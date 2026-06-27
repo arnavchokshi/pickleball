@@ -11,12 +11,27 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from threed.racketsport.corrections import CORRECTION_STATUSES, is_unsafe_relative_path
+
 DEFAULT_SCHEMA = ROOT / "corrections" / "schema.json"
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 JSON_POINTER_PATTERN = re.compile(r"^(/([^/~]|~[01])*)+$")
 TOP_LEVEL_FIELDS = {"schema_version", "manifest_id", "created_at", "description", "corrections"}
-CORRECTION_FIELDS = {"id", "target", "operation", "value", "confidence", "reason", "annotator", "created_at"}
-TARGET_FIELDS = {"artifact", "clip_id", "frame_index", "t_s", "path"}
+CORRECTION_FIELDS = {
+    "id",
+    "target",
+    "operation",
+    "value",
+    "confidence",
+    "reason",
+    "annotator",
+    "created_at",
+    "status",
+}
+TARGET_FIELDS = {"artifact", "clip_id", "frame_index", "t_s", "path", "phase", "metric"}
 VALUE_REQUIRED_OPERATIONS = {"set", "replace", "append"}
 OPERATIONS = VALUE_REQUIRED_OPERATIONS | {"delete"}
 
@@ -88,6 +103,9 @@ def _correction_errors(index: int, correction: Any) -> list[str]:
     if operation == "delete" and "value" in correction:
         errors.append(f"{prefix}/value: must not be present for delete operations")
 
+    if "status" in correction and correction["status"] not in CORRECTION_STATUSES:
+        errors.append(f"{prefix}/status: must be one of accepted, pending, rejected")
+
     if "confidence" in correction:
         confidence = correction["confidence"]
         if isinstance(confidence, bool) or not isinstance(confidence, (int, float)) or not 0 <= confidence <= 1:
@@ -114,6 +132,8 @@ def _target_errors(index: int, target: Any) -> list[str]:
     if "artifact" in target and (not isinstance(target["artifact"], str) or not target["artifact"]):
         errors.append(f"{prefix}/artifact: must be a non-empty string")
     _validate_id(errors, f"{prefix}/clip_id", target.get("clip_id"), required=False)
+    _validate_id(errors, f"{prefix}/phase", target.get("phase"), required=False)
+    _validate_id(errors, f"{prefix}/metric", target.get("metric"), required=False)
 
     frame_index = target.get("frame_index")
     if "frame_index" in target and (isinstance(frame_index, bool) or not isinstance(frame_index, int) or frame_index < 0):
@@ -192,17 +212,12 @@ def _semantic_errors(payload: Any) -> list[str]:
             continue
 
         artifact = target.get("artifact")
-        if isinstance(artifact, str) and _is_unsafe_relative_path(artifact):
+        if isinstance(artifact, str) and is_unsafe_relative_path(artifact):
             errors.append(
                 f"corrections/{index}/target/artifact must be relative and stay within the workspace"
             )
 
     return errors
-
-
-def _is_unsafe_relative_path(value: str) -> bool:
-    path = Path(value)
-    return path.is_absolute() or ".." in path.parts
 
 
 def main(argv: list[str] | None = None) -> int:

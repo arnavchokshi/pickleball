@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +13,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.racketsport.validate_corrections import validate_manifest
+from threed.racketsport.corrections import (
+    build_training_manifest_candidates,
+    enriched_queue_item,
+    summarize_corrections_queue,
+)
 
 
 def build_corrections_queue(manifests: list[str | Path]) -> dict[str, Any]:
@@ -38,31 +42,14 @@ def build_corrections_queue(manifests: list[str | Path]) -> dict[str, Any]:
                 raise ValueError(f"duplicate queued correction id: {manifest_id}/{correction_id}")
             seen_keys.add(key)
 
-            target = correction["target"]
-            queue.append(
-                {
-                    "manifest_id": manifest_id,
-                    "correction_id": correction_id,
-                    "operation": correction["operation"],
-                    "artifact": target["artifact"],
-                    "clip_id": target.get("clip_id"),
-                    "frame_index": target.get("frame_index"),
-                    "t_s": target.get("t_s"),
-                    "path": target["path"],
-                    "value": correction.get("value"),
-                    "confidence": correction.get("confidence"),
-                    "reason": correction["reason"],
-                    "annotator": correction["annotator"],
-                    "created_at": correction.get("created_at", payload["created_at"]),
-                }
-            )
+            queue.append(enriched_queue_item(manifest_id, correction, payload["created_at"]))
 
     return {
         "schema_version": 1,
         "manifest_count": len(source_summaries),
         "correction_count": len(queue),
         "source_manifests": source_summaries,
-        "summary": _summarize_queue(queue),
+        "summary": summarize_corrections_queue(queue),
         "corrections": queue,
     }
 
@@ -77,21 +64,13 @@ def discover_correction_manifests(root: str | Path, *, pattern: str = "*.json") 
 
 
 def write_queue(path: str | Path, payload: dict[str, Any]) -> None:
+    write_json(path, payload)
+
+
+def write_json(path: str | Path, payload: dict[str, Any]) -> None:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
-def _summarize_queue(queue: list[dict[str, Any]]) -> dict[str, Any]:
-    return {
-        "by_operation": _counter_dict(item["operation"] for item in queue),
-        "by_artifact": _counter_dict(item["artifact"] for item in queue),
-        "by_clip": _counter_dict(item["clip_id"] or "unknown" for item in queue),
-    }
-
-
-def _counter_dict(values: Any) -> dict[str, int]:
-    return dict(sorted(Counter(values).items()))
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -107,6 +86,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, help="Directory containing corrections manifest JSON files.")
     parser.add_argument("--pattern", default="*.json", help="Manifest glob used with --root. Defaults to *.json.")
     parser.add_argument("--out", type=Path, default=Path("runs/corrections_queue/corrections_queue.json"))
+    parser.add_argument("--training-manifest-out", type=Path, help="Optional accepted-correction training candidates JSON.")
+    parser.add_argument(
+        "--training-candidate-root",
+        default="training/corrections",
+        help="Relative root recorded in candidate_path fields. Defaults to training/corrections.",
+    )
     args = parser.parse_args(argv)
 
     if bool(args.root) == bool(args.manifests):
@@ -116,6 +101,11 @@ def main(argv: list[str] | None = None) -> int:
         manifests = discover_correction_manifests(args.root, pattern=args.pattern) if args.root else args.manifests
         payload = build_corrections_queue(manifests)
         write_queue(args.out, payload)
+        if args.training_manifest_out:
+            training_payload = build_training_manifest_candidates(
+                payload, candidate_root=args.training_candidate_root
+            )
+            write_json(args.training_manifest_out, training_payload)
     except ValueError as exc:
         print("ERROR: corrections queue build failed:", file=sys.stderr)
         for line in str(exc).splitlines():
