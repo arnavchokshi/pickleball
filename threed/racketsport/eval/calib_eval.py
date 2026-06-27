@@ -8,12 +8,32 @@ from threed.racketsport.court_calibration import (
     CALIBRATION_REPROJECTION_MEDIAN_GATE_PX,
     CALIBRATION_REPROJECTION_P95_GATE_PX,
 )
-from threed.racketsport.eval.metrics import build_phase_metrics, metric, missing_artifacts, write_phase_metrics
+from threed.racketsport.eval.metrics import (
+    NumericGate,
+    build_phase_metrics,
+    evaluate_numeric_gates,
+    missing_artifacts,
+    write_phase_metrics,
+)
 from threed.racketsport.schemas import CourtCalibration, EvalClipResult, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
 REQUIRED_CALIBRATION_ARTIFACTS = ["court_calibration.json", "court_zones.json", "net_plane.json"]
+CALIBRATION_GATES = {
+    "reprojection_median_px": NumericGate(
+        name="calibration_reprojection_median_px",
+        op="<",
+        threshold=CALIBRATION_REPROJECTION_MEDIAN_GATE_PX,
+        unit="px",
+    ),
+    "reprojection_p95_px": NumericGate(
+        name="calibration_reprojection_p95_px",
+        op="<",
+        threshold=CALIBRATION_REPROJECTION_P95_GATE_PX,
+        unit="px",
+    ),
+}
 
 
 def evaluate(root: str | Path, labels_root: str | Path) -> object:
@@ -105,31 +125,22 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
             notes=notes,
         )
 
-    median = calibration.reprojection_error_px.median
-    p95 = calibration.reprojection_error_px.p95
-    median_passed = median < CALIBRATION_REPROJECTION_MEDIAN_GATE_PX
-    p95_passed = p95 < CALIBRATION_REPROJECTION_P95_GATE_PX
+    metrics = evaluate_numeric_gates(
+        {
+            "reprojection_median_px": calibration.reprojection_error_px.median,
+            "reprojection_p95_px": calibration.reprojection_error_px.p95,
+        },
+        CALIBRATION_GATES,
+    )
+    passed = all(gated_metric.passed is True for gated_metric in metrics.values())
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
         labels_dir=str(labels_dir),
-        status="pass" if median_passed and p95_passed else "fail",
+        status="pass" if passed else "fail",
         missing_label_files=[],
         missing_artifacts=[],
-        metrics={
-            "reprojection_median_px": metric(
-                value=median,
-                unit="px",
-                gate=f"< {CALIBRATION_REPROJECTION_MEDIAN_GATE_PX}",
-                passed=median_passed,
-            ),
-            "reprojection_p95_px": metric(
-                value=p95,
-                unit="px",
-                gate=f"< {CALIBRATION_REPROJECTION_P95_GATE_PX}",
-                passed=p95_passed,
-            ),
-        },
+        metrics=metrics,
         notes=notes,
     )
 

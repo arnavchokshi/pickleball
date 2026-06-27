@@ -390,6 +390,11 @@ def test_calib_eval_passes_when_ready_clip_has_required_artifacts(tmp_path):
     assert payload["summary"]["passed_clips"] == 1
     assert payload["metrics"]["artifact_readiness"]["passed"] is True
     assert payload["clips"][0]["metrics"]["reprojection_median_px"]["value"] == 2.5
+    assert payload["clips"][0]["metrics"]["reprojection_median_px"]["gate"] == (
+        "calibration_reprojection_median_px: < 8.0"
+    )
+    assert payload["clips"][0]["metrics"]["reprojection_p95_px"]["value"] == 7.0
+    assert payload["clips"][0]["metrics"]["reprojection_p95_px"]["gate"] == "calibration_reprojection_p95_px: < 15.0"
     validate_artifact_file("phase_eval_metrics", root / "metrics.json")
 
 
