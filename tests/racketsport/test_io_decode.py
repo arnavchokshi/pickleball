@@ -134,6 +134,44 @@ def test_ingest_testclips_writes_qc_and_capture_quality(tmp_path):
     assert payload["clip_qc"]["sampled_frames"] == 1
 
 
+def test_extract_label_frames_cli_writes_manual_review_pack(tmp_path):
+    root = tmp_path / "testclips"
+    out = tmp_path / "label_frames"
+    clip_dir = root / "candidate"
+    clip_dir.mkdir(parents=True)
+    _make_tiny_clip(clip_dir / "source.mp4", rate=10, duration_s=1.0)
+
+    completed = subprocess.run(
+        [
+            "python",
+            "scripts/racketsport/extract_label_frames.py",
+            "--root",
+            str(root),
+            "--out",
+            str(out),
+            "--every-frames",
+            "3",
+            "--max-width",
+            "64",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(completed.stdout)
+    manifest = json.loads((out / "candidate" / "label_frame_manifest.json").read_text(encoding="utf-8"))
+    frames = sorted((out / "candidate").glob("frame_*.jpg"))
+
+    assert payload["clip_count"] == 1
+    assert payload["total_frames"] == len(frames)
+    assert payload["clips"][0]["clip"] == "candidate"
+    assert manifest["clip"] == "candidate"
+    assert manifest["sample_every_frames"] == 3
+    assert len(frames) >= 3
+    assert all(frame.stat().st_size > 0 for frame in frames)
+
+
 def test_measure_decode_throughput_returns_realtime_factor(tmp_path):
     clip = tmp_path / "sample.mp4"
     _make_tiny_clip(clip, rate=10, duration_s=1.0)
