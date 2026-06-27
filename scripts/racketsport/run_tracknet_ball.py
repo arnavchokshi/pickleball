@@ -21,6 +21,8 @@ def main() -> int:
     parser.add_argument("--inpaintnet-file", type=Path, default=None, help="InpaintNet_best.pt checkpoint.")
     parser.add_argument("--tracknet-repo", type=Path, default=None, help="Official TrackNetV3 repo containing predict.py.")
     parser.add_argument("--prediction-dir", type=Path, default=None, help="Keep official TrackNet CSV outputs in this directory.")
+    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--large-video", action="store_true", help="Pass --large_video to official TrackNetV3 predict.py.")
     parser.add_argument("--fps", type=float, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--metadata-out", type=Path, default=None)
@@ -37,6 +39,8 @@ def main() -> int:
             inpaintnet_file=args.inpaintnet_file,
             tracknet_repo=args.tracknet_repo,
             prediction_dir=args.prediction_dir,
+            batch_size=args.batch_size,
+            large_video=args.large_video,
         )
     except Exception as exc:
         print(str(exc), file=sys.stderr)

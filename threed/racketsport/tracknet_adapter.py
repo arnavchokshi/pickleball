@@ -208,6 +208,8 @@ def run_tracknet_or_convert(
     inpaintnet_file: str | Path | None = None,
     tracknet_repo: str | Path | None = None,
     prediction_dir: str | Path | None = None,
+    batch_size: int = 16,
+    large_video: bool = False,
 ) -> dict[str, Any]:
     """CLI-oriented entrypoint that converts CSV or runs official TrackNetV3."""
 
@@ -241,6 +243,8 @@ def run_tracknet_or_convert(
                 tracknet_file=tracknet_file,
                 inpaintnet_file=inpaintnet_file,
                 save_dir=tmp_dir,
+                batch_size=batch_size,
+                large_video=large_video,
             )
             return write_ball_track_from_csv(
                 predictions_csv=csv_path,
@@ -257,6 +261,8 @@ def run_tracknet_or_convert(
         tracknet_file=tracknet_file,
         inpaintnet_file=inpaintnet_file,
         save_dir=prediction_dir,
+        batch_size=batch_size,
+        large_video=large_video,
     )
     return write_ball_track_from_csv(
         predictions_csv=csv_path,
