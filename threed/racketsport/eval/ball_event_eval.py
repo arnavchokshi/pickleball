@@ -4,12 +4,38 @@ import argparse
 import json
 from pathlib import Path
 
-from threed.racketsport.eval.metrics import build_phase_metrics, metric, missing_artifacts, write_phase_metrics
+from threed.racketsport.eval.metrics import (
+    NumericGate,
+    build_phase_metrics,
+    evaluate_numeric_gates,
+    missing_artifacts,
+    write_phase_metrics,
+)
 from threed.racketsport.schemas import BallTrack, ContactWindows, EvalClipResult, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
 REQUIRED_BALL_EVENT_ARTIFACTS = ["ball_track.json", "contact_windows.json"]
+BALL_EVENT_GATES = {
+    "ball_frames": NumericGate(
+        name="ball_frames_min",
+        op=">=",
+        threshold=1,
+        unit="frames",
+    ),
+    "contact_events": NumericGate(
+        name="ball_contact_events_recorded",
+        op=">=",
+        threshold=0,
+        unit="events",
+    ),
+    "bounce_events": NumericGate(
+        name="ball_bounce_events_recorded",
+        op=">=",
+        threshold=0,
+        unit="events",
+    ),
+}
 
 
 def evaluate(root: str | Path, labels_root: str | Path) -> object:
@@ -101,7 +127,15 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
     ball_frames = len(ball_track.frames)
     contact_events = len(contact_windows.events)
     bounce_events = len(ball_track.bounces)
-    passed = ball_frames >= 1
+    metrics = evaluate_numeric_gates(
+        {
+            "ball_frames": ball_frames,
+            "contact_events": contact_events,
+            "bounce_events": bounce_events,
+        },
+        BALL_EVENT_GATES,
+    )
+    passed = all(gated_metric.passed is True for gated_metric in metrics.values())
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
@@ -109,21 +143,7 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         status="pass" if passed else "fail",
         missing_label_files=[],
         missing_artifacts=[],
-        metrics={
-            "ball_frames": metric(value=ball_frames, unit="frames", gate=">= 1", passed=passed),
-            "contact_events": metric(
-                value=contact_events,
-                unit="events",
-                gate="recorded for later timing gates",
-                passed=True,
-            ),
-            "bounce_events": metric(
-                value=bounce_events,
-                unit="events",
-                gate="recorded for later physics gates",
-                passed=True,
-            ),
-        },
+        metrics=metrics,
         notes=[],
     )
 

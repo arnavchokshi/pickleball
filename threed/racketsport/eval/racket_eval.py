@@ -4,12 +4,38 @@ import argparse
 import json
 from pathlib import Path
 
-from threed.racketsport.eval.metrics import build_phase_metrics, metric, missing_artifacts, write_phase_metrics
+from threed.racketsport.eval.metrics import (
+    NumericGate,
+    build_phase_metrics,
+    evaluate_numeric_gates,
+    missing_artifacts,
+    write_phase_metrics,
+)
 from threed.racketsport.schemas import EvalClipResult, RacketPose, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
 REQUIRED_RACKET_ARTIFACTS = ["racket_pose.json"]
+RACKET_GATES = {
+    "racket_players": NumericGate(
+        name="racket_players_min",
+        op=">=",
+        threshold=1,
+        unit="players",
+    ),
+    "racket_frames": NumericGate(
+        name="racket_frames_min",
+        op=">=",
+        threshold=1,
+        unit="frames",
+    ),
+    "racket_contacts": NumericGate(
+        name="racket_contacts_recorded",
+        op=">=",
+        threshold=0,
+        unit="contacts",
+    ),
+}
 
 
 def evaluate(root: str | Path, labels_root: str | Path) -> object:
@@ -100,25 +126,23 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
     player_count = len(racket_pose.players)
     frame_count = sum(len(player.frames) for player in racket_pose.players)
     contact_count = sum(len(player.contacts) for player in racket_pose.players)
-    players_passed = player_count >= 1
-    frames_passed = frame_count >= 1
+    metrics = evaluate_numeric_gates(
+        {
+            "racket_players": player_count,
+            "racket_frames": frame_count,
+            "racket_contacts": contact_count,
+        },
+        RACKET_GATES,
+    )
+    passed = all(gated_metric.passed is True for gated_metric in metrics.values())
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
         labels_dir=str(labels_dir),
-        status="pass" if players_passed and frames_passed else "fail",
+        status="pass" if passed else "fail",
         missing_label_files=[],
         missing_artifacts=[],
-        metrics={
-            "racket_players": metric(value=player_count, unit="players", gate=">= 1", passed=players_passed),
-            "racket_frames": metric(value=frame_count, unit="frames", gate=">= 1", passed=frames_passed),
-            "racket_contacts": metric(
-                value=contact_count,
-                unit="contacts",
-                gate="recorded for later face/contact gates",
-                passed=True,
-            ),
-        },
+        metrics=metrics,
         notes=[],
     )
 
