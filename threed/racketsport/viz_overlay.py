@@ -1,0 +1,2 @@
+"""Video overlay visualization artifacts."""
+

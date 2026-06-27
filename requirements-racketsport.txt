@@ -1,0 +1,10 @@
+# Phase 0 local/test dependencies.
+pydantic>=2.8
+pytest>=8.0
+
+# Runtime dependencies are intentionally listed without pinning until the H100
+# environment is finalized. setup_env.sh installs the GPU stack on the worker.
+numpy
+scipy
+ffmpeg-python
+

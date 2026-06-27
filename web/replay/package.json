@@ -1,0 +1,15 @@
+{
+  "name": "sway-racketsport-replay",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Phase 10 replay viewer not scaffolded yet\""
+  },
+  "dependencies": {
+    "@react-three/fiber": "^9.0.0",
+    "three": "^0.179.0"
+  },
+  "devDependencies": {}
+}
+

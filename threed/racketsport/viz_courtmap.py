@@ -1,0 +1,2 @@
+"""Court-map visualization artifacts."""
+

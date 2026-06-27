@@ -1,0 +1,255 @@
+# Sway Body — Build Checklist & Agent Coordination
+
+**This is the operational source of truth for building Sway Body.** The lead build agent (Codex) and every subagent it spawns coordinate **here** — it is how everyone knows who is doing what, what is done, and what remains. Agents cannot talk to each other directly; **this file + git commit messages are the only communication channel.**
+
+**Read order for any agent before doing anything:** (1) this file, (2) `SWAY_BODY_PICKLEBALL_MVP.md` (what/why), (3) `TECH_STACK.md` (which technology + why — **§2.3 Model Registry is the canonical exact model/variant/weights for every stage; never use a variant that contradicts it**), (4) the relevant phase in `IMPLEMENTATION_PHASES.md` (exact build + test steps), (5) `ACCURACY_AND_TRAINING.md` (datasets, training, validation gates). Each task below names its phase — go there for full detail; do not re-derive it.
+
+**Model variants are benchmarked + human-approved, not assumed:** `TECH_STACK.md §2.3` lists each stage's default + candidates; **all H100/on-device speeds in this repo are estimates.** Task **EVAL-0** benchmarks the candidates on real clips, **renders side-by-side comparison videos, and requires human approval before locking the variant (§1.6) — unless one option is obviously better, in which case it may auto-finalize and log it.** The approved choice is locked in `models/MANIFEST.json` (live = lightest usable; offline = recompute with the accurate variant). Benchmark **Fast SAM-3D-Body first** (pacing item; sets the MIG geometry).
+
+**Product scope reminder:** **single static camera** is the product focus. Multi-camera is FUTURE; multi-view is a TRAINING-TIME-ONLY technique that ships a single-camera model. Native **iOS Swift** client + GPU **server**.
+
+---
+
+## 1. Coordination protocol (mandatory)
+
+### Status values
+`TODO` → `CLAIMED` → `IN-PROGRESS` → `IN-REVIEW` → `DONE` → `VERIFIED`. Plus `BLOCKED` (with reason) and `PENDING-APPROVAL` (awaiting the human on a decision — see §1.6).
+
+- **TODO** — not started, available to claim (if its dependencies are `VERIFIED`).
+- **CLAIMED** — an agent has taken it; Owner set. No one else may touch it.
+- **IN-PROGRESS** — actively being built.
+- **BLOCKED** — cannot proceed; the `Notes` column states why and what's needed.
+- **PENDING-APPROVAL** — a model/variant (or other non-obvious) decision is waiting on the human; comparison videos rendered and linked. Does NOT unblock downstream until approved (§1.6).
+- **IN-REVIEW** — built; the task's own test passes; awaiting the lead's gate check.
+- **DONE** — code complete, task self-test green.
+- **VERIFIED** — the lead agent ran the phase **Acceptance Gate** (from `IMPLEMENTATION_PHASES.md`) and it passed. Only `VERIFIED` unblocks downstream tasks.
+
+### Rules
+1. **Claim before you build.** Edit the task row: set `Owner` + `Status=CLAIMED`, commit `claim <TASK-ID>`. One owner per task at a time.
+2. **Respect dependencies.** Do not start a task until every task in its `Deps` is `VERIFIED`. If you need something not yet ready, pick another `TODO` whose deps are met.
+3. **Own only your files.** Each task lists the files/modules it owns. Do not edit files owned by another `CLAIMED`/`IN-PROGRESS` task — coordinate via a `BLOCKED` note instead.
+4. **Update status as you go.** `CLAIMED`→`IN-PROGRESS` when you start; `BLOCKED` with a reason if you stall; `IN-REVIEW` when your task's test passes.
+5. **Finish with a handoff.** On completion: set `Status=DONE`, fill the **Handoff log** (§5) with: what you built, the artifacts/files produced, how you tested it, and what the next agent needs to know. Commit `done <TASK-ID>: <summary>`.
+6. **Only the lead verifies.** The lead agent runs the phase Acceptance Gate on GPU test clips; pass → `VERIFIED`; fail → back to `IN-PROGRESS` with failing-gate notes.
+7. **No phase advances on red.** A downstream phase's tasks stay `TODO` until their upstream gate tasks are `VERIFIED` (phase-gate discipline from `IMPLEMENTATION_PHASES.md §0.1`).
+8. **Log decisions.** Any deviation, model swap, or assumption goes in the **Decisions log** (§6) so others see it.
+9. **Keep commits scoped to one task** and prefix the message with the TASK-ID.
+
+### Definition of Done (global)
+A task is `VERIFIED` only when: code merged, its module unit tests pass, the phase Acceptance Gate (numeric, on real GPU test clips spanning the varied-camera matrix — run **through the §1.5 GPU lease/queue**) passes, artifacts conform to the JSON schemas in `IMPLEMENTATION_PHASES.md`, the Handoff log entry is written (incl. the recorded gate metric), **and any model/variant choice it depends on has cleared the §1.6 approval gate.**
+
+### 1.6 Decision approval gate — human-in-the-loop on variant choices (mandatory)
+
+**Whenever a task must choose between candidate models/variants (EVAL-0 and any per-stage variant pick), it does NOT silently finalize.** It must let the human compare and approve, *unless one option is obviously better.*
+
+1. **Render comparison videos.** For each candidate, render its ACTUAL output overlaid on the **same ≥3 real test clips** spanning the varied-camera matrix (e.g., detection boxes / pose skeleton / SMPL mesh / ball track / foot-lock before-after / racket 6DoF / replay), as **side-by-side comparisons**, each labeled with the candidate name + its measured accuracy-gate metric + latency + VRAM. Save to `runs/eval0/<stage>/compare/` and write `runs/eval0/<stage>/variant_selection.md` (metrics table + links to every video).
+2. **Auto-finalize ONLY if obvious.** The agent may lock a variant on its own — logging it in the **Decisions log (§6)** as `auto-finalized (obvious)` and still saving the videos — only when the winner is unambiguous: it **passes the gate AND is Pareto-dominant** (≥ as accurate AND ≥ as fast/cheaper than every alternative), OR every alternative **fails the gate** while it passes, OR it beats all others by a **large, clear margin** (e.g., well past the gate with no meaningful speed/VRAM penalty).
+3. **Otherwise BLOCK on the human.** Set the task `Status = PENDING-APPROVAL`, note the link to `variant_selection.md` + the comparison videos in the `Notes` column and the Handoff log, and **stop** — do not lock the variant, do not start dependents that need the final pick. The human reviews the videos and chooses.
+4. **On approval:** record `approved: <variant> by <human> on <date>` in the Decisions log, lock the choice in `models/MANIFEST.json`, set status forward (`IN-REVIEW`/`VERIFIED`).
+5. **Scope:** this applies to every model-variant decision and to any *other* non-obvious decision with close alternatives (e.g., a calibration method, a smoothing filter) — surface comparison artifacts and request approval rather than silently picking. Obvious/no-alternative choices proceed normally.
+
+---
+
+## 1.5 GPU coordination — ONE shared H100 (mandatory)
+
+**All agents share a single NVIDIA H100 80GB (GCP A3) for testing/training.** Naive parallel GPU use → OOM/crashes. The rule set below lets CPU work run fully parallel while GPU work is isolated and serialized.
+
+### The #1 rule: CPU work never touches the GPU lease
+Tasks tagged **[CPU]** (code, schemas, data download/convert, iOS Swift app, web viewer, CPU post-processing, MuJoCo-CPU, report formatting) run **immediately and in parallel** — they must never block on the GPU. Only **[GPU]** tasks (model training/fine-tune, heavy server inference, and **every eval/test run on test clips**) acquire the lease. (iOS on-device models run on the *phone's* Neural Engine, not this H100 — so IOS-* tasks are [CPU] w.r.t. this lease, except Core ML conversion/validation.)
+
+### Static MIG geometry (don't flip per-job — drain+reset churn is too costly)
+Pick ONE mode per session:
+- **Eval/dev mode (default): `2 × 3g.40gb`** — the inference pipeline + parallel eval agents each get hardware-isolated 40 GB (a buggy agent OOMs only its own slice, not its neighbors). Use **MIG, not MPS** (autonomous agents need hard fault/memory isolation).
+- **Training mode: `1 × 7g.80gb`** — one exclusive holder fine-tunes (SAM-3D-Body fine-tune needs ~40–55 GB → full GPU); eval agents pause.
+
+### Lease/queue convention (local disk, `flock` — NOT NFS)
+```
+/run/gpu-lease/
+  mode                 # "eval" | "training"
+  full-gpu.lock        # exclusive; held by the one training/full-GPU job
+  slots/slotN.lock     # one flock per MIG eval instance
+  slots/slotN.uuid     # MIG-<uuid> for CUDA_VISIBLE_DEVICES
+  heartbeat/<pid>      # pid+epoch ts; TTL watchdog evicts stale locks
+```
+- **[GPU] eval/inference task:** `flock -n` a free slot → `export CUDA_VISIBLE_DEVICES=$(cat slotN.uuid)` → run within that slice's VRAM budget → release. If none free, block on `flock` (FIFO queue) and meanwhile pick a [CPU] task.
+- **[GPU] training task:** acquire exclusive `full-gpu.lock`; if it fits 40 GB just take a slot, else drain slots → switch `mode→training` → reconfigure `7g.80gb` → train → restore eval geometry on release.
+- **Heartbeat + TTL** reclaims locks from dead agents. **Monitor with DCGM** (`dcgmi dmon -e 203,204,252`); stop DCGM before any `--gpu-reset`/mode switch (it counts as a GPU client).
+
+Helper (`scripts/gpu-eval-run.sh`): grab a free MIG slot via `flock`, set `CUDA_VISIBLE_DEVICES`, run the command, release — see `IMPLEMENTATION_PHASES.md` Phase 0 for the script.
+
+### VRAM budget (80 GB; estimates — measure SAM-3D-Body FIRST, it paces the pipeline)
+| Job | VRAM | Fits |
+|---|---|---|
+| Full inference pipeline (all models resident) | ~18–28 GB | 3g.40gb slice |
+| SAM-3D-Body **inference** (largest single model) | ~10–20 GB | 3g.40gb slice |
+| SAM-3D-Body **fine-tune** (AdamW states) | ~40–55 GB | **needs 7g.80gb (training mode)** |
+| YOLO26 / RTMW fine-tune | ~8–15 GB | a slice (eval-tier lease) |
+| 3 parallel eval agents (YOLO+TrackNet+RTMW, no SAM) | ~20 GB each | 3× 1g.20gb |
+
+### GPU-lease tasks (everything else is [CPU], no lease)
+**[GPU]:** **EVAL-0 (variant benchmarking)** · DATA-2, DATA-3, DATA-4 (training/auto-label inference) · CAL-3 (train keypoint net) · TRK-1 (eval runs) · BODY-1, BODY-2, BODY-3, BODY-4 · FOOT-1 (eval) · BALL-1, BALL-2, BALL-4 (train/eval) · RKT-1 (train/eval) · MET-1 (eval) · SHOT-1 (train) · RPL-1 (render bake, if GPU-rendered) · **EVAL-1, EVAL-2, EVAL-4 (all test-clip runs)**. FOOT-2 physics is [GPU] only if using MuJoCo-MJX/PHC training, else CPU.
+
+### Testing is a GPU job
+Every phase Acceptance Gate is run on test clips **through this lease/queue**. A task is `VERIFIED` only after its numeric gate passes on the shared H100 and the result is recorded in the Handoff log (§5).
+
+---
+
+## 2. Workstreams & dependency graph
+
+```
+ENV ──┬─> IOS (capture/calibration/fast-tier/viewer)        [iOS client track]
+      └─> DATA (datasets, auto-label, fine-tune)             [runs alongside]
+            |
+ENV ─> CAL (court calib, seeded by ARKit sidecar)
+            └─> TRK (detect/track/ID)
+                  └─> BODY (Fast SAM-3D-Body + world-grounding)
+                        ├─> FOOT (foot-skate kill + physics)
+                        ├─> BALL (track + audio events + 3D physics)
+                        │     └─> RKT (racket 6DoF; needs BALL for rebound-validate)
+                        └─> MET (metrics + insights + confidence)  [needs FOOT, BALL, RKT]
+                              ├─> SHOT (shot class + drill verify)
+                              └─> RPT (LLM copy + report + viz)
+                                    └─> RPL (3D replay: bake USDZ+GLB, RealityKit + web viewers)
+EVAL  ── spans everything (harness + per-phase gates + regression CI)
+```
+Critical path: **ENV → CAL → TRK → BODY → FOOT/BALL → RKT → MET → RPT → RPL.** The **IOS** and **DATA** tracks run in parallel from ENV.
+
+**Parallelization model (max throughput on one H100):** the lead spawns subagents to work concurrently. **[CPU] tasks run fully in parallel, anytime** (their deps permitting) — IOS app, web viewer, schemas, data download/convert, module scaffolding, CPU post-processing, report formatting. **[GPU] tasks** (training, heavy inference, all test-clip eval) **serialize through the §1.5 lease/queue** (or run concurrently in separate MIG eval slots when they fit). So: keep many CPU tasks in flight; let GPU tasks queue. FOOT and BALL can proceed in parallel once BODY is VERIFIED; SHOT/RPT can proceed once MET is VERIFIED.
+
+---
+
+## 3. Checklist
+
+Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** · **Phase** · **Owner** · **Status**. The **Phase** column maps each task to `IMPLEMENTATION_PHASES.md`: iOS client tasks → **Client Track C1–C3**; server tasks → the named **Pipeline Track phases (0–11)** — go there for the exact build steps + Acceptance Gate. (Phase names, not numbers, are used for server tasks so they stay valid if phases are renumbered.) **GPU vs CPU:** the **[GPU] tasks that must use the §1.5 lease are enumerated in §1.5**; every other task is **[CPU]** and runs in parallel without the lease.
+
+### ENV — Environment & scaffolding
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | ENV-1 | Server env, deps, repo scaffolding under `threed/racketsport/`, `models/MANIFEST.json` | repo skeleton, env files | — | Phase 0 | | TODO |
+| ☐ | ENV-2 | Fetch + checksum model checkpoints (incl. verify-before-commit flags + fallbacks) | `models/` | ENV-1 | Phase 0 | | TODO |
+| ☐ | ENV-3 | iOS Xcode project scaffolding (`ios/`), Swift package layout | `ios/` | — | Phase 0 | | TODO |
+| ☐ | ENV-4 | NvDEC ingest + clip QC + capture-quality scoring (server) | `ingest.py` | ENV-1 | Phase 0 | | TODO |
+
+### IOS — iOS client (capture, calibration, fast tier, viewer)
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | IOS-1 | AVFoundation locked capture (exposure 1/500–1/1000 s, focus, WB, fps/format policy, landscape, HEVC/ProRes record, live frames) | `ios/Capture/` | ENV-3 | C1 | | TODO |
+| ☐ | IOS-2 | ARKit setup/calibration pass → intrinsics + 6DoF pose + court plane → sidecar; manual tap fallback | `ios/Calibration/` | IOS-1 | C1 | | TODO |
+| ☐ | IOS-3 | On-device fast tier (Apple Vision 2D/3D/hand/seg + YOLO Core ML ball/racket) → preview | `ios/FastTier/` | IOS-1 | C2 | | TODO |
+| ☐ | IOS-4 | Capture-quality guidance UX (corner visibility, tracking state, exposure, blur risk, CoreMotion level/shake, iOS26 button capture) | `ios/Guidance/` | IOS-2, IOS-3 | C2 | | TODO |
+| ☐ | IOS-5 | Upload pipeline (trimmed clip + sidecar + on-device pose prior + LiDAR depth if Tier A) | `ios/Upload/` | IOS-2 | C1 | | TODO |
+| ☐ | IOS-6 | RealityKit/USDZ replay viewer (RealityView virtual camera, free-viewpoint gestures) | `ios/Replay/` | RPL-1 | C3 | | TODO |
+
+### CAL — Court calibration (server)
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | CAL-1 | Court templates (PB/tennis) + zones (NVZ, service boxes) + net plane from regulation geometry | `court_templates.py`, `court_zones.py`, `net_plane.py` | ENV-1 | Court Calibration | | TODO |
+| ☐ | CAL-2 | Per-clip calibration: seed from ARKit sidecar → solvePnP (6-DoF) + multi-frame averaging + reprojection gate; manual-tap fallback; capture-quality score | `court_calibration.py`, `intrinsics.py` | CAL-1, IOS-2 | Court Calibration | | TODO |
+| ☐ | CAL-3 | (Phase-2) Train auto court-keypoint net (fine-tune TennisCourtDetector + synthetic viewpoints) | `court_keypoint_net.py` | CAL-2, DATA-1 | Court Calibration | | TODO |
+
+### TRK — Person detection, tracking, doubles ID
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | TRK-1 | YOLO26m + BoT-SORT-ReID detect/track; court-polygon filter; ground-plane association; N-lock + coach 1-tap anchor | `person_fasttier.py` | CAL-2 | Person Detection/Tracking | | TODO |
+
+### BODY — 3D body mesh (core)
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | BODY-1 | Deep tier: Fast SAM-3D-Body per player crop (MHR→SMPL via MLP) | `hmr_deep.py` | TRK-1 | 3D Body | | TODO |
+| ☐ | BODY-2 | Our world-grounding: project per-frame to world via known camera + court Z=0 → temporal smooth | `worldhmr.py` | BODY-1, CAL-2 | 3D Body | | TODO |
+| ☐ | BODY-3 | Fast tier: camera-space mesh (SAT-HMR / Multi-HMR 2) for preview | `hmr_fast.py` | TRK-1 | 3D Body | | TODO |
+| ☐ | BODY-4 | Racket-motion fine-tune (BEDLAM2→AthletePose3D→CalTennis→RICH→AMASS) + world-MPJPE eval | `scripts/finetune_pose.py` | BODY-1, DATA-2 | 3D Body | | TODO |
+
+### FOOT — Foot-skate elimination & physics
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | FOOT-1 | Foot-contact detection vs known Z=0 + zero-velocity + CCD-IK foot-lock (≤3 mm, 0 penetration) | `footlock.py` | BODY-2 | Foot-Skate & Physics | | TODO |
+| ☐ | FOOT-2 | Physics refinement: PhysPT default; PHC/PULSE on MuJoCo+MJX flagship; MultiPhys for doubles | `physics_refine.py` | FOOT-1 | Foot-Skate & Physics | | TODO |
+
+### BALL — Ball tracking + events + 3D physics
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | BALL-1 | TrackNetV3 (→V5) fine-tuned ball tracking + tap-track fallback | `ball_tracknet.py`, `ball_tap_track.py` | CAL-2, DATA-3 | Ball + Events | | TODO |
+| ☐ | BALL-2 | Audio "pop" two-stage detector (onset + CNN) + distance-delay correction | `audio_pop.py` | DATA-3 | Ball + Events | | TODO |
+| ☐ | BALL-3 | Event fusion (audio + wrist-vel peak + ball inflection) → contact windows; doubles attribution | `event_fusion.py` | BALL-1, BALL-2, BODY-2 | Ball + Events | | TODO |
+| ☐ | BALL-4 | 3D ball physics (EKF + RANSAC parabola + z=0 bounce + Magnus + pickleball aero) | `ball_physics3d.py` | BALL-1, CAL-2 | Ball + Events | | TODO |
+
+### RKT — Racket 6DoF
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | RKT-1 | Detect (RTMDet+SAM2) → top/bottom/handle keypoints + corners → GigaPose/FoundPose + grip prior → PnP-IPPE → UKF SE(3) → physics-validate; contact-point + face-normal | `racket_pose6dof.py` | BODY-2, BALL-4, DATA-4 | Racket 6DoF | | TODO |
+
+### MET — Metrics, insights, confidence
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | MET-1 | Biomechanics metrics (foot/NVZ, zones, spacing, balance, X-factor, contact point, velocity w/ tiers) | `movement_metrics.py` | FOOT-1, BALL-3, RKT-1 | Metrics & Insights | | TODO |
+| ☐ | MET-2 | Rule-based insight engine + confidence gating | `insight_rules.py`, `confidence.py` | MET-1 | Metrics & Insights | | TODO |
+
+### SHOT — Shot classification + drills
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | SHOT-1 | Shot classifier (BST/PoseConv3D, dataset from audio-snapped+pose) | `shot_classifier.py` | MET-1, DATA-5 | Shot Classification | | TODO |
+| ☐ | SHOT-2 | Drill rep counting/verification (wrist-vel peak + contact + state machine) | `drill_verify.py` | MET-1, BALL-3 | Shot Classification | | TODO |
+
+### RPT — Report, LLM copy, visualization
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | RPT-1 | Report artifacts (`habit_report.json`, `coach_report.json`, corrections/exclusion model) | `report_model.py`, `habit_model.py` | MET-2 | Report & Delivery | | TODO |
+| ☐ | RPT-2 | LLM coaching copy (latest Claude; facts-in/copy-out; 100% faithfulness gate) | `llm_copy.py` | RPT-1 | Report & Delivery | | TODO |
+| ☐ | RPT-3 | Visualization (court map/heatmap + priority metric + self-vs-self) + tiered <10 s delivery | `viz/` | RPT-1 | Report & Delivery | | TODO |
+
+### RPL — 3D replay
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | RPL-1 | Server render bake → one animated scene → export USDZ (OpenUSD) + GLB (pygltflib/smplx); MeshOpt+Draco+KTX2; CDN | `replay_export.py` | FOOT-2, RKT-1, BALL-4 | 3D Replay | | TODO |
+| ☐ | RPL-2 | Three.js + R3F web viewer (free-viewpoint, per-point GLB stream, share link) | `viewer/` | RPL-1 | 3D Replay | | TODO |
+
+### DATA — Data & training infrastructure (parallel)
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | DATA-1 | Test-clip dataset (varied camera-height/angle matrix) + label schema | `data/testclips/` | ENV-1 | Test-Clip Spec | | TODO |
+| ☐ | DATA-2 | Body pose datasets download + fine-tune pipeline + auto-label/distill loop | `data/pose/`, `scripts/autolabel.py` | DATA-1 | Data Infra | | TODO |
+| ☐ | DATA-3 | Ball datasets (Roboflow→x,y) + audio "pop" collection (44.1 kHz) + augmentation | `data/ball/`, `data/audio/` | DATA-1 | Data Infra | | TODO |
+| ☐ | DATA-4 | Racket data (RacketVision + synthetic paddle-CAD BlenderProc + ArUco-GT) | `data/racket/` | DATA-1 | Data Infra | | TODO |
+| ☐ | DATA-5 | Shot-class dataset (audio-snapped + pose-derived labels) | `data/shots/` | DATA-1, BALL-3 | Data Infra | | TODO |
+
+### EVAL — Validation, gates, CI (spans all)
+| ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
+|---|----|------|------|------|-------|-------|--------|
+| ☐ | **EVAL-0** | **[GPU] Model variant selection** — benchmark each stage's `TECH_STACK §2.3` candidates on real clips (offline via §1.5 lease; live on device); **render side-by-side comparison videos + get human approval per §1.6 (auto-finalize only if obvious)**; lock the approved variant in `models/MANIFEST.json` (offline=accurate, live=light). Benchmark Fast SAM-3D-Body first. | `models/MANIFEST.json`, `racketsport/eval/bench/`, `runs/eval0/` | DATA-1, ENV-2 | Model Variant Selection | | TODO |
+| ☐ | EVAL-1 | Eval harness (`racketsport/eval/`, one evaluator per phase → `metrics.json`) | `racketsport/eval/` | DATA-1 | Cross-cutting | | TODO |
+| ☐ | EVAL-2 | Validation Protocols A/B/C/D + physics/racket gates wired to the harness | `racketsport/eval/` | EVAL-1 | Cross-cutting | | TODO |
+| ☐ | EVAL-3 | Regression CI (block merge on >2% drop) + corrections-flywheel plumbing | `.github/`, `corrections/` | EVAL-1 | Cross-cutting | | TODO |
+| ☐ | EVAL-4 | End-to-end integration on 20-min clips + perf + final acceptance | `pipeline.py` | all VERIFIED | End-to-End | | TODO |
+
+---
+
+## 4. Phase-gate summary (must pass before dependents start)
+
+| Gate | Numeric acceptance (see `IMPLEMENTATION_PHASES.md` for the exact test) |
+|---|---|
+| Court calibration | overlay matches ≥8/10 clips across ≥4 distinct viewpoints; feet-to-world within per-viewpoint budget |
+| Person track | stable IDs ≥90% on 2-player clips after confirmation; 20-min clip throughput target met |
+| 3D body | per-stage world-MPJPE target on EMDB2/CalTennis; fine-tune ladder hits ~50–70 mm |
+| Foot-skate & physics | foot-slide ≤3 mm; zero floor & inter-player penetration |
+| Ball + events | ball F1 ≥0.90 (FP <5%); contact timing ≤±2 frames / ±4 ms (audio) |
+| Racket 6DoF | face-angle ≤5° vs ArUco GT; contact-point ±1–3 cm |
+| Metrics/insights | metric accuracy vs manual review; confidence calibration; velocity Protocol A/B/C pass |
+| Replay | loads fast; free-viewpoint works; coach "looks right" review passes |
+| End-to-end | fast-tier first screen <10 s; deep-tier p95 under agreed SLA; gross margin target |
+
+---
+
+## 5. Handoff log (append-only — newest last)
+
+> Format: `[TASK-ID] <agent> — built: <what>; artifacts: <files>; tested: <how/result>; next: <what the next agent needs>`
+
+_(empty — first builder starts here)_
+
+---
+
+## 6. Decisions log (append-only)
+
+> Record any model swap, deviation, assumption, or resolved ambiguity so other agents see it.
+
+- Stack baseline as of handoff: Fast SAM-3D-Body backbone + our world-grounding; YOLO26m + BoT-SORT-ReID; foot-lock to Z=0 + PhysPT/MuJoCo; racket PnP-IPPE; TrackNetV3→V5; RealityKit/USDZ native + Three.js/GLB web. Fallbacks: Fast SAM-3D-Body→original→NLF; YOLO26→YOLO11; SAT-HMR↔Multi-HMR 2; PhysPT→PHC. Single-camera product; multi-cam future; multi-view training-only.
