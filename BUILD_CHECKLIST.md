@@ -216,8 +216,8 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 ### EVAL — Validation, gates, CI (spans all)
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☐ | **EVAL-0** | **[GPU] Model variant selection** — benchmark each stage's `TECH_STACK §2.3` candidates on real clips (offline via §1.5 lease; live on device); **render side-by-side comparison videos + get human approval per §1.6 (auto-finalize only if obvious)**; lock the approved variant in `models/MANIFEST.json` (offline=accurate, live=light). Benchmark Fast SAM-3D-Body first. | `models/MANIFEST.json`, `racketsport/eval/bench/`, `runs/eval0/` | DATA-1, ENV-2 | Model Variant Selection | | TODO |
-| ☐ | EVAL-1 | Eval harness (`racketsport/eval/`, one evaluator per phase → `metrics.json`) | `racketsport/eval/` | DATA-1 | Cross-cutting | | TODO |
+| ☐ | **EVAL-0** | **[GPU] Model variant selection** — benchmark each stage's `TECH_STACK §2.3` candidates on real clips (offline via §1.5 lease; live on device); **render side-by-side comparison videos + get human approval per §1.6 (auto-finalize only if obvious)**; lock the approved variant in `models/MANIFEST.json` (offline=accurate, live=light). Benchmark Fast SAM-3D-Body first. | `models/MANIFEST.json`, `racketsport/eval/bench/`, `runs/eval0/` | DATA-1, ENV-2 | Model Variant Selection | Codex | IN-PROGRESS |
+| ☐ | EVAL-1 | Eval harness (`racketsport/eval/`, one evaluator per phase → `metrics.json`) | `racketsport/eval/` | DATA-1 | Cross-cutting | Codex | IN-PROGRESS |
 | ☐ | EVAL-2 | Validation Protocols A/B/C/D + physics/racket gates wired to the harness | `racketsport/eval/` | EVAL-1 | Cross-cutting | | TODO |
 | ☐ | EVAL-3 | Regression CI (block merge on >2% drop) + corrections-flywheel plumbing | `.github/`, `corrections/` | EVAL-1 | Cross-cutting | | TODO |
 | ☐ | EVAL-4 | End-to-end integration on 20-min clips + perf + final acceptance | `pipeline.py` | all VERIFIED | End-to-End | | TODO |
