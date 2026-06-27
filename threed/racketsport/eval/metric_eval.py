@@ -4,12 +4,25 @@ import argparse
 import json
 from pathlib import Path
 
-from threed.racketsport.eval.metrics import build_phase_metrics, metric, missing_artifacts, write_phase_metrics
+from threed.racketsport.eval.metrics import (
+    NumericGate,
+    build_phase_metrics,
+    evaluate_numeric_gates,
+    metric,
+    missing_artifacts,
+    write_phase_metrics,
+)
 from threed.racketsport.schemas import EvalClipResult, HabitReport, RacketSportMetrics, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
 REQUIRED_METRIC_ARTIFACTS = ["racket_sport_metrics.json", "habit_report.json"]
+METRIC_GATES = {
+    "metric_players": NumericGate(name="metric_players_min", op=">=", threshold=1, unit="players"),
+    "shots": NumericGate(name="metric_shots_min", op=">=", threshold=1, unit="shots"),
+    "metric_values": NumericGate(name="metric_values_min", op=">=", threshold=1, unit="metrics"),
+    "habits": NumericGate(name="metric_habits_min", op=">=", threshold=1, unit="habits"),
+}
 
 
 def evaluate(root: str | Path, labels_root: str | Path) -> object:
@@ -109,7 +122,16 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         if value.gated is not None
     )
     habits = len(habit_report.habits)
-    passed = metric_players >= 1 and shots >= 1 and metric_values >= 1 and habits >= 1
+    gated = evaluate_numeric_gates(
+        {
+            "metric_players": metric_players,
+            "shots": shots,
+            "metric_values": metric_values,
+            "habits": habits,
+        },
+        METRIC_GATES,
+    )
+    passed = all(gated_metric.passed is True for gated_metric in gated.values())
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
@@ -118,16 +140,16 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         missing_label_files=[],
         missing_artifacts=[],
         metrics={
-            "metric_players": metric(value=metric_players, unit="players", gate=">= 1", passed=metric_players >= 1),
-            "shots": metric(value=shots, unit="shots", gate=">= 1", passed=shots >= 1),
-            "metric_values": metric(value=metric_values, unit="metrics", gate=">= 1", passed=metric_values >= 1),
+            "metric_players": gated["metric_players"],
+            "shots": gated["shots"],
+            "metric_values": gated["metric_values"],
             "gated_metrics": metric(
                 value=gated_metrics,
                 unit="metrics",
                 gate="recorded for later confidence gates",
                 passed=True,
             ),
-            "habits": metric(value=habits, unit="habits", gate=">= 1", passed=habits >= 1),
+            "habits": gated["habits"],
             "coverage_overall": metric(
                 value=habit_report.coverage.overall,
                 unit="ratio",

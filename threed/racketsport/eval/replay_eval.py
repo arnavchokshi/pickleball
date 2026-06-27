@@ -4,12 +4,23 @@ import argparse
 import json
 from pathlib import Path
 
-from threed.racketsport.eval.metrics import build_phase_metrics, metric, missing_artifacts, write_phase_metrics
+from threed.racketsport.eval.metrics import (
+    NumericGate,
+    build_phase_metrics,
+    evaluate_numeric_gates,
+    metric,
+    missing_artifacts,
+    write_phase_metrics,
+)
 from threed.racketsport.schemas import EvalClipResult, ReplayScene, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
 REQUIRED_REPLAY_ARTIFACTS = ["replay_scene.json"]
+REPLAY_GATES = {
+    "players": NumericGate(name="replay_players_min", op=">=", threshold=1, unit="players"),
+    "points": NumericGate(name="replay_points_min", op=">=", threshold=1, unit="points"),
+}
 
 
 def evaluate(root: str | Path, labels_root: str | Path) -> object:
@@ -102,7 +113,14 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
     player_count = len(replay_scene.players)
     point_count = len(replay_scene.points)
     largest_point_glb_mb = max((point.size_mb for point in replay_scene.points), default=0.0)
-    passed = player_count >= 1 and point_count >= 1 and not missing_glbs
+    gated = evaluate_numeric_gates(
+        {
+            "players": player_count,
+            "points": point_count,
+        },
+        REPLAY_GATES,
+    )
+    passed = all(gated_metric.passed is True for gated_metric in gated.values()) and not missing_glbs
     notes = [f"missing referenced GLB files: {', '.join(missing_glbs)}"] if missing_glbs else []
     return EvalClipResult(
         clip=clip_name,
@@ -112,8 +130,8 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         missing_label_files=[],
         missing_artifacts=[],
         metrics={
-            "players": metric(value=player_count, unit="players", gate=">= 1", passed=player_count >= 1),
-            "points": metric(value=point_count, unit="points", gate=">= 1", passed=point_count >= 1),
+            "players": gated["players"],
+            "points": gated["points"],
             "glb_files_present": metric(
                 value=len(expected_glbs) - len(missing_glbs),
                 unit="files",

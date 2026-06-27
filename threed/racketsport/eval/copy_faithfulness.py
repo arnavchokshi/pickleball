@@ -4,12 +4,23 @@ import argparse
 import json
 from pathlib import Path
 
-from threed.racketsport.eval.metrics import build_phase_metrics, metric, missing_artifacts, write_phase_metrics
+from threed.racketsport.eval.metrics import (
+    NumericGate,
+    build_phase_metrics,
+    evaluate_numeric_gates,
+    metric,
+    missing_artifacts,
+    write_phase_metrics,
+)
 from threed.racketsport.schemas import EvalClipResult, HabitReport, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
 REQUIRED_COPY_ARTIFACTS = ["habit_report.json", "coach_report.json"]
+COPY_GATES = {
+    "habit_count": NumericGate(name="copy_habit_count_min", op=">=", threshold=1, unit="habits"),
+    "coach_habit_count": NumericGate(name="copy_coach_habit_count_min", op=">=", threshold=1, unit="habits"),
+}
 
 
 def evaluate(root: str | Path, labels_root: str | Path) -> object:
@@ -101,7 +112,14 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
     habit_count = len(habit_report.habits)
     coach_habit_count = len(coach_report.habits)
     priority_habit_match = habit_report.priority_habit_id == coach_report.priority_habit_id
-    passed = habit_count >= 1 and coach_habit_count >= 1 and priority_habit_match
+    gated = evaluate_numeric_gates(
+        {
+            "habit_count": habit_count,
+            "coach_habit_count": coach_habit_count,
+        },
+        COPY_GATES,
+    )
+    passed = all(gated_metric.passed is True for gated_metric in gated.values()) and priority_habit_match
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
@@ -110,13 +128,8 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         missing_label_files=[],
         missing_artifacts=[],
         metrics={
-            "habit_count": metric(value=habit_count, unit="habits", gate=">= 1", passed=habit_count >= 1),
-            "coach_habit_count": metric(
-                value=coach_habit_count,
-                unit="habits",
-                gate=">= 1",
-                passed=coach_habit_count >= 1,
-            ),
+            "habit_count": gated["habit_count"],
+            "coach_habit_count": gated["coach_habit_count"],
             "priority_habit_match": metric(
                 value=priority_habit_match,
                 unit=None,
