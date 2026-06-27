@@ -84,21 +84,21 @@ def run_official_tracknet_predict(
 ) -> Path:
     """Run official TrackNetV3 ``predict.py`` and return its CSV path."""
 
-    repo = Path(tracknet_repo)
+    repo = Path(tracknet_repo).resolve()
     predict_py = repo / "predict.py"
     if not predict_py.is_file():
         raise FileNotFoundError(f"missing TrackNetV3 predict.py: {predict_py}")
-    video_path = Path(video)
+    video_path = Path(video).resolve()
     if not video_path.is_file():
         raise FileNotFoundError(f"missing video: {video_path}")
-    tracknet_path = Path(tracknet_file)
+    tracknet_path = Path(tracknet_file).resolve()
     if not tracknet_path.is_file():
         raise FileNotFoundError(f"missing TrackNet checkpoint: {tracknet_path}")
-    inpaintnet_path = Path(inpaintnet_file)
+    inpaintnet_path = Path(inpaintnet_file).resolve()
     if not inpaintnet_path.is_file():
         raise FileNotFoundError(f"missing InpaintNet checkpoint: {inpaintnet_path}")
 
-    save_path = Path(save_dir)
+    save_path = Path(save_dir).resolve()
     save_path.mkdir(parents=True, exist_ok=True)
     cmd = [
         sys.executable,
