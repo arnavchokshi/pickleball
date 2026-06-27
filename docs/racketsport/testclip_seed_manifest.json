@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "created_date": "2026-06-26",
+  "purpose": "Reproducible source manifest for ignored H100 DATA-1 test clips. Media lives under data/testclips/ on the H100 and is intentionally not tracked in git.",
+  "download_tool": "yt-dlp 2026.6.9 plus ffmpeg in /opt/conda/envs/fast_sam_3d_body on body4d-gcp-prod",
+  "registered_root": "/workspace/pickleball/data/testclips",
+  "clips": [
+    {
+      "name": "ppa_austin_md_qf_1200_high_baseline",
+      "url": "https://www.youtube.com/watch?v=3sC53GlvW_s",
+      "title": "Johns/Johns vs Ashlon/Navratil at the Veolia Austin Open",
+      "time_range": "00:12:00-00:13:30",
+      "verified_media": {
+        "width": 1920,
+        "height": 1080,
+        "fps": 30,
+        "duration_s": 90.005,
+        "codec": "av1"
+      },
+      "metadata": {
+        "camera_height": "high",
+        "camera_angle": "shallow_baseline",
+        "play_type": "doubles",
+        "environment": "outdoor",
+        "frame_rate_fps": 30,
+        "duration_s": 90,
+        "racket_gt": false
+      },
+      "visual_check": "Clean high baseline broadcast gameplay; all four players and court lines visible."
+    },
+    {
+      "name": "side_view_game5_0100_high_side_fence",
+      "url": "https://www.youtube.com/watch?v=R1Q8CW142Pk",
+      "title": "Pickleball 3.5 Doubles | Side View - Game 5 - Jacky/Dan vs Rex/Marielle",
+      "time_range": "00:01:00-00:02:30",
+      "verified_media": {
+        "width": 1920,
+        "height": 1080,
+        "fps": 25,
+        "duration_s": 90.12,
+        "codec": "h264"
+      },
+      "metadata": {
+        "camera_height": "high",
+        "camera_angle": "side_fence",
+        "play_type": "messy_real_world",
+        "environment": "outdoor",
+        "frame_rate_fps": 25,
+        "duration_s": 90,
+        "racket_gt": false
+      },
+      "visual_check": "Outdoor side/fence-ish static camera with adjacent courts and bystanders for messy real-world stress."
+    },
+    {
+      "name": "wolverine_mixed_0200_mid_steep_corner",
+      "url": "https://www.youtube.com/watch?v=nvig_KYBuL8",
+      "title": "4.0 Mixed Doubles Tournament at Wolverine Pickleball - 2024 Snowflake Series",
+      "time_range": "00:02:00-00:03:30",
+      "verified_media": {
+        "width": 1920,
+        "height": 1080,
+        "fps": 30,
+        "duration_s": 90.134,
+        "codec": "h264"
+      },
+      "metadata": {
+        "camera_height": "mid",
+        "camera_angle": "steep_corner",
+        "play_type": "doubles",
+        "environment": "indoor",
+        "frame_rate_fps": 30,
+        "duration_s": 90,
+        "racket_gt": false
+      },
+      "visual_check": "Indoor mid-height steep-corner style view with four players and visible court geometry."
+    },
+    {
+      "name": "gear360_0200_high_near_overhead",
+      "url": "https://www.youtube.com/watch?v=5cbhtpvhDaY",
+      "title": "Indoor Pickleball Mens 4.5 doubles highlights at the Weaver dome. Shot with a Samsung Gear 360",
+      "time_range": "00:02:00-00:03:30",
+      "verified_media": {
+        "width": 1920,
+        "height": 1080,
+        "fps": 59.94,
+        "duration_s": 90.027,
+        "codec": "h264"
+      },
+      "metadata": {
+        "camera_height": "high",
+        "camera_angle": "near_overhead",
+        "play_type": "doubles",
+        "environment": "indoor",
+        "frame_rate_fps": 60,
+        "duration_s": 90,
+        "racket_gt": false
+      },
+      "visual_check": "Indoor 360/fisheye near-overhead-ish stress clip with four players visible."
+    },
+    {
+      "name": "burlington_gold_0300_low_steep_corner",
+      "url": "https://www.youtube.com/watch?v=trIS0AZBtK0",
+      "title": "4.0 Gold Medal Match | Pickleball Doubles Tournament| Lifetime Burlington | Jacky/Dan vs Ryan/Josh",
+      "time_range": "00:03:00-00:04:30",
+      "verified_media": {
+        "width": 1920,
+        "height": 1080,
+        "fps": 59.94,
+        "duration_s": 90.07,
+        "codec": "h264"
+      },
+      "metadata": {
+        "camera_height": "low",
+        "camera_angle": "steep_corner",
+        "play_type": "doubles",
+        "environment": "indoor",
+        "frame_rate_fps": 60,
+        "duration_s": 90,
+        "racket_gt": false
+      },
+      "visual_check": "Indoor low-ish near-court steep-corner tournament view at about 60 fps."
+    }
+  ]
+}
