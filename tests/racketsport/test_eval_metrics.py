@@ -333,6 +333,21 @@ def _write_copy_artifacts(run_dir: Path) -> None:
     (run_dir / "coach_report.json").write_text(json.dumps(_habit_report_payload()), encoding="utf-8")
 
 
+def _write_replay_artifacts(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "court_pickleball.glb").write_bytes(b"glb")
+    (run_dir / "point_3.glb").write_bytes(b"glb")
+    replay_scene = {
+        "schema_version": 1,
+        "world_frame": "court_Z0",
+        "fps": 30.0,
+        "court_glb": "court_pickleball.glb",
+        "players": [1, 2],
+        "points": [{"id": 3, "t0": 31.2, "t1": 41.2, "glb_url": "point_3.glb", "size_mb": 9.4}],
+    }
+    (run_dir / "replay_scene.json").write_text(json.dumps(replay_scene), encoding="utf-8")
+
+
 def test_calib_eval_passes_when_ready_clip_has_required_artifacts(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase1"
@@ -956,3 +971,66 @@ def test_copy_faithfulness_blocks_when_coach_report_is_missing(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
     assert payload["clips"][0]["missing_artifacts"] == ["coach_report.json"]
+
+
+def test_replay_eval_passes_when_ready_clip_has_replay_scene_and_glbs(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase10"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_replay_artifacts(root / "clip_001")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.replay_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert json.loads(completed.stdout)["status"] == "pass"
+    assert payload["phase"] == "phase10"
+    assert payload["required_artifacts"] == ["replay_scene.json"]
+    assert payload["clips"][0]["metrics"]["players"]["value"] == 2
+    assert payload["clips"][0]["metrics"]["points"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["glb_files_present"]["value"] == 2
+    assert payload["clips"][0]["metrics"]["largest_point_glb_mb"]["value"] == 9.4
+    validate_artifact_file("phase_eval_metrics", root / "metrics.json")
+
+
+def test_replay_eval_fails_when_referenced_point_glb_is_missing(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase10"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_replay_artifacts(root / "clip_001")
+    (root / "clip_001" / "point_3.glb").unlink()
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.replay_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "fail"
+    assert "missing referenced GLB files" in payload["clips"][0]["notes"][0]
