@@ -94,6 +94,45 @@ def _write_tracks_artifact(run_dir: Path, *, players: int = 2) -> None:
     (run_dir / "tracks.json").write_text(json.dumps(payload), encoding="utf-8")
 
 
+def _write_body_artifacts(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    smpl_motion = {
+        "schema_version": 1,
+        "model": "smplx",
+        "fps": 60.0,
+        "world_frame": "court_Z0",
+        "players": [
+            {
+                "id": 1,
+                "betas": [0.0] * 10,
+                "skate_free": True,
+                "physics": "none",
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "global_orient": [0.0, 0.0, 0.0],
+                        "body_pose": [0.0] * 63,
+                        "left_hand_pose": [],
+                        "right_hand_pose": [],
+                        "transl_world": [0.0, 0.0, 0.0],
+                        "joints_world": [[0.0, 0.0, 0.0]],
+                        "joint_conf": [0.9],
+                        "foot_contact": {"left": True, "right": False},
+                    }
+                ],
+            }
+        ],
+    }
+    skeleton = {
+        "schema_version": 1,
+        "joint_names": ["pelvis"],
+        "preview_only": True,
+        "players": [{"id": 1, "frames": [{"t": 0.0, "joints_world": [[0.0, 0.0, 0.0]], "joint_conf": [0.9]}]}],
+    }
+    (run_dir / "smpl_motion.json").write_text(json.dumps(smpl_motion), encoding="utf-8")
+    (run_dir / "skeleton3d.json").write_text(json.dumps(skeleton), encoding="utf-8")
+
+
 def test_calib_eval_passes_when_ready_clip_has_required_artifacts(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase1"
@@ -245,3 +284,65 @@ def test_track_eval_blocks_when_tracks_artifact_is_missing(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
     assert payload["clips"][0]["missing_artifacts"] == ["tracks.json"]
+
+
+def test_body_eval_passes_when_ready_clip_has_body_artifacts(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase3"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_body_artifacts(root / "clip_001")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.body_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert json.loads(completed.stdout)["status"] == "pass"
+    assert payload["phase"] == "phase3"
+    assert payload["required_artifacts"] == ["smpl_motion.json", "skeleton3d.json"]
+    assert payload["clips"][0]["metrics"]["smpl_players"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["smpl_frames"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["skeleton_players"]["value"] == 1
+    validate_artifact_file("phase_eval_metrics", root / "metrics.json")
+
+
+def test_body_eval_blocks_when_skeleton_preview_is_missing(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase3"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_body_artifacts(root / "clip_001")
+    (root / "clip_001" / "skeleton3d.json").unlink()
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.body_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["clips"][0]["missing_artifacts"] == ["skeleton3d.json"]
