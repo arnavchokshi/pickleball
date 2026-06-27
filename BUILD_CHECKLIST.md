@@ -143,7 +143,7 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 ### CAL — Court calibration (server)
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☐ | CAL-1 | Court templates (PB/tennis) + zones (NVZ, service boxes) + net plane from regulation geometry | `court_templates.py`, `court_zones.py`, `net_plane.py` | ENV-1 | Court Calibration | | TODO |
+| ☐ | CAL-1 | Court templates (PB/tennis) + zones (NVZ, service boxes) + net plane from regulation geometry | `court_templates.py`, `court_zones.py`, `net_plane.py` | ENV-1 | Court Calibration | Codex | CLAIMED |
 | ☐ | CAL-2 | Per-clip calibration: seed from ARKit sidecar → solvePnP (6-DoF) + multi-frame averaging + reprojection gate; manual-tap fallback; capture-quality score | `court_calibration.py`, `intrinsics.py` | CAL-1, IOS-2 | Court Calibration | | TODO |
 | ☐ | CAL-3 | (Phase-2) Train auto court-keypoint net (fine-tune TennisCourtDetector + synthetic viewpoints) | `court_keypoint_net.py` | CAL-2, DATA-1 | Court Calibration | | TODO |
 
