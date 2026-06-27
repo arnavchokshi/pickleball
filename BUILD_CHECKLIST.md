@@ -127,7 +127,7 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 |---|----|------|------|------|-------|-------|--------|
 | ☑ | ENV-1 | Server env, deps, repo scaffolding under `threed/racketsport/`, `models/MANIFEST.json` | repo skeleton, env files | — | Phase 0 | Codex | DONE |
 | ☐ | ENV-2 | Fetch + checksum model checkpoints (incl. verify-before-commit flags + fallbacks) | `models/` | ENV-1 | Phase 0 | Codex | IN-PROGRESS |
-| ☐ | ENV-3 | iOS Xcode project scaffolding (`ios/`), Swift package layout | `ios/` | — | Phase 0 | | TODO |
+| ☐ | ENV-3 | iOS Xcode project scaffolding (`ios/`), Swift package layout | `ios/` | — | Phase 0 | Codex | CLAIMED |
 | ☐ | ENV-4 | NvDEC ingest + clip QC + capture-quality scoring (server) | `ingest.py` | ENV-1 | Phase 0 | Codex | IN-PROGRESS |
 
 ### IOS — iOS client (capture, calibration, fast tier, viewer)
