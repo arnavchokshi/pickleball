@@ -1,0 +1,137 @@
+from __future__ import annotations
+
+import pytest
+
+from threed.racketsport import event_fusion
+from threed.racketsport.schemas import ContactWindows
+
+
+def _fusion_api():
+    fuse_contact_windows = getattr(event_fusion, "fuse_contact_windows", None)
+    wrist_velocity_peak = getattr(event_fusion, "WristVelocityPeak", None)
+    ball_inflection_candidate = getattr(event_fusion, "BallInflectionCandidate", None)
+    assert callable(fuse_contact_windows)
+    assert callable(wrist_velocity_peak)
+    assert callable(ball_inflection_candidate)
+    return fuse_contact_windows, wrist_velocity_peak, ball_inflection_candidate
+
+
+def test_fuse_contact_windows_requires_audio_wrist_and_ball_sources_for_schema_event() -> None:
+    fuse_contact_windows, WristVelocityPeak, BallInflectionCandidate = _fusion_api()
+
+    fused = fuse_contact_windows(
+        fps=120.0,
+        audio_onsets=[{"time_s": 1.000, "score": 0.90}],
+        wrist_velocity_peaks=[
+            WristVelocityPeak(
+                time_s=1.015,
+                player_id=7,
+                wrist_world_xyz=(1.05, 0.05, 0.90),
+                speed_mps=7.5,
+                confidence=0.80,
+            )
+        ],
+        ball_inflections=[
+            BallInflectionCandidate(
+                time_s=0.990,
+                ball_world_xyz=(1.00, 0.00, 0.88),
+                confidence=0.70,
+            )
+        ],
+        pre_s=0.040,
+        post_s=0.060,
+    )
+
+    assert fused == {
+        "schema_version": 1,
+        "events": [
+            {
+                "type": "contact",
+                "t": pytest.approx(1.0025),
+                "frame": 120,
+                "player_id": 7,
+                "confidence": pytest.approx(0.80),
+                "sources": {"audio": 0.90, "wrist_vel": 0.80, "ball_inflection": 0.70},
+                "window": {"t0": pytest.approx(0.9625), "t1": pytest.approx(1.0625), "importance": 0.80},
+            }
+        ],
+    }
+    ContactWindows.model_validate(fused)
+
+
+def test_fuse_contact_windows_attributes_player_by_nearest_wrist_to_ball_position() -> None:
+    fuse_contact_windows, WristVelocityPeak, BallInflectionCandidate = _fusion_api()
+
+    fused = fuse_contact_windows(
+        fps=60.0,
+        audio_onsets=[{"time_s": 2.000, "score": 0.85}],
+        wrist_velocity_peaks=[
+            WristVelocityPeak(
+                time_s=2.010,
+                player_id=1,
+                wrist_world_xyz=(0.0, 0.0, 1.0),
+                speed_mps=5.0,
+                confidence=0.90,
+            ),
+            WristVelocityPeak(
+                time_s=1.990,
+                player_id=2,
+                wrist_world_xyz=(3.02, 0.02, 1.1),
+                speed_mps=6.0,
+                confidence=0.70,
+            ),
+        ],
+        ball_inflections=[
+            BallInflectionCandidate(
+                time_s=2.005,
+                ball_world_xyz=(3.0, 0.0, 1.08),
+                confidence=0.95,
+            )
+        ],
+        max_time_delta_s=0.030,
+    )
+
+    event = fused["events"][0]
+
+    assert event["player_id"] == 2
+    assert event["sources"] == {"audio": 0.85, "wrist_vel": 0.70, "ball_inflection": 0.95}
+
+
+def test_fuse_contact_windows_omits_events_when_required_sources_are_missing() -> None:
+    fuse_contact_windows, WristVelocityPeak, BallInflectionCandidate = _fusion_api()
+
+    assert fuse_contact_windows(
+        fps=120.0,
+        audio_onsets=[{"time_s": 1.0, "score": 0.9}],
+        wrist_velocity_peaks=[
+            WristVelocityPeak(
+                time_s=1.0,
+                player_id=1,
+                wrist_world_xyz=(0.0, 0.0, 1.0),
+                speed_mps=5.0,
+                confidence=0.8,
+            )
+        ],
+        ball_inflections=[],
+    ) == {"schema_version": 1, "events": []}
+
+    assert fuse_contact_windows(
+        fps=120.0,
+        audio_onsets=[],
+        wrist_velocity_peaks=[
+            WristVelocityPeak(
+                time_s=1.0,
+                player_id=1,
+                wrist_world_xyz=(0.0, 0.0, 1.0),
+                speed_mps=5.0,
+                confidence=0.8,
+            )
+        ],
+        ball_inflections=[
+            BallInflectionCandidate(
+                time_s=1.0,
+                ball_world_xyz=(0.0, 0.0, 1.0),
+                confidence=0.7,
+            )
+        ],
+    ) == {"schema_version": 1, "events": []}
