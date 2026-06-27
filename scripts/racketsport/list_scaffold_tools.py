@@ -1,0 +1,292 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+from collections import Counter
+from pathlib import Path
+from typing import Any
+
+
+SCRIPT_ROOT = Path("scripts/racketsport")
+TEST_ROOT = Path("tests/racketsport")
+SCHEMA_ROOT = Path("docs/racketsport")
+
+PREFIXES = (
+    "audit_",
+    "benchmark_",
+    "build_",
+    "check_",
+    "extract_",
+    "init_",
+    "materialize_",
+    "register_",
+    "render_",
+    "report_",
+    "smoke_",
+    "summarize_",
+    "validate_",
+)
+
+TEST_OVERRIDES = {
+    "audit_label_drafts": "test_label_draft_audit.py",
+    "benchmark_decode": "test_decode_benchmark_summary.py",
+    "benchmark_sam3dbody": "test_benchmark_sam3dbody.py",
+    "build_eval0_index": "test_eval0_index.py",
+    "build_report_artifacts": "test_report_artifacts.py",
+    "build_serving_manifest": "test_serving_manifest.py",
+    "build_variant_comparison": "test_variant_comparison.py",
+    "calibrate": "test_court_calibration.py",
+    "check_eval_regression": "test_eval_regression.py",
+    "build_corrections_queue": "test_corrections.py",
+    "extract_label_frames": "test_label_workdir.py",
+    "finetune_pose": "test_finetune_pose_scaffold.py",
+    "init_label_workdir": "test_label_workdir.py",
+    "manifest_report": "test_manifest_report.py",
+    "materialize_seed_manifest": "test_seed_manifest_materializer.py",
+    "render_calibration_overlay": "test_calibration_overlay.py",
+    "report_testclip_coverage": "test_testclip_coverage_report.py",
+    "smoke_models": "test_smoke_models.py",
+    "summarize_decode_benchmarks": "test_decode_benchmark_summary.py",
+    "track": "test_track_cli.py",
+    "validate_ball_audio_dataset": "test_ball_audio_dataset.py",
+    "validate_corrections": "test_corrections.py",
+    "validate_pipeline_artifacts": "test_pipeline_contracts.py",
+    "validate_pose_dataset": "test_pose_dataset.py",
+    "validate_racket_dataset": "test_racket_dataset.py",
+    "validate_shot_dataset": "test_shot_dataset.py",
+    "validate_testclips": "test_testclips.py",
+}
+
+SCHEMA_OVERRIDES = {
+    "audit_label_drafts": "label_draft_audit_schema.json",
+    "build_eval0_index": "eval0_index_schema.json",
+    "build_report_artifacts": "report_artifacts_schema.json",
+    "build_serving_manifest": "serving_manifest_schema.json",
+    "build_variant_comparison": "eval0_index_schema.json",
+    "summarize_eval_runs": "eval_summary_schema.json",
+    "validate_ball_audio_dataset": "ball_audio_dataset_schema.json",
+    "validate_pipeline_artifacts": "pipeline_contracts_schema.json",
+    "validate_pose_dataset": "pose_dataset_schema.json",
+    "validate_racket_dataset": "racket_dataset_schema.json",
+    "validate_shot_dataset": "shot_dataset_schema.json",
+}
+
+TASK_HINTS = {
+    "audit_label_drafts": ("DATA", "DATA-1"),
+    "benchmark_decode": ("EVAL", "EVAL-0"),
+    "benchmark_sam3dbody": ("EVAL", "EVAL-0"),
+    "build_corrections_queue": ("RPT", "RPT-1"),
+    "build_eval0_index": ("EVAL", "EVAL-0"),
+    "build_report_artifacts": ("RPT", "RPT-1"),
+    "build_serving_manifest": ("RPT", "RPT-1"),
+    "build_variant_comparison": ("EVAL", "EVAL-0"),
+    "calibrate": ("CAL", "CAL-2"),
+    "check_eval_regression": ("EVAL", "EVAL-1"),
+    "extract_label_frames": ("DATA", "DATA-1"),
+    "finetune_pose": ("BODY", "BODY-4"),
+    "ingest_testclips": ("DATA", "DATA-1"),
+    "init_label_workdir": ("DATA", "DATA-1"),
+    "manifest_report": ("RPT", "RPT-1"),
+    "materialize_seed_manifest": ("DATA", "DATA-1"),
+    "register_testclip": ("DATA", "DATA-1"),
+    "register_testclips_manifest": ("DATA", "DATA-1"),
+    "render_calibration_overlay": ("CAL", "CAL-2"),
+    "report_testclip_coverage": ("DATA", "DATA-1"),
+    "smoke_models": ("ENV", "ENV-2"),
+    "smoke_mujoco_mjx": ("ENV", "ENV-1"),
+    "summarize_decode_benchmarks": ("EVAL", "EVAL-0"),
+    "summarize_eval_runs": ("EVAL", "EVAL-1"),
+    "track": ("TRK", "TRK-1"),
+    "validate_ball_audio_dataset": ("DATA", "DATA-3"),
+    "validate_corrections": ("RPT", "RPT-1"),
+    "validate_pipeline_artifacts": ("EVAL", "EVAL-1"),
+    "validate_pose_dataset": ("DATA", "DATA-2"),
+    "validate_racket_dataset": ("DATA", "DATA-4"),
+    "validate_shot_dataset": ("DATA", "DATA-5"),
+    "validate_testclips": ("DATA", "DATA-1"),
+}
+
+
+def build_scaffold_tool_index(root: Path) -> dict[str, Any]:
+    root = root.resolve()
+    _validate_root(root)
+    scripts_root = root / SCRIPT_ROOT
+    tests_root = root / TEST_ROOT
+    schemas_root = root / SCHEMA_ROOT
+
+    script_paths = sorted(scripts_root.glob("*.py"))
+    tools = [
+        _tool_entry(path, root=root, tests_root=tests_root, schemas_root=schemas_root)
+        for path in script_paths
+    ]
+    category_counts = Counter(tool["category"] for tool in tools)
+
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_scaffold_tool_index",
+        "scripts_root": SCRIPT_ROOT.as_posix(),
+        "tests_root": TEST_ROOT.as_posix(),
+        "schema_root": SCHEMA_ROOT.as_posix(),
+        "execution": {
+            "cpu_only": True,
+            "runs_scaffold_commands": False,
+            "uses_gpu": False,
+            "downloads": False,
+            "mutates_repo": False,
+            "claims_build_or_eval_status": False,
+        },
+        "summary": {
+            "tool_count": len(tools),
+            "with_matching_tests": sum(1 for tool in tools if tool["matching_test"] is not None),
+            "missing_matching_tests": sum(1 for tool in tools if tool["matching_test"] is None),
+            "with_matching_schemas": sum(1 for tool in tools if tool["matching_schema"] is not None),
+            "missing_matching_schemas": sum(1 for tool in tools if tool["matching_schema"] is None),
+            "category_counts": dict(sorted(category_counts.items())),
+        },
+        "tools": tools,
+    }
+
+
+def _validate_root(root: Path) -> None:
+    if not root.exists():
+        raise ValueError(f"root does not exist: {root}")
+    if not root.is_dir():
+        raise ValueError(f"root is not a directory: {root}")
+    scripts_root = root / SCRIPT_ROOT
+    if not scripts_root.is_dir():
+        raise ValueError(f"scripts root does not exist: {scripts_root}")
+
+
+def _tool_entry(path: Path, *, root: Path, tests_root: Path, schemas_root: Path) -> dict[str, Any]:
+    stem = path.stem
+    workstream, task_prefix = TASK_HINTS.get(stem, _guess_task(stem))
+    return {
+        "command_path": _relative_posix(path, root=root),
+        "stem": stem,
+        "category": _category(stem),
+        "workstream": workstream,
+        "task_prefix": task_prefix,
+        "matching_test": _matching_test(stem, tests_root=tests_root, root=root),
+        "matching_schema": _matching_schema(stem, schemas_root=schemas_root, root=root),
+    }
+
+
+def _category(stem: str) -> str:
+    if "decode" in stem:
+        return "decode"
+    if "serving" in stem:
+        return "serving"
+    if "replay" in stem:
+        return "replay"
+    if "label" in stem:
+        return "label"
+    if "dataset" in stem or "testclip" in stem or "seed_manifest" in stem:
+        return "dataset"
+    if "eval" in stem or "variant_comparison" in stem or stem.startswith("benchmark_"):
+        return "eval"
+    if "model" in stem or "sam3dbody" in stem or "finetune" in stem:
+        return "model"
+    if "report" in stem or "corrections" in stem:
+        return "report"
+    if "calibrat" in stem or stem == "calibrate":
+        return "calibration"
+    if "track" in stem:
+        return "tracking"
+    return "unknown"
+
+
+def _guess_task(stem: str) -> tuple[str | None, str | None]:
+    category = _category(stem)
+    if category == "dataset":
+        return "DATA", None
+    if category == "eval":
+        return "EVAL", None
+    if category == "model":
+        return "BODY", None
+    if category == "report":
+        return "RPT", None
+    if category == "serving":
+        return "RPT", None
+    if category == "replay":
+        return "RPL", None
+    if category == "calibration":
+        return "CAL", None
+    if category == "tracking":
+        return "TRK", None
+    return None, None
+
+
+def _matching_test(stem: str, *, tests_root: Path, root: Path) -> str | None:
+    candidates = []
+    override = TEST_OVERRIDES.get(stem)
+    if override is not None:
+        candidates.append(override)
+    candidates.extend(f"test_{candidate}.py" for candidate in _stem_candidates(stem))
+    return _first_existing(candidates, directory=tests_root, root=root)
+
+
+def _matching_schema(stem: str, *, schemas_root: Path, root: Path) -> str | None:
+    candidates = []
+    override = SCHEMA_OVERRIDES.get(stem)
+    if override is not None:
+        candidates.append(override)
+    candidates.extend(f"{candidate}_schema.json" for candidate in _stem_candidates(stem))
+    return _first_existing(candidates, directory=schemas_root, root=root)
+
+
+def _stem_candidates(stem: str) -> list[str]:
+    candidates = [stem]
+    for prefix in PREFIXES:
+        if stem.startswith(prefix):
+            candidates.append(stem.removeprefix(prefix))
+    if stem.endswith("_benchmarks"):
+        candidates.append(stem.removesuffix("s"))
+    if stem.endswith("_artifacts"):
+        candidates.append(stem)
+        candidates.append(stem.removesuffix("_artifacts"))
+    if stem.endswith("_manifest"):
+        candidates.append(stem.removesuffix("_manifest"))
+    return _dedupe(candidates)
+
+
+def _first_existing(names: list[str], *, directory: Path, root: Path) -> str | None:
+    for name in names:
+        path = directory / name
+        if path.is_file():
+            return _relative_posix(path, root=root)
+    return None
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for value in values:
+        if value not in seen:
+            seen.add(value)
+            unique.append(value)
+    return unique
+
+
+def _relative_posix(path: Path, *, root: Path) -> str:
+    return path.relative_to(root).as_posix()
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="List racketsport scaffold CLIs and their local test/schema coverage gaps."
+    )
+    parser.add_argument("--root", type=Path, default=Path("."), help="Repository root to inspect.")
+    args = parser.parse_args()
+
+    try:
+        report = build_scaffold_tool_index(args.root)
+    except ValueError as exc:
+        parser.exit(2, f"{parser.prog}: error: {exc}\n")
+
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

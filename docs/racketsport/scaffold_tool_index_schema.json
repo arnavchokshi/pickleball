@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sway.body/racketsport/scaffold_tool_index_schema.json",
+  "title": "Racketsport scaffold tool index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "scripts_root",
+    "tests_root",
+    "schema_root",
+    "execution",
+    "summary",
+    "tools"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "artifact_type": {
+      "const": "racketsport_scaffold_tool_index"
+    },
+    "scripts_root": {
+      "const": "scripts/racketsport"
+    },
+    "tests_root": {
+      "const": "tests/racketsport"
+    },
+    "schema_root": {
+      "const": "docs/racketsport"
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpu_only",
+        "runs_scaffold_commands",
+        "uses_gpu",
+        "downloads",
+        "mutates_repo",
+        "claims_build_or_eval_status"
+      ],
+      "properties": {
+        "cpu_only": {
+          "const": true
+        },
+        "runs_scaffold_commands": {
+          "const": false
+        },
+        "uses_gpu": {
+          "const": false
+        },
+        "downloads": {
+          "const": false
+        },
+        "mutates_repo": {
+          "const": false
+        },
+        "claims_build_or_eval_status": {
+          "const": false
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool_count",
+        "with_matching_tests",
+        "missing_matching_tests",
+        "with_matching_schemas",
+        "missing_matching_schemas",
+        "category_counts"
+      ],
+      "properties": {
+        "tool_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "with_matching_tests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_matching_tests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "with_matching_schemas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_matching_schemas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "category_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "command_path",
+          "stem",
+          "category",
+          "workstream",
+          "task_prefix",
+          "matching_test",
+          "matching_schema"
+        ],
+        "properties": {
+          "command_path": {
+            "type": "string",
+            "pattern": "^scripts/racketsport/.+\\.py$"
+          },
+          "stem": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1
+          },
+          "workstream": {
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "task_prefix": {
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "matching_test": {
+            "type": ["string", "null"],
+            "pattern": "^tests/racketsport/test_.+\\.py$"
+          },
+          "matching_schema": {
+            "type": ["string", "null"],
+            "pattern": "^docs/racketsport/.+_schema\\.json$"
+          }
+        }
+      }
+    }
+  }
+}
