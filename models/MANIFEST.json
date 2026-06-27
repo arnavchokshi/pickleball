@@ -78,18 +78,27 @@
       "source": "https://docs.ultralytics.com/models/yolo26/",
       "license": "AGPL-3.0",
       "commercial_posture": "agpl_caveat",
-      "status": "pending_download",
-      "fallbacks": ["yolo11m", "rf_detr_l", "rtmdet"]
+      "status": "available_on_h100",
+      "local_path": "/workspace/checkpoints/body4d/yolo26/yolo26m.pt",
+      "sha256": "401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7",
+      "fallbacks": ["yolo11m", "rf_detr_l", "rtmdet"],
+      "notes": [
+        "Downloaded through ultralytics YOLO('yolo26m.pt') on the H100 into /workspace/checkpoints/body4d/yolo26.",
+        "AGPL posture is accepted for research/personal use now; use an Apache detector fallback before commercialization if needed."
+      ]
     },
     {
       "id": "rtmw_l_384",
       "stage": "2d_pose",
       "use": "Server whole-body pose candidate",
-      "source": "https://mmpose.readthedocs.io/",
+      "source": "https://mmpose.readthedocs.io/ and https://download.openmmlab.com/mmpose/v1/projects/rtmw/rtmw-dw-x-l_simcc-cocktail14_270e-384x288-20231122.pth",
       "license": "Apache-2.0",
       "commercial_posture": "ok",
-      "status": "pending_download",
-      "fallbacks": ["rtmpose_x", "rtmpose_m_384"]
+      "status": "available_on_h100",
+      "local_path": "/workspace/checkpoints/body4d/rtmw/rtmw-l_384x288.pth",
+      "sha256": "afa589fa16bf8b9bab0807c806538a43bead39ed0151b79f41adcf551e3bcfb0",
+      "fallbacks": ["rtmpose_x", "rtmpose_m_384"],
+      "notes": ["MMPose model-zoo row is RTMW-l cocktail14 384x288."]
     },
     {
       "id": "tracknetv3",
@@ -98,18 +107,40 @@
       "source": "https://github.com/qaz812345/TrackNetV3",
       "license": "MIT",
       "commercial_posture": "ok",
-      "status": "pending_download",
-      "fallbacks": ["manual_tap_track"]
+      "status": "available_on_h100",
+      "local_path": "/workspace/checkpoints/body4d/tracknetv3/ckpts/TrackNet_best.pt",
+      "sha256": "df867641a02712b021f04548ff4b1208ddfdb47f629ab2094ceb978667e83b1a",
+      "fallbacks": ["manual_tap_track"],
+      "notes": [
+        "Downloaded from the official README's Google Drive checkpoint id 1CfzE87a0f6LhBp0kniSl1-89zaLCZ8cA and extracted on the H100.",
+        "Original downloaded zip sha256 is 8de68d34ea2457e368e22947f1309143d60a6a7f9ddccd31cd526d4c4571bcc4."
+      ]
+    },
+    {
+      "id": "tracknetv3_inpaintnet",
+      "stage": "ball_tracking",
+      "use": "TrackNetV3 trajectory rectification/inpainting companion checkpoint",
+      "source": "https://github.com/qaz812345/TrackNetV3",
+      "license": "MIT",
+      "commercial_posture": "ok",
+      "status": "available_on_h100",
+      "local_path": "/workspace/checkpoints/body4d/tracknetv3/ckpts/InpaintNet_best.pt",
+      "sha256": "5749b66b8002f3ad9e0af841604004706fc796df30599e6bf01952696009688c",
+      "fallbacks": ["manual_tap_track"],
+      "notes": ["Extracted from the same official TrackNetV3 checkpoint package as TrackNet_best.pt."]
     },
     {
       "id": "sat_hmr",
       "stage": "fast_mesh_preview",
       "use": "Fast-tier camera-space mesh and license-safe body fallback candidate",
-      "source": "SAT-HMR upstream checkpoint sat_644_3dpw.pth",
+      "source": "https://huggingface.co/ChiSu001/SAT-HMR/blob/main/weights/sat_hmr/sat_644_3dpw.pth",
       "license": "Apache-2.0 per docs; verify upstream before use",
       "commercial_posture": "ok",
-      "status": "pending_download",
-      "fallbacks": ["hmr2", "fast_sam_3d_body_dinov3"]
+      "status": "available_on_h100",
+      "local_path": "/workspace/checkpoints/body4d/sat-hmr/weights/sat_hmr/sat_644_3dpw.pth",
+      "sha256": "7e1b5e80a967c8f4e1e273156e5272b2a3413caf079c2bc0a038e90c6a0b6dec",
+      "fallbacks": ["hmr2", "fast_sam_3d_body_dinov3"],
+      "notes": ["Downloaded with huggingface_hub from official ChiSu001/SAT-HMR repo."]
     },
     {
       "id": "mujoco_mjx",
