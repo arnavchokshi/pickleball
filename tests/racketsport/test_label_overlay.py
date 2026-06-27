@@ -237,6 +237,32 @@ def test_frame_pack_only_renders_without_decoding_source_video(tmp_path: Path, m
     assert fake_cv2.writers[0].fps == pytest.approx(2.0)
 
 
+def test_frame_pack_resolves_repo_relative_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    labels = tmp_path / "runs" / "eval0" / "prototype_gate" / "candidate_001" / "labels"
+    frame_dir = tmp_path / "runs" / "label_frames" / "candidate_001"
+    frame_paths = _write_frame_pack_label(labels, frame_dir)
+    label_path = labels / "court_corners.json"
+    payload = json.loads(label_path.read_text(encoding="utf-8"))
+    payload["frames"]["manifest_path"] = "runs/label_frames/candidate_001/label_frame_manifest.json"
+    for frame in payload["frames"]["frames"]:
+        frame["path"] = f"runs/label_frames/candidate_001/{frame['name']}"
+    label_path.write_text(json.dumps(payload), encoding="utf-8")
+    fake_cv2 = _FakeCv2({Path(f"runs/label_frames/candidate_001/{path.name}") for path in frame_paths})
+    monkeypatch.setattr("threed.racketsport.label_overlay._cv2", lambda: fake_cv2)
+
+    summary = render_label_overlays(
+        video_path=tmp_path / "missing_long_source.mp4",
+        draft_label_dir=labels,
+        output_root=tmp_path / "runs",
+        clip_name="candidate_001",
+        frame_pack_only=True,
+    )
+
+    assert summary["frame_count"] == 3
+    assert fake_cv2.writers[0].fps == pytest.approx(2.0)
+
+
 def test_prototype_gate_uses_source_clips_fallback_for_frame_pack_only_render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

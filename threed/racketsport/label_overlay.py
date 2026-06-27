@@ -294,7 +294,7 @@ def _frame_pack_metadata(frames: dict[str, Any], labels_dir: Path) -> tuple[dict
     if manifest_path_value:
         manifest_path = Path(str(manifest_path_value))
         if not manifest_path.is_absolute():
-            manifest_path = labels_dir / manifest_path
+            manifest_path = manifest_path if manifest_path.is_file() else labels_dir / manifest_path
         if manifest_path.is_file():
             base_dir = manifest_path.parent
             try:
@@ -315,6 +315,8 @@ def _frame_path_value(frame: Any) -> Any:
 def _resolve_frame_path(value: Any, base_dir: Path) -> Path:
     path = Path(str(value))
     if path.is_absolute():
+        return path
+    if path.is_file():
         return path
     return base_dir / path
 
