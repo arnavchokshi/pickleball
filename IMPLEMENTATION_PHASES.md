@@ -314,7 +314,7 @@ python scripts/racketsport/smoke_models.py --manifest models/MANIFEST.json   # l
 **Test procedure:**
 ```bash
 python scripts/racketsport/calibrate.py --clip data/testclips/<clip> --taps labels/court_corners.json --out runs/phase1/<clip> --overlay
-python -m racketsport.eval.calib_eval --root runs/phase1 --labels data/testclips --out runs/phase1/metrics.json
+python -m threed.racketsport.eval.calib_eval --root runs/phase1 --labels data/testclips --out runs/phase1/metrics.json
 ```
 Measure per clip, **bucketed by camera height × angle**: median/p95 reprojection (px + ft), overlay IoU, recovered-height plausibility, drift stability on long clips.
 
@@ -354,7 +354,7 @@ Measure per clip, **bucketed by camera height × angle**: median/p95 reprojectio
 **Test procedure:**
 ```bash
 python scripts/racketsport/track.py --clip data/testclips/<clip> --calib runs/phase1/<clip>/court_calibration.json --players 4 --out runs/phase2/<clip> --overlay
-python -m racketsport.eval.track_eval --root runs/phase2 --labels data/testclips --out runs/phase2/metrics.json
+python -m threed.racketsport.eval.track_eval --root runs/phase2 --labels data/testclips --out runs/phase2/metrics.json
 python scripts/racketsport/track.py --clip data/testclips/<20min_clip> --benchmark --out runs/phase2/bench
 ```
 Measure: IDF1 / ID-switches vs `players.json`; spectator rejection; side/role accuracy; swap-recovery latency; throughput; the same-color-partners clip.
@@ -404,7 +404,7 @@ Measure: IDF1 / ID-switches vs `players.json`; spectator rejection; side/role ac
 ```bash
 python scripts/racketsport/finetune_pose.py --order bedlam2,athletepose3d,caltennis,rich,amass --out models/finetuned
 python scripts/racketsport/body3d.py --clip <clip> --tracks runs/phase2/<clip>/tracks.json --calib runs/phase1/<clip>/court_calibration.json --out runs/phase3/<clip>
-python -m racketsport.eval.body_eval --root runs/phase3 --labels data/testclips --out runs/phase3/metrics.json
+python -m threed.racketsport.eval.body_eval --root runs/phase3 --labels data/testclips --out runs/phase3/metrics.json
 ```
 Measure: **world MPJPE on EMDB2 + CalTennis**; per-frame MPJPE on racket-motion val; foot/NVZ agreement vs `feet_nvz.json`; knee/elbow angle error + X-factor vs `manual_metrics.json`; spacing error; FPS (fast vs deep).
 **Velocity/kinematics (conflict RESOLVED — `ACCURACY_AND_TRAINING.md §5b`):** R²0.96 = ball-speed model from 2D in-plane speed; r0.11–0.28 = derivative of noisy lifted-3D. `velocity.py` computes the reliable way: **project wrist/ankle through court homography to metric world plane (Type D)** → RTS/Kalman → central difference → zero-phase Butterworth `filtfilt` (6 Hz body/timing, 8–10 Hz swing) or Savitzky-Golay (order 2, win 9); One-Euro (β≈0.007) real-time. **Never** contact-frame peak from pose (use the ball). Run Protocols A (ball-speed GT: r≥0.70 Tier-1 / r≥0.55 Tier-2), B (timing: MAE ≤2 frames), C (240→120/60 downsample: peak underestimate ≤15%, r≥0.90).
@@ -446,7 +446,7 @@ Measure: **world MPJPE on EMDB2 + CalTennis**; per-frame MPJPE on racket-motion 
 ```bash
 python scripts/racketsport/footlock.py --motion runs/phase3/<clip>/smpl_motion.json --calib runs/phase1/<clip>/court_calibration.json --out runs/phase4/<clip>
 python scripts/racketsport/physics_refine.py --motion runs/phase4/<clip>/smpl_motion.json --mode physpt --out runs/phase4/<clip>
-python -m racketsport.eval.physics_eval --root runs/phase4 --labels data/testclips --out runs/phase4/metrics.json
+python -m threed.racketsport.eval.physics_eval --root runs/phase4 --labels data/testclips --out runs/phase4/metrics.json
 ```
 Measure: **foot-slide** (stance-foot world displacement during detected contact) vs `foot_contact.json`; floor-penetration (min foot-vertex Z); inter-player penetration (mesh intersection); acceleration jitter; contact-detection precision/recall.
 
@@ -483,7 +483,7 @@ Measure: **foot-slide** (stance-foot world displacement during detected contact)
 python scripts/racketsport/train_tracknet.py --init models/tracknet_badminton.pth --data data/pb_ball --out models/finetuned/tracknet.pth
 python scripts/racketsport/train_audio_pop.py --data data/pb_audio --out models/finetuned/audio_pop.pt
 python scripts/racketsport/ball_events.py --clip <clip> --motion runs/phase3/<clip>/smpl_motion.json --calib runs/phase1/<clip>/court_calibration.json --out runs/phase5/<clip>
-python -m racketsport.eval.ball_event_eval --root runs/phase5 --labels data/testclips --out runs/phase5/metrics.json
+python -m threed.racketsport.eval.ball_event_eval --root runs/phase5 --labels data/testclips --out runs/phase5/metrics.json
 ```
 Measure: ball P/R/F1 vs `ball.json` (incl. blur/occlusion subset); false positives; contact-timing vs `events.json` (60 fps clips); bounce/net accuracy; 3D-trajectory physics-fit residual.
 
@@ -522,7 +522,7 @@ Measure: ball P/R/F1 vs `ball.json` (incl. blur/occlusion subset); false positiv
 ```bash
 python scripts/racketsport/train_racket_kpt.py --data data/racket_kpt --synth data/racket_synth --out models/finetuned/racket_kpt.pth
 python scripts/racketsport/racket6dof.py --clip <clip> --motion runs/phase3/<clip>/smpl_motion.json --ball runs/phase5/<clip>/ball_track.json --calib runs/phase1/<clip>/court_calibration.json --out runs/phase6/<clip>
-python -m racketsport.eval.racket_eval --root runs/phase6 --labels data/testclips --out runs/phase6/metrics.json   # vs ArUco-GT clips
+python -m threed.racketsport.eval.racket_eval --root runs/phase6 --labels data/testclips --out runs/phase6/metrics.json   # vs ArUco-GT clips
 ```
 Measure: face-angle error vs `racket_pose.json` (ArUco GT); contact-point-on-face error; 6DoF tracking continuity through swings (≥120 fps clips); occlusion recovery.
 
@@ -552,7 +552,7 @@ Measure: face-angle error vs `racket_pose.json` (ArUco GT); contact-point-on-fac
 **Test procedure:**
 ```bash
 python scripts/racketsport/metrics.py --clip <clip> --motion runs/phase4/<clip>/smpl_motion.json --racket runs/phase6/<clip>/racket_pose.json --events runs/phase5/<clip>/contact_windows.json --zones runs/phase1/<clip>/court_zones.json --out runs/phase7/<clip>
-python -m racketsport.eval.metric_eval --root runs/phase7 --labels data/testclips --out runs/phase7/metrics.json
+python -m threed.racketsport.eval.metric_eval --root runs/phase7 --labels data/testclips --out runs/phase7/metrics.json
 ```
 Measure: metric accuracy vs `manual_metrics.json`; rule-flag agreement vs `coach_habits.json`; confidence calibration; confirm gated metrics never surfaced.
 
@@ -585,7 +585,7 @@ Measure: metric accuracy vs `manual_metrics.json`; rule-flag agreement vs `coach
 python scripts/racketsport/train_shots.py --data data/pb_shots --out models/finetuned/shot_bst.pth
 python scripts/racketsport/shots.py --clip <clip> ... --out runs/phase8/<clip>
 python scripts/racketsport/drill.py --clip <drill_clip> ... --out runs/phase8/<clip>
-python -m racketsport.eval.shot_drill_eval --root runs/phase8 --labels data/testclips --out runs/phase8/metrics.json
+python -m threed.racketsport.eval.shot_drill_eval --root runs/phase8 --labels data/testclips --out runs/phase8/metrics.json
 ```
 Measure: shot-class macro-F1 + top-2 accuracy; rep-count error vs manual.
 
@@ -619,7 +619,7 @@ Measure: shot-class macro-F1 + top-2 accuracy; rep-count error vs manual.
 **Test procedure:**
 ```bash
 python scripts/racketsport/report.py --clip <clip> --metrics runs/phase7/<clip> --out runs/phase9/<clip>
-python -m racketsport.eval.copy_faithfulness --root runs/phase9 --out runs/phase9/metrics.json
+python -m threed.racketsport.eval.copy_faithfulness --root runs/phase9 --labels data/testclips --out runs/phase9/metrics.json
 # coach usefulness: 5 reports → 5 coaches, record Y/N "would you use this in a lesson"
 ```
 Measure: LLM-copy faithfulness (no invented facts); fast-tier latency; coach usefulness.
@@ -658,7 +658,7 @@ Measure: LLM-copy faithfulness (no invented facts); fast-tier latency; coach use
 python scripts/racketsport/replay_export.py --motion runs/phase4/<clip>/smpl_motion.json --ball runs/phase5/<clip>/ball_track.json --racket runs/phase6/<clip>/racket_pose.json --calib runs/phase1/<clip>/court_calibration.json --out runs/phase10/<clip>
 npx @gltf-transform/cli inspect runs/phase10/<clip>/point_3.glb
 # serve web/replay locally and load the GLB
-python -m racketsport.eval.replay_eval --root runs/phase10 --out runs/phase10/metrics.json
+python -m threed.racketsport.eval.replay_eval --root runs/phase10 --labels data/testclips --out runs/phase10/metrics.json
 ```
 Measure: GLB size per rally; viewer cold-load time; free-viewpoint works; foot-skate/penetration visible in-render (regression vs Phase 4 numbers); coach "looks right" review.
 
@@ -685,8 +685,8 @@ Measure: GLB size per rally; viewer cold-load time; free-viewpoint works; foot-s
 
 **Test procedure:**
 ```bash
-python -m racketsport.orchestrator --clip data/testclips/<20min_clip> --players 4 --out runs/phase11/<clip> --full
-python -m racketsport.eval.e2e_eval --root runs/phase11 --labels data/testclips --out runs/phase11/metrics.json
+python -m threed.racketsport.orchestrator --clip data/testclips/<20min_clip> --players 4 --out runs/phase11/<clip> --full
+python -m threed.racketsport.eval.e2e_eval --root runs/phase11 --labels data/testclips --out runs/phase11/metrics.json
 python -m pytest tests/racketsport -q   # full regression suite
 ```
 Measure: end-to-end fast-tier latency; full deep-tier wall-clock + GPU-cost per 20-min clip; replay export time; artifact completeness; regression suite green.
