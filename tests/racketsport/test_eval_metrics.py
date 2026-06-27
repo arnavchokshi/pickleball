@@ -160,6 +160,35 @@ def _write_ball_event_artifacts(run_dir: Path) -> None:
     (run_dir / "contact_windows.json").write_text(json.dumps(contact_windows), encoding="utf-8")
 
 
+def _write_racket_pose_artifact(run_dir: Path, *, contacts: int = 1) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": 1,
+        "fps": 120.0,
+        "players": [
+            {
+                "id": 1,
+                "paddle_dims_in": {"length": 15.5, "width": 7.5, "thickness": 0.55},
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "pose_se3": {
+                            "R": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+                            "t": [0.0, 0.0, 1.0],
+                        },
+                        "conf": 0.9,
+                    }
+                ],
+                "contacts": [
+                    {"t": float(idx) / 120.0, "contact_point_face_cm": [0.0, 0.0], "face_normal": [0.0, 0.0, 1.0], "conf": 0.8}
+                    for idx in range(contacts)
+                ],
+            }
+        ],
+    }
+    (run_dir / "racket_pose.json").write_text(json.dumps(payload), encoding="utf-8")
+
+
 def test_calib_eval_passes_when_ready_clip_has_required_artifacts(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase1"
@@ -435,3 +464,63 @@ def test_ball_event_eval_blocks_when_contact_windows_are_missing(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
     assert payload["clips"][0]["missing_artifacts"] == ["contact_windows.json"]
+
+
+def test_racket_eval_passes_when_ready_clip_has_racket_pose_artifact(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase6"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_racket_pose_artifact(root / "clip_001", contacts=2)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.racket_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert json.loads(completed.stdout)["status"] == "pass"
+    assert payload["phase"] == "phase6"
+    assert payload["required_artifacts"] == ["racket_pose.json"]
+    assert payload["clips"][0]["metrics"]["racket_players"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["racket_frames"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["racket_contacts"]["value"] == 2
+    validate_artifact_file("phase_eval_metrics", root / "metrics.json")
+
+
+def test_racket_eval_blocks_when_racket_pose_artifact_is_missing(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase6"
+    _write_ready_clip(labels_root, "clip_001")
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.racket_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["clips"][0]["missing_artifacts"] == ["racket_pose.json"]
