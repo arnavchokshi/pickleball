@@ -306,6 +306,33 @@ def _write_shot_drill_artifacts(run_dir: Path) -> None:
     (run_dir / "drill_report.json").write_text(json.dumps(drill_report), encoding="utf-8")
 
 
+def _habit_report_payload(*, priority_habit_id: str = "kitchen_foot") -> dict:
+    return {
+        "schema_version": 1,
+        "sport": "pickleball",
+        "coverage": {"overall": 0.82, "skipped_reason_counts": {"ball_uncertain": 1}},
+        "priority_habit_id": priority_habit_id,
+        "replay_ref": {"glb_url": "/replay/clip_001?point=1"},
+        "habits": [
+            {
+                "id": "kitchen_foot",
+                "title": "Kitchen foot",
+                "summary": "Foot crossed the NVZ line.",
+                "confidence": 0.86,
+                "clip_ref": {"t0_sec": 0.2, "t1_sec": 1.2},
+                "cue": "Stay balanced before contact.",
+                "drill": {"name": "Kitchen reset", "duration_min": 6.0},
+            }
+        ],
+    }
+
+
+def _write_copy_artifacts(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "habit_report.json").write_text(json.dumps(_habit_report_payload()), encoding="utf-8")
+    (run_dir / "coach_report.json").write_text(json.dumps(_habit_report_payload()), encoding="utf-8")
+
+
 def test_calib_eval_passes_when_ready_clip_has_required_artifacts(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase1"
@@ -866,3 +893,66 @@ def test_shot_drill_eval_blocks_when_drill_report_is_missing(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
     assert payload["clips"][0]["missing_artifacts"] == ["drill_report.json"]
+
+
+def test_copy_faithfulness_passes_when_ready_clip_has_habit_and_coach_reports(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase9"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_copy_artifacts(root / "clip_001")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.copy_faithfulness",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert json.loads(completed.stdout)["status"] == "pass"
+    assert payload["phase"] == "phase9"
+    assert payload["required_artifacts"] == ["habit_report.json", "coach_report.json"]
+    assert payload["clips"][0]["metrics"]["habit_count"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["coach_habit_count"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["priority_habit_match"]["value"] is True
+    assert payload["clips"][0]["metrics"]["coverage_overall"]["value"] == 0.82
+    validate_artifact_file("phase_eval_metrics", root / "metrics.json")
+
+
+def test_copy_faithfulness_blocks_when_coach_report_is_missing(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase9"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_copy_artifacts(root / "clip_001")
+    (root / "clip_001" / "coach_report.json").unlink()
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.copy_faithfulness",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["clips"][0]["missing_artifacts"] == ["coach_report.json"]
