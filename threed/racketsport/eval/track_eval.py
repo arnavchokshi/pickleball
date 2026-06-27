@@ -4,12 +4,32 @@ import argparse
 import json
 from pathlib import Path
 
-from threed.racketsport.eval.metrics import build_phase_metrics, metric, missing_artifacts, write_phase_metrics
+from threed.racketsport.eval.metrics import (
+    NumericGate,
+    build_phase_metrics,
+    evaluate_numeric_gates,
+    missing_artifacts,
+    write_phase_metrics,
+)
 from threed.racketsport.schemas import EvalClipResult, Tracks, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
 REQUIRED_TRACK_ARTIFACTS = ["tracks.json"]
+TRACK_GATES = {
+    "players_detected": NumericGate(
+        name="track_players_detected_min",
+        op=">=",
+        threshold=1,
+        unit="players",
+    ),
+    "track_frames": NumericGate(
+        name="track_frames_min",
+        op=">=",
+        threshold=1,
+        unit="frames",
+    ),
+}
 
 
 def evaluate(root: str | Path, labels_root: str | Path) -> object:
@@ -99,29 +119,22 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
 
     player_count = len(tracks.players)
     frame_count = sum(len(player.frames) for player in tracks.players)
-    players_passed = player_count >= 1
-    frames_passed = frame_count >= 1
+    metrics = evaluate_numeric_gates(
+        {
+            "players_detected": player_count,
+            "track_frames": frame_count,
+        },
+        TRACK_GATES,
+    )
+    passed = all(gated_metric.passed is True for gated_metric in metrics.values())
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
         labels_dir=str(labels_dir),
-        status="pass" if players_passed and frames_passed else "fail",
+        status="pass" if passed else "fail",
         missing_label_files=[],
         missing_artifacts=[],
-        metrics={
-            "players_detected": metric(
-                value=player_count,
-                unit="players",
-                gate=">= 1",
-                passed=players_passed,
-            ),
-            "track_frames": metric(
-                value=frame_count,
-                unit="frames",
-                gate=">= 1",
-                passed=frames_passed,
-            ),
-        },
+        metrics=metrics,
         notes=[],
     )
 

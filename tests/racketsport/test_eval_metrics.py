@@ -487,7 +487,45 @@ def test_track_eval_passes_when_ready_clip_has_tracks_artifact(tmp_path):
     assert payload["phase"] == "phase2"
     assert payload["required_artifacts"] == ["tracks.json"]
     assert payload["clips"][0]["metrics"]["players_detected"]["value"] == 2
+    assert payload["clips"][0]["metrics"]["players_detected"]["gate"] == "track_players_detected_min: >= 1"
     assert payload["clips"][0]["metrics"]["track_frames"]["value"] == 2
+    assert payload["clips"][0]["metrics"]["track_frames"]["gate"] == "track_frames_min: >= 1"
+    validate_artifact_file("phase_eval_metrics", root / "metrics.json")
+
+
+def test_track_eval_fails_numeric_gate_when_no_players_are_detected(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase2"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_tracks_artifact(root / "clip_001", players=0)
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.track_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    metrics = payload["clips"][0]["metrics"]
+    assert payload["status"] == "fail"
+    assert payload["clips"][0]["status"] == "fail"
+    assert metrics["players_detected"]["value"] == 0
+    assert metrics["players_detected"]["gate"] == "track_players_detected_min: >= 1"
+    assert metrics["players_detected"]["passed"] is False
+    assert metrics["track_frames"]["value"] == 0
+    assert metrics["track_frames"]["gate"] == "track_frames_min: >= 1"
+    assert metrics["track_frames"]["passed"] is False
     validate_artifact_file("phase_eval_metrics", root / "metrics.json")
 
 
