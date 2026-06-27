@@ -15,6 +15,8 @@ python scripts/racketsport/export_ball_click_review.py \
 
 Open `review.html`, click the target-court ball once per frame, and use
 `Mark missing` or `Mark occluded` when the target-court ball is not visible.
+Use `A` or the left arrow for the previous frame, and `D` or the right arrow
+for the next frame.
 The browser downloads `ball_points.json`; put that file back in the same clip
 folder or send it to the lead.
 

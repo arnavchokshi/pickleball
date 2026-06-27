@@ -62,6 +62,26 @@ def test_write_review_html_embeds_template_and_download_control(tmp_path: Path) 
     assert "Mark missing" in html
 
 
+def test_write_review_html_supports_keyboard_frame_navigation(tmp_path: Path) -> None:
+    payload = build_ball_points_template(
+        clip="clip_a",
+        source_video=Path("/tmp/source.mp4"),
+        fps=30.0,
+        frame_indices=[0, 1],
+        image_paths=[Path("images/frame_000000.jpg"), Path("images/frame_000001.jpg")],
+    )
+
+    html_path = tmp_path / "review.html"
+    write_review_html(html_path, payload)
+
+    html = html_path.read_text(encoding="utf-8")
+    assert "ArrowLeft" in html
+    assert "ArrowRight" in html
+    assert 'event.key.toLowerCase() === "a"' in html
+    assert 'event.key.toLowerCase() === "d"' in html
+    assert "Keyboard: A/Left = previous, D/Right = next" in html
+
+
 def test_export_ball_click_review_bundle_with_fake_cv2(tmp_path: Path) -> None:
     video_path = tmp_path / "source.mp4"
     video_path.write_bytes(b"fake")

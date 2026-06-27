@@ -244,6 +244,11 @@ def _review_html(payload: dict[str, Any]) -> str:
       color: #a9b5c4;
       font-size: 13px;
     }}
+    .hint {{
+      color: #7f8b9a;
+      font-size: 12px;
+      margin-left: auto;
+    }}
     input {{
       min-width: 240px;
       height: 32px;
@@ -274,6 +279,7 @@ def _review_html(payload: dict[str, Any]) -> str:
     <button type="button" id="occluded">Mark occluded</button>
     <input id="notes" type="text" placeholder="notes">
     <button type="button" id="download">Download ball_points.json</button>
+    <span class="hint">Keyboard: A/Left = previous, D/Right = next</span>
   </footer>
   <script>
     const reviewData = {review_json};
@@ -308,6 +314,18 @@ def _review_html(payload: dict[str, Any]) -> str:
       marker.style.top = `${{(item.ball_xy[1] / frame.naturalHeight) * rect.height}}px`;
     }}
 
+    function navigatePrevious() {{
+      currentItem().notes = notes.value;
+      index = Math.max(0, index - 1);
+      render();
+    }}
+
+    function navigateNext() {{
+      currentItem().notes = notes.value;
+      index = Math.min(reviewData.items.length - 1, index + 1);
+      render();
+    }}
+
     frame.addEventListener("click", (event) => {{
       const rect = frame.getBoundingClientRect();
       const naturalWidth = frame.naturalWidth || rect.width;
@@ -330,15 +348,20 @@ def _review_html(payload: dict[str, Any]) -> str:
     notes.addEventListener("input", () => {{
       currentItem().notes = notes.value;
     }});
-    document.getElementById("prev").addEventListener("click", () => {{
-      currentItem().notes = notes.value;
-      index = Math.max(0, index - 1);
-      render();
-    }});
-    document.getElementById("next").addEventListener("click", () => {{
-      currentItem().notes = notes.value;
-      index = Math.min(reviewData.items.length - 1, index + 1);
-      render();
+    document.getElementById("prev").addEventListener("click", navigatePrevious);
+    document.getElementById("next").addEventListener("click", navigateNext);
+    document.addEventListener("keydown", (event) => {{
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {{
+        return;
+      }}
+      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {{
+        event.preventDefault();
+        navigatePrevious();
+      }}
+      if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") {{
+        event.preventDefault();
+        navigateNext();
+      }}
     }});
     document.getElementById("missing").addEventListener("click", () => {{
       const item = currentItem();
