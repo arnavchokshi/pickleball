@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from threed.racketsport.court_templates import FT_TO_M, get_court_template
-from threed.racketsport.court_zones import build_court_zones
+from threed.racketsport.court_zones import build_court_zones, classify_point
 from threed.racketsport.net_plane import build_net_plane, net_top_height_m_at_x
 from threed.racketsport.schemas import CourtZones, NetPlane
 
@@ -92,6 +92,20 @@ def test_tennis_zones_include_service_boxes_and_alleys():
     _assert_xy_ft(zones.zones["far_right_service"][2], 13.5, 21.0)
 
 
+def test_classify_point_returns_specific_pickleball_zones_before_court_fallback():
+    assert classify_point("pickleball", [-5.0 * FT_TO_M, -3.0 * FT_TO_M]) == "near_nvz"
+    assert classify_point("pickleball", [-5.0 * FT_TO_M, -10.0 * FT_TO_M]) == "near_left_service"
+    assert classify_point("pickleball", [5.0 * FT_TO_M, 10.0 * FT_TO_M]) == "far_right_service"
+    assert classify_point("pickleball", [11.0 * FT_TO_M, 0.0]) is None
+
+
+def test_classify_point_returns_tennis_service_and_alley_zones():
+    assert classify_point("tennis", [-5.0 * FT_TO_M, -10.0 * FT_TO_M]) == "near_left_service"
+    assert classify_point("tennis", [-16.0 * FT_TO_M, 0.0]) == "left_doubles_alley"
+    assert classify_point("tennis", [0.0, 30.0 * FT_TO_M]) == "singles_court"
+    assert classify_point("tennis", [20.0 * FT_TO_M, 0.0]) is None
+
+
 def test_net_planes_use_vertical_net_plane_and_top_cable_heights():
     pickleball = build_net_plane("pickleball")
     tennis = build_net_plane("tennis")
@@ -118,6 +132,9 @@ def test_court_geometry_rejects_unknown_sports():
 
     with pytest.raises(ValueError, match="Unsupported sport"):
         build_court_zones("badminton")  # type: ignore[arg-type]
+
+    with pytest.raises(ValueError, match="Unsupported sport"):
+        classify_point("badminton", [0.0, 0.0])  # type: ignore[arg-type]
 
     with pytest.raises(ValueError, match="Unsupported sport"):
         build_net_plane("badminton")  # type: ignore[arg-type]
