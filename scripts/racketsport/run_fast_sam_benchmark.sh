@@ -8,6 +8,8 @@ ENV_NAME="${FAST_SAM_ENV_NAME:-fast_sam_3d_body}"
 OUT_DIR="${1:-$ROOT/runs/phase0/fast_sam_profile}"
 IMAGE_PATH="${FAST_SAM_IMAGE_PATH:-$FAST_SAM_ROOT/notebook/images/dancing.jpg}"
 TIMEOUT_SECONDS="${FAST_SAM_TIMEOUT_SECONDS:-900}"
+WARMUP_RUNS="${FAST_SAM_WARMUP_RUNS:-1}"
+BENCHMARK_RUNS="${FAST_SAM_BENCHMARK_RUNS:-5}"
 
 CHECKPOINT_SRC="${FAST_SAM_CHECKPOINT:-/workspace/checkpoints/body4d/sam-3d-body-dinov3/model.ckpt}"
 MHR_SRC="${FAST_SAM_MHR_MODEL:-/workspace/checkpoints/body4d/sam-3d-body-dinov3/assets/mhr_model.pt}"
@@ -58,5 +60,5 @@ fi
   --image_path "$IMAGE_PATH" \
   --output_dir "$OUT_DIR" \
   --detector_model yolo11n.pt \
-  --warmup 0 \
-  --runs 1
+  --warmup "$WARMUP_RUNS" \
+  --runs "$BENCHMARK_RUNS"
