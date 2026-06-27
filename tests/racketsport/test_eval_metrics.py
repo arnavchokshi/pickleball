@@ -133,6 +133,51 @@ def _write_body_artifacts(run_dir: Path) -> None:
     (run_dir / "skeleton3d.json").write_text(json.dumps(skeleton), encoding="utf-8")
 
 
+def _write_physics_artifact(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    smpl_motion = {
+        "schema_version": 1,
+        "model": "smplx",
+        "fps": 60.0,
+        "world_frame": "court_Z0",
+        "players": [
+            {
+                "id": 1,
+                "betas": [0.0] * 10,
+                "skate_free": True,
+                "physics": "physpt",
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "global_orient": [0.0, 0.0, 0.0],
+                        "body_pose": [0.0] * 63,
+                        "left_hand_pose": [],
+                        "right_hand_pose": [],
+                        "transl_world": [0.0, 0.0, 0.0],
+                        "joints_world": [[0.0, 0.0, 0.0]],
+                        "joint_conf": [0.9],
+                        "foot_contact": {"left": True, "right": False},
+                        "grf": [[0.0, 0.0, 1.0]],
+                    },
+                    {
+                        "t": 1.0 / 60.0,
+                        "global_orient": [0.0, 0.0, 0.0],
+                        "body_pose": [0.0] * 63,
+                        "left_hand_pose": [],
+                        "right_hand_pose": [],
+                        "transl_world": [0.01, 0.0, 0.0],
+                        "joints_world": [[0.01, 0.0, 0.0]],
+                        "joint_conf": [0.9],
+                        "foot_contact": {"left": False, "right": False},
+                        "grf": [[0.0, 0.0, 0.5]],
+                    },
+                ],
+            }
+        ],
+    }
+    (run_dir / "smpl_motion.json").write_text(json.dumps(smpl_motion), encoding="utf-8")
+
+
 def _write_ball_event_artifacts(run_dir: Path) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     ball_track = {
@@ -435,6 +480,69 @@ def test_body_eval_blocks_when_skeleton_preview_is_missing(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
     assert payload["clips"][0]["missing_artifacts"] == ["skeleton3d.json"]
+
+
+def test_physics_eval_passes_when_ready_clip_has_refined_smpl_motion(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase4"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_physics_artifact(root / "clip_001")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.physics_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert json.loads(completed.stdout)["status"] == "pass"
+    assert payload["phase"] == "phase4"
+    assert payload["required_artifacts"] == ["smpl_motion.json"]
+    assert payload["clips"][0]["metrics"]["smpl_players"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["smpl_frames"]["value"] == 2
+    assert payload["clips"][0]["metrics"]["foot_contact_frames"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["skate_free_players"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["physics_modes"]["value"] == "physpt"
+    assert payload["clips"][0]["metrics"]["grf_frames"]["value"] == 2
+    validate_artifact_file("phase_eval_metrics", root / "metrics.json")
+
+
+def test_physics_eval_blocks_when_smpl_motion_artifact_is_missing(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase4"
+    _write_ready_clip(labels_root, "clip_001")
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.physics_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["clips"][0]["missing_artifacts"] == ["smpl_motion.json"]
 
 
 def test_ball_event_eval_passes_when_ready_clip_has_ball_and_event_artifacts(tmp_path):
