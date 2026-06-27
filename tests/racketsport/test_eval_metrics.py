@@ -342,6 +342,39 @@ def test_track_eval_blocks_when_tracks_artifact_is_missing(tmp_path):
     assert payload["clips"][0]["missing_artifacts"] == ["tracks.json"]
 
 
+def test_track_eval_does_not_pass_when_any_clip_is_not_measured(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase2"
+    _write_ready_clip(labels_root, "clip_ready")
+    _write_tracks_artifact(root / "clip_ready", players=1)
+    partial_labels_dir = labels_root / "clip_partial" / "labels"
+    partial_labels_dir.mkdir(parents=True)
+    (partial_labels_dir / "court_corners.json").write_text("{}", encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.track_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert completed.returncode == 1
+    assert payload["status"] == "not_measured"
+    assert payload["summary"]["passed_clips"] == 1
+    assert payload["summary"]["evaluated_clips"] == 1
+
+
 def test_body_eval_passes_when_ready_clip_has_body_artifacts(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase3"

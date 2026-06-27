@@ -240,6 +240,20 @@ class SE3(BaseModel):
     R: Matrix3
     t: Vector3
 
+    @field_validator("R")
+    @classmethod
+    def _must_be_rotation_matrix(cls, value: Matrix3) -> Matrix3:
+        if len(value) != 3 or any(len(row) != 3 for row in value):
+            raise ValueError("pose_se3.R must be a 3x3 matrix")
+        return value
+
+    @field_validator("t")
+    @classmethod
+    def _must_be_translation_vector(cls, value: Vector3) -> Vector3:
+        if len(value) != 3:
+            raise ValueError("pose_se3.t must be a 3-vector")
+        return value
+
 
 class RacketFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -257,6 +271,20 @@ class RacketContact(BaseModel):
     face_normal: Vector3
     conf: float
 
+    @field_validator("contact_point_face_cm")
+    @classmethod
+    def _must_be_face_point(cls, value: Vector2) -> Vector2:
+        if len(value) != 2:
+            raise ValueError("contact_point_face_cm must be a 2-vector")
+        return value
+
+    @field_validator("face_normal")
+    @classmethod
+    def _must_be_face_normal(cls, value: Vector3) -> Vector3:
+        if len(value) != 3:
+            raise ValueError("face_normal must be a 3-vector")
+        return value
+
 
 class RacketPlayer(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -265,6 +293,17 @@ class RacketPlayer(BaseModel):
     paddle_dims_in: dict[str, float]
     frames: list[RacketFrame]
     contacts: list[RacketContact] = Field(default_factory=list)
+
+    @field_validator("paddle_dims_in")
+    @classmethod
+    def _must_have_paddle_dimensions(cls, value: dict[str, float]) -> dict[str, float]:
+        has_named_dims = {"length", "width"}.issubset(value)
+        has_short_dims = {"h", "w"}.issubset(value)
+        if not has_named_dims and not has_short_dims:
+            raise ValueError("paddle_dims_in must include length/width or h/w")
+        if any(dim <= 0 for dim in value.values()):
+            raise ValueError("paddle_dims_in values must be positive")
+        return value
 
 
 class RacketPose(StrictArtifact):

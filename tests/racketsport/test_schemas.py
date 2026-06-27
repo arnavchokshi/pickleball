@@ -9,6 +9,7 @@ from threed.racketsport.schemas import (
     CaptureSidecar,
     CourtCalibration,
     PhaseEvalMetrics,
+    RacketPose,
     validate_artifact_file,
 )
 
@@ -130,3 +131,21 @@ def test_phase_eval_metrics_schema_is_registered(tmp_path):
     assert isinstance(parsed, PhaseEvalMetrics)
     assert parsed.status == "blocked"
     assert parsed.clips[0].missing_artifacts == ["court_calibration.json"]
+
+
+def test_racket_pose_rejects_malformed_geometry():
+    payload = {
+        "schema_version": 1,
+        "fps": 120.0,
+        "players": [
+            {
+                "id": 1,
+                "paddle_dims_in": {},
+                "frames": [{"t": 0.0, "pose_se3": {"R": [[1.0]], "t": [0.0]}, "conf": 0.9}],
+                "contacts": [{"t": 0.0, "contact_point_face_cm": [0.0], "face_normal": [0.0], "conf": 0.8}],
+            }
+        ],
+    }
+
+    with pytest.raises(ValidationError):
+        RacketPose.model_validate(payload)

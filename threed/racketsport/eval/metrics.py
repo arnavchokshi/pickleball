@@ -37,7 +37,7 @@ def aggregate_status(clips: list[EvalClipResult]) -> EvalStatus:
         return "fail"
     if any(clip.status == "blocked" for clip in clips):
         return "blocked"
-    if any(clip.status == "pass" for clip in clips):
+    if clips and all(clip.status == "pass" for clip in clips):
         return "pass"
     return "not_measured"
 
