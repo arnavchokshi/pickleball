@@ -229,3 +229,70 @@ def test_register_testclip_cli_writes_metadata_and_label_skeleton(tmp_path):
     assert manifest.total_clips == 1
     assert manifest.metadata_ready_clips == 1
     assert manifest.ready_clips == 0
+
+
+def test_register_testclips_manifest_cli_registers_multiple_clips(tmp_path):
+    sources = tmp_path / "sources"
+    sources.mkdir()
+    (sources / "clip_a.mp4").write_bytes(b"fake video a")
+    (sources / "clip_b.mov").write_bytes(b"fake video b")
+    root = tmp_path / "data" / "testclips"
+    manifest_path = tmp_path / "candidate_clips.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "clips": [
+                    {
+                        "source": "sources/clip_a.mp4",
+                        "name": "baseline_corner_001",
+                        "camera_height": "low",
+                        "camera_angle": "shallow_baseline",
+                        "play_type": "doubles",
+                        "environment": "outdoor",
+                        "frame_rate_fps": 60,
+                        "duration_s": 90,
+                    },
+                    {
+                        "source": "sources/clip_b.mov",
+                        "name": "side_fence_001",
+                        "camera_height": "mid",
+                        "camera_angle": "side_fence",
+                        "play_type": "singles_drill",
+                        "environment": "indoor",
+                        "frame_rate_fps": 120,
+                        "duration_s": 75,
+                        "racket_gt": True,
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/register_testclips_manifest.py",
+            "--manifest",
+            str(manifest_path),
+            "--root",
+            str(root),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    dataset_manifest = build_testclip_manifest(root)
+    payload = json.loads(completed.stdout)
+    side_metadata = json.loads((root / "side_fence_001" / "clip_metadata.json").read_text(encoding="utf-8"))
+
+    assert payload["registered_count"] == 2
+    assert payload["failed_count"] == 0
+    assert [clip["clip"] for clip in payload["clips"]] == ["baseline_corner_001", "side_fence_001"]
+    assert (root / "baseline_corner_001" / "source.mp4").is_file()
+    assert (root / "side_fence_001" / "source.mov").is_file()
+    assert side_metadata["racket_gt"] is True
+    assert dataset_manifest.total_clips == 2
+    assert dataset_manifest.metadata_ready_clips == 2
+    assert dataset_manifest.ready_clips == 0
