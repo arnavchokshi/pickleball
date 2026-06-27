@@ -14,3 +14,8 @@ models/*.pth
 models/*.onnx
 models/*.engine
 
+# Swift/iOS build products.
+ios/.build/
+ios/.swiftpm/
+DerivedData/
+**/xcuserdata/
