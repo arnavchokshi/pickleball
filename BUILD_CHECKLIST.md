@@ -126,9 +126,9 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
 | ☑ | ENV-1 | Server env, deps, repo scaffolding under `threed/racketsport/`, `models/MANIFEST.json` | repo skeleton, env files | — | Phase 0 | Codex | DONE |
-| ☐ | ENV-2 | Fetch + checksum model checkpoints (incl. verify-before-commit flags + fallbacks) | `models/` | ENV-1 | Phase 0 | | TODO |
+| ☐ | ENV-2 | Fetch + checksum model checkpoints (incl. verify-before-commit flags + fallbacks) | `models/` | ENV-1 | Phase 0 | Codex | IN-PROGRESS |
 | ☐ | ENV-3 | iOS Xcode project scaffolding (`ios/`), Swift package layout | `ios/` | — | Phase 0 | | TODO |
-| ☐ | ENV-4 | NvDEC ingest + clip QC + capture-quality scoring (server) | `ingest.py` | ENV-1 | Phase 0 | | TODO |
+| ☐ | ENV-4 | NvDEC ingest + clip QC + capture-quality scoring (server) | `ingest.py` | ENV-1 | Phase 0 | Codex | IN-PROGRESS |
 
 ### IOS — iOS client (capture, calibration, fast tier, viewer)
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
@@ -207,7 +207,7 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 ### DATA — Data & training infrastructure (parallel)
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☐ | DATA-1 | Test-clip dataset (varied camera-height/angle matrix) + label schema | `data/testclips/` | ENV-1 | Test-Clip Spec | | TODO |
+| ☐ | DATA-1 | Test-clip dataset (varied camera-height/angle matrix) + label schema | `data/testclips/` | ENV-1 | Test-Clip Spec | Codex | IN-PROGRESS |
 | ☐ | DATA-2 | Body pose datasets download + fine-tune pipeline + auto-label/distill loop | `data/pose/`, `scripts/autolabel.py` | DATA-1 | Data Infra | | TODO |
 | ☐ | DATA-3 | Ball datasets (Roboflow→x,y) + audio "pop" collection (44.1 kHz) + augmentation | `data/ball/`, `data/audio/` | DATA-1 | Data Infra | | TODO |
 | ☐ | DATA-4 | Racket data (RacketVision + synthetic paddle-CAD BlenderProc + ArUco-GT) | `data/racket/` | DATA-1 | Data Infra | | TODO |
@@ -245,6 +245,9 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 > Format: `[TASK-ID] <agent> — built: <what>; artifacts: <files>; tested: <how/result>; next: <what the next agent needs>`
 
 - [ENV-1] Codex — built: initial `main` repo, Phase 0 Python scaffold, documented module stubs under `threed/racketsport/`, artifact schema registry, ffprobe-based clip metadata probe, test-clip ingest script, GPU eval/train lock helpers, placeholder model manifest, Triton scaffold, and web replay package placeholder; artifacts: `threed/racketsport/`, `tests/racketsport/`, `scripts/racketsport/`, `scripts/gpu-*.sh`, `models/MANIFEST.json`, `serving/triton/README.md`, `web/replay/package.json`; tested: local `.venv/bin/python -m pytest -q` passed (5 tests), local ingest smoke wrote `frames_meta.json`, local GPU-lock fallbacks ran, H100 container `/workspace/pickleball/.venv/bin/python -m pytest ... -q` passed (5 tests), H100 `nvidia-smi` via `scripts/gpu-eval-run.sh` showed `NVIDIA H100 80GB HBM3, 81559 MiB, 0 MiB, 0 %`; next: ENV-2 should fill `models/MANIFEST.json` with real checkpoints/checksums and replace the dry-run SAM-3D-Body benchmark with real inference.
+- [ENV-2] Codex — built: H100 model manifest verifier, Fast-SAM isolated conda env installer, Detectron2 CUDA build fixes, and warm-run benchmark wrapper; artifacts: `scripts/racketsport/smoke_models.py`, `scripts/racketsport/install_fast_sam_env.sh`, `scripts/racketsport/run_fast_sam_benchmark.sh`, `tests/racketsport/test_smoke_models.py`, `models/MANIFEST.json`; tested: H100 `/opt/conda/envs/fast_sam_3d_body/bin/python -m pytest tests/racketsport -q` passed (18 tests), H100 `smoke_models.py --check-files-only` verified all 5 `available_on_h100` files and sha256s, Fast-SAM-3D-Body profiler ran on H100 with one warmup + five measured warm runs: average 326.91 ms, std 1.72 ms, min 324.68 ms, max 329.90 ms, peak allocated GPU memory 4718.04 MB; next: ENV-2 still needs the remaining `pending_download` candidates (`yolo26m`, `rtmw_l_384`, `tracknetv3`, `sat_hmr`, `mujoco_mjx`) fetched/hashed or explicitly fallbacked before it can move to DONE.
+- [ENV-4] Codex — built: deterministic capture-quality scorer for framing, reprojection, blur, exposure, luminance stability, FPS, shutter, shake, and ARKit tracking state; artifacts: `threed/racketsport/capture_quality.py`, `tests/racketsport/test_capture_quality.py`; tested: local `.venv/bin/python -m pytest tests/racketsport` passed (15 tests before DATA-1 merge, then 18 tests after); next: wire real frame/audio QC extraction into ingest so the scorer is fed from video probes instead of sidecar/server signals only.
+- [DATA-1] Codex + Helmholtz — built: CPU-only test-clip readiness manifest and CLI validator for required label files from the Test-Clip Dataset Spec; artifacts: `threed/racketsport/testclips.py`, `scripts/racketsport/validate_testclips.py`, `tests/racketsport/test_testclips.py`; tested: local `.venv/bin/python -m pytest tests/racketsport` passed (18 tests), H100 `/opt/conda/envs/fast_sam_3d_body/bin/python -m pytest tests/racketsport -q` passed (18 tests); next: collect or mount real `data/testclips/` clips and labels, then run `scripts/racketsport/validate_testclips.py` until it exits 0.
 
 ---
 
@@ -255,3 +258,5 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 - Stack baseline as of handoff: Fast SAM-3D-Body backbone + our world-grounding; YOLO26m + BoT-SORT-ReID; foot-lock to Z=0 + PhysPT/MuJoCo; racket PnP-IPPE; TrackNetV3→V5; RealityKit/USDZ native + Three.js/GLB web. Fallbacks: Fast SAM-3D-Body→original→NLF; YOLO26→YOLO11; SAT-HMR↔Multi-HMR 2; PhysPT→PHC. Single-camera product; multi-cam future; multi-view training-only.
 - 2026-06-26 Codex: canonical server filenames are the `IMPLEMENTATION_PHASES.md §0.2` names (`person_fast.py`, `audio_pop.py`, `footlock.py`, `racket6dof.py`, etc.). Older MVP shorthand names such as `person_fasttier.py`, `audio_events.py`, `foot_lock.py`, and `racket_pose6dof.py` are retired aliases and should not be implemented.
 - 2026-06-26 Codex: external existence check found official Ultralytics YOLO26 docs/assets and public Fast SAM-3D-Body project/GitHub pages. This verifies the names exist, not our target H100 performance, checkpoint access, or commercial license posture.
+- 2026-06-26 Codex: Fast-SAM-3D-Body must use the isolated `/opt/conda/envs/fast_sam_3d_body` env on the H100. Detectron2 builds successfully there only after installing CUDA 12.4 toolkit plus conda-forge GCC/G++ 13 and setting `CUDAHOSTCXX`; GCC 14 is rejected by CUDA 12.4.
+- 2026-06-26 Codex: Fast-SAM-3D-Body H100 smoke benchmark is successful but not variant approval. Measured on one sample image with one detected person, YOLO11n detector, MoGe2 FOV, no SAM2 segmentation: average 326.91 ms over five warm runs and 4718.04 MB peak allocated GPU memory. EVAL-0 still requires real test clips, side-by-side artifacts, and the §1.6 approval gate.

@@ -15,7 +15,9 @@
       "fallbacks": ["sat_hmr", "nlf", "hmr2"],
       "notes": [
         "H100 container has Fast-SAM-3D-Body repo at /opt/fast-sam-3d-body.",
-        "H100 performance is still unbenchmarked; run scripts/racketsport/benchmark_sam3dbody.py with real inference next."
+        "Fast-SAM-3D-Body environment is isolated at /opt/conda/envs/fast_sam_3d_body.",
+        "H100 smoke benchmark on 2026-06-26 PDT used /opt/fast-sam-3d-body/notebook/images/dancing.jpg, YOLO11n detector, MoGe2 FOV, mask inference disabled, one detected person.",
+        "H100 smoke benchmark measured n=5 warm runs after one warmup: average 326.91 ms, std 1.72 ms, min 324.68 ms, max 329.90 ms; peak allocated GPU memory 4718.04 MB. This is a single-image smoke result, not EVAL-0 variant approval on real test clips."
       ]
     },
     {
@@ -122,8 +124,9 @@
     }
   ],
   "notes": [
-    "ENV-2 partial inventory captured from the running H100 container on 2026-06-26.",
-    "available_on_h100 means the file was present and hashed in the current /workspace-backed body4d container; it does not prove phase acceptance or H100 latency.",
+    "ENV-2 partial inventory captured from the running H100 container on 2026-06-26 PDT.",
+    "available_on_h100 means the file was present and hashed in the current /workspace-backed body4d container; it does not prove phase acceptance.",
+    "Fast-SAM-3D-Body H100 smoke latency is recorded on the fast_sam_3d_body_dinov3 entry; EVAL-0 still requires real test clips, comparison artifacts, and the human approval gate before any variant is locked.",
     "pending_download entries are next candidates for Codex to fetch or mirror without user input unless their upstream requires account-gated access."
   ]
 }
