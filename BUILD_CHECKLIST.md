@@ -207,7 +207,7 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 ### DATA — Data & training infrastructure (parallel)
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☐ | DATA-1 | Test-clip dataset (varied camera-height/angle matrix) + label schema | `data/testclips/` | ENV-1 | Test-Clip Spec | Codex | IN-PROGRESS |
+| ☐ | DATA-1 | Test-clip dataset (varied camera-height/angle matrix) + label schema | `data/testclips/`, `scripts/racketsport/*testclip*.py`, `docs/racketsport/testclip_seed_manifest.json` | ENV-1 | Test-Clip Spec | Codex | IN-PROGRESS |
 | ☐ | DATA-2 | Body pose datasets download + fine-tune pipeline + auto-label/distill loop | `data/pose/`, `scripts/autolabel.py` | DATA-1 | Data Infra | | TODO |
 | ☐ | DATA-3 | Ball datasets (Roboflow→x,y) + audio "pop" collection (44.1 kHz) + augmentation | `data/ball/`, `data/audio/` | DATA-1 | Data Infra | | TODO |
 | ☐ | DATA-4 | Racket data (RacketVision + synthetic paddle-CAD BlenderProc + ArUco-GT) | `data/racket/` | DATA-1 | Data Infra | | TODO |

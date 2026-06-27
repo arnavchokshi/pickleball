@@ -456,7 +456,7 @@ Run before any large push. (Codex phase gates expand these.)
 
 ## 19. Validation dataset
 
-**Pickleball:** 30 short clips (indoor/outdoor, singles/doubles), **deliberately varied camera heights/angles**, varied clothing/ball/court colors; ≥10 each of kitchen, transition, partner-spacing moments. Labels: court corners/lines, player boxes/IDs (sampled), support foot near NVZ (sampled), ball location (selected frames), contact/bounce timestamps, coach-scored habits.
+**Pickleball:** current DATA-1 sizing is governed by `IMPLEMENTATION_PHASES.md` Test-Clip Spec: minimum 24 clips with short and long slices, varied camera heights/angles, high-FPS/ArUco subsets, indoor/outdoor, doubles/singles/drill, and messy real-world coverage. The older MVP target was 30 short clips; treat that as superseded by the Test-Clip Spec matrix. Labels: court corners/lines, player boxes/IDs (sampled), support foot near NVZ (sampled), ball location (selected frames), contact/bounce timestamps, coach-scored habits.
 **Tennis:** 20 serve + 10 rally/recovery clips, singles & doubles. Labels: calibration, serve-contact timestamp, landing foot/balance, recovery position.
 **Acceptance philosophy:** practical truth (manual overlays, foot/NVZ review, coach usefulness, confidence honesty, before/after) — not perfect 3D ground truth first.
 

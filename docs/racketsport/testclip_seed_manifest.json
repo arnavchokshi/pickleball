@@ -2,6 +2,10 @@
   "schema_version": 1,
   "created_date": "2026-06-26",
   "purpose": "Reproducible source manifest for ignored H100 DATA-1 test clips. Media lives under data/testclips/ on the H100 and is intentionally not tracked in git.",
+  "notes": [
+    "This is a source/reproducibility manifest only; it is not accepted directly by scripts/racketsport/register_testclips_manifest.py.",
+    "The historical H100 smoke clip may appear in validator counts but is excluded from these public seed rows."
+  ],
   "download_tool": "yt-dlp 2026.6.9 plus ffmpeg in /opt/conda/envs/fast_sam_3d_body on body4d-gcp-prod",
   "registered_root": "/workspace/pickleball/data/testclips",
   "clips": [
