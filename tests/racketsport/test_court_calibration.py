@@ -17,9 +17,10 @@ from threed.racketsport.court_calibration import (
     passes_reprojection_gate,
     project_planar_points,
     reprojection_error,
+    solve_camera_pose,
 )
 from threed.racketsport.court_templates import FT_TO_M
-from threed.racketsport.schemas import CaptureSidecar, CourtCalibration, CourtZones, NetPlane, validate_artifact_file
+from threed.racketsport.schemas import CameraIntrinsics, CaptureSidecar, CourtCalibration, CourtZones, NetPlane, validate_artifact_file
 
 
 def _capture_sidecar_payload() -> dict:
@@ -180,3 +181,32 @@ def test_calibrate_cli_writes_calibration_zones_and_net_plane(tmp_path):
     assert isinstance(calibration, CourtCalibration)
     assert isinstance(zones, CourtZones)
     assert isinstance(net, NetPlane)
+
+
+def test_solve_camera_pose_uses_opencv_when_available():
+    cv2 = pytest.importorskip("cv2")
+    np = pytest.importorskip("numpy")
+    intrinsics = CameraIntrinsics(fx=1000.0, fy=1000.0, cx=960.0, cy=540.0, dist=[], source="arkit")
+    world_pts = [
+        [-3.0, -6.0, 0.0],
+        [3.0, -6.0, 0.0],
+        [3.0, 6.0, 0.0],
+        [-3.0, 6.0, 0.0],
+        [0.0, -3.0, 0.0],
+        [0.0, 3.0, 0.0],
+    ]
+    expected_rvec = np.zeros((3, 1), dtype=np.float64)
+    expected_tvec = np.array([[0.2], [0.1], [15.0]], dtype=np.float64)
+    image_pts, _ = cv2.projectPoints(
+        np.asarray(world_pts, dtype=np.float64),
+        expected_rvec,
+        expected_tvec,
+        np.asarray(camera_matrix_from_intrinsics(intrinsics), dtype=np.float64),
+        None,
+    )
+
+    extrinsics = solve_camera_pose(world_pts, image_pts.reshape(-1, 2).tolist(), intrinsics)
+
+    assert extrinsics.t == pytest.approx([0.2, 0.1, 15.0], abs=1e-4)
+    assert extrinsics.camera_height_m == pytest.approx(15.0, abs=1e-4)
+    assert extrinsics.R[0] == pytest.approx([1.0, 0.0, 0.0], abs=1e-4)

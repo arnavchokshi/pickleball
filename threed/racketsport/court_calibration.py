@@ -114,6 +114,43 @@ def passes_reprojection_gate(error: ReprojectionError) -> bool:
     )
 
 
+def solve_camera_pose(
+    world_pts: Iterable[Iterable[float]],
+    image_pts: Iterable[Iterable[float]],
+    intrinsics: CameraIntrinsics,
+) -> CourtExtrinsics:
+    try:
+        import cv2  # type: ignore[import-not-found]
+        import numpy as np  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise RuntimeError("solve_camera_pose requires opencv-python and numpy") from exc
+
+    world = np.asarray([[float(point[0]), float(point[1]), float(point[2])] for point in world_pts], dtype=np.float64)
+    image = np.asarray([[float(point[0]), float(point[1])] for point in image_pts], dtype=np.float64)
+    if world.shape[0] != image.shape[0] or world.shape[0] < 4:
+        raise ValueError("solve_camera_pose requires at least 4 paired world/image points")
+
+    distortion = np.asarray(intrinsics.dist, dtype=np.float64) if intrinsics.dist else None
+    ok, rvec, tvec = cv2.solvePnP(
+        world,
+        image,
+        np.asarray(camera_matrix_from_intrinsics(intrinsics), dtype=np.float64),
+        distortion,
+        flags=cv2.SOLVEPNP_ITERATIVE,
+    )
+    if not ok:
+        raise ValueError("cv2.solvePnP failed to solve camera pose")
+
+    rotation, _ = cv2.Rodrigues(rvec)
+    translation = tvec.reshape(3)
+    camera_center_world = -(rotation.T @ translation)
+    return CourtExtrinsics(
+        R=rotation.tolist(),
+        t=[float(value) for value in translation.tolist()],
+        camera_height_m=abs(float(camera_center_world[2])),
+    )
+
+
 def _camera_height_from_sidecar(sidecar: CaptureSidecar) -> float:
     if sidecar.arkit_camera_pose is None:
         return 0.0
