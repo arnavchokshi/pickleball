@@ -1,9 +1,33 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from threed.racketsport.schemas import EvalClipResult, EvalMetric, EvalStatus, EvalSummary, PhaseEvalMetrics
 from threed.racketsport.testclips import TestClipDatasetManifest
+
+
+NUMERIC_GATE_OPERATORS = {"<", "<=", ">", ">=", "=="}
+
+
+@dataclass(frozen=True)
+class NumericGate:
+    name: str
+    op: str
+    threshold: float | int
+    unit: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.op not in NUMERIC_GATE_OPERATORS:
+            raise ValueError(f"unsupported numeric gate operator: {self.op}")
+        if isinstance(self.threshold, bool) or not isinstance(self.threshold, (int, float)):
+            raise TypeError("numeric gate threshold must be an int or float")
+
+    @property
+    def label(self) -> str:
+        return f"{self.name}: {self.op} {self.threshold}"
 
 
 def metric(
@@ -15,6 +39,51 @@ def metric(
     status: str = "measured",
 ) -> EvalMetric:
     return EvalMetric(value=value, unit=unit, gate=gate, passed=passed, status=status)
+
+
+def evaluate_numeric_gates(
+    values: Mapping[str, Any],
+    gates: Mapping[str, NumericGate],
+) -> dict[str, EvalMetric]:
+    gated: dict[str, EvalMetric] = {}
+    for name, gate in gates.items():
+        value = _extract_numeric_gate_value(values.get(name))
+        if value is None:
+            gated[name] = metric(value=None, unit=gate.unit, gate=gate.label, passed=None, status="not_measured")
+            continue
+
+        gated[name] = metric(
+            value=value,
+            unit=gate.unit,
+            gate=gate.label,
+            passed=_numeric_gate_passed(value, gate),
+        )
+    return gated
+
+
+def _extract_numeric_gate_value(raw: Any) -> float | int | None:
+    if isinstance(raw, EvalMetric):
+        raw = raw.value
+    elif isinstance(raw, Mapping):
+        raw = raw.get("value")
+
+    if raw is None:
+        return None
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        raise TypeError(f"numeric gate value must be an int or float, got {type(raw).__name__}")
+    return raw
+
+
+def _numeric_gate_passed(value: float | int, gate: NumericGate) -> bool:
+    if gate.op == "<":
+        return value < gate.threshold
+    if gate.op == "<=":
+        return value <= gate.threshold
+    if gate.op == ">":
+        return value > gate.threshold
+    if gate.op == ">=":
+        return value >= gate.threshold
+    return value == gate.threshold
 
 
 def missing_artifacts(run_dir: Path, required_artifacts: list[str]) -> list[str]:
