@@ -1,0 +1,344 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sway.body/racketsport/serving_manifest_schema.json",
+  "title": "Racketsport CPU-only serving readiness manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "source_manifest",
+    "execution",
+    "tiers",
+    "summary",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "artifact_type": {
+      "const": "racketsport_serving_manifest"
+    },
+    "source_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "schema_version"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "schema_version": {
+          "const": 1
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpu_only",
+        "starts_triton",
+        "downloads_models",
+        "uses_gpu",
+        "mutates_model_manifest",
+        "claims_env_or_eval_completion"
+      ],
+      "properties": {
+        "cpu_only": {
+          "const": true
+        },
+        "starts_triton": {
+          "const": false
+        },
+        "downloads_models": {
+          "const": false
+        },
+        "uses_gpu": {
+          "const": false
+        },
+        "mutates_model_manifest": {
+          "const": false
+        },
+        "claims_env_or_eval_completion": {
+          "const": false
+        }
+      }
+    },
+    "tiers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["offline_deep", "live_light"],
+      "properties": {
+        "offline_deep": {
+          "$ref": "#/$defs/tier"
+        },
+        "live_light": {
+          "$ref": "#/$defs/tier"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_model_count",
+        "checkpoint_available_count",
+        "runtime_available_count",
+        "tier_count",
+        "component_count",
+        "serving_ready_component_count",
+        "unsafe_model_path_count",
+        "unsafe_model_path_ids",
+        "pending_item_count",
+        "pending_item_ids",
+        "missing_component_ids"
+      ],
+      "properties": {
+        "source_model_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "checkpoint_available_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runtime_available_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tier_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "component_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "serving_ready_component_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unsafe_model_path_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unsafe_model_path_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pending_item_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pending_item_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "missing_component_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "tier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tier",
+        "checkpoint_runtime_ready",
+        "eval0_approval",
+        "triton_ensemble_status",
+        "components"
+      ],
+      "properties": {
+        "tier": {
+          "enum": ["offline_deep", "live_light"]
+        },
+        "checkpoint_runtime_ready": {
+          "type": "boolean"
+        },
+        "eval0_approval": {
+          "const": "not_evaluated_by_cpu_manifest"
+        },
+        "triton_ensemble_status": {
+          "const": "scaffold_only_not_started"
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/component"
+          }
+        }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "component_id",
+        "stage",
+        "kind",
+        "role",
+        "serving_backend",
+        "required_status",
+        "checkpoint_available",
+        "runtime_available",
+        "safe_paths",
+        "serving_ready",
+        "entries",
+        "missing_or_pending"
+      ],
+      "properties": {
+        "component_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": ["checkpoint", "runtime"]
+        },
+        "role": {
+          "type": "string"
+        },
+        "serving_backend": {
+          "type": "string"
+        },
+        "required_status": {
+          "enum": ["available_on_h100", "available_runtime_on_h100"]
+        },
+        "checkpoint_available": {
+          "type": ["boolean", "null"]
+        },
+        "runtime_available": {
+          "type": ["boolean", "null"]
+        },
+        "safe_paths": {
+          "type": "boolean"
+        },
+        "serving_ready": {
+          "type": "boolean"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entry"
+          }
+        },
+        "missing_or_pending": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/missing_or_pending"
+          }
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "stage",
+        "status",
+        "local_path",
+        "license",
+        "commercial_posture",
+        "sha256_present",
+        "fallbacks",
+        "path_safety"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "local_path": {
+          "type": ["string", "null"]
+        },
+        "license": {
+          "type": "string"
+        },
+        "commercial_posture": {
+          "type": "string"
+        },
+        "sha256_present": {
+          "type": "boolean"
+        },
+        "fallbacks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "path_safety": {
+          "type": "object",
+          "required": ["safe", "reason"],
+          "properties": {
+            "safe": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "allowed_prefixes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "missing_or_pending": {
+      "type": "object",
+      "required": ["id", "stage", "reason"],
+      "properties": {
+        "id": {
+          "type": ["string", "null"]
+        },
+        "stage": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "required_status": {
+          "type": "string"
+        },
+        "path_reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

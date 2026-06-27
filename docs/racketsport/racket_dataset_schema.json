@@ -25,7 +25,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "source_type", "path"],
+        "required": ["id", "source_type", "path", "split", "annotations"],
         "properties": {
           "id": {
             "type": "string",
@@ -39,6 +39,113 @@
             "minLength": 1,
             "description": "Relative path under the manifest directory. Absolute paths and parent traversal are rejected by the validator."
           },
+          "split": {
+            "enum": ["eval", "test", "train", "val"]
+          },
+          "annotations": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["keypoints", "corners"],
+            "properties": {
+              "keypoints": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["names", "dimensions"],
+                "properties": {
+                  "names": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "allOf": [
+                      {
+                        "contains": {
+                          "const": "top"
+                        }
+                      },
+                      {
+                        "contains": {
+                          "const": "bottom"
+                        }
+                      },
+                      {
+                        "contains": {
+                          "const": "handle"
+                        }
+                      }
+                    ],
+                    "description": "Must include top, bottom, and handle; enforced by the validator."
+                  },
+                  "dimensions": {
+                    "enum": [2, 3]
+                  }
+                }
+              },
+              "corners": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["names", "dimensions"],
+                "properties": {
+                  "names": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "prefixItems": [
+                      {
+                        "const": "top_left"
+                      },
+                      {
+                        "const": "top_right"
+                      },
+                      {
+                        "const": "bottom_right"
+                      },
+                      {
+                        "const": "bottom_left"
+                      }
+                    ],
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "dimensions": {
+                    "enum": [2, 3]
+                  }
+                }
+              },
+              "pose_labels": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["format", "coordinate_frame"],
+                "properties": {
+                  "format": {
+                    "enum": ["aruco_marker_pose", "matrix_4x4", "quaternion_translation", "rvec_tvec"]
+                  },
+                  "coordinate_frame": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "segmentation_masks": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["format", "path"],
+                "properties": {
+                  "format": {
+                    "enum": ["coco_rle", "png", "polygon"]
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Relative path under the manifest directory. Absolute paths and parent traversal are rejected by the validator."
+                  }
+                }
+              }
+            }
+          },
           "camera": {
             "type": "object",
             "additionalProperties": true
@@ -46,6 +153,14 @@
           "fps": {
             "type": "number",
             "exclusiveMinimum": 0
+          },
+          "frame_count": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "license": {
+            "type": "string",
+            "minLength": 1
           },
           "marker": {
             "type": "object",

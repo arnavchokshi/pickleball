@@ -10,10 +10,55 @@ from typing import Any
 
 
 SCHEMA_VERSION = 1
-SOURCE_TYPES = {"ball_track", "pop_audio"}
-SPLITS = {"train", "val", "test"}
+SOURCE_TYPES = ("pop_audio", "roboflow_ball_xy", "tracknet_ball_xy")
+BALL_SOURCE_TYPES = {"roboflow_ball_xy", "tracknet_ball_xy"}
+CLASS_LABELS = ("ball_occluded", "ball_visible", "negative", "pop")
+BALL_CLASS_LABELS = {"ball_occluded", "ball_visible"}
+AUDIO_CLASS_LABELS = {"negative", "pop"}
+LABEL_FORMATS = ("roboflow_xy", "tracknet_xy")
+SOURCE_LABEL_FORMAT = {
+    "roboflow_ball_xy": "roboflow_xy",
+    "tracknet_ball_xy": "tracknet_xy",
+}
+SPLITS = ("test", "train", "val")
+KEY_SPLITS = ("val", "test")
+KEY_SOURCE_TYPES = SOURCE_TYPES
+KEY_CLASS_LABELS = CLASS_LABELS
+KNOWN_AUGMENTATIONS = (
+    "amplitude",
+    "background_subtraction",
+    "color_jitter",
+    "copy_paste",
+    "fps_sim",
+    "h264_artifact",
+    "jpeg_artifact",
+    "mixup",
+    "motion_blur",
+    "noise_snr",
+    "occlusion",
+    "pitch_shift",
+    "rir",
+    "specaugment",
+    "time_shift",
+    "time_stretch",
+)
 TOP_LEVEL_FIELDS = {"schema_version", "entries", "dataset_id", "description", "created_at", "notes"}
-ENTRY_FIELDS = {"id", "path", "split", "source_type", "frame_rate", "sample_rate", "notes"}
+ENTRY_FIELDS = {
+    "id",
+    "path",
+    "split",
+    "source_type",
+    "source_name",
+    "class_label",
+    "label_format",
+    "frame_rate",
+    "sample_rate",
+    "audio_format",
+    "duration_ms",
+    "visibility",
+    "augmentations",
+    "notes",
+}
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
@@ -33,9 +78,11 @@ def validate_manifest(path: str | Path) -> dict[str, Any]:
                 if isinstance(entry, dict):
                     entries.append(entry)
                 errors.extend(_entry_errors(index, entry, manifest_dir, seen_ids))
+    elif payload is not None:
+        errors.append("manifest: must be an object")
 
     coverage_counts = _coverage_counts(entries)
-    coverage_gaps = _coverage_gaps(coverage_counts["source_type"])
+    coverage_gaps = _coverage_gaps(coverage_counts)
     valid = not errors
 
     return {
@@ -92,7 +139,7 @@ def _entry_errors(index: int, entry: Any, manifest_dir: Path, seen_ids: set[str]
     errors: list[str] = []
     errors.extend(_unknown_fields(prefix, entry, ENTRY_FIELDS))
 
-    for field in ("id", "path", "split", "source_type"):
+    for field in ("id", "path", "split", "source_type", "class_label"):
         if field not in entry:
             errors.append(f"{prefix}/{field}: required property is missing")
 
@@ -105,14 +152,32 @@ def _entry_errors(index: int, entry: Any, manifest_dir: Path, seen_ids: set[str]
 
     source_type = entry.get("source_type")
     if source_type not in SOURCE_TYPES:
-        errors.append(f"{prefix}/source_type: must be one of ball_track, pop_audio")
+        errors.append(f"{prefix}/source_type: must be one of {', '.join(SOURCE_TYPES)}")
 
     split = entry.get("split")
     if split not in SPLITS:
-        errors.append(f"{prefix}/split: must be one of test, train, val")
+        errors.append(f"{prefix}/split: must be one of {', '.join(SPLITS)}")
+
+    class_label = entry.get("class_label")
+    if class_label not in CLASS_LABELS:
+        errors.append(f"{prefix}/class_label: must be one of {', '.join(CLASS_LABELS)}")
+    elif source_type in BALL_SOURCE_TYPES and class_label not in BALL_CLASS_LABELS:
+        errors.append(f"{prefix}/class_label: ball sources must use ball_occluded or ball_visible")
+    elif source_type == "pop_audio" and class_label not in AUDIO_CLASS_LABELS:
+        errors.append(f"{prefix}/class_label: pop_audio sources must use negative or pop")
+
+    label_format = entry.get("label_format")
+    expected_label_format = SOURCE_LABEL_FORMAT.get(source_type)
+    if expected_label_format is not None:
+        if "label_format" not in entry:
+            errors.append(f"{prefix}/label_format: required for {source_type} sources")
+        elif label_format != expected_label_format:
+            errors.append(f"{prefix}/label_format: {source_type} sources must use {expected_label_format}")
+    elif "label_format" in entry and label_format not in LABEL_FORMATS:
+        errors.append(f"{prefix}/label_format: must be one of {', '.join(LABEL_FORMATS)}")
 
     path_value = entry.get("path")
-    if isinstance(path_value, str):
+    if isinstance(path_value, str) and path_value:
         target = _resolve_safe_relative_path(path_value, manifest_dir)
         if target is None:
             errors.append(f"{prefix}/path: must be relative and stay within the manifest directory")
@@ -128,8 +193,21 @@ def _entry_errors(index: int, entry: Any, manifest_dir: Path, seen_ids: set[str]
     sample_rate = entry.get("sample_rate")
     if "sample_rate" in entry and not _is_positive_integer(sample_rate):
         errors.append(f"{prefix}/sample_rate: must be a positive integer")
-    if source_type == "pop_audio" and "sample_rate" in entry and sample_rate != 44100:
-        errors.append(f"{prefix}/sample_rate: pop_audio sources must be 44100 Hz when provided")
+    if source_type == "pop_audio":
+        if "sample_rate" not in entry:
+            errors.append(f"{prefix}/sample_rate: required for pop_audio sources")
+        elif sample_rate != 44100:
+            errors.append(f"{prefix}/sample_rate: pop_audio sources must be 44100 Hz")
+    if "audio_format" in entry and entry["audio_format"] != "wav":
+        errors.append(f"{prefix}/audio_format: must be wav")
+    if "duration_ms" in entry and not _is_positive_number(entry["duration_ms"]):
+        errors.append(f"{prefix}/duration_ms: must be a positive number")
+    if "visibility" in entry and not _is_visibility_value(entry["visibility"]):
+        errors.append(f"{prefix}/visibility: must be 0, 1, or 2")
+    if "source_name" in entry and (not isinstance(entry["source_name"], str) or not entry["source_name"]):
+        errors.append(f"{prefix}/source_name: must be a non-empty string")
+    if "augmentations" in entry:
+        errors.extend(_augmentation_errors(prefix, entry["augmentations"]))
 
     if "notes" in entry and not isinstance(entry["notes"], str):
         errors.append(f"{prefix}/notes: must be a string")
@@ -139,31 +217,50 @@ def _entry_errors(index: int, entry: Any, manifest_dir: Path, seen_ids: set[str]
 
 def _coverage_counts(entries: list[dict[str, Any]]) -> dict[str, Any]:
     source_counts = Counter(entry.get("source_type") for entry in entries if entry.get("source_type") in SOURCE_TYPES)
+    class_counts = Counter(entry.get("class_label") for entry in entries if entry.get("class_label") in CLASS_LABELS)
     split_counts = Counter(entry.get("split") for entry in entries if entry.get("split") in SPLITS)
     by_split_source: dict[str, dict[str, int]] = {}
+    by_split_class: dict[str, dict[str, int]] = {}
     for entry in entries:
         split = entry.get("split")
         source_type = entry.get("source_type")
-        if split not in SPLITS or source_type not in SOURCE_TYPES:
-            continue
-        by_split_source.setdefault(split, {})
-        by_split_source[split][source_type] = by_split_source[split].get(source_type, 0) + 1
+        class_label = entry.get("class_label")
+        if split in SPLITS and source_type in SOURCE_TYPES:
+            by_split_source.setdefault(split, {})
+            by_split_source[split][source_type] = by_split_source[split].get(source_type, 0) + 1
+        if split in SPLITS and class_label in CLASS_LABELS:
+            by_split_class.setdefault(split, {})
+            by_split_class[split][class_label] = by_split_class[split].get(class_label, 0) + 1
 
     return {
-        "source_type": {source_type: source_counts.get(source_type, 0) for source_type in sorted(SOURCE_TYPES)},
-        "split": {split: split_counts.get(split, 0) for split in sorted(SPLITS)},
+        "source_type": {source_type: source_counts.get(source_type, 0) for source_type in SOURCE_TYPES},
+        "class_label": {class_label: class_counts.get(class_label, 0) for class_label in CLASS_LABELS},
+        "split": {split: split_counts.get(split, 0) for split in SPLITS},
         "by_split_source_type": {
             split: dict(sorted(counts.items())) for split, counts in sorted(by_split_source.items())
+        },
+        "by_split_class_label": {
+            split: dict(sorted(counts.items())) for split, counts in sorted(by_split_class.items())
         },
     }
 
 
-def _coverage_gaps(source_type_counts: dict[str, int]) -> list[str]:
-    gaps = []
-    if source_type_counts.get("ball_track", 0) == 0:
-        gaps.append("missing ball_track entries")
-    if source_type_counts.get("pop_audio", 0) == 0:
-        gaps.append("missing pop_audio entries")
+def _coverage_gaps(coverage_counts: dict[str, Any]) -> list[str]:
+    gaps: list[str] = []
+    split_counts = coverage_counts["split"]
+    for split in KEY_SPLITS:
+        if split_counts.get(split, 0) == 0:
+            gaps.append(f"missing {split} entries")
+
+    source_counts = coverage_counts["source_type"]
+    missing_sources = [source_type for source_type in KEY_SOURCE_TYPES if source_counts.get(source_type, 0) == 0]
+    if missing_sources:
+        gaps.append(f"missing source types: {', '.join(missing_sources)}")
+
+    class_counts = coverage_counts["class_label"]
+    missing_classes = [class_label for class_label in KEY_CLASS_LABELS if class_counts.get(class_label, 0) == 0]
+    if missing_classes:
+        gaps.append(f"missing key classes: {', '.join(missing_classes)}")
     return gaps
 
 
@@ -199,6 +296,22 @@ def _is_positive_number(value: Any) -> bool:
 
 def _is_positive_integer(value: Any) -> bool:
     return not isinstance(value, bool) and isinstance(value, int) and value > 0
+
+
+def _is_visibility_value(value: Any) -> bool:
+    return not isinstance(value, bool) and isinstance(value, int) and value in {0, 1, 2}
+
+
+def _augmentation_errors(prefix: str, value: Any) -> list[str]:
+    if not isinstance(value, list) or not value:
+        return [f"{prefix}/augmentations: must be a non-empty array of known augmentation names"]
+    errors: list[str] = []
+    for index, item in enumerate(value):
+        if item not in KNOWN_AUGMENTATIONS:
+            errors.append(
+                f"{prefix}/augmentations/{index}: must be one of {', '.join(KNOWN_AUGMENTATIONS)}"
+            )
+    return errors
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -29,7 +29,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "path", "split", "source_type"],
+        "required": ["id", "path", "split", "source_type", "class_label"],
         "properties": {
           "id": {
             "type": "string",
@@ -41,10 +41,20 @@
             "description": "Relative path under the manifest directory. Absolute paths and parent traversal are rejected by the validator."
           },
           "split": {
-            "enum": ["train", "val", "test"]
+            "enum": ["test", "train", "val"]
           },
           "source_type": {
-            "enum": ["ball_track", "pop_audio"]
+            "enum": ["pop_audio", "roboflow_ball_xy", "tracknet_ball_xy"]
+          },
+          "source_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "class_label": {
+            "enum": ["ball_occluded", "ball_visible", "negative", "pop"]
+          },
+          "label_format": {
+            "enum": ["roboflow_xy", "tracknet_xy"]
           },
           "frame_rate": {
             "type": "number",
@@ -53,6 +63,40 @@
           "sample_rate": {
             "type": "integer",
             "exclusiveMinimum": 0
+          },
+          "audio_format": {
+            "const": "wav"
+          },
+          "duration_ms": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "visibility": {
+            "enum": [0, 1, 2]
+          },
+          "augmentations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "amplitude",
+                "background_subtraction",
+                "color_jitter",
+                "copy_paste",
+                "fps_sim",
+                "h264_artifact",
+                "jpeg_artifact",
+                "mixup",
+                "motion_blur",
+                "noise_snr",
+                "occlusion",
+                "pitch_shift",
+                "rir",
+                "specaugment",
+                "time_shift",
+                "time_stretch"
+              ]
+            }
           },
           "notes": {
             "type": "string"
@@ -63,16 +107,64 @@
             "if": {
               "properties": {
                 "source_type": {
-                  "const": "pop_audio"
-                },
-                "sample_rate": {}
+                  "const": "roboflow_ball_xy"
+                }
               },
-              "required": ["sample_rate"]
+              "required": ["source_type"]
             },
             "then": {
+              "required": ["label_format"],
               "properties": {
+                "class_label": {
+                  "enum": ["ball_occluded", "ball_visible"]
+                },
+                "label_format": {
+                  "const": "roboflow_xy"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "source_type": {
+                  "const": "tracknet_ball_xy"
+                }
+              },
+              "required": ["source_type"]
+            },
+            "then": {
+              "required": ["label_format"],
+              "properties": {
+                "class_label": {
+                  "enum": ["ball_occluded", "ball_visible"]
+                },
+                "label_format": {
+                  "const": "tracknet_xy"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "source_type": {
+                  "const": "pop_audio"
+                }
+              },
+              "required": ["source_type"]
+            },
+            "then": {
+              "required": ["sample_rate"],
+              "properties": {
+                "class_label": {
+                  "enum": ["negative", "pop"]
+                },
                 "sample_rate": {
                   "const": 44100
+                },
+                "audio_format": {
+                  "const": "wav"
                 }
               }
             }
