@@ -62,6 +62,28 @@ class ClipQualityProbe:
         }
 
 
+@dataclass(frozen=True)
+class DecodeBenchmark:
+    """Wall-clock decode throughput for Phase 0 backend validation."""
+
+    backend: str
+    elapsed_s: float
+    duration_s: float
+    frame_count: int
+    decode_fps: float
+    realtime_factor: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "backend": self.backend,
+            "elapsed_s": self.elapsed_s,
+            "duration_s": self.duration_s,
+            "frame_count": self.frame_count,
+            "decode_fps": self.decode_fps,
+            "realtime_factor": self.realtime_factor,
+        }
+
+
 def _parse_rational(value: str | None) -> float | None:
     if not value or value == "0/0":
         return None
@@ -258,6 +280,42 @@ def analyze_clip_qc(
         luminance_mean=luminance_mean,
         luminance_std_fraction=luminance_std_fraction,
         capture_quality=quality,
+    )
+
+
+def measure_decode_throughput(path: str | Path, *, backend: str = "cpu") -> DecodeBenchmark:
+    """Measure ffmpeg video decode throughput without materializing frames."""
+
+    if backend not in {"cpu", "cuda"}:
+        raise ValueError(f"Unsupported decode backend: {backend}")
+
+    clip_path = Path(path)
+    source = probe_clip(clip_path)
+    command = ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error"]
+    if backend == "cuda":
+        command.extend(["-hwaccel", "cuda", "-hwaccel_output_format", "cuda"])
+    command.extend(["-i", str(clip_path), "-map", "0:v:0", "-an", "-f", "null", "-"])
+
+    started = time.perf_counter()
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError("ffmpeg is required for Phase 0 decode benchmarking") from exc
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"ffmpeg {backend} decode failed for {clip_path}: {exc.stderr.strip()}") from exc
+
+    elapsed_s = max(time.perf_counter() - started, 1e-9)
+    frame_count = source.frame_count or max(1, round(source.duration_s * source.fps))
+    decode_fps = frame_count / elapsed_s
+    realtime_factor = source.duration_s / elapsed_s if source.duration_s > 0 else 0.0
+
+    return DecodeBenchmark(
+        backend=backend,
+        elapsed_s=elapsed_s,
+        duration_s=source.duration_s,
+        frame_count=frame_count,
+        decode_fps=decode_fps,
+        realtime_factor=realtime_factor,
     )
 
 

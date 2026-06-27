@@ -11,6 +11,7 @@ from threed.racketsport.io_decode import (
     FrameSource,
     _laplacian_variance,
     analyze_clip_qc,
+    measure_decode_throughput,
     probe_clip,
 )
 
@@ -131,3 +132,25 @@ def test_ingest_testclips_writes_qc_and_capture_quality(tmp_path):
     assert payload["capture_quality"]["grade"] in {"good", "warn", "poor"}
     assert payload["clip_qc"]["sample_resolution"] == [32, 24]
     assert payload["clip_qc"]["sampled_frames"] == 1
+
+
+def test_measure_decode_throughput_returns_realtime_factor(tmp_path):
+    clip = tmp_path / "sample.mp4"
+    _make_tiny_clip(clip, rate=10, duration_s=1.0)
+
+    benchmark = measure_decode_throughput(clip, backend="cpu")
+
+    assert benchmark.backend == "cpu"
+    assert benchmark.frame_count >= 10
+    assert benchmark.elapsed_s > 0.0
+    assert benchmark.decode_fps > 0.0
+    assert benchmark.realtime_factor > 0.0
+    json.dumps(benchmark.to_dict())
+
+
+def test_measure_decode_throughput_rejects_unknown_backend(tmp_path):
+    clip = tmp_path / "sample.mp4"
+    _make_tiny_clip(clip)
+
+    with pytest.raises(ValueError, match="Unsupported decode backend"):
+        measure_decode_throughput(clip, backend="bad")
