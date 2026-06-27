@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/racketsport/pipeline_contracts_schema.json",
+  "title": "Racket-sport Pipeline Artifact Readiness",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "run_dir",
+    "requested_stage",
+    "status",
+    "stage_order",
+    "required_artifacts",
+    "missing_artifacts",
+    "stages"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "artifact_type": {
+      "const": "racketsport_pipeline_artifact_readiness"
+    },
+    "run_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requested_stage": {
+      "type": "string",
+      "enum": [
+        "calibration",
+        "tracking",
+        "body",
+        "physics",
+        "ball_events",
+        "racket",
+        "metrics",
+        "shot_drill",
+        "copy",
+        "replay",
+        "e2e"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ready", "not_ready"]
+    },
+    "stage_order": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 11,
+      "maxItems": 11
+    },
+    "required_artifacts": {
+      "$ref": "#/$defs/artifact_list"
+    },
+    "missing_artifacts": {
+      "$ref": "#/$defs/artifact_list"
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stage",
+          "phase",
+          "depends_on",
+          "status",
+          "blocked_by",
+          "required_artifacts",
+          "present_artifacts",
+          "missing_artifacts"
+        ],
+        "properties": {
+          "stage": {
+            "type": "string",
+            "minLength": 1
+          },
+          "phase": {
+            "type": "string",
+            "pattern": "^phase[0-9]+$"
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ready", "not_ready", "blocked"]
+          },
+          "blocked_by": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required_artifacts": {
+            "$ref": "#/$defs/artifact_list"
+          },
+          "present_artifacts": {
+            "$ref": "#/$defs/artifact_list"
+          },
+          "missing_artifacts": {
+            "$ref": "#/$defs/artifact_list"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "artifact_list": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_]+\\.json$"
+      }
+    }
+  }
+}
