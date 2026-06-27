@@ -277,6 +277,35 @@ def _write_metric_artifacts(run_dir: Path) -> None:
     (run_dir / "habit_report.json").write_text(json.dumps(habit_report), encoding="utf-8")
 
 
+def _write_shot_drill_artifacts(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    metrics = {
+        "schema_version": 1,
+        "players": [
+            {
+                "id": 1,
+                "shots": [
+                    {"t": 0.25, "type": "dink", "type_conf": 0.82, "metrics": {}},
+                    {"t": 0.75, "type": "drive", "type_conf": 0.79, "metrics": {}},
+                ],
+            }
+        ],
+    }
+    drill_report = {
+        "schema_version": 1,
+        "drill": "kitchen_dinks",
+        "reps": 3,
+        "clean_reps": 2,
+        "per_rep": [
+            {"t": 0.0, "quality": "clean", "reasons": []},
+            {"t": 1.0, "quality": "fault", "reasons": ["late_contact"]},
+            {"t": 2.0, "quality": "clean", "reasons": []},
+        ],
+    }
+    (run_dir / "racket_sport_metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
+    (run_dir / "drill_report.json").write_text(json.dumps(drill_report), encoding="utf-8")
+
+
 def test_calib_eval_passes_when_ready_clip_has_required_artifacts(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase1"
@@ -773,3 +802,67 @@ def test_metric_eval_blocks_when_habit_report_is_missing(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
     assert payload["clips"][0]["missing_artifacts"] == ["habit_report.json"]
+
+
+def test_shot_drill_eval_passes_when_ready_clip_has_shots_and_drill_report(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase8"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_shot_drill_artifacts(root / "clip_001")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.shot_drill_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert json.loads(completed.stdout)["status"] == "pass"
+    assert payload["phase"] == "phase8"
+    assert payload["required_artifacts"] == ["racket_sport_metrics.json", "drill_report.json"]
+    assert payload["clips"][0]["metrics"]["shots"]["value"] == 2
+    assert payload["clips"][0]["metrics"]["shot_types"]["value"] == "dink,drive"
+    assert payload["clips"][0]["metrics"]["drill_reps"]["value"] == 3
+    assert payload["clips"][0]["metrics"]["clean_reps"]["value"] == 2
+    assert payload["clips"][0]["metrics"]["fault_reps"]["value"] == 1
+    validate_artifact_file("phase_eval_metrics", root / "metrics.json")
+
+
+def test_shot_drill_eval_blocks_when_drill_report_is_missing(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase8"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_shot_drill_artifacts(root / "clip_001")
+    (root / "clip_001" / "drill_report.json").unlink()
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.shot_drill_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["clips"][0]["missing_artifacts"] == ["drill_report.json"]
