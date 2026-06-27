@@ -109,4 +109,55 @@ def test_check_eval_regression_cli_exits_nonzero_and_prints_failures(tmp_path: P
     payload = json.loads(completed.stdout)
     assert payload["status"] == "fail"
     assert payload["max_drop_percent"] == 2.0
+    assert "checked_artifacts" not in payload
     assert payload["failures"][0]["path"] == "clips[clip_001].metrics.track_frames"
+
+
+def test_check_eval_regression_cli_discovers_and_pairs_metrics_from_roots(tmp_path: Path) -> None:
+    baseline_root = tmp_path / "baseline"
+    current_root = tmp_path / "current"
+
+    baseline_phase1 = baseline_root / "phase1"
+    current_phase1 = current_root / "phase1"
+    baseline_phase2 = baseline_root / "phase2"
+    current_phase2 = current_root / "phase2"
+    for path in [baseline_phase1, current_phase1, baseline_phase2, current_phase2]:
+        path.mkdir(parents=True)
+
+    (baseline_phase1 / "metrics.json").write_text(
+        json.dumps(_phase_payload(clip_metrics={"track_frames": _metric(100)})),
+        encoding="utf-8",
+    )
+    (current_phase1 / "metrics.json").write_text(
+        json.dumps(_phase_payload(clip_metrics={"track_frames": _metric(100)})),
+        encoding="utf-8",
+    )
+    (baseline_phase2 / "metrics.json").write_text(
+        json.dumps(_phase_payload(clip_metrics={"track_frames": _metric(50)})),
+        encoding="utf-8",
+    )
+    (current_phase2 / "metrics.json").write_text(
+        json.dumps(_phase_payload(clip_metrics={"track_frames": _metric(48)})),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/check_eval_regression.py",
+            "--current-root",
+            str(current_root),
+            "--baseline-root",
+            str(baseline_root),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 1
+    payload = json.loads(completed.stdout)
+    assert payload["status"] == "fail"
+    assert payload["checked_artifacts"] == 2
+    assert payload["checked_metrics"] == 2
+    assert payload["failures"][0]["path"] == "phase2/metrics.json:clips[clip_001].metrics.track_frames"

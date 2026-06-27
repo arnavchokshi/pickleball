@@ -4,7 +4,13 @@ import argparse
 import json
 from pathlib import Path
 
-from threed.racketsport.eval.metrics import build_phase_metrics, metric, missing_artifacts, write_phase_metrics
+from threed.racketsport.eval.metrics import (
+    NumericGate,
+    build_phase_metrics,
+    evaluate_numeric_gates,
+    missing_artifacts,
+    write_phase_metrics,
+)
 from threed.racketsport.schemas import EvalClipResult, ReplayScene, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
@@ -39,6 +45,21 @@ ARTIFACT_SCHEMA_NAMES = {
     "coach_report.json": "coach_report",
     "drill_report.json": "drill_report",
     "replay_scene.json": "replay_scene",
+}
+
+E2E_ARTIFACT_GATES = {
+    "required_artifacts_present": NumericGate(
+        name="e2e_required_artifacts_present",
+        op="==",
+        threshold=len(REQUIRED_E2E_ARTIFACTS),
+        unit="artifacts",
+    ),
+    "required_artifacts_total": NumericGate(
+        name="e2e_required_artifacts_total",
+        op="==",
+        threshold=len(REQUIRED_E2E_ARTIFACTS),
+        unit="artifacts",
+    ),
 }
 
 
@@ -127,7 +148,23 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         missing_glbs = [glb for glb in expected_glbs if not (run_dir / glb).is_file()]
 
     present_artifacts = len(REQUIRED_E2E_ARTIFACTS)
-    passed = present_artifacts == len(REQUIRED_E2E_ARTIFACTS) and not missing_glbs
+    gated = evaluate_numeric_gates(
+        {
+            "required_artifacts_present": present_artifacts,
+            "required_artifacts_total": len(REQUIRED_E2E_ARTIFACTS),
+            "referenced_glb_files_present": referenced_glbs - len(missing_glbs),
+        },
+        {
+            **E2E_ARTIFACT_GATES,
+            "referenced_glb_files_present": NumericGate(
+                name="e2e_referenced_glb_files_present",
+                op="==",
+                threshold=referenced_glbs,
+                unit="files",
+            ),
+        },
+    )
+    passed = all(gated_metric.passed is True for gated_metric in gated.values())
     notes = [f"missing referenced GLB files: {', '.join(missing_glbs)}"] if missing_glbs else []
     return EvalClipResult(
         clip=clip_name,
@@ -136,26 +173,7 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         status="pass" if passed else "fail",
         missing_label_files=[],
         missing_artifacts=[],
-        metrics={
-            "required_artifacts_present": metric(
-                value=present_artifacts,
-                unit="artifacts",
-                gate="all required end-to-end artifacts exist",
-                passed=present_artifacts == len(REQUIRED_E2E_ARTIFACTS),
-            ),
-            "required_artifacts_total": metric(
-                value=len(REQUIRED_E2E_ARTIFACTS),
-                unit="artifacts",
-                gate="all required end-to-end artifacts exist",
-                passed=True,
-            ),
-            "referenced_glb_files_present": metric(
-                value=referenced_glbs - len(missing_glbs),
-                unit="files",
-                gate="all replay GLB references exist",
-                passed=not missing_glbs,
-            ),
-        },
+        metrics=gated,
         notes=notes,
     )
 

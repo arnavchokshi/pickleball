@@ -15,10 +15,16 @@ on:
     inputs:
       current:
         description: "Current phase metrics JSON path in the checkout"
-        required: true
+        required: false
       baseline:
         description: "Baseline phase metrics JSON path in the checkout"
-        required: true
+        required: false
+      current_root:
+        description: "Directory containing current phase metrics JSON artifacts"
+        required: false
+      baseline_root:
+        description: "Directory containing baseline phase metrics JSON artifacts"
+        required: false
       max_drop_percent:
         description: "Maximum allowed measured numeric metric drop percentage"
         required: false
@@ -38,8 +44,19 @@ jobs:
         run: pytest tests/racketsport/test_eval_regression.py -q
       - name: Compare requested metrics
         if: github.event_name == 'workflow_dispatch'
-        run: >
-          python scripts/racketsport/check_eval_regression.py
-          --current "${{ inputs.current }}"
-          --baseline "${{ inputs.baseline }}"
-          --max-drop-percent "${{ inputs.max_drop_percent }}"
+        env:
+          CURRENT: ${{ inputs.current }}
+          BASELINE: ${{ inputs.baseline }}
+          CURRENT_ROOT: ${{ inputs.current_root }}
+          BASELINE_ROOT: ${{ inputs.baseline_root }}
+          MAX_DROP_PERCENT: ${{ inputs.max_drop_percent }}
+        run: |
+          set -euo pipefail
+          args=(--max-drop-percent "$MAX_DROP_PERCENT")
+          if [[ -n "$CURRENT" || -n "$BASELINE" ]]; then
+            args+=(--current "$CURRENT" --baseline "$BASELINE")
+          fi
+          if [[ -n "$CURRENT_ROOT" || -n "$BASELINE_ROOT" ]]; then
+            args+=(--current-root "$CURRENT_ROOT" --baseline-root "$BASELINE_ROOT")
+          fi
+          python scripts/racketsport/check_eval_regression.py "${args[@]}"

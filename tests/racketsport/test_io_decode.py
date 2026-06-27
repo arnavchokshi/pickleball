@@ -137,9 +137,10 @@ def test_ingest_testclips_writes_qc_and_capture_quality(tmp_path):
 def test_extract_label_frames_cli_writes_manual_review_pack(tmp_path):
     root = tmp_path / "testclips"
     out = tmp_path / "label_frames"
-    clip_dir = root / "candidate"
-    clip_dir.mkdir(parents=True)
-    _make_tiny_clip(clip_dir / "source.mp4", rate=10, duration_s=1.0)
+    for clip_name in ("candidate", "second_candidate"):
+        clip_dir = root / clip_name
+        clip_dir.mkdir(parents=True)
+        _make_tiny_clip(clip_dir / "source.mp4", rate=10, duration_s=1.0)
 
     completed = subprocess.run(
         [
@@ -162,14 +163,84 @@ def test_extract_label_frames_cli_writes_manual_review_pack(tmp_path):
     payload = json.loads(completed.stdout)
     manifest = json.loads((out / "candidate" / "label_frame_manifest.json").read_text(encoding="utf-8"))
     frames = sorted((out / "candidate").glob("frame_*.jpg"))
+    second_manifest = json.loads((out / "second_candidate" / "label_frame_manifest.json").read_text(encoding="utf-8"))
+    second_frames = sorted((out / "second_candidate").glob("frame_*.jpg"))
 
-    assert payload["clip_count"] == 1
-    assert payload["total_frames"] == len(frames)
+    assert payload["clip_count"] == 2
+    assert payload["total_frames"] == len(frames) + len(second_frames)
     assert payload["clips"][0]["clip"] == "candidate"
+    assert payload["clips"][1]["clip"] == "second_candidate"
     assert manifest["clip"] == "candidate"
     assert manifest["sample_every_frames"] == 3
+    assert second_manifest["clip"] == "second_candidate"
+    assert second_manifest["sample_every_frames"] == 3
     assert len(frames) >= 3
+    assert len(second_frames) >= 3
     assert all(frame.stat().st_size > 0 for frame in frames)
+    assert all(frame.stat().st_size > 0 for frame in second_frames)
+
+
+def test_extract_label_frames_cli_filters_to_requested_clip(tmp_path):
+    root = tmp_path / "testclips"
+    out = tmp_path / "label_frames"
+    for clip_name in ("candidate", "second_candidate"):
+        clip_dir = root / clip_name
+        clip_dir.mkdir(parents=True)
+        _make_tiny_clip(clip_dir / "source.mp4", rate=10, duration_s=1.0)
+
+    completed = subprocess.run(
+        [
+            "python",
+            "scripts/racketsport/extract_label_frames.py",
+            "--root",
+            str(root),
+            "--out",
+            str(out),
+            "--every-frames",
+            "3",
+            "--max-width",
+            "64",
+            "--clip",
+            "second_candidate",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(completed.stdout)
+
+    assert payload["clip_count"] == 1
+    assert payload["clips"][0]["clip"] == "second_candidate"
+    assert (out / "second_candidate" / "label_frame_manifest.json").exists()
+    assert not (out / "candidate").exists()
+
+
+def test_extract_label_frames_cli_reports_missing_requested_clip(tmp_path):
+    root = tmp_path / "testclips"
+    out = tmp_path / "label_frames"
+    clip_dir = root / "candidate"
+    clip_dir.mkdir(parents=True)
+    _make_tiny_clip(clip_dir / "source.mp4", rate=10, duration_s=1.0)
+
+    completed = subprocess.run(
+        [
+            "python",
+            "scripts/racketsport/extract_label_frames.py",
+            "--root",
+            str(root),
+            "--out",
+            str(out),
+            "--clip",
+            "missing",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode != 0
+    assert "requested clip not found: missing" in completed.stderr
+    assert "available clips: candidate" in completed.stderr
 
 
 def test_measure_decode_throughput_returns_realtime_factor(tmp_path):

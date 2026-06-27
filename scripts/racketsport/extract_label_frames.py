@@ -22,6 +22,21 @@ def _clip_dirs(root: Path) -> list[Path]:
     return sorted(path for path in root.iterdir() if path.is_dir() and not path.name.startswith("."))
 
 
+def _filter_clip_dirs(clip_dirs: list[Path], clip_names: list[str] | None) -> list[Path]:
+    if not clip_names:
+        return clip_dirs
+
+    requested = set(clip_names)
+    available = {clip_dir.name: clip_dir for clip_dir in clip_dirs}
+    missing = sorted(requested - set(available))
+    if missing:
+        available_names = ", ".join(sorted(available)) or "(none)"
+        missing_names = ", ".join(missing)
+        raise ValueError(f"requested clip not found: {missing_names}; available clips: {available_names}")
+
+    return [clip_dir for clip_dir in clip_dirs if clip_dir.name in requested]
+
+
 def _source_video(clip_dir: Path) -> Path:
     source_candidates = sorted(
         path for path in clip_dir.iterdir() if path.name.startswith("source") and path.suffix.lower() in VIDEO_SUFFIXES
@@ -112,9 +127,11 @@ def extract_label_frames(
     every_frames: int = 30,
     max_width: int = 1280,
     max_frames: int | None = None,
+    clip_names: list[str] | None = None,
 ) -> dict[str, Any]:
     if not root.exists():
         raise FileNotFoundError(root)
+    clip_dirs = _filter_clip_dirs(_clip_dirs(root), clip_names)
     clips = [
         extract_clip_label_frames(
             clip_dir=clip_dir,
@@ -123,7 +140,7 @@ def extract_label_frames(
             max_width=max_width,
             max_frames=max_frames,
         )
-        for clip_dir in _clip_dirs(root)
+        for clip_dir in clip_dirs
     ]
     return {
         "schema_version": 1,
@@ -142,15 +159,25 @@ def main() -> int:
     parser.add_argument("--every-frames", type=int, default=30)
     parser.add_argument("--max-width", type=int, default=1280)
     parser.add_argument("--max-frames", type=int)
+    parser.add_argument(
+        "--clip",
+        dest="clip_names",
+        action="append",
+        help="Only extract the named clip directory. Repeat to include multiple clips.",
+    )
     args = parser.parse_args()
 
-    summary = extract_label_frames(
-        root=args.root,
-        out=args.out,
-        every_frames=args.every_frames,
-        max_width=args.max_width,
-        max_frames=args.max_frames,
-    )
+    try:
+        summary = extract_label_frames(
+            root=args.root,
+            out=args.out,
+            every_frames=args.every_frames,
+            max_width=args.max_width,
+            max_frames=args.max_frames,
+            clip_names=args.clip_names,
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
 

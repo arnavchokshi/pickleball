@@ -34,6 +34,13 @@ class RegressionResult:
         }
 
 
+@dataclass(frozen=True)
+class MetricArtifactPair:
+    relative_path: str
+    baseline: Path
+    current: Path
+
+
 def compare_phase_metrics(
     *,
     current: dict[str, Any],
@@ -126,10 +133,84 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _discover_metric_artifacts(root: Path) -> dict[str, Path]:
+    if not root.is_dir():
+        raise ValueError(f"{root} must be a directory")
+
+    artifacts: dict[str, Path] = {}
+    for path in sorted(root.rglob("metrics.json")):
+        if not path.is_file():
+            continue
+        artifacts[path.relative_to(root).as_posix()] = path
+    return artifacts
+
+
+def _discover_paired_metric_artifacts(*, current_root: Path, baseline_root: Path) -> list[MetricArtifactPair]:
+    current_artifacts = _discover_metric_artifacts(current_root)
+    baseline_artifacts = _discover_metric_artifacts(baseline_root)
+    if not baseline_artifacts:
+        raise ValueError(f"No metrics.json artifacts found under baseline root {baseline_root}")
+    if not current_artifacts:
+        raise ValueError(f"No metrics.json artifacts found under current root {current_root}")
+
+    missing_current = sorted(set(baseline_artifacts) - set(current_artifacts))
+    if missing_current:
+        missing = ", ".join(missing_current)
+        raise ValueError(f"Current root {current_root} is missing baseline metrics artifacts: {missing}")
+
+    return [
+        MetricArtifactPair(
+            relative_path=relative_path,
+            baseline=baseline_path,
+            current=current_artifacts[relative_path],
+        )
+        for relative_path, baseline_path in sorted(baseline_artifacts.items())
+    ]
+
+
+def _prefixed_failure(*, relative_path: str, failure: MetricRegression) -> MetricRegression:
+    return MetricRegression(
+        path=f"{relative_path}:{failure.path}",
+        baseline=failure.baseline,
+        current=failure.current,
+        drop_percent=failure.drop_percent,
+    )
+
+
+def _compare_metric_artifact_pairs(
+    pairs: list[MetricArtifactPair],
+    *,
+    max_drop_percent: float,
+) -> dict[str, Any]:
+    checked_metrics = 0
+    failures: list[MetricRegression] = []
+
+    for pair in pairs:
+        result = compare_phase_metrics(
+            current=_load_json(pair.current),
+            baseline=_load_json(pair.baseline),
+            max_drop_percent=max_drop_percent,
+        )
+        checked_metrics += result.checked_metrics
+        failures.extend(
+            _prefixed_failure(relative_path=pair.relative_path, failure=failure) for failure in result.failures
+        )
+
+    return {
+        "status": "fail" if failures else "pass",
+        "max_drop_percent": max_drop_percent,
+        "checked_artifacts": len(pairs),
+        "checked_metrics": checked_metrics,
+        "failures": [asdict(failure) for failure in failures],
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Compare current and baseline phase metrics JSON for regressions.")
-    parser.add_argument("--current", type=Path, required=True, help="Current phase metrics JSON path.")
-    parser.add_argument("--baseline", type=Path, required=True, help="Baseline phase metrics JSON path.")
+    parser.add_argument("--current", type=Path, help="Current phase metrics JSON path.")
+    parser.add_argument("--baseline", type=Path, help="Baseline phase metrics JSON path.")
+    parser.add_argument("--current-root", type=Path, help="Directory containing current phase metrics JSON artifacts.")
+    parser.add_argument("--baseline-root", type=Path, help="Directory containing baseline phase metrics JSON artifacts.")
     parser.add_argument(
         "--max-drop-percent",
         type=float,
@@ -138,13 +219,39 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    result = compare_phase_metrics(
-        current=_load_json(args.current),
-        baseline=_load_json(args.baseline),
-        max_drop_percent=args.max_drop_percent,
-    )
-    print(json.dumps(result.to_json_dict(), indent=2, sort_keys=True))
-    return 1 if result.failures else 0
+    direct_files_requested = args.current is not None or args.baseline is not None
+    roots_requested = args.current_root is not None or args.baseline_root is not None
+    if direct_files_requested == roots_requested:
+        parser.error("Provide either --current/--baseline or --current-root/--baseline-root.")
+    if direct_files_requested and (args.current is None or args.baseline is None):
+        parser.error("--current and --baseline must be provided together.")
+    if roots_requested and (args.current_root is None or args.baseline_root is None):
+        parser.error("--current-root and --baseline-root must be provided together.")
+
+    try:
+        if direct_files_requested:
+            current_path = args.current
+            baseline_path = args.baseline
+            assert current_path is not None
+            assert baseline_path is not None
+            result = compare_phase_metrics(
+                current=_load_json(current_path),
+                baseline=_load_json(baseline_path),
+                max_drop_percent=args.max_drop_percent,
+            )
+            payload = result.to_json_dict()
+        else:
+            current_root = args.current_root
+            baseline_root = args.baseline_root
+            assert current_root is not None
+            assert baseline_root is not None
+            pairs = _discover_paired_metric_artifacts(current_root=current_root, baseline_root=baseline_root)
+            payload = _compare_metric_artifact_pairs(pairs, max_drop_percent=args.max_drop_percent)
+    except ValueError as exc:
+        parser.exit(2, f"{parser.prog}: error: {exc}\n")
+
+    print(json.dumps(payload, indent=2, sort_keys=True))
+    return 1 if payload["failures"] else 0
 
 
 if __name__ == "__main__":

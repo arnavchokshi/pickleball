@@ -8,6 +8,18 @@ Validate a manifest with:
 python scripts/racketsport/validate_corrections.py path/to/corrections.json
 ```
 
+Build a flat queue artifact from one or more validated manifests with:
+
+```bash
+python scripts/racketsport/build_corrections_queue.py path/to/corrections.json --out runs/corrections_queue/corrections_queue.json
+```
+
+Or discover all manifest JSON files under a directory:
+
+```bash
+python scripts/racketsport/build_corrections_queue.py --root corrections/inbox --out runs/corrections_queue/corrections_queue.json
+```
+
 The validator is intentionally strict:
 
 - `schema_version` must be `1`.
@@ -16,6 +28,7 @@ The validator is intentionally strict:
 - `set`, `replace`, and `append` operations require `value`.
 - `delete` operations must not include `value`.
 - Correction IDs must be unique within a manifest.
+- Queued correction keys must be unique by `manifest_id` + correction `id` across all queue inputs.
 - Artifact paths must be relative and must not traverse outside the workspace.
 
 Minimal manifest:
