@@ -25,6 +25,12 @@ conda activate "$ENV_NAME"
 # Fast-SAM-3D-Body's detectron2 build expects nvcc. Keep this in a separate
 # env so the running body4d pod-agent environment stays stable.
 conda install -c nvidia/label/cuda-12.4.0 cuda-toolkit -y
+conda install -c conda-forge cxx-compiler -y
+
+export CC="${CC:-x86_64-conda-linux-gnu-cc}"
+export CXX="${CXX:-x86_64-conda-linux-gnu-c++}"
+export FORCE_CUDA="${FORCE_CUDA:-1}"
+export TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-9.0}"
 
 python -m pip install \
   torch==2.5.1+cu124 torchvision==0.20.1+cu124 \
