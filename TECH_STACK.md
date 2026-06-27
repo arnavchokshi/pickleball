@@ -328,9 +328,9 @@ Two tiers (our world-grounding/foot-lock detailed in (p); built in `IMPLEMENTATI
 ### (m) Visualization / UX — **court map + 1 metric + self-vs-self is the conversion core; 3D is premium async**
 
 - **Chosen conversion core (delivered <10s):** top-down **court map / heatmap** + **one outcome-linked priority metric** (+3–4 context) + **self-vs-self before/after**. This is what mid-level players pay to retain.
-- **Premium async (notified):** 2D pose overlay on own video, **auto-telestration** (auto-drawn angle arcs / contact markers / base-of-support box), 3D skeleton replay, mesh avatar, LLM coaching summary, self-vs-self 3D ghost aligned at contact.
-- **Why this split:** the UX research is unambiguous — court map/heatmap/before-after are the "aha"+retention drivers; 3D avatar/skeleton replay/kinematic charts are "nice demo," not conversion. Nielsen limits: <1s in-flow, 1–10s spinner, >10s disengage. PB Vision's silent multi-minute wait is the friction gap we attack with progressive disclosure (0–10s preview / 10–60s full metrics / 2–10 min report).
-- **Toggle:** metric cards + 2D overlay (cheap, free tier) ↔ 3D skeleton replay ↔ mesh avatar + ghost (premium).
+- **Premium async (notified):** 2D pose overlay on own video, **auto-telestration** (auto-drawn angle arcs / contact markers / base-of-support box), physics-accurate 3D mesh replay, LLM coaching summary, self-vs-self 3D ghost aligned at contact.
+- **Why this split:** the UX research is unambiguous — court map/heatmap/before-after are the "aha"+retention drivers; full 3D replay and kinematic charts are premium proof layers, not the first conversion surface. Nielsen limits: <1s in-flow, 1–10s spinner, >10s disengage. PB Vision's silent multi-minute wait is the friction gap we attack with progressive disclosure (0–10s preview / 10–60s full metrics / 2–10 min report).
+- **Toggle:** metric cards + 2D overlay (cheap, free tier) ↔ physics-accurate 3D mesh replay + ghost (premium).
 
 ### (n) Storage / artifacts — **tiered retention**
 
@@ -439,7 +439,7 @@ We do not buy accuracy by running a heavier model at inference — that only cos
 
 | Component | License | Commercial OK? | Note |
 |---|---|---|---|
-| **SAM-3D-Body / Fast SAM-3D-Body** | SAM License | **YES** | No military/ITAR. **The per-frame mesh core** — best accuracy AND commercial-clean. |
+| **SAM-3D-Body / Fast SAM-3D-Body** | SAM License | **VERIFY** | Usable for current research/personal work. Before commercialization, verify the SAM License terms or switch the body backbone to SAT-HMR (Apache). |
 | Multi-HMR 2 / SAT-HMR (fast-tier preview) | Research | **NO** | Preview only; commercial-swap → SAM-3D-Body per-crop. |
 | GVHMR / WHAM / TRAM (optional trajectory x-check) | Research / MIT | NO / YES | Demoted to optional world-trajectory sanity-check, not the mesh. |
 | PromptHMR | Research | — | **Dropped** (bad on automated sports; user-confirmed). |
@@ -459,7 +459,7 @@ We do not buy accuracy by running a heavier model at inference — that only cos
 | OpenCV / kornia / librosa / torchaudio | BSD / Apache / ISC / BSD | **YES** | Utilities. |
 | Claude (LLM copy) | Anthropic API | **YES** | Commercial API. |
 
-**Rule (round-4b):** use the **most accurate** component per stage now (research/personal use). The body core (SAM-3D-Body) is already commercial-clean; for a future paid build the swaps are mainly YOLO26→RF-DETR-L/RTMDet, NC datasets→licensed/synthetic, and MultiPhys→a permissive equivalent.
+**Rule (round-4b):** use the **most accurate** component per stage now (research/personal use). For a future paid build, verify SAM-3D-Body's commercial terms and plan likely swaps for YOLO26→RF-DETR-L/RTMDet, NC datasets→licensed/synthetic, MultiPhys→a permissive equivalent, and SAM-3D-Body→SAT-HMR if the SAM License is not acceptable.
 
 **Verify-before-commit (bleeding-edge, some possibly future-dated in source research):** Multi-HMR 2, SAT-HMR, WATCH, OnlineHMR, HTD-Refine, PhysHMR, CalTennis, BEDLAM2, TT4D — confirm repo/license/benchmarks resolve before relying on them. **Proven core (build on now):** SAM-3D-Body + Fast SAM-3D-Body, YOLO26, BoT-SORT/ByteTrack, RTMPose/RTMW, MotionBERT, TrackNetV3, PhysPT, PHC/PULSE, MuJoCo+MJX, GigaPose/FoundPose, OpenCV PnP, Three.js. Established fallbacks: SAM-3D-Body per-crop (for Multi-HMR 2/SAT-HMR preview), PhysPT (for PHC), RF-DETR-L/RTMDet (for YOLO26).
 

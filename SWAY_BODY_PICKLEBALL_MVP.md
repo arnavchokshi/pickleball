@@ -138,7 +138,7 @@ The replay is mesh throughout; the racket, densest swing fidelity, and full phys
 
 | Tier | Latency | Work | User value |
 |---|---|---|---|
-| **Fast** | <10 s | person ID, court lock-in, cheap ball context, camera-space SMPL (SAT-HMR/OnlineHMR) overlay, court map, 1 priority metric | "I feel seen" — beats PB Vision's silent multi-minute wait |
+| **Fast** | <10 s | person ID, court lock-in, cheap ball context, camera-space SMPL (SAT-HMR / Multi-HMR 2) overlay, court map, 1 priority metric | "I feel seen" — beats PB Vision's silent multi-minute wait |
 | **Deep / replay** | async, notified | Fast SAM-3D-Body per crop → world-ground via known camera+court → foot-lock → physics → racket 6DoF → full metrics, rule insights, LLM coaching copy, **physics-accurate 3D replay**, before/after | the report + watchable replay people pay for |
 
 The tier toggle *is* the paywall: "Instant" (fast mesh preview + metrics, seconds) vs "Deep" (world-grounded physics replay + report + ghost, minutes, premium). Price tracks compute.
@@ -237,20 +237,20 @@ The build-now differentiators first, then the longer-horizon set:
 1. **Physics-accurate 3D replay** — watch the whole rally reconstructed (players, court, net, ball, rackets) from any angle, foot-skate-free and physics-consistent; the marquee "wow" + proof layer (see `IMPLEMENTATION_PHASES.md` Phase 10).
 2. **Racket in 3D / true contact point** — show exactly where on the paddle face the ball hit and the face angle at contact, rendered on the 3D paddle — the thing no competitor can do.
 3. **Self-vs-self ghost**, aligned at contact — now mesh-on-mesh in the 3D replay; the marquee shareable.
-3. **"One leak at a time"** — fix one habit, track only it, then advance.
-4. **Doubles Chemistry Score** — partner gap over time, split-step sync, middle-ball ownership, stack timing.
-5. **Court Advantage Meter** — label each moment attacking/neutral/defending/exposed; grade whether body+court state improved the rally.
-6. **Stay-On-Court report** — non-medical movement screen (overreach, backpedaling, knee collapse, asymmetry) for the 50+ lane.
-7. **Auto-telestration** — auto-draw the knee-angle arc, contact marker, base-of-support box (the minutes coaches pay to save).
-8. **Drill Verification Mode** — 45 s upload, scored reps (10 clean dinks, 10 balanced serves) via wrist-velocity peaks + contact events.
-9. **Lowlight reels** (coaching) + **highlight reels** (shareable growth loop).
-10. **"Why your rating is stuck"** — explain the bottleneck, don't replace DUPR/UTR.
-11. **Tennis Serve Lab** — trophy position, leg drive, trunk tilt, landing balance, foot fault, serve+1 readiness.
-12. **Paddle/Racket Fit Lab** — connect specs (weight, swingweight, balance) to movement patterns; profile + body proxy, no 6DoF CV.
-13. **Coach Revenue OS** — roster, auto 3-habit report, telestration, homework, before/after, share/PDF, credits. Likely the fastest path to $1M ARR.
-14. **Club Assessment Day** — 20 players in a 2-hour block, each a 1-page report, coach gets clinic buckets.
-15. **Facility camera body layer** — body layer on existing video; import path from PB Vision/facility clips.
-16. **PT / movement-professional pack** — non-diagnostic screen, asymmetry trend, referral-friendly (needs legal/copy review).
+4. **"One leak at a time"** — fix one habit, track only it, then advance.
+5. **Doubles Chemistry Score** — partner gap over time, split-step sync, middle-ball ownership, stack timing.
+6. **Court Advantage Meter** — label each moment attacking/neutral/defending/exposed; grade whether body+court state improved the rally.
+7. **Stay-On-Court report** — non-medical movement screen (overreach, backpedaling, knee collapse, asymmetry) for the 50+ lane.
+8. **Auto-telestration** — auto-draw the knee-angle arc, contact marker, base-of-support box (the minutes coaches pay to save).
+9. **Drill Verification Mode** — 45 s upload, scored reps (10 clean dinks, 10 balanced serves) via wrist-velocity peaks + contact events.
+10. **Lowlight reels** (coaching) + **highlight reels** (shareable growth loop).
+11. **"Why your rating is stuck"** — explain the bottleneck, don't replace DUPR/UTR.
+12. **Tennis Serve Lab** — trophy position, leg drive, trunk tilt, landing balance, foot fault, serve+1 readiness.
+13. **Paddle/Racket Fit Lab** — connect specs (weight, swingweight, balance) to movement patterns; profile + body proxy, no 6DoF CV.
+14. **Coach Revenue OS** — roster, auto 3-habit report, telestration, homework, before/after, share/PDF, credits. Likely the fastest path to $1M ARR.
+15. **Club Assessment Day** — 20 players in a 2-hour block, each a 1-page report, coach gets clinic buckets.
+16. **Facility camera body layer** — body layer on existing video; import path from PB Vision/facility clips.
+17. **PT / movement-professional pack** — non-diagnostic screen, asymmetry trend, referral-friendly (needs legal/copy review).
 
 ---
 
@@ -277,7 +277,7 @@ Single static iPhone (or facility camera). **The native app configures capture; 
 | Paddle-face / contact-point | drive/dink face control | serve/groundstroke face | **racket 6DoF (PnP on known paddle)** | ✅ via tracked racket (~3–5° face, ±1–3 cm contact); wrist-only stays gated |
 
 ### Outputs
-Session card with 3 habits; per-habit clip; **court map / top-down with player paths (conversion core)**; **self-vs-self before/after**; 3D skeleton replay (premium); optional mesh avatar (premium); confidence score + skipped-span count; one drill per habit; week-over-week tracker; coach share link/PDF; manual correction (wrong player/span/habit, exclude timeline).
+Session card with 3 habits; per-habit clip; **court map / top-down with player paths (conversion core)**; **self-vs-self before/after**; physics-accurate 3D mesh replay (premium); confidence score + skipped-span count; one drill per habit; week-over-week tracker; coach share link/PDF; manual correction (wrong player/span/habit, exclude timeline).
 
 ### In scope as of round-4
 **Racket 6DoF tracking** and a **physics-accurate, foot-skate-free 3D replay** (players + court + net + ball + rackets, free-viewpoint, shareable) — see `IMPLEMENTATION_PHASES.md` Phases 4/6/10.
@@ -324,12 +324,20 @@ On-device is **preview/guidance only**; the server is the source of truth. Devic
 ### Module layout (server: new code under `threed/racketsport/`)
 ```text
 threed/racketsport/
-  court_templates.py   court_calibration.py   court_zones.py     net_plane.py
-  person_fasttier.py   ball_tracknet.py       ball_physics3d.py  audio_events.py
-  event_fusion.py      hmr_fast.py            hmr_deep.py        worldhmr.py
-  foot_lock.py         physics_refine.py      racket_pose6dof.py replay_export.py
-  movement_metrics.py  insight_rules.py       confidence.py      shot_classifier.py
-  habit_model.py       report_model.py        paddle_profile.py  tennis_serve_lab.py
+  court_templates.py      court_calibration.py     court_zones.py
+  net_plane.py            capture_quality.py       drift_guard.py
+  person_fast.py          track_lock.py            doubles_id.py
+  pose2d.py               skeleton3d.py            ground_constraint.py
+  worldhmr.py             footlock.py              physics_refine.py
+  ball_tracknet.py        ball_tap_track.py        ball_physics3d.py
+  audio_pop.py            event_fusion.py          contact_windows.py
+  racket6dof.py           movement_metrics.py      biomech.py
+  insight_rules.py        confidence.py            shot_classifier.py
+  drill_verify.py         habit_model.py           report_model.py
+  llm_copy.py             viz_courtmap.py          viz_overlay.py
+  viz_ghost.py            replay_scene.py          replay_export.py
+  pipeline_fast.py        pipeline_deep.py         orchestrator.py
+  schemas/                eval/
 ios/                   # native Swift: Capture / Calibration / FastTier / Guidance / Upload / Replay
 viewer/                # Three.js + React Three Fiber 3D replay viewer (web share)
 ```
@@ -520,7 +528,7 @@ Do not start with: full ball ML, line calls, full-match upload, DUPR integration
 
 ## 25. Final recommendation
 
-The company is **Sway Body: the 3D movement coach for racket sports** — built on a fast skeleton core, an adaptive compute budget that spends mesh-grade fidelity only at the contact moments that matter, court geometry as a free accuracy moat, multi-signal fusion, and confidence honesty as a trust feature. Lead with pickleball doubles body IQ, kitchen/transition habits, doubles team-body, and the 50+ stay-on-court screen; second with the tennis serve lab. Sell to coaches and clubs first. If the quick tests pass, this is a credible $1M+ ARR direction; if they fail, the fallback (coach workflow + manually assisted reports) is still valuable while the CV layer matures.
+The company is **Sway Body: the 3D movement coach for racket sports** — built on a world-grounded mesh core, fast preview overlays, an adaptive compute budget that spends deepest fidelity only where it matters, court geometry as a free accuracy moat, multi-signal fusion, and confidence honesty as a trust feature. Lead with pickleball doubles body IQ, kitchen/transition habits, doubles team-body, and the 50+ stay-on-court screen; second with the tennis serve lab. Sell to coaches and clubs first. If the quick tests pass, this is a credible $1M+ ARR direction; if they fail, the fallback (coach workflow + manually assisted reports) is still valuable while the CV layer matures.
 
 ---
 

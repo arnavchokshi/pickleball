@@ -125,7 +125,7 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 ### ENV — Environment & scaffolding
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☐ | ENV-1 | Server env, deps, repo scaffolding under `threed/racketsport/`, `models/MANIFEST.json` | repo skeleton, env files | — | Phase 0 | | TODO |
+| ☑ | ENV-1 | Server env, deps, repo scaffolding under `threed/racketsport/`, `models/MANIFEST.json` | repo skeleton, env files | — | Phase 0 | Codex | DONE |
 | ☐ | ENV-2 | Fetch + checksum model checkpoints (incl. verify-before-commit flags + fallbacks) | `models/` | ENV-1 | Phase 0 | | TODO |
 | ☐ | ENV-3 | iOS Xcode project scaffolding (`ios/`), Swift package layout | `ios/` | — | Phase 0 | | TODO |
 | ☐ | ENV-4 | NvDEC ingest + clip QC + capture-quality scoring (server) | `ingest.py` | ENV-1 | Phase 0 | | TODO |
@@ -150,7 +150,7 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 ### TRK — Person detection, tracking, doubles ID
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☐ | TRK-1 | YOLO26m + BoT-SORT-ReID detect/track; court-polygon filter; ground-plane association; N-lock + coach 1-tap anchor | `person_fasttier.py` | CAL-2 | Person Detection/Tracking | | TODO |
+| ☐ | TRK-1 | YOLO26m + BoT-SORT-ReID detect/track; court-polygon filter; ground-plane association; N-lock + coach 1-tap anchor | `person_fast.py`, `track_lock.py`, `doubles_id.py` | CAL-2 | Person Detection/Tracking | | TODO |
 
 ### BODY — 3D body mesh (core)
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
@@ -177,7 +177,7 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 ### RKT — Racket 6DoF
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☐ | RKT-1 | Detect (RTMDet+SAM2) → top/bottom/handle keypoints + corners → GigaPose/FoundPose + grip prior → PnP-IPPE → UKF SE(3) → physics-validate; contact-point + face-normal | `racket_pose6dof.py` | BODY-2, BALL-4, DATA-4 | Racket 6DoF | | TODO |
+| ☐ | RKT-1 | Detect (RTMDet+SAM2) → top/bottom/handle keypoints + corners → GigaPose/FoundPose + grip prior → PnP-IPPE → UKF SE(3) → physics-validate; contact-point + face-normal | `racket6dof.py` | BODY-2, BALL-4, DATA-4 | Racket 6DoF | | TODO |
 
 ### MET — Metrics, insights, confidence
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
@@ -244,7 +244,7 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 
 > Format: `[TASK-ID] <agent> — built: <what>; artifacts: <files>; tested: <how/result>; next: <what the next agent needs>`
 
-_(empty — first builder starts here)_
+- [ENV-1] Codex — built: initial `main` repo, Phase 0 Python scaffold, documented module stubs under `threed/racketsport/`, artifact schema registry, ffprobe-based clip metadata probe, test-clip ingest script, GPU eval/train lock helpers, placeholder model manifest, Triton scaffold, and web replay package placeholder; artifacts: `threed/racketsport/`, `tests/racketsport/`, `scripts/racketsport/`, `scripts/gpu-*.sh`, `models/MANIFEST.json`, `serving/triton/README.md`, `web/replay/package.json`; tested: local `.venv/bin/python -m pytest -q` passed (5 tests), local ingest smoke wrote `frames_meta.json`, local GPU-lock fallbacks ran, H100 container `/workspace/pickleball/.venv/bin/python -m pytest ... -q` passed (5 tests), H100 `nvidia-smi` via `scripts/gpu-eval-run.sh` showed `NVIDIA H100 80GB HBM3, 81559 MiB, 0 MiB, 0 %`; next: ENV-2 should fill `models/MANIFEST.json` with real checkpoints/checksums and replace the dry-run SAM-3D-Body benchmark with real inference.
 
 ---
 
@@ -253,3 +253,5 @@ _(empty — first builder starts here)_
 > Record any model swap, deviation, assumption, or resolved ambiguity so other agents see it.
 
 - Stack baseline as of handoff: Fast SAM-3D-Body backbone + our world-grounding; YOLO26m + BoT-SORT-ReID; foot-lock to Z=0 + PhysPT/MuJoCo; racket PnP-IPPE; TrackNetV3→V5; RealityKit/USDZ native + Three.js/GLB web. Fallbacks: Fast SAM-3D-Body→original→NLF; YOLO26→YOLO11; SAT-HMR↔Multi-HMR 2; PhysPT→PHC. Single-camera product; multi-cam future; multi-view training-only.
+- 2026-06-26 Codex: canonical server filenames are the `IMPLEMENTATION_PHASES.md §0.2` names (`person_fast.py`, `audio_pop.py`, `footlock.py`, `racket6dof.py`, etc.). Older MVP shorthand names such as `person_fasttier.py`, `audio_events.py`, `foot_lock.py`, and `racket_pose6dof.py` are retired aliases and should not be implemented.
+- 2026-06-26 Codex: external existence check found official Ultralytics YOLO26 docs/assets and public Fast SAM-3D-Body project/GitHub pages. This verifies the names exist, not our target H100 performance, checkpoint access, or commercial license posture.
