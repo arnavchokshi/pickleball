@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from threed.racketsport.schemas import (
     CaptureSidecar,
     CourtCalibration,
+    PhaseEvalMetrics,
     validate_artifact_file,
 )
 
@@ -79,3 +80,53 @@ def test_validate_artifact_file_rejects_unknown_artifact(tmp_path):
 
     with pytest.raises(KeyError):
         validate_artifact_file("not_real", path)
+
+
+def test_phase_eval_metrics_schema_is_registered(tmp_path):
+    payload = {
+        "schema_version": 1,
+        "phase": "phase1",
+        "evaluator": "calib_eval",
+        "root": "runs/phase1",
+        "labels_root": "data/testclips",
+        "status": "blocked",
+        "required_artifacts": ["court_calibration.json", "court_zones.json", "net_plane.json"],
+        "summary": {
+            "total_clips": 1,
+            "ready_clips": 0,
+            "evaluated_clips": 0,
+            "passed_clips": 0,
+            "failed_clips": 0,
+            "blocked_clips": 1,
+        },
+        "metrics": {
+            "artifact_readiness": {
+                "value": False,
+                "unit": None,
+                "gate": "all required artifacts exist",
+                "passed": False,
+                "status": "measured",
+            }
+        },
+        "clips": [
+            {
+                "clip": "clip_001",
+                "run_dir": "runs/phase1/clip_001",
+                "labels_dir": "data/testclips/clip_001/labels",
+                "status": "blocked",
+                "missing_label_files": ["events.json"],
+                "missing_artifacts": ["court_calibration.json"],
+                "metrics": {},
+                "notes": [],
+            }
+        ],
+        "notes": ["DATA-1 labels are incomplete"],
+    }
+    path = tmp_path / "metrics.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    parsed = validate_artifact_file("phase_eval_metrics", path)
+
+    assert isinstance(parsed, PhaseEvalMetrics)
+    assert parsed.status == "blocked"
+    assert parsed.clips[0].missing_artifacts == ["court_calibration.json"]

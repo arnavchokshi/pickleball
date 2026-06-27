@@ -406,6 +406,58 @@ class DrillReport(StrictArtifact):
     per_rep: list[DrillRep]
 
 
+EvalStatus = Literal["pass", "fail", "blocked", "not_measured"]
+EvalMetricStatus = Literal["measured", "not_measured"]
+EvalMetricValue = float | int | bool | str | None
+
+
+class EvalMetric(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    value: EvalMetricValue = None
+    unit: str | None = None
+    gate: str
+    passed: bool | None = None
+    status: EvalMetricStatus
+
+
+class EvalClipResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    clip: str
+    run_dir: str
+    labels_dir: str
+    status: EvalStatus
+    missing_label_files: list[str] = Field(default_factory=list)
+    missing_artifacts: list[str] = Field(default_factory=list)
+    metrics: dict[str, EvalMetric] = Field(default_factory=dict)
+    notes: list[str] = Field(default_factory=list)
+
+
+class EvalSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    total_clips: int
+    ready_clips: int
+    evaluated_clips: int
+    passed_clips: int
+    failed_clips: int
+    blocked_clips: int
+
+
+class PhaseEvalMetrics(StrictArtifact):
+    phase: str
+    evaluator: str
+    root: str
+    labels_root: str
+    status: EvalStatus
+    required_artifacts: list[str]
+    summary: EvalSummary
+    metrics: dict[str, EvalMetric] = Field(default_factory=dict)
+    clips: list[EvalClipResult] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "capture_sidecar": CaptureSidecar,
     "court_calibration": CourtCalibration,
@@ -422,6 +474,7 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "coach_report": HabitReport,
     "replay_scene": ReplayScene,
     "drill_report": DrillReport,
+    "phase_eval_metrics": PhaseEvalMetrics,
 }
 
 
@@ -430,4 +483,3 @@ def validate_artifact_file(artifact: str, path: str | Path) -> BaseModel:
     with Path(path).open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
     return model.model_validate(payload)
-
