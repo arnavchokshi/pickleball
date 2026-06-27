@@ -15,12 +15,13 @@ from threed.racketsport.court_calibration import (
     homography_from_planar_points,
     manual_tap_correspondences,
     passes_reprojection_gate,
+    project_world_points,
     project_planar_points,
     reprojection_error,
     solve_camera_pose,
 )
 from threed.racketsport.court_templates import FT_TO_M
-from threed.racketsport.schemas import CameraIntrinsics, CaptureSidecar, CourtCalibration, CourtZones, NetPlane, validate_artifact_file
+from threed.racketsport.schemas import CameraIntrinsics, CaptureSidecar, CourtCalibration, CourtExtrinsics, CourtZones, NetPlane, validate_artifact_file
 
 
 def _capture_sidecar_payload() -> dict:
@@ -210,6 +211,20 @@ def test_solve_camera_pose_uses_opencv_when_available():
     assert extrinsics.t == pytest.approx([0.2, 0.1, 15.0], abs=1e-4)
     assert extrinsics.camera_height_m == pytest.approx(15.0, abs=1e-4)
     assert extrinsics.R[0] == pytest.approx([1.0, 0.0, 0.0], abs=1e-4)
+
+
+def test_project_world_points_uses_camera_extrinsics_and_intrinsics():
+    intrinsics = CameraIntrinsics(fx=1000.0, fy=1000.0, cx=960.0, cy=540.0, dist=[], source="arkit")
+    extrinsics = CourtExtrinsics(
+        R=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        t=[0.0, 0.0, 15.0],
+        camera_height_m=15.0,
+    )
+
+    projected = project_world_points(extrinsics, intrinsics, [[0.0, 0.0, 0.0], [3.0, 0.0, 0.0]])
+
+    assert projected[0] == pytest.approx([960.0, 540.0])
+    assert projected[1] == pytest.approx([1160.0, 540.0])
 
 
 def test_manual_calibration_prefers_solved_pose_when_opencv_is_available(tmp_path):

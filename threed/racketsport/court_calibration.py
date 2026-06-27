@@ -90,6 +90,31 @@ def project_planar_points(
     return projected
 
 
+def project_world_points(
+    extrinsics: CourtExtrinsics,
+    intrinsics: CameraIntrinsics,
+    world_pts: Iterable[Iterable[float]],
+) -> list[list[float]]:
+    projected: list[list[float]] = []
+    rotation = [[float(value) for value in row] for row in extrinsics.R]
+    translation = [float(value) for value in extrinsics.t]
+    for point in world_pts:
+        world = [float(point[0]), float(point[1]), float(point[2])]
+        camera = [
+            sum(rotation[row_idx][col_idx] * world[col_idx] for col_idx in range(3)) + translation[row_idx]
+            for row_idx in range(3)
+        ]
+        if math.isclose(camera[2], 0.0):
+            raise ValueError("world point projects with zero camera depth")
+        projected.append(
+            [
+                intrinsics.fx * camera[0] / camera[2] + intrinsics.cx,
+                intrinsics.fy * camera[1] / camera[2] + intrinsics.cy,
+            ]
+        )
+    return projected
+
+
 def reprojection_error(
     image_pts: Iterable[Iterable[float]],
     projected_pts: Iterable[Iterable[float]],

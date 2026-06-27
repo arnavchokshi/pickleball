@@ -4,8 +4,8 @@ import pytest
 
 from threed.racketsport.court_templates import FT_TO_M, get_court_template
 from threed.racketsport.court_zones import build_court_zones, classify_point
-from threed.racketsport.net_plane import build_net_plane, net_top_height_m_at_x
-from threed.racketsport.schemas import CourtZones, NetPlane
+from threed.racketsport.net_plane import build_net_plane, net_top_height_m_at_x, project_net_plane
+from threed.racketsport.schemas import CameraIntrinsics, CaptureQuality, CourtCalibration, CourtExtrinsics, CourtZones, NetPlane, ReprojectionError
 
 
 def _ft(value_m: float) -> float:
@@ -124,6 +124,31 @@ def test_net_planes_use_vertical_net_plane_and_top_cable_heights():
     assert tennis.center_height_in == pytest.approx(36.0)
     assert tennis.post_height_in == pytest.approx(42.0)
     assert net_top_height_m_at_x("tennis", tennis.endpoints[1][0]) == pytest.approx(42.0 * 0.0254)
+
+
+def test_project_net_plane_projects_regulation_net_endpoints():
+    calibration = CourtCalibration(
+        schema_version=1,
+        sport="pickleball",
+        homography=[[1.0, 0.0, 960.0], [0.0, 1.0, 540.0], [0.0, 0.0, 1.0]],
+        intrinsics=CameraIntrinsics(fx=1000.0, fy=1000.0, cx=960.0, cy=540.0, dist=[], source="arkit"),
+        extrinsics=CourtExtrinsics(
+            R=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            t=[0.0, 0.0, 15.0],
+            camera_height_m=15.0,
+        ),
+        reprojection_error_px=ReprojectionError(median=0.0, p95=0.0),
+        capture_quality=CaptureQuality(grade="good", reasons=[]),
+        image_pts=[],
+        world_pts=[],
+    )
+    projected = project_net_plane(calibration, build_net_plane("pickleball"))
+
+    assert projected["left_post"][1] == pytest.approx(540.0)
+    assert projected["right_post"][1] == pytest.approx(540.0)
+    assert projected["left_post"][0] < 960.0
+    assert projected["right_post"][0] > 960.0
+    assert projected["center"][0] == pytest.approx(960.0)
 
 
 def test_court_geometry_rejects_unknown_sports():

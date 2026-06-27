@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from .court_templates import Sport, get_court_template
-from .schemas import NetPlane
+from .court_calibration import project_world_points
+from .schemas import CourtCalibration, NetPlane
 
 
 def build_net_plane(sport: Sport) -> NetPlane:
@@ -33,3 +34,13 @@ def net_top_height_m_at_x(sport: Sport, x_m: float) -> float:
 
     clamped_ratio = min(abs(x_m) / half_net_width_m, 1.0)
     return template.center_net_height_m + (template.post_net_height_m - template.center_net_height_m) * clamped_ratio
+
+
+def project_net_plane(calibration: CourtCalibration, net_plane: NetPlane) -> dict[str, list[float]]:
+    center = [0.0, 0.0, net_plane.center_height_in * 0.0254]
+    left, right, center_projected = project_world_points(
+        calibration.extrinsics,
+        calibration.intrinsics,
+        [net_plane.endpoints[0], net_plane.endpoints[1], center],
+    )
+    return {"left_post": left, "right_post": right, "center": center_projected}
