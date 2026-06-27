@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/racketsport/eval0_index_schema.json",
+  "title": "EVAL-0 Variant Selection Index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "eval0_root",
+    "run_count",
+    "approval_status_counts",
+    "runs"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "artifact_type": {
+      "const": "racketsport_eval0_index"
+    },
+    "eval0_root": {
+      "const": "runs/eval0"
+    },
+    "run_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "approval_status_counts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "runs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "variant_selection_path",
+          "run_dir",
+          "stage",
+          "approval_status",
+          "selected_candidate",
+          "candidate_count",
+          "overlay_count",
+          "metric_paths"
+        ],
+        "properties": {
+          "variant_selection_path": {
+            "type": "string",
+            "pattern": "^runs/eval0/.+/variant_selection\\.json$"
+          },
+          "run_dir": {
+            "type": "string",
+            "pattern": "^runs/eval0/.+"
+          },
+          "stage": {
+            "type": "string",
+            "minLength": 1
+          },
+          "approval_status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "selected_candidate": {
+            "type": ["string", "null"]
+          },
+          "candidate_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "overlay_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "metric_paths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

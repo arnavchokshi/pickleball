@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/racketsport/report_artifacts_schema.json",
+  "title": "Racket-sport report artifacts",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["habit_report", "coach_report"],
+  "properties": {
+    "habit_report": {
+      "$ref": "#/$defs/habit_report"
+    },
+    "coach_report": {
+      "$ref": "#/$defs/habit_report"
+    }
+  },
+  "$defs": {
+    "habit_report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "sport",
+        "coverage",
+        "priority_habit_id",
+        "habits"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "sport": {
+          "enum": ["pickleball", "tennis"]
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "priority_habit_id": {
+          "type": "string"
+        },
+        "replay_ref": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "habits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/habit"
+          }
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["overall", "skipped_reason_counts"],
+      "properties": {
+        "overall": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "skipped_reason_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "habit": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "title", "summary", "confidence", "clip_ref", "cue", "drill"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "clip_ref": {
+          "$ref": "#/$defs/clip_ref"
+        },
+        "cue": {
+          "type": "string",
+          "minLength": 1
+        },
+        "drill": {
+          "$ref": "#/$defs/drill"
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["player_id", "shot_index", "shot_type", "shot_time_s", "metric", "value"],
+          "properties": {
+            "player_id": {
+              "type": "integer"
+            },
+            "shot_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "shot_type": {
+              "type": "string"
+            },
+            "shot_time_s": {
+              "type": "number",
+              "minimum": 0
+            },
+            "metric": {
+              "type": "string"
+            },
+            "value": true
+          }
+        }
+      }
+    },
+    "clip_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["t0_sec", "t1_sec"],
+      "properties": {
+        "t0_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "t1_sec": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "drill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "duration_min"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "duration_min": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    }
+  }
+}

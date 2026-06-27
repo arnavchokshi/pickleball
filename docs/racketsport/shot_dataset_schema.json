@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/racketsport/shot_dataset_schema.json",
+  "title": "Shot-Class Dataset Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "entries"],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "dataset_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "notes": {
+      "type": "string"
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path", "split", "shot_label", "source_type"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Relative path under the manifest directory. Absolute paths and parent traversal are rejected by the validator."
+          },
+          "split": {
+            "enum": ["train", "val", "test"]
+          },
+          "shot_label": {
+            "enum": [
+              "serve",
+              "fh_drive",
+              "bh_drive",
+              "dink",
+              "lob",
+              "overhead",
+              "third_shot_drop",
+              "reset_block"
+            ]
+          },
+          "source_type": {
+            "enum": ["audio_snapped_pose", "manual_review", "synthetic_aug"]
+          },
+          "fps": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "contact_time_ms": {
+            "type": "number",
+            "minimum": 0
+          },
+          "window_ms": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "player_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

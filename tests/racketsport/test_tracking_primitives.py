@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 
 from threed.racketsport.court_templates import FT_TO_M
-from threed.racketsport.doubles_id import assign_doubles_roles, coach_anchor
+from threed.racketsport import doubles_id, track_lock
+from threed.racketsport.doubles_id import DoublesIdentity, assign_doubles_roles, coach_anchor
 from threed.racketsport.person_fast import PersonDetection, court_polygon_filter, person_detection_from_bbox
 from threed.racketsport.schemas import CameraIntrinsics, CaptureQuality, CourtCalibration, CourtExtrinsics, ReprojectionError
 from threed.racketsport.track_lock import TrackCandidate, ground_step_plausible, n_lock
@@ -71,6 +72,51 @@ def test_ground_step_plausible_rejects_metric_teleports():
     assert not ground_step_plausible([0.0, 0.0], [2.5, 0.0], max_step_m=1.0)
 
 
+def test_update_track_lock_preserves_locked_ids_when_steps_are_plausible():
+    previous = [
+        TrackCandidate(track_id=10, world_xy=[0.0, 0.0], confidence=0.9),
+        TrackCandidate(track_id=20, world_xy=[2.0, 0.0], confidence=0.8),
+    ]
+    current = [
+        TrackCandidate(track_id=20, world_xy=[2.4, 0.0], confidence=0.6),
+        TrackCandidate(track_id=30, world_xy=[8.0, 0.0], confidence=0.99),
+        TrackCandidate(track_id=10, world_xy=[0.3, 0.1], confidence=0.5),
+    ]
+
+    result = track_lock.update_track_lock(previous, current, max_step_m=0.5)
+
+    assert result.accepted
+    assert [candidate.track_id for candidate in result.locked] == [10, 20]
+    assert result.locked[0].world_xy == pytest.approx([0.3, 0.1])
+    assert result.locked[1].world_xy == pytest.approx([2.4, 0.0])
+    assert result.notes == ["preserved_locked_ids:10,20"]
+
+
+def test_update_track_lock_fails_closed_when_locked_track_is_missing():
+    previous = [
+        TrackCandidate(track_id=10, world_xy=[0.0, 0.0], confidence=0.9),
+        TrackCandidate(track_id=20, world_xy=[2.0, 0.0], confidence=0.8),
+    ]
+    current = [TrackCandidate(track_id=10, world_xy=[0.2, 0.0], confidence=0.7)]
+
+    result = track_lock.update_track_lock(previous, current, max_step_m=1.0)
+
+    assert not result.accepted
+    assert result.locked == previous
+    assert result.notes == ["missing_locked_track:20"]
+
+
+def test_update_track_lock_fails_closed_when_locked_track_teleports():
+    previous = [TrackCandidate(track_id=10, world_xy=[0.0, 0.0], confidence=0.9)]
+    current = [TrackCandidate(track_id=10, world_xy=[2.5, 0.0], confidence=0.7)]
+
+    result = track_lock.update_track_lock(previous, current, max_step_m=1.0)
+
+    assert not result.accepted
+    assert result.locked == previous
+    assert result.notes == ["implausible_ground_step:10"]
+
+
 def test_assign_doubles_roles_uses_court_side_and_lateral_position():
     candidates = [
         TrackCandidate(track_id=1, world_xy=[-2.0, -4.0], confidence=0.9),
@@ -101,3 +147,34 @@ def test_coach_anchor_binds_nearest_track_within_radius():
 
     with pytest.raises(ValueError, match="no track within"):
         coach_anchor(candidates, anchor_world_xy=[10.0, 0.0], label="server", max_distance_m=0.5)
+
+
+def test_apply_coach_anchor_labels_existing_identity_without_recomputing_role():
+    candidates = [
+        TrackCandidate(track_id=1, world_xy=[-2.0, -4.0], confidence=0.9),
+        TrackCandidate(track_id=2, world_xy=[2.0, 4.0], confidence=0.9),
+    ]
+    identities = {
+        1: DoublesIdentity(track_id=1, side="near", role="left"),
+        2: DoublesIdentity(track_id=2, side="near", role="left"),
+    }
+
+    labeled = doubles_id.apply_coach_anchor(
+        identities,
+        candidates,
+        anchor_world_xy=[2.1, 4.1],
+        label="server",
+        max_distance_m=0.5,
+    )
+
+    assert labeled[2] == DoublesIdentity(track_id=2, side="near", role="left", label="server")
+    assert identities[2].label is None
+
+    with pytest.raises(ValueError, match="no identity within"):
+        doubles_id.apply_coach_anchor(
+            identities,
+            candidates,
+            anchor_world_xy=[10.0, 0.0],
+            label="server",
+            max_distance_m=0.5,
+        )
