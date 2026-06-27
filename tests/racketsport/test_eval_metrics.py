@@ -348,6 +348,18 @@ def _write_replay_artifacts(run_dir: Path) -> None:
     (run_dir / "replay_scene.json").write_text(json.dumps(replay_scene), encoding="utf-8")
 
 
+def _write_e2e_artifacts(run_dir: Path) -> None:
+    _write_calibration_artifacts(run_dir)
+    _write_tracks_artifact(run_dir, players=2)
+    _write_physics_artifact(run_dir)
+    _write_ball_event_artifacts(run_dir)
+    _write_racket_pose_artifact(run_dir, contacts=1)
+    _write_metric_artifacts(run_dir)
+    _write_shot_drill_artifacts(run_dir)
+    _write_copy_artifacts(run_dir)
+    _write_replay_artifacts(run_dir)
+
+
 def test_calib_eval_passes_when_ready_clip_has_required_artifacts(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase1"
@@ -1034,3 +1046,64 @@ def test_replay_eval_fails_when_referenced_point_glb_is_missing(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert payload["status"] == "fail"
     assert "missing referenced GLB files" in payload["clips"][0]["notes"][0]
+
+
+def test_e2e_eval_passes_when_ready_clip_has_all_major_artifacts(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase11"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_e2e_artifacts(root / "clip_001")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.e2e_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert json.loads(completed.stdout)["status"] == "pass"
+    assert payload["phase"] == "phase11"
+    assert payload["clips"][0]["metrics"]["required_artifacts_present"]["value"] == 13
+    assert payload["clips"][0]["metrics"]["required_artifacts_total"]["value"] == 13
+    assert payload["clips"][0]["metrics"]["referenced_glb_files_present"]["value"] == 2
+    validate_artifact_file("phase_eval_metrics", root / "metrics.json")
+
+
+def test_e2e_eval_blocks_when_major_artifact_is_missing(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase11"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_e2e_artifacts(root / "clip_001")
+    (root / "clip_001" / "racket_pose.json").unlink()
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.e2e_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["clips"][0]["missing_artifacts"] == ["racket_pose.json"]
