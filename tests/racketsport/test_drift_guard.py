@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from threed.racketsport.court_calibration import homography_from_planar_points, project_planar_points
-from threed.racketsport.drift_guard import should_check_frame, verify_drift
+from threed.racketsport.drift_guard import should_check_frame, verify, verify_drift
 
 
 def _square_world_points() -> list[list[float]]:
@@ -45,6 +45,26 @@ def test_verify_drift_flags_injected_twenty_pixel_bump():
     assert result.recalibration_required is True
     assert result.reprojection_error_px.p95 == pytest.approx(20.0)
     assert result.reasons == ["reprojection_drift"]
+
+
+def test_verify_is_doc_compatible_alias_for_verify_drift():
+    world_pts = _square_world_points()
+    homography = homography_from_planar_points(world_pts, _square_image_points())
+    observed = project_planar_points(homography, world_pts)
+
+    result = verify(
+        homography=homography,
+        world_pts=world_pts,
+        observed_image_pts=observed,
+        frame_index=150,
+    )
+
+    assert result == verify_drift(
+        homography=homography,
+        world_pts=world_pts,
+        observed_image_pts=observed,
+        frame_index=150,
+    )
 
 
 def test_should_check_frame_runs_first_frame_and_periodic_frames():

@@ -4,7 +4,7 @@ import pytest
 
 from threed.racketsport.court_templates import FT_TO_M, get_court_template
 from threed.racketsport.court_zones import build_court_zones, classify_point
-from threed.racketsport.net_plane import build_net_plane, net_top_height_m_at_x, project_net_plane
+from threed.racketsport.net_plane import build_net_plane, net_plane_from_template, net_top_height_m_at_x, project_net_plane
 from threed.racketsport.schemas import CameraIntrinsics, CaptureQuality, CourtCalibration, CourtExtrinsics, CourtZones, NetPlane, ReprojectionError
 
 
@@ -149,6 +149,26 @@ def test_project_net_plane_projects_regulation_net_endpoints():
     assert projected["left_post"][0] < 960.0
     assert projected["right_post"][0] > 960.0
     assert projected["center"][0] == pytest.approx(960.0)
+
+
+def test_net_plane_from_template_uses_calibration_sport():
+    calibration = CourtCalibration(
+        schema_version=1,
+        sport="tennis",
+        homography=[[1.0, 0.0, 960.0], [0.0, 1.0, 540.0], [0.0, 0.0, 1.0]],
+        intrinsics=CameraIntrinsics(fx=1000.0, fy=1000.0, cx=960.0, cy=540.0, dist=[], source="arkit"),
+        extrinsics=CourtExtrinsics(
+            R=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            t=[0.0, 0.0, 15.0],
+            camera_height_m=15.0,
+        ),
+        reprojection_error_px=ReprojectionError(median=0.0, p95=0.0),
+        capture_quality=CaptureQuality(grade="good", reasons=[]),
+        image_pts=[],
+        world_pts=[],
+    )
+
+    assert net_plane_from_template(calibration) == build_net_plane("tennis")
 
 
 def test_court_geometry_rejects_unknown_sports():

@@ -40,3 +40,22 @@ def verify_drift(
         recalibration_required=bool(reasons),
         reasons=reasons,
     )
+
+
+def verify(
+    *,
+    homography: Iterable[Iterable[float]],
+    world_pts: Iterable[Iterable[float]],
+    observed_image_pts: Iterable[Iterable[float]],
+    frame_index: int,
+    p95_gate_px: float = CALIBRATION_REPROJECTION_P95_GATE_PX,
+) -> DriftCheck:
+    """Doc-compatible wrapper for the Phase 1 drift check."""
+
+    return verify_drift(
+        homography=homography,
+        world_pts=world_pts,
+        observed_image_pts=observed_image_pts,
+        frame_index=frame_index,
+        p95_gate_px=p95_gate_px,
+    )

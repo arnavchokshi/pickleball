@@ -24,6 +24,12 @@ def build_net_plane(sport: Sport) -> NetPlane:
     )
 
 
+def net_plane_from_template(calibration: CourtCalibration) -> NetPlane:
+    """Build the regulation net plane for a solved calibration's sport."""
+
+    return build_net_plane(calibration.sport)
+
+
 def net_top_height_m_at_x(sport: Sport, x_m: float) -> float:
     """Approximate the top cable as symmetric linear sag from post to center."""
 
