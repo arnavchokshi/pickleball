@@ -22,5 +22,11 @@ let package = Package(
         .target(name: "SwayUpload", dependencies: ["SwayCore"], path: "Upload/Sources/SwayUpload"),
         .target(name: "SwayReplay", dependencies: ["SwayCore"], path: "Replay/Sources/SwayReplay"),
         .testTarget(name: "SwayCoreTests", dependencies: ["SwayCore"], path: "Core/Tests/SwayCoreTests"),
+        .testTarget(name: "SwayCaptureTests", dependencies: ["SwayCapture"], path: "Capture/Tests/SwayCaptureTests"),
+        .testTarget(name: "SwayFastTierTests", dependencies: ["SwayFastTier"], path: "FastTier/Tests/SwayFastTierTests"),
+        .testTarget(name: "SwayGuidanceTests", dependencies: ["SwayGuidance"], path: "Guidance/Tests/SwayGuidanceTests"),
+        .testTarget(name: "SwayCalibrationTests", dependencies: ["SwayCalibration", "SwayCore"], path: "Calibration/Tests/SwayCalibrationTests"),
+        .testTarget(name: "SwayUploadTests", dependencies: ["SwayUpload"], path: "Upload/Tests/SwayUploadTests"),
+        .testTarget(name: "SwayReplayTests", dependencies: ["SwayReplay"], path: "Replay/Tests/SwayReplayTests"),
     ]
 )
