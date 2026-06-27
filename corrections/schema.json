@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sway.local/racketsport/corrections.schema.json",
+  "title": "Racket-sport manual corrections manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "manifest_id", "created_at", "corrections"],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "manifest_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "corrections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/correction"
+      }
+    }
+  },
+  "$defs": {
+    "correction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "target", "operation", "reason", "annotator"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "target": {
+          "$ref": "#/$defs/target"
+        },
+        "operation": {
+          "enum": ["set", "replace", "append", "delete"]
+        },
+        "value": true,
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "annotator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "enum": ["set", "replace", "append"]
+              }
+            },
+            "required": ["operation"]
+          },
+          "then": {
+            "required": ["value"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "const": "delete"
+              }
+            },
+            "required": ["operation"]
+          },
+          "then": {
+            "not": {
+              "required": ["value"]
+            }
+          }
+        }
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact", "path"],
+      "properties": {
+        "artifact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clip_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "frame_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "t_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^(/([^/~]|~[01])*)+$"
+        }
+      }
+    }
+  }
+}
