@@ -20,3 +20,12 @@ def test_shell_scripts_are_executable_and_parse():
         assert script.exists(), script
         assert os.access(script, os.X_OK), script
         subprocess.run(["bash", "-n", str(script)], check=True)
+
+
+def test_fast_sam_wrapper_records_machine_readable_profile_metrics():
+    script = Path("scripts/racketsport/run_fast_sam_benchmark.sh").read_text(encoding="utf-8")
+
+    assert "profile_stdout.log" in script
+    assert "benchmark_sam3dbody.py" in script
+    assert "--profile-log" in script
+    assert "sam3dbody_benchmark.json" in script

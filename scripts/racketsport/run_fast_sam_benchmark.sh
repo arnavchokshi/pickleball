@@ -31,6 +31,8 @@ if [ ! -d "$CONDA_ROOT/envs/$ENV_NAME" ]; then
 fi
 
 mkdir -p "$OUT_DIR" "$CHECKPOINT_DIR/assets"
+PROFILE_LOG="$OUT_DIR/profile_stdout.log"
+BENCHMARK_JSON="$OUT_DIR/sam3dbody_benchmark.json"
 
 if [ -f "$CHECKPOINT_SRC" ]; then
   ln -sfn "$CHECKPOINT_SRC" "$CHECKPOINT_DIR/model.ckpt"
@@ -61,4 +63,9 @@ fi
   --output_dir "$OUT_DIR" \
   --detector_model yolo11n.pt \
   --warmup "$WARMUP_RUNS" \
-  --runs "$BENCHMARK_RUNS"
+  --runs "$BENCHMARK_RUNS" \
+  2>&1 | tee "$PROFILE_LOG"
+
+python "$ROOT/scripts/racketsport/benchmark_sam3dbody.py" \
+  --profile-log "$PROFILE_LOG" \
+  --out "$BENCHMARK_JSON"
