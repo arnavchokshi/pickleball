@@ -48,10 +48,10 @@ def _capture_sidecar_payload() -> dict:
         },
         "arkit_camera_pose": {
             "R": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
-            "t": [0.0, 0.0, 1.5],
+            "t": [0.0, 0.0, 15.0],
         },
         "court_plane": {"point": [0.0, 0.0, 0.0], "normal": [0.0, 0.0, 1.0]},
-        "manual_court_taps": [[100.0, 900.0], [1820.0, 900.0], [1720.0, 120.0], [200.0, 120.0]],
+        "manual_court_taps": [[756.8, 88.4896], [1163.2, 88.4896], [1163.2, 991.5104], [756.8, 991.5104]],
         "gravity": [0.0, -1.0, 0.0],
         "lidar_depth_refs": [],
         "ondevice_pose_track": "ondevice_pose.json",
@@ -126,7 +126,7 @@ def test_manual_calibration_artifact_is_schema_valid_and_gate_scored(tmp_path):
     assert calibration.reprojection_error_px.median == pytest.approx(0.0)
     assert calibration.reprojection_error_px.p95 == pytest.approx(0.0)
     assert calibration.capture_quality.grade == "good"
-    assert calibration.extrinsics.camera_height_m == pytest.approx(1.5)
+    assert calibration.extrinsics.camera_height_m == pytest.approx(15.0)
     assert len(calibration.image_pts) == 4
     assert len(calibration.world_pts) == 4
 
@@ -210,3 +210,17 @@ def test_solve_camera_pose_uses_opencv_when_available():
     assert extrinsics.t == pytest.approx([0.2, 0.1, 15.0], abs=1e-4)
     assert extrinsics.camera_height_m == pytest.approx(15.0, abs=1e-4)
     assert extrinsics.R[0] == pytest.approx([1.0, 0.0, 0.0], abs=1e-4)
+
+
+def test_manual_calibration_prefers_solved_pose_when_opencv_is_available(tmp_path):
+    pytest.importorskip("cv2")
+    pytest.importorskip("numpy")
+    payload = _capture_sidecar_payload()
+    payload["arkit_camera_pose"]["t"] = [0.0, 0.0, 12.0]
+    sidecar_path = tmp_path / "capture_sidecar.json"
+    sidecar_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    calibration = calibration_from_manual_taps(sidecar_path, sport="pickleball")
+
+    assert calibration.extrinsics.t == pytest.approx([0.0, 0.0, 15.0], abs=1e-4)
+    assert calibration.extrinsics.camera_height_m == pytest.approx(15.0, abs=1e-4)

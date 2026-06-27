@@ -216,13 +216,7 @@ def _build_calibration(
     homography = homography_from_planar_points(world_pts, image_pts)
     projected_pts = project_planar_points(homography, world_pts)
     error = reprojection_error(image_pts, projected_pts)
-    camera_height_m = _camera_height_from_sidecar(sidecar)
-
-    extrinsics = CourtExtrinsics(
-        R=sidecar.arkit_camera_pose.R if sidecar.arkit_camera_pose is not None else [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
-        t=sidecar.arkit_camera_pose.t if sidecar.arkit_camera_pose is not None else [0.0, 0.0, 0.0],
-        camera_height_m=camera_height_m,
-    )
+    extrinsics = _solve_or_seed_extrinsics(sidecar, world_pts=world_pts, image_pts=image_pts)
     return CourtCalibration(
         schema_version=1,
         sport=sport,
@@ -234,6 +228,22 @@ def _build_calibration(
         image_pts=image_pts,
         world_pts=world_pts,
     )
+
+
+def _solve_or_seed_extrinsics(
+    sidecar: CaptureSidecar,
+    *,
+    world_pts: list[list[float]],
+    image_pts: list[list[float]],
+) -> CourtExtrinsics:
+    try:
+        return solve_camera_pose(world_pts, image_pts, sidecar.intrinsics)
+    except (RuntimeError, ValueError):
+        return CourtExtrinsics(
+            R=sidecar.arkit_camera_pose.R if sidecar.arkit_camera_pose is not None else [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            t=sidecar.arkit_camera_pose.t if sidecar.arkit_camera_pose is not None else [0.0, 0.0, 0.0],
+            camera_height_m=_camera_height_from_sidecar(sidecar),
+        )
 
 
 def _percentile(values: list[float], percentile: float) -> float:
