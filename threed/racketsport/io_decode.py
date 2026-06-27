@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import json
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from .capture_quality import score_capture_quality
+from .schemas import CaptureQuality
 
 
 @dataclass(frozen=True)
@@ -30,6 +34,31 @@ class FrameSource:
             "duration_s": self.duration_s,
             "frame_count": self.frame_count,
             "audio_sample_rate": self.audio_sample_rate,
+        }
+
+
+@dataclass(frozen=True)
+class ClipQualityProbe:
+    """Sampled clip-level QC metrics extracted before expensive model stages."""
+
+    sample_width: int
+    sample_height: int
+    sampled_frames: int
+    qc_decode_fps: float
+    blur_laplacian_var: float
+    luminance_mean: float
+    luminance_std_fraction: float
+    capture_quality: CaptureQuality
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "sample_resolution": [self.sample_width, self.sample_height],
+            "sampled_frames": self.sampled_frames,
+            "qc_decode_fps": self.qc_decode_fps,
+            "blur_laplacian_var": self.blur_laplacian_var,
+            "luminance_mean": self.luminance_mean,
+            "luminance_std_fraction": self.luminance_std_fraction,
+            "capture_quality": self.capture_quality.model_dump(),
         }
 
 
@@ -63,6 +92,51 @@ def _run_ffprobe(path: Path) -> dict[str, Any]:
     except subprocess.CalledProcessError as exc:
         raise RuntimeError(f"ffprobe failed for {path}: {exc.stderr.strip()}") from exc
     return json.loads(completed.stdout)
+
+
+def _scaled_sample_size(width: int, height: int, max_width: int) -> tuple[int, int]:
+    sample_width = max(2, min(width, max_width))
+    if sample_width % 2:
+        sample_width -= 1
+    sample_height = max(2, round(height * sample_width / width))
+    if sample_height % 2:
+        sample_height += 1
+    return sample_width, sample_height
+
+
+def _variance(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    mean = sum(values) / len(values)
+    return sum((value - mean) ** 2 for value in values) / len(values)
+
+
+def _laplacian_variance(gray: bytes, width: int, height: int) -> float:
+    if width < 3 or height < 3:
+        return 0.0
+
+    values: list[float] = []
+    for y in range(1, height - 1):
+        row = y * width
+        row_above = (y - 1) * width
+        row_below = (y + 1) * width
+        for x in range(1, width - 1):
+            center = gray[row + x]
+            laplacian = (
+                4 * center
+                - gray[row + x - 1]
+                - gray[row + x + 1]
+                - gray[row_above + x]
+                - gray[row_below + x]
+            )
+            values.append(float(laplacian))
+    return _variance(values)
+
+
+def _mean_luminance(gray: bytes) -> float:
+    if not gray:
+        return 0.0
+    return sum(gray) / (len(gray) * 255.0)
 
 
 def probe_clip(path: str | Path, *, fps_out: float | None = None) -> FrameSource:
@@ -105,6 +179,88 @@ def probe_clip(path: str | Path, *, fps_out: float | None = None) -> FrameSource
     )
 
 
+def analyze_clip_qc(
+    path: str | Path,
+    *,
+    source: FrameSource | None = None,
+    sample_fps: float = 1.0,
+    max_frames: int = 30,
+    max_width: int = 160,
+) -> ClipQualityProbe:
+    """Sample frames with ffmpeg and compute deterministic ingest QC signals."""
+
+    if sample_fps <= 0:
+        raise ValueError("sample_fps must be positive")
+    if max_frames <= 0:
+        raise ValueError("max_frames must be positive")
+
+    clip_path = Path(path)
+    source = source or probe_clip(clip_path)
+    sample_width, sample_height = _scaled_sample_size(source.width, source.height, max_width)
+    frame_bytes = sample_width * sample_height
+    command = [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        str(clip_path),
+        "-vf",
+        f"fps={sample_fps},scale={sample_width}:{sample_height},format=gray",
+        "-frames:v",
+        str(max_frames),
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "gray",
+        "-",
+    ]
+
+    started = time.perf_counter()
+    try:
+        completed = subprocess.run(command, check=True, capture_output=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError("ffmpeg is required for Phase 0 clip QC") from exc
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.decode("utf-8", errors="replace").strip()
+        raise RuntimeError(f"ffmpeg QC failed for {clip_path}: {stderr}") from exc
+
+    elapsed = max(time.perf_counter() - started, 1e-9)
+    payload = completed.stdout
+    sampled_frames = len(payload) // frame_bytes
+    if sampled_frames == 0:
+        raise ValueError(f"no QC sample frames decoded from {clip_path}")
+
+    blur_values: list[float] = []
+    luminance_values: list[float] = []
+    for index in range(sampled_frames):
+        start = index * frame_bytes
+        gray = payload[start : start + frame_bytes]
+        blur_values.append(_laplacian_variance(gray, sample_width, sample_height))
+        luminance_values.append(_mean_luminance(gray))
+
+    luminance_mean = sum(luminance_values) / len(luminance_values)
+    luminance_std_fraction = _variance(luminance_values) ** 0.5
+    blur_laplacian_var = sum(blur_values) / len(blur_values)
+    quality = score_capture_quality(
+        blur_laplacian_var=blur_laplacian_var,
+        luminance_mean=luminance_mean,
+        luminance_std_fraction=luminance_std_fraction,
+        fps=source.fps,
+    )
+
+    return ClipQualityProbe(
+        sample_width=sample_width,
+        sample_height=sample_height,
+        sampled_frames=sampled_frames,
+        qc_decode_fps=sampled_frames / elapsed,
+        blur_laplacian_var=blur_laplacian_var,
+        luminance_mean=luminance_mean,
+        luminance_std_fraction=luminance_std_fraction,
+        capture_quality=quality,
+    )
+
+
 def decode_clip(path: str | Path, fps_out: float | None = None) -> FrameSource:
     """Return Phase 0 metadata for a clip.
 
@@ -114,4 +270,3 @@ def decode_clip(path: str | Path, fps_out: float | None = None) -> FrameSource:
     """
 
     return probe_clip(path, fps_out=fps_out)
-

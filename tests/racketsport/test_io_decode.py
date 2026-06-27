@@ -5,10 +5,17 @@ import subprocess
 
 import pytest
 
-from threed.racketsport.io_decode import FrameSource, probe_clip
+from scripts.racketsport.ingest_testclips import ingest_testclips
+from threed.racketsport.io_decode import (
+    ClipQualityProbe,
+    FrameSource,
+    _laplacian_variance,
+    analyze_clip_qc,
+    probe_clip,
+)
 
 
-def _make_tiny_clip(path):
+def _make_tiny_clip(path, *, rate: int = 5, duration_s: float = 1.0):
     command = [
         "ffmpeg",
         "-hide_banner",
@@ -17,11 +24,11 @@ def _make_tiny_clip(path):
         "-f",
         "lavfi",
         "-i",
-        "testsrc=size=64x48:rate=5:duration=1",
+        f"testsrc=size=64x48:rate={rate}:duration={duration_s}",
         "-f",
         "lavfi",
         "-i",
-        "sine=frequency=1000:sample_rate=44100:duration=1",
+        f"sine=frequency=1000:sample_rate=44100:duration={duration_s}",
         "-shortest",
         "-pix_fmt",
         "yuv420p",
@@ -53,3 +60,74 @@ def test_probe_clip_returns_phase0_metadata(tmp_path):
 def test_probe_clip_fails_closed_on_missing_file(tmp_path):
     with pytest.raises(FileNotFoundError):
         probe_clip(tmp_path / "missing.mp4")
+
+
+def test_laplacian_variance_flags_spatial_detail():
+    flat = bytes([128] * 25)
+    edge = bytes(
+        [
+            0,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            0,
+            255,
+            255,
+        ]
+    )
+
+    assert _laplacian_variance(flat, 5, 5) == 0.0
+    assert _laplacian_variance(edge, 5, 5) > 0.0
+
+
+def test_analyze_clip_qc_returns_capture_quality(tmp_path):
+    clip = tmp_path / "sample.mp4"
+    _make_tiny_clip(clip, rate=60)
+
+    qc = analyze_clip_qc(clip, sample_fps=2.0, max_frames=2, max_width=32)
+
+    assert isinstance(qc, ClipQualityProbe)
+    assert 1 <= qc.sampled_frames <= 2
+    assert qc.sample_width == 32
+    assert qc.sample_height == 24
+    assert qc.qc_decode_fps > 0.0
+    assert qc.blur_laplacian_var >= 0.0
+    assert 0.0 <= qc.luminance_mean <= 1.0
+    assert qc.luminance_std_fraction >= 0.0
+    assert qc.capture_quality.grade in {"good", "warn", "poor"}
+    json.dumps(qc.to_dict())
+
+
+def test_ingest_testclips_writes_qc_and_capture_quality(tmp_path):
+    root = tmp_path / "clips"
+    out = tmp_path / "runs"
+    clip = root / "pickleball" / "sample.mp4"
+    clip.parent.mkdir(parents=True)
+    _make_tiny_clip(clip, rate=60)
+
+    written = ingest_testclips(root, out, qc_sample_fps=1.0, qc_max_frames=1, qc_max_width=32)
+
+    assert len(written) == 1
+    payload = json.loads(written[0].read_text(encoding="utf-8"))
+    assert payload["source_relpath"] == "pickleball/sample.mp4"
+    assert payload["capture_quality"]["grade"] in {"good", "warn", "poor"}
+    assert payload["clip_qc"]["sample_resolution"] == [32, 24]
+    assert payload["clip_qc"]["sampled_frames"] == 1
