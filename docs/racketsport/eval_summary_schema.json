@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sway.body/racketsport/eval_summary_schema.json",
+  "title": "Racketsport CPU-only eval run summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "execution",
+    "summary",
+    "phases",
+    "highest_risk_phases",
+    "missing_metrics_files",
+    "malformed_metrics_files"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "artifact_type": {
+      "const": "racketsport_eval_run_summary"
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpu_only", "runs_evaluations", "uses_gpu", "mutates_metrics"],
+      "properties": {
+        "cpu_only": {
+          "const": true
+        },
+        "runs_evaluations": {
+          "const": false
+        },
+        "uses_gpu": {
+          "const": false
+        },
+        "mutates_metrics": {
+          "const": false
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase_count",
+        "metrics_file_count",
+        "missing_metrics_file_count",
+        "malformed_metrics_file_count",
+        "status_counts",
+        "metric_status_counts",
+        "gate_result_counts",
+        "clip_status_counts"
+      ],
+      "properties": {
+        "phase_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "metrics_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_metrics_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "malformed_metrics_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status_counts": {
+          "$ref": "#/$defs/status_counts"
+        },
+        "metric_status_counts": {
+          "$ref": "#/$defs/metric_status_counts"
+        },
+        "gate_result_counts": {
+          "$ref": "#/$defs/gate_result_counts"
+        },
+        "clip_status_counts": {
+          "$ref": "#/$defs/eval_status_counts"
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/phase"
+      }
+    },
+    "highest_risk_phases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/risk_phase"
+      }
+    },
+    "missing_metrics_files": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "malformed_metrics_files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/malformed_metrics_file"
+      }
+    }
+  },
+  "$defs": {
+    "nonnegative_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "status_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pass", "fail", "blocked", "not_measured", "missing_metrics", "malformed_metrics"],
+      "properties": {
+        "pass": {
+          "$ref": "#/$defs/nonnegative_count"
+        },
+        "fail": {
+          "$ref": "#/$defs/nonnegative_count"
+        },
+        "blocked": {
+          "$ref": "#/$defs/nonnegative_count"
+        },
+        "not_measured": {
+          "$ref": "#/$defs/nonnegative_count"
+        },
+        "missing_metrics": {
+          "$ref": "#/$defs/nonnegative_count"
+        },
+        "malformed_metrics": {
+          "$ref": "#/$defs/nonnegative_count"
+        }
+      }
+    },
+    "eval_status_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pass", "fail", "blocked", "not_measured"],
+      "properties": {
+        "pass": {
+          "$ref": "#/$defs/nonnegative_count"
+        },
+        "fail": {
+          "$ref": "#/$defs/nonnegative_count"
+        },
+        "blocked": {
+          "$ref": "#/$defs/nonnegative_count"
+        },
+        "not_measured": {
+          "$ref": "#/$defs/nonnegative_count"
+        }
+      }
+    },
+    "metric_status_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["measured", "not_measured"],
+      "properties": {
+        "measured": {
+          "$ref": "#/$defs/nonnegative_count"
+        },
+        "not_measured": {
+          "$ref": "#/$defs/nonnegative_count"
+        }
+      }
+    },
+    "gate_result_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pass", "fail", "not_measured"],
+      "properties": {
+        "pass": {
+          "$ref": "#/$defs/nonnegative_count"
+        },
+        "fail": {
+          "$ref": "#/$defs/nonnegative_count"
+        },
+        "not_measured": {
+          "$ref": "#/$defs/nonnegative_count"
+        }
+      }
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase",
+        "evaluator",
+        "phase_dir",
+        "metrics_path",
+        "metrics_exists",
+        "status",
+        "summary",
+        "required_artifacts",
+        "metric_status_counts",
+        "gate_result_counts",
+        "clip_status_counts",
+        "risk_score",
+        "risk_reasons"
+      ],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evaluator": {
+          "type": ["string", "null"]
+        },
+        "phase_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metrics_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metrics_exists": {
+          "type": "boolean"
+        },
+        "status": {
+          "enum": ["pass", "fail", "blocked", "not_measured", "missing_metrics", "malformed_metrics"]
+        },
+        "summary": {
+          "type": ["object", "null"]
+        },
+        "required_artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metric_status_counts": {
+          "$ref": "#/$defs/metric_status_counts"
+        },
+        "gate_result_counts": {
+          "$ref": "#/$defs/gate_result_counts"
+        },
+        "clip_status_counts": {
+          "$ref": "#/$defs/eval_status_counts"
+        },
+        "risk_score": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "risk_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "risk_phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "status", "risk_score", "risk_reasons", "phase_dir", "metrics_path"],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": ["pass", "fail", "blocked", "not_measured", "missing_metrics", "malformed_metrics"]
+        },
+        "risk_score": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "risk_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "phase_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metrics_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "malformed_metrics_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase_dir", "metrics_path", "error"],
+      "properties": {
+        "phase_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metrics_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "error": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
