@@ -1,8 +1,129 @@
 {
   "schema_version": 1,
-  "models": [],
+  "models": [
+    {
+      "id": "fast_sam_3d_body_dinov3",
+      "stage": "3d_body_backbone",
+      "use": "Deep-tier per-frame body mesh backbone",
+      "source": "https://github.com/yangtiming/Fast-SAM-3D-Body plus facebook/sam-3d-body-dinov3 checkpoint",
+      "license": "SAM License",
+      "commercial_posture": "research_ok_verify_commercial",
+      "status": "available_on_h100",
+      "local_path": "/workspace/checkpoints/body4d/sam-3d-body-dinov3/model.ckpt",
+      "sha256": "b5a2f9d305dd02626b967aa2e86021fba07065df66ce7a7e00ffb9664f150abf",
+      "repo_commit": "936894c37e51de9918012bcbc9ba2d9c20f73252",
+      "fallbacks": ["sat_hmr", "nlf", "hmr2"],
+      "notes": [
+        "H100 container has Fast-SAM-3D-Body repo at /opt/fast-sam-3d-body.",
+        "H100 performance is still unbenchmarked; run scripts/racketsport/benchmark_sam3dbody.py with real inference next."
+      ]
+    },
+    {
+      "id": "sam_3d_body_mhr_model",
+      "stage": "3d_body_backbone",
+      "use": "MHR to SMPL mapping asset used by SAM-3D-Body/Fast-SAM-3D-Body",
+      "source": "https://github.com/facebookresearch/sam-3d-body",
+      "license": "SAM License",
+      "commercial_posture": "research_ok_verify_commercial",
+      "status": "available_on_h100",
+      "local_path": "/workspace/checkpoints/body4d/sam-3d-body-dinov3/assets/mhr_model.pt",
+      "sha256": "352e271a6c42729c68554ceaea0c955e866970160c31e35506d782dc0f7377bc",
+      "repo_commit": "936894c37e51de9918012bcbc9ba2d9c20f73252",
+      "fallbacks": ["sat_hmr", "nlf", "hmr2"]
+    },
+    {
+      "id": "moge_2_vitl_normal",
+      "stage": "camera_fov_depth_prior",
+      "use": "MoGe/FOV depth prior used by the existing body4d image",
+      "source": "https://github.com/microsoft/MoGe",
+      "license": "See upstream MoGe license",
+      "commercial_posture": "unknown",
+      "status": "available_on_h100",
+      "local_path": "/workspace/checkpoints/body4d/moge-2-vitl-normal/model.pt",
+      "sha256": "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01",
+      "fallbacks": [],
+      "notes": ["Used by Fast-SAM-3D-Body FOV estimator path; license must be verified before commercialization."]
+    },
+    {
+      "id": "sam2_hiera_base_plus",
+      "stage": "racket_segmentation",
+      "use": "SAM2 base-plus segmentation checkpoint for paddle/racket silhouette candidates",
+      "source": "https://github.com/facebookresearch/sam2",
+      "license": "Apache-2.0",
+      "commercial_posture": "ok",
+      "status": "available_on_h100",
+      "local_path": "/workspace/checkpoints/body4d/sam2_hiera_base_plus.pt",
+      "sha256": "d0bb7f236400a49669ffdd1be617959a8b1d1065081789d7bbff88eded3a8071",
+      "fallbacks": ["sam2_hiera_small", "sam2_hiera_large"]
+    },
+    {
+      "id": "body4d_yolo_best_existing",
+      "stage": "person_or_aux_detection",
+      "use": "Existing YOLO-family weights in the body4d image; exact training target needs verification before pickleball use",
+      "source": "Existing /workspace/sam4dbody/weights/best.pt",
+      "license": "unknown",
+      "commercial_posture": "unknown",
+      "status": "available_on_h100",
+      "local_path": "/workspace/sam4dbody/weights/best.pt",
+      "sha256": "e2e4e15f4281d6bb8723483b15a729b9a17b64851e2053a10aed98e4f318ff68",
+      "fallbacks": ["yolo26m", "yolo11m"],
+      "notes": ["Do not treat as the canonical YOLO26m detector until class names and training provenance are verified."]
+    },
+    {
+      "id": "yolo26m",
+      "stage": "person_detect",
+      "use": "Offline person detector candidate",
+      "source": "https://docs.ultralytics.com/models/yolo26/",
+      "license": "AGPL-3.0",
+      "commercial_posture": "agpl_caveat",
+      "status": "pending_download",
+      "fallbacks": ["yolo11m", "rf_detr_l", "rtmdet"]
+    },
+    {
+      "id": "rtmw_l_384",
+      "stage": "2d_pose",
+      "use": "Server whole-body pose candidate",
+      "source": "https://mmpose.readthedocs.io/",
+      "license": "Apache-2.0",
+      "commercial_posture": "ok",
+      "status": "pending_download",
+      "fallbacks": ["rtmpose_x", "rtmpose_m_384"]
+    },
+    {
+      "id": "tracknetv3",
+      "stage": "ball_tracking",
+      "use": "Ball detector/tracker pretrain before pickleball fine-tune",
+      "source": "https://github.com/qaz812345/TrackNetV3",
+      "license": "MIT",
+      "commercial_posture": "ok",
+      "status": "pending_download",
+      "fallbacks": ["manual_tap_track"]
+    },
+    {
+      "id": "sat_hmr",
+      "stage": "fast_mesh_preview",
+      "use": "Fast-tier camera-space mesh and license-safe body fallback candidate",
+      "source": "SAT-HMR upstream checkpoint sat_644_3dpw.pth",
+      "license": "Apache-2.0 per docs; verify upstream before use",
+      "commercial_posture": "ok",
+      "status": "pending_download",
+      "fallbacks": ["hmr2", "fast_sam_3d_body_dinov3"]
+    },
+    {
+      "id": "mujoco_mjx",
+      "stage": "physics",
+      "use": "Physics refinement engine for flagship replay",
+      "source": "https://github.com/google-deepmind/mujoco",
+      "license": "Apache-2.0",
+      "commercial_posture": "ok",
+      "status": "pending_download",
+      "fallbacks": ["physpt", "footlock_only"],
+      "notes": ["The current H100 body4d conda env is missing the mujoco Python package."]
+    }
+  ],
   "notes": [
-    "Phase 0 scaffold manifest. ENV-2 fills this with model source URLs, licenses, sha256 values, local paths, and fallback status."
+    "ENV-2 partial inventory captured from the running H100 container on 2026-06-26.",
+    "available_on_h100 means the file was present and hashed in the current /workspace-backed body4d container; it does not prove phase acceptance or H100 latency.",
+    "pending_download entries are next candidates for Codex to fetch or mirror without user input unless their upstream requires account-gated access."
   ]
 }
-
