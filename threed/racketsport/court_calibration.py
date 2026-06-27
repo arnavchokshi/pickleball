@@ -90,6 +90,23 @@ def project_planar_points(
     return projected
 
 
+def project_image_points_to_world(
+    homography: Iterable[Iterable[float]],
+    image_pts: Iterable[Iterable[float]],
+) -> list[list[float]]:
+    inverse = _invert_homography(homography)
+    projected: list[list[float]] = []
+    for point in image_pts:
+        u, v = float(point[0]), float(point[1])
+        x_num = inverse[0][0] * u + inverse[0][1] * v + inverse[0][2]
+        y_num = inverse[1][0] * u + inverse[1][1] * v + inverse[1][2]
+        scale = inverse[2][0] * u + inverse[2][1] * v + inverse[2][2]
+        if math.isclose(scale, 0.0):
+            raise ValueError("homogeneous inverse projection has zero scale")
+        projected.append([x_num / scale, y_num / scale])
+    return projected
+
+
 def project_world_points(
     extrinsics: CourtExtrinsics,
     intrinsics: CameraIntrinsics,
@@ -284,6 +301,25 @@ def _percentile(values: list[float], percentile: float) -> float:
         return float(ordered[lower])
     weight = rank - lower
     return float(ordered[lower] * (1.0 - weight) + ordered[upper] * weight)
+
+
+def _invert_homography(homography: Iterable[Iterable[float]]) -> list[list[float]]:
+    h = [[float(value) for value in row] for row in homography]
+    if len(h) != 3 or any(len(row) != 3 for row in h):
+        raise ValueError("homography must be a 3x3 matrix")
+
+    a, b, c = h[0]
+    d, e, f = h[1]
+    g, i, j = h[2]
+    cofactor = [
+        [e * j - f * i, c * i - b * j, b * f - c * e],
+        [f * g - d * j, a * j - c * g, c * d - a * f],
+        [d * i - e * g, b * g - a * i, a * e - b * d],
+    ]
+    determinant = a * cofactor[0][0] + b * cofactor[1][0] + c * cofactor[2][0]
+    if math.isclose(determinant, 0.0, abs_tol=1e-12):
+        raise ValueError("homography is singular")
+    return [[value / determinant for value in row] for row in cofactor]
 
 
 def _solve_linear_system(matrix: list[list[float]], rhs: list[float]) -> list[float]:

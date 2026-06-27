@@ -15,6 +15,7 @@ from threed.racketsport.court_calibration import (
     homography_from_planar_points,
     manual_tap_correspondences,
     passes_reprojection_gate,
+    project_image_points_to_world,
     project_world_points,
     project_planar_points,
     reprojection_error,
@@ -113,6 +114,17 @@ def test_homography_maps_court_world_to_image_pixels():
     )
 
     assert project_planar_points(homography, [[1.0, 0.5, 0.0]])[0] == pytest.approx([20.0, 22.5])
+
+
+def test_image_pixels_project_back_to_court_world_plane():
+    homography = homography_from_planar_points(
+        world_pts=[[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [2.0, 1.0, 0.0], [0.0, 1.0, 0.0]],
+        image_pts=[[10.0, 20.0], [30.0, 20.0], [30.0, 25.0], [10.0, 25.0]],
+    )
+
+    world_points = project_image_points_to_world(homography, [[20.0, 22.5]])
+
+    assert world_points[0] == pytest.approx([1.0, 0.5])
 
 
 def test_manual_calibration_artifact_is_schema_valid_and_gate_scored(tmp_path):
