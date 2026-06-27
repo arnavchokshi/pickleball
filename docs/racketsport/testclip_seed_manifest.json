@@ -29,6 +29,29 @@
       "visual_check": "Clean high baseline broadcast gameplay; all four players and court lines visible."
     },
     {
+      "name": "ppa_austin_md_qf_1200_long_high_baseline",
+      "url": "https://www.youtube.com/watch?v=3sC53GlvW_s",
+      "title": "Johns/Johns vs Ashlon/Navratil at the Veolia Austin Open",
+      "time_range": "00:12:00-00:27:00",
+      "verified_media": {
+        "width": 1920,
+        "height": 1080,
+        "fps": 30,
+        "duration_s": 900.01,
+        "codec": "av1"
+      },
+      "metadata": {
+        "camera_height": "high",
+        "camera_angle": "shallow_baseline",
+        "play_type": "doubles",
+        "environment": "outdoor",
+        "frame_rate_fps": 30,
+        "duration_s": 900,
+        "racket_gt": false
+      },
+      "visual_check": "Fifteen-minute high baseline broadcast gameplay slice for long throughput coverage."
+    },
+    {
       "name": "side_view_game5_0100_high_side_fence",
       "url": "https://www.youtube.com/watch?v=R1Q8CW142Pk",
       "title": "Pickleball 3.5 Doubles | Side View - Game 5 - Jacky/Dan vs Rex/Marielle",
@@ -119,6 +142,29 @@
         "racket_gt": false
       },
       "visual_check": "Indoor low-ish near-court steep-corner tournament view at about 60 fps."
+    },
+    {
+      "name": "ppa_singles_0500_high_baseline",
+      "url": "https://www.youtube.com/watch?v=W998mR9Zs7g",
+      "title": "Federico Staksrud vs Camden Chaffin at the Pickleball Central Indoor National Championships | PPA",
+      "time_range": "00:05:00-00:06:30",
+      "verified_media": {
+        "width": 1920,
+        "height": 1080,
+        "fps": 59.94,
+        "duration_s": 90.007,
+        "codec": "av1"
+      },
+      "metadata": {
+        "camera_height": "high",
+        "camera_angle": "shallow_baseline",
+        "play_type": "singles_drill",
+        "environment": "indoor",
+        "frame_rate_fps": 60,
+        "duration_s": 90,
+        "racket_gt": false
+      },
+      "visual_check": "Indoor high baseline singles match with both players and court lines visible."
     }
   ]
 }
