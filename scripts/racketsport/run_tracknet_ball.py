@@ -22,6 +22,14 @@ def main() -> int:
     parser.add_argument("--tracknet-repo", type=Path, default=None, help="Official TrackNetV3 repo containing predict.py.")
     parser.add_argument("--prediction-dir", type=Path, default=None, help="Keep official TrackNet CSV outputs in this directory.")
     parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument(
+        "--video-range",
+        type=int,
+        nargs=2,
+        metavar=("START_S", "END_S"),
+        default=None,
+        help="Pass official TrackNetV3 --video_range START,END for background median sampling; it does not trim prediction frames.",
+    )
     parser.add_argument("--large-video", action="store_true", help="Pass --large_video to official TrackNetV3 predict.py.")
     parser.add_argument("--fps", type=float, required=True)
     parser.add_argument("--out", type=Path, required=True)
@@ -40,6 +48,7 @@ def main() -> int:
             tracknet_repo=args.tracknet_repo,
             prediction_dir=args.prediction_dir,
             batch_size=args.batch_size,
+            video_range=args.video_range,
             large_video=args.large_video,
         )
     except Exception as exc:

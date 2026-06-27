@@ -80,6 +80,7 @@ def run_official_tracknet_predict(
     inpaintnet_file: str | Path,
     save_dir: str | Path,
     batch_size: int = 16,
+    video_range: tuple[int, int] | list[int] | None = None,
     large_video: bool = True,
 ) -> Path:
     """Run official TrackNetV3 ``predict.py`` and return its CSV path."""
@@ -100,6 +101,7 @@ def run_official_tracknet_predict(
 
     save_path = Path(save_dir).resolve()
     save_path.mkdir(parents=True, exist_ok=True)
+    normalized_video_range = _normalize_video_range(video_range)
     cmd = [
         sys.executable,
         str(predict_py),
@@ -114,6 +116,8 @@ def run_official_tracknet_predict(
         "--batch_size",
         str(batch_size),
     ]
+    if normalized_video_range is not None:
+        cmd.extend(["--video_range", f"{normalized_video_range[0]},{normalized_video_range[1]}"])
     if large_video:
         cmd.append("--large_video")
     subprocess.run(cmd, cwd=repo, check=True)
@@ -197,6 +201,17 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _normalize_video_range(video_range: tuple[int, int] | list[int] | None) -> tuple[int, int] | None:
+    if video_range is None:
+        return None
+    if len(video_range) != 2:
+        raise ValueError("video_range must contain START_S and END_S")
+    start, end = int(video_range[0]), int(video_range[1])
+    if start < 0 or end <= start:
+        raise ValueError("video_range must satisfy 0 <= START_S < END_S")
+    return start, end
+
+
 def run_tracknet_or_convert(
     *,
     out: str | Path,
@@ -209,6 +224,7 @@ def run_tracknet_or_convert(
     tracknet_repo: str | Path | None = None,
     prediction_dir: str | Path | None = None,
     batch_size: int = 16,
+    video_range: tuple[int, int] | list[int] | None = None,
     large_video: bool = False,
 ) -> dict[str, Any]:
     """CLI-oriented entrypoint that converts CSV or runs official TrackNetV3."""
@@ -229,12 +245,18 @@ def run_tracknet_or_convert(
     if not predict_py.is_file():
         raise FileNotFoundError(f"missing TrackNetV3 predict.py: {predict_py}")
 
+    normalized_video_range = _normalize_video_range(video_range)
     runtime = {
         "tracknet_repo": str(tracknet_repo),
         "tracknet_checkpoint": checkpoint_metadata(tracknet_file),
         "inpaintnet_checkpoint": checkpoint_metadata(inpaintnet_file),
         "video": str(video),
     }
+    if normalized_video_range is not None:
+        runtime["video_range_seconds"] = list(normalized_video_range)
+        runtime["video_range_semantics"] = (
+            "official TrackNetV3 background median sampling range; does not trim prediction frames"
+        )
     if prediction_dir is None:
         with tempfile.TemporaryDirectory(prefix="tracknetv3_") as tmp_dir:
             csv_path = run_official_tracknet_predict(
@@ -244,6 +266,7 @@ def run_tracknet_or_convert(
                 inpaintnet_file=inpaintnet_file,
                 save_dir=tmp_dir,
                 batch_size=batch_size,
+                video_range=normalized_video_range,
                 large_video=large_video,
             )
             return write_ball_track_from_csv(
@@ -262,6 +285,7 @@ def run_tracknet_or_convert(
         inpaintnet_file=inpaintnet_file,
         save_dir=prediction_dir,
         batch_size=batch_size,
+        video_range=normalized_video_range,
         large_video=large_video,
     )
     return write_ball_track_from_csv(

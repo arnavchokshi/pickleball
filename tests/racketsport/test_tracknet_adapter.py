@@ -92,3 +92,84 @@ def test_run_tracknet_ball_cli_refuses_missing_tracknet_runtime(tmp_path: Path) 
     assert completed.returncode != 0
     assert "missing TrackNetV3 predict.py" in completed.stderr
     assert not (tmp_path / "ball_track.json").exists()
+
+
+def test_run_tracknet_ball_cli_passes_video_range_to_official_predict(tmp_path: Path) -> None:
+    repo = tmp_path / "TrackNetV3"
+    repo.mkdir()
+    predict_py = repo / "predict.py"
+    predict_py.write_text(
+        """
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--video_file", required=True)
+parser.add_argument("--tracknet_file", required=True)
+parser.add_argument("--inpaintnet_file", required=True)
+parser.add_argument("--save_dir", required=True)
+parser.add_argument("--batch_size", required=True)
+parser.add_argument("--large_video", action="store_true")
+parser.add_argument("--video_range")
+args = parser.parse_args()
+
+save_dir = Path(args.save_dir)
+save_dir.mkdir(parents=True, exist_ok=True)
+video_stem = Path(args.video_file).stem
+(save_dir / f"{video_stem}_ball.csv").write_text("Frame,Visibility,X,Y\\n0,1,10,20\\n", encoding="utf-8")
+(save_dir / "args.json").write_text(json.dumps(vars(args), sort_keys=True), encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake video")
+    tracknet = tmp_path / "TrackNet_best.pt"
+    inpaintnet = tmp_path / "InpaintNet_best.pt"
+    tracknet.write_bytes(b"tracknet")
+    inpaintnet.write_bytes(b"inpaintnet")
+    prediction_dir = tmp_path / "predictions"
+    out = tmp_path / "ball_track.json"
+    meta = tmp_path / "ball_track_run.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/run_tracknet_ball.py",
+            "--video",
+            str(video),
+            "--tracknet-file",
+            str(tracknet),
+            "--inpaintnet-file",
+            str(inpaintnet),
+            "--tracknet-repo",
+            str(repo),
+            "--prediction-dir",
+            str(prediction_dir),
+            "--video-range",
+            "10",
+            "20",
+            "--fps",
+            "60",
+            "--out",
+            str(out),
+            "--metadata-out",
+            str(meta),
+            "--large-video",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert json.loads(completed.stdout)["frame_count"] == 1
+    predict_args = json.loads((prediction_dir / "args.json").read_text(encoding="utf-8"))
+    assert predict_args["video_range"] == "10,20"
+    assert predict_args["large_video"] is True
+    metadata = json.loads(meta.read_text(encoding="utf-8"))
+    assert metadata["runtime"]["video_range_seconds"] == [10, 20]
+    assert metadata["runtime"]["video_range_semantics"] == (
+        "official TrackNetV3 background median sampling range; does not trim prediction frames"
+    )
