@@ -180,3 +180,52 @@ def test_validate_testclips_cli_exits_zero_only_when_labels_and_matrix_are_ready
     assert payload["is_ready"] is True
     assert payload["meets_dataset_matrix"] is True
     assert payload["dataset_ready"] is True
+
+
+def test_register_testclip_cli_writes_metadata_and_label_skeleton(tmp_path):
+    source = tmp_path / "clip.mp4"
+    source.write_bytes(b"fake video bytes")
+    root = tmp_path / "data" / "testclips"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/register_testclip.py",
+            "--source",
+            str(source),
+            "--root",
+            str(root),
+            "--name",
+            "candidate_001",
+            "--camera-height",
+            "low",
+            "--camera-angle",
+            "steep_corner",
+            "--play-type",
+            "doubles",
+            "--environment",
+            "outdoor",
+            "--frame-rate-fps",
+            "120",
+            "--duration-s",
+            "90",
+            "--racket-gt",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    clip_dir = root / "candidate_001"
+    manifest = build_testclip_manifest(root)
+    payload = json.loads(completed.stdout)
+    metadata = json.loads((clip_dir / "clip_metadata.json").read_text(encoding="utf-8"))
+
+    assert payload["clip"] == "candidate_001"
+    assert (clip_dir / "source.mp4").is_file()
+    assert (clip_dir / "labels").is_dir()
+    assert metadata["camera_height"] == "low"
+    assert metadata["racket_gt"] is True
+    assert manifest.total_clips == 1
+    assert manifest.metadata_ready_clips == 1
+    assert manifest.ready_clips == 0
