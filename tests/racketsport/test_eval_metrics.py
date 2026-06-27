@@ -234,6 +234,49 @@ def _write_racket_pose_artifact(run_dir: Path, *, contacts: int = 1) -> None:
     (run_dir / "racket_pose.json").write_text(json.dumps(payload), encoding="utf-8")
 
 
+def _write_metric_artifacts(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    metrics = {
+        "schema_version": 1,
+        "players": [
+            {
+                "id": 1,
+                "shots": [
+                    {
+                        "t": 0.25,
+                        "type": "dink",
+                        "type_conf": 0.82,
+                        "metrics": {
+                            "nvz_margin_ft": {"value": -0.5, "conf": 0.86, "frames": 5},
+                            "paddle_face_deg": {"value": 4.0, "conf": 0.82, "gated": False},
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+    habit_report = {
+        "schema_version": 1,
+        "sport": "pickleball",
+        "coverage": {"overall": 0.82, "skipped_reason_counts": {"ball_uncertain": 1}},
+        "priority_habit_id": "kitchen_foot",
+        "replay_ref": {"glb_url": "/replay/clip_001?point=1"},
+        "habits": [
+            {
+                "id": "kitchen_foot",
+                "title": "Kitchen foot",
+                "summary": "Foot crossed the NVZ line.",
+                "confidence": 0.86,
+                "clip_ref": {"t0_sec": 0.2, "t1_sec": 1.2},
+                "cue": "Stay balanced before contact.",
+                "drill": {"name": "Kitchen reset", "duration_min": 6.0},
+            }
+        ],
+    }
+    (run_dir / "racket_sport_metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
+    (run_dir / "habit_report.json").write_text(json.dumps(habit_report), encoding="utf-8")
+
+
 def test_calib_eval_passes_when_ready_clip_has_required_artifacts(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase1"
@@ -665,3 +708,68 @@ def test_racket_eval_blocks_when_racket_pose_artifact_is_missing(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
     assert payload["clips"][0]["missing_artifacts"] == ["racket_pose.json"]
+
+
+def test_metric_eval_passes_when_ready_clip_has_metrics_and_habit_artifacts(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase7"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_metric_artifacts(root / "clip_001")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.metric_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert json.loads(completed.stdout)["status"] == "pass"
+    assert payload["phase"] == "phase7"
+    assert payload["required_artifacts"] == ["racket_sport_metrics.json", "habit_report.json"]
+    assert payload["clips"][0]["metrics"]["metric_players"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["shots"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["metric_values"]["value"] == 2
+    assert payload["clips"][0]["metrics"]["gated_metrics"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["habits"]["value"] == 1
+    assert payload["clips"][0]["metrics"]["coverage_overall"]["value"] == 0.82
+    validate_artifact_file("phase_eval_metrics", root / "metrics.json")
+
+
+def test_metric_eval_blocks_when_habit_report_is_missing(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase7"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_metric_artifacts(root / "clip_001")
+    (root / "clip_001" / "habit_report.json").unlink()
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.metric_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["clips"][0]["missing_artifacts"] == ["habit_report.json"]
