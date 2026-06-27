@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from threed.racketsport.court_templates import FT_TO_M
+from threed.racketsport.doubles_id import assign_doubles_roles, coach_anchor
 from threed.racketsport.person_fast import PersonDetection, court_polygon_filter
 from threed.racketsport.track_lock import TrackCandidate, ground_step_plausible, n_lock
 
@@ -42,3 +43,35 @@ def test_n_lock_fails_closed_when_not_enough_candidates():
 def test_ground_step_plausible_rejects_metric_teleports():
     assert ground_step_plausible([0.0, 0.0], [0.5, 0.0], max_step_m=1.0)
     assert not ground_step_plausible([0.0, 0.0], [2.5, 0.0], max_step_m=1.0)
+
+
+def test_assign_doubles_roles_uses_court_side_and_lateral_position():
+    candidates = [
+        TrackCandidate(track_id=1, world_xy=[-2.0, -4.0], confidence=0.9),
+        TrackCandidate(track_id=2, world_xy=[2.0, -4.0], confidence=0.9),
+        TrackCandidate(track_id=3, world_xy=[-2.0, 4.0], confidence=0.9),
+        TrackCandidate(track_id=4, world_xy=[2.0, 4.0], confidence=0.9),
+    ]
+
+    roles = assign_doubles_roles(candidates)
+
+    assert roles[1].side == "near"
+    assert roles[1].role == "left"
+    assert roles[2].role == "right"
+    assert roles[3].side == "far"
+    assert roles[4].side == "far"
+
+
+def test_coach_anchor_binds_nearest_track_within_radius():
+    candidates = [
+        TrackCandidate(track_id=1, world_xy=[0.0, 0.0], confidence=0.7),
+        TrackCandidate(track_id=2, world_xy=[2.0, 0.0], confidence=0.9),
+    ]
+
+    identity = coach_anchor(candidates, anchor_world_xy=[1.8, 0.1], label="server", max_distance_m=0.5)
+
+    assert identity.track_id == 2
+    assert identity.label == "server"
+
+    with pytest.raises(ValueError, match="no track within"):
+        coach_anchor(candidates, anchor_world_xy=[10.0, 0.0], label="server", max_distance_m=0.5)
