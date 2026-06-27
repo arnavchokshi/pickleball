@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/racketsport/label_draft_audit_schema.json",
+  "title": "DATA-1 Label Draft Audit Summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "status",
+    "root",
+    "drafts_root",
+    "frames_root",
+    "dataset_labels_written",
+    "required_label_files",
+    "counts",
+    "warnings",
+    "errors",
+    "clips"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "artifact_type": {
+      "const": "racketsport_label_draft_audit"
+    },
+    "status": {
+      "enum": ["ready", "not_ready"]
+    },
+    "root": {
+      "type": "string"
+    },
+    "drafts_root": {
+      "type": "string"
+    },
+    "frames_root": {
+      "type": ["string", "null"]
+    },
+    "dataset_labels_written": {
+      "const": false
+    },
+    "required_label_files": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_]+\\.json$"
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_clips",
+        "ready_clips",
+        "not_ready_clips",
+        "missing_required_drafts",
+        "invalid_drafts",
+        "warnings"
+      ],
+      "properties": {
+        "total_clips": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ready_clips": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "not_ready_clips": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_required_drafts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid_drafts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "warnings": {
+      "$ref": "#/$defs/message_list"
+    },
+    "errors": {
+      "$ref": "#/$defs/message_list"
+    },
+    "clips": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "clip_dir",
+          "draft_labels_dir",
+          "dataset_labels_dir",
+          "status",
+          "missing_required_label_drafts",
+          "frame_pack",
+          "drafts",
+          "warnings",
+          "errors"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "clip_dir": {
+            "type": "string"
+          },
+          "draft_labels_dir": {
+            "type": "string"
+          },
+          "dataset_labels_dir": {
+            "type": "string"
+          },
+          "status": {
+            "enum": ["ready", "not_ready"]
+          },
+          "missing_required_label_drafts": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_]+\\.json$"
+            }
+          },
+          "frame_pack": {
+            "$ref": "#/$defs/frame_pack"
+          },
+          "drafts": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/$defs/draft_file"
+            }
+          },
+          "warnings": {
+            "$ref": "#/$defs/message_list"
+          },
+          "errors": {
+            "$ref": "#/$defs/message_list"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "message_list": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "frame_pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest_path",
+        "present",
+        "frame_count",
+        "sample_every_frames",
+        "warnings"
+      ],
+      "properties": {
+        "manifest_path": {
+          "type": ["string", "null"]
+        },
+        "present": {
+          "type": "boolean"
+        },
+        "frame_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sample_every_frames": {
+          "type": ["integer", "null"]
+        },
+        "warnings": {
+          "$ref": "#/$defs/message_list"
+        }
+      }
+    },
+    "draft_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "present",
+        "json_valid",
+        "schema_version_ok",
+        "status_ok",
+        "target_file_ok",
+        "annotation_item_count",
+        "warnings",
+        "errors"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "present": {
+          "type": "boolean"
+        },
+        "json_valid": {
+          "type": "boolean"
+        },
+        "schema_version_ok": {
+          "type": "boolean"
+        },
+        "status_ok": {
+          "type": "boolean"
+        },
+        "target_file_ok": {
+          "type": "boolean"
+        },
+        "annotation_item_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings": {
+          "$ref": "#/$defs/message_list"
+        },
+        "errors": {
+          "$ref": "#/$defs/message_list"
+        }
+      }
+    }
+  }
+}
