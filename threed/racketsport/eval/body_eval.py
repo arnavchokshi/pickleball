@@ -4,12 +4,38 @@ import argparse
 import json
 from pathlib import Path
 
-from threed.racketsport.eval.metrics import build_phase_metrics, metric, missing_artifacts, write_phase_metrics
+from threed.racketsport.eval.metrics import (
+    NumericGate,
+    build_phase_metrics,
+    evaluate_numeric_gates,
+    missing_artifacts,
+    write_phase_metrics,
+)
 from threed.racketsport.schemas import EvalClipResult, Skeleton3D, SmplMotion, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
 REQUIRED_BODY_ARTIFACTS = ["smpl_motion.json", "skeleton3d.json"]
+BODY_GATES = {
+    "smpl_players": NumericGate(
+        name="body_smpl_players_min",
+        op=">=",
+        threshold=1,
+        unit="players",
+    ),
+    "smpl_frames": NumericGate(
+        name="body_smpl_frames_min",
+        op=">=",
+        threshold=1,
+        unit="frames",
+    ),
+    "skeleton_players": NumericGate(
+        name="body_skeleton_players_min",
+        op=">=",
+        threshold=1,
+        unit="players",
+    ),
+}
 
 
 def evaluate(root: str | Path, labels_root: str | Path) -> object:
@@ -101,7 +127,15 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
     smpl_players = len(smpl_motion.players)
     smpl_frames = sum(len(player.frames) for player in smpl_motion.players)
     skeleton_players = len(skeleton.players)
-    passed = smpl_players >= 1 and smpl_frames >= 1 and skeleton_players >= 1
+    metrics = evaluate_numeric_gates(
+        {
+            "smpl_players": smpl_players,
+            "smpl_frames": smpl_frames,
+            "skeleton_players": skeleton_players,
+        },
+        BODY_GATES,
+    )
+    passed = all(gated_metric.passed is True for gated_metric in metrics.values())
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
@@ -109,16 +143,7 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         status="pass" if passed else "fail",
         missing_label_files=[],
         missing_artifacts=[],
-        metrics={
-            "smpl_players": metric(value=smpl_players, unit="players", gate=">= 1", passed=smpl_players >= 1),
-            "smpl_frames": metric(value=smpl_frames, unit="frames", gate=">= 1", passed=smpl_frames >= 1),
-            "skeleton_players": metric(
-                value=skeleton_players,
-                unit="players",
-                gate=">= 1",
-                passed=skeleton_players >= 1,
-            ),
-        },
+        metrics=metrics,
         notes=[],
     )
 

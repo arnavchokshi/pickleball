@@ -4,12 +4,51 @@ import argparse
 import json
 from pathlib import Path
 
-from threed.racketsport.eval.metrics import build_phase_metrics, metric, missing_artifacts, write_phase_metrics
+from threed.racketsport.eval.metrics import (
+    NumericGate,
+    build_phase_metrics,
+    evaluate_numeric_gates,
+    metric,
+    missing_artifacts,
+    write_phase_metrics,
+)
 from threed.racketsport.schemas import EvalClipResult, SmplMotion, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
 REQUIRED_PHYSICS_ARTIFACTS = ["smpl_motion.json"]
+PHYSICS_GATES = {
+    "smpl_players": NumericGate(
+        name="physics_smpl_players_min",
+        op=">=",
+        threshold=1,
+        unit="players",
+    ),
+    "smpl_frames": NumericGate(
+        name="physics_smpl_frames_min",
+        op=">=",
+        threshold=1,
+        unit="frames",
+    ),
+    "foot_contact_frames": NumericGate(
+        name="physics_foot_contact_frames_observed",
+        op=">=",
+        threshold=0,
+        unit="frames",
+    ),
+    "skate_free_players": NumericGate(
+        name="physics_skate_free_players_min",
+        op=">=",
+        threshold=1,
+        unit="players",
+    ),
+    "grf_frames": NumericGate(
+        name="physics_grf_frames_observed",
+        op=">=",
+        threshold=0,
+        unit="frames",
+    ),
+}
 
 
 def evaluate(root: str | Path, labels_root: str | Path) -> object:
@@ -110,7 +149,23 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
     grf_frames = sum(
         1 for player in smpl_motion.players for frame in player.frames if frame.grf is not None and len(frame.grf) > 0
     )
-    passed = player_count >= 1 and frame_count >= 1 and skate_free_players >= 1
+    metrics = evaluate_numeric_gates(
+        {
+            "smpl_players": player_count,
+            "smpl_frames": frame_count,
+            "foot_contact_frames": foot_contact_frames,
+            "skate_free_players": skate_free_players,
+            "grf_frames": grf_frames,
+        },
+        PHYSICS_GATES,
+    )
+    passed = all(gated_metric.passed is True for gated_metric in metrics.values())
+    metrics["physics_modes"] = metric(
+        value=physics_modes,
+        unit=None,
+        gate="recorded for later physics gates",
+        passed=bool(physics_modes),
+    )
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
@@ -118,34 +173,7 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         status="pass" if passed else "fail",
         missing_label_files=[],
         missing_artifacts=[],
-        metrics={
-            "smpl_players": metric(value=player_count, unit="players", gate=">= 1", passed=player_count >= 1),
-            "smpl_frames": metric(value=frame_count, unit="frames", gate=">= 1", passed=frame_count >= 1),
-            "foot_contact_frames": metric(
-                value=foot_contact_frames,
-                unit="frames",
-                gate="recorded for later foot-contact gates",
-                passed=True,
-            ),
-            "skate_free_players": metric(
-                value=skate_free_players,
-                unit="players",
-                gate=">= 1",
-                passed=skate_free_players >= 1,
-            ),
-            "physics_modes": metric(
-                value=physics_modes,
-                unit=None,
-                gate="recorded for later physics gates",
-                passed=bool(physics_modes),
-            ),
-            "grf_frames": metric(
-                value=grf_frames,
-                unit="frames",
-                gate="recorded when physics backend emits GRF",
-                passed=True,
-            ),
-        },
+        metrics=metrics,
         notes=[],
     )
 
