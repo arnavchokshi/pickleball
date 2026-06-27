@@ -7,14 +7,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-
-PROTOTYPE_GATE_CLIPS = (
-    "ppa_austin_md_qf_1200_high_baseline",
-    "ppa_singles_0500_high_baseline",
-    "gear360_0200_high_near_overhead",
-    "burlington_gold_0300_low_steep_corner",
-    "side_view_game5_0100_high_side_fence",
-)
+from threed.racketsport.autolabel import PROTOTYPE_GATE_CLIPS
 
 CVAT_LABELS = [
     {"name": "court_corner", "attributes": ["corner_name"]},

@@ -5,11 +5,18 @@ labels and correction bundles; it does not mark anything `VERIFIED`.
 
 Prototype clips:
 
-- `ppa_austin_md_qf_1200_high_baseline`
-- `ppa_singles_0500_high_baseline`
-- `gear360_0200_high_near_overhead`
 - `burlington_gold_0300_low_steep_corner`
 - `side_view_game5_0100_high_side_fence`
+- `wolverine_mixed_0200_mid_steep_corner`
+- `outdoor_webcam_iynbd_1500_long_high_baseline`
+- `indoor_doubles_fwuks_0500_long_mid_baseline`
+
+Rejected for this prototype gate:
+
+- Broadcast or edited videos with camera cuts/angle changes, including the PPA
+  clips, because static-camera calibration cannot remain valid across cuts.
+- 360/near-overhead videos, including `gear360_0200_high_near_overhead`, because
+  they do not represent the target user-upload path.
 
 Run the review export after draft labels exist:
 
@@ -21,8 +28,8 @@ python scripts/racketsport/export_review_frames.py \
 ```
 
 For each clip, open `review_bundle/images/<clip>/`. For calibration, click or
-enter four court corners in this order: `far_left`, `far_right`, `near_right`,
-`near_left`. Put corrected items into
+enter four visible court corners in this order: `far_left`, `far_right`,
+`near_right`, `near_left`. Put corrected items into
 `review_bundle/corrections/<clip>/<target_file>.json`.
 
 To create CVAT-style task folders:

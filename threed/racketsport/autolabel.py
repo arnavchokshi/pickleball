@@ -13,11 +13,11 @@ from typing import Any, Iterable, Sequence
 
 
 PROTOTYPE_GATE_CLIPS = (
-    "ppa_austin_md_qf_1200_high_baseline",
-    "ppa_singles_0500_high_baseline",
-    "gear360_0200_high_near_overhead",
     "burlington_gold_0300_low_steep_corner",
     "side_view_game5_0100_high_side_fence",
+    "wolverine_mixed_0200_mid_steep_corner",
+    "outdoor_webcam_iynbd_1500_long_high_baseline",
+    "indoor_doubles_fwuks_0500_long_mid_baseline",
 )
 
 PROTOTYPE_LABEL_FILES = (
@@ -279,6 +279,9 @@ def _first_source_video(clip_dir: Path) -> Path | None:
         return preferred
     for path in sorted(clip_dir.glob("*.mp4")):
         return path
+    cached = clip_dir.parent.parent / "source_clips" / f"{clip_dir.name}.mp4"
+    if cached.is_file():
+        return cached
     return None
 
 

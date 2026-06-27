@@ -106,6 +106,23 @@ def test_bootstrap_preserves_teacher_payload_but_still_marks_draft(tmp_path: Pat
     assert ball["annotation"]["teacher_payload"]["detections"][0]["conf"] == 0.91
 
 
+def test_bootstrap_uses_source_clip_cache_when_testclip_source_is_absent(tmp_path: Path) -> None:
+    root = tmp_path / "data" / "testclips"
+    frames_root = tmp_path / "runs" / "label_frames"
+    clip = "candidate_001"
+    _write_clip(root, frames_root, clip)
+    cached = tmp_path / "data" / "source_clips" / f"{clip}.mp4"
+    cached.parent.mkdir(parents=True)
+    cached.write_bytes(b"fake mp4")
+    (root / clip / "source.mp4").unlink(missing_ok=True)
+
+    out = tmp_path / "runs" / "label_drafts" / "prototype_gate"
+    bootstrap_prototype_gate(root=root, frames_root=frames_root, out=out)
+
+    manifest = json.loads((out / clip / "labels" / "prototype_autolabel_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["clip"]["source_video"] == str(cached)
+
+
 def test_bootstrap_refuses_dataset_output_and_h100_defaults_are_scoped(tmp_path: Path) -> None:
     root = tmp_path / "data" / "testclips"
     frames_root = tmp_path / "runs" / "label_frames"

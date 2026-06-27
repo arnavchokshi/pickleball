@@ -23,6 +23,7 @@ def main() -> int:
     parser.add_argument("--clip", action="append", dest="clips")
     parser.add_argument("--markdown", action="store_true")
     parser.add_argument("--max-frames", type=int)
+    parser.add_argument("--frame-pack-only", action="store_true", help="Render sampled label frames directly instead of decoding source video.")
     args = parser.parse_args()
 
     if args.video or args.draft_label_dir:
@@ -36,10 +37,17 @@ def main() -> int:
             write_index=True,
             write_markdown=args.markdown,
             max_frames=args.max_frames,
+            frame_pack_only=args.frame_pack_only,
         )
     else:
         root = args.root or Path(".")
-        summary = render_prototype_gate(root=root, clips=args.clips, write_markdown=args.markdown, max_frames=args.max_frames)
+        summary = render_prototype_gate(
+            root=root,
+            clips=args.clips,
+            write_markdown=args.markdown,
+            max_frames=args.max_frames,
+            frame_pack_only=args.frame_pack_only,
+        )
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
 

@@ -6,14 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
-
-PROTOTYPE_GATE_CLIPS = (
-    "ppa_austin_md_qf_1200_high_baseline",
-    "ppa_singles_0500_high_baseline",
-    "gear360_0200_high_near_overhead",
-    "burlington_gold_0300_low_steep_corner",
-    "side_view_game5_0100_high_side_fence",
-)
+from threed.racketsport.autolabel import PROTOTYPE_GATE_CLIPS
 
 LAYER_FILES = (
     ("court", "court_corners.json"),
@@ -34,6 +27,7 @@ def render_label_overlays(
     write_index: bool = True,
     write_markdown: bool = False,
     max_frames: int | None = None,
+    frame_pack_only: bool = False,
 ) -> dict[str, Any]:
     """Render an all-label qualitative overlay MP4 for one clip."""
 
@@ -46,32 +40,8 @@ def render_label_overlays(
     overlay_path = compare_dir / "all_labels_overlay.mp4"
 
     label_data, available_layers, warnings = _load_layers(draft_label_dir)
-    cap = cv2.VideoCapture(str(video_path))
-    if not cap.isOpened():
-        raise FileNotFoundError(f"cannot open video: {video_path}")
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1280
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
-    writer = cv2.VideoWriter(str(overlay_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
-    if not writer.isOpened():
-        cap.release()
-        raise RuntimeError(f"cannot open overlay writer: {overlay_path}")
-
     frame_index = 0
-    try:
-        while True:
-            ok, frame = cap.read()
-            if not ok:
-                break
-            _draw_layers(cv2, frame, frame_index, label_data)
-            writer.write(frame)
-            frame_index += 1
-            if max_frames is not None and frame_index >= max_frames:
-                break
-    finally:
-        cap.release()
-        writer.release()
-    if frame_index == 0:
+    if frame_pack_only:
         fallback_count = _render_from_frame_pack(
             cv2,
             draft_label_dir=draft_label_dir,
@@ -81,9 +51,47 @@ def render_label_overlays(
         )
         if fallback_count > 0:
             frame_index = fallback_count
-            warnings.append("video decode produced 0 frames; rendered from label frame pack")
+            warnings.append("rendered from label frame pack without source video decode")
         else:
-            warnings.append("video decode produced 0 frames and no label frame pack fallback was available")
+            warnings.append("frame-pack-only render requested but no label frame pack fallback was available")
+    else:
+        cap = cv2.VideoCapture(str(video_path))
+        if not cap.isOpened():
+            raise FileNotFoundError(f"cannot open video: {video_path}")
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1280
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
+        writer = cv2.VideoWriter(str(overlay_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
+        if not writer.isOpened():
+            cap.release()
+            raise RuntimeError(f"cannot open overlay writer: {overlay_path}")
+
+        try:
+            while True:
+                ok, frame = cap.read()
+                if not ok:
+                    break
+                _draw_layers(cv2, frame, frame_index, label_data)
+                writer.write(frame)
+                frame_index += 1
+                if max_frames is not None and frame_index >= max_frames:
+                    break
+        finally:
+            cap.release()
+            writer.release()
+        if frame_index == 0:
+            fallback_count = _render_from_frame_pack(
+                cv2,
+                draft_label_dir=draft_label_dir,
+                overlay_path=overlay_path,
+                label_data=label_data,
+                max_frames=max_frames,
+            )
+            if fallback_count > 0:
+                frame_index = fallback_count
+                warnings.append("video decode produced 0 frames; rendered from label frame pack")
+            else:
+                warnings.append("video decode produced 0 frames and no label frame pack fallback was available")
 
     summary = {
         "schema_version": 1,
@@ -115,6 +123,7 @@ def render_prototype_gate(
     clips: Sequence[str] | None = None,
     write_markdown: bool = False,
     max_frames: int | None = None,
+    frame_pack_only: bool = False,
 ) -> dict[str, Any]:
     """Render overlays for the prototype gate under a repo/workspace root."""
 
@@ -122,7 +131,7 @@ def render_prototype_gate(
     clip_names = list(clips or PROTOTYPE_GATE_CLIPS)
     summaries: list[dict[str, Any]] = []
     for clip in clip_names:
-        video_path = root / "data" / "testclips" / clip / "source.mp4"
+        video_path = _prototype_video_path(root, clip)
         preferred = root / "runs" / "eval0" / "prototype_gate" / clip / "labels"
         fallback = root / "runs" / "label_drafts" / "prototype_gate" / clip / "labels"
         labels = preferred if preferred.exists() else fallback
@@ -147,6 +156,7 @@ def render_prototype_gate(
                 write_index=True,
                 write_markdown=write_markdown,
                 max_frames=max_frames,
+                frame_pack_only=frame_pack_only,
             )
         )
     return {
@@ -198,7 +208,7 @@ def _render_from_frame_pack(
     label_data: dict[str, list[dict[str, Any]]],
     max_frames: int | None,
 ) -> int:
-    frame_paths = _frame_paths_from_labels(draft_label_dir)
+    frame_paths, metadata = _frame_pack_from_labels(draft_label_dir)
     if max_frames is not None:
         frame_paths = frame_paths[:max_frames]
     first_frame = None
@@ -213,7 +223,8 @@ def _render_from_frame_pack(
         return 0
     usable_paths.extend(path for path in frame_paths if path != usable_paths[0])
     height, width = first_frame.shape[:2]
-    writer = cv2.VideoWriter(str(overlay_path), cv2.VideoWriter_fourcc(*"mp4v"), 10.0, (width, height))
+    fps = _frame_pack_fps(metadata, frame_count=len(frame_paths))
+    writer = cv2.VideoWriter(str(overlay_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
     if not writer.isOpened():
         return 0
     count = 0
@@ -233,6 +244,11 @@ def _render_from_frame_pack(
 
 
 def _frame_paths_from_labels(labels_dir: Path) -> list[Path]:
+    frame_paths, _metadata = _frame_pack_from_labels(labels_dir)
+    return frame_paths
+
+
+def _frame_pack_from_labels(labels_dir: Path) -> tuple[list[Path], dict[str, Any]]:
     for _layer, filename in LAYER_FILES:
         path = labels_dir / filename
         if not path.is_file():
@@ -244,21 +260,90 @@ def _frame_paths_from_labels(labels_dir: Path) -> list[Path]:
         frames = payload.get("frames") if isinstance(payload, dict) else None
         if not isinstance(frames, dict):
             continue
+        metadata, base_dir = _frame_pack_metadata(frames, labels_dir)
         raw_frames = frames.get("frames")
+        if not isinstance(raw_frames, list):
+            raw_frames = metadata.get("frames")
         if not isinstance(raw_frames, list):
             continue
         frame_paths: list[Path] = []
         for frame in raw_frames:
-            if isinstance(frame, dict):
-                value = frame.get("path")
-            else:
-                value = frame
+            value = _frame_path_value(frame)
             if value:
-                frame_paths.append(Path(str(value)))
+                frame_paths.append(_resolve_frame_path(value, base_dir))
         existing = [path for path in frame_paths if path.is_file()]
         if existing:
-            return existing
-    return []
+            return existing, metadata
+    return [], {}
+
+
+def _prototype_video_path(root: Path, clip: str) -> Path:
+    primary = root / "data" / "testclips" / clip / "source.mp4"
+    if primary.exists():
+        return primary
+    source_clip = root / "data" / "source_clips" / f"{clip}.mp4"
+    if source_clip.exists():
+        return source_clip
+    return primary
+
+
+def _frame_pack_metadata(frames: dict[str, Any], labels_dir: Path) -> tuple[dict[str, Any], Path]:
+    manifest_payload: dict[str, Any] = {}
+    base_dir = labels_dir
+    manifest_path_value = frames.get("manifest_path")
+    if manifest_path_value:
+        manifest_path = Path(str(manifest_path_value))
+        if not manifest_path.is_absolute():
+            manifest_path = labels_dir / manifest_path
+        if manifest_path.is_file():
+            base_dir = manifest_path.parent
+            try:
+                loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                loaded = {}
+            if isinstance(loaded, dict):
+                manifest_payload = loaded
+    return {**manifest_payload, **frames}, base_dir
+
+
+def _frame_path_value(frame: Any) -> Any:
+    if isinstance(frame, dict):
+        return frame.get("path") or frame.get("name") or frame.get("frame")
+    return frame
+
+
+def _resolve_frame_path(value: Any, base_dir: Path) -> Path:
+    path = Path(str(value))
+    if path.is_absolute():
+        return path
+    return base_dir / path
+
+
+def _frame_pack_fps(metadata: dict[str, Any], *, frame_count: int) -> float:
+    source_fps = _positive_float(metadata.get("source_fps"))
+    sample_every = _positive_float(metadata.get("sample_every_frames"))
+    if source_fps is not None and sample_every is not None:
+        return source_fps / sample_every
+
+    duration_s = _positive_float(metadata.get("source_duration_s"))
+    manifest_frame_count = _positive_float(metadata.get("frame_count")) or float(frame_count)
+    if duration_s is not None and manifest_frame_count > 0:
+        return manifest_frame_count / duration_s
+
+    return 10.0
+
+
+def _positive_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float, str)):
+        try:
+            parsed = float(value)
+        except ValueError:
+            return None
+        if parsed > 0:
+            return parsed
+    return None
 
 
 def _payload_items(payload: Any) -> list[dict[str, Any]]:

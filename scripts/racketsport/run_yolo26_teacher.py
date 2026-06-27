@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,133 @@ from threed.racketsport.autolabel import PROTOTYPE_GATE_CLIPS
 PERSON_CLASS = 0
 SPORTS_BALL_CLASS = 32
 TENNIS_RACKET_CLASS = 38
+TARGET_CLASSES = {PERSON_CLASS, SPORTS_BALL_CLASS, TENNIS_RACKET_CLASS}
+
+DEFAULT_PERSON_MIN_CONF = 0.45
+DEFAULT_BALL_MIN_CONF = 0.25
+DEFAULT_RACKET_MIN_CONF = 0.30
+DEFAULT_MAX_PLAYERS_PER_FRAME = 4
+
+
+@dataclass(frozen=True)
+class DetectionCandidate:
+    cls: int
+    score: float
+    xyxy: tuple[float, float, float, float]
+    box_index: int
+
+
+@dataclass(frozen=True)
+class DetectionFilter:
+    min_conf: float
+    min_width_px: float
+    min_height_px: float
+    min_area_ratio: float
+    max_area_ratio: float
+    min_aspect: float
+    max_aspect: float
+
+
+def build_detection_filters(
+    *,
+    person_min_conf: float = DEFAULT_PERSON_MIN_CONF,
+    ball_min_conf: float = DEFAULT_BALL_MIN_CONF,
+    racket_min_conf: float = DEFAULT_RACKET_MIN_CONF,
+    person_min_width_px: float = 8.0,
+    person_min_height_px: float = 24.0,
+    person_min_area_ratio: float = 0.001,
+    person_max_area_ratio: float = 0.60,
+    person_min_aspect: float = 0.12,
+    person_max_aspect: float = 1.40,
+    ball_min_width_px: float = 2.0,
+    ball_min_height_px: float = 2.0,
+    ball_min_area_ratio: float = 0.0,
+    ball_max_area_ratio: float = 0.01,
+    ball_min_aspect: float = 0.35,
+    ball_max_aspect: float = 3.0,
+    racket_min_width_px: float = 3.0,
+    racket_min_height_px: float = 2.0,
+    racket_min_area_ratio: float = 0.0,
+    racket_max_area_ratio: float = 0.08,
+    racket_min_aspect: float = 0.08,
+    racket_max_aspect: float = 12.0,
+) -> dict[int, DetectionFilter]:
+    return {
+        PERSON_CLASS: DetectionFilter(
+            min_conf=person_min_conf,
+            min_width_px=person_min_width_px,
+            min_height_px=person_min_height_px,
+            min_area_ratio=person_min_area_ratio,
+            max_area_ratio=person_max_area_ratio,
+            min_aspect=person_min_aspect,
+            max_aspect=person_max_aspect,
+        ),
+        SPORTS_BALL_CLASS: DetectionFilter(
+            min_conf=ball_min_conf,
+            min_width_px=ball_min_width_px,
+            min_height_px=ball_min_height_px,
+            min_area_ratio=ball_min_area_ratio,
+            max_area_ratio=ball_max_area_ratio,
+            min_aspect=ball_min_aspect,
+            max_aspect=ball_max_aspect,
+        ),
+        TENNIS_RACKET_CLASS: DetectionFilter(
+            min_conf=racket_min_conf,
+            min_width_px=racket_min_width_px,
+            min_height_px=racket_min_height_px,
+            min_area_ratio=racket_min_area_ratio,
+            max_area_ratio=racket_max_area_ratio,
+            min_aspect=racket_min_aspect,
+            max_aspect=racket_max_aspect,
+        ),
+    }
+
+
+def filter_frame_detections(
+    candidates: list[DetectionCandidate],
+    *,
+    frame_width: int,
+    frame_height: int,
+    filters: dict[int, DetectionFilter],
+    max_players_per_frame: int | None = DEFAULT_MAX_PLAYERS_PER_FRAME,
+) -> list[DetectionCandidate]:
+    players: list[DetectionCandidate] = []
+    others: list[DetectionCandidate] = []
+    for candidate in candidates:
+        if not _passes_detection_filter(candidate, frame_width=frame_width, frame_height=frame_height, filters=filters):
+            continue
+        if candidate.cls == PERSON_CLASS:
+            players.append(candidate)
+        else:
+            others.append(candidate)
+
+    players.sort(key=lambda candidate: candidate.score, reverse=True)
+    if max_players_per_frame is not None:
+        players = players[: max(0, max_players_per_frame)]
+    return players + others
+
+
+def _passes_detection_filter(
+    candidate: DetectionCandidate,
+    *,
+    frame_width: int,
+    frame_height: int,
+    filters: dict[int, DetectionFilter],
+) -> bool:
+    filter_config = filters.get(candidate.cls)
+    if filter_config is None or candidate.score < filter_config.min_conf:
+        return False
+    x1, y1, x2, y2 = candidate.xyxy
+    width = x2 - x1
+    height = y2 - y1
+    if width < filter_config.min_width_px or height < filter_config.min_height_px:
+        return False
+    aspect = width / height
+    if aspect < filter_config.min_aspect or aspect > filter_config.max_aspect:
+        return False
+    frame_area = frame_width * frame_height
+    area_ratio = (width * height / frame_area) if frame_area > 0 else 0.0
+    return filter_config.min_area_ratio <= area_ratio <= filter_config.max_area_ratio
 
 
 def run_yolo26_teacher(
@@ -30,6 +158,28 @@ def run_yolo26_teacher(
     iou: float = 0.6,
     device: str = "0",
     max_frames: int | None = None,
+    person_min_conf: float = DEFAULT_PERSON_MIN_CONF,
+    ball_min_conf: float = DEFAULT_BALL_MIN_CONF,
+    racket_min_conf: float = DEFAULT_RACKET_MIN_CONF,
+    max_players_per_frame: int = DEFAULT_MAX_PLAYERS_PER_FRAME,
+    person_min_width_px: float = 8.0,
+    person_min_height_px: float = 24.0,
+    person_min_area_ratio: float = 0.001,
+    person_max_area_ratio: float = 0.60,
+    person_min_aspect: float = 0.12,
+    person_max_aspect: float = 1.40,
+    ball_min_width_px: float = 2.0,
+    ball_min_height_px: float = 2.0,
+    ball_min_area_ratio: float = 0.0,
+    ball_max_area_ratio: float = 0.01,
+    ball_min_aspect: float = 0.35,
+    ball_max_aspect: float = 3.0,
+    racket_min_width_px: float = 3.0,
+    racket_min_height_px: float = 2.0,
+    racket_min_area_ratio: float = 0.0,
+    racket_max_area_ratio: float = 0.08,
+    racket_min_aspect: float = 0.08,
+    racket_max_aspect: float = 12.0,
 ) -> dict[str, Any]:
     try:
         from ultralytics import YOLO
@@ -37,6 +187,29 @@ def run_yolo26_teacher(
         raise RuntimeError("ultralytics is required for the YOLO26 teacher pass") from exc
 
     model = YOLO(str(checkpoint))
+    filters = build_detection_filters(
+        person_min_conf=person_min_conf,
+        ball_min_conf=ball_min_conf,
+        racket_min_conf=racket_min_conf,
+        person_min_width_px=person_min_width_px,
+        person_min_height_px=person_min_height_px,
+        person_min_area_ratio=person_min_area_ratio,
+        person_max_area_ratio=person_max_area_ratio,
+        person_min_aspect=person_min_aspect,
+        person_max_aspect=person_max_aspect,
+        ball_min_width_px=ball_min_width_px,
+        ball_min_height_px=ball_min_height_px,
+        ball_min_area_ratio=ball_min_area_ratio,
+        ball_max_area_ratio=ball_max_area_ratio,
+        ball_min_aspect=ball_min_aspect,
+        ball_max_aspect=ball_max_aspect,
+        racket_min_width_px=racket_min_width_px,
+        racket_min_height_px=racket_min_height_px,
+        racket_min_area_ratio=racket_min_area_ratio,
+        racket_max_area_ratio=racket_max_area_ratio,
+        racket_min_aspect=racket_min_aspect,
+        racket_max_aspect=racket_max_aspect,
+    )
     out.mkdir(parents=True, exist_ok=True)
     clip_summaries: list[dict[str, Any]] = []
     for clip in clips:
@@ -51,13 +224,28 @@ def run_yolo26_teacher(
         for frame_path in frame_paths:
             result = model.predict(str(frame_path), imgsz=imgsz, conf=conf, iou=iou, device=device, verbose=False)[0]
             names = result.names
+            candidates: list[DetectionCandidate] = []
             for box_index, box in enumerate(result.boxes):
                 cls = int(box.cls.item())
+                if cls not in TARGET_CLASSES:
+                    continue
                 score = float(box.conf.item())
                 x1, y1, x2, y2 = [float(value) for value in box.xyxy[0].cpu().tolist()]
+                candidates.append(DetectionCandidate(cls=cls, score=score, xyxy=(x1, y1, x2, y2), box_index=box_index))
+            frame_width, frame_height = _frame_size_from_result(result=result, candidates=candidates)
+            for candidate in filter_frame_detections(
+                candidates,
+                frame_width=frame_width,
+                frame_height=frame_height,
+                filters=filters,
+                max_players_per_frame=max_players_per_frame,
+            ):
+                cls = candidate.cls
+                score = candidate.score
+                x1, y1, x2, y2 = candidate.xyxy
                 base = _box_item(
                     frame=frame_path.name,
-                    box_index=box_index,
+                    box_index=candidate.box_index,
                     cls=cls,
                     class_name=str(names.get(cls, cls)),
                     confidence=score,
@@ -67,14 +255,14 @@ def run_yolo26_teacher(
                     y2=y2,
                 )
                 if cls == PERSON_CLASS:
-                    players.append({**base, "review_id": f"person_{frame_path.stem}_{box_index}", "id": f"p{box_index + 1}"})
+                    players.append({**base, "review_id": f"person_{frame_path.stem}_{candidate.box_index}", "id": f"p{candidate.box_index + 1}"})
                 elif cls == SPORTS_BALL_CLASS:
-                    balls.append({**base, "review_id": f"ball_{frame_path.stem}_{box_index}", "xy_px": [round((x1 + x2) / 2.0, 2), round((y1 + y2) / 2.0, 2)]})
+                    balls.append({**base, "review_id": f"ball_{frame_path.stem}_{candidate.box_index}", "xy_px": [round((x1 + x2) / 2.0, 2), round((y1 + y2) / 2.0, 2)]})
                 elif cls == TENNIS_RACKET_CLASS:
                     rackets.append(
                         {
                             **base,
-                            "review_id": f"racket_{frame_path.stem}_{box_index}",
+                            "review_id": f"racket_{frame_path.stem}_{candidate.box_index}",
                             "player_id": None,
                             "keypoints_px": [[round(x1, 2), round((y1 + y2) / 2.0, 2)], [round(x2, 2), round((y1 + y2) / 2.0, 2)]],
                             "label": "racket",
@@ -108,6 +296,17 @@ def run_yolo26_teacher(
     }
     (out / "yolo26_teacher_run.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return summary
+
+
+def _frame_size_from_result(*, result: Any, candidates: list[DetectionCandidate]) -> tuple[int, int]:
+    orig_shape = getattr(result, "orig_shape", None)
+    if orig_shape and len(orig_shape) >= 2:
+        return int(orig_shape[1]), int(orig_shape[0])
+    if not candidates:
+        return 0, 0
+    max_x = max(candidate.xyxy[2] for candidate in candidates)
+    max_y = max(candidate.xyxy[3] for candidate in candidates)
+    return int(max_x), int(max_y)
 
 
 def _box_item(
@@ -160,6 +359,28 @@ def main() -> int:
     parser.add_argument("--iou", type=float, default=0.6)
     parser.add_argument("--device", default="0")
     parser.add_argument("--max-frames", type=int)
+    parser.add_argument("--person-min-conf", type=float, default=DEFAULT_PERSON_MIN_CONF)
+    parser.add_argument("--ball-min-conf", type=float, default=DEFAULT_BALL_MIN_CONF)
+    parser.add_argument("--racket-min-conf", type=float, default=DEFAULT_RACKET_MIN_CONF)
+    parser.add_argument("--max-players-per-frame", type=int, default=DEFAULT_MAX_PLAYERS_PER_FRAME)
+    parser.add_argument("--person-min-width-px", type=float, default=8.0)
+    parser.add_argument("--person-min-height-px", type=float, default=24.0)
+    parser.add_argument("--person-min-area-ratio", type=float, default=0.001)
+    parser.add_argument("--person-max-area-ratio", type=float, default=0.60)
+    parser.add_argument("--person-min-aspect", type=float, default=0.12)
+    parser.add_argument("--person-max-aspect", type=float, default=1.40)
+    parser.add_argument("--ball-min-width-px", type=float, default=2.0)
+    parser.add_argument("--ball-min-height-px", type=float, default=2.0)
+    parser.add_argument("--ball-min-area-ratio", type=float, default=0.0)
+    parser.add_argument("--ball-max-area-ratio", type=float, default=0.01)
+    parser.add_argument("--ball-min-aspect", type=float, default=0.35)
+    parser.add_argument("--ball-max-aspect", type=float, default=3.0)
+    parser.add_argument("--racket-min-width-px", type=float, default=3.0)
+    parser.add_argument("--racket-min-height-px", type=float, default=2.0)
+    parser.add_argument("--racket-min-area-ratio", type=float, default=0.0)
+    parser.add_argument("--racket-max-area-ratio", type=float, default=0.08)
+    parser.add_argument("--racket-min-aspect", type=float, default=0.08)
+    parser.add_argument("--racket-max-aspect", type=float, default=12.0)
     args = parser.parse_args()
     summary = run_yolo26_teacher(
         frames_root=args.frames_root,
@@ -171,6 +392,28 @@ def main() -> int:
         iou=args.iou,
         device=args.device,
         max_frames=args.max_frames,
+        person_min_conf=args.person_min_conf,
+        ball_min_conf=args.ball_min_conf,
+        racket_min_conf=args.racket_min_conf,
+        max_players_per_frame=args.max_players_per_frame,
+        person_min_width_px=args.person_min_width_px,
+        person_min_height_px=args.person_min_height_px,
+        person_min_area_ratio=args.person_min_area_ratio,
+        person_max_area_ratio=args.person_max_area_ratio,
+        person_min_aspect=args.person_min_aspect,
+        person_max_aspect=args.person_max_aspect,
+        ball_min_width_px=args.ball_min_width_px,
+        ball_min_height_px=args.ball_min_height_px,
+        ball_min_area_ratio=args.ball_min_area_ratio,
+        ball_max_area_ratio=args.ball_max_area_ratio,
+        ball_min_aspect=args.ball_min_aspect,
+        ball_max_aspect=args.ball_max_aspect,
+        racket_min_width_px=args.racket_min_width_px,
+        racket_min_height_px=args.racket_min_height_px,
+        racket_min_area_ratio=args.racket_min_area_ratio,
+        racket_max_area_ratio=args.racket_max_area_ratio,
+        racket_min_aspect=args.racket_min_aspect,
+        racket_max_aspect=args.racket_max_aspect,
     )
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0

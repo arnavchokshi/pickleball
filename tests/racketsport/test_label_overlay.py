@@ -7,7 +7,111 @@ from pathlib import Path
 
 import pytest
 
-from threed.racketsport.label_overlay import PROTOTYPE_GATE_CLIPS, render_label_overlays
+from threed.racketsport.label_overlay import PROTOTYPE_GATE_CLIPS, render_label_overlays, render_prototype_gate
+
+
+class _FakeFrame:
+    shape = (48, 64, 3)
+
+
+class _FakeCapture:
+    def __init__(self, path: str) -> None:
+        self.path = path
+
+    def isOpened(self) -> bool:
+        return True
+
+    def get(self, prop: int) -> float:
+        return {
+            _FakeCv2.CAP_PROP_FPS: 30.0,
+            _FakeCv2.CAP_PROP_FRAME_WIDTH: 64.0,
+            _FakeCv2.CAP_PROP_FRAME_HEIGHT: 48.0,
+        }.get(prop, 0.0)
+
+    def read(self) -> tuple[bool, None]:
+        return False, None
+
+    def release(self) -> None:
+        pass
+
+
+class _FakeWriter:
+    def __init__(self, cv2: "_FakeCv2", path: str, fourcc: int, fps: float, size: tuple[int, int]) -> None:
+        self.cv2 = cv2
+        self.path = path
+        self.fourcc = fourcc
+        self.fps = fps
+        self.size = size
+        self.frames = 0
+        cv2.writers.append(self)
+
+    def isOpened(self) -> bool:
+        return True
+
+    def write(self, frame: _FakeFrame) -> None:
+        self.frames += 1
+
+    def release(self) -> None:
+        pass
+
+
+class _FakeCv2:
+    CAP_PROP_FPS = 5
+    CAP_PROP_FRAME_WIDTH = 3
+    CAP_PROP_FRAME_HEIGHT = 4
+
+    def __init__(self, readable_paths: set[Path]) -> None:
+        self.readable_paths = {str(path) for path in readable_paths}
+        self.writers: list[_FakeWriter] = []
+
+    def VideoCapture(self, path: str) -> _FakeCapture:
+        return _FakeCapture(path)
+
+    def VideoWriter(self, path: str, fourcc: int, fps: float, size: tuple[int, int]) -> _FakeWriter:
+        return _FakeWriter(self, path, fourcc, fps, size)
+
+    def VideoWriter_fourcc(self, *args: str) -> int:
+        return 0
+
+    def imread(self, path: str) -> _FakeFrame | None:
+        return _FakeFrame() if path in self.readable_paths else None
+
+    def resize(self, frame: _FakeFrame, size: tuple[int, int]) -> _FakeFrame:
+        return frame
+
+
+def _write_frame_pack_label(labels: Path, frames_dir: Path) -> list[Path]:
+    labels.mkdir(parents=True, exist_ok=True)
+    frames_dir.mkdir(parents=True, exist_ok=True)
+    frame_paths = [frames_dir / f"frame_{index:06d}.jpg" for index in range(1, 4)]
+    for frame_path in frame_paths:
+        frame_path.write_bytes(b"fake image")
+    manifest = {
+        "schema_version": 1,
+        "source_fps": 60.0,
+        "source_duration_s": 1.5,
+        "sample_every_frames": 30,
+        "frame_count": len(frame_paths),
+        "frames": [frame_path.name for frame_path in frame_paths],
+    }
+    manifest_path = frames_dir / "label_frame_manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    (labels / "court_corners.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "status": "draft_manual_annotation",
+                "frames": {
+                    "manifest_path": str(manifest_path),
+                    "frame_count": len(frame_paths),
+                    "frames": [{"name": frame_path.name, "path": str(frame_path)} for frame_path in frame_paths],
+                },
+                "annotation": {"target_file": "court_corners.json", "items": []},
+            }
+        ),
+        encoding="utf-8",
+    )
+    return frame_paths
 
 
 def _make_video(path: Path, *, frames: int = 4) -> None:
@@ -95,3 +199,61 @@ def test_render_label_overlays_tolerates_sparse_labels_and_cli_defaults(tmp_path
     assert clip_summary["available_layers"] == ["ball"]
     assert clip_summary["qualitative_status"] == "prototype_not_gate_verified"
     assert (tmp_path / "runs" / "eval0" / "prototype_gate" / PROTOTYPE_GATE_CLIPS[0] / "compare" / "all_labels_overlay.mp4").is_file()
+
+
+def test_frame_pack_fallback_uses_source_sampling_fps(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    labels = tmp_path / "labels"
+    frame_paths = _write_frame_pack_label(labels, tmp_path / "label_frames" / "candidate_001")
+    fake_cv2 = _FakeCv2(set(frame_paths))
+    monkeypatch.setattr("threed.racketsport.label_overlay._cv2", lambda: fake_cv2)
+
+    summary = render_label_overlays(
+        video_path=tmp_path / "candidate_001.mp4",
+        draft_label_dir=labels,
+        output_root=tmp_path / "runs",
+        clip_name="candidate_001",
+    )
+
+    assert summary["frame_count"] == 3
+    assert fake_cv2.writers[-1].fps == pytest.approx(2.0)
+
+
+def test_frame_pack_only_renders_without_decoding_source_video(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    labels = tmp_path / "labels"
+    frame_paths = _write_frame_pack_label(labels, tmp_path / "label_frames" / "candidate_001")
+    fake_cv2 = _FakeCv2(set(frame_paths))
+    monkeypatch.setattr("threed.racketsport.label_overlay._cv2", lambda: fake_cv2)
+
+    summary = render_label_overlays(
+        video_path=tmp_path / "missing_long_source.mp4",
+        draft_label_dir=labels,
+        output_root=tmp_path / "runs",
+        clip_name="candidate_001",
+        frame_pack_only=True,
+    )
+
+    assert summary["frame_count"] == 3
+    assert len(fake_cv2.writers) == 1
+    assert fake_cv2.writers[0].fps == pytest.approx(2.0)
+
+
+def test_prototype_gate_uses_source_clips_fallback_for_frame_pack_only_render(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clip = PROTOTYPE_GATE_CLIPS[0]
+    source = tmp_path / "data" / "source_clips" / f"{clip}.mp4"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_bytes(b"source placeholder")
+    labels = tmp_path / "runs" / "eval0" / "prototype_gate" / clip / "labels"
+    frame_paths = _write_frame_pack_label(labels, tmp_path / "runs" / "label_frames" / clip)
+    fake_cv2 = _FakeCv2(set(frame_paths))
+    monkeypatch.setattr("threed.racketsport.label_overlay._cv2", lambda: fake_cv2)
+
+    summary = render_prototype_gate(root=tmp_path, clips=[clip], frame_pack_only=True)
+
+    clip_summary = summary["clips"][0]
+    assert clip_summary["status"] == "rendered"
+    assert clip_summary["video_path"] == str(source)
+    assert clip_summary["frame_count"] == 3
+    assert len(fake_cv2.writers) == 1
+    assert fake_cv2.writers[0].fps == pytest.approx(2.0)
