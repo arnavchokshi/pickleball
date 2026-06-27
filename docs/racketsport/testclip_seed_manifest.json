@@ -169,6 +169,98 @@
         "racket_gt": false
       },
       "visual_check": "Indoor high baseline singles match with both players and court lines visible."
+    },
+    {
+      "name": "ppa_singles_q4zd_0500_long_high_baseline",
+      "url": "https://www.youtube.com/watch?v=Q4ZDorjxjt8",
+      "title": "Christopher Haworth vs Ben Johns at the The Carvana Mesa Cup",
+      "time_range": "00:05:00-00:20:00",
+      "verified_media": {
+        "width": 1920,
+        "height": 1080,
+        "fps": 60,
+        "duration_s": 900,
+        "codec": "h264"
+      },
+      "metadata": {
+        "camera_height": "high",
+        "camera_angle": "shallow_baseline",
+        "play_type": "singles_drill",
+        "environment": "outdoor",
+        "frame_rate_fps": 60,
+        "duration_s": 900,
+        "racket_gt": false
+      },
+      "visual_check": "Clean long outdoor PPA singles slice with both players and the full court visible."
+    },
+    {
+      "name": "metro_rec_b2kg_0500_long_messy_indoor",
+      "url": "https://www.youtube.com/watch?v=b2KgNoQZRhA",
+      "title": "Metro Pickleball | 3.0–4.0 Men’s Doubles | Full Match",
+      "time_range": "00:05:00-00:20:00",
+      "verified_media": {
+        "width": 1920,
+        "height": 1080,
+        "fps": 59.94,
+        "duration_s": 900.016,
+        "codec": "h264"
+      },
+      "metadata": {
+        "camera_height": "high",
+        "camera_angle": "shallow_baseline",
+        "play_type": "messy_real_world",
+        "environment": "indoor",
+        "frame_rate_fps": 60,
+        "duration_s": 900,
+        "racket_gt": false
+      },
+      "visual_check": "Indoor long rec-play slice with adjacent-court clutter and four players visible for messy real-world coverage."
+    },
+    {
+      "name": "indoor_doubles_fwuks_0500_long_mid_baseline",
+      "url": "https://www.youtube.com/watch?v=FwuksLPGLbM",
+      "title": "4.0 men's doubles gold medal match PPA indoor national championship",
+      "time_range": "00:05:00-00:20:00",
+      "verified_media": {
+        "width": 1920,
+        "height": 1080,
+        "fps": 29.97,
+        "duration_s": 900.032,
+        "codec": "h264"
+      },
+      "metadata": {
+        "camera_height": "mid",
+        "camera_angle": "shallow_baseline",
+        "play_type": "doubles",
+        "environment": "indoor",
+        "frame_rate_fps": 30,
+        "duration_s": 900,
+        "racket_gt": false
+      },
+      "visual_check": "Static long indoor doubles baseline slice with visible court and four players."
+    },
+    {
+      "name": "outdoor_webcam_iynbd_1500_long_high_baseline",
+      "url": "https://www.youtube.com/watch?v=IYnbdRs1Jdk",
+      "title": "Live Camera View of Championship Court - Senior Pros Mixed Doubles",
+      "time_range": "00:15:00-00:30:00",
+      "verified_media": {
+        "width": 1920,
+        "height": 1080,
+        "fps": 60,
+        "duration_s": 900,
+        "codec": "h264"
+      },
+      "metadata": {
+        "camera_height": "high",
+        "camera_angle": "shallow_baseline",
+        "play_type": "doubles",
+        "environment": "outdoor",
+        "frame_rate_fps": 60,
+        "duration_s": 900,
+        "racket_gt": false
+      },
+      "visual_check": "Long outdoor static championship-court webcam slice with full-court view and sustained gameplay."
     }
   ]
 }
