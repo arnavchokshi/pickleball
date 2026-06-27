@@ -17,6 +17,12 @@ from .schemas import CourtCalibration, NetPlane
 OverlayPayload = dict[str, Any]
 
 
+COURT_LINE_COLOR = (34, 197, 94)
+NET_LINE_COLOR = (0, 140, 255)
+NET_POINT_COLOR = (0, 140, 255)
+TEXT_COLOR = (255, 255, 255)
+
+
 def load_calibration_artifact(path: str | Path) -> CourtCalibration:
     artifact_path = Path(path)
     if not artifact_path.exists():
@@ -149,13 +155,339 @@ def write_overlay_artifacts(
     return overlay
 
 
+def render_calibration_image_overlay(
+    *,
+    image_path: str | Path,
+    out_path: str | Path,
+    calibration: CourtCalibration,
+    net_plane: NetPlane | None = None,
+    cv2_module: Any | None = None,
+) -> dict[str, Any]:
+    """Draw projected calibration geometry onto a real review frame image."""
+
+    cv2 = cv2_module or _cv2()
+    image_path = Path(image_path)
+    out_path = Path(out_path)
+    frame = cv2.imread(str(image_path))
+    if frame is None:
+        raise ValueError(f"cannot open image frame: {image_path}")
+
+    overlay = build_calibration_overlay(calibration, net_plane=net_plane)
+    _draw_image_overlay(cv2, frame, overlay)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    if not cv2.imwrite(str(out_path), frame):
+        raise RuntimeError(f"cannot write calibration overlay image: {out_path}")
+
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_calibration_frame_overlay",
+        "status": "rendered",
+        "image_path": str(image_path),
+        "out_path": str(out_path),
+        "sport": overlay["sport"],
+        "court_line_count": len(overlay["court_lines"]),
+        "court_line_ids": [line["id"] for line in overlay["court_lines"]],
+        "net_point_count": len(overlay["net_points"]),
+        "reprojection_median_px": overlay["summary"]["reprojection_median_px"],
+        "reprojection_p95_px": overlay["summary"]["reprojection_p95_px"],
+        "qualitative_status": "corrected_unverified_visual_review_required",
+    }
+
+
+def render_calibration_run_overlays(
+    *,
+    run_root: str | Path,
+    frames_root: str | Path,
+    clips: list[str] | None = None,
+    max_video_frames: int | None = None,
+    fps: float = 10.0,
+    cv2_module: Any | None = None,
+    write_index: bool = True,
+    write_markdown: bool = True,
+) -> dict[str, Any]:
+    """Render review-frame and frame-pack calibration overlays for a run root."""
+
+    cv2 = cv2_module or _cv2()
+    run_root = Path(run_root)
+    frames_root = Path(frames_root)
+    reviewed_frames = _reviewed_frames_by_clip(run_root)
+    clip_names = list(clips or reviewed_frames or _artifact_clip_names(run_root))
+    clip_summaries = [
+        _render_clip_calibration_overlays(
+            cv2=cv2,
+            run_root=run_root,
+            frames_root=frames_root,
+            clip=clip,
+            reviewed_frame=reviewed_frames.get(clip),
+            max_video_frames=max_video_frames,
+            fps=fps,
+        )
+        for clip in clip_names
+    ]
+    status = "rendered" if any(item.get("status") == "rendered" for item in clip_summaries) else "no_renders"
+    summary = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_calibration_overlay_run",
+        "status": status,
+        "run_root": str(run_root),
+        "frames_root": str(frames_root),
+        "clip_count": len(clip_summaries),
+        "rendered_clip_count": sum(1 for item in clip_summaries if item.get("status") == "rendered"),
+        "clips": clip_summaries,
+        "qualitative_status": "corrected_unverified_visual_review_required",
+    }
+    if write_index:
+        (run_root / "calibration_overlay_index.json").write_text(
+            json.dumps(summary, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    if write_markdown:
+        (run_root / "calibration_overlay_index.md").write_text(_run_markdown_index(summary), encoding="utf-8")
+    return summary
+
+
 def _validate_net_plane_matches_sport(calibration: CourtCalibration, net_plane: NetPlane) -> None:
     expected = build_net_plane(calibration.sport)
     expected_points = [*expected.endpoints, [0.0, 0.0, expected.center_height_in * 0.0254]]
     actual_points = [*net_plane.endpoints, [0.0, 0.0, net_plane.center_height_in * 0.0254]]
     for actual, expected_point in zip(actual_points, expected_points, strict=True):
-        if any(not math.isclose(float(a), float(e), rel_tol=1e-9, abs_tol=1e-9) for a, e in zip(actual, expected_point, strict=True)):
+        point_mismatch = any(
+            not math.isclose(float(a), float(e), rel_tol=1e-9, abs_tol=1e-9)
+            for a, e in zip(actual, expected_point, strict=True)
+        )
+        if point_mismatch:
             raise ValueError("net plane endpoints do not match calibration sport")
+
+
+def _draw_image_overlay(cv2: Any, frame: Any, overlay: OverlayPayload) -> None:
+    line_type = getattr(cv2, "LINE_AA", 16)
+    for line in overlay["court_lines"]:
+        start, end = [_int_point(point) for point in line["image"]]
+        line_id = str(line["id"])
+        color = NET_LINE_COLOR if line_id == "net" else COURT_LINE_COLOR
+        thickness = 3 if line_id == "net" else 2
+        cv2.line(frame, start, end, color, thickness, line_type)
+        _draw_label(cv2, frame, line_id, _midpoint(start, end), color=color)
+
+    for segment in overlay["net_segments"]:
+        start, end = [_int_point(point) for point in segment["image"]]
+        cv2.line(frame, start, end, NET_LINE_COLOR, 2, line_type)
+
+    for point_id, point in overlay["net_points"].items():
+        center = _int_point(point)
+        cv2.circle(frame, center, 5, NET_POINT_COLOR, -1)
+        _draw_label(cv2, frame, str(point_id), (center[0] + 6, center[1] - 6), color=NET_POINT_COLOR)
+
+
+def _render_clip_calibration_overlays(
+    *,
+    cv2: Any,
+    run_root: Path,
+    frames_root: Path,
+    clip: str,
+    reviewed_frame: str | None,
+    max_video_frames: int | None,
+    fps: float,
+) -> dict[str, Any]:
+    clip_dir = run_root / clip
+    calibration_path = clip_dir / "court_calibration.json"
+    net_plane_path = clip_dir / "net_plane.json"
+    if not calibration_path.is_file() or not net_plane_path.is_file():
+        return {
+            "clip": clip,
+            "status": "skipped",
+            "warnings": ["missing calibration or net-plane artifact"],
+            "qualitative_status": "corrected_unverified_visual_review_required",
+        }
+
+    frame_dir = frames_root / clip
+    frame_paths = _frame_pack_images(frame_dir, max_video_frames=max_video_frames)
+    if not frame_paths:
+        return {
+            "clip": clip,
+            "status": "skipped",
+            "warnings": [f"no review frames found under {frame_dir}"],
+            "qualitative_status": "corrected_unverified_visual_review_required",
+        }
+
+    calibration = load_calibration_artifact(calibration_path)
+    net_plane = load_net_plane_artifact(net_plane_path)
+    compare_dir = clip_dir / "compare"
+    review_frame_path = _review_frame_path(frame_dir, reviewed_frame, frame_paths)
+    frame_out = compare_dir / "calibration_overlay_frame.jpg"
+    frame_summary = render_calibration_image_overlay(
+        image_path=review_frame_path,
+        out_path=frame_out,
+        calibration=calibration,
+        net_plane=net_plane,
+        cv2_module=cv2,
+    )
+    video_out = compare_dir / "calibration_overlay.mp4"
+    video_frame_count = _render_calibration_video_overlay(
+        cv2=cv2,
+        frame_paths=frame_paths,
+        out_path=video_out,
+        calibration=calibration,
+        net_plane=net_plane,
+        fps=fps,
+    )
+    summary = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_calibration_clip_overlay",
+        "clip": clip,
+        "status": "rendered",
+        "review_frame": str(review_frame_path),
+        "rendered_images": [str(frame_out)],
+        "rendered_videos": [str(video_out)],
+        "video_frame_count": video_frame_count,
+        "court_line_ids": frame_summary["court_line_ids"],
+        "court_line_count": frame_summary["court_line_count"],
+        "net_point_count": frame_summary["net_point_count"],
+        "warnings": [],
+        "qualitative_status": "corrected_unverified_visual_review_required",
+    }
+    (compare_dir / "calibration_overlay_index.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return summary
+
+
+def _render_calibration_video_overlay(
+    *,
+    cv2: Any,
+    frame_paths: list[Path],
+    out_path: Path,
+    calibration: CourtCalibration,
+    net_plane: NetPlane,
+    fps: float,
+) -> int:
+    first_frame = _read_first_frame(cv2, frame_paths)
+    if first_frame is None:
+        return 0
+    height, width = first_frame.shape[:2]
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    writer = cv2.VideoWriter(str(out_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (int(width), int(height)))
+    if not writer.isOpened():
+        raise RuntimeError(f"cannot open calibration overlay writer: {out_path}")
+    count = 0
+    overlay = build_calibration_overlay(calibration, net_plane=net_plane)
+    try:
+        for path in frame_paths:
+            frame = cv2.imread(str(path))
+            if frame is None:
+                continue
+            _draw_image_overlay(cv2, frame, overlay)
+            writer.write(frame)
+            count += 1
+    finally:
+        writer.release()
+    return count
+
+
+def _read_first_frame(cv2: Any, frame_paths: list[Path]) -> Any | None:
+    for path in frame_paths:
+        frame = cv2.imread(str(path))
+        if frame is not None:
+            return frame
+    return None
+
+
+def _frame_pack_images(frame_dir: Path, *, max_video_frames: int | None) -> list[Path]:
+    frames = (
+        sorted(
+            path
+            for path in frame_dir.iterdir()
+            if path.is_file() and path.suffix.lower() in {".jpg", ".jpeg", ".png"}
+        )
+        if frame_dir.is_dir()
+        else []
+    )
+    return frames[:max_video_frames] if max_video_frames is not None else frames
+
+
+def _review_frame_path(frame_dir: Path, reviewed_frame: str | None, frame_paths: list[Path]) -> Path:
+    if reviewed_frame:
+        candidate = frame_dir / reviewed_frame
+        if candidate.is_file():
+            return candidate
+    return frame_paths[0]
+
+
+def _reviewed_frames_by_clip(run_root: Path) -> dict[str, str]:
+    summary_path = run_root / "court_corner_calibration_summary.json"
+    if not summary_path.is_file():
+        return {}
+    try:
+        payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    clips = payload.get("clips")
+    if not isinstance(clips, list):
+        return {}
+    reviewed: dict[str, str] = {}
+    for item in clips:
+        if isinstance(item, dict) and isinstance(item.get("clip"), str) and isinstance(item.get("frame"), str):
+            reviewed[item["clip"]] = item["frame"]
+    return reviewed
+
+
+def _artifact_clip_names(run_root: Path) -> list[str]:
+    return (
+        sorted(
+            path.name
+            for path in run_root.iterdir()
+            if path.is_dir()
+            and (path / "court_calibration.json").is_file()
+            and (path / "net_plane.json").is_file()
+        )
+        if run_root.is_dir()
+        else []
+    )
+
+
+def _run_markdown_index(summary: dict[str, Any]) -> str:
+    rows = []
+    for clip in summary["clips"]:
+        images = ", ".join(Path(path).name for path in clip.get("rendered_images", [])) or "none"
+        videos = ", ".join(Path(path).name for path in clip.get("rendered_videos", [])) or "none"
+        warnings = "; ".join(clip.get("warnings", [])) or "none"
+        rows.append(
+            f"| `{clip['clip']}` | `{clip['status']}` | {images} | {videos} | {warnings} |"
+        )
+    table = "\n".join(rows)
+    return (
+        "# Calibration Overlay Index\n\n"
+        f"- Status: `{summary['qualitative_status']}`\n"
+        f"- Rendered clips: {summary['rendered_clip_count']} / {summary['clip_count']}\n\n"
+        "| Clip | Status | Images | Videos | Warnings |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        f"{table}\n"
+    )
+
+
+def _draw_label(
+    cv2: Any,
+    frame: Any,
+    text: str,
+    origin: tuple[int, int],
+    *,
+    color: tuple[int, int, int],
+) -> None:
+    font = getattr(cv2, "FONT_HERSHEY_SIMPLEX", 0)
+    line_type = getattr(cv2, "LINE_AA", 16)
+    shadow = (0, 0, 0)
+    cv2.putText(frame, text, (origin[0] + 1, origin[1] + 1), font, 0.38, shadow, 2, line_type)
+    label_color = color if color != COURT_LINE_COLOR else TEXT_COLOR
+    cv2.putText(frame, text, origin, font, 0.38, label_color, 1, line_type)
+
+
+def _midpoint(start: tuple[int, int], end: tuple[int, int]) -> tuple[int, int]:
+    return int(round((start[0] + end[0]) / 2.0)), int(round((start[1] + end[1]) / 2.0))
+
+
+def _int_point(point: list[float]) -> tuple[int, int]:
+    return int(round(float(point[0]))), int(round(float(point[1])))
 
 
 def _view_box_for_points(points: list[list[float]], *, pad_px: float = 24.0) -> dict[str, float]:
@@ -194,3 +526,11 @@ def _round_float(value: float) -> float:
 
 def _fmt(value: float) -> str:
     return f"{float(value):.6f}".rstrip("0").rstrip(".")
+
+
+def _cv2() -> Any:
+    try:
+        import cv2  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise RuntimeError("OpenCV is required for calibration frame overlay rendering") from exc
+    return cv2

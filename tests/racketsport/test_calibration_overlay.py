@@ -3,10 +3,15 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
-from threed.racketsport.calibration_overlay import build_calibration_overlay
+from threed.racketsport.calibration_overlay import (
+    build_calibration_overlay,
+    render_calibration_image_overlay,
+    render_calibration_run_overlays,
+)
 from threed.racketsport.net_plane import build_net_plane
 from threed.racketsport.schemas import CameraIntrinsics, CaptureQuality, CourtCalibration, CourtExtrinsics, ReprojectionError
 
@@ -134,3 +139,130 @@ def test_render_calibration_overlay_cli_fails_cleanly_for_invalid_input(tmp_path
     assert completed.returncode == 2
     assert "Field required" in completed.stderr
     assert "Traceback" not in completed.stderr
+
+
+def test_render_calibration_image_overlay_draws_projected_lines_without_real_cv2(tmp_path):
+    image_path = tmp_path / "frame.jpg"
+    out_path = tmp_path / "calibration_overlay_frame.jpg"
+    image_path.write_bytes(b"fake image")
+    fake_cv2 = _FakeCv2()
+
+    summary = render_calibration_image_overlay(
+        image_path=image_path,
+        out_path=out_path,
+        calibration=_synthetic_calibration(),
+        net_plane=build_net_plane("pickleball"),
+        cv2_module=fake_cv2,
+    )
+
+    assert summary["status"] == "rendered"
+    assert summary["image_path"] == str(image_path)
+    assert summary["out_path"] == str(out_path)
+    assert summary["court_line_count"] >= 7
+    assert {"net", "near_baseline"}.issubset(set(summary["court_line_ids"]))
+    assert summary["net_point_count"] == 3
+    assert out_path.read_bytes() == b"rendered"
+    assert sum(1 for call in fake_cv2.calls if call["kind"] == "line") >= summary["court_line_count"]
+    assert any(call["kind"] == "text" and call["text"] == "net" for call in fake_cv2.calls)
+    assert any(call["kind"] == "text" and call["text"] == "near_baseline" for call in fake_cv2.calls)
+    assert any(call["kind"] == "circle" for call in fake_cv2.calls)
+
+
+def test_render_calibration_run_overlays_uses_reviewed_frame_and_skips_missing_clips(tmp_path):
+    run_root = tmp_path / "run"
+    frames_root = run_root / "review_bundle" / "images"
+    clip = "clip_static"
+    clip_dir = run_root / clip
+    clip_dir.mkdir(parents=True)
+    frames_dir = frames_root / clip
+    frames_dir.mkdir(parents=True)
+    (frames_dir / "frame_000001.jpg").write_bytes(b"frame 1")
+    (frames_dir / "frame_000002.jpg").write_bytes(b"frame 2")
+    (clip_dir / "court_calibration.json").write_text(_synthetic_calibration().model_dump_json(), encoding="utf-8")
+    (clip_dir / "net_plane.json").write_text(build_net_plane("pickleball").model_dump_json(), encoding="utf-8")
+    (run_root / "court_corner_calibration_summary.json").write_text(
+        json.dumps({"clips": [{"clip": clip, "frame": "frame_000002.jpg"}]}),
+        encoding="utf-8",
+    )
+    fake_cv2 = _FakeCv2()
+
+    summary = render_calibration_run_overlays(
+        run_root=run_root,
+        frames_root=frames_root,
+        clips=[clip, "missing_clip"],
+        max_video_frames=2,
+        cv2_module=fake_cv2,
+    )
+
+    assert summary["status"] == "rendered"
+    rendered = summary["clips"][0]
+    skipped = summary["clips"][1]
+    assert rendered["clip"] == clip
+    assert rendered["review_frame"] == str(frames_dir / "frame_000002.jpg")
+    assert rendered["video_frame_count"] == 2
+    assert (clip_dir / "compare" / "calibration_overlay_frame.jpg").read_bytes() == b"rendered"
+    assert (clip_dir / "compare" / "calibration_overlay.mp4").read_bytes() == b"video"
+    assert skipped["status"] == "skipped"
+    assert "missing calibration or net-plane artifact" in skipped["warnings"]
+
+
+class _FakeFrame:
+    shape = (48, 64, 3)
+
+
+class _FakeCv2:
+    FONT_HERSHEY_SIMPLEX = 0
+    LINE_AA = 16
+
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    def imread(self, path: str) -> _FakeFrame:
+        self.calls.append({"kind": "imread", "path": path})
+        return _FakeFrame()
+
+    def imwrite(self, path: str, frame: _FakeFrame) -> bool:
+        Path(path).write_bytes(b"rendered")
+        self.calls.append({"kind": "imwrite", "path": path})
+        return True
+
+    def VideoWriter(self, path: str, fourcc: int, fps: float, size: tuple[int, int]) -> "_FakeWriter":
+        self.calls.append({"kind": "VideoWriter", "path": path, "fps": fps, "size": size})
+        return _FakeWriter(path)
+
+    def VideoWriter_fourcc(self, *args: str) -> int:
+        return 1
+
+    def line(self, frame: _FakeFrame, start: tuple[int, int], end: tuple[int, int], color: tuple[int, int, int], thickness: int, lineType: int | None = None) -> None:
+        self.calls.append({"kind": "line", "start": start, "end": end, "color": color, "thickness": thickness})
+
+    def circle(self, frame: _FakeFrame, center: tuple[int, int], radius: int, color: tuple[int, int, int], thickness: int) -> None:
+        self.calls.append({"kind": "circle", "center": center, "radius": radius, "color": color, "thickness": thickness})
+
+    def putText(
+        self,
+        frame: _FakeFrame,
+        text: str,
+        origin: tuple[int, int],
+        font: int,
+        scale: float,
+        color: tuple[int, int, int],
+        thickness: int,
+        lineType: int | None = None,
+    ) -> None:
+        self.calls.append({"kind": "text", "text": text, "origin": origin, "color": color})
+
+
+class _FakeWriter:
+    def __init__(self, path: str) -> None:
+        self.path = Path(path)
+        self.frames = 0
+
+    def isOpened(self) -> bool:
+        return True
+
+    def write(self, frame: _FakeFrame) -> None:
+        self.frames += 1
+
+    def release(self) -> None:
+        self.path.write_bytes(b"video")
