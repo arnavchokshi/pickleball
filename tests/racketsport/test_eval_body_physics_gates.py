@@ -101,11 +101,11 @@ def test_body_eval_uses_numeric_gates_for_measured_body_counts(tmp_path: Path) -
 
     metrics = payload["clips"][0]["metrics"]
     assert payload["status"] == "pass"
-    assert metrics["smpl_players"]["gate"] == "body_smpl_players_min: >= 1"
+    assert metrics["smpl_players"]["gate"] == "presence_check.body_smpl_players_min: >= 1"
     assert metrics["smpl_players"]["passed"] is True
-    assert metrics["smpl_frames"]["gate"] == "body_smpl_frames_min: >= 1"
+    assert metrics["smpl_frames"]["gate"] == "presence_check.body_smpl_frames_min: >= 1"
     assert metrics["smpl_frames"]["passed"] is True
-    assert metrics["skeleton_players"]["gate"] == "body_skeleton_players_min: >= 1"
+    assert metrics["skeleton_players"]["gate"] == "presence_check.body_skeleton_players_min: >= 1"
     assert metrics["skeleton_players"]["passed"] is True
 
 
@@ -121,7 +121,7 @@ def test_body_eval_numeric_gate_failure_fails_ready_clip(tmp_path: Path) -> None
     assert payload["status"] == "fail"
     assert payload["clips"][0]["status"] == "fail"
     assert metrics["smpl_players"]["value"] == 0
-    assert metrics["smpl_players"]["gate"] == "body_smpl_players_min: >= 1"
+    assert metrics["smpl_players"]["gate"] == "presence_check.body_smpl_players_min: >= 1"
     assert metrics["smpl_players"]["passed"] is False
     assert metrics["smpl_frames"]["passed"] is False
 
@@ -136,11 +136,11 @@ def test_physics_eval_uses_numeric_gates_for_measured_physics_counts(tmp_path: P
 
     metrics = payload["clips"][0]["metrics"]
     assert payload["status"] == "pass"
-    assert metrics["smpl_players"]["gate"] == "physics_smpl_players_min: >= 1"
-    assert metrics["smpl_frames"]["gate"] == "physics_smpl_frames_min: >= 1"
-    assert metrics["foot_contact_frames"]["gate"] == "physics_foot_contact_frames_min: >= 1"
-    assert metrics["skate_free_players"]["gate"] == "physics_skate_free_players_min: >= 1"
-    assert metrics["grf_frames"]["gate"] == "physics_grf_frames_min: >= 1"
+    assert metrics["smpl_players"]["gate"] == "presence_check.physics_smpl_players_min: >= 1"
+    assert metrics["smpl_frames"]["gate"] == "presence_check.physics_smpl_frames_min: >= 1"
+    assert metrics["foot_contact_frames"]["gate"] == "presence_check.physics_foot_contact_frames_min: >= 1"
+    assert metrics["skate_free_players"]["gate"] == "presence_check.physics_skate_free_players_min: >= 1"
+    assert metrics["grf_frames"]["gate"] == "presence_check.physics_grf_frames_min: >= 1"
     assert metrics["physics_modes"]["gate"] == "recorded for later physics gates"
 
 
@@ -156,7 +156,7 @@ def test_physics_eval_numeric_gate_failure_fails_ready_clip(tmp_path: Path) -> N
     assert payload["status"] == "fail"
     assert payload["clips"][0]["status"] == "fail"
     assert metrics["skate_free_players"]["value"] == 0
-    assert metrics["skate_free_players"]["gate"] == "physics_skate_free_players_min: >= 1"
+    assert metrics["skate_free_players"]["gate"] == "presence_check.physics_skate_free_players_min: >= 1"
     assert metrics["skate_free_players"]["passed"] is False
 
 

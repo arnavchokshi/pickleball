@@ -18,8 +18,8 @@ from threed.racketsport.testclips import build_testclip_manifest
 
 REQUIRED_SHOT_DRILL_ARTIFACTS = ["racket_sport_metrics.json", "drill_report.json"]
 SHOT_DRILL_GATES = {
-    "shots": NumericGate(name="shot_drill_shots_min", op=">=", threshold=1, unit="shots"),
-    "drill_reps": NumericGate(name="shot_drill_reps_min", op=">=", threshold=1, unit="reps"),
+    "shots": NumericGate(name="presence_check.shot_drill_shots_min", op=">=", threshold=1, unit="shots"),
+    "drill_reps": NumericGate(name="presence_check.shot_drill_reps_min", op=">=", threshold=1, unit="reps"),
 }
 
 

@@ -3,7 +3,18 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from threed.racketsport.eval import ball_event_eval, physics_eval, racket_eval
+from threed.racketsport.eval import (
+    ball_event_eval,
+    body_eval,
+    copy_faithfulness,
+    e2e_eval,
+    metric_eval,
+    physics_eval,
+    racket_eval,
+    replay_eval,
+    shot_drill_eval,
+    track_eval,
+)
 from tests.racketsport.test_eval_ball_racket_gates import (
     _write_ball_event_artifacts,
     _write_racket_pose_artifact,
@@ -26,6 +37,35 @@ def test_no_required_phase_gate_uses_greater_equal_zero_threshold() -> None:
     ]
 
     assert offenders == []
+
+
+def test_presence_and_artifact_checks_are_labeled_without_accuracy_claims() -> None:
+    presence_gate_groups = {
+        "tracking": track_eval.TRACK_GATES,
+        "body": body_eval.BODY_GATES,
+        "physics": physics_eval.PHYSICS_GATES,
+        "ball_events": ball_event_eval.BALL_EVENT_GATES,
+        "racket": racket_eval.RACKET_GATES,
+        "metrics": metric_eval.METRIC_GATES,
+        "shot_drill": shot_drill_eval.SHOT_DRILL_GATES,
+        "copy": copy_faithfulness.COPY_GATES,
+        "replay": replay_eval.REPLAY_GATES,
+    }
+
+    offenders = [
+        f"{group}.{metric_name}:{gate.label}"
+        for group, gates in presence_gate_groups.items()
+        for metric_name, gate in gates.items()
+        if not gate.label.startswith("presence_check.")
+    ]
+    assert offenders == []
+
+    artifact_offenders = [
+        f"e2e.{metric_name}:{gate.label}"
+        for metric_name, gate in e2e_eval.E2E_ARTIFACT_GATES.items()
+        if not gate.label.startswith("artifact_check.")
+    ]
+    assert artifact_offenders == []
 
 
 def test_ball_event_eval_rejects_zero_contact_and_bounce_evidence(tmp_path: Path) -> None:

@@ -128,14 +128,14 @@ def test_ball_event_eval_fails_zero_event_evidence(tmp_path: Path) -> None:
     assert payload.status == "fail"
     metrics = payload.clips[0].metrics
     assert metrics["ball_frames"].value == 1
-    assert metrics["ball_frames"].gate == "ball_frames_min: >= 1"
+    assert metrics["ball_frames"].gate == "presence_check.ball_frames_min: >= 1"
     assert metrics["ball_frames"].passed is True
     assert metrics["ball_frames"].status == "measured"
     assert metrics["contact_events"].value == 0
-    assert metrics["contact_events"].gate == "ball_contact_events_min: >= 1"
+    assert metrics["contact_events"].gate == "presence_check.ball_contact_events_min: >= 1"
     assert metrics["contact_events"].passed is False
     assert metrics["bounce_events"].value == 0
-    assert metrics["bounce_events"].gate == "ball_bounce_events_min: >= 1"
+    assert metrics["bounce_events"].gate == "presence_check.ball_bounce_events_min: >= 1"
     assert metrics["bounce_events"].passed is False
 
 
@@ -150,7 +150,7 @@ def test_ball_event_eval_fails_when_ball_frame_numeric_gate_fails(tmp_path: Path
     assert payload.status == "fail"
     metrics = payload.clips[0].metrics
     assert metrics["ball_frames"].value == 0
-    assert metrics["ball_frames"].gate == "ball_frames_min: >= 1"
+    assert metrics["ball_frames"].gate == "presence_check.ball_frames_min: >= 1"
     assert metrics["ball_frames"].passed is False
 
 
@@ -165,14 +165,14 @@ def test_racket_eval_fails_zero_contact_evidence(tmp_path: Path) -> None:
     assert payload.status == "fail"
     metrics = payload.clips[0].metrics
     assert metrics["racket_players"].value == 1
-    assert metrics["racket_players"].gate == "racket_players_min: >= 1"
+    assert metrics["racket_players"].gate == "presence_check.racket_players_min: >= 1"
     assert metrics["racket_players"].passed is True
     assert metrics["racket_players"].status == "measured"
     assert metrics["racket_frames"].value == 1
-    assert metrics["racket_frames"].gate == "racket_frames_min: >= 1"
+    assert metrics["racket_frames"].gate == "presence_check.racket_frames_min: >= 1"
     assert metrics["racket_frames"].passed is True
     assert metrics["racket_contacts"].value == 0
-    assert metrics["racket_contacts"].gate == "racket_contacts_min: >= 1"
+    assert metrics["racket_contacts"].gate == "presence_check.racket_contacts_min: >= 1"
     assert metrics["racket_contacts"].passed is False
 
 
@@ -188,7 +188,7 @@ def test_racket_eval_fails_when_frame_numeric_gate_fails(tmp_path: Path) -> None
     metrics = payload.clips[0].metrics
     assert metrics["racket_players"].passed is True
     assert metrics["racket_frames"].value == 0
-    assert metrics["racket_frames"].gate == "racket_frames_min: >= 1"
+    assert metrics["racket_frames"].gate == "presence_check.racket_frames_min: >= 1"
     assert metrics["racket_frames"].passed is False
 
 

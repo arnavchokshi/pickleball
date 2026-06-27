@@ -18,19 +18,19 @@ from threed.racketsport.testclips import build_testclip_manifest
 REQUIRED_RACKET_ARTIFACTS = ["racket_pose.json"]
 RACKET_GATES = {
     "racket_players": NumericGate(
-        name="racket_players_min",
+        name="presence_check.racket_players_min",
         op=">=",
         threshold=1,
         unit="players",
     ),
     "racket_frames": NumericGate(
-        name="racket_frames_min",
+        name="presence_check.racket_frames_min",
         op=">=",
         threshold=1,
         unit="frames",
     ),
     "racket_contacts": NumericGate(
-        name="racket_contacts_min",
+        name="presence_check.racket_contacts_min",
         op=">=",
         threshold=1,
         unit="contacts",

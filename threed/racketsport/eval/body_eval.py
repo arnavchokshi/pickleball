@@ -18,19 +18,19 @@ from threed.racketsport.testclips import build_testclip_manifest
 REQUIRED_BODY_ARTIFACTS = ["smpl_motion.json", "skeleton3d.json"]
 BODY_GATES = {
     "smpl_players": NumericGate(
-        name="body_smpl_players_min",
+        name="presence_check.body_smpl_players_min",
         op=">=",
         threshold=1,
         unit="players",
     ),
     "smpl_frames": NumericGate(
-        name="body_smpl_frames_min",
+        name="presence_check.body_smpl_frames_min",
         op=">=",
         threshold=1,
         unit="frames",
     ),
     "skeleton_players": NumericGate(
-        name="body_skeleton_players_min",
+        name="presence_check.body_skeleton_players_min",
         op=">=",
         threshold=1,
         unit="players",

@@ -338,7 +338,7 @@ def test_e2e_eval_emits_named_numeric_gate_metadata(tmp_path: Path) -> None:
     payload = e2e_eval.evaluate(root, labels_root)
     metrics = payload.clips[0].metrics
 
-    assert metrics["required_artifacts_present"].gate == "e2e_required_artifacts_present: == 13"
-    assert metrics["required_artifacts_total"].gate == "e2e_required_artifacts_total: == 13"
-    assert metrics["referenced_glb_files_present"].gate == "e2e_referenced_glb_files_present: == 2"
+    assert metrics["required_artifacts_present"].gate == "artifact_check.e2e_required_artifacts_present: == 13"
+    assert metrics["required_artifacts_total"].gate == "artifact_check.e2e_required_artifacts_total: == 13"
+    assert metrics["referenced_glb_files_present"].gate == "artifact_check.e2e_referenced_glb_files_present: == 2"
     assert all(metric.status == "measured" for metric in metrics.values())

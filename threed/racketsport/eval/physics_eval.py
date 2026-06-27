@@ -19,31 +19,31 @@ from threed.racketsport.testclips import build_testclip_manifest
 REQUIRED_PHYSICS_ARTIFACTS = ["smpl_motion.json"]
 PHYSICS_GATES = {
     "smpl_players": NumericGate(
-        name="physics_smpl_players_min",
+        name="presence_check.physics_smpl_players_min",
         op=">=",
         threshold=1,
         unit="players",
     ),
     "smpl_frames": NumericGate(
-        name="physics_smpl_frames_min",
+        name="presence_check.physics_smpl_frames_min",
         op=">=",
         threshold=1,
         unit="frames",
     ),
     "foot_contact_frames": NumericGate(
-        name="physics_foot_contact_frames_min",
+        name="presence_check.physics_foot_contact_frames_min",
         op=">=",
         threshold=1,
         unit="frames",
     ),
     "skate_free_players": NumericGate(
-        name="physics_skate_free_players_min",
+        name="presence_check.physics_skate_free_players_min",
         op=">=",
         threshold=1,
         unit="players",
     ),
     "grf_frames": NumericGate(
-        name="physics_grf_frames_min",
+        name="presence_check.physics_grf_frames_min",
         op=">=",
         threshold=1,
         unit="frames",

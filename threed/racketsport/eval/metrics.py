@@ -139,7 +139,7 @@ def build_phase_metrics(
             "artifact_readiness": metric(
                 value=artifact_readiness_passed if artifact_checks else None,
                 unit=None,
-                gate="all required artifacts exist",
+                gate="artifact_check.all_required_artifacts_exist",
                 passed=artifact_readiness_passed if artifact_checks else None,
                 status=artifact_readiness_status,
             )

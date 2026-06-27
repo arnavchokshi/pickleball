@@ -18,8 +18,8 @@ from threed.racketsport.testclips import build_testclip_manifest
 
 REQUIRED_REPLAY_ARTIFACTS = ["replay_scene.json"]
 REPLAY_GATES = {
-    "players": NumericGate(name="replay_players_min", op=">=", threshold=1, unit="players"),
-    "points": NumericGate(name="replay_points_min", op=">=", threshold=1, unit="points"),
+    "players": NumericGate(name="presence_check.replay_players_min", op=">=", threshold=1, unit="players"),
+    "points": NumericGate(name="presence_check.replay_points_min", op=">=", threshold=1, unit="points"),
 }
 
 

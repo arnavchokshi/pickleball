@@ -13,15 +13,16 @@
 ## 1. Coordination protocol (mandatory)
 
 ### Status values
-`TODO` → `CLAIMED` → `IN-PROGRESS` → `IN-REVIEW` → `DONE` → `VERIFIED`. Plus `BLOCKED` (with reason), `PENDING-APPROVAL` (awaiting the human on a decision — see §1.6), and `PROTOTYPE-GATE` (temporary 5-clip lowered gate for this prototype wave).
+`TODO` → `CLAIMED` → `IN-PROGRESS` → `IN-REVIEW` → `DONE` → `VERIFIED`. Plus `SCAFFOLD` (code/test primitives exist, but the named model/algorithm is not actually running through the pipeline), `BLOCKED` (with reason), `PENDING-APPROVAL` (awaiting the human on a decision — see §1.6), and `PROTOTYPE-GATE` (temporary 5-clip lowered gate for this prototype wave).
 
 - **TODO** — not started, available to claim (if its dependencies are `VERIFIED`).
 - **CLAIMED** — an agent has taken it; Owner set. No one else may touch it.
 - **IN-PROGRESS** — actively being built.
+- **SCAFFOLD** — CPU-safe plumbing, schemas, adapters, validators, docs, or unit-tested primitives exist, but the row's promised model/algorithm/real-world behavior is not actually invoked through the spine. It is useful implementation surface area, not feature completion.
 - **BLOCKED** — cannot proceed; the `Notes` column states why and what's needed.
 - **PENDING-APPROVAL** — a model/variant (or other non-obvious) decision is waiting on the human; comparison videos rendered and linked. Does NOT unblock downstream until approved (§1.6).
 - **IN-REVIEW** — built; the task's own test passes; awaiting the lead's gate check.
-- **DONE** — code complete, task self-test green.
+- **DONE** — code complete and task self-test green. If the row names a model or algorithm from `TECH_STACK.md §2.3`, `DONE` additionally requires that the exact model/variant/weight is actually invoked through a registered `StageRunner` in `threed/racketsport/orchestrator.py`, and that at least one test exercises that real path rather than a fabricated payload or precomputed adapter output.
 - **VERIFIED** — the lead agent ran the phase **Acceptance Gate** (from `IMPLEMENTATION_PHASES.md`) and it passed. Only `VERIFIED` unblocks downstream tasks.
 - **PROTOTYPE-GATE** — temporary lowered acceptance scope approved by the human for the current prototype wave. It can unblock prototype work on the named clips but does not replace full `VERIFIED`.
 
@@ -38,6 +39,8 @@
 
 ### Definition of Done (global)
 A task is `VERIFIED` only when: code merged, its module unit tests pass, the phase Acceptance Gate (numeric, on real GPU test clips spanning the varied-camera matrix — run **through the §1.5 GPU lease/queue**) passes, artifacts conform to the JSON schemas in `IMPLEMENTATION_PHASES.md`, the Handoff log entry is written (incl. the recorded gate metric), **and any model/variant choice it depends on has cleared the §1.6 approval gate.**
+
+For rows that name a model or algorithm, `DONE` is intentionally stricter than "module tests pass": the row must run the named technology through the registered pipeline spine with the correct manifest weight/variant. A smoke, probe, scaffold, precomputed artifact adapter, or presence-count gate remains `SCAFFOLD`/`PROTOTYPE-GATE` until that real path exists.
 
 ### 1.6 Decision approval gate — human-in-the-loop on variant choices (mandatory)
 
@@ -151,58 +154,58 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 ### TRK — Person detection, tracking, doubles ID
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☑ | TRK-1 | YOLO26m + BoT-SORT-ReID detect/track; court-polygon filter; ground-plane association; N-lock + coach 1-tap anchor | `person_fast.py`, `track_lock.py`, `doubles_id.py` | CAL-2 | Person Detection/Tracking | Codex | DONE |
+| ☐ | TRK-1 | YOLO26m + BoT-SORT-ReID detect/track; court-polygon filter; ground-plane association; N-lock + coach 1-tap anchor | `person_fast.py`, `track_lock.py`, `doubles_id.py` | CAL-2 | Person Detection/Tracking | Codex | SCAFFOLD |
 
 ### BODY — 3D body mesh (core)
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☑ | BODY-1 | Deep tier: Fast SAM-3D-Body per player crop (MHR→SMPL via MLP) | `hmr_deep.py` | TRK-1 | 3D Body | Codex | DONE |
-| ☑ | BODY-2 | Our world-grounding: project per-frame to world via known camera + court Z=0 → temporal smooth | `worldhmr.py` | BODY-1, CAL-2 | 3D Body | Codex | DONE |
-| ☑ | BODY-3 | Fast tier: camera-space mesh (SAT-HMR / Multi-HMR 2) for preview | `hmr_fast.py` | TRK-1 | 3D Body | Codex | DONE |
-| ☑ | BODY-4 | Racket-motion fine-tune (BEDLAM2→AthletePose3D→CalTennis→RICH→AMASS) + world-MPJPE eval | `scripts/finetune_pose.py` | BODY-1, DATA-2 | 3D Body | Codex | DONE |
+| ☐ | BODY-1 | Deep tier: Fast SAM-3D-Body per player crop (MHR→SMPL via MLP) | `hmr_deep.py` | TRK-1 | 3D Body | Codex | SCAFFOLD |
+| ☐ | BODY-2 | Our world-grounding: project per-frame to world via known camera + court Z=0 → temporal smooth | `worldhmr.py` | BODY-1, CAL-2 | 3D Body | Codex | SCAFFOLD |
+| ☐ | BODY-3 | Fast tier: camera-space mesh (SAT-HMR / Multi-HMR 2) for preview | `hmr_fast.py` | TRK-1 | 3D Body | Codex | SCAFFOLD |
+| ☐ | BODY-4 | Racket-motion fine-tune (BEDLAM2→AthletePose3D→CalTennis→RICH→AMASS) + world-MPJPE eval | `scripts/finetune_pose.py` | BODY-1, DATA-2 | 3D Body | Codex | SCAFFOLD |
 
 ### FOOT — Foot-skate elimination & physics
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☑ | FOOT-1 | Foot-contact detection vs known Z=0 + zero-velocity + CCD-IK foot-lock (≤3 mm, 0 penetration) | `footlock.py` | BODY-2 | Foot-Skate & Physics | Codex | DONE |
-| ☑ | FOOT-2 | Physics refinement: PhysPT default; PHC/PULSE on MuJoCo+MJX flagship; MultiPhys for doubles | `physics_refine.py` | FOOT-1 | Foot-Skate & Physics | Codex | DONE |
+| ☐ | FOOT-1 | Foot-contact detection vs known Z=0 + zero-velocity + CCD-IK foot-lock (≤3 mm, 0 penetration) | `footlock.py` | BODY-2 | Foot-Skate & Physics | Codex | SCAFFOLD |
+| ☐ | FOOT-2 | Physics refinement: PhysPT default; PHC/PULSE on MuJoCo+MJX flagship; MultiPhys for doubles | `physics_refine.py` | FOOT-1 | Foot-Skate & Physics | Codex | SCAFFOLD |
 
 ### BALL — Ball tracking + events + 3D physics
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☑ | BALL-1 | TrackNetV3 (→V5) fine-tuned ball tracking + tap-track fallback | `ball_tracknet.py`, `ball_tap_track.py` | CAL-2, DATA-3 | Ball + Events | Codex | DONE |
-| ☑ | BALL-2 | Audio "pop" two-stage detector (onset + CNN) + distance-delay correction | `audio_pop.py` | DATA-3 | Ball + Events | Codex | DONE |
-| ☑ | BALL-3 | Event fusion (audio + wrist-vel peak + ball inflection) → contact windows; doubles attribution | `event_fusion.py` | BALL-1, BALL-2, BODY-2 | Ball + Events | Codex | DONE |
-| ☑ | BALL-4 | 3D ball physics (EKF + RANSAC parabola + z=0 bounce + Magnus + pickleball aero) | `ball_physics3d.py` | BALL-1, CAL-2 | Ball + Events | Codex | DONE |
+| ☐ | BALL-1 | TrackNetV3 (→V5) fine-tuned ball tracking + tap-track fallback | `ball_tracknet.py`, `ball_tap_track.py` | CAL-2, DATA-3 | Ball + Events | Codex | SCAFFOLD |
+| ☐ | BALL-2 | Audio "pop" two-stage detector (onset + CNN) + distance-delay correction | `audio_pop.py` | DATA-3 | Ball + Events | Codex | SCAFFOLD |
+| ☐ | BALL-3 | Event fusion (audio + wrist-vel peak + ball inflection) → contact windows; doubles attribution | `event_fusion.py` | BALL-1, BALL-2, BODY-2 | Ball + Events | Codex | SCAFFOLD |
+| ☐ | BALL-4 | 3D ball physics (EKF + RANSAC parabola + z=0 bounce + Magnus + pickleball aero) | `ball_physics3d.py` | BALL-1, CAL-2 | Ball + Events | Codex | SCAFFOLD |
 
 ### RKT — Racket 6DoF
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☑ | RKT-1 | Detect (RTMDet+SAM2) → top/bottom/handle keypoints + corners → GigaPose/FoundPose + grip prior → PnP-IPPE → UKF SE(3) → physics-validate; contact-point + face-normal | `racket6dof.py` | BODY-2, BALL-4, DATA-4 | Racket 6DoF | Codex | DONE |
+| ☐ | RKT-1 | Detect (RTMDet+SAM2) → top/bottom/handle keypoints + corners → GigaPose/FoundPose + grip prior → PnP-IPPE → UKF SE(3) → physics-validate; contact-point + face-normal | `racket6dof.py` | BODY-2, BALL-4, DATA-4 | Racket 6DoF | Codex | SCAFFOLD |
 
 ### MET — Metrics, insights, confidence
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☑ | MET-1 | Biomechanics metrics (foot/NVZ, zones, spacing, balance, X-factor, contact point, velocity w/ tiers) | `movement_metrics.py` | FOOT-1, BALL-3, RKT-1 | Metrics & Insights | Codex | DONE |
+| ☐ | MET-1 | Biomechanics metrics (foot/NVZ, zones, spacing, balance, X-factor, contact point, velocity w/ tiers) | `movement_metrics.py` | FOOT-1, BALL-3, RKT-1 | Metrics & Insights | Codex | SCAFFOLD |
 | ☑ | MET-2 | Rule-based insight engine + confidence gating | `insight_rules.py`, `confidence.py` | MET-1 | Metrics & Insights | Codex | DONE |
 
 ### SHOT — Shot classification + drills
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☑ | SHOT-1 | Shot classifier (BST/PoseConv3D, dataset from audio-snapped+pose) | `shot_classifier.py` | MET-1, DATA-5 | Shot Classification | Codex | DONE |
-| ☑ | SHOT-2 | Drill rep counting/verification (wrist-vel peak + contact + state machine) | `drill_verify.py` | MET-1, BALL-3 | Shot Classification | Codex | DONE |
+| ☐ | SHOT-1 | Shot classifier (BST/PoseConv3D, dataset from audio-snapped+pose) | `shot_classifier.py` | MET-1, DATA-5 | Shot Classification | Codex | SCAFFOLD |
+| ☐ | SHOT-2 | Drill rep counting/verification (wrist-vel peak + contact + state machine) | `drill_verify.py` | MET-1, BALL-3 | Shot Classification | Codex | SCAFFOLD |
 
 ### RPT — Report, LLM copy, visualization
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
 | ☑ | RPT-1 | Report artifacts (`habit_report.json`, `coach_report.json`, corrections/exclusion model) | `report_model.py`, `habit_model.py` | MET-2 | Report & Delivery | Codex | DONE |
-| ☑ | RPT-2 | LLM coaching copy (latest Claude; facts-in/copy-out; 100% faithfulness gate) | `llm_copy.py` | RPT-1 | Report & Delivery | Codex | DONE |
+| ☐ | RPT-2 | LLM coaching copy (latest Claude; facts-in/copy-out; 100% faithfulness gate) | `llm_copy.py` | RPT-1 | Report & Delivery | Codex | SCAFFOLD |
 | ☑ | RPT-3 | Visualization (court map/heatmap + priority metric + self-vs-self) + tiered <10 s delivery | `viz/` | RPT-1 | Report & Delivery | Codex | DONE |
 
 ### RPL — 3D replay
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☑ | RPL-1 | Server render bake → one animated scene → export USDZ (OpenUSD) + GLB (pygltflib/smplx); MeshOpt+Draco+KTX2; CDN | `replay_export.py` | FOOT-2, RKT-1, BALL-4 | 3D Replay | Codex | DONE |
+| ☐ | RPL-1 | Server render bake → one animated scene → export USDZ (OpenUSD) + GLB (pygltflib/smplx); MeshOpt+Draco+KTX2; CDN | `replay_export.py` | FOOT-2, RKT-1, BALL-4 | 3D Replay | Codex | SCAFFOLD |
 | ☑ | RPL-2 | Three.js + R3F web viewer (free-viewpoint, per-point GLB stream, share link) | `viewer/` | RPL-1 | 3D Replay | Codex | DONE |
 
 ### DATA — Data & training infrastructure (parallel)
@@ -348,6 +351,7 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 - [TRK-1/DATA-2] Codex — built: prototype player-label-to-detection bridge that converts accepted YOLO teacher `labels/players.json` items into the `scripts/racketsport/track.py` `detections.json` contract, skipping uncertain boxes by default and keeping label IDs as source metadata instead of claiming stable tracks; artifacts: `threed/racketsport/detection_bridge.py`, `scripts/racketsport/convert_player_labels_to_detections.py`, `tests/racketsport/test_detection_bridge.py`, ignored `runs/eval0/prototype_gate_h100_v2/*/{detections.json,tracks.json}`; tested: local `.venv/bin/python -m pytest tests/racketsport -q` passed `343 passed, 4 skipped`, H100 `.venv/bin/python -m pytest tests/racketsport/test_detection_bridge.py -q` passed `4 passed`, and accepted-four H100 conversion/tracking wrote schema-valid `tracks.json` with 4/4/4/3 prototype player tracks respectively; next: render a track-review overlay in a later pass and keep TRK-1 unverified until a real IDF1/spectator-rejection gate passes on labeled clips.
 - [BALL-1] Codex — built: TrackNetV3 adapter seam that converts official `Frame,Visibility,X,Y` prediction CSVs into schema-valid `ball_track.json`, writes runtime metadata, can run official `predict.py` when the TrackNetV3 repo/runtime exists, and fails closed when runtime pieces are missing; artifacts: `threed/racketsport/tracknet_adapter.py`, `scripts/racketsport/run_tracknet_ball.py`, `tests/racketsport/test_tracknet_adapter.py`; tested: local `.venv/bin/python -m pytest tests/racketsport -q` passed `337 passed, 4 skipped`, H100 `.venv/bin/python -m pytest tests/racketsport/test_tracknet_adapter.py -q` passed, H100 `smoke_models.py --check-files-only --json` verified TrackNetV3 and InpaintNet checkpoint SHA256s, H100 cloned official TrackNetV3 at `/workspace/TrackNetV3` commit `77c123ad4dd449b7d275f16cc43f316ba5b54042`, installed missing `parse`, patched that external clone to `num_workers=0` for low-`/dev/shm` Docker smoke runs, and ran a 2-second Burlington smoke clip through the real predictor producing `runs/tracknet_smoke/burlington/ball_track.json` with 120 frames and 108 visible detections; next: this is runtime smoke only, not Phase 5 verification, because contact windows, labels, F1/timing gates, and full-clip/event fusion still remain.
 - [BALL-1/BODY-1] Codex — built: prototype review tooling for real H100 smoke artifacts without promoting gates. TrackNet wrapper now exposes upstream `--video-range` with explicit median-only semantics, `ball_overlay.py` renders schema-validated ball-track review videos, and `sam3dbody_probe.py` records probe-only FastSAM-3D-Body output metadata without fabricating `smpl_motion.json` or `skeleton3d.json`; artifacts: `threed/racketsport/tracknet_adapter.py`, `scripts/racketsport/run_tracknet_ball.py`, `threed/racketsport/ball_overlay.py`, `scripts/racketsport/render_ball_track_overlay.py`, `threed/racketsport/sam3dbody_probe.py`, `scripts/racketsport/run_sam3dbody_probe.py`, `tests/racketsport/test_tracknet_adapter.py`, `tests/racketsport/test_ball_overlay.py`, `tests/racketsport/test_sam3dbody_probe.py`, `docs/racketsport/prototype_gate_h100_v2_tracknet_body_smoke.md`, ignored `runs/eval0/prototype_gate_h100_v2/*/tracknet_smoke_0000_0010/`, and ignored `runs/eval0/prototype_gate_h100_v2/burlington_gold_0300_low_steep_corner/body_probe_0000/`; tested: local focused suite passed `12 passed, 5 skipped`, H100 FastSAM env focused suite passed `17 passed`, accepted-four H100 TrackNet 10s smokes produced schema-valid ball tracks and H.264 overlays, and a Burlington real FastSAM-3D-Body probe returned four person records with `pred_vertices`, `pred_keypoints_3d`, `pred_joint_coords`, `pred_cam_t`, and pose/shape parameter fields; next: inspect the overlay quality, then add full-window/full-clip TrackNet jobs selectively and build the BODY court-world conversion before registering a BODY StageRunner.
+- [STATUS-HYGIENE] Codex — built: stricter `DONE` semantics for named model/algorithm rows, demoted the overstated ML/CV rows to `SCAFFOLD`, added root `CAPABILITIES.md` as the per-stage truth matrix, and relabeled count-only evaluator gates as `presence_check.*` or `artifact_check.*`; artifacts: `BUILD_CHECKLIST.md`, `CAPABILITIES.md`, `threed/racketsport/eval/*.py`, `tests/racketsport/test_truthful_capabilities.py`, related eval tests; tested: local `.venv/bin/python -m pytest tests/racketsport/test_truthful_capabilities.py -q` passed, local focused eval/docs suite passed `58 passed`; next: do not promote any SCAFFOLD row until the exact named model/variant/weight runs through a registered StageRunner and a real-label accuracy gate passes.
 
 ---
 
@@ -388,3 +392,4 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 - 2026-06-27 Codex: the furthest real prototype vertical-slice stage is `tracking`: on `wolverine_mixed_0200_mid_steep_corner`, the fail-closed orchestrator ran calibration and precomputed-detection tracking, wrote `tracks.json`, then correctly returned `blocked` at BODY with `no runner registered for stage: body`. This is expected until a real Fast SAM-3D-Body/mesh runner is wired into the `StageRunner` registry.
 - 2026-06-27 Codex: accepted-four TrackNetV3 10-second smoke windows now exist under `runs/eval0/prototype_gate_h100_v2/*/tracknet_smoke_0000_0010/` with H.264 `ball_track_overlay_h264.mp4` review videos. Visible counts were Burlington 599/600, Wolverine 288/300, Outdoor webcam 600/600, and Indoor doubles 300/300 after correcting timestamps to each smoke input's `ffprobe avg_frame_rate`. This proves real TrackNet inference and review rendering on the accepted clips, but it is not BALL `VERIFIED` because no ball-label F1, contact-window, timing, or full-clip gate has passed.
 - 2026-06-27 Codex: a real FastSAM-3D-Body probe ran on Burlington frame 0 with four tracked player boxes and returned four person outputs with mesh/keypoint/pose tensors. The probe is intentionally `probe_only_not_verified` and writes no BODY contract artifacts; BODY remains blocked on a defensible camera-to-court/world-SMPL conversion plus foot/contact/physics gates.
+- 2026-06-27 Codex: truthfulness reset supersedes the earlier `DONE=40/44` parser note. Corrected counts are `DONE=23/44`, `SCAFFOLD=17/44`, `PROTOTYPE-GATE=3/44`, `IN-PROGRESS=1/44`, `VERIFIED=0/44`. Count-only gates now identify themselves as `presence_check.*`; e2e artifact completeness gates identify themselves as `artifact_check.*` and do not count toward `VERIFIED`.

@@ -104,7 +104,7 @@ def test_phase_eval_metrics_schema_is_registered(tmp_path):
             "artifact_readiness": {
                 "value": False,
                 "unit": None,
-                "gate": "all required artifacts exist",
+                "gate": "artifact_check.all_required_artifacts_exist",
                 "passed": False,
                 "status": "measured",
             }

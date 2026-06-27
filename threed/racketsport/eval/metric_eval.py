@@ -18,10 +18,10 @@ from threed.racketsport.testclips import build_testclip_manifest
 
 REQUIRED_METRIC_ARTIFACTS = ["racket_sport_metrics.json", "habit_report.json"]
 METRIC_GATES = {
-    "metric_players": NumericGate(name="metric_players_min", op=">=", threshold=1, unit="players"),
-    "shots": NumericGate(name="metric_shots_min", op=">=", threshold=1, unit="shots"),
-    "metric_values": NumericGate(name="metric_values_min", op=">=", threshold=1, unit="metrics"),
-    "habits": NumericGate(name="metric_habits_min", op=">=", threshold=1, unit="habits"),
+    "metric_players": NumericGate(name="presence_check.metric_players_min", op=">=", threshold=1, unit="players"),
+    "shots": NumericGate(name="presence_check.metric_shots_min", op=">=", threshold=1, unit="shots"),
+    "metric_values": NumericGate(name="presence_check.metric_values_min", op=">=", threshold=1, unit="metrics"),
+    "habits": NumericGate(name="presence_check.metric_habits_min", op=">=", threshold=1, unit="habits"),
 }
 
 

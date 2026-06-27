@@ -49,13 +49,13 @@ ARTIFACT_SCHEMA_NAMES = {
 
 E2E_ARTIFACT_GATES = {
     "required_artifacts_present": NumericGate(
-        name="e2e_required_artifacts_present",
+        name="artifact_check.e2e_required_artifacts_present",
         op="==",
         threshold=len(REQUIRED_E2E_ARTIFACTS),
         unit="artifacts",
     ),
     "required_artifacts_total": NumericGate(
-        name="e2e_required_artifacts_total",
+        name="artifact_check.e2e_required_artifacts_total",
         op="==",
         threshold=len(REQUIRED_E2E_ARTIFACTS),
         unit="artifacts",
@@ -157,7 +157,7 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         {
             **E2E_ARTIFACT_GATES,
             "referenced_glb_files_present": NumericGate(
-                name="e2e_referenced_glb_files_present",
+                name="artifact_check.e2e_referenced_glb_files_present",
                 op="==",
                 threshold=referenced_glbs,
                 unit="files",

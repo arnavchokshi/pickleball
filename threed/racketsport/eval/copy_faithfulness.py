@@ -18,8 +18,13 @@ from threed.racketsport.testclips import build_testclip_manifest
 
 REQUIRED_COPY_ARTIFACTS = ["habit_report.json", "coach_report.json"]
 COPY_GATES = {
-    "habit_count": NumericGate(name="copy_habit_count_min", op=">=", threshold=1, unit="habits"),
-    "coach_habit_count": NumericGate(name="copy_coach_habit_count_min", op=">=", threshold=1, unit="habits"),
+    "habit_count": NumericGate(name="presence_check.copy_habit_count_min", op=">=", threshold=1, unit="habits"),
+    "coach_habit_count": NumericGate(
+        name="presence_check.copy_coach_habit_count_min",
+        op=">=",
+        threshold=1,
+        unit="habits",
+    ),
 }
 
 

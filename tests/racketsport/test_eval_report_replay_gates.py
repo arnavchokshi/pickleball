@@ -169,10 +169,10 @@ def test_metric_eval_uses_named_numeric_gates_for_existing_count_thresholds(tmp_
     payload = _run_eval(metric_eval, tmp_path)
     metrics = payload.clips[0].metrics
 
-    assert metrics["metric_players"].gate == "metric_players_min: >= 1"
-    assert metrics["shots"].gate == "metric_shots_min: >= 1"
-    assert metrics["metric_values"].gate == "metric_values_min: >= 1"
-    assert metrics["habits"].gate == "metric_habits_min: >= 1"
+    assert metrics["metric_players"].gate == "presence_check.metric_players_min: >= 1"
+    assert metrics["shots"].gate == "presence_check.metric_shots_min: >= 1"
+    assert metrics["metric_values"].gate == "presence_check.metric_values_min: >= 1"
+    assert metrics["habits"].gate == "presence_check.metric_habits_min: >= 1"
     assert all(metrics[name].passed is True for name in ("metric_players", "shots", "metric_values", "habits"))
     assert metrics["coverage_overall"].gate == "recorded for later confidence gates"
 
@@ -187,9 +187,9 @@ def test_metric_eval_fails_named_numeric_gate_when_count_is_below_threshold(tmp_
     metrics = payload.clips[0].metrics
 
     assert payload.status == "fail"
-    assert metrics["metric_players"].gate == "metric_players_min: >= 1"
+    assert metrics["metric_players"].gate == "presence_check.metric_players_min: >= 1"
     assert metrics["metric_players"].passed is False
-    assert metrics["shots"].gate == "metric_shots_min: >= 1"
+    assert metrics["shots"].gate == "presence_check.metric_shots_min: >= 1"
     assert metrics["shots"].passed is False
 
 
@@ -202,8 +202,8 @@ def test_shot_drill_eval_uses_named_numeric_gates_for_shot_and_rep_thresholds(tm
     payload = _run_eval(shot_drill_eval, tmp_path)
     metrics = payload.clips[0].metrics
 
-    assert metrics["shots"].gate == "shot_drill_shots_min: >= 1"
-    assert metrics["drill_reps"].gate == "shot_drill_reps_min: >= 1"
+    assert metrics["shots"].gate == "presence_check.shot_drill_shots_min: >= 1"
+    assert metrics["drill_reps"].gate == "presence_check.shot_drill_reps_min: >= 1"
     assert metrics["shots"].passed is True
     assert metrics["drill_reps"].passed is True
     assert metrics["shot_types"].gate == "recorded for later shot-class gates"
@@ -218,8 +218,8 @@ def test_copy_faithfulness_uses_named_numeric_gates_for_report_habit_counts(tmp_
     payload = _run_eval(copy_faithfulness, tmp_path)
     metrics = payload.clips[0].metrics
 
-    assert metrics["habit_count"].gate == "copy_habit_count_min: >= 1"
-    assert metrics["coach_habit_count"].gate == "copy_coach_habit_count_min: >= 1"
+    assert metrics["habit_count"].gate == "presence_check.copy_habit_count_min: >= 1"
+    assert metrics["coach_habit_count"].gate == "presence_check.copy_coach_habit_count_min: >= 1"
     assert metrics["habit_count"].passed is True
     assert metrics["coach_habit_count"].passed is True
     assert metrics["priority_habit_match"].gate == "coach copy preserves priority habit"
@@ -234,8 +234,8 @@ def test_replay_eval_uses_named_numeric_gates_for_player_and_point_counts(tmp_pa
     payload = _run_eval(replay_eval, tmp_path)
     metrics = payload.clips[0].metrics
 
-    assert metrics["players"].gate == "replay_players_min: >= 1"
-    assert metrics["points"].gate == "replay_points_min: >= 1"
+    assert metrics["players"].gate == "presence_check.replay_players_min: >= 1"
+    assert metrics["points"].gate == "presence_check.replay_points_min: >= 1"
     assert metrics["players"].passed is True
     assert metrics["points"].passed is True
     assert metrics["glb_files_present"].gate == "all referenced GLB files exist"

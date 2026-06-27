@@ -18,13 +18,13 @@ from threed.racketsport.testclips import build_testclip_manifest
 REQUIRED_TRACK_ARTIFACTS = ["tracks.json"]
 TRACK_GATES = {
     "players_detected": NumericGate(
-        name="track_players_detected_min",
+        name="presence_check.track_players_detected_min",
         op=">=",
         threshold=1,
         unit="players",
     ),
     "track_frames": NumericGate(
-        name="track_frames_min",
+        name="presence_check.track_frames_min",
         op=">=",
         threshold=1,
         unit="frames",

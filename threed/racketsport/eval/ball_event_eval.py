@@ -18,19 +18,19 @@ from threed.racketsport.testclips import build_testclip_manifest
 REQUIRED_BALL_EVENT_ARTIFACTS = ["ball_track.json", "contact_windows.json"]
 BALL_EVENT_GATES = {
     "ball_frames": NumericGate(
-        name="ball_frames_min",
+        name="presence_check.ball_frames_min",
         op=">=",
         threshold=1,
         unit="frames",
     ),
     "contact_events": NumericGate(
-        name="ball_contact_events_min",
+        name="presence_check.ball_contact_events_min",
         op=">=",
         threshold=1,
         unit="events",
     ),
     "bounce_events": NumericGate(
-        name="ball_bounce_events_min",
+        name="presence_check.ball_bounce_events_min",
         op=">=",
         threshold=1,
         unit="events",
