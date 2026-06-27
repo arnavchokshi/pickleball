@@ -25,6 +25,8 @@ CVAT_LABELS = [
     {"name": "foot_contact", "attributes": ["foot"]},
 ]
 
+MAX_REVIEW_ITEMS_PER_LABEL = 20
+
 
 def export_review_bundle(
     *,
@@ -52,7 +54,7 @@ def export_review_bundle(
         clip_items: list[dict[str, Any]] = []
         templates: dict[str, list[str]] = {}
         for label_path in sorted(labels_dir.glob("*.json")):
-            if label_path.name in {"status.json", "prototype_autolabel_manifest.json"}:
+            if label_path.name in {"status.json", "prototype_autolabel_manifest.json", "uncertain_frames.json"}:
                 continue
             payload = _read_json(label_path)
             for item in _review_items(payload, label_path.name, confidence_threshold):
@@ -206,7 +208,7 @@ def _review_items(payload: dict[str, Any], target_file: str, confidence_threshol
                         "reason": ",".join(frame_item.get("reasons", [])) if isinstance(frame_item.get("reasons"), list) else "uncertain_frames",
                     }
                 )
-        return items
+        return items[:MAX_REVIEW_ITEMS_PER_LABEL]
 
     annotation = payload.get("annotation")
     raw_items = annotation.get("items", []) if isinstance(annotation, dict) else []
@@ -231,7 +233,7 @@ def _review_items(payload: dict[str, Any], target_file: str, confidence_threshol
                 "confidence": confidence,
             }
         )
-    return items
+    return items[:MAX_REVIEW_ITEMS_PER_LABEL]
 
 
 def _first_frame(payload: dict[str, Any]) -> str | None:
