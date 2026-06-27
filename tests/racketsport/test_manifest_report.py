@@ -26,7 +26,7 @@ def test_manifest_report_summarizes_status_counts():
     assert payload["status_counts"]["available_on_h100"] >= 5
     assert payload["commercial_posture_counts"]["research_ok_verify_commercial"] >= 2
     assert "fast_sam_3d_body_dinov3" in payload["available_on_h100"]
-    assert payload["missing_or_pending"]
+    assert "mujoco_mjx" in payload["ready_on_h100"]
 
 
 def test_manifest_report_writes_markdown(tmp_path):
@@ -47,4 +47,4 @@ def test_manifest_report_writes_markdown(tmp_path):
     body = out.read_text(encoding="utf-8")
     assert "# Model Manifest Report" in body
     assert "fast_sam_3d_body_dinov3" in body
-    assert "pending_download" in body
+    assert "available_runtime_on_h100" in body

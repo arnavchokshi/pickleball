@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 ModelStatus = Literal[
     "available_on_h100",
+    "available_runtime_on_h100",
     "pending_download",
     "pending_auth",
     "pending_benchmark",

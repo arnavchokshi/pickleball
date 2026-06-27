@@ -146,12 +146,18 @@
       "id": "mujoco_mjx",
       "stage": "physics",
       "use": "Physics refinement engine for flagship replay",
-      "source": "https://github.com/google-deepmind/mujoco",
+      "source": "https://mujoco.readthedocs.io/en/stable/mjx.html and https://pypi.org/project/mujoco-mjx/",
       "license": "Apache-2.0",
       "commercial_posture": "ok",
-      "status": "pending_download",
+      "status": "available_runtime_on_h100",
+      "local_path": "/opt/conda/envs/racketsport_mjx",
       "fallbacks": ["physpt", "footlock_only"],
-      "notes": ["The current H100 body4d conda env is missing the mujoco Python package."]
+      "notes": [
+        "Installed in an isolated H100 conda env to avoid perturbing /opt/conda/envs/fast_sam_3d_body.",
+        "Install command is codified in scripts/racketsport/install_mujoco_mjx_env.sh.",
+        "H100 runtime smoke on 2026-06-26 PDT used scripts/racketsport/smoke_mujoco_mjx.py and passed with jax 0.10.2, mujoco 3.10.0, mujoco-mjx 3.10.0, warp-lang 1.13.0, and JAX device cuda:0.",
+        "This is runtime availability only; FOOT-2 still needs task-specific physics integration and validation."
+      ]
     }
   ],
   "notes": [

@@ -10,6 +10,7 @@ SHELL_SCRIPTS = [
     Path("scripts/gpu-train-lock.sh"),
     Path("scripts/racketsport/setup_env.sh"),
     Path("scripts/racketsport/install_fast_sam_env.sh"),
+    Path("scripts/racketsport/install_mujoco_mjx_env.sh"),
     Path("scripts/racketsport/run_fast_sam_benchmark.sh"),
 ]
 
