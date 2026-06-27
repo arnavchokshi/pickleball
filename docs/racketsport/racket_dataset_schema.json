@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/racketsport/racket_dataset_schema.json",
+  "title": "Racket Data Source Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "dataset_id", "sources"],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "dataset_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "source_type", "path"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+          },
+          "source_type": {
+            "enum": ["racketvision", "synthetic_blenderproc", "aruco_gt"]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Relative path under the manifest directory. Absolute paths and parent traversal are rejected by the validator."
+          },
+          "camera": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "fps": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "marker": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}
