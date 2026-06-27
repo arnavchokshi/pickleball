@@ -11,6 +11,11 @@ mkdir -p "$PIP_CACHE_DIR" "$TMPDIR"
 
 source "$CONDA_ROOT/etc/profile.d/conda.sh"
 
+if "$CONDA_ROOT/bin/conda" tos --help >/dev/null 2>&1; then
+  "$CONDA_ROOT/bin/conda" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main || true
+  "$CONDA_ROOT/bin/conda" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r || true
+fi
+
 if ! "$CONDA_ROOT/bin/conda" env list | awk '{print $1}' | grep -qx "$ENV_NAME"; then
   "$CONDA_ROOT/bin/conda" create -n "$ENV_NAME" python=3.11 -y
 fi
