@@ -138,9 +138,9 @@ def test_physics_eval_uses_numeric_gates_for_measured_physics_counts(tmp_path: P
     assert payload["status"] == "pass"
     assert metrics["smpl_players"]["gate"] == "physics_smpl_players_min: >= 1"
     assert metrics["smpl_frames"]["gate"] == "physics_smpl_frames_min: >= 1"
-    assert metrics["foot_contact_frames"]["gate"] == "physics_foot_contact_frames_observed: >= 0"
+    assert metrics["foot_contact_frames"]["gate"] == "physics_foot_contact_frames_min: >= 1"
     assert metrics["skate_free_players"]["gate"] == "physics_skate_free_players_min: >= 1"
-    assert metrics["grf_frames"]["gate"] == "physics_grf_frames_observed: >= 0"
+    assert metrics["grf_frames"]["gate"] == "physics_grf_frames_min: >= 1"
     assert metrics["physics_modes"]["gate"] == "recorded for later physics gates"
 
 

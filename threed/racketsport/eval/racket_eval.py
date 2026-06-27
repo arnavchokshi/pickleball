@@ -30,9 +30,9 @@ RACKET_GATES = {
         unit="frames",
     ),
     "racket_contacts": NumericGate(
-        name="racket_contacts_recorded",
+        name="racket_contacts_min",
         op=">=",
-        threshold=0,
+        threshold=1,
         unit="contacts",
     ),
 }

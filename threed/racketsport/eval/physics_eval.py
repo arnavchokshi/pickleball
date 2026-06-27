@@ -31,9 +31,9 @@ PHYSICS_GATES = {
         unit="frames",
     ),
     "foot_contact_frames": NumericGate(
-        name="physics_foot_contact_frames_observed",
+        name="physics_foot_contact_frames_min",
         op=">=",
-        threshold=0,
+        threshold=1,
         unit="frames",
     ),
     "skate_free_players": NumericGate(
@@ -43,9 +43,9 @@ PHYSICS_GATES = {
         unit="players",
     ),
     "grf_frames": NumericGate(
-        name="physics_grf_frames_observed",
+        name="physics_grf_frames_min",
         op=">=",
-        threshold=0,
+        threshold=1,
         unit="frames",
     ),
 }

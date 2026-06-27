@@ -24,15 +24,15 @@ BALL_EVENT_GATES = {
         unit="frames",
     ),
     "contact_events": NumericGate(
-        name="ball_contact_events_recorded",
+        name="ball_contact_events_min",
         op=">=",
-        threshold=0,
+        threshold=1,
         unit="events",
     ),
     "bounce_events": NumericGate(
-        name="ball_bounce_events_recorded",
+        name="ball_bounce_events_min",
         op=">=",
-        threshold=0,
+        threshold=1,
         unit="events",
     ),
 }

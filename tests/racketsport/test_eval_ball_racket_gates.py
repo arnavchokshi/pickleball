@@ -117,7 +117,7 @@ def _write_racket_pose_artifact(
     (run_dir / "racket_pose.json").write_text(json.dumps(payload), encoding="utf-8")
 
 
-def test_ball_event_eval_applies_numeric_gates_to_existing_ready_clip_metrics(tmp_path: Path) -> None:
+def test_ball_event_eval_fails_zero_event_evidence(tmp_path: Path) -> None:
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase5"
     _write_ready_clip(labels_root, "clip_001")
@@ -125,18 +125,18 @@ def test_ball_event_eval_applies_numeric_gates_to_existing_ready_clip_metrics(tm
 
     payload = ball_event_eval.evaluate(root, labels_root)
 
-    assert payload.status == "pass"
+    assert payload.status == "fail"
     metrics = payload.clips[0].metrics
     assert metrics["ball_frames"].value == 1
     assert metrics["ball_frames"].gate == "ball_frames_min: >= 1"
     assert metrics["ball_frames"].passed is True
     assert metrics["ball_frames"].status == "measured"
     assert metrics["contact_events"].value == 0
-    assert metrics["contact_events"].gate == "ball_contact_events_recorded: >= 0"
-    assert metrics["contact_events"].passed is True
+    assert metrics["contact_events"].gate == "ball_contact_events_min: >= 1"
+    assert metrics["contact_events"].passed is False
     assert metrics["bounce_events"].value == 0
-    assert metrics["bounce_events"].gate == "ball_bounce_events_recorded: >= 0"
-    assert metrics["bounce_events"].passed is True
+    assert metrics["bounce_events"].gate == "ball_bounce_events_min: >= 1"
+    assert metrics["bounce_events"].passed is False
 
 
 def test_ball_event_eval_fails_when_ball_frame_numeric_gate_fails(tmp_path: Path) -> None:
@@ -154,7 +154,7 @@ def test_ball_event_eval_fails_when_ball_frame_numeric_gate_fails(tmp_path: Path
     assert metrics["ball_frames"].passed is False
 
 
-def test_racket_eval_applies_numeric_gates_to_existing_ready_clip_metrics(tmp_path: Path) -> None:
+def test_racket_eval_fails_zero_contact_evidence(tmp_path: Path) -> None:
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase6"
     _write_ready_clip(labels_root, "clip_001")
@@ -162,7 +162,7 @@ def test_racket_eval_applies_numeric_gates_to_existing_ready_clip_metrics(tmp_pa
 
     payload = racket_eval.evaluate(root, labels_root)
 
-    assert payload.status == "pass"
+    assert payload.status == "fail"
     metrics = payload.clips[0].metrics
     assert metrics["racket_players"].value == 1
     assert metrics["racket_players"].gate == "racket_players_min: >= 1"
@@ -172,8 +172,8 @@ def test_racket_eval_applies_numeric_gates_to_existing_ready_clip_metrics(tmp_pa
     assert metrics["racket_frames"].gate == "racket_frames_min: >= 1"
     assert metrics["racket_frames"].passed is True
     assert metrics["racket_contacts"].value == 0
-    assert metrics["racket_contacts"].gate == "racket_contacts_recorded: >= 0"
-    assert metrics["racket_contacts"].passed is True
+    assert metrics["racket_contacts"].gate == "racket_contacts_min: >= 1"
+    assert metrics["racket_contacts"].passed is False
 
 
 def test_racket_eval_fails_when_frame_numeric_gate_fails(tmp_path: Path) -> None:
