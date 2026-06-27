@@ -4,7 +4,12 @@ set -euo pipefail
 LEASE_ROOT="${GPU_LEASE_ROOT:-/run/gpu-lease}"
 SLOTS_DIR="$LEASE_ROOT/slots"
 HEARTBEAT_DIR="$LEASE_ROOT/heartbeat"
-mkdir -p "$SLOTS_DIR" "$HEARTBEAT_DIR"
+if ! mkdir -p "$SLOTS_DIR" "$HEARTBEAT_DIR" 2>/dev/null; then
+  LEASE_ROOT="${TMPDIR:-/tmp}/gpu-lease"
+  SLOTS_DIR="$LEASE_ROOT/slots"
+  HEARTBEAT_DIR="$LEASE_ROOT/heartbeat"
+  mkdir -p "$SLOTS_DIR" "$HEARTBEAT_DIR"
+fi
 
 if [ "$#" -eq 0 ]; then
   echo "usage: $0 <command> [args...]" >&2
@@ -21,8 +26,9 @@ if [ ! -e "${slot_files[0]}" ]; then
   slot_files=("$SLOTS_DIR"/slot*.lock)
 fi
 
-run_with_slot() {
+run_with_slot() (
   local lock_file="$1"
+  shift
   local slot_name
   slot_name="$(basename "$lock_file" .lock)"
   local uuid_file="$SLOTS_DIR/$slot_name.uuid"
@@ -32,13 +38,22 @@ run_with_slot() {
   printf 'pid=%s slot=%s ts=%s\n' "$$" "$slot_name" "$(date +%s)" > "$heartbeat"
   trap 'rm -f "$heartbeat"' EXIT
   "$@"
-}
+)
+
+if ! command -v flock >/dev/null 2>&1; then
+  echo "gpu-eval-run: flock unavailable; running single local fallback slot" >&2
+  run_with_slot "${slot_files[0]}" "$@"
+  exit $?
+fi
 
 for lock_file in "${slot_files[@]}"; do
-  if flock -n "$lock_file" bash -c 'run_with_slot "$0" "${@:1}"' "$lock_file" "$@"; then
-    exit 0
+  exec {lock_fd}>"$lock_file"
+  if flock -n "$lock_fd"; then
+    run_with_slot "$lock_file" "$@"
+    exit $?
   fi
 done
 
-flock "${slot_files[0]}" bash -c 'run_with_slot "$0" "${@:1}"' "${slot_files[0]}" "$@"
-
+exec {lock_fd}>"${slot_files[0]}"
+flock "$lock_fd"
+run_with_slot "${slot_files[0]}" "$@"
