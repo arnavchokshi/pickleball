@@ -71,6 +71,19 @@ def render_label_overlays(
     finally:
         cap.release()
         writer.release()
+    if frame_index == 0:
+        fallback_count = _render_from_frame_pack(
+            cv2,
+            draft_label_dir=draft_label_dir,
+            overlay_path=overlay_path,
+            label_data=label_data,
+            max_frames=max_frames,
+        )
+        if fallback_count > 0:
+            frame_index = fallback_count
+            warnings.append("video decode produced 0 frames; rendered from label frame pack")
+        else:
+            warnings.append("video decode produced 0 frames and no label frame pack fallback was available")
 
     summary = {
         "schema_version": 1,
@@ -175,6 +188,77 @@ def _load_layers(labels_dir: Path) -> tuple[dict[str, list[dict[str, Any]]], lis
         else:
             warnings.append(f"{filename} has no drawable items")
     return label_data, available_layers, warnings
+
+
+def _render_from_frame_pack(
+    cv2: Any,
+    *,
+    draft_label_dir: Path,
+    overlay_path: Path,
+    label_data: dict[str, list[dict[str, Any]]],
+    max_frames: int | None,
+) -> int:
+    frame_paths = _frame_paths_from_labels(draft_label_dir)
+    if max_frames is not None:
+        frame_paths = frame_paths[:max_frames]
+    first_frame = None
+    usable_paths: list[Path] = []
+    for path in frame_paths:
+        frame = cv2.imread(str(path))
+        if frame is not None:
+            first_frame = frame
+            usable_paths.append(path)
+            break
+    if first_frame is None:
+        return 0
+    usable_paths.extend(path for path in frame_paths if path != usable_paths[0])
+    height, width = first_frame.shape[:2]
+    writer = cv2.VideoWriter(str(overlay_path), cv2.VideoWriter_fourcc(*"mp4v"), 10.0, (width, height))
+    if not writer.isOpened():
+        return 0
+    count = 0
+    try:
+        for path in usable_paths:
+            frame = first_frame if count == 0 else cv2.imread(str(path))
+            if frame is None:
+                continue
+            if frame.shape[1] != width or frame.shape[0] != height:
+                frame = cv2.resize(frame, (width, height))
+            _draw_layers(cv2, frame, count, label_data)
+            writer.write(frame)
+            count += 1
+    finally:
+        writer.release()
+    return count
+
+
+def _frame_paths_from_labels(labels_dir: Path) -> list[Path]:
+    for _layer, filename in LAYER_FILES:
+        path = labels_dir / filename
+        if not path.is_file():
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        frames = payload.get("frames") if isinstance(payload, dict) else None
+        if not isinstance(frames, dict):
+            continue
+        raw_frames = frames.get("frames")
+        if not isinstance(raw_frames, list):
+            continue
+        frame_paths: list[Path] = []
+        for frame in raw_frames:
+            if isinstance(frame, dict):
+                value = frame.get("path")
+            else:
+                value = frame
+            if value:
+                frame_paths.append(Path(str(value)))
+        existing = [path for path in frame_paths if path.is_file()]
+        if existing:
+            return existing
+    return []
 
 
 def _payload_items(payload: Any) -> list[dict[str, Any]]:
