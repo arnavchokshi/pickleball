@@ -1,0 +1,45 @@
+name: RacketSport Regression
+
+on:
+  pull_request:
+    paths:
+      - "scripts/racketsport/check_eval_regression.py"
+      - "tests/racketsport/test_eval_regression.py"
+      - ".github/workflows/racketsport-regression.yml"
+  push:
+    paths:
+      - "scripts/racketsport/check_eval_regression.py"
+      - "tests/racketsport/test_eval_regression.py"
+      - ".github/workflows/racketsport-regression.yml"
+  workflow_dispatch:
+    inputs:
+      current:
+        description: "Current phase metrics JSON path in the checkout"
+        required: true
+      baseline:
+        description: "Baseline phase metrics JSON path in the checkout"
+        required: true
+      max_drop_percent:
+        description: "Maximum allowed measured numeric metric drop percentage"
+        required: false
+        default: "2.0"
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test dependency
+        run: python -m pip install pytest
+      - name: Test regression checker
+        run: pytest tests/racketsport/test_eval_regression.py -q
+      - name: Compare requested metrics
+        if: github.event_name == 'workflow_dispatch'
+        run: >
+          python scripts/racketsport/check_eval_regression.py
+          --current "${{ inputs.current }}"
+          --baseline "${{ inputs.baseline }}"
+          --max-drop-percent "${{ inputs.max_drop_percent }}"
