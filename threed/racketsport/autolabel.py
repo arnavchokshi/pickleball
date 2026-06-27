@@ -365,6 +365,9 @@ def _annotation_items(
     teacher_payload: dict[str, Any] | None,
 ) -> list[dict[str, Any]]:
     if teacher_payload is not None:
+        teacher_items = _teacher_annotation_items(teacher_payload)
+        if teacher_items:
+            return teacher_items
         return [
             {
                 "review_id": f"{target_file.removesuffix('.json')}_teacher_payload",
@@ -392,6 +395,24 @@ def _annotation_items(
     if target_file == "metrics.json":
         return [{"review_id": "metrics_smoke_summary", "status": "uncertain", "confidence": 0.2, "metrics": {}}]
     return [{"review_id": f"{target_file.removesuffix('.json')}_smoke", "status": "uncertain", "confidence": 0.2}]
+
+
+def _teacher_annotation_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    annotation = payload.get("annotation")
+    raw_items = annotation.get("items") if isinstance(annotation, dict) else payload.get("items")
+    if not isinstance(raw_items, list):
+        return []
+    items: list[dict[str, Any]] = []
+    for index, item in enumerate(raw_items):
+        if not isinstance(item, dict):
+            continue
+        normalized = dict(item)
+        normalized.setdefault("review_id", f"teacher_item_{index:04d}")
+        normalized.setdefault("status", "uncertain")
+        normalized.setdefault("source", "teacher_artifact")
+        normalized.setdefault("confidence", normalized.get("conf", 0.75))
+        items.append(normalized)
+    return items
 
 
 def _sample_frames(frames: Iterable[Any], *, max_count: int) -> Iterable[dict[str, Any]]:
