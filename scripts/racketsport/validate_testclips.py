@@ -20,7 +20,7 @@ def main() -> int:
 
     manifest = build_testclip_manifest(args.root)
     print(json.dumps(manifest.model_dump(mode="json"), indent=2, sort_keys=True))
-    return 0 if manifest.is_ready else 1
+    return 0 if manifest.dataset_ready else 1
 
 
 if __name__ == "__main__":
