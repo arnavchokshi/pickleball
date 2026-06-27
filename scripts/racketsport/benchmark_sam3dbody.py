@@ -31,7 +31,11 @@ def parse_profile_log(text: str) -> dict:
     if peak_vram_match is None:
         raise ValueError("profile log is missing Peak GPU memory summary")
 
-    detected = re.search(r"Detected\s+(?P<count>\d+)\s+(?:people|persons|humans)", text, flags=re.IGNORECASE)
+    detected = re.search(
+        r"detected\s+(?P<count>\d+)\s+(?:person(?:\(s\)|s)?|people|humans)",
+        text,
+        flags=re.IGNORECASE,
+    )
     output_dir = _line_value(text, "Results saved to") or _line_value(text, "Output")
     return {
         "schema_version": 1,

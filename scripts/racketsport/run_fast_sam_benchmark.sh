@@ -11,6 +11,11 @@ TIMEOUT_SECONDS="${FAST_SAM_TIMEOUT_SECONDS:-900}"
 WARMUP_RUNS="${FAST_SAM_WARMUP_RUNS:-1}"
 BENCHMARK_RUNS="${FAST_SAM_BENCHMARK_RUNS:-5}"
 
+case "$OUT_DIR" in
+  /*) ;;
+  *) OUT_DIR="$ROOT/$OUT_DIR" ;;
+esac
+
 CHECKPOINT_SRC="${FAST_SAM_CHECKPOINT:-/workspace/checkpoints/body4d/sam-3d-body-dinov3/model.ckpt}"
 MHR_SRC="${FAST_SAM_MHR_MODEL:-/workspace/checkpoints/body4d/sam-3d-body-dinov3/assets/mhr_model.pt}"
 CHECKPOINT_DIR="$FAST_SAM_ROOT/checkpoints/sam-3d-body-dinov3"

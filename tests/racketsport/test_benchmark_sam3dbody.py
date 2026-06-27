@@ -26,7 +26,7 @@ Model: facebook/sam-3d-body-dinov3
 Detector: yolo (yolo11n.pt)
 Hand Box Source: body_decoder
 Output: runs/phase0/fast_sam_real_smoke_profile
-Detected 4 persons
+[DEBUG] YOLO11 detected 4 person(s)
 
 Timing Statistics (n=3):
   Average: 342.35 ms

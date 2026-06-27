@@ -29,3 +29,11 @@ def test_fast_sam_wrapper_records_machine_readable_profile_metrics():
     assert "benchmark_sam3dbody.py" in script
     assert "--profile-log" in script
     assert "sam3dbody_benchmark.json" in script
+
+
+def test_fast_sam_wrapper_normalizes_relative_output_dir_before_cd():
+    script = Path("scripts/racketsport/run_fast_sam_benchmark.sh").read_text(encoding="utf-8")
+
+    assert 'case "$OUT_DIR" in' in script
+    assert 'OUT_DIR="$ROOT/$OUT_DIR"' in script
+    assert script.index('case "$OUT_DIR" in') < script.index('cd "$FAST_SAM_ROOT"')
