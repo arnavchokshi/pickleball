@@ -6,7 +6,7 @@ final class UploadManifestTests: XCTestCase {
     func testManifestValidationRejectsUnsafeRelativePaths() {
         let manifest = UploadManifest(
             clipRelativePath: "../clips/session.mov",
-            sidecar: Self.sidecar(ondevicePoseTrack: "pose/ondevice_pose.json", lidarDepthRefs: ["depth/frame_0001.bin"]),
+            sidecar: Self.sidecar(ondevicePoseTrack: "../sidecar_pose.json", lidarDepthRefs: ["depth/../sidecar.bin"]),
             onDevicePoseTrack: "https://example.com/pose.json",
             onDevicePersonTracks: "../tracks.json",
             onDevicePersonTiming: "https://example.com/timing.json",
@@ -18,9 +18,31 @@ final class UploadManifestTests: XCTestCase {
         XCTAssertFalse(report.isValid)
         XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "clipRelativePath", value: "../clips/session.mov")))
         XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "onDevicePoseTrack", value: "https://example.com/pose.json")))
+        XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "sidecar.ondevicePoseTrack", value: "../sidecar_pose.json")))
         XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "onDevicePersonTracks", value: "../tracks.json")))
         XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "onDevicePersonTiming", value: "https://example.com/timing.json")))
+        XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "sidecar.lidarDepthRefs[0]", value: "depth/../sidecar.bin")))
         XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "lidarDepthRefs[0]", value: "depth/../frame.bin")))
+    }
+
+    func testUploadPlanRejectsUnsafeSidecarPoseFallback() {
+        let manifest = UploadManifest(
+            clipRelativePath: "clips/session.mov",
+            sidecar: Self.sidecar(ondevicePoseTrack: "../pose.json", lidarDepthRefs: []),
+            onDevicePoseTrack: nil,
+            onDevicePersonTracks: nil,
+            onDevicePersonTiming: nil,
+            lidarDepthRefs: []
+        )
+
+        XCTAssertThrowsError(
+            try UploadPlan.sidecarFirstParts(for: manifest, sidecarRelativePath: "sidecars/session.json")
+        ) { error in
+            guard case UploadPlanningError.invalidManifest(let errors) = error else {
+                return XCTFail("expected invalid manifest, got \(error)")
+            }
+            XCTAssertTrue(errors.contains(.unsafeRelativePath(field: "sidecar.ondevicePoseTrack", value: "../pose.json")))
+        }
     }
 
     func testSidecarFirstOrderingUsesPoseAndDepthBeforeClip() throws {

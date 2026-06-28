@@ -1430,37 +1430,6 @@ def _corrections_template(packet: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _first_correction_artifact(packet: Mapping[str, Any]) -> str:
-    for run in packet.get("pipeline_runs", []):
-        if isinstance(run, Mapping):
-            root = Path(str(packet["run_root"]))
-            clip = str(run.get("clip") or "clip_001")
-            stage = str(run.get("requested_stage") or "tracking")
-            if stage in {"tracking", "body", "ball_events", "e2e"}:
-                return _correction_artifact_path(root / clip / "tracks.json")
-    return _correction_artifact_path(Path(str(packet["run_root"])) / "clip_001" / "tracks.json")
-
-
-def _correction_artifact_path(path: Path) -> str:
-    if "runs" in path.parts:
-        runs_index = path.parts.index("runs")
-        return Path(*path.parts[runs_index:]).as_posix()
-    try:
-        return path.relative_to(Path.cwd()).as_posix()
-    except ValueError:
-        return path.name
-
-
-def _first_clip(packet: Mapping[str, Any]) -> str:
-    for run in packet.get("pipeline_runs", []):
-        if isinstance(run, Mapping) and run.get("clip"):
-            return str(run["clip"])
-    for artifact in packet.get("review_artifacts", []):
-        if isinstance(artifact, Mapping) and artifact.get("clip"):
-            return str(artifact["clip"])
-    return "clip_001"
-
-
 def _read_json(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):

@@ -162,6 +162,10 @@ export default function App() {
 
   const stats = useMemo(() => worldStats(world), [world]);
   const activeLabels = useMemo(() => labelsForTime(labels, currentTime, world.fps), [labels, currentTime, world.fps]);
+  const playerBoxOverlay = useMemo(
+    () => manifest?.label_overlays.find((overlay) => overlay.kind === "player_boxes") ?? null,
+    [manifest],
+  );
   const activeContactPlayerIds = useMemo(
     () => activeBallContactPlayerIds(world, contactWindows, currentTime),
     [world, contactWindows, currentTime],
@@ -220,7 +224,7 @@ export default function App() {
             ) : (
               <div className="empty-video">Add ?manifest=/@fs/absolute/path/replay_viewer_manifest.json</div>
             )}
-            <svg className="box-overlay" viewBox={viewBox} preserveAspectRatio="none" aria-hidden="true">
+            <svg className="box-overlay" viewBox={viewBox} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
               {activeLabels.map((item, index) => {
                 const box = item.bbox_xyxy ?? xywhToXyxy(item.bbox);
                 if (!box) return null;
@@ -238,7 +242,7 @@ export default function App() {
             <span>{currentTime.toFixed(2)}s</span>
             <span>{activeLabels.length} boxes</span>
             <span>{contactReadout}</span>
-            <span>{manifest?.label_overlays[0]?.not_ground_truth ? "labels: review only" : "labels: trusted"}</span>
+            <span>{labelTrustText(playerBoxOverlay)}</span>
           </div>
         </div>
 
@@ -257,7 +261,7 @@ export default function App() {
           <div className="scene-legend">
             <span><i className="swatch floor" /> floor</span>
             <span><i className="swatch mesh" /> contact BODY</span>
-            <span><i className="swatch contact" /> joints</span>
+            <span><i className="swatch joints" /> joints</span>
             <span><i className="swatch ball" /> ball</span>
           </div>
         </div>
@@ -322,8 +326,8 @@ function CourtLines({ world }: { world: VirtualWorld }) {
   const netPoints = world.court.net.endpoints;
   return (
     <>
-      <LineSegments points={courtPoints} color="#e9f4e8" lineWidth={2} />
-      <LineSegments points={netPoints} color="#ffcf5a" lineWidth={2} />
+      <LineSegments points={courtPoints} color="#e9f4e8" />
+      <LineSegments points={netPoints} color="#ffcf5a" />
     </>
   );
 }
@@ -423,13 +427,19 @@ function SkeletonGraph({ skeleton, active }: { skeleton: { joints: Vec3[]; bones
   );
 }
 
-function LineSegments({ points, color }: { points: Vec3[]; color: string; lineWidth?: number }) {
+function LineSegments({ points, color }: { points: Vec3[]; color: string }) {
   const geometry = useMemo(() => geometryFromPoints(points), [points]);
   return (
     <lineSegments geometry={geometry}>
       <lineBasicMaterial color={color} />
     </lineSegments>
   );
+}
+
+function labelTrustText(overlay: ViewerManifest["label_overlays"][number] | null): string {
+  if (!overlay) return "labels: none";
+  if (overlay.not_ground_truth) return "labels: review only";
+  return overlay.trusted_for_metrics ? "labels: trusted" : "labels: not trusted";
 }
 
 function LineStrip({ points, color }: { points: Vec3[]; color: string }) {

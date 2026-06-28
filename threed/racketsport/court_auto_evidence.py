@@ -7,7 +7,7 @@ import math
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
-from .court_calibration import project_planar_points
+from .court_calibration import calibration_image_size, project_planar_points
 from .court_line_evidence import (
     Segment2,
     aggregate_court_line_evidence,
@@ -168,9 +168,9 @@ def write_auto_court_line_evidence(
 def calibration_for_image_size(calibration: CourtCalibration, *, width: int, height: int) -> CourtCalibration:
     """Scale calibration image coordinates when applying a calibration to a different frame resolution."""
 
-    base_width = float(calibration.intrinsics.cx) * 2.0
-    base_height = float(calibration.intrinsics.cy) * 2.0
-    if base_width <= 0.0 or base_height <= 0.0:
+    try:
+        base_width, base_height = calibration_image_size(calibration, fallback_target=(float(width), float(height)))
+    except ValueError:
         return calibration
     scale_x = float(width) / base_width
     scale_y = float(height) / base_height

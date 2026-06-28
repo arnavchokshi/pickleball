@@ -37,6 +37,28 @@ def _write_no_click_ball_source(inputs_dir: Path) -> Path:
     return source
 
 
+def _physics_refinement_payload() -> dict:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_physics_refinement",
+        "physics": "cpu_fallback_scaffold",
+        "foot2_done": False,
+        "must_not_mark_done_verified": True,
+        "constraint_summary": {
+            "contact_frames": 1,
+            "max_contact_slide_m": 0.0,
+            "max_floor_penetration_m": 0.0,
+            "inter_player_penetration_frames": 0,
+            "max_inter_player_penetration_m": 0.0,
+        },
+        "execution_plan": {
+            "mode": "cpu_fallback",
+            "will_run_mjx": False,
+            "reason": "test fixture",
+        },
+    }
+
+
 def _write_dependency_artifacts(run_dir: Path) -> None:
     _write_json(
         run_dir / "court_calibration.json",
@@ -153,6 +175,7 @@ def _write_dependency_artifacts(run_dir: Path) -> None:
             "players": [{"id": 7, "frames": [{"t": 0.0, "joints_world": [[0.0, 0.0, 0.0]], "joint_conf": [0.9]}]}],
         },
     )
+    _write_json(run_dir / "physics_refinement.json", _physics_refinement_payload())
 
 
 class NoopDependencyRunner:
@@ -182,7 +205,7 @@ def _noop_dependency_runners() -> dict[str, NoopDependencyRunner]:
         ),
         "tracking": NoopDependencyRunner("tracking", ("tracks.json",)),
         "body": NoopDependencyRunner("body", ("smpl_motion.json", "skeleton3d.json")),
-        "physics": NoopDependencyRunner("physics", ("smpl_motion.json",)),
+        "physics": NoopDependencyRunner("physics", ("smpl_motion.json", "physics_refinement.json")),
     }
 
 

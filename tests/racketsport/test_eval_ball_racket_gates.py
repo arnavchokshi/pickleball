@@ -23,7 +23,15 @@ def _write_ready_clip(labels_root: Path, name: str) -> None:
     labels_dir = labels_root / name / "labels"
     labels_dir.mkdir(parents=True)
     for label in REQUIRED_LABEL_FILES:
-        (labels_dir / label).write_text("{}", encoding="utf-8")
+        payload = {}
+        if label == "racket_pose.json":
+            payload = {
+                "schema_version": 1,
+                "status": "human_reviewed",
+                "not_ground_truth": False,
+                "annotation": {"target_file": "racket_pose.json", "items": []},
+            }
+        (labels_dir / label).write_text(json.dumps(payload), encoding="utf-8")
 
 
 def _write_incomplete_clip(labels_root: Path, name: str) -> None:

@@ -28,6 +28,7 @@ def build_corrections_queue(manifests: list[str | Path]) -> dict[str, Any]:
     source_summaries: list[dict[str, Any]] = []
     queue: list[dict[str, Any]] = []
     seen_keys: set[tuple[str, str]] = set()
+    active_targets: dict[tuple[Any, ...], dict[str, Any]] = {}
 
     for manifest_path in manifest_paths:
         summary = validate_manifest(manifest_path)
@@ -42,7 +43,20 @@ def build_corrections_queue(manifests: list[str | Path]) -> dict[str, Any]:
                 raise ValueError(f"duplicate queued correction id: {manifest_id}/{correction_id}")
             seen_keys.add(key)
 
-            queue.append(enriched_queue_item(manifest_id, correction, payload["created_at"]))
+            queue_item = enriched_queue_item(manifest_id, correction, payload["created_at"])
+            if queue_item["status"] != "rejected":
+                target_key = _correction_target_key(queue_item)
+                if target_key in active_targets:
+                    previous = active_targets[target_key]
+                    raise ValueError(
+                        "duplicate active correction target: "
+                        f"{queue_item['artifact']} {queue_item['path']} "
+                        f"already queued by {previous['manifest_id']}/{previous['correction_id']}; "
+                        f"conflicts with {queue_item['manifest_id']}/{queue_item['correction_id']}"
+                    )
+                active_targets[target_key] = queue_item
+
+            queue.append(queue_item)
 
     return {
         "schema_version": 1,
@@ -78,6 +92,18 @@ def _load_json(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"{path} must contain a JSON object")
     return payload
+
+
+def _correction_target_key(item: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        item.get("artifact"),
+        item.get("path"),
+        item.get("clip_id"),
+        item.get("phase"),
+        item.get("metric"),
+        item.get("frame_index"),
+        item.get("t_s"),
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

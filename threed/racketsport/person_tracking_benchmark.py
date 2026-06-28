@@ -11,6 +11,7 @@ from typing import Any, Sequence
 from scripts.racketsport.track import build_tracks
 
 from .body_compute import build_body_compute_execution, write_body_compute_execution
+from .court_calibration import calibration_image_size
 from .detection_scaling import scale_detection_payload_bboxes
 from .frame_rating import build_frame_compute_plan_from_files, write_frame_compute_plan
 from .person_tracking_promotion_audit import build_person_tracking_promotion_audit
@@ -82,7 +83,7 @@ def run_person_tracking_candidate(
     calibration = _load_calibration(calibration_path)
     fps = _video_fps(video_path)
     video_width, video_height = _video_size(video_path)
-    target_width, target_height = _calibration_resolution(calibration)
+    target_width, target_height = _calibration_resolution_for_video(calibration, video_width=video_width, video_height=video_height)
     scale_x = target_width / video_width
     scale_y = target_height / video_height
 
@@ -431,12 +432,27 @@ def _video_size(path: str | Path) -> tuple[float, float]:
     return width, height
 
 
-def _calibration_resolution(calibration: CourtCalibration) -> tuple[float, float]:
-    width = float(calibration.intrinsics.cx) * 2.0
-    height = float(calibration.intrinsics.cy) * 2.0
+def _calibration_resolution(
+    calibration: CourtCalibration,
+    *,
+    fallback_target: tuple[float, float] | None = None,
+) -> tuple[float, float]:
+    width, height = calibration_image_size(calibration, fallback_target=fallback_target)
     if width <= 0 or height <= 0:
         raise ValueError("calibration intrinsics must expose positive cx/cy to infer image size")
     return width, height
+
+
+def _calibration_resolution_for_video(
+    calibration: CourtCalibration,
+    *,
+    video_width: float,
+    video_height: float,
+) -> tuple[float, float]:
+    try:
+        return _calibration_resolution(calibration, fallback_target=(video_width, video_height))
+    except TypeError:
+        return _calibration_resolution(calibration)
 
 
 def _aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:

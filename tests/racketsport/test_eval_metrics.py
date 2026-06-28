@@ -201,6 +201,30 @@ def _write_physics_artifact(run_dir: Path) -> None:
         ],
     }
     (run_dir / "smpl_motion.json").write_text(json.dumps(smpl_motion), encoding="utf-8")
+    (run_dir / "physics_refinement.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_physics_refinement",
+                "physics": "cpu_fallback_scaffold",
+                "foot2_done": False,
+                "must_not_mark_done_verified": True,
+                "constraint_summary": {
+                    "contact_frames": 1,
+                    "max_contact_slide_m": 0.0,
+                    "max_floor_penetration_m": 0.0,
+                    "inter_player_penetration_frames": 0,
+                    "max_inter_player_penetration_m": 0.0,
+                },
+                "execution_plan": {
+                    "mode": "cpu_fallback",
+                    "will_run_mjx": False,
+                    "reason": "test fixture",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 def _write_ball_event_artifacts(run_dir: Path) -> None:
@@ -415,6 +439,7 @@ def _replay_virtual_world_payload() -> dict:
 def _write_e2e_artifacts(run_dir: Path) -> None:
     _write_calibration_artifacts(run_dir)
     _write_tracks_artifact(run_dir, players=2)
+    _write_body_artifacts(run_dir)
     _write_physics_artifact(run_dir)
     _write_ball_event_artifacts(run_dir)
     _write_racket_pose_artifact(run_dir, contacts=1)
@@ -1226,8 +1251,8 @@ def test_e2e_eval_passes_when_ready_clip_has_all_major_artifacts(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert json.loads(completed.stdout)["status"] == "pass"
     assert payload["phase"] == "phase11"
-    assert payload["clips"][0]["metrics"]["required_artifacts_present"]["value"] == 14
-    assert payload["clips"][0]["metrics"]["required_artifacts_total"]["value"] == 14
+    assert payload["clips"][0]["metrics"]["required_artifacts_present"]["value"] == 16
+    assert payload["clips"][0]["metrics"]["required_artifacts_total"]["value"] == 16
     assert payload["clips"][0]["metrics"]["referenced_glb_files_present"]["value"] == 2
     assert payload["clips"][0]["metrics"]["referenced_glb_files_valid"]["value"] == 2
     validate_artifact_file("phase_eval_metrics", root / "metrics.json")

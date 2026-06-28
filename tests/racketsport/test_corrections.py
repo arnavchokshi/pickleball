@@ -279,6 +279,27 @@ def test_build_corrections_queue_rejects_duplicate_manifest_correction_ids(tmp_p
     assert "duplicate queued correction id: eval3_manual_seed/corr_001" in str(excinfo.value)
 
 
+def test_build_corrections_queue_rejects_duplicate_active_targets(tmp_path):
+    first = _valid_manifest()
+    second = _valid_manifest()
+    second["manifest_id"] = "eval3_manual_followup"
+    second["corrections"][0]["id"] = "corr_002"
+    second["corrections"][0]["value"] = 0.42
+
+    with pytest.raises(ValueError) as excinfo:
+        build_corrections_queue(
+            [
+                _write_manifest(tmp_path / "first.json", first),
+                _write_manifest(tmp_path / "second.json", second),
+            ]
+        )
+
+    message = str(excinfo.value)
+    assert "duplicate active correction target" in message
+    assert "eval3_manual_seed/corr_001" in message
+    assert "eval3_manual_followup/corr_002" in message
+
+
 def test_build_corrections_queue_cli_discovers_root_and_writes_queue(tmp_path):
     root = tmp_path / "manifests"
     out = tmp_path / "queue" / "corrections_queue.json"

@@ -48,6 +48,7 @@ def _metric_payload(*, players: list[dict] | None = None) -> dict:
                         "t": 0.25,
                         "type": "dink",
                         "type_conf": 0.82,
+                        "top2": [{"type": "dink", "confidence": 0.82}, {"type": "reset_block", "confidence": 0.11}],
                         "metrics": {
                             "nvz_margin_ft": {"value": -0.5, "conf": 0.86, "frames": 5},
                             "paddle_face_deg": {"value": 4.0, "conf": 0.82, "gated": False},

@@ -70,6 +70,9 @@ public enum UploadManifestValidator {
         if let poseTrack = manifest.onDevicePoseTrack {
             appendPathIssue(field: "onDevicePoseTrack", path: poseTrack, to: &errors)
         }
+        if let sidecarPoseTrack = manifest.sidecar.ondevicePoseTrack {
+            appendPathIssue(field: "sidecar.ondevicePoseTrack", path: sidecarPoseTrack, to: &errors)
+        }
         if let personTracks = manifest.onDevicePersonTracks {
             appendPathIssue(field: "onDevicePersonTracks", path: personTracks, to: &errors)
         }
@@ -77,6 +80,9 @@ public enum UploadManifestValidator {
             appendPathIssue(field: "onDevicePersonTiming", path: personTiming, to: &errors)
         }
 
+        for (index, depthRef) in manifest.sidecar.lidarDepthRefs.enumerated() {
+            appendPathIssue(field: "sidecar.lidarDepthRefs[\(index)]", path: depthRef, to: &errors)
+        }
         for (index, depthRef) in manifest.lidarDepthRefs.enumerated() {
             appendPathIssue(field: "lidarDepthRefs[\(index)]", path: depthRef, to: &errors)
         }

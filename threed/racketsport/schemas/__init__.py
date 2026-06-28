@@ -113,6 +113,7 @@ class CourtCalibration(StrictArtifact):
     sport: Literal["pickleball", "tennis"]
     homography: Matrix3
     intrinsics: CameraIntrinsics
+    image_size: tuple[int, int] | None = None
     extrinsics: CourtExtrinsics
     reprojection_error_px: ReprojectionError
     capture_quality: CaptureQuality
@@ -838,12 +839,20 @@ class MetricValue(BaseModel):
     gated: bool | None = None
 
 
+class ShotAlternative(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: str
+    confidence: float
+
+
 class ShotMetrics(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     t: float
     type: str
     type_conf: float
+    top2: list[ShotAlternative] = Field(default_factory=list)
     metrics: dict[str, MetricValue]
 
 
@@ -1043,6 +1052,17 @@ class VirtualWorld(StrictArtifact):
     summary: VirtualWorldSummary
 
 
+class PhysicsRefinement(StrictArtifact):
+    model_config = ConfigDict(extra="allow")
+
+    artifact_type: Literal["racketsport_physics_refinement"]
+    physics: str
+    foot2_done: bool
+    must_not_mark_done_verified: bool
+    constraint_summary: dict[str, Any]
+    execution_plan: dict[str, Any]
+
+
 class DrillRep(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1134,6 +1154,7 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "coach_report": HabitReport,
     "replay_scene": ReplayScene,
     "virtual_world": VirtualWorld,
+    "physics_refinement": PhysicsRefinement,
     "drill_report": DrillReport,
     "phase_eval_metrics": PhaseEvalMetrics,
 }

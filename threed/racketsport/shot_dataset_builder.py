@@ -51,6 +51,7 @@ def build_shot_dataset(
             "clip_id": clip_id,
             "truth": truth,
             "contact": contact,
+            "features": _scaffold_features(truth=truth, contact=contact, dt_s=dt_s),
             "window": {
                 "center_t": _round_time(truth["t"]),
                 "start_t": _round_time(max(0.0, truth["t"] - half_window_s)),
@@ -97,8 +98,8 @@ def _truth_events(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
         raise ValueError("prediction output cannot be used as DATA-5 truth")
     if payload.get("not_ground_truth") is True:
         raise ValueError("truth events marked not_ground_truth cannot build DATA-5")
-    if payload.get("status") not in ("human_reviewed", "accepted", None):
-        raise ValueError("truth events must be human reviewed or accepted")
+    if payload.get("status") not in ("human_reviewed", "accepted", "reviewed"):
+        raise ValueError("truth events must have explicit human_reviewed or accepted status")
 
     annotation = payload.get("annotation")
     if not isinstance(annotation, Mapping):
@@ -111,7 +112,7 @@ def _truth_events(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
     for index, item in enumerate(items):
         if not isinstance(item, Mapping):
             raise ValueError(f"truth events/{index} must be an object")
-        if item.get("status", "accepted") != "accepted":
+        if item.get("status") != "accepted":
             continue
         shot_label = str(item.get("shot_label", ""))
         if shot_label not in ALLOWED_SHOT_LABELS:
@@ -133,6 +134,23 @@ def _truth_events(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
     if not truth_events:
         raise ValueError("no accepted DATA-5 truth events found")
     return truth_events
+
+
+def _scaffold_features(*, truth: Mapping[str, Any], contact: Mapping[str, Any], dt_s: float) -> dict[str, float]:
+    confidence = contact.get("confidence")
+    frame_index = truth.get("frame_index")
+    player_id = truth.get("player_id")
+    try:
+        player_value = float(player_id)
+    except (TypeError, ValueError):
+        player_value = 0.0
+    return {
+        "contact_confidence": float(confidence) if isinstance(confidence, (int, float)) and not isinstance(confidence, bool) else 0.0,
+        "contact_dt_s": round(float(dt_s), 6),
+        "contact_time_s": round(float(truth["t"]), 6),
+        "frame_index": float(frame_index) if isinstance(frame_index, int) else 0.0,
+        "player_id": player_value,
+    }
 
 
 def _contact_events(payload: Mapping[str, Any]) -> list[dict[str, Any]]:

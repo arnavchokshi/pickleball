@@ -286,11 +286,6 @@ def _render_from_frame_pack(
     return count
 
 
-def _frame_paths_from_labels(labels_dir: Path) -> list[Path]:
-    frame_paths, _metadata = _frame_pack_from_labels(labels_dir)
-    return frame_paths
-
-
 def _frame_pack_from_labels(labels_dir: Path) -> tuple[list[Path], dict[str, Any]]:
     entries, metadata = _frame_pack_entries_from_labels(labels_dir)
     return [entry.path for entry in entries], metadata

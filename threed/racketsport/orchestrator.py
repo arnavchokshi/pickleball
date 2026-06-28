@@ -14,7 +14,7 @@ from scripts.racketsport.track import build_tracks
 from .ball_stage_runner import BallStageRunner
 from .body_compute import build_body_compute_execution, body_frame_batches_from_execution, write_body_compute_execution
 from .court_auto_evidence import build_auto_court_line_evidence_from_frame, build_auto_court_line_evidence_from_video
-from .court_calibration import calibration_from_manual_taps
+from .court_calibration import calibration_from_manual_taps, calibration_image_size
 from .court_line_evidence import aggregate_court_line_evidence
 from .court_templates import Sport
 from .court_zones import build_court_zones
@@ -60,6 +60,7 @@ ARTIFACT_SCHEMA_BY_FILENAME: dict[str, str] = {
     "racket_sport_metrics.json": "racket_sport_metrics",
     "habit_report.json": "habit_report",
     "coach_report.json": "coach_report",
+    "physics_refinement.json": "physics_refinement",
     "drill_report.json": "drill_report",
     "replay_scene.json": "replay_scene",
 }
@@ -852,11 +853,6 @@ def _calibration_frame_path(context: StageContext) -> Path | None:
 
 
 def _detection_bbox_scale(calibration: CourtCalibration, video_path: Path) -> tuple[float, float, dict[str, Any]]:
-    target_width = float(calibration.intrinsics.cx) * 2.0
-    target_height = float(calibration.intrinsics.cy) * 2.0
-    if target_width <= 0 or target_height <= 0:
-        return 1.0, 1.0, {"bbox_scale_x": 1.0, "bbox_scale_y": 1.0, "bbox_scale_status": "missing_calibration_resolution"}
-
     try:
         import cv2  # type: ignore[import-not-found]
     except ImportError:
@@ -870,6 +866,10 @@ def _detection_bbox_scale(calibration: CourtCalibration, video_path: Path) -> tu
         cap.release()
     if source_width <= 0 or source_height <= 0:
         return 1.0, 1.0, {"bbox_scale_x": 1.0, "bbox_scale_y": 1.0, "bbox_scale_status": "video_size_unavailable"}
+    try:
+        target_width, target_height = calibration_image_size(calibration, fallback_target=(source_width, source_height))
+    except ValueError:
+        return 1.0, 1.0, {"bbox_scale_x": 1.0, "bbox_scale_y": 1.0, "bbox_scale_status": "missing_calibration_resolution"}
 
     scale_x = target_width / source_width
     scale_y = target_height / source_height
@@ -955,18 +955,6 @@ def _box_xyxy(box: Any) -> list[float]:
     return [float(item) for item in first]
 
 
-def _body_frame_batches(tracks: Tracks, *, max_frames: int | None) -> list[tuple[int, list[tuple[int, Any]]]]:
-    by_frame: dict[int, list[tuple[int, Any]]] = {}
-    for player in tracks.players:
-        for frame in player.frames:
-            frame_idx = int(round(frame.t * tracks.fps))
-            by_frame.setdefault(frame_idx, []).append((player.id, frame))
-    batches = [(frame_idx, by_frame[frame_idx]) for frame_idx in sorted(by_frame)]
-    if max_frames is not None:
-        return batches[:max_frames]
-    return batches
-
-
 def _find_body_frame_image(context: StageContext, frame_idx: int) -> Path:
     names = [f"frame_{frame_idx:06d}{suffix}" for suffix in BODY_FRAME_SUFFIXES]
     roots: list[Path] = []
@@ -1009,8 +997,9 @@ def _body_frame_priority(path: Path) -> tuple[int, str]:
 
 
 def _image_size_from_calibration_and_bboxes(calibration: CourtCalibration, bboxes: list[list[float]]) -> tuple[int, int]:
-    max_x = max([calibration.intrinsics.cx * 2.0, *[bbox[2] + 1.0 for bbox in bboxes]])
-    max_y = max([calibration.intrinsics.cy * 2.0, *[bbox[3] + 1.0 for bbox in bboxes]])
+    calibration_width, calibration_height = calibration_image_size(calibration)
+    max_x = max([calibration_width, *[bbox[2] + 1.0 for bbox in bboxes]])
+    max_y = max([calibration_height, *[bbox[3] + 1.0 for bbox in bboxes]])
     return (max(1, int(round(max_x))), max(1, int(round(max_y))))
 
 

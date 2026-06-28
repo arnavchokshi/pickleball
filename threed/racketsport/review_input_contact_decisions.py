@@ -37,7 +37,6 @@ def apply_review_input_contacts_to_review(
     payload = review_artifact.model_dump(mode="json")
     decisions = payload["decisions"]
     decisions_by_id = {str(decision["review_id"]): decision for decision in decisions}
-    candidate_by_id = {candidate.review_id: candidate for candidate in candidate_artifact.candidates}
     used_review_ids: set[str] = set()
     player_ids = _player_map(player_map)
 

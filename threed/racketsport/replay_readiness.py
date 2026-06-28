@@ -391,7 +391,7 @@ def _clip_svg(world: Mapping[str, Any] | None) -> str:
     def ty(y: float) -> float:
         return 12 + ((length / 2.0 - y) / max(length, 0.01)) * 186
 
-    lines: list[str] = [f"<rect x='18' y='12' width='234' height='186' fill='#24392e' stroke='#ded7bd' stroke-width='1.5'/>"]
+    lines: list[str] = ["<rect x='18' y='12' width='234' height='186' fill='#24392e' stroke='#ded7bd' stroke-width='1.5'/>"]
     segments = court.get("line_segments", {})
     if isinstance(segments, Mapping):
         for segment in segments.values():

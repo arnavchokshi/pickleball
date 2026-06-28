@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
+from .schemas import validate_artifact_file
+
 
 SCHEMA_VERSION = 1
 ARTIFACT_TYPE = "racketsport_pipeline_artifact_readiness"
@@ -46,7 +48,7 @@ PIPELINE_STAGE_CONTRACTS: tuple[PipelineStageContract, ...] = (
     PipelineStageContract(
         stage="physics",
         phase="phase4",
-        required_artifacts=("smpl_motion.json",),
+        required_artifacts=("smpl_motion.json", "physics_refinement.json"),
         depends_on=("body",),
     ),
     PipelineStageContract(
@@ -95,6 +97,8 @@ PIPELINE_STAGE_CONTRACTS: tuple[PipelineStageContract, ...] = (
             "court_line_evidence.json",
             "tracks.json",
             "smpl_motion.json",
+            "skeleton3d.json",
+            "physics_refinement.json",
             "ball_track.json",
             "contact_windows.json",
             "racket_pose.json",
@@ -110,6 +114,24 @@ PIPELINE_STAGE_CONTRACTS: tuple[PipelineStageContract, ...] = (
 
 PIPELINE_STAGE_ORDER = [contract.stage for contract in PIPELINE_STAGE_CONTRACTS]
 _CONTRACTS_BY_STAGE = {contract.stage: contract for contract in PIPELINE_STAGE_CONTRACTS}
+_ARTIFACT_SCHEMA_BY_FILENAME = {
+    "court_calibration.json": "court_calibration",
+    "court_zones.json": "court_zones",
+    "net_plane.json": "net_plane",
+    "court_line_evidence.json": "court_line_evidence",
+    "tracks.json": "tracks",
+    "smpl_motion.json": "smpl_motion",
+    "skeleton3d.json": "skeleton3d",
+    "physics_refinement.json": "physics_refinement",
+    "ball_track.json": "ball_track",
+    "contact_windows.json": "contact_windows",
+    "racket_pose.json": "racket_pose",
+    "racket_sport_metrics.json": "racket_sport_metrics",
+    "habit_report.json": "habit_report",
+    "coach_report.json": "coach_report",
+    "drill_report.json": "drill_report",
+    "replay_scene.json": "replay_scene",
+}
 
 
 def safe_relative_path(value: str | Path) -> Path:
@@ -136,10 +158,11 @@ def build_readiness_report(run_dir: str | Path, *, stage: str = "e2e") -> dict[s
     for contract in contracts:
         present = [artifact for artifact in contract.required_artifacts if (run_path / safe_relative_path(artifact)).is_file()]
         missing = [artifact for artifact in contract.required_artifacts if artifact not in present]
+        artifact_validation_errors = _artifact_validation_errors(run_path, present)
         blocked_by = [dependency for dependency in contract.depends_on if dependency not in ready_stages]
         semantic_blockers = _semantic_blockers_for_stage(contract.stage, run_path)
 
-        if missing:
+        if missing or artifact_validation_errors:
             status: StageStatus = "not_ready"
         elif blocked_by or semantic_blockers:
             status = "blocked"
@@ -157,12 +180,14 @@ def build_readiness_report(run_dir: str | Path, *, stage: str = "e2e") -> dict[s
                 "required_artifacts": list(contract.required_artifacts),
                 "present_artifacts": present,
                 "missing_artifacts": missing,
+                "artifact_validation_errors": artifact_validation_errors,
                 "semantic_blockers": semantic_blockers,
             }
         )
 
     required_artifacts = _dedupe_artifacts(stage_reports, "required_artifacts")
     missing_artifacts = _dedupe_artifacts(stage_reports, "missing_artifacts")
+    artifact_validation_errors = _dedupe_artifacts(stage_reports, "artifact_validation_errors")
     semantic_blockers = _dedupe_semantic_blockers(stage_reports)
     status: ReadinessStatus = "ready" if all(item["status"] == "ready" for item in stage_reports) else "not_ready"
     return {
@@ -174,6 +199,7 @@ def build_readiness_report(run_dir: str | Path, *, stage: str = "e2e") -> dict[s
         "stage_order": PIPELINE_STAGE_ORDER,
         "required_artifacts": required_artifacts,
         "missing_artifacts": missing_artifacts,
+        "artifact_validation_errors": artifact_validation_errors,
         "semantic_blockers": semantic_blockers,
         "stages": stage_reports,
     }
@@ -231,6 +257,19 @@ def _dedupe_semantic_blockers(stage_reports: list[dict[str, Any]]) -> list[str]:
             seen.add(key)
             blockers.append(key)
     return blockers
+
+
+def _artifact_validation_errors(run_path: Path, artifacts: list[str]) -> list[str]:
+    errors: list[str] = []
+    for artifact in artifacts:
+        schema = _ARTIFACT_SCHEMA_BY_FILENAME.get(artifact)
+        if schema is None:
+            continue
+        try:
+            validate_artifact_file(schema, run_path / artifact)
+        except Exception as exc:
+            errors.append(f"{artifact}: {exc}")
+    return errors
 
 
 def _semantic_blockers_for_stage(stage: str, run_path: Path) -> list[str]:

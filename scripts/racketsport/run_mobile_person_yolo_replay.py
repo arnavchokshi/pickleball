@@ -25,6 +25,14 @@ def main() -> int:
     parser.add_argument("--iou", type=float, default=0.6)
     parser.add_argument("--device", default=None)
     parser.add_argument("--max-players", type=int, choices=(2, 4), default=4)
+    parser.add_argument("--tracker", default="predict_iou")
+    parser.add_argument("--tracker-config", default=None)
+    parser.add_argument("--link-iou-threshold", type=float, default=None)
+    parser.add_argument("--max-age-frames", type=int, default=None)
+    parser.add_argument("--prune-mode", choices=("confidence", "court"), default="confidence")
+    parser.add_argument("--court-calibration", type=Path, default=None)
+    parser.add_argument("--court-margin-m", type=float, default=1.25)
+    parser.add_argument("--bbox-expand", type=float, default=1.0)
     parser.add_argument("--max-frames", type=int, default=None)
     parser.add_argument("--no-overlay", action="store_true")
     args = parser.parse_args()
@@ -41,6 +49,14 @@ def main() -> int:
                 iou=args.iou,
                 device=args.device,
                 max_players=args.max_players,
+                tracker=args.tracker,
+                tracker_config=args.tracker_config,
+                link_iou_threshold=args.link_iou_threshold,
+                max_age_frames=args.max_age_frames,
+                prune_mode=args.prune_mode,
+                court_calibration=str(args.court_calibration) if args.court_calibration is not None else None,
+                court_margin_m=args.court_margin_m,
+                bbox_expand=args.bbox_expand,
             ),
             out_dir=args.out_dir,
             max_frames=args.max_frames,

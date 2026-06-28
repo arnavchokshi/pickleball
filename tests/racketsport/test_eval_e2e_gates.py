@@ -149,6 +149,51 @@ def _write_smpl_motion_artifact(run_dir: Path) -> None:
         encoding="utf-8",
     )
 
+    (run_dir / "skeleton3d.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "joint_names": ["pelvis"],
+                "preview_only": True,
+                "players": [
+                    {
+                        "id": 1,
+                        "frames": [{"t": 0.0, "joints_world": [[0.0, 0.0, 0.0]], "joint_conf": [0.9]}],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_physics_refinement_artifact(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "physics_refinement.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_physics_refinement",
+                "physics": "cpu_fallback_scaffold",
+                "foot2_done": False,
+                "must_not_mark_done_verified": True,
+                "constraint_summary": {
+                    "contact_frames": 1,
+                    "max_contact_slide_m": 0.0,
+                    "max_floor_penetration_m": 0.0,
+                    "inter_player_penetration_frames": 0,
+                    "max_inter_player_penetration_m": 0.0,
+                },
+                "execution_plan": {
+                    "mode": "cpu_fallback",
+                    "will_run_mjx": False,
+                    "reason": "test fixture",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
 
 def _write_ball_event_artifacts(run_dir: Path) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -335,6 +380,7 @@ def _write_e2e_artifacts(run_dir: Path) -> None:
     _write_calibration_artifacts(run_dir)
     _write_tracks_artifact(run_dir)
     _write_smpl_motion_artifact(run_dir)
+    _write_physics_refinement_artifact(run_dir)
     _write_ball_event_artifacts(run_dir)
     _write_racket_pose_artifact(run_dir)
     _write_report_artifacts(run_dir)
@@ -352,7 +398,7 @@ def test_e2e_eval_passes_when_all_artifacts_and_glbs_exist(tmp_path: Path) -> No
     assert payload.status == "pass"
     assert payload.clips[0].status == "pass"
     metrics = payload.clips[0].metrics
-    assert metrics["required_artifacts_present"].value == 14
+    assert metrics["required_artifacts_present"].value == 16
     assert metrics["required_artifacts_present"].passed is True
     assert metrics["referenced_glb_files_present"].value == 2
     assert metrics["referenced_glb_files_present"].passed is True
@@ -417,8 +463,8 @@ def test_e2e_eval_emits_named_numeric_gate_metadata(tmp_path: Path) -> None:
     payload = e2e_eval.evaluate(root, labels_root)
     metrics = payload.clips[0].metrics
 
-    assert metrics["required_artifacts_present"].gate == "artifact_check.e2e_required_artifacts_present: == 14"
-    assert metrics["required_artifacts_total"].gate == "artifact_check.e2e_required_artifacts_total: == 14"
+    assert metrics["required_artifacts_present"].gate == "artifact_check.e2e_required_artifacts_present: == 16"
+    assert metrics["required_artifacts_total"].gate == "artifact_check.e2e_required_artifacts_total: == 16"
     assert metrics["referenced_glb_files_present"].gate == "artifact_check.e2e_referenced_glb_files_present: == 2"
     assert metrics["referenced_glb_files_valid"].gate == "artifact_check.e2e_referenced_glb_files_valid: == 2"
     assert all(metric.status == "measured" for metric in metrics.values())

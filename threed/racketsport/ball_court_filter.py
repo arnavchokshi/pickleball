@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .ball_overlay import load_ball_track
-from .court_calibration import project_planar_points
+from .court_calibration import calibration_image_size, project_planar_points
 from .court_templates import get_court_template
 from .schemas import BallTrack, CourtCalibration
 
@@ -142,8 +142,7 @@ def write_filtered_ball_track(
 
 
 def _calibration_image_size(calibration: CourtCalibration) -> tuple[float, float]:
-    width = float(calibration.intrinsics.cx) * 2.0
-    height = float(calibration.intrinsics.cy) * 2.0
+    width, height = calibration_image_size(calibration)
     if not math.isfinite(width) or not math.isfinite(height) or width <= 0.0 or height <= 0.0:
         raise ValueError("cannot infer calibration image size from intrinsics")
     return width, height

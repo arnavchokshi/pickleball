@@ -50,6 +50,11 @@ def test_scaffold_tool_index_reports_scripts_and_coverage_gaps(tmp_path: Path) -
 
     assert payload["schema_version"] == 1
     assert payload["artifact_type"] == "racketsport_scaffold_tool_index"
+    assert payload["scope"] == {
+        "indexed_globs": ["scripts/racketsport/*.py"],
+        "excluded_globs": ["scripts/*.sh", "scripts/racketsport/*.sh", "scripts/*.py"],
+        "repo_wide_hygiene_report": False,
+    }
     assert payload["execution"] == {
         "cpu_only": True,
         "runs_scaffold_commands": False,

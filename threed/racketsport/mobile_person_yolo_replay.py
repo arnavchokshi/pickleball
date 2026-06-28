@@ -8,8 +8,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .court_calibration import project_image_points_to_world
+from .court_templates import get_court_template
 from .mobile_person_eval import score_mobile_person_tracks, write_mobile_person_metrics
-from .schemas import OnDevicePersonTracks, PersonGroundTruth, validate_artifact_file
+from .schemas import CourtCalibration, OnDevicePersonTracks, PersonGroundTruth, validate_artifact_file
 
 
 @dataclass(frozen=True)
@@ -21,6 +23,14 @@ class ReplayYoloCandidate:
     iou: float
     device: str | None = None
     max_players: int = 4
+    tracker: str = "predict_iou"
+    tracker_config: str | None = None
+    link_iou_threshold: float | None = None
+    max_age_frames: int | None = None
+    prune_mode: str = "confidence"
+    court_calibration: str | None = None
+    court_margin_m: float = 1.25
+    bbox_expand: float = 1.0
 
 
 def run_replay_yolo_candidate(
@@ -54,41 +64,88 @@ def run_replay_yolo_candidate(
     model = YOLO(candidate.model)
     model_load_ms = (time.perf_counter() - model_load_start) * 1000.0
 
-    linker = _IoUPersonLinker(max_tracks=candidate.max_players)
     frames: list[dict[str, Any]] = []
     samples: list[dict[str, Any]] = []
     started = time.perf_counter()
-    iterator = model.predict(
-        source=str(video),
-        stream=True,
-        classes=[0],
-        conf=candidate.conf,
-        iou=candidate.iou,
-        imgsz=candidate.imgsz,
-        device=candidate.device,
-        verbose=False,
-    )
-    try:
-        for frame_index, result in enumerate(iterator):
-            if max_frames is not None and frame_index >= max_frames:
-                break
-            observations = _observations_from_result(result, max_players=candidate.max_players)
-            detections = linker.update(frame_index=frame_index, observations=observations)
-            latency_ms = _latency_ms_from_result(result)
-            samples.append(
-                {
-                    "frame_index": frame_index,
-                    "latency_ms": latency_ms,
-                    "processed": True,
-                }
-            )
-            frames.append({"frame_index": frame_index, "detections": detections})
-            if frame_index + 1 >= frame_limit:
-                break
-    finally:
-        close = getattr(iterator, "close", None)
-        if callable(close):
-            close()
+    court_calibration = _load_court_calibration(candidate.court_calibration) if candidate.court_calibration else None
+    if candidate.tracker.startswith("track_"):
+        iterator = model.track(
+            source=str(video),
+            stream=True,
+            classes=[0],
+            conf=candidate.conf,
+            iou=candidate.iou,
+            imgsz=candidate.imgsz,
+            device=candidate.device,
+            tracker=_tracker_config_path(candidate),
+            persist=True,
+            verbose=False,
+        )
+        try:
+            for frame_index, result in enumerate(iterator):
+                if max_frames is not None and frame_index >= max_frames:
+                    break
+                detections = _tracked_detections_from_result(result, max_players=candidate.max_players)
+                latency_ms = _latency_ms_from_result(result)
+                samples.append(
+                    {
+                        "frame_index": frame_index,
+                        "latency_ms": latency_ms,
+                        "processed": True,
+                    }
+                )
+                frames.append({"frame_index": frame_index, "detections": detections})
+                if frame_index + 1 >= frame_limit:
+                    break
+        finally:
+            close = getattr(iterator, "close", None)
+            if callable(close):
+                close()
+    else:
+        linker = _make_linker(
+            candidate.tracker,
+            max_players=candidate.max_players,
+            iou_threshold=candidate.link_iou_threshold,
+            max_age_frames=candidate.max_age_frames,
+        )
+        iterator = model.predict(
+            source=str(video),
+            stream=True,
+            classes=[0],
+            conf=candidate.conf,
+            iou=candidate.iou,
+            imgsz=candidate.imgsz,
+            device=candidate.device,
+            verbose=False,
+        )
+        try:
+            for frame_index, result in enumerate(iterator):
+                if max_frames is not None and frame_index >= max_frames:
+                    break
+                observations = _observations_from_result(
+                    result,
+                    max_players=candidate.max_players,
+                    prune_mode=candidate.prune_mode,
+                    court_calibration=court_calibration,
+                    court_margin_m=candidate.court_margin_m,
+                    bbox_expand=candidate.bbox_expand,
+                )
+                detections = linker.update(frame_index=frame_index, observations=observations)
+                latency_ms = _latency_ms_from_result(result)
+                samples.append(
+                    {
+                        "frame_index": frame_index,
+                        "latency_ms": latency_ms,
+                        "processed": True,
+                    }
+                )
+                frames.append({"frame_index": frame_index, "detections": detections})
+                if frame_index + 1 >= frame_limit:
+                    break
+        finally:
+            close = getattr(iterator, "close", None)
+            if callable(close):
+                close()
 
     wall_clock_seconds = time.perf_counter() - started
     tracks_payload = _tracks_payload(
@@ -136,6 +193,12 @@ def run_replay_yolo_candidate(
         "conf": candidate.conf,
         "iou": candidate.iou,
         "device": candidate.device,
+        "tracker": candidate.tracker,
+        "tracker_config": candidate.tracker_config,
+        "prune_mode": candidate.prune_mode,
+        "court_calibration": candidate.court_calibration,
+        "court_margin_m": candidate.court_margin_m,
+        "bbox_expand": candidate.bbox_expand,
         "video_path": str(video),
         "ground_truth_path": str(ground_truth_path),
         "tracks_path": str(tracks_path),
@@ -223,7 +286,123 @@ class _IoUPersonLinker:
         return best_index
 
 
-def _observations_from_result(result: Any, *, max_players: int) -> list[dict[str, Any]]:
+class _CenterDistancePersonLinker:
+    def __init__(
+        self,
+        *,
+        max_tracks: int = 4,
+        distance_factor: float = 1.25,
+        min_distance_px: float = 24.0,
+        max_age_frames: int = 30,
+    ) -> None:
+        self.max_tracks = max_tracks
+        self.distance_factor = distance_factor
+        self.min_distance_px = min_distance_px
+        self.max_age_frames = max_age_frames
+        self._next_id = 1
+        self._tracks: list[dict[str, Any]] = []
+
+    def update(self, *, frame_index: int, observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        self._tracks = [track for track in self._tracks if frame_index - int(track["last_frame_index"]) <= self.max_age_frames]
+        detections: list[dict[str, Any]] = []
+        used_track_indexes: set[int] = set()
+        for observation in observations[: self.max_tracks]:
+            match_index = self._best_track_index(observation["bbox_xywh"], used_track_indexes)
+            if match_index is None:
+                track = {
+                    "id": self._next_id,
+                    "bbox_xywh": observation["bbox_xywh"],
+                    "last_frame_index": frame_index,
+                }
+                self._next_id += 1
+                self._tracks.append(track)
+                match_index = len(self._tracks) - 1
+            else:
+                self._tracks[match_index]["bbox_xywh"] = observation["bbox_xywh"]
+                self._tracks[match_index]["last_frame_index"] = frame_index
+            used_track_indexes.add(match_index)
+            detections.append(_detection_from_observation(int(self._tracks[match_index]["id"]), observation))
+        return sorted(detections, key=lambda item: int(item["track_id"]))
+
+    def _best_track_index(self, bbox_xywh: list[float], used_track_indexes: set[int]) -> int | None:
+        best_index: int | None = None
+        best_distance = float("inf")
+        for index, track in enumerate(self._tracks):
+            if index in used_track_indexes:
+                continue
+            track_bbox = track["bbox_xywh"]
+            distance = _bbox_center_distance(bbox_xywh, track_bbox)
+            threshold = max(
+                self.min_distance_px,
+                self.distance_factor * max(_bbox_diagonal(bbox_xywh), _bbox_diagonal(track_bbox)),
+            )
+            if distance <= threshold and distance < best_distance:
+                best_index = index
+                best_distance = distance
+        return best_index
+
+
+class _RoleLockedPersonLinker:
+    def __init__(self, *, max_tracks: int = 4) -> None:
+        self.max_tracks = max_tracks
+
+    def update(self, *, frame_index: int, observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        del frame_index
+        ordered = _observations_in_role_order(observations[: self.max_tracks])
+        detections: list[dict[str, Any]] = []
+        roles = ["far_left", "far_right", "near_left", "near_right"]
+        for index, observation in enumerate(ordered):
+            role = roles[index] if index < len(roles) else None
+            detections.append(_detection_from_observation(index + 1, observation, role=role))
+        return detections
+
+
+def _make_linker(
+    tracker: str,
+    *,
+    max_players: int,
+    iou_threshold: float | None = None,
+    max_age_frames: int | None = None,
+) -> Any:
+    if tracker in {"predict_iou", "iou"}:
+        return _IoUPersonLinker(
+            max_tracks=max_players,
+            iou_threshold=0.3 if iou_threshold is None else iou_threshold,
+            max_age_frames=10 if max_age_frames is None else max_age_frames,
+        )
+    if tracker in {"predict_iou_loose", "iou_loose"}:
+        return _IoUPersonLinker(
+            max_tracks=max_players,
+            iou_threshold=0.1 if iou_threshold is None else iou_threshold,
+            max_age_frames=45 if max_age_frames is None else max_age_frames,
+        )
+    if tracker in {"predict_center", "center"}:
+        return _CenterDistancePersonLinker(
+            max_tracks=max_players,
+            distance_factor=1.25,
+            max_age_frames=30 if max_age_frames is None else max_age_frames,
+        )
+    if tracker in {"predict_center_loose", "center_loose"}:
+        return _CenterDistancePersonLinker(
+            max_tracks=max_players,
+            distance_factor=2.0,
+            max_age_frames=60 if max_age_frames is None else max_age_frames,
+        )
+    if tracker in {"predict_role_lock", "role_lock"}:
+        return _RoleLockedPersonLinker(max_tracks=max_players)
+    raise ValueError(f"unsupported replay person tracker: {tracker}")
+
+
+def _observations_from_result(
+    result: Any,
+    *,
+    max_players: int,
+    prune_mode: str = "confidence",
+    court_calibration: CourtCalibration | None = None,
+    court_margin_m: float = 1.25,
+    candidate_limit: int = 16,
+    bbox_expand: float = 1.0,
+) -> list[dict[str, Any]]:
     boxes = getattr(result, "boxes", None)
     if boxes is None or len(boxes) == 0:
         return []
@@ -236,15 +415,160 @@ def _observations_from_result(result: Any, *, max_players: int) -> list[dict[str
         height = max(0.0, y2 - y1)
         if width <= 0.0 or height <= 0.0:
             continue
+        bbox_xywh = _expand_bbox_xywh([x1, y1, width, height], bbox_expand)
         observations.append(
             {
-                "bbox_xywh": [x1, y1, width, height],
+                "bbox_xywh": bbox_xywh,
                 "confidence": max(0.0, min(1.0, float(confidence))),
                 "source": "yolo_person",
             }
         )
-    observations.sort(key=lambda item: (-float(item["confidence"]), item["bbox_xywh"][0], item["bbox_xywh"][1]))
-    return observations[:max_players]
+    return _prune_observations(
+        observations,
+        max_players=max_players,
+        prune_mode=prune_mode,
+        court_calibration=court_calibration,
+        court_margin_m=court_margin_m,
+        candidate_limit=candidate_limit,
+    )
+
+
+def _prune_observations(
+    observations: list[dict[str, Any]],
+    *,
+    max_players: int,
+    prune_mode: str = "confidence",
+    court_calibration: CourtCalibration | None = None,
+    court_margin_m: float = 1.25,
+    candidate_limit: int = 16,
+) -> list[dict[str, Any]]:
+    if max_players <= 0:
+        raise ValueError("max_players must be positive")
+    candidates = list(observations)
+    candidates.sort(key=lambda item: (-float(item["confidence"]), item["bbox_xywh"][0], item["bbox_xywh"][1]))
+    candidates = candidates[: max(max_players, candidate_limit)]
+    if prune_mode == "confidence":
+        return candidates[:max_players]
+    if prune_mode != "court":
+        raise ValueError(f"unsupported observation prune mode: {prune_mode}")
+    if court_calibration is None:
+        raise ValueError("court pruning requires court_calibration")
+    ranked = [_with_court_prune_features(observation, court_calibration) for observation in candidates]
+    ranked.sort(
+        key=lambda item: (
+            0 if float(item["court_outside_distance_m"]) <= court_margin_m else 1,
+            -float(item["confidence"]) if float(item["court_outside_distance_m"]) <= court_margin_m else float(item["court_outside_distance_m"]),
+            float(item["court_outside_distance_m"]) if float(item["court_outside_distance_m"]) <= court_margin_m else -float(item["confidence"]),
+            item["bbox_xywh"][0],
+            item["bbox_xywh"][1],
+        )
+    )
+    return ranked[:max_players]
+
+
+def _with_court_prune_features(observation: dict[str, Any], calibration: CourtCalibration) -> dict[str, Any]:
+    enriched = dict(observation)
+    x, y, width, height = [float(value) for value in observation["bbox_xywh"]]
+    foot = [x + width / 2.0, y + height]
+    foot_world_xy = project_image_points_to_world(calibration.homography, [foot])[0]
+    enriched["foot_world_xy"] = [float(foot_world_xy[0]), float(foot_world_xy[1])]
+    enriched["court_outside_distance_m"] = _court_outside_distance_m(calibration, enriched["foot_world_xy"])
+    return enriched
+
+
+def _court_outside_distance_m(calibration: CourtCalibration, world_xy: list[float]) -> float:
+    template = get_court_template(calibration.sport)
+    half_width = template.width_m / 2.0
+    half_length = template.length_m / 2.0
+    x, y = [float(value) for value in world_xy]
+    dx = max(0.0, abs(x) - half_width)
+    dy = max(0.0, abs(y) - half_length)
+    return (dx**2 + dy**2) ** 0.5
+
+
+def _load_court_calibration(path: str | Path) -> CourtCalibration:
+    parsed = validate_artifact_file("court_calibration", Path(path))
+    if not isinstance(parsed, CourtCalibration):
+        raise ValueError("court calibration artifact did not parse as CourtCalibration")
+    return parsed
+
+
+def _tracked_detections_from_result(result: Any, *, max_players: int) -> list[dict[str, Any]]:
+    boxes = getattr(result, "boxes", None)
+    if boxes is None or len(boxes) == 0:
+        return []
+    xyxy = boxes.xyxy.cpu().numpy()
+    conf = boxes.conf.cpu().numpy()
+    raw_ids = boxes.id.cpu().numpy() if getattr(boxes, "id", None) is not None else [None] * len(xyxy)
+    detections: list[dict[str, Any]] = []
+    for raw_box, confidence, raw_track_id in zip(xyxy, conf, raw_ids, strict=False):
+        x1, y1, x2, y2 = [float(value) for value in raw_box]
+        width = max(0.0, x2 - x1)
+        height = max(0.0, y2 - y1)
+        if width <= 0.0 or height <= 0.0:
+            continue
+        track_id = int(raw_track_id) if raw_track_id is not None else len(detections) + 1
+        detections.append(
+            {
+                "track_id": max(1, track_id),
+                "bbox_xywh": [x1, y1, width, height],
+                "confidence": max(0.0, min(1.0, float(confidence))),
+                "source": "ultralytics_track",
+                "role": None,
+            }
+        )
+    detections.sort(key=lambda item: (-float(item["confidence"]), int(item["track_id"])))
+    return sorted(detections[:max_players], key=lambda item: int(item["track_id"]))
+
+
+def _expand_bbox_xywh(bbox_xywh: list[float], scale: float) -> list[float]:
+    if scale <= 0.0:
+        raise ValueError("bbox expansion scale must be positive")
+    if scale == 1.0:
+        return [float(value) for value in bbox_xywh]
+    x, y, width, height = [float(value) for value in bbox_xywh]
+    center_x = x + width / 2.0
+    bottom_y = y + height
+    expanded_width = width * scale
+    expanded_height = height * scale
+    return [center_x - expanded_width / 2.0, bottom_y - expanded_height, expanded_width, expanded_height]
+
+
+def _detection_from_observation(track_id: int, observation: dict[str, Any], *, role: str | None = None) -> dict[str, Any]:
+    return {
+        "track_id": track_id,
+        "bbox_xywh": [float(value) for value in observation["bbox_xywh"]],
+        "confidence": float(observation["confidence"]),
+        "source": observation["source"],
+        "role": role,
+    }
+
+
+def _observations_in_role_order(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if len(observations) <= 2:
+        return sorted(observations, key=lambda item: (_bbox_center(item["bbox_xywh"])[1], _bbox_center(item["bbox_xywh"])[0]))
+    by_y = sorted(observations, key=lambda item: (_bbox_center(item["bbox_xywh"])[1], _bbox_center(item["bbox_xywh"])[0]))
+    top_count = len(by_y) // 2
+    top = sorted(by_y[:top_count], key=lambda item: _bbox_center(item["bbox_xywh"])[0])
+    bottom = sorted(by_y[top_count:], key=lambda item: _bbox_center(item["bbox_xywh"])[0])
+    return top + bottom
+
+
+def _tracker_config_path(candidate: ReplayYoloCandidate) -> str:
+    if candidate.tracker_config:
+        return candidate.tracker_config
+    defaults = {
+        "track_bytetrack": "configs/racketsport/bytetrack.yaml",
+        "track_bytetrack_loose": "configs/racketsport/bytetrack_loose.yaml",
+        "track_botsort_no_reid": "configs/racketsport/botsort_no_reid.yaml",
+        "track_botsort_no_reid_loose": "configs/racketsport/botsort_no_reid_loose.yaml",
+        "track_botsort_reid": "configs/racketsport/botsort_reid.yaml",
+        "track_botsort_reid_loose": "configs/racketsport/botsort_reid_loose.yaml",
+    }
+    try:
+        return defaults[candidate.tracker]
+    except KeyError as exc:
+        raise ValueError(f"missing Ultralytics tracker config for {candidate.tracker}") from exc
 
 
 def _latency_ms_from_result(result: Any) -> float:
@@ -396,6 +720,22 @@ def _bbox_iou(a: list[float], b: list[float]) -> float:
         return 0.0
     union = aw * ah + bw * bh - intersection
     return intersection / union if union > 0.0 else 0.0
+
+
+def _bbox_center(bbox_xywh: list[float]) -> tuple[float, float]:
+    x, y, width, height = bbox_xywh
+    return x + width / 2.0, y + height / 2.0
+
+
+def _bbox_center_distance(a: list[float], b: list[float]) -> float:
+    ax, ay = _bbox_center(a)
+    bx, by = _bbox_center(b)
+    return ((ax - bx) ** 2 + (ay - by) ** 2) ** 0.5
+
+
+def _bbox_diagonal(bbox_xywh: list[float]) -> float:
+    _, _, width, height = bbox_xywh
+    return (width**2 + height**2) ** 0.5
 
 
 def _percentile(sorted_values: list[float], fraction: float) -> float:

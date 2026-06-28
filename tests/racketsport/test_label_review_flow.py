@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from threed.racketsport.label_review import PROTOTYPE_GATE_CLIPS, export_cvat_tasks, export_review_bundle, import_corrected_labels
+from threed.racketsport.label_review import PROTOTYPE_GATE_CLIPS, export_cvat_tasks, export_review_bundle
 
 
 def _write_frame_pack(frames_root: Path, clip: str) -> None:

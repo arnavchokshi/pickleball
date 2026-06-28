@@ -86,6 +86,28 @@ def test_calibration_for_image_size_scales_homography_and_intrinsics_to_frame_re
     assert scaled.image_pts[0] == pytest.approx([760.0, 980.0])
 
 
+def test_calibration_for_image_size_does_not_rescale_off_center_intrinsics():
+    calibration = _synthetic_calibration().model_copy(
+        update={
+            "intrinsics": CameraIntrinsics(
+                fx=1000.0,
+                fy=1000.0,
+                cx=950.0,
+                cy=535.0,
+                dist=[],
+                source="synthetic_off_center",
+            ),
+            "image_size": None,
+        }
+    )
+
+    scaled = calibration_for_image_size(calibration, width=1920, height=1080)
+
+    assert scaled.homography == calibration.homography
+    assert scaled.intrinsics.cx == pytest.approx(950.0)
+    assert scaled.intrinsics.cy == pytest.approx(535.0)
+
+
 def _blank_frame() -> object:
     return np.zeros((1080, 1920, 3), dtype=np.uint8)
 
@@ -141,7 +163,6 @@ def test_top_net_observation_rejects_parallel_non_overlapping_candidate():
     calibration = _synthetic_calibration()
     net_plane = build_net_plane("pickleball")
     net_points = project_net_plane(calibration, net_plane)
-    left = net_points["left_post"]
     right = net_points["right_post"]
     shifted_segment = (
         (right[0] + 200.0, right[1]),

@@ -301,8 +301,7 @@ def _install_easydict_unpickle_shim() -> None:
     if "easydict" in sys.modules:
         return
     try:
-        import easydict  # noqa: F401
-
+        __import__("easydict")
         return
     except ModuleNotFoundError:
         pass

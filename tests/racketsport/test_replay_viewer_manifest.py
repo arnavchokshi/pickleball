@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from threed.racketsport.replay_viewer_manifest import build_replay_viewer_manifest, write_replay_viewer_manifest
+from threed.racketsport.replay_viewer_manifest import build_replay_viewer_manifest
 
 
 def _write_json(path: Path, payload: dict) -> Path:

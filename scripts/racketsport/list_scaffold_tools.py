@@ -128,6 +128,11 @@ def build_scaffold_tool_index(root: Path) -> dict[str, Any]:
         "scripts_root": SCRIPT_ROOT.as_posix(),
         "tests_root": TEST_ROOT.as_posix(),
         "schema_root": SCHEMA_ROOT.as_posix(),
+        "scope": {
+            "indexed_globs": [f"{SCRIPT_ROOT.as_posix()}/*.py"],
+            "excluded_globs": ["scripts/*.sh", f"{SCRIPT_ROOT.as_posix()}/*.sh", "scripts/*.py"],
+            "repo_wide_hygiene_report": False,
+        },
         "execution": {
             "cpu_only": True,
             "runs_scaffold_commands": False,

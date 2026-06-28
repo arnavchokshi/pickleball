@@ -14,7 +14,14 @@ This package currently includes:
 
 ```sh
 npm install
+npm run dev -- --host 127.0.0.1
 npm test
 npm run typecheck
 npm run build
+```
+
+Open the viewer with a manifest URL, for example:
+
+```text
+http://127.0.0.1:5173/?manifest=/@fs/absolute/path/to/replay_viewer_manifest.json
 ```

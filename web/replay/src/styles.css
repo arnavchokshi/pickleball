@@ -220,11 +220,11 @@ dd {
 }
 
 .swatch.mesh {
-  background: #aebdff;
+  background: #b4f2bf;
 }
 
-.swatch.contact {
-  background: #7cff87;
+.swatch.joints {
+  background: #ffb45d;
 }
 
 .swatch.ball {

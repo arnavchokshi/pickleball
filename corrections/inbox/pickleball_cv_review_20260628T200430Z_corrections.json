@@ -24,8 +24,8 @@
       "annotator": "review-ui",
       "id": "burlington_gold_0300_low_steep_corner_calibration_top_net_001",
       "operation": "append",
-      "reason": "Human reviewed calibration overlay and top-net reference points.",
-      "status": "pending",
+      "reason": "Superseded by top_net_review_20260628 active top-net correction.",
+      "status": "rejected",
       "target": {
         "artifact": "runs/eval0/prototype_gate_h100_v2/burlington_gold_0300_low_steep_corner/court_calibration.json",
         "clip_id": "burlington_gold_0300_low_steep_corner",
@@ -143,8 +143,8 @@
       "annotator": "review-ui",
       "id": "indoor_doubles_fwuks_0500_long_mid_baseline_calibration_top_net_001",
       "operation": "append",
-      "reason": "Human reviewed calibration overlay and top-net reference points.",
-      "status": "pending",
+      "reason": "Superseded by top_net_review_20260628 active top-net correction.",
+      "status": "rejected",
       "target": {
         "artifact": "runs/eval0/prototype_gate_h100_v2/indoor_doubles_fwuks_0500_long_mid_baseline/court_calibration.json",
         "clip_id": "indoor_doubles_fwuks_0500_long_mid_baseline",
@@ -405,8 +405,8 @@
       "annotator": "review-ui",
       "id": "outdoor_webcam_iynbd_1500_long_high_baseline_calibration_top_net_001",
       "operation": "append",
-      "reason": "Human reviewed calibration overlay and top-net reference points.",
-      "status": "pending",
+      "reason": "Superseded by top_net_review_20260628 active top-net correction.",
+      "status": "rejected",
       "target": {
         "artifact": "runs/eval0/prototype_gate_h100_v2/outdoor_webcam_iynbd_1500_long_high_baseline/court_calibration.json",
         "clip_id": "outdoor_webcam_iynbd_1500_long_high_baseline",
@@ -662,8 +662,8 @@
       "annotator": "review-ui",
       "id": "wolverine_mixed_0200_mid_steep_corner_calibration_top_net_001",
       "operation": "append",
-      "reason": "Human reviewed calibration overlay and top-net reference points.",
-      "status": "pending",
+      "reason": "Superseded by top_net_review_20260628 active top-net correction.",
+      "status": "rejected",
       "target": {
         "artifact": "runs/eval0/prototype_gate_h100_v2/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
         "clip_id": "wolverine_mixed_0200_mid_steep_corner",

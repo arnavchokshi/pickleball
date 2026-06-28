@@ -10,6 +10,24 @@ Canonical labels:
 
 `fh_shot` and `bh_shot` are abstract side labels. They are allowed when evidence supports forehand/backhand side but not a specific subtype. Specific labels require stronger body, ball, court, contact, and ideally racket evidence.
 
+## Implementation Update
+
+The 2026-06-28 follow-up added the missing local pieces needed to evaluate and iterate on shot labels without over-claiming:
+
+- Event-level scorer: `threed/racketsport/eval/shot_event_eval.py` matches reviewed truth to predictions by time, then reports accuracy, macro-F1, top-2 accuracy, unknown/gated rate, confusion, per-class precision/recall/F1, and confidence calibration.
+- Phase 8 gate wiring: `shot_drill_eval` now reports reviewed shot-label metrics only from authoritative labels; draft or `not_ground_truth` labels stay non-promotional.
+- BODY semantic adapter: `threed/racketsport/skeleton3d.py` maps provisional SAM-3D-Body/MHR70 generic joints into named wrist/elbow/shoulder/hip/knee/ankle joints. The current unit-tested provisional wrist/shoulder indices are `right_wrist=41`, `left_wrist=62`, `left_shoulder=5`, and `right_shoulder=6`; they still need BODY-label validation before being treated as verified ground truth.
+- DATA-5 builder: `scripts/racketsport/build_shot_dataset.py` builds validator-compatible shot-window manifests from reviewed labels plus contact windows and rejects prediction artifacts as truth.
+- Trainable sanity baseline: `scripts/racketsport/train_shots.py` trains/evaluates `threed/racketsport/shot_trainable_baseline.py`, a CPU nearest-centroid baseline over `features.*` windows with presence masks and side-family abstraction. It is useful for end-to-end checks, but it is not PoseConv3D/BST and not a promotion gate.
+
+Verified local command:
+
+```bash
+.venv/bin/python -m pytest tests/racketsport/test_shot_event_eval.py tests/racketsport/test_eval_report_replay_gates.py::test_shot_drill_eval_reports_reviewed_event_level_shot_metrics tests/racketsport/test_eval_report_replay_gates.py::test_shot_drill_eval_uses_named_numeric_gates_for_shot_and_rep_thresholds tests/racketsport/test_body_semantics.py tests/racketsport/test_shot_transfer_baseline.py tests/racketsport/test_shot_dataset_builder.py tests/racketsport/test_shot_dataset.py tests/racketsport/test_shot_trainable_baseline.py -q
+```
+
+Result: `32 passed in 0.86s`.
+
 ## External Score Snapshot
 
 ### THETIS Pose Eval
@@ -69,13 +87,12 @@ This is coverage, not accuracy. The current local path uses ball/track image-sid
 
 ## Recommended Build Path
 
-1. Add a canonical event-level shot evaluator: match predictions to labels by time/frame, report coverage, unknown/gated rate, accuracy, macro-F1, top-2 accuracy, per-class precision/recall/F1, confusion, and calibration.
-2. Add a SAM-3D-Body semantic joint adapter or emit named joints from BODY so wrists, elbows, shoulders, hips, knees, and ankles are available to shot classification.
-3. Build `data/pb_shots/` from reviewed pickleball contact windows with truth labels, abstraction labels, player id, contact frame/time, and source artifact references.
-4. Train a first H100 baseline over fixed windows: pose sequence + velocities + court zone + ball pre/post trajectory + contact/audio confidence + player track features. Use a small TCN/GRU/Transformer and PoseConv3D/PoseC3D before bigger fusion.
-5. Add a Stage-0 phase head for `serve`, `overhead_candidate`, `normal_hit`, and `unknown`, using longer serve windows around `[-1.2s, +0.4s]`.
-6. Add BST-style pose+ball/player fusion only after the pose, ball, court-zone, and player tensors are clean enough to evaluate.
-7. Keep the abstraction policy: exact class only above calibrated confidence; otherwise emit `fh_shot`/`bh_shot` when side is supported; only emit `unknown` when evidence is genuinely missing or gated.
+1. Populate `data/pb_shots/` from reviewed pickleball contact windows with truth labels, abstraction labels, player id, contact frame/time, and source artifact references.
+2. Extract fixed-window feature tensors: semantic BODY pose sequence, wrist velocities, court zone, ball pre/post trajectory, contact/audio confidence, player track features, and eventually racket velocity/pose.
+3. Train a first H100 baseline over those windows. Use a small TCN/GRU/Transformer and PoseConv3D/PoseC3D before bigger fusion.
+4. Add a Stage-0 phase head for `serve`, `overhead_candidate`, `normal_hit`, and `unknown`, using longer serve windows around `[-1.2s, +0.4s]`.
+5. Add BST-style pose+ball/player fusion only after the pose, ball, court-zone, and player tensors are clean enough to evaluate.
+6. Keep the abstraction policy: exact class only above calibrated confidence; otherwise emit `fh_shot`/`bh_shot` when side is supported; only emit `unknown` when evidence is genuinely missing or gated.
 
 ## Sources Used For Model/Data Direction
 

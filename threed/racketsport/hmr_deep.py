@@ -1,8 +1,8 @@
-"""CPU-only deep-tier HMR scaffold primitives.
+"""Deep-tier HMR primitives and optional Fast SAM-3D-Body runtime bridge.
 
-This module validates and packages Fast SAM-3D-Body/MHR-style inputs and
-outputs. It intentionally does not download checkpoints, run inference, select
-variants, or touch the GPU.
+The pure helpers validate and package Fast SAM-3D-Body/MHR-style inputs and
+outputs. ``FastSam3DBodyRuntime`` is the explicit runtime bridge that can load
+external checkpoints and run inference when the H100 environment is available.
 """
 
 from __future__ import annotations

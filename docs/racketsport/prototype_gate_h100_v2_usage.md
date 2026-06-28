@@ -374,23 +374,24 @@ Outdoor webcam has 4 review-only audio energy peaks and Indoor doubles has 1,
 both generated from available 30-second `racket_candidates/source_0000_0030.mp4`
 snippets clipped to the first 10 seconds. Burlington and Wolverine are blocked
 by `no_audio_stream` in the local strict smoke videos. All four
-`wrist_velocity_peaks.json` artifacts are blocked: Burlington has generic
-SAM3D body joint names with no semantic wrist map, Wolverine and Indoor have
-BODY skeletons but still lack a semantic wrist map, and Outdoor lacks
-`skeleton3d.json`. These artifacts make the cue blockers explicit, but they do
-not promote contacts.
+`wrist_velocity_peaks.json` artifacts are still blocked: Burlington,
+Wolverine, and Indoor have BODY skeletons plus a provisional SAM-3D-Body/MHR70
+semantic map, but the wrist-cue builder has not consumed that adapter/default
+explicit wrist indices yet; Outdoor lacks `skeleton3d.json`. These artifacts
+make the cue blockers explicit, but they do not promote contacts.
 
 When regenerating BALL through the fail-closed orchestrator, pass the strict
-no-click ball track with `--ball-source` so root `ball_track.json` is rebuilt
-from the same held-out no-click artifact and the post-run
-`frame_compute_plan.json` includes ball uncertainty:
+no-click ball track with `--ball-source` and target the `ball_events` stage.
+If earlier dependencies are not ready, an `e2e` run may stop before BALL;
+`--ball-source` then only lets post-run review helpers include ball
+uncertainty when enough upstream artifacts exist.
 
 ```bash
 python -m threed.racketsport.orchestrator \
   --clip <clip> \
   --inputs runs/eval0/prototype_gate_h100_v2/<clip> \
   --out runs/eval0/prototype_gate_h100_v2/<clip> \
-  --stage e2e \
+  --stage ball_events \
   --tracking-mode precomputed \
   --ball-source runs/eval0/prototype_gate_h100_v2/<clip>/tracknet_smoke_0000_0010/ball_track_fusion_temporal_vball100_localtraj.json
 ```
@@ -1020,7 +1021,7 @@ python scripts/racketsport/benchmark_person_trackers.py \
   --contact-windows "$RUN_ROOT/$CLIP/contact_windows.json" \
   --expected-players 4 \
   --out-root runs/person_tracking_frame_rating_audit \
-  --candidate "yolo26m_botsort_reid=models/yolo26m.pt,configs/racketsport/botsort_reid.yaml" \
+  --candidate "yolo26m_botsort_reid=models/checkpoints/yolo26m.pt,configs/racketsport/botsort_reid.yaml" \
   --device 0 \
   --max-frames 300 \
   --id-strategy role_lock

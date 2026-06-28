@@ -156,6 +156,37 @@ def passes_reprojection_gate(error: ReprojectionError) -> bool:
     )
 
 
+def calibration_image_size(
+    calibration: CourtCalibration,
+    *,
+    fallback_target: tuple[float, float] | None = None,
+    principal_point_tolerance: float = 0.10,
+) -> tuple[float, float]:
+    """Return calibration image size without treating off-center cx/cy as frame center."""
+
+    if calibration.image_size is not None:
+        width, height = calibration.image_size
+        if width > 0 and height > 0:
+            return float(width), float(height)
+
+    inferred_width = float(calibration.intrinsics.cx) * 2.0
+    inferred_height = float(calibration.intrinsics.cy) * 2.0
+    if inferred_width <= 0.0 or inferred_height <= 0.0:
+        raise ValueError("cannot infer calibration image size from intrinsics")
+
+    if fallback_target is not None:
+        target_width, target_height = fallback_target
+        if target_width > 0.0 and target_height > 0.0:
+            close_to_target = (
+                abs(target_width / inferred_width - 1.0) <= principal_point_tolerance
+                and abs(target_height / inferred_height - 1.0) <= principal_point_tolerance
+            )
+            if close_to_target:
+                return float(target_width), float(target_height)
+
+    return inferred_width, inferred_height
+
+
 def solve_camera_pose(
     world_pts: Iterable[Iterable[float]],
     image_pts: Iterable[Iterable[float]],
@@ -264,6 +295,7 @@ def _build_calibration(
         sport=sport,
         homography=homography,
         intrinsics=sidecar.intrinsics,
+        image_size=tuple(sidecar.resolution),
         extrinsics=extrinsics,
         reprojection_error_px=error,
         capture_quality=_merge_capture_quality(sidecar, error, len(image_pts)),

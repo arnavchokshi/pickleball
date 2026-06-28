@@ -105,18 +105,27 @@ def score_shot_events(
         )
 
     by_label = {
-        label: _label_scores(label, matches.matched)
+        label: _label_scores(label, truth_events=truth_events, matches=matches.matched)
         for label in truth_labels
     }
+    truth_by_id = {_event_id(event): _truth_label(event) for event in truth_events}
+    for truth_id in matches.unmatched_truth_ids:
+        label = truth_by_id.get(truth_id, "unknown")
+        confusion.setdefault(label, {})
+        confusion[label]["missing_prediction"] = confusion[label].get("missing_prediction", 0) + 1
 
     sample_count = len(truth_events)
     unknown_count = sum(1 for match in matches.matched if match.predicted_label == "unknown")
     gated_count = sum(1 for match in matches.matched if match.gated)
+    missing_prediction_count = len(matches.unmatched_truth_ids)
     return {
         "sample_count": sample_count,
         "matched_count": len(matches.matched),
         "unmatched_truth_count": len(matches.unmatched_truth_ids),
         "unmatched_prediction_count": len(matches.unmatched_prediction_ids),
+        "prediction_coverage": _ratio(len(matches.matched), sample_count),
+        "missing_prediction_count": missing_prediction_count,
+        "missing_prediction_rate": _ratio(missing_prediction_count, sample_count),
         "top1_correct": top1_correct,
         "top2_correct": top2_correct,
         "accuracy": _ratio(top1_correct, sample_count),
@@ -147,14 +156,20 @@ def score_shot_events(
     }
 
 
-def _label_scores(label: str, matches: Sequence[ShotEventMatch]) -> dict[str, float | int]:
+def _label_scores(
+    label: str,
+    *,
+    truth_events: Sequence[Mapping[str, Any]],
+    matches: Sequence[ShotEventMatch],
+) -> dict[str, float | int]:
+    truth_count = sum(1 for event in truth_events if _truth_label(event) == label)
     true_positive = sum(1 for match in matches if match.truth_label == label and match.predicted_label == label)
     false_positive = sum(1 for match in matches if match.truth_label != label and match.predicted_label == label)
-    false_negative = sum(1 for match in matches if match.truth_label == label and match.predicted_label != label)
+    false_negative = truth_count - true_positive
     precision = _ratio(true_positive, true_positive + false_positive)
     recall = _ratio(true_positive, true_positive + false_negative)
     return {
-        "support": true_positive + false_negative,
+        "support": truth_count,
         "true_positive": true_positive,
         "false_positive": false_positive,
         "false_negative": false_negative,

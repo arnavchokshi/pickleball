@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "artifact_type": "pickleball_coreml_model_manifest",
+  "generated_at": "2026-06-28T00:00:00Z",
+  "runtime_status": "candidate_assets_tracked_not_app_bundled",
+  "app_lookup_root": "Documents/models_coreml",
+  "runtime_note": "ios/App/CaptureViewModel.swift loads models from the app Documents models_coreml directory. These repo packages are not automatically available to the app unless copied there, compiled to .mlmodelc there, or explicitly added to the app bundle in a future Xcode resource pass.",
+  "packages": [
+    {
+      "id": "yolo26n_img416_int8",
+      "model_name": "yolo26n",
+      "candidate_ids": [
+        "yolo26nInt8EveryFrame",
+        "yolo26nInt8Detect15Track30"
+      ],
+      "image_size": 416,
+      "quantization": "int8",
+      "output_format": "yolo26_end_to_end",
+      "tracked_path": "models_coreml/yolo26n_img416_int8/yolo26n.mlpackage",
+      "app_documents_path": "Documents/models_coreml/yolo26n_img416_int8/yolo26n.mlpackage",
+      "files_sha256": {
+        "Manifest.json": "8edf20749276ffdf3aab9a4cecd2f31d2a7b9897cc6fac4991fd2b3fcb6c0354",
+        "Data/com.apple.CoreML/model.mlmodel": "73a5b104da5aaea77f55c34edbbff0bc51a71cbf2ea3fba1658072973554aa7b",
+        "Data/com.apple.CoreML/weights/weight.bin": "5782f7cd4e98ef47e68da96f86ccf47aad0c99e0d942a3c4e0d3d908a69ec794"
+      }
+    },
+    {
+      "id": "yolo26n_img512_int8",
+      "model_name": "yolo26n",
+      "candidate_ids": [
+        "yolo26nInt8Img512EveryFrame"
+      ],
+      "image_size": 512,
+      "quantization": "int8",
+      "output_format": "yolo26_end_to_end",
+      "tracked_path": "models_coreml/yolo26n_img512_int8/yolo26n.mlpackage",
+      "app_documents_path": "Documents/models_coreml/yolo26n_img512_int8/yolo26n.mlpackage",
+      "files_sha256": {
+        "Manifest.json": "2a8553e2f2ad6774123f0007c284a1fb542f1b3e6c145542ce3f7f7f7ba94ba1",
+        "Data/com.apple.CoreML/model.mlmodel": "7fa9effa7d26b03bdb822aae7e30bcd3c1b9d68ee7de1b90a266ae2bbb44bd00",
+        "Data/com.apple.CoreML/weights/weight.bin": "f942d901b326151945fc5b58e5c3637ceb5c6296197077cb8756639cc210cd1d"
+      }
+    },
+    {
+      "id": "yolo26n_img640_int8",
+      "model_name": "yolo26n",
+      "candidate_ids": [
+        "yolo26nInt8Img640EveryFrame"
+      ],
+      "image_size": 640,
+      "quantization": "int8",
+      "output_format": "yolo26_end_to_end",
+      "tracked_path": "models_coreml/yolo26n_img640_int8/yolo26n.mlpackage",
+      "app_documents_path": "Documents/models_coreml/yolo26n_img640_int8/yolo26n.mlpackage",
+      "files_sha256": {
+        "Manifest.json": "964719ceff908f3a2b8272fbdb73a281d77ffd8570381d73627d87769fc0bd29",
+        "Data/com.apple.CoreML/model.mlmodel": "f1c01873d2be23bcd30fcd6c042074add9553ac24d8085e0990cafc9f903642a",
+        "Data/com.apple.CoreML/weights/weight.bin": "26fdc3e77700f4c5356cfb41d88e6536b03b294ae574eb75e6c244a05d390e0b"
+      }
+    },
+    {
+      "id": "yolo26s_img416_int8",
+      "model_name": "yolo26s",
+      "candidate_ids": [
+        "yolo26sInt8EveryFrame"
+      ],
+      "image_size": 416,
+      "quantization": "int8",
+      "output_format": "yolo26_end_to_end",
+      "tracked_path": "models_coreml/yolo26s_img416_int8/yolo26s.mlpackage",
+      "app_documents_path": "Documents/models_coreml/yolo26s_img416_int8/yolo26s.mlpackage",
+      "files_sha256": {
+        "Manifest.json": "d19b7282eb83ba94ee41478cac070f7c6d18f02633b111c923885a45c28c1b9a",
+        "Data/com.apple.CoreML/model.mlmodel": "ce6765160448c36797d0bfce9fb88e760c52bd6a79028978ff8c303325b6997a",
+        "Data/com.apple.CoreML/weights/weight.bin": "3a5419984af771ea8ced7cbb93cdfd8004d0858e64997ff989695b58a146a9dd"
+      }
+    },
+    {
+      "id": "yolo26m_img416_int8",
+      "model_name": "yolo26m",
+      "candidate_ids": [
+        "yolo26mInt8Img416EveryFrame"
+      ],
+      "image_size": 416,
+      "quantization": "int8",
+      "output_format": "yolo26_end_to_end",
+      "tracked_path": "models_coreml/yolo26m_img416_int8/yolo26m.mlpackage",
+      "app_documents_path": "Documents/models_coreml/yolo26m_img416_int8/yolo26m.mlpackage",
+      "files_sha256": {
+        "Manifest.json": "976b61f0f963aa6f414649dbcf651db717b9b50460871a44ecacc5ded4b4daf2",
+        "Data/com.apple.CoreML/model.mlmodel": "3b8efa2e2c0c917a073b777e976e22e73ce37f4c92176b4aa44208f8dc8e1496",
+        "Data/com.apple.CoreML/weights/weight.bin": "8e1198520e30ce00307a5d1e21d14ea168d27ad44146dd27e7a6651f477a8c10"
+      }
+    },
+    {
+      "id": "yolo11n_img416_int8_nms",
+      "model_name": "yolo11n",
+      "candidate_ids": [
+        "yolo11nInt8Fallback"
+      ],
+      "image_size": 416,
+      "quantization": "int8",
+      "output_format": "yolo11_nms",
+      "tracked_path": "models_coreml/yolo11n_img416_int8_nms/yolo11n.mlpackage",
+      "app_documents_path": "Documents/models_coreml/yolo11n_img416_int8_nms/yolo11n.mlpackage",
+      "files_sha256": {
+        "Manifest.json": "64c12665e91eb36cecd7b80e7d264a4afff7bf31d638cc5e467cd963db55d322",
+        "Data/com.apple.CoreML/model.mlmodel": "3ec31c7affd550e4a2a1f89dd606f28943d6303f304dfdb8e36c60528b486e99",
+        "Data/com.apple.CoreML/weights/weight.bin": "7ace8a46edf32f014908f3bc341fd42fdcfdb5dacfadae0057131589e914dd8c"
+      }
+    }
+  ]
+}

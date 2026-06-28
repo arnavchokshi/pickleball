@@ -362,7 +362,7 @@ def _load_authoritative_payload(path: Path) -> tuple[dict[str, Any] | None, str]
     if payload.get("not_ground_truth") is True:
         return None, f"{path.name} has not_ground_truth=true; label_check metrics not measured"
     status = str(payload.get("status", "")).lower()
-    if any(token in status for token in ("draft", "unverified", "teacher")):
+    if status not in {"human_reviewed", "accepted", "reviewed"}:
         return None, f"{path.name} status is {payload.get('status')!r}; label_check metrics not measured"
     return payload, ""
 
@@ -384,7 +384,7 @@ def _payload_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _is_accepted_item(item: dict[str, Any]) -> bool:
     status = str(item.get("status", "")).lower()
-    return status not in {"rejected", "reject", "uncertain", "needs_review", "ignored"}
+    return status == "accepted"
 
 
 def _frame_index(item: dict[str, Any]) -> int | None:
@@ -504,7 +504,10 @@ def _shot_predictions_from_metrics(metrics_artifact: RacketSportMetrics) -> list
                     "player_id": int(player.id),
                     "type": str(shot.type),
                     "type_conf": float(shot.type_conf),
-                    "top2": [{"type": str(shot.type), "confidence": float(shot.type_conf)}],
+                    "top2": [
+                        {"type": str(item.type), "confidence": float(item.confidence)}
+                        for item in shot.top2[:2]
+                    ],
                     "gated": bool(
                         shot.type == "unknown"
                         or any(value.gated is True for value in shot.metrics.values())
@@ -545,6 +548,13 @@ def _shot_record_metrics(score: dict[str, Any] | None) -> dict[str, EvalMetric]:
                 passed=None,
                 status="not_measured",
             ),
+            "shot_label_missing_prediction_rate": metric(
+                value=None,
+                unit=None,
+                gate="label_check.shot_missing_prediction_rate_recorded",
+                passed=None,
+                status="not_measured",
+            ),
         }
     return {
         "shot_label_sample_count": metric(
@@ -569,6 +579,12 @@ def _shot_record_metrics(score: dict[str, Any] | None) -> dict[str, EvalMetric]:
             value=float(score["gated_rate"]),
             unit=None,
             gate="label_check.shot_gated_rate_recorded",
+            passed=None,
+        ),
+        "shot_label_missing_prediction_rate": metric(
+            value=float(score["missing_prediction_rate"]),
+            unit=None,
+            gate="label_check.shot_missing_prediction_rate_recorded",
             passed=None,
         ),
     }
