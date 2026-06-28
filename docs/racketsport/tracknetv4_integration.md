@@ -100,6 +100,19 @@ For wrappers or nonstandard repo layouts, pass a shlex command template:
 Available placeholders are `{python}`, `{repo}`, `{predict_py}`, `{video}`,
 `{checkpoint}`, `{output_dir}`, and `{queue_length}`.
 
+## Upstream Snapshot Caveats
+
+The H100 currently has the public TrackNetV4 repo cloned at
+`/workspace/TrackNetV4`. In that snapshot:
+
+- `docs/RESULT.md` lists model download entries, but the links are placeholders
+  (`#`) rather than usable checkpoint URLs.
+- `src/predict.py` references custom-layer names such as
+  `MotionIncorporationLayerV1`, `MotionIncorporationLayerV2`,
+  `CombineOutputs`, and `MotionFramesInput` that are not imported or defined in
+  the repo snapshot. A real run will need either an upstream fix, a local patch
+  to the custom object map, or a custom wrapper passed with `--command`.
+
 ## Verification Semantics
 
 The sidecar metadata always records `not_ground_truth=true`. By default it also
