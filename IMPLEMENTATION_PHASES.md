@@ -55,7 +55,8 @@ threed/racketsport/
   net_plane.py            capture_quality.py       drift_guard.py
   person_fast.py          track_lock.py            doubles_id.py
   hmr_fast.py             hmr_deep.py              worldhmr.py
-  footlock.py             physics_refine.py        body_mesh_readiness.py
+  skeleton3d.py           footlock.py              physics_refine.py
+  body_mesh_readiness.py
   ball_tracknet.py        ball_tap_track.py        ball_physics3d.py
   audio_pop.py            event_fusion.py          contact_windows.py
   racket6dof.py           movement_metrics.py      biomech.py
@@ -421,6 +422,7 @@ Measure: IDF1 / ID-switches vs `players.json`; spectator rejection; side/role ac
   - **FAST (server post-upload quick pass): Multi-HMR 2** (20 FPS, no FOV assumption — preferred given variable cameras) **or SAT-HMR** (24 FPS, assumes 60° FOV — verify per court cam) — multi-person camera-space SMPL for a quick server preview while the deep tier runs. **[VERIFY]**; fallback = HMR2.0/4D-Humans, or fit SMPL to RTMW3D. ~7–8 mm quality penalty vs SAM-3D-Body is fine for a preview. (The *instant, during-capture* preview is on-device **Phase C2 / Apple Vision** — this server fast pass is the post-upload one.)
   - Multi-person: **no single robust monocular ≤4-person world pipeline** — run **per-player** after Phase-2 detection; the court plane gives per-player metric scale + root depth.
 - `worldhmr.py` emits `skeleton3d.json` as a **preview/triggering overlay only**: RTMW3D-l or RTMPose→MotionBERT lift, world coords. Used for the <10 s fast preview and for sub-frame contact triggering; NOT the source of truth for the replay (that is world-grounded SMPL).
+- `skeleton3d.py` owns semantic joint adapters for preview skeleton payloads, including the fail-closed SAM3D/MHR-70 generic-joint map needed before wrist-driven shot-transfer fallback can trust `skeleton3d.json`.
 - `worldhmr.py` + `footlock.py` + `body_mesh_readiness.py` own court geometry as free accuracy (`ACCURACY_AND_TRAINING.md §5`): (1) **reprojection-consistency loss** at fine-tune; (2) **metric root depth** from court PnP; (3) **hard foot-on-ground** seed (full foot-lock is Phase 4). Foot-contact MLP on `[foot_y_world, |v_foot_world|, ankle_z]` (bootstrap AMASS zero-velocity, warm-start UnderPressure).
 - **Body fine-tune — biggest accuracy lever** (`scripts/racketsport/finetune_pose.py`; `ACCURACY_AND_TRAINING.md §5`). Generic models hit ~214 mm MPJPE on athletic motion vs ~65 mm fine-tuned. Ladder:
   1. **Fine-tune order: BEDLAM2 → AthletePose3D → CalTennis [VERIFY] → RICH (contact) → AMASS (priors)** (backbone LR 0.1× head). Eval on EMDB2 (world trajectory) + CalTennis multi-view + AthletePose3D.

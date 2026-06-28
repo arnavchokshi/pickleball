@@ -279,48 +279,64 @@ final class CaptureViewModel: ObservableObject {
 
     private static func replayBenchmarkProcessors(documentsURL: URL) -> [ReplayPersonBenchmarkProcessor] {
         let modelsRoot = documentsURL.appendingPathComponent("models_coreml", isDirectory: true)
-        var processors: [ReplayPersonBenchmarkProcessor] = [.visionHumanRectangles]
+        var processors: [ReplayPersonBenchmarkProcessor] = []
 
-        let yolo26n = modelsRoot
-            .appendingPathComponent("yolo26n_img416_int8", isDirectory: true)
-            .appendingPathComponent("yolo26n.mlpackage", isDirectory: true)
-        if FileManager.default.fileExists(atPath: yolo26n.path) {
-            processors.append(
-                .coreML(
-                    CoreMLPersonDetectorConfiguration(
-                        candidate: .yolo26nInt8EveryFrame,
-                        modelURL: yolo26n,
-                        outputFormat: .yolo26EndToEnd,
-                        inputWidth: 416,
-                        inputHeight: 416,
-                        minConfidence: 0.10
-                    )
-                )
-            )
-        }
+        Self.appendYolo26Processor(
+            to: &processors,
+            modelsRoot: modelsRoot,
+            modelDirectory: "yolo26n_img416_int8",
+            modelName: "yolo26n",
+            candidate: .yolo26nInt8EveryFrame,
+            imageSize: 416
+        )
+        Self.appendYolo26Processor(
+            to: &processors,
+            modelsRoot: modelsRoot,
+            modelDirectory: "yolo26n_img416_int8",
+            modelName: "yolo26n",
+            candidate: .yolo26nInt8Detect15Track30,
+            imageSize: 416,
+            maxTrackAgeFrames: 30,
+            detectionIntervalFrames: 2
+        )
+        Self.appendYolo26Processor(
+            to: &processors,
+            modelsRoot: modelsRoot,
+            modelDirectory: "yolo26n_img512_int8",
+            modelName: "yolo26n",
+            candidate: .yolo26nInt8Img512EveryFrame,
+            imageSize: 512
+        )
+        Self.appendYolo26Processor(
+            to: &processors,
+            modelsRoot: modelsRoot,
+            modelDirectory: "yolo26n_img640_int8",
+            modelName: "yolo26n",
+            candidate: .yolo26nInt8Img640EveryFrame,
+            imageSize: 640
+        )
+        Self.appendYolo26Processor(
+            to: &processors,
+            modelsRoot: modelsRoot,
+            modelDirectory: "yolo26s_img416_int8",
+            modelName: "yolo26s",
+            candidate: .yolo26sInt8EveryFrame,
+            imageSize: 416
+        )
+        Self.appendYolo26Processor(
+            to: &processors,
+            modelsRoot: modelsRoot,
+            modelDirectory: "yolo26m_img416_int8",
+            modelName: "yolo26m",
+            candidate: .yolo26mInt8Img416EveryFrame,
+            imageSize: 416
+        )
 
-        let yolo26s = modelsRoot
-            .appendingPathComponent("yolo26s_img416_int8", isDirectory: true)
-            .appendingPathComponent("yolo26s.mlpackage", isDirectory: true)
-        if FileManager.default.fileExists(atPath: yolo26s.path) {
-            processors.append(
-                .coreML(
-                    CoreMLPersonDetectorConfiguration(
-                        candidate: .yolo26sInt8EveryFrame,
-                        modelURL: yolo26s,
-                        outputFormat: .yolo26EndToEnd,
-                        inputWidth: 416,
-                        inputHeight: 416,
-                        minConfidence: 0.10
-                    )
-                )
-            )
-        }
-
-        let yolo11n = modelsRoot
-            .appendingPathComponent("yolo11n_img416_int8_nms", isDirectory: true)
-            .appendingPathComponent("yolo11n.mlpackage", isDirectory: true)
-        if FileManager.default.fileExists(atPath: yolo11n.path) {
+        if let yolo11n = Self.replayModelURL(
+            modelsRoot: modelsRoot,
+            modelDirectory: "yolo11n_img416_int8_nms",
+            modelName: "yolo11n"
+        ) {
             processors.append(
                 .coreML(
                     CoreMLPersonDetectorConfiguration(
@@ -335,7 +351,54 @@ final class CaptureViewModel: ObservableObject {
             )
         }
 
+        processors.append(.visionHumanRectangles)
         return processors
+    }
+
+    private static func appendYolo26Processor(
+        to processors: inout [ReplayPersonBenchmarkProcessor],
+        modelsRoot: URL,
+        modelDirectory: String,
+        modelName: String,
+        candidate: OnDevicePersonCandidate,
+        imageSize: Int,
+        maxTrackAgeFrames: Int = 8,
+        detectionIntervalFrames: Int = 1
+    ) {
+        guard let modelURL = Self.replayModelURL(
+            modelsRoot: modelsRoot,
+            modelDirectory: modelDirectory,
+            modelName: modelName
+        ) else {
+            return
+        }
+        processors.append(
+            .coreML(
+                CoreMLPersonDetectorConfiguration(
+                    candidate: candidate,
+                    modelURL: modelURL,
+                    outputFormat: .yolo26EndToEnd,
+                    inputWidth: imageSize,
+                    inputHeight: imageSize,
+                    minConfidence: 0.10,
+                    maxTrackAgeFrames: maxTrackAgeFrames,
+                    detectionIntervalFrames: detectionIntervalFrames
+                )
+            )
+        )
+    }
+
+    private static func replayModelURL(modelsRoot: URL, modelDirectory: String, modelName: String) -> URL? {
+        let root = modelsRoot.appendingPathComponent(modelDirectory, isDirectory: true)
+        let compiled = root.appendingPathComponent("\(modelName).mlmodelc", isDirectory: true)
+        if FileManager.default.fileExists(atPath: compiled.path) {
+            return compiled
+        }
+        let package = root.appendingPathComponent("\(modelName).mlpackage", isDirectory: true)
+        if FileManager.default.fileExists(atPath: package.path) {
+            return package
+        }
+        return nil
     }
 
     nonisolated private static func writeReplayBenchmarkFailure(

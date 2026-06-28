@@ -9,6 +9,7 @@ public struct ReplayPersonBenchmarkOutputPaths: Equatable, Sendable {
     public var tracksURL: URL
     public var timingURL: URL
     public var summaryURL: URL
+    public var progressURL: URL
 
     public init(rootURL: URL, clipID: String, candidate: String) {
         self.sessionURL = rootURL
@@ -17,6 +18,7 @@ public struct ReplayPersonBenchmarkOutputPaths: Equatable, Sendable {
         self.tracksURL = sessionURL.appendingPathComponent("on_device_person_tracks.json")
         self.timingURL = sessionURL.appendingPathComponent("timing.json")
         self.summaryURL = sessionURL.appendingPathComponent("run_summary.json")
+        self.progressURL = sessionURL.appendingPathComponent("progress.jsonl")
     }
 }
 
@@ -135,11 +137,13 @@ public final class ReplayPersonBenchmarkRunner {
             candidate: candidate.rawValue
         )
         try FileManager.default.createDirectory(at: paths.sessionURL, withIntermediateDirectories: true)
+        try appendProgress(stage: "session_created", frameIndex: nil, to: paths.progressURL)
 
         let asset = AVURLAsset(url: clip.videoURL)
         guard let videoTrack = asset.tracks(withMediaType: .video).first else {
             throw ReplayPersonBenchmarkRunnerError.missingVideoTrack(clip.videoURL.path)
         }
+        try appendProgress(stage: "video_track_ready", frameIndex: nil, to: paths.progressURL)
 
         let outputSettings: [String: Any] = [
             String(kCVPixelBufferPixelFormatTypeKey): kCVPixelFormatType_32BGRA,
@@ -154,6 +158,7 @@ public final class ReplayPersonBenchmarkRunner {
         guard reader.startReading() else {
             throw ReplayPersonBenchmarkRunnerError.cannotStartReader(reader.error?.localizedDescription ?? clip.videoURL.path)
         }
+        try appendProgress(stage: "reader_started", frameIndex: nil, to: paths.progressURL)
 
         let startedThermalState = thermalStateLabel()
         let started = CFAbsoluteTimeGetCurrent()
@@ -184,11 +189,15 @@ public final class ReplayPersonBenchmarkRunner {
             frames.append(OnDevicePersonFrame(frameIndex: frameIndex, detections: detections))
             timingSamples.append(OnDevicePersonTimingSample(frameIndex: frameIndex, latencyMs: latencyMs, processed: true))
             frameIndex += 1
+            if frameIndex == 1 || frameIndex % 30 == 0 {
+                try? appendProgress(stage: "frame_processed", frameIndex: frameIndex, to: paths.progressURL)
+            }
         }
 
         if reader.status == .failed, let error = reader.error {
             throw error
         }
+        try appendProgress(stage: "reader_complete", frameIndex: frameIndex, to: paths.progressURL)
 
         let wallClockSeconds = max(0, CFAbsoluteTimeGetCurrent() - started)
         let tracks = OnDevicePersonTracks(
@@ -226,12 +235,30 @@ public final class ReplayPersonBenchmarkRunner {
             wallClockSeconds: wallClockSeconds
         )
         try writeJSON(summary, to: paths.summaryURL)
+        try appendProgress(stage: "finished", frameIndex: frames.count, to: paths.progressURL)
         return summary
     }
 
     private func writeJSON<T: Encodable>(_ value: T, to url: URL) throws {
         let data = try encoder.encode(value)
         try data.write(to: url, options: [.atomic])
+    }
+
+    private func appendProgress(stage: String, frameIndex: Int?, to url: URL) throws {
+        var payload = "{\"stage\":\"\(stage)\""
+        if let frameIndex {
+            payload += ",\"frame_index\":\(frameIndex)"
+        }
+        payload += ",\"timestamp\":\(CFAbsoluteTimeGetCurrent())}\n"
+        let data = Data(payload.utf8)
+        if FileManager.default.fileExists(atPath: url.path) {
+            let handle = try FileHandle(forWritingTo: url)
+            handle.seekToEndOfFile()
+            handle.write(data)
+            handle.closeFile()
+        } else {
+            try data.write(to: url, options: [.atomic])
+        }
     }
 
     private func makeRuntime() throws -> ReplayPersonFrameProcessor {
@@ -278,6 +305,8 @@ private final class CoreMLReplayPersonFrameProcessor: ReplayPersonFrameProcessor
     let modelLoadMs: Double?
     let mlpackageSizeMB: Double?
     private let detector: CoreMLPersonDetector
+    private let detectionIntervalFrames: Int
+    private var lastDetections: [OnDevicePersonDetection] = []
 
     init(configuration: CoreMLPersonDetectorConfiguration) throws {
         let detector = try CoreMLPersonDetector(configuration: configuration)
@@ -285,10 +314,16 @@ private final class CoreMLReplayPersonFrameProcessor: ReplayPersonFrameProcessor
         self.modelLoadMs = detector.modelLoadMs
         self.mlpackageSizeMB = detector.mlpackageSizeMB
         self.detector = detector
+        self.detectionIntervalFrames = max(1, configuration.detectionIntervalFrames)
     }
 
     func process(pixelBuffer: CVPixelBuffer, frameIndex: Int) throws -> [OnDevicePersonDetection] {
-        try detector.process(pixelBuffer: pixelBuffer, frameIndex: frameIndex)
+        if detectionIntervalFrames > 1, frameIndex % detectionIntervalFrames != 0 {
+            return lastDetections
+        }
+        let detections = try detector.process(pixelBuffer: pixelBuffer, frameIndex: frameIndex)
+        lastDetections = detections
+        return detections
     }
 }
 

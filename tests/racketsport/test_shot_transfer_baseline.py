@@ -114,6 +114,58 @@ def test_baseline_uses_semantic_wrist_joints_when_ball_inflection_is_missing():
     assert payload["summary"]["unknown_count"] == 0
 
 
+def test_baseline_uses_sam3d_mhr70_semantic_adapter_when_joint_names_are_generic():
+    joints = [[0.0, 0.0, 1.0] for _index in range(70)]
+    joints[5] = [-0.3, -2.0, 1.4]
+    joints[6] = [0.3, -2.0, 1.4]
+    joints[41] = [1.2, -2.0, 1.0]
+    joints[62] = [-0.2, -2.0, 1.0]
+    payload = classify_shots_from_payloads(
+        clip_id="clip_sam3d_semantic_adapter",
+        contact_windows_payload=_contact_payload(),
+        ball_inflections_payload={"schema_version": 1, "candidates": []},
+        skeleton3d_payload={
+            "schema_version": 1,
+            "joint_names": [f"sam3dbody_joint_{index:03d}" for index in range(70)],
+            "players": [
+                {
+                    "id": 2,
+                    "frames": [
+                        {
+                            "t": 1.0,
+                            "joints_world": joints,
+                            "joint_conf": [0.9] * 70,
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+
+    shot = payload["shots"][0]
+    assert shot["type"] == "fh_shot"
+    assert shot["specific_type_candidate"] == "fh_drive"
+    assert shot["evidence"]["pose_track_fallback"]["source"] == "semantic_wrist_extension"
+    assert shot["evidence"]["pose_track_fallback"]["semantic_joint_source"] == "sam3d_body_mhr70_v1"
+
+
+def test_baseline_keeps_wrong_count_generic_joints_fail_closed_without_track_fallback():
+    payload = classify_shots_from_payloads(
+        clip_id="clip_wrong_count_generic",
+        contact_windows_payload=_contact_payload(),
+        ball_inflections_payload={"schema_version": 1, "candidates": []},
+        skeleton3d_payload={
+            "schema_version": 1,
+            "joint_names": [f"sam3dbody_joint_{index:03d}" for index in range(69)],
+            "players": [{"id": 2, "frames": [{"t": 1.0, "joints_world": [[0.0, 0.0, 1.0]] * 69}]}],
+        },
+    )
+
+    assert payload["shots"][0]["type"] == "unknown"
+    assert payload["shots"][0]["gated"] is True
+    assert payload["shots"][0]["evidence"].get("pose_track_fallback") is None
+
+
 def test_baseline_uses_ball_track_and_player_bbox_when_pose_joints_are_not_semantic():
     payload = classify_shots_from_payloads(
         clip_id="clip_track_fallback",

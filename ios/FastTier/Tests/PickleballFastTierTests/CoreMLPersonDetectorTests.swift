@@ -2,6 +2,19 @@ import XCTest
 @testable import PickleballFastTier
 
 final class CoreMLPersonDetectorTests: XCTestCase {
+    func testConfigurationClampsDetectionIntervalToAtLeastOne() {
+        let configuration = CoreMLPersonDetectorConfiguration(
+            candidate: .yolo26nInt8Detect15Track30,
+            modelURL: URL(fileURLWithPath: "/tmp/model.mlmodelc", isDirectory: true),
+            outputFormat: .yolo26EndToEnd,
+            inputWidth: 416,
+            inputHeight: 416,
+            detectionIntervalFrames: 0
+        )
+
+        XCTAssertEqual(configuration.detectionIntervalFrames, 1)
+    }
+
     func testYolo11NMSDecoderConvertsNormalizedCenterBoxesToSourcePixels() {
         let observations = CoreMLPersonDetectionDecoder.decodeYolo11NMS(
             coordinates: [

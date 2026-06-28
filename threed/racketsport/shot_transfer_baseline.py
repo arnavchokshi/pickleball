@@ -11,6 +11,8 @@ from __future__ import annotations
 import math
 from typing import Any, Mapping, Sequence
 
+from threed.racketsport.skeleton3d import semanticize_skeleton_payload
+
 
 CLASSIFIER_NAME = "shot_transfer_baseline_v1"
 DEFAULT_MAX_BALL_DT_S = 0.30
@@ -37,7 +39,11 @@ def classify_shots_from_payloads(
     max_ball_dt_s = _require_non_negative(max_ball_dt_s, "max_ball_dt_s")
     contacts = _contact_events(contact_windows_payload)
     inflections = _ball_inflections(ball_inflections_payload or {})
-    pose_payload = skeleton3d_payload or smpl_motion_payload or {}
+    pose_payload = (
+        semanticize_skeleton_payload(skeleton3d_payload)
+        or semanticize_skeleton_payload(smpl_motion_payload)
+        or {}
+    )
     tracks = _track_players(tracks_payload or {})
     ball_frames = _ball_track_frames(ball_track_payload or {})
 
@@ -332,6 +338,7 @@ def _semantic_pose_hint(
                 "source": "semantic_wrist_to_ball",
                 "player_id": player_id,
                 "pose_frame_dt_s": round(frame_dt, 6),
+                "semantic_joint_source": str(pose_payload.get("semantic_joint_source", "already_semantic")),
                 "left_wrist_xy": [left_wrist[0], left_wrist[1]],
                 "right_wrist_xy": [right_wrist[0], right_wrist[1]],
             }
@@ -350,6 +357,7 @@ def _semantic_pose_hint(
         "source": "semantic_wrist_extension",
         "player_id": player_id,
         "pose_frame_dt_s": round(frame_dt, 6),
+        "semantic_joint_source": str(pose_payload.get("semantic_joint_source", "already_semantic")),
         "left_extension_m": round(left_extension, 6),
         "right_extension_m": round(right_extension, 6),
     }

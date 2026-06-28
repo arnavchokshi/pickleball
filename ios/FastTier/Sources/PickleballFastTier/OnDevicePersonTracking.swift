@@ -4,9 +4,12 @@ public enum OnDevicePersonCandidate: String, Codable, Sendable {
     case visionHumanRectanglesIouV1 = "vision_human_rectangles_iou_v1"
     case visionPoseRoleLock = "vision_pose_rolelock"
     case yolo26nInt8EveryFrame = "yolo26n_int8_every_frame"
+    case yolo26nInt8Img512EveryFrame = "yolo26n_int8_img512_every_frame"
+    case yolo26nInt8Img640EveryFrame = "yolo26n_int8_img640_every_frame"
     case yolo26nInt8Detect15Track30 = "yolo26n_int8_detect15_track30"
     case yolo26nInt8RoleColorStitch = "yolo26n_int8_role_color_stitch"
     case yolo26sInt8EveryFrame = "yolo26s_int8_every_frame"
+    case yolo26mInt8Img416EveryFrame = "yolo26m_int8_img416_every_frame"
     case yolo11nInt8Fallback = "yolo11n_int8_fallback"
 }
 

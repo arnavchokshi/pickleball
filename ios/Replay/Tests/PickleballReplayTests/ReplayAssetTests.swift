@@ -110,5 +110,6 @@ final class ReplayAssetTests: XCTestCase {
         XCTAssertEqual(paths.tracksURL.lastPathComponent, "on_device_person_tracks.json")
         XCTAssertEqual(paths.timingURL.lastPathComponent, "timing.json")
         XCTAssertEqual(paths.summaryURL.lastPathComponent, "run_summary.json")
+        XCTAssertEqual(paths.progressURL.lastPathComponent, "progress.jsonl")
     }
 }

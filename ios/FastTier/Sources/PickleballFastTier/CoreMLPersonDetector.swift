@@ -27,6 +27,7 @@ public struct CoreMLPersonDetectorConfiguration: Equatable, Sendable {
     public var minConfidence: Double
     public var iouThreshold: Double
     public var maxTrackAgeFrames: Int
+    public var detectionIntervalFrames: Int
 
     public init(
         candidate: OnDevicePersonCandidate,
@@ -37,7 +38,8 @@ public struct CoreMLPersonDetectorConfiguration: Equatable, Sendable {
         maxTracks: Int = 4,
         minConfidence: Double = 0.10,
         iouThreshold: Double = 0.30,
-        maxTrackAgeFrames: Int = 8
+        maxTrackAgeFrames: Int = 8,
+        detectionIntervalFrames: Int = 1
     ) {
         self.candidate = candidate
         self.modelURL = modelURL
@@ -48,6 +50,7 @@ public struct CoreMLPersonDetectorConfiguration: Equatable, Sendable {
         self.minConfidence = minConfidence
         self.iouThreshold = iouThreshold
         self.maxTrackAgeFrames = maxTrackAgeFrames
+        self.detectionIntervalFrames = max(1, detectionIntervalFrames)
     }
 }
 
