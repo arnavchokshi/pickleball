@@ -23,6 +23,8 @@ trackers, post-processors, or production runtime paths.
   impossible jumps removed.
 - `tracknet_court_temporal_path`: target-court output reduced to the longest
   motion-consistent path, with only short gaps filled.
+- `tracknet_court_local_search`: target-court output post-processed with
+  bounded CPU pixel evidence around the predicted trajectory.
 - `oracle_click_corrected`: sparse-click identity filter output. Excluded from
   production ranking because it consumes held-out labels.
 
@@ -36,8 +38,17 @@ temporal path improves stability and hidden-frame behavior while losing too much
 visible recall. The less destructive outlier filter keeps recall but leaves too
 many hidden-frame false positives.
 
+The CPU local-search candidate is not currently a winner: it reduces large
+jumps and can recover some visible labels, but it also increases hidden-frame
+false positives on the accepted four-clip benchmark. Keep it as an experimental
+diagnostic path until its evidence model can distinguish real target-court balls
+from court lines, paddle flashes, and background balls.
+
 The next model-side candidate should be a sports-ball-specific tracker with
 motion attention, starting with TrackNetV4 if usable weights or training data are
-available. Generic point trackers should be evaluated only with automatic seeds
-from a detector or motion model; human-click seeded point tracking is another
-oracle variant, not a production-comparable tracker.
+available. The H100 has the official TrackNetV4 repo cloned, but the upstream
+`docs/RESULT.md` checkpoint links are placeholders in the public repo snapshot,
+so a real run still needs weights or fine-tuning. Generic point trackers should
+be evaluated only with automatic seeds from a detector or motion model;
+human-click seeded point tracking is another oracle variant, not a
+production-comparable tracker.
