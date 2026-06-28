@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from threed.racketsport.calibration_overlay import (
+    NET_LINE_COLOR,
     build_calibration_overlay,
     render_calibration_image_overlay,
     render_calibration_run_overlays,
@@ -34,6 +35,42 @@ def _synthetic_calibration() -> CourtCalibration:
     )
 
 
+def _half_resolution_calibration() -> CourtCalibration:
+    return CourtCalibration(
+        schema_version=1,
+        sport="pickleball",
+        homography=[[10.0, 0.0, 480.0], [0.0, -10.0, 270.0], [0.0, 0.0, 1.0]],
+        intrinsics=CameraIntrinsics(fx=500.0, fy=500.0, cx=480.0, cy=270.0, dist=[], source="synthetic_half"),
+        extrinsics=CourtExtrinsics(
+            R=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            t=[0.0, 0.0, 15.0],
+            camera_height_m=15.0,
+        ),
+        reprojection_error_px=ReprojectionError(median=0.0, p95=0.0),
+        capture_quality=CaptureQuality(grade="good", reasons=[]),
+        image_pts=[],
+        world_pts=[],
+    )
+
+
+def _untrusted_top_net_calibration() -> CourtCalibration:
+    return CourtCalibration(
+        schema_version=1,
+        sport="pickleball",
+        homography=[[100.0, 0.0, 500.0], [0.0, 100.0, 300.0], [0.0, 0.0, 1.0]],
+        intrinsics=CameraIntrinsics(fx=1000.0, fy=1000.0, cx=500.0, cy=300.0, dist=[], source="synthetic"),
+        extrinsics=CourtExtrinsics(
+            R=[[1.0, 0.0, 0.0], [0.35, 0.0, 1.0], [0.0, 0.0, 1.0]],
+            t=[0.0, 0.0, 10.0],
+            camera_height_m=10.0,
+        ),
+        reprojection_error_px=ReprojectionError(median=0.0, p95=0.0),
+        capture_quality=CaptureQuality(grade="good", reasons=[]),
+        image_pts=[],
+        world_pts=[],
+    )
+
+
 def test_overlay_emits_projected_court_lines_and_net_points():
     overlay = build_calibration_overlay(_synthetic_calibration(), net_plane=build_net_plane("pickleball"))
 
@@ -46,6 +83,8 @@ def test_overlay_emits_projected_court_lines_and_net_points():
         "right_sideline",
         "near_nvz",
         "far_nvz",
+        "near_centerline",
+        "far_centerline",
         "net",
     }
     near_baseline = next(line for line in overlay["court_lines"] if line["id"] == "near_baseline")
@@ -57,6 +96,32 @@ def test_overlay_emits_projected_court_lines_and_net_points():
     assert overlay["net_points"]["center"] == pytest.approx([960.0, 540.0])
     assert overlay["summary"]["court_line_count"] == len(overlay["court_lines"])
     assert overlay["summary"]["net_point_count"] == 3
+    assert overlay["summary"]["net_top_projection_status"] == "trusted_pnp_geometry"
+
+
+def test_overlay_omits_untrusted_top_net_projection_when_pnp_disagrees_with_ground_net():
+    overlay = build_calibration_overlay(_untrusted_top_net_calibration(), net_plane=build_net_plane("pickleball"))
+
+    assert any(line["id"] == "net" for line in overlay["court_lines"])
+    assert overlay["net_points"] == {}
+    assert overlay["net_segments"] == []
+    assert overlay["summary"]["net_point_count"] == 0
+    assert overlay["summary"]["net_top_projection_status"] == "untrusted_pnp_geometry"
+    assert overlay["summary"]["net_top_angle_delta_deg"] > 6.0
+
+
+def test_overlay_omits_top_net_projection_for_estimated_review_frame_intrinsics():
+    calibration = _synthetic_calibration()
+    calibration = calibration.model_copy(
+        deep=True,
+        update={"intrinsics": calibration.intrinsics.model_copy(update={"source": "estimated_from_review_frame"})},
+    )
+
+    overlay = build_calibration_overlay(calibration, net_plane=build_net_plane("pickleball"))
+
+    assert overlay["net_points"] == {}
+    assert overlay["net_segments"] == []
+    assert overlay["summary"]["net_top_projection_status"] == "untrusted_estimated_intrinsics"
 
 
 def test_overlay_rejects_mismatched_net_plane_sport():
@@ -95,8 +160,10 @@ def test_render_calibration_overlay_cli_writes_svg_and_json_summary(tmp_path):
     assert completed.stdout == f"wrote {svg_path}\nwrote {summary_path}\n"
     assert "<svg" in svg
     assert 'data-line-id="near_baseline"' in svg
+    assert 'data-line-id="near_centerline"' in svg
+    assert 'data-line-id="far_centerline"' in svg
     assert 'data-net-point-id="center"' in svg
-    assert summary["summary"]["court_line_count"] >= 7
+    assert summary["summary"]["court_line_count"] >= 9
     assert summary["summary"]["net_point_count"] == 3
 
 
@@ -168,6 +235,43 @@ def test_render_calibration_image_overlay_draws_projected_lines_without_real_cv2
     assert any(call["kind"] == "circle" for call in fake_cv2.calls)
 
 
+def test_render_calibration_image_overlay_scales_calibration_to_frame_resolution(tmp_path):
+    image_path = tmp_path / "frame.jpg"
+    out_path = tmp_path / "calibration_overlay_frame.jpg"
+    image_path.write_bytes(b"fake image")
+    fake_cv2 = _FakeCv2(frame_shape=(1080, 1920, 3))
+
+    render_calibration_image_overlay(
+        image_path=image_path,
+        out_path=out_path,
+        calibration=_half_resolution_calibration(),
+        net_plane=build_net_plane("pickleball"),
+        cv2_module=fake_cv2,
+    )
+
+    first_line = next(call for call in fake_cv2.calls if call["kind"] == "line")
+    assert first_line["start"] == (899, 674)
+    assert first_line["end"] == (1021, 674)
+
+
+def test_render_calibration_image_overlay_does_not_draw_orange_when_top_net_untrusted(tmp_path):
+    image_path = tmp_path / "frame.jpg"
+    out_path = tmp_path / "calibration_overlay_frame.jpg"
+    image_path.write_bytes(b"fake image")
+    fake_cv2 = _FakeCv2(frame_shape=(1080, 1920, 3))
+
+    render_calibration_image_overlay(
+        image_path=image_path,
+        out_path=out_path,
+        calibration=_untrusted_top_net_calibration(),
+        net_plane=build_net_plane("pickleball"),
+        cv2_module=fake_cv2,
+    )
+
+    assert not any(call["kind"] == "line" and call["color"] == NET_LINE_COLOR for call in fake_cv2.calls)
+    assert not any(call["kind"] == "circle" and call["color"] == NET_LINE_COLOR for call in fake_cv2.calls)
+
+
 def test_render_calibration_run_overlays_uses_reviewed_frame_and_skips_missing_clips(tmp_path):
     run_root = tmp_path / "run"
     frames_root = run_root / "review_bundle" / "images"
@@ -206,20 +310,49 @@ def test_render_calibration_run_overlays_uses_reviewed_frame_and_skips_missing_c
     assert "missing calibration or net-plane artifact" in skipped["warnings"]
 
 
+def test_render_calibration_video_overlay_scales_calibration_to_frame_resolution(tmp_path):
+    run_root = tmp_path / "run"
+    frames_root = run_root / "review_bundle" / "images"
+    clip = "clip_static"
+    clip_dir = run_root / clip
+    clip_dir.mkdir(parents=True)
+    frames_dir = frames_root / clip
+    frames_dir.mkdir(parents=True)
+    (frames_dir / "frame_000001.jpg").write_bytes(b"frame 1")
+    (clip_dir / "court_calibration.json").write_text(_half_resolution_calibration().model_dump_json(), encoding="utf-8")
+    (clip_dir / "net_plane.json").write_text(build_net_plane("pickleball").model_dump_json(), encoding="utf-8")
+    fake_cv2 = _FakeCv2(frame_shape=(1080, 1920, 3))
+
+    render_calibration_run_overlays(
+        run_root=run_root,
+        frames_root=frames_root,
+        clips=[clip],
+        max_video_frames=1,
+        cv2_module=fake_cv2,
+    )
+
+    video_writer_idx = next(idx for idx, call in enumerate(fake_cv2.calls) if call["kind"] == "VideoWriter")
+    first_video_line = next(call for call in fake_cv2.calls[video_writer_idx:] if call["kind"] == "line")
+    assert first_video_line["start"] == (899, 674)
+    assert first_video_line["end"] == (1021, 674)
+
+
 class _FakeFrame:
-    shape = (48, 64, 3)
+    def __init__(self, shape: tuple[int, int, int] = (48, 64, 3)) -> None:
+        self.shape = shape
 
 
 class _FakeCv2:
     FONT_HERSHEY_SIMPLEX = 0
     LINE_AA = 16
 
-    def __init__(self) -> None:
+    def __init__(self, frame_shape: tuple[int, int, int] = (48, 64, 3)) -> None:
         self.calls: list[dict[str, object]] = []
+        self.frame_shape = frame_shape
 
     def imread(self, path: str) -> _FakeFrame:
         self.calls.append({"kind": "imread", "path": path})
-        return _FakeFrame()
+        return _FakeFrame(self.frame_shape)
 
     def imwrite(self, path: str, frame: _FakeFrame) -> bool:
         Path(path).write_bytes(b"rendered")

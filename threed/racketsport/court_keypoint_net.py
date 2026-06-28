@@ -64,8 +64,10 @@ class SolvePnPCorrespondences:
 
 PICKLEBALL_KEYPOINTS: tuple[CourtKeypoint, ...] = (
     CourtKeypoint("near_left_corner", tuple(xyz_ft_to_m(-10.0, -22.0)), "near baseline left sideline corner"),
+    CourtKeypoint("near_baseline_center", tuple(xyz_ft_to_m(0.0, -22.0)), "near baseline at centerline"),
     CourtKeypoint("near_right_corner", tuple(xyz_ft_to_m(10.0, -22.0)), "near baseline right sideline corner"),
     CourtKeypoint("far_right_corner", tuple(xyz_ft_to_m(10.0, 22.0)), "far baseline right sideline corner"),
+    CourtKeypoint("far_baseline_center", tuple(xyz_ft_to_m(0.0, 22.0)), "far baseline at centerline"),
     CourtKeypoint("far_left_corner", tuple(xyz_ft_to_m(-10.0, 22.0)), "far baseline left sideline corner"),
     CourtKeypoint("near_nvz_left", tuple(xyz_ft_to_m(-10.0, -7.0)), "near NVZ line at left sideline"),
     CourtKeypoint("near_nvz_center", tuple(xyz_ft_to_m(0.0, -7.0)), "near NVZ line at centerline"),

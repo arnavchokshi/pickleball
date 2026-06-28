@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from threed.racketsport.schemas import (
     CaptureSidecar,
     CourtCalibration,
+    CourtLineEvidence,
     PhaseEvalMetrics,
     RacketPose,
     validate_artifact_file,
@@ -131,6 +132,63 @@ def test_phase_eval_metrics_schema_is_registered(tmp_path):
     assert isinstance(parsed, PhaseEvalMetrics)
     assert parsed.status == "blocked"
     assert parsed.clips[0].missing_artifacts == ["court_calibration.json"]
+
+
+def test_court_line_evidence_schema_validates_semantic_lines_and_net(tmp_path):
+    payload = {
+        "schema_version": 1,
+        "sport": "pickleball",
+        "source": "auto_hough_template",
+        "line_observations": [
+            {
+                "line_id": "near_nvz",
+                "image_segment": [[100.0, 320.0], [900.0, 320.0]],
+                "confidence": 0.91,
+                "frame_indexes": [1, 2, 3],
+                "residual_px": {"mean": 1.2, "p95": 2.4},
+                "visible_fraction": 0.86,
+                "source": "hough",
+            }
+        ],
+        "keypoint_observations": [
+            {
+                "name": "near_baseline_center",
+                "image_xy": [500.0, 700.0],
+                "confidence": 0.88,
+                "frame_indexes": [1, 2, 3],
+                "source": "line_intersection",
+            }
+        ],
+        "net_observations": [
+            {
+                "net_id": "top_net",
+                "image_points": [[100.0, 250.0], [500.0, 245.0], [900.0, 250.0]],
+                "confidence": 0.84,
+                "frame_indexes": [1, 2, 3],
+                "residual_px": {"mean": 2.1, "p95": 3.5},
+                "source": "net_top_roi",
+            }
+        ],
+        "aggregate": {
+            "accepted_line_ids": ["near_nvz"],
+            "rejected_line_ids": ["far_centerline"],
+            "missing_required_line_ids": ["far_centerline"],
+            "mean_residual_px": 1.2,
+            "p95_residual_px": 3.5,
+            "temporal_stability_px": 0.8,
+            "auto_calibration_ready": False,
+            "reasons": ["missing_far_centerline"],
+        },
+    }
+    path = tmp_path / "court_line_evidence.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    parsed = validate_artifact_file("court_line_evidence", path)
+
+    assert isinstance(parsed, CourtLineEvidence)
+    assert parsed.aggregate.auto_calibration_ready is False
+    assert parsed.line_observations[0].line_id == "near_nvz"
+    assert parsed.net_observations[0].image_points[1] == pytest.approx([500.0, 245.0])
 
 
 def test_racket_pose_rejects_malformed_geometry():

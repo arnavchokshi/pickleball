@@ -30,6 +30,13 @@ def test_pickleball_template_matches_regulation_dimensions():
     assert len(template.corners_m) == 4
     _assert_xy_ft(template.corners_m[0], -10.0, -22.0)
     _assert_xy_ft(template.corners_m[2], 10.0, 22.0)
+    assert {"near_centerline", "far_centerline"} <= set(template.line_segments_m)
+    near_centerline = template.line_segments_m["near_centerline"]
+    _assert_xy_ft(near_centerline[0], 0.0, -22.0)
+    _assert_xy_ft(near_centerline[1], 0.0, -7.0)
+    far_centerline = template.line_segments_m["far_centerline"]
+    _assert_xy_ft(far_centerline[0], 0.0, 7.0)
+    _assert_xy_ft(far_centerline[1], 0.0, 22.0)
 
 
 def test_tennis_template_matches_doubles_and_singles_geometry():

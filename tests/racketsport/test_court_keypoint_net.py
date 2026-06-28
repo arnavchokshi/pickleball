@@ -22,8 +22,10 @@ def test_pickleball_keypoint_taxonomy_includes_corners_nvz_and_centerline_inters
 
     assert names == [
         "near_left_corner",
+        "near_baseline_center",
         "near_right_corner",
         "far_right_corner",
+        "far_baseline_center",
         "far_left_corner",
         "near_nvz_left",
         "near_nvz_center",
@@ -40,6 +42,10 @@ def test_pickleball_keypoint_taxonomy_includes_corners_nvz_and_centerline_inters
     assert by_name["near_left_corner"].world_xyz_m[2] == pytest.approx(0.0)
     assert _ft(by_name["near_left_corner"].world_xyz_m[0]) == pytest.approx(-10.0)
     assert _ft(by_name["near_left_corner"].world_xyz_m[1]) == pytest.approx(-22.0)
+    assert _ft(by_name["near_baseline_center"].world_xyz_m[0]) == pytest.approx(0.0)
+    assert _ft(by_name["near_baseline_center"].world_xyz_m[1]) == pytest.approx(-22.0)
+    assert _ft(by_name["far_baseline_center"].world_xyz_m[0]) == pytest.approx(0.0)
+    assert _ft(by_name["far_baseline_center"].world_xyz_m[1]) == pytest.approx(22.0)
     assert _ft(by_name["near_nvz_center"].world_xyz_m[0]) == pytest.approx(0.0)
     assert _ft(by_name["near_nvz_center"].world_xyz_m[1]) == pytest.approx(-7.0)
     assert _ft(by_name["net_center"].world_xyz_m[0]) == pytest.approx(0.0)

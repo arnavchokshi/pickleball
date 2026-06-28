@@ -129,6 +129,15 @@ class CourtTemplate:
                 xyz_ft_to_m(-self.half_width_ft, self.non_volley_zone_ft),
                 xyz_ft_to_m(self.half_width_ft, self.non_volley_zone_ft),
             )
+            if self.sport == "pickleball":
+                lines["near_centerline"] = (
+                    xyz_ft_to_m(0.0, -self.half_length_ft),
+                    xyz_ft_to_m(0.0, -self.non_volley_zone_ft),
+                )
+                lines["far_centerline"] = (
+                    xyz_ft_to_m(0.0, self.non_volley_zone_ft),
+                    xyz_ft_to_m(0.0, self.half_length_ft),
+                )
         if self.service_line_distance_ft is not None:
             service_half_width_ft = (self.singles_width_ft or self.width_ft) / 2.0
             lines["near_service_line"] = (

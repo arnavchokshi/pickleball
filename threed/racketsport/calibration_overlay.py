@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .court_calibration import project_planar_points
+from .court_auto_evidence import calibration_for_image_size
 from .court_templates import COORDINATE_FRAME, get_court_template
 from .net_plane import build_net_plane, project_net_plane
 from .schemas import CourtCalibration, NetPlane
@@ -21,6 +22,9 @@ COURT_LINE_COLOR = (34, 197, 94)
 NET_LINE_COLOR = (0, 140, 255)
 NET_POINT_COLOR = (0, 140, 255)
 TEXT_COLOR = (255, 255, 255)
+MAX_TRUSTED_NET_TOP_ANGLE_DELTA_DEG = 6.0
+MAX_TRUSTED_NET_TOP_LENGTH_RATIO = 4.0
+UNTRUSTED_NET_TOP_INTRINSIC_SOURCES = {"estimated_from_review_frame"}
 
 
 def load_calibration_artifact(path: str | Path) -> CourtCalibration:
@@ -68,9 +72,25 @@ def build_calibration_overlay(calibration: CourtCalibration, *, net_plane: NetPl
             }
         )
 
-    net_points = {key: _round_point(value) for key, value in project_net_plane(calibration, net).items()}
+    projected_net_points = {key: _round_point(value) for key, value in project_net_plane(calibration, net).items()}
+    ground_net = next((line for line in court_lines if line["id"] == "net"), None)
+    net_trust = _net_top_projection_trust(
+        ground_net["image"] if ground_net else [],
+        projected_net_points,
+        intrinsics_source=calibration.intrinsics.source,
+    )
+    net_points = projected_net_points if net_trust["trusted"] else {}
     all_image_points = [point for line in court_lines for point in line["image"]] + list(net_points.values())
     view_box = _view_box_for_points(all_image_points)
+
+    net_segments = (
+        [
+            {"id": "net_top_left", "image": [net_points["left_post"], net_points["center"]]},
+            {"id": "net_top_right", "image": [net_points["center"], net_points["right_post"]]},
+        ]
+        if net_points
+        else []
+    )
 
     return {
         "schema_version": 1,
@@ -80,15 +100,15 @@ def build_calibration_overlay(calibration: CourtCalibration, *, net_plane: NetPl
         "view_box": view_box,
         "court_lines": court_lines,
         "net_points": net_points,
-        "net_segments": [
-            {"id": "net_top_left", "image": [net_points["left_post"], net_points["center"]]},
-            {"id": "net_top_right", "image": [net_points["center"], net_points["right_post"]]},
-        ],
+        "net_segments": net_segments,
         "summary": {
             "court_line_count": len(court_lines),
             "net_point_count": len(net_points),
             "reprojection_median_px": float(calibration.reprojection_error_px.median),
             "reprojection_p95_px": float(calibration.reprojection_error_px.p95),
+            "net_top_projection_status": net_trust["status"],
+            "net_top_angle_delta_deg": net_trust["angle_delta_deg"],
+            "net_top_length_ratio": net_trust["length_ratio"],
         },
     }
 
@@ -172,6 +192,8 @@ def render_calibration_image_overlay(
     if frame is None:
         raise ValueError(f"cannot open image frame: {image_path}")
 
+    height, width = frame.shape[:2]
+    calibration = calibration_for_image_size(calibration, width=int(width), height=int(height))
     overlay = build_calibration_overlay(calibration, net_plane=net_plane)
     _draw_image_overlay(cv2, frame, overlay)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -264,8 +286,8 @@ def _draw_image_overlay(cv2: Any, frame: Any, overlay: OverlayPayload) -> None:
     for line in overlay["court_lines"]:
         start, end = [_int_point(point) for point in line["image"]]
         line_id = str(line["id"])
-        color = NET_LINE_COLOR if line_id == "net" else COURT_LINE_COLOR
-        thickness = 3 if line_id == "net" else 2
+        color = COURT_LINE_COLOR
+        thickness = 2
         cv2.line(frame, start, end, color, thickness, line_type)
         _draw_label(cv2, frame, line_id, _midpoint(start, end), color=color)
 
@@ -366,6 +388,7 @@ def _render_calibration_video_overlay(
     if first_frame is None:
         return 0
     height, width = first_frame.shape[:2]
+    calibration = calibration_for_image_size(calibration, width=int(width), height=int(height))
     out_path.parent.mkdir(parents=True, exist_ok=True)
     writer = cv2.VideoWriter(str(out_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (int(width), int(height)))
     if not writer.isOpened():
@@ -464,6 +487,70 @@ def _run_markdown_index(summary: dict[str, Any]) -> str:
         "| --- | --- | --- | --- | --- |\n"
         f"{table}\n"
     )
+
+
+def _net_top_projection_trust(
+    ground_net_image: list[list[float]],
+    net_points: dict[str, list[float]],
+    *,
+    intrinsics_source: str,
+) -> dict[str, Any]:
+    if intrinsics_source in UNTRUSTED_NET_TOP_INTRINSIC_SOURCES:
+        return {
+            "trusted": False,
+            "status": "untrusted_estimated_intrinsics",
+            "angle_delta_deg": 180.0,
+            "length_ratio": float("inf"),
+        }
+    if len(ground_net_image) != 2 or not {"left_post", "right_post"}.issubset(net_points):
+        return {
+            "trusted": False,
+            "status": "untrusted_pnp_geometry",
+            "angle_delta_deg": 180.0,
+            "length_ratio": float("inf"),
+        }
+
+    ground_start, ground_end = ground_net_image
+    top_start = net_points["left_post"]
+    top_end = net_points["right_post"]
+    ground_length = _point_distance(ground_start, ground_end)
+    top_length = _point_distance(top_start, top_end)
+    if ground_length <= 0.0 or top_length <= 0.0:
+        return {
+            "trusted": False,
+            "status": "untrusted_pnp_geometry",
+            "angle_delta_deg": 180.0,
+            "length_ratio": float("inf"),
+        }
+
+    angle_delta_deg = _line_angle_delta_deg(ground_start, ground_end, top_start, top_end)
+    length_ratio = max(top_length / ground_length, ground_length / top_length)
+    trusted = (
+        angle_delta_deg <= MAX_TRUSTED_NET_TOP_ANGLE_DELTA_DEG
+        and length_ratio <= MAX_TRUSTED_NET_TOP_LENGTH_RATIO
+    )
+    return {
+        "trusted": trusted,
+        "status": "trusted_pnp_geometry" if trusted else "untrusted_pnp_geometry",
+        "angle_delta_deg": _round_float(angle_delta_deg),
+        "length_ratio": _round_float(length_ratio),
+    }
+
+
+def _line_angle_delta_deg(
+    first_start: list[float],
+    first_end: list[float],
+    second_start: list[float],
+    second_end: list[float],
+) -> float:
+    first_angle = math.degrees(math.atan2(first_end[1] - first_start[1], first_end[0] - first_start[0]))
+    second_angle = math.degrees(math.atan2(second_end[1] - second_start[1], second_end[0] - second_start[0]))
+    delta = abs(first_angle - second_angle) % 180.0
+    return min(delta, 180.0 - delta)
+
+
+def _point_distance(first: list[float], second: list[float]) -> float:
+    return math.hypot(second[0] - first[0], second[1] - first[1])
 
 
 def _draw_label(

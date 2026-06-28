@@ -110,6 +110,111 @@ class NetPlane(StrictArtifact):
     post_height_in: float
 
 
+class ResidualSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mean: float
+    p95: float
+
+
+class CourtLineObservation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    line_id: str
+    image_segment: list[Vector2]
+    confidence: float
+    frame_indexes: list[int]
+    residual_px: ResidualSummary
+    visible_fraction: float
+    source: str
+
+    @field_validator("image_segment")
+    @classmethod
+    def _must_be_segment(cls, value: list[Vector2]) -> list[Vector2]:
+        if len(value) != 2 or any(len(point) != 2 for point in value):
+            raise ValueError("image_segment must contain exactly two 2D points")
+        return value
+
+    @field_validator("confidence", "visible_fraction")
+    @classmethod
+    def _must_be_unit_interval(cls, value: float) -> float:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError("value must be in [0, 1]")
+        return value
+
+
+class CourtKeypointObservation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    image_xy: Vector2
+    confidence: float
+    frame_indexes: list[int]
+    source: str
+
+    @field_validator("image_xy")
+    @classmethod
+    def _must_be_image_point(cls, value: Vector2) -> Vector2:
+        if len(value) != 2:
+            raise ValueError("image_xy must be a 2D point")
+        return value
+
+    @field_validator("confidence")
+    @classmethod
+    def _must_be_unit_interval(cls, value: float) -> float:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError("confidence must be in [0, 1]")
+        return value
+
+
+class NetLineObservation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    net_id: str
+    image_points: list[Vector2]
+    confidence: float
+    frame_indexes: list[int]
+    residual_px: ResidualSummary
+    source: str
+
+    @field_validator("image_points")
+    @classmethod
+    def _must_be_top_net_triplet(cls, value: list[Vector2]) -> list[Vector2]:
+        if len(value) != 3 or any(len(point) != 2 for point in value):
+            raise ValueError("image_points must contain left, center, and right 2D points")
+        return value
+
+    @field_validator("confidence")
+    @classmethod
+    def _must_be_unit_interval(cls, value: float) -> float:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError("confidence must be in [0, 1]")
+        return value
+
+
+class CourtLineEvidenceAggregate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    accepted_line_ids: list[str] = Field(default_factory=list)
+    rejected_line_ids: list[str] = Field(default_factory=list)
+    missing_required_line_ids: list[str] = Field(default_factory=list)
+    missing_required_net_ids: list[str] = Field(default_factory=list)
+    mean_residual_px: float
+    p95_residual_px: float
+    temporal_stability_px: float
+    auto_calibration_ready: bool
+    reasons: list[str] = Field(default_factory=list)
+
+
+class CourtLineEvidence(StrictArtifact):
+    sport: Literal["pickleball", "tennis"]
+    source: str
+    line_observations: list[CourtLineObservation] = Field(default_factory=list)
+    keypoint_observations: list[CourtKeypointObservation] = Field(default_factory=list)
+    net_observations: list[NetLineObservation] = Field(default_factory=list)
+    aggregate: CourtLineEvidenceAggregate
+
+
 class TrackFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -500,6 +605,7 @@ class PhaseEvalMetrics(StrictArtifact):
 ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "capture_sidecar": CaptureSidecar,
     "court_calibration": CourtCalibration,
+    "court_line_evidence": CourtLineEvidence,
     "court_zones": CourtZones,
     "net_plane": NetPlane,
     "tracks": Tracks,
