@@ -74,8 +74,8 @@ def _schema_errors(payload: Any) -> list[str]:
         errors.append("description: must be a non-empty string")
 
     corrections = payload.get("corrections")
-    if not isinstance(corrections, list) or not corrections:
-        errors.append("corrections: must be a non-empty array")
+    if not isinstance(corrections, list):
+        errors.append("corrections: must be an array")
         return errors
 
     for index, correction in enumerate(corrections):

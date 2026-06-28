@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .court_calibration import project_image_points_to_world
-from .court_templates import Sport
+from .court_templates import Sport, get_court_template
 from .court_zones import classify_point
 from .schemas import CourtCalibration
 
@@ -36,5 +36,22 @@ def person_detection_from_bbox(
     )
 
 
-def court_polygon_filter(detections: list[PersonDetection], *, sport: Sport) -> list[PersonDetection]:
-    return [detection for detection in detections if classify_point(sport, detection.foot_world_xy) is not None]
+def court_polygon_filter(
+    detections: list[PersonDetection],
+    *,
+    sport: Sport,
+    margin_m: float = 0.0,
+) -> list[PersonDetection]:
+    if margin_m < 0.0:
+        raise ValueError("margin_m must be non-negative")
+    if margin_m == 0.0:
+        return [detection for detection in detections if classify_point(sport, detection.foot_world_xy) is not None]
+    return [detection for detection in detections if _inside_court_footprint(sport, detection.foot_world_xy, margin_m=margin_m)]
+
+
+def _inside_court_footprint(sport: Sport, world_xy: list[float], *, margin_m: float) -> bool:
+    template = get_court_template(sport)
+    half_width_m = template.width_m / 2.0 + margin_m
+    half_length_m = template.length_m / 2.0 + margin_m
+    x, y = world_xy
+    return -half_width_m <= x <= half_width_m and -half_length_m <= y <= half_length_m

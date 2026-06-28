@@ -8,6 +8,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -54,6 +55,8 @@ def write_ball_track_from_csv(
     payload = tracknet_csv_to_ball_track(predictions_csv, fps=fps)
     _write_json(out_path, payload)
     visible = sum(1 for frame in payload["frames"] if frame["visible"])
+    runtime_payload = dict(runtime or {})
+    _add_runtime_metrics(runtime_payload, processed_frame_count=len(payload["frames"]), fps=float(fps))
     metadata = {
         "schema_version": 1,
         "artifact_type": "racketsport_tracknet_ball_run",
@@ -64,7 +67,7 @@ def write_ball_track_from_csv(
         "frame_count": len(payload["frames"]),
         "visible_frame_count": visible,
         "confidence_semantics": CONFIDENCE_SEMANTICS,
-        "runtime": runtime or {},
+        "runtime": runtime_payload,
         "not_ground_truth": True,
     }
     if metadata_out is not None:
@@ -212,6 +215,34 @@ def _normalize_video_range(video_range: tuple[int, int] | list[int] | None) -> t
     return start, end
 
 
+def _persistent_prediction_csv_path(out: str | Path) -> Path:
+    out_path = Path(out)
+    return out_path.with_name(f"{out_path.stem}_tracknet_predictions.csv")
+
+
+def _copy_file(source: str | Path, destination: str | Path) -> None:
+    source_path = Path(source)
+    destination_path = Path(destination)
+    destination_path.parent.mkdir(parents=True, exist_ok=True)
+    destination_path.write_bytes(source_path.read_bytes())
+
+
+def _add_runtime_metrics(runtime: dict[str, Any], *, processed_frame_count: int, fps: float) -> None:
+    runtime["processed_frame_count"] = int(processed_frame_count)
+    runtime["video_seconds_processed"] = int(processed_frame_count) / float(fps)
+    wall_seconds = runtime.get("wall_seconds")
+    if wall_seconds is None:
+        return
+    wall = float(wall_seconds)
+    if wall <= 0.0:
+        runtime["effective_fps"] = None
+        runtime["realtime_factor"] = None
+        return
+    effective_fps = int(processed_frame_count) / wall
+    runtime["effective_fps"] = effective_fps
+    runtime["realtime_factor"] = effective_fps / float(fps)
+
+
 def run_tracknet_or_convert(
     *,
     out: str | Path,
@@ -251,6 +282,8 @@ def run_tracknet_or_convert(
         "tracknet_checkpoint": checkpoint_metadata(tracknet_file),
         "inpaintnet_checkpoint": checkpoint_metadata(inpaintnet_file),
         "video": str(video),
+        "batch_size": int(batch_size),
+        "large_video": bool(large_video),
     }
     if normalized_video_range is not None:
         runtime["video_range_seconds"] = list(normalized_video_range)
@@ -259,6 +292,7 @@ def run_tracknet_or_convert(
         )
     if prediction_dir is None:
         with tempfile.TemporaryDirectory(prefix="tracknetv3_") as tmp_dir:
+            start = time.perf_counter()
             csv_path = run_official_tracknet_predict(
                 tracknet_repo=tracknet_repo,
                 video=video,
@@ -269,8 +303,11 @@ def run_tracknet_or_convert(
                 video_range=normalized_video_range,
                 large_video=large_video,
             )
+            runtime["wall_seconds"] = time.perf_counter() - start
+            persistent_csv_path = _persistent_prediction_csv_path(out)
+            _copy_file(csv_path, persistent_csv_path)
             return write_ball_track_from_csv(
-                predictions_csv=csv_path,
+                predictions_csv=persistent_csv_path,
                 fps=fps,
                 out=out,
                 metadata_out=metadata_out,
@@ -278,6 +315,7 @@ def run_tracknet_or_convert(
                 runtime=runtime,
             )
 
+    start = time.perf_counter()
     csv_path = run_official_tracknet_predict(
         tracknet_repo=tracknet_repo,
         video=video,
@@ -288,6 +326,7 @@ def run_tracknet_or_convert(
         video_range=normalized_video_range,
         large_video=large_video,
     )
+    runtime["wall_seconds"] = time.perf_counter() - start
     return write_ball_track_from_csv(
         predictions_csv=csv_path,
         fps=fps,

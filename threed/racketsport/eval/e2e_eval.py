@@ -11,6 +11,7 @@ from threed.racketsport.eval.metrics import (
     missing_artifacts,
     write_phase_metrics,
 )
+from threed.racketsport.replay_export import inspect_glb_file
 from threed.racketsport.schemas import EvalClipResult, ReplayScene, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
@@ -19,6 +20,7 @@ REQUIRED_E2E_ARTIFACTS = [
     "court_calibration.json",
     "court_zones.json",
     "net_plane.json",
+    "court_line_evidence.json",
     "tracks.json",
     "smpl_motion.json",
     "ball_track.json",
@@ -35,6 +37,7 @@ ARTIFACT_SCHEMA_NAMES = {
     "court_calibration.json": "court_calibration",
     "court_zones.json": "court_zones",
     "net_plane.json": "net_plane",
+    "court_line_evidence.json": "court_line_evidence",
     "tracks.json": "tracks",
     "smpl_motion.json": "smpl_motion",
     "ball_track.json": "ball_track",
@@ -142,10 +145,18 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
     replay_scene = parsed["replay_scene.json"]
     referenced_glbs = 0
     missing_glbs: list[str] = []
+    invalid_glbs: list[str] = []
     if isinstance(replay_scene, ReplayScene):
         expected_glbs = [replay_scene.court_glb, *[point.glb_url for point in replay_scene.points]]
         referenced_glbs = len(expected_glbs)
         missing_glbs = [glb for glb in expected_glbs if not (run_dir / glb).is_file()]
+        for glb in expected_glbs:
+            if glb in missing_glbs:
+                continue
+            try:
+                inspect_glb_file(run_dir / glb)
+            except ValueError:
+                invalid_glbs.append(glb)
 
     present_artifacts = len(REQUIRED_E2E_ARTIFACTS)
     gated = evaluate_numeric_gates(
@@ -153,6 +164,7 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
             "required_artifacts_present": present_artifacts,
             "required_artifacts_total": len(REQUIRED_E2E_ARTIFACTS),
             "referenced_glb_files_present": referenced_glbs - len(missing_glbs),
+            "referenced_glb_files_valid": referenced_glbs - len(missing_glbs) - len(invalid_glbs),
         },
         {
             **E2E_ARTIFACT_GATES,
@@ -162,10 +174,20 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
                 threshold=referenced_glbs,
                 unit="files",
             ),
+            "referenced_glb_files_valid": NumericGate(
+                name="artifact_check.e2e_referenced_glb_files_valid",
+                op="==",
+                threshold=referenced_glbs,
+                unit="files",
+            ),
         },
     )
     passed = all(gated_metric.passed is True for gated_metric in gated.values())
-    notes = [f"missing referenced GLB files: {', '.join(missing_glbs)}"] if missing_glbs else []
+    notes = []
+    if missing_glbs:
+        notes.append(f"missing referenced GLB files: {', '.join(missing_glbs)}")
+    if invalid_glbs:
+        notes.append(f"invalid referenced GLB files: {', '.join(invalid_glbs)}")
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),

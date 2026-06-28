@@ -18,6 +18,7 @@ def fuse_ball_tracks_with_verifiers(
     stable_ball_track_path: str | Path,
     verifier_ball_track_paths: list[str | Path],
     outlier_distance_px: float = 100.0,
+    require_stable_verifier_support: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Keep a stable backbone and add primary detections confirmed by verifiers.
 
@@ -46,6 +47,7 @@ def fuse_ball_tracks_with_verifiers(
     kept_stable_count = 0
     kept_primary_consensus_count = 0
     added_verifier_consensus_count = 0
+    vetoed_stable_count = 0
     suppressed_primary_count = 0
 
     for frame_index, out_frame in output_samples.items():
@@ -54,9 +56,16 @@ def fuse_ball_tracks_with_verifiers(
         verifier_frames = [samples.get(frame_index) for samples in verifier_samples]
 
         if stable_frame is not None and stable_frame.visible:
-            _copy_frame(out_frame, stable_frame.model_dump(mode="json"))
-            kept_stable_count += 1
-            continue
+            if require_stable_verifier_support and not _any_close_visible(
+                stable_frame.xy,
+                verifier_frames,
+                threshold_px=outlier_distance_px,
+            ):
+                vetoed_stable_count += 1
+            else:
+                _copy_frame(out_frame, stable_frame.model_dump(mode="json"))
+                kept_stable_count += 1
+                continue
 
         if primary_frame is not None and primary_frame.visible:
             if _any_close_visible(primary_frame.xy, verifier_frames, threshold_px=outlier_distance_px):
@@ -94,8 +103,10 @@ def fuse_ball_tracks_with_verifiers(
         "kept_stable_count": kept_stable_count,
         "kept_primary_consensus_count": kept_primary_consensus_count,
         "added_verifier_consensus_count": added_verifier_consensus_count,
+        "vetoed_stable_count": vetoed_stable_count,
         "suppressed_primary_count": suppressed_primary_count,
         "outlier_distance_px": float(outlier_distance_px),
+        "require_stable_verifier_support": bool(require_stable_verifier_support),
         "uses_human_clicks": False,
         "not_ground_truth": True,
     }
@@ -110,12 +121,14 @@ def write_fused_ball_track(
     out_path: str | Path,
     summary_path: str | Path,
     outlier_distance_px: float = 100.0,
+    require_stable_verifier_support: bool = False,
 ) -> dict[str, Any]:
     payload, summary = fuse_ball_tracks_with_verifiers(
         primary_ball_track_path=primary_ball_track_path,
         stable_ball_track_path=stable_ball_track_path,
         verifier_ball_track_paths=verifier_ball_track_paths,
         outlier_distance_px=outlier_distance_px,
+        require_stable_verifier_support=require_stable_verifier_support,
     )
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -2,7 +2,7 @@
 
 **Status:** Product + technical spec (research-backed, decisions locked)
 **Date:** 2026-06-26
-**Repos in scope:** `sam4dbody` (CV/reconstruction — extend, do not greenfield), `sway` (backend/web), `ios/` (native Swift app: capture + on-device fast tier + replay viewer)
+**Repos in scope:** this `pickleball` repo is the live CV/client implementation; `sam4dbody` is an upstream reference/runtime source, `sway` remains the product integration surface, and `ios/` is the native Swift app.
 **Platform:** **native iOS Swift app** (capture, on-device preview/guidance, replay viewer) + **GPU server** (heavy 3D reconstruction). **Single static camera is the product focus; multi-camera is future; multi-view is a training-time-only technique that ships a single-camera model.**
 **Companion docs:** `TECH_STACK.md` (every model + why), `IMPLEMENTATION_PHASES.md` (phase-by-phase build + test gates), `ACCURACY_AND_TRAINING.md` (datasets, training, validation), `BUILD_CHECKLIST.md` (the operational checklist + multi-agent coordination protocol Codex drives). Physics, foot-skate elimination, racket 6DoF, and the 3D replay renderer live in `TECH_STACK.md` §(p)–(s) and `IMPLEMENTATION_PHASES.md`.
 **Thesis:** Be the fastest, most accurate, most plain-spoken movement coach in a racket player's pocket. Turn one court video into the 2–3 body habits costing points, the proof, one drill, and week-over-week improvement — in under 10 seconds for the first useful screen.
@@ -19,9 +19,9 @@ Six decisions define the build:
 
 1. **Full-body mesh is the core representation; the fast skeleton is a preview/triggering overlay.** A watchable, physics-accurate 3D replay needs a volumetric body (you can't drive a rigged avatar or run physics on a stick figure), and SMPL(-X) params are the animation/physics lingua franca. **The per-frame mesh backbone is Fast SAM-3D-Body** — verified (and confirmed by our own hands-on results) as the best per-frame mesh available (3DPW PA-MPJPE 30.4 mm, beats HMR2.0 by 15+ mm) and keeps the existing `sam4dbody` investment (license: SAM License — fine for research/personal use now; verify before commercial, with **SAT-HMR/Apache** as the license-safe fallback). We add **world-grounding ourselves** (project per-frame to world via the known camera + court plane → foot-lock → physics), rather than switching to a world-HMR model whose per-frame mesh is weaker. Mesh is now fast enough (SAT-HMR/Multi-HMR 2 ~20–24 FPS) to also serve the fast tier — so the old "skeleton is enough / mesh too slow" rationale no longer holds.
 
-2. **A physics-accurate, foot-skate-free 3D replay is a core deliverable.** We reconstruct the played game in one metric world frame — players (SMPL-X), court, net, ball, rackets — that obeys physics: **no foot sliding, no floor/player penetration, ball obeys gravity/bounce/Magnus.** Our **known ground plane (court Z=0)** is the decisive advantage that lets us beat published foot-slide numbers (snap stance feet to an exact plane → ~2–3 mm) and resolve single-camera ball depth.
+2. **A physics-accurate, foot-skate-free 3D replay is a core deliverable target.** We reconstruct the played game in one metric world frame — players (SMPL-X), court, net, ball, rackets — that obeys physics: **no foot sliding, no floor/player penetration, ball obeys gravity/bounce/Magnus.** Current code has CPU review scaffolds and static review GLBs only; the hard physics/replay gates still have to pass before this is a shipped claim.
 
-3. **Track the racket as a 6DoF object.** A paddle is large, rigid, planar, and dimensioned, so its pose/face-normal is recoverable to **~3–5°** via PnP on known geometry — **5–15× better than inferring face angle from the small, twist-ambiguous wrist (20–35°).** This **flips paddle-face/contact-point from "gated" to claimable** and gives the exact contact-point-on-face and racket angle players want.
+3. **Track the racket as a 6DoF object.** A paddle is large, rigid, planar, and dimensioned, so its pose/face-normal should be recoverable to **~3–5°** via PnP on known geometry — **5–15× better than inferring face angle from the small, twist-ambiguous wrist (20–35°).** This makes paddle-face/contact-point a claimable target only after true corner/CAD/reference evidence and RKT gates pass; current box-derived candidates stay preview-only.
 
 4. **Adaptive compute budget / tiered pipeline is still the architectural identity.** A **fast tier** (camera-space mesh + metrics, <10 s preview) and a **deep/replay tier** (world-grounded mesh → foot-lock → physics → racket → rendered replay, async). Every pipeline layer is an explicit accuracy/speed/UI toggle; spend heavy compute where it matters, where the user sees it, and where confidence is low.
 
@@ -158,7 +158,7 @@ The **canonical, exact model + variant + weights for every stage (offline vs liv
 | **Racket 6DoF** | RTMDet+SAM2 → RTMPose top/bottom/handle + corners → **PnP-IPPE** on known dims → UKF SE(3) → physics-validate | OpenCV/own | face-angle ~3–5° (beats wrist 5–15×); contact-point ±1–3 cm |
 | Ball | TrackNetV3→V5 + physics ODE 3D uplift (z=0 bounce + Magnus) | MIT | heatmap+temporal; known plane resolves single-cam depth |
 | Events | audio "pop" (CNN, retrained on PB) + wrist-vel peak + ball inflection; net crossing via homography | — | <1-frame contact timing; drives event triggers |
-| Shot class | adapt BST (pose+ball cross-attn) / PoseConv3D; dataset needed | open | no published PB classifier exists |
+| Shot class | scaffold/transfer baseline now; PoseConv3D family classifier first, BST-style pose+ball fusion after tensors are clean | open | current external eval misses serve/overhead; not claimable until reviewed labels and SHOT gates pass |
 | Insights | rule-based thresholds (source of truth) + confidence gating + LLM-for-copy (latest Claude) | — | never invents facts |
 | 3D replay render | **Three.js + R3F** (WebGPU/WebGL2), SMPL-X GLB, physics baked → glTF tracks, world frame (court Z=0) | MIT | free-viewpoint, ~8–12 MB/10 s, shareable; splats deferred to v2 |
 | Visualization | court map/heatmap + 1 priority metric + self-vs-self (conversion core); 3D physics replay premium async | — | matches what converts; progressive disclosure |
@@ -327,16 +327,16 @@ threed/racketsport/
   court_templates.py      court_calibration.py     court_zones.py
   net_plane.py            capture_quality.py       drift_guard.py
   person_fast.py          track_lock.py            doubles_id.py
-  pose2d.py               skeleton3d.py            ground_constraint.py
-  worldhmr.py             footlock.py              physics_refine.py
+  hmr_fast.py             hmr_deep.py              worldhmr.py
+  footlock.py             physics_refine.py        body_mesh_readiness.py
   ball_tracknet.py        ball_tap_track.py        ball_physics3d.py
   audio_pop.py            event_fusion.py          contact_windows.py
   racket6dof.py           movement_metrics.py      biomech.py
   insight_rules.py        confidence.py            shot_classifier.py
   drill_verify.py         habit_model.py           report_model.py
-  llm_copy.py             viz_courtmap.py          viz_overlay.py
-  viz_ghost.py            replay_scene.py          replay_export.py
-  pipeline_fast.py        pipeline_deep.py         orchestrator.py
+  llm_copy.py             replay_readiness.py      replay_export.py
+  virtual_world.py        pipeline_contracts.py    orchestrator.py
+  review_packet.py        replay_viewer_manifest.py
   schemas/                eval/
 ios/                   # native Swift: Capture / Calibration / FastTier / Guidance / Upload / Replay
 viewer/                # Three.js + React Three Fiber 3D replay viewer (web share)
@@ -411,7 +411,7 @@ Present uncertainty as ranges ("likely 52–61%"), bin confidence (confident/lea
 
 ## 15. Build plan (summary)
 
-Full detail with per-phase test gates is in `IMPLEMENTATION_PHASES.md` (see its One-Page Build Order Summary). Sequence: **env/data/scaffolding → court calibration (solvePnP, varied-camera tests) → person fast tier (YOLO26m+BoT-SORT, throughput + ID) → 3D body mesh (fast camera-space + Fast SAM-3D-Body + our world-grounding; foot/zone/X-factor + velocity validation) → foot-skate killer + physics refine (≤3 mm) → ball + audio + event fusion (contact timing) → racket 6DoF (face/contact gates) → metrics + rule insights + confidence → 3D replay viewer (Three.js) → shot classification + drill verification → LLM copy + report + tiered delivery → end-to-end on 20-min clips + perf + final acceptance.**
+Full detail with per-phase test gates is in `IMPLEMENTATION_PHASES.md` (see its One-Page Build Order Summary). Sequence: **env/data/scaffolding → court calibration (solvePnP, varied-camera tests) → person fast tier (YOLO26m+BoT-SORT, throughput + ID) → 3D body mesh (fast camera-space + Fast SAM-3D-Body + our world-grounding; foot/zone/X-factor + velocity validation) → foot-skate killer + physics refine (≤3 mm) → ball + audio + event fusion (contact timing) → racket 6DoF (face/contact gates) → metrics + rule insights + confidence → 3D replay viewer (Three.js) → shot classification + drill verification → LLM copy + report + tiered delivery → end-to-end on 20-min clips + perf + final acceptance.** SHOT remains scaffold/transfer-only until reviewed labels, trained model, macro-F1/top-2, and per-class serve/overhead gates pass.
 
 **Gate philosophy:** do not advance until a phase's numeric acceptance gates pass on real GPU test clips spanning deliberately varied camera heights/angles.
 

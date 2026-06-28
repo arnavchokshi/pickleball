@@ -1,19 +1,20 @@
 # Racketsport Replay Viewer
 
-Minimal CPU/testable scaffold for validating and summarizing replay scene JSON.
+Review-only replay viewer for inspecting `replay_viewer_manifest.json`,
+`virtual_world.json`, player boxes, ball/contact cues, and physics summaries.
+It is a QA surface, not the production animated GLB/USDZ replay.
 
 This package currently includes:
 
-- A strict TypeScript parser for the `threed.racketsport.schemas.ReplayScene` fields.
-- A placeholder React component that displays scene, player, and point counts.
+- Strict TypeScript parsers for viewer, world, contact, and physics artifacts.
+- A React Three Fiber / Three.js court-world renderer with video sync.
 - Vitest and TypeScript scripts for local checks.
-
-No Three.js replay rendering is implemented in this scaffold.
 
 ## Commands
 
 ```sh
-npm install --package-lock=false
+npm install
 npm test
 npm run typecheck
+npm run build
 ```

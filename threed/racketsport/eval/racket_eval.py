@@ -5,37 +5,18 @@ import json
 from pathlib import Path
 
 from threed.racketsport.eval.metrics import (
-    NumericGate,
     build_phase_metrics,
-    evaluate_numeric_gates,
+    metric,
     missing_artifacts,
     write_phase_metrics,
 )
+from threed.racketsport.eval.label_checks import RACKET_LABEL_GATES, score_racket_pose_labels
 from threed.racketsport.schemas import EvalClipResult, RacketPose, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
 REQUIRED_RACKET_ARTIFACTS = ["racket_pose.json"]
-RACKET_GATES = {
-    "racket_players": NumericGate(
-        name="presence_check.racket_players_min",
-        op=">=",
-        threshold=1,
-        unit="players",
-    ),
-    "racket_frames": NumericGate(
-        name="presence_check.racket_frames_min",
-        op=">=",
-        threshold=1,
-        unit="frames",
-    ),
-    "racket_contacts": NumericGate(
-        name="presence_check.racket_contacts_min",
-        op=">=",
-        threshold=1,
-        unit="contacts",
-    ),
-}
+RACKET_GATES = {}
 
 
 def evaluate(root: str | Path, labels_root: str | Path) -> object:
@@ -126,24 +107,48 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
     player_count = len(racket_pose.players)
     frame_count = sum(len(player.frames) for player in racket_pose.players)
     contact_count = sum(len(player.contacts) for player in racket_pose.players)
-    metrics = evaluate_numeric_gates(
-        {
-            "racket_players": player_count,
-            "racket_frames": frame_count,
-            "racket_contacts": contact_count,
-        },
-        RACKET_GATES,
-    )
-    passed = all(gated_metric.passed is True for gated_metric in metrics.values())
+    metrics = {
+        "racket_players": metric(
+            value=player_count,
+            unit="players",
+            gate="artifact_check.racket_players_recorded",
+            passed=None,
+        ),
+        "racket_frames": metric(
+            value=frame_count,
+            unit="frames",
+            gate="artifact_check.racket_frames_recorded",
+            passed=None,
+        ),
+        "racket_contacts": metric(
+            value=contact_count,
+            unit="contacts",
+            gate="artifact_check.racket_contacts_recorded",
+            passed=None,
+        ),
+    }
+    label_metrics, notes = score_racket_pose_labels(labels_dir=labels_dir, racket_pose=racket_pose)
+    metrics.update(label_metrics)
+    gate_results = [
+        metrics[name].passed
+        for name in RACKET_LABEL_GATES
+        if name in metrics and metrics[name].passed is not None
+    ]
+    if not gate_results:
+        status = "not_measured"
+    elif all(result is True for result in gate_results):
+        status = "pass"
+    else:
+        status = "fail"
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
         labels_dir=str(labels_dir),
-        status="pass" if passed else "fail",
+        status=status,
         missing_label_files=[],
         missing_artifacts=[],
         metrics=metrics,
-        notes=[],
+        notes=notes,
     )
 
 

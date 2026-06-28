@@ -7,16 +7,40 @@ variants, or touch the GPU.
 
 from __future__ import annotations
 
+import hashlib
+import importlib
+import os
+import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from math import isfinite
 from numbers import Integral
+from pathlib import Path
 from typing import Any
+
+from .model_manifest import load_model_manifest
 
 
 SCAFFOLD_NOTE = "cpu_hmr_deep_primitives_no_model_inference"
 SCHEMA_VERSION = "body_hmr_deep.v0"
 MODEL_FAMILY = "fast_sam_3d_body_mhr_to_smpl"
+DEFAULT_BODY_MANIFEST_PATH = Path("models/MANIFEST.json")
+DEFAULT_FAST_SAM_REPO = Path(os.environ.get("FAST_SAM_ROOT", "/opt/fast-sam-3d-body"))
+REQUIRED_FAST_SAM_MODEL_IDS = (
+    "fast_sam_3d_body_dinov3",
+    "sam_3d_body_mhr_model",
+    "moge_2_vitl_normal",
+    "yolo26m",
+)
+
+
+@dataclass(frozen=True)
+class VerifiedModelAsset:
+    """Manifest-backed checkpoint path verified before runtime setup."""
+
+    model_id: str
+    path: Path
+    sha256: str
 
 
 @dataclass(frozen=True)
@@ -199,6 +223,165 @@ def build_player_hmr_artifact(
     }
 
 
+def sha256_file(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def verify_fast_sam_manifest_assets(
+    manifest_path: str | Path = DEFAULT_BODY_MANIFEST_PATH,
+    *,
+    required_model_ids: Sequence[str] = REQUIRED_FAST_SAM_MODEL_IDS,
+) -> dict[str, VerifiedModelAsset]:
+    """Verify every checkpoint the BODY runner must load.
+
+    The BODY runner is intentionally strict: missing files and mismatched
+    checksums are configuration errors, not soft fallbacks.
+    """
+
+    manifest = load_model_manifest(manifest_path)
+    entries = {entry.id: entry for entry in manifest.models}
+    verified: dict[str, VerifiedModelAsset] = {}
+    for model_id in required_model_ids:
+        entry = entries.get(model_id)
+        if entry is None:
+            raise ValueError(f"models manifest is missing required BODY model id: {model_id}")
+        if entry.status != "available_on_h100":
+            raise ValueError(f"{model_id} is not available_on_h100 in models manifest: {entry.status}")
+        if not entry.local_path or not entry.sha256:
+            raise ValueError(f"{model_id} manifest entry must include local_path and sha256")
+        path = Path(entry.local_path)
+        if not path.is_file():
+            raise FileNotFoundError(f"missing checkpoint for {model_id}: {path}")
+        actual_sha = sha256_file(path)
+        if actual_sha != entry.sha256:
+            raise ValueError(f"sha256 mismatch for {model_id}: expected {entry.sha256}, got {actual_sha}")
+        verified[model_id] = VerifiedModelAsset(model_id=model_id, path=path, sha256=actual_sha)
+    return verified
+
+
+class FastSam3DBodyRuntime:
+    """Thin loader for the external Fast SAM-3D-Body runtime."""
+
+    def __init__(
+        self,
+        *,
+        assets: Mapping[str, VerifiedModelAsset],
+        fast_sam_repo: str | Path = DEFAULT_FAST_SAM_REPO,
+        detector_name: str = "yolo",
+        fov_name: str = "moge2",
+    ) -> None:
+        repo = Path(fast_sam_repo)
+        if not repo.is_dir():
+            raise FileNotFoundError(f"missing FastSAM-3D-Body repo at {repo}")
+        self.fast_sam_repo = repo
+        self.detector_name = detector_name
+        self.detector_model = assets["yolo26m"].path
+        self.checkpoint_dir = assets["fast_sam_3d_body_dinov3"].path.parent
+        self.fov_name = fov_name
+        setup_sam_3d_body = _load_setup_sam_3d_body(repo)
+        os.environ.setdefault("FAST_SAM_CHECKPOINT_DIR", str(self.checkpoint_dir))
+        os.environ.setdefault("SAM3DBODY_CHECKPOINT_DIR", str(self.checkpoint_dir))
+        self.estimator = setup_sam_3d_body(
+            hf_repo_id="facebook/sam-3d-body-dinov3",
+            detector_name=detector_name,
+            detector_model=str(self.detector_model),
+            fov_name=fov_name,
+            local_checkpoint_path=str(self.checkpoint_dir),
+        )
+
+    def process_frame(self, image_path: Path, *, bboxes_xyxy: list[list[float]]) -> list[dict[str, Any]]:
+        bbox_arg: Any = bboxes_xyxy
+        try:
+            import numpy as np  # type: ignore[import-not-found]
+
+            bbox_arg = np.asarray(bboxes_xyxy, dtype=np.float32)
+        except ImportError:
+            pass
+
+        raw_output = self.estimator.process_one_image(
+            str(image_path.resolve()),
+            bboxes=bbox_arg,
+            use_mask=False,
+            hand_box_source="body_decoder",
+        )
+        return extract_fast_sam_person_records(raw_output)
+
+
+def extract_fast_sam_person_records(raw_output: Any) -> list[dict[str, Any]]:
+    if isinstance(raw_output, Mapping):
+        for key in ("people", "persons", "person_results", "humans", "predictions", "outputs", "results"):
+            if key in raw_output:
+                records = _coerce_person_records(raw_output[key])
+                if records:
+                    return records
+        public_mapping = _as_public_mapping(raw_output)
+        if _looks_like_fast_sam_person(public_mapping):
+            return [public_mapping]
+        return []
+    return _coerce_person_records(raw_output)
+
+
+def normalize_fast_sam_body_output(
+    person: Mapping[str, Any],
+    *,
+    request: PlayerCropRequest,
+) -> dict[str, Any]:
+    """Normalize one real Fast SAM-3D-Body person output for world grounding."""
+
+    public = _as_public_mapping(person)
+    if not public:
+        raise ValueError("Fast SAM-3D-Body person output must be a mapping-like object")
+
+    joints = _vector3_list(
+        _first_present(public, ("pred_keypoints_3d", "pred_joint_coords", "joints3d", "joints3d_xyz")),
+        name="pred_keypoints_3d",
+    )
+    vertices = _vector3_list(
+        _first_present(public, ("pred_vertices", "vertices", "mesh_vertices_xyz")),
+        name="pred_vertices",
+    )
+    if not joints and not vertices:
+        raise ValueError("Fast SAM-3D-Body output is missing pred_keypoints_3d/pred_vertices")
+
+    confidence = _optional_confidence(
+        _first_present(public, ("confidence", "score", "model_confidence")),
+        name="confidence",
+    )
+    if confidence is None:
+        confidence = request.track_confidence
+
+    hand_pose = _float_list(_first_present(public, ("hand_pose_params", "hand_pose"), default=[]), name="hand_pose")
+    left_hand_pose, right_hand_pose = _split_hands(hand_pose)
+    return {
+        "frame_idx": request.frame_idx,
+        "player_id": request.player_id,
+        "bbox_xyxy": list(request.bbox_xyxy),
+        "track_confidence": request.track_confidence,
+        "confidence": min(confidence, request.track_confidence),
+        "global_orient": _float_vector(
+            _first_present(public, ("global_rot", "global_orient", "pred_global_orient"), default=[0.0, 0.0, 0.0]),
+            name="global_orient",
+            length=3,
+        ),
+        "body_pose": _float_list(_first_present(public, ("body_pose_params", "body_pose", "pred_pose_raw"), default=[]), name="body_pose"),
+        "left_hand_pose": left_hand_pose,
+        "right_hand_pose": right_hand_pose,
+        "betas": _float_list(_first_present(public, ("shape_params", "betas"), default=[]), name="betas"),
+        "camera_translation": _float_vector(
+            _first_present(public, ("pred_cam_t", "camera_translation", "transl"), default=[0.0, 0.0, 0.0]),
+            name="camera_translation",
+            length=3,
+        ),
+        "joints_camera": joints,
+        "vertices_camera": vertices,
+        "model_family": MODEL_FAMILY,
+    }
+
+
 def _image_size(values: Sequence[int]) -> tuple[int, int]:
     if isinstance(values, (str, bytes)) or len(values) != 2:
         raise ValueError("image_size_px must be a 2-vector")
@@ -234,6 +417,7 @@ def _float_vector(values: Any, *, name: str, length: int) -> list[float]:
 
 
 def _vector3_list(values: Any, *, name: str) -> list[list[float]]:
+    values = _to_python_container(values)
     if values is None:
         return []
     if isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
@@ -245,6 +429,7 @@ def _vector3_list(values: Any, *, name: str) -> list[list[float]]:
 
 
 def _float_list(values: Any, *, name: str) -> list[float]:
+    values = _to_python_container(values)
     if values is None or isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
         raise ValueError(f"{name} must be a sequence")
 
@@ -263,6 +448,7 @@ def _float_list(values: Any, *, name: str) -> list[float]:
 
 
 def _confidence(value: Any, *, name: str) -> float:
+    value = _to_python_container(value)
     if isinstance(value, bool):
         raise ValueError(f"{name} must be between 0 and 1")
     try:
@@ -275,6 +461,80 @@ def _confidence(value: Any, *, name: str) -> float:
 
 
 def _optional_confidence(value: Any, *, name: str) -> float | None:
+    value = _to_python_container(value)
     if value is None:
         return None
     return _confidence(value, name=name)
+
+
+def _load_setup_sam_3d_body(fast_sam_repo: Path) -> Any:
+    repo = str(fast_sam_repo.resolve())
+    if repo not in sys.path:
+        sys.path.insert(0, repo)
+    try:
+        module = importlib.import_module("notebook.utils")
+    except Exception as exc:
+        raise RuntimeError("could not import FastSAM-3D-Body notebook.utils.setup_sam_3d_body") from exc
+    setup_sam_3d_body = getattr(module, "setup_sam_3d_body", None)
+    if not callable(setup_sam_3d_body):
+        raise RuntimeError("FastSAM-3D-Body notebook.utils does not expose callable setup_sam_3d_body")
+    return setup_sam_3d_body
+
+
+def _coerce_person_records(value: Any) -> list[dict[str, Any]]:
+    if isinstance(value, Mapping):
+        values = [value[key] for key in sorted(value, key=str)]
+        return [_as_public_mapping(item) for item in values if _as_public_mapping(item)]
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
+        return [_as_public_mapping(item) for item in value if _as_public_mapping(item)]
+    return []
+
+
+def _as_public_mapping(value: Any) -> dict[str, Any]:
+    if isinstance(value, Mapping):
+        return {str(key): item for key, item in value.items()}
+    public_attrs = getattr(value, "__dict__", None)
+    if isinstance(public_attrs, Mapping):
+        return {
+            str(key): item
+            for key, item in public_attrs.items()
+            if not str(key).startswith("_") and not callable(item)
+        }
+    return {}
+
+
+def _looks_like_fast_sam_person(value: Mapping[str, Any]) -> bool:
+    keys = {str(key) for key in value}
+    return bool(keys.intersection({"pred_vertices", "pred_keypoints_3d", "pred_joint_coords", "body_pose_params"}))
+
+
+def _first_present(public: Mapping[str, Any], keys: Sequence[str], *, default: Any = None) -> Any:
+    for key in keys:
+        if key in public and public[key] is not None:
+            return public[key]
+    return default
+
+
+def _split_hands(hand_pose: list[float]) -> tuple[list[float], list[float]]:
+    if not hand_pose:
+        return [], []
+    midpoint = len(hand_pose) // 2
+    return hand_pose[:midpoint], hand_pose[midpoint:]
+
+
+def _to_python_container(value: Any) -> Any:
+    item = value
+    for method_name in ("detach", "cpu"):
+        method = getattr(item, method_name, None)
+        if callable(method):
+            try:
+                item = method()
+            except Exception:
+                return value
+    tolist = getattr(item, "tolist", None)
+    if callable(tolist):
+        try:
+            return tolist()
+        except Exception:
+            return value
+    return value

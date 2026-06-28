@@ -8,10 +8,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from math import sqrt
-from typing import Sequence
+from typing import Any, Mapping, Sequence
+
+from .schemas import CourtCalibration
 
 
 SCAFFOLD_NOTE = "cpu_worldhmr_primitives_no_sam3dbody_integration"
+FLOOR_CONTACT_EPSILON_M = 0.035
 
 
 @dataclass(frozen=True)
@@ -137,6 +140,138 @@ def residual_metrics(
     )
 
 
+def build_body_artifacts_from_fast_sam(
+    samples: Sequence[Mapping[str, Any]],
+    *,
+    calibration: CourtCalibration,
+    fps: float,
+    smoothing_alpha: float = 0.65,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Build BODY contract artifacts from real Fast SAM-3D-Body outputs."""
+
+    if fps <= 0.0:
+        raise ValueError("fps must be positive")
+    if not samples:
+        raise ValueError("at least one Fast SAM-3D-Body sample is required")
+    grounded = [
+        _ground_fast_sam_sample(sample, calibration=calibration)
+        for sample in sorted(samples, key=lambda item: (int(item["frame_idx"]), int(item["player_id"])))
+    ]
+    smoothed = _smooth_grounded_frames(grounded, alpha=smoothing_alpha)
+    players: list[dict[str, Any]] = []
+    skeleton_players: list[dict[str, Any]] = []
+    max_joint_count = max(len(frame["joints_world"]) for frame in smoothed)
+    for player_id in sorted({int(frame["player_id"]) for frame in smoothed}):
+        player_frames = [frame for frame in smoothed if int(frame["player_id"]) == player_id]
+        betas = _first_list(player_frames, "betas")
+        contact_by_frame = [_infer_floor_contact(frame) for frame in player_frames]
+        player_has_contact = any(contact["left"] or contact["right"] for contact in contact_by_frame)
+        players.append(
+            {
+                "id": player_id,
+                "betas": betas,
+                "frames": [
+                    {
+                        "t": float(frame["t"]),
+                        "global_orient": list(frame["global_orient"]),
+                        "body_pose": list(frame["body_pose"]),
+                        "left_hand_pose": list(frame["left_hand_pose"]),
+                        "right_hand_pose": list(frame["right_hand_pose"]),
+                        "transl_world": list(frame["transl_world"]),
+                        "joints_world": [list(joint) for joint in frame["joints_world"]],
+                        "mesh_vertices_world": [list(vertex) for vertex in frame["vertices_world"]],
+                        "joint_conf": [float(frame["confidence"])] * len(frame["joints_world"]),
+                        "foot_contact": contact,
+                        "grf": [[0.0, 0.0, 1.0]] if contact["left"] or contact["right"] else None,
+                    }
+                    for frame, contact in zip(player_frames, contact_by_frame)
+                ],
+                "skate_free": player_has_contact,
+                "physics": "worldhmr_grounded_floor_contact_heuristic"
+                if player_has_contact
+                else "worldhmr_grounded_not_footlocked",
+            }
+        )
+        skeleton_players.append(
+            {
+                "id": player_id,
+                "frames": [
+                    {
+                        "t": float(frame["t"]),
+                        "joints_world": [list(joint) for joint in frame["joints_world"]],
+                        "joint_conf": [float(frame["confidence"])] * len(frame["joints_world"]),
+                    }
+                    for frame in player_frames
+                ],
+            }
+        )
+
+    smpl_motion = {
+        "schema_version": 1,
+        "model": "smplx",
+        "fps": float(fps),
+        "world_frame": "court_Z0",
+        "players": players,
+    }
+    skeleton3d = {
+        "schema_version": 1,
+        "joint_names": [f"sam3dbody_joint_{idx:03d}" for idx in range(max_joint_count)],
+        "preview_only": True,
+        "players": skeleton_players,
+    }
+    metrics = {
+        "body_samples": len(samples),
+        "players": len(players),
+        "frames": len({int(frame["frame_idx"]) for frame in smoothed}),
+        "world_frame": "court_Z0",
+        "grounding": "camera_extrinsics_plus_track_footpoint_court_z0",
+        "smoothing_alpha": smoothing_alpha,
+        "min_joint_z_m": min(
+            (joint[2] for frame in smoothed for joint in frame["joints_world"]),
+            default=0.0,
+        ),
+        "foot_contact_frames": sum(
+            1
+            for player in players
+            for frame in player["frames"]
+            if frame["foot_contact"]["left"] or frame["foot_contact"]["right"]
+        ),
+        "grf_frames": sum(
+            1
+            for player in players
+            for frame in player["frames"]
+            if frame["grf"] is not None
+        ),
+        "skate_free_players": sum(1 for player in players if player["skate_free"]),
+    }
+    return smpl_motion, skeleton3d, metrics
+
+
+def _infer_floor_contact(frame: Mapping[str, Any], *, floor_z_m: float = 0.0) -> dict[str, bool]:
+    joints = frame.get("joints_world")
+    if not isinstance(joints, Sequence) or not joints:
+        return {"left": False, "right": False}
+    transl = frame.get("transl_world")
+    root_x = float(transl[0]) if isinstance(transl, Sequence) and len(transl) >= 1 else 0.0
+    low_points: list[tuple[float, float]] = []
+    for joint in joints:
+        if not isinstance(joint, Sequence) or len(joint) != 3:
+            continue
+        x = float(joint[0])
+        z = float(joint[2])
+        if abs(z - floor_z_m) <= FLOOR_CONTACT_EPSILON_M:
+            low_points.append((x, z))
+    if not low_points:
+        return {"left": False, "right": False}
+    left = any(x <= root_x for x, _z in low_points)
+    right = any(x >= root_x for x, _z in low_points)
+    if left and not right and len(low_points) >= 2:
+        right = True
+    elif right and not left and len(low_points) >= 2:
+        left = True
+    return {"left": left, "right": right}
+
+
 def _distance3(left: Sequence[float], right: Sequence[float]) -> float:
     return sqrt(sum((left[idx] - right[idx]) ** 2 for idx in range(3)))
 
@@ -150,3 +285,134 @@ def _rms(values: Sequence[float]) -> float:
 def _validate_vector3(values: Sequence[float], *, name: str) -> None:
     if len(values) != 3:
         raise ValueError(f"{name} must be a 3-vector")
+
+
+def _ground_fast_sam_sample(sample: Mapping[str, Any], *, calibration: CourtCalibration) -> dict[str, Any]:
+    joints_camera = _vector3_list(sample.get("joints_camera"), name="joints_camera")
+    vertices_camera = _vector3_list(sample.get("vertices_camera", []), name="vertices_camera")
+    if not joints_camera and not vertices_camera:
+        raise ValueError("Fast SAM-3D-Body sample must include joints_camera or vertices_camera")
+    camera_translation = _vector3(sample.get("camera_translation", [0.0, 0.0, 0.0]), name="camera_translation")
+    track_world_xy = _vector2(sample.get("track_world_xy"), name="track_world_xy")
+    t = float(sample["t"])
+    confidence = float(sample.get("confidence", 0.0))
+    if confidence < 0.0 or confidence > 1.0:
+        raise ValueError("confidence must be between 0 and 1")
+
+    joints_world_raw = _camera_points_to_world(joints_camera, camera_translation, calibration)
+    vertices_world_raw = _camera_points_to_world(vertices_camera, camera_translation, calibration)
+    anchor_candidates = joints_world_raw or vertices_world_raw
+    anchor = anchor_candidates[0]
+    all_world = joints_world_raw + vertices_world_raw
+    min_z = min(point[2] for point in all_world)
+    dx = track_world_xy[0] - anchor[0]
+    dy = track_world_xy[1] - anchor[1]
+    dz = -min_z
+
+    return {
+        "frame_idx": int(sample["frame_idx"]),
+        "player_id": int(sample["player_id"]),
+        "t": t,
+        "confidence": confidence,
+        "global_orient": _float_list(sample.get("global_orient", [0.0, 0.0, 0.0]), name="global_orient"),
+        "body_pose": _float_list(sample.get("body_pose", []), name="body_pose"),
+        "left_hand_pose": _float_list(sample.get("left_hand_pose", []), name="left_hand_pose"),
+        "right_hand_pose": _float_list(sample.get("right_hand_pose", []), name="right_hand_pose"),
+        "betas": _float_list(sample.get("betas", []), name="betas"),
+        "transl_world": [track_world_xy[0], track_world_xy[1], 0.0],
+        "joints_world": _translate_points(joints_world_raw or vertices_world_raw, dx=dx, dy=dy, dz=dz),
+        "vertices_world": _translate_points(vertices_world_raw, dx=dx, dy=dy, dz=dz),
+    }
+
+
+def _camera_points_to_world(
+    points_camera_relative: Sequence[Sequence[float]],
+    camera_translation: Sequence[float],
+    calibration: CourtCalibration,
+) -> list[list[float]]:
+    rotation = [[float(value) for value in row] for row in calibration.extrinsics.R]
+    translation = [float(value) for value in calibration.extrinsics.t]
+    points: list[list[float]] = []
+    for point in points_camera_relative:
+        camera_point = [float(point[idx]) + float(camera_translation[idx]) for idx in range(3)]
+        camera_minus_t = [camera_point[idx] - translation[idx] for idx in range(3)]
+        world = [
+            sum(rotation[row_idx][col_idx] * camera_minus_t[row_idx] for row_idx in range(3))
+            for col_idx in range(3)
+        ]
+        points.append(world)
+    return points
+
+
+def _translate_points(points: Sequence[Sequence[float]], *, dx: float, dy: float, dz: float) -> list[list[float]]:
+    return [[float(point[0]) + dx, float(point[1]) + dy, float(point[2]) + dz] for point in points]
+
+
+def _smooth_grounded_frames(frames: Sequence[dict[str, Any]], *, alpha: float) -> list[dict[str, Any]]:
+    if alpha <= 0.0 or alpha > 1.0:
+        raise ValueError("alpha must be greater than 0 and less than or equal to 1")
+    previous_by_player: dict[int, list[float]] = {}
+    smoothed: list[dict[str, Any]] = []
+    for frame in frames:
+        player_id = int(frame["player_id"])
+        previous = previous_by_player.get(player_id)
+        transl = [float(value) for value in frame["transl_world"]]
+        if previous is None:
+            smoothed_transl = transl
+        else:
+            smoothed_transl = [
+                alpha * transl[idx] + (1.0 - alpha) * previous[idx]
+                for idx in range(3)
+            ]
+        previous_by_player[player_id] = smoothed_transl
+        delta = [smoothed_transl[idx] - transl[idx] for idx in range(3)]
+        smoothed_frame = dict(frame)
+        smoothed_frame["transl_world"] = smoothed_transl
+        smoothed_frame["joints_world"] = [
+            [joint[0] + delta[0], joint[1] + delta[1], joint[2] + delta[2]]
+            for joint in frame["joints_world"]
+        ]
+        smoothed.append(smoothed_frame)
+    return smoothed
+
+
+def _first_list(frames: Sequence[Mapping[str, Any]], field: str) -> list[float]:
+    for frame in frames:
+        values = _float_list(frame.get(field, []), name=field)
+        if values:
+            return values
+    return []
+
+
+def _vector3_list(values: Any, *, name: str) -> list[list[float]]:
+    if values is None:
+        return []
+    if isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
+        raise ValueError(f"{name} must be a sequence of 3-vectors")
+    return [_vector3(vector, name=f"{name}/{idx}") for idx, vector in enumerate(values)]
+
+
+def _vector3(values: Any, *, name: str) -> list[float]:
+    result = _float_list(values, name=name)
+    if len(result) != 3:
+        raise ValueError(f"{name} must be a 3-vector")
+    return result
+
+
+def _vector2(values: Any, *, name: str) -> list[float]:
+    result = _float_list(values, name=name)
+    if len(result) != 2:
+        raise ValueError(f"{name} must be a 2-vector")
+    return result
+
+
+def _float_list(values: Any, *, name: str) -> list[float]:
+    if values is None or isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
+        raise ValueError(f"{name} must be a sequence")
+    result: list[float] = []
+    for idx, value in enumerate(values):
+        try:
+            result.append(float(value))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name}/{idx} must be numeric") from exc
+    return result

@@ -10,6 +10,8 @@ from scripts.racketsport.validate_shot_dataset import validate_manifest
 
 SHOT_LABELS = (
     "serve",
+    "fh_shot",
+    "bh_shot",
     "fh_drive",
     "bh_drive",
     "dink",
@@ -79,11 +81,11 @@ def test_validate_shot_dataset_accepts_manifest_with_all_shot_classes_and_source
     assert summary["entry_count"] == len(SHOT_LABELS)
     assert summary["coverage_counts"]["shot_label"] == {label: 1 for label in SHOT_LABELS}
     assert summary["coverage_counts"]["source_type"] == {
-        "audio_snapped_pose": 3,
+        "audio_snapped_pose": 4,
         "manual_review": 3,
-        "synthetic_aug": 2,
+        "synthetic_aug": 3,
     }
-    assert summary["coverage_counts"]["split"] == {"test": 2, "train": 3, "val": 3}
+    assert summary["coverage_counts"]["split"] == {"test": 3, "train": 4, "val": 3}
     assert summary["coverage_gaps"] == []
 
 
@@ -125,7 +127,7 @@ def test_validate_shot_dataset_reports_coverage_gaps_without_failing_cli(tmp_pat
     assert "missing val entries" in payload["coverage_gaps"]
     assert "missing test entries" in payload["coverage_gaps"]
     assert (
-        "missing key shot classes: bh_drive, dink, fh_drive, lob, overhead, reset_block, third_shot_drop"
+        "missing key shot classes: bh_drive, bh_shot, dink, fh_drive, fh_shot, lob, overhead, reset_block, third_shot_drop"
         in payload["coverage_gaps"]
     )
 
@@ -154,7 +156,7 @@ def test_validate_shot_dataset_rejects_duplicate_ids_unsafe_paths_and_bad_enums(
     assert "entries/1/id duplicate entry id: dup" in summary["errors"]
     assert "entries/1/path: must be relative and stay within the manifest directory" in summary["errors"]
     assert (
-        "entries/1/shot_label: must be one of bh_drive, dink, fh_drive, lob, overhead, reset_block, serve, third_shot_drop"
+        "entries/1/shot_label: must be one of bh_drive, bh_shot, dink, fh_drive, fh_shot, lob, overhead, reset_block, serve, third_shot_drop"
         in summary["errors"]
     )
     assert "entries/1/source_type: must be one of audio_snapped_pose, manual_review, synthetic_aug" in summary["errors"]

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from threed.racketsport.eval import e2e_eval
+from threed.racketsport.replay_export import build_replay_review_export_from_virtual_world, write_replay_scene
 from threed.racketsport.schemas import (
     CameraIntrinsics,
     CaptureQuality,
@@ -60,6 +61,30 @@ def _write_calibration_artifacts(run_dir: Path) -> None:
                 "endpoints": [[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]],
                 "center_height_in": 34.0,
                 "post_height_in": 36.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "court_line_evidence.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "sport": "pickleball",
+                "source": "auto_hough_template",
+                "line_observations": [],
+                "keypoint_observations": [],
+                "net_observations": [],
+                "aggregate": {
+                    "accepted_line_ids": ["near_nvz", "far_nvz", "near_centerline", "far_centerline"],
+                    "rejected_line_ids": [],
+                    "missing_required_line_ids": [],
+                    "missing_required_net_ids": [],
+                    "mean_residual_px": 2.0,
+                    "p95_residual_px": 4.0,
+                    "temporal_stability_px": 3.0,
+                    "auto_calibration_ready": True,
+                    "reasons": [],
+                },
             }
         ),
         encoding="utf-8",
@@ -254,21 +279,56 @@ def _write_report_artifacts(run_dir: Path) -> None:
 
 def _write_replay_artifacts(run_dir: Path) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / "court_pickleball.glb").write_bytes(b"glb")
-    (run_dir / "point_3.glb").write_bytes(b"glb")
-    (run_dir / "replay_scene.json").write_text(
-        json.dumps(
+    scene = build_replay_review_export_from_virtual_world(_replay_virtual_world_payload(), export_root=run_dir, point_id=3)
+    write_replay_scene(run_dir / "replay_scene.json", scene)
+
+
+def _replay_virtual_world_payload() -> dict:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_virtual_world",
+        "world_frame": "court_Z0",
+        "fps": 30.0,
+        "court": {
+            "sport": "pickleball",
+            "coordinate_frame": "court_Z0",
+            "line_segments": {"baseline": [[-3.05, 0.0, 0.0], [3.05, 0.0, 0.0]]},
+            "net": {"endpoints": [[-3.05, 6.705, 0.91], [3.05, 6.705, 0.91]]},
+        },
+        "players": [
             {
-                "schema_version": 1,
-                "world_frame": "court_Z0",
-                "fps": 30.0,
-                "court_glb": "court_pickleball.glb",
-                "players": [1, 2],
-                "points": [{"id": 3, "t0": 31.2, "t1": 41.2, "glb_url": "point_3.glb", "size_mb": 9.4}],
+                "id": 1,
+                "side": "near",
+                "role": "left",
+                "frames": [
+                    {"t": 0.0, "track_world_xy": [0.0, 1.0], "joints_world": [[0.0, 1.0, 1.2]]},
+                    {"t": 1.0, "track_world_xy": [0.0, 2.0], "joints_world": [[0.0, 2.0, 1.1]]},
+                ],
+            },
+            {
+                "id": 2,
+                "side": "far",
+                "role": "right",
+                "frames": [
+                    {"t": 0.0, "track_world_xy": [1.0, 10.0], "joints_world": [[1.0, 10.0, 1.2]]},
+                    {"t": 1.0, "track_world_xy": [1.0, 9.0], "joints_world": [[1.0, 9.0, 1.1]]},
+                ],
+            },
+        ],
+        "ball": {"source": "fixture", "frames": [{"t": 0.0, "world_xyz": [0.0, 6.0, 0.3], "visible": True}]},
+        "paddles": [
+            {
+                "player_id": 1,
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "mesh_vertices_world": [[0.0, 0.0, 0.0], [0.1, 0.0, 0.0], [0.1, 0.2, 0.0]],
+                        "mesh_faces": [[0, 1, 2]],
+                    }
+                ],
             }
-        ),
-        encoding="utf-8",
-    )
+        ],
+    }
 
 
 def _write_e2e_artifacts(run_dir: Path) -> None:
@@ -292,10 +352,12 @@ def test_e2e_eval_passes_when_all_artifacts_and_glbs_exist(tmp_path: Path) -> No
     assert payload.status == "pass"
     assert payload.clips[0].status == "pass"
     metrics = payload.clips[0].metrics
-    assert metrics["required_artifacts_present"].value == 13
+    assert metrics["required_artifacts_present"].value == 14
     assert metrics["required_artifacts_present"].passed is True
     assert metrics["referenced_glb_files_present"].value == 2
     assert metrics["referenced_glb_files_present"].passed is True
+    assert metrics["referenced_glb_files_valid"].value == 2
+    assert metrics["referenced_glb_files_valid"].passed is True
 
 
 def test_e2e_eval_blocks_when_required_artifact_is_missing(tmp_path: Path) -> None:
@@ -318,7 +380,7 @@ def test_e2e_eval_fails_when_referenced_glb_is_missing(tmp_path: Path) -> None:
     root = tmp_path / "runs" / "phase11"
     _write_ready_clip(labels_root, "clip_001")
     _write_e2e_artifacts(root / "clip_001")
-    (root / "clip_001" / "point_3.glb").unlink()
+    (root / "clip_001" / "points" / "point_003_review.glb").unlink()
 
     payload = e2e_eval.evaluate(root, labels_root)
 
@@ -326,7 +388,24 @@ def test_e2e_eval_fails_when_referenced_glb_is_missing(tmp_path: Path) -> None:
     assert payload.clips[0].status == "fail"
     assert payload.clips[0].metrics["referenced_glb_files_present"].value == 1
     assert payload.clips[0].metrics["referenced_glb_files_present"].passed is False
-    assert "missing referenced GLB files: point_3.glb" in payload.clips[0].notes
+    assert "missing referenced GLB files: points/point_003_review.glb" in payload.clips[0].notes
+
+
+def test_e2e_eval_fails_when_referenced_glb_is_invalid(tmp_path: Path) -> None:
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase11"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_e2e_artifacts(root / "clip_001")
+    (root / "clip_001" / "points" / "point_003_review.glb").write_bytes(b"glb")
+
+    payload = e2e_eval.evaluate(root, labels_root)
+
+    assert payload.status == "fail"
+    assert payload.clips[0].status == "fail"
+    assert payload.clips[0].metrics["referenced_glb_files_present"].passed is True
+    assert payload.clips[0].metrics["referenced_glb_files_valid"].value == 1
+    assert payload.clips[0].metrics["referenced_glb_files_valid"].passed is False
+    assert "invalid referenced GLB files: points/point_003_review.glb" in payload.clips[0].notes[0]
 
 
 def test_e2e_eval_emits_named_numeric_gate_metadata(tmp_path: Path) -> None:
@@ -338,7 +417,8 @@ def test_e2e_eval_emits_named_numeric_gate_metadata(tmp_path: Path) -> None:
     payload = e2e_eval.evaluate(root, labels_root)
     metrics = payload.clips[0].metrics
 
-    assert metrics["required_artifacts_present"].gate == "artifact_check.e2e_required_artifacts_present: == 13"
-    assert metrics["required_artifacts_total"].gate == "artifact_check.e2e_required_artifacts_total: == 13"
+    assert metrics["required_artifacts_present"].gate == "artifact_check.e2e_required_artifacts_present: == 14"
+    assert metrics["required_artifacts_total"].gate == "artifact_check.e2e_required_artifacts_total: == 14"
     assert metrics["referenced_glb_files_present"].gate == "artifact_check.e2e_referenced_glb_files_present: == 2"
+    assert metrics["referenced_glb_files_valid"].gate == "artifact_check.e2e_referenced_glb_files_valid: == 2"
     assert all(metric.status == "measured" for metric in metrics.values())

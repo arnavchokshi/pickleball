@@ -1,4 +1,7 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-
+markers = [
+  "h100: requires the shared H100 runtime and GPU lease",
+  "integration: exercises real external runtimes or media",
+]

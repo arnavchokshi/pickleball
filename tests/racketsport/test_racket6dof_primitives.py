@@ -1,10 +1,20 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from threed.racketsport.racket6dof import (
     SE3PoseConfidence,
+    camera_paddle_pose_to_court_world,
+    estimate_planar_paddle_pose,
+    estimate_planar_paddle_pose_with_diagnostics,
     normalize_face_normal,
+    paddle_face_corners_object_cm,
+    pose_face_normal,
+    project_paddle_corners,
+    rebound_consistency,
+    smooth_racket_pose_samples,
     validate_contact_point_face_cm,
     validate_paddle_dimensions,
 )
@@ -92,3 +102,122 @@ def test_se3_pose_confidence_validates_cpu_only_ukf_placeholder_fields() -> None
             t=[0.0, 0.0, 0.0],
             confidence=1.01,
         )
+
+
+def test_planar_paddle_pose_round_trips_projected_corners() -> None:
+    cv2 = pytest.importorskip("cv2")
+    import numpy as np
+
+    camera_matrix = [[900.0, 0.0, 320.0], [0.0, 900.0, 240.0], [0.0, 0.0, 1.0]]
+    dims = {"length": 16.0, "width": 8.0}
+    object_points = np.asarray(paddle_face_corners_object_cm(dims), dtype=np.float64)
+    rvec = np.asarray([[0.18], [-0.10], [0.07]], dtype=np.float64)
+    tvec = np.asarray([[3.0], [-1.5], [95.0]], dtype=np.float64)
+    projected, _ = cv2.projectPoints(object_points, rvec, tvec, np.asarray(camera_matrix), None)
+    image_points = projected.reshape(-1, 2).tolist()
+
+    pose = estimate_planar_paddle_pose(image_points, camera_matrix, dims)
+    reprojected = project_paddle_corners(pose, camera_matrix, dims)
+
+    max_error = max(
+        ((got[0] - want[0]) ** 2 + (got[1] - want[1]) ** 2) ** 0.5
+        for got, want in zip(reprojected, image_points)
+    )
+    assert max_error < 0.75
+    assert pose.confidence > 0.8
+    assert pose.source == "pnp_ippe"
+    assert pose_face_normal(pose)[2] > 0.9
+
+
+def test_planar_paddle_pose_diagnostics_report_reprojection_and_ambiguity() -> None:
+    cv2 = pytest.importorskip("cv2")
+    import numpy as np
+
+    camera_matrix = [[900.0, 0.0, 320.0], [0.0, 900.0, 240.0], [0.0, 0.0, 1.0]]
+    dims = {"length": 16.0, "width": 8.0}
+    object_points = np.asarray(paddle_face_corners_object_cm(dims), dtype=np.float64)
+    rvec = np.asarray([[0.18], [-0.10], [0.07]], dtype=np.float64)
+    tvec = np.asarray([[3.0], [-1.5], [95.0]], dtype=np.float64)
+    projected, _ = cv2.projectPoints(object_points, rvec, tvec, np.asarray(camera_matrix), None)
+    clean_points = projected.reshape(-1, 2).tolist()
+    noisy_points = [list(point) for point in clean_points]
+    noisy_points[2][0] += 12.0
+    noisy_points[2][1] -= 8.0
+
+    clean = estimate_planar_paddle_pose_with_diagnostics(clean_points, camera_matrix, dims)
+    noisy = estimate_planar_paddle_pose_with_diagnostics(noisy_points, camera_matrix, dims)
+
+    assert clean.pose.source == "pnp_ippe"
+    assert clean.reprojection_error_px < 0.75
+    assert clean.candidate_count >= 1
+    assert clean.ambiguity_margin_px is None or clean.ambiguity_margin_px >= 0.0
+    assert noisy.reprojection_error_px > clean.reprojection_error_px
+    assert noisy.pose.confidence < clean.pose.confidence
+    assert len(noisy.candidate_reprojection_errors_px) == noisy.candidate_count
+
+
+def test_camera_paddle_pose_to_court_world_uses_calibration_extrinsics_and_meter_units() -> None:
+    pose = SE3PoseConfidence(
+        R=[[1.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]],
+        t=[100.0, 200.0, 300.0],
+        confidence=0.82,
+        source="pnp_ippe",
+    )
+    calibration = SimpleNamespace(
+        extrinsics=SimpleNamespace(
+            R=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            t=[0.0, 0.0, 1.0],
+        )
+    )
+
+    world_pose = camera_paddle_pose_to_court_world(pose, calibration, input_translation_unit="cm")
+
+    for got, want in zip(world_pose.R, pose.R, strict=True):
+        assert got == pytest.approx(want)
+    assert world_pose.t == pytest.approx((1.0, 2.0, 2.0))
+    assert world_pose.confidence == pytest.approx(0.82)
+    assert world_pose.source == "pnp_ippe:court_Z0"
+
+
+def test_smooth_racket_pose_samples_clamps_implausible_frame_jumps() -> None:
+    first = SE3PoseConfidence(
+        R=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        t=[0.0, 0.0, 100.0],
+        confidence=0.95,
+    )
+    second = SE3PoseConfidence(
+        R=[[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+        t=[100.0, 0.0, 100.0],
+        confidence=0.95,
+    )
+
+    smoothed, report = smooth_racket_pose_samples(
+        [(0.0, first), (1.0 / 120.0, second)],
+        max_translation_speed_per_s=240.0,
+        max_angular_speed_deg_s=600.0,
+    )
+
+    assert smoothed[1].pose.t[0] == pytest.approx(2.0)
+    assert report.translation_clamp_count == 1
+    assert report.rotation_clamp_count == 1
+    assert report.max_translation_speed_per_s == pytest.approx(12000.0)
+    assert report.max_angular_speed_deg_s == pytest.approx(10800.0)
+
+
+def test_rebound_consistency_requires_ball_velocity_to_cross_face_normal() -> None:
+    good = rebound_consistency(
+        incoming_velocity=[0.0, 0.0, -8.0],
+        outgoing_velocity=[0.0, 0.0, 12.0],
+        face_normal=[0.0, 0.0, 1.0],
+    )
+    bad = rebound_consistency(
+        incoming_velocity=[0.0, 0.0, -8.0],
+        outgoing_velocity=[0.0, 0.0, -6.0],
+        face_normal=[0.0, 0.0, 1.0],
+    )
+
+    assert good.consistent is True
+    assert good.normal_speed_before == pytest.approx(-8.0)
+    assert good.normal_speed_after == pytest.approx(12.0)
+    assert bad.consistent is False
+    assert "normal_component_did_not_flip" in bad.notes

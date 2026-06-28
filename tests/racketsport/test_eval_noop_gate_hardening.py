@@ -84,7 +84,7 @@ def test_ball_event_eval_rejects_zero_contact_and_bounce_evidence(tmp_path: Path
     assert metrics["bounce_events"].passed is False
 
 
-def test_racket_eval_rejects_zero_contact_evidence(tmp_path: Path) -> None:
+def test_racket_eval_does_not_gate_on_presence_without_reference_labels(tmp_path: Path) -> None:
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase6"
     _write_ready_clip(labels_root, "clip_001")
@@ -92,10 +92,11 @@ def test_racket_eval_rejects_zero_contact_evidence(tmp_path: Path) -> None:
 
     payload = racket_eval.evaluate(root, labels_root)
 
-    assert payload.status == "fail"
+    assert payload.status == "not_measured"
     metrics = payload.clips[0].metrics
     assert metrics["racket_contacts"].value == 0
-    assert metrics["racket_contacts"].passed is False
+    assert metrics["racket_contacts"].passed is None
+    assert metrics["racket_face_angle_p90_error_deg"].status == "not_measured"
 
 
 def test_physics_eval_rejects_zero_contact_or_ground_force_evidence(tmp_path: Path) -> None:

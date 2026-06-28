@@ -6,11 +6,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .court_auto_evidence import build_auto_court_line_evidence_from_frame
 from .court_calibration import calibration_from_manual_taps
+from .court_line_evidence import aggregate_court_line_evidence
 from .court_templates import Sport
 from .court_zones import build_court_zones
 from .net_plane import build_net_plane
-from .schemas import CaptureSidecar
+from .schemas import CaptureSidecar, CourtCalibration, NetPlane
 
 
 SIDECAR_CORNER_ORDER = ("near_left", "near_right", "far_right", "far_left")
@@ -56,9 +58,19 @@ def build_calibration_from_corrections(
             out_dir.mkdir(parents=True, exist_ok=True)
             _write_json(out_dir / "capture_sidecar.json", sidecar)
             calibration = calibration_from_manual_taps(out_dir / "capture_sidecar.json", sport=sport)
+            net_plane = build_net_plane(sport)
             _write_json_artifact(out_dir / "court_calibration.json", calibration)
             _write_json_artifact(out_dir / "court_zones.json", build_court_zones(sport))
-            _write_json_artifact(out_dir / "net_plane.json", build_net_plane(sport))
+            _write_json_artifact(out_dir / "net_plane.json", net_plane)
+            _write_json_artifact(
+                out_dir / "court_line_evidence.json",
+                _line_evidence_from_review_frame(
+                    frame_path=frame_path,
+                    calibration=calibration,
+                    net_plane=net_plane,
+                    sport=sport,
+                ),
+            )
         except Exception as exc:
             clip_summaries.append(
                 {
@@ -83,6 +95,7 @@ def build_calibration_from_corrections(
                     "court_calibration.json",
                     "court_zones.json",
                     "net_plane.json",
+                    "court_line_evidence.json",
                 ],
                 "not_ground_truth": True,
             }
@@ -132,6 +145,28 @@ def _manual_taps_from_reviewed_corners(item: dict[str, Any]) -> list[list[float]
             raise ValueError(f"{key} must be a 2D image point")
         taps.append([float(value[0]), float(value[1])])
     return taps
+
+
+def _line_evidence_from_review_frame(
+    *,
+    frame_path: Path,
+    calibration: CourtCalibration,
+    net_plane: NetPlane,
+    sport: Sport,
+) -> Any:
+    try:
+        return build_auto_court_line_evidence_from_frame(frame_path, calibration, net_plane=net_plane, frame_index=0)
+    except Exception as exc:
+        evidence = aggregate_court_line_evidence(
+            sport=sport,
+            line_observations=[],
+            net_observations=[],
+            required_line_ids=("near_nvz", "far_nvz", "near_centerline", "far_centerline") if sport == "pickleball" else (),
+            required_net_ids=("top_net",),
+        )
+        evidence.source = "review_frame_auto_detection_failed"
+        evidence.aggregate.reasons.append(f"auto_detection_failed:{type(exc).__name__}")
+        return evidence
 
 
 def _sidecar_payload(

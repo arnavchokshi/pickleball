@@ -1,7 +1,7 @@
-# Sway Body — Pickleball/Tennis CV Pipeline: Codex Implementation Plan
+# Pickleball/Tennis CV Pipeline: Codex Implementation Plan
 
 **Audience:** the Codex coding agent.
-**Status:** authoritative build spec. Follow exactly.
+**Status:** target build spec plus current implementation delta. Follow the build order and gates exactly, but do not read target phase text as proof that the feature already exists.
 **Companion docs:** `SWAY_BODY_PICKLEBALL_MVP.md` (product), `TECH_STACK.md` (technology rationale), `ACCURACY_AND_TRAINING.md` (**source of truth for datasets, training/fine-tune/auto-label recipes, filtering parameters, and the numeric validation protocols A/B/C/D referenced by the gates below**), `BUILD_CHECKLIST.md` (**the operational checklist + multi-agent coordination protocol — Codex drives the build from there; each checklist task maps to a phase here**). World-grounded body, foot-skate elimination, physics refinement, racket 6DoF, and the 3D replay renderer are built and gated in Phases 3/4/6/10 below. **`TECH_STACK.md §2.3 Model Registry` is the canonical source for exact model variants + weights (offline vs live, candidates, fallbacks, licenses) — this doc must not state any variant that contradicts it; on any naming discrepancy the registry wins.**
 **Date:** 2026-06-26.
 
@@ -18,43 +18,62 @@
 
 ## 0. How To Use This Doc
 
+### 0.0 Current implementation reality (2026-06-28 audit)
+
+This file describes the system we are building. The implementation is not there yet. The current checklist truth is `VERIFIED=0`: no phase has passed its documented real-clip acceptance gate. The rows below are the current state to use before reading the target phase details.
+
+| area | current evidence | next gate that actually promotes it |
+|---|---|---|
+| repo/history | `main` and `origin/main` were at `22fba00`; strict last-12-hour commit window had 0 commits, while the relevant wider burst had 43 commits; local dirty tree was much larger than pushed main | separate pushed code, local dirty code, and ignored `runs/` artifacts before claiming status |
+| iOS client | Swift package/app target builds and Swift tests pass; IOS-1 has partial AVFoundation preview/recording runtime code, but sidecar writing, live-frame feed, fps/shutter/luminance measurement, codec validation, and physical-device gates are missing; IOS-2..IOS-6 remain scaffold-level | implement the missing AVFoundation/ARKit/Vision/CoreML/RealityKit/Upload runtime paths on a device and pass C1-C3 gates |
+| court calibration | sidecar/manual PnP, regulation zones/net, overlay/evidence plumbing, fail-closed court-line evidence, and pipeline semantic blockers for unready court evidence exist | implement/train no-tap solver, then pass Phase 1 gates on real labeled clips |
+| tracking | YOLO26m plus BoT-SORT-ReID runner is registered and fail-closed; precomputed/manual mode remains explicit. Canonical accepted-four tracks are still too sparse for BODY scheduling (Burlington 2/180 four-player frames, Wolverine 1/91, Outdoor 1/1786, Indoor 0/900). H100 source-30 strict candidates improved Outdoor to 864/1800 and Indoor to 424/900 four-player coverage and audit as `canonical_candidate_not_gate_verified`; widened-margin diagnostics audit as `diagnostic_only`. | run the real H100 labeled gate for IDF1, spectator rejection, ID switches, and throughput before TRK promotion |
+| body | BodyStageRunner exists and accepted-four scheduled-frame H100 smoke produced mesh/joint artifacts for Burlington, Wolverine, and Indoor; `body_gate_report.json` is still `blocked` because reviewed world-MPJPE labels and a full-clip BODY gate are missing, and Outdoor has no scheduled BODY output. Draft/not-ground-truth BODY labels now fail closed instead of measuring MPJPE. | canonical-safe BODY scheduling, reviewed/equivalent world-joint labels, full-clip BODY gate, then world-MPJPE and foot/NVZ gates |
+| ball/events | strict no-click ball review tracks and cue artifacts exist; canonical accepted-four contact windows were promoted from saved human review inputs, not complete machine cue triplets. `contact_timing_review_alignment.json` now proves 34/34 saved review contacts match promoted windows at 0-frame delta, but `ball_verified=false`. | audio/wrist/ball cue coverage, label F1, machine contact timing, and +/-2-frame timing gates |
+| racket | PnP/IPPE primitives, preview overlays, true-corner review crop sheets, and fail-closed audits exist; all accepted-four candidates are still box-derived, have 0 true-corner labels and 0 reference/GT labels, and cannot promote to canonical `racket_pose.json` | real paddle GT/assets or human true-corner labels, true detector/keypoint/CAD pose runtime, face-angle/contact gates |
+| report/visualization | report model and confidence primitives exist; visualization modules emit CPU payloads/metadata, not final rendered delivery | rendered court/ghost/overlay assets, SSE/tiered delivery, and copy faithfulness gates |
+| replay | static review GLBs/manifests, `replay_readiness_report.json/html`, and a web parser/summary exist; all four accepted clips are review-visual-ready but production replay and metrics remain blocked. Static GLBs are now classified as `review_static_glb_export` and rejected by production validation. | production animated GLB/USDZ export, real Three.js/R3F viewer, RealityKit playback, visual/perf gates after BODY/BALL/RKT gates are trustworthy |
+| data/eval | validators, manifests, and hardening exist; real data assets and several numeric gates are missing | populate reviewed datasets and replace presence checks with the documented numeric phase gates |
+
 ### 0.1 Phase-gate discipline (mandatory)
 
 This pipeline is built in ordered phases. **Do not start phase N+1 until every acceptance gate in phase N passes on the GPU test clips.** Each phase ends with a `REPORT.md` written to `runs/phaseN/REPORT.md` containing the measured numbers against each gate, marked PASS/FAIL. If a gate fails, fix or escalate; do not silently proceed. A failed gate that cannot be met is a product decision, not a coding decision — write `BLOCKED` with the measured number and the reason.
 
 ### 0.2 Repo assumptions
 
-- Extend the existing `sam4dbody` repo. **Do not greenfield.** Reuse:
-  - `threed/calibration/solver.py`, `threed/calibration/projection.py` — homography/PnP solving.
-  - `threed/stage_projection/run_stage_projection.py` — feet→plane projection (generalize to court plane).
-  - `threed/formation_alignment/assignment.py` — player→role/side assignment.
-  - `threed/sidecar_body4d/contact_states.py`, `threed/sidecar_body4d/impact.py` — contact/impact proxies.
-  - Test patterns: `tests/threed/test_wp47_readiness_gate.py` (artifact readiness), `tests/threed/test_wp36_scoreboard.py` (phase timing/cost), `pod_agent/tests/test_wp39_single_run_lock.py` (single-GPU queue lock).
-- All new code lives under `threed/racketsport/` and tests under `tests/racketsport/`. The 3D replay **viewer** is a separate web frontend (Three.js / React Three Fiber) under `web/replay/`. Module layout (create files as phases require them):
+- Work in this `pickleball` repo on `main`; do not treat the older `sam4dbody` tree as the live codebase for this build. Historical `sam4dbody`/WP references are useful background only, not current file ownership.
+- Reuse the current local modules and patterns:
+  - `threed/racketsport/court_calibration.py`, `court_templates.py`, `court_zones.py`, `net_plane.py`, and `court_line_evidence.py` for calibration geometry and semantic evidence.
+  - `threed/racketsport/orchestrator.py`, `pipeline_contracts.py`, and `scripts/racketsport/validate_pipeline_artifacts.py` for fail-closed stage wiring and artifact readiness.
+  - `threed/racketsport/eval/` and `tests/racketsport/` for phase evaluators and regression tests.
+  - `scripts/gpu-eval-run.sh`, `scripts/gpu-train-lock.sh`, and `models/MANIFEST.json` for shared-H100 coordination and model inventory.
+- All server code lives under `threed/racketsport/` and tests under `tests/racketsport/`. The 3D replay **viewer** is a separate web frontend (Three.js / React Three Fiber) under `web/replay/`. Module layout (create files as phases require them):
 
 ```
 threed/racketsport/
   court_templates.py      court_calibration.py     court_zones.py
   net_plane.py            capture_quality.py       drift_guard.py
   person_fast.py          track_lock.py            doubles_id.py
-  pose2d.py               skeleton3d.py            ground_constraint.py
-  worldhmr.py             footlock.py              physics_refine.py
+  hmr_fast.py             hmr_deep.py              worldhmr.py
+  footlock.py             physics_refine.py        body_mesh_readiness.py
   ball_tracknet.py        ball_tap_track.py        ball_physics3d.py
   audio_pop.py            event_fusion.py          contact_windows.py
   racket6dof.py           movement_metrics.py      biomech.py
   insight_rules.py        confidence.py            shot_classifier.py
   drill_verify.py         habit_model.py           report_model.py
-  llm_copy.py             viz_courtmap.py          viz_overlay.py
-  viz_ghost.py            replay_scene.py          replay_export.py
-  pipeline_fast.py        pipeline_deep.py         orchestrator.py
+  llm_copy.py             replay_readiness.py      replay_export.py
+  virtual_world.py        pipeline_contracts.py    orchestrator.py
+  review_packet.py        replay_viewer_manifest.py
   schemas/                eval/
 web/replay/   # Three.js + React Three Fiber web-share viewer (Phase 10)
 ios/          # native Swift app (Client Track C1–C3)
-  SwayCapture/        # AVFoundation capture: lock exposure/focus/WB, fps policy, HEVC/ProRes, landscape, iOS26 capture events
-  SwayCalibration/    # ARKit setup pass: intrinsics + 6DoF pose + court-plane → capture sidecar; manual court-corner tap fallback; LiDAR depth (Tier A)
-  SwayFastTier/       # on-device preview + capture guidance: Apple Vision (2D/3D/hand pose, segmentation) + YOLO Core ML (ball/racket) on the Neural Engine
-  SwayReplay/         # RealityKit + USDZ in-app 3D replay viewer (RealityView virtual-camera, free-viewpoint)
-  SwayUpload/         # trim on-device; upload clip + sidecar to server; fetch baked USDZ + web GLB share link
+  Capture/Sources/PickleballCapture/              # AVFoundation capture target/module scaffold
+  Calibration/Sources/PickleballCalibration/      # ARKit/manual-tap calibration target/module scaffold
+  FastTier/Sources/PickleballFastTier/            # on-device preview/guidance target/module scaffold
+  Guidance/Sources/PickleballGuidance/            # capture-quality guidance target/module scaffold
+  Replay/Sources/PickleballReplay/                # RealityKit/USDZ replay target/module scaffold
+  Upload/Sources/PickleballUpload/                # upload target/module scaffold
+  App/                                            # Pickleball iOS app target
 models_coreml/  # YOLO (+ any small student) exported to Core ML (coremltools 9.0, INT8/ANE)
 ```
 
@@ -185,16 +204,18 @@ The native Swift app. It runs **in parallel** with the server Pipeline Track (Ph
 
 **WHAT:** capture the cleanest possible frames and produce a per-clip **calibration sidecar** so the server never has to estimate camera geometry. **HOW it's used:** the locked, high-fps clip + sidecar are uploaded; server Phase 1 *seeds* its solve from the sidecar (and Phase 3 world-grounding uses the known camera). Clean, photometrically-stable frames are the single biggest free accuracy win.
 
-**Build (`ios/SwayCapture`, `ios/SwayCalibration`, `ios/SwayUpload`):**
+**Current delta:** the Swift package, Pickleball app target, shared contracts, and build/test scaffolds exist. IOS-1 includes partial AVFoundation preview/recording runtime code, but it has not written the real sidecar, provided the server live-frame feed, measured fps/shutter/luminance gates, validated HEVC/ProRes on device, or passed physical-device recording tests. The ARKit setup pass, manual tap UI, background upload, and physical-device validation remain unbuilt.
+
+**Build (`ios/Capture` / `PickleballCapture`, `ios/Calibration` / `PickleballCalibration`, `ios/Upload` / `PickleballUpload`):**
 - `AVCaptureSession` (rear wide cam). **Before recording, lock everything** (`device.lockForConfiguration()`): `setExposureModeCustom(duration: 1/500–1/1000 s, iso: clampedISO)` (clamp to `activeFormat.minISO…maxISO`), `setFocusModeLocked(lensPosition: courtFocus)`, `setWhiteBalanceModeLocked`. This stops auto-systems pumping brightness/sharpness/color mid-rally (what makes ball + pose stable frame-to-frame).
 - **Format/fps policy:** choose `activeFormat` + `activeVideoMin/MaxFrameDuration`: **default 1080p @ 120 fps**; **240 fps (≈720p binned)** for a ball-physics/swing deep-dive; **4K @ 60 fps + ProRes 422 LT** on Tier A. 60 fps is the floor. One mode per session (high-fps and iOS-26 cinematic 30 fps are mutually exclusive — **do not use cinematic**).
 - **Landscape:** `AVCaptureConnection.videoRotationAngle` (iOS 17+; replaces deprecated `videoOrientation`); lock UI orientation. Reject portrait at record time.
 - **Record:** `AVAssetWriter` → HEVC (10-bit) default; **ProRes 422 LT** on Tier A for max-quality reconstruction. `AVCaptureVideoDataOutput` provides live frames to the C2 fast tier in parallel.
 - **Hands-free control:** iOS 26 `AVCaptureEventInteraction` / SwiftUI `.onCameraCaptureEvent` → start/stop from the Action/Volume button or AirPods stem (no touching the tripod).
-- **ARKit setup/calibration pass** (`SwayCalibration`): briefly run `ARWorldTrackingConfiguration` with `planeDetection = .horizontal` to grab `ARFrame.camera.intrinsics` + `.transform` (6DoF pose) + an `ARPlaneAnchor` for the court floor. **Note: you cannot run ARKit and a high-fps `AVCaptureSession` at peak rates simultaneously** — do the ARKit pass during setup, persist the result, then switch to the AVFoundation recording session. Write the **capture sidecar** (`capture_sidecar.json`): intrinsics, camera pose, court-plane transform, device tier, fps/format, gravity vector (CoreMotion).
+- **ARKit setup/calibration pass** (`PickleballCalibration`): briefly run `ARWorldTrackingConfiguration` with `planeDetection = .horizontal` to grab `ARFrame.camera.intrinsics` + `.transform` (6DoF pose) + an `ARPlaneAnchor` for the court floor. **Note: you cannot run ARKit and a high-fps `AVCaptureSession` at peak rates simultaneously** — do the ARKit pass during setup, persist the result, then switch to the AVFoundation recording session. Write the **capture sidecar** (`capture_sidecar.json`): intrinsics, camera pose, court-plane transform, device tier, fps/format, gravity vector (CoreMotion).
 - **Manual fallback:** a court-corner tap UI (4 corners) when ARKit plane is unreliable (blank/low-contrast courts, low light) → still produces the sidecar's correspondences.
 - **LiDAR (Tier A only):** capture `sceneDepth` (`ARDepthData.depthMap` + `confidenceMap`) for the near court / near player; attach as optional sidecar frames. **Honest limit: ~5 m range, fails in sun** — it helps near-player foot-contact and the near court plane only, never the far player, far baseline, or the ball. Never a dependency.
-- **Upload (`SwayUpload`):** trim to the rally window on-device (cut upload size). **Send the tiny `capture_sidecar.json` + on-device pose track FIRST** (~50 KB — the pose JSON is ~166× smaller than the video) so the **server starts the SMPL fit while the video is still uploading**. Then stream the clip + LiDAR depth (Tier A) via **resumable chunked upload — TUSKit / iOS 17 native background upload (`URLSession` background task, 5–10 MB chunks, file-backed)** so it survives app suspension.
+- **Upload (`PickleballUpload`):** trim to the rally window on-device (cut upload size). **Send the tiny `capture_sidecar.json` + on-device pose track FIRST** (~50 KB — the pose JSON is ~166× smaller than the video) so the **server starts the SMPL fit while the video is still uploading**. Then stream the clip + LiDAR depth (Tier A) via **resumable chunked upload — TUSKit / iOS 17 native background upload (`URLSession` background task, 5–10 MB chunks, file-backed)** so it survives app suspension.
 
 **Test procedure (on a test device + a Mac harness):**
 - Record a locked-exposure clip; verify per-frame mean luminance variance is flat (no auto-exposure pumping) vs an unlocked control.
@@ -212,7 +233,9 @@ The native Swift app. It runs **in parallel** with the server Pipeline Track (Ph
 
 **WHAT:** an instant, on-device preview and real-time camera-placement coaching, all on the Neural Engine. **HOW it's used:** gives the user a "<10 s, I feel seen" result and steers them to a good camera setup *before* recording — but it is **preview/guidance only; the server deep tier is the source of truth** (Apple's on-device 3D pose is 17-joint, single-person, ~5–25° error).
 
-**Build (`ios/SwayFastTier`):**
+**Current delta:** the module boundary and contracts exist, but no real Vision/Core ML runtime path or on-device latency gate has passed.
+
+**Build (`ios/FastTier` / `PickleballFastTier`):**
 - **On-device CV (all ANE):** Apple Vision `VNDetectHumanBodyPoseRequest` (2D, ≤4 players), `VNDetectHumanBodyPose3DRequest` (coarse 3D, single-person — for the framed player), `VNDetectHumanHandPoseRequest` (grip cue), `VNGeneratePersonSegmentationRequest` (framing); **YOLO Core ML** (`models_coreml/`, INT8) for ball/racket boxes when Vision is insufficient.
 - **Instant preview:** overlay the 2D/coarse-3D pose + court overlay (from the C1 sidecar) + one priority cue on the live/just-recorded clip.
 - **Capture-quality guidance (before record):** court-corner visibility (Vision line/corner check → "move back / raise tripod"); ARKit `trackingState == .normal` + plane covers near court ("hold steady, finding ground"); exposure clipping (`exposureTargetOffset` + histogram → "too dark / sun in frame"); motion-blur risk (chosen shutter vs light → "not enough light for a sharp ball; lower fps or add light"); level/shake (CoreMotion gravity + accelerometer variance → "tilt down 5° / steady the tripod"). Mirrors the server `capture_quality` grades.
@@ -231,7 +254,9 @@ The native Swift app. It runs **in parallel** with the server Pipeline Track (Ph
 
 **WHAT:** play the server-baked physics-accurate replay natively, free-viewpoint. **HOW it's used:** the phone downloads the baked **USDZ** (from server Phase 10) and plays it; a **web GLB share link** (also from Phase 10) covers cross-platform sharing.
 
-**Build (`ios/SwayReplay`):**
+**Current delta:** the replay module scaffolding exists, but no server-baked USDZ, RealityKit animation playback, attached racket/ball path, or device FPS gate has passed.
+
+**Build (`ios/Replay` / `PickleballReplay`):**
 - **RealityKit + `RealityView`** in **`virtual` camera mode** (iOS 18+) for pure non-AR 3D playback; orbit/pan/zoom via `DragGesture`/`MagnifyGesture` → **free-viewpoint**. (SceneKit is soft-deprecated — do not use.)
 - Load the baked **USDZ** (`Entity(named:)`) and play its skeletal animation (`playAnimation(...)`); racket/ball pinned to joints via the WWDC25 attach API. Timeline scrub/loop; camera presets + free orbit.
 - **Doubles:** use the in-app `RealityView` path (handles multiple skeletons); reserve AR Quick Look (single-skeleton limit) for single-player AR.
@@ -251,6 +276,8 @@ The native Swift app. It runs **in parallel** with the server Pipeline Track (Ph
 ## Phase 0 — Environment, Scaffolding, Ingest
 
 **Goal:** reproducible env, repo scaffold, all checkpoints downloaded and smoke-tested, NVDEC decode working, test clips ingested.
+
+**Current delta:** repo/env scaffolding, manifest/checksum inventory, CPU ffmpeg ingest/QC, capture-quality scoring, decode benchmark helpers, and several local/H100 smokes exist. Representative Phase 0 acceptance is not complete: true NVDEC/DALI decode on real 1080p/4K/120+ clips, all-model forward-pass smoke, Triton serving, and the multi-slot GPU lease proof still need current recorded gates.
 
 **Build:**
 - `requirements-racketsport.txt` + `web/replay/package.json`; `scripts/racketsport/setup_env.sh` (installs deps, downloads checkpoints to `models/`, verifies hashes).
@@ -289,6 +316,8 @@ python scripts/racketsport/smoke_models.py --manifest models/MANIFEST.json   # l
 ## Phase 1 — Court Calibration, Camera Pose, Net Plane
 
 **Goal:** per-clip, viewpoint-agnostic court coordinate frame robust to highly variable camera height/angle. Output a validated homography + camera pose + net plane. **This is the keystone — it is the known camera + ground plane that the world-grounded body (Phase 3) and physics (Phase 4) depend on.**
+
+**Current delta:** CAL has regulation templates, zones, net plane, sidecar/manual PnP, multi-frame/reprojection primitives, overlay/evidence tooling, fail-closed `court_line_evidence.json` plumbing, and pipeline readiness blockers when `auto_calibration_ready=false`. Burlington is retired for court calibration because fisheye curvature bends court lines, though it remains useful for player-ID, ball, BODY smoke, paddle/replay, and other non-court QA. CAL does **not** yet have the trained no-tap keypoint/line solver, `scripts/racketsport/train_court_kpt.py`, or real Phase-1 dataset coverage.
 
 **Build:**
 - `court_templates.py` — `PICKLEBALL = CourtTemplate(width_ft=20, length_ft=44, nvz_ft=7, net_center_in=34, net_post_in=36, line_in=2)`; `TENNIS_SINGLES`, `TENNIS_DOUBLES` with service boxes. World origin at net center, X across court width, Y toward the far baseline, **Z up (court plane Z=0)**, meters for artifact coordinates.
@@ -340,6 +369,8 @@ Measure per clip, **bucketed by camera height × angle**: median/p95 reprojectio
 
 **Goal:** cheap, fast, ID-stable tracking of ≤4 on-court players over 20-min clips, using court geometry as the primary ID-stability engine.
 
+**Current delta:** tracking primitives, a registered real YOLO26m plus BoT-SORT-ReID runner, and a canonical-safety promotion audit exist, with explicit precomputed/manual mode retained. TRK is still `IN-PROGRESS` because the real H100 labeled gate for IDF1, spectator rejection, ID-switches, and throughput has not passed. The latest accepted-four audit found the canonical root `tracks.json` artifacts are too sparse for BODY scheduling: Burlington 2/180 four-player frames, Wolverine 1/91, Outdoor 1/1786, Indoor 0/900. Fresh H100 YOLO26m source-30 strict candidates improved Outdoor to 864/1800 and Indoor to 424/900 four-player frames and audit as `canonical_candidate_not_gate_verified`; widened-margin diagnostics audit as `diagnostic_only` because they include off-court frames, so they must not promote.
+
 **Build:**
 - `person_fast.py` — `detect(frames_batch) -> dets` using **YOLO26m** (TensorRT FP16, batch 32–64), person class only. (YOLO26 is real — Ultralytics Jan 2026, +1.4–2.8 mAP over YOLO11 at equal GPU latency, NMS-free end-to-end; **tune with official defaults** — the NMS-free/DFL-free changes need it. RF-DETR-L/RTMDet retained as Apache fallbacks for a future commercial pivot.) For ≤4 large players on a known court we are tracking-limited, not detection-limited — even YOLO26n suffices.
 - `track_lock.py`:
@@ -359,11 +390,11 @@ Measure per clip, **bucketed by camera height × angle**: median/p95 reprojectio
 
 **Test procedure:**
 ```bash
-python scripts/racketsport/track.py --clip data/testclips/<clip> --calib runs/phase1/<clip>/court_calibration.json --players 4 --out runs/phase2/<clip> --overlay
+python scripts/racketsport/track.py --detections runs/phase2/<clip>/detections.json --calibration runs/phase1/<clip>/court_calibration.json --out runs/phase2/<clip>/tracks.json --max-players 4 --id-strategy role_lock
 python -m threed.racketsport.eval.track_eval --root runs/phase2 --labels data/testclips --out runs/phase2/metrics.json
-python scripts/racketsport/track.py --clip data/testclips/<20min_clip> --benchmark --out runs/phase2/bench
+python scripts/racketsport/benchmark_person_trackers.py --clip <20min_clip> --video data/testclips/<20min_clip>/source.mp4 --calibration runs/phase1/<20min_clip>/court_calibration.json --out-root runs/phase2/bench --candidate yolo26m_botsort_reid=models/checkpoints/yolo26m.pt,configs/racketsport/botsort_reid.yaml --device 0 --max-players 4
 ```
-Measure: IDF1 / ID-switches vs `players.json`; spectator rejection; side/role accuracy; swap-recovery latency; throughput; the same-color-partners clip.
+Measure: IDF1 / ID-switches vs `players.json`; spectator rejection; side/role accuracy; swap-recovery latency; throughput; the same-color-partners clip. Presence/coverage diagnostics such as four-player-frame rate are useful for BODY scheduling, but they are not substitutes for labeled IDF1/spectator gates.
 
 **Acceptance gates:**
 - **≥ 90%** identity/side stability on 2-player clips after confirmation; **≥ 85%** doubles after `coach_anchor`.
@@ -380,15 +411,17 @@ Measure: IDF1 / ID-switches vs `players.json`; spectator rejection; side/role ac
 
 **Goal:** the core body engine. **SMPL/SMPL-X mesh is the primary representation** (drives the physics replay, biomechanics, and foot-skate elimination). The per-frame mesh backbone is **Fast SAM-3D-Body** — the best per-frame mesh available (3DPW PA-MPJPE 30.4 mm, beats HMR2.0 by 15+ mm; user-confirmed; SAM License — ⚠️ verify before commercial, Apache fallback **SAT-HMR**; see `TECH_STACK.md §2.3`) — and **we add world-grounding ourselves** using the known camera + court plane. Two tiers: a **fast multi-person camera-space mesh** for live preview, and a **deep per-frame SAM-3D-Body + world-grounding + (Phase-4) foot-lock + physics** for the replay/metrics. **GVHMR/WHAM are demoted to optional world-trajectory/foot-velocity sanity-checks — NOT the primary mesh** (their per-frame backbone is HMR2.0, weaker; we already solve world-grounding via calibration). The positional skeleton is only a preview/triggering overlay.
 
+**Current delta:** BodyStageRunner wiring, checksum-gated runtime loading, camera-to-court conversion, scheduled-frame BODY execution manifests, and `body_mesh_readiness.json`/`body_gate_report.json` audits exist. Accepted-four contact windows were promoted from human review inputs and request limited world-mesh frames on Burlington, Wolverine, and Indoor. Current BODY gate truth: Burlington 3 scheduled BODY frames / 9 mesh player-frames, Wolverine 4 / 12, Indoor 2 / 6 pass mesh-smoke only; Outdoor remains 0 / 0 with no BODY output. The report now fail-closes draft/not-ground-truth BODY world labels and lists expected label/full-clip gate paths. BODY remains scaffold because no multi-frame H100 BODY accuracy gate has passed, no reviewed world-MPJPE labels/equivalent evaluator exists, and no full-clip BODY coverage gate exists.
+
 **Build:**
-- `pose2d.py` — top-down `RTMW-l` on the ≤4 player crops from Phase 2. **Keypoints MUST include bilateral hips + shoulders** (X-factor) **and hands/fingers** (racket grip + face path). Whole-body (133-kpt).
+- `hmr_fast.py` / iOS `PickleballFastTier` — fast-tier preview metadata, Apple Vision/Core ML seams, and eventual top-down `RTMW-l`/whole-body keypoint adapters for the ≤4 player crops from Phase 2. **Keypoints MUST include bilateral hips + shoulders** (X-factor) **and hands/fingers** (racket grip + face path). Whole-body (133-kpt).
 - `worldhmr.py` — `reconstruct_world(frames, tracks, calibration) -> SmplMotion`:
   - **DEEP (primary): Fast SAM-3D-Body** per player crop → best per-frame mesh (MHR→SMPL via its built-in MLP). Then **world-grounding is OURS**: project the per-frame mesh to world via the known K,[R|t] + court plane Z=0 (metric root depth from court PnP), then temporal smoothing (windowed Gaussian / Savitzky-Golay / SmoothNet). This replaces any dependence on a world-HMR model's SLAM. Precedent: arXiv 2512.21573 (World-Coordinate retargeting via SAM 3D Body). Foot-lock + physics follow in Phase 4.
   - **Optional cross-check only: GVHMR / WHAM / TRAM** — run (GVHMR without its SLAM, our camera injected) purely to sanity-check world trajectory + foot-velocity against our grounded output. **Do NOT use them as the mesh source** — their per-frame mesh is HMR2.0-based (worse than SAM-3D-Body) and we already have ground-truth camera geometry.
   - **FAST (server post-upload quick pass): Multi-HMR 2** (20 FPS, no FOV assumption — preferred given variable cameras) **or SAT-HMR** (24 FPS, assumes 60° FOV — verify per court cam) — multi-person camera-space SMPL for a quick server preview while the deep tier runs. **[VERIFY]**; fallback = HMR2.0/4D-Humans, or fit SMPL to RTMW3D. ~7–8 mm quality penalty vs SAM-3D-Body is fine for a preview. (The *instant, during-capture* preview is on-device **Phase C2 / Apple Vision** — this server fast pass is the post-upload one.)
   - Multi-person: **no single robust monocular ≤4-person world pipeline** — run **per-player** after Phase-2 detection; the court plane gives per-player metric scale + root depth.
-- `skeleton3d.py` — **preview/triggering overlay only** now: RTMW3D-l or RTMPose→MotionBERT lift, world coords. Used for the <10 s fast preview and for sub-frame contact triggering; NOT the source of truth for the replay (that is `worldhmr` SMPL).
-- `ground_constraint.py` — court geometry as free accuracy (`ACCURACY_AND_TRAINING.md §5`): (1) **reprojection-consistency loss** at fine-tune; (2) **metric root depth** from court PnP; (3) **hard foot-on-ground** seed (full foot-lock is Phase 4). Foot-contact MLP on `[foot_y_world, |v_foot_world|, ankle_z]` (bootstrap AMASS zero-velocity, warm-start UnderPressure).
+- `worldhmr.py` emits `skeleton3d.json` as a **preview/triggering overlay only**: RTMW3D-l or RTMPose→MotionBERT lift, world coords. Used for the <10 s fast preview and for sub-frame contact triggering; NOT the source of truth for the replay (that is world-grounded SMPL).
+- `worldhmr.py` + `footlock.py` + `body_mesh_readiness.py` own court geometry as free accuracy (`ACCURACY_AND_TRAINING.md §5`): (1) **reprojection-consistency loss** at fine-tune; (2) **metric root depth** from court PnP; (3) **hard foot-on-ground** seed (full foot-lock is Phase 4). Foot-contact MLP on `[foot_y_world, |v_foot_world|, ankle_z]` (bootstrap AMASS zero-velocity, warm-start UnderPressure).
 - **Body fine-tune — biggest accuracy lever** (`scripts/racketsport/finetune_pose.py`; `ACCURACY_AND_TRAINING.md §5`). Generic models hit ~214 mm MPJPE on athletic motion vs ~65 mm fine-tuned. Ladder:
   1. **Fine-tune order: BEDLAM2 → AthletePose3D → CalTennis [VERIFY] → RICH (contact) → AMASS (priors)** (backbone LR 0.1× head). Eval on EMDB2 (world trajectory) + CalTennis multi-view + AthletePose3D.
   2. **+ ground-plane constraints** → lower world MPJPE + drift.
@@ -412,7 +445,7 @@ python scripts/racketsport/finetune_pose.py --order bedlam2,athletepose3d,calten
 python scripts/racketsport/body3d.py --clip <clip> --tracks runs/phase2/<clip>/tracks.json --calib runs/phase1/<clip>/court_calibration.json --out runs/phase3/<clip>
 python -m threed.racketsport.eval.body_eval --root runs/phase3 --labels data/testclips --out runs/phase3/metrics.json
 ```
-Measure: **world MPJPE on EMDB2 + CalTennis**; per-frame MPJPE on racket-motion val; foot/NVZ agreement vs `feet_nvz.json`; knee/elbow angle error + X-factor vs `manual_metrics.json`; spacing error; FPS (fast vs deep).
+Measure: **world MPJPE on EMDB2 + CalTennis**; per-frame MPJPE on racket-motion val; foot/NVZ agreement vs `feet_nvz.json`; knee/elbow angle error + X-factor vs `manual_metrics.json`; spacing error; FPS (fast vs deep). The local `body_gate_report.json` additionally requires clip-level BODY world-joint labels at `labels_root/<clip>/body_world_joints.json` or `labels_root/<clip>/labels/body_world_joints.json` plus `body_full_clip_gate.json` before mesh-smoke can become BODY verification.
 **Velocity/kinematics (conflict RESOLVED — `ACCURACY_AND_TRAINING.md §5b`):** R²0.96 = ball-speed model from 2D in-plane speed; r0.11–0.28 = derivative of noisy lifted-3D. `velocity.py` computes the reliable way: **project wrist/ankle through court homography to metric world plane (Type D)** → RTS/Kalman → central difference → zero-phase Butterworth `filtfilt` (6 Hz body/timing, 8–10 Hz swing) or Savitzky-Golay (order 2, win 9); One-Euro (β≈0.007) real-time. **Never** contact-frame peak from pose (use the ball). Run Protocols A (ball-speed GT: r≥0.70 Tier-1 / r≥0.55 Tier-2), B (timing: MAE ≤2 frames), C (240→120/60 downsample: peak underestimate ≤15%, r≥0.90).
 
 **Acceptance gates:**
@@ -431,6 +464,8 @@ Measure: **world MPJPE on EMDB2 + CalTennis**; per-frame MPJPE on racket-motion 
 ## Phase 4 — Foot-Skate Elimination & Physics Refinement
 
 **Goal:** make the reconstructed motion **physically plausible and foot-skate-free** — the watchable-replay requirement. The known ground plane (Z=0) lets us beat published foot-slide numbers. (This phase **replaces** the prior SAM-3D-Body "contact micro-mesh burst" idea — mesh is now core, not a burst.)
+
+**Current delta:** only CPU primitives/scaffolds and evaluator hardening exist. There is no trusted `smpl_motion.json` stream from Phase 3, no real foot-contact labels/gate pass, and no PhysPT/MuJoCo refinement path through the pipeline.
 
 **Build:**
 - `footlock.py` — the decisive skate killer (the modern form of "Reducing Footskate with Ground Contact Constraints"). Per foot (toe+heel), per player, per frame:
@@ -471,6 +506,8 @@ Measure: **foot-slide** (stance-foot world displacement during detected contact)
 
 **Goal:** 2D ball track + 3D ball trajectory + contact/bounce/net events accurate enough to drive adaptive-compute triggers, timing metrics, and the physics-consistent replay. Not line calls.
 
+**Current delta:** TrackNetV3 smoke/adapters, strict no-click review tracks, ball inflection/audio/wrist cue artifacts, saved human review inputs, promoted accepted-four `contact_windows.json`, fail-closed contact-window builders, and `contact_timing_review_alignment.json` exist. The alignment report confirms 34/34 saved human-review contact timestamps match promoted windows at 0-frame delta. BALL is still scaffold: the registered prototype runner consumes precomputed review tracks rather than running TrackNet, the promoted contacts are human-review prototype artifacts rather than label/F1 gates, audio/wrist coverage is incomplete, and machine cue-fusion contact timing has not passed.
+
 **Build:**
 - `ball_tap_track.py` — manual/semi-auto tap-track fallback (trust floor).
 - `ball_tracknet.py` — **build on TrackNetV3 (MIT, public) now; upgrade to TrackNetV5 [VERIFY] on release** (best F1 ~0.986, −74% FN under occlusion). Heatmap, multi-frame. **Transfer hierarchy:** badminton → tennis+TT (~155k) → pickleball. **Data:** pickleball Roboflow sets (InAPickle 18k + ball-tracking 11k ≈ 50k), bbox-center→(x,y), visibility=2; ~2–3k own frames using **BlurBall midpoint** convention; **TOTNet visibility-weighted loss + occlusion aug** + background-subtraction concat. **Aug:** motion-blur synthesis, H.264/JPEG artifact, color jitter hue ±30° (ball colors), copy-paste, fps sim (geometric transforms identical across the stack).
@@ -506,7 +543,9 @@ Measure: ball P/R/F1 vs `ball.json` (incl. blur/occlusion subset); false positiv
 
 ## Phase 6 — Racket / Paddle 6DoF Tracking
 
-**Goal:** track each player's paddle/racket in full 6DoF (position + orientation) and render it in the 3D world. This **unlocks real contact-point-on-face + face-angle** — markerless wrist pronation is 20–35°, but PnP on a large planar paddle with known dimensions hits **~3–5°** (a 5–15× win; flips the earlier "paddle-face not defensible" verdict). (See `TECH_STACK.md` §(r).)
+**Goal:** track each player's paddle/racket in full 6DoF (position + orientation) and render it in the 3D world. This should unlock real contact-point-on-face + face-angle: markerless wrist pronation is typically too noisy, while the target gate for a large planar paddle with known dimensions is **~3–5°**. The current repo has not proven that accuracy because no ArUco/GT face-angle evaluation has passed. (See `TECH_STACK.md` §(r).)
+
+**Current delta:** PnP/IPPE geometry, fail-closed candidate handling, review overlays, preview paddle poses, promotion audits, true-corner review artifacts, and crop sheets exist. RKT remains scaffold: no true paddle detector/mask/keypoint/CAD pose runtime has run, no canonical accepted-four `racket_pose.json` exists, and no ArUco/GT face-angle gate has passed. The current accepted-four candidate sets are all box-derived (Burlington 42, Wolverine 36, Outdoor 397, Indoor 280), have 0 reviewed true-corner labels and 0 reference/GT labels, and `RacketStageRunner` rejects them before canonical pose promotion.
 
 **Build:**
 - `racket6dof.py`:
@@ -530,7 +569,7 @@ python scripts/racketsport/train_racket_kpt.py --data data/racket_kpt --synth da
 python scripts/racketsport/racket6dof.py --clip <clip> --motion runs/phase3/<clip>/smpl_motion.json --ball runs/phase5/<clip>/ball_track.json --calib runs/phase1/<clip>/court_calibration.json --out runs/phase6/<clip>
 python -m threed.racketsport.eval.racket_eval --root runs/phase6 --labels data/testclips --out runs/phase6/metrics.json   # vs ArUco-GT clips
 ```
-Measure: face-angle error vs `racket_pose.json` (ArUco GT); contact-point-on-face error; 6DoF tracking continuity through swings (≥120 fps clips); occlusion recovery.
+Measure: face-angle error vs `racket_pose.json` (ArUco GT); contact-point-on-face error; 6DoF tracking continuity through swings (≥120 fps clips); occlusion recovery. Before this test is meaningful, accepted clips need reviewed true paddle-face corners in top-left, top-right, bottom-right, bottom-left order, or CAD/reference/ArUco evidence. Do not copy the yellow draft box corners from crop sheets into true-corner labels.
 
 **Acceptance gates:**
 - **Face-angle error ≤ 5°** vs ArUco GT on the ≥120 fps clips (target 3–5°).
@@ -545,6 +584,8 @@ Measure: face-angle error vs `racket_pose.json` (ArUco GT); contact-point-on-fac
 ## Phase 7 — Biomechanics Metrics + Rule-Based Insight Engine + Confidence Gating
 
 **Goal:** turn physics-refined body + racket + events + court into defensible coaching metrics and rule-based habit flags, with honest confidence gating.
+
+**Current delta:** rule/confidence/report primitives exist, but the trusted upstream inputs do not. Metrics that depend on BODY, BALL, FOOT, or RKT cannot be promoted until those phases pass their real gates.
 
 **Build:**
 - `movement_metrics.py` / `biomech.py` — foot/NVZ margin, court-zone occupancy, inter-player spacing, base-of-support, CoM (segmental mass-weighted, De Leva), reach outside base, recovery time, knee/elbow/trunk angles, shoulder-hip X-factor, contact point relative to body, contact height, split-step timing, weight transfer. **Now also racket-derived:** paddle-face angle at contact + contact-point-on-face (from Phase 6 — newly claimable). Each metric returns `{value, units, confidence, frames_used}`.
@@ -577,12 +618,14 @@ Measure: metric accuracy vs `manual_metrics.json`; rule-flag agreement vs `coach
 
 **Goal:** label shot types and verify drill reps — ML-for-label-only, rules elsewhere.
 
+**Current delta:** shot/drill modules, dataset validators, and a transfer/heuristic review baseline exist, but SHOT is still scaffold-level. There is no populated reviewed pickleball shot dataset, trained pickleball classifier, or macro-F1/rep-count gate result. External transfer checks on 2026-06-28 show the current baseline is not claimable: THETIS 60-clip family accuracy is 51.7% overall / 66.7% top-2, with `serve` 0/15 and `overhead` 0/5; OpenSportsLab 100-event broad family accuracy is 81.0%, but `swing` is 81/81 and `serve` is 0/19. These are review signals only and do not promote SHOT-1.
+
 **Build:**
-- `shot_classifier.py` — adapt **BST (Badminton Stroke Transformer)** (TCN→transformer, cross-attention pose↔ball) or **PoseConv3D**. Classes (PB): dink, drive, third-shot drop, volley, serve, reset, lob; (tennis): serve, forehand, backhand, volley. **No published pickleball classifier → collect + label** (`data/pb_shots/`), seed with ball-trajectory + contact-height + body-velocity heuristics for weak labels, then train.
+- `shot_classifier.py` — train a hierarchical shot classifier. Stage 0: `serve`, `overhead_candidate`, `normal_hit`, `unknown`. Stage 1: `fh_shot`, `bh_shot`, `serve`, `overhead`. Stage 2 PB taxonomy: `fh_drive`, `bh_drive`, `dink`, `lob`, `third_shot_drop`, `reset_block`. Start with **PoseConv3D/PoseC3D** for pose-window robustness, then compare **BST-style** pose+ball/player fusion after the ball/court tensors are clean. **No published pickleball classifier -> collect + label** (`data/pb_shots/`), seed with ball-trajectory + contact-height + body/racket-velocity heuristics for weak labels, then train.
 - `drill_verify.py` — rep counting via wrist-velocity peak + confirmed contact; per-rep quality gate; state machine ready→windup→contact→follow-through; output `{reps, clean_reps, per_rep_quality}`.
 - `scripts/racketsport/shots.py`, `scripts/racketsport/drill.py` — CLIs.
 
-**Models:** BST/PoseConv3D/ST-GCN, trained on our data.
+**Models:** PoseConv3D/PoseC3D first, BST-style fusion second, both trained/fine-tuned on our data after external tennis/badminton transfer checks.
 
 **Deliverables:** shot labels in `racket_sport_metrics.json`; `drill_report.json`.
 
@@ -607,6 +650,8 @@ Measure: shot-class macro-F1 + top-2 accuracy; rep-count error vs manual.
 
 **Goal:** the user-facing outputs and conversion-core UX. Fast result < 10 s; premium async after.
 
+**Current delta:** structured report artifacts and deterministic checks exist. `viz_*` modules currently emit CPU payloads/metadata, not final rendered court/ghost/overlay assets, and FastAPI/SSE/Celery/APNs/tiered delivery has not been built or validated.
+
 **Build:**
 - `llm_copy.py` — LLM **for copy only** (latest Claude — Opus/Sonnet). Input = structured biomechanical facts (angles, flags, confidence, clip refs); output = "one prescriptive external cue + plain-language why + drill" per habit. **The LLM never invents facts.** Pattern after CoachMe/BioCoach; enforce with a schema (copy references only provided facts; reject hallucinated numbers).
 - `report_model.py` — assemble `habit_report.json` + `coach_report.json` + share payload (`coverage`, `skipped_reason_counts`, per-habit fields).
@@ -615,7 +660,7 @@ Measure: shot-class macro-F1 + top-2 accuracy; rep-count error vs manual.
   - `viz_ghost.py` — self-vs-self before/after aligned at the contact frame.
   - `viz_overlay.py` — 2D pose overlay on the player's video + **auto-telestration** (knee-angle arc, contact-point marker, base-of-support box, **paddle-face indicator** from Phase 6).
   - Premium async: links to the Phase-10 3D replay.
-- `pipeline_fast.py` / `pipeline_deep.py` — the two tiers; **progressive disclosure**: 0–10 s (skeleton/SMPL overlay + court map + 1 priority metric), 10–60 s (full per-shot metrics + heatmap), 2–10 min async (LLM summary + 3D replay).
+- `orchestrator.py` + `pipeline_contracts.py` — the two tiers; **progressive disclosure**: 0–10 s (skeleton/SMPL overlay + court map + 1 priority metric), 10–60 s (full per-shot metrics + heatmap), 2–10 min async (LLM summary + 3D replay).
 - **Progressive rally-by-rally streaming (`stream_api.py`) — never make the user wait for the whole clip.** A **Celery GPU worker** processes rallies, publishing each result to a **Redis Pub/Sub** channel; a **FastAPI SSE endpoint** (`EventSourceResponse`) relays to iOS (the same pattern as LLM token streaming; iOS consumes via `URLSession`/`EventSource`). Event sequence: `job_accepted → rally_total:N → rally_done:{i, metrics, replay_url}` (×N, as each finishes) `→ habits_partial` (as detected) `→ complete`. Fire an **APNs push** on `complete` so a backgrounded user is notified. **Optimistic UI:** the app renders the N-rally checklist instantly from on-device segmentation and fills/▸-enables each row the moment its SSE event lands — each rally is interactive before `complete`. (Internal GPU-worker→aggregator hop may use gRPC streaming.)
 
 **Models:** Claude (Opus/Sonnet) via `anthropic`.
@@ -644,8 +689,10 @@ Measure: LLM-copy faithfulness (no invented facts); fast-tier latency; coach use
 
 **Goal:** a watchable, physics-accurate, free-viewpoint 3D replay of the game — players (SMPL-X meshes), court, net, ball, and rackets — shareable on web + app. (See `TECH_STACK.md` §(s).)
 
+**Current delta:** virtual-world assembly, preview/static review artifacts, static review GLB export, GLB structure checks, `replay_readiness_report.json/html`, and a web parser/summary scaffold exist. All four accepted clips are review-visual-ready and each references two valid static GLBs, but those GLBs are classified as `review_static_glb_export` and production validation rejects them. Production replay and metrics readiness remain blocked by missing skeletal animation/skinning/production compression, BODY accuracy, preview-only paddle pose, approximate court-plane ball projection, missing DATA-1 labels, and Outdoor missing BODY mesh. Production animated GLB/USDZ export, compression, CDN delivery, a real Three.js/R3F viewer, and RealityKit playback remain unbuilt.
+
 **Build:**
-- `replay_scene.py` — assemble the scene in the **calibrated metric world frame** (court Z=0): procedural court + net mesh; per-player SMPL-X mesh placed by world foot-contact; ball + racket transforms. All from `smpl_motion.json` (foot-locked + physics-refined), `ball_track.json`, `racket_pose.json`.
+- `virtual_world.py` + `replay_export.py` — assemble the scene in the **calibrated metric world frame** (court Z=0): procedural court + net mesh; per-player SMPL-X mesh placed by world foot-contact; ball + racket transforms. All from `smpl_motion.json` (foot-locked + physics-refined), `ball_track.json`, `racket_pose.json`.
 - `replay_export.py` — **bake physics server-side into skeletal-animation tracks** (foot-locked body θ @30 fps, ball gravity/bounce/Magnus, racket-ball contact). **Author the same scene into BOTH formats directly from the reconstruction** (do NOT round-trip one into the other — `usd_from_gltf` is archived and bloats animation):
   - **USDZ (native iOS replay, C3):** OpenUSD `pxr` — build a `UsdSkelSkeleton` (SMPL rest pose), bind via `UsdSkelBindingAPI`, write per-frame `UsdSkelAnimation`, package with `UsdUtils.CreateNewARKitLayer`. **Bake character + animation in a single USDZ** (a separate-file animation fails with "invalid bind path"). **Bake SMPL-X pose-corrective blend-shape deformation into the animation** so RealityKit's LBS reproduces it faithfully.
   - **GLB (web share):** `pygltflib` + `smplx` — map SMPL joints to a glTF `skin`, export per-frame joint quaternions as **true skeletal animation channels** (not per-frame morph targets, which bloat at 30 fps). Compress with **MeshOpt + Draco + KTX2** (`@gltf-transform/cli`) → **~8–12 MB per 10-s rally**.
@@ -666,7 +713,7 @@ npx @gltf-transform/cli inspect runs/phase10/<clip>/point_3.glb
 # serve web/replay locally and load the GLB
 python -m threed.racketsport.eval.replay_eval --root runs/phase10 --labels data/testclips --out runs/phase10/metrics.json
 ```
-Measure: GLB size per rally; viewer cold-load time; free-viewpoint works; foot-skate/penetration visible in-render (regression vs Phase 4 numbers); coach "looks right" review.
+Measure: GLB size per rally; viewer cold-load time; free-viewpoint works; foot-skate/penetration visible in-render (regression vs Phase 4 numbers); coach "looks right" review. Static review GLBs and `virtual_world_paddle_preview.html` are visual QA only; they do not satisfy the production replay gate.
 
 **Acceptance gates:**
 - Per-10-s-rally GLB **≤ 12 MB**; web viewer cold-load **< 6 s** on a typical connection; holds **≥ 30 FPS** with 4 players on mid-range mobile.
@@ -682,6 +729,8 @@ Measure: GLB size per rally; viewer cold-load time; free-viewpoint works; foot-s
 ## Phase 11 — End-to-End Integration, Performance, Final Acceptance
 
 **Goal:** one orchestrated run from upload → fast tier → deep tier → 3D replay on real 20-min clips, optimized, with capture-quality gating and the full artifact set.
+
+**Current delta:** the orchestrator is intentionally fail-closed and can run partial stages, and `pipeline_readiness_e2e.json`, `body_gate_report.json`, `paddle_true_corner_review.json`, and `replay_readiness_report.json` report artifact plus semantic readiness blockers. This is `SCAFFOLD`, not `PROTOTYPE-GATE`: the integrated system is blocked/failed after partial runtime-dependent stages because canonical-safe tracking, BODY accuracy, true paddle pose, production replay export, and final performance/accuracy gates are missing.
 
 **Build:**
 - Wire `orchestrator.py` end-to-end: ingest → calibrate → track (fast) → body3d (fast multi-person mesh preview + deep Fast SAM-3D-Body + our world-grounding) → foot-lock + physics → ball/events → racket 6DoF → metrics/insights → report/viz → replay export. **Adaptive compute:** cheap baseline on all frames; escalate deep SAM-3D-Body + physics + racket on rally/contact spans; second pass re-runs heavier models only on low-confidence spans. Honor the single-GPU lock (`test_wp39_single_run_lock` pattern) + scoreboard (`test_wp36_scoreboard` pattern: per-phase timing + GPU cost).
@@ -720,9 +769,9 @@ Full detail in `ACCURACY_AND_TRAINING.md §11–§14`. Build in parallel — it 
 
 ## Cross-Cutting Requirements
 
-- **Validation dataset & eval harness:** `racketsport/eval/` holds one evaluator per phase, each reading `data/testclips/*/labels/` and writing `metrics.json`. Validation Protocols A/B/C/D (`ACCURACY_AND_TRAINING.md §10`) and the physics/racket gates (Phases 4, 6, 10 acceptance gates) define the numeric gates.
+- **Validation dataset & eval harness:** `threed/racketsport/eval/` holds one evaluator per phase, each reading `data/testclips/*/labels/` and writing `metrics.json`. Validation Protocols A/B/C/D (`ACCURACY_AND_TRAINING.md §10`) and the physics/racket gates (Phases 4, 6, 10 acceptance gates) define the numeric gates.
 - **Regression dashboard + CI:** `scripts/racketsport/dashboard.py` aggregates every `runs/phaseN/metrics.json` into a per-metric trend table. CI **blocks any merge that drops a component metric >2%** (or below its gate) on the held-out eval set.
-- **CI:** `tests/racketsport/` mirrors `tests/threed/` conventions; readiness-gate test (artifacts exist) + scoreboard test (per-phase timing/cost).
+- **CI:** `tests/racketsport/` owns the current regression coverage; readiness-gate tests check artifact plus semantic blockers, while scoreboard/perf tests should be added only when real per-phase timing/cost artifacts exist.
 - **Artifact schema registry:** every JSON artifact has a `pydantic` schema in `threed/racketsport/schemas/` with `schema_version`; `validate()` runs in CI.
 - **Confidence plumbing ("no charge if we can't trust it"):** confidence + coverage propagate per-frame pose → per-metric → per-habit → report; report exposes `coverage.overall` + `skipped_reason_counts`; below-threshold reports flagged comp-able. Wired in Phase 7, surfaced in Phase 9, honored in the Phase 10 replay (gray/omit low-confidence).
 

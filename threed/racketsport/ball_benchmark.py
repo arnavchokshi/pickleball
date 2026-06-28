@@ -52,6 +52,7 @@ def benchmark_ball_track_candidate(
         samples_by_index=samples_by_index,
         review=review,
         hit_radius_px=hit_radius_px,
+        fps=float(track.fps),
     )
     jitter_metrics = _jitter_metrics(
         samples_by_index=samples_by_index,
@@ -72,6 +73,7 @@ def benchmark_ball_track_candidate(
         "max_jump_gap_frames": int(max_jump_gap_frames),
         "frame_count": len(track.frames),
         "visible_frame_count": sum(1 for frame in track.frames if frame.visible),
+        "visible_coverage_rate": _ratio(sum(1 for frame in track.frames if frame.visible), len(track.frames)),
         "label_metrics": label_metrics,
         "jitter_metrics": jitter_metrics,
         "quality_score": _quality_score(label_metrics, jitter_metrics),
@@ -153,12 +155,12 @@ def render_ball_tracker_benchmark_markdown(summary: dict[str, Any]) -> str:
         "",
         "## Aggregate",
         "",
-        "| Candidate | Category | Clips | Hit recall | Median err px | P90 err px | Hidden FP | P95 jump px | Teleports | Score |",
-        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| Candidate | Category | Clips | Hit recall | Median err px | P90 err px | Hidden FP | Coverage | Max gap | P95 jump px | Teleports | Score |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for name, row in sorted(summary["aggregate"].items()):
         lines.append(
-            "| {name} | {category} | {clips} | {recall} | {median} | {p90} | {hidden_fp} | {jump} | {teleports} | {score} |".format(
+            "| {name} | {category} | {clips} | {recall} | {median} | {p90} | {hidden_fp} | {coverage} | {max_gap} | {jump} | {teleports} | {score} |".format(
                 name=name,
                 category=row["category"],
                 clips=row["clip_count"],
@@ -166,6 +168,8 @@ def render_ball_tracker_benchmark_markdown(summary: dict[str, Any]) -> str:
                 median=_fmt(row.get("mean_median_error_px")),
                 p90=_fmt(row.get("mean_p90_error_px")),
                 hidden_fp=_fmt(row.get("mean_hidden_false_positive_rate")),
+                coverage=_fmt(row.get("mean_visible_coverage_rate")),
+                max_gap=_fmt(row.get("mean_max_visible_gap_frames")),
                 jump=_fmt(row.get("mean_p95_step_px")),
                 teleports=_fmt(row.get("total_teleport_count"), digits=0),
                 score=_fmt(row.get("mean_quality_score")),
@@ -177,15 +181,15 @@ def render_ball_tracker_benchmark_markdown(summary: dict[str, Any]) -> str:
             "",
             "## Per Clip",
             "",
-            "| Clip | Candidate | Category | Visible labels hit | Median err px | P90 err px | Hidden FP | P95 jump px | Teleports | Score |",
-            "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Clip | Candidate | Category | Visible labels hit | Median err px | P90 err px | Hidden FP | Coverage | Max gap | P95 jump px | Teleports | Score |",
+            "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for row in sorted(summary["results"], key=lambda item: (item["clip"], item["candidate"])):
         label = row["label_metrics"]
         jitter = row["jitter_metrics"]
         lines.append(
-            "| {clip} | {candidate} | {category} | {hits}/{labels} | {median} | {p90} | {hidden_fp} | {jump} | {teleports} | {score} |".format(
+            "| {clip} | {candidate} | {category} | {hits}/{labels} | {median} | {p90} | {hidden_fp} | {coverage} | {max_gap} | {jump} | {teleports} | {score} |".format(
                 clip=row["clip"],
                 candidate=row["candidate"],
                 category=row["category"],
@@ -194,6 +198,8 @@ def render_ball_tracker_benchmark_markdown(summary: dict[str, Any]) -> str:
                 median=_fmt(label.get("median_error_px")),
                 p90=_fmt(label.get("p90_error_px")),
                 hidden_fp=_fmt(label.get("hidden_false_positive_rate")),
+                coverage=_fmt(jitter.get("visible_coverage_rate")),
+                max_gap=_fmt(jitter.get("max_visible_gap_frames")),
                 jump=_fmt(jitter.get("p95_step_px")),
                 teleports=_fmt(jitter.get("teleport_count"), digits=0),
                 score=_fmt(row.get("quality_score")),
@@ -212,6 +218,7 @@ def _label_metrics(
     samples_by_index: dict[int, BallFrame],
     review: BallClickReview,
     hit_radius_px: float,
+    fps: float,
 ) -> dict[str, Any]:
     radii = (5.0, 10.0, 20.0, 40.0)
     distances: list[float] = []
@@ -240,6 +247,11 @@ def _label_metrics(
             hidden_false_positive_count += 1
 
     hidden_true_negative_count = len(review.hidden_items) - hidden_false_positive_count
+    reviewed_frame_count = len(review.visible_items) + len(review.hidden_items)
+    reviewed_minutes = reviewed_frame_count / float(fps) / 60.0 if fps > 0.0 else 0.0
+    hidden_false_positives_per_minute = (
+        hidden_false_positive_count / reviewed_minutes if reviewed_minutes > 0.0 else None
+    )
     f1_radius = 20.0
     f1_tp = hit_counts_by_radius[f1_radius]
     f1_fp = hidden_false_positive_count
@@ -272,6 +284,7 @@ def _label_metrics(
         "hidden_label_count": len(review.hidden_items),
         "hidden_false_positive_count": hidden_false_positive_count,
         "hidden_false_positive_rate": _ratio(hidden_false_positive_count, len(review.hidden_items)),
+        "hidden_false_positives_per_minute": hidden_false_positives_per_minute,
         "hidden_true_negative_count": hidden_true_negative_count,
         "hidden_true_negative_rate": hidden_true_negative_rate,
         "precision_at_20px": precision_at_20,
@@ -290,6 +303,7 @@ def _jitter_metrics(
     visible = sorted((index, frame) for index, frame in samples_by_index.items() if frame.visible)
     steps: list[float] = []
     speeds: list[float] = []
+    visible_gaps = [index - prev_index for (prev_index, _prev_frame), (index, _frame) in zip(visible, visible[1:])]
     teleport_count = 0
     max_step_px = 0.0
     for (prev_index, prev_frame), (index, frame) in zip(visible, visible[1:]):
@@ -306,6 +320,11 @@ def _jitter_metrics(
 
     return {
         "visible_segment_count": len(visible),
+        "visible_coverage_rate": _ratio(len(visible), len(samples_by_index)),
+        "max_visible_gap_frames": max(visible_gaps) if visible_gaps else None,
+        "p95_visible_gap_frames": _percentile([float(gap) for gap in visible_gaps], 95) if visible_gaps else None,
+        "long_gap_count_10f": sum(1 for gap in visible_gaps if gap > 10),
+        "long_gap_count_30f": sum(1 for gap in visible_gaps if gap > 30),
         "step_count": len(steps),
         "median_step_px": _percentile(steps, 50) if steps else None,
         "p95_step_px": _percentile(steps, 95) if steps else None,
@@ -325,14 +344,33 @@ def _aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
     for name, group in grouped.items():
         label_rows = [row["label_metrics"] for row in group]
         jitter_rows = [row["jitter_metrics"] for row in group]
+        total_visible_labels = sum(int(row.get("visible_label_count") or 0) for row in label_rows)
+        total_visible_hits = sum(int(row.get("visible_hit_count") or 0) for row in label_rows)
+        total_visible_predictions = sum(int(row.get("visible_prediction_count") or 0) for row in label_rows)
+        total_hidden_labels = sum(int(row.get("hidden_label_count") or 0) for row in label_rows)
+        total_hidden_false_positives = sum(int(row.get("hidden_false_positive_count") or 0) for row in label_rows)
         aggregate[name] = {
             "category": _first_category(group),
             "clip_count": len({row["clip"] for row in group}),
+            "total_visible_label_count": total_visible_labels,
+            "total_visible_hit_count": total_visible_hits,
+            "total_visible_prediction_count": total_visible_predictions,
+            "micro_visible_hit_recall": _ratio(total_visible_hits, total_visible_labels),
+            "micro_visible_presence_recall": _ratio(total_visible_predictions, total_visible_labels),
             "mean_visible_hit_recall": _mean(row.get("visible_hit_recall") for row in label_rows),
             "mean_visible_presence_recall": _mean(row.get("visible_presence_recall") for row in label_rows),
             "mean_median_error_px": _mean(row.get("median_error_px") for row in label_rows),
             "mean_p90_error_px": _mean(row.get("p90_error_px") for row in label_rows),
+            "total_hidden_label_count": total_hidden_labels,
+            "total_hidden_false_positive_count": total_hidden_false_positives,
+            "micro_hidden_false_positive_rate": _ratio(total_hidden_false_positives, total_hidden_labels),
             "mean_hidden_false_positive_rate": _mean(row.get("hidden_false_positive_rate") for row in label_rows),
+            "mean_hidden_false_positives_per_minute": _mean(row.get("hidden_false_positives_per_minute") for row in label_rows),
+            "mean_visible_coverage_rate": _mean(row.get("visible_coverage_rate") for row in jitter_rows),
+            "mean_max_visible_gap_frames": _mean(row.get("max_visible_gap_frames") for row in jitter_rows),
+            "mean_p95_visible_gap_frames": _mean(row.get("p95_visible_gap_frames") for row in jitter_rows),
+            "total_long_gap_count_10f": sum(int(row.get("long_gap_count_10f") or 0) for row in jitter_rows),
+            "total_long_gap_count_30f": sum(int(row.get("long_gap_count_30f") or 0) for row in jitter_rows),
             "mean_p95_step_px": _mean(row.get("p95_step_px") for row in jitter_rows),
             "total_teleport_count": sum(int(row.get("teleport_count") or 0) for row in jitter_rows),
             "mean_quality_score": _mean(row.get("quality_score") for row in group),
@@ -346,7 +384,21 @@ def _quality_score(label_metrics: dict[str, Any], jitter_metrics: dict[str, Any]
     teleport_penalty = min(0.35, float(jitter_metrics.get("teleport_count") or 0) * 0.01)
     p90_error = label_metrics.get("p90_error_px")
     error_penalty = min(0.35, float(p90_error) / 400.0) if p90_error is not None else 0.35
-    return round(hit_recall - (0.45 * hidden_fp) - teleport_penalty - error_penalty, 6)
+    gap_penalty = _gap_penalty(jitter_metrics)
+    return round(hit_recall - (0.45 * hidden_fp) - teleport_penalty - error_penalty - gap_penalty, 6)
+
+
+def _gap_penalty(jitter_metrics: dict[str, Any]) -> float:
+    max_gap = jitter_metrics.get("max_visible_gap_frames")
+    max_gap_penalty = 0.0
+    if max_gap is not None:
+        max_gap_penalty = min(0.20, max(0.0, float(max_gap) - 30.0) / 300.0)
+    long_gap_penalty = min(0.10, float(jitter_metrics.get("long_gap_count_30f") or 0) * 0.02)
+    coverage = jitter_metrics.get("visible_coverage_rate")
+    coverage_penalty = 0.0
+    if coverage is not None:
+        coverage_penalty = min(0.10, max(0.0, 0.25 - float(coverage)) * 0.20)
+    return min(0.25, max_gap_penalty + long_gap_penalty + coverage_penalty)
 
 
 def _first_category(rows: list[dict[str, Any]]) -> str:

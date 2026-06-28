@@ -12,14 +12,20 @@ from threed.racketsport.eval.metrics import (
     NumericGate,
     build_phase_metrics,
     evaluate_numeric_gates,
+    metric,
     missing_artifacts,
     write_phase_metrics,
 )
-from threed.racketsport.schemas import CourtCalibration, EvalClipResult, validate_artifact_file
+from threed.racketsport.schemas import CourtCalibration, CourtLineEvidence, EvalClipResult, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
-REQUIRED_CALIBRATION_ARTIFACTS = ["court_calibration.json", "court_zones.json", "net_plane.json"]
+REQUIRED_CALIBRATION_ARTIFACTS = [
+    "court_calibration.json",
+    "court_zones.json",
+    "net_plane.json",
+    "court_line_evidence.json",
+]
 CALIBRATION_GATES = {
     "reprojection_median_px": NumericGate(
         name="calibration_reprojection_median_px",
@@ -100,6 +106,7 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         calibration = validate_artifact_file("court_calibration", run_dir / "court_calibration.json")
         validate_artifact_file("court_zones", run_dir / "court_zones.json")
         validate_artifact_file("net_plane", run_dir / "net_plane.json")
+        line_evidence = validate_artifact_file("court_line_evidence", run_dir / "court_line_evidence.json")
     except Exception as exc:
         return EvalClipResult(
             clip=clip_name,
@@ -124,6 +131,18 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
             metrics={},
             notes=notes,
         )
+    if not isinstance(line_evidence, CourtLineEvidence):
+        notes.append("court_line_evidence artifact did not parse as CourtLineEvidence")
+        return EvalClipResult(
+            clip=clip_name,
+            run_dir=str(run_dir),
+            labels_dir=str(labels_dir),
+            status="fail",
+            missing_label_files=[],
+            missing_artifacts=[],
+            metrics={},
+            notes=notes,
+        )
 
     metrics = evaluate_numeric_gates(
         {
@@ -132,7 +151,27 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         },
         CALIBRATION_GATES,
     )
-    passed = all(gated_metric.passed is True for gated_metric in metrics.values())
+    metrics["auto_calibration_ready"] = metric(
+        value=line_evidence.aggregate.auto_calibration_ready,
+        unit=None,
+        gate="court_line_evidence.auto_calibration_ready",
+        passed=line_evidence.aggregate.auto_calibration_ready,
+    )
+    metrics["court_line_mean_residual_px"] = metric(
+        value=line_evidence.aggregate.mean_residual_px,
+        unit="px",
+        gate="court_line_evidence.aggregate.mean_residual_px",
+        passed=None,
+    )
+    metrics["court_line_p95_residual_px"] = metric(
+        value=line_evidence.aggregate.p95_residual_px,
+        unit="px",
+        gate="court_line_evidence.aggregate.p95_residual_px",
+        passed=None,
+    )
+    if not line_evidence.aggregate.auto_calibration_ready:
+        notes.extend(line_evidence.aggregate.reasons)
+    passed = all(gated_metric.passed is True for gated_metric in metrics.values() if gated_metric.passed is not None)
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),

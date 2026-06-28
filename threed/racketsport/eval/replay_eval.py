@@ -12,6 +12,7 @@ from threed.racketsport.eval.metrics import (
     missing_artifacts,
     write_phase_metrics,
 )
+from threed.racketsport.replay_export import inspect_glb_file
 from threed.racketsport.schemas import EvalClipResult, ReplayScene, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
@@ -110,6 +111,14 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
 
     expected_glbs = [replay_scene.court_glb, *[point.glb_url for point in replay_scene.points]]
     missing_glbs = [glb for glb in expected_glbs if not (run_dir / glb).is_file()]
+    invalid_glbs: list[str] = []
+    for glb in expected_glbs:
+        if glb in missing_glbs:
+            continue
+        try:
+            inspect_glb_file(run_dir / glb)
+        except ValueError:
+            invalid_glbs.append(glb)
     player_count = len(replay_scene.players)
     point_count = len(replay_scene.points)
     largest_point_glb_mb = max((point.size_mb for point in replay_scene.points), default=0.0)
@@ -120,8 +129,12 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         },
         REPLAY_GATES,
     )
-    passed = all(gated_metric.passed is True for gated_metric in gated.values()) and not missing_glbs
-    notes = [f"missing referenced GLB files: {', '.join(missing_glbs)}"] if missing_glbs else []
+    passed = all(gated_metric.passed is True for gated_metric in gated.values()) and not missing_glbs and not invalid_glbs
+    notes = []
+    if missing_glbs:
+        notes.append(f"missing referenced GLB files: {', '.join(missing_glbs)}")
+    if invalid_glbs:
+        notes.append(f"invalid referenced GLB files: {', '.join(invalid_glbs)}")
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
@@ -137,6 +150,12 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
                 unit="files",
                 gate="all referenced GLB files exist",
                 passed=not missing_glbs,
+            ),
+            "glb_files_valid": metric(
+                value=len(expected_glbs) - len(missing_glbs) - len(invalid_glbs),
+                unit="files",
+                gate="all referenced GLB files are structurally valid",
+                passed=not missing_glbs and not invalid_glbs,
             ),
             "largest_point_glb_mb": metric(
                 value=largest_point_glb_mb,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal
@@ -7,6 +8,7 @@ from typing import Any, Literal
 
 SCHEMA_VERSION = 1
 ARTIFACT_TYPE = "racketsport_pipeline_artifact_readiness"
+COURT_REVIEW_RETIRED_CLIPS = {"burlington_gold_0300_low_steep_corner"}
 ReadinessStatus = Literal["ready", "not_ready"]
 StageStatus = Literal["ready", "not_ready", "blocked"]
 
@@ -135,10 +137,11 @@ def build_readiness_report(run_dir: str | Path, *, stage: str = "e2e") -> dict[s
         present = [artifact for artifact in contract.required_artifacts if (run_path / safe_relative_path(artifact)).is_file()]
         missing = [artifact for artifact in contract.required_artifacts if artifact not in present]
         blocked_by = [dependency for dependency in contract.depends_on if dependency not in ready_stages]
+        semantic_blockers = _semantic_blockers_for_stage(contract.stage, run_path)
 
         if missing:
             status: StageStatus = "not_ready"
-        elif blocked_by:
+        elif blocked_by or semantic_blockers:
             status = "blocked"
         else:
             status = "ready"
@@ -154,11 +157,13 @@ def build_readiness_report(run_dir: str | Path, *, stage: str = "e2e") -> dict[s
                 "required_artifacts": list(contract.required_artifacts),
                 "present_artifacts": present,
                 "missing_artifacts": missing,
+                "semantic_blockers": semantic_blockers,
             }
         )
 
     required_artifacts = _dedupe_artifacts(stage_reports, "required_artifacts")
     missing_artifacts = _dedupe_artifacts(stage_reports, "missing_artifacts")
+    semantic_blockers = _dedupe_semantic_blockers(stage_reports)
     status: ReadinessStatus = "ready" if all(item["status"] == "ready" for item in stage_reports) else "not_ready"
     return {
         "schema_version": SCHEMA_VERSION,
@@ -169,6 +174,7 @@ def build_readiness_report(run_dir: str | Path, *, stage: str = "e2e") -> dict[s
         "stage_order": PIPELINE_STAGE_ORDER,
         "required_artifacts": required_artifacts,
         "missing_artifacts": missing_artifacts,
+        "semantic_blockers": semantic_blockers,
         "stages": stage_reports,
     }
 
@@ -211,3 +217,162 @@ def _dedupe_artifacts(stage_reports: list[dict[str, Any]], field: str) -> list[s
             seen.add(artifact)
             artifacts.append(artifact)
     return artifacts
+
+
+def _dedupe_semantic_blockers(stage_reports: list[dict[str, Any]]) -> list[str]:
+    seen: set[str] = set()
+    blockers: list[str] = []
+    for report in stage_reports:
+        stage = str(report["stage"])
+        for blocker in report.get("semantic_blockers", []):
+            key = f"{stage}:{blocker}"
+            if key in seen:
+                continue
+            seen.add(key)
+            blockers.append(key)
+    return blockers
+
+
+def _semantic_blockers_for_stage(stage: str, run_path: Path) -> list[str]:
+    if stage == "calibration":
+        return _court_line_evidence_blockers(run_path)
+    if stage == "body":
+        return _dedupe([*_body_compute_execution_blockers(run_path), *_body_mesh_readiness_blockers(run_path)])
+    if stage == "ball_events":
+        return _contact_windows_blockers(run_path)
+    return []
+
+
+def _court_line_evidence_blockers(run_path: Path) -> list[str]:
+    if run_path.name in COURT_REVIEW_RETIRED_CLIPS:
+        return []
+    path = run_path / "court_line_evidence.json"
+    if not path.is_file():
+        return []
+    payload, error = _read_mapping_json(path)
+    if error:
+        return [f"court_line_evidence_{error}"]
+    aggregate = payload.get("aggregate")
+    if not isinstance(aggregate, dict):
+        return ["court_line_evidence_missing_aggregate"]
+
+    blockers: list[str] = []
+    if aggregate.get("auto_calibration_ready") is not True:
+        blockers.append("court_line_evidence_not_ready")
+    for line_id in _string_list(aggregate.get("missing_required_line_ids")):
+        blockers.append(f"court_line_evidence_missing_required_line_{line_id}")
+    for net_id in _string_list(aggregate.get("missing_required_net_ids")):
+        blockers.append(f"court_line_evidence_missing_required_net_{net_id}")
+    return _dedupe(blockers)
+
+
+def _body_compute_execution_blockers(run_path: Path) -> list[str]:
+    path = run_path / "body_compute_execution.json"
+    if not path.is_file():
+        return []
+    payload, error = _read_mapping_json(path)
+    if error:
+        return [f"body_compute_execution_{error}"]
+    scheduled_count = _int_value(_nested_value(payload, "summary", "scheduled_frame_count"))
+    if scheduled_count is None:
+        scheduled_frames = payload.get("scheduled_frames")
+        scheduled_count = len(scheduled_frames) if isinstance(scheduled_frames, list) else None
+    if scheduled_count == 0:
+        return ["body_compute_execution_has_no_scheduled_frames"]
+    if scheduled_count is None:
+        return ["body_compute_execution_missing_scheduled_frame_count"]
+    scheduled_by_target = _nested_value(payload, "summary", "scheduled_by_target_representation")
+    world_mesh_count = _int_value(scheduled_by_target.get("world_mesh")) if isinstance(scheduled_by_target, dict) else None
+    if isinstance(world_mesh_count, int) and world_mesh_count == 0:
+        return ["body_compute_execution_has_no_world_mesh_frames"]
+    return []
+
+
+def _body_mesh_readiness_blockers(run_path: Path) -> list[str]:
+    path = run_path / "body_mesh_readiness.json"
+    if not path.is_file():
+        return []
+    payload, error = _read_mapping_json(path)
+    if error:
+        return [f"body_mesh_readiness_{error}"]
+    blockers: list[str] = []
+    representation_decision = str(payload.get("representation_decision", ""))
+    if representation_decision == "no_world_mesh_requested":
+        blockers.append("body_mesh_no_world_mesh_requested")
+    elif representation_decision == "world_mesh_required_missing_output":
+        blockers.append("body_mesh_world_mesh_required_missing_output")
+    elif representation_decision == "world_mesh_required_available_unverified":
+        blockers.append("body_mesh_world_mesh_unverified")
+    status = str(payload.get("status", ""))
+    if status == "missing_body_output":
+        blockers.append("body_mesh_readiness_missing_body_output")
+    if payload.get("trusted_for_body_promotion") is False:
+        blockers.append("body_mesh_not_trusted_for_promotion")
+    return _dedupe(blockers)
+
+
+def _contact_windows_blockers(run_path: Path) -> list[str]:
+    path = run_path / "contact_windows.json"
+    if not path.is_file():
+        return []
+    payload, error = _read_mapping_json(path)
+    if error:
+        return [f"contact_windows_{error}"]
+    events = payload.get("events")
+    if not isinstance(events, list):
+        return ["contact_windows_invalid_events"]
+    if not events:
+        return ["contact_windows_has_no_events"]
+    return []
+
+
+def _read_mapping_json(path: Path) -> tuple[dict[str, Any], str | None]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}, "invalid_json"
+    except OSError:
+        return {}, "unreadable"
+    if not isinstance(payload, dict):
+        return {}, "not_object"
+    return payload, None
+
+
+def _nested_value(payload: dict[str, Any], *keys: str) -> Any:
+    current: Any = payload
+    for key in keys:
+        if not isinstance(current, dict):
+            return None
+        current = current.get(key)
+    return current
+
+
+def _int_value(value: Any) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return value
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    result: list[str] = []
+    for item in value:
+        if not isinstance(item, str):
+            continue
+        token = item.strip()
+        if not token:
+            continue
+        result.append(token)
+    return result
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result

@@ -11,6 +11,7 @@ from threed.racketsport.eval.metrics import (
     missing_artifacts,
     write_phase_metrics,
 )
+from threed.racketsport.eval.label_checks import score_player_bbox_labels
 from threed.racketsport.schemas import EvalClipResult, Tracks, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
@@ -126,7 +127,9 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         },
         TRACK_GATES,
     )
-    passed = all(gated_metric.passed is True for gated_metric in metrics.values())
+    label_metrics, notes = score_player_bbox_labels(labels_dir=labels_dir, tracks=tracks)
+    metrics.update(label_metrics)
+    passed = all(gated_metric.passed is True for gated_metric in metrics.values() if gated_metric.passed is not None)
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
@@ -135,7 +138,7 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         missing_label_files=[],
         missing_artifacts=[],
         metrics=metrics,
-        notes=[],
+        notes=notes,
     )
 
 

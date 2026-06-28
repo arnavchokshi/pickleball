@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 from threed.racketsport import event_fusion
@@ -135,3 +140,88 @@ def test_fuse_contact_windows_omits_events_when_required_sources_are_missing() -
             )
         ],
     ) == {"schema_version": 1, "events": []}
+
+
+def test_build_contact_windows_from_cues_cli_writes_schema_contact_windows(tmp_path: Path) -> None:
+    audio = tmp_path / "audio_onsets.json"
+    wrist = tmp_path / "wrist_velocity_peaks.json"
+    ball = tmp_path / "ball_inflections.json"
+    tracks = tmp_path / "tracks.json"
+    out = tmp_path / "contact_windows.json"
+
+    audio.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_audio_onsets",
+                "status": "review_only",
+                "onsets": [{"time_s": 1.000, "score": 0.90}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    wrist.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_wrist_velocity_peaks",
+                "status": "review_only",
+                "peaks": [
+                    {
+                        "time_s": 1.010,
+                        "player_id": 4,
+                        "wrist_world_xyz": [1.05, 0.0, 0.75],
+                        "speed_mps": 8.0,
+                        "confidence": 0.80,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    ball.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_ball_inflections",
+                "candidates": [
+                    {
+                        "time_s": 0.995,
+                        "ball_world_xyz": [1.0, 0.0, 0.78],
+                        "confidence": 0.70,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    tracks.write_text(json.dumps({"schema_version": 1, "fps": 120.0, "players": []}), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/build_contact_windows_from_cues.py",
+            "--audio-onsets",
+            str(audio),
+            "--wrist-velocity-peaks",
+            str(wrist),
+            "--ball-inflections",
+            str(ball),
+            "--tracks",
+            str(tracks),
+            "--out",
+            str(out),
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    ContactWindows.model_validate(payload)
+    assert payload["events"][0]["player_id"] == 4
+    assert payload["events"][0]["frame"] == 120
+    assert json.loads(completed.stdout)["event_count"] == 1

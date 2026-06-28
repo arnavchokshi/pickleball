@@ -3,13 +3,31 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>Sway Body</string>
+	<string>Pickleball</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Sway Body needs camera access to record racket-sport practice clips.</string>
+	<string>Pickleball needs camera access to record pickleball practice clips.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Sway Body needs microphone access to record contact audio with practice clips.</string>
+	<string>Pickleball needs microphone access to record paddle contact audio with practice clips.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Pickleball uses device motion to record camera level, gravity, and tripod stability with each capture.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~iphone</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>

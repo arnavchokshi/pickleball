@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from threed.racketsport.court_corner_review import build_calibration_from_corrections
-from threed.racketsport.schemas import CourtCalibration, validate_artifact_file
+from threed.racketsport.schemas import CourtCalibration, CourtLineEvidence, validate_artifact_file
 
 
 def test_build_calibration_from_corrections_reorders_reviewed_corners(tmp_path: Path) -> None:
@@ -52,6 +52,9 @@ def test_build_calibration_from_corrections_reorders_reviewed_corners(tmp_path: 
     assert calibration.reprojection_error_px.median == pytest.approx(0.0)
     assert validate_artifact_file("court_zones", out_root / clip / "court_zones.json")
     assert validate_artifact_file("net_plane", out_root / clip / "net_plane.json")
+    evidence = validate_artifact_file("court_line_evidence", out_root / clip / "court_line_evidence.json")
+    assert isinstance(evidence, CourtLineEvidence)
+    assert evidence.aggregate.auto_calibration_ready is False
 
 
 def test_build_calibration_from_corrections_fails_closed_on_empty_template(tmp_path: Path) -> None:

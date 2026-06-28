@@ -19,6 +19,7 @@ def main() -> int:
     parser.add_argument("--stable-ball-track", type=Path, required=True)
     parser.add_argument("--verifier-ball-track", type=Path, action="append", default=[])
     parser.add_argument("--outlier-distance-px", type=float, default=100.0)
+    parser.add_argument("--require-stable-verifier-support", action="store_true")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--summary-out", type=Path, required=True)
     args = parser.parse_args()
@@ -29,6 +30,7 @@ def main() -> int:
             stable_ball_track_path=args.stable_ball_track,
             verifier_ball_track_paths=args.verifier_ball_track,
             outlier_distance_px=args.outlier_distance_px,
+            require_stable_verifier_support=args.require_stable_verifier_support,
             out_path=args.out,
             summary_path=args.summary_out,
         )

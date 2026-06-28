@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Iterable, Literal, Sequence
 
 from threed.racketsport.autolabel import PROTOTYPE_GATE_CLIPS
 
@@ -16,6 +17,12 @@ LAYER_FILES = (
     ("racket", "racket_pose.json"),
     ("foot_contact", "foot_contact.json"),
 )
+
+
+@dataclass(frozen=True)
+class _FramePackEntry:
+    path: Path
+    sampled_index: int
 
 
 def render_label_overlays(
@@ -39,9 +46,18 @@ def render_label_overlays(
     compare_dir.mkdir(parents=True, exist_ok=True)
     overlay_path = compare_dir / "all_labels_overlay.mp4"
 
-    label_data, available_layers, warnings = _load_layers(draft_label_dir)
+    label_data: dict[str, list[dict[str, Any]]]
+    available_layers: list[str]
+    warnings: list[str]
     frame_index = 0
     if frame_pack_only:
+        frame_pack_size = _frame_pack_size(cv2, draft_label_dir, max_frames=max_frames)
+        label_data, available_layers, warnings = _load_layers(
+            draft_label_dir,
+            render_mode="frame_pack",
+            output_size=frame_pack_size,
+            frame_pack_size=frame_pack_size,
+        )
         fallback_count = _render_from_frame_pack(
             cv2,
             draft_label_dir=draft_label_dir,
@@ -61,6 +77,13 @@ def render_label_overlays(
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1280
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
+        frame_pack_size = _frame_pack_size(cv2, draft_label_dir)
+        label_data, available_layers, warnings = _load_layers(
+            draft_label_dir,
+            render_mode="source_video",
+            output_size=(width, height),
+            frame_pack_size=frame_pack_size,
+        )
         writer = cv2.VideoWriter(str(overlay_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
         if not writer.isOpened():
             cap.release()
@@ -80,6 +103,13 @@ def render_label_overlays(
             cap.release()
             writer.release()
         if frame_index == 0:
+            frame_pack_size = _frame_pack_size(cv2, draft_label_dir, max_frames=max_frames)
+            label_data, available_layers, warnings = _load_layers(
+                draft_label_dir,
+                render_mode="frame_pack",
+                output_size=frame_pack_size,
+                frame_pack_size=frame_pack_size,
+            )
             fallback_count = _render_from_frame_pack(
                 cv2,
                 draft_label_dir=draft_label_dir,
@@ -177,7 +207,13 @@ def _cv2() -> Any:
     return cv2
 
 
-def _load_layers(labels_dir: Path) -> tuple[dict[str, list[dict[str, Any]]], list[str], list[str]]:
+def _load_layers(
+    labels_dir: Path,
+    *,
+    render_mode: Literal["source_video", "frame_pack"],
+    output_size: tuple[int, int] | None = None,
+    frame_pack_size: tuple[int, int] | None = None,
+) -> tuple[dict[str, list[dict[str, Any]]], list[str], list[str]]:
     label_data: dict[str, list[dict[str, Any]]] = {}
     available_layers: list[str] = []
     warnings: list[str] = []
@@ -191,7 +227,12 @@ def _load_layers(labels_dir: Path) -> tuple[dict[str, list[dict[str, Any]]], lis
         except json.JSONDecodeError as exc:
             warnings.append(f"{filename} invalid JSON: {exc}")
             continue
-        items = _payload_items(payload)
+        items = _payload_items_for_render(
+            payload,
+            render_mode=render_mode,
+            output_size=output_size,
+            frame_pack_size=frame_pack_size,
+        )
         if items:
             label_data[layer] = items
             available_layers.append(layer)
@@ -208,34 +249,36 @@ def _render_from_frame_pack(
     label_data: dict[str, list[dict[str, Any]]],
     max_frames: int | None,
 ) -> int:
-    frame_paths, metadata = _frame_pack_from_labels(draft_label_dir)
+    entries, metadata = _frame_pack_entries_from_labels(draft_label_dir)
     if max_frames is not None:
-        frame_paths = frame_paths[:max_frames]
+        entries = entries[:max_frames]
     first_frame = None
-    usable_paths: list[Path] = []
-    for path in frame_paths:
-        frame = cv2.imread(str(path))
+    first_entry: _FramePackEntry | None = None
+    usable_entries: list[_FramePackEntry] = []
+    for entry in entries:
+        frame = cv2.imread(str(entry.path))
         if frame is not None:
             first_frame = frame
-            usable_paths.append(path)
+            first_entry = entry
+            usable_entries.append(entry)
             break
     if first_frame is None:
         return 0
-    usable_paths.extend(path for path in frame_paths if path != usable_paths[0])
+    usable_entries.extend(entry for entry in entries if entry != first_entry)
     height, width = first_frame.shape[:2]
-    fps = _frame_pack_fps(metadata, frame_count=len(frame_paths))
+    fps = _frame_pack_fps(metadata, frame_count=len(entries))
     writer = cv2.VideoWriter(str(overlay_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
     if not writer.isOpened():
         return 0
     count = 0
     try:
-        for path in usable_paths:
-            frame = first_frame if count == 0 else cv2.imread(str(path))
+        for entry in usable_entries:
+            frame = first_frame if count == 0 else cv2.imread(str(entry.path))
             if frame is None:
                 continue
             if frame.shape[1] != width or frame.shape[0] != height:
                 frame = cv2.resize(frame, (width, height))
-            _draw_layers(cv2, frame, count, label_data)
+            _draw_layers(cv2, frame, entry.sampled_index, label_data)
             writer.write(frame)
             count += 1
     finally:
@@ -249,6 +292,11 @@ def _frame_paths_from_labels(labels_dir: Path) -> list[Path]:
 
 
 def _frame_pack_from_labels(labels_dir: Path) -> tuple[list[Path], dict[str, Any]]:
+    entries, metadata = _frame_pack_entries_from_labels(labels_dir)
+    return [entry.path for entry in entries], metadata
+
+
+def _frame_pack_entries_from_labels(labels_dir: Path) -> tuple[list[_FramePackEntry], dict[str, Any]]:
     for _layer, filename in LAYER_FILES:
         path = labels_dir / filename
         if not path.is_file():
@@ -266,12 +314,17 @@ def _frame_pack_from_labels(labels_dir: Path) -> tuple[list[Path], dict[str, Any
             raw_frames = metadata.get("frames")
         if not isinstance(raw_frames, list):
             continue
-        frame_paths: list[Path] = []
-        for frame in raw_frames:
+        entries: list[_FramePackEntry] = []
+        for index, frame in enumerate(raw_frames):
             value = _frame_path_value(frame)
             if value:
-                frame_paths.append(_resolve_frame_path(value, base_dir))
-        existing = [path for path in frame_paths if path.is_file()]
+                entries.append(
+                    _FramePackEntry(
+                        path=_resolve_frame_path(value, base_dir, labels_dir=labels_dir),
+                        sampled_index=_frame_pack_sample_index(frame, fallback_index=index),
+                    )
+                )
+        existing = [entry for entry in entries if entry.path.is_file()]
         if existing:
             return existing, metadata
     return [], {}
@@ -312,13 +365,48 @@ def _frame_path_value(frame: Any) -> Any:
     return frame
 
 
-def _resolve_frame_path(value: Any, base_dir: Path) -> Path:
+def _frame_pack_sample_index(frame: Any, *, fallback_index: int) -> int:
+    value: Any
+    if isinstance(frame, dict):
+        value = frame.get("name") or frame.get("frame") or frame.get("path")
+    else:
+        value = frame
+    if value is not None:
+        digits = "".join(ch for ch in Path(str(value)).stem if ch.isdigit())
+        if digits:
+            return max(0, int(digits) - 1)
+    return fallback_index
+
+
+def _resolve_frame_path(value: Any, base_dir: Path, *, labels_dir: Path | None = None) -> Path:
     path = Path(str(value))
     if path.is_absolute():
-        return path
-    if path.is_file():
-        return path
-    return base_dir / path
+        candidates = [path]
+    else:
+        candidates = [path, base_dir / path]
+    if labels_dir is not None:
+        candidates.extend(_prototype_gate_frame_pack_candidates(path, labels_dir))
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return candidates[0] if path.is_absolute() else base_dir / path
+
+
+def _prototype_gate_frame_pack_candidates(path: Path, labels_dir: Path) -> list[Path]:
+    if labels_dir.name != "labels":
+        return []
+    clip_dir = labels_dir.parent
+    prototype_root = clip_dir.parent
+    if not prototype_root.name.startswith("prototype_gate"):
+        return []
+    frame_name = path.name
+    if not frame_name:
+        return []
+    clip_name = clip_dir.name
+    return [
+        prototype_root / "review_bundle" / "images" / clip_name / frame_name,
+        prototype_root / "cvat_tasks" / clip_name / "images" / frame_name,
+    ]
 
 
 def _frame_pack_fps(metadata: dict[str, Any], *, frame_count: int) -> float:
@@ -333,6 +421,18 @@ def _frame_pack_fps(metadata: dict[str, Any], *, frame_count: int) -> float:
         return manifest_frame_count / duration_s
 
     return 10.0
+
+
+def _frame_pack_size(cv2: Any, labels_dir: Path, *, max_frames: int | None = None) -> tuple[int, int] | None:
+    entries, _metadata = _frame_pack_entries_from_labels(labels_dir)
+    if max_frames is not None:
+        entries = entries[:max_frames]
+    for entry in entries:
+        frame = cv2.imread(str(entry.path))
+        if frame is not None:
+            height, width = frame.shape[:2]
+            return int(width), int(height)
+    return None
 
 
 def _positive_float(value: Any) -> float | None:
@@ -356,6 +456,34 @@ def _payload_items(payload: Any) -> list[dict[str, Any]]:
         if isinstance(payload.get("items"), list):
             return [item for item in payload["items"] if isinstance(item, dict)]
     return []
+
+
+def _payload_items_for_render(
+    payload: Any,
+    *,
+    render_mode: Literal["source_video", "frame_pack"],
+    output_size: tuple[int, int] | None = None,
+    frame_pack_size: tuple[int, int] | None = None,
+) -> list[dict[str, Any]]:
+    items = _payload_items(payload)
+    if not isinstance(payload, dict):
+        return items
+
+    frames = payload.get("frames")
+    frame_metadata = frames if isinstance(frames, dict) else {}
+    sample_every = _positive_float(frame_metadata.get("sample_every_frames")) or 1.0
+    source_size = _size_from_resolution(frame_metadata.get("source_resolution"))
+
+    normalized: list[dict[str, Any]] = []
+    for item in items:
+        item_size = _item_coordinate_size(item, source_size=source_size, frame_pack_size=frame_pack_size)
+        scale_x, scale_y = _coordinate_scale(item_size, output_size)
+        normalized_item = _scale_item_coordinates(item, scale_x=scale_x, scale_y=scale_y)
+        render_index = _sampled_item_frame_index(normalized_item, sample_every=sample_every, render_mode=render_mode)
+        if render_index is not None:
+            normalized_item["_render_frame_index"] = render_index
+        normalized.append(normalized_item)
+    return normalized
 
 
 def _draw_layers(cv2: Any, frame: Any, frame_index: int, data: dict[str, list[dict[str, Any]]]) -> None:
@@ -422,6 +550,16 @@ def _draw_events(cv2: Any, frame: Any, frame_index: int, items: Iterable[dict[st
 
 def _draw_racket(cv2: Any, frame: Any, frame_index: int, items: Iterable[dict[str, Any]]) -> None:
     for item in _items_for_frame(items, frame_index):
+        bbox = _bbox_xyxy(item)
+        if bbox is not None:
+            x1, y1, x2, y2 = bbox
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 180, 0), 2)
+            label = _racket_label(item)
+            if label:
+                line_type = getattr(cv2, "LINE_AA", 16)
+                origin = (x1, max(12, y1 - 5))
+                cv2.putText(frame, label, (origin[0] + 1, origin[1] + 1), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 0, 0), 2, line_type)
+                cv2.putText(frame, label, origin, cv2.FONT_HERSHEY_SIMPLEX, 0.42, (255, 180, 0), 1, line_type)
         points = [_point(point) for point in item.get("keypoints_px", [])]
         if len(points) >= 2:
             cv2.line(frame, points[0], points[1], (255, 180, 0), 3)
@@ -448,6 +586,9 @@ def _items_for_frame(items: Iterable[dict[str, Any]], frame_index: int) -> list[
 
 
 def _item_frame_index(item: dict[str, Any]) -> int | None:
+    render_value = item.get("_render_frame_index")
+    if isinstance(render_value, int):
+        return render_value
     value = item.get("frame")
     if isinstance(value, int):
         return value
@@ -460,12 +601,150 @@ def _item_frame_index(item: dict[str, Any]) -> int | None:
     return None
 
 
+def _sampled_item_frame_index(
+    item: dict[str, Any],
+    *,
+    sample_every: float,
+    render_mode: Literal["source_video", "frame_pack"],
+) -> int | None:
+    value = item.get("frame")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        digits = "".join(ch for ch in value if ch.isdigit())
+        if not digits:
+            return None
+        sampled_index = max(0, int(digits) - 1)
+        if render_mode == "source_video":
+            return int(round(sampled_index * sample_every))
+        return sampled_index
+    return None
+
+
 def _point(value: Any) -> tuple[int, int]:
     if isinstance(value, tuple) and len(value) == 2 and all(isinstance(v, int) for v in value):
         return value
     if not isinstance(value, (list, tuple)) or len(value) < 2:
         return 0, 0
     return int(round(float(value[0]))), int(round(float(value[1])))
+
+
+def _coordinate_scale(source_resolution: Any, output_size: tuple[int, int] | None) -> tuple[float, float]:
+    if output_size is None:
+        return 1.0, 1.0
+    if not isinstance(source_resolution, (list, tuple)) or len(source_resolution) < 2:
+        return 1.0, 1.0
+    source_width = _positive_float(source_resolution[0])
+    source_height = _positive_float(source_resolution[1])
+    if source_width is None or source_height is None:
+        return 1.0, 1.0
+    return float(output_size[0]) / source_width, float(output_size[1]) / source_height
+
+
+def _size_from_resolution(source_resolution: Any) -> tuple[float, float] | None:
+    if not isinstance(source_resolution, (list, tuple)) or len(source_resolution) < 2:
+        return None
+    source_width = _positive_float(source_resolution[0])
+    source_height = _positive_float(source_resolution[1])
+    if source_width is None or source_height is None:
+        return None
+    return source_width, source_height
+
+
+def _item_coordinate_size(
+    item: dict[str, Any],
+    *,
+    source_size: tuple[float, float] | None,
+    frame_pack_size: tuple[int, int] | None,
+) -> tuple[float, float] | None:
+    if _item_uses_frame_pack_coordinates(item):
+        if frame_pack_size is not None:
+            return float(frame_pack_size[0]), float(frame_pack_size[1])
+    return source_size
+
+
+def _item_uses_frame_pack_coordinates(item: dict[str, Any]) -> bool:
+    coordinate_space = item.get("coordinate_space") or item.get("coord_space")
+    if isinstance(coordinate_space, str):
+        normalized = coordinate_space.lower()
+        if normalized in {"frame_pack", "review_frame", "label_frame", "image"}:
+            return True
+        if normalized in {"source", "source_video", "video"}:
+            return False
+    source = item.get("source")
+    if isinstance(source, str):
+        normalized_source = source.lower()
+        if normalized_source in {"yolo26m_teacher", "human_review", "teacher_artifact"}:
+            return True
+        if normalized_source.endswith("_teacher"):
+            return True
+        if normalized_source in {"manual_4_corner_required", "smoke_generated"}:
+            return False
+    if "teacher_model" in item:
+        return True
+    return False
+
+
+def _scale_item_coordinates(item: dict[str, Any], *, scale_x: float, scale_y: float) -> dict[str, Any]:
+    if scale_x == 1.0 and scale_y == 1.0:
+        return dict(item)
+
+    scaled = dict(item)
+    if "bbox" in scaled:
+        scaled["bbox"] = _scale_bbox(scaled["bbox"], scale_x=scale_x, scale_y=scale_y)
+    if "bbox_xyxy" in scaled:
+        scaled["bbox_xyxy"] = _scale_xyxy(scaled["bbox_xyxy"], scale_x=scale_x, scale_y=scale_y)
+    if "xy_px" in scaled:
+        scaled["xy_px"] = _scale_point(scaled["xy_px"], scale_x=scale_x, scale_y=scale_y)
+    if "keypoints_px" in scaled:
+        scaled["keypoints_px"] = [_scale_point(point, scale_x=scale_x, scale_y=scale_y) for point in scaled["keypoints_px"]]
+    if "points_px" in scaled:
+        scaled["points_px"] = [_scale_point(point, scale_x=scale_x, scale_y=scale_y) for point in scaled["points_px"]]
+    court_corners = scaled.get("court_corners")
+    if isinstance(court_corners, dict):
+        scaled["court_corners"] = {
+            key: _scale_point(value, scale_x=scale_x, scale_y=scale_y)
+            for key, value in court_corners.items()
+        }
+    return scaled
+
+
+def _scale_point(value: Any, *, scale_x: float, scale_y: float) -> list[float]:
+    if not isinstance(value, (list, tuple)) or len(value) < 2:
+        return [0.0, 0.0]
+    return [float(value[0]) * scale_x, float(value[1]) * scale_y]
+
+
+def _scale_bbox(value: Any, *, scale_x: float, scale_y: float) -> Any:
+    if not isinstance(value, (list, tuple)) or len(value) < 4:
+        return value
+    return [float(value[0]) * scale_x, float(value[1]) * scale_y, float(value[2]) * scale_x, float(value[3]) * scale_y]
+
+
+def _scale_xyxy(value: Any, *, scale_x: float, scale_y: float) -> Any:
+    if not isinstance(value, (list, tuple)) or len(value) < 4:
+        return value
+    return [float(value[0]) * scale_x, float(value[1]) * scale_y, float(value[2]) * scale_x, float(value[3]) * scale_y]
+
+
+def _bbox_xyxy(item: dict[str, Any]) -> tuple[int, int, int, int] | None:
+    value = item.get("bbox_xyxy")
+    if isinstance(value, (list, tuple)) and len(value) >= 4:
+        return tuple(int(round(float(coord))) for coord in value[:4])  # type: ignore[return-value]
+    value = item.get("bbox")
+    if isinstance(value, (list, tuple)) and len(value) >= 4:
+        x, y, w, h = (float(coord) for coord in value[:4])
+        return int(round(x)), int(round(y)), int(round(x + w)), int(round(y + h))
+    return None
+
+
+def _racket_label(item: dict[str, Any]) -> str:
+    confidence = _positive_float(item.get("confidence"))
+    if confidence is None:
+        return "racket"
+    return f"racket {confidence:.2f}"
 
 
 def _markdown_index(summary: dict[str, Any]) -> str:

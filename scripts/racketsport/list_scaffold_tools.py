@@ -100,7 +100,7 @@ TASK_HINTS = {
     "track": ("TRK", "TRK-1"),
     "validate_ball_audio_dataset": ("DATA", "DATA-3"),
     "validate_corrections": ("RPT", "RPT-1"),
-    "validate_pipeline_artifacts": ("EVAL", "EVAL-1"),
+    "validate_pipeline_artifacts": ("EVAL", "EVAL-4"),
     "validate_pose_dataset": ("DATA", "DATA-2"),
     "validate_racket_dataset": ("DATA", "DATA-4"),
     "validate_shot_dataset": ("DATA", "DATA-5"),

@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from threed.racketsport.schemas import BallTrack, validate_artifact_file
-from threed.racketsport.tracknet_adapter import tracknet_csv_to_ball_track
+from threed.racketsport.tracknet_adapter import run_tracknet_or_convert, tracknet_csv_to_ball_track
 
 
 def test_tracknet_csv_to_ball_track_converts_official_prediction_format(tmp_path: Path) -> None:
@@ -173,3 +173,46 @@ video_stem = Path(args.video_file).stem
     assert metadata["runtime"]["video_range_semantics"] == (
         "official TrackNetV3 background median sampling range; does not trim prediction frames"
     )
+    assert metadata["runtime"]["batch_size"] == 16
+    assert metadata["runtime"]["large_video"] is True
+    assert metadata["runtime"]["processed_frame_count"] == 1
+    assert metadata["runtime"]["effective_fps"] > 0.0
+    assert metadata["runtime"]["realtime_factor"] > 0.0
+    assert metadata["runtime"]["wall_seconds"] > 0.0
+
+
+def test_run_tracknet_temp_prediction_metadata_does_not_reference_deleted_csv(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "TrackNetV3"
+    repo.mkdir()
+    (repo / "predict.py").write_text("print('fake')\n", encoding="utf-8")
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake video")
+    tracknet = tmp_path / "TrackNet_best.pt"
+    inpaintnet = tmp_path / "InpaintNet_best.pt"
+    tracknet.write_bytes(b"tracknet")
+    inpaintnet.write_bytes(b"inpaintnet")
+
+    def fake_predict(*, save_dir, **_kwargs):
+        csv_path = Path(save_dir) / "clip_ball.csv"
+        csv_path.write_text("Frame,Visibility,X,Y\n0,1,10,20\n", encoding="utf-8")
+        return csv_path
+
+    monkeypatch.setattr("threed.racketsport.tracknet_adapter.run_official_tracknet_predict", fake_predict)
+
+    metadata = run_tracknet_or_convert(
+        out=tmp_path / "ball_track.json",
+        fps=30.0,
+        metadata_out=tmp_path / "ball_track_run.json",
+        video=video,
+        tracknet_file=tracknet,
+        inpaintnet_file=inpaintnet,
+        tracknet_repo=repo,
+        prediction_dir=None,
+    )
+
+    predictions_csv = Path(metadata["predictions_csv"])
+    assert predictions_csv.is_file()
+    assert predictions_csv.parent == tmp_path

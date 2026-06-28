@@ -18,7 +18,7 @@ def main() -> int:
     parser.add_argument("--ball-track", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--summary-out", type=Path, required=True)
-    parser.add_argument("--mode", choices=("path", "outlier", "local_trajectory"), default="path")
+    parser.add_argument("--mode", choices=("path", "outlier", "local_trajectory", "ballistic"), default="path")
     parser.add_argument("--max-speed-px-per-second", type=float, default=7200.0)
     parser.add_argument("--base-jump-px", type=float, default=60.0)
     parser.add_argument("--max-link-gap-frames", type=int, default=10)
@@ -29,6 +29,10 @@ def main() -> int:
     parser.add_argument("--local-trajectory-window-frames", type=int, default=20)
     parser.add_argument("--local-trajectory-max-error-px", type=float, default=80.0)
     parser.add_argument("--local-trajectory-min-pair-predictions", type=int, default=4)
+    parser.add_argument("--ballistic-window-frames", type=int, default=24)
+    parser.add_argument("--ballistic-max-residual-px", type=float, default=60.0)
+    parser.add_argument("--ballistic-min-fit-points", type=int, default=5)
+    parser.add_argument("--no-ballistic-require-bracket", action="store_true")
     args = parser.parse_args()
 
     try:
@@ -47,6 +51,10 @@ def main() -> int:
             local_trajectory_window_frames=args.local_trajectory_window_frames,
             local_trajectory_max_error_px=args.local_trajectory_max_error_px,
             local_trajectory_min_pair_predictions=args.local_trajectory_min_pair_predictions,
+            ballistic_window_frames=args.ballistic_window_frames,
+            ballistic_max_residual_px=args.ballistic_max_residual_px,
+            ballistic_min_fit_points=args.ballistic_min_fit_points,
+            ballistic_require_bracket=not args.no_ballistic_require_bracket,
         )
     except Exception as exc:
         print(str(exc), file=sys.stderr)

@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from threed.racketsport.eval import copy_faithfulness, metric_eval, replay_eval, shot_drill_eval
+from threed.racketsport.replay_export import build_replay_review_export_from_virtual_world, write_replay_scene
 
 
 REQUIRED_LABEL_FILES = (
@@ -116,6 +117,33 @@ def _write_shot_drill_artifacts(run_dir: Path, *, metrics: dict | None = None, r
     )
 
 
+def _write_reviewed_shot_labels(labels_root: Path, name: str, *, shot_label: str = "dink") -> None:
+    labels_dir = labels_root / name / "labels"
+    (labels_dir / "events.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "status": "human_reviewed",
+                "not_ground_truth": False,
+                "annotation": {
+                    "target_file": "events.json",
+                    "items": [
+                        {
+                            "id": "truth_shot_001",
+                            "status": "accepted",
+                            "t": 0.25,
+                            "frame_index": 15,
+                            "player_id": 1,
+                            "shot_label": shot_label,
+                        }
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def _write_copy_artifacts(
     run_dir: Path,
     *,
@@ -135,25 +163,56 @@ def _write_copy_artifacts(
 
 def _write_replay_artifacts(run_dir: Path, *, players: list[int] | None = None, points: list[dict] | None = None) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
-    replay_points = points if points is not None else [
-        {"id": 3, "t0": 31.2, "t1": 41.2, "glb_url": "point_3.glb", "size_mb": 9.4}
-    ]
-    (run_dir / "court_pickleball.glb").write_bytes(b"glb")
-    for point in replay_points:
-        (run_dir / point["glb_url"]).write_bytes(b"glb")
-    (run_dir / "replay_scene.json").write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "world_frame": "court_Z0",
-                "fps": 30.0,
-                "court_glb": "court_pickleball.glb",
-                "players": players if players is not None else [1, 2],
-                "points": replay_points,
-            }
-        ),
-        encoding="utf-8",
+    scene = build_replay_review_export_from_virtual_world(
+        _replay_virtual_world_payload(players=players if players is not None else [1, 2]),
+        export_root=run_dir,
+        point_id=3,
     )
+    if points is not None:
+        payload = scene.model_dump(mode="json")
+        payload["points"] = points
+        scene = payload
+    write_replay_scene(run_dir / "replay_scene.json", scene)
+
+
+def _replay_virtual_world_payload(*, players: list[int]) -> dict:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_virtual_world",
+        "world_frame": "court_Z0",
+        "fps": 30.0,
+        "court": {
+            "sport": "pickleball",
+            "coordinate_frame": "court_Z0",
+            "line_segments": {"baseline": [[-3.05, 0.0, 0.0], [3.05, 0.0, 0.0]]},
+            "net": {"endpoints": [[-3.05, 6.705, 0.91], [3.05, 6.705, 0.91]]},
+        },
+        "players": [
+            {
+                "id": player_id,
+                "side": "near",
+                "role": "left",
+                "frames": [
+                    {"t": 0.0, "track_world_xy": [float(player_id), 1.0], "joints_world": [[float(player_id), 1.0, 1.2]]},
+                    {"t": 1.0, "track_world_xy": [float(player_id), 2.0], "joints_world": [[float(player_id), 2.0, 1.1]]},
+                ],
+            }
+            for player_id in players
+        ],
+        "ball": {"source": "fixture", "frames": [{"t": 0.0, "world_xyz": [0.0, 6.0, 0.3], "visible": True}]},
+        "paddles": [
+            {
+                "player_id": players[0],
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "mesh_vertices_world": [[0.0, 0.0, 0.0], [0.1, 0.0, 0.0], [0.1, 0.2, 0.0]],
+                        "mesh_faces": [[0, 1, 2]],
+                    }
+                ],
+            }
+        ],
+    }
 
 
 def _run_eval(evaluator: object, tmp_path: Path) -> object:
@@ -209,6 +268,25 @@ def test_shot_drill_eval_uses_named_numeric_gates_for_shot_and_rep_thresholds(tm
     assert metrics["shot_types"].gate == "recorded for later shot-class gates"
 
 
+def test_shot_drill_eval_reports_reviewed_event_level_shot_metrics(tmp_path: Path) -> None:
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_reviewed_shot_labels(labels_root, "clip_001", shot_label="dink")
+    _write_shot_drill_artifacts(root / "clip_001")
+
+    payload = _run_eval(shot_drill_eval, tmp_path)
+    metrics = payload.clips[0].metrics
+
+    assert payload.status == "pass"
+    assert metrics["shot_label_macro_f1"].gate == "label_check.shot_macro_f1: >= 0.65"
+    assert metrics["shot_label_macro_f1"].value == 1.0
+    assert metrics["shot_label_top2_accuracy"].gate == "label_check.shot_top2_accuracy: >= 0.85"
+    assert metrics["shot_label_top2_accuracy"].value == 1.0
+    assert metrics["shot_label_unknown_rate"].value == 0.0
+    assert metrics["shot_label_gated_rate"].value == 0.0
+
+
 def test_copy_faithfulness_uses_named_numeric_gates_for_report_habit_counts(tmp_path: Path) -> None:
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs"
@@ -239,6 +317,24 @@ def test_replay_eval_uses_named_numeric_gates_for_player_and_point_counts(tmp_pa
     assert metrics["players"].passed is True
     assert metrics["points"].passed is True
     assert metrics["glb_files_present"].gate == "all referenced GLB files exist"
+    assert metrics["glb_files_valid"].gate == "all referenced GLB files are structurally valid"
+    assert metrics["glb_files_valid"].passed is True
+
+
+def test_replay_eval_fails_when_referenced_glb_is_invalid(tmp_path: Path) -> None:
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_replay_artifacts(root / "clip_001")
+    (root / "clip_001" / "points" / "point_003_review.glb").write_bytes(b"glb")
+
+    payload = _run_eval(replay_eval, tmp_path)
+    metrics = payload.clips[0].metrics
+
+    assert payload.status == "fail"
+    assert metrics["glb_files_present"].passed is True
+    assert metrics["glb_files_valid"].passed is False
+    assert "invalid referenced GLB files: points/point_003_review.glb" in payload.clips[0].notes[0]
 
 
 @pytest.mark.parametrize("evaluator", [metric_eval, shot_drill_eval, copy_faithfulness, replay_eval])

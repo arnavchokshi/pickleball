@@ -5,7 +5,7 @@
 **Scope:** Every model/technology in the pipeline, the decision behind it, and the speed/accuracy/license/UI tradeoff it sits on.
 **Companion docs:** `SWAY_BODY_PICKLEBALL_MVP.md` (product/market), `IMPLEMENTATION_PHASES.md` (Codex build + test plan), `ACCURACY_AND_TRAINING.md` (**source of truth for datasets, training/fine-tuning/auto-labeling recipes, filtering parameters, and validation protocols**), `BUILD_CHECKLIST.md` (the operational checklist + multi-agent coordination protocol). World-grounded mesh, foot-skate elimination, physics refinement, racket 6DoF, and the 3D replay renderer are detailed per-layer below ((e),(p)–(s)) and built in `IMPLEMENTATION_PHASES.md` Phases 3/4/6/10.
 
-This document states decisions, not options. Where a number is unverified in source research it is flagged `[UNVERIFIED]`. The pipeline extends the existing `sam4dbody` repo (reusing its calibration solver, formation alignment, and contact-state primitives); it does not start greenfield.
+This document states decisions, not options. Where a number is unverified in source research it is flagged `[UNVERIFIED]`. The live implementation is in this `pickleball` repo while reusing proven `sam4dbody` runtime ideas and assets where appropriate; it does not start greenfield.
 
 > **Round-4 revision (2026-06-26):** the product is **not being sold yet** (research/personal use), so **licensing is no longer a build blocker** — we use the most accurate model per stage regardless of license (license recorded in §5 for future commercialization). This **flips the core body decision: a full body MESH is now CORE** (world-grounded, physics-refined, foot-skate-free) and the fast skeleton is demoted to a **preview/triggering overlay**. New goals — a **physics-accurate 3D replay** and **no foot-skating** — add four layers: world-grounded body + foot-lock (p), physics refinement (q), **racket 6DoF** (r), and the **3D replay renderer** (s). Detailed in (p)–(s) below and built in `IMPLEMENTATION_PHASES.md` Phases 4/6/10.
 >
@@ -20,6 +20,16 @@ This document states decisions, not options. Where a number is unverified in sou
 ### The core identity: an adaptive compute budget
 
 Every competitor runs **one fixed model at a fixed frame rate over the whole video**. That is the structural weakness we attack. Sway Body treats the pipeline as a **budget allocator**: a cheap baseline runs over 100% of frames, and expensive compute is spent surgically in exactly three places —
+
+Current implementation status: `frame_compute_plan.json` and
+`body_compute_execution.json` now express that budget in the fail-closed spine,
+and `BodyStageRunner` consumes planned deep-mesh windows when they exist. The
+accepted-four prototype clips now have canonical `contact_windows.json` files
+promoted from explicit human review inputs, with `player_id` still untrusted/null.
+Current BODY scheduling is limited and fail-closed: Burlington schedules 3 frames
+/ 9 player-frames, Wolverine 4 / 12, Outdoor webcam 0 / 0 due player coverage,
+and Indoor doubles 2 / 6. These are scheduling artifacts only; they do not make
+BODY or BALL verified.
 
 1. **Where it matters biomechanically** — the swing/contact window, the split-step, the balance-loss moment.
 2. **Where the user sees and pays** — the avatar "wow" frame, the shareable highlight, the premium replay.
@@ -88,7 +98,7 @@ The dance pipeline runs one heavy path uniformly: `video → 2D identity trackin
         │  BALL 3D physics: TrackNet → z=0-bounce uplift + Magnus → contact impulse            │
         │                                                                                     │
         │  biomechanics metrics → rule-based insight engine (+confidence gating)              │
-        │     → shot classification (BST) → LLM-for-copy (latest Claude)                      │
+        │     → shot classification (scaffold now; PoseConv3D default vs BST candidate)        │
         │                                                                                     │
         │  → 3D REPLAY (Three.js+R3F, SMPL-X GLB, physics baked→glTF, free-viewpoint)         │
         │  → REPORT: top habits, clips, self-vs-self ghost, drill, trend                       │
@@ -198,12 +208,14 @@ This is the single source of truth for **exactly which model + variant + weights
 | 4b | 3D mesh (server preview) | **SAT-HMR** (`sat_644_3dpw.pth` · Apache) | — | SAT-HMR vs Multi-HMR 2 (Naver ⚠️) | HMR2.0b (MIT) |
 | 5 | Ball | **TrackNetV3** (`qaz812345/TrackNetV3`, badminton→fine-tune PB · MIT) | — | TrackNetV4 tennis weights; TrackNetV5 (no code yet) | manual tap-track |
 | 6 | Court keypoints | **TennisCourtDetector** (`yastrebksv`, no-LICENSE ⚠️) → fine-tune + add ~4 kitchen-line kpts | (computed once/setup, reused) | yastrebksv init vs scratch | manual 4-tap homography |
-| 7 | Racket 6DoF | **RTMDet-m + RTMPose-m + SAM2.1-hiera-base-plus + PnP-IPPE** (Apache/MIT; no racket pretrain → train) | — | SAM2 small/base-plus/large; FoundationPose vs GigaPose | GigaPose |
+| 7 | Racket 6DoF | **SAM 3 concept detection/tracking when approved, DINO-X/Grounded-SAM-2 fallback, FoundationPose/GigaPose/FoundPose CAD or reference-pose scoring, plus PnP-IPPE/UKF** (research/runtime probes still required) | — | SAM 3 vs DINO-X/Grounded-SAM-2; FoundationPose vs GigaPose vs FoundPose | true-corner IPPE gate; no box-derived promotion |
 | 8 | Audio contact | **BEATs** (or AST) fine-tuned (MIT — no PB pretrain) | small CNN on mel-spec (on-device) | BEATs vs AST vs small CNN | AST |
 | 9 | Shot classifier | **PoseConv3D** (pyskl SlowOnly-R50) adapted (Apache); BST as ball-aware option | — | PoseConv3D vs BST | train own |
 | 10 | Physics | **PhysPT** (MIT) + **PHC+/PULSE** on **MuJoCo 3.9/MJX** | — | PhysPT vs PHC+/PULSE | PHC |
 | 11 | Live pose | — (server uses #3) | **Apple Vision**: `VNDetectHumanBodyPose` (2D) + `VNDetectHumanBodyPose3D` (coarse, single-person) + `VNDetectHumanHandPose` + `VNGeneratePersonSegmentation`; iOS18 holistic | YOLO11n-pose Core ML | — |
 | 12 | Render | **OpenUSD (pxr) → USDZ** + **GLB** | RealityKit 4 (USDZ) / Three.js (GLB) | — | AR Quick Look |
+
+Shot classifier status (2026-06-28): no trained SHOT-1 model is approved. The current transfer/external checks are not gate-verified: THETIS 60-clip family accuracy is 51.7% overall / 66.7% top-2, with serve and overhead at 0%; OpenSportsLab 100-event broad accuracy is 81.0%, but it is 81/81 on swing and 0/19 on serve. Treat serve, overhead, and exact pickleball shot labels as blocked classes until per-class eval passes.
 
 **License posture (research/personal use now; flagged for future commercialization):** SAM-3D-Body (SAM License) and Multi-HMR 2 (Naver) are the only commercial-risk items — if commercializing, switch the 3D backbone to **SAT-HMR (Apache)**. Everything else is Apache/MIT or trained by us. TennisCourtDetector has no LICENSE file (use as init only; our fine-tuned weights are ours).
 
@@ -222,9 +234,9 @@ This is the single source of truth for **exactly which model + variant + weights
 - **Toggle:** decode full clip (rich) ↔ decode only active-rally spans found by a coarse pass (cheap).
 - **Differs from dance:** dance assumed short clips and CPU decode was acceptable; racket sports require GPU decode + dead-time skipping for ~20-min ingest.
 
-### (b) Court calibration + net plane — **manual-tap homography + regulation net geometry**
+### (b) Court calibration + net plane — **semantic court evidence + solvePnP, with manual fallback**
 
-- **Chosen (MVP):** user taps 4–6 known court points → `cv2.findHomography(..., RANSAC)` → ground-plane homography, gated by a **reprojection-error check** before any downstream metric is trusted. Off-ground 3D (camera pose) via `cv2.solvePnP` using known court dimensions (20×44 ft, 7 ft NVZ). **Net plane derived from regulation geometry** (anchor a vertical plane to the projected centerline at **34 in center / 36 in sidelines**) — never estimated from pixels.
+- **Chosen (MVP):** the server attempts semantic court evidence first, writes `court_line_evidence.json`, and fail-closes video-backed runs when NVZ/centerline/top-net evidence is not ready. Trusted manual/ARKit sidecars still seed `cv2.solvePnP` using known court dimensions (20×44 ft, 7 ft NVZ), gated by reprojection and semantic residual checks. Manual 4–6 tap remains the universal fallback until the no-tap solver passes CAL-3.
 - **iOS seed (round-5, layer (u)):** the app's **ARKit setup pass already provides camera intrinsics + 6DoF pose + a detected horizontal court-plane** as a sidecar — the server uses these as the calibration seed (then refines with solvePnP), so on Tier A/B devices we often skip manual taps entirely. Manual 4–6 tap remains the universal fallback.
 - **Auto-assist (Phase 2):** classical Hough + RANSAC + court-template fit (~6 ms/frame) pre-places the tap points; user corrects. Later, a fine-tuned court-keypoint net.
 - **Rejected:** TennisCourtDetector (0.961 acc, 1.83 px median, but **license unstated** and tennis keypoint topology ≠ pickleball, no NVZ line); PnLCalib (CC BY 4.0 but 164–439 ms/frame and soccer-trained). No well-licensed pickleball court-keypoint model exists today — so we do not depend on one for MVP.
@@ -258,6 +270,7 @@ This is the single source of truth for **exactly which model + variant + weights
 Two tiers (our world-grounding/foot-lock detailed in (p); built in `IMPLEMENTATION_PHASES.md` Phases 3–4):
 
 - **DEEP/REPLAY tier — core: Fast SAM-3D-Body per-frame mesh.** It is the **best per-frame mesh available** (3DPW PA-MPJPE **30.4 mm** for the Fast variant / 33.8 mm original; EMDB 38.2 mm — beats HMR2.0 by 15+ mm and NLF on 3DPW), **user-confirmed in practice**, native body+hands+feet (MHR rig). (License: SAM License — research/personal use now; ⚠️ verify before commercial; SAT-HMR/Apache fallback — see §2.3.) MHR→SMPL via its built-in MLP (the Fast variant made this ~10,000× cheaper). Then **we add world-grounding ourselves** (see (p)): project per-frame output to world via our known K,[R|t] + court plane Z=0 → temporal smoothing → foot-lock → physics. This drives the replay, the rigged avatar, and biomechanics. Refine with BioPose (anatomically valid joints).
+- **Current contract reality:** `BodyStageRunner` now preserves both `joints_world` and optional `mesh_vertices_world` in `smpl_motion.json` when Fast SAM-3D-Body returns vertices. A one-frame Burlington H100 spine smoke has passed and produced real BODY contract artifacts, but BODY is still not promoted until multi-frame/multi-clip runs and the real world-MPJPE gate pass.
 - **FAST tier — preview (two flavors).** **(1) On-device, instant (layer (v)):** Apple **Vision** runs on the Neural Engine *on the phone* for the live capture overlay + guidance — `VNDetectHumanBodyPoseRequest` (2D, ≤4 players), `VNDetectHumanBodyPose3DRequest` (coarse single-person), hand pose, segmentation; **preview/guidance ONLY, not a coaching metric** (17 joints, no fingers, single-person, ~5–25° error). **(2) Server fast tier (<10 s after upload):** **Multi-HMR 2** (~20 FPS, no FOV assumption — preferred for our variable cameras) or **SAT-HMR** (~24 FPS, assumes ~60° FOV — verify) for a multi-person camera-space mesh on all ≤4 players in one pass (~7–8 mm worse than SAM-3D-Body, fine for a preview); **RTMPose-2D → MotionBERT** skeleton lift only for sub-frame contact triggering. Feet **hard-constrained to the solved court ground plane**.
 - **GVHMR / WHAM — demoted to optional references only.** They are HMR2.0-backbone pipelines: their *per-frame mesh is worse* than SAM-3D-Body, and their one advantage (world trajectory + foot-contact) is exactly what we already get from our known camera + court plane. Use GVHMR/WHAM at most as an offline world-trajectory/foot-velocity sanity-check, **not** as the mesh source. **PromptHMR: dropped** (full-image hurts distant players, needs manual prompts, worst translation error — user got bad results).
 - **Two non-negotiables (unchanged):**
@@ -279,6 +292,7 @@ Two tiers (our world-grounding/foot-lock detailed in (p); built in `IMPLEMENTATI
 ### (g) Twist / pronation / paddle-face — **hand-keypoints / racket-pose / optional IMU, contact window only**
 
 - **Chosen:** estimate axial twist (forearm pronation, paddle-face angle) from **hand-landmark geometry** (already in whole-body keypoints), optionally a **racket 6DoF object-pose** detector or a **forearm IMU**, run **only in the contact window**.
+- **Current 2026 paddle stack:** prefer **SAM 3** concept detection/segmentation/tracking when checkpoints and license are approved; fall back to **DINO-X/Grounded-SAM-2** for open-vocabulary detection plus video masks. For 6DoF, use **FoundationPose** when CAD/reference-image onboarding is available, with **GigaPose/FoundPose** as RGB/CAD alternatives, then keep **PnP-IPPE + reprojection/ambiguity + UKF + rebound** as fail-closed geometry gates. See `docs/racketsport/paddle_pose_research_2026_06_28.md`.
 - **Why:** axial roll is **unobservable from two joint endpoints** (20–45° error keypoint-only) — and a mesh does **not** fix this either. The fix is an explicit twist signal: a purpose-trained hand+IMU model reached ~4.65–5.61° MAE.
 - **Decision:** **confidence-gate or omit** paddle-face/pronation when no extra signal is available. We do not claim a pronation number we can't defend. This is a trust win, not a gap.
 - **Toggle:** omit (default) ↔ hand-keypoint estimate ↔ + racket-pose/IMU (richest).
@@ -304,11 +318,11 @@ Two tiers (our world-grounding/foot-lock detailed in (p); built in `IMPLEMENTATI
 - **Toggle:** trajectory heuristic only (cheap) ↔ + audio (cheap, always on) ↔ + learned event head (rich).
 - **License:** in-house model; librosa (ISC) / torchaudio (BSD).
 
-### (j) Shot classification — **BST (adapt) + dataset collection**
+### (j) Shot classification — **PoseConv3D first, BST after fusion tensors are clean**
 
-- **Chosen:** adapt **BST (Badminton Stroke-type Transformer)** — TCN→transformer with **cross-attention between pose and ball trajectory** (77.1% acc / 0.70 macro-F1 / 93.4% top-2 over 36k strokes). Fall back to **PoseConv3D** (robust to pose noise) or ST-GCN. **ML produces the shot LABEL only** — never a coaching fact.
-- **Reality:** no published pickleball 7-class (dink/drive/3rd-drop/volley/serve/reset/lob) classifier exists — **we must collect and label a dataset.** Tennis has a ready 4-class set (Tennis Player Actions, 2,000 imgs).
-- **Toggle:** rule-based shot heuristics from ball arc + contact height (cheap) ↔ learned BST classifier (rich).
+- **Chosen:** train **PoseConv3D/PoseC3D** first because it is built for pose-window action recognition and should handle noisy transferred pose better than the current single-frame heuristic. Compare **BST-style** pose+ball/player cross-attention after ball trajectory, court zones, and player tensors are trustworthy. **ML produces the shot LABEL only** — never a coaching fact.
+- **Reality:** no published pickleball classifier matches our taxonomy. Current code supports `serve`, `fh_shot`, `bh_shot`, `fh_drive`, `bh_drive`, `dink`, `lob`, `overhead`, `third_shot_drop`, `reset_block`, but the baseline is not trained and fails serve/overhead in external checks. We must collect and label `data/pb_shots/`.
+- **Toggle:** abstract side fallback (`fh_shot`/`bh_shot`) for review coverage ↔ PoseConv3D family classifier ↔ BST-style multimodal exact classifier.
 - **License:** model in-house; backbones Apache/MIT.
 
 ### (k) Biomechanics metrics computation — **deterministic from 3D skeleton + court + events**
@@ -334,7 +348,7 @@ Two tiers (our world-grounding/foot-lock detailed in (p); built in `IMPLEMENTATI
 
 ### (n) Storage / artifacts — **tiered retention**
 
-- **Chosen:** keep sparse fast-tier artifacts + habit clips + downsampled previews by default; archive full mesh/skeleton only for selected key spans; chunked object layout; re-process from source on demand. Artifacts: `court_calibration.json`, `court_zones.json`, `net_plane.json`, `ball_track.json`, `contact_windows.json`, `skeleton_3d.npz`, `racket_sport_metrics.json`, `habit_report.json`, `coach_report.json`, `corrections.json`.
+- **Chosen:** keep sparse fast-tier artifacts + habit clips + downsampled previews by default; archive full mesh/skeleton only for selected key spans; chunked object layout; re-process from source on demand. Artifacts: `court_calibration.json`, `court_zones.json`, `net_plane.json`, `tracks.json`, `smpl_motion.json` (`joints_world` plus optional `mesh_vertices_world`), `ball_track.json`, `contact_windows.json`, `racket_pose.json`, `frame_compute_plan.json`, `virtual_world.json`, `racket_sport_metrics.json`, `habit_report.json`, `coach_report.json`, `corrections.json`.
 - **Why:** 20-min clips at 60 FPS make full-fidelity retention for every frame wasteful; we keep what's shown and re-derive the rest.
 - **Toggle:** previews only (cheap) ↔ full per-span mesh archive (rich).
 - **Reuse:** S3 archive + backend callback path; production-readiness gate (`test_wp47_readiness_gate.py`).
@@ -360,10 +374,12 @@ Two tiers (our world-grounding/foot-lock detailed in (p); built in `IMPLEMENTATI
 
 ### (r) Racket / paddle 6DoF — **detect → keypoints → PnP-IPPE → UKF → physics-validate** *(round-4, new — flips paddle-face from gated to claimable)*
 
-- **Chosen:** detect (RTMDet box + SAM2 silhouette) → **RTMPose top/bottom/handle keypoints** (PCK 92–99%; **not** side keypoints, 65–80%) + convex-hull corners → coarse pose (GigaPose/FoundPose + **hand-grip prior** from wrist+middle-finger MCP) → **PnP-IPPE on the known paddle dimensions** → **UKF on SE(3)** (blur streak as a rotation cue; predict through grip occlusion) → **physics-validate** against the observed ball rebound → **contact-point-on-face (±1–3 cm) + face-normal (~3–5°)**.
-- **Why this changes the envelope:** the paddle is large, rigid, planar, and dimensioned, so its pose/face-normal is recoverable **~5–15× better than wrist-derived pronation** (3–5° vs 20–35°). This **flips paddle-face/contact-point from "gated/omit" to claimable** when the racket is tracked. Render the paddle mesh as a child of the wrist bone. Build/test in `IMPLEMENTATION_PHASES.md` Phase 6.
+- **Chosen:** detect/track the paddle with **SAM 3** concept prompts when runtime/checkpoints are approved; fall back to **DINO-X/Grounded-SAM-2** for open-vocabulary boxes/masks. Derive true face corners/keypoints/masks, score/refine pose with **FoundationPose/GigaPose/FoundPose** when CAD/reference inputs exist, add a **hand-grip prior** from wrist+middle-finger MCP, then promote only through **PnP-IPPE on the known paddle dimensions** → **UKF on SE(3)** (blur streak as a rotation cue; predict through grip occlusion) → **physics-validate** against the observed ball rebound → **contact-point-on-face (±1–3 cm) + face-normal (~3–5°)**.
+- **Current contract reality:** the local code has deterministic PnP-IPPE, reprojection diagnostics, ambiguity reporting, SE(3) smoothing, rebound checks, camera-space-to-`court_Z0` pose conversion, and a fail-closed `RacketStageRunner` that writes `racket_pose.json` only from schema-validated explicit four-corner paddle candidates. It still lacks the trained detector/keypoint/mask/CAD runner, so racket remains scaffold until ArUco/GT gates pass.
+- **2026-06-28 research refresh:** the canonical acceptance path remains true paddle-face corners plus fail-closed IPPE because planar paddles can produce two visually similar pose hypotheses. For ordinary single-RGB uploads, GigaPose/FoundPose are the first CAD/RGB coarse-pose scorers to probe; FoundationPose remains a strong candidate for Tier-A depth/ARKit/pseudo-depth-capable paths or if its RGB/runtime path proves practical on our H100 setup. SAM2/Grounded-SAM2 should be treated as mask/video-tracking candidate generators, not as pose solvers.
+- **Why this changes the target envelope:** the paddle is large, rigid, planar, and dimensioned, so its pose/face-normal should be recoverable **~5–15× better than wrist-derived pronation** (3–5° vs 20–35°). This makes paddle-face/contact-point claimable only after true paddle evidence and RKT gates pass; current box-derived preview candidates stay gated. Render the paddle mesh as a child of the wrist bone. Build/test in `IMPLEMENTATION_PHASES.md` Phase 6.
 - **Toggle:** none ↔ wrist-proxy contact point (cheap) ↔ full racket 6DoF (rich, claimable face angle).
-- **Training/license:** RTMPose fine-tuned on RacketVision (tennis) + Roboflow PB + ~50k synthetic (BlenderProc paddle CAD) + ArUco real GT; OpenCV PnP (BSD), GigaPose/FoundPose (research).
+- **Training/license:** RTMPose fine-tuned on RacketVision (tennis) + Roboflow PB + ~50k synthetic (BlenderProc paddle CAD) + ArUco real GT; OpenCV PnP (BSD), FoundationPose/GigaPose/FoundPose (research/runtime terms must be checked before commercialization).
 
 ### (s) 3D replay rendering — **native RealityKit/USDZ in-app + Three.js/GLB on web, from one server bake** *(round-4, +round-5 native path)*
 
@@ -435,7 +451,7 @@ We do not buy accuracy by running a heavier model at inference — that only cos
 
 > **Round-4 reframe:** licensing is **no longer a build gate** (not selling yet). This table is **informational metadata for a future commercial build** — the "Commercial OK?" column tells you what would need swapping *if* we commercialize, with the permissive fallback named. Today we run the most accurate option per stage.
 
-**Note on the round-4b body decision:** the **core body backbone (SAM-3D-Body) is usable now** (SAM License — research/personal use); for future commercial use, verify the SAM License or fall back to **SAT-HMR (Apache)**. Licensing also matters for **datasets** (AMASS/BEDLAM2/AthletePose3D/RICH/CalTennis — research/NC), **YOLO26** (AGPL), and the optional GVHMR/WHAM trajectory references. Other round-4 components (research/personal use — fine now): **PhysPT** (MIT), **PHC/PULSE** (BSD-3), **MuJoCo/MJX** (Apache), **MultiPhys** (CC BY-NC-SA), **Three.js/R3F** (MIT), **Rapier.js** (Apache), **GigaPose/FoundPose** (research), **OpenCV PnP** (BSD).
+**Note on the round-4b body decision:** the **core body backbone (SAM-3D-Body) is usable now** (SAM License — research/personal use); for future commercial use, verify the SAM License or fall back to **SAT-HMR (Apache)**. Licensing also matters for **datasets** (AMASS/BEDLAM2/AthletePose3D/RICH/CalTennis — research/NC), **YOLO26** (AGPL), and the optional GVHMR/WHAM trajectory references. Other round-4 components (research/personal use — fine now): **PhysPT** (MIT), **PHC/PULSE** (BSD-3), **MuJoCo/MJX** (Apache), **MultiPhys** (CC BY-NC-SA), **Three.js/R3F** (MIT), **Rapier.js** (Apache), **FoundationPose/GigaPose/FoundPose** (research/runtime terms need review), **OpenCV PnP** (BSD).
 
 | Component | License | Commercial OK? | Note |
 |---|---|---|---|
@@ -451,7 +467,7 @@ We do not buy accuracy by running a heavier model at inference — that only cos
 | TrackNet V2 / V3 (→V5 on release) | MIT | **YES** | Ball tracking. |
 | WASB / BlurBall / TOTNet | MIT / open | **YES** | Ball upgrades. |
 | PhysPT / PHC / PULSE / MuJoCo+MJX / MultiPhys | MIT / BSD-3 / Apache / CC-BY-NC-SA | mostly **YES** | Physics (MultiPhys NC → use only doubles, or swap). |
-| GigaPose / FoundPose / OpenCV PnP-IPPE | research / BSD | PnP **YES** | Racket 6DoF. |
+| FoundationPose / GigaPose / FoundPose / OpenCV PnP-IPPE | research/runtime-specific / BSD | PnP **YES** | Racket 6DoF. |
 | Three.js / React Three Fiber / Rapier.js | MIT / Apache | **YES** | 3D replay renderer (web). |
 | **Apple Vision / Core ML / ARKit / RealityKit / AVFoundation** | Apple SDK | **YES** | Free for iOS apps; on-device capture/calibration/fast-tier/native replay (t)(u)(v)(s). |
 | coremltools / OpenUSD (USDZ) / pygltflib | BSD-3 / Apache-mod / BSD-MIT | **YES** | Model conversion + render-bake to USDZ/GLB. |
@@ -461,7 +477,7 @@ We do not buy accuracy by running a heavier model at inference — that only cos
 
 **Rule (round-4b):** use the **most accurate** component per stage now (research/personal use). For a future paid build, verify SAM-3D-Body's commercial terms and plan likely swaps for YOLO26→RF-DETR-L/RTMDet, NC datasets→licensed/synthetic, MultiPhys→a permissive equivalent, and SAM-3D-Body→SAT-HMR if the SAM License is not acceptable.
 
-**Verify-before-commit (bleeding-edge, some possibly future-dated in source research):** Multi-HMR 2, SAT-HMR, WATCH, OnlineHMR, HTD-Refine, PhysHMR, CalTennis, BEDLAM2, TT4D — confirm repo/license/benchmarks resolve before relying on them. **Proven core (build on now):** SAM-3D-Body + Fast SAM-3D-Body, YOLO26, BoT-SORT/ByteTrack, RTMPose/RTMW, MotionBERT, TrackNetV3, PhysPT, PHC/PULSE, MuJoCo+MJX, GigaPose/FoundPose, OpenCV PnP, Three.js. Established fallbacks: SAM-3D-Body per-crop (for Multi-HMR 2/SAT-HMR preview), PhysPT (for PHC), RF-DETR-L/RTMDet (for YOLO26).
+**Verify-before-commit (bleeding-edge, some possibly future-dated in source research):** Multi-HMR 2, SAT-HMR, WATCH, OnlineHMR, HTD-Refine, PhysHMR, CalTennis, BEDLAM2, TT4D — confirm repo/license/benchmarks resolve before relying on them. **Proven core (build on now):** SAM-3D-Body + Fast SAM-3D-Body, YOLO26, BoT-SORT/ByteTrack, RTMPose/RTMW, MotionBERT, TrackNetV3, PhysPT, PHC/PULSE, MuJoCo+MJX, FoundationPose/GigaPose/FoundPose, OpenCV PnP, Three.js. Established fallbacks: SAM-3D-Body per-crop (for Multi-HMR 2/SAT-HMR preview), PhysPT (for PHC), RF-DETR-L/RTMDet (for YOLO26).
 
 ---
 
@@ -516,7 +532,7 @@ For one H100 with a fixed multi-model DAG, **NVIDIA Triton Inference Server** ("
 | Compute location | on-device preview (Apple Vision) | server deep tier (SAM-3D-Body + physics) | preview on phone; truth on server |
 | Frame sampling | uniform low FPS | adaptive dense at events | always adaptive |
 | Decode coverage | rally spans only | full clip | long uploads → spans |
-| GPU decode | CPU (FFmpeg/OpenCV) | **NVDEC + DALI (GPU)** | always for ≥1080p — CPU decode starves the GPU |
+| GPU decode | CPU (FFmpeg/OpenCV) | **NVDEC + DALI (GPU)** | benchmark per real clip set; current 1080p H.264 H100 sample favored CPU decode |
 | Runtime | PyTorch eager | **TensorRT INT8/FP16 + CUDA graphs** (SAM-3D-Body stays FP16/BF16) | frozen models in production |
 | Stage execution | serial | **CUDA-stream pipelined** (decode→infer→postproc overlap) | always when GPU-bound |
 | Result delivery | wait for full clip | **stream rally-by-rally (SSE) + APNs push** | always |
@@ -526,10 +542,10 @@ For one H100 with a fixed multi-model DAG, **NVIDIA Triton Inference Server** ("
 | **3D body** | **preview mesh (Multi-HMR 2 / SAT-HMR) + skeleton lift** | **Fast SAM-3D-Body per-frame → our court-plane grounding + temporal** | **fast = preview; deep/replay = SAM-3D-Body grounded (default)** |
 | **Physics** | none | foot-lock (CCD-IK) → PhysPT → full MuJoCo sim | replay tier; MuJoCo for flagship + doubles |
 | **Racket** | none / wrist-proxy | full 6DoF (PnP-IPPE + UKF) | when face-angle/contact-point wanted |
-| Twist/paddle-face | omit (gated) | racket 6DoF (claimable ~3–5°) / hand-kpt | racket tracking on |
+| Twist/paddle-face | omit (gated) | racket 6DoF target (~3–5° only after RKT gates) / hand-kpt | racket tracking on |
 | Ball | manual tap / TrackNetV3 | TrackNetV5/BlurBall + physics 3D | timing/depth matters |
 | Events | trajectory heuristic | + audio + learned head | audio always on (cheap) |
-| Shot class | ball-arc heuristic | BST learned classifier | premium reports |
+| Shot class | abstract FH/BH review fallback | PoseConv3D family classifier → BST-style multimodal exact classifier | premium reports |
 | Insights | rules + template copy | + LLM copy + DTW reference | premium reports |
 | Visualization / render | court map + metric + 2D overlay | 3D mesh replay → physics replay + free-viewpoint (native RealityKit/USDZ in-app + Three.js/GLB web) | premium / share moments |
 | Cameras | **1 phone (v1 product)** | 2 phones (true 3D) — **FUTURE; training-instrument only for now** | future line-call tier |

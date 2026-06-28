@@ -7,7 +7,7 @@ from pathlib import Path
 
 from threed.racketsport.orchestrator import run_pipeline
 from threed.racketsport.court_line_evidence import aggregate_court_line_evidence
-from threed.racketsport.schemas import CourtLineEvidence, CourtLineObservation, NetLineObservation, Tracks, validate_artifact_file
+from threed.racketsport.schemas import CourtLineEvidence, CourtLineObservation, NetLineObservation, Tracks, VirtualWorld, validate_artifact_file
 
 
 def _sidecar_payload() -> dict:
@@ -48,22 +48,23 @@ def _write_inputs(inputs_dir: Path) -> None:
     )
 
 
-def test_pipeline_runs_real_calibration_and_tracking_then_blocks_missing_body(tmp_path: Path) -> None:
+def test_pipeline_runs_manual_calibration_and_precomputed_tracking_then_fails_missing_body_runtime(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs" / "clip_001"
     run_dir = tmp_path / "runs" / "phase11" / "clip_001"
     _write_inputs(inputs)
 
-    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="body")
+    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="body", tracking_mode="precomputed")
 
-    assert summary["status"] == "blocked"
+    assert summary["status"] == "fail"
     assert [item["stage"] for item in summary["stages"]] == ["calibration", "tracking", "body"]
     assert summary["stages"][0]["status"] == "ran"
     assert summary["stages"][0]["real_model"] is False
     assert summary["stages"][1]["status"] == "ran"
     assert summary["stages"][1]["real_model"] is False
     assert summary["stages"][1]["source_mode"] == "precomputed_detections"
-    assert summary["stages"][2]["status"] == "blocked"
-    assert "no runner registered for stage: body" in summary["stages"][2]["notes"]
+    assert summary["stages"][2]["status"] == "fail"
+    assert summary["stages"][2]["real_model"] is True
+    assert any("missing checkpoint for fast_sam_3d_body_dinov3" in note for note in summary["stages"][2]["notes"])
     assert validate_artifact_file("court_calibration", run_dir / "court_calibration.json")
     evidence = validate_artifact_file("court_line_evidence", run_dir / "court_line_evidence.json")
     assert isinstance(evidence, CourtLineEvidence)
@@ -71,6 +72,20 @@ def test_pipeline_runs_real_calibration_and_tracking_then_blocks_missing_body(tm
     tracks = validate_artifact_file("tracks", run_dir / "tracks.json")
     assert isinstance(tracks, Tracks)
     assert not (run_dir / "smpl_motion.json").exists()
+    frame_plan = json.loads((run_dir / "frame_compute_plan.json").read_text(encoding="utf-8"))
+    assert frame_plan["artifact_type"] == "racketsport_frame_compute_plan"
+    assert frame_plan["summary"]["human_review_frame_count"] == 2
+    virtual_world = validate_artifact_file("virtual_world", run_dir / "virtual_world.json")
+    assert isinstance(virtual_world, VirtualWorld)
+    assert virtual_world.summary.warnings == ["missing_mesh_vertices", "missing_ball_track", "missing_paddle_pose"]
+    body_execution = json.loads((run_dir / "body_compute_execution.json").read_text(encoding="utf-8"))
+    assert body_execution["artifact_type"] == "racketsport_body_compute_execution"
+    assert body_execution["summary"]["scheduled_frame_count"] == 0
+    assert summary["review_artifacts"]["produced_artifacts"] == [
+        "frame_compute_plan.json",
+        "body_compute_execution.json",
+        "virtual_world.json",
+    ]
 
 
 def test_calibration_runner_samples_video_for_court_line_evidence(tmp_path: Path, monkeypatch) -> None:
@@ -102,6 +117,46 @@ def test_calibration_runner_samples_video_for_court_line_evidence(tmp_path: Path
     assert evidence.aggregate.auto_calibration_ready is True
 
 
+def test_pipeline_review_frame_plan_uses_explicit_ball_source_after_body_failure(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "phase11" / "clip_001"
+    _write_inputs(inputs)
+    ball_source = inputs / "strict_ball_track.json"
+    ball_source.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "fps": 30.0,
+                "source": "tracknet",
+                "frames": [
+                    {"t": 0.0, "xy": [300.0, 200.0], "conf": 0.1, "visible": False},
+                    {"t": 1.0 / 30.0, "xy": [310.0, 210.0], "conf": 0.9, "visible": True},
+                ],
+                "bounces": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="body",
+        tracking_mode="precomputed",
+        ball_source_path=ball_source,
+    )
+
+    assert summary["status"] == "fail"
+    frame_plan = json.loads((run_dir / "frame_compute_plan.json").read_text(encoding="utf-8"))
+    assert frame_plan["summary"]["by_reason"]["ball_uncertain"] == 1
+    assert summary["review_artifacts"]["produced_artifacts"] == [
+        "frame_compute_plan.json",
+        "body_compute_execution.json",
+        "virtual_world.json",
+    ]
+
+
 def test_video_backed_calibration_fails_closed_when_semantic_court_evidence_not_ready(tmp_path: Path, monkeypatch) -> None:
     inputs = tmp_path / "inputs" / "clip_001"
     run_dir = tmp_path / "runs" / "phase1" / "clip_001"
@@ -124,7 +179,7 @@ def test_video_backed_calibration_fails_closed_when_semantic_court_evidence_not_
         fake_video_evidence,
     )
 
-    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="tracking")
+    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="tracking", tracking_mode="precomputed")
 
     assert summary["status"] == "fail"
     assert [item["stage"] for item in summary["stages"]] == ["calibration"]
@@ -159,7 +214,7 @@ def test_pipeline_fails_closed_when_runner_outputs_invalid_artifact(tmp_path: Pa
     _write_inputs(inputs)
     (inputs / "detections.json").write_text(json.dumps({"fps": 30.0, "frames": [{"detections": [{"bbox": [1, 2, 3, 4], "class": "person"}]}]}), encoding="utf-8")
 
-    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="tracking")
+    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="tracking", tracking_mode="precomputed")
 
     assert summary["status"] == "fail"
     assert summary["stages"][-1]["stage"] == "tracking"
@@ -185,6 +240,8 @@ def test_orchestrator_cli_writes_summary_and_does_not_fake_e2e(tmp_path: Path) -
             str(run_dir),
             "--stage",
             "e2e",
+            "--tracking-mode",
+            "precomputed",
         ],
         check=False,
         capture_output=True,
@@ -193,9 +250,10 @@ def test_orchestrator_cli_writes_summary_and_does_not_fake_e2e(tmp_path: Path) -
 
     assert completed.returncode == 1
     payload = json.loads((run_dir / "pipeline_run.json").read_text(encoding="utf-8"))
-    assert payload["status"] == "blocked"
+    assert payload["status"] == "fail"
     assert payload["stages"][2]["stage"] == "body"
-    assert payload["stages"][2]["status"] == "blocked"
+    assert payload["stages"][2]["status"] == "fail"
+    assert any("missing checkpoint for fast_sam_3d_body_dinov3" in note for note in payload["stages"][2]["notes"])
     assert not (run_dir / "replay_scene.json").exists()
 
 

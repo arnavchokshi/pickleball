@@ -1,0 +1,908 @@
+{
+  "corrections": [
+    {
+      "annotator": "review-ui",
+      "id": "global_global_review_policy_001",
+      "operation": "append",
+      "reason": "Human review global policy from browser review UI.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/review_inputs/pickleball_cv_review_latest.json",
+        "clip_id": "global",
+        "metric": "global_review_policy",
+        "path": "/global",
+        "phase": "phase11"
+      },
+      "value": {
+        "artifact_source_of_truth": "h100",
+        "custom_windows": "outdoor: 0-10s, 300-310s, 600-610s\nindoor: 0-10s, 300-310s, 600-610s",
+        "long_clip_policy": "fixed_windows",
+        "racket_policy": "skip_this_wave"
+      }
+    },
+    {
+      "annotator": "review-ui",
+      "id": "burlington_gold_0300_low_steep_corner_calibration_top_net_001",
+      "operation": "append",
+      "reason": "Human reviewed calibration overlay and top-net reference points.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/burlington_gold_0300_low_steep_corner/court_calibration.json",
+        "clip_id": "burlington_gold_0300_low_steep_corner",
+        "metric": "calibration_top_net",
+        "path": "/human_review/top_net",
+        "phase": "phase1"
+      },
+      "value": {
+        "court_overlay_ok": "yes",
+        "reviewed_enough": false,
+        "top_net": {
+          "left": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 527.68,
+            "y": 225.5
+          },
+          "notes": "",
+          "right": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 901.19,
+            "y": 233.44
+          }
+        }
+      }
+    },
+    {
+      "annotator": "review-ui",
+      "id": "burlington_gold_0300_low_steep_corner_player_identity_002",
+      "operation": "append",
+      "reason": "Human provided player identity or spectator ignore notes.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/burlington_gold_0300_low_steep_corner/tracks.json",
+        "clip_id": "burlington_gold_0300_low_steep_corner",
+        "metric": "player_identity",
+        "path": "/human_review/player_identity",
+        "phase": "phase2"
+      },
+      "value": {
+        "players": {
+          "P1": "near-left"
+        },
+        "spectators_ignore": ""
+      }
+    },
+    {
+      "annotator": "review-ui",
+      "id": "burlington_gold_0300_low_steep_corner_contact_windows_003",
+      "operation": "append",
+      "reason": "Human marked contact candidates or rally/event windows.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/burlington_gold_0300_low_steep_corner/contact_windows.json",
+        "clip_id": "burlington_gold_0300_low_steep_corner",
+        "metric": "contact_windows",
+        "path": "/human_review/events",
+        "phase": "phase5"
+      },
+      "value": {
+        "contacts": [
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 0.574792
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 1.541542
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 2.638546
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 3.749734
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 4.692476
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 6.299122
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 7.456218
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 8.580755
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 9.451522
+          }
+        ],
+        "event_windows": []
+      }
+    },
+    {
+      "annotator": "review-ui",
+      "id": "indoor_doubles_fwuks_0500_long_mid_baseline_calibration_top_net_001",
+      "operation": "append",
+      "reason": "Human reviewed calibration overlay and top-net reference points.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/indoor_doubles_fwuks_0500_long_mid_baseline/court_calibration.json",
+        "clip_id": "indoor_doubles_fwuks_0500_long_mid_baseline",
+        "metric": "calibration_top_net",
+        "path": "/human_review/top_net",
+        "phase": "phase1"
+      },
+      "value": {
+        "court_overlay_ok": "yes",
+        "reviewed_enough": false,
+        "top_net": {
+          "left": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 294.04,
+            "y": 244.57
+          },
+          "notes": "",
+          "right": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 662.78,
+            "y": 244.57
+          }
+        }
+      }
+    },
+    {
+      "annotator": "review-ui",
+      "id": "indoor_doubles_fwuks_0500_long_mid_baseline_court_line_evidence_review_002",
+      "operation": "append",
+      "reason": "Human clicked or classified court line evidence in the browser review UI.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/indoor_doubles_fwuks_0500_long_mid_baseline/court_line_evidence.json",
+        "clip_id": "indoor_doubles_fwuks_0500_long_mid_baseline",
+        "metric": "court_line_evidence_review",
+        "path": "/human_review/court_evidence",
+        "phase": "phase1"
+      },
+      "value": {
+        "notes": "",
+        "point_statuses": {
+          "far_centerline:a": "clicked",
+          "far_centerline:b": "clicked",
+          "far_nvz:a": "clicked",
+          "far_nvz:b": "clicked",
+          "near_centerline:a": "clicked",
+          "near_centerline:b": "clicked",
+          "near_nvz:a": "clicked",
+          "near_nvz:b": "clicked",
+          "top_net:a": "clicked",
+          "top_net:b": "clicked"
+        },
+        "points": {
+          "far_centerline:a": {
+            "endpoint": "a",
+            "evidence_id": "far_centerline",
+            "label": "far centerline point A",
+            "status": "clicked",
+            "target_id": "far_centerline:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 478.9,
+            "y": 257.41
+          },
+          "far_centerline:b": {
+            "endpoint": "b",
+            "evidence_id": "far_centerline",
+            "label": "far centerline point B",
+            "status": "clicked",
+            "target_id": "far_centerline:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 477.79,
+            "y": 278.38
+          },
+          "far_nvz:a": {
+            "endpoint": "a",
+            "evidence_id": "far_nvz",
+            "label": "far nvz point A",
+            "status": "clicked",
+            "target_id": "far_nvz:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 344.28,
+            "y": 279.48
+          },
+          "far_nvz:b": {
+            "endpoint": "b",
+            "evidence_id": "far_nvz",
+            "label": "far nvz point B",
+            "status": "clicked",
+            "target_id": "far_nvz:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 611.31,
+            "y": 278.38
+          },
+          "near_centerline:a": {
+            "endpoint": "a",
+            "evidence_id": "near_centerline",
+            "label": "near centerline point A",
+            "status": "clicked",
+            "target_id": "near_centerline:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 488.83,
+            "y": 452.72
+          },
+          "near_centerline:b": {
+            "endpoint": "b",
+            "evidence_id": "near_centerline",
+            "label": "near centerline point B",
+            "status": "clicked",
+            "target_id": "near_centerline:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 480,
+            "y": 317
+          },
+          "near_nvz:a": {
+            "endpoint": "a",
+            "evidence_id": "near_nvz",
+            "label": "near nvz point A",
+            "status": "clicked",
+            "target_id": "near_nvz:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 285.79,
+            "y": 313.69
+          },
+          "near_nvz:b": {
+            "endpoint": "b",
+            "evidence_id": "near_nvz",
+            "label": "near nvz point B",
+            "status": "clicked",
+            "target_id": "near_nvz:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 673.1,
+            "y": 312.59
+          },
+          "top_net:a": {
+            "endpoint": "a",
+            "evidence_id": "top_net",
+            "label": "top net point A",
+            "status": "clicked",
+            "target_id": "top_net:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 294.62,
+            "y": 244.17
+          },
+          "top_net:b": {
+            "endpoint": "b",
+            "evidence_id": "top_net",
+            "label": "top net point B",
+            "status": "clicked",
+            "target_id": "top_net:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 660.97,
+            "y": 243.07
+          }
+        },
+        "states": {
+          "far_centerline": "confirmed",
+          "far_nvz": "confirmed",
+          "near_centerline": "confirmed",
+          "near_nvz": "confirmed",
+          "top_net": "confirmed"
+        }
+      }
+    },
+    {
+      "annotator": "review-ui",
+      "id": "indoor_doubles_fwuks_0500_long_mid_baseline_contact_windows_003",
+      "operation": "append",
+      "reason": "Human marked contact candidates or rally/event windows.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/indoor_doubles_fwuks_0500_long_mid_baseline/contact_windows.json",
+        "clip_id": "indoor_doubles_fwuks_0500_long_mid_baseline",
+        "metric": "contact_windows",
+        "path": "/human_review/events",
+        "phase": "phase5"
+      },
+      "value": {
+        "contacts": [
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 0
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 2.365504
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 2.735597
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 3.375413
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 4.009338
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 5.360806
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 6.579294
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 7.840486
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 8.94158
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 9.576199
+          }
+        ],
+        "event_windows": []
+      }
+    },
+    {
+      "annotator": "review-ui",
+      "id": "outdoor_webcam_iynbd_1500_long_high_baseline_calibration_top_net_001",
+      "operation": "append",
+      "reason": "Human reviewed calibration overlay and top-net reference points.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/outdoor_webcam_iynbd_1500_long_high_baseline/court_calibration.json",
+        "clip_id": "outdoor_webcam_iynbd_1500_long_high_baseline",
+        "metric": "calibration_top_net",
+        "path": "/human_review/top_net",
+        "phase": "phase1"
+      },
+      "value": {
+        "court_overlay_ok": "yes",
+        "reviewed_enough": false,
+        "top_net": {
+          "left": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 268.61,
+            "y": 174.64
+          },
+          "notes": "",
+          "right": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 688.21,
+            "y": 173.05
+          }
+        }
+      }
+    },
+    {
+      "annotator": "review-ui",
+      "id": "outdoor_webcam_iynbd_1500_long_high_baseline_court_line_evidence_review_002",
+      "operation": "append",
+      "reason": "Human clicked or classified court line evidence in the browser review UI.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/outdoor_webcam_iynbd_1500_long_high_baseline/court_line_evidence.json",
+        "clip_id": "outdoor_webcam_iynbd_1500_long_high_baseline",
+        "metric": "court_line_evidence_review",
+        "path": "/human_review/court_evidence",
+        "phase": "phase1"
+      },
+      "value": {
+        "notes": "",
+        "point_statuses": {
+          "far_centerline:a": "clicked",
+          "far_centerline:b": "clicked",
+          "far_nvz:a": "clicked",
+          "far_nvz:b": "clicked",
+          "near_centerline:a": "clicked",
+          "near_centerline:b": "clicked",
+          "near_nvz:a": "clicked",
+          "near_nvz:b": "clicked",
+          "top_net:a": "clicked",
+          "top_net:b": "clicked"
+        },
+        "points": {
+          "far_centerline:a": {
+            "endpoint": "a",
+            "evidence_id": "far_centerline",
+            "label": "far centerline point A",
+            "status": "clicked",
+            "target_id": "far_centerline:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 477.79,
+            "y": 158.66
+          },
+          "far_centerline:b": {
+            "endpoint": "b",
+            "evidence_id": "far_centerline",
+            "label": "far centerline point B",
+            "status": "clicked",
+            "target_id": "far_centerline:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 480,
+            "y": 203.9
+          },
+          "far_nvz:a": {
+            "endpoint": "a",
+            "evidence_id": "far_nvz",
+            "label": "far nvz point A",
+            "status": "clicked",
+            "target_id": "far_nvz:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 312.28,
+            "y": 199.48
+          },
+          "far_nvz:b": {
+            "endpoint": "b",
+            "evidence_id": "far_nvz",
+            "label": "far nvz point B",
+            "status": "clicked",
+            "target_id": "far_nvz:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 643.31,
+            "y": 200.59
+          },
+          "near_centerline:a": {
+            "endpoint": "a",
+            "evidence_id": "near_centerline",
+            "label": "near centerline point A",
+            "status": "clicked",
+            "target_id": "near_centerline:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 476.69,
+            "y": 351.76
+          },
+          "near_centerline:b": {
+            "endpoint": "b",
+            "evidence_id": "near_centerline",
+            "label": "near centerline point B",
+            "status": "clicked",
+            "target_id": "near_centerline:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 476.69,
+            "y": 275.62
+          },
+          "near_nvz:a": {
+            "endpoint": "a",
+            "evidence_id": "near_nvz",
+            "label": "near nvz point A",
+            "status": "clicked",
+            "target_id": "near_nvz:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 279.17,
+            "y": 257.97
+          },
+          "near_nvz:b": {
+            "endpoint": "b",
+            "evidence_id": "near_nvz",
+            "label": "near nvz point B",
+            "status": "clicked",
+            "target_id": "near_nvz:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 676.41,
+            "y": 257.97
+          },
+          "top_net:a": {
+            "endpoint": "a",
+            "evidence_id": "top_net",
+            "label": "top net point A",
+            "status": "clicked",
+            "target_id": "top_net:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 271.45,
+            "y": 175.21
+          },
+          "top_net:b": {
+            "endpoint": "b",
+            "evidence_id": "top_net",
+            "label": "top net point B",
+            "status": "clicked",
+            "target_id": "top_net:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 683.03,
+            "y": 173
+          }
+        },
+        "states": {
+          "far_centerline": "confirmed",
+          "far_nvz": "confirmed",
+          "near_centerline": "confirmed",
+          "near_nvz": "confirmed",
+          "top_net": "confirmed"
+        }
+      }
+    },
+    {
+      "annotator": "review-ui",
+      "id": "outdoor_webcam_iynbd_1500_long_high_baseline_contact_windows_003",
+      "operation": "append",
+      "reason": "Human marked contact candidates or rally/event windows.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/outdoor_webcam_iynbd_1500_long_high_baseline/contact_windows.json",
+        "clip_id": "outdoor_webcam_iynbd_1500_long_high_baseline",
+        "metric": "contact_windows",
+        "path": "/human_review/events",
+        "phase": "phase5"
+      },
+      "value": {
+        "contacts": [
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 3.066663
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 4.3104
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 5.878669
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 6.542164
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 7.164717
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 8.215624
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 8.611665
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 9.091194
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 9.969517
+          }
+        ],
+        "event_windows": []
+      }
+    },
+    {
+      "annotator": "review-ui",
+      "id": "wolverine_mixed_0200_mid_steep_corner_calibration_top_net_001",
+      "operation": "append",
+      "reason": "Human reviewed calibration overlay and top-net reference points.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+        "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+        "metric": "calibration_top_net",
+        "path": "/human_review/top_net",
+        "phase": "phase1"
+      },
+      "value": {
+        "court_overlay_ok": "yes",
+        "reviewed_enough": false,
+        "top_net": {
+          "left": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 79.47,
+            "y": 169.87
+          },
+          "notes": "",
+          "right": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 514.97,
+            "y": 141.26
+          }
+        }
+      }
+    },
+    {
+      "annotator": "review-ui",
+      "id": "wolverine_mixed_0200_mid_steep_corner_court_line_evidence_review_002",
+      "operation": "append",
+      "reason": "Human clicked or classified court line evidence in the browser review UI.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/wolverine_mixed_0200_mid_steep_corner/court_line_evidence.json",
+        "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+        "metric": "court_line_evidence_review",
+        "path": "/human_review/court_evidence",
+        "phase": "phase1"
+      },
+      "value": {
+        "notes": "",
+        "point_statuses": {
+          "far_centerline:a": "clicked",
+          "far_centerline:b": "clicked",
+          "far_nvz:a": "clicked",
+          "far_nvz:b": "clicked",
+          "near_centerline:a": "clicked",
+          "near_centerline:b": "clicked",
+          "near_nvz:a": "clicked",
+          "near_nvz:b": "clicked",
+          "top_net:a": "clicked",
+          "top_net:b": "clicked"
+        },
+        "points": {
+          "far_centerline:a": {
+            "endpoint": "a",
+            "evidence_id": "far_centerline",
+            "label": "far centerline point A",
+            "status": "clicked",
+            "target_id": "far_centerline:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 273.66,
+            "y": 199.48
+          },
+          "far_centerline:b": {
+            "endpoint": "b",
+            "evidence_id": "far_centerline",
+            "label": "far centerline point B",
+            "status": "clicked",
+            "target_id": "far_centerline:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 196.41,
+            "y": 174.1
+          },
+          "far_nvz:a": {
+            "endpoint": "a",
+            "evidence_id": "far_nvz",
+            "label": "far nvz point A",
+            "status": "clicked",
+            "target_id": "far_nvz:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 104.83,
+            "y": 219.34
+          },
+          "far_nvz:b": {
+            "endpoint": "b",
+            "evidence_id": "far_nvz",
+            "label": "far nvz point B",
+            "status": "clicked",
+            "target_id": "far_nvz:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 403.86,
+            "y": 186.24
+          },
+          "near_centerline:a": {
+            "endpoint": "a",
+            "evidence_id": "near_centerline",
+            "label": "near centerline point A",
+            "status": "clicked",
+            "target_id": "near_centerline:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 784.55,
+            "y": 327.48
+          },
+          "near_centerline:b": {
+            "endpoint": "b",
+            "evidence_id": "near_centerline",
+            "label": "near centerline point B",
+            "status": "clicked",
+            "target_id": "near_centerline:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 442.48,
+            "y": 240.31
+          },
+          "near_nvz:a": {
+            "endpoint": "a",
+            "evidence_id": "near_nvz",
+            "label": "near nvz point A",
+            "status": "clicked",
+            "target_id": "near_nvz:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 176.55,
+            "y": 278.93
+          },
+          "near_nvz:b": {
+            "endpoint": "b",
+            "evidence_id": "near_nvz",
+            "label": "near nvz point B",
+            "status": "clicked",
+            "target_id": "near_nvz:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 589.24,
+            "y": 207.21
+          },
+          "top_net:a": {
+            "endpoint": "a",
+            "evidence_id": "top_net",
+            "label": "top net point A",
+            "status": "clicked",
+            "target_id": "top_net:a",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 87.17,
+            "y": 171.9
+          },
+          "top_net:b": {
+            "endpoint": "b",
+            "evidence_id": "top_net",
+            "label": "top net point B",
+            "status": "clicked",
+            "target_id": "top_net:b",
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 515.31,
+            "y": 142.1
+          }
+        },
+        "states": {
+          "far_centerline": "confirmed",
+          "far_nvz": "confirmed",
+          "near_centerline": "confirmed",
+          "near_nvz": "confirmed",
+          "top_net": "confirmed"
+        }
+      }
+    },
+    {
+      "annotator": "review-ui",
+      "id": "wolverine_mixed_0200_mid_steep_corner_contact_windows_003",
+      "operation": "append",
+      "reason": "Human marked contact candidates or rally/event windows.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/wolverine_mixed_0200_mid_steep_corner/contact_windows.json",
+        "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+        "metric": "contact_windows",
+        "path": "/human_review/events",
+        "phase": "phase5"
+      },
+      "value": {
+        "contacts": [
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 2.428779
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 3.691737
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 5.714947
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 6.696144
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 7.506337
+          },
+          {
+            "note": "",
+            "player": "P1",
+            "time_s": 8.42099
+          }
+        ],
+        "event_windows": []
+      }
+    }
+  ],
+  "created_at": "2026-06-28T20:04:30.711463Z",
+  "description": "Corrections exported from the local pickleball browser review UI.",
+  "manifest_id": "pickleball_cv_review_20260628T200430Z_corrections",
+  "schema_version": 1
+}

@@ -6,6 +6,8 @@ from threed.racketsport import shot_classifier as sc
 def test_taxonomy_matches_pickleball_shot_dataset_labels():
     assert sc.ALLOWED_SHOT_LABELS == (
         "serve",
+        "fh_shot",
+        "bh_shot",
         "fh_drive",
         "bh_drive",
         "dink",
@@ -159,9 +161,9 @@ def test_prediction_gating_accepts_only_allowed_confident_labels():
         "type_conf": 0.44,
         "gated": True,
         "gate_reasons": [
-            "label must be one of bh_drive, dink, fh_drive, lob, overhead, reset_block, serve, third_shot_drop",
+            "label must be one of bh_drive, bh_shot, dink, fh_drive, fh_shot, lob, overhead, reset_block, serve, third_shot_drop",
             "confidence below 0.65",
-            "top2/0 label must be one of bh_drive, dink, fh_drive, lob, overhead, reset_block, serve, third_shot_drop",
+            "top2/0 label must be one of bh_drive, bh_shot, dink, fh_drive, fh_shot, lob, overhead, reset_block, serve, third_shot_drop",
         ],
         "original_type": "smash",
         "top2": [

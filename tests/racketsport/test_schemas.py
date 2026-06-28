@@ -9,6 +9,8 @@ from threed.racketsport.schemas import (
     CaptureSidecar,
     CourtCalibration,
     CourtLineEvidence,
+    ContactWindows,
+    RacketCandidates,
     PhaseEvalMetrics,
     RacketPose,
     validate_artifact_file,
@@ -22,8 +24,14 @@ def test_capture_sidecar_schema_accepts_documented_payload(tmp_path):
         "device_model": "iPhone16,2",
         "fps": 120,
         "format": "hevc",
-        "resolution": [1920, 1080],
-        "orientation": "landscape",
+        "resolution": [1080, 1920],
+        "orientation": "portrait",
+        "capture_device_orientation": "portrait",
+        "video_rotation_angle_degrees": 0,
+        "recording_started_at": "2026-06-28T20:30:00Z",
+        "recording_duration_s": 4.5,
+        "camera_position": "back",
+        "camera_lens": "wide",
         "locked": {
             "exposure_s": 0.001,
             "iso": 320,
@@ -56,6 +64,10 @@ def test_capture_sidecar_schema_accepts_documented_payload(tmp_path):
 
     assert isinstance(parsed, CaptureSidecar)
     assert parsed.fps == 120
+    assert parsed.orientation == "portrait"
+    assert parsed.capture_device_orientation == "portrait"
+    assert parsed.video_rotation_angle_degrees == 0
+    assert parsed.recording_duration_s == 4.5
     assert parsed.capture_quality.grade == "good"
 
 
@@ -134,6 +146,31 @@ def test_phase_eval_metrics_schema_is_registered(tmp_path):
     assert parsed.clips[0].missing_artifacts == ["court_calibration.json"]
 
 
+def test_contact_windows_rejects_out_of_range_human_review_source() -> None:
+    payload = {
+        "schema_version": 1,
+        "events": [
+            {
+                "type": "contact",
+                "t": 1.0,
+                "frame": 60,
+                "player_id": 1,
+                "confidence": 0.9,
+                "sources": {
+                    "audio": 0.0,
+                    "wrist_vel": 0.0,
+                    "ball_inflection": 0.0,
+                    "human_review": 1.5,
+                },
+                "window": {"t0": 0.92, "t1": 1.08, "importance": 0.9},
+            }
+        ],
+    }
+
+    with pytest.raises(ValidationError):
+        ContactWindows.model_validate(payload)
+
+
 def test_court_line_evidence_schema_validates_semantic_lines_and_net(tmp_path):
     payload = {
         "schema_version": 1,
@@ -191,6 +228,102 @@ def test_court_line_evidence_schema_validates_semantic_lines_and_net(tmp_path):
     assert parsed.net_observations[0].image_points[1] == pytest.approx([500.0, 245.0])
 
 
+def test_racket_pose_schema_records_world_frame_units_source_and_projection_error():
+    payload = {
+        "schema_version": 1,
+        "fps": 120.0,
+        "world_frame": "court_Z0",
+        "translation_unit": "m",
+        "players": [
+            {
+                "id": 1,
+                "paddle_dims_in": {"length": 15.5, "width": 7.5},
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "pose_se3": {
+                            "R": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+                            "t": [0.4, -0.2, 1.1],
+                        },
+                        "conf": 0.91,
+                        "world_frame": "court_Z0",
+                        "translation_unit": "m",
+                        "source": "pnp_ippe:court_Z0",
+                        "reprojection_error_px": 1.7,
+                        "ambiguous": False,
+                    }
+                ],
+                "contacts": [],
+            }
+        ],
+    }
+
+    parsed = RacketPose.model_validate(payload)
+
+    assert parsed.world_frame == "court_Z0"
+    assert parsed.translation_unit == "m"
+    frame = parsed.players[0].frames[0]
+    assert frame.world_frame == "court_Z0"
+    assert frame.translation_unit == "m"
+    assert frame.source == "pnp_ippe:court_Z0"
+    assert frame.reprojection_error_px == pytest.approx(1.7)
+
+
+def test_racket_candidates_schema_is_registered_and_validates_four_corner_inputs(tmp_path):
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_racket_candidates",
+        "fps": 120.0,
+        "players": [
+            {
+                "id": 1,
+                "paddle_dims_in": {"length": 15.5, "width": 7.5},
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "corners_px": [[10.0, 20.0], [30.0, 21.0], [31.0, 70.0], [11.0, 69.0]],
+                        "conf": 0.82,
+                        "source": "manual_four_corners",
+                    }
+                ],
+            }
+        ],
+    }
+    path = tmp_path / "racket_candidates.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    parsed = validate_artifact_file("racket_candidates", path)
+
+    assert isinstance(parsed, RacketCandidates)
+    assert parsed.artifact_type == "racketsport_racket_candidates"
+    assert parsed.players[0].frames[0].corners_px[2] == pytest.approx([31.0, 70.0])
+
+
+def test_racket_candidates_schema_rejects_bad_corner_contract():
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_racket_candidates",
+        "fps": 120.0,
+        "players": [
+            {
+                "id": 1,
+                "paddle_dims_in": {"length": 15.5, "width": 7.5},
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "corners_px": [[10.0, 20.0], [30.0, 21.0], [31.0, 70.0]],
+                        "conf": 1.2,
+                        "source": "manual_four_corners",
+                    }
+                ],
+            }
+        ],
+    }
+
+    with pytest.raises(ValidationError):
+        RacketCandidates.model_validate(payload)
+
+
 def test_racket_pose_rejects_malformed_geometry():
     payload = {
         "schema_version": 1,
@@ -206,4 +339,31 @@ def test_racket_pose_rejects_malformed_geometry():
     }
 
     with pytest.raises(ValidationError):
+        RacketPose.model_validate(payload)
+
+
+def test_racket_pose_rejects_non_orthonormal_rotation_matrix():
+    payload = {
+        "schema_version": 1,
+        "fps": 120.0,
+        "players": [
+            {
+                "id": 1,
+                "paddle_dims_in": {"length": 15.5, "width": 7.5},
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "pose_se3": {
+                            "R": [[2.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+                            "t": [0.0, 0.0, 1.0],
+                        },
+                        "conf": 0.91,
+                    }
+                ],
+                "contacts": [],
+            }
+        ],
+    }
+
+    with pytest.raises(ValidationError, match="orthonormal"):
         RacketPose.model_validate(payload)

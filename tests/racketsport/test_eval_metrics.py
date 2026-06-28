@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from threed.racketsport.replay_export import build_replay_review_export_from_virtual_world, write_replay_scene
 from threed.racketsport.schemas import (
     CameraIntrinsics,
     CaptureQuality,
@@ -62,6 +63,30 @@ def _write_calibration_artifacts(run_dir: Path, *, median: float = 2.5, p95: flo
                 "endpoints": [[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]],
                 "center_height_in": 34.0,
                 "post_height_in": 36.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "court_line_evidence.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "sport": "pickleball",
+                "source": "auto_hough_template",
+                "line_observations": [],
+                "keypoint_observations": [],
+                "net_observations": [],
+                "aggregate": {
+                    "accepted_line_ids": ["near_nvz", "far_nvz", "near_centerline", "far_centerline"],
+                    "rejected_line_ids": [],
+                    "missing_required_line_ids": [],
+                    "missing_required_net_ids": [],
+                    "mean_residual_px": 2.0,
+                    "p95_residual_px": 4.0,
+                    "temporal_stability_px": 3.0,
+                    "auto_calibration_ready": True,
+                    "reasons": [],
+                },
             }
         ),
         encoding="utf-8",
@@ -335,17 +360,56 @@ def _write_copy_artifacts(run_dir: Path) -> None:
 
 def _write_replay_artifacts(run_dir: Path) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / "court_pickleball.glb").write_bytes(b"glb")
-    (run_dir / "point_3.glb").write_bytes(b"glb")
-    replay_scene = {
+    scene = build_replay_review_export_from_virtual_world(_replay_virtual_world_payload(), export_root=run_dir, point_id=3)
+    write_replay_scene(run_dir / "replay_scene.json", scene)
+
+
+def _replay_virtual_world_payload() -> dict:
+    return {
         "schema_version": 1,
+        "artifact_type": "racketsport_virtual_world",
         "world_frame": "court_Z0",
         "fps": 30.0,
-        "court_glb": "court_pickleball.glb",
-        "players": [1, 2],
-        "points": [{"id": 3, "t0": 31.2, "t1": 41.2, "glb_url": "point_3.glb", "size_mb": 9.4}],
+        "court": {
+            "sport": "pickleball",
+            "coordinate_frame": "court_Z0",
+            "line_segments": {"baseline": [[-3.05, 0.0, 0.0], [3.05, 0.0, 0.0]]},
+            "net": {"endpoints": [[-3.05, 6.705, 0.91], [3.05, 6.705, 0.91]]},
+        },
+        "players": [
+            {
+                "id": 1,
+                "side": "near",
+                "role": "left",
+                "frames": [
+                    {"t": 0.0, "track_world_xy": [0.0, 1.0], "joints_world": [[0.0, 1.0, 1.2]]},
+                    {"t": 1.0, "track_world_xy": [0.0, 2.0], "joints_world": [[0.0, 2.0, 1.1]]},
+                ],
+            },
+            {
+                "id": 2,
+                "side": "far",
+                "role": "right",
+                "frames": [
+                    {"t": 0.0, "track_world_xy": [1.0, 10.0], "joints_world": [[1.0, 10.0, 1.2]]},
+                    {"t": 1.0, "track_world_xy": [1.0, 9.0], "joints_world": [[1.0, 9.0, 1.1]]},
+                ],
+            },
+        ],
+        "ball": {"source": "fixture", "frames": [{"t": 0.0, "world_xyz": [0.0, 6.0, 0.3], "visible": True}]},
+        "paddles": [
+            {
+                "player_id": 1,
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "mesh_vertices_world": [[0.0, 0.0, 0.0], [0.1, 0.0, 0.0], [0.1, 0.2, 0.0]],
+                        "mesh_faces": [[0, 1, 2]],
+                    }
+                ],
+            }
+        ],
     }
-    (run_dir / "replay_scene.json").write_text(json.dumps(replay_scene), encoding="utf-8")
 
 
 def _write_e2e_artifacts(run_dir: Path) -> None:
@@ -395,6 +459,8 @@ def test_calib_eval_passes_when_ready_clip_has_required_artifacts(tmp_path):
     )
     assert payload["clips"][0]["metrics"]["reprojection_p95_px"]["value"] == 7.0
     assert payload["clips"][0]["metrics"]["reprojection_p95_px"]["gate"] == "calibration_reprojection_p95_px: < 15.0"
+    assert payload["clips"][0]["metrics"]["auto_calibration_ready"]["value"] is True
+    assert payload["clips"][0]["metrics"]["auto_calibration_ready"]["passed"] is True
     validate_artifact_file("phase_eval_metrics", root / "metrics.json")
 
 
@@ -426,6 +492,42 @@ def test_calib_eval_blocks_when_required_run_artifact_is_missing(tmp_path):
     assert payload["status"] == "blocked"
     assert payload["summary"]["blocked_clips"] == 1
     assert payload["clips"][0]["missing_artifacts"] == ["net_plane.json"]
+
+
+def test_calib_eval_fails_when_auto_court_line_evidence_is_not_ready(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase1"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_calibration_artifacts(root / "clip_001")
+    evidence_path = root / "clip_001" / "court_line_evidence.json"
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    evidence["aggregate"]["auto_calibration_ready"] = False
+    evidence["aggregate"]["missing_required_line_ids"] = ["near_centerline"]
+    evidence["aggregate"]["reasons"] = ["missing_near_centerline"]
+    evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.calib_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "fail"
+    assert payload["summary"]["failed_clips"] == 1
+    assert payload["clips"][0]["metrics"]["auto_calibration_ready"]["passed"] is False
+    assert "missing_near_centerline" in payload["clips"][0]["notes"]
 
 
 def test_calib_eval_marks_missing_labels_not_measured(tmp_path):
@@ -779,7 +881,7 @@ def test_ball_event_eval_blocks_when_contact_windows_are_missing(tmp_path):
     assert payload["clips"][0]["missing_artifacts"] == ["contact_windows.json"]
 
 
-def test_racket_eval_passes_when_ready_clip_has_racket_pose_artifact(tmp_path):
+def test_racket_eval_is_not_measured_without_reference_pose_labels(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase6"
     _write_ready_clip(labels_root, "clip_001")
@@ -797,18 +899,21 @@ def test_racket_eval_passes_when_ready_clip_has_racket_pose_artifact(tmp_path):
             "--out",
             str(root / "metrics.json"),
         ],
-        check=True,
+        check=False,
         capture_output=True,
         text=True,
     )
 
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
-    assert json.loads(completed.stdout)["status"] == "pass"
+    assert completed.returncode == 1
+    assert json.loads(completed.stdout)["status"] == "not_measured"
     assert payload["phase"] == "phase6"
     assert payload["required_artifacts"] == ["racket_pose.json"]
+    assert payload["status"] == "not_measured"
     assert payload["clips"][0]["metrics"]["racket_players"]["value"] == 1
     assert payload["clips"][0]["metrics"]["racket_frames"]["value"] == 1
     assert payload["clips"][0]["metrics"]["racket_contacts"]["value"] == 2
+    assert payload["clips"][0]["metrics"]["racket_face_angle_p90_error_deg"]["status"] == "not_measured"
     validate_artifact_file("phase_eval_metrics", root / "metrics.json")
 
 
@@ -1061,7 +1166,8 @@ def test_replay_eval_passes_when_ready_clip_has_replay_scene_and_glbs(tmp_path):
     assert payload["clips"][0]["metrics"]["players"]["value"] == 2
     assert payload["clips"][0]["metrics"]["points"]["value"] == 1
     assert payload["clips"][0]["metrics"]["glb_files_present"]["value"] == 2
-    assert payload["clips"][0]["metrics"]["largest_point_glb_mb"]["value"] == 9.4
+    assert payload["clips"][0]["metrics"]["glb_files_valid"]["value"] == 2
+    assert payload["clips"][0]["metrics"]["largest_point_glb_mb"]["value"] > 0
     validate_artifact_file("phase_eval_metrics", root / "metrics.json")
 
 
@@ -1070,7 +1176,7 @@ def test_replay_eval_fails_when_referenced_point_glb_is_missing(tmp_path):
     root = tmp_path / "runs" / "phase10"
     _write_ready_clip(labels_root, "clip_001")
     _write_replay_artifacts(root / "clip_001")
-    (root / "clip_001" / "point_3.glb").unlink()
+    (root / "clip_001" / "points" / "point_003_review.glb").unlink()
 
     subprocess.run(
         [
@@ -1120,9 +1226,10 @@ def test_e2e_eval_passes_when_ready_clip_has_all_major_artifacts(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert json.loads(completed.stdout)["status"] == "pass"
     assert payload["phase"] == "phase11"
-    assert payload["clips"][0]["metrics"]["required_artifacts_present"]["value"] == 13
-    assert payload["clips"][0]["metrics"]["required_artifacts_total"]["value"] == 13
+    assert payload["clips"][0]["metrics"]["required_artifacts_present"]["value"] == 14
+    assert payload["clips"][0]["metrics"]["required_artifacts_total"]["value"] == 14
     assert payload["clips"][0]["metrics"]["referenced_glb_files_present"]["value"] == 2
+    assert payload["clips"][0]["metrics"]["referenced_glb_files_valid"]["value"] == 2
     validate_artifact_file("phase_eval_metrics", root / "metrics.json")
 
 

@@ -1,2 +1,0 @@
-"""Replay scene manifest assembly."""
-

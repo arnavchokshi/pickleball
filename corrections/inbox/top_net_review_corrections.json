@@ -1,0 +1,148 @@
+{
+  "corrections": [
+    {
+      "annotator": "review-ui-top-net-only",
+      "id": "burlington_gold_0300_low_steep_corner_calibration_top_net_001",
+      "operation": "append",
+      "reason": "Human reviewed calibration overlay and top-net reference points.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/burlington_gold_0300_low_steep_corner/court_calibration.json",
+        "clip_id": "burlington_gold_0300_low_steep_corner",
+        "metric": "calibration_top_net",
+        "path": "/human_review/top_net",
+        "phase": "phase1"
+      },
+      "value": {
+        "court_overlay_ok": "yes",
+        "reviewed_enough": true,
+        "top_net": {
+          "left": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 527.68,
+            "y": 225.5
+          },
+          "notes": "",
+          "right": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 901.19,
+            "y": 233.44
+          }
+        }
+      }
+    },
+    {
+      "annotator": "review-ui-top-net-only",
+      "id": "indoor_doubles_fwuks_0500_long_mid_baseline_calibration_top_net_001",
+      "operation": "append",
+      "reason": "Human reviewed calibration overlay and top-net reference points.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/indoor_doubles_fwuks_0500_long_mid_baseline/court_calibration.json",
+        "clip_id": "indoor_doubles_fwuks_0500_long_mid_baseline",
+        "metric": "calibration_top_net",
+        "path": "/human_review/top_net",
+        "phase": "phase1"
+      },
+      "value": {
+        "court_overlay_ok": "yes",
+        "reviewed_enough": true,
+        "top_net": {
+          "left": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 294.04,
+            "y": 244.57
+          },
+          "notes": "",
+          "right": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 662.78,
+            "y": 244.57
+          }
+        }
+      }
+    },
+    {
+      "annotator": "review-ui-top-net-only",
+      "id": "outdoor_webcam_iynbd_1500_long_high_baseline_calibration_top_net_001",
+      "operation": "append",
+      "reason": "Human reviewed calibration overlay and top-net reference points.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/outdoor_webcam_iynbd_1500_long_high_baseline/court_calibration.json",
+        "clip_id": "outdoor_webcam_iynbd_1500_long_high_baseline",
+        "metric": "calibration_top_net",
+        "path": "/human_review/top_net",
+        "phase": "phase1"
+      },
+      "value": {
+        "court_overlay_ok": "yes",
+        "reviewed_enough": true,
+        "top_net": {
+          "left": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 268.61,
+            "y": 174.64
+          },
+          "notes": "",
+          "right": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 688.21,
+            "y": 173.05
+          }
+        }
+      }
+    },
+    {
+      "annotator": "review-ui-top-net-only",
+      "id": "wolverine_mixed_0200_mid_steep_corner_calibration_top_net_001",
+      "operation": "append",
+      "reason": "Human reviewed calibration overlay and top-net reference points.",
+      "status": "pending",
+      "target": {
+        "artifact": "runs/eval0/prototype_gate_h100_v2/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+        "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+        "metric": "calibration_top_net",
+        "path": "/human_review/top_net",
+        "phase": "phase1"
+      },
+      "value": {
+        "court_overlay_ok": "yes",
+        "reviewed_enough": true,
+        "top_net": {
+          "left": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 79.47,
+            "y": 169.87
+          },
+          "notes": "",
+          "right": {
+            "time_s": 0,
+            "video_height": 540,
+            "video_width": 960,
+            "x": 514.97,
+            "y": 141.26
+          }
+        }
+      }
+    }
+  ],
+  "created_at": "2026-06-28T17:49:19Z",
+  "description": "Corrections exported from the local pickleball browser review UI.",
+  "manifest_id": "top_net_review_20260628",
+  "schema_version": 1
+}

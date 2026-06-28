@@ -103,9 +103,11 @@ def test_benchmark_candidate_scores_visible_hits_hidden_false_positives_and_jitt
     assert summary["label_metrics"]["visible_recall_at_5px"] == pytest.approx(0.5)
     assert summary["label_metrics"]["visible_recall_at_20px"] == pytest.approx(0.5)
     assert summary["label_metrics"]["hidden_false_positive_count"] == 1
+    assert summary["label_metrics"]["hidden_false_positives_per_minute"] == pytest.approx(600.0)
     assert summary["label_metrics"]["hidden_true_negative_rate"] == pytest.approx(0.0)
     assert summary["label_metrics"]["label_f1_at_20px"] == pytest.approx(0.5)
     assert summary["jitter_metrics"]["teleport_count"] == 2
+    assert summary["jitter_metrics"]["max_visible_gap_frames"] == 1
     assert summary["quality_score"] < 0.5
 
 
@@ -129,7 +131,75 @@ def test_write_benchmark_aggregates_candidates_and_markdown(tmp_path: Path) -> N
     )
 
     assert summary["aggregate"]["raw"]["clip_count"] == 1
+    assert summary["aggregate"]["raw"]["total_visible_label_count"] == 2
+    assert summary["aggregate"]["raw"]["total_visible_hit_count"] == 1
+    assert summary["aggregate"]["raw"]["micro_visible_hit_recall"] == pytest.approx(0.5)
+    assert summary["aggregate"]["raw"]["total_hidden_label_count"] == 1
+    assert summary["aggregate"]["raw"]["total_hidden_false_positive_count"] == 1
+    assert summary["aggregate"]["raw"]["micro_hidden_false_positive_rate"] == pytest.approx(1.0)
     assert "# Ball Tracker Benchmark" in (tmp_path / "summary.md").read_text(encoding="utf-8")
+
+
+def test_quality_score_penalizes_excessive_visible_gaps(tmp_path: Path) -> None:
+    clicks_path = tmp_path / "ball_points.json"
+    clicks_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_ball_click_review",
+                "status": "human_reviewed",
+                "clip": "clip_a",
+                "target_file": "ball.json",
+                "coordinate_frame": "image_pixels_video_space",
+                "items": [
+                    {
+                        "review_id": "ball_frame_000000",
+                        "frame_index": 0,
+                        "t": 0.0,
+                        "image": "frame_000000.jpg",
+                        "ball_xy": [11.0, 10.0],
+                        "visible": True,
+                        "visibility": "visible",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    dense_track = tmp_path / "dense.json"
+    sparse_track = tmp_path / "sparse.json"
+    dense_frames = [
+        {"t": index / 30.0, "xy": [11.0, 10.0], "conf": 0.9, "visible": True}
+        for index in range(61)
+    ]
+    sparse_frames = [
+        {
+            "t": index / 30.0,
+            "xy": [11.0, 10.0],
+            "conf": 0.9 if index in {0, 60} else 0.0,
+            "visible": index in {0, 60},
+        }
+        for index in range(61)
+    ]
+    for path, frames in ((dense_track, dense_frames), (sparse_track, sparse_frames)):
+        path.write_text(
+            json.dumps({"schema_version": 1, "fps": 30.0, "source": "tracknet", "frames": frames, "bounces": []}),
+            encoding="utf-8",
+        )
+
+    dense = benchmark_ball_track_candidate(
+        ball_track_path=dense_track,
+        clicks_path=clicks_path,
+        candidate_name="dense",
+    )
+    sparse = benchmark_ball_track_candidate(
+        ball_track_path=sparse_track,
+        clicks_path=clicks_path,
+        candidate_name="sparse",
+    )
+
+    assert sparse["jitter_metrics"]["max_visible_gap_frames"] == 60
+    assert sparse["quality_score"] < dense["quality_score"]
 
 
 def test_ball_benchmark_cli_expands_candidate_specs(tmp_path: Path) -> None:

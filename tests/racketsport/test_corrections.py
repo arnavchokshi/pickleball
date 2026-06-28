@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from scripts.racketsport.build_corrections_queue import build_corrections_queue, discover_correction_manifests
+from scripts.racketsport.export_review_inputs_to_corrections import build_corrections_from_review_inputs
 from scripts.racketsport.validate_corrections import validate_manifest
 
 
@@ -55,6 +56,17 @@ def test_validate_manifest_accepts_strict_generic_corrections(tmp_path):
     }
 
 
+def test_validate_manifest_accepts_empty_review_template(tmp_path):
+    payload = _valid_manifest()
+    payload["corrections"] = []
+    manifest_path = _write_manifest(tmp_path / "corrections.json", payload)
+
+    summary = validate_manifest(manifest_path)
+
+    assert summary["correction_count"] == 0
+    assert summary["correction_ids"] == []
+
+
 def test_validate_manifest_rejects_extra_fields_and_missing_values(tmp_path):
     payload = _valid_manifest()
     payload["unexpected"] = True
@@ -94,6 +106,18 @@ def test_validate_manifest_rejects_unknown_correction_status(tmp_path):
         validate_manifest(manifest_path)
 
     assert "status: must be one of accepted, pending, rejected" in str(excinfo.value)
+
+
+def test_corrections_json_schema_documents_validator_fields():
+    schema = json.loads(Path("corrections/schema.json").read_text(encoding="utf-8"))
+
+    correction_properties = schema["$defs"]["correction"]["properties"]
+    target_properties = schema["$defs"]["target"]["properties"]
+
+    assert "minItems" not in schema["properties"]["corrections"]
+    assert correction_properties["status"]["enum"] == ["accepted", "pending", "rejected"]
+    assert "phase" in target_properties
+    assert "metric" in target_properties
 
 
 def test_validate_corrections_cli_emits_json_summary(tmp_path):
@@ -318,3 +342,124 @@ def test_build_corrections_queue_cli_writes_training_manifest_candidates(tmp_pat
 
     assert completed.returncode == 0
     assert json.loads(training_out.read_text(encoding="utf-8"))["accepted_correction_count"] == 1
+
+
+def test_export_review_inputs_to_corrections_groups_human_review_notes(tmp_path):
+    review_input = {
+        "schema_version": 1,
+        "review_type": "pickleball_cv_blocker_review",
+        "server_saved_at_utc": "2026-06-28T09:00:00+00:00",
+        "global": {
+            "long_clip_policy": "fixed_windows",
+            "artifact_source_of_truth": "h100",
+            "artifact_notes": "Use H100 overlays.",
+            "racket_policy": "approved_examples",
+            "aruco_notes": "",
+        },
+        "clips": {
+            "clip_001": {
+                "reviewed_enough": True,
+                "court_overlay_ok": "no",
+                "top_net": {
+                    "left": {"x": 10.0, "y": 20.0},
+                    "right": {"x": 100.0, "y": 21.0},
+                    "notes": "top net is slightly low",
+                },
+                "court_evidence": {
+                    "near_nvz": "confirmed",
+                    "points": {
+                        "near_nvz:a": {
+                            "x": 20.0,
+                            "y": 200.0,
+                            "video_width": 960,
+                            "video_height": 540,
+                            "time_s": 0.0,
+                        }
+                    },
+                    "point_statuses": {"near_nvz:a": "clicked"},
+                    "notes": "",
+                },
+                "players": {"P1": "red shirt near left", "P2": "", "P3": "", "P4": ""},
+                "spectators_ignore": "person on far court",
+                "ball": {"mistakes": [{"kind": "bad_jump", "time_s": 1.25, "note": "neighbor ball"}], "notes": "ball note"},
+                "contacts": [{"player": "P1", "time_s": 1.5, "note": "clear pop"}],
+                "event_windows": [{"start_s": 0.5, "end_s": 3.0, "note": "rally"}],
+                "racket": {"examples": [{"player": "P1", "time_s": 1.5, "note": "face visible"}], "notes": "racket note"},
+                "general_notes": "clip-wide note",
+            }
+        },
+    }
+
+    corrections = build_corrections_from_review_inputs(
+        review_input,
+        manifest_id="review_inputs_export",
+        run_root="runs/eval0/prototype_gate_h100_v2",
+        annotator="review-ui",
+    )
+
+    metrics = [correction["target"]["metric"] for correction in corrections["corrections"]]
+    assert metrics == [
+        "global_review_policy",
+        "calibration_top_net",
+        "court_line_evidence_review",
+        "player_identity",
+        "ball_track_review",
+        "contact_windows",
+        "racket_candidates",
+        "general_review",
+    ]
+    assert corrections["corrections"][1]["target"]["artifact"] == (
+        "runs/eval0/prototype_gate_h100_v2/clip_001/court_calibration.json"
+    )
+    assert corrections["corrections"][2]["target"]["artifact"] == (
+        "runs/eval0/prototype_gate_h100_v2/clip_001/court_line_evidence.json"
+    )
+    assert corrections["corrections"][2]["value"]["points"]["near_nvz:a"]["x"] == 20.0
+    assert corrections["corrections"][6]["value"]["examples"][0]["note"] == "face visible"
+
+    manifest_path = _write_manifest(tmp_path / "corrections.json", corrections)
+    assert validate_manifest(manifest_path)["correction_count"] == 8
+
+
+def test_export_review_inputs_to_corrections_cli_writes_valid_manifest(tmp_path):
+    review_input_path = tmp_path / "review_input.json"
+    out = tmp_path / "corrections" / "review_corrections.json"
+    review_input_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "server_saved_at_utc": "2026-06-28T09:00:00+00:00",
+                "global": {"artifact_source_of_truth": "local"},
+                "clips": {
+                    "clip_001": {
+                        "ball": {"mistakes": [{"kind": "missing_ball", "time_s": 2.0, "note": "gone"}]},
+                        "contacts": [],
+                        "event_windows": [],
+                        "racket": {"examples": []},
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/export_review_inputs_to_corrections.py",
+            "--review-input",
+            str(review_input_path),
+            "--out",
+            str(out),
+            "--manifest-id",
+            "review_input_export",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    assert json.loads(completed.stdout)["correction_count"] == 2
+    assert validate_manifest(out)["manifest_id"] == "review_input_export"

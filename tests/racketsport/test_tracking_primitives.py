@@ -25,6 +25,24 @@ def test_court_polygon_filter_rejects_off_court_people_before_tracking():
     assert filtered == [detections[0]]
 
 
+def test_court_polygon_filter_can_include_runoff_margin_for_players_near_lines():
+    detections = [
+        PersonDetection(
+            bbox_xyxy=(100.0, 100.0, 140.0, 260.0),
+            confidence=0.92,
+            foot_world_xy=[(10.0 * FT_TO_M) + 0.5, 0.0],
+        ),
+        PersonDetection(
+            bbox_xyxy=(500.0, 100.0, 540.0, 260.0),
+            confidence=0.89,
+            foot_world_xy=[(10.0 * FT_TO_M) + 1.5, 0.0],
+        ),
+    ]
+
+    assert court_polygon_filter(detections, sport="pickleball") == []
+    assert court_polygon_filter(detections, sport="pickleball", margin_m=0.75) == [detections[0]]
+
+
 def test_person_detection_from_bbox_uses_bottom_center_as_world_foot_point():
     calibration = CourtCalibration(
         schema_version=1,

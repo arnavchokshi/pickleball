@@ -67,6 +67,31 @@ def test_fusion_keeps_stable_track_adds_verifier_consensus_and_suppresses_unconf
     assert summary["suppressed_primary_count"] == 2
 
 
+def test_fusion_can_veto_unverified_stable_backbone_frame(tmp_path: Path) -> None:
+    primary = tmp_path / "primary.json"
+    stable = tmp_path / "stable.json"
+    verifier = tmp_path / "verifier.json"
+    _write_track(primary, _frames([None, (20, 10), (40, 10)]))
+    _write_track(stable, _frames([(300, 300), (20, 10), (400, 400)]))
+    _write_track(verifier, _frames([None, (22, 11), None]))
+
+    payload, summary = fuse_ball_tracks_with_verifiers(
+        primary_ball_track_path=primary,
+        stable_ball_track_path=stable,
+        verifier_ball_track_paths=[verifier],
+        outlier_distance_px=8.0,
+        require_stable_verifier_support=True,
+    )
+
+    fused = BallTrack.model_validate(payload)
+    assert fused.frames[0].visible is False
+    assert fused.frames[1].visible is True
+    assert fused.frames[1].xy == [20.0, 10.0]
+    assert fused.frames[2].visible is False
+    assert summary["vetoed_stable_count"] == 2
+    assert summary["kept_stable_count"] == 1
+
+
 def test_fusion_cli_writes_schema_valid_output(tmp_path: Path) -> None:
     primary = tmp_path / "primary.json"
     stable = tmp_path / "stable.json"

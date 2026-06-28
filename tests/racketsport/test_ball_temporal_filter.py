@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from threed.racketsport.ball_temporal_filter import (
+    filter_ball_track_ballistic_outliers,
     filter_ball_track_local_trajectory_outliers,
     filter_ball_track_temporal_outliers,
     filter_ball_track_temporal_path,
@@ -143,4 +144,42 @@ def test_local_trajectory_filter_rejects_points_far_from_surrounding_path(tmp_pa
     assert filtered.frames[3].visible is False
     assert filtered.frames[4].visible is True
     assert summary["rejected_local_trajectory_outlier_count"] == 1
+    assert summary["uses_human_clicks"] is False
+
+
+def test_ballistic_filter_preserves_arc_and_rejects_off_arc_false_positive(tmp_path: Path) -> None:
+    track_path = tmp_path / "ball_track.json"
+    frames = []
+    for frame_index in range(11):
+        x = 20.0 + 9.0 * frame_index
+        y = 160.0 - 6.0 * frame_index + 0.85 * frame_index * frame_index
+        if frame_index == 5:
+            x = 450.0
+            y = 450.0
+        frames.append(
+            {
+                "t": frame_index / 60.0,
+                "xy": [x, y],
+                "conf": 0.9,
+                "visible": True,
+            }
+        )
+    track_path.write_text(
+        json.dumps({"schema_version": 1, "fps": 60.0, "source": "tracknet", "frames": frames, "bounces": []}),
+        encoding="utf-8",
+    )
+
+    payload, summary = filter_ball_track_ballistic_outliers(
+        ball_track_path=track_path,
+        window_frames=6,
+        max_residual_px=20.0,
+        min_fit_points=5,
+        max_iterations=2,
+    )
+
+    filtered = BallTrack.model_validate(payload)
+    assert filtered.frames[4].visible is True
+    assert filtered.frames[5].visible is False
+    assert filtered.frames[6].visible is True
+    assert summary["rejected_ballistic_outlier_count"] == 1
     assert summary["uses_human_clicks"] is False

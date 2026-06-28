@@ -1,0 +1,359 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A3BF00012F60000000000001 /* PickleballCore in Frameworks */ = {isa = PBXBuildFile; productRef = A3PD00012F60000000000001 /* PickleballCore */; };
+		A3BF00022F60000000000001 /* PickleballCapture in Frameworks */ = {isa = PBXBuildFile; productRef = A3PD00022F60000000000001 /* PickleballCapture */; };
+		A3BF00032F60000000000001 /* PickleballCalibration in Frameworks */ = {isa = PBXBuildFile; productRef = A3PD00032F60000000000001 /* PickleballCalibration */; };
+		A3BF00042F60000000000001 /* PickleballFastTier in Frameworks */ = {isa = PBXBuildFile; productRef = A3PD00042F60000000000001 /* PickleballFastTier */; };
+		A3BF00052F60000000000001 /* PickleballGuidance in Frameworks */ = {isa = PBXBuildFile; productRef = A3PD00052F60000000000001 /* PickleballGuidance */; };
+		A3BF00062F60000000000001 /* PickleballUpload in Frameworks */ = {isa = PBXBuildFile; productRef = A3PD00062F60000000000001 /* PickleballUpload */; };
+		A3BF00072F60000000000001 /* PickleballReplay in Frameworks */ = {isa = PBXBuildFile; productRef = A3PD00072F60000000000001 /* PickleballReplay */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A3FR00012F60000000000001 /* Pickleball.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pickleball.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A3EX00012F60000000000001 /* Exceptions for "App" folder in "Pickleball" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A3TG00012F60000000000001 /* Pickleball */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		A3RG00012F60000000000001 /* App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A3EX00012F60000000000001 /* Exceptions for "App" folder in "Pickleball" target */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A3BP00022F60000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3BF00012F60000000000001 /* PickleballCore in Frameworks */,
+				A3BF00022F60000000000001 /* PickleballCapture in Frameworks */,
+				A3BF00032F60000000000001 /* PickleballCalibration in Frameworks */,
+				A3BF00042F60000000000001 /* PickleballFastTier in Frameworks */,
+				A3BF00052F60000000000001 /* PickleballGuidance in Frameworks */,
+				A3BF00062F60000000000001 /* PickleballUpload in Frameworks */,
+				A3BF00072F60000000000001 /* PickleballReplay in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A3GR00012F60000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A3RG00012F60000000000001 /* App */,
+				A3GR00022F60000000000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A3GR00022F60000000000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A3FR00012F60000000000001 /* Pickleball.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A3TG00012F60000000000001 /* Pickleball */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A3CL00022F60000000000001 /* Build configuration list for PBXNativeTarget "Pickleball" */;
+			buildPhases = (
+				A3BP00012F60000000000001 /* Sources */,
+				A3BP00022F60000000000001 /* Frameworks */,
+				A3BP00032F60000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A3RG00012F60000000000001 /* App */,
+			);
+			name = Pickleball;
+			packageProductDependencies = (
+				A3PD00012F60000000000001 /* PickleballCore */,
+				A3PD00022F60000000000001 /* PickleballCapture */,
+				A3PD00032F60000000000001 /* PickleballCalibration */,
+				A3PD00042F60000000000001 /* PickleballFastTier */,
+				A3PD00052F60000000000001 /* PickleballGuidance */,
+				A3PD00062F60000000000001 /* PickleballUpload */,
+				A3PD00072F60000000000001 /* PickleballReplay */,
+			);
+			productName = Pickleball;
+			productReference = A3FR00012F60000000000001 /* Pickleball.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A3PR00012F60000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2650;
+				LastUpgradeCheck = 2650;
+				TargetAttributes = {
+					A3TG00012F60000000000001 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+				};
+			};
+			buildConfigurationList = A3CL00012F60000000000001 /* Build configuration list for PBXProject "Pickleball" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A3GR00012F60000000000001;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A3PK00012F60000000000001 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A3GR00022F60000000000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A3TG00012F60000000000001 /* Pickleball */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A3BP00032F60000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A3BP00012F60000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A3BC00012F60000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A3BC00022F60000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A3BC00032F60000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = H59NULCBY3;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Pickleball;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Pickleball needs camera access to record pickleball practice clips.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Pickleball needs microphone access to record paddle contact audio with practice clips.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Pickleball uses device motion to record camera level, gravity, and tripod stability with each capture.";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arnavchokshi.pickleball;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A3BC00042F60000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = H59NULCBY3;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Pickleball;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Pickleball needs camera access to record pickleball practice clips.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Pickleball needs microphone access to record paddle contact audio with practice clips.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Pickleball uses device motion to record camera level, gravity, and tripod stability with each capture.";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arnavchokshi.pickleball;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A3CL00012F60000000000001 /* Build configuration list for PBXProject "Pickleball" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A3BC00012F60000000000001 /* Debug */,
+				A3BC00022F60000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A3CL00022F60000000000001 /* Build configuration list for PBXNativeTarget "Pickleball" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A3BC00032F60000000000001 /* Debug */,
+				A3BC00042F60000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A3PK00012F60000000000001 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A3PD00012F60000000000001 /* PickleballCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3PK00012F60000000000001 /* XCLocalSwiftPackageReference "." */;
+			productName = PickleballCore;
+		};
+		A3PD00022F60000000000001 /* PickleballCapture */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3PK00012F60000000000001 /* XCLocalSwiftPackageReference "." */;
+			productName = PickleballCapture;
+		};
+		A3PD00032F60000000000001 /* PickleballCalibration */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3PK00012F60000000000001 /* XCLocalSwiftPackageReference "." */;
+			productName = PickleballCalibration;
+		};
+		A3PD00042F60000000000001 /* PickleballFastTier */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3PK00012F60000000000001 /* XCLocalSwiftPackageReference "." */;
+			productName = PickleballFastTier;
+		};
+		A3PD00052F60000000000001 /* PickleballGuidance */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3PK00012F60000000000001 /* XCLocalSwiftPackageReference "." */;
+			productName = PickleballGuidance;
+		};
+		A3PD00062F60000000000001 /* PickleballUpload */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3PK00012F60000000000001 /* XCLocalSwiftPackageReference "." */;
+			productName = PickleballUpload;
+		};
+		A3PD00072F60000000000001 /* PickleballReplay */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3PK00012F60000000000001 /* XCLocalSwiftPackageReference "." */;
+			productName = PickleballReplay;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A3PR00012F60000000000001 /* Project object */;
+}

@@ -3,6 +3,31 @@ from __future__ import annotations
 import pytest
 
 from threed.racketsport import worldhmr
+from threed.racketsport.schemas import (
+    CameraIntrinsics,
+    CaptureQuality,
+    CourtCalibration,
+    CourtExtrinsics,
+    ReprojectionError,
+)
+
+
+def _identity_calibration() -> CourtCalibration:
+    return CourtCalibration(
+        schema_version=1,
+        sport="pickleball",
+        homography=[[100.0, 0.0, 1000.0], [0.0, 100.0, 1000.0], [0.0, 0.0, 1.0]],
+        intrinsics=CameraIntrinsics(fx=1000.0, fy=1000.0, cx=960.0, cy=540.0, dist=[], source="manual"),
+        extrinsics=CourtExtrinsics(
+            R=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            t=[0.0, 0.0, 0.0],
+            camera_height_m=1.5,
+        ),
+        reprojection_error_px=ReprojectionError(median=0.0, p95=0.0),
+        capture_quality=CaptureQuality(grade="good", reasons=[]),
+        image_pts=[],
+        world_pts=[],
+    )
 
 
 def test_snap_player_translation_to_court_projects_root_and_mesh_without_mutating_input() -> None:
@@ -71,6 +96,43 @@ def test_residual_metrics_report_root_translation_error_and_grounding_z_error() 
         max_ground_z_error_m=0.0,
         scaffold="cpu_worldhmr_primitives_no_sam3dbody_integration",
     )
+
+
+def test_build_body_artifacts_marks_floor_contact_from_grounded_joints() -> None:
+    samples = [
+        {
+            "frame_idx": 12,
+            "player_id": 1,
+            "t": 0.4,
+            "confidence": 0.9,
+            "track_world_xy": [2.0, 3.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [
+                [0.0, 0.0, 1.1],
+                [-0.16, 0.0, 0.0],
+                [0.18, 0.0, 0.015],
+                [0.0, 0.0, 0.7],
+            ],
+            "vertices_camera": [],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        }
+    ]
+
+    smpl_motion, _skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+    )
+
+    player = smpl_motion["players"][0]
+    frame = player["frames"][0]
+    assert frame["foot_contact"] == {"left": True, "right": True}
+    assert frame["grf"] == [[0.0, 0.0, 1.0]]
+    assert player["skate_free"] is True
+    assert player["physics"] == "worldhmr_grounded_floor_contact_heuristic"
+    assert metrics["foot_contact_frames"] == 1
 
 
 def test_world_grounding_helpers_validate_vectors_and_smoothing_alpha() -> None:

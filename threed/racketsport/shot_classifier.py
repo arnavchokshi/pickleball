@@ -15,6 +15,8 @@ from typing import Any, Sequence
 
 ALLOWED_SHOT_LABELS = (
     "serve",
+    "fh_shot",
+    "bh_shot",
     "fh_drive",
     "bh_drive",
     "dink",

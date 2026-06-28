@@ -7,7 +7,9 @@ not run ML models, cross-attention, or learned event ranking.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 import math
+from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from threed.racketsport.contact_windows import build_contact_event, build_contact_windows_artifact
@@ -150,6 +152,71 @@ def fuse_contact_windows(
     return build_contact_windows_artifact(events)
 
 
+def fuse_contact_windows_from_cue_payloads(
+    *,
+    fps: float,
+    audio_onsets_payload: Any,
+    wrist_velocity_peaks_payload: Any,
+    ball_inflections_payload: Any,
+    max_time_delta_s: float = DEFAULT_MAX_TIME_DELTA_S,
+    pre_s: float = DEFAULT_PRE_WINDOW_S,
+    post_s: float = DEFAULT_POST_WINDOW_S,
+) -> dict[str, object]:
+    """Fuse canonical cue artifact payloads into a ContactWindows artifact."""
+
+    audio_onsets = _items(audio_onsets_payload, keys=("onsets", "audio_onsets", "items"))
+    wrist_velocity_peaks = [
+        WristVelocityPeak(
+            time_s=float(item["time_s"]),
+            player_id=int(item["player_id"]),
+            wrist_world_xyz=tuple(item["wrist_world_xyz"]),
+            speed_mps=float(item["speed_mps"]),
+            confidence=float(item["confidence"]),
+        )
+        for item in _items(wrist_velocity_peaks_payload, keys=("peaks", "wrist_velocity_peaks", "items"))
+    ]
+    ball_inflections = [
+        BallInflectionCandidate(
+            time_s=float(item["time_s"]),
+            ball_world_xyz=tuple(item["ball_world_xyz"]),
+            confidence=float(item["confidence"]),
+        )
+        for item in _items(ball_inflections_payload, keys=("candidates", "ball_inflections", "items"))
+    ]
+    return fuse_contact_windows(
+        fps=fps,
+        audio_onsets=audio_onsets,
+        wrist_velocity_peaks=wrist_velocity_peaks,
+        ball_inflections=ball_inflections,
+        max_time_delta_s=max_time_delta_s,
+        pre_s=pre_s,
+        post_s=post_s,
+    )
+
+
+def fuse_contact_windows_from_cue_files(
+    *,
+    fps: float,
+    audio_onsets_path: str | Path,
+    wrist_velocity_peaks_path: str | Path,
+    ball_inflections_path: str | Path,
+    max_time_delta_s: float = DEFAULT_MAX_TIME_DELTA_S,
+    pre_s: float = DEFAULT_PRE_WINDOW_S,
+    post_s: float = DEFAULT_POST_WINDOW_S,
+) -> dict[str, object]:
+    """Read cue artifact files and fuse them into a ContactWindows artifact."""
+
+    return fuse_contact_windows_from_cue_payloads(
+        fps=fps,
+        audio_onsets_payload=_read_json(Path(audio_onsets_path)),
+        wrist_velocity_peaks_payload=_read_json(Path(wrist_velocity_peaks_path)),
+        ball_inflections_payload=_read_json(Path(ball_inflections_path)),
+        max_time_delta_s=max_time_delta_s,
+        pre_s=pre_s,
+        post_s=post_s,
+    )
+
+
 def _coerce_audio_onset(candidate: AudioOnsetCandidate | Mapping[str, Any] | Any) -> AudioOnsetCandidate:
     if isinstance(candidate, AudioOnsetCandidate):
         return candidate
@@ -244,6 +311,27 @@ def _require_finite(value: float | None, name: str) -> float:
     return value
 
 
+def _items(payload: Any, *, keys: tuple[str, ...]) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        items = payload
+    elif isinstance(payload, Mapping):
+        items = next((payload[key] for key in keys if isinstance(payload.get(key), list)), None)
+        if items is None:
+            raise ValueError(f"cue artifact must contain one of: {', '.join(keys)}")
+    else:
+        raise ValueError("cue artifact must be an object or array")
+    if not all(isinstance(item, dict) for item in items):
+        raise ValueError("cue artifact items must be objects")
+    return list(items)
+
+
+def _read_json(path: Path) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"invalid cue artifact JSON: {path}: {exc}") from exc
+
+
 __all__ = [
     "AudioOnsetCandidate",
     "BallInflectionCandidate",
@@ -252,4 +340,6 @@ __all__ = [
     "DEFAULT_PRE_WINDOW_S",
     "WristVelocityPeak",
     "fuse_contact_windows",
+    "fuse_contact_windows_from_cue_files",
+    "fuse_contact_windows_from_cue_payloads",
 ]

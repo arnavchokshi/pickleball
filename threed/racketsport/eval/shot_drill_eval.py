@@ -12,6 +12,7 @@ from threed.racketsport.eval.metrics import (
     missing_artifacts,
     write_phase_metrics,
 )
+from threed.racketsport.eval.label_checks import score_shot_labels
 from threed.racketsport.schemas import DrillReport, EvalClipResult, RacketSportMetrics, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
@@ -119,7 +120,32 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         },
         SHOT_DRILL_GATES,
     )
-    passed = all(gated_metric.passed is True for gated_metric in gated.values())
+    label_metrics, notes = score_shot_labels(labels_dir=labels_dir, metrics_artifact=metrics_artifact)
+    gated.update(label_metrics)
+    passed = all(gated_metric.passed is True for gated_metric in gated.values() if gated_metric.passed is not None)
+    metrics = {
+        "shots": gated["shots"],
+        "shot_types": metric(
+            value=shot_types,
+            unit=None,
+            gate="recorded for later shot-class gates",
+            passed=bool(shot_types),
+        ),
+        "drill_reps": gated["drill_reps"],
+        "clean_reps": metric(
+            value=drill_report.clean_reps,
+            unit="reps",
+            gate="recorded for later rep-count gates",
+            passed=True,
+        ),
+        "fault_reps": metric(
+            value=fault_reps,
+            unit="reps",
+            gate="recorded for later drill-quality gates",
+            passed=fault_reps >= 0,
+        ),
+    }
+    metrics.update(label_metrics)
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
@@ -127,29 +153,8 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         status="pass" if passed else "fail",
         missing_label_files=[],
         missing_artifacts=[],
-        metrics={
-            "shots": gated["shots"],
-            "shot_types": metric(
-                value=shot_types,
-                unit=None,
-                gate="recorded for later shot-class gates",
-                passed=bool(shot_types),
-            ),
-            "drill_reps": gated["drill_reps"],
-            "clean_reps": metric(
-                value=drill_report.clean_reps,
-                unit="reps",
-                gate="recorded for later rep-count gates",
-                passed=True,
-            ),
-            "fault_reps": metric(
-                value=fault_reps,
-                unit="reps",
-                gate="recorded for later drill-quality gates",
-                passed=fault_reps >= 0,
-            ),
-        },
-        notes=[],
+        metrics=metrics,
+        notes=notes,
     )
 
 

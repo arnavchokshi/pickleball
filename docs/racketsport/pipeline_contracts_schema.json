@@ -13,6 +13,7 @@
     "stage_order",
     "required_artifacts",
     "missing_artifacts",
+    "semantic_blockers",
     "stages"
   ],
   "properties": {
@@ -60,6 +61,9 @@
     "missing_artifacts": {
       "$ref": "#/$defs/artifact_list"
     },
+    "semantic_blockers": {
+      "$ref": "#/$defs/semantic_blocker_list"
+    },
     "stages": {
       "type": "array",
       "items": {
@@ -73,7 +77,8 @@
           "blocked_by",
           "required_artifacts",
           "present_artifacts",
-          "missing_artifacts"
+          "missing_artifacts",
+          "semantic_blockers"
         ],
         "properties": {
           "stage": {
@@ -110,6 +115,9 @@
           },
           "missing_artifacts": {
             "$ref": "#/$defs/artifact_list"
+          },
+          "semantic_blockers": {
+            "$ref": "#/$defs/stage_semantic_blocker_list"
           }
         }
       }
@@ -121,6 +129,20 @@
       "items": {
         "type": "string",
         "pattern": "^[A-Za-z0-9_]+\\.json$"
+      }
+    },
+    "semantic_blocker_list": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_]+:[A-Za-z0-9_]+$"
+      }
+    },
+    "stage_semantic_blocker_list": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_]+$"
       }
     }
   }

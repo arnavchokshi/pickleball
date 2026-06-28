@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Literal
@@ -67,3 +68,37 @@ class ModelManifest(BaseModel):
 def load_model_manifest(path: str | Path) -> ModelManifest:
     with Path(path).open("r", encoding="utf-8") as handle:
         return ModelManifest.model_validate(json.load(handle))
+
+
+def get_model_entry(manifest: ModelManifest, model_id: str) -> ModelEntry:
+    for entry in manifest.models:
+        if entry.id == model_id:
+            return entry
+    raise KeyError(f"model id not found in manifest: {model_id}")
+
+
+def verify_model_checkpoint(path: str | Path, model_id: str) -> ModelEntry:
+    manifest = load_model_manifest(path)
+    entry = get_model_entry(manifest, model_id)
+    if entry.status != "available_on_h100":
+        raise RuntimeError(f"model {model_id} is not available_on_h100: status={entry.status}")
+    if not entry.local_path:
+        raise RuntimeError(f"model {model_id} has no local_path in manifest")
+    checkpoint = Path(entry.local_path)
+    if not checkpoint.is_file():
+        raise FileNotFoundError(f"missing checkpoint for {model_id}: {checkpoint}")
+    if not entry.sha256:
+        raise RuntimeError(f"model {model_id} has no sha256 in manifest")
+
+    digest = _sha256_file(checkpoint)
+    if digest.lower() != entry.sha256.lower():
+        raise ValueError(f"sha256 mismatch for {model_id}: expected {entry.sha256}, got {digest}")
+    return entry
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()

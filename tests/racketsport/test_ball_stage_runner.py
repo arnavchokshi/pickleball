@@ -1,0 +1,424 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from threed.racketsport.ball_stage_runner import BallStageRunner
+from threed.racketsport.orchestrator import StageRun, run_pipeline
+from threed.racketsport.body_compute import build_body_compute_execution
+from threed.racketsport.frame_rating import build_frame_compute_plan
+from threed.racketsport.schemas import BallTrack, ContactWindows, validate_artifact_file
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _ball_track_payload() -> dict:
+    return {
+        "schema_version": 1,
+        "fps": 30.0,
+        "source": "tracknet",
+        "frames": [
+            {"t": 0.0, "xy": [120.0, 240.0], "conf": 0.82, "visible": True, "approx": False},
+            {"t": 1.0 / 30.0, "xy": [124.0, 242.0], "conf": 0.76, "visible": True, "approx": False},
+            {"t": 2.0 / 30.0, "xy": [0.0, 0.0], "conf": 0.0, "visible": False, "approx": False},
+        ],
+        "bounces": [],
+    }
+
+
+def _write_no_click_ball_source(inputs_dir: Path) -> Path:
+    source = inputs_dir / "tracknet_smoke_0000_0010" / "ball_track_fusion_temporal_vball100_localtraj.json"
+    _write_json(source, _ball_track_payload())
+    return source
+
+
+def _write_dependency_artifacts(run_dir: Path) -> None:
+    _write_json(
+        run_dir / "court_calibration.json",
+        {
+            "schema_version": 1,
+            "sport": "pickleball",
+            "homography": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            "intrinsics": {"fx": 1000.0, "fy": 1000.0, "cx": 960.0, "cy": 540.0, "dist": [], "source": "manual"},
+            "extrinsics": {
+                "R": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+                "t": [0.0, 0.0, 12.0],
+                "camera_height_m": 12.0,
+            },
+            "reprojection_error_px": {"median": 0.0, "p95": 0.0},
+            "capture_quality": {"grade": "good", "reasons": []},
+            "image_pts": [],
+            "world_pts": [],
+        },
+    )
+    _write_json(run_dir / "court_zones.json", {"schema_version": 1, "zones": {}})
+    _write_json(
+        run_dir / "net_plane.json",
+        {
+            "schema_version": 1,
+            "plane": {"point": [0.0, 0.0, 0.0], "normal": [0.0, 1.0, 0.0]},
+            "endpoints": [[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]],
+            "center_height_in": 34.0,
+            "post_height_in": 36.0,
+        },
+    )
+    _write_json(
+        run_dir / "court_line_evidence.json",
+        {
+            "schema_version": 1,
+            "sport": "pickleball",
+            "source": "test",
+            "line_observations": [],
+            "keypoint_observations": [],
+            "net_observations": [],
+            "aggregate": {
+                "accepted_line_ids": [],
+                "rejected_line_ids": [],
+                "missing_required_line_ids": [],
+                "missing_required_net_ids": [],
+                "mean_residual_px": 0.0,
+                "p95_residual_px": 0.0,
+                "temporal_stability_px": 0.0,
+                "auto_calibration_ready": False,
+                "reasons": ["test_dependency_artifact"],
+            },
+        },
+    )
+    _write_json(
+        run_dir / "tracks.json",
+        {
+            "schema_version": 1,
+            "fps": 30.0,
+            "players": [
+                {
+                    "id": 7,
+                    "side": "near",
+                    "role": "near_left",
+                    "frames": [
+                        {"t": 0.0, "bbox": [1.0, 2.0, 3.0, 4.0], "world_xy": [0.0, 0.0], "conf": 0.9},
+                        {
+                            "t": 1.0 / 30.0,
+                            "bbox": [1.2, 2.0, 3.2, 4.0],
+                            "world_xy": [0.05, 0.0],
+                            "conf": 0.88,
+                        },
+                    ],
+                }
+            ],
+            "rally_spans": [],
+        },
+    )
+    _write_json(
+        run_dir / "smpl_motion.json",
+        {
+            "schema_version": 1,
+            "model": "smplx",
+            "fps": 30.0,
+            "world_frame": "court_Z0",
+            "players": [
+                {
+                    "id": 7,
+                    "betas": [0.0] * 10,
+                    "frames": [
+                        {
+                            "t": 0.0,
+                            "global_orient": [0.0, 0.0, 0.0],
+                            "body_pose": [0.0] * 63,
+                            "left_hand_pose": [],
+                            "right_hand_pose": [],
+                            "transl_world": [0.0, 0.0, 0.0],
+                            "joints_world": [[0.0, 0.0, 0.0]],
+                            "joint_conf": [0.9],
+                            "foot_contact": {"left": True, "right": True},
+                            "grf": None,
+                        }
+                    ],
+                    "skate_free": False,
+                    "physics": "test",
+                }
+            ],
+        },
+    )
+    _write_json(
+        run_dir / "skeleton3d.json",
+        {
+            "schema_version": 1,
+            "joint_names": ["root"],
+            "preview_only": True,
+            "players": [{"id": 7, "frames": [{"t": 0.0, "joints_world": [[0.0, 0.0, 0.0]], "joint_conf": [0.9]}]}],
+        },
+    )
+
+
+class NoopDependencyRunner:
+    real_model = False
+    source_mode = "prewritten_test_artifacts"
+
+    def __init__(self, stage: str, produced_artifacts: tuple[str, ...]) -> None:
+        self.stage = stage
+        self.produced_artifacts = produced_artifacts
+
+    def run(self, context) -> StageRun:
+        return StageRun(
+            stage=self.stage,
+            status="ran",
+            real_model=False,
+            source_mode=self.source_mode,
+            produced_artifacts=self.produced_artifacts,
+            notes=("test runner reused prewritten dependency artifacts",),
+        )
+
+
+def _noop_dependency_runners() -> dict[str, NoopDependencyRunner]:
+    return {
+        "calibration": NoopDependencyRunner(
+            "calibration",
+            ("court_calibration.json", "court_zones.json", "net_plane.json", "court_line_evidence.json"),
+        ),
+        "tracking": NoopDependencyRunner("tracking", ("tracks.json",)),
+        "body": NoopDependencyRunner("body", ("smpl_motion.json", "skeleton3d.json")),
+        "physics": NoopDependencyRunner("physics", ("smpl_motion.json",)),
+    }
+
+
+def test_ball_stage_runner_uses_no_click_localtraj_artifact_without_reading_ball_points(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "clip_001"
+    source = _write_no_click_ball_source(inputs)
+    _write_dependency_artifacts(run_dir)
+    click_labels = inputs / "ball_points.json"
+    click_labels.write_text("{ this would explode if read", encoding="utf-8")
+
+    original_read_text = Path.read_text
+
+    def guard_click_reads(path: Path, *args, **kwargs):
+        if path.name == "ball_points.json":
+            raise AssertionError("BALL StageRunner must not read ball_points.json")
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", guard_click_reads)
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=_noop_dependency_runners(),
+    )
+
+    assert summary["status"] == "pass"
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["stage"] == "ball_events"
+    assert ball_stage["source_mode"] == "no_click_fusion_temporal_vball100_localtraj"
+    assert ball_stage["metrics"]["source_ball_track"] == str(source)
+    assert ball_stage["metrics"]["uses_human_clicks"] is False
+    assert ball_stage["produced_artifacts"] == ["ball_track.json", "contact_windows.json"]
+
+    emitted = json.loads((run_dir / "ball_track.json").read_text(encoding="utf-8"))
+    assert emitted == _ball_track_payload()
+
+
+def test_ball_stage_runner_prefers_eval_suite_selected_track_over_legacy_prototype(tmp_path: Path) -> None:
+    clip = "clip_001"
+    inputs = tmp_path / "inputs" / clip
+    run_dir = tmp_path / "runs" / clip
+    eval_root = tmp_path / "eval_suite"
+    selected_source = eval_root / "selected_tracks" / clip / "ball_track.json"
+    legacy_source = eval_root / clip / "tracknet_smoke_0000_0010" / "ball_track_fusion_temporal_vball100_localtraj.json"
+    selected_payload = _ball_track_payload()
+    selected_payload["frames"][0]["xy"] = [321.0, 123.0]
+    selected_payload["source"] = "pbmat"
+    legacy_payload = _ball_track_payload()
+    legacy_payload["frames"][0]["xy"] = [999.0, 999.0]
+    _write_json(selected_source, selected_payload)
+    _write_json(
+        selected_source.parent / "ball_track_selection.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_ball_track_selection",
+            "status": "selected_not_gate_verified",
+            "clip": clip,
+            "candidate": "pbmat_v0_motion_composite",
+            "candidate_category": "composite_alias_not_trained_model",
+            "candidate_score": 0.12,
+            "candidate_rank": 2,
+            "eligible_for_model_ranking": False,
+            "trained_pbmat_checkpoint": False,
+            "source_ball_track": str(legacy_source),
+            "out": str(selected_source),
+            "not_ground_truth": True,
+        },
+    )
+    _write_json(legacy_source, legacy_payload)
+    _write_dependency_artifacts(run_dir)
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(prototype_root=eval_root)
+
+    summary = run_pipeline(
+        clip=clip,
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    assert summary["status"] == "pass"
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["metrics"]["source_ball_track"] == str(selected_source)
+    assert ball_stage["source_mode"] == "selected_ball_track_prototype"
+    assert ball_stage["metrics"]["selection"]["candidate"] == "pbmat_v0_motion_composite"
+    assert ball_stage["metrics"]["selection"]["candidate_category"] == "composite_alias_not_trained_model"
+    assert ball_stage["metrics"]["selection"]["trained_pbmat_checkpoint"] is False
+    emitted = json.loads((run_dir / "ball_track.json").read_text(encoding="utf-8"))
+    assert emitted["frames"][0]["xy"] == [321.0, 123.0]
+
+
+def test_ball_stage_runner_fails_closed_when_selected_track_has_no_selection_sidecar(tmp_path: Path) -> None:
+    clip = "clip_001"
+    inputs = tmp_path / "inputs" / clip
+    run_dir = tmp_path / "runs" / clip
+    eval_root = tmp_path / "eval_suite"
+    selected_source = eval_root / "selected_tracks" / clip / "ball_track.json"
+    legacy_source = eval_root / clip / "tracknet_smoke_0000_0010" / "ball_track_fusion_temporal_vball100_localtraj.json"
+    _write_json(selected_source, _ball_track_payload())
+    _write_json(legacy_source, _ball_track_payload())
+    _write_dependency_artifacts(run_dir)
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(prototype_root=eval_root)
+
+    summary = run_pipeline(
+        clip=clip,
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    assert summary["status"] == "fail"
+    ball_stage = summary["stages"][-1]
+    assert any("missing selected-track metadata sidecar" in note for note in ball_stage["notes"])
+    assert not (run_dir / "ball_track.json").exists()
+
+
+def test_ball_stage_runner_fails_closed_when_no_click_source_artifact_is_missing(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    inputs.mkdir(parents=True)
+    run_dir = tmp_path / "runs" / "clip_001"
+    _write_dependency_artifacts(run_dir)
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=_noop_dependency_runners(),
+    )
+
+    assert summary["status"] == "fail"
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["stage"] == "ball_events"
+    assert ball_stage["status"] == "fail"
+    assert any("missing no-click BALL source artifact" in note for note in ball_stage["notes"])
+    assert not (run_dir / "ball_track.json").exists()
+    assert not (run_dir / "contact_windows.json").exists()
+
+
+def test_ball_stage_runner_emits_schema_valid_ball_contract_artifacts(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "clip_001"
+    _write_no_click_ball_source(inputs)
+    _write_dependency_artifacts(run_dir)
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=_noop_dependency_runners(),
+    )
+
+    assert summary["status"] == "pass"
+    ball_track = validate_artifact_file("ball_track", run_dir / "ball_track.json")
+    contact_windows = validate_artifact_file("contact_windows", run_dir / "contact_windows.json")
+    assert isinstance(ball_track, BallTrack)
+    assert isinstance(contact_windows, ContactWindows)
+    assert len(ball_track.frames) == 3
+    assert contact_windows.events == []
+
+
+def test_ball_stage_runner_fuses_trusted_contact_windows_from_required_cue_artifacts(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "clip_001"
+    _write_no_click_ball_source(inputs)
+    _write_dependency_artifacts(run_dir)
+    _write_json(inputs / "audio_onsets.json", {"schema_version": 1, "onsets": [{"time_s": 1.0 / 30.0, "score": 0.9}]})
+    _write_json(
+        inputs / "wrist_velocity_peaks.json",
+        {
+            "schema_version": 1,
+            "peaks": [
+                {
+                    "time_s": 1.0 / 30.0,
+                    "player_id": 7,
+                    "wrist_world_xyz": [0.0, 0.0, 1.0],
+                    "speed_mps": 12.0,
+                    "confidence": 0.8,
+                }
+            ],
+        },
+    )
+    _write_json(
+        inputs / "ball_inflections.json",
+        {
+            "schema_version": 1,
+            "candidates": [
+                {
+                    "time_s": 1.0 / 30.0,
+                    "ball_world_xyz": [0.02, 0.0, 1.0],
+                    "confidence": 0.7,
+                }
+            ],
+        },
+    )
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=_noop_dependency_runners(),
+    )
+
+    assert summary["status"] == "pass"
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["metrics"]["contact_event_count"] == 1
+    assert "fused contact_windows.json from audio, wrist, and ball cue artifacts" in ball_stage["notes"]
+    contact_windows = validate_artifact_file("contact_windows", run_dir / "contact_windows.json")
+    tracks = validate_artifact_file("tracks", run_dir / "tracks.json")
+    ball_track = validate_artifact_file("ball_track", run_dir / "ball_track.json")
+    assert isinstance(contact_windows, ContactWindows)
+    assert isinstance(ball_track, BallTrack)
+    assert len(contact_windows.events) == 1
+    assert contact_windows.events[0].player_id == 7
+
+    frame_plan = build_frame_compute_plan(
+        tracks,
+        ball_track=ball_track,
+        contact_windows=contact_windows,
+        expected_players=1,
+    )
+    assert frame_plan["summary"]["deep_mesh_window_count"] == 1
+    assert frame_plan["deep_mesh_windows"][0]["target_player_ids"] == [7]
+    _write_json(run_dir / "frame_compute_plan.json", frame_plan)
+    execution = build_body_compute_execution(tracks, frame_plan_path=run_dir / "frame_compute_plan.json")
+    assert execution["summary"]["scheduled_player_frame_count"] == 2
