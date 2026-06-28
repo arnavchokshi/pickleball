@@ -6,7 +6,8 @@ import sys
 from pathlib import Path
 
 from threed.racketsport.orchestrator import run_pipeline
-from threed.racketsport.schemas import Tracks, validate_artifact_file
+from threed.racketsport.court_line_evidence import aggregate_court_line_evidence
+from threed.racketsport.schemas import CourtLineEvidence, CourtLineObservation, NetLineObservation, Tracks, validate_artifact_file
 
 
 def _sidecar_payload() -> dict:
@@ -64,9 +65,92 @@ def test_pipeline_runs_real_calibration_and_tracking_then_blocks_missing_body(tm
     assert summary["stages"][2]["status"] == "blocked"
     assert "no runner registered for stage: body" in summary["stages"][2]["notes"]
     assert validate_artifact_file("court_calibration", run_dir / "court_calibration.json")
+    evidence = validate_artifact_file("court_line_evidence", run_dir / "court_line_evidence.json")
+    assert isinstance(evidence, CourtLineEvidence)
+    assert evidence.aggregate.auto_calibration_ready is False
     tracks = validate_artifact_file("tracks", run_dir / "tracks.json")
     assert isinstance(tracks, Tracks)
     assert not (run_dir / "smpl_motion.json").exists()
+
+
+def test_calibration_runner_samples_video_for_court_line_evidence(tmp_path: Path, monkeypatch) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "phase1" / "clip_001"
+    _write_inputs(inputs)
+    video_path = inputs / "video.mp4"
+    video_path.write_bytes(b"not-real-video-but-discovered-before-cv2")
+    calls: list[Path] = []
+
+    def fake_video_evidence(path, calibration, *, net_plane, sample_count):
+        calls.append(Path(path))
+        evidence = _ready_court_line_evidence(calibration.sport)
+        evidence.source = "stub_video_sampler"
+        return evidence
+
+    monkeypatch.setattr(
+        "threed.racketsport.orchestrator.build_auto_court_line_evidence_from_video",
+        fake_video_evidence,
+    )
+
+    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="calibration")
+
+    assert summary["status"] == "pass"
+    assert calls == [video_path]
+    evidence = validate_artifact_file("court_line_evidence", run_dir / "court_line_evidence.json")
+    assert isinstance(evidence, CourtLineEvidence)
+    assert evidence.source == "stub_video_sampler"
+    assert evidence.aggregate.auto_calibration_ready is True
+
+
+def test_video_backed_calibration_fails_closed_when_semantic_court_evidence_not_ready(tmp_path: Path, monkeypatch) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "phase1" / "clip_001"
+    _write_inputs(inputs)
+    (inputs / "video.mp4").write_bytes(b"not-real-video-but-discovered-before-cv2")
+
+    def fake_video_evidence(path, calibration, *, net_plane, sample_count):
+        evidence = aggregate_court_line_evidence(
+            sport=calibration.sport,
+            line_observations=[],
+            net_observations=[],
+            required_line_ids=("near_nvz", "far_nvz", "near_centerline", "far_centerline"),
+            required_net_ids=("top_net",),
+        )
+        evidence.source = "stub_video_sampler_not_ready"
+        return evidence
+
+    monkeypatch.setattr(
+        "threed.racketsport.orchestrator.build_auto_court_line_evidence_from_video",
+        fake_video_evidence,
+    )
+
+    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="tracking")
+
+    assert summary["status"] == "fail"
+    assert [item["stage"] for item in summary["stages"]] == ["calibration"]
+    assert any("automatic court evidence not ready" in note for note in summary["stages"][0]["notes"])
+    assert not (run_dir / "tracks.json").exists()
+
+
+def test_calibration_runner_attempts_video_only_court_evidence_before_missing_sidecar_failure(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "phase1" / "clip_001"
+    inputs.mkdir(parents=True)
+    (inputs / "video.mp4").write_bytes(b"placeholder")
+
+    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="calibration")
+
+    assert summary["status"] == "fail"
+    assert summary["stages"][0]["stage"] == "calibration"
+    assert summary["stages"][0]["source_mode"] == "manual_sidecar"
+    assert any("no trusted no-tap calibration seed" in note for note in summary["stages"][0]["notes"])
+    assert (run_dir / "court_zones.json").is_file()
+    assert (run_dir / "net_plane.json").is_file()
+    evidence = validate_artifact_file("court_line_evidence", run_dir / "court_line_evidence.json")
+    assert isinstance(evidence, CourtLineEvidence)
+    assert evidence.source == "auto_video_no_calibration_seed"
+    assert "missing_calibration_seed" in evidence.aggregate.reasons
+    assert not (run_dir / "court_calibration.json").exists()
 
 
 def test_pipeline_fails_closed_when_runner_outputs_invalid_artifact(tmp_path: Path) -> None:
@@ -113,3 +197,33 @@ def test_orchestrator_cli_writes_summary_and_does_not_fake_e2e(tmp_path: Path) -
     assert payload["stages"][2]["stage"] == "body"
     assert payload["stages"][2]["status"] == "blocked"
     assert not (run_dir / "replay_scene.json").exists()
+
+
+def _ready_court_line_evidence(sport: str) -> CourtLineEvidence:
+    lines = [
+        CourtLineObservation(
+            line_id=line_id,
+            image_segment=[[10.0, 10.0], [100.0, 10.0]],
+            confidence=0.95,
+            frame_indexes=[0, 1],
+            residual_px={"mean": 1.0, "p95": 2.0},
+            visible_fraction=0.9,
+            source="test",
+        )
+        for line_id in ("near_nvz", "far_nvz", "near_centerline", "far_centerline")
+    ]
+    net = NetLineObservation(
+        net_id="top_net",
+        image_points=[[10.0, 8.0], [55.0, 8.0], [100.0, 8.0]],
+        confidence=0.95,
+        frame_indexes=[0, 1],
+        residual_px={"mean": 1.0, "p95": 2.0},
+        source="test",
+    )
+    return aggregate_court_line_evidence(
+        sport=sport,  # type: ignore[arg-type]
+        line_observations=lines,
+        net_observations=[net],
+        required_line_ids=("near_nvz", "far_nvz", "near_centerline", "far_centerline"),
+        required_net_ids=("top_net",),
+    )

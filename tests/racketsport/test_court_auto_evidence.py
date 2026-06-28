@@ -164,6 +164,20 @@ def test_top_net_observation_rejects_untrusted_pnp_projection_even_with_matching
     assert observation is None
 
 
+def test_top_net_observation_rejects_projection_with_implausible_top_to_ground_length_ratio():
+    calibration = _synthetic_calibration().model_copy(
+        deep=True,
+        update={"homography": [[1.0, 0.0, 960.0], [0.0, -20.0, 540.0], [0.0, 0.0, 1.0]]},
+    )
+    net_plane = build_net_plane("pickleball")
+    net_points = project_net_plane(calibration, net_plane)
+    candidate_segment = (tuple(net_points["left_post"]), tuple(net_points["right_post"]))
+
+    observation = select_top_net_observation(calibration, net_plane, [candidate_segment])
+
+    assert observation is None
+
+
 def test_top_net_observation_rejects_estimated_review_frame_intrinsics_even_with_matching_candidate():
     calibration = _synthetic_calibration()
     calibration = calibration.model_copy(

@@ -301,22 +301,27 @@ python scripts/racketsport/smoke_models.py --manifest models/MANIFEST.json   # l
   - `reprojection_error(...) -> {median_px, p95_px}`.
   - `manual_tap_calibration(...)` — MVP fallback (taps feed the same PnP solver).
 - `court_keypoint_net.py` + `scripts/racketsport/train_court_kpt.py` — fine-tune **TennisCourtDetector** (pickleball geom ⊂ tennis) after pretraining on **synthetic court renders across 50–500 viewpoints**, then ~200–500 hand-labeled pickleball frames → sub-pixel keypoints → `solve_multiframe`. Replaces manual taps once it passes the gate.
-- `net_plane.py` — `net_plane_from_template(calibration)`: raise net-line endpoints to 36 in (posts), center 34 in; return vertical plane + sag in world. **No net pixel detection** — geometry only; `project_net(...)` for overlay + homography cross-check.
+- `net_plane.py` — `net_plane_from_template(calibration)`: raise net-line endpoints to 36 in (posts), center 34 in; return vertical plane + sag in world. The physical net remains regulation geometry, but `court_line_evidence.json` records observed top-net pixel evidence as a trust cross-check; overlays and downstream metrics fail closed when the projected top net is not independently supported.
 - `capture_quality.py` — `score_capture(...) -> {grade, reasons[]}`: flags shallow angle, extreme distortion, small court coverage. Drives confidence gating + "raise/move camera" hint.
 - `drift_guard.py` — `verify(H, frame_t)` every N frames via reprojection + ORB/optical-flow warp; flag re-cal on breach.
 - `court_zones.py` — NVZ/kitchen, transition, baseline, service boxes as world polygons; `classify_point(world_xy) -> zone`.
-- `scripts/racketsport/calibrate.py` — CLI → `court_calibration.json`, `court_zones.json`, `net_plane.json`, overlay MP4.
+- `scripts/racketsport/calibrate.py` — low-level sidecar/manual calibration CLI → `court_calibration.json`, `court_zones.json`, `net_plane.json`.
+- `scripts/racketsport/build_court_line_evidence.py` and the default orchestrator calibration stage — sample video/frames to write `court_line_evidence.json` for kitchen/NVZ lines, center service lines, and trusted top-net evidence; video-backed runs stop at calibration when evidence is not ready.
 
 **Models:** none (classical CV); `kornia` for differentiable homography if needed.
 
-**Deliverables:** `court_calibration.json`, `court_zones.json`, `net_plane.json`, overlay MP4 per clip.
+**Deliverables:** `court_calibration.json`, `court_zones.json`, `net_plane.json`, `court_line_evidence.json`, overlay MP4 per clip. `court_line_evidence.json` is mandatory for readiness, even when it is fail-closed.
 
 **Test procedure:**
 ```bash
-python scripts/racketsport/calibrate.py --clip data/testclips/<clip> --taps labels/court_corners.json --out runs/phase1/<clip> --overlay
+python -m threed.racketsport.orchestrator \
+  --clip <clip> \
+  --inputs data/testclips/<clip> \
+  --out runs/phase1/<clip> \
+  --stage calibration
 python -m threed.racketsport.eval.calib_eval --root runs/phase1 --labels data/testclips --out runs/phase1/metrics.json
 ```
-Measure per clip, **bucketed by camera height × angle**: median/p95 reprojection (px + ft), overlay IoU, recovered-height plausibility, drift stability on long clips.
+Measure per clip, **bucketed by camera height × angle**: median/p95 reprojection (px + ft), semantic kitchen/centerline/top-net residuals, `auto_calibration_ready`, overlay IoU, recovered-height plausibility, drift stability on long clips.
 
 **Acceptance gates:**
 - Overlay matches on **≥ 90% of clips** (projected-corner reprojection **median < 8 px AND p95 < 15 px** @1080p).
@@ -324,6 +329,7 @@ Measure per clip, **bucketed by camera height × angle**: median/p95 reprojectio
 - Feet-to-world error per viewpoint budget (`ACCURACY_AND_TRAINING.md §3`): high-corner **lat <0.2 ft / depth <0.5 ft**; mid-sideline **lat <0.3 ft / depth <0.8 ft**; low-shallow may exceed depth — `capture_quality` marks `warn/poor` and far-court NVZ is confidence-gated downstream.
 - `solve_multiframe` beats single-frame on reprojection (regression check).
 - Net-plane projection within **15 px** of the visible net line (cross-check).
+- `court_line_evidence.json` reports accepted/missing NVZ, centerline, and top-net IDs; video-backed runs do not proceed to tracking when `auto_calibration_ready=false`.
 - Drift guard catches an injected 20-px bump within **N+1 frames**, **0** false triggers on a static clip.
 
 **Risks:** occluded corners → homography reconstructs them; wide-FOV distortion → device-profile intrinsic calibration; shallow angles inflate depth → `capture_quality` flags, never hides.
@@ -750,6 +756,26 @@ Full detail in `ACCURACY_AND_TRAINING.md §11–§14`. Build in parallel — it 
   "reprojection_error_px": {"median": 0.0, "p95": 0.0},
   "capture_quality": {"grade": "good|warn|poor", "reasons": []},
   "image_pts": [[x,y]], "world_pts": [[X,Y,Z]]
+}
+
+// court_line_evidence.json
+{
+  "schema_version": 1, "sport": "pickleball", "source": "auto_hough_template_video",
+  "line_observations": [
+    {"line_id": "near_nvz|far_nvz|near_centerline|far_centerline", "image_segment": [[x,y],[x,y]],
+     "confidence": 0.0, "frame_indexes": [0], "residual_px": {"mean": 0.0, "p95": 0.0},
+     "visible_fraction": 0.0, "source": "auto_hough_template"}
+  ],
+  "keypoint_observations": [],
+  "net_observations": [
+    {"net_id": "top_net", "image_points": [[x,y],[x,y],[x,y]], "confidence": 0.0,
+     "frame_indexes": [0], "residual_px": {"mean": 0.0, "p95": 0.0}, "source": "auto_hough_net_top"}
+  ],
+  "aggregate": {
+    "accepted_line_ids": [], "rejected_line_ids": [], "missing_required_line_ids": [],
+    "missing_required_net_ids": [], "mean_residual_px": 0.0, "p95_residual_px": 0.0,
+    "temporal_stability_px": 0.0, "auto_calibration_ready": false, "reasons": []
+  }
 }
 
 // court_zones.json

@@ -27,7 +27,7 @@ PIPELINE_STAGE_CONTRACTS: tuple[PipelineStageContract, ...] = (
     PipelineStageContract(
         stage="calibration",
         phase="phase1",
-        required_artifacts=("court_calibration.json", "court_zones.json", "net_plane.json"),
+        required_artifacts=("court_calibration.json", "court_zones.json", "net_plane.json", "court_line_evidence.json"),
     ),
     PipelineStageContract(
         stage="tracking",
@@ -90,6 +90,7 @@ PIPELINE_STAGE_CONTRACTS: tuple[PipelineStageContract, ...] = (
             "court_calibration.json",
             "court_zones.json",
             "net_plane.json",
+            "court_line_evidence.json",
             "tracks.json",
             "smpl_motion.json",
             "ball_track.json",

@@ -10,7 +10,9 @@ from typing import Any, Protocol
 
 from scripts.racketsport.track import build_tracks
 
+from .court_auto_evidence import build_auto_court_line_evidence_from_frame, build_auto_court_line_evidence_from_video
 from .court_calibration import calibration_from_manual_taps
+from .court_line_evidence import aggregate_court_line_evidence
 from .court_templates import Sport
 from .court_zones import build_court_zones
 from .net_plane import build_net_plane
@@ -18,8 +20,11 @@ from .pipeline_contracts import PIPELINE_STAGE_CONTRACTS, PipelineContractError,
 from .schemas import CourtCalibration, StrictArtifact, validate_artifact_file
 
 
+VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".avi", ".mkv"}
+
 ARTIFACT_SCHEMA_BY_FILENAME: dict[str, str] = {
     "court_calibration.json": "court_calibration",
+    "court_line_evidence.json": "court_line_evidence",
     "court_zones.json": "court_zones",
     "net_plane.json": "net_plane",
     "tracks.json": "tracks",
@@ -88,17 +93,32 @@ class ManualCalibrationRunner:
 
     def run(self, context: StageContext) -> StageRun:
         sidecar_path = context.inputs_dir / "capture_sidecar.json"
+        net_plane = build_net_plane(context.sport)
         if not sidecar_path.is_file():
-            raise FileNotFoundError(f"missing calibration sidecar: {sidecar_path}")
+            line_evidence, evidence_notes = _unseeded_calibration_line_evidence(context)
+            artifacts = {
+                "court_zones.json": build_court_zones(context.sport),
+                "net_plane.json": net_plane,
+                "court_line_evidence.json": line_evidence,
+            }
+            for filename, artifact in artifacts.items():
+                _write_json_artifact(context.run_dir / filename, artifact)
+            note = "; ".join(evidence_notes)
+            raise FileNotFoundError(
+                f"missing calibration sidecar: {sidecar_path}; {note}; no trusted no-tap calibration seed"
+            )
 
         calibration = calibration_from_manual_taps(sidecar_path, sport=context.sport)
+        line_evidence, evidence_notes = _calibration_line_evidence(context, calibration=calibration, net_plane=net_plane)
         artifacts = {
             "court_calibration.json": calibration,
             "court_zones.json": build_court_zones(context.sport),
-            "net_plane.json": build_net_plane(context.sport),
+            "net_plane.json": net_plane,
+            "court_line_evidence.json": line_evidence,
         }
         for filename, artifact in artifacts.items():
             _write_json_artifact(context.run_dir / filename, artifact)
+        _raise_if_video_evidence_not_ready(context, line_evidence)
 
         return StageRun(
             stage=self.stage,
@@ -108,6 +128,7 @@ class ManualCalibrationRunner:
             produced_artifacts=tuple(artifacts),
             notes=(
                 "manual 4-corner calibration seed; requires human-reviewed corners for product verification",
+                *evidence_notes,
             ),
             metrics={
                 "reprojection_median_px": calibration.reprojection_error_px.median,
@@ -259,6 +280,152 @@ def _blocked_stage(contract: PipelineStageContract, note: str) -> dict[str, Any]
         source_mode="unregistered",
         notes=(note,),
     ).as_dict()
+
+
+def _calibration_line_evidence(context: StageContext, *, calibration: CourtCalibration, net_plane: Any) -> tuple[Any, tuple[str, ...]]:
+    video_path = _calibration_video_path(context)
+    if video_path is not None:
+        try:
+            evidence = build_auto_court_line_evidence_from_video(
+                video_path,
+                calibration,
+                net_plane=net_plane,
+                sample_count=7,
+            )
+        except Exception as exc:
+            evidence = _fail_closed_court_line_evidence(
+                context,
+                source="auto_video_evidence_failed",
+                reason=f"video_evidence_failed:{type(exc).__name__}",
+            )
+            return evidence, (
+                f"court_line_evidence.json is fail-closed because automatic video evidence failed for {video_path}: {exc}",
+            )
+        return evidence, (f"court_line_evidence.json generated automatically from video {video_path}",)
+
+    frame_path = _calibration_frame_path(context)
+    if frame_path is None:
+        evidence = _fail_closed_court_line_evidence(
+            context,
+            source="manual_sidecar_no_auto_frame",
+            reason="missing_auto_frame_or_video",
+        )
+        return evidence, (
+            "court_line_evidence.json is fail-closed because no calibration frame was available for automatic line/net detection",
+        )
+
+    evidence = build_auto_court_line_evidence_from_frame(
+        frame_path,
+        calibration,
+        net_plane=net_plane,
+        frame_index=0,
+    )
+    return evidence, (f"court_line_evidence.json generated automatically from {frame_path}",)
+
+
+def _unseeded_calibration_line_evidence(context: StageContext) -> tuple[Any, tuple[str, ...]]:
+    video_path = _calibration_video_path(context)
+    if video_path is not None:
+        evidence = _fail_closed_court_line_evidence(
+            context,
+            source="auto_video_no_calibration_seed",
+            reason="missing_calibration_seed",
+        )
+        return evidence, (
+            f"video court evidence attempt recorded from {video_path}, but calibration is fail-closed without a trusted sidecar or no-tap solve",
+        )
+
+    frame_path = _calibration_frame_path(context)
+    if frame_path is not None:
+        evidence = _fail_closed_court_line_evidence(
+            context,
+            source="auto_frame_no_calibration_seed",
+            reason="missing_calibration_seed",
+        )
+        return evidence, (
+            f"frame court evidence attempt recorded from {frame_path}, but calibration is fail-closed without a trusted sidecar or no-tap solve",
+        )
+
+    evidence = _fail_closed_court_line_evidence(
+        context,
+        source="no_auto_court_source",
+        reason="missing_auto_frame_or_video",
+    )
+    evidence.aggregate.reasons.append("missing_calibration_seed")
+    return evidence, (
+        "court calibration is fail-closed because no video/frame and no trusted calibration sidecar were available",
+    )
+
+
+def _raise_if_video_evidence_not_ready(context: StageContext, evidence: Any) -> None:
+    if _calibration_video_path(context) is None:
+        return
+    aggregate = getattr(evidence, "aggregate", None)
+    if aggregate is None or getattr(aggregate, "auto_calibration_ready", False):
+        return
+    reasons = ", ".join(getattr(aggregate, "reasons", []) or ["unknown"])
+    raise ValueError(f"automatic court evidence not ready for video-backed run: {reasons}")
+
+
+def _fail_closed_court_line_evidence(context: StageContext, *, source: str, reason: str) -> Any:
+    evidence = aggregate_court_line_evidence(
+        sport=context.sport,
+        line_observations=[],
+        net_observations=[],
+        required_line_ids=("near_nvz", "far_nvz", "near_centerline", "far_centerline")
+        if context.sport == "pickleball"
+        else (),
+        required_net_ids=("top_net",),
+    )
+    evidence.source = source
+    if reason not in evidence.aggregate.reasons:
+        evidence.aggregate.reasons.append(reason)
+    return evidence
+
+
+def _calibration_video_path(context: StageContext) -> Path | None:
+    candidates = [
+        context.inputs_dir / "source.mp4",
+        context.inputs_dir / "clip.mp4",
+        context.inputs_dir / "video.mp4",
+        context.inputs_dir / "input.mp4",
+    ]
+    if context.inputs_dir.is_dir():
+        candidates.extend(sorted(path for path in context.inputs_dir.iterdir() if path.suffix.lower() in VIDEO_SUFFIXES))
+
+    seen: set[Path] = set()
+    for candidate in candidates:
+        resolved = candidate.resolve() if candidate.exists() else candidate
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _calibration_frame_path(context: StageContext) -> Path | None:
+    names = (
+        "calibration_frame.jpg",
+        "calibration_frame.png",
+        "court_frame.jpg",
+        "court_frame.png",
+        "frame_000000.jpg",
+        "frame_000000.png",
+        "frame_000001.jpg",
+        "frame_000001.png",
+    )
+    roots = (
+        context.inputs_dir,
+        context.inputs_dir / "frames",
+        context.inputs_dir / "calibration_frames",
+    )
+    for root in roots:
+        for name in names:
+            candidate = root / name
+            if candidate.is_file():
+                return candidate
+    return None
 
 
 def _read_json(path: Path) -> Any:

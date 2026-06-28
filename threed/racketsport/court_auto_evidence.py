@@ -22,6 +22,7 @@ from .schemas import CourtCalibration, CourtLineEvidence, CourtLineObservation, 
 DEFAULT_REQUIRED_PICKLEBALL_LINES = ("near_nvz", "far_nvz", "near_centerline", "far_centerline")
 DEFAULT_REQUIRED_NET_IDS = ("top_net",)
 MAX_TRUSTED_TOP_NET_ANGLE_DELTA_DEG = 6.0
+MAX_TRUSTED_TOP_NET_LENGTH_RATIO = 4.0
 UNTRUSTED_TOP_NET_INTRINSIC_SOURCES = {"estimated_from_review_frame"}
 
 
@@ -337,7 +338,14 @@ def select_top_net_observation(
     ground_net_segment = projected_template_line_segments(calibration).get("net")
     if ground_net_segment is not None:
         angle_delta = score_line_candidate(ground_net_segment, expected_segment).angle_delta_deg
-        if angle_delta > MAX_TRUSTED_TOP_NET_ANGLE_DELTA_DEG:
+        ground_length = _segment_length(ground_net_segment)
+        top_length = _segment_length(expected_segment)
+        length_ratio = (
+            max(top_length / ground_length, ground_length / top_length)
+            if ground_length > 0.0 and top_length > 0.0
+            else float("inf")
+        )
+        if angle_delta > MAX_TRUSTED_TOP_NET_ANGLE_DELTA_DEG or length_ratio > MAX_TRUSTED_TOP_NET_LENGTH_RATIO:
             return None
 
     scored = [(score_line_candidate(expected_segment, segment), segment) for segment in candidate_segments]
@@ -393,6 +401,10 @@ def _segment(points: Sequence[Sequence[float]]) -> Segment2:
         (float(points[0][0]), float(points[0][1])),
         (float(points[1][0]), float(points[1][1])),
     )
+
+
+def _segment_length(segment: Segment2) -> float:
+    return math.hypot(segment[1][0] - segment[0][0], segment[1][1] - segment[0][1])
 
 
 def _cv2() -> Any:

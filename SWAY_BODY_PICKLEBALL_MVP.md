@@ -260,7 +260,7 @@ The build-now differentiators first, then the longer-horizon set:
 Single static iPhone (or facility camera). **The native app configures capture; the user only frames it — so the user-facing ask is three things: Landscape · stable tripod · all four corners in view (good light).** The app sets the rest via AVFoundation: landscape, 1080p/**60 fps** (120 fps for swing-speed/racket; not 240, which drops to 720p), **HDR off, locked exposure/focus/WB, shutter ≥1/500 s** (indoor 1/100 or 1/120 to kill flicker). Audio anchors sub-frame contact timing, so 60 fps is sufficient for most metrics. **Variable height/angle handled per-clip** (see §5, §13); the app auto-handles rolling shutter, compression, AF/AE drift, flicker, and shadows (`ACCURACY_AND_TRAINING.md` §2). Tripod ≥1.2–1.5 m, all 4 corners visible. 60–180 s clips for v1 product focus; ~20-min ingest is an architecture requirement. Pre-upload trim + naming; player/side confirmation; optional coach focus tag; failed QC = no credit charged. Upload UX (multipart/resume, facility import, coach batch, when fast vs deep tier starts) is an explicit design task.
 
 ### Court setup
-- **Pickleball:** 20×44 ft template; 7 ft NVZ lines; baseline/sidelines/centerline; net plane (34" center / 36" sidelines). User taps 4 corners (or 2 baselines + a sideline if a corner is occluded).
+- **Pickleball:** 20×44 ft template; 7 ft NVZ lines; baseline/sidelines/centerline; net plane (34" center / 36" sidelines). Product default is no user taps: upload/recording triggers automatic court evidence for outline, kitchen/NVZ, center service lines, and trusted top net. Manual corner review/taps remain a fallback/debug label path when the automatic evidence or calibration seed fails.
 - **Tennis:** singles/doubles template, service boxes, baseline, sidelines, net plane. Serve lab needs exact service-box/net geometry.
 
 ### Body insights (≤3 per session, defensible only)
@@ -290,10 +290,10 @@ Line calls, auto scoring, full-match auto-analysis UX on day one (but ~20-min in
 ## 11. Native court / net / ball / paddle tracking
 
 ### Court / floor
-Stable per-clip court coordinate frame. MVP: `court_template.json` (PB + tennis), 4-tap homography via the existing solver, fallback (2 baseline corners + 1 sideline + template), reprojection sanity check, tripod-bump guard (re-verify every N frames + optical-flow warp), court zones (NVZ, transition, baseline, service boxes). Auto-detect (classical Hough+template pre-place; later a fine-tuned court-keypoint net — no licensed pickleball one exists today) is an accelerator, never a dependency. Reuse `threed/calibration/solver.py`, `threed/stage_projection/`, `threed/calibration/projection.py`.
+Stable per-clip court coordinate frame. MVP server path: `court_template.json` (PB + tennis), trusted sidecar/manual-review calibration when available, automatic `court_line_evidence.json` on every run, reprojection sanity check, tripod-bump guard (re-verify every N frames + optical-flow warp), court zones (NVZ, transition, baseline, service boxes). Auto-detect is no longer optional for product flow: video-backed runs must attempt semantic court evidence and fail closed if kitchen/centerline/top-net evidence is not trustworthy. The fully no-tap calibration solve is still gated behind the CAL-3 trained/heuristic keypoint-line solver; manual taps are fallback labels, not the main user flow.
 
 ### Net
-Static net plane from the court template + regulation heights (no pixel-based height estimation, which is unreliable on a thin sagging net). Use detected net line only as a homography cross-check. Defer net-cord/contact classification.
+Static net plane from the court template + regulation heights. Observed top-net pixels are used as evidence/trust checks, not as blind height estimation; projected top-net overlays and downstream net logic are low confidence when the observed top net is missing or inconsistent. Defer net-cord/contact classification.
 
 ### Ball
 **MVP goal: timing/context, not line calls.**
@@ -464,7 +464,7 @@ Run before any large push. (Codex phase gates expand these.)
 
 ## 20. Product UX
 
-**Player flow:** select sport → clip type → record/upload → trim → tap court corners → confirm side/identity → optional paddle profile → submit → **<10 s fast preview** → notified when deep report ready → review 3 habits → corrections → repeat next week.
+**Player flow:** select sport → clip type → record/upload → trim → automatic court detection/quality check → confirm side/identity → optional paddle profile → submit → **<10 s fast preview** → notified when deep report ready → review 3 habits → corrections → repeat next week. Manual court review appears only when auto court evidence fails and the user/report should not be charged as a trusted automatic result.
 **Coach flow:** create student/session → upload/import → confirm focus → review auto habits → dismiss/edit spans → add note → send report → assign drill → track next session.
 **Club flow:** create assessment event → batch upload → assign names → generate reports → bucket by clinic need → send follow-up.
 **Design rule:** first screen is the court map + the priority habit, never a raw metric dashboard:

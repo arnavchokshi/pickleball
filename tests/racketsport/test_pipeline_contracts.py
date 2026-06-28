@@ -37,7 +37,12 @@ def test_readiness_report_marks_stage_ready_only_after_dependencies_exist(tmp_pa
     tracking = report["stages"][1]
     assert calibration["stage"] == "calibration"
     assert calibration["status"] == "not_ready"
-    assert calibration["missing_artifacts"] == ["court_calibration.json", "court_zones.json", "net_plane.json"]
+    assert calibration["missing_artifacts"] == [
+        "court_calibration.json",
+        "court_zones.json",
+        "net_plane.json",
+        "court_line_evidence.json",
+    ]
     assert tracking["stage"] == "tracking"
     assert tracking["present_artifacts"] == ["tracks.json"]
     assert tracking["missing_artifacts"] == []
@@ -51,6 +56,7 @@ def test_readiness_report_is_ready_when_requested_stage_and_dependencies_are_pre
         "court_calibration.json",
         "court_zones.json",
         "net_plane.json",
+        "court_line_evidence.json",
         "tracks.json",
         "smpl_motion.json",
         "skeleton3d.json",
@@ -90,6 +96,7 @@ def test_validate_pipeline_artifacts_cli_writes_machine_readable_report(tmp_path
             "court_calibration.json",
             "court_zones.json",
             "net_plane.json",
+            "court_line_evidence.json",
             "tracks.json",
             "smpl_motion.json",
             "skeleton3d.json",

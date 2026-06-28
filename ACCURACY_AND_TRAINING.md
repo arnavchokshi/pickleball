@@ -67,6 +67,8 @@ The app **enforces** Landscape + locked capture and **auto-handles** the rest (S
 
 **Decisive stack:** start from the **ARKit sidecar** (camera intrinsics + 6DoF pose + horizontal court-floor plane captured on-device) → auto-detect court keypoints → distortion-correct → aggregate over 20–40 static frames → **`solvePnP` (full 6-DOF), not homography-only** → reprojection gate + capture-quality score. The ARKit plane + pose give a strong initialization that the server refines; manual court-corner tap is the fallback when ARKit tracking is `.limited` (blank/low-contrast courts, low light).
 
+**Current implementation note (2026-06-28):** the default server calibration stage now attempts automatic semantic court evidence for every available upload video/frame and writes `court_line_evidence.json` with kitchen/NVZ, centerline, and top-net readiness. Video-backed runs stop before tracking when that evidence is not ready. A random video without a trusted calibration seed still fails closed instead of fabricating `court_calibration.json`; the trained/heuristic no-tap solver must pass the gates below before this becomes verified automatic calibration.
+
 Ranked levers:
 
 | # | Lever | Expected gain | Effort |
