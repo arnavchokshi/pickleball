@@ -25,6 +25,8 @@ trackers, post-processors, or production runtime paths.
   motion-consistent path, with only short gaps filled.
 - `tracknet_court_local_search`: target-court output post-processed with
   bounded CPU pixel evidence around the predicted trajectory.
+- `fusion_temporal_vball`: target-court TrackNet plus temporal backbone fused
+  with independent VballNet verifier tracks. This does not use click labels.
 - `oracle_click_corrected`: sparse-click identity filter output. Excluded from
   production ranking because it consumes held-out labels.
 
@@ -44,6 +46,12 @@ false positives on the accepted four-clip benchmark. Keep it as an experimental
 diagnostic path until its evidence model can distinguish real target-court balls
 from court lines, paddle flashes, and background balls.
 
+The best current no-click prototype is the TrackNet/VballNet fusion pass. It
+uses TrackNet for recall, the temporal path as a stable backbone, and VballNet
+as an independent verifier. On the accepted four-clip held-out benchmark it
+beats the previous temporal-path score while keeping p90 error and teleports
+far below raw TrackNet. It is still `fused_not_gate_verified`, not a BALL gate.
+
 The next model-side candidate should be a sports-ball-specific tracker with
 motion attention, starting with TrackNetV4 if usable weights or training data are
 available. The H100 has the official TrackNetV4 repo cloned, but the upstream
@@ -52,3 +60,9 @@ so a real run still needs weights or fine-tuning. Generic point trackers should
 be evaluated only with automatic seeds from a detector or motion model;
 human-click seeded point tracking is another oracle variant, not a
 production-comparable tracker.
+
+A usable adjacent pretrained model was found in `asigatchov/vball-net`: the
+Google Drive demo archive contains VballNet Keras and ONNX weights. Those
+weights are volleyball-trained, so they are not a substitute for official
+TrackNetV4 or pickleball fine-tuning, but they provide a useful independent
+motion-attention verifier for fusion experiments.
