@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from threed.racketsport.ball_temporal_filter import (
+    filter_ball_track_local_trajectory_outliers,
     filter_ball_track_temporal_outliers,
     filter_ball_track_temporal_path,
 )
@@ -111,4 +112,35 @@ def test_temporal_outlier_filter_removes_only_isolated_impossible_jumps(tmp_path
     assert filtered.frames[6].visible is False
     assert filtered.frames[7].visible is True
     assert summary["rejected_isolated_outlier_count"] == 2
+    assert summary["uses_human_clicks"] is False
+
+
+def test_local_trajectory_filter_rejects_points_far_from_surrounding_path(tmp_path: Path) -> None:
+    track_path = tmp_path / "ball_track.json"
+    frames = [
+        {"t": 0 / 30.0, "xy": [0.0, 0.0], "conf": 0.9, "visible": True},
+        {"t": 1 / 30.0, "xy": [10.0, 0.0], "conf": 0.9, "visible": True},
+        {"t": 2 / 30.0, "xy": [20.0, 0.0], "conf": 0.9, "visible": True},
+        {"t": 3 / 30.0, "xy": [300.0, 300.0], "conf": 0.9, "visible": True},
+        {"t": 4 / 30.0, "xy": [40.0, 0.0], "conf": 0.9, "visible": True},
+        {"t": 5 / 30.0, "xy": [50.0, 0.0], "conf": 0.9, "visible": True},
+        {"t": 6 / 30.0, "xy": [60.0, 0.0], "conf": 0.9, "visible": True},
+    ]
+    track_path.write_text(
+        json.dumps({"schema_version": 1, "fps": 30.0, "source": "tracknet", "frames": frames, "bounces": []}),
+        encoding="utf-8",
+    )
+
+    payload, summary = filter_ball_track_local_trajectory_outliers(
+        ball_track_path=track_path,
+        window_frames=4,
+        max_error_px=30.0,
+        min_pair_predictions=4,
+    )
+
+    filtered = BallTrack.model_validate(payload)
+    assert filtered.frames[2].visible is True
+    assert filtered.frames[3].visible is False
+    assert filtered.frames[4].visible is True
+    assert summary["rejected_local_trajectory_outlier_count"] == 1
     assert summary["uses_human_clicks"] is False

@@ -164,6 +164,79 @@ def filter_ball_track_temporal_outliers(
     return payload, summary
 
 
+def filter_ball_track_local_trajectory_outliers(
+    *,
+    ball_track_path: str | Path,
+    window_frames: int = 20,
+    max_error_px: float = 80.0,
+    min_pair_predictions: int = 4,
+    max_iterations: int = 2,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Reject points far from the local trajectory implied by surrounding points."""
+
+    if window_frames < 1:
+        raise ValueError("window_frames must be >= 1")
+    _validate_positive(max_error_px, "max_error_px")
+    if min_pair_predictions < 1:
+        raise ValueError("min_pair_predictions must be >= 1")
+    if max_iterations < 1:
+        raise ValueError("max_iterations must be >= 1")
+
+    track = load_ball_track(ball_track_path)
+    payload = deepcopy(track.model_dump(mode="json"))
+    samples_by_index = _payload_samples_by_frame_index(payload, fps=float(track.fps))
+    visible_before = sum(1 for frame in payload["frames"] if bool(frame["visible"]))
+    rejected_count = 0
+    evaluated_count = 0
+    iterations = 0
+
+    for iteration in range(max_iterations):
+        to_hide: set[int] = set()
+        visible = sorted((index, frame) for index, frame in samples_by_index.items() if bool(frame["visible"]))
+        for frame_index, frame in visible:
+            prediction = _local_pairwise_prediction(
+                visible=visible,
+                frame_index=frame_index,
+                window_frames=window_frames,
+                min_pair_predictions=min_pair_predictions,
+            )
+            if prediction is None:
+                continue
+            evaluated_count += 1
+            if _distance(_xy(frame), prediction) > max_error_px:
+                to_hide.add(frame_index)
+        if not to_hide:
+            break
+        for frame_index in to_hide:
+            frame = samples_by_index[frame_index]
+            if bool(frame["visible"]):
+                _hide_frame(frame)
+                frame["approx"] = False
+                rejected_count += 1
+        iterations = iteration + 1
+
+    BallTrack.model_validate(payload)
+    visible_after = sum(1 for frame in payload["frames"] if bool(frame["visible"]))
+    summary = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_local_trajectory_filter",
+        "status": "filtered_not_gate_verified",
+        "source_ball_track": str(ball_track_path),
+        "frame_count": len(payload["frames"]),
+        "visible_before": visible_before,
+        "visible_after": visible_after,
+        "evaluated_local_trajectory_count": evaluated_count,
+        "rejected_local_trajectory_outlier_count": rejected_count,
+        "iterations": iterations,
+        "window_frames": int(window_frames),
+        "max_error_px": float(max_error_px),
+        "min_pair_predictions": int(min_pair_predictions),
+        "uses_human_clicks": False,
+        "not_ground_truth": True,
+    }
+    return payload, summary
+
+
 def write_temporal_filtered_ball_track(
     *,
     ball_track_path: str | Path,
@@ -177,6 +250,9 @@ def write_temporal_filtered_ball_track(
     min_chain_visible_frames: int = 3,
     max_neighbor_gap_frames: int = 4,
     max_iterations: int = 3,
+    local_trajectory_window_frames: int = 20,
+    local_trajectory_max_error_px: float = 80.0,
+    local_trajectory_min_pair_predictions: int = 4,
 ) -> dict[str, Any]:
     if mode == "path":
         payload, summary = filter_ball_track_temporal_path(
@@ -195,8 +271,16 @@ def write_temporal_filtered_ball_track(
             max_neighbor_gap_frames=max_neighbor_gap_frames,
             max_iterations=max_iterations,
         )
+    elif mode == "local_trajectory":
+        payload, summary = filter_ball_track_local_trajectory_outliers(
+            ball_track_path=ball_track_path,
+            window_frames=local_trajectory_window_frames,
+            max_error_px=local_trajectory_max_error_px,
+            min_pair_predictions=local_trajectory_min_pair_predictions,
+            max_iterations=max_iterations,
+        )
     else:
-        raise ValueError("mode must be 'path' or 'outlier'")
+        raise ValueError("mode must be 'path', 'outlier', or 'local_trajectory'")
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -365,6 +449,46 @@ def _isolated_outlier_indices(
     return to_hide
 
 
+def _local_pairwise_prediction(
+    *,
+    visible: list[tuple[int, dict[str, Any]]],
+    frame_index: int,
+    window_frames: int,
+    min_pair_predictions: int,
+) -> tuple[float, float] | None:
+    before = [
+        (index, frame)
+        for index, frame in visible
+        if 0 < frame_index - index <= window_frames
+    ]
+    after = [
+        (index, frame)
+        for index, frame in visible
+        if 0 < index - frame_index <= window_frames
+    ]
+    predictions: list[tuple[float, float]] = []
+    for before_index, before_frame in before:
+        before_xy = _xy(before_frame)
+        for after_index, after_frame in after:
+            span = after_index - before_index
+            if span <= 0:
+                continue
+            alpha = (frame_index - before_index) / float(span)
+            after_xy = _xy(after_frame)
+            predictions.append(
+                (
+                    before_xy[0] + (after_xy[0] - before_xy[0]) * alpha,
+                    before_xy[1] + (after_xy[1] - before_xy[1]) * alpha,
+                )
+            )
+    if len(predictions) < min_pair_predictions:
+        return None
+    return (
+        _median([prediction[0] for prediction in predictions]),
+        _median([prediction[1] for prediction in predictions]),
+    )
+
+
 def _neighbor_index(visible_indices: list[int], position: int, *, direction: int, max_gap: int) -> int | None:
     neighbor_position = position + direction
     if neighbor_position < 0 or neighbor_position >= len(visible_indices):
@@ -404,6 +528,16 @@ def _distance(a: tuple[float, float], b: tuple[float, float]) -> float:
     return math.hypot(a[0] - b[0], a[1] - b[1])
 
 
+def _median(values: list[float]) -> float:
+    if not values:
+        raise ValueError("median requires at least one value")
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    if len(ordered) % 2 == 1:
+        return ordered[middle]
+    return (ordered[middle - 1] + ordered[middle]) / 2.0
+
+
 def _validate_positive(value: float, name: str) -> None:
     if not math.isfinite(float(value)) or float(value) <= 0.0:
         raise ValueError(f"{name} must be > 0")
@@ -415,6 +549,7 @@ def _validate_nonnegative(value: float, name: str) -> None:
 
 
 __all__ = [
+    "filter_ball_track_local_trajectory_outliers",
     "filter_ball_track_temporal_outliers",
     "filter_ball_track_temporal_path",
     "write_temporal_filtered_ball_track",

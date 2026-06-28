@@ -18,7 +18,7 @@ def main() -> int:
     parser.add_argument("--ball-track", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--summary-out", type=Path, required=True)
-    parser.add_argument("--mode", choices=("path", "outlier"), default="path")
+    parser.add_argument("--mode", choices=("path", "outlier", "local_trajectory"), default="path")
     parser.add_argument("--max-speed-px-per-second", type=float, default=7200.0)
     parser.add_argument("--base-jump-px", type=float, default=60.0)
     parser.add_argument("--max-link-gap-frames", type=int, default=10)
@@ -26,6 +26,9 @@ def main() -> int:
     parser.add_argument("--min-chain-visible-frames", type=int, default=3)
     parser.add_argument("--max-neighbor-gap-frames", type=int, default=4)
     parser.add_argument("--max-iterations", type=int, default=3)
+    parser.add_argument("--local-trajectory-window-frames", type=int, default=20)
+    parser.add_argument("--local-trajectory-max-error-px", type=float, default=80.0)
+    parser.add_argument("--local-trajectory-min-pair-predictions", type=int, default=4)
     args = parser.parse_args()
 
     try:
@@ -41,6 +44,9 @@ def main() -> int:
             min_chain_visible_frames=args.min_chain_visible_frames,
             max_neighbor_gap_frames=args.max_neighbor_gap_frames,
             max_iterations=args.max_iterations,
+            local_trajectory_window_frames=args.local_trajectory_window_frames,
+            local_trajectory_max_error_px=args.local_trajectory_max_error_px,
+            local_trajectory_min_pair_predictions=args.local_trajectory_min_pair_predictions,
         )
     except Exception as exc:
         print(str(exc), file=sys.stderr)

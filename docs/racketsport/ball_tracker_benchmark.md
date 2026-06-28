@@ -27,6 +27,10 @@ trackers, post-processors, or production runtime paths.
   bounded CPU pixel evidence around the predicted trajectory.
 - `fusion_temporal_vball`: target-court TrackNet plus temporal backbone fused
   with independent VballNet verifier tracks. This does not use click labels.
+- `fusion_temporal_vball_localtraj`: the fusion track after a local
+  trajectory-consistency filter. Each point is checked against robust
+  before/after predictions from surrounding visible points; points far away from
+  the surrounding path are hidden.
 - `oracle_click_corrected`: sparse-click identity filter output. Excluded from
   production ranking because it consumes held-out labels.
 
@@ -51,6 +55,12 @@ uses TrackNet for recall, the temporal path as a stable backbone, and VballNet
 as an independent verifier. On the accepted four-clip held-out benchmark it
 beats the previous temporal-path score while keeping p90 error and teleports
 far below raw TrackNet. It is still `fused_not_gate_verified`, not a BALL gate.
+
+The smoother review variant is `fusion_temporal_vball_localtraj`. Compared with
+the fusion pass, it removes the remaining benchmark teleports and lowers hidden
+false positives, but it also drops visible recall. Use this variant when visual
+jitter and obviously false jumps are more harmful than intermittent missing
+ball frames.
 
 The next model-side candidate should be a sports-ball-specific tracker with
 motion attention, starting with TrackNetV4 if usable weights or training data are
