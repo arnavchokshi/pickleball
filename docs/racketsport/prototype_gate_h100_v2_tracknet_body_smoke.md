@@ -57,3 +57,23 @@ Result:
 - detected output keys include `pred_vertices`, `pred_keypoints_3d`, `pred_joint_coords`, `pred_cam_t`, `pred_pose_raw`, `body_pose_params`, `hand_pose_params`, `shape_params`, and `global_rot`.
 
 This proves `setup_sam_3d_body(...).process_one_image(...)` can run on a prototype pickleball frame with tracked boxes. It does not yet prove the court-world SMPL conversion, foot contact, physics, or BODY acceptance gates.
+
+## Current Ball Review Track
+
+The accepted-four TrackNet smoke windows now also have no-click model-fusion and
+local-trajectory review artifacts under each clip's `tracknet_smoke_0000_0010/`
+directory:
+
+- `ball_track_fusion_temporal_vball100.json`
+- `ball_track_fusion_temporal_vball100_summary.json`
+- `ball_track_fusion_temporal_vball100_localtraj.json`
+- `ball_track_fusion_temporal_vball100_localtraj_summary.json`
+- `ball_track_fusion_temporal_vball100_localtraj_overlay_h264.mp4`
+
+The local-trajectory variant is the current strict review track. On the four
+accepted clips it removes benchmark teleports and lowers hidden false positives
+relative to the looser fusion track, but it also hides more uncertain ball
+frames. This remains `filtered_not_gate_verified`; it is not BALL `VERIFIED`.
+
+Usage and rerun commands are documented in
+`docs/racketsport/prototype_gate_h100_v2_usage.md`.

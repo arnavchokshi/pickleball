@@ -4,6 +4,10 @@ This is a prototype-only human review loop for bad TrackNet output in videos
 with nearby courts, background balls, or occlusions. It does not create final
 ground truth.
 
+The resulting `ball_points.json` files are held-out benchmark labels. They must
+not be read by production trackers, no-click post-processors, or model-fusion
+runtime paths. Use them to score candidates and decide what to improve next.
+
 Export 30 frames for one clip:
 
 ```bash
@@ -57,3 +61,11 @@ under each clip's `tracknet_smoke_0000_0010/` directory:
 
 The 120 px margin is a prototype setting to tolerate imperfect fisheye and
 corner placement while still suppressing obvious balls from neighboring courts.
+
+The current strict no-click review artifact for each clip is:
+
+- `tracknet_smoke_0000_0010/ball_track_fusion_temporal_vball100_localtraj.json`
+- `tracknet_smoke_0000_0010/ball_track_fusion_temporal_vball100_localtraj_overlay_h264.mp4`
+
+See `docs/racketsport/prototype_gate_h100_v2_usage.md` for rebuild and benchmark
+commands.

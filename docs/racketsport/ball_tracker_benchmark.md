@@ -36,6 +36,9 @@ trackers, post-processors, or production runtime paths.
 
 ## Current Read
 
+Operational usage for the current four-clip prototype gate is in
+`docs/racketsport/prototype_gate_h100_v2_usage.md`.
+
 The benchmark at
 `runs/eval0/prototype_gate_h100_v2/ball_tracker_benchmark/benchmark_summary.md`
 shows that court filtering and temporal filtering reduce background balls and
@@ -61,6 +64,12 @@ the fusion pass, it removes the remaining benchmark teleports and lowers hidden
 false positives, but it also drops visible recall. Use this variant when visual
 jitter and obviously false jumps are more harmful than intermittent missing
 ball frames.
+
+As of the latest four-clip benchmark, `fusion_temporal_vball_localtraj` improves
+aggregate teleports from 8 to 0, hidden false positives from 0.425 to 0.294, and
+p90 error from 46.8 px to 38.9 px versus `fusion_temporal_vball100`. Hit recall
+drops from 0.563 to 0.509, so this is a stricter review/runtime option rather
+than a final BALL gate.
 
 The next model-side candidate should be a sports-ball-specific tracker with
 motion attention, starting with TrackNetV4 if usable weights or training data are
