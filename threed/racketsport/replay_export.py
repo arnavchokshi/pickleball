@@ -262,6 +262,13 @@ def validate_replay_export_manifest(
     return scene
 
 
+def resolve_replay_glb_path(export_root: str | Path, value: str | Path, *, field: str) -> Path:
+    """Resolve a replay GLB ref after validating it is a safe relative path."""
+
+    root = Path(export_root)
+    return root / _validate_glb_ref(root, value, field=field)
+
+
 def _court_primitives(virtual_world: Mapping[str, Any]) -> list[dict[str, Any]]:
     court = virtual_world.get("court")
     if not isinstance(court, Mapping):

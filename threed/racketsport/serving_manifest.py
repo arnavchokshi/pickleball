@@ -84,7 +84,7 @@ def build_serving_manifest(manifest_path: str | Path = "models/MANIFEST.json") -
         "tiers": tiers,
         "summary": _summarize(manifest.models, tiers),
         "notes": [
-            "This report is a CPU-only serving readiness scaffold.",
+            "This report is a CPU-only serving inventory scaffold and does not start Triton.",
             "EVAL-0 approval is not inferred here; model variants remain subject to benchmark and human approval gates.",
             "Local checkpoint paths are validated syntactically for serving safety only; file existence is not probed on this host.",
         ],
@@ -100,7 +100,8 @@ def _build_tier(
     components = [_build_component(spec, entries_by_stage.get(spec.stage, [])) for spec in specs]
     return {
         "tier": tier,
-        "checkpoint_runtime_ready": all(component["serving_ready"] for component in components),
+        "checkpoint_runtime_inventory_ready": all(component["inventory_ready"] for component in components),
+        "serving_ready": False,
         "eval0_approval": "not_evaluated_by_cpu_manifest",
         "triton_ensemble_status": "scaffold_only_not_started",
         "components": components,
@@ -113,8 +114,9 @@ def _build_component(spec: ComponentSpec, entries: list[ModelEntry]) -> dict[str
     sorted_entries = sorted(entries, key=lambda entry: entry.id)
     entry_reports = [_entry_report(entry, safe_prefixes=safe_prefixes) for entry in sorted_entries]
     available_entries = [report for report in entry_reports if report["status"] == ready_status]
-    serving_ready_entries = [report for report in available_entries if report["path_safety"]["safe"]]
+    inventory_ready_entries = [report for report in available_entries if report["path_safety"]["safe"]]
     missing_or_pending = _component_missing_or_pending(spec, entry_reports, ready_status=ready_status)
+    inventory_ready = bool(inventory_ready_entries)
 
     return {
         "component_id": spec.component_id,
@@ -126,7 +128,9 @@ def _build_component(spec: ComponentSpec, entries: list[ModelEntry]) -> dict[str
         "checkpoint_available": bool(available_entries) if spec.kind == "checkpoint" else None,
         "runtime_available": bool(available_entries) if spec.kind == "runtime" else None,
         "safe_paths": all(report["path_safety"]["safe"] for report in entry_reports if report["local_path"] is not None),
-        "serving_ready": bool(serving_ready_entries),
+        "inventory_ready": inventory_ready,
+        "serving_ready": False,
+        "serving_blockers": ["triton_not_started", "eval0_not_approved"],
         "entries": entry_reports,
         "missing_or_pending": missing_or_pending,
     }
@@ -242,6 +246,7 @@ def _summarize(models: list[ModelEntry], tiers: dict[str, dict[str, Any]]) -> di
         "runtime_available_count": sum(1 for model in models if model.status == READY_RUNTIME_STATUS),
         "tier_count": len(tiers),
         "component_count": len(components),
+        "inventory_ready_component_count": sum(1 for component in components if component["inventory_ready"]),
         "serving_ready_component_count": sum(1 for component in components if component["serving_ready"]),
         "unsafe_model_path_count": len(unsafe_ids),
         "unsafe_model_path_ids": unsafe_ids,

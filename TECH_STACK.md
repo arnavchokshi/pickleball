@@ -244,7 +244,7 @@ Shot classifier status (2026-06-28): no trained SHOT-1 model is approved. The cu
 - **Accuracy levers** (detail in `ACCURACY_AND_TRAINING.md` §3): prefer **`solvePnP` full 6-DOF pose over homography-only** (~2×, essential at shallow angles); **average correspondences over 20–40 static frames** (−23–57% error, free); sub-pixel line refinement + line-based (PnL) optimization; **ChArUco intrinsics cached per phone-model → EXIF → GeoCalib** fallback (don't self-calibrate distortion from court lines — degenerate); **train our own court-keypoint net** (fine-tune TennisCourtDetector + synthetic renders across 50–500 viewpoints). Feet-to-world error ranges from ~3–5 cm (high corner) to ~0.6 m far-court depth (low/shallow) → capture-quality score gates far-court NVZ calls.
 - **Toggle:** one-time manual tap (cheap) ↔ auto-detect + continuous re-solve (rich).
 - **License:** OpenCV (BSD), kornia (Apache). Clean.
-- **Reuse:** `threed/calibration/solver.py`, `threed/stage_projection/`.
+- **Current repo modules:** `threed/racketsport/court_calibration.py`, `threed/racketsport/court_auto_evidence.py`, `threed/racketsport/calibration_overlay.py`, `threed/racketsport/court_zones.py`, and `threed/racketsport/net_plane.py`.
 
 ### (c) Person detection + tracking + doubles ID — **YOLO26m + BoT-SORT-ReID + court geometry** *(round-4b: YOLO26 verified real)*
 
@@ -255,7 +255,7 @@ Shot classifier status (2026-06-28): no trained SHOT-1 model is approved. The cu
 - **Toggle:** nano detector + motion tracker (cheap) ↔ + ReID model (rich, only if needed).
 - **Pose is OFF in this layer** — pose runs downstream; for ≤4 players geometry resolves IDs without it.
 - **Differs from dance:** dance justified a heavy tracker; here a nano detector + free spatial priors replace it.
-- **Reuse:** `threed/formation_alignment/assignment.py` for side/role.
+- **Current repo modules:** `threed/racketsport/person_mot.py`, `threed/racketsport/track_lock.py`, `threed/racketsport/doubles_id.py`, and `threed/racketsport/person_tracking_benchmark.py`.
 
 ### (d) 2D pose — **RTMPose / RTMW (top-down on ≤4 crops)**
 
@@ -330,7 +330,7 @@ Two tiers (our world-grounding/foot-lock detailed in (p); built in `IMPLEMENTATI
 - **Chosen:** compute coaching metrics directly from the skeleton, court frame, and event timestamps. Defensible set: foot/NVZ position, court zones, spacing, balance (segmental mass-weighted CoM, ~20–30 mm error — sufficient; mesh CoM not materially better), base of support, reach, recovery time, knee/elbow bend, **shoulder-hip separation (X-factor, <1° MAE with bilateral keypoints)**, contact point/height, swing path, split-step timing, weight transfer, trunk tilt.
 - **Confidence-gated/deferred:** forearm pronation/paddle-face (needs twist signal), and **velocity/acceleration** metrics (see §4 — conflicting evidence, validate empirically before trusting).
 - **Toggle:** core positional metrics (cheap) ↔ + event-synced contact-window metrics ↔ + twist metrics (rich).
-- **Reuse:** `threed/sidecar_body4d/contact_states.py`, `impact.py`.
+- **Current repo modules:** `threed/racketsport/movement_metrics.py`, `threed/racketsport/biomech.py`, `threed/racketsport/contact_windows.py`, `threed/racketsport/virtual_world.py`, and `threed/racketsport/physics_world_refinement.py`.
 
 ### (l) Insight engine — **rules = truth; ML = label; LLM = copy only**
 
@@ -351,7 +351,7 @@ Two tiers (our world-grounding/foot-lock detailed in (p); built in `IMPLEMENTATI
 - **Chosen:** keep sparse fast-tier artifacts + habit clips + downsampled previews by default; archive full mesh/skeleton only for selected key spans; chunked object layout; re-process from source on demand. Artifacts: `court_calibration.json`, `court_zones.json`, `net_plane.json`, `tracks.json`, `smpl_motion.json` (`joints_world` plus optional `mesh_vertices_world`), `ball_track.json`, `contact_windows.json`, `racket_pose.json`, `frame_compute_plan.json`, `virtual_world.json`, `racket_sport_metrics.json`, `habit_report.json`, `coach_report.json`, `corrections.json`.
 - **Why:** 20-min clips at 60 FPS make full-fidelity retention for every frame wasteful; we keep what's shown and re-derive the rest.
 - **Toggle:** previews only (cheap) ↔ full per-span mesh archive (rich).
-- **Reuse:** S3 archive + backend callback path; production-readiness gate (`test_wp47_readiness_gate.py`).
+- **Reuse:** current repo readiness plumbing is `threed/racketsport/pipeline_contracts.py`, `scripts/racketsport/validate_pipeline_artifacts.py`, and `threed/racketsport/replay_readiness.py`. S3 archive/backend callback production gates are not implemented yet.
 
 ### (o) Drill verification — **wrist-velocity peaks + contact events**
 

@@ -4,6 +4,8 @@ Date: 2026-06-27; updated 2026-06-28
 
 This is a prototype smoke record, not an acceptance gate. None of these artifacts make BALL, BODY, or E2E `VERIFIED`; they only prove real H100 runtime seams on the accepted-four prototype clips.
 
+Archived evidence snapshot. The canonical current prototype runbook is `docs/racketsport/prototype_gate_h100_v2_usage.md`; use this file only for the original TrackNet/BODY smoke provenance.
+
 ## Accepted Clips
 
 - `burlington_gold_0300_low_steep_corner`

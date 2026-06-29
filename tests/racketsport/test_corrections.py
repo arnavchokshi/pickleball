@@ -108,6 +108,19 @@ def test_validate_manifest_rejects_unknown_correction_status(tmp_path):
     assert "status: must be one of accepted, pending, rejected" in str(excinfo.value)
 
 
+@pytest.mark.parametrize("created_at", ["2026-06-28T20:04:30", "2026-06-28 20:04:30Z"])
+def test_validate_manifest_rejects_non_rfc3339_date_times(tmp_path: Path, created_at: str) -> None:
+    payload = _valid_manifest()
+    payload["created_at"] = created_at
+    payload["corrections"][0]["created_at"] = created_at
+    manifest_path = _write_manifest(tmp_path / "corrections.json", payload)
+
+    with pytest.raises(ValueError) as excinfo:
+        validate_manifest(manifest_path)
+
+    assert "must be an RFC 3339 date-time string" in str(excinfo.value)
+
+
 def test_corrections_json_schema_documents_validator_fields():
     schema = json.loads(Path("corrections/schema.json").read_text(encoding="utf-8"))
 

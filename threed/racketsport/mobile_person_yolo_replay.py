@@ -174,7 +174,7 @@ def run_replay_yolo_candidate(
     predictions = validate_artifact_file("on_device_person_tracks", tracks_path)
     if not isinstance(predictions, OnDevicePersonTracks):
         raise ValueError("prediction artifact did not parse as OnDevicePersonTracks")
-    metrics = score_mobile_person_tracks(gt, predictions, expected_players=4)
+    metrics = score_mobile_person_tracks(gt, predictions, expected_players=candidate.max_players)
     metrics_path = output / "metrics.json"
     write_mobile_person_metrics(metrics_path, metrics)
 

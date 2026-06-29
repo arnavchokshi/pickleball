@@ -518,6 +518,12 @@ def run_pipeline(
             summary_status = PIPELINE_STATUS_FAIL
             break
         stage_runs.append(result.as_dict())
+        if result.status == PIPELINE_STATUS_FAIL:
+            summary_status = PIPELINE_STATUS_FAIL
+            break
+        if result.status == PIPELINE_STATUS_BLOCKED:
+            summary_status = PIPELINE_STATUS_BLOCKED
+            break
 
     review_artifacts = _write_best_effort_review_artifacts(context, expected_players=max_players)
     summary = {

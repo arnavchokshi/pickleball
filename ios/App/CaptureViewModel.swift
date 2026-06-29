@@ -294,7 +294,7 @@ final class CaptureViewModel: ObservableObject {
             modelsRoot: modelsRoot,
             modelDirectory: "yolo26n_img416_int8",
             modelName: "yolo26n",
-            candidate: .yolo26nInt8Detect15Track30,
+            candidate: .yolo26nInt8Detect2Track30,
             imageSize: 416,
             maxTrackAgeFrames: 30,
             detectionIntervalFrames: 2

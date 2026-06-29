@@ -19,6 +19,7 @@ from threed.racketsport.corrections import CORRECTION_STATUSES, is_unsafe_relati
 DEFAULT_SCHEMA = ROOT / "corrections" / "schema.json"
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 JSON_POINTER_PATTERN = re.compile(r"^(/([^/~]|~[01])*)+$")
+RFC3339_DATE_TIME_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$")
 TOP_LEVEL_FIELDS = {"schema_version", "manifest_id", "created_at", "description", "corrections"}
 CORRECTION_FIELDS = {
     "id",
@@ -170,6 +171,9 @@ def _validate_date_time(errors: list[str], path: str, value: Any, *, required: b
     if value is None and not required:
         return
     if not isinstance(value, str):
+        errors.append(f"{path}: must be an RFC 3339 date-time string")
+        return
+    if not RFC3339_DATE_TIME_PATTERN.match(value):
         errors.append(f"{path}: must be an RFC 3339 date-time string")
         return
     try:

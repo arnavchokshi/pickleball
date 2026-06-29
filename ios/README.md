@@ -1,8 +1,8 @@
 # Pickleball iOS
 
 This scaffold is the native iOS entry point for the Pickleball capture client.
-It contains the app shell, live camera capture path, sensor sidecar contracts,
-and module boundaries for the video-to-pipeline workflow.
+It contains the app shell, partial AVFoundation capture scaffolding, sensor
+sidecar contracts, and module boundaries for the video-to-pipeline workflow.
 
 ## Modules
 

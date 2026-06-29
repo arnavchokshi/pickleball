@@ -12,7 +12,7 @@ from threed.racketsport.eval.metrics import (
     missing_artifacts,
     write_phase_metrics,
 )
-from threed.racketsport.replay_export import inspect_glb_file
+from threed.racketsport.replay_export import inspect_glb_file, resolve_replay_glb_path
 from threed.racketsport.schemas import EvalClipResult, ReplayScene, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
@@ -109,14 +109,23 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
             notes=["replay artifact did not parse as ReplayScene"],
         )
 
-    expected_glbs = [replay_scene.court_glb, *[point.glb_url for point in replay_scene.points]]
-    missing_glbs = [glb for glb in expected_glbs if not (run_dir / glb).is_file()]
+    expected_glb_refs = [("court_glb", replay_scene.court_glb), *[
+        (f"points/{index}/glb_url", point.glb_url) for index, point in enumerate(replay_scene.points)
+    ]]
+    expected_glbs = [glb for _, glb in expected_glb_refs]
+    missing_glbs: list[str] = []
     invalid_glbs: list[str] = []
-    for glb in expected_glbs:
-        if glb in missing_glbs:
-            continue
+    resolved_glbs: list[tuple[str, Path]] = []
+    for field, glb in expected_glb_refs:
         try:
-            inspect_glb_file(run_dir / glb)
+            resolved_glbs.append((glb, resolve_replay_glb_path(run_dir, glb, field=field)))
+        except FileNotFoundError:
+            missing_glbs.append(glb)
+        except ValueError:
+            invalid_glbs.append(glb)
+    for glb, path in resolved_glbs:
+        try:
+            inspect_glb_file(path)
         except ValueError:
             invalid_glbs.append(glb)
     player_count = len(replay_scene.players)

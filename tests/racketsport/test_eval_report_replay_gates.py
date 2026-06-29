@@ -338,6 +338,25 @@ def test_replay_eval_fails_when_referenced_glb_is_invalid(tmp_path: Path) -> Non
     assert "invalid referenced GLB files: points/point_003_review.glb" in payload.clips[0].notes[0]
 
 
+def test_replay_eval_fails_when_referenced_glb_escapes_run_dir(tmp_path: Path) -> None:
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_replay_artifacts(root / "clip_001")
+    replay_scene_path = root / "clip_001" / "replay_scene.json"
+    replay_scene = json.loads(replay_scene_path.read_text(encoding="utf-8"))
+    replay_scene["points"][0]["glb_url"] = "../outside.glb"
+    replay_scene_path.write_text(json.dumps(replay_scene), encoding="utf-8")
+
+    payload = _run_eval(replay_eval, tmp_path)
+    metrics = payload.clips[0].metrics
+
+    assert payload.status == "fail"
+    assert metrics["glb_files_present"].passed is True
+    assert metrics["glb_files_valid"].passed is False
+    assert "invalid referenced GLB files: ../outside.glb" in payload.clips[0].notes[0]
+
+
 @pytest.mark.parametrize("evaluator", [metric_eval, shot_drill_eval, copy_faithfulness, replay_eval])
 def test_incomplete_data1_labels_still_short_circuit_to_not_measured(tmp_path: Path, evaluator: object) -> None:
     labels_root = tmp_path / "data" / "testclips"

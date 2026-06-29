@@ -271,11 +271,13 @@ def _merge_line_observations(observations: Iterable[CourtLineObservation]) -> li
 
 def _merge_one_line(line_id: str, observations: list[CourtLineObservation]) -> CourtLineObservation:
     count = len(observations)
+    reference = observations[0].image_segment
+    aligned_segments = [_align_image_segment(reference, observation.image_segment) for observation in observations]
     return CourtLineObservation(
         line_id=line_id,
         image_segment=[
             [
-                sum(observation.image_segment[point_idx][axis_idx] for observation in observations) / count
+                sum(segment[point_idx][axis_idx] for segment in aligned_segments) / count
                 for axis_idx in range(2)
             ]
             for point_idx in range(2)
@@ -291,6 +293,14 @@ def _merge_one_line(line_id: str, observations: list[CourtLineObservation]) -> C
     )
 
 
+def _align_image_segment(reference: list[list[float]], segment: list[list[float]]) -> list[list[float]]:
+    direct = math.dist(reference[0], segment[0]) + math.dist(reference[1], segment[1])
+    flipped = math.dist(reference[0], segment[1]) + math.dist(reference[1], segment[0])
+    if flipped < direct:
+        return [segment[1], segment[0]]
+    return segment
+
+
 def _merge_net_observations(observations: Iterable[NetLineObservation]) -> list[NetLineObservation]:
     by_net: dict[str, list[NetLineObservation]] = {}
     for observation in observations:
@@ -300,11 +310,13 @@ def _merge_net_observations(observations: Iterable[NetLineObservation]) -> list[
 
 def _merge_one_net(net_id: str, observations: list[NetLineObservation]) -> NetLineObservation:
     count = len(observations)
+    reference = observations[0].image_points
+    aligned_points = [_align_net_points(reference, observation.image_points) for observation in observations]
     return NetLineObservation(
         net_id=net_id,
         image_points=[
             [
-                sum(observation.image_points[point_idx][axis_idx] for observation in observations) / count
+                sum(points[point_idx][axis_idx] for points in aligned_points) / count
                 for axis_idx in range(2)
             ]
             for point_idx in range(3)
@@ -317,6 +329,14 @@ def _merge_one_net(net_id: str, observations: list[NetLineObservation]) -> NetLi
         },
         source="auto_hough_net_top_video",
     )
+
+
+def _align_net_points(reference: list[list[float]], points: list[list[float]]) -> list[list[float]]:
+    direct = math.dist(reference[0], points[0]) + math.dist(reference[2], points[2])
+    flipped = math.dist(reference[0], points[2]) + math.dist(reference[2], points[0])
+    if flipped < direct:
+        return [points[2], points[1], points[0]]
+    return points
 
 
 def select_top_net_observation(

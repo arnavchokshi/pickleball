@@ -998,9 +998,9 @@ readiness coverage is:
 | clip | candidate frames | rendered candidates | preview paddle frames | true/reference frames | reference/GT frames | court-plane ball points | preview warning |
 |---|---:|---:|---:|---:|---:|---:|---|
 | `burlington_gold_0300_low_steep_corner` | 42 | 42 | 42 | 0 | 0 | 288 | `ambiguous_paddle_pose` |
-| `wolverine_mixed_0200_mid_steep_corner` | 36 | 36 | 36 | 0 | 0 | 119 | `missing_mesh_vertices`, `ambiguous_paddle_pose` |
+| `wolverine_mixed_0200_mid_steep_corner` | 36 | 36 | 36 | 0 | 0 | 119 | `ambiguous_paddle_pose` |
 | `outdoor_webcam_iynbd_1500_long_high_baseline` | 397 | 397 | 397 | 0 | 0 | 489 | `missing_mesh_vertices`, `ambiguous_paddle_pose` |
-| `indoor_doubles_fwuks_0500_long_mid_baseline` | 280 | 280 | 280 | 0 | 0 | 117 | `missing_mesh_vertices`, `ambiguous_paddle_pose` |
+| `indoor_doubles_fwuks_0500_long_mid_baseline` | 280 | 280 | 280 | 0 | 0 | 117 | `ambiguous_paddle_pose` |
 
 ## Benchmark Person Trackers With Adaptive BODY Audit
 
@@ -1069,7 +1069,7 @@ gcloud compute ssh body4d-gcp-prod --zone us-west1-b --command \
   "docker exec sam4dbody-pod-agent nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv,noheader"
 ```
 
-Expected focused test result at the current commit: `9 passed`.
+Historical focused test result for the 2026-06-28 baseline: `9 passed`. Re-run the command and record the fresh count before using it as current evidence.
 
 ## If The Output Looks Wrong
 

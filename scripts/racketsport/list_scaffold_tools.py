@@ -11,6 +11,7 @@ from typing import Any
 SCRIPT_ROOT = Path("scripts/racketsport")
 TEST_ROOT = Path("tests/racketsport")
 SCHEMA_ROOT = Path("docs/racketsport")
+INDEXED_GLOBS = ("scripts/racketsport/*.py", "scripts/racketsport/*.sh", "scripts/*.py", "scripts/*.sh")
 
 PREFIXES = (
     "audit_",
@@ -111,11 +112,10 @@ TASK_HINTS = {
 def build_scaffold_tool_index(root: Path) -> dict[str, Any]:
     root = root.resolve()
     _validate_root(root)
-    scripts_root = root / SCRIPT_ROOT
     tests_root = root / TEST_ROOT
     schemas_root = root / SCHEMA_ROOT
 
-    script_paths = sorted(scripts_root.glob("*.py"))
+    script_paths = _script_paths(root)
     tools = [
         _tool_entry(path, root=root, tests_root=tests_root, schemas_root=schemas_root)
         for path in script_paths
@@ -129,8 +129,8 @@ def build_scaffold_tool_index(root: Path) -> dict[str, Any]:
         "tests_root": TEST_ROOT.as_posix(),
         "schema_root": SCHEMA_ROOT.as_posix(),
         "scope": {
-            "indexed_globs": [f"{SCRIPT_ROOT.as_posix()}/*.py"],
-            "excluded_globs": ["scripts/*.sh", f"{SCRIPT_ROOT.as_posix()}/*.sh", "scripts/*.py"],
+            "indexed_globs": list(INDEXED_GLOBS),
+            "excluded_globs": [],
             "repo_wide_hygiene_report": False,
         },
         "execution": {
@@ -163,16 +163,26 @@ def _validate_root(root: Path) -> None:
         raise ValueError(f"scripts root does not exist: {scripts_root}")
 
 
+def _script_paths(root: Path) -> list[Path]:
+    paths: dict[str, Path] = {}
+    for pattern in INDEXED_GLOBS:
+        for path in root.glob(pattern):
+            if path.is_file():
+                paths[path.relative_to(root).as_posix()] = path
+    return [paths[key] for key in sorted(paths)]
+
+
 def _tool_entry(path: Path, *, root: Path, tests_root: Path, schemas_root: Path) -> dict[str, Any]:
     stem = path.stem
     workstream, task_prefix = TASK_HINTS.get(stem, _guess_task(stem))
+    command_path = _relative_posix(path, root=root)
     return {
-        "command_path": _relative_posix(path, root=root),
+        "command_path": command_path,
         "stem": stem,
         "category": _category(stem),
         "workstream": workstream,
         "task_prefix": task_prefix,
-        "matching_test": _matching_test(stem, tests_root=tests_root, root=root),
+        "matching_test": _matching_test(stem, command_path=command_path, tests_root=tests_root, root=root),
         "matching_schema": _matching_schema(stem, schemas_root=schemas_root, root=root),
     }
 
@@ -222,13 +232,16 @@ def _guess_task(stem: str) -> tuple[str | None, str | None]:
     return None, None
 
 
-def _matching_test(stem: str, *, tests_root: Path, root: Path) -> str | None:
+def _matching_test(stem: str, *, command_path: str, tests_root: Path, root: Path) -> str | None:
     candidates = []
     override = TEST_OVERRIDES.get(stem)
     if override is not None:
         candidates.append(override)
     candidates.extend(f"test_{candidate}.py" for candidate in _stem_candidates(stem))
-    return _first_existing(candidates, directory=tests_root, root=root)
+    direct_match = _first_existing(candidates, directory=tests_root, root=root)
+    if direct_match is not None:
+        return direct_match
+    return _first_test_referencing(command_path, tests_root=tests_root, root=root)
 
 
 def _matching_schema(stem: str, *, schemas_root: Path, root: Path) -> str | None:
@@ -259,6 +272,19 @@ def _first_existing(names: list[str], *, directory: Path, root: Path) -> str | N
     for name in names:
         path = directory / name
         if path.is_file():
+            return _relative_posix(path, root=root)
+    return None
+
+
+def _first_test_referencing(command_path: str, *, tests_root: Path, root: Path) -> str | None:
+    if not tests_root.is_dir():
+        return None
+    for path in sorted(tests_root.glob("test_*.py")):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if command_path in text:
             return _relative_posix(path, root=root)
     return None
 

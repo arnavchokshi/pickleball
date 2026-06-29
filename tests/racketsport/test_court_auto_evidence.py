@@ -4,13 +4,23 @@ import pytest
 
 from threed.racketsport.calibration_overlay import build_calibration_overlay
 from threed.racketsport.court_auto_evidence import (
+    _merge_line_observations,
+    _merge_net_observations,
     build_auto_court_line_evidence_from_image,
     calibration_for_image_size,
     select_top_net_observation,
 )
 from threed.racketsport.net_plane import project_net_plane
 from threed.racketsport.net_plane import build_net_plane
-from threed.racketsport.schemas import CameraIntrinsics, CaptureQuality, CourtCalibration, CourtExtrinsics, ReprojectionError
+from threed.racketsport.schemas import (
+    CameraIntrinsics,
+    CaptureQuality,
+    CourtCalibration,
+    CourtExtrinsics,
+    CourtLineObservation,
+    NetLineObservation,
+    ReprojectionError,
+)
 
 
 cv2 = pytest.importorskip("cv2")
@@ -124,6 +134,64 @@ def _draw_top_net(image: object, overlay: dict) -> None:
     right = overlay["net_points"]["right_post"]
     cv2.line(image, (round(left[0]), round(left[1])), (round(center[0]), round(center[1])), (255, 255, 255), 5)
     cv2.line(image, (round(center[0]), round(center[1])), (round(right[0]), round(right[1])), (255, 255, 255), 5)
+
+
+def test_merge_line_observations_aligns_reversed_segment_endpoints():
+    observations = [
+        CourtLineObservation(
+            line_id="near_nvz",
+            image_segment=[[0.0, 10.0], [100.0, 10.0]],
+            confidence=0.9,
+            frame_indexes=[0],
+            residual_px={"mean": 1.0, "p95": 1.0},
+            visible_fraction=1.0,
+            source="test",
+        ),
+        CourtLineObservation(
+            line_id="near_nvz",
+            image_segment=[[101.0, 10.0], [1.0, 10.0]],
+            confidence=0.8,
+            frame_indexes=[1],
+            residual_px={"mean": 2.0, "p95": 2.0},
+            visible_fraction=1.0,
+            source="test",
+        ),
+    ]
+
+    [merged] = _merge_line_observations(observations)
+
+    assert merged.image_segment[0] == pytest.approx([0.5, 10.0])
+    assert merged.image_segment[1] == pytest.approx([100.5, 10.0])
+    assert merged.residual_px.mean == pytest.approx(1.5)
+    assert merged.frame_indexes == [0, 1]
+
+
+def test_merge_net_observations_aligns_reversed_top_net_points():
+    observations = [
+        NetLineObservation(
+            net_id="top_net",
+            image_points=[[0.0, 200.0], [500.0, 195.0], [1000.0, 200.0]],
+            confidence=0.9,
+            frame_indexes=[0],
+            residual_px={"mean": 1.0, "p95": 1.0},
+            source="test",
+        ),
+        NetLineObservation(
+            net_id="top_net",
+            image_points=[[1002.0, 200.0], [501.0, 195.0], [2.0, 200.0]],
+            confidence=0.8,
+            frame_indexes=[1],
+            residual_px={"mean": 2.0, "p95": 2.0},
+            source="test",
+        ),
+    ]
+
+    [merged] = _merge_net_observations(observations)
+
+    assert merged.image_points[0] == pytest.approx([1.0, 200.0])
+    assert merged.image_points[1] == pytest.approx([500.5, 195.0])
+    assert merged.image_points[2] == pytest.approx([1001.0, 200.0])
+    assert merged.frame_indexes == [0, 1]
 
 
 def test_auto_evidence_accepts_observed_kitchen_centerlines_and_top_net():

@@ -12,10 +12,16 @@ def _write_script(root: Path, name: str) -> None:
     path.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
 
 
-def _write_test(root: Path, name: str) -> None:
+def _write_top_script(root: Path, name: str) -> None:
+    path = root / "scripts" / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+
+
+def _write_test(root: Path, name: str, body: str = "def test_placeholder():\n    assert True\n") -> None:
     path = root / "tests" / "racketsport" / name
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("def test_placeholder():\n    assert True\n", encoding="utf-8")
+    path.write_text(body, encoding="utf-8")
 
 
 def _write_schema(root: Path, name: str) -> None:
@@ -27,10 +33,17 @@ def _write_schema(root: Path, name: str) -> None:
 def test_scaffold_tool_index_reports_scripts_and_coverage_gaps(tmp_path: Path) -> None:
     _write_script(tmp_path, "benchmark_decode.py")
     _write_script(tmp_path, "build_serving_manifest.py")
+    _write_script(tmp_path, "gpu-eval-run.sh")
     _write_script(tmp_path, "validate_pose_dataset.py")
     _write_script(tmp_path, "zz_private_helper.py")
+    _write_top_script(tmp_path, "autolabel.py")
     _write_test(tmp_path, "test_decode_benchmark_summary.py")
     _write_test(tmp_path, "test_serving_manifest.py")
+    _write_test(
+        tmp_path,
+        "test_cli_help.py",
+        "def test_cli_help():\n    assert 'scripts/autolabel.py'\n    assert 'scripts/racketsport/gpu-eval-run.sh'\n",
+    )
     _write_schema(tmp_path, "serving_manifest_schema.json")
     _write_schema(tmp_path, "pose_dataset_schema.json")
 
@@ -51,8 +64,8 @@ def test_scaffold_tool_index_reports_scripts_and_coverage_gaps(tmp_path: Path) -
     assert payload["schema_version"] == 1
     assert payload["artifact_type"] == "racketsport_scaffold_tool_index"
     assert payload["scope"] == {
-        "indexed_globs": ["scripts/racketsport/*.py"],
-        "excluded_globs": ["scripts/*.sh", "scripts/racketsport/*.sh", "scripts/*.py"],
+        "indexed_globs": ["scripts/racketsport/*.py", "scripts/racketsport/*.sh", "scripts/*.py", "scripts/*.sh"],
+        "excluded_globs": [],
         "repo_wide_hygiene_report": False,
     }
     assert payload["execution"] == {
@@ -64,26 +77,33 @@ def test_scaffold_tool_index_reports_scripts_and_coverage_gaps(tmp_path: Path) -
         "claims_build_or_eval_status": False,
     }
     assert payload["summary"] == {
-        "tool_count": 4,
-        "with_matching_tests": 2,
+        "tool_count": 6,
+        "with_matching_tests": 4,
         "missing_matching_tests": 2,
         "with_matching_schemas": 2,
-        "missing_matching_schemas": 2,
+        "missing_matching_schemas": 4,
         "category_counts": {
             "dataset": 1,
             "decode": 1,
+            "eval": 1,
+            "label": 1,
             "serving": 1,
             "unknown": 1,
         },
     }
     assert [tool["command_path"] for tool in payload["tools"]] == [
+        "scripts/autolabel.py",
         "scripts/racketsport/benchmark_decode.py",
         "scripts/racketsport/build_serving_manifest.py",
+        "scripts/racketsport/gpu-eval-run.sh",
         "scripts/racketsport/validate_pose_dataset.py",
         "scripts/racketsport/zz_private_helper.py",
     ]
 
-    decode = payload["tools"][0]
+    autolabel = payload["tools"][0]
+    assert autolabel["matching_test"] == "tests/racketsport/test_cli_help.py"
+
+    decode = payload["tools"][1]
     assert decode["stem"] == "benchmark_decode"
     assert decode["category"] == "decode"
     assert decode["workstream"] == "EVAL"
@@ -91,21 +111,25 @@ def test_scaffold_tool_index_reports_scripts_and_coverage_gaps(tmp_path: Path) -
     assert decode["matching_test"] == "tests/racketsport/test_decode_benchmark_summary.py"
     assert decode["matching_schema"] is None
 
-    serving = payload["tools"][1]
+    serving = payload["tools"][2]
     assert serving["category"] == "serving"
     assert serving["workstream"] == "RPT"
     assert serving["task_prefix"] == "RPT-1"
     assert serving["matching_test"] == "tests/racketsport/test_serving_manifest.py"
     assert serving["matching_schema"] == "docs/racketsport/serving_manifest_schema.json"
 
-    pose = payload["tools"][2]
+    shell = payload["tools"][3]
+    assert shell["command_path"] == "scripts/racketsport/gpu-eval-run.sh"
+    assert shell["matching_test"] == "tests/racketsport/test_cli_help.py"
+
+    pose = payload["tools"][4]
     assert pose["category"] == "dataset"
     assert pose["workstream"] == "DATA"
     assert pose["task_prefix"] == "DATA-2"
     assert pose["matching_test"] is None
     assert pose["matching_schema"] == "docs/racketsport/pose_dataset_schema.json"
 
-    unknown = payload["tools"][3]
+    unknown = payload["tools"][5]
     assert unknown["category"] == "unknown"
     assert unknown["workstream"] is None
     assert unknown["task_prefix"] is None

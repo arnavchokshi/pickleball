@@ -3,14 +3,15 @@ from __future__ import annotations
 import json
 import math
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
-Vector2 = list[float]
-Vector3 = list[float]
-Matrix3 = list[list[float]]
+Vector2 = Annotated[list[float], Field(min_length=2, max_length=2)]
+Vector3 = Annotated[list[float], Field(min_length=3, max_length=3)]
+MatrixRow3 = Annotated[list[float], Field(min_length=3, max_length=3)]
+Matrix3 = Annotated[list[MatrixRow3], Field(min_length=3, max_length=3)]
 
 
 class StrictArtifact(BaseModel):
@@ -240,10 +241,18 @@ class CourtLineEvidence(StrictArtifact):
 class TrackFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    t: float
+    t: float = Field(ge=0.0)
     bbox: tuple[float, float, float, float]
     world_xy: Vector2
-    conf: float
+    conf: float = Field(ge=0.0, le=1.0)
+
+    @field_validator("bbox")
+    @classmethod
+    def _bbox_must_have_positive_extent(cls, value: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+        _, _, width, height = value
+        if width <= 0.0 or height <= 0.0:
+            raise ValueError("bbox width and height must be positive")
+        return value
 
 
 class PlayerTrack(BaseModel):
@@ -258,12 +267,18 @@ class PlayerTrack(BaseModel):
 class TimeSpan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    t0: float
-    t1: float
+    t0: float = Field(ge=0.0)
+    t1: float = Field(ge=0.0)
+
+    @model_validator(mode="after")
+    def _times_must_be_ordered(self) -> "TimeSpan":
+        if self.t1 < self.t0:
+            raise ValueError("t1 must be greater than or equal to t0")
+        return self
 
 
 class Tracks(StrictArtifact):
-    fps: float
+    fps: float = Field(gt=0.0)
     players: list[PlayerTrack]
     rally_spans: list[TimeSpan] = Field(default_factory=list)
 
@@ -457,7 +472,7 @@ class FootContact(BaseModel):
 class SmplFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    t: float
+    t: float = Field(ge=0.0)
     global_orient: list[float]
     body_pose: list[float]
     left_hand_pose: list[float] = Field(default_factory=list)
@@ -482,7 +497,7 @@ class SmplPlayer(BaseModel):
 
 class SmplMotion(StrictArtifact):
     model: Literal["smpl", "smplx"]
-    fps: float
+    fps: float = Field(gt=0.0)
     world_frame: Literal["court_Z0"]
     players: list[SmplPlayer]
 
@@ -490,7 +505,7 @@ class SmplMotion(StrictArtifact):
 class SkeletonFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    t: float
+    t: float = Field(ge=0.0)
     joints_world: list[Vector3]
     joint_conf: list[float]
 
@@ -518,9 +533,9 @@ class Skeleton3D(StrictArtifact):
 class BallFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    t: float
+    t: float = Field(ge=0.0)
     xy: Vector2
-    conf: float
+    conf: float = Field(ge=0.0, le=1.0)
     visible: bool
     world_xyz: Vector3 | None = None
     spin_rpm: float | None = None
@@ -530,12 +545,12 @@ class BallFrame(BaseModel):
 class Bounce(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    t: float
+    t: float = Field(ge=0.0)
     world_xy: Vector2
 
 
 class BallTrack(StrictArtifact):
-    fps: float
+    fps: float = Field(gt=0.0)
     source: Literal["tracknet", "tap", "pbmat", "totnet"]
     frames: list[BallFrame]
     bounces: list[Bounce] = Field(default_factory=list)
@@ -632,9 +647,9 @@ class SE3(BaseModel):
 class RacketFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    t: float
+    t: float = Field(ge=0.0)
     pose_se3: SE3
-    conf: float
+    conf: float = Field(ge=0.0, le=1.0)
     world_frame: Literal["camera", "court_Z0"] = "camera"
     translation_unit: Literal["cm", "m"] = "cm"
     source: str = "unspecified"
@@ -659,10 +674,10 @@ class RacketFrame(BaseModel):
 class RacketContact(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    t: float
+    t: float = Field(ge=0.0)
     contact_point_face_cm: Vector2
     face_normal: Vector3
-    conf: float
+    conf: float = Field(ge=0.0, le=1.0)
 
     @field_validator("contact_point_face_cm")
     @classmethod
@@ -694,7 +709,7 @@ class RacketPlayer(BaseModel):
 
 
 class RacketPose(StrictArtifact):
-    fps: float
+    fps: float = Field(gt=0.0)
     world_frame: Literal["camera", "court_Z0"] = "camera"
     translation_unit: Literal["cm", "m"] = "cm"
     players: list[RacketPlayer]
@@ -740,19 +755,25 @@ class EventSources(BaseModel):
 class ContactWindow(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    t0: float
-    t1: float
-    importance: float
+    t0: float = Field(ge=0.0)
+    t1: float = Field(ge=0.0)
+    importance: float = Field(ge=0.0, le=1.0)
+
+    @model_validator(mode="after")
+    def _times_must_be_ordered(self) -> "ContactWindow":
+        if self.t1 < self.t0:
+            raise ValueError("t1 must be greater than or equal to t0")
+        return self
 
 
 class ContactEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     type: Literal["contact", "bounce", "net_cross"]
-    t: float
-    frame: int
+    t: float = Field(ge=0.0)
+    frame: int = Field(ge=0)
     player_id: int | None = None
-    confidence: float
+    confidence: float = Field(ge=0.0, le=1.0)
     sources: EventSources
     window: ContactWindow
 
@@ -764,11 +785,18 @@ class ContactWindows(StrictArtifact):
 class ContactWindowCandidateSummary(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    candidate_count: int
-    rejected_item_count: int
+    candidate_count: int = Field(ge=0)
+    rejected_item_count: int = Field(ge=0)
     by_type: dict[str, int] = Field(default_factory=dict)
     by_status: dict[str, int] = Field(default_factory=dict)
     uncertainty_flags: list[str] = Field(default_factory=list)
+
+    @field_validator("by_type", "by_status")
+    @classmethod
+    def _summary_counts_must_be_nonnegative(cls, value: dict[str, int]) -> dict[str, int]:
+        if any(count < 0 for count in value.values()):
+            raise ValueError("summary counts must be nonnegative")
+        return value
 
 
 class ContactWindowCandidate(BaseModel):
@@ -776,26 +804,41 @@ class ContactWindowCandidate(BaseModel):
 
     review_id: str
     type: Literal["contact", "bounce", "net_cross"]
-    frame: int
-    t: float
+    frame: int = Field(ge=0)
+    t: float = Field(ge=0.0)
     xy_px: Vector2 | None = None
     source_label: str
     source_status: str
-    source_confidence: float
-    candidate_confidence: float
+    source_confidence: float = Field(ge=0.0, le=1.0)
+    candidate_confidence: float = Field(ge=0.0, le=1.0)
     window: ContactWindow
 
 
 class ContactWindowCandidates(StrictArtifact):
     artifact_type: Literal["racketsport_contact_window_candidates"]
     clip: str
-    fps: float
+    fps: float = Field(gt=0.0)
     source_event_path: str
     not_gate_verified: Literal[True]
     trusted_for_body: Literal[False]
     promotion_target: Literal["contact_windows.json"]
     candidates: list[ContactWindowCandidate]
     summary: ContactWindowCandidateSummary
+
+    @model_validator(mode="after")
+    def _summary_must_match_candidates(self) -> "ContactWindowCandidates":
+        if self.summary.candidate_count != len(self.candidates):
+            raise ValueError("summary.candidate_count must equal candidates length")
+        expected_by_type: dict[str, int] = {}
+        expected_by_status: dict[str, int] = {}
+        for candidate in self.candidates:
+            expected_by_type[candidate.type] = expected_by_type.get(candidate.type, 0) + 1
+            expected_by_status[candidate.source_status] = expected_by_status.get(candidate.source_status, 0) + 1
+        if self.summary.by_type and self.summary.by_type != expected_by_type:
+            raise ValueError("summary.by_type must match candidates")
+        if self.summary.by_status and self.summary.by_status != expected_by_status:
+            raise ValueError("summary.by_status must match candidates")
+        return self
 
 
 class ContactWindowReviewSummary(BaseModel):
@@ -993,7 +1036,7 @@ class VirtualWorldBallFrame(BaseModel):
 class VirtualWorldBall(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    source: Literal["tracknet", "tap"] | None = None
+    source: Literal["tracknet", "tap", "pbmat", "totnet"] | None = None
     frames: list[VirtualWorldBallFrame] = Field(default_factory=list)
 
 

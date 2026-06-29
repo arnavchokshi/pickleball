@@ -50,7 +50,7 @@ final class OnDevicePersonTrackingTests: XCTestCase {
     func testOnDevicePersonTimingComputesLatencyAndDropSummaries() throws {
         let timing = OnDevicePersonTiming(
             clipID: "clip-a",
-            candidate: .yolo26nInt8Detect15Track30,
+            candidate: .yolo26nInt8Detect2Track30,
             mode: .replay,
             deviceModel: "iPhone15,2",
             osVersion: "26.5",
@@ -77,7 +77,7 @@ final class OnDevicePersonTrackingTests: XCTestCase {
         let data = try JSONEncoder().encode(timing)
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["artifact_type"] as? String, "racketsport_on_device_person_timing")
-        XCTAssertEqual(object["candidate"] as? String, "yolo26n_int8_detect15_track30")
+        XCTAssertEqual(object["candidate"] as? String, "yolo26n_int8_detect2_track30")
         XCTAssertEqual(object["mode"] as? String, "replay")
         XCTAssertEqual(object["os_version"] as? String, "26.5")
         XCTAssertEqual(object["model_load_ms"] as? Double, 120.0)

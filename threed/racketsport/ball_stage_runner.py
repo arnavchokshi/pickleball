@@ -65,6 +65,8 @@ class BallStageRunner:
 
         ball_payload = _read_json(source_path)
         ball_track = BallTrack.model_validate(ball_payload)
+        if ball_track.source == "tap":
+            raise ValueError("BALL StageRunner refuses to consume tap/manual ball tracks")
         source_mode = _source_mode_for_path(source_path)
         selection = _selection_metadata_for_track(source_path)
         if source_mode == "selected_ball_track_prototype" and selection is None:
@@ -92,15 +94,22 @@ class BallStageRunner:
         }
         if selection is not None:
             metrics["selection"] = selection
+        status = "ran" if contact_event_count else "blocked"
+        blocked_notes: tuple[str, ...] = ()
+        if status == "blocked":
+            blocked_notes = (
+                "BALL contact windows are empty; downstream stages remain blocked until trusted cue fusion produces contacts",
+            )
         return BallStageRun(
             stage=self.stage,
-            status="ran",
+            status=status,
             real_model=self.real_model,
             source_mode=source_mode,
             produced_artifacts=("ball_track.json", "contact_windows.json"),
             notes=(
                 _source_note_for_path(source_path),
                 *contact_notes,
+                *blocked_notes,
                 "prototype integration only; not a BALL VERIFIED accuracy gate",
             ),
             metrics=metrics,

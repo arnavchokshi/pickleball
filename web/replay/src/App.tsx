@@ -386,8 +386,8 @@ function Player({
   frame?: VirtualWorldFrame;
   isBallContactActive: boolean;
 }) {
-  const floor = frame?.floor_world_xyz ?? (frame?.track_world_xy ? [frame.track_world_xy[0], frame.track_world_xy[1], 0] as Vec3 : null);
-  const track = player.frames.map((entry) => entry.floor_world_xyz).filter(isVec3);
+  const floor = floorWorldForFrame(frame);
+  const track = player.frames.map(floorWorldForFrame).filter(isVec3);
   const meshPoints = isBallContactActive ? sampleMeshPoints(frame?.mesh_vertices_world ?? [], 320) : [];
   const bodyJoints = isBallContactActive ? frame?.joints_world ?? [] : [];
   const proxySkeleton = skeletonForFrame(frame);
@@ -504,8 +504,12 @@ function defaultCameraPose(world: VirtualWorld): { position: Vec3; target: Vec3 
   };
 }
 
+function floorWorldForFrame(frame: VirtualWorldFrame | undefined): Vec3 | null {
+  return frame?.floor_world_xyz ?? (frame?.track_world_xy ? ([frame.track_world_xy[0], frame.track_world_xy[1], 0] as Vec3) : null);
+}
+
 function skeletonForFrame(frame: VirtualWorldFrame | undefined): { joints: Vec3[]; bones: Vec3[] } | null {
-  const floor = frame?.floor_world_xyz ?? (frame?.track_world_xy ? ([frame.track_world_xy[0], frame.track_world_xy[1], 0] as Vec3) : null);
+  const floor = floorWorldForFrame(frame);
   if (!floor) return null;
   const [x, y] = floor;
   const joints: Vec3[] = [

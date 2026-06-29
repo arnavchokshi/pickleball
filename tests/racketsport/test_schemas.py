@@ -10,9 +10,13 @@ from threed.racketsport.schemas import (
     CourtCalibration,
     CourtLineEvidence,
     ContactWindows,
+    ContactWindowCandidates,
+    BallTrack,
     RacketCandidates,
     PhaseEvalMetrics,
     RacketPose,
+    Tracks,
+    VirtualWorld,
     validate_artifact_file,
 )
 
@@ -86,6 +90,65 @@ def test_court_calibration_requires_current_schema_version():
 
     with pytest.raises(ValidationError):
         CourtCalibration.model_validate(payload)
+
+
+def test_common_vector_fields_reject_wrong_dimensions() -> None:
+    calibration_payload = {
+        "schema_version": 1,
+        "sport": "pickleball",
+        "homography": [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+        "intrinsics": {"fx": 1, "fy": 1, "cx": 0, "cy": 0, "dist": [], "source": "manual"},
+        "extrinsics": {"R": [[1, 0, 0], [0, 1, 0], [0, 0, 1]], "t": [0, 0, 0], "camera_height_m": 1.4},
+        "reprojection_error_px": {"median": 2.0, "p95": 5.0},
+        "capture_quality": {"grade": "good", "reasons": []},
+        "image_pts": [[0, 0], [1, 0], [1, 1], [0, 1]],
+        "world_pts": [[0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
+    }
+    with pytest.raises(ValidationError):
+        CourtCalibration.model_validate(calibration_payload)
+
+    ball_payload = {
+        "schema_version": 1,
+        "fps": 60.0,
+        "source": "tap",
+        "frames": [{"t": 0.0, "xy": [10.0], "conf": 0.9, "visible": True, "world_xyz": [0.0, 0.0]}],
+    }
+    with pytest.raises(ValidationError):
+        BallTrack.model_validate(ball_payload)
+
+    candidates_payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_contact_window_candidates",
+        "clip": "clip-a",
+        "fps": 60.0,
+        "source_event_path": "labels/events.json",
+        "not_gate_verified": True,
+        "trusted_for_body": False,
+        "promotion_target": "contact_windows.json",
+        "candidates": [
+            {
+                "review_id": "contact-001",
+                "type": "contact",
+                "frame": 10,
+                "t": 0.167,
+                "xy_px": [100.0, 200.0, 300.0],
+                "source_label": "manual",
+                "source_status": "draft",
+                "source_confidence": 0.7,
+                "candidate_confidence": 0.7,
+                "window": {"t0": 0.1, "t1": 0.2, "importance": 0.7},
+            }
+        ],
+        "summary": {
+            "candidate_count": 1,
+            "rejected_item_count": 0,
+            "by_type": {"contact": 1},
+            "by_status": {"draft": 1},
+            "uncertainty_flags": [],
+        },
+    }
+    with pytest.raises(ValidationError):
+        ContactWindowCandidates.model_validate(candidates_payload)
 
 
 def test_validate_artifact_file_rejects_unknown_artifact(tmp_path):
@@ -367,3 +430,204 @@ def test_racket_pose_rejects_non_orthonormal_rotation_matrix():
 
     with pytest.raises(ValidationError, match="orthonormal"):
         RacketPose.model_validate(payload)
+
+
+def test_virtual_world_rejects_vectors_the_replay_viewer_cannot_read() -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_virtual_world",
+        "world_frame": "court_Z0",
+        "fps": 30.0,
+        "court": {
+            "sport": "pickleball",
+            "coordinate_frame": "court_Z0",
+            "length_m": 13.4112,
+            "width_m": 6.096,
+            "line_segments": {"net": [[-3.048, 0.0, 0.0], [3.048, 0.0]]},
+            "net": {
+                "endpoints": [[-3.048, 0.0, 0.0, 1.0], [3.048, 0.0, 0.0]],
+                "center_height_m": 0.8636,
+                "post_height_m": 0.9144,
+            },
+        },
+        "players": [
+            {
+                "id": 1,
+                "side": "near",
+                "role": "left",
+                "representation": "track_only",
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "track_world_xy": [0.1],
+                        "joint_count": 0,
+                        "mesh_vertex_count": 0,
+                        "floor_world_xyz": [0.1, -1.0],
+                    }
+                ],
+            }
+        ],
+        "ball": {"source": "tap", "frames": [{"t": 0.0, "xy": [10.0], "conf": 0.8, "visible": True}]},
+        "paddles": [],
+        "summary": {
+            "player_count": 1,
+            "mesh_player_count": 0,
+            "ball_frame_count": 1,
+            "paddle_frame_count": 0,
+        },
+    }
+
+    with pytest.raises(ValidationError):
+        VirtualWorld.model_validate(payload)
+
+
+def test_virtual_world_accepts_all_ball_track_source_enums() -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_virtual_world",
+        "world_frame": "court_Z0",
+        "fps": 30.0,
+        "court": {
+            "sport": "pickleball",
+            "coordinate_frame": "court_Z0",
+            "length_m": 13.4112,
+            "width_m": 6.096,
+            "line_segments": {"net": [[-3.048, 0.0, 0.0], [3.048, 0.0, 0.0]]},
+            "net": {
+                "endpoints": [[-3.048, 0.0, 0.0], [3.048, 0.0, 0.0]],
+                "center_height_m": 0.8636,
+                "post_height_m": 0.9144,
+            },
+        },
+        "players": [],
+        "ball": {
+            "source": "pbmat",
+            "frames": [{"t": 0.0, "xy": [10.0, 20.0], "conf": 0.8, "visible": True, "world_xyz": [0.0, 0.0, 1.0]}],
+        },
+        "paddles": [],
+        "summary": {
+            "player_count": 0,
+            "mesh_player_count": 0,
+            "ball_frame_count": 1,
+            "paddle_frame_count": 0,
+        },
+    }
+
+    parsed = VirtualWorld.model_validate(payload)
+
+    assert parsed.ball.source == "pbmat"
+
+
+def test_timeseries_schemas_reject_impossible_numeric_values() -> None:
+    with pytest.raises(ValidationError):
+        BallTrack.model_validate(
+            {
+                "schema_version": 1,
+                "fps": -30.0,
+                "source": "tap",
+                "frames": [{"t": 0.0, "xy": [10.0, 20.0], "conf": 99.0, "visible": True}],
+                "bounces": [{"t": -1.0, "world_xy": [0.0, 0.0]}],
+            }
+        )
+
+    with pytest.raises(ValidationError):
+        ContactWindows.model_validate(
+            {
+                "schema_version": 1,
+                "events": [
+                    {
+                        "type": "contact",
+                        "t": -0.1,
+                        "frame": -1,
+                        "player_id": 1,
+                        "confidence": 2.0,
+                        "sources": {"audio": 1.0, "wrist_vel": 1.0, "ball_inflection": 1.0},
+                        "window": {"t0": 10.0, "t1": 1.0, "importance": -5.0},
+                    }
+                ],
+            }
+        )
+
+    with pytest.raises(ValidationError):
+        Tracks.model_validate(
+            {
+                "schema_version": 1,
+                "fps": 0.0,
+                "players": [
+                    {
+                        "id": 1,
+                        "side": "near",
+                        "role": "left",
+                        "frames": [{"t": 0.0, "bbox": [10.0, 20.0, -5.0, 40.0], "world_xy": [0.0, 0.0], "conf": 2.0}],
+                    }
+                ],
+            }
+        )
+
+    with pytest.raises(ValidationError):
+        RacketPose.model_validate({"schema_version": 1, "fps": 0.0, "players": []})
+
+
+def test_contact_window_candidates_reject_impossible_values_and_mismatched_summary() -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_contact_window_candidates",
+        "clip": "clip-a",
+        "fps": 0.0,
+        "source_event_path": "labels/events.json",
+        "not_gate_verified": True,
+        "trusted_for_body": False,
+        "promotion_target": "contact_windows.json",
+        "candidates": [
+            {
+                "review_id": "contact-001",
+                "type": "contact",
+                "frame": -2,
+                "t": -1.0,
+                "xy_px": [100.0, 200.0],
+                "source_label": "manual",
+                "source_status": "draft",
+                "source_confidence": 2.5,
+                "candidate_confidence": -0.5,
+                "window": {"t0": 0.2, "t1": 0.1, "importance": 1.5},
+            }
+        ],
+        "summary": {
+            "candidate_count": -1,
+            "rejected_item_count": -2,
+            "by_type": {"contact": -1},
+            "by_status": {"draft": 1},
+            "uncertainty_flags": [],
+        },
+    }
+
+    with pytest.raises(ValidationError):
+        ContactWindowCandidates.model_validate(payload)
+
+    valid_candidate = {
+        "review_id": "contact-001",
+        "type": "contact",
+        "frame": 2,
+        "t": 1.0,
+        "xy_px": [100.0, 200.0],
+        "source_label": "manual",
+        "source_status": "draft",
+        "source_confidence": 0.5,
+        "candidate_confidence": 0.5,
+        "window": {"t0": 0.9, "t1": 1.1, "importance": 0.5},
+    }
+    payload.update(
+        {
+            "fps": 60.0,
+            "candidates": [valid_candidate],
+            "summary": {
+                "candidate_count": 2,
+                "rejected_item_count": 0,
+                "by_type": {"contact": 1},
+                "by_status": {"draft": 1},
+                "uncertainty_flags": [],
+            },
+        }
+    )
+    with pytest.raises(ValidationError, match="candidate_count"):
+        ContactWindowCandidates.model_validate(payload)

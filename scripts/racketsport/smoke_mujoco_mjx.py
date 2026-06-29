@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import json
-
-import jax
-import mujoco
-from mujoco import mjx
 
 
 XML = """
@@ -21,6 +18,13 @@ XML = """
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Smoke-test MuJoCo MJX stepping and report local JAX/MuJoCo devices.")
+    parser.parse_args()
+
+    import jax
+    import mujoco
+    from mujoco import mjx
+
     model = mujoco.MjModel.from_xml_string(XML)
     mjx_model = mjx.put_model(model)
     data = mjx.make_data(mjx_model)

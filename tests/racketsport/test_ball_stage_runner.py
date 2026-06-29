@@ -37,6 +37,38 @@ def _write_no_click_ball_source(inputs_dir: Path) -> Path:
     return source
 
 
+def _write_contact_cue_artifacts(inputs_dir: Path) -> None:
+    _write_json(inputs_dir / "audio_onsets.json", {"schema_version": 1, "onsets": [{"time_s": 1.0 / 30.0, "score": 0.9}]})
+    _write_json(
+        inputs_dir / "wrist_velocity_peaks.json",
+        {
+            "schema_version": 1,
+            "peaks": [
+                {
+                    "time_s": 1.0 / 30.0,
+                    "player_id": 7,
+                    "wrist_world_xyz": [0.0, 0.0, 1.0],
+                    "speed_mps": 12.0,
+                    "confidence": 0.8,
+                }
+            ],
+        },
+    )
+    _write_json(
+        inputs_dir / "ball_inflections.json",
+        {
+            "schema_version": 1,
+            "candidates": [
+                {
+                    "time_s": 1.0 / 30.0,
+                    "ball_world_xyz": [0.02, 0.0, 1.0],
+                    "confidence": 0.7,
+                }
+            ],
+        },
+    )
+
+
 def _physics_refinement_payload() -> dict:
     return {
         "schema_version": 1,
@@ -237,9 +269,10 @@ def test_ball_stage_runner_uses_no_click_localtraj_artifact_without_reading_ball
         runners=_noop_dependency_runners(),
     )
 
-    assert summary["status"] == "pass"
+    assert summary["status"] == "blocked"
     ball_stage = summary["stages"][-1]
     assert ball_stage["stage"] == "ball_events"
+    assert ball_stage["status"] == "blocked"
     assert ball_stage["source_mode"] == "no_click_fusion_temporal_vball100_localtraj"
     assert ball_stage["metrics"]["source_ball_track"] == str(source)
     assert ball_stage["metrics"]["uses_human_clicks"] is False
@@ -247,6 +280,35 @@ def test_ball_stage_runner_uses_no_click_localtraj_artifact_without_reading_ball
 
     emitted = json.loads((run_dir / "ball_track.json").read_text(encoding="utf-8"))
     assert emitted == _ball_track_payload()
+
+
+def test_ball_stage_runner_fails_closed_on_renamed_tap_track_even_with_cues(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "clip_001"
+    renamed_tap_source = inputs / "renamed_no_click_candidate.json"
+    tap_payload = _ball_track_payload()
+    tap_payload["source"] = "tap"
+    _write_json(renamed_tap_source, tap_payload)
+    _write_contact_cue_artifacts(inputs)
+    _write_dependency_artifacts(run_dir)
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(source_path=renamed_tap_source)
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    assert summary["status"] == "fail"
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["status"] == "fail"
+    assert any("refuses to consume tap/manual ball tracks" in note for note in ball_stage["notes"])
+    assert not (run_dir / "ball_track.json").exists()
+    assert not (run_dir / "contact_windows.json").exists()
 
 
 def test_ball_stage_runner_prefers_eval_suite_selected_track_over_legacy_prototype(tmp_path: Path) -> None:
@@ -294,8 +356,9 @@ def test_ball_stage_runner_prefers_eval_suite_selected_track_over_legacy_prototy
         runners=runners,
     )
 
-    assert summary["status"] == "pass"
+    assert summary["status"] == "blocked"
     ball_stage = summary["stages"][-1]
+    assert ball_stage["status"] == "blocked"
     assert ball_stage["metrics"]["source_ball_track"] == str(selected_source)
     assert ball_stage["source_mode"] == "selected_ball_track_prototype"
     assert ball_stage["metrics"]["selection"]["candidate"] == "pbmat_v0_motion_composite"
@@ -356,7 +419,7 @@ def test_ball_stage_runner_fails_closed_when_no_click_source_artifact_is_missing
     assert not (run_dir / "contact_windows.json").exists()
 
 
-def test_ball_stage_runner_emits_schema_valid_ball_contract_artifacts(tmp_path: Path) -> None:
+def test_ball_stage_runner_blocks_empty_contact_windows_even_when_artifacts_are_schema_valid(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs" / "clip_001"
     run_dir = tmp_path / "runs" / "clip_001"
     _write_no_click_ball_source(inputs)
@@ -370,7 +433,11 @@ def test_ball_stage_runner_emits_schema_valid_ball_contract_artifacts(tmp_path: 
         runners=_noop_dependency_runners(),
     )
 
-    assert summary["status"] == "pass"
+    assert summary["status"] == "blocked"
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["status"] == "blocked"
+    assert ball_stage["metrics"]["contact_event_count"] == 0
+    assert any("BALL contact windows are empty" in note for note in ball_stage["notes"])
     ball_track = validate_artifact_file("ball_track", run_dir / "ball_track.json")
     contact_windows = validate_artifact_file("contact_windows", run_dir / "contact_windows.json")
     assert isinstance(ball_track, BallTrack)
@@ -384,35 +451,7 @@ def test_ball_stage_runner_fuses_trusted_contact_windows_from_required_cue_artif
     run_dir = tmp_path / "runs" / "clip_001"
     _write_no_click_ball_source(inputs)
     _write_dependency_artifacts(run_dir)
-    _write_json(inputs / "audio_onsets.json", {"schema_version": 1, "onsets": [{"time_s": 1.0 / 30.0, "score": 0.9}]})
-    _write_json(
-        inputs / "wrist_velocity_peaks.json",
-        {
-            "schema_version": 1,
-            "peaks": [
-                {
-                    "time_s": 1.0 / 30.0,
-                    "player_id": 7,
-                    "wrist_world_xyz": [0.0, 0.0, 1.0],
-                    "speed_mps": 12.0,
-                    "confidence": 0.8,
-                }
-            ],
-        },
-    )
-    _write_json(
-        inputs / "ball_inflections.json",
-        {
-            "schema_version": 1,
-            "candidates": [
-                {
-                    "time_s": 1.0 / 30.0,
-                    "ball_world_xyz": [0.02, 0.0, 1.0],
-                    "confidence": 0.7,
-                }
-            ],
-        },
-    )
+    _write_contact_cue_artifacts(inputs)
 
     summary = run_pipeline(
         clip="clip_001",

@@ -1510,6 +1510,7 @@ def test_review_packet_cli_writes_packet(tmp_path: Path) -> None:
         },
     )
     out_dir = tmp_path / "packet"
+    corrections_root = tmp_path / "corrections" / "inbox"
 
     completed = subprocess.run(
         [
@@ -1521,6 +1522,8 @@ def test_review_packet_cli_writes_packet(tmp_path: Path) -> None:
             str(out_dir),
             "--packet-id",
             "phase11_review",
+            "--corrections-root",
+            str(corrections_root),
             "--write-corrections-template",
         ],
         check=False,
@@ -1534,7 +1537,9 @@ def test_review_packet_cli_writes_packet(tmp_path: Path) -> None:
     assert Path(summary["json_path"]).is_file()
     assert Path(summary["markdown_path"]).is_file()
     assert Path(summary["html_path"]).is_file()
-    assert Path(summary["corrections_template_path"]).is_file()
+    corrections_template = Path(summary["corrections_template_path"])
+    assert corrections_template.is_file()
+    assert corrections_template.is_relative_to(corrections_root)
 
 
 def test_review_packet_cli_accepts_clip_filters(tmp_path: Path) -> None:

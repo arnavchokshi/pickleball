@@ -90,9 +90,12 @@ def test_serving_manifest_reports_pending_and_unsafe_entries_without_touching_so
     offline_by_id = {component["component_id"]: component for component in report["tiers"]["offline_deep"]["components"]}
     assert offline_by_id["body_backbone"]["checkpoint_available"] is True
     assert offline_by_id["body_backbone"]["safe_paths"] is True
-    assert offline_by_id["body_backbone"]["serving_ready"] is True
+    assert offline_by_id["body_backbone"]["inventory_ready"] is True
+    assert offline_by_id["body_backbone"]["serving_ready"] is False
+    assert "triton_not_started" in offline_by_id["body_backbone"]["serving_blockers"]
     assert offline_by_id["person_detection"]["checkpoint_available"] is True
     assert offline_by_id["person_detection"]["safe_paths"] is False
+    assert offline_by_id["person_detection"]["inventory_ready"] is False
     assert offline_by_id["person_detection"]["serving_ready"] is False
     assert offline_by_id["ball_tracking"]["checkpoint_available"] is False
     assert offline_by_id["ball_tracking"]["missing_or_pending"][0]["reason"] == "pending_download"
@@ -139,6 +142,8 @@ def test_repo_serving_manifest_covers_current_manifest_runtime_and_tiers() -> No
     assert report["tiers"]["live_light"]["tier"] == "live_light"
     assert report["tiers"]["offline_deep"]["eval0_approval"] == "not_evaluated_by_cpu_manifest"
     assert report["tiers"]["live_light"]["eval0_approval"] == "not_evaluated_by_cpu_manifest"
+    assert report["tiers"]["offline_deep"]["serving_ready"] is False
+    assert report["summary"]["serving_ready_component_count"] == 0
 
     offline_components = {component["component_id"] for component in report["tiers"]["offline_deep"]["components"]}
     assert {"body_backbone", "physics_refinement", "racket_segmentation", "ball_tracking"}.issubset(offline_components)

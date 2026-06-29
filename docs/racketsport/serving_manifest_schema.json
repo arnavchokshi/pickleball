@@ -92,6 +92,7 @@
         "runtime_available_count",
         "tier_count",
         "component_count",
+        "inventory_ready_component_count",
         "serving_ready_component_count",
         "unsafe_model_path_count",
         "unsafe_model_path_ids",
@@ -117,6 +118,10 @@
           "minimum": 0
         },
         "component_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inventory_ready_component_count": {
           "type": "integer",
           "minimum": 0
         },
@@ -165,7 +170,8 @@
       "additionalProperties": false,
       "required": [
         "tier",
-        "checkpoint_runtime_ready",
+        "checkpoint_runtime_inventory_ready",
+        "serving_ready",
         "eval0_approval",
         "triton_ensemble_status",
         "components"
@@ -174,7 +180,10 @@
         "tier": {
           "enum": ["offline_deep", "live_light"]
         },
-        "checkpoint_runtime_ready": {
+        "checkpoint_runtime_inventory_ready": {
+          "type": "boolean"
+        },
+        "serving_ready": {
           "type": "boolean"
         },
         "eval0_approval": {
@@ -204,7 +213,9 @@
         "checkpoint_available",
         "runtime_available",
         "safe_paths",
+        "inventory_ready",
         "serving_ready",
+        "serving_blockers",
         "entries",
         "missing_or_pending"
       ],
@@ -238,8 +249,17 @@
         "safe_paths": {
           "type": "boolean"
         },
+        "inventory_ready": {
+          "type": "boolean"
+        },
         "serving_ready": {
           "type": "boolean"
+        },
+        "serving_blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "entries": {
           "type": "array",

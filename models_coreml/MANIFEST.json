@@ -3,6 +3,12 @@
   "artifact_type": "pickleball_coreml_model_manifest",
   "generated_at": "2026-06-28T00:00:00Z",
   "runtime_status": "candidate_assets_tracked_not_app_bundled",
+  "tracked_asset_policy": {
+    "scope": "small on-device candidate packages only",
+    "max_package_size_mb_without_lfs_or_release_artifact": 25,
+    "requires_sha256_manifest": true,
+    "note": "Server checkpoints and larger runtime artifacts stay out of Git; Core ML candidates above this threshold should move to LFS or release-artifact materialization before tracking."
+  },
   "app_lookup_root": "Documents/models_coreml",
   "runtime_note": "ios/App/CaptureViewModel.swift loads models from the app Documents models_coreml directory. These repo packages are not automatically available to the app unless copied there, compiled to .mlmodelc there, or explicitly added to the app bundle in a future Xcode resource pass.",
   "packages": [
@@ -11,7 +17,7 @@
       "model_name": "yolo26n",
       "candidate_ids": [
         "yolo26nInt8EveryFrame",
-        "yolo26nInt8Detect15Track30"
+        "yolo26nInt8Detect2Track30"
       ],
       "image_size": 416,
       "quantization": "int8",

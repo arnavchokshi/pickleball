@@ -8,8 +8,8 @@ from pathlib import Path
 from scripts.racketsport.check_eval_regression import compare_phase_metrics
 
 
-def _metric(value: object, *, status: str = "measured") -> dict[str, object]:
-    return {"value": value, "unit": "count", "gate": ">= 0", "passed": True, "status": status}
+def _metric(value: object, *, status: str = "measured", gate: str = ">= 0") -> dict[str, object]:
+    return {"value": value, "unit": "count", "gate": gate, "passed": True, "status": status}
 
 
 def _phase_payload(*, top_metrics: dict[str, object] | None = None, clip_metrics: dict[str, object] | None = None) -> dict[str, object]:
@@ -82,6 +82,67 @@ def test_compare_phase_metrics_allows_configurable_drop_limit_and_ignores_unmeas
 
     assert result.status == "pass"
     assert result.checked_metrics == 1
+    assert result.failures == []
+
+
+def test_compare_phase_metrics_treats_less_than_gates_as_lower_is_better() -> None:
+    baseline = _phase_payload(
+        clip_metrics={
+            "track_frames": _metric(100, gate="presence_check.track_frames: >= 1"),
+            "p95_latency_ms": _metric(10.0, gate="runtime_check.p95_latency_ms: <= 15"),
+        }
+    )
+    current = _phase_payload(
+        clip_metrics={
+            "track_frames": _metric(100, gate="presence_check.track_frames: >= 1"),
+            "p95_latency_ms": _metric(8.0, gate="runtime_check.p95_latency_ms: <= 15"),
+        }
+    )
+
+    result = compare_phase_metrics(current=current, baseline=baseline)
+
+    assert result.status == "pass"
+    assert result.checked_metrics == 2
+    assert result.failures == []
+
+
+def test_compare_phase_metrics_fails_lower_is_better_increase_over_limit() -> None:
+    baseline = _phase_payload(clip_metrics={"p95_latency_ms": _metric(10.0, gate="runtime_check.p95_latency_ms: <= 15")})
+    current = _phase_payload(clip_metrics={"p95_latency_ms": _metric(14.0, gate="runtime_check.p95_latency_ms: <= 15")})
+
+    result = compare_phase_metrics(current=current, baseline=baseline)
+
+    assert result.status == "fail"
+    assert result.failures[0].path == "clips[clip_001].metrics.p95_latency_ms"
+    assert result.failures[0].drop_percent == 40.0
+
+
+def test_compare_phase_metrics_infers_operatorless_error_metrics_are_lower_is_better() -> None:
+    baseline = _phase_payload(
+        clip_metrics={"ball_p90_error_px": _metric(2.0, gate="label_check.ball_p90_error_px_recorded")}
+    )
+    current = _phase_payload(
+        clip_metrics={"ball_p90_error_px": _metric(4.0, gate="label_check.ball_p90_error_px_recorded")}
+    )
+
+    result = compare_phase_metrics(current=current, baseline=baseline)
+
+    assert result.status == "fail"
+    assert result.failures[0].path == "clips[clip_001].metrics.ball_p90_error_px"
+    assert result.failures[0].drop_percent == 100.0
+
+
+def test_compare_phase_metrics_keeps_positive_operatorless_rates_higher_is_better() -> None:
+    baseline = _phase_payload(
+        clip_metrics={"visible_coverage_rate": _metric(0.8, gate="label_check.visible_coverage_rate_recorded")}
+    )
+    current = _phase_payload(
+        clip_metrics={"visible_coverage_rate": _metric(0.85, gate="label_check.visible_coverage_rate_recorded")}
+    )
+
+    result = compare_phase_metrics(current=current, baseline=baseline)
+
+    assert result.status == "pass"
     assert result.failures == []
 
 
@@ -161,3 +222,25 @@ def test_check_eval_regression_cli_discovers_and_pairs_metrics_from_roots(tmp_pa
     assert payload["checked_artifacts"] == 2
     assert payload["checked_metrics"] == 2
     assert payload["failures"][0]["path"] == "phase2/metrics.json:clips[clip_001].metrics.track_frames"
+
+
+def test_check_eval_regression_cli_rejects_empty_path_arguments(tmp_path: Path) -> None:
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(json.dumps(_phase_payload()), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/check_eval_regression.py",
+            "--current",
+            "",
+            "--baseline",
+            str(baseline_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 2
+    assert "path must not be empty" in completed.stderr
