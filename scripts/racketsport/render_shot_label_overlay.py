@@ -7,8 +7,6 @@ import sys
 from pathlib import Path
 from typing import Any, Mapping
 
-import cv2
-
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Render provisional shot labels onto a review video.")
@@ -27,7 +25,7 @@ def main(argv: list[str] | None = None) -> int:
             out_path=args.out,
             marker_window_frames=args.marker_window_frames,
         )
-    except (OSError, ValueError) as exc:
+    except (OSError, RuntimeError, ValueError) as exc:
         print(f"ERROR: shot-label overlay failed: {exc}", file=sys.stderr)
         return 1
 
@@ -55,6 +53,7 @@ def render_overlay(
     if marker_window_frames < 0:
         raise ValueError("marker_window_frames must be non-negative")
 
+    cv2 = _cv2()
     capture = cv2.VideoCapture(str(video_path))
     if not capture.isOpened():
         raise ValueError(f"could not open video: {video_path}")
@@ -86,10 +85,10 @@ def render_overlay(
                 current = by_frame[next_index]
                 next_index += 1
 
-            _draw_header(frame, current=current, next_shot=by_frame[next_index] if next_index < len(by_frame) else None)
+            _draw_header(cv2, frame, current=current, next_shot=by_frame[next_index] if next_index < len(by_frame) else None)
             for shot in by_frame:
                 if abs(frame_index - int(shot["frame"])) <= marker_window_frames:
-                    _draw_contact_marker(frame, shot)
+                    _draw_contact_marker(cv2, frame, shot)
             writer.write(frame)
             frame_index += 1
     finally:
@@ -97,7 +96,7 @@ def render_overlay(
         writer.release()
 
 
-def _draw_header(frame: Any, *, current: Mapping[str, Any] | None, next_shot: Mapping[str, Any] | None) -> None:
+def _draw_header(cv2: Any, frame: Any, *, current: Mapping[str, Any] | None, next_shot: Mapping[str, Any] | None) -> None:
     height, width = frame.shape[:2]
     panel_w = min(width - 20, 560)
     cv2.rectangle(frame, (10, 10), (10 + panel_w, 92), (12, 18, 28), thickness=-1)
@@ -115,7 +114,7 @@ def _draw_header(frame: Any, *, current: Mapping[str, Any] | None, next_shot: Ma
     cv2.putText(frame, next_text, (24, 84), cv2.FONT_HERSHEY_SIMPLEX, 0.50, (210, 220, 230), 1)
 
 
-def _draw_contact_marker(frame: Any, shot: Mapping[str, Any]) -> None:
+def _draw_contact_marker(cv2: Any, frame: Any, shot: Mapping[str, Any]) -> None:
     height, width = frame.shape[:2]
     x = width - 220
     y = 44
@@ -123,6 +122,14 @@ def _draw_contact_marker(frame: Any, shot: Mapping[str, Any]) -> None:
     cv2.rectangle(frame, (x - 12, y - 28), (width - 12, y + 16), (20, 90, 120), thickness=-1)
     cv2.putText(frame, "CONTACT", (x, y - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1)
     cv2.putText(frame, label, (x, y + 12), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1)
+
+
+def _cv2() -> Any:
+    try:
+        import cv2  # type: ignore[import-not-found]
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("opencv-python is required to render shot-label overlays") from exc
+    return cv2
 
 
 def _read_json_object(path: Path, label: str) -> Mapping[str, Any]:

@@ -42,7 +42,7 @@ Zero ML cost, largest immediate quality lift. **In the native iOS app the *app* 
 - **LiDAR depth (Tier-A Pro devices):** near-camera (~5 m) depth as *extra* supervision (near-player foot-contact, near court-plane) — **not** court-spanning, **not** the ball, fails in direct sun. Vision-first is the baseline.
 - **2-camera mode — FUTURE.** A second phone is a *training-time* instrument (§12) and a future power-user product toggle for true 3D triangulation; **not** part of the single-camera v1 product.
 
-The app **enforces** Landscape + locked capture and **auto-handles** the rest (Section 2). Consumer-proven: PB Vision requires a stationary camera ≥4 ft with all corners visible; CalTennis used iPhones on $40 tripods at 1.65 m.
+Target app behavior is to **enforce** Landscape + locked capture and auto-handle the rest (Section 2). Current repo status is guidance/metadata scaffolds plus partial preview/recording; hard record-time landscape rejection and physical-device capture gates remain pending. Consumer-proven: PB Vision requires a stationary camera ≥4 ft with all corners visible; CalTennis used iPhones on $40 tripods at 1.65 m.
 
 ---
 
@@ -80,7 +80,7 @@ Ranked levers:
 | 5 | Train our own court-keypoint detector | removes manual taps; ~2 px median err | High |
 | 6 | One-time ChArUco intrinsics per phone-model | removes 5–20 px edge distortion → 0.5–2 ft feet error | Low/model |
 
-**Intrinsics/distortion (tiered target):** **ARKit `ARFrame.camera.intrinsics`** (on-device, per-clip, free — primary on iOS after device verification) → cached **ChArUco per `phone-model + zoom`** (refines distortion, target RMS <0.3 px) → **EXIF** focal bootstrap → **GeoCalib** per-clip (unknown phone, works on empty court frames). Current `intrinsics.py` only returns sidecar intrinsics; ChArUco/EXIF/GeoCalib fallbacks are not yet implemented. Do **not** self-calibrate radial distortion from court lines alone — degenerate.
+**Intrinsics/distortion (tiered target):** **ARKit `ARFrame.camera.intrinsics`** (on-device, per-clip, free — primary on iOS after device verification) → cached **ChArUco per `phone-model + zoom`** (refines distortion, target RMS <0.3 px) → **EXIF** focal bootstrap → **GeoCalib** per-clip (unknown phone, works on empty court frames). Current `threed/racketsport/intrinsics.py` only returns sidecar intrinsics; ChArUco/EXIF/GeoCalib fallbacks are not yet implemented. Do **not** self-calibrate radial distortion from court lines alone — degenerate.
 
 **Auto court-keypoint detector:** fine-tune **TennisCourtDetector** (pickleball geometry is a strict subset of tennis; only the NVZ/kitchen line + centerline are new) → pickleball. Architecture: HRNetV2-W48 heatmap (highest accuracy) or TrackNet-style (lighter). Loss: MSE + Adaptive Wing + a quadrilateral/rectangle-consistency term. Recipe: pretrain on **synthetic court renders across 50–500 viewpoints** (height 1–4 m, tilt 10–80°, focal 28–90 mm-eq, randomized colors/shadows/glare/occluded corners — labels are free since geometry is known) → train on tennis (8.8k + Roboflow) → fine-tune on ~200–500 hand-labeled pickleball frames spanning our viewpoint range. Sub-pixel heatmap decode (DSNT/parabolic).
 

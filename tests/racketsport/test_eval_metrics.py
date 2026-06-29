@@ -1161,7 +1161,7 @@ def test_copy_faithfulness_blocks_when_coach_report_is_missing(tmp_path):
     assert payload["clips"][0]["missing_artifacts"] == ["coach_report.json"]
 
 
-def test_replay_eval_passes_when_ready_clip_has_replay_scene_and_glbs(tmp_path):
+def test_replay_eval_fails_review_static_glbs_for_production_readiness(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase10"
     _write_ready_clip(labels_root, "clip_001")
@@ -1179,20 +1179,24 @@ def test_replay_eval_passes_when_ready_clip_has_replay_scene_and_glbs(tmp_path):
             "--out",
             str(root / "metrics.json"),
         ],
-        check=True,
+        check=False,
         capture_output=True,
         text=True,
     )
 
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
-    assert json.loads(completed.stdout)["status"] == "pass"
+    assert completed.returncode == 1
+    assert json.loads(completed.stdout)["status"] == "fail"
     assert payload["phase"] == "phase10"
+    assert payload["status"] == "fail"
     assert payload["required_artifacts"] == ["replay_scene.json"]
     assert payload["clips"][0]["metrics"]["players"]["value"] == 2
     assert payload["clips"][0]["metrics"]["points"]["value"] == 1
     assert payload["clips"][0]["metrics"]["glb_files_present"]["value"] == 2
     assert payload["clips"][0]["metrics"]["glb_files_valid"]["value"] == 2
     assert payload["clips"][0]["metrics"]["largest_point_glb_mb"]["value"] > 0
+    assert payload["clips"][0]["metrics"]["replay_production_ready"]["value"] is False
+    assert payload["clips"][0]["metrics"]["replay_production_blocker_count"]["value"] > 0
     validate_artifact_file("phase_eval_metrics", root / "metrics.json")
 
 
@@ -1225,7 +1229,7 @@ def test_replay_eval_fails_when_referenced_point_glb_is_missing(tmp_path):
     assert "missing referenced GLB files" in payload["clips"][0]["notes"][0]
 
 
-def test_e2e_eval_passes_when_ready_clip_has_all_major_artifacts(tmp_path):
+def test_e2e_eval_fails_when_major_artifacts_include_review_static_replay_glbs(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase11"
     _write_ready_clip(labels_root, "clip_001")
@@ -1243,18 +1247,22 @@ def test_e2e_eval_passes_when_ready_clip_has_all_major_artifacts(tmp_path):
             "--out",
             str(root / "metrics.json"),
         ],
-        check=True,
+        check=False,
         capture_output=True,
         text=True,
     )
 
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
-    assert json.loads(completed.stdout)["status"] == "pass"
+    assert completed.returncode == 1
+    assert json.loads(completed.stdout)["status"] == "fail"
     assert payload["phase"] == "phase11"
+    assert payload["status"] == "fail"
     assert payload["clips"][0]["metrics"]["required_artifacts_present"]["value"] == 16
     assert payload["clips"][0]["metrics"]["required_artifacts_total"]["value"] == 16
     assert payload["clips"][0]["metrics"]["referenced_glb_files_present"]["value"] == 2
     assert payload["clips"][0]["metrics"]["referenced_glb_files_valid"]["value"] == 2
+    assert payload["clips"][0]["metrics"]["replay_production_ready"]["value"] is False
+    assert payload["clips"][0]["metrics"]["replay_production_blocker_count"]["value"] > 0
     validate_artifact_file("phase_eval_metrics", root / "metrics.json")
 
 

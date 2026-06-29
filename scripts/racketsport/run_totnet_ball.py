@@ -13,7 +13,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-import cv2
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,6 +44,7 @@ def run_totnet_video(
 ) -> dict[str, Any]:
     import torch
 
+    cv2 = _cv2()
     if num_frames < 1:
         raise ValueError("num_frames must be positive")
     if input_height <= 0 or input_width <= 0:
@@ -244,6 +244,14 @@ def _runtime_metrics(
         "max_frames": max_frames,
         "timing_breakdown": breakdown,
     }
+
+
+def _cv2() -> Any:
+    try:
+        import cv2  # type: ignore[import-not-found]
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("opencv-python is required to run TOTNet video inference") from exc
+    return cv2
 
 
 def _normalize_frame(rgb: np.ndarray) -> np.ndarray:

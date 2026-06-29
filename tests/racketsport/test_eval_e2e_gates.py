@@ -387,7 +387,7 @@ def _write_e2e_artifacts(run_dir: Path) -> None:
     _write_replay_artifacts(run_dir)
 
 
-def test_e2e_eval_passes_when_all_artifacts_and_glbs_exist(tmp_path: Path) -> None:
+def test_e2e_eval_fails_when_replay_glbs_are_review_static_only(tmp_path: Path) -> None:
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase11"
     _write_ready_clip(labels_root, "clip_001")
@@ -395,8 +395,8 @@ def test_e2e_eval_passes_when_all_artifacts_and_glbs_exist(tmp_path: Path) -> No
 
     payload = e2e_eval.evaluate(root, labels_root)
 
-    assert payload.status == "pass"
-    assert payload.clips[0].status == "pass"
+    assert payload.status == "fail"
+    assert payload.clips[0].status == "fail"
     metrics = payload.clips[0].metrics
     assert metrics["required_artifacts_present"].value == 16
     assert metrics["required_artifacts_present"].passed is True
@@ -404,6 +404,9 @@ def test_e2e_eval_passes_when_all_artifacts_and_glbs_exist(tmp_path: Path) -> No
     assert metrics["referenced_glb_files_present"].passed is True
     assert metrics["referenced_glb_files_valid"].value == 2
     assert metrics["referenced_glb_files_valid"].passed is True
+    assert metrics["replay_production_ready"].passed is False
+    assert metrics["replay_production_blocker_count"].value > 0
+    assert any("review_static_glb_export" in note for note in payload.clips[0].notes)
 
 
 def test_e2e_eval_blocks_when_required_artifact_is_missing(tmp_path: Path) -> None:

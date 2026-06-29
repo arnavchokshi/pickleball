@@ -2,30 +2,25 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from pathlib import Path
+
+import pytest
 
 
-def test_autolabel_compatibility_wrapper_help_runs_from_repo_root() -> None:
+PYTHON_CLI_SCRIPTS = sorted([*Path("scripts").glob("*.py"), *Path("scripts/racketsport").glob("*.py")])
+
+
+@pytest.mark.parametrize("script_path", PYTHON_CLI_SCRIPTS, ids=lambda path: path.as_posix())
+def test_python_cli_help_runs_from_repo_root(script_path: Path) -> None:
     completed = subprocess.run(
-        [sys.executable, "scripts/autolabel.py", "--help"],
+        [sys.executable, str(script_path), "--help"],
         check=False,
         capture_output=True,
         text=True,
     )
 
-    assert completed.returncode == 0
-    assert "Bootstrap draft labels" in completed.stdout
-
-
-def test_train_court_keypoint_heatmap_help_runs_from_repo_root() -> None:
-    completed = subprocess.run(
-        [sys.executable, "scripts/racketsport/train_court_keypoint_heatmap.py", "--help"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-
-    assert completed.returncode == 0
-    assert "Train a lightweight pickleball court-keypoint heatmap model" in completed.stdout
+    assert completed.returncode == 0, completed.stderr
+    assert "usage:" in completed.stdout.lower()
 
 
 def test_smoke_mujoco_mjx_help_does_not_import_optional_mjx_stack() -> None:

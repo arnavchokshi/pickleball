@@ -16,6 +16,12 @@ sidecar contracts, and module boundaries for the video-to-pipeline workflow.
 
 ## Local Verification
 
+`swift test` covers the Swift package modules. The shared Xcode scheme currently
+builds the app shell only; it has no app test target wired into the test action,
+so do not treat `xcodebuild test` as app-target coverage until that target exists.
+Capture landscape enforcement, ARKit setup, Core ML fast tier, upload, and
+RealityKit replay remain scaffold/partial unless promoted in the root checklist.
+
 ```bash
 swift package --package-path ios describe
 swift test --package-path ios

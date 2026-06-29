@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 
 
@@ -23,6 +24,22 @@ def test_coreml_manifest_matches_tracked_package_files() -> None:
             file_path = package_root / relative_path
             assert file_path.is_file(), f"{package['id']} missing {relative_path}"
             assert _sha256(file_path) == expected_sha256
+
+
+def test_coreml_manifest_candidate_ids_match_swift_raw_values() -> None:
+    manifest = json.loads(Path("models_coreml/MANIFEST.json").read_text(encoding="utf-8"))
+    enum_source = Path("ios/FastTier/Sources/PickleballFastTier/OnDevicePersonTracking.swift").read_text(encoding="utf-8")
+    swift_cases = dict(re.findall(r'case\s+(\w+)\s*=\s*"([^"]+)"', enum_source))
+    raw_values = set(swift_cases.values())
+
+    assert swift_cases
+    for package in manifest["packages"]:
+        candidate_ids = package["candidate_ids"]
+        swift_case_ids = package["swift_case_ids"]
+        assert candidate_ids
+        assert len(candidate_ids) == len(swift_case_ids)
+        assert set(candidate_ids).issubset(raw_values)
+        assert [swift_cases[case_id] for case_id in swift_case_ids] == candidate_ids
 
 
 def _sha256(path: Path) -> str:

@@ -1,9 +1,9 @@
 # Sway Body — Pickleball & Tennis MVP
 
-**Status:** Product + technical spec (research-backed, decisions locked)
+**Status:** Target product + technical spec with current implementation caveats
 **Date:** 2026-06-26
 **Repos in scope:** this `pickleball` repo is the live CV/client implementation; `sam4dbody` is an upstream reference/runtime source, `sway` remains the product integration surface, and `ios/` is the native Swift app.
-**Platform:** **native iOS Swift app** (capture, on-device preview/guidance, replay viewer) + **GPU server** (heavy 3D reconstruction). **Single static camera is the product focus; multi-camera is future; multi-view is a training-time-only technique that ships a single-camera model.**
+**Platform target:** **native iOS Swift app** (capture, on-device preview/guidance, replay viewer) + **GPU server** (heavy 3D reconstruction). **Current repo status:** Swift package/app scaffolds plus partial AVFoundation preview/recording; ARKit/Vision/CoreML/RealityKit/upload and physical-device gates remain scaffold-level until `BUILD_CHECKLIST.md` promotes them. **Single static camera is the product focus; multi-camera is future; multi-view is a training-time-only technique that ships a single-camera model.**
 **Companion docs:** `TECH_STACK.md` (every model + why), `IMPLEMENTATION_PHASES.md` (phase-by-phase build + test gates), `ACCURACY_AND_TRAINING.md` (datasets, training, validation), `BUILD_CHECKLIST.md` (the operational checklist + multi-agent coordination protocol Codex drives). Physics, foot-skate elimination, racket 6DoF, and the 3D replay renderer live in `TECH_STACK.md` §(p)–(s) and `IMPLEMENTATION_PHASES.md`.
 **Thesis:** Be the fastest, most accurate, most plain-spoken movement coach in a racket player's pocket. Turn one court video into the 2–3 body habits costing points, the proof, one drill, and week-over-week improvement — in under 10 seconds for the first useful screen.
 
@@ -176,10 +176,10 @@ Accuracy comes from **training, not a bigger inference model.** Full detail in `
 
 ### 5.7 Live vs offline & performance (fastest possible results)
 
-Edge-first hybrid; three perceived tiers (full design in `TECH_STACK.md`):
+Edge-first hybrid target; current repo status is scaffold/partial for the iPhone-side gates listed in `BUILD_CHECKLIST.md`.
 
-- **Instant (<1 s) — on-device:** live cues during play (framing OK, swing/split-step detected, late-contact hint) via Apple Vision + YOLO Core ML on the Neural Engine.
-- **Preview (<10 s, no upload wait) — on-device:** a coarse replay + summary the moment recording stops.
+- **Instant (<1 s) — target on-device:** live cues during play (framing OK, swing/split-step detected, late-contact hint) via Apple Vision + YOLO Core ML on the Neural Engine.
+- **Preview (<10 s, no upload wait) — target on-device:** a coarse replay + summary the moment recording stops.
 - **Deep (async, streamed) — server H100:** accurate SMPL-X mesh, foot-lock, physics, racket, metrics, insights, replay — returned **rally-by-rally over SSE** (a "3/14 analyzed" checklist that fills in live), with an APNs push when complete.
 
 **Top latency levers:** (1) upload the on-device 2D pose track as a **server prior** — ~166× smaller than video, 50–80% fewer mesh-fit iterations, and the server starts fitting *while the video uploads*; (2) **event-triggered compute** — skip 40–60% dead time (≈2× throughput); (3) **cache the personalized body model** (betas) so repeat sessions converge ~5× faster; (4) warm GPU worker (no cold start); (5) resumable chunked upload. **H100 throughput** comes from NVDEC/DALI GPU decode + TensorRT engines + CUDA-stream overlap + B=4 crop batching (SAM-3D-Body runs sequentially per player and is the pacing item to benchmark first), served via Triton. Multi-agent build/test on the single shared H100 is governed by the GPU lease/MIG protocol in `BUILD_CHECKLIST.md §1.5`.
@@ -310,8 +310,10 @@ Static net plane from the court template + regulation heights. Observed top-net 
 
 See `TECH_STACK.md` for the full stack/toggle map and `IMPLEMENTATION_PHASES.md` for build steps.
 
-### Client / server split (single camera)
-| Runs on **iPhone (Swift)** | Runs on **GPU server** |
+### Client / server split (single camera target)
+The table below is the target architecture. Current checked-in iOS code is scaffold/partial unless a gate in `BUILD_CHECKLIST.md` says otherwise.
+
+| Target on **iPhone (Swift)** | Runs on **GPU server** |
 |---|---|
 | AVFoundation locked capture (exposure/focus/WB, fps/format, landscape, HEVC/ProRes) | Court calibration refine (seeded by ARKit sidecar) + net plane |
 | ARKit setup pass → camera intrinsics + 6DoF pose + court plane (sidecar) | Person detect/track/ID (YOLO26m + BoT-SORT) |

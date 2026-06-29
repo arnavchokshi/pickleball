@@ -2,11 +2,12 @@ import json
 import subprocess
 import sys
 
-import cv2
 import numpy as np
+import pytest
 
 
 def test_render_shot_label_overlay_writes_review_video(tmp_path):
+    cv2 = pytest.importorskip("cv2")
     source = tmp_path / "source.mp4"
     writer = cv2.VideoWriter(str(source), cv2.VideoWriter_fourcc(*"mp4v"), 10.0, (320, 180))
     assert writer.isOpened()

@@ -31,15 +31,21 @@ export type ViewerManifest = {
 };
 
 export type ContactWindowEvent = {
-  type: string;
+  type: "contact" | "bounce" | "net_cross";
   t: number;
-  frame: number | null;
+  frame: number;
   player_id: number | null;
-  confidence: number | null;
+  confidence: number;
+  sources: {
+    audio: number;
+    wrist_vel: number;
+    ball_inflection: number;
+    human_review: number | null;
+  };
   window: {
     t0: number;
     t1: number;
-    importance: number | null;
+    importance: number;
   };
 };
 
@@ -113,7 +119,10 @@ export type VirtualWorld = {
     };
   };
   players: VirtualWorldPlayer[];
-  ball: { source: string | null; frames: Array<{ t: number; world_xyz?: Vec3 | null; visible?: boolean }> };
+  ball: {
+    source: "tracknet" | "tap" | "pbmat" | "totnet" | null;
+    frames: Array<{ t: number; xy: Vec2; conf: number; visible: boolean; world_xyz?: Vec3 | null; approx: boolean }>;
+  };
   paddles: unknown[];
   summary: {
     player_count: number;
@@ -338,19 +347,30 @@ function readContactWindowEvent(input: unknown, index: number): ContactWindowEve
   assertRecord(input, path);
   assertRecord(input.window, `${path}.window`);
   return {
-    type: readString(input.type, `${path}.type`),
+    type: readEnum(input.type, `${path}.type`, ["contact", "bounce", "net_cross"] as const),
     t: readNumber(input.t, `${path}.t`),
-    frame: input.frame === null || input.frame === undefined ? null : readNumber(input.frame, `${path}.frame`, true),
+    frame: readNumber(input.frame, `${path}.frame`, true),
     player_id: input.player_id === null || input.player_id === undefined ? null : readPlayerId(input.player_id, `${path}.player_id`),
-    confidence: input.confidence === null || input.confidence === undefined ? null : readNumber(input.confidence, `${path}.confidence`),
+    confidence: readNumber(input.confidence, `${path}.confidence`),
+    sources: readContactSources(input.sources, `${path}.sources`),
     window: {
       t0: readNumber(input.window.t0, `${path}.window.t0`),
       t1: readNumber(input.window.t1, `${path}.window.t1`),
-      importance:
-        input.window.importance === null || input.window.importance === undefined
-          ? null
-          : readNumber(input.window.importance, `${path}.window.importance`),
+      importance: readNumber(input.window.importance, `${path}.window.importance`),
     },
+  };
+}
+
+function readContactSources(input: unknown, path: string): ContactWindowEvent["sources"] {
+  assertRecord(input, path);
+  return {
+    audio: readUnitNumber(input.audio, `${path}.audio`),
+    wrist_vel: readUnitNumber(input.wrist_vel, `${path}.wrist_vel`),
+    ball_inflection: readUnitNumber(input.ball_inflection, `${path}.ball_inflection`),
+    human_review:
+      input.human_review === null || input.human_review === undefined
+        ? null
+        : readUnitNumber(input.human_review, `${path}.human_review`),
   };
 }
 
@@ -416,14 +436,20 @@ function readFrame(input: unknown, path: string): VirtualWorldFrame {
 function readBall(input: unknown): VirtualWorld["ball"] {
   assertRecord(input, "virtual_world.ball");
   return {
-    source: input.source === null || input.source === undefined ? null : readString(input.source, "virtual_world.ball.source"),
+    source:
+      input.source === null || input.source === undefined
+        ? null
+        : readEnum(input.source, "virtual_world.ball.source", ["tracknet", "tap", "pbmat", "totnet"] as const),
     frames: readArray(input.frames, "virtual_world.ball.frames").map((frame, index) => {
       const path = `virtual_world.ball.frames[${index}]`;
       assertRecord(frame, path);
       return {
         t: readNumber(frame.t, `${path}.t`),
+        xy: readVec2(frame.xy, `${path}.xy`),
+        conf: readNumber(frame.conf, `${path}.conf`),
+        visible: readBoolean(frame.visible, `${path}.visible`),
         world_xyz: frame.world_xyz === null || frame.world_xyz === undefined ? null : readVec3(frame.world_xyz, `${path}.world_xyz`),
-        visible: frame.visible === undefined ? undefined : readBoolean(frame.visible, `${path}.visible`),
+        approx: frame.approx === undefined ? false : readBoolean(frame.approx, `${path}.approx`),
       };
     }),
   };
@@ -480,6 +506,12 @@ function readNumber(value: unknown, path: string, integer = false): number {
   return value;
 }
 
+function readUnitNumber(value: unknown, path: string): number {
+  const number = readNumber(value, path);
+  if (number < 0 || number > 1) throw new Error(`${path} must be in [0, 1]`);
+  return number;
+}
+
 function readPlayerId(value: unknown, path: string): number {
   if (typeof value === "number") return readNumber(value, path, true);
   if (typeof value === "string" && value.trim() !== "") {
@@ -492,6 +524,12 @@ function readPlayerId(value: unknown, path: string): number {
 function readString(value: unknown, path: string): string {
   if (typeof value !== "string") throw new Error(`${path} must be a string`);
   return value;
+}
+
+function readEnum<T extends string>(value: unknown, path: string, allowed: readonly T[]): T {
+  const text = readString(value, path);
+  if (!allowed.includes(text as T)) throw new Error(`${path} must be one of: ${allowed.join(", ")}`);
+  return text as T;
 }
 
 function readBoolean(value: unknown, path: string): boolean {

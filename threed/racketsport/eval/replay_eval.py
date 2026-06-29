@@ -12,7 +12,7 @@ from threed.racketsport.eval.metrics import (
     missing_artifacts,
     write_phase_metrics,
 )
-from threed.racketsport.replay_export import inspect_glb_file, resolve_replay_glb_path
+from threed.racketsport.replay_export import audit_replay_export_manifest, inspect_glb_file, resolve_replay_glb_path
 from threed.racketsport.schemas import EvalClipResult, ReplayScene, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
@@ -128,6 +128,15 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
             inspect_glb_file(path)
         except ValueError:
             invalid_glbs.append(glb)
+    replay_production_ready = False
+    replay_production_blockers: list[str] = []
+    if not missing_glbs and not invalid_glbs:
+        try:
+            replay_audit = audit_replay_export_manifest(run_dir, replay_scene)
+            replay_production_ready = bool(replay_audit["production_replay_ready"])
+            replay_production_blockers = [str(blocker) for blocker in replay_audit["blockers"]]
+        except (FileNotFoundError, ValueError) as exc:
+            replay_production_blockers = [f"replay_export_manifest_invalid: {exc}"]
     player_count = len(replay_scene.players)
     point_count = len(replay_scene.points)
     largest_point_glb_mb = max((point.size_mb for point in replay_scene.points), default=0.0)
@@ -138,12 +147,19 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
         },
         REPLAY_GATES,
     )
-    passed = all(gated_metric.passed is True for gated_metric in gated.values()) and not missing_glbs and not invalid_glbs
+    passed = (
+        all(gated_metric.passed is True for gated_metric in gated.values())
+        and not missing_glbs
+        and not invalid_glbs
+        and replay_production_ready
+    )
     notes = []
     if missing_glbs:
         notes.append(f"missing referenced GLB files: {', '.join(missing_glbs)}")
     if invalid_glbs:
         notes.append(f"invalid referenced GLB files: {', '.join(invalid_glbs)}")
+    if replay_production_blockers:
+        notes.append(f"production replay blockers: {', '.join(replay_production_blockers)}")
     return EvalClipResult(
         clip=clip_name,
         run_dir=str(run_dir),
@@ -171,6 +187,18 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
                 unit="MB",
                 gate="recorded for later replay size gate",
                 passed=True,
+            ),
+            "replay_production_ready": metric(
+                value=replay_production_ready,
+                unit=None,
+                gate="production replay export requirements met",
+                passed=replay_production_ready,
+            ),
+            "replay_production_blocker_count": metric(
+                value=len(replay_production_blockers),
+                unit="blockers",
+                gate="production replay export blockers must be zero",
+                passed=not replay_production_blockers,
             ),
         },
         notes=notes,

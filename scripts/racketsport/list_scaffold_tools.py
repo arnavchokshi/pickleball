@@ -31,25 +31,41 @@ PREFIXES = (
 
 TEST_OVERRIDES = {
     "audit_label_drafts": "test_label_draft_audit.py",
+    "benchmark_person_trackers": "test_person_tracking_benchmark.py",
     "benchmark_decode": "test_decode_benchmark_summary.py",
     "benchmark_sam3dbody": "test_benchmark_sam3dbody.py",
+    "build_contact_windows_from_review_inputs": "test_contact_window_review.py",
     "build_eval0_index": "test_eval0_index.py",
+    "build_paddle_true_corner_review": "test_racket_candidate_generation.py",
     "build_report_artifacts": "test_report_artifacts.py",
     "build_serving_manifest": "test_serving_manifest.py",
     "build_variant_comparison": "test_variant_comparison.py",
     "calibrate": "test_court_calibration.py",
     "check_eval_regression": "test_eval_regression.py",
     "build_corrections_queue": "test_corrections.py",
+    "export_ball_click_review": "test_ball_click_review.py",
+    "export_cvat_tasks": "test_label_review_flow.py",
+    "export_review_frames": "test_label_review_flow.py",
     "extract_label_frames": "test_label_workdir.py",
+    "filter_ball_local_search": "test_ball_local_search.py",
     "finetune_pose": "test_finetune_pose_scaffold.py",
+    "ingest_testclips": "test_io_decode.py",
     "init_label_workdir": "test_label_workdir.py",
     "manifest_report": "test_manifest_report.py",
+    "materialize_body_frames": "test_body_frame_materialization.py",
     "materialize_seed_manifest": "test_seed_manifest_materializer.py",
+    "prepare_tracknetv3_finetune_dataset": "test_pretraining_dataset_prep.py",
     "render_calibration_overlay": "test_calibration_overlay.py",
     "report_testclip_coverage": "test_testclip_coverage_report.py",
+    "run_ball_tracking_eval_suite": "test_ball_tracking_eval_suite.py",
+    "run_mobile_person_yolo_replay": "test_mobile_person_yolo_replay.py",
+    "run_totnet_ball": "test_totnet_runner_runtime.py",
+    "run_yolo26_teacher": "test_yolo26_teacher_filters.py",
     "smoke_models": "test_smoke_models.py",
     "summarize_decode_benchmarks": "test_decode_benchmark_summary.py",
     "track": "test_track_cli.py",
+    "train_court_keypoint_heatmap": "test_pretraining_dataset_prep.py",
+    "train_tenniset_shot_baseline": "test_tenniset_shot_baseline.py",
     "validate_ball_audio_dataset": "test_ball_audio_dataset.py",
     "validate_corrections": "test_corrections.py",
     "validate_pipeline_artifacts": "test_pipeline_contracts.py",
@@ -188,25 +204,68 @@ def _tool_entry(path: Path, *, root: Path, tests_root: Path, schemas_root: Path)
 
 
 def _category(stem: str) -> str:
-    if "decode" in stem:
-        return "decode"
-    if "serving" in stem:
-        return "serving"
-    if "replay" in stem:
-        return "replay"
-    if "label" in stem:
-        return "label"
-    if "dataset" in stem or "testclip" in stem or "seed_manifest" in stem:
-        return "dataset"
-    if "eval" in stem or "variant_comparison" in stem or stem.startswith("benchmark_"):
+    normalized = stem.replace("-", "_")
+    if normalized in {"gpu_train_lock", "setup_env"} or normalized.startswith("install_") or normalized.startswith("smoke_"):
+        return "env"
+    if "pipeline_artifacts" in normalized:
         return "eval"
-    if "model" in stem or "sam3dbody" in stem or "finetune" in stem:
-        return "model"
-    if "report" in stem or "corrections" in stem:
-        return "report"
-    if "calibrat" in stem or stem == "calibrate":
+    if "decode" in normalized:
+        return "decode"
+    if "serving" in normalized:
+        return "serving"
+    if "replay" in normalized:
+        return "replay"
+    if "eval" in normalized or "variant_comparison" in normalized or "benchmark" in normalized or "sweep" in normalized:
+        return "eval"
+    if "calibrat" in normalized or normalized == "calibrate" or "court_line" in normalized or "court_keypoint" in normalized:
         return "calibration"
-    if "track" in stem:
+    if "dataset" in normalized or "testclip" in normalized or "seed_manifest" in normalized or normalized.startswith("ingest_"):
+        return "dataset"
+    if (
+        "label" in normalized
+        or "cvat" in normalized
+        or "teacher" in normalized
+        or "review_frames" in normalized
+        or "review_input" in normalized
+    ):
+        return "label"
+    if "shot" in normalized or "tenniset" in normalized:
+        return "shot"
+    if "contact" in normalized or "audio" in normalized or "wrist" in normalized:
+        return "contact"
+    if "ball" in normalized or "totnet" in normalized or "pbmat" in normalized or "tracknet" in normalized:
+        return "ball"
+    if "racket" in normalized or "paddle" in normalized:
+        return "racket"
+    if (
+        "body" in normalized
+        or "person" in normalized
+        or "player_track" in normalized
+        or "frame_compute" in normalized
+        or "hmr" in normalized
+    ):
+        return "body"
+    if "physics" in normalized or "virtual_world" in normalized or "mujoco" in normalized:
+        return "physics"
+    if (
+        "model" in normalized
+        or "coreml" in normalized
+        or "sam3dbody" in normalized
+        or "finetune" in normalized
+        or normalized.startswith("train_")
+    ):
+        return "model"
+    if (
+        "report" in normalized
+        or "corrections" in normalized
+        or "readiness" in normalized
+        or "promotion_audit" in normalized
+        or "review_packet" in normalized
+        or "review_action_manifest" in normalized
+        or "scaffold" in normalized
+    ):
+        return "report"
+    if "track" in normalized:
         return "tracking"
     return "unknown"
 
@@ -215,10 +274,26 @@ def _guess_task(stem: str) -> tuple[str | None, str | None]:
     category = _category(stem)
     if category == "dataset":
         return "DATA", None
+    if category == "label":
+        return "DATA", None
     if category == "eval":
         return "EVAL", None
+    if category == "env":
+        return "ENV", None
     if category == "model":
         return "BODY", None
+    if category == "body":
+        return "BODY", None
+    if category == "ball":
+        return "BALL", None
+    if category == "racket":
+        return "RKT", None
+    if category == "contact":
+        return "BALL", None
+    if category == "shot":
+        return "SHOT", None
+    if category == "physics":
+        return "E2E", None
     if category == "report":
         return "RPT", None
     if category == "serving":

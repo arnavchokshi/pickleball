@@ -153,6 +153,7 @@ const contactWindows = {
       frame: 3,
       player_id: null,
       confidence: 1,
+      sources: { audio: 0, wrist_vel: 0, ball_inflection: 0, human_review: 1 },
       window: { t0: 0, t1: 0.2, importance: 1 },
     },
     {
@@ -161,6 +162,7 @@ const contactWindows = {
       frame: 33,
       player_id: 2,
       confidence: 1,
+      sources: { audio: 0, wrist_vel: 0, ball_inflection: 0, human_review: 1 },
       window: { t0: 1, t1: 1.2, importance: 1 },
     },
   ],
@@ -200,7 +202,7 @@ const contactWorld = {
       ],
     },
   ],
-  ball: { source: "tracknet", frames: [{ t: 0.1, world_xyz: [0.15, 1, 0], visible: true }] },
+  ball: { source: "tracknet", frames: [{ t: 0.1, xy: [12, 18], conf: 0.92, world_xyz: [0.15, 1, 0], visible: true }] },
 };
 
 describe("viewer data contracts", () => {
@@ -235,6 +237,33 @@ describe("viewer data contracts", () => {
     expect(activeBallContactPlayerIds(parsedWorld, parsedContacts, 0.1)).toEqual(new Set([1]));
     expect(activeBallContactPlayerIds(parsedWorld, parsedContacts, 1.1)).toEqual(new Set([2]));
     expect(activeBallContactPlayerIds(parsedWorld, parsedContacts, 0.7)).toEqual(new Set());
+  });
+
+  it("rejects contact windows missing Python-required source scores", () => {
+    const invalid = {
+      schema_version: 1,
+      events: [
+        {
+          type: "contact",
+          t: 0.1,
+          frame: 3,
+          player_id: null,
+          confidence: 1,
+          window: { t0: 0, t1: 0.2, importance: 1 },
+        },
+      ],
+    };
+
+    expect(() => parseContactWindows(invalid)).toThrow("contact_windows.events[0].sources must be an object");
+  });
+
+  it("rejects virtual-world ball frames missing Python-required xy/conf fields", () => {
+    const invalid = {
+      ...world,
+      ball: { source: "tracknet", frames: [{ t: 0.1, world_xyz: [0.15, 1, 0], visible: true }] },
+    };
+
+    expect(() => parseVirtualWorld(invalid)).toThrow("virtual_world.ball.frames[0].xy must be an array");
   });
 
   it("selects the nearest player frame for the current video time", () => {

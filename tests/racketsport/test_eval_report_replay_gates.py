@@ -304,7 +304,7 @@ def test_copy_faithfulness_uses_named_numeric_gates_for_report_habit_counts(tmp_
     assert metrics["priority_habit_match"].gate == "coach copy preserves priority habit"
 
 
-def test_replay_eval_uses_named_numeric_gates_for_player_and_point_counts(tmp_path: Path) -> None:
+def test_replay_eval_fails_review_static_glbs_for_production_gate(tmp_path: Path) -> None:
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs"
     _write_ready_clip(labels_root, "clip_001")
@@ -313,6 +313,8 @@ def test_replay_eval_uses_named_numeric_gates_for_player_and_point_counts(tmp_pa
     payload = _run_eval(replay_eval, tmp_path)
     metrics = payload.clips[0].metrics
 
+    assert payload.status == "fail"
+    assert payload.clips[0].status == "fail"
     assert metrics["players"].gate == "presence_check.replay_players_min: >= 1"
     assert metrics["points"].gate == "presence_check.replay_points_min: >= 1"
     assert metrics["players"].passed is True
@@ -320,6 +322,10 @@ def test_replay_eval_uses_named_numeric_gates_for_player_and_point_counts(tmp_pa
     assert metrics["glb_files_present"].gate == "all referenced GLB files exist"
     assert metrics["glb_files_valid"].gate == "all referenced GLB files are structurally valid"
     assert metrics["glb_files_valid"].passed is True
+    assert metrics["replay_production_ready"].gate == "production replay export requirements met"
+    assert metrics["replay_production_ready"].passed is False
+    assert metrics["replay_production_blocker_count"].value > 0
+    assert any("review_static_glb_export" in note for note in payload.clips[0].notes)
 
 
 def test_replay_eval_fails_when_referenced_glb_is_invalid(tmp_path: Path) -> None:

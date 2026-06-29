@@ -6,6 +6,7 @@ import pytest
 
 from scripts.racketsport.prepare_tracknetv3_finetune_dataset import (
     TrackNetLabel,
+    build_tracknetv3_dataset,
     interpolated_tracknet_labels,
     write_tracknet_csv,
 )
@@ -45,6 +46,47 @@ def test_write_tracknet_csv_uses_official_columns(tmp_path: Path) -> None:
         "0,1,10.000,20.000",
         "1,0,0.000,0.000",
     ]
+
+
+def test_tracknetv3_overwrite_rejects_broad_paths_before_delete(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_rmtree(path: Path) -> None:
+        raise AssertionError(f"rmtree must not run for unsafe path: {path}")
+
+    monkeypatch.setattr("scripts.racketsport.prepare_tracknetv3_finetune_dataset.shutil.rmtree", fail_rmtree)
+
+    with pytest.raises(ValueError, match="refusing to overwrite broad output directory"):
+        build_tracknetv3_dataset(
+            run_root=Path("/tmp/run-root"),
+            review_root=Path("/tmp/review-root"),
+            out=Path("/"),
+            splits={"train": ()},
+            overwrite=True,
+        )
+
+
+def test_tracknetv3_overwrite_rejects_source_tree_paths_before_delete(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    unsafe = Path("scripts/racketsport/tracknetv3_dataset_tmp")
+    unsafe.mkdir(exist_ok=True)
+
+    def fail_rmtree(path: Path) -> None:
+        raise AssertionError(f"rmtree must not run for unsafe path: {path}")
+
+    monkeypatch.setattr("scripts.racketsport.prepare_tracknetv3_finetune_dataset.shutil.rmtree", fail_rmtree)
+
+    try:
+        with pytest.raises(ValueError, match="source-controlled project directory"):
+            build_tracknetv3_dataset(
+                run_root=tmp_path / "run-root",
+                review_root=tmp_path / "review-root",
+                out=unsafe,
+                splits={"train": ()},
+                overwrite=True,
+            )
+    finally:
+        unsafe.rmdir()
 
 
 def test_court_corner_keypoint_labels_map_manual_seed_to_taxonomy(tmp_path: Path) -> None:

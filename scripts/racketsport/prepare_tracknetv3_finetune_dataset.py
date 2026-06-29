@@ -119,6 +119,7 @@ def build_tracknetv3_dataset(
     if splits is None:
         splits = DEFAULT_SPLITS
     if overwrite and out.exists():
+        _validate_safe_overwrite_path(out)
         shutil.rmtree(out)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -177,6 +178,33 @@ def build_tracknetv3_dataset(
     manifest_path = out / "pickleball_tracknetv3_dataset_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return manifest
+
+
+def _validate_safe_overwrite_path(path: Path) -> None:
+    resolved = path.expanduser().resolve(strict=False)
+    repo_root = Path(__file__).resolve().parents[2]
+    dangerous_roots = {
+        Path(resolved.anchor).resolve(strict=False),
+        Path.home().resolve(strict=False),
+        repo_root.resolve(strict=False),
+        (repo_root / "data").resolve(strict=False),
+        (repo_root / "runs").resolve(strict=False),
+        Path("/workspace").resolve(strict=False),
+        Path("/workspace/runs").resolve(strict=False),
+    }
+    if resolved in dangerous_roots:
+        raise ValueError(f"refusing to overwrite broad output directory: {resolved}")
+    if len(resolved.parts) < 4:
+        raise ValueError(f"refusing to overwrite shallow output directory: {resolved}")
+    if repo_root.resolve(strict=False) in resolved.parents:
+        relative = resolved.relative_to(repo_root.resolve(strict=False))
+        if relative.parts and relative.parts[0] in {"docs", "ios", "models", "models_coreml", "scripts", "tests", "threed", "web"}:
+            raise ValueError(f"refusing to overwrite source-controlled project directory: {resolved}")
+    if not any(token in resolved.name.lower() for token in ("dataset", "pickleball", "tracknet")):
+        raise ValueError(
+            "refusing to overwrite a TrackNetV3 output directory whose name does not include "
+            "'dataset', 'pickleball', or 'tracknet'"
+        )
 
 
 def _video_frame_count(video_path: Path) -> int:

@@ -778,12 +778,14 @@ Full detail in `ACCURACY_AND_TRAINING.md §11–§14`. Build in parallel — it 
 - **Validation dataset & eval harness:** `threed/racketsport/eval/` holds one evaluator per phase, each reading `data/testclips/*/labels/` and writing `metrics.json`. Validation Protocols A/B/C/D (`ACCURACY_AND_TRAINING.md §10`) and the physics/racket gates (Phases 4, 6, 10 acceptance gates) define the numeric gates.
 - **Regression dashboard + CI:** current regression coverage is `scripts/racketsport/check_eval_regression.py`, `scripts/racketsport/summarize_eval_runs.py`, and tests under `tests/racketsport/`. The tracked GitHub workflow primarily runs checker tests on relevant file changes; real baseline-vs-current metric comparison is currently a manual `workflow_dispatch` path, not a universal merge blocker.
 - **CI:** `tests/racketsport/` owns the current regression coverage; readiness-gate tests check artifact plus semantic blockers, while scoreboard/perf tests should be added only when real per-phase timing/cost artifacts exist.
-- **Artifact schema registry:** JSON artifact schemas live in `threed/racketsport/schemas/` and are exercised by local/tests where wired. The current GitHub workflow does not run broad artifact-schema validation in CI; add an explicit schema-validation workflow before claiming universal `validate()` coverage in CI.
+- **Artifact schema registry:** Runtime Pydantic artifact models live in `threed/racketsport/schemas/__init__.py`; tracked JSON schemas/manifests for dataset/report/serving/scaffold tooling live under `docs/racketsport/`. The current GitHub workflow does not run broad artifact-schema validation in CI; add an explicit schema-validation workflow before claiming universal `validate()` coverage in CI.
 - **Confidence plumbing ("no charge if we can't trust it"):** confidence + coverage propagate per-frame pose → per-metric → per-habit → report; report exposes `coverage.overall` + `skipped_reason_counts`; below-threshold reports flagged comp-able. Wired in Phase 7, surfaced in Phase 9, honored in the Phase 10 replay (gray/omit low-confidence).
 
 ---
 
-## Artifact JSON Schemas (authoritative)
+## Artifact JSON Shapes (design examples, not authoritative)
+
+The examples below are planning/reference shapes. Treat `threed/racketsport/schemas/__init__.py` as the runtime authority for artifact validation, and treat `docs/racketsport/*_schema.json` plus `docs/racketsport/testclip_seed_manifest.json` as the tracked JSON-schema/manifests that exist today.
 
 ```jsonc
 // capture_sidecar.json  (produced by iOS Phase C1; consumed by server Phase 1)

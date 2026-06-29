@@ -16,6 +16,10 @@
       "id": "yolo26n_img416_int8",
       "model_name": "yolo26n",
       "candidate_ids": [
+        "yolo26n_int8_every_frame",
+        "yolo26n_int8_detect2_track30"
+      ],
+      "swift_case_ids": [
         "yolo26nInt8EveryFrame",
         "yolo26nInt8Detect2Track30"
       ],
@@ -34,6 +38,9 @@
       "id": "yolo26n_img512_int8",
       "model_name": "yolo26n",
       "candidate_ids": [
+        "yolo26n_int8_img512_every_frame"
+      ],
+      "swift_case_ids": [
         "yolo26nInt8Img512EveryFrame"
       ],
       "image_size": 512,
@@ -51,6 +58,9 @@
       "id": "yolo26n_img640_int8",
       "model_name": "yolo26n",
       "candidate_ids": [
+        "yolo26n_int8_img640_every_frame"
+      ],
+      "swift_case_ids": [
         "yolo26nInt8Img640EveryFrame"
       ],
       "image_size": 640,
@@ -68,6 +78,9 @@
       "id": "yolo26s_img416_int8",
       "model_name": "yolo26s",
       "candidate_ids": [
+        "yolo26s_int8_every_frame"
+      ],
+      "swift_case_ids": [
         "yolo26sInt8EveryFrame"
       ],
       "image_size": 416,
@@ -85,6 +98,9 @@
       "id": "yolo26m_img416_int8",
       "model_name": "yolo26m",
       "candidate_ids": [
+        "yolo26m_int8_img416_every_frame"
+      ],
+      "swift_case_ids": [
         "yolo26mInt8Img416EveryFrame"
       ],
       "image_size": 416,
@@ -102,6 +118,9 @@
       "id": "yolo11n_img416_int8_nms",
       "model_name": "yolo11n",
       "candidate_ids": [
+        "yolo11n_int8_fallback"
+      ],
+      "swift_case_ids": [
         "yolo11nInt8Fallback"
       ],
       "image_size": 416,

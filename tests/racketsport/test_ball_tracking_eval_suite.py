@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import cv2
 import numpy as np
+import pytest
 
 from scripts.racketsport.run_ball_tracking_eval_suite import (
     EvalSuiteConfig,
@@ -69,6 +69,7 @@ def _write_clicks(path: Path, *, clip: str) -> None:
 
 
 def _write_video(path: Path, *, fps: float = 30.0, frame_count: int = 2) -> None:
+    cv2 = pytest.importorskip("cv2")
     path.parent.mkdir(parents=True, exist_ok=True)
     writer = cv2.VideoWriter(
         str(path),
