@@ -10,6 +10,7 @@
     "scripts_root",
     "tests_root",
     "schema_root",
+    "scope",
     "execution",
     "summary",
     "tools"
@@ -29,6 +30,34 @@
     },
     "schema_root": {
       "const": "docs/racketsport"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "indexed_globs",
+        "excluded_globs",
+        "repo_wide_hygiene_report"
+      ],
+      "properties": {
+        "indexed_globs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^scripts(/racketsport)?/\\*\\.(py|sh)$"
+          },
+          "minItems": 1
+        },
+        "excluded_globs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repo_wide_hygiene_report": {
+          "const": false
+        }
+      }
     },
     "execution": {
       "type": "object",
@@ -69,8 +98,8 @@
         "tool_count",
         "with_matching_tests",
         "missing_matching_tests",
-        "with_matching_schemas",
-        "missing_matching_schemas",
+        "with_matching_json_schema_files",
+        "missing_matching_json_schema_files",
         "category_counts"
       ],
       "properties": {
@@ -86,11 +115,11 @@
           "type": "integer",
           "minimum": 0
         },
-        "with_matching_schemas": {
+        "with_matching_json_schema_files": {
           "type": "integer",
           "minimum": 0
         },
-        "missing_matching_schemas": {
+        "missing_matching_json_schema_files": {
           "type": "integer",
           "minimum": 0
         },
@@ -120,7 +149,7 @@
         "properties": {
           "command_path": {
             "type": "string",
-            "pattern": "^scripts/racketsport/.+\\.py$"
+            "pattern": "^scripts/(racketsport/)?[^/]+\\.(py|sh)$"
           },
           "stem": {
             "type": "string",

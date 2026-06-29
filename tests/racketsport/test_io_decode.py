@@ -11,6 +11,7 @@ from threed.racketsport.io_decode import (
     FrameSource,
     _laplacian_variance,
     analyze_clip_qc,
+    decode_clip,
     measure_decode_throughput,
     probe_clip,
 )
@@ -56,6 +57,13 @@ def test_probe_clip_returns_phase0_metadata(tmp_path):
     assert source.frame_count >= 5
     assert source.audio_sample_rate == 44100
     json.dumps(source.to_frames_meta())
+
+
+def test_decode_clip_alias_matches_probe_clip_metadata(tmp_path):
+    clip = tmp_path / "sample.mp4"
+    _make_tiny_clip(clip)
+
+    assert decode_clip(clip, fps_out=30.0) == probe_clip(clip, fps_out=30.0)
 
 
 def test_probe_clip_fails_closed_on_missing_file(tmp_path):

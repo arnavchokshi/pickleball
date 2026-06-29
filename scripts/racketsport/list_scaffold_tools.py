@@ -162,8 +162,8 @@ def build_scaffold_tool_index(root: Path) -> dict[str, Any]:
             "tool_count": len(tools),
             "with_matching_tests": sum(1 for tool in tools if tool["matching_test"] is not None),
             "missing_matching_tests": sum(1 for tool in tools if tool["matching_test"] is None),
-            "with_matching_schemas": sum(1 for tool in tools if tool["matching_schema"] is not None),
-            "missing_matching_schemas": sum(1 for tool in tools if tool["matching_schema"] is None),
+            "with_matching_json_schema_files": sum(1 for tool in tools if tool["matching_schema"] is not None),
+            "missing_matching_json_schema_files": sum(1 for tool in tools if tool["matching_schema"] is None),
             "category_counts": dict(sorted(category_counts.items())),
         },
         "tools": tools,
@@ -356,6 +356,8 @@ def _first_test_referencing(command_path: str, *, tests_root: Path, root: Path) 
     if not tests_root.is_dir():
         return None
     for path in sorted(tests_root.glob("test_*.py")):
+        if path.name == "test_scaffold_tool_index.py" and command_path != "scripts/racketsport/list_scaffold_tools.py":
+            continue
         try:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:

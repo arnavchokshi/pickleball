@@ -94,6 +94,20 @@ def test_player_labels_to_detections_fails_closed_without_fps():
         player_labels_to_detections({"items": []}, fps=0.0)
 
 
+def test_player_labels_to_detections_skips_fractional_frame_ids():
+    payload = {
+        "items": [
+            {"frame": 1.9, "bbox_xyxy": [10, 20, 30, 60], "status": "accepted"},
+            {"frame": "frame_000002.jpg", "bbox_xyxy": [10, 20, 30, 60], "status": "accepted"},
+        ]
+    }
+
+    detections = player_labels_to_detections(payload, fps=30.0)
+
+    assert detections["counts"] == {"accepted": 1, "skipped_status": 0, "skipped_invalid": 1}
+    assert detections["frames"][0]["frame"] == 1
+
+
 def test_convert_player_labels_cli_writes_detections_with_manifest_fps(tmp_path):
     labels = tmp_path / "players.json"
     manifest = tmp_path / "prototype_autolabel_manifest.json"

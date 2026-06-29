@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.racketsport.json_schema_assertions import assert_matches_json_schema
 import threed.racketsport.report_model as report_model
 from threed.racketsport.schemas import HabitReport, validate_artifact_file
 
@@ -123,6 +124,8 @@ def test_report_artifact_cli_writes_schema_valid_outputs(tmp_path: Path) -> None
     assert completed.returncode == 0
     assert completed.stderr == ""
     summary = json.loads(completed.stdout)
+    schema = json.loads(Path("docs/racketsport/report_artifacts_schema.json").read_text(encoding="utf-8"))
+    assert_matches_json_schema(summary, schema)
     assert summary == {
         "schema_version": 1,
         "habit_report": str(run_dir / "habit_report.json"),
@@ -168,3 +171,15 @@ def test_report_artifact_schema_doc_is_valid_json() -> None:
         "priority_habit_id",
         "habits",
     ]
+
+
+def test_report_artifact_schema_accepts_embedded_bundle(tmp_path: Path) -> None:
+    metrics_path = _write_json(tmp_path / "racket_sport_metrics.json", _metrics_payload())
+    artifacts = report_model.build_report_artifacts(metrics_path)
+    schema = json.loads(Path("docs/racketsport/report_artifacts_schema.json").read_text(encoding="utf-8"))
+    bundle = {
+        "habit_report": artifacts.habit_report.model_dump(mode="json"),
+        "coach_report": artifacts.coach_report.model_dump(mode="json"),
+    }
+
+    assert_matches_json_schema(bundle, schema)

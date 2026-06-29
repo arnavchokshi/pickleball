@@ -69,7 +69,7 @@ public struct CapturePolicy: Equatable, Sendable {
         for mode: CaptureMode,
         deviceTier: DeviceTier,
         capabilities: CaptureCodecCapabilities,
-        orientation: CaptureOrientation = .portrait
+        orientation: CaptureOrientation = .landscape
     ) -> CapturePolicy {
         switch mode {
         case .standard60:

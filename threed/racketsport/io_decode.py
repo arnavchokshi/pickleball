@@ -320,11 +320,6 @@ def measure_decode_throughput(path: str | Path, *, backend: str = "cpu") -> Deco
 
 
 def decode_clip(path: str | Path, fps_out: float | None = None) -> FrameSource:
-    """Return Phase 0 metadata for a clip.
-
-    Full NVDEC frame iteration is wired in later once the GPU worker environment
-    is finalized. Phase 0 callers can still use this deterministic metadata
-    contract for ingestion and schema tests.
-    """
+    """Compatibility alias for ``probe_clip`` metadata-only clip inspection."""
 
     return probe_clip(path, fps_out=fps_out)

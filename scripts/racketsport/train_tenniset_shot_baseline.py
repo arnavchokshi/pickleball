@@ -6,9 +6,10 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import sys
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
-import numpy as np
+if TYPE_CHECKING:
+    import numpy as np
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,7 @@ def build_dataset_index(root: str | Path, split: str) -> tuple[list[TenniSetSamp
 
 
 def load_feature_vector(sample: TenniSetSample, *, seq_len: int) -> np.ndarray:
+    np = _numpy()
     if seq_len <= 0:
         raise ValueError("seq_len must be positive")
     joints = np.load(sample.joints_path).astype(np.float32, copy=False)
@@ -83,6 +85,7 @@ def macro_f1(y_true: Sequence[int], y_pred: Sequence[int], *, class_count: int) 
 
 
 def _resample_sequence(sequence: np.ndarray, seq_len: int) -> np.ndarray:
+    np = _numpy()
     if sequence.shape[0] == seq_len:
         return sequence
     if sequence.shape[0] == 1:
@@ -139,6 +142,7 @@ def train_external_baseline(
     device_name: str,
     checkpoint_path: Path | None,
 ) -> dict[str, object]:
+    np = _numpy()
     import torch
     from torch import nn
     from torch.utils.data import DataLoader, TensorDataset
@@ -260,6 +264,7 @@ def _load_matrix(
     *,
     seq_len: int,
 ) -> tuple[np.ndarray, np.ndarray]:
+    np = _numpy()
     x = np.stack([load_feature_vector(sample, seq_len=seq_len) for sample in samples])
     y = np.array([label_to_id[sample.label] for sample in samples], dtype=np.int64)
     return x.astype(np.float32, copy=False), y
@@ -276,6 +281,14 @@ def _predict(model: object, x: np.ndarray, *, device: object, batch_size: int) -
             pred = torch.argmax(model(xb), dim=1).cpu().tolist()
             predictions.extend(int(item) for item in pred)
     return predictions
+
+
+def _numpy() -> Any:
+    try:
+        import numpy as np  # type: ignore[import-not-found]
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("numpy is required for TenniSet shot baseline training") from exc
+    return np
 
 
 def _accuracy(y_true: Sequence[int], y_pred: Sequence[int]) -> float:

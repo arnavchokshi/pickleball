@@ -11,16 +11,14 @@ import types
 from collections import deque
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import numpy as np
+if TYPE_CHECKING:
+    import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-
-from threed.racketsport.totnet_adapter import checkpoint_metadata, write_ball_track_from_totnet_predictions  # noqa: E402
-
 
 def run_totnet_video(
     *,
@@ -42,7 +40,10 @@ def run_totnet_video(
     min_matched_keys: int = 180,
     max_frames: int | None = None,
 ) -> dict[str, Any]:
+    np = _numpy()
     import torch
+
+    from threed.racketsport.totnet_adapter import checkpoint_metadata, write_ball_track_from_totnet_predictions
 
     cv2 = _cv2()
     if num_frames < 1:
@@ -254,7 +255,16 @@ def _cv2() -> Any:
     return cv2
 
 
+def _numpy() -> Any:
+    try:
+        import numpy as np  # type: ignore[import-not-found]
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("numpy is required to run TOTNet video inference") from exc
+    return np
+
+
 def _normalize_frame(rgb: np.ndarray) -> np.ndarray:
+    np = _numpy()
     frame = rgb.astype(np.float32) / 255.0
     mean = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(1, 1, 3)
     std = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(1, 1, 3)

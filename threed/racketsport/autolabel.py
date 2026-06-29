@@ -14,7 +14,6 @@ from typing import Any, Iterable, Sequence
 
 PROTOTYPE_GATE_CLIPS = (
     "burlington_gold_0300_low_steep_corner",
-    "side_view_game5_0100_high_side_fence",
     "wolverine_mixed_0200_mid_steep_corner",
     "outdoor_webcam_iynbd_1500_long_high_baseline",
     "indoor_doubles_fwuks_0500_long_mid_baseline",
@@ -40,7 +39,7 @@ ALL_LABEL_FILES = PROTOTYPE_LABEL_FILES + COMPATIBILITY_LABEL_FILES
 
 
 def h100_defaults(*, output_space: str = "eval0") -> dict[str, Any]:
-    """Return default H100 paths for the current five-clip prototype gate."""
+    """Return default H100 paths for the current accepted-four prototype gate."""
 
     if output_space == "eval0":
         out = Path("runs/eval0/prototype_gate")
@@ -63,7 +62,7 @@ def bootstrap_prototype_gate(
     frames_root: Path,
     teacher_root: Path | None = None,
     clip_names: Sequence[str] | None = None,
-    max_clips: int = 5,
+    max_clips: int = 4,
 ) -> dict[str, Any]:
     """Write draft label packages for the prototype-gate clips.
 

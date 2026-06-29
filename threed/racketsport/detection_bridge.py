@@ -126,11 +126,18 @@ def _frame_index(value: Any) -> int:
     if isinstance(value, bool):
         raise ValueError("frame must be numeric or frame filename")
     if isinstance(value, int):
+        if value < 0:
+            raise ValueError("frame must be non-negative")
         return value
     if isinstance(value, float):
+        if not value.is_integer() or value < 0:
+            raise ValueError("frame must be an integer")
         return int(value)
     if isinstance(value, str):
-        match = re.search(r"(\d+)", value)
+        token = value.strip()
+        if re.fullmatch(r"\d+\.\d+", token):
+            raise ValueError("frame must be an integer")
+        match = re.search(r"(\d+)", token)
         if match:
             return max(0, int(match.group(1)) - 1)
     raise ValueError("frame is missing or invalid")

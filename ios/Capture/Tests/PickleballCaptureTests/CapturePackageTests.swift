@@ -74,6 +74,18 @@ final class CapturePackageTests: XCTestCase {
         }
     }
 
+    func testDefaultCapturePackageDescriptorIsLandscapeRecordable() throws {
+        let descriptor = try CapturePackageDescriptor(
+            sessionID: "default-landscape",
+            policy: CapturePolicy.recommended(for: .standard60, deviceTier: .standard, capabilities: .hevcOnly),
+            startedAt: Date(timeIntervalSince1970: 0)
+        )
+
+        XCTAssertEqual(descriptor.expectedOrientation, .landscape)
+        XCTAssertEqual(descriptor.captureDeviceOrientation, .landscapeRight)
+        XCTAssertEqual(descriptor.videoRotationAngleDegrees, 90)
+    }
+
     func testPipelineSensorManifestDeclaresAllCaptureInputsNeededDownstream() {
         let manifest = CaptureSensorManifest.pipelineRequired
 

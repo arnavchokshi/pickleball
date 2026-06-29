@@ -35,7 +35,7 @@ public struct CapturePackageDescriptor: Equatable, Sendable {
         sessionID: String,
         policy: CapturePolicy,
         startedAt: Date,
-        captureDeviceOrientation: CaptureDeviceOrientation = .portrait,
+        captureDeviceOrientation: CaptureDeviceOrientation = .landscapeRight,
         rootDirectory: String = "captures"
     ) throws {
         guard Self.isSafeSessionID(sessionID) else {

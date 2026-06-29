@@ -64,7 +64,7 @@ public final class CameraCaptureController: NSObject {
         mode: CaptureMode,
         deviceTier: DeviceTier = .standard,
         capabilities: CaptureCodecCapabilities = .hevcOnly,
-        captureDeviceOrientation: CaptureDeviceOrientation = .portrait,
+        captureDeviceOrientation: CaptureDeviceOrientation = .landscapeRight,
         sessionID: String = defaultSessionID(),
         packageRootURL: URL = defaultPackageRootURL()
     ) throws -> CapturePackageDescriptor {

@@ -132,10 +132,10 @@ def _source_evidence_kind(source: str) -> str:
     normalized = source.lower()
     if normalized.startswith("label_bbox:"):
         return "box_derived"
-    if any(token in normalized for token in ("aruco", "april", "tag", "gt", "ground_truth", "reference")):
-        return "reference_gt"
     if any(token in normalized for token in ("synthetic", "blenderproc", "cad")):
         return "synthetic_or_cad"
+    if any(token in normalized for token in ("aruco", "april", "tag", "gt", "ground_truth", "reference")):
+        return "reference_gt"
     return "keypoint_or_mask"
 
 

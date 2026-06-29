@@ -35,7 +35,7 @@ def import_mot_zip(path: str | Path, *, clip_id: str | None = None, fps: float |
         track_id = _positive_int(row[1], field="track_id")
         x, y, width, height = [float(value) for value in row[2:6]]
         mot_mark = float(row[6]) if len(row) > 6 and row[6] != "" else 1.0
-        class_id = int(float(row[7])) if len(row) > 7 and row[7] != "" else None
+        class_id = _positive_int(row[7], field="class_id") if len(row) > 7 and row[7] != "" else None
         visibility = float(row[8]) if len(row) > 8 and row[8] != "" else None
         class_name = labels.get(class_id) if class_id is not None else None
         person_class = _is_person_class(class_name)
@@ -125,7 +125,10 @@ def _is_person_class(class_name: str | None) -> bool:
 
 
 def _positive_int(value: str, *, field: str) -> int:
-    parsed = int(float(value))
+    number = float(value)
+    if not number.is_integer():
+        raise ValueError(f"{field} must be an integer")
+    parsed = int(number)
     if parsed <= 0:
         raise ValueError(f"{field} must be positive")
     return parsed

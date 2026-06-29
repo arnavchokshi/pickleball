@@ -14,7 +14,7 @@ from threed.racketsport.autolabel import PROTOTYPE_GATE_CLIPS, bootstrap_prototy
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Bootstrap draft labels for the 5-clip prototype gate.")
+    parser = argparse.ArgumentParser(description="Bootstrap draft labels for the accepted-four prototype gate.")
     parser.add_argument("--root", type=Path, default=None)
     parser.add_argument("--frames-root", type=Path, default=None)
     parser.add_argument("--out", type=Path, default=None)

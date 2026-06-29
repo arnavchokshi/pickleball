@@ -152,6 +152,74 @@ def test_true_corner_labels_to_candidates_marks_reviewed_corners_as_non_box_evid
     assert parsed.players[0].frames[0].source == "true_corners:human_true_corner_review"
 
 
+def test_true_corner_labels_reject_fractional_player_and_frame_ids() -> None:
+    base_player = {
+        "id": 4,
+        "paddle_dims_in": {"length": 16.0, "width": 8.0},
+        "frames": [
+            {
+                "frame_index": 12,
+                "corners_px": [[101.0, 201.0], [141.0, 203.0], [138.0, 282.0], [98.0, 279.0]],
+                "conf": 0.95,
+                "reviewer": "qa",
+                "evidence_type": "true_corners",
+            }
+        ],
+    }
+    updates = (
+        {"id": 4.5},
+        {"frames": [{**base_player["frames"][0], "frame_index": 12.9}]},
+    )
+    for update in updates:
+        payload = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_paddle_true_corner_labels",
+            "clip": "clip_001",
+            "fps": 60.0,
+            "label_source": "human_true_corner_review",
+            "players": [{**base_player, **update}],
+        }
+
+        with pytest.raises(ValueError, match="no reviewed true-corner labels accepted"):
+            true_corner_labels_to_candidates(payload)
+
+
+def test_cad_gt_counts_as_cad_not_reference_gt() -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_paddle_true_corner_labels",
+        "clip": "clip_001",
+        "fps": 60.0,
+        "label_source": "measured_cad_pose",
+        "players": [
+            {
+                "id": 4,
+                "paddle_dims_in": {"length": 16.0, "width": 8.0},
+                "frames": [
+                    {
+                        "frame_index": 12,
+                        "corners_px": [[101.0, 201.0], [141.0, 203.0], [138.0, 282.0], [98.0, 279.0]],
+                        "conf": 0.95,
+                        "reviewer": "qa",
+                        "evidence_type": "cad_gt",
+                    }
+                ],
+            }
+        ],
+    }
+
+    candidates, summary = true_corner_labels_to_candidates(payload)
+    review = build_paddle_true_corner_review(
+        clip="clip_001",
+        racket_candidates=candidates,
+        true_corner_candidates=candidates,
+    )
+
+    assert summary["source"] == "cad_gt:measured_cad_pose"
+    assert review["true_corner_source_evidence_counts"]["synthetic_or_cad"] == 1
+    assert review["true_corner_source_evidence_counts"]["reference_gt"] == 0
+
+
 def test_true_corner_labels_reject_box_sources_and_missing_reviewer() -> None:
     payload = {
         "schema_version": 1,

@@ -64,7 +64,7 @@ def test_bootstrap_writes_draft_packages_without_touching_dataset_labels(tmp_pat
     summary = bootstrap_prototype_gate(root=root, frames_root=frames_root, out=out)
 
     assert summary["status"] == "draft_ready_for_review"
-    assert summary["clip_count"] == 5
+    assert summary["clip_count"] == 4
     assert summary["dataset_labels_written"] is False
     labels_dir = out / "candidate_001" / "labels"
     expected = set(PROTOTYPE_LABEL_FILES) | set(COMPATIBILITY_LABEL_FILES) | {
@@ -165,4 +165,20 @@ def test_prototype_gate_clip_order_and_cli(tmp_path: Path) -> None:
     )
     payload = json.loads(completed.stdout)
     assert payload["artifact_type"] == "racketsport_prototype_autolabel_run"
-    assert payload["clip_count"] == 5
+    assert payload["clip_count"] == 4
+
+
+def test_top_level_autolabel_wrapper_exposes_bootstrap_help() -> None:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/autolabel.py",
+            "--help",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert "Bootstrap draft labels for the accepted-four prototype gate" in completed.stdout

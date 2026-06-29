@@ -3,17 +3,59 @@
   "$id": "https://example.local/racketsport/report_artifacts_schema.json",
   "title": "Racket-sport report artifacts",
   "type": "object",
-  "additionalProperties": false,
-  "required": ["habit_report", "coach_report"],
-  "properties": {
-    "habit_report": {
-      "$ref": "#/$defs/habit_report"
+  "oneOf": [
+    {
+      "$ref": "#/$defs/report_artifact_bundle"
     },
-    "coach_report": {
-      "$ref": "#/$defs/habit_report"
+    {
+      "$ref": "#/$defs/report_artifact_summary"
     }
-  },
+  ],
   "$defs": {
+    "report_artifact_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["habit_report", "coach_report"],
+      "properties": {
+        "habit_report": {
+          "$ref": "#/$defs/habit_report"
+        },
+        "coach_report": {
+          "$ref": "#/$defs/habit_report"
+        }
+      }
+    },
+    "report_artifact_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "habit_report",
+        "coach_report",
+        "habit_count",
+        "coverage"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "habit_report": {
+          "type": "string",
+          "minLength": 1
+        },
+        "coach_report": {
+          "type": "string",
+          "minLength": 1
+        },
+        "habit_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        }
+      }
+    },
     "habit_report": {
       "type": "object",
       "additionalProperties": false,

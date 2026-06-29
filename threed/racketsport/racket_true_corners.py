@@ -12,8 +12,9 @@ from .schemas import RacketCandidates
 ARTIFACT_TYPE = "racketsport_paddle_true_corner_review"
 LABEL_ARTIFACT_TYPE = "racketsport_paddle_true_corner_labels"
 SCHEMA_VERSION = 1
-REFERENCE_EVIDENCE_TYPES = {"reference_gt", "aruco_gt", "april_tag_gt", "cad_gt"}
-TRUE_CORNER_EVIDENCE_TYPES = {"true_corners", "mask_corners", "keypoint_corners"} | REFERENCE_EVIDENCE_TYPES
+REFERENCE_EVIDENCE_TYPES = {"reference_gt", "aruco_gt", "april_tag_gt"}
+CAD_EVIDENCE_TYPES = {"cad_gt"}
+TRUE_CORNER_EVIDENCE_TYPES = {"true_corners", "mask_corners", "keypoint_corners"} | REFERENCE_EVIDENCE_TYPES | CAD_EVIDENCE_TYPES
 BOX_DERIVED_BLOCKER = "box_candidates_are_not_true_paddle_corners"
 
 
@@ -284,10 +285,10 @@ def _true_corner_frame(frame_payload: Any, *, fps: float, label_source: str) -> 
 
 
 def _source_prefix(evidence_type: str) -> str:
+    if evidence_type in CAD_EVIDENCE_TYPES:
+        return "cad_gt"
     if evidence_type in REFERENCE_EVIDENCE_TYPES:
         return "reference_gt"
-    if evidence_type == "cad_gt":
-        return "cad_gt"
     return "true_corners"
 
 
@@ -340,11 +341,11 @@ def _source_evidence_counts(source_counts: Mapping[str, int]) -> dict[str, int]:
         normalized = source.lower()
         if is_box_derived_source(normalized):
             evidence["box_derived"] += count
-        elif any(token in normalized for token in ("aruco", "april", "tag", "gt", "ground_truth", "reference")):
-            evidence["reference_gt"] += count
-            evidence["true_corners_or_pose"] += count
         elif any(token in normalized for token in ("synthetic", "blenderproc", "cad")):
             evidence["synthetic_or_cad"] += count
+            evidence["true_corners_or_pose"] += count
+        elif any(token in normalized for token in ("aruco", "april", "tag", "gt", "ground_truth", "reference")):
+            evidence["reference_gt"] += count
             evidence["true_corners_or_pose"] += count
         else:
             evidence["keypoint_or_mask"] += count
@@ -445,7 +446,19 @@ def _unit_float(value: Any, field: str) -> float:
 def _integer(value: Any, field: str) -> int:
     if isinstance(value, bool):
         raise ValueError(f"{field} must be an integer")
-    number = int(value)
+    if isinstance(value, int):
+        number = value
+    elif isinstance(value, float):
+        if not value.is_integer():
+            raise ValueError(f"{field} must be an integer")
+        number = int(value)
+    elif isinstance(value, str):
+        token = value.strip()
+        if not token.isdecimal():
+            raise ValueError(f"{field} must be an integer")
+        number = int(token)
+    else:
+        raise ValueError(f"{field} must be an integer")
     if number < 0:
         raise ValueError(f"{field} must be non-negative")
     return number

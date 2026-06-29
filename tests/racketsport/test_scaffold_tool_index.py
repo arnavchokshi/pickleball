@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tests.racketsport.json_schema_assertions import assert_matches_json_schema
 
 def _write_script(root: Path, name: str) -> None:
     path = root / "scripts" / "racketsport" / name
@@ -80,8 +81,8 @@ def test_scaffold_tool_index_reports_scripts_and_coverage_gaps(tmp_path: Path) -
         "tool_count": 6,
         "with_matching_tests": 4,
         "missing_matching_tests": 2,
-        "with_matching_schemas": 2,
-        "missing_matching_schemas": 4,
+        "with_matching_json_schema_files": 2,
+        "missing_matching_json_schema_files": 4,
         "category_counts": {
             "dataset": 1,
             "decode": 1,
@@ -152,3 +153,22 @@ def test_scaffold_tool_index_rejects_invalid_root(tmp_path: Path) -> None:
 
     assert completed.returncode == 2
     assert "root does not exist" in completed.stderr
+
+
+def test_real_scaffold_tool_index_matches_checked_in_schema() -> None:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/list_scaffold_tools.py",
+            "--root",
+            ".",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(completed.stdout)
+    schema = json.loads(Path("docs/racketsport/scaffold_tool_index_schema.json").read_text(encoding="utf-8"))
+
+    assert_matches_json_schema(payload, schema)
+    assert payload["summary"]["tool_count"] == len(payload["tools"])

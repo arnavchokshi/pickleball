@@ -118,6 +118,19 @@ def test_racket_promotion_audit_requires_gt_eval_for_true_corner_pose() -> None:
     assert payload["warnings"] == ["not_trusted_for_rkt_promotion"]
 
 
+def test_racket_promotion_audit_classifies_cad_gt_as_cad_not_reference() -> None:
+    payload = build_racket_promotion_audit(
+        clip="clip_001",
+        racket_candidates=_racket_candidates(source="cad_gt:measured_paddle_model"),
+        racket_pose=_racket_pose(source="cad_gt:measured_paddle_model:pnp_ippe"),
+    )
+
+    assert payload["source_evidence_counts"]["synthetic_or_cad"] == 1
+    assert payload["source_evidence_counts"]["reference_gt"] == 0
+    assert payload["reference_gt_frame_count"] == 0
+    assert payload["blockers"] == ["missing_reference_pose_gt", "missing_racket_pose_evaluation"]
+
+
 def test_racket_promotion_audit_cli_writes_json(tmp_path: Path) -> None:
     candidates = tmp_path / "racket_candidates.json"
     preview = tmp_path / "racket_pose_preview.json"

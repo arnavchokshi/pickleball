@@ -397,18 +397,18 @@ Present uncertainty as ranges ("likely 52–61%"), bin confidence (confident/lea
 
 This is a product/research target view, not current capability status. Current invoked pipeline truth lives in `CAPABILITIES.md` and mutable task counts live in `BUILD_CHECKLIST.md`.
 
-| Claim | Target feasibility | Current repo status | Why |
+| Claim | Target feasibility | Current truth source | Why |
 |---|---|---|---|
-| Short-clip person tracking (≤4) | High | IN-PROGRESS, not VERIFIED | court geometry does the ID work; cheap detector suffices |
-| Fast 3D skeleton + court metrics | High | SCAFFOLD, not VERIFIED | near real-time; must fine-tune on racket motion |
-| Court calibration (variable camera) | High | DONE, not VERIFIED | per-clip homography + solvePnP; reprojection-gated |
-| NVZ/kitchen foot, spacing, balance | High | SCAFFOLD, not VERIFIED | world-grounded mesh + foot-lock to court plane |
-| Split-step / contact timing | Medium-high | SCAFFOLD, not VERIFIED | needs ball/audio event; audio makes it strong |
-| World-grounded mesh + foot-skate-free replay | High | SCAFFOLD, not VERIFIED | Fast SAM-3D-Body + our world-grounding (known camera) + foot-lock to known Z=0 plane (≤3 mm) |
-| Physics-accurate 3D replay (Three.js, free-viewpoint) | High | SCAFFOLD, not VERIFIED | mesh + baked physics -> glTF; engineering, not research |
-| Racket 6DoF (face angle / contact-point) | High | SCAFFOLD, not VERIFIED | PnP on known paddle geometry; ~3-5° (wrist-only stays low) |
-| Ball automation | Medium | SCAFFOLD, not VERIFIED | TrackNetV3 fine-tune for context; line calls need 2 cams |
-| Coach reports / UX | High | SCAFFOLD, not VERIFIED | mostly product/backend |
+| Short-clip person tracking (≤4) | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | court geometry does the ID work; cheap detector suffices |
+| Fast 3D skeleton + court metrics | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | near real-time; must fine-tune on racket motion |
+| Court calibration (variable camera) | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | per-clip homography + solvePnP; reprojection-gated |
+| NVZ/kitchen foot, spacing, balance | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | world-grounded mesh + foot-lock to court plane |
+| Split-step / contact timing | Medium-high | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | needs ball/audio event; audio makes it strong |
+| World-grounded mesh + foot-skate-free replay | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | Fast SAM-3D-Body + our world-grounding (known camera) + foot-lock to known Z=0 plane (≤3 mm) |
+| Physics-accurate 3D replay (Three.js, free-viewpoint) | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | mesh + baked physics -> glTF; engineering, not research |
+| Racket 6DoF (face angle / contact-point) | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | PnP on known paddle geometry; ~3-5° (wrist-only stays low) |
+| Ball automation | Medium | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | TrackNetV3 fine-tune for context; line calls need 2 cams |
+| Coach reports / UX | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | mostly product/backend |
 | $1M ARR | Plausible | market thesis, not pipeline capability | coaches/clubs first |
 
 ---

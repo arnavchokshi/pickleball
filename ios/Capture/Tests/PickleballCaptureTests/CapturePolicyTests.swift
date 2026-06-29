@@ -27,6 +27,7 @@ final class CapturePolicyTests: XCTestCase {
         XCTAssertEqual(policy.fps, 240)
         XCTAssertEqual(policy.resolution, .hd720p)
         XCTAssertEqual(policy.codec, .hevc)
+        XCTAssertEqual(policy.orientation, .landscape)
     }
 
     func testTierAQualityModeUses4K60ProResWhenSupported() {
@@ -96,5 +97,12 @@ final class CapturePolicyTests: XCTestCase {
         XCTAssertEqual(policy.orientation, .portrait)
         XCTAssertEqual(policy.resolution.dimensions(for: .portrait), [1080, 1920])
         XCTAssertEqual(policy.resolution.dimensions(for: .landscape), [1920, 1080])
+    }
+
+    func testSessionScaffoldDefaultsToRecordableLandscapePolicy() {
+        let scaffold = CaptureSessionScaffold(mode: .standard60)
+
+        XCTAssertEqual(scaffold.orientation, .landscape)
+        XCTAssertEqual(scaffold.resolution.dimensions(for: scaffold.orientation), [1920, 1080])
     }
 }

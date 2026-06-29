@@ -19,7 +19,7 @@ final class CaptureViewModel: ObservableObject {
     }
 
     @Published var selectedMode: CaptureMode = .standard60
-    @Published private(set) var captureDeviceOrientation: CaptureDeviceOrientation = .portrait
+    @Published private(set) var captureDeviceOrientation: CaptureDeviceOrientation = .landscapeRight
     @Published private(set) var descriptor: CapturePackageDescriptor?
     @Published private(set) var permissions = CapturePermissionSnapshot(camera: .notDetermined, microphone: .notDetermined)
     @Published private(set) var replayBenchmarkStatus: ReplayBenchmarkStatus = .idle

@@ -2,10 +2,12 @@
 
 Date: 2026-06-28
 
-PB-MAT is the intended production ball-model family: a motion-aware temporal
-heatmap detector with optional crop refinement. This document covers the runtime
-artifact seam only. It does not claim a trained PB-MAT checkpoint exists, does
-not fine-tune TrackNet, and does not promote BALL to verified.
+PB-MAT is an experimental ball-model runtime seam, not the approved production
+default. The current MVP/default registry path remains TrackNetV3 plus available
+review candidates until PB-MAT has a trained checkpoint, registry entry, and BALL
+gate evidence. This document covers the runtime artifact seam only. It does not
+claim a trained PB-MAT checkpoint exists, does not fine-tune TrackNet, and does
+not promote BALL to verified.
 
 ## Prediction Artifact
 

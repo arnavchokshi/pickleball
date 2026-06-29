@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.racketsport.json_schema_assertions import assert_matches_json_schema
 from threed.racketsport.pipeline_contracts import (
     PIPELINE_STAGE_ORDER,
     PipelineContractError,
@@ -283,6 +284,7 @@ def test_readiness_report_is_ready_when_requested_stage_and_dependencies_are_pre
     assert [stage["stage"] for stage in report["stages"]] == PIPELINE_STAGE_ORDER[:6]
     assert report["required_artifacts"] == required
     assert report["missing_artifacts"] == []
+    assert report["artifact_validation_errors"] == []
     assert all(stage["status"] == "ready" for stage in report["stages"])
 
 
@@ -524,3 +526,13 @@ def test_validate_pipeline_artifacts_cli_writes_machine_readable_report(tmp_path
     ]
     assert payload["stages"][-1]["stage"] == "metrics"
     assert payload["stages"][-1]["status"] == "not_ready"
+
+
+def test_readiness_report_matches_checked_in_json_schema(tmp_path: Path) -> None:
+    run_dir = tmp_path / "runs" / "phase11" / "clip_001"
+    _touch_all(run_dir, ["tracks.json"])
+
+    report = build_readiness_report(run_dir, stage="tracking")
+    schema = json.loads(Path("docs/racketsport/pipeline_contracts_schema.json").read_text(encoding="utf-8"))
+
+    assert_matches_json_schema(report, schema)

@@ -12,14 +12,14 @@ public struct CaptureSessionScaffold: Equatable, Sendable {
     public var liveFramesEnabled: Bool
 
     public init(mode: CaptureMode) {
-        self.init(mode: mode, deviceTier: .standard, capabilities: .hevcOnly, orientation: .portrait)
+        self.init(mode: mode, deviceTier: .standard, capabilities: .hevcOnly, orientation: .landscape)
     }
 
     public init(
         mode: CaptureMode,
         deviceTier: DeviceTier,
         capabilities: CaptureCodecCapabilities,
-        orientation: CaptureOrientation = .portrait
+        orientation: CaptureOrientation = .landscape
     ) {
         let policy = CapturePolicy.recommended(
             for: mode,

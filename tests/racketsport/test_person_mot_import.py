@@ -29,6 +29,12 @@ def _write_mot_zip(path: Path) -> None:
         )
 
 
+def _write_mot_zip_with_gt(path: Path, rows: list[str]) -> None:
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("gt/labels.txt", "player\n")
+        archive.writestr("gt/gt.txt", "\n".join(rows) + "\n")
+
+
 def test_import_mot_zip_normalizes_cvat_tracks_to_person_ground_truth(tmp_path: Path) -> None:
     zip_path = tmp_path / "annotations_mot.zip"
     _write_mot_zip(zip_path)
@@ -48,6 +54,17 @@ def test_import_mot_zip_normalizes_cvat_tracks_to_person_ground_truth(tmp_path: 
     assert ground_truth.frames[0].labels[0].bbox_xywh == pytest.approx((10.0, 20.0, 30.0, 40.0))
     assert ground_truth.frames[1].labels[1].ignored is True
     assert ground_truth.frames[1].labels[1].person_class is False
+
+
+def test_import_mot_zip_rejects_fractional_frame_track_and_class_ids(tmp_path: Path) -> None:
+    for field_index, message in [(0, "frame"), (1, "track_id"), (7, "class_id")]:
+        row = ["1", "1", "10", "20", "30", "40", "1", "1", "0.90"]
+        row[field_index] = "1.9"
+        zip_path = tmp_path / f"fractional_{field_index}.zip"
+        _write_mot_zip_with_gt(zip_path, [",".join(row)])
+
+        with pytest.raises(ValueError, match=f"{message} must be an integer"):
+            import_mot_zip(zip_path)
 
 
 def test_write_person_ground_truth_registers_schema(tmp_path: Path) -> None:
