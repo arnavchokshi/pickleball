@@ -96,8 +96,15 @@ public final class CameraCaptureController: NSObject {
         guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
             throw CameraCaptureControllerError.cameraUnavailable
         }
+        try configureAudioSession()
 
         session.beginConfiguration()
+        var didCommitConfiguration = false
+        defer {
+            if !didCommitConfiguration {
+                session.commitConfiguration()
+            }
+        }
         session.inputs.forEach(session.removeInput)
         session.outputs.forEach(session.removeOutput)
         session.sessionPreset = sessionPreset(for: policy.resolution)
@@ -106,27 +113,26 @@ public final class CameraCaptureController: NSObject {
 
         let videoInput = try AVCaptureDeviceInput(device: camera)
         guard session.canAddInput(videoInput) else {
-            session.commitConfiguration()
             throw CameraCaptureControllerError.cannotAddVideoInput
         }
         session.addInput(videoInput)
 
-        if let microphone = AVCaptureDevice.default(for: .audio) {
-            let audioInput = try AVCaptureDeviceInput(device: microphone)
-            guard session.canAddInput(audioInput) else {
-                session.commitConfiguration()
-                throw CameraCaptureControllerError.cannotAddAudioInput
-            }
-            session.addInput(audioInput)
+        guard let microphone = AVCaptureDevice.default(for: .audio) else {
+            throw CameraCaptureControllerError.cannotAddAudioInput
         }
+        let audioInput = try AVCaptureDeviceInput(device: microphone)
+        guard session.canAddInput(audioInput) else {
+            throw CameraCaptureControllerError.cannotAddAudioInput
+        }
+        session.addInput(audioInput)
 
         guard session.canAddOutput(movieOutput) else {
-            session.commitConfiguration()
             throw CameraCaptureControllerError.cannotAddMovieOutput
         }
         session.addOutput(movieOutput)
         configureMovieOutput(policy: policy, videoRotationAngleDegrees: descriptor.videoRotationAngleDegrees)
         session.commitConfiguration()
+        didCommitConfiguration = true
 
         activeDevice = camera
         activePolicy = policy
@@ -252,6 +258,16 @@ public final class CameraCaptureController: NSObject {
         camera.activeVideoMaxFrameDuration = frameDuration
 
         lockExposureFocusAndWhiteBalance(on: camera)
+    }
+
+    private func configureAudioSession() throws {
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setCategory(.playAndRecord, mode: .videoRecording, options: [.allowBluetooth])
+            try audioSession.setActive(true)
+        } catch {
+            throw CameraCaptureControllerError.cannotAddAudioInput
+        }
     }
 
     private func bestFormat(on camera: AVCaptureDevice, policy: CapturePolicy) -> AVCaptureDevice.Format? {
