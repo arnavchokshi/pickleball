@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import mimetypes
 import socket
 import threading
@@ -25,6 +26,9 @@ RUN_ROOT = Path("runs/eval0/prototype_gate_h100_v2")
 SAVE_DIR = Path("runs/review_inputs")
 LATEST_SAVE = SAVE_DIR / "pickleball_cv_review_latest.json"
 ACTION_MANIFEST = Path("runs/review_packets/prototype_gate_h100_v2/prototype_gate_h100_v2_review_actions.json")
+MAX_SAVE_BYTES = 2_000_000
+MAX_TEXT_CHARS = 4000
+MAX_SAVE_LIST_ITEMS = 200
 PRIORITY_RANK = {"high": 0, "medium": 1, "low": 2}
 REQUIRED_LABEL_FILES = (
     "court_corners.json",
@@ -40,6 +44,8 @@ REQUIRED_LABEL_FILES = (
 REVIEWED_LABEL_STATUSES = {"accepted", "ground_truth", "human_reviewed", "reviewed", "verified"}
 REQUIRED_COURT_LINE_IDS = ("near_nvz", "far_nvz", "near_centerline", "far_centerline")
 REQUIRED_NET_IDS = ("top_net",)
+COURT_EVIDENCE_IDS = (*REQUIRED_COURT_LINE_IDS, *REQUIRED_NET_IDS)
+COURT_POINT_IDS = {f"{evidence_id}:{endpoint}" for evidence_id in COURT_EVIDENCE_IDS for endpoint in ("a", "b")}
 PADDLE_CROP_TILE_SIZE = 180
 TRACKING_REVIEW_ROOT = Path("runs/phase2/person_coverage_actual_source30_h100_yolo26m_fulltb3_20260628")
 TRACKING_REVIEW_ITEMS = (
@@ -600,6 +606,598 @@ def _manifest(root: Path) -> dict[str, Any]:
             "custom_windows": "outdoor: 0-10s, 300-310s, 600-610s\nindoor: 0-10s, 300-310s, 600-610s",
         },
     }
+
+
+ALLOWED_TOP_LEVEL_SAVE_KEYS = {
+    "schema_version",
+    "review_type",
+    "global",
+    "clips",
+    "paddle_corner_labels",
+    "tracking_video_review",
+    "saved_from_browser_at",
+    "manifest_seen",
+}
+SERVER_MANAGED_SAVE_KEYS = {"repo_root", "server_saved_at_utc"}
+ALLOWED_GLOBAL_KEYS = {
+    "long_clip_policy",
+    "custom_windows",
+    "artifact_source_of_truth",
+    "artifact_notes",
+    "racket_policy",
+    "aruco_notes",
+}
+ALLOWED_CLIP_SAVE_KEYS = {
+    "reviewed_enough",
+    "court_overlay_ok",
+    "top_net",
+    "source_data",
+    "court_evidence",
+    "players",
+    "spectators_ignore",
+    "ball",
+    "contacts",
+    "event_windows",
+    "racket",
+    "general_notes",
+}
+ALLOWED_PLAYERS = {"P1", "P2", "P3", "P4", "unknown"}
+ALLOWED_PLAYER_POSITIONS = {"near-left", "near-right", "far-left", "far-right", "unclear", ""}
+ALLOWED_COURT_OVERLAY_STATES = {"unsure", "yes", "no"}
+ALLOWED_COURT_EVIDENCE_STATES = {"unsure", "confirmed", "not_visible", "missing"}
+ALLOWED_POINT_STATUSES = {"clicked", "not_visible", "missing"}
+ALLOWED_BALL_MISTAKE_KINDS = {"bad_jump", "missing_ball", "false_ball", "looks_good"}
+ALLOWED_TRACKING_DECISIONS = {"safe_to_promote", "unsafe_background_or_spectators", "unsure", ""}
+ALLOWED_PADDLE_STATUSES = {"pending", "in_progress", "accepted", "not_visible", "ambiguous"}
+ALLOWED_CORNER_NAMES = {"top_left", "top_right", "bottom_right", "bottom_left"}
+
+
+def _sanitize_save_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    unknown = set(payload) - ALLOWED_TOP_LEVEL_SAVE_KEYS - SERVER_MANAGED_SAVE_KEYS
+    if unknown:
+        raise ValueError(f"unexpected save fields: {', '.join(sorted(unknown))}")
+
+    sanitized: dict[str, Any] = {
+        "schema_version": _schema_version(payload.get("schema_version", 1)),
+    }
+
+    review_type = payload.get("review_type")
+    if review_type is not None:
+        review_type_text = _bounded_text(review_type, field="review_type")
+        if review_type_text != "pickleball_cv_blocker_review":
+            raise ValueError(f"unsupported review_type: {review_type_text}")
+        sanitized["review_type"] = review_type_text
+
+    if "global" in payload:
+        sanitized["global"] = _sanitize_global(payload["global"])
+    if "clips" in payload:
+        sanitized["clips"] = _sanitize_clips(payload["clips"])
+    if "paddle_corner_labels" in payload:
+        sanitized["paddle_corner_labels"] = _sanitize_paddle_corner_labels(payload["paddle_corner_labels"])
+    if "tracking_video_review" in payload:
+        sanitized["tracking_video_review"] = _sanitize_tracking_video_review(payload["tracking_video_review"])
+    if "saved_from_browser_at" in payload:
+        sanitized["saved_from_browser_at"] = _bounded_text(payload["saved_from_browser_at"], field="saved_from_browser_at", max_chars=128)
+    if "manifest_seen" in payload:
+        sanitized["manifest_seen"] = _sanitize_manifest_seen(payload["manifest_seen"])
+
+    return sanitized
+
+
+def _schema_version(value: Any) -> int:
+    if isinstance(value, bool):
+        raise ValueError("schema_version must be an integer")
+    try:
+        version = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("schema_version must be an integer") from exc
+    if version < 1 or version > 10:
+        raise ValueError("schema_version is outside the supported range")
+    return version
+
+
+def _sanitize_global(value: Any) -> dict[str, str]:
+    if not isinstance(value, dict):
+        raise ValueError("global must be a JSON object")
+    unknown = set(value) - ALLOWED_GLOBAL_KEYS
+    if unknown:
+        raise ValueError(f"unexpected global fields: {', '.join(sorted(unknown))}")
+    return {key: _bounded_text(value[key], field=f"global.{key}") for key in ALLOWED_GLOBAL_KEYS if key in value}
+
+
+def _sanitize_clips(value: Any) -> dict[str, dict[str, Any]]:
+    if not isinstance(value, dict):
+        raise ValueError("clips must be a JSON object")
+    sanitized: dict[str, dict[str, Any]] = {}
+    allowed_clips = set(CLIPS)
+    for clip, raw_clip in value.items():
+        clip_id = _bounded_text(clip, field="clip_id", max_chars=128)
+        if clip_id not in allowed_clips:
+            raise ValueError(f"unknown review clip id: {clip_id}")
+        if not isinstance(raw_clip, dict):
+            raise ValueError(f"clips.{clip_id} must be a JSON object")
+        sanitized[clip_id] = _sanitize_clip_payload(clip_id, raw_clip)
+    return sanitized
+
+
+def _empty_save_clip() -> dict[str, Any]:
+    return {
+        "reviewed_enough": False,
+        "court_overlay_ok": "unsure",
+        "top_net": {"left": None, "right": None, "notes": ""},
+        "source_data": {"source_video_path": "", "available_label_files": "", "data_owner": "", "notes": ""},
+        "court_evidence": {
+            "near_nvz": "unsure",
+            "far_nvz": "unsure",
+            "near_centerline": "unsure",
+            "far_centerline": "unsure",
+            "top_net": "unsure",
+            "points": {},
+            "point_statuses": {},
+            "notes": "",
+        },
+        "players": {"P1": "", "P2": "", "P3": "", "P4": ""},
+        "spectators_ignore": "",
+        "ball": {"mistakes": [], "notes": ""},
+        "contacts": [],
+        "event_windows": [],
+        "racket": {"examples": [], "notes": ""},
+        "general_notes": "",
+    }
+
+
+def _sanitize_clip_payload(clip_id: str, value: dict[str, Any]) -> dict[str, Any]:
+    unknown = set(value) - ALLOWED_CLIP_SAVE_KEYS
+    if unknown:
+        raise ValueError(f"unexpected fields for clip {clip_id}: {', '.join(sorted(unknown))}")
+    out = _empty_save_clip()
+    if "reviewed_enough" in value:
+        out["reviewed_enough"] = bool(value["reviewed_enough"])
+    if "court_overlay_ok" in value:
+        out["court_overlay_ok"] = _enum_text(value["court_overlay_ok"], ALLOWED_COURT_OVERLAY_STATES, field=f"clips.{clip_id}.court_overlay_ok")
+    if "top_net" in value:
+        out["top_net"] = _sanitize_top_net(value["top_net"], field=f"clips.{clip_id}.top_net")
+    if "source_data" in value:
+        out["source_data"] = _sanitize_text_object(
+            value["source_data"],
+            allowed={"source_video_path", "available_label_files", "data_owner", "notes"},
+            field=f"clips.{clip_id}.source_data",
+        )
+    if "court_evidence" in value:
+        out["court_evidence"] = _sanitize_court_evidence(value["court_evidence"], field=f"clips.{clip_id}.court_evidence")
+    if "players" in value:
+        out["players"] = _sanitize_players(value["players"], field=f"clips.{clip_id}.players")
+    if "spectators_ignore" in value:
+        out["spectators_ignore"] = _bounded_text(value["spectators_ignore"], field=f"clips.{clip_id}.spectators_ignore")
+    if "ball" in value:
+        out["ball"] = _sanitize_ball(value["ball"], field=f"clips.{clip_id}.ball")
+    if "contacts" in value:
+        out["contacts"] = _sanitize_contact_list(value["contacts"], field=f"clips.{clip_id}.contacts")
+    if "event_windows" in value:
+        out["event_windows"] = _sanitize_event_window_list(value["event_windows"], field=f"clips.{clip_id}.event_windows")
+    if "racket" in value:
+        out["racket"] = _sanitize_racket(value["racket"], field=f"clips.{clip_id}.racket")
+    if "general_notes" in value:
+        out["general_notes"] = _bounded_text(value["general_notes"], field=f"clips.{clip_id}.general_notes")
+    return out
+
+
+def _sanitize_top_net(value: Any, *, field: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be a JSON object")
+    unknown = set(value) - {"left", "right", "notes"}
+    if unknown:
+        raise ValueError(f"unexpected fields for {field}: {', '.join(sorted(unknown))}")
+    return {
+        "left": _optional_point(value.get("left"), field=f"{field}.left"),
+        "right": _optional_point(value.get("right"), field=f"{field}.right"),
+        "notes": _bounded_text(value.get("notes", ""), field=f"{field}.notes"),
+    }
+
+
+def _sanitize_court_evidence(value: Any, *, field: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be a JSON object")
+    allowed = set(COURT_EVIDENCE_IDS) | {"points", "point_statuses", "notes"}
+    unknown = set(value) - allowed
+    if unknown:
+        raise ValueError(f"unexpected fields for {field}: {', '.join(sorted(unknown))}")
+    out = {
+        "near_nvz": "unsure",
+        "far_nvz": "unsure",
+        "near_centerline": "unsure",
+        "far_centerline": "unsure",
+        "top_net": "unsure",
+        "points": {},
+        "point_statuses": {},
+        "notes": "",
+    }
+    for evidence_id in COURT_EVIDENCE_IDS:
+        if evidence_id in value:
+            out[evidence_id] = _enum_text(value[evidence_id], ALLOWED_COURT_EVIDENCE_STATES, field=f"{field}.{evidence_id}")
+    if "points" in value:
+        out["points"] = _sanitize_court_points(value["points"], field=f"{field}.points")
+    if "point_statuses" in value:
+        out["point_statuses"] = _sanitize_point_statuses(value["point_statuses"], field=f"{field}.point_statuses")
+    if "notes" in value:
+        out["notes"] = _bounded_text(value["notes"], field=f"{field}.notes")
+    return out
+
+
+def _sanitize_court_points(value: Any, *, field: str) -> dict[str, dict[str, Any]]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be a JSON object")
+    unknown = set(value) - COURT_POINT_IDS
+    if unknown:
+        raise ValueError(f"unexpected point ids for {field}: {', '.join(sorted(str(item) for item in unknown))}")
+    out: dict[str, dict[str, Any]] = {}
+    for point_id, raw_point in value.items():
+        if not isinstance(raw_point, dict):
+            raise ValueError(f"{field}.{point_id} must be a JSON object")
+        evidence_id, endpoint = str(point_id).split(":", 1)
+        point = _point(raw_point, field=f"{field}.{point_id}")
+        point.update(
+            {
+                "target_id": point_id,
+                "evidence_id": evidence_id,
+                "endpoint": endpoint,
+                "label": _bounded_text(raw_point.get("label", ""), field=f"{field}.{point_id}.label", max_chars=128),
+                "status": _enum_text(raw_point.get("status", "clicked"), {"clicked"}, field=f"{field}.{point_id}.status"),
+            }
+        )
+        out[str(point_id)] = point
+    return out
+
+
+def _sanitize_point_statuses(value: Any, *, field: str) -> dict[str, str]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be a JSON object")
+    unknown = set(value) - COURT_POINT_IDS
+    if unknown:
+        raise ValueError(f"unexpected point ids for {field}: {', '.join(sorted(str(item) for item in unknown))}")
+    return {
+        str(point_id): _enum_text(status, ALLOWED_POINT_STATUSES, field=f"{field}.{point_id}")
+        for point_id, status in value.items()
+    }
+
+
+def _sanitize_players(value: Any, *, field: str) -> dict[str, str]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be a JSON object")
+    unknown = set(value) - {"P1", "P2", "P3", "P4"}
+    if unknown:
+        raise ValueError(f"unexpected fields for {field}: {', '.join(sorted(unknown))}")
+    out = {"P1": "", "P2": "", "P3": "", "P4": ""}
+    for key in out:
+        if key in value:
+            out[key] = _enum_text(value[key], ALLOWED_PLAYER_POSITIONS, field=f"{field}.{key}")
+    return out
+
+
+def _sanitize_ball(value: Any, *, field: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be a JSON object")
+    unknown = set(value) - {"mistakes", "notes"}
+    if unknown:
+        raise ValueError(f"unexpected fields for {field}: {', '.join(sorted(unknown))}")
+    return {
+        "mistakes": _sanitize_ball_mistakes(value.get("mistakes", []), field=f"{field}.mistakes"),
+        "notes": _bounded_text(value.get("notes", ""), field=f"{field}.notes"),
+    }
+
+
+def _sanitize_ball_mistakes(value: Any, *, field: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "kind": _enum_text(item.get("kind"), ALLOWED_BALL_MISTAKE_KINDS, field=f"{field}[{index}].kind"),
+            "time_s": _finite_nonnegative(item.get("time_s"), field=f"{field}[{index}].time_s"),
+            "note": _bounded_text(item.get("note", ""), field=f"{field}[{index}].note"),
+        }
+        for index, item in _json_object_list(value, field=field)
+    ]
+
+
+def _sanitize_contact_list(value: Any, *, field: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "player": _enum_text(item.get("player"), ALLOWED_PLAYERS, field=f"{field}[{index}].player"),
+            "time_s": _finite_nonnegative(item.get("time_s"), field=f"{field}[{index}].time_s"),
+            "note": _bounded_text(item.get("note", ""), field=f"{field}[{index}].note"),
+        }
+        for index, item in _json_object_list(value, field=field)
+    ]
+
+
+def _sanitize_event_window_list(value: Any, *, field: str) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for index, item in _json_object_list(value, field=field):
+        start_s = _finite_nonnegative(item.get("start_s"), field=f"{field}[{index}].start_s")
+        end_s = _finite_nonnegative(item.get("end_s"), field=f"{field}[{index}].end_s")
+        if end_s < start_s:
+            raise ValueError(f"{field}[{index}].end_s must be greater than or equal to start_s")
+        out.append({"start_s": start_s, "end_s": end_s, "note": _bounded_text(item.get("note", ""), field=f"{field}[{index}].note")})
+    return out
+
+
+def _sanitize_racket(value: Any, *, field: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be a JSON object")
+    unknown = set(value) - {"examples", "notes"}
+    if unknown:
+        raise ValueError(f"unexpected fields for {field}: {', '.join(sorted(unknown))}")
+    return {
+        "examples": [
+            {
+                "player": _enum_text(item.get("player"), ALLOWED_PLAYERS, field=f"{field}.examples[{index}].player"),
+                "time_s": _finite_nonnegative(item.get("time_s"), field=f"{field}.examples[{index}].time_s"),
+                "note": _bounded_text(item.get("note", ""), field=f"{field}.examples[{index}].note"),
+            }
+            for index, item in _json_object_list(value.get("examples", []), field=f"{field}.examples")
+        ],
+        "notes": _bounded_text(value.get("notes", ""), field=f"{field}.notes"),
+    }
+
+
+def _sanitize_paddle_corner_labels(value: Any) -> dict[str, dict[str, Any]]:
+    if not isinstance(value, dict):
+        raise ValueError("paddle_corner_labels must be a JSON object")
+    sanitized: dict[str, dict[str, Any]] = {}
+    allowed_clips = set(CLIPS)
+    for clip, raw_bucket in value.items():
+        clip_id = _bounded_text(clip, field="paddle_corner_labels clip id", max_chars=128)
+        if clip_id not in allowed_clips:
+            raise ValueError(f"unknown paddle review clip id: {clip_id}")
+        if not isinstance(raw_bucket, dict):
+            raise ValueError(f"paddle_corner_labels.{clip_id} must be a JSON object")
+        unknown = set(raw_bucket) - {"artifact_type", "labels"}
+        if unknown:
+            raise ValueError(f"unexpected fields for paddle_corner_labels.{clip_id}: {', '.join(sorted(unknown))}")
+        artifact_type = _bounded_text(raw_bucket.get("artifact_type", "paddle_true_corner_labels"), field=f"paddle_corner_labels.{clip_id}.artifact_type")
+        if artifact_type not in {"paddle_true_corner_labels", "racketsport_paddle_true_corner_labels"}:
+            raise ValueError(f"unsupported paddle label artifact_type: {artifact_type}")
+        raw_labels = raw_bucket.get("labels", {})
+        if not isinstance(raw_labels, dict):
+            raise ValueError(f"paddle_corner_labels.{clip_id}.labels must be a JSON object")
+        labels: dict[str, Any] = {}
+        if len(raw_labels) > MAX_SAVE_LIST_ITEMS:
+            raise ValueError(f"paddle_corner_labels.{clip_id}.labels has too many items")
+        for review_id, raw_label in raw_labels.items():
+            safe_review_id = _bounded_text(review_id, field=f"paddle_corner_labels.{clip_id}.review_id", max_chars=128)
+            if not isinstance(raw_label, dict):
+                raise ValueError(f"paddle_corner_labels.{clip_id}.labels.{safe_review_id} must be a JSON object")
+            labels[safe_review_id] = _sanitize_paddle_label(raw_label, review_id=safe_review_id, field=f"paddle_corner_labels.{clip_id}.labels.{safe_review_id}")
+        sanitized[clip_id] = {"artifact_type": "paddle_true_corner_labels", "labels": labels}
+    return sanitized
+
+
+def _sanitize_paddle_label(value: dict[str, Any], *, review_id: str, field: str) -> dict[str, Any]:
+    allowed = {
+        "review_id",
+        "player_id",
+        "frame_index",
+        "t",
+        "crop_xyxy",
+        "status",
+        "evidence_type",
+        "reviewer",
+        "corners_px_order",
+        "corners_by_name",
+        "sheet_points_by_name",
+        "corners_px",
+    }
+    unknown = set(value) - allowed
+    if unknown:
+        raise ValueError(f"unexpected fields for {field}: {', '.join(sorted(unknown))}")
+    out = {
+        "review_id": _bounded_text(value.get("review_id", review_id), field=f"{field}.review_id", max_chars=128),
+        "status": _enum_text(value.get("status", "pending"), ALLOWED_PADDLE_STATUSES, field=f"{field}.status"),
+        "evidence_type": _bounded_text(value.get("evidence_type", "true_corners"), field=f"{field}.evidence_type", max_chars=128),
+        "reviewer": _bounded_text(value.get("reviewer", "local_click_review"), field=f"{field}.reviewer", max_chars=128),
+        "corners_px_order": _corner_order(value.get("corners_px_order", ["top_left", "top_right", "bottom_right", "bottom_left"]), field=f"{field}.corners_px_order"),
+        "corners_by_name": _corner_point_map(value.get("corners_by_name", {}), field=f"{field}.corners_by_name"),
+        "sheet_points_by_name": _corner_point_map(value.get("sheet_points_by_name", {}), field=f"{field}.sheet_points_by_name"),
+    }
+    if "player_id" in value:
+        out["player_id"] = _json_scalar(value["player_id"], field=f"{field}.player_id")
+    if "frame_index" in value:
+        out["frame_index"] = int(_finite_nonnegative(value["frame_index"], field=f"{field}.frame_index"))
+    if "t" in value:
+        out["t"] = _finite_nonnegative(value["t"], field=f"{field}.t")
+    if "crop_xyxy" in value:
+        out["crop_xyxy"] = _numeric_list_exact(value["crop_xyxy"], 4, field=f"{field}.crop_xyxy")
+    if "corners_px" in value:
+        out["corners_px"] = _point_list(value["corners_px"], field=f"{field}.corners_px")
+    return out
+
+
+def _sanitize_tracking_video_review(value: Any) -> dict[str, dict[str, str]]:
+    if not isinstance(value, dict):
+        raise ValueError("tracking_video_review must be a JSON object")
+    allowed_clips = {str(item["clip"]) for item in TRACKING_REVIEW_ITEMS}
+    sanitized: dict[str, dict[str, str]] = {}
+    for clip, raw_decision in value.items():
+        clip_id = _bounded_text(clip, field="tracking_video_review clip id", max_chars=128)
+        if clip_id not in allowed_clips:
+            raise ValueError(f"unknown tracking review clip id: {clip_id}")
+        if not isinstance(raw_decision, dict):
+            raise ValueError(f"tracking_video_review.{clip_id} must be a JSON object")
+        unknown = set(raw_decision) - {"decision", "notes"}
+        if unknown:
+            raise ValueError(f"unexpected fields for tracking_video_review.{clip_id}: {', '.join(sorted(unknown))}")
+        sanitized[clip_id] = {
+            "decision": _enum_text(raw_decision.get("decision", ""), ALLOWED_TRACKING_DECISIONS, field=f"tracking_video_review.{clip_id}.decision"),
+            "notes": _bounded_text(raw_decision.get("notes", ""), field=f"tracking_video_review.{clip_id}.notes"),
+        }
+    return sanitized
+
+
+def _sanitize_manifest_seen(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("manifest_seen must be a JSON object")
+    allowed = {"repo_root", "focused_review_page", "clips", "paddle_clips", "tracking_videos"}
+    unknown = set(value) - allowed
+    if unknown:
+        raise ValueError(f"unexpected manifest_seen fields: {', '.join(sorted(unknown))}")
+    out: dict[str, Any] = {}
+    for key in ("repo_root", "focused_review_page"):
+        if key in value:
+            out[key] = _bounded_text(value[key], field=f"manifest_seen.{key}", max_chars=1024)
+    manifest_list_fields = {
+        "clips": {"id", "label_overlay", "calibration_overlay", "ball_overlay", "track_overlay"},
+        "paddle_clips": {"id", "crop_sheet", "candidate_overlay"},
+        "tracking_videos": {"clip", "overlay_video", "montage"},
+    }
+    for key, fields in manifest_list_fields.items():
+        if key not in value:
+            continue
+        out[key] = [
+            {field_name: _bounded_text(item[field_name], field=f"manifest_seen.{key}[{index}].{field_name}", max_chars=1024) for field_name in fields if field_name in item}
+            for index, item in _json_object_list(value[key], field=f"manifest_seen.{key}", max_items=100)
+        ]
+    return out
+
+
+def _sanitize_text_object(value: Any, *, allowed: set[str], field: str) -> dict[str, str]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be a JSON object")
+    unknown = set(value) - allowed
+    if unknown:
+        raise ValueError(f"unexpected fields for {field}: {', '.join(sorted(unknown))}")
+    return {key: _bounded_text(value.get(key, ""), field=f"{field}.{key}") for key in allowed}
+
+
+def _optional_point(value: Any, *, field: str) -> dict[str, float] | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be null or a JSON object")
+    return _point(value, field=field)
+
+
+def _point(value: dict[str, Any], *, field: str) -> dict[str, float]:
+    allowed = {"x", "y", "time_s", "video_width", "video_height", "target_id", "evidence_id", "endpoint", "label", "status"}
+    unknown = set(value) - allowed
+    if unknown:
+        raise ValueError(f"unexpected fields for {field}: {', '.join(sorted(unknown))}")
+    return {
+        "x": _finite_nonnegative(value.get("x"), field=f"{field}.x"),
+        "y": _finite_nonnegative(value.get("y"), field=f"{field}.y"),
+        "time_s": _finite_nonnegative(value.get("time_s"), field=f"{field}.time_s"),
+        "video_width": _finite_positive(value.get("video_width"), field=f"{field}.video_width"),
+        "video_height": _finite_positive(value.get("video_height"), field=f"{field}.video_height"),
+    }
+
+
+def _json_object_list(value: Any, *, field: str, max_items: int = MAX_SAVE_LIST_ITEMS) -> list[tuple[int, dict[str, Any]]]:
+    if not isinstance(value, list):
+        raise ValueError(f"{field} must be a JSON array")
+    if len(value) > max_items:
+        raise ValueError(f"{field} has too many items")
+    out: list[tuple[int, dict[str, Any]]] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(f"{field}[{index}] must be a JSON object")
+        out.append((index, item))
+    return out
+
+
+def _enum_text(value: Any, allowed: set[str], *, field: str) -> str:
+    text = _bounded_text(value, field=field, max_chars=128)
+    if text not in allowed:
+        raise ValueError(f"{field} must be one of: {', '.join(sorted(allowed))}")
+    return text
+
+
+def _bounded_text(value: Any, *, field: str, max_chars: int = MAX_TEXT_CHARS) -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be a string")
+    if len(value) > max_chars:
+        raise ValueError(f"{field} is too long")
+    return value
+
+
+def _finite_nonnegative(value: Any, *, field: str) -> float:
+    number = _finite_number(value, field=field)
+    if number < 0.0:
+        raise ValueError(f"{field} must be non-negative")
+    return number
+
+
+def _finite_positive(value: Any, *, field: str) -> float:
+    number = _finite_number(value, field=field)
+    if number <= 0.0:
+        raise ValueError(f"{field} must be positive")
+    return number
+
+
+def _finite_number(value: Any, *, field: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"{field} must be a finite number")
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError(f"{field} must be finite")
+    return number
+
+
+def _numeric_list_exact(value: Any, length: int, *, field: str) -> list[float]:
+    if not isinstance(value, list) or len(value) != length:
+        raise ValueError(f"{field} must be a JSON array of {length} numbers")
+    return [_finite_number(item, field=f"{field}[{index}]") for index, item in enumerate(value)]
+
+
+def _corner_order(value: Any, *, field: str) -> list[str]:
+    if not isinstance(value, list) or len(value) != 4:
+        raise ValueError(f"{field} must contain four corner names")
+    out = [_enum_text(item, ALLOWED_CORNER_NAMES, field=f"{field}[{index}]") for index, item in enumerate(value)]
+    if len(set(out)) != 4:
+        raise ValueError(f"{field} must not contain duplicate corner names")
+    return out
+
+
+def _corner_point_map(value: Any, *, field: str) -> dict[str, list[float]]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be a JSON object")
+    unknown = set(value) - ALLOWED_CORNER_NAMES
+    if unknown:
+        raise ValueError(f"unexpected corner names for {field}: {', '.join(sorted(unknown))}")
+    return {
+        str(name): _numeric_list_exact(point, 2, field=f"{field}.{name}")
+        for name, point in value.items()
+    }
+
+
+def _point_list(value: Any, *, field: str) -> list[list[float]]:
+    if not isinstance(value, list) or len(value) > 4:
+        raise ValueError(f"{field} must contain at most four points")
+    return [_numeric_list_exact(point, 2, field=f"{field}[{index}]") for index, point in enumerate(value)]
+
+
+def _json_scalar(value: Any, *, field: str) -> str | int | float | bool | None:
+    if value is None or isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return _bounded_text(value, field=field, max_chars=128)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, int | float):
+        return _finite_number(value, field=field)
+    raise ValueError(f"{field} must be a JSON scalar")
+
+
+def _write_review_input(root: Path, payload: dict[str, Any], *, now: datetime | None = None) -> tuple[Path, Path]:
+    saved_at_dt = now or datetime.now(timezone.utc)
+    saved_at = saved_at_dt.strftime("%Y%m%dT%H%M%SZ")
+    sanitized = _sanitize_save_payload(payload)
+    sanitized["server_saved_at_utc"] = saved_at_dt.isoformat()
+    sanitized["repo_root"] = str(root)
+    save_dir = root / SAVE_DIR
+    save_dir.mkdir(parents=True, exist_ok=True)
+    latest = root / LATEST_SAVE
+    timestamped = save_dir / f"pickleball_cv_review_{saved_at}.json"
+    text = json.dumps(sanitized, indent=2, sort_keys=True) + "\n"
+    latest.write_text(text, encoding="utf-8")
+    timestamped.write_text(text, encoding="utf-8")
+    return latest, timestamped
 
 
 HTML = r"""<!doctype html>
@@ -3463,19 +4061,14 @@ class ReviewHandler(BaseHTTPRequestHandler):
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
+            if length <= 0:
+                raise ValueError("request body is empty")
+            if length > MAX_SAVE_BYTES:
+                raise ValueError("request body is too large")
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
             if not isinstance(payload, dict):
                 raise ValueError("payload must be a JSON object")
-            saved_at = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-            payload["server_saved_at_utc"] = datetime.now(timezone.utc).isoformat()
-            payload["repo_root"] = str(self.root)
-            save_dir = self.root / SAVE_DIR
-            save_dir.mkdir(parents=True, exist_ok=True)
-            latest = self.root / LATEST_SAVE
-            timestamped = save_dir / f"pickleball_cv_review_{saved_at}.json"
-            text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-            latest.write_text(text, encoding="utf-8")
-            timestamped.write_text(text, encoding="utf-8")
+            latest, timestamped = _write_review_input(self.root, payload)
         except Exception as exc:
             self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
             return

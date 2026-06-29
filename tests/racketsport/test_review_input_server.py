@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
+
+import pytest
 
 from scripts.racketsport import review_input_server
 
@@ -373,3 +376,75 @@ def test_parse_byte_range_supports_video_seek_ranges() -> None:
     assert review_input_server._parse_byte_range("bytes=-5", 100) == (95, 99)
     assert review_input_server._parse_byte_range("items=0-5", 100) is None
     assert review_input_server._parse_byte_range("bytes=120-130", 100) is None
+
+
+def test_review_input_write_uses_fixed_paths_and_server_metadata(tmp_path: Path) -> None:
+    now = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+    clip = "wolverine_mixed_0200_mid_steep_corner"
+    latest, timestamped = review_input_server._write_review_input(
+        tmp_path,
+        {
+            "schema_version": 1,
+            "review_type": "pickleball_cv_blocker_review",
+            "repo_root": "/tmp/client-controlled",
+            "server_saved_at_utc": "client-controlled",
+            "clips": {
+                clip: {
+                    "reviewed_enough": True,
+                    "court_overlay_ok": "yes",
+                    "top_net": {
+                        "left": {"x": 1, "y": 2, "time_s": 3, "video_width": 640, "video_height": 480},
+                        "right": None,
+                        "notes": "top net partly visible",
+                    },
+                    "players": {"P1": "near-left"},
+                    "contacts": [{"player": "P1", "time_s": 1.25, "note": "clean paddle contact"}],
+                }
+            },
+        },
+        now=now,
+    )
+
+    assert latest == tmp_path / "runs" / "review_inputs" / "pickleball_cv_review_latest.json"
+    assert timestamped == tmp_path / "runs" / "review_inputs" / "pickleball_cv_review_20260102T030405Z.json"
+    assert sorted(path.name for path in tmp_path.rglob("*.json")) == [
+        "pickleball_cv_review_20260102T030405Z.json",
+        "pickleball_cv_review_latest.json",
+    ]
+
+    saved = json.loads(latest.read_text(encoding="utf-8"))
+    assert saved["repo_root"] == str(tmp_path)
+    assert saved["server_saved_at_utc"] == "2026-01-02T03:04:05+00:00"
+    assert saved["clips"][clip]["reviewed_enough"] is True
+    assert saved["clips"][clip]["top_net"]["left"]["x"] == 1.0
+    assert saved["clips"][clip]["players"] == {"P1": "near-left", "P2": "", "P3": "", "P4": ""}
+
+
+def test_review_input_write_rejects_client_path_fields_without_writing(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="unexpected save fields"):
+        review_input_server._write_review_input(
+            tmp_path,
+            {
+                "schema_version": 1,
+                "review_type": "pickleball_cv_blocker_review",
+                "save_path": "../../evil.json",
+                "filename": "/tmp/evil.json",
+            },
+        )
+
+    assert not (tmp_path / "runs").exists()
+    assert not (tmp_path.parent / "evil.json").exists()
+
+
+def test_review_input_write_rejects_unknown_clip_ids_without_writing(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="unknown review clip id"):
+        review_input_server._write_review_input(
+            tmp_path,
+            {
+                "schema_version": 1,
+                "review_type": "pickleball_cv_blocker_review",
+                "clips": {"../../evil": {"general_notes": "do not use this as a path"}},
+            },
+        )
+
+    assert not (tmp_path / "runs").exists()
