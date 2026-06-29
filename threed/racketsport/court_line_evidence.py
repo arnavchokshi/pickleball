@@ -17,6 +17,14 @@ from .schemas import CourtLineEvidence, CourtLineObservation, NetLineObservation
 Point2 = tuple[float, float]
 Segment2 = tuple[Point2, Point2]
 Sport = Literal["pickleball", "tennis"]
+REQUIRED_COURT_LINE_IDS_BY_SPORT: dict[Sport, tuple[str, ...]] = {
+    "pickleball": ("near_nvz", "far_nvz", "near_centerline", "far_centerline"),
+    "tennis": ("near_service_line", "far_service_line"),
+}
+REQUIRED_COURT_NET_IDS_BY_SPORT: dict[Sport, tuple[str, ...]] = {
+    "pickleball": ("top_net",),
+    "tennis": ("top_net",),
+}
 
 
 @dataclass(frozen=True)
@@ -27,6 +35,20 @@ class LineCandidateScore:
     visible_fraction: float
     score: float
     confidence: float
+
+
+def required_court_line_ids(sport: Sport) -> tuple[str, ...]:
+    try:
+        return REQUIRED_COURT_LINE_IDS_BY_SPORT[sport]
+    except KeyError as exc:
+        raise ValueError(f"unsupported sport for court line evidence: {sport}") from exc
+
+
+def required_court_net_ids(sport: Sport) -> tuple[str, ...]:
+    try:
+        return REQUIRED_COURT_NET_IDS_BY_SPORT[sport]
+    except KeyError as exc:
+        raise ValueError(f"unsupported sport for court net evidence: {sport}") from exc
 
 
 def score_line_candidate(expected_segment: Sequence[Sequence[float]], candidate_segment: Sequence[Sequence[float]]) -> LineCandidateScore:

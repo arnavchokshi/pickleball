@@ -46,6 +46,10 @@ def _synthetic_calibration() -> CourtCalibration:
     )
 
 
+def _synthetic_tennis_calibration() -> CourtCalibration:
+    return _synthetic_calibration().model_copy(update={"sport": "tennis"})
+
+
 def _half_resolution_calibration() -> CourtCalibration:
     return CourtCalibration(
         schema_version=1,
@@ -216,6 +220,23 @@ def test_auto_evidence_accepts_observed_kitchen_centerlines_and_top_net():
     assert set(evidence.aggregate.accepted_line_ids) >= {"near_nvz", "far_nvz", "near_centerline", "far_centerline"}
     assert evidence.aggregate.missing_required_net_ids == []
     assert evidence.net_observations[0].net_id == "top_net"
+
+
+def test_auto_evidence_uses_tennis_service_lines_instead_of_pickleball_lines():
+    calibration = _synthetic_tennis_calibration()
+    net_plane = build_net_plane("tennis")
+    overlay = build_calibration_overlay(calibration, net_plane=net_plane)
+    image = _blank_frame()
+    for line_id in ("near_service_line", "far_service_line"):
+        _draw_overlay_line(image, overlay, line_id)
+    _draw_top_net(image, overlay)
+
+    evidence = build_auto_court_line_evidence_from_image(image, calibration, net_plane=net_plane)
+
+    assert evidence.sport == "tennis"
+    assert set(evidence.aggregate.accepted_line_ids) >= {"near_service_line", "far_service_line"}
+    assert evidence.aggregate.missing_required_line_ids == []
+    assert all("nvz" not in reason and "centerline" not in reason for reason in evidence.aggregate.reasons)
 
 
 def test_auto_evidence_refuses_readiness_when_centerlines_are_not_seen():

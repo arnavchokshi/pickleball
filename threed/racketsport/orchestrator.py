@@ -16,7 +16,7 @@ from .body_compute import build_body_compute_execution, body_frame_batches_from_
 from .body_mesh_readiness import build_body_mesh_readiness
 from .court_auto_evidence import build_auto_court_line_evidence_from_frame, build_auto_court_line_evidence_from_video
 from .court_calibration import calibration_from_manual_taps, calibration_image_size
-from .court_line_evidence import aggregate_court_line_evidence
+from .court_line_evidence import aggregate_court_line_evidence, required_court_line_ids, required_court_net_ids
 from .court_templates import Sport
 from .court_zones import build_court_zones
 from .detection_scaling import scale_detection_payload_bboxes
@@ -825,10 +825,8 @@ def _fail_closed_court_line_evidence(context: StageContext, *, source: str, reas
         sport=context.sport,
         line_observations=[],
         net_observations=[],
-        required_line_ids=("near_nvz", "far_nvz", "near_centerline", "far_centerline")
-        if context.sport == "pickleball"
-        else (),
-        required_net_ids=("top_net",),
+        required_line_ids=required_court_line_ids(context.sport),
+        required_net_ids=required_court_net_ids(context.sport),
     )
     evidence.source = source
     if reason not in evidence.aggregate.reasons:

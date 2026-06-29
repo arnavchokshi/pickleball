@@ -12,12 +12,12 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from threed.racketsport.court_line_evidence import aggregate_court_line_evidence  # noqa: E402
+from threed.racketsport.court_line_evidence import (  # noqa: E402
+    aggregate_court_line_evidence,
+    required_court_line_ids,
+    required_court_net_ids,
+)
 from threed.racketsport.schemas import CourtLineObservation, NetLineObservation, validate_artifact_file  # noqa: E402
-
-
-REQUIRED_LINE_IDS = ("near_nvz", "far_nvz", "near_centerline", "far_centerline")
-REQUIRED_NET_IDS = ("top_net",)
 
 
 def build_court_line_evidence_from_review_inputs(
@@ -40,8 +40,10 @@ def build_court_line_evidence_from_review_inputs(
     if not isinstance(points, Mapping):
         points = {}
 
+    required_line_ids = required_court_line_ids(sport)  # type: ignore[arg-type]
+    required_net_ids = required_court_net_ids(sport)  # type: ignore[arg-type]
     line_observations: list[CourtLineObservation] = []
-    for line_id in REQUIRED_LINE_IDS:
+    for line_id in required_line_ids:
         observation = _line_observation_from_points(line_id, points)
         if observation is not None:
             line_observations.append(observation)
@@ -55,8 +57,8 @@ def build_court_line_evidence_from_review_inputs(
         sport=sport,  # type: ignore[arg-type]
         line_observations=line_observations,
         net_observations=net_observations,
-        required_line_ids=REQUIRED_LINE_IDS,
-        required_net_ids=REQUIRED_NET_IDS,
+        required_line_ids=required_line_ids,
+        required_net_ids=required_net_ids,
         max_mean_residual_px=8.0,
         max_p95_residual_px=16.0,
     )

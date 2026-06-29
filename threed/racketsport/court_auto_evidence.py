@@ -11,6 +11,8 @@ from .court_calibration import calibration_image_size, project_planar_points
 from .court_line_evidence import (
     Segment2,
     aggregate_court_line_evidence,
+    required_court_line_ids,
+    required_court_net_ids,
     score_line_candidate,
     select_best_line_observation,
 )
@@ -19,8 +21,6 @@ from .net_plane import build_net_plane, project_net_plane
 from .schemas import CourtCalibration, CourtLineEvidence, CourtLineObservation, NetLineObservation, NetPlane
 
 
-DEFAULT_REQUIRED_PICKLEBALL_LINES = ("near_nvz", "far_nvz", "near_centerline", "far_centerline")
-DEFAULT_REQUIRED_NET_IDS = ("top_net",)
 MAX_TRUSTED_TOP_NET_ANGLE_DELTA_DEG = 6.0
 MAX_TRUSTED_TOP_NET_LENGTH_RATIO = 4.0
 UNTRUSTED_TOP_NET_INTRINSIC_SOURCES = {"estimated_from_review_frame"}
@@ -33,6 +33,8 @@ def build_auto_court_line_evidence_from_frame(
     net_plane: NetPlane | None = None,
     frame_index: int = 0,
     cv2_module: Any | None = None,
+    required_line_ids: Sequence[str] | None = None,
+    required_net_ids: Sequence[str] | None = None,
 ) -> CourtLineEvidence:
     cv2 = cv2_module or _cv2()
     frame_path = Path(frame_path)
@@ -45,6 +47,8 @@ def build_auto_court_line_evidence_from_frame(
         net_plane=net_plane,
         frame_indexes=[frame_index],
         cv2_module=cv2,
+        required_line_ids=required_line_ids,
+        required_net_ids=required_net_ids,
     )
 
 
@@ -55,13 +59,15 @@ def build_auto_court_line_evidence_from_video(
     net_plane: NetPlane | None = None,
     sample_count: int = 7,
     cv2_module: Any | None = None,
-    required_line_ids: Sequence[str] = DEFAULT_REQUIRED_PICKLEBALL_LINES,
-    required_net_ids: Sequence[str] = DEFAULT_REQUIRED_NET_IDS,
+    required_line_ids: Sequence[str] | None = None,
+    required_net_ids: Sequence[str] | None = None,
 ) -> CourtLineEvidence:
     """Sample a video and aggregate semantic court-line evidence across frames."""
 
     if sample_count <= 0:
         raise ValueError("sample_count must be positive")
+    resolved_required_line_ids = tuple(required_line_ids) if required_line_ids is not None else required_court_line_ids(calibration.sport)
+    resolved_required_net_ids = tuple(required_net_ids) if required_net_ids is not None else required_court_net_ids(calibration.sport)
     cv2 = cv2_module or _cv2()
     cap = cv2.VideoCapture(str(video_path))
     try:
@@ -82,8 +88,8 @@ def build_auto_court_line_evidence_from_video(
                     net_plane=net_plane,
                     frame_indexes=[frame_index],
                     cv2_module=cv2,
-                    required_line_ids=required_line_ids,
-                    required_net_ids=required_net_ids,
+                    required_line_ids=resolved_required_line_ids,
+                    required_net_ids=resolved_required_net_ids,
                 )
             )
     finally:
@@ -102,8 +108,8 @@ def build_auto_court_line_evidence_from_video(
         sport=calibration.sport,
         line_observations=lines,
         net_observations=nets,
-        required_line_ids=required_line_ids,
-        required_net_ids=required_net_ids,
+        required_line_ids=resolved_required_line_ids,
+        required_net_ids=resolved_required_net_ids,
     )
     evidence.source = "auto_hough_template_video"
     return evidence
@@ -116,13 +122,15 @@ def build_auto_court_line_evidence_from_image(
     net_plane: NetPlane | None = None,
     frame_indexes: Sequence[int] = (0,),
     cv2_module: Any | None = None,
-    required_line_ids: Sequence[str] = DEFAULT_REQUIRED_PICKLEBALL_LINES,
-    required_net_ids: Sequence[str] = DEFAULT_REQUIRED_NET_IDS,
+    required_line_ids: Sequence[str] | None = None,
+    required_net_ids: Sequence[str] | None = None,
 ) -> CourtLineEvidence:
     """Detect line candidates and aggregate semantic court evidence."""
 
     cv2 = cv2_module or _cv2()
     height, width = image.shape[:2]
+    resolved_required_line_ids = tuple(required_line_ids) if required_line_ids is not None else required_court_line_ids(calibration.sport)
+    resolved_required_net_ids = tuple(required_net_ids) if required_net_ids is not None else required_court_net_ids(calibration.sport)
     calibration = calibration_for_image_size(calibration, width=int(width), height=int(height))
     candidates = detect_image_line_segments(image, cv2_module=cv2)
     expected_lines = projected_template_line_segments(calibration)
@@ -149,8 +157,8 @@ def build_auto_court_line_evidence_from_image(
         sport=calibration.sport,
         line_observations=observations,
         net_observations=[top_net_observation] if top_net_observation is not None else [],
-        required_line_ids=required_line_ids,
-        required_net_ids=required_net_ids,
+        required_line_ids=resolved_required_line_ids,
+        required_net_ids=resolved_required_net_ids,
     )
     evidence.source = "auto_hough_template"
     return evidence
