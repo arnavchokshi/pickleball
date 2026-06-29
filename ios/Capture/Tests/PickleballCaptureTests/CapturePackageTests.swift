@@ -122,9 +122,17 @@ final class CapturePackageTests: XCTestCase {
                 .coreMotionGravity,
                 .manualCourtTaps,
                 .onDevicePoseTrack,
-                .lidarDepthRefs,
             ]
         )
+        XCTAssertTrue(manifest.hasRequiredSidecarInputs)
+        XCTAssertFalse(manifest.hasOptionalDepthInput)
+    }
+
+    func testSensorManifestTreatsLidarDepthAsOptionalTierAInput() {
+        let manifest = CaptureSensorManifest(
+            streams: CaptureSensorManifest.pipelineRequired.streams + [.lidarDepthRefs]
+        )
+
         XCTAssertTrue(manifest.hasRequiredSidecarInputs)
         XCTAssertTrue(manifest.hasOptionalDepthInput)
     }

@@ -234,7 +234,6 @@ public struct CaptureSensorManifest: Equatable, Sendable {
         .coreMotionGravity,
         .manualCourtTaps,
         .onDevicePoseTrack,
-        .lidarDepthRefs,
     ])
 }
 

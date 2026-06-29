@@ -82,6 +82,22 @@ final class UploadManifestTests: XCTestCase {
         )
     }
 
+    func testSidecarFirstOrderingOmitsLidarPartsWhenNoDepthRefsExist() throws {
+        let manifest = UploadManifest(
+            clipRelativePath: "clips/session.mov",
+            sidecar: Self.sidecar(ondevicePoseTrack: "pose/sidecar_pose.json", lidarDepthRefs: []),
+            onDevicePoseTrack: nil,
+            onDevicePersonTracks: nil,
+            onDevicePersonTiming: nil,
+            lidarDepthRefs: []
+        )
+
+        let parts = try UploadPlan.sidecarFirstParts(for: manifest, sidecarRelativePath: "sidecars/session.json")
+
+        XCTAssertEqual(parts.map(\.kind), [.captureSidecar, .posePrior, .clip])
+        XCTAssertFalse(parts.contains { $0.kind == .lidarDepth })
+    }
+
     func testChunkPlanComputesStableOffsetsLengthsAndIdentifiers() throws {
         let plan = try ResumableChunkPlan(
             relativePath: "clips/session.mov",
