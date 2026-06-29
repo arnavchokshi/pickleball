@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from threed.racketsport.label_review import PROTOTYPE_GATE_CLIPS, export_cvat_tasks, export_review_bundle
+from threed.racketsport.label_review import PROTOTYPE_GATE_CLIPS, export_cvat_tasks, export_review_bundle, import_corrected_labels
 
 
 def _write_frame_pack(frames_root: Path, clip: str) -> None:
@@ -70,6 +70,122 @@ def test_export_review_bundle_and_cvat_task(tmp_path: Path) -> None:
     assert task["images"][0]["review_id"] == "corner_review_1"
 
 
+def test_export_review_bundle_blocks_missing_review_images(tmp_path: Path) -> None:
+    drafts_root, _frames_root, clip = _inputs(tmp_path)
+    missing_frames_root = tmp_path / "missing_frames"
+    bundle = tmp_path / "review_bundle"
+
+    summary = export_review_bundle(drafts_root=drafts_root, frames_root=missing_frames_root, out=bundle)
+    manifest = json.loads((bundle / "review_manifest.json").read_text(encoding="utf-8"))
+
+    assert summary["status"] == "blocked_missing_review_images"
+    assert manifest["missing_source_image_count"] == 1
+    assert manifest["clips"][0]["review_items"][0]["source_image_exists"] is False
+    assert not (bundle / "images" / clip / "frame_000001.jpg").exists()
+
+
+def test_export_review_frames_cli_rejects_missing_review_images(tmp_path: Path) -> None:
+    drafts_root, _frames_root, _clip = _inputs(tmp_path)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/export_review_frames.py",
+            "--drafts-root",
+            str(drafts_root),
+            "--frames-root",
+            str(tmp_path / "missing_frames"),
+            "--out",
+            str(tmp_path / "review_bundle"),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 2
+    assert json.loads(completed.stdout)["status"] == "blocked_missing_review_images"
+
+
+def test_export_review_bundle_reports_no_review_items(tmp_path: Path) -> None:
+    clip = PROTOTYPE_GATE_CLIPS[0]
+    drafts_root = tmp_path / "runs" / "label_drafts" / "prototype_gate"
+    frames_root = tmp_path / "runs" / "label_frames"
+    _write_frame_pack(frames_root, clip)
+    _write_draft(
+        drafts_root,
+        clip,
+        "court_corners.json",
+        [{"review_id": "corner_confident", "frame": "frame_000001.jpg", "status": "accepted", "confidence": 0.98}],
+    )
+
+    summary = export_review_bundle(drafts_root=drafts_root, frames_root=frames_root, out=tmp_path / "review_bundle")
+
+    assert summary["status"] == "no_review_items"
+    assert summary["review_item_count"] == 0
+    assert summary["clips"] == []
+
+
+def test_export_cvat_tasks_blocks_manifest_with_missing_images(tmp_path: Path) -> None:
+    drafts_root, _frames_root, _clip = _inputs(tmp_path)
+    bundle = tmp_path / "review_bundle"
+    export_review_bundle(drafts_root=drafts_root, frames_root=tmp_path / "missing_frames", out=bundle)
+
+    summary = export_cvat_tasks(review_manifest=bundle / "review_manifest.json", out=tmp_path / "cvat")
+
+    assert summary["status"] == "blocked_missing_review_images"
+    assert summary["missing_source_image_count"] == 1
+    assert summary["tasks"][0]["image_count"] == 0
+    task = json.loads(Path(summary["tasks"][0]["task_dir"]).joinpath("task.json").read_text(encoding="utf-8"))
+    assert task["status"] == "blocked_missing_review_images"
+    assert task["missing_source_image_count"] == 1
+
+
+def test_export_cvat_tasks_cli_rejects_missing_images(tmp_path: Path) -> None:
+    drafts_root, _frames_root, _clip = _inputs(tmp_path)
+    bundle = tmp_path / "review_bundle"
+    export_review_bundle(drafts_root=drafts_root, frames_root=tmp_path / "missing_frames", out=bundle)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/export_cvat_tasks.py",
+            "--review-manifest",
+            str(bundle / "review_manifest.json"),
+            "--out",
+            str(tmp_path / "cvat"),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 2
+    assert json.loads(completed.stdout)["status"] == "blocked_missing_review_images"
+
+
+def test_import_corrected_labels_blocks_missing_draft_targets(tmp_path: Path) -> None:
+    corrections_root = tmp_path / "corrections"
+    correction_path = corrections_root / "clip_without_draft" / "court_corners.json"
+    correction_path.parent.mkdir(parents=True)
+    correction_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "clip": "clip_without_draft",
+                "target_file": "court_corners.json",
+                "items": [{"review_id": "corner_review_1"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    summary = import_corrected_labels(drafts_root=tmp_path / "drafts", corrections_root=corrections_root)
+
+    assert summary["status"] == "blocked_missing_drafts"
+    assert summary["imported_item_count"] == 0
+    assert summary["missing_draft_count"] == 1
+    assert summary["skipped_corrections"][0]["correction_path"] == str(correction_path)
+
+
 def test_import_corrections_roundtrip_cli(tmp_path: Path) -> None:
     drafts_root, frames_root, clip = _inputs(tmp_path)
     bundle = tmp_path / "review_bundle"
@@ -104,3 +220,59 @@ def test_import_corrections_roundtrip_cli(tmp_path: Path) -> None:
     assert draft["status"] == "draft_manual_annotation"
     assert draft["annotation"]["items"][0]["status"] == "corrected_unverified"
     assert draft["annotation"]["items"][0]["court_corners"]["near_right"] == [5, 6]
+
+
+def test_import_corrections_cli_rejects_noop_missing_draft_by_default(tmp_path: Path) -> None:
+    corrections_root = tmp_path / "corrections"
+    correction_path = corrections_root / "clip_without_draft" / "court_corners.json"
+    correction_path.parent.mkdir(parents=True)
+    correction_path.write_text(
+        json.dumps({"clip": "clip_without_draft", "target_file": "court_corners.json", "items": [{"review_id": "corner_review_1"}]}),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/import_cvat_labels.py",
+            "--drafts-root",
+            str(tmp_path / "drafts"),
+            "--corrections-root",
+            str(corrections_root),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 2
+    payload = json.loads(completed.stdout)
+    assert payload["status"] == "blocked_missing_drafts"
+
+
+def test_import_corrections_cli_can_allow_missing_drafts_explicitly(tmp_path: Path) -> None:
+    corrections_root = tmp_path / "corrections"
+    correction_path = corrections_root / "clip_without_draft" / "court_corners.json"
+    correction_path.parent.mkdir(parents=True)
+    correction_path.write_text(
+        json.dumps({"clip": "clip_without_draft", "target_file": "court_corners.json", "items": [{"review_id": "corner_review_1"}]}),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/import_cvat_labels.py",
+            "--drafts-root",
+            str(tmp_path / "drafts"),
+            "--corrections-root",
+            str(corrections_root),
+            "--allow-missing-drafts",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    payload = json.loads(completed.stdout)
+    assert payload["status"] == "missing_drafts_allowed"
+    assert payload["missing_draft_count"] == 1

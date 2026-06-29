@@ -18,17 +18,17 @@ from threed.racketsport.model_manifest import ModelManifest, load_model_manifest
 def summarize_manifest(manifest: ModelManifest) -> dict[str, Any]:
     status_counts = Counter(entry.status for entry in manifest.models)
     posture_counts = Counter(entry.commercial_posture for entry in manifest.models)
-    ready_statuses = {"available_on_h100", "available_runtime_on_h100"}
-    available = [entry.id for entry in manifest.models if entry.status == "available_on_h100"]
-    ready = [entry.id for entry in manifest.models if entry.status in ready_statuses]
-    pending = [entry.id for entry in manifest.models if entry.status not in ready_statuses]
+    declared_inventory_statuses = {"available_on_h100", "available_runtime_on_h100"}
+    checkpoint_files = [entry.id for entry in manifest.models if entry.status == "available_on_h100"]
+    declared_inventory = [entry.id for entry in manifest.models if entry.status in declared_inventory_statuses]
+    pending = [entry.id for entry in manifest.models if entry.status not in declared_inventory_statuses]
     return {
         "schema_version": 1,
         "total_models": len(manifest.models),
         "status_counts": dict(sorted(status_counts.items())),
         "commercial_posture_counts": dict(sorted(posture_counts.items())),
-        "available_on_h100": available,
-        "ready_on_h100": ready,
+        "declared_h100_checkpoint_files": checkpoint_files,
+        "declared_h100_inventory": declared_inventory,
         "missing_or_pending": pending,
     }
 
@@ -38,7 +38,7 @@ def render_markdown(manifest: ModelManifest, summary: dict[str, Any]) -> str:
         "# Model Manifest Report",
         "",
         f"- Total models: {summary['total_models']}",
-        f"- Ready on H100: {len(summary['ready_on_h100'])}",
+        f"- Declared H100 inventory: {len(summary['declared_h100_inventory'])}",
         f"- Missing or pending: {len(summary['missing_or_pending'])}",
         "",
         "## Status Counts",
@@ -55,7 +55,7 @@ def render_markdown(manifest: ModelManifest, summary: dict[str, Any]) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Summarize models/MANIFEST.json readiness.")
+    parser = argparse.ArgumentParser(description="Summarize declared models/MANIFEST.json inventory.")
     parser.add_argument("--manifest", type=Path, default=Path("models/MANIFEST.json"))
     parser.add_argument("--out", type=Path)
     parser.add_argument("--json", action="store_true", help="Print JSON summary to stdout.")

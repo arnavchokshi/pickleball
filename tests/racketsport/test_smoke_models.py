@@ -30,7 +30,7 @@ def _manifest(tmp_path: Path, sha256: str) -> Path:
     return path
 
 
-def test_smoke_models_checks_available_model_files(tmp_path):
+def test_model_file_check_verifies_available_model_files_without_claiming_forward_smoke(tmp_path):
     weights = tmp_path / "weights.bin"
     weights.write_bytes(b"pickleball")
     digest = hashlib.sha256(weights.read_bytes()).hexdigest()
@@ -55,7 +55,9 @@ def test_smoke_models_checks_available_model_files(tmp_path):
     assert result["id"] == "fake_model"
     assert result["file_ok"] is True
     assert result["checksum_ok"] is True
-    assert result["smoke_ok"] is True
+    assert result["integrity_ok"] is True
+    assert result["forward_smoke_status"] == "not_run"
+    assert "smoke_ok" not in result
 
 
 def test_smoke_models_fails_on_checksum_mismatch(tmp_path):
@@ -80,4 +82,6 @@ def test_smoke_models_fails_on_checksum_mismatch(tmp_path):
     payload = json.loads(completed.stdout)
     assert payload["models"][0]["file_ok"] is True
     assert payload["models"][0]["checksum_ok"] is False
-    assert payload["models"][0]["smoke_ok"] is False
+    assert payload["models"][0]["integrity_ok"] is False
+    assert payload["models"][0]["forward_smoke_status"] == "not_run"
+    assert payload["integrity_failed"] == 1

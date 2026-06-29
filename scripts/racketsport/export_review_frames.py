@@ -27,7 +27,7 @@ def main() -> int:
         confidence_threshold=args.confidence_threshold,
     )
     print(json.dumps(summary, indent=2, sort_keys=True))
-    return 0
+    return 0 if summary["status"] == "ready_for_human_review" else 2
 
 
 if __name__ == "__main__":

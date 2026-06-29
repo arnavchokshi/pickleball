@@ -20,7 +20,7 @@ def main() -> int:
     args = parser.parse_args()
     summary = export_cvat_tasks(review_manifest=args.review_manifest, out=args.out)
     print(json.dumps(summary, indent=2, sort_keys=True))
-    return 0
+    return 0 if summary["status"] == "ready_for_cvat_review" else 2
 
 
 if __name__ == "__main__":

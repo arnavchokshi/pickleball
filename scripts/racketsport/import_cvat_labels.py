@@ -17,10 +17,21 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Import human corrections into prototype draft labels.")
     parser.add_argument("--drafts-root", type=Path, required=True)
     parser.add_argument("--corrections-root", type=Path, required=True)
+    parser.add_argument(
+        "--allow-missing-drafts",
+        action="store_true",
+        help="Treat correction files whose draft target is missing as an explicit no-op instead of a blocked import.",
+    )
     args = parser.parse_args()
-    summary = import_corrected_labels(drafts_root=args.drafts_root, corrections_root=args.corrections_root)
+    summary = import_corrected_labels(
+        drafts_root=args.drafts_root,
+        corrections_root=args.corrections_root,
+        allow_missing_drafts=args.allow_missing_drafts,
+    )
     print(json.dumps(summary, indent=2, sort_keys=True))
-    return 0
+    if summary["status"] in {"imported", "no_corrections", "missing_drafts_allowed", "partial_missing_drafts_allowed"}:
+        return 0
+    return 2
 
 
 if __name__ == "__main__":

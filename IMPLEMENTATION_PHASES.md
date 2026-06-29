@@ -290,7 +290,7 @@ The native Swift app. It runs **in parallel** with the server Pipeline Track (Ph
 - **`scripts/racketsport/benchmark_sam3dbody.py`** — **run FIRST:** measure Fast SAM-3D-Body per-player-frame FPS + peak VRAM on the H100 (B=1 and batched crops). Its numbers set the MIG geometry and deep-tier latency budget.
 - **Perf substrate scaffold:** minimal **Triton** ensemble config skeleton (`serving/triton/`) for the eval-serving path. TensorRT export utilities, `torch.compile` warmup, INT8 calibration hooks, and DALI/NVDEC decode remain pending implementation rather than completed code.
 
-**Models:** all of § 0.4. Current `scripts/racketsport/smoke_models.py` verifies local file presence and sha256 for `available_on_h100` manifest entries only; model-specific forward passes/FPS remain a Phase-0 GPU task to wire per runtime.
+**Models:** all of § 0.4. Current `scripts/racketsport/smoke_models.py` verifies local file presence and sha256 integrity for `available_on_h100` manifest entries only; model-specific forward passes/FPS remain a Phase-0 GPU task to wire per runtime.
 
 **Deliverables:** `runs/phase0/REPORT.md`, decoded metadata for every clip, `models/MANIFEST.json` (name, license, sha256, path).
 
@@ -299,7 +299,7 @@ The native Swift app. It runs **in parallel** with the server Pipeline Track (Ph
 bash scripts/racketsport/setup_env.sh
 python -m pytest tests/racketsport/test_schemas.py tests/racketsport/test_io_decode.py -q
 python scripts/racketsport/ingest_testclips.py --root data/testclips --out runs/phase0
-python scripts/racketsport/smoke_models.py --manifest models/MANIFEST.json   # verifies files + sha256; forward-pass/FPS smokes are pending runtime-specific wiring
+python scripts/racketsport/smoke_models.py --manifest models/MANIFEST.json   # verifies file integrity only; forward-pass/FPS smokes are pending runtime-specific wiring
 ```
 
 **Acceptance gates:**

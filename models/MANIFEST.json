@@ -253,7 +253,7 @@
     {
       "id": "mujoco_mjx",
       "stage": "physics",
-      "use": "Physics refinement engine for flagship replay",
+      "use": "Declared MuJoCo/MJX runtime candidate for future physics refinement; current pipeline integration still requires FOOT-2 task-specific validation",
       "source": "https://mujoco.readthedocs.io/en/stable/mjx.html and https://pypi.org/project/mujoco-mjx/",
       "license": "Apache-2.0",
       "commercial_posture": "ok",

@@ -39,6 +39,7 @@ def export_review_bundle(
     corrections_root.mkdir(parents=True, exist_ok=True)
 
     clip_entries: list[dict[str, Any]] = []
+    missing_source_images: list[dict[str, str]] = []
     review_item_count = 0
     for clip_dir in sorted(path for path in drafts_root.iterdir() if path.is_dir()):
         labels_dir = clip_dir / "labels"
@@ -55,13 +56,25 @@ def export_review_bundle(
                 image_path = frames_root / clip_dir.name / frame
                 bundle_image = image_root / clip_dir.name / frame
                 bundle_image.parent.mkdir(parents=True, exist_ok=True)
-                if image_path.is_file():
+                source_image_exists = image_path.is_file()
+                if source_image_exists:
                     shutil.copy2(image_path, bundle_image)
+                else:
+                    missing_source_images.append(
+                        {
+                            "clip": clip_dir.name,
+                            "frame": frame,
+                            "source_image_path": str(image_path),
+                            "bundle_image_path": str(bundle_image),
+                            "review_id": str(item["review_id"]),
+                        }
+                    )
                 review_item = {
                     **item,
                     "clip": clip_dir.name,
                     "image_path": str(bundle_image),
                     "source_image_path": str(image_path),
+                    "source_image_exists": source_image_exists,
                 }
                 clip_items.append(review_item)
                 templates.setdefault(str(item["target_file"]), []).append(str(item["review_id"]))
@@ -89,15 +102,24 @@ def export_review_bundle(
             review_item_count += len(clip_items)
             clip_entries.append({"clip": clip_dir.name, "review_items": clip_items})
 
+    if review_item_count == 0:
+        status = "no_review_items"
+    elif missing_source_images:
+        status = "blocked_missing_review_images"
+    else:
+        status = "ready_for_human_review"
+
     manifest = {
         "schema_version": 1,
         "artifact_type": "racketsport_label_review_bundle",
-        "status": "ready_for_human_review",
+        "status": status,
         "drafts_root": str(drafts_root),
         "frames_root": str(frames_root),
         "out": str(out),
         "prototype_gate_clips": list(PROTOTYPE_GATE_CLIPS),
         "review_item_count": review_item_count,
+        "missing_source_image_count": len(missing_source_images),
+        "missing_source_images": missing_source_images,
         "clips": clip_entries,
         "not_ground_truth": True,
     }
@@ -112,6 +134,7 @@ def export_cvat_tasks(*, review_manifest: Path, out: Path) -> dict[str, Any]:
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     task_count = 0
+    missing_source_images: list[dict[str, str]] = []
     tasks: list[dict[str, Any]] = []
     for clip in manifest.get("clips", []):
         clip_name = str(clip["clip"])
@@ -119,48 +142,89 @@ def export_cvat_tasks(*, review_manifest: Path, out: Path) -> dict[str, Any]:
         image_dir = task_dir / "images"
         image_dir.mkdir(parents=True, exist_ok=True)
         images: list[dict[str, Any]] = []
+        task_missing_source_images: list[dict[str, str]] = []
         for item in clip.get("review_items", []):
             src = Path(item["image_path"])
             dst = image_dir / src.name
-            if src.is_file():
+            source_image_exists = src.is_file() and item.get("source_image_exists", True) is not False
+            if source_image_exists:
                 shutil.copy2(src, dst)
-            images.append(
-                {
-                    "file_name": src.name,
-                    "frame": item["frame"],
-                    "review_id": item["review_id"],
-                    "target_file": item["target_file"],
+                images.append(
+                    {
+                        "file_name": src.name,
+                        "frame": item["frame"],
+                        "review_id": item["review_id"],
+                        "target_file": item["target_file"],
+                    }
+                )
+            else:
+                missing = {
+                    "clip": clip_name,
+                    "frame": str(item["frame"]),
+                    "image_path": str(src),
+                    "review_id": str(item["review_id"]),
                 }
-            )
+                missing_source_images.append(missing)
+                task_missing_source_images.append(missing)
+        task_status = "blocked_missing_review_images" if task_missing_source_images else "ready_for_cvat_review"
         task = {
             "schema_version": 1,
             "artifact_type": "racketsport_cvat_task",
+            "status": task_status,
             "task_name": f"racketsport_{clip_name}_label_review",
             "clip": clip_name,
             "labels": CVAT_LABELS,
             "images": images,
+            "missing_source_image_count": len(task_missing_source_images),
+            "missing_source_images": task_missing_source_images,
             "corrections_hint": "Export annotations, then convert them into the correction template under review_bundle/corrections/<clip>/<target_file>.",
             "not_ground_truth": True,
         }
         (task_dir / "task.json").write_text(json.dumps(task, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         task_count += 1
         tasks.append({"clip": clip_name, "task_dir": str(task_dir), "image_count": len(images)})
-    return {"schema_version": 1, "artifact_type": "racketsport_cvat_task_export", "task_count": task_count, "tasks": tasks}
+    if missing_source_images:
+        status = "blocked_missing_review_images"
+    elif task_count == 0:
+        status = "no_review_items"
+    else:
+        status = "ready_for_cvat_review"
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_cvat_task_export",
+        "status": status,
+        "task_count": task_count,
+        "missing_source_image_count": len(missing_source_images),
+        "missing_source_images": missing_source_images,
+        "tasks": tasks,
+    }
 
 
-def import_corrected_labels(*, drafts_root: Path, corrections_root: Path) -> dict[str, Any]:
+def import_corrected_labels(*, drafts_root: Path, corrections_root: Path, allow_missing_drafts: bool = False) -> dict[str, Any]:
     """Merge correction template items back into draft labels without verification."""
 
     drafts_root = Path(drafts_root)
     corrections_root = Path(corrections_root)
     imported = 0
+    correction_file_count = 0
     files: list[dict[str, Any]] = []
+    skipped_corrections: list[dict[str, str]] = []
     for correction_path in sorted(corrections_root.glob("*/*.json")):
+        correction_file_count += 1
         correction = _read_json(correction_path)
         clip = str(correction.get("clip") or correction_path.parent.name)
         target_file = str(correction.get("target_file") or correction_path.name)
         draft_path = drafts_root / clip / "labels" / target_file
         if not draft_path.is_file():
+            skipped_corrections.append(
+                {
+                    "clip": clip,
+                    "target_file": target_file,
+                    "correction_path": str(correction_path),
+                    "reason": "missing_draft_allowed" if allow_missing_drafts else "missing_draft",
+                    "draft_path": str(draft_path),
+                }
+            )
             continue
         draft = _read_json(draft_path)
         annotation = draft.setdefault("annotation", {})
@@ -185,7 +249,32 @@ def import_corrected_labels(*, drafts_root: Path, corrections_root: Path) -> dic
         draft["not_ground_truth"] = True
         draft_path.write_text(json.dumps(draft, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         files.append({"clip": clip, "target_file": target_file, "imported_items": len(corrections), "draft_path": str(draft_path)})
-    return {"schema_version": 1, "artifact_type": "racketsport_label_review_import", "imported_item_count": imported, "files": files}
+    missing_draft_count = sum(1 for item in skipped_corrections if item["reason"] == "missing_draft")
+    allowed_missing_draft_count = sum(1 for item in skipped_corrections if item["reason"] == "missing_draft_allowed")
+    if allowed_missing_draft_count and imported == 0:
+        status = "missing_drafts_allowed"
+    elif allowed_missing_draft_count:
+        status = "partial_missing_drafts_allowed"
+    elif missing_draft_count and imported == 0:
+        status = "blocked_missing_drafts"
+    elif missing_draft_count:
+        status = "partial_missing_drafts"
+    elif correction_file_count == 0:
+        status = "no_corrections"
+    elif imported == 0:
+        status = "no_imported_items"
+    else:
+        status = "imported"
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_label_review_import",
+        "status": status,
+        "correction_file_count": correction_file_count,
+        "imported_item_count": imported,
+        "missing_draft_count": missing_draft_count + allowed_missing_draft_count,
+        "skipped_corrections": skipped_corrections,
+        "files": files,
+    }
 
 
 def _review_items(payload: dict[str, Any], target_file: str, confidence_threshold: float) -> list[dict[str, Any]]:
