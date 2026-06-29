@@ -4,10 +4,12 @@ set -euo pipefail
 LEASE_ROOT="${GPU_LEASE_ROOT:-/run/gpu-lease}"
 SLOTS_DIR="$LEASE_ROOT/slots"
 HEARTBEAT_DIR="$LEASE_ROOT/heartbeat"
+FULL_GPU_LOCK="$LEASE_ROOT/full-gpu.lock"
 if ! mkdir -p "$SLOTS_DIR" "$HEARTBEAT_DIR" 2>/dev/null; then
   LEASE_ROOT="${TMPDIR:-/tmp}/gpu-lease"
   SLOTS_DIR="$LEASE_ROOT/slots"
   HEARTBEAT_DIR="$LEASE_ROOT/heartbeat"
+  FULL_GPU_LOCK="$LEASE_ROOT/full-gpu.lock"
   mkdir -p "$SLOTS_DIR" "$HEARTBEAT_DIR"
 fi
 
@@ -48,10 +50,12 @@ run_with_slot() (
 )
 
 if ! command -v flock >/dev/null 2>&1; then
-  echo "gpu-eval-run: flock unavailable; running single local fallback slot" >&2
-  run_with_slot "${slot_files[0]}" "$@"
-  exit $?
+  echo "gpu-eval-run: flock is required for shared-H100 lease enforcement" >&2
+  exit 69
 fi
+
+exec {full_gpu_fd}>"$FULL_GPU_LOCK"
+flock -s "$full_gpu_fd"
 
 for lock_file in "${slot_files[@]}"; do
   exec {lock_fd}>"$lock_file"

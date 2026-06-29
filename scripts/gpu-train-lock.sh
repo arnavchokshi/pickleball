@@ -13,9 +13,10 @@ if [ "$#" -eq 0 ]; then
 fi
 
 if ! command -v flock >/dev/null 2>&1; then
-  echo "gpu-train-lock: flock unavailable; running without cross-process lock" >&2
-  "$@"
-  exit $?
+  echo "gpu-train-lock: flock is required for shared-H100 lease enforcement" >&2
+  exit 69
 fi
 
-flock "$LEASE_ROOT/full-gpu.lock" "$@"
+exec {full_gpu_fd}>"$LEASE_ROOT/full-gpu.lock"
+flock "$full_gpu_fd"
+"$@"
