@@ -343,9 +343,46 @@ def test_review_input_manifest_exposes_tracking_video_review_questions(tmp_path:
 def test_review_input_server_exposes_focused_paddle_review_page() -> None:
     assert "paddleCornerQueue" in review_input_server.PADDLE_HTML
     assert "trackingReviewVideos" in review_input_server.PADDLE_HTML
+    assert "sourceFrameContext" in review_input_server.PADDLE_HTML
+    assert "cropContextBox" in review_input_server.PADDLE_HTML
+    assert "sourceVideo" in review_input_server.PADDLE_HTML
+    assert "Not a paddle" in review_input_server.PADDLE_HTML
     assert "Not visible" in review_input_server.PADDLE_HTML
     assert "Ambiguous" in review_input_server.PADDLE_HTML
+    assert "box-derived candidates" in review_input_server.PADDLE_HTML
     assert "paddle_true_corner_labels" in review_input_server.PADDLE_HTML
+
+
+def test_review_input_write_accepts_not_paddle_paddle_labels(tmp_path: Path) -> None:
+    clip = "wolverine_mixed_0200_mid_steep_corner"
+
+    latest, _ = review_input_server._write_review_input(
+        tmp_path,
+        {
+            "schema_version": 2,
+            "review_type": "pickleball_cv_blocker_review",
+            "paddle_corner_labels": {
+                clip: {
+                    "artifact_type": "paddle_true_corner_labels",
+                    "labels": {
+                        "0_000120": {
+                            "review_id": "0_000120",
+                            "status": "not_paddle",
+                            "evidence_type": "true_corners",
+                            "reviewer": "local_click_review",
+                            "corners_px_order": ["top_left", "top_right", "bottom_right", "bottom_left"],
+                            "crop_xyxy": [100, 200, 160, 290],
+                        }
+                    },
+                }
+            },
+        },
+    )
+
+    saved = json.loads(latest.read_text(encoding="utf-8"))
+    label = saved["paddle_corner_labels"][clip]["labels"]["0_000120"]
+    assert label["status"] == "not_paddle"
+    assert label["crop_xyxy"] == [100.0, 200.0, 160.0, 290.0]
 
 
 def test_asset_streaming_ignores_client_disconnect(tmp_path: Path) -> None:

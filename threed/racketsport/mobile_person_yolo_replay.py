@@ -359,6 +359,103 @@ class _RoleLockedPersonLinker:
         return detections
 
 
+class _WideRoleLockedPersonLinker:
+    def __init__(self, *, max_tracks: int = 4) -> None:
+        self.max_tracks = max_tracks
+
+    def update(self, *, frame_index: int, observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        del frame_index
+        selected = _select_spatially_diverse_observations(observations, self.max_tracks)
+        ordered = _observations_in_role_order(selected)
+        roles = ["far_left", "far_right", "near_left", "near_right"]
+        detections: list[dict[str, Any]] = []
+        for index, observation in enumerate(ordered):
+            role = roles[index] if index < len(roles) else None
+            detections.append(_detection_from_observation(index + 1, observation, role=role))
+        return detections
+
+
+class _StableSetPersonLinker:
+    def __init__(
+        self,
+        *,
+        max_tracks: int = 4,
+        max_age_frames: int = 45,
+        max_assignment_cost: float = 3.25,
+    ) -> None:
+        self.max_tracks = max_tracks
+        self.max_age_frames = max_age_frames
+        self.max_assignment_cost = max_assignment_cost
+        self._tracks: list[dict[str, Any]] = []
+        self._next_id = 1
+
+    def update(self, *, frame_index: int, observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not self._tracks:
+            return self._bootstrap(frame_index=frame_index, observations=observations)
+
+        active_tracks = [
+            track
+            for track in self._tracks
+            if frame_index - int(track["last_seen_frame_index"]) <= self.max_age_frames
+        ]
+        self._tracks = active_tracks
+        assignments = _stable_track_assignments(
+            active_tracks,
+            observations,
+            frame_index=frame_index,
+            max_cost=self.max_assignment_cost,
+        )
+        detections: list[dict[str, Any]] = []
+        used_observation_indexes = set(assignments.values())
+        for track_index, observation_index in sorted(assignments.items()):
+            track = active_tracks[track_index]
+            observation = observations[observation_index]
+            self._update_track(track, observation, frame_index)
+            detections.append(_detection_from_observation(int(track["id"]), observation))
+
+        if len(self._tracks) < self.max_tracks:
+            unused = [observation for index, observation in enumerate(observations) if index not in used_observation_indexes]
+            for observation in _select_spatially_diverse_observations(unused, self.max_tracks - len(self._tracks)):
+                track = self._new_track(self._next_id, observation, frame_index)
+                self._next_id += 1
+                self._tracks.append(track)
+                detections.append(_detection_from_observation(int(track["id"]), observation))
+
+        return sorted(detections, key=lambda item: int(item["track_id"]))
+
+    def _bootstrap(self, *, frame_index: int, observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        selected = _observations_in_role_order(_select_spatially_diverse_observations(observations, self.max_tracks))
+        self._tracks = []
+        for observation in selected:
+            self._tracks.append(self._new_track(self._next_id, observation, frame_index))
+            self._next_id += 1
+        return [_detection_from_observation(int(track["id"]), track["observation"]) for track in self._tracks]
+
+    @staticmethod
+    def _new_track(track_id: int, observation: dict[str, Any], frame_index: int) -> dict[str, Any]:
+        return {
+            "id": track_id,
+            "bbox_xywh": [float(value) for value in observation["bbox_xywh"]],
+            "velocity_xy": [0.0, 0.0],
+            "last_seen_frame_index": frame_index,
+            "observation": observation,
+        }
+
+    @staticmethod
+    def _update_track(track: dict[str, Any], observation: dict[str, Any], frame_index: int) -> None:
+        previous_center = _bbox_center(track["bbox_xywh"])
+        current_bbox = [float(value) for value in observation["bbox_xywh"]]
+        current_center = _bbox_center(current_bbox)
+        frame_delta = max(1, frame_index - int(track["last_seen_frame_index"]))
+        track["velocity_xy"] = [
+            (current_center[0] - previous_center[0]) / frame_delta,
+            (current_center[1] - previous_center[1]) / frame_delta,
+        ]
+        track["bbox_xywh"] = current_bbox
+        track["last_seen_frame_index"] = frame_index
+        track["observation"] = observation
+
+
 def _make_linker(
     tracker: str,
     *,
@@ -392,6 +489,13 @@ def _make_linker(
         )
     if tracker in {"predict_role_lock", "role_lock"}:
         return _RoleLockedPersonLinker(max_tracks=max_players)
+    if tracker in {"predict_role_lock_wide", "role_lock_wide"}:
+        return _WideRoleLockedPersonLinker(max_tracks=max_players)
+    if tracker in {"predict_stable_set", "stable_set"}:
+        return _StableSetPersonLinker(
+            max_tracks=max_players,
+            max_age_frames=60 if max_age_frames is None else max_age_frames,
+        )
     raise ValueError(f"unsupported replay person tracker: {tracker}")
 
 
@@ -758,6 +862,71 @@ def _expand_bbox_xywh(bbox_xywh: list[float], scale: float) -> list[float]:
     expanded_width = width * scale
     expanded_height = height * scale
     return [center_x - expanded_width / 2.0, bottom_y - expanded_height, expanded_width, expanded_height]
+
+
+def _select_spatially_diverse_observations(observations: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+    if limit <= 0 or not observations:
+        return []
+    candidates = list(observations)
+    selected: list[dict[str, Any]] = []
+    while candidates and len(selected) < limit:
+        best_index = 0
+        best_score = -float("inf")
+        for index, candidate in enumerate(candidates):
+            if any(_bbox_iou(candidate["bbox_xywh"], chosen["bbox_xywh"]) > 0.35 for chosen in selected):
+                continue
+            score = float(candidate.get("confidence", 0.0))
+            if selected:
+                min_distance = min(_bbox_center_distance(candidate["bbox_xywh"], chosen["bbox_xywh"]) for chosen in selected)
+                score += min(1.0, min_distance / max(1.0, _bbox_diagonal(candidate["bbox_xywh"]) * 2.0))
+            if score > best_score:
+                best_score = score
+                best_index = index
+        selected.append(candidates.pop(best_index))
+    return selected
+
+
+def _stable_track_assignments(
+    tracks: list[dict[str, Any]],
+    observations: list[dict[str, Any]],
+    *,
+    frame_index: int,
+    max_cost: float,
+) -> dict[int, int]:
+    pairs: list[tuple[float, int, int]] = []
+    for track_index, track in enumerate(tracks):
+        predicted = _predict_track_bbox(track, frame_index)
+        for observation_index, observation in enumerate(observations):
+            cost = _stable_assignment_cost(predicted, observation)
+            if cost <= max_cost:
+                pairs.append((cost, track_index, observation_index))
+    pairs.sort()
+    assignments: dict[int, int] = {}
+    used_observations: set[int] = set()
+    for _cost, track_index, observation_index in pairs:
+        if track_index in assignments or observation_index in used_observations:
+            continue
+        assignments[track_index] = observation_index
+        used_observations.add(observation_index)
+    return assignments
+
+
+def _predict_track_bbox(track: dict[str, Any], frame_index: int) -> list[float]:
+    bbox = [float(value) for value in track["bbox_xywh"]]
+    frame_delta = max(0, frame_index - int(track["last_seen_frame_index"]))
+    velocity_x, velocity_y = [float(value) for value in track.get("velocity_xy", [0.0, 0.0])]
+    return [bbox[0] + velocity_x * frame_delta, bbox[1] + velocity_y * frame_delta, bbox[2], bbox[3]]
+
+
+def _stable_assignment_cost(predicted_bbox: list[float], observation: dict[str, Any]) -> float:
+    bbox = [float(value) for value in observation["bbox_xywh"]]
+    distance = _bbox_center_distance(predicted_bbox, bbox)
+    scale = max(32.0, _bbox_diagonal(predicted_bbox), _bbox_diagonal(bbox))
+    distance_term = distance / scale
+    iou_term = 1.0 - _bbox_iou(predicted_bbox, bbox)
+    area_term = abs(math.log(max(1.0, bbox[2] * bbox[3]) / max(1.0, predicted_bbox[2] * predicted_bbox[3])))
+    confidence_bonus = min(1.0, max(0.0, float(observation.get("confidence", 0.0))))
+    return distance_term + 0.8 * iou_term + 0.25 * area_term - 0.2 * confidence_bonus
 
 
 def _detection_from_observation(track_id: int, observation: dict[str, Any], *, role: str | None = None) -> dict[str, Any]:

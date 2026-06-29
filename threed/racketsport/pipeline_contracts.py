@@ -352,8 +352,12 @@ def _body_compute_execution_blockers(run_path: Path) -> list[str]:
     if scheduled_count is None:
         return ["body_compute_execution_missing_scheduled_frame_count"]
     scheduled_by_target = _nested_value(payload, "summary", "scheduled_by_target_representation")
+    if not isinstance(scheduled_by_target, dict):
+        return ["body_compute_execution_missing_scheduled_by_target_representation"]
     world_mesh_count = _int_value(scheduled_by_target.get("world_mesh")) if isinstance(scheduled_by_target, dict) else None
-    if isinstance(world_mesh_count, int) and world_mesh_count == 0:
+    if world_mesh_count is None:
+        return ["body_compute_execution_missing_world_mesh_scheduled_count"]
+    if world_mesh_count == 0:
         return ["body_compute_execution_has_no_world_mesh_frames"]
     return []
 

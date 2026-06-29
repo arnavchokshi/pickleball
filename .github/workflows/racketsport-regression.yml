@@ -3,12 +3,22 @@ name: RacketSport Regression
 on:
   pull_request:
     paths:
+      - "pyproject.toml"
+      - "requirements-racketsport.txt"
+      - "scripts/**/*.py"
+      - "scripts/**/*.sh"
       - "scripts/racketsport/check_eval_regression.py"
+      - "tests/**/*.py"
       - "tests/racketsport/test_eval_regression.py"
       - ".github/workflows/racketsport-regression.yml"
   push:
     paths:
+      - "pyproject.toml"
+      - "requirements-racketsport.txt"
+      - "scripts/**/*.py"
+      - "scripts/**/*.sh"
       - "scripts/racketsport/check_eval_regression.py"
+      - "tests/**/*.py"
       - "tests/racketsport/test_eval_regression.py"
       - ".github/workflows/racketsport-regression.yml"
   workflow_dispatch:
@@ -38,10 +48,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install test dependency
-        run: python -m pip install pytest
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-racketsport.txt
       - name: Test regression checker
         run: pytest tests/racketsport/test_eval_regression.py -q
+      - name: Test script hygiene
+        run: |
+          pytest --collect-only -q tests
+          pytest tests/racketsport/test_cli_help.py tests/racketsport/test_shell_scripts.py tests/racketsport/test_scaffold_tool_index.py -q
       - name: Compare requested metrics
         if: github.event_name == 'workflow_dispatch'
         env:
@@ -53,10 +67,30 @@ jobs:
         run: |
           set -euo pipefail
           args=(--max-drop-percent "$MAX_DROP_PERCENT")
+          has_direct=false
+          has_roots=false
           if [[ -n "$CURRENT" || -n "$BASELINE" ]]; then
+            if [[ -z "$CURRENT" || -z "$BASELINE" ]]; then
+              echo "::error::Provide both current and baseline, or leave both empty."
+              exit 2
+            fi
             args+=(--current "$CURRENT" --baseline "$BASELINE")
+            has_direct=true
           fi
           if [[ -n "$CURRENT_ROOT" || -n "$BASELINE_ROOT" ]]; then
+            if [[ -z "$CURRENT_ROOT" || -z "$BASELINE_ROOT" ]]; then
+              echo "::error::Provide both current_root and baseline_root, or leave both empty."
+              exit 2
+            fi
             args+=(--current-root "$CURRENT_ROOT" --baseline-root "$BASELINE_ROOT")
+            has_roots=true
+          fi
+          if [[ "$has_direct" == "true" && "$has_roots" == "true" ]]; then
+            echo "::error::Use either direct metric files or metric roots, not both."
+            exit 2
+          fi
+          if [[ "$has_direct" == "false" && "$has_roots" == "false" ]]; then
+            echo "No metric inputs supplied; skipping regression comparison."
+            exit 0
           fi
           python scripts/racketsport/check_eval_regression.py "${args[@]}"

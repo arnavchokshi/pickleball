@@ -136,7 +136,7 @@ footpoints and available BODY world meshes. The same pass wrote
 and generated `replay_viewer_manifest.json` for the local React/Three.js
 viewer.
 
-Current generated summary:
+Generated summary at snapshot time:
 
 | Clip | Mesh player-frames | Floor player-frames | Physics artifact | FOOT-2 done |
 | --- | ---: | ---: | --- | --- |
@@ -154,13 +154,13 @@ browser screenshot passed an image-level nonblank check at:
 runs/eval0/prototype_gate_h100_v2/burlington_gold_0300_low_steep_corner/replay_viewer_browser_check.jpg
 ```
 
-This proves the local review viewer path loads real generated artifacts. It
-does not prove production replay export or physics verification. The current
-physics artifact remains `cpu_fallback_scaffold`; it does not run MuJoCo/MJX,
+This proves the local review viewer path loaded real generated artifacts at the
+time of this snapshot. It does not prove production replay export or physics
+verification. The snapshot physics artifact remained `cpu_fallback_scaffold`; it does not run MuJoCo/MJX,
 PhysPT, PHC/PULSE, or FOOT-2, and no positive foot-contact frames are present
-in the current BODY artifacts.
+in the snapshot BODY artifacts.
 
-## Current Ball Review Track
+## Ball Review Track At Snapshot Time
 
 The accepted-four TrackNet smoke windows now also have no-click model-fusion and
 local-trajectory review artifacts under each clip's `tracknet_smoke_0000_0010/`

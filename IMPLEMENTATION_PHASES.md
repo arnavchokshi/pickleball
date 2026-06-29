@@ -431,7 +431,7 @@ Measure: IDF1 / ID-switches vs `players.json`; spectator rejection; side/role ac
 - **Keypoint/param target:** SMPL-X params (body + hands + feet); H3WB-133 for the preview skeleton (lift only 17 body joints temporally, MotionBERT 243-frame).
 - `person_calibration.py` — `lock_body_model(player, sessions)`: fix per-player SMPL shape (β) after a few sessions → faster + more accurate (better-with-use moat). **Cache betas in Postgres/Redis; reuse as a fixed prior → SMPLify-fit iterations drop ~100→~20 on every repeat session** (first clip slow, every later one fast).
 - **Performance (the deep tier is the pipeline's pacing item — optimize here most):**
-  - **Server-side SMPL-fit uses the uploaded on-device 2D pose track as a PRIOR** (from the C1 sidecar `ondevice_pose_track`) → cuts mesh-fit iterations **50–80%**; **start fitting while the video is still uploading** (the ~50 KB pose JSON arrives first).
+  - **Server-side SMPL-fit can use an uploaded on-device 2D pose track as a future C2 PRIOR** (`ondevice_pose_track`) → expected to cut mesh-fit iterations **50–80%** once a live producer exists. The current C1 recorder writes the clip plus `capture_sidecar.json`; it does not write or upload an on-device pose JSON by default.
   - **Event-triggered compute:** run deep Fast SAM-3D-Body **only on rally/contact spans** (from Phase-2 `rally_spans` + Phase-5 `contact_windows`); skip the 40–60% dead time → ~2× throughput. Coast/interpolate through low-information frames; densify around contact.
   - **GPU placement:** **Fast SAM-3D-Body at FP16/BF16, run SEQUENTIALLY per player** (mesh model too big to batch at B=4; **do NOT INT8 it — causes mesh artifacts**); **batch the ≤4 player crops at B=4 for YOLO26/RTMW** (TensorRT INT8 for those); **CUDA-stream overlap** decode→detect→pose→mesh. SAM-3D-Body ~15 FPS/person, ~4–6 FPS for 4 crops (⚠️ RTX-5090 estimate — **re-benchmark on the H100 first, §0.7**; it paces the pipeline) — offline-feasible on rally spans.
 - Registered `body` stage in `threed.racketsport.orchestrator` — clip + tracks + calibration → `smpl_motion.json` (+ `skeleton3d.json` preview) when the Fast SAM-3D-Body runtime/checkpoints are available. There is no standalone BODY CLI in the current repo.
@@ -775,7 +775,7 @@ Full detail in `ACCURACY_AND_TRAINING.md §11–§14`. Build in parallel — it 
 ## Cross-Cutting Requirements
 
 - **Validation dataset & eval harness:** `threed/racketsport/eval/` holds one evaluator per phase, each reading `data/testclips/*/labels/` and writing `metrics.json`. Validation Protocols A/B/C/D (`ACCURACY_AND_TRAINING.md §10`) and the physics/racket gates (Phases 4, 6, 10 acceptance gates) define the numeric gates.
-- **Regression dashboard + CI:** current regression coverage is `scripts/racketsport/check_eval_regression.py`, `scripts/racketsport/summarize_eval_runs.py`, and tests under `tests/racketsport/`. The tracked GitHub workflow primarily runs checker tests on relevant file changes; real baseline-vs-current metric comparison is currently a manual `workflow_dispatch` path, not a universal merge blocker.
+- **Regression dashboard + CI:** current regression coverage is `scripts/racketsport/check_eval_regression.py`, `scripts/racketsport/summarize_eval_runs.py`, and tests under `tests/racketsport/`. The tracked GitHub workflow runs regression-checker tests plus script/CLI hygiene checks on relevant file changes; real baseline-vs-current metric comparison is still a manual `workflow_dispatch` path unless persisted metric roots are supplied, not a universal merge blocker.
 - **CI:** `tests/racketsport/` owns the current regression coverage; readiness-gate tests check artifact plus semantic blockers, while scoreboard/perf tests should be added only when real per-phase timing/cost artifacts exist.
 - **Artifact schema registry:** Runtime Pydantic artifact models live in `threed/racketsport/schemas/__init__.py`; tracked JSON schemas/manifests for dataset/report/serving/scaffold tooling live under `docs/racketsport/`. The current GitHub workflow does not run broad artifact-schema validation in CI; add an explicit schema-validation workflow before claiming universal `validate()` coverage in CI.
 - **Confidence plumbing ("no charge if we can't trust it"):** confidence + coverage propagate per-frame pose → per-metric → per-habit → report; report exposes `coverage.overall` + `skipped_reason_counts`; below-threshold reports flagged comp-able. Wired in Phase 7, surfaced in Phase 9, honored in the Phase 10 replay (gray/omit low-confidence).
@@ -784,7 +784,7 @@ Full detail in `ACCURACY_AND_TRAINING.md §11–§14`. Build in parallel — it 
 
 ## Artifact JSON Shapes (design examples, not authoritative)
 
-The examples below are planning/reference shapes. Treat `threed/racketsport/schemas/__init__.py` as the runtime authority for artifact validation, and treat `docs/racketsport/*_schema.json` plus `docs/racketsport/testclip_seed_manifest.json` as the tracked JSON-schema/manifests that exist today.
+The examples below are planning/reference shapes. Treat `threed/racketsport/schemas/__init__.py` as the runtime authority for artifact validation, treat `docs/racketsport/*_schema.json` as tracked JSON-schema references, and treat `docs/racketsport/manifests/testclip_seed_manifest.json` as the tracked DATA-1 source/reproducibility manifest that exists today.
 
 ```jsonc
 // capture_sidecar.json  (produced by iOS Phase C1; consumed by server Phase 1)
@@ -799,7 +799,7 @@ The examples below are planning/reference shapes. Treat `threed/racketsport/sche
   "manual_court_taps": [[x,y]],                            // present when ARKit plane unreliable
   "gravity": [gx, gy, gz],                                // CoreMotion
   "lidar_depth_refs": ["depth/000123.bin"],              // Tier A only; near-court assist
-  "ondevice_pose_track": "ondevice_pose.json",          // C2 prior to speed up server fit
+  "ondevice_pose_track": null,                          // optional future C2 prior; current C1 recorder omits it
   "capture_quality": {"grade": "good|warn|poor", "reasons": []}
 }
 

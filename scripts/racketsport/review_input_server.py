@@ -648,7 +648,7 @@ ALLOWED_COURT_EVIDENCE_STATES = {"unsure", "confirmed", "not_visible", "missing"
 ALLOWED_POINT_STATUSES = {"clicked", "not_visible", "missing"}
 ALLOWED_BALL_MISTAKE_KINDS = {"bad_jump", "missing_ball", "false_ball", "looks_good"}
 ALLOWED_TRACKING_DECISIONS = {"safe_to_promote", "unsafe_background_or_spectators", "unsure", ""}
-ALLOWED_PADDLE_STATUSES = {"pending", "in_progress", "accepted", "not_visible", "ambiguous"}
+ALLOWED_PADDLE_STATUSES = {"pending", "in_progress", "accepted", "not_paddle", "not_visible", "ambiguous"}
 ALLOWED_CORNER_NAMES = {"top_left", "top_right", "bottom_right", "bottom_left"}
 
 
@@ -3502,6 +3502,13 @@ PADDLE_HTML = r"""<!doctype html>
       align-items: start;
     }
     .media { overflow: hidden; background: #120f0c; }
+    .media-stack {
+      display: grid;
+      gap: 14px;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+    }
     .media-head {
       padding: 10px 12px;
       background: #2a241d;
@@ -3512,7 +3519,7 @@ PADDLE_HTML = r"""<!doctype html>
       font-size: 13px;
     }
     .asset-path { color: #d7c2a9; overflow-wrap: anywhere; font-size: 12px; }
-    .sheet-wrap, .video-wrap { position: relative; background: #100d0b; }
+    .sheet-wrap, .video-wrap, .source-wrap { position: relative; background: #100d0b; }
     .sheet {
       display: block;
       width: 100%;
@@ -3521,12 +3528,27 @@ PADDLE_HTML = r"""<!doctype html>
       background: #100d0b;
       cursor: crosshair;
     }
+    .source-video {
+      display: block;
+      width: 100%;
+      max-height: 360px;
+      object-fit: contain;
+      background: #100d0b;
+    }
     .tile-box {
       position: absolute;
       border: 3px solid rgba(15,118,110,.9);
       box-shadow: 0 0 0 9999px rgba(0,0,0,.32);
       pointer-events: none;
     }
+    .crop-context-box {
+      position: absolute;
+      border: 4px solid rgba(255,214,10,.95);
+      box-shadow: 0 0 0 9999px rgba(0,0,0,.18), 0 0 16px rgba(255,214,10,.9);
+      pointer-events: none;
+      display: none;
+    }
+    .crop-context-box.visible { display: block; }
     .marker {
       position: absolute;
       width: 18px;
@@ -3757,24 +3779,35 @@ PADDLE_HTML = r"""<!doctype html>
       const p = paddle();
       const item = currentItem();
       const corner = currentCorner();
-      qs("#taskKicker").textContent = "Paddle true-corner labels";
-      qs("#taskTitle").textContent = "Click true paddle-face corners";
-      qs("#taskCopy").textContent = "Click the real paddle-face corners in order. Use Not visible or Ambiguous when the crop is not trustworthy.";
+      qs("#taskKicker").textContent = "Paddle candidate triage";
+      qs("#taskTitle").textContent = "Reject false crops before corner clicks";
+      qs("#taskCopy").textContent = "These are box-derived candidates, not trusted paddle detections. First use the source-frame rectangle to decide whether the crop is actually on a visible paddle face. Only then click true paddle-face corners.";
       renderClipList();
       qs("#content").innerHTML = `
         <div class="work-grid">
-          <div class="panel media">
-            <div class="media-head">
-              <span>Crop sheet</span>
-              <span class="asset-path">${escapeHtml(p.crop_sheet?.path || "")}</span>
+          <div class="media-stack">
+            <div class="panel media" id="sourceFrameContext">
+              <div class="media-head">
+                <span>Source frame context</span>
+                <span class="asset-path">${escapeHtml(p.source_video?.path || "")}</span>
+              </div>
+              <div class="source-wrap">
+                ${sourceVideoContext(p.source_video)}
+              </div>
             </div>
-            <div class="sheet-wrap">
-              ${assetImage(p.crop_sheet, "sheet")}
-              <div id="sheetOverlay"></div>
+            <div class="panel media">
+              <div class="media-head">
+                <span>Crop sheet</span>
+                <span class="asset-path">${escapeHtml(p.crop_sheet?.path || "")}</span>
+              </div>
+              <div class="sheet-wrap">
+                ${assetImage(p.crop_sheet, "sheet")}
+                <div id="sheetOverlay"></div>
+              </div>
             </div>
           </div>
           <div class="panel side">
-            <div class="callout"><strong>Saved format</strong>This page writes click inputs for <code>paddle_true_corner_labels</code>. I will convert them into strict RKT labels after you save.</div>
+            <div class="callout"><strong>First decision</strong>If the yellow rectangle is not on a paddle face, click <strong>Not a paddle</strong>. If it is a real visible paddle face, click the four true corners on the crop sheet.</div>
             ${item ? targetPanel(item, corner) : '<div class="target"><h3>No paddle crop queue</h3><div class="meta">No rendered crop-sheet items found for this clip.</div></div>'}
             <div class="grid2">
               <button class="btn" id="prevItem">Previous crop</button>
@@ -3783,23 +3816,32 @@ PADDLE_HTML = r"""<!doctype html>
               <button class="btn" id="nextCorner">Next corner</button>
             </div>
             <div class="grid2">
+              <button class="btn" id="notPaddle">Not a paddle</button>
               <button class="btn" id="notVisible">Not visible</button>
               <button class="btn" id="ambiguous">Ambiguous</button>
               <button class="btn" id="clearItem">Clear crop</button>
-              <button class="btn primary" id="saveNow">Save answers</button>
             </div>
+            <button class="btn primary" id="saveNow">Save answers</button>
             <div class="list" id="paddleCornerQueue">${queueRows()}</div>
           </div>
         </div>`;
       bindPaddle();
+      updateSourceContext();
       updateSheetOverlay();
+    }
+    function sourceVideoContext(asset) {
+      if (!asset || !asset.exists) {
+        return `<div class="missing">Missing local source video<br><span class="asset-path">${escapeHtml(asset?.path || "")}</span></div>`;
+      }
+      return `<video controls preload="metadata" class="source-video" id="sourceVideo" src="${asset.url}"></video><div class="crop-context-box" id="cropContextBox"></div>`;
     }
     function targetPanel(item, corner) {
       const status = entryStatus(item);
       return `<div class="target">
         <div class="kicker">Current target</div>
-        <h3>${escapeHtml(CORNER_LABELS[corner] || corner)} corner</h3>
+        <h3>Check source rectangle first</h3>
         <div class="meta">Crop ${currentItemIndex() + 1} of ${paddle().task_items.length} | review_id ${escapeHtml(item.review_id)} | frame ${escapeHtml(item.frame_index)}</div>
+        <div class="meta">If it is a real visible paddle face, next click: ${escapeHtml(CORNER_LABELS[corner] || corner)} corner.</div>
         <div class="meta">Status: ${escapeHtml(statusLabel(status))}</div>
       </div>`;
     }
@@ -3810,12 +3852,13 @@ PADDLE_HTML = r"""<!doctype html>
         const status = entryStatus(item);
         return `<div class="row ${index === currentItemIndex() ? "active" : ""}">
           <span>${index + 1}. ${escapeHtml(item.review_id)}<br><span class="muted">frame ${escapeHtml(item.frame_index)}</span></span>
-          <span class="pill ${status === "accepted" ? "good" : status === "not_visible" || status === "ambiguous" ? "bad" : ""}">${escapeHtml(statusLabel(status))}</span>
+          <span class="pill ${status === "accepted" ? "good" : status === "not_paddle" || status === "not_visible" || status === "ambiguous" ? "bad" : ""}">${escapeHtml(statusLabel(status))}</span>
         </div>`;
       }).join("");
     }
     function statusLabel(status) {
       if (status === "not_visible") return "not visible";
+      if (status === "not_paddle") return "not a paddle";
       if (status === "accepted") return "saved";
       return status || "pending";
     }
@@ -3825,10 +3868,17 @@ PADDLE_HTML = r"""<!doctype html>
         img.onclick = captureCornerClick;
         img.onload = updateSheetOverlay;
       }
+      const sourceVideo = qs("#sourceVideo");
+      if (sourceVideo) {
+        sourceVideo.onloadedmetadata = updateSourceContext;
+        sourceVideo.onloadeddata = updateCropContextBox;
+        sourceVideo.onseeked = updateCropContextBox;
+      }
       qs("#prevItem").onclick = () => { setCurrentItemIndex(currentItemIndex() - 1); setCurrentCornerIndex(0); renderPaddle(); };
       qs("#nextItem").onclick = () => { setCurrentItemIndex(currentItemIndex() + 1); setCurrentCornerIndex(0); renderPaddle(); };
       qs("#prevCorner").onclick = () => { setCurrentCornerIndex(currentCornerIndex() - 1); renderPaddle(); };
       qs("#nextCorner").onclick = () => { setCurrentCornerIndex(currentCornerIndex() + 1); renderPaddle(); };
+      qs("#notPaddle").onclick = () => markCurrentItem("not_paddle");
       qs("#notVisible").onclick = () => markCurrentItem("not_visible");
       qs("#ambiguous").onclick = () => markCurrentItem("ambiguous");
       qs("#clearItem").onclick = clearCurrentItem;
@@ -3887,6 +3937,32 @@ PADDLE_HTML = r"""<!doctype html>
       delete labelBucket(clip().id).labels[item.review_id];
       setCurrentCornerIndex(0);
       renderPaddle();
+    }
+    function updateSourceContext() {
+      const video = qs("#sourceVideo");
+      const item = currentItem();
+      if (!video || !item) return;
+      const targetTime = Number(item.t || 0);
+      if (video.readyState >= 1 && Number.isFinite(targetTime)) {
+        const boundedTime = Math.max(0, Math.min(targetTime, Number.isFinite(video.duration) ? video.duration : targetTime));
+        if (Math.abs(video.currentTime - boundedTime) > 0.05) {
+          video.currentTime = boundedTime;
+        }
+      }
+      updateCropContextBox();
+    }
+    function updateCropContextBox() {
+      const box = qs("#cropContextBox");
+      const video = qs("#sourceVideo");
+      const item = currentItem();
+      if (!box || !video || !item || !video.videoWidth || !video.videoHeight) return;
+      const [x1, y1, x2, y2] = item.crop_xyxy || [];
+      if (![x1, y1, x2, y2].every(Number.isFinite)) return;
+      box.style.left = (x1 / video.videoWidth * 100) + "%";
+      box.style.top = (y1 / video.videoHeight * 100) + "%";
+      box.style.width = ((x2 - x1) / video.videoWidth * 100) + "%";
+      box.style.height = ((y2 - y1) / video.videoHeight * 100) + "%";
+      box.classList.add("visible");
     }
     function updateSheetOverlay() {
       const overlay = qs("#sheetOverlay");

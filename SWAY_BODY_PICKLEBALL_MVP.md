@@ -17,7 +17,7 @@ Sway should not enter pickleball/tennis as another line-calling, scoring, or sta
 
 Six decisions define the build:
 
-1. **Full-body mesh is the core representation; the fast skeleton is a preview/triggering overlay.** A watchable, physics-accurate 3D replay needs a volumetric body (you can't drive a rigged avatar or run physics on a stick figure), and SMPL(-X) params are the animation/physics lingua franca. **The per-frame mesh backbone is Fast SAM-3D-Body** — verified (and confirmed by our own hands-on results) as the best per-frame mesh available (3DPW PA-MPJPE 30.4 mm, beats HMR2.0 by 15+ mm) and keeps the existing `sam4dbody` investment (license: SAM License — fine for research/personal use now; verify before commercial, with **SAT-HMR/Apache** as the license-safe fallback). We add **world-grounding ourselves** (project per-frame to world via the known camera + court plane → foot-lock → physics), rather than switching to a world-HMR model whose per-frame mesh is weaker. Mesh is now fast enough (SAT-HMR/Multi-HMR 2 ~20–24 FPS) to also serve the fast tier — so the old "skeleton is enough / mesh too slow" rationale no longer holds.
+1. **Full-body mesh is the core target representation; the fast skeleton is a preview/triggering overlay.** A watchable, physics-accurate 3D replay needs a volumetric body (you can't drive a rigged avatar or run physics on a stick figure), and SMPL(-X) params are the animation/physics lingua franca. **The per-frame mesh backbone target is Fast SAM-3D-Body** — selected from research benchmarks and hands-on checks as the best current candidate (3DPW PA-MPJPE 30.4 mm, beats HMR2.0 by 15+ mm) and it keeps the existing `sam4dbody` investment. Current repo evidence is scheduled-frame BODY smoke, not BODY verification. (License: SAM License — fine for research/personal use now; verify before commercial, with **SAT-HMR/Apache** as the license-safe fallback.) We add **world-grounding ourselves** (project per-frame to world via the known camera + court plane → foot-lock → physics), rather than switching to a world-HMR model whose per-frame mesh is weaker. Mesh is targeted to be fast enough (SAT-HMR/Multi-HMR 2 ~20–24 FPS) to also serve the fast tier — so the old "skeleton is enough / mesh too slow" rationale no longer holds.
 
 2. **A physics-accurate, foot-skate-free 3D replay is a core deliverable target.** We reconstruct the played game in one metric world frame — players (SMPL-X), court, net, ball, rackets — that obeys physics: **no foot sliding, no floor/player penetration, ball obeys gravity/bounce/Magnus.** Current code has CPU review scaffolds and static review GLBs only; the hard physics/replay gates still have to pass before this is a shipped claim.
 
@@ -517,7 +517,12 @@ WP-PB-00 validation set · 01 court template + calibration (solvePnP) · 02 cour
 
 ---
 
-## 24. What to build first
+## 24. Initial Build Order Snapshot
+
+This was the product-strategy build order at the time of the MVP memo. The
+current operational order and blockers live in `BUILD_CHECKLIST.md`, especially
+the Critical next build order and task table. Use that checklist, not this
+snapshot, to decide what to build next.
 
 1. Pickleball court calibration overlay (varied camera angles), `solvePnP` + multi-frame.
 2. Fast SAM-3D-Body + our world-grounding (known camera + court plane) on a 60–90 s doubles clip.

@@ -373,7 +373,7 @@ public final class CameraCaptureController: NSObject {
             locked: lockedCaptureSnapshot(),
             intrinsics: estimatedIntrinsics(for: descriptor.expectedResolution),
             gravity: latestGravity,
-            ondevicePoseTrack: descriptor.onDevicePoseTrackRelativePath,
+            ondevicePoseTrack: nil,
             captureQuality: CaptureQuality(
                 grade: .warn,
                 reasons: [

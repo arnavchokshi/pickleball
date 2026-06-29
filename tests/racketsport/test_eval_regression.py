@@ -60,6 +60,21 @@ def test_compare_phase_metrics_fails_numeric_measured_drops_over_default_limit()
     assert result.failures[0].drop_percent > 2.0
 
 
+def test_compare_phase_metrics_fails_when_baseline_metric_disappears() -> None:
+    baseline = _phase_payload(clip_metrics={"track_frames": _metric(100)})
+    current = _phase_payload(clip_metrics={})
+
+    result = compare_phase_metrics(current=current, baseline=baseline)
+
+    assert result.status == "fail"
+    assert result.checked_metrics == 1
+    assert len(result.failures) == 1
+    assert result.failures[0].path == "clips[clip_001].metrics.track_frames"
+    assert result.failures[0].baseline == 100
+    assert result.failures[0].current is None
+    assert result.failures[0].drop_percent == 100.0
+
+
 def test_compare_phase_metrics_allows_configurable_drop_limit_and_ignores_unmeasured_values() -> None:
     baseline = _phase_payload(
         top_metrics={"artifact_readiness": _metric(True)},

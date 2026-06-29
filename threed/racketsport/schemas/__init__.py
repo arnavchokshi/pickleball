@@ -587,6 +587,109 @@ class BallTrack(StrictArtifact):
     bounces: list[Bounce] = Field(default_factory=list)
 
 
+class BallLineCall(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    t: FiniteFloat = Field(ge=0.0)
+    world_xy: Vector2
+    court_call: Literal["in", "out", "unknown"]
+    kitchen_call: Literal["nvz", "non_nvz", "unknown"]
+    zone: str | None = None
+    nearest_boundary_line_id: str | None = None
+    nearest_kitchen_line_id: str | None = None
+    boundary_margin_m: FiniteFloat
+    kitchen_margin_m: FiniteFloat | None = None
+    uncertainty_radius_m: FiniteFloat = Field(ge=0.0)
+    confidence: FiniteFloat = Field(ge=0.0, le=1.0)
+    reasons: list[str] = Field(default_factory=list)
+
+
+class BallLineCallSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["ready", "blocked"]
+    total_bounces: int = Field(ge=0)
+    court_call_counts: dict[str, int]
+    kitchen_call_counts: dict[str, int]
+    reasons: list[str] = Field(default_factory=list)
+
+
+class BallLineCalls(StrictArtifact):
+    artifact_type: Literal["racketsport_ball_line_calls"]
+    sport: Literal["pickleball", "tennis"]
+    source: str
+    rule_scope: Literal["ball_bounce_location_only"]
+    world_frame: Literal["court_Z0"]
+    input_ball_track: str | None = None
+    uncertainty_radius_m: FiniteFloat = Field(ge=0.0)
+    calls: list[BallLineCall] = Field(default_factory=list)
+    summary: BallLineCallSummary
+    not_gate_verified: bool
+
+    @field_validator("not_gate_verified")
+    @classmethod
+    def _must_be_not_gate_verified(cls, value: bool) -> bool:
+        if value is not True:
+            raise ValueError("ball_line_calls is not gate verified")
+        return value
+
+
+class RuntimeEnvironment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    python: str | None = None
+    platform: str | None = None
+    torch_version: str | None = None
+    torch_cuda_version: str | None = None
+    cuda_available: bool
+    cuda_device_name: str | None = None
+    cuda_visible_devices: str | None = None
+
+
+class BallModelRuntimeProfile(StrictArtifact):
+    artifact_type: Literal["racketsport_ball_model_runtime_profile"]
+    candidate: str
+    model_id: str
+    clip_id: str
+    video: str
+    source_fps: FiniteFloat = Field(gt=0.0)
+    batch_size: int = Field(gt=0)
+    command: list[str]
+    returncode: int | None = None
+    status: Literal["ran", "failed", "blocked_missing_cuda"]
+    wall_seconds: FiniteFloat | None = Field(default=None, ge=0.0)
+    processed_frame_count: int | None = Field(default=None, ge=0)
+    video_seconds_processed: FiniteFloat | None = Field(default=None, ge=0.0)
+    effective_fps: FiniteFloat | None = Field(default=None, ge=0.0)
+    realtime_factor: FiniteFloat | None = Field(default=None, ge=0.0)
+    timing_breakdown: dict[str, FiniteFloat] = Field(default_factory=dict)
+    runtime_env: RuntimeEnvironment
+    gpu_verified: bool
+    claim_scope: Literal[
+        "cpu_profiler_smoke",
+        "h100_runtime_profile_not_accuracy_gate",
+        "blocked_missing_cuda",
+    ]
+    verified: bool
+    not_ground_truth: bool
+    not_accuracy_verified: bool
+    stdout_tail: str = ""
+    stderr_tail: str = ""
+    notes: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _gpu_verified_requires_cuda_evidence(self) -> BallModelRuntimeProfile:
+        if self.gpu_verified and (not self.runtime_env.cuda_available or not self.runtime_env.cuda_device_name):
+            raise ValueError("gpu_verified requires CUDA evidence")
+        if self.gpu_verified and self.claim_scope != "h100_runtime_profile_not_accuracy_gate":
+            raise ValueError("gpu_verified requires h100 runtime claim scope")
+        if self.verified:
+            raise ValueError("runtime profile is not an accuracy or deployment verification gate")
+        if not self.not_ground_truth or not self.not_accuracy_verified:
+            raise ValueError("runtime profile must remain not_ground_truth and not_accuracy_verified")
+        return self
+
+
 def _validate_paddle_dimensions_dict(value: dict[str, float]) -> dict[str, float]:
     has_named_dims = {"length", "width"}.issubset(value)
     has_short_dims = {"h", "w"}.issubset(value)
@@ -1408,6 +1511,8 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "body_compute_execution": BodyComputeExecution,
     "body_mesh_readiness": BodyMeshReadiness,
     "ball_track": BallTrack,
+    "ball_line_calls": BallLineCalls,
+    "ball_model_runtime_profile": BallModelRuntimeProfile,
     "contact_window_candidates": ContactWindowCandidates,
     "contact_window_review": ContactWindowReview,
     "racket_candidates": RacketCandidates,

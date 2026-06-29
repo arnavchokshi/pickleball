@@ -67,6 +67,67 @@ def test_role_lock_assigns_stable_court_position_ids_without_temporal_linking() 
     assert by_box[(300.0, 300.0)] == 4
 
 
+def test_wide_role_lock_uses_spatial_diversity_instead_of_top_confidence_only() -> None:
+    linker = _make_linker("predict_role_lock_wide", max_players=4)
+
+    detections = linker.update(
+        frame_index=0,
+        observations=[
+            _observation(100.0, 100.0, confidence=0.99),
+            _observation(103.0, 102.0, confidence=0.98),
+            _observation(300.0, 100.0, confidence=0.90),
+            _observation(100.0, 300.0, confidence=0.89),
+            _observation(300.0, 300.0, confidence=0.05),
+        ],
+    )
+
+    selected_origins = {tuple(det["bbox_xywh"][:2]) for det in detections}
+    assert selected_origins == {(100.0, 100.0), (300.0, 100.0), (100.0, 300.0), (300.0, 300.0)}
+
+
+def test_stable_set_linker_assigns_from_wider_candidate_pool() -> None:
+    linker = _make_linker("predict_stable_set", max_players=4)
+
+    first = linker.update(
+        frame_index=0,
+        observations=[
+            _observation(0.0, 0.0),
+            _observation(100.0, 0.0),
+            _observation(0.0, 100.0),
+            _observation(100.0, 100.0),
+        ],
+    )
+    second = linker.update(
+        frame_index=1,
+        observations=[
+            _observation(500.0, 500.0, confidence=0.99),
+            _observation(520.0, 500.0, confidence=0.98),
+            _observation(540.0, 500.0, confidence=0.97),
+            _observation(560.0, 500.0, confidence=0.96),
+            _observation(4.0, 0.0, confidence=0.10),
+            _observation(104.0, 0.0, confidence=0.10),
+            _observation(4.0, 100.0, confidence=0.10),
+            _observation(104.0, 100.0, confidence=0.10),
+        ],
+    )
+
+    assert [det["track_id"] for det in first] == [1, 2, 3, 4]
+    assert [det["track_id"] for det in second] == [1, 2, 3, 4]
+    assert [det["bbox_xywh"][0] for det in second] == pytest.approx([4.0, 104.0, 4.0, 104.0])
+
+
+def test_stable_set_linker_replaces_expired_tracks() -> None:
+    linker = _make_linker("predict_stable_set", max_players=2, max_age_frames=1)
+
+    first = linker.update(frame_index=0, observations=[_observation(0.0, 0.0), _observation(100.0, 0.0)])
+    second = linker.update(frame_index=5, observations=[_observation(300.0, 0.0), _observation(400.0, 0.0)])
+
+    assert [det["track_id"] for det in first] == [1, 2]
+    assert len(second) == 2
+    assert [det["track_id"] for det in second] == [3, 4]
+    assert [det["bbox_xywh"][0] for det in second] == pytest.approx([300.0, 400.0])
+
+
 def test_court_pruning_prefers_on_court_player_over_high_confidence_spectator() -> None:
     calibration = _identity_court_calibration()
     observations = [

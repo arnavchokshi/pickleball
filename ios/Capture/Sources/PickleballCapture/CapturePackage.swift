@@ -24,9 +24,6 @@ public struct CapturePackageDescriptor: Equatable, Sendable {
     public var preferredUploadOrder: [CaptureUploadPart] {
         [
             CaptureUploadPart(kind: .captureSidecar, relativePath: sidecarRelativePath),
-            CaptureUploadPart(kind: .onDevicePoseTrack, relativePath: onDevicePoseTrackRelativePath),
-            CaptureUploadPart(kind: .onDevicePersonTracks, relativePath: onDevicePersonTracksRelativePath),
-            CaptureUploadPart(kind: .onDevicePersonTiming, relativePath: onDevicePersonTimingRelativePath),
             CaptureUploadPart(kind: .clip, relativePath: clipRelativePath),
         ]
     }
@@ -183,6 +180,15 @@ public struct CaptureSwiftCapabilityManifest: Equatable, Sendable {
     }
 
     public static let pipelineRequired = CaptureSwiftCapabilityManifest(capabilities: [
+        .avFoundationCamera,
+        .avFoundationMicrophone,
+        .lockedExposureFocusWhiteBalance,
+        .highFrameRateRecording,
+        .coreMotionGravity,
+        .manualCourtTapFallback,
+    ])
+
+    public static let plannedPipelineRequired = CaptureSwiftCapabilityManifest(capabilities: [
         .avFoundationCamera,
         .avFoundationMicrophone,
         .lockedExposureFocusWhiteBalance,

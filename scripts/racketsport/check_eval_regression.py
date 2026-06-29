@@ -17,7 +17,7 @@ HIGHER_IS_BETTER = "higher_is_better"
 class MetricRegression:
     path: str
     baseline: float | int
-    current: float | int
+    current: float | int | None
     drop_percent: float
 
 
@@ -59,6 +59,15 @@ def compare_phase_metrics(
 
     for path, baseline_metric in sorted(baseline_metrics.items()):
         if path not in current_metrics:
+            baseline_value, _direction = baseline_metric
+            failures.append(
+                MetricRegression(
+                    path=path,
+                    baseline=baseline_value,
+                    current=None,
+                    drop_percent=100.0,
+                )
+            )
             continue
         baseline_value, direction = baseline_metric
         current_value, _current_direction = current_metrics[path]
@@ -83,7 +92,7 @@ def compare_phase_metrics(
     return RegressionResult(
         status="fail" if failures else "pass",
         max_drop_percent=max_drop_percent,
-        checked_metrics=len(set(current_metrics).intersection(baseline_metrics)),
+        checked_metrics=len(baseline_metrics),
         failures=failures,
     )
 

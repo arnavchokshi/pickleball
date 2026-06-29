@@ -29,12 +29,10 @@ final class CapturePackageTests: XCTestCase {
             descriptor.preferredUploadOrder.map(\.relativePath),
             [
                 "captures/court-a-001/capture_sidecar.json",
-                "captures/court-a-001/ondevice_pose.json",
-                "captures/court-a-001/on_device_person_tracks.json",
-                "captures/court-a-001/timing.json",
                 "captures/court-a-001/clip.mov",
             ]
         )
+        XCTAssertEqual(descriptor.preferredUploadOrder.map(\.kind), [.captureSidecar, .clip])
         XCTAssertEqual(descriptor.expectedFPS, 120)
         XCTAssertEqual(descriptor.expectedResolution, [1920, 1080])
         XCTAssertEqual(descriptor.expectedFormat, .hevc)
@@ -238,7 +236,7 @@ final class CapturePackageTests: XCTestCase {
         XCTAssertEqual(permissionAndLandscapeBlocked.blockers, [.cameraPermissionDenied, .landscapeRequired])
     }
 
-    func testSwiftCapabilityManifestDeclaresRequiredCaptureCalibrationFastTierUploadAndReplayFrameworks() {
+    func testSwiftCapabilityManifestSeparatesImplementedCaptureScaffoldFromPlannedPipeline() {
         let manifest = CaptureSwiftCapabilityManifest.pipelineRequired
 
         XCTAssertEqual(
@@ -248,16 +246,15 @@ final class CapturePackageTests: XCTestCase {
                 .avFoundationMicrophone,
                 .lockedExposureFocusWhiteBalance,
                 .highFrameRateRecording,
-                .arkitSetupPass,
                 .coreMotionGravity,
                 .manualCourtTapFallback,
-                .visionFastTier,
-                .coreMLFastTier,
-                .urlSessionBackgroundUpload,
-                .realityKitReplay,
             ]
         )
-        XCTAssertTrue(manifest.declaresCaptureCalibrationRequirements)
-        XCTAssertTrue(manifest.declaresFastTierReplayRequirements)
+        XCTAssertFalse(manifest.declaresCaptureCalibrationRequirements)
+        XCTAssertFalse(manifest.declaresFastTierReplayRequirements)
+
+        let planned = CaptureSwiftCapabilityManifest.plannedPipelineRequired
+        XCTAssertTrue(planned.declaresCaptureCalibrationRequirements)
+        XCTAssertTrue(planned.declaresFastTierReplayRequirements)
     }
 }

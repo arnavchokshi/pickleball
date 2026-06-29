@@ -479,6 +479,46 @@ def test_readiness_report_blocks_on_semantically_empty_artifacts(tmp_path: Path)
     assert racket["blocked_by"] == ["physics", "ball_events"]
 
 
+def test_readiness_report_blocks_when_body_schedule_omits_world_mesh_count(tmp_path: Path) -> None:
+    run_dir = tmp_path / "runs" / "phase11" / "clip_001"
+    required = [
+        "court_calibration.json",
+        "court_zones.json",
+        "net_plane.json",
+        "court_line_evidence.json",
+        "tracks.json",
+        "smpl_motion.json",
+        "skeleton3d.json",
+        "body_compute_execution.json",
+        "body_mesh_readiness.json",
+    ]
+    _touch_all(run_dir, required)
+    (run_dir / "body_compute_execution.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_body_compute_execution",
+                "mode": "adaptive_frame_compute_plan",
+                "scheduled_frames": [{"frame_idx": 0, "player_targets": []}],
+                "skipped_frames": [],
+                "summary": {"scheduled_frame_count": 1},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_readiness_report(run_dir, stage="body")
+
+    assert report["status"] == "not_ready"
+    assert report["semantic_blockers"] == [
+        "body:body_compute_execution_missing_scheduled_by_target_representation"
+    ]
+    body = next(stage for stage in report["stages"] if stage["stage"] == "body")
+    assert body["status"] == "blocked"
+    assert body["semantic_blockers"] == ["body_compute_execution_missing_scheduled_by_target_representation"]
+
+
 def test_readiness_report_requires_body_and_racket_readiness_artifacts(tmp_path: Path) -> None:
     run_dir = tmp_path / "runs" / "phase11" / "clip_001"
     _touch_all(
