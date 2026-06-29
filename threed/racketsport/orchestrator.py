@@ -13,6 +13,7 @@ from scripts.racketsport.track import build_tracks
 
 from .ball_stage_runner import BallStageRunner
 from .body_compute import build_body_compute_execution, body_frame_batches_from_execution, write_body_compute_execution
+from .body_mesh_readiness import build_body_mesh_readiness
 from .court_auto_evidence import build_auto_court_line_evidence_from_frame, build_auto_court_line_evidence_from_video
 from .court_calibration import calibration_from_manual_taps, calibration_image_size
 from .court_line_evidence import aggregate_court_line_evidence
@@ -53,9 +54,13 @@ ARTIFACT_SCHEMA_BY_FILENAME: dict[str, str] = {
     "tracks.json": "tracks",
     "smpl_motion.json": "smpl_motion",
     "skeleton3d.json": "skeleton3d",
+    "body_compute_execution.json": "body_compute_execution",
+    "body_mesh_readiness.json": "body_mesh_readiness",
     "ball_track.json": "ball_track",
     "contact_windows.json": "contact_windows",
     "racket_pose.json": "racket_pose",
+    "racket_pose_readiness.json": "racket_pose_readiness",
+    "racket_promotion_audit.json": "racket_promotion_audit",
     "virtual_world.json": "virtual_world",
     "racket_sport_metrics.json": "racket_sport_metrics",
     "habit_report.json": "habit_report",
@@ -385,12 +390,31 @@ class BodyStageRunner:
         )
         _write_json_artifact(context.run_dir / "smpl_motion.json", smpl_motion)
         _write_json_artifact(context.run_dir / "skeleton3d.json", skeleton3d)
+        smpl_motion_payload = smpl_motion.model_dump(mode="json") if hasattr(smpl_motion, "model_dump") else smpl_motion
+        skeleton3d_payload = skeleton3d.model_dump(mode="json") if hasattr(skeleton3d, "model_dump") else skeleton3d
+        body_mesh_readiness = build_body_mesh_readiness(
+            clip=context.clip,
+            smpl_motion=smpl_motion_payload,
+            skeleton3d=skeleton3d_payload,
+            frame_compute_plan=_read_optional_json(context.run_dir / "frame_compute_plan.json"),
+            body_compute_execution=body_execution,
+            smpl_motion_path=str(context.run_dir / "smpl_motion.json"),
+            skeleton3d_path=str(context.run_dir / "skeleton3d.json"),
+            frame_compute_plan_path=str(context.run_dir / "frame_compute_plan.json"),
+            body_compute_execution_path=str(context.run_dir / "body_compute_execution.json"),
+        )
+        _write_json_artifact(context.run_dir / "body_mesh_readiness.json", body_mesh_readiness)
         return StageRun(
             stage=self.stage,
             status="ran",
             real_model=self.real_model,
             source_mode=self.source_mode,
-            produced_artifacts=("body_compute_execution.json", "smpl_motion.json", "skeleton3d.json"),
+            produced_artifacts=(
+                "body_compute_execution.json",
+                "smpl_motion.json",
+                "skeleton3d.json",
+                "body_mesh_readiness.json",
+            ),
             notes=(
                 "Fast SAM-3D-Body runtime output converted to court/world coordinates with court_calibration.json",
                 "BODY frame execution follows frame_compute_plan.json when present and skips manual-review/preview-only frames",
@@ -1087,6 +1111,12 @@ def _to_python_container(value: Any) -> Any:
 def _read_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def _read_optional_json(path: Path) -> Any | None:
+    if not path.is_file():
+        return None
+    return _read_json(path)
 
 
 def _write_json_artifact(path: Path, artifact: StrictArtifact | Any) -> None:

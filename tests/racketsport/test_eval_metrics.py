@@ -5,6 +5,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tests.racketsport.calibration_fixtures import (
+    minimal_calibration_image_pts,
+    minimal_calibration_world_pts,
+    minimal_ready_court_line_evidence,
+)
 from threed.racketsport.replay_export import build_replay_review_export_from_virtual_world, write_replay_scene
 from threed.racketsport.schemas import (
     CameraIntrinsics,
@@ -50,8 +55,8 @@ def _write_calibration_artifacts(run_dir: Path, *, median: float = 2.5, p95: flo
         ),
         reprojection_error_px=ReprojectionError(median=median, p95=p95),
         capture_quality=CaptureQuality(grade="good", reasons=[]),
-        image_pts=[],
-        world_pts=[],
+        image_pts=minimal_calibration_image_pts(),
+        world_pts=minimal_calibration_world_pts(),
     )
     (run_dir / "court_calibration.json").write_text(calibration.model_dump_json(), encoding="utf-8")
     (run_dir / "court_zones.json").write_text(json.dumps({"schema_version": 1, "zones": {}}), encoding="utf-8")
@@ -68,27 +73,7 @@ def _write_calibration_artifacts(run_dir: Path, *, median: float = 2.5, p95: flo
         encoding="utf-8",
     )
     (run_dir / "court_line_evidence.json").write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "sport": "pickleball",
-                "source": "auto_hough_template",
-                "line_observations": [],
-                "keypoint_observations": [],
-                "net_observations": [],
-                "aggregate": {
-                    "accepted_line_ids": ["near_nvz", "far_nvz", "near_centerline", "far_centerline"],
-                    "rejected_line_ids": [],
-                    "missing_required_line_ids": [],
-                    "missing_required_net_ids": [],
-                    "mean_residual_px": 2.0,
-                    "p95_residual_px": 4.0,
-                    "temporal_stability_px": 3.0,
-                    "auto_calibration_ready": True,
-                    "reasons": [],
-                },
-            }
-        ),
+        json.dumps(minimal_ready_court_line_evidence()),
         encoding="utf-8",
     )
 
@@ -807,7 +792,7 @@ def test_physics_eval_passes_when_ready_clip_has_refined_smpl_motion(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert json.loads(completed.stdout)["status"] == "pass"
     assert payload["phase"] == "phase4"
-    assert payload["required_artifacts"] == ["smpl_motion.json"]
+    assert payload["required_artifacts"] == ["smpl_motion.json", "physics_refinement.json"]
     assert payload["clips"][0]["metrics"]["smpl_players"]["value"] == 1
     assert payload["clips"][0]["metrics"]["smpl_frames"]["value"] == 2
     assert payload["clips"][0]["metrics"]["foot_contact_frames"]["value"] == 1
@@ -841,7 +826,36 @@ def test_physics_eval_blocks_when_smpl_motion_artifact_is_missing(tmp_path):
 
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
-    assert payload["clips"][0]["missing_artifacts"] == ["smpl_motion.json"]
+    assert payload["clips"][0]["missing_artifacts"] == ["smpl_motion.json", "physics_refinement.json"]
+
+
+def test_physics_eval_blocks_when_physics_refinement_artifact_is_missing(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase4"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_physics_artifact(root / "clip_001")
+    (root / "clip_001" / "physics_refinement.json").unlink()
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.physics_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["clips"][0]["missing_artifacts"] == ["physics_refinement.json"]
 
 
 def test_ball_event_eval_passes_when_ready_clip_has_ball_and_event_artifacts(tmp_path):

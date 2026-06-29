@@ -36,8 +36,8 @@ def _artifact_payload(name: str) -> dict:
             },
             "reprojection_error_px": {"median": 2.0, "p95": 4.0},
             "capture_quality": {"grade": "good", "reasons": []},
-            "image_pts": [],
-            "world_pts": [],
+            "image_pts": [[100.0, 300.0], [900.0, 300.0], [500.0, 300.0], [500.0, 180.0]],
+            "world_pts": [[0.0, 7.0, 0.0], [20.0, 7.0, 0.0], [10.0, 7.0, 0.0], [10.0, 22.0, 0.0]],
         },
         "court_zones.json": {"schema_version": 1, "zones": {}},
         "net_plane.json": {
@@ -93,6 +93,53 @@ def _artifact_payload(name: str) -> dict:
             "joint_names": ["pelvis"],
             "preview_only": True,
             "players": [{"id": 1, "frames": [{"t": 0.0, "joints_world": [[0.0, 0.0, 0.0]], "joint_conf": [0.9]}]}],
+        },
+        "body_compute_execution.json": {
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_compute_execution",
+            "mode": "adaptive_frame_compute_plan",
+            "scheduled_frames": [
+                {
+                    "frame_idx": 0,
+                    "player_targets": [
+                        {
+                            "player_id": 1,
+                            "track_conf": 0.9,
+                            "score": 0.8,
+                            "recommended_tier": "deep_mesh",
+                            "target_representation": "world_mesh",
+                            "reasons": ["test_fixture"],
+                        }
+                    ],
+                }
+            ],
+            "skipped_frames": [],
+            "summary": {
+                "scheduled_frame_count": 1,
+                "scheduled_player_frame_count": 1,
+                "scheduled_by_target_representation": {"world_mesh": 1},
+                "skipped_frame_count": 0,
+            },
+        },
+        "body_mesh_readiness.json": {
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_mesh_readiness",
+            "clip": "clip_001",
+            "status": "verified",
+            "world_mesh_available": True,
+            "representation_decision": "world_mesh_required_available_verified",
+            "trusted_for_body_promotion": True,
+            "summary": {
+                "player_count": 1,
+                "mesh_player_count": 1,
+                "mesh_frame_count": 1,
+                "mesh_vertex_count_min": 3,
+                "mesh_vertex_count_max": 3,
+                "joints_player_count": 1,
+                "joints_frame_count": 1,
+            },
+            "blockers": [],
+            "warnings": [],
         },
         "physics_refinement.json": {
             "schema_version": 1,
@@ -151,6 +198,20 @@ def _artifact_payload(name: str) -> dict:
                 }
             ],
         },
+        "racket_pose_readiness.json": {
+            "schema_version": 1,
+            "artifact_type": "racketsport_racket_pose_readiness",
+            "clip": "clip_001",
+            "status": "ready_for_rkt_promotion",
+            "blockers": [],
+        },
+        "racket_promotion_audit.json": {
+            "schema_version": 1,
+            "artifact_type": "racketsport_racket_promotion_audit",
+            "clip": "clip_001",
+            "trusted_for_rkt_promotion": True,
+            "blockers": [],
+        },
         "racket_sport_metrics.json": {
             "schema_version": 1,
             "players": [
@@ -207,9 +268,23 @@ def _ready_court_line_evidence_payload() -> dict:
         "schema_version": 1,
         "sport": "pickleball",
         "source": "auto_hough_template",
-        "line_observations": [],
+        "line_observations": [
+            _court_line_observation("near_nvz", [[100.0, 300.0], [900.0, 300.0]]),
+            _court_line_observation("far_nvz", [[120.0, 180.0], [880.0, 180.0]]),
+            _court_line_observation("near_centerline", [[500.0, 300.0], [500.0, 700.0]]),
+            _court_line_observation("far_centerline", [[500.0, 180.0], [500.0, 40.0]]),
+        ],
         "keypoint_observations": [],
-        "net_observations": [],
+        "net_observations": [
+            {
+                "net_id": "top_net",
+                "image_points": [[100.0, 240.0], [500.0, 238.0], [900.0, 240.0]],
+                "confidence": 0.88,
+                "frame_indexes": [1, 2, 3],
+                "residual_px": {"mean": 2.0, "p95": 3.0},
+                "source": "net_top_roi",
+            }
+        ],
         "aggregate": {
             "accepted_line_ids": ["near_nvz", "far_nvz", "near_centerline", "far_centerline"],
             "rejected_line_ids": [],
@@ -222,6 +297,25 @@ def _ready_court_line_evidence_payload() -> dict:
             "reasons": [],
         },
     }
+
+
+def _court_line_observation(line_id: str, image_segment: list[list[float]]) -> dict:
+    return {
+        "line_id": line_id,
+        "image_segment": image_segment,
+        "confidence": 0.9,
+        "frame_indexes": [1, 2, 3],
+        "residual_px": {"mean": 1.0, "p95": 2.0},
+        "visible_fraction": 0.9,
+        "source": "hough_template",
+    }
+
+
+def _aggregate_only_ready_court_line_evidence_payload() -> dict:
+    payload = _ready_court_line_evidence_payload()
+    payload["line_observations"] = []
+    payload["net_observations"] = []
+    return payload
 
 
 def _write_ready_court_line_evidence(run_dir: Path) -> None:
@@ -271,10 +365,14 @@ def test_readiness_report_is_ready_when_requested_stage_and_dependencies_are_pre
         "tracks.json",
         "smpl_motion.json",
         "skeleton3d.json",
+        "body_compute_execution.json",
+        "body_mesh_readiness.json",
         "physics_refinement.json",
         "ball_track.json",
         "contact_windows.json",
         "racket_pose.json",
+        "racket_pose_readiness.json",
+        "racket_promotion_audit.json",
     ]
     _touch_all(run_dir, required)
 
@@ -288,6 +386,23 @@ def test_readiness_report_is_ready_when_requested_stage_and_dependencies_are_pre
     assert all(stage["status"] == "ready" for stage in report["stages"])
 
 
+def test_readiness_report_rejects_aggregate_only_court_line_evidence(tmp_path: Path) -> None:
+    run_dir = tmp_path / "runs" / "phase11" / "clip_001"
+    _touch_all(run_dir, ["court_calibration.json", "court_zones.json", "net_plane.json", "court_line_evidence.json", "tracks.json"])
+    (run_dir / "court_line_evidence.json").write_text(
+        json.dumps(_aggregate_only_ready_court_line_evidence_payload()) + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_readiness_report(run_dir, stage="tracking")
+
+    assert report["status"] == "not_ready"
+    calibration = report["stages"][0]
+    assert calibration["status"] == "not_ready"
+    assert "court_line_evidence_ready_without_line_observations" in calibration["semantic_blockers"]
+    assert "court_line_evidence_ready_without_net_observations" in calibration["semantic_blockers"]
+
+
 def test_readiness_report_blocks_on_semantically_empty_artifacts(tmp_path: Path) -> None:
     run_dir = tmp_path / "runs" / "phase11" / "clip_001"
     required = [
@@ -298,10 +413,14 @@ def test_readiness_report_blocks_on_semantically_empty_artifacts(tmp_path: Path)
         "tracks.json",
         "smpl_motion.json",
         "skeleton3d.json",
+        "body_compute_execution.json",
+        "body_mesh_readiness.json",
         "physics_refinement.json",
         "ball_track.json",
         "contact_windows.json",
         "racket_pose.json",
+        "racket_pose_readiness.json",
+        "racket_promotion_audit.json",
     ]
     _touch_all(run_dir, required)
     (run_dir / "contact_windows.json").write_text(
@@ -313,7 +432,9 @@ def test_readiness_report_blocks_on_semantically_empty_artifacts(tmp_path: Path)
             {
                 "schema_version": 1,
                 "artifact_type": "racketsport_body_compute_execution",
+                "mode": "adaptive_frame_compute_plan",
                 "scheduled_frames": [],
+                "skipped_frames": [],
                 "summary": {"scheduled_frame_count": 0},
             }
         )
@@ -356,6 +477,36 @@ def test_readiness_report_blocks_on_semantically_empty_artifacts(tmp_path: Path)
     assert ball_events["semantic_blockers"] == ["contact_windows_has_no_events"]
     assert racket["status"] == "blocked"
     assert racket["blocked_by"] == ["physics", "ball_events"]
+
+
+def test_readiness_report_requires_body_and_racket_readiness_artifacts(tmp_path: Path) -> None:
+    run_dir = tmp_path / "runs" / "phase11" / "clip_001"
+    _touch_all(
+        run_dir,
+        [
+            "court_calibration.json",
+            "court_zones.json",
+            "net_plane.json",
+            "court_line_evidence.json",
+            "tracks.json",
+            "smpl_motion.json",
+            "skeleton3d.json",
+            "physics_refinement.json",
+            "ball_track.json",
+            "contact_windows.json",
+            "racket_pose.json",
+        ],
+    )
+
+    report = build_readiness_report(run_dir, stage="racket")
+
+    assert report["status"] == "not_ready"
+    assert report["missing_artifacts"] == [
+        "body_compute_execution.json",
+        "body_mesh_readiness.json",
+        "racket_pose_readiness.json",
+        "racket_promotion_audit.json",
+    ]
 
 
 def test_readiness_report_blocks_when_court_line_evidence_is_not_ready(tmp_path: Path) -> None:
@@ -517,10 +668,14 @@ def test_validate_pipeline_artifacts_cli_writes_machine_readable_report(tmp_path
     assert payload["status"] == "not_ready"
     assert payload["requested_stage"] == "metrics"
     assert payload["missing_artifacts"] == [
+        "body_compute_execution.json",
+        "body_mesh_readiness.json",
         "physics_refinement.json",
         "ball_track.json",
         "contact_windows.json",
         "racket_pose.json",
+        "racket_pose_readiness.json",
+        "racket_promotion_audit.json",
         "racket_sport_metrics.json",
         "habit_report.json",
     ]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
 from threed.racketsport import worldhmr
 from threed.racketsport.schemas import (
     CameraIntrinsics,
@@ -25,8 +26,8 @@ def _identity_calibration() -> CourtCalibration:
         ),
         reprojection_error_px=ReprojectionError(median=0.0, p95=0.0),
         capture_quality=CaptureQuality(grade="good", reasons=[]),
-        image_pts=[],
-        world_pts=[],
+        image_pts=minimal_calibration_image_pts(),
+        world_pts=minimal_calibration_world_pts(),
     )
 
 

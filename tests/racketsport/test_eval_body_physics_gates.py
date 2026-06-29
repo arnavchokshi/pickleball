@@ -89,6 +89,26 @@ def _write_physics_artifact(run_dir: Path, *, players: int = 1, frames: int = 1,
         json.dumps(_smpl_motion_payload(players=players, frames=frames, skate_free=skate_free)),
         encoding="utf-8",
     )
+    (run_dir / "physics_refinement.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_physics_refinement",
+                "physics": "cpu_fallback_scaffold",
+                "foot2_done": False,
+                "must_not_mark_done_verified": True,
+                "constraint_summary": {
+                    "contact_frames": 1,
+                    "max_contact_slide_m": 0.0,
+                    "max_floor_penetration_m": 0.0,
+                    "inter_player_penetration_frames": 0,
+                    "max_inter_player_penetration_m": 0.0,
+                },
+                "execution_plan": {"mode": "cpu_fallback", "will_run_mjx": False, "reason": "test fixture"},
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 def test_body_eval_uses_numeric_gates_for_measured_body_counts(tmp_path: Path) -> None:

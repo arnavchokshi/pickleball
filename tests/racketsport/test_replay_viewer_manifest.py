@@ -83,6 +83,7 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
         physics_refinement_path=physics,
         contact_windows_path=contacts,
         annotation_sources=[person_gt],
+        vite_allow_root=tmp_path,
     )
 
     assert manifest["artifact_type"] == "racketsport_replay_viewer_manifest"
@@ -104,6 +105,21 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
     assert manifest["annotation_sources"][0]["kind"] == "person_ground_truth"
     assert manifest["annotation_sources"][0]["trusted_for_metrics"] is True
     assert isinstance(ReplayViewerManifest.model_validate(manifest), ReplayViewerManifest)
+
+
+def test_replay_viewer_manifest_rejects_files_outside_default_vite_allow_root(tmp_path: Path) -> None:
+    run_dir = tmp_path / "clip_a"
+    video = run_dir / "video.mp4"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"video")
+    virtual_world = _write_json(run_dir / "virtual_world.json", {"artifact_type": "racketsport_virtual_world"})
+
+    with pytest.raises(ValueError, match="outside Vite allow root"):
+        build_replay_viewer_manifest(
+            clip="clip_a",
+            video_path=video,
+            virtual_world_path=virtual_world,
+        )
 
 
 def test_replay_viewer_manifest_rejects_unvalidated_person_ground_truth_sources(tmp_path: Path) -> None:
@@ -128,6 +144,7 @@ def test_replay_viewer_manifest_rejects_unvalidated_person_ground_truth_sources(
             video_path=video,
             virtual_world_path=virtual_world,
             annotation_sources=[invalid_person_gt],
+            vite_allow_root=tmp_path,
         )
     except Exception as exc:
         assert "source_format" in str(exc)
@@ -149,6 +166,7 @@ def test_replay_viewer_manifest_requires_explicit_label_trust_status(tmp_path: P
             video_path=video,
             virtual_world_path=virtual_world,
             player_labels_path=labels,
+            vite_allow_root=tmp_path,
         )
     except ValueError as exc:
         assert "not_ground_truth" in str(exc)
@@ -177,6 +195,8 @@ def test_replay_viewer_manifest_cli_writes_manifest(tmp_path: Path) -> None:
             str(run_dir / "virtual_world.json"),
             "--player-labels",
             str(run_dir / "labels" / "players.json"),
+            "--vite-allow-root",
+            str(tmp_path),
             "--out",
             str(out),
         ],

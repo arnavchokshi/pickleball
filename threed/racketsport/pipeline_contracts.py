@@ -42,7 +42,7 @@ PIPELINE_STAGE_CONTRACTS: tuple[PipelineStageContract, ...] = (
     PipelineStageContract(
         stage="body",
         phase="phase3",
-        required_artifacts=("smpl_motion.json", "skeleton3d.json"),
+        required_artifacts=("smpl_motion.json", "skeleton3d.json", "body_compute_execution.json", "body_mesh_readiness.json"),
         depends_on=("tracking",),
     ),
     PipelineStageContract(
@@ -60,7 +60,7 @@ PIPELINE_STAGE_CONTRACTS: tuple[PipelineStageContract, ...] = (
     PipelineStageContract(
         stage="racket",
         phase="phase6",
-        required_artifacts=("racket_pose.json",),
+        required_artifacts=("racket_pose.json", "racket_pose_readiness.json", "racket_promotion_audit.json"),
         depends_on=("physics", "ball_events"),
     ),
     PipelineStageContract(
@@ -98,10 +98,14 @@ PIPELINE_STAGE_CONTRACTS: tuple[PipelineStageContract, ...] = (
             "tracks.json",
             "smpl_motion.json",
             "skeleton3d.json",
+            "body_compute_execution.json",
+            "body_mesh_readiness.json",
             "physics_refinement.json",
             "ball_track.json",
             "contact_windows.json",
             "racket_pose.json",
+            "racket_pose_readiness.json",
+            "racket_promotion_audit.json",
             "racket_sport_metrics.json",
             "habit_report.json",
             "coach_report.json",
@@ -122,10 +126,14 @@ _ARTIFACT_SCHEMA_BY_FILENAME = {
     "tracks.json": "tracks",
     "smpl_motion.json": "smpl_motion",
     "skeleton3d.json": "skeleton3d",
+    "body_compute_execution.json": "body_compute_execution",
+    "body_mesh_readiness.json": "body_mesh_readiness",
     "physics_refinement.json": "physics_refinement",
     "ball_track.json": "ball_track",
     "contact_windows.json": "contact_windows",
     "racket_pose.json": "racket_pose",
+    "racket_pose_readiness.json": "racket_pose_readiness",
+    "racket_promotion_audit.json": "racket_promotion_audit",
     "racket_sport_metrics.json": "racket_sport_metrics",
     "habit_report.json": "habit_report",
     "coach_report.json": "coach_report",
@@ -279,6 +287,8 @@ def _semantic_blockers_for_stage(stage: str, run_path: Path) -> list[str]:
         return _dedupe([*_body_compute_execution_blockers(run_path), *_body_mesh_readiness_blockers(run_path)])
     if stage == "ball_events":
         return _contact_windows_blockers(run_path)
+    if stage == "racket":
+        return _dedupe([*_racket_pose_readiness_blockers(run_path), *_racket_promotion_audit_blockers(run_path)])
     return []
 
 
@@ -298,11 +308,32 @@ def _court_line_evidence_blockers(run_path: Path) -> list[str]:
     blockers: list[str] = []
     if aggregate.get("auto_calibration_ready") is not True:
         blockers.append("court_line_evidence_not_ready")
+    elif not _ready_court_evidence_has_observations(payload, aggregate):
+        line_observations = payload.get("line_observations")
+        net_observations = payload.get("net_observations")
+        if not isinstance(line_observations, list) or not line_observations:
+            blockers.append("court_line_evidence_ready_without_line_observations")
+        if not isinstance(net_observations, list) or not net_observations:
+            blockers.append("court_line_evidence_ready_without_net_observations")
     for line_id in _string_list(aggregate.get("missing_required_line_ids")):
         blockers.append(f"court_line_evidence_missing_required_line_{line_id}")
     for net_id in _string_list(aggregate.get("missing_required_net_ids")):
         blockers.append(f"court_line_evidence_missing_required_net_{net_id}")
     return _dedupe(blockers)
+
+
+def _ready_court_evidence_has_observations(payload: dict[str, Any], aggregate: dict[str, Any]) -> bool:
+    line_observations = payload.get("line_observations")
+    net_observations = payload.get("net_observations")
+    if not isinstance(line_observations, list) or not isinstance(net_observations, list):
+        return False
+    observed_line_ids = {
+        str(item.get("line_id"))
+        for item in line_observations
+        if isinstance(item, dict) and isinstance(item.get("line_id"), str)
+    }
+    accepted_line_ids = _string_list(aggregate.get("accepted_line_ids"))
+    return bool(accepted_line_ids) and bool(net_observations) and all(line_id in observed_line_ids for line_id in accepted_line_ids)
 
 
 def _body_compute_execution_blockers(run_path: Path) -> list[str]:
@@ -363,6 +394,33 @@ def _contact_windows_blockers(run_path: Path) -> list[str]:
     if not events:
         return ["contact_windows_has_no_events"]
     return []
+
+
+def _racket_pose_readiness_blockers(run_path: Path) -> list[str]:
+    path = run_path / "racket_pose_readiness.json"
+    if not path.is_file():
+        return []
+    payload, error = _read_mapping_json(path)
+    if error:
+        return [f"racket_pose_readiness_{error}"]
+    blockers = [f"racket_pose_readiness_{blocker}" for blocker in _string_list(payload.get("blockers"))]
+    status = str(payload.get("status", ""))
+    if status not in {"ready", "ready_for_rkt_promotion", "verified"}:
+        blockers.append(f"racket_pose_readiness_status_{status or 'missing'}")
+    return _dedupe(blockers)
+
+
+def _racket_promotion_audit_blockers(run_path: Path) -> list[str]:
+    path = run_path / "racket_promotion_audit.json"
+    if not path.is_file():
+        return []
+    payload, error = _read_mapping_json(path)
+    if error:
+        return [f"racket_promotion_audit_{error}"]
+    blockers = [f"racket_promotion_audit_{blocker}" for blocker in _string_list(payload.get("blockers"))]
+    if payload.get("trusted_for_rkt_promotion") is not True:
+        blockers.append("racket_promotion_audit_not_trusted_for_rkt_promotion")
+    return _dedupe(blockers)
 
 
 def _read_mapping_json(path: Path) -> tuple[dict[str, Any], str | None]:

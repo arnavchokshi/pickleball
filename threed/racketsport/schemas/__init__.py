@@ -40,11 +40,11 @@ class CaptureQuality(BaseModel):
 class CameraIntrinsics(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    fx: float
-    fy: float
-    cx: float
-    cy: float
-    dist: list[float] = Field(default_factory=list)
+    fx: FiniteFloat = Field(gt=0.0)
+    fy: FiniteFloat = Field(gt=0.0)
+    cx: FiniteFloat
+    cy: FiniteFloat
+    dist: list[FiniteFloat] = Field(default_factory=list)
     source: str
 
 
@@ -112,12 +112,12 @@ class CaptureSidecar(StrictArtifact):
 class ReprojectionError(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    median: FiniteFloat
-    p95: FiniteFloat
+    median: FiniteFloat = Field(ge=0.0)
+    p95: FiniteFloat = Field(ge=0.0)
 
 
 class CourtExtrinsics(RigidPose):
-    camera_height_m: float
+    camera_height_m: FiniteFloat = Field(gt=0.0)
 
 
 class CourtCalibration(StrictArtifact):
@@ -128,8 +128,14 @@ class CourtCalibration(StrictArtifact):
     extrinsics: CourtExtrinsics
     reprojection_error_px: ReprojectionError
     capture_quality: CaptureQuality
-    image_pts: list[Vector2]
-    world_pts: list[Vector3]
+    image_pts: list[Vector2] = Field(min_length=4)
+    world_pts: list[Vector3] = Field(min_length=4)
+
+    @model_validator(mode="after")
+    def _point_lists_must_be_paired(self) -> CourtCalibration:
+        if len(self.image_pts) != len(self.world_pts):
+            raise ValueError("image_pts and world_pts must have the same length")
+        return self
 
 
 class CourtZones(StrictArtifact):
@@ -146,8 +152,8 @@ class NetPlane(StrictArtifact):
 class ResidualSummary(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    mean: float
-    p95: float
+    mean: FiniteFloat = Field(ge=0.0)
+    p95: FiniteFloat = Field(ge=0.0)
 
 
 class CourtLineObservation(BaseModel):
@@ -232,9 +238,9 @@ class CourtLineEvidenceAggregate(BaseModel):
     rejected_line_ids: list[str] = Field(default_factory=list)
     missing_required_line_ids: list[str] = Field(default_factory=list)
     missing_required_net_ids: list[str] = Field(default_factory=list)
-    mean_residual_px: float
-    p95_residual_px: float
-    temporal_stability_px: float
+    mean_residual_px: FiniteFloat = Field(ge=0.0)
+    p95_residual_px: FiniteFloat = Field(ge=0.0)
+    temporal_stability_px: FiniteFloat = Field(ge=0.0)
     auto_calibration_ready: bool
     reasons: list[str] = Field(default_factory=list)
 
@@ -246,6 +252,21 @@ class CourtLineEvidence(StrictArtifact):
     keypoint_observations: list[CourtKeypointObservation] = Field(default_factory=list)
     net_observations: list[NetLineObservation] = Field(default_factory=list)
     aggregate: CourtLineEvidenceAggregate
+
+    @model_validator(mode="after")
+    def _ready_aggregate_must_be_backed_by_observations(self) -> CourtLineEvidence:
+        if not self.aggregate.auto_calibration_ready:
+            return self
+        observed_line_ids = {observation.line_id for observation in self.line_observations}
+        missing_accepted = [
+            line_id for line_id in self.aggregate.accepted_line_ids
+            if line_id not in observed_line_ids
+        ]
+        if not self.aggregate.accepted_line_ids or missing_accepted:
+            raise ValueError("ready court_line_evidence must include observations for accepted lines")
+        if not self.net_observations:
+            raise ValueError("ready court_line_evidence must include net observations")
+        return self
 
 
 class TrackFrame(BaseModel):
@@ -1148,6 +1169,162 @@ class PhysicsRefinement(StrictArtifact):
     execution_plan: dict[str, Any]
 
 
+class BodyComputeExecution(StrictArtifact):
+    model_config = ConfigDict(extra="allow")
+
+    artifact_type: Literal["racketsport_body_compute_execution"]
+    mode: str
+    scheduled_frames: list[dict[str, Any]]
+    skipped_frames: list[dict[str, Any]] = Field(default_factory=list)
+    summary: dict[str, Any]
+
+
+class BodyMeshReadiness(StrictArtifact):
+    model_config = ConfigDict(extra="allow")
+
+    artifact_type: Literal["racketsport_body_mesh_readiness"]
+    clip: str | None = None
+    status: str
+    world_mesh_available: bool | None = None
+    representation_decision: str
+    trusted_for_body_promotion: bool
+    summary: dict[str, Any] = Field(default_factory=dict)
+    blockers: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class RacketPoseReadiness(StrictArtifact):
+    model_config = ConfigDict(extra="allow")
+
+    artifact_type: Literal["racketsport_racket_pose_readiness"]
+    clip: str | None = None
+    status: str
+    blockers: list[str] = Field(default_factory=list)
+
+
+class RacketPromotionAudit(StrictArtifact):
+    model_config = ConfigDict(extra="allow")
+
+    artifact_type: Literal["racketsport_racket_promotion_audit"]
+    clip: str | None = None
+    trusted_for_rkt_promotion: bool
+    blockers: list[str] = Field(default_factory=list)
+
+
+class ServingManifestSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+    sha256: str
+    schema_version: Literal[1]
+
+
+class ServingManifestExecution(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    cpu_only: Literal[True]
+    starts_triton: Literal[False]
+    downloads_models: Literal[False]
+    uses_gpu: Literal[False]
+    mutates_model_manifest: Literal[False]
+    claims_env_or_eval_completion: Literal[False]
+
+
+class ServingManifestPathSafety(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    safe: bool
+    reason: str
+    allowed_prefixes: list[str] | None = None
+
+
+class ServingManifestEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    stage: str
+    status: str
+    local_path: str | None
+    license: str
+    commercial_posture: str
+    sha256_present: bool
+    fallbacks: list[str]
+    path_safety: ServingManifestPathSafety
+
+
+class ServingManifestMissingOrPending(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str | None
+    stage: str
+    reason: str
+    required_status: str | None = None
+    path_reason: str | None = None
+
+
+class ServingManifestComponent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    component_id: str
+    stage: str
+    kind: Literal["checkpoint", "runtime"]
+    role: str
+    serving_backend: str
+    required_status: Literal["available_on_h100", "available_runtime_on_h100"]
+    checkpoint_available: bool | None
+    runtime_available: bool | None
+    safe_paths: bool
+    inventory_ready: bool
+    serving_ready: bool
+    serving_blockers: list[str]
+    entries: list[ServingManifestEntry]
+    missing_or_pending: list[ServingManifestMissingOrPending]
+
+
+class ServingManifestTier(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tier: Literal["offline_deep", "live_light"]
+    checkpoint_runtime_inventory_ready: bool
+    serving_ready: bool
+    eval0_approval: Literal["not_evaluated_by_cpu_manifest"]
+    triton_ensemble_status: Literal["scaffold_only_not_started"]
+    components: list[ServingManifestComponent]
+
+
+class ServingManifestTiers(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    offline_deep: ServingManifestTier
+    live_light: ServingManifestTier
+
+
+class ServingManifestSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_model_count: int = Field(ge=0)
+    checkpoint_available_count: int = Field(ge=0)
+    runtime_available_count: int = Field(ge=0)
+    tier_count: int = Field(ge=0)
+    component_count: int = Field(ge=0)
+    inventory_ready_component_count: int = Field(ge=0)
+    serving_ready_component_count: int = Field(ge=0)
+    unsafe_model_path_count: int = Field(ge=0)
+    unsafe_model_path_ids: list[str]
+    pending_item_count: int = Field(ge=0)
+    pending_item_ids: list[str]
+    missing_component_ids: list[str]
+
+
+class ServingManifest(StrictArtifact):
+    artifact_type: Literal["racketsport_serving_manifest"]
+    source_manifest: ServingManifestSource
+    execution: ServingManifestExecution
+    tiers: ServingManifestTiers
+    summary: ServingManifestSummary
+    notes: list[str]
+
+
 class DrillRep(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1228,11 +1405,15 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "mobile_person_tracking_metrics": MobilePersonTrackingMetrics,
     "smpl_motion": SmplMotion,
     "skeleton3d": Skeleton3D,
+    "body_compute_execution": BodyComputeExecution,
+    "body_mesh_readiness": BodyMeshReadiness,
     "ball_track": BallTrack,
     "contact_window_candidates": ContactWindowCandidates,
     "contact_window_review": ContactWindowReview,
     "racket_candidates": RacketCandidates,
     "racket_pose": RacketPose,
+    "racket_pose_readiness": RacketPoseReadiness,
+    "racket_promotion_audit": RacketPromotionAudit,
     "contact_windows": ContactWindows,
     "racket_sport_metrics": RacketSportMetrics,
     "habit_report": HabitReport,
@@ -1241,6 +1422,7 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "replay_viewer_manifest": ReplayViewerManifest,
     "virtual_world": VirtualWorld,
     "physics_refinement": PhysicsRefinement,
+    "serving_manifest": ServingManifest,
     "drill_report": DrillReport,
     "phase_eval_metrics": PhaseEvalMetrics,
 }

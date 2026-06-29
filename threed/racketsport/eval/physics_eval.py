@@ -12,11 +12,11 @@ from threed.racketsport.eval.metrics import (
     missing_artifacts,
     write_phase_metrics,
 )
-from threed.racketsport.schemas import EvalClipResult, SmplMotion, validate_artifact_file
+from threed.racketsport.schemas import EvalClipResult, PhysicsRefinement, SmplMotion, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
-REQUIRED_PHYSICS_ARTIFACTS = ["smpl_motion.json"]
+REQUIRED_PHYSICS_ARTIFACTS = ["smpl_motion.json", "physics_refinement.json"]
 PHYSICS_GATES = {
     "smpl_players": NumericGate(
         name="presence_check.physics_smpl_players_min",
@@ -112,6 +112,7 @@ def evaluate(root: str | Path, labels_root: str | Path) -> object:
 def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> EvalClipResult:
     try:
         smpl_motion = validate_artifact_file("smpl_motion", run_dir / "smpl_motion.json")
+        physics_refinement = validate_artifact_file("physics_refinement", run_dir / "physics_refinement.json")
     except Exception as exc:
         return EvalClipResult(
             clip=clip_name,
@@ -134,6 +135,17 @@ def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> 
             missing_artifacts=[],
             metrics={},
             notes=["physics artifact did not parse as SmplMotion"],
+        )
+    if not isinstance(physics_refinement, PhysicsRefinement):
+        return EvalClipResult(
+            clip=clip_name,
+            run_dir=str(run_dir),
+            labels_dir=str(labels_dir),
+            status="fail",
+            missing_label_files=[],
+            missing_artifacts=[],
+            metrics={},
+            notes=["physics_refinement artifact did not parse as PhysicsRefinement"],
         )
 
     player_count = len(smpl_motion.players)

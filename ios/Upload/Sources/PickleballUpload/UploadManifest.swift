@@ -185,7 +185,10 @@ public enum UploadPlan {
             parts.append(UploadPart(kind: .personTiming, relativePath: personTiming, priority: 12))
         }
 
-        for depthRef in manifest.lidarDepthRefs.sorted() {
+        let depthRefs = Set(manifest.lidarDepthRefs)
+            .union(manifest.sidecar.lidarDepthRefs)
+            .sorted()
+        for depthRef in depthRefs {
             parts.append(UploadPart(kind: .lidarDepth, relativePath: depthRef, priority: 20))
         }
 

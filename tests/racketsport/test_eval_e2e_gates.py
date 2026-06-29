@@ -3,6 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from tests.racketsport.calibration_fixtures import (
+    minimal_calibration_image_pts,
+    minimal_calibration_world_pts,
+    minimal_ready_court_line_evidence,
+)
 from threed.racketsport.eval import e2e_eval
 from threed.racketsport.replay_export import build_replay_review_export_from_virtual_world, write_replay_scene
 from threed.racketsport.schemas import (
@@ -48,8 +53,8 @@ def _write_calibration_artifacts(run_dir: Path) -> None:
         ),
         reprojection_error_px=ReprojectionError(median=2.5, p95=7.0),
         capture_quality=CaptureQuality(grade="good", reasons=[]),
-        image_pts=[],
-        world_pts=[],
+        image_pts=minimal_calibration_image_pts(),
+        world_pts=minimal_calibration_world_pts(),
     )
     (run_dir / "court_calibration.json").write_text(calibration.model_dump_json(), encoding="utf-8")
     (run_dir / "court_zones.json").write_text(json.dumps({"schema_version": 1, "zones": {}}), encoding="utf-8")
@@ -66,27 +71,7 @@ def _write_calibration_artifacts(run_dir: Path) -> None:
         encoding="utf-8",
     )
     (run_dir / "court_line_evidence.json").write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "sport": "pickleball",
-                "source": "auto_hough_template",
-                "line_observations": [],
-                "keypoint_observations": [],
-                "net_observations": [],
-                "aggregate": {
-                    "accepted_line_ids": ["near_nvz", "far_nvz", "near_centerline", "far_centerline"],
-                    "rejected_line_ids": [],
-                    "missing_required_line_ids": [],
-                    "missing_required_net_ids": [],
-                    "mean_residual_px": 2.0,
-                    "p95_residual_px": 4.0,
-                    "temporal_stability_px": 3.0,
-                    "auto_calibration_ready": True,
-                    "reasons": [],
-                },
-            }
-        ),
+        json.dumps(minimal_ready_court_line_evidence()),
         encoding="utf-8",
     )
 

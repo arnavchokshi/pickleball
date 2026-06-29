@@ -26,3 +26,5 @@ Open the viewer with a manifest URL, for example:
 ```text
 http://127.0.0.1:5173/?manifest=/@fs/absolute/path/to/replay_viewer_manifest.json
 ```
+
+`build_replay_viewer_manifest.py` validates every emitted `/@fs` source against a Vite allow root. By default that root is the repo root; pass `--vite-allow-root <path>` when reviewing artifacts from a temporary or external run directory, and start Vite with a matching `server.fs.allow` policy if needed.

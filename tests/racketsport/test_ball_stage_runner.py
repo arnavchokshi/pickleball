@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
 from threed.racketsport.ball_stage_runner import BallStageRunner
 from threed.racketsport.orchestrator import StageRun, run_pipeline
 from threed.racketsport.body_compute import build_body_compute_execution
@@ -106,8 +107,8 @@ def _write_dependency_artifacts(run_dir: Path) -> None:
             },
             "reprojection_error_px": {"median": 0.0, "p95": 0.0},
             "capture_quality": {"grade": "good", "reasons": []},
-            "image_pts": [],
-            "world_pts": [],
+            "image_pts": minimal_calibration_image_pts(),
+            "world_pts": minimal_calibration_world_pts(),
         },
     )
     _write_json(run_dir / "court_zones.json", {"schema_version": 1, "zones": {}})
@@ -207,6 +208,59 @@ def _write_dependency_artifacts(run_dir: Path) -> None:
             "players": [{"id": 7, "frames": [{"t": 0.0, "joints_world": [[0.0, 0.0, 0.0]], "joint_conf": [0.9]}]}],
         },
     )
+    _write_json(
+        run_dir / "body_compute_execution.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_compute_execution",
+            "mode": "adaptive_frame_compute_plan",
+            "scheduled_frames": [
+                {
+                    "frame_idx": 0,
+                    "player_targets": [
+                        {
+                            "player_id": 7,
+                            "track_conf": 0.9,
+                            "score": 0.8,
+                            "recommended_tier": "deep_mesh",
+                            "target_representation": "world_mesh",
+                            "reasons": ["test_fixture"],
+                        }
+                    ],
+                }
+            ],
+            "skipped_frames": [],
+            "summary": {
+                "scheduled_frame_count": 1,
+                "scheduled_player_frame_count": 1,
+                "scheduled_by_target_representation": {"world_mesh": 1},
+                "skipped_frame_count": 0,
+            },
+        },
+    )
+    _write_json(
+        run_dir / "body_mesh_readiness.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_mesh_readiness",
+            "clip": "clip_001",
+            "status": "verified",
+            "world_mesh_available": True,
+            "representation_decision": "world_mesh_required_available_verified",
+            "trusted_for_body_promotion": True,
+            "summary": {
+                "player_count": 1,
+                "mesh_player_count": 1,
+                "mesh_frame_count": 1,
+                "mesh_vertex_count_min": 3,
+                "mesh_vertex_count_max": 3,
+                "joints_player_count": 1,
+                "joints_frame_count": 1,
+            },
+            "blockers": [],
+            "warnings": [],
+        },
+    )
     _write_json(run_dir / "physics_refinement.json", _physics_refinement_payload())
 
 
@@ -236,7 +290,10 @@ def _noop_dependency_runners() -> dict[str, NoopDependencyRunner]:
             ("court_calibration.json", "court_zones.json", "net_plane.json", "court_line_evidence.json"),
         ),
         "tracking": NoopDependencyRunner("tracking", ("tracks.json",)),
-        "body": NoopDependencyRunner("body", ("smpl_motion.json", "skeleton3d.json")),
+        "body": NoopDependencyRunner(
+            "body",
+            ("smpl_motion.json", "skeleton3d.json", "body_compute_execution.json", "body_mesh_readiness.json"),
+        ),
         "physics": NoopDependencyRunner("physics", ("smpl_motion.json", "physics_refinement.json")),
     }
 

@@ -183,6 +183,71 @@ def test_common_numeric_fields_reject_bool_nan_and_infinity() -> None:
         MetricValue.model_validate({"value": 1.0, "conf": float("nan")})
 
 
+def test_calibration_artifact_rejects_nonfinite_negative_and_empty_geometry_fields() -> None:
+    base_payload = {
+        "schema_version": 1,
+        "sport": "pickleball",
+        "homography": [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+        "intrinsics": {"fx": 1000.0, "fy": 1000.0, "cx": 960.0, "cy": 540.0, "dist": [], "source": "manual"},
+        "extrinsics": {"R": [[1, 0, 0], [0, 1, 0], [0, 0, 1]], "t": [0, 0, 0], "camera_height_m": 1.4},
+        "reprojection_error_px": {"median": 2.0, "p95": 5.0},
+        "capture_quality": {"grade": "good", "reasons": []},
+        "image_pts": [[0, 0], [1, 0], [1, 1], [0, 1]],
+        "world_pts": [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
+    }
+
+    invalid_payloads = []
+    payload = json.loads(json.dumps(base_payload))
+    payload["intrinsics"]["fx"] = -1.0
+    invalid_payloads.append(payload)
+    payload = json.loads(json.dumps(base_payload))
+    payload["intrinsics"]["fx"] = float("nan")
+    invalid_payloads.append(payload)
+    payload = json.loads(json.dumps(base_payload))
+    payload["reprojection_error_px"]["median"] = -0.1
+    invalid_payloads.append(payload)
+    payload = json.loads(json.dumps(base_payload))
+    payload["extrinsics"]["camera_height_m"] = 0.0
+    invalid_payloads.append(payload)
+    payload = json.loads(json.dumps(base_payload))
+    payload["image_pts"] = []
+    payload["world_pts"] = []
+    invalid_payloads.append(payload)
+    payload = json.loads(json.dumps(base_payload))
+    payload["image_pts"] = [[0, 0], [1, 0], [1, 1], [0, 1]]
+    payload["world_pts"] = [[0, 0, 0], [1, 0, 0], [1, 1, 0]]
+    invalid_payloads.append(payload)
+
+    for invalid in invalid_payloads:
+        with pytest.raises(ValidationError):
+            CourtCalibration.model_validate(invalid)
+
+
+def test_court_line_evidence_rejects_ready_aggregate_without_backing_observations() -> None:
+    payload = {
+        "schema_version": 1,
+        "sport": "pickleball",
+        "source": "auto_hough_template",
+        "line_observations": [],
+        "keypoint_observations": [],
+        "net_observations": [],
+        "aggregate": {
+            "accepted_line_ids": ["near_nvz", "far_nvz", "near_centerline", "far_centerline"],
+            "rejected_line_ids": [],
+            "missing_required_line_ids": [],
+            "missing_required_net_ids": [],
+            "mean_residual_px": 2.0,
+            "p95_residual_px": 4.0,
+            "temporal_stability_px": 3.0,
+            "auto_calibration_ready": True,
+            "reasons": [],
+        },
+    }
+
+    with pytest.raises(ValidationError, match="ready court_line_evidence"):
+        CourtLineEvidence.model_validate(payload)
+
+
 def test_validate_artifact_file_rejects_unknown_artifact(tmp_path):
     path = tmp_path / "unknown.json"
     path.write_text("{}", encoding="utf-8")

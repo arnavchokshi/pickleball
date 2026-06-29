@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
 from threed.racketsport.schemas import (
     CameraIntrinsics,
     CaptureQuality,
@@ -30,8 +31,8 @@ def _write_calibration(path: Path) -> None:
         ),
         reprojection_error_px=ReprojectionError(median=0.0, p95=0.0),
         capture_quality=CaptureQuality(grade="good", reasons=[]),
-        image_pts=[],
-        world_pts=[],
+        image_pts=minimal_calibration_image_pts(),
+        world_pts=minimal_calibration_world_pts(),
     )
     path.write_text(calibration.model_dump_json(), encoding="utf-8")
 

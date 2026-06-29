@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
 from threed.racketsport.racket6dof import paddle_face_corners_object_cm
 from threed.racketsport.schemas import RacketPose, validate_artifact_file
 
@@ -30,8 +31,8 @@ def _court_calibration() -> dict:
         },
         "reprojection_error_px": {"median": 0.0, "p95": 0.0},
         "capture_quality": {"grade": "good", "reasons": []},
-        "image_pts": [],
-        "world_pts": [],
+        "image_pts": minimal_calibration_image_pts(),
+        "world_pts": minimal_calibration_world_pts(),
     }
 
 

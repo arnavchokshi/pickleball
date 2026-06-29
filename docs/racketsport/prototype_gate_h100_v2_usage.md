@@ -1086,9 +1086,10 @@ Historical focused test result for the 2026-06-28 baseline: `9 passed`. Re-run t
 
 ## Explicit Next Steps
 
-1. Promote the prototype `BallStageRunner` into a reachable real BALL path:
-   run the best no-click track path through the orchestrator, generate non-empty
-   contact windows, and write BALL contract artifacts fail-closed.
+1. Replace the prototype `BallStageRunner` precomputed-review adapter with the
+   real BALL runtime: run TrackNet/audio/wrist/ball-inflection cue generation
+   through the orchestrator, generate non-empty contact windows, and pass the
+   BALL contract gates fail-closed.
 2. Improve candidate generation, not just filtering: obtain usable TrackNetV4
    weights or fine-tune TrackNetV3/V4/V5 on pickleball clips with neighboring
    courts, small balls, occlusions, and high-baseline viewpoints.

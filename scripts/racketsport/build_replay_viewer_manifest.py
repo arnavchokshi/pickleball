@@ -33,6 +33,12 @@ def main(argv: list[str] | None = None) -> int:
         default=[],
         help="Optional extra annotation JSON such as person_ground_truth.json. Repeatable.",
     )
+    parser.add_argument(
+        "--vite-allow-root",
+        type=Path,
+        default=None,
+        help="Root directory the local Vite replay server is configured to serve. Defaults to the repo root.",
+    )
     parser.add_argument("--out", type=Path, required=True, help="Output replay_viewer_manifest.json path.")
     args = parser.parse_args(argv)
 
@@ -46,6 +52,7 @@ def main(argv: list[str] | None = None) -> int:
             physics_refinement_path=args.physics_refinement,
             contact_windows_path=args.contact_windows,
             annotation_sources=args.annotation_source,
+            vite_allow_root=args.vite_allow_root,
         )
         write_replay_viewer_manifest(args.out, manifest)
     except (OSError, ValueError, json.JSONDecodeError) as exc:

@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from threed.racketsport.serving_manifest import build_serving_manifest
+from threed.racketsport.schemas import ServingManifest, validate_artifact_file
 
 
 def _write_manifest(path: Path, models: list[dict[str, object]]) -> None:
@@ -131,6 +132,9 @@ def test_build_serving_manifest_cli_writes_json_and_preserves_manifest(tmp_path:
     assert payload["source_manifest"]["path"] == str(manifest_path)
     assert payload["tiers"]["live_light"]["components"][0]["component_id"] == "person_detection"
     assert payload["tiers"]["live_light"]["eval0_approval"] == "not_evaluated_by_cpu_manifest"
+    parsed = validate_artifact_file("serving_manifest", out_path)
+    assert isinstance(parsed, ServingManifest)
+    assert parsed.artifact_type == "racketsport_serving_manifest"
 
 
 def test_repo_serving_manifest_covers_current_manifest_runtime_and_tiers() -> None:

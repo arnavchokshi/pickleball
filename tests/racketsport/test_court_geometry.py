@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
 from threed.racketsport.court_templates import FT_TO_M, get_court_template
 from threed.racketsport.court_zones import build_court_zones, classify_point
 from threed.racketsport.net_plane import build_net_plane, net_plane_from_template, net_top_height_m_at_x, project_net_plane
@@ -146,8 +147,8 @@ def test_project_net_plane_projects_regulation_net_endpoints():
         ),
         reprojection_error_px=ReprojectionError(median=0.0, p95=0.0),
         capture_quality=CaptureQuality(grade="good", reasons=[]),
-        image_pts=[],
-        world_pts=[],
+        image_pts=minimal_calibration_image_pts(),
+        world_pts=minimal_calibration_world_pts(),
     )
     projected = project_net_plane(calibration, build_net_plane("pickleball"))
 
@@ -171,8 +172,8 @@ def test_net_plane_from_template_uses_calibration_sport():
         ),
         reprojection_error_px=ReprojectionError(median=0.0, p95=0.0),
         capture_quality=CaptureQuality(grade="good", reasons=[]),
-        image_pts=[],
-        world_pts=[],
+        image_pts=minimal_calibration_image_pts(),
+        world_pts=minimal_calibration_world_pts(),
     )
 
     assert net_plane_from_template(calibration) == build_net_plane("tennis")

@@ -160,7 +160,7 @@ The **target/default model + variant + weight candidates for every stage (offlin
 | Events | audio "pop" (CNN, retrained on PB) + wrist-vel peak + ball inflection; net crossing via homography | — | <1-frame contact timing; drives event triggers |
 | Shot class | scaffold/transfer baseline now; PoseConv3D family classifier first, BST-style pose+ball fusion after tensors are clean | open | current external eval misses serve/overhead; not claimable until reviewed labels and SHOT gates pass |
 | Insights | rule-based thresholds (source of truth) + confidence gating + LLM-for-copy (latest Claude) | — | never invents facts |
-| 3D replay render | **Three.js + R3F** (WebGPU/WebGL2), SMPL-X GLB, physics baked → glTF tracks, world frame (court Z=0) | MIT | free-viewpoint, ~8–12 MB/10 s, shareable; splats deferred to v2 |
+| 3D replay render | Target production path: **Three.js + R3F** (WebGPU/WebGL2), SMPL-X GLB, physics baked → glTF tracks, world frame (court Z=0). Current repo has a review-only Three.js/R3F viewer and static QA exports, not the shipped animated replay. | MIT | free-viewpoint, ~8–12 MB/10 s, shareable; splats deferred to v2 |
 | Visualization | court map/heatmap + 1 priority metric + self-vs-self (conversion core); 3D physics replay premium async | — | matches what converts; progressive disclosure |
 
 ### 5.6 Accuracy & training strategy
@@ -180,9 +180,9 @@ Edge-first hybrid target; current repo status is scaffold/partial for the iPhone
 
 - **Instant (<1 s) — target on-device:** live cues during play (framing OK, swing/split-step detected, late-contact hint) via Apple Vision + YOLO Core ML on the Neural Engine.
 - **Preview (<10 s, no upload wait) — target on-device:** a coarse replay + summary the moment recording stops.
-- **Deep (async, streamed) — server H100:** accurate SMPL-X mesh, foot-lock, physics, racket, metrics, insights, replay — returned **rally-by-rally over SSE** (a "3/14 analyzed" checklist that fills in live), with an APNs push when complete.
+- **Deep (async, streamed) — target server H100 path:** accurate SMPL-X mesh, foot-lock, physics, racket, metrics, insights, replay — returned **rally-by-rally over SSE** (a "3/14 analyzed" checklist that fills in live), with an APNs push when complete. Current repo has partial pipeline/artifact scaffolds; the streaming service and production replay delivery are not yet verified.
 
-**Top latency levers:** (1) upload the on-device 2D pose track as a **server prior** — ~166× smaller than video, 50–80% fewer mesh-fit iterations, and the server starts fitting *while the video uploads*; (2) **event-triggered compute** — skip 40–60% dead time (≈2× throughput); (3) **cache the personalized body model** (betas) so repeat sessions converge ~5× faster; (4) warm GPU worker (no cold start); (5) resumable chunked upload. **H100 throughput** comes from NVDEC/DALI GPU decode + TensorRT engines + CUDA-stream overlap + B=4 crop batching (SAM-3D-Body runs sequentially per player and is the pacing item to benchmark first), served via Triton. Multi-agent build/test on the single shared H100 is governed by the GPU lease/MIG protocol in `BUILD_CHECKLIST.md §1.5`.
+**Top latency levers:** (1) upload the on-device 2D pose track as a **server prior** — ~166× smaller than video, 50–80% fewer mesh-fit iterations, and the server starts fitting *while the video uploads*; (2) **event-triggered compute** — skip 40–60% dead time (≈2× throughput); (3) **cache the personalized body model** (betas) so repeat sessions converge ~5× faster; (4) warm GPU worker (no cold start); (5) resumable chunked upload. **Target H100 throughput** comes from NVDEC/DALI GPU decode + TensorRT engines + CUDA-stream overlap + B=4 crop batching (SAM-3D-Body runs sequentially per player and is the pacing item to benchmark first), served via Triton; current repo evidence still treats true NVDEC/DALI and Triton serving as pending gates. Multi-agent build/test on the single shared H100 is governed by the GPU lease/MIG protocol in `BUILD_CHECKLIST.md §1.5`.
 
 ---
 

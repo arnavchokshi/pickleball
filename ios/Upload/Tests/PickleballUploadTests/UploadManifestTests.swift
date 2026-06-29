@@ -57,7 +57,16 @@ final class UploadManifestTests: XCTestCase {
 
         let parts = try UploadPlan.sidecarFirstParts(for: manifest, sidecarRelativePath: "sidecars/session.json")
 
-        XCTAssertEqual(parts.map(\.kind), [.captureSidecar, .posePrior, .personTracks, .personTiming, .lidarDepth, .lidarDepth, .clip])
+        XCTAssertEqual(parts.map(\.kind), [
+            .captureSidecar,
+            .posePrior,
+            .personTracks,
+            .personTiming,
+            .lidarDepth,
+            .lidarDepth,
+            .lidarDepth,
+            .clip
+        ])
         XCTAssertEqual(
             parts.map(\.relativePath),
             [
@@ -67,6 +76,7 @@ final class UploadManifestTests: XCTestCase {
                 "tracks/timing.json",
                 "depth/frame_0001.bin",
                 "depth/frame_0002.bin",
+                "depth/from_sidecar.bin",
                 "clips/session.mov",
             ]
         )

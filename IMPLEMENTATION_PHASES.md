@@ -80,8 +80,8 @@ models_coreml/  # YOLO (+ any small student) exported to Core ML (coremltools 9.
 
 ### 0.3 Environment
 
-- One H100-class GPU. Python 3.11, CUDA 12.x, PyTorch ≥2.4 (TensorRT + `torch.compile`), `onnxruntime-gpu`, `opencv-python`, `kornia`, `ffmpeg` with NVDEC, `librosa`, `xgboost`, `mmcv`/`mmpose`/`mmdet` (OpenMMLab), `ultralytics` (YOLO26 — AGPL, license noted for future commercialization), `scipy`, `filterpy` (Kalman/UKF), `smplx` + SAM-3D-Body/Fast SAM-3D-Body (MHR→SMPL), `trimesh`/`pyrender` (mesh), `mujoco` + `mujoco-mjx` (physics sim), `pydantic` (schemas), `anthropic` (LLM copy). Web viewer: Node + `three` (r171+) + `@react-three/fiber`/`drei`/`rapier`, `@gltf-transform/cli`.
-- **H100 performance substrate** (the runtime everything rides on; full rationale in `TECH_STACK.md §H100 runtime & serving`): **TensorRT 10.x** (frozen-model engines), **NVIDIA DALI** + **NVDEC** (GPU video decode — fixes CPU-decode starvation, the #1 bottleneck), **BF16 AMP** (all training; prefer over FP16 on H100), **`torch.compile`** (`max-autotune`, for fast-iterating code), **CUDA graphs/streams** (fixed-shape + decode→infer→postproc overlap), **Triton Inference Server** (ensemble DAG serving the multi-model pipeline on one box — skip Ray/Modal/Bento), **DCGM** (`dcgmi`) for GPU telemetry. Deep-tier delivery: **FastAPI + SSE**, **Redis** (Pub/Sub), **Celery** (GPU worker queue), **APNs** (push). iOS upload: **TUSKit** (resumable).
+- One H100-class GPU. Python 3.11, CUDA 12.x, PyTorch ≥2.4 (TensorRT + `torch.compile`), `onnxruntime-gpu`, `opencv-python`, `kornia`, `ffmpeg` with NVDEC, `librosa`, `xgboost`, `mmcv`/`mmpose`/`mmdet` (OpenMMLab), `ultralytics` (YOLO26 — AGPL, license noted for future commercialization), `scipy`, `filterpy` (Kalman/UKF), `smplx` + SAM-3D-Body/Fast SAM-3D-Body (MHR→SMPL), `trimesh`/`pyrender` (mesh), `mujoco` + `mujoco-mjx` (physics sim), `pydantic` (schemas), `anthropic` (LLM copy). Current review web viewer package pins Node + `three`, React, `@react-three/fiber`, Vite, Vitest, and TypeScript; target production replay work may add `drei`, `rapier`, and `@gltf-transform/cli` when those features are actually wired.
+- **Target H100 performance substrate** (the runtime everything rides on once gates pass; full rationale in `TECH_STACK.md §H100 runtime & serving`): **TensorRT 10.x** (frozen-model engines), **NVIDIA DALI** + **NVDEC** (GPU video decode target for CPU-decode starvation), **BF16 AMP** (all training; prefer over FP16 on H100), **`torch.compile`** (`max-autotune`, for fast-iterating code), **CUDA graphs/streams** (fixed-shape + decode→infer→postproc overlap), **Triton Inference Server** (ensemble DAG serving the multi-model pipeline on one box — skip Ray/Modal/Bento), **DCGM** (`dcgmi`) for GPU telemetry. Deep-tier delivery target: **FastAPI + SSE**, **Redis** (Pub/Sub), **Celery** (GPU worker queue), **APNs** (push). iOS upload target: **TUSKit** (resumable).
 - **Benchmark Fast SAM-3D-Body per-player-frame FIRST (Phase 0).** It is the pipeline's pacing item; its measured VRAM + FPS set the MIG geometry (`BUILD_CHECKLIST.md §1.5`) and the deep-tier latency budget. Do not size anything else before this number exists.
 - `requirements-racketsport.txt` is currently a lightweight, partially unpinned local bootstrap; `web/replay/package-lock.json` pins the web viewer. Record `pip freeze`/lockfile evidence into each `runs/phaseN/REPORT.md` before claiming reproducibility.
 - **iOS client toolchain (Client Track):** Xcode 16+ / Swift 6, deployment target iOS 18+ (RealityView virtual camera) with iOS 17 fallbacks (Vision 3D pose, `videoRotationAngle`); frameworks **AVFoundation, ARKit, Vision, CoreML, RealityKit, CoreMotion**. **Model export:** `coremltools` 9.0 (PyTorch→Core ML, INT8/W8A8 for the ANE) to produce `models_coreml/`. **Replay bake (server, Python):** OpenUSD `pxr` (USDZ/UsdSkel) + `pygltflib` + `smplx` (GLB) — author USDZ and GLB **directly from the reconstruction**, do not round-trip one into the other.
@@ -290,7 +290,7 @@ The native Swift app. It runs **in parallel** with the server Pipeline Track (Ph
 - **`scripts/racketsport/benchmark_sam3dbody.py`** — **run FIRST:** measure Fast SAM-3D-Body per-player-frame FPS + peak VRAM on the H100 (B=1 and batched crops). Its numbers set the MIG geometry and deep-tier latency budget.
 - **Perf substrate scaffold:** minimal **Triton** ensemble config skeleton (`serving/triton/`) for the eval-serving path. TensorRT export utilities, `torch.compile` warmup, INT8 calibration hooks, and DALI/NVDEC decode remain pending implementation rather than completed code.
 
-**Models:** all of § 0.4 (download + load smoke test only; the body models Fast SAM-3D-Body (primary) + Multi-HMR 2/SAT-HMR (fast) + GVHMR/WHAM (cross-check) load + 1 forward pass).
+**Models:** all of § 0.4. Current `scripts/racketsport/smoke_models.py` verifies local file presence and sha256 for `available_on_h100` manifest entries only; model-specific forward passes/FPS remain a Phase-0 GPU task to wire per runtime.
 
 **Deliverables:** `runs/phase0/REPORT.md`, decoded metadata for every clip, `models/MANIFEST.json` (name, license, sha256, path).
 
@@ -299,12 +299,12 @@ The native Swift app. It runs **in parallel** with the server Pipeline Track (Ph
 bash scripts/racketsport/setup_env.sh
 python -m pytest tests/racketsport/test_schemas.py tests/racketsport/test_io_decode.py -q
 python scripts/racketsport/ingest_testclips.py --root data/testclips --out runs/phase0
-python scripts/racketsport/smoke_models.py --manifest models/MANIFEST.json   # loads each model, 1 forward pass, prints FPS
+python scripts/racketsport/smoke_models.py --manifest models/MANIFEST.json   # verifies files + sha256; forward-pass/FPS smokes are pending runtime-specific wiring
 ```
 
 **Acceptance gates:**
 - All schema + io_decode unit tests pass.
-- Every checkpoint loads and runs one forward pass; `smoke_models.py` prints per-model FPS on the H100. Bleeding-edge **[VERIFY]** models that fail to resolve → record the named fallback in `MANIFEST.json` and proceed.
+- Every checkpoint has a verified local file and sha256 in `models/MANIFEST.json`; then each runtime-specific model smoke must load the model, run one forward pass, and record FPS on the H100 before the Phase-0 model gate is claimed. Bleeding-edge **[VERIFY]** models that fail to resolve → record the named fallback in `MANIFEST.json` and proceed.
 - NVDEC decode **≥ 8× real-time** on 1080p (20-min clip decodes < 2.5 min); **≥ 3× real-time** on 4K.
 - 100% of test clips ingested with valid `frames_meta.json`.
 - **SAM-3D-Body benchmark recorded** (per-player-frame FPS + peak VRAM, B=1 and batched) in `runs/phase0/REPORT.md`; MIG geometry chosen from it (eval `2×3g.40gb` default).
@@ -382,12 +382,12 @@ Measure per clip, **bucketed by camera height × angle**: median/p95 reprojectio
   - `hsv_color_cue(crop)` — upper-body HSV histogram + Bhattacharyya.
   - Optional `osnet_reid` — only when `outfits_ambiguous()`.
 - `doubles_id.py` — IDs by court position + side prior; `coach_anchor(...)` 1-tap lock; `detect_stack(...)`; `recover_swap()` (position → color → embedding).
-- `rally_segment.py` — motion+audio activity detector → rally vs dead-time spans (full pipeline only on rallies; ~1 fps state-keeping in dead time).
-- `scripts/racketsport/track.py` — CLI → `tracks.json` (+ overlay MP4).
+- `rally_segment.py` — planned motion+audio activity detector → rally vs dead-time spans (full pipeline only on rallies; ~1 fps state-keeping in dead time). This module is not currently checked in.
+- `scripts/racketsport/track.py` — CLI → `tracks.json`; overlay MP4 is produced separately by `scripts/racketsport/render_player_track_overlay.py`.
 
 **Models:** YOLO26m + BoT-SORT-ReID (ByteTrack fallback); OSNet-x0.5 (optional). No pose here.
 
-**Deliverables:** `tracks.json` (per-frame boxes + world positions + IDs + side/role + confidence), rally segmentation, overlay MP4.
+**Deliverables:** `tracks.json` (per-frame boxes + world positions + IDs + side/role + confidence), rally segmentation once implemented, and optional overlay MP4 from the separate overlay renderer.
 
 **Test procedure:**
 ```bash
@@ -746,7 +746,7 @@ Measure: GLB size per rally; viewer cold-load time; free-viewpoint works; foot-s
 
 **Test procedure:**
 ```bash
-python -m threed.racketsport.orchestrator --clip data/testclips/<20min_clip> --players 4 --out runs/phase11/<clip> --full
+python -m threed.racketsport.orchestrator --clip <clip> --inputs data/testclips/<clip> --out runs/phase11/<clip> --stage e2e --tracking-mode precomputed
 python -m threed.racketsport.eval.e2e_eval --root runs/phase11 --labels data/testclips --out runs/phase11/metrics.json
 python -m pytest tests/racketsport -q   # full regression suite
 ```

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
 from threed.racketsport.court_templates import FT_TO_M
 from threed.racketsport import doubles_id, track_lock
 from threed.racketsport.doubles_id import DoublesIdentity, assign_doubles_roles, coach_anchor
@@ -56,8 +57,8 @@ def test_person_detection_from_bbox_uses_bottom_center_as_world_foot_point():
         ),
         reprojection_error_px=ReprojectionError(median=0.0, p95=0.0),
         capture_quality=CaptureQuality(grade="good", reasons=[]),
-        image_pts=[],
-        world_pts=[],
+        image_pts=minimal_calibration_image_pts(),
+        world_pts=minimal_calibration_world_pts(),
     )
 
     detection = person_detection_from_bbox(calibration, bbox_xyxy=(105.0, 150.0, 115.0, 190.0), confidence=0.91)

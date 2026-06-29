@@ -72,7 +72,7 @@ The dance pipeline runs one heavy path uniformly: `video → 2D identity trackin
 ## 2. End-to-End Pipeline
 
 ```
-                          INGEST (NvDEC hardware decode, trim, QC, capture-quality score)
+                          INGEST (target NVDEC/DALI hardware decode, trim, QC, capture-quality score)
                                               |
         ┌─────────────────────────────────── FAST TIER ───────────────────────────────────┐
         │  (target: usable result <10s; "Instant" product tier)                            │
@@ -227,10 +227,10 @@ Shot classifier status (2026-06-28): no trained SHOT-1 model is approved. The cu
 
 > The per-layer detail below explains WHAT/WHY/HOW-tested. The default/candidate variant names for each layer are centralized in the **§2.3 Model Registry** above, and approved runtime locks belong in `models/MANIFEST.json` after EVAL-0.
 
-### (a) Ingest / decode — **NvDEC hardware decode**
+### (a) Ingest / decode — **GPU decode target**
 
-- **Chosen:** NVIDIA NvDEC (via PyAV/torchaudio/DALI) for GPU-side H.264/HEVC decode; trim dead time pre-decode; compute a **capture-quality score** per clip (camera height/angle estimate, court coverage, resolution, blur).
-- **Why:** On 20-min 1080p/4K clips the bottleneck is decode, not the models. NvDEC keeps frames on-GPU and frees CPU. 4K is downsized to model input (≈640px) right after decode, so model cost ≈ 1080p.
+- **Target:** NVIDIA NVDEC + DALI/PyNvVideoCodec for GPU-side H.264/HEVC decode; trim dead time pre-decode; compute a **capture-quality score** per clip (camera height/angle estimate, court coverage, resolution, blur). Current checked-in decode helpers are CPU/metadata-oriented, and one H100 sample favored CPU decode; true NVDEC/DALI readiness is still a Phase-0 benchmark gate.
+- **Why:** On 20-min 1080p/4K clips decode can dominate wall-clock. GPU decode is still the intended rich path once it beats the measured CPU path on the real clip set. 4K is downsized to model input (≈640px) right after decode, so model cost ≈ 1080p.
 - **Toggle:** decode full clip (rich) ↔ decode only active-rally spans found by a coarse pass (cheap).
 - **Differs from dance:** dance assumed short clips and CPU decode was acceptable; racket sports require GPU decode + dead-time skipping for ~20-min ingest.
 
@@ -456,7 +456,8 @@ We do not buy accuracy by running a heavier model at inference — that only cos
 | Component | License | Commercial OK? | Note |
 |---|---|---|---|
 | **SAM-3D-Body / Fast SAM-3D-Body** | SAM License | **VERIFY** | Usable for current research/personal work. Before commercialization, verify the SAM License terms or switch the body backbone to SAT-HMR (Apache). |
-| Multi-HMR 2 / SAT-HMR (fast-tier preview) | Research | **NO** | Preview only; commercial-swap → SAM-3D-Body per-crop. |
+| Multi-HMR 2 (fast-tier preview) | Research | **NO** | Preview candidate only; commercial build must replace or verify terms. |
+| SAT-HMR (fast-tier fallback) | Apache-2.0 | **YES** | License-safe fast-tier/body-backbone fallback if quality and FOV assumptions pass gates. |
 | GVHMR / WHAM / TRAM (optional trajectory x-check) | Research / MIT | NO / YES | Demoted to optional world-trajectory sanity-check, not the mesh. |
 | PromptHMR | Research | — | **Dropped** (bad on automated sports; user-confirmed). |
 | SMPL / SMPL-X (avatar/anim params) | Model license | **NO** | From SAM-3D-Body MHR→SMPL; commercial build keeps MHR. |
