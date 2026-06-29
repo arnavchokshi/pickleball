@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from threed.racketsport.schemas import PersonGroundTruth, validate_artifact_file
+
 
 SCHEMA_VERSION = 1
 ARTIFACT_TYPE = "racketsport_replay_viewer_manifest"
@@ -35,17 +37,7 @@ def build_replay_viewer_manifest(
 
     label_overlays = []
     if player_labels is not None:
-        payload = _read_mapping_json(player_labels)
-        not_ground_truth = bool(payload.get("not_ground_truth", False))
-        label_overlays.append(
-            {
-                "kind": "player_boxes",
-                "label": "prototype player boxes",
-                "url": _vite_file_url(player_labels),
-                "trusted_for_metrics": not not_ground_truth,
-                "not_ground_truth": not_ground_truth,
-            }
-        )
+        label_overlays.append(_player_label_overlay(player_labels))
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -71,16 +63,41 @@ def write_replay_viewer_manifest(path: str | Path, manifest: Mapping[str, Any]) 
     out.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _player_label_overlay(path: Path) -> dict[str, Any]:
+    payload = _read_mapping_json(path)
+    if "not_ground_truth" not in payload or not isinstance(payload["not_ground_truth"], bool):
+        raise ValueError(f"player_labels must explicitly declare boolean not_ground_truth: {path}")
+    not_ground_truth = payload["not_ground_truth"]
+    reviewed = payload.get("status") == "human_reviewed"
+    trusted_for_metrics = reviewed and not not_ground_truth
+    return {
+        "kind": "player_boxes",
+        "label": "reviewed player boxes" if trusted_for_metrics else "prototype player boxes",
+        "url": _vite_file_url(path),
+        "trusted_for_metrics": trusted_for_metrics,
+        "not_ground_truth": not_ground_truth,
+    }
+
+
 def _annotation_source(path: str | Path) -> dict[str, Any]:
     source = _existing_file(path, "annotation_source")
     payload = _read_mapping_json(source)
     artifact_type = str(payload.get("artifact_type", ""))
-    kind = "person_ground_truth" if artifact_type == "racketsport_person_ground_truth" else "annotation"
+    if artifact_type == "racketsport_person_ground_truth":
+        parsed = validate_artifact_file("person_ground_truth", source)
+        if not isinstance(parsed, PersonGroundTruth):
+            raise ValueError(f"annotation source did not parse as PersonGroundTruth: {source}")
+        return {
+            "kind": "person_ground_truth",
+            "clip_id": parsed.clip_id,
+            "url": _vite_file_url(source),
+            "trusted_for_metrics": True,
+        }
     return {
-        "kind": kind,
+        "kind": "annotation",
         "clip_id": str(payload.get("clip_id", source.stem)),
         "url": _vite_file_url(source),
-        "trusted_for_metrics": kind == "person_ground_truth",
+        "trusted_for_metrics": False,
     }
 
 

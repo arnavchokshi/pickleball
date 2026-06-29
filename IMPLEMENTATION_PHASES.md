@@ -283,7 +283,7 @@ The native Swift app. It runs **in parallel** with the server Pipeline Track (Ph
 **Build:**
 - `requirements-racketsport.txt` + `web/replay/package.json`; `scripts/racketsport/setup_env.sh` creates `.venv`, installs the local Python requirements, and creates expected directories only. Model download/checkpoint hash verification remains a separate manifest/runtime step.
 - `threed/racketsport/__init__.py` + empty module stubs from § 0.2.
-- `threed/racketsport/io_decode.py` — `decode_clip(path, fps_out=None) -> FrameSource` via `ffmpeg`/PyNvVideoCodec NVDEC; yields frames + audio; supports frame-range and stride.
+- `threed/racketsport/io_decode.py` — current `decode_clip(path, fps_out=None)` is a metadata-only compatibility wrapper around `probe_clip`; CPU ffmpeg ingest/QC and decode benchmark helpers exist. True NVDEC/PyNvVideoCodec frame/audio iteration with frame-range and stride remains pending Phase 0 work.
 - `threed/racketsport/schemas/` — `pydantic` models for every artifact JSON (schemas at end). One `validate(path)` per schema.
 - `scripts/racketsport/ingest_testclips.py` — walks `data/testclips/`, decodes each, writes `runs/phase0/<clip>/frames_meta.json` (resolution, fps, frame count, duration, audio sample rate, decode FPS).
 - **`scripts/gpu-eval-run.sh`** — the MIG-slot `flock` lease helper that **all `[GPU]` tasks/tests use** (referenced by `BUILD_CHECKLIST.md §1.5`): scan `/run/gpu-lease/slots/slot*.lock` with `flock -n`; on a free slot `export CUDA_VISIBLE_DEVICES=$(cat slotN.uuid)`, write a heartbeat, run `"$@"`, release; if none free, block on `flock` (FIFO). Plus `scripts/gpu-train-lock.sh` (exclusive `full-gpu.lock` for training mode). Set up the MIG geometry (`eval = 2×3g.40gb` default).

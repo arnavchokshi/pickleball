@@ -37,7 +37,28 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
             "schema_version": 1,
             "artifact_type": "racketsport_person_ground_truth",
             "clip_id": "task_1",
+            "source_format": "cvat_mot_1_1",
+            "source_path": "task_1.zip",
+            "fps": 30.0,
             "frames": [],
+            "summary": {
+                "frame_count": 0,
+                "valid_label_count": 0,
+                "ignored_label_count": 0,
+                "track_ids": [],
+                "max_valid_players_per_frame": 0,
+            },
+        },
+    )
+    replay_scene = _write_json(
+        run_dir / "replay_scene.json",
+        {
+            "schema_version": 1,
+            "world_frame": "court_Z0",
+            "fps": 30.0,
+            "court_glb": "court_review.glb",
+            "players": [],
+            "points": [],
         },
     )
     physics = _write_json(
@@ -55,6 +76,7 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
         video_path=video,
         virtual_world_path=virtual_world,
         player_labels_path=labels,
+        replay_scene_path=replay_scene,
         physics_refinement_path=physics,
         contact_windows_path=contacts,
         annotation_sources=[person_gt],
@@ -64,6 +86,7 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
     assert manifest["clip"] == "clip_a"
     assert manifest["video_url"].startswith("/@fs/")
     assert manifest["virtual_world_url"].startswith("/@fs/")
+    assert manifest["replay_scene_url"].startswith("/@fs/")
     assert manifest["physics_refinement_url"].startswith("/@fs/")
     assert manifest["contact_windows_url"].startswith("/@fs/")
     assert manifest["label_overlays"] == [
@@ -77,6 +100,56 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
     ]
     assert manifest["annotation_sources"][0]["kind"] == "person_ground_truth"
     assert manifest["annotation_sources"][0]["trusted_for_metrics"] is True
+
+
+def test_replay_viewer_manifest_rejects_unvalidated_person_ground_truth_sources(tmp_path: Path) -> None:
+    run_dir = tmp_path / "clip_a"
+    video = run_dir / "video.mp4"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"video")
+    virtual_world = _write_json(run_dir / "virtual_world.json", {"artifact_type": "racketsport_virtual_world"})
+    invalid_person_gt = _write_json(
+        tmp_path / "labels" / "task_1" / "person_ground_truth.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_person_ground_truth",
+            "clip_id": "task_1",
+            "frames": [],
+        },
+    )
+
+    try:
+        build_replay_viewer_manifest(
+            clip="clip_a",
+            video_path=video,
+            virtual_world_path=virtual_world,
+            annotation_sources=[invalid_person_gt],
+        )
+    except Exception as exc:
+        assert "source_format" in str(exc)
+    else:
+        raise AssertionError("invalid person_ground_truth source should not be marked trusted")
+
+
+def test_replay_viewer_manifest_requires_explicit_label_trust_status(tmp_path: Path) -> None:
+    run_dir = tmp_path / "clip_a"
+    video = run_dir / "video.mp4"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"video")
+    virtual_world = _write_json(run_dir / "virtual_world.json", {"artifact_type": "racketsport_virtual_world"})
+    labels = _write_json(run_dir / "labels" / "players.json", {"annotation": {"items": []}})
+
+    try:
+        build_replay_viewer_manifest(
+            clip="clip_a",
+            video_path=video,
+            virtual_world_path=virtual_world,
+            player_labels_path=labels,
+        )
+    except ValueError as exc:
+        assert "not_ground_truth" in str(exc)
+    else:
+        raise AssertionError("player labels without explicit not_ground_truth should not be trusted")
 
 
 def test_replay_viewer_manifest_cli_writes_manifest(tmp_path: Path) -> None:

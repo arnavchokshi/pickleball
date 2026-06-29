@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BufferAttribute, BufferGeometry, Color } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
+import { parseReplayScene, type ReplayScene } from "./replayScene";
 import {
   activeBallContactPlayerIds,
   ballFrameForTime,
@@ -98,6 +99,7 @@ export default function App() {
   const [labels, setLabels] = useState<LabelItem[]>([]);
   const [physics, setPhysics] = useState<PhysicsRefinement | null>(null);
   const [contactWindows, setContactWindows] = useState<ContactWindows | null>(null);
+  const [replayScene, setReplayScene] = useState<ReplayScene | null>(null);
   const [currentTime, setCurrentTime] = useState(initialTime);
   const [loadError, setLoadError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -121,12 +123,16 @@ export default function App() {
         const contactPayload = manifestPayload.contact_windows_url
           ? parseContactWindows(await fetchJson(manifestPayload.contact_windows_url))
           : null;
+        const replayScenePayload = manifestPayload.replay_scene_url
+          ? parseReplayScene(await fetchJson(manifestPayload.replay_scene_url))
+          : null;
         if (cancelled) return;
         setManifest(manifestPayload);
         setWorld(worldPayload);
         setLabels(readLabelItems(labelPayload));
         setPhysics(physicsPayload);
         setContactWindows(contactPayload);
+        setReplayScene(replayScenePayload);
         setLoadError(null);
       } catch (error) {
         if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error));
@@ -202,6 +208,7 @@ export default function App() {
           <Metric label="Mesh Frames" value={stats.meshFrames} />
           <Metric label="Floor Frames" value={stats.floorPlacedFrames} />
           <Metric label="Ball Contacts" value={contactEventCount(contactWindows)} />
+          <Metric label="Replay Points" value={replayScene?.points.length ?? 0} />
         </div>
       </header>
 
@@ -270,6 +277,7 @@ export default function App() {
       <section className="details-band">
         <p>Physics modes: {stats.physicsModes.length ? stats.physicsModes.join(", ") : "none"}</p>
         <p>{physics ? `Physics artifact: ${physics.physics}; FOOT-2 done: ${String(physics.foot2_done)}` : "Physics artifact: none"}</p>
+        <p>{replayScene ? replaySceneReadout(replayScene) : "Replay scene: none"}</p>
         <p>Max floor penetration: {stats.maxFloorPenetrationM.toFixed(4)} m</p>
         <p>{manifest?.notes[0] ?? "Review-only viewer. Artifact gates stay separate from visual inspection."}</p>
       </section>
@@ -440,6 +448,12 @@ function labelTrustText(overlay: ViewerManifest["label_overlays"][number] | null
   if (!overlay) return "labels: none";
   if (overlay.not_ground_truth) return "labels: review only";
   return overlay.trusted_for_metrics ? "labels: trusted" : "labels: not trusted";
+}
+
+function replaySceneReadout(scene: ReplayScene): string {
+  const pointCount = scene.points.length;
+  const totalMb = scene.points.reduce((total, point) => total + point.size_mb, 0);
+  return `Replay scene: ${pointCount} static review point${pointCount === 1 ? "" : "s"}, ${totalMb.toFixed(3)} MB GLB refs`;
 }
 
 function LineStrip({ points, color }: { points: Vec3[]; color: string }) {
