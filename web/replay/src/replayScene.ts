@@ -54,6 +54,9 @@ export function resolveReplaySceneAssetUrl(replaySceneUrl: string, assetPath: st
   if (assetPath.startsWith("/")) return assetPath;
   const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
   const resolved = new URL(assetPath, new URL(replaySceneUrl, origin));
+  if (/^https?:\/\//.test(replaySceneUrl)) {
+    return resolved.href;
+  }
   return resolved.pathname + resolved.search + resolved.hash;
 }
 

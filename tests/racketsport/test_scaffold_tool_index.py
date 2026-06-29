@@ -62,7 +62,7 @@ def test_scaffold_tool_index_reports_scripts_and_coverage_gaps(tmp_path: Path) -
 
     payload = json.loads(completed.stdout)
 
-    assert payload["schema_version"] == 2
+    assert payload["schema_version"] == 3
     assert payload["artifact_type"] == "racketsport_scaffold_tool_index"
     assert payload["scope"] == {
         "indexed_globs": ["scripts/racketsport/*.py", "scripts/racketsport/*.sh", "scripts/*.py", "scripts/*.sh"],
@@ -81,8 +81,8 @@ def test_scaffold_tool_index_reports_scripts_and_coverage_gaps(tmp_path: Path) -
         "tool_count": 6,
         "with_related_tests": 4,
         "missing_related_tests": 2,
-        "with_direct_cli_tests": 2,
-        "missing_direct_cli_tests": 4,
+        "with_direct_cli_reference_tests": 2,
+        "missing_direct_cli_reference_tests": 4,
         "with_matching_json_schema_files": 2,
         "missing_matching_json_schema_files": 4,
         "category_counts": {
@@ -105,7 +105,7 @@ def test_scaffold_tool_index_reports_scripts_and_coverage_gaps(tmp_path: Path) -
 
     autolabel = payload["tools"][0]
     assert autolabel["related_test"] == "tests/racketsport/test_cli_help.py"
-    assert autolabel["direct_cli_test"] == "tests/racketsport/test_cli_help.py"
+    assert autolabel["direct_cli_reference_test"] == "tests/racketsport/test_cli_help.py"
 
     decode = payload["tools"][1]
     assert decode["stem"] == "benchmark_decode"
@@ -113,7 +113,7 @@ def test_scaffold_tool_index_reports_scripts_and_coverage_gaps(tmp_path: Path) -
     assert decode["workstream"] == "EVAL"
     assert decode["task_prefix"] == "EVAL-0"
     assert decode["related_test"] == "tests/racketsport/test_decode_benchmark_summary.py"
-    assert decode["direct_cli_test"] is None
+    assert decode["direct_cli_reference_test"] is None
     assert decode["matching_schema"] is None
 
     serving = payload["tools"][2]
@@ -121,20 +121,20 @@ def test_scaffold_tool_index_reports_scripts_and_coverage_gaps(tmp_path: Path) -
     assert serving["workstream"] == "RPT"
     assert serving["task_prefix"] == "RPT-1"
     assert serving["related_test"] == "tests/racketsport/test_serving_manifest.py"
-    assert serving["direct_cli_test"] is None
+    assert serving["direct_cli_reference_test"] is None
     assert serving["matching_schema"] == "docs/racketsport/serving_manifest_schema.json"
 
     shell = payload["tools"][3]
     assert shell["command_path"] == "scripts/racketsport/gpu-eval-run.sh"
     assert shell["related_test"] == "tests/racketsport/test_cli_help.py"
-    assert shell["direct_cli_test"] == "tests/racketsport/test_cli_help.py"
+    assert shell["direct_cli_reference_test"] == "tests/racketsport/test_cli_help.py"
 
     pose = payload["tools"][4]
     assert pose["category"] == "dataset"
     assert pose["workstream"] == "DATA"
     assert pose["task_prefix"] == "DATA-2"
     assert pose["related_test"] is None
-    assert pose["direct_cli_test"] is None
+    assert pose["direct_cli_reference_test"] is None
     assert pose["matching_schema"] == "docs/racketsport/pose_dataset_schema.json"
 
     unknown = payload["tools"][5]
@@ -142,7 +142,7 @@ def test_scaffold_tool_index_reports_scripts_and_coverage_gaps(tmp_path: Path) -
     assert unknown["workstream"] is None
     assert unknown["task_prefix"] is None
     assert unknown["related_test"] is None
-    assert unknown["direct_cli_test"] is None
+    assert unknown["direct_cli_reference_test"] is None
     assert unknown["matching_schema"] is None
 
 

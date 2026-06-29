@@ -30,9 +30,7 @@ import {
   worldStats,
 } from "./viewerData";
 
-const DEFAULT_REPLAY_MANIFEST_URL =
-  import.meta.env.VITE_REPLAY_MANIFEST_URL ??
-  "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/eval0/prototype_gate_h100_v2/wolverine_mixed_0200_mid_steep_corner/e2e_rerun_20260628_144504/replay_viewer_manifest.json";
+const DEFAULT_REPLAY_MANIFEST_URL = import.meta.env.VITE_REPLAY_MANIFEST_URL?.trim() || null;
 
 const sampleWorld = {
   schema_version: 1,
@@ -94,7 +92,7 @@ const sampleWorld = {
   },
 };
 
-function manifestUrlFromSearch(search: string): string {
+export function manifestUrlFromSearch(search: string): string | null {
   const url = new URLSearchParams(search).get("manifest");
   return url && url.trim() ? url : DEFAULT_REPLAY_MANIFEST_URL;
 }
@@ -116,10 +114,16 @@ export default function App() {
 
   useEffect(() => {
     const manifestUrl = manifestUrlFromSearch(window.location.search);
+    if (manifestUrl === null) {
+      setManifest(null);
+      setLoadError(null);
+      return;
+    }
+    const resolvedManifestUrl = manifestUrl;
     let cancelled = false;
     async function load() {
       try {
-        const manifestPayload = parseViewerManifest(await fetchJson(manifestUrl));
+        const manifestPayload = parseViewerManifest(await fetchJson(resolvedManifestUrl));
         const worldPayload = parseVirtualWorld(await fetchJson(manifestPayload.virtual_world_url));
         const firstOverlay = manifestPayload.label_overlays.find((overlay) => overlay.kind === "player_boxes");
         const labelPayload = firstOverlay ? await fetchJson(firstOverlay.url) : null;
@@ -219,7 +223,7 @@ export default function App() {
       <header className="viewer-header">
         <div>
           <p className="eyebrow">Pickleball Main Review UI</p>
-          <h1>{manifest?.clip ?? "Loading Replay"}</h1>
+          <h1>{manifest?.clip ?? "Replay Review"}</h1>
         </div>
         <div className="status-grid">
           <Metric label="Players" value={stats.players} />
@@ -248,7 +252,7 @@ export default function App() {
                 onTimeUpdate={(event) => syncVideoTime(event.currentTarget)}
               />
             ) : (
-              <div className="empty-video">Loading replay manifest...</div>
+              <div className="empty-video">Load a replay manifest with ?manifest=...</div>
             )}
             <svg className="box-overlay" viewBox={viewBox} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
               {activeLabels.map((item, index) => {

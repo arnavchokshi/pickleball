@@ -1,5 +1,10 @@
 # Paddle Pose Research Snapshot - 2026-06-28
 
+Historical research snapshot. Active RKT policy and current status live in
+`TECH_STACK.md` section `(r)`, `CAPABILITIES.md`, and `BUILD_CHECKLIST.md`.
+Do not treat the local-work bullets below as a current runbook unless those
+canonical files still agree.
+
 ## Recommendation
 
 Use a two-stage paddle stack:

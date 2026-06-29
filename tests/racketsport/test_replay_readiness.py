@@ -121,8 +121,33 @@ def _write_clip(run_root: Path, clip: str, *, body_status: str, mesh_frames: int
     world = _world_payload(mesh_frames=mesh_frames)
     _write_json(run_dir / "virtual_world_paddle_preview.json", world)
     (run_dir / "virtual_world_paddle_preview.html").write_text("<html>review</html>", encoding="utf-8")
-    _write_json(run_dir / "body_mesh_readiness.json", {"schema_version": 1, "status": body_status})
-    _write_json(run_dir / "racket_pose_readiness.json", {"schema_version": 1, "status": "blocked_preview_only"})
+    _write_json(
+        run_dir / "body_mesh_readiness.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_mesh_readiness",
+            "clip": clip,
+            "status": body_status,
+            "world_mesh_available": body_status != "missing_body_output",
+            "representation_decision": "world_mesh_required_available_unverified"
+            if body_status != "missing_body_output"
+            else "world_mesh_required_missing_output",
+            "trusted_for_body_promotion": body_status == "gate_verified",
+            "summary": {},
+            "blockers": [] if body_status == "gate_verified" else ["missing_body_accuracy_gate"],
+            "warnings": [],
+        },
+    )
+    _write_json(
+        run_dir / "racket_pose_readiness.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_racket_pose_readiness",
+            "clip": clip,
+            "status": "blocked_preview_only",
+            "blockers": ["box_derived_preview_only"],
+        },
+    )
     _write_json(run_dir / "contact_window_review.json", {"schema_version": 1, "status": "cleared"})
     scene = build_replay_review_export_from_virtual_world(world, export_root=run_dir / "replay_review", scene_root=run_dir)
     write_replay_scene(run_dir / "replay_scene.json", scene)
@@ -174,6 +199,23 @@ def test_replay_readiness_fails_closed_for_unsafe_replay_scene_glb_refs(tmp_path
     assert clip["review_visual_ready"] is False
     assert "invalid_replay_scene_glb_ref" in clip["blockers"]
     assert "../outside.glb" in clip["glb_report"]["invalid_glbs"]
+
+
+def test_replay_readiness_rejects_status_only_readiness_sidecars(tmp_path: Path) -> None:
+    run_root = tmp_path / "runs"
+    _write_clip(run_root, "clip_with_body", body_status="gate_verified")
+    run_dir = run_root / "clip_with_body"
+    _write_json(run_dir / "body_mesh_readiness.json", {"schema_version": 1, "status": "gate_verified"})
+    _write_json(run_dir / "racket_pose_readiness.json", {"schema_version": 1, "status": "gate_verified"})
+
+    report = build_replay_readiness_report(run_root=run_root, clips=["clip_with_body"])
+    clip = report["clips"][0]
+
+    assert report["status"] == "blocked"
+    assert "invalid_body_mesh_readiness" in clip["blockers"]
+    assert "invalid_racket_pose_readiness" in clip["blockers"]
+    assert clip["truth_status"]["body"].startswith("invalid:")
+    assert clip["truth_status"]["paddle_pose"].startswith("invalid:")
 
 
 def test_replay_readiness_cli_writes_json_and_html_summary(tmp_path: Path) -> None:

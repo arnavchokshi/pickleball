@@ -156,6 +156,54 @@ chmod +x "$env_path/bin/python"
     assert "-n racketsport_mjx" not in conda_args
 
 
+def test_gpu_helpers_help_exits_before_lease_side_effects(tmp_path: Path):
+    for script in ("scripts/gpu-eval-run.sh", "scripts/gpu-train-lock.sh"):
+        lease_root = tmp_path / script.replace("/", "_")
+        completed = subprocess.run(
+            ["bash", script, "--help"],
+            check=False,
+            capture_output=True,
+            text=True,
+            env={**os.environ, "GPU_LEASE_ROOT": str(lease_root)},
+        )
+
+        assert completed.returncode == 0
+        assert "Usage:" in completed.stdout
+        assert completed.stderr == ""
+        assert not lease_root.exists()
+
+
+def test_setup_env_help_and_arg_validation_exit_before_mutation():
+    for args, expected_returncode in [(["--help"], 0), (["extra"], 64)]:
+        completed = subprocess.run(
+            ["bash", "scripts/racketsport/setup_env.sh", *args],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        assert completed.returncode == expected_returncode
+        assert "Usage: scripts/racketsport/setup_env.sh" in completed.stdout + completed.stderr
+        assert "local Phase 0 environment ready" not in completed.stdout
+
+
+def test_fast_sam_installer_help_and_arg_validation_exit_before_environment_checks(tmp_path: Path):
+    for args, expected_returncode in [(["--help"], 0), (["extra"], 64)]:
+        cache_root = tmp_path / ("cache_" + args[0].lstrip("-"))
+        completed = subprocess.run(
+            ["bash", "scripts/racketsport/install_fast_sam_env.sh", *args],
+            check=False,
+            capture_output=True,
+            text=True,
+            env={**os.environ, "WORKSPACE_CACHE": str(cache_root)},
+        )
+
+        assert completed.returncode == expected_returncode
+        assert "Usage: scripts/racketsport/install_fast_sam_env.sh" in completed.stdout + completed.stderr
+        assert "conda.sh" not in completed.stderr
+        assert not cache_root.exists()
+
+
 def test_gpu_eval_run_repairs_stale_slot_uuid(tmp_path):
     _require_flock()
 

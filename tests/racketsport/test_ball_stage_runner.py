@@ -425,6 +425,36 @@ def test_ball_stage_runner_prefers_eval_suite_selected_track_over_legacy_prototy
     assert emitted["frames"][0]["xy"] == [321.0, 123.0]
 
 
+def test_ball_stage_runner_prefers_current_inputs_over_stale_run_dir_track(tmp_path: Path) -> None:
+    clip = "clip_001"
+    inputs = tmp_path / "inputs" / clip
+    run_dir = tmp_path / "runs" / clip
+    current_source = inputs / "tracknet_smoke_0000_0010" / "ball_track_fusion_temporal_vball100_localtraj.json"
+    stale_source = run_dir / "tracknet_smoke_0000_0010" / "ball_track_fusion_temporal_vball100_localtraj.json"
+    current_payload = _ball_track_payload()
+    current_payload["frames"][0]["xy"] = [111.0, 222.0]
+    stale_payload = _ball_track_payload()
+    stale_payload["frames"][0]["xy"] = [999.0, 999.0]
+    _write_json(current_source, current_payload)
+    _write_json(stale_source, stale_payload)
+    _write_dependency_artifacts(run_dir)
+
+    runners = _noop_dependency_runners()
+
+    summary = run_pipeline(
+        clip=clip,
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["metrics"]["source_ball_track"] == str(current_source)
+    emitted = json.loads((run_dir / "ball_track.json").read_text(encoding="utf-8"))
+    assert emitted["frames"][0]["xy"] == [111.0, 222.0]
+
+
 def test_ball_stage_runner_fails_closed_when_selected_track_has_no_selection_sidecar(tmp_path: Path) -> None:
     clip = "clip_001"
     inputs = tmp_path / "inputs" / clip
@@ -451,6 +481,29 @@ def test_ball_stage_runner_fails_closed_when_selected_track_has_no_selection_sid
     ball_stage = summary["stages"][-1]
     assert any("missing selected-track metadata sidecar" in note for note in ball_stage["notes"])
     assert not (run_dir / "ball_track.json").exists()
+
+
+def test_ball_stage_runner_prefers_current_input_cues_over_stale_run_dir_cues(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "clip_001"
+    _write_no_click_ball_source(inputs)
+    _write_dependency_artifacts(run_dir)
+    _write_contact_cue_artifacts(inputs)
+    _write_json(run_dir / "audio_onsets.json", {"schema_version": 1, "onsets": []})
+    _write_json(run_dir / "wrist_velocity_peaks.json", {"schema_version": 1, "peaks": []})
+    _write_json(run_dir / "ball_inflections.json", {"schema_version": 1, "candidates": []})
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=_noop_dependency_runners(),
+    )
+
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["metrics"]["contact_event_count"] == 1
+    assert "fused contact_windows.json from audio, wrist, and ball cue artifacts" in ball_stage["notes"]
 
 
 def test_ball_stage_runner_fails_closed_when_no_click_source_artifact_is_missing(tmp_path: Path) -> None:

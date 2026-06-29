@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .racket6dof import estimate_planar_paddle_pose_with_diagnostics, validate_paddle_dimensions
+from .racket_pose_readiness import build_racket_pose_readiness, write_racket_pose_readiness
+from .racket_promotion_audit import build_racket_promotion_audit, write_racket_promotion_audit
 from .racket_true_corners import is_box_derived_source
 from .schemas import CourtCalibration, RacketCandidateFrame, RacketCandidates, RacketPose, validate_artifact_file
 
@@ -180,12 +182,24 @@ class RacketStageRunner:
             }
         )
         _write_json(context.run_dir / "racket_pose.json", racket_pose.model_dump(mode="json"))
+        readiness = build_racket_pose_readiness(
+            clip=str(getattr(context, "clip", "")),
+            racket_candidates=candidates,
+            racket_pose=racket_pose,
+        )
+        write_racket_pose_readiness(context.run_dir / "racket_pose_readiness.json", readiness)
+        promotion_audit = build_racket_promotion_audit(
+            clip=str(getattr(context, "clip", "")),
+            racket_candidates=candidates,
+            racket_pose=racket_pose,
+        )
+        write_racket_promotion_audit(context.run_dir / "racket_promotion_audit.json", promotion_audit)
         return RacketStageRun(
             stage=self.stage,
             status="ran",
             real_model=self.real_model,
             source_mode=self.source_mode,
-            produced_artifacts=("racket_pose.json",),
+            produced_artifacts=("racket_pose.json", "racket_pose_readiness.json", "racket_promotion_audit.json"),
             notes=(
                 "consumed explicit four-corner paddle candidates and solved planar PnP/IPPE",
                 "fails closed when candidates are missing, ambiguous, invalid, or above reprojection threshold",

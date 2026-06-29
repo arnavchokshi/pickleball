@@ -29,7 +29,7 @@ Six decisions define the build:
 
 6. **Coaching value still leads the product.** The 3D replay is the proof layer and a differentiator, but the conversion core remains court map + one priority habit + self-vs-self + one drill, delivered fast (§4, §5.6).
 
-**Capture constraint (core, not optional):** one static tripod camera (**single-camera is the product focus; multi-camera is future**), but **height and angle vary a lot**. Nothing geometric is hardcoded — we solve calibration per-clip from the court and world-ground the body off the *solved* plane (viewpoint-agnostic, and now also the anchor for physics + ball depth). The **native iOS app** makes this a strength: AVFoundation locks exposure/focus/WB and runs a high shutter (1/500–1/1000 s) for sharp frames, and an **ARKit setup pass supplies camera intrinsics + 6DoF pose + the court-floor plane for free** (sidecar) to seed calibration — no manual checkerboard. Low/shallow angles compress depth → per-clip capture-quality score + confidence gating. Capture 60 fps (120 for swing-speed/racket); see §10. **LiDAR (Pro devices) is a near-camera (~5 m) bonus only** — it helps near-player foot-contact, never the far court or the ball; vision-first is the baseline.
+**Capture constraint (core, not optional):** one static tripod camera (**single-camera is the product focus; multi-camera is future**), but **height and angle vary a lot**. Nothing geometric is hardcoded — we solve calibration per-clip from the court and world-ground the body off the *solved* plane (viewpoint-agnostic, and now also the anchor for physics + ball depth). The **target native iOS app** makes this a strength: AVFoundation locks exposure/focus/WB and runs a high shutter (1/500–1/1000 s) for sharp frames, and an **ARKit setup pass should supply camera intrinsics + 6DoF pose + the court-floor plane** (sidecar) to seed calibration once the device gate passes. Current repo reality is basic estimated sidecar writing plus calibration/manual-tap contracts; trusted ARKit/manual sidecar capture is not yet verified. Low/shallow angles compress depth → per-clip capture-quality score + confidence gating. Capture 60 fps (120 for swing-speed/racket); see §10. **LiDAR (Pro devices) is a near-camera (~5 m) bonus only** — it helps near-player foot-contact, never the far court or the ball; vision-first is the baseline.
 
 **What this is NOT in v1:** electronic line calling, auto scoring, DUPR/UTR replacement, real-time in-rally sideline coaching (fast preview after upload is in scope), medical diagnosis, consumer-only App Store launch before coach/club pilots. (6DoF paddle tracking and the 3D replay are now **in** scope.)
 
@@ -264,17 +264,17 @@ Single static iPhone (or facility camera). **The native app configures capture; 
 - **Tennis:** singles/doubles template, service boxes, baseline, sidelines, net plane. Serve lab needs exact service-box/net geometry.
 
 ### Body insights (≤3 per session, defensible only)
-| Insight | PB use | Tennis use | Min. signal | Defensible? |
+| Insight | PB use | Tennis use | Min. signal | Claim status |
 |---|---|---|---|---|
-| Kitchen/NVZ foot | foot faults, approach timing | net approach | foot keypoint vs court plane | ✅ |
-| Split-step / ready timing | late readiness | return/serve+1 | ankle vel vs opponent-contact timestamp | ✅ (timing) |
-| Overreach / balance | unstable dinks/resets | stretched ground strokes | base of support + CoM proxy | ✅ |
-| Doubles spacing | middle gap, partner exposure | doubles shape | player positions in court frame | ✅ |
-| Transition-zone recovery | stuck between lines | recovery to neutral | zone occupancy over time | ✅ |
-| Shoulder–hip separation (X-factor) | drive/serve coil | serve/forehand coil | bilateral shoulder & hip keypoints | ✅ (trend) |
-| Knee bend / trunk tilt | load, posture | trophy/landing | sagittal joint angles | ✅ (±3–10°) |
-| Contact point vs body | early/late | early/late | wrist vs front hip | ✅ |
-| Paddle-face / contact-point | drive/dink face control | serve/groundstroke face | **racket 6DoF (PnP on known paddle)** | ✅ via tracked racket (~3–5° face, ±1–3 cm contact); wrist-only stays gated |
+| Kitchen/NVZ foot | foot faults, approach timing | net approach | foot keypoint vs court plane | target after CAL/BODY foot gate |
+| Split-step / ready timing | late readiness | return/serve+1 | ankle vel vs opponent-contact timestamp | target after event-timing gate |
+| Overreach / balance | unstable dinks/resets | stretched ground strokes | base of support + CoM proxy | target after BODY confidence gate |
+| Doubles spacing | middle gap, partner exposure | doubles shape | player positions in court frame | target after TRK/CAL gates |
+| Transition-zone recovery | stuck between lines | recovery to neutral | zone occupancy over time | target after TRK/CAL/event gates |
+| Shoulder–hip separation (X-factor) | drive/serve coil | serve/forehand coil | bilateral shoulder & hip keypoints | target trend after BODY labels |
+| Knee bend / trunk tilt | load, posture | trophy/landing | sagittal joint angles | target after angle-validation gate |
+| Contact point vs body | early/late | early/late | wrist vs front hip | target after event/BODY gate |
+| Paddle-face / contact-point | drive/dink face control | serve/groundstroke face | **racket 6DoF (PnP on known paddle)** | target after true paddle evidence + RKT gate; current box-derived preview stays gated |
 
 ### Outputs
 Session card with 3 habits; per-habit clip; **court map / top-down with player paths (conversion core)**; **self-vs-self before/after**; physics-accurate 3D mesh replay (premium); confidence score + skipped-span count; one drill per habit; week-over-week tracker; coach share link/PDF; manual correction (wrong player/span/habit, exclude timeline).

@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
 from threed.racketsport.racket_stage_runner import RacketStageRunner
 from threed.racketsport.racket6dof import paddle_face_corners_object_cm
-from threed.racketsport.schemas import RacketPose, validate_artifact_file
+from threed.racketsport.schemas import RacketPose, RacketPoseReadiness, RacketPromotionAudit, validate_artifact_file
 
 
 def _write_json(path: Path, payload: dict) -> Path:
@@ -79,6 +79,7 @@ def test_racket_stage_runner_writes_schema_valid_pose_from_explicit_four_corner_
 
     assert result.status == "ran"
     assert result.source_mode == "explicit_four_corner_candidates_pnp_ippe"
+    assert result.produced_artifacts == ("racket_pose.json", "racket_pose_readiness.json", "racket_promotion_audit.json")
     assert result.metrics["candidate_frame_count"] == 1
     assert result.metrics["accepted_frame_count"] == 1
     parsed = validate_artifact_file("racket_pose", run_dir / "racket_pose.json")
@@ -88,6 +89,51 @@ def test_racket_stage_runner_writes_schema_valid_pose_from_explicit_four_corner_
     assert parsed.players[0].frames[0].translation_unit == "cm"
     assert parsed.players[0].frames[0].reprojection_error_px is not None
     assert parsed.players[0].frames[0].reprojection_error_px < 0.75
+    readiness = validate_artifact_file("racket_pose_readiness", run_dir / "racket_pose_readiness.json")
+    audit = validate_artifact_file("racket_promotion_audit", run_dir / "racket_promotion_audit.json")
+    assert isinstance(readiness, RacketPoseReadiness)
+    assert isinstance(audit, RacketPromotionAudit)
+    assert readiness.clip == "clip_001"
+    assert audit.clip == "clip_001"
+
+
+def test_racket_stage_runner_overwrites_stale_readiness_sidecars(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "clip_001"
+    _write_json(run_dir / "court_calibration.json", _court_calibration())
+    _write_json(inputs / "racket_candidates.json", _candidate_payload())
+    _write_json(
+        run_dir / "racket_pose_readiness.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_racket_pose_readiness",
+            "clip": "stale_old_clip",
+            "status": "ready_for_rkt_promotion",
+            "blockers": [],
+        },
+    )
+    _write_json(
+        run_dir / "racket_promotion_audit.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_racket_promotion_audit",
+            "clip": "stale_old_clip",
+            "trusted_for_rkt_promotion": True,
+            "blockers": [],
+        },
+    )
+    context = SimpleNamespace(inputs_dir=inputs, run_dir=run_dir, clip="clip_001")
+
+    RacketStageRunner().run(context)
+
+    readiness = validate_artifact_file("racket_pose_readiness", run_dir / "racket_pose_readiness.json")
+    audit = validate_artifact_file("racket_promotion_audit", run_dir / "racket_promotion_audit.json")
+    assert isinstance(readiness, RacketPoseReadiness)
+    assert isinstance(audit, RacketPromotionAudit)
+    assert readiness.clip == "clip_001"
+    assert audit.clip == "clip_001"
+    assert readiness.status != "ready_for_rkt_promotion"
+    assert audit.trusted_for_rkt_promotion is False
 
 
 def test_racket_stage_runner_rejects_box_derived_candidates_before_promotion(tmp_path: Path) -> None:

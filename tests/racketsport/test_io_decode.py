@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 
 import pytest
 
@@ -69,6 +70,26 @@ def test_decode_clip_alias_matches_probe_clip_metadata(tmp_path):
 def test_probe_clip_fails_closed_on_missing_file(tmp_path):
     with pytest.raises(FileNotFoundError):
         probe_clip(tmp_path / "missing.mp4")
+
+
+def test_ingest_testclips_cli_reports_missing_root_without_traceback(tmp_path):
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/ingest_testclips.py",
+            "--root",
+            str(tmp_path / "missing"),
+            "--out",
+            str(tmp_path / "runs"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 2
+    assert "root does not exist" in completed.stderr
+    assert "Traceback" not in completed.stderr
 
 
 def test_laplacian_variance_flags_spatial_detail():

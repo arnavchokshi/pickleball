@@ -201,18 +201,20 @@ public struct CaptureSensorManifest: Equatable, Sendable {
     public var streams: [CaptureSensorStream]
 
     public var hasRequiredSidecarInputs: Bool {
-        let required: Set<CaptureSensorStream> = [
+        let streamSet = Set(streams)
+        let commonRequired: Set<CaptureSensorStream> = [
             .videoFrames,
             .audioSamples,
             .frameTiming,
             .lockedCameraSettings,
             .cameraIntrinsics,
             .coreMotionGravity,
-            .manualCourtTaps,
             .onDevicePoseTrack,
         ]
+        let hasARKitSeed = streamSet.contains(.arkitCameraPose) && streamSet.contains(.courtPlane)
+        let hasManualFallback = streamSet.contains(.manualCourtTaps)
 
-        return required.isSubset(of: Set(streams))
+        return commonRequired.isSubset(of: streamSet) && (hasARKitSeed || hasManualFallback)
     }
 
     public var hasOptionalDepthInput: Bool {

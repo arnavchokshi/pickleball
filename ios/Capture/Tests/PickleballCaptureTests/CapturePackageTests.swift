@@ -128,6 +128,51 @@ final class CapturePackageTests: XCTestCase {
         XCTAssertFalse(manifest.hasOptionalDepthInput)
     }
 
+    func testSensorManifestAcceptsARKitSeedWithoutManualFallback() {
+        let manifest = CaptureSensorManifest(streams: [
+            .videoFrames,
+            .audioSamples,
+            .frameTiming,
+            .lockedCameraSettings,
+            .cameraIntrinsics,
+            .arkitCameraPose,
+            .courtPlane,
+            .coreMotionGravity,
+            .onDevicePoseTrack,
+        ])
+
+        XCTAssertTrue(manifest.hasRequiredSidecarInputs)
+    }
+
+    func testSensorManifestAcceptsManualFallbackWithoutARKitSeed() {
+        let manifest = CaptureSensorManifest(streams: [
+            .videoFrames,
+            .audioSamples,
+            .frameTiming,
+            .lockedCameraSettings,
+            .cameraIntrinsics,
+            .coreMotionGravity,
+            .manualCourtTaps,
+            .onDevicePoseTrack,
+        ])
+
+        XCTAssertTrue(manifest.hasRequiredSidecarInputs)
+    }
+
+    func testSensorManifestRequiresEitherARKitSeedOrManualFallback() {
+        let manifest = CaptureSensorManifest(streams: [
+            .videoFrames,
+            .audioSamples,
+            .frameTiming,
+            .lockedCameraSettings,
+            .cameraIntrinsics,
+            .coreMotionGravity,
+            .onDevicePoseTrack,
+        ])
+
+        XCTAssertFalse(manifest.hasRequiredSidecarInputs)
+    }
+
     func testSensorManifestTreatsLidarDepthAsOptionalTierAInput() {
         let manifest = CaptureSensorManifest(
             streams: CaptureSensorManifest.pipelineRequired.streams + [.lidarDepthRefs]

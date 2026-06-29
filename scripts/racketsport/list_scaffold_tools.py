@@ -141,7 +141,7 @@ def build_scaffold_tool_index(root: Path) -> dict[str, Any]:
     category_counts = Counter(tool["category"] for tool in tools)
 
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "artifact_type": "racketsport_scaffold_tool_index",
         "scripts_root": SCRIPT_ROOT.as_posix(),
         "tests_root": TEST_ROOT.as_posix(),
@@ -163,8 +163,12 @@ def build_scaffold_tool_index(root: Path) -> dict[str, Any]:
             "tool_count": len(tools),
             "with_related_tests": sum(1 for tool in tools if tool["related_test"] is not None),
             "missing_related_tests": sum(1 for tool in tools if tool["related_test"] is None),
-            "with_direct_cli_tests": sum(1 for tool in tools if tool["direct_cli_test"] is not None),
-            "missing_direct_cli_tests": sum(1 for tool in tools if tool["direct_cli_test"] is None),
+            "with_direct_cli_reference_tests": sum(
+                1 for tool in tools if tool["direct_cli_reference_test"] is not None
+            ),
+            "missing_direct_cli_reference_tests": sum(
+                1 for tool in tools if tool["direct_cli_reference_test"] is None
+            ),
             "with_matching_json_schema_files": sum(1 for tool in tools if tool["matching_schema"] is not None),
             "missing_matching_json_schema_files": sum(1 for tool in tools if tool["matching_schema"] is None),
             "category_counts": dict(sorted(category_counts.items())),
@@ -203,7 +207,7 @@ def _tool_entry(path: Path, *, root: Path, tests_root: Path, schemas_root: Path)
         "workstream": workstream,
         "task_prefix": task_prefix,
         "related_test": _related_test(stem, command_path=command_path, tests_root=tests_root, root=root),
-        "direct_cli_test": _direct_cli_test(command_path, tests_root=tests_root, root=root),
+        "direct_cli_reference_test": _direct_cli_reference_test(command_path, tests_root=tests_root, root=root),
         "matching_schema": _matching_schema(stem, schemas_root=schemas_root, root=root),
     }
 
@@ -324,7 +328,7 @@ def _related_test(stem: str, *, command_path: str, tests_root: Path, root: Path)
     return _first_test_referencing(command_path, tests_root=tests_root, root=root)
 
 
-def _direct_cli_test(command_path: str, *, tests_root: Path, root: Path) -> str | None:
+def _direct_cli_reference_test(command_path: str, *, tests_root: Path, root: Path) -> str | None:
     return _first_test_referencing(command_path, tests_root=tests_root, root=root)
 
 

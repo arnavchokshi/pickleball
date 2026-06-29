@@ -54,4 +54,12 @@ describe("parseReplayScene", () => {
     );
     expect(resolveReplaySceneAssetUrl(base, "/@fs//tmp/court.glb")).toBe("/@fs//tmp/court.glb");
   });
+
+  it("preserves remote replay scene asset origins", () => {
+    const base = "https://cdn.example.com/runs/eval0/clip/replay_scene.json";
+
+    expect(resolveReplaySceneAssetUrl(base, "replay_review/points/point_001_review.glb")).toBe(
+      "https://cdn.example.com/runs/eval0/clip/replay_review/points/point_001_review.glb",
+    );
+  });
 });

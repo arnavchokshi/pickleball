@@ -63,7 +63,9 @@ def main() -> int:
     args = parser.parse_args()
 
     if not args.root.exists():
-        raise FileNotFoundError(args.root)
+        parser.exit(2, f"{parser.prog}: error: root does not exist: {args.root}\n")
+    if not args.root.is_dir():
+        parser.exit(2, f"{parser.prog}: error: root is not a directory: {args.root}\n")
     written = ingest_testclips(
         args.root,
         args.out,

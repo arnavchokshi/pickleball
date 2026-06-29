@@ -5,6 +5,25 @@ CONDA_ROOT="${CONDA_ROOT:-/opt/conda}"
 ENV_NAME="${FAST_SAM_ENV_NAME:-fast_sam_3d_body}"
 WORKSPACE_CACHE="${WORKSPACE_CACHE:-/workspace/.cache}"
 
+usage() {
+  cat <<'EOF'
+Usage: scripts/racketsport/install_fast_sam_env.sh
+
+Installs the Fast SAM-3D-Body conda environment and verifies imports.
+EOF
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+if [ "$#" -gt 0 ]; then
+  usage >&2
+  exit 64
+fi
+
 export PIP_CACHE_DIR="${PIP_CACHE_DIR:-$WORKSPACE_CACHE/pip}"
 export TMPDIR="${TMPDIR:-$WORKSPACE_CACHE/build}"
 mkdir -p "$PIP_CACHE_DIR" "$TMPDIR"

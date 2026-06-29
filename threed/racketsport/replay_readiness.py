@@ -144,17 +144,21 @@ def _build_clip_report(run_dir: Path, *, clip: str, labels_root: Path | None) ->
         if warning_text not in blockers:
             blockers.append(warning_text)
 
-    body_status = _artifact_status(run_dir / "body_mesh_readiness.json")
-    racket_status = _artifact_status(run_dir / "racket_pose_readiness.json")
+    body_status = _validated_artifact_status(run_dir / "body_mesh_readiness.json", "body_mesh_readiness")
+    racket_status = _validated_artifact_status(run_dir / "racket_pose_readiness.json", "racket_pose_readiness")
     contact_status = _artifact_status(run_dir / "contact_window_review.json")
     if body_status is None:
         blockers.append("missing_body_mesh_readiness")
+    elif body_status.startswith("invalid:"):
+        blockers.append("invalid_body_mesh_readiness")
     elif body_status == "missing_body_output":
         blockers.append("missing_body_mesh")
     elif body_status != "gate_verified":
         blockers.append("body_mesh_needs_accuracy_gate")
     if racket_status is None:
         blockers.append("missing_racket_pose_readiness")
+    elif racket_status.startswith("invalid:"):
+        blockers.append("invalid_racket_pose_readiness")
     elif racket_status != "gate_verified":
         blockers.append("paddle_pose_preview_only")
 
@@ -244,6 +248,17 @@ def _artifact_status(path: Path) -> str | None:
         return "invalid_json"
     status = payload.get("status")
     return str(status) if status is not None else "missing_status"
+
+
+def _validated_artifact_status(path: Path, schema_name: str) -> str | None:
+    if not path.is_file():
+        return None
+    try:
+        payload = validate_artifact_file(schema_name, path)
+    except Exception as exc:
+        return f"invalid:{exc}"
+    status = getattr(payload, "status", None)
+    return str(status) if status is not None else "invalid:missing_status"
 
 
 def _glb_report(run_dir: Path) -> dict[str, Any]:

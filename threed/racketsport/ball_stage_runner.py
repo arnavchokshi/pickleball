@@ -141,15 +141,15 @@ def _default_source_candidates(context: Any, *, prototype_root: Path) -> list[Pa
     selected_dir = DEFAULT_SELECTED_TRACKS_DIR
     selected_filename = DEFAULT_SELECTED_BALL_FILENAME
     return [
-        context.run_dir / selected_dir / context.clip / selected_filename,
-        context.run_dir.parent / selected_dir / context.clip / selected_filename,
         context.inputs_dir / selected_dir / context.clip / selected_filename,
         context.inputs_dir.parent / selected_dir / context.clip / selected_filename,
+        context.run_dir / selected_dir / context.clip / selected_filename,
+        context.run_dir.parent / selected_dir / context.clip / selected_filename,
         prototype_root / selected_dir / context.clip / selected_filename,
-        context.run_dir / filename,
-        context.run_dir / smoke_dir / filename,
         context.inputs_dir / filename,
         context.inputs_dir / smoke_dir / filename,
+        context.run_dir / filename,
+        context.run_dir / smoke_dir / filename,
         prototype_root / context.clip / smoke_dir / filename,
     ]
 
@@ -222,7 +222,7 @@ def _contact_windows_from_cues(context: Any, *, fps: float) -> tuple[dict[str, o
 
 
 def _first_existing(context: Any, filename: str) -> Path | None:
-    for root in (context.run_dir, context.inputs_dir):
+    for root in (context.inputs_dir, context.run_dir):
         candidate = root / filename
         if candidate.is_file():
             return candidate

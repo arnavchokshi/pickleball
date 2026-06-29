@@ -113,19 +113,19 @@ Low-confidence escalation runs across both tiers: any span the fast tier flags u
 
 The target product is a **native iOS Swift app** + a **GPU server**. The phone does what it is uniquely good at (controlled capture, camera geometry from ARKit/manual seed, instant on-device preview/guidance on the Neural Engine, and native 3D playback); the server does the heavy, accuracy-critical reconstruction. Current code has iOS/package boundaries and candidate Core ML assets/manual staging paths; it does not yet prove bundled model delivery, device capture, or native replay end to end. **Single camera only for v1.**
 
-| Task | On-device (iPhone) | Server (H100) | Why there |
+| Task | Target owner | Current repo state | Why there |
 |---|---|---|---|
-| Capture (locked exposure/focus/WB, fps/format) | ✅ AVFoundation (t) | — | hardware control only the device has |
-| Camera intrinsics + 6DoF pose + court-plane | ✅ ARKit setup pass → sidecar (u) | refine with solvePnP (b) | ARKit gives calibration **for free**; server refines |
-| Fast-tier preview pose + ball/racket | ✅ Apple Vision + YOLO Core ML (v) | — | instant, on the Neural Engine, free |
-| Capture-quality guidance (framing/light/level) | ✅ Vision + ARKit + CoreMotion (v) | — | must be real-time, before recording |
-| Person detect/track (deep) | — | ✅ YOLO26m + BoT-SORT (c) | accuracy + batch throughput |
-| **3D body mesh (source of truth)** | — | ✅ **Fast SAM-3D-Body + our grounding (e/p)** | ViT-H-class; can't run real-time on-device |
-| Foot-lock, physics, racket 6DoF, ball 3D | — | ✅ (p)(q)(r)(h) | heavy, global, deterministic |
-| Metrics, insights, LLM copy | — | ✅ (k)(l) | server-side, async |
-| **Render bake → animated scene** | — | ✅ one bake → **USDZ + GLB** | author once, play everywhere |
-| Replay playback | ✅ RealityKit/USDZ (s) | — | native free-viewpoint viewer |
-| Web share playback | (link) | served GLB | Three.js cross-platform (s) |
+| Capture (locked exposure/focus/WB, fps/format) | iPhone AVFoundation (t) | partial preview/recording runtime plus landscape readiness/start-recording guards; physical-device fps/codec/luminance gates still missing | hardware control only the device has |
+| Camera intrinsics + 6DoF pose + court-plane | iPhone ARKit setup pass -> sidecar (u), server refine with solvePnP (b) | sidecar schemas/package support ARKit or manual seeds; live ARKit setup pass and trusted device sidecar gate are not verified | ARKit can seed calibration; server refines |
+| Fast-tier preview pose + ball/racket | iPhone Apple Vision + YOLO Core ML (v) | data structures, local Core ML candidate packages, and tests exist; bundled app delivery/device latency gates are not verified | instant, on the Neural Engine |
+| Capture-quality guidance (framing/light/level) | iPhone Vision + ARKit + CoreMotion (v) | guidance contracts/scaffolds exist; live device guidance UX is not verified | must run before recording |
+| Person detect/track (deep) | Server YOLO26m + BoT-SORT (c) | runner/checkpoint wiring exists; labeled IDF1/spectator/ID-switch gates remain pending | accuracy + batch throughput |
+| **3D body mesh (source of truth)** | Server Fast SAM-3D-Body + grounding (e/p) | scheduled-frame H100 smoke exists for selected clips; BODY accuracy/full-window gates remain pending | ViT-H-class; cannot run real-time on-device |
+| Foot-lock, physics, racket 6DoF, ball 3D | Server (p)(q)(r)(h) | CPU scaffolds/review artifacts exist; FOOT/BALL/RKT gates remain pending | heavy, global, deterministic |
+| Metrics, insights, LLM copy | Server (k)(l) | fact/copy scaffolds exist; production metrics/report gates remain pending | server-side, async |
+| **Render bake -> animated scene** | Server bake -> USDZ + GLB (s) | static review GLBs exist; production animated bake is missing | author once, play everywhere |
+| Replay playback | iPhone RealityKit/USDZ (s) | metadata/module scaffolds exist; native playback is not verified | native free-viewpoint viewer |
+| Web share playback | Browser Three.js/GLB (s) | review-only Three.js/R3F viewer exists; production replay/share gate remains pending | cross-platform review/share surface |
 
 **Upload payload:** trimmed HEVC/ProRes clip + sidecar (ARKit intrinsics/pose/court-plane + on-device pose track as a **server prior** + LiDAR depth frames if Tier A). **Latency model:** on-device preview is instant; the deep-tier replay is async (seconds–minutes) and swapped in when ready.
 

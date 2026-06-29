@@ -48,7 +48,7 @@ What is **not** done yet:
 - Burlington is retired as a court-calibration seed because fisheye curvature bends the court lines. Keep it for player-ID, ball, BODY smoke, paddle/replay, and other non-court QA only.
 - RKT is review/scaffold only. Box-derived preview poses are explicitly not canonical paddle 6DoF; true-corner review crop sheets exist but have not been labeled.
 - RPL has parser/static review artifacts only. Static review GLBs are structurally valid and explicitly review-only; the production animated GLB/USDZ export and real Three.js/R3F free-viewpoint viewer are not built.
-- The iOS Swift package has scaffold/unit-test coverage, and IOS-1 has partial AVFoundation preview/recording runtime code. The capture path now has a landscape readiness/start-recording gate in code, and the shared Xcode scheme has a minimal hosted `PickleballAppTests` target for camera-free app state coverage. Full simulator test execution on this machine is blocked by host disk space, and sidecar writing, live-frame feed, fps/shutter/luminance, codec behavior, ARKit/Vision/CoreML/RealityKit/upload, and physical-device gates remain scaffold-level.
+- The iOS Swift package has scaffold/unit-test coverage, and IOS-1 has partial AVFoundation preview/recording runtime code. The capture path now has a landscape readiness/start-recording gate in code, basic estimated `capture_sidecar.json` writing, and the shared Xcode scheme has a minimal hosted `PickleballAppTests` target for camera-free app state coverage. Full simulator test execution on this machine is blocked by host disk space, and trusted ARKit/manual sidecar capture, live-frame feed, fps/shutter/luminance, codec behavior, ARKit/Vision/CoreML/RealityKit/upload, and physical-device gates remain scaffold-level.
 
 Critical next build order:
 
@@ -190,7 +190,7 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 ### IOS — iOS client (capture, calibration, fast tier, viewer)
 | ☐ | ID | Task | Owns | Deps | Phase | Owner | Status |
 |---|----|------|------|------|-------|-------|--------|
-| ☐ | IOS-1 | AVFoundation capture contracts plus partial preview/recording runtime; sidecar writing, live-frame feed, fps/shutter/luminance measurement, codec validation, and physical-device gates still missing | `ios/Capture/`, `ios/App/CameraPreviewView.swift`, `ios/App/CaptureViewModel.swift` | ENV-3 | C1 | Codex | SCAFFOLD |
+| ☐ | IOS-1 | AVFoundation capture contracts plus partial preview/recording runtime; basic estimated sidecar writing exists, while trusted ARKit/manual sidecar capture, live-frame feed, fps/shutter/luminance measurement, codec validation, and physical-device gates are still missing | `ios/Capture/`, `ios/App/CameraPreviewView.swift`, `ios/App/CaptureViewModel.swift` | ENV-3 | C1 | Codex | SCAFFOLD |
 | ☐ | IOS-2 | Calibration sidecar/manual-tap contracts and scaffolding; real ARKit setup pass still needs device runtime implementation and validation | `ios/Calibration/` | IOS-1 | C1 | Codex | SCAFFOLD |
 | ☐ | IOS-3 | Fast-tier module scaffolding; real Vision/Core ML preview still needs on-device implementation and latency validation | `ios/FastTier/` | IOS-1 | C2 | Codex | SCAFFOLD |
 | ☐ | IOS-4 | Guidance contracts/scaffolding; real corner/exposure/blur/CoreMotion guidance UX still needs device implementation and validation | `ios/Guidance/` | IOS-2, IOS-3 | C2 | Codex | SCAFFOLD |

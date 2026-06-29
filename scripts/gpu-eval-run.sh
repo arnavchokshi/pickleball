@@ -1,6 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+usage() {
+  cat <<'EOF'
+Usage: scripts/gpu-eval-run.sh <command> [args...]
+
+Runs a GPU eval/inference command under the shared-H100 slot lease.
+EOF
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+if [ "$#" -eq 0 ]; then
+  usage >&2
+  exit 64
+fi
+
 LEASE_ROOT="${GPU_LEASE_ROOT:-/run/gpu-lease}"
 SLOTS_DIR="$LEASE_ROOT/slots"
 HEARTBEAT_DIR="$LEASE_ROOT/heartbeat"
@@ -11,11 +30,6 @@ if ! mkdir -p "$SLOTS_DIR" "$HEARTBEAT_DIR" 2>/dev/null; then
   HEARTBEAT_DIR="$LEASE_ROOT/heartbeat"
   FULL_GPU_LOCK="$LEASE_ROOT/full-gpu.lock"
   mkdir -p "$SLOTS_DIR" "$HEARTBEAT_DIR"
-fi
-
-if [ "$#" -eq 0 ]; then
-  echo "usage: $0 <command> [args...]" >&2
-  exit 64
 fi
 
 slot_files=("$SLOTS_DIR"/slot*.lock)
