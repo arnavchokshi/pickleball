@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -75,3 +76,34 @@ def test_materialize_body_frames_fails_when_no_frames_are_scheduled(tmp_path: Pa
 
     with pytest.raises(ValueError, match="no scheduled BODY frames"):
         materialize_body_frames(video_path=video, execution_path=execution, out_dir=tmp_path / "body_frames")
+
+
+def test_materialize_body_frames_cli_extracts_scheduled_frames(tmp_path: Path) -> None:
+    video = tmp_path / "source.mp4"
+    execution = tmp_path / "body_compute_execution.json"
+    out = tmp_path / "body_frames"
+    _make_tiny_clip(video)
+    _write_execution(execution)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/materialize_body_frames.py",
+            "--video",
+            str(video),
+            "--body-compute-execution",
+            str(execution),
+            "--out-dir",
+            str(out),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    summary = json.loads(completed.stdout)
+    assert summary["frame_indexes"] == [2, 5]
+    assert (out / "frame_000002.jpg").is_file()
+    assert (out / "frame_000005.jpg").is_file()

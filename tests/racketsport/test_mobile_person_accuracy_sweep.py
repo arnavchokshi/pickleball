@@ -116,7 +116,7 @@ def test_accuracy_sweep_partial_failures_are_nonzero_by_default(tmp_path: Path, 
         sys,
         "argv",
         [
-            "run_mobile_person_accuracy_sweep.py",
+            "scripts/racketsport/run_mobile_person_accuracy_sweep.py",
             "--out-dir",
             str(out_dir),
             "--clip",
@@ -153,7 +153,7 @@ def test_accuracy_sweep_allow_partial_keeps_partial_status_but_returns_success(
         sys,
         "argv",
         [
-            "run_mobile_person_accuracy_sweep.py",
+            "scripts/racketsport/run_mobile_person_accuracy_sweep.py",
             "--out-dir",
             str(out_dir),
             "--clip",

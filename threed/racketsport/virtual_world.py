@@ -370,7 +370,19 @@ def _ball_world_xyz(frame: Any, *, calibration: CourtCalibration) -> list[float]
         world_xy = project_image_points_to_world(calibration.homography, [frame.xy])[0]
     except ValueError:
         return None
+    if not _world_xy_in_court(calibration, world_xy, margin_m=0.35):
+        return None
     return [float(world_xy[0]), float(world_xy[1]), 0.0]
+
+
+def _world_xy_in_court(calibration: CourtCalibration, world_xy: Any, *, margin_m: float) -> bool:
+    template = get_court_template(calibration.sport)
+    points = [point for segment in template.line_segments_m.values() for point in segment]
+    xs = [float(point[0]) for point in points]
+    ys = [float(point[1]) for point in points]
+    x = float(world_xy[0])
+    y = float(world_xy[1])
+    return min(xs) - margin_m <= x <= max(xs) + margin_m and min(ys) - margin_m <= y <= max(ys) + margin_m
 
 
 def _paddles(racket_obj: RacketPose | None, *, calibration: CourtCalibration) -> list[dict[str, Any]]:
@@ -437,6 +449,8 @@ def _warnings(*, players: list[dict[str, Any]], ball: dict[str, Any], paddles: l
         warnings.append("missing_mesh_vertices")
     if not ball["frames"]:
         warnings.append("missing_ball_track")
+    elif any(frame.get("visible") is True and frame.get("world_xyz") is None for frame in ball["frames"]):
+        warnings.append("unprojected_visible_ball_frames")
     if not any(paddle["frames"] for paddle in paddles):
         warnings.append("missing_paddle_pose")
     if any(frame.get("ambiguous") for paddle in paddles for frame in paddle["frames"]):

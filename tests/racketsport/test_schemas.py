@@ -171,6 +171,12 @@ def test_common_numeric_fields_reject_bool_nan_and_infinity() -> None:
         with pytest.raises(ValidationError):
             TrackFrame.model_validate(payload)
 
+
+def test_track_frame_bbox_rejects_inverted_xyxy_boxes() -> None:
+    with pytest.raises(ValidationError, match="bbox must be ordered"):
+        TrackFrame.model_validate({"t": 0.0, "bbox": [10.0, 20.0, 5.0, 40.0], "world_xy": [0.0, 0.0], "conf": 0.8})
+
+
     for payload in (
         {"t": True, "xy": [10.0, 20.0], "conf": 0.9, "visible": True},
         {"t": 0.0, "xy": [10.0, 20.0], "conf": float("nan"), "visible": True},

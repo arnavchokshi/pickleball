@@ -3,12 +3,21 @@ from __future__ import annotations
 import json
 import sys
 import types
+from pathlib import Path
 
 import pytest
 
+import scripts.racketsport.run_mobile_person_yolo_replay as replay_cli
 import threed.racketsport.mobile_person_yolo_replay as replay
 from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
-from threed.racketsport.mobile_person_yolo_replay import ReplayYoloCandidate, _expand_bbox_xywh, _make_linker, _prune_observations
+from threed.racketsport.mobile_person_yolo_replay import (
+    ReplayYoloCandidate,
+    _closed_set_prune_frames,
+    _expand_bbox_xywh,
+    _make_linker,
+    _observations_from_result,
+    _prune_observations,
+)
 from threed.racketsport.schemas import MobilePersonTrackingMetrics
 from threed.racketsport.schemas import CameraIntrinsics, CaptureQuality, CourtCalibration, CourtExtrinsics, ReprojectionError
 
@@ -76,6 +85,75 @@ def test_court_pruning_prefers_on_court_player_over_high_confidence_spectator() 
 
     assert confidence_only[0]["bbox_xywh"][0] == pytest.approx(11.0)
     assert court_pruned[0]["bbox_xywh"][0] == pytest.approx(0.0)
+
+
+def test_observations_from_result_can_keep_more_candidates_than_final_players() -> None:
+    class _Array:
+        def __init__(self, value):
+            self._value = value
+
+        def cpu(self):
+            return self
+
+        def numpy(self):
+            return self._value
+
+    class _Boxes:
+        xyxy = _Array(
+            [
+                [0.0, 0.0, 10.0, 20.0],
+                [20.0, 0.0, 30.0, 20.0],
+                [40.0, 0.0, 50.0, 20.0],
+            ]
+        )
+        conf = _Array([0.9, 0.8, 0.7])
+
+        def __len__(self):
+            return 3
+
+    result = types.SimpleNamespace(boxes=_Boxes())
+
+    observations = _observations_from_result(result, max_players=2, output_limit=3)
+
+    assert len(observations) == 3
+    assert [obs["confidence"] for obs in observations] == pytest.approx([0.9, 0.8, 0.7])
+
+
+def test_closed_set_pruning_keeps_long_stable_tracks_and_remaps_ids() -> None:
+    frames = []
+    for frame_index in range(20):
+        detections = [
+            {"track_id": 10, "bbox_xywh": [10.0, 20.0, 20.0, 50.0], "confidence": 0.90, "source": "test", "role": None},
+            {"track_id": 20, "bbox_xywh": [110.0, 25.0, 20.0, 50.0], "confidence": 0.88, "source": "test", "role": None},
+            {"track_id": 30, "bbox_xywh": [210.0, 30.0, 20.0, 50.0], "confidence": 0.86, "source": "test", "role": None},
+            {"track_id": 40, "bbox_xywh": [310.0, 35.0, 20.0, 50.0], "confidence": 0.84, "source": "test", "role": None},
+        ]
+        if frame_index < 4:
+            detections.append(
+                {
+                    "track_id": 99,
+                    "bbox_xywh": [390.0, 15.0, 20.0, 50.0],
+                    "confidence": 0.99,
+                    "source": "test",
+                    "role": None,
+                }
+            )
+        frames.append({"frame_index": frame_index, "detections": detections})
+
+    pruned = _closed_set_prune_frames(frames, max_players=4, mode="quality", frame_width=420.0)
+
+    selected_ids = {
+        detection["track_id"]
+        for frame in pruned
+        for detection in frame["detections"]
+    }
+    assert selected_ids == {1, 2, 3, 4}
+    assert all(len(frame["detections"]) == 4 for frame in pruned[4:])
+    assert all(
+        detection["source"] == "test+closed_set_quality"
+        for frame in pruned
+        for detection in frame["detections"]
+    )
 
 
 def test_bbox_expansion_preserves_bottom_center_foot_point() -> None:
@@ -167,6 +245,62 @@ def test_replay_yolo_candidate_scores_with_candidate_max_players(monkeypatch: py
 
     assert captured["expected_players"] == 2
     assert summary["metrics"]["expected_players"] == 2
+
+
+def test_run_mobile_person_yolo_replay_cli_forwards_args_and_prints_metrics(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_run_replay_yolo_candidate(**kwargs):
+        captured.update(kwargs)
+        return {"metrics": {"idf1": 0.875, "expected_players": kwargs["candidate"].max_players}}
+
+    monkeypatch.setattr(replay_cli, "run_replay_yolo_candidate", fake_run_replay_yolo_candidate)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "scripts/racketsport/run_mobile_person_yolo_replay.py",
+            "--video",
+            str(tmp_path / "clip.mp4"),
+            "--ground-truth",
+            str(tmp_path / "person_ground_truth.json"),
+            "--model",
+            "models_coreml/yolo26n_img416_int8/yolo26n.mlpackage",
+            "--candidate",
+            "coreml-smoke",
+            "--out-dir",
+            str(tmp_path / "out"),
+            "--imgsz",
+            "512",
+            "--conf",
+            "0.2",
+            "--max-players",
+            "2",
+            "--tracker",
+            "predict_center",
+            "--no-overlay",
+        ],
+    )
+
+    assert replay_cli.main() == 0
+
+    output = json.loads(capsys.readouterr().out)
+    assert output == {"expected_players": 2, "idf1": 0.875}
+    assert captured["video_path"] == tmp_path / "clip.mp4"
+    assert captured["ground_truth_path"] == tmp_path / "person_ground_truth.json"
+    assert captured["out_dir"] == tmp_path / "out"
+    assert captured["max_frames"] is None
+    assert captured["render_overlay"] is False
+    candidate = captured["candidate"]
+    assert isinstance(candidate, ReplayYoloCandidate)
+    assert candidate.name == "coreml-smoke"
+    assert candidate.model == "models_coreml/yolo26n_img416_int8/yolo26n.mlpackage"
+    assert candidate.imgsz == 512
+    assert candidate.conf == pytest.approx(0.2)
+    assert candidate.max_players == 2
+    assert candidate.tracker == "predict_center"
 
 
 def _identity_court_calibration() -> CourtCalibration:

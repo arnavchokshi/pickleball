@@ -280,9 +280,9 @@ class TrackFrame(BaseModel):
     @field_validator("bbox")
     @classmethod
     def _bbox_must_have_positive_extent(cls, value: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
-        _, _, width, height = value
-        if width <= 0.0 or height <= 0.0:
-            raise ValueError("bbox width and height must be positive")
+        x1, y1, x2, y2 = value
+        if x2 <= x1 or y2 <= y1:
+            raise ValueError("bbox must be ordered as x1, y1, x2, y2")
         return value
 
 

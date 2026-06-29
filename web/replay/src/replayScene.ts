@@ -46,6 +46,17 @@ export function parseReplayScene(input: unknown): ReplayScene {
   };
 }
 
+export function activeReplayPointForTime(scene: ReplayScene, timeSeconds: number): ReplayPoint | undefined {
+  return scene.points.find((point) => point.t0 <= timeSeconds && timeSeconds <= point.t1);
+}
+
+export function resolveReplaySceneAssetUrl(replaySceneUrl: string, assetPath: string): string {
+  if (assetPath.startsWith("/")) return assetPath;
+  const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
+  const resolved = new URL(assetPath, new URL(replaySceneUrl, origin));
+  return resolved.pathname + resolved.search + resolved.hash;
+}
+
 function parseJson(input: string): unknown {
   try {
     return JSON.parse(input) as unknown;

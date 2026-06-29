@@ -3,12 +3,17 @@ import { describe, expect, it } from "vitest";
 import {
   activeBallContactPlayerIds,
   ballFrameForTime,
+  ballRenderInfoForTime,
   contactEventCount,
   frameForTime,
+  labelOverlayForTime,
+  labelViewBox,
   parseContactWindows,
+  parseLabelOverlayPayload,
   parsePhysicsRefinement,
   parseViewerManifest,
   parseVirtualWorld,
+  playerCoverageStats,
   startTimeFromSearch,
   worldStats,
 } from "./viewerData";
@@ -206,6 +211,23 @@ const contactWorld = {
   ball: { source: "tracknet", frames: [{ t: 0.1, xy: [12, 18], conf: 0.92, world_xyz: [0.15, 1, 0], visible: true }] },
 };
 
+const sampledLabelOverlay = {
+  schema_version: 1,
+  not_ground_truth: true,
+  status: "draft_prototype_unverified",
+  frames: {
+    source_fps: 30,
+    sample_every_frames: 30,
+    source_resolution: [1920, 1080],
+  },
+  annotation: {
+    items: [
+      { frame: "frame_000001.jpg", bbox_xyxy: [100, 50, 150, 180], id: "p1" },
+      { frame: "frame_000003.jpg", bbox_xyxy: [700, 320, 955, 538], id: "p2" },
+    ],
+  },
+};
+
 describe("viewer data contracts", () => {
   it("parses the local replay viewer manifest with overlay trust flags", () => {
     expect(parseViewerManifest(manifest)).toEqual(manifest);
@@ -359,6 +381,45 @@ describe("viewer data contracts", () => {
     const parsed = parseVirtualWorld(world);
 
     expect(frameForTime(parsed.players[0], 0.8)?.t).toBe(1);
+  });
+
+  it("reports player artifact coverage so late-video gaps are visible", () => {
+    const parsed = parseVirtualWorld(world);
+
+    expect(playerCoverageStats(parsed)).toEqual({
+      firstTime: 0,
+      lastTime: 1,
+      playerCount: 1,
+      coveredFrameCount: 2,
+    });
+  });
+
+  it("parses sampled prototype labels at their review-frame cadence", () => {
+    const parsed = parseLabelOverlayPayload(sampledLabelOverlay);
+
+    expect(parsed.notGroundTruth).toBe(true);
+    expect(parsed.secondsPerFrame).toBe(1);
+    expect(labelOverlayForTime(parsed, 0.1).map((item) => item.id)).toEqual(["p1"]);
+    expect(labelOverlayForTime(parsed, 2.4).map((item) => item.id)).toEqual(["p2"]);
+    expect(labelViewBox(parsed)).toBe("0 0 960 540");
+  });
+
+  it("classifies approximate off-court ball projections as hidden in 3D", () => {
+    const parsed = parseVirtualWorld({
+      ...world,
+      ball: {
+        source: "tracknet",
+        frames: [
+          { t: 0.1, xy: [12, 18], conf: 0.92, world_xyz: [100, 100, 0], visible: true, approx: true },
+          { t: 0.2, xy: [12, 18], conf: 0.92, world_xyz: [0, 1, 0], visible: true, approx: true },
+          { t: 0.3, xy: [12, 18], conf: 0.92, world_xyz: [0, 1, 0.6], visible: true, approx: false },
+        ],
+      },
+    });
+
+    expect(ballRenderInfoForTime(parsed, 0.1)).toMatchObject({ mode: "off_court_projection", render3d: false });
+    expect(ballRenderInfoForTime(parsed, 0.2)).toMatchObject({ mode: "court_plane_projection", render3d: true });
+    expect(ballRenderInfoForTime(parsed, 0.3)).toMatchObject({ mode: "calibrated_3d", render3d: true });
   });
 
   it("does not reuse stale player or ball frames far outside the artifact time range", () => {

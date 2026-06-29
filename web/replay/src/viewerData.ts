@@ -17,6 +17,23 @@ export type AnnotationSource = {
   trusted_for_metrics: boolean;
 };
 
+export type LabelItem = {
+  frame?: string | number;
+  bbox?: number[];
+  bbox_xyxy?: number[];
+  id?: string;
+  status?: string;
+};
+
+export type LabelOverlayPayload = {
+  items: LabelItem[];
+  notGroundTruth: boolean;
+  status: string | null;
+  sourceWidth: number;
+  sourceHeight: number;
+  secondsPerFrame: number;
+};
+
 export type ViewerManifest = {
   schema_version: 1;
   artifact_type: "racketsport_replay_viewer_manifest";
@@ -290,6 +307,23 @@ export function ballFrameForTime(world: VirtualWorld, timeSeconds: number): Virt
   return frames.reduce((best, frame) => (Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best));
 }
 
+export function ballRenderInfoForTime(
+  world: VirtualWorld,
+  timeSeconds: number,
+): {
+  frame?: VirtualWorld["ball"]["frames"][number];
+  mode: "missing" | "calibrated_3d" | "court_plane_projection" | "off_court_projection";
+  render3d: boolean;
+} {
+  const frame = ballFrameForTime(world, timeSeconds);
+  if (!frame?.world_xyz) return { mode: "missing", render3d: false };
+  if (!frame.approx) return { frame, mode: "calibrated_3d", render3d: true };
+  if (!isWorldPointInsideCourt(world, frame.world_xyz, 0.35)) {
+    return { frame, mode: "off_court_projection", render3d: false };
+  }
+  return { frame, mode: "court_plane_projection", render3d: true };
+}
+
 function isWithinFrameRange(frames: Array<{ t: number }>, timeSeconds: number): boolean {
   const times = frames.map((frame) => frame.t).sort((a, b) => a - b);
   const first = times[0];
@@ -297,6 +331,17 @@ function isWithinFrameRange(frames: Array<{ t: number }>, timeSeconds: number): 
   const positiveGaps = times.slice(1).map((time, index) => time - times[index]).filter((gap) => gap > 0);
   const tolerance = positiveGaps.length ? Math.min(...positiveGaps) * 1.5 : 1 / 30;
   return first - tolerance <= timeSeconds && timeSeconds <= last + tolerance;
+}
+
+function isWorldPointInsideCourt(world: VirtualWorld, point: Vec3, marginM: number): boolean {
+  const courtPoints = Object.values(world.court.line_segments).flat();
+  const xs = courtPoints.map((entry) => entry[0]);
+  const ys = courtPoints.map((entry) => entry[1]);
+  const minX = Math.min(...xs, -world.court.width_m / 2) - marginM;
+  const maxX = Math.max(...xs, world.court.width_m / 2) + marginM;
+  const minY = Math.min(...ys, -world.court.length_m / 2, 0) - marginM;
+  const maxY = Math.max(...ys, world.court.length_m / 2, world.court.length_m) + marginM;
+  return minX <= point[0] && point[0] <= maxX && minY <= point[1] && point[1] <= maxY;
 }
 
 export function contactEventsForTime(contactWindows: ContactWindows | null, timeSeconds: number): ContactWindowEvent[] {
@@ -356,6 +401,65 @@ export function worldStats(world: VirtualWorld) {
   };
 }
 
+export function playerCoverageStats(world: VirtualWorld): {
+  firstTime: number | null;
+  lastTime: number | null;
+  playerCount: number;
+  coveredFrameCount: number;
+} {
+  const times = world.players.flatMap((player) => player.frames.map((frame) => frame.t));
+  if (!times.length) {
+    return { firstTime: null, lastTime: null, playerCount: world.players.length, coveredFrameCount: 0 };
+  }
+  return {
+    firstTime: Math.min(...times),
+    lastTime: Math.max(...times),
+    playerCount: world.players.length,
+    coveredFrameCount: times.length,
+  };
+}
+
+export function parseLabelOverlayPayload(input: unknown): LabelOverlayPayload {
+  const value = parseMaybeJson(input);
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return emptyLabelOverlayPayload();
+  }
+  const record = value as Record<string, unknown>;
+  const annotation = record.annotation;
+  const items =
+    annotation && typeof annotation === "object" && !Array.isArray(annotation)
+      ? (annotation as { items?: unknown }).items
+      : null;
+  const labelItems = Array.isArray(items)
+    ? items.filter((item): item is LabelItem => typeof item === "object" && item !== null)
+    : [];
+  const frameMeta = record.frames && typeof record.frames === "object" && !Array.isArray(record.frames)
+    ? (record.frames as Record<string, unknown>)
+    : {};
+  const sourceFps = readOptionalPositiveNumber(frameMeta.source_fps) ?? readOptionalPositiveNumber(frameMeta.frame_rate_fps) ?? 30;
+  const sampleEveryFrames = readOptionalPositiveNumber(frameMeta.sample_every_frames) ?? 1;
+  const inferredSize = inferLabelSourceSize(labelItems, frameMeta.source_resolution);
+  return {
+    items: labelItems,
+    notGroundTruth: record.not_ground_truth === true,
+    status: typeof record.status === "string" ? record.status : null,
+    sourceWidth: inferredSize[0],
+    sourceHeight: inferredSize[1],
+    secondsPerFrame: sampleEveryFrames / sourceFps,
+  };
+}
+
+export function labelOverlayForTime(labelOverlay: LabelOverlayPayload, currentTime: number): LabelItem[] {
+  if (!labelOverlay.items.length) return [];
+  const secondsPerFrame = labelOverlay.secondsPerFrame > 0 ? labelOverlay.secondsPerFrame : 1 / 30;
+  const frameIndex = Math.max(0, Math.round(currentTime / secondsPerFrame));
+  return labelOverlay.items.filter((item) => labelFrameIndex(item.frame) === frameIndex).slice(0, 8);
+}
+
+export function labelViewBox(labelOverlay: LabelOverlayPayload): string {
+  return `0 0 ${Math.ceil(labelOverlay.sourceWidth)} ${Math.ceil(labelOverlay.sourceHeight)}`;
+}
+
 function readLabelOverlay(input: unknown, index: number): LabelOverlay {
   const path = `manifest.label_overlays[${index}]`;
   assertRecord(input, path);
@@ -377,6 +481,55 @@ function readAnnotationSource(input: unknown, index: number): AnnotationSource {
     url: readString(input.url, `${path}.url`),
     trusted_for_metrics: readBoolean(input.trusted_for_metrics, `${path}.trusted_for_metrics`),
   };
+}
+
+function emptyLabelOverlayPayload(): LabelOverlayPayload {
+  return {
+    items: [],
+    notGroundTruth: true,
+    status: null,
+    sourceWidth: 1920,
+    sourceHeight: 1080,
+    secondsPerFrame: 1 / 30,
+  };
+}
+
+function readOptionalPositiveNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function inferLabelSourceSize(items: LabelItem[], sourceResolution: unknown): [number, number] {
+  const source =
+    Array.isArray(sourceResolution) && sourceResolution.length >= 2
+      ? [readOptionalPositiveNumber(sourceResolution[0]), readOptionalPositiveNumber(sourceResolution[1])]
+      : [null, null];
+  const maxBox = items.reduce(
+    (best, item) => {
+      const box = item.bbox_xyxy ?? xywhToXyxy(item.bbox);
+      if (!box) return best;
+      return [Math.max(best[0], box[2]), Math.max(best[1], box[3])] as [number, number];
+    },
+    [0, 0] as [number, number],
+  );
+  const sourceWidth = source[0] ?? 1920;
+  const sourceHeight = source[1] ?? 1080;
+  const halfWidth = sourceWidth / 2;
+  const halfHeight = sourceHeight / 2;
+  const boxesFitHalfResolution = maxBox[0] > 0 && maxBox[1] > 0 && maxBox[0] <= halfWidth + 2 && maxBox[1] <= halfHeight + 2;
+  if (boxesFitHalfResolution) return [halfWidth, halfHeight];
+  return [sourceWidth, sourceHeight];
+}
+
+function labelFrameIndex(value: LabelItem["frame"]): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.round(value));
+  if (typeof value !== "string") return null;
+  const match = value.match(/(\d+)/);
+  return match ? Math.max(0, Number.parseInt(match[1], 10) - 1) : null;
+}
+
+function xywhToXyxy(value?: number[]): [number, number, number, number] | null {
+  if (!Array.isArray(value) || value.length < 4) return null;
+  return [value[0], value[1], value[0] + value[2], value[1] + value[3]];
 }
 
 function readContactWindowEvent(input: unknown, index: number): ContactWindowEvent {

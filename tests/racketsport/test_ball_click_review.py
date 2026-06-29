@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
 
+import scripts.racketsport.export_ball_click_review as export_cli
 from threed.racketsport.ball_click_review import (
     build_ball_points_template,
     export_ball_click_review_bundle,
@@ -102,6 +104,42 @@ def test_export_ball_click_review_bundle_with_fake_cv2(tmp_path: Path) -> None:
     assert payload["items"][2]["image"] == "images/frame_000005.jpg"
     assert (out_dir / "images" / "frame_000005.jpg").is_file()
     assert (out_dir / "review.html").is_file()
+
+
+def test_export_ball_click_review_cli_forwards_arguments(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_export_ball_click_review_bundle(**kwargs):
+        captured.update(kwargs)
+        return {"clip": kwargs["clip"], "frame_count": kwargs["sample_count"]}
+
+    monkeypatch.setattr(export_cli, "export_ball_click_review_bundle", fake_export_ball_click_review_bundle)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "scripts/racketsport/export_ball_click_review.py",
+            "--video",
+            str(tmp_path / "source.mp4"),
+            "--out",
+            str(tmp_path / "review"),
+            "--clip",
+            "clip_a",
+            "--sample-count",
+            "4",
+        ],
+    )
+
+    assert export_cli.main() == 0
+    assert json.loads(capsys.readouterr().out) == {"clip": "clip_a", "frame_count": 4}
+    assert captured == {
+        "video_path": tmp_path / "source.mp4",
+        "out_dir": tmp_path / "review",
+        "clip": "clip_a",
+        "sample_count": 4,
+    }
 
 
 class _FakeCapture:

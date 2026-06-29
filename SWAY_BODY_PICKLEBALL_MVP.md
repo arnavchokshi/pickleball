@@ -260,7 +260,7 @@ The build-now differentiators first, then the longer-horizon set:
 Single static iPhone (or facility camera). **The native app configures capture; the user only frames it — so the user-facing ask is three things: Landscape · stable tripod · all four corners in view (good light).** The app sets the rest via AVFoundation: landscape, 1080p/**60 fps** (120 fps for swing-speed/racket; not 240, which drops to 720p), **HDR off, locked exposure/focus/WB, shutter ≥1/500 s** (indoor 1/100 or 1/120 to kill flicker). Audio anchors sub-frame contact timing, so 60 fps is sufficient for most metrics. **Variable height/angle handled per-clip** (see §5, §13); the app auto-handles rolling shutter, compression, AF/AE drift, flicker, and shadows (`ACCURACY_AND_TRAINING.md` §2). Tripod ≥1.2–1.5 m, all 4 corners visible. 60–180 s clips for v1 product focus; ~20-min ingest is an architecture requirement. Pre-upload trim + naming; player/side confirmation; optional coach focus tag; failed QC = no credit charged. Upload UX (multipart/resume, facility import, coach batch, when fast vs deep tier starts) is an explicit design task.
 
 ### Court setup
-- **Pickleball:** 20×44 ft template; 7 ft NVZ lines; baseline/sidelines/centerline; net plane (34" center / 36" sidelines). Product default is no user taps: upload/recording triggers automatic court evidence for outline, kitchen/NVZ, center service lines, and trusted top net. Manual corner review/taps remain a fallback/debug label path when the automatic evidence or calibration seed fails.
+- **Pickleball:** 20×44 ft template; 7 ft NVZ lines; baseline/sidelines/centerline; net plane (34" center / 36" sidelines). Target product default after CAL-3 is no user taps: upload/recording should trigger automatic court evidence for outline, kitchen/NVZ, center service lines, and trusted top net. Current server code attempts semantic court evidence, but still needs a trusted sidecar/manual seed or fails closed before tracking; manual corner review/taps remain the fallback/debug label path when automatic evidence or calibration seed trust fails.
 - **Tennis:** singles/doubles template, service boxes, baseline, sidelines, net plane. Serve lab needs exact service-box/net geometry.
 
 ### Body insights (≤3 per session, defensible only)
@@ -373,16 +373,16 @@ upload (trim/name/QC)
 
 ## 13. Defensible accuracy envelope
 
-Claim only what markerless 3D supports; gate the rest.
+This table is the target claim envelope, not current shipped capability. Claim a row only after the matching `CAPABILITIES.md`/`BUILD_CHECKLIST.md` gate passes; current repo truth remains `VERIFIED = 0`.
 
 | Signal class | Status | Action |
 |---|---|---|
-| Positions (feet, zones, spacing) post-calibration | cm-level | claim |
-| Sagittal/large-joint angles (knee, elbow, trunk) | ±3–10° (beats a coach's ~12° eye) | claim |
-| Shoulder–hip separation (X-factor) | reliable as a trend with bilateral keypoints | claim as trend |
-| Contact timing (with audio) | <1 frame | claim |
+| Positions (feet, zones, spacing) post-calibration | cm-level | target claim after gate |
+| Sagittal/large-joint angles (knee, elbow, trunk) | ±3–10° (beats a coach's ~12° eye) | target claim after gate |
+| Shoulder–hip separation (X-factor) | reliable as a trend with bilateral keypoints | target claim as trend after gate |
+| Contact timing (with audio) | <1 frame | target claim after gate |
 | **Paddle-face angle + contact-point — via tracked racket** | ~3–5° face / ±1–3 cm contact (PnP on known paddle) | **claim after racket-6DoF validation (≤5° vs ArUco GT)** |
-| Foot-slide during contact / floor & inter-player penetration | ≤3 mm / zero (physics-constrained) | **claim (hard gates)** |
+| Foot-slide during contact / floor & inter-player penetration | ≤3 mm / zero (physics-constrained) | **target claim after hard gates** |
 | Wrist-only pronation / transverse-axial rotation (no racket) | 20–57° markerless error | **gate — superseded by the tracked racket above** |
 | Velocity — wrist/elbow swing speed (ball-speed predictor), horizontal CoM velocity, split-step timing/tempo | reliable in-plane via court homography (±15–25%; timing ±17 ms@60 / ±8 ms@120) | **Tier 1 — claim with number after Protocol A/B passes** |
 | Velocity — swing-speed index, 3D angular velocity | relative/trend only | **Tier 2 — present as "relative/estimated"** |

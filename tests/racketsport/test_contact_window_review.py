@@ -358,6 +358,54 @@ def test_apply_review_inputs_to_contact_review_cli_writes_updated_review(tmp_pat
     assert updated.decisions[0].player_id == 1
 
 
+def test_build_contact_windows_from_review_inputs_cli_writes_contact_windows(tmp_path: Path) -> None:
+    review_input_path = tmp_path / "review_input.json"
+    contact_windows_path = tmp_path / "contact_windows.json"
+    review_input_path.write_text(
+        json.dumps(
+            {
+                "clips": {
+                    "clip_001": {
+                        "contacts": [
+                            {"player": "P1", "time_s": 1.25, "note": ""},
+                            {"player": "P2", "time_s": 2.5, "note": ""},
+                        ]
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/build_contact_windows_from_review_inputs.py",
+            "--review-input",
+            str(review_input_path),
+            "--clip",
+            "clip_001",
+            "--out",
+            str(contact_windows_path),
+            "--fps",
+            "60",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    summary = json.loads(completed.stdout)
+    assert summary["clip"] == "clip_001"
+    assert summary["event_count"] == 2
+    artifact = validate_artifact_file("contact_windows", contact_windows_path)
+    assert isinstance(artifact, ContactWindows)
+    assert [event.frame for event in artifact.events] == [75, 150]
+    assert [event.player_id for event in artifact.events] == [None, None]
+
+
 def test_contact_window_review_cli_writes_template_and_promoted_contact_windows(tmp_path: Path) -> None:
     candidates_path = tmp_path / "contact_window_candidates.json"
     template_path = tmp_path / "contact_window_review.json"

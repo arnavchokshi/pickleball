@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseReplayScene } from "./replayScene";
+import { activeReplayPointForTime, parseReplayScene, resolveReplaySceneAssetUrl } from "./replayScene";
 
 const validScene = {
   schema_version: 1,
@@ -36,5 +36,22 @@ describe("parseReplayScene", () => {
         points: [{ id: 1, t0: 0, t1: 1, glb_url: "points/point_1.glb" }],
       }),
     ).toThrow("points[0].size_mb must be a number");
+  });
+
+  it("selects active review GLB points by video time", () => {
+    const scene = parseReplayScene(validScene);
+
+    expect(activeReplayPointForTime(scene, 0)?.id).toBe(1);
+    expect(activeReplayPointForTime(scene, 3.75)?.id).toBe(2);
+    expect(activeReplayPointForTime(scene, 8)).toBeUndefined();
+  });
+
+  it("resolves replay scene assets relative to replay_scene.json", () => {
+    const base = "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/eval0/clip/replay_scene.json";
+
+    expect(resolveReplaySceneAssetUrl(base, "replay_review/points/point_001_review.glb")).toBe(
+      "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/eval0/clip/replay_review/points/point_001_review.glb",
+    );
+    expect(resolveReplaySceneAssetUrl(base, "/@fs//tmp/court.glb")).toBe("/@fs//tmp/court.glb");
   });
 });

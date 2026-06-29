@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import math
 import time
 from dataclasses import dataclass
+from itertools import combinations
 from pathlib import Path
 from typing import Any
 
@@ -401,6 +403,7 @@ def _observations_from_result(
     court_calibration: CourtCalibration | None = None,
     court_margin_m: float = 1.25,
     candidate_limit: int = 16,
+    output_limit: int | None = None,
     bbox_expand: float = 1.0,
 ) -> list[dict[str, Any]]:
     boxes = getattr(result, "boxes", None)
@@ -430,6 +433,7 @@ def _observations_from_result(
         court_calibration=court_calibration,
         court_margin_m=court_margin_m,
         candidate_limit=candidate_limit,
+        output_limit=output_limit,
     )
 
 
@@ -441,14 +445,18 @@ def _prune_observations(
     court_calibration: CourtCalibration | None = None,
     court_margin_m: float = 1.25,
     candidate_limit: int = 16,
+    output_limit: int | None = None,
 ) -> list[dict[str, Any]]:
     if max_players <= 0:
         raise ValueError("max_players must be positive")
+    limit = max_players if output_limit is None else int(output_limit)
+    if limit <= 0:
+        raise ValueError("output_limit must be positive")
     candidates = list(observations)
     candidates.sort(key=lambda item: (-float(item["confidence"]), item["bbox_xywh"][0], item["bbox_xywh"][1]))
-    candidates = candidates[: max(max_players, candidate_limit)]
+    candidates = candidates[: max(max_players, limit, candidate_limit)]
     if prune_mode == "confidence":
-        return candidates[:max_players]
+        return candidates[:limit]
     if prune_mode != "court":
         raise ValueError(f"unsupported observation prune mode: {prune_mode}")
     if court_calibration is None:
@@ -463,7 +471,225 @@ def _prune_observations(
             item["bbox_xywh"][1],
         )
     )
-    return ranked[:max_players]
+    return ranked[:limit]
+
+
+def _closed_set_prune_frames(
+    frames: list[dict[str, Any]],
+    *,
+    max_players: int,
+    mode: str = "quality",
+    frame_width: float | None = None,
+    frame_height: float | None = None,
+) -> list[dict[str, Any]]:
+    """Select the expected player set after linking a wider candidate pool.
+
+    This mirrors the useful part of sam4dbody's closed-set pass for our mobile
+    benchmark: surplus linked tracks are treated as non-player guests instead
+    of allowing a high-confidence spectator box to displace a real player
+    before tracking.
+    """
+
+    if max_players <= 0:
+        raise ValueError("max_players must be positive")
+    summaries = _closed_set_track_summaries(frames, frame_width=frame_width)
+    if not summaries:
+        return [{"frame_index": int(frame["frame_index"]), "detections": []} for frame in frames]
+    selected_ids = _select_closed_set_track_ids(
+        summaries,
+        max_players=max_players,
+        mode=mode,
+        frame_width=frame_width,
+        frame_height=frame_height,
+    )
+    remap_order = _track_ids_in_role_order([summaries[track_id] for track_id in selected_ids])
+    id_map = {int(track_id): index + 1 for index, track_id in enumerate(remap_order)}
+    source_suffix = f"closed_set_{_safe_source_token(mode)}"
+    out_frames: list[dict[str, Any]] = []
+    for frame in frames:
+        detections: list[dict[str, Any]] = []
+        for detection in frame.get("detections", []):
+            track_id = int(detection["track_id"])
+            if track_id not in id_map:
+                continue
+            cloned = dict(detection)
+            cloned["track_id"] = id_map[track_id]
+            cloned["source"] = f"{cloned.get('source', 'unknown')}+{source_suffix}"
+            detections.append(cloned)
+        detections.sort(key=lambda item: int(item["track_id"]))
+        out_frames.append({"frame_index": int(frame["frame_index"]), "detections": detections})
+    return out_frames
+
+
+def _closed_set_track_summaries(
+    frames: list[dict[str, Any]],
+    *,
+    frame_width: float | None,
+) -> dict[int, dict[str, Any]]:
+    by_track: dict[int, list[tuple[int, dict[str, Any]]]] = {}
+    for frame in frames:
+        frame_index = int(frame["frame_index"])
+        for detection in frame.get("detections", []):
+            by_track.setdefault(int(detection["track_id"]), []).append((frame_index, detection))
+
+    summaries: dict[int, dict[str, Any]] = {}
+    for track_id, rows in by_track.items():
+        rows.sort(key=lambda item: item[0])
+        frame_indexes = [frame_index for frame_index, _detection in rows]
+        bboxes = [[float(value) for value in detection["bbox_xywh"]] for _frame_index, detection in rows]
+        confidences = [float(detection.get("confidence", 0.0)) for _frame_index, detection in rows]
+        centers = [_bbox_center(bbox) for bbox in bboxes]
+        areas = [max(0.0, bbox[2]) * max(0.0, bbox[3]) for bbox in bboxes]
+        span = max(1, frame_indexes[-1] - frame_indexes[0] + 1)
+        movement = 0.0
+        for prev, current in zip(centers, centers[1:], strict=False):
+            movement += math.hypot(float(current[0]) - float(prev[0]), float(current[1]) - float(prev[1]))
+        summaries[int(track_id)] = {
+            "track_id": int(track_id),
+            "n_frames": len(frame_indexes),
+            "first_frame": frame_indexes[0],
+            "last_frame": frame_indexes[-1],
+            "span_frames": span,
+            "coverage_in_span": len(set(frame_indexes)) / span,
+            "confidence_mean": sum(confidences) / len(confidences),
+            "confidence_p90": _percentile(confidences, 90.0),
+            "median_area": _percentile(areas, 50.0),
+            "p90_area": _percentile(areas, 90.0),
+            "edge_fraction": _edge_fraction_xywh(bboxes, frame_width),
+            "median_center": [_percentile([center[0] for center in centers], 50.0), _percentile([center[1] for center in centers], 50.0)],
+            "movement_px": movement,
+        }
+    return summaries
+
+
+def _select_closed_set_track_ids(
+    summaries: dict[int, dict[str, Any]],
+    *,
+    max_players: int,
+    mode: str,
+    frame_width: float | None,
+    frame_height: float | None,
+) -> list[int]:
+    if len(summaries) <= max_players:
+        return sorted(summaries)
+    scored = [
+        (track_id, _closed_set_quality_score(summary, mode=mode))
+        for track_id, summary in summaries.items()
+    ]
+    scored.sort(key=lambda item: (-item[1], summaries[item[0]]["first_frame"], item[0]))
+    if mode in {"cluster", "quality_cluster", "cluster_strong", "motion_cluster"}:
+        top_ids = [track_id for track_id, _score in scored[: min(12, len(scored))]]
+        return _best_closed_set_cluster(
+            top_ids,
+            summaries,
+            max_players=max_players,
+            mode=mode,
+            frame_width=frame_width,
+            frame_height=frame_height,
+        )
+    return [track_id for track_id, _score in scored[:max_players]]
+
+
+def _closed_set_quality_score(summary: dict[str, Any], *, mode: str) -> float:
+    n_frames = float(summary["n_frames"])
+    span = float(summary["span_frames"])
+    mean_conf = float(summary["confidence_mean"])
+    p90_conf = float(summary["confidence_p90"])
+    coverage = float(summary["coverage_in_span"])
+    edge = float(summary["edge_fraction"])
+    area_term = min(40.0, math.sqrt(max(0.0, float(summary["median_area"]))) * 0.12)
+    motion_term = min(80.0, math.sqrt(max(0.0, float(summary["movement_px"]))) * 2.0)
+    quality = n_frames + 0.05 * span + 35.0 * mean_conf + 20.0 * p90_conf + 20.0 * coverage + area_term - 12.0 * edge
+    if mode == "duration":
+        return n_frames + 20.0 * coverage - 8.0 * edge
+    if mode in {"motion", "motion_cluster"}:
+        return quality + motion_term
+    if mode == "area":
+        return quality + area_term
+    return quality
+
+
+def _best_closed_set_cluster(
+    track_ids: list[int],
+    summaries: dict[int, dict[str, Any]],
+    *,
+    max_players: int,
+    mode: str,
+    frame_width: float | None,
+    frame_height: float | None,
+) -> list[int]:
+    if len(track_ids) <= max_players:
+        return sorted(track_ids)
+    width = max(1.0, float(frame_width or _infer_frame_extent(summaries, axis=0)))
+    height = max(1.0, float(frame_height or _infer_frame_extent(summaries, axis=1)))
+    spread_weight = 120.0
+    if mode == "cluster_strong":
+        spread_weight = 300.0
+    if mode == "motion_cluster":
+        spread_weight = 180.0
+    best_ids: tuple[int, ...] | None = None
+    best_score = -float("inf")
+    for combo in combinations(track_ids, max_players):
+        centers = [summaries[track_id]["median_center"] for track_id in combo]
+        xs = [float(center[0]) for center in centers]
+        ys = [float(center[1]) for center in centers]
+        spread_area = ((max(xs) - min(xs)) / width) * ((max(ys) - min(ys)) / height)
+        edge_penalty = sum(float(summaries[track_id]["edge_fraction"]) for track_id in combo)
+        score = sum(_closed_set_quality_score(summaries[track_id], mode=mode) for track_id in combo)
+        score -= spread_weight * spread_area
+        score -= 10.0 * edge_penalty
+        if score > best_score:
+            best_score = score
+            best_ids = combo
+    return sorted(best_ids or tuple(track_ids[:max_players]))
+
+
+def _track_ids_in_role_order(summaries: list[dict[str, Any]]) -> list[int]:
+    if len(summaries) <= 2:
+        ordered = sorted(summaries, key=lambda item: (item["median_center"][1], item["median_center"][0]))
+    else:
+        by_y = sorted(summaries, key=lambda item: (item["median_center"][1], item["median_center"][0]))
+        top_count = len(by_y) // 2
+        top = sorted(by_y[:top_count], key=lambda item: item["median_center"][0])
+        bottom = sorted(by_y[top_count:], key=lambda item: item["median_center"][0])
+        ordered = top + bottom
+    return [int(summary["track_id"]) for summary in ordered]
+
+
+def _edge_fraction_xywh(bboxes: list[list[float]], frame_width: float | None, margin: float = 8.0) -> float:
+    if not bboxes:
+        return 1.0
+    if not frame_width or frame_width <= 0.0:
+        return sum(1 for bbox in bboxes if bbox[0] <= margin) / len(bboxes)
+    width = float(frame_width)
+    return sum(1 for bbox in bboxes if bbox[0] <= margin or bbox[0] + bbox[2] >= width - margin) / len(bboxes)
+
+
+def _percentile(values: list[float], percentile: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(float(value) for value in values)
+    if len(ordered) == 1:
+        return ordered[0]
+    position = (len(ordered) - 1) * max(0.0, min(100.0, percentile)) / 100.0
+    lower = int(math.floor(position))
+    upper = int(math.ceil(position))
+    if lower == upper:
+        return ordered[lower]
+    weight = position - lower
+    return ordered[lower] * (1.0 - weight) + ordered[upper] * weight
+
+
+def _infer_frame_extent(summaries: dict[int, dict[str, Any]], *, axis: int) -> float:
+    if not summaries:
+        return 1.0
+    centers = [float(summary["median_center"][axis]) for summary in summaries.values()]
+    return max(1.0, max(centers) - min(centers))
+
+
+def _safe_source_token(value: str) -> str:
+    token = "".join(char if char.isalnum() else "_" for char in str(value).lower())
+    return "_".join(part for part in token.split("_") if part) or "unknown"
 
 
 def _with_court_prune_features(observation: dict[str, Any], calibration: CourtCalibration) -> dict[str, Any]:

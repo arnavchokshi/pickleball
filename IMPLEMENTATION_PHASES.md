@@ -9,8 +9,8 @@
 
 > **Accuracy doctrine (from `ACCURACY_AND_TRAINING.md`):** heavy/multi-view/physics/audio models are *teachers* used at training/labeling time to manufacture ground truth; we distill into fast single-camera *students* that ship. Calibrated court geometry is a free accuracy multiplier (reprojection loss, metric root depth, foot-on-ground constraint) and — critically — it gives world-grounded HMR the known camera + ground plane those methods normally have to estimate (their biggest weakness). Validate, then claim — every metric ships only after passing its validation protocol; until then it is gated.
 
-> **Round-5 — single-camera scope + iOS client/server split.** The product is **single-camera**: one rear iPhone camera on a tripod. **Multi-camera is a FUTURE product capability** — the *only* multi-camera use today is **training-time** (the 2-camera shoot manufactures 3D ground truth to distill a single-camera model; see Data & Training Infra). Do not build any product feature that requires two cameras at inference. This is a **native iOS Swift app + GPU server**:
-> - **iPhone (client)** — captures (AVFoundation, locked exposure/focus, high fps), runs an **on-device fast-tier preview + capture guidance** (Apple Vision + a small Core ML model on the Neural Engine), and **plays the 3D replay** (RealityKit/USDZ). Produces the **capture sidecar** (camera intrinsics + ARKit pose + court-plane seed + on-device pose prior + optional LiDAR depth) that the server consumes.
+> **Round-5 — single-camera scope + iOS client/server split.** The product target is **single-camera**: one rear iPhone camera on a tripod. **Multi-camera is a FUTURE product capability** — the *only* multi-camera use today is **training-time** (the 2-camera shoot manufactures 3D ground truth to distill a single-camera model; see Data & Training Infra). Do not build any product feature that requires two cameras at inference. This is the target architecture for a **native iOS Swift app + GPU server**; current repo proof is package/app scaffolding plus partial tests until the IOS/RPL gates are promoted:
+> - **iPhone (client)** — captures (AVFoundation, locked exposure/focus, high fps), runs an **on-device fast-tier preview + capture guidance** (Apple Vision + a small Core ML model on the Neural Engine), and **plays the 3D replay** (RealityKit/USDZ). Produces the **capture sidecar** (camera intrinsics + ARKit/manual court-plane seed + on-device pose prior + optional LiDAR depth) that the server consumes.
 > - **Server (H100)** — the heavy **deep tier**: Fast SAM-3D-Body → our world-grounding → foot-lock → physics → racket 6DoF → render-bake (USDZ + GLB).
 > The **Client Track (iOS App — Phases C1–C3)** is defined right before Phase 0 (it sets the input contract); the server **Pipeline Track is Phases 0–11**. Both tracks appear in the One-Page Build Order Summary.
 
@@ -75,7 +75,7 @@ ios/          # native Swift app (Client Track C1–C3)
   Replay/Sources/PickleballReplay/                # RealityKit/USDZ replay target/module scaffold
   Upload/Sources/PickleballUpload/                # upload target/module scaffold
   App/                                            # Pickleball iOS app target
-models_coreml/  # YOLO (+ any small student) exported to Core ML (coremltools 9.0, INT8/ANE)
+	models_coreml/  # candidate Core ML packages; manual staging until app bundling/install + device latency proof exists
 ```
 
 ### 0.3 Environment

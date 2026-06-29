@@ -5,13 +5,13 @@
 **Scope:** Every model/technology in the pipeline, the decision behind it, and the speed/accuracy/license/UI tradeoff it sits on.
 **Companion docs:** `SWAY_BODY_PICKLEBALL_MVP.md` (product/market), `IMPLEMENTATION_PHASES.md` (Codex build + test plan), `ACCURACY_AND_TRAINING.md` (**source of truth for datasets, training/fine-tuning/auto-labeling recipes, filtering parameters, and validation protocols**), `BUILD_CHECKLIST.md` (the operational checklist + multi-agent coordination protocol). World-grounded mesh, foot-skate elimination, physics refinement, racket 6DoF, and the 3D replay renderer are detailed per-layer below ((e),(p)–(s)) and built in `IMPLEMENTATION_PHASES.md` Phases 3/4/6/10.
 
-This document states decisions, not options. Where a number is unverified in source research it is flagged `[UNVERIFIED]`. The live implementation is in this `pickleball` repo while reusing proven `sam4dbody` runtime ideas and assets where appropriate; it does not start greenfield.
+This document states target defaults and implementation decisions where they are explicitly locked. Model variants remain provisional until EVAL-0 benchmarks plus `models/MANIFEST.json` approval lock them; where a number is unverified in source research it is flagged `[UNVERIFIED]`. The live implementation is in this `pickleball` repo while reusing proven `sam4dbody` runtime ideas and assets where appropriate; it does not start greenfield.
 
 > **Round-4 revision (2026-06-26):** the product is **not being sold yet** (research/personal use), so **licensing is no longer a build blocker** — we use the most accurate model per stage regardless of license (license recorded in §5 for future commercialization). This **flips the core body decision: a full body MESH is now CORE** (world-grounded, physics-refined, foot-skate-free) and the fast skeleton is demoted to a **preview/triggering overlay**. New goals — a **physics-accurate 3D replay** and **no foot-skating** — add four layers: world-grounded body + foot-lock (p), physics refinement (q), **racket 6DoF** (r), and the **3D replay renderer** (s). Detailed in (p)–(s) below and built in `IMPLEMENTATION_PHASES.md` Phases 4/6/10.
 >
 > **Round-4b correction (verified — supersedes the GVHMR-primary call):** the per-frame mesh backbone is **Fast SAM-3D-Body**, not GVHMR. Reality-check (and the user's hands-on results) confirm **SAM-3D-Body is the best per-frame mesh available** (3DPW PA-MPJPE **30.4 mm**, beats HMR2.0 by 15+ mm) — usable now under the licensing-lifted policy; for future commercial use the SAM License must be verified, with **SAT-HMR (Apache)** as the license-safe fallback. **GVHMR/WHAM are HMR2.0-backbone pipelines: their per-frame mesh is *worse* than SAM-3D-Body; their only advantage (world trajectory + foot-contact) is something we already solve via our known camera + court plane.** So they are **demoted to optional world-trajectory/foot-velocity sanity-checks**, not the primary mesh. **World-grounding is ours**: project per-frame SAM-3D-Body output to world via known K,[R|t] + court Z=0 → temporal smooth → foot-lock → physics (precedent: arXiv 2512.21573). **PromptHMR is dropped** (full-image hurts distant players; needs manual prompts; worst translation error). **Detector flips to YOLO26m + BoT-SORT-ReID** (YOLO26 is real — Ultralytics Jan 2026, +1.4–2.8 mAP over YOLO11 at equal GPU latency). Sections below reflect 4b.
 >
-> **Round-5 (handoff): SINGLE CAMERA is the product; native iOS Swift client + GPU server.** Multi-camera is **future**; multi-view is a **training-time-only** instrument that ships a single-camera model (§4). The product is a **native iOS Swift app** (capture + on-device fast-tier preview + capture guidance + native replay viewer) talking to a **GPU server** (the deep tier). This adds a client/server split (§2.1), four client-side layers — iOS capture (t), iOS calibration via ARKit (u), on-device fast tier via Apple Vision + Core ML (v) — and makes rendering **native RealityKit/USDZ in-app + Three.js/GLB on the web** (s). Apple's on-device 3D pose is **preview/guidance only** (17 joints, no fingers, single-person, ~5–25° error); the **server SAM-3D-Body mesh stays the source of truth**. **LiDAR (Pro devices) is a near-camera (~5 m) bonus only** — it cannot reach a 6–12 m court or the ball; vision-first is the baseline.
+> **Round-5 (handoff): SINGLE CAMERA is the product target; native iOS Swift client + GPU server.** Multi-camera is **future**; multi-view is a **training-time-only** instrument that ships a single-camera model (§4). The target product is a **native iOS Swift app** (capture + on-device fast-tier preview + capture guidance + native replay viewer) talking to a **GPU server** (the deep tier). Current repo reality is scaffolds/partial runtime proofs, not a verified native product. This adds a client/server split (§2.1), four client-side layers — iOS capture (t), iOS calibration via ARKit (u), on-device fast tier via Apple Vision + Core ML (v) — and makes rendering **native RealityKit/USDZ in-app + Three.js/GLB on the web** (s). Apple's on-device 3D pose is **preview/guidance only** (17 joints, no fingers, single-person, ~5–25° error); the **server SAM-3D-Body mesh stays the source of truth**. **LiDAR (Pro devices) is a near-camera (~5 m) bonus only** — it cannot reach a 6–12 m court or the ball; vision-first is the baseline.
 
 ---
 
@@ -111,7 +111,7 @@ Low-confidence escalation runs across both tiers: any span the fast tier flags u
 
 ## 2.1 iOS Client / Server Architecture (native Swift app)
 
-The product is a **native iOS Swift app** + a **GPU server**. The phone does what it is uniquely good at (controlled capture, free camera geometry from ARKit, instant on-device preview/guidance on the Neural Engine, and native 3D playback); the server does the heavy, accuracy-critical reconstruction. **Single camera only for v1.**
+The target product is a **native iOS Swift app** + a **GPU server**. The phone does what it is uniquely good at (controlled capture, camera geometry from ARKit/manual seed, instant on-device preview/guidance on the Neural Engine, and native 3D playback); the server does the heavy, accuracy-critical reconstruction. Current code has iOS/package boundaries and candidate Core ML assets/manual staging paths; it does not yet prove bundled model delivery, device capture, or native replay end to end. **Single camera only for v1.**
 
 | Task | On-device (iPhone) | Server (H100) | Why there |
 |---|---|---|---|
@@ -415,23 +415,23 @@ Two tiers (our world-grounding/foot-lock detailed in (p); built in `IMPLEMENTATI
 
 ## 4. Defensible Accuracy Envelope
 
-We make only claims the markerless-3D literature supports, and we gate the rest.
+This is the defensible target envelope, not the current capability matrix. Treat every row as `TARGET CLAIM AFTER GATE` unless `CAPABILITIES.md` and `BUILD_CHECKLIST.md` show the corresponding real-clip/device gate has passed; current repo truth remains `VERIFIED = 0`.
 
 | Signal | Status | Evidence / error |
 |---|---|---|
-| Foot/ankle court position, zones, spacing | **CLAIM** | cm-level after homography; feet hard-constrained to court plane |
-| Sagittal/large-joint angles (knee, elbow flexion, trunk tilt) | **CLAIM** | markerless 3–10° vs mocap; a human coach's eye is only ~12° |
-| Shoulder-hip separation (X-factor) | **CLAIM** | <1° MAE with **bilateral** hip+shoulder keypoints |
-| Center of mass / balance / weight transfer (relative) | **CLAIM** | segmental CoM ~20–30 mm; below the 50–100 mm shifts coaching flags |
-| Contact point/height relative to body | **CLAIM** | positional, reliable |
-| Contact/bounce/net **timing** | **CLAIM** | <1 frame with audio fusion |
-| Velocity — wrist/elbow swing speed (ball-speed predictor), horizontal CoM velocity, split-step timing, tempo | **CLAIM (Tier 1, after validation)** | ±15–25% relative for swing speed; split-step timing ±17 ms@60 / ±8 ms@120. Compute via court-homography→metric in-plane speed (the free lever). Validate via Protocol A/B (`ACCURACY_AND_TRAINING.md` §10). |
-| Velocity — swing-speed *index*, 3D angular velocity | **CLAIM (Tier 2, relative/estimated only)** | present as "faster/slower than baseline," not absolute m/s |
+| Foot/ankle court position, zones, spacing | **TARGET CLAIM AFTER GATE** | cm-level after homography; feet hard-constrained to court plane |
+| Sagittal/large-joint angles (knee, elbow flexion, trunk tilt) | **TARGET CLAIM AFTER GATE** | markerless 3–10° vs mocap; a human coach's eye is only ~12° |
+| Shoulder-hip separation (X-factor) | **TARGET CLAIM AFTER GATE** | <1° MAE with **bilateral** hip+shoulder keypoints |
+| Center of mass / balance / weight transfer (relative) | **TARGET CLAIM AFTER GATE** | segmental CoM ~20–30 mm; below the 50–100 mm shifts coaching flags |
+| Contact point/height relative to body | **TARGET CLAIM AFTER GATE** | positional, reliable |
+| Contact/bounce/net **timing** | **TARGET CLAIM AFTER GATE** | <1 frame with audio fusion |
+| Velocity — wrist/elbow swing speed (ball-speed predictor), horizontal CoM velocity, split-step timing, tempo | **TARGET CLAIM AFTER VALIDATION** | ±15–25% relative for swing speed; split-step timing ±17 ms@60 / ±8 ms@120. Compute via court-homography→metric in-plane speed (the free lever). Validate via Protocol A/B (`ACCURACY_AND_TRAINING.md` §10). |
+| Velocity — swing-speed *index*, 3D angular velocity | **TARGET CLAIM, TIER 2 RELATIVE/ESTIMATED ONLY** | present as "faster/slower than baseline," not absolute m/s |
 | Velocity — 3D angular **acceleration**, depth-axis velocity, contact-frame peak from pose | **NEVER (Tier 3)** | use the **ball** for contact-frame speed; depth-axis derivative is catastrophically noisy |
 | *Velocity conflict, resolved* | — | The R²≈0.96 result was a model predicting **ball speed from 2D in-plane endpoint speed** (raw wrist↔ball only r≈0.50–0.70); the r≈0.11–0.28 result was the derivative of **noisy lifted-3D positions**. Different quantities — not a contradiction. |
 | Transverse/axial joint rotation (from pose) | **GATE/OMIT** | markerless error 3–57° from pose alone |
-| **Paddle-face angle + contact-point-on-face — *with racket 6DoF tracking (r)*** | **CLAIM (round-4 flip)** | **~3–5° face angle, ±1–3 cm contact point** via PnP on the known paddle (vs 20–35° wrist-derived). Without racket tracking, still gate/omit. |
-| Foot-slide / floor penetration in the 3D replay | **CLAIM** | **≤3 mm foot-slide, 0 penetration** via contact-vs-Z=0 lock + CCD-IK (p) |
+| **Paddle-face angle + contact-point-on-face — *with racket 6DoF tracking (r)*** | **TARGET CLAIM AFTER RKT GATE** | **~3–5° face angle, ±1–3 cm contact point** via PnP on the known paddle (vs 20–35° wrist-derived). Without racket tracking, still gate/omit. |
+| Foot-slide / floor penetration in the 3D replay | **TARGET CLAIM AFTER PHYSICS/REPLAY GATES** | **≤3 mm foot-slide, 0 penetration** via contact-vs-Z=0 lock + CCD-IK (p) |
 | Ball 3D position (single camera) | **CONTEXT ONLY** | meter-level (Acc@1m ≈ 66%); not line-call grade |
 | Line calls (in/out) | **OUT OF SCOPE** | requires 2nd camera + sub-pixel calibration |
 
@@ -572,9 +572,9 @@ The bolded rows are the round-4 architectural identity: a fast skeleton/camera-s
 | **Personalized body calibration** | lock bone lengths/shape over sessions → faster + more accurate | One-shot competitors can't compound |
 | **Learns from corrections** | coach/user corrections fine-tune per club | One-shot models don't improve with use |
 | **Graceful 1→2 camera scaling** *(future)* | v1 is single-camera; later a 2nd phone → true 3D ball + line-call tier | Single-cam-locked or expensive fixed rigs |
-| **Free ARKit calibration (native iOS)** | camera intrinsics + pose + court-plane from an ARKit setup pass — no checkerboard, no manual taps on most devices | Web/Android-first competitors hand-calibrate or skip metric geometry |
-| **Instant on-device preview + capture guidance** | Apple Vision on the Neural Engine shows pose/court the moment you point the phone, and coaches the camera setup before recording | Upload-then-wait competitors give no real-time feedback |
-| **Native in-app 3D replay (RealityKit/USDZ)** | free-viewpoint mesh replay plays natively on the phone, plus a Three.js/GLB web share link from the same bake | Sportsbox shows fixed angles; nobody ships a native free-viewpoint physics replay |
+| **Target: free ARKit calibration (native iOS)** | camera intrinsics + pose + court-plane from an ARKit setup pass; current server still fails closed without trusted sidecar/manual seed where evidence is not ready | Web/Android-first competitors hand-calibrate or skip metric geometry |
+| **Target: instant on-device preview + capture guidance** | Apple Vision/Core ML on the Neural Engine; current repo has module boundaries and candidate packages, not verified bundled device runtime | Upload-then-wait competitors give no real-time feedback |
+| **Target: native in-app 3D replay (RealityKit/USDZ)** | free-viewpoint mesh replay plays natively on the phone, plus a Three.js/GLB web share link from the same bake; current web surface is QA/review scaffolding until replay gates pass | Sportsbox shows fixed angles; nobody ships a native free-viewpoint physics replay |
 | **Movement screening for 50+** | non-diagnostic balance/asymmetry from 3D | Wide-open lane; peer-reviewed fall-prevention demand, no incumbent |
 | **Physics-accurate, foot-skate-free 3D replay** | world-grounded SMPL + contact-vs-Z=0 lock + physics refinement (≤3 mm slide) | Competitors show 2D/skeleton overlays or sliding avatars; none deliver a watchable physics replay |
 | **Racket tracked as a 6DoF object** | PnP on known paddle → face angle ~3–5°, contact-point ±1–3 cm | Everyone else uses the hand center as a contact proxy (e.g. LATTE-MV); nobody estimates racket pose |

@@ -61,7 +61,7 @@ h1 {
 
 .status-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(74px, 1fr));
+  grid-template-columns: repeat(6, minmax(74px, 1fr));
   gap: 8px;
 }
 
@@ -160,6 +160,11 @@ dd {
   stroke: #ffcf5a;
 }
 
+.box.draft {
+  fill: rgb(255 207 90 / 9%);
+  stroke-dasharray: 8 6;
+}
+
 .box-overlay text {
   fill: #f4f7f2;
   font-size: 18px;
@@ -200,6 +205,20 @@ dd {
   background: rgb(17 19 21 / 88%);
   color: #c8d0ca;
   font-size: 12px;
+}
+
+.world-warning {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  max-width: min(360px, calc(100% - 24px));
+  padding: 8px 10px;
+  border: 1px solid #70582a;
+  border-radius: 6px;
+  background: rgb(41 32 12 / 88%);
+  color: #ffe2a4;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .scene-legend span {
@@ -265,7 +284,7 @@ dd {
   }
 
   .status-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .review-layout {

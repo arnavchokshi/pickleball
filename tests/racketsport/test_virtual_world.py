@@ -246,6 +246,24 @@ def test_build_virtual_world_state_projects_visible_2d_ball_to_court_plane() -> 
     assert world["summary"]["approx_ball_frame_count"] == 1
 
 
+def test_build_virtual_world_state_rejects_off_court_2d_ball_projection() -> None:
+    ball_track = _ball_track_without_world_xyz()
+    ball_track["frames"][0]["xy"] = [10000.0, 10000.0]
+
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=_tracks(),
+        ball_track=ball_track,
+    )
+
+    ball_frame = world["ball"]["frames"][0]
+    assert ball_frame["visible"] is True
+    assert ball_frame["world_xyz"] is None
+    assert ball_frame["approx"] is False
+    assert world["summary"]["approx_ball_frame_count"] == 0
+    assert "unprojected_visible_ball_frames" in world["summary"]["warnings"]
+
+
 def test_build_virtual_world_state_preserves_track_only_frames_outside_sparse_mesh() -> None:
     world = build_virtual_world_state(
         court_calibration=_court_calibration(),

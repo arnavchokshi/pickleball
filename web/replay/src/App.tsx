@@ -1,20 +1,26 @@
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BufferAttribute, BufferGeometry, Color } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-import { parseReplayScene, type ReplayScene } from "./replayScene";
+import { activeReplayPointForTime, parseReplayScene, resolveReplaySceneAssetUrl, type ReplayScene } from "./replayScene";
 import {
   activeBallContactPlayerIds,
-  ballFrameForTime,
+  ballRenderInfoForTime,
   contactEventCount,
   frameForTime,
+  labelOverlayForTime,
+  labelViewBox,
   parseContactWindows,
+  parseLabelOverlayPayload,
   parsePhysicsRefinement,
   parseViewerManifest,
   parseVirtualWorld,
+  playerCoverageStats,
   startTimeFromSearch,
   type ContactWindows,
+  type LabelOverlayPayload,
   type PhysicsRefinement,
   type Vec3,
   type ViewerManifest,
@@ -23,6 +29,10 @@ import {
   type VirtualWorldPlayer,
   worldStats,
 } from "./viewerData";
+
+const DEFAULT_REPLAY_MANIFEST_URL =
+  import.meta.env.VITE_REPLAY_MANIFEST_URL ??
+  "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/eval0/prototype_gate_h100_v2/wolverine_mixed_0200_mid_steep_corner/e2e_rerun_20260628_144504/replay_viewer_manifest.json";
 
 const sampleWorld = {
   schema_version: 1,
@@ -84,32 +94,28 @@ const sampleWorld = {
   },
 };
 
-type LabelItem = {
-  frame?: string | number;
-  bbox?: number[];
-  bbox_xyxy?: number[];
-  id?: string;
-  status?: string;
-};
+function manifestUrlFromSearch(search: string): string {
+  const url = new URLSearchParams(search).get("manifest");
+  return url && url.trim() ? url : DEFAULT_REPLAY_MANIFEST_URL;
+}
 
 export default function App() {
   const initialTime = useMemo(() => startTimeFromSearch(window.location.search), []);
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
   const [world, setWorld] = useState<VirtualWorld>(() => parseVirtualWorld(sampleWorld));
-  const [labels, setLabels] = useState<LabelItem[]>([]);
+  const [labelOverlay, setLabelOverlay] = useState<LabelOverlayPayload>(() => parseLabelOverlayPayload(null));
   const [physics, setPhysics] = useState<PhysicsRefinement | null>(null);
   const [contactWindows, setContactWindows] = useState<ContactWindows | null>(null);
   const [replayScene, setReplayScene] = useState<ReplayScene | null>(null);
   const [currentTime, setCurrentTime] = useState(initialTime);
+  const [videoDuration, setVideoDuration] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const currentTimeRef = useRef(0);
   const initialSeekAppliedRef = useRef(false);
 
   useEffect(() => {
-    const manifestUrlParam = new URLSearchParams(window.location.search).get("manifest");
-    if (!manifestUrlParam) return;
-    const manifestUrl = manifestUrlParam;
+    const manifestUrl = manifestUrlFromSearch(window.location.search);
     let cancelled = false;
     async function load() {
       try {
@@ -129,7 +135,7 @@ export default function App() {
         if (cancelled) return;
         setManifest(manifestPayload);
         setWorld(worldPayload);
-        setLabels(readLabelItems(labelPayload));
+        setLabelOverlay(parseLabelOverlayPayload(labelPayload));
         setPhysics(physicsPayload);
         setContactWindows(contactPayload);
         setReplayScene(replayScenePayload);
@@ -167,7 +173,9 @@ export default function App() {
   }, [manifest?.video_url, world.fps]);
 
   const stats = useMemo(() => worldStats(world), [world]);
-  const activeLabels = useMemo(() => labelsForTime(labels, currentTime, world.fps), [labels, currentTime, world.fps]);
+  const coverage = useMemo(() => playerCoverageStats(world), [world]);
+  const activeLabels = useMemo(() => labelOverlayForTime(labelOverlay, currentTime), [labelOverlay, currentTime]);
+  const ballRenderInfo = useMemo(() => ballRenderInfoForTime(world, currentTime), [world, currentTime]);
   const playerBoxOverlay = useMemo(
     () => manifest?.label_overlays.find((overlay) => overlay.kind === "player_boxes") ?? null,
     [manifest],
@@ -180,10 +188,13 @@ export default function App() {
     () => activeBallContactPlayerIds(world, contactWindows, currentTime),
     [world, contactWindows, currentTime],
   );
-  const viewBox = useMemo(() => labelViewBox(labels), [labels]);
+  const viewBox = useMemo(() => labelViewBox(labelOverlay), [labelOverlay]);
+  const activeReplayPoint = useMemo(() => (replayScene ? activeReplayPointForTime(replayScene, currentTime) : undefined), [replayScene, currentTime]);
+  const coverageGapActive = coverage.lastTime !== null && currentTime > coverage.lastTime + Math.max(0.12, 1 / (world.fps || 30));
   const contactReadout = activeContactPlayerIds.size
     ? `3D contact: ${Array.from(activeContactPlayerIds).map((id) => `p${id}`).join(", ")}`
     : "3D contact: none";
+  const ballReadout = ballRenderText(ballRenderInfo.mode);
 
   const syncVideoTime = (video: HTMLVideoElement) => {
     if (Math.abs(video.currentTime - currentTimeRef.current) > 0.004) {
@@ -192,6 +203,9 @@ export default function App() {
   };
 
   const syncLoadedVideoTime = (video: HTMLVideoElement) => {
+    if (Number.isFinite(video.duration)) {
+      setVideoDuration(video.duration);
+    }
     if (!initialSeekAppliedRef.current && initialTime > 0) {
       const duration = Number.isFinite(video.duration) ? video.duration : initialTime;
       video.currentTime = Math.min(initialTime, duration);
@@ -204,8 +218,8 @@ export default function App() {
     <main className="viewer-shell" aria-label="Replay viewer">
       <header className="viewer-header">
         <div>
-          <p className="eyebrow">Court Z0 Review</p>
-          <h1>{manifest?.clip ?? "Replay Viewer"}</h1>
+          <p className="eyebrow">Pickleball Main Review UI</p>
+          <h1>{manifest?.clip ?? "Loading Replay"}</h1>
         </div>
         <div className="status-grid">
           <Metric label="Players" value={stats.players} />
@@ -213,6 +227,7 @@ export default function App() {
           <Metric label="Floor Frames" value={stats.floorPlacedFrames} />
           <Metric label="Ball Contacts" value={contactEventCount(contactWindows)} />
           <Metric label="Replay Points" value={replayScene?.points.length ?? 0} />
+          <Metric label="Player Span" value={coverage.lastTime === null ? "0.0s" : `${coverage.lastTime.toFixed(1)}s`} />
         </div>
       </header>
 
@@ -233,16 +248,23 @@ export default function App() {
                 onTimeUpdate={(event) => syncVideoTime(event.currentTarget)}
               />
             ) : (
-              <div className="empty-video">Add ?manifest=/@fs/absolute/path/replay_viewer_manifest.json</div>
+              <div className="empty-video">Loading replay manifest...</div>
             )}
             <svg className="box-overlay" viewBox={viewBox} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
               {activeLabels.map((item, index) => {
                 const box = item.bbox_xyxy ?? xywhToXyxy(item.bbox);
                 if (!box) return null;
                 const [x1, y1, x2, y2] = box;
+                const className = [
+                  "box",
+                  item.status === "uncertain" ? "uncertain" : "",
+                  labelOverlay.notGroundTruth ? "draft" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ");
                 return (
                   <g key={`${item.id ?? "box"}-${index}`}>
-                    <rect x={x1} y={y1} width={x2 - x1} height={y2 - y1} className={item.status === "uncertain" ? "box uncertain" : "box"} />
+                    <rect x={x1} y={y1} width={x2 - x1} height={y2 - y1} className={className} />
                     <text x={x1 + 4} y={Math.max(12, y1 - 4)}>{item.id ?? "player"}</text>
                   </g>
                 );
@@ -253,12 +275,13 @@ export default function App() {
             <span>{currentTime.toFixed(2)}s</span>
             <span>{activeLabels.length} boxes</span>
             <span>{contactReadout}</span>
+            <span>{ballReadout}</span>
             <span>{labelTrustText(playerBoxOverlay)}</span>
           </div>
         </div>
 
         <div className="world-panel">
-          <Canvas camera={{ position: [0, -18, 8.5], fov: 50, near: 0.05, far: 100 }}>
+          <Canvas dpr={[1, 1.5]} camera={{ position: [0, -18, 8.5], fov: 50, near: 0.05, far: 100 }}>
             <color attach="background" args={["#111315"]} />
             <ambientLight intensity={1.8} />
             <directionalLight position={[0, -4, 8]} intensity={2.2} />
@@ -266,13 +289,15 @@ export default function App() {
             <CourtSurface world={world} />
             <CourtLines world={world} />
             <NetAssembly world={world} />
+            <ReplayGlbLayer replayScene={replayScene} replaySceneUrl={manifest?.replay_scene_url ?? null} currentTime={currentTime} />
             <Players world={world} currentTime={currentTime} activeContactPlayerIds={activeContactPlayerIds} />
             <Ball world={world} currentTime={currentTime} />
           </Canvas>
+          {coverageGapActive ? <div className="world-warning">No player artifact coverage after {coverage.lastTime?.toFixed(2)}s</div> : null}
           <div className="scene-legend">
             <span><i className="swatch floor" /> floor</span>
-            <span><i className="swatch mesh" /> contact BODY</span>
-            <span><i className="swatch joints" /> joints</span>
+            <span><i className="swatch mesh" /> BODY verts</span>
+            <span><i className="swatch joints" /> BODY joints</span>
             <span><i className="swatch ball" /> ball</span>
           </div>
         </div>
@@ -281,8 +306,9 @@ export default function App() {
       <section className="details-band">
         <p>Physics modes: {stats.physicsModes.length ? stats.physicsModes.join(", ") : "none"}</p>
         <p>{physics ? `Physics artifact: ${physics.physics}; FOOT-2 done: ${String(physics.foot2_done)}` : "Physics artifact: none"}</p>
-        <p>{replayScene ? replaySceneReadout(replayScene) : "Replay scene: none"}</p>
+        <p>{replayScene ? replaySceneReadout(replayScene, activeReplayPoint?.id ?? null) : "Replay scene: none"}</p>
         <p>{annotationSourceReadout(trustedAnnotationSources)}</p>
+        <p>{coverageReadout(coverage, videoDuration)}</p>
         <p>Max floor penetration: {stats.maxFloorPenetrationM.toFixed(4)} m</p>
         <p>{manifest?.notes[0] ?? "Review-only viewer. Artifact gates stay separate from visual inspection."}</p>
       </section>
@@ -290,7 +316,7 @@ export default function App() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ label, value }: { label: string; value: number | string }) {
   return (
     <div>
       <dt>{label}</dt>
@@ -371,6 +397,51 @@ function NetAssembly({ world }: { world: VirtualWorld }) {
   );
 }
 
+function ReplayGlbLayer({
+  replayScene,
+  replaySceneUrl,
+  currentTime,
+}: {
+  replayScene: ReplayScene | null;
+  replaySceneUrl: string | null;
+  currentTime: number;
+}) {
+  const activePoint = useMemo(
+    () => (replayScene ? activeReplayPointForTime(replayScene, currentTime) : undefined),
+    [replayScene, currentTime],
+  );
+  const urls = useMemo(() => {
+    if (!replayScene || !replaySceneUrl) return [];
+    const activeGlb = activePoint ? resolveReplaySceneAssetUrl(replaySceneUrl, activePoint.glb_url) : null;
+    return [
+      resolveReplaySceneAssetUrl(replaySceneUrl, replayScene.court_glb),
+      activeGlb,
+    ].filter((url): url is string => Boolean(url));
+  }, [activePoint, replayScene, replaySceneUrl]);
+
+  return (
+    <>
+      {urls.map((url) => (
+        <ReplayGlb key={url} url={url} />
+      ))}
+    </>
+  );
+}
+
+function ReplayGlb({ url }: { url: string }) {
+  const gltf = useLoader(GLTFLoader, url);
+  const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
+  useEffect(() => {
+    scene.traverse((child) => {
+      child.frustumCulled = false;
+      if (child.name.toLowerCase().includes("ball")) {
+        child.visible = false;
+      }
+    });
+  }, [scene]);
+  return <primitive object={scene} />;
+}
+
 function Players({
   world,
   currentTime,
@@ -401,9 +472,9 @@ function Player({
 }) {
   const floor = floorWorldForFrame(frame);
   const track = player.frames.map(floorWorldForFrame).filter(isVec3);
-  const meshPoints = isBallContactActive ? sampleMeshPoints(frame?.mesh_vertices_world ?? [], 320) : [];
-  const bodyJoints = isBallContactActive ? frame?.joints_world ?? [] : [];
-  const proxySkeleton = skeletonForFrame(frame);
+  const bodyJoints = frame?.joints_world ?? [];
+  const meshPoints = sampleMeshPoints(frame?.mesh_vertices_world ?? [], isBallContactActive ? 1800 : 850);
+  const proxySkeleton = bodyJoints.length ? null : skeletonForFrame(frame);
   return (
     <>
       {track.length >= 2 ? <LineStrip points={track} color="#6cb2ff" /> : null}
@@ -414,19 +485,22 @@ function Player({
         </mesh>
       ) : null}
       {proxySkeleton ? <SkeletonGraph skeleton={proxySkeleton} active={isBallContactActive} /> : null}
-      {bodyJoints.length ? <PointCloud points={bodyJoints} color="#ffb45d" size={0.055} /> : null}
-      {meshPoints.length ? <PointCloud points={meshPoints} color="#b4f2bf" size={0.032} /> : null}
+      {bodyJoints.length ? <PointCloud points={bodyJoints} color="#ffb45d" size={isBallContactActive ? 0.07 : 0.055} /> : null}
+      {meshPoints.length ? (
+        <PointCloud points={meshPoints} color={isBallContactActive ? "#b4f2bf" : "#86c7ff"} size={isBallContactActive ? 0.024 : 0.018} />
+      ) : null}
     </>
   );
 }
 
 function Ball({ world, currentTime }: { world: VirtualWorld; currentTime: number }) {
-  const frame = ballFrameForTime(world, currentTime);
-  if (!frame?.world_xyz) return null;
+  const info = ballRenderInfoForTime(world, currentTime);
+  if (!info.frame?.world_xyz || !info.render3d) return null;
+  const isApprox = info.mode === "court_plane_projection";
   return (
-    <mesh position={frame.world_xyz}>
+    <mesh position={info.frame.world_xyz}>
       <sphereGeometry args={[0.055, 16, 16]} />
-      <meshStandardMaterial color="#e8ff34" emissive="#526000" />
+      <meshStandardMaterial color={isApprox ? "#ffcf5a" : "#e8ff34"} emissive={isApprox ? "#4f3f00" : "#526000"} />
     </mesh>
   );
 }
@@ -455,15 +529,29 @@ function labelTrustText(overlay: ViewerManifest["label_overlays"][number] | null
   return overlay.trusted_for_metrics ? "labels: trusted" : "labels: not trusted";
 }
 
-function replaySceneReadout(scene: ReplayScene): string {
+function replaySceneReadout(scene: ReplayScene, activePointId: number | null): string {
   const pointCount = scene.points.length;
   const totalMb = scene.points.reduce((total, point) => total + point.size_mb, 0);
-  return `Replay scene: ${pointCount} static review point${pointCount === 1 ? "" : "s"}, ${totalMb.toFixed(3)} MB GLB refs`;
+  const active = activePointId === null ? "none" : `point ${activePointId}`;
+  return `Replay scene: ${pointCount} static review point${pointCount === 1 ? "" : "s"}, ${totalMb.toFixed(3)} MB GLB refs, active ${active}`;
 }
 
 function annotationSourceReadout(sources: ViewerManifest["annotation_sources"]): string {
   if (!sources.length) return "Trusted annotation sources: none";
   return `Trusted annotation sources: ${sources.length} (${sources.map((source) => source.clip_id).join(", ")})`;
+}
+
+function ballRenderText(mode: ReturnType<typeof ballRenderInfoForTime>["mode"]): string {
+  if (mode === "calibrated_3d") return "ball: calibrated 3D";
+  if (mode === "court_plane_projection") return "ball: court-plane approx";
+  if (mode === "off_court_projection") return "ball: off-court hidden";
+  return "ball: missing";
+}
+
+function coverageReadout(coverage: ReturnType<typeof playerCoverageStats>, videoDuration: number): string {
+  if (coverage.firstTime === null || coverage.lastTime === null) return "Player artifact coverage: none";
+  const suffix = videoDuration > 0 ? ` of ${videoDuration.toFixed(2)}s video` : "";
+  return `Player artifact coverage: ${coverage.firstTime.toFixed(2)}-${coverage.lastTime.toFixed(2)}s${suffix}`;
 }
 
 function LineStrip({ points, color }: { points: Vec3[]; color: string }) {
@@ -578,38 +666,6 @@ async function fetchJson(url: string) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`failed to fetch ${url}: ${response.status}`);
   return response.json() as Promise<unknown>;
-}
-
-function readLabelItems(input: unknown): LabelItem[] {
-  if (!input || typeof input !== "object" || Array.isArray(input)) return [];
-  const annotation = "annotation" in input ? (input as { annotation?: unknown }).annotation : null;
-  if (!annotation || typeof annotation !== "object" || Array.isArray(annotation)) return [];
-  const items = (annotation as { items?: unknown }).items;
-  return Array.isArray(items) ? items.filter((item): item is LabelItem => typeof item === "object" && item !== null) : [];
-}
-
-function labelsForTime(labels: LabelItem[], currentTime: number, fps: number) {
-  const frameIndex = Math.max(0, Math.round(currentTime * fps));
-  return labels.filter((item) => labelFrameIndex(item.frame) === frameIndex).slice(0, 8);
-}
-
-function labelFrameIndex(value: LabelItem["frame"]): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.round(value));
-  if (typeof value !== "string") return null;
-  const match = value.match(/(\d+)/);
-  return match ? Math.max(0, Number.parseInt(match[1], 10) - 1) : null;
-}
-
-function labelViewBox(labels: LabelItem[]) {
-  let maxX = 1920;
-  let maxY = 1080;
-  for (const item of labels) {
-    const box = item.bbox_xyxy ?? xywhToXyxy(item.bbox);
-    if (!box) continue;
-    maxX = Math.max(maxX, box[2]);
-    maxY = Math.max(maxY, box[3]);
-  }
-  return `0 0 ${Math.ceil(maxX)} ${Math.ceil(maxY)}`;
 }
 
 function xywhToXyxy(value?: number[]): [number, number, number, number] | null {
