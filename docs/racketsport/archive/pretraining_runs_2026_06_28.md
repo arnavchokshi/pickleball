@@ -1,12 +1,14 @@
 # Pickleball Pretraining Runs 2026-06-28
 
+Archived evidence snapshot. Current truth lives in `CAPABILITIES.md` and `BUILD_CHECKLIST.md`; do not use this file as an active runbook.
+
 Date: 2026-06-28
 
 Scope: TrackNetV3 ball tracking fine-tune and court-keypoint heatmap pretraining only. These artifacts are pretraining experiments, not BALL or CAL verification.
 
 ## Outcome Ranking
 
-| Rank | Technology | Pipeline part | Result | Use now? |
+| Rank | Technology | Pipeline part | Result | Snapshot disposition |
 | ---: | --- | --- | --- | --- |
 | 1 | Court-keypoint heatmap model | No-tap court calibration / court corner prior | Synthetic error improved from 67.31 px to 27.53 px. Tiny real holdout improved from 77.40 px to 72.69 px. | Keep as a pretraining artifact; not CAL-3 verified. |
 | 2 | TrackNetV3 fine-tune from sparse/interpolated click labels | BALL stage ball trajectory tracking | Training completed, but both fine-tuned checkpoints predicted zero visible ball frames on held-out Wolverine. Held-out visible recall dropped from 0.75/1.00 to 0.00/0.00. | Do not deploy this fine-tuned checkpoint. Keep original pretrained TrackNet for now. |

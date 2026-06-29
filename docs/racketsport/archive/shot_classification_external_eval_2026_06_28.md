@@ -1,8 +1,10 @@
 # Shot Classification External Eval - 2026-06-28
 
+Archived evidence snapshot. Current truth lives in `CAPABILITIES.md` and `BUILD_CHECKLIST.md`; do not use this file as an active runbook.
+
 ## Status
 
-The current shot path is a scaffold/transfer baseline for review overlays, not a trained pickleball classifier. It should not be treated as SHOT-1 complete or as a claimable shot-classification product feature.
+At snapshot time, the shot path was a scaffold/transfer baseline for review overlays, not a trained pickleball classifier. It should not be treated as SHOT-1 complete or as a claimable shot-classification product feature.
 
 Canonical labels:
 

@@ -29,6 +29,11 @@ def test_parse_adaptive_crop_regions_returns_primary_and_fallback_sets() -> None
     assert min_detections == 4
 
 
+def test_single_frame_tiled_yolo_helper_is_not_public_api() -> None:
+    assert "yolo_tiled_detections_for_frame" not in tiled_person_detector.__all__
+    assert not hasattr(tiled_person_detector, "yolo_tiled_detections_for_frame")
+
+
 def test_offset_crop_detections_restores_full_frame_coordinates() -> None:
     detections = offset_crop_detections(
         [{"bbox": [10.0, 20.0, 30.0, 40.0], "conf": 0.9, "class": "person"}],

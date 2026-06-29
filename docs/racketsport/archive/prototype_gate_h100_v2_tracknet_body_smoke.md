@@ -1,10 +1,10 @@
 # Prototype Gate H100 v2 TrackNet and Body Smoke
 
+Archived evidence snapshot. Current truth lives in `CAPABILITIES.md` and `BUILD_CHECKLIST.md`; do not use this file as an active runbook.
+
 Date: 2026-06-27; updated 2026-06-28
 
 This is a prototype smoke record, not an acceptance gate. None of these artifacts make BALL, BODY, or E2E `VERIFIED`; they only prove real H100 runtime seams on the accepted-four prototype clips.
-
-Archived evidence snapshot. The canonical current prototype runbook is `docs/racketsport/prototype_gate_h100_v2_usage.md`; use this file only for the original TrackNet/BODY smoke provenance.
 
 ## Accepted Clips
 
@@ -172,7 +172,7 @@ directory:
 - `ball_track_fusion_temporal_vball100_localtraj_summary.json`
 - `ball_track_fusion_temporal_vball100_localtraj_overlay_h264.mp4`
 
-The local-trajectory variant is the current strict review track. On the four
+At snapshot time, the local-trajectory variant was the strict review track. On the four
 accepted clips it removes benchmark teleports and lowers hidden false positives
 relative to the looser fusion track, but it also hides more uncertain ball
 frames. This remains `filtered_not_gate_verified`; it is not BALL `VERIFIED`.
@@ -181,7 +181,7 @@ Machine cue fusion still emits no machine-derived contact events unless all
 three cue families are present: `audio_onsets.json`, `wrist_velocity_peaks.json`,
 and `ball_inflections.json`. When they are present and temporally agree, the
 BALL runner fuses them into schema-valid contact events. The accepted-four
-canonical `contact_windows.json` files currently exist from explicit human
+canonical `contact_windows.json` files existed at snapshot time from explicit human
 review inputs, with `player_id` untrusted/null; they schedule limited BODY
 review work (Burlington 3 frames / 9 player-frames, Wolverine 4 / 12, Outdoor 0
 / 0, Indoor 2 / 6) but do not make BALL or BODY `VERIFIED`.

@@ -593,9 +593,9 @@ Measure: face-angle error vs `racket_pose.json` (ArUco GT); contact-point-on-fac
 **Current delta:** rule/confidence/report primitives exist, but the trusted upstream inputs do not. Metrics that depend on BODY, BALL, FOOT, or RKT cannot be promoted until those phases pass their real gates.
 
 **Build:**
-- `movement_metrics.py` / `biomech.py` — foot/NVZ margin, court-zone occupancy, inter-player spacing, base-of-support, CoM (segmental mass-weighted, De Leva), reach outside base, recovery time, knee/elbow/trunk angles, shoulder-hip X-factor, contact point relative to body, contact height, split-step timing, weight transfer. **Now also racket-derived:** paddle-face angle at contact + contact-point-on-face (from Phase 6 — newly claimable). Each metric returns `{value, units, confidence, frames_used}`.
+- `movement_metrics.py` / `biomech.py` — foot/NVZ margin, court-zone occupancy, inter-player spacing, base-of-support, CoM (segmental mass-weighted, De Leva), reach outside base, recovery time, knee/elbow/trunk angles, shoulder-hip X-factor, contact point relative to body, contact height, split-step timing, weight transfer. **Target after RKT gate:** paddle-face angle at contact + contact-point-on-face; currently gated because Phase 6 remains scaffold. Each metric returns `{value, units, confidence, frames_used}`.
 - `confidence.py` — central gating: pose + event + capture-quality + racket-6DoF confidence on every metric. **Hard-gate** any velocity metric that failed Phase-3 tests and any face-angle when racket 6DoF confidence is low; present values as **ranges**, never false precision. The "no charge if we can't trust it" plumbing.
-- `insight_rules.py` — rule-based thresholds = source of truth. PB: kitchen-foot, transition-stuck, partner-gap, overreach, late-split, arm-led, **paddle-face-at-contact** (now defensible via racket 6DoF). Tennis: serve landing balance, toss/contact consistency, serve+1 readiness, backhand spacing. Each rule: required signals, threshold band, flag + clip ref + metric.
+- `insight_rules.py` — rule-based thresholds = source of truth. PB: kitchen-foot, transition-stuck, partner-gap, overreach, late-split, arm-led, **paddle-face-at-contact** (target after racket 6DoF validation; currently gated). Tennis: serve landing balance, toss/contact consistency, serve+1 readiness, backhand spacing. Each rule: required signals, threshold band, flag + clip ref + metric.
 - `habit_model.py` — rank flags into habits; the "one leak at a time" selector picks the single highest-leverage habit; before/after hooks.
 - Current module primitives (`movement_metrics.py`, `biomech.py`, `confidence.py`, `insight_rules.py`) feed `racket_sport_metrics.json` and draft `habit_report.json`; a standalone metrics CLI is still pending.
 
@@ -610,7 +610,7 @@ Measure: metric accuracy vs `manual_metrics.json`; rule-flag agreement vs `coach
 
 **Acceptance gates:**
 - Kitchen/NVZ foot **within 6 in**; spacing **within 12 in** on confident frames.
-- Paddle-face angle **within 5°** vs ArUco GT (now claimable via racket 6DoF; gated when racket conf low).
+- Paddle-face angle **within 5°** vs ArUco GT; claimable only after RKT gate and ArUco/GT evaluation pass.
 - Rule-flag precision vs coach labels **≥ 75%** on confident spans; **habit dismiss rate < 20%**.
 - Confidence calibration monotonic (uncertain bucket has higher error than confident).
 - **0** ungated transverse-rotation values from *pose alone* (face-angle only via the racket path).
@@ -664,7 +664,7 @@ Measure: shot-class macro-F1 + top-2 accuracy; rep-count error vs manual.
 - Visualization (conversion core, render fast):
   - `viz_courtmap.py` — top-down court map + shot/position heatmap + player paths.
   - `viz_ghost.py` — self-vs-self before/after aligned at the contact frame.
-  - `viz_overlay.py` — 2D pose overlay on the player's video + **auto-telestration** (knee-angle arc, contact-point marker, base-of-support box, **paddle-face indicator** from Phase 6).
+  - `viz_overlay.py` — 2D pose overlay on the player's video + **auto-telestration** (knee-angle arc, contact-point marker, base-of-support box, **paddle-face indicator** only after the Phase-6 RKT gate passes).
   - Premium async: links to the Phase-10 3D replay.
 - `orchestrator.py` + `pipeline_contracts.py` — the two tiers; **progressive disclosure**: 0–10 s (skeleton/SMPL overlay + court map + 1 priority metric), 10–60 s (full per-shot metrics + heatmap), 2–10 min async (LLM summary + 3D replay).
 - **Progressive rally-by-rally streaming (`stream_api.py`) — never make the user wait for the whole clip.** A **Celery GPU worker** processes rallies, publishing each result to a **Redis Pub/Sub** channel; a **FastAPI SSE endpoint** (`EventSourceResponse`) relays to iOS (the same pattern as LLM token streaming; iOS consumes via `URLSession`/`EventSource`). Event sequence: `job_accepted → rally_total:N → rally_done:{i, metrics, replay_url}` (×N, as each finishes) `→ habits_partial` (as detected) `→ complete`. Fire an **APNs push** on `complete` so a backgrounded user is notified. **Optimistic UI:** the app renders the N-rally checklist instantly from on-device segmentation and fills/▸-enables each row the moment its SSE event lands — each rally is interactive before `complete`. (Internal GPU-worker→aggregator hop may use gRPC streaming.)
@@ -889,7 +889,7 @@ The examples below are planning/reference shapes. Treat `threed/racketsport/sche
   {"id": 1, "shots": [{"t": 0.0, "type": "dink", "type_conf": 0.0,
     "metrics": {"nvz_margin_ft": {"value": -0.6, "conf": 0.86, "frames": 5},
                 "x_factor_deg": {"value": 31, "conf": 0.7, "gated": false},
-                "paddle_face_deg": {"value": 4.0, "conf": 0.82, "gated": false, "source": "racket6dof"},
+                "paddle_face_deg": {"gated": true, "skipped_reason": "rkt_not_verified", "source": "racket6dof_target"},
                 "contact_point_face_cm": {"value": [1.2, -0.5], "conf": 0.8}}}]} ] }
 
 // habit_report.json
@@ -937,7 +937,7 @@ The examples below are planning/reference shapes. Treat `threed/racketsport/sche
 | 3 | 3D body mesh-core (Fast SAM-3D-Body deep + our grounding; Multi-HMR2/SAT-HMR fast) | per-frame PA-MPJPE ~30 mm; foot/NVZ ≥80%; fast mesh ≥20 FPS; velocity decided |
 | 4 | foot-skate elimination + physics | **foot-slide ≤3 mm; 0 penetration**; contact P≥0.9/R≥0.85 |
 | 5 | ball (TrackNet) + audio + events + 3D physics | ball F1 ≥0.90 (FP<5%); contact ≤±2 frames / ±4 ms; 3D obeys physics |
-| 6 | racket 6DoF | **face-angle ≤5°; contact-point ±1–3 cm** |
+| 6 | racket 6DoF | target: **face-angle ≤5°; contact-point ±1–3 cm** after RKT gate and ArUco/GT evaluation pass |
 | 7 | metrics + rules + confidence gating | NVZ ±6 in; rule precision ≥75%; rotation gated unless via racket |
 | 8 | shot classification + drill reps | shot F1 ≥0.65/top-2 ≥0.85; reps ±1 |
 | 9 | LLM copy + reports + viz + tiers | copy 100% faithful; <10 s fast tier; ≥3/5 coaches |

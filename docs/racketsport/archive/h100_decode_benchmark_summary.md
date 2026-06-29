@@ -1,5 +1,7 @@
 # H100 Decode Benchmark Summary
 
+Archived evidence snapshot. Current truth lives in `CAPABILITIES.md` and `BUILD_CHECKLIST.md`; do not use this file as an active runbook.
+
 Recorded on 2026-06-27 from `body4d-gcp-prod` (`a3-highgpu-1g`, H100 80 GB) using real ignored DATA-1 clips in `/workspace/pickleball/data/testclips`.
 
 This report is evidence for ENV-4 backend triage only. It does not set a global decode default; backend choice remains empirical per real clip set.
@@ -24,4 +26,4 @@ This report is evidence for ENV-4 backend triage only. It does not set a global 
 - Benchmarks: 6 total runs over 3 clips.
 - All sampled clips were 1920x1080 H.264.
 - CUDA decode was not faster for this sample; the earlier synthetic-short-clip result was directionally consistent for 60 fps clips.
-- Keep re-running `scripts/racketsport/benchmark_decode.py` and `scripts/racketsport/summarize_decode_benchmarks.py` as the DATA-1 matrix grows, especially for 4K, 120 fps, and 240 fps captures.
+- Active rerun guidance belongs in `BUILD_CHECKLIST.md` ENV-4; this snapshot records only the 2026-06-27 sample.

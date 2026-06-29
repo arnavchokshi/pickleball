@@ -15,8 +15,6 @@ from typing import Any, Sequence
 from .ball_tracknet import ball_frame
 from .schemas import BallTrack
 
-
-TRACKNETV4_COLUMNS = ("Frame", "Visibility", "X", "Y")
 CONFIDENCE_SEMANTICS = "official/simple visibility mapped to conf 1.0/0.0"
 TRACKNETV4_SOURCE_URL = "https://github.com/TrackNetV4/TrackNetV4"
 
@@ -437,7 +435,6 @@ def _write_json(path: Path, payload: Any) -> None:
 
 __all__ = [
     "CONFIDENCE_SEMANTICS",
-    "TRACKNETV4_COLUMNS",
     "checkpoint_metadata",
     "run_external_tracknetv4_predict",
     "run_tracknetv4_or_convert",

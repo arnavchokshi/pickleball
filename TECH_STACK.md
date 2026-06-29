@@ -93,8 +93,8 @@ The dance pipeline runs one heavy path uniformly: `video → 2D identity trackin
         │     → FOOT-SKATE KILLER: contact vs court Z=0 + zero-velocity + CCD-IK (~2-3mm)      │
         │     → PHYSICS REFINEMENT: PhysPT (default) / PHC+PULSE on MuJoCo+MJX (flagship)      │
         │        + MultiPhys (inter-player non-penetration, doubles)                           │
-        │  RACKET 6DoF per player: detect → kpts(top/bottom/handle) → PnP-IPPE → UKF →         │
-        │        physics-validate → contact-point + face-angle (~3-5°)                         │
+        │  RACKET 6DoF target after RKT gate: currently blocked until approved detector/mask,   │
+        │        CAD/reference, and GT assets exist before contact-point/face-angle claims      │
         │  BALL 3D physics: TrackNet → z=0-bounce uplift + Magnus → contact impulse            │
         │                                                                                     │
         │  biomechanics metrics → rule-based insight engine (+confidence gating)              │
@@ -292,7 +292,7 @@ Two tiers (our world-grounding/foot-lock detailed in (p); built in `IMPLEMENTATI
 ### (g) Twist / pronation / paddle-face — **hand-keypoints / racket-pose / optional IMU, contact window only**
 
 - **Chosen:** estimate axial twist (forearm pronation, paddle-face angle) from **hand-landmark geometry** (already in whole-body keypoints), optionally a **racket 6DoF object-pose** detector or a **forearm IMU**, run **only in the contact window**.
-- **Current 2026 paddle stack:** prefer **SAM 3** concept detection/segmentation/tracking when checkpoints and license are approved; fall back to **DINO-X/Grounded-SAM-2** for open-vocabulary detection plus video masks. For 6DoF, use **FoundationPose** when CAD/reference-image onboarding is available, with **GigaPose/FoundPose** as RGB/CAD alternatives, then keep **PnP-IPPE + reprojection/ambiguity + UKF + rebound** as fail-closed geometry gates. See `docs/racketsport/archive/paddle_pose_research_2026_06_28.md`.
+- **Target 2026 paddle stack, not runtime-ready in this repo:** prefer **SAM 3** concept detection/segmentation/tracking when checkpoints and license are approved; fall back to **DINO-X/Grounded-SAM-2** for open-vocabulary detection plus video masks. For 6DoF, use **FoundationPose** when CAD/reference-image onboarding is available, with **GigaPose/FoundPose** as RGB/CAD alternatives, then keep **PnP-IPPE + reprojection/ambiguity + UKF + rebound** as fail-closed geometry gates. See `docs/racketsport/archive/paddle_pose_research_2026_06_28.md`.
 - **Why:** axial roll is **unobservable from two joint endpoints** (20–45° error keypoint-only) — and a mesh does **not** fix this either. The fix is an explicit twist signal: a purpose-trained hand+IMU model reached ~4.65–5.61° MAE.
 - **Decision:** **confidence-gate or omit** paddle-face/pronation when no extra signal is available. We do not claim a pronation number we can't defend. This is a trust win, not a gap.
 - **Toggle:** omit (default) ↔ hand-keypoint estimate ↔ + racket-pose/IMU (richest).
@@ -551,7 +551,7 @@ For one H100 with a fixed multi-model DAG, **NVIDIA Triton Inference Server** ("
 | Visualization / render | court map + metric + 2D overlay | 3D mesh replay → physics replay + free-viewpoint (native RealityKit/USDZ in-app + Three.js/GLB web) | premium / share moments |
 | Cameras | **1 phone (v1 product)** | 2 phones (true 3D) — **FUTURE; training-instrument only for now** | future line-call tier |
 
-The bolded rows are the round-4 architectural identity: a fast skeleton/camera-space preview, a world-grounded SMPL mesh core that is foot-locked and physics-refined for the replay, and the racket tracked as a 6DoF object — all on one phone at any camera height.
+The bolded rows are the round-4 architectural identity: a fast skeleton/camera-space preview, a world-grounded SMPL mesh core that is foot-locked and physics-refined for the replay, and a racket-6DoF target after the RKT gate — all designed around one phone at any camera height.
 
 ---
 
@@ -577,7 +577,7 @@ The bolded rows are the round-4 architectural identity: a fast skeleton/camera-s
 | **Target: native in-app 3D replay (RealityKit/USDZ)** | free-viewpoint mesh replay plays natively on the phone, plus a Three.js/GLB web share link from the same bake; current web surface is QA/review scaffolding until replay gates pass | Sportsbox shows fixed angles; nobody ships a native free-viewpoint physics replay |
 | **Movement screening for 50+** | non-diagnostic balance/asymmetry from 3D | Wide-open lane; peer-reviewed fall-prevention demand, no incumbent |
 | **Physics-accurate, foot-skate-free 3D replay** | world-grounded SMPL + contact-vs-Z=0 lock + physics refinement (≤3 mm slide) | Competitors show 2D/skeleton overlays or sliding avatars; none deliver a watchable physics replay |
-| **Racket tracked as a 6DoF object** | PnP on known paddle → face angle ~3–5°, contact-point ±1–3 cm | Everyone else uses the hand center as a contact proxy (e.g. LATTE-MV); nobody estimates racket pose |
+| **Target after RKT gate: racket tracked as a 6DoF object** | PnP on known paddle → face angle/contact point only after approved detector/mask/CAD/reference/GT evidence exists | Everyone else uses the hand center as a contact proxy (e.g. LATTE-MV); nobody estimates racket pose |
 | **Free-viewpoint replay on one phone** | calibrated world frame + Three.js mesh scene → rotate to any angle | Free-viewpoint elsewhere needs multi-camera rigs (Hawk-Eye/TRACAB) |
 | **3D avatar that's a real SMPL-X mesh, generated for free** | LBS from already-computed SMPL-X params | Sportsbox's "avatar" is a skeleton rig — we render a true volumetric mesh at LBS cost |
 

@@ -102,36 +102,6 @@ def merge_tiled_detections(detections: Iterable[Detection], *, iou_threshold: fl
     return merged
 
 
-def yolo_tiled_detections_for_frame(
-    model: Any,
-    frame: Any,
-    *,
-    crop_regions: Sequence[NormalizedCrop] = DEFAULT_CROP_REGIONS,
-    conf: float,
-    iou: float,
-    imgsz: int,
-    device: str | None,
-    nms_iou: float = 0.55,
-) -> list[Detection]:
-    height, width = frame.shape[:2]
-    detections: list[Detection] = []
-    for region in crop_regions:
-        x0, y0, x1, y1 = crop_region_pixels(width, height, region)
-        crop = frame[y0:y1, x0:x1]
-        result = model.predict(
-            crop,
-            classes=[0],
-            conf=conf,
-            iou=iou,
-            imgsz=imgsz,
-            device=device,
-            verbose=False,
-        )[0]
-        crop_detections = _detections_from_yolo_result(result)
-        detections.extend(offset_crop_detections(crop_detections, x0=x0, y0=y0))
-    return merge_tiled_detections(detections, iou_threshold=nms_iou)
-
-
 def yolo_tiled_detections_for_frames_batched(
     *,
     model: Any,
@@ -490,7 +460,6 @@ __all__ = [
     "parse_crop_regions",
     "yolo_adaptive_tiled_detections_for_frames_batched",
     "yolo_adaptive_tiled_detections_payload",
-    "yolo_tiled_detections_for_frame",
     "yolo_tiled_detections_for_frames_batched",
     "yolo_tiled_detections_payload",
 ]

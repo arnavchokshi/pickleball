@@ -82,7 +82,7 @@ The dominant unmet need across Reddit, coaching sites, PB Vision's roadmap, and 
 2. **"I'm stuck at my rating and don't know how to break through"** (3.5/4.0 plateaus). Subtle mechanics players can't feel.
 3. **"Give me a plan/drills for MY weaknesses, not a dashboard."**
 4. **"Fix my footwork / split-step / recovery."** Pure body-tracking output competitors don't touch.
-5. **"Diagnose my contact point & paddle face."** 3D resolves the "heuristic estimate" weakness 2D tools (SwingVantage) openly admit to — and with **racket 6DoF tracking** we now deliver true contact-point-on-face (±1–3 cm) and face angle (~3–5°), which wrist-based methods cannot (see §13).
+5. **"Diagnose my contact point & paddle face."** 3D resolves the "heuristic estimate" weakness 2D tools (SwingVantage) openly admit to — and with **racket 6DoF tracking** we target true contact-point-on-face and face angle after RKT validation; the current repo keeps this gated (see §13).
 6. **"Make my third-shot drop / reset / dink consistent."** PB-native; body cause (weight transfer, paddle angle) is ours.
 7. **"Show me what I really look like."** The perception-gap "aha."
 8. **"Am I actually getting better?"** Progress proof — uniquely answerable by tracking a mechanic in degrees/inches/ms over time.
@@ -128,7 +128,7 @@ Cheap baseline everywhere; spend the expensive budget only where it pays:
 The body baseline is now world-grounded SMPL mesh, but the *heaviest* compute is still concentrated at the moments that matter:
 
 - Detect contact via **audio "pop" + wrist-velocity peak + ball-trajectory inflection** (~4 ms precision, near-free).
-- In the contact window, for the hitting player, run **racket 6DoF estimation** (PnP on the known paddle geometry → face-normal + contact-point) and the densest mesh/physics refinement of the swing.
+- In the contact window, for the hitting player, after RKT readiness/gates pass, run **racket 6DoF estimation** (PnP on the known paddle geometry → face-normal + contact-point) and the densest mesh/physics refinement of the swing.
 - Run the **full physics refinement** (PhysPT, or MuJoCo imitation for the flagship replay) on rally spans; coast through dead time.
 - **Foot-lock everywhere** (cheap, runs on all confident-contact frames) so the whole replay is skate-free, not just the highlights.
 
@@ -155,7 +155,7 @@ The **target/default model + variant + weight candidates for every stage (offlin
 | **3D body — fast tier** | camera-space mesh — **SAT-HMR (24 FPS) / Multi-HMR 2 (20 FPS, no FOV assumption)** | research | mesh now fast enough for preview |
 | **3D body — deep/replay (core)** | **Fast SAM-3D-Body** per crop (best per-frame mesh, 30.4 mm PA-MPJPE) + **our own world-grounding** (known camera + court plane); GVHMR/WHAM optional trajectory cross-check | SAM (research-OK; ⚠️ verify-commercial; SAT-HMR/Apache fallback) | best per-frame mesh, user-confirmed; we add grounding via calibration |
 | Foot-skate + physics | contact vs known Z=0 + zero-velocity + CCD-IK (≤3 mm); **PhysPT** (MIT) default / **PHC+PULSE on MuJoCo+MJX** flagship + MultiPhys (doubles) | MIT/Apache | physically plausible, skate-free replay |
-| **Racket 6DoF** | RTMDet+SAM2 → RTMPose top/bottom/handle + corners → **PnP-IPPE** on known dims → UKF SE(3) → physics-validate | OpenCV/own | face-angle ~3–5° (beats wrist 5–15×); contact-point ±1–3 cm |
+| **Racket 6DoF** | Target stack: SAM 3 concept detection/tracking when approved; DINO-X/Grounded-SAM-2 fallback; FoundationPose when CAD/reference onboarding exists, with GigaPose/FoundPose as alternatives; PnP-IPPE + UKF/rebound as fail-closed gates | OpenCV/own plus approval-gated model licenses | Current runtime is blocked; face-angle/contact-point claims stay gated until RKT validation and ArUco/GT evaluation pass |
 | Ball | TrackNetV3→V5 + physics ODE 3D uplift (z=0 bounce + Magnus) | MIT | heatmap+temporal; known plane resolves single-cam depth |
 | Events | audio "pop" (CNN, retrained on PB) + wrist-vel peak + ball inflection; net crossing via homography | — | <1-frame contact timing; drives event triggers |
 | Shot class | scaffold/transfer baseline now; PoseConv3D family classifier first, BST-style pose+ball fusion after tensors are clean | open | current external eval misses serve/overhead; not a product claim until reviewed labels and SHOT gates pass |
@@ -204,7 +204,7 @@ Edge-first hybrid target; current repo status is scaffold/partial for the iPhone
 | **Native iOS 3D replay + free ARKit calibration** (RealityKit/USDZ in-app, intrinsics+court-plane from ARKit) | Web-only/manual-calibration competitors |
 | **Graceful 1→2 camera scaling** *(future)* — unlock true 3D/line-calls with a 2nd phone | Single fixed product elsewhere |
 | **Physics-accurate, foot-skate-free 3D replay** (free-viewpoint, shareable) | Sportsbox shows 6 preset angles of a single body; we render the whole game, physical and rotatable |
-| **Racket tracked in 3D** (true contact-point-on-face + face angle, 5–15× better than wrist) | Everyone else uses the hand center as a contact proxy |
+| **Target after RKT gate: racket tracked in 3D** (true contact-point-on-face + face angle) | Everyone else uses the hand center as a contact proxy |
 | **Known ground plane = physics anchor** (foot-lock to exact Z=0, single-cam ball depth) | In-the-wild HMR methods fight drift/scale; we solved it via calibration |
 
 ---
@@ -235,7 +235,7 @@ Edge-first hybrid target; current repo status is scaffold/partial for the iPhone
 The build-now differentiators first, then the longer-horizon set:
 
 1. **Physics-accurate 3D replay** — watch the whole rally reconstructed (players, court, net, ball, rackets) from any angle, foot-skate-free and physics-consistent; the marquee "wow" + proof layer (see `IMPLEMENTATION_PHASES.md` Phase 10).
-2. **Racket in 3D / true contact point** — show exactly where on the paddle face the ball hit and the face angle at contact, rendered on the 3D paddle — the thing no competitor can do.
+2. **Target after RKT gate: racket in 3D / true contact point** — show exactly where on the paddle face the ball hit and the face angle at contact, rendered on the 3D paddle after validation passes.
 3. **Self-vs-self ghost**, aligned at contact — now mesh-on-mesh in the 3D replay; the marquee shareable.
 4. **"One leak at a time"** — fix one habit, track only it, then advance.
 5. **Doubles Chemistry Score** — partner gap over time, split-step sync, middle-ball ownership, stack timing.
@@ -381,7 +381,7 @@ This table is the target claim envelope, not current shipped capability. Claim a
 | Sagittal/large-joint angles (knee, elbow, trunk) | ±3–10° (beats a coach's ~12° eye) | target claim after gate |
 | Shoulder–hip separation (X-factor) | reliable as a trend with bilateral keypoints | target claim as trend after gate |
 | Contact timing (with audio) | <1 frame | target claim after gate |
-| **Paddle-face angle + contact-point — via tracked racket** | ~3–5° face / ±1–3 cm contact (PnP on known paddle) | **claim after racket-6DoF validation (≤5° vs ArUco GT)** |
+| **Paddle-face angle + contact-point — via tracked racket** | target ~3–5° face / ±1–3 cm contact after RKT gate | **claim only after racket-6DoF validation (≤5° vs ArUco GT)** |
 | Foot-slide during contact / floor & inter-player penetration | ≤3 mm / zero (physics-constrained) | **target claim after hard gates** |
 | Wrist-only pronation / transverse-axial rotation (no racket) | 20–57° markerless error | **gate — superseded by the tracked racket above** |
 | Velocity — wrist/elbow swing speed (ball-speed predictor), horizontal CoM velocity, split-step timing/tempo | reliable in-plane via court homography (±15–25%; timing ±17 ms@60 / ±8 ms@120) | **Tier 1 — claim with number after Protocol A/B passes** |
@@ -406,7 +406,7 @@ This is a product/research target view, not current capability status. Current i
 | Split-step / contact timing | Medium-high | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | needs ball/audio event; audio makes it strong |
 | World-grounded mesh + foot-skate-free replay | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | Fast SAM-3D-Body + our world-grounding (known camera) + foot-lock to known Z=0 plane (≤3 mm) |
 | Physics-accurate 3D replay (Three.js, free-viewpoint) | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | mesh + baked physics -> glTF; engineering, not research |
-| Racket 6DoF (face angle / contact-point) | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | PnP on known paddle geometry; ~3-5° (wrist-only stays low) |
+| Racket 6DoF (face angle / contact-point) | High target after gate | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | PnP on known paddle geometry; claim only after RKT gate and ArUco/GT evaluation pass |
 | Ball automation | Medium | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | TrackNetV3 fine-tune for context; line calls need 2 cams |
 | Coach reports / UX | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | mostly product/backend |
 | $1M ARR | Plausible | market thesis, not pipeline capability | coaches/clubs first |

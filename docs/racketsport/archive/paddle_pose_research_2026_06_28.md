@@ -1,9 +1,6 @@
 # Paddle Pose Research Snapshot - 2026-06-28
 
-Historical research snapshot. Active RKT policy and current status live in
-`TECH_STACK.md` section `(r)`, `CAPABILITIES.md`, and `BUILD_CHECKLIST.md`.
-Do not treat the local-work bullets below as a current runbook unless those
-canonical files still agree.
+Archived evidence snapshot. Current truth lives in `CAPABILITIES.md` and `BUILD_CHECKLIST.md`; do not use this file as an active runbook.
 
 ## Recommendation
 
@@ -101,7 +98,7 @@ accepted-four clips report box-derived candidate frames, but
 - Keep BODY and replay allowed to display preview paddles, but keep metrics
   and paddle-face angles gated until RKT evaluation passes.
 
-## Local Work That Does Not Need Human Permission
+## Historical Local-Work Notes; Cross-Check Active Docs First
 
 - Keep generating `racket_candidate_overlay.mp4` and
   `virtual_world_paddle_preview.html` for human review.

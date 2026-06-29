@@ -12,6 +12,12 @@ from threed.racketsport.tracknetv4_adapter import (
     run_tracknetv4_or_convert,
     tracknetv4_csv_to_ball_track,
 )
+from threed.racketsport import tracknetv4_adapter
+
+
+def test_tracknetv4_schema_constant_is_not_public_api() -> None:
+    assert "TRACKNETV4_COLUMNS" not in tracknetv4_adapter.__all__
+    assert not hasattr(tracknetv4_adapter, "TRACKNETV4_COLUMNS")
 
 
 def test_tracknetv4_csv_to_ball_track_accepts_official_prediction_format(tmp_path: Path) -> None:
