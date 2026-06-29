@@ -42,7 +42,9 @@ describe("parseReplayScene", () => {
     const scene = parseReplayScene(validScene);
 
     expect(activeReplayPointForTime(scene, 0)?.id).toBe(1);
+    expect(activeReplayPointForTime(scene, 3.5)?.id).toBe(2);
     expect(activeReplayPointForTime(scene, 3.75)?.id).toBe(2);
+    expect(activeReplayPointForTime(scene, 7)?.id).toBe(2);
     expect(activeReplayPointForTime(scene, 8)).toBeUndefined();
   });
 

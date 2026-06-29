@@ -13,6 +13,7 @@ from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts
 from threed.racketsport.mobile_person_yolo_replay import (
     ReplayYoloCandidate,
     _closed_set_prune_frames,
+    _closed_set_track_summaries,
     _expand_bbox_xywh,
     _make_linker,
     _observations_from_result,
@@ -83,6 +84,32 @@ def test_wide_role_lock_uses_spatial_diversity_instead_of_top_confidence_only() 
 
     selected_origins = {tuple(det["bbox_xywh"][:2]) for det in detections}
     assert selected_origins == {(100.0, 100.0), (300.0, 100.0), (100.0, 300.0), (300.0, 300.0)}
+
+
+def test_closed_set_track_summaries_use_true_percentiles() -> None:
+    frames = []
+    for frame_index, (confidence, width) in enumerate(
+        [(0.1, 10.0), (0.2, 20.0), (0.3, 30.0), (0.4, 40.0), (0.9, 100.0)]
+    ):
+        frames.append(
+            {
+                "frame_index": frame_index,
+                "detections": [
+                    {
+                        "track_id": 7,
+                        "bbox_xywh": [0.0, 0.0, width, 1.0],
+                        "confidence": confidence,
+                    }
+                ],
+            }
+        )
+
+    summary = _closed_set_track_summaries(frames, frame_width=500.0)[7]
+
+    assert summary["confidence_p90"] == pytest.approx(0.7)
+    assert summary["median_area"] == pytest.approx(30.0)
+    assert summary["p90_area"] == pytest.approx(76.0)
+    assert summary["median_center"] == pytest.approx([15.0, 0.5])
 
 
 def test_stable_set_linker_assigns_from_wider_candidate_pool() -> None:

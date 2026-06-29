@@ -47,7 +47,10 @@ export function parseReplayScene(input: unknown): ReplayScene {
 }
 
 export function activeReplayPointForTime(scene: ReplayScene, timeSeconds: number): ReplayPoint | undefined {
-  return scene.points.find((point) => point.t0 <= timeSeconds && timeSeconds <= point.t1);
+  return scene.points.find((point, index) => {
+    const isLastPoint = index === scene.points.length - 1;
+    return point.t0 <= timeSeconds && (timeSeconds < point.t1 || (isLastPoint && timeSeconds <= point.t1));
+  });
 }
 
 export function resolveReplaySceneAssetUrl(replaySceneUrl: string, assetPath: string): string {

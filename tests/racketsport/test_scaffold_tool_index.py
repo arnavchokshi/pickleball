@@ -180,6 +180,7 @@ def test_real_scaffold_tool_index_matches_checked_in_schema() -> None:
 
     assert_matches_json_schema(payload, schema)
     assert payload["summary"]["tool_count"] == len(payload["tools"])
+    assert payload["summary"]["missing_direct_cli_reference_tests"] == 0
     by_path = {tool["command_path"]: tool for tool in payload["tools"]}
     assert (
         by_path["scripts/racketsport/list_scaffold_tools.py"]["matching_schema"]

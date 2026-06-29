@@ -28,7 +28,7 @@ Zero ML cost, largest immediate quality lift. **In the native iOS app the *app* 
 | Parameter | App sets (AVFoundation) | Why |
 |---|---|---|
 | Orientation | **Landscape** enforced (`videoRotationAngle`, iOS 17+) | Portrait crops the court to an unusable slice |
-| Resolution / fps | **1080p / 120 fps default** (`activeFormat` + `activeVideoMin/MaxFrameDuration`); 60 fps floor on constrained devices | 120 fps makes swing-speed numbers always available (§5b) and halves motion blur; 4K adds storage for ~0 CV gain at 8–15 m |
+| Resolution / fps | **1080p / 60 fps current default** (`CaptureViewModel.selectedMode = .standard60`); 120 fps is a separate swing/racket mode when supported; 60 fps floor on constrained devices | 120 fps is required before claiming absolute swing-speed numbers (§5b) and halves motion blur, but the repo does not make it the default; 4K adds storage for ~0 CV gain at 8–15 m |
 | Exposure | **Locked, custom** (`setExposureModeCustom`, 1/500–1/1000 s shutter, clamped ISO); HDR off | Stops AE pumping (false motion in ball-tracker stacks); fast shutter freezes the ball |
 | Focus | **Locked** (`setFocusModeLocked` on court distance) | No AF hunting on fast motion; stable intrinsics |
 | White balance | **Locked** (`setWhiteBalanceModeLocked`) | Consistent ball/court color for segmentation |
@@ -38,7 +38,8 @@ Zero ML cost, largest immediate quality lift. **In the native iOS app the *app* 
 | Placement (user) | tripod ≥1.2–1.5 m, all 4 corners visible, stable | Higher angle → less foot occlusion, better depth; app's capture-quality guidance coaches this in real time |
 
 **Special modes:**
-- **240 fps "impact deep-dive"** (≈720p binned, rear-only) for max ball-trajectory/impact temporal resolution — let the server super-resolve. (Default 120 fps already covers swing-speed numbers.)
+- **120 fps swing/racket mode** for absolute swing-speed/racket-6DoF claims when the device and light support it.
+- **240 fps "impact deep-dive"** (≈720p binned, rear-only) for max ball-trajectory/impact temporal resolution — let the server super-resolve.
 - **LiDAR depth (Tier-A Pro devices):** near-camera (~5 m) depth as *extra* supervision (near-player foot-contact, near court-plane) — **not** court-spanning, **not** the ball, fails in direct sun. Vision-first is the baseline.
 - **2-camera mode — FUTURE.** A second phone is a *training-time* instrument (§12) and a future power-user product toggle for true 3D triangulation; **not** part of the single-camera v1 product.
 
@@ -311,7 +312,7 @@ ROI ranking: **ball ★★★★★ > court ★★★★ ≈ pose ★★★★ >
 
 - **Versioning:** DVC (datasets-with-code) + Roboflow Versions (snapshots tied to runs) + W&B (experiments + model registry).
 - **Eval harness:** held-out 500 clips across all 4 placements × indoor/outdoor × skill. Per-version metrics — Court PCK@10px; Person mAP@50/HOTA; Ball P/R@10px; Pose per-joint MPJPE; Velocity per Section 10; Shot per-class F1.
-- **Regression CI:** GitHub Actions → DVC pull test set → infer → compare to baseline; **block merge if any component drops >2%.**
+- **Regression CI target:** GitHub Actions → DVC pull test set → infer → compare to baseline; **block merge if any component drops >2%.** Current repo reality is narrower: the workflow runs the regression-checker tests and script/CLI hygiene on PR/push, and `workflow_dispatch` can compare supplied baseline/current metric files or roots. It does **not** yet DVC-pull a held-out set, run inference, or universally block merges on real phase drops because persisted baseline/current metric roots are not wired.
 - **Corrections flywheel (the moat):** every in-app user/coach correction ("this was a lob, not a drive"; dragged ball/foot position) logs clip + predicted-vs-corrected into a corrections queue = high-value hard negatives → FiftyOne active-learning prioritization → CVAT verification → next training batch → fewer future corrections. **Retrain triggered** when a shot-class correction rate spikes >3%; **scheduled** full retrain every 4–6 weeks.
 
 ---

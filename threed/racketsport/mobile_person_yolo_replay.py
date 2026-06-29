@@ -690,11 +690,14 @@ def _closed_set_track_summaries(
             "span_frames": span,
             "coverage_in_span": len(set(frame_indexes)) / span,
             "confidence_mean": sum(confidences) / len(confidences),
-            "confidence_p90": _percentile(confidences, 90.0),
-            "median_area": _percentile(areas, 50.0),
-            "p90_area": _percentile(areas, 90.0),
+            "confidence_p90": _percentile_0_to_100(confidences, 90.0),
+            "median_area": _percentile_0_to_100(areas, 50.0),
+            "p90_area": _percentile_0_to_100(areas, 90.0),
             "edge_fraction": _edge_fraction_xywh(bboxes, frame_width),
-            "median_center": [_percentile([center[0] for center in centers], 50.0), _percentile([center[1] for center in centers], 50.0)],
+            "median_center": [
+                _percentile_0_to_100([center[0] for center in centers], 50.0),
+                _percentile_0_to_100([center[1] for center in centers], 50.0),
+            ],
             "movement_px": movement,
         }
     return summaries
@@ -803,7 +806,7 @@ def _edge_fraction_xywh(bboxes: list[list[float]], frame_width: float | None, ma
     return sum(1 for bbox in bboxes if bbox[0] <= margin or bbox[0] + bbox[2] >= width - margin) / len(bboxes)
 
 
-def _percentile(values: list[float], percentile: float) -> float:
+def _percentile_0_to_100(values: list[float], percentile: float) -> float:
     if not values:
         return 0.0
     ordered = sorted(float(value) for value in values)
@@ -1124,8 +1127,8 @@ def _timing_payload(
             "processed_frame_count": frame_count,
             "dropped_frame_count": dropped_frame_count,
             "sustained_processed_fps": (frame_count / wall_clock_seconds) if wall_clock_seconds > 0 else 0.0,
-            "p50_latency_ms": _percentile(latencies, 0.50),
-            "p95_latency_ms": _percentile(latencies, 0.95),
+            "p50_latency_ms": _quantile_fraction(latencies, 0.50),
+            "p95_latency_ms": _quantile_fraction(latencies, 0.95),
         },
     }
 
@@ -1223,7 +1226,7 @@ def _bbox_diagonal(bbox_xywh: list[float]) -> float:
     return (width**2 + height**2) ** 0.5
 
 
-def _percentile(sorted_values: list[float], fraction: float) -> float:
+def _quantile_fraction(sorted_values: list[float], fraction: float) -> float:
     if not sorted_values:
         return 0.0
     index = min(len(sorted_values) - 1, max(0, int(round((len(sorted_values) - 1) * fraction))))
