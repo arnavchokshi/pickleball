@@ -94,6 +94,11 @@ def main() -> int:
     parser.add_argument("--max-frames", type=int, default=None)
     parser.add_argument("--top-overlays", type=int, default=3)
     parser.add_argument("--force", action="store_true")
+    parser.add_argument(
+        "--allow-partial",
+        action="store_true",
+        help="Return success for exploratory sweeps with at least one successful row even if some candidates failed.",
+    )
     args = parser.parse_args()
 
     out_dir = args.out_dir or Path("runs/phase2/iphone_person_tracking_eval") / f"local_accuracy_sweep_{_timestamp()}"
@@ -270,11 +275,15 @@ def main() -> int:
                                 print(f"FAILED {clip.clip_id} {candidate_name}: {exc}")
 
     leaderboard = _aggregate_rows(rows)
+    status = _sweep_status(rows, failures)
     _write_outputs(out_dir, clips=clips, rows=rows, leaderboard=leaderboard, failures=failures, args=vars(args))
     _render_top_overlays(out_dir, clips=clips, leaderboard=leaderboard, top_n=args.top_overlays)
     print(f"leaderboard: {out_dir / 'leaderboard.csv'}")
     print(f"report: {out_dir / 'REPORT.md'}")
-    return 0 if rows else 2
+    if status == "partial" and not args.allow_partial:
+        print("sweep status=partial; rerun with --allow-partial to accept exploratory partial results")
+        return 2
+    return 0 if status in {"pass", "partial"} else 2
 
 
 def _load_or_collect_detections(
@@ -590,11 +599,13 @@ def _write_outputs(
     failures: Sequence[dict[str, Any]],
     args: dict[str, Any],
 ) -> None:
+    status = _sweep_status(rows, failures)
     _write_json(
         out_dir / "sweep_summary.json",
         {
             "schema_version": 1,
             "artifact_type": "racketsport_mobile_person_accuracy_sweep",
+            "status": status,
             "created_at": datetime.now().isoformat(timespec="seconds"),
             "clips": [
                 {
@@ -621,7 +632,7 @@ def _write_outputs(
     _write_json(out_dir / "failures.json", list(failures))
     _write_csv(out_dir / "leaderboard.csv", leaderboard)
     _write_csv(out_dir / "per_clip_metrics.csv", rows)
-    (out_dir / "REPORT.md").write_text(_render_report(clips, leaderboard, rows, failures), encoding="utf-8")
+    (out_dir / "REPORT.md").write_text(_render_report(clips, leaderboard, rows, failures, status=status), encoding="utf-8")
     _try_write_chart(out_dir / "leaderboard_top20.png", leaderboard)
 
 
@@ -651,12 +662,20 @@ def _render_report(
     leaderboard: Sequence[dict[str, Any]],
     rows: Sequence[dict[str, Any]],
     failures: Sequence[dict[str, Any]],
+    *,
+    status: str,
 ) -> str:
     lines = [
         "# Mobile Person Local Accuracy Sweep",
         "",
         "This is a laptop-local accuracy sweep against the currently available CVAT MOT-derived annotations.",
         "It is not an iPhone speed result. Cached detector candidates reuse one detector pass across multiple ID linkers.",
+        "",
+        "## Summary",
+        "",
+        f"- Status: `{status}`",
+        f"- Per-clip rows: `{len(rows)}`",
+        f"- Failed candidates: `{len(failures)}`",
         "",
         "## Clips",
         "",
@@ -718,6 +737,16 @@ def _render_report(
             lines.append(f"| `{failure['candidate']}` | `{failure['clip_id']}` | `{failure['error']}` |")
     lines.append("")
     return "\n".join(lines)
+
+
+def _sweep_status(rows: Sequence[dict[str, Any]], failures: Sequence[dict[str, Any]]) -> str:
+    if failures and rows:
+        return "partial"
+    if failures:
+        return "failed"
+    if rows:
+        return "pass"
+    return "failed"
 
 
 def _try_write_chart(path: Path, leaderboard: Sequence[dict[str, Any]]) -> None:

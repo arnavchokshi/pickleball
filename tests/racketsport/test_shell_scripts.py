@@ -69,6 +69,48 @@ def test_gpu_eval_run_repairs_stale_slot_uuid(tmp_path):
     assert (slots / "slot0.uuid").read_text(encoding="utf-8").strip() == "7"
 
 
+def test_gpu_eval_run_uses_next_available_precreated_slot(tmp_path):
+    _require_flock()
+
+    lease_root = tmp_path / "gpu-lease"
+    slots = lease_root / "slots"
+    slots.mkdir(parents=True)
+    for index in range(2):
+        (slots / f"slot{index}.lock").write_text("", encoding="utf-8")
+        (slots / f"slot{index}.uuid").write_text(str(index), encoding="utf-8")
+    marker = tmp_path / "slot0-held"
+    env = {**os.environ, "GPU_LEASE_ROOT": str(lease_root), "CUDA_VISIBLE_DEVICES": "9"}
+    holder = subprocess.Popen(
+        [
+            "flock",
+            str(slots / "slot0.lock"),
+            "bash",
+            "-lc",
+            f"printf held > {marker}; sleep 0.4",
+        ],
+        env=env,
+    )
+
+    try:
+        deadline = time.monotonic() + 3.0
+        while not marker.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert marker.exists()
+
+        completed = subprocess.run(
+            ["bash", "scripts/gpu-eval-run.sh", "bash", "-lc", "printf '%s' \"$CUDA_VISIBLE_DEVICES\""],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=5,
+        )
+
+        assert completed.stdout == "1"
+    finally:
+        holder.wait(timeout=5)
+
+
 def test_gpu_eval_run_waits_for_full_gpu_training_lock(tmp_path):
     _require_flock()
 

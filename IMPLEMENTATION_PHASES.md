@@ -286,7 +286,7 @@ The native Swift app. It runs **in parallel** with the server Pipeline Track (Ph
 - `threed/racketsport/io_decode.py` — current `decode_clip(path, fps_out=None)` is a metadata-only compatibility wrapper around `probe_clip`; CPU ffmpeg ingest/QC and decode benchmark helpers exist. True NVDEC/PyNvVideoCodec frame/audio iteration with frame-range and stride remains pending Phase 0 work.
 - `threed/racketsport/schemas/` — `pydantic` models for every artifact JSON (schemas at end). One `validate(path)` per schema.
 - `scripts/racketsport/ingest_testclips.py` — walks `data/testclips/`, decodes each, writes `runs/phase0/<clip>/frames_meta.json` (resolution, fps, frame count, duration, audio sample rate, decode FPS).
-- **`scripts/gpu-eval-run.sh`** — the MIG-slot `flock` lease helper that **all `[GPU]` tasks/tests use** (referenced by `BUILD_CHECKLIST.md §1.5`): scan `/run/gpu-lease/slots/slot*.lock` with `flock -n`; on a free slot `export CUDA_VISIBLE_DEVICES=$(cat slotN.uuid)`, write a heartbeat, run `"$@"`, release; if none free, block on `flock` (FIFO). Plus `scripts/gpu-train-lock.sh` (exclusive `full-gpu.lock` for training mode). Set up the MIG geometry (`eval = 2×3g.40gb` default).
+- **`scripts/gpu-eval-run.sh`** — the pre-created-slot `flock` lease helper that **all `[GPU]` tasks/tests use** (referenced by `BUILD_CHECKLIST.md §1.5`): take a shared `full-gpu.lock`, scan `/run/gpu-lease/slots/slot*.lock` with `flock -n`, on a free slot `export CUDA_VISIBLE_DEVICES=$(cat slotN.uuid)`, write a heartbeat, run `"$@"`, and release. If none are free, it blocks on the first slot lock; strict FIFO ordering is not guaranteed by the script. `scripts/gpu-train-lock.sh` takes exclusive `full-gpu.lock` for full-GPU/training commands. MIG geometry setup (`eval = 2×3g.40gb` default) is manual/external; the helpers do not drain, reconfigure, or restore MIG mode.
 - **`scripts/racketsport/benchmark_sam3dbody.py`** — **run FIRST:** measure Fast SAM-3D-Body per-player-frame FPS + peak VRAM on the H100 (B=1 and batched crops). Its numbers set the MIG geometry and deep-tier latency budget.
 - **Perf substrate scaffold:** minimal **Triton** ensemble config skeleton (`serving/triton/`) for the eval-serving path. TensorRT export utilities, `torch.compile` warmup, INT8 calibration hooks, and DALI/NVDEC decode remain pending implementation rather than completed code.
 
@@ -308,7 +308,7 @@ python scripts/racketsport/smoke_models.py --manifest models/MANIFEST.json   # v
 - NVDEC decode **≥ 8× real-time** on 1080p (20-min clip decodes < 2.5 min); **≥ 3× real-time** on 4K.
 - 100% of test clips ingested with valid `frames_meta.json`.
 - **SAM-3D-Body benchmark recorded** (per-player-frame FPS + peak VRAM, B=1 and batched) in `runs/phase0/REPORT.md`; MIG geometry chosen from it (eval `2×3g.40gb` default).
-- **GPU lease smoke test:** `scripts/gpu-eval-run.sh` launches **2 concurrent eval jobs on separate MIG slices without OOM** and serializes a 3rd via the queue (proves the shared-H100 protocol works before parallel agents rely on it).
+- **GPU lease smoke test:** with two pre-created slot files, `scripts/gpu-eval-run.sh` can run concurrent eval jobs on distinct `CUDA_VISIBLE_DEVICES` values, and `scripts/gpu-train-lock.sh` blocks eval jobs while a full-GPU command holds the exclusive lock. Real MIG OOM isolation and any multi-slice H100 proof remain manual GPU validation before parallel agents rely on it.
 
 **Risks:** NVDEC build issues → PyNvVideoCodec fallback; slow 4K → downscale to 1080p at decode (record the choice).
 

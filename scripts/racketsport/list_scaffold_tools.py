@@ -29,7 +29,7 @@ PREFIXES = (
     "validate_",
 )
 
-TEST_OVERRIDES = {
+RELATED_TEST_OVERRIDES = {
     "audit_label_drafts": "test_label_draft_audit.py",
     "benchmark_person_trackers": "test_person_tracking_benchmark.py",
     "benchmark_decode": "test_decode_benchmark_summary.py",
@@ -141,7 +141,7 @@ def build_scaffold_tool_index(root: Path) -> dict[str, Any]:
     category_counts = Counter(tool["category"] for tool in tools)
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "artifact_type": "racketsport_scaffold_tool_index",
         "scripts_root": SCRIPT_ROOT.as_posix(),
         "tests_root": TEST_ROOT.as_posix(),
@@ -161,8 +161,10 @@ def build_scaffold_tool_index(root: Path) -> dict[str, Any]:
         },
         "summary": {
             "tool_count": len(tools),
-            "with_matching_tests": sum(1 for tool in tools if tool["matching_test"] is not None),
-            "missing_matching_tests": sum(1 for tool in tools if tool["matching_test"] is None),
+            "with_related_tests": sum(1 for tool in tools if tool["related_test"] is not None),
+            "missing_related_tests": sum(1 for tool in tools if tool["related_test"] is None),
+            "with_direct_cli_tests": sum(1 for tool in tools if tool["direct_cli_test"] is not None),
+            "missing_direct_cli_tests": sum(1 for tool in tools if tool["direct_cli_test"] is None),
             "with_matching_json_schema_files": sum(1 for tool in tools if tool["matching_schema"] is not None),
             "missing_matching_json_schema_files": sum(1 for tool in tools if tool["matching_schema"] is None),
             "category_counts": dict(sorted(category_counts.items())),
@@ -200,7 +202,8 @@ def _tool_entry(path: Path, *, root: Path, tests_root: Path, schemas_root: Path)
         "category": _category(stem),
         "workstream": workstream,
         "task_prefix": task_prefix,
-        "matching_test": _matching_test(stem, command_path=command_path, tests_root=tests_root, root=root),
+        "related_test": _related_test(stem, command_path=command_path, tests_root=tests_root, root=root),
+        "direct_cli_test": _direct_cli_test(command_path, tests_root=tests_root, root=root),
         "matching_schema": _matching_schema(stem, schemas_root=schemas_root, root=root),
     }
 
@@ -309,15 +312,19 @@ def _guess_task(stem: str) -> tuple[str | None, str | None]:
     return None, None
 
 
-def _matching_test(stem: str, *, command_path: str, tests_root: Path, root: Path) -> str | None:
+def _related_test(stem: str, *, command_path: str, tests_root: Path, root: Path) -> str | None:
     candidates = []
-    override = TEST_OVERRIDES.get(stem)
+    override = RELATED_TEST_OVERRIDES.get(stem)
     if override is not None:
         candidates.append(override)
     candidates.extend(f"test_{candidate}.py" for candidate in _stem_candidates(stem))
     direct_match = _first_existing(candidates, directory=tests_root, root=root)
     if direct_match is not None:
         return direct_match
+    return _first_test_referencing(command_path, tests_root=tests_root, root=root)
+
+
+def _direct_cli_test(command_path: str, *, tests_root: Path, root: Path) -> str | None:
     return _first_test_referencing(command_path, tests_root=tests_root, root=root)
 
 

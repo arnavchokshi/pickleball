@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -11,6 +13,7 @@ from scripts.racketsport.run_mobile_person_accuracy_sweep import (
     _parse_clips,
     _parse_models,
     _write_outputs,
+    main as run_sweep_main,
 )
 
 
@@ -104,3 +107,110 @@ def test_accuracy_sweep_aggregates_leaderboard_and_writes_review_outputs(tmp_pat
     assert summary["failure_count"] == 1
     assert (tmp_path / "leaderboard.csv").is_file()
     assert "candidate_a" in (tmp_path / "REPORT.md").read_text(encoding="utf-8")
+
+
+def test_accuracy_sweep_partial_failures_are_nonzero_by_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    out_dir = _stub_main_dependencies(tmp_path, monkeypatch)
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_mobile_person_accuracy_sweep.py",
+            "--out-dir",
+            str(out_dir),
+            "--clip",
+            f"clip_1={tmp_path / 'clip.mp4'}={tmp_path / 'person_ground_truth.json'}",
+            "--model",
+            f"fake={tmp_path / 'fake.pt'}",
+            "--track-model",
+            f"fake={tmp_path / 'fake.pt'}",
+            "--tracker",
+            "ok",
+            "--tracker",
+            "boom",
+            "--imgsz",
+            "416",
+            "--conf",
+            "0.1",
+            "--skip-ultralytics-track",
+        ],
+    )
+
+    assert run_sweep_main() == 2
+    summary = json.loads((out_dir / "sweep_summary.json").read_text(encoding="utf-8"))
+    assert summary["status"] == "partial"
+    assert summary["row_count"] == 1
+    assert summary["failure_count"] == 1
+
+
+def test_accuracy_sweep_allow_partial_keeps_partial_status_but_returns_success(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    out_dir = _stub_main_dependencies(tmp_path, monkeypatch)
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_mobile_person_accuracy_sweep.py",
+            "--out-dir",
+            str(out_dir),
+            "--clip",
+            f"clip_1={tmp_path / 'clip.mp4'}={tmp_path / 'person_ground_truth.json'}",
+            "--model",
+            f"fake={tmp_path / 'fake.pt'}",
+            "--track-model",
+            f"fake={tmp_path / 'fake.pt'}",
+            "--tracker",
+            "ok",
+            "--tracker",
+            "boom",
+            "--imgsz",
+            "416",
+            "--conf",
+            "0.1",
+            "--skip-ultralytics-track",
+            "--allow-partial",
+        ],
+    )
+
+    assert run_sweep_main() == 0
+    summary = json.loads((out_dir / "sweep_summary.json").read_text(encoding="utf-8"))
+    assert summary["status"] == "partial"
+    assert summary["failure_count"] == 1
+
+
+def _stub_main_dependencies(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    (tmp_path / "clip.mp4").write_bytes(b"video")
+    (tmp_path / "person_ground_truth.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "fake.pt").write_bytes(b"model")
+    out_dir = tmp_path / "sweep"
+
+    class FakeYOLO:
+        def __init__(self, path: str) -> None:
+            self.path = path
+
+    monkeypatch.setitem(sys.modules, "ultralytics", types.SimpleNamespace(YOLO=FakeYOLO))
+
+    def fake_load_or_collect_detections(**kwargs: object) -> dict[str, object]:
+        return {"frames": []}
+
+    def fake_score_cached_linker(**kwargs: object) -> dict:
+        clip = kwargs["clip"]
+        candidate_name = str(kwargs["candidate_name"])
+        linker_name = str(kwargs["linker_name"])
+        if linker_name == "boom":
+            raise RuntimeError("simulated candidate failure")
+        return _row(candidate_name, clip.clip_id, idf1=0.75)  # type: ignore[attr-defined]
+
+    monkeypatch.setattr(
+        "scripts.racketsport.run_mobile_person_accuracy_sweep._load_or_collect_detections",
+        fake_load_or_collect_detections,
+    )
+    monkeypatch.setattr(
+        "scripts.racketsport.run_mobile_person_accuracy_sweep._score_cached_linker",
+        fake_score_cached_linker,
+    )
+    monkeypatch.setattr("scripts.racketsport.run_mobile_person_accuracy_sweep._render_top_overlays", lambda *_, **__: None)
+    return out_dir

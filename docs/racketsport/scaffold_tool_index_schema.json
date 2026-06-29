@@ -17,7 +17,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "artifact_type": {
       "const": "racketsport_scaffold_tool_index"
@@ -96,8 +96,10 @@
       "additionalProperties": false,
       "required": [
         "tool_count",
-        "with_matching_tests",
-        "missing_matching_tests",
+        "with_related_tests",
+        "missing_related_tests",
+        "with_direct_cli_tests",
+        "missing_direct_cli_tests",
         "with_matching_json_schema_files",
         "missing_matching_json_schema_files",
         "category_counts"
@@ -107,11 +109,19 @@
           "type": "integer",
           "minimum": 0
         },
-        "with_matching_tests": {
+        "with_related_tests": {
           "type": "integer",
           "minimum": 0
         },
-        "missing_matching_tests": {
+        "missing_related_tests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "with_direct_cli_tests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_direct_cli_tests": {
           "type": "integer",
           "minimum": 0
         },
@@ -143,7 +153,8 @@
           "category",
           "workstream",
           "task_prefix",
-          "matching_test",
+          "related_test",
+          "direct_cli_test",
           "matching_schema"
         ],
         "properties": {
@@ -167,7 +178,11 @@
             "type": ["string", "null"],
             "minLength": 1
           },
-          "matching_test": {
+          "related_test": {
+            "type": ["string", "null"],
+            "pattern": "^tests/racketsport/test_.+\\.py$"
+          },
+          "direct_cli_test": {
             "type": ["string", "null"],
             "pattern": "^tests/racketsport/test_.+\\.py$"
           },
