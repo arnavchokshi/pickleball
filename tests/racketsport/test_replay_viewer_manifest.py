@@ -5,7 +5,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from threed.racketsport.replay_viewer_manifest import build_replay_viewer_manifest
+import pytest
+
+from threed.racketsport.replay_viewer_manifest import build_replay_viewer_manifest, write_replay_viewer_manifest
+from threed.racketsport.schemas import ReplayViewerManifest, validate_artifact_file
 
 
 def _write_json(path: Path, payload: dict) -> Path:
@@ -100,6 +103,7 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
     ]
     assert manifest["annotation_sources"][0]["kind"] == "person_ground_truth"
     assert manifest["annotation_sources"][0]["trusted_for_metrics"] is True
+    assert isinstance(ReplayViewerManifest.model_validate(manifest), ReplayViewerManifest)
 
 
 def test_replay_viewer_manifest_rejects_unvalidated_person_ground_truth_sources(tmp_path: Path) -> None:
@@ -186,3 +190,21 @@ def test_replay_viewer_manifest_cli_writes_manifest(tmp_path: Path) -> None:
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload["clip"] == "clip_a"
     assert json.loads(completed.stdout)["out"] == str(out)
+    assert isinstance(validate_artifact_file("replay_viewer_manifest", out), ReplayViewerManifest)
+
+
+def test_replay_viewer_manifest_writer_validates_schema(tmp_path: Path) -> None:
+    out = tmp_path / "replay_viewer_manifest.json"
+    with pytest.raises(Exception, match="virtual_world_url"):
+        write_replay_viewer_manifest(
+            out,
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_replay_viewer_manifest",
+                "clip": "clip_a",
+                "video_url": "/@fs/tmp/clip_a/input.mp4",
+                "label_overlays": [],
+                "annotation_sources": [],
+                "notes": [],
+            },
+        )

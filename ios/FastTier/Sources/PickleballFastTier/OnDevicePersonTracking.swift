@@ -2,7 +2,6 @@ import Foundation
 
 public enum OnDevicePersonCandidate: String, Codable, Sendable {
     case visionHumanRectanglesIouV1 = "vision_human_rectangles_iou_v1"
-    case visionPoseRoleLock = "vision_pose_rolelock"
     case yolo26nInt8EveryFrame = "yolo26n_int8_every_frame"
     case yolo26nInt8Img512EveryFrame = "yolo26n_int8_img512_every_frame"
     case yolo26nInt8Img640EveryFrame = "yolo26n_int8_img640_every_frame"

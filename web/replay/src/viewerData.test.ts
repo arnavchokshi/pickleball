@@ -225,6 +225,48 @@ describe("viewer data contracts", () => {
     });
   });
 
+  it("parses Python-shaped paddle frames instead of treating them as unknown UI data", () => {
+    const withPaddle = {
+      ...world,
+      paddles: [
+        {
+          player_id: 1,
+          paddle_dims_in: { length: 15.5, width: 7.5 },
+          frames: [
+            {
+              t: 0.1,
+              pose_se3: {
+                R: [
+                  [1, 0, 0],
+                  [0, 1, 0],
+                  [0, 0, 1],
+                ],
+                t: [0.45, -1.9, 0.85],
+              },
+              mesh_vertices_world: [
+                [0.35, -1.7, 0.85],
+                [0.55, -1.7, 0.85],
+                [0.55, -2.1, 0.85],
+              ],
+              mesh_faces: [[0, 1, 2]],
+              conf: 0.72,
+              world_frame: "court_Z0",
+              translation_unit: "m",
+              source: "pnp_ippe:court_Z0",
+              reprojection_error_px: 2.1,
+              ambiguous: false,
+            },
+          ],
+        },
+      ],
+    };
+
+    const parsed = parseVirtualWorld(withPaddle);
+
+    expect(parsed.paddles[0].frames[0].pose_se3.t).toEqual([0.45, -1.9, 0.85]);
+    expect(parsed.paddles[0].frames[0].mesh_faces).toEqual([[0, 1, 2]]);
+  });
+
   it("parses the physics-refinement scaffold status", () => {
     expect(parsePhysicsRefinement(physics).execution_plan.will_run_mjx).toBe(false);
   });
@@ -257,6 +299,25 @@ describe("viewer data contracts", () => {
     expect(() => parseContactWindows(invalid)).toThrow("contact_windows.events[0].sources must be an object");
   });
 
+  it("rejects contact windows with impossible Python-schema values", () => {
+    expect(() =>
+      parseContactWindows({
+        schema_version: 1,
+        events: [
+          {
+            type: "contact",
+            t: -0.1,
+            frame: -1,
+            player_id: 1,
+            confidence: 2,
+            sources: { audio: 1, wrist_vel: 1, ball_inflection: 1 },
+            window: { t0: 10, t1: 1, importance: -5 },
+          },
+        ],
+      }),
+    ).toThrow("contact_windows.events[0].window.t1 must be greater than or equal to contact_windows.events[0].window.t0");
+  });
+
   it("rejects virtual-world ball frames missing Python-required xy/conf fields", () => {
     const invalid = {
       ...world,
@@ -264,6 +325,33 @@ describe("viewer data contracts", () => {
     };
 
     expect(() => parseVirtualWorld(invalid)).toThrow("virtual_world.ball.frames[0].xy must be an array");
+  });
+
+  it("rejects vectors, player representations, and paddle shapes outside the Python schema", () => {
+    const extraVector = {
+      ...world,
+      ball: { source: "tracknet", frames: [{ t: 0.1, xy: [12, 18, 99], conf: 0.92, world_xyz: [0.15, 1, 0], visible: true }] },
+    };
+    const invalidRepresentation = {
+      ...world,
+      players: [{ id: 1, representation: "debug_proxy", frames: [] }],
+    };
+    const invalidPaddle = {
+      ...world,
+      paddles: [
+        {
+          player_id: 1,
+          paddle_dims_in: { width: 7.5 },
+          frames: [],
+        },
+      ],
+    };
+
+    expect(() => parseVirtualWorld(extraVector)).toThrow("virtual_world.ball.frames[0].xy must have length 2");
+    expect(() => parseVirtualWorld(invalidRepresentation)).toThrow(
+      "virtual_world.players[0].representation must be one of: track_only, joints, mesh",
+    );
+    expect(() => parseVirtualWorld(invalidPaddle)).toThrow("virtual_world.paddles[0].paddle_dims_in must include length/width or h/w");
   });
 
   it("selects the nearest player frame for the current video time", () => {

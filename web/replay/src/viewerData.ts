@@ -1,5 +1,6 @@
 export type Vec2 = [number, number];
 export type Vec3 = [number, number, number];
+export type Matrix3 = [Vec3, Vec3, Vec3];
 
 export type LabelOverlay = {
   kind: "player_boxes" | string;
@@ -77,9 +78,11 @@ export type PhysicsRefinement = {
 export type VirtualWorldFrame = {
   t: number;
   track_world_xy?: Vec2 | null;
+  track_conf?: number | null;
   bbox?: [number, number, number, number] | null;
   transl_world?: Vec3 | null;
   joints_world: Vec3[];
+  joint_conf: number[];
   mesh_vertices_world: Vec3[];
   joint_count: number;
   mesh_vertex_count: number;
@@ -91,14 +94,37 @@ export type VirtualWorldFrame = {
   foot_contact?: { left: boolean; right: boolean } | null;
   contact_locked?: boolean;
   physics?: string | null;
+  grf?: Vec3[] | null;
 };
 
 export type VirtualWorldPlayer = {
   id: number;
   side?: string | null;
   role?: string | null;
-  representation: "track_only" | "joints" | "mesh" | string;
+  representation: "track_only" | "joints" | "mesh";
   frames: VirtualWorldFrame[];
+};
+
+export type VirtualWorldPaddleFrame = {
+  t: number;
+  pose_se3: {
+    R: Matrix3;
+    t: Vec3;
+  };
+  mesh_vertices_world: Vec3[];
+  mesh_faces: Array<[number, number, number]>;
+  conf: number;
+  world_frame: "court_Z0";
+  translation_unit: "m";
+  source: string;
+  reprojection_error_px?: number | null;
+  ambiguous: boolean;
+};
+
+export type VirtualWorldPaddle = {
+  player_id: number;
+  paddle_dims_in: Record<string, number>;
+  frames: VirtualWorldPaddleFrame[];
 };
 
 export type VirtualWorld = {
@@ -123,7 +149,7 @@ export type VirtualWorld = {
     source: "tracknet" | "tap" | "pbmat" | "totnet" | null;
     frames: Array<{ t: number; xy: Vec2; conf: number; visible: boolean; world_xyz?: Vec3 | null; approx: boolean }>;
   };
-  paddles: unknown[];
+  paddles: VirtualWorldPaddle[];
   summary: {
     player_count: number;
     mesh_player_count: number;
@@ -244,7 +270,7 @@ export function parseVirtualWorld(input: unknown): VirtualWorld {
     court,
     players,
     ball: readBall(value.ball),
-    paddles: readArray(value.paddles, "virtual_world.paddles"),
+    paddles: readArray(value.paddles, "virtual_world.paddles").map(readPaddle),
     summary,
   };
 }
@@ -346,17 +372,20 @@ function readContactWindowEvent(input: unknown, index: number): ContactWindowEve
   const path = `contact_windows.events[${index}]`;
   assertRecord(input, path);
   assertRecord(input.window, `${path}.window`);
+  const windowStart = readNonNegativeNumber(input.window.t0, `${path}.window.t0`);
+  const windowEnd = readNonNegativeNumber(input.window.t1, `${path}.window.t1`);
+  if (windowEnd < windowStart) throw new Error(`${path}.window.t1 must be greater than or equal to ${path}.window.t0`);
   return {
     type: readEnum(input.type, `${path}.type`, ["contact", "bounce", "net_cross"] as const),
-    t: readNumber(input.t, `${path}.t`),
-    frame: readNumber(input.frame, `${path}.frame`, true),
+    t: readNonNegativeNumber(input.t, `${path}.t`),
+    frame: readNonNegativeInteger(input.frame, `${path}.frame`),
     player_id: input.player_id === null || input.player_id === undefined ? null : readPlayerId(input.player_id, `${path}.player_id`),
-    confidence: readNumber(input.confidence, `${path}.confidence`),
+    confidence: readUnitNumber(input.confidence, `${path}.confidence`),
     sources: readContactSources(input.sources, `${path}.sources`),
     window: {
-      t0: readNumber(input.window.t0, `${path}.window.t0`),
-      t1: readNumber(input.window.t1, `${path}.window.t1`),
-      importance: readNumber(input.window.importance, `${path}.window.importance`),
+      t0: windowStart,
+      t1: windowEnd,
+      importance: readUnitNumber(input.window.importance, `${path}.window.importance`),
     },
   };
 }
@@ -384,9 +413,9 @@ function readCourt(input: unknown): VirtualWorld["court"] {
     const segment = readArray(value, `virtual_world.court.line_segments.${key}`);
     line_segments[key] = [readVec3(segment[0], `${key}[0]`), readVec3(segment[1], `${key}[1]`)];
   }
-  const endpoints = readArray(input.net.endpoints, "virtual_world.court.net.endpoints");
+  const endpoints = readFixedArray(input.net.endpoints, "virtual_world.court.net.endpoints", 2);
   return {
-    sport: readString(input.sport, "virtual_world.court.sport") as "pickleball" | "tennis",
+    sport: readEnum(input.sport, "virtual_world.court.sport", ["pickleball", "tennis"] as const),
     coordinate_frame: readString(input.coordinate_frame, "virtual_world.court.coordinate_frame"),
     length_m: readNumber(input.length_m, "virtual_world.court.length_m"),
     width_m: readNumber(input.width_m, "virtual_world.court.width_m"),
@@ -406,7 +435,7 @@ function readPlayer(input: unknown, index: number): VirtualWorldPlayer {
     id: readNumber(input.id, `${path}.id`, true),
     side: input.side === null || input.side === undefined ? null : readString(input.side, `${path}.side`),
     role: input.role === null || input.role === undefined ? null : readString(input.role, `${path}.role`),
-    representation: readString(input.representation, `${path}.representation`),
+    representation: readEnum(input.representation, `${path}.representation`, ["track_only", "joints", "mesh"] as const),
     frames: readArray(input.frames, `${path}.frames`).map((frame, frameIndex) => readFrame(frame, `${path}.frames[${frameIndex}]`)),
   };
 }
@@ -416,9 +445,14 @@ function readFrame(input: unknown, path: string): VirtualWorldFrame {
   return {
     t: readNumber(input.t, `${path}.t`),
     track_world_xy: input.track_world_xy === null || input.track_world_xy === undefined ? null : readVec2(input.track_world_xy, `${path}.track_world_xy`),
+    track_conf: input.track_conf === null || input.track_conf === undefined ? null : readNumber(input.track_conf, `${path}.track_conf`),
     bbox: input.bbox === null || input.bbox === undefined ? null : readBBox(input.bbox, `${path}.bbox`),
     transl_world: input.transl_world === null || input.transl_world === undefined ? null : readVec3(input.transl_world, `${path}.transl_world`),
     joints_world: readArray(input.joints_world, `${path}.joints_world`).map((point, index) => readVec3(point, `${path}.joints_world[${index}]`)),
+    joint_conf:
+      input.joint_conf === undefined
+        ? []
+        : readArray(input.joint_conf, `${path}.joint_conf`).map((confidence, index) => readNumber(confidence, `${path}.joint_conf[${index}]`)),
     mesh_vertices_world: readArray(input.mesh_vertices_world, `${path}.mesh_vertices_world`).map((point, index) => readVec3(point, `${path}.mesh_vertices_world[${index}]`)),
     joint_count: readNumber(input.joint_count, `${path}.joint_count`, true),
     mesh_vertex_count: readNumber(input.mesh_vertex_count, `${path}.mesh_vertex_count`, true),
@@ -430,6 +464,10 @@ function readFrame(input: unknown, path: string): VirtualWorldFrame {
     foot_contact: input.foot_contact === null || input.foot_contact === undefined ? null : readFootContact(input.foot_contact, `${path}.foot_contact`),
     contact_locked: input.contact_locked === undefined ? false : readBoolean(input.contact_locked, `${path}.contact_locked`),
     physics: input.physics === null || input.physics === undefined ? null : readString(input.physics, `${path}.physics`),
+    grf:
+      input.grf === null || input.grf === undefined
+        ? null
+        : readArray(input.grf, `${path}.grf`).map((point, index) => readVec3(point, `${path}.grf[${index}]`)),
   };
 }
 
@@ -477,6 +515,56 @@ function readSummary(input: unknown): VirtualWorld["summary"] {
   };
 }
 
+function readPaddle(input: unknown, index: number): VirtualWorldPaddle {
+  const path = `virtual_world.paddles[${index}]`;
+  assertRecord(input, path);
+  assertRecord(input.paddle_dims_in, `${path}.paddle_dims_in`);
+  const paddleDims = readPaddleDims(input.paddle_dims_in, `${path}.paddle_dims_in`);
+  return {
+    player_id: readNumber(input.player_id, `${path}.player_id`, true),
+    paddle_dims_in: paddleDims,
+    frames: readArray(input.frames, `${path}.frames`).map((frame, frameIndex) => readPaddleFrame(frame, `${path}.frames[${frameIndex}]`)),
+  };
+}
+
+function readPaddleDims(input: Record<string, unknown>, path: string): Record<string, number> {
+  const dims: Record<string, number> = {};
+  for (const [key, value] of Object.entries(input)) {
+    const number = readNumber(value, `${path}.${key}`);
+    if (number <= 0) throw new Error(`${path}.${key} must be positive`);
+    dims[key] = number;
+  }
+  const hasLengthWidth = typeof dims.length === "number" && typeof dims.width === "number";
+  const hasHeightWidth = typeof dims.h === "number" && typeof dims.w === "number";
+  if (!hasLengthWidth && !hasHeightWidth) throw new Error(`${path} must include length/width or h/w`);
+  return dims;
+}
+
+function readPaddleFrame(input: unknown, path: string): VirtualWorldPaddleFrame {
+  assertRecord(input, path);
+  assertRecord(input.pose_se3, `${path}.pose_se3`);
+  return {
+    t: readNumber(input.t, `${path}.t`),
+    pose_se3: {
+      R: readRotationMatrix(input.pose_se3.R, `${path}.pose_se3.R`),
+      t: readVec3(input.pose_se3.t, `${path}.pose_se3.t`),
+    },
+    mesh_vertices_world: readArray(input.mesh_vertices_world, `${path}.mesh_vertices_world`).map((point, index) =>
+      readVec3(point, `${path}.mesh_vertices_world[${index}]`),
+    ),
+    mesh_faces: readArray(input.mesh_faces, `${path}.mesh_faces`).map((face, index) => readFace(face, `${path}.mesh_faces[${index}]`)),
+    conf: readNumber(input.conf, `${path}.conf`),
+    world_frame: readEnum(input.world_frame, `${path}.world_frame`, ["court_Z0"] as const),
+    translation_unit: readEnum(input.translation_unit, `${path}.translation_unit`, ["m"] as const),
+    source: readString(input.source, `${path}.source`),
+    reprojection_error_px:
+      input.reprojection_error_px === null || input.reprojection_error_px === undefined
+        ? null
+        : readNumber(input.reprojection_error_px, `${path}.reprojection_error_px`),
+    ambiguous: input.ambiguous === undefined ? false : readBoolean(input.ambiguous, `${path}.ambiguous`),
+  };
+}
+
 function readFootContact(input: unknown, path: string): { left: boolean; right: boolean } {
   assertRecord(input, path);
   return {
@@ -500,10 +588,28 @@ function readArray(value: unknown, path: string): unknown[] {
   return value;
 }
 
+function readFixedArray(value: unknown, path: string, length: number): unknown[] {
+  const values = readArray(value, path);
+  if (values.length !== length) throw new Error(`${path} must have length ${length}`);
+  return values;
+}
+
 function readNumber(value: unknown, path: string, integer = false): number {
   if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`${path} must be a number`);
   if (integer && !Number.isInteger(value)) throw new Error(`${path} must be an integer`);
   return value;
+}
+
+function readNonNegativeNumber(value: unknown, path: string): number {
+  const number = readNumber(value, path);
+  if (number < 0) throw new Error(`${path} must be non-negative`);
+  return number;
+}
+
+function readNonNegativeInteger(value: unknown, path: string): number {
+  const number = readNumber(value, path, true);
+  if (number < 0) throw new Error(`${path} must be non-negative`);
+  return number;
 }
 
 function readUnitNumber(value: unknown, path: string): number {
@@ -538,23 +644,53 @@ function readBoolean(value: unknown, path: string): boolean {
 }
 
 function readVec2(value: unknown, path: string): Vec2 {
-  const values = readArray(value, path);
+  const values = readFixedArray(value, path, 2);
   return [readNumber(values[0], `${path}[0]`), readNumber(values[1], `${path}[1]`)];
 }
 
 function readVec3(value: unknown, path: string): Vec3 {
-  const values = readArray(value, path);
+  const values = readFixedArray(value, path, 3);
   return [readNumber(values[0], `${path}[0]`), readNumber(values[1], `${path}[1]`), readNumber(values[2], `${path}[2]`)];
 }
 
 function readBBox(value: unknown, path: string): [number, number, number, number] {
-  const values = readArray(value, path);
+  const values = readFixedArray(value, path, 4);
   return [
     readNumber(values[0], `${path}[0]`),
     readNumber(values[1], `${path}[1]`),
     readNumber(values[2], `${path}[2]`),
     readNumber(values[3], `${path}[3]`),
   ];
+}
+
+function readFace(value: unknown, path: string): [number, number, number] {
+  const values = readFixedArray(value, path, 3);
+  return [readNumber(values[0], `${path}[0]`, true), readNumber(values[1], `${path}[1]`, true), readNumber(values[2], `${path}[2]`, true)];
+}
+
+function readRotationMatrix(value: unknown, path: string): Matrix3 {
+  const rows = readFixedArray(value, path, 3).map((row, index) => readVec3(row, `${path}[${index}]`)) as Matrix3;
+  assertOrthonormalRotation(rows, path);
+  return rows;
+}
+
+function assertOrthonormalRotation(rows: Matrix3, path: string) {
+  const tolerance = 1e-3;
+  for (const row of rows) {
+    const norm = Math.sqrt(row.reduce((total, entry) => total + entry * entry, 0));
+    if (Math.abs(norm - 1) > tolerance) throw new Error(`${path} must be orthonormal`);
+  }
+  for (let left = 0; left < 3; left += 1) {
+    for (let right = left + 1; right < 3; right += 1) {
+      const dot = rows[left].reduce((total, entry, index) => total + entry * rows[right][index], 0);
+      if (Math.abs(dot) > tolerance) throw new Error(`${path} must be orthonormal`);
+    }
+  }
+  const determinant =
+    rows[0][0] * (rows[1][1] * rows[2][2] - rows[1][2] * rows[2][1]) -
+    rows[0][1] * (rows[1][0] * rows[2][2] - rows[1][2] * rows[2][0]) +
+    rows[0][2] * (rows[1][0] * rows[2][1] - rows[1][1] * rows[2][0]);
+  if (Math.abs(determinant - 1) > tolerance) throw new Error(`${path} determinant must be 1`);
 }
 
 function assertRecord(value: unknown, path: string): asserts value is Record<string, unknown> {

@@ -100,7 +100,12 @@ final class CapturePackageTests: XCTestCase {
     func testCaptureReadinessRequiresCameraMicrophoneAndWritablePackage() throws {
         let descriptor = try CapturePackageDescriptor(
             sessionID: "ready",
-            policy: CapturePolicy.recommended(for: .standard60, deviceTier: .standard, capabilities: .hevcOnly),
+            policy: CapturePolicy.recommended(
+                for: .standard60,
+                deviceTier: .standard,
+                capabilities: .hevcOnly,
+                orientation: .landscape
+            ),
             startedAt: Date(timeIntervalSince1970: 0)
         )
 
@@ -120,7 +125,35 @@ final class CapturePackageTests: XCTestCase {
         XCTAssertEqual(blocked.blockers, [.cameraPermissionDenied, .microphonePermissionMissing])
     }
 
-    func testSwiftCapabilityManifestIncludesCaptureCalibrationFastTierUploadAndReplayFrameworks() {
+    func testCaptureReadinessRequiresLandscapePolicy() throws {
+        let descriptor = try CapturePackageDescriptor(
+            sessionID: "portrait-blocked",
+            policy: CapturePolicy.recommended(
+                for: .standard60,
+                deviceTier: .standard,
+                capabilities: .hevcOnly,
+                orientation: .portrait
+            ),
+            startedAt: Date(timeIntervalSince1970: 0),
+            captureDeviceOrientation: .portrait
+        )
+
+        let readiness = CaptureReadinessEvaluator.evaluate(
+            permissions: CapturePermissionSnapshot(camera: .authorized, microphone: .authorized),
+            descriptor: descriptor
+        )
+
+        XCTAssertFalse(readiness.isReady)
+        XCTAssertEqual(readiness.blockers, [.landscapeRequired])
+
+        let permissionAndLandscapeBlocked = CaptureReadinessEvaluator.evaluate(
+            permissions: CapturePermissionSnapshot(camera: .denied, microphone: .authorized),
+            descriptor: descriptor
+        )
+        XCTAssertEqual(permissionAndLandscapeBlocked.blockers, [.cameraPermissionDenied, .landscapeRequired])
+    }
+
+    func testSwiftCapabilityManifestDeclaresRequiredCaptureCalibrationFastTierUploadAndReplayFrameworks() {
         let manifest = CaptureSwiftCapabilityManifest.pipelineRequired
 
         XCTAssertEqual(
@@ -139,7 +172,7 @@ final class CapturePackageTests: XCTestCase {
                 .realityKitReplay,
             ]
         )
-        XCTAssertTrue(manifest.supportsCaptureAndCalibration)
-        XCTAssertTrue(manifest.supportsFastTierAndReplay)
+        XCTAssertTrue(manifest.declaresCaptureCalibrationRequirements)
+        XCTAssertTrue(manifest.declaresFastTierReplayRequirements)
     }
 }

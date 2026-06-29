@@ -172,6 +172,10 @@ export default function App() {
     () => manifest?.label_overlays.find((overlay) => overlay.kind === "player_boxes") ?? null,
     [manifest],
   );
+  const trustedAnnotationSources = useMemo(
+    () => manifest?.annotation_sources.filter((source) => source.trusted_for_metrics) ?? [],
+    [manifest],
+  );
   const activeContactPlayerIds = useMemo(
     () => activeBallContactPlayerIds(world, contactWindows, currentTime),
     [world, contactWindows, currentTime],
@@ -278,6 +282,7 @@ export default function App() {
         <p>Physics modes: {stats.physicsModes.length ? stats.physicsModes.join(", ") : "none"}</p>
         <p>{physics ? `Physics artifact: ${physics.physics}; FOOT-2 done: ${String(physics.foot2_done)}` : "Physics artifact: none"}</p>
         <p>{replayScene ? replaySceneReadout(replayScene) : "Replay scene: none"}</p>
+        <p>{annotationSourceReadout(trustedAnnotationSources)}</p>
         <p>Max floor penetration: {stats.maxFloorPenetrationM.toFixed(4)} m</p>
         <p>{manifest?.notes[0] ?? "Review-only viewer. Artifact gates stay separate from visual inspection."}</p>
       </section>
@@ -454,6 +459,11 @@ function replaySceneReadout(scene: ReplayScene): string {
   const pointCount = scene.points.length;
   const totalMb = scene.points.reduce((total, point) => total + point.size_mb, 0);
   return `Replay scene: ${pointCount} static review point${pointCount === 1 ? "" : "s"}, ${totalMb.toFixed(3)} MB GLB refs`;
+}
+
+function annotationSourceReadout(sources: ViewerManifest["annotation_sources"]): string {
+  if (!sources.length) return "Trusted annotation sources: none";
+  return `Trusted annotation sources: ${sources.length} (${sources.map((source) => source.clip_id).join(", ")})`;
 }
 
 function LineStrip({ points, color }: { points: Vec3[]; color: string }) {

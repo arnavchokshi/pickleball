@@ -1,6 +1,6 @@
 # Sway Body — Pickleball/Tennis CV Technology Stack
 
-**Status:** Locked technical reference for implementation
+**Status:** Target/default technical reference for implementation; approved runtime locks live in `models/MANIFEST.json` after the EVAL-0 gate.
 **Date:** 2026-06-26
 **Scope:** Every model/technology in the pipeline, the decision behind it, and the speed/accuracy/license/UI tradeoff it sits on.
 **Companion docs:** `SWAY_BODY_PICKLEBALL_MVP.md` (product/market), `IMPLEMENTATION_PHASES.md` (Codex build + test plan), `ACCURACY_AND_TRAINING.md` (**source of truth for datasets, training/fine-tuning/auto-labeling recipes, filtering parameters, and validation protocols**), `BUILD_CHECKLIST.md` (the operational checklist + multi-agent coordination protocol). World-grounded mesh, foot-skate elimination, physics refinement, racket 6DoF, and the 3D replay renderer are detailed per-layer below ((e),(p)–(s)) and built in `IMPLEMENTATION_PHASES.md` Phases 3/4/6/10.
@@ -190,9 +190,9 @@ Skeletal replay is tiny (<1 MB/min), so the win is per-rally streaming + CDN, no
 
 ---
 
-## 2.3 Model Registry — CANONICAL (every doc cites this; do not state model variants elsewhere that contradict this table)
+## 2.3 Model Registry — Target Defaults And Candidates
 
-This is the single source of truth for **exactly which model + variant + weights** each stage uses, split by **OFFLINE (server H100, accuracy-first)** and **LIVE (on-device iOS, real-time preview/guidance only)** tier.
+This is the registry of target defaults, candidates, and fallbacks for model/variant/weight decisions, split by **OFFLINE (server H100, accuracy-first)** and **LIVE (on-device iOS, real-time preview/guidance only)** tier. It is not proof that every listed model is currently invoked; approved locks move to `models/MANIFEST.json` after EVAL-0.
 
 **Selection rule (how a variant becomes final):** the values below are **defaults + candidates**, not final. Codex benchmarks the candidates on real clips (offline on the H100 via the `BUILD_CHECKLIST.md §1.5` GPU lease; live on a test device), **renders side-by-side comparison videos, and the human approves the pick before it is locked — unless one variant is obviously better, in which case Codex may auto-finalize and log it** (the full gate is `BUILD_CHECKLIST.md §1.6`; procedure in `IMPLEMENTATION_PHASES.md §0.7 "Model variant selection"`). It locks the approved variant whose accuracy meets the phase gate. Bias: pick the most accurate variant whose latency is acceptable for its tier — on the H100 the gap between detector/pose sizes is sub-millisecond, so lean to the bigger one *only where it buys accuracy we need* (for ≤4 large players we are tracking-limited, not detection-limited, so the mid detector is plenty). **LIVE = lightest variant that gives a usable preview; OFFLINE always recomputes with the accurate variant** — the live output is a preview + a server *prior*, never the final result.
 
@@ -225,7 +225,7 @@ Shot classifier status (2026-06-28): no trained SHOT-1 model is approved. The cu
 
 ## 3. Per-Layer Technology Choices
 
-> The per-layer detail below explains WHAT/WHY/HOW-tested. The exact variant + weights for each layer are pinned in the **§2.3 Model Registry** above — that table wins on any naming discrepancy.
+> The per-layer detail below explains WHAT/WHY/HOW-tested. The default/candidate variant names for each layer are centralized in the **§2.3 Model Registry** above, and approved runtime locks belong in `models/MANIFEST.json` after EVAL-0.
 
 ### (a) Ingest / decode — **NvDEC hardware decode**
 
@@ -292,7 +292,7 @@ Two tiers (our world-grounding/foot-lock detailed in (p); built in `IMPLEMENTATI
 ### (g) Twist / pronation / paddle-face — **hand-keypoints / racket-pose / optional IMU, contact window only**
 
 - **Chosen:** estimate axial twist (forearm pronation, paddle-face angle) from **hand-landmark geometry** (already in whole-body keypoints), optionally a **racket 6DoF object-pose** detector or a **forearm IMU**, run **only in the contact window**.
-- **Current 2026 paddle stack:** prefer **SAM 3** concept detection/segmentation/tracking when checkpoints and license are approved; fall back to **DINO-X/Grounded-SAM-2** for open-vocabulary detection plus video masks. For 6DoF, use **FoundationPose** when CAD/reference-image onboarding is available, with **GigaPose/FoundPose** as RGB/CAD alternatives, then keep **PnP-IPPE + reprojection/ambiguity + UKF + rebound** as fail-closed geometry gates. See `docs/racketsport/paddle_pose_research_2026_06_28.md`.
+- **Current 2026 paddle stack:** prefer **SAM 3** concept detection/segmentation/tracking when checkpoints and license are approved; fall back to **DINO-X/Grounded-SAM-2** for open-vocabulary detection plus video masks. For 6DoF, use **FoundationPose** when CAD/reference-image onboarding is available, with **GigaPose/FoundPose** as RGB/CAD alternatives, then keep **PnP-IPPE + reprojection/ambiguity + UKF + rebound** as fail-closed geometry gates. See `docs/racketsport/archive/paddle_pose_research_2026_06_28.md`.
 - **Why:** axial roll is **unobservable from two joint endpoints** (20–45° error keypoint-only) — and a mesh does **not** fix this either. The fix is an explicit twist signal: a purpose-trained hand+IMU model reached ~4.65–5.61° MAE.
 - **Decision:** **confidence-gate or omit** paddle-face/pronation when no extra signal is available. We do not claim a pronation number we can't defend. This is a trust win, not a gap.
 - **Toggle:** omit (default) ↔ hand-keypoint estimate ↔ + racket-pose/IMU (richest).

@@ -101,7 +101,7 @@ def test_capabilities_matrix_records_truth_columns_and_current_spine_limit() -> 
     assert rows["e2e"]["honest status"] == "SCAFFOLD/BLOCKED, not PROTOTYPE-GATE"
 
 
-def test_checklist_ids_are_unique_and_visible_count_tables_match_rows() -> None:
+def test_checklist_ids_are_unique_and_only_operational_count_table_matches_rows() -> None:
     checklist_text = (ROOT / "BUILD_CHECKLIST.md").read_text(encoding="utf-8")
     capabilities_text = (ROOT / "CAPABILITIES.md").read_text(encoding="utf-8")
     rows = _checklist_rows(checklist_text)
@@ -112,7 +112,7 @@ def test_checklist_ids_are_unique_and_visible_count_tables_match_rows() -> None:
 
     parsed_counts = Counter(status for _task_id, status in rows)
     assert _visible_status_count_table(checklist_text) == parsed_counts
-    assert _visible_status_count_table(capabilities_text) == parsed_counts
+    assert _visible_status_count_table(capabilities_text) == Counter()
 
 
 def _checklist_statuses(text: str) -> dict[str, str]:

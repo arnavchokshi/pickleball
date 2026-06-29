@@ -969,6 +969,38 @@ class ReplayScene(StrictArtifact):
     points: list[ReplayPoint]
 
 
+class ReplayViewerLabelOverlay(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: str
+    label: str
+    url: str
+    trusted_for_metrics: bool
+    not_ground_truth: bool
+
+
+class ReplayViewerAnnotationSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: str
+    clip_id: str
+    url: str
+    trusted_for_metrics: bool
+
+
+class ReplayViewerManifest(StrictArtifact):
+    artifact_type: Literal["racketsport_replay_viewer_manifest"]
+    clip: str
+    video_url: str
+    virtual_world_url: str
+    replay_scene_url: str | None = None
+    physics_refinement_url: str | None = None
+    contact_windows_url: str | None = None
+    label_overlays: list[ReplayViewerLabelOverlay] = Field(default_factory=list)
+    annotation_sources: list[ReplayViewerAnnotationSource] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 class VirtualWorldNet(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1196,6 +1228,7 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "habit_report": HabitReport,
     "coach_report": HabitReport,
     "replay_scene": ReplayScene,
+    "replay_viewer_manifest": ReplayViewerManifest,
     "virtual_world": VirtualWorld,
     "physics_refinement": PhysicsRefinement,
     "drill_report": DrillReport,

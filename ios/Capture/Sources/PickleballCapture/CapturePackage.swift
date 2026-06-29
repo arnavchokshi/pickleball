@@ -119,7 +119,7 @@ public enum CaptureSwiftCapability: String, CaseIterable, Hashable, Sendable {
 public struct CaptureSwiftCapabilityManifest: Equatable, Sendable {
     public var capabilities: [CaptureSwiftCapability]
 
-    public var supportsCaptureAndCalibration: Bool {
+    public var declaresCaptureCalibrationRequirements: Bool {
         let required: Set<CaptureSwiftCapability> = [
             .avFoundationCamera,
             .avFoundationMicrophone,
@@ -133,7 +133,7 @@ public struct CaptureSwiftCapabilityManifest: Equatable, Sendable {
         return required.isSubset(of: Set(capabilities))
     }
 
-    public var supportsFastTierAndReplay: Bool {
+    public var declaresFastTierReplayRequirements: Bool {
         let required: Set<CaptureSwiftCapability> = [
             .visionFastTier,
             .coreMLFastTier,
@@ -226,6 +226,7 @@ public enum CaptureReadinessBlocker: Equatable, Sendable {
     case cameraPermissionMissing
     case microphonePermissionDenied
     case microphonePermissionMissing
+    case landscapeRequired
 }
 
 public struct CaptureReadiness: Equatable, Sendable {
@@ -241,11 +242,14 @@ public struct CaptureReadiness: Equatable, Sendable {
 public enum CaptureReadinessEvaluator {
     public static func evaluate(
         permissions: CapturePermissionSnapshot,
-        descriptor _: CapturePackageDescriptor
+        descriptor: CapturePackageDescriptor
     ) -> CaptureReadiness {
         var blockers: [CaptureReadinessBlocker] = []
         appendBlocker(for: permissions.camera, denied: .cameraPermissionDenied, missing: .cameraPermissionMissing, to: &blockers)
         appendBlocker(for: permissions.microphone, denied: .microphonePermissionDenied, missing: .microphonePermissionMissing, to: &blockers)
+        if descriptor.expectedOrientation != .landscape {
+            blockers.append(.landscapeRequired)
+        }
         return CaptureReadiness(isReady: blockers.isEmpty, blockers: blockers)
     }
 

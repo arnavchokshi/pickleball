@@ -5,7 +5,7 @@ final class OnDevicePersonTrackingTests: XCTestCase {
     func testOnDevicePersonTracksEncodeMobileBenchmarkSchema() throws {
         let tracks = OnDevicePersonTracks(
             clipID: "clip-a",
-            candidate: .visionPoseRoleLock,
+            candidate: .visionHumanRectanglesIouV1,
             deviceModel: "iPhone15,2",
             resolution: [1920, 1080],
             fps: 30,
@@ -17,7 +17,7 @@ final class OnDevicePersonTrackingTests: XCTestCase {
                             trackID: 1,
                             bboxXYWH: [10, 20, 30, 40],
                             confidence: 0.91,
-                            source: "apple_vision_body_2d",
+                            source: "vision_human_rectangles",
                             role: "near_left"
                         )
                     ]
@@ -35,7 +35,7 @@ final class OnDevicePersonTrackingTests: XCTestCase {
         XCTAssertEqual(object["schema_version"] as? Int, 1)
         XCTAssertEqual(object["artifact_type"] as? String, "racketsport_on_device_person_tracks")
         XCTAssertEqual(object["clip_id"] as? String, "clip-a")
-        XCTAssertEqual(object["candidate"] as? String, "vision_pose_rolelock")
+        XCTAssertEqual(object["candidate"] as? String, "vision_human_rectangles_iou_v1")
         XCTAssertEqual(object["device_model"] as? String, "iPhone15,2")
         XCTAssertEqual(object["coordinate_space"] as? String, "source_video_pixels")
         XCTAssertEqual(object["resolution"] as? [Int], [1920, 1080])

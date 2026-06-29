@@ -22,6 +22,7 @@ public enum CameraCaptureControllerError: Error, Equatable, Sendable {
     case cannotAddMovieOutput
     case unsupportedFrameRate(Int)
     case noConfiguredPackage
+    case landscapeRequired
     case alreadyRecording
     case notRecording
     case fileSystem(String)
@@ -83,6 +84,9 @@ public final class CameraCaptureController: NSObject {
         )
         let readiness = CaptureReadinessEvaluator.evaluate(permissions: permissions, descriptor: descriptor)
         guard readiness.isReady else {
+            if readiness.blockers == [.landscapeRequired] {
+                throw CameraCaptureControllerError.landscapeRequired
+            }
             throw CameraCaptureControllerError.permissionDenied(permissions)
         }
 
@@ -152,6 +156,12 @@ public final class CameraCaptureController: NSObject {
     public func startRecording() throws {
         guard !movieOutput.isRecording else {
             throw CameraCaptureControllerError.alreadyRecording
+        }
+        guard let policy = activePolicy else {
+            throw CameraCaptureControllerError.noConfiguredPackage
+        }
+        guard policy.orientation == .landscape else {
+            throw CameraCaptureControllerError.landscapeRequired
         }
         guard let clipURL = activeClipURL else {
             throw CameraCaptureControllerError.noConfiguredPackage

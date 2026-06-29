@@ -58,6 +58,7 @@ TEST_OVERRIDES = {
     "render_calibration_overlay": "test_calibration_overlay.py",
     "report_testclip_coverage": "test_testclip_coverage_report.py",
     "run_ball_tracking_eval_suite": "test_ball_tracking_eval_suite.py",
+    "run_mobile_person_accuracy_sweep": "test_mobile_person_accuracy_sweep.py",
     "run_mobile_person_yolo_replay": "test_mobile_person_yolo_replay.py",
     "run_totnet_ball": "test_totnet_runner_runtime.py",
     "run_yolo26_teacher": "test_yolo26_teacher_filters.py",

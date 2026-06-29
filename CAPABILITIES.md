@@ -1,18 +1,8 @@
 # Racket-Sport Capability Truth Matrix
 
-Last audited: 2026-06-28.
+Last audited: 2026-06-29.
 
-This file is the single source of truth for what the current pipeline actually invokes. A smoke, probe, precomputed artifact adapter, CPU scaffold, or presence-count check is not `DONE` for a row that names a specific model or algorithm, and it never counts as `VERIFIED`.
-
-Corrected checklist counts after the stricter 2026-06-28 audit. This demotes rows that had buildable scaffolds or validators but no real runtime/device/data gate evidence, including iOS runtime rows, dataset rows, report visualization/delivery, web replay, the partially wired validation-protocol row, and the end-to-end readiness row:
-
-| status | count |
-|---|---:|
-| DONE | 10 |
-| SCAFFOLD | 30 |
-| PROTOTYPE-GATE | 2 |
-| IN-PROGRESS | 2 |
-| VERIFIED | 0 |
+This matrix records what the current pipeline actually invokes. `BUILD_CHECKLIST.md` is the operational source for mutable task counts and current row status totals. A smoke, probe, precomputed artifact adapter, CPU scaffold, or presence-count check is not `DONE` for a row that names a specific model or algorithm, and it never counts as `VERIFIED`.
 
 | stage | named tech (registry) | actually invoked? | correct variant+weight? | wired into spine? | gate type (accuracy/presence/none) | gate run on real labels? | honest status |
 |---|---|---|---|---|---|---|---|

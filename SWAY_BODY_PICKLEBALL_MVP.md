@@ -145,7 +145,7 @@ The tier toggle *is* the paywall: "Instant" (fast mesh preview + metrics, second
 
 ### 5.5 Locked model choices
 
-The **canonical, exact model + variant + weights for every stage (offline vs live tier) lives in `TECH_STACK.md` §2.3 Model Registry** — that table is the single source of truth; the summary below must match it. Final variants are locked by the on-clip benchmark (EVAL-0) **with side-by-side comparison videos and human approval — auto-finalized only when one option is obviously better** (`BUILD_CHECKLIST.md §1.6`). Summary:
+The **target/default model + variant + weight candidates for every stage (offline vs live tier) live in `TECH_STACK.md` §2.3 Model Registry**. Final approved runtime locks belong in `models/MANIFEST.json` after the on-clip benchmark (EVAL-0) **with side-by-side comparison videos and human approval — auto-finalized only when one option is obviously better** (`BUILD_CHECKLIST.md §1.6`). Summary:
 
 | Layer | Choice | License | Why |
 |---|---|---|---|
@@ -341,7 +341,7 @@ threed/racketsport/
   review_packet.py        replay_viewer_manifest.py
   schemas/                eval/
 ios/                   # native Swift: Capture / Calibration / FastTier / Guidance / Upload / Replay
-viewer/                # Three.js + React Three Fiber 3D replay viewer (web share)
+web/replay/            # React + Three.js/R3F replay viewer (web share)
 ```
 
 ### Tiered data flow
@@ -393,21 +393,23 @@ Present uncertainty as ranges ("likely 52–61%"), bin confidence (confident/lea
 
 ---
 
-## 14. Feasibility verdict
+## 14. Target feasibility verdict
 
-| Claim | Feasible now? | Why |
-|---|---|---|
-| Short-clip person tracking (≤4) | High | court geometry does the ID work; cheap detector suffices |
-| Fast 3D skeleton + court metrics | High | near real-time; must fine-tune on racket motion |
-| Court calibration (variable camera) | High | per-clip homography + solvePnP; reprojection-gated |
-| NVZ/kitchen foot, spacing, balance | High | world-grounded mesh + foot-lock to court plane |
-| Split-step / contact timing | Medium-high | needs ball/audio event; audio makes it strong |
-| World-grounded mesh + foot-skate-free replay | High | Fast SAM-3D-Body + our world-grounding (known camera) + foot-lock to known Z=0 plane (≤3 mm) |
-| Physics-accurate 3D replay (Three.js, free-viewpoint) | High | mesh + baked physics → glTF; engineering, not research |
-| Racket 6DoF (face angle / contact-point) | High | PnP on known paddle geometry; ~3–5° (wrist-only stays low) |
-| Ball automation | Medium | TrackNetV3 fine-tune for context; line calls need 2 cams |
-| Coach reports / UX | High | mostly product/backend |
-| $1M ARR | Plausible | coaches/clubs first |
+This is a product/research target view, not current capability status. Current invoked pipeline truth lives in `CAPABILITIES.md` and mutable task counts live in `BUILD_CHECKLIST.md`.
+
+| Claim | Target feasibility | Current repo status | Why |
+|---|---|---|---|
+| Short-clip person tracking (≤4) | High | IN-PROGRESS, not VERIFIED | court geometry does the ID work; cheap detector suffices |
+| Fast 3D skeleton + court metrics | High | SCAFFOLD, not VERIFIED | near real-time; must fine-tune on racket motion |
+| Court calibration (variable camera) | High | DONE, not VERIFIED | per-clip homography + solvePnP; reprojection-gated |
+| NVZ/kitchen foot, spacing, balance | High | SCAFFOLD, not VERIFIED | world-grounded mesh + foot-lock to court plane |
+| Split-step / contact timing | Medium-high | SCAFFOLD, not VERIFIED | needs ball/audio event; audio makes it strong |
+| World-grounded mesh + foot-skate-free replay | High | SCAFFOLD, not VERIFIED | Fast SAM-3D-Body + our world-grounding (known camera) + foot-lock to known Z=0 plane (≤3 mm) |
+| Physics-accurate 3D replay (Three.js, free-viewpoint) | High | SCAFFOLD, not VERIFIED | mesh + baked physics -> glTF; engineering, not research |
+| Racket 6DoF (face angle / contact-point) | High | SCAFFOLD, not VERIFIED | PnP on known paddle geometry; ~3-5° (wrist-only stays low) |
+| Ball automation | Medium | SCAFFOLD, not VERIFIED | TrackNetV3 fine-tune for context; line calls need 2 cams |
+| Coach reports / UX | High | SCAFFOLD, not VERIFIED | mostly product/backend |
+| $1M ARR | Plausible | market thesis, not pipeline capability | coaches/clubs first |
 
 ---
 

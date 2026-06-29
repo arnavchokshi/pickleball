@@ -229,6 +229,8 @@ final class CaptureViewModel: ObservableObject {
             return "Camera or microphone access needed"
         case CameraCaptureControllerError.unsupportedFrameRate(let fps):
             return "\(fps) fps unavailable on this camera"
+        case CameraCaptureControllerError.landscapeRequired:
+            return "Rotate to landscape"
         case CameraCaptureControllerError.alreadyRecording:
             return "Already recording"
         case CameraCaptureControllerError.notRecording:

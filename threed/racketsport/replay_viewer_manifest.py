@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from threed.racketsport.schemas import PersonGroundTruth, validate_artifact_file
+from threed.racketsport.schemas import PersonGroundTruth, ReplayViewerManifest, validate_artifact_file
 
 
 SCHEMA_VERSION = 1
@@ -39,7 +39,7 @@ def build_replay_viewer_manifest(
     if player_labels is not None:
         label_overlays.append(_player_label_overlay(player_labels))
 
-    return {
+    payload = {
         "schema_version": SCHEMA_VERSION,
         "artifact_type": ARTIFACT_TYPE,
         "clip": clip,
@@ -55,12 +55,14 @@ def build_replay_viewer_manifest(
             "Vite /@fs URLs are intended for local review server use.",
         ],
     }
+    return ReplayViewerManifest.model_validate(payload).model_dump(mode="json")
 
 
 def write_replay_viewer_manifest(path: str | Path, manifest: Mapping[str, Any]) -> None:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    payload = ReplayViewerManifest.model_validate(manifest).model_dump(mode="json")
+    out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _player_label_overlay(path: Path) -> dict[str, Any]:
