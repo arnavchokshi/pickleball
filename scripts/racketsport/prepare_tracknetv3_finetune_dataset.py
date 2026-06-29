@@ -18,7 +18,9 @@ DEFAULT_SPLITS = {
         "indoor_doubles_fwuks_0500_long_mid_baseline",
     ),
     "val": ("wolverine_mixed_0200_mid_steep_corner",),
-    "test": ("wolverine_mixed_0200_mid_steep_corner",),
+    # No independent reviewed test clip is safe as a default yet; pass --test-clip
+    # once a separate held-out clip has matching TrackNet click labels.
+    "test": (),
 }
 
 
@@ -118,6 +120,7 @@ def build_tracknetv3_dataset(
 ) -> dict[str, Any]:
     if splits is None:
         splits = DEFAULT_SPLITS
+    _validate_disjoint_splits(splits)
     if overwrite and out.exists():
         _validate_safe_overwrite_path(out)
         shutil.rmtree(out)
@@ -178,6 +181,16 @@ def build_tracknetv3_dataset(
     manifest_path = out / "pickleball_tracknetv3_dataset_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return manifest
+
+
+def _validate_disjoint_splits(splits: dict[str, tuple[str, ...]]) -> None:
+    seen: dict[str, str] = {}
+    for split, clips in splits.items():
+        for clip in clips:
+            previous = seen.get(clip)
+            if previous is not None:
+                raise ValueError(f"split clip overlap: {clip} appears in both {previous} and {split}")
+            seen[clip] = split
 
 
 def _validate_safe_overwrite_path(path: Path) -> None:

@@ -1,6 +1,10 @@
 import XCTest
 @testable import PickleballFastTier
 
+#if canImport(CoreML)
+import CoreML
+#endif
+
 final class CoreMLPersonDetectorTests: XCTestCase {
     func testConfigurationClampsDetectionIntervalToAtLeastOne() {
         let configuration = CoreMLPersonDetectorConfiguration(
@@ -59,4 +63,38 @@ final class CoreMLPersonDetectorTests: XCTestCase {
         XCTAssertEqual(observations[1].bboxXYWH, [150, 120, 500, 400])
         XCTAssertEqual(observations[0].source, "coreml_yolo26_end2end")
     }
+
+#if canImport(CoreML)
+    func testMultiArrayRowsReadYolo11ConfidenceShapeWithStrides() throws {
+        let confidence = try MLMultiArray(shape: [2, 80], dataType: .double)
+        confidence[[0, 0] as [NSNumber]] = 0.80
+        confidence[[1, 0] as [NSNumber]] = 0.25
+        confidence[[1, 3] as [NSNumber]] = 0.95
+
+        let rows = try CoreMLPersonMultiArrayRows.read(confidence, columns: 80, outputName: "confidence")
+
+        XCTAssertEqual(rows.count, 2)
+        XCTAssertEqual(rows[0][0], 0.80, accuracy: 0.001)
+        XCTAssertEqual(rows[1][0], 0.25, accuracy: 0.001)
+        XCTAssertEqual(rows[1][3], 0.95, accuracy: 0.001)
+    }
+
+    func testMultiArrayRowsRejectsScalarOrClassMajorConfidenceShapes() throws {
+        let scalarConfidence = try MLMultiArray(shape: [2], dataType: .double)
+        XCTAssertThrowsError(try CoreMLPersonMultiArrayRows.read(scalarConfidence, columns: 80, outputName: "confidence")) { error in
+            guard case CoreMLPersonDetectorError.unsupportedOutputShape(let message) = error else {
+                return XCTFail("unexpected error: \(error)")
+            }
+            XCTAssertTrue(message.contains("confidence expected [N, 80], got [2]"))
+        }
+
+        let classMajorConfidence = try MLMultiArray(shape: [80, 2], dataType: .double)
+        XCTAssertThrowsError(try CoreMLPersonMultiArrayRows.read(classMajorConfidence, columns: 80, outputName: "confidence")) { error in
+            guard case CoreMLPersonDetectorError.unsupportedOutputShape(let message) = error else {
+                return XCTFail("unexpected error: \(error)")
+            }
+            XCTAssertTrue(message.contains("confidence expected [N, 80], got [80, 2]"))
+        }
+    }
+#endif
 }

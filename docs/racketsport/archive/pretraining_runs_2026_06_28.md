@@ -52,6 +52,8 @@ Split summary:
 | train | `indoor_doubles_fwuks_0500_long_mid_baseline` | 300 | 21 | 129 | 150 |
 | val/test | `wolverine_mixed_0200_mid_steep_corner` | 300 | 24 | 186 | 210 |
 
+2026-06-29 audit note: the `val/test` row above is historical evidence of the old unsafe default, not a recipe to repeat. The current dataset helper leaves the default test split empty until an independent reviewed test clip is supplied with `--test-clip`, and it rejects overlapping split clips before writing output.
+
 ## TrackNetV3 Training
 
 Training command:

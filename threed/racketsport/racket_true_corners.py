@@ -347,7 +347,7 @@ def _source_evidence_counts(source_counts: Mapping[str, int]) -> dict[str, int]:
         elif any(token in normalized for token in ("aruco", "april", "tag", "gt", "ground_truth", "reference")):
             evidence["reference_gt"] += count
             evidence["true_corners_or_pose"] += count
-        else:
+        elif is_true_corner_source(normalized):
             evidence["keypoint_or_mask"] += count
             evidence["true_corners_or_pose"] += count
     return evidence

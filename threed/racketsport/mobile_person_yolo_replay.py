@@ -6,7 +6,7 @@ import json
 import math
 import time
 from dataclasses import dataclass
-from itertools import combinations
+from itertools import combinations, permutations
 from pathlib import Path
 from typing import Any
 
@@ -482,6 +482,112 @@ class _WideRoleStablePersonLinker:
         return self._stable.update(frame_index=frame_index, observations=observations)
 
 
+class _TemporalFillPersonLinker:
+    def __init__(self, *, max_tracks: int = 4, max_fill_gap_frames: int = 8) -> None:
+        self.max_tracks = max_tracks
+        self.max_fill_gap_frames = max_fill_gap_frames
+        self._next_id = 1
+        self._tracks: list[dict[str, Any]] = []
+
+    def update(self, *, frame_index: int, observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        selected = _observations_in_role_order(_select_spatially_diverse_observations(observations, self.max_tracks))
+        if not self._tracks:
+            return self._bootstrap(frame_index=frame_index, observations=selected)
+
+        assignments = _temporal_fill_assignments(self._tracks, selected, frame_index=frame_index)
+        detections: list[dict[str, Any]] = []
+        used_observations: set[int] = set()
+        for track_index, observation_index in sorted(assignments.items()):
+            track = self._tracks[track_index]
+            observation = selected[observation_index]
+            self._update_track(track, observation, frame_index)
+            used_observations.add(observation_index)
+            detections.append(_detection_from_observation(int(track["id"]), observation))
+
+        for track_index, track in enumerate(self._tracks):
+            if track_index in assignments:
+                continue
+            track["miss_count"] = int(track.get("miss_count", 0)) + 1
+            if int(track["miss_count"]) > self.max_fill_gap_frames:
+                continue
+            predicted_bbox = _predict_track_bbox(track, frame_index)
+            track["bbox_xywh"] = predicted_bbox
+            track["last_seen_frame_index"] = frame_index
+            detections.append(
+                {
+                    "track_id": int(track["id"]),
+                    "bbox_xywh": predicted_bbox,
+                    "confidence": 0.0,
+                    "source": "temporal_fill",
+                    "role": None,
+                }
+            )
+
+        if len(self._tracks) < self.max_tracks:
+            for index, observation in enumerate(selected):
+                if index in used_observations:
+                    continue
+                track = self._new_track(self._next_id, observation, frame_index)
+                self._next_id += 1
+                self._tracks.append(track)
+                detections.append(_detection_from_observation(int(track["id"]), observation))
+                if len(self._tracks) >= self.max_tracks:
+                    break
+
+        return sorted(detections, key=lambda item: int(item["track_id"]))
+
+    def _bootstrap(self, *, frame_index: int, observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        self._tracks = []
+        for observation in observations[: self.max_tracks]:
+            self._tracks.append(self._new_track(self._next_id, observation, frame_index))
+            self._next_id += 1
+        return [_detection_from_observation(int(track["id"]), track["observation"]) for track in self._tracks]
+
+    @staticmethod
+    def _new_track(track_id: int, observation: dict[str, Any], frame_index: int) -> dict[str, Any]:
+        return {
+            "id": track_id,
+            "bbox_xywh": [float(value) for value in observation["bbox_xywh"]],
+            "velocity_xy": [0.0, 0.0],
+            "last_seen_frame_index": frame_index,
+            "last_detected_frame_index": frame_index,
+            "miss_count": 0,
+            "observation": observation,
+            "appearance_hsv": _appearance_vector(observation),
+        }
+
+    @staticmethod
+    def _update_track(track: dict[str, Any], observation: dict[str, Any], frame_index: int) -> None:
+        previous_center = _bbox_center(track["bbox_xywh"])
+        current_bbox = [float(value) for value in observation["bbox_xywh"]]
+        current_center = _bbox_center(current_bbox)
+        frame_delta = max(1, frame_index - int(track["last_seen_frame_index"]))
+        previous_velocity = [float(value) for value in track.get("velocity_xy", [0.0, 0.0])]
+        measured_velocity = [
+            (current_center[0] - previous_center[0]) / frame_delta,
+            (current_center[1] - previous_center[1]) / frame_delta,
+        ]
+        track["velocity_xy"] = [
+            0.6 * previous_velocity[0] + 0.4 * measured_velocity[0],
+            0.6 * previous_velocity[1] + 0.4 * measured_velocity[1],
+        ]
+        track["bbox_xywh"] = current_bbox
+        track["last_seen_frame_index"] = frame_index
+        track["last_detected_frame_index"] = frame_index
+        track["miss_count"] = 0
+        track["observation"] = observation
+        current_appearance = _appearance_vector(observation)
+        previous_appearance = _appearance_vector(track)
+        if current_appearance is not None:
+            if previous_appearance is None:
+                track["appearance_hsv"] = current_appearance
+            else:
+                track["appearance_hsv"] = [
+                    0.9 * previous + 0.1 * current
+                    for previous, current in zip(previous_appearance, current_appearance, strict=False)
+                ]
+
+
 def _make_linker(
     tracker: str,
     *,
@@ -527,6 +633,8 @@ def _make_linker(
             max_tracks=max_players,
             max_age_frames=60 if max_age_frames is None else max_age_frames,
         )
+    if tracker in {"predict_temporal_fill", "temporal_fill"}:
+        return _TemporalFillPersonLinker(max_tracks=max_players)
     raise ValueError(f"unsupported replay person tracker: {tracker}")
 
 
@@ -983,6 +1091,56 @@ def _stable_track_assignments(
     return assignments
 
 
+def _temporal_fill_assignments(
+    tracks: list[dict[str, Any]],
+    observations: list[dict[str, Any]],
+    *,
+    frame_index: int,
+) -> dict[int, int]:
+    if not tracks or not observations:
+        return {}
+    track_count = len(tracks)
+    observation_count = len(observations)
+    pair_count = min(track_count, observation_count)
+    best_assignments: dict[int, int] = {}
+    best_cost = float("inf")
+
+    if observation_count >= track_count:
+        track_choices = (tuple(range(track_count)),)
+        observation_choices = permutations(range(observation_count), pair_count)
+        for track_indexes in track_choices:
+            for observation_indexes in observation_choices:
+                total = 0.0
+                assignments: dict[int, int] = {}
+                for track_index, observation_index in zip(track_indexes, observation_indexes, strict=False):
+                    total += _temporal_fill_assignment_cost(
+                        tracks[track_index],
+                        observations[observation_index],
+                        frame_index=frame_index,
+                    )
+                    assignments[track_index] = observation_index
+                if total < best_cost:
+                    best_cost = total
+                    best_assignments = assignments
+        return best_assignments
+
+    for track_indexes in combinations(range(track_count), pair_count):
+        for observation_indexes in permutations(range(observation_count), pair_count):
+            total = 0.0
+            assignments = {}
+            for track_index, observation_index in zip(track_indexes, observation_indexes, strict=False):
+                total += _temporal_fill_assignment_cost(
+                    tracks[track_index],
+                    observations[observation_index],
+                    frame_index=frame_index,
+                )
+                assignments[track_index] = observation_index
+            if total < best_cost:
+                best_cost = total
+                best_assignments = assignments
+    return best_assignments
+
+
 def _predict_track_bbox(track: dict[str, Any], frame_index: int) -> list[float]:
     bbox = [float(value) for value in track["bbox_xywh"]]
     frame_delta = max(0, frame_index - int(track["last_seen_frame_index"]))
@@ -1002,6 +1160,20 @@ def _stable_assignment_cost(track: dict[str, Any], predicted_bbox: list[float], 
     if appearance_distance is None:
         return distance_term + 0.8 * iou_term + 0.25 * area_term - 0.2 * confidence_bonus
     return 0.35 * distance_term + 0.5 * iou_term + 0.2 * area_term + 4.0 * appearance_distance - 0.2 * confidence_bonus
+
+
+def _temporal_fill_assignment_cost(track: dict[str, Any], observation: dict[str, Any], *, frame_index: int) -> float:
+    predicted_bbox = _predict_track_bbox(track, frame_index)
+    bbox = [float(value) for value in observation["bbox_xywh"]]
+    distance = _bbox_center_distance(predicted_bbox, bbox)
+    scale = max(32.0, _bbox_diagonal(predicted_bbox), _bbox_diagonal(bbox))
+    distance_term = distance / scale
+    iou_term = 1.0 - _bbox_iou(predicted_bbox, bbox)
+    area_term = abs(math.log(max(1.0, bbox[2] * bbox[3]) / max(1.0, predicted_bbox[2] * predicted_bbox[3])))
+    confidence_bonus = min(1.0, max(0.0, float(observation.get("confidence", 0.0))))
+    appearance_distance = _appearance_distance(_appearance_vector(track), _appearance_vector(observation))
+    appearance_term = 0.0 if appearance_distance is None else 1.0 * appearance_distance
+    return 0.35 * distance_term + 0.5 * iou_term + 0.2 * area_term + appearance_term - 0.2 * confidence_bonus
 
 
 def _appearance_vector(item: dict[str, Any]) -> list[float] | None:

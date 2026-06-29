@@ -530,6 +530,8 @@ python scripts/racketsport/validate_ball_audio_dataset.py --help
 python -m threed.racketsport.orchestrator --clip <clip> --inputs data/testclips/<clip> --out runs/phase5/<clip> --stage ball_events --tracking-mode precomputed --ball-source runs/phase5/<clip>/tracknet_smoke_0000_0010/ball_track_fusion_temporal_vball100_localtraj.json
 python -m threed.racketsport.eval.ball_event_eval --root runs/phase5 --labels data/testclips --out runs/phase5/metrics.json
 ```
+
+The TrackNetV3 dataset helper intentionally has no default held-out test clip until a separate reviewed clip is available. Pass `--test-clip <independent-reviewed-clip>` for a true test split; overlapping train/val/test clips now fail before writing output.
 Measure: ball P/R/F1 vs `ball.json` (incl. blur/occlusion subset); false positives; contact-timing vs `events.json` (60 fps clips); bounce/net accuracy; 3D-trajectory physics-fit residual.
 
 **Acceptance gates:**

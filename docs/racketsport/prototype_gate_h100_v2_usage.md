@@ -50,6 +50,14 @@ but it must not prove no-tap or line-based court calibration.
 
 ## Review Entrypoints
 
+If an accepted-four CVAT-labeled dataset is being produced, use that export as
+the preferred reviewed-label source for player boxes/tracks/IDs and downstream
+TRK/BODY gates. The localhost correction UI below remains useful for quick
+triage, but it is not the next required user action in that case. Likewise, if
+the separate racket annotation workflow is producing true paddle-face corners,
+masks/keypoints, CAD/reference pose, or ArUco/reference labels, consume that
+export instead of duplicating paddle review in this runbook.
+
 Main generated packet:
 
 ```text

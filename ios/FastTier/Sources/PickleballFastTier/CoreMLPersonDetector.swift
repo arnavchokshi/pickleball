@@ -228,8 +228,8 @@ public final class CoreMLPersonDetector {
                 throw CoreMLPersonDetectorError.missingOutput("confidence")
             }
             return CoreMLPersonDetectionDecoder.decodeYolo11NMS(
-                coordinates: rows(from: coordinates, columns: 4),
-                confidences: rows(from: confidence, columns: 80),
+                coordinates: try CoreMLPersonMultiArrayRows.read(coordinates, columns: 4, outputName: "coordinates"),
+                confidences: try CoreMLPersonMultiArrayRows.read(confidence, columns: 80, outputName: "confidence"),
                 sourceWidth: sourceWidth,
                 sourceHeight: sourceHeight,
                 maxPlayers: configuration.maxTracks,
@@ -241,7 +241,7 @@ public final class CoreMLPersonDetector {
                 throw CoreMLPersonDetectorError.missingOutput("yolo26 end2end")
             }
             return CoreMLPersonDetectionDecoder.decodeYolo26EndToEnd(
-                rows: rows(from: array, columns: 6),
+                rows: try CoreMLPersonMultiArrayRows.read(array, columns: 6, outputName: "yolo26 end2end"),
                 modelInputWidth: configuration.inputWidth,
                 modelInputHeight: configuration.inputHeight,
                 sourceWidth: sourceWidth,
@@ -311,16 +311,26 @@ public final class CoreMLPersonDetector {
     }
 }
 
-private func rows(from multiArray: MLMultiArray, columns: Int) -> [[Double]] {
-    guard columns > 0 else {
-        return []
-    }
-    let count = multiArray.count / columns
-    return (0..<count).map { rowIndex in
-        (0..<columns).map { columnIndex in
-            let flatIndex = rowIndex * columns + columnIndex
-            return multiArray[flatIndex].doubleValue
+enum CoreMLPersonMultiArrayRows {
+    static func read(_ multiArray: MLMultiArray, columns: Int, outputName: String) throws -> [[Double]] {
+        guard columns > 0 else {
+            throw CoreMLPersonDetectorError.unsupportedOutputShape("\(outputName) expected positive column count")
         }
+        let shape = multiArray.shape.map(\.intValue)
+        guard shape.count == 2, shape[1] == columns else {
+            throw CoreMLPersonDetectorError.unsupportedOutputShape(
+                "\(outputName) expected [N, \(columns)], got \(formatShape(shape))"
+            )
+        }
+        return (0..<shape[0]).map { rowIndex in
+            (0..<columns).map { columnIndex in
+                multiArray[[NSNumber(value: rowIndex), NSNumber(value: columnIndex)]].doubleValue
+            }
+        }
+    }
+
+    private static func formatShape(_ shape: [Int]) -> String {
+        "[" + shape.map(String.init).joined(separator: ", ") + "]"
     }
 }
 #else

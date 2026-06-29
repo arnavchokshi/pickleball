@@ -86,6 +86,43 @@ def test_wide_role_lock_uses_spatial_diversity_instead_of_top_confidence_only() 
     assert selected_origins == {(100.0, 100.0), (300.0, 100.0), (100.0, 300.0), (300.0, 300.0)}
 
 
+def test_temporal_fill_linker_preserves_identity_when_role_order_flips() -> None:
+    linker = _make_linker("predict_temporal_fill", max_players=2)
+
+    first = linker.update(
+        frame_index=0,
+        observations=[
+            _observation(0.0, 10.0),
+            _observation(100.0, 0.0),
+        ],
+    )
+    second = linker.update(
+        frame_index=1,
+        observations=[
+            _observation(2.0, 0.0),
+            _observation(102.0, 20.0),
+        ],
+    )
+
+    assert [det["track_id"] for det in first] == [1, 2]
+    assert [det["bbox_xywh"][0] for det in first] == pytest.approx([100.0, 0.0])
+    assert [det["track_id"] for det in second] == [1, 2]
+    assert [det["bbox_xywh"][0] for det in second] == pytest.approx([102.0, 2.0])
+
+
+def test_temporal_fill_linker_predicts_short_detector_dropouts() -> None:
+    linker = _make_linker("predict_temporal_fill", max_players=2)
+
+    linker.update(frame_index=0, observations=[_observation(0.0, 0.0), _observation(100.0, 0.0)])
+    linker.update(frame_index=1, observations=[_observation(10.0, 0.0), _observation(110.0, 0.0)])
+    filled = linker.update(frame_index=2, observations=[])
+
+    assert [det["track_id"] for det in filled] == [1, 2]
+    assert [det["source"] for det in filled] == ["temporal_fill", "temporal_fill"]
+    assert filled[0]["bbox_xywh"][0] > 10.0
+    assert filled[1]["bbox_xywh"][0] > 110.0
+
+
 def test_closed_set_track_summaries_use_true_percentiles() -> None:
     frames = []
     for frame_index, (confidence, width) in enumerate(

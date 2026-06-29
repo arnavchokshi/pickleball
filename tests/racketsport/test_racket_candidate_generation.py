@@ -10,6 +10,7 @@ import pytest
 from threed.racketsport.racket_candidates import racket_labels_to_candidates
 from threed.racketsport.racket_true_corners import (
     build_paddle_true_corner_review,
+    is_true_corner_source,
     true_corner_labels_to_candidates,
 )
 from threed.racketsport.schemas import RacketCandidates, validate_artifact_file
@@ -218,6 +219,51 @@ def test_cad_gt_counts_as_cad_not_reference_gt() -> None:
     assert summary["source"] == "cad_gt:measured_cad_pose"
     assert review["true_corner_source_evidence_counts"]["synthetic_or_cad"] == 1
     assert review["true_corner_source_evidence_counts"]["reference_gt"] == 0
+
+
+def test_true_corner_source_policy_does_not_count_ambiguous_manual_sources() -> None:
+    assert is_true_corner_source("true_corners:human_review") is True
+    assert is_true_corner_source("mask_corner:segmenter") is True
+    assert is_true_corner_source("aruco_gt:april_tag_reference") is True
+    assert is_true_corner_source("cad_gt:synthetic_paddle") is True
+    assert is_true_corner_source("label_bbox:yolo26m_teacher") is False
+    assert is_true_corner_source("manual_review") is False
+
+    ambiguous = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_racket_candidates",
+        "fps": 30.0,
+        "players": [
+            {
+                "id": 2,
+                "paddle_dims_in": {"length": 16.0, "width": 8.0},
+                "frames": [
+                    {
+                        "t": 0.5,
+                        "corners_px": [[10.0, 20.0], [30.0, 20.0], [30.0, 70.0], [10.0, 70.0]],
+                        "conf": 0.8,
+                        "source": "manual_review",
+                    }
+                ],
+            }
+        ],
+    }
+
+    empty_candidates = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_racket_candidates",
+        "fps": 30.0,
+        "players": [],
+    }
+    review = build_paddle_true_corner_review(
+        clip="clip_001",
+        racket_candidates=empty_candidates,
+        true_corner_candidates=ambiguous,
+    )
+
+    assert review["true_corner_label_count"] == 0
+    assert review["true_corner_source_evidence_counts"]["true_corners_or_pose"] == 0
+    assert review["true_corner_source_evidence_counts"]["keypoint_or_mask"] == 0
 
 
 def test_true_corner_labels_reject_box_sources_and_missing_reviewer() -> None:

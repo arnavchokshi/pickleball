@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from scripts.racketsport.prepare_tracknetv3_finetune_dataset import (
+    DEFAULT_SPLITS,
     TrackNetLabel,
     build_tracknetv3_dataset,
     interpolated_tracknet_labels,
@@ -46,6 +47,28 @@ def test_write_tracknet_csv_uses_official_columns(tmp_path: Path) -> None:
         "0,1,10.000,20.000",
         "1,0,0.000,0.000",
     ]
+
+
+def test_tracknetv3_default_splits_do_not_reuse_clips_across_eval_sets() -> None:
+    seen: dict[str, str] = {}
+    for split, clips in DEFAULT_SPLITS.items():
+        for clip in clips:
+            assert clip not in seen, f"{clip} appears in both {seen[clip]} and {split}"
+            seen[clip] = split
+
+
+def test_tracknetv3_dataset_rejects_overlapping_splits_before_io(tmp_path: Path) -> None:
+    out = tmp_path / "pickleball_tracknetv3_overlap"
+
+    with pytest.raises(ValueError, match="split clip overlap"):
+        build_tracknetv3_dataset(
+            run_root=tmp_path / "run-root",
+            review_root=tmp_path / "review-root",
+            out=out,
+            splits={"train": ("clip_a",), "val": ("clip_b",), "test": ("clip_b",)},
+        )
+
+    assert not out.exists()
 
 
 def test_tracknetv3_overwrite_rejects_broad_paths_before_delete(monkeypatch: pytest.MonkeyPatch) -> None:

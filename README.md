@@ -9,4 +9,4 @@ Canonical read order:
 3. `IMPLEMENTATION_PHASES.md` - target build plan and phase gates.
 4. `ACCURACY_AND_TRAINING.md`, `TECH_STACK.md`, `SWAY_BODY_PICKLEBALL_MVP.md` - target product, model, data, and training context.
 
-Current truth: `VERIFIED = 0`; many iOS, model, replay, and on-device items are scaffold or prototype-gate only until their checklist rows are promoted by tests and real label/device evidence. Files under `docs/racketsport/archive/` are evidence snapshots, not active runbooks.
+Current truth: `VERIFIED = 0`; many iOS, model, replay, and on-device items are scaffold or prototype-gate only until their checklist rows are promoted by tests and real label/device evidence. Accepted-four artifacts under `runs/eval0/prototype_gate_h100_v2` are prototype packet evidence, not a populated `DATA-1` test-clip dataset. Files under `docs/racketsport/archive/` are evidence snapshots, not active runbooks.

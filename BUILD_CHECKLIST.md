@@ -2,7 +2,7 @@
 
 **This is the operational source of truth for the pickleball/tennis CV pipeline.** The lead build agent (Codex) and every subagent it spawns coordinate **here** - it is how everyone knows who is doing what, what is done, and what remains. Agents cannot talk to each other directly; **this file + git commit messages are the only communication channel.**
 
-**Read order for any agent before doing anything:** (1) this file, (2) `SWAY_BODY_PICKLEBALL_MVP.md` (what/why), (3) `TECH_STACK.md` (target defaults/candidates + why; approved locks live in `models/MANIFEST.json` after EVAL-0), (4) the relevant phase in `IMPLEMENTATION_PHASES.md` (exact build + test steps), (5) `ACCURACY_AND_TRAINING.md` (datasets, training, validation gates). Each task below names its phase — go there for full detail; do not re-derive it.
+**Role:** operational task status, row ownership, and handoff checklist. Use `README.md` for canonical read order; each task below names its phase — go there for full detail and do not re-derive it.
 
 **Model variants are benchmarked + human-approved, not assumed:** `TECH_STACK.md §2.3` lists each stage's default + candidates; **all H100/on-device speeds in this repo are estimates.** Task **EVAL-0** benchmarks the candidates on real clips, **renders side-by-side comparison videos, and requires human approval before locking the variant (§1.6) — unless one option is obviously better, in which case it may auto-finalize and log it.** The approved choice is locked in `models/MANIFEST.json` (live = lightest usable; offline = recompute with the accurate variant). Benchmark **Fast SAM-3D-Body first** (pacing item; sets the MIG geometry).
 
@@ -22,11 +22,12 @@ Status counts after this audit:
 | IN-PROGRESS | 2 |
 | VERIFIED | 0 |
 
-Commit/window reality:
+Historical commit-window note:
 
 - Strict "past 12 hours" from the original audit time had **0 commits**. The relevant work burst was the wider prior window: 43 commits from 2026-06-26 23:00 PDT through `22fba00` on 2026-06-27 19:04 PDT.
-- Do not treat those commit IDs as live branch state. This checklist records capability truth, not the current Git pointer; agents must run `git status --short --branch` and `git log --oneline --decorate -5` at the start of a pass. During the follow-up audit, local `main` was already ahead of `origin/main` from prior audit commits.
+- Do not treat those commit IDs or branch-ahead notes as live branch state. This checklist records capability truth, not the current Git pointer; agents must run `git status --short --branch` and `git log --oneline --decorate -5` at the start of a pass.
 - Treat pushed code, local dirty changes, and ignored `runs/` evidence as three different evidence classes. Do not claim a capability from ignored run artifacts unless the row also has code, a reproducible command, and the relevant gate result.
+- Accepted-four artifacts under `runs/eval0/prototype_gate_h100_v2` are prototype packet evidence, not populated `DATA-1` test clips.
 
 Accepted-four artifact truth after the 2026-06-28 four-lane pass:
 
@@ -53,9 +54,9 @@ What is **not** done yet:
 Critical next build order:
 
 1. Keep this truth snapshot, `IMPLEMENTATION_PHASES.md`, and generated readiness reports synchronized before any push.
-2. TRK: decide and verify a canonical-safe player coverage fix. Candidate H100 YOLO26m source-30 tracks are useful evidence, but widened court margins need false-positive review before promotion.
+2. TRK: decide and verify a canonical-safe player coverage fix. If a CVAT-labeled dataset is being produced for these clips, treat that export as the preferred authoritative review source for player boxes/tracks/IDs and skip the ad-hoc Step-3 player-marking wizard. Candidate H100 YOLO26m source-30 tracks are useful evidence, but widened court margins need CVAT labels or explicit false-positive review before promotion.
 3. BODY: run BODY only from canonical-safe tracks/contact spans, then add world-MPJPE labels or an equivalent evaluator plus a full-clip BODY coverage gate.
-4. RKT: label true paddle-face corners from the crop sheets or add CAD/reference/ArUco evidence; do not promote box-corner candidates.
+4. RKT: consume the separate racket-annotation workflow's exported true paddle-face corners, masks/keypoints, CAD/reference pose, or ArUco evidence when available; do not duplicate that work in the local crop-sheet wizard unless the external workflow stalls. Do not promote box-corner candidates.
 5. DATA-1: promote real reviewed labels/assets for the accepted clips; do not treat validators or run artifacts as the dataset.
 6. BALL: add the contact-timing evaluator, unblock audio/wrist/ball cue coverage, promote only human-reviewed contacts, then run F1 and timing gates.
 7. CAL: keep semantic court evidence enforced in pipeline contracts, then implement/train the no-tap solver and run Phase 1 gates on real labeled clips.
@@ -438,6 +439,7 @@ Columns: **☐** (done) · **ID** · **Task** · **Owns (files)** · **Deps** ·
 - 2026-06-28 Codex: box-derived paddle candidates must never promote to canonical `racket_pose.json`. Only true paddle-face corners, masks/keypoints, CAD/reference pose, or ArUco/AprilTag/reference GT evidence can enter the RKT promotion path.
 - 2026-06-28 Codex: BODY mesh-smoke availability is not BODY verification. Accepted-four BODY remains blocked until world-MPJPE and full-clip BODY coverage evidence exist; Outdoor additionally needs schedulable BODY output from canonical-safe tracks.
 - 2026-06-28 Codex: widened court margins can improve player coverage numerically but are not canonical-safe by default. The Indoor diagnostic shows background/spectator-like boxes, so tracker promotion requires visual false-positive review plus labeled ID/spectator gates.
+- 2026-06-29 Codex: user decision for this handoff: if the accepted-four CVAT-labeled dataset is being produced, skip the ad-hoc Step-3 player-marking wizard in `review_input_server.py` and use the CVAT export as the preferred TRK/BODY review input. A separate racket annotation workflow owns the improved paddle-highlight/label UI; this agent should consume its exported true-corner/reference labels when ready instead of asking for duplicate local crop-sheet review. The localhost review UI remains an optional quick-triage fallback, not the next required user action.
 - 2026-06-26 Codex: canonical server filenames are the `IMPLEMENTATION_PHASES.md §0.2` names (`person_fast.py`, `audio_pop.py`, `footlock.py`, `racket6dof.py`, etc.). Older MVP shorthand names such as `person_fasttier.py`, `audio_events.py`, `foot_lock.py`, and `racket_pose6dof.py` are retired aliases and should not be implemented.
 - 2026-06-26 Codex: external existence check found official Ultralytics YOLO26 docs and assets plus public Fast SAM-3D-Body project/GitHub pages. This verifies the names exist, not our target H100 performance, checkpoint access, or commercial license posture.
 - 2026-06-26 Codex: CAL-1 uses a shared court world frame with origin at net center, +x across court width, +y toward the far baseline, +z up, and meters for artifact coordinates. Regulation dimensions are stored in feet/inches and converted at the API boundary: pickleball 20x44 ft, 7 ft NVZ, 22 ft net, 34/36 in net heights; tennis 78 ft length, 36 ft doubles width, 27 ft singles width, 21 ft service line, 42 ft net between posts, 36/42 in net heights.

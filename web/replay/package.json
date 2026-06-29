@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit --jsx react-jsx --module ESNext --moduleResolution Bundler --target ES2020 --lib ES2020,DOM --strict --allowImportingTsExtensions src/vite-env.d.ts src/main.tsx src/App.tsx src/App.test.tsx src/replayScene.ts src/replayScene.test.ts src/viewerData.ts src/viewerData.test.ts"
+    "typecheck": "tsc --noEmit --jsx react-jsx --module ESNext --moduleResolution Bundler --target ES2020 --lib ESNext,DOM --types node --strict --allowImportingTsExtensions src/vite-env.d.ts src/main.tsx src/App.tsx src/App.test.tsx src/replayScene.ts src/replayScene.test.ts src/viewerData.ts src/viewerData.test.ts"
   },
   "dependencies": {
     "@react-three/fiber": "^9.0.0",
@@ -16,6 +16,7 @@
     "three": "^0.179.0"
   },
   "devDependencies": {
+    "@types/node": "^22.12.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/three": "^0.185.0",
