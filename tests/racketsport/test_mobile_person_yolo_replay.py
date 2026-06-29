@@ -116,6 +116,57 @@ def test_stable_set_linker_assigns_from_wider_candidate_pool() -> None:
     assert [det["bbox_xywh"][0] for det in second] == pytest.approx([4.0, 104.0, 4.0, 104.0])
 
 
+def test_wide_role_stable_linker_filters_before_temporal_assignment() -> None:
+    linker = _make_linker("predict_role_lock_wide_stable", max_players=4)
+
+    first = linker.update(
+        frame_index=0,
+        observations=[
+            _observation(0.0, 0.0),
+            _observation(100.0, 0.0),
+            _observation(0.0, 100.0),
+            _observation(100.0, 100.0),
+        ],
+    )
+    second = linker.update(
+        frame_index=1,
+        observations=[
+            _observation(500.0, 500.0, confidence=0.99),
+            _observation(4.0, 0.0, confidence=0.10),
+            _observation(104.0, 0.0, confidence=0.10),
+            _observation(4.0, 100.0, confidence=0.10),
+            _observation(104.0, 100.0, confidence=0.10),
+        ],
+    )
+
+    assert [det["track_id"] for det in first] == [1, 2, 3, 4]
+    assert [det["track_id"] for det in second] == [1, 2, 3, 4]
+    assert {round(det["bbox_xywh"][0]) for det in second} == {4, 104}
+
+
+def test_stable_set_linker_uses_appearance_when_tracks_cross() -> None:
+    linker = _make_linker("predict_stable_set", max_players=2)
+
+    first = linker.update(
+        frame_index=0,
+        observations=[
+            {**_observation(0.0, 0.0), "appearance_hsv": [1.0, 0.0, 0.0]},
+            {**_observation(100.0, 0.0), "appearance_hsv": [0.0, 1.0, 0.0]},
+        ],
+    )
+    second = linker.update(
+        frame_index=1,
+        observations=[
+            {**_observation(96.0, 0.0), "appearance_hsv": [1.0, 0.0, 0.0]},
+            {**_observation(4.0, 0.0), "appearance_hsv": [0.0, 1.0, 0.0]},
+        ],
+    )
+
+    assert [det["track_id"] for det in first] == [1, 2]
+    assert [det["track_id"] for det in second] == [1, 2]
+    assert [det["bbox_xywh"][0] for det in second] == pytest.approx([96.0, 4.0])
+
+
 def test_stable_set_linker_replaces_expired_tracks() -> None:
     linker = _make_linker("predict_stable_set", max_players=2, max_age_frames=1)
 

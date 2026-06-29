@@ -159,6 +159,23 @@ def test_build_eval_run_summary_rejects_malformed_metrics_by_default(tmp_path):
         build_eval_run_summary([phase1])
 
 
+def test_build_eval_run_summary_can_report_malformed_metrics_non_strict(tmp_path):
+    phase1 = tmp_path / "runs" / "phase1"
+    phase1.mkdir(parents=True)
+    (phase1 / "metrics.json").write_text("{not valid json", encoding="utf-8")
+
+    summary = build_eval_run_summary([phase1], strict=False)
+
+    assert summary["summary"]["metrics_file_count"] == 0
+    assert summary["summary"]["malformed_metrics_file_count"] == 1
+    assert summary["summary"]["status_counts"]["malformed_metrics"] == 1
+    assert summary["malformed_metrics_files"][0]["metrics_path"] == str(phase1 / "metrics.json")
+    malformed_phase = summary["phases"][0]
+    assert malformed_phase["phase"] == "phase1"
+    assert malformed_phase["status"] == "malformed_metrics"
+    assert malformed_phase["risk_reasons"] == ["metrics.json malformed"]
+
+
 def test_summarize_eval_runs_cli_writes_summary_json(tmp_path):
     phase1 = tmp_path / "runs" / "phase1"
     out = tmp_path / "summary.json"
@@ -180,3 +197,29 @@ def test_summarize_eval_runs_cli_writes_summary_json(tmp_path):
 
     assert json.loads(completed.stdout)["summary"]["status_counts"]["pass"] == 1
     assert json.loads(out.read_text(encoding="utf-8"))["schema_version"] == 1
+
+
+def test_summarize_eval_runs_cli_can_allow_malformed_metrics(tmp_path):
+    phase1 = tmp_path / "runs" / "phase1"
+    out = tmp_path / "summary.json"
+    phase1.mkdir(parents=True)
+    (phase1 / "metrics.json").write_text("{not valid json", encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/summarize_eval_runs.py",
+            "--phase-dir",
+            str(phase1),
+            "--allow-malformed-metrics",
+            "--out",
+            str(out),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(completed.stdout)
+    assert payload["summary"]["status_counts"]["malformed_metrics"] == 1
+    assert json.loads(out.read_text(encoding="utf-8"))["summary"]["malformed_metrics_file_count"] == 1

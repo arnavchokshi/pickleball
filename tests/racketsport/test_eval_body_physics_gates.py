@@ -81,6 +81,40 @@ def _write_body_artifacts(run_dir: Path, *, smpl_players: int = 1, skeleton_play
         encoding="utf-8",
     )
     (run_dir / "skeleton3d.json").write_text(json.dumps(skeleton), encoding="utf-8")
+    (run_dir / "body_compute_execution.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_body_compute_execution",
+                "mode": "fixture",
+                "scheduled_frames": [{"frame_idx": 0, "t": 0.0, "target_representation": "world_mesh"}],
+                "skipped_frames": [],
+                "summary": {
+                    "scheduled_frame_count": 1,
+                    "scheduled_player_frame_count": max(0, smpl_players),
+                    "scheduled_by_target_representation": {"world_mesh": 1},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "body_mesh_readiness.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_body_mesh_readiness",
+                "clip": "clip_001",
+                "status": "gate_verified",
+                "world_mesh_available": True,
+                "representation_decision": "world_mesh_required_available_verified",
+                "trusted_for_body_promotion": True,
+                "summary": {"mesh_frame_count": 1, "mesh_player_count": max(0, smpl_players)},
+                "blockers": [],
+                "warnings": [],
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 def _write_physics_artifact(run_dir: Path, *, players: int = 1, frames: int = 1, skate_free: bool = True) -> None:

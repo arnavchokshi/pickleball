@@ -123,6 +123,30 @@ def _write_racket_pose_artifact(
         ],
     }
     (run_dir / "racket_pose.json").write_text(json.dumps(payload), encoding="utf-8")
+    (run_dir / "racket_pose_readiness.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_racket_pose_readiness",
+                "clip": "clip_001",
+                "status": "ready_for_rkt_promotion",
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "racket_promotion_audit.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_racket_promotion_audit",
+                "clip": "clip_001",
+                "trusted_for_rkt_promotion": True,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 def _write_racket_pose_labels(

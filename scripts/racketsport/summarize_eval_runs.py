@@ -24,10 +24,15 @@ def main() -> int:
         help="Phase directory containing a metrics.json file. Repeat for multiple phases.",
     )
     parser.add_argument("--out", type=Path, help="Optional path to write the summary JSON.")
+    parser.add_argument(
+        "--allow-malformed-metrics",
+        action="store_true",
+        help="Report malformed metrics.json files in the summary instead of exiting nonzero.",
+    )
     args = parser.parse_args()
 
     try:
-        payload = build_eval_run_summary(args.phase_dirs)
+        payload = build_eval_run_summary(args.phase_dirs, strict=not args.allow_malformed_metrics)
     except ValueError as exc:
         parser.exit(2, f"{parser.prog}: error: {exc}\n")
 

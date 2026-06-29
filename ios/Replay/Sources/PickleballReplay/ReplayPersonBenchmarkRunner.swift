@@ -32,6 +32,9 @@ public struct ReplayPersonBenchmarkRunSummary: Codable, Equatable, Sendable {
     public var timingPath: String
     public var processedFrameCount: Int
     public var wallClockSeconds: Double
+    public var frameCount: Int?
+    public var detectorInvocationCount: Int?
+    public var propagatedFrameCount: Int?
 
     public init(
         schemaVersion: Int = 1,
@@ -42,7 +45,10 @@ public struct ReplayPersonBenchmarkRunSummary: Codable, Equatable, Sendable {
         tracksPath: String,
         timingPath: String,
         processedFrameCount: Int,
-        wallClockSeconds: Double
+        wallClockSeconds: Double,
+        frameCount: Int? = nil,
+        detectorInvocationCount: Int? = nil,
+        propagatedFrameCount: Int? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.artifactType = artifactType
@@ -53,6 +59,9 @@ public struct ReplayPersonBenchmarkRunSummary: Codable, Equatable, Sendable {
         self.timingPath = timingPath
         self.processedFrameCount = processedFrameCount
         self.wallClockSeconds = wallClockSeconds
+        self.frameCount = frameCount
+        self.detectorInvocationCount = detectorInvocationCount
+        self.propagatedFrameCount = propagatedFrameCount
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -65,6 +74,9 @@ public struct ReplayPersonBenchmarkRunSummary: Codable, Equatable, Sendable {
         case timingPath = "timing_path"
         case processedFrameCount = "processed_frame_count"
         case wallClockSeconds = "wall_clock_seconds"
+        case frameCount = "frame_count"
+        case detectorInvocationCount = "detector_invocation_count"
+        case propagatedFrameCount = "propagated_frame_count"
     }
 }
 
@@ -96,11 +108,17 @@ public enum ReplayPersonBenchmarkProcessor: Equatable, Sendable {
 
 @available(iOS 13.0, macOS 10.15, *)
 public final class ReplayPersonBenchmarkRunner {
-    private let processor: ReplayPersonBenchmarkProcessor
+    private let runtimeFactory: () throws -> any ReplayPersonFrameProcessor
     private let encoder: JSONEncoder
 
     public init(processor: ReplayPersonBenchmarkProcessor = .visionHumanRectangles) {
-        self.processor = processor
+        self.runtimeFactory = { try Self.makeRuntime(for: processor) }
+        self.encoder = JSONEncoder()
+        self.encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    }
+
+    init(runtimeFactory: @escaping () throws -> any ReplayPersonFrameProcessor) {
+        self.runtimeFactory = runtimeFactory
         self.encoder = JSONEncoder()
         self.encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     }
@@ -129,7 +147,7 @@ public final class ReplayPersonBenchmarkRunner {
         outputRootURL: URL,
         maxFrames: Int? = nil
     ) async throws -> ReplayPersonBenchmarkRunSummary {
-        let runtime = try makeRuntime()
+        let runtime = try runtimeFactory()
         let candidate = runtime.candidate
         let paths = ReplayPersonBenchmarkOutputPaths(
             rootURL: outputRootURL,
@@ -184,10 +202,16 @@ public final class ReplayPersonBenchmarkRunner {
             }
 
             let frameStarted = CFAbsoluteTimeGetCurrent()
-            let detections = try runtime.process(pixelBuffer: pixelBuffer, frameIndex: frameIndex)
+            let processingResult = try runtime.process(pixelBuffer: pixelBuffer, frameIndex: frameIndex)
             let latencyMs = max(0, (CFAbsoluteTimeGetCurrent() - frameStarted) * 1000.0)
-            frames.append(OnDevicePersonFrame(frameIndex: frameIndex, detections: detections))
-            timingSamples.append(OnDevicePersonTimingSample(frameIndex: frameIndex, latencyMs: latencyMs, processed: true))
+            frames.append(OnDevicePersonFrame(frameIndex: frameIndex, detections: processingResult.detections))
+            timingSamples.append(
+                OnDevicePersonTimingSample(
+                    frameIndex: frameIndex,
+                    latencyMs: latencyMs,
+                    processed: processingResult.detectorInvoked
+                )
+            )
             frameIndex += 1
             if frameIndex == 1 || frameIndex % 30 == 0 {
                 try? appendProgress(stage: "frame_processed", frameIndex: frameIndex, to: paths.progressURL)
@@ -225,14 +249,19 @@ public final class ReplayPersonBenchmarkRunner {
         try writeJSON(tracks, to: paths.tracksURL)
         try writeJSON(timing, to: paths.timingURL)
 
+        let processedFrameCount = timing.summary.processedFrameCount
+        let propagatedFrameCount = max(0, frames.count - processedFrameCount)
         let summary = ReplayPersonBenchmarkRunSummary(
             clipID: clip.clipID,
             candidate: candidate.rawValue,
             videoPath: clip.videoURL.path,
             tracksPath: paths.tracksURL.path,
             timingPath: paths.timingURL.path,
-            processedFrameCount: frames.count,
-            wallClockSeconds: wallClockSeconds
+            processedFrameCount: processedFrameCount,
+            wallClockSeconds: wallClockSeconds,
+            frameCount: frames.count,
+            detectorInvocationCount: processedFrameCount,
+            propagatedFrameCount: propagatedFrameCount
         )
         try writeJSON(summary, to: paths.summaryURL)
         try appendProgress(stage: "finished", frameIndex: frames.count, to: paths.progressURL)
@@ -261,7 +290,7 @@ public final class ReplayPersonBenchmarkRunner {
         }
     }
 
-    private func makeRuntime() throws -> ReplayPersonFrameProcessor {
+    private static func makeRuntime(for processor: ReplayPersonBenchmarkProcessor) throws -> any ReplayPersonFrameProcessor {
         switch processor {
         case .vision(let configuration):
             return VisionReplayPersonFrameProcessor(configuration: configuration)
@@ -274,12 +303,22 @@ public final class ReplayPersonBenchmarkRunner {
     }
 }
 
-private protocol ReplayPersonFrameProcessor {
+struct ReplayPersonFrameProcessingResult: Equatable, Sendable {
+    var detections: [OnDevicePersonDetection]
+    var detectorInvoked: Bool
+
+    init(detections: [OnDevicePersonDetection], detectorInvoked: Bool) {
+        self.detections = detections
+        self.detectorInvoked = detectorInvoked
+    }
+}
+
+protocol ReplayPersonFrameProcessor {
     var candidate: OnDevicePersonCandidate { get }
     var modelLoadMs: Double? { get }
     var mlpackageSizeMB: Double? { get }
 
-    func process(pixelBuffer: CVPixelBuffer, frameIndex: Int) throws -> [OnDevicePersonDetection]
+    func process(pixelBuffer: CVPixelBuffer, frameIndex: Int) throws -> ReplayPersonFrameProcessingResult
 }
 
 @available(iOS 13.0, macOS 10.15, *)
@@ -294,8 +333,11 @@ private final class VisionReplayPersonFrameProcessor: ReplayPersonFrameProcessor
         self.processor = VisionHumanRectanglePersonProcessor(configuration: configuration)
     }
 
-    func process(pixelBuffer: CVPixelBuffer, frameIndex: Int) throws -> [OnDevicePersonDetection] {
-        try processor.process(pixelBuffer: pixelBuffer, frameIndex: frameIndex)
+    func process(pixelBuffer: CVPixelBuffer, frameIndex: Int) throws -> ReplayPersonFrameProcessingResult {
+        ReplayPersonFrameProcessingResult(
+            detections: try processor.process(pixelBuffer: pixelBuffer, frameIndex: frameIndex),
+            detectorInvoked: true
+        )
     }
 }
 
@@ -317,13 +359,13 @@ private final class CoreMLReplayPersonFrameProcessor: ReplayPersonFrameProcessor
         self.detectionIntervalFrames = max(1, configuration.detectionIntervalFrames)
     }
 
-    func process(pixelBuffer: CVPixelBuffer, frameIndex: Int) throws -> [OnDevicePersonDetection] {
+    func process(pixelBuffer: CVPixelBuffer, frameIndex: Int) throws -> ReplayPersonFrameProcessingResult {
         if detectionIntervalFrames > 1, frameIndex % detectionIntervalFrames != 0 {
-            return lastDetections
+            return ReplayPersonFrameProcessingResult(detections: lastDetections, detectorInvoked: false)
         }
         let detections = try detector.process(pixelBuffer: pixelBuffer, frameIndex: frameIndex)
         lastDetections = detections
-        return detections
+        return ReplayPersonFrameProcessingResult(detections: detections, detectorInvoked: true)
     }
 }
 

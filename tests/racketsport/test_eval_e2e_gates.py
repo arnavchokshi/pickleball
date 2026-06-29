@@ -9,6 +9,7 @@ from tests.racketsport.calibration_fixtures import (
     minimal_ready_court_line_evidence,
 )
 from threed.racketsport.eval import e2e_eval
+from threed.racketsport.pipeline_contracts import PIPELINE_STAGE_CONTRACTS
 from threed.racketsport.replay_export import build_replay_review_export_from_virtual_world, write_replay_scene
 from threed.racketsport.schemas import (
     CameraIntrinsics,
@@ -17,6 +18,13 @@ from threed.racketsport.schemas import (
     CourtExtrinsics,
     ReprojectionError,
 )
+
+
+def _contract_required_artifacts(stage: str) -> list[str]:
+    for contract in PIPELINE_STAGE_CONTRACTS:
+        if contract.stage == stage:
+            return list(contract.required_artifacts)
+    raise AssertionError(f"unknown pipeline stage in test fixture: {stage}")
 
 
 REQUIRED_LABEL_FILES = (
@@ -150,6 +158,37 @@ def _write_smpl_motion_artifact(run_dir: Path) -> None:
         ),
         encoding="utf-8",
     )
+    _write_body_sidecar_artifacts(run_dir)
+
+
+def _write_body_sidecar_artifacts(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    body_compute_execution = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_body_compute_execution",
+        "mode": "fixture",
+        "scheduled_frames": [{"frame_idx": 0, "t": 0.0, "target_representation": "world_mesh"}],
+        "skipped_frames": [],
+        "summary": {
+            "scheduled_frame_count": 1,
+            "scheduled_player_frame_count": 1,
+            "scheduled_by_target_representation": {"world_mesh": 1},
+        },
+    }
+    body_mesh_readiness = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_body_mesh_readiness",
+        "clip": "clip_001",
+        "status": "gate_verified",
+        "world_mesh_available": True,
+        "representation_decision": "world_mesh_required_available_verified",
+        "trusted_for_body_promotion": True,
+        "summary": {"mesh_frame_count": 1, "mesh_player_count": 1},
+        "blockers": [],
+        "warnings": [],
+    }
+    (run_dir / "body_compute_execution.json").write_text(json.dumps(body_compute_execution), encoding="utf-8")
+    (run_dir / "body_mesh_readiness.json").write_text(json.dumps(body_mesh_readiness), encoding="utf-8")
 
 
 def _write_physics_refinement_artifact(run_dir: Path) -> None:
@@ -245,6 +284,26 @@ def _write_racket_pose_artifact(run_dir: Path) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def _write_racket_sidecar_artifacts(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    readiness = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_racket_pose_readiness",
+        "clip": "clip_001",
+        "status": "ready_for_rkt_promotion",
+        "blockers": [],
+    }
+    audit = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_racket_promotion_audit",
+        "clip": "clip_001",
+        "trusted_for_rkt_promotion": True,
+        "blockers": [],
+    }
+    (run_dir / "racket_pose_readiness.json").write_text(json.dumps(readiness), encoding="utf-8")
+    (run_dir / "racket_promotion_audit.json").write_text(json.dumps(audit), encoding="utf-8")
 
 
 def _habit_report_payload() -> dict:
@@ -368,6 +427,7 @@ def _write_e2e_artifacts(run_dir: Path) -> None:
     _write_physics_refinement_artifact(run_dir)
     _write_ball_event_artifacts(run_dir)
     _write_racket_pose_artifact(run_dir)
+    _write_racket_sidecar_artifacts(run_dir)
     _write_report_artifacts(run_dir)
     _write_replay_artifacts(run_dir)
 
@@ -383,7 +443,8 @@ def test_e2e_eval_fails_when_replay_glbs_are_review_static_only(tmp_path: Path) 
     assert payload.status == "fail"
     assert payload.clips[0].status == "fail"
     metrics = payload.clips[0].metrics
-    assert metrics["required_artifacts_present"].value == 16
+    assert payload.required_artifacts == _contract_required_artifacts("e2e")
+    assert metrics["required_artifacts_present"].value == len(_contract_required_artifacts("e2e"))
     assert metrics["required_artifacts_present"].passed is True
     assert metrics["referenced_glb_files_present"].value == 2
     assert metrics["referenced_glb_files_present"].passed is True
@@ -406,6 +467,22 @@ def test_e2e_eval_blocks_when_required_artifact_is_missing(tmp_path: Path) -> No
     assert payload.status == "blocked"
     assert payload.clips[0].status == "blocked"
     assert payload.clips[0].missing_artifacts == ["racket_pose.json"]
+    assert payload.clips[0].metrics == {}
+
+
+def test_e2e_eval_blocks_when_required_sidecar_is_missing(tmp_path: Path) -> None:
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase11"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_e2e_artifacts(root / "clip_001")
+    (root / "clip_001" / "body_mesh_readiness.json").unlink()
+
+    payload = e2e_eval.evaluate(root, labels_root)
+
+    assert payload.status == "blocked"
+    assert payload.required_artifacts == _contract_required_artifacts("e2e")
+    assert payload.clips[0].status == "blocked"
+    assert payload.clips[0].missing_artifacts == ["body_mesh_readiness.json"]
     assert payload.clips[0].metrics == {}
 
 
@@ -470,8 +547,9 @@ def test_e2e_eval_emits_named_numeric_gate_metadata(tmp_path: Path) -> None:
     payload = e2e_eval.evaluate(root, labels_root)
     metrics = payload.clips[0].metrics
 
-    assert metrics["required_artifacts_present"].gate == "artifact_check.e2e_required_artifacts_present: == 16"
-    assert metrics["required_artifacts_total"].gate == "artifact_check.e2e_required_artifacts_total: == 16"
+    e2e_required_count = len(_contract_required_artifacts("e2e"))
+    assert metrics["required_artifacts_present"].gate == f"artifact_check.e2e_required_artifacts_present: == {e2e_required_count}"
+    assert metrics["required_artifacts_total"].gate == f"artifact_check.e2e_required_artifacts_total: == {e2e_required_count}"
     assert metrics["referenced_glb_files_present"].gate == "artifact_check.e2e_referenced_glb_files_present: == 2"
     assert metrics["referenced_glb_files_valid"].gate == "artifact_check.e2e_referenced_glb_files_valid: == 2"
     assert all(metric.status == "measured" for metric in metrics.values())

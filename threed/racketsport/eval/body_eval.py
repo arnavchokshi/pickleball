@@ -11,11 +11,19 @@ from threed.racketsport.eval.metrics import (
     missing_artifacts,
     write_phase_metrics,
 )
+from threed.racketsport.pipeline_contracts import PIPELINE_STAGE_CONTRACTS
 from threed.racketsport.schemas import EvalClipResult, Skeleton3D, SmplMotion, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
-REQUIRED_BODY_ARTIFACTS = ["smpl_motion.json", "skeleton3d.json"]
+def _required_artifacts_for_stage(stage: str) -> list[str]:
+    for contract in PIPELINE_STAGE_CONTRACTS:
+        if contract.stage == stage:
+            return list(contract.required_artifacts)
+    raise RuntimeError(f"unknown pipeline stage: {stage}")
+
+
+REQUIRED_BODY_ARTIFACTS = _required_artifacts_for_stage("body")
 BODY_GATES = {
     "smpl_players": NumericGate(
         name="presence_check.body_smpl_players_min",

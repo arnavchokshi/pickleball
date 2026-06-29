@@ -553,7 +553,11 @@ def run_pipeline(
             summary_status = PIPELINE_STATUS_BLOCKED
             break
 
-    review_artifacts = _write_best_effort_review_artifacts(context, expected_players=max_players)
+    review_artifacts = _write_best_effort_review_artifacts(
+        context,
+        expected_players=max_players,
+        protected_artifacts=_successful_stage_artifacts(stage_runs),
+    )
     readiness = build_readiness_report(run_path, stage=stage)
     if summary_status == PIPELINE_STATUS_PASS and readiness["status"] != "ready":
         summary_status = PIPELINE_STATUS_BLOCKED
@@ -611,10 +615,27 @@ def _blocked_stage(contract: PipelineStageContract, note: str) -> dict[str, Any]
     ).as_dict()
 
 
-def _write_best_effort_review_artifacts(context: StageContext, *, expected_players: int) -> dict[str, Any]:
+def _successful_stage_artifacts(stage_runs: Sequence[dict[str, Any]]) -> set[str]:
+    protected: set[str] = set()
+    for stage_run in stage_runs:
+        if stage_run.get("status") in {PIPELINE_STATUS_FAIL, PIPELINE_STATUS_BLOCKED}:
+            continue
+        produced = stage_run.get("produced_artifacts", [])
+        if isinstance(produced, list):
+            protected.update(str(artifact) for artifact in produced)
+    return protected
+
+
+def _write_best_effort_review_artifacts(
+    context: StageContext,
+    *,
+    expected_players: int,
+    protected_artifacts: set[str] | None = None,
+) -> dict[str, Any]:
     produced_artifacts: list[str] = []
     reused_artifacts: list[str] = []
     notes: list[str] = []
+    protected = protected_artifacts or set()
 
     tracks_path = context.run_dir / "tracks.json"
     court_path = context.run_dir / "court_calibration.json"
@@ -625,9 +646,21 @@ def _write_best_effort_review_artifacts(context: StageContext, *, expected_playe
     skeleton_path = _existing_file(context.run_dir / "skeleton3d.json")
 
     if tracks_path.is_file():
-        try:
-            frame_plan_path = context.run_dir / "frame_compute_plan.json"
-            if not frame_plan_path.is_file():
+        frame_plan_path = context.run_dir / "frame_compute_plan.json"
+        protect_body_plan = bool(
+            protected.intersection(
+                {
+                    "body_compute_execution.json",
+                    "body_mesh_readiness.json",
+                    "smpl_motion.json",
+                    "skeleton3d.json",
+                }
+            )
+        )
+        if protect_body_plan and frame_plan_path.is_file():
+            reused_artifacts.append("frame_compute_plan.json")
+        else:
+            try:
                 frame_plan = build_frame_compute_plan_from_files(
                     tracks_path=tracks_path,
                     ball_track_path=ball_path,
@@ -636,24 +669,25 @@ def _write_best_effort_review_artifacts(context: StageContext, *, expected_playe
                 )
                 write_frame_compute_plan(frame_plan_path, frame_plan)
                 produced_artifacts.append("frame_compute_plan.json")
-            else:
-                reused_artifacts.append("frame_compute_plan.json")
-        except Exception as exc:
-            notes.append(f"frame_compute_plan.json not written: {exc}")
+            except Exception as exc:
+                notes.append(f"frame_compute_plan.json not written: {exc}")
 
-        try:
-            tracks = validate_artifact_file("tracks", tracks_path)
-            if not isinstance(tracks, Tracks):
-                raise ValueError("tracks artifact did not parse as Tracks")
-            body_execution = build_body_compute_execution(
-                tracks,
-                frame_plan_path=context.run_dir / "frame_compute_plan.json",
-                max_frames=context.max_frames,
-            )
-            write_body_compute_execution(context.run_dir / "body_compute_execution.json", body_execution)
-            produced_artifacts.append("body_compute_execution.json")
-        except Exception as exc:
-            notes.append(f"body_compute_execution.json not written: {exc}")
+        if "body_compute_execution.json" in protected and (context.run_dir / "body_compute_execution.json").is_file():
+            reused_artifacts.append("body_compute_execution.json")
+        else:
+            try:
+                tracks = validate_artifact_file("tracks", tracks_path)
+                if not isinstance(tracks, Tracks):
+                    raise ValueError("tracks artifact did not parse as Tracks")
+                body_execution = build_body_compute_execution(
+                    tracks,
+                    frame_plan_path=context.run_dir / "frame_compute_plan.json",
+                    max_frames=context.max_frames,
+                )
+                write_body_compute_execution(context.run_dir / "body_compute_execution.json", body_execution)
+                produced_artifacts.append("body_compute_execution.json")
+            except Exception as exc:
+                notes.append(f"body_compute_execution.json not written: {exc}")
 
     if court_path.is_file():
         try:

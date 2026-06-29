@@ -433,12 +433,14 @@ export function parseLabelOverlayPayload(input: unknown): LabelOverlayPayload {
   const labelItems = Array.isArray(items)
     ? items.filter((item): item is LabelItem => typeof item === "object" && item !== null)
     : [];
+  const annotationMeta =
+    annotation && typeof annotation === "object" && !Array.isArray(annotation) ? (annotation as Record<string, unknown>) : {};
   const frameMeta = record.frames && typeof record.frames === "object" && !Array.isArray(record.frames)
     ? (record.frames as Record<string, unknown>)
     : {};
   const sourceFps = readOptionalPositiveNumber(frameMeta.source_fps) ?? readOptionalPositiveNumber(frameMeta.frame_rate_fps) ?? 30;
   const sampleEveryFrames = readOptionalPositiveNumber(frameMeta.sample_every_frames) ?? 1;
-  const inferredSize = inferLabelSourceSize(labelItems, frameMeta.source_resolution);
+  const inferredSize = inferLabelSourceSize(record, frameMeta, annotationMeta);
   return {
     items: labelItems,
     notGroundTruth: record.not_ground_truth === true,
@@ -495,29 +497,61 @@ function emptyLabelOverlayPayload(): LabelOverlayPayload {
 }
 
 function readOptionalPositiveNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+  return null;
 }
 
-function inferLabelSourceSize(items: LabelItem[], sourceResolution: unknown): [number, number] {
-  const source =
-    Array.isArray(sourceResolution) && sourceResolution.length >= 2
-      ? [readOptionalPositiveNumber(sourceResolution[0]), readOptionalPositiveNumber(sourceResolution[1])]
-      : [null, null];
-  const maxBox = items.reduce(
-    (best, item) => {
-      const box = item.bbox_xyxy ?? xywhToXyxy(item.bbox);
-      if (!box) return best;
-      return [Math.max(best[0], box[2]), Math.max(best[1], box[3])] as [number, number];
-    },
-    [0, 0] as [number, number],
+function inferLabelSourceSize(
+  payload: Record<string, unknown>,
+  frameMeta: Record<string, unknown>,
+  annotationMeta: Record<string, unknown>,
+): [number, number] {
+  const explicitLabelResolution = readFirstResolution(
+    frameMeta.label_resolution,
+    frameMeta.render_resolution,
+    frameMeta.coordinate_resolution,
+    frameMeta.frame_pack_resolution,
+    frameMeta.frame_resolution,
+    frameMeta.image_resolution,
+    annotationMeta.label_resolution,
+    annotationMeta.render_resolution,
+    annotationMeta.coordinate_resolution,
+    annotationMeta.resolution,
+    payload.label_resolution,
+    payload.render_resolution,
+    payload.coordinate_resolution,
   );
-  const sourceWidth = source[0] ?? 1920;
-  const sourceHeight = source[1] ?? 1080;
-  const halfWidth = sourceWidth / 2;
-  const halfHeight = sourceHeight / 2;
-  const boxesFitHalfResolution = maxBox[0] > 0 && maxBox[1] > 0 && maxBox[0] <= halfWidth + 2 && maxBox[1] <= halfHeight + 2;
-  if (boxesFitHalfResolution) return [halfWidth, halfHeight];
-  return [sourceWidth, sourceHeight];
+  if (explicitLabelResolution) return explicitLabelResolution;
+  return readFirstResolution(frameMeta.source_resolution, frameMeta.resolution, payload.source_resolution, payload.resolution) ?? [1920, 1080];
+}
+
+function readFirstResolution(...values: unknown[]): [number, number] | null {
+  for (const value of values) {
+    const resolution = readOptionalResolution(value);
+    if (resolution) return resolution;
+  }
+  return null;
+}
+
+function readOptionalResolution(value: unknown): [number, number] | null {
+  if (Array.isArray(value) && value.length >= 2) {
+    const width = readOptionalPositiveNumber(value[0]);
+    const height = readOptionalPositiveNumber(value[1]);
+    return width !== null && height !== null ? [width, height] : null;
+  }
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    const width = readOptionalPositiveNumber(record.width) ?? readOptionalPositiveNumber(record.w);
+    const height = readOptionalPositiveNumber(record.height) ?? readOptionalPositiveNumber(record.h);
+    return width !== null && height !== null ? [width, height] : null;
+  }
+  return null;
 }
 
 function labelFrameIndex(value: LabelItem["frame"]): number | null {
@@ -525,11 +559,6 @@ function labelFrameIndex(value: LabelItem["frame"]): number | null {
   if (typeof value !== "string") return null;
   const match = value.match(/(\d+)/);
   return match ? Math.max(0, Number.parseInt(match[1], 10) - 1) : null;
-}
-
-function xywhToXyxy(value?: number[]): [number, number, number, number] | null {
-  if (!Array.isArray(value) || value.length < 4) return null;
-  return [value[0], value[1], value[0] + value[2], value[1] + value[3]];
 }
 
 function readContactWindowEvent(input: unknown, index: number): ContactWindowEvent {

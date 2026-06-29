@@ -439,6 +439,7 @@ class _StableSetPersonLinker:
             "velocity_xy": [0.0, 0.0],
             "last_seen_frame_index": frame_index,
             "observation": observation,
+            "appearance_hsv": _appearance_vector(observation),
         }
 
     @staticmethod
@@ -454,6 +455,31 @@ class _StableSetPersonLinker:
         track["bbox_xywh"] = current_bbox
         track["last_seen_frame_index"] = frame_index
         track["observation"] = observation
+        current_appearance = _appearance_vector(observation)
+        previous_appearance = _appearance_vector(track)
+        if current_appearance is not None:
+            if previous_appearance is None:
+                track["appearance_hsv"] = current_appearance
+            else:
+                track["appearance_hsv"] = [
+                    0.85 * previous + 0.15 * current
+                    for previous, current in zip(previous_appearance, current_appearance, strict=False)
+                ]
+
+
+class _WideRoleStablePersonLinker:
+    def __init__(self, *, max_tracks: int = 4, max_age_frames: int = 45) -> None:
+        self.max_tracks = max_tracks
+        self._stable = _StableSetPersonLinker(
+            max_tracks=max_tracks,
+            max_age_frames=max_age_frames,
+            max_assignment_cost=2.75,
+        )
+
+    def update(self, *, frame_index: int, observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not self._stable._tracks:
+            observations = _select_spatially_diverse_observations(observations, self.max_tracks)
+        return self._stable.update(frame_index=frame_index, observations=observations)
 
 
 def _make_linker(
@@ -496,6 +522,11 @@ def _make_linker(
             max_tracks=max_players,
             max_age_frames=60 if max_age_frames is None else max_age_frames,
         )
+    if tracker in {"predict_role_lock_wide_stable", "role_lock_wide_stable"}:
+        return _WideRoleStablePersonLinker(
+            max_tracks=max_players,
+            max_age_frames=60 if max_age_frames is None else max_age_frames,
+        )
     raise ValueError(f"unsupported replay person tracker: {tracker}")
 
 
@@ -515,6 +546,7 @@ def _observations_from_result(
         return []
     xyxy = boxes.xyxy.cpu().numpy()
     conf = boxes.conf.cpu().numpy()
+    source_image = getattr(result, "orig_img", None)
     observations: list[dict[str, Any]] = []
     for raw_box, confidence in zip(xyxy, conf, strict=False):
         x1, y1, x2, y2 = [float(value) for value in raw_box]
@@ -523,13 +555,15 @@ def _observations_from_result(
         if width <= 0.0 or height <= 0.0:
             continue
         bbox_xywh = _expand_bbox_xywh([x1, y1, width, height], bbox_expand)
-        observations.append(
-            {
-                "bbox_xywh": bbox_xywh,
-                "confidence": max(0.0, min(1.0, float(confidence))),
-                "source": "yolo_person",
-            }
-        )
+        observation = {
+            "bbox_xywh": bbox_xywh,
+            "confidence": max(0.0, min(1.0, float(confidence))),
+            "source": "yolo_person",
+        }
+        appearance = _appearance_hsv_from_image(source_image, [x1, y1, width, height])
+        if appearance is not None:
+            observation["appearance_hsv"] = appearance
+        observations.append(observation)
     return _prune_observations(
         observations,
         max_players=max_players,
@@ -864,6 +898,41 @@ def _expand_bbox_xywh(bbox_xywh: list[float], scale: float) -> list[float]:
     return [center_x - expanded_width / 2.0, bottom_y - expanded_height, expanded_width, expanded_height]
 
 
+def _appearance_hsv_from_image(image: Any, bbox_xywh: list[float]) -> list[float] | None:
+    if image is None or not hasattr(image, "shape"):
+        return None
+    try:
+        import cv2  # type: ignore[import-not-found]
+        import numpy as np  # type: ignore[import-not-found]
+    except ImportError:
+        return None
+    image_height, image_width = image.shape[:2]
+    x, y, width, height = [float(value) for value in bbox_xywh]
+    crop_x1 = int(max(0.0, min(image_width - 1, x + 0.20 * width)))
+    crop_x2 = int(max(0.0, min(image_width, x + 0.80 * width)))
+    crop_y1 = int(max(0.0, min(image_height - 1, y + 0.18 * height)))
+    crop_y2 = int(max(0.0, min(image_height, y + 0.70 * height)))
+    if crop_x2 <= crop_x1 + 1 or crop_y2 <= crop_y1 + 1:
+        return None
+    crop = image[crop_y1:crop_y2, crop_x1:crop_x2]
+    if crop.size == 0:
+        return None
+    hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+    hue = hsv[:, :, 0].astype("float32") * (2.0 * math.pi / 180.0)
+    saturation = hsv[:, :, 1].astype("float32") / 255.0
+    value = hsv[:, :, 2].astype("float32") / 255.0
+    weights = saturation + 0.05
+    weight_sum = float(weights.sum())
+    if weight_sum <= 0.0:
+        return None
+    return [
+        float((weights * np.cos(hue)).sum() / weight_sum),
+        float((weights * np.sin(hue)).sum() / weight_sum),
+        float((weights * saturation).sum() / weight_sum),
+        float((weights * value).sum() / weight_sum),
+    ]
+
+
 def _select_spatially_diverse_observations(observations: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
     if limit <= 0 or not observations:
         return []
@@ -897,7 +966,7 @@ def _stable_track_assignments(
     for track_index, track in enumerate(tracks):
         predicted = _predict_track_bbox(track, frame_index)
         for observation_index, observation in enumerate(observations):
-            cost = _stable_assignment_cost(predicted, observation)
+            cost = _stable_assignment_cost(track, predicted, observation)
             if cost <= max_cost:
                 pairs.append((cost, track_index, observation_index))
     pairs.sort()
@@ -918,7 +987,7 @@ def _predict_track_bbox(track: dict[str, Any], frame_index: int) -> list[float]:
     return [bbox[0] + velocity_x * frame_delta, bbox[1] + velocity_y * frame_delta, bbox[2], bbox[3]]
 
 
-def _stable_assignment_cost(predicted_bbox: list[float], observation: dict[str, Any]) -> float:
+def _stable_assignment_cost(track: dict[str, Any], predicted_bbox: list[float], observation: dict[str, Any]) -> float:
     bbox = [float(value) for value in observation["bbox_xywh"]]
     distance = _bbox_center_distance(predicted_bbox, bbox)
     scale = max(32.0, _bbox_diagonal(predicted_bbox), _bbox_diagonal(bbox))
@@ -926,7 +995,28 @@ def _stable_assignment_cost(predicted_bbox: list[float], observation: dict[str, 
     iou_term = 1.0 - _bbox_iou(predicted_bbox, bbox)
     area_term = abs(math.log(max(1.0, bbox[2] * bbox[3]) / max(1.0, predicted_bbox[2] * predicted_bbox[3])))
     confidence_bonus = min(1.0, max(0.0, float(observation.get("confidence", 0.0))))
-    return distance_term + 0.8 * iou_term + 0.25 * area_term - 0.2 * confidence_bonus
+    appearance_distance = _appearance_distance(_appearance_vector(track), _appearance_vector(observation))
+    if appearance_distance is None:
+        return distance_term + 0.8 * iou_term + 0.25 * area_term - 0.2 * confidence_bonus
+    return 0.35 * distance_term + 0.5 * iou_term + 0.2 * area_term + 4.0 * appearance_distance - 0.2 * confidence_bonus
+
+
+def _appearance_vector(item: dict[str, Any]) -> list[float] | None:
+    raw = item.get("appearance_hsv")
+    if not isinstance(raw, (list, tuple)) or not raw:
+        return None
+    try:
+        return [float(value) for value in raw]
+    except (TypeError, ValueError):
+        return None
+
+
+def _appearance_distance(a: list[float] | None, b: list[float] | None) -> float | None:
+    if a is None or b is None or len(a) != len(b):
+        return None
+    if not a:
+        return None
+    return math.sqrt(sum((left - right) ** 2 for left, right in zip(a, b, strict=False)) / len(a))
 
 
 def _detection_from_observation(track_id: int, observation: dict[str, Any], *, role: str | None = None) -> dict[str, Any]:

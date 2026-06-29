@@ -10,6 +10,7 @@ from tests.racketsport.calibration_fixtures import (
     minimal_calibration_world_pts,
     minimal_ready_court_line_evidence,
 )
+from threed.racketsport.pipeline_contracts import PIPELINE_STAGE_CONTRACTS
 from threed.racketsport.replay_export import build_replay_review_export_from_virtual_world, write_replay_scene
 from threed.racketsport.schemas import (
     CameraIntrinsics,
@@ -19,6 +20,13 @@ from threed.racketsport.schemas import (
     ReprojectionError,
     validate_artifact_file,
 )
+
+
+def _contract_required_artifacts(stage: str) -> list[str]:
+    for contract in PIPELINE_STAGE_CONTRACTS:
+        if contract.stage == stage:
+            return list(contract.required_artifacts)
+    raise AssertionError(f"unknown pipeline stage in test fixture: {stage}")
 
 
 REQUIRED_LABEL_FILES = (
@@ -141,6 +149,37 @@ def _write_body_artifacts(run_dir: Path) -> None:
     }
     (run_dir / "smpl_motion.json").write_text(json.dumps(smpl_motion), encoding="utf-8")
     (run_dir / "skeleton3d.json").write_text(json.dumps(skeleton), encoding="utf-8")
+    _write_body_sidecar_artifacts(run_dir)
+
+
+def _write_body_sidecar_artifacts(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    body_compute_execution = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_body_compute_execution",
+        "mode": "fixture",
+        "scheduled_frames": [{"frame_idx": 0, "t": 0.0, "target_representation": "world_mesh"}],
+        "skipped_frames": [],
+        "summary": {
+            "scheduled_frame_count": 1,
+            "scheduled_player_frame_count": 1,
+            "scheduled_by_target_representation": {"world_mesh": 1},
+        },
+    }
+    body_mesh_readiness = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_body_mesh_readiness",
+        "clip": "clip_001",
+        "status": "gate_verified",
+        "world_mesh_available": True,
+        "representation_decision": "world_mesh_required_available_verified",
+        "trusted_for_body_promotion": True,
+        "summary": {"mesh_frame_count": 1, "mesh_player_count": 1},
+        "blockers": [],
+        "warnings": [],
+    }
+    (run_dir / "body_compute_execution.json").write_text(json.dumps(body_compute_execution), encoding="utf-8")
+    (run_dir / "body_mesh_readiness.json").write_text(json.dumps(body_mesh_readiness), encoding="utf-8")
 
 
 def _write_physics_artifact(run_dir: Path) -> None:
@@ -266,6 +305,26 @@ def _write_racket_pose_artifact(run_dir: Path, *, contacts: int = 1) -> None:
         ],
     }
     (run_dir / "racket_pose.json").write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _write_racket_artifacts(run_dir: Path, *, contacts: int = 1) -> None:
+    _write_racket_pose_artifact(run_dir, contacts=contacts)
+    readiness = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_racket_pose_readiness",
+        "clip": "clip_001",
+        "status": "ready_for_rkt_promotion",
+        "blockers": [],
+    }
+    audit = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_racket_promotion_audit",
+        "clip": "clip_001",
+        "trusted_for_rkt_promotion": True,
+        "blockers": [],
+    }
+    (run_dir / "racket_pose_readiness.json").write_text(json.dumps(readiness), encoding="utf-8")
+    (run_dir / "racket_promotion_audit.json").write_text(json.dumps(audit), encoding="utf-8")
 
 
 def _write_metric_artifacts(run_dir: Path) -> None:
@@ -427,7 +486,7 @@ def _write_e2e_artifacts(run_dir: Path) -> None:
     _write_body_artifacts(run_dir)
     _write_physics_artifact(run_dir)
     _write_ball_event_artifacts(run_dir)
-    _write_racket_pose_artifact(run_dir, contacts=1)
+    _write_racket_artifacts(run_dir, contacts=1)
     _write_metric_artifacts(run_dir)
     _write_shot_drill_artifacts(run_dir)
     _write_copy_artifacts(run_dir)
@@ -730,7 +789,7 @@ def test_body_eval_passes_when_ready_clip_has_body_artifacts(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert json.loads(completed.stdout)["status"] == "pass"
     assert payload["phase"] == "phase3"
-    assert payload["required_artifacts"] == ["smpl_motion.json", "skeleton3d.json"]
+    assert payload["required_artifacts"] == _contract_required_artifacts("body")
     assert payload["clips"][0]["metrics"]["smpl_players"]["value"] == 1
     assert payload["clips"][0]["metrics"]["smpl_frames"]["value"] == 1
     assert payload["clips"][0]["metrics"]["skeleton_players"]["value"] == 1
@@ -764,6 +823,37 @@ def test_body_eval_blocks_when_skeleton_preview_is_missing(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
     assert payload["clips"][0]["missing_artifacts"] == ["skeleton3d.json"]
+
+
+def test_body_eval_blocks_when_body_readiness_sidecars_are_missing(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase3"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_body_artifacts(root / "clip_001")
+    (root / "clip_001" / "body_compute_execution.json").unlink()
+    (root / "clip_001" / "body_mesh_readiness.json").unlink()
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.body_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["required_artifacts"] == _contract_required_artifacts("body")
+    assert payload["clips"][0]["missing_artifacts"] == ["body_compute_execution.json", "body_mesh_readiness.json"]
 
 
 def test_physics_eval_passes_when_ready_clip_has_refined_smpl_motion(tmp_path):
@@ -924,7 +1014,7 @@ def test_racket_eval_is_not_measured_without_reference_pose_labels(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase6"
     _write_ready_clip(labels_root, "clip_001")
-    _write_racket_pose_artifact(root / "clip_001", contacts=2)
+    _write_racket_artifacts(root / "clip_001", contacts=2)
 
     completed = subprocess.run(
         [
@@ -947,7 +1037,7 @@ def test_racket_eval_is_not_measured_without_reference_pose_labels(tmp_path):
     assert completed.returncode == 1
     assert json.loads(completed.stdout)["status"] == "not_measured"
     assert payload["phase"] == "phase6"
-    assert payload["required_artifacts"] == ["racket_pose.json"]
+    assert payload["required_artifacts"] == _contract_required_artifacts("racket")
     assert payload["status"] == "not_measured"
     assert payload["clips"][0]["metrics"]["racket_players"]["value"] == 1
     assert payload["clips"][0]["metrics"]["racket_frames"]["value"] == 1
@@ -960,6 +1050,8 @@ def test_racket_eval_blocks_when_racket_pose_artifact_is_missing(tmp_path):
     labels_root = tmp_path / "data" / "testclips"
     root = tmp_path / "runs" / "phase6"
     _write_ready_clip(labels_root, "clip_001")
+    _write_racket_artifacts(root / "clip_001")
+    (root / "clip_001" / "racket_pose.json").unlink()
 
     subprocess.run(
         [
@@ -980,7 +1072,37 @@ def test_racket_eval_blocks_when_racket_pose_artifact_is_missing(tmp_path):
 
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
+    assert payload["required_artifacts"] == _contract_required_artifacts("racket")
     assert payload["clips"][0]["missing_artifacts"] == ["racket_pose.json"]
+
+
+def test_racket_eval_blocks_when_readiness_and_audit_sidecars_are_missing(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase6"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_racket_pose_artifact(root / "clip_001", contacts=2)
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.racket_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["required_artifacts"] == _contract_required_artifacts("racket")
+    assert payload["clips"][0]["missing_artifacts"] == ["racket_pose_readiness.json", "racket_promotion_audit.json"]
 
 
 def test_metric_eval_passes_when_ready_clip_has_metrics_and_habit_artifacts(tmp_path):
@@ -1271,8 +1393,9 @@ def test_e2e_eval_fails_when_major_artifacts_include_review_static_replay_glbs(t
     assert json.loads(completed.stdout)["status"] == "fail"
     assert payload["phase"] == "phase11"
     assert payload["status"] == "fail"
-    assert payload["clips"][0]["metrics"]["required_artifacts_present"]["value"] == 16
-    assert payload["clips"][0]["metrics"]["required_artifacts_total"]["value"] == 16
+    assert payload["required_artifacts"] == _contract_required_artifacts("e2e")
+    assert payload["clips"][0]["metrics"]["required_artifacts_present"]["value"] == len(_contract_required_artifacts("e2e"))
+    assert payload["clips"][0]["metrics"]["required_artifacts_total"]["value"] == len(_contract_required_artifacts("e2e"))
     assert payload["clips"][0]["metrics"]["referenced_glb_files_present"]["value"] == 2
     assert payload["clips"][0]["metrics"]["referenced_glb_files_valid"]["value"] == 2
     assert payload["clips"][0]["metrics"]["replay_production_ready"]["value"] is False
@@ -1307,3 +1430,33 @@ def test_e2e_eval_blocks_when_major_artifact_is_missing(tmp_path):
     payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
     assert payload["clips"][0]["missing_artifacts"] == ["racket_pose.json"]
+
+
+def test_e2e_eval_blocks_when_required_readiness_sidecar_is_missing(tmp_path):
+    labels_root = tmp_path / "data" / "testclips"
+    root = tmp_path / "runs" / "phase11"
+    _write_ready_clip(labels_root, "clip_001")
+    _write_e2e_artifacts(root / "clip_001")
+    (root / "clip_001" / "racket_promotion_audit.json").unlink()
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "threed.racketsport.eval.e2e_eval",
+            "--root",
+            str(root),
+            "--labels",
+            str(labels_root),
+            "--out",
+            str(root / "metrics.json"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["required_artifacts"] == _contract_required_artifacts("e2e")
+    assert payload["clips"][0]["missing_artifacts"] == ["racket_promotion_audit.json"]

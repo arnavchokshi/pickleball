@@ -11,11 +11,19 @@ from threed.racketsport.eval.metrics import (
     write_phase_metrics,
 )
 from threed.racketsport.eval.label_checks import RACKET_LABEL_GATES, score_racket_pose_labels
+from threed.racketsport.pipeline_contracts import PIPELINE_STAGE_CONTRACTS
 from threed.racketsport.schemas import EvalClipResult, RacketPose, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
-REQUIRED_RACKET_ARTIFACTS = ["racket_pose.json"]
+def _required_artifacts_for_stage(stage: str) -> list[str]:
+    for contract in PIPELINE_STAGE_CONTRACTS:
+        if contract.stage == stage:
+            return list(contract.required_artifacts)
+    raise RuntimeError(f"unknown pipeline stage: {stage}")
+
+
+REQUIRED_RACKET_ARTIFACTS = _required_artifacts_for_stage("racket")
 RACKET_GATES = {}
 
 

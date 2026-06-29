@@ -14,7 +14,12 @@ METRIC_STATUS_KEYS = ("measured", "not_measured")
 GATE_RESULT_KEYS = ("pass", "fail", "not_measured")
 
 
-def build_eval_run_summary(phase_dirs: Iterable[str | Path], *, metrics_filename: str = "metrics.json") -> dict[str, Any]:
+def build_eval_run_summary(
+    phase_dirs: Iterable[str | Path],
+    *,
+    metrics_filename: str = "metrics.json",
+    strict: bool = True,
+) -> dict[str, Any]:
     phase_paths = sorted(Path(phase_dir) for phase_dir in phase_dirs)
     if not phase_paths:
         raise ValueError("at least one phase directory is required")
@@ -38,14 +43,17 @@ def build_eval_run_summary(phase_dirs: Iterable[str | Path], *, metrics_filename
         try:
             payload = _load_phase_metrics(metrics_path)
         except ValueError as exc:
-            malformed_metrics_files.append(
-                {
-                    "phase_dir": str(phase_dir),
-                    "metrics_path": str(metrics_path),
-                    "error": str(exc),
-                }
-            )
-            raise
+            malformed = {
+                "phase_dir": str(phase_dir),
+                "metrics_path": str(metrics_path),
+                "error": str(exc),
+            }
+            malformed_metrics_files.append(malformed)
+            if strict:
+                raise
+            status_counts["malformed_metrics"] += 1
+            phases.append(_malformed_phase_record(phase_dir=phase_dir, metrics_path=metrics_path, error=str(exc)))
+            continue
 
         phase_record = _phase_record(phase_dir=phase_dir, metrics_path=metrics_path, payload=payload)
         phases.append(phase_record)
@@ -117,6 +125,25 @@ def _missing_phase_record(*, phase_dir: Path, metrics_path: Path) -> dict[str, A
         "clip_status_counts": _fixed_counts(Counter(), EVAL_STATUS_KEYS),
         "risk_score": 80,
         "risk_reasons": ["metrics.json missing"],
+    }
+
+
+def _malformed_phase_record(*, phase_dir: Path, metrics_path: Path, error: str) -> dict[str, Any]:
+    phase = phase_dir.name
+    return {
+        "phase": phase,
+        "evaluator": None,
+        "phase_dir": str(phase_dir),
+        "metrics_path": str(metrics_path),
+        "metrics_exists": True,
+        "status": "malformed_metrics",
+        "summary": {"error": error},
+        "required_artifacts": [],
+        "metric_status_counts": _fixed_counts(Counter(), METRIC_STATUS_KEYS),
+        "gate_result_counts": _fixed_counts(Counter(), GATE_RESULT_KEYS),
+        "clip_status_counts": _fixed_counts(Counter(), EVAL_STATUS_KEYS),
+        "risk_score": 100,
+        "risk_reasons": ["metrics.json malformed"],
     }
 
 

@@ -12,29 +12,20 @@ from threed.racketsport.eval.metrics import (
     missing_artifacts,
     write_phase_metrics,
 )
+from threed.racketsport.pipeline_contracts import PIPELINE_STAGE_CONTRACTS
 from threed.racketsport.replay_export import audit_replay_export_manifest, inspect_glb_file, resolve_replay_glb_path
 from threed.racketsport.schemas import EvalClipResult, ReplayScene, validate_artifact_file
 from threed.racketsport.testclips import build_testclip_manifest
 
 
-REQUIRED_E2E_ARTIFACTS = [
-    "court_calibration.json",
-    "court_zones.json",
-    "net_plane.json",
-    "court_line_evidence.json",
-    "tracks.json",
-    "smpl_motion.json",
-    "skeleton3d.json",
-    "physics_refinement.json",
-    "ball_track.json",
-    "contact_windows.json",
-    "racket_pose.json",
-    "racket_sport_metrics.json",
-    "habit_report.json",
-    "coach_report.json",
-    "drill_report.json",
-    "replay_scene.json",
-]
+def _required_artifacts_for_stage(stage: str) -> list[str]:
+    for contract in PIPELINE_STAGE_CONTRACTS:
+        if contract.stage == stage:
+            return list(contract.required_artifacts)
+    raise RuntimeError(f"unknown pipeline stage: {stage}")
+
+
+REQUIRED_E2E_ARTIFACTS = _required_artifacts_for_stage("e2e")
 
 ARTIFACT_SCHEMA_NAMES = {
     "court_calibration.json": "court_calibration",
@@ -44,10 +35,14 @@ ARTIFACT_SCHEMA_NAMES = {
     "tracks.json": "tracks",
     "smpl_motion.json": "smpl_motion",
     "skeleton3d.json": "skeleton3d",
+    "body_compute_execution.json": "body_compute_execution",
+    "body_mesh_readiness.json": "body_mesh_readiness",
     "physics_refinement.json": "physics_refinement",
     "ball_track.json": "ball_track",
     "contact_windows.json": "contact_windows",
     "racket_pose.json": "racket_pose",
+    "racket_pose_readiness.json": "racket_pose_readiness",
+    "racket_promotion_audit.json": "racket_promotion_audit",
     "racket_sport_metrics.json": "racket_sport_metrics",
     "habit_report.json": "habit_report",
     "coach_report.json": "coach_report",
@@ -131,10 +126,10 @@ def evaluate(root: str | Path, labels_root: str | Path) -> object:
 
 def _evaluate_ready_clip(clip_name: str, *, run_dir: Path, labels_dir: Path) -> EvalClipResult:
     try:
-        parsed = {
-            artifact: validate_artifact_file(schema_name, run_dir / artifact)
-            for artifact, schema_name in ARTIFACT_SCHEMA_NAMES.items()
-        }
+        parsed = {}
+        for artifact in REQUIRED_E2E_ARTIFACTS:
+            schema_name = ARTIFACT_SCHEMA_NAMES[artifact]
+            parsed[artifact] = validate_artifact_file(schema_name, run_dir / artifact)
     except Exception as exc:
         return EvalClipResult(
             clip=clip_name,

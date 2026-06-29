@@ -403,7 +403,7 @@ def test_ball_stage_runner_prefers_eval_suite_selected_track_over_legacy_prototy
     _write_dependency_artifacts(run_dir)
 
     runners = _noop_dependency_runners()
-    runners["ball_events"] = BallStageRunner(prototype_root=eval_root)
+    runners["ball_events"] = BallStageRunner(prototype_root=eval_root, allow_prototype_root_fallback=True)
 
     summary = run_pipeline(
         clip=clip,
@@ -467,7 +467,7 @@ def test_ball_stage_runner_fails_closed_when_selected_track_has_no_selection_sid
     _write_dependency_artifacts(run_dir)
 
     runners = _noop_dependency_runners()
-    runners["ball_events"] = BallStageRunner(prototype_root=eval_root)
+    runners["ball_events"] = BallStageRunner(prototype_root=eval_root, allow_prototype_root_fallback=True)
 
     summary = run_pipeline(
         clip=clip,
@@ -529,6 +529,34 @@ def test_ball_stage_runner_fails_closed_when_no_click_source_artifact_is_missing
     assert not (run_dir / "contact_windows.json").exists()
 
 
+def test_ball_stage_runner_does_not_read_prototype_root_without_explicit_opt_in(tmp_path: Path) -> None:
+    clip = "clip_001"
+    inputs = tmp_path / "inputs" / clip
+    inputs.mkdir(parents=True)
+    run_dir = tmp_path / "runs" / clip
+    prototype_root = tmp_path / "prototype_gate_h100_v2"
+    stale_source = prototype_root / clip / "tracknet_smoke_0000_0010" / "ball_track_fusion_temporal_vball100_localtraj.json"
+    _write_json(stale_source, _ball_track_payload())
+    _write_dependency_artifacts(run_dir)
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(prototype_root=prototype_root)
+
+    summary = run_pipeline(
+        clip=clip,
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    assert summary["status"] == "fail"
+    ball_stage = summary["stages"][-1]
+    assert any("missing no-click BALL source artifact" in note for note in ball_stage["notes"])
+    assert str(stale_source) not in ball_stage["notes"][0]
+    assert not (run_dir / "ball_track.json").exists()
+
+
 def test_ball_stage_runner_blocks_empty_contact_windows_even_when_artifacts_are_schema_valid(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs" / "clip_001"
     run_dir = tmp_path / "runs" / "clip_001"
@@ -574,7 +602,7 @@ def test_ball_stage_runner_fuses_trusted_contact_windows_from_required_cue_artif
     assert summary["status"] == "blocked"
     assert summary["readiness"]["status"] == "not_ready"
     assert "calibration:court_line_evidence_not_ready" in summary["readiness"]["semantic_blockers"]
-    assert "body:body_compute_execution_has_no_scheduled_frames" in summary["readiness"]["semantic_blockers"]
+    assert "body_compute_execution.json" in summary["review_artifacts"]["reused_artifacts"]
     ball_stage = summary["stages"][-1]
     assert ball_stage["metrics"]["contact_event_count"] == 1
     assert "fused contact_windows.json from audio, wrist, and ball cue artifacts" in ball_stage["notes"]

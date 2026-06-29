@@ -394,13 +394,28 @@ describe("viewer data contracts", () => {
     });
   });
 
-  it("parses sampled prototype labels at their review-frame cadence", () => {
+  it("preserves declared source resolution when labels only occupy the upper-left half", () => {
     const parsed = parseLabelOverlayPayload(sampledLabelOverlay);
 
     expect(parsed.notGroundTruth).toBe(true);
     expect(parsed.secondsPerFrame).toBe(1);
     expect(labelOverlayForTime(parsed, 0.1).map((item) => item.id)).toEqual(["p1"]);
     expect(labelOverlayForTime(parsed, 2.4).map((item) => item.id)).toEqual(["p2"]);
+    expect(labelViewBox(parsed)).toBe("0 0 1920 1080");
+  });
+
+  it("uses explicit label resolution metadata for half-resolution overlays", () => {
+    const parsed = parseLabelOverlayPayload({
+      ...sampledLabelOverlay,
+      frames: {
+        ...sampledLabelOverlay.frames,
+        label_resolution: [960, 540],
+      },
+      annotation: {
+        items: [{ frame: "frame_000001.jpg", id: "p1" }],
+      },
+    });
+
     expect(labelViewBox(parsed)).toBe("0 0 960 540");
   });
 

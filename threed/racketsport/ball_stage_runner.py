@@ -54,9 +54,11 @@ class BallStageRunner:
         *,
         source_path: str | Path | None = None,
         prototype_root: str | Path = DEFAULT_PROTOTYPE_GATE_ROOT,
+        allow_prototype_root_fallback: bool = False,
     ) -> None:
         self.source_path = Path(source_path) if source_path is not None else None
         self.prototype_root = Path(prototype_root)
+        self.allow_prototype_root_fallback = allow_prototype_root_fallback
 
     def run(self, context: Any) -> BallStageRun:
         source_path = self._resolve_source_path(context)
@@ -119,6 +121,7 @@ class BallStageRunner:
         candidates = [self.source_path] if self.source_path is not None else _default_source_candidates(
             context,
             prototype_root=self.prototype_root,
+            allow_prototype_root_fallback=self.allow_prototype_root_fallback,
         )
         searched: list[Path] = []
         for candidate in candidates:
@@ -135,23 +138,29 @@ class BallStageRunner:
         )
 
 
-def _default_source_candidates(context: Any, *, prototype_root: Path) -> list[Path]:
+def _default_source_candidates(context: Any, *, prototype_root: Path, allow_prototype_root_fallback: bool) -> list[Path]:
     filename = DEFAULT_NO_CLICK_BALL_FILENAME
     smoke_dir = DEFAULT_TRACKNET_SMOKE_DIR
     selected_dir = DEFAULT_SELECTED_TRACKS_DIR
     selected_filename = DEFAULT_SELECTED_BALL_FILENAME
-    return [
+    candidates = [
         context.inputs_dir / selected_dir / context.clip / selected_filename,
         context.inputs_dir.parent / selected_dir / context.clip / selected_filename,
         context.run_dir / selected_dir / context.clip / selected_filename,
         context.run_dir.parent / selected_dir / context.clip / selected_filename,
-        prototype_root / selected_dir / context.clip / selected_filename,
         context.inputs_dir / filename,
         context.inputs_dir / smoke_dir / filename,
         context.run_dir / filename,
         context.run_dir / smoke_dir / filename,
-        prototype_root / context.clip / smoke_dir / filename,
     ]
+    if allow_prototype_root_fallback:
+        candidates.extend(
+            [
+                prototype_root / selected_dir / context.clip / selected_filename,
+                prototype_root / context.clip / smoke_dir / filename,
+            ]
+        )
+    return candidates
 
 
 def _source_mode_for_path(path: Path) -> str:

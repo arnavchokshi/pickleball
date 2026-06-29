@@ -171,7 +171,7 @@ def test_pipeline_summary_blocks_when_schema_valid_artifacts_are_not_semanticall
     assert "calibration:court_line_evidence_not_ready" in summary["readiness"]["semantic_blockers"]
 
 
-def test_pipeline_reports_existing_review_frame_plan_as_reused_not_produced(tmp_path: Path) -> None:
+def test_pipeline_overwrites_existing_review_frame_plan_from_current_inputs(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs" / "clip_001"
     run_dir = tmp_path / "runs" / "phase11" / "clip_001"
     _write_inputs(inputs)
@@ -188,14 +188,15 @@ def test_pipeline_reports_existing_review_frame_plan_as_reused_not_produced(tmp_
     }
     frame_plan_path = run_dir / "frame_compute_plan.json"
     frame_plan_path.write_text(json.dumps(stale_plan, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    before = frame_plan_path.read_text(encoding="utf-8")
 
     summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="body", tracking_mode="precomputed")
 
     assert summary["status"] == "fail"
-    assert frame_plan_path.read_text(encoding="utf-8") == before
-    assert "frame_compute_plan.json" not in summary["review_artifacts"]["produced_artifacts"]
-    assert summary["review_artifacts"]["reused_artifacts"] == ["frame_compute_plan.json"]
+    rewritten_plan = json.loads(frame_plan_path.read_text(encoding="utf-8"))
+    assert rewritten_plan["summary"].get("stale_marker") is None
+    assert rewritten_plan["frame_count"] == 2
+    assert "frame_compute_plan.json" in summary["review_artifacts"]["produced_artifacts"]
+    assert summary["review_artifacts"]["reused_artifacts"] == []
     assert "body_compute_execution.json" in summary["review_artifacts"]["produced_artifacts"]
 
 
