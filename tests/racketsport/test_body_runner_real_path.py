@@ -9,6 +9,13 @@ from threed.racketsport.orchestrator import BodyStageRunner, run_pipeline
 from threed.racketsport.schemas import Skeleton3D, SmplMotion, validate_artifact_file
 
 
+def _assert_pipeline_semantically_blocked(summary: dict, *expected_blockers: str) -> None:
+    assert summary["status"] == "blocked"
+    assert summary["readiness"]["status"] == "not_ready"
+    for blocker in expected_blockers:
+        assert blocker in summary["readiness"]["semantic_blockers"]
+
+
 def _manifest(root: Path, *, yolo_sha: str | None = None) -> Path:
     fast = root / "sam-3d-body-dinov3" / "model.ckpt"
     mhr = root / "sam-3d-body-dinov3" / "assets" / "mhr_model.pt"
@@ -222,7 +229,12 @@ def test_body_runner_verifies_manifest_uses_yolo26m_and_writes_contract_artifact
         runners={"body": BodyStageRunner(manifest_path=manifest, runtime=runtime)},
     )
 
-    assert summary["status"] == "pass"
+    _assert_pipeline_semantically_blocked(
+        summary,
+        "calibration:court_line_evidence_not_ready",
+        "body:body_mesh_world_mesh_unverified",
+        "body:body_mesh_not_trusted_for_promotion",
+    )
     body_stage = summary["stages"][2]
     assert body_stage["stage"] == "body"
     assert body_stage["status"] == "ran"
@@ -269,7 +281,12 @@ def test_body_runner_uses_adaptive_frame_plan_for_deep_mesh_work(tmp_path: Path)
         runners={"body": BodyStageRunner(manifest_path=manifest, runtime=runtime)},
     )
 
-    assert summary["status"] == "pass"
+    _assert_pipeline_semantically_blocked(
+        summary,
+        "calibration:court_line_evidence_not_ready",
+        "body:body_mesh_world_mesh_unverified",
+        "body:body_mesh_not_trusted_for_promotion",
+    )
     assert [Path(call["image_path"]).name for call in runtime.calls] == ["frame_000001.jpg"]
     execution = json.loads((run_dir / "body_compute_execution.json").read_text(encoding="utf-8"))
     assert execution["artifact_type"] == "racketsport_body_compute_execution"
@@ -301,7 +318,12 @@ def test_body_runner_accepts_numpy_bbox_from_real_fast_sam_runtime(tmp_path: Pat
         runners={"body": BodyStageRunner(manifest_path=manifest, runtime=FakeFastSamRuntime(bbox_as_numpy=True))},
     )
 
-    assert summary["status"] == "pass"
+    _assert_pipeline_semantically_blocked(
+        summary,
+        "calibration:court_line_evidence_not_ready",
+        "body:body_mesh_world_mesh_unverified",
+        "body:body_mesh_not_trusted_for_promotion",
+    )
     assert validate_artifact_file("smpl_motion", run_dir / "smpl_motion.json")
 
 

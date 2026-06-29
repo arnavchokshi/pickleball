@@ -21,11 +21,11 @@ Six decisions define the build:
 
 2. **A physics-accurate, foot-skate-free 3D replay is a core deliverable target.** We reconstruct the played game in one metric world frame — players (SMPL-X), court, net, ball, rackets — that obeys physics: **no foot sliding, no floor/player penetration, ball obeys gravity/bounce/Magnus.** Current code has CPU review scaffolds and static review GLBs only; the hard physics/replay gates still have to pass before this is a shipped claim.
 
-3. **Track the racket as a 6DoF object.** A paddle is large, rigid, planar, and dimensioned, so its pose/face-normal should be recoverable to **~3–5°** via PnP on known geometry — **5–15× better than inferring face angle from the small, twist-ambiguous wrist (20–35°).** This makes paddle-face/contact-point a claimable target only after true corner/CAD/reference evidence and RKT gates pass; current box-derived candidates stay preview-only.
+3. **Track the racket as a 6DoF object.** A paddle is large, rigid, planar, and dimensioned, so its pose/face-normal should be recoverable to **~3–5°** via PnP on known geometry — **5–15× better than inferring face angle from the small, twist-ambiguous wrist (20–35°).** This makes paddle-face/contact-point a validated target only after true corner/CAD/reference evidence and RKT gates pass; current box-derived candidates stay preview-only.
 
 4. **Adaptive compute budget / tiered pipeline is still the architectural identity.** A **fast tier** (camera-space mesh + metrics, <10 s preview) and a **deep/replay tier** (world-grounded mesh → foot-lock → physics → racket → rendered replay, async). Every pipeline layer is an explicit accuracy/speed/UI toggle; spend heavy compute where it matters, where the user sees it, and where confidence is low.
 
-5. **Accuracy honesty is a trust feature.** Gate/gray low-confidence metrics, show ranges not false precision, never charge for a result we can't trust. Note the update: **paddle-face is now claimable *via the tracked racket*** (wrist-only pronation stays gated). Foot-slide, penetration, and racket face-angle all get hard validation gates.
+5. **Accuracy honesty is a trust feature.** Gate/gray low-confidence metrics, show ranges not false precision, never charge for a result we can't trust. Note the update: **paddle-face becomes a gated target through true racket tracking** (wrist-only pronation stays gated). Foot-slide, penetration, and racket face-angle all require hard validation gates before product claims.
 
 6. **Coaching value still leads the product.** The 3D replay is the proof layer and a differentiator, but the conversion core remains court map + one priority habit + self-vs-self + one drill, delivered fast (§4, §5.6).
 
@@ -158,7 +158,7 @@ The **target/default model + variant + weight candidates for every stage (offlin
 | **Racket 6DoF** | RTMDet+SAM2 → RTMPose top/bottom/handle + corners → **PnP-IPPE** on known dims → UKF SE(3) → physics-validate | OpenCV/own | face-angle ~3–5° (beats wrist 5–15×); contact-point ±1–3 cm |
 | Ball | TrackNetV3→V5 + physics ODE 3D uplift (z=0 bounce + Magnus) | MIT | heatmap+temporal; known plane resolves single-cam depth |
 | Events | audio "pop" (CNN, retrained on PB) + wrist-vel peak + ball inflection; net crossing via homography | — | <1-frame contact timing; drives event triggers |
-| Shot class | scaffold/transfer baseline now; PoseConv3D family classifier first, BST-style pose+ball fusion after tensors are clean | open | current external eval misses serve/overhead; not claimable until reviewed labels and SHOT gates pass |
+| Shot class | scaffold/transfer baseline now; PoseConv3D family classifier first, BST-style pose+ball fusion after tensors are clean | open | current external eval misses serve/overhead; not a product claim until reviewed labels and SHOT gates pass |
 | Insights | rule-based thresholds (source of truth) + confidence gating + LLM-for-copy (latest Claude) | — | never invents facts |
 | 3D replay render | Target production path: **Three.js + R3F** (WebGPU/WebGL2), SMPL-X GLB, physics baked → glTF tracks, world frame (court Z=0). Current repo has a review-only Three.js/R3F viewer and static QA exports, not the shipped animated replay. | MIT | free-viewpoint, ~8–12 MB/10 s, shareable; splats deferred to v2 |
 | Visualization | court map/heatmap + 1 priority metric + self-vs-self (conversion core); 3D physics replay premium async | — | matches what converts; progressive disclosure |
@@ -301,8 +301,8 @@ Static net plane from the court template + regulation heights. Observed top-net 
 - **Phase B:** TrackNetV3 fine-tuned on ~2–3k labeled PB frames (+ converted Roboflow data) + Kalman/physics smoothing; output confidence; gray uncertain spans.
 - **Phase C:** bounce/net-crossing estimation; rough 3D via physics + "Z=0 at bounce." Still no official line calls (those need 2 cameras).
 
-### Paddle / racket — now a tracked 6DoF object (round-4)
-**Track the racket, don't proxy it.** Detect (RTMDet+SAM2) → RTMPose top/bottom/handle keypoints + face corners → **PnP-IPPE on the known paddle dimensions** → UKF on SE(3) → physics-validate against ball rebound → contact-point-on-face (±1–3 cm) + face-normal (~3–5°). Render the paddle in the 3D replay attached to the wrist bone. This beats wrist-derived face angle 5–15× and is novel (current systems use the hand center as the contact proxy). Keep the spec database (weight, balance, swingweight) for the Fit Lab. Use side-edge keypoints only as a weak cue (RacketVision shows they degrade under occlusion/blur). Full pipeline + training in `IMPLEMENTATION_PHASES.md` Phase 6 and `TECH_STACK.md` §(r).
+### Paddle / racket — target tracked 6DoF object after RKT gate (round-4)
+**Target: track the racket, don't proxy it.** Detect (RTMDet/SAM2-class or approved fallback) → top/bottom/handle keypoints + true face corners → **PnP-IPPE on the known paddle dimensions** → UKF on SE(3) → physics-validate against ball rebound → contact-point-on-face (±1–3 cm) + face-normal (~3–5°). Render the paddle in the 3D replay attached to the wrist bone only after the RKT/replay gates pass. Current repo reality is fail-closed PnP/review scaffolding: box-derived candidates are rejected before canonical `racket_pose.json`, and no detector/keypoint/CAD/GT gate has passed. Keep the spec database (weight, balance, swingweight) for the Fit Lab. Use side-edge keypoints only as a weak cue (RacketVision shows they degrade under occlusion/blur). Full pipeline + training in `IMPLEMENTATION_PHASES.md` Phase 6 and `TECH_STACK.md` §(r).
 
 ---
 

@@ -518,7 +518,10 @@ def test_ball_stage_runner_fuses_trusted_contact_windows_from_required_cue_artif
         runners=_noop_dependency_runners(),
     )
 
-    assert summary["status"] == "pass"
+    assert summary["status"] == "blocked"
+    assert summary["readiness"]["status"] == "not_ready"
+    assert "calibration:court_line_evidence_not_ready" in summary["readiness"]["semantic_blockers"]
+    assert "body:body_compute_execution_has_no_scheduled_frames" in summary["readiness"]["semantic_blockers"]
     ball_stage = summary["stages"][-1]
     assert ball_stage["metrics"]["contact_event_count"] == 1
     assert "fused contact_windows.json from audio, wrist, and ball cue artifacts" in ball_stage["notes"]

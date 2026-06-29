@@ -294,7 +294,7 @@ def _semantic_blockers_for_stage(stage: str, run_path: Path) -> list[str]:
 
 def _court_line_evidence_blockers(run_path: Path) -> list[str]:
     if run_path.name in COURT_REVIEW_RETIRED_CLIPS:
-        return []
+        return ["court_line_evidence_retired_for_court_calibration"]
     path = run_path / "court_line_evidence.json"
     if not path.is_file():
         return []

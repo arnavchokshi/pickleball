@@ -568,7 +568,7 @@ def test_readiness_report_blocks_when_court_line_evidence_is_not_ready(tmp_path:
     assert tracking["blocked_by"] == ["calibration"]
 
 
-def test_readiness_report_skips_retired_burlington_court_evidence(tmp_path: Path) -> None:
+def test_readiness_report_blocks_retired_burlington_court_evidence(tmp_path: Path) -> None:
     run_dir = tmp_path / "runs" / "prototype_gate_h100_v2" / "burlington_gold_0300_low_steep_corner"
     _touch_all(
         run_dir,
@@ -608,11 +608,13 @@ def test_readiness_report_skips_retired_burlington_court_evidence(tmp_path: Path
 
     report = build_readiness_report(run_dir, stage="tracking")
 
-    assert report["semantic_blockers"] == []
+    assert report["semantic_blockers"] == ["calibration:court_line_evidence_retired_for_court_calibration"]
     calibration = report["stages"][0]
     tracking = report["stages"][1]
-    assert calibration["status"] == "ready"
-    assert tracking["status"] == "ready"
+    assert calibration["status"] == "blocked"
+    assert calibration["semantic_blockers"] == ["court_line_evidence_retired_for_court_calibration"]
+    assert tracking["status"] == "blocked"
+    assert tracking["blocked_by"] == ["calibration"]
 
 
 def test_safe_relative_path_rejects_absolute_and_parent_traversal() -> None:

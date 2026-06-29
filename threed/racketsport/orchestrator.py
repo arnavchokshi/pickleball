@@ -32,7 +32,7 @@ from .hmr_deep import (
 )
 from .model_manifest import verify_model_checkpoint
 from .net_plane import build_net_plane
-from .pipeline_contracts import PIPELINE_STAGE_CONTRACTS, PipelineContractError, PipelineStageContract
+from .pipeline_contracts import PIPELINE_STAGE_CONTRACTS, PipelineContractError, PipelineStageContract, build_readiness_report
 from .racket_stage_runner import RacketStageRunner
 from .schemas import CaptureSidecar, CourtCalibration, StrictArtifact, Tracks, validate_artifact_file
 from .virtual_world import build_virtual_world_state_from_files, write_virtual_world
@@ -554,6 +554,9 @@ def run_pipeline(
             break
 
     review_artifacts = _write_best_effort_review_artifacts(context, expected_players=max_players)
+    readiness = build_readiness_report(run_path, stage=stage)
+    if summary_status == PIPELINE_STATUS_PASS and readiness["status"] != "ready":
+        summary_status = PIPELINE_STATUS_BLOCKED
     summary = {
         "schema_version": 1,
         "artifact_type": "racketsport_pipeline_run",
@@ -564,6 +567,7 @@ def run_pipeline(
         "inputs_dir": str(context.inputs_dir),
         "stages": stage_runs,
         "review_artifacts": review_artifacts,
+        "readiness": readiness,
     }
     _write_json(run_path / "pipeline_run.json", summary)
     return summary
@@ -609,6 +613,7 @@ def _blocked_stage(contract: PipelineStageContract, note: str) -> dict[str, Any]
 
 def _write_best_effort_review_artifacts(context: StageContext, *, expected_players: int) -> dict[str, Any]:
     produced_artifacts: list[str] = []
+    reused_artifacts: list[str] = []
     notes: list[str] = []
 
     tracks_path = context.run_dir / "tracks.json"
@@ -630,7 +635,9 @@ def _write_best_effort_review_artifacts(context: StageContext, *, expected_playe
                     expected_players=expected_players,
                 )
                 write_frame_compute_plan(frame_plan_path, frame_plan)
-            produced_artifacts.append("frame_compute_plan.json")
+                produced_artifacts.append("frame_compute_plan.json")
+            else:
+                reused_artifacts.append("frame_compute_plan.json")
         except Exception as exc:
             notes.append(f"frame_compute_plan.json not written: {exc}")
 
@@ -665,6 +672,7 @@ def _write_best_effort_review_artifacts(context: StageContext, *, expected_playe
 
     return {
         "produced_artifacts": produced_artifacts,
+        "reused_artifacts": reused_artifacts,
         "notes": notes,
     }
 

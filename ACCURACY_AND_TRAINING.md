@@ -158,17 +158,17 @@ The R²≈0.96 vs r≈0.11–0.28 "conflict" is a **measurement-type mismatch, n
 
 ## 5c. Foot-skate & physics accuracy
 
-Full design/build in `IMPLEMENTATION_PHASES.md` Phase 4 (`TECH_STACK.md` §(p),(q)). Accuracy summary:
+Full design/build in `IMPLEMENTATION_PHASES.md` Phase 4 (`TECH_STACK.md` §(p),(q)). Target accuracy rationale, not current repo proof:
 
-- **Foot-skate killer (do regardless of physics tier):** contact = (foot height above Z=0 < 2–3 cm) AND (world speed < 1 cm/frame) AND (pose-confidence), with on/off **hysteresis**; on contact, **snap stance toe/heel to the exact Z=0 court plane + zero its world velocity → CCD-IK** for the leg, blend at edges. Because the plane is *exact* (our calibration), this reaches **≤3 mm foot-slide and zero floor penetration — beating published world-HMR (3.0–4.4 mm)** that has to estimate the ground. Near real-time.
+- **Foot-skate killer target (do regardless of physics tier):** contact = (foot height above Z=0 < 2–3 cm) AND (world speed < 1 cm/frame) AND (pose-confidence), with on/off **hysteresis**; on contact, **snap stance toe/heel to the exact Z=0 court plane + zero its world velocity → CCD-IK** for the leg, blend at edges. Because the calibrated court plane should be stronger than an estimated ground plane, the target is **≤3 mm foot-slide and zero floor penetration**. Current repo does not yet prove that target; BODY labels, foot-contact validation, and physics/replay gates are still required.
 - **Foot-contact classifier** (if thresholds prove noisy in fast lunges): small MLP on `[foot_y_world, |v_foot_world|, ankle_z]`, trained on **RICH** (vertex-contact labels) + **UnderPressure** (vGRF→contact, ~95% vs ~81% thresholds). On **Tier-A (Pro + LiDAR)** devices, near-camera depth (≤~5 m, indoor/shade) gives a direct foot-to-floor distance for the *near* player — use it as extra supervision / a confidence boost for near-court contact; it does **not** reach the far player and **fails in direct sun**, so vision + the Z=0 constraint remain the baseline.
-- **Physics refinement:** **PhysPT** (MIT, no engine at inference — −68.7% skate, −83.8% accel) as the default plausibility post-processor; **PHC/PULSE on MuJoCo+MJX** (from SMPLOlympics tennis envs) for the flagship deep replay; **MultiPhys** for inter-player non-penetration in doubles. Output is physically valid by construction (can't float/skate/penetrate).
+- **Physics refinement target:** **PhysPT** (MIT, no engine at inference — −68.7% skate, −83.8% accel) as the default plausibility post-processor; **PHC/PULSE on MuJoCo+MJX** (from SMPLOlympics tennis envs) for the flagship deep replay; **MultiPhys** for inter-player non-penetration in doubles. No MJX/PhysPT/PHC/PULSE runner has passed in this repo yet, so physical validity remains a target gate.
 
-## 5d. Racket 6DoF accuracy (paddle-face flips to claimable)
+## 5d. Racket 6DoF accuracy target after RKT gate
 
-Full design/build in `IMPLEMENTATION_PHASES.md` Phase 6 (`TECH_STACK.md` §(r)). **The user's hypothesis is validated: tracking the paddle directly beats inferring face angle from the wrist by ~5–15×.**
+Full design/build in `IMPLEMENTATION_PHASES.md` Phase 6 (`TECH_STACK.md` §(r)). **Rationale:** tracking the paddle directly should beat inferring face angle from the wrist by ~5–15×, but current repo proof is limited to fail-closed PnP/review scaffolds; no accepted-four true-corner/reference/ArUco RKT gate has passed.
 
-- **Monocular PnP-IPPE + known paddle dimensions + clean face corners → face-angle ~3–5°**, vs **20–35°** for markerless wrist pronation (axial twist is geometrically unobservable from wrist keypoints). **Contact-point-on-face ±1–3 cm** (dominated by *ball* 3D localization, not paddle pose).
+- **Target:** monocular PnP-IPPE + known paddle dimensions + clean face corners → face-angle ~3–5°, vs **20–35°** for markerless wrist pronation (axial twist is geometrically unobservable from wrist keypoints). **Contact-point-on-face ±1–3 cm** remains gated on true paddle-corner/reference labels plus ball 3D/contact validation.
 - **Pipeline:** RTMDet-m + SAM2.1-hiera-base-plus silhouette → RTMPose-m **top/bottom/handle** keypoints (side keypoints unreliable, skip) + convex-hull corners → coarse pose (GigaPose/FoundPose + **hand-grip prior** from wrist+middle-finger MCP) → **PnP-IPPE** on known 3D corners → **UKF on SE(3)** (blur streak = rotation cue; predict through occlusion) → physics-validate vs ball rebound.
 - **Training:** fine-tune RTMPose on RacketVision (tennis) + Roboflow pickleball + **~50k synthetic paddle-CAD frames (BlenderProc, free 6DoF+corner GT)**; **~5k real frames with ArUco markers on the paddle back** for real 6DoF ground truth (train, remove markers for inference). ≥60 fps (120 preferred — at 30 fps a ~1000°/s swing rotates ~33°/frame and the SE(3) filter diverges).
 
@@ -324,7 +324,7 @@ ROI ranking: **ball ★★★★★ > court ★★★★ ≈ pose ★★★★ >
 4. **Court-geometry constraints** (reprojection loss, metric root, foot-on-ground) — free accuracy.
 5. **Foot-skate killer + physics** (contact-vs-Z=0 lock + CCD-IK → PhysPT) — the watchable, skate-free replay (`IMPLEMENTATION_PHASES.md` Phase 4).
 6. **Ball (TrackNetV3→V5) + audio contact model** — enables event-triggered compute + scene physics.
-7. **Racket 6DoF** — paddle-face + contact-point (flips paddle-face to claimable).
+7. **Racket 6DoF** — paddle-face + contact-point, gated behind true-corner/CAD/reference evidence and RKT evaluation before any face-angle claim.
 8. **Velocity pipeline + Protocol A/B/C validation** — turn on defensible velocity claims.
 9. **Unified 2-camera shoot + auto-labeling loop; multi-view→monocular distillation** — manufacture ground truth; the accuracy moat.
 10. **Shot classification + corrections flywheel** — durable, compounding moat.

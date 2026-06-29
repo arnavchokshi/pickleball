@@ -5,11 +5,32 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SAM_ROOT="${FAST_SAM_ROOT:-/opt/fast-sam-3d-body}"
 CONDA_ROOT="${CONDA_ROOT:-/opt/conda}"
 ENV_NAME="${FAST_SAM_ENV_NAME:-fast_sam_3d_body}"
-OUT_DIR="${1:-$ROOT/runs/phase0/fast_sam_profile}"
 IMAGE_PATH="${FAST_SAM_IMAGE_PATH:-$FAST_SAM_ROOT/notebook/images/dancing.jpg}"
 TIMEOUT_SECONDS="${FAST_SAM_TIMEOUT_SECONDS:-900}"
 WARMUP_RUNS="${FAST_SAM_WARMUP_RUNS:-1}"
 BENCHMARK_RUNS="${FAST_SAM_BENCHMARK_RUNS:-5}"
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/racketsport/run_fast_sam_benchmark.sh [OUT_DIR]
+
+Runs the Fast SAM-3D-Body profile wrapper and writes profile_stdout.log plus
+sam3dbody_benchmark.json under OUT_DIR. Defaults to runs/phase0/fast_sam_profile.
+EOF
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+if [ "$#" -gt 1 ]; then
+  usage >&2
+  exit 64
+fi
+
+OUT_DIR="${1:-$ROOT/runs/phase0/fast_sam_profile}"
 
 case "$OUT_DIR" in
   /*) ;;

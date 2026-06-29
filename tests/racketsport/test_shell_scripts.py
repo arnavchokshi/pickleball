@@ -48,6 +48,114 @@ def test_fast_sam_wrapper_normalizes_relative_output_dir_before_cd():
     assert script.index('case "$OUT_DIR" in') < script.index('cd "$FAST_SAM_ROOT"')
 
 
+def test_fast_sam_wrapper_help_exits_before_environment_checks():
+    completed = subprocess.run(
+        ["bash", "scripts/racketsport/run_fast_sam_benchmark.sh", "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert "Usage: scripts/racketsport/run_fast_sam_benchmark.sh [OUT_DIR]" in completed.stdout
+    assert completed.stderr == ""
+
+
+def test_fast_sam_wrapper_rejects_extra_args_before_environment_checks():
+    completed = subprocess.run(
+        ["bash", "scripts/racketsport/run_fast_sam_benchmark.sh", "out", "extra"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 64
+    assert "Usage: scripts/racketsport/run_fast_sam_benchmark.sh [OUT_DIR]" in completed.stderr
+    assert "missing Fast-SAM" not in completed.stderr
+
+
+def test_mujoco_mjx_installer_help_exits_before_environment_checks():
+    completed = subprocess.run(
+        ["bash", "scripts/racketsport/install_mujoco_mjx_env.sh", "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert "Usage: scripts/racketsport/install_mujoco_mjx_env.sh" in completed.stdout
+    assert completed.stderr == ""
+
+
+def test_mujoco_mjx_installer_rejects_args_before_environment_checks():
+    completed = subprocess.run(
+        ["bash", "scripts/racketsport/install_mujoco_mjx_env.sh", "extra"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 64
+    assert "Usage: scripts/racketsport/install_mujoco_mjx_env.sh" in completed.stderr
+
+
+def test_mujoco_mjx_installer_uses_env_path_when_overridden(tmp_path: Path):
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    conda_log = tmp_path / "conda.log"
+    named_env_root = tmp_path / "named-envs"
+    conda = fake_bin / "conda"
+    conda.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$*" >> "$CONDA_LOG"
+env_path=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -p)
+      shift
+      env_path="$1"
+      ;;
+    -n)
+      shift
+      env_path="$CONDA_NAMED_ENV_ROOT/$1"
+      ;;
+  esac
+  shift || true
+done
+mkdir -p "$env_path/bin"
+cat > "$env_path/bin/python" <<'PY'
+#!/usr/bin/env bash
+exit 0
+PY
+chmod +x "$env_path/bin/python"
+""",
+        encoding="utf-8",
+    )
+    conda.chmod(0o755)
+    env_path = tmp_path / "custom-mjx-env"
+    env = {
+        **os.environ,
+        "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+        "CONDA_LOG": str(conda_log),
+        "CONDA_NAMED_ENV_ROOT": str(named_env_root),
+        "MUJOCO_MJX_ENV_PATH": str(env_path),
+    }
+
+    completed = subprocess.run(
+        ["bash", "scripts/racketsport/install_mujoco_mjx_env.sh"],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert completed.returncode == 0
+    conda_args = conda_log.read_text(encoding="utf-8")
+    assert f"-p {env_path}" in conda_args
+    assert "-n racketsport_mjx" not in conda_args
+
+
 def test_gpu_eval_run_repairs_stale_slot_uuid(tmp_path):
     _require_flock()
 
