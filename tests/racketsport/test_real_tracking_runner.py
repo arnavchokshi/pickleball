@@ -129,8 +129,10 @@ class _FakeBox:
 
 
 class _FakeResult:
-    def __init__(self, boxes: list[_FakeBox]) -> None:
+    def __init__(self, boxes: list[_FakeBox], *, orig_shape: tuple[int, int] | None = (1080, 1920)) -> None:
         self.boxes = boxes
+        if orig_shape is not None:
+            self.orig_shape = orig_shape
 
 
 def test_real_tracking_runner_invokes_manifest_yolo26m_with_botsort_reid(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -198,6 +200,93 @@ def test_real_tracking_runner_invokes_manifest_yolo26m_with_botsort_reid(monkeyp
     assert [player.id for player in tracks.players] == [9]
     assert [frame.t for frame in tracks.players[0].frames] == [0.0, 1.0 / 30.0]
     assert tracks.players[0].frames[0].world_xy == [1.0, 0.0]
+
+
+def test_real_tracking_runner_scales_result_bboxes_to_calibration_pixels(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    checkpoint = tmp_path / "yolo26m.pt"
+    checkpoint.write_bytes(b"registry yolo26m checkpoint")
+    manifest = tmp_path / "MANIFEST.json"
+    _write_manifest(manifest, checkpoint)
+
+    inputs = tmp_path / "inputs"
+    run_dir = tmp_path / "run"
+    inputs.mkdir()
+    run_dir.mkdir()
+    (inputs / "source.mp4").write_bytes(b"not decoded by fake ultralytics")
+    _write_sidecar(inputs / "capture_sidecar.json")
+    _write_calibration(run_dir / "court_calibration.json")
+
+    class FakeYOLO:
+        def __init__(self, model_path: str) -> None:
+            assert model_path == str(checkpoint)
+
+        def track(self, *args: object, **kwargs: object) -> list[_FakeResult]:
+            return [_FakeResult([_FakeBox(track_id=9, xyxy=[540.0, 450.0, 560.0, 500.0])], orig_shape=(540, 960))]
+
+    monkeypatch.setitem(sys.modules, "ultralytics", SimpleNamespace(YOLO=FakeYOLO))
+
+    runner = RealYOLO26BoTSORTReIDTrackingRunner(manifest_path=manifest)
+    result = runner.run(
+        StageContext(
+            clip="clip_001",
+            inputs_dir=inputs,
+            run_dir=run_dir,
+            sport="pickleball",
+            max_frames=1,
+        )
+    )
+
+    tracks = validate_artifact_file("tracks", run_dir / "tracks.json")
+    assert isinstance(tracks, Tracks)
+    assert tracks.players[0].frames[0].bbox == (1080.0, 900.0, 1120.0, 1000.0)
+    assert tracks.players[0].frames[0].world_xy == [1.0, 0.0]
+    assert result.metrics["bbox_scale_x"] == 2.0
+    assert result.metrics["bbox_scale_y"] == 2.0
+    assert result.metrics["bbox_scale_status"] == "scaled"
+    assert result.metrics["tracker_source_width"] == 960
+    assert result.metrics["tracker_source_height"] == 540
+
+
+def test_real_tracking_runner_fails_closed_without_source_dimensions(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    checkpoint = tmp_path / "yolo26m.pt"
+    checkpoint.write_bytes(b"registry yolo26m checkpoint")
+    manifest = tmp_path / "MANIFEST.json"
+    _write_manifest(manifest, checkpoint)
+
+    inputs = tmp_path / "inputs"
+    run_dir = tmp_path / "run"
+    inputs.mkdir()
+    run_dir.mkdir()
+    (inputs / "source.mp4").write_bytes(b"not decoded by fake ultralytics")
+    _write_sidecar(inputs / "capture_sidecar.json")
+    _write_calibration(run_dir / "court_calibration.json")
+
+    class FakeYOLO:
+        def __init__(self, model_path: str) -> None:
+            assert model_path == str(checkpoint)
+
+        def track(self, *args: object, **kwargs: object) -> list[_FakeResult]:
+            return [_FakeResult([_FakeBox(track_id=9, xyxy=[540.0, 450.0, 560.0, 500.0])], orig_shape=None)]
+
+    monkeypatch.setitem(sys.modules, "ultralytics", SimpleNamespace(YOLO=FakeYOLO))
+
+    runner = RealYOLO26BoTSORTReIDTrackingRunner(manifest_path=manifest)
+    with pytest.raises(ValueError, match="source video dimensions are unavailable"):
+        runner.run(
+            StageContext(
+                clip="clip_001",
+                inputs_dir=inputs,
+                run_dir=run_dir,
+                sport="pickleball",
+                max_frames=1,
+            )
+        )
+
+    assert not (run_dir / "tracks.json").exists()
 
 
 def test_real_tracking_runner_caps_tracked_people_after_botsort(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

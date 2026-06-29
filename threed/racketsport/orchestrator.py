@@ -283,7 +283,11 @@ class RealYOLO26BoTSORTReIDTrackingRunner:
             close = getattr(results, "close", None)
             if callable(close):
                 close()
-        scale_x, scale_y, scale_counts = _detection_bbox_scale(calibration, video_path)
+        scale_x, scale_y, scale_counts = _detection_bbox_scale(
+            calibration,
+            video_path,
+            source_size=_payload_source_size(raw_detections_payload),
+        )
         detections_payload = scale_detection_payload_bboxes(raw_detections_payload, scale_x=scale_x, scale_y=scale_y)
         tracks, counts = build_tracks(
             detections_payload,
@@ -882,24 +886,18 @@ def _calibration_frame_path(context: StageContext) -> Path | None:
     return None
 
 
-def _detection_bbox_scale(calibration: CourtCalibration, video_path: Path) -> tuple[float, float, dict[str, Any]]:
-    try:
-        import cv2  # type: ignore[import-not-found]
-    except ImportError:
-        return 1.0, 1.0, {"bbox_scale_x": 1.0, "bbox_scale_y": 1.0, "bbox_scale_status": "cv2_unavailable"}
-
-    cap = cv2.VideoCapture(str(video_path))
-    try:
-        source_width = float(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        source_height = float(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    finally:
-        cap.release()
+def _detection_bbox_scale(
+    calibration: CourtCalibration,
+    video_path: Path,
+    *,
+    source_size: tuple[float, float] | None = None,
+) -> tuple[float, float, dict[str, Any]]:
+    if source_size is None:
+        source_size = _video_source_size(video_path)
+    source_width, source_height = source_size
     if source_width <= 0 or source_height <= 0:
-        return 1.0, 1.0, {"bbox_scale_x": 1.0, "bbox_scale_y": 1.0, "bbox_scale_status": "video_size_unavailable"}
-    try:
-        target_width, target_height = calibration_image_size(calibration, fallback_target=(source_width, source_height))
-    except ValueError:
-        return 1.0, 1.0, {"bbox_scale_x": 1.0, "bbox_scale_y": 1.0, "bbox_scale_status": "missing_calibration_resolution"}
+        raise ValueError("tracking source video dimensions are unavailable; refusing identity bbox scaling")
+    target_width, target_height = calibration_image_size(calibration, fallback_target=(source_width, source_height))
 
     scale_x = target_width / source_width
     scale_y = target_height / source_height
@@ -918,6 +916,31 @@ def _detection_bbox_scale(calibration: CourtCalibration, video_path: Path) -> tu
     )
 
 
+def _payload_source_size(payload: dict[str, Any]) -> tuple[float, float] | None:
+    width = payload.get("source_width")
+    height = payload.get("source_height")
+    if isinstance(width, int | float) and isinstance(height, int | float):
+        return float(width), float(height)
+    return None
+
+
+def _video_source_size(video_path: Path) -> tuple[float, float]:
+    try:
+        import cv2  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise ValueError("tracking source video dimensions are unavailable because cv2 is not installed") from exc
+
+    cap = cv2.VideoCapture(str(video_path))
+    try:
+        source_width = float(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        source_height = float(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    finally:
+        cap.release()
+    if source_width <= 0 or source_height <= 0:
+        raise ValueError("tracking source video dimensions are unavailable; refusing identity bbox scaling")
+    return source_width, source_height
+
+
 def _detections_payload_from_tracked_results(results: Any, *, fps: float, max_frames: int | None) -> tuple[dict[str, Any], dict[str, int]]:
     frames: list[dict[str, Any]] = []
     counts = {
@@ -927,10 +950,17 @@ def _detections_payload_from_tracked_results(results: Any, *, fps: float, max_fr
         "untracked_person_boxes": 0,
         "tracker_non_person": 0,
     }
+    source_size: tuple[float, float] | None = None
     for frame_index, result in enumerate(results):
         if max_frames is not None and frame_index >= max_frames:
             break
         counts["tracker_frames"] += 1
+        result_size = _result_source_size(result)
+        if result_size is not None:
+            if source_size is None:
+                source_size = result_size
+            elif result_size != source_size:
+                raise ValueError(f"tracking result source size changed across frames: {source_size} then {result_size}")
         detections: list[dict[str, Any]] = []
         boxes = getattr(result, "boxes", []) or []
         for box in boxes:
@@ -956,7 +986,31 @@ def _detections_payload_from_tracked_results(results: Any, *, fps: float, max_fr
 
     if not frames:
         raise ValueError("real tracking produced no frames")
-    return {"fps": fps, "frames": frames}, counts
+    payload: dict[str, Any] = {"fps": fps, "frames": frames}
+    if source_size is not None:
+        source_width, source_height = source_size
+        payload["source_width"] = source_width
+        payload["source_height"] = source_height
+        counts["tracker_source_width"] = int(source_width)
+        counts["tracker_source_height"] = int(source_height)
+    return payload, counts
+
+
+def _result_source_size(result: Any) -> tuple[float, float] | None:
+    orig_shape = getattr(result, "orig_shape", None)
+    if isinstance(orig_shape, list | tuple) and len(orig_shape) >= 2:
+        height = float(orig_shape[0])
+        width = float(orig_shape[1])
+        if width > 0 and height > 0:
+            return width, height
+    orig_img = getattr(result, "orig_img", None)
+    shape = getattr(orig_img, "shape", None)
+    if isinstance(shape, list | tuple) and len(shape) >= 2:
+        height = float(shape[0])
+        width = float(shape[1])
+        if width > 0 and height > 0:
+            return width, height
+    return None
 
 
 def _box_scalar(value: Any) -> float:
