@@ -38,9 +38,12 @@ public final class CameraCaptureController: NSObject {
     private let motionSampler = CaptureMotionSampler()
     private var activeDevice: AVCaptureDevice?
     private var activePolicy: CapturePolicy?
+    private var activePackageRootURL: URL?
+    private var activeCaptureDeviceOrientation: CaptureDeviceOrientation?
     private var activeClipURL: URL?
     private var activeSidecarURL: URL?
     private var recordingStartedAt: Date?
+    private var sessionIDFactory = CaptureSessionIDFactory()
 
     public override init() {
         super.init()
@@ -127,6 +130,8 @@ public final class CameraCaptureController: NSObject {
 
         activeDevice = camera
         activePolicy = policy
+        activePackageRootURL = packageRootURL
+        activeCaptureDeviceOrientation = captureDeviceOrientation
         activeDescriptor = descriptor
         activeClipURL = packageRootURL.appendingPathComponent(descriptor.clipRelativePath, isDirectory: false)
         activeSidecarURL = packageRootURL.appendingPathComponent(descriptor.sidecarRelativePath, isDirectory: false)
@@ -163,6 +168,9 @@ public final class CameraCaptureController: NSObject {
         guard policy.orientation == .landscape else {
             throw CameraCaptureControllerError.landscapeRequired
         }
+        if lastRecordingResult != nil {
+            try rotateRecordingPackage()
+        }
         guard let clipURL = activeClipURL else {
             throw CameraCaptureControllerError.noConfiguredPackage
         }
@@ -176,6 +184,7 @@ public final class CameraCaptureController: NSObject {
         }
 
         recordingStartedAt = Date()
+        lastRecordingResult = nil
         movieOutput.startRecording(to: clipURL, recordingDelegate: self)
     }
 
@@ -192,12 +201,24 @@ public final class CameraCaptureController: NSObject {
     }
 
     public static func defaultSessionID(now: Date = Date()) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.dateFormat = "yyyyMMdd-HHmmss"
-        return "capture-\(formatter.string(from: now))"
+        CaptureSessionIDFactory.uniqueSessionID(now: now)
+    }
+
+    private func rotateRecordingPackage() throws {
+        guard let policy = activePolicy,
+              let packageRootURL = activePackageRootURL,
+              let captureDeviceOrientation = activeCaptureDeviceOrientation else {
+            throw CameraCaptureControllerError.noConfiguredPackage
+        }
+        let descriptor = try CapturePackageDescriptor(
+            sessionID: sessionIDFactory.nextSessionID(),
+            policy: policy,
+            startedAt: Date(),
+            captureDeviceOrientation: captureDeviceOrientation
+        )
+        activeDescriptor = descriptor
+        activeClipURL = packageRootURL.appendingPathComponent(descriptor.clipRelativePath, isDirectory: false)
+        activeSidecarURL = packageRootURL.appendingPathComponent(descriptor.sidecarRelativePath, isDirectory: false)
     }
 
     private static func permissionState(for mediaType: AVMediaType) -> CapturePermissionState {

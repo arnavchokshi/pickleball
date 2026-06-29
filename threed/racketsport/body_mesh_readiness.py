@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -307,7 +308,7 @@ def _is_vector3(value: Any) -> bool:
     return (
         isinstance(value, list)
         and len(value) == 3
-        and all(isinstance(item, int | float) for item in value)
+        and all(not isinstance(item, bool) and isinstance(item, int | float) and math.isfinite(float(item)) for item in value)
     )
 
 

@@ -3,8 +3,7 @@ pydantic>=2.8
 pytest>=8.0
 
 # Runtime dependencies are intentionally listed without pinning until the H100
-# environment is finalized. setup_env.sh installs the GPU stack on the worker.
+# environment is finalized. setup_env.sh is local/CPU-only; GPU workers use
+# install_fast_sam_env.sh or install_mujoco_mjx_env.sh for heavyweight stacks.
 numpy
 scipy
-ffmpeg-python
-

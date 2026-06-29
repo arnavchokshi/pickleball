@@ -198,6 +198,10 @@ def audit_replay_export_manifest(export_root: str | Path, manifest: Mapping[str,
     refs = [("court", scene.court_glb), *((f"point_{point.id}", point.glb_url) for point in scene.points)]
     glbs: list[dict[str, Any]] = []
     blockers: list[str] = []
+    if not scene.players:
+        blockers.append("missing_replay_players")
+    if not scene.points:
+        blockers.append("missing_replay_points")
     for role, ref in refs:
         info = inspect_glb_file(root / ref)
         glbs.append({"role": role, "ref": ref, **info})

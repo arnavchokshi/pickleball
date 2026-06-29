@@ -94,6 +94,12 @@ def test_calibration_for_image_size_scales_homography_and_intrinsics_to_frame_re
     assert scaled.intrinsics.cx == pytest.approx(960.0)
     assert scaled.intrinsics.cy == pytest.approx(540.0)
     assert scaled.image_pts[0] == pytest.approx([760.0, 980.0])
+    assert scaled.image_size == (1920, 1080)
+
+    rescaled = calibration_for_image_size(scaled, width=1920, height=1080)
+
+    assert rescaled.homography == scaled.homography
+    assert rescaled.image_pts == scaled.image_pts
 
 
 def test_calibration_for_image_size_does_not_rescale_off_center_intrinsics():

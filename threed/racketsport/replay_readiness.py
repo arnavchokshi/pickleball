@@ -7,7 +7,7 @@ from html import escape
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from threed.racketsport.replay_export import audit_replay_export_manifest, inspect_glb_file
+from threed.racketsport.replay_export import audit_replay_export_manifest, inspect_glb_file, resolve_replay_glb_path
 from threed.racketsport.schemas import ReplayScene, VirtualWorld, validate_artifact_file
 from threed.racketsport.testclips import REQUIRED_LABEL_FILES
 
@@ -291,14 +291,18 @@ def _glb_report(run_dir: Path) -> dict[str, Any]:
             "blockers": ["invalid_replay_scene"],
         }
 
-    refs = [parsed.court_glb, *[point.glb_url for point in parsed.points]]
+    refs = [("court_glb", parsed.court_glb), *[(f"points/{index}/glb_url", point.glb_url) for index, point in enumerate(parsed.points)]]
     missing: list[str] = []
     invalid: list[str] = []
     valid = 0
-    for ref in refs:
-        path = run_dir / ref
-        if not path.is_file():
+    for field, ref in refs:
+        try:
+            path = resolve_replay_glb_path(run_dir, ref, field=field)
+        except FileNotFoundError:
             missing.append(ref)
+            continue
+        except ValueError:
+            invalid.append(ref)
             continue
         try:
             inspect_glb_file(path)
@@ -309,6 +313,7 @@ def _glb_report(run_dir: Path) -> dict[str, Any]:
         blockers.append("missing_referenced_glb")
     if invalid:
         blockers.append("invalid_referenced_glb")
+        blockers.append("invalid_replay_scene_glb_ref")
     if not parsed.players:
         blockers.append("missing_replay_players")
     if not parsed.points:

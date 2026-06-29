@@ -95,6 +95,12 @@ def test_training_plan_rejects_gpu_downloads_and_out_of_recipe_ranges() -> None:
     with pytest.raises(ValueError, match="augmentations"):
         validate_synthetic_render_config({"viewpoint_count": 50, "augmentations": [""]})
 
+    with pytest.raises(ValueError, match="augmentations"):
+        validate_synthetic_render_config({"viewpoint_count": 50, "augmentations": [None]})
+
+    with pytest.raises(ValueError, match="augmentations"):
+        validate_synthetic_render_config({"viewpoint_count": 50, "augmentations": [3]})
+
     render = validate_synthetic_render_config({"viewpoint_count": 50})
     with pytest.raises(ValueError, match="device"):
         validate_training_plan_config({"synthetic": render, "device": "cuda"})

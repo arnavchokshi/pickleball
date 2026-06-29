@@ -287,8 +287,8 @@ def _string_tuple_field(config: Mapping[str, Any], name: str, default: tuple[str
     raw_value = config.get(name, default)
     if not isinstance(raw_value, Sequence) or isinstance(raw_value, (str, bytes)):
         raise ValueError(f"{name} must be a sequence of non-empty strings")
-    values = tuple(str(item) for item in raw_value)
-    if not values or any(not item for item in values):
+    values = tuple(raw_value)
+    if not values or any(not isinstance(item, str) or not item for item in values):
         raise ValueError(f"{name} must contain non-empty strings")
     return values
 

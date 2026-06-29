@@ -53,6 +53,7 @@ def validate_manifest(path: str | Path) -> dict[str, Any]:
     split_type_counts = {split: split_counts.get(split, 0) for split in SPLITS}
     annotation_counts = _annotation_counts(sources)
     coverage = _coverage_summary(source_type_counts, split_type_counts, sources)
+    content_gaps = _content_gaps(sources, base_dir)
 
     return {
         "valid": True,
@@ -63,8 +64,9 @@ def validate_manifest(path: str | Path) -> dict[str, Any]:
         "source_type_counts": source_type_counts,
         "split_counts": split_type_counts,
         "annotation_counts": annotation_counts,
-        "dataset_ready": not coverage["gaps"],
+        "dataset_ready": not coverage["gaps"] and not content_gaps,
         "coverage_summary": coverage,
+        "content_gaps": content_gaps,
     }
 
 
@@ -336,6 +338,45 @@ def _safe_existing_file_errors(path: str, value: str, base_dir: Path) -> list[st
     if not candidate.is_file():
         return [f"{path}: file does not exist: {value}"]
     return []
+
+
+def _content_gaps(sources: list[dict[str, Any]], base_dir: Path) -> list[str]:
+    placeholder_json = 0
+    placeholder_masks = 0
+    for source in sources:
+        raw_path = source.get("path")
+        if isinstance(raw_path, str):
+            target = base_dir / raw_path
+            if target.suffix.lower() == ".json" and _is_placeholder_json(target):
+                placeholder_json += 1
+        annotations = source.get("annotations")
+        masks = annotations.get("segmentation_masks") if isinstance(annotations, dict) else None
+        raw_mask_path = masks.get("path") if isinstance(masks, dict) else None
+        if isinstance(raw_mask_path, str):
+            mask_path = base_dir / raw_mask_path
+            if mask_path.is_file() and not _has_png_signature(mask_path):
+                placeholder_masks += 1
+    gaps: list[str] = []
+    if placeholder_json:
+        gaps.append(f"sources contain placeholder JSON only: {placeholder_json}")
+    if placeholder_masks:
+        gaps.append(f"segmentation masks contain placeholder bytes: {placeholder_masks}")
+    return gaps
+
+
+def _is_placeholder_json(path: Path) -> bool:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return payload == {} or payload == []
+
+
+def _has_png_signature(path: Path) -> bool:
+    try:
+        return path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    except OSError:
+        return False
 
 
 def _unknown_fields(prefix: str, payload: dict[str, Any], allowed: set[str]) -> list[str]:

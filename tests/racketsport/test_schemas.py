@@ -6,15 +6,19 @@ import pytest
 from pydantic import ValidationError
 
 from threed.racketsport.schemas import (
+    BallFrame,
     CaptureSidecar,
     CourtCalibration,
     CourtLineEvidence,
     ContactWindows,
     ContactWindowCandidates,
     BallTrack,
+    MetricValue,
     RacketCandidates,
     PhaseEvalMetrics,
     RacketPose,
+    ReprojectionError,
+    TrackFrame,
     Tracks,
     VirtualWorld,
     validate_artifact_file,
@@ -149,6 +153,34 @@ def test_common_vector_fields_reject_wrong_dimensions() -> None:
     }
     with pytest.raises(ValidationError):
         ContactWindowCandidates.model_validate(candidates_payload)
+
+
+def test_common_numeric_fields_reject_bool_nan_and_infinity() -> None:
+    for payload in (
+        {"median": float("nan"), "p95": 1.0},
+        {"median": 1.0, "p95": float("inf")},
+    ):
+        with pytest.raises(ValidationError):
+            ReprojectionError.model_validate(payload)
+
+    for payload in (
+        {"t": True, "bbox": [0.0, 0.0, 10.0, 20.0], "world_xy": [0.0, 0.0], "conf": 0.8},
+        {"t": 0.0, "bbox": [0.0, 0.0, 10.0, 20.0], "world_xy": [float("nan"), 0.0], "conf": 0.8},
+        {"t": 0.0, "bbox": [0.0, 0.0, 10.0, 20.0], "world_xy": [0.0, 0.0], "conf": float("nan")},
+    ):
+        with pytest.raises(ValidationError):
+            TrackFrame.model_validate(payload)
+
+    for payload in (
+        {"t": True, "xy": [10.0, 20.0], "conf": 0.9, "visible": True},
+        {"t": 0.0, "xy": [10.0, 20.0], "conf": float("nan"), "visible": True},
+        {"t": 0.0, "xy": [10.0, 20.0], "conf": 0.9, "visible": True, "world_xyz": [0.0, float("inf"), 0.0]},
+    ):
+        with pytest.raises(ValidationError):
+            BallFrame.model_validate(payload)
+
+    with pytest.raises(ValidationError):
+        MetricValue.model_validate({"value": 1.0, "conf": float("nan")})
 
 
 def test_validate_artifact_file_rejects_unknown_artifact(tmp_path):

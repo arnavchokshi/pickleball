@@ -155,6 +155,27 @@ def test_build_replay_readiness_report_separates_visual_review_from_production_g
     assert by_clip["clip_with_body"]["glb_report"]["artifact_class"] == "review_static_glb"
 
 
+def test_replay_readiness_fails_closed_for_unsafe_replay_scene_glb_refs(tmp_path: Path) -> None:
+    run_root = tmp_path / "runs"
+    _write_clip(run_root, "clip_with_body", body_status="mesh_available_needs_accuracy_gate")
+    run_dir = run_root / "clip_with_body"
+    scene_path = run_dir / "replay_scene.json"
+    scene = json.loads(scene_path.read_text(encoding="utf-8"))
+    original_point_glb = run_dir / scene["points"][0]["glb_url"]
+    outside_glb = run_root / "outside.glb"
+    outside_glb.write_bytes(original_point_glb.read_bytes())
+    scene["points"][0]["glb_url"] = "../outside.glb"
+    scene_path.write_text(json.dumps(scene, indent=2, sort_keys=True), encoding="utf-8")
+
+    report = build_replay_readiness_report(run_root=run_root, clips=["clip_with_body"])
+    clip = report["clips"][0]
+
+    assert report["status"] == "blocked"
+    assert clip["review_visual_ready"] is False
+    assert "invalid_replay_scene_glb_ref" in clip["blockers"]
+    assert "../outside.glb" in clip["glb_report"]["invalid_glbs"]
+
+
 def test_replay_readiness_cli_writes_json_and_html_summary(tmp_path: Path) -> None:
     run_root = tmp_path / "runs"
     _write_clip(run_root, "clip_with_body", body_status="mesh_available_needs_accuracy_gate")

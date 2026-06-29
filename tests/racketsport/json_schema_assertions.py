@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import urlparse
 from typing import Any
 
 
@@ -23,6 +24,14 @@ def _validate(instance: Any, schema: dict[str, Any] | bool, *, root: dict[str, A
         return _validate(instance, _resolve_ref(root, str(schema["$ref"])), root=root, path=path)
 
     errors: list[str] = []
+    if "allOf" in schema:
+        for index, option in enumerate(schema["allOf"]):
+            errors.extend(_validate(instance, option, root=root, path=f"{path}.allOf[{index}]"))
+    if "if" in schema:
+        condition_errors = _validate(instance, schema["if"], root=root, path=path)
+        branch = schema.get("then") if not condition_errors else schema.get("else")
+        if branch is not None:
+            errors.extend(_validate(instance, branch, root=root, path=path))
     if "oneOf" in schema:
         matches = sum(1 for option in schema["oneOf"] if not _validate(instance, option, root=root, path=path))
         if matches != 1:
@@ -68,16 +77,34 @@ def _validate(instance: Any, schema: dict[str, Any] | bool, *, root: dict[str, A
             errors.append(f"{path}: expected at least {schema['minItems']} items, got {len(instance)}")
         if "maxItems" in schema and len(instance) > int(schema["maxItems"]):
             errors.append(f"{path}: expected at most {schema['maxItems']} items, got {len(instance)}")
+        prefix_items = schema.get("prefixItems")
+        prefix_count = 0
+        if isinstance(prefix_items, list):
+            prefix_count = len(prefix_items)
+            for index, item_schema in enumerate(prefix_items):
+                if index >= len(instance):
+                    break
+                errors.extend(_validate(instance[index], item_schema, root=root, path=f"{path}[{index}]"))
         item_schema = schema.get("items")
         if item_schema is not None:
-            for index, item in enumerate(instance):
+            for index, item in enumerate(instance[prefix_count:], start=prefix_count):
                 errors.extend(_validate(item, item_schema, root=root, path=f"{path}[{index}]"))
+        if "contains" in schema:
+            matches = sum(1 for item in instance if not _validate(item, schema["contains"], root=root, path=path))
+            min_contains = int(schema.get("minContains", 1))
+            max_contains = schema.get("maxContains")
+            if matches < min_contains:
+                errors.append(f"{path}: expected contains to match at least {min_contains} items, got {matches}")
+            if max_contains is not None and matches > int(max_contains):
+                errors.append(f"{path}: expected contains to match at most {max_contains} items, got {matches}")
 
     if isinstance(instance, str):
         if "minLength" in schema and len(instance) < int(schema["minLength"]):
             errors.append(f"{path}: expected minLength {schema['minLength']}, got {len(instance)}")
         if "pattern" in schema and re.search(str(schema["pattern"]), instance) is None:
             errors.append(f"{path}: value {instance!r} does not match pattern {schema['pattern']!r}")
+        if "format" in schema and not _matches_format(instance, str(schema["format"])):
+            errors.append(f"{path}: value {instance!r} does not match format {schema['format']!r}")
 
     if isinstance(instance, int | float) and not isinstance(instance, bool):
         if "minimum" in schema and instance < schema["minimum"]:
@@ -117,3 +144,12 @@ def _matches_type(instance: Any, schema_type: str | list[str]) -> bool:
     if schema_type == "null":
         return instance is None
     raise JsonSchemaAssertionError(f"unsupported schema type: {schema_type}")
+
+
+def _matches_format(instance: str, schema_format: str) -> bool:
+    if schema_format in {"uri", "uri-reference"}:
+        parsed = urlparse(instance)
+        return bool(parsed.scheme) if schema_format == "uri" else bool(instance)
+    if schema_format == "date-time":
+        return bool(re.match(r"^\d{4}-\d{2}-\d{2}T", instance))
+    return True

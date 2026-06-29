@@ -7,6 +7,7 @@ import sys
 import pytest
 
 from threed.racketsport.replay_export import (
+    audit_replay_export_manifest,
     build_replay_review_export_from_virtual_world,
     build_replay_export_manifest,
     inspect_glb_file,
@@ -158,6 +159,21 @@ def test_validate_replay_export_manifest_rejects_static_review_glbs_for_producti
     assert validate_replay_export_manifest(tmp_path, scene) == scene
     with pytest.raises(ValueError, match="review_static_glb_export"):
         validate_replay_export_manifest(tmp_path, scene, require_production=True)
+
+
+def test_validate_replay_export_manifest_rejects_empty_production_scene(tmp_path):
+    scene = build_replay_review_export_from_virtual_world(_virtual_world_payload(), export_root=tmp_path)
+    payload = scene.model_dump(mode="json")
+    payload["players"] = []
+    payload["points"] = []
+
+    audit = audit_replay_export_manifest(tmp_path, payload)
+
+    assert audit["production_replay_ready"] is False
+    assert "missing_replay_players" in audit["blockers"]
+    assert "missing_replay_points" in audit["blockers"]
+    with pytest.raises(ValueError, match="missing_replay_players"):
+        validate_replay_export_manifest(tmp_path, payload, require_production=True)
 
 
 def test_inspect_glb_file_reports_generated_review_scene_structure(tmp_path):

@@ -93,6 +93,26 @@ def test_body_mesh_readiness_reports_real_mesh_available_but_not_accuracy_verifi
     assert payload["warnings"] == ["mesh_not_accuracy_verified"]
 
 
+def test_body_mesh_readiness_rejects_boolean_or_nonfinite_mesh_vertices() -> None:
+    boolean_mesh = _smpl_motion(include_mesh=False)
+    boolean_mesh["players"][0]["frames"][0]["mesh_vertices_world"] = [[True, False, True]]
+    nan_mesh = _smpl_motion(include_mesh=False)
+    nan_mesh["players"][0]["frames"][0]["mesh_vertices_world"] = [[0.0, float("nan"), 1.0]]
+
+    for smpl_motion in (boolean_mesh, nan_mesh):
+        payload = build_body_mesh_readiness(
+            clip="clip_001",
+            smpl_motion=smpl_motion,
+            skeleton3d=_skeleton3d(),
+            frame_compute_plan=_frame_plan(deep_mesh_frames=1),
+            body_compute_execution=_body_execution(scheduled_frames=1, scheduled_player_frames=1),
+        )
+
+        assert payload["world_mesh_available"] is False
+        assert payload["summary"]["mesh_frame_count"] == 0
+        assert "world_mesh_required_but_missing" in payload["blockers"]
+
+
 def test_body_mesh_readiness_compares_world_mesh_demand_to_available_mesh() -> None:
     payload = build_body_mesh_readiness(
         clip="clip_001",

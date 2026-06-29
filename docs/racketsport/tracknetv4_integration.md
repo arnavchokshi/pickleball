@@ -102,8 +102,16 @@ Available placeholders are `{python}`, `{repo}`, `{predict_py}`, `{video}`,
 
 ## Upstream Snapshot Caveats
 
-The H100 currently has the public TrackNetV4 repo cloned at
-`/workspace/TrackNetV4`. In that snapshot:
+Last observed on the shared H100 during the 2026-06-28 prototype audit, the
+public TrackNetV4 repo was cloned at `/workspace/TrackNetV4`. Re-check this live
+before relying on it:
+
+```bash
+gcloud compute ssh body4d-gcp-prod --zone us-west1-b --command \
+  "docker exec sam4dbody-pod-agent bash -lc 'test -d /workspace/TrackNetV4 && cd /workspace/TrackNetV4 && git rev-parse --short HEAD'"
+```
+
+In that observed snapshot:
 
 - `docs/RESULT.md` lists model download entries, but the links are placeholders
   (`#`) rather than usable checkpoint URLs.

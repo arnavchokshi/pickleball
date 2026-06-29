@@ -5,12 +5,22 @@ import math
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_validator
 
 
-Vector2 = Annotated[list[float], Field(min_length=2, max_length=2)]
-Vector3 = Annotated[list[float], Field(min_length=3, max_length=3)]
-MatrixRow3 = Annotated[list[float], Field(min_length=3, max_length=3)]
+def _finite_number(value: Any) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError("value must be a finite number")
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("value must be a finite number")
+    return number
+
+
+FiniteFloat = Annotated[float, BeforeValidator(_finite_number)]
+Vector2 = Annotated[list[FiniteFloat], Field(min_length=2, max_length=2)]
+Vector3 = Annotated[list[FiniteFloat], Field(min_length=3, max_length=3)]
+MatrixRow3 = Annotated[list[FiniteFloat], Field(min_length=3, max_length=3)]
 Matrix3 = Annotated[list[MatrixRow3], Field(min_length=3, max_length=3)]
 
 
@@ -102,8 +112,8 @@ class CaptureSidecar(StrictArtifact):
 class ReprojectionError(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    median: float
-    p95: float
+    median: FiniteFloat
+    p95: FiniteFloat
 
 
 class CourtExtrinsics(RigidPose):
@@ -241,10 +251,10 @@ class CourtLineEvidence(StrictArtifact):
 class TrackFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    t: float = Field(ge=0.0)
-    bbox: tuple[float, float, float, float]
+    t: FiniteFloat = Field(ge=0.0)
+    bbox: tuple[FiniteFloat, FiniteFloat, FiniteFloat, FiniteFloat]
     world_xy: Vector2
-    conf: float = Field(ge=0.0, le=1.0)
+    conf: FiniteFloat = Field(ge=0.0, le=1.0)
 
     @field_validator("bbox")
     @classmethod
@@ -533,12 +543,12 @@ class Skeleton3D(StrictArtifact):
 class BallFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    t: float = Field(ge=0.0)
+    t: FiniteFloat = Field(ge=0.0)
     xy: Vector2
-    conf: float = Field(ge=0.0, le=1.0)
+    conf: FiniteFloat = Field(ge=0.0, le=1.0)
     visible: bool
     world_xyz: Vector3 | None = None
-    spin_rpm: float | None = None
+    spin_rpm: FiniteFloat | None = None
     approx: bool = False
 
 
@@ -878,7 +888,7 @@ class MetricValue(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     value: Any
-    conf: float
+    conf: FiniteFloat
     gated: bool | None = None
 
 

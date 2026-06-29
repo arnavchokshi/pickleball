@@ -277,6 +277,7 @@ export function parseVirtualWorld(input: unknown): VirtualWorld {
 
 export function frameForTime(player: VirtualWorldPlayer, timeSeconds: number): VirtualWorldFrame | undefined {
   if (!player.frames.length) return undefined;
+  if (!isWithinFrameRange(player.frames, timeSeconds)) return undefined;
   return player.frames.reduce((best, frame) =>
     Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best,
   );
@@ -285,7 +286,17 @@ export function frameForTime(player: VirtualWorldPlayer, timeSeconds: number): V
 export function ballFrameForTime(world: VirtualWorld, timeSeconds: number): VirtualWorld["ball"]["frames"][number] | undefined {
   const frames = world.ball.frames.filter((frame) => frame.visible !== false && frame.world_xyz);
   if (!frames.length) return undefined;
+  if (!isWithinFrameRange(frames, timeSeconds)) return undefined;
   return frames.reduce((best, frame) => (Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best));
+}
+
+function isWithinFrameRange(frames: Array<{ t: number }>, timeSeconds: number): boolean {
+  const times = frames.map((frame) => frame.t).sort((a, b) => a - b);
+  const first = times[0];
+  const last = times[times.length - 1];
+  const positiveGaps = times.slice(1).map((time, index) => time - times[index]).filter((gap) => gap > 0);
+  const tolerance = positiveGaps.length ? Math.min(...positiveGaps) * 1.5 : 1 / 30;
+  return first - tolerance <= timeSeconds && timeSeconds <= last + tolerance;
 }
 
 export function contactEventsForTime(contactWindows: ContactWindows | null, timeSeconds: number): ContactWindowEvent[] {

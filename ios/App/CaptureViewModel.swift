@@ -163,6 +163,7 @@ final class CaptureViewModel: ObservableObject {
                 try controller.stopRecording()
             } else {
                 try controller.startRecording()
+                descriptor = controller.activeDescriptor
                 status = .recording
             }
         } catch {

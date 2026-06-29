@@ -1,7 +1,9 @@
 # DATA-1 Test Clip Coverage Report
 
 `scripts/racketsport/report_testclip_coverage.py` is a read-only triage CLI for the
-registered DATA-1 test clips under `data/testclips`.
+registered DATA-1 test clips when they are present under `data/testclips`. This
+checkout may legitimately have no `data/` root; in that state the report exits
+zero with `root_exists=false`, `total_clips=0`, and `ready=false`.
 
 It reuses `threed.racketsport.testclips.build_testclip_manifest` for clip readiness,
 label counts, metadata validation, and coverage-matrix gaps. Optional frame-pack

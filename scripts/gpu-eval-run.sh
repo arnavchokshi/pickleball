@@ -25,6 +25,13 @@ if [ ! -e "${slot_files[0]}" ]; then
   fi
   slot_files=("$SLOTS_DIR"/slot*.lock)
 fi
+for lock_file in "${slot_files[@]}"; do
+  slot_name="$(basename "$lock_file" .lock)"
+  uuid_file="$SLOTS_DIR/$slot_name.uuid"
+  if [ ! -f "$uuid_file" ]; then
+    echo "${CUDA_VISIBLE_DEVICES:-0}" > "$uuid_file"
+  fi
+done
 
 run_with_slot() (
   local lock_file="$1"

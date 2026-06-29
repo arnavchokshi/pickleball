@@ -46,6 +46,7 @@ def validate_manifest(path: str | Path) -> dict[str, Any]:
     source_type_counts = {source_type: source_counts.get(source_type, 0) for source_type in SOURCE_TYPES}
     split_type_counts = {split: split_counts.get(split, 0) for split in SPLITS}
     coverage = _coverage_summary(source_type_counts)
+    content_gaps = _content_gaps(sources, base_dir)
 
     return {
         "valid": True,
@@ -55,8 +56,9 @@ def validate_manifest(path: str | Path) -> dict[str, Any]:
         "total_sources": len(sources),
         "source_type_counts": source_type_counts,
         "split_counts": split_type_counts,
-        "dataset_ready": not coverage["gaps"],
+        "dataset_ready": not coverage["gaps"] and not content_gaps,
         "coverage_summary": coverage,
+        "content_gaps": content_gaps,
     }
 
 
@@ -173,6 +175,26 @@ def _semantic_errors(payload: dict[str, Any], base_dir: Path) -> list[str]:
         if not candidate.is_file():
             errors.append(f"sources/{index}/path file does not exist: {raw_path}")
     return errors
+
+
+def _content_gaps(sources: list[dict[str, Any]], base_dir: Path) -> list[str]:
+    placeholder_json = 0
+    for source in sources:
+        raw_path = source.get("path")
+        if not isinstance(raw_path, str):
+            continue
+        target = base_dir / raw_path
+        if target.suffix.lower() == ".json" and _is_placeholder_json(target):
+            placeholder_json += 1
+    return [f"sources contain placeholder JSON only: {placeholder_json}"] if placeholder_json else []
+
+
+def _is_placeholder_json(path: Path) -> bool:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return payload == {} or payload == []
 
 
 def _unknown_fields(prefix: str, payload: dict[str, Any], allowed: set[str]) -> list[str]:

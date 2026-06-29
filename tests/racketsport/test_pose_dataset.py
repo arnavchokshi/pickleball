@@ -28,7 +28,10 @@ def _run_validator(manifest: Path) -> subprocess.CompletedProcess[str]:
 def test_validate_pose_dataset_accepts_complete_body_ladder_and_eval_sources(tmp_path):
     for directory in ("bedlam2", "athletepose3d", "caltennis", "rich", "amass", "emdb"):
         (tmp_path / directory).mkdir()
-        (tmp_path / directory / "manifest.json").write_text("{}", encoding="utf-8")
+        (tmp_path / directory / "manifest.json").write_text(
+            json.dumps({"source": directory, "frames": [{"t": 0.0}]}),
+            encoding="utf-8",
+        )
     manifest = _write_manifest(
         tmp_path,
         {
@@ -78,6 +81,36 @@ def test_validate_pose_dataset_accepts_complete_body_ladder_and_eval_sources(tmp
         "amass",
     ]
     assert payload["coverage_summary"]["gaps"] == []
+
+
+def test_validate_pose_dataset_does_not_mark_empty_source_manifests_ready(tmp_path):
+    for directory in ("bedlam2", "athletepose3d", "caltennis", "rich", "amass", "emdb"):
+        (tmp_path / directory).mkdir()
+        (tmp_path / directory / "manifest.json").write_text("{}", encoding="utf-8")
+    manifest = _write_manifest(
+        tmp_path,
+        {
+            "schema_version": 1,
+            "dataset_id": "placeholder_pose_sources",
+            "sources": [
+                _source("bedlam2_seed", "bedlam2", "bedlam2/manifest.json", "train"),
+                _source("athletepose3d_train", "athletepose3d", "athletepose3d/manifest.json", "train"),
+                _source("caltennis_val", "caltennis", "caltennis/manifest.json", "val"),
+                _source("rich_contact", "rich", "rich/manifest.json", "train"),
+                _source("amass_prior", "amass", "amass/manifest.json", "train"),
+                _source("emdb_eval", "emdb_eval", "emdb/manifest.json", "eval"),
+            ],
+        },
+    )
+
+    completed = _run_validator(manifest)
+    payload = json.loads(completed.stdout)
+
+    assert completed.returncode == 0
+    assert payload["valid"] is True
+    assert payload["coverage_summary"]["gaps"] == []
+    assert payload["dataset_ready"] is False
+    assert payload["content_gaps"] == ["sources contain placeholder JSON only: 6"]
 
 
 def test_validate_pose_dataset_reports_fine_tune_ladder_gaps_without_failing(tmp_path):

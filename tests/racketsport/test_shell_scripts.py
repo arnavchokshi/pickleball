@@ -37,3 +37,22 @@ def test_fast_sam_wrapper_normalizes_relative_output_dir_before_cd():
     assert 'case "$OUT_DIR" in' in script
     assert 'OUT_DIR="$ROOT/$OUT_DIR"' in script
     assert script.index('case "$OUT_DIR" in') < script.index('cd "$FAST_SAM_ROOT"')
+
+
+def test_gpu_eval_run_repairs_stale_slot_uuid(tmp_path):
+    lease_root = tmp_path / "gpu-lease"
+    slots = lease_root / "slots"
+    slots.mkdir(parents=True)
+    (slots / "slot0.lock").write_text("", encoding="utf-8")
+    env = {**os.environ, "GPU_LEASE_ROOT": str(lease_root), "CUDA_VISIBLE_DEVICES": "7"}
+
+    completed = subprocess.run(
+        ["bash", "scripts/gpu-eval-run.sh", "bash", "-lc", "printf '%s' \"$CUDA_VISIBLE_DEVICES\""],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert completed.stdout == "7"
+    assert (slots / "slot0.uuid").read_text(encoding="utf-8").strip() == "7"

@@ -54,7 +54,10 @@ def test_validate_shot_dataset_accepts_manifest_with_all_shot_classes_and_source
     split_cycle = ("train", "val", "test")
     for index, shot_label in enumerate(SHOT_LABELS):
         clip_path = clips / f"{shot_label}.json"
-        clip_path.write_text("{}", encoding="utf-8")
+        clip_path.write_text(
+            json.dumps({"frames": [{"t": 0.0, "player_id": "player_a"}], "shot_label": shot_label}),
+            encoding="utf-8",
+        )
         entries.append(
             _entry(
                 f"shot_{index:03d}",
@@ -87,6 +90,37 @@ def test_validate_shot_dataset_accepts_manifest_with_all_shot_classes_and_source
     }
     assert summary["coverage_counts"]["split"] == {"test": 3, "train": 4, "val": 3}
     assert summary["coverage_gaps"] == []
+
+
+def test_validate_shot_dataset_does_not_mark_empty_placeholder_entries_ready(tmp_path):
+    clips = tmp_path / "clips"
+    clips.mkdir()
+    entries = []
+    source_cycle = ("audio_snapped_pose", "manual_review", "synthetic_aug")
+    split_cycle = ("train", "val", "test")
+    for index, shot_label in enumerate(SHOT_LABELS):
+        clip_path = clips / f"{shot_label}.json"
+        clip_path.write_text("{}", encoding="utf-8")
+        entries.append(
+            _entry(
+                f"shot_{index:03d}",
+                shot_label,
+                source_cycle[index % len(source_cycle)],
+                split_cycle[index % len(split_cycle)],
+                f"clips/{shot_label}.json",
+            )
+        )
+    manifest = _write_manifest(
+        tmp_path,
+        {"schema_version": 1, "dataset_id": "placeholder_shot_dataset", "entries": entries},
+    )
+
+    summary = validate_manifest(manifest)
+
+    assert summary["valid"] is True
+    assert summary["coverage_gaps"] == []
+    assert summary["dataset_ready"] is False
+    assert summary["content_gaps"] == ["entries contain placeholder JSON only: 10"]
 
 
 def test_validate_shot_dataset_reports_coverage_gaps_without_failing_cli(tmp_path):

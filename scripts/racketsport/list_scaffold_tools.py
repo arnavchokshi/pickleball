@@ -82,6 +82,7 @@ SCHEMA_OVERRIDES = {
     "build_report_artifacts": "report_artifacts_schema.json",
     "build_serving_manifest": "serving_manifest_schema.json",
     "build_variant_comparison": "eval0_index_schema.json",
+    "list_scaffold_tools": "scaffold_tool_index_schema.json",
     "summarize_eval_runs": "eval_summary_schema.json",
     "validate_ball_audio_dataset": "ball_audio_dataset_schema.json",
     "validate_pipeline_artifacts": "pipeline_contracts_schema.json",

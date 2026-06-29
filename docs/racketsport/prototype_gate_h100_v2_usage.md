@@ -341,8 +341,8 @@ candidate types (`bounce`, `net_cross`) are refused so they cannot accidentally
 schedule BODY mesh work. Contact-review is no longer a user-gated action for
 these clips unless the promoted files are regenerated or invalidated.
 
-The BALL runner now also fails open only when all three non-human cue artifacts
-are present in the clip input or run directory:
+The BALL runner fails closed unless all three non-human cue artifacts are present
+in the clip input or run directory and agree inside the temporal gate:
 
 - `audio_onsets.json` with `onsets`
 - `wrist_velocity_peaks.json` with `peaks`
@@ -472,7 +472,8 @@ python scripts/racketsport/build_review_action_manifest.py \
 ## Rebuild The Current Review Tracks
 
 Run from repo root. The same commands work locally for existing artifacts and on
-the H100 under `/workspace/pickleball` after `git pull --ff-only`.
+the H100 under `/workspace/pickleball` after the local `main` commit you are
+auditing has been pushed to origin and `git pull --ff-only` reaches that commit.
 
 ```bash
 RUN_ROOT=runs/eval0/prototype_gate_h100_v2
@@ -1060,7 +1061,7 @@ python scripts/racketsport/benchmark_ball_trackers.py \
 
 ```bash
 gcloud compute ssh body4d-gcp-prod --zone us-west1-b --command \
-  "docker exec sam4dbody-pod-agent bash -lc 'cd /workspace/pickleball && git pull --ff-only'"
+  "docker exec sam4dbody-pod-agent bash -lc 'cd /workspace/pickleball && git pull --ff-only && git rev-parse --short HEAD'"
 
 gcloud compute ssh body4d-gcp-prod --zone us-west1-b --command \
   "docker exec sam4dbody-pod-agent bash -lc 'cd /workspace/pickleball && /opt/conda/envs/fast_sam_3d_body/bin/python -m pytest -q -p no:cacheprovider tests/racketsport/test_ball_temporal_filter.py tests/racketsport/test_ball_benchmark.py tests/racketsport/test_ball_model_fusion.py'"

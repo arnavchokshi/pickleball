@@ -61,16 +61,18 @@ def validate_manifest(path: str | Path) -> dict[str, Any]:
 
     coverage_counts = _coverage_counts(entries)
     coverage_gaps = _coverage_gaps(coverage_counts)
+    content_gaps = _content_gaps(entries, manifest_dir) if not errors else []
     valid = not errors
 
     return {
         "schema_version": SCHEMA_VERSION,
         "manifest": str(manifest_path),
         "valid": valid,
-        "dataset_ready": valid and not coverage_gaps,
+        "dataset_ready": valid and not coverage_gaps and not content_gaps,
         "entry_count": len(entries),
         "coverage_counts": coverage_counts,
         "coverage_gaps": coverage_gaps,
+        "content_gaps": content_gaps,
         "errors": errors,
     }
 
@@ -195,6 +197,26 @@ def _coverage_gaps(coverage_counts: dict[str, Any]) -> list[str]:
     if missing_labels:
         gaps.append(f"missing key shot classes: {', '.join(missing_labels)}")
     return gaps
+
+
+def _content_gaps(entries: list[dict[str, Any]], manifest_dir: Path) -> list[str]:
+    placeholder_json = 0
+    for entry in entries:
+        path_value = entry.get("path")
+        if not isinstance(path_value, str):
+            continue
+        target = _resolve_safe_relative_path(path_value, manifest_dir)
+        if target is not None and target.suffix.lower() == ".json" and _is_placeholder_json(target):
+            placeholder_json += 1
+    return [f"entries contain placeholder JSON only: {placeholder_json}"] if placeholder_json else []
+
+
+def _is_placeholder_json(path: Path) -> bool:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return payload == {} or payload == []
 
 
 def _unknown_fields(prefix: str, payload: dict[str, Any], allowed: set[str]) -> list[str]:

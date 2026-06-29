@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   activeBallContactPlayerIds,
+  ballFrameForTime,
   contactEventCount,
   frameForTime,
   parseContactWindows,
@@ -358,6 +359,13 @@ describe("viewer data contracts", () => {
     const parsed = parseVirtualWorld(world);
 
     expect(frameForTime(parsed.players[0], 0.8)?.t).toBe(1);
+  });
+
+  it("does not reuse stale player or ball frames far outside the artifact time range", () => {
+    const parsed = parseVirtualWorld(world);
+
+    expect(frameForTime(parsed.players[0], 999)).toBeUndefined();
+    expect(ballFrameForTime(parsed, 999)).toBeUndefined();
   });
 
   it("reads a non-negative review start time from the query string", () => {

@@ -86,6 +86,26 @@ final class CapturePackageTests: XCTestCase {
         XCTAssertEqual(descriptor.videoRotationAngleDegrees, 90)
     }
 
+    func testCaptureSessionIDFactoryAvoidsSameSecondPackageCollisions() throws {
+        var factory = CaptureSessionIDFactory()
+        let timestamp = Date(timeIntervalSince1970: 1_782_711_200)
+
+        let first = factory.nextSessionID(now: timestamp)
+        let second = factory.nextSessionID(now: timestamp)
+
+        XCTAssertNotEqual(first, second)
+        XCTAssertTrue(first.hasPrefix("capture-20260629-"))
+        XCTAssertTrue(second.hasPrefix("capture-20260629-"))
+
+        let policy = CapturePolicy.recommended(for: .standard60, deviceTier: .standard, capabilities: .hevcOnly)
+        let firstDescriptor = try CapturePackageDescriptor(sessionID: first, policy: policy, startedAt: timestamp)
+        let secondDescriptor = try CapturePackageDescriptor(sessionID: second, policy: policy, startedAt: timestamp)
+
+        XCTAssertNotEqual(firstDescriptor.directoryRelativePath, secondDescriptor.directoryRelativePath)
+        XCTAssertNotEqual(firstDescriptor.clipRelativePath, secondDescriptor.clipRelativePath)
+        XCTAssertNotEqual(firstDescriptor.sidecarRelativePath, secondDescriptor.sidecarRelativePath)
+    }
+
     func testPipelineSensorManifestDeclaresAllCaptureInputsNeededDownstream() {
         let manifest = CaptureSensorManifest.pipelineRequired
 

@@ -203,6 +203,7 @@ def calibration_for_image_size(calibration: CourtCalibration, *, width: int, hei
             "homography": homography,
             "intrinsics": intrinsics,
             "reprojection_error_px": reprojection_error,
+            "image_size": (int(width), int(height)),
             "image_pts": [
                 [float(point[0]) * scale_x, float(point[1]) * scale_y] for point in calibration.image_pts
             ],

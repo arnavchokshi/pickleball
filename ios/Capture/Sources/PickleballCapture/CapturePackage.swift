@@ -70,6 +70,40 @@ public struct CapturePackageDescriptor: Equatable, Sendable {
     }
 }
 
+public struct CaptureSessionIDFactory: Sendable {
+    private var lastTimestampStem: String?
+    private var sequence: Int
+
+    public init() {
+        self.lastTimestampStem = nil
+        self.sequence = 0
+    }
+
+    public mutating func nextSessionID(now: Date = Date()) -> String {
+        let stem = Self.timestampStem(now: now)
+        if stem == lastTimestampStem {
+            sequence += 1
+        } else {
+            lastTimestampStem = stem
+            sequence = 0
+        }
+        return "\(stem)-\(String(format: "%03d", sequence))"
+    }
+
+    public static func uniqueSessionID(now: Date = Date()) -> String {
+        "\(timestampStem(now: now))-\(UUID().uuidString.prefix(8))"
+    }
+
+    private static func timestampStem(now: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return "capture-\(formatter.string(from: now))"
+    }
+}
+
 public struct CaptureUploadPart: Equatable, Sendable {
     public enum Kind: Equatable, Sendable {
         case captureSidecar
