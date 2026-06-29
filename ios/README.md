@@ -16,9 +16,10 @@ sidecar contracts, and module boundaries for the video-to-pipeline workflow.
 
 ## Local Verification
 
-`swift test` covers the Swift package modules. The shared Xcode scheme currently
-builds the app shell only; it has no app test target wired into the test action,
-so do not treat `xcodebuild test` as app-target coverage until that target exists.
+`swift test` covers the Swift package modules. The shared Xcode scheme now has a
+minimal hosted `PickleballAppTests` target for camera-free app state coverage.
+This proves the app target can be built for XCTest, but it is not physical-device
+capture validation.
 Capture landscape enforcement, ARKit setup, Core ML fast tier, upload, and
 RealityKit replay remain scaffold/partial unless promoted in the root checklist.
 
@@ -26,4 +27,5 @@ RealityKit replay remain scaffold/partial unless promoted in the root checklist.
 swift package --package-path ios describe
 swift test --package-path ios
 xcodebuild -project ios/Pickleball.xcodeproj -scheme Pickleball -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project ios/Pickleball.xcodeproj -scheme Pickleball -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' CODE_SIGNING_ALLOWED=NO test
 ```
