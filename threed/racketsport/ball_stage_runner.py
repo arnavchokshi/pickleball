@@ -7,6 +7,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
+from .ball_physics3d import (
+    BallSample3D,
+    detect_bounce_events,
+    project_bounces_to_ball_track,
+)
 from .contact_windows import build_contact_windows_artifact
 from .event_fusion import fuse_contact_windows_from_cue_payloads
 from .schemas import BallTrack, ContactWindows
@@ -26,6 +31,9 @@ TRACKNET_RUN_METADATA_FILENAME = "tracknet_metadata.json"
 TRACKNET_PREDICTION_DIR = "tracknet_predictions"
 TRACKNET_RAW_BALL_FILENAME = "ball_track_tracknet_raw.json"
 BALL_LOCAL_SEARCH_SUMMARY_FILENAME = "ball_local_search_summary.json"
+BALL_PHYSICS3D_SUMMARY_FILENAME = "ball_physics3d_summary.json"
+BALL_BOUNCE_MIN_VERTICAL_SPEED_MPS = 0.0
+BALL_BOUNCE_MIN_SEPARATION_S = 0.05
 
 ModelRunner = Callable[..., dict[str, Any]]
 
@@ -75,6 +83,7 @@ class BallStageRunner:
         tracknet_large_video: bool = False,
         tracknet_local_search: bool = False,
         local_search_runner: ModelRunner | None = None,
+        ball_physics3d: bool = False,
         confidence_threshold: float = 0.0,
         batch_size: int = 8,
     ) -> None:
@@ -93,6 +102,7 @@ class BallStageRunner:
         self.tracknet_large_video = bool(tracknet_large_video)
         self.tracknet_local_search = bool(tracknet_local_search)
         self.local_search_runner = local_search_runner
+        self.ball_physics3d = bool(ball_physics3d)
         self.confidence_threshold = float(confidence_threshold)
         self.batch_size = int(batch_size)
         if self._totnet_configured and self._tracknet_configured:
@@ -126,6 +136,15 @@ class BallStageRunner:
         ball_track = BallTrack.model_validate(ball_payload)
         if ball_track.source == "tap":
             raise ValueError("BALL StageRunner refuses to consume tap/manual ball tracks")
+        physics_summary: dict[str, Any] | None = None
+        physics_notes: tuple[str, ...] = ()
+        if self.ball_physics3d:
+            ball_payload, physics_summary, physics_notes = _apply_ball_physics3d(
+                ball_payload,
+                summary_path=context.run_dir / BALL_PHYSICS3D_SUMMARY_FILENAME,
+                source_path=source_path,
+            )
+            ball_track = BallTrack.model_validate(ball_payload)
 
         contact_payload, contact_notes = _contact_windows_from_cues(context, fps=ball_track.fps)
         ContactWindows.model_validate(contact_payload)
@@ -148,6 +167,8 @@ class BallStageRunner:
             "not_gate_verified": True,
         }
         metrics.update(model_metrics)
+        if physics_summary is not None:
+            metrics["physics3d"] = _physics3d_metrics(physics_summary)
         if selection is not None:
             metrics["selection"] = selection
         status = "ran" if contact_event_count else "blocked"
@@ -164,6 +185,7 @@ class BallStageRunner:
             produced_artifacts=self._produced_artifacts,
             notes=(
                 *self._source_notes(source_path),
+                *physics_notes,
                 *contact_notes,
                 *blocked_notes,
                 "real BALL model inference output; not a BALL VERIFIED accuracy gate",
@@ -182,18 +204,28 @@ class BallStageRunner:
     @property
     def _produced_artifacts(self) -> tuple[str, ...]:
         if self._totnet_configured:
-            return ("ball_track.json", "contact_windows.json", TOTNET_PREDICTIONS_FILENAME, TOTNET_RUN_METADATA_FILENAME)
-        if self._tracknet_configured:
+            artifacts = (
+                "ball_track.json",
+                "contact_windows.json",
+                TOTNET_PREDICTIONS_FILENAME,
+                TOTNET_RUN_METADATA_FILENAME,
+            )
+        elif self._tracknet_configured:
             if self.tracknet_local_search:
-                return (
+                artifacts = (
                     "ball_track.json",
                     "contact_windows.json",
                     TRACKNET_RUN_METADATA_FILENAME,
                     TRACKNET_RAW_BALL_FILENAME,
                     BALL_LOCAL_SEARCH_SUMMARY_FILENAME,
                 )
-            return ("ball_track.json", "contact_windows.json", TRACKNET_RUN_METADATA_FILENAME)
-        return ("ball_track.json", "contact_windows.json")
+            else:
+                artifacts = ("ball_track.json", "contact_windows.json", TRACKNET_RUN_METADATA_FILENAME)
+        else:
+            artifacts = ("ball_track.json", "contact_windows.json")
+        if self.ball_physics3d:
+            artifacts = (*artifacts, BALL_PHYSICS3D_SUMMARY_FILENAME)
+        return artifacts
 
     def _source_notes(self, source_path: Path) -> tuple[str, ...]:
         if self._totnet_configured:
@@ -347,6 +379,89 @@ def _local_search_metrics(summary: dict[str, Any]) -> dict[str, Any]:
         "evidence_miss_count",
         "court_rejected_count",
         "uses_human_clicks",
+    )
+    return {field: summary[field] for field in fields if field in summary}
+
+
+def _apply_ball_physics3d(
+    ball_payload: dict[str, Any],
+    *,
+    summary_path: Path,
+    source_path: Path,
+) -> tuple[dict[str, Any], dict[str, Any], tuple[str, ...]]:
+    samples = _world_xyz_samples(ball_payload)
+    existing_bounces = ball_payload.get("bounces", [])
+    existing_bounce_count = len(existing_bounces) if isinstance(existing_bounces, list) else 0
+    events = detect_bounce_events(
+        samples,
+        min_vertical_speed_mps=BALL_BOUNCE_MIN_VERTICAL_SPEED_MPS,
+        min_separation_s=BALL_BOUNCE_MIN_SEPARATION_S,
+    )
+    physics_bounces = project_bounces_to_ball_track(events)
+    if physics_bounces:
+        ball_payload["bounces"] = physics_bounces
+
+    if len(samples) < 3:
+        status = "insufficient_world_xyz_samples"
+        notes = ("BALL 3D bounce physics skipped; fewer than 3 world_xyz ball samples",)
+    elif physics_bounces:
+        status = "ran"
+        notes = ("applied BALL 3D bounce physics from existing world_xyz samples",)
+    else:
+        status = "ran_no_bounce_events"
+        notes = ("BALL 3D bounce physics found no bounce events in existing world_xyz samples",)
+
+    summary = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_physics3d_summary",
+        "status": status,
+        "source_ball_track": str(source_path),
+        "sample_count": len(samples),
+        "existing_bounce_count": existing_bounce_count,
+        "bounce_count": len(physics_bounces),
+        "applied_to_ball_track": bool(physics_bounces),
+        "min_vertical_speed_mps": BALL_BOUNCE_MIN_VERTICAL_SPEED_MPS,
+        "min_separation_s": BALL_BOUNCE_MIN_SEPARATION_S,
+        "uses_human_clicks": False,
+        "not_gate_verified": True,
+    }
+    _write_json(summary_path, summary)
+    return ball_payload, summary, notes
+
+
+def _world_xyz_samples(ball_payload: dict[str, Any]) -> tuple[BallSample3D, ...]:
+    samples: list[BallSample3D] = []
+    frames = ball_payload.get("frames", [])
+    if not isinstance(frames, list):
+        return ()
+    for frame in frames:
+        if not isinstance(frame, dict) or not frame.get("visible"):
+            continue
+        world_xyz = frame.get("world_xyz")
+        if not isinstance(world_xyz, (list, tuple)) or len(world_xyz) != 3:
+            continue
+        samples.append(
+            BallSample3D(
+                t=float(frame["t"]),
+                x=float(world_xyz[0]),
+                y=float(world_xyz[1]),
+                z=float(world_xyz[2]),
+            )
+        )
+    return tuple(samples)
+
+
+def _physics3d_metrics(summary: dict[str, Any]) -> dict[str, Any]:
+    fields = (
+        "status",
+        "sample_count",
+        "existing_bounce_count",
+        "bounce_count",
+        "applied_to_ball_track",
+        "min_vertical_speed_mps",
+        "min_separation_s",
+        "uses_human_clicks",
+        "not_gate_verified",
     )
     return {field: summary[field] for field in fields if field in summary}
 
@@ -521,6 +636,7 @@ def _read_json(path: Path) -> Any:
 
 
 __all__ = [
+    "BALL_PHYSICS3D_SUMMARY_FILENAME",
     "BallStageRunner",
     "DEFAULT_AUDIO_ONSETS_FILENAME",
     "DEFAULT_BALL_INFLECTIONS_FILENAME",

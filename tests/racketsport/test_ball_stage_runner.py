@@ -32,6 +32,54 @@ def _ball_track_payload() -> dict:
     }
 
 
+def _ball_track_payload_with_world_bounce() -> dict:
+    payload = _ball_track_payload()
+    payload["frames"] = [
+        {
+            "t": 0.0,
+            "xy": [120.0, 240.0],
+            "conf": 0.88,
+            "visible": True,
+            "world_xyz": [0.0, 0.0, 1.2],
+            "approx": False,
+        },
+        {
+            "t": 1.0 / 30.0,
+            "xy": [124.0, 242.0],
+            "conf": 0.86,
+            "visible": True,
+            "world_xyz": [0.2, 0.0, 0.48],
+            "approx": False,
+        },
+        {
+            "t": 2.0 / 30.0,
+            "xy": [128.0, 244.0],
+            "conf": 0.85,
+            "visible": True,
+            "world_xyz": [0.4, 0.0, 0.02],
+            "approx": False,
+        },
+        {
+            "t": 3.0 / 30.0,
+            "xy": [132.0, 246.0],
+            "conf": 0.84,
+            "visible": True,
+            "world_xyz": [0.6, 0.0, 0.50],
+            "approx": False,
+        },
+        {
+            "t": 4.0 / 30.0,
+            "xy": [136.0, 248.0],
+            "conf": 0.82,
+            "visible": True,
+            "world_xyz": [0.8, 0.0, 1.15],
+            "approx": False,
+        },
+    ]
+    payload["bounces"] = []
+    return payload
+
+
 def _write_no_click_ball_source(inputs_dir: Path) -> Path:
     source = inputs_dir / "tracknet_smoke_0000_0010" / "ball_track_fusion_temporal_vball100_localtraj.json"
     _write_json(source, _ball_track_payload())
@@ -573,6 +621,65 @@ def test_ball_stage_runner_tracknet_local_search_keeps_raw_and_outputs_filtered_
     assert "ball_track_tracknet_raw.json" in ball_stage["produced_artifacts"]
     assert "ball_local_search_summary.json" in ball_stage["produced_artifacts"]
     assert "applied TrackNetV3 local-search postprocess" in ball_stage["notes"]
+
+
+def test_ball_stage_runner_applies_physics3d_bounces_from_world_xyz(tmp_path: Path) -> None:
+    clip = "clip_001"
+    inputs = tmp_path / "inputs" / clip
+    run_dir = tmp_path / "runs" / clip
+    video = inputs / "input.mp4"
+    tracknet_file = tmp_path / "TrackNet_best.pt"
+    inpaintnet_file = tmp_path / "InpaintNet_best.pt"
+    tracknet_repo = tmp_path / "TrackNetV3"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"fake video bytes")
+    tracknet_file.write_bytes(b"fake tracknet checkpoint")
+    inpaintnet_file.write_bytes(b"fake inpaintnet checkpoint")
+    tracknet_repo.mkdir(parents=True)
+    (tracknet_repo / "predict.py").write_text("print('fake')\n", encoding="utf-8")
+    _write_dependency_artifacts(run_dir)
+    _write_contact_cue_artifacts(inputs)
+
+    def fake_tracknet_runner(**kwargs):
+        _write_json(Path(kwargs["out"]), _ball_track_payload_with_world_bounce())
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_tracknet_ball_run",
+            "source_mode": "tracknet_predict",
+            "frame_count": 5,
+            "visible_frame_count": 5,
+        }
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(
+        tracknet_repo=tracknet_repo,
+        tracknet_file=tracknet_file,
+        inpaintnet_file=inpaintnet_file,
+        video_path=video,
+        tracknet_runner=fake_tracknet_runner,
+        tracknet_fps=30.0,
+        ball_physics3d=True,
+    )
+
+    summary = run_pipeline(
+        clip=clip,
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    emitted = json.loads((run_dir / "ball_track.json").read_text(encoding="utf-8"))
+    assert emitted["bounces"] == [{"t": 2.0 / 30.0, "world_xy": [0.4, 0.0]}]
+    physics_summary = json.loads((run_dir / "ball_physics3d_summary.json").read_text(encoding="utf-8"))
+    assert physics_summary["sample_count"] == 5
+    assert physics_summary["bounce_count"] == 1
+    assert physics_summary["uses_human_clicks"] is False
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["metrics"]["bounce_count"] == 1
+    assert ball_stage["metrics"]["physics3d"]["bounce_count"] == 1
+    assert "ball_physics3d_summary.json" in ball_stage["produced_artifacts"]
+    assert "applied BALL 3D bounce physics from existing world_xyz samples" in ball_stage["notes"]
 
 
 def test_ball_stage_runner_fails_closed_on_renamed_tap_track_even_with_cues(tmp_path: Path) -> None:
