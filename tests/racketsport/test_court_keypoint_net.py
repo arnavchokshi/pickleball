@@ -6,6 +6,7 @@ from threed.racketsport.court_templates import FT_TO_M
 from threed.racketsport.court_keypoint_net import (
     PICKLEBALL_KEYPOINTS,
     decode_subpixel_heatmap,
+    keypoint_labels_from_court_corners,
     keypoints_to_solvepnp_correspondences,
     validate_heatmap_prediction_payload,
     validate_synthetic_render_config,
@@ -188,3 +189,25 @@ def test_keypoints_to_solvepnp_correspondences_filters_confidence_and_preserves_
 
     with pytest.raises(ValueError, match="at least 4"):
         keypoints_to_solvepnp_correspondences(payload, min_confidence=0.96)
+
+
+def test_keypoint_labels_from_court_corners_expands_full_pickleball_layout() -> None:
+    labels = keypoint_labels_from_court_corners(
+        {
+            "near_left": [100.0, 900.0],
+            "near_right": [900.0, 900.0],
+            "far_right": [700.0, 100.0],
+            "far_left": [300.0, 100.0],
+        }
+    )
+
+    assert set(labels) == {point.name for point in PICKLEBALL_KEYPOINTS}
+    assert labels["near_left_corner"] == pytest.approx([100.0, 900.0])
+    assert labels["near_right_corner"] == pytest.approx([900.0, 900.0])
+    assert labels["far_right_corner"] == pytest.approx([700.0, 100.0])
+    assert labels["far_left_corner"] == pytest.approx([300.0, 100.0])
+    assert labels["near_baseline_center"][0] == pytest.approx(500.0)
+    assert labels["far_baseline_center"][0] == pytest.approx(500.0)
+    assert labels["net_center"][0] == pytest.approx(500.0)
+    assert labels["net_center"][1] < labels["near_baseline_center"][1]
+    assert labels["net_center"][1] > labels["far_baseline_center"][1]

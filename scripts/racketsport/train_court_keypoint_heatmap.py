@@ -12,18 +12,14 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
+from threed.racketsport.court_keypoint_net import (
+    PICKLEBALL_KEYPOINTS,
+    decode_subpixel_heatmap,
+    keypoint_labels_from_court_corners,
+)
 
 
-COURT_CORNER_TAXONOMY = {
-    "near_left": "near_left_corner",
-    "near_right": "near_right_corner",
-    "far_right": "far_right_corner",
-    "far_left": "far_left_corner",
-}
-
-
-def court_corner_keypoint_labels(payload: dict[str, Any]) -> dict[str, Any]:
+def court_corner_keypoint_labels(payload: dict[str, Any], *, clip_root: Path | None = None) -> dict[str, Any]:
     items = _items(payload)
     item = items[0]
     if not isinstance(item, dict):
@@ -38,11 +34,14 @@ def court_corner_keypoint_labels(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("court corner item requires court_corners")
 
     frame_dir = _frame_dir(payload)
-    keypoints = {
-        output_name: _corner_xy(corners, input_name)
-        for input_name, output_name in COURT_CORNER_TAXONOMY.items()
+    image_path = frame_dir / frame_name
+    video_path = clip_root / "source.mp4" if clip_root is not None else _payload_source_video(payload)
+    return {
+        "image_path": str(image_path) if image_path.is_file() else None,
+        "video_path": str(video_path) if video_path is not None else None,
+        "frame_index": _frame_index_from_name(frame_name),
+        "keypoints": keypoint_labels_from_court_corners(corners),
     }
-    return {"image_path": str(frame_dir / frame_name), "keypoints": keypoints}
 
 
 def _items(payload: dict[str, Any]) -> list[Any]:
@@ -65,21 +64,29 @@ def _frame_dir(payload: dict[str, Any]) -> Path:
     return Path(frame_dir)
 
 
-def _corner_xy(corners: dict[str, Any], key: str) -> list[float]:
-    value = corners.get(key)
-    if not isinstance(value, list) or len(value) != 2:
-        raise ValueError(f"court corner item missing {key}")
-    x, y = value
-    if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
-        raise ValueError(f"court corner item has non-numeric {key}")
-    return [float(x), float(y)]
+def _payload_source_video(payload: dict[str, Any]) -> Path | None:
+    clip = payload.get("clip")
+    if not isinstance(clip, dict):
+        return None
+    source_video = clip.get("source_video")
+    if not isinstance(source_video, str) or not source_video:
+        return None
+    return Path(source_video)
+
+
+def _frame_index_from_name(frame_name: str) -> int:
+    stem = Path(frame_name).stem
+    try:
+        return int(stem.rsplit("_", 1)[1])
+    except (IndexError, ValueError) as exc:
+        raise ValueError(f"cannot parse frame index from {frame_name}") from exc
 
 
 def load_real_corner_labels(root: Path) -> list[dict[str, Any]]:
     labels: list[dict[str, Any]] = []
     for path in sorted(root.glob("*/labels/court_corners.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
-        row = court_corner_keypoint_labels(payload)
+        row = court_corner_keypoint_labels(payload, clip_root=path.parent.parent)
         row["clip"] = path.parent.parent.name
         labels.append(row)
     return labels
@@ -109,6 +116,31 @@ def heatmaps_for_points(
 
 def mean(values: list[float]) -> float | None:
     return None if not values else float(sum(values) / len(values))
+
+
+def _error_summary(values: list[float]) -> dict[str, float | int | None]:
+    if not values:
+        return {"count": 0, "mean": None, "median": None, "p95": None, "max": None}
+    ordered = sorted(float(value) for value in values)
+    return {
+        "count": len(ordered),
+        "mean": float(sum(ordered) / len(ordered)),
+        "median": _percentile(ordered, 50.0),
+        "p95": _percentile(ordered, 95.0),
+        "max": float(ordered[-1]),
+    }
+
+
+def _percentile(ordered_values: list[float], percentile: float) -> float:
+    if len(ordered_values) == 1:
+        return float(ordered_values[0])
+    rank = (len(ordered_values) - 1) * percentile / 100.0
+    low = math.floor(rank)
+    high = math.ceil(rank)
+    if low == high:
+        return float(ordered_values[low])
+    weight = rank - low
+    return float(ordered_values[low] * (1.0 - weight) + ordered_values[high] * weight)
 
 
 def _world_bounds() -> tuple[float, float, float, float]:
@@ -141,6 +173,7 @@ def _random_quad(width: int, height: int, rng: random.Random) -> list[tuple[floa
 
 
 def run_training(args: argparse.Namespace) -> dict[str, Any]:
+    import cv2
     import numpy as np
     from PIL import Image, ImageDraw
     import torch
@@ -203,7 +236,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             return None
         images, targets, masks = [], [], []
         for row in rows:
-            image = Image.open(row["image_path"]).convert("RGB")
+            image = load_label_image(row, cv2=cv2, image_module=Image)
             original_w, original_h = image.size
             image = image.resize((width, height))
             scaled = {
@@ -228,7 +261,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                     continue
                 x, _, _ = [part.to(device) for part in batch]
                 pred = model(x).detach().cpu()[0]
-                image = Image.open(row["image_path"])
+                image = load_label_image(row, cv2=cv2, image_module=Image)
                 sx, sy = width / image.size[0], height / image.size[1]
                 for name, xy in row["keypoints"].items():
                     idx = keypoint_names.index(name)
@@ -245,11 +278,23 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                         py, px = divmod(pred_flat, width)
                         ty, tx = divmod(target_flat, width)
                         synthetic_errors.append(math.hypot(px - tx, py - ty))
+        real_summary = _error_summary(real_errors)
+        synthetic_summary = _error_summary(synthetic_errors)
         return {
-            "real_corner_mean_px": mean(real_errors),
-            "real_corner_count": len(real_errors),
-            "synthetic_mean_px": mean(synthetic_errors),
-            "synthetic_count": len(synthetic_errors),
+            "real_corner_mean_px": real_summary["mean"],
+            "real_corner_median_px": real_summary["median"],
+            "real_corner_p95_px": real_summary["p95"],
+            "real_corner_max_px": real_summary["max"],
+            "real_corner_count": real_summary["count"],
+            "real_keypoint_mean_px": real_summary["mean"],
+            "real_keypoint_median_px": real_summary["median"],
+            "real_keypoint_p95_px": real_summary["p95"],
+            "real_keypoint_max_px": real_summary["max"],
+            "real_keypoint_count": real_summary["count"],
+            "synthetic_mean_px": synthetic_summary["mean"],
+            "synthetic_median_px": synthetic_summary["median"],
+            "synthetic_p95_px": synthetic_summary["p95"],
+            "synthetic_count": synthetic_summary["count"],
         }
 
     model = make_model().to(device)
@@ -289,20 +334,257 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         },
         checkpoint,
     )
+    holdout_artifacts = _write_holdout_prediction_artifacts(
+        model,
+        holdout_real,
+        cv2=cv2,
+        np=np,
+        torch=torch,
+        device=device,
+        keypoint_names=keypoint_names,
+        model_width=width,
+        model_height=height,
+        out_dir=args.out,
+    )
+    gate_values = [
+        float(artifact["median_keypoint_reprojection_px"])
+        for artifact in holdout_artifacts
+        if artifact.get("median_keypoint_reprojection_px") is not None
+    ]
+    gate_value = _error_summary(gate_values)["median"]
     summary = {
         "schema_version": 1,
         "artifact_type": "court_keypoint_pretraining_run",
         "status": "trained_not_phase_verified",
         "checkpoint": str(checkpoint),
+        "gate": {
+            "metric": "heldout_median_keypoint_reprojection_px",
+            "value_px": gate_value,
+            "threshold_px": 5.0,
+            "passed": bool(gate_value is not None and float(gate_value) <= 5.0),
+            "not_cal3_verified": True,
+        },
         "before": before,
         "after": after,
         "history": history,
+        "holdout_artifacts": holdout_artifacts,
         "real_train_count": len(train_real),
         "real_holdout_count": len(holdout_real),
         "note": "Synthetic pretraining plus limited real corner fine-tune; not a verified CAL-3 no-tap solver.",
     }
     (args.out / "court_keypoint_metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return summary
+
+
+def load_label_image(row: dict[str, Any], *, cv2: Any, image_module: Any) -> Any:
+    image_path = row.get("image_path")
+    if isinstance(image_path, str) and image_path and Path(image_path).is_file():
+        return image_module.open(image_path).convert("RGB")
+
+    video_path = row.get("video_path")
+    frame_index = row.get("frame_index")
+    if not isinstance(video_path, str) or not video_path:
+        raise ValueError("real court label row is missing video_path")
+    if isinstance(frame_index, bool) or not isinstance(frame_index, int) or frame_index < 0:
+        raise ValueError("real court label row is missing non-negative frame_index")
+    capture = cv2.VideoCapture(video_path)
+    if not capture.isOpened():
+        raise ValueError(f"could not open court label video: {video_path}")
+    try:
+        capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+        ok, frame_bgr = capture.read()
+    finally:
+        capture.release()
+    if not ok:
+        raise ValueError(f"could not read frame {frame_index} from court label video: {video_path}")
+    frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+    return image_module.fromarray(frame_rgb).convert("RGB")
+
+
+def _write_holdout_prediction_artifacts(
+    model: Any,
+    rows: list[dict[str, Any]],
+    *,
+    cv2: Any,
+    np: Any,
+    torch: Any,
+    device: Any,
+    keypoint_names: list[str],
+    model_width: int,
+    model_height: int,
+    out_dir: Path,
+) -> list[dict[str, Any]]:
+    prediction_dir = out_dir / "holdout_predictions"
+    overlay_dir = out_dir / "holdout_overlays"
+    prediction_dir.mkdir(parents=True, exist_ok=True)
+    overlay_dir.mkdir(parents=True, exist_ok=True)
+    artifacts: list[dict[str, Any]] = []
+    model.eval()
+
+    for row in rows:
+        video_path = Path(str(row.get("video_path")))
+        clip = str(row.get("clip") or video_path.parent.name)
+        prediction_path = prediction_dir / f"{clip}_court_keypoints.json"
+        overlay_path = overlay_dir / f"{clip}_court_keypoints_overlay.mp4"
+        capture = cv2.VideoCapture(str(video_path))
+        if not capture.isOpened():
+            raise ValueError(f"could not open holdout court video: {video_path}")
+        fps = float(capture.get(cv2.CAP_PROP_FPS) or 30.0)
+        source_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+        source_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+        if source_width <= 0 or source_height <= 0:
+            capture.release()
+            raise ValueError(f"could not determine holdout court video size: {video_path}")
+        writer = cv2.VideoWriter(
+            str(overlay_path),
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            fps,
+            (source_width, source_height),
+        )
+        if not writer.isOpened():
+            capture.release()
+            raise RuntimeError(f"could not open court keypoint overlay writer: {overlay_path}")
+
+        frames: list[dict[str, Any]] = []
+        label_errors: list[float] = []
+        frame_index = 0
+        try:
+            while True:
+                ok, frame_bgr = capture.read()
+                if not ok:
+                    break
+                keypoints = _predict_frame_keypoints(
+                    frame_bgr,
+                    model,
+                    cv2=cv2,
+                    np=np,
+                    torch=torch,
+                    device=device,
+                    keypoint_names=keypoint_names,
+                    source_width=source_width,
+                    source_height=source_height,
+                    model_width=model_width,
+                    model_height=model_height,
+                )
+                frames.append({"frame_index": frame_index, "keypoints": keypoints})
+                if frame_index == row.get("frame_index"):
+                    label_errors = _keypoint_errors(keypoints, row["keypoints"])
+                _draw_court_keypoints(cv2, frame_bgr, keypoints)
+                writer.write(frame_bgr)
+                frame_index += 1
+        finally:
+            capture.release()
+            writer.release()
+
+        prediction_payload = {
+            "schema_version": 1,
+            "artifact_type": "court_keypoint_holdout_predictions",
+            "clip": clip,
+            "video": str(video_path),
+            "coordinate_space": "source_video_pixels",
+            "model_input_size": [model_width, model_height],
+            "source_size": [source_width, source_height],
+            "frames": frames,
+            "verified": False,
+            "not_cal3_verified": True,
+        }
+        prediction_path.write_text(json.dumps(prediction_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        errors = _error_summary(label_errors)
+        artifacts.append(
+            {
+                "clip": clip,
+                "prediction_artifact": str(prediction_path),
+                "overlay_artifact": str(overlay_path),
+                "overlay_frame_count": len(frames),
+                "heldout_label_frame_index": row.get("frame_index"),
+                "heldout_keypoint_count": errors["count"],
+                "median_keypoint_reprojection_px": errors["median"],
+                "p95_keypoint_reprojection_px": errors["p95"],
+                "not_cal3_verified": True,
+            }
+        )
+    return artifacts
+
+
+def _predict_frame_keypoints(
+    frame_bgr: Any,
+    model: Any,
+    *,
+    cv2: Any,
+    np: Any,
+    torch: Any,
+    device: Any,
+    keypoint_names: list[str],
+    source_width: int,
+    source_height: int,
+    model_width: int,
+    model_height: int,
+) -> dict[str, dict[str, Any]]:
+    frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+    resized = cv2.resize(frame_rgb, (model_width, model_height), interpolation=cv2.INTER_AREA)
+    arr = resized.astype(np.float32) / 255.0
+    tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0).to(device)
+    with torch.inference_mode():
+        pred = model(tensor).detach().cpu()[0]
+    scale_x = source_width / float(model_width)
+    scale_y = source_height / float(model_height)
+    keypoints: dict[str, dict[str, Any]] = {}
+    for idx, name in enumerate(keypoint_names):
+        decoded = decode_subpixel_heatmap(pred[idx].tolist())
+        keypoints[name] = {
+            "xy": [decoded.x * scale_x, decoded.y * scale_y],
+            "confidence": max(0.0, min(1.0, float(decoded.score))),
+            "heatmap_score": float(decoded.score),
+        }
+    return keypoints
+
+
+def _keypoint_errors(predictions: dict[str, dict[str, Any]], labels: dict[str, list[float]]) -> list[float]:
+    errors: list[float] = []
+    for name, label_xy in labels.items():
+        prediction = predictions.get(name)
+        if prediction is None:
+            continue
+        pred_xy = prediction.get("xy")
+        if not isinstance(pred_xy, list) or len(pred_xy) != 2:
+            continue
+        errors.append(math.hypot(float(pred_xy[0]) - float(label_xy[0]), float(pred_xy[1]) - float(label_xy[1])))
+    return errors
+
+
+def _draw_court_keypoints(cv2: Any, frame_bgr: Any, keypoints: dict[str, dict[str, Any]]) -> None:
+    line_type = getattr(cv2, "LINE_AA", 16)
+    for start, end in (
+        ("near_left_corner", "near_right_corner"),
+        ("near_right_corner", "far_right_corner"),
+        ("far_right_corner", "far_left_corner"),
+        ("far_left_corner", "near_left_corner"),
+        ("near_nvz_left", "near_nvz_right"),
+        ("far_nvz_left", "far_nvz_right"),
+        ("net_left_sideline", "net_right_sideline"),
+        ("near_baseline_center", "near_nvz_center"),
+        ("far_nvz_center", "far_baseline_center"),
+    ):
+        p0 = _prediction_point(keypoints.get(start))
+        p1 = _prediction_point(keypoints.get(end))
+        if p0 is not None and p1 is not None:
+            cv2.line(frame_bgr, p0, p1, (0, 255, 255), 1, line_type)
+    for name, prediction in keypoints.items():
+        point = _prediction_point(prediction)
+        if point is None:
+            continue
+        color = (0, 255, 0) if name.endswith("corner") else (255, 200, 0)
+        cv2.circle(frame_bgr, point, 3, (0, 0, 0), -1, line_type)
+        cv2.circle(frame_bgr, point, 2, color, -1, line_type)
+
+
+def _prediction_point(prediction: dict[str, Any] | None) -> tuple[int, int] | None:
+    if prediction is None:
+        return None
+    xy = prediction.get("xy")
+    if not isinstance(xy, list) or len(xy) != 2:
+        return None
+    return int(round(float(xy[0]))), int(round(float(xy[1])))
 
 
 def main(argv: list[str] | None = None) -> int:

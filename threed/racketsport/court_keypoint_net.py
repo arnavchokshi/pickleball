@@ -11,6 +11,7 @@ from dataclasses import dataclass
 import math
 from typing import Any, Mapping, Sequence
 
+from threed.racketsport.court_calibration import homography_from_planar_points, project_planar_points
 from threed.racketsport.court_templates import xyz_ft_to_m
 
 
@@ -81,6 +82,12 @@ PICKLEBALL_KEYPOINTS: tuple[CourtKeypoint, ...] = (
 )
 
 PICKLEBALL_KEYPOINT_BY_NAME: dict[str, CourtKeypoint] = {point.name: point for point in PICKLEBALL_KEYPOINTS}
+COURT_CORNER_LABEL_TO_KEYPOINT: dict[str, str] = {
+    "near_left": "near_left_corner",
+    "near_right": "near_right_corner",
+    "far_right": "far_right_corner",
+    "far_left": "far_left_corner",
+}
 
 DEFAULT_SYNTHETIC_RENDER_CONFIG = SyntheticRenderConfig(
     viewpoint_count=200,
@@ -164,6 +171,25 @@ def validate_training_plan_config(config: Mapping[str, Any]) -> TrainingPlanConf
         device=device,
         checkpoint_policy=checkpoint_policy,
     )
+
+
+def keypoint_labels_from_court_corners(corners: Mapping[str, Any]) -> dict[str, list[float]]:
+    """Expand four labeled court corners into the full pickleball keypoint layout."""
+
+    world_pts: list[tuple[float, float, float]] = []
+    image_pts: list[tuple[float, float]] = []
+    for corner_name, keypoint_name in COURT_CORNER_LABEL_TO_KEYPOINT.items():
+        keypoint = PICKLEBALL_KEYPOINT_BY_NAME[keypoint_name]
+        image_xy = _xy_field(corners.get(corner_name), f"court_corners.{corner_name}")
+        world_pts.append(keypoint.world_xyz_m)
+        image_pts.append(image_xy)
+
+    homography = homography_from_planar_points(world_pts, image_pts)
+    projected = project_planar_points(homography, [point.world_xyz_m for point in PICKLEBALL_KEYPOINTS])
+    return {
+        point.name: [float(projected_xy[0]), float(projected_xy[1])]
+        for point, projected_xy in zip(PICKLEBALL_KEYPOINTS, projected, strict=True)
+    }
 
 
 def decode_subpixel_heatmap(heatmap: Sequence[Sequence[float]]) -> HeatmapDecode:
