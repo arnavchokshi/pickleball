@@ -34,13 +34,18 @@ def court_corner_keypoint_labels(payload: dict[str, Any], *, clip_root: Path | N
         raise ValueError("court corner item requires court_corners")
 
     frame_dir = _frame_dir(payload)
+    source_size = _source_resolution(payload)
+    label_size = _infer_label_coordinate_space(corners, source_size=source_size)
+    scaled_corners = _scale_corner_labels(corners, label_size=label_size, source_size=source_size)
     image_path = frame_dir / frame_name
     video_path = clip_root / "source.mp4" if clip_root is not None else _payload_source_video(payload)
     return {
         "image_path": str(image_path) if image_path.is_file() else None,
         "video_path": str(video_path) if video_path is not None else None,
         "frame_index": _frame_index_from_name(frame_name),
-        "keypoints": keypoint_labels_from_court_corners(corners),
+        "label_coordinate_space": list(label_size) if label_size is not None else None,
+        "source_video_size": list(source_size) if source_size is not None else None,
+        "keypoints": keypoint_labels_from_court_corners(scaled_corners),
     }
 
 
@@ -62,6 +67,66 @@ def _frame_dir(payload: dict[str, Any]) -> Path:
     if not isinstance(frame_dir, str) or not frame_dir:
         raise ValueError("frames.frame_dir missing")
     return Path(frame_dir)
+
+
+def _source_resolution(payload: dict[str, Any]) -> tuple[int, int] | None:
+    frames = payload.get("frames")
+    if not isinstance(frames, dict):
+        return None
+    source_resolution = frames.get("source_resolution")
+    if not isinstance(source_resolution, list) or len(source_resolution) != 2:
+        return None
+    width, height = source_resolution
+    if isinstance(width, bool) or isinstance(height, bool) or not isinstance(width, int) or not isinstance(height, int):
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    return (width, height)
+
+
+def _infer_label_coordinate_space(
+    corners: dict[str, Any],
+    *,
+    source_size: tuple[int, int] | None,
+) -> tuple[int, int] | None:
+    if source_size is None:
+        return None
+    source_width, source_height = source_size
+    numeric = [_corner_xy(corners, name) for name in ("near_left", "near_right", "far_right", "far_left")]
+    max_x = max(point[0] for point in numeric)
+    max_y = max(point[1] for point in numeric)
+    half_width = source_width / 2.0
+    half_height = source_height / 2.0
+    if max_x <= half_width + 1.0 and max_y <= half_height + 1.0:
+        return (int(round(half_width)), int(round(half_height)))
+    return source_size
+
+
+def _scale_corner_labels(
+    corners: dict[str, Any],
+    *,
+    label_size: tuple[int, int] | None,
+    source_size: tuple[int, int] | None,
+) -> dict[str, list[float]]:
+    if label_size is None or source_size is None:
+        return {name: _corner_xy(corners, name) for name in ("near_left", "near_right", "far_right", "far_left")}
+    scale_x = source_size[0] / float(label_size[0])
+    scale_y = source_size[1] / float(label_size[1])
+    return {
+        name: [xy[0] * scale_x, xy[1] * scale_y]
+        for name in ("near_left", "near_right", "far_right", "far_left")
+        for xy in [_corner_xy(corners, name)]
+    }
+
+
+def _corner_xy(corners: dict[str, Any], key: str) -> list[float]:
+    value = corners.get(key)
+    if not isinstance(value, list) or len(value) != 2:
+        raise ValueError(f"court corner item missing {key}")
+    x, y = value
+    if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
+        raise ValueError(f"court corner item has non-numeric {key}")
+    return [float(x), float(y)]
 
 
 def _payload_source_video(payload: dict[str, Any]) -> Path | None:
@@ -376,6 +441,16 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     return summary
 
 
+def training_cli_summary(summary: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "checkpoint": summary["checkpoint"],
+        "gate": summary["gate"],
+        "before": summary["before"],
+        "after": summary["after"],
+        "holdout_artifacts": summary.get("holdout_artifacts", []),
+    }
+
+
 def load_label_image(row: dict[str, Any], *, cv2: Any, image_module: Any) -> Any:
     image_path = row.get("image_path")
     if isinstance(image_path, str) and image_path and Path(image_path).is_file():
@@ -608,7 +683,7 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
-    print(json.dumps({"checkpoint": summary["checkpoint"], "before": summary["before"], "after": summary["after"]}, indent=2, sort_keys=True))
+    print(json.dumps(training_cli_summary(summary), indent=2, sort_keys=True))
     return 0
 
 

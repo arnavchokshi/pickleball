@@ -5,8 +5,9 @@ from argparse import Namespace
 from pathlib import Path
 
 import numpy as np
+import pytest
 
-from scripts.racketsport.train_court_keypoint_heatmap import load_real_corner_labels, run_training
+from scripts.racketsport.train_court_keypoint_heatmap import load_real_corner_labels, run_training, training_cli_summary
 from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
 
 
@@ -28,15 +29,15 @@ def test_load_real_corner_labels_uses_committed_video_frame_when_label_frames_ar
                     {
                         "frame": "frame_000002.jpg",
                         "court_corners": {
-                            "near_left": [100, 900],
-                            "near_right": [900, 900],
-                            "far_right": [700, 100],
-                            "far_left": [300, 100],
+                            "near_left": [8, 32],
+                            "near_right": [56, 32],
+                            "far_right": [44, 6],
+                            "far_left": [20, 6],
                         },
                     }
                 ]
             },
-            "frames": {"frame_dir": "runs/label_frames/clip_a"},
+            "frames": {"frame_dir": "runs/label_frames/clip_a", "source_resolution": [128, 72]},
         },
     )
 
@@ -49,6 +50,10 @@ def test_load_real_corner_labels_uses_committed_video_frame_when_label_frames_ar
     assert row["frame_index"] == 2
     assert row["image_path"] is None
     assert set(row["keypoints"]) == {point.name for point in PICKLEBALL_KEYPOINTS}
+    assert row["label_coordinate_space"] == [64, 36]
+    assert row["source_video_size"] == [128, 72]
+    assert row["keypoints"]["near_left_corner"] == pytest.approx([16.0, 64.0])
+    assert row["keypoints"]["near_right_corner"] == pytest.approx([112.0, 64.0])
 
 
 def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_path: Path) -> None:
@@ -113,3 +118,32 @@ def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_pat
     assert summary["holdout_artifacts"][0]["overlay_frame_count"] == 3
     assert (out / "holdout_predictions" / "clip_a_court_keypoints.json").is_file()
     assert (out / "holdout_overlays" / "clip_a_court_keypoints_overlay.mp4").is_file()
+
+
+def test_training_cli_summary_prints_gate_metric_and_artifact_paths() -> None:
+    summary = training_cli_summary(
+        {
+            "checkpoint": "run/court_keypoint_heatmap.pt",
+            "gate": {
+                "metric": "heldout_median_keypoint_reprojection_px",
+                "value_px": 12.5,
+                "threshold_px": 5.0,
+                "passed": False,
+            },
+            "before": {"real_keypoint_median_px": 80.0},
+            "after": {"real_keypoint_median_px": 40.0},
+            "holdout_artifacts": [
+                {
+                    "clip": "clip_a",
+                    "prediction_artifact": "run/holdout_predictions/clip_a.json",
+                    "overlay_artifact": "run/holdout_overlays/clip_a.mp4",
+                    "median_keypoint_reprojection_px": 12.5,
+                }
+            ],
+        }
+    )
+
+    assert summary["checkpoint"] == "run/court_keypoint_heatmap.pt"
+    assert summary["gate"]["metric"] == "heldout_median_keypoint_reprojection_px"
+    assert summary["gate"]["value_px"] == 12.5
+    assert summary["holdout_artifacts"][0]["overlay_artifact"] == "run/holdout_overlays/clip_a.mp4"
