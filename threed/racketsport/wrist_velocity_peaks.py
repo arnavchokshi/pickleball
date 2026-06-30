@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from threed.racketsport.skeleton3d import semanticize_skeleton_payload
 
 ARTIFACT_TYPE = "racketsport_wrist_velocity_peaks"
 DEFAULT_MIN_SPEED_MPS = 4.0
@@ -81,6 +82,10 @@ def build_wrist_velocity_peaks_from_skeleton(
     min_speed_mps = _require_non_negative(min_speed_mps, "min_speed_mps")
     min_confidence = _require_unit(min_confidence, "min_confidence")
     min_separation_s = _require_non_negative(min_separation_s, "min_separation_s")
+    if left_wrist_index is None and right_wrist_index is None:
+        semantic_skeleton = semanticize_skeleton_payload(skeleton)
+        if semantic_skeleton is not None:
+            skeleton = semantic_skeleton
     players = skeleton.get("players")
     if not isinstance(players, list):
         raise ValueError("skeleton3d players must be a list")

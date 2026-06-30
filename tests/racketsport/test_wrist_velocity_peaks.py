@@ -69,6 +69,20 @@ def test_wrist_velocity_builder_blocks_when_wrist_joint_mapping_is_missing() -> 
     assert artifact["peaks"] == []
 
 
+def test_wrist_velocity_builder_uses_sam3d_mhr70_semantic_adapter() -> None:
+    payload = _skeleton_payload(joint_names=[f"sam3dbody_joint_{index:03d}" for index in range(70)])
+    payload["players"][0]["frames"][1]["joints_world"][62] = [0.5, 0.0, 1.0]
+    payload["players"][0]["frames"][2]["joints_world"][62] = [0.55, 0.0, 1.0]
+
+    artifact = build_wrist_velocity_peaks_from_skeleton(payload, min_speed_mps=4.0, min_separation_s=0.1)
+
+    assert artifact["status"] == "review_only"
+    assert artifact["summary"]["peak_count"] == 1
+    assert artifact["joint_mapping"] == {"right_wrist": 10, "left_wrist": 11}
+    assert artifact["peaks"][0]["player_id"] == 7
+    assert artifact["peaks"][0]["wrist_side"] == "left"
+
+
 def test_build_wrist_velocity_peaks_cli_writes_artifact(tmp_path: Path) -> None:
     skeleton = _skeleton_payload(joint_names=["pelvis", "left_wrist"])
     skeleton["players"][0]["frames"][1]["joints_world"][1] = [0.5, 0.0, 1.0]

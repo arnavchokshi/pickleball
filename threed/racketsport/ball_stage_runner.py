@@ -25,6 +25,8 @@ DEFAULT_PROTOTYPE_GATE_ROOT = Path("runs/eval0/prototype_gate_h100_v2")
 DEFAULT_AUDIO_ONSETS_FILENAME = "audio_onsets.json"
 DEFAULT_WRIST_VELOCITY_PEAKS_FILENAME = "wrist_velocity_peaks.json"
 DEFAULT_BALL_INFLECTIONS_FILENAME = "ball_inflections.json"
+CONTACT_FUSION_MODE_AUDIO_WRIST_BALL = "audio_wrist_ball"
+CONTACT_FUSION_MODE_WRIST_BALL = "wrist_ball"
 TOTNET_PREDICTIONS_FILENAME = "totnet_predictions.json"
 TOTNET_RUN_METADATA_FILENAME = "totnet_run.json"
 TRACKNET_RUN_METADATA_FILENAME = "tracknet_metadata.json"
@@ -84,6 +86,7 @@ class BallStageRunner:
         tracknet_local_search: bool = False,
         local_search_runner: ModelRunner | None = None,
         ball_physics3d: bool = False,
+        contact_fusion_mode: str = CONTACT_FUSION_MODE_AUDIO_WRIST_BALL,
         confidence_threshold: float = 0.0,
         batch_size: int = 8,
     ) -> None:
@@ -103,6 +106,12 @@ class BallStageRunner:
         self.tracknet_local_search = bool(tracknet_local_search)
         self.local_search_runner = local_search_runner
         self.ball_physics3d = bool(ball_physics3d)
+        if contact_fusion_mode not in {CONTACT_FUSION_MODE_AUDIO_WRIST_BALL, CONTACT_FUSION_MODE_WRIST_BALL}:
+            raise ValueError(
+                f"unknown BALL contact_fusion_mode: {contact_fusion_mode}; "
+                f"expected {CONTACT_FUSION_MODE_AUDIO_WRIST_BALL} or {CONTACT_FUSION_MODE_WRIST_BALL}"
+            )
+        self.contact_fusion_mode = contact_fusion_mode
         self.confidence_threshold = float(confidence_threshold)
         self.batch_size = int(batch_size)
         if self._totnet_configured and self._tracknet_configured:
@@ -146,7 +155,11 @@ class BallStageRunner:
             )
             ball_track = BallTrack.model_validate(ball_payload)
 
-        contact_payload, contact_notes = _contact_windows_from_cues(context, fps=ball_track.fps)
+        contact_payload, contact_notes = _contact_windows_from_cues(
+            context,
+            fps=ball_track.fps,
+            contact_fusion_mode=self.contact_fusion_mode,
+        )
         ContactWindows.model_validate(contact_payload)
 
         _write_json(context.run_dir / "ball_track.json", ball_payload)
@@ -165,6 +178,7 @@ class BallStageRunner:
             "contact_event_count": contact_event_count,
             "uses_human_clicks": False,
             "not_gate_verified": True,
+            "contact_fusion_mode": self.contact_fusion_mode,
         }
         metrics.update(model_metrics)
         if physics_summary is not None:
@@ -583,13 +597,20 @@ def _selection_metadata_for_track(path: Path) -> dict[str, Any] | None:
     return {field: payload[field] for field in fields if field in payload}
 
 
-def _contact_windows_from_cues(context: Any, *, fps: float) -> tuple[dict[str, object], tuple[str, ...]]:
+def _contact_windows_from_cues(
+    context: Any,
+    *,
+    fps: float,
+    contact_fusion_mode: str,
+) -> tuple[dict[str, object], tuple[str, ...]]:
     cue_paths = {
         "audio": _first_existing(context, DEFAULT_AUDIO_ONSETS_FILENAME),
         "wrist": _first_existing(context, DEFAULT_WRIST_VELOCITY_PEAKS_FILENAME),
         "ball": _first_existing(context, DEFAULT_BALL_INFLECTIONS_FILENAME),
     }
-    missing = [name for name, path in cue_paths.items() if path is None]
+    require_audio = contact_fusion_mode == CONTACT_FUSION_MODE_AUDIO_WRIST_BALL
+    required_cues = ("audio", "wrist", "ball") if require_audio else ("wrist", "ball")
+    missing = [name for name in required_cues if cue_paths[name] is None]
     if missing:
         return (
             build_contact_windows_artifact([]),
@@ -598,13 +619,17 @@ def _contact_windows_from_cues(context: Any, *, fps: float) -> tuple[dict[str, o
 
     contact_payload = fuse_contact_windows_from_cue_payloads(
         fps=fps,
-        audio_onsets_payload=_read_json(cue_paths["audio"]),
+        audio_onsets_payload=_read_json(cue_paths["audio"]) if require_audio else [],
         wrist_velocity_peaks_payload=_read_json(cue_paths["wrist"]),
         ball_inflections_payload=_read_json(cue_paths["ball"]),
+        require_audio=require_audio,
     )
     event_count = len(contact_payload.get("events", []))
     if event_count:
-        note = "fused contact_windows.json from audio, wrist, and ball cue artifacts"
+        if require_audio:
+            note = "fused contact_windows.json from audio, wrist, and ball cue artifacts"
+        else:
+            note = "fused contact_windows.json from wrist and ball cue artifacts"
     else:
         note = "contact cue artifacts were present but produced zero temporally matched contact windows"
     return contact_payload, (note,)
@@ -638,6 +663,8 @@ def _read_json(path: Path) -> Any:
 __all__ = [
     "BALL_PHYSICS3D_SUMMARY_FILENAME",
     "BallStageRunner",
+    "CONTACT_FUSION_MODE_AUDIO_WRIST_BALL",
+    "CONTACT_FUSION_MODE_WRIST_BALL",
     "DEFAULT_AUDIO_ONSETS_FILENAME",
     "DEFAULT_BALL_INFLECTIONS_FILENAME",
     "DEFAULT_NO_CLICK_BALL_FILENAME",

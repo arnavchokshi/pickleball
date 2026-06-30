@@ -71,6 +71,7 @@ def fuse_contact_windows(
     audio_onsets: Sequence[AudioOnsetCandidate | Mapping[str, Any] | Any],
     wrist_velocity_peaks: Sequence[WristVelocityPeak],
     ball_inflections: Sequence[BallInflectionCandidate],
+    require_audio: bool = True,
     max_time_delta_s: float = DEFAULT_MAX_TIME_DELTA_S,
     pre_s: float = DEFAULT_PRE_WINDOW_S,
     post_s: float = DEFAULT_POST_WINDOW_S,
@@ -99,12 +100,55 @@ def fuse_contact_windows(
     sorted_ball = sorted(ball_inflections, key=lambda candidate: candidate.time_s)
     sorted_wrist = sorted(wrist_velocity_peaks, key=lambda candidate: (candidate.time_s, candidate.player_id))
 
-    if not normalized_audio or not sorted_ball or not sorted_wrist:
+    if require_audio and not normalized_audio:
+        return build_contact_windows_artifact([])
+    if not sorted_ball or not sorted_wrist:
         return build_contact_windows_artifact([])
 
     events: list[dict[str, object]] = []
     used_ball_indices: set[int] = set()
     used_wrist_indices: set[int] = set()
+
+    if not require_audio:
+        for ball_idx, ball in enumerate(sorted_ball):
+            if ball_idx in used_ball_indices:
+                continue
+            wrist_match = _nearest_wrist_to_ball_only_match(
+                ball=ball,
+                wrists=sorted_wrist,
+                used_indices=used_wrist_indices,
+                max_time_delta_s=max_time_delta_s,
+            )
+            if wrist_match is None:
+                continue
+
+            wrist_idx, wrist = wrist_match
+            source_times = (wrist.time_s, ball.time_s)
+            event_t = (min(source_times) + max(source_times)) / 2.0
+            source_confidences = {
+                "wrist_vel": wrist.confidence,
+                "ball_inflection": ball.confidence,
+            }
+            confidence = round(sum(source_confidences.values()) / len(source_confidences), 12)
+            frame = max(0, int(round(event_t * fps)))
+
+            events.append(
+                build_contact_event(
+                    t=event_t,
+                    frame=frame,
+                    player_id=wrist.player_id,
+                    confidence=confidence,
+                    sources=source_confidences,
+                    t0=max(0.0, event_t - pre_s),
+                    t1=event_t + post_s,
+                    importance=confidence,
+                )
+            )
+            used_ball_indices.add(ball_idx)
+            used_wrist_indices.add(wrist_idx)
+
+        events.sort(key=lambda event: (float(event["t"]), int(event["frame"])))
+        return build_contact_windows_artifact(events)
 
     for audio in normalized_audio:
         ball_match = _nearest_ball_match(audio, sorted_ball, used_ball_indices, max_time_delta_s)
@@ -158,6 +202,7 @@ def fuse_contact_windows_from_cue_payloads(
     audio_onsets_payload: Any,
     wrist_velocity_peaks_payload: Any,
     ball_inflections_payload: Any,
+    require_audio: bool = True,
     max_time_delta_s: float = DEFAULT_MAX_TIME_DELTA_S,
     pre_s: float = DEFAULT_PRE_WINDOW_S,
     post_s: float = DEFAULT_POST_WINDOW_S,
@@ -188,6 +233,7 @@ def fuse_contact_windows_from_cue_payloads(
         audio_onsets=audio_onsets,
         wrist_velocity_peaks=wrist_velocity_peaks,
         ball_inflections=ball_inflections,
+        require_audio=require_audio,
         max_time_delta_s=max_time_delta_s,
         pre_s=pre_s,
         post_s=post_s,
@@ -197,9 +243,10 @@ def fuse_contact_windows_from_cue_payloads(
 def fuse_contact_windows_from_cue_files(
     *,
     fps: float,
-    audio_onsets_path: str | Path,
+    audio_onsets_path: str | Path | None,
     wrist_velocity_peaks_path: str | Path,
     ball_inflections_path: str | Path,
+    require_audio: bool = True,
     max_time_delta_s: float = DEFAULT_MAX_TIME_DELTA_S,
     pre_s: float = DEFAULT_PRE_WINDOW_S,
     post_s: float = DEFAULT_POST_WINDOW_S,
@@ -208,9 +255,10 @@ def fuse_contact_windows_from_cue_files(
 
     return fuse_contact_windows_from_cue_payloads(
         fps=fps,
-        audio_onsets_payload=_read_json(Path(audio_onsets_path)),
+        audio_onsets_payload=_read_json(Path(audio_onsets_path)) if audio_onsets_path is not None else [],
         wrist_velocity_peaks_payload=_read_json(Path(wrist_velocity_peaks_path)),
         ball_inflections_payload=_read_json(Path(ball_inflections_path)),
+        require_audio=require_audio,
         max_time_delta_s=max_time_delta_s,
         pre_s=pre_s,
         post_s=post_s,
@@ -271,6 +319,32 @@ def _nearest_wrist_to_ball_match(
         key=lambda item: (
             _distance_m(item[1].wrist_world_xyz, ball.ball_world_xyz),
             abs(item[1].time_s - center_t),
+            -item[1].confidence,
+            item[1].player_id,
+            item[0],
+        ),
+    )
+
+
+def _nearest_wrist_to_ball_only_match(
+    *,
+    ball: BallInflectionCandidate,
+    wrists: Sequence[WristVelocityPeak],
+    used_indices: set[int],
+    max_time_delta_s: float,
+) -> tuple[int, WristVelocityPeak] | None:
+    matches = [
+        (idx, candidate)
+        for idx, candidate in enumerate(wrists)
+        if idx not in used_indices and abs(candidate.time_s - ball.time_s) <= max_time_delta_s
+    ]
+    if not matches:
+        return None
+    return min(
+        matches,
+        key=lambda item: (
+            _distance_m(item[1].wrist_world_xyz, ball.ball_world_xyz),
+            abs(item[1].time_s - ball.time_s),
             -item[1].confidence,
             item[1].player_id,
             item[0],

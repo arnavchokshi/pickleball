@@ -23,14 +23,20 @@ from threed.racketsport.schemas import ContactWindows
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Fuse audio, wrist-velocity, and ball-inflection cues into contact_windows.json."
+        description="Fuse contact cue artifacts into contact_windows.json."
     )
-    parser.add_argument("--audio-onsets", type=Path, required=True, help="audio_onsets.json artifact.")
+    parser.add_argument("--audio-onsets", type=Path, help="audio_onsets.json artifact.")
     parser.add_argument("--wrist-velocity-peaks", type=Path, required=True, help="wrist_velocity_peaks.json artifact.")
     parser.add_argument("--ball-inflections", type=Path, required=True, help="ball_inflections.json artifact.")
     parser.add_argument("--tracks", type=Path, help="Optional tracks.json used to infer FPS.")
     parser.add_argument("--ball-track", type=Path, help="Optional ball_track.json used to infer FPS.")
     parser.add_argument("--fps", type=float, help="Explicit frame rate override.")
+    parser.add_argument(
+        "--contact-fusion-mode",
+        choices=("audio_wrist_ball", "wrist_ball"),
+        default="audio_wrist_ball",
+        help="Cue families required for a promoted contact window.",
+    )
     parser.add_argument("--max-time-delta-s", type=float, default=DEFAULT_MAX_TIME_DELTA_S)
     parser.add_argument("--pre-s", type=float, default=DEFAULT_PRE_WINDOW_S)
     parser.add_argument("--post-s", type=float, default=DEFAULT_POST_WINDOW_S)
@@ -39,11 +45,15 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         fps = _resolve_fps(explicit_fps=args.fps, tracks_path=args.tracks, ball_track_path=args.ball_track)
+        require_audio = args.contact_fusion_mode == "audio_wrist_ball"
+        if require_audio and args.audio_onsets is None:
+            raise ValueError("--audio-onsets is required in audio_wrist_ball contact-fusion mode")
         payload = fuse_contact_windows_from_cue_files(
             fps=fps,
             audio_onsets_path=args.audio_onsets,
             wrist_velocity_peaks_path=args.wrist_velocity_peaks,
             ball_inflections_path=args.ball_inflections,
+            require_audio=require_audio,
             max_time_delta_s=args.max_time_delta_s,
             pre_s=args.pre_s,
             post_s=args.post_s,

@@ -873,7 +873,7 @@ def _validate_rotation_orthonormal(value: Matrix3) -> None:
 class EventSources(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    audio: float
+    audio: float | None = None
     wrist_vel: float
     ball_inflection: float
     human_review: float | None = None

@@ -142,6 +142,51 @@ def test_fuse_contact_windows_omits_events_when_required_sources_are_missing() -
     ) == {"schema_version": 1, "events": []}
 
 
+def test_fuse_contact_windows_can_opt_into_wrist_ball_fusion_without_audio() -> None:
+    fuse_contact_windows, WristVelocityPeak, BallInflectionCandidate = _fusion_api()
+
+    fused = fuse_contact_windows(
+        fps=120.0,
+        audio_onsets=[],
+        wrist_velocity_peaks=[
+            WristVelocityPeak(
+                time_s=1.010,
+                player_id=7,
+                wrist_world_xyz=(1.02, 0.02, 0.82),
+                speed_mps=8.5,
+                confidence=0.82,
+            )
+        ],
+        ball_inflections=[
+            BallInflectionCandidate(
+                time_s=0.990,
+                ball_world_xyz=(1.00, 0.00, 0.80),
+                confidence=0.74,
+            )
+        ],
+        require_audio=False,
+        max_time_delta_s=0.030,
+        pre_s=0.040,
+        post_s=0.060,
+    )
+
+    assert fused == {
+        "schema_version": 1,
+        "events": [
+            {
+                "type": "contact",
+                "t": pytest.approx(1.0),
+                "frame": 120,
+                "player_id": 7,
+                "confidence": pytest.approx(0.78),
+                "sources": {"wrist_vel": 0.82, "ball_inflection": 0.74},
+                "window": {"t0": pytest.approx(0.96), "t1": pytest.approx(1.06), "importance": pytest.approx(0.78)},
+            }
+        ],
+    }
+    ContactWindows.model_validate(fused)
+
+
 def test_build_contact_windows_from_cues_cli_writes_schema_contact_windows(tmp_path: Path) -> None:
     audio = tmp_path / "audio_onsets.json"
     wrist = tmp_path / "wrist_velocity_peaks.json"
@@ -225,3 +270,73 @@ def test_build_contact_windows_from_cues_cli_writes_schema_contact_windows(tmp_p
     assert payload["events"][0]["player_id"] == 4
     assert payload["events"][0]["frame"] == 120
     assert json.loads(completed.stdout)["event_count"] == 1
+
+
+def test_build_contact_windows_from_cues_cli_supports_wrist_ball_mode_without_audio(tmp_path: Path) -> None:
+    wrist = tmp_path / "wrist_velocity_peaks.json"
+    ball = tmp_path / "ball_inflections.json"
+    out = tmp_path / "contact_windows.json"
+
+    wrist.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_wrist_velocity_peaks",
+                "status": "review_only",
+                "peaks": [
+                    {
+                        "time_s": 1.010,
+                        "player_id": 4,
+                        "wrist_world_xyz": [1.05, 0.0, 0.75],
+                        "speed_mps": 8.0,
+                        "confidence": 0.80,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    ball.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_ball_inflections",
+                "candidates": [
+                    {
+                        "time_s": 0.995,
+                        "ball_world_xyz": [1.0, 0.0, 0.78],
+                        "confidence": 0.70,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/build_contact_windows_from_cues.py",
+            "--contact-fusion-mode",
+            "wrist_ball",
+            "--wrist-velocity-peaks",
+            str(wrist),
+            "--ball-inflections",
+            str(ball),
+            "--fps",
+            "120",
+            "--out",
+            str(out),
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    ContactWindows.model_validate(payload)
+    assert payload["events"][0]["player_id"] == 4
+    assert payload["events"][0]["sources"] == {"wrist_vel": 0.8, "ball_inflection": 0.7}

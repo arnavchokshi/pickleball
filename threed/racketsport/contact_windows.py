@@ -29,17 +29,22 @@ def build_contact_event(
     if t1 < t0:
         raise ValueError("t1 must be greater than or equal to t0")
 
+    source_scores = {
+        "wrist_vel": _require_confidence(sources.get("wrist_vel"), "sources.wrist_vel"),
+        "ball_inflection": _require_confidence(sources.get("ball_inflection"), "sources.ball_inflection"),
+    }
+    if sources.get("audio") is not None:
+        source_scores["audio"] = _require_confidence(sources.get("audio"), "sources.audio")
+    if sources.get("human_review") is not None:
+        source_scores["human_review"] = _require_confidence(sources.get("human_review"), "sources.human_review")
+
     return {
         "type": "contact",
         "t": t,
         "frame": int(frame),
         "player_id": player_id,
         "confidence": confidence,
-        "sources": {
-            "audio": _require_confidence(sources.get("audio"), "sources.audio"),
-            "wrist_vel": _require_confidence(sources.get("wrist_vel"), "sources.wrist_vel"),
-            "ball_inflection": _require_confidence(sources.get("ball_inflection"), "sources.ball_inflection"),
-        },
+        "sources": source_scores,
         "window": {"t0": t0, "t1": t1, "importance": importance},
     }
 

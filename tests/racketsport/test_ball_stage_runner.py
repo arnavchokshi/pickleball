@@ -968,3 +968,32 @@ def test_ball_stage_runner_fuses_trusted_contact_windows_from_required_cue_artif
     _write_json(run_dir / "frame_compute_plan.json", frame_plan)
     execution = build_body_compute_execution(tracks, frame_plan_path=run_dir / "frame_compute_plan.json")
     assert execution["summary"]["scheduled_player_frame_count"] == 2
+
+
+def test_ball_stage_runner_can_opt_into_wrist_ball_contact_fusion_without_audio(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "clip_001"
+    _write_no_click_ball_source(inputs)
+    _write_dependency_artifacts(run_dir)
+    _write_contact_cue_artifacts(inputs)
+    (inputs / "audio_onsets.json").unlink()
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(contact_fusion_mode="wrist_ball")
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["metrics"]["contact_event_count"] == 1
+    assert "fused contact_windows.json from wrist and ball cue artifacts" in ball_stage["notes"]
+    contact_windows = validate_artifact_file("contact_windows", run_dir / "contact_windows.json")
+    assert isinstance(contact_windows, ContactWindows)
+    assert len(contact_windows.events) == 1
+    assert contact_windows.events[0].player_id == 7
+    assert contact_windows.events[0].sources.audio is None
