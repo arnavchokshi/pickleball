@@ -24,6 +24,8 @@ TOTNET_PREDICTIONS_FILENAME = "totnet_predictions.json"
 TOTNET_RUN_METADATA_FILENAME = "totnet_run.json"
 TRACKNET_RUN_METADATA_FILENAME = "tracknet_metadata.json"
 TRACKNET_PREDICTION_DIR = "tracknet_predictions"
+TRACKNET_RAW_BALL_FILENAME = "ball_track_tracknet_raw.json"
+BALL_LOCAL_SEARCH_SUMMARY_FILENAME = "ball_local_search_summary.json"
 
 ModelRunner = Callable[..., dict[str, Any]]
 
@@ -71,6 +73,8 @@ class BallStageRunner:
         tracknet_runner: ModelRunner | None = None,
         tracknet_fps: float | None = None,
         tracknet_large_video: bool = False,
+        tracknet_local_search: bool = False,
+        local_search_runner: ModelRunner | None = None,
         confidence_threshold: float = 0.0,
         batch_size: int = 8,
     ) -> None:
@@ -87,6 +91,8 @@ class BallStageRunner:
         self.tracknet_runner = tracknet_runner
         self.tracknet_fps = float(tracknet_fps) if tracknet_fps is not None else None
         self.tracknet_large_video = bool(tracknet_large_video)
+        self.tracknet_local_search = bool(tracknet_local_search)
+        self.local_search_runner = local_search_runner
         self.confidence_threshold = float(confidence_threshold)
         self.batch_size = int(batch_size)
         if self._totnet_configured and self._tracknet_configured:
@@ -157,7 +163,7 @@ class BallStageRunner:
             source_mode=source_mode,
             produced_artifacts=self._produced_artifacts,
             notes=(
-                self._source_note(source_path),
+                *self._source_notes(source_path),
                 *contact_notes,
                 *blocked_notes,
                 "real BALL model inference output; not a BALL VERIFIED accuracy gate",
@@ -178,15 +184,26 @@ class BallStageRunner:
         if self._totnet_configured:
             return ("ball_track.json", "contact_windows.json", TOTNET_PREDICTIONS_FILENAME, TOTNET_RUN_METADATA_FILENAME)
         if self._tracknet_configured:
+            if self.tracknet_local_search:
+                return (
+                    "ball_track.json",
+                    "contact_windows.json",
+                    TRACKNET_RUN_METADATA_FILENAME,
+                    TRACKNET_RAW_BALL_FILENAME,
+                    BALL_LOCAL_SEARCH_SUMMARY_FILENAME,
+                )
             return ("ball_track.json", "contact_windows.json", TRACKNET_RUN_METADATA_FILENAME)
         return ("ball_track.json", "contact_windows.json")
 
-    def _source_note(self, source_path: Path) -> str:
+    def _source_notes(self, source_path: Path) -> tuple[str, ...]:
         if self._totnet_configured:
-            return "ran TOTNet video inference locally"
+            return ("ran TOTNet video inference locally",)
         if self._tracknet_configured:
-            return "ran TrackNetV3 video inference locally"
-        return _source_note_for_path(source_path)
+            notes = ["ran TrackNetV3 video inference locally"]
+            if self.tracknet_local_search:
+                notes.append("applied TrackNetV3 local-search postprocess")
+            return tuple(notes)
+        return (_source_note_for_path(source_path),)
 
     def _run_totnet_inference(self, context: Any) -> tuple[dict[str, Any], Path, str, dict[str, Any]]:
         if self.totnet_repo is None or self.totnet_checkpoint is None:
@@ -237,8 +254,20 @@ class BallStageRunner:
             batch_size=self.batch_size,
             large_video=self.tracknet_large_video,
         )
-        payload = _read_json(out)
         model_metrics = _tracknet_model_metrics(summary)
+        if self.tracknet_local_search:
+            raw_out = context.run_dir / TRACKNET_RAW_BALL_FILENAME
+            _copy_file(out, raw_out)
+            local_summary_out = context.run_dir / BALL_LOCAL_SEARCH_SUMMARY_FILENAME
+            local_summary = (self.local_search_runner or _default_local_search_runner())(
+                video_path=video,
+                ball_track_path=raw_out,
+                out_path=out,
+                summary_path=local_summary_out,
+            )
+            model_metrics["raw_tracknet_ball_track"] = str(raw_out)
+            model_metrics["local_search"] = _local_search_metrics(local_summary)
+        payload = _read_json(out)
         return payload, out, "tracknetv3_inference", model_metrics
 
     def _resolve_source_path(self, context: Any) -> Path:
@@ -274,6 +303,12 @@ def _default_tracknet_runner() -> ModelRunner:
     return run_tracknet_or_convert
 
 
+def _default_local_search_runner() -> ModelRunner:
+    from threed.racketsport.ball_local_search import write_local_search_ball_track
+
+    return write_local_search_ball_track
+
+
 def _totnet_model_metrics(summary: dict[str, Any]) -> dict[str, Any]:
     metrics: dict[str, Any] = {"model_family": "TOTNet"}
     for key in ("frame_count", "visible_frame_count", "confidence_threshold"):
@@ -290,13 +325,30 @@ def _totnet_model_metrics(summary: dict[str, Any]) -> dict[str, Any]:
 
 def _tracknet_model_metrics(summary: dict[str, Any]) -> dict[str, Any]:
     metrics: dict[str, Any] = {"model_family": "TrackNetV3"}
-    for key in ("frame_count", "visible_frame_count", "source_mode"):
-        if key in summary:
-            metrics[key] = summary[key]
+    if "frame_count" in summary:
+        metrics["tracknet_raw_frame_count"] = summary["frame_count"]
+    if "visible_frame_count" in summary:
+        metrics["tracknet_raw_visible_frame_count"] = summary["visible_frame_count"]
+    if "source_mode" in summary:
+        metrics["tracknet_source_mode"] = summary["source_mode"]
     runtime = summary.get("runtime")
     if isinstance(runtime, dict):
         metrics["runtime"] = runtime
     return metrics
+
+
+def _local_search_metrics(summary: dict[str, Any]) -> dict[str, Any]:
+    fields = (
+        "visible_before",
+        "visible_after",
+        "recovered_count",
+        "relocated_off_path_count",
+        "suppressed_off_path_count",
+        "evidence_miss_count",
+        "court_rejected_count",
+        "uses_human_clicks",
+    )
+    return {field: summary[field] for field in fields if field in summary}
 
 
 def _resolve_video_path(context: Any, *, explicit: Path | None) -> Path:
@@ -454,6 +506,11 @@ def _first_existing(context: Any, filename: str) -> Path | None:
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _copy_file(source: Path, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(source.read_bytes())
 
 
 def _read_json(path: Path) -> Any:

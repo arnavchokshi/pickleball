@@ -480,6 +480,101 @@ def test_ball_stage_runner_real_tracknet_mode_runs_model_inference_before_contac
     assert emitted["frames"][0]["xy"] == [444.0, 222.0]
 
 
+def test_ball_stage_runner_tracknet_local_search_keeps_raw_and_outputs_filtered_track(tmp_path: Path) -> None:
+    clip = "clip_001"
+    inputs = tmp_path / "inputs" / clip
+    run_dir = tmp_path / "runs" / clip
+    video = inputs / "input.mp4"
+    tracknet_file = tmp_path / "TrackNet_best.pt"
+    inpaintnet_file = tmp_path / "InpaintNet_best.pt"
+    tracknet_repo = tmp_path / "TrackNetV3"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"fake video bytes")
+    tracknet_file.write_bytes(b"fake tracknet checkpoint")
+    inpaintnet_file.write_bytes(b"fake inpaintnet checkpoint")
+    tracknet_repo.mkdir(parents=True)
+    (tracknet_repo / "predict.py").write_text("print('fake')\n", encoding="utf-8")
+    _write_dependency_artifacts(run_dir)
+    _write_contact_cue_artifacts(inputs)
+
+    tracknet_calls: list[dict[str, object]] = []
+    local_search_calls: list[dict[str, object]] = []
+
+    def fake_tracknet_runner(**kwargs):
+        tracknet_calls.append(kwargs)
+        _write_model_ball_track(Path(kwargs["out"]), source="tracknet")
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_tracknet_ball_run",
+            "source_mode": "tracknet_predict",
+            "frame_count": 3,
+            "visible_frame_count": 2,
+        }
+
+    def fake_local_search_runner(**kwargs):
+        local_search_calls.append(kwargs)
+        payload = _ball_track_payload()
+        payload["source"] = "tracknet"
+        payload["frames"][0]["xy"] = [555.0, 333.0]
+        payload["frames"][2]["xy"] = [560.0, 336.0]
+        payload["frames"][2]["conf"] = 0.61
+        payload["frames"][2]["visible"] = True
+        _write_json(Path(kwargs["out_path"]), payload)
+        summary = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_ball_local_search_filter",
+            "visible_before": 2,
+            "visible_after": 3,
+            "recovered_count": 1,
+            "relocated_off_path_count": 1,
+            "suppressed_off_path_count": 0,
+            "uses_human_clicks": False,
+        }
+        _write_json(Path(kwargs["summary_path"]), summary)
+        return summary
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(
+        tracknet_repo=tracknet_repo,
+        tracknet_file=tracknet_file,
+        inpaintnet_file=inpaintnet_file,
+        video_path=video,
+        tracknet_runner=fake_tracknet_runner,
+        tracknet_fps=30.0,
+        tracknet_local_search=True,
+        local_search_runner=fake_local_search_runner,
+    )
+
+    summary = run_pipeline(
+        clip=clip,
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    assert tracknet_calls
+    assert local_search_calls
+    assert local_search_calls[0]["video_path"] == video
+    assert local_search_calls[0]["ball_track_path"] == run_dir / "ball_track_tracknet_raw.json"
+    assert local_search_calls[0]["out_path"] == run_dir / "ball_track.json"
+    assert local_search_calls[0]["summary_path"] == run_dir / "ball_local_search_summary.json"
+    assert json.loads((run_dir / "ball_track_tracknet_raw.json").read_text(encoding="utf-8"))["frames"][0]["xy"] == [
+        444.0,
+        222.0,
+    ]
+    assert json.loads((run_dir / "ball_track.json").read_text(encoding="utf-8"))["frames"][0]["xy"] == [555.0, 333.0]
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["metrics"]["source_ball_track"] == str(run_dir / "ball_track.json")
+    assert ball_stage["metrics"]["visible_frame_count"] == 3
+    assert ball_stage["metrics"]["tracknet_raw_visible_frame_count"] == 2
+    assert ball_stage["metrics"]["raw_tracknet_ball_track"] == str(run_dir / "ball_track_tracknet_raw.json")
+    assert ball_stage["metrics"]["local_search"]["recovered_count"] == 1
+    assert "ball_track_tracknet_raw.json" in ball_stage["produced_artifacts"]
+    assert "ball_local_search_summary.json" in ball_stage["produced_artifacts"]
+    assert "applied TrackNetV3 local-search postprocess" in ball_stage["notes"]
+
+
 def test_ball_stage_runner_fails_closed_on_renamed_tap_track_even_with_cues(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs" / "clip_001"
     run_dir = tmp_path / "runs" / "clip_001"
