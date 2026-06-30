@@ -1,0 +1,10 @@
+{
+  "camera_angle": "steep_corner",
+  "camera_height": "mid",
+  "duration_s": 10.0,
+  "environment": "outdoor",
+  "frame_rate_fps": 30,
+  "play_type": "doubles",
+  "racket_gt": false,
+  "schema_version": 1
+}

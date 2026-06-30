@@ -1,0 +1,10 @@
+{
+  "camera_angle": "shallow_baseline",
+  "camera_height": "high",
+  "duration_s": 19.183333333333334,
+  "environment": "outdoor",
+  "frame_rate_fps": 60,
+  "play_type": "messy_real_world",
+  "racket_gt": false,
+  "schema_version": 1
+}

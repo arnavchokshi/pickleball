@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "artifact_type": "pickleball_local_eval_clip_bundle",
+  "pillar": "ball",
+  "gate_status": "local_eval_fixture_only_not_promotion_ready",
+  "description": "Small committed fixture bundle for local BALL pipeline smoke/eval runs. This bundle is not a promotion gate by itself.",
+  "clips": [
+    {
+      "clip": "burlington_gold_0300_low_steep_corner",
+      "source_video": "burlington_gold_0300_low_steep_corner/source.mp4",
+      "source_sha256": "fc329b53a8d522046779a45fba4e695ee953421e1187070a4ce9a36239cb1aaa",
+      "width": 1920,
+      "height": 1080,
+      "fps": 59.94005994005994,
+      "frame_count": 600,
+      "duration_s": 10.01,
+      "labels": {
+        "ball_points": "burlington_gold_0300_low_steep_corner/labels/ball_points.json",
+        "events": "burlington_gold_0300_low_steep_corner/labels/events.json",
+        "foot_contact": "burlington_gold_0300_low_steep_corner/labels/foot_contact.json",
+        "court_corners": "burlington_gold_0300_low_steep_corner/labels/court_corners.json"
+      },
+      "label_sha256": {
+        "ball_points": "44cf9507059a2f7791eea984d7d67dee426b63a9ef077eefea9ec570540274eb",
+        "events": "9b1a7ab876905c049dcb6e80af7512cbbdec9874cbe7a30f8e68c029d64ad29c",
+        "foot_contact": "2c752a5fb9efad14f72e9ecaee4aa067e2a6420eb28cb4cb27544964f44a66da",
+        "court_corners": "9de740906ee6b466523149ef9b0deb85dce6f8af10cb3fda9b8fe303282e769c"
+      },
+      "label_item_counts": {
+        "ball_points": 30,
+        "events": 1,
+        "foot_contact": 4,
+        "court_corners": 1
+      },
+      "metadata": {
+        "schema_version": 1,
+        "camera_height": "low",
+        "camera_angle": "steep_corner",
+        "play_type": "doubles",
+        "environment": "indoor",
+        "frame_rate_fps": 60,
+        "duration_s": 10.01,
+        "racket_gt": false
+      }
+    },
+    {
+      "clip": "wolverine_mixed_0200_mid_steep_corner",
+      "source_video": "wolverine_mixed_0200_mid_steep_corner/source.mp4",
+      "source_sha256": "7f6c33b7cfd94a063405b68708d37d968cc1850e7435aa875f5b30f0afb6cb4b",
+      "width": 1920,
+      "height": 1080,
+      "fps": 30.0,
+      "frame_count": 300,
+      "duration_s": 10.0,
+      "labels": {
+        "ball_points": "wolverine_mixed_0200_mid_steep_corner/labels/ball_points.json",
+        "events": "wolverine_mixed_0200_mid_steep_corner/labels/events.json",
+        "foot_contact": "wolverine_mixed_0200_mid_steep_corner/labels/foot_contact.json",
+        "court_corners": "wolverine_mixed_0200_mid_steep_corner/labels/court_corners.json"
+      },
+      "label_sha256": {
+        "ball_points": "c27f260840a5683569b6f8728be360d20c38fd5583c3cac899fdabfa101b2eec",
+        "events": "e1c21a1fa4c2aa39d4a4664bb59129a0036eedb9e5c46fc71727c798692f6065",
+        "foot_contact": "9fb04ee032599092ab53e349727b50096fb3c75325b776430953a4ffd1e44d27",
+        "court_corners": "b21588dbe9b483a3b26a3201fc20808ad9842151976634d40fa1fcb65d2883c8"
+      },
+      "label_item_counts": {
+        "ball_points": 30,
+        "events": 1,
+        "foot_contact": 4,
+        "court_corners": 1
+      },
+      "metadata": {
+        "schema_version": 1,
+        "camera_height": "mid",
+        "camera_angle": "steep_corner",
+        "play_type": "doubles",
+        "environment": "outdoor",
+        "frame_rate_fps": 30,
+        "duration_s": 10.0,
+        "racket_gt": false
+      }
+    },
+    {
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline",
+      "source_video": "outdoor_webcam_iynbd_1500_long_high_baseline/source.mp4",
+      "source_sha256": "8b0265f5dc3bf3e3b5b5a1423bf7e58ac7972481dc163b8398dcb2f20bf070c9",
+      "width": 1920,
+      "height": 1080,
+      "fps": 60.0,
+      "frame_count": 1151,
+      "duration_s": 19.183333333333334,
+      "labels": {
+        "ball_points": "outdoor_webcam_iynbd_1500_long_high_baseline/labels/ball_points.json",
+        "events": "outdoor_webcam_iynbd_1500_long_high_baseline/labels/events.json",
+        "foot_contact": "outdoor_webcam_iynbd_1500_long_high_baseline/labels/foot_contact.json",
+        "court_corners": "outdoor_webcam_iynbd_1500_long_high_baseline/labels/court_corners.json"
+      },
+      "label_sha256": {
+        "ball_points": "dfc8e3837490a6fab140f5e5885703f9696949ac294066b3ce0ecca01c111520",
+        "events": "c55efb8d7132cb7f61c2d53f18a86536154185086bb6191ee90e328918895520",
+        "foot_contact": "6a4ef7493d59d18f105f9c5f6a270410600ae6a8b55861c02f3b8b8360379790",
+        "court_corners": "d162e20c42abb664f237ba7369713aead314ada9a5e6a881497fcb64f5101b18"
+      },
+      "label_item_counts": {
+        "ball_points": 30,
+        "events": 1,
+        "foot_contact": 4,
+        "court_corners": 1
+      },
+      "metadata": {
+        "schema_version": 1,
+        "camera_height": "high",
+        "camera_angle": "shallow_baseline",
+        "play_type": "messy_real_world",
+        "environment": "outdoor",
+        "frame_rate_fps": 60,
+        "duration_s": 19.183333333333334,
+        "racket_gt": false
+      }
+    },
+    {
+      "clip": "indoor_doubles_fwuks_0500_long_mid_baseline",
+      "source_video": "indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4",
+      "source_sha256": "22955134f7bf9bdc9392bdde868173fbc6ec9afa4d7a8c58f3e7e0ed33d4e0f1",
+      "width": 1920,
+      "height": 1080,
+      "fps": 29.97002997002997,
+      "frame_count": 900,
+      "duration_s": 30.03,
+      "labels": {
+        "ball_points": "indoor_doubles_fwuks_0500_long_mid_baseline/labels/ball_points.json",
+        "events": "indoor_doubles_fwuks_0500_long_mid_baseline/labels/events.json",
+        "foot_contact": "indoor_doubles_fwuks_0500_long_mid_baseline/labels/foot_contact.json",
+        "court_corners": "indoor_doubles_fwuks_0500_long_mid_baseline/labels/court_corners.json"
+      },
+      "label_sha256": {
+        "ball_points": "397619a262fc688824b9cd4b86a300b8f7a98e34bf340e4376ed650597de186c",
+        "events": "09b65d7451bf3ffb38978ed32cd176993aee6f97728b396db40db81f01dac75f",
+        "foot_contact": "e7a18460b8bdf9e01fb344dfcea954ba03165573ff57e18e3d855be2523309d8",
+        "court_corners": "4abdbc8aef7b5bd81770bdc78156cc4d442db0f4ec1bad3a40a93df71388a052"
+      },
+      "label_item_counts": {
+        "ball_points": 30,
+        "events": 1,
+        "foot_contact": 4,
+        "court_corners": 1
+      },
+      "metadata": {
+        "schema_version": 1,
+        "camera_height": "mid",
+        "camera_angle": "shallow_baseline",
+        "play_type": "doubles",
+        "environment": "indoor",
+        "frame_rate_fps": 30,
+        "duration_s": 30.03,
+        "racket_gt": false
+      }
+    }
+  ]
+}

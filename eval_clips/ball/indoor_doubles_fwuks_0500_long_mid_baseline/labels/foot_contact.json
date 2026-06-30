@@ -1,0 +1,3720 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "confidence": 0.25,
+        "foot": "left",
+        "frame": "frame_000001.jpg",
+        "player_id": "p1",
+        "review_id": "foot_contact_smoke_0000",
+        "status": "uncertain",
+        "xy_px": [
+          921.6,
+          842.4
+        ]
+      },
+      {
+        "confidence": 0.25,
+        "foot": "right",
+        "frame": "frame_000113.jpg",
+        "player_id": "p1",
+        "review_id": "foot_contact_smoke_0001",
+        "status": "uncertain",
+        "xy_px": [
+          921.6,
+          842.4
+        ]
+      },
+      {
+        "confidence": 0.25,
+        "foot": "left",
+        "frame": "frame_000225.jpg",
+        "player_id": "p1",
+        "review_id": "foot_contact_smoke_0002",
+        "status": "uncertain",
+        "xy_px": [
+          921.6,
+          842.4
+        ]
+      },
+      {
+        "confidence": 0.25,
+        "foot": "right",
+        "frame": "frame_000337.jpg",
+        "player_id": "p1",
+        "review_id": "foot_contact_smoke_0003",
+        "status": "uncertain",
+        "xy_px": [
+          921.6,
+          842.4
+        ]
+      }
+    ],
+    "notes": [
+      "Prototype draft only; requires human review before promotion.",
+      "Full 24-clip and ArUco/RKT gates are deferred for this wave."
+    ],
+    "review_imports": [
+      {
+        "correction_path": "runs/eval0/prototype_gate_h100_v2/review_bundle/corrections_accepted_static4/indoor_doubles_fwuks_0500_long_mid_baseline/foot_contact.json",
+        "item_count": 0,
+        "status": "corrected_unverified"
+      }
+    ],
+    "target_file": "foot_contact.json",
+    "teacher_payload": null
+  },
+  "clip": {
+    "metadata": {
+      "camera_angle": "shallow_baseline",
+      "camera_height": "mid",
+      "duration_s": 900.0,
+      "environment": "indoor",
+      "frame_rate_fps": 30,
+      "play_type": "doubles",
+      "racket_gt": false,
+      "schema_version": 1
+    },
+    "name": "indoor_doubles_fwuks_0500_long_mid_baseline",
+    "path": "data/testclips/indoor_doubles_fwuks_0500_long_mid_baseline",
+    "source_video": "data/testclips/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4"
+  },
+  "confidence": {
+    "mean": 0.25,
+    "uncertainty_flags": [
+      "teacher_model_unavailable",
+      "smoke_generated"
+    ],
+    "verified": false
+  },
+  "frames": {
+    "frame_count": 900,
+    "frame_dir": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline",
+    "frames": [
+      {
+        "name": "frame_000001.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000001.jpg"
+      },
+      {
+        "name": "frame_000002.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000002.jpg"
+      },
+      {
+        "name": "frame_000003.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000003.jpg"
+      },
+      {
+        "name": "frame_000004.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000004.jpg"
+      },
+      {
+        "name": "frame_000005.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000005.jpg"
+      },
+      {
+        "name": "frame_000006.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000006.jpg"
+      },
+      {
+        "name": "frame_000007.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000007.jpg"
+      },
+      {
+        "name": "frame_000008.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000008.jpg"
+      },
+      {
+        "name": "frame_000009.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000009.jpg"
+      },
+      {
+        "name": "frame_000010.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000010.jpg"
+      },
+      {
+        "name": "frame_000011.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000011.jpg"
+      },
+      {
+        "name": "frame_000012.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000012.jpg"
+      },
+      {
+        "name": "frame_000013.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000013.jpg"
+      },
+      {
+        "name": "frame_000014.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000014.jpg"
+      },
+      {
+        "name": "frame_000015.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000015.jpg"
+      },
+      {
+        "name": "frame_000016.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000016.jpg"
+      },
+      {
+        "name": "frame_000017.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000017.jpg"
+      },
+      {
+        "name": "frame_000018.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000018.jpg"
+      },
+      {
+        "name": "frame_000019.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000019.jpg"
+      },
+      {
+        "name": "frame_000020.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000020.jpg"
+      },
+      {
+        "name": "frame_000021.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000021.jpg"
+      },
+      {
+        "name": "frame_000022.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000022.jpg"
+      },
+      {
+        "name": "frame_000023.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000023.jpg"
+      },
+      {
+        "name": "frame_000024.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000024.jpg"
+      },
+      {
+        "name": "frame_000025.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000025.jpg"
+      },
+      {
+        "name": "frame_000026.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000026.jpg"
+      },
+      {
+        "name": "frame_000027.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000027.jpg"
+      },
+      {
+        "name": "frame_000028.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000028.jpg"
+      },
+      {
+        "name": "frame_000029.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000029.jpg"
+      },
+      {
+        "name": "frame_000030.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000030.jpg"
+      },
+      {
+        "name": "frame_000031.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000031.jpg"
+      },
+      {
+        "name": "frame_000032.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000032.jpg"
+      },
+      {
+        "name": "frame_000033.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000033.jpg"
+      },
+      {
+        "name": "frame_000034.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000034.jpg"
+      },
+      {
+        "name": "frame_000035.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000035.jpg"
+      },
+      {
+        "name": "frame_000036.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000036.jpg"
+      },
+      {
+        "name": "frame_000037.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000037.jpg"
+      },
+      {
+        "name": "frame_000038.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000038.jpg"
+      },
+      {
+        "name": "frame_000039.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000039.jpg"
+      },
+      {
+        "name": "frame_000040.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000040.jpg"
+      },
+      {
+        "name": "frame_000041.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000041.jpg"
+      },
+      {
+        "name": "frame_000042.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000042.jpg"
+      },
+      {
+        "name": "frame_000043.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000043.jpg"
+      },
+      {
+        "name": "frame_000044.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000044.jpg"
+      },
+      {
+        "name": "frame_000045.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000045.jpg"
+      },
+      {
+        "name": "frame_000046.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000046.jpg"
+      },
+      {
+        "name": "frame_000047.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000047.jpg"
+      },
+      {
+        "name": "frame_000048.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000048.jpg"
+      },
+      {
+        "name": "frame_000049.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000049.jpg"
+      },
+      {
+        "name": "frame_000050.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000050.jpg"
+      },
+      {
+        "name": "frame_000051.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000051.jpg"
+      },
+      {
+        "name": "frame_000052.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000052.jpg"
+      },
+      {
+        "name": "frame_000053.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000053.jpg"
+      },
+      {
+        "name": "frame_000054.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000054.jpg"
+      },
+      {
+        "name": "frame_000055.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000055.jpg"
+      },
+      {
+        "name": "frame_000056.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000056.jpg"
+      },
+      {
+        "name": "frame_000057.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000057.jpg"
+      },
+      {
+        "name": "frame_000058.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000058.jpg"
+      },
+      {
+        "name": "frame_000059.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000059.jpg"
+      },
+      {
+        "name": "frame_000060.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000060.jpg"
+      },
+      {
+        "name": "frame_000061.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000061.jpg"
+      },
+      {
+        "name": "frame_000062.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000062.jpg"
+      },
+      {
+        "name": "frame_000063.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000063.jpg"
+      },
+      {
+        "name": "frame_000064.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000064.jpg"
+      },
+      {
+        "name": "frame_000065.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000065.jpg"
+      },
+      {
+        "name": "frame_000066.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000066.jpg"
+      },
+      {
+        "name": "frame_000067.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000067.jpg"
+      },
+      {
+        "name": "frame_000068.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000068.jpg"
+      },
+      {
+        "name": "frame_000069.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000069.jpg"
+      },
+      {
+        "name": "frame_000070.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000070.jpg"
+      },
+      {
+        "name": "frame_000071.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000071.jpg"
+      },
+      {
+        "name": "frame_000072.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000072.jpg"
+      },
+      {
+        "name": "frame_000073.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000073.jpg"
+      },
+      {
+        "name": "frame_000074.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000074.jpg"
+      },
+      {
+        "name": "frame_000075.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000075.jpg"
+      },
+      {
+        "name": "frame_000076.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000076.jpg"
+      },
+      {
+        "name": "frame_000077.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000077.jpg"
+      },
+      {
+        "name": "frame_000078.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000078.jpg"
+      },
+      {
+        "name": "frame_000079.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000079.jpg"
+      },
+      {
+        "name": "frame_000080.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000080.jpg"
+      },
+      {
+        "name": "frame_000081.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000081.jpg"
+      },
+      {
+        "name": "frame_000082.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000082.jpg"
+      },
+      {
+        "name": "frame_000083.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000083.jpg"
+      },
+      {
+        "name": "frame_000084.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000084.jpg"
+      },
+      {
+        "name": "frame_000085.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000085.jpg"
+      },
+      {
+        "name": "frame_000086.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000086.jpg"
+      },
+      {
+        "name": "frame_000087.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000087.jpg"
+      },
+      {
+        "name": "frame_000088.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000088.jpg"
+      },
+      {
+        "name": "frame_000089.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000089.jpg"
+      },
+      {
+        "name": "frame_000090.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000090.jpg"
+      },
+      {
+        "name": "frame_000091.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000091.jpg"
+      },
+      {
+        "name": "frame_000092.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000092.jpg"
+      },
+      {
+        "name": "frame_000093.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000093.jpg"
+      },
+      {
+        "name": "frame_000094.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000094.jpg"
+      },
+      {
+        "name": "frame_000095.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000095.jpg"
+      },
+      {
+        "name": "frame_000096.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000096.jpg"
+      },
+      {
+        "name": "frame_000097.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000097.jpg"
+      },
+      {
+        "name": "frame_000098.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000098.jpg"
+      },
+      {
+        "name": "frame_000099.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000099.jpg"
+      },
+      {
+        "name": "frame_000100.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000100.jpg"
+      },
+      {
+        "name": "frame_000101.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000101.jpg"
+      },
+      {
+        "name": "frame_000102.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000102.jpg"
+      },
+      {
+        "name": "frame_000103.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000103.jpg"
+      },
+      {
+        "name": "frame_000104.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000104.jpg"
+      },
+      {
+        "name": "frame_000105.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000105.jpg"
+      },
+      {
+        "name": "frame_000106.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000106.jpg"
+      },
+      {
+        "name": "frame_000107.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000107.jpg"
+      },
+      {
+        "name": "frame_000108.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000108.jpg"
+      },
+      {
+        "name": "frame_000109.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000109.jpg"
+      },
+      {
+        "name": "frame_000110.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000110.jpg"
+      },
+      {
+        "name": "frame_000111.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000111.jpg"
+      },
+      {
+        "name": "frame_000112.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000112.jpg"
+      },
+      {
+        "name": "frame_000113.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000113.jpg"
+      },
+      {
+        "name": "frame_000114.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000114.jpg"
+      },
+      {
+        "name": "frame_000115.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000115.jpg"
+      },
+      {
+        "name": "frame_000116.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000116.jpg"
+      },
+      {
+        "name": "frame_000117.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000117.jpg"
+      },
+      {
+        "name": "frame_000118.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000118.jpg"
+      },
+      {
+        "name": "frame_000119.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000119.jpg"
+      },
+      {
+        "name": "frame_000120.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000120.jpg"
+      },
+      {
+        "name": "frame_000121.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000121.jpg"
+      },
+      {
+        "name": "frame_000122.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000122.jpg"
+      },
+      {
+        "name": "frame_000123.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000123.jpg"
+      },
+      {
+        "name": "frame_000124.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000124.jpg"
+      },
+      {
+        "name": "frame_000125.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000125.jpg"
+      },
+      {
+        "name": "frame_000126.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000126.jpg"
+      },
+      {
+        "name": "frame_000127.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000127.jpg"
+      },
+      {
+        "name": "frame_000128.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000128.jpg"
+      },
+      {
+        "name": "frame_000129.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000129.jpg"
+      },
+      {
+        "name": "frame_000130.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000130.jpg"
+      },
+      {
+        "name": "frame_000131.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000131.jpg"
+      },
+      {
+        "name": "frame_000132.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000132.jpg"
+      },
+      {
+        "name": "frame_000133.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000133.jpg"
+      },
+      {
+        "name": "frame_000134.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000134.jpg"
+      },
+      {
+        "name": "frame_000135.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000135.jpg"
+      },
+      {
+        "name": "frame_000136.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000136.jpg"
+      },
+      {
+        "name": "frame_000137.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000137.jpg"
+      },
+      {
+        "name": "frame_000138.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000138.jpg"
+      },
+      {
+        "name": "frame_000139.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000139.jpg"
+      },
+      {
+        "name": "frame_000140.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000140.jpg"
+      },
+      {
+        "name": "frame_000141.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000141.jpg"
+      },
+      {
+        "name": "frame_000142.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000142.jpg"
+      },
+      {
+        "name": "frame_000143.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000143.jpg"
+      },
+      {
+        "name": "frame_000144.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000144.jpg"
+      },
+      {
+        "name": "frame_000145.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000145.jpg"
+      },
+      {
+        "name": "frame_000146.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000146.jpg"
+      },
+      {
+        "name": "frame_000147.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000147.jpg"
+      },
+      {
+        "name": "frame_000148.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000148.jpg"
+      },
+      {
+        "name": "frame_000149.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000149.jpg"
+      },
+      {
+        "name": "frame_000150.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000150.jpg"
+      },
+      {
+        "name": "frame_000151.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000151.jpg"
+      },
+      {
+        "name": "frame_000152.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000152.jpg"
+      },
+      {
+        "name": "frame_000153.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000153.jpg"
+      },
+      {
+        "name": "frame_000154.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000154.jpg"
+      },
+      {
+        "name": "frame_000155.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000155.jpg"
+      },
+      {
+        "name": "frame_000156.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000156.jpg"
+      },
+      {
+        "name": "frame_000157.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000157.jpg"
+      },
+      {
+        "name": "frame_000158.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000158.jpg"
+      },
+      {
+        "name": "frame_000159.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000159.jpg"
+      },
+      {
+        "name": "frame_000160.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000160.jpg"
+      },
+      {
+        "name": "frame_000161.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000161.jpg"
+      },
+      {
+        "name": "frame_000162.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000162.jpg"
+      },
+      {
+        "name": "frame_000163.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000163.jpg"
+      },
+      {
+        "name": "frame_000164.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000164.jpg"
+      },
+      {
+        "name": "frame_000165.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000165.jpg"
+      },
+      {
+        "name": "frame_000166.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000166.jpg"
+      },
+      {
+        "name": "frame_000167.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000167.jpg"
+      },
+      {
+        "name": "frame_000168.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000168.jpg"
+      },
+      {
+        "name": "frame_000169.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000169.jpg"
+      },
+      {
+        "name": "frame_000170.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000170.jpg"
+      },
+      {
+        "name": "frame_000171.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000171.jpg"
+      },
+      {
+        "name": "frame_000172.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000172.jpg"
+      },
+      {
+        "name": "frame_000173.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000173.jpg"
+      },
+      {
+        "name": "frame_000174.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000174.jpg"
+      },
+      {
+        "name": "frame_000175.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000175.jpg"
+      },
+      {
+        "name": "frame_000176.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000176.jpg"
+      },
+      {
+        "name": "frame_000177.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000177.jpg"
+      },
+      {
+        "name": "frame_000178.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000178.jpg"
+      },
+      {
+        "name": "frame_000179.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000179.jpg"
+      },
+      {
+        "name": "frame_000180.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000180.jpg"
+      },
+      {
+        "name": "frame_000181.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000181.jpg"
+      },
+      {
+        "name": "frame_000182.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000182.jpg"
+      },
+      {
+        "name": "frame_000183.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000183.jpg"
+      },
+      {
+        "name": "frame_000184.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000184.jpg"
+      },
+      {
+        "name": "frame_000185.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000185.jpg"
+      },
+      {
+        "name": "frame_000186.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000186.jpg"
+      },
+      {
+        "name": "frame_000187.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000187.jpg"
+      },
+      {
+        "name": "frame_000188.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000188.jpg"
+      },
+      {
+        "name": "frame_000189.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000189.jpg"
+      },
+      {
+        "name": "frame_000190.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000190.jpg"
+      },
+      {
+        "name": "frame_000191.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000191.jpg"
+      },
+      {
+        "name": "frame_000192.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000192.jpg"
+      },
+      {
+        "name": "frame_000193.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000193.jpg"
+      },
+      {
+        "name": "frame_000194.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000194.jpg"
+      },
+      {
+        "name": "frame_000195.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000195.jpg"
+      },
+      {
+        "name": "frame_000196.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000196.jpg"
+      },
+      {
+        "name": "frame_000197.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000197.jpg"
+      },
+      {
+        "name": "frame_000198.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000198.jpg"
+      },
+      {
+        "name": "frame_000199.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000199.jpg"
+      },
+      {
+        "name": "frame_000200.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000200.jpg"
+      },
+      {
+        "name": "frame_000201.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000201.jpg"
+      },
+      {
+        "name": "frame_000202.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000202.jpg"
+      },
+      {
+        "name": "frame_000203.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000203.jpg"
+      },
+      {
+        "name": "frame_000204.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000204.jpg"
+      },
+      {
+        "name": "frame_000205.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000205.jpg"
+      },
+      {
+        "name": "frame_000206.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000206.jpg"
+      },
+      {
+        "name": "frame_000207.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000207.jpg"
+      },
+      {
+        "name": "frame_000208.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000208.jpg"
+      },
+      {
+        "name": "frame_000209.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000209.jpg"
+      },
+      {
+        "name": "frame_000210.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000210.jpg"
+      },
+      {
+        "name": "frame_000211.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000211.jpg"
+      },
+      {
+        "name": "frame_000212.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000212.jpg"
+      },
+      {
+        "name": "frame_000213.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000213.jpg"
+      },
+      {
+        "name": "frame_000214.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000214.jpg"
+      },
+      {
+        "name": "frame_000215.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000215.jpg"
+      },
+      {
+        "name": "frame_000216.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000216.jpg"
+      },
+      {
+        "name": "frame_000217.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000217.jpg"
+      },
+      {
+        "name": "frame_000218.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000218.jpg"
+      },
+      {
+        "name": "frame_000219.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000219.jpg"
+      },
+      {
+        "name": "frame_000220.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000220.jpg"
+      },
+      {
+        "name": "frame_000221.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000221.jpg"
+      },
+      {
+        "name": "frame_000222.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000222.jpg"
+      },
+      {
+        "name": "frame_000223.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000223.jpg"
+      },
+      {
+        "name": "frame_000224.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000224.jpg"
+      },
+      {
+        "name": "frame_000225.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000225.jpg"
+      },
+      {
+        "name": "frame_000226.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000226.jpg"
+      },
+      {
+        "name": "frame_000227.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000227.jpg"
+      },
+      {
+        "name": "frame_000228.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000228.jpg"
+      },
+      {
+        "name": "frame_000229.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000229.jpg"
+      },
+      {
+        "name": "frame_000230.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000230.jpg"
+      },
+      {
+        "name": "frame_000231.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000231.jpg"
+      },
+      {
+        "name": "frame_000232.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000232.jpg"
+      },
+      {
+        "name": "frame_000233.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000233.jpg"
+      },
+      {
+        "name": "frame_000234.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000234.jpg"
+      },
+      {
+        "name": "frame_000235.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000235.jpg"
+      },
+      {
+        "name": "frame_000236.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000236.jpg"
+      },
+      {
+        "name": "frame_000237.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000237.jpg"
+      },
+      {
+        "name": "frame_000238.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000238.jpg"
+      },
+      {
+        "name": "frame_000239.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000239.jpg"
+      },
+      {
+        "name": "frame_000240.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000240.jpg"
+      },
+      {
+        "name": "frame_000241.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000241.jpg"
+      },
+      {
+        "name": "frame_000242.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000242.jpg"
+      },
+      {
+        "name": "frame_000243.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000243.jpg"
+      },
+      {
+        "name": "frame_000244.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000244.jpg"
+      },
+      {
+        "name": "frame_000245.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000245.jpg"
+      },
+      {
+        "name": "frame_000246.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000246.jpg"
+      },
+      {
+        "name": "frame_000247.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000247.jpg"
+      },
+      {
+        "name": "frame_000248.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000248.jpg"
+      },
+      {
+        "name": "frame_000249.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000249.jpg"
+      },
+      {
+        "name": "frame_000250.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000250.jpg"
+      },
+      {
+        "name": "frame_000251.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000251.jpg"
+      },
+      {
+        "name": "frame_000252.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000252.jpg"
+      },
+      {
+        "name": "frame_000253.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000253.jpg"
+      },
+      {
+        "name": "frame_000254.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000254.jpg"
+      },
+      {
+        "name": "frame_000255.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000255.jpg"
+      },
+      {
+        "name": "frame_000256.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000256.jpg"
+      },
+      {
+        "name": "frame_000257.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000257.jpg"
+      },
+      {
+        "name": "frame_000258.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000258.jpg"
+      },
+      {
+        "name": "frame_000259.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000259.jpg"
+      },
+      {
+        "name": "frame_000260.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000260.jpg"
+      },
+      {
+        "name": "frame_000261.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000261.jpg"
+      },
+      {
+        "name": "frame_000262.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000262.jpg"
+      },
+      {
+        "name": "frame_000263.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000263.jpg"
+      },
+      {
+        "name": "frame_000264.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000264.jpg"
+      },
+      {
+        "name": "frame_000265.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000265.jpg"
+      },
+      {
+        "name": "frame_000266.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000266.jpg"
+      },
+      {
+        "name": "frame_000267.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000267.jpg"
+      },
+      {
+        "name": "frame_000268.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000268.jpg"
+      },
+      {
+        "name": "frame_000269.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000269.jpg"
+      },
+      {
+        "name": "frame_000270.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000270.jpg"
+      },
+      {
+        "name": "frame_000271.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000271.jpg"
+      },
+      {
+        "name": "frame_000272.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000272.jpg"
+      },
+      {
+        "name": "frame_000273.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000273.jpg"
+      },
+      {
+        "name": "frame_000274.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000274.jpg"
+      },
+      {
+        "name": "frame_000275.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000275.jpg"
+      },
+      {
+        "name": "frame_000276.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000276.jpg"
+      },
+      {
+        "name": "frame_000277.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000277.jpg"
+      },
+      {
+        "name": "frame_000278.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000278.jpg"
+      },
+      {
+        "name": "frame_000279.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000279.jpg"
+      },
+      {
+        "name": "frame_000280.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000280.jpg"
+      },
+      {
+        "name": "frame_000281.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000281.jpg"
+      },
+      {
+        "name": "frame_000282.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000282.jpg"
+      },
+      {
+        "name": "frame_000283.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000283.jpg"
+      },
+      {
+        "name": "frame_000284.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000284.jpg"
+      },
+      {
+        "name": "frame_000285.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000285.jpg"
+      },
+      {
+        "name": "frame_000286.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000286.jpg"
+      },
+      {
+        "name": "frame_000287.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000287.jpg"
+      },
+      {
+        "name": "frame_000288.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000288.jpg"
+      },
+      {
+        "name": "frame_000289.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000289.jpg"
+      },
+      {
+        "name": "frame_000290.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000290.jpg"
+      },
+      {
+        "name": "frame_000291.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000291.jpg"
+      },
+      {
+        "name": "frame_000292.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000292.jpg"
+      },
+      {
+        "name": "frame_000293.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000293.jpg"
+      },
+      {
+        "name": "frame_000294.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000294.jpg"
+      },
+      {
+        "name": "frame_000295.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000295.jpg"
+      },
+      {
+        "name": "frame_000296.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000296.jpg"
+      },
+      {
+        "name": "frame_000297.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000297.jpg"
+      },
+      {
+        "name": "frame_000298.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000298.jpg"
+      },
+      {
+        "name": "frame_000299.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000299.jpg"
+      },
+      {
+        "name": "frame_000300.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000300.jpg"
+      },
+      {
+        "name": "frame_000301.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000301.jpg"
+      },
+      {
+        "name": "frame_000302.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000302.jpg"
+      },
+      {
+        "name": "frame_000303.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000303.jpg"
+      },
+      {
+        "name": "frame_000304.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000304.jpg"
+      },
+      {
+        "name": "frame_000305.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000305.jpg"
+      },
+      {
+        "name": "frame_000306.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000306.jpg"
+      },
+      {
+        "name": "frame_000307.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000307.jpg"
+      },
+      {
+        "name": "frame_000308.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000308.jpg"
+      },
+      {
+        "name": "frame_000309.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000309.jpg"
+      },
+      {
+        "name": "frame_000310.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000310.jpg"
+      },
+      {
+        "name": "frame_000311.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000311.jpg"
+      },
+      {
+        "name": "frame_000312.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000312.jpg"
+      },
+      {
+        "name": "frame_000313.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000313.jpg"
+      },
+      {
+        "name": "frame_000314.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000314.jpg"
+      },
+      {
+        "name": "frame_000315.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000315.jpg"
+      },
+      {
+        "name": "frame_000316.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000316.jpg"
+      },
+      {
+        "name": "frame_000317.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000317.jpg"
+      },
+      {
+        "name": "frame_000318.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000318.jpg"
+      },
+      {
+        "name": "frame_000319.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000319.jpg"
+      },
+      {
+        "name": "frame_000320.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000320.jpg"
+      },
+      {
+        "name": "frame_000321.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000321.jpg"
+      },
+      {
+        "name": "frame_000322.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000322.jpg"
+      },
+      {
+        "name": "frame_000323.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000323.jpg"
+      },
+      {
+        "name": "frame_000324.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000324.jpg"
+      },
+      {
+        "name": "frame_000325.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000325.jpg"
+      },
+      {
+        "name": "frame_000326.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000326.jpg"
+      },
+      {
+        "name": "frame_000327.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000327.jpg"
+      },
+      {
+        "name": "frame_000328.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000328.jpg"
+      },
+      {
+        "name": "frame_000329.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000329.jpg"
+      },
+      {
+        "name": "frame_000330.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000330.jpg"
+      },
+      {
+        "name": "frame_000331.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000331.jpg"
+      },
+      {
+        "name": "frame_000332.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000332.jpg"
+      },
+      {
+        "name": "frame_000333.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000333.jpg"
+      },
+      {
+        "name": "frame_000334.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000334.jpg"
+      },
+      {
+        "name": "frame_000335.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000335.jpg"
+      },
+      {
+        "name": "frame_000336.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000336.jpg"
+      },
+      {
+        "name": "frame_000337.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000337.jpg"
+      },
+      {
+        "name": "frame_000338.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000338.jpg"
+      },
+      {
+        "name": "frame_000339.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000339.jpg"
+      },
+      {
+        "name": "frame_000340.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000340.jpg"
+      },
+      {
+        "name": "frame_000341.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000341.jpg"
+      },
+      {
+        "name": "frame_000342.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000342.jpg"
+      },
+      {
+        "name": "frame_000343.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000343.jpg"
+      },
+      {
+        "name": "frame_000344.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000344.jpg"
+      },
+      {
+        "name": "frame_000345.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000345.jpg"
+      },
+      {
+        "name": "frame_000346.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000346.jpg"
+      },
+      {
+        "name": "frame_000347.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000347.jpg"
+      },
+      {
+        "name": "frame_000348.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000348.jpg"
+      },
+      {
+        "name": "frame_000349.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000349.jpg"
+      },
+      {
+        "name": "frame_000350.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000350.jpg"
+      },
+      {
+        "name": "frame_000351.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000351.jpg"
+      },
+      {
+        "name": "frame_000352.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000352.jpg"
+      },
+      {
+        "name": "frame_000353.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000353.jpg"
+      },
+      {
+        "name": "frame_000354.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000354.jpg"
+      },
+      {
+        "name": "frame_000355.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000355.jpg"
+      },
+      {
+        "name": "frame_000356.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000356.jpg"
+      },
+      {
+        "name": "frame_000357.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000357.jpg"
+      },
+      {
+        "name": "frame_000358.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000358.jpg"
+      },
+      {
+        "name": "frame_000359.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000359.jpg"
+      },
+      {
+        "name": "frame_000360.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000360.jpg"
+      },
+      {
+        "name": "frame_000361.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000361.jpg"
+      },
+      {
+        "name": "frame_000362.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000362.jpg"
+      },
+      {
+        "name": "frame_000363.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000363.jpg"
+      },
+      {
+        "name": "frame_000364.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000364.jpg"
+      },
+      {
+        "name": "frame_000365.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000365.jpg"
+      },
+      {
+        "name": "frame_000366.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000366.jpg"
+      },
+      {
+        "name": "frame_000367.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000367.jpg"
+      },
+      {
+        "name": "frame_000368.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000368.jpg"
+      },
+      {
+        "name": "frame_000369.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000369.jpg"
+      },
+      {
+        "name": "frame_000370.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000370.jpg"
+      },
+      {
+        "name": "frame_000371.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000371.jpg"
+      },
+      {
+        "name": "frame_000372.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000372.jpg"
+      },
+      {
+        "name": "frame_000373.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000373.jpg"
+      },
+      {
+        "name": "frame_000374.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000374.jpg"
+      },
+      {
+        "name": "frame_000375.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000375.jpg"
+      },
+      {
+        "name": "frame_000376.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000376.jpg"
+      },
+      {
+        "name": "frame_000377.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000377.jpg"
+      },
+      {
+        "name": "frame_000378.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000378.jpg"
+      },
+      {
+        "name": "frame_000379.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000379.jpg"
+      },
+      {
+        "name": "frame_000380.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000380.jpg"
+      },
+      {
+        "name": "frame_000381.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000381.jpg"
+      },
+      {
+        "name": "frame_000382.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000382.jpg"
+      },
+      {
+        "name": "frame_000383.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000383.jpg"
+      },
+      {
+        "name": "frame_000384.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000384.jpg"
+      },
+      {
+        "name": "frame_000385.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000385.jpg"
+      },
+      {
+        "name": "frame_000386.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000386.jpg"
+      },
+      {
+        "name": "frame_000387.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000387.jpg"
+      },
+      {
+        "name": "frame_000388.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000388.jpg"
+      },
+      {
+        "name": "frame_000389.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000389.jpg"
+      },
+      {
+        "name": "frame_000390.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000390.jpg"
+      },
+      {
+        "name": "frame_000391.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000391.jpg"
+      },
+      {
+        "name": "frame_000392.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000392.jpg"
+      },
+      {
+        "name": "frame_000393.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000393.jpg"
+      },
+      {
+        "name": "frame_000394.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000394.jpg"
+      },
+      {
+        "name": "frame_000395.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000395.jpg"
+      },
+      {
+        "name": "frame_000396.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000396.jpg"
+      },
+      {
+        "name": "frame_000397.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000397.jpg"
+      },
+      {
+        "name": "frame_000398.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000398.jpg"
+      },
+      {
+        "name": "frame_000399.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000399.jpg"
+      },
+      {
+        "name": "frame_000400.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000400.jpg"
+      },
+      {
+        "name": "frame_000401.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000401.jpg"
+      },
+      {
+        "name": "frame_000402.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000402.jpg"
+      },
+      {
+        "name": "frame_000403.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000403.jpg"
+      },
+      {
+        "name": "frame_000404.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000404.jpg"
+      },
+      {
+        "name": "frame_000405.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000405.jpg"
+      },
+      {
+        "name": "frame_000406.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000406.jpg"
+      },
+      {
+        "name": "frame_000407.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000407.jpg"
+      },
+      {
+        "name": "frame_000408.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000408.jpg"
+      },
+      {
+        "name": "frame_000409.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000409.jpg"
+      },
+      {
+        "name": "frame_000410.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000410.jpg"
+      },
+      {
+        "name": "frame_000411.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000411.jpg"
+      },
+      {
+        "name": "frame_000412.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000412.jpg"
+      },
+      {
+        "name": "frame_000413.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000413.jpg"
+      },
+      {
+        "name": "frame_000414.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000414.jpg"
+      },
+      {
+        "name": "frame_000415.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000415.jpg"
+      },
+      {
+        "name": "frame_000416.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000416.jpg"
+      },
+      {
+        "name": "frame_000417.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000417.jpg"
+      },
+      {
+        "name": "frame_000418.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000418.jpg"
+      },
+      {
+        "name": "frame_000419.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000419.jpg"
+      },
+      {
+        "name": "frame_000420.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000420.jpg"
+      },
+      {
+        "name": "frame_000421.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000421.jpg"
+      },
+      {
+        "name": "frame_000422.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000422.jpg"
+      },
+      {
+        "name": "frame_000423.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000423.jpg"
+      },
+      {
+        "name": "frame_000424.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000424.jpg"
+      },
+      {
+        "name": "frame_000425.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000425.jpg"
+      },
+      {
+        "name": "frame_000426.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000426.jpg"
+      },
+      {
+        "name": "frame_000427.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000427.jpg"
+      },
+      {
+        "name": "frame_000428.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000428.jpg"
+      },
+      {
+        "name": "frame_000429.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000429.jpg"
+      },
+      {
+        "name": "frame_000430.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000430.jpg"
+      },
+      {
+        "name": "frame_000431.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000431.jpg"
+      },
+      {
+        "name": "frame_000432.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000432.jpg"
+      },
+      {
+        "name": "frame_000433.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000433.jpg"
+      },
+      {
+        "name": "frame_000434.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000434.jpg"
+      },
+      {
+        "name": "frame_000435.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000435.jpg"
+      },
+      {
+        "name": "frame_000436.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000436.jpg"
+      },
+      {
+        "name": "frame_000437.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000437.jpg"
+      },
+      {
+        "name": "frame_000438.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000438.jpg"
+      },
+      {
+        "name": "frame_000439.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000439.jpg"
+      },
+      {
+        "name": "frame_000440.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000440.jpg"
+      },
+      {
+        "name": "frame_000441.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000441.jpg"
+      },
+      {
+        "name": "frame_000442.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000442.jpg"
+      },
+      {
+        "name": "frame_000443.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000443.jpg"
+      },
+      {
+        "name": "frame_000444.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000444.jpg"
+      },
+      {
+        "name": "frame_000445.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000445.jpg"
+      },
+      {
+        "name": "frame_000446.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000446.jpg"
+      },
+      {
+        "name": "frame_000447.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000447.jpg"
+      },
+      {
+        "name": "frame_000448.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000448.jpg"
+      },
+      {
+        "name": "frame_000449.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000449.jpg"
+      },
+      {
+        "name": "frame_000450.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000450.jpg"
+      },
+      {
+        "name": "frame_000451.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000451.jpg"
+      },
+      {
+        "name": "frame_000452.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000452.jpg"
+      },
+      {
+        "name": "frame_000453.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000453.jpg"
+      },
+      {
+        "name": "frame_000454.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000454.jpg"
+      },
+      {
+        "name": "frame_000455.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000455.jpg"
+      },
+      {
+        "name": "frame_000456.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000456.jpg"
+      },
+      {
+        "name": "frame_000457.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000457.jpg"
+      },
+      {
+        "name": "frame_000458.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000458.jpg"
+      },
+      {
+        "name": "frame_000459.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000459.jpg"
+      },
+      {
+        "name": "frame_000460.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000460.jpg"
+      },
+      {
+        "name": "frame_000461.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000461.jpg"
+      },
+      {
+        "name": "frame_000462.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000462.jpg"
+      },
+      {
+        "name": "frame_000463.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000463.jpg"
+      },
+      {
+        "name": "frame_000464.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000464.jpg"
+      },
+      {
+        "name": "frame_000465.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000465.jpg"
+      },
+      {
+        "name": "frame_000466.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000466.jpg"
+      },
+      {
+        "name": "frame_000467.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000467.jpg"
+      },
+      {
+        "name": "frame_000468.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000468.jpg"
+      },
+      {
+        "name": "frame_000469.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000469.jpg"
+      },
+      {
+        "name": "frame_000470.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000470.jpg"
+      },
+      {
+        "name": "frame_000471.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000471.jpg"
+      },
+      {
+        "name": "frame_000472.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000472.jpg"
+      },
+      {
+        "name": "frame_000473.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000473.jpg"
+      },
+      {
+        "name": "frame_000474.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000474.jpg"
+      },
+      {
+        "name": "frame_000475.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000475.jpg"
+      },
+      {
+        "name": "frame_000476.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000476.jpg"
+      },
+      {
+        "name": "frame_000477.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000477.jpg"
+      },
+      {
+        "name": "frame_000478.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000478.jpg"
+      },
+      {
+        "name": "frame_000479.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000479.jpg"
+      },
+      {
+        "name": "frame_000480.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000480.jpg"
+      },
+      {
+        "name": "frame_000481.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000481.jpg"
+      },
+      {
+        "name": "frame_000482.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000482.jpg"
+      },
+      {
+        "name": "frame_000483.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000483.jpg"
+      },
+      {
+        "name": "frame_000484.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000484.jpg"
+      },
+      {
+        "name": "frame_000485.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000485.jpg"
+      },
+      {
+        "name": "frame_000486.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000486.jpg"
+      },
+      {
+        "name": "frame_000487.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000487.jpg"
+      },
+      {
+        "name": "frame_000488.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000488.jpg"
+      },
+      {
+        "name": "frame_000489.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000489.jpg"
+      },
+      {
+        "name": "frame_000490.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000490.jpg"
+      },
+      {
+        "name": "frame_000491.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000491.jpg"
+      },
+      {
+        "name": "frame_000492.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000492.jpg"
+      },
+      {
+        "name": "frame_000493.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000493.jpg"
+      },
+      {
+        "name": "frame_000494.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000494.jpg"
+      },
+      {
+        "name": "frame_000495.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000495.jpg"
+      },
+      {
+        "name": "frame_000496.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000496.jpg"
+      },
+      {
+        "name": "frame_000497.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000497.jpg"
+      },
+      {
+        "name": "frame_000498.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000498.jpg"
+      },
+      {
+        "name": "frame_000499.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000499.jpg"
+      },
+      {
+        "name": "frame_000500.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000500.jpg"
+      },
+      {
+        "name": "frame_000501.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000501.jpg"
+      },
+      {
+        "name": "frame_000502.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000502.jpg"
+      },
+      {
+        "name": "frame_000503.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000503.jpg"
+      },
+      {
+        "name": "frame_000504.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000504.jpg"
+      },
+      {
+        "name": "frame_000505.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000505.jpg"
+      },
+      {
+        "name": "frame_000506.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000506.jpg"
+      },
+      {
+        "name": "frame_000507.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000507.jpg"
+      },
+      {
+        "name": "frame_000508.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000508.jpg"
+      },
+      {
+        "name": "frame_000509.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000509.jpg"
+      },
+      {
+        "name": "frame_000510.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000510.jpg"
+      },
+      {
+        "name": "frame_000511.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000511.jpg"
+      },
+      {
+        "name": "frame_000512.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000512.jpg"
+      },
+      {
+        "name": "frame_000513.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000513.jpg"
+      },
+      {
+        "name": "frame_000514.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000514.jpg"
+      },
+      {
+        "name": "frame_000515.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000515.jpg"
+      },
+      {
+        "name": "frame_000516.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000516.jpg"
+      },
+      {
+        "name": "frame_000517.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000517.jpg"
+      },
+      {
+        "name": "frame_000518.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000518.jpg"
+      },
+      {
+        "name": "frame_000519.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000519.jpg"
+      },
+      {
+        "name": "frame_000520.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000520.jpg"
+      },
+      {
+        "name": "frame_000521.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000521.jpg"
+      },
+      {
+        "name": "frame_000522.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000522.jpg"
+      },
+      {
+        "name": "frame_000523.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000523.jpg"
+      },
+      {
+        "name": "frame_000524.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000524.jpg"
+      },
+      {
+        "name": "frame_000525.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000525.jpg"
+      },
+      {
+        "name": "frame_000526.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000526.jpg"
+      },
+      {
+        "name": "frame_000527.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000527.jpg"
+      },
+      {
+        "name": "frame_000528.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000528.jpg"
+      },
+      {
+        "name": "frame_000529.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000529.jpg"
+      },
+      {
+        "name": "frame_000530.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000530.jpg"
+      },
+      {
+        "name": "frame_000531.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000531.jpg"
+      },
+      {
+        "name": "frame_000532.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000532.jpg"
+      },
+      {
+        "name": "frame_000533.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000533.jpg"
+      },
+      {
+        "name": "frame_000534.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000534.jpg"
+      },
+      {
+        "name": "frame_000535.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000535.jpg"
+      },
+      {
+        "name": "frame_000536.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000536.jpg"
+      },
+      {
+        "name": "frame_000537.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000537.jpg"
+      },
+      {
+        "name": "frame_000538.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000538.jpg"
+      },
+      {
+        "name": "frame_000539.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000539.jpg"
+      },
+      {
+        "name": "frame_000540.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000540.jpg"
+      },
+      {
+        "name": "frame_000541.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000541.jpg"
+      },
+      {
+        "name": "frame_000542.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000542.jpg"
+      },
+      {
+        "name": "frame_000543.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000543.jpg"
+      },
+      {
+        "name": "frame_000544.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000544.jpg"
+      },
+      {
+        "name": "frame_000545.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000545.jpg"
+      },
+      {
+        "name": "frame_000546.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000546.jpg"
+      },
+      {
+        "name": "frame_000547.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000547.jpg"
+      },
+      {
+        "name": "frame_000548.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000548.jpg"
+      },
+      {
+        "name": "frame_000549.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000549.jpg"
+      },
+      {
+        "name": "frame_000550.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000550.jpg"
+      },
+      {
+        "name": "frame_000551.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000551.jpg"
+      },
+      {
+        "name": "frame_000552.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000552.jpg"
+      },
+      {
+        "name": "frame_000553.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000553.jpg"
+      },
+      {
+        "name": "frame_000554.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000554.jpg"
+      },
+      {
+        "name": "frame_000555.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000555.jpg"
+      },
+      {
+        "name": "frame_000556.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000556.jpg"
+      },
+      {
+        "name": "frame_000557.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000557.jpg"
+      },
+      {
+        "name": "frame_000558.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000558.jpg"
+      },
+      {
+        "name": "frame_000559.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000559.jpg"
+      },
+      {
+        "name": "frame_000560.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000560.jpg"
+      },
+      {
+        "name": "frame_000561.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000561.jpg"
+      },
+      {
+        "name": "frame_000562.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000562.jpg"
+      },
+      {
+        "name": "frame_000563.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000563.jpg"
+      },
+      {
+        "name": "frame_000564.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000564.jpg"
+      },
+      {
+        "name": "frame_000565.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000565.jpg"
+      },
+      {
+        "name": "frame_000566.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000566.jpg"
+      },
+      {
+        "name": "frame_000567.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000567.jpg"
+      },
+      {
+        "name": "frame_000568.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000568.jpg"
+      },
+      {
+        "name": "frame_000569.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000569.jpg"
+      },
+      {
+        "name": "frame_000570.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000570.jpg"
+      },
+      {
+        "name": "frame_000571.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000571.jpg"
+      },
+      {
+        "name": "frame_000572.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000572.jpg"
+      },
+      {
+        "name": "frame_000573.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000573.jpg"
+      },
+      {
+        "name": "frame_000574.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000574.jpg"
+      },
+      {
+        "name": "frame_000575.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000575.jpg"
+      },
+      {
+        "name": "frame_000576.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000576.jpg"
+      },
+      {
+        "name": "frame_000577.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000577.jpg"
+      },
+      {
+        "name": "frame_000578.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000578.jpg"
+      },
+      {
+        "name": "frame_000579.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000579.jpg"
+      },
+      {
+        "name": "frame_000580.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000580.jpg"
+      },
+      {
+        "name": "frame_000581.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000581.jpg"
+      },
+      {
+        "name": "frame_000582.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000582.jpg"
+      },
+      {
+        "name": "frame_000583.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000583.jpg"
+      },
+      {
+        "name": "frame_000584.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000584.jpg"
+      },
+      {
+        "name": "frame_000585.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000585.jpg"
+      },
+      {
+        "name": "frame_000586.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000586.jpg"
+      },
+      {
+        "name": "frame_000587.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000587.jpg"
+      },
+      {
+        "name": "frame_000588.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000588.jpg"
+      },
+      {
+        "name": "frame_000589.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000589.jpg"
+      },
+      {
+        "name": "frame_000590.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000590.jpg"
+      },
+      {
+        "name": "frame_000591.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000591.jpg"
+      },
+      {
+        "name": "frame_000592.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000592.jpg"
+      },
+      {
+        "name": "frame_000593.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000593.jpg"
+      },
+      {
+        "name": "frame_000594.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000594.jpg"
+      },
+      {
+        "name": "frame_000595.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000595.jpg"
+      },
+      {
+        "name": "frame_000596.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000596.jpg"
+      },
+      {
+        "name": "frame_000597.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000597.jpg"
+      },
+      {
+        "name": "frame_000598.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000598.jpg"
+      },
+      {
+        "name": "frame_000599.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000599.jpg"
+      },
+      {
+        "name": "frame_000600.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000600.jpg"
+      },
+      {
+        "name": "frame_000601.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000601.jpg"
+      },
+      {
+        "name": "frame_000602.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000602.jpg"
+      },
+      {
+        "name": "frame_000603.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000603.jpg"
+      },
+      {
+        "name": "frame_000604.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000604.jpg"
+      },
+      {
+        "name": "frame_000605.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000605.jpg"
+      },
+      {
+        "name": "frame_000606.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000606.jpg"
+      },
+      {
+        "name": "frame_000607.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000607.jpg"
+      },
+      {
+        "name": "frame_000608.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000608.jpg"
+      },
+      {
+        "name": "frame_000609.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000609.jpg"
+      },
+      {
+        "name": "frame_000610.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000610.jpg"
+      },
+      {
+        "name": "frame_000611.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000611.jpg"
+      },
+      {
+        "name": "frame_000612.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000612.jpg"
+      },
+      {
+        "name": "frame_000613.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000613.jpg"
+      },
+      {
+        "name": "frame_000614.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000614.jpg"
+      },
+      {
+        "name": "frame_000615.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000615.jpg"
+      },
+      {
+        "name": "frame_000616.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000616.jpg"
+      },
+      {
+        "name": "frame_000617.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000617.jpg"
+      },
+      {
+        "name": "frame_000618.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000618.jpg"
+      },
+      {
+        "name": "frame_000619.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000619.jpg"
+      },
+      {
+        "name": "frame_000620.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000620.jpg"
+      },
+      {
+        "name": "frame_000621.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000621.jpg"
+      },
+      {
+        "name": "frame_000622.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000622.jpg"
+      },
+      {
+        "name": "frame_000623.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000623.jpg"
+      },
+      {
+        "name": "frame_000624.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000624.jpg"
+      },
+      {
+        "name": "frame_000625.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000625.jpg"
+      },
+      {
+        "name": "frame_000626.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000626.jpg"
+      },
+      {
+        "name": "frame_000627.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000627.jpg"
+      },
+      {
+        "name": "frame_000628.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000628.jpg"
+      },
+      {
+        "name": "frame_000629.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000629.jpg"
+      },
+      {
+        "name": "frame_000630.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000630.jpg"
+      },
+      {
+        "name": "frame_000631.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000631.jpg"
+      },
+      {
+        "name": "frame_000632.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000632.jpg"
+      },
+      {
+        "name": "frame_000633.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000633.jpg"
+      },
+      {
+        "name": "frame_000634.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000634.jpg"
+      },
+      {
+        "name": "frame_000635.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000635.jpg"
+      },
+      {
+        "name": "frame_000636.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000636.jpg"
+      },
+      {
+        "name": "frame_000637.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000637.jpg"
+      },
+      {
+        "name": "frame_000638.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000638.jpg"
+      },
+      {
+        "name": "frame_000639.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000639.jpg"
+      },
+      {
+        "name": "frame_000640.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000640.jpg"
+      },
+      {
+        "name": "frame_000641.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000641.jpg"
+      },
+      {
+        "name": "frame_000642.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000642.jpg"
+      },
+      {
+        "name": "frame_000643.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000643.jpg"
+      },
+      {
+        "name": "frame_000644.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000644.jpg"
+      },
+      {
+        "name": "frame_000645.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000645.jpg"
+      },
+      {
+        "name": "frame_000646.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000646.jpg"
+      },
+      {
+        "name": "frame_000647.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000647.jpg"
+      },
+      {
+        "name": "frame_000648.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000648.jpg"
+      },
+      {
+        "name": "frame_000649.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000649.jpg"
+      },
+      {
+        "name": "frame_000650.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000650.jpg"
+      },
+      {
+        "name": "frame_000651.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000651.jpg"
+      },
+      {
+        "name": "frame_000652.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000652.jpg"
+      },
+      {
+        "name": "frame_000653.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000653.jpg"
+      },
+      {
+        "name": "frame_000654.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000654.jpg"
+      },
+      {
+        "name": "frame_000655.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000655.jpg"
+      },
+      {
+        "name": "frame_000656.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000656.jpg"
+      },
+      {
+        "name": "frame_000657.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000657.jpg"
+      },
+      {
+        "name": "frame_000658.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000658.jpg"
+      },
+      {
+        "name": "frame_000659.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000659.jpg"
+      },
+      {
+        "name": "frame_000660.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000660.jpg"
+      },
+      {
+        "name": "frame_000661.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000661.jpg"
+      },
+      {
+        "name": "frame_000662.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000662.jpg"
+      },
+      {
+        "name": "frame_000663.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000663.jpg"
+      },
+      {
+        "name": "frame_000664.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000664.jpg"
+      },
+      {
+        "name": "frame_000665.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000665.jpg"
+      },
+      {
+        "name": "frame_000666.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000666.jpg"
+      },
+      {
+        "name": "frame_000667.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000667.jpg"
+      },
+      {
+        "name": "frame_000668.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000668.jpg"
+      },
+      {
+        "name": "frame_000669.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000669.jpg"
+      },
+      {
+        "name": "frame_000670.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000670.jpg"
+      },
+      {
+        "name": "frame_000671.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000671.jpg"
+      },
+      {
+        "name": "frame_000672.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000672.jpg"
+      },
+      {
+        "name": "frame_000673.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000673.jpg"
+      },
+      {
+        "name": "frame_000674.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000674.jpg"
+      },
+      {
+        "name": "frame_000675.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000675.jpg"
+      },
+      {
+        "name": "frame_000676.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000676.jpg"
+      },
+      {
+        "name": "frame_000677.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000677.jpg"
+      },
+      {
+        "name": "frame_000678.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000678.jpg"
+      },
+      {
+        "name": "frame_000679.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000679.jpg"
+      },
+      {
+        "name": "frame_000680.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000680.jpg"
+      },
+      {
+        "name": "frame_000681.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000681.jpg"
+      },
+      {
+        "name": "frame_000682.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000682.jpg"
+      },
+      {
+        "name": "frame_000683.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000683.jpg"
+      },
+      {
+        "name": "frame_000684.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000684.jpg"
+      },
+      {
+        "name": "frame_000685.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000685.jpg"
+      },
+      {
+        "name": "frame_000686.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000686.jpg"
+      },
+      {
+        "name": "frame_000687.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000687.jpg"
+      },
+      {
+        "name": "frame_000688.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000688.jpg"
+      },
+      {
+        "name": "frame_000689.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000689.jpg"
+      },
+      {
+        "name": "frame_000690.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000690.jpg"
+      },
+      {
+        "name": "frame_000691.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000691.jpg"
+      },
+      {
+        "name": "frame_000692.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000692.jpg"
+      },
+      {
+        "name": "frame_000693.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000693.jpg"
+      },
+      {
+        "name": "frame_000694.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000694.jpg"
+      },
+      {
+        "name": "frame_000695.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000695.jpg"
+      },
+      {
+        "name": "frame_000696.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000696.jpg"
+      },
+      {
+        "name": "frame_000697.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000697.jpg"
+      },
+      {
+        "name": "frame_000698.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000698.jpg"
+      },
+      {
+        "name": "frame_000699.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000699.jpg"
+      },
+      {
+        "name": "frame_000700.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000700.jpg"
+      },
+      {
+        "name": "frame_000701.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000701.jpg"
+      },
+      {
+        "name": "frame_000702.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000702.jpg"
+      },
+      {
+        "name": "frame_000703.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000703.jpg"
+      },
+      {
+        "name": "frame_000704.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000704.jpg"
+      },
+      {
+        "name": "frame_000705.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000705.jpg"
+      },
+      {
+        "name": "frame_000706.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000706.jpg"
+      },
+      {
+        "name": "frame_000707.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000707.jpg"
+      },
+      {
+        "name": "frame_000708.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000708.jpg"
+      },
+      {
+        "name": "frame_000709.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000709.jpg"
+      },
+      {
+        "name": "frame_000710.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000710.jpg"
+      },
+      {
+        "name": "frame_000711.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000711.jpg"
+      },
+      {
+        "name": "frame_000712.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000712.jpg"
+      },
+      {
+        "name": "frame_000713.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000713.jpg"
+      },
+      {
+        "name": "frame_000714.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000714.jpg"
+      },
+      {
+        "name": "frame_000715.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000715.jpg"
+      },
+      {
+        "name": "frame_000716.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000716.jpg"
+      },
+      {
+        "name": "frame_000717.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000717.jpg"
+      },
+      {
+        "name": "frame_000718.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000718.jpg"
+      },
+      {
+        "name": "frame_000719.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000719.jpg"
+      },
+      {
+        "name": "frame_000720.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000720.jpg"
+      },
+      {
+        "name": "frame_000721.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000721.jpg"
+      },
+      {
+        "name": "frame_000722.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000722.jpg"
+      },
+      {
+        "name": "frame_000723.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000723.jpg"
+      },
+      {
+        "name": "frame_000724.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000724.jpg"
+      },
+      {
+        "name": "frame_000725.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000725.jpg"
+      },
+      {
+        "name": "frame_000726.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000726.jpg"
+      },
+      {
+        "name": "frame_000727.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000727.jpg"
+      },
+      {
+        "name": "frame_000728.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000728.jpg"
+      },
+      {
+        "name": "frame_000729.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000729.jpg"
+      },
+      {
+        "name": "frame_000730.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000730.jpg"
+      },
+      {
+        "name": "frame_000731.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000731.jpg"
+      },
+      {
+        "name": "frame_000732.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000732.jpg"
+      },
+      {
+        "name": "frame_000733.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000733.jpg"
+      },
+      {
+        "name": "frame_000734.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000734.jpg"
+      },
+      {
+        "name": "frame_000735.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000735.jpg"
+      },
+      {
+        "name": "frame_000736.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000736.jpg"
+      },
+      {
+        "name": "frame_000737.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000737.jpg"
+      },
+      {
+        "name": "frame_000738.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000738.jpg"
+      },
+      {
+        "name": "frame_000739.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000739.jpg"
+      },
+      {
+        "name": "frame_000740.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000740.jpg"
+      },
+      {
+        "name": "frame_000741.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000741.jpg"
+      },
+      {
+        "name": "frame_000742.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000742.jpg"
+      },
+      {
+        "name": "frame_000743.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000743.jpg"
+      },
+      {
+        "name": "frame_000744.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000744.jpg"
+      },
+      {
+        "name": "frame_000745.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000745.jpg"
+      },
+      {
+        "name": "frame_000746.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000746.jpg"
+      },
+      {
+        "name": "frame_000747.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000747.jpg"
+      },
+      {
+        "name": "frame_000748.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000748.jpg"
+      },
+      {
+        "name": "frame_000749.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000749.jpg"
+      },
+      {
+        "name": "frame_000750.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000750.jpg"
+      },
+      {
+        "name": "frame_000751.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000751.jpg"
+      },
+      {
+        "name": "frame_000752.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000752.jpg"
+      },
+      {
+        "name": "frame_000753.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000753.jpg"
+      },
+      {
+        "name": "frame_000754.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000754.jpg"
+      },
+      {
+        "name": "frame_000755.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000755.jpg"
+      },
+      {
+        "name": "frame_000756.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000756.jpg"
+      },
+      {
+        "name": "frame_000757.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000757.jpg"
+      },
+      {
+        "name": "frame_000758.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000758.jpg"
+      },
+      {
+        "name": "frame_000759.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000759.jpg"
+      },
+      {
+        "name": "frame_000760.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000760.jpg"
+      },
+      {
+        "name": "frame_000761.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000761.jpg"
+      },
+      {
+        "name": "frame_000762.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000762.jpg"
+      },
+      {
+        "name": "frame_000763.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000763.jpg"
+      },
+      {
+        "name": "frame_000764.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000764.jpg"
+      },
+      {
+        "name": "frame_000765.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000765.jpg"
+      },
+      {
+        "name": "frame_000766.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000766.jpg"
+      },
+      {
+        "name": "frame_000767.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000767.jpg"
+      },
+      {
+        "name": "frame_000768.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000768.jpg"
+      },
+      {
+        "name": "frame_000769.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000769.jpg"
+      },
+      {
+        "name": "frame_000770.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000770.jpg"
+      },
+      {
+        "name": "frame_000771.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000771.jpg"
+      },
+      {
+        "name": "frame_000772.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000772.jpg"
+      },
+      {
+        "name": "frame_000773.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000773.jpg"
+      },
+      {
+        "name": "frame_000774.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000774.jpg"
+      },
+      {
+        "name": "frame_000775.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000775.jpg"
+      },
+      {
+        "name": "frame_000776.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000776.jpg"
+      },
+      {
+        "name": "frame_000777.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000777.jpg"
+      },
+      {
+        "name": "frame_000778.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000778.jpg"
+      },
+      {
+        "name": "frame_000779.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000779.jpg"
+      },
+      {
+        "name": "frame_000780.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000780.jpg"
+      },
+      {
+        "name": "frame_000781.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000781.jpg"
+      },
+      {
+        "name": "frame_000782.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000782.jpg"
+      },
+      {
+        "name": "frame_000783.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000783.jpg"
+      },
+      {
+        "name": "frame_000784.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000784.jpg"
+      },
+      {
+        "name": "frame_000785.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000785.jpg"
+      },
+      {
+        "name": "frame_000786.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000786.jpg"
+      },
+      {
+        "name": "frame_000787.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000787.jpg"
+      },
+      {
+        "name": "frame_000788.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000788.jpg"
+      },
+      {
+        "name": "frame_000789.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000789.jpg"
+      },
+      {
+        "name": "frame_000790.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000790.jpg"
+      },
+      {
+        "name": "frame_000791.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000791.jpg"
+      },
+      {
+        "name": "frame_000792.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000792.jpg"
+      },
+      {
+        "name": "frame_000793.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000793.jpg"
+      },
+      {
+        "name": "frame_000794.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000794.jpg"
+      },
+      {
+        "name": "frame_000795.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000795.jpg"
+      },
+      {
+        "name": "frame_000796.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000796.jpg"
+      },
+      {
+        "name": "frame_000797.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000797.jpg"
+      },
+      {
+        "name": "frame_000798.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000798.jpg"
+      },
+      {
+        "name": "frame_000799.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000799.jpg"
+      },
+      {
+        "name": "frame_000800.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000800.jpg"
+      },
+      {
+        "name": "frame_000801.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000801.jpg"
+      },
+      {
+        "name": "frame_000802.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000802.jpg"
+      },
+      {
+        "name": "frame_000803.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000803.jpg"
+      },
+      {
+        "name": "frame_000804.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000804.jpg"
+      },
+      {
+        "name": "frame_000805.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000805.jpg"
+      },
+      {
+        "name": "frame_000806.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000806.jpg"
+      },
+      {
+        "name": "frame_000807.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000807.jpg"
+      },
+      {
+        "name": "frame_000808.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000808.jpg"
+      },
+      {
+        "name": "frame_000809.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000809.jpg"
+      },
+      {
+        "name": "frame_000810.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000810.jpg"
+      },
+      {
+        "name": "frame_000811.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000811.jpg"
+      },
+      {
+        "name": "frame_000812.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000812.jpg"
+      },
+      {
+        "name": "frame_000813.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000813.jpg"
+      },
+      {
+        "name": "frame_000814.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000814.jpg"
+      },
+      {
+        "name": "frame_000815.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000815.jpg"
+      },
+      {
+        "name": "frame_000816.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000816.jpg"
+      },
+      {
+        "name": "frame_000817.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000817.jpg"
+      },
+      {
+        "name": "frame_000818.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000818.jpg"
+      },
+      {
+        "name": "frame_000819.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000819.jpg"
+      },
+      {
+        "name": "frame_000820.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000820.jpg"
+      },
+      {
+        "name": "frame_000821.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000821.jpg"
+      },
+      {
+        "name": "frame_000822.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000822.jpg"
+      },
+      {
+        "name": "frame_000823.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000823.jpg"
+      },
+      {
+        "name": "frame_000824.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000824.jpg"
+      },
+      {
+        "name": "frame_000825.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000825.jpg"
+      },
+      {
+        "name": "frame_000826.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000826.jpg"
+      },
+      {
+        "name": "frame_000827.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000827.jpg"
+      },
+      {
+        "name": "frame_000828.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000828.jpg"
+      },
+      {
+        "name": "frame_000829.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000829.jpg"
+      },
+      {
+        "name": "frame_000830.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000830.jpg"
+      },
+      {
+        "name": "frame_000831.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000831.jpg"
+      },
+      {
+        "name": "frame_000832.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000832.jpg"
+      },
+      {
+        "name": "frame_000833.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000833.jpg"
+      },
+      {
+        "name": "frame_000834.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000834.jpg"
+      },
+      {
+        "name": "frame_000835.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000835.jpg"
+      },
+      {
+        "name": "frame_000836.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000836.jpg"
+      },
+      {
+        "name": "frame_000837.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000837.jpg"
+      },
+      {
+        "name": "frame_000838.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000838.jpg"
+      },
+      {
+        "name": "frame_000839.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000839.jpg"
+      },
+      {
+        "name": "frame_000840.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000840.jpg"
+      },
+      {
+        "name": "frame_000841.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000841.jpg"
+      },
+      {
+        "name": "frame_000842.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000842.jpg"
+      },
+      {
+        "name": "frame_000843.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000843.jpg"
+      },
+      {
+        "name": "frame_000844.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000844.jpg"
+      },
+      {
+        "name": "frame_000845.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000845.jpg"
+      },
+      {
+        "name": "frame_000846.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000846.jpg"
+      },
+      {
+        "name": "frame_000847.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000847.jpg"
+      },
+      {
+        "name": "frame_000848.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000848.jpg"
+      },
+      {
+        "name": "frame_000849.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000849.jpg"
+      },
+      {
+        "name": "frame_000850.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000850.jpg"
+      },
+      {
+        "name": "frame_000851.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000851.jpg"
+      },
+      {
+        "name": "frame_000852.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000852.jpg"
+      },
+      {
+        "name": "frame_000853.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000853.jpg"
+      },
+      {
+        "name": "frame_000854.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000854.jpg"
+      },
+      {
+        "name": "frame_000855.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000855.jpg"
+      },
+      {
+        "name": "frame_000856.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000856.jpg"
+      },
+      {
+        "name": "frame_000857.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000857.jpg"
+      },
+      {
+        "name": "frame_000858.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000858.jpg"
+      },
+      {
+        "name": "frame_000859.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000859.jpg"
+      },
+      {
+        "name": "frame_000860.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000860.jpg"
+      },
+      {
+        "name": "frame_000861.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000861.jpg"
+      },
+      {
+        "name": "frame_000862.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000862.jpg"
+      },
+      {
+        "name": "frame_000863.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000863.jpg"
+      },
+      {
+        "name": "frame_000864.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000864.jpg"
+      },
+      {
+        "name": "frame_000865.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000865.jpg"
+      },
+      {
+        "name": "frame_000866.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000866.jpg"
+      },
+      {
+        "name": "frame_000867.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000867.jpg"
+      },
+      {
+        "name": "frame_000868.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000868.jpg"
+      },
+      {
+        "name": "frame_000869.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000869.jpg"
+      },
+      {
+        "name": "frame_000870.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000870.jpg"
+      },
+      {
+        "name": "frame_000871.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000871.jpg"
+      },
+      {
+        "name": "frame_000872.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000872.jpg"
+      },
+      {
+        "name": "frame_000873.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000873.jpg"
+      },
+      {
+        "name": "frame_000874.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000874.jpg"
+      },
+      {
+        "name": "frame_000875.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000875.jpg"
+      },
+      {
+        "name": "frame_000876.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000876.jpg"
+      },
+      {
+        "name": "frame_000877.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000877.jpg"
+      },
+      {
+        "name": "frame_000878.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000878.jpg"
+      },
+      {
+        "name": "frame_000879.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000879.jpg"
+      },
+      {
+        "name": "frame_000880.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000880.jpg"
+      },
+      {
+        "name": "frame_000881.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000881.jpg"
+      },
+      {
+        "name": "frame_000882.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000882.jpg"
+      },
+      {
+        "name": "frame_000883.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000883.jpg"
+      },
+      {
+        "name": "frame_000884.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000884.jpg"
+      },
+      {
+        "name": "frame_000885.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000885.jpg"
+      },
+      {
+        "name": "frame_000886.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000886.jpg"
+      },
+      {
+        "name": "frame_000887.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000887.jpg"
+      },
+      {
+        "name": "frame_000888.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000888.jpg"
+      },
+      {
+        "name": "frame_000889.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000889.jpg"
+      },
+      {
+        "name": "frame_000890.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000890.jpg"
+      },
+      {
+        "name": "frame_000891.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000891.jpg"
+      },
+      {
+        "name": "frame_000892.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000892.jpg"
+      },
+      {
+        "name": "frame_000893.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000893.jpg"
+      },
+      {
+        "name": "frame_000894.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000894.jpg"
+      },
+      {
+        "name": "frame_000895.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000895.jpg"
+      },
+      {
+        "name": "frame_000896.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000896.jpg"
+      },
+      {
+        "name": "frame_000897.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000897.jpg"
+      },
+      {
+        "name": "frame_000898.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000898.jpg"
+      },
+      {
+        "name": "frame_000899.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000899.jpg"
+      },
+      {
+        "name": "frame_000900.jpg",
+        "path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/frame_000900.jpg"
+      }
+    ],
+    "manifest_path": "runs/label_frames/indoor_doubles_fwuks_0500_long_mid_baseline/label_frame_manifest.json",
+    "sample_every_frames": 30,
+    "source_duration_s": 900.032467,
+    "source_fps": 29.97002997002997,
+    "source_resolution": [
+      1920,
+      1080
+    ]
+  },
+  "not_ground_truth": true,
+  "schema_version": 1,
+  "source": {
+    "filters": [
+      "confidence",
+      "physics_consistency",
+      "reprojection"
+    ],
+    "mode": "deterministic_smoke",
+    "teacher_models": [
+      "world_grounding",
+      "zero_velocity"
+    ],
+    "teacher_path": null
+  },
+  "status": "draft_prototype_unverified"
+}

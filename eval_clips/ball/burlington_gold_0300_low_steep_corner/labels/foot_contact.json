@@ -1,0 +1,840 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "confidence": 0.25,
+        "foot": "left",
+        "frame": "frame_000001.jpg",
+        "player_id": "p1",
+        "review_id": "foot_contact_smoke_0000",
+        "status": "uncertain",
+        "xy_px": [
+          921.6,
+          842.4
+        ]
+      },
+      {
+        "confidence": 0.25,
+        "foot": "right",
+        "frame": "frame_000023.jpg",
+        "player_id": "p1",
+        "review_id": "foot_contact_smoke_0001",
+        "status": "uncertain",
+        "xy_px": [
+          921.6,
+          842.4
+        ]
+      },
+      {
+        "confidence": 0.25,
+        "foot": "left",
+        "frame": "frame_000045.jpg",
+        "player_id": "p1",
+        "review_id": "foot_contact_smoke_0002",
+        "status": "uncertain",
+        "xy_px": [
+          921.6,
+          842.4
+        ]
+      },
+      {
+        "confidence": 0.25,
+        "foot": "right",
+        "frame": "frame_000067.jpg",
+        "player_id": "p1",
+        "review_id": "foot_contact_smoke_0003",
+        "status": "uncertain",
+        "xy_px": [
+          921.6,
+          842.4
+        ]
+      }
+    ],
+    "notes": [
+      "Prototype draft only; requires human review before promotion.",
+      "Full 24-clip and ArUco/RKT gates are deferred for this wave."
+    ],
+    "review_imports": [
+      {
+        "correction_path": "runs/eval0/prototype_gate_h100_v2/review_bundle/corrections_accepted_static4/burlington_gold_0300_low_steep_corner/foot_contact.json",
+        "item_count": 0,
+        "status": "corrected_unverified"
+      }
+    ],
+    "target_file": "foot_contact.json",
+    "teacher_payload": null
+  },
+  "clip": {
+    "metadata": {
+      "camera_angle": "steep_corner",
+      "camera_height": "low",
+      "duration_s": 90.0,
+      "environment": "indoor",
+      "frame_rate_fps": 60,
+      "play_type": "doubles",
+      "racket_gt": false,
+      "schema_version": 1
+    },
+    "name": "burlington_gold_0300_low_steep_corner",
+    "path": "data/testclips/burlington_gold_0300_low_steep_corner",
+    "source_video": "data/testclips/burlington_gold_0300_low_steep_corner/source.mp4"
+  },
+  "confidence": {
+    "mean": 0.25,
+    "uncertainty_flags": [
+      "teacher_model_unavailable",
+      "smoke_generated"
+    ],
+    "verified": false
+  },
+  "frames": {
+    "frame_count": 180,
+    "frame_dir": "runs/label_frames/burlington_gold_0300_low_steep_corner",
+    "frames": [
+      {
+        "name": "frame_000001.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000001.jpg"
+      },
+      {
+        "name": "frame_000002.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000002.jpg"
+      },
+      {
+        "name": "frame_000003.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000003.jpg"
+      },
+      {
+        "name": "frame_000004.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000004.jpg"
+      },
+      {
+        "name": "frame_000005.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000005.jpg"
+      },
+      {
+        "name": "frame_000006.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000006.jpg"
+      },
+      {
+        "name": "frame_000007.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000007.jpg"
+      },
+      {
+        "name": "frame_000008.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000008.jpg"
+      },
+      {
+        "name": "frame_000009.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000009.jpg"
+      },
+      {
+        "name": "frame_000010.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000010.jpg"
+      },
+      {
+        "name": "frame_000011.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000011.jpg"
+      },
+      {
+        "name": "frame_000012.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000012.jpg"
+      },
+      {
+        "name": "frame_000013.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000013.jpg"
+      },
+      {
+        "name": "frame_000014.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000014.jpg"
+      },
+      {
+        "name": "frame_000015.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000015.jpg"
+      },
+      {
+        "name": "frame_000016.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000016.jpg"
+      },
+      {
+        "name": "frame_000017.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000017.jpg"
+      },
+      {
+        "name": "frame_000018.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000018.jpg"
+      },
+      {
+        "name": "frame_000019.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000019.jpg"
+      },
+      {
+        "name": "frame_000020.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000020.jpg"
+      },
+      {
+        "name": "frame_000021.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000021.jpg"
+      },
+      {
+        "name": "frame_000022.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000022.jpg"
+      },
+      {
+        "name": "frame_000023.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000023.jpg"
+      },
+      {
+        "name": "frame_000024.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000024.jpg"
+      },
+      {
+        "name": "frame_000025.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000025.jpg"
+      },
+      {
+        "name": "frame_000026.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000026.jpg"
+      },
+      {
+        "name": "frame_000027.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000027.jpg"
+      },
+      {
+        "name": "frame_000028.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000028.jpg"
+      },
+      {
+        "name": "frame_000029.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000029.jpg"
+      },
+      {
+        "name": "frame_000030.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000030.jpg"
+      },
+      {
+        "name": "frame_000031.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000031.jpg"
+      },
+      {
+        "name": "frame_000032.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000032.jpg"
+      },
+      {
+        "name": "frame_000033.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000033.jpg"
+      },
+      {
+        "name": "frame_000034.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000034.jpg"
+      },
+      {
+        "name": "frame_000035.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000035.jpg"
+      },
+      {
+        "name": "frame_000036.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000036.jpg"
+      },
+      {
+        "name": "frame_000037.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000037.jpg"
+      },
+      {
+        "name": "frame_000038.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000038.jpg"
+      },
+      {
+        "name": "frame_000039.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000039.jpg"
+      },
+      {
+        "name": "frame_000040.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000040.jpg"
+      },
+      {
+        "name": "frame_000041.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000041.jpg"
+      },
+      {
+        "name": "frame_000042.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000042.jpg"
+      },
+      {
+        "name": "frame_000043.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000043.jpg"
+      },
+      {
+        "name": "frame_000044.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000044.jpg"
+      },
+      {
+        "name": "frame_000045.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000045.jpg"
+      },
+      {
+        "name": "frame_000046.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000046.jpg"
+      },
+      {
+        "name": "frame_000047.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000047.jpg"
+      },
+      {
+        "name": "frame_000048.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000048.jpg"
+      },
+      {
+        "name": "frame_000049.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000049.jpg"
+      },
+      {
+        "name": "frame_000050.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000050.jpg"
+      },
+      {
+        "name": "frame_000051.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000051.jpg"
+      },
+      {
+        "name": "frame_000052.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000052.jpg"
+      },
+      {
+        "name": "frame_000053.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000053.jpg"
+      },
+      {
+        "name": "frame_000054.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000054.jpg"
+      },
+      {
+        "name": "frame_000055.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000055.jpg"
+      },
+      {
+        "name": "frame_000056.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000056.jpg"
+      },
+      {
+        "name": "frame_000057.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000057.jpg"
+      },
+      {
+        "name": "frame_000058.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000058.jpg"
+      },
+      {
+        "name": "frame_000059.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000059.jpg"
+      },
+      {
+        "name": "frame_000060.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000060.jpg"
+      },
+      {
+        "name": "frame_000061.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000061.jpg"
+      },
+      {
+        "name": "frame_000062.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000062.jpg"
+      },
+      {
+        "name": "frame_000063.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000063.jpg"
+      },
+      {
+        "name": "frame_000064.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000064.jpg"
+      },
+      {
+        "name": "frame_000065.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000065.jpg"
+      },
+      {
+        "name": "frame_000066.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000066.jpg"
+      },
+      {
+        "name": "frame_000067.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000067.jpg"
+      },
+      {
+        "name": "frame_000068.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000068.jpg"
+      },
+      {
+        "name": "frame_000069.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000069.jpg"
+      },
+      {
+        "name": "frame_000070.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000070.jpg"
+      },
+      {
+        "name": "frame_000071.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000071.jpg"
+      },
+      {
+        "name": "frame_000072.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000072.jpg"
+      },
+      {
+        "name": "frame_000073.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000073.jpg"
+      },
+      {
+        "name": "frame_000074.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000074.jpg"
+      },
+      {
+        "name": "frame_000075.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000075.jpg"
+      },
+      {
+        "name": "frame_000076.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000076.jpg"
+      },
+      {
+        "name": "frame_000077.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000077.jpg"
+      },
+      {
+        "name": "frame_000078.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000078.jpg"
+      },
+      {
+        "name": "frame_000079.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000079.jpg"
+      },
+      {
+        "name": "frame_000080.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000080.jpg"
+      },
+      {
+        "name": "frame_000081.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000081.jpg"
+      },
+      {
+        "name": "frame_000082.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000082.jpg"
+      },
+      {
+        "name": "frame_000083.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000083.jpg"
+      },
+      {
+        "name": "frame_000084.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000084.jpg"
+      },
+      {
+        "name": "frame_000085.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000085.jpg"
+      },
+      {
+        "name": "frame_000086.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000086.jpg"
+      },
+      {
+        "name": "frame_000087.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000087.jpg"
+      },
+      {
+        "name": "frame_000088.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000088.jpg"
+      },
+      {
+        "name": "frame_000089.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000089.jpg"
+      },
+      {
+        "name": "frame_000090.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000090.jpg"
+      },
+      {
+        "name": "frame_000091.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000091.jpg"
+      },
+      {
+        "name": "frame_000092.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000092.jpg"
+      },
+      {
+        "name": "frame_000093.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000093.jpg"
+      },
+      {
+        "name": "frame_000094.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000094.jpg"
+      },
+      {
+        "name": "frame_000095.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000095.jpg"
+      },
+      {
+        "name": "frame_000096.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000096.jpg"
+      },
+      {
+        "name": "frame_000097.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000097.jpg"
+      },
+      {
+        "name": "frame_000098.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000098.jpg"
+      },
+      {
+        "name": "frame_000099.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000099.jpg"
+      },
+      {
+        "name": "frame_000100.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000100.jpg"
+      },
+      {
+        "name": "frame_000101.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000101.jpg"
+      },
+      {
+        "name": "frame_000102.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000102.jpg"
+      },
+      {
+        "name": "frame_000103.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000103.jpg"
+      },
+      {
+        "name": "frame_000104.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000104.jpg"
+      },
+      {
+        "name": "frame_000105.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000105.jpg"
+      },
+      {
+        "name": "frame_000106.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000106.jpg"
+      },
+      {
+        "name": "frame_000107.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000107.jpg"
+      },
+      {
+        "name": "frame_000108.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000108.jpg"
+      },
+      {
+        "name": "frame_000109.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000109.jpg"
+      },
+      {
+        "name": "frame_000110.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000110.jpg"
+      },
+      {
+        "name": "frame_000111.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000111.jpg"
+      },
+      {
+        "name": "frame_000112.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000112.jpg"
+      },
+      {
+        "name": "frame_000113.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000113.jpg"
+      },
+      {
+        "name": "frame_000114.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000114.jpg"
+      },
+      {
+        "name": "frame_000115.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000115.jpg"
+      },
+      {
+        "name": "frame_000116.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000116.jpg"
+      },
+      {
+        "name": "frame_000117.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000117.jpg"
+      },
+      {
+        "name": "frame_000118.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000118.jpg"
+      },
+      {
+        "name": "frame_000119.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000119.jpg"
+      },
+      {
+        "name": "frame_000120.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000120.jpg"
+      },
+      {
+        "name": "frame_000121.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000121.jpg"
+      },
+      {
+        "name": "frame_000122.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000122.jpg"
+      },
+      {
+        "name": "frame_000123.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000123.jpg"
+      },
+      {
+        "name": "frame_000124.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000124.jpg"
+      },
+      {
+        "name": "frame_000125.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000125.jpg"
+      },
+      {
+        "name": "frame_000126.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000126.jpg"
+      },
+      {
+        "name": "frame_000127.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000127.jpg"
+      },
+      {
+        "name": "frame_000128.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000128.jpg"
+      },
+      {
+        "name": "frame_000129.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000129.jpg"
+      },
+      {
+        "name": "frame_000130.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000130.jpg"
+      },
+      {
+        "name": "frame_000131.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000131.jpg"
+      },
+      {
+        "name": "frame_000132.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000132.jpg"
+      },
+      {
+        "name": "frame_000133.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000133.jpg"
+      },
+      {
+        "name": "frame_000134.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000134.jpg"
+      },
+      {
+        "name": "frame_000135.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000135.jpg"
+      },
+      {
+        "name": "frame_000136.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000136.jpg"
+      },
+      {
+        "name": "frame_000137.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000137.jpg"
+      },
+      {
+        "name": "frame_000138.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000138.jpg"
+      },
+      {
+        "name": "frame_000139.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000139.jpg"
+      },
+      {
+        "name": "frame_000140.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000140.jpg"
+      },
+      {
+        "name": "frame_000141.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000141.jpg"
+      },
+      {
+        "name": "frame_000142.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000142.jpg"
+      },
+      {
+        "name": "frame_000143.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000143.jpg"
+      },
+      {
+        "name": "frame_000144.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000144.jpg"
+      },
+      {
+        "name": "frame_000145.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000145.jpg"
+      },
+      {
+        "name": "frame_000146.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000146.jpg"
+      },
+      {
+        "name": "frame_000147.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000147.jpg"
+      },
+      {
+        "name": "frame_000148.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000148.jpg"
+      },
+      {
+        "name": "frame_000149.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000149.jpg"
+      },
+      {
+        "name": "frame_000150.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000150.jpg"
+      },
+      {
+        "name": "frame_000151.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000151.jpg"
+      },
+      {
+        "name": "frame_000152.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000152.jpg"
+      },
+      {
+        "name": "frame_000153.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000153.jpg"
+      },
+      {
+        "name": "frame_000154.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000154.jpg"
+      },
+      {
+        "name": "frame_000155.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000155.jpg"
+      },
+      {
+        "name": "frame_000156.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000156.jpg"
+      },
+      {
+        "name": "frame_000157.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000157.jpg"
+      },
+      {
+        "name": "frame_000158.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000158.jpg"
+      },
+      {
+        "name": "frame_000159.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000159.jpg"
+      },
+      {
+        "name": "frame_000160.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000160.jpg"
+      },
+      {
+        "name": "frame_000161.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000161.jpg"
+      },
+      {
+        "name": "frame_000162.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000162.jpg"
+      },
+      {
+        "name": "frame_000163.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000163.jpg"
+      },
+      {
+        "name": "frame_000164.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000164.jpg"
+      },
+      {
+        "name": "frame_000165.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000165.jpg"
+      },
+      {
+        "name": "frame_000166.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000166.jpg"
+      },
+      {
+        "name": "frame_000167.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000167.jpg"
+      },
+      {
+        "name": "frame_000168.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000168.jpg"
+      },
+      {
+        "name": "frame_000169.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000169.jpg"
+      },
+      {
+        "name": "frame_000170.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000170.jpg"
+      },
+      {
+        "name": "frame_000171.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000171.jpg"
+      },
+      {
+        "name": "frame_000172.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000172.jpg"
+      },
+      {
+        "name": "frame_000173.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000173.jpg"
+      },
+      {
+        "name": "frame_000174.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000174.jpg"
+      },
+      {
+        "name": "frame_000175.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000175.jpg"
+      },
+      {
+        "name": "frame_000176.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000176.jpg"
+      },
+      {
+        "name": "frame_000177.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000177.jpg"
+      },
+      {
+        "name": "frame_000178.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000178.jpg"
+      },
+      {
+        "name": "frame_000179.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000179.jpg"
+      },
+      {
+        "name": "frame_000180.jpg",
+        "path": "runs/label_frames/burlington_gold_0300_low_steep_corner/frame_000180.jpg"
+      }
+    ],
+    "manifest_path": "runs/label_frames/burlington_gold_0300_low_steep_corner/label_frame_manifest.json",
+    "sample_every_frames": 30,
+    "source_duration_s": 90.0698,
+    "source_fps": 59.94005994005994,
+    "source_resolution": [
+      1920,
+      1080
+    ]
+  },
+  "not_ground_truth": true,
+  "schema_version": 1,
+  "source": {
+    "filters": [
+      "confidence",
+      "physics_consistency",
+      "reprojection"
+    ],
+    "mode": "deterministic_smoke",
+    "teacher_models": [
+      "world_grounding",
+      "zero_velocity"
+    ],
+    "teacher_path": null
+  },
+  "status": "draft_prototype_unverified"
+}

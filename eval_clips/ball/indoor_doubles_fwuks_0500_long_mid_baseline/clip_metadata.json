@@ -1,0 +1,10 @@
+{
+  "camera_angle": "shallow_baseline",
+  "camera_height": "mid",
+  "duration_s": 30.03,
+  "environment": "indoor",
+  "frame_rate_fps": 30,
+  "play_type": "doubles",
+  "racket_gt": false,
+  "schema_version": 1
+}

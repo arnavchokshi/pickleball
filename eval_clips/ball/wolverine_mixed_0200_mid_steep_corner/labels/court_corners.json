@@ -1,0 +1,460 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "court_corners": {
+          "far_left": [
+            36,
+            190
+          ],
+          "far_right": [
+            322,
+            165
+          ],
+          "near_left": [
+            463,
+            467
+          ],
+          "near_right": [
+            939,
+            265
+          ]
+        },
+        "frame": "frame_000002.jpg",
+        "review_id": "court_corners_manual_seed",
+        "source": "human_review",
+        "status": "corrected_unverified"
+      }
+    ],
+    "notes": [
+      "Prototype draft only; requires human review before promotion.",
+      "Full 24-clip and ArUco/RKT gates are deferred for this wave."
+    ],
+    "review_imports": [
+      {
+        "correction_path": "runs/eval0/prototype_gate_h100_v2/review_bundle/corrections_accepted_static4/wolverine_mixed_0200_mid_steep_corner/court_corners.json",
+        "item_count": 1,
+        "status": "corrected_unverified"
+      }
+    ],
+    "target_file": "court_corners.json",
+    "teacher_payload": null
+  },
+  "clip": {
+    "metadata": {
+      "camera_angle": "steep_corner",
+      "camera_height": "mid",
+      "duration_s": 90.0,
+      "environment": "indoor",
+      "frame_rate_fps": 30,
+      "play_type": "doubles",
+      "racket_gt": false,
+      "schema_version": 1
+    },
+    "name": "wolverine_mixed_0200_mid_steep_corner",
+    "path": "data/testclips/wolverine_mixed_0200_mid_steep_corner",
+    "source_video": "data/testclips/wolverine_mixed_0200_mid_steep_corner/source.mp4"
+  },
+  "confidence": {
+    "mean": 0.25,
+    "uncertainty_flags": [
+      "teacher_model_unavailable",
+      "smoke_generated"
+    ],
+    "verified": false
+  },
+  "frames": {
+    "frame_count": 91,
+    "frame_dir": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner",
+    "frames": [
+      {
+        "name": "frame_000001.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000001.jpg"
+      },
+      {
+        "name": "frame_000002.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000002.jpg"
+      },
+      {
+        "name": "frame_000003.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000003.jpg"
+      },
+      {
+        "name": "frame_000004.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000004.jpg"
+      },
+      {
+        "name": "frame_000005.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000005.jpg"
+      },
+      {
+        "name": "frame_000006.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000006.jpg"
+      },
+      {
+        "name": "frame_000007.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000007.jpg"
+      },
+      {
+        "name": "frame_000008.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000008.jpg"
+      },
+      {
+        "name": "frame_000009.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000009.jpg"
+      },
+      {
+        "name": "frame_000010.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000010.jpg"
+      },
+      {
+        "name": "frame_000011.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000011.jpg"
+      },
+      {
+        "name": "frame_000012.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000012.jpg"
+      },
+      {
+        "name": "frame_000013.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000013.jpg"
+      },
+      {
+        "name": "frame_000014.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000014.jpg"
+      },
+      {
+        "name": "frame_000015.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000015.jpg"
+      },
+      {
+        "name": "frame_000016.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000016.jpg"
+      },
+      {
+        "name": "frame_000017.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000017.jpg"
+      },
+      {
+        "name": "frame_000018.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000018.jpg"
+      },
+      {
+        "name": "frame_000019.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000019.jpg"
+      },
+      {
+        "name": "frame_000020.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000020.jpg"
+      },
+      {
+        "name": "frame_000021.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000021.jpg"
+      },
+      {
+        "name": "frame_000022.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000022.jpg"
+      },
+      {
+        "name": "frame_000023.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000023.jpg"
+      },
+      {
+        "name": "frame_000024.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000024.jpg"
+      },
+      {
+        "name": "frame_000025.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000025.jpg"
+      },
+      {
+        "name": "frame_000026.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000026.jpg"
+      },
+      {
+        "name": "frame_000027.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000027.jpg"
+      },
+      {
+        "name": "frame_000028.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000028.jpg"
+      },
+      {
+        "name": "frame_000029.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000029.jpg"
+      },
+      {
+        "name": "frame_000030.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000030.jpg"
+      },
+      {
+        "name": "frame_000031.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000031.jpg"
+      },
+      {
+        "name": "frame_000032.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000032.jpg"
+      },
+      {
+        "name": "frame_000033.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000033.jpg"
+      },
+      {
+        "name": "frame_000034.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000034.jpg"
+      },
+      {
+        "name": "frame_000035.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000035.jpg"
+      },
+      {
+        "name": "frame_000036.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000036.jpg"
+      },
+      {
+        "name": "frame_000037.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000037.jpg"
+      },
+      {
+        "name": "frame_000038.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000038.jpg"
+      },
+      {
+        "name": "frame_000039.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000039.jpg"
+      },
+      {
+        "name": "frame_000040.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000040.jpg"
+      },
+      {
+        "name": "frame_000041.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000041.jpg"
+      },
+      {
+        "name": "frame_000042.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000042.jpg"
+      },
+      {
+        "name": "frame_000043.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000043.jpg"
+      },
+      {
+        "name": "frame_000044.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000044.jpg"
+      },
+      {
+        "name": "frame_000045.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000045.jpg"
+      },
+      {
+        "name": "frame_000046.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000046.jpg"
+      },
+      {
+        "name": "frame_000047.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000047.jpg"
+      },
+      {
+        "name": "frame_000048.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000048.jpg"
+      },
+      {
+        "name": "frame_000049.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000049.jpg"
+      },
+      {
+        "name": "frame_000050.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000050.jpg"
+      },
+      {
+        "name": "frame_000051.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000051.jpg"
+      },
+      {
+        "name": "frame_000052.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000052.jpg"
+      },
+      {
+        "name": "frame_000053.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000053.jpg"
+      },
+      {
+        "name": "frame_000054.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000054.jpg"
+      },
+      {
+        "name": "frame_000055.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000055.jpg"
+      },
+      {
+        "name": "frame_000056.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000056.jpg"
+      },
+      {
+        "name": "frame_000057.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000057.jpg"
+      },
+      {
+        "name": "frame_000058.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000058.jpg"
+      },
+      {
+        "name": "frame_000059.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000059.jpg"
+      },
+      {
+        "name": "frame_000060.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000060.jpg"
+      },
+      {
+        "name": "frame_000061.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000061.jpg"
+      },
+      {
+        "name": "frame_000062.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000062.jpg"
+      },
+      {
+        "name": "frame_000063.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000063.jpg"
+      },
+      {
+        "name": "frame_000064.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000064.jpg"
+      },
+      {
+        "name": "frame_000065.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000065.jpg"
+      },
+      {
+        "name": "frame_000066.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000066.jpg"
+      },
+      {
+        "name": "frame_000067.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000067.jpg"
+      },
+      {
+        "name": "frame_000068.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000068.jpg"
+      },
+      {
+        "name": "frame_000069.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000069.jpg"
+      },
+      {
+        "name": "frame_000070.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000070.jpg"
+      },
+      {
+        "name": "frame_000071.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000071.jpg"
+      },
+      {
+        "name": "frame_000072.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000072.jpg"
+      },
+      {
+        "name": "frame_000073.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000073.jpg"
+      },
+      {
+        "name": "frame_000074.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000074.jpg"
+      },
+      {
+        "name": "frame_000075.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000075.jpg"
+      },
+      {
+        "name": "frame_000076.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000076.jpg"
+      },
+      {
+        "name": "frame_000077.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000077.jpg"
+      },
+      {
+        "name": "frame_000078.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000078.jpg"
+      },
+      {
+        "name": "frame_000079.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000079.jpg"
+      },
+      {
+        "name": "frame_000080.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000080.jpg"
+      },
+      {
+        "name": "frame_000081.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000081.jpg"
+      },
+      {
+        "name": "frame_000082.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000082.jpg"
+      },
+      {
+        "name": "frame_000083.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000083.jpg"
+      },
+      {
+        "name": "frame_000084.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000084.jpg"
+      },
+      {
+        "name": "frame_000085.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000085.jpg"
+      },
+      {
+        "name": "frame_000086.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000086.jpg"
+      },
+      {
+        "name": "frame_000087.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000087.jpg"
+      },
+      {
+        "name": "frame_000088.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000088.jpg"
+      },
+      {
+        "name": "frame_000089.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000089.jpg"
+      },
+      {
+        "name": "frame_000090.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000090.jpg"
+      },
+      {
+        "name": "frame_000091.jpg",
+        "path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/frame_000091.jpg"
+      }
+    ],
+    "manifest_path": "runs/label_frames/wolverine_mixed_0200_mid_steep_corner/label_frame_manifest.json",
+    "sample_every_frames": 30,
+    "source_duration_s": 90.133333,
+    "source_fps": 30.0,
+    "source_resolution": [
+      1920,
+      1080
+    ]
+  },
+  "not_ground_truth": true,
+  "schema_version": 1,
+  "source": {
+    "filters": [
+      "confidence",
+      "physics_consistency",
+      "reprojection"
+    ],
+    "mode": "deterministic_smoke",
+    "teacher_models": [
+      "court_keypoint_teacher",
+      "manual_4_corner_fallback"
+    ],
+    "teacher_path": null
+  },
+  "status": "draft_prototype_unverified"
+}

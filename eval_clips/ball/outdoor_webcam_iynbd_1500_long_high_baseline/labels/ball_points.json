@@ -1,0 +1,704 @@
+{
+  "artifact_type": "racketsport_ball_click_review",
+  "clip": "outdoor_webcam_iynbd_1500_long_high_baseline",
+  "coordinate_frame": "image_pixels_video_space",
+  "items": [
+    {
+      "ball_xy": null,
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000000.jpg",
+      "frame_index": 0,
+      "image": "images/frame_000000.jpg",
+      "label": "ball",
+      "notes": "missing",
+      "review_id": "ball_frame_000000",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 0,
+      "visibility": "missing",
+      "visible": false,
+      "xy_px": null
+    },
+    {
+      "ball_xy": null,
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000021.jpg",
+      "frame_index": 21,
+      "image": "images/frame_000021.jpg",
+      "label": "ball",
+      "notes": "missing",
+      "review_id": "ball_frame_000021",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 0.35,
+      "visibility": "missing",
+      "visible": false,
+      "xy_px": null
+    },
+    {
+      "ball_xy": null,
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000041.jpg",
+      "frame_index": 41,
+      "image": "images/frame_000041.jpg",
+      "label": "ball",
+      "notes": "missing",
+      "review_id": "ball_frame_000041",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 0.6833333333333333,
+      "visibility": "missing",
+      "visible": false,
+      "xy_px": null
+    },
+    {
+      "ball_xy": null,
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000062.jpg",
+      "frame_index": 62,
+      "image": "images/frame_000062.jpg",
+      "label": "ball",
+      "notes": "missing",
+      "review_id": "ball_frame_000062",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 1.0333333333333334,
+      "visibility": "missing",
+      "visible": false,
+      "xy_px": null
+    },
+    {
+      "ball_xy": null,
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000083.jpg",
+      "frame_index": 83,
+      "image": "images/frame_000083.jpg",
+      "label": "ball",
+      "notes": "missing",
+      "review_id": "ball_frame_000083",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 1.3833333333333333,
+      "visibility": "missing",
+      "visible": false,
+      "xy_px": null
+    },
+    {
+      "ball_xy": [
+        836,
+        222
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000103.jpg",
+      "frame_index": 103,
+      "image": "images/frame_000103.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000103",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 1.7166666666666666,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        836,
+        222
+      ]
+    },
+    {
+      "ball_xy": [
+        833.4,
+        232.3
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000124.jpg",
+      "frame_index": 124,
+      "image": "images/frame_000124.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000124",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 2.066666666666667,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        833.4,
+        232.3
+      ]
+    },
+    {
+      "ball_xy": null,
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000145.jpg",
+      "frame_index": 145,
+      "image": "images/frame_000145.jpg",
+      "label": "ball",
+      "notes": "occluded",
+      "review_id": "ball_frame_000145",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 2.4166666666666665,
+      "visibility": "occluded",
+      "visible": false,
+      "xy_px": null
+    },
+    {
+      "ball_xy": null,
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000165.jpg",
+      "frame_index": 165,
+      "image": "images/frame_000165.jpg",
+      "label": "ball",
+      "notes": "occluded",
+      "review_id": "ball_frame_000165",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 2.75,
+      "visibility": "occluded",
+      "visible": false,
+      "xy_px": null
+    },
+    {
+      "ball_xy": [
+        841.1,
+        256.9
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000186.jpg",
+      "frame_index": 186,
+      "image": "images/frame_000186.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000186",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 3.1,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        841.1,
+        256.9
+      ]
+    },
+    {
+      "ball_xy": [
+        935.5,
+        264.6
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000207.jpg",
+      "frame_index": 207,
+      "image": "images/frame_000207.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000207",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 3.45,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        935.5,
+        264.6
+      ]
+    },
+    {
+      "ball_xy": [
+        1025.9,
+        450.5
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000227.jpg",
+      "frame_index": 227,
+      "image": "images/frame_000227.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000227",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 3.783333333333333,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        1025.9,
+        450.5
+      ]
+    },
+    {
+      "ball_xy": null,
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000248.jpg",
+      "frame_index": 248,
+      "image": "images/frame_000248.jpg",
+      "label": "ball",
+      "notes": "occluded",
+      "review_id": "ball_frame_000248",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 4.133333333333334,
+      "visibility": "occluded",
+      "visible": false,
+      "xy_px": null
+    },
+    {
+      "ball_xy": [
+        1094.4,
+        511.1
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000269.jpg",
+      "frame_index": 269,
+      "image": "images/frame_000269.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000269",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 4.483333333333333,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        1094.4,
+        511.1
+      ]
+    },
+    {
+      "ball_xy": [
+        1062.1,
+        335.6
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000289.jpg",
+      "frame_index": 289,
+      "image": "images/frame_000289.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000289",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 4.816666666666666,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        1062.1,
+        335.6
+      ]
+    },
+    {
+      "ball_xy": [
+        1065.9,
+        330.4
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000310.jpg",
+      "frame_index": 310,
+      "image": "images/frame_000310.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000310",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 5.166666666666667,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        1065.9,
+        330.4
+      ]
+    },
+    {
+      "ball_xy": [
+        1095.7,
+        327.8
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000330.jpg",
+      "frame_index": 330,
+      "image": "images/frame_000330.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000330",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 5.5,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        1095.7,
+        327.8
+      ]
+    },
+    {
+      "ball_xy": [
+        1128,
+        294.3
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000351.jpg",
+      "frame_index": 351,
+      "image": "images/frame_000351.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000351",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 5.85,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        1128,
+        294.3
+      ]
+    },
+    {
+      "ball_xy": [
+        1142.2,
+        309.8
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000372.jpg",
+      "frame_index": 372,
+      "image": "images/frame_000372.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000372",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 6.2,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        1142.2,
+        309.8
+      ]
+    },
+    {
+      "ball_xy": null,
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000392.jpg",
+      "frame_index": 392,
+      "image": "images/frame_000392.jpg",
+      "label": "ball",
+      "notes": "occluded",
+      "review_id": "ball_frame_000392",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 6.533333333333333,
+      "visibility": "occluded",
+      "visible": false,
+      "xy_px": null
+    },
+    {
+      "ball_xy": [
+        1010.4,
+        329.1
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000413.jpg",
+      "frame_index": 413,
+      "image": "images/frame_000413.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000413",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 6.883333333333334,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        1010.4,
+        329.1
+      ]
+    },
+    {
+      "ball_xy": [
+        978.1,
+        300.7
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000434.jpg",
+      "frame_index": 434,
+      "image": "images/frame_000434.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000434",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 7.233333333333333,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        978.1,
+        300.7
+      ]
+    },
+    {
+      "ball_xy": [
+        1027.2,
+        236.2
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000454.jpg",
+      "frame_index": 454,
+      "image": "images/frame_000454.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000454",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 7.566666666666666,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        1027.2,
+        236.2
+      ]
+    },
+    {
+      "ball_xy": [
+        1073.7,
+        289.1
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000475.jpg",
+      "frame_index": 475,
+      "image": "images/frame_000475.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000475",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 7.916666666666667,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        1073.7,
+        289.1
+      ]
+    },
+    {
+      "ball_xy": null,
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000496.jpg",
+      "frame_index": 496,
+      "image": "images/frame_000496.jpg",
+      "label": "ball",
+      "notes": "occluded",
+      "review_id": "ball_frame_000496",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 8.266666666666667,
+      "visibility": "occluded",
+      "visible": false,
+      "xy_px": null
+    },
+    {
+      "ball_xy": [
+        1009.1,
+        334.3
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000516.jpg",
+      "frame_index": 516,
+      "image": "images/frame_000516.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000516",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 8.6,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        1009.1,
+        334.3
+      ]
+    },
+    {
+      "ball_xy": [
+        1064.7,
+        370.4
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000537.jpg",
+      "frame_index": 537,
+      "image": "images/frame_000537.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000537",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 8.95,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        1064.7,
+        370.4
+      ]
+    },
+    {
+      "ball_xy": [
+        954.8,
+        273.6
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000558.jpg",
+      "frame_index": 558,
+      "image": "images/frame_000558.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000558",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 9.3,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        954.8,
+        273.6
+      ]
+    },
+    {
+      "ball_xy": [
+        821.7,
+        216.8
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000578.jpg",
+      "frame_index": 578,
+      "image": "images/frame_000578.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000578",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 9.633333333333333,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        821.7,
+        216.8
+      ]
+    },
+    {
+      "ball_xy": [
+        785.6,
+        271
+      ],
+      "class_id": 32,
+      "class_name": "sports ball",
+      "confidence": 1,
+      "frame": "frame_000599.jpg",
+      "frame_index": 599,
+      "image": "images/frame_000599.jpg",
+      "label": "ball",
+      "notes": "",
+      "review_id": "ball_frame_000599",
+      "source": "human_review",
+      "status": "corrected_unverified",
+      "t": 9.983333333333333,
+      "visibility": "visible",
+      "visible": true,
+      "xy_px": [
+        785.6,
+        271
+      ]
+    }
+  ],
+  "not_ground_truth": true,
+  "review_items": [
+    "ball_frame_000000",
+    "ball_frame_000021",
+    "ball_frame_000041",
+    "ball_frame_000062",
+    "ball_frame_000083",
+    "ball_frame_000103",
+    "ball_frame_000124",
+    "ball_frame_000145",
+    "ball_frame_000165",
+    "ball_frame_000186",
+    "ball_frame_000207",
+    "ball_frame_000227",
+    "ball_frame_000248",
+    "ball_frame_000269",
+    "ball_frame_000289",
+    "ball_frame_000310",
+    "ball_frame_000330",
+    "ball_frame_000351",
+    "ball_frame_000372",
+    "ball_frame_000392",
+    "ball_frame_000413",
+    "ball_frame_000434",
+    "ball_frame_000454",
+    "ball_frame_000475",
+    "ball_frame_000496",
+    "ball_frame_000516",
+    "ball_frame_000537",
+    "ball_frame_000558",
+    "ball_frame_000578",
+    "ball_frame_000599"
+  ],
+  "schema_version": 1,
+  "source_video": "/Users/arnavchokshi/Desktop/pickleball/runs/eval0/prototype_gate_h100_v2/outdoor_webcam_iynbd_1500_long_high_baseline/tracknet_smoke_0000_0010/input_0000_0010.mp4",
+  "status": "human_reviewed",
+  "target_file": "ball.json"
+}

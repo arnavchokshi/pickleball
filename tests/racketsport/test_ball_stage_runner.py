@@ -70,6 +70,13 @@ def _write_contact_cue_artifacts(inputs_dir: Path) -> None:
     )
 
 
+def _write_model_ball_track(path: Path, *, source: str = "totnet") -> None:
+    payload = _ball_track_payload()
+    payload["source"] = source
+    payload["frames"][0]["xy"] = [444.0, 222.0]
+    _write_json(path, payload)
+
+
 def _physics_refinement_payload() -> dict:
     return {
         "schema_version": 1,
@@ -337,6 +344,140 @@ def test_ball_stage_runner_uses_no_click_localtraj_artifact_without_reading_ball
 
     emitted = json.loads((run_dir / "ball_track.json").read_text(encoding="utf-8"))
     assert emitted == _ball_track_payload()
+
+
+def test_ball_stage_runner_real_totnet_mode_runs_model_inference_before_contact_fusion(tmp_path: Path) -> None:
+    clip = "clip_001"
+    inputs = tmp_path / "inputs" / clip
+    run_dir = tmp_path / "runs" / clip
+    video = inputs / "input.mp4"
+    checkpoint = tmp_path / "totnet.ckpt"
+    totnet_repo = tmp_path / "TOTNet"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"fake video bytes")
+    checkpoint.write_bytes(b"fake checkpoint")
+    (totnet_repo / "src").mkdir(parents=True)
+    _write_dependency_artifacts(run_dir)
+    _write_contact_cue_artifacts(inputs)
+
+    calls: list[dict[str, object]] = []
+
+    def fake_totnet_runner(**kwargs):
+        calls.append(kwargs)
+        _write_model_ball_track(Path(kwargs["out"]))
+        _write_json(Path(kwargs["predictions_out"]), {"artifact_type": "fake_totnet_predictions"})
+        if kwargs.get("metadata_out") is not None:
+            _write_json(Path(kwargs["metadata_out"]), {"artifact_type": "fake_totnet_run"})
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_totnet_ball_run",
+            "frame_count": 3,
+            "visible_frame_count": 2,
+            "runtime": {"effective_fps": 42.0},
+        }
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(
+        totnet_repo=totnet_repo,
+        totnet_checkpoint=checkpoint,
+        video_path=video,
+        model_runner=fake_totnet_runner,
+    )
+
+    summary = run_pipeline(
+        clip=clip,
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    assert calls
+    assert calls[0]["video"] == video
+    assert calls[0]["totnet_repo"] == totnet_repo
+    assert calls[0]["checkpoint"] == checkpoint
+    assert calls[0]["out"] == run_dir / "ball_track.json"
+    assert calls[0]["predictions_out"] == run_dir / "totnet_predictions.json"
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["stage"] == "ball_events"
+    assert ball_stage["real_model"] is True
+    assert ball_stage["source_mode"] == "totnet_inference"
+    assert ball_stage["metrics"]["model_family"] == "TOTNet"
+    assert ball_stage["metrics"]["source_ball_track"] == str(run_dir / "ball_track.json")
+    assert ball_stage["metrics"]["contact_event_count"] == 1
+    assert "ran TOTNet video inference locally" in ball_stage["notes"]
+    emitted = json.loads((run_dir / "ball_track.json").read_text(encoding="utf-8"))
+    assert emitted["source"] == "totnet"
+    assert emitted["frames"][0]["xy"] == [444.0, 222.0]
+
+
+def test_ball_stage_runner_real_tracknet_mode_runs_model_inference_before_contact_fusion(tmp_path: Path) -> None:
+    clip = "clip_001"
+    inputs = tmp_path / "inputs" / clip
+    run_dir = tmp_path / "runs" / clip
+    video = inputs / "input.mp4"
+    tracknet_file = tmp_path / "TrackNet_best.pt"
+    inpaintnet_file = tmp_path / "InpaintNet_best.pt"
+    tracknet_repo = tmp_path / "TrackNetV3"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"fake video bytes")
+    tracknet_file.write_bytes(b"fake tracknet checkpoint")
+    inpaintnet_file.write_bytes(b"fake inpaintnet checkpoint")
+    tracknet_repo.mkdir(parents=True)
+    (tracknet_repo / "predict.py").write_text("print('fake')\n", encoding="utf-8")
+    _write_dependency_artifacts(run_dir)
+    _write_contact_cue_artifacts(inputs)
+
+    calls: list[dict[str, object]] = []
+
+    def fake_tracknet_runner(**kwargs):
+        calls.append(kwargs)
+        _write_model_ball_track(Path(kwargs["out"]), source="tracknet")
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_tracknet_ball_run",
+            "source_mode": "tracknet_predict",
+            "frame_count": 3,
+            "visible_frame_count": 2,
+            "runtime": {"effective_fps": 24.0},
+        }
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(
+        tracknet_repo=tracknet_repo,
+        tracknet_file=tracknet_file,
+        inpaintnet_file=inpaintnet_file,
+        video_path=video,
+        tracknet_runner=fake_tracknet_runner,
+        tracknet_fps=30.0,
+    )
+
+    summary = run_pipeline(
+        clip=clip,
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    assert calls
+    assert calls[0]["video"] == video
+    assert calls[0]["tracknet_repo"] == tracknet_repo
+    assert calls[0]["tracknet_file"] == tracknet_file
+    assert calls[0]["inpaintnet_file"] == inpaintnet_file
+    assert calls[0]["out"] == run_dir / "ball_track.json"
+    assert calls[0]["metadata_out"] == run_dir / "tracknet_metadata.json"
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["stage"] == "ball_events"
+    assert ball_stage["real_model"] is True
+    assert ball_stage["source_mode"] == "tracknetv3_inference"
+    assert ball_stage["metrics"]["model_family"] == "TrackNetV3"
+    assert ball_stage["metrics"]["source_ball_track"] == str(run_dir / "ball_track.json")
+    assert ball_stage["metrics"]["contact_event_count"] == 1
+    assert "ran TrackNetV3 video inference locally" in ball_stage["notes"]
+    emitted = json.loads((run_dir / "ball_track.json").read_text(encoding="utf-8"))
+    assert emitted["source"] == "tracknet"
+    assert emitted["frames"][0]["xy"] == [444.0, 222.0]
 
 
 def test_ball_stage_runner_fails_closed_on_renamed_tap_track_even_with_cues(tmp_path: Path) -> None:

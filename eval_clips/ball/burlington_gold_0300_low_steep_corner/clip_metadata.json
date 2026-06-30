@@ -1,0 +1,10 @@
+{
+  "camera_angle": "steep_corner",
+  "camera_height": "low",
+  "duration_s": 10.01,
+  "environment": "indoor",
+  "frame_rate_fps": 60,
+  "play_type": "doubles",
+  "racket_gt": false,
+  "schema_version": 1
+}
