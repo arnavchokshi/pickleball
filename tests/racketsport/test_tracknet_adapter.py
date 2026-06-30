@@ -8,7 +8,11 @@ from pathlib import Path
 import pytest
 
 from threed.racketsport.schemas import BallTrack, validate_artifact_file
-from threed.racketsport.tracknet_adapter import run_tracknet_or_convert, tracknet_csv_to_ball_track
+from threed.racketsport.tracknet_adapter import (
+    run_official_tracknet_predict,
+    run_tracknet_or_convert,
+    tracknet_csv_to_ball_track,
+)
 
 
 def test_tracknet_csv_to_ball_track_converts_official_prediction_format(tmp_path: Path) -> None:
@@ -179,6 +183,58 @@ video_stem = Path(args.video_file).stem
     assert metadata["runtime"]["effective_fps"] > 0.0
     assert metadata["runtime"]["realtime_factor"] > 0.0
     assert metadata["runtime"]["wall_seconds"] > 0.0
+
+
+def test_run_official_tracknet_predict_patches_cuda_only_predict_in_temp_repo(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "TrackNetV3"
+    repo.mkdir()
+    source_predict = """
+import torch
+tracknet = get_model('TrackNet', tracknet_seq_len, bg_mode).cuda()
+inpaintnet = get_model('InpaintNet').cuda()
+x = x.float().cuda()
+coor_inpaint = inpaintnet(coor_pred.cuda(), inpaint_mask.cuda()).detach().cpu()
+"""
+    (repo / "predict.py").write_text(source_predict, encoding="utf-8")
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake video")
+    tracknet = tmp_path / "TrackNet_best.pt"
+    inpaintnet = tmp_path / "InpaintNet_best.pt"
+    tracknet.write_bytes(b"tracknet")
+    inpaintnet.write_bytes(b"inpaintnet")
+    save_dir = tmp_path / "predictions"
+    observed: dict[str, Path] = {}
+
+    def fake_subprocess_run(cmd, *, cwd, check):
+        observed["cwd"] = Path(cwd)
+        observed["predict_py"] = Path(cmd[1])
+        patched_predict = observed["predict_py"].read_text(encoding="utf-8")
+        assert check is True
+        assert observed["cwd"] != repo
+        assert observed["predict_py"].parent == observed["cwd"]
+        assert "DEVICE = torch.device" in patched_predict
+        assert ".cuda()" not in patched_predict
+        assert ".cuda(" not in patched_predict
+        save_dir.mkdir(parents=True, exist_ok=True)
+        (save_dir / "clip_ball.csv").write_text("Frame,Visibility,X,Y\n0,1,10,20\n", encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr("threed.racketsport.tracknet_adapter.subprocess.run", fake_subprocess_run)
+
+    csv_path = run_official_tracknet_predict(
+        tracknet_repo=repo,
+        video=video,
+        tracknet_file=tracknet,
+        inpaintnet_file=inpaintnet,
+        save_dir=save_dir,
+        batch_size=1,
+    )
+
+    assert csv_path == save_dir / "clip_ball.csv"
+    assert (repo / "predict.py").read_text(encoding="utf-8") == source_predict
 
 
 def test_run_tracknet_temp_prediction_metadata_does_not_reference_deleted_csv(

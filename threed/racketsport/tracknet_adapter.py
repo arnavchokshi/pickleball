@@ -5,12 +5,14 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
 import time
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from .ball_tracknet import ball_frame
 from .schemas import BallTrack
@@ -105,25 +107,27 @@ def run_official_tracknet_predict(
     save_path = Path(save_dir).resolve()
     save_path.mkdir(parents=True, exist_ok=True)
     normalized_video_range = _normalize_video_range(video_range)
-    cmd = [
-        sys.executable,
-        str(predict_py),
-        "--video_file",
-        str(video_path),
-        "--tracknet_file",
-        str(tracknet_path),
-        "--inpaintnet_file",
-        str(inpaintnet_path),
-        "--save_dir",
-        str(save_path),
-        "--batch_size",
-        str(batch_size),
-    ]
-    if normalized_video_range is not None:
-        cmd.extend(["--video_range", f"{normalized_video_range[0]},{normalized_video_range[1]}"])
-    if large_video:
-        cmd.append("--large_video")
-    subprocess.run(cmd, cwd=repo, check=True)
+    with _portable_tracknet_predict_repo(repo) as runtime_repo:
+        runtime_predict_py = runtime_repo / "predict.py"
+        cmd = [
+            sys.executable,
+            str(runtime_predict_py),
+            "--video_file",
+            str(video_path),
+            "--tracknet_file",
+            str(tracknet_path),
+            "--inpaintnet_file",
+            str(inpaintnet_path),
+            "--save_dir",
+            str(save_path),
+            "--batch_size",
+            str(batch_size),
+        ]
+        if normalized_video_range is not None:
+            cmd.extend(["--video_range", f"{normalized_video_range[0]},{normalized_video_range[1]}"])
+        if large_video:
+            cmd.append("--large_video")
+        subprocess.run(cmd, cwd=runtime_repo, check=True)
     csv_path = save_path / f"{video_path.stem}_ball.csv"
     if not csv_path.is_file():
         raise FileNotFoundError(f"TrackNetV3 completed without writing predictions CSV: {csv_path}")
@@ -225,6 +229,53 @@ def _copy_file(source: str | Path, destination: str | Path) -> None:
     destination_path = Path(destination)
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     destination_path.write_bytes(source_path.read_bytes())
+
+
+@contextmanager
+def _portable_tracknet_predict_repo(repo: Path) -> Iterator[Path]:
+    predict_py = repo / "predict.py"
+    source = predict_py.read_text(encoding="utf-8")
+    if not _needs_portable_device_patch(source):
+        yield repo
+        return
+
+    with tempfile.TemporaryDirectory(prefix="tracknetv3_repo_") as tmp_dir:
+        runtime_repo = Path(tmp_dir) / repo.name
+        shutil.copytree(
+            repo,
+            runtime_repo,
+            ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+        )
+        runtime_predict_py = runtime_repo / "predict.py"
+        runtime_predict_py.write_text(
+            _patch_predict_for_portable_device(runtime_predict_py.read_text(encoding="utf-8")),
+            encoding="utf-8",
+        )
+        yield runtime_repo
+
+
+def _needs_portable_device_patch(source: str) -> bool:
+    return ".cuda()" in source or ".cuda(" in source or "torch.load(args.tracknet_file)" in source
+
+
+def _patch_predict_for_portable_device(source: str) -> str:
+    patched = source
+    if "DEVICE = torch.device" not in patched:
+        helper = (
+            "DEVICE = torch.device(\n"
+            "    \"cuda\" if torch.cuda.is_available()\n"
+            "    else \"mps\" if hasattr(torch.backends, \"mps\") and torch.backends.mps.is_available()\n"
+            "    else \"cpu\"\n"
+            ")\n"
+        )
+        patched = patched.replace("import torch\n", f"import torch\n{helper}\n", 1)
+    patched = patched.replace("torch.load(args.tracknet_file)", "torch.load(args.tracknet_file, map_location=DEVICE)")
+    patched = patched.replace(
+        "torch.load(args.inpaintnet_file)",
+        "torch.load(args.inpaintnet_file, map_location=DEVICE)",
+    )
+    patched = patched.replace(".cuda()", ".to(DEVICE)")
+    return patched
 
 
 def _add_runtime_metrics(runtime: dict[str, Any], *, processed_frame_count: int, fps: float) -> None:
