@@ -18,6 +18,7 @@ from threed.racketsport.schemas import (
     PhaseEvalMetrics,
     RacketPose,
     ReprojectionError,
+    SmplMotion,
     TrackFrame,
     Tracks,
     VirtualWorld,
@@ -175,6 +176,44 @@ def test_common_numeric_fields_reject_bool_nan_and_infinity() -> None:
 def test_track_frame_bbox_rejects_inverted_xyxy_boxes() -> None:
     with pytest.raises(ValidationError, match="bbox must be ordered"):
         TrackFrame.model_validate({"t": 0.0, "bbox": [10.0, 20.0, 5.0, 40.0], "world_xy": [0.0, 0.0], "conf": 0.8})
+
+def test_smpl_motion_accepts_sam3dbody_world_joint_representation_without_grf() -> None:
+    parsed = SmplMotion.model_validate(
+        {
+            "schema_version": 1,
+            "model": "sam3dbody_world_joints",
+            "fps": 30.0,
+            "world_frame": "court_Z0",
+            "players": [
+                {
+                    "id": 1,
+                    "betas": [],
+                    "frames": [
+                        {
+                            "t": 0.0,
+                            "global_orient": [0.0, 0.0, 0.0],
+                            "body_pose": [],
+                            "left_hand_pose": [],
+                            "right_hand_pose": [],
+                            "transl_world": [0.0, 1.0, 0.0],
+                            "track_world_xy": [0.0, 1.0],
+                            "joints_world": [[0.0, 1.0, 0.0]],
+                            "mesh_vertices_world": [],
+                            "joint_conf": [0.9],
+                            "foot_contact": {"left": True, "right": False},
+                            "grf": None,
+                        }
+                    ],
+                    "skate_free": False,
+                    "physics": "worldhmr_floor_contact_observation_only",
+                }
+            ],
+        }
+    )
+
+    assert parsed.model == "sam3dbody_world_joints"
+    assert parsed.players[0].skate_free is False
+    assert parsed.players[0].frames[0].grf is None
 
 
     for payload in (

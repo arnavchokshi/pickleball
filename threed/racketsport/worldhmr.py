@@ -182,12 +182,12 @@ def build_body_artifacts_from_fast_sam(
                         "mesh_vertices_world": [list(vertex) for vertex in frame["vertices_world"]],
                         "joint_conf": [float(frame["confidence"])] * len(frame["joints_world"]),
                         "foot_contact": contact,
-                        "grf": [[0.0, 0.0, 1.0]] if contact["left"] or contact["right"] else None,
+                        "grf": None,
                     }
                     for frame, contact in zip(player_frames, contact_by_frame)
                 ],
-                "skate_free": player_has_contact,
-                "physics": "worldhmr_grounded_floor_contact_heuristic"
+                "skate_free": False,
+                "physics": "worldhmr_floor_contact_observation_only"
                 if player_has_contact
                 else "worldhmr_grounded_not_footlocked",
             }
@@ -208,7 +208,7 @@ def build_body_artifacts_from_fast_sam(
 
     smpl_motion = {
         "schema_version": 1,
-        "model": "smplx",
+        "model": "sam3dbody_world_joints",
         "fps": float(fps),
         "world_frame": "court_Z0",
         "players": players,

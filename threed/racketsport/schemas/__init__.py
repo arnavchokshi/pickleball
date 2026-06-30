@@ -527,7 +527,7 @@ class SmplPlayer(BaseModel):
 
 
 class SmplMotion(StrictArtifact):
-    model: Literal["smpl", "smplx"]
+    model: Literal["smpl", "smplx", "sam3dbody_world_joints"]
     fps: float = Field(gt=0.0)
     world_frame: Literal["court_Z0"]
     players: list[SmplPlayer]

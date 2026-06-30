@@ -129,11 +129,14 @@ def test_build_body_artifacts_marks_floor_contact_from_grounded_joints() -> None
 
     player = smpl_motion["players"][0]
     frame = player["frames"][0]
+    assert smpl_motion["model"] == "sam3dbody_world_joints"
     assert frame["foot_contact"] == {"left": True, "right": True}
-    assert frame["grf"] == [[0.0, 0.0, 1.0]]
-    assert player["skate_free"] is True
-    assert player["physics"] == "worldhmr_grounded_floor_contact_heuristic"
+    assert frame["grf"] is None
+    assert player["skate_free"] is False
+    assert player["physics"] == "worldhmr_floor_contact_observation_only"
     assert metrics["foot_contact_frames"] == 1
+    assert metrics["grf_frames"] == 0
+    assert metrics["skate_free_players"] == 0
 
 
 def test_world_grounding_helpers_validate_vectors_and_smoothing_alpha() -> None:
