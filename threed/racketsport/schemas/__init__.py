@@ -599,6 +599,17 @@ class FootContact(BaseModel):
     right: bool
 
 
+class FootLockSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scaffold: str
+    contact_frames: int = Field(ge=0)
+    contact_samples: int = Field(ge=0)
+    max_slide_m: float = Field(ge=0.0)
+    max_penetration_m: float = Field(ge=0.0)
+    skate_free: bool
+
+
 class SmplFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -615,6 +626,7 @@ class SmplFrame(BaseModel):
     mesh_vertices_world: list[Vector3] = Field(default_factory=list)
     joint_conf: list[float]
     foot_contact: FootContact
+    foot_lock: FootContact | None = None
     grf: list[Vector3] | None = None
 
 
@@ -626,6 +638,7 @@ class SmplPlayer(BaseModel):
     frames: list[SmplFrame]
     skate_free: bool
     physics: str
+    foot_lock: FootLockSummary | None = None
 
 
 class SmplMotion(StrictArtifact):

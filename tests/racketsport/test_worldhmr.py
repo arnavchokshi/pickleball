@@ -135,12 +135,84 @@ def test_build_body_artifacts_marks_floor_contact_from_grounded_joints() -> None
     assert frame["frame_idx"] == 12
     assert skeleton_frame["frame_idx"] == 12
     assert frame["foot_contact"] == {"left": True, "right": True}
+    assert frame["foot_lock"] == {"left": True, "right": True}
     assert frame["grf"] is None
+    assert player["foot_lock"]["contact_frames"] == 1
+    assert player["foot_lock"]["contact_samples"] == 2
     assert player["skate_free"] is False
-    assert player["physics"] == "worldhmr_floor_contact_observation_only"
+    assert player["physics"] == "worldhmr_floor_contact_footlock_z_snap"
     assert metrics["foot_contact_frames"] == 1
+    assert metrics["foot_lock_contact_frames"] == 1
+    assert metrics["foot_lock_contact_samples"] == 2
     assert metrics["grf_frames"] == 0
     assert metrics["skate_free_players"] == 0
+
+
+def test_build_body_artifacts_wires_footlock_z_snap_and_metrics() -> None:
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [1.0, 2.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [
+                [0.0, 0.0, 1.2],
+                [-0.20, 0.0, 0.02],
+                [0.20, 0.0, 0.03],
+            ],
+            "vertices_camera": [[0.0, 0.0, 0.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+        {
+            "frame_idx": 1,
+            "player_id": 1,
+            "t": 1.0 / 30.0,
+            "confidence": 0.9,
+            "track_world_xy": [1.001, 2.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [
+                [0.0, 0.0, 1.2],
+                [-0.20, 0.0, 0.02],
+                [0.20, 0.0, 0.03],
+            ],
+            "vertices_camera": [[0.0, 0.0, 0.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+    ]
+
+    smpl_motion, _skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+    )
+
+    player = smpl_motion["players"][0]
+    first, second = player["frames"]
+    assert first["joints_world"][1][2] == pytest.approx(0.0)
+    assert first["joints_world"][2][2] == pytest.approx(0.0)
+    assert second["joints_world"][1][2] == pytest.approx(0.0)
+    assert second["joints_world"][2][2] == pytest.approx(0.0)
+    assert first["foot_lock"] == {"left": True, "right": True}
+    assert second["foot_lock"] == {"left": True, "right": True}
+    assert player["foot_lock"]["scaffold"] == "cpu_foot_lock_primitives_no_smpl_ik"
+    assert player["foot_lock"]["contact_frames"] == 2
+    assert player["foot_lock"]["contact_samples"] == 4
+    assert player["foot_lock"]["max_slide_m"] == pytest.approx(0.001)
+    assert player["foot_lock"]["max_penetration_m"] == pytest.approx(0.0)
+    assert player["skate_free"] is True
+    assert player["physics"] == "worldhmr_floor_contact_footlock_z_snap"
+    assert metrics["foot_lock_contact_frames"] == 2
+    assert metrics["foot_lock_contact_samples"] == 4
+    assert metrics["max_foot_lock_slide_m"] == pytest.approx(0.001)
+    assert metrics["max_foot_lock_penetration_m"] == pytest.approx(0.0)
+    assert metrics["foot_lock_skate_free_players"] == 1
 
 
 def test_build_body_artifacts_anchors_track_xy_to_low_joint_cluster_not_first_joint() -> None:

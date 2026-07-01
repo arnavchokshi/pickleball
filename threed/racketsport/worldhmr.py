@@ -10,12 +10,14 @@ from dataclasses import dataclass, field
 from math import sqrt
 from typing import Any, Mapping, Sequence
 
+from .footlock import FootKinematics, foot_lock_metrics, snap_stance_foot
 from .schemas import CourtCalibration
 
 
 SCAFFOLD_NOTE = "cpu_worldhmr_primitives_no_sam3dbody_integration"
 FLOOR_CONTACT_EPSILON_M = 0.035
 LOW_GROUNDING_ANCHOR_HEIGHT_M = 0.08
+FOOT_LOCK_SKATE_FREE_MAX_SLIDE_M = 0.003
 
 
 @dataclass(frozen=True)
@@ -173,8 +175,11 @@ def build_body_artifacts_from_fast_sam(
     players: list[dict[str, Any]] = []
     skeleton_players: list[dict[str, Any]] = []
     max_joint_count = max(len(frame["joints_world"]) for frame in smoothed)
+    foot_lock_player_summaries: list[dict[str, Any]] = []
     for player_id in sorted({int(frame["player_id"]) for frame in smoothed}):
         player_frames = [frame for frame in smoothed if int(frame["player_id"]) == player_id]
+        player_frames, foot_lock_summary = _apply_footlock_to_player_frames(player_frames)
+        foot_lock_player_summaries.append(foot_lock_summary)
         betas = _first_list(player_frames, "betas")
         contact_by_frame = [_infer_floor_contact(frame) for frame in player_frames]
         player_has_contact = any(contact["left"] or contact["right"] for contact in contact_by_frame)
@@ -197,12 +202,14 @@ def build_body_artifacts_from_fast_sam(
                         "mesh_vertices_world": [list(vertex) for vertex in frame["vertices_world"]],
                         "joint_conf": [float(frame["confidence"])] * len(frame["joints_world"]),
                         "foot_contact": contact,
+                        "foot_lock": frame["foot_lock"],
                         "grf": None,
                     }
                     for frame, contact in zip(player_frames, contact_by_frame)
                 ],
-                "skate_free": False,
-                "physics": "worldhmr_floor_contact_observation_only"
+                "foot_lock": foot_lock_summary,
+                "skate_free": bool(foot_lock_summary["skate_free"]),
+                "physics": "worldhmr_floor_contact_footlock_z_snap"
                 if player_has_contact
                 else "worldhmr_grounded_not_footlocked",
             }
@@ -256,6 +263,17 @@ def build_body_artifacts_from_fast_sam(
             for frame in player["frames"]
             if frame["foot_contact"]["left"] or frame["foot_contact"]["right"]
         ),
+        "foot_lock_contact_frames": sum(int(summary["contact_frames"]) for summary in foot_lock_player_summaries),
+        "foot_lock_contact_samples": sum(int(summary["contact_samples"]) for summary in foot_lock_player_summaries),
+        "max_foot_lock_slide_m": max(
+            (float(summary["max_slide_m"]) for summary in foot_lock_player_summaries),
+            default=0.0,
+        ),
+        "max_foot_lock_penetration_m": max(
+            (float(summary["max_penetration_m"]) for summary in foot_lock_player_summaries),
+            default=0.0,
+        ),
+        "foot_lock_skate_free_players": sum(1 for summary in foot_lock_player_summaries if summary["skate_free"]),
         "grf_frames": sum(
             1
             for player in players
@@ -290,6 +308,56 @@ def _infer_floor_contact(frame: Mapping[str, Any], *, floor_z_m: float = 0.0) ->
     elif right and not left and len(low_points) >= 2:
         left = True
     return {"left": left, "right": right}
+
+
+def _apply_footlock_to_player_frames(frames: Sequence[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    samples_by_joint: dict[int, list[FootKinematics]] = {}
+    snapped_frames: list[dict[str, Any]] = []
+    contact_frame_count = 0
+
+    for frame in frames:
+        snapped = dict(frame)
+        joints = [[float(value) for value in joint] for joint in frame["joints_world"]]
+        contact_sample_count = 0
+        for joint_idx, joint in enumerate(joints):
+            if abs(joint[2]) > FLOOR_CONTACT_EPSILON_M:
+                continue
+            locked = snap_stance_foot(
+                FootKinematics(
+                    position_xyz=joint,
+                    velocity_xyz=[0.0, 0.0, 0.0],
+                    contact=True,
+                ),
+                court_z_m=0.0,
+            )
+            joints[joint_idx] = locked.position_xyz
+            samples_by_joint.setdefault(joint_idx, []).append(locked)
+            contact_sample_count += 1
+
+        if contact_sample_count:
+            contact_frame_count += 1
+        snapped["joints_world"] = joints
+        snapped["foot_lock"] = _infer_floor_contact(snapped)
+        snapped_frames.append(snapped)
+
+    joint_metrics = [foot_lock_metrics(samples, court_z_m=0.0) for samples in samples_by_joint.values()]
+    max_slide_m = max((metric.max_slide_m for metric in joint_metrics), default=0.0)
+    max_penetration_m = max((metric.max_penetration_m for metric in joint_metrics), default=0.0)
+    contact_samples = sum(metric.contact_frames for metric in joint_metrics)
+    skate_free = (
+        contact_frame_count >= 2
+        and contact_samples > 0
+        and max_slide_m <= FOOT_LOCK_SKATE_FREE_MAX_SLIDE_M
+        and max_penetration_m <= 0.0
+    )
+    return snapped_frames, {
+        "scaffold": "cpu_foot_lock_primitives_no_smpl_ik",
+        "contact_frames": contact_frame_count,
+        "contact_samples": contact_samples,
+        "max_slide_m": max_slide_m,
+        "max_penetration_m": max_penetration_m,
+        "skate_free": skate_free,
+    }
 
 
 def _distance3(left: Sequence[float], right: Sequence[float]) -> float:
