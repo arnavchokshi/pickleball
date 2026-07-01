@@ -20,6 +20,7 @@ def main() -> int:
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--teacher-root", type=Path, default=None)
     parser.add_argument("--clip", action="append", dest="clips", help="Clip name to include. Repeatable.")
+    parser.add_argument("--label-file", action="append", dest="label_files", help="Label JSON to draft. Repeatable.")
     parser.add_argument("--output-space", choices=["eval0", "label_drafts"], default="eval0")
     parser.add_argument("--h100-defaults", action="store_true", help="Use /workspace/pickleball defaults explicitly.")
     args = parser.parse_args()
@@ -38,6 +39,7 @@ def main() -> int:
         frames_root=frames_root,
         teacher_root=args.teacher_root,
         clip_names=clip_names,
+        label_files=args.label_files,
     )
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0

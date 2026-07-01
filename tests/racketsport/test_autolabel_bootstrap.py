@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
 from threed.racketsport.autolabel import (
     COMPATIBILITY_LABEL_FILES,
     PROTOTYPE_GATE_CLIPS,
@@ -83,6 +84,12 @@ def test_bootstrap_writes_draft_packages_without_touching_dataset_labels(tmp_pat
     assert ball["annotation"]["target_file"] == "ball.json"
     assert len(ball["annotation"]["items"]) == 3
 
+    court_keypoints = json.loads((labels_dir / "court_keypoints.json").read_text(encoding="utf-8"))
+    assert court_keypoints["annotation"]["target_file"] == "court_keypoints.json"
+    assert len(court_keypoints["annotation"]["items"]) == 3
+    assert court_keypoints["annotation"]["items"][0]["required_keypoints"] == [point.name for point in PICKLEBALL_KEYPOINTS]
+    assert set(court_keypoints["annotation"]["items"][0]["keypoints"]) == {point.name for point in PICKLEBALL_KEYPOINTS}
+
     uncertain = json.loads((labels_dir / "uncertain_frames.json").read_text(encoding="utf-8"))
     assert uncertain["status"] == "draft_requires_review"
     assert uncertain["frames"][0]["target_file"]
@@ -104,6 +111,26 @@ def test_bootstrap_preserves_teacher_payload_but_still_marks_draft(tmp_path: Pat
     assert ball["source"]["mode"] == "teacher_artifact"
     assert ball["source"]["teacher_path"] == str(teacher_labels / "ball.json")
     assert ball["annotation"]["teacher_payload"]["detections"][0]["conf"] == 0.91
+
+
+def test_bootstrap_can_scope_to_court_keypoint_labels_only(tmp_path: Path) -> None:
+    root = tmp_path / "data" / "testclips"
+    frames_root = tmp_path / "runs" / "label_frames"
+    _write_clip(root, frames_root, "candidate_001")
+    out = tmp_path / "runs" / "label_drafts" / "court_keypoint_review"
+
+    summary = bootstrap_prototype_gate(
+        root=root,
+        frames_root=frames_root,
+        out=out,
+        label_files=["court_keypoints.json"],
+    )
+
+    labels_dir = out / "candidate_001" / "labels"
+    assert summary["clips"][0]["label_files"] == ["court_keypoints.json"]
+    assert (labels_dir / "court_keypoints.json").is_file()
+    assert not (labels_dir / "ball.json").exists()
+    assert not (labels_dir / "racket_pose.json").exists()
 
 
 def test_bootstrap_uses_source_clip_cache_when_testclip_source_is_absent(tmp_path: Path) -> None:

@@ -11,6 +11,7 @@ from threed.racketsport.autolabel import PROTOTYPE_GATE_CLIPS
 
 CVAT_LABELS = [
     {"name": "court_corner", "attributes": ["corner_name"]},
+    {"name": "court_keypoint", "attributes": ["keypoint_name"]},
     {"name": "player_box", "attributes": ["player_id"]},
     {"name": "ball", "attributes": ["visibility"]},
     {"name": "event", "attributes": ["event_type"]},
@@ -237,6 +238,8 @@ def import_corrected_labels(*, drafts_root: Path, corrections_root: Path, allow_
             corrected = {**corrected, "status": corrected.get("status", "corrected_unverified")}
             _replace_or_prepend(items, corrected)
             imported += 1
+        if target_file == "court_keypoints.json" and isinstance(correction.get("review"), dict):
+            draft["review"] = dict(correction["review"])
         imports = annotation.setdefault("review_imports", [])
         imports.append(
             {

@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from scripts.racketsport.train_court_keypoint_heatmap import load_real_court_keypoint_labels
+from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
 from threed.racketsport.label_review import PROTOTYPE_GATE_CLIPS, export_cvat_tasks, export_review_bundle, import_corrected_labels
 
 
@@ -68,6 +70,38 @@ def test_export_review_bundle_and_cvat_task(tmp_path: Path) -> None:
     assert cvat["task_count"] == 1
     assert task["labels"][0]["name"] == "court_corner"
     assert task["images"][0]["review_id"] == "corner_review_1"
+
+
+def test_export_review_bundle_and_cvat_task_support_court_keypoint_review(tmp_path: Path) -> None:
+    clip = PROTOTYPE_GATE_CLIPS[0]
+    drafts_root = tmp_path / "runs" / "label_drafts" / "prototype_gate"
+    frames_root = tmp_path / "runs" / "label_frames"
+    _write_frame_pack(frames_root, clip)
+    _write_draft(
+        drafts_root,
+        clip,
+        "court_keypoints.json",
+        [
+            {
+                "review_id": "court_keypoints_review_1",
+                "frame": "frame_000001.jpg",
+                "status": "uncertain",
+                "confidence": 0.25,
+            }
+        ],
+    )
+    bundle = tmp_path / "review_bundle"
+
+    summary = export_review_bundle(drafts_root=drafts_root, frames_root=frames_root, out=bundle)
+    cvat = export_cvat_tasks(review_manifest=bundle / "review_manifest.json", out=tmp_path / "cvat")
+
+    correction = json.loads((bundle / "corrections" / clip / "court_keypoints.json").read_text(encoding="utf-8"))
+    task = json.loads((tmp_path / "cvat" / clip / "task.json").read_text(encoding="utf-8"))
+    assert summary["review_item_count"] == 1
+    assert cvat["status"] == "ready_for_cvat_review"
+    assert correction["review_items"] == ["court_keypoints_review_1"]
+    assert {"name": "court_keypoint", "attributes": ["keypoint_name"]} in task["labels"]
+    assert task["images"][0]["target_file"] == "court_keypoints.json"
 
 
 def test_export_review_bundle_blocks_missing_review_images(tmp_path: Path) -> None:
@@ -220,6 +254,75 @@ def test_import_corrections_roundtrip_cli(tmp_path: Path) -> None:
     assert draft["status"] == "draft_manual_annotation"
     assert draft["annotation"]["items"][0]["status"] == "corrected_unverified"
     assert draft["annotation"]["items"][0]["court_corners"]["near_right"] == [5, 6]
+
+
+def test_import_reviewed_court_keypoint_corrections_preserves_training_ready_review_status(tmp_path: Path) -> None:
+    clip = PROTOTYPE_GATE_CLIPS[0]
+    drafts_root = tmp_path / "runs" / "label_drafts" / "prototype_gate"
+    labels = drafts_root / clip / "labels"
+    labels.mkdir(parents=True)
+    (labels.parent / "source.mp4").write_bytes(b"fake video")
+    keypoints = {
+        point.name: [float(index + 10), float(index + 20)]
+        for index, point in enumerate(PICKLEBALL_KEYPOINTS)
+    }
+    (labels / "court_keypoints.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "status": "draft_manual_annotation",
+                "annotation": {
+                    "target_file": "court_keypoints.json",
+                    "items": [
+                        {
+                            "review_id": "court_keypoints_review_1",
+                            "frame": "frame_000001.jpg",
+                            "status": "uncertain",
+                            "confidence": 0.25,
+                        }
+                    ],
+                },
+                "frames": {
+                    "frame_dir": str(tmp_path / "runs" / "label_frames" / clip),
+                    "source_resolution": [1920, 1080],
+                    "label_coordinate_space": [1920, 1080],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    corrections = tmp_path / "review_bundle" / "corrections"
+    correction_path = corrections / clip / "court_keypoints.json"
+    correction_path.parent.mkdir(parents=True)
+    correction_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "clip": clip,
+                "target_file": "court_keypoints.json",
+                "review": {"status": "reviewed", "reviewer": "court-keypoint-review"},
+                "items": [
+                    {
+                        "review_id": "court_keypoints_review_1",
+                        "frame": "frame_000001.jpg",
+                        "source": "human_review",
+                        "keypoints": keypoints,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    summary = import_corrected_labels(drafts_root=drafts_root, corrections_root=corrections)
+    rows = load_real_court_keypoint_labels(drafts_root)
+
+    draft = json.loads((labels / "court_keypoints.json").read_text(encoding="utf-8"))
+    assert summary["imported_item_count"] == 1
+    assert draft["review"] == {"status": "reviewed", "reviewer": "court-keypoint-review"}
+    assert rows[0]["clip"] == clip
+    assert rows[0]["label_source"] == "reviewed_15_keypoint_court_labels"
+    assert rows[0]["keypoints"]["near_left_corner"] == [10.0, 20.0]
 
 
 def test_import_corrections_cli_rejects_noop_missing_draft_by_default(tmp_path: Path) -> None:

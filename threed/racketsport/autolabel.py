@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
+from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
+
 
 PROTOTYPE_GATE_CLIPS = (
     "burlington_gold_0300_low_steep_corner",
@@ -21,6 +23,7 @@ PROTOTYPE_GATE_CLIPS = (
 
 PROTOTYPE_LABEL_FILES = (
     "court_corners.json",
+    "court_keypoints.json",
     "players.json",
     "ball.json",
     "events.json",
@@ -62,6 +65,7 @@ def bootstrap_prototype_gate(
     frames_root: Path,
     teacher_root: Path | None = None,
     clip_names: Sequence[str] | None = None,
+    label_files: Sequence[str] | None = None,
     max_clips: int = 4,
 ) -> dict[str, Any]:
     """Write draft label packages for the prototype-gate clips.
@@ -78,12 +82,14 @@ def bootstrap_prototype_gate(
     _refuse_dataset_label_output(root=root, out=out)
 
     clips = _select_clips(root=root, clip_names=clip_names, max_clips=max_clips)
+    selected_label_files = _select_label_files(label_files)
     summaries = [
         _write_clip_package(
             clip_dir=clip_dir,
             out=out,
             frames_root=frames_root,
             teacher_root=teacher_root,
+            label_files=selected_label_files,
         )
         for clip_dir in clips
     ]
@@ -97,6 +103,7 @@ def bootstrap_prototype_gate(
         "frames_root": str(frames_root),
         "teacher_root": str(teacher_root) if teacher_root is not None else None,
         "clip_count": len(summaries),
+        "label_files": list(selected_label_files),
         "dataset_labels_written": False,
         "teacher_inference_wired": teacher_wired,
         "not_ground_truth": True,
@@ -145,12 +152,25 @@ def _select_clips(*, root: Path, clip_names: Sequence[str] | None, max_clips: in
     return clips
 
 
+def _select_label_files(label_files: Sequence[str] | None) -> tuple[str, ...]:
+    if label_files is None:
+        return ALL_LABEL_FILES
+    selected = tuple(str(label_file) for label_file in label_files)
+    if not selected:
+        raise ValueError("label_files must not be empty")
+    unknown = sorted(set(selected) - set(ALL_LABEL_FILES))
+    if unknown:
+        raise ValueError(f"unknown label file(s): {', '.join(unknown)}")
+    return selected
+
+
 def _write_clip_package(
     *,
     clip_dir: Path,
     out: Path,
     frames_root: Path,
     teacher_root: Path | None,
+    label_files: Sequence[str],
 ) -> dict[str, Any]:
     clip_name = clip_dir.name
     labels_dir = out / clip_name / "labels"
@@ -162,7 +182,7 @@ def _write_clip_package(
     label_statuses: dict[str, dict[str, Any]] = {}
     uncertain_items: list[dict[str, Any]] = []
 
-    for label_file in ALL_LABEL_FILES:
+    for label_file in label_files:
         teacher_payload = _read_teacher_payload(teacher_root, clip_name, label_file)
         if teacher_payload is not None:
             teacher_count += 1
@@ -189,7 +209,7 @@ def _write_clip_package(
         "clip": {"name": clip_name},
         "source": {"mode": "teacher_artifact" if teacher_count else "deterministic_smoke"},
         "frames": uncertain_items,
-        "human_action": "review frames, click 4 court corners where requested, and correct low-confidence labels",
+        "human_action": "review frames, click 15 court keypoints and 4 court corners where requested, and correct low-confidence labels",
         "not_ground_truth": True,
     }
     (labels_dir / "uncertain_frames.json").write_text(
@@ -345,6 +365,7 @@ def _draft_payload(
 def _teacher_models_for(target_file: str) -> list[str]:
     mapping = {
         "court_corners.json": ["court_keypoint_teacher", "manual_4_corner_fallback"],
+        "court_keypoints.json": ["court_keypoint_teacher", "manual_15_keypoint_review"],
         "players.json": ["YOLO26", "BoT-SORT-ReID", "Fast SAM-3D-Body"],
         "ball.json": ["TrackNetV3", "ball_physics_filter"],
         "events.json": ["audio_onset", "ball_inflection", "wrist_velocity"],
@@ -384,6 +405,8 @@ def _annotation_items(
     width, height = _source_resolution(frames)
     if target_file == "court_corners.json":
         return _court_corner_items(frame_entries[:1], width, height)
+    if target_file == "court_keypoints.json":
+        return _court_keypoint_items(frame_entries)
     if target_file == "players.json":
         return _player_items(frame_entries, width, height)
     if target_file == "ball.json":
@@ -448,6 +471,24 @@ def _court_corner_items(frames: Sequence[dict[str, Any]], width: int, height: in
             },
             "reasons": ["manual_4_corner_tap_needed", "smoke_generated"],
         }
+    ]
+
+
+def _court_keypoint_items(frames: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    frame_entries = list(frames) or [{"name": "frame_000001.jpg"}]
+    names = [point.name for point in PICKLEBALL_KEYPOINTS]
+    return [
+        {
+            "review_id": f"court_keypoints_manual_15pt_{index:04d}",
+            "frame": _frame_name(frame, index),
+            "status": "uncertain",
+            "confidence": 0.2,
+            "source": "manual_15_keypoint_required",
+            "required_keypoints": names,
+            "keypoints": {name: None for name in names},
+            "reasons": ["manual_15_keypoint_label_needed", "detector_training_gate"],
+        }
+        for index, frame in enumerate(frame_entries)
     ]
 
 
