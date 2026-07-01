@@ -392,6 +392,7 @@ def _local_search_metrics(summary: dict[str, Any]) -> dict[str, Any]:
         "suppressed_off_path_count",
         "evidence_miss_count",
         "court_rejected_count",
+        "suppress_conf_threshold",
         "uses_human_clicks",
     )
     return {field: summary[field] for field in fields if field in summary}

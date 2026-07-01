@@ -18,6 +18,9 @@ from .ball_overlay import load_ball_track
 from .schemas import BallTrack
 
 
+DEFAULT_SUPPRESS_CONF_THRESHOLD = 1.01
+
+
 @dataclass(frozen=True)
 class _AcceptedSample:
     frame_index: int
@@ -42,7 +45,7 @@ def filter_ball_track_local_search(
     max_speed_px_per_second: float = 1800.0,
     base_jump_px: float = 20.0,
     max_prediction_gap_frames: int = 6,
-    suppress_conf_threshold: float = 0.35,
+    suppress_conf_threshold: float = DEFAULT_SUPPRESS_CONF_THRESHOLD,
     court_margin_px: float = 20.0,
     cv2_module: Any | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -233,7 +236,7 @@ def write_local_search_ball_track(
     max_speed_px_per_second: float = 1800.0,
     base_jump_px: float = 20.0,
     max_prediction_gap_frames: int = 6,
-    suppress_conf_threshold: float = 0.35,
+    suppress_conf_threshold: float = DEFAULT_SUPPRESS_CONF_THRESHOLD,
     court_margin_px: float = 20.0,
     cv2_module: Any | None = None,
 ) -> dict[str, Any]:
@@ -544,6 +547,7 @@ def _cv2() -> Any:
 
 
 __all__ = [
+    "DEFAULT_SUPPRESS_CONF_THRESHOLD",
     "filter_ball_track_local_search",
     "write_local_search_ball_track",
 ]

@@ -68,12 +68,12 @@ class _FakeCV2:
         return _FakeCapture(self._frames, fps=self._fps)
 
 
-def _write_track(path: Path) -> None:
+def _write_track(path: Path, *, off_path_conf: float = 0.2) -> None:
     frames = [
         {"t": 0 / 30.0, "xy": [10.0, 10.0], "conf": 0.95, "visible": True},
         {"t": 1 / 30.0, "xy": [20.0, 10.0], "conf": 0.95, "visible": True},
         {"t": 2 / 30.0, "xy": [0.0, 0.0], "conf": 0.0, "visible": False},
-        {"t": 3 / 30.0, "xy": [100.0, 45.0], "conf": 0.2, "visible": True},
+        {"t": 3 / 30.0, "xy": [100.0, 45.0], "conf": off_path_conf, "visible": True},
         {"t": 4 / 30.0, "xy": [40.0, 10.0], "conf": 0.95, "visible": True},
     ]
     path.write_text(
@@ -129,6 +129,30 @@ def test_local_search_recovers_missing_ball_and_suppresses_weak_off_path_candida
     assert summary["suppressed_off_path_count"] == 1
     assert summary["source_video"] == str(video_path)
     assert "clicks_path" not in summary
+
+
+def test_local_search_suppresses_high_confidence_off_path_candidate_by_default(tmp_path: Path) -> None:
+    video_path = tmp_path / "clip.mp4"
+    track_path = tmp_path / "ball_track.json"
+    video_path.write_bytes(b"fake video")
+    _write_track(track_path, off_path_conf=0.99)
+
+    payload, summary = filter_ball_track_local_search(
+        video_path=video_path,
+        ball_track_path=track_path,
+        search_radius_px=5,
+        min_contrast=80.0,
+        max_speed_px_per_second=600.0,
+        base_jump_px=6.0,
+        cv2_module=_FakeCV2(_fake_frames()),
+    )
+
+    filtered = BallTrack.model_validate(payload)
+    assert filtered.frames[2].visible is True
+    assert filtered.frames[3].visible is False
+    assert filtered.frames[3].conf == pytest.approx(0.0)
+    assert summary["suppressed_off_path_count"] == 1
+    assert summary["uses_human_clicks"] is False
 
 
 def test_local_search_writer_and_cli_entrypoint_write_schema_valid_outputs(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

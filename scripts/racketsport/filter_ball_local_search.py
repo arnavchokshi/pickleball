@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from threed.racketsport.ball_local_search import write_local_search_ball_track  # noqa: E402
+from threed.racketsport.ball_local_search import DEFAULT_SUPPRESS_CONF_THRESHOLD, write_local_search_ball_track  # noqa: E402
 
 
 def main(argv: list[str] | None = None, *, cv2_module: Any | None = None) -> int:
@@ -26,7 +26,7 @@ def main(argv: list[str] | None = None, *, cv2_module: Any | None = None) -> int
     parser.add_argument("--max-speed-px-per-second", type=float, default=1800.0)
     parser.add_argument("--base-jump-px", type=float, default=20.0)
     parser.add_argument("--max-prediction-gap-frames", type=int, default=6)
-    parser.add_argument("--suppress-conf-threshold", type=float, default=0.35)
+    parser.add_argument("--suppress-conf-threshold", type=float, default=DEFAULT_SUPPRESS_CONF_THRESHOLD)
     parser.add_argument("--court-margin-px", type=float, default=20.0)
     args = parser.parse_args(argv)
 
