@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import sqrt
-from typing import Iterable, Sequence
+from typing import Any, Iterable, Mapping, Sequence
+
+from .court_auto_evidence import calibration_for_image_size
+from .court_calibration import project_image_points_to_world
+from .schemas import CourtCalibration
 
 
 @dataclass(frozen=True)
@@ -25,6 +29,43 @@ class BounceEvent:
     world_xy: tuple[float, float]
     sample_index: int
     z_min: float
+
+
+@dataclass(frozen=True)
+class BounceArcReconstruction:
+    """Camera-calibrated reconstruction from image observations around one bounce."""
+
+    status: str
+    samples: tuple[BallSample3D, ...] = ()
+    bounces: list[dict[str, object]] | None = None
+    frame_indices: tuple[int, ...] = ()
+    reprojection_rmse_px: float | None = None
+    max_reprojection_error_px: float | None = None
+    candidate_count: int = 0
+    selected_bounce_time_s: float | None = None
+    effective_accel_z_mps2: float | None = None
+    notes: tuple[str, ...] = ()
+
+    @property
+    def sample_count(self) -> int:
+        return len(self.samples)
+
+    @property
+    def bounce_count(self) -> int:
+        return len(self.bounces or [])
+
+    def summary(self) -> dict[str, object]:
+        return {
+            "status": self.status,
+            "sample_count": self.sample_count,
+            "bounce_count": self.bounce_count,
+            "reprojection_rmse_px": self.reprojection_rmse_px,
+            "max_reprojection_error_px": self.max_reprojection_error_px,
+            "candidate_count": self.candidate_count,
+            "selected_bounce_time_s": self.selected_bounce_time_s,
+            "effective_accel_z_mps2": self.effective_accel_z_mps2,
+            "notes": list(self.notes),
+        }
 
 
 @dataclass(frozen=True)
@@ -55,6 +96,306 @@ class ParabolaFit3D:
     def residual_m(self, sample: BallSample3D) -> float:
         x, y, z = self.predict(sample.t)
         return sqrt((sample.x - x) ** 2 + (sample.y - y) ** 2 + (sample.z - z) ** 2)
+
+
+def reconstruct_bounce_arcs_from_image_track(
+    ball_payload: Mapping[str, Any],
+    calibration: CourtCalibration | Mapping[str, Any],
+    *,
+    image_size: tuple[int, int] | None = None,
+    max_reprojection_rmse_px: float = 12.0,
+    max_neighbor_gap_s: float | None = None,
+    min_samples: int = 5,
+    max_fit_samples: int = 21,
+) -> BounceArcReconstruction:
+    """Fit a calibrated two-arc bounce model to image-only ball observations.
+
+    A bounce is a collision discontinuity, so this uses two vertical arcs joined
+    at an observed bounce candidate instead of a single smooth parabola. The fit
+    is accepted only when reprojection error stays under
+    ``max_reprojection_rmse_px``.
+    """
+
+    if max_reprojection_rmse_px <= 0.0:
+        raise ValueError("max_reprojection_rmse_px must be positive")
+    if min_samples < 5:
+        raise ValueError("min_samples must be at least 5")
+    if max_fit_samples < min_samples:
+        raise ValueError("max_fit_samples must be >= min_samples")
+
+    try:
+        import numpy as np  # type: ignore[import-not-found]
+        from scipy.optimize import least_squares  # type: ignore[import-not-found]
+    except ImportError as exc:
+        return BounceArcReconstruction(status="missing_numeric_dependency", notes=(str(exc),))
+
+    parsed_calibration = _scaled_calibration(calibration, image_size=image_size)
+    observations = _visible_image_observations(ball_payload)
+    if len(observations) < min_samples:
+        return BounceArcReconstruction(
+            status="insufficient_image_samples",
+            candidate_count=0,
+            notes=(f"need at least {min_samples} visible image observations",),
+        )
+
+    runs = _contiguous_observation_runs(
+        observations,
+        max_gap_s=max_neighbor_gap_s or _default_max_neighbor_gap_s(ball_payload),
+    )
+    camera = _camera_projection_arrays(parsed_calibration, np_module=np)
+    best: dict[str, Any] | None = None
+    candidate_count = 0
+
+    for run in runs:
+        if len(run) < min_samples:
+            continue
+        for bounce_offset in range(2, len(run) - 2):
+            window = _fit_window(run, bounce_offset=bounce_offset, max_fit_samples=max_fit_samples)
+            if len(window) < min_samples:
+                continue
+            local_bounce_offset = next(
+                (index for index, obs in enumerate(window) if obs["frame_index"] == run[bounce_offset]["frame_index"]),
+                len(window) // 2,
+            )
+            if local_bounce_offset < 2 or len(window) - local_bounce_offset - 1 < 2:
+                continue
+            candidate_count += 1
+            fitted = _fit_bounce_window(
+                window,
+                bounce_offset=local_bounce_offset,
+                calibration=parsed_calibration,
+                camera=camera,
+                np_module=np,
+                least_squares=least_squares,
+            )
+            if fitted is None:
+                continue
+            if best is None or _fit_rank(fitted) < _fit_rank(best):
+                best = fitted
+
+    if best is None:
+        return BounceArcReconstruction(
+            status="no_fit",
+            candidate_count=candidate_count,
+            notes=("no calibrated two-arc bounce candidate could be fitted",),
+        )
+    if float(best["reprojection_rmse_px"]) > max_reprojection_rmse_px:
+        return BounceArcReconstruction(
+            status="no_fit_under_reprojection_gate",
+            samples=tuple(best["samples"]),
+            bounces=best["bounces"],
+            frame_indices=tuple(best["frame_indices"]),
+            reprojection_rmse_px=float(best["reprojection_rmse_px"]),
+            max_reprojection_error_px=float(best["max_reprojection_error_px"]),
+            candidate_count=candidate_count,
+            selected_bounce_time_s=float(best["bounce_time_s"]),
+            effective_accel_z_mps2=float(best["accel_z_mps2"]),
+            notes=(f"best fit exceeded {max_reprojection_rmse_px:.3f}px reprojection RMSE gate",),
+        )
+
+    return BounceArcReconstruction(
+        status="ran",
+        samples=tuple(best["samples"]),
+        bounces=best["bounces"],
+        frame_indices=tuple(best["frame_indices"]),
+        reprojection_rmse_px=float(best["reprojection_rmse_px"]),
+        max_reprojection_error_px=float(best["max_reprojection_error_px"]),
+        candidate_count=candidate_count,
+        selected_bounce_time_s=float(best["bounce_time_s"]),
+        effective_accel_z_mps2=float(best["accel_z_mps2"]),
+        notes=("fit calibrated two-arc bounce model from image observations",),
+    )
+
+
+def _scaled_calibration(
+    calibration: CourtCalibration | Mapping[str, Any],
+    *,
+    image_size: tuple[int, int] | None,
+) -> CourtCalibration:
+    parsed = calibration if isinstance(calibration, CourtCalibration) else CourtCalibration.model_validate(calibration)
+    if image_size is None:
+        return parsed
+    width, height = image_size
+    if width <= 0 or height <= 0:
+        raise ValueError("image_size must contain positive width and height")
+    return calibration_for_image_size(parsed, width=int(width), height=int(height))
+
+
+def _visible_image_observations(ball_payload: Mapping[str, Any]) -> list[dict[str, Any]]:
+    observations: list[dict[str, Any]] = []
+    frames = ball_payload.get("frames")
+    if not isinstance(frames, list):
+        return observations
+    for index, frame in enumerate(frames):
+        if not isinstance(frame, Mapping):
+            continue
+        if frame.get("visible") is not True:
+            continue
+        xy = frame.get("xy")
+        if not isinstance(xy, Sequence) or isinstance(xy, (str, bytes)) or len(xy) != 2:
+            continue
+        try:
+            t = float(frame.get("t"))
+            x = float(xy[0])
+            y = float(xy[1])
+        except (TypeError, ValueError):
+            continue
+        observations.append({"frame_index": index, "t": t, "xy": (x, y)})
+    return sorted(observations, key=lambda item: (item["t"], item["frame_index"]))
+
+
+def _default_max_neighbor_gap_s(ball_payload: Mapping[str, Any]) -> float:
+    fps = ball_payload.get("fps")
+    try:
+        fps_value = float(fps)
+    except (TypeError, ValueError):
+        fps_value = 0.0
+    if fps_value > 0.0:
+        return max(0.12, 3.5 / fps_value)
+    return 0.18
+
+
+def _contiguous_observation_runs(observations: Sequence[dict[str, Any]], *, max_gap_s: float) -> list[list[dict[str, Any]]]:
+    if max_gap_s <= 0.0:
+        raise ValueError("max_gap_s must be positive")
+    runs: list[list[dict[str, Any]]] = []
+    current: list[dict[str, Any]] = []
+    previous: dict[str, Any] | None = None
+    for observation in observations:
+        if (
+            previous is not None
+            and (
+                int(observation["frame_index"]) - int(previous["frame_index"]) > 1
+                or float(observation["t"]) - float(previous["t"]) > max_gap_s
+            )
+        ):
+            runs.append(current)
+            current = []
+        current.append(observation)
+        previous = observation
+    if current:
+        runs.append(current)
+    return runs
+
+
+def _fit_window(
+    run: Sequence[dict[str, Any]],
+    *,
+    bounce_offset: int,
+    max_fit_samples: int,
+) -> list[dict[str, Any]]:
+    if len(run) <= max_fit_samples:
+        return list(run)
+    radius = max_fit_samples // 2
+    start = max(0, bounce_offset - radius)
+    end = min(len(run), start + max_fit_samples)
+    start = max(0, end - max_fit_samples)
+    return list(run[start:end])
+
+
+def _camera_projection_arrays(calibration: CourtCalibration, *, np_module: Any) -> dict[str, Any]:
+    return {
+        "intrinsics": calibration.intrinsics,
+        "rotation": np_module.asarray(calibration.extrinsics.R, dtype=float),
+        "translation": np_module.asarray(calibration.extrinsics.t, dtype=float),
+    }
+
+
+def _fit_bounce_window(
+    observations: Sequence[dict[str, Any]],
+    *,
+    bounce_offset: int,
+    calibration: CourtCalibration,
+    camera: Mapping[str, Any],
+    np_module: Any,
+    least_squares: Any,
+) -> dict[str, Any] | None:
+    times = np_module.asarray([float(observation["t"]) for observation in observations], dtype=float)
+    image = np_module.asarray([observation["xy"] for observation in observations], dtype=float)
+    bounce_time = float(times[bounce_offset])
+    try:
+        ground_xy = project_image_points_to_world(calibration.homography, [observation["xy"] for observation in observations])
+    except ValueError:
+        return None
+    ground = np_module.asarray(ground_xy, dtype=float)
+    bounce_ground = ground[bounce_offset]
+    dt_span = max(float(times[-1] - times[0]), 1e-3)
+    vx0 = float((ground[-1, 0] - ground[0, 0]) / dt_span)
+    vy0 = float((ground[-1, 1] - ground[0, 1]) / dt_span)
+    initial = np_module.asarray([bounce_ground[0], bounce_ground[1], vx0, vy0, 0.04, 3.0, 2.8, -9.81], dtype=float)
+    lower = np_module.asarray([-30.0, -40.0, -80.0, -80.0, 0.0, 0.05, 0.05, -15.0], dtype=float)
+    upper = np_module.asarray([30.0, 40.0, 80.0, 80.0, 0.35, 35.0, 35.0, 4.0], dtype=float)
+
+    def residuals(params: Any) -> Any:
+        world = _piecewise_bounce_points(params, times, bounce_time=bounce_time, np_module=np_module)
+        projected = _project_world_array(world, camera=camera, np_module=np_module)
+        residual = (projected - image).reshape(-1)
+        z = world[:, 2]
+        low_penalty = np_module.minimum(z, 0.0) * 120.0
+        high_penalty = np_module.maximum(z - 5.0, 0.0) * 20.0
+        accel_prior = np_module.asarray([(float(params[7]) + 9.81) / 8.0], dtype=float)
+        return np_module.concatenate([residual, low_penalty, high_penalty, accel_prior])
+
+    try:
+        result = least_squares(residuals, initial, bounds=(lower, upper), max_nfev=3000)
+    except ValueError:
+        return None
+    if not result.success:
+        return None
+
+    world = _piecewise_bounce_points(result.x, times, bounce_time=bounce_time, np_module=np_module)
+    projected = _project_world_array(world, camera=camera, np_module=np_module)
+    errors = np_module.linalg.norm(projected - image, axis=1)
+    rmse = float(np_module.sqrt(np_module.mean(errors * errors)))
+    samples = tuple(
+        BallSample3D(
+            t=float(time),
+            x=float(point[0]),
+            y=float(point[1]),
+            z=float(point[2]),
+        )
+        for time, point in zip(times, world, strict=True)
+    )
+    bounce = BounceEvent(
+        t=bounce_time,
+        world_xy=(float(world[bounce_offset, 0]), float(world[bounce_offset, 1])),
+        sample_index=bounce_offset,
+        z_min=float(world[bounce_offset, 2]),
+    )
+    return {
+        "samples": samples,
+        "bounces": project_bounces_to_ball_track((bounce,)),
+        "frame_indices": tuple(int(observation["frame_index"]) for observation in observations),
+        "reprojection_rmse_px": rmse,
+        "max_reprojection_error_px": float(np_module.max(errors)),
+        "bounce_time_s": bounce_time,
+        "accel_z_mps2": float(result.x[7]),
+    }
+
+
+def _piecewise_bounce_points(params: Any, times: Any, *, bounce_time: float, np_module: Any) -> Any:
+    xb, yb, vx, vy, zmin, vdown, vup, accel_z = [float(value) for value in params]
+    dt = times - bounce_time
+    x = xb + vx * dt
+    y = yb + vy * dt
+    z_before = zmin - vdown * dt + 0.5 * accel_z * dt * dt
+    z_after = zmin + vup * dt + 0.5 * accel_z * dt * dt
+    z = np_module.where(dt <= 0.0, z_before, z_after)
+    return np_module.column_stack([x, y, z])
+
+
+def _project_world_array(world: Any, *, camera: Mapping[str, Any], np_module: Any) -> Any:
+    intrinsics = camera["intrinsics"]
+    camera_points = (camera["rotation"] @ world.T).T + camera["translation"]
+    depth = camera_points[:, 2]
+    depth = np_module.where(np_module.abs(depth) < 1e-9, 1e-9, depth)
+    u = float(intrinsics.fx) * camera_points[:, 0] / depth + float(intrinsics.cx)
+    v = float(intrinsics.fy) * camera_points[:, 1] / depth + float(intrinsics.cy)
+    return np_module.column_stack([u, v])
+
+
+def _fit_rank(fit: Mapping[str, Any]) -> tuple[float, float]:
+    return (float(fit["reprojection_rmse_px"]), float(fit["max_reprojection_error_px"]))
 
 
 def fit_parabola_segment(
@@ -246,9 +587,11 @@ def _solve_linear_system(matrix: list[list[float]], rhs: list[float]) -> list[fl
 
 __all__ = [
     "BallSample3D",
+    "BounceArcReconstruction",
     "BounceEvent",
     "ParabolaFit3D",
     "detect_bounce_events",
     "fit_parabola_segment",
     "project_bounces_to_ball_track",
+    "reconstruct_bounce_arcs_from_image_track",
 ]

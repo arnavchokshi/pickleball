@@ -9,8 +9,10 @@ from typing import Any, Callable
 
 from .ball_physics3d import (
     BallSample3D,
+    BounceArcReconstruction,
     detect_bounce_events,
     project_bounces_to_ball_track,
+    reconstruct_bounce_arcs_from_image_track,
 )
 from .contact_windows import build_contact_windows_artifact
 from .event_fusion import fuse_contact_windows_from_cue_payloads
@@ -152,6 +154,7 @@ class BallStageRunner:
                 ball_payload,
                 summary_path=context.run_dir / BALL_PHYSICS3D_SUMMARY_FILENAME,
                 source_path=source_path,
+                context=context,
             )
             ball_track = BallTrack.model_validate(ball_payload)
 
@@ -403,25 +406,44 @@ def _apply_ball_physics3d(
     *,
     summary_path: Path,
     source_path: Path,
+    context: Any,
 ) -> tuple[dict[str, Any], dict[str, Any], tuple[str, ...]]:
     samples = _world_xyz_samples(ball_payload)
     existing_bounces = ball_payload.get("bounces", [])
     existing_bounce_count = len(existing_bounces) if isinstance(existing_bounces, list) else 0
-    events = detect_bounce_events(
-        samples,
-        min_vertical_speed_mps=BALL_BOUNCE_MIN_VERTICAL_SPEED_MPS,
-        min_separation_s=BALL_BOUNCE_MIN_SEPARATION_S,
-    )
-    physics_bounces = project_bounces_to_ball_track(events)
+    image_reconstruction: dict[str, Any] | None = None
+    physics_bounces: list[dict[str, object]] = []
+    sample_source = "existing_world_xyz"
+
+    if len(samples) < 3:
+        reconstruction = _reconstruct_image_ball_physics3d(ball_payload, context=context)
+        image_reconstruction = reconstruction.summary()
+        if reconstruction.status == "ran" and reconstruction.bounces:
+            _apply_reconstructed_samples(ball_payload, reconstruction.samples, reconstruction.frame_indices)
+            samples = reconstruction.samples
+            physics_bounces = reconstruction.bounces
+            sample_source = "image_calibration_bounce_fit"
+    if not physics_bounces and len(samples) >= 3:
+        events = detect_bounce_events(
+            samples,
+            min_vertical_speed_mps=BALL_BOUNCE_MIN_VERTICAL_SPEED_MPS,
+            min_separation_s=BALL_BOUNCE_MIN_SEPARATION_S,
+        )
+        physics_bounces = project_bounces_to_ball_track(events)
     if physics_bounces:
         ball_payload["bounces"] = physics_bounces
 
     if len(samples) < 3:
         status = "insufficient_world_xyz_samples"
         notes = ("BALL 3D bounce physics skipped; fewer than 3 world_xyz ball samples",)
+        if image_reconstruction is not None:
+            notes = (*notes, "calibrated image-track bounce reconstruction did not produce accepted 3D samples")
     elif physics_bounces:
         status = "ran"
-        notes = ("applied BALL 3D bounce physics from existing world_xyz samples",)
+        if sample_source == "image_calibration_bounce_fit":
+            notes = ("reconstructed BALL 3D bounce physics from image track and court calibration",)
+        else:
+            notes = ("applied BALL 3D bounce physics from existing world_xyz samples",)
     else:
         status = "ran_no_bounce_events"
         notes = ("BALL 3D bounce physics found no bounce events in existing world_xyz samples",)
@@ -432,6 +454,7 @@ def _apply_ball_physics3d(
         "status": status,
         "source_ball_track": str(source_path),
         "sample_count": len(samples),
+        "sample_source": sample_source,
         "existing_bounce_count": existing_bounce_count,
         "bounce_count": len(physics_bounces),
         "applied_to_ball_track": bool(physics_bounces),
@@ -440,8 +463,52 @@ def _apply_ball_physics3d(
         "uses_human_clicks": False,
         "not_gate_verified": True,
     }
+    if image_reconstruction is not None:
+        summary["image_reconstruction"] = image_reconstruction
     _write_json(summary_path, summary)
     return ball_payload, summary, notes
+
+
+def _reconstruct_image_ball_physics3d(ball_payload: dict[str, Any], *, context: Any) -> BounceArcReconstruction:
+    calibration_path = Path(context.run_dir) / "court_calibration.json"
+    if not calibration_path.is_file():
+        return BounceArcReconstruction(
+            status="missing_court_calibration",
+            notes=(f"missing court_calibration.json for image-track BALL 3D reconstruction: {calibration_path}",),
+        )
+    try:
+        calibration = _read_json(calibration_path)
+    except ValueError as exc:
+        return BounceArcReconstruction(status="invalid_court_calibration", notes=(str(exc),))
+    try:
+        return reconstruct_bounce_arcs_from_image_track(
+            ball_payload,
+            calibration,
+            image_size=_optional_source_video_size(context),
+        )
+    except ValueError as exc:
+        return BounceArcReconstruction(status="invalid_image_reconstruction_input", notes=(str(exc),))
+
+
+def _apply_reconstructed_samples(
+    ball_payload: dict[str, Any],
+    samples: tuple[BallSample3D, ...],
+    frame_indices: tuple[int, ...],
+) -> None:
+    frames = ball_payload.get("frames", [])
+    if not isinstance(frames, list):
+        return
+    for frame_index, sample in zip(frame_indices, samples, strict=True):
+        if frame_index < 0 or frame_index >= len(frames):
+            continue
+        frame = frames[frame_index]
+        if not isinstance(frame, dict):
+            continue
+        frame["world_xyz"] = [sample.x, sample.y, sample.z]
+        if "approx" in frame:
+            frame["approx"] = bool(frame["approx"])
+        else:
+            frame["approx"] = True
 
 
 def _world_xyz_samples(ball_payload: dict[str, Any]) -> tuple[BallSample3D, ...]:
@@ -470,6 +537,7 @@ def _physics3d_metrics(summary: dict[str, Any]) -> dict[str, Any]:
     fields = (
         "status",
         "sample_count",
+        "sample_source",
         "existing_bounce_count",
         "bounce_count",
         "applied_to_ball_track",
@@ -478,7 +546,24 @@ def _physics3d_metrics(summary: dict[str, Any]) -> dict[str, Any]:
         "uses_human_clicks",
         "not_gate_verified",
     )
-    return {field: summary[field] for field in fields if field in summary}
+    metrics = {field: summary[field] for field in fields if field in summary}
+    image_reconstruction = summary.get("image_reconstruction")
+    if isinstance(image_reconstruction, dict):
+        metrics["image_reconstruction"] = {
+            field: image_reconstruction[field]
+            for field in (
+                "status",
+                "sample_count",
+                "bounce_count",
+                "reprojection_rmse_px",
+                "max_reprojection_error_px",
+                "candidate_count",
+                "selected_bounce_time_s",
+                "effective_accel_z_mps2",
+            )
+            if field in image_reconstruction
+        }
+    return metrics
 
 
 def _resolve_video_path(context: Any, *, explicit: Path | None) -> Path:
@@ -519,6 +604,40 @@ def _video_fps(video: Path) -> float:
     if fps <= 0.0:
         raise ValueError(f"could not determine FPS for TrackNetV3 BALL video: {video}")
     return fps
+
+
+def _optional_source_video_size(context: Any) -> tuple[int, int] | None:
+    try:
+        import cv2  # type: ignore[import-not-found]
+    except ModuleNotFoundError:
+        return None
+    candidates: list[Path] = []
+    tracking_video = getattr(context, "tracking_video", None)
+    if tracking_video is not None:
+        candidates.append(Path(tracking_video))
+    inputs_dir = Path(context.inputs_dir)
+    candidates.extend(
+        [
+            inputs_dir / "source.mp4",
+            inputs_dir / "clip.mp4",
+            inputs_dir / "video.mp4",
+            inputs_dir / "input.mp4",
+        ]
+    )
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        cap = cv2.VideoCapture(str(candidate))
+        try:
+            if not cap.isOpened():
+                continue
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+        finally:
+            cap.release()
+        if width > 0 and height > 0:
+            return width, height
+    return None
 
 
 def _require_file(path: Path, label: str) -> Path:

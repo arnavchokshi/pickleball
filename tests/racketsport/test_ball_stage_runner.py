@@ -80,6 +80,70 @@ def _ball_track_payload_with_world_bounce() -> dict:
     return payload
 
 
+def _ball_track_payload_with_image_bounce() -> dict:
+    calibration = _ballistic_projection_calibration_payload()
+    times = [0.00, 0.05, 0.10, 0.15, 0.20]
+    return {
+        "schema_version": 1,
+        "fps": 20.0,
+        "source": "tracknet",
+        "frames": [
+            {
+                "t": t,
+                "xy": _project_with_ballistic_calibration(calibration, _synthetic_bounce_world_xyz(t)),
+                "conf": 0.9,
+                "visible": True,
+                "approx": False,
+            }
+            for t in times
+        ],
+        "bounces": [],
+    }
+
+
+def _ballistic_projection_calibration_payload() -> dict:
+    return {
+        "schema_version": 1,
+        "sport": "pickleball",
+        "homography": [[1000.0 / 12.0, 0.0, 960.0], [0.0, 1000.0 / 12.0, 540.0], [0.0, 0.0, 1.0]],
+        "intrinsics": {"fx": 1000.0, "fy": 1000.0, "cx": 960.0, "cy": 540.0, "dist": [], "source": "test"},
+        "extrinsics": {
+            "R": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            "t": [0.0, 0.0, 12.0],
+            "camera_height_m": 12.0,
+        },
+        "reprojection_error_px": {"median": 0.0, "p95": 0.0},
+        "capture_quality": {"grade": "good", "reasons": []},
+        "image_pts": [[876.6666667, -18.8], [1043.3333333, -18.8], [1043.3333333, 1098.8], [876.6666667, 1098.8]],
+        "world_pts": [[-1.0, -6.7056, 0.0], [1.0, -6.7056, 0.0], [1.0, 6.7056, 0.0], [-1.0, 6.7056, 0.0]],
+        "image_size": [1920, 1080],
+    }
+
+
+def _synthetic_bounce_world_xyz(t: float) -> tuple[float, float, float]:
+    bounce_t = 0.10
+    dt = t - bounce_t
+    x = 1.20 + 4.0 * dt
+    y = 2.04 + 0.4 * dt
+    if dt <= 0.0:
+        z = 0.04 + 3.0 * (-dt) - 0.5 * 9.81 * dt * dt
+    else:
+        z = 0.04 + 2.6 * dt - 0.5 * 9.81 * dt * dt
+    return x, y, z
+
+
+def _project_with_ballistic_calibration(calibration: dict, world_xyz: tuple[float, float, float]) -> list[float]:
+    intrinsics = calibration["intrinsics"]
+    translation = calibration["extrinsics"]["t"]
+    camera_x = world_xyz[0] + translation[0]
+    camera_y = world_xyz[1] + translation[1]
+    camera_z = world_xyz[2] + translation[2]
+    return [
+        intrinsics["fx"] * camera_x / camera_z + intrinsics["cx"],
+        intrinsics["fy"] * camera_y / camera_z + intrinsics["cy"],
+    ]
+
+
 def _write_no_click_ball_source(inputs_dir: Path) -> Path:
     source = inputs_dir / "tracknet_smoke_0000_0010" / "ball_track_fusion_temporal_vball100_localtraj.json"
     _write_json(source, _ball_track_payload())
@@ -680,6 +744,66 @@ def test_ball_stage_runner_applies_physics3d_bounces_from_world_xyz(tmp_path: Pa
     assert ball_stage["metrics"]["physics3d"]["bounce_count"] == 1
     assert "ball_physics3d_summary.json" in ball_stage["produced_artifacts"]
     assert "applied BALL 3D bounce physics from existing world_xyz samples" in ball_stage["notes"]
+
+
+def test_ball_stage_runner_reconstructs_physics3d_bounces_from_image_track_and_calibration(tmp_path: Path) -> None:
+    clip = "clip_001"
+    inputs = tmp_path / "inputs" / clip
+    run_dir = tmp_path / "runs" / clip
+    video = inputs / "input.mp4"
+    tracknet_file = tmp_path / "TrackNet_best.pt"
+    inpaintnet_file = tmp_path / "InpaintNet_best.pt"
+    tracknet_repo = tmp_path / "TrackNetV3"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"fake video bytes")
+    tracknet_file.write_bytes(b"fake tracknet checkpoint")
+    inpaintnet_file.write_bytes(b"fake inpaintnet checkpoint")
+    tracknet_repo.mkdir(parents=True)
+    (tracknet_repo / "predict.py").write_text("print('fake')\n", encoding="utf-8")
+    _write_dependency_artifacts(run_dir)
+    _write_json(run_dir / "court_calibration.json", _ballistic_projection_calibration_payload())
+    _write_contact_cue_artifacts(inputs)
+
+    def fake_tracknet_runner(**kwargs):
+        _write_json(Path(kwargs["out"]), _ball_track_payload_with_image_bounce())
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_tracknet_ball_run",
+            "source_mode": "tracknet_predict",
+            "frame_count": 5,
+            "visible_frame_count": 5,
+        }
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(
+        tracknet_repo=tracknet_repo,
+        tracknet_file=tracknet_file,
+        inpaintnet_file=inpaintnet_file,
+        video_path=video,
+        tracknet_runner=fake_tracknet_runner,
+        tracknet_fps=20.0,
+        ball_physics3d=True,
+    )
+
+    summary = run_pipeline(
+        clip=clip,
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    emitted = json.loads((run_dir / "ball_track.json").read_text(encoding="utf-8"))
+    assert emitted["frames"][2]["world_xyz"][2] == pytest.approx(0.04, abs=0.05)
+    assert emitted["bounces"] == [{"t": pytest.approx(0.10), "world_xy": pytest.approx([1.20, 2.04])}]
+    physics_summary = json.loads((run_dir / "ball_physics3d_summary.json").read_text(encoding="utf-8"))
+    assert physics_summary["status"] == "ran"
+    assert physics_summary["sample_count"] == 5
+    assert physics_summary["bounce_count"] == 1
+    assert physics_summary["image_reconstruction"]["status"] == "ran"
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["metrics"]["physics3d"]["bounce_count"] == 1
+    assert "reconstructed BALL 3D bounce physics from image track and court calibration" in ball_stage["notes"]
 
 
 def test_ball_stage_runner_fails_closed_on_renamed_tap_track_even_with_cues(tmp_path: Path) -> None:
