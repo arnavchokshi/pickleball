@@ -164,18 +164,30 @@ def load_real_court_keypoint_labels(root: Path) -> list[dict[str, Any]]:
     labels: list[dict[str, Any]] = []
     for path in sorted(root.glob("*/labels/court_keypoints.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
-        row = court_keypoint_label_row(payload, clip_root=path.parent.parent)
-        row["clip"] = path.parent.parent.name
-        labels.append(row)
+        for row in court_keypoint_label_rows(payload, clip_root=path.parent.parent):
+            row["clip"] = path.parent.parent.name
+            labels.append(row)
     if not labels:
         raise ValueError(f"no reviewed 15-keypoint court labels found under {root}")
     return labels
 
 
+def court_keypoint_label_rows(payload: dict[str, Any], *, clip_root: Path | None = None) -> list[dict[str, Any]]:
+    _require_reviewed(payload)
+    return [_court_keypoint_label_row_from_item(payload, item, clip_root=clip_root) for item in _items(payload)]
+
+
 def court_keypoint_label_row(payload: dict[str, Any], *, clip_root: Path | None = None) -> dict[str, Any]:
     _require_reviewed(payload)
-    items = _items(payload)
-    item = items[0]
+    return _court_keypoint_label_row_from_item(payload, _items(payload)[0], clip_root=clip_root)
+
+
+def _court_keypoint_label_row_from_item(
+    payload: dict[str, Any],
+    item: Any,
+    *,
+    clip_root: Path | None = None,
+) -> dict[str, Any]:
     if not isinstance(item, dict):
         raise ValueError("court keypoint item must be an object")
 

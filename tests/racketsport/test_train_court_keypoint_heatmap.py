@@ -174,6 +174,30 @@ def test_load_real_court_keypoint_labels_reads_reviewed_full_15_point_labels(tmp
     assert row["keypoints"]["far_nvz_right"] == pytest.approx([104.0, 66.0])
 
 
+def test_load_real_court_keypoint_labels_reads_all_reviewed_items(tmp_path: Path) -> None:
+    clip_root = tmp_path / "eval_clips" / "ball" / "clip_a"
+    clip_root.mkdir(parents=True)
+    (clip_root / "source.mp4").write_bytes(b"fake video")
+    payload = _reviewed_court_keypoint_label_payload("frame_000001.jpg")
+    second_item = {
+        "frame": "frame_000002.jpg",
+        "keypoints": {
+            point.name: [float(index * 5 + 20), float(index * 7 + 30)]
+            for index, point in enumerate(PICKLEBALL_KEYPOINTS)
+        },
+    }
+    payload["annotation"]["items"].append(second_item)
+    _write_json(clip_root / "labels" / "court_keypoints.json", payload)
+
+    rows = load_real_court_keypoint_labels(tmp_path / "eval_clips" / "ball")
+
+    assert len(rows) == 2
+    assert [row["frame_index"] for row in rows] == [1, 2]
+    assert [row["clip"] for row in rows] == ["clip_a", "clip_a"]
+    assert rows[1]["keypoints"]["near_left_corner"] == pytest.approx([40.0, 60.0])
+    assert rows[1]["keypoints"]["far_nvz_right"] == pytest.approx([180.0, 256.0])
+
+
 def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_path: Path) -> None:
     cv2 = __import__("cv2")
     clip_root = tmp_path / "eval_clips" / "ball" / "clip_a"
