@@ -221,3 +221,101 @@ def setup_sam_3d_body(**kwargs):
     assert payload["provenance"]["runtime_function"].endswith("FakeEstimator.process_one_image")
     assert payload["provenance"]["requested_bboxes"] == [[1.0, 2.0, 3.0, 4.0]]
     assert payload["persons"][0]["selected_fields"]["bbox"]["value"] == [1.0, 2.0, 3.0, 4.0]
+
+
+def test_probe_cli_falls_back_to_direct_runtime_when_notebook_import_needs_egl(tmp_path):
+    image = tmp_path / "frame.jpg"
+    image.write_bytes(b"not-a-real-jpeg")
+    checkpoint_dir = tmp_path / "checkpoint"
+    checkpoint_dir.mkdir()
+    (checkpoint_dir / "assets").mkdir()
+    repo = tmp_path / "fast-sam"
+    (repo / "notebook").mkdir(parents=True)
+    (repo / "notebook" / "__init__.py").write_text("", encoding="utf-8")
+    (repo / "notebook" / "utils.py").write_text(
+        "raise ImportError('Unable to load EGL library')\n",
+        encoding="utf-8",
+    )
+    sam_pkg = repo / "sam_3d_body"
+    sam_pkg.mkdir()
+    (sam_pkg / "__init__.py").write_text(
+        """
+class FakeModel:
+    pass
+
+
+class FakeEstimator:
+    def __init__(self, sam_3d_body_model, model_cfg, human_detector=None, human_segmentor=None, fov_estimator=None):
+        self.setup_args = {
+            "model": sam_3d_body_model,
+            "model_cfg": model_cfg,
+            "human_detector": human_detector,
+            "human_segmentor": human_segmentor,
+            "fov_estimator": fov_estimator,
+        }
+
+    def process_one_image(self, img, bboxes=None, use_mask=False, hand_box_source="body_decoder"):
+        return {
+            "people": [
+                {
+                    "bbox": [5.0, 6.0, 7.0, 8.0],
+                    "focal_length": 700.0,
+                    "process_args": {
+                        "img": img,
+                        "bboxes_type": type(bboxes).__name__,
+                        "use_mask": use_mask,
+                        "hand_box_source": hand_box_source,
+                    },
+                }
+            ]
+        }
+
+
+def load_sam_3d_body(checkpoint_path="", device="cuda", mhr_path=""):
+    return FakeModel(), {
+        "checkpoint_path": checkpoint_path,
+        "device": device,
+        "mhr_path": mhr_path,
+    }
+
+
+def load_sam_3d_body_hf(repo_id, **kwargs):
+    return FakeModel(), {"repo_id": repo_id, **kwargs}
+
+
+SAM3DBodyEstimator = FakeEstimator
+""",
+        encoding="utf-8",
+    )
+    out = tmp_path / "probe.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/run_sam3dbody_probe.py",
+            "--image",
+            str(image),
+            "--out",
+            str(out),
+            "--bbox",
+            "1,2,3,4",
+            "--fast-sam-repo",
+            str(repo),
+            "--checkpoint-dir",
+            str(checkpoint_dir),
+            "--detector-name",
+            "",
+            "--fov-name",
+            "",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["person_count"] == 1
+    assert payload["provenance"]["runtime_setup_function"] == "__main__._direct_setup_sam_3d_body"
+    assert payload["provenance"]["runtime_function"].endswith("FakeEstimator.process_one_image")
+    assert payload["persons"][0]["selected_fields"]["bbox"]["value"] == [5.0, 6.0, 7.0, 8.0]

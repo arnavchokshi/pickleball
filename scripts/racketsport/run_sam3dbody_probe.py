@@ -119,11 +119,69 @@ def _load_setup_sam_3d_body(fast_sam_repo: Path) -> Callable[..., Any]:
     try:
         module = importlib.import_module("notebook.utils")
     except Exception as exc:
-        raise RuntimeError("could not import FastSAM-3D-Body notebook.utils.setup_sam_3d_body") from exc
+        try:
+            importlib.import_module("sam_3d_body")
+        except Exception as direct_exc:
+            raise RuntimeError(
+                "could not import FastSAM-3D-Body notebook.utils.setup_sam_3d_body "
+                "or direct sam_3d_body runtime"
+            ) from direct_exc
+        return _direct_setup_sam_3d_body
     setup_sam_3d_body = getattr(module, "setup_sam_3d_body", None)
     if not callable(setup_sam_3d_body):
         raise RuntimeError("FastSAM-3D-Body notebook.utils does not expose callable setup_sam_3d_body")
     return setup_sam_3d_body
+
+
+def _direct_setup_sam_3d_body(
+    *,
+    hf_repo_id: str = "facebook/sam-3d-body-dinov3",
+    detector_name: str = "",
+    detector_model: str = "",
+    fov_name: str = "",
+    device: str = "cuda",
+    local_checkpoint_path: str = "",
+    local_mhr_path: str = "",
+) -> Any:
+    import torch  # type: ignore[import-not-found]
+    from sam_3d_body import SAM3DBodyEstimator, load_sam_3d_body, load_sam_3d_body_hf
+
+    resolved_device = device
+    if resolved_device == "cuda" and not torch.cuda.is_available():
+        resolved_device = "cpu"
+
+    if local_checkpoint_path:
+        checkpoint_dir = Path(local_checkpoint_path)
+        model, model_cfg = load_sam_3d_body(
+            checkpoint_path=str(checkpoint_dir / "model.ckpt"),
+            device=resolved_device,
+            mhr_path=local_mhr_path or str(checkpoint_dir / "assets" / "mhr_model.pt"),
+        )
+    else:
+        model, model_cfg = load_sam_3d_body_hf(hf_repo_id, device=resolved_device)
+
+    human_detector = None
+    if detector_name:
+        from tools.build_detector import HumanDetector
+
+        detector_kwargs: dict[str, Any] = {}
+        if detector_model and detector_name in ("yolo", "yolo11", "yolo_pose"):
+            detector_kwargs["model"] = detector_model
+        human_detector = HumanDetector(name=detector_name, device=resolved_device, **detector_kwargs)
+
+    fov_estimator = None
+    if fov_name:
+        from tools.build_fov_estimator import FOVEstimator
+
+        fov_estimator = FOVEstimator(name=fov_name, device=resolved_device)
+
+    return SAM3DBodyEstimator(
+        sam_3d_body_model=model,
+        model_cfg=model_cfg,
+        human_detector=human_detector,
+        human_segmentor=None,
+        fov_estimator=fov_estimator,
+    )
 
 
 def _setup_estimator(
