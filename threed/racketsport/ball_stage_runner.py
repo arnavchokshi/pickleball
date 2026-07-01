@@ -14,6 +14,7 @@ from .ball_physics3d import (
     project_bounces_to_ball_track,
     reconstruct_bounce_arcs_from_image_track,
 )
+from .ball_inflections import build_ball_inflections_from_ball_track
 from .contact_windows import build_contact_windows_artifact
 from .event_fusion import fuse_contact_windows_from_cue_payloads
 from .schemas import BallTrack, ContactWindows
@@ -158,6 +159,11 @@ class BallStageRunner:
             )
             ball_track = BallTrack.model_validate(ball_payload)
 
+        generated_ball_inflections, ball_inflection_notes = _derive_ball_inflections_from_current_track(
+            context,
+            ball_payload=ball_payload,
+            enabled=self.real_model,
+        )
         contact_payload, contact_notes = _contact_windows_from_cues(
             context,
             fps=ball_track.fps,
@@ -183,6 +189,11 @@ class BallStageRunner:
             "not_gate_verified": True,
             "contact_fusion_mode": self.contact_fusion_mode,
         }
+        produced_artifacts = self._produced_artifacts
+        if generated_ball_inflections is not None:
+            metrics["ball_inflection_candidate_count"] = generated_ball_inflections["summary"]["candidate_count"]
+            metrics["ball_inflection_source"] = generated_ball_inflections["source"]
+            produced_artifacts = (*produced_artifacts, DEFAULT_BALL_INFLECTIONS_FILENAME)
         metrics.update(model_metrics)
         if physics_summary is not None:
             metrics["physics3d"] = _physics3d_metrics(physics_summary)
@@ -199,10 +210,11 @@ class BallStageRunner:
             status=status,
             real_model=self.real_model,
             source_mode=source_mode,
-            produced_artifacts=self._produced_artifacts,
+            produced_artifacts=produced_artifacts,
             notes=(
                 *self._source_notes(source_path),
                 *physics_notes,
+                *ball_inflection_notes,
                 *contact_notes,
                 *blocked_notes,
                 "real BALL model inference output; not a BALL VERIFIED accuracy gate",
@@ -715,6 +727,23 @@ def _selection_metadata_for_track(path: Path) -> dict[str, Any] | None:
         "not_ground_truth",
     )
     return {field: payload[field] for field in fields if field in payload}
+
+
+def _derive_ball_inflections_from_current_track(
+    context: Any,
+    *,
+    ball_payload: dict[str, Any],
+    enabled: bool,
+) -> tuple[dict[str, Any] | None, tuple[str, ...]]:
+    if not enabled:
+        return None, ()
+    input_ball_inflections = Path(context.inputs_dir) / DEFAULT_BALL_INFLECTIONS_FILENAME
+    if input_ball_inflections.is_file():
+        return None, ()
+
+    payload = build_ball_inflections_from_ball_track(ball_payload)
+    _write_json(Path(context.run_dir) / DEFAULT_BALL_INFLECTIONS_FILENAME, payload)
+    return payload, ("derived ball_inflections.json from current ball_track.json image motion",)
 
 
 def _contact_windows_from_cues(

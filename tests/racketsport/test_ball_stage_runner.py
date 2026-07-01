@@ -101,6 +101,16 @@ def _ball_track_payload_with_image_bounce() -> dict:
     }
 
 
+def _ball_track_payload_with_image_contact_turn() -> dict:
+    payload = _ball_track_payload()
+    payload["frames"] = [
+        {"t": 0.0, "xy": [100.0, 100.0], "conf": 0.92, "visible": True, "approx": False},
+        {"t": 1.0 / 30.0, "xy": [112.0, 100.0], "conf": 0.91, "visible": True, "approx": False},
+        {"t": 2.0 / 30.0, "xy": [112.0, 112.0], "conf": 0.9, "visible": True, "approx": False},
+    ]
+    return payload
+
+
 def _ballistic_projection_calibration_payload() -> dict:
     return {
         "schema_version": 1,
@@ -176,6 +186,25 @@ def _write_contact_cue_artifacts(inputs_dir: Path) -> None:
                     "time_s": 1.0 / 30.0,
                     "ball_world_xyz": [0.02, 0.0, 1.0],
                     "confidence": 0.7,
+                }
+            ],
+        },
+    )
+
+
+def _write_wrist_velocity_peak_artifact(inputs_dir: Path) -> None:
+    _write_json(
+        inputs_dir / "wrist_velocity_peaks.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_wrist_velocity_peaks",
+            "peaks": [
+                {
+                    "time_s": 1.0 / 30.0,
+                    "player_id": 7,
+                    "wrist_world_xyz": [0.0, 0.0, 0.0],
+                    "speed_mps": 12.0,
+                    "confidence": 0.8,
                 }
             ],
         },
@@ -590,6 +619,62 @@ def test_ball_stage_runner_real_tracknet_mode_runs_model_inference_before_contac
     emitted = json.loads((run_dir / "ball_track.json").read_text(encoding="utf-8"))
     assert emitted["source"] == "tracknet"
     assert emitted["frames"][0]["xy"] == [444.0, 222.0]
+
+
+def test_ball_stage_runner_derives_ball_inflections_from_current_tracknet_output(tmp_path: Path) -> None:
+    clip = "clip_001"
+    inputs = tmp_path / "inputs" / clip
+    run_dir = tmp_path / "runs" / clip
+    video = inputs / "input.mp4"
+    tracknet_file = tmp_path / "TrackNet_best.pt"
+    inpaintnet_file = tmp_path / "InpaintNet_best.pt"
+    tracknet_repo = tmp_path / "TrackNetV3"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"fake video bytes")
+    tracknet_file.write_bytes(b"fake tracknet checkpoint")
+    inpaintnet_file.write_bytes(b"fake inpaintnet checkpoint")
+    tracknet_repo.mkdir(parents=True)
+    (tracknet_repo / "predict.py").write_text("print('fake')\n", encoding="utf-8")
+    _write_dependency_artifacts(run_dir)
+    _write_wrist_velocity_peak_artifact(inputs)
+
+    def fake_tracknet_runner(**kwargs):
+        _write_json(Path(kwargs["out"]), _ball_track_payload_with_image_contact_turn())
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_tracknet_ball_run",
+            "source_mode": "tracknet_predict",
+            "frame_count": 3,
+            "visible_frame_count": 3,
+        }
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(
+        tracknet_repo=tracknet_repo,
+        tracknet_file=tracknet_file,
+        inpaintnet_file=inpaintnet_file,
+        video_path=video,
+        tracknet_runner=fake_tracknet_runner,
+        tracknet_fps=30.0,
+    )
+
+    summary = run_pipeline(
+        clip=clip,
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    ball_inflections = json.loads((run_dir / "ball_inflections.json").read_text(encoding="utf-8"))
+    assert ball_inflections["source"] == "ball_track_image_motion"
+    assert ball_inflections["summary"]["candidate_count"] == 1
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["status"] == "ran"
+    assert ball_stage["metrics"]["contact_event_count"] == 1
+    assert ball_stage["metrics"]["ball_inflection_candidate_count"] == 1
+    assert "ball_inflections.json" in ball_stage["produced_artifacts"]
+    assert "derived ball_inflections.json from current ball_track.json image motion" in ball_stage["notes"]
 
 
 def test_ball_stage_runner_tracknet_local_search_keeps_raw_and_outputs_filtered_track(tmp_path: Path) -> None:
