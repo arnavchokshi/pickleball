@@ -34,8 +34,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--contact-fusion-mode",
         choices=("audio_wrist_ball", "wrist_ball"),
-        default="audio_wrist_ball",
-        help="Cue families required for a promoted contact window.",
+        default="wrist_ball",
+        help="Cue families required for a contact window; pass audio_wrist_ball to require audio onsets.",
     )
     parser.add_argument("--max-time-delta-s", type=float, default=DEFAULT_MAX_TIME_DELTA_S)
     parser.add_argument("--pre-s", type=float, default=DEFAULT_PRE_WINDOW_S)

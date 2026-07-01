@@ -88,7 +88,7 @@ class BallStageRunner:
         tracknet_local_search: bool = False,
         local_search_runner: ModelRunner | None = None,
         ball_physics3d: bool = False,
-        contact_fusion_mode: str = CONTACT_FUSION_MODE_AUDIO_WRIST_BALL,
+        contact_fusion_mode: str = CONTACT_FUSION_MODE_WRIST_BALL,
         confidence_threshold: float = 0.0,
         batch_size: int = 8,
     ) -> None:

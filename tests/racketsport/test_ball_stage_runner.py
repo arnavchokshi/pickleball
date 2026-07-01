@@ -970,7 +970,7 @@ def test_ball_stage_runner_prefers_current_input_cues_over_stale_run_dir_cues(tm
 
     ball_stage = summary["stages"][-1]
     assert ball_stage["metrics"]["contact_event_count"] == 1
-    assert "fused contact_windows.json from audio, wrist, and ball cue artifacts" in ball_stage["notes"]
+    assert "fused contact_windows.json from wrist and ball cue artifacts" in ball_stage["notes"]
 
 
 def test_ball_stage_runner_fails_closed_when_no_click_source_artifact_is_missing(tmp_path: Path) -> None:
@@ -1058,12 +1058,15 @@ def test_ball_stage_runner_fuses_trusted_contact_windows_from_required_cue_artif
     _write_dependency_artifacts(run_dir)
     _write_contact_cue_artifacts(inputs)
 
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(contact_fusion_mode="audio_wrist_ball")
+
     summary = run_pipeline(
         clip="clip_001",
         inputs_dir=inputs,
         run_dir=run_dir,
         stage="ball_events",
-        runners=_noop_dependency_runners(),
+        runners=runners,
     )
 
     assert summary["status"] == "blocked"
@@ -1120,4 +1123,30 @@ def test_ball_stage_runner_can_opt_into_wrist_ball_contact_fusion_without_audio(
     assert isinstance(contact_windows, ContactWindows)
     assert len(contact_windows.events) == 1
     assert contact_windows.events[0].player_id == 7
+    assert contact_windows.events[0].sources.audio is None
+
+
+def test_ball_stage_runner_default_fuses_wrist_ball_contacts_without_audio(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "clip_001"
+    _write_no_click_ball_source(inputs)
+    _write_dependency_artifacts(run_dir)
+    _write_contact_cue_artifacts(inputs)
+    (inputs / "audio_onsets.json").unlink()
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=_noop_dependency_runners(),
+    )
+
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["metrics"]["contact_fusion_mode"] == "wrist_ball"
+    assert ball_stage["metrics"]["contact_event_count"] == 1
+    assert "fused contact_windows.json from wrist and ball cue artifacts" in ball_stage["notes"]
+    contact_windows = validate_artifact_file("contact_windows", run_dir / "contact_windows.json")
+    assert isinstance(contact_windows, ContactWindows)
+    assert len(contact_windows.events) == 1
     assert contact_windows.events[0].sources.audio is None
