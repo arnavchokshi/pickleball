@@ -7,6 +7,7 @@ heatmap helpers used by the court-keypoint training and calibration paths.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import combinations
 import math
 from typing import Any, Mapping, Sequence
 
@@ -285,6 +286,91 @@ def keypoint_labels_from_court_corners(corners: Mapping[str, Any]) -> dict[str, 
     }
 
 
+def refine_keypoint_xy_with_planar_homography(
+    keypoints: Mapping[str, Sequence[float]],
+    *,
+    max_inlier_error_px: float = 30.0,
+    min_inliers: int = 8,
+) -> dict[str, list[float]]:
+    """Correct scattered per-channel outliers using regulation court geometry.
+
+    The heatmap model predicts each keypoint channel independently, but a valid court
+    must be explained by one planar homography. When enough raw predictions agree on
+    that geometry, this projects the canonical 15-point template through the consensus
+    homography. If consensus is weak, raw predictions are returned unchanged.
+    """
+
+    if max_inlier_error_px <= 0:
+        raise ValueError("max_inlier_error_px must be positive")
+    if min_inliers < 4:
+        raise ValueError("min_inliers must be at least 4")
+
+    candidates: list[tuple[str, tuple[float, float], tuple[float, float]]] = []
+    for point in PICKLEBALL_KEYPOINTS:
+        xy = keypoints.get(point.name)
+        if xy is None:
+            continue
+        candidates.append(
+            (
+                point.name,
+                (point.world_xyz_m[0], point.world_xyz_m[1]),
+                _xy_field(xy, f"{point.name}.xy"),
+            )
+        )
+    raw = {name: [image_xy[0], image_xy[1]] for name, _, image_xy in candidates}
+    if len(candidates) < max(4, min_inliers):
+        return raw
+
+    best: tuple[int, float, tuple[str, ...], list[list[float]]] | None = None
+    all_world = [item[1] for item in candidates]
+    for subset in combinations(candidates, 4):
+        world_subset = [item[1] for item in subset]
+        image_subset = [item[2] for item in subset]
+        if _max_triangle_area(world_subset) <= 1e-6 or _max_triangle_area(image_subset) <= 1e-3:
+            continue
+        try:
+            homography = homography_from_planar_points(world_subset, image_subset)
+            projected = project_planar_points(homography, all_world)
+        except ValueError:
+            continue
+
+        residuals = [
+            math.hypot(float(projected_xy[0]) - image_xy[0], float(projected_xy[1]) - image_xy[1])
+            for projected_xy, (_, _, image_xy) in zip(projected, candidates, strict=True)
+        ]
+        inlier_indexes = [idx for idx, residual in enumerate(residuals) if residual <= max_inlier_error_px]
+        if len(inlier_indexes) < min_inliers:
+            continue
+        mean_inlier_error = sum(residuals[idx] for idx in inlier_indexes) / len(inlier_indexes)
+        inlier_names = tuple(candidates[idx][0] for idx in inlier_indexes)
+        candidate = (len(inlier_indexes), mean_inlier_error, inlier_names, homography)
+        if best is None or candidate[0] > best[0] or (candidate[0] == best[0] and candidate[1] < best[1]):
+            best = candidate
+
+    if best is None:
+        return raw
+
+    inlier_name_set = set(best[2])
+    inlier_candidates = [item for item in candidates if item[0] in inlier_name_set]
+    homography = best[3]
+    try:
+        homography = homography_from_planar_points(
+            [item[1] for item in inlier_candidates],
+            [item[2] for item in inlier_candidates],
+        )
+        projected_all = project_planar_points(
+            homography,
+            [(point.world_xyz_m[0], point.world_xyz_m[1]) for point in PICKLEBALL_KEYPOINTS],
+        )
+    except ValueError:
+        return raw
+
+    return {
+        point.name: [float(projected_xy[0]), float(projected_xy[1])]
+        for point, projected_xy in zip(PICKLEBALL_KEYPOINTS, projected_all, strict=True)
+    }
+
+
 def decode_subpixel_heatmap(heatmap: Sequence[Sequence[float]]) -> HeatmapDecode:
     """Decode a 2D heatmap with a local parabolic subpixel refinement."""
 
@@ -448,6 +534,14 @@ def _parabolic_offset(left: float, center: float, right: float) -> float:
         return 0.0
     offset = 0.5 * (left - right) / denominator
     return max(-0.5, min(0.5, offset))
+
+
+def _max_triangle_area(points: Sequence[tuple[float, float]]) -> float:
+    best = 0.0
+    for a, b, c in combinations(points, 3):
+        area = abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) / 2.0
+        best = max(best, area)
+    return best
 
 
 def _xy_field(raw_value: Any, name: str) -> tuple[float, float]:

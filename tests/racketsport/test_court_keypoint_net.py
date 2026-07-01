@@ -8,6 +8,7 @@ from threed.racketsport.court_keypoint_net import (
     decode_subpixel_heatmap,
     keypoint_labels_from_court_corners,
     keypoints_to_solvepnp_correspondences,
+    refine_keypoint_xy_with_planar_homography,
     validate_heatmap_prediction_payload,
     validate_synthetic_render_config,
     validate_training_plan_config,
@@ -211,3 +212,24 @@ def test_keypoint_labels_from_court_corners_expands_full_pickleball_layout() -> 
     assert labels["net_center"][0] == pytest.approx(500.0)
     assert labels["net_center"][1] < labels["near_baseline_center"][1]
     assert labels["net_center"][1] > labels["far_baseline_center"][1]
+
+
+def test_refine_keypoint_xy_with_planar_homography_recovers_scattered_outliers() -> None:
+    labels = keypoint_labels_from_court_corners(
+        {
+            "near_left": [120.0, 900.0],
+            "near_right": [930.0, 880.0],
+            "far_right": [700.0, 110.0],
+            "far_left": [310.0, 120.0],
+        }
+    )
+    raw = {name: list(xy) for name, xy in labels.items()}
+    raw["net_left_sideline"] = [1700.0, 80.0]
+    raw["net_center"] = [20.0, 930.0]
+    raw["far_baseline_center"] = [1800.0, 950.0]
+    raw["far_nvz_center"] = [10.0, 10.0]
+
+    refined = refine_keypoint_xy_with_planar_homography(raw, max_inlier_error_px=3.0, min_inliers=8)
+
+    for name, expected_xy in labels.items():
+        assert refined[name] == pytest.approx(expected_xy, abs=1e-6)

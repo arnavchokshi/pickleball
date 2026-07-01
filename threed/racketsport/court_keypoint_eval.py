@@ -23,6 +23,7 @@ from threed.racketsport.court_keypoint_net import (
     decode_subpixel_heatmap,
     keypoints_to_solvepnp_correspondences,
     make_court_keypoint_heatmap_model,
+    refine_keypoint_xy_with_planar_homography,
     validate_heatmap_prediction_payload,
 )
 from threed.racketsport.schemas import CourtCalibration, CourtLineEvidence, validate_artifact_file
@@ -1077,6 +1078,13 @@ def _decode_model_output(
             "confidence": confidence,
             "heatmap_score": float(decoded.score),
         }
+    refined = refine_keypoint_xy_with_planar_homography({name: item["xy"] for name, item in keypoints.items()})
+    for name, xy in refined.items():
+        if name not in keypoints:
+            continue
+        keypoints[name]["raw_xy"] = keypoints[name]["xy"]
+        keypoints[name]["xy"] = xy
+        keypoints[name]["postprocess"] = "planar_homography_ransac_v1"
     return keypoints
 
 

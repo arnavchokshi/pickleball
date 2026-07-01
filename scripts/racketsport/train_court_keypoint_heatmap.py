@@ -19,6 +19,7 @@ from threed.racketsport.court_keypoint_net import (
     decode_subpixel_heatmap,
     keypoint_labels_from_court_corners,
     make_court_keypoint_heatmap_model,
+    refine_keypoint_xy_with_planar_homography,
 )
 
 # Court-keypoint review item status enum, mirrored from
@@ -424,6 +425,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     rng = random.Random(args.seed)
     torch.manual_seed(args.seed)
     device = torch.device(args.device if args.device == "cpu" or torch.cuda.is_available() else "cpu")
+    use_homography_refinement = not bool(getattr(args, "disable_homography_refinement", False))
 
     real_labels = load_real_court_keypoint_labels(args.real_root) if args.real_root else []
     label_status_counts = _label_status_counts(real_labels)
@@ -514,13 +516,17 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                 image = load_label_image(row, cv2=cv2, image_module=Image)
                 label_w, label_h = _label_coordinate_size(row, fallback_size=image.size)
                 sx, sy = width / label_w, height / label_h
-                for name, xy in row["keypoints"].items():
+                predicted_source_points: dict[str, list[float]] = {}
+                for name in row["keypoints"]:
                     idx = keypoint_names.index(name)
                     flat = int(pred[idx].argmax())
                     py, px = divmod(flat, width)
-                    real_model_input_errors.append(math.hypot(px - xy[0] * sx, py - xy[1] * sy))
-                    source_x = px / sx
-                    source_y = py / sy
+                    predicted_source_points[name] = [px / sx, py / sy]
+                if use_homography_refinement:
+                    predicted_source_points = refine_keypoint_xy_with_planar_homography(predicted_source_points)
+                for name, xy in row["keypoints"].items():
+                    source_x, source_y = predicted_source_points[name]
+                    real_model_input_errors.append(math.hypot(source_x * sx - xy[0] * sx, source_y * sy - xy[1] * sy))
                     source_error = math.hypot(source_x - xy[0], source_y - xy[1])
                     real_source_errors.append(source_error)
                     real_source_errors_by_clip.setdefault(str(row.get("clip") or "unknown"), []).append(source_error)
@@ -656,6 +662,11 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         "real_holdout_count": len(holdout_real),
         "labels_independent_human_frames": independent_reviewed_frame_count,
         "labels_static_camera_copy_frame_count": copied_frame_count,
+        "postprocess": {
+            "homography_refinement": use_homography_refinement,
+            "homography_refinement_max_inlier_error_px": 30.0,
+            "homography_refinement_min_inliers": 8,
+        },
         "note": (
             "Synthetic pretraining plus limited reviewed 15-keypoint court fine-tune; not a "
             "verified CAL-3 no-tap solver. " + human_verification_note
@@ -674,6 +685,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             model_width=width,
             model_height=height,
             out_dir=args.out,
+            use_homography_refinement=use_homography_refinement,
         )
         _write_training_summary(args.out, summary)
     return summary
@@ -743,6 +755,7 @@ def _write_holdout_prediction_artifacts(
     model_width: int,
     model_height: int,
     out_dir: Path,
+    use_homography_refinement: bool,
 ) -> list[dict[str, Any]]:
     prediction_dir = out_dir / "holdout_predictions"
     overlay_dir = out_dir / "holdout_overlays"
@@ -805,6 +818,7 @@ def _write_holdout_prediction_artifacts(
                     source_height=source_height,
                     model_width=model_width,
                     model_height=model_height,
+                    use_homography_refinement=use_homography_refinement,
                 )
                 frames.append({"frame_index": frame_index, "keypoints": keypoints})
                 for label_row in labels_by_frame.get(frame_index, []):
@@ -861,6 +875,7 @@ def _predict_frame_keypoints(
     source_height: int,
     model_width: int,
     model_height: int,
+    use_homography_refinement: bool,
 ) -> dict[str, dict[str, Any]]:
     frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
     resized = cv2.resize(frame_rgb, (model_width, model_height), interpolation=cv2.INTER_AREA)
@@ -878,6 +893,14 @@ def _predict_frame_keypoints(
             "confidence": max(0.0, min(1.0, float(decoded.score))),
             "heatmap_score": float(decoded.score),
         }
+    if use_homography_refinement:
+        refined = refine_keypoint_xy_with_planar_homography({name: item["xy"] for name, item in keypoints.items()})
+        for name, xy in refined.items():
+            if name not in keypoints:
+                continue
+            keypoints[name]["raw_xy"] = keypoints[name]["xy"]
+            keypoints[name]["xy"] = xy
+            keypoints[name]["postprocess"] = "planar_homography_ransac_v1"
     return keypoints
 
 
@@ -952,6 +975,11 @@ def main(argv: list[str] | None = None) -> int:
         "--skip-holdout-artifacts",
         action="store_true",
         help="Write the checkpoint and gate metrics without generating full-video holdout prediction overlays.",
+    )
+    parser.add_argument(
+        "--disable-homography-refinement",
+        action="store_true",
+        help="Evaluate raw heatmap peaks without planar court-geometry refinement.",
     )
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument("--device", default="cuda")

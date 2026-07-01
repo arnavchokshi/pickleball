@@ -278,6 +278,7 @@ def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_pat
     assert summary["gate"]["threshold"] == 0.95
     assert summary["gate"]["pck_threshold_px"] == 5.0
     assert summary["gate"]["value"] == summary["after"]["real_keypoint_pck_at_5px"]
+    assert summary["postprocess"]["homography_refinement"] is True
     assert summary["after"]["real_keypoint_pck_per_clip"]["clip_a"]["keypoint_count"] == 15
     assert summary["after"]["real_keypoint_pck_per_clip"]["clip_a"]["pck_at_5px"] == summary["after"]["real_keypoint_pck_at_5px"]
     assert summary["after"]["real_corner_median_px"] is not None
@@ -295,6 +296,10 @@ def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_pat
     assert summary["holdout_artifacts"][0]["heldout_label_frame_indices"] == [0]
     assert (out / "holdout_predictions" / "clip_a_court_keypoints.json").is_file()
     assert (out / "holdout_overlays" / "clip_a_court_keypoints_overlay.mp4").is_file()
+    prediction_payload = json.loads((out / "holdout_predictions" / "clip_a_court_keypoints.json").read_text(encoding="utf-8"))
+    near_left_prediction = prediction_payload["frames"][0]["keypoints"]["near_left_corner"]
+    assert near_left_prediction["postprocess"] == "planar_homography_ransac_v1"
+    assert len(near_left_prediction["raw_xy"]) == 2
     # A single independently-reviewed frame, no static-camera copies in this fixture.
     assert summary["labels_independent_human_frames"] == 1
     assert summary["labels_static_camera_copy_frame_count"] == 0
