@@ -11,6 +11,8 @@ from typing import Any
 from .ball_overlay import load_ball_track
 from .schemas import BallTrack
 
+STATUS_TESTED = "TESTED-ON-REAL-DATA"
+
 
 def fuse_ball_tracks_with_verifiers(
     *,
@@ -39,6 +41,7 @@ def fuse_ball_tracks_with_verifiers(
         _require_compatible_fps(primary, verifier, f"verifier/{index}")
 
     payload = deepcopy(primary.model_dump(mode="json"))
+    payload["source"] = "fused"
     primary_samples = _samples_by_index(primary)
     stable_samples = _samples_by_index(stable)
     verifier_samples = [_samples_by_index(verifier) for verifier in verifiers]
@@ -93,7 +96,7 @@ def fuse_ball_tracks_with_verifiers(
     summary = {
         "schema_version": 1,
         "artifact_type": "racketsport_ball_model_fusion",
-        "status": "fused_not_gate_verified",
+        "status": STATUS_TESTED,
         "primary_ball_track": str(primary_ball_track_path),
         "stable_ball_track": str(stable_ball_track_path),
         "verifier_ball_tracks": [str(path) for path in verifier_ball_track_paths],

@@ -41,6 +41,8 @@ class ModelEntry(BaseModel):
     local_path: str | None = None
     sha256: str | None = None
     repo_commit: str | None = None
+    fine_tuned_on_pickleball: bool | None = None
+    training_data: list[str] = Field(default_factory=list)
     fallbacks: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
 

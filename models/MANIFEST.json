@@ -9,12 +9,14 @@
       "license": "SAM License",
       "commercial_posture": "research_ok_verify_commercial",
       "status": "available_on_h100",
-      "local_path": "/workspace/checkpoints/body4d/sam-3d-body-dinov3/model.ckpt",
+      "local_path": "/home/arnavchokshi/body_runtime/Fast-SAM-3D-Body/checkpoints/sam-3d-body-dinov3/model.ckpt",
       "sha256": "b5a2f9d305dd02626b967aa2e86021fba07065df66ce7a7e00ffb9664f150abf",
       "repo_commit": "936894c37e51de9918012bcbc9ba2d9c20f73252",
       "fallbacks": ["sat_hmr", "nlf", "hmr2"],
       "notes": [
-        "H100 container has Fast-SAM-3D-Body repo at /opt/fast-sam-3d-body.",
+        "A100 runtime has Fast-SAM-3D-Body repo at /home/arnavchokshi/body_runtime/Fast-SAM-3D-Body.",
+        "A100 checkpoint path /home/arnavchokshi/body_runtime/Fast-SAM-3D-Body/checkpoints/sam-3d-body-dinov3/model.ckpt matched sha256 b5a2f9d305dd02626b967aa2e86021fba07065df66ce7a7e00ffb9664f150abf on 2026-07-01 UTC.",
+        "Legacy H100 container path was /workspace/checkpoints/body4d/sam-3d-body-dinov3/model.ckpt.",
         "Fast-SAM-3D-Body environment is isolated at /opt/conda/envs/fast_sam_3d_body.",
         "H100 smoke benchmark on 2026-06-26 PDT used /opt/fast-sam-3d-body/notebook/images/dancing.jpg, YOLO11n detector, MoGe2 FOV, mask inference disabled, one detected person.",
         "H100 smoke benchmark measured n=5 warm runs after one warmup: average 326.91 ms, std 1.72 ms, min 324.68 ms, max 329.90 ms; peak allocated GPU memory 4718.04 MB. This is a single-image smoke result, not EVAL-0 variant approval on real test clips."
@@ -28,7 +30,7 @@
       "license": "SAM License",
       "commercial_posture": "research_ok_verify_commercial",
       "status": "available_on_h100",
-      "local_path": "/workspace/checkpoints/body4d/sam-3d-body-dinov3/assets/mhr_model.pt",
+      "local_path": "/home/arnavchokshi/body_runtime/Fast-SAM-3D-Body/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt",
       "sha256": "352e271a6c42729c68554ceaea0c955e866970160c31e35506d782dc0f7377bc",
       "repo_commit": "936894c37e51de9918012bcbc9ba2d9c20f73252",
       "fallbacks": ["sat_hmr", "nlf", "hmr2"]
@@ -96,7 +98,7 @@
       "license": "AGPL-3.0",
       "commercial_posture": "agpl_caveat",
       "status": "available_on_h100",
-      "local_path": "/workspace/checkpoints/body4d/yolo26/yolo26m.pt",
+      "local_path": "/home/arnavchokshi/pickleball_git/models/checkpoints/yolo26m.pt",
       "sha256": "401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7",
       "fallbacks": ["yolo11m", "rf_detr_l", "rtmdet"],
       "notes": [
@@ -129,6 +131,47 @@
       "sha256": "f840f2044fe46cb3821b7cea86be83e1f6cba406ccd28f5475ac010412dcda95",
       "fallbacks": ["rtmw_l_384", "rtmpose_x_wholebody_384"],
       "notes": ["MMPose project README lists RTMW-x cocktail14 384x288 as 70.2 whole-body AP; this is an EVAL-0 candidate, not an approved default."]
+    },
+    {
+      "id": "rtmw3d_x",
+      "stage": "lane_a_3d_pose",
+      "use": "Lane A always-on 3D whole-body pose source for continuous per-player skeleton3d.json",
+      "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose3d",
+      "license": "Apache-2.0",
+      "commercial_posture": "ok",
+      "status": "available_on_h100",
+      "local_path": "/home/arnavchokshi/checkpoints/body4d/mmpose/rtmw3d-x_8xb64_cocktail14-384x288-b0a0eab7_20240626.pth",
+      "sha256": "b0a0eab7ca501e2c88028fe1cfd78b50c7130e220d39541da7f669e5de25e6ca",
+      "repo_commit": "759b39c13fea6ba094afc1fa932f51dc1b11cbf9",
+      "fallbacks": ["rtmw_x_384", "rtmpose_x_wholebody_384"],
+      "notes": [
+        "MMPose documents RTMW3D/RTMPose3D as a real-time 3D whole-body pose project.",
+        "Pipeline keeps 65 joints from its 133-keypoint whole-body output: body17, feet6, hands42; face68 is dropped.",
+        "A100 validation on pickleball-a100-spot-ase1a used config /home/arnavchokshi/checkpoints/body4d/mmpose/rtmw3d-x_8xb32_cocktail14-384x288.py with sha256 dadd68acdc0dbc47cdd0f362b77f845fd4ce7e1100c99d4d377c6c4923fd9c25.",
+        "MMPose projects/rtmpose3d was cloned at repo_commit so the config custom_imports=['rtmpose3d'] resolves.",
+        "CUDA smoke on 2026-07-01 initialized TopdownPoseEstimator3D and returned keypoints shape (1, 133, 3) on an A100."
+      ]
+    },
+    {
+      "id": "motionbert_lift_smooth",
+      "stage": "lane_a_temporal_refine",
+      "use": "Temporal lift and smoothing candidate for Lane A body-17 windows before foot/hand One-Euro filtering",
+      "source": "https://github.com/Walter0807/MotionBERT",
+      "license": "Apache-2.0",
+      "commercial_posture": "ok",
+      "status": "available_on_h100",
+      "local_path": "/home/arnavchokshi/checkpoints/body4d/motionbert/FT_MB_lite_MB_ft_h36m_global_lite/best_epoch.bin",
+      "sha256": "9811155371db4ca5d20f31a36a232d41012e12e1333882888a564d741861148f",
+      "repo_commit": "705d3a95354db8bdb696b3492e47a3b5537174ff",
+      "fallbacks": [],
+      "notes": [
+        "Official MotionBERT repository is Apache-2.0 and targets 3D pose estimation and motion representation.",
+        "A100 validation on pickleball-a100-spot-ase1a downloaded the official Hugging Face mirror checkpoint for FT_MB_lite_MB_ft_h36m_global_lite/best_epoch.bin.",
+        "Torch checkpoint smoke on 2026-07-01 loaded model_pos and first tensor module.temp_embed with shape (1, 243, 1, 256).",
+        "Config /home/arnavchokshi/research/MotionBERT/configs/pose3d/MB_ft_h36m_global_lite.yaml declares maxlen 243 and num_joints 17.",
+        "Repo runtime adapter maps RTMW3D COCO body17 to MotionBERT H36M17, runs 243-frame windows, and merges supported body joints back while preserving unsupported COCO eye/ear joints.",
+        "A100 runtime smoke on 2026-07-01 loaded the checkpoint through MotionBERTTemporalRuntime and returned 17 refined body joints; it is not gate-bearing until cold-clip and labeled accuracy validation pass."
+      ]
     },
     {
       "id": "rtmpose_m_body26_384",
@@ -216,12 +259,16 @@
       "license": "MIT",
       "commercial_posture": "ok",
       "status": "available_on_h100",
-      "local_path": "/workspace/checkpoints/body4d/tracknetv3/ckpts/TrackNet_best.pt",
+      "local_path": "models/checkpoints/tracknetv3/TrackNet_best.pt",
       "sha256": "df867641a02712b021f04548ff4b1208ddfdb47f629ab2094ceb978667e83b1a",
+      "repo_commit": "77c123ad4dd449b7d275f16cc43f316ba5b54042",
+      "fine_tuned_on_pickleball": false,
+      "training_data": ["official_tracknetv3_badminton_pretrained"],
       "fallbacks": ["manual_tap_track"],
       "notes": [
         "Downloaded from the official README's Google Drive checkpoint id 1CfzE87a0f6LhBp0kniSl1-89zaLCZ8cA and extracted on the H100.",
-        "Original downloaded zip sha256 is 8de68d34ea2457e368e22947f1309143d60a6a7f9ddccd31cd526d4c4571bcc4."
+        "Original downloaded zip sha256 is 8de68d34ea2457e368e22947f1309143d60a6a7f9ddccd31cd526d4c4571bcc4.",
+        "This is an official pretrained seed only; it is not pickleball-fine-tuned and has not passed BALL validation gates."
       ]
     },
     {
@@ -232,10 +279,35 @@
       "license": "MIT",
       "commercial_posture": "ok",
       "status": "available_on_h100",
-      "local_path": "/workspace/checkpoints/body4d/tracknetv3/ckpts/InpaintNet_best.pt",
+      "local_path": "models/checkpoints/tracknetv3/InpaintNet_best.pt",
       "sha256": "5749b66b8002f3ad9e0af841604004706fc796df30599e6bf01952696009688c",
+      "repo_commit": "77c123ad4dd449b7d275f16cc43f316ba5b54042",
+      "fine_tuned_on_pickleball": false,
+      "training_data": ["official_tracknetv3_inpaintnet_pretrained"],
       "fallbacks": ["manual_tap_track"],
-      "notes": ["Extracted from the same official TrackNetV3 checkpoint package as TrackNet_best.pt."]
+      "notes": [
+        "Extracted from the same official TrackNetV3 checkpoint package as TrackNet_best.pt.",
+        "This is an official pretrained trajectory-rectification seed only; it is not pickleball-fine-tuned and has not passed BALL validation gates."
+      ]
+    },
+    {
+      "id": "wasb_tennis_bmvc2023",
+      "stage": "ball_tracking_verifier",
+      "use": "WASB pretrained tennis checkpoint seed for the offline BALL verifier before pickleball fine-tuning",
+      "source": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md and https://drive.google.com/file/d/14AeyIOCQ2UaQmbZLNQJa1H_eSwxUXk7z/view?usp=drive_link",
+      "license": "MIT",
+      "commercial_posture": "ok",
+      "status": "available_on_h100",
+      "local_path": "models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+      "sha256": "9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb",
+      "repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f",
+      "fine_tuned_on_pickleball": false,
+      "training_data": ["official_wasb_tennis_pretrained"],
+      "fallbacks": ["tracknetv3"],
+      "notes": [
+        "Downloaded with gdown from the official WASB-SBDT MODEL_ZOO tennis WASB link on 2026-07-01.",
+        "This is a pretrained verifier seed only; it is not a pickleball-fine-tuned checkpoint and has not passed BALL validation gates."
+      ]
     },
     {
       "id": "sat_hmr",
@@ -287,7 +359,7 @@
   ],
   "notes": [
     "ENV-2 partial inventory captured from the running H100 container on 2026-06-26 PDT.",
-    "available_on_h100 means the file was present and hashed in the current /workspace-backed body4d container; it does not prove phase acceptance.",
+    "available_on_h100 means the file was present and hashed on the current named GPU host/path in local_path; it does not prove phase acceptance.",
     "Fast-SAM-3D-Body H100 smoke latency is recorded on the fast_sam_3d_body_dinov3 entry; EVAL-0 still requires real test clips, comparison artifacts, and the human approval gate before any variant is locked.",
     "pending_download entries are next candidates for Codex to fetch or mirror without user input unless their upstream requires account-gated access."
   ]

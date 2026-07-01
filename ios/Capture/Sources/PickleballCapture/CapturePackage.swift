@@ -24,6 +24,9 @@ public struct CapturePackageDescriptor: Equatable, Sendable {
     public var preferredUploadOrder: [CaptureUploadPart] {
         [
             CaptureUploadPart(kind: .captureSidecar, relativePath: sidecarRelativePath),
+            CaptureUploadPart(kind: .onDevicePoseTrack, relativePath: onDevicePoseTrackRelativePath),
+            CaptureUploadPart(kind: .onDevicePersonTracks, relativePath: onDevicePersonTracksRelativePath),
+            CaptureUploadPart(kind: .onDevicePersonTiming, relativePath: onDevicePersonTimingRelativePath),
             CaptureUploadPart(kind: .clip, relativePath: clipRelativePath),
         ]
     }
@@ -134,6 +137,9 @@ public enum CaptureSensorStream: String, CaseIterable, Hashable, Sendable {
 }
 
 public enum CaptureSwiftCapability: String, CaseIterable, Hashable, Sendable {
+    // `FastTier` here means ON-DEVICE LIVE guidance on the iPhone ANE. Replay
+    // capability below is playback of SERVER OFFLINE render assets, not a
+    // phone-real-time deep reconstruction requirement.
     case avFoundationCamera = "avfoundation_camera"
     case avFoundationMicrophone = "avfoundation_microphone"
     case lockedExposureFocusWhiteBalance = "locked_exposure_focus_white_balance"
@@ -164,6 +170,9 @@ public struct CaptureSwiftCapabilityManifest: Equatable, Sendable {
         return required.isSubset(of: Set(capabilities))
     }
 
+    // Historical name retained for API compatibility: this bundles client
+    // live-guidance capabilities with playback support for server-rendered
+    // replay assets. It must not be read as "3D replay runs in the live tier."
     public var declaresFastTierReplayRequirements: Bool {
         let required: Set<CaptureSwiftCapability> = [
             .visionFastTier,
@@ -224,6 +233,7 @@ public struct CaptureSensorManifest: Equatable, Sendable {
     }
 
     public var hasOptionalDepthInput: Bool {
+        // LiDAR depth is optional near-field evidence only, not a product tier.
         streams.contains(.lidarDepthRefs)
     }
 

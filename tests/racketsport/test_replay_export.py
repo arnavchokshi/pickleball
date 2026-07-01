@@ -135,6 +135,36 @@ def test_build_replay_export_manifest_rejects_missing_referenced_files(tmp_path)
         )
 
 
+def test_validate_replay_export_manifest_rejects_invalid_point_timing(tmp_path):
+    export_root = tmp_path / "clip_001"
+    export_root.mkdir()
+    (export_root / "court.glb").write_bytes(b"court")
+    (export_root / "points").mkdir()
+    (export_root / "points" / "point_1.glb").write_bytes(b"a")
+    (export_root / "points" / "point_2.glb").write_bytes(b"b")
+
+    backwards_point = {
+        "schema_version": 1,
+        "world_frame": "court_Z0",
+        "fps": 30.0,
+        "court_glb": "court.glb",
+        "players": [1],
+        "points": [{"id": 1, "t0": 2.0, "t1": 1.0, "glb_url": "points/point_1.glb", "size_mb": 0.000001}],
+    }
+    overlapping_points = {
+        **backwards_point,
+        "points": [
+            {"id": 1, "t0": 0.0, "t1": 2.0, "glb_url": "points/point_1.glb", "size_mb": 0.000001},
+            {"id": 2, "t0": 1.5, "t1": 3.0, "glb_url": "points/point_2.glb", "size_mb": 0.000001},
+        ],
+    }
+
+    with pytest.raises(ValueError, match="points/0/t1 must be greater than points/0/t0"):
+        validate_replay_export_manifest(export_root, backwards_point)
+    with pytest.raises(ValueError, match="points/1/t0 must be greater than or equal to previous point t1"):
+        validate_replay_export_manifest(export_root, overlapping_points)
+
+
 def test_build_replay_review_export_from_virtual_world_writes_glbs_and_scene(tmp_path):
     virtual_world = _virtual_world_payload()
 

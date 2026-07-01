@@ -14,6 +14,7 @@ from threed.racketsport.court_calibration import (
     camera_matrix_from_intrinsics,
     homography_from_planar_points,
     manual_tap_correspondences,
+    metric_calibration_from_sidecar_and_keypoints,
     passes_reprojection_gate,
     project_image_points_to_world,
     project_world_points,
@@ -22,6 +23,8 @@ from threed.racketsport.court_calibration import (
     solve_camera_pose,
 )
 from threed.racketsport.court_templates import FT_TO_M
+from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
+from threed.racketsport.court_positioning_artifacts import build_court_keypoints_artifact
 from threed.racketsport.schemas import CameraIntrinsics, CaptureSidecar, CourtCalibration, CourtExtrinsics, CourtZones, NetPlane, validate_artifact_file
 
 
@@ -59,6 +62,40 @@ def _capture_sidecar_payload() -> dict:
         "ondevice_pose_track": "ondevice_pose.json",
         "capture_quality": {"grade": "good", "reasons": []},
     }
+
+
+def _metric_sidecar_payload() -> dict:
+    payload = _capture_sidecar_payload()
+    payload["intrinsics"] = {"fx": 100.0, "fy": 100.0, "cx": 500.0, "cy": 500.0, "dist": [], "source": "arkit"}
+    payload["arkit_camera_pose"] = {
+        "R": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]],
+        "t": [0.0, 0.0, 10.0],
+    }
+    payload["court_plane"] = {"point": [0.0, 0.0, 0.0], "normal": [0.0, 0.0, 1.0]}
+    payload["manual_court_taps"] = []
+    return payload
+
+
+def _metric_court_keypoints_payload(sidecar_payload: dict) -> dict:
+    intrinsics = sidecar_payload["intrinsics"]
+    keypoints = {
+        point.name: {
+            "uv": [
+                intrinsics["cx"] + intrinsics["fx"] * point.world_xyz_m[0] / 10.0,
+                intrinsics["cy"] + intrinsics["fy"] * point.world_xyz_m[1] / 10.0,
+            ],
+            "confidence": 0.9,
+            "inlier_frames": [0, 15, 29],
+            "recovered": False,
+        }
+        for point in PICKLEBALL_KEYPOINTS
+    }
+    return build_court_keypoints_artifact(
+        frame_indexes=[0, 15, 29],
+        keypoints=keypoints,
+        target_court_score=0.95,
+        source="test_synthetic_aggregate",
+    )
 
 
 def test_camera_matrix_uses_sidecar_intrinsics():
@@ -166,6 +203,87 @@ def test_multiframe_manual_taps_average_static_correspondences(tmp_path):
     for actual, expected in zip(calibration.image_pts, base, strict=True):
         assert actual == pytest.approx(expected)
     assert calibration.reprojection_error_px.median == pytest.approx(0.0)
+
+
+def test_metric_calibration_from_sidecar_and_court_keypoints_uses_arkit_floor_plane(tmp_path):
+    payload = _metric_sidecar_payload()
+    sidecar_path = tmp_path / "capture_sidecar.json"
+    sidecar_path.write_text(json.dumps(payload), encoding="utf-8")
+    keypoints_path = tmp_path / "court_keypoints.json"
+    keypoints_path.write_text(json.dumps(_metric_court_keypoints_payload(payload)), encoding="utf-8")
+
+    calibration = metric_calibration_from_sidecar_and_keypoints(sidecar_path, keypoints_path, sport="pickleball")
+
+    assert isinstance(calibration, CourtCalibration)
+    assert calibration.coordinate_frame == "court_netcenter_z_up_m"
+    assert calibration.metric_confidence == "high"
+    assert calibration.source == "arkit_plane_keypoint_metric_solve_v1"
+    assert calibration.solved_over_frames == [0, 15, 29]
+    assert calibration.reprojection_error_px.p95 == pytest.approx(0.0, abs=1e-6)
+    assert calibration.T_world_court is not None
+    assert calibration.T_world_court[0] == pytest.approx([1.0, 0.0, 0.0, 0.0], abs=1e-8)
+    assert calibration.T_world_court[1] == pytest.approx([0.0, 1.0, 0.0, 0.0], abs=1e-8)
+    assert len(calibration.per_keypoint_residual_px or []) == 15
+    assert calibration.gsd_model is not None
+    assert calibration.gsd_model.samples
+
+
+def test_metric_calibration_from_sidecar_and_court_keypoints_requires_trusted_plane(tmp_path):
+    payload = _capture_sidecar_payload()
+    payload["manual_court_taps"] = []
+    payload["court_plane"] = None
+    sidecar_path = tmp_path / "capture_sidecar.json"
+    sidecar_path.write_text(json.dumps(payload), encoding="utf-8")
+    keypoints_path = tmp_path / "court_keypoints.json"
+    keypoints_path.write_text(
+        json.dumps(
+            build_court_keypoints_artifact(
+                frame_indexes=[0, 15, 29],
+                keypoints={
+                    point.name: {"uv": [500.0, 500.0], "confidence": 0.9}
+                    for point in PICKLEBALL_KEYPOINTS
+                },
+                target_court_score=0.95,
+                source="test_synthetic_aggregate",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="trusted ARKit floor plane"):
+        metric_calibration_from_sidecar_and_keypoints(sidecar_path, keypoints_path, sport="pickleball")
+
+
+def test_calibrate_cli_can_write_metric_calibration_from_court_keypoints(tmp_path):
+    payload = _metric_sidecar_payload()
+    sidecar_path = tmp_path / "capture_sidecar.json"
+    keypoints_path = tmp_path / "court_keypoints.json"
+    out_dir = tmp_path / "calib"
+    sidecar_path.write_text(json.dumps(payload), encoding="utf-8")
+    keypoints_path.write_text(json.dumps(_metric_court_keypoints_payload(payload)), encoding="utf-8")
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/calibrate.py",
+            "--sidecar",
+            str(sidecar_path),
+            "--court-keypoints",
+            str(keypoints_path),
+            "--sport",
+            "pickleball",
+            "--out",
+            str(out_dir),
+        ],
+        check=True,
+    )
+
+    calibration = validate_artifact_file("court_calibration", out_dir / "court_calibration.json")
+
+    assert isinstance(calibration, CourtCalibration)
+    assert calibration.source == "arkit_plane_keypoint_metric_solve_v1"
+    assert calibration.metric_confidence == "high"
+    assert calibration.solved_over_frames == [0, 15, 29]
 
 
 def test_calibrate_cli_writes_calibration_zones_and_net_plane(tmp_path):

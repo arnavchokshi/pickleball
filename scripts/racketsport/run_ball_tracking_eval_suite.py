@@ -45,6 +45,14 @@ OverlayRenderer = Callable[..., dict[str, Any]]
 
 
 @dataclass(frozen=True)
+class ExternalCandidate:
+    clip: str
+    name: str
+    path: Path
+    category: str = "generalizable"
+
+
+@dataclass(frozen=True)
 class EvalSuiteConfig:
     run_root: Path
     review_root: Path
@@ -64,6 +72,7 @@ class EvalSuiteConfig:
     hit_radius_px: float = 36.0
     teleport_px_per_frame: float = 160.0
     max_jump_gap_frames: int = 3
+    external_candidates: list[ExternalCandidate] = field(default_factory=list)
 
 
 def run_ball_tracking_eval_suite(
@@ -97,6 +106,13 @@ def run_ball_tracking_eval_suite(
             clip_candidates,
             "fusion_temporal_vball100_localtraj",
             base / "ball_track_fusion_temporal_vball100_localtraj.json",
+        )
+        clip_candidate_categories: dict[str, str] = {}
+        _add_external_candidates(
+            clip_candidates,
+            clip_candidate_categories,
+            clip=clip,
+            external_candidates=config.external_candidates,
         )
 
         stage_timings: dict[str, float] = {}
@@ -215,7 +231,14 @@ def run_ball_tracking_eval_suite(
         )
 
         for name, path in sorted(clip_candidates.items()):
-            candidates.append(BallCandidate(clip=clip, name=name, path=path, category=_candidate_category(name)))
+            candidates.append(
+                BallCandidate(
+                    clip=clip,
+                    name=name,
+                    path=path,
+                    category=clip_candidate_categories.get(name, _candidate_category(name)),
+                )
+            )
         generated[clip] = {name: str(path) for name, path in sorted(clip_candidates.items())}
         if overlay_paths:
             generated[clip]["overlays"] = json.dumps(overlay_paths, sort_keys=True)
@@ -568,6 +591,24 @@ def _add_existing_candidate(clip_candidates: dict[str, Path], name: str, path: P
         clip_candidates[name] = path
 
 
+def _add_external_candidates(
+    clip_candidates: dict[str, Path],
+    clip_candidate_categories: dict[str, str],
+    *,
+    clip: str,
+    external_candidates: list[ExternalCandidate],
+) -> None:
+    for candidate in external_candidates:
+        if candidate.clip != clip:
+            continue
+        if candidate.name in clip_candidates:
+            raise ValueError(f"external candidate {candidate.name} conflicts with generated candidate for {clip}")
+        _require_file(candidate.path, f"{clip} external candidate {candidate.name}")
+        BallTrack.model_validate_json(candidate.path.read_text(encoding="utf-8"))
+        clip_candidates[candidate.name] = candidate.path
+        clip_candidate_categories[candidate.name] = candidate.category
+
+
 def _require_tracknet_config(config: EvalSuiteConfig) -> None:
     if config.tracknet_repo is None:
         raise ValueError("--run-tracknet requires --tracknet-repo")
@@ -653,6 +694,12 @@ def _parse_args() -> EvalSuiteConfig:
     parser.add_argument("--overlay-candidate", action="append", default=[])
     parser.add_argument("--select-candidate", default=None, help=f"Optional candidate to copy into selected_tracks. Example: {DEFAULT_SELECTED_CANDIDATE}.")
     parser.add_argument("--selected-root", type=Path, default=None, help="Optional selected-track output root.")
+    parser.add_argument(
+        "--external-candidate",
+        action="append",
+        default=[],
+        help="External candidate in CLIP:NAME:CATEGORY=PATH form. Repeat per clip.",
+    )
     parser.add_argument("--hit-radius-px", type=float, default=36.0)
     parser.add_argument("--teleport-px-per-frame", type=float, default=160.0)
     parser.add_argument("--max-jump-gap-frames", type=int, default=3)
@@ -675,10 +722,25 @@ def _parse_args() -> EvalSuiteConfig:
         overlay_candidates=tuple(args.overlay_candidate) if args.overlay_candidate else DEFAULT_OVERLAY_CANDIDATES,
         selected_candidate=args.select_candidate,
         selected_root=args.selected_root,
+        external_candidates=_parse_external_candidates(args.external_candidate),
         hit_radius_px=args.hit_radius_px,
         teleport_px_per_frame=args.teleport_px_per_frame,
         max_jump_gap_frames=args.max_jump_gap_frames,
     )
+
+
+def _parse_external_candidates(values: list[str]) -> list[ExternalCandidate]:
+    parsed: list[ExternalCandidate] = []
+    for value in values:
+        if "=" not in value:
+            raise ValueError(f"--external-candidate must use CLIP:NAME:CATEGORY=PATH form: {value}")
+        left, raw_path = value.split("=", 1)
+        parts = left.split(":")
+        if len(parts) != 3 or not all(part.strip() for part in parts):
+            raise ValueError(f"--external-candidate must use CLIP:NAME:CATEGORY=PATH form: {value}")
+        clip, name, category = (part.strip() for part in parts)
+        parsed.append(ExternalCandidate(clip=clip, name=name, category=category, path=Path(raw_path)))
+    return parsed
 
 
 def main() -> int:

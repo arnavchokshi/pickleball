@@ -18,19 +18,35 @@ if str(ROOT) not in sys.path:
 
 from threed.racketsport.mobile_person_eval import score_mobile_person_tracks, write_mobile_person_metrics  # noqa: E402
 from threed.racketsport.mobile_person_yolo_replay import (  # noqa: E402
+    BEST_PERSON_TRACKING_BBOX_EXPAND,
+    BEST_PERSON_TRACKING_CONF,
+    BEST_PERSON_TRACKING_DETECTOR_OUTPUT_LIMIT,
+    BEST_PERSON_TRACKING_IMGSZ,
+    BEST_PERSON_TRACKING_MODEL,
+    BEST_PERSON_TRACKING_MODEL_NAME,
+    BEST_PERSON_TRACKING_TRACKER,
     ReplayYoloCandidate,
     _closed_set_prune_frames,
+    _expand_bbox_xywh,
     _latency_ms_from_result,
     _make_linker,
     _observations_from_result,
     _package_size_mb,
+    _prune_observations,
     _timing_payload,
     _tracks_payload,
     _video_properties,
     render_replay_yolo_overlay,
     run_replay_yolo_candidate,
 )
+from threed.racketsport.person_detector_oracle import detections_payload_to_candidates  # noqa: E402
 from threed.racketsport.schemas import OnDevicePersonTracks, PersonGroundTruth, validate_artifact_file  # noqa: E402
+from threed.racketsport.tiled_person_detector import (  # noqa: E402
+    parse_adaptive_crop_regions,
+    parse_crop_regions,
+    yolo_adaptive_tiled_detections_payload,
+    yolo_tiled_detections_payload,
+)
 
 
 DEFAULT_CLIPS = (
@@ -44,15 +60,14 @@ DEFAULT_CLIPS = (
     "runs/eval0/prototype_gate_h100_v2/burlington_gold_0300_low_steep_corner/court_calibration.json",
 )
 DEFAULT_MODELS = (
-    "yolo11n=models/checkpoints/yolo11n.pt",
-    "yolo26n=models/checkpoints/yolo26n.pt",
-    "yolo26s=models/checkpoints/yolo26s.pt",
-    "yolo26m=models/checkpoints/yolo26m.pt",
+    f"{BEST_PERSON_TRACKING_MODEL_NAME}={BEST_PERSON_TRACKING_MODEL}",
 )
-DEFAULT_TRACK_MODELS = ("yolo26n=models/checkpoints/yolo26n.pt", "yolo26s=models/checkpoints/yolo26s.pt")
-DEFAULT_IMGSZ = (416, 512, 640, 960)
-DEFAULT_CONF = (0.05, 0.10, 0.15, 0.20)
-DEFAULT_LINKERS = ("predict_iou", "predict_iou_loose", "predict_center", "predict_center_loose", "predict_role_lock")
+DEFAULT_TRACK_MODELS = DEFAULT_MODELS
+DEFAULT_IMGSZ = (BEST_PERSON_TRACKING_IMGSZ,)
+DEFAULT_CONF = (BEST_PERSON_TRACKING_CONF,)
+DEFAULT_LINKERS = (BEST_PERSON_TRACKING_TRACKER,)
+DEFAULT_DETECTOR_OUTPUT_LIMITS = (BEST_PERSON_TRACKING_DETECTOR_OUTPUT_LIMIT,)
+DEFAULT_BBOX_EXPANDS = (BEST_PERSON_TRACKING_BBOX_EXPAND,)
 DEFAULT_TRACK_MODES = ("track_bytetrack_loose", "track_botsort_no_reid_loose")
 DEFAULT_CLOSED_SET_MODES = ("quality", "duration", "motion", "quality_cluster", "cluster_strong", "motion_cluster")
 
@@ -84,6 +99,11 @@ def main() -> int:
     parser.add_argument("--iou", type=float, default=0.60)
     parser.add_argument("--tracker", action="append", default=[])
     parser.add_argument("--detector-output-limit", action="append", type=int, default=[])
+    parser.add_argument("--detector-mode", action="append", choices=("full", "tiled", "adaptive_tiled"), default=[])
+    parser.add_argument("--crop-regions", default="default4")
+    parser.add_argument("--adaptive-crop-regions", default="adaptive_full_tb3")
+    parser.add_argument("--detector-nms-iou", type=float, default=0.55)
+    parser.add_argument("--detector-batch-size", type=int, default=32)
     parser.add_argument("--closed-set-mode", action="append", choices=DEFAULT_CLOSED_SET_MODES, default=[])
     parser.add_argument("--prune-mode", action="append", choices=("confidence", "court"), default=[])
     parser.add_argument("--court-margin-m", action="append", type=float, default=[])
@@ -112,11 +132,12 @@ def main() -> int:
     imgsz_values = _unique_ints(args.imgsz or list(DEFAULT_IMGSZ))
     conf_values = _unique_floats(args.conf or list(DEFAULT_CONF))
     linkers = tuple(args.tracker or list(DEFAULT_LINKERS))
-    detector_output_limits = _unique_ints(args.detector_output_limit or [args.max_players])
+    detector_output_limits = _unique_ints(args.detector_output_limit or list(DEFAULT_DETECTOR_OUTPUT_LIMITS))
+    detector_modes = tuple(args.detector_mode or ["full"])
     closed_set_modes = tuple(args.closed_set_mode or [])
     prune_modes = tuple(args.prune_mode or ["confidence"])
     court_margins = _unique_floats(args.court_margin_m or [1.25])
-    bbox_expands = _unique_floats(args.bbox_expand or [1.0])
+    bbox_expands = _unique_floats(args.bbox_expand or list(DEFAULT_BBOX_EXPANDS))
     track_modes = list(args.track_mode or list(DEFAULT_TRACK_MODES))
     if args.include_reid_trackers:
         track_modes.extend(["track_botsort_reid", "track_botsort_reid_loose"])
@@ -128,7 +149,8 @@ def main() -> int:
     print(f"writing sweep to {out_dir}")
     print(
         f"device={device or 'default'} clips={len(clips)} models={len(models)} "
-        f"imgsz={imgsz_values} conf={conf_values} detector_output_limits={detector_output_limits}"
+        f"imgsz={imgsz_values} conf={conf_values} detector_output_limits={detector_output_limits} "
+        f"detector_modes={list(detector_modes)}"
     )
 
     rows: list[dict[str, Any]] = []
@@ -149,103 +171,81 @@ def main() -> int:
                 for court_margin_m in margin_values:
                     for bbox_expand in bbox_expands:
                         for detector_output_limit in detector_output_limits:
-                            for imgsz in imgsz_values:
-                                for conf in conf_values:
-                                    prune_token = _prune_token(prune_mode, court_margin_m)
-                                    bbox_token = _bbox_token(bbox_expand)
-                                    limit_token = _candidate_limit_token(detector_output_limit)
-                                    base_name = _candidate_name(
-                                        model_spec.name,
-                                        imgsz,
-                                        conf,
-                                        args.iou,
-                                        f"{prune_token}_{bbox_token}_{limit_token}_detect_cache",
-                                    )
-                                    try:
-                                        detection = _load_or_collect_detections(
-                                            model=model,
-                                            clip=clip,
-                                            model_spec=model_spec,
-                                            out_dir=out_dir,
-                                            base_name=base_name,
-                                            imgsz=imgsz,
-                                            conf=conf,
-                                            iou=args.iou,
-                                            device=device,
-                                            max_players=args.max_players,
-                                            detector_output_limit=detector_output_limit,
-                                            max_frames=args.max_frames,
-                                            model_load_ms=model_load_ms,
-                                            prune_mode=prune_mode,
-                                            court_margin_m=court_margin_m,
-                                            bbox_expand=bbox_expand,
-                                            force=args.force,
+                            for detector_mode in detector_modes:
+                                mode_token = _detector_mode_token(detector_mode)
+                                for imgsz in imgsz_values:
+                                    for conf in conf_values:
+                                        prune_token = _prune_token(prune_mode, court_margin_m)
+                                        bbox_token = _bbox_token(bbox_expand)
+                                        limit_token = _candidate_limit_token(detector_output_limit)
+                                        detector_token = _join_tokens(
+                                            mode_token,
+                                            prune_token,
+                                            bbox_token,
+                                            limit_token,
+                                            "detect_cache",
                                         )
-                                    except Exception as exc:
-                                        failure = _failure_row(
-                                            candidate=base_name,
-                                            clip=clip.clip_id,
-                                            model=model_spec.name,
-                                            imgsz=imgsz,
-                                            conf=conf,
-                                            iou=args.iou,
-                                            tracker=f"{prune_token}_{bbox_token}_{limit_token}_detect_cache",
-                                            error=exc,
-                                        )
-                                        failures.append(failure)
-                                        print(f"FAILED {clip.clip_id} {base_name}: {exc}")
-                                        continue
-
-                                    for linker_name in linkers:
-                                        candidate_name = _candidate_name(
+                                        base_name = _candidate_name(
                                             model_spec.name,
                                             imgsz,
                                             conf,
                                             args.iou,
-                                            f"{prune_token}_{bbox_token}_{limit_token}_{linker_name}",
+                                            detector_token,
                                         )
                                         try:
-                                            row = _score_cached_linker(
+                                            detection = _load_or_collect_detections(
+                                                model=model,
                                                 clip=clip,
+                                                model_spec=model_spec,
                                                 out_dir=out_dir,
-                                                candidate_name=candidate_name,
-                                                detector=detection,
-                                                linker_name=linker_name,
                                                 max_players=args.max_players,
-                                            )
-                                            rows.append(row)
-                                            print(
-                                                "{clip} {candidate} IDF1={idf1:.3f} MOTA={mota:.3f} cov4={coverage:.3f} sw={switches}".format(
-                                                    clip=clip.clip_id,
-                                                    candidate=candidate_name,
-                                                    idf1=row["idf1"],
-                                                    mota=row["mota"],
-                                                    coverage=row["expected_player_coverage"],
-                                                    switches=row["id_switches"],
-                                                )
+                                                detector_mode=detector_mode,
+                                                crop_regions=args.crop_regions,
+                                                adaptive_crop_regions=args.adaptive_crop_regions,
+                                                detector_nms_iou=float(args.detector_nms_iou),
+                                                detector_batch_size=int(args.detector_batch_size),
+                                                base_name=base_name,
+                                                imgsz=imgsz,
+                                                conf=conf,
+                                                iou=args.iou,
+                                                device=device,
+                                                detector_output_limit=detector_output_limit,
+                                                max_frames=args.max_frames,
+                                                model_load_ms=model_load_ms,
+                                                prune_mode=prune_mode,
+                                                court_margin_m=court_margin_m,
+                                                bbox_expand=bbox_expand,
+                                                force=args.force,
                                             )
                                         except Exception as exc:
                                             failure = _failure_row(
-                                                candidate=candidate_name,
+                                                candidate=base_name,
                                                 clip=clip.clip_id,
                                                 model=model_spec.name,
                                                 imgsz=imgsz,
                                                 conf=conf,
                                                 iou=args.iou,
-                                                tracker=f"{prune_token}_{bbox_token}_{limit_token}_{linker_name}",
+                                                tracker=detector_token,
                                                 error=exc,
                                             )
                                             failures.append(failure)
-                                            print(f"FAILED {clip.clip_id} {candidate_name}: {exc}")
+                                            print(f"FAILED {clip.clip_id} {base_name}: {exc}")
+                                            continue
 
-                                    for closed_set_mode in closed_set_modes:
                                         for linker_name in linkers:
+                                            tracker_token = _join_tokens(
+                                                mode_token,
+                                                prune_token,
+                                                bbox_token,
+                                                limit_token,
+                                                linker_name,
+                                            )
                                             candidate_name = _candidate_name(
                                                 model_spec.name,
                                                 imgsz,
                                                 conf,
                                                 args.iou,
-                                                f"{prune_token}_{bbox_token}_{limit_token}_{linker_name}_closed_{closed_set_mode}",
+                                                tracker_token,
                                             )
                                             try:
                                                 row = _score_cached_linker(
@@ -255,8 +255,6 @@ def main() -> int:
                                                     detector=detection,
                                                     linker_name=linker_name,
                                                     max_players=args.max_players,
-                                                    linker_max_players=detector_output_limit,
-                                                    closed_set_mode=closed_set_mode,
                                                 )
                                                 rows.append(row)
                                                 print(
@@ -277,11 +275,65 @@ def main() -> int:
                                                     imgsz=imgsz,
                                                     conf=conf,
                                                     iou=args.iou,
-                                                    tracker=f"{prune_token}_{bbox_token}_{limit_token}_{linker_name}_closed_{closed_set_mode}",
+                                                    tracker=tracker_token,
                                                     error=exc,
                                                 )
                                                 failures.append(failure)
                                                 print(f"FAILED {clip.clip_id} {candidate_name}: {exc}")
+
+                                        for closed_set_mode in closed_set_modes:
+                                            for linker_name in linkers:
+                                                tracker_token = _join_tokens(
+                                                    mode_token,
+                                                    prune_token,
+                                                    bbox_token,
+                                                    limit_token,
+                                                    linker_name,
+                                                    "closed",
+                                                    closed_set_mode,
+                                                )
+                                                candidate_name = _candidate_name(
+                                                    model_spec.name,
+                                                    imgsz,
+                                                    conf,
+                                                    args.iou,
+                                                    tracker_token,
+                                                )
+                                                try:
+                                                    row = _score_cached_linker(
+                                                        clip=clip,
+                                                        out_dir=out_dir,
+                                                        candidate_name=candidate_name,
+                                                        detector=detection,
+                                                        linker_name=linker_name,
+                                                        max_players=args.max_players,
+                                                        linker_max_players=detector_output_limit,
+                                                        closed_set_mode=closed_set_mode,
+                                                    )
+                                                    rows.append(row)
+                                                    print(
+                                                        "{clip} {candidate} IDF1={idf1:.3f} MOTA={mota:.3f} cov4={coverage:.3f} sw={switches}".format(
+                                                            clip=clip.clip_id,
+                                                            candidate=candidate_name,
+                                                            idf1=row["idf1"],
+                                                            mota=row["mota"],
+                                                            coverage=row["expected_player_coverage"],
+                                                            switches=row["id_switches"],
+                                                        )
+                                                    )
+                                                except Exception as exc:
+                                                    failure = _failure_row(
+                                                        candidate=candidate_name,
+                                                        clip=clip.clip_id,
+                                                        model=model_spec.name,
+                                                        imgsz=imgsz,
+                                                        conf=conf,
+                                                        iou=args.iou,
+                                                        tracker=tracker_token,
+                                                        error=exc,
+                                                    )
+                                                    failures.append(failure)
+                                                    print(f"FAILED {clip.clip_id} {candidate_name}: {exc}")
 
     if not args.skip_ultralytics_track:
         for model_spec in track_models:
@@ -350,6 +402,11 @@ def _load_or_collect_detections(
     model_spec: ModelSpec,
     out_dir: Path,
     base_name: str,
+    detector_mode: str,
+    crop_regions: str,
+    adaptive_crop_regions: str,
+    detector_nms_iou: float,
+    detector_batch_size: int,
     imgsz: int,
     conf: float,
     iou: float,
@@ -379,40 +436,73 @@ def _load_or_collect_detections(
     samples: list[dict[str, Any]] = []
     calibration = _load_court_calibration(clip.court_calibration_path) if prune_mode == "court" else None
     started = time.perf_counter()
-    iterator = model.predict(
-        source=str(clip.video_path),
-        stream=True,
-        classes=[0],
-        conf=conf,
-        iou=iou,
-        imgsz=imgsz,
-        device=device,
-        verbose=False,
-    )
-    try:
-        for frame_index, result in enumerate(iterator):
-            if max_frames is not None and frame_index >= max_frames:
-                break
-            observations = _observations_from_result(
-                result,
-                max_players=max_players,
-                prune_mode=prune_mode,
-                court_calibration=calibration,
-                court_margin_m=1.25 if court_margin_m is None else court_margin_m,
-                output_limit=detector_output_limit,
-                bbox_expand=bbox_expand,
-            )
-            latency_ms = _latency_ms_from_result(result)
-            samples.append({"frame_index": frame_index, "latency_ms": latency_ms, "processed": True})
-            frames.append({"frame_index": frame_index, "observations": observations})
-            if frame_index + 1 >= frame_limit:
-                break
-    finally:
-        close = getattr(iterator, "close", None)
-        if callable(close):
-            close()
+    detector_extra: dict[str, Any] = {}
+    if detector_mode == "full":
+        iterator = model.predict(
+            source=str(clip.video_path),
+            stream=True,
+            classes=[0],
+            conf=conf,
+            iou=iou,
+            imgsz=imgsz,
+            device=device,
+            verbose=False,
+        )
+        try:
+            for frame_index, result in enumerate(iterator):
+                if max_frames is not None and frame_index >= max_frames:
+                    break
+                observations = _observations_from_result(
+                    result,
+                    max_players=max_players,
+                    prune_mode=prune_mode,
+                    court_calibration=calibration,
+                    court_margin_m=1.25 if court_margin_m is None else court_margin_m,
+                    output_limit=detector_output_limit,
+                    bbox_expand=bbox_expand,
+                )
+                latency_ms = _latency_ms_from_result(result)
+                samples.append({"frame_index": frame_index, "latency_ms": latency_ms, "processed": True})
+                frames.append({"frame_index": frame_index, "observations": observations})
+                if frame_index + 1 >= frame_limit:
+                    break
+        finally:
+            close = getattr(iterator, "close", None)
+            if callable(close):
+                close()
+    elif detector_mode in {"tiled", "adaptive_tiled"}:
+        frames, detector_extra = _collect_tiled_observation_frames(
+            model=model,
+            clip=clip,
+            fps=fps,
+            max_frames=frame_limit,
+            detector_mode=detector_mode,
+            crop_regions=crop_regions,
+            adaptive_crop_regions=adaptive_crop_regions,
+            detector_nms_iou=detector_nms_iou,
+            detector_batch_size=detector_batch_size,
+            imgsz=imgsz,
+            conf=conf,
+            iou=iou,
+            device=device,
+            max_players=max_players,
+            detector_output_limit=detector_output_limit,
+            prune_mode=prune_mode,
+            court_calibration=calibration,
+            court_margin_m=1.25 if court_margin_m is None else court_margin_m,
+            bbox_expand=bbox_expand,
+        )
+    else:
+        raise ValueError(f"unsupported detector mode: {detector_mode}")
 
     wall_clock_seconds = time.perf_counter() - started
+    if not samples:
+        avg_latency_ms = (wall_clock_seconds * 1000.0 / len(frames)) if frames else 0.0
+        samples = [
+            {"frame_index": int(frame["frame_index"]), "latency_ms": avg_latency_ms, "processed": True}
+            for frame in frames
+        ]
+
     payload = {
         "schema_version": 1,
         "artifact_type": "racketsport_mobile_person_detection_cache",
@@ -424,6 +514,11 @@ def _load_or_collect_detections(
         "iou": iou,
         "device": device,
         "max_players": max_players,
+        "detector_mode": detector_mode,
+        "crop_regions": crop_regions,
+        "adaptive_crop_regions": adaptive_crop_regions,
+        "detector_nms_iou": detector_nms_iou,
+        "detector_batch_size": detector_batch_size,
         "detector_output_limit": detector_output_limit,
         "prune_mode": prune_mode,
         "court_calibration_path": str(clip.court_calibration_path) if clip.court_calibration_path is not None else None,
@@ -439,9 +534,129 @@ def _load_or_collect_detections(
         "wall_clock_seconds": wall_clock_seconds,
         "samples": samples,
         "frames": frames,
+        **detector_extra,
     }
     _write_json(cache_path, payload)
     return payload
+
+
+def _collect_tiled_observation_frames(
+    *,
+    model: Any,
+    clip: ClipSpec,
+    fps: float,
+    max_frames: int,
+    detector_mode: str,
+    crop_regions: str,
+    adaptive_crop_regions: str,
+    detector_nms_iou: float,
+    detector_batch_size: int,
+    imgsz: int,
+    conf: float,
+    iou: float,
+    device: str | None,
+    max_players: int,
+    detector_output_limit: int,
+    prune_mode: str,
+    court_calibration: Any,
+    court_margin_m: float,
+    bbox_expand: float,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if detector_mode == "tiled":
+        parsed_regions = parse_crop_regions(crop_regions)
+        payload = yolo_tiled_detections_payload(
+            model=model,
+            video_path=clip.video_path,
+            fps=fps,
+            max_frames=max_frames,
+            crop_regions=parsed_regions,
+            conf=conf,
+            iou=iou,
+            imgsz=imgsz,
+            device=device,
+            nms_iou=detector_nms_iou,
+            batch_size=detector_batch_size,
+        )
+        extra = {"crop_region_count": len(parsed_regions), "adaptive_fallback_frame_count": 0}
+    elif detector_mode == "adaptive_tiled":
+        primary, fallback, min_detections = parse_adaptive_crop_regions(adaptive_crop_regions)
+        payload = yolo_adaptive_tiled_detections_payload(
+            model=model,
+            video_path=clip.video_path,
+            fps=fps,
+            max_frames=max_frames,
+            primary_crop_regions=primary,
+            fallback_crop_regions=fallback,
+            min_detections=min_detections,
+            conf=conf,
+            iou=iou,
+            imgsz=imgsz,
+            device=device,
+            nms_iou=detector_nms_iou,
+            batch_size=detector_batch_size,
+        )
+        extra = {
+            "crop_region_count": int(payload.get("primary_crop_region_count", len(primary)))
+            + int(payload.get("fallback_crop_region_count", len(fallback))),
+            "adaptive_fallback_frame_count": int(payload.get("fallback_frame_count", 0)),
+            "adaptive_crop_eval_count": int(payload.get("crop_eval_count", 0)),
+        }
+    else:
+        raise ValueError(f"unsupported tiled detector mode: {detector_mode}")
+
+    candidates_by_frame = detections_payload_to_candidates(payload)
+    frames: list[dict[str, Any]] = []
+    for frame_index in range(max_frames):
+        candidates = candidates_by_frame.get(frame_index, [])
+        observations = _observations_from_candidates(
+            candidates,
+            max_players=max_players,
+            detector_output_limit=detector_output_limit,
+            prune_mode=prune_mode,
+            court_calibration=court_calibration,
+            court_margin_m=court_margin_m,
+            bbox_expand=bbox_expand,
+            source=f"yolo_person_{detector_mode}",
+        )
+        frames.append({"frame_index": frame_index, "observations": observations})
+    return frames, extra
+
+
+def _observations_from_candidates(
+    candidates: Sequence[dict[str, Any]],
+    *,
+    max_players: int,
+    detector_output_limit: int,
+    prune_mode: str,
+    court_calibration: Any,
+    court_margin_m: float,
+    bbox_expand: float,
+    source: str,
+) -> list[dict[str, Any]]:
+    observations: list[dict[str, Any]] = []
+    for candidate in candidates:
+        raw_bbox = candidate.get("bbox_xywh")
+        if raw_bbox is None or len(raw_bbox) != 4:
+            continue
+        bbox_xywh = [float(value) for value in raw_bbox]
+        if bbox_expand != 1.0:
+            bbox_xywh = _expand_bbox_xywh(bbox_xywh, bbox_expand)
+        observations.append(
+            {
+                "bbox_xywh": bbox_xywh,
+                "confidence": max(0.0, min(1.0, float(candidate.get("confidence", 0.0)))),
+                "source": source,
+            }
+        )
+    return _prune_observations(
+        observations,
+        max_players=max_players,
+        prune_mode=prune_mode,
+        court_calibration=court_calibration,
+        court_margin_m=court_margin_m,
+        candidate_limit=max(detector_output_limit, 16),
+        output_limit=detector_output_limit,
+    )
 
 
 def _score_cached_linker(
@@ -516,6 +731,7 @@ def _score_cached_linker(
         "device": detector["device"],
         "tracker": linker_name,
         "linker_max_players": active_linker_max,
+        "detector_mode": detector.get("detector_mode", "full"),
         "detector_output_limit": detector.get("detector_output_limit", max_players),
         "closed_set_mode": closed_set_mode,
         "prune_mode": detector.get("prune_mode"),
@@ -589,6 +805,7 @@ def _row_from_summary(summary: dict[str, Any]) -> dict[str, Any]:
         "iou": float(summary["iou"]),
         "tracker": summary.get("tracker", ""),
         "linker_max_players": int(summary.get("linker_max_players", summary.get("detector_output_limit", 0)) or 0),
+        "detector_mode": summary.get("detector_mode", "full"),
         "detector_output_limit": int(summary.get("detector_output_limit", summary.get("max_players", 0)) or 0),
         "closed_set_mode": summary.get("closed_set_mode"),
         "prune_mode": summary.get("prune_mode", "confidence"),
@@ -634,6 +851,7 @@ def _aggregate_rows(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
                 "iou": first["iou"],
                 "tracker": first["tracker"],
                 "linker_max_players": linker_max_players,
+                "detector_mode": first.get("detector_mode", "full"),
                 "detector_output_limit": detector_output_limit,
                 "closed_set_mode": first.get("closed_set_mode"),
                 "prune_mode": first["prune_mode"],
@@ -771,16 +989,17 @@ def _render_report(
             "",
             "## Top Candidates",
             "",
-            "| Rank | Candidate | Mean IDF1 | Worst IDF1 | Mean MOTA | Mean cov4 | Switches | FN | FP | FPS |",
-            "| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Rank | Candidate | Detector | Mean IDF1 | Worst IDF1 | Mean MOTA | Mean cov4 | Switches | FN | FP | FPS |",
+            "| ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for row in leaderboard[:25]:
         lines.append(
-            "| {rank} | `{candidate}` | {mean_idf1:.3f} | {worst_idf1:.3f} | {mean_mota:.3f} | "
+            "| {rank} | `{candidate}` | `{detector}` | {mean_idf1:.3f} | {worst_idf1:.3f} | {mean_mota:.3f} | "
             "{coverage:.3f} | {switches} | {fn} | {fp} | {fps:.1f} |".format(
                 rank=row["rank"],
                 candidate=row["candidate"],
+                detector=row.get("detector_mode", "full"),
                 mean_idf1=row["mean_idf1"],
                 worst_idf1=row["worst_idf1"],
                 mean_mota=row["mean_mota"],
@@ -924,6 +1143,18 @@ def _candidate_limit_token(detector_output_limit: int) -> str:
     if detector_output_limit <= 0:
         raise ValueError("detector output limit must be positive")
     return f"cand{int(detector_output_limit)}"
+
+
+def _detector_mode_token(detector_mode: str) -> str:
+    if detector_mode == "full":
+        return ""
+    if detector_mode in {"tiled", "adaptive_tiled"}:
+        return detector_mode
+    raise ValueError(f"unsupported detector mode: {detector_mode}")
+
+
+def _join_tokens(*tokens: str | None) -> str:
+    return "_".join(token for token in tokens if token)
 
 
 def _load_court_calibration(path: Path | None) -> Any:

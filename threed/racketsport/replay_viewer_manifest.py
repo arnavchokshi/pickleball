@@ -20,6 +20,7 @@ def build_replay_viewer_manifest(
     virtual_world_path: str | Path,
     player_labels_path: str | Path | None = None,
     replay_scene_path: str | Path | None = None,
+    body_mesh_path: str | Path | None = None,
     physics_refinement_path: str | Path | None = None,
     contact_windows_path: str | Path | None = None,
     annotation_sources: Iterable[str | Path] = (),
@@ -33,6 +34,7 @@ def build_replay_viewer_manifest(
     video = _existing_file(video_path, "video", allow_root=allow_root)
     virtual_world = _existing_file(virtual_world_path, "virtual_world", allow_root=allow_root)
     replay_scene = _optional_existing_file(replay_scene_path, "replay_scene", allow_root=allow_root)
+    body_mesh = _optional_existing_file(body_mesh_path, "body_mesh", allow_root=allow_root)
     physics_refinement = _optional_existing_file(
         physics_refinement_path,
         "physics_refinement",
@@ -52,6 +54,7 @@ def build_replay_viewer_manifest(
         "video_url": _vite_file_url(video),
         "virtual_world_url": _vite_file_url(virtual_world),
         "replay_scene_url": _vite_file_url(replay_scene) if replay_scene is not None else None,
+        "body_mesh_url": _vite_file_url(body_mesh) if body_mesh is not None else None,
         "physics_refinement_url": _vite_file_url(physics_refinement) if physics_refinement is not None else None,
         "contact_windows_url": _vite_file_url(contact_windows) if contact_windows is not None else None,
         "label_overlays": label_overlays,

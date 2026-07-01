@@ -19,10 +19,12 @@ def build_body_mesh_readiness(
     skeleton3d: Mapping[str, Any] | None = None,
     frame_compute_plan: Mapping[str, Any] | None = None,
     body_compute_execution: Mapping[str, Any] | None = None,
+    body_full_clip_gate: Mapping[str, Any] | None = None,
     smpl_motion_path: str | None = None,
     skeleton3d_path: str | None = None,
     frame_compute_plan_path: str | None = None,
     body_compute_execution_path: str | None = None,
+    body_full_clip_gate_path: str | None = None,
 ) -> dict[str, Any]:
     """Report whether existing BODY artifacts contain real mesh vertices."""
 
@@ -31,6 +33,7 @@ def build_body_mesh_readiness(
     representation_plan = _representation_plan(
         frame_compute_plan=frame_compute_plan,
         body_compute_execution=body_compute_execution,
+        body_full_clip_gate=body_full_clip_gate,
         mesh_stats=mesh_stats,
         joints_stats=joints_stats,
     )
@@ -42,7 +45,7 @@ def build_body_mesh_readiness(
     elif mesh_stats["mesh_frame_count"] == 0:
         blockers.append("joints_only_no_mesh_vertices")
     else:
-        blockers.extend(["missing_world_mpjpe_gate", "missing_full_clip_body_gate"])
+        blockers.extend(["missing_world_mpjpe_gate", *_full_clip_gate_blockers(body_full_clip_gate)])
         warnings.append("mesh_not_accuracy_verified")
 
     if skeleton3d is None and smpl_motion is None:
@@ -90,6 +93,7 @@ def build_body_mesh_readiness(
         "skeleton3d_path": skeleton3d_path or "",
         "frame_compute_plan_path": frame_compute_plan_path or "",
         "body_compute_execution_path": body_compute_execution_path or "",
+        "body_full_clip_gate_path": body_full_clip_gate_path or "",
         "summary": summary,
         "representation_plan": representation_plan,
         "blockers": _dedupe(blockers),
@@ -111,21 +115,25 @@ def build_body_mesh_readiness_from_paths(
     skeleton3d_path: str | Path | None,
     frame_compute_plan_path: str | Path | None = None,
     body_compute_execution_path: str | Path | None = None,
+    body_full_clip_gate_path: str | Path | None = None,
 ) -> dict[str, Any]:
     smpl_payload = _read_optional_json(smpl_motion_path)
     skeleton_payload = _read_optional_json(skeleton3d_path)
     frame_plan_payload = _read_optional_json(frame_compute_plan_path)
     execution_payload = _read_optional_json(body_compute_execution_path)
+    full_clip_gate_payload = _read_optional_json(body_full_clip_gate_path)
     return build_body_mesh_readiness(
         clip=clip,
         smpl_motion=smpl_payload,
         skeleton3d=skeleton_payload,
         frame_compute_plan=frame_plan_payload,
         body_compute_execution=execution_payload,
+        body_full_clip_gate=full_clip_gate_payload,
         smpl_motion_path=str(smpl_motion_path or ""),
         skeleton3d_path=str(skeleton3d_path or ""),
         frame_compute_plan_path=str(frame_compute_plan_path or ""),
         body_compute_execution_path=str(body_compute_execution_path or ""),
+        body_full_clip_gate_path=str(body_full_clip_gate_path or ""),
     )
 
 
@@ -205,6 +213,7 @@ def _representation_plan(
     *,
     frame_compute_plan: Mapping[str, Any] | None,
     body_compute_execution: Mapping[str, Any] | None,
+    body_full_clip_gate: Mapping[str, Any] | None,
     mesh_stats: Mapping[str, int],
     joints_stats: Mapping[str, int],
 ) -> dict[str, Any]:
@@ -220,7 +229,10 @@ def _representation_plan(
     scheduled_world_mesh_player_frame_count = _int_summary(execution_summary, "scheduled_player_frame_count")
     available_mesh_frame_count = int(mesh_stats.get("mesh_frame_count", 0))
     available_joint_frame_count = int(joints_stats.get("joints_frame_count", 0))
-    joints_or_preview_mesh_target_count = _int_mapping_value(by_player_target, "joints_or_preview_mesh")
+    lane_a_skeleton_target_count = _int_mapping_value(by_player_target, "lane_a_skeleton") + _int_mapping_value(
+        by_player_target,
+        "joints_or_preview_mesh",
+    )
     manual_review_required_target_count = _int_mapping_value(by_player_target, "manual_review_required")
 
     blockers: list[str] = []
@@ -236,7 +248,7 @@ def _representation_plan(
         elif available_mesh_frame_count < max(requested_world_mesh_frame_count, scheduled_world_mesh_frame_count):
             blockers.append("world_mesh_demand_exceeds_available_mesh")
             warnings.append("world_mesh_demand_exceeds_available_mesh")
-        blockers.extend(["missing_world_mpjpe_gate", "missing_full_clip_body_gate"])
+        blockers.extend(["missing_world_mpjpe_gate", *_full_clip_gate_blockers(body_full_clip_gate)])
     elif frame_compute_plan is not None:
         blockers.append("no_trusted_world_mesh_triggers")
         warnings.append("world_mesh_not_requested_by_current_frame_plan")
@@ -250,7 +262,7 @@ def _representation_plan(
         "scheduled_world_mesh_player_frame_count": scheduled_world_mesh_player_frame_count,
         "available_mesh_frame_count": available_mesh_frame_count,
         "available_joint_frame_count": available_joint_frame_count,
-        "joints_or_preview_mesh_target_count": joints_or_preview_mesh_target_count,
+        "lane_a_skeleton_target_count": lane_a_skeleton_target_count,
         "manual_review_required_target_count": manual_review_required_target_count,
         "blockers": _dedupe(blockers),
         "warnings": _dedupe(warnings),
@@ -266,6 +278,19 @@ def _representation_decision(representation_plan: Mapping[str, Any]) -> str:
     if available == 0:
         return "world_mesh_required_missing_output"
     return "world_mesh_required_available_unverified"
+
+
+def _full_clip_gate_blockers(body_full_clip_gate: Mapping[str, Any] | None) -> list[str]:
+    if body_full_clip_gate is None:
+        return ["missing_full_clip_body_gate"]
+    if body_full_clip_gate.get("passed") is True:
+        return []
+    blockers = body_full_clip_gate.get("blockers")
+    if isinstance(blockers, list):
+        parsed = [str(blocker) for blocker in blockers if str(blocker)]
+        if parsed:
+            return parsed
+    return ["full_clip_body_gate_failed"]
 
 
 def _scheduled_world_mesh_frame_count(summary: Any) -> int:

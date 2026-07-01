@@ -11,6 +11,13 @@ import scripts.racketsport.run_mobile_person_yolo_replay as replay_cli
 import threed.racketsport.mobile_person_yolo_replay as replay
 from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
 from threed.racketsport.mobile_person_yolo_replay import (
+    BEST_PERSON_TRACKING_BBOX_EXPAND,
+    BEST_PERSON_TRACKING_CANDIDATE,
+    BEST_PERSON_TRACKING_CONF,
+    BEST_PERSON_TRACKING_DETECTOR_OUTPUT_LIMIT,
+    BEST_PERSON_TRACKING_IMGSZ,
+    BEST_PERSON_TRACKING_MODEL,
+    BEST_PERSON_TRACKING_TRACKER,
     ReplayYoloCandidate,
     _closed_set_prune_frames,
     _closed_set_track_summaries,
@@ -477,6 +484,46 @@ def test_run_mobile_person_yolo_replay_cli_forwards_args_and_prints_metrics(
     assert candidate.conf == pytest.approx(0.2)
     assert candidate.max_players == 2
     assert candidate.tracker == "predict_center"
+
+
+def test_run_mobile_person_yolo_replay_cli_defaults_to_best_measured_profile(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_run_replay_yolo_candidate(**kwargs):
+        captured.update(kwargs)
+        return {"metrics": {"candidate": kwargs["candidate"].name, "idf1": 0.96}}
+
+    monkeypatch.setattr(replay_cli, "run_replay_yolo_candidate", fake_run_replay_yolo_candidate)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "scripts/racketsport/run_mobile_person_yolo_replay.py",
+            "--video",
+            str(tmp_path / "clip.mp4"),
+            "--ground-truth",
+            str(tmp_path / "person_ground_truth.json"),
+            "--out-dir",
+            str(tmp_path / "out"),
+            "--no-overlay",
+        ],
+    )
+
+    assert replay_cli.main() == 0
+
+    output = json.loads(capsys.readouterr().out)
+    assert output == {"candidate": BEST_PERSON_TRACKING_CANDIDATE, "idf1": 0.96}
+    candidate = captured["candidate"]
+    assert isinstance(candidate, ReplayYoloCandidate)
+    assert candidate.name == BEST_PERSON_TRACKING_CANDIDATE
+    assert candidate.model == BEST_PERSON_TRACKING_MODEL
+    assert candidate.imgsz == BEST_PERSON_TRACKING_IMGSZ
+    assert candidate.conf == pytest.approx(BEST_PERSON_TRACKING_CONF)
+    assert candidate.tracker == BEST_PERSON_TRACKING_TRACKER
+    assert candidate.bbox_expand == pytest.approx(BEST_PERSON_TRACKING_BBOX_EXPAND)
+    assert candidate.detector_output_limit == BEST_PERSON_TRACKING_DETECTOR_OUTPUT_LIMIT
 
 
 def _identity_court_calibration() -> CourtCalibration:

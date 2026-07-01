@@ -24,6 +24,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skeleton3d", type=Path, help="Optional skeleton3d.json path.")
     parser.add_argument("--frame-compute-plan", type=Path, help="Optional frame_compute_plan.json path.")
     parser.add_argument("--body-compute-execution", type=Path, help="Optional body_compute_execution.json path.")
+    parser.add_argument("--body-full-clip-gate", type=Path, help="Optional body_full_clip_gate.json path.")
     parser.add_argument("--out", type=Path, required=True, help="Output body_mesh_readiness.json path.")
     args = parser.parse_args(argv)
 
@@ -34,6 +35,7 @@ def main(argv: list[str] | None = None) -> int:
             skeleton3d_path=args.skeleton3d,
             frame_compute_plan_path=args.frame_compute_plan,
             body_compute_execution_path=args.body_compute_execution,
+            body_full_clip_gate_path=args.body_full_clip_gate,
         )
         write_body_mesh_readiness(args.out, payload)
     except (OSError, ValueError, json.JSONDecodeError) as exc:

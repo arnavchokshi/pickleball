@@ -9,14 +9,17 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import json
 import os
+import subprocess
 import sys
+import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from math import isfinite
 from numbers import Integral
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .model_manifest import load_model_manifest
 
@@ -31,6 +34,10 @@ REQUIRED_FAST_SAM_MODEL_IDS = (
     "sam_3d_body_mhr_model",
     "moge_2_vitl_normal",
     "yolo26m",
+)
+CORE_FAST_SAM_MODEL_IDS = (
+    "fast_sam_3d_body_dinov3",
+    "sam_3d_body_mhr_model",
 )
 
 
@@ -263,6 +270,17 @@ def verify_fast_sam_manifest_assets(
     return verified
 
 
+def fast_sam_required_model_ids(*, detector_name: str = "yolo", fov_name: str = "moge2") -> tuple[str, ...]:
+    """Return the manifest assets required for the selected runtime components."""
+
+    model_ids = list(CORE_FAST_SAM_MODEL_IDS)
+    if fov_name:
+        model_ids.append("moge_2_vitl_normal")
+    if detector_name:
+        model_ids.append("yolo26m")
+    return tuple(model_ids)
+
+
 class FastSam3DBodyRuntime:
     """Thin loader for the external Fast SAM-3D-Body runtime."""
 
@@ -279,7 +297,10 @@ class FastSam3DBodyRuntime:
             raise FileNotFoundError(f"missing FastSAM-3D-Body repo at {repo}")
         self.fast_sam_repo = repo
         self.detector_name = detector_name
-        self.detector_model = assets["yolo26m"].path
+        detector_asset = assets.get("yolo26m") if detector_name else None
+        if detector_name and detector_asset is None:
+            raise ValueError("yolo26m asset is required when detector_name is enabled")
+        self.detector_model = detector_asset.path if detector_asset is not None else None
         self.checkpoint_dir = assets["fast_sam_3d_body_dinov3"].path.parent
         self.fov_name = fov_name
         setup_sam_3d_body = _load_setup_sam_3d_body(repo)
@@ -288,7 +309,7 @@ class FastSam3DBodyRuntime:
         self.estimator = setup_sam_3d_body(
             hf_repo_id="facebook/sam-3d-body-dinov3",
             detector_name=detector_name,
-            detector_model=str(self.detector_model),
+            detector_model=str(self.detector_model) if self.detector_model is not None else "",
             fov_name=fov_name,
             local_checkpoint_path=str(self.checkpoint_dir),
         )
@@ -308,7 +329,129 @@ class FastSam3DBodyRuntime:
             use_mask=False,
             hand_box_source="body_decoder",
         )
-        return extract_fast_sam_person_records(raw_output)
+        records = extract_fast_sam_person_records(raw_output)
+        _attach_mesh_faces(records, getattr(self.estimator, "faces", None))
+        return records
+
+
+class FastSam3DBodySubprocessRuntime:
+    """Run Fast SAM-3D-Body in an isolated Python runtime and return raw records."""
+
+    def __init__(
+        self,
+        *,
+        python_executable: str | Path,
+        fast_sam_repo: str | Path,
+        checkpoint_dir: str | Path,
+        detector_name: str = "yolo",
+        detector_model: str = "",
+        fov_name: str = "moge2",
+        work_dir: str | Path,
+        script_path: str | Path | None = None,
+    ) -> None:
+        self.python_executable = Path(python_executable)
+        self.fast_sam_repo = Path(fast_sam_repo)
+        self.checkpoint_dir = Path(checkpoint_dir)
+        self.detector_name = detector_name
+        self.detector_model = detector_model
+        self.fov_name = fov_name
+        self.work_dir = Path(work_dir)
+        repo_root = Path(__file__).resolve().parents[2]
+        self.script_path = Path(script_path) if script_path is not None else repo_root / "scripts/racketsport/run_sam3dbody_frame.py"
+
+    def process_frame(self, image_path: Path, *, bboxes_xyxy: list[list[float]]) -> list[dict[str, Any]]:
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        out_path = self.work_dir / f"{Path(image_path).stem}-{uuid.uuid4().hex}.json"
+        command = [
+            str(self.python_executable),
+            str(self.script_path),
+            "--image",
+            str(Path(image_path)),
+            "--out",
+            str(out_path),
+            "--fast-sam-repo",
+            str(self.fast_sam_repo),
+            "--checkpoint-dir",
+            str(self.checkpoint_dir),
+            "--detector-model",
+            self.detector_model,
+            "--detector-name",
+            self.detector_name,
+            "--fov-name",
+            self.fov_name,
+        ]
+        for bbox in bboxes_xyxy:
+            command.extend(["--bbox", ",".join(str(float(value)) for value in bbox)])
+        completed = subprocess.run(command, check=False, capture_output=True, text=True)
+        if completed.returncode != 0:
+            stderr = (completed.stderr or "").strip()
+            stdout = (completed.stdout or "").strip()
+            detail = stderr or stdout or f"exit={completed.returncode}"
+            raise RuntimeError(f"FastSAM-3D-Body subprocess failed: {detail}")
+        payload = json.loads(out_path.read_text(encoding="utf-8"))
+        records = payload.get("records")
+        if not isinstance(records, list):
+            raise RuntimeError(f"FastSAM-3D-Body subprocess output missing records: {out_path}")
+        return [dict(record) for record in records if isinstance(record, Mapping)]
+
+    def process_frame_batches(self, requests: list[tuple[Path, list[list[float]]]]) -> list[list[dict[str, Any]]]:
+        if not requests:
+            return []
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        request_path = self.work_dir / f"batch_requests-{uuid.uuid4().hex}.json"
+        out_path = self.work_dir / f"batch_outputs-{uuid.uuid4().hex}.json"
+        request_payload = {
+            "schema_version": 1,
+            "requests": [
+                {
+                    "request_id": str(index),
+                    "image": str(Path(image_path)),
+                    "bboxes": [[float(value) for value in bbox] for bbox in bboxes],
+                }
+                for index, (image_path, bboxes) in enumerate(requests)
+            ],
+        }
+        request_path.write_text(json.dumps(request_payload, separators=(",", ":")) + "\n", encoding="utf-8")
+        command = [
+            str(self.python_executable),
+            str(Path(__file__).resolve().parents[2] / "scripts/racketsport/run_sam3dbody_batch.py"),
+            "--requests",
+            str(request_path),
+            "--out",
+            str(out_path),
+            "--fast-sam-repo",
+            str(self.fast_sam_repo),
+            "--checkpoint-dir",
+            str(self.checkpoint_dir),
+            "--detector-model",
+            self.detector_model,
+            "--detector-name",
+            self.detector_name,
+            "--fov-name",
+            self.fov_name,
+        ]
+        completed = subprocess.run(command, check=False, capture_output=True, text=True)
+        if completed.returncode != 0:
+            stderr = (completed.stderr or "").strip()
+            stdout = (completed.stdout or "").strip()
+            detail = stderr or stdout or f"exit={completed.returncode}"
+            raise RuntimeError(f"FastSAM-3D-Body batch subprocess failed: {detail}")
+        payload = json.loads(out_path.read_text(encoding="utf-8"))
+        frames = payload.get("frames")
+        if not isinstance(frames, list):
+            raise RuntimeError(f"FastSAM-3D-Body batch output missing frames: {out_path}")
+        by_id = {
+            str(frame.get("request_id")): frame.get("records", [])
+            for frame in frames
+            if isinstance(frame, Mapping)
+        }
+        outputs: list[list[dict[str, Any]]] = []
+        for index in range(len(requests)):
+            records = by_id.get(str(index), [])
+            if not isinstance(records, list):
+                raise RuntimeError(f"FastSAM-3D-Body batch records are not a list for request {index}: {out_path}")
+            outputs.append([dict(record) for record in records if isinstance(record, Mapping)])
+        return outputs
 
 
 def extract_fast_sam_person_records(raw_output: Any) -> list[dict[str, Any]]:
@@ -323,6 +466,17 @@ def extract_fast_sam_person_records(raw_output: Any) -> list[dict[str, Any]]:
             return [public_mapping]
         return []
     return _coerce_person_records(raw_output)
+
+
+def _attach_mesh_faces(records: list[dict[str, Any]], faces: Any) -> None:
+    if faces is None:
+        return
+    face_rows = _to_python_container(faces)
+    if not isinstance(face_rows, Sequence) or isinstance(face_rows, str | bytes | bytearray):
+        return
+    for record in records:
+        if "mesh_faces" not in record and "faces" not in record:
+            record["mesh_faces"] = face_rows
 
 
 def normalize_fast_sam_body_output(
@@ -378,6 +532,12 @@ def normalize_fast_sam_body_output(
         ),
         "joints_camera": joints,
         "vertices_camera": vertices,
+        "mesh_faces": _face_list(
+            _first_present(public, ("mesh_faces", "faces", "pred_faces", "triangles", "mesh_triangles"), default=[]),
+            vertex_count=len(vertices),
+            name="mesh_faces",
+            vertices_name="pred_vertices",
+        ),
         "model_family": MODEL_FAMILY,
     }
 
@@ -447,6 +607,32 @@ def _float_list(values: Any, *, name: str) -> list[float]:
     return result
 
 
+def _face_list(values: Any, *, vertex_count: int, name: str, vertices_name: str) -> list[list[int]]:
+    values = _to_python_container(values)
+    if values is None:
+        return []
+    if isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
+        raise ValueError(f"{name} must be a sequence of triangle index triples")
+    faces: list[list[int]] = []
+    for face_index, face in enumerate(values):
+        face = _to_python_container(face)
+        if isinstance(face, (str, bytes)) or not isinstance(face, Sequence) or len(face) != 3:
+            raise ValueError(f"{name}/{face_index} must be a triangle index triple")
+        parsed_face: list[int] = []
+        for raw_index in face:
+            raw_index = _to_python_container(raw_index)
+            if isinstance(raw_index, bool) or not isinstance(raw_index, Integral):
+                raise ValueError(f"{name}/{face_index} must be a triangle index triple")
+            index = int(raw_index)
+            if index < 0:
+                raise ValueError(f"{name}/{face_index} must be a triangle index triple")
+            if index >= vertex_count:
+                raise ValueError(f"{name}/{face_index} index {index} is outside {vertices_name}")
+            parsed_face.append(index)
+        faces.append(parsed_face)
+    return faces
+
+
 def _confidence(value: Any, *, name: str) -> float:
     value = _to_python_container(value)
     if isinstance(value, bool):
@@ -474,11 +660,117 @@ def _load_setup_sam_3d_body(fast_sam_repo: Path) -> Any:
     try:
         module = importlib.import_module("notebook.utils")
     except Exception as exc:
-        raise RuntimeError("could not import FastSAM-3D-Body notebook.utils.setup_sam_3d_body") from exc
+        try:
+            importlib.import_module("sam_3d_body")
+        except Exception as direct_exc:
+            raise RuntimeError(
+                "could not import FastSAM-3D-Body notebook.utils.setup_sam_3d_body "
+                "or direct sam_3d_body runtime"
+            ) from direct_exc
+        return _direct_setup_sam_3d_body
     setup_sam_3d_body = getattr(module, "setup_sam_3d_body", None)
     if not callable(setup_sam_3d_body):
         raise RuntimeError("FastSAM-3D-Body notebook.utils does not expose callable setup_sam_3d_body")
     return setup_sam_3d_body
+
+
+def _direct_setup_sam_3d_body(
+    *,
+    hf_repo_id: str = "facebook/sam-3d-body-dinov3",
+    detector_name: str = "",
+    detector_model: str = "",
+    fov_name: str = "",
+    device: str = "cuda",
+    local_checkpoint_path: str = "",
+    local_mhr_path: str = "",
+) -> Any:
+    import torch  # type: ignore[import-not-found]
+
+    _ensure_torch_amp_custom_decorators(torch)
+    _ensure_torch_dynamo_accumulated_cache_limit(torch)
+    from sam_3d_body import SAM3DBodyEstimator, load_sam_3d_body, load_sam_3d_body_hf
+
+    resolved_device = device
+    if resolved_device == "cuda" and not torch.cuda.is_available():
+        resolved_device = "cpu"
+
+    if local_checkpoint_path:
+        checkpoint_dir = Path(local_checkpoint_path)
+        model, model_cfg = load_sam_3d_body(
+            checkpoint_path=str(checkpoint_dir / "model.ckpt"),
+            device=resolved_device,
+            mhr_path=local_mhr_path or str(checkpoint_dir / "assets" / "mhr_model.pt"),
+        )
+    else:
+        model, model_cfg = load_sam_3d_body_hf(hf_repo_id, device=resolved_device)
+
+    human_detector = None
+    if detector_name:
+        from tools.build_detector import HumanDetector
+
+        detector_kwargs: dict[str, Any] = {}
+        if detector_model and detector_name in ("yolo", "yolo11", "yolo_pose"):
+            detector_kwargs["model"] = detector_model
+        human_detector = HumanDetector(name=detector_name, device=resolved_device, **detector_kwargs)
+
+    fov_estimator = None
+    if fov_name:
+        from tools.build_fov_estimator import FOVEstimator
+
+        fov_estimator = FOVEstimator(name=fov_name, device=resolved_device)
+
+    return SAM3DBodyEstimator(
+        sam_3d_body_model=model,
+        model_cfg=model_cfg,
+        human_detector=human_detector,
+        human_segmentor=None,
+        fov_estimator=fov_estimator,
+    )
+
+
+def _ensure_torch_amp_custom_decorators(torch_module: Any) -> None:
+    """Expose torch.amp custom decorators for DINOv3 on older CUDA Torch builds."""
+
+    amp = getattr(torch_module, "amp", None)
+    cuda = getattr(torch_module, "cuda", None)
+    cuda_amp = getattr(cuda, "amp", None)
+    if amp is None or cuda_amp is None:
+        return
+    if not hasattr(amp, "custom_fwd") and hasattr(cuda_amp, "custom_fwd"):
+
+        def custom_fwd(fwd: Callable | None = None, *, device_type: str | None = None, cast_inputs: Any = None) -> Any:
+            del device_type
+            return cuda_amp.custom_fwd(fwd, cast_inputs=cast_inputs)
+
+        amp.custom_fwd = custom_fwd
+    if not hasattr(amp, "custom_bwd") and hasattr(cuda_amp, "custom_bwd"):
+
+        def custom_bwd(bwd: Callable | None = None, *, device_type: str | None = None) -> Any:
+            del device_type
+            if bwd is None:
+                return lambda fn: cuda_amp.custom_bwd(fn)
+            return cuda_amp.custom_bwd(bwd)
+
+        amp.custom_bwd = custom_bwd
+
+
+def _ensure_torch_dynamo_accumulated_cache_limit(torch_module: Any) -> None:
+    """Allow DINOv3 to set a newer torch._dynamo cache knob on Torch 2.1."""
+
+    dynamo = getattr(torch_module, "_dynamo", None)
+    config = getattr(dynamo, "config", None)
+    if config is None or hasattr(config, "accumulated_cache_size_limit"):
+        return
+    default_value = getattr(config, "cache_size_limit", 64)
+    config_values = getattr(config, "_config", None)
+    if isinstance(config_values, dict):
+        config_values.setdefault("accumulated_cache_size_limit", default_value)
+    default_values = getattr(config, "_default", None)
+    if isinstance(default_values, dict):
+        default_values.setdefault("accumulated_cache_size_limit", default_value)
+    allowed_keys = getattr(config, "_allowed_keys", None)
+    if isinstance(allowed_keys, set):
+        allowed_keys.add("accumulated_cache_size_limit")
 
 
 def _coerce_person_records(value: Any) -> list[dict[str, Any]]:

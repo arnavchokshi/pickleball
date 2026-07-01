@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
+import math
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
@@ -91,12 +92,15 @@ def build_tracks(
     max_players: int = 4,
     court_margin_m: float = 0.0,
     id_strategy: IdStrategy = "raw_track",
+    role_lock_max_speed_mps: float | None = 90.0,
 ) -> tuple[Tracks, dict[str, int]]:
     _validate_max_players(max_players)
     if court_margin_m < 0.0:
         raise ValueError("court_margin_m must be non-negative")
     if id_strategy not in {"auto", "raw_track", "role_lock"}:
         raise ValueError("id_strategy must be auto, raw_track, or role_lock")
+    if role_lock_max_speed_mps is not None and role_lock_max_speed_mps <= 0.0:
+        raise ValueError("role_lock_max_speed_mps must be positive when provided")
     resolved_id_strategy = _resolve_id_strategy(detections_payload, id_strategy=id_strategy)
     fps = float(detections_payload["fps"])
     frames = detections_payload.get("frames")
@@ -110,6 +114,7 @@ def build_tracks(
             max_players=max_players,
             court_margin_m=court_margin_m,
             requested_id_strategy=id_strategy,
+            role_lock_max_speed_mps=role_lock_max_speed_mps,
         )
 
     by_player: dict[int, list[TrackFrame]] = defaultdict(list)
@@ -128,6 +133,7 @@ def build_tracks(
         "court_margin_m": court_margin_m,
         "id_strategy": resolved_id_strategy,
         "requested_id_strategy": id_strategy,
+        "role_lock_max_speed_mps": role_lock_max_speed_mps,
         "extra_players_dropped": 0,
         "extra_player_frames_dropped": 0,
     }
@@ -209,6 +215,7 @@ def _build_role_locked_tracks(
     max_players: int,
     court_margin_m: float,
     requested_id_strategy: IdStrategy = "role_lock",
+    role_lock_max_speed_mps: float | None = 90.0,
 ) -> tuple[Tracks, dict[str, Any]]:
     counts: dict[str, Any] = {
         "accepted": 0,
@@ -222,10 +229,12 @@ def _build_role_locked_tracks(
         "court_margin_m": court_margin_m,
         "id_strategy": "role_lock",
         "requested_id_strategy": requested_id_strategy,
+        "role_lock_max_speed_mps": role_lock_max_speed_mps,
         "extra_players_dropped": 0,
         "extra_player_frames_dropped": 0,
     }
     by_role: dict[int, list[TrackFrame]] = defaultdict(list)
+    last_by_role: dict[int, tuple[int, list[float]]] = {}
     raw_ids: set[int] = set()
 
     for default_frame_idx, frame_entry in enumerate(frame_entries):
@@ -245,6 +254,15 @@ def _build_role_locked_tracks(
         )
         for role_id, frame_person in assignments:
             person = frame_person.person
+            previous = last_by_role.get(role_id)
+            if previous is not None and _role_update_speed_mps(
+                previous_frame_idx=previous[0],
+                previous_world_xy=previous[1],
+                frame_person=frame_person,
+                fps=fps,
+            ) > (role_lock_max_speed_mps if role_lock_max_speed_mps is not None else math.inf):
+                counts["implausible_step"] += 1
+                continue
             by_role[role_id].append(
                 TrackFrame(
                     t=frame_person.frame_idx / fps,
@@ -253,6 +271,7 @@ def _build_role_locked_tracks(
                     conf=person.confidence,
                 )
             )
+            last_by_role[role_id] = (frame_person.frame_idx, list(person.foot_world_xy))
 
     identities = _role_lock_identities(max_players=max_players)
     players = [
@@ -266,6 +285,23 @@ def _build_role_locked_tracks(
     counts["extra_players_dropped"] = max(0, counts["candidate_players"] - len(players))
     counts["extra_player_frames_dropped"] = max(0, counts["accepted_before_player_cap"] - counts["accepted"])
     return Tracks(schema_version=1, fps=fps, players=players, rally_spans=[]), counts
+
+
+def _role_update_speed_mps(
+    *,
+    previous_frame_idx: int,
+    previous_world_xy: list[float],
+    frame_person: _FramePerson,
+    fps: float,
+) -> float:
+    frame_gap = frame_person.frame_idx - previous_frame_idx
+    if frame_gap <= 0 or fps <= 0.0:
+        return math.inf
+    distance_m = math.hypot(
+        frame_person.person.foot_world_xy[0] - previous_world_xy[0],
+        frame_person.person.foot_world_xy[1] - previous_world_xy[1],
+    )
+    return distance_m / (frame_gap / fps)
 
 
 def _accepted_frame_people(
@@ -527,6 +563,12 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--role-lock-max-speed-mps",
+        type=float,
+        default=90.0,
+        help="Maximum role-lock ground speed before a per-role update is skipped; use 0 to disable.",
+    )
+    parser.add_argument(
         "--max-players",
         type=int,
         choices=(2, 4),
@@ -549,6 +591,7 @@ def main() -> int:
             max_players=args.max_players,
             court_margin_m=args.court_margin_m,
             id_strategy=args.id_strategy,
+            role_lock_max_speed_mps=args.role_lock_max_speed_mps if args.role_lock_max_speed_mps > 0.0 else None,
         )
         _write_tracks(args.out, tracks)
     except Exception as exc:

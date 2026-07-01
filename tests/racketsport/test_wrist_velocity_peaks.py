@@ -83,6 +83,47 @@ def test_wrist_velocity_builder_uses_sam3d_mhr70_semantic_adapter() -> None:
     assert artifact["peaks"][0]["wrist_side"] == "left"
 
 
+def test_wrist_velocity_builder_suppresses_peaks_per_player_and_side() -> None:
+    payload = _skeleton_payload(joint_names=["pelvis", "left_wrist", "right_wrist"])
+    payload["players"].append(
+        {
+            "id": 8,
+            "frames": [
+                {
+                    "t": 0.0,
+                    "joints_world": [[0.0, 0.0, 0.0] for _name in payload["joint_names"]],
+                    "joint_conf": [0.9 for _name in payload["joint_names"]],
+                },
+                {
+                    "t": 0.05,
+                    "joints_world": [[0.0, 0.0, 0.0] for _name in payload["joint_names"]],
+                    "joint_conf": [0.9 for _name in payload["joint_names"]],
+                },
+                {
+                    "t": 0.10,
+                    "joints_world": [[0.0, 0.0, 0.0] for _name in payload["joint_names"]],
+                    "joint_conf": [0.9 for _name in payload["joint_names"]],
+                },
+            ],
+        }
+    )
+    payload["players"][0]["frames"][1]["joints_world"][1] = [0.45, 0.0, 1.0]
+    payload["players"][0]["frames"][2]["joints_world"][1] = [0.50, 0.0, 1.0]
+    payload["players"][0]["frames"][1]["joints_world"][2] = [0.30, 0.0, 1.0]
+    payload["players"][0]["frames"][2]["joints_world"][2] = [0.35, 0.0, 1.0]
+    payload["players"][1]["frames"][1]["joints_world"][1] = [0.70, 0.0, 1.0]
+    payload["players"][1]["frames"][2]["joints_world"][1] = [0.75, 0.0, 1.0]
+
+    artifact = build_wrist_velocity_peaks_from_skeleton(payload, min_speed_mps=4.0, min_separation_s=0.1)
+
+    assert artifact["summary"]["peak_count"] == 3
+    assert {(peak["player_id"], peak["wrist_side"]) for peak in artifact["peaks"]} == {
+        (7, "left"),
+        (7, "right"),
+        (8, "left"),
+    }
+
+
 def test_build_wrist_velocity_peaks_cli_writes_artifact(tmp_path: Path) -> None:
     skeleton = _skeleton_payload(joint_names=["pelvis", "left_wrist"])
     skeleton["players"][0]["frames"][1]["joints_world"][1] = [0.5, 0.0, 1.0]

@@ -1,0 +1,698 @@
+"""WASB-SBDT prediction adapters for schema-valid ball tracks."""
+
+from __future__ import annotations
+
+import csv
+import hashlib
+import json
+import math
+import subprocess
+import sys
+import time
+from collections import defaultdict, deque
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Any, Iterator, Sequence
+
+from .ball_tracknet import ball_frame
+from .schemas import BallTrack
+
+
+WASB_REPO_URL = "https://github.com/nttcom/WASB-SBDT"
+WASB_MODEL_ZOO_URL = "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md"
+WASB_COLUMNS = ("Frame", "Visibility", "X", "Y", "Confidence")
+WASB_CONFIDENCE_SEMANTICS = "WASB heatmap peak value (0..1)"
+STATUS_TESTED = "TESTED-ON-REAL-DATA"
+DEFAULT_WASB_VISIBLE_THRESHOLD = 0.5
+WASB_INPUT_WH = (512, 288)
+WASB_FRAMES_IN = 3
+WASB_FRAMES_OUT = 3
+
+
+def wasb_csv_to_ball_track(
+    csv_path: str | Path,
+    *,
+    fps: float,
+    visible_threshold: float = DEFAULT_WASB_VISIBLE_THRESHOLD,
+) -> dict[str, Any]:
+    """Convert WASB ``Frame,Visibility,X,Y,Confidence`` rows into BallTrack JSON."""
+
+    fps = _require_positive_float(fps, "fps")
+    visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
+    rows = _read_wasb_rows(Path(csv_path))
+    frames = []
+    for row in sorted(rows, key=lambda item: item["frame"]):
+        visible = bool(row["visible"] and row["confidence"] >= visible_threshold)
+        frames.append(
+            ball_frame(
+                t=float(row["frame"]) / fps,
+                xy=[row["x"], row["y"]],
+                conf=float(row["confidence"]),
+                visible=visible,
+                approx=False,
+            )
+        )
+    payload = {"schema_version": 1, "fps": fps, "source": "wasb", "frames": frames, "bounces": []}
+    BallTrack.model_validate(payload)
+    return payload
+
+
+def write_ball_track_from_wasb_predictions(
+    *,
+    predictions_csv: str | Path,
+    fps: float,
+    out: str | Path,
+    metadata_out: str | Path | None = None,
+    source_mode: str = "wasb_csv",
+    runtime: dict[str, Any] | None = None,
+    visible_threshold: float = DEFAULT_WASB_VISIBLE_THRESHOLD,
+) -> dict[str, Any]:
+    """Write ``ball_track.json`` plus WASB run metadata."""
+
+    out_path = Path(out)
+    visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
+    payload = wasb_csv_to_ball_track(predictions_csv, fps=fps, visible_threshold=visible_threshold)
+    _write_json(out_path, payload)
+    visible_count = sum(1 for frame in payload["frames"] if frame["visible"])
+    runtime_payload = dict(runtime or {})
+    _add_runtime_metrics(runtime_payload, processed_frame_count=len(payload["frames"]), fps=float(fps))
+    metadata = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_wasb_ball_run",
+        "status": STATUS_TESTED,
+        "source_mode": source_mode,
+        "predictions_csv": str(predictions_csv),
+        "out": str(out_path),
+        "fps": float(fps),
+        "frame_count": len(payload["frames"]),
+        "visible_frame_count": visible_count,
+        "confidence_semantics": WASB_CONFIDENCE_SEMANTICS,
+        "visible_threshold": visible_threshold,
+        "not_ground_truth": True,
+        "official_repo_url": WASB_REPO_URL,
+        "official_model_zoo_url": WASB_MODEL_ZOO_URL,
+        "runtime": runtime_payload,
+    }
+    if metadata_out is not None:
+        _write_json(Path(metadata_out), metadata)
+    return metadata
+
+
+def run_official_wasb_predict(
+    *,
+    wasb_repo: str | Path,
+    checkpoint: str | Path,
+    video: str | Path,
+    out_csv: str | Path,
+    batch_size: int = 8,
+    visible_threshold: float = DEFAULT_WASB_VISIBLE_THRESHOLD,
+    video_range: tuple[int, int] | list[int] | None = None,
+    max_frames: int | None = None,
+    device: str = "cuda",
+) -> dict[str, Any]:
+    """Run official WASB model code on a video and write per-frame predictions CSV."""
+
+    repo = Path(wasb_repo).resolve()
+    src = repo / "src"
+    if not (src / "models" / "__init__.py").is_file():
+        raise FileNotFoundError(f"missing WASB-SBDT official src/models in: {repo}")
+    if not (src / "detectors" / "postprocessor.py").is_file():
+        raise FileNotFoundError(f"missing WASB-SBDT official detector postprocessor in: {repo}")
+    checkpoint_path = Path(checkpoint).resolve()
+    if not checkpoint_path.is_file():
+        raise FileNotFoundError(f"missing WASB checkpoint: {checkpoint_path}")
+    video_path = Path(video).resolve()
+    if not video_path.is_file():
+        raise FileNotFoundError(f"missing video: {video_path}")
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
+    visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
+    normalized_range = _normalize_video_range(video_range)
+
+    start = time.perf_counter()
+    with _wasb_repo_imports(src):
+        import cv2
+        import numpy as np
+        import torch
+
+        if not hasattr(np, "Inf"):
+            np.Inf = np.inf  # type: ignore[attr-defined]
+
+        if device == "cuda" and not torch.cuda.is_available():
+            raise RuntimeError("WASB official inference requires CUDA but torch.cuda.is_available() is false")
+        torch_device = torch.device(device)
+        cfg = _wasb_cfg(device=device)
+
+        from detectors.postprocessor import TracknetV2Postprocessor
+        from models import build_model
+        from trackers.online import OnlineTracker
+        from utils.image import get_affine_transform
+
+        model = build_model(cfg)
+        checkpoint_payload = torch.load(checkpoint_path, map_location="cpu")
+        state_dict = _checkpoint_state_dict(checkpoint_payload)
+        model.load_state_dict(_strip_module_prefix(state_dict))
+        model = model.to(torch_device)
+        model.eval()
+        postprocessor = TracknetV2Postprocessor(cfg)
+        tracker = OnlineTracker(cfg)
+
+        cap = cv2.VideoCapture(str(video_path))
+        if not cap.isOpened():
+            raise ValueError(f"could not open video: {video_path}")
+        try:
+            source_fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+            if width <= 0 or height <= 0:
+                raise ValueError(f"could not read video dimensions: {video_path}")
+            start_frame, end_frame = _resolve_frame_bounds(
+                fps=source_fps,
+                frame_count=frame_count,
+                video_range=normalized_range,
+                max_frames=max_frames,
+            )
+            if start_frame:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+
+            center = np.array([width / 2.0, height / 2.0], dtype=np.float32)
+            scale = max(height, width) * 1.0
+            trans_input = get_affine_transform(center, scale, 0, list(WASB_INPUT_WH))
+            trans_output_inv = get_affine_transform(center, scale, 0, list(WASB_INPUT_WH), inv=1)
+
+            det_results: dict[int, list[dict[str, Any]]] = defaultdict(list)
+            confidence_results: dict[int, list[float]] = defaultdict(list)
+            pending_tensors: list[Any] = []
+            pending_indices: list[list[int]] = []
+            window: deque[tuple[int, Any]] = deque(maxlen=WASB_FRAMES_IN)
+            processed_windows = 0
+            read_frames = 0
+            frame_index = start_frame
+
+            while frame_index < end_frame:
+                ok, frame_bgr = cap.read()
+                if not ok:
+                    break
+                frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+                window.append((frame_index, frame_rgb))
+                read_frames += 1
+                if len(window) == WASB_FRAMES_IN:
+                    frame_indices = [item[0] for item in window]
+                    frame_images = [item[1] for item in window]
+                    pending_tensors.append(_preprocess_wasb_window(frame_images, trans_input, cv2=cv2, np=np, torch=torch))
+                    pending_indices.append(frame_indices)
+                    if len(pending_tensors) >= batch_size:
+                        processed_windows += _process_wasb_batch(
+                            model=model,
+                            postprocessor=postprocessor,
+                            tensors=pending_tensors,
+                            frame_indices=pending_indices,
+                            affine_inv=trans_output_inv,
+                            det_results=det_results,
+                            confidence_results=confidence_results,
+                            torch=torch,
+                            device=torch_device,
+                        )
+                        pending_tensors = []
+                        pending_indices = []
+                frame_index += 1
+
+            if pending_tensors:
+                processed_windows += _process_wasb_batch(
+                    model=model,
+                    postprocessor=postprocessor,
+                    tensors=pending_tensors,
+                    frame_indices=pending_indices,
+                    affine_inv=trans_output_inv,
+                    det_results=det_results,
+                    confidence_results=confidence_results,
+                    torch=torch,
+                    device=torch_device,
+                )
+        finally:
+            cap.release()
+
+        if processed_windows <= 0:
+            raise ValueError(f"WASB inference needs at least {WASB_FRAMES_IN} readable frames: {video_path}")
+
+        rows = _track_wasb_rows(
+            tracker=tracker,
+            det_results=det_results,
+            confidence_results=confidence_results,
+            visible_threshold=visible_threshold,
+        )
+
+    out_path = Path(out_csv)
+    _write_wasb_csv(out_path, rows)
+    wall_seconds = time.perf_counter() - start
+    return {
+        "wasb_repo": str(repo),
+        "wasb_repo_commit": _git_commit(repo),
+        "wasb_checkpoint": checkpoint_metadata(checkpoint_path),
+        "video": str(video_path),
+        "source_video_fps": source_fps,
+        "source_video_frame_count": frame_count,
+        "source_video_size": [width, height],
+        "processed_frame_count": len(rows),
+        "processed_window_count": processed_windows,
+        "read_frame_count": read_frames,
+        "video_range_seconds": list(normalized_range) if normalized_range is not None else None,
+        "max_frames": max_frames,
+        "batch_size": int(batch_size),
+        "device": device,
+        "wall_seconds": wall_seconds,
+    }
+
+
+def run_wasb_or_convert(
+    *,
+    out: str | Path,
+    fps: float,
+    metadata_out: str | Path | None = None,
+    predictions_csv: str | Path | None = None,
+    video: str | Path | None = None,
+    checkpoint: str | Path | None = None,
+    wasb_repo: str | Path | None = None,
+    prediction_csv_out: str | Path | None = None,
+    batch_size: int = 8,
+    visible_threshold: float = DEFAULT_WASB_VISIBLE_THRESHOLD,
+    video_range: tuple[int, int] | list[int] | None = None,
+    max_frames: int | None = None,
+    device: str = "cuda",
+) -> dict[str, Any]:
+    """CLI-oriented entrypoint that converts CSV or runs official WASB-SBDT."""
+
+    visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
+    if predictions_csv is not None:
+        return write_ball_track_from_wasb_predictions(
+            predictions_csv=predictions_csv,
+            fps=fps,
+            out=out,
+            metadata_out=metadata_out,
+            source_mode="wasb_csv",
+            visible_threshold=visible_threshold,
+        )
+
+    if video is None or checkpoint is None or wasb_repo is None:
+        raise ValueError("either --predictions-csv or --video/--checkpoint/--wasb-repo is required")
+    prediction_csv_path = Path(prediction_csv_out) if prediction_csv_out is not None else _persistent_prediction_csv_path(out)
+    runtime = run_official_wasb_predict(
+        wasb_repo=wasb_repo,
+        checkpoint=checkpoint,
+        video=video,
+        out_csv=prediction_csv_path,
+        batch_size=batch_size,
+        visible_threshold=visible_threshold,
+        video_range=video_range,
+        max_frames=max_frames,
+        device=device,
+    )
+    return write_ball_track_from_wasb_predictions(
+        predictions_csv=prediction_csv_path,
+        fps=fps,
+        out=out,
+        metadata_out=metadata_out,
+        source_mode="wasb_predict",
+        runtime=runtime,
+        visible_threshold=visible_threshold,
+    )
+
+
+def checkpoint_metadata(path: str | Path) -> dict[str, Any]:
+    checkpoint = Path(path)
+    if not checkpoint.is_file():
+        raise FileNotFoundError(f"missing checkpoint: {checkpoint}")
+    return {"path": str(checkpoint), "sha256": _sha256(checkpoint)}
+
+
+def _read_wasb_rows(csv_path: Path) -> list[dict[str, Any]]:
+    if not csv_path.is_file():
+        raise FileNotFoundError(f"missing WASB predictions CSV: {csv_path}")
+    with csv_path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        missing = [column for column in WASB_COLUMNS if column not in (reader.fieldnames or [])]
+        if missing:
+            raise ValueError(f"missing WASB column(s): {', '.join(missing)}")
+        rows = []
+        for index, row in enumerate(reader):
+            rows.append(
+                {
+                    "frame": _parse_nonnegative_int(row["Frame"], f"Frame/{index}"),
+                    "visible": _parse_visibility(row["Visibility"], f"Visibility/{index}"),
+                    "x": _parse_float(row["X"], f"X/{index}"),
+                    "y": _parse_float(row["Y"], f"Y/{index}"),
+                    "confidence": _parse_confidence(row["Confidence"], f"Confidence/{index}"),
+                }
+            )
+    if not rows:
+        raise ValueError(f"WASB predictions CSV is empty: {csv_path}")
+    return rows
+
+
+def _preprocess_wasb_window(frames_rgb: Sequence[Any], trans_input: Any, *, cv2: Any, np: Any, torch: Any) -> Any:
+    tensors = []
+    mean = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
+    std = np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
+    for frame_rgb in frames_rgb:
+        warped = cv2.warpAffine(frame_rgb, trans_input, WASB_INPUT_WH, flags=cv2.INTER_LINEAR)
+        array = warped.astype(np.float32) / 255.0
+        array = (array - mean) / std
+        tensors.append(torch.from_numpy(array.transpose(2, 0, 1)).float())
+    return torch.cat(tensors, dim=0)
+
+
+def _process_wasb_batch(
+    *,
+    model: Any,
+    postprocessor: Any,
+    tensors: list[Any],
+    frame_indices: list[list[int]],
+    affine_inv: Any,
+    det_results: dict[int, list[dict[str, Any]]],
+    confidence_results: dict[int, list[float]],
+    torch: Any,
+    device: Any,
+) -> int:
+    batch = torch.stack(tensors, dim=0).to(device)
+    affine = torch.as_tensor(affine_inv, dtype=torch.float32).unsqueeze(0).repeat(len(tensors), 1, 1)
+    with torch.no_grad():
+        logits_by_scale = model(batch)
+    logits = logits_by_scale[0]
+    heatmaps = torch.sigmoid(logits).detach().cpu().numpy()
+    pp_results = postprocessor.run({0: logits.detach().clone()}, {0: affine})
+    for batch_index, indices in enumerate(frame_indices):
+        for output_index, frame_index in enumerate(indices):
+            frame_heatmap = heatmaps[batch_index, output_index]
+            confidence_results[int(frame_index)].append(float(frame_heatmap.max()))
+            scale_results = pp_results[batch_index][output_index][0]
+            for xy, score in zip(scale_results["xys"], scale_results["scores"]):
+                det_results[int(frame_index)].append({"xy": xy, "score": float(score)})
+    return len(tensors)
+
+
+def _track_wasb_rows(
+    *,
+    tracker: Any,
+    det_results: dict[int, list[dict[str, Any]]],
+    confidence_results: dict[int, list[float]],
+    visible_threshold: float,
+) -> list[dict[str, Any]]:
+    tracker.refresh()
+    rows = []
+    for frame_index in sorted(confidence_results):
+        result = tracker.update(det_results.get(frame_index, []))
+        confidence = max(confidence_results.get(frame_index, [0.0]))
+        x = float(result["x"])
+        y = float(result["y"])
+        visible = bool(result["visi"] and math.isfinite(x) and math.isfinite(y) and confidence >= visible_threshold)
+        rows.append(
+            {
+                "Frame": int(frame_index),
+                "Visibility": int(visible),
+                "X": x if visible else 0.0,
+                "Y": y if visible else 0.0,
+                "Confidence": confidence,
+            }
+        )
+    return rows
+
+
+def _write_wasb_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        raise ValueError("WASB inference produced no rows")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(WASB_COLUMNS))
+        writer.writeheader()
+        for row in sorted(rows, key=lambda item: int(item["Frame"])):
+            writer.writerow(
+                {
+                    "Frame": int(row["Frame"]),
+                    "Visibility": int(row["Visibility"]),
+                    "X": f"{float(row['X']):.6f}",
+                    "Y": f"{float(row['Y']):.6f}",
+                    "Confidence": f"{float(row['Confidence']):.8f}",
+                }
+            )
+
+
+def _wasb_cfg(*, device: str) -> Any:
+    return _attrdict(
+        {
+            "model": {
+                "name": "hrnet",
+                "frames_in": WASB_FRAMES_IN,
+                "frames_out": WASB_FRAMES_OUT,
+                "inp_height": WASB_INPUT_WH[1],
+                "inp_width": WASB_INPUT_WH[0],
+                "out_height": WASB_INPUT_WH[1],
+                "out_width": WASB_INPUT_WH[0],
+                "rgb_diff": False,
+                "out_scales": [0],
+                "MODEL": {
+                    "EXTRA": {
+                        "FINAL_CONV_KERNEL": 1,
+                        "PRETRAINED_LAYERS": ["*"],
+                        "STEM": {"INPLANES": 64, "STRIDES": [1, 1]},
+                        "STAGE1": {
+                            "NUM_MODULES": 1,
+                            "NUM_BRANCHES": 1,
+                            "BLOCK": "BOTTLENECK",
+                            "NUM_BLOCKS": [1],
+                            "NUM_CHANNELS": [32],
+                            "FUSE_METHOD": "SUM",
+                        },
+                        "STAGE2": {
+                            "NUM_MODULES": 1,
+                            "NUM_BRANCHES": 2,
+                            "BLOCK": "BASIC",
+                            "NUM_BLOCKS": [2, 2],
+                            "NUM_CHANNELS": [16, 32],
+                            "FUSE_METHOD": "SUM",
+                        },
+                        "STAGE3": {
+                            "NUM_MODULES": 1,
+                            "NUM_BRANCHES": 3,
+                            "BLOCK": "BASIC",
+                            "NUM_BLOCKS": [2, 2, 2],
+                            "NUM_CHANNELS": [16, 32, 64],
+                            "FUSE_METHOD": "SUM",
+                        },
+                        "STAGE4": {
+                            "NUM_MODULES": 1,
+                            "NUM_BRANCHES": 4,
+                            "BLOCK": "BASIC",
+                            "NUM_BLOCKS": [2, 2, 2, 2],
+                            "NUM_CHANNELS": [16, 32, 64, 128],
+                            "FUSE_METHOD": "SUM",
+                        },
+                        "DECONV": {
+                            "NUM_DECONVS": 0,
+                            "KERNEL_SIZE": [],
+                            "NUM_BASIC_BLOCKS": 2,
+                        },
+                    },
+                    "INIT_WEIGHTS": True,
+                },
+            },
+            "detector": {
+                "name": "tracknetv2",
+                "model_path": None,
+                "step": WASB_FRAMES_IN,
+                "postprocessor": {
+                    "name": "tracknetv2",
+                    "score_threshold": 0.5,
+                    "scales": [0],
+                    "blob_det_method": "concomp",
+                    "use_hm_weight": True,
+                },
+            },
+            "dataloader": {"heatmap": {"sigmas": [2.5]}},
+            "runner": {"device": device, "gpus": [0]},
+            "tracker": {"name": "online", "max_disp": 300},
+        }
+    )
+
+
+class _AttrDict(dict):
+    def __getattr__(self, name: str) -> Any:
+        try:
+            return self[name]
+        except KeyError as exc:
+            raise AttributeError(name) from exc
+
+
+def _attrdict(value: Any) -> Any:
+    if isinstance(value, dict):
+        return _AttrDict({key: _attrdict(child) for key, child in value.items()})
+    if isinstance(value, list):
+        return [_attrdict(child) for child in value]
+    return value
+
+
+def _checkpoint_state_dict(checkpoint_payload: Any) -> dict[str, Any]:
+    if not isinstance(checkpoint_payload, dict):
+        raise ValueError("WASB checkpoint must be a dictionary")
+    if "model_state_dict" in checkpoint_payload:
+        return checkpoint_payload["model_state_dict"]
+    if "state_dict" in checkpoint_payload:
+        return checkpoint_payload["state_dict"]
+    raise ValueError("WASB checkpoint missing model_state_dict")
+
+
+def _strip_module_prefix(state_dict: dict[str, Any]) -> dict[str, Any]:
+    if not any(key.startswith("module.") for key in state_dict):
+        return state_dict
+    return {key.removeprefix("module."): value for key, value in state_dict.items()}
+
+
+def _resolve_frame_bounds(
+    *,
+    fps: float,
+    frame_count: int,
+    video_range: tuple[int, int] | None,
+    max_frames: int | None,
+) -> tuple[int, int]:
+    if video_range is None:
+        start_frame = 0
+        end_frame = frame_count if frame_count > 0 else 10**12
+    else:
+        if fps <= 0:
+            raise ValueError("video_range requires readable source FPS")
+        start_frame = int(round(video_range[0] * fps))
+        end_frame = int(round(video_range[1] * fps))
+        if frame_count > 0:
+            end_frame = min(end_frame, frame_count)
+    if max_frames is not None:
+        if max_frames < WASB_FRAMES_IN:
+            raise ValueError(f"max_frames must be at least {WASB_FRAMES_IN}")
+        end_frame = min(end_frame, start_frame + int(max_frames))
+    if end_frame <= start_frame:
+        raise ValueError("resolved video frame range is empty")
+    return start_frame, end_frame
+
+
+def _normalize_video_range(video_range: tuple[int, int] | list[int] | None) -> tuple[int, int] | None:
+    if video_range is None:
+        return None
+    if len(video_range) != 2:
+        raise ValueError("video_range must contain START_S and END_S")
+    start, end = int(video_range[0]), int(video_range[1])
+    if start < 0 or end <= start:
+        raise ValueError("video_range must satisfy 0 <= START_S < END_S")
+    return start, end
+
+
+def _parse_visibility(value: object, name: str) -> bool:
+    number = _parse_float(value, name)
+    if number not in {0.0, 1.0}:
+        raise ValueError(f"{name} must be 0 or 1")
+    return number == 1.0
+
+
+def _parse_confidence(value: object, name: str) -> float:
+    number = _parse_float(value, name)
+    if not 0.0 <= number <= 1.0:
+        raise ValueError(f"{name} must be between 0.0 and 1.0")
+    return number
+
+
+def _parse_nonnegative_int(value: object, name: str) -> int:
+    number = _parse_float(value, name)
+    if int(number) != number or number < 0:
+        raise ValueError(f"{name} must be a non-negative integer")
+    return int(number)
+
+
+def _require_positive_float(value: object, name: str) -> float:
+    number = _parse_float(value, name)
+    if number <= 0:
+        raise ValueError(f"{name} must be positive")
+    return number
+
+
+def _parse_float(value: object, name: str) -> float:
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+    if not math.isfinite(number):
+        raise ValueError(f"{name} must be finite")
+    return number
+
+
+def _persistent_prediction_csv_path(out: str | Path) -> Path:
+    out_path = Path(out)
+    return out_path.with_name(f"{out_path.stem}_wasb_predictions.csv")
+
+
+def _add_runtime_metrics(runtime: dict[str, Any], *, processed_frame_count: int, fps: float) -> None:
+    wall = runtime.get("wall_seconds")
+    if not isinstance(wall, (int, float)) or wall <= 0:
+        runtime["effective_fps"] = None
+        runtime["realtime_factor"] = None
+        return
+    effective_fps = int(processed_frame_count) / float(wall)
+    runtime["effective_fps"] = effective_fps
+    runtime["realtime_factor"] = effective_fps / float(fps)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _git_commit(repo: Path) -> str | None:
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return completed.stdout.strip() or None
+
+
+def _write_json(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+@contextmanager
+def _wasb_repo_imports(src: Path) -> Iterator[None]:
+    src_text = str(src)
+    sys.path.insert(0, src_text)
+    try:
+        yield
+    finally:
+        try:
+            sys.path.remove(src_text)
+        except ValueError:
+            pass
+        for name, module in list(sys.modules.items()):
+            module_file = getattr(module, "__file__", None)
+            if not module_file:
+                continue
+            try:
+                module_path = Path(module_file).resolve()
+            except OSError:
+                continue
+            if module_path.is_relative_to(src):
+                sys.modules.pop(name, None)
+
+
+__all__ = [
+    "DEFAULT_WASB_VISIBLE_THRESHOLD",
+    "WASB_CONFIDENCE_SEMANTICS",
+    "checkpoint_metadata",
+    "run_official_wasb_predict",
+    "run_wasb_or_convert",
+    "wasb_csv_to_ball_track",
+    "write_ball_track_from_wasb_predictions",
+]

@@ -1,6 +1,6 @@
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { BufferAttribute, BufferGeometry, Color } from "three";
+import { BufferAttribute, BufferGeometry, Color, DoubleSide } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -12,13 +12,17 @@ import {
   frameForTime,
   labelOverlayForTime,
   labelViewBox,
+  parseBodyMesh,
   parseContactWindows,
   parseLabelOverlayPayload,
   parsePhysicsRefinement,
   parseViewerManifest,
   parseVirtualWorld,
   playerCoverageStats,
+  solidBodyMeshFramesForTime,
   startTimeFromSearch,
+  type ActiveBodyMeshFrame,
+  type BodyMesh,
   type ContactWindows,
   type LabelOverlayPayload,
   type PhysicsRefinement,
@@ -97,6 +101,31 @@ export function manifestUrlFromSearch(search: string): string | null {
   return url && url.trim() ? url : DEFAULT_REPLAY_MANIFEST_URL;
 }
 
+export function bodyMeshOpacityFromBlendWeight(frame: Pick<ActiveBodyMeshFrame["frame"], "blend_weight">): number {
+  return Math.max(0, Math.min(1, frame.blend_weight)) * 0.68;
+}
+
+export function contactPlayerIdsForViewer(
+  activeContactPlayerIds: Set<number>,
+  activeBodyMeshes: ActiveBodyMeshFrame[],
+): Set<number> {
+  const playerIds = new Set(activeContactPlayerIds);
+  for (const mesh of activeBodyMeshes) {
+    playerIds.add(mesh.playerId);
+  }
+  return playerIds;
+}
+
+export function contactReadoutText(
+  activeContactPlayerIds: Set<number>,
+  activeBodyMeshes: ActiveBodyMeshFrame[],
+): string {
+  const playerIds = contactPlayerIdsForViewer(activeContactPlayerIds, activeBodyMeshes);
+  return playerIds.size
+    ? `3D contact: ${Array.from(playerIds).map((id) => `p${id}`).join(", ")}`
+    : "3D contact: none";
+}
+
 export default function App() {
   const initialTime = useMemo(() => startTimeFromSearch(window.location.search), []);
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
@@ -104,6 +133,7 @@ export default function App() {
   const [labelOverlay, setLabelOverlay] = useState<LabelOverlayPayload>(() => parseLabelOverlayPayload(null));
   const [physics, setPhysics] = useState<PhysicsRefinement | null>(null);
   const [contactWindows, setContactWindows] = useState<ContactWindows | null>(null);
+  const [bodyMesh, setBodyMesh] = useState<BodyMesh | null>(null);
   const [replayScene, setReplayScene] = useState<ReplayScene | null>(null);
   const [currentTime, setCurrentTime] = useState(initialTime);
   const [videoDuration, setVideoDuration] = useState(0);
@@ -116,6 +146,7 @@ export default function App() {
     const manifestUrl = manifestUrlFromSearch(window.location.search);
     if (manifestUrl === null) {
       setManifest(null);
+      setBodyMesh(null);
       setLoadError(null);
       return;
     }
@@ -133,6 +164,9 @@ export default function App() {
         const contactPayload = manifestPayload.contact_windows_url
           ? parseContactWindows(await fetchJson(manifestPayload.contact_windows_url))
           : null;
+        const bodyMeshPayload = manifestPayload.body_mesh_url
+          ? parseBodyMesh(await fetchJson(manifestPayload.body_mesh_url))
+          : null;
         const replayScenePayload = manifestPayload.replay_scene_url
           ? parseReplayScene(await fetchJson(manifestPayload.replay_scene_url))
           : null;
@@ -142,6 +176,7 @@ export default function App() {
         setLabelOverlay(parseLabelOverlayPayload(labelPayload));
         setPhysics(physicsPayload);
         setContactWindows(contactPayload);
+        setBodyMesh(bodyMeshPayload);
         setReplayScene(replayScenePayload);
         setLoadError(null);
       } catch (error) {
@@ -192,12 +227,18 @@ export default function App() {
     () => activeBallContactPlayerIds(world, contactWindows, currentTime),
     [world, contactWindows, currentTime],
   );
+  const activeBodyMeshes = useMemo(
+    () => solidBodyMeshFramesForTime(bodyMesh, contactWindows, currentTime),
+    [bodyMesh, contactWindows, currentTime],
+  );
+  const viewerContactPlayerIds = useMemo(
+    () => contactPlayerIdsForViewer(activeContactPlayerIds, activeBodyMeshes),
+    [activeContactPlayerIds, activeBodyMeshes],
+  );
   const viewBox = useMemo(() => labelViewBox(labelOverlay), [labelOverlay]);
   const activeReplayPoint = useMemo(() => (replayScene ? activeReplayPointForTime(replayScene, currentTime) : undefined), [replayScene, currentTime]);
   const coverageGapActive = coverage.lastTime !== null && currentTime > coverage.lastTime + Math.max(0.12, 1 / (world.fps || 30));
-  const contactReadout = activeContactPlayerIds.size
-    ? `3D contact: ${Array.from(activeContactPlayerIds).map((id) => `p${id}`).join(", ")}`
-    : "3D contact: none";
+  const contactReadout = contactReadoutText(activeContactPlayerIds, activeBodyMeshes);
   const ballReadout = ballRenderText(ballRenderInfo.mode);
 
   const syncVideoTime = (video: HTMLVideoElement) => {
@@ -221,9 +262,14 @@ export default function App() {
   return (
     <main className="viewer-shell" aria-label="Replay viewer">
       <header className="viewer-header">
-        <div>
-          <p className="eyebrow">Pickleball Main Review UI</p>
-          <h1>{manifest?.clip ?? "Replay Review"}</h1>
+        <div className="viewer-brand">
+          <div className="brand-mark" aria-hidden="true">
+            <span />
+          </div>
+          <div>
+            <p className="eyebrow">Court intelligence</p>
+            <h1>{manifest?.clip ?? "Replay Review"}</h1>
+          </div>
         </div>
         <div className="status-grid">
           <Metric label="Players" value={stats.players} />
@@ -294,13 +340,14 @@ export default function App() {
             <CourtLines world={world} />
             <NetAssembly world={world} />
             <ReplayGlbLayer replayScene={replayScene} replaySceneUrl={manifest?.replay_scene_url ?? null} currentTime={currentTime} />
-            <Players world={world} currentTime={currentTime} activeContactPlayerIds={activeContactPlayerIds} />
+            <Players world={world} currentTime={currentTime} activeContactPlayerIds={viewerContactPlayerIds} />
+            <SolidBodyMeshes meshes={activeBodyMeshes} />
             <Ball world={world} currentTime={currentTime} />
           </Canvas>
           {coverageGapActive ? <div className="world-warning">No player artifact coverage after {coverage.lastTime?.toFixed(2)}s</div> : null}
           <div className="scene-legend">
             <span><i className="swatch floor" /> floor</span>
-            <span><i className="swatch mesh" /> BODY verts</span>
+            <span><i className="swatch mesh" /> BODY mesh</span>
             <span><i className="swatch joints" /> BODY joints</span>
             <span><i className="swatch ball" /> ball</span>
           </div>
@@ -497,6 +544,29 @@ function Player({
   );
 }
 
+function SolidBodyMeshes({ meshes }: { meshes: ActiveBodyMeshFrame[] }) {
+  return (
+    <>
+      {meshes.map(({ playerId, frame }) => (
+        <SolidBodyMesh key={`${playerId}-${frame.frame_idx}`} frame={frame} />
+      ))}
+    </>
+  );
+}
+
+function SolidBodyMesh({ frame }: { frame: ActiveBodyMeshFrame["frame"] }) {
+  const geometry = useMemo(
+    () => geometryFromIndexedMesh(frame.mesh_vertices_world, frame.mesh_faces),
+    [frame.mesh_faces, frame.mesh_vertices_world],
+  );
+  const opacity = bodyMeshOpacityFromBlendWeight(frame);
+  return (
+    <mesh geometry={geometry} renderOrder={20}>
+      <meshStandardMaterial color="#b4f2bf" emissive="#102d18" roughness={0.58} metalness={0.02} transparent opacity={opacity} side={DoubleSide} depthWrite={false} />
+    </mesh>
+  );
+}
+
 function Ball({ world, currentTime }: { world: VirtualWorld; currentTime: number }) {
   const info = ballRenderInfoForTime(world, currentTime);
   if (!info.frame?.world_xyz || !info.render3d) return null;
@@ -588,6 +658,13 @@ function geometryFromPolylineSegments(points: Vec3[]) {
     segments.push(points[index - 1], points[index]);
   }
   return geometryFromPoints(segments);
+}
+
+function geometryFromIndexedMesh(points: Vec3[], faces: Array<[number, number, number]>) {
+  const geometry = geometryFromPoints(points);
+  geometry.setIndex(faces.flat());
+  geometry.computeVertexNormals();
+  return geometry;
 }
 
 function courtBounds(world: VirtualWorld) {

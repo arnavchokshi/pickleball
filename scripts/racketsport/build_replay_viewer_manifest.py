@@ -24,6 +24,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--virtual-world", type=Path, required=True, help="virtual_world.json path.")
     parser.add_argument("--player-labels", type=Path, help="Optional labels/players.json box overlay.")
     parser.add_argument("--replay-scene", type=Path, help="Optional replay_scene.json path.")
+    parser.add_argument("--body-mesh", type=Path, help="Optional body_mesh.json path.")
     parser.add_argument("--physics-refinement", type=Path, help="Optional physics_refinement.json path.")
     parser.add_argument("--contact-windows", type=Path, help="Optional contact_windows.json path.")
     parser.add_argument(
@@ -49,6 +50,7 @@ def main(argv: list[str] | None = None) -> int:
             virtual_world_path=args.virtual_world,
             player_labels_path=args.player_labels,
             replay_scene_path=args.replay_scene,
+            body_mesh_path=args.body_mesh,
             physics_refinement_path=args.physics_refinement,
             contact_windows_path=args.contact_windows,
             annotation_sources=args.annotation_source,

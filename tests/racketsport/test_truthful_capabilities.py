@@ -74,6 +74,138 @@ def test_build_checklist_demotes_model_and_algorithm_scaffolds() -> None:
     assert "exact model/variant/weight is actually invoked through a registered `StageRunner`" in text
 
 
+def test_build_checklist_does_not_repeat_superseded_ball_hard_negative_gap() -> None:
+    text = (ROOT / "BUILD_CHECKLIST.md").read_text(encoding="utf-8")
+
+    assert "local dataset builders do not consume the hard-negative plan" not in text
+    assert "hard-negative materializer" in text
+    assert "diagnostic-only rejected" in text
+
+
+def test_build_checklist_does_not_repeat_superseded_trk_embedding_consumer_gap() -> None:
+    text = (ROOT / "BUILD_CHECKLIST.md").read_text(encoding="utf-8")
+
+    assert "no current source-selection command consumes them" not in text
+    assert "selector/CLI now consumes" in text
+    assert "runs/phase2/trk_embedding_source_selection_20260630T223103Z/" in text
+
+
+def test_ball_local_search_postprocess_rejection_is_documented() -> None:
+    checklist_text = (ROOT / "BUILD_CHECKLIST.md").read_text(encoding="utf-8")
+    capabilities_text = (ROOT / "CAPABILITIES.md").read_text(encoding="utf-8")
+
+    for text in (checklist_text, capabilities_text):
+        assert "runs/ball_local_search_postprocess_20260630T225735Z/" in text
+        assert "dense local-search postprocess regresses to F1@20 0.487" in text
+        assert "hard-negative local-search postprocess regresses to F1@20 0.502" in text
+        assert "local-search postprocess is diagnostic-only and rejected" in text
+
+
+def test_ball_physics3d_stage_hook_is_documented_without_promotion() -> None:
+    checklist_text = (ROOT / "BUILD_CHECKLIST.md").read_text(encoding="utf-8")
+    capabilities_text = (ROOT / "CAPABILITIES.md").read_text(encoding="utf-8")
+
+    for text in (checklist_text, capabilities_text):
+        assert "`BallStageRunner(ball_physics3d=True)`" in text
+        assert "`ball_physics3d_summary.json`" in text
+        assert "insufficient_world_xyz_samples" in text
+        assert "sample_count=0" in text
+        assert "not a BALL/PHYSICS verification gate" in text
+
+
+def test_active_ball_docs_qualify_physics_targets_and_historical_benchmarks() -> None:
+    accuracy_text = (ROOT / "ACCURACY_AND_TRAINING.md").read_text(encoding="utf-8")
+    phases_text = (ROOT / "IMPLEMENTATION_PHASES.md").read_text(encoding="utf-8")
+    runbook_text = (ROOT / "docs" / "racketsport" / "prototype_gate_h100_v2_usage.md").read_text(encoding="utf-8")
+    tech_text = (ROOT / "TECH_STACK.md").read_text(encoding="utf-8")
+    wave4_text = (
+        ROOT / "runs" / "manager_goal_continuation_20260630_wave4" / "MANAGER_GOAL_CONTINUATION_WAVE4_BLOCKER_ADDENDUM.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Target, not current evidence: the current repo has not proven this FP reduction" in accuracy_text
+    assert "Current implemented subset:" in phases_text
+    assert "`BallStageRunner(ball_physics3d=True)`" in phases_text
+    assert "historical pre-A100 CVAT ball benchmark" in runbook_text
+    assert "current full-CVAT A100 rerun evaluates all 1524 visible labels" in runbook_text
+    assert "manager_goal_continuation_wave4_blocker_addendum.json" in wave4_text
+
+
+def test_active_body_docs_reflect_latest_reset_bound_bboxscaled_diagnostics_without_promotion() -> None:
+    checklist_text = (ROOT / "BUILD_CHECKLIST.md").read_text(encoding="utf-8")
+    capabilities_text = (ROOT / "CAPABILITIES.md").read_text(encoding="utf-8")
+    phases_text = (ROOT / "IMPLEMENTATION_PHASES.md").read_text(encoding="utf-8")
+    runbook_text = (ROOT / "docs" / "racketsport" / "prototype_gate_h100_v2_usage.md").read_text(encoding="utf-8")
+    tech_text = (ROOT / "TECH_STACK.md").read_text(encoding="utf-8")
+    wave4_text = (
+        ROOT / "runs" / "manager_goal_continuation_20260630_wave4" / "MANAGER_GOAL_CONTINUATION_WAVE4_BLOCKER_ADDENDUM.md"
+    ).read_text(encoding="utf-8")
+
+    required = (
+        "a100_body_video_smoke_burlington_bboxscaled_resetcap075_runtime_20260701T001500Z",
+        "a100_body_video_smoke_wolverine_bboxscaled_resetcap075_runtime_20260701T002500Z",
+        "0.974265",
+        "0.964497",
+        "0 selected overlay alignment failures",
+        "max track-anchor residual",
+        "missing_world_mpjpe_gate",
+    )
+    for text in (checklist_text, capabilities_text, phases_text, runbook_text, wave4_text):
+        for phrase in required:
+            assert phrase in text
+        assert any(
+            phrase in text
+            for phrase in (
+                "no BODY promotion",
+                "not BODY promotion",
+                "not BODY verification",
+                "does not promote BODY",
+                "diagnostic/review evidence, not promotion",
+                "before promotion",
+                "before using diagnostic BODY runs for canonical promotion",
+            )
+        )
+
+    for text in (checklist_text, capabilities_text, phases_text, runbook_text):
+        assert "body_gate_report_resetcap075.json" in text
+        assert "body_world_label_packet.json" in text
+        assert "body_joint_quality_from_packet.json" in text
+        assert "body_joint_overlay_warning_review_required" in text
+        assert "body_world_label_finalization_blocked" in text
+        assert "packet quality" in text.lower()
+        assert "compact" in text
+        assert "blocked_finalization" in text
+
+    for text in (checklist_text, capabilities_text, phases_text, runbook_text, tech_text):
+        assert "BODY label review" in text or "body_label_review" in text
+        assert "27 / 20 selected" in text or "27 Burlington / 20 Wolverine selected" in text
+        assert "0 accepted" in text
+        assert "selected_samples_have_overlay_warnings" in text or "selected overlay-warning samples" in text
+
+    for text in (checklist_text, capabilities_text):
+        assert "warning_samples" in text
+        assert "frame_000047_player_2" in text
+        assert "competing_player_warning_count" in text
+        assert "not a proven wrong-track assignment" in text
+
+
+def test_active_handoff_docs_do_not_repeat_superseded_ball_and_body_next_steps() -> None:
+    wave4_text = (
+        ROOT / "runs" / "manager_goal_continuation_20260630_wave4" / "MANAGER_GOAL_CONTINUATION_WAVE4_BLOCKER_ADDENDUM.md"
+    ).read_text(encoding="utf-8")
+    runbook_text = (ROOT / "docs" / "racketsport" / "prototype_gate_h100_v2_usage.md").read_text(encoding="utf-8")
+    capabilities_text = (ROOT / "CAPABILITIES.md").read_text(encoding="utf-8")
+
+    for text in (wave4_text, runbook_text):
+        assert "Add a hard-negative materializer first" not in text
+        assert "existing local scripts do not consume the hard-negative plan" not in text
+        assert "hard-negative-only and local-search postprocess paths are rejected" in text
+
+    assert "Current synced A100 reset-bound bbox-scaled BODY diagnostics produced review-only Burlington/Wolverine outputs" in wave4_text
+    assert "0 selected overlay alignment failures" in wave4_text
+    assert "selected overlays still fail alignment" not in wave4_text
+    assert "false by default; true only when explicitly configured with TrackNetV3/TOTNet runtime paths" in capabilities_text
+
+
 def test_capabilities_matrix_records_truth_columns_and_current_spine_limit() -> None:
     capabilities_path = ROOT / "CAPABILITIES.md"
     assert capabilities_path.is_file()
@@ -84,9 +216,10 @@ def test_capabilities_matrix_records_truth_columns_and_current_spine_limit() -> 
 
     rows = _capability_rows(text)
     assert {"calibration", "tracking", "body", "ball", "racket", "metrics", "replay", "e2e"}.issubset(rows)
-    assert rows["tracking"]["actually invoked?"] == (
-        "real YOLO26m BoT-SORT-ReID runner is registered; precomputed detections remain explicit manual mode"
-    )
+    assert "real YOLO26m BoT-SORT-ReID runner is registered" in rows["tracking"]["actually invoked?"]
+    assert "precomputed detections remain explicit manual mode" in rows["tracking"]["actually invoked?"]
+    assert "consumed by a scored weak-cost diagnostic selector" in rows["tracking"]["actually invoked?"]
+    assert "no candidate passes TRK gates" in rows["tracking"]["actually invoked?"]
     assert rows["tracking"]["wired into spine?"] == "yes, default real runner plus explicit precomputed runner"
     assert "scheduled H100 BODY spine runs passed on Burlington, Wolverine, and Indoor" in rows["body"]["actually invoked?"]
     assert "registered `BodyStageRunner` writes BODY contracts with world joints and mesh vertices only from runtime outputs" in rows["body"][

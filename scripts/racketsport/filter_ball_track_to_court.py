@@ -19,6 +19,12 @@ def main() -> int:
     parser.add_argument("--calibration", type=Path, required=True, help="Input court_calibration.json path.")
     parser.add_argument("--target-size", type=int, nargs=2, metavar=("WIDTH", "HEIGHT"), default=None)
     parser.add_argument("--margin-px", type=float, default=80.0, help="Pixel margin around the target court polygon.")
+    parser.add_argument(
+        "--margin-m",
+        type=float,
+        default=None,
+        help="Metric margin around regulation court in meters. Overrides --margin-px when set; M2 spec default is 0.5.",
+    )
     parser.add_argument("--out", type=Path, required=True, help="Output filtered ball_track.json path.")
     parser.add_argument("--summary-out", type=Path, required=True, help="Output filter summary JSON path.")
     args = parser.parse_args()
@@ -31,6 +37,7 @@ def main() -> int:
             summary_path=args.summary_out,
             target_size=tuple(args.target_size) if args.target_size is not None else None,
             margin_px=args.margin_px,
+            margin_m=args.margin_m,
         )
     except Exception as exc:
         print(str(exc), file=sys.stderr)

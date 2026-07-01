@@ -73,6 +73,22 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
         },
     )
     contacts = _write_json(run_dir / "contact_windows.json", {"schema_version": 1, "events": []})
+    body_mesh = _write_json(
+        run_dir / "body_mesh.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_mesh",
+            "clip": "clip_a",
+            "model": "sam3dbody_world_joints",
+            "fps": 30.0,
+            "world_frame": "court_Z0",
+            "faces_ref": "mhr_faces_static",
+            "mesh_faces": [[0, 1, 2]],
+            "joint_names": ["left_wrist"],
+            "players": [],
+            "summary": {"mesh_frame_count": 0, "player_count": 0, "contact_window_count": 0},
+        },
+    )
 
     manifest = build_replay_viewer_manifest(
         clip="clip_a",
@@ -82,6 +98,7 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
         replay_scene_path=replay_scene,
         physics_refinement_path=physics,
         contact_windows_path=contacts,
+        body_mesh_path=body_mesh,
         annotation_sources=[person_gt],
         vite_allow_root=tmp_path,
     )
@@ -91,6 +108,7 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
     assert manifest["video_url"].startswith("/@fs/")
     assert manifest["virtual_world_url"].startswith("/@fs/")
     assert manifest["replay_scene_url"].startswith("/@fs/")
+    assert manifest["body_mesh_url"].startswith("/@fs/")
     assert manifest["physics_refinement_url"].startswith("/@fs/")
     assert manifest["contact_windows_url"].startswith("/@fs/")
     assert manifest["label_overlays"] == [

@@ -228,7 +228,7 @@ def _target_representation(recommended_tier: str) -> str:
     if recommended_tier == "deep_mesh":
         return "world_mesh"
     if recommended_tier == "skeleton_preview":
-        return "joints_or_preview_mesh"
+        return "lane_a_skeleton"
     return "track_only"
 
 
@@ -386,7 +386,7 @@ def _deep_mesh_window(frames: list[Mapping[str, Any]], *, fps: float) -> dict[st
         "t1": (frame_end + 1) / fps,
         "frame_count": len(frames),
         "target_representation": "world_mesh",
-        "fallback_representation": "skeleton_preview",
+        "fallback_representation": "lane_a_skeleton",
         "target_player_ids": target_player_ids,
         "reason_counts": _reason_counts(frames),
         "max_score": max(float(frame["score"]) for frame in frames),

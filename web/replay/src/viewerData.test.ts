@@ -8,12 +8,14 @@ import {
   frameForTime,
   labelOverlayForTime,
   labelViewBox,
+  parseBodyMesh,
   parseContactWindows,
   parseLabelOverlayPayload,
   parsePhysicsRefinement,
   parseViewerManifest,
   parseVirtualWorld,
   playerCoverageStats,
+  solidBodyMeshFramesForTime,
   startTimeFromSearch,
   worldStats,
 } from "./viewerData";
@@ -25,6 +27,7 @@ const manifest = {
   video_url: "/@fs/tmp/clip_a/input.mp4",
   virtual_world_url: "/@fs/tmp/clip_a/virtual_world.json",
   replay_scene_url: null,
+  body_mesh_url: "/@fs/tmp/clip_a/body_mesh.json",
   physics_refinement_url: "/@fs/tmp/clip_a/physics_refinement.json",
   contact_windows_url: "/@fs/tmp/clip_a/contact_windows.json",
   label_overlays: [
@@ -174,6 +177,56 @@ const contactWindows = {
   ],
 };
 
+const bodyMesh = {
+  schema_version: 1,
+  artifact_type: "racketsport_body_mesh",
+  clip: "clip_a",
+  model: "sam3dbody_world_joints",
+  fps: 30,
+  world_frame: "court_Z0",
+  faces_ref: "mhr_faces_static",
+  mesh_faces: [
+    [0, 1, 2],
+    [0, 2, 3],
+  ],
+  joint_names: ["left_wrist"],
+  players: [
+    {
+      id: 2,
+      frames: [
+        {
+          frame_idx: 33,
+          t: 1.1,
+          source_window_index: 1,
+          blend_weight: 0.42,
+          joints_world: [[2, 1, 1.2]],
+          joint_conf: [0.95],
+          mesh_vertices_world: [
+            [1.9, 0.9, 0.2],
+            [2.1, 0.9, 0.2],
+            [2.1, 1.1, 1.6],
+            [1.9, 1.1, 1.6],
+          ],
+          smplx_params: {
+            global_orient: [0, 0, 0],
+            body_pose: [0.1],
+            left_hand_pose: [0.2],
+            right_hand_pose: [0.3],
+            betas: [0.4],
+            transl_world: [2, 1, 0],
+          },
+          reasons: ["contact_window"],
+        },
+      ],
+    },
+  ],
+  summary: {
+    mesh_frame_count: 1,
+    player_count: 1,
+    contact_window_count: 1,
+  },
+};
+
 const contactWorld = {
   ...world,
   players: [
@@ -302,6 +355,41 @@ describe("viewer data contracts", () => {
     expect(activeBallContactPlayerIds(parsedWorld, parsedContacts, 0.1)).toEqual(new Set([1]));
     expect(activeBallContactPlayerIds(parsedWorld, parsedContacts, 1.1)).toEqual(new Set([2]));
     expect(activeBallContactPlayerIds(parsedWorld, parsedContacts, 0.7)).toEqual(new Set());
+  });
+
+  it("parses body_mesh.json and selects only solid hitter meshes during active contact", () => {
+    const parsedBodyMesh = parseBodyMesh(bodyMesh);
+    const parsedContacts = parseContactWindows(contactWindows);
+
+    expect(parsedBodyMesh.mesh_faces).toEqual([
+      [0, 1, 2],
+      [0, 2, 3],
+    ]);
+    expect(parsedBodyMesh.players[0].frames[0].mesh_faces).toEqual(parsedBodyMesh.mesh_faces);
+    expect(parsedBodyMesh.players[0].frames[0].blend_weight).toBe(0.42);
+    expect(solidBodyMeshFramesForTime(parsedBodyMesh, parsedContacts, 1.1)).toMatchObject([
+      {
+        playerId: 2,
+        frame: {
+          frame_idx: 33,
+          blend_weight: 0.42,
+          mesh_faces: [
+            [0, 1, 2],
+            [0, 2, 3],
+          ],
+        },
+      },
+    ]);
+    expect(solidBodyMeshFramesForTime(parsedBodyMesh, parsedContacts, 0.7)).toEqual([]);
+  });
+
+  it("fails closed to no solid body mesh when body_mesh.json has vertices but no faces", () => {
+    const noFaces = parseBodyMesh({
+      ...bodyMesh,
+      mesh_faces: [],
+    });
+
+    expect(solidBodyMeshFramesForTime(noFaces, null, 1.1)).toEqual([]);
   });
 
   it("rejects contact windows missing Python-required source scores", () => {

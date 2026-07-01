@@ -251,6 +251,7 @@ def validate_replay_export_manifest(
     root = Path(export_root)
     scene = manifest if isinstance(manifest, ReplayScene) else ReplayScene.model_validate(manifest)
     _validate_glb_ref(root, scene.court_glb, field="court_glb")
+    _validate_replay_point_timing(scene)
     for index, point in enumerate(scene.points):
         glb_path = _validate_glb_ref(root, point.glb_url, field=f"points/{index}/glb_url")
         actual_size_mb = _size_mb(root / glb_path)
@@ -264,6 +265,16 @@ def validate_replay_export_manifest(
             blockers = ", ".join(audit["blockers"])
             raise ValueError(f"production replay manifest is not ready: {blockers}")
     return scene
+
+
+def _validate_replay_point_timing(scene: ReplayScene) -> None:
+    previous_t1: float | None = None
+    for index, point in enumerate(scene.points):
+        if point.t1 <= point.t0:
+            raise ValueError(f"points/{index}/t1 must be greater than points/{index}/t0")
+        if previous_t1 is not None and point.t0 < previous_t1:
+            raise ValueError(f"points/{index}/t0 must be greater than or equal to previous point t1")
+        previous_t1 = point.t1
 
 
 def resolve_replay_glb_path(export_root: str | Path, value: str | Path, *, field: str) -> Path:

@@ -27,6 +27,7 @@ def build_wrist_velocity_peaks_from_file(
     min_separation_s: float = DEFAULT_MIN_SEPARATION_S,
     left_wrist_index: int | None = None,
     right_wrist_index: int | None = None,
+    require_lane_a: bool = False,
 ) -> dict[str, Any]:
     path = Path(skeleton3d_path)
     payload = _read_json(path)
@@ -40,6 +41,7 @@ def build_wrist_velocity_peaks_from_file(
         min_separation_s=min_separation_s,
         left_wrist_index=left_wrist_index,
         right_wrist_index=right_wrist_index,
+        require_lane_a=require_lane_a,
     )
 
 
@@ -76,12 +78,32 @@ def build_wrist_velocity_peaks_from_skeleton(
     min_separation_s: float = DEFAULT_MIN_SEPARATION_S,
     left_wrist_index: int | None = None,
     right_wrist_index: int | None = None,
+    require_lane_a: bool = False,
 ) -> dict[str, Any]:
     """Build review-only wrist-velocity peaks from timestamped world joints."""
 
     min_speed_mps = _require_non_negative(min_speed_mps, "min_speed_mps")
     min_confidence = _require_unit(min_confidence, "min_confidence")
     min_separation_s = _require_non_negative(min_separation_s, "min_separation_s")
+    source = _source_kind(skeleton)
+    source_provenance = _source_provenance(skeleton)
+    if require_lane_a and source != "lane_a_skeleton3d_world_joints":
+        return _artifact(
+            status="blocked",
+            source=source,
+            source_path=source_path,
+            source_provenance=source_provenance,
+            joint_mapping={},
+            player_count=0,
+            usable_sample_count=0,
+            raw_peak_count=0,
+            peaks=[],
+            blockers=["wrist_velocity_requires_lane_a_skeleton3d"],
+            warnings=["wrist_velocity_requires_lane_a_skeleton3d"],
+            min_speed_mps=min_speed_mps,
+            min_confidence=min_confidence,
+            min_separation_s=min_separation_s,
+        )
     if left_wrist_index is None and right_wrist_index is None:
         semantic_skeleton = semanticize_skeleton_payload(skeleton)
         if semantic_skeleton is not None:
@@ -97,7 +119,9 @@ def build_wrist_velocity_peaks_from_skeleton(
     if not joint_mapping:
         return _artifact(
             status="blocked",
+            source=source,
             source_path=source_path,
+            source_provenance=source_provenance,
             joint_mapping={},
             player_count=len(players),
             usable_sample_count=0,
@@ -158,7 +182,9 @@ def build_wrist_velocity_peaks_from_skeleton(
         warnings.extend(blockers)
     return _artifact(
         status="review_only" if peaks else "blocked",
+        source=source,
         source_path=source_path,
+        source_provenance=source_provenance,
         joint_mapping=joint_mapping,
         player_count=len(players),
         usable_sample_count=usable_sample_count,
@@ -192,13 +218,16 @@ def _artifact(
     min_speed_mps: float,
     min_confidence: float,
     min_separation_s: float,
+    source: str = "skeleton3d_world_joints",
+    source_provenance: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "artifact_type": ARTIFACT_TYPE,
         "status": status,
-        "source": "skeleton3d_world_joints",
+        "source": source,
         "source_path": str(source_path) if source_path is not None else "",
+        "source_provenance": dict(source_provenance or {}),
         "not_gate_verified": True,
         "trusted_for_contact": False,
         "joint_mapping": dict(joint_mapping),
@@ -214,6 +243,27 @@ def _artifact(
             "min_separation_s": min_separation_s,
         },
         "peaks": peaks,
+    }
+
+
+def _source_kind(skeleton: Mapping[str, Any]) -> str:
+    if skeleton.get("preview_only") is False:
+        provenance = skeleton.get("provenance")
+        if isinstance(provenance, Mapping) and provenance.get("lane") == "A":
+            return "lane_a_skeleton3d_world_joints"
+    return "skeleton3d_world_joints"
+
+
+def _source_provenance(skeleton: Mapping[str, Any]) -> dict[str, Any]:
+    provenance = skeleton.get("provenance")
+    lane = provenance.get("lane") if isinstance(provenance, Mapping) else None
+    joint_names = skeleton.get("joint_names")
+    return {
+        "lane": str(lane) if lane is not None else "",
+        "preview_only": bool(skeleton.get("preview_only")),
+        "source_model": str(skeleton.get("source_model", "")),
+        "world_frame": str(skeleton.get("world_frame", "")),
+        "joint_count": len(joint_names) if isinstance(joint_names, list) else 0,
     }
 
 
@@ -278,8 +328,20 @@ def _usable_wrist_samples(
 
 
 def _suppress_nearby_peaks(candidates: list[dict[str, Any]], *, min_separation_s: float) -> list[dict[str, Any]]:
+    grouped: dict[tuple[int, str], list[dict[str, Any]]] = {}
+    for candidate in candidates:
+        key = (int(candidate["player_id"]), str(candidate.get("wrist_side", "")))
+        grouped.setdefault(key, []).append(candidate)
+
     kept: list[dict[str, Any]] = []
-    for candidate in sorted(candidates, key=lambda item: (float(item["time_s"]), int(item["player_id"]))):
+    for group in grouped.values():
+        kept.extend(_suppress_nearby_peaks_for_group(group, min_separation_s=min_separation_s))
+    return sorted(kept, key=lambda item: (float(item["time_s"]), int(item["player_id"]), str(item.get("wrist_side", ""))))
+
+
+def _suppress_nearby_peaks_for_group(candidates: list[dict[str, Any]], *, min_separation_s: float) -> list[dict[str, Any]]:
+    kept: list[dict[str, Any]] = []
+    for candidate in sorted(candidates, key=lambda item: float(item["time_s"])):
         if not kept or float(candidate["time_s"]) - float(kept[-1]["time_s"]) >= min_separation_s:
             kept.append(candidate)
             continue

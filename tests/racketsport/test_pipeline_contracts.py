@@ -10,6 +10,7 @@ import pytest
 from tests.racketsport.json_schema_assertions import assert_matches_json_schema
 from threed.racketsport.pipeline_contracts import (
     PIPELINE_STAGE_ORDER,
+    _ARTIFACT_SCHEMA_BY_FILENAME,
     PipelineContractError,
     build_readiness_report,
     safe_relative_path,
@@ -48,6 +49,43 @@ def _artifact_payload(name: str) -> dict:
             "post_height_in": 36.0,
         },
         "court_line_evidence.json": _ready_court_line_evidence_payload(),
+        "court_keypoints.json": {
+            "schema_version": 1,
+            "artifact_type": "racketsport_court_keypoints",
+            "frame_indexes": [0, 15, 29],
+            "coordinate_space": "undistorted_source_video_pixels",
+            "keypoints": [
+                {
+                    "name": name,
+                    "uv": [float(index), float(index + 10)],
+                    "confidence": 0.91,
+                    "inlier_frames": [0, 15, 29],
+                    "recovered": False,
+                }
+                for index, name in enumerate(
+                    [
+                        "near_left_corner",
+                        "near_baseline_center",
+                        "near_right_corner",
+                        "far_right_corner",
+                        "far_baseline_center",
+                        "far_left_corner",
+                        "near_nvz_left",
+                        "near_nvz_center",
+                        "near_nvz_right",
+                        "net_left_sideline",
+                        "net_center",
+                        "net_right_sideline",
+                        "far_nvz_left",
+                        "far_nvz_center",
+                        "far_nvz_right",
+                    ]
+                )
+            ],
+            "target_court_score": 0.82,
+            "source": "model_aggregate_v1",
+            "not_gate_verified": True,
+        },
         "tracks.json": {
             "schema_version": 1,
             "fps": 60.0,
@@ -60,6 +98,89 @@ def _artifact_payload(name: str) -> dict:
                 }
             ],
             "rally_spans": [],
+        },
+        "player_ground.json": {
+            "schema_version": 1,
+            "artifact_type": "racketsport_player_ground",
+            "fps": 60.0,
+            "source": "metric_floor_pose_grounding_v1",
+            "not_gate_verified": True,
+            "players": [
+                {
+                    "id": 1,
+                    "frames": [
+                        {
+                            "t": 0.0,
+                            "feet": [
+                                {
+                                    "side": "L",
+                                    "court_xy": [-0.2, -2.1],
+                                    "height_m": 0.01,
+                                    "contact": True,
+                                    "sigma_p_m": 0.03,
+                                    "confidence": 0.9,
+                                    "world_xyz": [0.0, 0.0, 0.0],
+                                    "source_points": ["ankle"],
+                                },
+                                {
+                                    "side": "R",
+                                    "court_xy": [0.2, -2.1],
+                                    "height_m": 0.01,
+                                    "contact": True,
+                                    "sigma_p_m": 0.03,
+                                    "confidence": 0.9,
+                                    "world_xyz": [0.4, 0.0, 0.0],
+                                    "source_points": ["ankle"],
+                                },
+                            ],
+                            "root_world": [0.2, 0.0, 0.9],
+                            "joints_world": [[0.2, 0.0, 0.9]],
+                        }
+                    ],
+                }
+            ],
+        },
+        "calls.json": {
+            "schema_version": 1,
+            "artifact_type": "racketsport_court_calls",
+            "source": "metric_floor_v1",
+            "not_gate_verified": True,
+            "events": [
+                {
+                    "t": 0.0,
+                    "player_id": 1,
+                    "foot": "L",
+                    "boundary": "kitchen",
+                    "decision": "too_close_to_call",
+                    "signed_dist_m": -0.004,
+                    "sigma_p_m": 0.02,
+                    "frames": [0],
+                    "metric_confidence": "low",
+                    "capture_quality_grade": "good",
+                }
+            ],
+            "summary": {
+                "total_events": 1,
+                "hard_call_count": 0,
+                "too_close_to_call_count": 1,
+                "status": "not_gate_verified",
+            },
+        },
+        "drift_log.json": {
+            "schema_version": 1,
+            "artifact_type": "racketsport_drift_log",
+            "checks": [
+                {"frame": 15, "p95_px": 8.5, "tripped": False},
+                {"frame": 30, "p95_px": 8.4, "tripped": False},
+                {"frame": 45, "p95_px": 8.6, "tripped": True},
+            ],
+            "recalibrations": [
+                {
+                    "from_frame": 15,
+                    "to_frame": 45,
+                    "reason": "reprojection_drift_3_consecutive",
+                }
+            ],
         },
         "smpl_motion.json": {
             "schema_version": 1,
@@ -336,7 +457,7 @@ def test_readiness_report_marks_stage_ready_only_after_dependencies_exist(tmp_pa
     assert report["artifact_type"] == "racketsport_pipeline_artifact_readiness"
     assert report["status"] == "not_ready"
     assert report["requested_stage"] == "tracking"
-    assert report["stage_order"][:3] == ["calibration", "tracking", "body"]
+    assert report["stage_order"][:4] == ["calibration", "tracking", "pose", "body"]
 
     calibration = report["stages"][0]
     tracking = report["stages"][1]
@@ -363,8 +484,8 @@ def test_readiness_report_is_ready_when_requested_stage_and_dependencies_are_pre
         "net_plane.json",
         "court_line_evidence.json",
         "tracks.json",
-        "smpl_motion.json",
         "skeleton3d.json",
+        "smpl_motion.json",
         "body_compute_execution.json",
         "body_mesh_readiness.json",
         "physics_refinement.json",
@@ -379,7 +500,7 @@ def test_readiness_report_is_ready_when_requested_stage_and_dependencies_are_pre
     report = build_readiness_report(run_dir, stage="racket")
 
     assert report["status"] == "ready"
-    assert [stage["stage"] for stage in report["stages"]] == PIPELINE_STAGE_ORDER[:6]
+    assert [stage["stage"] for stage in report["stages"]] == PIPELINE_STAGE_ORDER[:7]
     assert report["required_artifacts"] == required
     assert report["missing_artifacts"] == []
     assert report["artifact_validation_errors"] == []
@@ -663,6 +784,13 @@ def test_safe_relative_path_rejects_absolute_and_parent_traversal() -> None:
     for value in ["", ".", "/tmp/court_calibration.json", "../court_calibration.json", "clip/../../tracks.json"]:
         with pytest.raises(PipelineContractError):
             safe_relative_path(value)
+
+
+def test_court_positioning_artifact_filenames_are_schema_mapped() -> None:
+    assert _ARTIFACT_SCHEMA_BY_FILENAME["court_keypoints.json"] == "court_keypoints"
+    assert _ARTIFACT_SCHEMA_BY_FILENAME["player_ground.json"] == "player_ground"
+    assert _ARTIFACT_SCHEMA_BY_FILENAME["calls.json"] == "court_calls"
+    assert _ARTIFACT_SCHEMA_BY_FILENAME["drift_log.json"] == "drift_log"
 
 
 def test_unknown_stage_fails_closed(tmp_path: Path) -> None:

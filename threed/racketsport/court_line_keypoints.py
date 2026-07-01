@@ -71,6 +71,40 @@ def detect_court_keypoints_from_image(
     if len(merged_lines) < 4:
         raise ValueError("not enough court-line candidates were detected")
 
+    high_support_candidate = _try_high_support_near_strip_keypoints(
+        merged_lines,
+        mask=mask,
+        cv2_module=cv2,
+        width=float(width),
+        height=float(height),
+    )
+    if high_support_candidate is not None:
+        keypoints, semantic_segments, confidence = high_support_candidate
+        return DetectedCourtKeypoints(
+            keypoints=keypoints,
+            semantic_lines=semantic_segments,
+            raw_segment_count=len(segments),
+            merged_line_count=len(merged_lines),
+            confidence=confidence,
+        )
+
+    semantic_candidate = _try_semantic_line_keypoints(
+        merged_lines,
+        mask=mask,
+        cv2_module=cv2,
+        width=float(width),
+        height=float(height),
+    )
+    if semantic_candidate is not None:
+        keypoints, semantic_segments, confidence = semantic_candidate
+        return DetectedCourtKeypoints(
+            keypoints=keypoints,
+            semantic_lines=semantic_segments,
+            raw_segment_count=len(segments),
+            merged_line_count=len(merged_lines),
+            confidence=confidence,
+        )
+
     near_strip = _select_near_strip_lines(merged_lines, width=float(width), height=float(height))
     refined = {
         name: _refine_line_from_mask(mask, group.line, cv2_module=cv2, max_distance_px=6.0)
@@ -86,6 +120,143 @@ def detect_court_keypoints_from_image(
         merged_line_count=len(merged_lines),
         confidence=confidence,
     )
+
+
+def _try_semantic_line_keypoints(
+    groups: Sequence[_LineGroup],
+    *,
+    mask: Any,
+    cv2_module: Any,
+    width: float,
+    height: float,
+) -> tuple[dict[str, dict[str, Any]], dict[str, list[list[float]]], float] | None:
+    try:
+        semantic_groups = _select_semantic_lines(groups, width=width, height=height)
+        semantic_lines = {
+            name: _refine_line_from_mask(mask, group.line, cv2_module=cv2_module, max_distance_px=6.0)
+            for name, group in semantic_groups.items()
+        }
+        semantic_segments = {
+            name: _segment_for_image(line, width=width, height=height)
+            for name, line in semantic_lines.items()
+        }
+        keypoints = keypoints_from_semantic_lines(semantic_segments)
+    except ValueError:
+        return None
+    if not _keypoints_are_plausible(keypoints, width=width, height=height):
+        return None
+    confidence = min(1.0, sum(group.support_length_px for group in semantic_groups.values()) / (float(width) * 3.0))
+    return keypoints, semantic_segments, confidence
+
+
+def _try_high_support_near_strip_keypoints(
+    groups: Sequence[_LineGroup],
+    *,
+    mask: Any,
+    cv2_module: Any,
+    width: float,
+    height: float,
+) -> tuple[dict[str, dict[str, Any]], dict[str, list[list[float]]], float] | None:
+    side_pool = sorted(
+        [
+            group
+            for group in groups
+            if abs(group.line.angle_deg) > 5.0 and _segment_length(group.segment) > width * 0.05
+        ],
+        key=lambda group: group.support_length_px,
+        reverse=True,
+    )[:4]
+    if len(side_pool) < 2:
+        return None
+
+    best: tuple[float, dict[str, dict[str, Any]], dict[str, list[list[float]]], float] | None = None
+    for left_index, first in enumerate(side_pool):
+        for second in side_pool[left_index + 1 :]:
+            left, right = sorted((first, second), key=lambda group: _line_x_at(group.line, height * 0.52))
+            cross_candidates = [
+                group
+                for group in groups
+                if abs(group.line.angle_deg) <= 8.0
+                and _segment_length(group.segment) > width * 0.04
+                and _cross_line_intersections_are_sane(group.line, left.line, right.line, width=width, height=height)
+            ]
+            cross_candidates = sorted(
+                _dedupe_parallel_groups(cross_candidates, x_for_order=width * 0.35),
+                key=lambda group: _mean_side_intersection_y(group.line, left.line, right.line),
+            )
+            if len(cross_candidates) < 2:
+                continue
+            min_cross_separation_px = max(40.0, height * 0.08)
+            cross_y = {
+                group: _mean_side_intersection_y(group.line, left.line, right.line)
+                for group in cross_candidates
+            }
+            for near_baseline in cross_candidates[1:]:
+                baseline_y = cross_y[near_baseline]
+                for near_nvz in cross_candidates:
+                    separation = baseline_y - cross_y[near_nvz]
+                    if separation < min_cross_separation_px:
+                        continue
+                    refined = {
+                        "left_sideline": _refine_line_from_mask(mask, left.line, cv2_module=cv2_module, max_distance_px=6.0),
+                        "right_sideline": _refine_line_from_mask(mask, right.line, cv2_module=cv2_module, max_distance_px=6.0),
+                        "near_nvz": _refine_line_from_mask(mask, near_nvz.line, cv2_module=cv2_module, max_distance_px=6.0),
+                        "near_baseline": _refine_line_from_mask(
+                            mask,
+                            near_baseline.line,
+                            cv2_module=cv2_module,
+                            max_distance_px=6.0,
+                        ),
+                    }
+                    try:
+                        keypoints = _keypoints_from_near_strip_homography(refined)
+                    except ValueError:
+                        continue
+                    if not _keypoints_are_plausible(keypoints, width=width, height=height):
+                        continue
+                    semantic_segments = _semantic_segments_from_keypoints(keypoints)
+                    score = (
+                        left.support_length_px
+                        + right.support_length_px
+                        + near_nvz.support_length_px
+                        + near_baseline.support_length_px
+                    )
+                    confidence = min(1.0, score / (float(width) * 2.0))
+                    if best is None or score > best[0]:
+                        best = (score, keypoints, semantic_segments, confidence)
+    if best is None:
+        return None
+    return best[1], best[2], best[3]
+
+
+def _keypoints_are_plausible(keypoints: Mapping[str, Mapping[str, Any]], *, width: float, height: float) -> bool:
+    margin = max(width, height) * 0.25
+    for keypoint in keypoints.values():
+        xy = keypoint.get("xy")
+        if not isinstance(xy, list) or len(xy) != 2:
+            return False
+        x, y = float(xy[0]), float(xy[1])
+        if not (math.isfinite(x) and math.isfinite(y)):
+            return False
+        if x < -margin or x > width + margin or y < -margin or y > height + margin:
+            return False
+
+    try:
+        far_left = _xy_from_keypoint(keypoints["far_left_corner"])
+        far_right = _xy_from_keypoint(keypoints["far_right_corner"])
+        near_left = _xy_from_keypoint(keypoints["near_left_corner"])
+        near_right = _xy_from_keypoint(keypoints["near_right_corner"])
+        near_nvz_left = _xy_from_keypoint(keypoints["near_nvz_left"])
+        near_nvz_right = _xy_from_keypoint(keypoints["near_nvz_right"])
+    except (KeyError, ValueError):
+        return False
+
+    if far_left[0] >= far_right[0] or near_left[0] >= near_right[0]:
+        return False
+    far_y = (far_left[1] + far_right[1]) / 2.0
+    near_nvz_y = (near_nvz_left[1] + near_nvz_right[1]) / 2.0
+    near_y = (near_left[1] + near_right[1]) / 2.0
+    return far_y < near_nvz_y < near_y
 
 
 def keypoints_from_semantic_lines(semantic_lines: Mapping[str, Sequence[Sequence[float]]]) -> dict[str, dict[str, Any]]:

@@ -48,7 +48,7 @@ def _frame_plan(*, deep_mesh_frames: int, player_targets: dict[str, int] | None 
             "deep_mesh_window_count": 1 if deep_mesh_frames else 0,
             "human_review_frame_count": 3,
             "by_player_target_representation": player_targets
-            or {"manual_review_required": 3, "joints_or_preview_mesh": 2, "world_mesh": deep_mesh_frames},
+            or {"manual_review_required": 3, "lane_a_skeleton": 2, "world_mesh": deep_mesh_frames},
         },
     }
 
@@ -66,6 +66,17 @@ def _body_execution(*, scheduled_frames: int, scheduled_player_frames: int) -> d
             "scheduled_by_target_representation": {"world_mesh": scheduled_frames} if scheduled_frames else {},
             "skipped_frame_count": 0,
         },
+    }
+
+
+def _full_clip_gate(*, passed: bool = True) -> dict:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_body_full_clip_gate",
+        "passed": passed,
+        "coverage": 1.0 if passed else 0.5,
+        "evaluated_frame_count": 1,
+        "blockers": [] if passed else ["full_clip_body_coverage_below_threshold"],
     }
 
 
@@ -91,6 +102,22 @@ def test_body_mesh_readiness_reports_real_mesh_available_but_not_accuracy_verifi
     }
     assert payload["blockers"] == ["missing_world_mpjpe_gate", "missing_full_clip_body_gate"]
     assert payload["warnings"] == ["mesh_not_accuracy_verified"]
+
+
+def test_body_mesh_readiness_respects_passing_full_clip_gate() -> None:
+    payload = build_body_mesh_readiness(
+        clip="clip_001",
+        smpl_motion=_smpl_motion(include_mesh=True),
+        skeleton3d=_skeleton3d(),
+        frame_compute_plan=_frame_plan(deep_mesh_frames=1),
+        body_compute_execution=_body_execution(scheduled_frames=1, scheduled_player_frames=1),
+        body_full_clip_gate=_full_clip_gate(passed=True),
+    )
+
+    assert payload["status"] == "mesh_available_needs_accuracy_gate"
+    assert payload["blockers"] == ["missing_world_mpjpe_gate"]
+    assert payload["representation_plan"]["blockers"] == ["missing_world_mpjpe_gate"]
+    assert payload["body_full_clip_gate_path"] == ""
 
 
 def test_body_mesh_readiness_rejects_boolean_or_nonfinite_mesh_vertices() -> None:
@@ -130,7 +157,7 @@ def test_body_mesh_readiness_compares_world_mesh_demand_to_available_mesh() -> N
         "scheduled_world_mesh_player_frame_count": 2,
         "available_mesh_frame_count": 1,
         "available_joint_frame_count": 1,
-        "joints_or_preview_mesh_target_count": 2,
+        "lane_a_skeleton_target_count": 2,
         "manual_review_required_target_count": 3,
         "blockers": [
             "world_mesh_demand_exceeds_available_mesh",
@@ -151,7 +178,7 @@ def test_body_mesh_readiness_reports_no_world_mesh_requested_by_frame_plan() -> 
         clip="clip_001",
         frame_compute_plan=_frame_plan(
             deep_mesh_frames=0,
-            player_targets={"manual_review_required": 9, "joints_or_preview_mesh": 4, "track_only": 2},
+            player_targets={"manual_review_required": 9, "lane_a_skeleton": 4, "track_only": 2},
         ),
         body_compute_execution=_body_execution(scheduled_frames=0, scheduled_player_frames=0),
     )
@@ -165,7 +192,7 @@ def test_body_mesh_readiness_reports_no_world_mesh_requested_by_frame_plan() -> 
         "scheduled_world_mesh_player_frame_count": 0,
         "available_mesh_frame_count": 0,
         "available_joint_frame_count": 0,
-        "joints_or_preview_mesh_target_count": 4,
+        "lane_a_skeleton_target_count": 4,
         "manual_review_required_target_count": 9,
         "blockers": [
             "no_trusted_world_mesh_triggers",

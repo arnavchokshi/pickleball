@@ -1,11 +1,21 @@
 from __future__ import annotations
 
+from pathlib import Path
+from types import SimpleNamespace
+
 import pytest
 
 from threed.racketsport.hmr_deep import (
+    FastSam3DBodyRuntime,
+    FastSam3DBodySubprocessRuntime,
     PlayerCropRequest,
+    VerifiedModelAsset,
+    _ensure_torch_amp_custom_decorators,
+    _ensure_torch_dynamo_accumulated_cache_limit,
+    _load_setup_sam_3d_body,
     build_player_hmr_artifact,
     gate_deep_hmr_artifact,
+    normalize_fast_sam_body_output,
     normalize_deep_hmr_payload,
 )
 
@@ -208,3 +218,307 @@ def test_gate_deep_hmr_artifact_reports_low_confidence_and_missing_payload_parts
         "threshold": 0.65,
         "reasons": ["low_confidence", "missing_mesh_vertices", "missing_joints3d"],
     }
+
+
+def test_normalize_fast_sam_body_output_preserves_static_mesh_faces_for_mhr_surface() -> None:
+    request = PlayerCropRequest(
+        frame_idx=5,
+        player_id=7,
+        bbox_xyxy=[100, 120, 260, 520],
+        image_size_px=[1920, 1080],
+        track_confidence=0.93,
+    )
+
+    normalized = normalize_fast_sam_body_output(
+        {
+            "pred_vertices": [[0, 0, 0.1], [0.3, 0, 0.1], [0.3, 0.2, 1.6]],
+            "pred_keypoints_3d": [[0.1, 0.0, 1.0]],
+            "faces": [[0, 1, 2]],
+            "confidence": 0.91,
+        },
+        request=request,
+    )
+
+    assert normalized["mesh_faces"] == [[0, 1, 2]]
+
+
+def test_normalize_fast_sam_body_output_rejects_faces_outside_pred_vertices() -> None:
+    request = PlayerCropRequest(
+        frame_idx=5,
+        player_id=7,
+        bbox_xyxy=[100, 120, 260, 520],
+        image_size_px=[1920, 1080],
+        track_confidence=0.93,
+    )
+
+    with pytest.raises(ValueError, match="mesh_faces/0 index 3 is outside pred_vertices"):
+        normalize_fast_sam_body_output(
+            {
+                "pred_vertices": [[0, 0, 0.1], [0.3, 0, 0.1], [0.3, 0.2, 1.6]],
+                "pred_keypoints_3d": [[0.1, 0.0, 1.0]],
+                "mesh_faces": [[0, 1, 3]],
+                "confidence": 0.91,
+            },
+            request=request,
+        )
+
+
+def test_fast_sam_runtime_allows_bbox_only_setup_without_detector_asset(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "fast-sam"
+    checkpoint_dir = tmp_path / "sam-3d-body-dinov3"
+    repo.mkdir()
+    checkpoint_dir.mkdir()
+    checkpoint = checkpoint_dir / "model.ckpt"
+    checkpoint.write_bytes(b"body")
+
+    calls = []
+
+    def fake_loader(path):
+        assert path == repo
+
+        def fake_setup(**kwargs):
+            calls.append(kwargs)
+            return object()
+
+        return fake_setup
+
+    monkeypatch.setattr("threed.racketsport.hmr_deep._load_setup_sam_3d_body", fake_loader)
+
+    runtime = FastSam3DBodyRuntime(
+        assets={
+            "fast_sam_3d_body_dinov3": VerifiedModelAsset(
+                model_id="fast_sam_3d_body_dinov3",
+                path=checkpoint,
+                sha256="x",
+            ),
+            "sam_3d_body_mhr_model": VerifiedModelAsset(
+                model_id="sam_3d_body_mhr_model",
+                path=checkpoint_dir / "assets" / "mhr_model.pt",
+                sha256="y",
+            ),
+        },
+        fast_sam_repo=repo,
+        detector_name="",
+        fov_name="",
+    )
+
+    assert runtime.detector_name == ""
+    assert runtime.detector_model is None
+    assert runtime.fov_name == ""
+    assert calls == [
+        {
+            "hf_repo_id": "facebook/sam-3d-body-dinov3",
+            "detector_name": "",
+            "detector_model": "",
+            "fov_name": "",
+            "local_checkpoint_path": str(checkpoint_dir),
+        }
+    ]
+
+
+def test_fast_sam_subprocess_runtime_returns_frame_records(tmp_path, monkeypatch) -> None:
+    image = tmp_path / "frame.jpg"
+    image.write_bytes(b"jpg")
+    repo = tmp_path / "fast-sam"
+    repo.mkdir()
+    checkpoint_dir = tmp_path / "sam-3d-body-dinov3"
+    checkpoint_dir.mkdir()
+    work_dir = tmp_path / "work"
+    commands: list[list[str]] = []
+
+    def fake_run(command, check, capture_output, text):
+        commands.append([str(value) for value in command])
+        out_path = command[command.index("--out") + 1]
+        Path(out_path).write_text(
+            """
+{
+  "schema_version": 1,
+  "artifact_type": "racketsport_sam3dbody_frame",
+  "records": [
+    {
+      "bbox": [1.0, 2.0, 3.0, 4.0],
+      "pred_vertices": [[0.0, 0.0, 0.0], [0.1, 0.0, 0.0], [0.0, 0.1, 0.0]],
+      "pred_keypoints_3d": [[0.0, 0.0, 1.0]],
+      "mesh_faces": [[0, 1, 2]]
+    }
+  ]
+}
+""",
+            encoding="utf-8",
+        )
+        return SimpleNamespace(returncode=0, stdout=str(out_path), stderr="")
+
+    monkeypatch.setattr("threed.racketsport.hmr_deep.subprocess.run", fake_run)
+
+    runtime = FastSam3DBodySubprocessRuntime(
+        python_executable=tmp_path / "fast_sam_python",
+        fast_sam_repo=repo,
+        checkpoint_dir=checkpoint_dir,
+        detector_name="",
+        fov_name="",
+        work_dir=work_dir,
+    )
+    records = runtime.process_frame(image, bboxes_xyxy=[[1.0, 2.0, 3.0, 4.0]])
+
+    assert records[0]["mesh_faces"] == [[0, 1, 2]]
+    assert commands
+    command = commands[0]
+    assert command[0] == str(tmp_path / "fast_sam_python")
+    assert any(part.endswith("scripts/racketsport/run_sam3dbody_frame.py") for part in command)
+    assert command[command.index("--bbox") + 1] == "1.0,2.0,3.0,4.0"
+    assert command[command.index("--detector-name") + 1] == ""
+    assert command[command.index("--fov-name") + 1] == ""
+
+
+def test_fast_sam_subprocess_runtime_batches_frame_requests_in_one_process(tmp_path, monkeypatch) -> None:
+    image_a = tmp_path / "frame_a.jpg"
+    image_b = tmp_path / "frame_b.jpg"
+    image_a.write_bytes(b"jpg")
+    image_b.write_bytes(b"jpg")
+    repo = tmp_path / "fast-sam"
+    repo.mkdir()
+    checkpoint_dir = tmp_path / "sam-3d-body-dinov3"
+    checkpoint_dir.mkdir()
+    work_dir = tmp_path / "work"
+    commands: list[list[str]] = []
+
+    def fake_run(command, check, capture_output, text):
+        commands.append([str(value) for value in command])
+        requests_path = Path(command[command.index("--requests") + 1])
+        out_path = Path(command[command.index("--out") + 1])
+        requests = __import__("json").loads(requests_path.read_text(encoding="utf-8"))["requests"]
+        out_path.write_text(
+            __import__("json").dumps(
+                {
+                    "schema_version": 1,
+                    "artifact_type": "racketsport_sam3dbody_batch",
+                    "frames": [
+                        {
+                            "request_id": request["request_id"],
+                            "records": [
+                                {
+                                    "bbox": request["bboxes"][0],
+                                    "pred_vertices": [[float(idx), 0.0, 0.0] for idx in range(3)],
+                                    "pred_keypoints_3d": [[0.0, 0.0, 1.0]],
+                                    "mesh_faces": [[0, 1, 2]],
+                                }
+                            ],
+                        }
+                        for request in requests
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        return SimpleNamespace(returncode=0, stdout=str(out_path), stderr="")
+
+    monkeypatch.setattr("threed.racketsport.hmr_deep.subprocess.run", fake_run)
+
+    runtime = FastSam3DBodySubprocessRuntime(
+        python_executable=tmp_path / "fast_sam_python",
+        fast_sam_repo=repo,
+        checkpoint_dir=checkpoint_dir,
+        detector_name="",
+        fov_name="",
+        work_dir=work_dir,
+    )
+    records = runtime.process_frame_batches(
+        [
+            (image_a, [[1.0, 2.0, 3.0, 4.0]]),
+            (image_b, [[5.0, 6.0, 7.0, 8.0]]),
+        ]
+    )
+
+    assert [frame_records[0]["bbox"] for frame_records in records] == [
+        [1.0, 2.0, 3.0, 4.0],
+        [5.0, 6.0, 7.0, 8.0],
+    ]
+    assert len(commands) == 1
+    command = commands[0]
+    assert command[0] == str(tmp_path / "fast_sam_python")
+    assert any(part.endswith("scripts/racketsport/run_sam3dbody_batch.py") for part in command)
+    requests_path = Path(command[command.index("--requests") + 1])
+    payload = __import__("json").loads(requests_path.read_text(encoding="utf-8"))
+    assert [request["image"] for request in payload["requests"]] == [str(image_a), str(image_b)]
+    assert command[command.index("--detector-name") + 1] == ""
+    assert command[command.index("--fov-name") + 1] == ""
+
+
+def test_fast_sam_loader_falls_back_to_direct_runtime_when_notebook_import_fails(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "fast-sam"
+    repo.mkdir()
+    imported: list[str] = []
+
+    def fake_import_module(name: str):
+        imported.append(name)
+        if name == "notebook.utils":
+            raise ModuleNotFoundError("notebook dependency unavailable")
+        if name == "sam_3d_body":
+            return object()
+        raise AssertionError(f"unexpected import: {name}")
+
+    monkeypatch.setattr("threed.racketsport.hmr_deep.importlib.import_module", fake_import_module)
+
+    setup = _load_setup_sam_3d_body(repo)
+
+    assert setup.__name__ == "_direct_setup_sam_3d_body"
+    assert imported == ["notebook.utils", "sam_3d_body"]
+
+
+def test_fast_sam_direct_setup_installs_torch_amp_compat_decorators() -> None:
+    calls: list[tuple[str, object]] = []
+
+    class FakeCudaAmp:
+        @staticmethod
+        def custom_fwd(fwd=None, *, cast_inputs=None):
+            calls.append(("custom_fwd", cast_inputs))
+            return fwd if fwd is not None else (lambda fn: fn)
+
+        @staticmethod
+        def custom_bwd(bwd):
+            calls.append(("custom_bwd", None))
+            return bwd
+
+    fake_torch = SimpleNamespace(amp=SimpleNamespace(), cuda=SimpleNamespace(amp=FakeCudaAmp()))
+
+    _ensure_torch_amp_custom_decorators(fake_torch)
+
+    def forward():
+        return "forward"
+
+    def backward():
+        return "backward"
+
+    assert fake_torch.amp.custom_fwd(device_type="cuda", cast_inputs="float32")(forward)() == "forward"
+    assert fake_torch.amp.custom_bwd(device_type="cuda")(backward)() == "backward"
+    assert calls == [("custom_fwd", "float32"), ("custom_bwd", None)]
+
+
+def test_fast_sam_direct_setup_installs_torch_dynamo_accumulated_cache_limit() -> None:
+    class FakeDynamoConfig:
+        def __init__(self) -> None:
+            object.__setattr__(self, "_config", {"cache_size_limit": 64})
+            object.__setattr__(self, "_default", {"cache_size_limit": 64})
+            object.__setattr__(self, "_allowed_keys", {"cache_size_limit"})
+
+        def __getattr__(self, name: str):
+            config = object.__getattribute__(self, "_config")
+            if name in config:
+                return config[name]
+            raise AttributeError(name)
+
+        def __setattr__(self, name: str, value) -> None:
+            allowed = object.__getattribute__(self, "_allowed_keys")
+            if name not in allowed:
+                raise AttributeError(name)
+            object.__getattribute__(self, "_config")[name] = value
+
+    fake_config = FakeDynamoConfig()
+    fake_torch = SimpleNamespace(_dynamo=SimpleNamespace(config=fake_config))
+
+    _ensure_torch_dynamo_accumulated_cache_limit(fake_torch)
+    fake_torch._dynamo.config.accumulated_cache_size_limit = 1024
+
+    assert fake_torch._dynamo.config.accumulated_cache_size_limit == 1024
+    assert fake_config._default["accumulated_cache_size_limit"] == 64
+    assert "accumulated_cache_size_limit" in fake_config._allowed_keys

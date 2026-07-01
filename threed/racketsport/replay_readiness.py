@@ -274,6 +274,7 @@ def _glb_report(run_dir: Path) -> dict[str, Any]:
             "court_glb_path": None,
             "point_glb_paths": [],
             "artifact_class": "missing",
+            "production_replay_ready": False,
             "production_requirements": {},
             "blockers": ["missing_replay_scene"],
         }
@@ -289,6 +290,7 @@ def _glb_report(run_dir: Path) -> dict[str, Any]:
             "court_glb_path": None,
             "point_glb_paths": [],
             "artifact_class": "invalid",
+            "production_replay_ready": False,
             "production_requirements": {},
             "blockers": [f"invalid_replay_scene:{exc}"],
         }
@@ -302,6 +304,7 @@ def _glb_report(run_dir: Path) -> dict[str, Any]:
             "court_glb_path": None,
             "point_glb_paths": [],
             "artifact_class": "invalid",
+            "production_replay_ready": False,
             "production_requirements": {},
             "blockers": ["invalid_replay_scene"],
         }
@@ -335,6 +338,7 @@ def _glb_report(run_dir: Path) -> dict[str, Any]:
         blockers.append("missing_replay_points")
     production_audit = audit_replay_export_manifest(run_dir, parsed) if not missing and not invalid else {
         "artifact_class": "invalid" if invalid else "missing",
+        "production_replay_ready": False,
         "blockers": [],
         "production_requirements": {},
     }
@@ -348,6 +352,7 @@ def _glb_report(run_dir: Path) -> dict[str, Any]:
         "court_glb_path": str(run_dir / parsed.court_glb),
         "point_glb_paths": [str(run_dir / point.glb_url) for point in parsed.points],
         "artifact_class": production_audit["artifact_class"],
+        "production_replay_ready": bool(production_audit["production_replay_ready"]),
         "production_requirements": production_audit["production_requirements"],
         "blockers": sorted(set(blockers)),
     }
@@ -369,6 +374,7 @@ def _clip_section(clip: Mapping[str, Any]) -> str:
     blockers = ", ".join(str(blocker) for blocker in clip.get("blockers", [])) or "none"
     counts = clip.get("counts", {}) if isinstance(clip.get("counts"), Mapping) else {}
     visual_outputs = clip.get("visual_outputs", {}) if isinstance(clip.get("visual_outputs"), Mapping) else {}
+    glb_report = clip.get("glb_report", {}) if isinstance(clip.get("glb_report"), Mapping) else {}
     status_class = "pass" if clip.get("production_replay_ready") and clip.get("metrics_gate_ready") else "blocked"
     return f"""<section class="clip">
   <div class="viz">{clip.get("preview_svg", "")}</div>
@@ -384,6 +390,8 @@ def _clip_section(clip: Mapping[str, Any]) -> str:
       <dt>Paddle frames</dt><dd>{escape(str(counts.get("paddle_frames", 0)))} ({escape(str(counts.get("ambiguous_paddle_frames", 0)))} ambiguous)</dd>
       <dt>HTML</dt><dd>{_link(visual_outputs.get("virtual_world_html"))}</dd>
       <dt>Replay scene</dt><dd>{_link(visual_outputs.get("replay_scene"))}</dd>
+      <dt>GLB class</dt><dd>{escape(str(glb_report.get("artifact_class", "missing")))}</dd>
+      <dt>Production GLB/USDZ requirements</dt><dd>{escape(_production_requirements_text(glb_report.get("production_requirements", {})))}</dd>
       <dt>Blockers</dt><dd>{escape(blockers)}</dd>
     </dl>
   </div>
@@ -395,6 +403,19 @@ def _link(path: Any) -> str:
         return "missing"
     text = escape(str(path))
     return f'<a href="{text}">{text}</a>'
+
+
+def _production_requirements_text(value: Any) -> str:
+    if not isinstance(value, Mapping) or not value:
+        return "missing production audit"
+    point_glbs = value.get("point_glbs", [])
+    not_allowed = value.get("not_allowed", [])
+    parts: list[str] = []
+    if isinstance(point_glbs, list) and point_glbs:
+        parts.append("point GLBs need " + ", ".join(str(item) for item in point_glbs))
+    if isinstance(not_allowed, list) and not_allowed:
+        parts.append("not allowed: " + ", ".join(str(item) for item in not_allowed))
+    return "; ".join(parts) if parts else "missing production audit"
 
 
 def _clip_svg(world: Mapping[str, Any] | None) -> str:

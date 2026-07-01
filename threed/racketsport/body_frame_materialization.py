@@ -34,13 +34,21 @@ def materialize_body_frames(
         raise ValueError("no scheduled BODY frames in execution manifest")
 
     out.mkdir(parents=True, exist_ok=True)
-    extracted: list[str] = []
+    missing_indexes: list[int] = []
     for frame_idx in frame_indexes:
         frame_path = out / f"frame_{frame_idx:06d}.jpg"
         if frame_path.exists() and not overwrite:
-            extracted.append(frame_path.name)
             continue
-        _extract_one_frame(video, frame_idx=frame_idx, out_path=frame_path)
+        missing_indexes.append(frame_idx)
+
+    if missing_indexes:
+        _extract_frames_batch(video, frame_indexes=missing_indexes, out_dir=out)
+
+    extracted: list[str] = []
+    for frame_idx in frame_indexes:
+        frame_path = out / f"frame_{frame_idx:06d}.jpg"
+        if not frame_path.is_file() or frame_path.stat().st_size <= 0:
+            raise RuntimeError(f"ffmpeg did not produce BODY frame {frame_idx}: {frame_path}")
         extracted.append(frame_path.name)
 
     summary = {
@@ -64,7 +72,9 @@ def _scheduled_frame_indexes(execution: Mapping[str, Any]) -> list[int]:
     return sorted(indexes)
 
 
-def _extract_one_frame(video: Path, *, frame_idx: int, out_path: Path) -> None:
+def _extract_frames_batch(video: Path, *, frame_indexes: list[int], out_dir: Path) -> None:
+    select_expr = _select_expression(frame_indexes)
+    output_pattern = out_dir / "frame_%06d.jpg"
     command = [
         "ffmpeg",
         "-nostdin",
@@ -75,18 +85,36 @@ def _extract_one_frame(video: Path, *, frame_idx: int, out_path: Path) -> None:
         "-i",
         str(video),
         "-vf",
-        f"select=eq(n\\,{frame_idx})",
+        f"select='{select_expr}'",
         "-frames:v",
-        "1",
+        str(len(frame_indexes)),
         "-vsync",
         "0",
-        str(out_path),
+        "-frame_pts",
+        "1",
+        str(output_pattern),
     ]
     try:
         completed = subprocess.run(command, check=False, capture_output=True, text=True)
     except FileNotFoundError as exc:
         raise RuntimeError("ffmpeg is required to materialize BODY frames") from exc
     if completed.returncode != 0:
-        raise RuntimeError(f"ffmpeg failed to extract frame {frame_idx}: {completed.stderr.strip()}")
-    if not out_path.is_file() or out_path.stat().st_size <= 0:
-        raise RuntimeError(f"ffmpeg did not produce BODY frame {frame_idx}: {out_path}")
+        raise RuntimeError(f"ffmpeg failed to extract BODY frames: {completed.stderr.strip()}")
+
+
+def _select_expression(frame_indexes: list[int]) -> str:
+    ranges: list[tuple[int, int]] = []
+    for frame_idx in sorted(set(frame_indexes)):
+        if not ranges or frame_idx != ranges[-1][1] + 1:
+            ranges.append((frame_idx, frame_idx))
+        else:
+            start, _end = ranges[-1]
+            ranges[-1] = (start, frame_idx)
+
+    parts = []
+    for start, end in ranges:
+        if start == end:
+            parts.append(f"eq(n\\,{start})")
+        else:
+            parts.append(f"between(n\\,{start}\\,{end})")
+    return "+".join(parts)

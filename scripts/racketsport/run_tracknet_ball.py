@@ -23,6 +23,29 @@ def main() -> int:
     parser.add_argument("--prediction-dir", type=Path, default=None, help="Keep official TrackNet CSV outputs in this directory.")
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument(
+        "--confidence-mode",
+        choices=("legacy_visibility", "heatmap_peak"),
+        default="legacy_visibility",
+        help="Use legacy TrackNet visibility-as-confidence, or require a real heatmap peak Confidence column.",
+    )
+    parser.add_argument(
+        "--heatmap-visible-threshold",
+        type=float,
+        default=0.5,
+        help="Visibility cutoff for heatmap_peak confidence mode. The spec primary threshold is 0.50.",
+    )
+    parser.add_argument(
+        "--heatmap-eval-mode",
+        choices=("nonoverlap", "average", "weight"),
+        default="weight",
+        help="TrackNet heatmap-confidence pass mode. Use nonoverlap for faster real-confidence baselines.",
+    )
+    parser.add_argument(
+        "--heatmap-large-video",
+        action="store_true",
+        help="Stream frames only for the heatmap-confidence pass without forcing official predict.py --large_video.",
+    )
+    parser.add_argument(
         "--video-range",
         type=int,
         nargs=2,
@@ -50,6 +73,10 @@ def main() -> int:
             batch_size=args.batch_size,
             video_range=args.video_range,
             large_video=args.large_video,
+            confidence_mode=args.confidence_mode,
+            heatmap_visible_threshold=args.heatmap_visible_threshold,
+            heatmap_eval_mode=args.heatmap_eval_mode,
+            heatmap_large_video=args.heatmap_large_video,
         )
     except Exception as exc:
         print(str(exc), file=sys.stderr)

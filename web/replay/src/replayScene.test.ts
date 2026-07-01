@@ -38,6 +38,25 @@ describe("parseReplayScene", () => {
     ).toThrow("points[0].size_mb must be a number");
   });
 
+  it("rejects impossible or overlapping ReplayPoint time ranges", () => {
+    expect(() =>
+      parseReplayScene({
+        ...validScene,
+        points: [{ id: 1, t0: 2, t1: 1, glb_url: "points/point_1.glb", size_mb: 0.5 }],
+      }),
+    ).toThrow("points[0].t1 must be greater than points[0].t0");
+
+    expect(() =>
+      parseReplayScene({
+        ...validScene,
+        points: [
+          { id: 1, t0: 0, t1: 2, glb_url: "points/point_1.glb", size_mb: 0.5 },
+          { id: 2, t0: 1.5, t1: 3, glb_url: "points/point_2.glb", size_mb: 0.5 },
+        ],
+      }),
+    ).toThrow("points[1].t0 must be greater than or equal to previous point t1");
+  });
+
   it("selects active review GLB points by video time", () => {
     const scene = parseReplayScene(validScene);
 

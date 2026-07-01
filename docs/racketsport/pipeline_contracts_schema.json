@@ -33,6 +33,7 @@
       "enum": [
         "calibration",
         "tracking",
+        "pose",
         "body",
         "physics",
         "ball_events",
@@ -53,8 +54,8 @@
       "items": {
         "type": "string"
       },
-      "minItems": 11,
-      "maxItems": 11
+      "minItems": 12,
+      "maxItems": 12
     },
     "required_artifacts": {
       "$ref": "#/$defs/artifact_list"

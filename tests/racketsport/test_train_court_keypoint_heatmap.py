@@ -7,13 +7,52 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scripts.racketsport.train_court_keypoint_heatmap import load_real_corner_labels, run_training, training_cli_summary
+from scripts.racketsport.train_court_keypoint_heatmap import (
+    court_keypoint_heatmap_loss,
+    court_keypoint_probabilities,
+    load_real_corner_labels,
+    make_court_keypoint_heatmap_model,
+    run_training,
+    training_cli_summary,
+)
 from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
 
 
 def _write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def test_court_keypoint_heatmap_loss_prioritizes_labeled_peaks() -> None:
+    torch = pytest.importorskip("torch")
+    target = torch.zeros((1, 1, 9, 9), dtype=torch.float32)
+    target[0, 0, 4, 4] = 1.0
+    mask = torch.ones_like(target)
+
+    peak_missed = torch.full_like(target, -6.0)
+    background_false_positive = torch.full_like(target, -6.0)
+    background_false_positive[0, 0, 4, 4] = 6.0
+    background_false_positive[0, 0, 0, 0] = 6.0
+
+    missed_loss = court_keypoint_heatmap_loss(peak_missed, target, mask)
+    false_positive_loss = court_keypoint_heatmap_loss(background_false_positive, target, mask)
+
+    assert missed_loss.item() > false_positive_loss.item() * 4.0
+
+    probabilities = court_keypoint_probabilities(torch.tensor([[[[-6.0, 0.0, 6.0]]]]))
+    assert probabilities.sum().item() == pytest.approx(1.0)
+    assert probabilities[0, 0, 0].tolist() == pytest.approx([0.00000612898, 0.002472608, 0.9975212])
+
+
+def test_court_keypoint_heatmap_model_uses_encoder_decoder_context() -> None:
+    torch = pytest.importorskip("torch")
+
+    model = make_court_keypoint_heatmap_model(3)
+    output = model(torch.zeros((2, 3, 90, 160), dtype=torch.float32))
+
+    assert tuple(output.shape) == (2, 3, 90, 160)
+    assert any(isinstance(module, torch.nn.Conv2d) and module.stride == (2, 2) for module in model.modules())
+    assert any(isinstance(module, torch.nn.Upsample) for module in model.modules())
 
 
 def test_load_real_corner_labels_uses_committed_video_frame_when_label_frames_are_absent(tmp_path: Path) -> None:

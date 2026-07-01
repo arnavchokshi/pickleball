@@ -769,7 +769,7 @@ def _body_mesh_readiness_details(payload: Mapping[str, Any]) -> list[str]:
         )
         details.append(
             "Representation targets: "
-            f"joints_or_preview_mesh={representation_plan.get('joints_or_preview_mesh_target_count', 0)}, "
+            f"lane_a_skeleton={representation_plan.get('lane_a_skeleton_target_count', 0)}, "
             f"manual_review_required={representation_plan.get('manual_review_required_target_count', 0)}, "
             f"world_mesh={representation_plan.get('requested_world_mesh_player_target_count', 0)}"
         )
@@ -1122,6 +1122,17 @@ def _racket_pose_readiness_details(payload: Mapping[str, Any]) -> list[str]:
     source_counts = payload.get("source_counts")
     if isinstance(source_counts, Mapping) and source_counts:
         details.append("Sources: " + ", ".join(f"{key}={value}" for key, value in sorted(source_counts.items())))
+    local_readiness = payload.get("local_readiness")
+    if isinstance(local_readiness, Mapping) and local_readiness:
+        details.append(
+            "Local readiness: "
+            + ", ".join(f"{key}={str(value).lower()}" for key, value in sorted(local_readiness.items()))
+        )
+    missing_state = payload.get("missing_label_or_asset_state")
+    if isinstance(missing_state, Mapping) and missing_state:
+        details.append(
+            "Missing labels/assets: " + ", ".join(f"{key}={value}" for key, value in sorted(missing_state.items()))
+        )
     return details
 
 

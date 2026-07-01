@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .ball_overlay import load_ball_track
-from .court_calibration import calibration_image_size, project_planar_points
+from .court_calibration import calibration_image_size, project_image_points_to_world, project_planar_points
 from .court_templates import get_court_template
 from .schemas import BallTrack, CourtCalibration
+
+STATUS_TESTED = "TESTED-ON-REAL-DATA"
 
 
 def load_court_calibration(path: str | Path) -> CourtCalibration:
@@ -99,12 +101,60 @@ def filter_ball_track_to_target_court(
     summary = {
         "schema_version": 1,
         "artifact_type": "racketsport_ball_target_court_filter",
-        "status": "filtered_not_gate_verified",
+        "status": STATUS_TESTED,
         "source_ball_track": str(ball_track_path),
         "sport": calibration.sport,
         "target_size": list(target_size) if target_size is not None else None,
         "margin_px": float(margin_px),
         "target_court_polygon": target_court_polygon,
+        "frame_count": len(payload["frames"]),
+        "visible_before": visible_before,
+        "visible_after": visible_after,
+        "rejected_outside_target_court": rejected_outside,
+        "not_ground_truth": True,
+    }
+    return payload, summary
+
+
+def filter_ball_track_to_target_court_metric_margin(
+    *,
+    ball_track_path: str | Path,
+    calibration: CourtCalibration,
+    target_size: tuple[int, int] | None,
+    margin_m: float,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Drop visible detections outside the regulation court plus a metric margin."""
+
+    if margin_m < 0.0 or not math.isfinite(float(margin_m)):
+        raise ValueError("margin_m must be >= 0")
+
+    track = load_ball_track(ball_track_path)
+    payload = track.model_dump(mode="json")
+    visible_before = 0
+    visible_after = 0
+    rejected_outside = 0
+
+    for frame in payload["frames"]:
+        if not bool(frame["visible"]):
+            continue
+        visible_before += 1
+        world_xy = _target_image_xy_to_world_xy(frame["xy"], calibration=calibration, target_size=target_size)
+        if _world_xy_in_court_with_margin(world_xy, calibration=calibration, margin_m=float(margin_m)):
+            visible_after += 1
+            continue
+        frame["visible"] = False
+        frame["conf"] = 0.0
+        rejected_outside += 1
+
+    BallTrack.model_validate(payload)
+    summary = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_target_court_metric_filter",
+        "status": STATUS_TESTED,
+        "source_ball_track": str(ball_track_path),
+        "sport": calibration.sport,
+        "target_size": list(target_size) if target_size is not None else None,
+        "court_margin_m": float(margin_m),
         "frame_count": len(payload["frames"]),
         "visible_before": visible_before,
         "visible_after": visible_after,
@@ -122,14 +172,23 @@ def write_filtered_ball_track(
     summary_path: str | Path,
     target_size: tuple[int, int] | None,
     margin_px: float,
+    margin_m: float | None = None,
 ) -> dict[str, Any]:
     calibration = load_court_calibration(calibration_path)
-    payload, summary = filter_ball_track_to_target_court(
-        ball_track_path=ball_track_path,
-        calibration=calibration,
-        target_size=target_size,
-        margin_px=margin_px,
-    )
+    if margin_m is None:
+        payload, summary = filter_ball_track_to_target_court(
+            ball_track_path=ball_track_path,
+            calibration=calibration,
+            target_size=target_size,
+            margin_px=margin_px,
+        )
+    else:
+        payload, summary = filter_ball_track_to_target_court_metric_margin(
+            ball_track_path=ball_track_path,
+            calibration=calibration,
+            target_size=target_size,
+            margin_m=margin_m,
+        )
 
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -146,6 +205,37 @@ def _calibration_image_size(calibration: CourtCalibration) -> tuple[float, float
     if not math.isfinite(width) or not math.isfinite(height) or width <= 0.0 or height <= 0.0:
         raise ValueError("cannot infer calibration image size from intrinsics")
     return width, height
+
+
+def _target_image_xy_to_world_xy(
+    xy: Any,
+    *,
+    calibration: CourtCalibration,
+    target_size: tuple[int, int] | None,
+) -> list[float]:
+    x, y = float(xy[0]), float(xy[1])
+    if target_size is not None:
+        calibration_width, calibration_height = _calibration_image_size(calibration)
+        target_width, target_height = target_size
+        if target_width <= 0 or target_height <= 0:
+            raise ValueError("target_size values must be > 0")
+        x *= calibration_width / float(target_width)
+        y *= calibration_height / float(target_height)
+    world = project_image_points_to_world(calibration.homography, [[x, y]])[0]
+    return [float(world[0]), float(world[1])]
+
+
+def _world_xy_in_court_with_margin(
+    world_xy: list[float],
+    *,
+    calibration: CourtCalibration,
+    margin_m: float,
+) -> bool:
+    template = get_court_template(calibration.sport)
+    half_width = template.width_m / 2.0 + margin_m
+    half_length = template.length_m / 2.0 + margin_m
+    x, y = float(world_xy[0]), float(world_xy[1])
+    return -half_width <= x <= half_width and -half_length <= y <= half_length
 
 
 def _point_in_polygon(point: list[float], polygon: list[list[float]]) -> bool:

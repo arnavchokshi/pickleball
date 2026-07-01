@@ -178,6 +178,7 @@ def test_build_replay_readiness_report_separates_visual_review_from_production_g
     assert by_clip["clip_with_body"]["visual_outputs"]["virtual_world_html"].endswith("virtual_world_paddle_preview.html")
     assert by_clip["clip_with_body"]["glb_report"]["valid_glb_count"] == 2
     assert by_clip["clip_with_body"]["glb_report"]["artifact_class"] == "review_static_glb"
+    assert by_clip["clip_with_body"]["glb_report"]["production_replay_ready"] is False
 
 
 def test_replay_readiness_fails_closed_for_unsafe_replay_scene_glb_refs(tmp_path: Path) -> None:
@@ -248,5 +249,10 @@ def test_replay_readiness_cli_writes_json_and_html_summary(tmp_path: Path) -> No
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
     assert payload["clips"][0]["review_visual_ready"] is True
-    assert "Production replay ready" in html.read_text(encoding="utf-8")
+    html_text = html.read_text(encoding="utf-8")
+    assert "Production replay ready" in html_text
+    assert "GLB class" in html_text
+    assert "review_static_glb" in html_text
+    assert "Production GLB/USDZ requirements" in html_text
+    assert "true skeletal animation channels" in html_text
     assert json.loads(completed.stdout)["status"] == "blocked"

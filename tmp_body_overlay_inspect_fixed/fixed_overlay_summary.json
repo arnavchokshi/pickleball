@@ -1,0 +1,85 @@
+{
+  "alignment_warning_count": 3,
+  "blockers": [],
+  "bundle_status": "ready_for_review",
+  "competing_player_warning_count": null,
+  "floor_anchor_projection_warning_count": 0,
+  "overlay_status": "ready_for_review_with_overlay_warnings",
+  "packet_sample_count": 152,
+  "rendered_count": 20,
+  "selected_sample_count": 20,
+  "warning_samples": [
+    {
+      "alignment": {
+        "bbox_center": [
+          1698.0,
+          441.375
+        ],
+        "center_delta_bbox_diag": 0.1739,
+        "center_delta_px": 30.679,
+        "containment_ratio": 0.5,
+        "inside_bbox_joint_count": 35,
+        "projected_joint_center": [
+          1721.975,
+          422.233
+        ],
+        "projected_joint_count": 70,
+        "status": "warning"
+      },
+      "frame_index": 84,
+      "player_id": 4,
+      "sample_id": "frame_000084_player_4",
+      "warnings": [
+        "body_joint_overlay_alignment_warning"
+      ]
+    },
+    {
+      "alignment": {
+        "bbox_center": [
+          1699.5,
+          441.375
+        ],
+        "center_delta_bbox_diag": 0.1396,
+        "center_delta_px": 24.095,
+        "containment_ratio": 0.4857,
+        "inside_bbox_joint_count": 34,
+        "projected_joint_center": [
+          1720.837,
+          430.181
+        ],
+        "projected_joint_count": 70,
+        "status": "warning"
+      },
+      "frame_index": 92,
+      "player_id": 4,
+      "sample_id": "frame_000092_player_4",
+      "warnings": [
+        "body_joint_overlay_alignment_warning"
+      ]
+    },
+    {
+      "alignment": {
+        "bbox_center": [
+          1699.5,
+          442.312
+        ],
+        "center_delta_bbox_diag": 0.1759,
+        "center_delta_px": 31.223,
+        "containment_ratio": 0.4714,
+        "inside_bbox_joint_count": 33,
+        "projected_joint_center": [
+          1729.646,
+          434.185
+        ],
+        "projected_joint_count": 70,
+        "status": "warning"
+      },
+      "frame_index": 108,
+      "player_id": 4,
+      "sample_id": "frame_000108_player_4",
+      "warnings": [
+        "body_joint_overlay_alignment_warning"
+      ]
+    }
+  ]
+}

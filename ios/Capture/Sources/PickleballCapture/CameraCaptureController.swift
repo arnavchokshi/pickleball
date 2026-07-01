@@ -347,33 +347,19 @@ public final class CameraCaptureController: NSObject {
     }
 
     private func writeSidecar(for descriptor: CapturePackageDescriptor, outputFileURL _: URL, finishedAt: Date) throws {
-        guard let sidecarURL = activeSidecarURL else {
+        guard activeSidecarURL != nil, let packageRootURL = activePackageRootURL else {
             throw CameraCaptureControllerError.noConfiguredPackage
         }
 
-        try FileManager.default.createDirectory(
-            at: sidecarURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-
         let startedAt = recordingStartedAt ?? descriptor.startedAt
-        let sidecar = CaptureSidecar(
+        let context = CaptureSidecarWriteContext(
             deviceTier: .standard,
             deviceModel: Self.deviceModelIdentifier(),
-            fps: descriptor.expectedFPS,
-            format: descriptor.expectedFormat,
-            resolution: descriptor.expectedResolution,
-            orientation: descriptor.expectedOrientation,
-            captureDeviceOrientation: descriptor.captureDeviceOrientation,
-            videoRotationAngleDegrees: descriptor.videoRotationAngleDegrees,
-            recordingStartedAt: Self.iso8601String(from: startedAt),
-            recordingDurationS: max(0.0, finishedAt.timeIntervalSince(startedAt)),
             cameraPosition: "back",
             cameraLens: activeDevice?.deviceType.rawValue,
             locked: lockedCaptureSnapshot(),
             intrinsics: estimatedIntrinsics(for: descriptor.expectedResolution),
             gravity: latestGravity,
-            ondevicePoseTrack: nil,
             captureQuality: CaptureQuality(
                 grade: .warn,
                 reasons: [
@@ -383,10 +369,13 @@ public final class CameraCaptureController: NSObject {
                 ]
             )
         )
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let data = try encoder.encode(sidecar)
-        try data.write(to: sidecarURL, options: .atomic)
+        try CaptureSidecarWriter.write(
+            descriptor: descriptor,
+            packageRootURL: packageRootURL,
+            recordingStartedAt: startedAt,
+            finishedAt: finishedAt,
+            context: context
+        )
     }
 
     private func lockedCaptureSnapshot() -> LockedCapture {
@@ -418,12 +407,6 @@ public final class CameraCaptureController: NSObject {
             cy: height / 2.0,
             source: "avfoundation_fov_estimate"
         )
-    }
-
-    private static func iso8601String(from date: Date) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.string(from: date)
     }
 
     private static func deviceModelIdentifier() -> String {

@@ -22,6 +22,25 @@ Vector2 = Annotated[list[FiniteFloat], Field(min_length=2, max_length=2)]
 Vector3 = Annotated[list[FiniteFloat], Field(min_length=3, max_length=3)]
 MatrixRow3 = Annotated[list[FiniteFloat], Field(min_length=3, max_length=3)]
 Matrix3 = Annotated[list[MatrixRow3], Field(min_length=3, max_length=3)]
+MatrixRow4 = Annotated[list[FiniteFloat], Field(min_length=4, max_length=4)]
+Matrix4 = Annotated[list[MatrixRow4], Field(min_length=4, max_length=4)]
+PICKLEBALL_COURT_KEYPOINT_NAMES: tuple[str, ...] = (
+    "near_left_corner",
+    "near_baseline_center",
+    "near_right_corner",
+    "far_right_corner",
+    "far_baseline_center",
+    "far_left_corner",
+    "near_nvz_left",
+    "near_nvz_center",
+    "near_nvz_right",
+    "net_left_sideline",
+    "net_center",
+    "net_right_sideline",
+    "far_nvz_left",
+    "far_nvz_center",
+    "far_nvz_right",
+)
 
 
 class StrictArtifact(BaseModel):
@@ -93,6 +112,15 @@ class CaptureSidecar(StrictArtifact):
     lidar_depth_refs: list[str] = Field(default_factory=list)
     ondevice_pose_track: str | None = None
     capture_quality: CaptureQuality
+    hdr_enabled: bool | None = None
+    video_stabilization_enabled: bool | None = None
+    exposure_locked: bool | None = None
+    focus_locked: bool | None = None
+    tripod_height_m: FiniteFloat | None = Field(default=None, ge=0.0)
+    full_court_visible: bool | None = None
+    court_lock_passed: bool | None = None
+    ball_high_contrast: bool | None = None
+    audio_recorded: bool | None = None
 
     @field_validator("video_rotation_angle_degrees")
     @classmethod
@@ -120,21 +148,66 @@ class CourtExtrinsics(RigidPose):
     camera_height_m: FiniteFloat = Field(gt=0.0)
 
 
+class CourtGsdSample(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    court_xy: Vector2
+    gsd_m_per_px: FiniteFloat = Field(ge=0.0)
+    sigma_p_m: FiniteFloat = Field(ge=0.0)
+
+
+class CourtGsdModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["analytic_ray_plane"]
+    plane_sigma_m: FiniteFloat = Field(ge=0.0)
+    calibration_sigma_m: FiniteFloat = Field(ge=0.0)
+    samples: list[CourtGsdSample] = Field(default_factory=list)
+
+
 class CourtCalibration(StrictArtifact):
     sport: Literal["pickleball", "tennis"]
+    coordinate_frame: Literal["court_netcenter_z_up_m"] | None = None
+    T_world_court: Matrix4 | None = None
     homography: Matrix3
     intrinsics: CameraIntrinsics
     image_size: tuple[int, int] | None = None
     extrinsics: CourtExtrinsics
     reprojection_error_px: ReprojectionError
+    per_keypoint_residual_px: list[FiniteFloat] | None = None
+    metric_confidence: Literal["high", "med", "low"] | None = None
+    gsd_model: CourtGsdModel | None = None
     capture_quality: CaptureQuality
     image_pts: list[Vector2] = Field(min_length=4)
     world_pts: list[Vector3] = Field(min_length=4)
+    source: str | None = None
+    solved_over_frames: list[int] | None = None
 
     @model_validator(mode="after")
     def _point_lists_must_be_paired(self) -> CourtCalibration:
         if len(self.image_pts) != len(self.world_pts):
             raise ValueError("image_pts and world_pts must have the same length")
+        metric_fields = {
+            "coordinate_frame": self.coordinate_frame,
+            "T_world_court": self.T_world_court,
+            "per_keypoint_residual_px": self.per_keypoint_residual_px,
+            "metric_confidence": self.metric_confidence,
+            "gsd_model": self.gsd_model,
+            "source": self.source,
+            "solved_over_frames": self.solved_over_frames,
+        }
+        if any(value is not None for value in metric_fields.values()):
+            missing = [name for name, value in metric_fields.items() if value is None]
+            if missing:
+                raise ValueError(f"metric court_calibration fields must be complete; missing {', '.join(missing)}")
+            assert self.per_keypoint_residual_px is not None
+            if len(self.per_keypoint_residual_px) != len(PICKLEBALL_COURT_KEYPOINT_NAMES):
+                raise ValueError("per_keypoint_residual_px must contain exactly 15 values")
+            if any(value < 0.0 for value in self.per_keypoint_residual_px):
+                raise ValueError("per_keypoint_residual_px must be non-negative")
+            assert self.solved_over_frames is not None
+            if any(frame < 0 for frame in self.solved_over_frames):
+                raise ValueError("solved_over_frames must be non-negative")
         return self
 
 
@@ -269,6 +342,56 @@ class CourtLineEvidence(StrictArtifact):
         return self
 
 
+class CourtKeypointAggregate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    uv: Vector2
+    confidence: FiniteFloat = Field(ge=0.0, le=1.0)
+    inlier_frames: list[int] = Field(default_factory=list)
+    recovered: bool
+
+    @field_validator("inlier_frames")
+    @classmethod
+    def _inlier_frames_must_be_nonnegative(cls, value: list[int]) -> list[int]:
+        if any(frame < 0 for frame in value):
+            raise ValueError("inlier_frames must be non-negative")
+        return value
+
+
+class CourtKeypoints(StrictArtifact):
+    artifact_type: Literal["racketsport_court_keypoints"]
+    frame_indexes: list[int] = Field(min_length=1)
+    coordinate_space: Literal["undistorted_source_video_pixels"]
+    keypoints: list[CourtKeypointAggregate]
+    target_court_score: FiniteFloat = Field(ge=0.0, le=1.0)
+    source: str
+    not_gate_verified: bool
+
+    @field_validator("frame_indexes")
+    @classmethod
+    def _frame_indexes_must_be_nonnegative(cls, value: list[int]) -> list[int]:
+        if any(frame < 0 for frame in value):
+            raise ValueError("frame_indexes must be non-negative")
+        return value
+
+    @field_validator("not_gate_verified")
+    @classmethod
+    def _must_be_not_gate_verified(cls, value: bool) -> bool:
+        if value is not True:
+            raise ValueError("court_keypoints is not gate verified")
+        return value
+
+    @model_validator(mode="after")
+    def _must_match_canonical_keypoint_schema(self) -> "CourtKeypoints":
+        names = [keypoint.name for keypoint in self.keypoints]
+        if len(names) != len(set(names)):
+            raise ValueError("court_keypoints must not contain duplicate keypoint names")
+        if tuple(names) != PICKLEBALL_COURT_KEYPOINT_NAMES:
+            raise ValueError("court_keypoints must contain exactly the 15 canonical pickleball keypoints in schema order")
+        return self
+
+
 class TrackFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -312,6 +435,137 @@ class Tracks(StrictArtifact):
     fps: float = Field(gt=0.0)
     players: list[PlayerTrack]
     rally_spans: list[TimeSpan] = Field(default_factory=list)
+
+
+class PlayerGroundFoot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    side: Literal["L", "R"]
+    court_xy: Vector2
+    height_m: FiniteFloat
+    contact: bool
+    sigma_p_m: FiniteFloat = Field(ge=0.0)
+    confidence: FiniteFloat = Field(ge=0.0, le=1.0)
+    world_xyz: Vector3
+    source_points: list[str] = Field(default_factory=list)
+
+
+class PlayerGroundFrame(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    t: FiniteFloat = Field(ge=0.0)
+    feet: list[PlayerGroundFoot]
+    root_world: Vector3
+    joints_world: list[Vector3] = Field(default_factory=list)
+    mesh_ref: str | None = None
+
+    @model_validator(mode="after")
+    def _must_have_both_feet(self) -> "PlayerGroundFrame":
+        sides = {foot.side for foot in self.feet}
+        if len(self.feet) != 2 or sides != {"L", "R"}:
+            raise ValueError("player_ground frame must include both L and R feet")
+        return self
+
+
+class PlayerGroundPlayer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    frames: list[PlayerGroundFrame]
+
+
+class PlayerGroundArtifact(StrictArtifact):
+    artifact_type: Literal["racketsport_player_ground"]
+    fps: FiniteFloat = Field(gt=0.0)
+    players: list[PlayerGroundPlayer]
+    source: str
+    not_gate_verified: bool
+
+    @field_validator("not_gate_verified")
+    @classmethod
+    def _must_be_not_gate_verified(cls, value: bool) -> bool:
+        if value is not True:
+            raise ValueError("player_ground is not gate verified")
+        return value
+
+
+class CourtCallEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    t: FiniteFloat = Field(ge=0.0)
+    player_id: int
+    foot: Literal["L", "R"]
+    boundary: Literal["kitchen", "sideline", "baseline", "centerline"]
+    decision: Literal["in", "out", "kitchen", "too_close_to_call"]
+    signed_dist_m: FiniteFloat
+    sigma_p_m: FiniteFloat = Field(ge=0.0)
+    frames: list[int] = Field(min_length=1)
+    metric_confidence: Literal["high", "med", "low"]
+    capture_quality_grade: Literal["good", "warn", "poor"]
+
+    @field_validator("frames")
+    @classmethod
+    def _frames_must_be_nonnegative(cls, value: list[int]) -> list[int]:
+        if any(frame < 0 for frame in value):
+            raise ValueError("frames must be non-negative")
+        return value
+
+
+class CallsArtifact(StrictArtifact):
+    artifact_type: Literal["racketsport_court_calls"]
+    source: str
+    events: list[CourtCallEvent]
+    summary: dict[str, int | str]
+    not_gate_verified: bool
+
+    @field_validator("not_gate_verified")
+    @classmethod
+    def _must_be_not_gate_verified(cls, value: bool) -> bool:
+        if value is not True:
+            raise ValueError("court calls are not gate verified")
+        return value
+
+    @model_validator(mode="after")
+    def _summary_must_match_events(self) -> "CallsArtifact":
+        too_close = sum(1 for event in self.events if event.decision == "too_close_to_call")
+        expected = {
+            "total_events": len(self.events),
+            "hard_call_count": len(self.events) - too_close,
+            "too_close_to_call_count": too_close,
+            "status": "not_gate_verified",
+        }
+        for key, value in expected.items():
+            if self.summary.get(key) != value:
+                raise ValueError(f"court calls summary {key} must match events")
+        return self
+
+
+class DriftLogCheck(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    frame: int = Field(ge=0)
+    p95_px: FiniteFloat = Field(ge=0.0)
+    tripped: bool
+
+
+class DriftRecalibration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    from_frame: int = Field(ge=0)
+    to_frame: int = Field(ge=0)
+    reason: str
+
+    @model_validator(mode="after")
+    def _frames_must_be_ordered(self) -> "DriftRecalibration":
+        if self.to_frame < self.from_frame:
+            raise ValueError("to_frame must be greater than or equal to from_frame")
+        return self
+
+
+class DriftLog(StrictArtifact):
+    artifact_type: Literal["racketsport_drift_log"]
+    checks: list[DriftLogCheck]
+    recalibrations: list[DriftRecalibration] = Field(default_factory=list)
 
 
 class PersonLabel(BaseModel):
@@ -605,6 +859,7 @@ class FootLockSummary(BaseModel):
     scaffold: str
     contact_frames: int = Field(ge=0)
     contact_samples: int = Field(ge=0)
+    root_speed_limited_frames: int = Field(default=0, ge=0)
     max_slide_m: float = Field(ge=0.0)
     max_penetration_m: float = Field(ge=0.0)
     skate_free: bool
@@ -642,10 +897,18 @@ class SmplPlayer(BaseModel):
 
 
 class SmplMotion(StrictArtifact):
-    model: Literal["smpl", "smplx", "sam3dbody_world_joints"]
+    model: Literal["smpl", "smplx", "sam3dbody_world_joints", "sat_hmr_world_joints"]
     fps: float = Field(gt=0.0)
     world_frame: Literal["court_Z0"]
+    mesh_faces: list[tuple[int, int, int]] = Field(default_factory=list)
     players: list[SmplPlayer]
+
+    @field_validator("mesh_faces")
+    @classmethod
+    def _mesh_face_indices_must_be_nonnegative(cls, value: list[tuple[int, int, int]]) -> list[tuple[int, int, int]]:
+        if any(index < 0 for face in value for index in face):
+            raise ValueError("mesh_faces must not contain negative indices")
+        return value
 
 
 class SkeletonFrame(BaseModel):
@@ -665,16 +928,14 @@ class SkeletonPlayer(BaseModel):
 
 
 class Skeleton3D(StrictArtifact):
+    artifact_type: Literal["racketsport_skeleton3d"] = "racketsport_skeleton3d"
+    fps: float | None = Field(default=None, gt=0.0)
+    world_frame: Literal["court_Z0", "relative_only"] | None = None
+    source_model: str | None = None
     joint_names: list[str]
     preview_only: bool
     players: list[SkeletonPlayer]
-
-    @field_validator("preview_only")
-    @classmethod
-    def _must_be_preview_only(cls, value: bool) -> bool:
-        if value is not True:
-            raise ValueError("skeleton3d is preview/triggering only")
-        return value
+    provenance: dict[str, Any] = Field(default_factory=dict)
 
 
 class BallFrame(BaseModel):
@@ -686,6 +947,7 @@ class BallFrame(BaseModel):
     visible: bool
     world_xyz: Vector3 | None = None
     spin_rpm: FiniteFloat | None = None
+    speed_mps: FiniteFloat | None = Field(default=None, ge=0.0)
     approx: bool = False
 
 
@@ -693,12 +955,24 @@ class Bounce(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     t: float = Field(ge=0.0)
+    frame: int | None = Field(default=None, ge=0)
     world_xy: Vector2
+    contact_xy_img: Vector2 | None = None
+    p_bounce: FiniteFloat | None = Field(default=None, ge=0.0, le=1.0)
+    audio_delta_ms: FiniteFloat | None = None
+    source: str | None = None
+    margin_m: FiniteFloat | None = None
+    uncertainty_m: FiniteFloat | None = Field(default=None, ge=0.0)
+    confidence: FiniteFloat | None = Field(default=None, ge=0.0, le=1.0)
+    call: Literal["in", "out", "too_close_to_call"] | None = None
+    nearest_line: str | None = None
+    region: str | None = None
+    dominant_uncertainty_term: str | None = None
 
 
 class BallTrack(StrictArtifact):
     fps: float = Field(gt=0.0)
-    source: Literal["tracknet", "tap", "pbmat", "totnet"]
+    source: Literal["tracknet", "wasb", "fused", "tap", "pbmat", "totnet"]
     frames: list[BallFrame]
     bounces: list[Bounce] = Field(default_factory=list)
 
@@ -1019,7 +1293,7 @@ class ContactWindow(BaseModel):
 class ContactEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    type: Literal["contact", "bounce", "net_cross"]
+    type: Literal["contact", "bounce", "net_cross", "into_net"]
     t: float = Field(ge=0.0)
     frame: int = Field(ge=0)
     player_id: int | None = None
@@ -1053,7 +1327,7 @@ class ContactWindowCandidate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     review_id: str
-    type: Literal["contact", "bounce", "net_cross"]
+    type: Literal["contact", "bounce", "net_cross", "into_net"]
     frame: int = Field(ge=0)
     t: float = Field(ge=0.0)
     xy_px: Vector2 | None = None
@@ -1244,6 +1518,7 @@ class ReplayViewerManifest(StrictArtifact):
     video_url: str
     virtual_world_url: str
     replay_scene_url: str | None = None
+    body_mesh_url: str | None = None
     physics_refinement_url: str | None = None
     contact_windows_url: str | None = None
     label_overlays: list[ReplayViewerLabelOverlay] = Field(default_factory=list)
@@ -1318,7 +1593,7 @@ class VirtualWorldBallFrame(BaseModel):
 class VirtualWorldBall(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    source: Literal["tracknet", "tap", "pbmat", "totnet"] | None = None
+    source: Literal["tracknet", "wasb", "fused", "tap", "pbmat", "totnet"] | None = None
     frames: list[VirtualWorldBallFrame] = Field(default_factory=list)
 
 
@@ -1396,6 +1671,80 @@ class BodyComputeExecution(StrictArtifact):
     scheduled_frames: list[dict[str, Any]]
     skipped_frames: list[dict[str, Any]] = Field(default_factory=list)
     summary: dict[str, Any]
+
+
+class BodyMeshFrame(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    frame_idx: int = Field(ge=0)
+    t: float = Field(ge=0.0)
+    source_window_index: int | None = Field(default=None, ge=0)
+    blend_weight: float = Field(default=1.0, ge=0.0, le=1.0)
+    mesh_vertices_world: list[Vector3]
+    mesh_faces: list[tuple[int, int, int]] = Field(default_factory=list)
+    smplx_params: dict[str, list[float]]
+    joints_world: list[Vector3] = Field(default_factory=list)
+    joint_conf: list[float] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
+
+    @field_validator("mesh_faces")
+    @classmethod
+    def _face_indices_must_be_nonnegative(cls, value: list[tuple[int, int, int]]) -> list[tuple[int, int, int]]:
+        if any(index < 0 for face in value for index in face):
+            raise ValueError("mesh_faces must not contain negative indices")
+        return value
+
+
+class BodyMeshPlayer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    frames: list[BodyMeshFrame]
+
+
+class BodyMeshWindow(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_window_index: int = Field(ge=0)
+    frame_start: int = Field(ge=0)
+    frame_end: int = Field(ge=0)
+    t0: float = Field(ge=0.0)
+    t1: float = Field(ge=0.0)
+    frame_count: int = Field(ge=0)
+    target_player_ids: list[int]
+    target_representation: str
+    fallback_representation: str
+    reason_counts: dict[str, int] = Field(default_factory=dict)
+    max_score: float = Field(ge=0.0)
+
+
+class BodyMeshSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mesh_frame_count: int = Field(ge=0)
+    player_count: int = Field(ge=0)
+    contact_window_count: int = Field(ge=0)
+
+
+class BodyMesh(StrictArtifact):
+    artifact_type: Literal["racketsport_body_mesh"]
+    clip: str
+    model: str
+    fps: float = Field(gt=0.0)
+    world_frame: Literal["court_Z0"]
+    faces_ref: str
+    mesh_faces: list[tuple[int, int, int]] = Field(default_factory=list)
+    joint_names: list[str] = Field(default_factory=list)
+    windows: list[BodyMeshWindow] = Field(default_factory=list)
+    players: list[BodyMeshPlayer]
+    summary: BodyMeshSummary
+
+    @field_validator("mesh_faces")
+    @classmethod
+    def _static_face_indices_must_be_nonnegative(cls, value: list[tuple[int, int, int]]) -> list[tuple[int, int, int]]:
+        if any(index < 0 for face in value for index in face):
+            raise ValueError("mesh_faces must not contain negative indices")
+        return value
 
 
 class BodyMeshReadiness(StrictArtifact):
@@ -1615,9 +1964,13 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "capture_sidecar": CaptureSidecar,
     "court_calibration": CourtCalibration,
     "court_line_evidence": CourtLineEvidence,
+    "court_keypoints": CourtKeypoints,
     "court_zones": CourtZones,
     "net_plane": NetPlane,
     "tracks": Tracks,
+    "player_ground": PlayerGroundArtifact,
+    "court_calls": CallsArtifact,
+    "drift_log": DriftLog,
     "person_ground_truth": PersonGroundTruth,
     "cvat_video_annotations": CvatVideoAnnotations,
     "on_device_person_tracks": OnDevicePersonTracks,
@@ -1626,6 +1979,7 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "smpl_motion": SmplMotion,
     "skeleton3d": Skeleton3D,
     "body_compute_execution": BodyComputeExecution,
+    "body_mesh": BodyMesh,
     "body_mesh_readiness": BodyMeshReadiness,
     "ball_track": BallTrack,
     "ball_line_calls": BallLineCalls,

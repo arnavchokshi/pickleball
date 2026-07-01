@@ -15,6 +15,8 @@ from .schemas import (
     CaptureSidecar,
     CourtCalibration,
     CourtExtrinsics,
+    CourtKeypoints,
+    PICKLEBALL_COURT_KEYPOINT_NAMES,
     ReprojectionError,
 )
 
@@ -33,6 +35,11 @@ def camera_matrix_from_intrinsics(intrinsics: CameraIntrinsics) -> list[list[flo
 def load_capture_sidecar(path: str | Path) -> CaptureSidecar:
     with Path(path).open("r", encoding="utf-8") as handle:
         return CaptureSidecar.model_validate(json.load(handle))
+
+
+def load_court_keypoints(path: str | Path) -> CourtKeypoints:
+    with Path(path).open("r", encoding="utf-8") as handle:
+        return CourtKeypoints.model_validate(json.load(handle))
 
 
 def manual_tap_correspondences(
@@ -277,6 +284,116 @@ def calibration_from_manual_tap_frames(paths: Iterable[str | Path], *, sport: Sp
         averaged_image_pts.append([sum(x_values) / len(x_values), sum(y_values) / len(y_values)])
 
     return _build_calibration(sidecars[0], sport=sport, image_pts=averaged_image_pts, world_pts=first_world_pts)
+
+
+def metric_calibration_from_sidecar_and_keypoints(
+    sidecar_path: str | Path,
+    keypoints_path: str | Path,
+    *,
+    sport: Sport,
+) -> CourtCalibration:
+    if sport != "pickleball":
+        raise ValueError("metric court calibration currently supports pickleball")
+
+    sidecar = load_capture_sidecar(sidecar_path)
+    keypoints = load_court_keypoints(keypoints_path)
+    if (
+        sidecar.arkit_camera_pose is None
+        or sidecar.court_plane is None
+        or sidecar.intrinsics.source.lower() != "arkit"
+    ):
+        raise ValueError("trusted ARKit floor plane is required for metric court calibration")
+
+    from .court_keypoint_net import PICKLEBALL_KEYPOINT_BY_NAME
+    from .court_positioning import (
+        CameraFloorGeometry,
+        back_project_pixel_to_floor,
+        estimate_ground_sample_distance,
+        estimate_position_uncertainty,
+        solve_metric_court_placement,
+    )
+    from .court_positioning_artifacts import build_metric_court_calibration_artifact
+
+    geometry = CameraFloorGeometry(
+        intrinsics=sidecar.intrinsics.model_dump(mode="json"),
+        camera_origin_world=sidecar.arkit_camera_pose.t,
+        R_world_camera=sidecar.arkit_camera_pose.R,
+        floor_plane_point=sidecar.court_plane.point,
+        floor_plane_normal=sidecar.court_plane.normal,
+    )
+    image_keypoints = {
+        keypoint.name: {
+            "uv": [float(keypoint.uv[0]), float(keypoint.uv[1])],
+            "confidence": float(keypoint.confidence),
+            "inlier_frames": [int(frame) for frame in keypoint.inlier_frames],
+            "recovered": keypoint.recovered,
+        }
+        for keypoint in keypoints.keypoints
+    }
+    world_keypoints = {
+        name: back_project_pixel_to_floor(image_keypoints[name]["uv"], geometry)
+        for name in PICKLEBALL_COURT_KEYPOINT_NAMES
+    }
+    placement = solve_metric_court_placement(world_keypoints)
+    if placement.solved_keypoints != PICKLEBALL_COURT_KEYPOINT_NAMES:
+        raise ValueError("metric court calibration requires all 15 canonical pickleball keypoints")
+
+    court_pts = [list(PICKLEBALL_KEYPOINT_BY_NAME[name].world_xyz_m) for name in placement.solved_keypoints]
+    image_pts = [image_keypoints[name]["uv"] for name in placement.solved_keypoints]
+    homography = homography_from_planar_points(court_pts, image_pts)
+    projected_pts = project_planar_points(homography, court_pts)
+    error = reprojection_error(image_pts, projected_pts)
+    per_keypoint_residual_px = [
+        math.hypot(observed[0] - projected[0], observed[1] - projected[1])
+        for observed, projected in zip(image_pts, projected_pts, strict=True)
+    ]
+    per_keypoint_residual_px = [0.0 if residual < 1e-9 else residual for residual in per_keypoint_residual_px]
+    calibration_sigma_m = 0.0 if placement.residual_error_m.p95 < 1e-9 else placement.residual_error_m.p95
+    plane_sigma_m = 0.012
+    gsd_samples = []
+    for name in placement.solved_keypoints:
+        uv = image_keypoints[name]["uv"]
+        gsd = estimate_ground_sample_distance(uv, geometry)
+        sigma = estimate_position_uncertainty(
+            pixel_error_px=1.0,
+            gsd_m_per_px=gsd,
+            plane_sigma_m=plane_sigma_m,
+            calibration_sigma_m=calibration_sigma_m,
+        )
+        canonical = PICKLEBALL_KEYPOINT_BY_NAME[name].world_xyz_m
+        gsd_samples.append(
+            {
+                "court_xy": [float(canonical[0]), float(canonical[1])],
+                "gsd_m_per_px": gsd,
+                "sigma_p_m": sigma,
+            }
+        )
+
+    extrinsics = _solve_or_seed_extrinsics(
+        sidecar,
+        world_pts=[world_keypoints[name] for name in placement.solved_keypoints],
+        image_pts=image_pts,
+    )
+    payload = build_metric_court_calibration_artifact(
+        placement=placement,
+        intrinsics=sidecar.intrinsics.model_dump(mode="json"),
+        homography=homography,
+        image_keypoints=image_keypoints,
+        extrinsics=extrinsics.model_dump(mode="json"),
+        reprojection_error_px=error.model_dump(mode="json"),
+        per_keypoint_residual_px=per_keypoint_residual_px,
+        gsd_model={
+            "type": "analytic_ray_plane",
+            "plane_sigma_m": plane_sigma_m,
+            "calibration_sigma_m": calibration_sigma_m,
+            "samples": gsd_samples,
+        },
+        capture_quality=_merge_capture_quality(sidecar, error, len(image_pts)).model_dump(mode="json"),
+        source="arkit_plane_keypoint_metric_solve_v1",
+        solved_over_frames=keypoints.frame_indexes,
+        sport=sport,
+    )
+    return CourtCalibration.model_validate(payload)
 
 
 def _build_calibration(

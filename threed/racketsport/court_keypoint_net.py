@@ -63,6 +63,90 @@ class SolvePnPCorrespondences:
     confidence: tuple[float, ...]
 
 
+def make_court_keypoint_heatmap_model(keypoint_count: int, *, architecture: str = "encoder_decoder_v1") -> Any:
+    if isinstance(keypoint_count, bool) or not isinstance(keypoint_count, int) or keypoint_count <= 0:
+        raise ValueError("keypoint_count must be a positive integer")
+    if architecture not in {"encoder_decoder_v1", "local_conv_v1"}:
+        raise ValueError("unsupported court keypoint heatmap architecture")
+    import torch.nn as nn
+    import torch.nn.functional as F
+
+    if architecture == "local_conv_v1":
+        return nn.Sequential(
+            nn.Conv2d(3, 24, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(24, 48, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(48, 48, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(48, keypoint_count, 1),
+        )
+
+    class CourtKeypointEncoderDecoder(nn.Module):
+        def __init__(self, outputs: int) -> None:
+            super().__init__()
+            self.encoder = nn.Sequential(
+                nn.Conv2d(3, 32, 3, padding=1),
+                nn.ReLU(),
+                nn.Conv2d(32, 64, 3, stride=2, padding=1),
+                nn.ReLU(),
+                nn.Conv2d(64, 96, 3, stride=2, padding=1),
+                nn.ReLU(),
+                nn.Conv2d(96, 128, 3, stride=2, padding=1),
+                nn.ReLU(),
+                nn.Conv2d(128, 128, 3, padding=1),
+                nn.ReLU(),
+            )
+            self.decoder = nn.Sequential(
+                nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False),
+                nn.Conv2d(128, 96, 3, padding=1),
+                nn.ReLU(),
+                nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False),
+                nn.Conv2d(96, 64, 3, padding=1),
+                nn.ReLU(),
+                nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False),
+                nn.Conv2d(64, 32, 3, padding=1),
+                nn.ReLU(),
+                nn.Conv2d(32, outputs, 1),
+            )
+
+        def forward(self, x: Any) -> Any:
+            logits = self.decoder(self.encoder(x))
+            if logits.shape[-2:] != x.shape[-2:]:
+                logits = F.interpolate(logits, size=x.shape[-2:], mode="bilinear", align_corners=False)
+            return logits
+
+    return CourtKeypointEncoderDecoder(keypoint_count)
+
+
+def court_keypoint_probabilities(logits: Any, *, activation: str = "spatial_softmax") -> Any:
+    if activation == "sigmoid":
+        return logits.sigmoid()
+    if activation != "spatial_softmax":
+        raise ValueError("unsupported court keypoint heatmap activation")
+    import torch.nn.functional as F
+
+    if logits.ndim < 3:
+        return F.softmax(logits, dim=-1)
+    flat = logits.reshape(*logits.shape[:-2], -1)
+    return F.softmax(flat, dim=-1).reshape_as(logits)
+
+
+def court_keypoint_heatmap_loss(logits: Any, target: Any, mask: Any, *, foreground_weight: float = 20.0) -> Any:
+    if foreground_weight <= 0:
+        raise ValueError("foreground_weight must be positive")
+    import torch.nn.functional as F
+
+    target = target.clamp(0.0, 1.0)
+    target_flat = target.reshape(*target.shape[:-2], -1)
+    logits_flat = logits.reshape(*logits.shape[:-2], -1)
+    mask_flat = mask.reshape(*mask.shape[:-2], -1)
+    channel_mask = (mask_flat.amax(dim=-1) > 0).to(logits.dtype)
+    target_distribution = target_flat / target_flat.sum(dim=-1, keepdim=True).clamp_min(1e-6)
+    loss = -(target_distribution * F.log_softmax(logits_flat, dim=-1)).sum(dim=-1)
+    return (loss * channel_mask).sum() / channel_mask.sum().clamp_min(1.0)
+
+
 PICKLEBALL_KEYPOINTS: tuple[CourtKeypoint, ...] = (
     CourtKeypoint("near_left_corner", tuple(xyz_ft_to_m(-10.0, -22.0)), "near baseline left sideline corner"),
     CourtKeypoint("near_baseline_center", tuple(xyz_ft_to_m(0.0, -22.0)), "near baseline at centerline"),

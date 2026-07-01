@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -11,6 +12,12 @@ from .schemas import Tracks
 
 ARTIFACT_TYPE = "racketsport_body_compute_execution"
 SCHEMA_VERSION = 1
+DEFAULT_MAX_TRACK_SPEED_FOR_BODY_MPS = 10.0
+DEFAULT_MAX_BBOX_CENTER_SPEED_FOR_BODY_DIAG_S = 30.0
+DEFAULT_MAX_BBOX_CENTER_STEP_FOR_BODY_PX = 300.0
+DEFAULT_MAX_TRACK_WORLD_STEP_FOR_BBOX_JITTER_M = 3.5
+UNSAFE_TRACK_CONTINUITY_REASON = "unsafe_track_continuity"
+MISSING_FRAME_COMPUTE_PLAN_REASON = "missing_frame_compute_plan"
 
 
 def build_body_compute_execution(
@@ -18,23 +25,55 @@ def build_body_compute_execution(
     *,
     frame_plan_path: str | Path | None = None,
     max_frames: int | None = None,
+    max_track_speed_for_body_mps: float = DEFAULT_MAX_TRACK_SPEED_FOR_BODY_MPS,
+    max_bbox_center_speed_for_body_diag_s: float = DEFAULT_MAX_BBOX_CENTER_SPEED_FOR_BODY_DIAG_S,
+    max_bbox_center_step_for_body_px: float = DEFAULT_MAX_BBOX_CENTER_STEP_FOR_BODY_PX,
+    max_track_world_step_for_bbox_jitter_m: float = DEFAULT_MAX_TRACK_WORLD_STEP_FOR_BBOX_JITTER_M,
 ) -> dict[str, Any]:
     """Return the BODY frames that should invoke deep mesh compute.
 
     If ``frame_plan_path`` exists, only frames inside ``deep_mesh_windows`` are
     scheduled. Other plan frames are preserved as skipped review records. When
-    no plan exists, the runner keeps its historical behavior and schedules every
-    tracked frame.
+    no plan exists, BODY fails closed by skipping all mesh work; Lane B must be
+    driven by an explicit frame plan.
     """
 
     if max_frames is not None and max_frames < 0:
         raise ValueError("max_frames must be non-negative")
+    if max_track_speed_for_body_mps <= 0.0:
+        raise ValueError("max_track_speed_for_body_mps must be positive")
+    if max_bbox_center_speed_for_body_diag_s <= 0.0:
+        raise ValueError("max_bbox_center_speed_for_body_diag_s must be positive")
+    if max_bbox_center_step_for_body_px <= 0.0:
+        raise ValueError("max_bbox_center_step_for_body_px must be positive")
+    if max_track_world_step_for_bbox_jitter_m <= 0.0:
+        raise ValueError("max_track_world_step_for_bbox_jitter_m must be positive")
 
     track_lookup = _track_lookup(tracks)
+    safe_track_lookup, track_continuity = _body_safe_track_lookup(
+        tracks,
+        track_lookup=track_lookup,
+        max_track_speed_for_body_mps=max_track_speed_for_body_mps,
+        max_bbox_center_speed_for_body_diag_s=max_bbox_center_speed_for_body_diag_s,
+        max_bbox_center_step_for_body_px=max_bbox_center_step_for_body_px,
+        max_track_world_step_for_bbox_jitter_m=max_track_world_step_for_bbox_jitter_m,
+    )
     plan_path = Path(frame_plan_path) if frame_plan_path is not None else None
     if plan_path is not None and plan_path.is_file():
-        return _execution_from_frame_plan(tracks, plan_path=plan_path, track_lookup=track_lookup, max_frames=max_frames)
-    return _execution_from_tracks(tracks, track_lookup=track_lookup, max_frames=max_frames)
+        return _execution_from_frame_plan(
+            tracks,
+            plan_path=plan_path,
+            track_lookup=track_lookup,
+            safe_track_lookup=safe_track_lookup,
+            track_continuity=track_continuity,
+            max_frames=max_frames,
+        )
+    return _execution_without_frame_plan(
+        tracks,
+        track_lookup=track_lookup,
+        safe_track_lookup=safe_track_lookup,
+        track_continuity=track_continuity,
+    )
 
 
 def body_frame_batches_from_execution(
@@ -67,6 +106,8 @@ def _execution_from_frame_plan(
     *,
     plan_path: Path,
     track_lookup: dict[int, list[tuple[int, Any]]],
+    safe_track_lookup: dict[int, list[tuple[int, Any]]],
+    track_continuity: dict[str, Any],
     max_frames: int | None,
 ) -> dict[str, Any]:
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
@@ -74,6 +115,7 @@ def _execution_from_frame_plan(
     scheduled: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     scheduled_indexes: set[int] = set()
+    continuity_skipped_indexes: set[int] = set()
 
     for window_index, window in enumerate(plan.get("deep_mesh_windows", [])):
         frame_start = int(window["frame_start"])
@@ -87,24 +129,46 @@ def _execution_from_frame_plan(
             target_ids = _target_player_ids(active, window_target_ids, frame_plan)
             if not target_ids:
                 continue
+            safe_ids = {player_id for player_id, _frame in safe_track_lookup.get(frame_idx, [])}
+            safe_target_ids = [player_id for player_id in target_ids if player_id in safe_ids]
+            unsafe_target_ids = [player_id for player_id in target_ids if player_id not in safe_ids]
+            if unsafe_target_ids:
+                continuity_skipped_indexes.add(frame_idx)
+                skipped.append(
+                    _continuity_skipped_frame(
+                        tracks,
+                        frame_idx=frame_idx,
+                        target_player_ids=unsafe_target_ids,
+                        active_player_ids=[player_id for player_id, _frame in active],
+                        player_targets=_selected_player_targets(frame_plan, unsafe_target_ids),
+                    )
+                )
+            if not safe_target_ids:
+                continue
             scheduled_indexes.add(frame_idx)
             scheduled.append(
                 {
                     "frame_idx": frame_idx,
                     "t": frame_idx / tracks.fps,
                     "target_representation": "world_mesh",
-                    "target_player_ids": target_ids,
+                    "target_player_ids": safe_target_ids,
                     "active_player_ids": [player_id for player_id, _frame in active],
                     "source_window_index": window_index,
+                    "window_frame_start": frame_start,
+                    "window_frame_end": frame_end,
+                    "window_frame_count": int(window.get("frame_count", frame_end - frame_start + 1)),
+                    "window_t0": float(window.get("t0", frame_start / tracks.fps)),
+                    "window_t1": float(window.get("t1", (frame_end + 1) / tracks.fps)),
+                    "fallback_representation": str(window.get("fallback_representation", "lane_a_skeleton")),
                     "reason_counts": dict(window.get("reason_counts", {})),
                     "reasons": list(frame_plan.get("reasons", [])),
                     "max_score": float(window.get("max_score", frame_plan.get("score", 0.0))),
-                    "player_targets": _selected_player_targets(frame_plan, target_ids),
+                    "player_targets": _selected_player_targets(frame_plan, safe_target_ids),
                 }
             )
 
     for frame_idx, frame_plan in sorted(frame_lookup.items()):
-        if frame_idx in scheduled_indexes:
+        if frame_idx in scheduled_indexes or frame_idx in continuity_skipped_indexes:
             continue
         tier = str(frame_plan.get("recommended_tier", "unknown"))
         target_representation = str(frame_plan.get("target_representation", "unknown"))
@@ -129,47 +193,62 @@ def _execution_from_frame_plan(
         source_plan=str(plan_path),
         scheduled=scheduled,
         skipped=sorted(skipped, key=lambda item: (int(item["frame_idx"]), str(item["skip_reason"]))),
+        track_continuity=track_continuity,
     )
 
 
-def _execution_from_tracks(
+def _execution_without_frame_plan(
     tracks: Tracks,
     *,
     track_lookup: dict[int, list[tuple[int, Any]]],
-    max_frames: int | None,
+    safe_track_lookup: dict[int, list[tuple[int, Any]]],
+    track_continuity: dict[str, Any],
 ) -> dict[str, Any]:
-    scheduled = [
-        {
-            "frame_idx": frame_idx,
-            "t": frame_idx / tracks.fps,
-            "target_representation": "world_mesh",
-            "target_player_ids": [player_id for player_id, _frame in active],
-            "active_player_ids": [player_id for player_id, _frame in active],
-            "source_window_index": None,
-            "reason_counts": {},
-            "reasons": ["no_frame_compute_plan"],
-            "max_score": None,
-            "player_targets": [
+    skipped: list[dict[str, Any]] = []
+    for frame_idx, active in sorted(track_lookup.items()):
+        active_player_ids = [player_id for player_id, _frame in active]
+        safe_active = safe_track_lookup.get(frame_idx, [])
+        safe_ids = {player_id for player_id, _frame in safe_active}
+        unsafe_ids = [player_id for player_id in active_player_ids if player_id not in safe_ids]
+        if safe_active:
+            skipped.append(
                 {
-                    "player_id": player_id,
-                    "track_conf": round(float(track_frame.conf), 3),
-                    "score": 1.0,
+                    "frame_idx": frame_idx,
+                    "t": frame_idx / tracks.fps,
                     "recommended_tier": "deep_mesh",
                     "target_representation": "world_mesh",
-                    "reasons": ["no_frame_compute_plan"],
+                    "target_player_ids": [player_id for player_id, _frame in safe_active],
+                    "active_player_ids": active_player_ids,
+                    "source_window_index": None,
+                    "reason_counts": {},
+                    "skip_reason": MISSING_FRAME_COMPUTE_PLAN_REASON,
+                    "reasons": [MISSING_FRAME_COMPUTE_PLAN_REASON],
+                    "max_score": None,
+                    "player_targets": _track_player_targets(
+                        safe_active,
+                        reason=MISSING_FRAME_COMPUTE_PLAN_REASON,
+                    ),
                 }
-                for player_id, track_frame in active
-            ],
-        }
-        for frame_idx, active in sorted(track_lookup.items())
-    ]
-    scheduled, skipped = _apply_max_frames(scheduled, max_frames=max_frames)
+            )
+        if unsafe_ids:
+            unsafe_id_set = set(unsafe_ids)
+            unsafe_active = [(player_id, track_frame) for player_id, track_frame in active if player_id in unsafe_id_set]
+            skipped.append(
+                _continuity_skipped_frame(
+                    tracks,
+                    frame_idx=frame_idx,
+                    target_player_ids=unsafe_ids,
+                    active_player_ids=active_player_ids,
+                    player_targets=_track_player_targets(unsafe_active),
+                )
+            )
     return _execution_payload(
         tracks,
-        mode="all_track_frames",
+        mode="lane_b_requires_frame_compute_plan",
         source_plan=None,
-        scheduled=scheduled,
+        scheduled=[],
         skipped=skipped,
+        track_continuity=track_continuity,
     )
 
 
@@ -180,6 +259,7 @@ def _execution_payload(
     source_plan: str | None,
     scheduled: list[dict[str, Any]],
     skipped: list[dict[str, Any]],
+    track_continuity: dict[str, Any],
 ) -> dict[str, Any]:
     scheduled_by_target_representation: dict[str, int] = {}
     scheduled_by_reason: dict[str, int] = {}
@@ -212,6 +292,15 @@ def _execution_payload(
                 reason_key = str(reason)
                 skipped_by_reason[reason_key] = skipped_by_reason.get(reason_key, 0) + 1
     scheduled_player_frame_count = sum(len(frame.get("target_player_ids", [])) for frame in scheduled)
+    track_continuity_skipped_player_frame_count = sum(
+        len(frame.get("target_player_ids", []))
+        for frame in skipped
+        if frame.get("skip_reason") == UNSAFE_TRACK_CONTINUITY_REASON
+    )
+    max_track_speed_for_body_mps = float(track_continuity["max_track_speed_for_body_mps"])
+    max_bbox_center_speed_for_body_diag_s = float(track_continuity["max_bbox_center_speed_for_body_diag_s"])
+    max_bbox_center_step_for_body_px = float(track_continuity["max_bbox_center_step_for_body_px"])
+    max_track_world_step_for_bbox_jitter_m = float(track_continuity["max_track_world_step_for_bbox_jitter_m"])
     return {
         "schema_version": SCHEMA_VERSION,
         "artifact_type": ARTIFACT_TYPE,
@@ -220,6 +309,7 @@ def _execution_payload(
         "fps": tracks.fps,
         "scheduled_frames": scheduled,
         "skipped_frames": skipped,
+        "track_continuity": track_continuity,
         "summary": {
             "scheduled_frame_count": len(scheduled),
             "scheduled_player_frame_count": scheduled_player_frame_count,
@@ -231,8 +321,150 @@ def _execution_payload(
             "skipped_by_tier": dict(sorted(skipped_by_tier.items())),
             "skipped_by_target_representation": dict(sorted(skipped_by_target_representation.items())),
             "skipped_by_reason": dict(sorted(skipped_by_reason.items())),
+            "max_track_speed_for_body_mps": max_track_speed_for_body_mps,
+            "max_bbox_center_speed_for_body_diag_s": max_bbox_center_speed_for_body_diag_s,
+            "max_bbox_center_step_for_body_px": max_bbox_center_step_for_body_px,
+            "max_track_world_step_for_bbox_jitter_m": max_track_world_step_for_bbox_jitter_m,
+            "track_continuity_status": track_continuity["status"],
+            "track_continuity_temporal_jump_count": int(track_continuity["temporal_jump_count"]),
+            "track_continuity_world_anchor_jitter_player_frame_count": int(
+                track_continuity["world_anchor_jitter_count"]
+            ),
+            "track_continuity_skipped_player_frame_count": track_continuity_skipped_player_frame_count,
         },
     }
+
+
+def _body_safe_track_lookup(
+    tracks: Tracks,
+    *,
+    track_lookup: dict[int, list[tuple[int, Any]]],
+    max_track_speed_for_body_mps: float,
+    max_bbox_center_speed_for_body_diag_s: float,
+    max_bbox_center_step_for_body_px: float,
+    max_track_world_step_for_bbox_jitter_m: float,
+) -> tuple[dict[int, list[tuple[int, Any]]], dict[str, Any]]:
+    safe_lookup: dict[int, list[tuple[int, Any]]] = {}
+    last_safe_by_player: dict[int, tuple[int, float, list[float], list[float]]] = {}
+    temporal_jumps: list[dict[str, Any]] = []
+    world_anchor_jitter: list[dict[str, Any]] = []
+    total_player_frame_count = 0
+    safe_player_frame_count = 0
+
+    for frame_idx, active in sorted(track_lookup.items()):
+        t = frame_idx / tracks.fps
+        for player_id, track_frame in active:
+            total_player_frame_count += 1
+            xy = [float(value) for value in track_frame.world_xy]
+            bbox = [float(value) for value in track_frame.bbox]
+            previous = last_safe_by_player.get(player_id)
+            if previous is not None:
+                prev_frame_idx, prev_t, prev_xy, prev_bbox = previous
+                dt = t - prev_t
+                step = math.dist(prev_xy, xy) if dt > 0.0 else math.inf
+                speed = step / dt if dt > 0.0 else math.inf
+                bbox_step_px = _bbox_center_step_px(prev_bbox, bbox)
+                bbox_center_speed_diag_s = (
+                    bbox_step_px / _average_bbox_diagonal_px(prev_bbox, bbox) / dt
+                    if dt > 0.0
+                    else math.inf
+                )
+                if dt <= 0.0 or speed > max_track_speed_for_body_mps:
+                    continuity_record = _continuity_record(
+                        player_id=player_id,
+                        prev_frame_idx=prev_frame_idx,
+                        frame_idx=frame_idx,
+                        prev_t=prev_t,
+                        t=t,
+                        dt=dt,
+                        step=step,
+                        speed=speed,
+                        prev_xy=prev_xy,
+                        xy=xy,
+                        bbox_step_px=bbox_step_px,
+                        bbox_center_speed_diag_s=bbox_center_speed_diag_s,
+                    )
+                    if (
+                        dt > 0.0
+                        and bbox_center_speed_diag_s <= max_bbox_center_speed_for_body_diag_s
+                        and bbox_step_px <= max_bbox_center_step_for_body_px
+                        and step <= max_track_world_step_for_bbox_jitter_m
+                    ):
+                        world_anchor_jitter.append(continuity_record)
+                    else:
+                        temporal_jumps.append(continuity_record)
+                        continue
+            safe_lookup.setdefault(frame_idx, []).append((player_id, track_frame))
+            last_safe_by_player[player_id] = (frame_idx, t, xy, bbox)
+            safe_player_frame_count += 1
+
+    status = "blocked" if temporal_jumps else "warning" if world_anchor_jitter else "ok"
+    return safe_lookup, {
+        "status": status,
+        "max_track_speed_for_body_mps": float(max_track_speed_for_body_mps),
+        "max_bbox_center_speed_for_body_diag_s": float(max_bbox_center_speed_for_body_diag_s),
+        "max_bbox_center_step_for_body_px": float(max_bbox_center_step_for_body_px),
+        "max_track_world_step_for_bbox_jitter_m": float(max_track_world_step_for_bbox_jitter_m),
+        "total_player_frame_count": total_player_frame_count,
+        "safe_player_frame_count": safe_player_frame_count,
+        "skipped_player_frame_count": total_player_frame_count - safe_player_frame_count,
+        "temporal_jump_count": len(temporal_jumps),
+        "world_anchor_jitter_count": len(world_anchor_jitter),
+        "temporal_jumps": temporal_jumps[:50],
+        "world_anchor_jitter": world_anchor_jitter[:50],
+    }
+
+
+def _continuity_record(
+    *,
+    player_id: int,
+    prev_frame_idx: int,
+    frame_idx: int,
+    prev_t: float,
+    t: float,
+    dt: float,
+    step: float,
+    speed: float,
+    prev_xy: list[float],
+    xy: list[float],
+    bbox_step_px: float,
+    bbox_center_speed_diag_s: float,
+) -> dict[str, Any]:
+    return {
+        "player_id": int(player_id),
+        "prev_frame_idx": int(prev_frame_idx),
+        "frame_idx": int(frame_idx),
+        "prev_t": round(prev_t, 6),
+        "t": round(t, 6),
+        "dt_s": round(dt, 6),
+        "step_m": round(step, 6) if math.isfinite(step) else None,
+        "speed_mps": round(speed, 6) if math.isfinite(speed) else None,
+        "world_speed_mps": round(speed, 6) if math.isfinite(speed) else None,
+        "prev_world_xy": [round(value, 6) for value in prev_xy],
+        "world_xy": [round(value, 6) for value in xy],
+        "bbox_center_step_px": round(bbox_step_px, 6) if math.isfinite(bbox_step_px) else None,
+        "bbox_center_speed_diag_s": round(bbox_center_speed_diag_s, 6)
+        if math.isfinite(bbox_center_speed_diag_s)
+        else None,
+    }
+
+
+def _bbox_center_step_px(previous_bbox: list[float], bbox: list[float]) -> float:
+    prev_center = _bbox_center(previous_bbox)
+    center = _bbox_center(bbox)
+    return math.dist(prev_center, center)
+
+
+def _bbox_center(bbox: list[float]) -> list[float]:
+    return [(bbox[0] + bbox[2]) / 2.0, (bbox[1] + bbox[3]) / 2.0]
+
+
+def _average_bbox_diagonal_px(previous_bbox: list[float], bbox: list[float]) -> float:
+    return max((_bbox_diagonal_px(previous_bbox) + _bbox_diagonal_px(bbox)) / 2.0, 1e-6)
+
+
+def _bbox_diagonal_px(bbox: list[float]) -> float:
+    return math.hypot(bbox[2] - bbox[0], bbox[3] - bbox[1])
 
 
 def _track_lookup(tracks: Tracks) -> dict[int, list[tuple[int, Any]]]:
@@ -242,6 +474,45 @@ def _track_lookup(tracks: Tracks) -> dict[int, list[tuple[int, Any]]]:
             frame_idx = int(round(frame.t * tracks.fps))
             by_frame.setdefault(frame_idx, []).append((player.id, frame))
     return by_frame
+
+
+def _continuity_skipped_frame(
+    tracks: Tracks,
+    *,
+    frame_idx: int,
+    target_player_ids: list[int],
+    active_player_ids: list[int],
+    player_targets: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "frame_idx": frame_idx,
+        "t": frame_idx / tracks.fps,
+        "recommended_tier": "deep_mesh",
+        "target_representation": "world_mesh",
+        "skip_reason": UNSAFE_TRACK_CONTINUITY_REASON,
+        "reasons": [UNSAFE_TRACK_CONTINUITY_REASON],
+        "target_player_ids": target_player_ids,
+        "active_player_ids": active_player_ids,
+        "player_targets": player_targets,
+    }
+
+
+def _track_player_targets(
+    active: list[tuple[int, Any]],
+    *,
+    reason: str = "no_frame_compute_plan",
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "player_id": player_id,
+            "track_conf": round(float(track_frame.conf), 3),
+            "score": 1.0,
+            "recommended_tier": "deep_mesh",
+            "target_representation": "world_mesh",
+            "reasons": [reason],
+        }
+        for player_id, track_frame in active
+    ]
 
 
 def _target_player_ids(

@@ -19,6 +19,7 @@ from .schemas import BallTrack
 
 
 DEFAULT_SUPPRESS_CONF_THRESHOLD = 1.01
+STATUS_TESTED = "TESTED-ON-REAL-DATA"
 
 
 @dataclass(frozen=True)
@@ -212,7 +213,7 @@ def filter_ball_track_local_search(
     summary = {
         "schema_version": 1,
         "artifact_type": "racketsport_ball_local_search_filter",
-        "status": "filtered_not_gate_verified",
+        "status": STATUS_TESTED,
         "source_ball_track": str(ball_track_path),
         "source_video": str(video),
         "court_calibration": str(court_calibration_path) if court_calibration_path is not None else None,

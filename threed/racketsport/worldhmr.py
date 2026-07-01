@@ -10,7 +10,14 @@ from dataclasses import dataclass, field
 from math import sqrt
 from typing import Any, Mapping, Sequence
 
-from .footlock import FootKinematics, foot_lock_metrics, snap_stance_foot
+from .footlock import (
+    ContactHysteresis,
+    FootContactObservation,
+    FootKinematics,
+    classify_contact,
+    foot_lock_metrics,
+    snap_stance_foot,
+)
 from .schemas import CourtCalibration
 
 
@@ -18,6 +25,15 @@ SCAFFOLD_NOTE = "cpu_worldhmr_primitives_no_sam3dbody_integration"
 FLOOR_CONTACT_EPSILON_M = 0.035
 LOW_GROUNDING_ANCHOR_HEIGHT_M = 0.08
 FOOT_LOCK_SKATE_FREE_MAX_SLIDE_M = 0.003
+FOOT_LOCK_RELATIVE_ENTER_SPEED_MPS = 5.0
+FOOT_LOCK_RELATIVE_EXIT_SPEED_MPS = 6.0
+FOOT_LOCK_CONTACT_HYSTERESIS = ContactHysteresis(
+    enter_height_m=FLOOR_CONTACT_EPSILON_M,
+    exit_height_m=FLOOR_CONTACT_EPSILON_M,
+    enter_speed_mps=FOOT_LOCK_RELATIVE_ENTER_SPEED_MPS,
+    exit_speed_mps=FOOT_LOCK_RELATIVE_EXIT_SPEED_MPS,
+    min_confidence=0.5,
+)
 
 
 @dataclass(frozen=True)
@@ -151,11 +167,14 @@ def build_body_artifacts_from_fast_sam(
     smoothing_alpha: float = 0.65,
     max_root_speed_mps: float | None = None,
     max_track_anchor_smoothing_residual_m: float | None = None,
+    model: str = "sam3dbody_world_joints",
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Build BODY contract artifacts from real Fast SAM-3D-Body outputs."""
 
     if fps <= 0.0:
         raise ValueError("fps must be positive")
+    if model not in {"sam3dbody_world_joints", "sat_hmr_world_joints"}:
+        raise ValueError("model must be a supported world-joint BODY model")
     if max_root_speed_mps is not None and max_root_speed_mps <= 0.0:
         raise ValueError("max_root_speed_mps must be positive when provided")
     if max_track_anchor_smoothing_residual_m is not None and max_track_anchor_smoothing_residual_m <= 0.0:
@@ -172,13 +191,17 @@ def build_body_artifacts_from_fast_sam(
         max_root_speed_mps=max_root_speed_mps,
         max_track_anchor_smoothing_residual_m=max_track_anchor_smoothing_residual_m,
     )
+    mesh_faces = _common_mesh_faces(smoothed)
     players: list[dict[str, Any]] = []
     skeleton_players: list[dict[str, Any]] = []
     max_joint_count = max(len(frame["joints_world"]) for frame in smoothed)
     foot_lock_player_summaries: list[dict[str, Any]] = []
     for player_id in sorted({int(frame["player_id"]) for frame in smoothed}):
         player_frames = [frame for frame in smoothed if int(frame["player_id"]) == player_id]
-        player_frames, foot_lock_summary = _apply_footlock_to_player_frames(player_frames)
+        player_frames, foot_lock_summary = _apply_footlock_to_player_frames(
+            player_frames,
+            max_root_speed_mps=max_root_speed_mps,
+        )
         foot_lock_player_summaries.append(foot_lock_summary)
         betas = _first_list(player_frames, "betas")
         contact_by_frame = [_infer_floor_contact(frame) for frame in player_frames]
@@ -231,11 +254,13 @@ def build_body_artifacts_from_fast_sam(
 
     smpl_motion = {
         "schema_version": 1,
-        "model": "sam3dbody_world_joints",
+        "model": model,
         "fps": float(fps),
         "world_frame": "court_Z0",
         "players": players,
     }
+    if mesh_faces:
+        smpl_motion["mesh_faces"] = mesh_faces
     skeleton3d = {
         "schema_version": 1,
         "joint_names": [f"sam3dbody_joint_{idx:03d}" for idx in range(max_joint_count)],
@@ -265,6 +290,9 @@ def build_body_artifacts_from_fast_sam(
         ),
         "foot_lock_contact_frames": sum(int(summary["contact_frames"]) for summary in foot_lock_player_summaries),
         "foot_lock_contact_samples": sum(int(summary["contact_samples"]) for summary in foot_lock_player_summaries),
+        "foot_lock_root_speed_limited_frames": sum(
+            int(summary["root_speed_limited_frames"]) for summary in foot_lock_player_summaries
+        ),
         "max_foot_lock_slide_m": max(
             (float(summary["max_slide_m"]) for summary in foot_lock_player_summaries),
             default=0.0,
@@ -310,33 +338,155 @@ def _infer_floor_contact(frame: Mapping[str, Any], *, floor_z_m: float = 0.0) ->
     return {"left": left, "right": right}
 
 
-def _apply_footlock_to_player_frames(frames: Sequence[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def _apply_footlock_to_player_frames(
+    frames: Sequence[dict[str, Any]],
+    *,
+    max_root_speed_mps: float | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     samples_by_joint: dict[int, list[FootKinematics]] = {}
+    locked_xy_by_joint: dict[int, list[float]] = {}
     snapped_frames: list[dict[str, Any]] = []
     contact_frame_count = 0
+    previous_frame_idx: int | None = None
+    previous_transl: list[float] | None = None
+    previous_t: float | None = None
+    previous_relative_by_joint: dict[int, list[float]] = {}
+    contact_by_joint: dict[int, bool] = {}
+    root_speed_limited_frames = 0
 
     for frame in frames:
+        frame_idx = int(frame["frame_idx"])
+        sparse_output_reset = False
+        if previous_frame_idx is not None and frame_idx > previous_frame_idx + 1:
+            for joint_idx, locked_xy in list(locked_xy_by_joint.items()):
+                _append_footlock_reset(samples_by_joint, joint_idx, locked_xy)
+            locked_xy_by_joint.clear()
+            previous_relative_by_joint.clear()
+            contact_by_joint.clear()
+            sparse_output_reset = True
+        previous_frame_idx = frame_idx
+
         snapped = dict(frame)
         joints = [[float(value) for value in joint] for joint in frame["joints_world"]]
+        vertices = [[float(value) for value in vertex] for vertex in frame["vertices_world"]]
+        transl = [float(value) for value in frame["transl_world"]]
+        frame_t = float(frame["t"])
+        dt = frame_t - previous_t if previous_t is not None else 0.0
+        confidence = float(frame.get("confidence", 0.0))
         contact_sample_count = 0
+        contact_joint_indices: list[int] = []
+        relative_by_joint: dict[int, list[float]] = {}
         for joint_idx, joint in enumerate(joints):
-            if abs(joint[2]) > FLOOR_CONTACT_EPSILON_M:
+            relative = [joint[0] - transl[0], joint[1] - transl[1], joint[2]]
+            relative_by_joint[joint_idx] = relative
+            previous_relative = previous_relative_by_joint.get(joint_idx)
+            relative_speed = (
+                _distance3(previous_relative, relative)
+                / dt
+                if previous_relative is not None and dt > 0.0
+                else 0.0
+            )
+            contact = classify_contact(
+                FootContactObservation(
+                    height_m=abs(joint[2]),
+                    speed_mps=relative_speed,
+                    confidence=confidence,
+                ),
+                previous_contact=contact_by_joint.get(joint_idx, False),
+                hysteresis=FOOT_LOCK_CONTACT_HYSTERESIS,
+            )
+            contact_by_joint[joint_idx] = contact
+            if not contact:
                 continue
             locked = snap_stance_foot(
                 FootKinematics(
                     position_xyz=joint,
-                    velocity_xyz=[0.0, 0.0, 0.0],
+                    velocity_xyz=[relative_speed, 0.0, 0.0],
                     contact=True,
                 ),
                 court_z_m=0.0,
             )
             joints[joint_idx] = locked.position_xyz
-            samples_by_joint.setdefault(joint_idx, []).append(locked)
+            contact_joint_indices.append(joint_idx)
             contact_sample_count += 1
+
+        can_pin_contact_xy = bool(contact_joint_indices) and len(contact_joint_indices) < len(joints)
+        if not can_pin_contact_xy:
+            for joint_idx, locked_xy in list(locked_xy_by_joint.items()):
+                _append_footlock_reset(samples_by_joint, joint_idx, locked_xy)
+            locked_xy_by_joint.clear()
+
+        active_contact_indices = set(contact_joint_indices)
+        if can_pin_contact_xy:
+            for joint_idx in list(locked_xy_by_joint):
+                if joint_idx not in active_contact_indices:
+                    _append_footlock_reset(samples_by_joint, joint_idx, locked_xy_by_joint[joint_idx])
+                    del locked_xy_by_joint[joint_idx]
+
+        lock_deltas = [
+            [
+                locked_xy_by_joint[joint_idx][0] - joints[joint_idx][0],
+                locked_xy_by_joint[joint_idx][1] - joints[joint_idx][1],
+            ]
+            for joint_idx in contact_joint_indices
+            if can_pin_contact_xy and joint_idx in locked_xy_by_joint
+        ]
+        if lock_deltas:
+            dx = sum(delta[0] for delta in lock_deltas) / len(lock_deltas)
+            dy = sum(delta[1] for delta in lock_deltas) / len(lock_deltas)
+            transl = [transl[0] + dx, transl[1] + dy, transl[2]]
+            joints = [[joint[0] + dx, joint[1] + dy, joint[2]] for joint in joints]
+            vertices = [[vertex[0] + dx, vertex[1] + dy, vertex[2]] for vertex in vertices]
+
+        for joint_idx in contact_joint_indices:
+            if can_pin_contact_xy:
+                locked_xy = locked_xy_by_joint.setdefault(joint_idx, [joints[joint_idx][0], joints[joint_idx][1]])
+                joints[joint_idx][0] = locked_xy[0]
+                joints[joint_idx][1] = locked_xy[1]
+
+        temporal_smoothing_reset = bool(snapped.get("temporal_smoothing_reset")) or sparse_output_reset
+        if (
+            max_root_speed_mps is not None
+            and previous_transl is not None
+            and previous_t is not None
+            and not temporal_smoothing_reset
+        ):
+            dt = float(frame["t"]) - previous_t
+            if dt > 0.0:
+                limited_transl, limited = _limit_step(
+                    previous_transl,
+                    transl,
+                    max_distance=max_root_speed_mps * dt,
+                )
+                if limited:
+                    delta = [limited_transl[idx] - transl[idx] for idx in range(3)]
+                    transl = limited_transl
+                    joints = [[joint[0] + delta[0], joint[1] + delta[1], joint[2] + delta[2]] for joint in joints]
+                    vertices = [
+                        [vertex[0] + delta[0], vertex[1] + delta[1], vertex[2] + delta[2]]
+                        for vertex in vertices
+                    ]
+                    root_speed_limited_frames += 1
+
+        previous_transl = list(transl)
+        previous_t = frame_t
+        previous_relative_by_joint = relative_by_joint
+
+        for joint_idx in contact_joint_indices:
+            samples_by_joint.setdefault(joint_idx, []).append(
+                FootKinematics(
+                    position_xyz=[joints[joint_idx][0], joints[joint_idx][1], joints[joint_idx][2]],
+                    velocity_xyz=[0.0, 0.0, 0.0],
+                    contact=True,
+                )
+            )
 
         if contact_sample_count:
             contact_frame_count += 1
+        snapped["temporal_smoothing_reset"] = temporal_smoothing_reset
+        snapped["transl_world"] = transl
         snapped["joints_world"] = joints
+        snapped["vertices_world"] = vertices
         snapped["foot_lock"] = _infer_floor_contact(snapped)
         snapped_frames.append(snapped)
 
@@ -354,10 +504,25 @@ def _apply_footlock_to_player_frames(frames: Sequence[dict[str, Any]]) -> tuple[
         "scaffold": "cpu_foot_lock_primitives_no_smpl_ik",
         "contact_frames": contact_frame_count,
         "contact_samples": contact_samples,
+        "root_speed_limited_frames": root_speed_limited_frames,
         "max_slide_m": max_slide_m,
         "max_penetration_m": max_penetration_m,
         "skate_free": skate_free,
     }
+
+
+def _append_footlock_reset(
+    samples_by_joint: dict[int, list[FootKinematics]],
+    joint_idx: int,
+    locked_xy: Sequence[float],
+) -> None:
+    samples_by_joint.setdefault(joint_idx, []).append(
+        FootKinematics(
+            position_xyz=[float(locked_xy[0]), float(locked_xy[1]), 0.0],
+            velocity_xyz=[0.0, 0.0, 0.0],
+            contact=False,
+        )
+    )
 
 
 def _distance3(left: Sequence[float], right: Sequence[float]) -> float:
@@ -373,6 +538,47 @@ def _rms(values: Sequence[float]) -> float:
 def _validate_vector3(values: Sequence[float], *, name: str) -> None:
     if len(values) != 3:
         raise ValueError(f"{name} must be a 3-vector")
+
+
+def _mesh_faces(values: Any, *, vertex_count: int) -> list[list[int]]:
+    if values is None:
+        return []
+    if isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
+        raise ValueError("mesh_faces must be a sequence of triangle index triples")
+    faces: list[list[int]] = []
+    for face_index, face in enumerate(values):
+        if isinstance(face, (str, bytes)) or not isinstance(face, Sequence) or len(face) != 3:
+            raise ValueError(f"mesh_faces/{face_index} must be a triangle index triple")
+        parsed_face: list[int] = []
+        for raw_index in face:
+            if isinstance(raw_index, bool):
+                raise ValueError(f"mesh_faces/{face_index} must be a triangle index triple")
+            try:
+                index = int(raw_index)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"mesh_faces/{face_index} must be a triangle index triple") from exc
+            if index < 0:
+                raise ValueError(f"mesh_faces/{face_index} must be a triangle index triple")
+            if index >= vertex_count:
+                raise ValueError(f"mesh_faces/{face_index} index {index} is outside vertices_camera")
+            parsed_face.append(index)
+        faces.append(parsed_face)
+    return faces
+
+
+def _common_mesh_faces(frames: Sequence[Mapping[str, Any]]) -> list[list[int]]:
+    canonical: list[list[int]] | None = None
+    for frame in frames:
+        faces = frame.get("mesh_faces", [])
+        if not faces:
+            continue
+        face_rows = [[int(index) for index in face] for face in faces]
+        if canonical is None:
+            canonical = face_rows
+            continue
+        if canonical != face_rows:
+            raise ValueError("Fast SAM-3D-Body samples produced inconsistent mesh_faces")
+    return canonical or []
 
 
 def _ground_fast_sam_sample(sample: Mapping[str, Any], *, calibration: CourtCalibration) -> dict[str, Any]:
@@ -412,6 +618,7 @@ def _ground_fast_sam_sample(sample: Mapping[str, Any], *, calibration: CourtCali
         "transl_world": [track_world_xy[0], track_world_xy[1], 0.0],
         "joints_world": _translate_points(joints_world_raw or vertices_world_raw, dx=dx, dy=dy, dz=dz),
         "vertices_world": _translate_points(vertices_world_raw, dx=dx, dy=dy, dz=dz),
+        "mesh_faces": _mesh_faces(sample.get("mesh_faces", []), vertex_count=len(vertices_camera)),
     }
 
 

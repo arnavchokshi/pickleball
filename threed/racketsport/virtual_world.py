@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from .court_calibration import project_image_points_to_world
 from .court_templates import get_court_template
 from .racket6dof import SE3PoseConfidence, camera_paddle_pose_to_court_world, paddle_face_corners_object_cm
+from .racket_true_corners import is_box_derived_source
 from .schemas import (
     BallTrack,
     CourtCalibration,
@@ -49,8 +50,8 @@ def build_virtual_world_state(
     fps = _world_fps(tracks_obj, smpl_obj, skeleton_obj, ball_obj, racket_obj)
     players = _players(tracks_obj=tracks_obj, smpl_obj=smpl_obj, skeleton_obj=skeleton_obj)
     ball = _ball(ball_obj, calibration=calibration)
-    paddles = _paddles(racket_obj, calibration=calibration)
-    warnings = _warnings(players=players, ball=ball, paddles=paddles)
+    paddles, paddle_warnings = _paddles(racket_obj, calibration=calibration)
+    warnings = [*_warnings(players=players, ball=ball, paddles=paddles), *paddle_warnings]
     payload = {
         "schema_version": SCHEMA_VERSION,
         "artifact_type": ARTIFACT_TYPE,
@@ -385,15 +386,23 @@ def _world_xy_in_court(calibration: CourtCalibration, world_xy: Any, *, margin_m
     return min(xs) - margin_m <= x <= max(xs) + margin_m and min(ys) - margin_m <= y <= max(ys) + margin_m
 
 
-def _paddles(racket_obj: RacketPose | None, *, calibration: CourtCalibration) -> list[dict[str, Any]]:
+def _paddles(racket_obj: RacketPose | None, *, calibration: CourtCalibration) -> tuple[list[dict[str, Any]], list[str]]:
     if racket_obj is None:
-        return []
+        return [], []
     paddles = []
+    suppressed_box_derived_count = 0
     for player in racket_obj.players:
         paddle_dims = dict(player.paddle_dims_in)
-        frames = [_paddle_frame(frame, calibration=calibration, paddle_dims_in=paddle_dims) for frame in player.frames]
-        paddles.append({"player_id": player.id, "paddle_dims_in": dict(player.paddle_dims_in), "frames": frames})
-    return paddles
+        frames = []
+        for frame in player.frames:
+            if is_box_derived_source(frame.source):
+                suppressed_box_derived_count += 1
+                continue
+            frames.append(_paddle_frame(frame, calibration=calibration, paddle_dims_in=paddle_dims))
+        if frames:
+            paddles.append({"player_id": player.id, "paddle_dims_in": dict(player.paddle_dims_in), "frames": frames})
+    warnings = ["box_derived_paddle_pose_suppressed"] if suppressed_box_derived_count else []
+    return paddles, warnings
 
 
 def _paddle_frame(frame: Any, *, calibration: CourtCalibration, paddle_dims_in: Mapping[str, float]) -> dict[str, Any]:

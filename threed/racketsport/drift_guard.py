@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Iterable
 
 from .court_calibration import CALIBRATION_REPROJECTION_P95_GATE_PX, project_planar_points, reprojection_error
-from .schemas import ReprojectionError
+from .schemas import DriftLog, ReprojectionError
 
 
 @dataclass(frozen=True)
@@ -14,6 +14,14 @@ class DriftCheck:
     frame_index: int
     reprojection_error_px: ReprojectionError
     recalibration_required: bool
+    reasons: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class DriftSequenceStatus:
+    checks: list[dict[str, float | int | bool]]
+    recalibration_required: bool
+    recalibration_from_frame: int | None
     reasons: list[str] = field(default_factory=list)
 
 
@@ -59,3 +67,75 @@ def verify(
         frame_index=frame_index,
         p95_gate_px=p95_gate_px,
     )
+
+
+def evaluate_drift_sequence(
+    checks: Iterable[tuple[int, float]],
+    *,
+    p95_gate_px: float = 8.0,
+    consecutive_failures: int = 3,
+) -> DriftSequenceStatus:
+    """Apply the Stage D tripod-bump rule across cheap verification checks."""
+
+    if p95_gate_px < 0.0:
+        raise ValueError("p95_gate_px must be non-negative")
+    if consecutive_failures <= 0:
+        raise ValueError("consecutive_failures must be positive")
+
+    serialized_checks: list[dict[str, float | int | bool]] = []
+    failing_window: list[int] = []
+    recalibration_from_frame: int | None = None
+    for frame_index, p95_px in checks:
+        if frame_index < 0:
+            raise ValueError("frame_index must be non-negative")
+        if p95_px < 0.0:
+            raise ValueError("p95_px must be non-negative")
+        failed = float(p95_px) > p95_gate_px
+        if failed:
+            failing_window.append(int(frame_index))
+        else:
+            failing_window.clear()
+        tripped = len(failing_window) >= consecutive_failures
+        if tripped and recalibration_from_frame is None:
+            recalibration_from_frame = failing_window[-consecutive_failures]
+        serialized_checks.append({"frame": int(frame_index), "p95_px": float(p95_px), "tripped": tripped})
+
+    reasons = ["reprojection_drift_3_consecutive"] if recalibration_from_frame is not None else []
+    return DriftSequenceStatus(
+        checks=serialized_checks,
+        recalibration_required=recalibration_from_frame is not None,
+        recalibration_from_frame=recalibration_from_frame,
+        reasons=reasons,
+    )
+
+
+def build_drift_log_artifact(
+    status: DriftSequenceStatus,
+    *,
+    recalibration_to_frame: int | None = None,
+) -> dict[str, object]:
+    """Serialize Stage D checks and recalibration spans to drift_log.json."""
+
+    recalibrations: list[dict[str, int | str]] = []
+    if status.recalibration_required:
+        if status.recalibration_from_frame is None:
+            raise ValueError("recalibration_from_frame is required when recalibration_required is true")
+        if not status.checks:
+            raise ValueError("drift checks are required when recalibration_required is true")
+        to_frame = int(recalibration_to_frame) if recalibration_to_frame is not None else int(status.checks[-1]["frame"])
+        reason = status.reasons[0] if status.reasons else "reprojection_drift_3_consecutive"
+        recalibrations.append(
+            {
+                "from_frame": int(status.recalibration_from_frame),
+                "to_frame": to_frame,
+                "reason": reason,
+            }
+        )
+
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_drift_log",
+        "checks": status.checks,
+        "recalibrations": recalibrations,
+    }
+    return DriftLog.model_validate(payload).model_dump(mode="json")

@@ -1,5 +1,9 @@
 import Foundation
 
+// Canonical tier split: this module describes ON-DEVICE LIVE preview/guidance
+// contracts only. 2D pose/joints are canonical for the live tier. The `pose3D`
+// cases below are legacy/debug preview payloads and must not be treated as
+// phone-real-time mesh, metric coaching truth, or SERVER OFFLINE deep output.
 public enum PreviewTrackKind: String, Codable, Sendable {
     case pose2D = "pose_2d"
     case pose3D = "pose_3d"
@@ -119,6 +123,8 @@ public struct FastTierPreviewPayload: Codable, Equatable, Sendable {
             reasons.append("missing_preview_pose_track")
         }
 
+        // ON-DEVICE LIVE payloads are guidance only; server-deep artifacts and
+        // authoritative coaching metrics must stay outside this contract.
         if tracks.contains(where: { !$0.previewOnly }) || metricLabels.contains(where: { !$0.previewOnly }) {
             reasons.append("non_preview_data_in_fast_tier")
         }

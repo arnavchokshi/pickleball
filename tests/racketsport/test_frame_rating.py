@@ -132,7 +132,7 @@ def test_frame_compute_plan_prioritizes_contact_low_confidence_and_ball_uncertai
             "t1": 2.0 / 30.0,
             "frame_count": 2,
             "target_representation": "world_mesh",
-            "fallback_representation": "skeleton_preview",
+            "fallback_representation": "lane_a_skeleton",
             "target_player_ids": [1],
             "reason_counts": {
                 "ball_uncertain": 1,
@@ -144,6 +144,25 @@ def test_frame_compute_plan_prioritizes_contact_low_confidence_and_ball_uncertai
     ]
     assert plan["summary"]["deep_mesh_window_count"] == 1
     assert plan["summary"]["by_player_target_representation"] == {"track_only": 1, "world_mesh": 2}
+
+
+def test_frame_compute_plan_routes_skeleton_preview_to_lane_a_skeleton() -> None:
+    plan = build_frame_compute_plan(_tracks_payload(), expected_players=2)
+
+    frame_one = next(frame for frame in plan["frames"] if frame["frame_idx"] == 1)
+    assert frame_one["recommended_tier"] == "skeleton_preview"
+    assert frame_one["target_representation"] == "lane_a_skeleton"
+    assert frame_one["player_targets"] == [
+        {
+            "player_id": 1,
+            "track_conf": 0.41,
+            "score": 0.25,
+            "recommended_tier": "skeleton_preview",
+            "target_representation": "lane_a_skeleton",
+            "reasons": ["low_track_confidence"],
+        }
+    ]
+    assert plan["summary"]["by_player_target_representation"] == {"lane_a_skeleton": 1, "track_only": 2}
 
 
 def test_frame_compute_plan_marks_missing_expected_players_for_human_review() -> None:
@@ -200,7 +219,7 @@ def test_frame_compute_plan_schedules_reviewed_assigned_contact_despite_incomple
             "t1": 2.0 / 30.0,
             "frame_count": 2,
             "target_representation": "world_mesh",
-            "fallback_representation": "skeleton_preview",
+            "fallback_representation": "lane_a_skeleton",
             "target_player_ids": [1],
             "reason_counts": {
                 "contact_window": 2,

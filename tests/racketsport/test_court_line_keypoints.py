@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 import math
+from pathlib import Path
 
 import pytest
 
+from scripts.racketsport.train_court_keypoint_heatmap import court_corner_keypoint_labels
 from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS, keypoint_labels_from_court_corners
 from threed.racketsport.court_line_keypoints import (
     detect_court_keypoints_from_image,
@@ -63,6 +66,56 @@ def test_detect_court_keypoints_from_image_decodes_synthetic_white_line_court() 
         errors.append(math.dist(pred_xy, expected_xy))
     assert _median(errors) < 2.0
     assert max(errors) < 4.0
+
+
+def test_detect_court_keypoints_from_image_prefers_plausible_semantic_lines_on_outdoor_eval_clip() -> None:
+    cv2 = pytest.importorskip("cv2")
+    label_path = Path("eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/labels/court_corners.json")
+    if not label_path.is_file():
+        pytest.skip("committed outdoor court-corner label is unavailable")
+    row = court_corner_keypoint_labels(json.loads(label_path.read_text(encoding="utf-8")), clip_root=label_path.parent.parent)
+
+    capture = cv2.VideoCapture(str(label_path.parent.parent / "source.mp4"))
+    try:
+        assert capture.isOpened()
+        capture.set(cv2.CAP_PROP_POS_FRAMES, int(row["frame_index"]))
+        ok, image = capture.read()
+    finally:
+        capture.release()
+    assert ok
+
+    predictions = detect_court_keypoints_from_image(image)
+
+    errors = [
+        math.dist(predictions.keypoints[name]["xy"], expected_xy)
+        for name, expected_xy in row["keypoints"].items()
+    ]
+    assert _median(errors) <= 10.0
+
+
+def test_detect_court_keypoints_from_image_uses_high_support_sides_on_indoor_eval_clip() -> None:
+    cv2 = pytest.importorskip("cv2")
+    label_path = Path("eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/labels/court_corners.json")
+    if not label_path.is_file():
+        pytest.skip("committed indoor court-corner label is unavailable")
+    row = court_corner_keypoint_labels(json.loads(label_path.read_text(encoding="utf-8")), clip_root=label_path.parent.parent)
+
+    capture = cv2.VideoCapture(str(label_path.parent.parent / "source.mp4"))
+    try:
+        assert capture.isOpened()
+        capture.set(cv2.CAP_PROP_POS_FRAMES, int(row["frame_index"]))
+        ok, image = capture.read()
+    finally:
+        capture.release()
+    assert ok
+
+    predictions = detect_court_keypoints_from_image(image)
+
+    errors = [
+        math.dist(predictions.keypoints[name]["xy"], expected_xy)
+        for name, expected_xy in row["keypoints"].items()
+    ]
+    assert _median(errors) <= 5.0
 
 
 def _semantic_lines_from_labels(labels: dict[str, list[float]]) -> dict[str, list[list[float]]]:

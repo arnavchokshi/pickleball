@@ -468,6 +468,7 @@ def _noop_dependency_runners() -> dict[str, NoopDependencyRunner]:
             ("court_calibration.json", "court_zones.json", "net_plane.json", "court_line_evidence.json"),
         ),
         "tracking": NoopDependencyRunner("tracking", ("tracks.json",)),
+        "pose": NoopDependencyRunner("pose", ("skeleton3d.json",)),
         "body": NoopDependencyRunner(
             "body",
             ("smpl_motion.json", "skeleton3d.json", "body_compute_execution.json", "body_mesh_readiness.json"),
@@ -638,6 +639,8 @@ def test_ball_stage_runner_real_tracknet_mode_runs_model_inference_before_contac
     assert calls[0]["inpaintnet_file"] == inpaintnet_file
     assert calls[0]["out"] == run_dir / "ball_track.json"
     assert calls[0]["metadata_out"] == run_dir / "tracknet_metadata.json"
+    assert calls[0]["confidence_mode"] == "heatmap_peak"
+    assert calls[0]["heatmap_visible_threshold"] == 0.5
     ball_stage = summary["stages"][-1]
     assert ball_stage["stage"] == "ball_events"
     assert ball_stage["real_model"] is True
@@ -844,7 +847,7 @@ def test_ball_stage_runner_tracknet_local_search_keeps_raw_and_outputs_filtered_
     assert local_search_calls[0]["ball_track_path"] == run_dir / "ball_track_tracknet_raw.json"
     assert local_search_calls[0]["out_path"] == run_dir / "ball_track.json"
     assert local_search_calls[0]["summary_path"] == run_dir / "ball_local_search_summary.json"
-    assert local_search_calls[0]["court_calibration_path"] == run_dir / "court_calibration.json"
+    assert local_search_calls[0]["court_calibration_path"] is None
     assert json.loads((run_dir / "ball_track_tracknet_raw.json").read_text(encoding="utf-8"))["frames"][0]["xy"] == [
         444.0,
         222.0,
@@ -859,6 +862,76 @@ def test_ball_stage_runner_tracknet_local_search_keeps_raw_and_outputs_filtered_
     assert "ball_track_tracknet_raw.json" in ball_stage["produced_artifacts"]
     assert "ball_local_search_summary.json" in ball_stage["produced_artifacts"]
     assert "applied TrackNetV3 local-search postprocess" in ball_stage["notes"]
+
+
+def test_ball_stage_runner_tracknet_local_search_can_opt_into_court_filter(tmp_path: Path) -> None:
+    clip = "clip_001"
+    inputs = tmp_path / "inputs" / clip
+    run_dir = tmp_path / "runs" / clip
+    video = inputs / "input.mp4"
+    tracknet_file = tmp_path / "TrackNet_best.pt"
+    inpaintnet_file = tmp_path / "InpaintNet_best.pt"
+    tracknet_repo = tmp_path / "TrackNetV3"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"fake video bytes")
+    tracknet_file.write_bytes(b"fake tracknet checkpoint")
+    inpaintnet_file.write_bytes(b"fake inpaintnet checkpoint")
+    tracknet_repo.mkdir(parents=True)
+    (tracknet_repo / "predict.py").write_text("print('fake')\n", encoding="utf-8")
+    _write_dependency_artifacts(run_dir)
+    _write_contact_cue_artifacts(inputs)
+
+    local_search_calls: list[dict[str, object]] = []
+
+    def fake_tracknet_runner(**kwargs):
+        _write_model_ball_track(Path(kwargs["out"]), source="tracknet")
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_tracknet_ball_run",
+            "source_mode": "tracknet_predict",
+            "frame_count": 3,
+            "visible_frame_count": 2,
+        }
+
+    def fake_local_search_runner(**kwargs):
+        local_search_calls.append(kwargs)
+        _write_model_ball_track(Path(kwargs["out_path"]), source="tracknet")
+        summary = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_ball_local_search_filter",
+            "visible_before": 2,
+            "visible_after": 2,
+            "recovered_count": 0,
+            "relocated_off_path_count": 0,
+            "suppressed_off_path_count": 0,
+            "uses_human_clicks": False,
+        }
+        _write_json(Path(kwargs["summary_path"]), summary)
+        return summary
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(
+        tracknet_repo=tracknet_repo,
+        tracknet_file=tracknet_file,
+        inpaintnet_file=inpaintnet_file,
+        video_path=video,
+        tracknet_runner=fake_tracknet_runner,
+        tracknet_fps=30.0,
+        tracknet_local_search=True,
+        tracknet_local_search_court_filter=True,
+        local_search_runner=fake_local_search_runner,
+    )
+
+    run_pipeline(
+        clip=clip,
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    assert local_search_calls
+    assert local_search_calls[0]["court_calibration_path"] == run_dir / "court_calibration.json"
 
 
 def test_ball_stage_runner_applies_physics3d_bounces_from_world_xyz(tmp_path: Path) -> None:

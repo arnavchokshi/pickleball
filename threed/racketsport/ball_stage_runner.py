@@ -36,6 +36,7 @@ TOTNET_RUN_METADATA_FILENAME = "totnet_run.json"
 TRACKNET_RUN_METADATA_FILENAME = "tracknet_metadata.json"
 TRACKNET_PREDICTION_DIR = "tracknet_predictions"
 TRACKNET_RAW_BALL_FILENAME = "ball_track_tracknet_raw.json"
+DEFAULT_TRACKNET_HEATMAP_VISIBLE_THRESHOLD = 0.5
 BALL_LOCAL_SEARCH_SUMMARY_FILENAME = "ball_local_search_summary.json"
 BALL_PHYSICS3D_SUMMARY_FILENAME = "ball_physics3d_summary.json"
 BALL_BOUNCE_MIN_VERTICAL_SPEED_MPS = 0.0
@@ -87,7 +88,10 @@ class BallStageRunner:
         tracknet_runner: ModelRunner | None = None,
         tracknet_fps: float | None = None,
         tracknet_large_video: bool = False,
+        tracknet_confidence_mode: str = "heatmap_peak",
+        tracknet_heatmap_visible_threshold: float = DEFAULT_TRACKNET_HEATMAP_VISIBLE_THRESHOLD,
         tracknet_local_search: bool = False,
+        tracknet_local_search_court_filter: bool = False,
         local_search_runner: ModelRunner | None = None,
         ball_physics3d: bool = False,
         contact_fusion_mode: str = CONTACT_FUSION_MODE_WRIST_BALL,
@@ -107,7 +111,12 @@ class BallStageRunner:
         self.tracknet_runner = tracknet_runner
         self.tracknet_fps = float(tracknet_fps) if tracknet_fps is not None else None
         self.tracknet_large_video = bool(tracknet_large_video)
+        if tracknet_confidence_mode not in {"legacy_visibility", "heatmap_peak"}:
+            raise ValueError("tracknet_confidence_mode must be legacy_visibility or heatmap_peak")
+        self.tracknet_confidence_mode = tracknet_confidence_mode
+        self.tracknet_heatmap_visible_threshold = float(tracknet_heatmap_visible_threshold)
         self.tracknet_local_search = bool(tracknet_local_search)
+        self.tracknet_local_search_court_filter = bool(tracknet_local_search_court_filter)
         self.local_search_runner = local_search_runner
         self.ball_physics3d = bool(ball_physics3d)
         if contact_fusion_mode not in {CONTACT_FUSION_MODE_AUDIO_WRIST_BALL, CONTACT_FUSION_MODE_WRIST_BALL}:
@@ -324,6 +333,8 @@ class BallStageRunner:
             prediction_dir=context.run_dir / TRACKNET_PREDICTION_DIR,
             batch_size=self.batch_size,
             large_video=self.tracknet_large_video,
+            confidence_mode=self.tracknet_confidence_mode,
+            heatmap_visible_threshold=self.tracknet_heatmap_visible_threshold,
         )
         model_metrics = _tracknet_model_metrics(summary)
         if self.tracknet_local_search:
@@ -335,7 +346,9 @@ class BallStageRunner:
                 ball_track_path=raw_out,
                 out_path=out,
                 summary_path=local_summary_out,
-                court_calibration_path=_optional_court_calibration_path(context),
+                court_calibration_path=(
+                    _optional_court_calibration_path(context) if self.tracknet_local_search_court_filter else None
+                ),
             )
             model_metrics["raw_tracknet_ball_track"] = str(raw_out)
             model_metrics["local_search"] = _local_search_metrics(local_summary)

@@ -48,6 +48,32 @@ COURT_EVIDENCE_IDS = (*REQUIRED_COURT_LINE_IDS, *REQUIRED_NET_IDS)
 COURT_POINT_IDS = {f"{evidence_id}:{endpoint}" for evidence_id in COURT_EVIDENCE_IDS for endpoint in ("a", "b")}
 PADDLE_CROP_TILE_SIZE = 180
 TRACKING_REVIEW_ROOT = Path("runs/phase2/person_coverage_actual_source30_h100_yolo26m_fulltb3_20260628")
+BODY_REVIEW_ROOT = Path("runs/body_joint_goal_smoke_20260630T001407")
+BODY_LABEL_FINALIZATION_REPORT_PATH = Path("body_world_label_review_bundle/body_world_label_finalization.json")
+BODY_REVIEW_RUNS = (
+    {
+        "run_id": "a100_body_video_smoke_burlington_best_zero_switch_tracks_20260701T153021Z_reground_footlockfix_report",
+        "title": "Burlington zero-switch footlock-fixed BODY labels",
+        "corrections_path": Path("corrections/inbox/body_burlington_best_zero_switch_footlockfix_review_corrections.json"),
+    },
+    {
+        "run_id": "a100_body_video_smoke_burlington_fresh_max1_fastmesh_gatefix_20260701T133821Z",
+        "title": "Burlington FastSAM BODY candidate world-label sample",
+        "corrections_path": Path("corrections/inbox/body_burlington_fastmesh_gatefix_review_corrections.json"),
+    },
+    {
+        "run_id": "a100_body_video_smoke_burlington_bboxscaled_resetcap075_runtime_20260701T001500Z",
+        "title": "Burlington reset-bound BODY overlay warnings",
+        "corrections_path": Path("corrections/inbox/body_full_track_v2_review_corrections.json"),
+    },
+    {
+        "run_id": "a100_body_video_smoke_wolverine_bboxscaled_resetcap075_runtime_20260701T002500Z",
+        "title": "Wolverine reset-bound BODY overlay warnings",
+        "corrections_path": Path("corrections/inbox/body_wolverine_full_track_v1_review_corrections.json"),
+    },
+)
+BODY_REVIEW_CHOICES = ["overlay_ok", "bad_alignment", "wrong_player", "unsure"]
+BODY_SAMPLE_LABEL_CHOICES = ["accept_candidate_label", "reject_candidate_label", "unsure"]
 TRACKING_REVIEW_ITEMS = (
     {
         "clip": "outdoor_webcam_iynbd_1500_long_high_baseline",
@@ -526,10 +552,31 @@ def _numeric_list(value: Any) -> list[float]:
     return out
 
 
+def _maybe_nonnegative_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number >= 0 else None
+
+
+def _maybe_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
 def _human_review_tasks(root: Path) -> dict[str, Any]:
     return {
         "paddle_corner_review_url": "/paddle",
         "tracking_video_review": _tracking_video_review(root),
+        "body_world_label_review": _body_world_label_review(root),
     }
 
 
@@ -552,6 +599,189 @@ def _tracking_video_review(root: Path) -> dict[str, Any]:
             for item in TRACKING_REVIEW_ITEMS
         ],
     }
+
+
+def _body_world_label_review(root: Path) -> dict[str, Any]:
+    return {
+        "title": "BODY world-joint sample review",
+        "question": "For each selected BODY sample, does the projected skeleton support accepting the candidate world label?",
+        "needed_answer": (
+            "Choose accept_candidate_label only after visual review. Overlay warning choices are visual overlay review only; "
+            "candidate acceptance is not independent world-MPJPE ground truth without an explicit trusted label source."
+        ),
+        "body_review_url": "/body",
+        "choices": BODY_REVIEW_CHOICES,
+        "sample_label_choices": BODY_SAMPLE_LABEL_CHOICES,
+        "items": [_body_world_label_review_item(root, item) for item in BODY_REVIEW_RUNS],
+    }
+
+
+def _body_world_label_review_item(root: Path, item: dict[str, Any]) -> dict[str, Any]:
+    run_id = str(item["run_id"])
+    run_dir = BODY_REVIEW_ROOT / run_id
+    bundle_dir = run_dir / "body_world_label_review_bundle"
+    overlay_index_path = bundle_dir / "overlays" / "body_world_label_review_overlay_index.json"
+    queue_path = bundle_dir / "body_world_label_review_queue.json"
+    finalization_path = bundle_dir / "body_world_label_finalization.json"
+    overlay_index = _read_json(root / overlay_index_path)
+    queue = _read_json(root / queue_path)
+    finalization = _read_json(root / finalization_path)
+    warnings = _body_world_label_warning_items(root, bundle_dir, overlay_index)
+    samples = _body_world_label_sample_items(root, bundle_dir, queue, overlay_index)
+    return {
+        "run_id": run_id,
+        "title": str(item["title"]),
+        "artifact": _asset(root, overlay_index_path),
+        "queue": _asset(root, queue_path),
+        "finalization_report": _asset(root, finalization_path),
+        "corrections_manifest": _asset(root, Path(item["corrections_path"])),
+        "decision_pipeline_command": _body_world_label_decision_pipeline_command(
+            run_dir=run_dir,
+            template_path=bundle_dir / "body_world_joints.template.json",
+            overlay_index_path=overlay_index_path,
+            corrections_path=Path(item["corrections_path"]),
+            run_id=run_id,
+        ),
+        "status": str(overlay_index.get("status", "")) if isinstance(overlay_index, dict) else "missing_overlay_index",
+        "queue_status": str(queue.get("status", "")) if isinstance(queue, dict) else "missing_queue",
+        "finalization_status": str(finalization.get("status", ""))
+        if isinstance(finalization, dict)
+        else "missing_finalization",
+        "selected_sample_count": _maybe_nonnegative_int(finalization.get("selected_sample_count"))
+        if isinstance(finalization, dict)
+        else 0,
+        "accepted_sample_count": _maybe_nonnegative_int(finalization.get("accepted_sample_count"))
+        if isinstance(finalization, dict)
+        else 0,
+        "sample_count": len(samples),
+        "sample_items": samples,
+        "warning_count": len(warnings),
+        "warning_items": warnings,
+    }
+
+
+def _body_world_label_decision_pipeline_command(
+    *,
+    run_dir: Path,
+    template_path: Path,
+    overlay_index_path: Path,
+    corrections_path: Path,
+    run_id: str,
+) -> str:
+    pipeline_out_dir = run_dir / "body_world_label_review_decision_pipeline"
+    return (
+        "python scripts/racketsport/run_body_world_label_review_decision_pipeline.py "
+        f"--template {template_path} "
+        f"--overlay-index {overlay_index_path} "
+        f"--corrections {corrections_path} "
+        f"--review-input {LATEST_SAVE} "
+        f"--run-id {run_id} "
+        f"--out-dir {pipeline_out_dir} "
+        f"--final-labels-out {run_dir / 'labels' / 'body_world_joints.json'} "
+        f"--finalization-report-out {run_dir / BODY_LABEL_FINALIZATION_REPORT_PATH} "
+        f"--summary-out {pipeline_out_dir / 'summary.json'} "
+        "--allow-blocked"
+    )
+
+
+def _body_world_label_sample_items(
+    root: Path,
+    bundle_dir: Path,
+    queue: Any | None,
+    overlay_index: Any | None,
+) -> list[dict[str, Any]]:
+    samples = queue.get("samples") if isinstance(queue, dict) else None
+    if not isinstance(samples, list):
+        return []
+    overlays = _body_world_label_overlay_items_by_sample(overlay_index)
+    out: list[dict[str, Any]] = []
+    for sample in samples:
+        if not isinstance(sample, dict):
+            continue
+        sample_id = str(sample.get("sample_id", ""))
+        frame_index = _maybe_nonnegative_int(sample.get("frame_index"))
+        overlay = overlays.get(sample_id, {})
+        alignment = overlay.get("joint_bbox_alignment") if isinstance(overlay.get("joint_bbox_alignment"), dict) else {}
+        warnings = _string_list(overlay.get("warnings"))
+        image_path = Path(str(sample.get("image_path", ""))) if sample.get("image_path") else Path()
+        overlay_path = Path(str(overlay.get("overlay_path", ""))) if overlay.get("overlay_path") else Path()
+        out.append(
+            {
+                "sample_id": sample_id,
+                "frame_index": frame_index,
+                "t": _maybe_float(sample.get("t")),
+                "player_id": _maybe_nonnegative_int(sample.get("player_id")),
+                "joint_count": _maybe_nonnegative_int(sample.get("joint_count")),
+                "warnings": warnings,
+                "warning_review_status": str(overlay.get("warning_review_status", "")),
+                "warning_review_note": str(overlay.get("warning_review_note", "")),
+                "frame_image": _asset(root, image_path)
+                if image_path.parts
+                else (
+                    _asset(root, bundle_dir / "frames" / f"frame_{frame_index:06d}.jpg")
+                    if frame_index is not None
+                    else _asset(root, Path())
+                ),
+                "overlay_image": _asset(root, overlay_path)
+                if overlay_path.parts
+                else _asset(root, bundle_dir / "overlays" / f"{sample_id}_overlay.jpg"),
+                "center_delta_px": _maybe_float(alignment.get("center_delta_px")),
+                "center_delta_bbox_diag": _maybe_float(alignment.get("center_delta_bbox_diag")),
+                "containment_ratio": _maybe_float(alignment.get("containment_ratio")),
+            }
+        )
+    return out
+
+
+def _body_world_label_warning_items(root: Path, bundle_dir: Path, overlay_index: Any | None) -> list[dict[str, Any]]:
+    overlays = overlay_index.get("overlays") if isinstance(overlay_index, dict) else None
+    if not isinstance(overlays, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for overlay in overlays:
+        if not isinstance(overlay, dict):
+            continue
+        warnings = _string_list(overlay.get("warnings"))
+        if not warnings:
+            continue
+        sample_id = str(overlay.get("sample_id", ""))
+        frame_index = _maybe_nonnegative_int(overlay.get("frame_index"))
+        overlay_path = Path(str(overlay.get("overlay_path", ""))) if overlay.get("overlay_path") else Path()
+        alignment = overlay.get("joint_bbox_alignment") if isinstance(overlay.get("joint_bbox_alignment"), dict) else {}
+        out.append(
+            {
+                "sample_id": sample_id,
+                "frame_index": frame_index,
+                "player_id": _maybe_nonnegative_int(overlay.get("player_id")),
+                "warnings": warnings,
+                "warning_review_status": str(overlay.get("warning_review_status", "")),
+                "warning_review_note": str(overlay.get("warning_review_note", "")),
+                "overlay_image": _asset(root, overlay_path)
+                if overlay_path.parts
+                else _asset(root, bundle_dir / "overlays" / f"{sample_id}_overlay.jpg"),
+                "frame_image": _asset(root, bundle_dir / "frames" / f"frame_{frame_index:06d}.jpg")
+                if frame_index is not None
+                else _asset(root, Path()),
+                "center_delta_px": _maybe_float(alignment.get("center_delta_px")),
+                "center_delta_bbox_diag": _maybe_float(alignment.get("center_delta_bbox_diag")),
+                "containment_ratio": _maybe_float(alignment.get("containment_ratio")),
+            }
+        )
+    return out
+
+
+def _body_world_label_overlay_items_by_sample(overlay_index: Any | None) -> dict[str, dict[str, Any]]:
+    overlays = overlay_index.get("overlays") if isinstance(overlay_index, dict) else None
+    if not isinstance(overlays, list):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for overlay in overlays:
+        if not isinstance(overlay, dict):
+            continue
+        sample_id = str(overlay.get("sample_id", ""))
+        if sample_id:
+            out[sample_id] = overlay
+    return out
 
 
 def _clip_manifest(root: Path, clip: str, *, review_actions: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -615,6 +845,7 @@ ALLOWED_TOP_LEVEL_SAVE_KEYS = {
     "clips",
     "paddle_corner_labels",
     "tracking_video_review",
+    "body_world_label_review",
     "saved_from_browser_at",
     "manifest_seen",
 }
@@ -648,6 +879,7 @@ ALLOWED_COURT_EVIDENCE_STATES = {"unsure", "confirmed", "not_visible", "missing"
 ALLOWED_POINT_STATUSES = {"clicked", "not_visible", "missing"}
 ALLOWED_BALL_MISTAKE_KINDS = {"bad_jump", "missing_ball", "false_ball", "looks_good"}
 ALLOWED_TRACKING_DECISIONS = {"safe_to_promote", "unsafe_background_or_spectators", "unsure", ""}
+ALLOWED_BODY_REVIEW_DECISIONS = {*BODY_REVIEW_CHOICES, *BODY_SAMPLE_LABEL_CHOICES, ""}
 ALLOWED_PADDLE_STATUSES = {"pending", "in_progress", "accepted", "not_paddle", "not_visible", "ambiguous"}
 ALLOWED_CORNER_NAMES = {"top_left", "top_right", "bottom_right", "bottom_left"}
 
@@ -676,6 +908,8 @@ def _sanitize_save_payload(payload: dict[str, Any]) -> dict[str, Any]:
         sanitized["paddle_corner_labels"] = _sanitize_paddle_corner_labels(payload["paddle_corner_labels"])
     if "tracking_video_review" in payload:
         sanitized["tracking_video_review"] = _sanitize_tracking_video_review(payload["tracking_video_review"])
+    if "body_world_label_review" in payload:
+        sanitized["body_world_label_review"] = _sanitize_body_world_label_review(payload["body_world_label_review"])
     if "saved_from_browser_at" in payload:
         sanitized["saved_from_browser_at"] = _bounded_text(payload["saved_from_browser_at"], field="saved_from_browser_at", max_chars=128)
     if "manifest_seen" in payload:
@@ -1028,6 +1262,48 @@ def _sanitize_tracking_video_review(value: Any) -> dict[str, dict[str, str]]:
             "decision": _enum_text(raw_decision.get("decision", ""), ALLOWED_TRACKING_DECISIONS, field=f"tracking_video_review.{clip_id}.decision"),
             "notes": _bounded_text(raw_decision.get("notes", ""), field=f"tracking_video_review.{clip_id}.notes"),
         }
+    return sanitized
+
+
+def _sanitize_body_world_label_review(value: Any) -> dict[str, dict[str, dict[str, str]]]:
+    if not isinstance(value, dict):
+        raise ValueError("body_world_label_review must be a JSON object")
+    allowed_runs = {str(item["run_id"]) for item in BODY_REVIEW_RUNS}
+    sanitized: dict[str, dict[str, dict[str, str]]] = {}
+    for run_id, raw_samples in value.items():
+        safe_run_id = _bounded_text(run_id, field="body_world_label_review run id", max_chars=160)
+        if safe_run_id not in allowed_runs:
+            raise ValueError(f"unknown BODY review run id: {safe_run_id}")
+        if not isinstance(raw_samples, dict):
+            raise ValueError(f"body_world_label_review.{safe_run_id} must be a JSON object")
+        if len(raw_samples) > MAX_SAVE_LIST_ITEMS:
+            raise ValueError(f"body_world_label_review.{safe_run_id} has too many items")
+        sample_decisions: dict[str, dict[str, str]] = {}
+        for sample_id, raw_decision in raw_samples.items():
+            safe_sample_id = _bounded_text(
+                sample_id,
+                field=f"body_world_label_review.{safe_run_id} sample id",
+                max_chars=160,
+            )
+            if not isinstance(raw_decision, dict):
+                raise ValueError(f"body_world_label_review.{safe_run_id}.{safe_sample_id} must be a JSON object")
+            unknown = set(raw_decision) - {"decision", "notes"}
+            if unknown:
+                raise ValueError(
+                    f"unexpected fields for body_world_label_review.{safe_run_id}.{safe_sample_id}: {', '.join(sorted(unknown))}"
+                )
+            sample_decisions[safe_sample_id] = {
+                "decision": _enum_text(
+                    raw_decision.get("decision", ""),
+                    ALLOWED_BODY_REVIEW_DECISIONS,
+                    field=f"body_world_label_review.{safe_run_id}.{safe_sample_id}.decision",
+                ),
+                "notes": _bounded_text(
+                    raw_decision.get("notes", ""),
+                    field=f"body_world_label_review.{safe_run_id}.{safe_sample_id}.notes",
+                ),
+            }
+        sanitized[safe_run_id] = sample_decisions
     return sanitized
 
 
@@ -3520,6 +3796,13 @@ PADDLE_HTML = r"""<!doctype html>
     }
     .asset-path { color: #d7c2a9; overflow-wrap: anywhere; font-size: 12px; }
     .sheet-wrap, .video-wrap, .source-wrap { position: relative; background: #100d0b; }
+    .source-wrap { padding: 10px; }
+    .source-stage {
+      position: relative;
+      width: min(100%, 720px);
+      margin: 0 auto;
+      background: #100d0b;
+    }
     .sheet {
       display: block;
       width: 100%;
@@ -3531,8 +3814,7 @@ PADDLE_HTML = r"""<!doctype html>
     .source-video {
       display: block;
       width: 100%;
-      max-height: 360px;
-      object-fit: contain;
+      height: auto;
       background: #100d0b;
     }
     .tile-box {
@@ -3833,7 +4115,7 @@ PADDLE_HTML = r"""<!doctype html>
       if (!asset || !asset.exists) {
         return `<div class="missing">Missing local source video<br><span class="asset-path">${escapeHtml(asset?.path || "")}</span></div>`;
       }
-      return `<video controls preload="metadata" class="source-video" id="sourceVideo" src="${asset.url}"></video><div class="crop-context-box" id="cropContextBox"></div>`;
+      return `<div class="source-stage" id="sourceStage"><video controls preload="metadata" class="source-video" id="sourceVideo" src="${asset.url}"></video><div class="crop-context-box" id="cropContextBox"></div></div>`;
     }
     function targetPanel(item, corner) {
       const status = entryStatus(item);
@@ -4088,6 +4370,224 @@ PADDLE_HTML = r"""<!doctype html>
 """
 
 
+BODY_HTML = r"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BODY Joint Overlay Review</title>
+  <style>
+    :root {
+      --bg: #f5f6f3;
+      --panel: #ffffff;
+      --ink: #18211d;
+      --muted: #5f6b64;
+      --line: #d5ded8;
+      --accent: #116b5f;
+      --bad: #b42318;
+      --warn: #9f580a;
+      --ok: #177245;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+    .top { position: sticky; top: 0; z-index: 2; background: rgba(245,246,243,.96); border-bottom: 1px solid var(--line); }
+    .top-inner { max-width: 1440px; margin: 0 auto; padding: 18px 22px; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; }
+    h1 { margin: 0; font-size: 24px; line-height: 1.1; letter-spacing: 0; }
+    .sub { margin-top: 6px; color: var(--muted); font-size: 14px; max-width: 900px; }
+    .save-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .btn { border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 6px; padding: 9px 12px; font-weight: 700; cursor: pointer; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .btn.selected { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+    .layout { max-width: 1440px; margin: 0 auto; padding: 18px 22px 34px; display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 18px; }
+    .side { display: grid; gap: 10px; align-content: start; }
+    .run { text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 12px; cursor: pointer; }
+    .run.active { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+    .mini { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .queue { display: grid; gap: 16px; }
+    .card { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); overflow: hidden; }
+    .card-head { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+    .sample-title { font-weight: 800; }
+    .metrics { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .pill { border-radius: 999px; padding: 4px 8px; border: 1px solid var(--line); font-size: 12px; font-weight: 800; align-self: start; }
+    .pill.ok { color: var(--ok); border-color: rgba(23,114,69,.35); background: rgba(23,114,69,.08); }
+    .pill.bad { color: var(--bad); border-color: rgba(180,35,24,.35); background: rgba(180,35,24,.08); }
+    .media-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 12px; padding: 12px; }
+    .media { display: grid; gap: 6px; min-width: 0; }
+    .media img { width: 100%; border-radius: 6px; border: 1px solid var(--line); background: #f0f2ef; }
+    .asset-path { color: var(--muted); overflow-wrap: anywhere; font-size: 12px; }
+    .missing { min-height: 180px; display: grid; place-items: center; text-align: center; color: var(--bad); border: 1px dashed var(--line); border-radius: 6px; padding: 16px; }
+    .decision { display: grid; gap: 10px; padding: 0 12px 12px; }
+    .choices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    textarea { width: 100%; min-height: 70px; resize: vertical; border: 1px solid var(--line); border-radius: 6px; padding: 10px; font: inherit; }
+    .status { color: var(--muted); font-size: 13px; }
+    @media (max-width: 900px) {
+      .top-inner, .layout, .media-grid, .choices { grid-template-columns: 1fr; }
+      .save-row { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div>
+        <h1>BODY Joint Overlay Review</h1>
+        <div class="sub">Review selected BODY world-joint samples. Overlay warning choices are visual overlay review only; candidate acceptance is not independent world-MPJPE ground truth.</div>
+      </div>
+      <div class="save-row">
+        <button class="btn primary" id="save">Save decisions</button>
+        <button class="btn" id="loadLatest">Load latest</button>
+        <div class="status" id="saveStatus">Not saved yet.</div>
+      </div>
+    </div>
+  </header>
+  <main class="layout">
+    <aside class="side" id="runList"></aside>
+    <section class="queue" id="bodyReviewOverlays"></section>
+  </main>
+  <script>
+    let manifest = null;
+    let state = { schema_version: 2, review_type: "pickleball_cv_blocker_review", body_world_label_review: {} };
+    let runIndex = 0;
+    const DECISIONS = [
+      ["accept_candidate_label", "Accept visual candidate"],
+      ["reject_candidate_label", "Reject candidate label"],
+      ["unsure", "Unsure"],
+      ["overlay_ok", "Overlay ok"],
+      ["bad_alignment", "Bad alignment"],
+      ["wrong_player", "Wrong player"]
+    ];
+    const qs = (sel, root=document) => root.querySelector(sel);
+    const qsa = (sel, root=document) => [...root.querySelectorAll(sel)];
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+    }
+    function task() { return manifest.human_review_tasks.body_world_label_review; }
+    function runs() { return task().items || []; }
+    function run() { return runs()[runIndex] || { warning_items: [] }; }
+    function stateFromManifest(data) {
+      const existing = data.latest_save && typeof data.latest_save === "object" ? data.latest_save : {};
+      const next = {
+        schema_version: 2,
+        review_type: "pickleball_cv_blocker_review",
+        body_world_label_review: existing.body_world_label_review || {}
+      };
+      for (const item of data.human_review_tasks.body_world_label_review.items || []) {
+        next.body_world_label_review[item.run_id] ||= {};
+      }
+      return next;
+    }
+    function bucket(runId) {
+      state.body_world_label_review[runId] ||= {};
+      return state.body_world_label_review[runId];
+    }
+    function sampleDecision(runId, sampleId) {
+      const b = bucket(runId);
+      b[sampleId] ||= { decision: "", notes: "" };
+      return b[sampleId];
+    }
+    function assetImage(asset) {
+      if (!asset || !asset.exists) return `<div class="missing">Missing image<br><span class="asset-path">${escapeHtml(asset?.path || "")}</span></div>`;
+      return `<img src="${asset.url}" alt="">`;
+    }
+    function render() {
+      renderRuns();
+      renderWarnings();
+    }
+    function renderRuns() {
+      qs("#runList").innerHTML = runs().map((item, index) => {
+        const decisions = Object.values(bucket(item.run_id)).filter(v => v.decision).length;
+        return `<button class="run ${index === runIndex ? "active" : ""}" data-run="${index}">
+          <strong>${escapeHtml(item.title)}</strong>
+          <span class="mini">${escapeHtml(item.status)} | samples ${item.sample_count || 0} | warnings ${item.warning_count || 0} | saved ${decisions}</span>
+        </button>`;
+      }).join("");
+      qsa("[data-run]").forEach(btn => btn.onclick = () => { runIndex = Number(btn.dataset.run); render(); });
+    }
+    function renderWarnings() {
+      const item = run();
+      const samples = item.sample_items && item.sample_items.length ? item.sample_items : (item.warning_items || []);
+      qs("#bodyReviewOverlays").innerHTML = samples.length ? samples.map(w => renderWarning(item, w)).join("") : '<div class="card"><div class="card-head"><div class="sample-title">No BODY samples found</div></div></div>';
+      bindWarnings();
+    }
+    function renderWarning(item, warning) {
+      const saved = sampleDecision(item.run_id, warning.sample_id);
+      const pillClass = saved.decision === "overlay_ok" ? "ok" : saved.decision ? "bad" : "";
+      return `<article class="card" data-run-id="${escapeHtml(item.run_id)}" data-sample-id="${escapeHtml(warning.sample_id)}">
+        <div class="card-head">
+          <div>
+            <div class="sample-title">${escapeHtml(warning.sample_id)}</div>
+            <div class="metrics">frame ${escapeHtml(warning.frame_index)} | player ${escapeHtml(warning.player_id)} | containment ${escapeHtml(warning.containment_ratio)} | center delta ${escapeHtml(warning.center_delta_px)} px</div>
+            <div class="metrics">${escapeHtml((warning.warnings || []).join(", "))}</div>
+          </div>
+          <span class="pill ${pillClass}">${escapeHtml(saved.decision || "pending")}</span>
+        </div>
+        <div class="media-grid">
+          <div class="media">
+            <strong>Overlay</strong>
+            <span class="asset-path">${escapeHtml(warning.overlay_image?.path || "")}</span>
+            ${assetImage(warning.overlay_image)}
+          </div>
+          <div class="media">
+            <strong>Source frame</strong>
+            <span class="asset-path">${escapeHtml(warning.frame_image?.path || "")}</span>
+            ${assetImage(warning.frame_image)}
+          </div>
+        </div>
+        <div class="decision">
+          <div class="choices">
+            ${DECISIONS.map(([value, label]) => `<button class="btn ${saved.decision === value ? "selected" : ""}" data-decision="${escapeHtml(value)}">${escapeHtml(label)}</button>`).join("")}
+          </div>
+          <textarea data-notes placeholder="Optional notes">${escapeHtml(saved.notes || "")}</textarea>
+        </div>
+      </article>`;
+    }
+    function bindWarnings() {
+      qsa("[data-decision]").forEach(btn => btn.onclick = () => {
+        const card = btn.closest("[data-run-id]");
+        sampleDecision(card.dataset.runId, card.dataset.sampleId).decision = btn.dataset.decision;
+        render();
+      });
+      qsa("[data-notes]").forEach(area => area.oninput = () => {
+        const card = area.closest("[data-run-id]");
+        sampleDecision(card.dataset.runId, card.dataset.sampleId).notes = area.value;
+      });
+    }
+    async function save() {
+      const payload = {
+        ...state,
+        saved_from_browser_at: new Date().toISOString(),
+        manifest_seen: {
+          repo_root: manifest.repo_root,
+          focused_review_page: "/body"
+        }
+      };
+      const response = await fetch("/api/save", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "save failed");
+      qs("#saveStatus").textContent = "Saved: " + result.latest_path;
+    }
+    async function loadLatest() {
+      manifest = await (await fetch("/api/manifest")).json();
+      state = stateFromManifest(manifest);
+      qs("#saveStatus").textContent = manifest.latest_save ? "Latest saved decisions loaded." : "No saved decisions yet.";
+      render();
+    }
+    async function init() {
+      manifest = await (await fetch("/api/manifest")).json();
+      state = stateFromManifest(manifest);
+      qs("#save").onclick = () => save().catch(err => qs("#saveStatus").textContent = err.message);
+      qs("#loadLatest").onclick = () => loadLatest().catch(err => qs("#saveStatus").textContent = err.message);
+      render();
+    }
+    init().catch(err => {
+      document.body.innerHTML = "<pre style='padding:20px'>" + escapeHtml(err.stack || err.message) + "</pre>";
+    });
+  </script>
+</body>
+</html>
+"""
+
+
 class ReviewHandler(BaseHTTPRequestHandler):
     server_version = "PickleballReviewInput/1.0"
 
@@ -4121,6 +4621,9 @@ class ReviewHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/paddle":
             self._send_text(PADDLE_HTML)
+            return
+        if parsed.path == "/body":
+            self._send_text(BODY_HTML)
             return
         if parsed.path == "/api/manifest":
             self._send_json(_manifest(self.root))

@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 from threed.racketsport.eval.body_gate_report import (  # noqa: E402
     DEFAULT_WORLD_MPJPE_THRESHOLD_M,
+    DEFAULT_WORLD_WRIST_MPJPE_THRESHOLD_M,
     build_body_gate_report,
     write_clip_body_gate_reports,
     write_body_gate_markdown,
@@ -29,6 +30,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--markdown-out", type=Path, help="Optional Markdown report path.")
     parser.add_argument("--write-clip-reports", action="store_true", help="Write body_gate_report JSON/Markdown in each clip directory.")
     parser.add_argument("--world-mpjpe-threshold-m", type=float, default=DEFAULT_WORLD_MPJPE_THRESHOLD_M)
+    parser.add_argument("--world-wrist-mpjpe-threshold-m", type=float, default=DEFAULT_WORLD_WRIST_MPJPE_THRESHOLD_M)
     parser.add_argument(
         "--allow-not-verified",
         action="store_true",
@@ -42,6 +44,7 @@ def main(argv: list[str] | None = None) -> int:
             clips=args.clips,
             labels_root=args.labels_root,
             world_mpjpe_threshold_m=args.world_mpjpe_threshold_m,
+            world_wrist_mpjpe_threshold_m=args.world_wrist_mpjpe_threshold_m,
         )
         write_body_gate_report(args.out, payload)
         if args.markdown_out:

@@ -16,6 +16,23 @@ from .mobile_person_eval import score_mobile_person_tracks, write_mobile_person_
 from .schemas import CourtCalibration, OnDevicePersonTracks, PersonGroundTruth, validate_artifact_file
 
 
+BEST_PERSON_TRACKING_MODEL = (
+    "runs/phase2/iphone_person_tracking_eval/person_yolo_finetune/"
+    "yolo26n_img640_alt5_e2plus6/weights/best.pt"
+)
+BEST_PERSON_TRACKING_MODEL_NAME = "yolo26n_ft640_e8"
+BEST_PERSON_TRACKING_IMGSZ = 640
+BEST_PERSON_TRACKING_CONF = 0.05
+BEST_PERSON_TRACKING_IOU = 0.60
+BEST_PERSON_TRACKING_TRACKER = "predict_temporal_fill"
+BEST_PERSON_TRACKING_DETECTOR_OUTPUT_LIMIT = 8
+BEST_PERSON_TRACKING_BBOX_EXPAND = 1.04
+BEST_PERSON_TRACKING_CANDIDATE = (
+    "yolo26n_ft640_e8_img640_conf005_iou060_"
+    "confprune_bboxe104_cand8_predict_temporal_fill"
+)
+
+
 @dataclass(frozen=True)
 class ReplayYoloCandidate:
     name: str
@@ -33,6 +50,7 @@ class ReplayYoloCandidate:
     court_calibration: str | None = None
     court_margin_m: float = 1.25
     bbox_expand: float = 1.0
+    detector_output_limit: int | None = None
 
 
 def run_replay_yolo_candidate(
@@ -130,6 +148,7 @@ def run_replay_yolo_candidate(
                     prune_mode=candidate.prune_mode,
                     court_calibration=court_calibration,
                     court_margin_m=candidate.court_margin_m,
+                    output_limit=candidate.detector_output_limit,
                     bbox_expand=candidate.bbox_expand,
                 )
                 detections = linker.update(frame_index=frame_index, observations=observations)
@@ -201,6 +220,7 @@ def run_replay_yolo_candidate(
         "court_calibration": candidate.court_calibration,
         "court_margin_m": candidate.court_margin_m,
         "bbox_expand": candidate.bbox_expand,
+        "detector_output_limit": candidate.detector_output_limit,
         "video_path": str(video),
         "ground_truth_path": str(ground_truth_path),
         "tracks_path": str(tracks_path),
@@ -1410,4 +1430,17 @@ def _color_for_id(track_id: int) -> tuple[int, int, int]:
     return palette[track_id % len(palette)]
 
 
-__all__ = ["ReplayYoloCandidate", "render_replay_yolo_overlay", "run_replay_yolo_candidate"]
+__all__ = [
+    "BEST_PERSON_TRACKING_BBOX_EXPAND",
+    "BEST_PERSON_TRACKING_CANDIDATE",
+    "BEST_PERSON_TRACKING_CONF",
+    "BEST_PERSON_TRACKING_DETECTOR_OUTPUT_LIMIT",
+    "BEST_PERSON_TRACKING_IMGSZ",
+    "BEST_PERSON_TRACKING_IOU",
+    "BEST_PERSON_TRACKING_MODEL",
+    "BEST_PERSON_TRACKING_MODEL_NAME",
+    "BEST_PERSON_TRACKING_TRACKER",
+    "ReplayYoloCandidate",
+    "render_replay_yolo_overlay",
+    "run_replay_yolo_candidate",
+]

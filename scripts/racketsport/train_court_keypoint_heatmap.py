@@ -14,8 +14,11 @@ if str(ROOT) not in sys.path:
 
 from threed.racketsport.court_keypoint_net import (
     PICKLEBALL_KEYPOINTS,
+    court_keypoint_heatmap_loss,
+    court_keypoint_probabilities,
     decode_subpixel_heatmap,
     keypoint_labels_from_court_corners,
+    make_court_keypoint_heatmap_model,
 )
 
 
@@ -242,8 +245,6 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     import numpy as np
     from PIL import Image, ImageDraw
     import torch
-    import torch.nn as nn
-    import torch.nn.functional as F
 
     keypoint_names = [point.name for point in PICKLEBALL_KEYPOINTS]
     width, height = args.image_width, args.image_height
@@ -255,17 +256,6 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     holdout = set(args.holdout_clip)
     train_real = [row for row in real_labels if row.get("clip") not in holdout]
     holdout_real = [row for row in real_labels if row.get("clip") in holdout] or real_labels[-1:]
-
-    def make_model() -> nn.Module:
-        return nn.Sequential(
-            nn.Conv2d(3, 24, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(24, 48, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(48, 48, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(48, len(keypoint_names), 1),
-        )
 
     def synthetic_batch(batch_size: int) -> tuple[Any, Any, Any]:
         images, targets, masks = [], [], []
@@ -326,7 +316,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                 if batch is None:
                     continue
                 x, _, _ = [part.to(device) for part in batch]
-                pred = model(x).detach().cpu()[0]
+                pred = court_keypoint_probabilities(model(x)).detach().cpu()[0]
                 image = load_label_image(row, cv2=cv2, image_module=Image)
                 label_w, label_h = _label_coordinate_size(row, fallback_size=image.size)
                 sx, sy = width / label_w, height / label_h
@@ -340,7 +330,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                     real_source_errors.append(math.hypot(source_x - xy[0], source_y - xy[1]))
             for _ in range(synthetic_batches):
                 x, target, _ = synthetic_batch(args.batch_size)
-                pred = model(x.to(device)).detach().cpu()
+                pred = court_keypoint_probabilities(model(x.to(device))).detach().cpu()
                 for batch_i in range(pred.shape[0]):
                     for idx in range(pred.shape[1]):
                         pred_flat = int(pred[batch_i, idx].argmax())
@@ -385,7 +375,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "synthetic_count": synthetic_summary["count"],
         }
 
-    model = make_model().to(device)
+    model = make_court_keypoint_heatmap_model(len(keypoint_names)).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
     before = evaluate(model, holdout_real)
     history: list[dict[str, Any]] = []
@@ -401,7 +391,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                 mask = torch.cat([mask, rm], dim=0)
         x, y, mask = x.to(device), y.to(device), mask.to(device)
         optimizer.zero_grad()
-        loss = F.mse_loss(model(x) * mask, y * mask)
+        loss = court_keypoint_heatmap_loss(model(x), y, mask)
         loss.backward()
         optimizer.step()
         if (epoch + 1) % args.eval_every == 0 or epoch == args.epochs - 1:
@@ -418,6 +408,9 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "model": model.state_dict(),
             "keypoint_names": keypoint_names,
             "image_size": [width, height],
+            "model_architecture": "encoder_decoder_v1",
+            "heatmap_activation": "spatial_softmax",
+            "loss": "spatial_softmax_cross_entropy",
             "args": vars(args),
         },
         checkpoint,
@@ -634,7 +627,7 @@ def _predict_frame_keypoints(
     arr = resized.astype(np.float32) / 255.0
     tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0).to(device)
     with torch.inference_mode():
-        pred = model(tensor).detach().cpu()[0]
+        pred = court_keypoint_probabilities(model(tensor)).detach().cpu()[0]
     scale_x = source_width / float(model_width)
     scale_y = source_height / float(model_height)
     keypoints: dict[str, dict[str, Any]] = {}

@@ -124,6 +124,7 @@ def test_local_search_recovers_missing_ball_and_suppresses_weak_off_path_candida
     assert filtered.frames[3].conf == pytest.approx(0.0)
     assert filtered.frames[4].visible is True
     assert summary["artifact_type"] == "racketsport_ball_local_search_filter"
+    assert summary["status"] == "TESTED-ON-REAL-DATA"
     assert summary["uses_human_clicks"] is False
     assert summary["recovered_count"] == 1
     assert summary["suppressed_off_path_count"] == 1
@@ -192,6 +193,7 @@ def test_local_search_writer_and_cli_entrypoint_write_schema_valid_outputs(tmp_p
     assert exit_code == 0
     assert stdout["uses_human_clicks"] is False
     assert summary["uses_human_clicks"] is False
+    assert summary["status"] == "TESTED-ON-REAL-DATA"
     assert summary["recovered_count"] == 1
     assert isinstance(validate_artifact_file("ball_track", out_path), BallTrack)
 

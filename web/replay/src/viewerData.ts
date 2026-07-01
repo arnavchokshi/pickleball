@@ -1,6 +1,7 @@
 export type Vec2 = [number, number];
 export type Vec3 = [number, number, number];
 export type Matrix3 = [Vec3, Vec3, Vec3];
+export type MeshFace = [number, number, number];
 
 export type LabelOverlay = {
   kind: "player_boxes" | string;
@@ -41,11 +42,53 @@ export type ViewerManifest = {
   video_url: string;
   virtual_world_url: string;
   replay_scene_url: string | null;
+  body_mesh_url: string | null;
   physics_refinement_url: string | null;
   contact_windows_url: string | null;
   label_overlays: LabelOverlay[];
   annotation_sources: AnnotationSource[];
   notes: string[];
+};
+
+export type BodyMeshFrame = {
+  frame_idx: number;
+  t: number;
+  source_window_index: number | null;
+  blend_weight: number;
+  joints_world: Vec3[];
+  joint_conf: number[];
+  mesh_vertices_world: Vec3[];
+  mesh_faces: MeshFace[];
+  smplx_params: Record<string, number[]>;
+  reasons: string[];
+};
+
+export type BodyMeshPlayer = {
+  id: number;
+  frames: BodyMeshFrame[];
+};
+
+export type BodyMesh = {
+  schema_version: 1;
+  artifact_type: "racketsport_body_mesh";
+  clip: string;
+  model: string;
+  fps: number;
+  world_frame: "court_Z0";
+  faces_ref: string;
+  mesh_faces: MeshFace[];
+  joint_names: string[];
+  players: BodyMeshPlayer[];
+  summary: {
+    mesh_frame_count: number;
+    player_count: number;
+    contact_window_count: number;
+  };
+};
+
+export type ActiveBodyMeshFrame = {
+  playerId: number;
+  frame: BodyMeshFrame;
 };
 
 export type ContactWindowEvent = {
@@ -201,6 +244,10 @@ export function parseViewerManifest(input: unknown): ViewerManifest {
     video_url: readString(value.video_url, "manifest.video_url"),
     virtual_world_url: readString(value.virtual_world_url, "manifest.virtual_world_url"),
     replay_scene_url: value.replay_scene_url === null ? null : readString(value.replay_scene_url, "manifest.replay_scene_url"),
+    body_mesh_url:
+      value.body_mesh_url === null || value.body_mesh_url === undefined
+        ? null
+        : readString(value.body_mesh_url, "manifest.body_mesh_url"),
     physics_refinement_url:
       value.physics_refinement_url === null || value.physics_refinement_url === undefined
         ? null
@@ -212,6 +259,39 @@ export function parseViewerManifest(input: unknown): ViewerManifest {
     label_overlays: readArray(value.label_overlays, "manifest.label_overlays").map(readLabelOverlay),
     annotation_sources: readArray(value.annotation_sources, "manifest.annotation_sources").map(readAnnotationSource),
     notes: readArray(value.notes, "manifest.notes").map((entry, index) => readString(entry, `manifest.notes[${index}]`)),
+  };
+}
+
+export function parseBodyMesh(input: unknown): BodyMesh {
+  const value = parseMaybeJson(input);
+  assertRecord(value, "body_mesh");
+  if (value.schema_version !== 1) throw new Error("body_mesh.schema_version must be 1");
+  if (value.artifact_type !== "racketsport_body_mesh") {
+    throw new Error("body_mesh.artifact_type must be racketsport_body_mesh");
+  }
+  const mesh_faces =
+    value.mesh_faces === undefined
+      ? []
+      : readArray(value.mesh_faces, "body_mesh.mesh_faces").map((face, index) => readFace(face, `body_mesh.mesh_faces[${index}]`));
+  const fps = readNumber(value.fps, "body_mesh.fps");
+  const players = readArray(value.players, "body_mesh.players").map((player, index) => readBodyMeshPlayer(player, index, mesh_faces));
+  assertRecord(value.summary, "body_mesh.summary");
+  return {
+    schema_version: 1,
+    artifact_type: "racketsport_body_mesh",
+    clip: readString(value.clip, "body_mesh.clip"),
+    model: readString(value.model, "body_mesh.model"),
+    fps,
+    world_frame: readEnum(value.world_frame, "body_mesh.world_frame", ["court_Z0"] as const),
+    faces_ref: readString(value.faces_ref, "body_mesh.faces_ref"),
+    mesh_faces,
+    joint_names: readArray(value.joint_names, "body_mesh.joint_names").map((name, index) => readString(name, `body_mesh.joint_names[${index}]`)),
+    players,
+    summary: {
+      mesh_frame_count: readNumber(value.summary.mesh_frame_count, "body_mesh.summary.mesh_frame_count", true),
+      player_count: readNumber(value.summary.player_count, "body_mesh.summary.player_count", true),
+      contact_window_count: readNumber(value.summary.contact_window_count, "body_mesh.summary.contact_window_count", true),
+    },
   };
 }
 
@@ -382,6 +462,30 @@ export function activeBallContactPlayerIds(
   return playerIds;
 }
 
+export function solidBodyMeshFramesForTime(
+  bodyMesh: BodyMesh | null,
+  contactWindows: ContactWindows | null,
+  timeSeconds: number,
+): ActiveBodyMeshFrame[] {
+  if (!bodyMesh) return [];
+  const activeContacts = contactEventsForTime(contactWindows, timeSeconds);
+  if (contactWindows && activeContacts.length === 0) return [];
+  const activePlayerIds = new Set(
+    activeContacts
+      .map((event) => event.player_id)
+      .filter((playerId): playerId is number => playerId !== null),
+  );
+  const results: ActiveBodyMeshFrame[] = [];
+  for (const player of bodyMesh.players) {
+    if (activePlayerIds.size > 0 && !activePlayerIds.has(player.id)) continue;
+    const frame = bodyMeshFrameForTime(player, timeSeconds, bodyMesh.fps);
+    if (!frame) continue;
+    if (frame.mesh_vertices_world.length === 0 || frame.mesh_faces.length === 0) continue;
+    results.push({ playerId: player.id, frame });
+  }
+  return results;
+}
+
 export function startTimeFromSearch(search: string): number {
   const params = new URLSearchParams(search);
   const raw = params.get("t") ?? params.get("time");
@@ -483,6 +587,72 @@ function readAnnotationSource(input: unknown, index: number): AnnotationSource {
     url: readString(input.url, `${path}.url`),
     trusted_for_metrics: readBoolean(input.trusted_for_metrics, `${path}.trusted_for_metrics`),
   };
+}
+
+function readBodyMeshPlayer(input: unknown, index: number, artifactFaces: MeshFace[]): BodyMeshPlayer {
+  const path = `body_mesh.players[${index}]`;
+  assertRecord(input, path);
+  return {
+    id: readPlayerId(input.id, `${path}.id`),
+    frames: readArray(input.frames, `${path}.frames`).map((frame, frameIndex) =>
+      readBodyMeshFrame(frame, `${path}.frames[${frameIndex}]`, artifactFaces),
+    ),
+  };
+}
+
+function readBodyMeshFrame(input: unknown, path: string, artifactFaces: MeshFace[]): BodyMeshFrame {
+  assertRecord(input, path);
+  const vertices = readArray(input.mesh_vertices_world, `${path}.mesh_vertices_world`).map((point, index) =>
+    readVec3(point, `${path}.mesh_vertices_world[${index}]`),
+  );
+  const frameFaces =
+    input.mesh_faces === undefined
+      ? artifactFaces
+      : readArray(input.mesh_faces, `${path}.mesh_faces`).map((face, index) => readFace(face, `${path}.mesh_faces[${index}]`));
+  validateFacesForVertices(frameFaces, vertices.length, `${path}.mesh_faces`);
+  return {
+    frame_idx: readNonNegativeInteger(input.frame_idx, `${path}.frame_idx`),
+    t: readNonNegativeNumber(input.t, `${path}.t`),
+    source_window_index:
+      input.source_window_index === null || input.source_window_index === undefined
+        ? null
+        : readNonNegativeInteger(input.source_window_index, `${path}.source_window_index`),
+    blend_weight: input.blend_weight === undefined ? 1 : readUnitNumber(input.blend_weight, `${path}.blend_weight`),
+    joints_world:
+      input.joints_world === undefined
+        ? []
+        : readArray(input.joints_world, `${path}.joints_world`).map((point, index) => readVec3(point, `${path}.joints_world[${index}]`)),
+    joint_conf:
+      input.joint_conf === undefined
+        ? []
+        : readArray(input.joint_conf, `${path}.joint_conf`).map((confidence, index) => readNumber(confidence, `${path}.joint_conf[${index}]`)),
+    mesh_vertices_world: vertices,
+    mesh_faces: frameFaces,
+    smplx_params: readSmplxParams(input.smplx_params, `${path}.smplx_params`),
+    reasons:
+      input.reasons === undefined
+        ? []
+        : readArray(input.reasons, `${path}.reasons`).map((reason, index) => readString(reason, `${path}.reasons[${index}]`)),
+  };
+}
+
+function readSmplxParams(input: unknown, path: string): Record<string, number[]> {
+  assertRecord(input, path);
+  const params: Record<string, number[]> = {};
+  for (const [key, value] of Object.entries(input)) {
+    params[key] = readArray(value, `${path}.${key}`).map((entry, index) => readNumber(entry, `${path}.${key}[${index}]`));
+  }
+  return params;
+}
+
+function bodyMeshFrameForTime(player: BodyMeshPlayer, timeSeconds: number, fps: number): BodyMeshFrame | undefined {
+  if (!player.frames.length) return undefined;
+  const sortedFrames = [...player.frames].sort((left, right) => left.t - right.t);
+  const tolerance = Math.max(1 / Math.max(fps || 30, 1) * 1.5, 0.04);
+  const first = sortedFrames[0].t;
+  const last = sortedFrames[sortedFrames.length - 1].t;
+  if (timeSeconds < first - tolerance || timeSeconds > last + tolerance) return undefined;
+  return sortedFrames.reduce((best, frame) => (Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best));
 }
 
 function emptyLabelOverlayPayload(): LabelOverlayPayload {
@@ -858,7 +1028,21 @@ function readBBox(value: unknown, path: string): [number, number, number, number
 
 function readFace(value: unknown, path: string): [number, number, number] {
   const values = readFixedArray(value, path, 3);
-  return [readNumber(values[0], `${path}[0]`, true), readNumber(values[1], `${path}[1]`, true), readNumber(values[2], `${path}[2]`, true)];
+  return [
+    readNonNegativeInteger(values[0], `${path}[0]`),
+    readNonNegativeInteger(values[1], `${path}[1]`),
+    readNonNegativeInteger(values[2], `${path}[2]`),
+  ];
+}
+
+function validateFacesForVertices(faces: MeshFace[], vertexCount: number, path: string): void {
+  for (const [faceIndex, face] of faces.entries()) {
+    for (const [componentIndex, vertexIndex] of face.entries()) {
+      if (vertexIndex >= vertexCount) {
+        throw new Error(`${path}[${faceIndex}][${componentIndex}] must reference an existing mesh vertex`);
+      }
+    }
+  }
 }
 
 function readRotationMatrix(value: unknown, path: string): Matrix3 {

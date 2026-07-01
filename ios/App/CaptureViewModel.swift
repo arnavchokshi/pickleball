@@ -25,10 +25,21 @@ final class CaptureViewModel: ObservableObject {
     @Published private(set) var replayBenchmarkStatus: ReplayBenchmarkStatus = .idle
     @Published private(set) var status: Status = .idle
 
-    let controller = CameraCaptureController()
+    let controller: CameraCaptureControlling
+    private let requestPermissions: () async -> CapturePermissionSnapshot
     private var didAutoStartReplayBenchmark = false
 
     static let modes: [CaptureMode] = [.standard60, .swing120, .ballPhysics240, .quality4K60]
+
+    init(
+        controller: CameraCaptureControlling = QueuedCameraCaptureController(),
+        requestPermissions: @escaping () async -> CapturePermissionSnapshot = {
+            await CameraCaptureController.requestPermissions()
+        }
+    ) {
+        self.controller = controller
+        self.requestPermissions = requestPermissions
+    }
 
     var session: AVCaptureSession {
         controller.session
@@ -112,16 +123,20 @@ final class CaptureViewModel: ObservableObject {
 
     func prepare() async {
         status = .requestingAccess
-        permissions = await CameraCaptureController.requestPermissions()
-        configure()
+        permissions = await requestPermissions()
+        await configure()
         await autoStartReplayBenchmarkIfRequested()
     }
 
-    func configure() {
+    func configure() async {
         do {
-            descriptor = try controller.configure(
+            descriptor = try await controller.configure(
                 mode: selectedMode,
-                captureDeviceOrientation: captureDeviceOrientation
+                deviceTier: .standard,
+                capabilities: .hevcOnly,
+                captureDeviceOrientation: captureDeviceOrientation,
+                sessionID: CameraCaptureController.defaultSessionID(),
+                packageRootURL: CameraCaptureController.defaultPackageRootURL()
             )
             controller.onRecordingFinished = { [weak self] result in
                 switch result {
@@ -136,14 +151,14 @@ final class CaptureViewModel: ObservableObject {
                     }
                 }
             }
-            controller.startPreview()
+            await controller.startPreview()
             status = .ready
         } catch {
             status = .blocked(Self.message(for: error))
         }
     }
 
-    func updateOrientation(isLandscapeViewport: Bool) {
+    func updateOrientation(isLandscapeViewport: Bool) async {
         let updatedOrientation = Self.deviceOrientation(fallbackIsLandscape: isLandscapeViewport)
         guard updatedOrientation != captureDeviceOrientation else {
             return
@@ -154,18 +169,26 @@ final class CaptureViewModel: ObservableObject {
             return
         }
 
-        configure()
+        await configure()
     }
 
-    func toggleRecording() {
+    func toggleRecording() async {
         do {
             if isRecording {
-                try controller.stopRecording()
-            } else {
-                try controller.startRecording()
-                descriptor = controller.activeDescriptor
-                status = .recording
+                try await controller.stopRecording()
+                return
             }
+
+            guard canStartRecording else {
+                if case .blocked = status {
+                    return
+                }
+                status = .blocked("Camera is not ready")
+                return
+            }
+
+            descriptor = try await controller.startRecording()
+            status = .recording
         } catch {
             status = .blocked(Self.message(for: error))
         }
@@ -238,6 +261,15 @@ final class CaptureViewModel: ObservableObject {
             return "Not recording"
         default:
             return String(describing: error)
+        }
+    }
+
+    private var canStartRecording: Bool {
+        switch status {
+        case .ready, .finished:
+            return true
+        case .idle, .requestingAccess, .recording, .blocked:
+            return false
         }
     }
 

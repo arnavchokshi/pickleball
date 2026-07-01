@@ -8,6 +8,7 @@ import pytest
 
 from scripts.racketsport.run_ball_tracking_eval_suite import (
     EvalSuiteConfig,
+    ExternalCandidate,
     run_ball_tracking_eval_suite,
 )
 
@@ -168,6 +169,41 @@ def test_eval_suite_does_not_crash_when_no_ballistic_source_exists(tmp_path: Pat
 
     assert "tracknet_raw_existing" in summary["benchmark"]["aggregate"]
     assert not any(name.endswith("_ballistic") for name in summary["benchmark"]["aggregate"])
+
+
+def test_eval_suite_adds_external_real_candidate_tracks_to_benchmark(tmp_path: Path) -> None:
+    run_root = tmp_path / "runs"
+    review_root = run_root / "ball_click_review_30"
+    clip = "clip_a"
+    base = run_root / clip / "tracknet_smoke_0000_0010"
+    external = tmp_path / "external" / clip / "tracknet_wasb_fusion" / "ball_track.json"
+    _write_track(base / "ball_track_0000_0010.json")
+    _write_track(external, visible=True)
+    _write_clicks(review_root / clip / "ball_points.json", clip=clip)
+    (base / "input_0000_0010.mp4").write_bytes(b"unused")
+
+    summary = run_ball_tracking_eval_suite(
+        EvalSuiteConfig(
+            run_root=run_root,
+            review_root=review_root,
+            out_root=tmp_path / "eval",
+            clips=[clip],
+            run_tracknet=False,
+            external_candidates=[
+                ExternalCandidate(
+                    clip=clip,
+                    name="tracknet_wasb_fusion",
+                    path=external,
+                    category="m8_wasb_fusion",
+                )
+            ],
+        )
+    )
+
+    assert summary["generated_candidates"][clip]["tracknet_wasb_fusion"] == str(external)
+    aggregate = summary["benchmark"]["aggregate"]["tracknet_wasb_fusion"]
+    assert aggregate["category"] == "m8_wasb_fusion"
+    assert aggregate["clip_count"] == 1
 
 
 def test_eval_suite_reruns_tracknet_with_repo_directory(tmp_path: Path) -> None:

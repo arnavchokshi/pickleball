@@ -7,6 +7,8 @@
 **Companion docs:** `TECH_STACK.md` (every model + why), `IMPLEMENTATION_PHASES.md` (phase-by-phase build + test gates), `ACCURACY_AND_TRAINING.md` (datasets, training, validation), `BUILD_CHECKLIST.md` (the operational checklist + multi-agent coordination protocol Codex drives). Physics, foot-skate elimination, racket 6DoF, and the 3D replay renderer live in `TECH_STACK.md` §(p)–(s) and `IMPLEMENTATION_PHASES.md`.
 **Thesis:** Be the fastest, most accurate, most plain-spoken movement coach in a racket player's pocket. Turn one court video into the 2–3 body habits costing points, the proof, one drill, and week-over-week improvement — in under 10 seconds for the first useful screen.
 
+**Canonical tier split:** `CAPABILITIES.md` section "Canonical Tier Split" is the source of truth. ON-DEVICE LIVE / fast tier runs on the iPhone ANE during play; SERVER OFFLINE / deep tier is async GPU. Camera-space mesh preview is `server-fast`, not phone-real-time. LiDAR is a near-field (~5 m) bonus only.
+
 ---
 
 ## 0. Executive decision
@@ -17,13 +19,13 @@ Sway should not enter pickleball/tennis as another line-calling, scoring, or sta
 
 Six decisions define the build:
 
-1. **Full-body mesh is the core target representation; the fast skeleton is a preview/triggering overlay.** A watchable, physics-accurate 3D replay needs a volumetric body (you can't drive a rigged avatar or run physics on a stick figure), and SMPL(-X) params are the animation/physics lingua franca. **The per-frame mesh backbone target is Fast SAM-3D-Body** — selected from research benchmarks and hands-on checks as the best current candidate (3DPW PA-MPJPE 30.4 mm, beats HMR2.0 by 15+ mm) and it keeps the existing `sam4dbody` investment. Current repo evidence is scheduled-frame BODY smoke, not BODY verification. (License: SAM License — fine for research/personal use now; verify before commercial, with **SAT-HMR/Apache** as the license-safe fallback.) We add **world-grounding ourselves** (project per-frame to world via the known camera + court plane → foot-lock → physics), rather than switching to a world-HMR model whose per-frame mesh is weaker. Mesh is targeted to be fast enough (SAT-HMR/Multi-HMR 2 ~20–24 FPS) to also serve the fast tier — so the old "skeleton is enough / mesh too slow" rationale no longer holds.
+1. **Full-body mesh is the SERVER OFFLINE core target representation; the phone-live tier is 2D guidance.** A watchable, physics-accurate 3D replay needs a volumetric body (you can't drive a rigged avatar or run physics on a stick figure), and SMPL(-X) params are the animation/physics lingua franca. **The per-frame mesh backbone target is Fast SAM-3D-Body** — selected from research benchmarks and hands-on checks as the best current candidate (3DPW PA-MPJPE 30.4 mm, beats HMR2.0 by 15+ mm) and it keeps the existing `sam4dbody` investment. Current repo evidence is scheduled-frame BODY smoke, not BODY verification. (License: SAM License — fine for research/personal use now; verify before commercial, with **SAT-HMR/Apache** as the license-safe fallback.) We add **world-grounding ourselves** (project per-frame to world via the known camera + court plane → foot-lock → physics), rather than switching to a world-HMR model whose per-frame mesh is weaker. SAT-HMR/Multi-HMR 2 are `server-fast` camera-space preview candidates, not phone-real-time.
 
 2. **A physics-accurate, foot-skate-free 3D replay is a core deliverable target.** We reconstruct the played game in one metric world frame — players (SMPL-X), court, net, ball, rackets — that obeys physics: **no foot sliding, no floor/player penetration, ball obeys gravity/bounce/Magnus.** Current code has CPU review scaffolds and static review GLBs only; the hard physics/replay gates still have to pass before this is a shipped claim.
 
 3. **Track the racket as a 6DoF object.** A paddle is large, rigid, planar, and dimensioned, so its pose/face-normal should be recoverable to **~3–5°** via PnP on known geometry — **5–15× better than inferring face angle from the small, twist-ambiguous wrist (20–35°).** This makes paddle-face/contact-point a validated target only after true corner/CAD/reference evidence and RKT gates pass; current box-derived candidates stay preview-only.
 
-4. **Adaptive compute budget / tiered pipeline is still the architectural identity.** A **fast tier** (camera-space mesh + metrics, <10 s preview) and a **deep/replay tier** (world-grounded mesh → foot-lock → physics → racket → rendered replay, async). Every pipeline layer is an explicit accuracy/speed/UI toggle; spend heavy compute where it matters, where the user sees it, and where confidence is low.
+4. **Adaptive compute budget / tiered pipeline is still the architectural identity.** ON-DEVICE LIVE / fast tier is court calibration seed/cache, person lock, 2D pose/joints, the risky ~288p CoreML ball heatmap tracker, cheap line/contact cues, court map, one priority cue, and capture guidance. SERVER OFFLINE / deep tier is mesh, world grounding, foot-lock/physics, paddle 6DoF, full biomech, 3D replay, LLM copy, and week-over-week. Every pipeline layer is an explicit accuracy/speed/UI toggle; spend heavy compute where it matters, where the user sees it, and where confidence is low.
 
 5. **Accuracy honesty is a trust feature.** Gate/gray low-confidence metrics, show ranges not false precision, never charge for a result we can't trust. Note the update: **paddle-face becomes a gated target through true racket tracking** (wrist-only pronation stays gated). Foot-slide, penetration, and racket face-angle all require hard validation gates before product claims.
 
@@ -31,7 +33,7 @@ Six decisions define the build:
 
 **Capture constraint (core, not optional):** one static tripod camera (**single-camera is the product focus; multi-camera is future**), but **height and angle vary a lot**. Nothing geometric is hardcoded — we solve calibration per-clip from the court and world-ground the body off the *solved* plane (viewpoint-agnostic, and now also the anchor for physics + ball depth). The **target native iOS app** makes this a strength: AVFoundation locks exposure/focus/WB and runs a high shutter (1/500–1/1000 s) for sharp frames, and an **ARKit setup pass should supply camera intrinsics + 6DoF pose + the court-floor plane** (sidecar) to seed calibration once the device gate passes. Current repo reality is basic estimated sidecar writing plus calibration/manual-tap contracts; trusted ARKit/manual sidecar capture is not yet verified. Low/shallow angles compress depth → per-clip capture-quality score + confidence gating. Capture 60 fps (120 for swing-speed/racket); see §10. **LiDAR (Pro devices) is a near-camera (~5 m) bonus only** — it helps near-player foot-contact, never the far court or the ball; vision-first is the baseline.
 
-**What this is NOT in v1:** electronic line calling, auto scoring, DUPR/UTR replacement, real-time in-rally sideline coaching (fast preview after upload is in scope), medical diagnosis, consumer-only App Store launch before coach/club pilots. (6DoF paddle tracking and the 3D replay are now **in** scope.)
+**What this is NOT in v1:** auto scoring, DUPR/UTR replacement, medical diagnosis, consumer-only App Store launch before coach/club pilots, or server-deep inference pretending to be phone-real-time. Cheap on-device ball IN/OUT + net-crossing guidance is in the live tier, but final claims still gate on the documented BALL/court evidence. (6DoF paddle tracking and the 3D replay are now **in** scope as SERVER OFFLINE deep-tier targets.)
 
 ---
 
@@ -97,7 +99,7 @@ The dominant unmet need across Reddit, coaching sites, PB Vision's roadmap, and 
 
 ## 5. Technical strategy (the heart)
 
-> **Round-4 note:** mesh is now core (not skeleton); we add world-grounded reconstruction, foot-skate elimination, physics, racket 6DoF, and a 3D replay. The *adaptive-compute / tiered* philosophy below still holds — it now governs **camera-space mesh (fast) vs world-grounded mesh + physics (deep/replay)**. Full body/physics/racket/replay design: `TECH_STACK.md` §(e)–(s) and `IMPLEMENTATION_PHASES.md` Phases 3–6, 10.
+> **Round-4/5 note:** mesh is now core for SERVER OFFLINE, not for phone-real-time. The ON-DEVICE LIVE tier stays light: court/person/2D pose/ball/contact/cue/guidance. The `server-fast` preview may use camera-space mesh, while the deep tier owns world-grounded mesh + physics. Full body/physics/racket/replay design: `TECH_STACK.md` §(e)–(s) and `IMPLEMENTATION_PHASES.md` Phases 3–6, 10.
 
 ### 5.1 Why this is not a dance port
 
@@ -107,13 +109,13 @@ The dance pipeline (`video → 2D tracking → SAM2 masks → SAM-3D-Body mesh �
 |---|---|---|---|
 | People | many, chaotic | ≤4, on a fixed court | **cheaper, faster** person finding |
 | Scene context | stage floor | court lines, zones, net, ball | **new** geometry + ball/event layers |
-| Body model | one heavy mesh path, uniform | **tiered mesh**: fast camera-space SMPL preview + world-grounded SMPL with physics on replay spans | adaptive compute, not uniform |
+| Body model | one heavy mesh path, uniform | phone-live 2D guidance + `server-fast` camera-space SMPL preview + world-grounded SMPL with physics on replay spans | adaptive compute, not uniform |
 | Grounding | floor projection | world-grounded off the *solved* court plane (no SLAM needed) + foot-lock to Z=0 | drift-free, skate-free |
 | Motion speed | moderate | very fast swings | high temporal density + racket 6DoF at contact |
 | Clip length | short | up to ~20 min | segmentation, dead-time skip, tiered storage |
 | Camera | controlled | variable height/angle, single | per-clip calibration; known plane = physics + ball-depth anchor |
 
-Net: **cheaper/faster on people and court; the body path is mesh-core but tiered — fast camera-space mesh for preview, world-grounded mesh + foot-lock + physics for the replay; heavy racket/physics compute concentrated at contact spans.**
+Net: **cheaper/faster on people and court; the phone-live path is 2D/court/ball guidance, the server path is mesh-core but tiered — `server-fast` camera-space mesh for preview, world-grounded mesh + foot-lock + physics for the replay; heavy racket/physics compute concentrated at contact spans.**
 
 ### 5.2 Adaptive compute budget
 
@@ -134,14 +136,14 @@ The body baseline is now world-grounded SMPL mesh, but the *heaviest* compute is
 
 The replay is mesh throughout; the racket, densest swing fidelity, and full physics-sim are spent at the contact micro-moments that define technique.
 
-### 5.4 Tiered delivery (fast-first, rich-second)
+### 5.4 Tiered delivery (phone-first, server-deep second)
 
 | Tier | Latency | Work | User value |
 |---|---|---|---|
-| **Fast** | <10 s | person ID, court lock-in, cheap ball context, camera-space SMPL (SAT-HMR / Multi-HMR 2) overlay, court map, 1 priority metric | "I feel seen" — beats PB Vision's silent multi-minute wait |
-| **Deep / replay** | async, notified | Fast SAM-3D-Body per crop → world-ground via known camera+court → foot-lock → physics → racket 6DoF → full metrics, rule insights, LLM coaching copy, **physics-accurate 3D replay**, before/after | the report + watchable replay people pay for |
+| **ON-DEVICE LIVE / fast** | <10 s | cached court calibration seed, CoreML YOLO26n/s person detect+track+N-lock, 2D pose/joints, risky ~288p CoreML ball heatmap, homography+bounce IN/OUT/net-crossing, mic+wrist contact timing, court map, one priority cue, capture guidance | "I feel seen" during play/setup without waiting for upload |
+| **SERVER OFFLINE / deep** | async, notified | Fast SAM-3D-Body / SAT-HMR mesh, WHAM/TRAM/GVHMR/OnlineHMR + court-plane hard constraint, foot-lock + physics, paddle 6DoF, full biomech, 3D replay render, LLM coaching copy, week-over-week | the report + watchable replay people pay for |
 
-The tier toggle *is* the paywall: "Instant" (fast mesh preview + metrics, seconds) vs "Deep" (world-grounded physics replay + report + ghost, minutes, premium). Price tracks compute.
+The tier toggle *is* the paywall: live guidance is cheap and immediate; deep reconstruction/replay/report is async and premium. Price tracks compute.
 
 ### 5.5 Locked model choices
 
@@ -152,12 +154,12 @@ The **target/default model + variant + weight candidates for every stage (offlin
 | Court calibration | auto court-keypoint net + manual tap fallback; **`solvePnP` full 6-DOF** + multi-frame averaging; ChArUco/GeoCalib intrinsics; net plane from regulation geometry (34"/36") | OpenCV/own | viewpoint-agnostic; PnP ~2× homography at shallow angles |
 | Detect + track | **YOLO26m + BoT-SORT-ReID** + HSV color; court-polygon filter + ground-plane association; N-lock + coach 1-tap anchor | AGPL (OK now) | YOLO26 real (Jan 2026), +1.4–2.8 mAP vs YOLO11 same latency, NMS-free; court geometry does the ID work |
 | 2D pose | RTMW-l (whole-body) | Apache | 130 FPS, first open >70 COCO-WholeBody; stays |
-| **3D body — fast tier** | camera-space mesh — **SAT-HMR (24 FPS) / Multi-HMR 2 (20 FPS, no FOV assumption)** | research | mesh now fast enough for preview |
+| **3D body — server-fast preview** | camera-space mesh — **SAT-HMR (24 FPS) / Multi-HMR 2 (20 FPS, no FOV assumption)** | research | server preview only; not phone-real-time |
 | **3D body — deep/replay (core)** | **Fast SAM-3D-Body** per crop (best per-frame mesh, 30.4 mm PA-MPJPE) + **our own world-grounding** (known camera + court plane); GVHMR/WHAM optional trajectory cross-check | SAM (research-OK; ⚠️ verify-commercial; SAT-HMR/Apache fallback) | best per-frame mesh, user-confirmed; we add grounding via calibration |
 | Foot-skate + physics | contact vs known Z=0 + zero-velocity + CCD-IK (≤3 mm); **PhysPT** (MIT) default / **PHC+PULSE on MuJoCo+MJX** flagship + MultiPhys (doubles) | MIT/Apache | physically plausible, skate-free replay |
 | **Racket 6DoF** | Target stack: SAM 3 concept detection/tracking when approved; DINO-X/Grounded-SAM-2 fallback; FoundationPose when CAD/reference onboarding exists, with GigaPose/FoundPose as alternatives; PnP-IPPE + UKF/rebound as fail-closed gates | OpenCV/own plus approval-gated model licenses | Current runtime is blocked; face-angle/contact-point claims stay gated until RKT validation and ArUco/GT evaluation pass |
-| Ball | TrackNetV3→V5 + physics ODE 3D uplift (z=0 bounce + Magnus) | MIT | heatmap+temporal; known plane resolves single-cam depth |
-| Events | audio "pop" (CNN, retrained on PB) + wrist-vel peak + ball inflection; net crossing via homography | — | <1-frame contact timing; drives event triggers |
+| Ball | ON-DEVICE LIVE: distilled/quantized CoreML heatmap tracker (~288p, top risk); SERVER OFFLINE: TrackNetV3→V5/PB-MAT + physics ODE 3D uplift (z=0 bounce + Magnus) | MIT/own | known plane resolves single-cam depth; live cue fails closed until device spike passes |
+| Events | ON-DEVICE LIVE: mic onset + wrist-vel peak; SERVER OFFLINE: audio "pop" CNN + wrist-vel peak + ball inflection; net crossing via homography | — | contact timing; drives event triggers |
 | Shot class | scaffold/transfer baseline now; PoseConv3D family classifier first, BST-style pose+ball fusion after tensors are clean | open | current external eval misses serve/overhead; not a product claim until reviewed labels and SHOT gates pass |
 | Insights | rule-based thresholds (source of truth) + confidence gating + LLM-for-copy (latest Claude) | — | never invents facts |
 | 3D replay render | Target production path: **Three.js + R3F** (WebGPU/WebGL2), SMPL-X GLB, physics baked → glTF tracks, world frame (court Z=0). Current repo has a review-only Three.js/R3F viewer and static QA exports, not the shipped animated replay. | MIT | free-viewpoint, ~8–12 MB/10 s, shareable; splats deferred to v2 |
@@ -178,9 +180,8 @@ Accuracy comes from **training, not a bigger inference model.** Full detail in `
 
 Edge-first hybrid target; current repo status is scaffold/partial for the iPhone-side gates listed in `BUILD_CHECKLIST.md`.
 
-- **Instant (<1 s) — target on-device:** live cues during play (framing OK, swing/split-step detected, late-contact hint) via Apple Vision + YOLO Core ML on the Neural Engine.
-- **Preview (<10 s, no upload wait) — target on-device:** a coarse replay + summary the moment recording stops.
-- **Deep (async, streamed) — target server H100 path:** accurate SMPL-X mesh, foot-lock, physics, racket, metrics, insights, replay — returned **rally-by-rally over SSE** (a "3/14 analyzed" checklist that fills in live), with an APNs push when complete. Current repo has partial pipeline/artifact scaffolds; the streaming service and production replay delivery are not yet verified.
+- **ON-DEVICE LIVE (<10 s) — target on-device:** live court map, person lock, 2D pose/joints, ball/contact cues, one priority cue, and capture-quality guidance via Apple Vision/CoreML on the Neural Engine. The ~288p CoreML ball heatmap tracker is the top live-tier risk.
+- **SERVER OFFLINE (async, streamed) — target server H100 path or explicitly accepted replacement gate hardware:** accurate SMPL-X mesh, foot-lock, physics, racket, metrics, insights, replay — returned **rally-by-rally over SSE** (a "3/14 analyzed" checklist that fills progressively), with an APNs push when complete. Current repo has partial pipeline/artifact scaffolds; the streaming service and production replay delivery are not yet verified.
 
 **Top latency levers:** (1) upload the on-device 2D pose track as a **server prior** — ~166× smaller than video, 50–80% fewer mesh-fit iterations, and the server starts fitting *while the video uploads*; (2) **event-triggered compute** — skip 40–60% dead time (≈2× throughput); (3) **cache the personalized body model** (betas) so repeat sessions converge ~5× faster; (4) warm GPU worker (no cold start); (5) resumable chunked upload. **Target H100 throughput** comes from NVDEC/DALI GPU decode + TensorRT engines + CUDA-stream overlap + B=4 crop batching (SAM-3D-Body runs sequentially per player and is the pacing item to benchmark first), served via Triton; current repo evidence still treats true NVDEC/DALI and Triton serving as pending gates. Multi-agent build/test on the single shared H100 is governed by the GPU lease/MIG protocol in `BUILD_CHECKLIST.md §1.5`.
 
@@ -283,7 +284,7 @@ Session card with 3 habits; per-habit clip; **court map / top-down with player p
 **Racket 6DoF tracking** and a **physics-accurate, foot-skate-free 3D replay** (players + court + net + ball + rackets, free-viewpoint, shareable) — see `IMPLEMENTATION_PHASES.md` Phases 4/6/10.
 
 ### Out of scope (v1)
-Line calls, auto scoring, full-match auto-analysis UX on day one (but ~20-min ingest + tiered processing are architecture requirements), live in-rally coaching, Apple Watch challenges, medical diagnosis, consumer-only launch before pilots. Photoreal Gaussian-splat avatars are deferred to v2.
+Official/challenge-grade line calling, auto scoring, full-match auto-analysis UX on day one (but ~20-min ingest + tiered processing are architecture requirements), live in-rally coaching beyond the single priority cue, Apple Watch challenges, medical diagnosis, consumer-only launch before pilots. Photoreal Gaussian-splat avatars are deferred to v2.
 
 ---
 
@@ -296,10 +297,10 @@ Stable per-clip court coordinate frame. MVP server path: `court_templates.py` ge
 Static net plane from the court template + regulation heights. Observed top-net pixels are used as evidence/trust checks, not as blind height estimation; projected top-net overlays and downstream net logic are low confidence when the observed top net is missing or inconsistent. Defer net-cord/contact classification.
 
 ### Ball
-**MVP goal: timing/context, not line calls.**
+**MVP goal: timing/context plus cheap live line guidance, not official line adjudication.**
 - **Phase A:** manual tap-track on key frames → anchor split-step, contact proxy, advantage state.
 - **Phase B:** TrackNetV3 fine-tuned on ~2–3k labeled PB frames (+ converted Roboflow data) + Kalman/physics smoothing; output confidence; gray uncertain spans.
-- **Phase C:** bounce/net-crossing estimation; rough 3D via physics + "Z=0 at bounce." Still no official line calls (those need 2 cameras).
+- **Phase C:** on-device cached-court homography+bounce IN/OUT and net-crossing guidance, plus server rough 3D via physics + "Z=0 at bounce." Official/challenge-grade line adjudication remains gated and likely needs a second camera.
 
 ### Paddle / racket — target tracked 6DoF object after RKT gate (round-4)
 **Target: track the racket, don't proxy it.** Detect (RTMDet/SAM2-class or approved fallback) → top/bottom/handle keypoints + true face corners → **PnP-IPPE on the known paddle dimensions** → UKF on SE(3) → physics-validate against ball rebound → contact-point-on-face (±1–3 cm) + face-normal (~3–5°). Render the paddle in the 3D replay attached to the wrist bone only after the RKT/replay gates pass. Current repo reality is fail-closed PnP/review scaffolding: box-derived candidates are rejected before canonical `racket_pose.json`, and no detector/keypoint/CAD/GT gate has passed. Keep the spec database (weight, balance, swingweight) for the Fit Lab. Use side-edge keypoints only as a weak cue (RacketVision shows they degrade under occlusion/blur). Full pipeline + training in `IMPLEMENTATION_PHASES.md` Phase 6 and `TECH_STACK.md` §(r).
@@ -317,11 +318,11 @@ The table below is the target architecture. Current checked-in iOS code is scaff
 |---|---|
 | AVFoundation locked capture (exposure/focus/WB, fps/format, landscape, HEVC/ProRes) | Court calibration refine (seeded by ARKit sidecar) + net plane |
 | ARKit setup pass → camera intrinsics + 6DoF pose + court plane (sidecar) | Person detect/track/ID (YOLO26m + BoT-SORT) |
-| On-device fast tier (Apple Vision pose/hand/seg + YOLO Core ML ball) → instant preview + capture guidance | Fast SAM-3D-Body per crop → our world-grounding → foot-lock → physics |
-| Upload: trimmed clip + sidecar + on-device pose prior (+ LiDAR depth, Tier A) | Racket 6DoF, ball 3D physics, metrics, insights, LLM copy |
+| ON-DEVICE LIVE fast tier: CoreML YOLO26n/s person detect+track+N-lock, 2D pose/joints, ~288p CoreML ball heatmap, homography+bounce line cues, mic+wrist contact timing, court map + one cue + capture guidance | Fast SAM-3D-Body / SAT-HMR mesh → WHAM/TRAM/GVHMR/OnlineHMR cross-checks with court-plane hard constraint → foot-lock → physics |
+| Upload: trimmed clip + sidecar + on-device pose/person/ball/contact priors (+ LiDAR depth bonus when present) | Paddle 6DoF, full biomech, ball 3D physics, metrics, insights, LLM copy, week-over-week |
 | Replay viewer: RealityKit/USDZ (free-viewpoint) | Render-bake one scene → **USDZ** (native) + **GLB** (web) |
 
-On-device is **preview/guidance only**; the server is the source of truth. Device tiers: **A** (Pro + LiDAR bonus), **B** (standard, vision-only baseline), fallback (manual court-tap calibration).
+On-device is **preview/guidance only**; the server is the source of truth. Device tiers: Pro phones may add LiDAR as a near-field (~5 m) bonus, standard phones are the vision-only baseline, and fallback devices use manual court-tap calibration.
 
 ### Module layout (server: new code under `threed/racketsport/`)
 ```text
@@ -346,24 +347,26 @@ web/replay/            # React + Three.js/R3F replay viewer (web share)
 
 ### Tiered data flow
 ```text
-upload (trim/name/QC)
+record/play setup
   |
-  +-- FAST TIER (<10 s)
-  |     YOLO26m + BoT-SORT-ReID + court-polygon filter + ground-plane association (≤4 players)
-  |     per-clip court calibration lock-in (solvePnP) + net plane
-  |     cheap ball context (TrackNetV3) + audio rally segmentation
-  |     camera-space mesh (SAT-HMR / Multi-HMR 2) on active spans
-  |     -> preview: who/where + court map + 1 priority metric + mesh overlay
+  +-- ON-DEVICE LIVE / FAST TIER (<10 s, iPhone ANE)
+  |     ARKit intrinsics+pose+floor-plane seed, cached
+  |     CoreML YOLO26n/s person detect+track+N-lock + court-polygon filter
+  |     Apple Vision or CoreML RTMPose-m 2D pose/joints
+  |     distilled/quantized CoreML ball heatmap (~288p) -- top live risk
+  |     homography+bounce IN/OUT and net-crossing on cached court, known Z=0
+  |     mic onset + wrist-velocity peak contact timing
+  |     -> live court map + 1 priority cue + capture-quality guidance
   |
-  +-- DEEP / REPLAY TIER (async, per event / selected span)
-        event fusion (audio pop + wrist-vel peak + ball inflection) -> contact windows
-        Fast SAM-3D-Body per crop -> world-ground via known camera + court plane
-        foot-skate killer (contact vs Z=0 + zero-velocity + CCD-IK, <=3 mm)
-        physics refine (PhysPT / PHC+MuJoCo; MultiPhys for doubles)
-        racket 6DoF (PnP-IPPE) + ball 3D physics (z=0 bounce + Magnus)
-        court-frame transform + foot/contact/world metrics
-        rule-based insight engine + confidence gating + LLM coaching copy
-        -> habit_report + clips + self-vs-self + physics-accurate 3D replay (GLB)
+  +-- SERVER OFFLINE / DEEP TIER (async GPU after upload)
+        Fast SAM-3D-Body / SAT-HMR mesh
+        WHAM/TRAM/GVHMR/OnlineHMR + court-plane hard constraint
+        foot-lock + physics
+        paddle 6DoF
+        full biomech
+        3D replay render
+        LLM coaching copy
+        week-over-week
 ```
 
 ### Artifacts
@@ -387,7 +390,7 @@ This table is the target claim envelope, not current shipped capability. Claim a
 | Velocity — wrist/elbow swing speed (ball-speed predictor), horizontal CoM velocity, split-step timing/tempo | reliable in-plane via court homography (±15–25%; timing ±17 ms@60 / ±8 ms@120) | **Tier 1 — claim with number after Protocol A/B passes** |
 | Velocity — swing-speed index, 3D angular velocity | relative/trend only | **Tier 2 — present as "relative/estimated"** |
 | Velocity — 3D angular acceleration, depth-axis velocity, contact-frame peak from pose | not recoverable markerless | **Tier 3 — never claim (use the ball for contact-frame speed)** |
-| 3D ball height/depth (single cam) | meter-level | context only, never line calls |
+| 3D ball height/depth (single cam) | meter-level | context only; live IN/OUT guidance uses homography+bounce on the court plane, not meter-level 3D |
 
 Present uncertainty as ranges ("likely 52–61%"), bin confidence (confident/lean/uncertain), and gate any metric behind a minimum sample. Low/shallow camera angles lower the capture-quality score and widen gates.
 
@@ -400,14 +403,14 @@ This is a product/research target view, not current capability status. Current i
 | Claim | Target feasibility | Current truth source | Why |
 |---|---|---|---|
 | Short-clip person tracking (≤4) | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | court geometry does the ID work; cheap detector suffices |
-| Fast 3D skeleton + court metrics | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | near real-time; must fine-tune on racket motion |
+| On-device live court/person/2D pose/ball/contact guidance | High target, ball tracker is the top risk | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | court and 2D pose are cheap; the ~288p CoreML ball heatmap must prove device FPS/thermal/recall |
 | Court calibration (variable camera) | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | per-clip homography + solvePnP; reprojection-gated |
 | NVZ/kitchen foot, spacing, balance | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | world-grounded mesh + foot-lock to court plane |
 | Split-step / contact timing | Medium-high | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | needs ball/audio event; audio makes it strong |
 | World-grounded mesh + foot-skate-free replay | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | Fast SAM-3D-Body + our world-grounding (known camera) + foot-lock to known Z=0 plane (≤3 mm) |
 | Physics-accurate 3D replay (Three.js, free-viewpoint) | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | mesh + baked physics -> glTF; engineering, not research |
 | Racket 6DoF (face angle / contact-point) | High target after gate | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | PnP on known paddle geometry; claim only after RKT gate and ArUco/GT evaluation pass |
-| Ball automation | Medium | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | TrackNetV3 fine-tune for context; line calls need 2 cams |
+| Ball automation | Medium | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | on-device homography+bounce line guidance is in scope; official/challenge-grade line adjudication likely needs 2 cams |
 | Coach reports / UX | High | See `CAPABILITIES.md` + `BUILD_CHECKLIST.md` | mostly product/backend |
 | $1M ARR | Plausible | market thesis, not pipeline capability | coaches/clubs first |
 
@@ -415,7 +418,7 @@ This is a product/research target view, not current capability status. Current i
 
 ## 15. Build plan (summary)
 
-Full detail with per-phase test gates is in `IMPLEMENTATION_PHASES.md` (see its One-Page Build Order Summary). Sequence: **env/data/scaffolding → court calibration (solvePnP, varied-camera tests) → person fast tier (YOLO26m+BoT-SORT, throughput + ID) → 3D body mesh (fast camera-space + Fast SAM-3D-Body + our world-grounding; foot/zone/X-factor + velocity validation) → foot-skate killer + physics refine (≤3 mm) → ball + audio + event fusion (contact timing) → racket 6DoF (face/contact gates) → metrics + rule insights + confidence → 3D replay viewer (Three.js) → shot classification + drill verification → LLM copy + report + tiered delivery → end-to-end on 20-min clips + perf + final acceptance.** SHOT remains scaffold/transfer-only until reviewed labels, trained model, macro-F1/top-2, and per-class serve/overhead gates pass.
+Full detail with per-phase test gates is in `IMPLEMENTATION_PHASES.md` (see its One-Page Build Order Summary). Current priority sequence: **env/data/scaffolding → iOS capture/calibration sidecar → ON-DEVICE LIVE court/person/2D pose guidance → on-device ball heatmap spike + cached-court IN/OUT/net/contact cues → server calibration/tracking support → server ball/audio/event gates → SERVER OFFLINE mesh/world-grounding/foot-lock/physics → paddle 6DoF → metrics + rule insights + confidence → 3D replay render/viewer → shot classification + drill verification → LLM copy + report + server-progressive delivery → end-to-end on 20-min clips + perf + final acceptance.** SHOT remains scaffold/transfer-only until reviewed labels, trained model, macro-F1/top-2, and per-class serve/overhead gates pass.
 
 **Gate philosophy:** do not advance until a phase's numeric acceptance gates pass on real GPU test clips spanning deliberately varied camera heights/angles.
 
@@ -431,14 +434,14 @@ Pure B2C at $19/mo needs ~4,400 retained payers — slow. Better: B2B2C.
 | Coaches | $99–119/mo | 500 | ~$594–714k |
 | Players | $19/mo | 750–1,000 | ~$171–228k |
 
-Packaging: **Player** ($19/mo, 4 analyses, tracker, reports, paddle profile); **Coach** ($99–149/mo, roster, 25–50 analyses, reports/share/corrections); **Club** ($299–499/mo platform + usage credits + assessment tooling). Credit rules: failed QC = no charge; low-confidence comped/discounted; long clips cost more; skeleton-only "Instant" tier is cheap, "Deep" (bursts + report) costs more — price tracks compute.
+Packaging: **Player** ($19/mo, 4 analyses, tracker, reports, paddle profile); **Coach** ($99–149/mo, roster, 25–50 analyses, reports/share/corrections); **Club** ($299–499/mo platform + usage credits + assessment tooling). Credit rules: failed QC = no charge; low-confidence comped/discounted; long clips cost more; ON-DEVICE LIVE guidance is cheap, SERVER OFFLINE deep reconstruction/replay/report costs more — price tracks compute.
 
 ---
 
 ## 17. Success metrics
 
 **Product:** coach says report is lesson-useful ≥70%; player states one fix ≥70%; 2nd session within 30 days ≥40%; habit dismiss rate on confident spans <15%; failed QC after guidance <20%; ≥5 min review saved/session.
-**Technical:** court reprojection passes on ≥90% of clips across varied angles; NVZ foot within 6 in on confident frames; spacing within 12 in; ID stability ≥90% on 2-player clips after confirmation; contact timing within ±2 frames with audio; **fast-tier first screen <10 s**; deep-tier p95 under agreed async SLA.
+**Technical:** court reprojection passes on ≥90% of clips across varied angles; on-device person lock/2D pose/court guidance passes physical-device latency gates; on-device ball heatmap spike either passes or line/contact cues stay disabled fail-closed; NVZ foot within 6 in on confident frames; spacing within 12 in; ID stability ≥90% on 2-player clips after confirmation; contact timing within ±2 frames with audio; **ON-DEVICE LIVE first screen <10 s**; server deep-tier p95 under agreed async SLA.
 **Business:** coach WTP ≥$79/mo; club ≥$299/mo or event fee; pilot→paid ≥30%; gross margin ≥70% at target pricing.
 
 ---
@@ -452,9 +455,9 @@ Run before any large push. (Codex phase gates expand these.)
 3. **Foot-to-NVZ from 3D skeleton** — Pass: reviewer agrees with in/out/near NVZ on confident frames ≥80%.
 4. **Velocity-metric reality check** — compute wrist/joint velocities on labeled swings and correlate with manual/known values. Decides whether velocity claims are defensible or must be gated. (Resolves the R²0.96-vs-r0.11 conflict.)
 5. **Contact timing via audio + pose + ball** — Pass: contact within ±2 frames vs manual on selected moments.
-6. **Ball detector spike** — TrackNetV3 fine-tuned on 2–3k PB frames; measure precision/recall, false positives from lines/shoes/paddles, temporal continuity. Pass: enough recall for timing context; fail → keep tap-track.
+6. **On-device ball detector spike** — distilled/quantized CoreML heatmap tracker at ~288p on a physical iPhone; measure FPS/latency, thermal behavior, precision/recall, false positives from lines/shoes/paddles, temporal continuity, and cached-court line/contact cue stability. Pass: enough recall for live guidance; fail → disable line/contact cues and keep server/tap-track paths.
 7. **Coach usefulness** — 5 manually assisted reports to 5 coaches. Pass: ≥3/5 would use it in a lesson.
-8. **Runtime/cost** — one fast-tier run + one deep-tier burst run on H100; record latency, GPU time, cost. Pass: fast tier <10 s; deep tier acceptable async.
+8. **Runtime/cost** — one ON-DEVICE LIVE run on iPhone + one SERVER OFFLINE burst run on accepted GPU hardware; record latency, thermal/GPU time, cost. Pass: live tier <10 s; deep tier acceptable async.
 
 ---
 
@@ -468,7 +471,7 @@ Run before any large push. (Codex phase gates expand these.)
 
 ## 20. Product UX
 
-**Player flow:** select sport → clip type → record/upload → trim → automatic court detection/quality check → confirm side/identity → optional paddle profile → submit → **<10 s fast preview** → notified when deep report ready → review 3 habits → corrections → repeat next week. Manual court review appears only when auto court evidence fails and the user/report should not be charged as a trusted automatic result.
+**Player flow:** select sport → clip type → setup/record with ON-DEVICE LIVE court/person/2D pose/ball/contact guidance → trim/upload → confirm side/identity → optional paddle profile → submit → server-progressive results → notified when deep report ready → review 3 habits → corrections → repeat next week. Manual court review appears only when auto court evidence fails and the user/report should not be charged as a trusted automatic result.
 **Coach flow:** create student/session → upload/import → confirm focus → review auto habits → dismiss/edit spans → add note → send report → assign drill → track next session.
 **Club flow:** create assessment event → batch upload → assign names → generate reports → bucket by clinic need → send follow-up.
 **Design rule:** first screen is the court map + the priority habit, never a raw metric dashboard:
@@ -499,8 +502,8 @@ Rule-based thresholds are the source of truth; LLM only phrases. Each rule state
 | Foot-skating / unphysical replay | High | foot-lock to known Z=0 + zero-velocity + physics refine (PhysPT/MuJoCo); ≤3 mm gate |
 | Racket pose fails (blur/occlusion/edge-on) | Medium-high | reliable top/bottom/handle keypoints only; hand-grip prior; UKF predict through occlusion; physics-validate |
 | Variable camera angle breaks geometry | High | per-clip calibration + capture-quality score + confidence gating |
-| Ball automation unreliable | High | timing/context only; tap-track fallback; no line calls |
-| Deep/replay tier too slow/costly | High | fast camera-space mesh tier; physics offline; PhysPT (no engine) before full MuJoCo sim; tiered pricing |
+| On-device ball automation unreliable | High | top live-tier spike; disable line/contact cues fail-closed; tap-track/server fallback; do not promote until physical-device evidence passes |
+| Server deep/replay tier too slow/costly | High | `server-fast` camera-space preview only after live tier; physics offline; PhysPT (no engine) before full MuJoCo sim; tiered pricing |
 | Long uploads blow queue/storage | High | rally segmentation, dead-time skip, tiered retention, chunked upload |
 | Doubles ID swaps | Medium-high | court-polygon + ground-plane association + coach anchor + correction UI |
 | Coaches undervalue 3D | Medium | run 5 manual reports before full build |
@@ -513,7 +516,7 @@ Rule-based thresholds are the source of truth; LLM only phrases. Each rule state
 
 ## 23. Work packages
 
-WP-PB-00 validation set · 01 court template + calibration (solvePnP) · 02 court zone metrics · 03 mesh HMR (fast camera-space + Fast SAM-3D-Body + our world-grounding) + foot/body metrics · 04 foot-skate killer + physics refine · 05 ball + audio + event fusion · 06 racket 6DoF · 07 habit rules + confidence gating · 08 shot classification + drill verification · 09 report artifacts + LLM copy · 10 3D replay viewer (Three.js) · 11 visualization (court map / before-after / overlays) · 12 coach web review · 13 paddle profile/Fit Lab · 14 club assessment flow.
+WP-PB-00 validation set · 01 iOS capture/calibration sidecar · 02 ON-DEVICE LIVE court/person/2D pose guidance · 03 on-device ball heatmap + line/contact spike · 04 server court calibration/tracking support · 05 server ball + audio + event fusion · 06 SERVER OFFLINE mesh/world-grounding + foot/body metrics · 07 foot-skate killer + physics refine · 08 racket 6DoF · 09 habit rules + confidence gating · 10 report artifacts + LLM copy · 11 3D replay render/viewers · 12 shot classification + drill verification · 13 coach web review · 14 paddle profile/Fit Lab · 15 club assessment flow.
 
 ---
 
@@ -524,14 +527,16 @@ current operational order and blockers live in `BUILD_CHECKLIST.md`, especially
 the Critical next build order and task table. Use that checklist, not this
 snapshot, to decide what to build next.
 
-1. Pickleball court calibration overlay (varied camera angles), `solvePnP` + multi-frame.
-2. Fast SAM-3D-Body + our world-grounding (known camera + court plane) on a 60–90 s doubles clip.
-3. Foot-skate killer (contact vs Z=0 + zero-velocity + CCD-IK) → ≤3 mm; foot/NVZ + spacing + balance with confidence.
-4. Three.js 3D replay viewer (court + SMPL-X mesh + baked motion; free-viewpoint, share link).
+1. iOS capture/calibration setup: ARKit intrinsics+pose+floor-plane seed, cached; manual fallback and sidecar packaging.
+2. ON-DEVICE LIVE person detect+track+N-lock plus 2D pose/joints and court map/capture guidance on a physical iPhone.
+3. ON-DEVICE LIVE ball heatmap spike at ~288p plus cached-court IN/OUT/net-crossing and mic+wrist contact timing; disable cues fail-closed if the spike fails.
+4. Server court calibration/tracking/ball support gates, then Fast SAM-3D-Body + our world-grounding (known camera + court plane) on a 60–90 s doubles clip.
+5. Foot-skate killer (contact vs Z=0 + zero-velocity + CCD-IK) → ≤3 mm; foot/NVZ + spacing + balance with confidence.
+6. Three.js/RealityKit 3D replay viewer (court + SMPL-X mesh + baked motion; free-viewpoint, share link) after upstream deep-tier gates are trustworthy.
 5. Audio + ball events for contact windows; racket 6DoF on the hitting player.
 6. Court map + 3 habit cards + self-vs-self + one shareable coach report (LLM copy from facts).
 
-Do not start with: full ball ML, line calls, full-match upload, DUPR integration, App Store consumer funnel, full MuJoCo physics sim (use PhysPT first), Gaussian-splat avatars (v2).
+Do not start with: official/challenge-grade line adjudication, full-match upload, DUPR integration, App Store consumer funnel, full MuJoCo physics sim (use PhysPT first), Gaussian-splat avatars (v2). The on-device ~288p ball heatmap spike is a priority because live line/contact guidance depends on it.
 
 ---
 
@@ -544,5 +549,5 @@ The company is **Sway Body: the 3D movement coach for racket sports** — built 
 ## Sources
 
 Market/product: SFIA pickleball participation; USTA 2026 report; AOAO injury study; senior fall-prevention RCT (PMC12469448); PB Vision roadmap & help docs; SwingVision/DinkAI App Store; Sportsbox AI; SportAI (TIME Best Invention 2025); Onform/CoachNow; "Talking Tennis" (arXiv 2510.03921). WTP: PB Vision/SwingVision/Sportsbox/OnForm pricing pages; Tennis AI 2.0; OnCourtAI; RevenueCat State of Subscription Apps 2025.
-CV/biomechanics: TrackNetV2/V3/V5, BlurBall/TOTNet, WASB; TennisCourtDetector, PnLCalib, GeoCalib; **YOLO26m + BoT-SORT-ReID** (YOLO11/RTMDet/RT-DETR fallbacks), RTMPose/RTMW/RTMW3D, MotionBERT, MeTRAbs. 3D body (per-frame mesh): **Fast SAM-3D-Body (primary backbone), SAM-3D-Body, NLF**; fast-tier **SAT-HMR / Multi-HMR 2**; **world-grounding done by us** via known camera + court plane (GVHMR/WHAM/TRAM = optional trajectory cross-check only; PromptHMR rejected); SMPLer-X/SMPLest-X (hands), BioPose (joint limits). Physics: **PhysPT, PHC/PULSE, MuJoCo+MJX, MultiPhys, UnderPressure, SMPLOlympics**. Racket: **RacketVision, GigaPose, FoundPose, FoundationPose, HOISDF, OpenCV PnP-IPPE**. Datasets: AMASS, BEDLAM2, AthletePose3D, CalTennis, RICH, EMDB, Human3.6M. Render: **Three.js, React Three Fiber, Rapier.js**. Shot/insight: BST, PoseConv3D/ST-GCN, CoachMe/BioCoach. Markerless validation: Theia3D, OpenCap, Pose2Sim. Licensing is informational only (research/personal use now); verify bleeding-edge repos before committing. Full per-claim URLs in `TECH_STACK.md` and `ACCURACY_AND_TRAINING.md`.
+CV/biomechanics: TrackNetV2/V3/V5, BlurBall/TOTNet, WASB; TennisCourtDetector, PnLCalib, GeoCalib; **YOLO26m + BoT-SORT-ReID** (YOLO11/RTMDet/RT-DETR fallbacks), RTMPose/RTMW/RTMW3D, MotionBERT, MeTRAbs. 3D body (per-frame mesh): **Fast SAM-3D-Body (primary backbone), SAM-3D-Body, NLF**; `server-fast` **SAT-HMR / Multi-HMR 2** preview; **world-grounding done by us** via known camera + court plane (GVHMR/WHAM/TRAM = optional trajectory cross-check only; PromptHMR rejected); SMPLer-X/SMPLest-X (hands), BioPose (joint limits). Physics: **PhysPT, PHC/PULSE, MuJoCo+MJX, MultiPhys, UnderPressure, SMPLOlympics**. Racket: **RacketVision, GigaPose, FoundPose, FoundationPose, HOISDF, OpenCV PnP-IPPE**. Datasets: AMASS, BEDLAM2, AthletePose3D, CalTennis, RICH, EMDB, Human3.6M. Render: **Three.js, React Three Fiber, Rapier.js**. Shot/insight: BST, PoseConv3D/ST-GCN, CoachMe/BioCoach. Markerless validation: Theia3D, OpenCap, Pose2Sim. Licensing is informational only (research/personal use now); verify bleeding-edge repos before committing. Full per-claim URLs in `TECH_STACK.md` and `ACCURACY_AND_TRAINING.md`.
 ```

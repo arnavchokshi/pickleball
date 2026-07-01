@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+import scripts.racketsport.run_mobile_person_accuracy_sweep as sweep_cli
 from scripts.racketsport.run_mobile_person_accuracy_sweep import (
     _aggregate_rows,
     _candidate_name,
@@ -27,6 +28,7 @@ def _row(candidate: str, clip: str, *, idf1: float, mota: float = 0.5, coverage:
         "conf": 0.1,
         "iou": 0.6,
         "tracker": "predict_iou",
+        "detector_mode": "full",
         "prune_mode": "confidence",
         "court_margin_m": None,
         "bbox_expand": 1.0,
@@ -179,6 +181,164 @@ def test_accuracy_sweep_allow_partial_keeps_partial_status_but_returns_success(
     summary = json.loads((out_dir / "sweep_summary.json").read_text(encoding="utf-8"))
     assert summary["status"] == "partial"
     assert summary["failure_count"] == 1
+
+
+def test_accuracy_sweep_passes_detector_mode_options_to_detection_cache(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "clip.mp4").write_bytes(b"video")
+    (tmp_path / "person_ground_truth.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "fake.pt").write_bytes(b"model")
+    out_dir = tmp_path / "sweep"
+    captured: list[dict[str, object]] = []
+
+    class FakeYOLO:
+        def __init__(self, path: str) -> None:
+            self.path = path
+
+    monkeypatch.setitem(sys.modules, "ultralytics", types.SimpleNamespace(YOLO=FakeYOLO))
+
+    def fake_load_or_collect_detections(**kwargs: object) -> dict[str, object]:
+        captured.append(kwargs)
+        return {"frames": [], "detector_mode": kwargs["detector_mode"]}
+
+    def fake_score_cached_linker(**kwargs: object) -> dict:
+        clip = kwargs["clip"]
+        row = _row(str(kwargs["candidate_name"]), clip.clip_id, idf1=0.8)  # type: ignore[attr-defined]
+        row["detector_mode"] = kwargs["detector"]["detector_mode"]  # type: ignore[index]
+        return row
+
+    monkeypatch.setattr(
+        "scripts.racketsport.run_mobile_person_accuracy_sweep._load_or_collect_detections",
+        fake_load_or_collect_detections,
+    )
+    monkeypatch.setattr(
+        "scripts.racketsport.run_mobile_person_accuracy_sweep._score_cached_linker",
+        fake_score_cached_linker,
+    )
+    monkeypatch.setattr("scripts.racketsport.run_mobile_person_accuracy_sweep._render_top_overlays", lambda *_, **__: None)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "scripts/racketsport/run_mobile_person_accuracy_sweep.py",
+            "--out-dir",
+            str(out_dir),
+            "--clip",
+            f"clip_1={tmp_path / 'clip.mp4'}={tmp_path / 'person_ground_truth.json'}",
+            "--model",
+            f"fake={tmp_path / 'fake.pt'}",
+            "--track-model",
+            f"fake={tmp_path / 'fake.pt'}",
+            "--detector-mode",
+            "adaptive_tiled",
+            "--crop-regions",
+            "default4",
+            "--adaptive-crop-regions",
+            "adaptive_full_tb3",
+            "--detector-nms-iou",
+            "0.45",
+            "--detector-batch-size",
+            "12",
+            "--tracker",
+            "ok",
+            "--imgsz",
+            "416",
+            "--conf",
+            "0.1",
+            "--skip-ultralytics-track",
+        ],
+    )
+
+    assert run_sweep_main() == 0
+    assert captured[0]["detector_mode"] == "adaptive_tiled"
+    assert captured[0]["crop_regions"] == "default4"
+    assert captured[0]["adaptive_crop_regions"] == "adaptive_full_tb3"
+    assert captured[0]["detector_nms_iou"] == pytest.approx(0.45)
+    assert captured[0]["detector_batch_size"] == 12
+    leaderboard = json.loads((out_dir / "leaderboard.json").read_text(encoding="utf-8"))
+    assert leaderboard[0]["detector_mode"] == "adaptive_tiled"
+
+
+def test_accuracy_sweep_defaults_to_best_measured_person_tracking_profile(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "clip.mp4").write_bytes(b"video")
+    (tmp_path / "person_ground_truth.json").write_text("{}", encoding="utf-8")
+    best_model = tmp_path / "best.pt"
+    best_model.write_bytes(b"model")
+    out_dir = tmp_path / "sweep"
+    captured: list[dict[str, object]] = []
+
+    class FakeYOLO:
+        def __init__(self, path: str) -> None:
+            self.path = path
+
+    monkeypatch.setattr(sweep_cli, "DEFAULT_MODELS", (f"yolo26n_ft640_e8={best_model}",))
+    monkeypatch.setattr(sweep_cli, "DEFAULT_TRACK_MODELS", (f"yolo26n_ft640_e8={best_model}",))
+    monkeypatch.setitem(sys.modules, "ultralytics", types.SimpleNamespace(YOLO=FakeYOLO))
+
+    def fake_load_or_collect_detections(**kwargs: object) -> dict[str, object]:
+        captured.append(kwargs)
+        return {
+            "frames": [],
+            "detector_mode": kwargs["detector_mode"],
+            "model": str(kwargs["model_spec"].path),  # type: ignore[attr-defined]
+            "model_name": kwargs["model_spec"].name,  # type: ignore[attr-defined]
+            "imgsz": kwargs["imgsz"],
+            "conf": kwargs["conf"],
+            "iou": kwargs["iou"],
+            "detector_output_limit": kwargs["detector_output_limit"],
+            "bbox_expand": kwargs["bbox_expand"],
+            "prune_mode": kwargs["prune_mode"],
+        }
+
+    def fake_score_cached_linker(**kwargs: object) -> dict:
+        clip = kwargs["clip"]
+        row = _row(str(kwargs["candidate_name"]), clip.clip_id, idf1=0.96)  # type: ignore[attr-defined]
+        row["model"] = kwargs["detector"]["model_name"]  # type: ignore[index]
+        row["model_path"] = kwargs["detector"]["model"]  # type: ignore[index]
+        row["imgsz"] = kwargs["detector"]["imgsz"]  # type: ignore[index]
+        row["conf"] = kwargs["detector"]["conf"]  # type: ignore[index]
+        row["iou"] = kwargs["detector"]["iou"]  # type: ignore[index]
+        row["tracker"] = kwargs["linker_name"]
+        row["detector_mode"] = kwargs["detector"]["detector_mode"]  # type: ignore[index]
+        row["detector_output_limit"] = kwargs["detector"]["detector_output_limit"]  # type: ignore[index]
+        row["bbox_expand"] = kwargs["detector"]["bbox_expand"]  # type: ignore[index]
+        return row
+
+    monkeypatch.setattr(sweep_cli, "_load_or_collect_detections", fake_load_or_collect_detections)
+    monkeypatch.setattr(sweep_cli, "_score_cached_linker", fake_score_cached_linker)
+    monkeypatch.setattr(sweep_cli, "_render_top_overlays", lambda *_, **__: None)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "scripts/racketsport/run_mobile_person_accuracy_sweep.py",
+            "--out-dir",
+            str(out_dir),
+            "--clip",
+            f"clip_1={tmp_path / 'clip.mp4'}={tmp_path / 'person_ground_truth.json'}",
+            "--skip-ultralytics-track",
+        ],
+    )
+
+    assert run_sweep_main() == 0
+
+    assert len(captured) == 1
+    assert captured[0]["model_spec"].name == "yolo26n_ft640_e8"  # type: ignore[attr-defined]
+    assert captured[0]["model_spec"].path == best_model  # type: ignore[attr-defined]
+    assert captured[0]["detector_mode"] == "full"
+    assert captured[0]["imgsz"] == 640
+    assert captured[0]["conf"] == pytest.approx(0.05)
+    assert captured[0]["detector_output_limit"] == 8
+    assert captured[0]["bbox_expand"] == pytest.approx(1.04)
+    leaderboard = json.loads((out_dir / "leaderboard.json").read_text(encoding="utf-8"))
+    assert leaderboard[0]["candidate"] == (
+        "yolo26n_ft640_e8_img640_conf005_iou060_"
+        "confprune_bboxe104_cand8_predict_temporal_fill"
+    )
+    assert leaderboard[0]["tracker"] == "predict_temporal_fill"
 
 
 def _stub_main_dependencies(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:

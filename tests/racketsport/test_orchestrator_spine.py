@@ -5,9 +5,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
+from threed.racketsport.court_positioning_artifacts import build_court_keypoints_artifact
 from threed.racketsport.orchestrator import run_pipeline
 from threed.racketsport.court_line_evidence import aggregate_court_line_evidence
-from threed.racketsport.schemas import CourtLineEvidence, CourtLineObservation, NetLineObservation, Tracks, VirtualWorld, validate_artifact_file
+from threed.racketsport.schemas import CourtCalibration, CourtLineEvidence, CourtLineObservation, NetLineObservation, Tracks, VirtualWorld, validate_artifact_file
 
 
 def _sidecar_payload() -> dict:
@@ -31,6 +33,39 @@ def _sidecar_payload() -> dict:
     }
 
 
+def _metric_sidecar_payload() -> dict:
+    payload = _sidecar_payload()
+    payload["intrinsics"] = {"fx": 100.0, "fy": 100.0, "cx": 500.0, "cy": 500.0, "dist": [], "source": "arkit"}
+    payload["arkit_camera_pose"] = {
+        "R": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]],
+        "t": [0.0, 0.0, 10.0],
+    }
+    payload["court_plane"] = {"point": [0.0, 0.0, 0.0], "normal": [0.0, 0.0, 1.0]}
+    payload["manual_court_taps"] = []
+    return payload
+
+
+def _metric_court_keypoints_payload(sidecar_payload: dict) -> dict:
+    intrinsics = sidecar_payload["intrinsics"]
+    return build_court_keypoints_artifact(
+        frame_indexes=[0, 15, 29],
+        keypoints={
+            point.name: {
+                "uv": [
+                    intrinsics["cx"] + intrinsics["fx"] * point.world_xyz_m[0] / 10.0,
+                    intrinsics["cy"] + intrinsics["fy"] * point.world_xyz_m[1] / 10.0,
+                ],
+                "confidence": 0.9,
+                "inlier_frames": [0, 15, 29],
+                "recovered": False,
+            }
+            for point in PICKLEBALL_KEYPOINTS
+        },
+        target_court_score=0.95,
+        source="test_synthetic_aggregate",
+    )
+
+
 def _write_inputs(inputs_dir: Path) -> None:
     inputs_dir.mkdir(parents=True)
     (inputs_dir / "capture_sidecar.json").write_text(json.dumps(_sidecar_payload()), encoding="utf-8")
@@ -46,17 +81,67 @@ def _write_inputs(inputs_dir: Path) -> None:
         ),
         encoding="utf-8",
     )
+    frames = inputs_dir / "body_frames"
+    frames.mkdir()
+    (frames / "frame_000000.jpg").write_bytes(b"not decoded by default pose runtime")
+    (frames / "frame_000001.jpg").write_bytes(b"not decoded by default pose runtime")
 
 
-def test_pipeline_runs_manual_calibration_and_precomputed_tracking_then_fails_missing_body_runtime(tmp_path: Path) -> None:
+def _write_missing_rtmw3d_manifest(path: Path) -> Path:
+    manifest = {
+        "schema_version": 1,
+        "models": [
+            {
+                "id": "rtmw3d_x",
+                "stage": "lane_a_3d_pose",
+                "use": "Lane A always-on 3D whole-body pose source",
+                "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose3d",
+                "license": "Apache-2.0",
+                "commercial_posture": "ok",
+                "status": "available_on_h100",
+                "local_path": str(path.parent / "missing-rtmw3d-x.pth"),
+                "sha256": "0" * 64,
+                "fallbacks": [],
+            }
+        ],
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    return path
+
+
+def test_calibration_runner_prefers_metric_court_keypoints_when_available(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "phase1" / "clip_001"
+    inputs.mkdir(parents=True)
+    sidecar_payload = _metric_sidecar_payload()
+    (inputs / "capture_sidecar.json").write_text(json.dumps(sidecar_payload), encoding="utf-8")
+    (inputs / "court_keypoints.json").write_text(
+        json.dumps(_metric_court_keypoints_payload(sidecar_payload)),
+        encoding="utf-8",
+    )
+
+    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="calibration")
+
+    assert summary["status"] == "blocked"
+    assert summary["stages"][0]["status"] == "ran"
+    assert summary["stages"][0]["source_mode"] == "arkit_plane_keypoints"
+    calibration = validate_artifact_file("court_calibration", run_dir / "court_calibration.json")
+    assert isinstance(calibration, CourtCalibration)
+    assert calibration.source == "arkit_plane_keypoint_metric_solve_v1"
+    assert calibration.metric_confidence == "high"
+
+
+def test_pipeline_runs_lane_a_pose_before_body_and_fails_missing_pose_runtime(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs" / "clip_001"
     run_dir = tmp_path / "runs" / "phase11" / "clip_001"
     _write_inputs(inputs)
+    manifest = _write_missing_rtmw3d_manifest(tmp_path / "models" / "MANIFEST.json")
 
-    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="body", tracking_mode="precomputed")
+    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="body", tracking_mode="precomputed", manifest_path=manifest)
 
     assert summary["status"] == "fail"
-    assert [item["stage"] for item in summary["stages"]] == ["calibration", "tracking", "body"]
+    assert [item["stage"] for item in summary["stages"]] == ["calibration", "tracking", "pose"]
     assert summary["stages"][0]["status"] == "ran"
     assert summary["stages"][0]["real_model"] is False
     assert summary["stages"][1]["status"] == "ran"
@@ -64,13 +149,15 @@ def test_pipeline_runs_manual_calibration_and_precomputed_tracking_then_fails_mi
     assert summary["stages"][1]["source_mode"] == "precomputed_detections"
     assert summary["stages"][2]["status"] == "fail"
     assert summary["stages"][2]["real_model"] is True
-    assert any("missing checkpoint for fast_sam_3d_body_dinov3" in note for note in summary["stages"][2]["notes"])
+    assert summary["stages"][2]["source_mode"] == "rtmw3d_x_lane_a"
+    assert any("missing checkpoint for rtmw3d_x" in note for note in summary["stages"][2]["notes"])
     assert validate_artifact_file("court_calibration", run_dir / "court_calibration.json")
     evidence = validate_artifact_file("court_line_evidence", run_dir / "court_line_evidence.json")
     assert isinstance(evidence, CourtLineEvidence)
     assert evidence.aggregate.auto_calibration_ready is False
     tracks = validate_artifact_file("tracks", run_dir / "tracks.json")
     assert isinstance(tracks, Tracks)
+    assert not (run_dir / "skeleton3d.json").exists()
     assert not (run_dir / "smpl_motion.json").exists()
     frame_plan = json.loads((run_dir / "frame_compute_plan.json").read_text(encoding="utf-8"))
     assert frame_plan["artifact_type"] == "racketsport_frame_compute_plan"
@@ -171,6 +258,50 @@ def test_pipeline_summary_blocks_when_schema_valid_artifacts_are_not_semanticall
     assert "calibration:court_line_evidence_not_ready" in summary["readiness"]["semantic_blockers"]
 
 
+def test_pipeline_precomputed_tracks_mode_uses_tracks_without_detections(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "phase2" / "clip_001"
+    inputs.mkdir(parents=True)
+    (inputs / "capture_sidecar.json").write_text(json.dumps(_sidecar_payload()), encoding="utf-8")
+    (inputs / "tracks.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "fps": 30.0,
+                "players": [
+                    {
+                        "id": 1,
+                        "side": "near",
+                        "role": "left",
+                        "frames": [
+                            {"t": 0.0, "bbox": [940.0, 440.0, 980.0, 540.0], "world_xy": [0.0, 0.0], "conf": 0.91},
+                            {
+                                "t": 1.0 / 30.0,
+                                "bbox": [942.0, 440.0, 982.0, 540.0],
+                                "world_xy": [0.1, 0.0],
+                                "conf": 0.89,
+                            },
+                        ],
+                    }
+                ],
+                "rally_spans": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="tracking", tracking_mode="precomputed_tracks")
+
+    assert summary["status"] == "blocked"
+    assert [item["stage"] for item in summary["stages"]] == ["calibration", "tracking"]
+    assert summary["stages"][1]["source_mode"] == "precomputed_tracks"
+    assert summary["stages"][1]["metrics"]["track_frame_count"] == 2
+    tracks = validate_artifact_file("tracks", run_dir / "tracks.json")
+    assert isinstance(tracks, Tracks)
+    assert len(tracks.players) == 1
+    assert len(tracks.players[0].frames) == 2
+
+
 def test_pipeline_overwrites_existing_review_frame_plan_from_current_inputs(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs" / "clip_001"
     run_dir = tmp_path / "runs" / "phase11" / "clip_001"
@@ -269,6 +400,7 @@ def test_orchestrator_cli_writes_summary_and_does_not_fake_e2e(tmp_path: Path) -
     inputs = tmp_path / "inputs" / "clip_001"
     run_dir = tmp_path / "runs" / "phase11" / "clip_001"
     _write_inputs(inputs)
+    manifest = _write_missing_rtmw3d_manifest(tmp_path / "models" / "MANIFEST.json")
 
     completed = subprocess.run(
         [
@@ -285,6 +417,8 @@ def test_orchestrator_cli_writes_summary_and_does_not_fake_e2e(tmp_path: Path) -
             "e2e",
             "--tracking-mode",
             "precomputed",
+            "--manifest",
+            str(manifest),
         ],
         check=False,
         capture_output=True,
@@ -294,9 +428,9 @@ def test_orchestrator_cli_writes_summary_and_does_not_fake_e2e(tmp_path: Path) -
     assert completed.returncode == 1
     payload = json.loads((run_dir / "pipeline_run.json").read_text(encoding="utf-8"))
     assert payload["status"] == "fail"
-    assert payload["stages"][2]["stage"] == "body"
+    assert payload["stages"][2]["stage"] == "pose"
     assert payload["stages"][2]["status"] == "fail"
-    assert any("missing checkpoint for fast_sam_3d_body_dinov3" in note for note in payload["stages"][2]["notes"])
+    assert any("missing checkpoint for rtmw3d_x" in note for note in payload["stages"][2]["notes"])
     assert not (run_dir / "replay_scene.json").exists()
 
 

@@ -77,15 +77,25 @@ function readReplayPoints(value: unknown): ReplayPoint[] {
     throw new Error("points must be an array");
   }
 
+  let previousT1: number | null = null;
   return value.map((point, index) => {
     const path = `points[${index}]`;
     assertRecord(point, path);
     assertExactKeys(point, replayPointKeys, path);
+    const t0 = readNumber(point.t0, `${path}.t0`);
+    const t1 = readNumber(point.t1, `${path}.t1`);
+    if (t1 <= t0) {
+      throw new Error(`${path}.t1 must be greater than ${path}.t0`);
+    }
+    if (previousT1 !== null && t0 < previousT1) {
+      throw new Error(`${path}.t0 must be greater than or equal to previous point t1`);
+    }
+    previousT1 = t1;
 
     return {
       id: readNumber(point.id, `${path}.id`, true),
-      t0: readNumber(point.t0, `${path}.t0`),
-      t1: readNumber(point.t1, `${path}.t1`),
+      t0,
+      t1,
       glb_url: readString(point.glb_url, `${path}.glb_url`),
       size_mb: readNumber(point.size_mb, `${path}.size_mb`),
     };

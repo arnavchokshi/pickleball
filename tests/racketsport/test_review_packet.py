@@ -363,7 +363,7 @@ def test_review_packet_includes_body_representation_decision(tmp_path: Path) -> 
                 "scheduled_world_mesh_player_frame_count": 0,
                 "available_mesh_frame_count": 0,
                 "available_joint_frame_count": 0,
-                "joints_or_preview_mesh_target_count": 4,
+                "lane_a_skeleton_target_count": 4,
                 "manual_review_required_target_count": 9,
                 "blockers": ["no_trusted_world_mesh_triggers", "manual_review_required_before_mesh"],
                 "warnings": ["world_mesh_not_requested_by_current_frame_plan"],
@@ -388,7 +388,7 @@ def test_review_packet_includes_body_representation_decision(tmp_path: Path) -> 
         "Joints frames: 0",
         "Representation decision: no_world_mesh_requested",
         "World mesh demand: requested=0, scheduled=0, available=0",
-        "Representation targets: joints_or_preview_mesh=4, manual_review_required=9, world_mesh=0",
+        "Representation targets: lane_a_skeleton=4, manual_review_required=9, world_mesh=0",
     ]
     assert "world_mesh_not_requested_by_current_frame_plan" in artifact["warnings"]
 
@@ -765,6 +765,21 @@ def test_review_packet_includes_racket_pose_readiness_summary(tmp_path: Path) ->
                 "synthetic_or_cad": 0,
                 "true_corners_or_pose": 0,
             },
+            "local_readiness": {
+                "can_convert_box_labels_to_review_candidates": True,
+                "can_build_true_corner_review": True,
+                "can_build_preview_pose": True,
+                "can_run_promotion_audit": True,
+                "can_run_fail_closed_stage_smoke": True,
+                "can_write_canonical_racket_pose": False,
+                "can_claim_paddle_6dof": False,
+            },
+            "missing_label_or_asset_state": {
+                "true_paddle_face_corner_labels": "missing",
+                "paddle_cad_or_reference_asset": "missing",
+                "aruco_apriltag_or_reference_pose_gt": "missing",
+                "racket_pose_evaluation": "missing",
+            },
             "summary": {
                 "candidate_player_count": 1,
                 "candidate_frame_count": 4,
@@ -798,6 +813,8 @@ def test_review_packet_includes_racket_pose_readiness_summary(tmp_path: Path) ->
         "Promoted pose frames: 0",
         "Source evidence: box_derived=4, keypoint_or_mask=0, reference_gt=0, synthetic_or_cad=0, true_corners_or_pose=0",
         "Sources: label_bbox:manual=4",
+        "Local readiness: can_build_preview_pose=true, can_build_true_corner_review=true, can_claim_paddle_6dof=false, can_convert_box_labels_to_review_candidates=true, can_run_fail_closed_stage_smoke=true, can_run_promotion_audit=true, can_write_canonical_racket_pose=false",
+        "Missing labels/assets: aruco_apriltag_or_reference_pose_gt=missing, paddle_cad_or_reference_asset=missing, racket_pose_evaluation=missing, true_paddle_face_corner_labels=missing",
     ]
 
 

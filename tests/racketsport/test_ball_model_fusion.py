@@ -51,6 +51,7 @@ def test_fusion_keeps_stable_track_adds_verifier_consensus_and_suppresses_unconf
     )
 
     fused = BallTrack.model_validate(payload)
+    assert fused.source == "fused"
     assert fused.frames[0].visible is True
     assert fused.frames[0].xy == [10.0, 10.0]
     assert fused.frames[1].visible is True
@@ -61,6 +62,7 @@ def test_fusion_keeps_stable_track_adds_verifier_consensus_and_suppresses_unconf
     assert fused.frames[3].approx is True
     assert fused.frames[4].visible is False
     assert summary["uses_human_clicks"] is False
+    assert summary["status"] == "TESTED-ON-REAL-DATA"
     assert summary["kept_stable_count"] == 1
     assert summary["kept_primary_consensus_count"] == 1
     assert summary["added_verifier_consensus_count"] == 1
@@ -84,6 +86,7 @@ def test_fusion_can_veto_unverified_stable_backbone_frame(tmp_path: Path) -> Non
     )
 
     fused = BallTrack.model_validate(payload)
+    assert fused.source == "fused"
     assert fused.frames[0].visible is False
     assert fused.frames[1].visible is True
     assert fused.frames[1].xy == [20.0, 10.0]
@@ -129,4 +132,6 @@ def test_fusion_cli_writes_schema_valid_output(tmp_path: Path) -> None:
     )
 
     assert json.loads(completed.stdout)["uses_human_clicks"] is False
-    assert isinstance(validate_artifact_file("ball_track", out), BallTrack)
+    fused = validate_artifact_file("ball_track", out)
+    assert isinstance(fused, BallTrack)
+    assert fused.source == "fused"

@@ -340,10 +340,287 @@ def test_review_input_manifest_exposes_tracking_video_review_questions(tmp_path:
     assert tracking["choices"] == ["safe_to_promote", "unsafe_background_or_spectators", "unsure"]
 
 
+def test_review_input_manifest_exposes_body_world_label_warning_queue(tmp_path: Path) -> None:
+    run_id = "a100_body_video_smoke_burlington_bboxscaled_resetcap075_runtime_20260701T001500Z"
+    bundle = (
+        tmp_path
+        / "runs"
+        / "body_joint_goal_smoke_20260630T001407"
+        / run_id
+        / "body_world_label_review_bundle"
+    )
+    overlay_path = bundle / "overlays" / "frame_000047_player_2_overlay.jpg"
+    frame_path = bundle / "frames" / "frame_000047.jpg"
+    overlay_path.parent.mkdir(parents=True, exist_ok=True)
+    frame_path.parent.mkdir(parents=True, exist_ok=True)
+    overlay_path.write_bytes(b"jpg")
+    frame_path.write_bytes(b"jpg")
+    (bundle / "overlays" / "body_world_label_review_overlay_index.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_body_world_label_review_overlay",
+                "status": "ready_for_review_with_overlay_warnings",
+                "rendered_count": 1,
+                "sample_count": 1,
+                "alignment_warning_count": 1,
+                "overlays": [
+                    {
+                        "sample_id": "frame_000047_player_2",
+                        "frame_index": 47,
+                        "player_id": 2,
+                        "overlay_path": str(overlay_path.relative_to(tmp_path)),
+                        "warnings": ["body_joint_overlay_alignment_warning"],
+                        "joint_bbox_alignment": {
+                            "status": "warning",
+                            "center_delta_px": 118.068,
+                            "center_delta_bbox_diag": 0.2866,
+                            "containment_ratio": 0.2714,
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (bundle / "body_world_label_finalization.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_body_world_label_finalization",
+                "status": "blocked",
+                "selected_sample_count": 27,
+                "accepted_sample_count": 0,
+                "overlay_warning_selected_sample_count": 1,
+                "overlay_warning_selected_sample_ids": ["frame_000047_player_2"],
+                "blockers": ["selected_samples_have_overlay_warnings"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    manifest = review_input_server._manifest(tmp_path)
+    body_review = manifest["human_review_tasks"]["body_world_label_review"]
+
+    assert body_review["body_review_url"] == "/body"
+    assert body_review["choices"] == ["overlay_ok", "bad_alignment", "wrong_player", "unsure"]
+    item = next(item for item in body_review["items"] if item["run_id"] == run_id)
+    assert item["status"] == "ready_for_review_with_overlay_warnings"
+    assert item["warning_count"] == 1
+    assert item["selected_sample_count"] == 27
+    warning = item["warning_items"][0]
+    assert warning["sample_id"] == "frame_000047_player_2"
+    assert warning["overlay_image"]["exists"] is True
+    assert warning["frame_image"]["exists"] is True
+    assert warning["center_delta_px"] == 118.068
+    assert warning["containment_ratio"] == 0.2714
+
+
+def test_review_input_manifest_exposes_latest_body_world_label_sample_queue(tmp_path: Path) -> None:
+    run_id = "a100_body_video_smoke_burlington_fresh_max1_fastmesh_gatefix_20260701T133821Z"
+    bundle = (
+        tmp_path
+        / "runs"
+        / "body_joint_goal_smoke_20260630T001407"
+        / run_id
+        / "body_world_label_review_bundle"
+    )
+    frame_path = bundle / "frames" / "frame_000150.jpg"
+    overlay_path = bundle / "overlays" / "frame_000150_player_1_overlay.jpg"
+    frame_path.parent.mkdir(parents=True, exist_ok=True)
+    overlay_path.parent.mkdir(parents=True, exist_ok=True)
+    frame_path.write_bytes(b"jpg")
+    overlay_path.write_bytes(b"jpg")
+    (bundle / "body_world_label_review_queue.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_body_world_label_review_queue",
+                "status": "ready_for_review",
+                "clip": "burlington_gold_0300_low_steep_corner",
+                "sample_count": 1,
+                "samples": [
+                    {
+                        "sample_id": "frame_000150_player_1",
+                        "frame_index": 150,
+                        "t": 2.5,
+                        "player_id": 1,
+                        "joint_count": 70,
+                        "image_path": str(frame_path.relative_to(tmp_path)),
+                        "source_image_exists": True,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (bundle / "overlays" / "body_world_label_review_overlay_index.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_body_world_label_review_overlay",
+                "status": "ready_for_review",
+                "rendered_count": 1,
+                "sample_count": 1,
+                "alignment_warning_count": 0,
+                "overlays": [
+                    {
+                        "sample_id": "frame_000150_player_1",
+                        "frame_index": 150,
+                        "player_id": 1,
+                        "overlay_path": str(overlay_path.relative_to(tmp_path)),
+                        "warnings": [],
+                        "joint_bbox_alignment": {
+                            "status": "passed",
+                            "center_delta_px": 69.634,
+                            "center_delta_bbox_diag": 0.1713,
+                            "containment_ratio": 0.9429,
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (bundle / "body_world_label_finalization.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_body_world_label_finalization",
+                "status": "blocked",
+                "selected_sample_count": 1,
+                "accepted_sample_count": 0,
+                "blockers": ["template_not_reviewed"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    manifest = review_input_server._manifest(tmp_path)
+    body_review = manifest["human_review_tasks"]["body_world_label_review"]
+    latest = next(item for item in body_review["items"] if item["run_id"] == run_id)
+
+    assert body_review["sample_label_choices"] == ["accept_candidate_label", "reject_candidate_label", "unsure"]
+    assert latest["sample_count"] == 1
+    assert latest["warning_count"] == 0
+    assert latest["corrections_manifest"]["path"] == "corrections/inbox/body_burlington_fastmesh_gatefix_review_corrections.json"
+    assert "--final-labels-out runs/body_joint_goal_smoke_20260630T001407/a100_body_video_smoke_burlington_fresh_max1_fastmesh_gatefix_20260701T133821Z/labels/body_world_joints.json" in latest["decision_pipeline_command"]
+    assert "--finalization-report-out runs/body_joint_goal_smoke_20260630T001407/a100_body_video_smoke_burlington_fresh_max1_fastmesh_gatefix_20260701T133821Z/body_world_label_review_bundle/body_world_label_finalization.json" in latest["decision_pipeline_command"]
+    sample = latest["sample_items"][0]
+    assert sample["sample_id"] == "frame_000150_player_1"
+    assert sample["frame_image"]["exists"] is True
+    assert sample["overlay_image"]["exists"] is True
+    assert sample["center_delta_px"] == 69.634
+    assert sample["containment_ratio"] == 0.9429
+
+
+def test_review_input_manifest_exposes_zero_switch_footlockfix_body_label_queue(tmp_path: Path) -> None:
+    run_id = "a100_body_video_smoke_burlington_best_zero_switch_tracks_20260701T153021Z_reground_footlockfix_report"
+    bundle = (
+        tmp_path
+        / "runs"
+        / "body_joint_goal_smoke_20260630T001407"
+        / run_id
+        / "body_world_label_review_bundle"
+    )
+    frame_path = bundle / "frames" / "frame_000084.jpg"
+    overlay_path = bundle / "overlays" / "frame_000084_player_4_overlay.jpg"
+    frame_path.parent.mkdir(parents=True, exist_ok=True)
+    overlay_path.parent.mkdir(parents=True, exist_ok=True)
+    frame_path.write_bytes(b"jpg")
+    overlay_path.write_bytes(b"jpg")
+    (bundle / "body_world_label_review_queue.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_body_world_label_review_queue",
+                "status": "ready_for_review",
+                "clip": "burlington_gold_0300_low_steep_corner",
+                "sample_count": 1,
+                "samples": [
+                    {
+                        "sample_id": "frame_000084_player_4",
+                        "frame_index": 84,
+                        "t": 2.8,
+                        "player_id": 4,
+                        "joint_count": 70,
+                        "image_path": str(frame_path.relative_to(tmp_path)),
+                        "source_image_exists": True,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (bundle / "overlays" / "body_world_label_review_overlay_index.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_body_world_label_review_overlay",
+                "status": "ready_for_review_with_overlay_warnings",
+                "rendered_count": 1,
+                "sample_count": 1,
+                "alignment_warning_count": 1,
+                "overlays": [
+                    {
+                        "sample_id": "frame_000084_player_4",
+                        "frame_index": 84,
+                        "player_id": 4,
+                        "overlay_path": str(overlay_path.relative_to(tmp_path)),
+                        "warnings": ["body_joint_overlay_alignment_warning"],
+                        "warning_review_status": "accepted",
+                        "joint_bbox_alignment": {
+                            "status": "warning",
+                            "center_delta_px": 91.2,
+                            "center_delta_bbox_diag": 0.22,
+                            "containment_ratio": 0.41,
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (bundle / "body_world_label_finalization.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_body_world_label_finalization",
+                "status": "blocked",
+                "selected_sample_count": 20,
+                "accepted_sample_count": 0,
+                "overlay_warning_selected_sample_count": 3,
+                "overlay_warning_selected_sample_ids": [
+                    "frame_000084_player_4",
+                    "frame_000092_player_4",
+                    "frame_000108_player_4",
+                ],
+                "blockers": ["selected_samples_not_all_accepted", "template_not_reviewed"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    manifest = review_input_server._manifest(tmp_path)
+    body_review = manifest["human_review_tasks"]["body_world_label_review"]
+    latest = next(item for item in body_review["items"] if item["run_id"] == run_id)
+
+    assert latest["sample_count"] == 1
+    assert latest["warning_count"] == 1
+    assert latest["selected_sample_count"] == 20
+    assert latest["corrections_manifest"]["path"] == (
+        "corrections/inbox/body_burlington_best_zero_switch_footlockfix_review_corrections.json"
+    )
+    assert f"--run-id {run_id}" in latest["decision_pipeline_command"]
+    assert f"--final-labels-out runs/body_joint_goal_smoke_20260630T001407/{run_id}/labels/body_world_joints.json" in latest["decision_pipeline_command"]
+
+
 def test_review_input_server_exposes_focused_paddle_review_page() -> None:
     assert "paddleCornerQueue" in review_input_server.PADDLE_HTML
     assert "trackingReviewVideos" in review_input_server.PADDLE_HTML
     assert "sourceFrameContext" in review_input_server.PADDLE_HTML
+    assert "sourceStage" in review_input_server.PADDLE_HTML
+    assert "source-stage" in review_input_server.PADDLE_HTML
     assert "cropContextBox" in review_input_server.PADDLE_HTML
     assert "sourceVideo" in review_input_server.PADDLE_HTML
     assert "Not a paddle" in review_input_server.PADDLE_HTML
@@ -351,6 +628,67 @@ def test_review_input_server_exposes_focused_paddle_review_page() -> None:
     assert "Ambiguous" in review_input_server.PADDLE_HTML
     assert "box-derived candidates" in review_input_server.PADDLE_HTML
     assert "paddle_true_corner_labels" in review_input_server.PADDLE_HTML
+
+
+def test_review_input_server_exposes_focused_body_review_page() -> None:
+    assert hasattr(review_input_server, "BODY_HTML")
+    assert "bodyReviewOverlays" in review_input_server.BODY_HTML
+    assert "body_world_label_review" in review_input_server.BODY_HTML
+    assert "Accept visual candidate" in review_input_server.BODY_HTML
+    assert "Overlay ok" in review_input_server.BODY_HTML
+    assert "Wrong player" in review_input_server.BODY_HTML
+    assert "visual overlay review only" in review_input_server.BODY_HTML
+    assert "not independent world-MPJPE ground truth" in review_input_server.BODY_HTML
+
+
+def test_review_input_write_accepts_body_world_label_review_decisions(tmp_path: Path) -> None:
+    run_id = "a100_body_video_smoke_burlington_bboxscaled_resetcap075_runtime_20260701T001500Z"
+
+    latest, _ = review_input_server._write_review_input(
+        tmp_path,
+        {
+            "schema_version": 2,
+            "review_type": "pickleball_cv_blocker_review",
+            "body_world_label_review": {
+                run_id: {
+                    "frame_000047_player_2": {
+                        "decision": "overlay_ok",
+                        "notes": "Projection stays on the target player; not world-MPJPE ground truth.",
+                    }
+                }
+            },
+        },
+    )
+
+    saved = json.loads(latest.read_text(encoding="utf-8"))
+    decision = saved["body_world_label_review"][run_id]["frame_000047_player_2"]
+    assert decision["decision"] == "overlay_ok"
+    assert "not world-MPJPE" in decision["notes"]
+
+
+def test_review_input_write_accepts_body_world_label_sample_decisions(tmp_path: Path) -> None:
+    run_id = "a100_body_video_smoke_burlington_fresh_max1_fastmesh_gatefix_20260701T133821Z"
+
+    latest, _ = review_input_server._write_review_input(
+        tmp_path,
+        {
+            "schema_version": 2,
+            "review_type": "pickleball_cv_blocker_review",
+            "body_world_label_review": {
+                run_id: {
+                    "frame_000150_player_1": {
+                        "decision": "accept_candidate_label",
+                        "notes": "Candidate label is accepted after visual overlay review.",
+                    }
+                }
+            },
+        },
+    )
+
+    saved = json.loads(latest.read_text(encoding="utf-8"))
+    decision = saved["body_world_label_review"][run_id]["frame_000150_player_1"]
+    assert decision["decision"] == "accept_candidate_label"
+    assert "accepted" in decision["notes"]
 
 
 def test_review_input_write_accepts_not_paddle_paddle_labels(tmp_path: Path) -> None:

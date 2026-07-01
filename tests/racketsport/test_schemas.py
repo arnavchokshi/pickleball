@@ -1,23 +1,29 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from threed.racketsport.schemas import (
     BallFrame,
+    CallsArtifact,
     CaptureSidecar,
     CourtCalibration,
     CourtLineEvidence,
+    CourtKeypoints,
+    DriftLog,
     ContactWindows,
     ContactWindowCandidates,
     BallTrack,
     MetricValue,
+    PlayerGroundArtifact,
     RacketCandidates,
     PhaseEvalMetrics,
     RacketPose,
     ReprojectionError,
+    Skeleton3D,
     SmplMotion,
     TrackFrame,
     Tracks,
@@ -94,6 +100,56 @@ def test_court_calibration_requires_current_schema_version():
     }
 
     with pytest.raises(ValidationError):
+        CourtCalibration.model_validate(payload)
+
+
+def test_court_calibration_accepts_metric_stage_c_spec_fields(tmp_path: Path) -> None:
+    payload = {
+        "schema_version": 1,
+        "sport": "pickleball",
+        "coordinate_frame": "court_netcenter_z_up_m",
+        "T_world_court": [
+            [1.0, 0.0, 0.0, 4.0],
+            [0.0, 1.0, 0.0, -2.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ],
+        "homography": [[1.0, 0.0, 960.0], [0.0, 1.0, 540.0], [0.0, 0.0, 1.0]],
+        "intrinsics": {"fx": 1000.0, "fy": 1000.0, "cx": 960.0, "cy": 540.0, "dist": [], "source": "arkit"},
+        "extrinsics": {
+            "R": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            "t": [0.0, 0.0, 1.6],
+            "camera_height_m": 1.6,
+        },
+        "reprojection_error_px": {"median": 1.2, "p95": 4.8},
+        "per_keypoint_residual_px": [1.0] * 15,
+        "metric_confidence": "high",
+        "gsd_model": {
+            "type": "analytic_ray_plane",
+            "plane_sigma_m": 0.012,
+            "calibration_sigma_m": 0.018,
+            "samples": [{"court_xy": [0.0, -2.1336], "gsd_m_per_px": 0.018, "sigma_p_m": 0.032}],
+        },
+        "capture_quality": {"grade": "good", "reasons": []},
+        "image_pts": [[100.0, 300.0], [900.0, 300.0], [500.0, 300.0], [500.0, 180.0]],
+        "world_pts": [[0.0, 7.0, 0.0], [20.0, 7.0, 0.0], [10.0, 7.0, 0.0], [10.0, 22.0, 0.0]],
+        "source": "arkit_plane_kabsch_ransac_v1",
+        "solved_over_frames": [0, 15, 29],
+    }
+    path = tmp_path / "court_calibration.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    parsed = validate_artifact_file("court_calibration", path)
+
+    assert isinstance(parsed, CourtCalibration)
+    assert parsed.coordinate_frame == "court_netcenter_z_up_m"
+    assert parsed.T_world_court[0][3] == pytest.approx(4.0)
+    assert parsed.metric_confidence == "high"
+    assert parsed.gsd_model.samples[0].sigma_p_m == pytest.approx(0.032)
+    assert parsed.solved_over_frames == [0, 15, 29]
+
+    payload["solved_over_frames"] = [0, -1, 29]
+    with pytest.raises(ValidationError, match="solved_over_frames"):
         CourtCalibration.model_validate(payload)
 
 
@@ -177,6 +233,74 @@ def test_track_frame_bbox_rejects_inverted_xyxy_boxes() -> None:
     with pytest.raises(ValidationError, match="bbox must be ordered"):
         TrackFrame.model_validate({"t": 0.0, "bbox": [10.0, 20.0, 5.0, 40.0], "world_xy": [0.0, 0.0], "conf": 0.8})
 
+
+def test_smpl_motion_frame_accepts_raw_track_anchor() -> None:
+    parsed = SmplMotion.model_validate(
+        {
+            "schema_version": 1,
+            "model": "smplx",
+            "fps": 30.0,
+            "world_frame": "court_Z0",
+            "players": [
+                {
+                    "id": 1,
+                    "betas": [0.0] * 10,
+                    "frames": [
+                        {
+                            "t": 0.0,
+                            "global_orient": [0.0, 0.0, 0.0],
+                            "body_pose": [0.0] * 63,
+                            "left_hand_pose": [],
+                            "right_hand_pose": [],
+                            "transl_world": [0.0, 1.0, 0.0],
+                            "track_world_xy": [1.25, -2.5],
+                            "joints_world": [[0.0, 1.0, 0.0]],
+                            "mesh_vertices_world": [],
+                            "joint_conf": [0.9],
+                            "foot_contact": {"left": False, "right": False},
+                            "grf": None,
+                        }
+                    ],
+                    "skate_free": True,
+                    "physics": "pending",
+                }
+            ],
+        }
+    )
+
+    assert parsed.players[0].frames[0].track_world_xy == [1.25, -2.5]
+
+
+def test_skeleton3d_accepts_real_lane_a_world_joints() -> None:
+    parsed = Skeleton3D.model_validate(
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_skeleton3d",
+            "joint_names": ["pelvis", "left_wrist", "right_wrist"],
+            "preview_only": False,
+            "players": [
+                {
+                    "id": 1,
+                    "frames": [
+                        {
+                            "frame_idx": 0,
+                            "t": 0.0,
+                            "joints_world": [
+                                [0.0, 0.0, 0.9],
+                                [-0.35, 0.1, 1.2],
+                                [0.35, 0.1, 1.2],
+                            ],
+                            "joint_conf": [0.99, 0.95, 0.94],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert parsed.preview_only is False
+
+
 def test_smpl_motion_accepts_sam3dbody_world_joint_representation_without_grf() -> None:
     parsed = SmplMotion.model_validate(
         {
@@ -184,6 +308,7 @@ def test_smpl_motion_accepts_sam3dbody_world_joint_representation_without_grf() 
             "model": "sam3dbody_world_joints",
             "fps": 30.0,
             "world_frame": "court_Z0",
+            "mesh_faces": [[0, 1, 2]],
             "players": [
                 {
                     "id": 1,
@@ -212,6 +337,7 @@ def test_smpl_motion_accepts_sam3dbody_world_joint_representation_without_grf() 
     )
 
     assert parsed.model == "sam3dbody_world_joints"
+    assert parsed.mesh_faces == [(0, 1, 2)]
     assert parsed.players[0].skate_free is False
     assert parsed.players[0].frames[0].grf is None
 
@@ -349,6 +475,195 @@ def test_phase_eval_metrics_schema_is_registered(tmp_path):
     assert isinstance(parsed, PhaseEvalMetrics)
     assert parsed.status == "blocked"
     assert parsed.clips[0].missing_artifacts == ["court_calibration.json"]
+
+
+def test_player_ground_schema_is_registered_and_requires_both_feet(tmp_path: Path) -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_player_ground",
+        "fps": 60.0,
+        "source": "metric_floor_pose_grounding_v1",
+        "not_gate_verified": True,
+        "players": [
+            {
+                "id": 1,
+                "frames": [
+                    {
+                        "t": 0.5,
+                        "feet": [
+                            {
+                                "side": "L",
+                                "court_xy": [-0.25, -2.1],
+                                "height_m": 0.012,
+                                "contact": True,
+                                "sigma_p_m": 0.028,
+                                "confidence": 0.91,
+                                "world_xyz": [1.0, 2.0, 0.0],
+                                "source_points": ["ankle", "heel", "toe"],
+                            },
+                            {
+                                "side": "R",
+                                "court_xy": [0.22, -2.05],
+                                "height_m": 0.018,
+                                "contact": True,
+                                "sigma_p_m": 0.031,
+                                "confidence": 0.88,
+                                "world_xyz": [1.4, 2.1, 0.0],
+                                "source_points": ["ankle"],
+                            },
+                        ],
+                        "root_world": [1.2, 2.05, 0.0],
+                        "joints_world": [[1.2, 2.05, 0.9]],
+                    }
+                ],
+            }
+        ],
+    }
+    path = tmp_path / "player_ground.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    parsed = validate_artifact_file("player_ground", path)
+
+    assert isinstance(parsed, PlayerGroundArtifact)
+    assert parsed.players[0].frames[0].feet[0].court_xy == pytest.approx([-0.25, -2.1])
+
+    payload["players"][0]["frames"][0]["feet"] = payload["players"][0]["frames"][0]["feet"][:1]
+    with pytest.raises(ValidationError, match="both L and R feet"):
+        PlayerGroundArtifact.model_validate(payload)
+
+
+def test_court_calls_schema_is_registered_and_preserves_uncertainty(tmp_path: Path) -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_court_calls",
+        "source": "metric_floor_v1",
+        "not_gate_verified": True,
+        "events": [
+            {
+                "t": 2.0,
+                "player_id": 3,
+                "foot": "R",
+                "boundary": "sideline",
+                "decision": "out",
+                "signed_dist_m": 0.052,
+                "sigma_p_m": 0.010,
+                "frames": [118, 119, 120],
+                "metric_confidence": "high",
+                "capture_quality_grade": "good",
+            },
+            {
+                "t": 2.2,
+                "player_id": 3,
+                "foot": "L",
+                "boundary": "kitchen",
+                "decision": "too_close_to_call",
+                "signed_dist_m": -0.004,
+                "sigma_p_m": 0.020,
+                "frames": [132],
+                "metric_confidence": "low",
+                "capture_quality_grade": "good",
+            },
+        ],
+        "summary": {
+            "total_events": 2,
+            "hard_call_count": 1,
+            "too_close_to_call_count": 1,
+            "status": "not_gate_verified",
+        },
+    }
+    path = tmp_path / "calls.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    parsed = validate_artifact_file("court_calls", path)
+
+    assert isinstance(parsed, CallsArtifact)
+    assert parsed.events[0].signed_dist_m == pytest.approx(0.052)
+    assert parsed.events[1].decision == "too_close_to_call"
+
+    payload["events"][0]["frames"] = []
+    with pytest.raises(ValidationError):
+        CallsArtifact.model_validate(payload)
+
+
+def test_drift_log_schema_is_registered_and_validates_recalibration_spans(tmp_path: Path) -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_drift_log",
+        "checks": [
+            {"frame": 15, "p95_px": 8.5, "tripped": False},
+            {"frame": 30, "p95_px": 8.4, "tripped": False},
+            {"frame": 45, "p95_px": 8.6, "tripped": True},
+        ],
+        "recalibrations": [
+            {
+                "from_frame": 15,
+                "to_frame": 45,
+                "reason": "reprojection_drift_3_consecutive",
+            }
+        ],
+    }
+    path = tmp_path / "drift_log.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    parsed = validate_artifact_file("drift_log", path)
+
+    assert isinstance(parsed, DriftLog)
+    assert parsed.recalibrations[0].from_frame == 15
+
+    payload["recalibrations"][0]["to_frame"] = 14
+    with pytest.raises(ValidationError, match="to_frame"):
+        DriftLog.model_validate(payload)
+
+
+def test_court_keypoints_schema_is_registered_and_requires_full_15_point_contract(tmp_path: Path) -> None:
+    names = [
+        "near_left_corner",
+        "near_baseline_center",
+        "near_right_corner",
+        "far_right_corner",
+        "far_baseline_center",
+        "far_left_corner",
+        "near_nvz_left",
+        "near_nvz_center",
+        "near_nvz_right",
+        "net_left_sideline",
+        "net_center",
+        "net_right_sideline",
+        "far_nvz_left",
+        "far_nvz_center",
+        "far_nvz_right",
+    ]
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_court_keypoints",
+        "frame_indexes": [0, 15, 29],
+        "coordinate_space": "undistorted_source_video_pixels",
+        "keypoints": [
+            {
+                "name": name,
+                "uv": [float(index), float(index + 10)],
+                "confidence": 0.91,
+                "inlier_frames": [0, 15, 29],
+                "recovered": False,
+            }
+            for index, name in enumerate(names)
+        ],
+        "target_court_score": 0.82,
+        "source": "model_aggregate_v1",
+        "not_gate_verified": True,
+    }
+    path = tmp_path / "court_keypoints.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    parsed = validate_artifact_file("court_keypoints", path)
+
+    assert isinstance(parsed, CourtKeypoints)
+    assert parsed.keypoints[0].name == "near_left_corner"
+    assert parsed.keypoints[0].uv == pytest.approx([0.0, 10.0])
+
+    payload["keypoints"] = payload["keypoints"][:-1]
+    with pytest.raises(ValidationError, match="exactly the 15 canonical"):
+        CourtKeypoints.model_validate(payload)
 
 
 def test_contact_windows_rejects_out_of_range_human_review_source() -> None:

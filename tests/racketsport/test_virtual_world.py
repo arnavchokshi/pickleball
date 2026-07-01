@@ -233,6 +233,25 @@ def test_build_virtual_world_state_warns_on_ambiguous_paddle_preview() -> None:
     assert "ambiguous_paddle_pose" in world["summary"]["warnings"]
 
 
+def test_build_virtual_world_state_suppresses_box_derived_paddle_output() -> None:
+    racket_pose = _racket_pose()
+    racket_pose["players"][0]["frames"][0]["source"] = "label_bbox:cvat_video:paddle:pnp_ippe"
+
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=_tracks(),
+        smpl_motion=_smpl_motion(),
+        ball_track=_ball_track(),
+        racket_pose=racket_pose,
+    )
+
+    assert world["paddles"] == []
+    assert world["summary"]["paddle_player_count"] == 0
+    assert world["summary"]["paddle_frame_count"] == 0
+    assert "missing_paddle_pose" in world["summary"]["warnings"]
+    assert "box_derived_paddle_pose_suppressed" in world["summary"]["warnings"]
+
+
 def test_build_virtual_world_state_projects_visible_2d_ball_to_court_plane() -> None:
     world = build_virtual_world_state(
         court_calibration=_court_calibration(),

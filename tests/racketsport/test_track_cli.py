@@ -312,6 +312,45 @@ def test_build_tracks_auto_role_locks_player_label_payloads_without_tracker_ids(
     assert [len(player.frames) for player in tracks.players] == [2, 2]
 
 
+def test_build_tracks_role_lock_skips_implausible_role_speed_jump(tmp_path):
+    calibration_path = tmp_path / "court_calibration.json"
+    _write_calibration(calibration_path)
+    calibration = validate_artifact_file("court_calibration", calibration_path)
+    detections = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_person_detections",
+        "source": "player_labels",
+        "fps": 30.0,
+        "frames": [
+            {
+                "frame": 0,
+                "detections": [
+                    {"bbox": [880.0, 620.0, 920.0, 700.0], "conf": 0.91, "class": "person", "source_id": "left"},
+                ],
+            },
+            {
+                "frame": 1,
+                "detections": [
+                    {"bbox": [730.0, 620.0, 770.0, 700.0], "conf": 0.91, "class": "person", "source_id": "left"},
+                ],
+            },
+        ],
+    }
+
+    tracks, counts = build_tracks(
+        detections,
+        calibration,
+        max_step_m=2.0,
+        max_players=4,
+        id_strategy="role_lock",
+        role_lock_max_speed_mps=20.0,
+    )
+
+    assert counts["implausible_step"] == 1
+    assert [player.id for player in tracks.players] == [1]
+    assert [frame.t for frame in tracks.players[0].frames] == [0.0]
+
+
 def test_track_cli_caps_singles_to_two_players(tmp_path):
     calibration = tmp_path / "court_calibration.json"
     detections = tmp_path / "detections.json"
