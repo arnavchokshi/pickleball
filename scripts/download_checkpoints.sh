@@ -10,6 +10,8 @@ TRACKNET_SHA256="df867641a02712b021f04548ff4b1208ddfdb47f629ab2094ceb978667e83b1
 INPAINTNET_SHA256="5749b66b8002f3ad9e0af841604004706fc796df30599e6bf01952696009688c"
 YOLO26N_SHA256="9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
 YOLO26M_SHA256="401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7"
+SAT_HMR_URL="https://huggingface.co/ChiSu001/SAT-HMR/resolve/main/weights/sat_hmr/sat_644_3dpw.pth"
+SAT_HMR_SHA256="7e1b5e80a967c8f4e1e273156e5272b2a3413caf079c2bc0a038e90c6a0b6dec"
 
 usage() {
   cat <<'USAGE'
@@ -26,6 +28,8 @@ Environment overrides:
   TRACKNETV3_CKPT_DIR   Directory containing TrackNet_best.pt and InpaintNet_best.pt.
   TRACKNETV3_CKPT_ZIP   Zip file containing TrackNetV3 checkpoint files.
   YOLO26_CKPT_DIR       Directory containing yolo26n.pt and yolo26m.pt.
+  SAT_HMR_CKPT_FILE     Path to sat_644_3dpw.pth.
+  SAT_HMR_CKPT_DIR      Directory containing sat_644_3dpw.pth.
 
 The optional TRACKNET_DEST_DIR positional argument is kept for the old script
 interface and only changes where TrackNetV3 files are installed.
@@ -74,6 +78,7 @@ done
 
 TRACKNET_DEST_DIR="${LEGACY_TRACKNET_DEST:-"${DEST_ROOT}/tracknetv3"}"
 YOLO_DEST_DIR="$DEST_ROOT"
+SAT_HMR_DEST_FILE="${DEST_ROOT}/body4d/sat-hmr/weights/sat_hmr/sat_644_3dpw.pth"
 
 sha256_file() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -110,6 +115,11 @@ verify_yolo26() {
   echo "YOLO detector checkpoints verified in ${YOLO_DEST_DIR}"
 }
 
+verify_sat_hmr() {
+  verify_file "$SAT_HMR_DEST_FILE" "$SAT_HMR_SHA256"
+  echo "SAT-HMR checkpoint verified at ${SAT_HMR_DEST_FILE}"
+}
+
 install_from_dir() {
   local source_dir="$1"
   local tracknet
@@ -142,9 +152,27 @@ install_yolo_from_dir() {
   cp "$yolo26m" "${YOLO_DEST_DIR}/yolo26m.pt"
 }
 
+install_sat_hmr_file() {
+  local source_file="$1"
+  mkdir -p "$(dirname "$SAT_HMR_DEST_FILE")"
+  cp "$source_file" "$SAT_HMR_DEST_FILE"
+}
+
+install_sat_hmr_from_dir() {
+  local source_dir="$1"
+  local sat_hmr
+  sat_hmr="$(find "$source_dir" -name sat_644_3dpw.pth -type f | head -n 1)"
+  if [[ -z "$sat_hmr" ]]; then
+    echo "missing sat_644_3dpw.pth under ${source_dir}" >&2
+    return 1
+  fi
+  install_sat_hmr_file "$sat_hmr"
+}
+
 if [[ "$VERIFY_ONLY" -eq 1 ]]; then
   verify_tracknetv3
   verify_yolo26
+  verify_sat_hmr
   exit 0
 fi
 
@@ -182,4 +210,18 @@ else
   echo "missing YOLO detector checkpoints in ${YOLO_DEST_DIR}" >&2
   echo "Provide YOLO26_CKPT_DIR or place yolo26n.pt and yolo26m.pt there." >&2
   exit 1
+fi
+
+if [[ -f "$SAT_HMR_DEST_FILE" ]]; then
+  verify_sat_hmr
+elif [[ -n "${SAT_HMR_CKPT_FILE:-}" ]]; then
+  install_sat_hmr_file "$SAT_HMR_CKPT_FILE"
+  verify_sat_hmr
+elif [[ -n "${SAT_HMR_CKPT_DIR:-}" ]]; then
+  install_sat_hmr_from_dir "$SAT_HMR_CKPT_DIR"
+  verify_sat_hmr
+else
+  mkdir -p "$(dirname "$SAT_HMR_DEST_FILE")"
+  curl -L "$SAT_HMR_URL" -o "$SAT_HMR_DEST_FILE"
+  verify_sat_hmr
 fi

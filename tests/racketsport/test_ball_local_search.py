@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from threed.racketsport.ball_local_search import filter_ball_track_local_search
+from threed.racketsport.ball_local_search import _apply_motion_evidence_postprocess, filter_ball_track_local_search
 from threed.racketsport.schemas import BallTrack, validate_artifact_file
 
 
@@ -194,3 +194,104 @@ def test_local_search_writer_and_cli_entrypoint_write_schema_valid_outputs(tmp_p
     assert summary["uses_human_clicks"] is False
     assert summary["recovered_count"] == 1
     assert isinstance(validate_artifact_file("ball_track", out_path), BallTrack)
+
+
+def _motion_payload() -> dict:
+    return {
+        "schema_version": 1,
+        "fps": 30.0,
+        "source": "tracknet",
+        "frames": [
+            {"t": index / 30.0, "xy": [80.0, 20.0], "conf": 1.0, "visible": True, "approx": False}
+            for index in range(8)
+        ],
+        "bounces": [],
+    }
+
+
+def _moving_blob_frames() -> list[object]:
+    np = pytest.importorskip("numpy")
+
+    frames = []
+    for index in range(8):
+        image = np.zeros((48, 120, 3), dtype=np.uint8)
+        x = 24 + index
+        image[20:25, x : x + 5] = 245
+        frames.append(image)
+    return frames
+
+
+def test_motion_evidence_postprocess_replaces_stationary_false_run_with_moving_blob() -> None:
+    cv2 = pytest.importorskip("cv2")
+    payload = _motion_payload()
+
+    summary = _apply_motion_evidence_postprocess(
+        payload,
+        source_frames=_moving_blob_frames(),
+        cv2_module=cv2,
+        stationary_run_min_frames=4,
+        stationary_min_relocate_distance_px=20.0,
+        motion_min_area_px=3,
+        motion_max_area_px=80,
+        motion_min_peak=40.0,
+    )
+
+    assert summary["motion_recovered_count"] >= 1
+    assert payload["frames"][3]["visible"] is True
+    assert payload["frames"][3]["approx"] is True
+    assert payload["frames"][3]["xy"][0] < 40.0
+    assert isinstance(BallTrack.model_validate(payload), BallTrack)
+
+
+def test_motion_evidence_postprocess_suppresses_stale_duplicates_and_top_edge_samples() -> None:
+    cv2 = pytest.importorskip("cv2")
+    payload = _motion_payload()
+    payload["frames"][1]["approx"] = True
+    payload["frames"][2]["approx"] = True
+    payload["frames"][2]["xy"] = list(payload["frames"][1]["xy"])
+    payload["frames"][5]["xy"] = [44.0, 4.0]
+
+    summary = _apply_motion_evidence_postprocess(
+        payload,
+        source_frames=[],
+        cv2_module=cv2,
+        top_edge_suppress_px=10.0,
+    )
+
+    assert payload["frames"][2]["visible"] is False
+    assert payload["frames"][5]["visible"] is False
+    assert summary["stale_duplicate_suppressed_count"] == 1
+    assert summary["edge_suppressed_count"] == 1
+    assert isinstance(BallTrack.model_validate(payload), BallTrack)
+
+
+def test_motion_evidence_postprocess_relocates_approximate_sample_to_nearby_motion() -> None:
+    cv2 = pytest.importorskip("cv2")
+    payload = {
+        "schema_version": 1,
+        "fps": 30.0,
+        "source": "tracknet",
+        "frames": [
+            {"t": 0.0, "xy": [12.0, 18.0], "conf": 1.0, "visible": True, "approx": False},
+            {"t": 1.0 / 30.0, "xy": [54.0, 15.0], "conf": 0.4, "visible": True, "approx": True},
+            {"t": 2.0 / 30.0, "xy": [30.0, 35.0], "conf": 1.0, "visible": True, "approx": False},
+        ],
+        "bounces": [],
+    }
+    frames = _moving_blob_frames()[:3]
+
+    summary = _apply_motion_evidence_postprocess(
+        payload,
+        source_frames=frames,
+        cv2_module=cv2,
+        approximate_relocate_radius_px=60.0,
+        approximate_min_relocate_distance_px=5.0,
+        motion_min_area_px=3,
+        motion_max_area_px=80,
+        motion_min_peak=40.0,
+    )
+
+    assert summary["motion_relocated_count"] == 1
+    assert payload["frames"][1]["xy"][0] < 40.0
+    assert payload["frames"][1]["approx"] is True
+    assert isinstance(BallTrack.model_validate(payload), BallTrack)

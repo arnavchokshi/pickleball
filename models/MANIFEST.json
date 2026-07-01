@@ -34,6 +34,23 @@
       "fallbacks": ["sat_hmr", "nlf", "hmr2"]
     },
     {
+      "id": "sat_hmr_644_3dpw",
+      "stage": "3d_body_backbone_fallback",
+      "use": "SAT-HMR fallback checkpoint intended to run without H100 once SMPL assets/runtime dependencies are present",
+      "source": "https://huggingface.co/ChiSu001/SAT-HMR/blob/main/weights/sat_hmr/sat_644_3dpw.pth",
+      "license": "Apache-2.0 code; verify checkpoint/data terms before commercialization",
+      "commercial_posture": "research_ok_verify_checkpoint_terms",
+      "status": "downloadable_local_checkpoint",
+      "local_path": "models/checkpoints/body4d/sat-hmr/weights/sat_hmr/sat_644_3dpw.pth",
+      "sha256": "7e1b5e80a967c8f4e1e273156e5272b2a3413caf079c2bc0a038e90c6a0b6dec",
+      "repo_commit": "920b1380e1d4967e47b1de1782408ac30f4f44da",
+      "fallbacks": ["fast_sam_3d_body_dinov3"],
+      "notes": [
+        "scripts/download_checkpoints.sh verifies this SHA locally.",
+        "Current repo runtime still needs SMPL model assets and dependency isolation before BODY can claim a local non-H100 SAT-HMR gate."
+      ]
+    },
+    {
       "id": "moge_2_vitl_normal",
       "stage": "camera_fov_depth_prior",
       "use": "MoGe/FOV depth prior used by the existing body4d image",

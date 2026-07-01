@@ -35,6 +35,14 @@ class _SearchHit:
     local_mean: float
 
 
+@dataclass(frozen=True)
+class _MotionCandidate:
+    xy: tuple[float, float]
+    area_px: int
+    peak: float
+    score: float
+
+
 def filter_ball_track_local_search(
     *,
     video_path: str | Path,
@@ -94,12 +102,14 @@ def filter_ball_track_local_search(
     court_rejected_count = 0
     video_frame_count = 0
     source_index = 0
+    source_frames: list[Any] = []
 
     try:
         while True:
             ok, image = cap.read()
             if not ok:
                 break
+            source_frames.append(_clone_frame_for_motion(image))
             video_frame_count += 1
             track_index = _track_index_for_source_frame(
                 source_index=source_index,
@@ -192,6 +202,11 @@ def filter_ball_track_local_search(
     finally:
         cap.release()
 
+    motion_summary = _apply_motion_evidence_postprocess(
+        payload,
+        source_frames=source_frames,
+        cv2_module=cv2,
+    )
     BallTrack.model_validate(payload)
     visible_after = sum(1 for frame in payload["frames"] if bool(frame["visible"]))
     summary = {
@@ -218,6 +233,7 @@ def filter_ball_track_local_search(
         "max_prediction_gap_frames": int(max_prediction_gap_frames),
         "suppress_conf_threshold": float(suppress_conf_threshold),
         "court_margin_px": float(court_margin_px),
+        **motion_summary,
         "uses_human_clicks": False,
         "not_ground_truth": True,
     }
@@ -266,6 +282,302 @@ def write_local_search_ball_track(
 
 def _payload_samples_by_frame_index(payload: dict[str, Any], *, fps: float) -> dict[int, dict[str, Any]]:
     return {int(round(float(frame["t"]) * fps)): frame for frame in payload["frames"]}
+
+
+def _apply_motion_evidence_postprocess(
+    payload: dict[str, Any],
+    *,
+    source_frames: list[Any],
+    cv2_module: Any | None,
+    motion_threshold: float = 18.0,
+    motion_min_area_px: int = 20,
+    motion_max_area_px: int = 900,
+    motion_min_peak: float = 40.0,
+    motion_max_aspect: float = 4.0,
+    stationary_run_min_frames: int = 4,
+    stationary_epsilon_px: float = 2.0,
+    stationary_min_relocate_distance_px: float = 80.0,
+    approximate_relocate_radius_px: float = 90.0,
+    approximate_min_relocate_distance_px: float = 8.0,
+    stale_duplicate_epsilon_px: float = 1.0,
+    top_edge_suppress_px: float = 20.0,
+    teleport_px_per_frame: float = 160.0,
+) -> dict[str, Any]:
+    """Use frame-to-frame motion evidence to correct local-search identity drift."""
+
+    frames = payload.get("frames", [])
+    if not isinstance(frames, list):
+        return _empty_motion_summary()
+
+    motion_recovered_count = 0
+    motion_relocated_count = 0
+    stale_duplicate_suppressed_count = 0
+    edge_suppressed_count = 0
+    teleport_cleanup_suppressed_count = 0
+
+    for start, end in _stationary_visible_runs(
+        frames,
+        min_frames=stationary_run_min_frames,
+        epsilon_px=stationary_epsilon_px,
+    ):
+        for frame_index in range(start, end):
+            frame = frames[frame_index]
+            if not bool(frame.get("visible")):
+                continue
+            current_xy = _xy(frame)
+            candidates = [
+                candidate
+                for candidate in _motion_candidates_for_frame(
+                    source_frames,
+                    frame_index=frame_index,
+                    cv2_module=cv2_module,
+                    motion_threshold=motion_threshold,
+                    min_area_px=motion_min_area_px,
+                    max_area_px=motion_max_area_px,
+                    min_peak=motion_min_peak,
+                    max_aspect=motion_max_aspect,
+                )
+                if _distance(candidate.xy, current_xy) >= stationary_min_relocate_distance_px
+            ]
+            if not candidates:
+                continue
+            _apply_motion_candidate(frame, candidates[0])
+            motion_recovered_count += 1
+
+    for frame, prev in zip(frames[1:], frames[:-1]):
+        if not (bool(frame.get("visible")) and bool(prev.get("visible"))):
+            continue
+        if not (bool(frame.get("approx")) and bool(prev.get("approx"))):
+            continue
+        if _distance(_xy(frame), _xy(prev)) > stale_duplicate_epsilon_px:
+            continue
+        _hide_frame(frame)
+        stale_duplicate_suppressed_count += 1
+
+    if _top_edge_suppression_allowed(source_frames, top_edge_suppress_px=top_edge_suppress_px):
+        for frame in frames:
+            if not bool(frame.get("visible")):
+                continue
+            if _xy(frame)[1] >= float(top_edge_suppress_px):
+                continue
+            _hide_frame(frame)
+            edge_suppressed_count += 1
+
+    for frame_index, frame in enumerate(frames[: len(source_frames)]):
+        if not (bool(frame.get("visible")) and bool(frame.get("approx"))):
+            continue
+        current_xy = _xy(frame)
+        candidates = [
+            candidate
+            for candidate in _motion_candidates_for_frame(
+                source_frames,
+                frame_index=frame_index,
+                cv2_module=cv2_module,
+                motion_threshold=motion_threshold,
+                min_area_px=motion_min_area_px,
+                max_area_px=motion_max_area_px,
+                min_peak=motion_min_peak,
+                max_aspect=motion_max_aspect,
+            )
+            if _distance(candidate.xy, current_xy) <= approximate_relocate_radius_px
+        ]
+        if not candidates:
+            continue
+        candidate = sorted(candidates, key=lambda item: (-item.peak, _distance(item.xy, current_xy)))[0]
+        if _distance(candidate.xy, current_xy) < approximate_min_relocate_distance_px:
+            continue
+        _apply_motion_candidate(frame, candidate)
+        motion_relocated_count += 1
+
+    last_index: int | None = None
+    last_xy: tuple[float, float] | None = None
+    for frame_index, frame in enumerate(frames):
+        if not bool(frame.get("visible")):
+            continue
+        current_xy = _xy(frame)
+        if last_index is None or last_xy is None:
+            last_index = frame_index
+            last_xy = current_xy
+            continue
+        gap = frame_index - last_index
+        if gap > 0 and _distance(last_xy, current_xy) / float(gap) > float(teleport_px_per_frame):
+            _hide_frame(frame)
+            teleport_cleanup_suppressed_count += 1
+            continue
+        last_index = frame_index
+        last_xy = current_xy
+
+    return {
+        "motion_recovered_count": motion_recovered_count,
+        "motion_relocated_count": motion_relocated_count,
+        "stale_duplicate_suppressed_count": stale_duplicate_suppressed_count,
+        "edge_suppressed_count": edge_suppressed_count,
+        "teleport_cleanup_suppressed_count": teleport_cleanup_suppressed_count,
+        "motion_threshold": float(motion_threshold),
+        "motion_min_area_px": int(motion_min_area_px),
+        "motion_max_area_px": int(motion_max_area_px),
+        "motion_min_peak": float(motion_min_peak),
+        "motion_max_aspect": float(motion_max_aspect),
+        "top_edge_suppress_px": float(top_edge_suppress_px),
+        "teleport_cleanup_px_per_frame": float(teleport_px_per_frame),
+    }
+
+
+def _empty_motion_summary() -> dict[str, Any]:
+    return {
+        "motion_recovered_count": 0,
+        "motion_relocated_count": 0,
+        "stale_duplicate_suppressed_count": 0,
+        "edge_suppressed_count": 0,
+        "teleport_cleanup_suppressed_count": 0,
+    }
+
+
+def _clone_frame_for_motion(frame: Any) -> Any:
+    copy = getattr(frame, "copy", None)
+    if callable(copy):
+        try:
+            return copy()
+        except TypeError:
+            return frame
+    return frame
+
+
+def _stationary_visible_runs(
+    frames: list[Any],
+    *,
+    min_frames: int,
+    epsilon_px: float,
+) -> list[tuple[int, int]]:
+    runs: list[tuple[int, int]] = []
+    start = 0
+    while start < len(frames):
+        frame = frames[start]
+        if not isinstance(frame, dict) or not bool(frame.get("visible")):
+            start += 1
+            continue
+        anchor = _xy(frame)
+        end = start + 1
+        while end < len(frames):
+            candidate = frames[end]
+            if not isinstance(candidate, dict) or not bool(candidate.get("visible")):
+                break
+            if _distance(_xy(candidate), anchor) > float(epsilon_px):
+                break
+            end += 1
+        if end - start >= int(min_frames):
+            runs.append((start, end))
+        start = end
+    return runs
+
+
+def _motion_candidates_for_frame(
+    source_frames: list[Any],
+    *,
+    frame_index: int,
+    cv2_module: Any | None,
+    motion_threshold: float,
+    min_area_px: int,
+    max_area_px: int,
+    min_peak: float,
+    max_aspect: float,
+) -> list[_MotionCandidate]:
+    if frame_index < 0 or frame_index >= len(source_frames):
+        return []
+    cv2 = cv2_module
+    if cv2 is None or not hasattr(cv2, "connectedComponentsWithStats"):
+        return []
+    try:
+        import numpy as np
+    except ModuleNotFoundError:
+        return []
+
+    gray = _frame_to_gray_array(source_frames[frame_index], np=np, cv2_module=cv2)
+    if gray is None:
+        return []
+    diffs = []
+    if frame_index > 0:
+        prev_gray = _frame_to_gray_array(source_frames[frame_index - 1], np=np, cv2_module=cv2)
+        if prev_gray is not None:
+            diffs.append(np.abs(gray - prev_gray))
+    if frame_index + 1 < len(source_frames):
+        next_gray = _frame_to_gray_array(source_frames[frame_index + 1], np=np, cv2_module=cv2)
+        if next_gray is not None:
+            diffs.append(np.abs(gray - next_gray))
+    if not diffs:
+        return []
+
+    diff = np.maximum.reduce(diffs)
+    mask = (diff >= float(motion_threshold)).astype("uint8")
+    try:
+        component_count, _labels, stats, centroids = cv2.connectedComponentsWithStats(mask, 8)
+    except Exception:
+        return []
+
+    candidates: list[_MotionCandidate] = []
+    for component_index in range(1, int(component_count)):
+        x, y, width, height, area = (int(value) for value in stats[component_index][:5])
+        if area < int(min_area_px) or area > int(max_area_px):
+            continue
+        if width <= 0 or height <= 0:
+            continue
+        aspect = max(float(width) / float(height), float(height) / float(width))
+        if aspect > float(max_aspect):
+            continue
+        patch = diff[y : y + height, x : x + width]
+        if patch.size == 0:
+            continue
+        peak = float(patch.max())
+        if peak < float(min_peak):
+            continue
+        cx, cy = centroids[component_index]
+        score = peak * math.sqrt(float(area))
+        candidates.append(
+            _MotionCandidate(
+                xy=(float(cx), float(cy)),
+                area_px=area,
+                peak=peak,
+                score=score,
+            )
+        )
+    return sorted(candidates, key=lambda item: item.score, reverse=True)
+
+
+def _frame_to_gray_array(frame: Any, *, np: Any, cv2_module: Any) -> Any | None:
+    try:
+        array = np.asarray(frame)
+    except Exception:
+        return None
+    if array.size == 0 or array.ndim < 2:
+        return None
+    if array.ndim == 2:
+        return array.astype("int16")
+    if array.ndim >= 3 and array.shape[2] >= 3:
+        try:
+            return cv2_module.cvtColor(array, cv2_module.COLOR_BGR2GRAY).astype("int16")
+        except Exception:
+            b = array[:, :, 0].astype("float32")
+            g = array[:, :, 1].astype("float32")
+            r = array[:, :, 2].astype("float32")
+            return (0.114 * b + 0.587 * g + 0.299 * r).astype("int16")
+    return array[:, :, 0].astype("int16")
+
+
+def _top_edge_suppression_allowed(source_frames: list[Any], *, top_edge_suppress_px: float) -> bool:
+    if top_edge_suppress_px <= 0:
+        return False
+    if not source_frames:
+        return True
+    _width, height = _frame_width_height(source_frames[0])
+    return height >= int(math.ceil(float(top_edge_suppress_px) * 4.0))
+
+
+def _apply_motion_candidate(frame: dict[str, Any], candidate: _MotionCandidate) -> None:
+    frame["xy"] = [float(candidate.xy[0]), float(candidate.xy[1])]
+    frame["conf"] = _confidence_from_contrast(candidate.peak)
+    frame["visible"] = True
+    frame["approx"] = True
+    frame.pop("world_xyz", None)
 
 
 def _track_index_for_source_frame(*, source_index: int, source_fps: float, ball_fps: float) -> int:
