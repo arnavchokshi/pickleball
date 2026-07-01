@@ -11,13 +11,21 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 ModelStatus = Literal[
     "available_on_h100",
     "available_runtime_on_h100",
+    "downloadable_local_checkpoint",
     "pending_download",
     "pending_auth",
     "pending_benchmark",
     "fallback_only",
 ]
 
-CommercialPosture = Literal["ok", "research_ok_verify_commercial", "agpl_caveat", "unknown", "avoid"]
+CommercialPosture = Literal[
+    "ok",
+    "research_ok_verify_commercial",
+    "research_ok_verify_checkpoint_terms",
+    "agpl_caveat",
+    "unknown",
+    "avoid",
+]
 
 
 class ModelEntry(BaseModel):
