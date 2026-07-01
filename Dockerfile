@@ -8,6 +8,7 @@ WORKDIR /workspace/pickleball
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        bash \
         ca-certificates \
         curl \
         ffmpeg \
@@ -32,5 +33,8 @@ RUN python -m pip install --upgrade pip \
         tqdm
 
 COPY . .
+
+RUN bash -n scripts/download_checkpoints.sh \
+    && bash scripts/download_checkpoints.sh --help >/dev/null
 
 CMD ["python", "-m", "pytest", "tests/racketsport/test_ball_stage_runner.py", "-q"]

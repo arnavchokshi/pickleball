@@ -12,6 +12,7 @@ import pytest
 SHELL_SCRIPTS = [
     Path("scripts/gpu-eval-run.sh"),
     Path("scripts/gpu-train-lock.sh"),
+    Path("scripts/download_checkpoints.sh"),
     Path("scripts/racketsport/setup_env.sh"),
     Path("scripts/racketsport/install_fast_sam_env.sh"),
     Path("scripts/racketsport/install_mujoco_mjx_env.sh"),
@@ -185,6 +186,98 @@ def test_setup_env_help_and_arg_validation_exit_before_mutation():
         assert completed.returncode == expected_returncode
         assert "Usage: scripts/racketsport/setup_env.sh" in completed.stdout + completed.stderr
         assert "local Phase 0 environment ready" not in completed.stdout
+
+
+def test_download_checkpoints_help_exits_before_network_access():
+    completed = subprocess.run(
+        ["bash", "scripts/download_checkpoints.sh", "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert "Usage: scripts/download_checkpoints.sh" in completed.stdout
+    assert "--verify-only" in completed.stdout
+    assert "--dest-root" in completed.stdout
+    assert completed.stderr == ""
+
+
+def test_download_checkpoints_verify_only_uses_sha256(tmp_path: Path):
+    dest_root = tmp_path / "checkpoints"
+    tracknet_dir = dest_root / "tracknetv3"
+    tracknet_dir.mkdir(parents=True)
+    (tracknet_dir / "TrackNet_best.pt").write_text("tracknet", encoding="utf-8")
+    (tracknet_dir / "InpaintNet_best.pt").write_text("inpaintnet", encoding="utf-8")
+    (dest_root / "yolo26n.pt").write_text("yolo26n", encoding="utf-8")
+    (dest_root / "yolo26m.pt").write_text("yolo26m", encoding="utf-8")
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake_sha256sum = fake_bin / "sha256sum"
+    fake_sha256sum.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+case "$1" in
+  */TrackNet_best.pt)
+    printf '%s  %s\\n' df867641a02712b021f04548ff4b1208ddfdb47f629ab2094ceb978667e83b1a "$1"
+    ;;
+  */InpaintNet_best.pt)
+    printf '%s  %s\\n' 5749b66b8002f3ad9e0af841604004706fc796df30599e6bf01952696009688c "$1"
+    ;;
+  */yolo26n.pt)
+    printf '%s  %s\\n' 9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef "$1"
+    ;;
+  */yolo26m.pt)
+    printf '%s  %s\\n' 401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7 "$1"
+    ;;
+  *)
+    exit 2
+    ;;
+esac
+""",
+        encoding="utf-8",
+    )
+    fake_sha256sum.chmod(0o755)
+
+    completed = subprocess.run(
+        ["bash", "scripts/download_checkpoints.sh", "--verify-only", "--dest-root", str(dest_root)],
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}"},
+    )
+
+    assert completed.returncode == 0
+    assert "TrackNetV3 checkpoints verified" in completed.stdout
+    assert "YOLO detector checkpoints verified" in completed.stdout
+
+
+def test_download_checkpoints_verify_only_fails_on_hash_mismatch(tmp_path: Path):
+    dest_root = tmp_path / "checkpoints"
+    tracknet_dir = dest_root / "tracknetv3"
+    tracknet_dir.mkdir(parents=True)
+    (tracknet_dir / "TrackNet_best.pt").write_text("bad", encoding="utf-8")
+    (tracknet_dir / "InpaintNet_best.pt").write_text("bad", encoding="utf-8")
+    (dest_root / "yolo26n.pt").write_text("bad", encoding="utf-8")
+    (dest_root / "yolo26m.pt").write_text("bad", encoding="utf-8")
+
+    completed = subprocess.run(
+        ["bash", "scripts/download_checkpoints.sh", "--verify-only", "--dest-root", str(dest_root)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode != 0
+    assert "sha256 mismatch" in completed.stderr
+
+
+def test_dockerfile_checks_checkpoint_script_without_downloading_weights():
+    dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
+
+    assert "bash -n scripts/download_checkpoints.sh" in dockerfile
+    assert "bash scripts/download_checkpoints.sh --help" in dockerfile
 
 
 def test_fast_sam_installer_help_and_arg_validation_exit_before_environment_checks(tmp_path: Path):
