@@ -318,6 +318,20 @@ def _error_summary(values: list[float]) -> dict[str, float | int | None]:
     }
 
 
+def _pck_at_threshold(values: list[float], threshold_px: float) -> float | None:
+    if not values:
+        return None
+    return float(sum(1 for value in values if float(value) <= threshold_px) / len(values))
+
+
+def _pck_error_summary(values: list[float], threshold_px: float) -> dict[str, float | int | None]:
+    summary = _error_summary(values)
+    summary["keypoint_count"] = summary["count"]
+    summary["pck_at_5px"] = _pck_at_threshold(values, threshold_px)
+    summary["pck_threshold_px"] = threshold_px
+    return summary
+
+
 def _percentile(ordered_values: list[float], percentile: float) -> float:
     if len(ordered_values) == 1:
         return float(ordered_values[0])
@@ -428,6 +442,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         model.eval()
         real_model_input_errors: list[float] = []
         real_source_errors: list[float] = []
+        real_source_errors_by_clip: dict[str, list[float]] = {}
         synthetic_errors: list[float] = []
         with torch.no_grad():
             for row in rows:
@@ -446,7 +461,9 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                     real_model_input_errors.append(math.hypot(px - xy[0] * sx, py - xy[1] * sy))
                     source_x = px / sx
                     source_y = py / sy
-                    real_source_errors.append(math.hypot(source_x - xy[0], source_y - xy[1]))
+                    source_error = math.hypot(source_x - xy[0], source_y - xy[1])
+                    real_source_errors.append(source_error)
+                    real_source_errors_by_clip.setdefault(str(row.get("clip") or "unknown"), []).append(source_error)
             for _ in range(synthetic_batches):
                 x, target, _ = synthetic_batch(args.batch_size)
                 pred = court_keypoint_probabilities(model(x.to(device))).detach().cpu()
@@ -460,6 +477,11 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         real_model_input_summary = _error_summary(real_model_input_errors)
         real_source_summary = _error_summary(real_source_errors)
         synthetic_summary = _error_summary(synthetic_errors)
+        real_source_pck_at_5 = _pck_at_threshold(real_source_errors, 5.0)
+        real_source_pck_per_clip = {
+            clip: _pck_error_summary(errors, 5.0)
+            for clip, errors in sorted(real_source_errors_by_clip.items())
+        }
         return {
             "real_metric_coordinate_space": "source_video_pixels",
             "real_corner_mean_px": real_source_summary["mean"],
@@ -467,6 +489,8 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "real_corner_p95_px": real_source_summary["p95"],
             "real_corner_max_px": real_source_summary["max"],
             "real_corner_count": real_source_summary["count"],
+            "real_corner_pck_at_5px": real_source_pck_at_5,
+            "real_corner_pck_per_clip": real_source_pck_per_clip,
             "real_corner_mean_source_px": real_source_summary["mean"],
             "real_corner_median_source_px": real_source_summary["median"],
             "real_corner_p95_source_px": real_source_summary["p95"],
@@ -480,6 +504,8 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "real_keypoint_p95_px": real_source_summary["p95"],
             "real_keypoint_max_px": real_source_summary["max"],
             "real_keypoint_count": real_source_summary["count"],
+            "real_keypoint_pck_at_5px": real_source_pck_at_5,
+            "real_keypoint_pck_per_clip": real_source_pck_per_clip,
             "real_keypoint_mean_source_px": real_source_summary["mean"],
             "real_keypoint_median_source_px": real_source_summary["median"],
             "real_keypoint_p95_source_px": real_source_summary["p95"],
@@ -546,22 +572,18 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         model_height=height,
         out_dir=args.out,
     )
-    gate_values = [
-        float(artifact["median_keypoint_reprojection_px"])
-        for artifact in holdout_artifacts
-        if artifact.get("median_keypoint_reprojection_px") is not None
-    ]
-    gate_value = _error_summary(gate_values)["median"]
+    gate_value = after.get("real_keypoint_pck_at_5px")
     summary = {
         "schema_version": 1,
         "artifact_type": "court_keypoint_pretraining_run",
         "status": "trained_not_phase_verified",
         "checkpoint": str(checkpoint),
         "gate": {
-            "metric": "heldout_median_keypoint_reprojection_px",
-            "value_px": gate_value,
-            "threshold_px": 5.0,
-            "passed": bool(gate_value is not None and float(gate_value) <= 5.0),
+            "metric": "heldout_pck_at_5px",
+            "value": gate_value,
+            "threshold": 0.95,
+            "pck_threshold_px": 5.0,
+            "passed": bool(gate_value is not None and float(gate_value) >= 0.95),
             "not_cal3_verified": True,
         },
         "before": before,

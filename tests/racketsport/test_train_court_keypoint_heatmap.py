@@ -238,8 +238,12 @@ def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_pat
         )
     )
 
-    assert summary["gate"]["metric"] == "heldout_median_keypoint_reprojection_px"
-    assert summary["gate"]["threshold_px"] == 5.0
+    assert summary["gate"]["metric"] == "heldout_pck_at_5px"
+    assert summary["gate"]["threshold"] == 0.95
+    assert summary["gate"]["pck_threshold_px"] == 5.0
+    assert summary["gate"]["value"] == summary["after"]["real_keypoint_pck_at_5px"]
+    assert summary["after"]["real_keypoint_pck_per_clip"]["clip_a"]["keypoint_count"] == 15
+    assert summary["after"]["real_keypoint_pck_per_clip"]["clip_a"]["pck_at_5px"] == summary["after"]["real_keypoint_pck_at_5px"]
     assert summary["after"]["real_corner_median_px"] is not None
     assert summary["after"]["real_corner_median_model_input_px"] is not None
     assert summary["after"]["real_corner_median_source_px"] == pytest.approx(summary["after"]["real_corner_median_px"])
@@ -248,7 +252,6 @@ def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_pat
         rel=0.15,
     )
     assert summary["holdout_artifacts"][0]["clip"] == "clip_a"
-    assert summary["gate"]["value_px"] == summary["holdout_artifacts"][0]["median_keypoint_reprojection_px"]
     assert summary["holdout_artifacts"][0]["prediction_artifact"].endswith("clip_a_court_keypoints.json")
     assert summary["holdout_artifacts"][0]["overlay_artifact"].endswith("clip_a_court_keypoints_overlay.mp4")
     assert summary["holdout_artifacts"][0]["overlay_frame_count"] == 3
@@ -261,9 +264,10 @@ def test_training_cli_summary_prints_gate_metric_and_artifact_paths() -> None:
         {
             "checkpoint": "run/court_keypoint_heatmap.pt",
             "gate": {
-                "metric": "heldout_median_keypoint_reprojection_px",
-                "value_px": 12.5,
-                "threshold_px": 5.0,
+                "metric": "heldout_pck_at_5px",
+                "value": 0.9,
+                "threshold": 0.95,
+                "pck_threshold_px": 5.0,
                 "passed": False,
             },
             "before": {"real_keypoint_median_px": 80.0},
@@ -280,6 +284,6 @@ def test_training_cli_summary_prints_gate_metric_and_artifact_paths() -> None:
     )
 
     assert summary["checkpoint"] == "run/court_keypoint_heatmap.pt"
-    assert summary["gate"]["metric"] == "heldout_median_keypoint_reprojection_px"
-    assert summary["gate"]["value_px"] == 12.5
+    assert summary["gate"]["metric"] == "heldout_pck_at_5px"
+    assert summary["gate"]["value"] == 0.9
     assert summary["holdout_artifacts"][0]["overlay_artifact"] == "run/holdout_overlays/clip_a.mp4"
