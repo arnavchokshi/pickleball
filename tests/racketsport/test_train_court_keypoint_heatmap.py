@@ -259,6 +259,60 @@ def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_pat
     assert (out / "holdout_overlays" / "clip_a_court_keypoints_overlay.mp4").is_file()
 
 
+def test_run_training_can_hold_out_frames_per_viewpoint(tmp_path: Path) -> None:
+    cv2 = __import__("cv2")
+    clip_root = tmp_path / "eval_clips" / "ball" / "clip_a"
+    clip_root.mkdir(parents=True)
+    video = clip_root / "source.mp4"
+    writer = cv2.VideoWriter(str(video), cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (64, 36))
+    assert writer.isOpened()
+    for idx in range(6):
+        frame = np.zeros((36, 64, 3), dtype=np.uint8)
+        frame[:, :] = (30 + idx * 5, 70, 100)
+        writer.write(frame)
+    writer.release()
+    payload = _reviewed_court_keypoint_label_payload(
+        "frame_000001.jpg",
+        source_resolution=[64, 36],
+        label_coordinate_space=[64, 36],
+    )
+    payload["annotation"]["items"] = [
+        {
+            "frame": f"frame_{frame_index:06d}.jpg",
+            "keypoints": {
+                point.name: [float(index * 3 + 10), float(index * 2 + 5)]
+                for index, point in enumerate(PICKLEBALL_KEYPOINTS)
+            },
+        }
+        for frame_index in range(1, 5)
+    ]
+    _write_json(clip_root / "labels" / "court_keypoints.json", payload)
+
+    summary = run_training(
+        Namespace(
+            real_root=tmp_path / "eval_clips" / "ball",
+            out=tmp_path / "court_run_frame_split",
+            holdout_clip=["clip_b"],
+            holdout_frame_stride=2,
+            epochs=0,
+            batch_size=1,
+            image_width=32,
+            image_height=18,
+            sigma=1.5,
+            learning_rate=1e-3,
+            real_finetune_start_epoch=0,
+            eval_every=1,
+            seed=13,
+            device="cpu",
+        )
+    )
+
+    assert summary["holdout_strategy"] == {"type": "frame_stride", "stride": 2}
+    assert summary["real_train_count"] == 2
+    assert summary["real_holdout_count"] == 2
+    assert summary["after"]["real_keypoint_pck_per_clip"]["clip_a"]["keypoint_count"] == 30
+
+
 def test_training_cli_summary_prints_gate_metric_and_artifact_paths() -> None:
     summary = training_cli_summary(
         {

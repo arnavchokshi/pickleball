@@ -386,9 +386,28 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     device = torch.device(args.device if args.device == "cpu" or torch.cuda.is_available() else "cpu")
 
     real_labels = load_real_court_keypoint_labels(args.real_root) if args.real_root else []
-    holdout = set(args.holdout_clip)
-    train_real = [row for row in real_labels if row.get("clip") not in holdout]
-    holdout_real = [row for row in real_labels if row.get("clip") in holdout] or real_labels[-1:]
+    holdout_frame_stride = int(getattr(args, "holdout_frame_stride", 0) or 0)
+    if holdout_frame_stride > 0:
+        train_real = [
+            row
+            for row in real_labels
+            if int(row.get("frame_index", -1)) % holdout_frame_stride != 0
+        ]
+        holdout_real = [
+            row
+            for row in real_labels
+            if int(row.get("frame_index", -1)) % holdout_frame_stride == 0
+        ]
+        holdout_strategy = {"type": "frame_stride", "stride": holdout_frame_stride}
+    else:
+        holdout = set(args.holdout_clip)
+        train_real = [row for row in real_labels if row.get("clip") not in holdout]
+        holdout_real = [row for row in real_labels if row.get("clip") in holdout] or real_labels[-1:]
+        holdout_strategy = {"type": "clip", "clips": sorted(holdout)}
+    if real_labels and not train_real:
+        train_real = [row for row in real_labels if row not in holdout_real] or real_labels
+    if real_labels and not holdout_real:
+        holdout_real = real_labels[-1:]
 
     def synthetic_batch(batch_size: int) -> tuple[Any, Any, Any]:
         images, targets, masks = [], [], []
@@ -590,6 +609,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         "after": after,
         "history": history,
         "holdout_artifacts": holdout_artifacts,
+        "holdout_strategy": holdout_strategy,
         "real_train_count": len(train_real),
         "real_holdout_count": len(holdout_real),
         "note": "Synthetic pretraining plus limited reviewed 15-keypoint court fine-tune; not a verified CAL-3 no-tap solver.",
@@ -835,6 +855,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--real-root", type=Path, default=None)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--holdout-clip", action="append", default=["wolverine_mixed_0200_mid_steep_corner"])
+    parser.add_argument(
+        "--holdout-frame-stride",
+        type=int,
+        default=0,
+        help="When positive, hold out frames whose frame_index is divisible by this stride across every clip.",
+    )
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--image-width", type=int, default=160)
