@@ -18,6 +18,7 @@ from .ball_inflections import build_ball_inflections_from_ball_track
 from .contact_windows import build_contact_windows_artifact
 from .event_fusion import fuse_contact_windows_from_cue_payloads
 from .schemas import BallTrack, ContactWindows
+from .wrist_velocity_peaks import build_wrist_velocity_peaks_from_file
 
 
 DEFAULT_NO_CLICK_BALL_FILENAME = "ball_track_fusion_temporal_vball100_localtraj.json"
@@ -164,6 +165,10 @@ class BallStageRunner:
             ball_payload=ball_payload,
             enabled=self.real_model,
         )
+        generated_wrist_peaks, wrist_peak_notes = _derive_wrist_velocity_peaks_from_current_skeleton(
+            context,
+            enabled=self.real_model,
+        )
         contact_payload, contact_notes = _contact_windows_from_cues(
             context,
             fps=ball_track.fps,
@@ -194,6 +199,10 @@ class BallStageRunner:
             metrics["ball_inflection_candidate_count"] = generated_ball_inflections["summary"]["candidate_count"]
             metrics["ball_inflection_source"] = generated_ball_inflections["source"]
             produced_artifacts = (*produced_artifacts, DEFAULT_BALL_INFLECTIONS_FILENAME)
+        if generated_wrist_peaks is not None:
+            metrics["wrist_velocity_peak_count"] = generated_wrist_peaks["summary"]["peak_count"]
+            metrics["wrist_velocity_source"] = generated_wrist_peaks["source"]
+            produced_artifacts = (*produced_artifacts, DEFAULT_WRIST_VELOCITY_PEAKS_FILENAME)
         metrics.update(model_metrics)
         if physics_summary is not None:
             metrics["physics3d"] = _physics3d_metrics(physics_summary)
@@ -215,6 +224,7 @@ class BallStageRunner:
                 *self._source_notes(source_path),
                 *physics_notes,
                 *ball_inflection_notes,
+                *wrist_peak_notes,
                 *contact_notes,
                 *blocked_notes,
                 "real BALL model inference output; not a BALL VERIFIED accuracy gate",
@@ -750,6 +760,25 @@ def _derive_ball_inflections_from_current_track(
     payload = build_ball_inflections_from_ball_track(ball_payload)
     _write_json(Path(context.run_dir) / DEFAULT_BALL_INFLECTIONS_FILENAME, payload)
     return payload, ("derived ball_inflections.json from current ball_track.json image motion",)
+
+
+def _derive_wrist_velocity_peaks_from_current_skeleton(
+    context: Any,
+    *,
+    enabled: bool,
+) -> tuple[dict[str, Any] | None, tuple[str, ...]]:
+    if not enabled:
+        return None, ()
+    input_wrist_peaks = Path(context.inputs_dir) / DEFAULT_WRIST_VELOCITY_PEAKS_FILENAME
+    if input_wrist_peaks.is_file():
+        return None, ()
+    skeleton_path = Path(context.run_dir) / "skeleton3d.json"
+    if not skeleton_path.is_file():
+        return None, ()
+
+    payload = build_wrist_velocity_peaks_from_file(skeleton_path)
+    _write_json(Path(context.run_dir) / DEFAULT_WRIST_VELOCITY_PEAKS_FILENAME, payload)
+    return payload, ("derived wrist_velocity_peaks.json from current skeleton3d.json",)
 
 
 def _contact_windows_from_cues(

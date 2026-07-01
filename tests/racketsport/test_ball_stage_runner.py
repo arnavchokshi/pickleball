@@ -211,6 +211,36 @@ def _write_wrist_velocity_peak_artifact(inputs_dir: Path) -> None:
     )
 
 
+def _write_skeleton3d_contact_peak(run_dir: Path) -> None:
+    joint_names = ["pelvis", "left_wrist", "right_wrist"]
+    frames = [
+        {
+            "t": 0.0,
+            "joints_world": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "joint_conf": [0.9, 0.9, 0.9],
+        },
+        {
+            "t": 1.0 / 30.0,
+            "joints_world": [[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "joint_conf": [0.9, 0.9, 0.9],
+        },
+        {
+            "t": 2.0 / 30.0,
+            "joints_world": [[0.0, 0.0, 0.0], [0.55, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "joint_conf": [0.9, 0.9, 0.9],
+        },
+    ]
+    _write_json(
+        run_dir / "skeleton3d.json",
+        {
+            "schema_version": 1,
+            "joint_names": joint_names,
+            "preview_only": True,
+            "players": [{"id": 7, "frames": frames}],
+        },
+    )
+
+
 def _write_model_ball_track(path: Path, *, source: str = "totnet") -> None:
     payload = _ball_track_payload()
     payload["source"] = source
@@ -675,6 +705,64 @@ def test_ball_stage_runner_derives_ball_inflections_from_current_tracknet_output
     assert ball_stage["metrics"]["ball_inflection_candidate_count"] == 1
     assert "ball_inflections.json" in ball_stage["produced_artifacts"]
     assert "derived ball_inflections.json from current ball_track.json image motion" in ball_stage["notes"]
+
+
+def test_ball_stage_runner_derives_wrist_peaks_from_current_skeleton_for_real_model_fusion(tmp_path: Path) -> None:
+    clip = "clip_001"
+    inputs = tmp_path / "inputs" / clip
+    run_dir = tmp_path / "runs" / clip
+    video = inputs / "input.mp4"
+    tracknet_file = tmp_path / "TrackNet_best.pt"
+    inpaintnet_file = tmp_path / "InpaintNet_best.pt"
+    tracknet_repo = tmp_path / "TrackNetV3"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"fake video bytes")
+    tracknet_file.write_bytes(b"fake tracknet checkpoint")
+    inpaintnet_file.write_bytes(b"fake inpaintnet checkpoint")
+    tracknet_repo.mkdir(parents=True)
+    (tracknet_repo / "predict.py").write_text("print('fake')\n", encoding="utf-8")
+    _write_dependency_artifacts(run_dir)
+    _write_skeleton3d_contact_peak(run_dir)
+
+    def fake_tracknet_runner(**kwargs):
+        _write_json(Path(kwargs["out"]), _ball_track_payload_with_image_contact_turn())
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_tracknet_ball_run",
+            "source_mode": "tracknet_predict",
+            "frame_count": 3,
+            "visible_frame_count": 3,
+        }
+
+    runners = _noop_dependency_runners()
+    runners["ball_events"] = BallStageRunner(
+        tracknet_repo=tracknet_repo,
+        tracknet_file=tracknet_file,
+        inpaintnet_file=inpaintnet_file,
+        video_path=video,
+        tracknet_runner=fake_tracknet_runner,
+        tracknet_fps=30.0,
+    )
+
+    summary = run_pipeline(
+        clip=clip,
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="ball_events",
+        runners=runners,
+    )
+
+    wrist_peaks = json.loads((run_dir / "wrist_velocity_peaks.json").read_text(encoding="utf-8"))
+    contact_windows = json.loads((run_dir / "contact_windows.json").read_text(encoding="utf-8"))
+    assert wrist_peaks["status"] == "review_only"
+    assert wrist_peaks["summary"]["peak_count"] == 1
+    assert len(contact_windows["events"]) == 1
+    ball_stage = summary["stages"][-1]
+    assert ball_stage["status"] == "ran"
+    assert ball_stage["metrics"]["contact_event_count"] == 1
+    assert ball_stage["metrics"]["wrist_velocity_peak_count"] == 1
+    assert "wrist_velocity_peaks.json" in ball_stage["produced_artifacts"]
+    assert "derived wrist_velocity_peaks.json from current skeleton3d.json" in ball_stage["notes"]
 
 
 def test_ball_stage_runner_tracknet_local_search_keeps_raw_and_outputs_filtered_track(tmp_path: Path) -> None:
