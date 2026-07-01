@@ -756,6 +756,7 @@ def test_ball_stage_runner_tracknet_local_search_keeps_raw_and_outputs_filtered_
     assert local_search_calls[0]["ball_track_path"] == run_dir / "ball_track_tracknet_raw.json"
     assert local_search_calls[0]["out_path"] == run_dir / "ball_track.json"
     assert local_search_calls[0]["summary_path"] == run_dir / "ball_local_search_summary.json"
+    assert local_search_calls[0]["court_calibration_path"] == run_dir / "court_calibration.json"
     assert json.loads((run_dir / "ball_track_tracknet_raw.json").read_text(encoding="utf-8"))["frames"][0]["xy"] == [
         444.0,
         222.0,

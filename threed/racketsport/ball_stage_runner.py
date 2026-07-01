@@ -325,6 +325,7 @@ class BallStageRunner:
                 ball_track_path=raw_out,
                 out_path=out,
                 summary_path=local_summary_out,
+                court_calibration_path=_optional_court_calibration_path(context),
             )
             model_metrics["raw_tracknet_ball_track"] = str(raw_out)
             model_metrics["local_search"] = _local_search_metrics(local_summary)
@@ -650,6 +651,11 @@ def _optional_source_video_size(context: Any) -> tuple[int, int] | None:
         if width > 0 and height > 0:
             return width, height
     return None
+
+
+def _optional_court_calibration_path(context: Any) -> Path | None:
+    candidate = Path(context.run_dir) / "court_calibration.json"
+    return candidate if candidate.is_file() else None
 
 
 def _require_file(path: Path, label: str) -> Path:
