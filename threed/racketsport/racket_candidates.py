@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any, Mapping
 
-from .schemas import RacketCandidates
+from .schemas import CvatVideoAnnotations, RacketCandidates
 
 
 DEFAULT_PADDLE_DIMS_IN = {"length": 16.0, "width": 8.0}
@@ -60,6 +60,73 @@ def racket_labels_to_candidates(
 
     if counts["accepted"] == 0:
         raise ValueError(f"no racket candidates accepted; counts={counts}")
+
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_racket_candidates",
+        "fps": float(fps),
+        "players": [
+            {
+                "id": player_id,
+                "paddle_dims_in": dims,
+                "frames": sorted(frames, key=lambda frame: float(frame["t"])),
+            }
+            for player_id, frames in sorted(by_player.items())
+        ],
+    }
+    return RacketCandidates.model_validate(payload).model_dump(mode="json"), counts
+
+
+def cvat_paddle_boxes_to_candidates(
+    cvat_payload: Mapping[str, Any],
+    *,
+    fps: float,
+    paddle_dims_in: Mapping[str, float] | None = None,
+    label_name: str = "paddle",
+) -> tuple[dict[str, Any], dict[str, int]]:
+    """Convert reviewed CVAT paddle rectangles into review-only candidates.
+
+    CVAT rectangles are useful for detector training and crop review, but they
+    are still box-derived. The emitted source intentionally starts with
+    ``label_bbox:`` so canonical RKT promotion keeps failing closed until true
+    face-corner/CAD/reference evidence exists.
+    """
+
+    if fps <= 0.0:
+        raise ValueError("fps must be positive")
+    label = label_name.strip().lower()
+    if not label:
+        raise ValueError("label_name must be non-empty")
+
+    annotations = CvatVideoAnnotations.model_validate(cvat_payload)
+    dims = dict(paddle_dims_in or DEFAULT_PADDLE_DIMS_IN)
+    by_player: dict[int, list[dict[str, Any]]] = {}
+    counts = {"accepted": 0, "skipped_label": 0, "skipped_invalid": 0}
+
+    for frame in annotations.frames:
+        for box in frame.boxes:
+            if box.label.strip().lower() != label:
+                counts["skipped_label"] += 1
+                continue
+            try:
+                corners = _bbox_corners_px([float(value) for value in box.bbox_xyxy])
+                player_id = int(box.track_id)
+            except (TypeError, ValueError):
+                counts["skipped_invalid"] += 1
+                continue
+            source_suffix = f"{label}_occluded" if box.occluded else label
+            by_player.setdefault(player_id, []).append(
+                {
+                    "t": int(frame.frame_index) / float(fps),
+                    "corners_px": corners,
+                    "conf": 0.75 if box.occluded else 1.0,
+                    "source": f"label_bbox:cvat_video:{source_suffix}",
+                }
+            )
+            counts["accepted"] += 1
+
+    if counts["accepted"] == 0:
+        raise ValueError(f"no CVAT paddle boxes accepted; counts={counts}")
 
     payload = {
         "schema_version": 1,
@@ -166,6 +233,7 @@ def _candidate_source(item: Mapping[str, Any]) -> str:
 
 __all__ = [
     "DEFAULT_PADDLE_DIMS_IN",
+    "cvat_paddle_boxes_to_candidates",
     "load_json_object",
     "racket_labels_to_candidates",
     "write_racket_candidates",

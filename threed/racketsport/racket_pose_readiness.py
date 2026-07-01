@@ -64,6 +64,18 @@ def build_racket_pose_readiness(
         "reference_gt_frame_count": reference_gt_frame_count,
         "preview_pose_frame_count": preview_pose_frame_count,
         "promoted_pose_frame_count": promoted_pose_frame_count,
+        "local_readiness": _local_readiness(
+            candidate_frame_count=candidate_frame_count,
+            box_derived_frame_count=box_derived_frame_count,
+            true_corner_frame_count=true_corner_frame_count,
+        ),
+        "missing_label_or_asset_state": _missing_label_or_asset_state(
+            source_evidence_counts=source_evidence_counts,
+            true_corner_frame_count=true_corner_frame_count,
+            reference_gt_frame_count=reference_gt_frame_count,
+        ),
+        "runnable_now": _runnable_now(candidate_frame_count=candidate_frame_count),
+        "blocked_until": _blocked_until(blockers),
         "blockers": blockers,
         "recommended_next_actions": _recommended_next_actions(blockers),
         "summary": {
@@ -76,6 +88,64 @@ def build_racket_pose_readiness(
             "promoted_pose_frame_count": promoted_pose_frame_count,
         },
     }
+
+
+def _local_readiness(
+    *,
+    candidate_frame_count: int,
+    box_derived_frame_count: int,
+    true_corner_frame_count: int,
+) -> dict[str, bool]:
+    has_candidates = candidate_frame_count > 0
+    non_box_candidate_only = has_candidates and box_derived_frame_count == 0
+    can_attempt_canonical_pose = non_box_candidate_only and true_corner_frame_count > 0
+    return {
+        "can_convert_box_labels_to_review_candidates": has_candidates and box_derived_frame_count > 0,
+        "can_build_true_corner_review": has_candidates,
+        "can_build_preview_pose": has_candidates,
+        "can_run_promotion_audit": has_candidates,
+        "can_run_fail_closed_stage_smoke": has_candidates,
+        "can_write_canonical_racket_pose": can_attempt_canonical_pose,
+        "can_claim_paddle_6dof": False,
+    }
+
+
+def _missing_label_or_asset_state(
+    *,
+    source_evidence_counts: Mapping[str, int],
+    true_corner_frame_count: int,
+    reference_gt_frame_count: int,
+) -> dict[str, str]:
+    cad_or_reference_count = int(source_evidence_counts.get("synthetic_or_cad", 0)) + reference_gt_frame_count
+    return {
+        "true_paddle_face_corner_labels": "present" if true_corner_frame_count > 0 else "missing",
+        "paddle_cad_or_reference_asset": "present" if cad_or_reference_count > 0 else "missing",
+        "aruco_apriltag_or_reference_pose_gt": "present" if reference_gt_frame_count > 0 else "missing",
+        "racket_pose_evaluation": "missing",
+    }
+
+
+def _runnable_now(*, candidate_frame_count: int) -> list[str]:
+    if candidate_frame_count <= 0:
+        return []
+    return [
+        "convert CVAT or draft paddle boxes into review-only racket_candidates.json",
+        "render candidate overlays and paddle true-corner crop sheets",
+        "build racket_pose_preview.json for visualization only when calibration is present",
+        "build racket_promotion_audit.json to prove canonical racket_pose.json is absent or safe",
+        "run RacketStageRunner as a fail-closed smoke; box-derived candidates must be rejected",
+    ]
+
+
+def _blocked_until(blockers: list[str]) -> list[str]:
+    blocked: list[str] = []
+    if "missing_true_paddle_keypoints_or_cad_pose" in blockers or "missing_reference_pose_gt" in blockers:
+        blocked.append("true paddle-face corner labels, mask/keypoint corners, CAD/reference pose, or ArUco/AprilTag GT")
+    if "missing_promoted_racket_pose_json" in blockers:
+        blocked.append("canonical racket_pose.json from non-box evidence")
+    if "missing_racket_pose_evaluation" in blockers:
+        blocked.append("RKT face-angle/contact-point evaluation against reference labels")
+    return blocked
 
 
 def build_racket_pose_readiness_from_files(

@@ -100,6 +100,33 @@ def test_racket_pose_readiness_flags_box_derived_preview_as_blocked() -> None:
         "missing_reference_pose_gt",
         "missing_racket_pose_evaluation",
     ]
+    assert payload["local_readiness"] == {
+        "can_convert_box_labels_to_review_candidates": True,
+        "can_build_true_corner_review": True,
+        "can_build_preview_pose": True,
+        "can_run_promotion_audit": True,
+        "can_run_fail_closed_stage_smoke": True,
+        "can_write_canonical_racket_pose": False,
+        "can_claim_paddle_6dof": False,
+    }
+    assert payload["missing_label_or_asset_state"] == {
+        "true_paddle_face_corner_labels": "missing",
+        "paddle_cad_or_reference_asset": "missing",
+        "aruco_apriltag_or_reference_pose_gt": "missing",
+        "racket_pose_evaluation": "missing",
+    }
+    assert payload["runnable_now"] == [
+        "convert CVAT or draft paddle boxes into review-only racket_candidates.json",
+        "render candidate overlays and paddle true-corner crop sheets",
+        "build racket_pose_preview.json for visualization only when calibration is present",
+        "build racket_promotion_audit.json to prove canonical racket_pose.json is absent or safe",
+        "run RacketStageRunner as a fail-closed smoke; box-derived candidates must be rejected",
+    ]
+    assert payload["blocked_until"] == [
+        "true paddle-face corner labels, mask/keypoint corners, CAD/reference pose, or ArUco/AprilTag GT",
+        "canonical racket_pose.json from non-box evidence",
+        "RKT face-angle/contact-point evaluation against reference labels",
+    ]
 
 
 def test_racket_pose_readiness_requires_reference_gt_for_non_box_promoted_pose() -> None:

@@ -136,12 +136,13 @@ def test_racket_stage_runner_overwrites_stale_readiness_sidecars(tmp_path: Path)
     assert audit.trusted_for_rkt_promotion is False
 
 
-def test_racket_stage_runner_rejects_box_derived_candidates_before_promotion(tmp_path: Path) -> None:
+@pytest.mark.parametrize("source", ["label_bbox:yolo26m_teacher", "label_bbox:cvat_video:paddle"])
+def test_racket_stage_runner_rejects_box_derived_candidates_before_promotion(tmp_path: Path, source: str) -> None:
     inputs = tmp_path / "inputs" / "clip_001"
     run_dir = tmp_path / "runs" / "clip_001"
     _write_json(run_dir / "court_calibration.json", _court_calibration())
     payload = _candidate_payload()
-    payload["players"][0]["frames"][0]["source"] = "label_bbox:yolo26m_teacher"
+    payload["players"][0]["frames"][0]["source"] = source
     _write_json(inputs / "racket_candidates.json", payload)
     context = SimpleNamespace(inputs_dir=inputs, run_dir=run_dir, clip="clip_001")
 

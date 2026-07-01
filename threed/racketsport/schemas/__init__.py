@@ -377,6 +377,105 @@ class PersonGroundTruth(StrictArtifact):
     summary: PersonGroundTruthSummary
 
 
+class CvatVideoTask(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    task_id: int | None = None
+    name: str | None = None
+    size: int = Field(ge=0)
+    mode: str | None = None
+    start_frame: int = Field(ge=0)
+    stop_frame: int = Field(ge=0)
+    original_size: tuple[int, int]
+    source: str | None = None
+    dumped: str | None = None
+
+    @field_validator("original_size")
+    @classmethod
+    def _original_size_must_be_positive(cls, value: tuple[int, int]) -> tuple[int, int]:
+        width, height = value
+        if width <= 0 or height <= 0:
+            raise ValueError("original_size values must be positive")
+        return value
+
+
+class CvatVideoBox(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    track_id: int = Field(ge=0)
+    label: str
+    frame_index: int = Field(ge=0)
+    bbox_xyxy: tuple[float, float, float, float]
+    bbox_xywh: tuple[float, float, float, float]
+    keyframe: bool
+    occluded: bool
+    source: str | None = None
+
+    @field_validator("label")
+    @classmethod
+    def _label_must_be_nonempty(cls, value: str) -> str:
+        if not value:
+            raise ValueError("label must be non-empty")
+        return value
+
+    @field_validator("bbox_xyxy")
+    @classmethod
+    def _xyxy_must_have_positive_extent(cls, value: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+        x1, y1, x2, y2 = value
+        if x2 <= x1 or y2 <= y1:
+            raise ValueError("bbox_xyxy must have positive extent")
+        return value
+
+    @field_validator("bbox_xywh")
+    @classmethod
+    def _xywh_must_have_positive_extent(cls, value: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+        _, _, width, height = value
+        if width <= 0.0 or height <= 0.0:
+            raise ValueError("bbox_xywh width and height must be positive")
+        return value
+
+
+class CvatVideoFrame(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    frame_index: int = Field(ge=0)
+    boxes: list[CvatVideoBox]
+
+
+class CvatVideoTrackSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    track_id: int = Field(ge=0)
+    label: str
+    visible_box_count: int = Field(ge=0)
+    outside_box_count: int = Field(ge=0)
+    keyframe_count: int = Field(ge=0)
+    first_visible_frame: int | None = None
+    last_visible_frame: int | None = None
+
+
+class CvatVideoAnnotationSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    frame_count: int = Field(ge=0)
+    visible_box_count: int = Field(ge=0)
+    outside_box_count: int = Field(ge=0)
+    labels: list[str]
+    track_count_by_label: dict[str, int]
+    visible_box_count_by_label: dict[str, int]
+
+
+class CvatVideoAnnotations(StrictArtifact):
+    artifact_type: Literal["racketsport_cvat_video_annotations"]
+    clip_id: str
+    source_format: Literal["cvat_video_1_1"]
+    source_path: str
+    task: CvatVideoTask
+    frames: list[CvatVideoFrame]
+    tracks: list[CvatVideoTrackSummary]
+    summary: CvatVideoAnnotationSummary
+
+
 class OnDevicePersonDetection(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -503,12 +602,15 @@ class FootContact(BaseModel):
 class SmplFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    frame_idx: int | None = Field(default=None, ge=0)
     t: float = Field(ge=0.0)
     global_orient: list[float]
     body_pose: list[float]
     left_hand_pose: list[float] = Field(default_factory=list)
     right_hand_pose: list[float] = Field(default_factory=list)
     transl_world: Vector3
+    track_world_xy: Vector2 | None = None
+    temporal_smoothing_reset: bool = False
     joints_world: list[Vector3]
     mesh_vertices_world: list[Vector3] = Field(default_factory=list)
     joint_conf: list[float]
@@ -536,6 +638,7 @@ class SmplMotion(StrictArtifact):
 class SkeletonFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    frame_idx: int | None = Field(default=None, ge=0)
     t: float = Field(ge=0.0)
     joints_world: list[Vector3]
     joint_conf: list[float]
@@ -1503,6 +1606,7 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "net_plane": NetPlane,
     "tracks": Tracks,
     "person_ground_truth": PersonGroundTruth,
+    "cvat_video_annotations": CvatVideoAnnotations,
     "on_device_person_tracks": OnDevicePersonTracks,
     "on_device_person_timing": OnDevicePersonTiming,
     "mobile_person_tracking_metrics": MobilePersonTrackingMetrics,

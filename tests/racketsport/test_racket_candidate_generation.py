@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+import threed.racketsport.racket_candidates as racket_candidate_module
 from threed.racketsport.racket_candidates import racket_labels_to_candidates
 from threed.racketsport.racket_true_corners import (
     build_paddle_true_corner_review,
@@ -64,6 +65,95 @@ def test_racket_labels_to_candidates_fails_closed_without_valid_items() -> None:
         racket_labels_to_candidates(payload, fps=30.0)
 
 
+def test_cvat_paddle_boxes_convert_to_review_only_box_candidates() -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_cvat_video_annotations",
+        "clip_id": "clip_cvat",
+        "source_format": "cvat_video_1_1",
+        "source_path": "cvat.zip",
+        "task": {
+            "task_id": 42,
+            "name": "clip_cvat",
+            "size": 3,
+            "mode": "interpolation",
+            "start_frame": 0,
+            "stop_frame": 2,
+            "original_size": [1920, 1080],
+            "source": "clip.mp4",
+            "dumped": None,
+        },
+        "frames": [
+            {
+                "frame_index": 0,
+                "boxes": [
+                    {
+                        "track_id": 3,
+                        "label": "player",
+                        "frame_index": 0,
+                        "bbox_xyxy": [10.0, 20.0, 110.0, 220.0],
+                        "bbox_xywh": [10.0, 20.0, 100.0, 200.0],
+                        "keyframe": True,
+                        "occluded": False,
+                        "source": "manual",
+                    }
+                ],
+            },
+            {
+                "frame_index": 1,
+                "boxes": [
+                    {
+                        "track_id": 5,
+                        "label": "paddle",
+                        "frame_index": 1,
+                        "bbox_xyxy": [300.0, 400.0, 330.0, 450.0],
+                        "bbox_xywh": [300.0, 400.0, 30.0, 50.0],
+                        "keyframe": True,
+                        "occluded": False,
+                        "source": "manual",
+                    },
+                    {
+                        "track_id": 6,
+                        "label": "paddle",
+                        "frame_index": 1,
+                        "bbox_xyxy": [500.0, 600.0, 520.0, 640.0],
+                        "bbox_xywh": [500.0, 600.0, 20.0, 40.0],
+                        "keyframe": False,
+                        "occluded": True,
+                        "source": "manual",
+                    },
+                ],
+            },
+            {"frame_index": 2, "boxes": []},
+        ],
+        "tracks": [],
+        "summary": {
+            "frame_count": 3,
+            "visible_box_count": 3,
+            "outside_box_count": 0,
+            "labels": ["player", "paddle"],
+            "track_count_by_label": {"player": 1, "paddle": 2},
+            "visible_box_count_by_label": {"player": 1, "paddle": 2},
+        },
+    }
+
+    candidates, counts = racket_candidate_module.cvat_paddle_boxes_to_candidates(payload, fps=30.0)
+
+    assert counts == {"accepted": 2, "skipped_label": 1, "skipped_invalid": 0}
+    parsed = RacketCandidates.model_validate(candidates)
+    assert parsed.fps == pytest.approx(30.0)
+    assert [player.id for player in parsed.players] == [5, 6]
+    assert parsed.players[0].frames[0].t == pytest.approx(1.0 / 30.0)
+    assert parsed.players[0].frames[0].corners_px == [
+        [300.0, 400.0],
+        [330.0, 400.0],
+        [330.0, 450.0],
+        [300.0, 450.0],
+    ]
+    assert parsed.players[0].frames[0].source == "label_bbox:cvat_video:paddle"
+    assert parsed.players[1].frames[0].source == "label_bbox:cvat_video:paddle_occluded"
+
+
 def test_build_racket_candidates_cli_writes_registered_artifact_with_manifest_fps(tmp_path: Path) -> None:
     labels = tmp_path / "racket_pose.json"
     manifest = tmp_path / "prototype_autolabel_manifest.json"
@@ -113,6 +203,79 @@ def test_build_racket_candidates_cli_writes_registered_artifact_with_manifest_fp
     assert isinstance(parsed, RacketCandidates)
     assert parsed.fps == pytest.approx(59.94)
     assert parsed.players[0].id == 0
+
+
+def test_build_racket_candidates_cli_converts_cvat_paddle_boxes_as_box_derived(tmp_path: Path) -> None:
+    reviewed_boxes = tmp_path / "reviewed_boxes.json"
+    out = tmp_path / "racket_candidates.json"
+    reviewed_boxes.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_cvat_video_annotations",
+                "clip_id": "clip_cvat",
+                "source_format": "cvat_video_1_1",
+                "source_path": "cvat.zip",
+                "task": {
+                    "size": 2,
+                    "start_frame": 0,
+                    "stop_frame": 1,
+                    "original_size": [1920, 1080],
+                },
+                "frames": [
+                    {"frame_index": 0, "boxes": []},
+                    {
+                        "frame_index": 1,
+                        "boxes": [
+                            {
+                                "track_id": 8,
+                                "label": "paddle",
+                                "frame_index": 1,
+                                "bbox_xyxy": [100.0, 120.0, 140.0, 180.0],
+                                "bbox_xywh": [100.0, 120.0, 40.0, 60.0],
+                                "keyframe": True,
+                                "occluded": False,
+                                "source": "manual",
+                            }
+                        ],
+                    },
+                ],
+                "tracks": [],
+                "summary": {
+                    "frame_count": 2,
+                    "visible_box_count": 1,
+                    "outside_box_count": 0,
+                    "labels": ["paddle"],
+                    "track_count_by_label": {"paddle": 1},
+                    "visible_box_count_by_label": {"paddle": 1},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/build_racket_candidates.py",
+            "--cvat-reviewed-boxes",
+            str(reviewed_boxes),
+            "--fps",
+            "30",
+            "--out",
+            str(out),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "accepted=1" in completed.stderr
+    parsed = validate_artifact_file("racket_candidates", out)
+    assert isinstance(parsed, RacketCandidates)
+    assert parsed.players[0].id == 8
+    assert parsed.players[0].frames[0].source == "label_bbox:cvat_video:paddle"
 
 
 def test_true_corner_labels_to_candidates_marks_reviewed_corners_as_non_box_evidence() -> None:

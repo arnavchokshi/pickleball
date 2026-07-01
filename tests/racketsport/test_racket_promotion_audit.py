@@ -78,6 +78,7 @@ def test_racket_promotion_audit_marks_box_preview_without_root_pose_safe() -> No
     assert payload["promoted_pose_frame_count"] == 0
     assert payload["unsafe_promoted_frame_count"] == 0
     assert payload["blockers"] == [
+        "box_derived_candidate_corners",
         "missing_true_paddle_keypoints_or_cad_pose",
         "missing_promoted_racket_pose_json",
         "missing_reference_pose_gt",

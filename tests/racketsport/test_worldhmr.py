@@ -4,6 +4,7 @@ import pytest
 
 from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
 from threed.racketsport import worldhmr
+from threed.racketsport.body_joint_quality import build_body_joint_quality
 from threed.racketsport.schemas import (
     CameraIntrinsics,
     CaptureQuality,
@@ -121,7 +122,7 @@ def test_build_body_artifacts_marks_floor_contact_from_grounded_joints() -> None
         }
     ]
 
-    smpl_motion, _skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+    smpl_motion, skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
         samples,
         calibration=_identity_calibration(),
         fps=30.0,
@@ -129,7 +130,10 @@ def test_build_body_artifacts_marks_floor_contact_from_grounded_joints() -> None
 
     player = smpl_motion["players"][0]
     frame = player["frames"][0]
+    skeleton_frame = skeleton3d["players"][0]["frames"][0]
     assert smpl_motion["model"] == "sam3dbody_world_joints"
+    assert frame["frame_idx"] == 12
+    assert skeleton_frame["frame_idx"] == 12
     assert frame["foot_contact"] == {"left": True, "right": True}
     assert frame["grf"] is None
     assert player["skate_free"] is False
@@ -137,6 +141,242 @@ def test_build_body_artifacts_marks_floor_contact_from_grounded_joints() -> None
     assert metrics["foot_contact_frames"] == 1
     assert metrics["grf_frames"] == 0
     assert metrics["skate_free_players"] == 0
+
+
+def test_build_body_artifacts_anchors_track_xy_to_low_joint_cluster_not_first_joint() -> None:
+    samples = [
+        {
+            "frame_idx": 12,
+            "player_id": 1,
+            "t": 0.4,
+            "confidence": 0.9,
+            "track_world_xy": [2.0, 3.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [
+                [0.0, 0.0, 1.4],
+                [0.45, -0.15, 0.0],
+                [0.55, 0.15, 0.02],
+                [0.1, 0.0, 0.75],
+            ],
+            "vertices_camera": [],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        }
+    ]
+
+    smpl_motion, _skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        max_root_speed_mps=None,
+    )
+
+    frame = smpl_motion["players"][0]["frames"][0]
+    low_joints = [joint for joint in frame["joints_world"] if joint[2] <= 0.08]
+    low_center = [
+        sum(joint[0] for joint in low_joints) / len(low_joints),
+        sum(joint[1] for joint in low_joints) / len(low_joints),
+    ]
+    assert low_center == pytest.approx(frame["track_world_xy"])
+    assert frame["joints_world"][0][:2] != pytest.approx(frame["track_world_xy"])
+    assert metrics["grounding_anchor"] == "low_joint_cluster"
+
+
+def test_body_artifact_smoothing_translates_mesh_vertices_with_root_delta() -> None:
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [[1.0, 0.0, 1.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+        {
+            "frame_idx": 1,
+            "player_id": 1,
+            "t": 1.0 / 30.0,
+            "confidence": 0.9,
+            "track_world_xy": [10.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [[1.0, 0.0, 1.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+    ]
+
+    smpl_motion, _skeleton3d, _metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=0.5,
+    )
+
+    second = smpl_motion["players"][0]["frames"][1]
+    assert second["transl_world"] == pytest.approx([5.0, 0.0, 0.0])
+    assert second["joints_world"][0] == pytest.approx([5.0, 0.0, 0.0])
+    assert second["mesh_vertices_world"][0] == pytest.approx([6.0, 0.0, 0.0])
+
+
+def test_body_artifact_speed_limit_caps_root_motion_and_records_track_residual() -> None:
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [[1.0, 0.0, 1.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+        {
+            "frame_idx": 1,
+            "player_id": 1,
+            "t": 1.0 / 30.0,
+            "confidence": 0.9,
+            "track_world_xy": [10.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [[1.0, 0.0, 1.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+    ]
+
+    smpl_motion, _skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        max_root_speed_mps=3.0,
+    )
+
+    second = smpl_motion["players"][0]["frames"][1]
+    assert second["track_world_xy"] == pytest.approx([10.0, 0.0])
+    assert second["transl_world"] == pytest.approx([0.1, 0.0, 0.0])
+    assert second["joints_world"][0] == pytest.approx([0.1, 0.0, 0.0])
+    assert second["mesh_vertices_world"][0] == pytest.approx([1.1, 0.0, 0.0])
+    assert metrics["root_speed_limited_frames"] == 1
+    assert metrics["max_track_anchor_residual_m"] == pytest.approx(9.9)
+
+
+def test_body_artifact_track_anchor_reset_prevents_wrong_player_smoothing() -> None:
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [[1.0, 0.0, 1.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+        {
+            "frame_idx": 1,
+            "player_id": 1,
+            "t": 1.0 / 30.0,
+            "confidence": 0.9,
+            "track_world_xy": [2.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [[1.0, 0.0, 1.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+    ]
+
+    smpl_motion, _skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        max_root_speed_mps=3.0,
+        max_track_anchor_smoothing_residual_m=0.5,
+    )
+
+    second = smpl_motion["players"][0]["frames"][1]
+    assert second["temporal_smoothing_reset"] is True
+    assert second["track_world_xy"] == pytest.approx([2.0, 0.0])
+    assert second["transl_world"] == pytest.approx([2.0, 0.0, 0.0])
+    assert second["joints_world"][0] == pytest.approx([2.0, 0.0, 0.0])
+    assert second["mesh_vertices_world"][0] == pytest.approx([3.0, 0.0, 0.0])
+    assert metrics["root_speed_limited_frames"] == 1
+    assert metrics["track_anchor_residual_reset_frames"] == 1
+    assert metrics["max_pre_reset_track_anchor_residual_m"] == pytest.approx(1.9)
+    assert metrics["max_track_anchor_residual_m"] == pytest.approx(0.0)
+
+
+def test_body_artifact_default_speed_cap_feeds_review_quality_gate() -> None:
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [[1.0, 0.0, 1.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+        {
+            "frame_idx": 1,
+            "player_id": 1,
+            "t": 1.0 / 30.0,
+            "confidence": 0.9,
+            "track_world_xy": [10.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [[1.0, 0.0, 1.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+    ]
+
+    smpl_motion, skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        max_root_speed_mps=8.0,
+    )
+    quality = build_body_joint_quality(
+        clip="clip_001",
+        smpl_motion=smpl_motion,
+        skeleton3d=skeleton3d,
+        body_compute_execution={"summary": {"scheduled_frame_count": 2, "scheduled_player_frame_count": 2}},
+        min_joint_count=1,
+        max_root_speed_for_review_mps=10.0,
+        max_track_anchor_residual_for_review_m=12.0,
+    )
+
+    assert metrics["root_speed_limited_frames"] == 1
+    assert metrics["max_track_anchor_residual_m"] > 0.0
+    assert quality["status"] == "quality_checked_needs_accuracy_gate"
+    assert "root_motion_temporal_jump" not in quality["quality_blockers"]
+    assert quality["summary"]["max_root_speed_mps"] < quality["summary"]["max_root_speed_for_review_mps"]
 
 
 def test_world_grounding_helpers_validate_vectors_and_smoothing_alpha() -> None:

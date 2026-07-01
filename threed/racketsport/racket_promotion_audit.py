@@ -47,6 +47,8 @@ def build_racket_promotion_audit(
     blockers: list[str] = []
     if unsafe_promoted_frame_count:
         blockers.append("box_derived_racket_pose_promoted")
+    if box_derived_candidate_frame_count:
+        blockers.append("box_derived_candidate_corners")
     if true_corner_frame_count == 0:
         blockers.append("missing_true_paddle_keypoints_or_cad_pose")
     if promoted_pose_frame_count == 0:
@@ -213,6 +215,8 @@ def _recommended_next_actions(blockers: list[str]) -> list[str]:
     actions: list[str] = []
     if "box_derived_racket_pose_promoted" in blockers:
         actions.append("remove or quarantine canonical racket_pose.json built from label-box or preview sources")
+    if "box_derived_candidate_corners" in blockers:
+        actions.append("keep label-box candidates review-only; do not write canonical racket_pose.json from them")
     if "missing_true_paddle_keypoints_or_cad_pose" in blockers:
         actions.append("collect true paddle corners, masks/keypoints, CAD, or reference pose evidence before promotion")
     if "missing_promoted_racket_pose_json" in blockers:

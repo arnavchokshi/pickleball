@@ -15,6 +15,7 @@ from .schemas import CourtCalibration
 
 SCAFFOLD_NOTE = "cpu_worldhmr_primitives_no_sam3dbody_integration"
 FLOOR_CONTACT_EPSILON_M = 0.035
+LOW_GROUNDING_ANCHOR_HEIGHT_M = 0.08
 
 
 @dataclass(frozen=True)
@@ -146,18 +147,29 @@ def build_body_artifacts_from_fast_sam(
     calibration: CourtCalibration,
     fps: float,
     smoothing_alpha: float = 0.65,
+    max_root_speed_mps: float | None = None,
+    max_track_anchor_smoothing_residual_m: float | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Build BODY contract artifacts from real Fast SAM-3D-Body outputs."""
 
     if fps <= 0.0:
         raise ValueError("fps must be positive")
+    if max_root_speed_mps is not None and max_root_speed_mps <= 0.0:
+        raise ValueError("max_root_speed_mps must be positive when provided")
+    if max_track_anchor_smoothing_residual_m is not None and max_track_anchor_smoothing_residual_m <= 0.0:
+        raise ValueError("max_track_anchor_smoothing_residual_m must be positive when provided")
     if not samples:
         raise ValueError("at least one Fast SAM-3D-Body sample is required")
     grounded = [
         _ground_fast_sam_sample(sample, calibration=calibration)
         for sample in sorted(samples, key=lambda item: (int(item["frame_idx"]), int(item["player_id"])))
     ]
-    smoothed = _smooth_grounded_frames(grounded, alpha=smoothing_alpha)
+    smoothed, smoothing_metrics = _smooth_grounded_frames(
+        grounded,
+        alpha=smoothing_alpha,
+        max_root_speed_mps=max_root_speed_mps,
+        max_track_anchor_smoothing_residual_m=max_track_anchor_smoothing_residual_m,
+    )
     players: list[dict[str, Any]] = []
     skeleton_players: list[dict[str, Any]] = []
     max_joint_count = max(len(frame["joints_world"]) for frame in smoothed)
@@ -172,12 +184,15 @@ def build_body_artifacts_from_fast_sam(
                 "betas": betas,
                 "frames": [
                     {
+                        "frame_idx": int(frame["frame_idx"]),
                         "t": float(frame["t"]),
                         "global_orient": list(frame["global_orient"]),
                         "body_pose": list(frame["body_pose"]),
                         "left_hand_pose": list(frame["left_hand_pose"]),
                         "right_hand_pose": list(frame["right_hand_pose"]),
                         "transl_world": list(frame["transl_world"]),
+                        "track_world_xy": list(frame["track_world_xy"]),
+                        "temporal_smoothing_reset": bool(frame["temporal_smoothing_reset"]),
                         "joints_world": [list(joint) for joint in frame["joints_world"]],
                         "mesh_vertices_world": [list(vertex) for vertex in frame["vertices_world"]],
                         "joint_conf": [float(frame["confidence"])] * len(frame["joints_world"]),
@@ -197,6 +212,7 @@ def build_body_artifacts_from_fast_sam(
                 "id": player_id,
                 "frames": [
                     {
+                        "frame_idx": int(frame["frame_idx"]),
                         "t": float(frame["t"]),
                         "joints_world": [list(joint) for joint in frame["joints_world"]],
                         "joint_conf": [float(frame["confidence"])] * len(frame["joints_world"]),
@@ -225,7 +241,11 @@ def build_body_artifacts_from_fast_sam(
         "frames": len({int(frame["frame_idx"]) for frame in smoothed}),
         "world_frame": "court_Z0",
         "grounding": "camera_extrinsics_plus_track_footpoint_court_z0",
+        "grounding_anchor": _common_grounding_anchor(smoothed),
         "smoothing_alpha": smoothing_alpha,
+        "max_root_speed_mps": max_root_speed_mps,
+        "max_track_anchor_smoothing_residual_m": max_track_anchor_smoothing_residual_m,
+        **smoothing_metrics,
         "min_joint_z_m": min(
             (joint[2] for frame in smoothed for joint in frame["joints_world"]),
             default=0.0,
@@ -302,11 +322,11 @@ def _ground_fast_sam_sample(sample: Mapping[str, Any], *, calibration: CourtCali
     joints_world_raw = _camera_points_to_world(joints_camera, camera_translation, calibration)
     vertices_world_raw = _camera_points_to_world(vertices_camera, camera_translation, calibration)
     anchor_candidates = joints_world_raw or vertices_world_raw
-    anchor = anchor_candidates[0]
+    anchor_xy, anchor_name = _low_grounding_anchor_xy(anchor_candidates)
     all_world = joints_world_raw + vertices_world_raw
     min_z = min(point[2] for point in all_world)
-    dx = track_world_xy[0] - anchor[0]
-    dy = track_world_xy[1] - anchor[1]
+    dx = track_world_xy[0] - anchor_xy[0]
+    dy = track_world_xy[1] - anchor_xy[1]
     dz = -min_z
 
     return {
@@ -314,6 +334,8 @@ def _ground_fast_sam_sample(sample: Mapping[str, Any], *, calibration: CourtCali
         "player_id": int(sample["player_id"]),
         "t": t,
         "confidence": confidence,
+        "grounding_anchor": anchor_name,
+        "track_world_xy": track_world_xy,
         "global_orient": _float_list(sample.get("global_orient", [0.0, 0.0, 0.0]), name="global_orient"),
         "body_pose": _float_list(sample.get("body_pose", []), name="body_pose"),
         "left_hand_pose": _float_list(sample.get("left_hand_pose", []), name="left_hand_pose"),
@@ -344,18 +366,41 @@ def _camera_points_to_world(
     return points
 
 
+def _low_grounding_anchor_xy(points_world: Sequence[Sequence[float]]) -> tuple[list[float], str]:
+    points = [[float(point[0]), float(point[1]), float(point[2])] for point in points_world]
+    min_z = min(point[2] for point in points)
+    low_points = [point for point in points if point[2] <= min_z + LOW_GROUNDING_ANCHOR_HEIGHT_M]
+    anchor_points = low_points or points[:1]
+    return [
+        sum(point[0] for point in anchor_points) / len(anchor_points),
+        sum(point[1] for point in anchor_points) / len(anchor_points),
+    ], "low_joint_cluster" if len(anchor_points) > 1 else "lowest_joint"
+
+
 def _translate_points(points: Sequence[Sequence[float]], *, dx: float, dy: float, dz: float) -> list[list[float]]:
     return [[float(point[0]) + dx, float(point[1]) + dy, float(point[2]) + dz] for point in points]
 
 
-def _smooth_grounded_frames(frames: Sequence[dict[str, Any]], *, alpha: float) -> list[dict[str, Any]]:
+def _smooth_grounded_frames(
+    frames: Sequence[dict[str, Any]],
+    *,
+    alpha: float,
+    max_root_speed_mps: float | None,
+    max_track_anchor_smoothing_residual_m: float | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     if alpha <= 0.0 or alpha > 1.0:
         raise ValueError("alpha must be greater than 0 and less than or equal to 1")
     previous_by_player: dict[int, list[float]] = {}
+    previous_t_by_player: dict[int, float] = {}
     smoothed: list[dict[str, Any]] = []
+    root_speed_limited_frames = 0
+    track_anchor_residuals: list[float] = []
+    pre_reset_track_anchor_residuals: list[float] = []
+    track_anchor_residual_reset_frames = 0
     for frame in frames:
         player_id = int(frame["player_id"])
         previous = previous_by_player.get(player_id)
+        previous_t = previous_t_by_player.get(player_id)
         transl = [float(value) for value in frame["transl_world"]]
         if previous is None:
             smoothed_transl = transl
@@ -364,16 +409,68 @@ def _smooth_grounded_frames(frames: Sequence[dict[str, Any]], *, alpha: float) -
                 alpha * transl[idx] + (1.0 - alpha) * previous[idx]
                 for idx in range(3)
             ]
+            if max_root_speed_mps is not None and previous_t is not None:
+                dt = max(float(frame["t"]) - previous_t, 0.0)
+                if dt > 0.0:
+                    smoothed_transl, limited = _limit_step(previous, smoothed_transl, max_distance=max_root_speed_mps * dt)
+                    if limited:
+                        root_speed_limited_frames += 1
+        track_xy = [float(value) for value in frame["track_world_xy"]]
+        pre_reset_residual = _distance2(smoothed_transl[:2], track_xy)
+        pre_reset_track_anchor_residuals.append(pre_reset_residual)
+        temporal_smoothing_reset = False
+        if (
+            previous is not None
+            and max_track_anchor_smoothing_residual_m is not None
+            and pre_reset_residual > max_track_anchor_smoothing_residual_m
+        ):
+            smoothed_transl = transl
+            temporal_smoothing_reset = True
+            track_anchor_residual_reset_frames += 1
         previous_by_player[player_id] = smoothed_transl
+        previous_t_by_player[player_id] = float(frame["t"])
         delta = [smoothed_transl[idx] - transl[idx] for idx in range(3)]
+        track_anchor_residuals.append(_distance2(smoothed_transl[:2], track_xy))
         smoothed_frame = dict(frame)
+        smoothed_frame["grounding_anchor"] = frame.get("grounding_anchor", "")
         smoothed_frame["transl_world"] = smoothed_transl
+        smoothed_frame["temporal_smoothing_reset"] = temporal_smoothing_reset
         smoothed_frame["joints_world"] = [
             [joint[0] + delta[0], joint[1] + delta[1], joint[2] + delta[2]]
             for joint in frame["joints_world"]
         ]
+        smoothed_frame["vertices_world"] = [
+            [vertex[0] + delta[0], vertex[1] + delta[1], vertex[2] + delta[2]]
+            for vertex in frame["vertices_world"]
+        ]
         smoothed.append(smoothed_frame)
-    return smoothed
+    return smoothed, {
+        "root_speed_limited_frames": root_speed_limited_frames,
+        "track_anchor_residual_reset_frames": track_anchor_residual_reset_frames,
+        "max_pre_reset_track_anchor_residual_m": max(pre_reset_track_anchor_residuals, default=0.0),
+        "max_track_anchor_residual_m": max(track_anchor_residuals, default=0.0),
+    }
+
+
+def _limit_step(previous: Sequence[float], current: Sequence[float], *, max_distance: float) -> tuple[list[float], bool]:
+    distance = _distance3(previous, current)
+    if distance <= max_distance:
+        return [float(value) for value in current], False
+    if distance == 0.0:
+        return [float(value) for value in current], False
+    scale = max_distance / distance
+    return [float(previous[idx]) + (float(current[idx]) - float(previous[idx])) * scale for idx in range(3)], True
+
+
+def _common_grounding_anchor(frames: Sequence[Mapping[str, Any]]) -> str:
+    anchors = sorted({str(frame.get("grounding_anchor", "")) for frame in frames if frame.get("grounding_anchor")})
+    if not anchors:
+        return ""
+    return anchors[0] if len(anchors) == 1 else ",".join(anchors)
+
+
+def _distance2(left: Sequence[float], right: Sequence[float]) -> float:
+    return sqrt(sum((left[idx] - right[idx]) ** 2 for idx in range(2)))
 
 
 def _first_list(frames: Sequence[Mapping[str, Any]], field: str) -> list[float]:
