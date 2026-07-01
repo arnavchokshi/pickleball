@@ -95,8 +95,18 @@ def test_write_review_progress_exports_complete_reviewed_label_files(tmp_path: P
             "clips": {
                 "clip_a": {
                     "items": [
-                        {"frame": "frame_000001.jpg", "review_id": "r1", "keypoints": _full_keypoints()},
-                        {"frame": "frame_000002.jpg", "review_id": "r2", "keypoints": _full_keypoints(100.0)},
+                        {
+                            "frame": "frame_000001.jpg",
+                            "review_id": "r1",
+                            "status": "reviewed",
+                            "keypoints": _full_keypoints(),
+                        },
+                        {
+                            "frame": "frame_000002.jpg",
+                            "review_id": "r2",
+                            "status": "reviewed_static_camera_copy",
+                            "keypoints": _full_keypoints(100.0),
+                        },
                     ]
                 }
             },
@@ -109,17 +119,78 @@ def test_write_review_progress_exports_complete_reviewed_label_files(tmp_path: P
     assert summary["status"] == "saved"
     assert summary["exported_clip_count"] == 1
     assert summary["exported"][0]["label_path"] == str(label_path.relative_to(tmp_path))
+    assert summary["exported"][0]["independent_reviewed_count"] == 1
+    assert summary["exported"][0]["static_camera_copy_count"] == 1
     assert payload["review"] == {
         "status": "reviewed",
         "reviewer": "local_court_keypoint_review",
         "reviewed_at_utc": "2026-07-01T12:00:00+00:00",
+        "independent_reviewed_count": 1,
+        "static_camera_copy_count": 1,
     }
     assert payload["frames"]["frame_dir"] == "eval_clips/ball/clip_a/labels/court_keypoint_frames"
     assert payload["frames"]["source_resolution"] == [1920, 1080]
     assert payload["frames"]["label_coordinate_space"] == [1280, 720]
     assert len(payload["annotation"]["items"]) == 2
+    # Per-item status must stay distinct through export -- the copy status is never
+    # collapsed into "reviewed", and the independent review is never demoted either.
+    items_by_frame = {item["frame"]: item for item in payload["annotation"]["items"]}
+    assert items_by_frame["frame_000001.jpg"]["status"] == "reviewed"
+    assert items_by_frame["frame_000002.jpg"]["status"] == "reviewed_static_camera_copy"
     assert payload["annotation"]["items"][1]["keypoints"]["near_left_corner"] == [110.0, 120.0]
     assert (tmp_path / "eval_clips" / "ball" / "clip_a" / "labels" / "court_keypoint_frames" / "frame_000001.jpg").read_bytes() == b"jpg"
+
+
+def test_write_review_progress_rejects_unknown_item_status_without_writing(tmp_path: Path) -> None:
+    _write_review_task(tmp_path)
+
+    with pytest.raises(ValueError, match="status must be one of"):
+        court_keypoint_review_server._write_review_progress(
+            tmp_path,
+            {
+                "schema_version": 1,
+                "review_type": "court_keypoint_review",
+                "clips": {
+                    "clip_a": {
+                        "items": [
+                            {
+                                "frame": "frame_000001.jpg",
+                                "status": "definitely_reviewed_trust_me",
+                                "keypoints": _full_keypoints(),
+                            },
+                        ]
+                    }
+                },
+            },
+        )
+
+    assert not (tmp_path / "runs" / "court_keypoint_review_20260701" / "local_court_keypoint_review_progress.json").exists()
+    assert not (tmp_path / "eval_clips" / "ball" / "clip_a" / "labels" / "court_keypoints.json").exists()
+
+
+def test_write_review_progress_accepts_all_enum_statuses(tmp_path: Path) -> None:
+    _write_review_task(tmp_path)
+
+    for status in ("in_progress", "reviewed", "reviewed_static_camera_copy"):
+        summary = court_keypoint_review_server._write_review_progress(
+            tmp_path,
+            {
+                "schema_version": 1,
+                "review_type": "court_keypoint_review",
+                "clips": {
+                    "clip_a": {"items": [{"frame": "frame_000001.jpg", "status": status, "keypoints": _full_keypoints()}]}
+                },
+            },
+        )
+        # A full 15-point frame is always exportable regardless of its status label; only
+        # the exported status text (and provenance counts) should vary with the input.
+        assert summary["exported_clip_count"] == 1
+
+    label_path = tmp_path / "eval_clips" / "ball" / "clip_a" / "labels" / "court_keypoints.json"
+    payload = json.loads(label_path.read_text(encoding="utf-8"))
+    assert payload["annotation"]["items"][0]["status"] == "reviewed_static_camera_copy"
+    assert payload["review"]["independent_reviewed_count"] == 0
+    assert payload["review"]["static_camera_copy_count"] == 1
 
 
 def test_write_review_progress_exports_completed_frames_even_when_clip_has_unlabeled_review_frames(tmp_path: Path) -> None:

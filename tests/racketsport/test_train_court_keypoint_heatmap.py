@@ -101,6 +101,7 @@ def _reviewed_court_keypoint_label_payload(
     *,
     source_resolution: list[int] | None = None,
     label_coordinate_space: list[int] | None = None,
+    item_status: str = "reviewed",
 ) -> dict:
     return {
         "schema_version": 1,
@@ -108,6 +109,7 @@ def _reviewed_court_keypoint_label_payload(
             "items": [
                 {
                     "frame": frame,
+                    "status": item_status,
                     "keypoints": {
                         point.name: [float(index * 3 + 10), float(index * 2 + 5)]
                         for index, point in enumerate(PICKLEBALL_KEYPOINTS)
@@ -172,6 +174,7 @@ def test_load_real_court_keypoint_labels_reads_reviewed_full_15_point_labels(tmp
     assert row["source_video_size"] == [128, 72]
     assert row["keypoints"]["near_left_corner"] == pytest.approx([20.0, 10.0])
     assert row["keypoints"]["far_nvz_right"] == pytest.approx([104.0, 66.0])
+    assert row["label_status"] == "reviewed"
 
 
 def test_load_real_court_keypoint_labels_reads_all_reviewed_items(tmp_path: Path) -> None:
@@ -181,6 +184,9 @@ def test_load_real_court_keypoint_labels_reads_all_reviewed_items(tmp_path: Path
     payload = _reviewed_court_keypoint_label_payload("frame_000001.jpg")
     second_item = {
         "frame": "frame_000002.jpg",
+        # Owner-approved static-camera copy of the independent review above -- must stay
+        # distinct from "reviewed" all the way through to the loaded row's label_status.
+        "status": "reviewed_static_camera_copy",
         "keypoints": {
             point.name: [float(index * 5 + 20), float(index * 7 + 30)]
             for index, point in enumerate(PICKLEBALL_KEYPOINTS)
@@ -196,6 +202,36 @@ def test_load_real_court_keypoint_labels_reads_all_reviewed_items(tmp_path: Path
     assert [row["clip"] for row in rows] == ["clip_a", "clip_a"]
     assert rows[1]["keypoints"]["near_left_corner"] == pytest.approx([40.0, 60.0])
     assert rows[1]["keypoints"]["far_nvz_right"] == pytest.approx([180.0, 256.0])
+    assert rows[0]["label_status"] == "reviewed"
+    assert rows[1]["label_status"] == "reviewed_static_camera_copy"
+
+
+def test_load_real_court_keypoint_labels_rejects_unknown_item_status(tmp_path: Path) -> None:
+    clip_root = tmp_path / "eval_clips" / "ball" / "clip_a"
+    clip_root.mkdir(parents=True)
+    (clip_root / "source.mp4").write_bytes(b"fake video")
+    _write_json(
+        clip_root / "labels" / "court_keypoints.json",
+        _reviewed_court_keypoint_label_payload(item_status="reviewed_by_a_robot"),
+    )
+
+    with pytest.raises(ValueError, match="status must be one of"):
+        load_real_court_keypoint_labels(tmp_path / "eval_clips" / "ball")
+
+
+def test_load_real_court_keypoint_labels_accepts_static_camera_copy_status(tmp_path: Path) -> None:
+    clip_root = tmp_path / "eval_clips" / "ball" / "clip_a"
+    clip_root.mkdir(parents=True)
+    (clip_root / "source.mp4").write_bytes(b"fake video")
+    _write_json(
+        clip_root / "labels" / "court_keypoints.json",
+        _reviewed_court_keypoint_label_payload(item_status="reviewed_static_camera_copy"),
+    )
+
+    rows = load_real_court_keypoint_labels(tmp_path / "eval_clips" / "ball")
+
+    assert len(rows) == 1
+    assert rows[0]["label_status"] == "reviewed_static_camera_copy"
 
 
 def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_path: Path) -> None:
@@ -255,8 +291,17 @@ def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_pat
     assert summary["holdout_artifacts"][0]["prediction_artifact"].endswith("clip_a_court_keypoints.json")
     assert summary["holdout_artifacts"][0]["overlay_artifact"].endswith("clip_a_court_keypoints_overlay.mp4")
     assert summary["holdout_artifacts"][0]["overlay_frame_count"] == 3
+    assert summary["holdout_artifacts"][0]["heldout_label_frame_index"] == 0
+    assert summary["holdout_artifacts"][0]["heldout_label_frame_indices"] == [0]
     assert (out / "holdout_predictions" / "clip_a_court_keypoints.json").is_file()
     assert (out / "holdout_overlays" / "clip_a_court_keypoints_overlay.mp4").is_file()
+    # A single independently-reviewed frame, no static-camera copies in this fixture.
+    assert summary["labels_independent_human_frames"] == 1
+    assert summary["labels_static_camera_copy_frame_count"] == 0
+    assert summary["gate"]["independent_reviewed_frame_count"] == 1
+    assert summary["gate"]["copied_frame_count"] == 0
+    assert "Independent human-verified frames = 1" in summary["gate"]["human_verification_note"]
+    assert "Independent human-verified frames = 1" in summary["note"]
 
 
 def test_run_training_can_hold_out_frames_per_viewpoint(tmp_path: Path) -> None:
@@ -276,9 +321,12 @@ def test_run_training_can_hold_out_frames_per_viewpoint(tmp_path: Path) -> None:
         source_resolution=[64, 36],
         label_coordinate_space=[64, 36],
     )
+    # Alternate independent reviews and owner-approved static-camera copies so the test
+    # exercises the provenance split, not just the frame-stride holdout split.
     payload["annotation"]["items"] = [
         {
             "frame": f"frame_{frame_index:06d}.jpg",
+            "status": "reviewed" if frame_index % 2 == 1 else "reviewed_static_camera_copy",
             "keypoints": {
                 point.name: [float(index * 3 + 10), float(index * 2 + 5)]
                 for index, point in enumerate(PICKLEBALL_KEYPOINTS)
@@ -311,6 +359,63 @@ def test_run_training_can_hold_out_frames_per_viewpoint(tmp_path: Path) -> None:
     assert summary["real_train_count"] == 2
     assert summary["real_holdout_count"] == 2
     assert summary["after"]["real_keypoint_pck_per_clip"]["clip_a"]["keypoint_count"] == 30
+    assert len(summary["holdout_artifacts"]) == 1
+    assert summary["holdout_artifacts"][0]["clip"] == "clip_a"
+    assert summary["holdout_artifacts"][0]["heldout_label_frame_index"] is None
+    assert summary["holdout_artifacts"][0]["heldout_label_frame_indices"] == [2, 4]
+    assert summary["holdout_artifacts"][0]["heldout_keypoint_count"] == 30
+    # 2 independently-reviewed frames (odd frame indices) + 2 static-camera-copy frames
+    # (even frame indices), counted across all loaded rows regardless of train/holdout split.
+    assert summary["labels_independent_human_frames"] == 2
+    assert summary["labels_static_camera_copy_frame_count"] == 2
+    assert summary["gate"]["independent_reviewed_frame_count"] == 2
+    assert summary["gate"]["copied_frame_count"] == 2
+
+
+def test_run_training_can_skip_holdout_artifacts_and_still_write_metrics(tmp_path: Path) -> None:
+    cv2 = __import__("cv2")
+    clip_root = tmp_path / "eval_clips" / "ball" / "clip_a"
+    clip_root.mkdir(parents=True)
+    video = clip_root / "source.mp4"
+    writer = cv2.VideoWriter(str(video), cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (64, 36))
+    assert writer.isOpened()
+    writer.write(np.zeros((36, 64, 3), dtype=np.uint8))
+    writer.release()
+    _write_json(
+        clip_root / "labels" / "court_keypoints.json",
+        _reviewed_court_keypoint_label_payload(
+            "frame_000000.jpg",
+            source_resolution=[64, 36],
+            label_coordinate_space=[64, 36],
+        ),
+    )
+
+    out = tmp_path / "court_run_skip_artifacts"
+    summary = run_training(
+        Namespace(
+            real_root=tmp_path / "eval_clips" / "ball",
+            out=out,
+            holdout_clip=["clip_a"],
+            holdout_frame_stride=0,
+            epochs=0,
+            batch_size=1,
+            image_width=32,
+            image_height=18,
+            sigma=1.5,
+            learning_rate=1e-3,
+            real_finetune_start_epoch=0,
+            eval_every=1,
+            seed=13,
+            device="cpu",
+            skip_holdout_artifacts=True,
+        )
+    )
+
+    metrics = json.loads((out / "court_keypoint_metrics.json").read_text(encoding="utf-8"))
+    assert summary["holdout_artifacts"] == []
+    assert metrics["gate"]["metric"] == "heldout_pck_at_5px"
+    assert metrics["holdout_artifacts"] == []
+    assert not (out / "holdout_overlays").exists()
 
 
 def test_training_cli_summary_prints_gate_metric_and_artifact_paths() -> None:
@@ -334,6 +439,8 @@ def test_training_cli_summary_prints_gate_metric_and_artifact_paths() -> None:
                     "median_keypoint_reprojection_px": 12.5,
                 }
             ],
+            "labels_independent_human_frames": 4,
+            "labels_static_camera_copy_frame_count": 28,
         }
     )
 
@@ -341,3 +448,7 @@ def test_training_cli_summary_prints_gate_metric_and_artifact_paths() -> None:
     assert summary["gate"]["metric"] == "heldout_pck_at_5px"
     assert summary["gate"]["value"] == 0.9
     assert summary["holdout_artifacts"][0]["overlay_artifact"] == "run/holdout_overlays/clip_a.mp4"
+    # CLI-visible summary must keep independent human-verified frames distinguishable from
+    # owner-approved static-camera copies (4 vs 28 for the current court-keypoint dataset).
+    assert summary["labels_independent_human_frames"] == 4
+    assert summary["labels_static_camera_copy_frame_count"] == 28

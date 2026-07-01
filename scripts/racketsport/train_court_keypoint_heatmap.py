@@ -21,6 +21,16 @@ from threed.racketsport.court_keypoint_net import (
     make_court_keypoint_heatmap_model,
 )
 
+# Court-keypoint review item status enum, mirrored from
+# scripts/racketsport/court_keypoint_review_server.py. "reviewed" is an independent human
+# review of that exact frame; "reviewed_static_camera_copy" is an owner-approved copy of an
+# independent review of another frame from the same static-camera clip. Both are accepted
+# as usable training rows, but only "reviewed" counts toward the independent human-verified
+# frame count reported in the training/gate summary.
+INDEPENDENT_REVIEWED_STATUS = "reviewed"
+STATIC_CAMERA_COPY_STATUS = "reviewed_static_camera_copy"
+ACCEPTED_ITEM_STATUSES = {INDEPENDENT_REVIEWED_STATUS, STATIC_CAMERA_COPY_STATUS}
+
 
 def court_corner_keypoint_labels(payload: dict[str, Any], *, clip_root: Path | None = None) -> dict[str, Any]:
     items = _items(payload)
@@ -160,6 +170,19 @@ def load_real_corner_labels(root: Path) -> list[dict[str, Any]]:
     return labels
 
 
+def _label_status_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Split loaded court-keypoint label rows into independent-human vs static-camera-copy
+    counts, keyed off the per-item ``label_status`` provenance tag. This must be used
+    anywhere a frame count is reported as human-verified so a copied label is never
+    presented as an independent review."""
+    independent = sum(1 for row in rows if row.get("label_status") == INDEPENDENT_REVIEWED_STATUS)
+    copied = sum(1 for row in rows if row.get("label_status") == STATIC_CAMERA_COPY_STATUS)
+    return {
+        "labels_independent_human_frames": independent,
+        "labels_static_camera_copy_frame_count": copied,
+    }
+
+
 def load_real_court_keypoint_labels(root: Path) -> list[dict[str, Any]]:
     labels: list[dict[str, Any]] = []
     for path in sorted(root.glob("*/labels/court_keypoints.json")):
@@ -173,13 +196,15 @@ def load_real_court_keypoint_labels(root: Path) -> list[dict[str, Any]]:
 
 
 def court_keypoint_label_rows(payload: dict[str, Any], *, clip_root: Path | None = None) -> list[dict[str, Any]]:
-    _require_reviewed(payload)
-    return [_court_keypoint_label_row_from_item(payload, item, clip_root=clip_root) for item in _items(payload)]
+    items = _items(payload)
+    _require_reviewed(payload, items=items)
+    return [_court_keypoint_label_row_from_item(payload, item, clip_root=clip_root) for item in items]
 
 
 def court_keypoint_label_row(payload: dict[str, Any], *, clip_root: Path | None = None) -> dict[str, Any]:
-    _require_reviewed(payload)
-    return _court_keypoint_label_row_from_item(payload, _items(payload)[0], clip_root=clip_root)
+    items = _items(payload)
+    _require_reviewed(payload, items=items)
+    return _court_keypoint_label_row_from_item(payload, items[0], clip_root=clip_root)
 
 
 def _court_keypoint_label_row_from_item(
@@ -227,13 +252,28 @@ def _court_keypoint_label_row_from_item(
         "source_video_size": list(source_size) if source_size is not None else None,
         "keypoints": source_keypoints,
         "label_source": "reviewed_15_keypoint_court_labels",
+        # Provenance of this specific frame's label: an independent human review, or an
+        # owner-approved copy of another frame's independent review on the same static
+        # camera. Training/gate summaries must count these separately (see
+        # labels_independent_human_frames / labels_static_camera_copy_frame_count below) so
+        # a copied label is never reported as an independent human-verified frame.
+        "label_status": item.get("status", INDEPENDENT_REVIEWED_STATUS),
     }
 
 
-def _require_reviewed(payload: dict[str, Any]) -> None:
+def _require_reviewed(payload: dict[str, Any], *, items: list[Any] | None = None) -> None:
     review = payload.get("review")
     if not isinstance(review, dict) or review.get("status") != "reviewed":
         raise ValueError("court_keypoints labels must have review.status == reviewed")
+    for item in items if items is not None else _items(payload):
+        if not isinstance(item, dict):
+            continue
+        status = item.get("status", INDEPENDENT_REVIEWED_STATUS)
+        if status not in ACCEPTED_ITEM_STATUSES:
+            raise ValueError(
+                "court_keypoints item status must be one of "
+                f"{sorted(ACCEPTED_ITEM_STATUSES)}; got {status!r}"
+            )
 
 
 def _label_coordinate_space(payload: dict[str, Any]) -> tuple[int, int] | None:
@@ -386,6 +426,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     device = torch.device(args.device if args.device == "cpu" or torch.cuda.is_available() else "cpu")
 
     real_labels = load_real_court_keypoint_labels(args.real_root) if args.real_root else []
+    label_status_counts = _label_status_counts(real_labels)
     holdout_frame_stride = int(getattr(args, "holdout_frame_stride", 0) or 0)
     if holdout_frame_stride > 0:
         train_real = [
@@ -579,19 +620,15 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         },
         checkpoint,
     )
-    holdout_artifacts = _write_holdout_prediction_artifacts(
-        model,
-        holdout_real,
-        cv2=cv2,
-        np=np,
-        torch=torch,
-        device=device,
-        keypoint_names=keypoint_names,
-        model_width=width,
-        model_height=height,
-        out_dir=args.out,
-    )
     gate_value = after.get("real_keypoint_pck_at_5px")
+    independent_reviewed_frame_count = label_status_counts["labels_independent_human_frames"]
+    copied_frame_count = label_status_counts["labels_static_camera_copy_frame_count"]
+    human_verification_note = (
+        f"Independent human-verified frames = {independent_reviewed_frame_count}; "
+        f"{copied_frame_count} additional frame(s) are owner-approved reviewed_static_camera_copy "
+        "duplicates of an independent review on the same static camera and are NOT independent "
+        "human labels."
+    )
     summary = {
         "schema_version": 1,
         "artifact_type": "court_keypoint_pretraining_run",
@@ -604,18 +641,46 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "pck_threshold_px": 5.0,
             "passed": bool(gate_value is not None and float(gate_value) >= 0.95),
             "not_cal3_verified": True,
+            # Report independent human-verified frames separately from owner-approved
+            # static-camera copies; never collapse these into a single "reviewed" count.
+            "independent_reviewed_frame_count": independent_reviewed_frame_count,
+            "copied_frame_count": copied_frame_count,
+            "human_verification_note": human_verification_note,
         },
         "before": before,
         "after": after,
         "history": history,
-        "holdout_artifacts": holdout_artifacts,
+        "holdout_artifacts": [],
         "holdout_strategy": holdout_strategy,
         "real_train_count": len(train_real),
         "real_holdout_count": len(holdout_real),
-        "note": "Synthetic pretraining plus limited reviewed 15-keypoint court fine-tune; not a verified CAL-3 no-tap solver.",
+        "labels_independent_human_frames": independent_reviewed_frame_count,
+        "labels_static_camera_copy_frame_count": copied_frame_count,
+        "note": (
+            "Synthetic pretraining plus limited reviewed 15-keypoint court fine-tune; not a "
+            "verified CAL-3 no-tap solver. " + human_verification_note
+        ),
     }
-    (args.out / "court_keypoint_metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_training_summary(args.out, summary)
+    if not bool(getattr(args, "skip_holdout_artifacts", False)):
+        summary["holdout_artifacts"] = _write_holdout_prediction_artifacts(
+            model,
+            holdout_real,
+            cv2=cv2,
+            np=np,
+            torch=torch,
+            device=device,
+            keypoint_names=keypoint_names,
+            model_width=width,
+            model_height=height,
+            out_dir=args.out,
+        )
+        _write_training_summary(args.out, summary)
     return summary
+
+
+def _write_training_summary(out_dir: Path, summary: dict[str, Any]) -> None:
+    (out_dir / "court_keypoint_metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def training_cli_summary(summary: dict[str, Any]) -> dict[str, Any]:
@@ -625,6 +690,8 @@ def training_cli_summary(summary: dict[str, Any]) -> dict[str, Any]:
         "before": summary["before"],
         "after": summary["after"],
         "holdout_artifacts": summary.get("holdout_artifacts", []),
+        "labels_independent_human_frames": summary.get("labels_independent_human_frames"),
+        "labels_static_camera_copy_frame_count": summary.get("labels_static_camera_copy_frame_count"),
     }
 
 
@@ -684,9 +751,14 @@ def _write_holdout_prediction_artifacts(
     artifacts: list[dict[str, Any]] = []
     model.eval()
 
+    rows_by_clip_video: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for row in rows:
         video_path = Path(str(row.get("video_path")))
         clip = str(row.get("clip") or video_path.parent.name)
+        rows_by_clip_video.setdefault((clip, str(video_path)), []).append(row)
+
+    for (clip, video_path_text), label_rows in sorted(rows_by_clip_video.items()):
+        video_path = Path(video_path_text)
         prediction_path = prediction_dir / f"{clip}_court_keypoints.json"
         overlay_path = overlay_dir / f"{clip}_court_keypoints_overlay.mp4"
         capture = cv2.VideoCapture(str(video_path))
@@ -710,6 +782,11 @@ def _write_holdout_prediction_artifacts(
 
         frames: list[dict[str, Any]] = []
         label_errors: list[float] = []
+        labels_by_frame: dict[int, list[dict[str, Any]]] = {}
+        for label_row in label_rows:
+            frame_index_value = label_row.get("frame_index")
+            if isinstance(frame_index_value, int) and not isinstance(frame_index_value, bool):
+                labels_by_frame.setdefault(frame_index_value, []).append(label_row)
         frame_index = 0
         try:
             while True:
@@ -730,8 +807,8 @@ def _write_holdout_prediction_artifacts(
                     model_height=model_height,
                 )
                 frames.append({"frame_index": frame_index, "keypoints": keypoints})
-                if frame_index == row.get("frame_index"):
-                    label_errors = _keypoint_errors(keypoints, row["keypoints"])
+                for label_row in labels_by_frame.get(frame_index, []):
+                    label_errors.extend(_keypoint_errors(keypoints, label_row["keypoints"]))
                 _draw_court_keypoints(cv2, frame_bgr, keypoints)
                 writer.write(frame_bgr)
                 frame_index += 1
@@ -753,13 +830,15 @@ def _write_holdout_prediction_artifacts(
         }
         prediction_path.write_text(json.dumps(prediction_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         errors = _error_summary(label_errors)
+        heldout_frame_indices = sorted(labels_by_frame)
         artifacts.append(
             {
                 "clip": clip,
                 "prediction_artifact": str(prediction_path),
                 "overlay_artifact": str(overlay_path),
                 "overlay_frame_count": len(frames),
-                "heldout_label_frame_index": row.get("frame_index"),
+                "heldout_label_frame_index": heldout_frame_indices[0] if len(heldout_frame_indices) == 1 else None,
+                "heldout_label_frame_indices": heldout_frame_indices,
                 "heldout_keypoint_count": errors["count"],
                 "median_keypoint_reprojection_px": errors["median"],
                 "p95_keypoint_reprojection_px": errors["p95"],
@@ -869,6 +948,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--real-finetune-start-epoch", type=int, default=120)
     parser.add_argument("--eval-every", type=int, default=20)
+    parser.add_argument(
+        "--skip-holdout-artifacts",
+        action="store_true",
+        help="Write the checkpoint and gate metrics without generating full-video holdout prediction overlays.",
+    )
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument("--device", default="cuda")
     args = parser.parse_args(argv)

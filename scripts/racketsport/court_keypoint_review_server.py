@@ -34,6 +34,15 @@ MAX_TEXT_CHARS = 512
 KEYPOINT_NAMES = [point.name for point in PICKLEBALL_KEYPOINTS]
 KEYPOINT_INDEX = {name: index for index, name in enumerate(KEYPOINT_NAMES)}
 
+# Per-item review status enum. "reviewed" means a human placed every keypoint for this
+# frame in this UI. "reviewed_static_camera_copy" means the frame's keypoints were copied
+# from a human-reviewed frame of the same static-camera clip (owner-ratified, 2026-07-01);
+# it must never be conflated with an independent human review when counted downstream.
+DEFAULT_ITEM_STATUS = "in_progress"
+INDEPENDENT_REVIEWED_STATUS = "reviewed"
+STATIC_CAMERA_COPY_STATUS = "reviewed_static_camera_copy"
+ITEM_STATUSES = (DEFAULT_ITEM_STATUS, INDEPENDENT_REVIEWED_STATUS, STATIC_CAMERA_COPY_STATUS)
+
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
@@ -219,7 +228,14 @@ def _write_review_progress(root: Path, payload: dict[str, Any], *, now: datetime
             )
             label_path.parent.mkdir(parents=True, exist_ok=True)
             label_path.write_text(json.dumps(label_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            exported.append({"clip": clip, "label_path": _rel(label_path, root)})
+            exported.append(
+                {
+                    "clip": clip,
+                    "label_path": _rel(label_path, root),
+                    "independent_reviewed_count": label_payload["review"]["independent_reviewed_count"],
+                    "static_camera_copy_count": label_payload["review"]["static_camera_copy_count"],
+                }
+            )
         if not completion["complete"]:
             incomplete[clip] = {
                 "missing_frame_count": completion["missing_frame_count"],
@@ -311,7 +327,7 @@ def _sanitize_items(value: Any, *, entry: dict[str, Any], field: str) -> list[di
         out_by_frame[frame] = {
             "frame": frame,
             "review_id": _bounded_text(item.get("review_id", ""), field=f"{field}[{index}].review_id", max_chars=160),
-            "status": _bounded_text(item.get("status", "in_progress"), field=f"{field}[{index}].status", max_chars=80),
+            "status": _item_status(item.get("status", DEFAULT_ITEM_STATUS), field=f"{field}[{index}].status"),
             "keypoints": keypoints,
         }
     return [out_by_frame[frame] for frame in sorted(out_by_frame, key=_frame_sort_key)]
@@ -363,13 +379,18 @@ def _reviewed_label_payload(
             {
                 "frame": image["frame"],
                 "review_id": item.get("review_id") or image["review_id"],
-                "status": "reviewed",
+                # Preserve the item's true status (reviewed vs reviewed_static_camera_copy)
+                # instead of collapsing every exported item to "reviewed". Downstream
+                # consumers rely on this distinction to count independent human labels.
+                "status": item.get("status", INDEPENDENT_REVIEWED_STATUS),
                 "keypoints": {
                     name: [float(item["keypoints"][name][0]), float(item["keypoints"][name][1])]
                     for name in KEYPOINT_NAMES
                 },
             }
         )
+    independent_reviewed_count = sum(1 for exported_item in items if exported_item["status"] == INDEPENDENT_REVIEWED_STATUS)
+    static_camera_copy_count = sum(1 for exported_item in items if exported_item["status"] == STATIC_CAMERA_COPY_STATUS)
     return {
         "schema_version": 1,
         "artifact_type": "racketsport_court_keypoint_labels",
@@ -378,6 +399,11 @@ def _reviewed_label_payload(
             "status": "reviewed",
             "reviewer": clip_payload.get("reviewer", "local_court_keypoint_review"),
             "reviewed_at_utc": reviewed_at.isoformat(),
+            # Per-export provenance: how many exported items are independent human reviews
+            # versus owner-approved static-camera copies of an independent review. Gates
+            # and trainers must report these separately, never as one undifferentiated count.
+            "independent_reviewed_count": independent_reviewed_count,
+            "static_camera_copy_count": static_camera_copy_count,
         },
         "frames": {
             "frame_dir": str(frame_dir),
@@ -411,6 +437,13 @@ def _bounded_text(value: Any, *, field: str, max_chars: int = MAX_TEXT_CHARS) ->
     text = value.strip()
     if len(text) > max_chars:
         raise ValueError(f"{field} is too long")
+    return text
+
+
+def _item_status(value: Any, *, field: str) -> str:
+    text = _bounded_text(value, field=field, max_chars=80) or DEFAULT_ITEM_STATUS
+    if text not in ITEM_STATUSES:
+        raise ValueError(f"{field} must be one of {', '.join(ITEM_STATUSES)}; got {text!r}")
     return text
 
 

@@ -320,6 +320,7 @@ def test_import_reviewed_court_keypoint_corrections_preserves_training_ready_rev
     draft = json.loads((labels / "court_keypoints.json").read_text(encoding="utf-8"))
     assert summary["imported_item_count"] == 1
     assert draft["review"] == {"status": "reviewed", "reviewer": "court-keypoint-review"}
+    assert draft["annotation"]["items"][0]["status"] == "reviewed"
     assert rows[0]["clip"] == clip
     assert rows[0]["label_source"] == "reviewed_15_keypoint_court_labels"
     assert rows[0]["keypoints"]["near_left_corner"] == [10.0, 20.0]

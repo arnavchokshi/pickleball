@@ -234,12 +234,20 @@ def import_corrected_labels(*, drafts_root: Path, corrections_root: Path, allow_
             items = []
             annotation["items"] = items
         corrections = [item for item in correction.get("items", []) if isinstance(item, dict)]
+        correction_review = correction.get("review")
+        default_item_status = "corrected_unverified"
+        if (
+            target_file == "court_keypoints.json"
+            and isinstance(correction_review, dict)
+            and correction_review.get("status") == "reviewed"
+        ):
+            default_item_status = "reviewed"
         for corrected in corrections:
-            corrected = {**corrected, "status": corrected.get("status", "corrected_unverified")}
+            corrected = {**corrected, "status": corrected.get("status", default_item_status)}
             _replace_or_prepend(items, corrected)
             imported += 1
-        if target_file == "court_keypoints.json" and isinstance(correction.get("review"), dict):
-            draft["review"] = dict(correction["review"])
+        if target_file == "court_keypoints.json" and isinstance(correction_review, dict):
+            draft["review"] = dict(correction_review)
         imports = annotation.setdefault("review_imports", [])
         imports.append(
             {
