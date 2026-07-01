@@ -211,6 +211,9 @@ def test_download_checkpoints_verify_only_uses_sha256(tmp_path: Path):
     (tracknet_dir / "InpaintNet_best.pt").write_text("inpaintnet", encoding="utf-8")
     (dest_root / "yolo26n.pt").write_text("yolo26n", encoding="utf-8")
     (dest_root / "yolo26m.pt").write_text("yolo26m", encoding="utf-8")
+    sat_hmr_path = dest_root / "body4d" / "sat-hmr" / "weights" / "sat_hmr" / "sat_644_3dpw.pth"
+    sat_hmr_path.parent.mkdir(parents=True)
+    sat_hmr_path.write_text("sat_hmr", encoding="utf-8")
 
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
@@ -230,6 +233,9 @@ case "$1" in
     ;;
   */yolo26m.pt)
     printf '%s  %s\\n' 401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7 "$1"
+    ;;
+  */sat_644_3dpw.pth)
+    printf '%s  %s\\n' 7e1b5e80a967c8f4e1e273156e5272b2a3413caf079c2bc0a038e90c6a0b6dec "$1"
     ;;
   *)
     exit 2
@@ -251,6 +257,7 @@ esac
     assert completed.returncode == 0
     assert "TrackNetV3 checkpoints verified" in completed.stdout
     assert "YOLO detector checkpoints verified" in completed.stdout
+    assert "SAT-HMR checkpoint verified" in completed.stdout
 
 
 def test_download_checkpoints_verify_only_fails_on_hash_mismatch(tmp_path: Path):
