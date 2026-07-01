@@ -14,9 +14,12 @@ from typing import Any, Mapping, Sequence
 
 ARTIFACT_TYPE = "racketsport_ball_inflections"
 DEFAULT_MIN_TURN_DEGREES = 45.0
+DEFAULT_IMAGE_MIN_TURN_DEGREES = 60.0
 DEFAULT_MIN_SPEED_MPS = 0.75
+DEFAULT_MIN_SPEED_PX_PER_S = 75.0
 DEFAULT_MAX_NEIGHBOR_GAP_S = 0.2
 DEFAULT_MIN_CANDIDATE_SEPARATION_S = 0.15
+DEFAULT_IMAGE_MIN_CANDIDATE_SEPARATION_S = 0.05
 
 
 def build_ball_inflections_from_virtual_world(
@@ -119,6 +122,117 @@ def build_ball_inflections_from_file(
     )
 
 
+def build_ball_inflections_from_ball_track(
+    ball_track: Mapping[str, Any],
+    *,
+    min_turn_degrees: float = DEFAULT_IMAGE_MIN_TURN_DEGREES,
+    min_speed_px_per_s: float = DEFAULT_MIN_SPEED_PX_PER_S,
+    max_neighbor_gap_s: float = DEFAULT_MAX_NEIGHBOR_GAP_S,
+    min_candidate_separation_s: float = DEFAULT_IMAGE_MIN_CANDIDATE_SEPARATION_S,
+) -> dict[str, Any]:
+    """Build ball-inflection cues from visible image-space ball-track motion."""
+
+    min_turn_degrees = _require_finite(min_turn_degrees, "min_turn_degrees")
+    min_speed_px_per_s = _require_finite(min_speed_px_per_s, "min_speed_px_per_s")
+    max_neighbor_gap_s = _require_finite(max_neighbor_gap_s, "max_neighbor_gap_s")
+    min_candidate_separation_s = _require_finite(min_candidate_separation_s, "min_candidate_separation_s")
+    if min_turn_degrees < 0.0:
+        raise ValueError("min_turn_degrees must be non-negative")
+    if min_speed_px_per_s < 0.0:
+        raise ValueError("min_speed_px_per_s must be non-negative")
+    if max_neighbor_gap_s <= 0.0:
+        raise ValueError("max_neighbor_gap_s must be positive")
+    if min_candidate_separation_s < 0.0:
+        raise ValueError("min_candidate_separation_s must be non-negative")
+
+    frames = _usable_ball_track_frames(ball_track)
+    raw_candidates: list[dict[str, Any]] = []
+    max_window_frames = min(6, max(1, (len(frames) - 1) // 2))
+    for current_index in range(len(frames)):
+        for window_frames in range(1, max_window_frames + 1):
+            previous_index = current_index - window_frames
+            following_index = current_index + window_frames
+            if previous_index < 0 or following_index >= len(frames):
+                continue
+            previous = frames[previous_index]
+            current = frames[current_index]
+            following = frames[following_index]
+            dt_before = current["time_s"] - previous["time_s"]
+            dt_after = following["time_s"] - current["time_s"]
+            if dt_before <= 0.0 or dt_after <= 0.0:
+                continue
+            if dt_before > max_neighbor_gap_s * window_frames or dt_after > max_neighbor_gap_s * window_frames:
+                continue
+
+            before = _vector_delta(previous["image_xy"], current["image_xy"])
+            after = _vector_delta(current["image_xy"], following["image_xy"])
+            speed_before = _norm(before) / dt_before
+            speed_after = _norm(after) / dt_after
+            if min(speed_before, speed_after) < min_speed_px_per_s:
+                continue
+
+            turn_degrees = _turn_angle_degrees(before, after)
+            if turn_degrees < min_turn_degrees:
+                continue
+
+            confidence = _candidate_confidence(current, previous, following, turn_degrees)
+            raw_candidates.append(
+                {
+                    "time_s": current["time_s"],
+                    "frame": current.get("frame"),
+                    "ball_image_xy": [round(float(value), 9) for value in current["image_xy"]],
+                    "ball_world_xyz": [round(float(value), 9) for value in current.get("world_xyz", (0.0, 0.0, 0.0))],
+                    "confidence": confidence,
+                    "turn_angle_deg": round(turn_degrees, 6),
+                    "speed_before_px_s": round(speed_before, 6),
+                    "speed_after_px_s": round(speed_after, 6),
+                    "window_frames": window_frames,
+                    "approx": bool(current.get("approx", False) or previous.get("approx", False) or following.get("approx", False)),
+                    "source": "ball_track_image_motion",
+                }
+            )
+    candidates = _suppress_nearby_candidates(raw_candidates, min_separation_s=min_candidate_separation_s)
+
+    return {
+        "schema_version": 1,
+        "artifact_type": ARTIFACT_TYPE,
+        "source": "ball_track_image_motion",
+        "world_frame": "image_xy",
+        "not_gate_verified": True,
+        "requires_additional_cues": ["wrist_velocity_peaks"],
+        "summary": {
+            "usable_frame_count": len(frames),
+            "candidate_count": len(candidates),
+            "raw_candidate_count": len(raw_candidates),
+            "min_turn_degrees": min_turn_degrees,
+            "min_speed_px_per_s": min_speed_px_per_s,
+            "max_neighbor_gap_s": max_neighbor_gap_s,
+            "min_candidate_separation_s": min_candidate_separation_s,
+        },
+        "candidates": candidates,
+    }
+
+
+def build_ball_inflections_from_ball_track_file(
+    ball_track_path: str | Path,
+    *,
+    min_turn_degrees: float = DEFAULT_IMAGE_MIN_TURN_DEGREES,
+    min_speed_px_per_s: float = DEFAULT_MIN_SPEED_PX_PER_S,
+    max_neighbor_gap_s: float = DEFAULT_MAX_NEIGHBOR_GAP_S,
+    min_candidate_separation_s: float = DEFAULT_IMAGE_MIN_CANDIDATE_SEPARATION_S,
+) -> dict[str, Any]:
+    payload = _read_json(Path(ball_track_path))
+    if not isinstance(payload, Mapping):
+        raise ValueError("ball_track.json must contain an object")
+    return build_ball_inflections_from_ball_track(
+        payload,
+        min_turn_degrees=min_turn_degrees,
+        min_speed_px_per_s=min_speed_px_per_s,
+        max_neighbor_gap_s=max_neighbor_gap_s,
+        min_candidate_separation_s=min_candidate_separation_s,
+    )
+
+
 def write_ball_inflections(path: str | Path, payload: Mapping[str, Any]) -> None:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -158,6 +272,50 @@ def _usable_ball_frames(virtual_world: Mapping[str, Any]) -> list[dict[str, Any]
             }
         )
     return sorted(frames, key=lambda item: (item["time_s"], item["frame"]))
+
+
+def _usable_ball_track_frames(ball_track: Mapping[str, Any]) -> list[dict[str, Any]]:
+    raw_frames = ball_track.get("frames")
+    if not isinstance(raw_frames, list):
+        raise ValueError("ball_track frames must be a list")
+
+    frames: list[dict[str, Any]] = []
+    for index, frame in enumerate(raw_frames):
+        if not isinstance(frame, Mapping):
+            continue
+        if frame.get("visible") is not True:
+            continue
+        image_xy = frame.get("xy")
+        if not isinstance(image_xy, Sequence) or isinstance(image_xy, (str, bytes)) or len(image_xy) != 2:
+            continue
+        try:
+            point = tuple(_require_finite(component, "xy") for component in image_xy)
+            time_s = _require_finite(frame.get("t", frame.get("time_s")), "t")
+            confidence = _confidence(frame.get("conf", frame.get("confidence", 0.0)))
+            world_xyz = _optional_vector3(frame.get("world_xyz"))
+        except ValueError:
+            continue
+        if time_s < 0.0:
+            continue
+        sample = {
+            "time_s": time_s,
+            "frame": frame.get("frame", index),
+            "image_xy": point,
+            "confidence": confidence,
+            "approx": bool(frame.get("approx", False)),
+        }
+        if world_xyz is not None:
+            sample["world_xyz"] = world_xyz
+        frames.append(sample)
+    return sorted(frames, key=lambda item: (item["time_s"], item["frame"]))
+
+
+def _optional_vector3(value: Any) -> tuple[float, float, float] | None:
+    if value is None:
+        return None
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)) or len(value) != 3:
+        raise ValueError("world_xyz must be a 3-vector")
+    return tuple(_require_finite(component, "world_xyz") for component in value)
 
 
 def _candidate_confidence(
@@ -235,6 +393,8 @@ def _read_json(path: Path) -> Any:
 
 __all__ = [
     "ARTIFACT_TYPE",
+    "build_ball_inflections_from_ball_track",
+    "build_ball_inflections_from_ball_track_file",
     "build_ball_inflections_from_file",
     "build_ball_inflections_from_virtual_world",
     "write_ball_inflections",
