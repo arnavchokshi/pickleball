@@ -15,7 +15,7 @@ def memory_efficient_attention(q: Tensor, k: Tensor, v: Tensor, attn_bias: objec
         v.transpose(1, 2),
         attn_mask=bias,
     )
-    return out.transpose(1, 2)
+    return out.transpose(1, 2).contiguous()
 
 
 def unbind(value: Tensor, dim: int) -> tuple[Tensor, ...]:
@@ -103,7 +103,7 @@ class BlockDiagonalMask:
             chunks.append(value[:, start : start + length])
             start += length
         if self._batch_sizes is None:
-            return tuple(chunks)
+            return chunks
 
         grouped = []
         offset = 0
@@ -117,7 +117,7 @@ class BlockDiagonalMask:
                     raise ValueError("cannot regroup variable sequence lengths into a dense tensor")
                 grouped.append(torch.cat(group, dim=0))
             offset += batch_size
-        return tuple(grouped)
+        return grouped
 
 
 fmha = SimpleNamespace(attn_bias=SimpleNamespace(BlockDiagonalMask=BlockDiagonalMask))

@@ -25,15 +25,18 @@ def test_xformers_shim_exposes_memory_attention_and_block_diagonal_mask(monkeypa
     out = ops.memory_efficient_attention(q, k, v, attn_bias=mask)
 
     assert out.shape == (1, 5, 2, 3)
+    assert out.is_contiguous()
     first, second = mask.split(out)
     assert first.shape == (1, 2, 2, 3)
     assert second.shape == (1, 3, 2, 3)
+    assert isinstance(mask.split(out), list)
 
     nested = ops.fmha.attn_bias.BlockDiagonalMask.from_seqlens([3, 3, 5])
     nested._batch_sizes = [2, 1]
     first_group, second_group = nested.split(torch.randn(1, 11, 4))
     assert first_group.shape == (2, 3, 4)
     assert second_group.shape == (1, 5, 4)
+    assert isinstance(nested.split(torch.randn(1, 11, 4)), list)
 
 
 def test_xformers_shim_exposes_unbind_swiglu_and_index_helpers(monkeypatch) -> None:
