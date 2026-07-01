@@ -1,8 +1,7 @@
-"""CPU-only court keypoint detector scaffold primitives.
+"""Court keypoint detector primitives.
 
-This module intentionally does not train or load a model. It provides the
-deterministic validation and geometry helpers that a future CAL-3 training
-script can use before handing correspondences to the existing calibration path.
+This module contains the deterministic validation, geometry, and lightweight
+heatmap helpers used by the court-keypoint training and calibration paths.
 """
 
 from __future__ import annotations
@@ -182,7 +181,15 @@ DEFAULT_SYNTHETIC_RENDER_CONFIG = SyntheticRenderConfig(
     augmentations=("colors", "shadows", "glare", "occluded_corners"),
 )
 
-ALLOWED_CHECKPOINT_POLICIES = {"none", "local_only", "scratch"}
+ALLOWED_TRAINING_DEVICES = {"cpu", "cuda", "mps"}
+ALLOWED_CHECKPOINT_POLICIES = {
+    "none",
+    "local_only",
+    "scratch",
+    "courtkeynet_mit",
+    "download_tenniscourtdetector",
+    "ultralytics_yolo11_pose",
+}
 
 
 def validate_synthetic_render_config(config: Mapping[str, Any]) -> SyntheticRenderConfig:
@@ -222,7 +229,7 @@ def validate_synthetic_render_config(config: Mapping[str, Any]) -> SyntheticRend
 
 
 def validate_training_plan_config(config: Mapping[str, Any]) -> TrainingPlanConfig:
-    """Validate a CPU-only training-plan description for future orchestration."""
+    """Validate a court-keypoint training-plan description."""
 
     synthetic_raw = config.get("synthetic", DEFAULT_SYNTHETIC_RENDER_CONFIG)
     if isinstance(synthetic_raw, SyntheticRenderConfig):
@@ -241,12 +248,14 @@ def validate_training_plan_config(config: Mapping[str, Any]) -> TrainingPlanConf
         raise ValueError("pickleball_frames must be in the fine-tune recipe range [200, 500]")
 
     device = str(config.get("device", "cpu")).lower()
-    if device != "cpu":
-        raise ValueError("device must be 'cpu' for this scaffold")
+    if device not in ALLOWED_TRAINING_DEVICES:
+        allowed = ", ".join(sorted(ALLOWED_TRAINING_DEVICES))
+        raise ValueError(f"device must be one of: {allowed}")
 
     checkpoint_policy = str(config.get("checkpoint_policy", "none"))
     if checkpoint_policy not in ALLOWED_CHECKPOINT_POLICIES:
-        raise ValueError("checkpoint_policy must not download or select external checkpoints")
+        allowed = ", ".join(sorted(ALLOWED_CHECKPOINT_POLICIES))
+        raise ValueError(f"checkpoint_policy must be one of: {allowed}")
 
     return TrainingPlanConfig(
         synthetic=synthetic,

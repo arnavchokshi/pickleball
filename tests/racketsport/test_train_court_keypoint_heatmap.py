@@ -11,6 +11,7 @@ from scripts.racketsport.train_court_keypoint_heatmap import (
     court_keypoint_heatmap_loss,
     court_keypoint_probabilities,
     load_real_corner_labels,
+    load_real_court_keypoint_labels,
     make_court_keypoint_heatmap_model,
     run_training,
     training_cli_summary,
@@ -95,6 +96,84 @@ def test_load_real_corner_labels_uses_committed_video_frame_when_label_frames_ar
     assert row["keypoints"]["near_right_corner"] == pytest.approx([112.0, 64.0])
 
 
+def _reviewed_court_keypoint_label_payload(
+    frame: str = "frame_000002.jpg",
+    *,
+    source_resolution: list[int] | None = None,
+    label_coordinate_space: list[int] | None = None,
+) -> dict:
+    return {
+        "schema_version": 1,
+        "annotation": {
+            "items": [
+                {
+                    "frame": frame,
+                    "keypoints": {
+                        point.name: [float(index * 3 + 10), float(index * 2 + 5)]
+                        for index, point in enumerate(PICKLEBALL_KEYPOINTS)
+                    },
+                }
+            ]
+        },
+        "frames": {
+            "frame_dir": "runs/label_frames/clip_a",
+            "source_resolution": source_resolution or [128, 72],
+            "label_coordinate_space": label_coordinate_space or [64, 36],
+        },
+        "review": {"status": "reviewed", "reviewer": "court-label-review"},
+    }
+
+
+def test_load_real_court_keypoint_labels_requires_reviewed_full_15_point_labels(tmp_path: Path) -> None:
+    clip_root = tmp_path / "eval_clips" / "ball" / "clip_a"
+    clip_root.mkdir(parents=True)
+    (clip_root / "source.mp4").write_bytes(b"fake video")
+    _write_json(
+        clip_root / "labels" / "court_corners.json",
+        {
+            "schema_version": 1,
+            "annotation": {
+                "items": [
+                    {
+                        "frame": "frame_000002.jpg",
+                        "court_corners": {
+                            "near_left": [8, 32],
+                            "near_right": [56, 32],
+                            "far_right": [44, 6],
+                            "far_left": [20, 6],
+                        },
+                    }
+                ]
+            },
+            "frames": {"frame_dir": "runs/label_frames/clip_a", "source_resolution": [128, 72]},
+        },
+    )
+
+    with pytest.raises(ValueError, match="reviewed 15-keypoint court labels"):
+        load_real_court_keypoint_labels(tmp_path / "eval_clips" / "ball")
+
+
+def test_load_real_court_keypoint_labels_reads_reviewed_full_15_point_labels(tmp_path: Path) -> None:
+    clip_root = tmp_path / "eval_clips" / "ball" / "clip_a"
+    clip_root.mkdir(parents=True)
+    (clip_root / "source.mp4").write_bytes(b"fake video")
+    _write_json(clip_root / "labels" / "court_keypoints.json", _reviewed_court_keypoint_label_payload())
+
+    rows = load_real_court_keypoint_labels(tmp_path / "eval_clips" / "ball")
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["clip"] == "clip_a"
+    assert row["video_path"] == str(clip_root / "source.mp4")
+    assert row["frame_index"] == 2
+    assert row["image_path"] is None
+    assert set(row["keypoints"]) == {point.name for point in PICKLEBALL_KEYPOINTS}
+    assert row["label_coordinate_space"] == [64, 36]
+    assert row["source_video_size"] == [128, 72]
+    assert row["keypoints"]["near_left_corner"] == pytest.approx([20.0, 10.0])
+    assert row["keypoints"]["far_nvz_right"] == pytest.approx([104.0, 66.0])
+
+
 def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_path: Path) -> None:
     cv2 = __import__("cv2")
     clip_root = tmp_path / "eval_clips" / "ball" / "clip_a"
@@ -108,24 +187,12 @@ def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_pat
         writer.write(frame)
     writer.release()
     _write_json(
-        clip_root / "labels" / "court_corners.json",
-        {
-            "schema_version": 1,
-            "annotation": {
-                "items": [
-                    {
-                        "frame": "frame_000000.jpg",
-                        "court_corners": {
-                            "near_left": [8, 32],
-                            "near_right": [56, 32],
-                            "far_right": [44, 6],
-                            "far_left": [20, 6],
-                        },
-                    }
-                ]
-            },
-            "frames": {"frame_dir": "runs/label_frames/clip_a"},
-        },
+        clip_root / "labels" / "court_keypoints.json",
+        _reviewed_court_keypoint_label_payload(
+            "frame_000000.jpg",
+            source_resolution=[64, 36],
+            label_coordinate_space=[64, 36],
+        ),
     )
 
     out = tmp_path / "court_run"

@@ -54,7 +54,7 @@ def test_pickleball_keypoint_taxonomy_includes_corners_nvz_and_centerline_inters
     assert _ft(by_name["far_nvz_center"].world_xyz_m[1]) == pytest.approx(7.0)
 
 
-def test_synthetic_render_and_training_plan_configs_validate_cpu_scaffold_bounds() -> None:
+def test_synthetic_render_and_training_plan_configs_validate_training_bounds() -> None:
     render = validate_synthetic_render_config(
         {
             "viewpoint_count": 200,
@@ -70,20 +70,20 @@ def test_synthetic_render_and_training_plan_configs_validate_cpu_scaffold_bounds
             "synthetic": render,
             "tennis_frames": 8800,
             "pickleball_frames": 300,
-            "device": "cpu",
-            "checkpoint_policy": "none",
+            "device": "cuda",
+            "checkpoint_policy": "courtkeynet_mit",
         }
     )
 
     assert render.viewpoint_count == 200
     assert render.height_m == pytest.approx((1.0, 4.0))
     assert render.tilt_deg == pytest.approx((10.0, 80.0))
-    assert plan.device == "cpu"
-    assert plan.checkpoint_policy == "none"
+    assert plan.device == "cuda"
+    assert plan.checkpoint_policy == "courtkeynet_mit"
     assert plan.pickleball_frames == 300
 
 
-def test_training_plan_rejects_gpu_downloads_and_out_of_recipe_ranges() -> None:
+def test_training_plan_rejects_unknown_devices_policies_and_out_of_recipe_ranges() -> None:
     with pytest.raises(ValueError, match="viewpoint_count"):
         validate_synthetic_render_config({"viewpoint_count": 49})
 
@@ -104,10 +104,10 @@ def test_training_plan_rejects_gpu_downloads_and_out_of_recipe_ranges() -> None:
 
     render = validate_synthetic_render_config({"viewpoint_count": 50})
     with pytest.raises(ValueError, match="device"):
-        validate_training_plan_config({"synthetic": render, "device": "cuda"})
+        validate_training_plan_config({"synthetic": render, "device": "tpu"})
 
     with pytest.raises(ValueError, match="checkpoint_policy"):
-        validate_training_plan_config({"synthetic": render, "checkpoint_policy": "download_tenniscourtdetector"})
+        validate_training_plan_config({"synthetic": render, "checkpoint_policy": "unknown_external_checkpoint"})
 
 
 def test_decode_subpixel_heatmap_uses_parabolic_offset_without_numpy() -> None:

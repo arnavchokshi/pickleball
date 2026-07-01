@@ -160,6 +160,113 @@ def load_real_corner_labels(root: Path) -> list[dict[str, Any]]:
     return labels
 
 
+def load_real_court_keypoint_labels(root: Path) -> list[dict[str, Any]]:
+    labels: list[dict[str, Any]] = []
+    for path in sorted(root.glob("*/labels/court_keypoints.json")):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        row = court_keypoint_label_row(payload, clip_root=path.parent.parent)
+        row["clip"] = path.parent.parent.name
+        labels.append(row)
+    if not labels:
+        raise ValueError(f"no reviewed 15-keypoint court labels found under {root}")
+    return labels
+
+
+def court_keypoint_label_row(payload: dict[str, Any], *, clip_root: Path | None = None) -> dict[str, Any]:
+    _require_reviewed(payload)
+    items = _items(payload)
+    item = items[0]
+    if not isinstance(item, dict):
+        raise ValueError("court keypoint item must be an object")
+
+    frame_name = item.get("frame")
+    if not isinstance(frame_name, str) or not frame_name:
+        raise ValueError("court keypoint item requires frame")
+
+    keypoints = item.get("keypoints")
+    if not isinstance(keypoints, dict):
+        raise ValueError("court keypoint item requires keypoints")
+    expected_names = [point.name for point in PICKLEBALL_KEYPOINTS]
+    if set(keypoints) != set(expected_names):
+        missing = sorted(set(expected_names) - set(keypoints))
+        extra = sorted(set(keypoints) - set(expected_names))
+        details = []
+        if missing:
+            details.append(f"missing {', '.join(missing)}")
+        if extra:
+            details.append(f"unexpected {', '.join(extra)}")
+        raise ValueError("court keypoint labels must contain exactly the 15 canonical keypoints: " + "; ".join(details))
+
+    frame_dir = _frame_dir(payload)
+    source_size = _source_resolution(payload)
+    label_size = _label_coordinate_space(payload)
+    raw_keypoints = {
+        name: list(_xy_field(keypoints[name], f"court_keypoints.{name}"))
+        for name in expected_names
+    }
+    source_keypoints = _scale_keypoint_labels_to_source(raw_keypoints, label_size=label_size, source_size=source_size)
+    image_path = frame_dir / frame_name
+    video_path = clip_root / "source.mp4" if clip_root is not None else _payload_source_video(payload)
+    return {
+        "image_path": str(image_path) if image_path.is_file() else None,
+        "video_path": str(video_path) if video_path is not None else None,
+        "frame_index": _frame_index_from_name(frame_name),
+        "label_coordinate_space": list(label_size) if label_size is not None else None,
+        "source_video_size": list(source_size) if source_size is not None else None,
+        "keypoints": source_keypoints,
+        "label_source": "reviewed_15_keypoint_court_labels",
+    }
+
+
+def _require_reviewed(payload: dict[str, Any]) -> None:
+    review = payload.get("review")
+    if not isinstance(review, dict) or review.get("status") != "reviewed":
+        raise ValueError("court_keypoints labels must have review.status == reviewed")
+
+
+def _label_coordinate_space(payload: dict[str, Any]) -> tuple[int, int] | None:
+    frames = payload.get("frames")
+    if not isinstance(frames, dict):
+        return None
+    raw = frames.get("label_coordinate_space")
+    if not isinstance(raw, list) or len(raw) != 2:
+        return None
+    width, height = raw
+    if isinstance(width, bool) or isinstance(height, bool) or not isinstance(width, int) or not isinstance(height, int):
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    return (width, height)
+
+
+def _scale_keypoint_labels_to_source(
+    keypoints: dict[str, list[float]],
+    *,
+    label_size: tuple[int, int] | None,
+    source_size: tuple[int, int] | None,
+) -> dict[str, list[float]]:
+    if label_size is None or source_size is None:
+        return {name: list(xy) for name, xy in keypoints.items()}
+    scale_x = source_size[0] / float(label_size[0])
+    scale_y = source_size[1] / float(label_size[1])
+    return {name: [xy[0] * scale_x, xy[1] * scale_y] for name, xy in keypoints.items()}
+
+
+def _xy_field(raw_value: Any, name: str) -> tuple[float, float]:
+    if not isinstance(raw_value, list) or len(raw_value) != 2:
+        raise ValueError(f"{name} must be a two-item image coordinate")
+    return (_finite_float(raw_value[0], name), _finite_float(raw_value[1], name))
+
+
+def _finite_float(value: Any, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{name} must be numeric")
+    result = float(value)
+    if not math.isfinite(result):
+        raise ValueError(f"{name} must be finite")
+    return result
+
+
 def heatmaps_for_points(
     points: dict[str, list[float] | tuple[float, float]],
     keypoint_names: list[str],
@@ -252,7 +359,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     torch.manual_seed(args.seed)
     device = torch.device(args.device if args.device == "cpu" or torch.cuda.is_available() else "cpu")
 
-    real_labels = load_real_corner_labels(args.real_root) if args.real_root else []
+    real_labels = load_real_court_keypoint_labels(args.real_root) if args.real_root else []
     holdout = set(args.holdout_clip)
     train_real = [row for row in real_labels if row.get("clip") not in holdout]
     holdout_real = [row for row in real_labels if row.get("clip") in holdout] or real_labels[-1:]
@@ -451,7 +558,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         "holdout_artifacts": holdout_artifacts,
         "real_train_count": len(train_real),
         "real_holdout_count": len(holdout_real),
-        "note": "Synthetic pretraining plus limited real corner fine-tune; not a verified CAL-3 no-tap solver.",
+        "note": "Synthetic pretraining plus limited reviewed 15-keypoint court fine-tune; not a verified CAL-3 no-tap solver.",
     }
     (args.out / "court_keypoint_metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return summary
