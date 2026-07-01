@@ -302,10 +302,10 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         images, targets, masks = [], [], []
         for row in rows:
             image = load_label_image(row, cv2=cv2, image_module=Image)
-            original_w, original_h = image.size
+            label_w, label_h = _label_coordinate_size(row, fallback_size=image.size)
             image = image.resize((width, height))
             scaled = {
-                name: [xy[0] * width / original_w, xy[1] * height / original_h]
+                name: [xy[0] * width / label_w, xy[1] * height / label_h]
                 for name, xy in row["keypoints"].items()
             }
             arr = np.asarray(image, dtype=np.float32) / 255.0
@@ -317,7 +317,8 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
 
     def evaluate(model: nn.Module, rows: list[dict[str, Any]], synthetic_batches: int = 4) -> dict[str, Any]:
         model.eval()
-        real_errors: list[float] = []
+        real_model_input_errors: list[float] = []
+        real_source_errors: list[float] = []
         synthetic_errors: list[float] = []
         with torch.no_grad():
             for row in rows:
@@ -327,12 +328,16 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                 x, _, _ = [part.to(device) for part in batch]
                 pred = model(x).detach().cpu()[0]
                 image = load_label_image(row, cv2=cv2, image_module=Image)
-                sx, sy = width / image.size[0], height / image.size[1]
+                label_w, label_h = _label_coordinate_size(row, fallback_size=image.size)
+                sx, sy = width / label_w, height / label_h
                 for name, xy in row["keypoints"].items():
                     idx = keypoint_names.index(name)
                     flat = int(pred[idx].argmax())
                     py, px = divmod(flat, width)
-                    real_errors.append(math.hypot(px - xy[0] * sx, py - xy[1] * sy))
+                    real_model_input_errors.append(math.hypot(px - xy[0] * sx, py - xy[1] * sy))
+                    source_x = px / sx
+                    source_y = py / sy
+                    real_source_errors.append(math.hypot(source_x - xy[0], source_y - xy[1]))
             for _ in range(synthetic_batches):
                 x, target, _ = synthetic_batch(args.batch_size)
                 pred = model(x.to(device)).detach().cpu()
@@ -343,19 +348,37 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                         py, px = divmod(pred_flat, width)
                         ty, tx = divmod(target_flat, width)
                         synthetic_errors.append(math.hypot(px - tx, py - ty))
-        real_summary = _error_summary(real_errors)
+        real_model_input_summary = _error_summary(real_model_input_errors)
+        real_source_summary = _error_summary(real_source_errors)
         synthetic_summary = _error_summary(synthetic_errors)
         return {
-            "real_corner_mean_px": real_summary["mean"],
-            "real_corner_median_px": real_summary["median"],
-            "real_corner_p95_px": real_summary["p95"],
-            "real_corner_max_px": real_summary["max"],
-            "real_corner_count": real_summary["count"],
-            "real_keypoint_mean_px": real_summary["mean"],
-            "real_keypoint_median_px": real_summary["median"],
-            "real_keypoint_p95_px": real_summary["p95"],
-            "real_keypoint_max_px": real_summary["max"],
-            "real_keypoint_count": real_summary["count"],
+            "real_metric_coordinate_space": "source_video_pixels",
+            "real_corner_mean_px": real_source_summary["mean"],
+            "real_corner_median_px": real_source_summary["median"],
+            "real_corner_p95_px": real_source_summary["p95"],
+            "real_corner_max_px": real_source_summary["max"],
+            "real_corner_count": real_source_summary["count"],
+            "real_corner_mean_source_px": real_source_summary["mean"],
+            "real_corner_median_source_px": real_source_summary["median"],
+            "real_corner_p95_source_px": real_source_summary["p95"],
+            "real_corner_max_source_px": real_source_summary["max"],
+            "real_corner_mean_model_input_px": real_model_input_summary["mean"],
+            "real_corner_median_model_input_px": real_model_input_summary["median"],
+            "real_corner_p95_model_input_px": real_model_input_summary["p95"],
+            "real_corner_max_model_input_px": real_model_input_summary["max"],
+            "real_keypoint_mean_px": real_source_summary["mean"],
+            "real_keypoint_median_px": real_source_summary["median"],
+            "real_keypoint_p95_px": real_source_summary["p95"],
+            "real_keypoint_max_px": real_source_summary["max"],
+            "real_keypoint_count": real_source_summary["count"],
+            "real_keypoint_mean_source_px": real_source_summary["mean"],
+            "real_keypoint_median_source_px": real_source_summary["median"],
+            "real_keypoint_p95_source_px": real_source_summary["p95"],
+            "real_keypoint_max_source_px": real_source_summary["max"],
+            "real_keypoint_mean_model_input_px": real_model_input_summary["mean"],
+            "real_keypoint_median_model_input_px": real_model_input_summary["median"],
+            "real_keypoint_p95_model_input_px": real_model_input_summary["p95"],
+            "real_keypoint_max_model_input_px": real_model_input_summary["max"],
             "synthetic_mean_px": synthetic_summary["mean"],
             "synthetic_median_px": synthetic_summary["median"],
             "synthetic_p95_px": synthetic_summary["p95"],
@@ -474,6 +497,17 @@ def load_label_image(row: dict[str, Any], *, cv2: Any, image_module: Any) -> Any
         raise ValueError(f"could not read frame {frame_index} from court label video: {video_path}")
     frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
     return image_module.fromarray(frame_rgb).convert("RGB")
+
+
+def _label_coordinate_size(row: dict[str, Any], *, fallback_size: tuple[int, int]) -> tuple[float, float]:
+    source_size = row.get("source_video_size")
+    if (
+        isinstance(source_size, list)
+        and len(source_size) == 2
+        and all(isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0 for value in source_size)
+    ):
+        return float(source_size[0]), float(source_size[1])
+    return float(fallback_size[0]), float(fallback_size[1])
 
 
 def _write_holdout_prediction_artifacts(

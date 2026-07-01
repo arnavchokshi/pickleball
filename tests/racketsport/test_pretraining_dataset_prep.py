@@ -12,6 +12,7 @@ from scripts.racketsport.prepare_tracknetv3_finetune_dataset import (
     write_tracknet_csv,
 )
 from scripts.racketsport.train_court_keypoint_heatmap import court_corner_keypoint_labels
+from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
 
 
 def test_interpolated_tracknet_labels_preserve_clicks_and_fill_short_visible_gaps() -> None:
@@ -139,12 +140,7 @@ def test_court_corner_keypoint_labels_map_manual_seed_to_taxonomy(tmp_path: Path
     assert labels["keypoints"]["near_right_corner"] == pytest.approx([90.0, 100.0])
     assert labels["keypoints"]["far_right_corner"] == pytest.approx([80.0, 20.0])
     assert labels["keypoints"]["far_left_corner"] == pytest.approx([20.0, 20.0])
-    assert set(labels["keypoints"]) == {
-        "near_left_corner",
-        "near_right_corner",
-        "far_right_corner",
-        "far_left_corner",
-    }
+    assert set(labels["keypoints"]) == {point.name for point in PICKLEBALL_KEYPOINTS}
 
 
 def test_court_corner_keypoint_labels_reject_missing_items() -> None:

@@ -111,6 +111,12 @@ def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_pat
     assert summary["gate"]["metric"] == "heldout_median_keypoint_reprojection_px"
     assert summary["gate"]["threshold_px"] == 5.0
     assert summary["after"]["real_corner_median_px"] is not None
+    assert summary["after"]["real_corner_median_model_input_px"] is not None
+    assert summary["after"]["real_corner_median_source_px"] == pytest.approx(summary["after"]["real_corner_median_px"])
+    assert summary["after"]["real_corner_median_source_px"] == pytest.approx(
+        summary["after"]["real_corner_median_model_input_px"] * 2.0,
+        rel=0.15,
+    )
     assert summary["holdout_artifacts"][0]["clip"] == "clip_a"
     assert summary["gate"]["value_px"] == summary["holdout_artifacts"][0]["median_keypoint_reprojection_px"]
     assert summary["holdout_artifacts"][0]["prediction_artifact"].endswith("clip_a_court_keypoints.json")
