@@ -1,5 +1,7 @@
+import Foundation
 import SwiftUI
 import PickleballCapture
+import PickleballUpload
 
 private enum PickleballPalette {
     static let ink = Color(red: 0.03, green: 0.045, blue: 0.04)
@@ -10,6 +12,70 @@ private enum PickleballPalette {
     static let cyan = Color(red: 0.40, green: 0.86, blue: 1.0)
     static let cream = Color(red: 0.94, green: 0.97, blue: 0.89)
 }
+
+private enum RenderCameraUploadStatus: Equatable {
+    case idle
+    case submitting
+    case running(RenderGatewayJob, URL?)
+    case complete(RenderGatewayJob, URL?)
+    case failed(String)
+
+    var isBusy: Bool {
+        switch self {
+        case .submitting, .running:
+            return true
+        case .idle, .complete, .failed:
+            return false
+        }
+    }
+
+    var progressFraction: Double {
+        switch self {
+        case .idle:
+            return 0
+        case .submitting:
+            return 0.05
+        case .running(let job, _), .complete(let job, _):
+            return job.progress?.fractionComplete ?? (job.status == .complete ? 1.0 : 0.35)
+        case .failed:
+            return 1.0
+        }
+    }
+
+    var stageText: String {
+        switch self {
+        case .idle:
+            return "Ready to process"
+        case .submitting:
+            return "Uploading to Render"
+        case .running(let job, _), .complete(let job, _):
+            return job.progress?.stage ?? job.status.rawValue
+        case .failed(let message):
+            return message
+        }
+    }
+
+    var etaText: String? {
+        switch self {
+        case .submitting:
+            return "ETA calculating"
+        case .running(let job, _):
+            return job.progress?.etaText
+        case .idle, .complete, .failed:
+            return nil
+        }
+    }
+
+    var replayURL: URL? {
+        switch self {
+        case .running(_, let replayURL), .complete(_, let replayURL):
+            return replayURL
+        case .idle, .submitting, .failed:
+            return nil
+        }
+    }
+}
+
 
 struct AppRootView: View {
     @StateObject private var flow = PickleballAppFlow()
@@ -187,6 +253,7 @@ private struct PickleballHomeScreen: View {
 private struct CameraCaptureScreen: View {
     let returnHome: () -> Void
     @StateObject private var model = CaptureViewModel()
+    @State private var renderUploadStatus: RenderCameraUploadStatus = .idle
 
     var body: some View {
         GeometryReader { proxy in
@@ -206,6 +273,10 @@ private struct CameraCaptureScreen: View {
                 } else {
                     portraitOverlay
                 }
+
+                if shouldShowRenderUploadOverlay {
+                    renderUploadOverlay
+                }
             }
             .task {
                 await model.prepare()
@@ -216,6 +287,128 @@ private struct CameraCaptureScreen: View {
                     await model.updateOrientation(isLandscapeViewport: isLandscape)
                 }
             }
+        }
+    }
+
+
+    private var shouldShowRenderUploadOverlay: Bool {
+        if case .finished = model.status {
+            return true
+        }
+        return renderUploadStatus.isBusy || renderUploadStatus.replayURL != nil
+    }
+
+    private var renderUploadOverlay: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                VStack(alignment: .leading, spacing: 9) {
+                    HStack(spacing: 8) {
+                        Image(systemName: renderUploadStatus.isBusy ? "hourglass" : "icloud.and.arrow.up")
+                        Text(renderUploadStatus.stageText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                        Spacer(minLength: 6)
+                        if let etaText = renderUploadStatus.etaText {
+                            Text(etaText)
+                                .font(.caption2.weight(.black))
+                                .foregroundStyle(PickleballPalette.ink)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(PickleballPalette.cyan, in: Capsule())
+                        }
+                    }
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(PickleballPalette.cream)
+
+                    ProgressView(value: renderUploadStatus.progressFraction)
+                        .tint(renderUploadTint)
+
+                    HStack(spacing: 10) {
+                        Button {
+                            Task {
+                                await uploadFinishedRecording()
+                            }
+                        } label: {
+                            Label(renderUploadStatus.isBusy ? "Processing" : "Process on GPU", systemImage: "bolt.horizontal")
+                                .font(.caption.weight(.heavy))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(PickleballPalette.lime)
+                        .disabled(renderUploadStatus.isBusy)
+
+                        if let replayURL = renderUploadStatus.replayURL {
+                            Link(destination: replayURL) {
+                                Label("Open replay", systemImage: "play.rectangle")
+                                    .font(.caption.weight(.heavy))
+                                    .foregroundStyle(PickleballPalette.lime)
+                            }
+                        }
+                    }
+                }
+                .padding(12)
+                .frame(width: 300)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(renderUploadTint.opacity(0.48), lineWidth: 1)
+                )
+            }
+        }
+        .padding(16)
+    }
+
+    private var renderUploadTint: Color {
+        switch renderUploadStatus {
+        case .complete:
+            return PickleballPalette.lime
+        case .failed:
+            return PickleballPalette.coral
+        case .idle, .submitting, .running:
+            return PickleballPalette.cyan
+        }
+    }
+
+    private func uploadFinishedRecording() async {
+        guard !renderUploadStatus.isBusy else {
+            return
+        }
+        guard let descriptor = model.descriptor else {
+            renderUploadStatus = .failed("No saved package")
+            return
+        }
+
+        let packageRootURL = CameraCaptureController.defaultPackageRootURL()
+        let client = RenderGatewayClient()
+        renderUploadStatus = .submitting
+
+        do {
+            var job = try await client.submitJob(
+                upload: RenderGatewayUploadRequest(
+                    videoURL: packageRootURL.appendingPathComponent(descriptor.clipRelativePath),
+                    captureSidecarURL: packageRootURL.appendingPathComponent(descriptor.sidecarRelativePath),
+                    clip: descriptor.sessionID
+                )
+            )
+            renderUploadStatus = .running(job, client.replayURL(for: job))
+
+            while job.isActive && !Task.isCancelled {
+                try await Task.sleep(nanoseconds: 2_500_000_000)
+                job = try await client.fetchJobStatus(job.links.status)
+                let replayURL = client.replayURL(for: job)
+                if job.status == .complete {
+                    renderUploadStatus = .complete(job, replayURL)
+                } else if job.status == .failed {
+                    renderUploadStatus = .failed(job.error ?? "Render job failed")
+                } else {
+                    renderUploadStatus = .running(job, replayURL)
+                }
+            }
+        } catch is CancellationError {
+            renderUploadStatus = .idle
+        } catch {
+            renderUploadStatus = .failed(String(describing: error))
         }
     }
 
