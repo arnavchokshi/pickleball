@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -201,6 +203,7 @@ class SshGpuRunner(GpuRunner):
                 f"{request.artifacts_dir}/",
             ]
         )
+        prepare_render_artifacts(request)
 
         manifest_path = request.artifacts_dir / "replay_viewer_manifest.json"
         return GpuRunResult(
@@ -393,6 +396,7 @@ class LocalPipelineRunner(GpuRunner):
                 if path.is_file():
                     target.write_bytes(path.read_bytes())
 
+        prepare_render_artifacts(request)
         manifest_path = request.artifacts_dir / "replay_viewer_manifest.json"
         return GpuRunResult(
             status="complete",
@@ -427,3 +431,72 @@ def runner_from_env(env: Mapping[str, str] | None = None) -> GpuRunner:
         python=env.get("PICKLEBALL_LOCAL_PYTHON", "python"),
         command_timeout_s=int(env.get("PICKLEBALL_GPU_COMMAND_TIMEOUT_S", "7200")),
     )
+
+
+def prepare_render_artifacts(request: GpuRunRequest) -> None:
+    request.artifacts_dir.mkdir(parents=True, exist_ok=True)
+    _copy_source_video_artifact(request)
+    _rewrite_manifest_urls_for_render(request)
+
+
+def _copy_source_video_artifact(request: GpuRunRequest) -> None:
+    suffix = request.video_path.suffix.lower() or ".mp4"
+    target = request.artifacts_dir / f"source{suffix}"
+    if target.is_symlink() or (target.exists() and not target.is_file()):
+        target.unlink()
+    if not target.is_file():
+        shutil.copy2(request.video_path, target)
+
+
+def _rewrite_manifest_urls_for_render(request: GpuRunRequest) -> None:
+    manifest_path = request.artifacts_dir / "replay_viewer_manifest.json"
+    if not manifest_path.is_file():
+        return
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return
+
+    source_artifact_name = f"source{request.video_path.suffix.lower() or '.mp4'}"
+    rewritten = _rewrite_manifest_value(payload, job_id=request.job_id, source_artifact_name=source_artifact_name)
+    manifest_path.write_text(json.dumps(rewritten, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def _rewrite_manifest_value(
+    value: object,
+    *,
+    job_id: str,
+    source_artifact_name: str,
+    key: str | None = None,
+) -> object:
+    if isinstance(value, dict):
+        return {
+            str(child_key): _rewrite_manifest_value(
+                child_value,
+                job_id=job_id,
+                source_artifact_name=source_artifact_name,
+                key=str(child_key),
+            )
+            for child_key, child_value in value.items()
+        }
+    if isinstance(value, list):
+        return [_rewrite_manifest_value(item, job_id=job_id, source_artifact_name=source_artifact_name, key=key) for item in value]
+    if isinstance(value, str) and key is not None and key.endswith("_url"):
+        artifact_name = _artifact_name_from_pipeline_url(value)
+        if artifact_name is not None:
+            if key == "video_url":
+                artifact_name = source_artifact_name
+            return f"/api/jobs/{safe_slug(job_id)}/artifacts/{artifact_name}"
+    return value
+
+
+def _artifact_name_from_pipeline_url(value: str) -> str | None:
+    if value.startswith("/@fs//"):
+        return Path(value.removeprefix("/@fs//")).name
+    if value.startswith("/@fs/"):
+        return Path(value.removeprefix("/@fs/")).name
+    if value.startswith("/"):
+        path = Path(value)
+        if "runs" in path.parts and path.name:
+            return path.name
+    return None

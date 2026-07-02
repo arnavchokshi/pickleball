@@ -1,4 +1,5 @@
 import subprocess
+import json
 from pathlib import Path
 
 import pytest
@@ -58,7 +59,16 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
     def fake_run(cmd: list[str], timeout_s: int | None) -> subprocess.CompletedProcess[str]:
         calls.append(cmd)
         if cmd[0] == "rsync" and "gpu.example:/srv/pickleball/runs/render_jobs/job_1/out/clip_1/" in cmd[-2]:
-            (tmp_path / "artifacts" / "replay_viewer_manifest.json").write_text("{}", encoding="utf-8")
+            (tmp_path / "artifacts" / "confidence_gated_world.json").write_text("{}", encoding="utf-8")
+            (tmp_path / "artifacts" / "replay_viewer_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "video_url": "/@fs//srv/pickleball/runs/render_jobs/job_1/input/clip.mp4",
+                        "virtual_world_url": "/@fs//srv/pickleball/runs/render_jobs/job_1/out/clip_1/confidence_gated_world.json",
+                    }
+                ),
+                encoding="utf-8",
+            )
         return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
 
     request = GpuRunRequest(
@@ -115,6 +125,10 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
         "Running pipeline on GPU",
         "Syncing replay artifacts",
     ]
+    rewritten_manifest = json.loads((tmp_path / "artifacts" / "replay_viewer_manifest.json").read_text(encoding="utf-8"))
+    assert rewritten_manifest["video_url"] == "/api/jobs/job_1/artifacts/source.mp4"
+    assert rewritten_manifest["virtual_world_url"] == "/api/jobs/job_1/artifacts/confidence_gated_world.json"
+    assert (tmp_path / "artifacts" / "source.mp4").read_bytes() == b"video"
 
 
 def test_local_pipeline_runner_requires_explicit_enablement(tmp_path: Path) -> None:
