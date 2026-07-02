@@ -5,6 +5,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { activeReplayPointForTime, parseReplayScene, resolveReplaySceneAssetUrl, type ReplayScene } from "./replayScene";
+import { UploadPanel } from "./UploadPanel";
 import {
   activeBallContactPlayerIds,
   ballRenderInfoForTime,
@@ -282,6 +283,8 @@ export default function App() {
       </header>
 
       {loadError ? <p className="load-error">{loadError}</p> : null}
+
+      <UploadPanel />
 
       <section className="review-layout">
         <div className="video-panel">

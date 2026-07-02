@@ -17,4 +17,11 @@ models_coreml
 third_party
 
 ios
-web
+web/**
+!web/replay
+!web/replay/package.json
+!web/replay/package-lock.json
+!web/replay/index.html
+!web/replay/vite.config.ts
+!web/replay/src
+!web/replay/src/**

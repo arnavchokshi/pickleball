@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: pickleball-gpu-gateway
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PICKLEBALL_UPLOAD_ROOT
+        value: /tmp/pickleball_uploads
+      - key: PICKLEBALL_GPU_REPO
+        value: /home/arnavchokshi/pickleball_git
+      - key: PICKLEBALL_GPU_PYTHON
+        value: /home/arnavchokshi/pickleball_git/.venv/bin/python
+      - key: PICKLEBALL_GPU_SSH_KEY_PATH
+        value: /etc/secrets/gcp_ssh_key
+      - key: PICKLEBALL_GPU_KNOWN_HOSTS_PATH
+        value: /etc/secrets/gcp_known_hosts
+      - key: PICKLEBALL_GPU_COMMAND_TIMEOUT_S
+        value: "7200"
+      - key: PICKLEBALL_GPU_SSH_HOST
+        sync: false
+      - key: PICKLEBALL_GPU_WORKER_URL
+        sync: false
+      - key: PICKLEBALL_GPU_WORKER_TOKEN
+        sync: false
+
+previews:
+  generation: "off"
