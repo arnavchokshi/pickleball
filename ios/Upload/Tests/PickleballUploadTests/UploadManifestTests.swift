@@ -98,6 +98,29 @@ final class UploadManifestTests: XCTestCase {
         XCTAssertFalse(parts.contains { $0.kind == .lidarDepth })
     }
 
+    func testUploadValidationAllowsCameraRollImportWithoutGravityWhenReasonIsPresent() {
+        let manifest = UploadManifest(
+            clipRelativePath: "captures/imported/clip.mov",
+            sidecar: CaptureSidecar(
+                provenance: .cameraRollImport,
+                deviceTier: .standard,
+                deviceModel: "camera_roll",
+                fps: 60,
+                format: .hevc,
+                resolution: [1920, 1080],
+                locked: nil,
+                intrinsics: nil,
+                gravity: nil,
+                unavailableSensorReasons: [
+                    "core_motion_gravity": "camera_roll_import_has_no_live_core_motion",
+                ],
+                captureQuality: CaptureQuality(grade: .warn, reasons: ["imported_no_live_sensors"])
+            )
+        )
+
+        XCTAssertTrue(UploadManifestValidator.validate(manifest).isValid)
+    }
+
     func testChunkPlanComputesStableOffsetsLengthsAndIdentifiers() throws {
         let plan = try ResumableChunkPlan(
             relativePath: "clips/session.mov",
@@ -118,6 +141,71 @@ final class UploadManifestTests: XCTestCase {
                 "clips/session.mov:2:10485760:1",
             ]
         )
+    }
+
+    func testRenderGatewayMultipartBodyIncludesVideoSidecarClipAndFrameCap() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("render-gateway-upload-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let videoURL = directory.appendingPathComponent("clip.mov")
+        let sidecarURL = directory.appendingPathComponent("capture_sidecar.json")
+        try Data("video-bytes".utf8).write(to: videoURL)
+        try Data("{\"schema_version\":1}".utf8).write(to: sidecarURL)
+
+        let body = try RenderGatewayMultipartBodyWriter.write(
+            RenderGatewayUploadRequest(
+                videoURL: videoURL,
+                captureSidecarURL: sidecarURL,
+                clip: "capture_001",
+                maxFrames: 12
+            ),
+            boundary: "test-boundary",
+            directory: directory
+        )
+
+        let payload = try String(contentsOf: body.fileURL, encoding: .utf8)
+        XCTAssertEqual(body.contentType, "multipart/form-data; boundary=test-boundary")
+        XCTAssertTrue(payload.contains(#"name="video"; filename="clip.mov""#))
+        XCTAssertTrue(payload.contains(#"name="capture_sidecar"; filename="capture_sidecar.json""#))
+        XCTAssertTrue(payload.contains(#"name="clip""#))
+        XCTAssertTrue(payload.contains("capture_001"))
+        XCTAssertTrue(payload.contains(#"name="max_frames""#))
+        XCTAssertTrue(payload.contains("12"))
+    }
+
+    func testRenderGatewayJobDecodesProgressAndReplayManifestURL() throws {
+        let data = Data(
+            """
+            {
+              "id": "job_1",
+              "clip": "capture_001",
+              "status": "running",
+              "progress": {
+                "percent": 42,
+                "stage": "Running pipeline on GPU",
+                "message": "Tracking and body stages are active.",
+                "eta_seconds": 118
+              },
+              "result": {
+                "manifest_url": "/api/jobs/job_1/manifest"
+              },
+              "links": {
+                "status": "/api/jobs/job_1"
+              }
+            }
+            """.utf8
+        )
+
+        let job = try RenderGatewayJob.decode(data)
+
+        XCTAssertEqual(job.id, "job_1")
+        XCTAssertEqual(job.status, .running)
+        XCTAssertEqual(job.progress?.percent, 42)
+        XCTAssertEqual(job.progress?.etaText, "about 2 min")
+        XCTAssertEqual(job.result?.manifestUrl, "/api/jobs/job_1/manifest")
+        XCTAssertTrue(job.isActive)
     }
 
     private static func sidecar(

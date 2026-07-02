@@ -5,6 +5,7 @@ import re
 import shutil
 import time
 import uuid
+from dataclasses import replace
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -13,11 +14,21 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadF
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .gpu_runner import GpuRunner, GpuRunRequest, GpuRunResult, runner_from_env, safe_slug
+from .gpu_runner import GpuRunner, GpuRunProgress, GpuRunRequest, GpuRunResult, runner_from_env, safe_slug
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_UPLOAD_ROOT = Path(os.environ.get("PICKLEBALL_UPLOAD_ROOT", "/tmp/pickleball_render_uploads"))
 DEFAULT_STATIC_DIR = ROOT / "web" / "replay" / "dist"
+
+PIPELINE_STEPS: tuple[tuple[str, str, int], ...] = (
+    ("queued", "Queued", 0),
+    ("uploaded", "Inputs saved", 8),
+    ("gpu_prepare", "GPU setup", 12),
+    ("gpu_upload", "Input transfer", 20),
+    ("gpu_pipeline", "GPU pipeline", 36),
+    ("artifacts", "Artifact sync", 88),
+    ("ready", "Replay ready", 100),
+)
 
 
 class JobStore:
@@ -36,6 +47,11 @@ class JobStore:
             "status": "queued",
             "created_at": now,
             "updated_at": now,
+            "progress": _progress_payload(
+                GpuRunProgress(percent=0, stage="Queued", message="Waiting for the GPU worker."),
+                status="queued",
+                updated_at=now,
+            ),
             "result": None,
             "error": None,
             "links": {
@@ -53,7 +69,8 @@ class JobStore:
             raise KeyError(job_id)
         import json
 
-        return json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return _with_dynamic_eta(payload)
 
     def update(self, job_id: str, **changes: Any) -> dict[str, Any]:
         with self._lock:
@@ -115,6 +132,13 @@ def create_app(
         capture_sidecar_path = await _save_optional_upload(capture_sidecar, input_dir, "capture_sidecar.json")
         court_corners_path = await _save_optional_upload(court_corners, input_dir, "court_corners.json")
         court_calibration_path = await _save_optional_upload(court_calibration, input_dir, "court_calibration.json")
+        store.update(
+            job["id"],
+            progress=_progress_payload(
+                GpuRunProgress(percent=8, stage="Inputs saved", message="Upload received by Render."),
+                status="queued",
+            ),
+        )
 
         request = GpuRunRequest(
             job_id=job["id"],
@@ -169,18 +193,71 @@ def create_app(
 
 
 def _execute_job(store: JobStore, runner: GpuRunner, request: GpuRunRequest) -> None:
-    store.update(request.job_id, status="running", error=None)
+    started_at = time.time()
+    estimated_total_seconds = _estimated_total_seconds(request)
+
+    def handle_progress(progress: GpuRunProgress) -> None:
+        store.update(
+            request.job_id,
+            progress=_progress_payload(
+                progress,
+                status="running",
+                started_at=started_at,
+                estimated_total_seconds=estimated_total_seconds,
+            ),
+        )
+
+    store.update(
+        request.job_id,
+        status="running",
+        error=None,
+        progress=_progress_payload(
+            GpuRunProgress(
+                percent=10,
+                stage="Starting GPU job",
+                message="Render is handing the video package to the GPU runner.",
+            ),
+            status="running",
+            started_at=started_at,
+            estimated_total_seconds=estimated_total_seconds,
+        ),
+    )
+    tracked_request = replace(request, progress_callback=handle_progress)
     try:
-        result = runner.run(request)
+        result = runner.run(tracked_request)
     except Exception as exc:  # noqa: BLE001 - job failures are API state, not process crashes
-        store.update(request.job_id, status="failed", error=f"{type(exc).__name__}: {exc}", result=None)
+        current = store.get(request.job_id)
+        current_percent = int(current.get("progress", {}).get("percent", 10))
+        store.update(
+            request.job_id,
+            status="failed",
+            error=f"{type(exc).__name__}: {exc}",
+            result=None,
+            progress=_progress_payload(
+                GpuRunProgress(percent=current_percent, stage="Failed", message=str(exc), eta_seconds=None),
+                status="failed",
+                started_at=started_at,
+                completed_at=time.time(),
+            ),
+        )
         return
 
+    final_progress = (
+        GpuRunProgress(percent=100, stage="Replay ready", message="Replay artifacts are ready.", eta_seconds=0)
+        if result.status == "complete"
+        else GpuRunProgress(percent=55, stage="Submitted", message="GPU worker accepted the job.")
+    )
     store.update(
         request.job_id,
         status=result.status,
         error=None,
         result=_result_payload(request.job_id, result),
+        progress=_progress_payload(
+            final_progress,
+            status=result.status,
+            started_at=started_at,
+            completed_at=time.time() if result.status in {"complete", "failed"} else None,
+        ),
     )
 
 
@@ -193,6 +270,95 @@ def _result_payload(job_id: str, result: GpuRunResult) -> dict[str, Any]:
     if result.raw:
         payload["raw"] = result.raw
     return payload
+
+
+def _estimated_total_seconds(request: GpuRunRequest) -> int:
+    override = os.environ.get("PICKLEBALL_GPU_DEFAULT_ETA_SECONDS", "").strip()
+    if override:
+        try:
+            return max(30, int(override))
+        except ValueError:
+            pass
+    if request.max_frames is not None:
+        return max(45, min(900, request.max_frames * 8))
+    try:
+        size_mb = max(1.0, request.video_path.stat().st_size / (1024 * 1024))
+    except OSError:
+        size_mb = 100.0
+    return int(max(180, min(5400, size_mb * 18)))
+
+
+def _progress_payload(
+    progress: GpuRunProgress,
+    *,
+    status: str,
+    updated_at: float | None = None,
+    started_at: float | None = None,
+    estimated_total_seconds: int | None = None,
+    completed_at: float | None = None,
+) -> dict[str, Any]:
+    now = time.time() if updated_at is None else updated_at
+    percent = max(0, min(100, int(progress.percent)))
+    payload: dict[str, Any] = {
+        "percent": percent,
+        "stage": progress.stage,
+        "message": progress.message,
+        "eta_seconds": progress.eta_seconds,
+        "updated_at": now,
+        "started_at": started_at,
+        "completed_at": completed_at,
+        "steps": _progress_steps(status=status, percent=percent),
+    }
+    if estimated_total_seconds is not None:
+        payload["estimated_total_seconds"] = estimated_total_seconds
+        if status in {"queued", "running", "submitted"} and started_at is not None:
+            payload["eta_seconds"] = max(0, int(estimated_total_seconds - max(0.0, now - started_at)))
+    if status == "complete":
+        payload["eta_seconds"] = 0
+    if status == "failed":
+        payload["eta_seconds"] = None
+    return payload
+
+
+def _progress_steps(*, status: str, percent: int) -> list[dict[str, str]]:
+    if status == "complete":
+        return [{"id": step_id, "label": label, "status": "complete"} for step_id, label, _ in PIPELINE_STEPS]
+
+    active_index = 0
+    for index, (_, _, threshold) in enumerate(PIPELINE_STEPS):
+        if percent >= threshold:
+            active_index = index
+
+    steps: list[dict[str, str]] = []
+    for index, (step_id, label, _) in enumerate(PIPELINE_STEPS):
+        if status == "failed" and index == active_index:
+            step_status = "failed"
+        elif index < active_index:
+            step_status = "complete"
+        elif index == active_index:
+            step_status = "active"
+        else:
+            step_status = "pending"
+        steps.append({"id": step_id, "label": label, "status": step_status})
+    return steps
+
+
+def _with_dynamic_eta(payload: dict[str, Any]) -> dict[str, Any]:
+    progress = payload.get("progress")
+    if not isinstance(progress, dict):
+        return payload
+    if payload.get("status") not in {"queued", "running", "submitted"}:
+        return payload
+    started_at = progress.get("started_at")
+    estimated_total_seconds = progress.get("estimated_total_seconds")
+    if not isinstance(started_at, (int, float)) or not isinstance(estimated_total_seconds, (int, float)):
+        return payload
+
+    updated_payload = dict(payload)
+    updated_progress = dict(progress)
+    updated_progress["eta_seconds"] = max(0, int(estimated_total_seconds - max(0.0, time.time() - started_at)))
+    updated_payload["progress"] = updated_progress
+    return updated_payload
 
 
 def _clip_id_from_upload(clip: str | None, filename: str | None) -> str:

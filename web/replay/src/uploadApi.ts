@@ -2,10 +2,25 @@ const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
 
 export type UploadJobStatus = "queued" | "running" | "complete" | "submitted" | "failed";
 
+export type UploadJobStep = {
+  id: string;
+  label: string;
+  status: "pending" | "active" | "complete" | "failed";
+};
+
+export type UploadJobProgress = {
+  percent: number;
+  stage: string;
+  message?: string;
+  eta_seconds?: number | null;
+  steps?: UploadJobStep[];
+};
+
 export type UploadJob = {
   id: string;
   clip?: string;
   status: UploadJobStatus;
+  progress?: UploadJobProgress | null;
   error?: string | null;
   result?: {
     manifest_url?: string | null;
@@ -36,6 +51,24 @@ export function apiUrl(path: string, baseUrl = DEFAULT_API_BASE_URL): string {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   const cleanBase = baseUrl.trim().replace(/\/+$/, "");
   return cleanBase ? `${cleanBase}${cleanPath}` : cleanPath;
+}
+
+export function jobProgressPercent(job: UploadJob | null): number {
+  if (!job) return 0;
+  if (job.status === "complete") return 100;
+  const rawPercent = job.progress?.percent;
+  if (typeof rawPercent !== "number" || Number.isNaN(rawPercent)) {
+    if (job.status === "queued") return 0;
+    if (job.status === "running" || job.status === "submitted") return 35;
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(rawPercent)));
+}
+
+export function formatEta(etaSeconds?: number | null): string {
+  if (etaSeconds === null || etaSeconds === undefined || Number.isNaN(etaSeconds)) return "ETA calculating";
+  if (etaSeconds < 60) return "less than 1 min";
+  return `about ${Math.max(1, Math.round(etaSeconds / 60))} min`;
 }
 
 export async function uploadVideoJob(input: UploadVideoInput, options: UploadApiOptions = {}): Promise<UploadJob> {

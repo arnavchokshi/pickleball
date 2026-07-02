@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-import { apiUrl, fetchJobStatus, uploadVideoJob, type UploadJob } from "./uploadApi";
+import { apiUrl, fetchJobStatus, formatEta, jobProgressPercent, uploadVideoJob, type UploadJob } from "./uploadApi";
 
 type UploadPanelProps = {
   apiBaseUrl?: string;
@@ -15,6 +15,14 @@ export function jobStatusText(job: UploadJob | null): string {
   return job.status;
 }
 
+export function pipelineProgressLabel(job: UploadJob | null): string {
+  if (!job) return "Waiting for upload";
+  const stage = job.progress?.stage ?? jobStatusText(job);
+  if (job.status === "complete") return stage;
+  if (job.status === "failed") return stage;
+  return `${stage} · ${formatEta(job.progress?.eta_seconds)} left`;
+}
+
 export function UploadPanel({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? "" }: UploadPanelProps) {
   const [video, setVideo] = useState<File | null>(null);
   const [captureSidecar, setCaptureSidecar] = useState<File | null>(null);
@@ -25,6 +33,8 @@ export function UploadPanel({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.tr
   const [job, setJob] = useState<UploadJob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const visibleProgress = isUploading && !job ? 5 : jobProgressPercent(job);
+  const visibleProgressLabel = isUploading && !job ? "Uploading to Render · ETA calculating" : pipelineProgressLabel(job);
 
   const replayManifestUrl = useMemo(() => {
     const manifestUrl = job?.result?.manifest_url;
@@ -103,6 +113,32 @@ export function UploadPanel({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.tr
           {isUploading ? "Uploading" : "Upload and process"}
         </button>
       </form>
+      <div className="upload-progress" aria-label="Pipeline progress">
+        <div className="upload-progress-head">
+          <span>Pipeline progress</span>
+          <strong>{visibleProgress}%</strong>
+        </div>
+        <div
+          className="upload-progress-track"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={visibleProgress}
+          aria-label="Pipeline progress"
+        >
+          <div className="upload-progress-fill" style={{ width: `${visibleProgress}%` }} />
+        </div>
+        <div className="upload-progress-meta">{visibleProgressLabel}</div>
+        {job?.progress?.steps?.length ? (
+          <div className="upload-steps" aria-label="Pipeline steps">
+            {job.progress.steps.map((step) => (
+              <span key={step.id} className={`upload-step ${step.status}`}>
+                {step.label}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
       <div className="upload-status">
         <span className={`upload-state ${job?.status ?? "idle"}`}>{jobStatusText(job)}</span>
         {job?.id ? <span>{job.id}</span> : null}

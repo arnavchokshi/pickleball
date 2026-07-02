@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { apiUrl, fetchJobStatus, uploadVideoJob } from "./uploadApi";
+import { apiUrl, fetchJobStatus, formatEta, jobProgressPercent, uploadVideoJob } from "./uploadApi";
 
 describe("apiUrl", () => {
   it("uses same-origin API paths by default", () => {
@@ -72,5 +72,27 @@ describe("fetchJobStatus", () => {
     const job = await fetchJobStatus("/api/jobs/job_1", { baseUrl: "https://pb.example.com/", fetchImpl });
 
     expect(job.status).toBe("complete");
+  });
+});
+
+describe("job progress helpers", () => {
+  it("normalizes server progress and formats ETA", () => {
+    expect(
+      jobProgressPercent({
+        id: "job_1",
+        status: "running",
+        progress: { percent: 42, stage: "Running pipeline on GPU", eta_seconds: 118 },
+        links: { status: "/api/jobs/job_1" },
+      }),
+    ).toBe(42);
+    expect(
+      jobProgressPercent({
+        id: "job_1",
+        status: "complete",
+        links: { status: "/api/jobs/job_1" },
+      }),
+    ).toBe(100);
+    expect(formatEta(118)).toBe("about 2 min");
+    expect(formatEta(0)).toBe("less than 1 min");
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { UploadPanel, jobStatusText } from "./UploadPanel";
+import { UploadPanel, jobStatusText, pipelineProgressLabel } from "./UploadPanel";
 
 describe("jobStatusText", () => {
   it("maps server job states to concise user-facing labels", () => {
@@ -14,6 +14,24 @@ describe("jobStatusText", () => {
   });
 });
 
+describe("pipelineProgressLabel", () => {
+  it("uses server progress stage and ETA when present", () => {
+    expect(
+      pipelineProgressLabel({
+        id: "job_1",
+        status: "running",
+        progress: {
+          percent: 42,
+          stage: "Running pipeline on GPU",
+          message: "Tracking and body stages are active.",
+          eta_seconds: 118,
+        },
+        links: { status: "/api/jobs/job_1" },
+      }),
+    ).toBe("Running pipeline on GPU · about 2 min left");
+  });
+});
+
 describe("UploadPanel", () => {
   it("renders video, sidecar, calibration, and submit controls", () => {
     const markup = renderToStaticMarkup(<UploadPanel />);
@@ -21,6 +39,7 @@ describe("UploadPanel", () => {
     expect(markup).toContain("Video");
     expect(markup).toContain("Capture sidecar");
     expect(markup).toContain("Court calibration");
+    expect(markup).toContain("Pipeline progress");
     expect(markup).toContain("Upload and process");
   });
 });

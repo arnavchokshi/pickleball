@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from server.gpu_runner import (
+    GpuRunProgress,
     GpuRunRequest,
     LocalPipelineRunner,
     MissingGpuRunnerConfig,
@@ -72,6 +73,17 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
     request.input_dir.mkdir()
     request.video_path.write_bytes(b"video")
     request.capture_sidecar_path.write_text("{}", encoding="utf-8")
+    progress_events: list[GpuRunProgress] = []
+    request = GpuRunRequest(
+        job_id=request.job_id,
+        clip=request.clip,
+        input_dir=request.input_dir,
+        video_path=request.video_path,
+        capture_sidecar_path=request.capture_sidecar_path,
+        artifacts_dir=request.artifacts_dir,
+        max_frames=request.max_frames,
+        progress_callback=progress_events.append,
+    )
 
     runner = SshGpuRunner(
         host="gpu.example",
@@ -97,6 +109,12 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
     assert "--device cuda:0" in remote_command
     assert "--capture-sidecar" in remote_command
     assert "--max-frames 12" in remote_command
+    assert [event.stage for event in progress_events] == [
+        "Preparing GPU workspace",
+        "Uploading inputs to GPU",
+        "Running pipeline on GPU",
+        "Syncing replay artifacts",
+    ]
 
 
 def test_local_pipeline_runner_requires_explicit_enablement(tmp_path: Path) -> None:

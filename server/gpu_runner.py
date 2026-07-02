@@ -24,6 +24,17 @@ def safe_slug(value: str) -> str:
 
 
 @dataclass(frozen=True)
+class GpuRunProgress:
+    percent: int
+    stage: str
+    message: str = ""
+    eta_seconds: int | None = None
+
+
+ProgressCallback = Callable[[GpuRunProgress], None]
+
+
+@dataclass(frozen=True)
 class GpuRunRequest:
     job_id: str
     clip: str
@@ -34,6 +45,7 @@ class GpuRunRequest:
     court_corners_path: Path | None = None
     court_calibration_path: Path | None = None
     max_frames: int | None = None
+    progress_callback: ProgressCallback | None = field(default=None, compare=False, repr=False)
 
 
 @dataclass(frozen=True)
@@ -54,6 +66,26 @@ class GpuRunner:
 
     def run(self, request: GpuRunRequest) -> GpuRunResult:
         raise NotImplementedError
+
+    @staticmethod
+    def emit_progress(
+        request: GpuRunRequest,
+        *,
+        percent: int,
+        stage: str,
+        message: str = "",
+        eta_seconds: int | None = None,
+    ) -> None:
+        if request.progress_callback is None:
+            return
+        request.progress_callback(
+            GpuRunProgress(
+                percent=max(0, min(100, percent)),
+                stage=stage,
+                message=message,
+                eta_seconds=eta_seconds,
+            )
+        )
 
 
 class UnconfiguredGpuRunner(GpuRunner):
@@ -87,6 +119,7 @@ class SshGpuRunner(GpuRunner):
         known_hosts_path: str | None = None,
         connect_timeout_s: int = 20,
         command_timeout_s: int = 7200,
+        supports_court_calibration: bool = False,
         run: RunCommand = _run_command,
     ) -> None:
         self.host = host
@@ -96,6 +129,7 @@ class SshGpuRunner(GpuRunner):
         self.known_hosts_path = known_hosts_path
         self.connect_timeout_s = connect_timeout_s
         self.command_timeout_s = command_timeout_s
+        self.supports_court_calibration = supports_court_calibration
         self._run = run
 
     def describe(self) -> dict[str, str]:
@@ -110,13 +144,30 @@ class SshGpuRunner(GpuRunner):
         job_id = safe_slug(request.job_id)
         clip = safe_slug(request.clip)
         request.artifacts_dir.mkdir(parents=True, exist_ok=True)
+        if request.court_calibration_path is not None and not self.supports_court_calibration:
+            raise RuntimeError(
+                "court_calibration upload is not supported by the configured GPU process_video snapshot; "
+                "upload capture_sidecar or court_corners instead."
+            )
 
         remote_job_dir = f"{self.remote_repo}/runs/render_jobs/{job_id}"
         remote_input_dir = f"{remote_job_dir}/input"
         remote_out_dir = f"{remote_job_dir}/out"
         remote_artifacts_dir = f"{remote_out_dir}/{clip}"
 
+        self.emit_progress(
+            request,
+            percent=12,
+            stage="Preparing GPU workspace",
+            message="Creating the remote job directory.",
+        )
         self._checked_run([*self._ssh_base(), f"mkdir -p {shlex.quote(remote_input_dir)} {shlex.quote(remote_out_dir)}"])
+        self.emit_progress(
+            request,
+            percent=20,
+            stage="Uploading inputs to GPU",
+            message="Copying video and sidecar files to the GCP host.",
+        )
         self._checked_run(
             [
                 "rsync",
@@ -127,7 +178,19 @@ class SshGpuRunner(GpuRunner):
                 f"{self.host}:{remote_input_dir}/",
             ]
         )
+        self.emit_progress(
+            request,
+            percent=36,
+            stage="Running pipeline on GPU",
+            message="GPU processing is running process_video.py.",
+        )
         self._checked_run([*self._ssh_base(), self._remote_process_command(request, remote_input_dir, remote_out_dir)])
+        self.emit_progress(
+            request,
+            percent=88,
+            stage="Syncing replay artifacts",
+            message="Copying replay outputs back to Render.",
+        )
         self._checked_run(
             [
                 "rsync",
@@ -191,7 +254,7 @@ class SshGpuRunner(GpuRunner):
             args.extend(["--capture-sidecar", f"{remote_input_dir}/{request.capture_sidecar_path.name}"])
         if request.court_corners_path is not None:
             args.extend(["--court-corners", f"{remote_input_dir}/{request.court_corners_path.name}"])
-        if request.court_calibration_path is not None:
+        if request.court_calibration_path is not None and self.supports_court_calibration:
             args.extend(["--court-calibration", f"{remote_input_dir}/{request.court_calibration_path.name}"])
 
         quoted = " ".join(shlex.quote(arg) for arg in args)
@@ -217,6 +280,12 @@ class HttpGpuRunner(GpuRunner):
         return {"mode": self.name, "base_url": self.base_url}
 
     def run(self, request: GpuRunRequest) -> GpuRunResult:
+        self.emit_progress(
+            request,
+            percent=20,
+            stage="Uploading inputs to GPU worker",
+            message="Submitting the video package to the configured GPU worker.",
+        )
         headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
         data: dict[str, str] = {"job_id": request.job_id, "clip": request.clip}
         if request.max_frames is not None:
@@ -233,6 +302,12 @@ class HttpGpuRunner(GpuRunner):
                 if path is not None:
                     files[field] = (path.name, path.open("rb"), "application/json")
             with httpx.Client(timeout=self.timeout_s) as client:
+                self.emit_progress(
+                    request,
+                    percent=36,
+                    stage="Running pipeline on GPU",
+                    message="Waiting for the GPU worker to return.",
+                )
                 response = client.post(f"{self.base_url}/jobs", data=data, files=files, headers=headers)
                 response.raise_for_status()
                 payload = response.json()
@@ -274,6 +349,12 @@ class LocalPipelineRunner(GpuRunner):
 
         request.artifacts_dir.mkdir(parents=True, exist_ok=True)
         out_dir = request.artifacts_dir.parent / "process_video"
+        self.emit_progress(
+            request,
+            percent=36,
+            stage="Running local pipeline",
+            message="process_video.py is running on the local machine.",
+        )
         args = [
             self.python,
             "scripts/racketsport/process_video.py",
@@ -299,6 +380,12 @@ class LocalPipelineRunner(GpuRunner):
             detail = (completed.stderr or completed.stdout or "").strip()
             raise RuntimeError(f"local process_video failed ({completed.returncode}): {detail}")
 
+        self.emit_progress(
+            request,
+            percent=88,
+            stage="Collecting replay artifacts",
+            message="Copying process_video outputs into the job artifacts directory.",
+        )
         produced_dir = out_dir / safe_slug(request.clip)
         if produced_dir.is_dir() and produced_dir != request.artifacts_dir:
             for path in produced_dir.iterdir():
@@ -332,6 +419,7 @@ def runner_from_env(env: Mapping[str, str] | None = None) -> GpuRunner:
             known_hosts_path=env.get("PICKLEBALL_GPU_KNOWN_HOSTS_PATH") or None,
             connect_timeout_s=int(env.get("PICKLEBALL_GPU_CONNECT_TIMEOUT_S", "20")),
             command_timeout_s=int(env.get("PICKLEBALL_GPU_COMMAND_TIMEOUT_S", "7200")),
+            supports_court_calibration=env.get("PICKLEBALL_GPU_SUPPORTS_COURT_CALIBRATION", "").strip() == "1",
         )
 
     return LocalPipelineRunner(

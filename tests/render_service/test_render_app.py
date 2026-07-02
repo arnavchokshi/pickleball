@@ -2,7 +2,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from server.gpu_runner import GpuRunRequest, GpuRunResult
+from server.gpu_runner import GpuRunProgress, GpuRunRequest, GpuRunResult
 from server.render_app import create_app
 
 
@@ -36,6 +36,22 @@ class FailingRunner:
 
     def run(self, request: GpuRunRequest) -> GpuRunResult:
         raise RuntimeError("gpu unavailable")
+
+
+class ProgressRunner(CompletingRunner):
+    name = "test-progress"
+
+    def run(self, request: GpuRunRequest) -> GpuRunResult:
+        assert request.progress_callback is not None
+        request.progress_callback(
+            GpuRunProgress(
+                percent=42,
+                stage="Running pipeline on GPU",
+                message="Tracking and body stages are active.",
+                eta_seconds=118,
+            )
+        )
+        return super().run(request)
 
 
 def test_health_reports_runner_mode(tmp_path: Path) -> None:
@@ -83,6 +99,30 @@ def test_upload_job_saves_inputs_runs_gpu_and_exposes_manifest(tmp_path: Path) -
     assert manifest.json()["artifact_type"] == "replay_viewer_manifest"
 
 
+def test_upload_job_reports_progress_and_eta(tmp_path: Path) -> None:
+    runner = ProgressRunner()
+    app = create_app(upload_root=tmp_path, runner=runner, run_jobs_inline=True, static_dir=tmp_path / "dist")
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/jobs",
+        data={"clip": "progress_01", "max_frames": "8"},
+        files={"video": ("progress.mp4", b"fake-video", "video/mp4")},
+    )
+
+    assert response.status_code == 202
+    initial = response.json()
+    assert initial["progress"]["percent"] >= 0
+
+    status = client.get(initial["links"]["status"]).json()
+
+    assert status["status"] == "complete"
+    assert status["progress"]["percent"] == 100
+    assert status["progress"]["stage"] == "Replay ready"
+    assert status["progress"]["eta_seconds"] == 0
+    assert any(step["id"] == "gpu_pipeline" and step["status"] == "complete" for step in status["progress"]["steps"])
+
+
 def test_upload_job_records_runner_failures(tmp_path: Path) -> None:
     app = create_app(upload_root=tmp_path, runner=FailingRunner(), run_jobs_inline=True, static_dir=tmp_path / "dist")
     client = TestClient(app)
@@ -97,6 +137,8 @@ def test_upload_job_records_runner_failures(tmp_path: Path) -> None:
 
     assert status["status"] == "failed"
     assert "gpu unavailable" in status["error"]
+    assert status["progress"]["stage"] == "Failed"
+    assert status["progress"]["eta_seconds"] is None
 
 
 def test_upload_rejects_unsafe_clip_names(tmp_path: Path) -> None:
