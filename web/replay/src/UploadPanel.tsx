@@ -18,6 +18,7 @@ export function jobStatusText(job: UploadJob | null): string {
 export function UploadPanel({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? "" }: UploadPanelProps) {
   const [video, setVideo] = useState<File | null>(null);
   const [captureSidecar, setCaptureSidecar] = useState<File | null>(null);
+  const [courtCorners, setCourtCorners] = useState<File | null>(null);
   const [courtCalibration, setCourtCalibration] = useState<File | null>(null);
   const [clip, setClip] = useState("");
   const [maxFrames, setMaxFrames] = useState("");
@@ -56,6 +57,7 @@ export function UploadPanel({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.tr
         {
           video,
           captureSidecar,
+          courtCorners,
           courtCalibration,
           clip,
           maxFrames: maxFrames ? Number(maxFrames) : undefined,
@@ -80,6 +82,10 @@ export function UploadPanel({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.tr
         <label>
           <span>Capture sidecar</span>
           <input type="file" accept="application/json,.json" onChange={(event) => setCaptureSidecar(event.target.files?.[0] ?? null)} />
+        </label>
+        <label>
+          <span>Court corners</span>
+          <input type="file" accept="application/json,.json" onChange={(event) => setCourtCorners(event.target.files?.[0] ?? null)} />
         </label>
         <label>
           <span>Court calibration</span>
