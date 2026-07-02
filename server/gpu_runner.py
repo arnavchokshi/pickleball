@@ -123,6 +123,9 @@ class SshGpuRunner(GpuRunner):
         connect_timeout_s: int = 20,
         command_timeout_s: int = 7200,
         supports_court_calibration: bool = False,
+        extra_pythonpath: str | None = None,
+        wasb_repo: str | None = None,
+        wasb_checkpoint: str | None = None,
         run: RunCommand = _run_command,
     ) -> None:
         self.host = host
@@ -133,6 +136,9 @@ class SshGpuRunner(GpuRunner):
         self.connect_timeout_s = connect_timeout_s
         self.command_timeout_s = command_timeout_s
         self.supports_court_calibration = supports_court_calibration
+        self.extra_pythonpath = extra_pythonpath
+        self.wasb_repo = wasb_repo
+        self.wasb_checkpoint = wasb_checkpoint
         self._run = run
 
     def describe(self) -> dict[str, str]:
@@ -254,6 +260,10 @@ class SshGpuRunner(GpuRunner):
         ]
         if request.allow_auto_court_corners_preview:
             args.append("--allow-auto-court-corners-preview")
+        if self.wasb_repo:
+            args.extend(["--wasb-repo", self.wasb_repo])
+        if self.wasb_checkpoint:
+            args.extend(["--wasb-checkpoint", self.wasb_checkpoint])
         if request.max_frames is not None:
             args.extend(["--max-frames", str(request.max_frames)])
         if request.capture_sidecar_path is not None:
@@ -264,7 +274,13 @@ class SshGpuRunner(GpuRunner):
             args.extend(["--court-calibration", f"{remote_input_dir}/{request.court_calibration_path.name}"])
 
         quoted = " ".join(shlex.quote(arg) for arg in args)
-        return f"cd {shlex.quote(self.remote_repo)} && {quoted}"
+        env_prefix = self._remote_env_prefix()
+        return f"cd {shlex.quote(self.remote_repo)} && {env_prefix}{quoted}"
+
+    def _remote_env_prefix(self) -> str:
+        if not self.extra_pythonpath:
+            return ""
+        return f"PYTHONPATH={shlex.quote(self.extra_pythonpath)}${{PYTHONPATH:+:$PYTHONPATH}} "
 
     def _checked_run(self, cmd: list[str]) -> subprocess.CompletedProcess[str]:
         completed = self._run(cmd, self.command_timeout_s)
@@ -431,6 +447,9 @@ def runner_from_env(env: Mapping[str, str] | None = None) -> GpuRunner:
             connect_timeout_s=int(env.get("PICKLEBALL_GPU_CONNECT_TIMEOUT_S", "20")),
             command_timeout_s=int(env.get("PICKLEBALL_GPU_COMMAND_TIMEOUT_S", "7200")),
             supports_court_calibration=env.get("PICKLEBALL_GPU_SUPPORTS_COURT_CALIBRATION", "").strip() == "1",
+            extra_pythonpath=env.get("PICKLEBALL_GPU_EXTRA_PYTHONPATH") or None,
+            wasb_repo=env.get("PICKLEBALL_GPU_WASB_REPO") or None,
+            wasb_checkpoint=env.get("PICKLEBALL_GPU_WASB_CHECKPOINT") or None,
         )
 
     return LocalPipelineRunner(

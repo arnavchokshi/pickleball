@@ -101,6 +101,9 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
         remote_repo="/srv/pickleball",
         remote_python="/srv/pickleball/.venv/bin/python",
         known_hosts_path="/etc/secrets/gcp_known_hosts",
+        extra_pythonpath="/srv/openmmlab/mmpose/projects/rtmpose3d",
+        wasb_repo="/srv/pickleball_git/third_party/WASB-SBDT",
+        wasb_checkpoint="/srv/pickleball_git/models/checkpoints/wasb/wasb_tennis_best.pth.tar",
         run=fake_run,
     )
 
@@ -118,6 +121,9 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
     assert "--body-local" in remote_command
     assert "--device cuda:0" in remote_command
     assert "--allow-auto-court-corners-preview" in remote_command
+    assert "PYTHONPATH=/srv/openmmlab/mmpose/projects/rtmpose3d${PYTHONPATH:+:$PYTHONPATH}" in remote_command
+    assert "--wasb-repo /srv/pickleball_git/third_party/WASB-SBDT" in remote_command
+    assert "--wasb-checkpoint /srv/pickleball_git/models/checkpoints/wasb/wasb_tennis_best.pth.tar" in remote_command
     assert "--capture-sidecar" in remote_command
     assert "--max-frames 12" in remote_command
     assert [event.stage for event in progress_events] == [
