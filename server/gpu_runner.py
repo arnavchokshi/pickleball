@@ -47,6 +47,7 @@ class GpuRunRequest:
     court_corners_path: Path | None = None
     court_calibration_path: Path | None = None
     max_frames: int | None = None
+    allow_auto_court_corners_preview: bool = True
     progress_callback: ProgressCallback | None = field(default=None, compare=False, repr=False)
 
 
@@ -251,6 +252,8 @@ class SshGpuRunner(GpuRunner):
             "cuda:0",
             "--json",
         ]
+        if request.allow_auto_court_corners_preview:
+            args.append("--allow-auto-court-corners-preview")
         if request.max_frames is not None:
             args.extend(["--max-frames", str(request.max_frames)])
         if request.capture_sidecar_path is not None:
@@ -293,6 +296,8 @@ class HttpGpuRunner(GpuRunner):
         data: dict[str, str] = {"job_id": request.job_id, "clip": request.clip}
         if request.max_frames is not None:
             data["max_frames"] = str(request.max_frames)
+        if request.allow_auto_court_corners_preview:
+            data["allow_auto_court_corners_preview"] = "1"
 
         files = {"video": (request.video_path.name, request.video_path.open("rb"), "application/octet-stream")}
         optional_files = {
@@ -369,6 +374,8 @@ class LocalPipelineRunner(GpuRunner):
             safe_slug(request.clip),
             "--json",
         ]
+        if request.allow_auto_court_corners_preview:
+            args.append("--allow-auto-court-corners-preview")
         if request.max_frames is not None:
             args.extend(["--max-frames", str(request.max_frames)])
         if request.capture_sidecar_path is not None:

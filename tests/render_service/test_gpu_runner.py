@@ -117,6 +117,7 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
     assert "scripts/racketsport/process_video.py" in remote_command
     assert "--body-local" in remote_command
     assert "--device cuda:0" in remote_command
+    assert "--allow-auto-court-corners-preview" in remote_command
     assert "--capture-sidecar" in remote_command
     assert "--max-frames 12" in remote_command
     assert [event.stage for event in progress_events] == [
