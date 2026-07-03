@@ -22,6 +22,8 @@ Vector2 = Annotated[list[FiniteFloat], Field(min_length=2, max_length=2)]
 Vector3 = Annotated[list[FiniteFloat], Field(min_length=3, max_length=3)]
 MatrixRow3 = Annotated[list[FiniteFloat], Field(min_length=3, max_length=3)]
 Matrix3 = Annotated[list[MatrixRow3], Field(min_length=3, max_length=3)]
+MatrixRow2 = Annotated[list[FiniteFloat], Field(min_length=2, max_length=2)]
+Matrix2 = Annotated[list[MatrixRow2], Field(min_length=2, max_length=2)]
 MatrixRow4 = Annotated[list[FiniteFloat], Field(min_length=4, max_length=4)]
 Matrix4 = Annotated[list[MatrixRow4], Field(min_length=4, max_length=4)]
 PICKLEBALL_COURT_KEYPOINT_NAMES: tuple[str, ...] = (
@@ -435,6 +437,109 @@ class Tracks(StrictArtifact):
     fps: float = Field(gt=0.0)
     players: list[PlayerTrack]
     rally_spans: list[TimeSpan] = Field(default_factory=list)
+    placement_provenance: dict[str, Any] | None = None
+
+
+class PlacementSignal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    xy: Vector2 | None = None
+    sigma_m: Vector2 | None = None
+    covariance_m2: Matrix2 | None = None
+    used: bool
+    reason: str | None = None
+
+
+class PlacementFrame(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    frame_idx: int = Field(ge=0)
+    t: FiniteFloat = Field(ge=0.0)
+    original_world_xy: Vector2
+    fused_world_xy: Vector2
+    smoothed_world_xy: Vector2
+    covariance_m2: Matrix2
+    stance: bool
+    signals: list[PlacementSignal] = Field(default_factory=list)
+    source_counts: dict[str, int] = Field(default_factory=dict)
+
+    @field_validator("source_counts")
+    @classmethod
+    def _source_counts_must_be_nonnegative(cls, value: dict[str, int]) -> dict[str, int]:
+        if any(count < 0 for count in value.values()):
+            raise ValueError("source_counts must be non-negative")
+        return value
+
+
+class PlacementPlayer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    frames: list[PlacementFrame]
+
+
+class PlacementSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    player_count: int = Field(ge=0)
+    frame_count: int = Field(ge=0)
+    coverage_unchanged: bool
+    source_counts: dict[str, int] = Field(default_factory=dict)
+    jitter_before_after_mps: dict[str, dict[str, FiniteFloat]] = Field(default_factory=dict)
+    stance_wobble_before_after_m: dict[str, dict[str, FiniteFloat]] = Field(default_factory=dict)
+    court_bounds_violations: int = Field(ge=0)
+
+    @field_validator("source_counts")
+    @classmethod
+    def _summary_source_counts_must_be_nonnegative(cls, value: dict[str, int]) -> dict[str, int]:
+        if any(count < 0 for count in value.values()):
+            raise ValueError("source_counts must be non-negative")
+        return value
+
+
+class PlacementArtifact(StrictArtifact):
+    artifact_type: Literal["racketsport_placement"]
+    fps: FiniteFloat = Field(gt=0.0)
+    source: str
+    tracks_path: str
+    backup_tracks_path: str
+    refine_from_sam3d: bool
+    undistort_applied: bool
+    players: list[PlacementPlayer]
+    summary: PlacementSummary
+    provenance: dict[str, Any] = Field(default_factory=dict)
+
+
+class Sam3DKeypoint2D(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    index: int = Field(ge=0)
+    xy_px: Vector2
+    conf: FiniteFloat = Field(ge=0.0)
+
+
+class Sam3DKeypoints2DFrame(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    frame_idx: int = Field(ge=0)
+    t: FiniteFloat = Field(ge=0.0)
+    keypoints: list[Sam3DKeypoint2D]
+
+
+class Sam3DKeypoints2DPlayer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    frames: list[Sam3DKeypoints2DFrame]
+
+
+class Sam3DKeypoints2D(StrictArtifact):
+    artifact_type: Literal["racketsport_sam3d_keypoints_2d"]
+    source: str
+    foot_keypoint_indices: dict[str, int] = Field(default_factory=dict)
+    players: list[Sam3DKeypoints2DPlayer] = Field(default_factory=list)
 
 
 class PlayerGroundFoot(BaseModel):
@@ -1046,7 +1151,18 @@ class Bounce(BaseModel):
 
 class BallTrack(StrictArtifact):
     fps: float = Field(gt=0.0)
-    source: Literal["tracknet", "wasb", "fused", "tap", "pbmat", "totnet", "vn_trajectories", "physics_filled", "sam31"]
+    source: Literal[
+        "tracknet",
+        "wasb",
+        "fused",
+        "tap",
+        "pbmat",
+        "totnet",
+        "blurball",
+        "vn_trajectories",
+        "physics_filled",
+        "sam31",
+    ]
     frames: list[BallFrame]
     bounces: list[Bounce] = Field(default_factory=list)
 
@@ -1683,6 +1799,13 @@ class VirtualWorldPlayerFrame(BaseModel):
     confidence_provenance: ConfidenceProvenance | None = None
 
 
+class VirtualWorldJointsSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    skeleton3d: int = Field(default=0, ge=0)
+    smpl_fill: int = Field(default=0, ge=0)
+
+
 class VirtualWorldPlayer(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1690,6 +1813,7 @@ class VirtualWorldPlayer(BaseModel):
     side: str | None = None
     role: str | None = None
     representation: Literal["track_only", "joints", "mesh"]
+    joints_source: VirtualWorldJointsSource | None = None
     frames: list[VirtualWorldPlayerFrame]
     trust_band: TrustBand | None = None
 
@@ -1798,12 +1922,14 @@ class VirtualWorld(StrictArtifact):
     artifact_type: Literal["racketsport_virtual_world"]
     world_frame: Literal["court_Z0"]
     fps: float
+    joint_names: list[str] | None = None
     court: VirtualWorldCourt
     players: list[VirtualWorldPlayer]
     ball: VirtualWorldBall
     paddles: list[VirtualWorldPaddle]
     summary: VirtualWorldSummary
     confidence_gate: dict[str, Any] | None = None
+    foot_pin: dict[str, Any] | None = None
 
 
 class PhysicsRefinement(StrictArtifact):
@@ -2122,6 +2248,8 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "court_zones": CourtZones,
     "net_plane": NetPlane,
     "tracks": Tracks,
+    "placement": PlacementArtifact,
+    "sam3d_keypoints_2d": Sam3DKeypoints2D,
     "player_ground": PlayerGroundArtifact,
     "court_calls": CallsArtifact,
     "drift_log": DriftLog,

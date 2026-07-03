@@ -7,6 +7,7 @@ import inspect
 import json
 import os
 import time
+from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, Mapping, Protocol, Sequence
@@ -43,6 +44,7 @@ from .hmr_deep import (
     DEFAULT_BODY_MANIFEST_PATH,
     DEFAULT_FAST_SAM_REPO,
     REQUIRED_FAST_SAM_MODEL_IDS,
+    SAM3D_FOOT_KEYPOINT_INDICES,
     FastSam3DBodyRuntime,
     FastSam3DBodySubprocessRuntime,
     PlayerCropRequest,
@@ -983,6 +985,10 @@ class BodyStageRunner:
                 sample["vertices_camera"] = []
                 sample["mesh_faces"] = []
             samples.append(sample)
+
+        sam3d_keypoints_sidecar = _sam3d_keypoints_sidecar_from_samples(samples)
+        if sam3d_keypoints_sidecar["players"]:
+            _write_json_artifact(context.run_dir / "sam3d_keypoints_2d.json", sam3d_keypoints_sidecar)
 
         if samples:
             smpl_motion, skeleton3d, grounding_metrics = build_body_artifacts_from_fast_sam(
@@ -2503,6 +2509,41 @@ def _scale_bbox(bbox: list[float], *, scale_x: float, scale_y: float) -> list[fl
         float(bbox[2]) * scale_x,
         float(bbox[3]) * scale_y,
     ]
+
+
+def _sam3d_keypoints_sidecar_from_samples(samples: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    by_player: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for sample in samples:
+        keypoints = sample.get("pred_foot_keypoints_2d") or []
+        if not keypoints:
+            continue
+        frame_idx = int(sample["frame_idx"])
+        player_id = int(sample["player_id"])
+        by_player[player_id].append(
+            {
+                "frame_idx": frame_idx,
+                "t": float(sample.get("t", 0.0)),
+                "keypoints": [
+                    {
+                        "name": str(item["name"]),
+                        "index": int(item["index"]),
+                        "xy_px": [float(item["xy_px"][0]), float(item["xy_px"][1])],
+                        "conf": float(item.get("conf", sample.get("confidence", 1.0))),
+                    }
+                    for item in keypoints
+                ],
+            }
+        )
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_sam3d_keypoints_2d",
+        "source": "orchestrator_body_stage",
+        "foot_keypoint_indices": dict(SAM3D_FOOT_KEYPOINT_INDICES),
+        "players": [
+            {"id": player_id, "frames": sorted(frames, key=lambda frame: frame["frame_idx"])}
+            for player_id, frames in sorted(by_player.items())
+        ],
+    }
 
 
 def _match_body_outputs(raw_outputs: list[Any], requested_bboxes: list[list[float]]) -> list[Any]:

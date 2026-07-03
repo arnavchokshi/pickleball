@@ -1305,11 +1305,13 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
         "ingest",
         "calibration",
         "tracking",
+        "placement",
         "frames",
         "ball",
         "events",
         "ball_fill",
         "body",
+        "placement_refine",
         "grounding_refine",
         "world",
         "confidence_gate",
@@ -1320,12 +1322,14 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
     by_stage = {s["stage"]: s for s in summary["stages"]}
     assert by_stage["calibration"]["status"] == "ran"
     assert by_stage["tracking"]["status"] == "blocked"
+    assert by_stage["placement"]["status"] == "blocked"
     assert by_stage["frames"]["status"] == "blocked"
     assert "pose" not in by_stage
     assert by_stage["ball"]["status"] == "skipped"
     assert by_stage["ball_fill"]["status"] == "blocked"
     assert by_stage["body"]["status"] == "degraded"
     assert "SAM-3D BODY skipped" in " ".join(by_stage["body"]["notes"])
+    assert by_stage["placement_refine"]["status"] == "skipped"
     assert by_stage["grounding_refine"]["status"] == "skipped"
     # world/manifest still assemble a partial (court-only) bundle, not a crash.
     assert by_stage["world"]["status"] == "ran"
@@ -1333,6 +1337,143 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
     assert by_stage["manifest"]["status"] == "ran"
     assert (options.clip_dir / "virtual_world.json").is_file()
     assert (options.run_dir / "PIPELINE_SUMMARY.json").is_file()
+
+
+def test_placement_stage_rewrites_tracks_after_tracking(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "tracks.json", _tracks_payload())
+    keypoints_path = tmp_path / "native_keypoints.json"
+    _write_json(keypoints_path, {"schema_version": 1, "artifact_type": "racketsport_keypoints_2d", "players": []})
+    options.placement_keypoints_2d = keypoints_path
+
+    calls: list[dict[str, Any]] = []
+
+    def _fake_rewrite(**kwargs):  # noqa: ANN001
+        calls.append(kwargs)
+        _write_json(
+            kwargs["placement_path"],
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_placement",
+                "fps": 30.0,
+                "source": "test",
+                "tracks_path": "tracks.json",
+                "backup_tracks_path": "tracks_prewrite_backup.json",
+                "refine_from_sam3d": False,
+                "undistort_applied": False,
+                "players": [],
+                "summary": {
+                    "player_count": 0,
+                    "frame_count": 0,
+                    "coverage_unchanged": True,
+                    "source_counts": {"bbox": 0, "native2d": 0, "sam3d": 0},
+                    "jitter_before_after_mps": {},
+                    "court_bounds_violations": 0,
+                },
+                "provenance": {},
+            },
+        )
+        return type("Result", (), {"coverage_unchanged": True, "source_counts": {"bbox": 2, "native2d": 1, "sam3d": 0}})()
+
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite)
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    outcome = pipeline._stage_placement()
+
+    assert outcome.status == "ran"
+    assert calls[0]["tracks_path"] == options.clip_dir / "tracks.json"
+    assert calls[0]["native2d_keypoints_path"] == keypoints_path
+    assert calls[0]["stance_phases_path"] is None
+    assert calls[0]["refine_from_sam3d"] is False
+    assert "placement.json" in outcome.artifacts
+
+
+def test_placement_refine_stage_runs_when_sam3d_sidecar_exists(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "tracks.json", _tracks_payload())
+    keypoints_path = tmp_path / "native_keypoints.json"
+    _write_json(keypoints_path, {"schema_version": 1, "artifact_type": "racketsport_keypoints_2d", "players": []})
+    options.placement_keypoints_2d = keypoints_path
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    skipped = pipeline._stage_placement_refine()
+    assert skipped.status == "skipped"
+
+    _write_json(
+        options.clip_dir / "sam3d_keypoints_2d.json",
+        {"schema_version": 1, "artifact_type": "racketsport_sam3d_keypoints_2d", "source": "test", "players": []},
+    )
+    calls: list[dict[str, Any]] = []
+
+    def _fake_rewrite(**kwargs):  # noqa: ANN001
+        calls.append(kwargs)
+        _write_json(
+            kwargs["placement_path"],
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_placement",
+                "fps": 30.0,
+                "source": "test",
+                "tracks_path": "tracks.json",
+                "backup_tracks_path": "tracks_prewrite_backup.json",
+                "refine_from_sam3d": True,
+                "undistort_applied": False,
+                "players": [],
+                "summary": {
+                    "player_count": 0,
+                    "frame_count": 0,
+                    "coverage_unchanged": True,
+                    "source_counts": {"bbox": 0, "native2d": 0, "sam3d": 1},
+                    "jitter_before_after_mps": {},
+                    "court_bounds_violations": 0,
+                },
+                "provenance": {},
+            },
+        )
+        return type("Result", (), {"coverage_unchanged": True, "source_counts": {"bbox": 0, "native2d": 0, "sam3d": 1}})()
+
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite)
+
+    ran = pipeline._stage_placement_refine()
+
+    assert ran.status == "ran"
+    assert calls[0]["native2d_keypoints_path"] == keypoints_path
+    assert calls[0]["sam3d_keypoints_path"] == options.clip_dir / "sam3d_keypoints_2d.json"
+    assert calls[0]["stance_phases_path"] is None
+    assert calls[0]["refine_from_sam3d"] is True
+
+
+def test_placement_refine_stage_runs_with_stance_phases_without_sam3d_sidecar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "tracks.json", _tracks_payload())
+    _write_json(options.clip_dir / "foot_contact_phases.json", _foot_contact_phases_payload())
+    calls: list[dict[str, Any]] = []
+
+    def _fake_rewrite(**kwargs):  # noqa: ANN001
+        calls.append(kwargs)
+        return type("Result", (), {"coverage_unchanged": True, "source_counts": {"bbox": 1, "native2d": 0, "sam3d": 0}, "court_bounds_violations": 0})()
+
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite)
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    ran = pipeline._stage_placement_refine()
+
+    assert ran.status == "ran"
+    assert calls[0]["sam3d_keypoints_path"] is None
+    assert calls[0]["stance_phases_path"] == options.clip_dir / "foot_contact_phases.json"
+    assert calls[0]["refine_from_sam3d"] is True
 
 
 def test_pipeline_blocks_wrist_cues_before_body_without_pose_fallback(

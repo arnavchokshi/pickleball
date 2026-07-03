@@ -242,6 +242,30 @@ def test_normalize_fast_sam_body_output_preserves_static_mesh_faces_for_mhr_surf
     assert normalized["mesh_faces"] == [[0, 1, 2]]
 
 
+def test_normalize_fast_sam_body_output_keeps_compact_foot_keypoints_only_by_default() -> None:
+    request = PlayerCropRequest(
+        frame_idx=5,
+        player_id=7,
+        bbox_xyxy=[100, 120, 260, 520],
+        image_size_px=[1920, 1080],
+        track_confidence=0.93,
+    )
+    keypoints = [[float(idx), float(idx + 100)] for idx in range(70)]
+
+    normalized = normalize_fast_sam_body_output(
+        {
+            "pred_vertices": [[0, 0, 0.1], [0.3, 0, 0.1], [0.3, 0.2, 1.6]],
+            "pred_keypoints_3d": [[0.1, 0.0, 1.0]],
+            "pred_keypoints_2d": keypoints,
+            "confidence": 0.91,
+        },
+        request=request,
+    )
+
+    assert sorted(item["index"] for item in normalized["pred_foot_keypoints_2d"]) == [13, 14, 15, 16, 17, 20]
+    assert "pred_keypoints_2d" not in normalized
+
+
 def test_normalize_fast_sam_body_output_rejects_faces_outside_pred_vertices() -> None:
     request = PlayerCropRequest(
         frame_idx=5,

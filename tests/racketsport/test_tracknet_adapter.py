@@ -92,6 +92,51 @@ def test_join_tracknet_confidence_csv_saturates_model_heatmap_overshoot(tmp_path
     assert ball_track.frames[0].visible is True
 
 
+def test_join_tracknet_confidence_csv_allows_terminal_hidden_row_without_heatmap(tmp_path: Path) -> None:
+    predictions_csv = tmp_path / "clip_ball.csv"
+    confidence_csv = tmp_path / "clip_ball_heatmap_confidence.csv"
+    joined_csv = tmp_path / "clip_ball_with_heatmap_confidence.csv"
+    predictions_csv.write_text(
+        "Frame,Visibility,X,Y\n"
+        "1149,1,977,226\n"
+        "1150,1,1012,161\n"
+        "1151,0,0,0\n",
+        encoding="utf-8",
+    )
+    confidence_csv.write_text(
+        "Frame,Visibility,X,Y,Confidence\n"
+        "1149,1,977,226,0.11062220\n"
+        "1150,1,1012,161,0.14725174\n",
+        encoding="utf-8",
+    )
+
+    _join_tracknet_confidence_csv(
+        predictions_csv=predictions_csv,
+        confidence_csv=confidence_csv,
+        out=joined_csv,
+    )
+
+    payload = tracknet_csv_to_ball_track(joined_csv, fps=60.0, confidence_mode="heatmap_peak")
+    ball_track = BallTrack.model_validate(payload)
+    assert ball_track.frames[-1].visible is False
+    assert ball_track.frames[-1].conf == pytest.approx(0.0)
+
+
+def test_join_tracknet_confidence_csv_rejects_empty_heatmap_confidence_rows(tmp_path: Path) -> None:
+    predictions_csv = tmp_path / "clip_ball.csv"
+    confidence_csv = tmp_path / "clip_ball_heatmap_confidence.csv"
+    joined_csv = tmp_path / "clip_ball_with_heatmap_confidence.csv"
+    predictions_csv.write_text("Frame,Visibility,X,Y\n0,1,321,240\n", encoding="utf-8")
+    confidence_csv.write_text("Frame,Visibility,X,Y,Confidence\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="TrackNet heatmap confidence CSV is empty"):
+        _join_tracknet_confidence_csv(
+            predictions_csv=predictions_csv,
+            confidence_csv=confidence_csv,
+            out=joined_csv,
+        )
+
+
 def test_tracknet_csv_to_ball_track_supports_custom_heatmap_visibility_threshold(tmp_path: Path) -> None:
     csv_path = tmp_path / "clip_ball.csv"
     csv_path.write_text(

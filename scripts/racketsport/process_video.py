@@ -24,7 +24,11 @@ entrypoint (MASTER_PLAN.md's product goal). It chains, in order:
                       association (threed.racketsport.raw_pool_person_authority,
                       the champion recipe cited in MASTER_PLAN.md), or reused
                       from an already-computed --tracks artifact.
-  4. frames        -- body_frames/frame_NNNNNN.jpg JPEGs the body stage reads
+  4. placement     -- placement.json plus an in-place tracks.json world_xy rewrite
+                      from bbox, native-2D foot keypoints, covariance fusion, and
+                      offline smoothing. The original tracks artifact is backed up
+                      as tracks_prewrite_backup.json.
+  5. frames        -- body_frames/frame_NNNNNN.jpg JPEGs the body stage reads
                       (threed.racketsport.orchestrator's
                       BODY-runtime frame lookup); scheduled from tracks.json
                       (every tracked-player frame for SAM-3D body joints) and, when a
@@ -33,36 +37,38 @@ entrypoint (MASTER_PLAN.md's product goal). It chains, in order:
                       threed.racketsport.process_video_body_frames for the
                       cap/fallback rules). Reused by remote BODY dispatch's
                       rsync-up and by local body.
-  5. ball          -- ball_track.json via WASB-tennis zero-shot (or reused
+  6. ball          -- ball_track.json via WASB-tennis zero-shot (or reused
                       from --ball-track), then 2D bounce detection and
                       geometry-corrected manual-court in/out (both imported
                       unmodified from threed.racketsport.ball_bounce_2d /
                       ball_manual_court_inout -- never rewritten here).
-  6. events        -- ball_inflections / audio onsets and any existing SAM-3D
+  7. events        -- ball_inflections / audio onsets and any existing SAM-3D
                       wrist_velocity_peaks fused into contact_windows.json, plus
                       frame_compute_plan.json. If SAM-3D joints are not available
                       before BODY, wrist cues are explicitly blocked instead of
                       replaced by a legacy pose source.
-  7. body          -- Fast SAM-3D-Body body-mode joints for all safe tracked
+  8. body          -- Fast SAM-3D-Body body-mode joints for all safe tracked
                       person-frames; mesh vertices serialized only for the
                       tier-1 ball_aware_100 windows. BODY is
                       dispatched to the remote A100 by default (see
                       remote_body_dispatch.py) since most hosts running this
                       script have no local GPU; --no-gpu (or a failed/busy
                       dispatch) degrades to skeleton-only, never a crash.
-  8. grounding     -- render-honest rigid root-level BODY grounding refinement
+  9. placement_refine -- optional post-BODY placement rewrite from compact SAM-3D
+                      foot keypoint sidecar and/or 3D contact phase anchors.
+ 10. grounding     -- render-honest rigid root-level BODY grounding refinement
                       when foot_contact_phases.json + calibration + tracks exist;
                       not accuracy/gate evidence, skipped untouched on zero
                       contact phases.
-  9. world         -- virtual_world.json + trust_bands.json (every entity
+ 11. world         -- virtual_world.json + trust_bands.json (every entity
                       badged from real upstream gate/artifact state via
                       threed.racketsport.trust_band, never invented).
- 10. confidence    -- confidence_gated_world.json via the Wave-B additive
+ 12. confidence    -- confidence_gated_world.json via the Wave-B additive
                       confidence gate (default on; --no-confidence-gate keeps
                       raw virtual_world.json as the viewer world).
- 11. manifest      -- replay_viewer_manifest.json, the same bundle shape
+ 13. manifest      -- replay_viewer_manifest.json, the same bundle shape
                       web/replay already loads.
- 12. verify        -- optional (--verify-viewer) headless load check of the
+ 14. verify        -- optional (--verify-viewer) headless load check of the
                       web viewer against the freshly built manifest.
 
 Resilience: every stage checks for an already-valid artifact first and skips
@@ -114,6 +120,7 @@ from threed.racketsport.frame_rating import (  # noqa: E402
     write_frame_compute_plan,
 )
 from threed.racketsport.person_reid_diagnostics import resolve_reid_device  # noqa: E402
+from threed.racketsport.placement import PlacementConfig, rewrite_tracks_with_placement  # noqa: E402
 from threed.racketsport.process_video_body_frames import materialize_process_video_frames  # noqa: E402
 from threed.racketsport.rally_gating import build_rally_spans_artifact, in_rally_span  # noqa: E402
 from threed.racketsport.raw_pool_person_authority import (  # noqa: E402
@@ -304,6 +311,9 @@ class PipelineOptions:
     rally_gating: bool = False
     rally_gating_pad_seconds: float = 0.5
 
+    placement_keypoints_2d: Path | None = None
+    placement_undistort: bool = True
+
     mesh_coverage_mode: str = DEFAULT_MESH_COVERAGE_MODE
     target_mesh_frame_budget: int | None = DEFAULT_TARGET_MESH_FRAME_BUDGET
     ball_proximity_m: float = DEFAULT_BALL_PROXIMITY_M
@@ -357,6 +367,8 @@ class ProcessVideoPipeline:
             "audio_onsets.json",
             "contact_windows.json",
             "frame_compute_plan.json",
+            "placement.json",
+            "sam3d_keypoints_2d.json",
             "smpl_motion.json",
             "body_compute_execution.json",
             "body_mesh.json",
@@ -390,6 +402,7 @@ class ProcessVideoPipeline:
             ("ingest", self._stage_ingest),
             ("calibration", self._stage_calibration),
             ("tracking", self._stage_tracking),
+            ("placement", self._stage_placement),
         ]
         if self.options.rally_gating:
             stage_fns.append(("rally_gating", self._stage_rally_gating))
@@ -400,6 +413,7 @@ class ProcessVideoPipeline:
                 ("events", self._stage_events),
                 ("ball_fill", self._stage_ball_fill),
                 ("body", self._stage_body),
+                ("placement_refine", self._stage_placement_refine),
                 ("grounding_refine", self._stage_grounding_refine),
                 ("world", self._stage_world),
                 ("confidence_gate", self._stage_confidence_gate),
@@ -870,6 +884,102 @@ class ProcessVideoPipeline:
                 f"batch={reid_batch_size}, out_dir={out_dir})"
             ]
         return ["raw-pool global association ran but produced no valid tracks.json; kept loose-pool tracks.json"]
+
+    def _stage_placement(self) -> StageOutcome:
+        return self._run_placement_stage(refine_from_sam3d=False)
+
+    def _stage_placement_refine(self) -> StageOutcome:
+        sidecar = self.clip_dir / "sam3d_keypoints_2d.json"
+        stance_phases = self._placement_stance_phases_path()
+        if not sidecar.is_file() and stance_phases is None:
+            return StageOutcome(
+                stage="placement_refine",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["sam3d_keypoints_2d.json and stance phase artifacts not present after BODY; placement refine pass skipped"],
+            )
+        return self._run_placement_stage(refine_from_sam3d=True)
+
+    def _run_placement_stage(self, *, refine_from_sam3d: bool) -> StageOutcome:
+        stage_name = "placement_refine" if refine_from_sam3d else "placement"
+        tracks_path = self.clip_dir / "tracks.json"
+        calibration_path = self.clip_dir / "court_calibration.json"
+        if not tracks_path.is_file():
+            return StageOutcome(stage=stage_name, status="blocked", wall_seconds=0.0, notes=["requires tracks.json"])
+        if not calibration_path.is_file():
+            return StageOutcome(stage=stage_name, status="blocked", wall_seconds=0.0, notes=["requires court_calibration.json"])
+
+        native2d_path = self._placement_native2d_path()
+        sam3d_path = self.clip_dir / "sam3d_keypoints_2d.json" if refine_from_sam3d else None
+        if sam3d_path is not None and not sam3d_path.is_file():
+            sam3d_path = None
+        stance_phases_path = self._placement_stance_phases_path() if refine_from_sam3d else None
+        placement_path = self.clip_dir / "placement.json"
+        try:
+            result = rewrite_tracks_with_placement(
+                tracks_path=tracks_path,
+                calibration_path=calibration_path,
+                placement_path=placement_path,
+                native2d_keypoints_path=native2d_path,
+                sam3d_keypoints_path=sam3d_path,
+                stance_phases_path=stance_phases_path,
+                refine_from_sam3d=refine_from_sam3d,
+                config=PlacementConfig(undistort=self.options.placement_undistort),
+            )
+        except Exception as exc:  # noqa: BLE001
+            return StageOutcome(
+                stage=stage_name,
+                status="degraded",
+                wall_seconds=0.0,
+                notes=[f"{stage_name} failed ({type(exc).__name__}: {exc}); kept current tracks.json"],
+            )
+
+        source_notes = [f"{name}={count}" for name, count in sorted(result.source_counts.items()) if count]
+        notes = [
+            "rewrote tracks.json world_xy via foot-keypoint placement fusion",
+            f"coverage_unchanged={result.coverage_unchanged}",
+            f"source_counts({', '.join(source_notes) if source_notes else 'none'})",
+        ]
+        if native2d_path is not None:
+            notes.append(f"native2d_keypoints={native2d_path}")
+        if sam3d_path is not None:
+            notes.append(f"sam3d_keypoints={sam3d_path}")
+        if stance_phases_path is not None:
+            notes.append(f"stance_phases={stance_phases_path}")
+        return StageOutcome(
+            stage=stage_name,
+            status="ran",
+            wall_seconds=0.0,
+            notes=notes,
+            artifacts=["placement.json", "tracks.json", "tracks_prewrite_backup.json"],
+            metrics={
+                "coverage_unchanged": result.coverage_unchanged,
+                "source_counts": result.source_counts,
+                "court_bounds_violations": getattr(result, "court_bounds_violations", 0),
+            },
+        )
+
+    def _placement_native2d_path(self) -> Path | None:
+        explicit = self.options.placement_keypoints_2d
+        if explicit is not None:
+            return explicit if explicit.is_file() else None
+        candidates = sorted(ROOT.glob(f"runs/native2d_{self.options.clip}*/keypoints_2d.json"))
+        if candidates:
+            return candidates[-1]
+        slug = self.options.clip.split("/")[-1]
+        candidates = sorted(ROOT.glob(f"runs/native2d_{slug}*/keypoints_2d.json"))
+        if candidates:
+            return candidates[-1]
+        prefix = slug.split("_", 1)[0]
+        candidates = sorted(ROOT.glob(f"runs/native2d_{prefix}*/keypoints_2d.json"))
+        return candidates[-1] if candidates else None
+
+    def _placement_stance_phases_path(self) -> Path | None:
+        for name in ("foot_contact_phases.json", "foot_pin_audit.json"):
+            path = self.clip_dir / name
+            if path.is_file():
+                return path
+        return None
 
     def _runtime_manifest_for_local_host(self) -> tuple[Path, list[str]]:
         """Return a per-run manifest with local checkpoint paths when available."""
@@ -3779,6 +3889,10 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         wasb_repo=Path(args.wasb_repo).expanduser().resolve() if args.wasb_repo else None,
         skip_audio=args.skip_audio,
         rally_gating=args.rally_gating,
+        placement_keypoints_2d=Path(args.placement_keypoints_2d).expanduser().resolve()
+        if args.placement_keypoints_2d
+        else None,
+        placement_undistort=not args.no_placement_undistort,
         mesh_coverage_mode=args.mesh_coverage_mode,
         target_mesh_frame_budget=None if args.target_mesh_frame_budget == 0 else args.target_mesh_frame_budget,
         ball_proximity_m=args.ball_proximity_m,
@@ -3862,6 +3976,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--wasb-repo", default=None, help=f"WASB-SBDT repo checkout (default: {DEFAULT_WASB_REPO} if present).")
     parser.add_argument("--skip-audio", action="store_true", help="Skip audio-onset extraction for contact-window fusion.")
     parser.add_argument("--rally-gating", action="store_true", help="Opt in to loose rally-span gating before frame/pose/body/world stages; preserves full pre-gating artifacts with *_pre_rally_gating.json copies.")
+    parser.add_argument("--placement-keypoints-2d", default=None, help="Optional native RTMW keypoints_2d.json for the pre-BODY placement pass.")
+    parser.add_argument("--no-placement-undistort", action="store_true", help="Disable placement-stage pixel undistortion before homography projection.")
 
     parser.add_argument(
         "--mesh-coverage-mode",

@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
 
 from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
 from threed.racketsport.eval_guard import EvalClipLeakError
+from threed.racketsport.external_gt_body_prediction_schema import MHR70_JOINT_NAMES
 from threed.racketsport.schemas import VirtualWorld, validate_artifact_file
 from threed.racketsport.virtual_world import (
     apply_ball_track_arc_solved_overlay,
@@ -203,6 +205,33 @@ def _skeleton3d_second_frame() -> dict:
             }
         ],
         "provenance": {"source": "lane_a_skeleton3d"},
+    }
+
+
+def _sam3d_skeleton3d_same_first_frame() -> dict:
+    joints = [[float(index), float(index) + 0.1, float(index) + 0.2] for index in range(70)]
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_skeleton3d",
+        "fps": 60.0,
+        "world_frame": "court_Z0",
+        "source_model": "sam3d_body_joints",
+        "joint_names": [f"sam3dbody_joint_{index:03d}" for index in range(70)],
+        "preview_only": True,
+        "players": [
+            {
+                "id": 7,
+                "frames": [
+                    {
+                        "frame_idx": 0,
+                        "t": 0.0,
+                        "joints_world": joints,
+                        "joint_conf": [0.5 + index / 1000.0 for index in range(70)],
+                    }
+                ],
+            }
+        ],
+        "provenance": {"source": "sam3d_refined_skeleton3d"},
     }
 
 
@@ -881,6 +910,47 @@ def test_build_virtual_world_state_keeps_skeleton_joints_outside_sparse_mesh_fra
     assert world["summary"]["mesh_player_frame_count"] == 1
     assert world["summary"]["joint_player_frame_count"] == 2
     assert world["summary"]["track_only_player_frame_count"] == 0
+
+
+def test_build_virtual_world_state_prefers_skeleton3d_joints_over_same_timestamp_smpl() -> None:
+    smpl = _smpl_motion()
+    smpl_fill_frame = deepcopy(smpl["players"][0]["frames"][0])
+    smpl_fill_frame["t"] = 1.0 / 60.0
+    smpl_fill_frame["frame_idx"] = 1
+    smpl_fill_frame["joints_world"] = [[9.0, 9.0, 9.0], [10.0, 10.0, 10.0]]
+    smpl_fill_frame["joint_conf"] = [0.2, 0.2]
+    smpl["players"][0]["frames"].append(smpl_fill_frame)
+    skeleton = _sam3d_skeleton3d_same_first_frame()
+
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=_tracks_two_frames(),
+        smpl_motion=smpl,
+        skeleton3d=skeleton,
+    )
+
+    assert world["joint_names"] == list(MHR70_JOINT_NAMES)
+    player = world["players"][0]
+    assert player["joints_source"] == {"skeleton3d": 1, "smpl_fill": 1}
+    assert [frame["t"] for frame in player["frames"]] == [0.0, pytest.approx(1.0 / 60.0)]
+
+    same_timestamp = player["frames"][0]
+    assert same_timestamp["joints_world"] == skeleton["players"][0]["frames"][0]["joints_world"]
+    assert same_timestamp["joint_conf"] == skeleton["players"][0]["frames"][0]["joint_conf"]
+    assert same_timestamp["joint_count"] == 70
+    assert same_timestamp["mesh_vertex_count"] == 2
+    assert same_timestamp["mesh_ref"] == {
+        "artifact": "body_mesh.json",
+        "player_id": 7,
+        "frame_idx": 0,
+        "t": 0.0,
+    }
+    assert same_timestamp["transl_world"] == [0.25, -2.0, 0.0]
+    assert same_timestamp["joints_world"] != _smpl_motion()["players"][0]["frames"][0]["joints_world"]
+
+    smpl_fill = player["frames"][1]
+    assert smpl_fill["joints_world"] == [[9.0, 9.0, 9.0], [10.0, 10.0, 10.0]]
+    assert smpl_fill["joint_count"] == 2
 
 
 def test_build_virtual_world_state_reports_temporal_coverage_relative_to_clip_span() -> None:

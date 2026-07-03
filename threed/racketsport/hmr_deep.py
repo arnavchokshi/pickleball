@@ -40,6 +40,14 @@ CORE_FAST_SAM_MODEL_IDS = (
     "fast_sam_3d_body_dinov3",
     "sam_3d_body_mhr_model",
 )
+SAM3D_FOOT_KEYPOINT_INDICES = {
+    "left_ankle": 13,
+    "right_ankle": 14,
+    "left_toe": 15,
+    "right_toe": 16,
+    "left_heel": 17,
+    "right_heel": 20,
+}
 
 
 @dataclass(frozen=True)
@@ -669,6 +677,10 @@ def normalize_fast_sam_body_output(
             name="mesh_faces",
             vertices_name="pred_vertices",
         ),
+        "pred_foot_keypoints_2d": _compact_foot_keypoints_2d(
+            _first_present(public, ("pred_keypoints_2d",), default=None),
+            confidence=min(confidence, request.track_confidence),
+        ),
         "model_family": MODEL_FAMILY,
     }
 
@@ -762,6 +774,21 @@ def _face_list(values: Any, *, vertex_count: int, name: str, vertices_name: str)
             parsed_face.append(index)
         faces.append(parsed_face)
     return faces
+
+
+def _compact_foot_keypoints_2d(values: Any, *, confidence: float) -> list[dict[str, Any]]:
+    values = _to_python_container(values)
+    if values is None:
+        return []
+    if isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
+        raise ValueError("pred_keypoints_2d must be a sequence of 2-vectors")
+    out: list[dict[str, Any]] = []
+    for name, index in SAM3D_FOOT_KEYPOINT_INDICES.items():
+        if index >= len(values):
+            continue
+        xy = _float_vector(values[index], name=f"pred_keypoints_2d/{index}", length=2)
+        out.append({"name": name, "index": index, "xy_px": xy, "conf": confidence})
+    return out
 
 
 def _confidence(value: Any, *, name: str) -> float:

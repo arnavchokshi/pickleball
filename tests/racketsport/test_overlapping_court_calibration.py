@@ -16,6 +16,7 @@ from threed.racketsport.overlapping_court_calibration import (
     fit_joint_camera_point_line_lm,
     fit_joint_distorted_camera_lm,
     fit_metric_plane_camera_lm,
+    _mobilenet_v3_keypoint_checkpoint_evidence,
     hsv_paint_mask,
     image_points_to_world_plane_with_distortion_fit,
     load_labelme_court_keypoints,
@@ -99,6 +100,61 @@ def test_detect_hsv_paint_hough_segments_reports_mask_and_group_evidence() -> No
     assert evidence["candidate_count"] >= 4
     assert evidence["paint_mask"]["support_ratio"] > 0.005
     assert evidence["boundary_cluster_count"] == 4
+
+
+def test_mobilenet_v3_checkpoint_evidence_uses_sibling_holdout_metrics_without_rescoring_all_rows(tmp_path) -> None:
+    run_dir = (
+        tmp_path
+        / "runs"
+        / "overlapping_court_calibration_20260703"
+        / "mobilenet_v3_direct_regressor"
+        / "mobilenet_trial"
+    )
+    run_dir.mkdir(parents=True)
+    checkpoint = run_dir / "mobilenet_v3_court_keypoint_regressor.pt"
+    checkpoint.write_bytes(b"placeholder; sibling metrics should be authoritative")
+    metrics = {
+        "artifact_type": "mobilenet_v3_court_keypoint_regressor_training_report",
+        "status": "trained_not_cal3_verified",
+        "verified": False,
+        "not_cal3_verified": True,
+        "diagnostic_only": True,
+        "promotes_calibration": False,
+        "checkpoint": str(checkpoint),
+        "train_row_count": 24,
+        "holdout_row_count": 8,
+        "train_clip_names": ["clip_a", "clip_b", "clip_c"],
+        "holdout_clip_names": ["clip_d"],
+        "evaluation": {
+            "artifact_type": "mobilenet_v3_court_keypoint_regressor_eval",
+            "status": "scored",
+            "diagnostic_only": True,
+            "promotes_calibration": False,
+            "gate_passed": False,
+            "median_error_px": 12.5,
+            "mean_error_px": 20.0,
+            "p95_error_px": 44.0,
+            "pck_at_5px": 0.1,
+            "evaluated_keypoint_count": 120,
+            "promotion_blockers": ["diagnostic_only", "not_cal3_verified", "gate_failed"],
+        },
+    }
+    (run_dir / "mobilenet_v3_court_keypoint_metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
+
+    evidence = _mobilenet_v3_keypoint_checkpoint_evidence(
+        repo_root=tmp_path,
+        eval_root=tmp_path / "missing_eval_root",
+    )
+
+    assert evidence["status"] == "scored"
+    assert evidence["candidate_count"] == 1
+    assert evidence["scored_candidate_count"] == 1
+    assert evidence["best_candidate"]["source"] == "sibling_training_metrics"
+    assert evidence["best_candidate"]["checkpoint"] == str(checkpoint)
+    assert evidence["best_candidate"]["median_error_px"] == 12.5
+    assert evidence["best_candidate"]["holdout_row_count"] == 8
+    assert evidence["best_candidate"]["train_row_count"] == 24
+    assert evidence["promotes_calibration"] is False
 
 
 def test_labelme_loader_accepts_point_shapes_for_canonical_court_keypoints(tmp_path) -> None:
@@ -264,21 +320,41 @@ def test_point_line_lm_uses_line_evidence_to_reduce_clean_geometry_error() -> No
         {
             "world_line_m": [COURT_OBJECT_POINTS_M[0], COURT_OBJECT_POINTS_M[1]],
             "image_segment_px": [clean_points[0], clean_points[1]],
+            "sampled_image_points_px": [
+                clean_points[0],
+                [(clean_points[0][0] + clean_points[1][0]) / 2.0, (clean_points[0][1] + clean_points[1][1]) / 2.0],
+                clean_points[1],
+            ],
             "name": "near_baseline",
         },
         {
             "world_line_m": [COURT_OBJECT_POINTS_M[2], COURT_OBJECT_POINTS_M[3]],
             "image_segment_px": [clean_points[2], clean_points[3]],
+            "sampled_image_points_px": [
+                clean_points[2],
+                [(clean_points[2][0] + clean_points[3][0]) / 2.0, (clean_points[2][1] + clean_points[3][1]) / 2.0],
+                clean_points[3],
+            ],
             "name": "far_baseline",
         },
         {
             "world_line_m": [COURT_OBJECT_POINTS_M[0], COURT_OBJECT_POINTS_M[3]],
             "image_segment_px": [clean_points[0], clean_points[3]],
+            "sampled_image_points_px": [
+                clean_points[0],
+                [(clean_points[0][0] + clean_points[3][0]) / 2.0, (clean_points[0][1] + clean_points[3][1]) / 2.0],
+                clean_points[3],
+            ],
             "name": "left_sideline",
         },
         {
             "world_line_m": [COURT_OBJECT_POINTS_M[1], COURT_OBJECT_POINTS_M[2]],
             "image_segment_px": [clean_points[1], clean_points[2]],
+            "sampled_image_points_px": [
+                clean_points[1],
+                [(clean_points[1][0] + clean_points[2][0]) / 2.0, (clean_points[1][1] + clean_points[2][1]) / 2.0],
+                clean_points[2],
+            ],
             "name": "right_sideline",
         },
     ]
@@ -298,7 +374,10 @@ def test_point_line_lm_uses_line_evidence_to_reduce_clean_geometry_error() -> No
     point_line_clean_rmse = np.sqrt(np.mean(np.sum((np.asarray(point_line_projection) - np.asarray(clean_points)) ** 2, axis=1)))
 
     assert point_line["method"] == "joint_point_line_focal_pose_radial_lm"
+    assert point_line["line_residual_mode"] == "sampled_line_pixels_to_projected_model_line"
     assert point_line["line_observation_count"] == 4
+    assert point_line["line_pixel_sample_count"] == 12
+    assert point_line["line_pixel_samples_per_observation"] == 3
     assert point_line_clean_rmse < point_only_clean_rmse
 
 

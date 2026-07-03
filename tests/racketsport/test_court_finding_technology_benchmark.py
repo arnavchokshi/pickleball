@@ -49,6 +49,76 @@ def test_opencv_lsd_line_adapter_reports_available_segments() -> None:
     assert evidence["segments"][0]["length_px"] > 20
 
 
+def test_skimage_probabilistic_hough_adapter_reports_available_segments() -> None:
+    pytest.importorskip("skimage.transform")
+    image = np.zeros((240, 320, 3), dtype=np.uint8)
+    image[:] = (30, 110, 70)
+    cv2.line(image, (28, 188), (292, 168), (245, 245, 245), 3, cv2.LINE_AA)
+    cv2.line(image, (82, 210), (128, 50), (245, 245, 245), 3, cv2.LINE_AA)
+
+    evidence = detect_line_candidates_for_technology(image, "skimage_probabilistic_hough")
+
+    assert evidence["technology_id"] == "skimage_probabilistic_hough"
+    assert evidence["available"] is True
+    assert evidence["candidate_count"] >= 2
+    assert evidence["segments"][0]["length_px"] > 20
+    assert all(segment["source"] == "skimage_probabilistic_hough" for segment in evidence["segments"])
+
+
+def test_skimage_probabilistic_hough_adapter_is_deterministic() -> None:
+    pytest.importorskip("skimage.transform")
+    sample = next(
+        sample
+        for sample in discover_court_finding_samples("eval_clips/ball")
+        if sample.clip == "owner_IMG_1605_8a193402780b"
+    )
+    from threed.racketsport.net_anchor_court import load_player_suppressed_frame
+
+    image, _meta = load_player_suppressed_frame(sample.frame_input)
+
+    first = detect_line_candidates_for_technology(image, "skimage_probabilistic_hough")
+    second = detect_line_candidates_for_technology(image, "skimage_probabilistic_hough")
+
+    assert first["available"] is True
+    assert second["available"] is True
+    assert first["segments"] == second["segments"]
+
+
+def test_opencv_fast_line_detector_adapter_reports_available_segments() -> None:
+    image = np.zeros((240, 320, 3), dtype=np.uint8)
+    image[:] = (30, 110, 70)
+    cv2.line(image, (28, 188), (292, 168), (245, 245, 245), 3, cv2.LINE_AA)
+    cv2.line(image, (82, 210), (128, 50), (245, 245, 245), 3, cv2.LINE_AA)
+
+    evidence = detect_line_candidates_for_technology(image, "opencv_fast_line_detector")
+
+    assert evidence["technology_id"] == "opencv_fast_line_detector"
+    if evidence["available"]:
+        assert evidence["candidate_count"] >= 2
+        assert evidence["segments"][0]["length_px"] > 20
+        assert all(segment["source"] == "opencv_fast_line_detector" for segment in evidence["segments"])
+    else:
+        assert evidence["candidate_count"] == 0
+        assert evidence["reason"] == "opencv_ximgproc_fast_line_detector_unavailable"
+
+
+def test_elsed_adapter_fails_closed_when_pyelsed_is_unavailable() -> None:
+    image = np.zeros((160, 220, 3), dtype=np.uint8)
+    image[:] = (40, 95, 55)
+    cv2.line(image, (25, 120), (195, 118), (245, 245, 245), 3, cv2.LINE_AA)
+
+    evidence = detect_line_candidates_for_technology(image, "elsed")
+
+    assert evidence["technology_id"] == "elsed"
+    if evidence["available"]:
+        assert evidence["candidate_count"] >= 1
+        assert all(segment["source"] == "elsed" for segment in evidence["segments"])
+    else:
+        assert evidence["candidate_count"] == 0
+        assert evidence["reason"] == "pyelsed_unavailable"
+        assert "git+https://github.com/iago-suarez/ELSED.git" in evidence["install_hint"]
+
+
 def test_shadow_normalized_hough_adapter_records_preprocess_evidence() -> None:
     image = np.zeros((240, 320, 3), dtype=np.uint8)
     image[:] = (50, 120, 70)
@@ -177,6 +247,21 @@ def test_line_support_scoring_scales_candidate_frame_to_native_space() -> None:
     )
 
     assert support["per_line"]["near_nvz"]["status"] == "supported"
+
+
+def test_opencv_fast_line_detector_reports_real_sample_line_support(tmp_path) -> None:
+    report = build_court_finding_technology_report(
+        eval_root="eval_clips/ball",
+        technologies=["opencv_fast_line_detector"],
+        out_dir=tmp_path,
+    )
+
+    fast_line = report["summary"]["by_technology"]["opencv_fast_line_detector"]
+
+    assert report["verified"] is False
+    assert report["not_cal3_verified"] is True
+    assert fast_line["scored_clip_count"] == 0
+    assert fast_line["line_support_ratio_mean"] is not None
 
 
 def test_template_competition_penalizes_tennis_service_spacing() -> None:
@@ -381,6 +466,85 @@ def test_distance_mask_regulation_records_distance_transform_evidence(tmp_path) 
     assert "distance_supported_line_count" in components["projected_distance_support"]
 
 
+def test_line_refined_regulation_reduces_synthetic_assignment_residual() -> None:
+    from threed.racketsport.court_calibration import homography_from_planar_points, project_planar_points
+
+    true_h = homography_from_planar_points(
+        [[-10.0, -22.0, 0.0], [10.0, -22.0, 0.0], [10.0, 22.0, 0.0], [-10.0, 22.0, 0.0]],
+        [[180.0, 650.0], [1110.0, 640.0], [860.0, 120.0], [405.0, 130.0]],
+    )
+    seed_h = homography_from_planar_points(
+        [[-10.0, -22.0, 0.0], [10.0, -22.0, 0.0], [10.0, 22.0, 0.0], [-10.0, 22.0, 0.0]],
+        [[205.0, 636.0], [1080.0, 656.0], [884.0, 142.0], [382.0, 111.0]],
+    )
+    line_world_endpoints = {
+        "near_baseline": ((-10.0, -22.0, 0.0), (10.0, -22.0, 0.0)),
+        "far_baseline": ((-10.0, 22.0, 0.0), (10.0, 22.0, 0.0)),
+        "near_nvz": ((-10.0, -7.0, 0.0), (10.0, -7.0, 0.0)),
+        "far_nvz": ((-10.0, 7.0, 0.0), (10.0, 7.0, 0.0)),
+        "left_sideline": ((-10.0, -22.0, 0.0), (-10.0, 22.0, 0.0)),
+        "right_sideline": ((10.0, -22.0, 0.0), (10.0, 22.0, 0.0)),
+    }
+    line_assignment = {}
+    for name, endpoints in line_world_endpoints.items():
+        p1, p2 = project_planar_points(true_h, endpoints)
+        line_assignment[name] = {
+            "p1": [p1[0], p1[1]],
+            "p2": [p2[0], p2[1]],
+            "angle_deg": 0.0,
+            "support_length_px": 500.0,
+            "source_segment_count": 1,
+        }
+    keypoints = {
+        name: tuple(project_planar_points(seed_h, [[xy[0], xy[1], 0.0]])[0])
+        for name, xy in court_finding_benchmark._FLOOR_WORLD_XY.items()
+    }
+    hypothesis = {
+        "score": 0.0,
+        "keypoints": keypoints,
+        "supported_line_count": 6,
+        "line_assignment": line_assignment,
+        "score_components": {},
+    }
+
+    refined = court_finding_benchmark.refine_regulation_homography_for_line_assignment(
+        hypothesis,
+        image_size=(1280, 720),
+    )
+
+    refinement = refined["score_components"]["line_refinement"]
+    assert refinement["method"] == "scipy_least_squares_point_line_homography"
+    assert refinement["accepted"] is True
+    assert refinement["optimized_line_rmse_px"] < refinement["initial_line_rmse_px"] * 0.75
+    assert refined["keypoints"]["near_left_corner"] != hypothesis["keypoints"]["near_left_corner"]
+
+
+def test_line_refined_regulation_scores_real_samples_without_claiming_verified(tmp_path) -> None:
+    report = build_court_finding_technology_report(
+        eval_root="eval_clips/ball",
+        technologies=["opencv_hough_lsd_regulation", "opencv_hough_lsd_regulation_line_refined"],
+        out_dir=tmp_path,
+    )
+
+    refined = report["summary"]["by_technology"]["opencv_hough_lsd_regulation_line_refined"]
+
+    assert report["verified"] is False
+    assert report["not_cal3_verified"] is True
+    assert refined["scored_clip_count"] == 5
+    proposal = json.loads(
+        (
+            tmp_path
+            / "owner_IMG_1605_8a193402780b"
+            / "opencv_hough_lsd_regulation_line_refined"
+            / "court_proposal.json"
+        ).read_text()
+    )
+    assert proposal["solver"]["writes_court_calibration"] is False
+    assert proposal["needs_user_confirmation"] is True
+    assert proposal["score_components"]["line_refinement"]["available"] is True
+    assert proposal["hypotheses"][0]["score_components"]["line_refinement"]["available"] is True
+
+
 def test_hough_or_distance_mask_selector_scores_candidate_combination(tmp_path) -> None:
     report = build_court_finding_technology_report(
         eval_root="eval_clips/ball",
@@ -399,6 +563,8 @@ def test_hough_or_distance_mask_selector_scores_candidate_combination(tmp_path) 
     assert report["not_cal3_verified"] is True
     assert selector["scored_clip_count"] == 5
     assert selector["floor_visible_median_px_mean"] < report["summary"]["by_technology"]["hough_keypoints"]["floor_visible_median_px_mean"]
+    assert selector["floor_visible_median_px_mean"] < 305.0
+    assert selector["floor_visible_p95_px_mean"] < 540.0
 
     proposal = json.loads(
         (
@@ -414,6 +580,26 @@ def test_hough_or_distance_mask_selector_scores_candidate_combination(tmp_path) 
         "opencv_hough_lsd_regulation_distance_mask",
     }
     assert proposal["needs_user_confirmation"] is True
+
+    wolverine = json.loads(
+        (
+            tmp_path
+            / "wolverine_mixed_0200_mid_steep_corner"
+            / "hough_or_regulation_distance_mask_selector"
+            / "court_proposal.json"
+        ).read_text()
+    )
+    assert wolverine["selector"]["selected_technology_id"] == "opencv_hough_lsd_regulation"
+
+    indoor = json.loads(
+        (
+            tmp_path
+            / "indoor_doubles_fwuks_0500_long_mid_baseline"
+            / "hough_or_regulation_distance_mask_selector"
+            / "court_proposal.json"
+        ).read_text()
+    )
+    assert indoor["selector"]["selected_technology_id"] == "opencv_hough_lsd_regulation_distance_mask"
 
 
 def test_benchmark_report_scores_existing_adapters_without_claiming_verified(tmp_path) -> None:
@@ -674,6 +860,40 @@ def test_temporal_persistent_regulation_scores_without_claiming_verified(tmp_pat
     assert proposal["solver"]["writes_court_calibration"] is False
     assert proposal["line_evidence"]["technology_id"] == "opencv_hough_lsd_temporal_persistent"
     assert proposal["line_evidence"]["persistence_min_frame_count"] >= 2
+
+
+def test_skimage_merged_regulation_scores_real_samples_without_claiming_verified(tmp_path) -> None:
+    pytest.importorskip("skimage.transform")
+    report = build_court_finding_technology_report(
+        eval_root="eval_clips/ball",
+        technologies=[
+            "skimage_probabilistic_hough",
+            "opencv_hough_lsd_skimage",
+            "opencv_hough_lsd_skimage_regulation",
+        ],
+        out_dir=tmp_path,
+    )
+
+    skimage_lines = report["summary"]["by_technology"]["skimage_probabilistic_hough"]
+    merged_lines = report["summary"]["by_technology"]["opencv_hough_lsd_skimage"]
+    merged_regulation = report["summary"]["by_technology"]["opencv_hough_lsd_skimage_regulation"]
+
+    assert report["verified"] is False
+    assert report["not_cal3_verified"] is True
+    assert skimage_lines["line_support_ratio_mean"] is not None
+    assert merged_lines["line_support_ratio_mean"] is not None
+    assert merged_regulation["scored_clip_count"] == 5
+    proposal = json.loads(
+        (
+            tmp_path
+            / "owner_IMG_1605_8a193402780b"
+            / "opencv_hough_lsd_skimage_regulation"
+            / "court_proposal.json"
+        ).read_text()
+    )
+    assert proposal["needs_user_confirmation"] is True
+    assert proposal["solver"]["writes_court_calibration"] is False
+    assert proposal["line_evidence"]["technology_id"] == "opencv_hough_lsd_skimage"
 
 
 def test_hough_regulation_temporal_selector_improves_deployable_mean(tmp_path) -> None:

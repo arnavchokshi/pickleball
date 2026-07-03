@@ -21,8 +21,10 @@ from threed.racketsport.schemas import (
     PlayerGroundArtifact,
     RacketCandidates,
     PhaseEvalMetrics,
+    PlacementArtifact,
     RacketPose,
     ReprojectionError,
+    Sam3DKeypoints2D,
     Skeleton3D,
     SmplMotion,
     TrackFrame,
@@ -212,6 +214,20 @@ def test_common_vector_fields_reject_wrong_dimensions() -> None:
         ContactWindowCandidates.model_validate(candidates_payload)
 
 
+def test_ball_track_schema_accepts_blurball_source() -> None:
+    parsed = BallTrack.model_validate(
+        {
+            "schema_version": 1,
+            "fps": 60.0,
+            "source": "blurball",
+            "frames": [{"t": 0.0, "xy": [100.0, 200.0], "conf": 0.75, "visible": True}],
+            "bounces": [],
+        }
+    )
+
+    assert parsed.source == "blurball"
+
+
 def test_common_numeric_fields_reject_bool_nan_and_infinity() -> None:
     for payload in (
         {"median": float("nan"), "p95": 1.0},
@@ -232,6 +248,110 @@ def test_common_numeric_fields_reject_bool_nan_and_infinity() -> None:
 def test_track_frame_bbox_rejects_inverted_xyxy_boxes() -> None:
     with pytest.raises(ValidationError, match="bbox must be ordered"):
         TrackFrame.model_validate({"t": 0.0, "bbox": [10.0, 20.0, 5.0, 40.0], "world_xy": [0.0, 0.0], "conf": 0.8})
+
+
+def test_tracks_schema_accepts_placement_provenance_block() -> None:
+    parsed = Tracks.model_validate(
+        {
+            "schema_version": 1,
+            "fps": 30.0,
+            "players": [
+                {
+                    "id": 1,
+                    "side": "near",
+                    "role": "left",
+                    "frames": [{"t": 0.0, "bbox": [0.0, 0.0, 10.0, 20.0], "world_xy": [0.0, 0.0], "conf": 0.8}],
+                }
+            ],
+            "rally_spans": [],
+            "placement_provenance": {
+                "stage": "placement",
+                "placement": "placement.json",
+                "tracks_backup": "tracks_prewrite_backup.json",
+            },
+        }
+    )
+
+    assert parsed.placement_provenance["stage"] == "placement"
+
+
+def test_placement_artifact_schema_accepts_signal_covariance_and_summary() -> None:
+    parsed = PlacementArtifact.model_validate(
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_placement",
+            "fps": 30.0,
+            "source": "placement_stage",
+            "tracks_path": "tracks.json",
+            "backup_tracks_path": "tracks_prewrite_backup.json",
+            "refine_from_sam3d": False,
+            "undistort_applied": False,
+            "players": [
+                {
+                    "id": 1,
+                    "frames": [
+                        {
+                            "frame_idx": 0,
+                            "t": 0.0,
+                            "original_world_xy": [0.0, 0.0],
+                            "fused_world_xy": [0.1, 0.2],
+                            "smoothed_world_xy": [0.1, 0.2],
+                            "covariance_m2": [[0.01, 0.0], [0.0, 0.02]],
+                            "stance": True,
+                            "signals": [
+                                {
+                                    "name": "native2d",
+                                    "xy": [0.1, 0.2],
+                                    "sigma_m": [0.1, 0.14],
+                                    "used": True,
+                                    "reason": None,
+                                }
+                            ],
+                            "source_counts": {"bbox": 1, "native2d": 1},
+                        }
+                    ],
+                }
+            ],
+            "summary": {
+                "player_count": 1,
+                "frame_count": 1,
+                "coverage_unchanged": True,
+                "source_counts": {"bbox": 1, "native2d": 1, "sam3d": 0},
+                "jitter_before_after_mps": {"1": {"before_p90": 1.0, "after_p90": 0.5}},
+                "court_bounds_violations": 0,
+            },
+            "provenance": {"stage": "placement"},
+        }
+    )
+
+    assert parsed.players[0].frames[0].signals[0].name == "native2d"
+
+
+def test_sam3d_keypoints_sidecar_schema_accepts_compact_foot_points() -> None:
+    parsed = Sam3DKeypoints2D.model_validate(
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_sam3d_keypoints_2d",
+            "source": "body_stage",
+            "foot_keypoint_indices": {"left_ankle": 13, "right_ankle": 14},
+            "players": [
+                {
+                    "id": 1,
+                    "frames": [
+                        {
+                            "frame_idx": 0,
+                            "t": 0.0,
+                            "keypoints": [
+                                {"name": "left_ankle", "index": 13, "xy_px": [100.0, 200.0], "conf": 0.9}
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert parsed.players[0].frames[0].keypoints[0].index == 13
 
 
 def test_smpl_motion_frame_accepts_raw_track_anchor() -> None:
@@ -1149,6 +1269,68 @@ def test_virtual_world_accepts_confidence_gate_provenance_fields() -> None:
     assert parsed.ball.frames[0].not_for_detection_metrics is True
     assert parsed.paddles[0].frames[0].confidence_provenance.predictor == "PaddleNullPredictor"
     assert parsed.confidence_gate["artifact_type"] == "racketsport_confidence_gate_overlay"
+
+
+def test_virtual_world_accepts_joint_names_foot_pin_and_joints_source_metadata() -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_virtual_world",
+        "world_frame": "court_Z0",
+        "fps": 30.0,
+        "joint_names": ["nose", "left_wrist"],
+        "court": {
+            "sport": "pickleball",
+            "coordinate_frame": "court_Z0",
+            "length_m": 13.4112,
+            "width_m": 6.096,
+            "line_segments": {"net": [[-3.048, 0.0, 0.0], [3.048, 0.0, 0.0]]},
+            "net": {
+                "endpoints": [[-3.048, 0.0, 0.0], [3.048, 0.0, 0.0]],
+                "center_height_m": 0.8636,
+                "post_height_m": 0.9144,
+            },
+        },
+        "players": [
+            {
+                "id": 1,
+                "representation": "joints",
+                "joints_source": {"skeleton3d": 1, "smpl_fill": 0},
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "joints_world": [[0.0, 0.0, 1.0], [0.2, 0.1, 1.1]],
+                        "mesh_vertices_world": [],
+                        "joint_count": 2,
+                        "mesh_vertex_count": 0,
+                    }
+                ],
+            }
+        ],
+        "ball": {"source": "tap", "frames": []},
+        "paddles": [],
+        "summary": {
+            "player_count": 1,
+            "mesh_player_count": 0,
+            "joint_player_frame_count": 1,
+            "ball_frame_count": 0,
+            "paddle_frame_count": 0,
+        },
+        "foot_pin": {
+            "version": 1,
+            "audit": {
+                "artifact_type": "foot_pin_audit",
+                "summary": {"stance_slide_after_mm": {"p95": 18.9}},
+            },
+        },
+    }
+
+    parsed = VirtualWorld.model_validate(payload)
+
+    assert parsed.joint_names == ["nose", "left_wrist"]
+    assert parsed.players[0].joints_source is not None
+    assert parsed.players[0].joints_source.model_dump() == {"skeleton3d": 1, "smpl_fill": 0}
+    assert parsed.foot_pin is not None
+    assert parsed.foot_pin["audit"]["summary"]["stance_slide_after_mm"]["p95"] == 18.9
 
 
 def test_virtual_world_defaults_confidence_provenance_fields_for_legacy_payloads() -> None:
