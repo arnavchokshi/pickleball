@@ -6,8 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from threed.racketsport.external_gt_body_prediction_schema import MHR70_JOINT_NAMES
 from threed.racketsport.pose_temporal import (
     _apply_sam3d_skeleton_plausibility,
+    _joint_smoothing_group,
     apply_sam3d_wrist_bone_lock,
     compare_wrist_peak_timing,
     refine_lane_a_skeleton3d,
@@ -280,6 +282,109 @@ def test_sam3d_postprocess_rejects_non_sam3d_skeleton() -> None:
 
     with pytest.raises(ValueError, match="SAM-3D"):
         refine_sam3d_skeleton3d(skeleton)
+
+
+def test_sam3d_heel_and_toe_tip_joints_resolve_to_feet_smoothing_group() -> None:
+    # runs/sam3d_foot_wander_20260703T1024Z/REPORT.md: heel and toe-tip joints were
+    # silently bucketed as "core_body" for SAM-3D's generic sam3dbody_joint_### payloads
+    # because SAM3D_BODY_MHR70_SEMANTIC_MAP only covers the 12 wrist/limb/ankle gate
+    # joints, and _joint_smoothing_group compared its canonicalized name against a set of
+    # RAW joint_names entries that could never match. Ankle, hip, knee, shoulder, elbow,
+    # and wrist were already covered by the semantic map and must stay exactly as before.
+    joint_names = [f"sam3dbody_joint_{idx:03d}" for idx in range(70)]
+    expected_group = {
+        "left_ankle": "feet",
+        "right_ankle": "feet",
+        "left_big_toe_tip": "feet",
+        "left_small_toe_tip": "feet",
+        "left_heel": "feet",
+        "right_big_toe_tip": "feet",
+        "right_small_toe_tip": "feet",
+        "right_heel": "feet",
+        "left_wrist": "wrists",
+        "right_wrist": "wrists",
+        "left_hip": "core_body",
+        "left_knee": "core_body",
+        "left_shoulder": "core_body",
+        "left_elbow": "core_body",
+    }
+    for canonical_name, expected in expected_group.items():
+        idx = MHR70_JOINT_NAMES.index(canonical_name)
+        assert _joint_smoothing_group(joint_names[idx], joint_names) == expected, canonical_name
+
+
+def _sam3d_foot_lag_skeleton() -> dict:
+    left_elbow = _sam3d_idx("left_elbow")
+    left_wrist = _sam3d_idx("left_wrist")
+    right_elbow = _sam3d_idx("right_elbow")
+    right_wrist = _sam3d_idx("right_wrist")
+    left_heel = MHR70_JOINT_NAMES.index("left_heel")
+    frames = []
+    for frame_idx, offset in enumerate([0.0, 0.0, 1.0, 1.0, 1.0, 1.0]):
+        joints = [[0.0, 0.0, 0.0] for _idx in range(70)]
+        joints[left_elbow] = [1.0, 0.0, 1.0]
+        joints[right_elbow] = [-1.0, 0.0, 1.0]
+        joints[left_wrist] = [1.3, 0.0, 1.0]
+        joints[right_wrist] = [-1.3, 0.0, 1.0]
+        joints[left_heel] = [offset, 0.0, 0.02]
+        frames.append(
+            {
+                "frame_idx": frame_idx,
+                "t": frame_idx / 30.0,
+                "joints_world": joints,
+                "joint_conf": [1.0] * 70,
+            }
+        )
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_skeleton3d",
+        "fps": 30.0,
+        "world_frame": "court_Z0",
+        "source_model": "sam3d_body_joints",
+        "joint_names": [f"sam3dbody_joint_{idx:03d}" for idx in range(70)],
+        "preview_only": False,
+        "players": [{"id": 7, "frames": frames}],
+        "provenance": {"source": "sam3d_body_joints"},
+    }
+
+
+def test_refine_sam3d_skeleton3d_foot_low_lag_smoothing_reduces_heel_lag_vs_legacy() -> None:
+    skeleton = _sam3d_foot_lag_skeleton()
+    left_heel = MHR70_JOINT_NAMES.index("left_heel")
+
+    low_lag = refine_sam3d_skeleton3d(skeleton, fps=30.0)
+    legacy = refine_sam3d_skeleton3d(skeleton, fps=30.0, sam3d_foot_low_lag_smoothing=False)
+
+    # Frame 2 is the first frame after the heel's step change to 1.0; near-pass-through
+    # foot smoothing must track the step much more closely than the legacy generic
+    # (mincutoff=1.0, beta=0.3) treatment shared with "hands".
+    low_lag_x = low_lag["players"][0]["frames"][2]["joints_world"][left_heel][0]
+    legacy_x = legacy["players"][0]["frames"][2]["joints_world"][left_heel][0]
+    assert low_lag_x > legacy_x
+    assert low_lag_x == pytest.approx(1.0, abs=0.6)
+    assert legacy_x < 0.3
+
+
+def test_refine_sam3d_skeleton3d_records_foot_treatment_provenance() -> None:
+    skeleton = _sam3d_foot_lag_skeleton()
+
+    enabled = refine_sam3d_skeleton3d(skeleton, fps=30.0)
+    disabled = refine_sam3d_skeleton3d(skeleton, fps=30.0, sam3d_foot_low_lag_smoothing=False)
+
+    enabled_treatment = enabled["provenance"]["sam3d_foot_treatment"]
+    assert enabled_treatment["low_lag_smoothing_enabled"] is True
+    assert enabled_treatment["foot_one_euro_mincutoff"] == 1000.0
+    assert enabled_treatment["foot_one_euro_beta"] == 0.0
+    assert enabled_treatment["heel_toe_canonical_name_resolution"] == "mhr70_positional_fallback"
+
+    disabled_treatment = disabled["provenance"]["sam3d_foot_treatment"]
+    assert disabled_treatment["low_lag_smoothing_enabled"] is False
+    assert disabled_treatment["foot_one_euro_mincutoff"] == 1.0
+    assert disabled_treatment["foot_one_euro_beta"] == 0.3
+
+    enabled_one_euro = enabled["provenance"]["temporal_refine"]["one_euro"]
+    assert enabled_one_euro["foot_mincutoff"] == 1000.0
+    assert enabled_one_euro["foot_beta"] == 0.0
 
 
 def _distance(first: list[float], second: list[float]) -> float:

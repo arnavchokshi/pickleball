@@ -83,6 +83,8 @@ def test_refine_lane_a_skeleton3d_one_euro_smooths_feet_and_hands() -> None:
         "core_body_beta": 0.05,
         "wrist_mincutoff": 1000.0,
         "wrist_beta": 0.0,
+        "foot_mincutoff": 1.0,
+        "foot_beta": 0.3,
         "applied_joint_groups": ["core_body", "feet", "hands", "wrists"],
         "filtered_joint_count": 65,
     }
@@ -90,6 +92,58 @@ def test_refine_lane_a_skeleton3d_one_euro_smooths_feet_and_hands() -> None:
     assert refined["players"][0]["frames"][1]["joints_world"][foot_idx][0] < 1.0
     assert refined["players"][0]["frames"][1]["joints_world"][hand_idx][0] < 1.0
     assert refined["players"][0]["frames"][1]["joint_conf"][hand_idx] == pytest.approx(0.9)
+
+
+def test_refine_lane_a_skeleton3d_foot_one_euro_override_only_affects_feet() -> None:
+    # foot_one_euro_mincutoff/beta default to None, which falls back to the generic
+    # mincutoff/beta (identical to pre-fix behavior for every existing caller). Passing
+    # explicit near-pass-through values must change ONLY the "feet" group's lag, not
+    # "hands" (which still shares the generic bucket) or "core_body"/"wrists". World
+    # grounding is disabled here because it re-anchors every joint's XY off the support
+    # foot position (by design), which would otherwise cascade a feet-only smoothing
+    # change onto every other joint including hands -- an orthogonal, expected effect
+    # this test does not want to exercise.
+    foot_idx = _idx("left_big_toe")
+    hand_idx = _idx("left_hand_00")
+    frames = []
+    for frame_idx, offset in enumerate([0.0, 1.0, 0.0]):
+        joints = _base_joints()
+        joints[foot_idx] = [offset, 0.0, 0.0]
+        joints[hand_idx] = [offset, 0.0, 1.4]
+        frames.append(_frame(frame_idx, joints))
+
+    default_fallback = refine_lane_a_skeleton3d(_skeleton(frames), fps=30.0, apply_world_grounding=False)
+    low_lag_feet = refine_lane_a_skeleton3d(
+        _skeleton(frames),
+        fps=30.0,
+        apply_world_grounding=False,
+        foot_one_euro_mincutoff=1000.0,
+        foot_one_euro_beta=0.0,
+    )
+
+    one_euro = low_lag_feet["provenance"]["temporal_refine"]["one_euro"]
+    assert one_euro["foot_mincutoff"] == 1000.0
+    assert one_euro["foot_beta"] == 0.0
+    assert default_fallback["provenance"]["temporal_refine"]["one_euro"]["foot_mincutoff"] == 1.0
+
+    low_lag_foot_x = low_lag_feet["players"][0]["frames"][1]["joints_world"][foot_idx][0]
+    default_foot_x = default_fallback["players"][0]["frames"][1]["joints_world"][foot_idx][0]
+    assert low_lag_foot_x > default_foot_x
+
+    # Hands are untouched by the foot-specific override -- still the generic bucket.
+    low_lag_hand_x = low_lag_feet["players"][0]["frames"][1]["joints_world"][hand_idx][0]
+    default_hand_x = default_fallback["players"][0]["frames"][1]["joints_world"][hand_idx][0]
+    assert low_lag_hand_x == pytest.approx(default_hand_x)
+
+
+def test_refine_lane_a_skeleton3d_rejects_non_positive_foot_mincutoff() -> None:
+    frames = [_frame(0, _base_joints())]
+
+    with pytest.raises(ValueError, match="foot_one_euro_mincutoff"):
+        refine_lane_a_skeleton3d(_skeleton(frames), fps=30.0, foot_one_euro_mincutoff=0.0)
+
+    with pytest.raises(ValueError, match="foot_one_euro_beta"):
+        refine_lane_a_skeleton3d(_skeleton(frames), fps=30.0, foot_one_euro_beta=-0.1)
 
 
 def test_refine_lane_a_skeleton3d_enforces_per_player_body_bone_lengths() -> None:

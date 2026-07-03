@@ -13,6 +13,7 @@ from statistics import median
 from types import SimpleNamespace
 from typing import Any, Mapping, Sequence
 
+from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
 from .model_manifest import verify_model_checkpoint
 from .skeleton3d import SAM3D_BODY_MHR70_SEMANTIC_MAP
 from .skeleton_lift_2d import _DEFAULT_LEG_DERIVED_RATIOS, LEG_BONE_JOINT_PAIRS
@@ -25,6 +26,12 @@ DEFAULT_CORE_BODY_ONE_EURO_MINCUTOFF = 0.45
 DEFAULT_CORE_BODY_ONE_EURO_BETA = 0.05
 DEFAULT_WRIST_ONE_EURO_MINCUTOFF = 1000.0
 DEFAULT_WRIST_ONE_EURO_BETA = 0.0
+# Near pass-through, matching the verified wrist treatment: stance-phase measurement
+# (runs/sam3d_foot_wander_20260703T1024Z/REPORT.md) showed the "feet" one-euro group
+# inheriting the generic core-ish default lag was the dominant source of ANKLE/HEEL/TOE
+# stance-phase slide in the SAM-3D refine chain, not bone-length or grounding.
+DEFAULT_FOOT_ONE_EURO_MINCUTOFF = 1000.0
+DEFAULT_FOOT_ONE_EURO_BETA = 0.0
 DEFAULT_LOW_CONFIDENCE_JOINT_THRESHOLD = 0.25
 DEFAULT_PLAUSIBILITY_JOINT_CONFIDENCE_FLOOR = 0.25
 DEFAULT_PLAUSIBILITY_MAX_BONE_ZSCORE = 6.0
@@ -236,12 +243,21 @@ def refine_lane_a_skeleton3d(
     core_one_euro_beta: float = DEFAULT_CORE_BODY_ONE_EURO_BETA,
     wrist_one_euro_mincutoff: float = DEFAULT_WRIST_ONE_EURO_MINCUTOFF,
     wrist_one_euro_beta: float = DEFAULT_WRIST_ONE_EURO_BETA,
+    foot_one_euro_mincutoff: float | None = None,
+    foot_one_euro_beta: float | None = None,
     low_confidence_threshold: float = DEFAULT_LOW_CONFIDENCE_JOINT_THRESHOLD,
     motionbert_window_max_frames: int = DEFAULT_MOTIONBERT_WINDOW_MAX_FRAMES,
     motionbert_runtime: Any | None = None,
     apply_world_grounding: bool = True,
 ) -> dict[str, Any]:
-    """Return a refined Lane A skeleton payload without fabricating frames."""
+    """Return a refined Lane A skeleton payload without fabricating frames.
+
+    ``foot_one_euro_mincutoff``/``foot_one_euro_beta`` default to ``None``, which keeps
+    every existing caller's behavior unchanged: the "feet" joint group falls back to the
+    generic ``one_euro_mincutoff``/``one_euro_beta`` params exactly as before. Pass explicit
+    values to give the feet their own (typically lower-lag) one-euro tuning independent of
+    the generic default; ``refine_sam3d_skeleton3d`` does this by default.
+    """
 
     if one_euro_mincutoff <= 0.0:
         raise ValueError("one_euro_mincutoff must be positive")
@@ -255,6 +271,10 @@ def refine_lane_a_skeleton3d(
         raise ValueError("wrist_one_euro_mincutoff must be positive")
     if wrist_one_euro_beta < 0.0:
         raise ValueError("wrist_one_euro_beta must be non-negative")
+    if foot_one_euro_mincutoff is not None and foot_one_euro_mincutoff <= 0.0:
+        raise ValueError("foot_one_euro_mincutoff must be positive")
+    if foot_one_euro_beta is not None and foot_one_euro_beta < 0.0:
+        raise ValueError("foot_one_euro_beta must be non-negative")
     if not 0.0 <= low_confidence_threshold <= 1.0:
         raise ValueError("low_confidence_threshold must be in [0, 1]")
     if motionbert_window_max_frames <= 0:
@@ -269,6 +289,9 @@ def refine_lane_a_skeleton3d(
     inferred_fps = float(fps or skeleton3d.get("fps") or 0.0)
     if inferred_fps <= 0.0:
         inferred_fps = _infer_fps(players)
+
+    effective_foot_mincutoff = foot_one_euro_mincutoff if foot_one_euro_mincutoff is not None else one_euro_mincutoff
+    effective_foot_beta = foot_one_euro_beta if foot_one_euro_beta is not None else one_euro_beta
 
     output = copy.deepcopy(dict(skeleton3d))
     output_players: list[dict[str, Any]] = []
@@ -305,6 +328,8 @@ def refine_lane_a_skeleton3d(
             core_beta=core_one_euro_beta,
             wrist_mincutoff=wrist_one_euro_mincutoff,
             wrist_beta=wrist_one_euro_beta,
+            foot_mincutoff=effective_foot_mincutoff,
+            foot_beta=effective_foot_beta,
             low_confidence_threshold=low_confidence_threshold,
         )
         _add_smoothing_metrics(smoothing_metrics, player_smoothing_metrics)
@@ -342,6 +367,8 @@ def refine_lane_a_skeleton3d(
         core_beta=core_one_euro_beta,
         wrist_mincutoff=wrist_one_euro_mincutoff,
         wrist_beta=wrist_one_euro_beta,
+        foot_mincutoff=effective_foot_mincutoff,
+        foot_beta=effective_foot_beta,
         low_confidence_threshold=low_confidence_threshold,
         motionbert_window_max_frames=motionbert_window_max_frames,
         motionbert_metrics=motionbert_metrics,
@@ -363,6 +390,9 @@ def refine_sam3d_skeleton3d(
     core_one_euro_beta: float = DEFAULT_CORE_BODY_ONE_EURO_BETA,
     wrist_one_euro_mincutoff: float = DEFAULT_WRIST_ONE_EURO_MINCUTOFF,
     wrist_one_euro_beta: float = DEFAULT_WRIST_ONE_EURO_BETA,
+    sam3d_foot_low_lag_smoothing: bool = True,
+    foot_one_euro_mincutoff: float = DEFAULT_FOOT_ONE_EURO_MINCUTOFF,
+    foot_one_euro_beta: float = DEFAULT_FOOT_ONE_EURO_BETA,
     low_confidence_threshold: float = DEFAULT_LOW_CONFIDENCE_JOINT_THRESHOLD,
     plausibility_joint_confidence_floor: float = DEFAULT_PLAUSIBILITY_JOINT_CONFIDENCE_FLOOR,
     plausibility_max_bone_zscore: float = DEFAULT_PLAUSIBILITY_MAX_BONE_ZSCORE,
@@ -376,6 +406,14 @@ def refine_sam3d_skeleton3d(
     SAM-3D MHR70 artifacts usually carry generic ``sam3dbody_joint_###``
     names. This entrypoint keeps all 70 joints intact and uses the local
     semantic map only for wrist/limb/ankle gates.
+
+    ``sam3d_foot_low_lag_smoothing`` (default on) gives the ANKLE/HEEL/TOE joint group its
+    own near-pass-through one-euro tuning (``foot_one_euro_mincutoff``/``foot_one_euro_beta``,
+    same style as the verified wrist treatment) instead of silently inheriting the
+    core-body-ish generic default. Stage-by-stage measurement on real Wolverine artifacts
+    (runs/sam3d_foot_wander_20260703T1024Z/REPORT.md) found this one-euro lag -- not
+    bone-length enforcement or world grounding -- was the dominant source of stance-phase
+    foot slide in this chain. Set to False to restore the pre-fix behavior for rollback.
     """
 
     if not _is_sam3d_skeleton_payload(skeleton3d):
@@ -408,6 +446,8 @@ def refine_sam3d_skeleton3d(
         core_one_euro_beta=core_one_euro_beta,
         wrist_one_euro_mincutoff=wrist_one_euro_mincutoff,
         wrist_one_euro_beta=wrist_one_euro_beta,
+        foot_one_euro_mincutoff=foot_one_euro_mincutoff if sam3d_foot_low_lag_smoothing else None,
+        foot_one_euro_beta=foot_one_euro_beta if sam3d_foot_low_lag_smoothing else None,
         low_confidence_threshold=low_confidence_threshold,
         motionbert_runtime=None,
         apply_world_grounding=apply_world_grounding,
@@ -429,6 +469,14 @@ def refine_sam3d_skeleton3d(
     temporal["wrist_peak_timing_gate_pass"] = wrist_timing.get("status") == "pass"
     provenance["temporal_refine"] = temporal
     provenance["sam3d_skeleton_plausibility"] = plausibility
+    provenance["sam3d_foot_treatment"] = {
+        "low_lag_smoothing_enabled": sam3d_foot_low_lag_smoothing,
+        "foot_one_euro_mincutoff": foot_one_euro_mincutoff if sam3d_foot_low_lag_smoothing else one_euro_mincutoff,
+        "foot_one_euro_beta": foot_one_euro_beta if sam3d_foot_low_lag_smoothing else one_euro_beta,
+        "heel_toe_canonical_name_resolution": "mhr70_positional_fallback",
+        "bone_length_leg_chain_unchanged": True,
+        "world_grounding_unchanged": True,
+    }
     provenance["stature_check"] = _build_sam3d_stature_check(refined)
     provenance["sam3d_postprocess"] = {
         "source": SAM3D_BODY_JOINT_SOURCE,
@@ -788,6 +836,8 @@ def _apply_one_euro(
     core_beta: float,
     wrist_mincutoff: float,
     wrist_beta: float,
+    foot_mincutoff: float,
+    foot_beta: float,
     low_confidence_threshold: float,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     filter_indexes = list(range(len(joint_names)))
@@ -852,6 +902,9 @@ def _apply_one_euro(
             elif group == "wrists":
                 group_mincutoff = wrist_mincutoff
                 group_beta = wrist_beta
+            elif group == "feet":
+                group_mincutoff = foot_mincutoff
+                group_beta = foot_beta
             else:
                 group_mincutoff = mincutoff
                 group_beta = beta
@@ -1439,6 +1492,8 @@ def _provenance_with_temporal_refine(
     core_beta: float,
     wrist_mincutoff: float,
     wrist_beta: float,
+    foot_mincutoff: float,
+    foot_beta: float,
     low_confidence_threshold: float,
     motionbert_window_max_frames: int,
     motionbert_metrics: Mapping[str, Any],
@@ -1467,6 +1522,8 @@ def _provenance_with_temporal_refine(
             "core_body_beta": core_beta,
             "wrist_mincutoff": wrist_mincutoff,
             "wrist_beta": wrist_beta,
+            "foot_mincutoff": foot_mincutoff,
+            "foot_beta": foot_beta,
             "applied_joint_groups": ["core_body", "feet", "hands", "wrists"],
             "filtered_joint_count": int(smoothing_metrics.get("filtered_joint_count", 0)),
         },
@@ -1897,16 +1954,33 @@ def _canonical_joint_name(name: str, joint_names: Sequence[str]) -> str:
     for semantic_name, semantic_idx in SAM3D_BODY_MHR70_SEMANTIC_MAP.joints.items():
         if semantic_idx == idx:
             return semantic_name
+    # SAM3D_BODY_MHR70_SEMANTIC_MAP only covers the 12 joints needed for wrist/limb/ankle
+    # gates (see refine_sam3d_skeleton3d docstring). Foot joints outside that set (heel,
+    # big/small toe tips) fell through to the generic sam3dbody_joint_### name here, which
+    # made _foot_joint_names/_joint_smoothing_group silently bucket them as "core_body"
+    # instead of "feet" -- runs/sam3d_foot_wander_20260703T1024Z/REPORT.md measured this as
+    # the dominant source of ANKLE/HEEL/TOE stance-phase slide. MHR70_JOINT_NAMES is the
+    # full canonical 70-joint layout that _looks_like_sam3d_mhr70_joint_names already
+    # confirmed this payload matches positionally, so use it as a full-coverage fallback.
+    if idx < len(MHR70_JOINT_NAMES):
+        return MHR70_JOINT_NAMES[idx]
     return name
 
 
 def _joint_smoothing_group(name: str, joint_names: Sequence[str]) -> str:
-    name = _canonical_joint_name(name, joint_names)
-    if name in {"left_wrist", "right_wrist"}:
+    canonical = _canonical_joint_name(name, joint_names)
+    if canonical in {"left_wrist", "right_wrist"}:
         return "wrists"
-    if name.startswith("left_hand_") or name.startswith("right_hand_"):
+    if canonical.startswith("left_hand_") or canonical.startswith("right_hand_"):
         return "hands"
-    if name in _foot_joint_names(joint_names) or name in {"left_ankle", "right_ankle"}:
+    # Check the foot/toe/heel pattern directly against the canonical name rather than
+    # membership in _foot_joint_names(joint_names) (which returns RAW joint_names entries,
+    # not canonical ones): for SAM-3D generic sam3dbody_joint_### payloads, `canonical` is
+    # already resolved (e.g. "left_heel"), so comparing it against a set of raw
+    # "sam3dbody_joint_017"-style strings could never match, which silently bucketed heel
+    # and toe-tip joints as "core_body" instead of "feet". See
+    # runs/sam3d_foot_wander_20260703T1024Z/REPORT.md for the measured impact.
+    if canonical in {"left_ankle", "right_ankle"} or "toe" in canonical or canonical.endswith("_heel"):
         return "feet"
     return "core_body"
 
