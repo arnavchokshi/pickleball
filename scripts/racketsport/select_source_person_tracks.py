@@ -48,7 +48,13 @@ def main() -> int:
     parser.add_argument("--seed-prior-weight", type=float, default=0.75)
     parser.add_argument("--cardinality-gap-penalty", type=float, default=8.0)
     parser.add_argument("--confidence-reward-weight", type=float, default=0.25)
-    parser.add_argument("--embedding-weight", type=float, default=0.0)
+    parser.add_argument("--margin-band-penalty", type=float, default=SourceSelectionConfig().margin_band_penalty)
+    parser.add_argument(
+        "--embedding-weight",
+        type=float,
+        default=SourceSelectionConfig().embedding_weight,
+        help="Opt-in appearance cost weight for --embedding-export. Default 0.0 keeps baseline scoring embedding-free.",
+    )
     parser.add_argument(
         "--embedding-bbox-scale",
         type=float,
@@ -73,6 +79,7 @@ def main() -> int:
         seed_prior_weight=args.seed_prior_weight,
         cardinality_gap_penalty=args.cardinality_gap_penalty,
         confidence_reward_weight=args.confidence_reward_weight,
+        margin_band_penalty=args.margin_band_penalty,
         embedding_weight=args.embedding_weight,
         embedding_bbox_scale=args.embedding_bbox_scale,
     )

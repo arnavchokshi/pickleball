@@ -9,15 +9,28 @@ import pytest
 
 PYTHON_CLI_SCRIPTS = sorted([*Path("scripts").glob("*.py"), *Path("scripts/racketsport").glob("*.py")])
 EXPLICIT_AUDIT_CLI_SCRIPTS = (
+    "scripts/racketsport/apply_ball_physics_fill.py",
     "scripts/racketsport/benchmark_decode.py",
     "scripts/racketsport/benchmark_person_trackers.py",
+    "scripts/racketsport/build_external_gt_aspset510_body_inputs.py",
+    "scripts/racketsport/build_external_gt_aspset510_labels.py",
     "scripts/racketsport/build_paddle_true_corner_review.py",
+    "scripts/racketsport/build_rally_spans.py",
+    "scripts/racketsport/build_tiled_raw_pool.py",
     "scripts/racketsport/filter_ball_local_search.py",
+    "scripts/racketsport/pool_parity_diagnostics.py",
     "scripts/racketsport/prepare_tracknetv3_finetune_dataset.py",
+    "scripts/racketsport/profile_stage_runtime.py",
     "scripts/racketsport/review_input_server.py",
+    "scripts/racketsport/rescore_body_ext3_grounding_consistent.py",
+    "scripts/racketsport/run_external_gt_aspset510_body_inference.py",
     "scripts/racketsport/run_ball_tracking_eval_suite.py",
     "scripts/racketsport/run_yolo26_teacher.py",
+    "scripts/racketsport/score_external_gt_aspset510_body_results.py",
     "scripts/racketsport/train_court_keypoint_heatmap.py",
+    "scripts/racketsport/validate_metric_calibration_15pt.py",
+    "scripts/racketsport/validate_rally_gating.py",
+    "scripts/racketsport/verify_process_video_viewer.py",
 )
 
 

@@ -9,6 +9,9 @@ public enum OnDevicePersonCandidate: String, Codable, Sendable {
     case yolo26sInt8EveryFrame = "yolo26s_int8_every_frame"
     case yolo26mInt8Img416EveryFrame = "yolo26m_int8_img416_every_frame"
     case yolo11nInt8Fallback = "yolo11n_int8_fallback"
+    /// Live camera feed (not replay), decimated per `LiveDetectionCadenceScheduler`
+    /// -- see `LiveCourtOverlayEngine` in `PickleballCapture` (W3-LIVE-MLP).
+    case yolo26nInt8Img640LiveCadence4 = "yolo26n_int8_img640_live_cadence4"
 }
 
 public struct OnDevicePersonDetection: Codable, Equatable, Sendable {

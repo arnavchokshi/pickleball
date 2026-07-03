@@ -25,11 +25,19 @@
 			remoteGlobalIDString = A3TG00012F60000000000001;
 			remoteInfo = Pickleball;
 		};
+		A3CP00022F60000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A3PR00012F60000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A3TG00012F60000000000001;
+			remoteInfo = Pickleball;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		A3FR00012F60000000000001 /* Pickleball.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pickleball.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3FR00022F60000000000001 /* PickleballAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PickleballAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A3FR00032F60000000000001 /* PickleballAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PickleballAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -54,6 +62,11 @@
 		A3RG00022F60000000000001 /* AppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AppTests;
+			sourceTree = "<group>";
+		};
+		A3RG00032F60000000000001 /* AppUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AppUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -81,6 +94,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A3BP00082F60000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -89,6 +109,7 @@
 			children = (
 				A3RG00012F60000000000001 /* App */,
 				A3RG00022F60000000000001 /* AppTests */,
+				A3RG00032F60000000000001 /* AppUITests */,
 				A3GR00022F60000000000001 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -98,6 +119,7 @@
 			children = (
 				A3FR00012F60000000000001 /* Pickleball.app */,
 				A3FR00022F60000000000001 /* PickleballAppTests.xctest */,
+				A3FR00032F60000000000001 /* PickleballAppUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -158,6 +180,29 @@
 			productReference = A3FR00022F60000000000001 /* PickleballAppTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		A3TG00032F60000000000001 /* PickleballAppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A3CL00042F60000000000001 /* Build configuration list for PBXNativeTarget "PickleballAppUITests" */;
+			buildPhases = (
+				A3BP00072F60000000000001 /* Sources */,
+				A3BP00082F60000000000001 /* Frameworks */,
+				A3BP00092F60000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A3TD00022F60000000000001 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A3RG00032F60000000000001 /* AppUITests */,
+			);
+			name = PickleballAppUITests;
+			packageProductDependencies = (
+			);
+			productName = PickleballAppUITests;
+			productReference = A3FR00032F60000000000001 /* PickleballAppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -172,6 +217,10 @@
 						CreatedOnToolsVersion = 26.5;
 					};
 					A3TG00022F60000000000001 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = A3TG00012F60000000000001;
+					};
+					A3TG00032F60000000000001 = {
 						CreatedOnToolsVersion = 26.5;
 						TestTargetID = A3TG00012F60000000000001;
 					};
@@ -196,6 +245,7 @@
 			targets = (
 				A3TG00012F60000000000001 /* Pickleball */,
 				A3TG00022F60000000000001 /* PickleballAppTests */,
+				A3TG00032F60000000000001 /* PickleballAppUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -209,6 +259,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		A3BP00062F60000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3BP00092F60000000000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -232,6 +289,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A3BP00072F60000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -239,6 +303,11 @@
 			isa = PBXTargetDependency;
 			target = A3TG00012F60000000000001 /* Pickleball */;
 			targetProxy = A3CP00012F60000000000001 /* PBXContainerItemProxy */;
+		};
+		A3TD00022F60000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A3TG00012F60000000000001 /* Pickleball */;
+			targetProxy = A3CP00022F60000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -417,6 +486,54 @@
 			};
 			name = Release;
 		};
+		A3BC00072F60000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = H59NULCBY3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arnavchokshi.pickleball.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Pickleball;
+			};
+			name = Debug;
+		};
+		A3BC00082F60000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = H59NULCBY3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arnavchokshi.pickleball.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Pickleball;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -443,6 +560,15 @@
 			buildConfigurations = (
 				A3BC00052F60000000000001 /* Debug */,
 				A3BC00062F60000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A3CL00042F60000000000001 /* Build configuration list for PBXNativeTarget "PickleballAppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A3BC00072F60000000000001 /* Debug */,
+				A3BC00082F60000000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

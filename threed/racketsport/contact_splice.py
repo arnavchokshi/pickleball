@@ -1,4 +1,4 @@
-"""Splice Lane B contact mesh joints into continuous Lane A skeletons."""
+"""Splice scheduled contact mesh joints into continuous skeletons."""
 
 from __future__ import annotations
 
@@ -20,18 +20,18 @@ def splice_contact_skeleton_with_body_mesh(
     fallback_skeleton3d: Mapping[str, Any] | None = None,
     override_joint_names: Sequence[str] | None = None,
     mesh_source: str = DEFAULT_MESH_SOURCE,
-    fallback_source: str = "body_pose_fallback.json",
+    fallback_source: str = "fallback_skeleton3d.json",
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Return a skeleton with scheduled hitter contact joints overridden by mesh joints.
 
     The splice is intentionally conservative: it only touches scheduled BODY
     player-frames, only overrides joints with a semantic name match, and leaves
-    the Lane A skeleton untouched when mesh joints are unavailable.
+    the skeleton untouched when mesh joints are unavailable.
     """
 
     output = deepcopy(dict(skeleton3d))
     skeleton_joint_names = _string_list(output.get("joint_names", []))
-    skeleton_index = {name: idx for idx, name in enumerate(skeleton_joint_names)}
+    skeleton_index = _joint_index(skeleton_joint_names)
     requested_names = _override_joint_names(skeleton_joint_names, override_joint_names)
     skeleton_frames = _skeleton_frame_lookup(output)
     mesh_frames = _mesh_frame_lookup(body_mesh)
@@ -39,7 +39,7 @@ def splice_contact_skeleton_with_body_mesh(
     mesh_index = _mesh_joint_index(mesh_joint_names)
     fallback_frames = _skeleton_frame_lookup(dict(fallback_skeleton3d)) if isinstance(fallback_skeleton3d, Mapping) else {}
     fallback_joint_names = _string_list(fallback_skeleton3d.get("joint_names", [])) if isinstance(fallback_skeleton3d, Mapping) else []
-    fallback_index = {name: idx for idx, name in enumerate(fallback_joint_names)}
+    fallback_index = _joint_index(fallback_joint_names)
 
     events: list[dict[str, Any]] = []
     spliced_contact_count = 0
@@ -79,7 +79,7 @@ def splice_contact_skeleton_with_body_mesh(
                 events.append(
                     {
                         **base_event,
-                        "status": "mesh_unavailable_pose_fallback",
+                        "status": "mesh_unavailable_skeleton_fallback",
                         "mesh_unavailable": True,
                         "fallback_source": fallback_source,
                         "overridden_joint_names": fallback_names,
@@ -177,7 +177,9 @@ def _override_joint_names(skeleton_joint_names: Sequence[str], override_joint_na
             for name in skeleton_joint_names
             if name in {"left_wrist", "right_wrist"} or name.startswith("left_hand_") or name.startswith("right_hand_")
         ]
-    skeleton_names = set(skeleton_joint_names)
+        if _looks_like_sam3d_body_mhr70(skeleton_joint_names):
+            candidates = ["left_wrist", "right_wrist"]
+    skeleton_names = set(_joint_index(skeleton_joint_names))
     return [name for name in candidates if name in skeleton_names]
 
 
@@ -232,8 +234,12 @@ def _scheduled_targets(body_compute_execution: Mapping[str, Any]) -> list[dict[s
 
 
 def _mesh_joint_index(mesh_joint_names: Sequence[str]) -> dict[str, int]:
-    direct = {name: idx for idx, name in enumerate(mesh_joint_names)}
-    if _looks_like_sam3d_body_mhr70(mesh_joint_names):
+    return _joint_index(mesh_joint_names)
+
+
+def _joint_index(joint_names: Sequence[str]) -> dict[str, int]:
+    direct = {name: idx for idx, name in enumerate(joint_names)}
+    if _looks_like_sam3d_body_mhr70(joint_names):
         for name, idx in SAM3D_BODY_MHR70_SEMANTIC_MAP.joints.items():
             direct.setdefault(name, idx)
     return direct

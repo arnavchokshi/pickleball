@@ -83,4 +83,13 @@ describe("parseReplayScene", () => {
       "https://cdn.example.com/runs/eval0/clip/replay_review/points/point_001_review.glb",
     );
   });
+
+  it("preserves file replay scene asset origins for static headless verification", () => {
+    const base = "file:///Users/arnavchokshi/Desktop/pickleball/runs/scrubber_v1_codex_20260702/burlington/replay_scene.json";
+
+    expect(resolveReplaySceneAssetUrl(base, "body_mesh_animated_compressed.glb")).toBe(
+      "file:///Users/arnavchokshi/Desktop/pickleball/runs/scrubber_v1_codex_20260702/burlington/body_mesh_animated_compressed.glb",
+    );
+    expect(resolveReplaySceneAssetUrl(base, "file:///tmp/court.glb")).toBe("file:///tmp/court.glb");
+  });
 });

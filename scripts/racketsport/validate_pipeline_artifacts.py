@@ -11,6 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from threed.racketsport.pipeline_contracts import PipelineContractError, build_readiness_report
+from threed.racketsport.pipeline_cli import build_public_contract_readiness
 
 
 def main() -> int:
@@ -18,11 +19,19 @@ def main() -> int:
     parser.add_argument("--run-dir", type=Path, required=True, help="Directory containing per-clip pipeline JSON artifacts.")
     parser.add_argument("--stage", default="e2e", help="Requested pipeline stage readiness target. Defaults to e2e.")
     parser.add_argument("--out", type=Path, help="Optional JSON report path.")
+    parser.add_argument(
+        "--public-contracts",
+        action="store_true",
+        help="Validate the public run_pipeline artifact contracts instead of the legacy internal readiness contracts.",
+    )
     args = parser.parse_args()
 
     try:
-        report = build_readiness_report(args.run_dir, stage=args.stage)
-    except PipelineContractError as exc:
+        if args.public_contracts:
+            report = build_public_contract_readiness(args.run_dir, stage=args.stage)
+        else:
+            report = build_readiness_report(args.run_dir, stage=args.stage)
+    except (PipelineContractError, ValueError) as exc:
         parser.exit(2, f"{parser.prog}: error: {exc}\n")
 
     text = json.dumps(report, indent=2, sort_keys=True) + "\n"

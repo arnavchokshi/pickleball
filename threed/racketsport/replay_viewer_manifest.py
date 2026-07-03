@@ -11,6 +11,11 @@ from threed.racketsport.schemas import PersonGroundTruth, ReplayViewerManifest, 
 
 SCHEMA_VERSION = 1
 ARTIFACT_TYPE = "racketsport_replay_viewer_manifest"
+OPTIONAL_URL_FIELDS = {
+    "reviewed_bounces_url",
+    "coaching_card_facts_url",
+    "rally_spans_url",
+}
 
 
 def build_replay_viewer_manifest(
@@ -21,8 +26,13 @@ def build_replay_viewer_manifest(
     player_labels_path: str | Path | None = None,
     replay_scene_path: str | Path | None = None,
     body_mesh_path: str | Path | None = None,
+    body_mesh_index_path: str | Path | None = None,
     physics_refinement_path: str | Path | None = None,
     contact_windows_path: str | Path | None = None,
+    ball_inflections_path: str | Path | None = None,
+    reviewed_bounces_path: str | Path | None = None,
+    coaching_card_facts_path: str | Path | None = None,
+    rally_spans_path: str | Path | None = None,
     annotation_sources: Iterable[str | Path] = (),
     vite_allow_root: str | Path | None = None,
 ) -> dict[str, Any]:
@@ -35,12 +45,17 @@ def build_replay_viewer_manifest(
     virtual_world = _existing_file(virtual_world_path, "virtual_world", allow_root=allow_root)
     replay_scene = _optional_existing_file(replay_scene_path, "replay_scene", allow_root=allow_root)
     body_mesh = _optional_existing_file(body_mesh_path, "body_mesh", allow_root=allow_root)
+    body_mesh_index = _optional_existing_file(body_mesh_index_path, "body_mesh_index", allow_root=allow_root)
     physics_refinement = _optional_existing_file(
         physics_refinement_path,
         "physics_refinement",
         allow_root=allow_root,
     )
     contact_windows = _optional_existing_file(contact_windows_path, "contact_windows", allow_root=allow_root)
+    ball_inflections = _optional_existing_file(ball_inflections_path, "ball_inflections", allow_root=allow_root)
+    reviewed_bounces = _optional_existing_file(reviewed_bounces_path, "reviewed_bounces", allow_root=allow_root)
+    coaching_card_facts = _optional_existing_file(coaching_card_facts_path, "coaching_card_facts", allow_root=allow_root)
+    rally_spans = _optional_existing_file(rally_spans_path, "rally_spans", allow_root=allow_root)
     player_labels = _optional_existing_file(player_labels_path, "player_labels", allow_root=allow_root)
 
     label_overlays = []
@@ -55,8 +70,13 @@ def build_replay_viewer_manifest(
         "virtual_world_url": _vite_file_url(virtual_world),
         "replay_scene_url": _vite_file_url(replay_scene) if replay_scene is not None else None,
         "body_mesh_url": _vite_file_url(body_mesh) if body_mesh is not None else None,
+        "body_mesh_index_url": _vite_file_url(body_mesh_index) if body_mesh_index is not None else None,
         "physics_refinement_url": _vite_file_url(physics_refinement) if physics_refinement is not None else None,
         "contact_windows_url": _vite_file_url(contact_windows) if contact_windows is not None else None,
+        "ball_inflections_url": _vite_file_url(ball_inflections) if ball_inflections is not None else None,
+        "reviewed_bounces_url": _vite_file_url(reviewed_bounces) if reviewed_bounces is not None else None,
+        "coaching_card_facts_url": _vite_file_url(coaching_card_facts) if coaching_card_facts is not None else None,
+        "rally_spans_url": _vite_file_url(rally_spans) if rally_spans is not None else None,
         "label_overlays": label_overlays,
         "annotation_sources": [_annotation_source(path, allow_root=allow_root) for path in annotation_sources],
         "notes": [
@@ -65,14 +85,26 @@ def build_replay_viewer_manifest(
             f"Vite allow root: {allow_root.as_posix()}",
         ],
     }
-    return ReplayViewerManifest.model_validate(payload).model_dump(mode="json")
+    return _validate_manifest_preserving_optional_urls(payload)
 
 
 def write_replay_viewer_manifest(path: str | Path, manifest: Mapping[str, Any]) -> None:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    payload = ReplayViewerManifest.model_validate(manifest).model_dump(mode="json")
+    payload = _validate_manifest_preserving_optional_urls(manifest)
     out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _validate_manifest_preserving_optional_urls(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    extras = {
+        field: manifest.get(field)
+        for field in OPTIONAL_URL_FIELDS
+        if isinstance(manifest.get(field), str) and str(manifest.get(field))
+    }
+    base = {key: value for key, value in manifest.items() if key not in OPTIONAL_URL_FIELDS}
+    payload = ReplayViewerManifest.model_validate(base).model_dump(mode="json")
+    payload.update(extras)
+    return payload
 
 
 def _player_label_overlay(path: Path) -> dict[str, Any]:

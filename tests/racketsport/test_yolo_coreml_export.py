@@ -59,3 +59,21 @@ def test_export_yolo_coreml_dry_run_maps_quantize_16_to_half_precision(tmp_path:
     assert result.returncode == 0, result.stderr
     assert "quantize=16" in result.stdout
     assert "int8=True" not in result.stdout
+
+
+def test_export_yolo_coreml_default_weights_use_checkpoint_registry() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/export_yolo_coreml.py",
+            "--dry-run",
+        ],
+        check=False,
+        cwd=Path(__file__).resolve().parents[2],
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "model=" in result.stdout
+    assert "models/checkpoints/yolo26n.pt" in result.stdout

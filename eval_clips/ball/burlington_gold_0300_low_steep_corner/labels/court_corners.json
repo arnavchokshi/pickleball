@@ -21,6 +21,10 @@
           ]
         },
         "frame": "frame_000001.jpg",
+        "image_size": [
+          960,
+          540
+        ],
         "review_id": "court_corners_manual_seed",
         "source": "human_review",
         "status": "corrected_unverified"

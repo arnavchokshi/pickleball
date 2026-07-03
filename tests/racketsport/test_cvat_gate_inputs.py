@@ -9,6 +9,7 @@ from threed.racketsport.cvat_gate_inputs import (
     CvatGateClipSpec,
     Data1CvatClipSpec,
     build_cvat_gate_input_payloads,
+    canonical_data1_cvat_clip_specs,
     write_cvat_gate_input_package,
     write_data1_substitute_package,
 )
@@ -356,7 +357,7 @@ def test_build_cvat_gate_inputs_cli_writes_data1_substitute_package(tmp_path: Pa
     for filename in (
         "01_burlington_gold_0300_low_steep_corner_10s.mp4",
         "02_wolverine_mixed_0200_mid_steep_corner_10s.mp4",
-        "03_outdoor_webcam_iynbd_1500_long_high_baseline_30s.mp4",
+        "03_outdoor_webcam_iynbd_1500_long_high_baseline_frames_0000_1150.mp4",
         "04_indoor_doubles_fwuks_0500_long_mid_baseline_30s.mp4",
     ):
         path = cvat_root / filename
@@ -394,6 +395,44 @@ def test_build_cvat_gate_inputs_cli_writes_data1_substitute_package(tmp_path: Pa
     assert payload["data1_ready"] is False
     assert (out_dir / "missing_inputs.json").is_file()
     assert (out_dir / "canonical_testclips_registration_manifest.json").is_file()
+
+
+def test_data1_substitute_package_records_current_strict_holdout_exports(tmp_path: Path) -> None:
+    cvat_root = tmp_path / "cvat_upload"
+    imports_root = tmp_path / "runs" / "cvat_imports" / "2026_06_30"
+    out_dir = imports_root / "data1_substitute"
+    for clip in canonical_data1_cvat_clip_specs(cvat_upload_root=cvat_root, imports_root=imports_root):
+        clip.source_video_path.parent.mkdir(parents=True, exist_ok=True)
+        clip.source_video_path.write_bytes(b"video")
+        clip.cvat_export_path.parent.mkdir(parents=True, exist_ok=True)
+        clip.cvat_export_path.write_bytes(b"zip")
+        clip.reviewed_boxes_path.parent.mkdir(parents=True, exist_ok=True)
+        clip.reviewed_boxes_path.write_text("{}", encoding="utf-8")
+
+    manifest = write_data1_substitute_package(
+        clips=canonical_data1_cvat_clip_specs(cvat_upload_root=cvat_root, imports_root=imports_root),
+        out_dir=out_dir,
+        data_testclips_root=tmp_path / "data" / "testclips",
+        detector_gate_inputs_root=imports_root / "gate_inputs",
+    )
+
+    assert manifest["summary"]["cvat_export_count"] == 4
+    assert manifest["summary"]["reviewed_boxes_count"] == 4
+    clips_by_id = {clip["clip_id"]: clip for clip in manifest["clips"]}
+    indoor = clips_by_id["indoor_doubles_fwuks_0500_long_mid_baseline"]
+    outdoor = clips_by_id["outdoor_webcam_iynbd_1500_long_high_baseline"]
+    assert indoor["cvat_export_exists"] is True
+    assert indoor["eval_policy"]["role"] == "strict_holdout"
+    assert outdoor["eval_policy"]["role"] == "strict_holdout"
+    assert outdoor["source_video_path"].endswith("_frames_0000_1150.mp4")
+    assert outdoor["metadata"]["duration_s"] == 19.183333
+
+    sanity = json.loads((out_dir / "sanity_checks.json").read_text(encoding="utf-8"))
+    assert sanity["checks"]["indoor_cvat_export_status_recorded"] is True
+    assert sanity["checks"]["strict_holdouts_not_promoted"] is True
+    report = (out_dir / "DATA1_SUBSTITUTE_report.md").read_text(encoding="utf-8")
+    assert "Import the missing Indoor" not in report
+    assert "Outdoor and Indoor remain strict held-out eval clips" in report
 
 
 def test_data1_substitute_registration_manifest_uses_absolute_sources_for_relative_roots(

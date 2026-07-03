@@ -7,6 +7,9 @@ from pathlib import Path
 
 from tests.racketsport.json_schema_assertions import assert_matches_json_schema
 
+EXPECTED_MISSING_DIRECT_CLI_REFERENCE: set[str] = set()
+
+
 def _write_script(root: Path, name: str) -> None:
     path = root / "scripts" / "racketsport" / name
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -180,8 +183,24 @@ def test_real_scaffold_tool_index_matches_checked_in_schema() -> None:
 
     assert_matches_json_schema(payload, schema)
     assert payload["summary"]["tool_count"] == len(payload["tools"])
+    actual_missing = {
+        tool["command_path"]
+        for tool in payload["tools"]
+        if tool.get("direct_cli_reference_test") is None
+    }
+    assert actual_missing == EXPECTED_MISSING_DIRECT_CLI_REFERENCE, (
+        "scaffold CLI coverage drifted: new uncovered CLIs must ship a direct "
+        "reference test in the same lane; newly covered CLIs must be removed "
+        f"from EXPECTED_MISSING_DIRECT_CLI_REFERENCE. delta={actual_missing ^ EXPECTED_MISSING_DIRECT_CLI_REFERENCE}"
+    )
     assert payload["summary"]["missing_direct_cli_reference_tests"] == 0
+    assert payload["summary"]["category_counts"].get("unknown", 0) == 0
     by_path = {tool["command_path"]: tool for tool in payload["tools"]}
+    assert {
+        tool["command_path"]
+        for tool in payload["tools"]
+        if tool["direct_cli_reference_test"] is None
+    } == set()
     assert (
         by_path["scripts/racketsport/list_scaffold_tools.py"]["matching_schema"]
         == "docs/racketsport/scaffold_tool_index_schema.json"

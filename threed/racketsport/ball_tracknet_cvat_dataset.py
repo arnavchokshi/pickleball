@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import csv
+import io
 import json
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import median
 from typing import Any, Mapping, Sequence
 
+from .eval_guard import assert_not_training_on_eval_clip
 from .schemas import CvatVideoAnnotations, validate_artifact_file
 
 
@@ -17,7 +20,36 @@ ARTIFACT_TYPE = "racketsport_ball_tracknet_cvat_dataset"
 MANIFEST_JSON = "ball_tracknet_cvat_dataset_manifest.json"
 MANIFEST_MD = "ball_tracknet_cvat_dataset_manifest.md"
 TRACKNET_COLUMNS = ("Frame", "Visibility", "X", "Y")
+CENTER_CONVENTION_VALUES = ("blur_midpoint", "disk_center", "unknown")
+BLUR_LABEL_QUALITY_VALUES = ("absent", "clear", "unknown", "weak")
 SPLIT_ORDER = ("train", "val", "test")
+TRAIN_AUGMENTATION_PROFILES: dict[str, tuple[dict[str, Any], ...]] = {
+    "codec_motion_v1": (
+        {
+            "name": "jpeg_q55_brightness_1_06_contrast_1_08_color_0_94",
+            "jpeg_quality": 55,
+            "brightness": 1.06,
+            "contrast": 1.08,
+            "color": 0.94,
+        },
+        {
+            "name": "horizontal_motion3_jpeg_q45_brightness_0_94_contrast_1_10",
+            "motion_blur": "horizontal_3",
+            "jpeg_quality": 45,
+            "brightness": 0.94,
+            "contrast": 1.10,
+            "color": 0.98,
+        },
+        {
+            "name": "vertical_motion3_jpeg_q60_brightness_1_10_color_0_90",
+            "motion_blur": "vertical_3",
+            "jpeg_quality": 60,
+            "brightness": 1.10,
+            "contrast": 1.02,
+            "color": 0.90,
+        },
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -27,6 +59,11 @@ class TrackNetCvatLabel:
     x: float
     y: float
     source: str
+    center_convention: str | None = None
+    blur_angle_deg: float | None = None
+    blur_length_px: float | None = None
+    blur_width_px: float | None = None
+    blur_label_quality: str | None = None
 
 
 def dense_tracknet_labels_from_cvat(reviewed_boxes_path: str | Path) -> list[TrackNetCvatLabel]:
@@ -48,6 +85,8 @@ def build_ball_tracknet_cvat_dataset(
     hard_negative_plan: str | Path | None = None,
     hard_negative_context_frames: int = 0,
     hard_negative_repeat: int = 1,
+    train_augmentation_profile: str | None = None,
+    train_augmentation_repeat: int = 1,
 ) -> dict[str, Any]:
     """Write dense TrackNetV3 CSV labels plus JSON/Markdown manifest artifacts."""
 
@@ -57,13 +96,27 @@ def build_ball_tracknet_cvat_dataset(
     out = Path(out_dir)
     split_map = _split_map_from_yolo_manifest(yolo_manifest_path)
     selected_clips = _selected_clips(split_map, clips)
+    # Eval-clip integrity gate (fail closed): this function writes the CSV/frame
+    # artifacts that TrackNet fine-tuning consumes directly as training and
+    # checkpoint-selection ("val" split) input, so it counts as training-input
+    # creation. No protected eval clip may appear in any split built here --
+    # see threed/racketsport/eval_guard.py for the policy this enforces.
+    assert_not_training_on_eval_clip(selected_clips, allow_internal_val=False)
     normalized_video_paths = _normalize_video_paths(video_paths)
     hard_negative_spec = _load_hard_negative_plan(hard_negative_plan) if hard_negative_plan is not None else None
+    train_augmentation_spec = _normalize_train_augmentation(
+        profile=train_augmentation_profile,
+        repeat=train_augmentation_repeat,
+    )
     if hard_negative_spec is not None:
-        _require_new_empty_out_dir(out)
+        _require_new_empty_out_dir(out, reason="hard-negative materialization")
         hard_negative_context_frames = _nonnegative_int(hard_negative_context_frames, "hard_negative_context_frames")
         hard_negative_repeat = _positive_int(hard_negative_repeat, "hard_negative_repeat")
         _validate_hard_negative_split_roles(hard_negative_spec, split_map=split_map, selected_clips=selected_clips)
+    if train_augmentation_spec is not None:
+        if not materialize_frames:
+            raise ValueError("train augmentation requires --materialize-frames")
+        _require_new_empty_out_dir(out, reason="train augmentation")
     if materialize_frames:
         _require_video_paths(selected_clips, normalized_video_paths)
     out.mkdir(parents=True, exist_ok=True)
@@ -71,7 +124,11 @@ def build_ball_tracknet_cvat_dataset(
     manifest: dict[str, Any] = {
         "schema_version": 1,
         "artifact_type": ARTIFACT_TYPE,
-        "status": _dataset_status(materialize_frames=materialize_frames, hard_negative_plan=hard_negative_spec is not None),
+        "status": _dataset_status(
+            materialize_frames=materialize_frames,
+            hard_negative_plan=hard_negative_spec is not None,
+            train_augmentation=train_augmentation_spec is not None,
+        ),
         "ball_verified": False,
         "cvat_root": str(cvat_base),
         "source_yolo_manifest": str(yolo_manifest_path),
@@ -86,8 +143,12 @@ def build_ball_tracknet_cvat_dataset(
             "reviewed_visible_ball_frame_count": 0,
             "reviewed_hidden_frame_count": 0,
         },
+        "blur_annotation_summary": _empty_blur_annotation_summary(),
         "leakage_checks": _leakage_checks(split_map, selected_clips),
-        "limitations": _limitations(materialize_frames=materialize_frames),
+        "limitations": _limitations(
+            materialize_frames=materialize_frames,
+            train_augmentation=train_augmentation_spec is not None,
+        ),
     }
     if hard_negative_spec is not None:
         manifest["hard_negative_plan"] = {
@@ -100,6 +161,17 @@ def build_ball_tracknet_cvat_dataset(
             "unique_window_count": 0,
             "oversampled_frame_count": 0,
             "cache_policy": "hard_negative_plan_requires_new_empty_out_dir; generated frame dirs and median.npz files are not reused from prior datasets",
+        }
+    if train_augmentation_spec is not None:
+        manifest["train_augmentation"] = {
+            "profile": train_augmentation_spec["profile"],
+            "repeat": train_augmentation_spec["repeat"],
+            "applies_to_splits": ["train"],
+            "source_sample_count": 0,
+            "generated_sample_count": 0,
+            "source_sample_types": [],
+            "label_policy": "CSV labels are copied from reviewed CVAT-derived rows; no synthetic ball labels are generated.",
+            "cache_policy": "train augmentation requires a new empty out_dir so transformed frame caches cannot be stale.",
         }
 
     match_index = 1
@@ -138,6 +210,7 @@ def build_ball_tracknet_cvat_dataset(
             row["training_sample_type"] = "dense_clip"
             split_rows.append(row)
             _add_counts(manifest["label_counts"], row)
+            _add_blur_annotation_counts(manifest["blur_annotation_summary"], row["blur_annotation_summary"])
             match_index += 1
         if split_rows:
             manifest["splits"][split] = split_rows
@@ -160,6 +233,7 @@ def build_ball_tracknet_cvat_dataset(
             manifest["splits"].setdefault("train", []).extend(hard_negative_rows)
             for row in hard_negative_rows:
                 _add_counts(manifest["label_counts"], row)
+                _add_blur_annotation_counts(manifest["blur_annotation_summary"], row["blur_annotation_summary"])
         hard_negative_manifest = manifest["hard_negative_plan"]
         hard_negative_manifest["generated_window_count"] = len(hard_negative_rows)
         hard_negative_manifest["hard_negative_window_count"] = sum(
@@ -176,6 +250,27 @@ def build_ball_tracknet_cvat_dataset(
         )
         hard_negative_manifest["oversampled_frame_count"] = sum(int(row["frame_count"]) for row in hard_negative_rows)
 
+    if train_augmentation_spec is not None:
+        source_train_rows = list(manifest["splits"].get("train", []))
+        train_augmented_rows, next_match_index = _build_train_augmentation_rows(
+            source_rows=source_train_rows,
+            spec=train_augmentation_spec,
+            out=out,
+            first_match_index=match_index,
+        )
+        match_index = next_match_index
+        if train_augmented_rows:
+            manifest["splits"].setdefault("train", []).extend(train_augmented_rows)
+            for row in train_augmented_rows:
+                _add_counts(manifest["label_counts"], row)
+                _add_blur_annotation_counts(manifest["blur_annotation_summary"], row["blur_annotation_summary"])
+        train_augmentation_manifest = manifest["train_augmentation"]
+        train_augmentation_manifest["source_sample_count"] = len(source_train_rows)
+        train_augmentation_manifest["generated_sample_count"] = len(train_augmented_rows)
+        train_augmentation_manifest["source_sample_types"] = sorted(
+            {str(row.get("training_sample_type", "")) for row in source_train_rows if row.get("training_sample_type")}
+        )
+
     manifest["label_counts"]["clip_count"] = sum(len(rows) for rows in manifest["splits"].values())
     manifest["next_match_index"] = match_index
     manifest["next_gpu_commands"] = _next_gpu_commands(manifest)
@@ -190,6 +285,7 @@ def build_ball_tracknet_cvat_dataset(
 
 def render_ball_tracknet_cvat_dataset_markdown(manifest: Mapping[str, Any]) -> str:
     counts = manifest.get("label_counts", {})
+    blur_summary = manifest.get("blur_annotation_summary", {})
     status = str(manifest.get("status", ""))
     lines = [
         "# BALL TrackNet CVAT Dataset",
@@ -204,6 +300,13 @@ def render_ball_tracknet_cvat_dataset_markdown(manifest: Mapping[str, Any]) -> s
         f"- Frames: {counts.get('frame_count', 0)}",
         f"- Visible ball frames: {counts.get('reviewed_visible_ball_frame_count', 0)}",
         f"- Hidden negative frames: {counts.get('reviewed_hidden_frame_count', 0)}",
+        "",
+        "## Blur Annotation Summary",
+        "",
+        f"- Visible ball frames: {blur_summary.get('visible_ball_frame_count', 0)}",
+        f"- Blur angle labels: {blur_summary.get('blur_angle_labeled_count', 0)}",
+        f"- Blur length labels: {blur_summary.get('blur_length_labeled_count', 0)}",
+        f"- Blur width labels: {blur_summary.get('blur_width_labeled_count', 0)}",
         "",
         "## Splits",
         "",
@@ -222,6 +325,21 @@ def render_ball_tracknet_cvat_dataset_markdown(manifest: Mapping[str, Any]) -> s
                     csv=row.get("csv", ""),
                 )
             )
+    train_augmentation = manifest.get("train_augmentation")
+    if isinstance(train_augmentation, Mapping):
+        lines.extend(
+            [
+                "",
+                "## Train Augmentation",
+                "",
+                f"- Profile: `{train_augmentation.get('profile')}`",
+                f"- Repeat: {train_augmentation.get('repeat')}",
+                f"- Source samples: {train_augmentation.get('source_sample_count')}",
+                f"- Generated samples: {train_augmentation.get('generated_sample_count')}",
+                "- Applies only to the `train` split.",
+                "- CSV labels are copied unchanged from reviewed CVAT-derived rows; no synthetic ball labels are generated.",
+            ]
+        )
     lines.extend(["", "## Next GPU Commands", ""])
     for command in manifest.get("next_gpu_commands", []):
         lines.extend(["```bash", str(command), "```", ""])
@@ -260,6 +378,11 @@ def _dense_tracknet_labels_from_annotations(annotations: CvatVideoAnnotations) -
                 x=float(x) + float(width) * 0.5,
                 y=float(y) + float(height) * 0.5,
                 source="reviewed_cvat_ball_box",
+                center_convention=box.center_convention,
+                blur_angle_deg=box.blur_angle_deg,
+                blur_length_px=box.blur_length_px,
+                blur_width_px=box.blur_width_px,
+                blur_label_quality=box.blur_label_quality,
             )
         )
     return labels
@@ -328,6 +451,7 @@ def _clip_manifest_row(
         "source_video": annotations.task.source,
         "ball_bbox_width_px_median": median(widths) if widths else None,
         "ball_bbox_height_px_median": median(heights) if heights else None,
+        "blur_annotation_summary": _blur_annotation_summary(labels),
     }
 
 
@@ -435,6 +559,60 @@ def _leakage_checks(split_map: Mapping[str, str], selected_clips: Sequence[str])
         "disjoint_clip_splits": True,
         "split_clip_counts": dict(sorted(split_counts.items())),
     }
+
+
+def _empty_blur_annotation_summary() -> dict[str, Any]:
+    return {
+        "visible_ball_frame_count": 0,
+        "center_convention_counts": {value: 0 for value in CENTER_CONVENTION_VALUES},
+        "blur_label_quality_counts": {value: 0 for value in BLUR_LABEL_QUALITY_VALUES},
+        "blur_angle_labeled_count": 0,
+        "blur_length_labeled_count": 0,
+        "blur_width_labeled_count": 0,
+    }
+
+
+def _blur_annotation_summary(labels: Sequence[TrackNetCvatLabel]) -> dict[str, Any]:
+    summary = _empty_blur_annotation_summary()
+    for label in labels:
+        if label.visibility != 1:
+            continue
+        summary["visible_ball_frame_count"] += 1
+        center_convention = label.center_convention or "unknown"
+        blur_label_quality = label.blur_label_quality or "unknown"
+        _increment_required_count(summary["center_convention_counts"], center_convention, "center_convention")
+        _increment_required_count(summary["blur_label_quality_counts"], blur_label_quality, "blur_label_quality")
+        if label.blur_angle_deg is not None:
+            summary["blur_angle_labeled_count"] += 1
+        if label.blur_length_px is not None:
+            summary["blur_length_labeled_count"] += 1
+        if label.blur_width_px is not None:
+            summary["blur_width_labeled_count"] += 1
+    return summary
+
+
+def _increment_required_count(counts: dict[str, int], value: str, field_name: str) -> None:
+    if value not in counts:
+        raise ValueError(f"unsupported {field_name}: {value}")
+    counts[value] += 1
+
+
+def _add_blur_annotation_counts(target: dict[str, Any], source: Mapping[str, Any]) -> None:
+    target["visible_ball_frame_count"] = int(target.get("visible_ball_frame_count", 0)) + int(
+        source.get("visible_ball_frame_count", 0)
+    )
+    for key in ("center_convention_counts", "blur_label_quality_counts"):
+        target_counts = target[key]
+        source_counts = source.get(key, {})
+        if not isinstance(target_counts, dict) or not isinstance(source_counts, Mapping):
+            raise ValueError(f"invalid blur annotation count map: {key}")
+        for value, count in source_counts.items():
+            value_key = str(value)
+            if value_key not in target_counts:
+                raise ValueError(f"unsupported {key}: {value_key}")
+            target_counts[value_key] = int(target_counts[value_key]) + int(count)
+    for key in ("blur_angle_labeled_count", "blur_length_labeled_count", "blur_width_labeled_count"):
+        target[key] = int(target.get(key, 0)) + int(source.get(key, 0))
 
 
 def _add_counts(counts: dict[str, Any], row: Mapping[str, Any]) -> None:
@@ -620,9 +798,135 @@ def _slice_labels_for_window(
                 x=label.x,
                 y=label.y,
                 source=f"{label.source};hard_negative_window",
+                center_convention=label.center_convention,
+                blur_angle_deg=label.blur_angle_deg,
+                blur_length_px=label.blur_length_px,
+                blur_width_px=label.blur_width_px,
+                blur_label_quality=label.blur_label_quality,
             )
         )
     return sliced
+
+
+def _normalize_train_augmentation(*, profile: str | None, repeat: int) -> dict[str, Any] | None:
+    if profile is None:
+        return None
+    if profile not in TRAIN_AUGMENTATION_PROFILES:
+        supported = ", ".join(sorted(TRAIN_AUGMENTATION_PROFILES))
+        raise ValueError(f"unsupported train augmentation profile: {profile}; supported profiles: {supported}")
+    return {"profile": profile, "repeat": _positive_int(repeat, "train_augmentation_repeat")}
+
+
+def _build_train_augmentation_rows(
+    *,
+    source_rows: Sequence[Mapping[str, Any]],
+    spec: Mapping[str, Any],
+    out: Path,
+    first_match_index: int,
+) -> tuple[list[dict[str, Any]], int]:
+    rows: list[dict[str, Any]] = []
+    match_index = first_match_index
+    profile = str(spec["profile"])
+    repeat = int(spec["repeat"])
+    for source_row in source_rows:
+        if source_row.get("split") != "train":
+            continue
+        if source_row.get("frames_materialized") is not True:
+            raise ValueError("train augmentation requires materialized train frame directories")
+        source_csv = Path(str(source_row.get("csv", "")))
+        source_frame_dir = Path(str(source_row.get("frame_dir", "")))
+        if not source_csv.is_file():
+            raise FileNotFoundError(f"missing source CSV for train augmentation: {source_csv}")
+        if not source_frame_dir.is_dir():
+            raise FileNotFoundError(f"missing source frame dir for train augmentation: {source_frame_dir}")
+        source_sample_type = str(source_row.get("training_sample_type", "dense_clip"))
+        for repeat_index in range(1, repeat + 1):
+            recipe = _augmentation_recipe(profile, repeat_index=repeat_index)
+            rally_id = f"{match_index}_01_00"
+            match_name = f"match{match_index}"
+            match_dir = out / "train" / match_name
+            csv_path = match_dir / "csv" / f"{rally_id}_ball.csv"
+            frame_dir = match_dir / "frame" / rally_id
+            csv_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source_csv, csv_path)
+            _augment_frame_dir(
+                source_frame_dir,
+                frame_dir,
+                frame_count=int(source_row["frame_count"]),
+                recipe=recipe,
+            )
+            row = dict(source_row)
+            row.update(
+                {
+                    "match": match_name,
+                    "rally_id": rally_id,
+                    "csv": str(csv_path),
+                    "frame_dir": str(frame_dir),
+                    "frames_materialized": True,
+                    "training_sample_type": f"visual_augmented_{source_sample_type}",
+                    "source_training_sample_type": source_sample_type,
+                    "source_match": source_row.get("match"),
+                    "source_rally_id": source_row.get("rally_id"),
+                    "source_csv": source_row.get("csv"),
+                    "source_frame_dir": source_row.get("frame_dir"),
+                    "augmentation_profile": profile,
+                    "augmentation_repeat_index": repeat_index,
+                    "augmentation_recipe": recipe["name"],
+                    "augmentation_recipe_index": recipe["profile_index"],
+                }
+            )
+            rows.append(row)
+            match_index += 1
+    return rows, match_index
+
+
+def _augmentation_recipe(profile: str, *, repeat_index: int) -> dict[str, Any]:
+    if repeat_index <= 0:
+        raise ValueError("repeat_index must be positive")
+    recipes = TRAIN_AUGMENTATION_PROFILES.get(profile)
+    if recipes is None:
+        supported = ", ".join(sorted(TRAIN_AUGMENTATION_PROFILES))
+        raise ValueError(f"unsupported train augmentation profile: {profile}; supported profiles: {supported}")
+    profile_index = (repeat_index - 1) % len(recipes)
+    recipe = dict(recipes[profile_index])
+    recipe["profile"] = profile
+    recipe["profile_index"] = profile_index + 1
+    return recipe
+
+
+def _augment_frame_dir(source_frame_dir: Path, target_frame_dir: Path, *, frame_count: int, recipe: Mapping[str, Any]) -> None:
+    if frame_count < 0:
+        raise ValueError("frame_count must be non-negative")
+    target_frame_dir.mkdir(parents=True, exist_ok=True)
+    if frame_count == 0:
+        return
+    from PIL import Image, ImageEnhance, ImageFilter
+
+    for frame_index in range(frame_count):
+        source_path = source_frame_dir / f"{frame_index}.png"
+        if not source_path.is_file():
+            raise FileNotFoundError(f"missing source frame for train augmentation: {source_path}")
+        with Image.open(source_path) as source_image:
+            image = source_image.convert("RGB")
+        blur = recipe.get("motion_blur")
+        if blur == "horizontal_3":
+            image = image.filter(ImageFilter.Kernel((3, 3), [0, 0, 0, 1, 1, 1, 0, 0, 0], scale=3))
+        elif blur == "vertical_3":
+            image = image.filter(ImageFilter.Kernel((3, 3), [0, 1, 0, 0, 1, 0, 0, 1, 0], scale=3))
+        elif blur is not None:
+            raise ValueError(f"unsupported train augmentation motion_blur: {blur}")
+        image = ImageEnhance.Brightness(image).enhance(float(recipe.get("brightness", 1.0)))
+        image = ImageEnhance.Contrast(image).enhance(float(recipe.get("contrast", 1.0)))
+        image = ImageEnhance.Color(image).enhance(float(recipe.get("color", 1.0)))
+        jpeg_quality = recipe.get("jpeg_quality")
+        if jpeg_quality is not None:
+            buffer = io.BytesIO()
+            image.save(buffer, format="JPEG", quality=int(jpeg_quality))
+            buffer.seek(0)
+            with Image.open(buffer) as compressed_image:
+                image = compressed_image.convert("RGB")
+        image.save(target_frame_dir / f"{frame_index}.png")
+    _write_median(target_frame_dir, frame_count)
 
 
 def _next_gpu_commands(manifest: Mapping[str, Any]) -> list[str]:
@@ -637,7 +941,7 @@ def _next_gpu_commands(manifest: Mapping[str, Any]) -> list[str]:
     video_args = [f"--video {clip}={path}" for clip, path in sorted(video_by_clip.items())]
     materialize = " --materialize-frames" if video_args else ""
     output_arg = f"--out-dir {out_dir}"
-    if "hard_negative_plan" in manifest:
+    if "hard_negative_plan" in manifest or "train_augmentation" in manifest:
         output_arg = f"--out-dir <new_empty_out_dir_like_{Path(out_dir).name}>"
     return [
         "python scripts/racketsport/build_ball_tracknet_cvat_dataset.py "
@@ -645,6 +949,7 @@ def _next_gpu_commands(manifest: Mapping[str, Any]) -> list[str]:
         f"--yolo-manifest {manifest.get('source_yolo_manifest')} "
         f"{output_arg}"
         f"{_hard_negative_cli_args(manifest)}"
+        f"{_train_augmentation_cli_args(manifest)}"
         f"{materialize}"
         f"{(' ' + ' '.join(video_args)) if video_args else ''}",
         "cd /workspace/runs/pickleball_pretraining/TrackNetV3_finetune_repo && "
@@ -663,6 +968,16 @@ def _hard_negative_cli_args(manifest: Mapping[str, Any]) -> str:
         f" --hard-negative-plan {hard_negative.get('source_plan')}"
         f" --hard-negative-context-frames {hard_negative.get('context_frames')}"
         f" --hard-negative-repeat {hard_negative.get('repeat')}"
+    )
+
+
+def _train_augmentation_cli_args(manifest: Mapping[str, Any]) -> str:
+    train_augmentation = manifest.get("train_augmentation")
+    if not isinstance(train_augmentation, Mapping):
+        return ""
+    return (
+        f" --train-augmentation-profile {train_augmentation.get('profile')}"
+        f" --train-augmentation-repeat {train_augmentation.get('repeat')}"
     )
 
 
@@ -701,12 +1016,16 @@ def _frame_int(value: object, name: str) -> int:
     return number
 
 
-def _require_new_empty_out_dir(out: Path) -> None:
+def _require_new_empty_out_dir(out: Path, *, reason: str = "materialization") -> None:
     if out.exists() and any(out.iterdir()):
-        raise ValueError(f"hard-negative materialization requires a new empty out_dir to avoid stale TrackNet frame/median caches: {out}")
+        raise ValueError(f"{reason} requires a new empty out_dir to avoid stale TrackNet frame/median caches: {out}")
 
 
-def _dataset_status(*, materialize_frames: bool, hard_negative_plan: bool) -> str:
+def _dataset_status(*, materialize_frames: bool, hard_negative_plan: bool, train_augmentation: bool) -> str:
+    if hard_negative_plan and train_augmentation:
+        return "tracknet_dataset_materialized_hard_negative_train_augmented"
+    if train_augmentation:
+        return "tracknet_dataset_materialized_train_augmented"
     if hard_negative_plan and materialize_frames:
         return "tracknet_dataset_materialized_hard_negative_augmented"
     if hard_negative_plan:
@@ -800,7 +1119,7 @@ def _write_median(frame_dir: Path, frame_count: int) -> None:
     np.savez(median_path, median=median_image)
 
 
-def _limitations(*, materialize_frames: bool) -> list[str]:
+def _limitations(*, materialize_frames: bool, train_augmentation: bool) -> list[str]:
     limitations = ["This artifact prepares supervised labels only; it does not train or verify BALL."]
     if materialize_frames:
         limitations.append("Frame images were materialized for TrackNetV3 training, but no model has been trained by this builder.")
@@ -808,6 +1127,8 @@ def _limitations(*, materialize_frames: bool) -> list[str]:
         limitations.append(
             "Frame images are not materialized by this builder run; rerun with --materialize-frames and --video clip=path before training."
         )
+    if train_augmentation:
+        limitations.append("Train-only visual augmentation copies reviewed labels unchanged and does not add new reviewed BALL evidence.")
     limitations.append("Validation uses the split declared by the source YOLO manifest, so held-out metrics must be reported separately after GPU training.")
     return limitations
 

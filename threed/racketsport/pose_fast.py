@@ -12,6 +12,7 @@ from typing import Any, Callable, Mapping, Sequence
 from .court_positioning import CameraFloorGeometry, back_project_pixel_to_floor
 from .model_manifest import verify_model_checkpoint
 from .schemas import CourtCalibration, Tracks
+from .skeleton_upright import ROTATION_CONVENTION_OFFSET_ROW_TIMES_R, rotate_camera_offsets_row_times_R
 
 
 ARTIFACT_TYPE = "racketsport_skeleton3d"
@@ -198,7 +199,17 @@ def build_lane_a_skeleton3d_from_rtmw3d(
                 missing.append({"frame_idx": frame_idx, "player_id": int(player.id)})
                 continue
             selected_joints, selected_conf = _lane_a_joints(result)
-            support_idx = _support_foot_index(selected_joints, selected_conf)
+            rotation_applied = calibration is not None and world_frame == "court_Z0"
+            grounding_joints = (
+                rotate_camera_offsets_row_times_R(
+                    selected_joints,
+                    rotation=calibration.extrinsics.R,
+                    joint_names=LANE_A_RTMW3D_JOINT_NAMES,
+                )
+                if rotation_applied
+                else selected_joints
+            )
+            support_idx = _support_foot_index(grounding_joints, selected_conf)
             support_xy = None
             if calibration is not None and world_frame == "court_Z0":
                 support_xy = _support_foot_ground_xy_from_pixels(result, support_idx=support_idx, calibration=calibration)
@@ -208,7 +219,7 @@ def build_lane_a_skeleton3d_from_rtmw3d(
             else:
                 pixel_grounding_count += 1
             joints_world = _ground_to_support_foot(
-                selected_joints,
+                grounding_joints,
                 support_idx=support_idx,
                 support_world_xy=support_xy,
             )
@@ -216,6 +227,7 @@ def build_lane_a_skeleton3d_from_rtmw3d(
                 {
                     "frame_idx": frame_idx,
                     "t": float(track_frame.t),
+                    "transl_world": [float(track_frame.world_xy[0]), float(track_frame.world_xy[1]), 0.0],
                     "joints_world": joints_world,
                     "joint_conf": selected_conf,
                 }
@@ -246,6 +258,9 @@ def build_lane_a_skeleton3d_from_rtmw3d(
             ),
             "pixel_grounding_count": pixel_grounding_count,
             "grounding_fallback_count": grounding_fallback_count,
+            "camera_offset_rotation_convention": (
+                ROTATION_CONVENTION_OFFSET_ROW_TIMES_R if calibration is not None and world_frame == "court_Z0" else None
+            ),
         },
     }
 

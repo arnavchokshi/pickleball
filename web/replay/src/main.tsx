@@ -10,8 +10,4 @@ if (!rootElement) {
   throw new Error("Replay viewer root element #root was not found");
 }
 
-createRoot(rootElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+createRoot(rootElement).render(<App />);

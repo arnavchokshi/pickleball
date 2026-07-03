@@ -78,6 +78,123 @@
       "fallbacks": ["sam2_hiera_small", "sam2_hiera_large"]
     },
     {
+      "id": "grounding_dino_tiny_paddle_detector",
+      "stage": "racket_detection",
+      "use": "Open-vocabulary paddle detector for RKT detector+mask gate 1",
+      "source": "https://huggingface.co/IDEA-Research/grounding-dino-tiny and https://github.com/IDEA-Research/GroundingDINO",
+      "license": "Apache-2.0",
+      "commercial_posture": "ok",
+      "status": "available_local",
+      "local_path": "models/checkpoints/racket/grounding-dino-tiny/model.safetensors",
+      "sha256": "1a2412ef99bd74bcd3c2a246fa1e48581f8889a1300c9051974741314fc042f3",
+      "repo_commit": "a2bb814dd30d776dcf7e30523b00659f4f141c71",
+      "fine_tuned_on_pickleball": false,
+      "training_data": ["official_grounding_dino_tiny_pretrained"],
+      "fallbacks": ["sam3_concept_tracker", "dinox_detector"],
+      "notes": [
+        "Downloaded with huggingface_hub on 2026-07-01 into models/checkpoints/racket/grounding-dino-tiny.",
+        "Used only for real detector/mask gate-1 inference against reviewed CVAT paddle rectangles.",
+        "This is not DINO-X, not pickleball fine-tuned, and not evidence for true paddle corners or 6DoF pose."
+      ]
+    },
+    {
+      "id": "grounding_dino_base_paddle_detector_failed_probe",
+      "stage": "racket_detection",
+      "use": "Failed open-vocabulary paddle detector probe for RKT detector+mask gate 1",
+      "source": "https://huggingface.co/IDEA-Research/grounding-dino-base and https://github.com/IDEA-Research/GroundingDINO",
+      "license": "Apache-2.0",
+      "commercial_posture": "ok",
+      "status": "available_on_h100",
+      "local_path": "/home/arnavchokshi/.cache/huggingface/hub/models--IDEA-Research--grounding-dino-base/snapshots/12bdfa3120f3e7ec7b434d90674b3396eccf88eb/model.safetensors",
+      "sha256": "5548f844c928c4b6f411fa8cbcc2bfa8dbbba437cb1d513975519f93c2a9ed21",
+      "repo_commit": "12bdfa3120f3e7ec7b434d90674b3396eccf88eb",
+      "fine_tuned_on_pickleball": false,
+      "training_data": ["official_grounding_dino_base_pretrained"],
+      "fallbacks": ["grounding_dino_tiny_paddle_detector", "sam3_concept_tracker", "dinox_detector"],
+      "notes": [
+        "Downloaded through Hugging Face cache on pickleball-a100-spot-ase1a during RKT detector gate diagnosis on 2026-07-01 UTC.",
+        "GroundingDINO-base + SAM2 tiny tiled 15-frame sample at box/text threshold 0.05 reached recall 0.8333 and failed the detector+mask gate.",
+        "This is not DINO-X, not pickleball fine-tuned, and must not be promoted."
+      ]
+    },
+    {
+      "id": "sam2_hiera_tiny_racket_masks",
+      "stage": "racket_segmentation",
+      "use": "SAM2 tiny box-prompted mask checkpoint for RKT detector+mask gate 1",
+      "source": "https://huggingface.co/facebook/sam2-hiera-tiny and https://github.com/facebookresearch/sam2",
+      "license": "Apache-2.0",
+      "commercial_posture": "ok",
+      "status": "available_local",
+      "local_path": "models/checkpoints/racket/sam2-hiera-tiny/sam2_hiera_tiny.pt",
+      "sha256": "65b50056e05bcb13694174f51bb6da89c894b57b75ccdf0ba6352c597c5d1125",
+      "repo_commit": "7c218beaf0bb87874785f32b582f640134fc1c09",
+      "fine_tuned_on_pickleball": false,
+      "training_data": ["official_sam2_hiera_tiny_pretrained"],
+      "fallbacks": ["sam2_hiera_base_plus"],
+      "notes": [
+        "Downloaded with huggingface_hub on 2026-07-01 into models/checkpoints/racket/sam2-hiera-tiny.",
+        "Local PyTorch MPS failed on SAM2 bicubic upsample; CPU inference was verified for this checkpoint.",
+        "Used only for real box-prompted masks after detector inference; it is not true corner or 6DoF evidence."
+      ]
+    },
+    {
+      "id": "yolo11n_paddle_cpu320_e2_failed_probe",
+      "stage": "racket_detection",
+      "use": "Failed local paddle-detector training probe for RKT detector gate diagnosis",
+      "source": "Locally fine-tuned from models/checkpoints/yolo11n.pt on runs/cvat_imports/2026_06_30/yolo_datasets/paddle",
+      "license": "AGPL-3.0 via Ultralytics YOLO11 weights",
+      "commercial_posture": "agpl_caveat",
+      "status": "available_local",
+      "local_path": "runs/detect/runs/cvat_imports/2026_06_30/racket_yolo_train/yolo11n_paddle_cpu320_e5/weights/best.pt",
+      "sha256": "76b9e47ce128d1300ace493d3356bd305150d0256c61c50f778b3274dac8c5cc",
+      "fine_tuned_on_pickleball": true,
+      "training_data": ["runs/cvat_imports/2026_06_30/yolo_datasets/paddle"],
+      "fallbacks": ["grounding_dino_tiny_paddle_detector"],
+      "notes": [
+        "CPU training was stopped after two completed epochs because Outdoor validation recall stayed at 0.0024.",
+        "MPS training failed before producing weights with RuntimeError: view size is not compatible with input tensor's size and stride.",
+        "Detector-only 15-frame sample at conf=0.001 reached recall 0.4333 with 1152 detections; this checkpoint failed the RKT detector gate and must not be promoted."
+      ]
+    },
+    {
+      "id": "yolo11n_paddle_a100_img960_e50_failed_probe",
+      "stage": "racket_detection",
+      "use": "Failed A100 paddle-detector training probe for RKT detector+mask gate diagnosis",
+      "source": "Fine-tuned from models/checkpoints/yolo11n.pt on runs/cvat_imports/2026_06_30/yolo_datasets/paddle using pickleball-a100-spot-ase1a",
+      "license": "AGPL-3.0 via Ultralytics YOLO11 weights",
+      "commercial_posture": "agpl_caveat",
+      "status": "available_on_h100",
+      "local_path": "/home/arnavchokshi/pickleball_git/runs/cvat_imports/2026_06_30/racket_yolo_train_gpu/yolo11n_paddle_img960_e50/weights/best.pt",
+      "sha256": "7134203e168dbcaef802f26e092d20b14a45e91a757240887becd99741b4bdbe",
+      "fine_tuned_on_pickleball": true,
+      "training_data": ["runs/cvat_imports/2026_06_30/yolo_datasets/paddle"],
+      "fallbacks": ["grounding_dino_tiny_paddle_detector"],
+      "notes": [
+        "A100 training early-stopped after 21 epochs; best validation metrics were P=0.645, R=0.321, mAP50=0.322, mAP50-95=0.0954.",
+        "YOLO+SAM2 15-frame sample at conf=0.001 reached recall 1.0 but precision 0.0201 with 1489 detections; this was smoke-only and not gate verification.",
+        "Full-manifest detector-only sweep over 1426 reviewed rows at conf=0.001 reached overall recall 0.9240 but failed per-viewpoint recall because Outdoor was 0.8259; this checkpoint failed the RKT detector gate and must not be promoted."
+      ]
+    },
+    {
+      "id": "yolo26s_paddle_a100_img1280_e80_failed_probe",
+      "stage": "racket_detection",
+      "use": "Failed A100 high-resolution paddle-detector training probe for RKT detector gate diagnosis",
+      "source": "Fine-tuned from models/checkpoints/yolo26s.pt on runs/cvat_imports/2026_06_30/yolo_datasets/paddle using pickleball-a100-spot-ase1a",
+      "license": "AGPL-3.0 via Ultralytics YOLO26 weights",
+      "commercial_posture": "agpl_caveat",
+      "status": "available_on_h100",
+      "local_path": "/home/arnavchokshi/pickleball_git/runs/detect/runs/cvat_imports/2026_06_30/racket_yolo_train_gpu/yolo26s_paddle_img1280_e80/weights/best.pt",
+      "sha256": "3b6b97a41e4ec14bc61e5468ffc2a5065bef8ff65533cf5d6c82e64a7393f4d8",
+      "fine_tuned_on_pickleball": true,
+      "training_data": ["runs/cvat_imports/2026_06_30/yolo_datasets/paddle"],
+      "fallbacks": ["yolo11n_paddle_a100_img960_e50_failed_probe", "grounding_dino_tiny_paddle_detector"],
+      "notes": [
+        "A100 training early-stopped after 21 epochs; best validation metrics were P=0.470, R=0.403, mAP50=0.356, mAP50-95=0.112.",
+        "Native Ultralytics validation at conf=0.001, imgsz=1280, batch=1, iou=0.25 on the 600-image validation split returned precision 0.4679 and recall 0.4010.",
+        "Batched full-manifest detector sweep attempts at imgsz=1280 failed with CUDA OOM at batch 16 and batch 4; no full-manifest pass was produced, and this checkpoint must not be promoted."
+      ]
+    },
+    {
       "id": "body4d_yolo_best_existing",
       "stage": "person_or_aux_detection",
       "use": "Existing YOLO-family weights in the body4d image; exact training target needs verification before pickleball use",

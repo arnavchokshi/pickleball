@@ -6,6 +6,7 @@ run Fast SAM-3D-Body or infer SMPL parameters.
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from math import sqrt
 from typing import Any, Mapping, Sequence
@@ -18,7 +19,9 @@ from .footlock import (
     foot_lock_metrics,
     snap_stance_foot,
 )
+from .pose_temporal import apply_sam3d_wrist_bone_lock, refine_sam3d_skeleton3d
 from .schemas import CourtCalibration
+from .skeleton_upright import ROTATION_CONVENTION_OFFSET_ROW_TIMES_R, rotate_camera_offsets_row_times_R
 
 
 SCAFFOLD_NOTE = "cpu_worldhmr_primitives_no_sam3dbody_integration"
@@ -168,6 +171,7 @@ def build_body_artifacts_from_fast_sam(
     max_root_speed_mps: float | None = None,
     max_track_anchor_smoothing_residual_m: float | None = None,
     model: str = "sam3dbody_world_joints",
+    sam3d_wrist_bone_lock: bool = True,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Build BODY contract artifacts from real Fast SAM-3D-Body outputs."""
 
@@ -244,8 +248,13 @@ def build_body_artifacts_from_fast_sam(
                     {
                         "frame_idx": int(frame["frame_idx"]),
                         "t": float(frame["t"]),
+                        "transl_world": list(frame["transl_world"]),
                         "joints_world": [list(joint) for joint in frame["joints_world"]],
                         "joint_conf": [float(frame["confidence"])] * len(frame["joints_world"]),
+                        "confidence_provenance": {
+                            "source": "sam3d_body_joints",
+                            "model": model,
+                        },
                     }
                     for frame in player_frames
                 ],
@@ -263,18 +272,48 @@ def build_body_artifacts_from_fast_sam(
         smpl_motion["mesh_faces"] = mesh_faces
     skeleton3d = {
         "schema_version": 1,
+        "artifact_type": "racketsport_skeleton3d",
+        "fps": float(fps),
+        "world_frame": "court_Z0",
+        "source_model": "sam3d_body_joints",
         "joint_names": [f"sam3dbody_joint_{idx:03d}" for idx in range(max_joint_count)],
-        "preview_only": True,
+        "preview_only": False,
         "players": skeleton_players,
+        "provenance": {
+            "lane": "BODY_TIER2",
+            "source": "sam3d_body_joints",
+            "model_family": model,
+            "camera_offset_rotation_convention": ROTATION_CONVENTION_OFFSET_ROW_TIMES_R,
+            "grounding": "camera_offset_row_times_R_plus_track_footpoint_court_z0",
+            "protected_eval_labels_used": False,
+        },
     }
+    skeleton3d = apply_sam3d_temporal_refine_gate(
+        skeleton3d,
+        fps=fps,
+        sam3d_wrist_bone_lock=sam3d_wrist_bone_lock,
+    )
+    sam3d_temporal_refine = dict(skeleton3d.get("provenance", {}).get("sam3d_temporal_refine", {}))
+    sam3d_lock = dict(skeleton3d.get("provenance", {}).get("sam3d_wrist_bone_lock", {}))
+    temporal_refine = dict(skeleton3d.get("provenance", {}).get("temporal_refine", {}))
+    physical_plausibility = dict(temporal_refine.get("physical_plausibility", {}))
     metrics = {
         "body_samples": len(samples),
         "players": len(players),
         "frames": len({int(frame["frame_idx"]) for frame in smoothed}),
         "world_frame": "court_Z0",
-        "grounding": "camera_extrinsics_plus_track_footpoint_court_z0",
+        "grounding": "camera_offset_row_times_R_plus_track_footpoint_court_z0",
+        "camera_offset_rotation_convention": ROTATION_CONVENTION_OFFSET_ROW_TIMES_R,
         "grounding_anchor": _common_grounding_anchor(smoothed),
         "smoothing_alpha": smoothing_alpha,
+        "sam3d_temporal_refine_status": sam3d_temporal_refine.get("status", "absent"),
+        "sam3d_wrist_peak_timing_gate_pass": sam3d_temporal_refine.get("wrist_peak_timing_gate_pass"),
+        "sam3d_wrist_bone_lock_status": sam3d_lock.get("status", "disabled" if not sam3d_wrist_bone_lock else "absent"),
+        "sam3d_wrist_bone_lock_locked_frame_count": sam3d_lock.get("locked_frame_count", 0),
+        "sam3d_core_body_speed_clamp_engagement_by_player": physical_plausibility.get(
+            "core_body_speed_clamp_engagement_by_player",
+            {},
+        ),
         "max_root_speed_mps": max_root_speed_mps,
         "max_track_anchor_smoothing_residual_m": max_track_anchor_smoothing_residual_m,
         **smoothing_metrics,
@@ -311,6 +350,76 @@ def build_body_artifacts_from_fast_sam(
         "skate_free_players": sum(1 for player in players if player["skate_free"]),
     }
     return smpl_motion, skeleton3d, metrics
+
+
+def apply_sam3d_temporal_refine_gate(
+    skeleton3d: Mapping[str, Any],
+    *,
+    fps: float | None = None,
+    sam3d_wrist_bone_lock: bool = True,
+) -> dict[str, Any]:
+    """Run SAM-3D temporal refinement and enforce the wrist peak gate.
+
+    A failed or blocked gate returns the original grounded skeleton with a
+    provenance flag instead of adopting smoothed coordinates.
+    """
+
+    original = copy.deepcopy(dict(skeleton3d))
+    try:
+        refined = refine_sam3d_skeleton3d(original, fps=fps, apply_world_grounding=False)
+    except Exception as exc:
+        failed = _with_sam3d_temporal_refine_status(
+            original,
+            status="skipped_refine_error",
+            wrist_peak_timing_gate_pass=False,
+            error=str(exc),
+        )
+        return apply_sam3d_wrist_bone_lock(failed) if sam3d_wrist_bone_lock else failed
+
+    temporal = dict(refined.get("provenance", {}).get("temporal_refine", {}))
+    wrist_timing = temporal.get("wrist_peak_timing")
+    gate_pass = temporal.get("wrist_peak_timing_gate_pass") is True
+    if gate_pass:
+        accepted = _with_sam3d_temporal_refine_status(
+            refined,
+            status="applied",
+            wrist_peak_timing_gate_pass=True,
+            wrist_peak_timing=wrist_timing,
+        )
+        return apply_sam3d_wrist_bone_lock(accepted) if sam3d_wrist_bone_lock else accepted
+    rejected = _with_sam3d_temporal_refine_status(
+        original,
+        status="rejected_wrist_peak_gate_failed",
+        wrist_peak_timing_gate_pass=False,
+        wrist_peak_timing=wrist_timing,
+    )
+    return apply_sam3d_wrist_bone_lock(rejected) if sam3d_wrist_bone_lock else rejected
+
+
+def _with_sam3d_temporal_refine_status(
+    skeleton3d: Mapping[str, Any],
+    *,
+    status: str,
+    wrist_peak_timing_gate_pass: bool,
+    wrist_peak_timing: Any | None = None,
+    error: str = "",
+) -> dict[str, Any]:
+    output = copy.deepcopy(dict(skeleton3d))
+    provenance = dict(output.get("provenance", {}))
+    record = {
+        "status": status,
+        "source": "refine_sam3d_skeleton3d",
+        "wrist_peak_timing_gate_pass": bool(wrist_peak_timing_gate_pass),
+        "protected_eval_labels_used": False,
+        "internal_val_only": True,
+    }
+    if wrist_peak_timing is not None:
+        record["wrist_peak_timing"] = wrist_peak_timing
+    if error:
+        record["error"] = error
+    provenance["sam3d_temporal_refine"] = record
+    output["provenance"] = provenance
+    return output
 
 
 def _infer_floor_contact(frame: Mapping[str, Any], *, floor_z_m: float = 0.0) -> dict[str, bool]:
@@ -586,15 +695,18 @@ def _ground_fast_sam_sample(sample: Mapping[str, Any], *, calibration: CourtCali
     vertices_camera = _vector3_list(sample.get("vertices_camera", []), name="vertices_camera")
     if not joints_camera and not vertices_camera:
         raise ValueError("Fast SAM-3D-Body sample must include joints_camera or vertices_camera")
-    camera_translation = _vector3(sample.get("camera_translation", [0.0, 0.0, 0.0]), name="camera_translation")
     track_world_xy = _vector2(sample.get("track_world_xy"), name="track_world_xy")
     t = float(sample["t"])
     confidence = float(sample.get("confidence", 0.0))
     if confidence < 0.0 or confidence > 1.0:
         raise ValueError("confidence must be between 0 and 1")
 
-    joints_world_raw = _camera_points_to_world(joints_camera, camera_translation, calibration)
-    vertices_world_raw = _camera_points_to_world(vertices_camera, camera_translation, calibration)
+    joints_world_raw = _camera_offsets_to_world(joints_camera, calibration=calibration)
+    vertices_world_raw = _camera_offsets_to_world(
+        vertices_camera,
+        calibration=calibration,
+        root_camera=joints_camera[0] if joints_camera else (vertices_camera[0] if vertices_camera else [0.0, 0.0, 0.0]),
+    )
     anchor_candidates = joints_world_raw or vertices_world_raw
     anchor_xy, anchor_name = _low_grounding_anchor_xy(anchor_candidates)
     all_world = joints_world_raw + vertices_world_raw
@@ -622,23 +734,32 @@ def _ground_fast_sam_sample(sample: Mapping[str, Any], *, calibration: CourtCali
     }
 
 
-def _camera_points_to_world(
+def _camera_offsets_to_world(
     points_camera_relative: Sequence[Sequence[float]],
-    camera_translation: Sequence[float],
+    *,
     calibration: CourtCalibration,
+    root_camera: Sequence[float] | None = None,
 ) -> list[list[float]]:
+    if not points_camera_relative:
+        return []
+    joint_names = [f"sam3dbody_joint_{idx:03d}" for idx in range(len(points_camera_relative))]
+    if root_camera is None:
+        return rotate_camera_offsets_row_times_R(
+            points_camera_relative,
+            rotation=calibration.extrinsics.R,
+            joint_names=joint_names,
+        )
+    root = [float(root_camera[idx]) for idx in range(3)]
     rotation = [[float(value) for value in row] for row in calibration.extrinsics.R]
-    translation = [float(value) for value in calibration.extrinsics.t]
-    points: list[list[float]] = []
+    rotated: list[list[float]] = []
     for point in points_camera_relative:
-        camera_point = [float(point[idx]) + float(camera_translation[idx]) for idx in range(3)]
-        camera_minus_t = [camera_point[idx] - translation[idx] for idx in range(3)]
-        world = [
-            sum(rotation[row_idx][col_idx] * camera_minus_t[row_idx] for row_idx in range(3))
+        offset = [float(point[idx]) - root[idx] for idx in range(3)]
+        world_offset = [
+            sum(offset[row_idx] * rotation[row_idx][col_idx] for row_idx in range(3))
             for col_idx in range(3)
         ]
-        points.append(world)
-    return points
+        rotated.append([root[idx] + world_offset[idx] for idx in range(3)])
+    return rotated
 
 
 def _low_grounding_anchor_xy(points_world: Sequence[Sequence[float]]) -> tuple[list[float], str]:

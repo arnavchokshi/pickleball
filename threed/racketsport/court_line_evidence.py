@@ -82,8 +82,12 @@ def score_line_candidate(expected_segment: Sequence[Sequence[float]], candidate_
     distance_score = math.exp(-((distance_px / 12.0) ** 2))
     angle_score = math.exp(-((angle_delta_deg / 12.0) ** 2))
     overlap_score = visible_fraction
-    length_score = min(candidate_length / expected_length, 1.0)
+    length_ratio = candidate_length / expected_length
+    length_score = min(length_ratio, 1.0)
     score = _clamp01(0.45 * distance_score + 0.25 * angle_score + 0.25 * overlap_score + 0.05 * length_score)
+    if length_ratio > 1.08:
+        overlength_penalty = math.exp(-(((length_ratio - 1.08) / 0.28) ** 2))
+        score *= overlength_penalty
 
     return LineCandidateScore(
         distance_px=distance_px,

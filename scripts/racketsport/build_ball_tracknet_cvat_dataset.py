@@ -31,6 +31,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--hard-negative-plan", type=Path, help="BALL hard-negative iteration plan JSON to consume.")
     parser.add_argument("--hard-negative-context-frames", type=int, default=0, help="Context frames to include around hard-negative ranges.")
     parser.add_argument("--hard-negative-repeat", type=int, default=1, help="Deterministic oversampling repeat count for hard-negative windows.")
+    parser.add_argument("--train-augmentation-profile", help="Optional train-only materialized visual augmentation profile.")
+    parser.add_argument("--train-augmentation-repeat", type=int, default=1, help="Augmented copies to create per materialized train sample.")
     args = parser.parse_args(argv)
 
     try:
@@ -46,6 +48,8 @@ def main(argv: list[str] | None = None) -> int:
             hard_negative_plan=args.hard_negative_plan,
             hard_negative_context_frames=args.hard_negative_context_frames,
             hard_negative_repeat=args.hard_negative_repeat,
+            train_augmentation_profile=args.train_augmentation_profile,
+            train_augmentation_repeat=args.train_augmentation_repeat,
         )
     except Exception as exc:
         print(f"BALL TrackNet CVAT dataset build failed: {exc}", file=sys.stderr)

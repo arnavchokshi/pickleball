@@ -10,6 +10,8 @@
 	<string>Pickleball needs microphone access to record paddle contact audio with practice clips.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Pickleball uses device motion to record camera level, gravity, and tripod stability with each capture.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Pickleball lets you import old camera-roll videos into the same local capture package format as recorded clips.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UISupportedInterfaceOrientations</key>

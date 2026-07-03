@@ -16,6 +16,7 @@ from threed.racketsport.cvat_detection_dataset import (  # noqa: E402
     class_map_for_preset,
     export_cvat_detection_yolo_dataset,
 )
+from threed.racketsport.eval_guard import assert_not_training_on_eval_clip  # noqa: E402
 
 
 def main() -> int:
@@ -31,8 +32,16 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        clips = _parse_clips(args.clip)
+        # Eval-clip integrity gate (fail closed): this builder writes YOLO
+        # detector training data directly from CVAT clips, so it counts as
+        # training-input creation. See threed/racketsport/eval_guard.py.
+        assert_not_training_on_eval_clip(
+            (value for clip in clips for value in (clip.clip_id, str(clip.video_path), str(clip.reviewed_boxes_path))),
+            allow_internal_val=False,
+        )
         summary = export_cvat_detection_yolo_dataset(
-            clips=_parse_clips(args.clip),
+            clips=clips,
             out_dir=args.out_dir,
             class_map=class_map_for_preset(args.preset),
             split_mode=args.split_mode,

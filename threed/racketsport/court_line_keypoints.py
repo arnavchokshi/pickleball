@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import combinations
 import math
 from typing import Any, Mapping, Sequence
 
@@ -48,6 +49,8 @@ REQUIRED_SEMANTIC_LINES: tuple[str, ...] = (
     "centerline",
     "right_sideline",
 )
+NEAR_STRIP_UNVERIFIED_CONFIDENCE_CAP = 0.45
+MIN_WHITE_SUPPORT_RATIO_FOR_FIXED_MASK = 0.02
 
 
 def detect_court_keypoints_from_image(
@@ -112,7 +115,11 @@ def detect_court_keypoints_from_image(
     }
     keypoints = _keypoints_from_near_strip_homography(refined)
     semantic_segments = _semantic_segments_from_keypoints(keypoints)
-    confidence = min(1.0, sum(group.support_length_px for group in near_strip.values()) / (float(width) * 2.0))
+    confidence = min(
+        NEAR_STRIP_UNVERIFIED_CONFIDENCE_CAP,
+        sum(group.support_length_px for group in near_strip.values()) / (float(width) * 2.0),
+    )
+    keypoints = _with_keypoint_confidence_cap(keypoints, confidence)
     return DetectedCourtKeypoints(
         keypoints=keypoints,
         semantic_lines=semantic_segments,
@@ -221,7 +228,8 @@ def _try_high_support_near_strip_keypoints(
                         + near_nvz.support_length_px
                         + near_baseline.support_length_px
                     )
-                    confidence = min(1.0, score / (float(width) * 2.0))
+                    confidence = min(NEAR_STRIP_UNVERIFIED_CONFIDENCE_CAP, score / (float(width) * 2.0))
+                    keypoints = _with_keypoint_confidence_cap(keypoints, confidence)
                     if best is None or score > best[0]:
                         best = (score, keypoints, semantic_segments, confidence)
     if best is None:
@@ -326,6 +334,20 @@ def _keypoints_from_near_strip_homography(lines: Mapping[str, _Line]) -> dict[st
     }
 
 
+def _with_keypoint_confidence_cap(
+    keypoints: Mapping[str, Mapping[str, Any]],
+    confidence: float,
+) -> dict[str, dict[str, Any]]:
+    cap = max(0.0, min(1.0, float(confidence)))
+    capped: dict[str, dict[str, Any]] = {}
+    for name, keypoint in keypoints.items():
+        item = dict(keypoint)
+        item["confidence"] = min(float(item.get("confidence", 0.0)), cap)
+        item["confidence_cap_reason"] = "near_strip_homography_unverified"
+        capped[name] = item
+    return capped
+
+
 def _semantic_segments_from_keypoints(keypoints: Mapping[str, Mapping[str, Any]]) -> dict[str, list[list[float]]]:
     return {
         "far_baseline": [_xy_from_keypoint(keypoints["far_left_corner"]), _xy_from_keypoint(keypoints["far_right_corner"])],
@@ -360,13 +382,60 @@ def _white_line_mask(image: Any, *, cv2_module: Any, white_threshold: int) -> An
         bgr = image.astype(np.int16)
         channel_min = bgr.min(axis=2)
         channel_max = bgr.max(axis=2)
-        mask = ((channel_min >= threshold) & ((channel_max - channel_min) <= 80)).astype(np.uint8) * 255
+        white = (channel_min >= threshold) & ((channel_max - channel_min) <= 80)
+        mask = white.astype(np.uint8) * 255
 
     height = int(mask.shape[0])
     mask[: int(round(height * 0.25)), :] = 0
+    if len(image.shape) != 2 and _mask_support_ratio(mask) < MIN_WHITE_SUPPORT_RATIO_FOR_FIXED_MASK:
+        adaptive = _local_court_paint_mask(image, cv2_module=cv2)
+        mask = ((mask > 0) | (adaptive > 0)).astype(np.uint8) * 255
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
     return cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+
+
+def _mask_support_ratio(mask: Any) -> float:
+    import numpy as np
+
+    total = int(mask.size)
+    if total <= 0:
+        return 0.0
+    return float(np.count_nonzero(mask)) / float(total)
+
+
+def _local_court_paint_mask(image: Any, *, cv2_module: Any) -> Any:
+    cv2 = cv2_module
+    import numpy as np
+
+    if len(image.shape) == 2:
+        return np.zeros(image.shape[:2], dtype=np.uint8)
+    height, width = image.shape[:2]
+    if width <= 0 or height <= 0:
+        return np.zeros((0, 0), dtype=np.uint8)
+
+    bgr = image.astype(np.float32)
+    y0 = int(round(height * 0.40))
+    y1 = int(round(height * 0.94))
+    x0 = int(round(width * 0.08))
+    x1 = int(round(width * 0.92))
+    sample = bgr[y0:y1, x0:x1].reshape(-1, 3)
+    if sample.size == 0:
+        return np.zeros((height, width), dtype=np.uint8)
+    surface = np.median(sample, axis=0)
+    distance = np.linalg.norm(bgr - surface.reshape(1, 1, 3), axis=2)
+    sample_distance = np.linalg.norm(sample - surface.reshape(1, 3), axis=1)
+    contrast_threshold = max(34.0, float(np.percentile(sample_distance, 82)) + 10.0)
+    paint_like = distance >= contrast_threshold
+
+    surface_threshold = max(24.0, float(np.percentile(sample_distance, 68)) + 8.0)
+    court_surface = distance <= surface_threshold
+    court_surface[: int(round(height * 0.25)), :] = False
+    adjacency_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (13, 13))
+    near_surface = cv2.dilate(court_surface.astype(np.uint8) * 255, adjacency_kernel) > 0
+    paint_like &= near_surface
+    paint_like[: int(round(height * 0.25)), :] = False
+    return paint_like.astype(np.uint8) * 255
 
 
 def _detect_hough_segments(mask: Any, *, cv2_module: Any) -> list[Segment]:
@@ -477,9 +546,11 @@ def _select_semantic_lines(groups: Sequence[_LineGroup], *, width: float, height
         horizontal_pool = _dedupe_parallel_groups(cross_candidates, x_for_order=x_ref)
     if len(horizontal_pool) < 5:
         raise ValueError("could not classify the far/net/NVZ/baseline court-line candidates")
-    ordered_cross = sorted(horizontal_pool, key=lambda group: _mean_side_intersection_y(group.line, left.line, right_sideline.line))
-    far_baseline, far_nvz, net, near_nvz = ordered_cross[:4]
-    near_baseline = ordered_cross[-1]
+    far_baseline, far_nvz, net, near_nvz, near_baseline = _select_cross_lines_by_regulation_spacing(
+        horizontal_pool,
+        left=left,
+        right=right_sideline,
+    )
 
     if len({id(group) for group in (far_baseline, far_nvz, net, near_nvz, near_baseline)}) < 5:
         raise ValueError("semantic cross-court lines were not distinct")
@@ -494,6 +565,58 @@ def _select_semantic_lines(groups: Sequence[_LineGroup], *, width: float, height
         "centerline": centerline,
         "right_sideline": right_sideline,
     }
+
+
+def _select_cross_lines_by_regulation_spacing(
+    groups: Sequence[_LineGroup],
+    *,
+    left: _LineGroup,
+    right: _LineGroup,
+) -> tuple[_LineGroup, _LineGroup, _LineGroup, _LineGroup, _LineGroup]:
+    ordered = sorted(groups, key=lambda group: _mean_side_intersection_y(group.line, left.line, right.line))
+    if len(ordered) < 5:
+        raise ValueError("not enough cross-court lines for regulation spacing check")
+
+    best: tuple[float, tuple[_LineGroup, _LineGroup, _LineGroup, _LineGroup, _LineGroup]] | None = None
+    second_score: float | None = None
+    for indexes in combinations(range(len(ordered)), 5):
+        candidate = tuple(ordered[index] for index in indexes)
+        score = _regulation_cross_spacing_error(candidate, left=left, right=right)
+        if best is None or score < best[0]:
+            second_score = best[0] if best is not None else None
+            best = (score, candidate)  # type: ignore[assignment]
+        elif second_score is None or score < second_score:
+            second_score = score
+
+    if best is None or best[0] > 0.35:
+        raise ValueError("cross-court line spacing is not regulation-consistent")
+    if second_score is not None and second_score - best[0] < 0.02:
+        raise ValueError("cross-court line spacing assignment is ambiguous")
+    return best[1]
+
+
+def _regulation_cross_spacing_error(
+    groups: Sequence[_LineGroup],
+    *,
+    left: _LineGroup,
+    right: _LineGroup,
+) -> float:
+    expected = [15.0, 7.0, 7.0, 15.0]
+    positions = [_mean_side_intersection_y(group.line, left.line, right.line) for group in groups]
+    distances = [positions[index + 1] - positions[index] for index in range(4)]
+    if any(distance <= 8.0 for distance in distances):
+        return float("inf")
+    scale = sum(distance * expect for distance, expect in zip(distances, expected, strict=True)) / sum(
+        expect * expect for expect in expected
+    )
+    if scale <= 0.0:
+        return float("inf")
+    relative_errors = [
+        abs(distance - scale * expect) / max(1.0, scale * expect)
+        for distance, expect in zip(distances, expected, strict=True)
+    ]
+    return sum(relative_errors) / len(relative_errors)
+
 
 def _dedupe_parallel_groups(groups: Sequence[_LineGroup], *, x_for_order: float) -> list[_LineGroup]:
     ordered = sorted(groups, key=lambda group: (round(_line_y_at(group.line, x_for_order) / 12.0), -group.support_length_px))

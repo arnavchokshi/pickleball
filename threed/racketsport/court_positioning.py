@@ -191,10 +191,14 @@ def solve_metric_court_placement(world_keypoints: Mapping[str, Sequence[float]])
         [0.0, 0.0, 0.0, 1.0],
     ]
 
-    residuals = [
-        _distance(transform_court_to_world(PICKLEBALL_KEYPOINT_BY_NAME[name].world_xyz_m, transform), point)
-        for name, point in zip(names, world_xyz, strict=True)
-    ]
+    # This solver estimates only a 2D court placement on the detected floor
+    # plane. Net-top canonical keypoints carry z=0.9144 m, while floor-plane
+    # back-projection observes their court footprint at z=0; grading full 3D
+    # distance would incorrectly turn an exact XY placement into low confidence.
+    residuals = []
+    for name, point in zip(names, world_xyz, strict=True):
+        transformed = transform_court_to_world(PICKLEBALL_KEYPOINT_BY_NAME[name].world_xyz_m, transform)
+        residuals.append(math.hypot(transformed[0] - point[0], transformed[1] - point[1]))
     residual_error = ResidualErrorMeters(
         median=_percentile(residuals, 50),
         p95=_percentile(residuals, 95),

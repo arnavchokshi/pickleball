@@ -3,6 +3,7 @@
 import Darwin
 import Foundation
 import PickleballCore
+import PickleballGuidance
 
 public struct CameraRecordingResult: Equatable, Sendable {
     public var descriptor: CapturePackageDescriptor
@@ -33,6 +34,10 @@ public final class CameraCaptureController: NSObject {
     public private(set) var activeDescriptor: CapturePackageDescriptor?
     public private(set) var lastRecordingResult: CameraRecordingResult?
     public var onRecordingFinished: ((Result<CameraRecordingResult, Error>) -> Void)?
+    /// Live court-dot map engine (W3-LIVE-MLP surface 2). Attached
+    /// best-effort alongside the movie output in `configure()`; a failure to
+    /// attach or to find a compiled detector model never blocks recording.
+    public let liveOverlayEngine = LiveCourtOverlayEngine()
 
     private let movieOutput = AVCaptureMovieFileOutput()
     private let motionSampler = CaptureMotionSampler()
@@ -131,6 +136,9 @@ public final class CameraCaptureController: NSObject {
         }
         session.addOutput(movieOutput)
         configureMovieOutput(policy: policy, videoRotationAngleDegrees: descriptor.videoRotationAngleDegrees)
+        // Best-effort: never throws, never blocks recording if the session
+        // declines the extra output or no detector model is installed yet.
+        liveOverlayEngine.attach(to: session, rotationDegrees: descriptor.videoRotationAngleDegrees)
         session.commitConfiguration()
         didCommitConfiguration = true
 
@@ -162,6 +170,43 @@ public final class CameraCaptureController: NSObject {
 
     public var latestGravity: [Double] {
         motionSampler.latestGravity
+    }
+
+    /// Real, live-readback signals for the pre-record capture-quality
+    /// guidance screen (W3-LIVE-MLP surface 1) -- see `LiveGuidanceEvaluator`
+    /// in `PickleballGuidance` for how these become pass/warn/unavailable
+    /// checks. Every field here is a direct AVFoundation/CoreMotion
+    /// readback or a value already computed from the active policy; nothing
+    /// is estimated or fabricated. Returns an all-`nil` sample (every check
+    /// renders `.unavailable`) if the session has not been configured yet.
+    public func currentLiveGuidanceSample() -> LiveGuidanceSample {
+        guard let device = activeDevice, let policy = activePolicy, let descriptor = activeDescriptor else {
+            return LiveGuidanceSample()
+        }
+
+        let dimensions = CMVideoFormatDescriptionGetDimensions(device.activeFormat.formatDescription)
+        let minFrameDurationSeconds = device.activeVideoMinFrameDuration.seconds
+        let tilt = LiveTiltEstimator.tiltDegrees(
+            gravity: latestGravity,
+            expectedLevelAxis: LiveTiltEstimator.expectedLevelAxis(for: descriptor.captureDeviceOrientation)
+        )
+
+        return LiveGuidanceSample(
+            exposureTargetOffsetEV: Double(device.exposureTargetOffset),
+            isExposureLocked: device.exposureMode == .locked || device.exposureMode == .custom,
+            shutterSeconds: device.exposureDuration.seconds,
+            minimumSharpShutterSeconds: LockedCapturePolicy.slowestAllowedShutterSeconds,
+            tiltFromLevelDegrees: tilt,
+            requestedFPS: policy.fps,
+            configuredFPS: minFrameDurationSeconds > 0 ? 1.0 / minFrameDurationSeconds : nil,
+            expectedResolution: policy.resolution.dimensions(for: policy.orientation),
+            configuredResolution: [Int(dimensions.width), Int(dimensions.height)],
+            setupTipReasons: [
+                "arkit_seed_missing",
+                "court_plane_missing",
+                "intrinsics_estimated_from_fov",
+            ]
+        )
     }
 
     public func startRecording() throws {

@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from threed.racketsport.court_keypoint_eval import (  # noqa: E402
+    DEFAULT_ACCEPTED_CLIPS,
     build_court_keypoint_no_tap_eval_report,
     render_court_keypoint_no_tap_eval_markdown,
 )
@@ -21,7 +22,31 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Evaluate CAL-3 no-tap court-keypoint checkpoint plumbing without claiming CAL-3 verification.",
     )
-    parser.add_argument("--run-root", type=Path, default=Path("runs/eval0/prototype_gate_h100_v2"))
+    parser.add_argument("--run-root", type=Path, default=None)
+    parser.add_argument(
+        "--eval-root",
+        type=Path,
+        default=None,
+        help="Eval clip root for partial visible-label artifacts, e.g. eval_clips/ball.",
+    )
+    parser.add_argument(
+        "--include-partial",
+        action="append",
+        default=[],
+        help="Clip id with labels/court_keypoints_partial.json to include in the visible-point gate.",
+    )
+    parser.add_argument(
+        "--partial-proposal-root",
+        type=Path,
+        default=None,
+        help="Optional root containing court_corner_proposals.json for included partial clips.",
+    )
+    parser.add_argument(
+        "--detector-v2-proposal-root",
+        type=Path,
+        default=None,
+        help="Optional root containing court_detector_v2_proposals.json for included partial clips.",
+    )
     parser.add_argument(
         "--checkpoint",
         type=Path,
@@ -48,10 +73,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--markdown-out", type=Path, default=None, help="Optional Markdown diagnostic output path.")
     args = parser.parse_args(argv)
+    run_root = args.run_root or args.eval_root or Path("runs/eval0/prototype_gate_h100_v2")
+    accepted_clips = () if args.run_root is None and args.eval_root is not None else DEFAULT_ACCEPTED_CLIPS
 
     try:
         report = build_court_keypoint_no_tap_eval_report(
-            run_root=args.run_root,
+            run_root=run_root,
             checkpoint=args.checkpoint,
             metrics=args.metrics,
             out=args.out,
@@ -60,6 +87,11 @@ def main(argv: list[str] | None = None) -> int:
             frames_per_clip=args.frames_per_clip,
             min_confidence=args.min_confidence,
             thresholds=_parse_thresholds(args.thresholds),
+            accepted_clips=accepted_clips,
+            eval_root=args.eval_root,
+            include_partial=args.include_partial,
+            partial_proposal_root=args.partial_proposal_root,
+            detector_v2_proposal_root=args.detector_v2_proposal_root,
         )
         if args.markdown_out is not None:
             args.markdown_out.parent.mkdir(parents=True, exist_ok=True)

@@ -48,6 +48,7 @@ def build_ball_bounce_gate_report(
         classifier,
         classifier_path=Path(classifier_path) if classifier_path is not None else None,
         ball_track_path=track_path,
+        track=track,
     )
     _extend_unique(violations, classifier_summary["violations"])
     audio_alignment = _audio_alignment_summary(track, audio=audio, video=video)
@@ -134,6 +135,7 @@ def _classifier_summary(
     *,
     classifier_path: Path | None,
     ball_track_path: Path,
+    track: BallTrack,
 ) -> dict[str, Any]:
     violations: list[str] = []
     if classifier is None:
@@ -157,6 +159,14 @@ def _classifier_summary(
         }
 
     artifact_type = classifier.get("artifact_type")
+    if artifact_type == "racketsport_ball_bounce_2d_output":
+        return _bounce_2d_summary(
+            classifier,
+            classifier_path=classifier_path,
+            ball_track_path=ball_track_path,
+            track=track,
+        )
+
     model_family = classifier.get("model_family")
     trained_on_real_labels = classifier.get("trained_on_real_labels")
     probability_threshold = _finite_or_none(classifier.get("probability_threshold"))
@@ -245,6 +255,125 @@ def _classifier_summary(
         },
         "violations": sorted(set(violations)),
     }
+
+
+def _bounce_2d_summary(
+    detector: Mapping[str, Any],
+    *,
+    classifier_path: Path | None,
+    ball_track_path: Path,
+    track: BallTrack,
+) -> dict[str, Any]:
+    violations: list[str] = []
+    artifact_type = detector.get("artifact_type")
+    status = detector.get("status")
+    algorithm = detector.get("algorithm")
+    probability_threshold = _finite_or_none(detector.get("probability_threshold"))
+    accepted = detector.get("accepted_bounces")
+    accepted_bounces = accepted if isinstance(accepted, list) else []
+    input_ball_track_path = detector.get("input_ball_track_path")
+    command = detector.get("command")
+    court_corners_path = detector.get("court_corners_path")
+    input_track_matches = isinstance(input_ball_track_path, str) and _paths_match(input_ball_track_path, ball_track_path)
+    accepted_bounces_match_track = _accepted_2d_bounces_match_track(accepted_bounces, track)
+
+    if artifact_type != "racketsport_ball_bounce_2d_output":
+        violations.append("bounce_2d_artifact_type_invalid")
+    if status != M4_STATUS_TESTED:
+        violations.append("bounce_2d_not_tested_on_real_data")
+    if algorithm != "image_velocity_inflection_court_plane_2d_v1":
+        violations.append("bounce_2d_algorithm_not_allowed")
+    if probability_threshold is None:
+        violations.append("bounce_2d_threshold_missing")
+    elif probability_threshold < BOUNCE_PROBABILITY_GATE:
+        violations.append("bounce_2d_threshold_below_0_50")
+    if not accepted_bounces:
+        violations.append("bounce_2d_has_no_accepted_bounces")
+    if not isinstance(input_ball_track_path, str) or not input_ball_track_path:
+        violations.append("bounce_2d_input_track_missing")
+    elif not input_track_matches and not accepted_bounces_match_track:
+        violations.append("bounce_2d_input_track_mismatch")
+    if not accepted_bounces_match_track:
+        violations.append("bounce_2d_accepted_bounces_mismatch_ball_track")
+    if not isinstance(command, str) or not command:
+        violations.append("bounce_2d_command_missing")
+    if not isinstance(court_corners_path, str) or not court_corners_path:
+        violations.append("bounce_2d_court_corners_missing")
+
+    for candidate in accepted_bounces:
+        if not isinstance(candidate, Mapping):
+            violations.append("bounce_2d_candidate_invalid")
+            continue
+        p_bounce = _finite_or_none(candidate.get("p_bounce"))
+        if p_bounce is None:
+            violations.append("bounce_2d_candidate_probability_missing")
+        elif p_bounce < BOUNCE_PROBABILITY_GATE:
+            violations.append("bounce_2d_candidate_probability_below_0_50")
+        if candidate.get("source") != "image_velocity_inflection_court_plane_2d_v1":
+            violations.append("bounce_2d_candidate_source_invalid")
+
+    return {
+        "summary": {
+            "path_present": True,
+            "artifact_type": artifact_type,
+            "status": status,
+            "algorithm": algorithm,
+            "probability_threshold": probability_threshold,
+            "candidate_count": detector.get("candidate_count"),
+            "accepted_bounce_count": len(accepted_bounces),
+            "input_ball_track_path": input_ball_track_path,
+            "input_track_matches_ball_track": input_track_matches,
+            "accepted_bounces_match_ball_track": accepted_bounces_match_track,
+            "court_corners_path": court_corners_path,
+            "command": command,
+            "artifact_path": str(classifier_path) if classifier_path is not None else None,
+        },
+        "violations": sorted(set(violations)),
+    }
+
+
+def _accepted_2d_bounces_match_track(accepted_bounces: Sequence[Any], track: BallTrack) -> bool:
+    if len(accepted_bounces) != len(track.bounces):
+        return False
+    accepted_sorted = sorted(accepted_bounces, key=_accepted_2d_sort_key)
+    track_sorted = sorted(track.bounces, key=lambda bounce: (bounce.frame if bounce.frame is not None else -1, float(bounce.t)))
+    return all(_accepted_2d_bounce_matches_track_bounce(candidate, bounce) for candidate, bounce in zip(accepted_sorted, track_sorted, strict=False))
+
+
+def _accepted_2d_sort_key(candidate: Any) -> tuple[int, float]:
+    if not isinstance(candidate, Mapping):
+        return (-1, -1.0)
+    frame = candidate.get("frame")
+    t = _finite_or_none(candidate.get("t"))
+    return (int(frame) if isinstance(frame, int) else -1, float(t) if t is not None else -1.0)
+
+
+def _accepted_2d_bounce_matches_track_bounce(candidate: Any, bounce: Any) -> bool:
+    if not isinstance(candidate, Mapping):
+        return False
+    if candidate.get("source") != bounce.source:
+        return False
+    candidate_frame = candidate.get("frame")
+    if not isinstance(candidate_frame, int) or bounce.frame != candidate_frame:
+        return False
+    candidate_t = _finite_or_none(candidate.get("t"))
+    if candidate_t is None or not math.isclose(candidate_t, float(bounce.t), rel_tol=1e-6, abs_tol=1e-6):
+        return False
+    candidate_p_bounce = _finite_or_none(candidate.get("p_bounce"))
+    if candidate_p_bounce is None or bounce.p_bounce is None:
+        return False
+    if not math.isclose(candidate_p_bounce, float(bounce.p_bounce), rel_tol=1e-6, abs_tol=1e-6):
+        return False
+    return _point_matches(candidate.get("world_xy"), bounce.world_xy) and _point_matches(candidate.get("contact_xy_img"), bounce.contact_xy_img)
+
+
+def _point_matches(candidate: Any, value: Any) -> bool:
+    if value is None or not isinstance(candidate, list | tuple) or len(candidate) != 2:
+        return False
+    return all(
+        _finite_or_none(left) is not None and math.isclose(float(left), float(right), rel_tol=1e-6, abs_tol=1e-6)
+        for left, right in zip(candidate, value, strict=True)
+    )
 
 
 def _audio_alignment_summary(

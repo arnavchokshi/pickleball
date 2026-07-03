@@ -180,13 +180,20 @@ def test_real_tracking_runner_invokes_manifest_yolo26m_with_botsort_reid(monkeyp
 
     assert result.real_model is True
     assert result.source_mode == "yolo26m_botsort_reid"
-    assert result.produced_artifacts == ("tracks.json",)
+    assert result.produced_artifacts == (
+        "raw_tracked_detections.json",
+        "tracked_detections.json",
+        "metrics.json",
+        "tracks.json",
+    )
     assert result.metrics["checkpoint_sha256_verified"] == checkpoint.name
     assert calls["model_path"] == str(checkpoint)
     track_kwargs = calls["track_kwargs"]
     assert isinstance(track_kwargs, dict)
     assert track_kwargs["source"] == str(inputs / "source.mp4")
     assert track_kwargs["classes"] == [0]
+    assert track_kwargs["conf"] == 0.05
+    assert track_kwargs["imgsz"] == 1536
     assert track_kwargs["stream"] is True
     assert track_kwargs["persist"] is False
     tracker_path = Path(str(track_kwargs["tracker"]))
@@ -200,6 +207,15 @@ def test_real_tracking_runner_invokes_manifest_yolo26m_with_botsort_reid(monkeyp
     assert [player.id for player in tracks.players] == [9]
     assert [frame.t for frame in tracks.players[0].frames] == [0.0, 1.0 / 30.0]
     assert tracks.players[0].frames[0].world_xy == [1.0, 0.0]
+
+    raw_pool = json.loads((run_dir / "raw_tracked_detections.json").read_text(encoding="utf-8"))
+    scaled_pool = json.loads((run_dir / "tracked_detections.json").read_text(encoding="utf-8"))
+    metrics = json.loads((run_dir / "metrics.json").read_text(encoding="utf-8"))
+    assert raw_pool["frames"][0]["detections"][0]["bbox"] == [1080.0, 900.0, 1120.0, 1000.0]
+    assert scaled_pool["frames"][0]["detections"][0]["bbox"] == [1080.0, 900.0, 1120.0, 1000.0]
+    assert metrics["artifact_type"] == "racketsport_person_tracker_candidate"
+    assert metrics["counts"]["source_width"] == 1920
+    assert metrics["counts"]["calibration_width"] == 1920
 
 
 def test_real_tracking_runner_scales_result_bboxes_to_calibration_pixels(

@@ -484,8 +484,8 @@ def test_readiness_report_is_ready_when_requested_stage_and_dependencies_are_pre
         "net_plane.json",
         "court_line_evidence.json",
         "tracks.json",
-        "skeleton3d.json",
         "smpl_motion.json",
+        "skeleton3d.json",
         "body_compute_execution.json",
         "body_mesh_readiness.json",
         "physics_refinement.json",
@@ -500,7 +500,16 @@ def test_readiness_report_is_ready_when_requested_stage_and_dependencies_are_pre
     report = build_readiness_report(run_dir, stage="racket")
 
     assert report["status"] == "ready"
-    assert [stage["stage"] for stage in report["stages"]] == PIPELINE_STAGE_ORDER[:7]
+    # BODY depends on tracking directly; the removed legacy pose stage is no
+    # longer part of the racket readiness chain.
+    assert [stage["stage"] for stage in report["stages"]] == [
+        "calibration",
+        "tracking",
+        "body",
+        "physics",
+        "ball_events",
+        "racket",
+    ]
     assert report["required_artifacts"] == required
     assert report["missing_artifacts"] == []
     assert report["artifact_validation_errors"] == []

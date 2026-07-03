@@ -12,7 +12,7 @@ import math
 from typing import Any, Mapping, Sequence
 
 from threed.racketsport.court_calibration import homography_from_planar_points, project_planar_points
-from threed.racketsport.court_templates import xyz_ft_to_m
+from threed.racketsport.court_templates import ft_to_m, get_court_template, xyz_ft_to_m
 
 
 @dataclass(frozen=True)
@@ -147,6 +147,17 @@ def court_keypoint_heatmap_loss(logits: Any, target: Any, mask: Any, *, foregrou
     return (loss * channel_mask).sum() / channel_mask.sum().clamp_min(1.0)
 
 
+_PICKLEBALL_TEMPLATE = get_court_template("pickleball")
+
+
+def _pickleball_net_keypoint_xyz_ft(x_ft: float) -> tuple[float, float, float]:
+    return (
+        ft_to_m(x_ft),
+        0.0,
+        _PICKLEBALL_TEMPLATE.post_net_height_m,
+    )
+
+
 PICKLEBALL_KEYPOINTS: tuple[CourtKeypoint, ...] = (
     CourtKeypoint("near_left_corner", tuple(xyz_ft_to_m(-10.0, -22.0)), "near baseline left sideline corner"),
     CourtKeypoint("near_baseline_center", tuple(xyz_ft_to_m(0.0, -22.0)), "near baseline at centerline"),
@@ -157,9 +168,9 @@ PICKLEBALL_KEYPOINTS: tuple[CourtKeypoint, ...] = (
     CourtKeypoint("near_nvz_left", tuple(xyz_ft_to_m(-10.0, -7.0)), "near NVZ line at left sideline"),
     CourtKeypoint("near_nvz_center", tuple(xyz_ft_to_m(0.0, -7.0)), "near NVZ line at centerline"),
     CourtKeypoint("near_nvz_right", tuple(xyz_ft_to_m(10.0, -7.0)), "near NVZ line at right sideline"),
-    CourtKeypoint("net_left_sideline", tuple(xyz_ft_to_m(-10.0, 0.0)), "net line at left sideline"),
-    CourtKeypoint("net_center", tuple(xyz_ft_to_m(0.0, 0.0)), "net line at centerline"),
-    CourtKeypoint("net_right_sideline", tuple(xyz_ft_to_m(10.0, 0.0)), "net line at right sideline"),
+    CourtKeypoint("net_left_sideline", _pickleball_net_keypoint_xyz_ft(-10.0), "net top at left sideline"),
+    CourtKeypoint("net_center", _pickleball_net_keypoint_xyz_ft(0.0), "net top at centerline"),
+    CourtKeypoint("net_right_sideline", _pickleball_net_keypoint_xyz_ft(10.0), "net top at right sideline"),
     CourtKeypoint("far_nvz_left", tuple(xyz_ft_to_m(-10.0, 7.0)), "far NVZ line at left sideline"),
     CourtKeypoint("far_nvz_center", tuple(xyz_ft_to_m(0.0, 7.0)), "far NVZ line at centerline"),
     CourtKeypoint("far_nvz_right", tuple(xyz_ft_to_m(10.0, 7.0)), "far NVZ line at right sideline"),

@@ -722,7 +722,7 @@ def test_body_video_smoke_reports_quality_checked_outputs(tmp_path: Path, monkey
     assert report["paths"]["body_joint_quality_from_packet"] == str(run_dir / "body_joint_quality_from_packet.json")
 
 
-def test_body_video_smoke_full_track_body_removes_generated_frame_plan_before_body_stage(
+def test_body_video_smoke_diagnostic_full_track_removes_generated_frame_plan_before_body_stage(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -783,17 +783,141 @@ def test_body_video_smoke_full_track_body_removes_generated_frame_plan_before_bo
         video_path=video,
         run_dir=run_dir,
         tracking_mode="precomputed",
-        full_track_body=True,
+        diagnostic_full_track=True,
     )
 
     assert calls[0]["stage"] == "tracking"
     assert calls[1]["stage"] == "body"
     assert report["paths"]["frame_compute_plan"] == str(run_dir / "frame_compute_plan.json")
     assert report["summary"]["scheduled_player_frame_count"] == 1
+    assert report["diagnostic_full_track_mode"] is True
+    assert any("bypasses the contact-aware tier rule" in note for note in report["frame_plan_notes"])
     assert (run_dir / "frame_compute_plan.json").exists()
     execution = json.loads((run_dir / "body_compute_execution.json").read_text(encoding="utf-8"))
     assert execution["mode"] == "adaptive_frame_compute_plan"
     assert execution["summary"]["scheduled_player_frame_count"] == 1
+
+
+def test_body_video_smoke_default_path_ignores_stale_diagnostic_full_track_plan_in_inputs(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """The default (non-diagnostic) path must never silently inherit a
+    100%-coverage diagnostic_full_track plan that happens to already be
+    sitting in inputs_dir (e.g. copied over from a prior diagnostic run
+    sharing the same inputs bundle) -- that would bypass the contact-aware
+    tier rule in what looks like a normal production run."""
+
+    inputs = tmp_path / "inputs"
+    run_dir = tmp_path / "run"
+    video = tmp_path / "source.mp4"
+    video.write_bytes(b"fake video bytes")
+    inputs.mkdir()
+    # A stale diagnostic-tagged plan left in the shared inputs bundle.
+    stale_plan = _frame_plan_payload()
+    stale_plan["diagnostic_full_track"] = True
+    _write_json(inputs / "frame_compute_plan.json", stale_plan)
+    calls: list[dict] = []
+
+    def fake_run_pipeline(**kwargs):
+        calls.append(kwargs)
+        stage = kwargs["stage"]
+        out = Path(kwargs["run_dir"])
+        if stage == "tracking":
+            _write_json(out / "tracks.json", _tracks_payload())
+            return {"status": "blocked", "stages": [{"stage": "tracking", "status": "ran"}]}
+        # The default path must not have pre-written frame_compute_plan.json
+        # from the stale diagnostic plan; the orchestrator (mocked here) is
+        # the one that would derive the real contact-aware plan.
+        assert not (out / "frame_compute_plan.json").exists()
+        frame = {
+            "t": 1.0 / 30.0,
+            "joints_world": [[0.0, 0.0, 0.2] for _ in range(17)],
+            "joint_conf": [0.9] * 17,
+            "mesh_vertices_world": [[0.0, 0.0, 0.1]],
+            "transl_world": [0.0, 0.0, 0.0],
+        }
+        _write_json(out / "smpl_motion.json", {"schema_version": 1, "players": [{"id": 7, "frames": [frame]}]})
+        _write_json(out / "skeleton3d.json", {"schema_version": 1, "players": [{"id": 7, "frames": [frame]}]})
+        return {"status": "blocked", "stages": [{"stage": "body", "status": "ran"}]}
+
+    def fake_materialize_body_frames(*, video_path, execution_path, out_dir, overwrite=True):
+        out = Path(out_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "frame_000001.jpg").write_bytes(b"jpg")
+        return {"extracted_frame_count": 1, "frame_indexes": [1], "frames": ["frame_000001.jpg"]}
+
+    monkeypatch.setattr("threed.racketsport.body_video_smoke.run_pipeline", fake_run_pipeline)
+    monkeypatch.setattr("threed.racketsport.body_video_smoke.materialize_body_frames", fake_materialize_body_frames)
+
+    report = run_body_video_smoke(
+        clip="clip_001",
+        inputs_dir=inputs,
+        video_path=video,
+        run_dir=run_dir,
+        tracking_mode="precomputed",
+    )
+
+    assert report["diagnostic_full_track_mode"] is False
+    assert any("ignored diagnostic-tagged" in note for note in report["frame_plan_notes"])
+    assert report["paths"]["frame_compute_plan"] == ""
+
+
+def test_body_video_smoke_default_path_still_reuses_non_diagnostic_inputs_plan(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """A normal (non-diagnostic) contact-aware plan already present in
+    inputs_dir must still be reused as before -- only diagnostic_full_track
+    plans get rejected."""
+
+    inputs = tmp_path / "inputs"
+    run_dir = tmp_path / "run"
+    video = tmp_path / "source.mp4"
+    video.write_bytes(b"fake video bytes")
+    inputs.mkdir()
+    _write_json(inputs / "frame_compute_plan.json", _frame_plan_payload())
+    calls: list[dict] = []
+
+    def fake_run_pipeline(**kwargs):
+        calls.append(kwargs)
+        stage = kwargs["stage"]
+        out = Path(kwargs["run_dir"])
+        if stage == "tracking":
+            _write_json(out / "tracks.json", _tracks_payload())
+            return {"status": "blocked", "stages": [{"stage": "tracking", "status": "ran"}]}
+        assert (out / "frame_compute_plan.json").exists()
+        frame = {
+            "t": 1.0 / 30.0,
+            "joints_world": [[0.0, 0.0, 0.2] for _ in range(17)],
+            "joint_conf": [0.9] * 17,
+            "mesh_vertices_world": [[0.0, 0.0, 0.1]],
+            "transl_world": [0.0, 0.0, 0.0],
+        }
+        _write_json(out / "smpl_motion.json", {"schema_version": 1, "players": [{"id": 7, "frames": [frame]}]})
+        _write_json(out / "skeleton3d.json", {"schema_version": 1, "players": [{"id": 7, "frames": [frame]}]})
+        return {"status": "blocked", "stages": [{"stage": "body", "status": "ran"}]}
+
+    def fake_materialize_body_frames(*, video_path, execution_path, out_dir, overwrite=True):
+        out = Path(out_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "frame_000001.jpg").write_bytes(b"jpg")
+        return {"extracted_frame_count": 1, "frame_indexes": [1], "frames": ["frame_000001.jpg"]}
+
+    monkeypatch.setattr("threed.racketsport.body_video_smoke.run_pipeline", fake_run_pipeline)
+    monkeypatch.setattr("threed.racketsport.body_video_smoke.materialize_body_frames", fake_materialize_body_frames)
+
+    report = run_body_video_smoke(
+        clip="clip_001",
+        inputs_dir=inputs,
+        video_path=video,
+        run_dir=run_dir,
+        tracking_mode="precomputed",
+    )
+
+    assert report["diagnostic_full_track_mode"] is False
+    assert report["frame_plan_notes"] == []
+    assert report["paths"]["frame_compute_plan"] == str(run_dir / "frame_compute_plan.json")
 
 
 def test_body_video_smoke_forwards_runtime_overrides_to_body_stage(tmp_path: Path, monkeypatch) -> None:

@@ -24,31 +24,77 @@ public struct PersonTrackLinker: Sendable {
     public var iouThreshold: Double
     public var maxTrackAgeFrames: Int
     public var maxTracks: Int
+    public var highConfidenceThreshold: Double
+    public var lowConfidenceThreshold: Double
     private var nextTrackID: Int
     private var activeTracks: [ActiveTrack]
 
-    public init(iouThreshold: Double = 0.3, maxTrackAgeFrames: Int = 8, maxTracks: Int = 4) {
+    public init(
+        iouThreshold: Double = 0.3,
+        maxTrackAgeFrames: Int = 8,
+        maxTracks: Int = 4,
+        highConfidenceThreshold: Double = 0.5,
+        lowConfidenceThreshold: Double = 0.1
+    ) {
         self.iouThreshold = iouThreshold
         self.maxTrackAgeFrames = maxTrackAgeFrames
         self.maxTracks = maxTracks
+        self.highConfidenceThreshold = highConfidenceThreshold
+        self.lowConfidenceThreshold = lowConfidenceThreshold
         self.nextTrackID = 1
         self.activeTracks = []
     }
 
     public mutating func update(frameIndex: Int, observations: [OnDevicePersonObservation]) -> [OnDevicePersonDetection] {
         pruneTracks(olderThan: frameIndex)
-        let sortedObservations = observations
+        let eligibleObservations = observations
+            .filter { observation in observation.confidence >= lowConfidenceThreshold }
             .sorted { lhs, rhs in
                 if lhs.confidence == rhs.confidence {
                     return lhs.bboxXYWH.lexicographicallyPrecedes(rhs.bboxXYWH)
                 }
                 return lhs.confidence > rhs.confidence
             }
-            .prefix(maxTracks)
+        let highConfidenceObservations = eligibleObservations.filter { observation in
+            observation.confidence >= highConfidenceThreshold
+        }
+        let lowConfidenceObservations = eligibleObservations.filter { observation in
+            observation.confidence < highConfidenceThreshold
+        }
 
         var usedTrackIDs = Set<Int>()
         var detections: [OnDevicePersonDetection] = []
-        for observation in sortedObservations {
+        link(
+            observations: highConfidenceObservations,
+            frameIndex: frameIndex,
+            allowNewTracks: true,
+            usedTrackIDs: &usedTrackIDs,
+            detections: &detections
+        )
+        link(
+            observations: lowConfidenceObservations,
+            frameIndex: frameIndex,
+            allowNewTracks: false,
+            usedTrackIDs: &usedTrackIDs,
+            detections: &detections
+        )
+        return detections
+            .sorted { $0.trackID < $1.trackID }
+            .prefix(maxTracks)
+            .map { $0 }
+    }
+
+    private mutating func link(
+        observations: [OnDevicePersonObservation],
+        frameIndex: Int,
+        allowNewTracks: Bool,
+        usedTrackIDs: inout Set<Int>,
+        detections: inout [OnDevicePersonDetection]
+    ) {
+        for observation in observations {
+            guard detections.count < maxTracks else {
+                return
+            }
             let matchedIndex = bestTrackIndex(for: observation, excluding: usedTrackIDs)
             let trackID: Int
             if let matchedIndex {
@@ -56,6 +102,9 @@ public struct PersonTrackLinker: Sendable {
                 activeTracks[matchedIndex].lastFrameIndex = frameIndex
                 trackID = activeTracks[matchedIndex].id
             } else {
+                guard allowNewTracks, activeTracks.count < maxTracks else {
+                    continue
+                }
                 trackID = nextTrackID
                 nextTrackID += 1
                 activeTracks.append(ActiveTrack(id: trackID, bboxXYWH: observation.bboxXYWH, lastFrameIndex: frameIndex))
@@ -71,7 +120,6 @@ public struct PersonTrackLinker: Sendable {
                 )
             )
         }
-        return detections.sorted { $0.trackID < $1.trackID }
     }
 
     private mutating func pruneTracks(olderThan frameIndex: Int) {

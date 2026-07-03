@@ -44,9 +44,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--min-joint-count", type=int, default=17)
     parser.add_argument("--no-overwrite-frames", action="store_true", help="Keep existing materialized BODY frames.")
     parser.add_argument(
-        "--full-track-body",
+        "--diagnostic-full-track",
         action="store_true",
-        help="Ignore any frame_compute_plan.json and schedule BODY for every tracked player-frame.",
+        help=(
+            "Diagnostic-only: ignore any frame_compute_plan.json and schedule BODY (deep mesh) for every "
+            "tracked player-frame instead of the contact-aware tier rule. This exists to reproduce past "
+            "full-clip continuity/world-MPJPE diagnostics; it costs ~7x more BODY compute than production "
+            "contact-aware scheduling and a run made with it set must never be cited as tier-rule promotion "
+            "or compute-cost evidence. Never the default; omit this flag for the production path, which "
+            "also refuses to silently reuse a stale diagnostic-tagged plan found in --inputs."
+        ),
     )
     args = parser.parse_args(argv)
 
@@ -71,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
             body_fov_name=args.body_fov_name,
             min_joint_count=args.min_joint_count,
             overwrite_frames=not args.no_overwrite_frames,
-            full_track_body=args.full_track_body,
+            diagnostic_full_track=args.diagnostic_full_track,
         )
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
         print(f"ERROR: BODY video smoke failed before report write: {exc}", file=sys.stderr)

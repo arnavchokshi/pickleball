@@ -1,0 +1,44 @@
+{
+  "artifact_type": "racketsport_frame_compute_plan",
+  "deep_mesh_windows": [
+    {
+      "fallback_representation": "lane_a_skeleton",
+      "frame_count": 1,
+      "frame_end": 10,
+      "frame_start": 10,
+      "max_score": 0.8,
+      "reason_counts": {
+        "contact_window": 1
+      },
+      "t0": 0.3333333333333333,
+      "t1": 0.36666666666666664,
+      "target_player_ids": [
+        7
+      ],
+      "target_representation": "world_mesh"
+    },
+    {
+      "fallback_representation": "lane_a_skeleton",
+      "frame_count": 1,
+      "frame_end": 20,
+      "frame_start": 20,
+      "max_score": 0.75,
+      "reason_counts": {
+        "low_track_confidence": 1
+      },
+      "t0": 0.6666666666666666,
+      "t1": 0.7,
+      "target_player_ids": [
+        8
+      ],
+      "target_representation": "world_mesh"
+    }
+  ],
+  "fps": 30.0,
+  "frame_count": 30,
+  "frames": [],
+  "schema_version": 1,
+  "summary": {
+    "deep_mesh_window_count": 2
+  }
+}

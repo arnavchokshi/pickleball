@@ -7,8 +7,11 @@ import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from .ball_overlay import load_ball_track
 from .ball_benchmark import BallCandidate, write_ball_tracker_benchmark
+from .ball_cvat_benchmark import CvatBallCandidate, write_cvat_ball_tracker_benchmark
 from .pbmat_adapter import write_ball_track_from_pbmat_predictions
+from .schemas import BallTrack
 from .totnet_adapter import write_ball_track_from_totnet_predictions
 
 
@@ -106,6 +109,130 @@ def sweep_prediction_thresholds(
     if out_markdown is not None:
         Path(out_markdown).write_text(_render_markdown(summary), encoding="utf-8")
     return summary
+
+
+def sweep_ball_track_cvat_thresholds(
+    *,
+    tracks_by_clip: Mapping[str, str | Path],
+    cvat_root: str | Path,
+    out_root: str | Path,
+    candidate_name_prefix: str,
+    thresholds: Sequence[float],
+    category: str = "detector_threshold_sweep",
+    hit_radius_px: float = 36.0,
+    f1_radius_px: float = 20.0,
+    teleport_px_per_frame: float = 160.0,
+    max_jump_gap_frames: int = 3,
+    out_json: str | Path | None = None,
+    out_markdown: str | Path | None = None,
+) -> dict[str, Any]:
+    """Sweep visibility thresholds over existing BallTrack confidence values and CVAT-score outputs."""
+
+    normalized_thresholds = _normalize_thresholds(thresholds)
+    if not tracks_by_clip:
+        raise ValueError("at least one ball track clip is required")
+    prefix = _safe_candidate_prefix(candidate_name_prefix)
+    root = Path(out_root)
+    root.mkdir(parents=True, exist_ok=True)
+
+    candidates: list[CvatBallCandidate] = []
+    generated: dict[str, dict[str, str]] = {}
+    for clip, track_path in sorted(tracks_by_clip.items()):
+        clip_name = str(clip)
+        source_track = Path(track_path)
+        if not source_track.is_file():
+            raise FileNotFoundError(f"missing ball_track JSON for {clip_name}: {source_track}")
+        generated[clip_name] = {}
+        for threshold in normalized_thresholds:
+            candidate_name = f"{prefix}_thr_{_threshold_token(threshold)}"
+            candidate_dir = root / clip_name / candidate_name
+            ball_track_path = candidate_dir / "ball_track.json"
+            metadata_path = candidate_dir / "run.json"
+            _write_ball_track_threshold_track(
+                source_track=source_track,
+                threshold=threshold,
+                out=ball_track_path,
+                metadata_out=metadata_path,
+            )
+            candidates.append(
+                CvatBallCandidate(
+                    clip=clip_name,
+                    name=candidate_name,
+                    category=category,
+                    path=ball_track_path,
+                )
+            )
+            generated[clip_name][candidate_name] = str(ball_track_path)
+
+    benchmark = write_cvat_ball_tracker_benchmark(
+        candidates=candidates,
+        cvat_root=cvat_root,
+        out_json=root / "benchmark.json",
+        out_markdown=root / "benchmark.md",
+        hit_radius_px=hit_radius_px,
+        f1_radius_px=f1_radius_px,
+        teleport_px_per_frame=teleport_px_per_frame,
+        max_jump_gap_frames=max_jump_gap_frames,
+    )
+    best_candidate, best_threshold = _best_threshold_candidate(benchmark["aggregate"], normalized_thresholds, prefix)
+    summary = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_track_cvat_threshold_sweep",
+        "status": "TESTED-ON-REAL-DATA",
+        "family": "balltrack",
+        "candidate_name_prefix": prefix,
+        "category": category,
+        "thresholds": normalized_thresholds,
+        "selection_gates": {
+            "min_micro_visible_hit_recall": MIN_BEST_VISIBLE_HIT_RECALL,
+            "max_micro_hidden_false_positive_rate": MAX_BEST_HIDDEN_FALSE_POSITIVE_RATE,
+            "max_total_teleport_count": MAX_BEST_TELEPORT_COUNT,
+        },
+        "best_candidate": best_candidate,
+        "best_threshold": best_threshold,
+        "generated_candidates": generated,
+        "benchmark": benchmark,
+        "not_ground_truth": True,
+    }
+    summary_path = Path(out_json) if out_json is not None else root / "threshold_sweep_summary.json"
+    _write_json(summary_path, summary)
+    if out_markdown is not None:
+        Path(out_markdown).write_text(_render_markdown(summary), encoding="utf-8")
+    return summary
+
+
+def _write_ball_track_threshold_track(
+    *,
+    source_track: Path,
+    threshold: float,
+    out: Path,
+    metadata_out: Path,
+) -> None:
+    track = load_ball_track(source_track)
+    payload = track.model_dump(mode="json")
+    visible_before = sum(1 for frame in payload["frames"] if frame["visible"])
+    visible_after = 0
+    for frame in payload["frames"]:
+        frame["visible"] = bool(frame["visible"] and float(frame["conf"]) >= threshold)
+        if frame["visible"]:
+            visible_after += 1
+    BallTrack.model_validate(payload)
+    _write_json(out, payload)
+    _write_json(
+        metadata_out,
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_ball_track_threshold_filter",
+            "status": "TESTED-ON-REAL-DATA",
+            "source_ball_track": str(source_track),
+            "out": str(out),
+            "threshold": threshold,
+            "visible_before": visible_before,
+            "visible_after": visible_after,
+            "confidence_semantics": "existing BallTrack conf thresholded without binarizing confidence",
+            "not_ground_truth": True,
+        },
+    )
 
 
 def _write_threshold_track(
@@ -243,4 +370,4 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-__all__ = ["sweep_prediction_thresholds"]
+__all__ = ["sweep_ball_track_cvat_thresholds", "sweep_prediction_thresholds"]

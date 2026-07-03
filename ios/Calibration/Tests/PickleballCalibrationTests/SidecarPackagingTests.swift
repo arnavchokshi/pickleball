@@ -18,7 +18,7 @@ final class SidecarPackagingTests: XCTestCase {
             manualTaps: nil
         )
 
-        XCTAssertEqual(sidecar.intrinsics.source, "arkit")
+        XCTAssertEqual(sidecar.intrinsics?.source, "arkit")
         XCTAssertEqual(sidecar.arkitCameraPose, Self.identityPose)
         XCTAssertEqual(sidecar.courtPlane, Plane(point: [0, 0, 0], normal: [0, 1, 0]))
         XCTAssertTrue(sidecar.manualCourtTaps.isEmpty)

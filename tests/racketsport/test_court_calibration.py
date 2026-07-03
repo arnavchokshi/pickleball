@@ -9,9 +9,11 @@ import pytest
 from threed.racketsport.court_calibration import (
     CALIBRATION_REPROJECTION_MEDIAN_GATE_PX,
     CALIBRATION_REPROJECTION_P95_GATE_PX,
+    build_manual_tap_calibration_artifact,
     calibration_from_manual_taps,
     calibration_from_manual_tap_frames,
     camera_matrix_from_intrinsics,
+    evaluate_manual_tap_plausibility,
     homography_from_planar_points,
     manual_tap_correspondences,
     metric_calibration_from_sidecar_and_keypoints,
@@ -22,7 +24,7 @@ from threed.racketsport.court_calibration import (
     reprojection_error,
     solve_camera_pose,
 )
-from threed.racketsport.court_templates import FT_TO_M
+from threed.racketsport.court_templates import FT_TO_M, get_court_template
 from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
 from threed.racketsport.court_positioning_artifacts import build_court_keypoints_artifact
 from threed.racketsport.schemas import CameraIntrinsics, CaptureSidecar, CourtCalibration, CourtExtrinsics, CourtZones, NetPlane, validate_artifact_file
@@ -181,6 +183,69 @@ def test_manual_calibration_artifact_is_schema_valid_and_gate_scored(tmp_path):
     assert len(calibration.world_pts) == 4
 
 
+def test_manual_tap_plausibility_flags_tennis_corners_but_keeps_trusted_calibration(tmp_path):
+    tennis_homography = _template_homography("tennis")
+    payload = _capture_sidecar_payload()
+    payload["resolution"] = [1600, 1200]
+    payload["intrinsics"]["cx"] = 800.0
+    payload["intrinsics"]["cy"] = 600.0
+    payload["manual_court_taps"] = project_planar_points(tennis_homography, get_court_template("tennis").corners_m)
+    sidecar_path = tmp_path / "capture_sidecar.json"
+    sidecar_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    artifact = build_manual_tap_calibration_artifact(
+        sidecar_path,
+        sport="pickleball",
+        candidate_segments=_template_line_candidates("tennis", tennis_homography),
+    )
+
+    assert artifact["sport"] == "pickleball"
+    assert artifact["reprojection_error_px"]["median"] == pytest.approx(0.0)
+    assert artifact["tap_plausibility"]["verdict"] == "suspect_tennis_corners"
+    assert artifact["tap_plausibility"]["owner_tap_trusted"] is True
+    assert artifact["tap_plausibility"]["trust_note"]["grade"] == "warn"
+    assert artifact["needs_user_confirmation"] is True
+
+
+def test_manual_tap_plausibility_accepts_pickleball_corners_with_pickleball_evidence():
+    pickleball_homography = _template_homography("pickleball")
+    payload = _capture_sidecar_payload()
+    payload["manual_court_taps"] = project_planar_points(
+        pickleball_homography,
+        get_court_template("pickleball").corners_m,
+    )
+    sidecar = CaptureSidecar.model_validate(payload)
+
+    plausibility = evaluate_manual_tap_plausibility(
+        sidecar,
+        sport="pickleball",
+        candidate_segments=_template_line_candidates("pickleball", pickleball_homography),
+    )
+
+    assert plausibility["verdict"] == "consistent"
+    assert plausibility["needs_user_confirmation"] is False
+
+
+def test_manual_tap_plausibility_flags_weak_pickleball_evidence_for_confirmation():
+    pickleball_homography = _template_homography("pickleball")
+    payload = _capture_sidecar_payload()
+    payload["manual_court_taps"] = project_planar_points(
+        pickleball_homography,
+        get_court_template("pickleball").corners_m,
+    )
+    sidecar = CaptureSidecar.model_validate(payload)
+
+    plausibility = evaluate_manual_tap_plausibility(
+        sidecar,
+        sport="pickleball",
+        candidate_segments=[((50.0, 50.0), (160.0, 54.0)), ((300.0, 90.0), (420.0, 94.0))],
+    )
+
+    assert plausibility["verdict"] == "suspect_tennis_corners"
+    assert plausibility["reason"] == "pickleball_line_evidence_weak"
+    assert plausibility["needs_user_confirmation"] is True
+
+
 def test_multiframe_manual_taps_average_static_correspondences(tmp_path):
     paths = []
     jitters = [
@@ -226,6 +291,23 @@ def test_metric_calibration_from_sidecar_and_court_keypoints_uses_arkit_floor_pl
     assert len(calibration.per_keypoint_residual_px or []) == 15
     assert calibration.gsd_model is not None
     assert calibration.gsd_model.samples
+
+
+def _template_homography(sport: str) -> list[list[float]]:
+    template = get_court_template(sport)  # type: ignore[arg-type]
+    return homography_from_planar_points(
+        template.corners_m,
+        [[300.0, 1080.0], [1300.0, 1080.0], [1180.0, 120.0], [420.0, 120.0]],
+    )
+
+
+def _template_line_candidates(sport: str, homography: list[list[float]]) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+    candidates = []
+    for segment in get_court_template(sport).line_segments_m.items():  # type: ignore[arg-type]
+        _line_id, endpoints = segment
+        start, end = project_planar_points(homography, endpoints)
+        candidates.append(((start[0], start[1]), (end[0], end[1])))
+    return candidates
 
 
 def test_metric_calibration_from_sidecar_and_court_keypoints_requires_trusted_plane(tmp_path):

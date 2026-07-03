@@ -156,8 +156,8 @@ def test_build_body_world_label_review_corrections_template_prefills_pending_rev
     )
 
     assert manifest["manifest_id"] == "body_clip_001_review"
-    assert manifest["correction_count"] == 8
-    assert manifest["pending_correction_count"] == 8
+    assert manifest["correction_count"] == 9
+    assert manifest["pending_correction_count"] == 9
     assert out.is_file()
     payload = json.loads(out.read_text(encoding="utf-8"))
     corrections_by_path = {correction["target"]["path"]: correction for correction in payload["corrections"]}
@@ -167,6 +167,7 @@ def test_build_body_world_label_review_corrections_template_prefills_pending_rev
     ]
     assert corrections_by_path["/samples/frame_000001_player_7/accepted"]["value"] is True
     assert corrections_by_path["/samples/frame_000001_player_7/review_status"]["value"] == "reviewed"
+    assert corrections_by_path["/samples/frame_000001_player_7/notes"]["value"] == ""
     assert corrections_by_path["/overlays/frame_000001_player_7/warning_review_status"]["value"] == "accepted"
     assert corrections_by_path["/status"]["status"] == "pending"
     assert all(correction["status"] == "pending" for correction in payload["corrections"])
@@ -202,7 +203,7 @@ def test_build_body_world_label_review_corrections_template_cli_writes_pending_m
 
     assert completed.returncode == 0
     summary = json.loads(completed.stdout)
-    assert summary["correction_count"] == 8
+    assert summary["correction_count"] == 9
     assert out.is_file()
 
 
@@ -320,6 +321,55 @@ def test_merge_body_world_label_review_decisions_accepts_only_overlay_warning_co
     assert "selected_samples_have_overlay_warnings" not in final_report["blockers"]
     assert "selected_samples_not_all_accepted" in final_report["blockers"]
     assert "template_not_reviewed" in final_report["blockers"]
+
+
+def test_merge_body_world_label_review_decisions_copies_label_notes_to_template_note_correction(
+    tmp_path: Path,
+) -> None:
+    bundle = tmp_path / "body_world_label_review_bundle"
+    template = bundle / "body_world_joints.template.json"
+    overlay = bundle / "overlays" / "body_world_label_review_overlay_index.json"
+    corrections = tmp_path / "corrections" / "body_clip_001_review_corrections.json"
+    review_input = tmp_path / "runs" / "review_inputs" / "pickleball_cv_review_latest.json"
+    merged = tmp_path / "corrections" / "body_clip_001_review_corrections.merged.json"
+    _write_json(template, _template())
+    _write_json(overlay, {**_overlay_index(), "overlays": [{**_overlay_index()["overlays"][0], "warnings": []}]})
+    build_body_world_label_review_corrections_template(
+        template_path=template,
+        overlay_index_path=overlay,
+        out_path=corrections,
+        manifest_id="body_clip_001_review",
+        created_at="2026-07-01T12:00:00Z",
+    )
+    _write_json(
+        review_input,
+        {
+            "schema_version": 2,
+            "review_type": "pickleball_cv_blocker_review",
+            "body_world_label_review": {
+                "body_clip_001_runtime": {
+                    "frame_000001_player_7": {
+                        "decision": "accept_candidate_label",
+                        "notes": "systematic overlay offset, but joints align after checking source frame",
+                    }
+                }
+            },
+        },
+    )
+
+    summary = merge_body_world_label_review_decisions_into_corrections(
+        corrections_path=corrections,
+        review_input_path=review_input,
+        run_id="body_clip_001_runtime",
+        out_path=merged,
+    )
+
+    assert summary["status"] == "written"
+    payload = json.loads(merged.read_text(encoding="utf-8"))
+    corrections_by_path = {correction["target"]["path"]: correction for correction in payload["corrections"]}
+    note_correction = corrections_by_path["/samples/frame_000001_player_7/notes"]
+    assert note_correction["status"] == "accepted"
+    assert note_correction["value"] == "systematic overlay offset, but joints align after checking source frame"
 
 
 def test_merge_body_world_label_review_decisions_rejects_bad_overlay_without_accepting_corrections(tmp_path: Path) -> None:
@@ -528,7 +578,7 @@ def test_run_body_world_label_review_decision_pipeline_blocks_candidate_world_la
 
     assert summary["status"] == "blocked"
     assert summary["merge"]["accepted_label_sample_ids"] == ["frame_000001_player_7"]
-    assert summary["apply"]["applied_count"] == 6
+    assert summary["apply"]["applied_count"] == 7
     assert summary["finalization"]["status"] == "blocked"
     assert "accepted_candidate_labels_not_independent_ground_truth" in summary["finalization"]["blockers"]
     assert not Path(summary["final_labels_path"]).exists()
@@ -581,6 +631,9 @@ def test_run_body_world_label_review_decision_pipeline_writes_canonical_label_ou
     assert summary["status"] == "finalized"
     assert summary["final_labels_path"] == str(final_labels)
     assert summary["finalization_report_path"] == str(finalization_report)
+    assert summary["reviewed_template_path"] == str(template)
+    assert summary["finalization_template_path"] == str(template)
+    assert json.loads(template.read_text(encoding="utf-8"))["status"] == "human_reviewed"
     assert final_labels.is_file()
     assert json.loads(finalization_report.read_text(encoding="utf-8"))["status"] == "finalized"
 

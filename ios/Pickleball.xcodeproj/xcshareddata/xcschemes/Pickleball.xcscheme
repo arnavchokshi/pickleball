@@ -40,6 +40,17 @@
                ReferencedContainer = "container:Pickleball.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "A3TG00032F60000000000001"
+               BuildableName = "PickleballAppUITests.xctest"
+               BlueprintName = "PickleballAppUITests"
+               ReferencedContainer = "container:Pickleball.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

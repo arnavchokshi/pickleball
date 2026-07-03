@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 import random
+import statistics
 import sys
 from pathlib import Path
 from typing import Any
@@ -12,7 +13,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from threed.racketsport.court_calibration import homography_from_planar_points, project_planar_points
+from threed.racketsport.court_keypoint_geometric_loss import court_geometric_consistency_loss
 from threed.racketsport.court_keypoint_net import (
+    PICKLEBALL_KEYPOINT_BY_NAME,
     PICKLEBALL_KEYPOINTS,
     court_keypoint_heatmap_loss,
     court_keypoint_probabilities,
@@ -21,16 +25,36 @@ from threed.racketsport.court_keypoint_net import (
     make_court_keypoint_heatmap_model,
     refine_keypoint_xy_with_planar_homography,
 )
+from threed.racketsport.court_keypoint_lines import (
+    COURT_LINE_FAMILIES,
+    fit_court_lines_from_masks,
+    intersect_court_keypoints_from_lines,
+    line_mask_targets_for_keypoints,
+    validate_round3_input_resolution,
+)
+from threed.racketsport.eval_guard import assert_not_training_on_eval_clip
 
 # Court-keypoint review item status enum, mirrored from
 # scripts/racketsport/court_keypoint_review_server.py. "reviewed" is an independent human
 # review of that exact frame; "reviewed_static_camera_copy" is an owner-approved copy of an
-# independent review of another frame from the same static-camera clip. Both are accepted
-# as usable training rows, but only "reviewed" counts toward the independent human-verified
-# frame count reported in the training/gate summary.
+# independent review of another frame from the same static-camera clip. "synthetic" is a
+# procedurally-rendered domain-randomized court render (scripts/racketsport/
+# generate_synthetic_court_keypoints.py, runs/training_corpora_20260701/court_synthetic/) with
+# geometrically-exact but never human-verified labels. All three are accepted as usable training
+# rows, but only "reviewed" counts toward the independent human-verified frame count reported in
+# the training/gate summary.
+#
+# CAL-R2 provenance fix (2026-07-02): "synthetic" used to be smuggled in under
+# "reviewed_static_camera_copy" (an enum workaround -- see the CAL-R2 REPORT.md in this run's
+# directory), which meant loading the 2,000-image synthetic corpus silently inflated
+# `labels_static_camera_copy_frame_count` -- a field whose whole purpose is to separate
+# owner-approved REAL human-review copies from anything else -- with thousands of synthetic
+# rows. "synthetic" is now its own status so gates can never count synthetic frames as human
+# (real or copied) verification. See `labels_synthetic_frame_count` below.
 INDEPENDENT_REVIEWED_STATUS = "reviewed"
 STATIC_CAMERA_COPY_STATUS = "reviewed_static_camera_copy"
-ACCEPTED_ITEM_STATUSES = {INDEPENDENT_REVIEWED_STATUS, STATIC_CAMERA_COPY_STATUS}
+SYNTHETIC_STATUS = "synthetic"
+ACCEPTED_ITEM_STATUSES = {INDEPENDENT_REVIEWED_STATUS, STATIC_CAMERA_COPY_STATUS, SYNTHETIC_STATUS}
 
 
 def court_corner_keypoint_labels(payload: dict[str, Any], *, clip_root: Path | None = None) -> dict[str, Any]:
@@ -172,15 +196,18 @@ def load_real_corner_labels(root: Path) -> list[dict[str, Any]]:
 
 
 def _label_status_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
-    """Split loaded court-keypoint label rows into independent-human vs static-camera-copy
-    counts, keyed off the per-item ``label_status`` provenance tag. This must be used
-    anywhere a frame count is reported as human-verified so a copied label is never
-    presented as an independent review."""
+    """Split loaded court-keypoint label rows into independent-human, static-camera-copy, and
+    synthetic counts, keyed off the per-item ``label_status`` provenance tag. This must be used
+    anywhere a frame count is reported as human-verified so a copied OR synthetic label is
+    never presented as an independent review (CAL-R2 provenance fix -- see the ``SYNTHETIC_STATUS``
+    comment above for why this used to be able to happen silently)."""
     independent = sum(1 for row in rows if row.get("label_status") == INDEPENDENT_REVIEWED_STATUS)
     copied = sum(1 for row in rows if row.get("label_status") == STATIC_CAMERA_COPY_STATUS)
+    synthetic = sum(1 for row in rows if row.get("label_status") == SYNTHETIC_STATUS)
     return {
         "labels_independent_human_frames": independent,
         "labels_static_camera_copy_frame_count": copied,
+        "labels_synthetic_frame_count": synthetic,
     }
 
 
@@ -193,6 +220,25 @@ def load_real_court_keypoint_labels(root: Path) -> list[dict[str, Any]]:
             labels.append(row)
     if not labels:
         raise ValueError(f"no reviewed 15-keypoint court labels found under {root}")
+    return labels
+
+
+def _load_real_court_keypoint_labels_from_roots(real_root: Any) -> list[dict[str, Any]]:
+    """Normalize ``args.real_root`` (None, one Path, or a list of Paths) and merge every root's
+    labels into a single row list.
+
+    Supporting multiple roots lets a single training run combine several external-corpus tiers
+    (e.g. ``--real-root .../tier1_direct --real-root .../tier2_homography_derived``) without
+    needing a merged/symlinked directory on disk -- useful both locally and on a fresh VM clone
+    where symlinks may not have been synced.
+    """
+
+    if real_root is None:
+        return []
+    roots = [real_root] if isinstance(real_root, (str, Path)) else list(real_root)
+    labels: list[dict[str, Any]] = []
+    for root in roots:
+        labels.extend(load_real_court_keypoint_labels(Path(root)))
     return labels
 
 
@@ -253,11 +299,12 @@ def _court_keypoint_label_row_from_item(
         "source_video_size": list(source_size) if source_size is not None else None,
         "keypoints": source_keypoints,
         "label_source": "reviewed_15_keypoint_court_labels",
-        # Provenance of this specific frame's label: an independent human review, or an
+        # Provenance of this specific frame's label: an independent human review, an
         # owner-approved copy of another frame's independent review on the same static
-        # camera. Training/gate summaries must count these separately (see
-        # labels_independent_human_frames / labels_static_camera_copy_frame_count below) so
-        # a copied label is never reported as an independent human-verified frame.
+        # camera, or a synthetic domain-randomized render. Training/gate summaries must count
+        # these separately (see labels_independent_human_frames /
+        # labels_static_camera_copy_frame_count / labels_synthetic_frame_count below) so a
+        # copied or synthetic label is never reported as an independent human-verified frame.
         "label_status": item.get("status", INDEPENDENT_REVIEWED_STATUS),
     }
 
@@ -342,6 +389,20 @@ def heatmaps_for_points(
     return heatmaps, masks
 
 
+def line_masks_for_points(
+    points: dict[str, list[float] | tuple[float, float]],
+    width: int,
+    height: int,
+    *,
+    line_width: int,
+) -> tuple[Any, Any]:
+    import numpy as np
+
+    line_masks = line_mask_targets_for_keypoints(points, width=width, height=height, line_width=line_width)
+    ordered = np.stack([line_masks[family.name] for family in COURT_LINE_FAMILIES], axis=0).astype(np.float32)
+    return ordered, np.ones_like(ordered, dtype=np.float32)
+
+
 def mean(values: list[float]) -> float | None:
     return None if not values else float(sum(values) / len(values))
 
@@ -414,6 +475,445 @@ def _random_quad(width: int, height: int, rng: random.Random) -> list[tuple[floa
     return [near_left, near_right, far_right, far_left]
 
 
+def predict_source_keypoints(
+    model: Any,
+    row: dict[str, Any],
+    *,
+    cv2: Any,
+    np: Any,
+    torch: Any,
+    image_module: Any,
+    device: Any,
+    width: int,
+    height: int,
+    keypoint_names: list[str],
+    use_homography_refinement: bool = False,
+) -> dict[str, list[float]]:
+    """Run the model on one labeled row, returning predicted keypoints in source-video pixel
+    space. This is the single-frame prediction primitive shared by training-time evaluation
+    (`run_training`) and the standalone post-hoc checkpoint gate evaluator
+    (`evaluate_checkpoint_against_real_labels`) -- both must decode predictions identically so a
+    frozen checkpoint's held-out gate number matches what training-time logging showed.
+    """
+    image = load_label_image(row, cv2=cv2, image_module=image_module)
+    label_w, label_h = _label_coordinate_size(row, fallback_size=image.size)
+    resized = image.resize((width, height))
+    arr = np.asarray(resized, dtype=np.float32) / 255.0
+    tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0).to(device)
+    with torch.no_grad():
+        pred = court_keypoint_probabilities(model(tensor)).detach().cpu()[0]
+    sx, sy = width / label_w, height / label_h
+    predicted_source_points: dict[str, list[float]] = {}
+    for name in row["keypoints"]:
+        idx = keypoint_names.index(name)
+        flat = int(pred[idx].argmax())
+        py, px = divmod(flat, width)
+        predicted_source_points[name] = [px / sx, py / sy]
+    if use_homography_refinement:
+        predicted_source_points = refine_keypoint_xy_with_planar_homography(predicted_source_points)
+    return predicted_source_points
+
+
+def predict_source_keypoints_from_line_model(
+    model: Any,
+    row: dict[str, Any],
+    *,
+    cv2: Any,
+    np: Any,
+    torch: Any,
+    image_module: Any,
+    device: Any,
+    width: int,
+    height: int,
+    line_names: list[str],
+) -> dict[str, Any]:
+    image = load_label_image(row, cv2=cv2, image_module=image_module)
+    label_w, label_h = _label_coordinate_size(row, fallback_size=image.size)
+    resized = image.resize((width, height))
+    arr = np.asarray(resized, dtype=np.float32) / 255.0
+    tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0).to(device)
+    with torch.no_grad():
+        probabilities = model(tensor).sigmoid().detach().cpu()[0].numpy()
+    masks = {
+        name: _adaptive_line_probability_mask(probabilities[index], np=np)
+        for index, name in enumerate(line_names)
+    }
+    try:
+        lines = fit_court_lines_from_masks(masks, threshold=0.5)
+        model_points = intersect_court_keypoints_from_lines(lines)
+    except ValueError as exc:
+        return {"keypoints": {}, "line_fit_rms_px": None, "line_fit_error": str(exc)}
+
+    scale_x = label_w / float(width)
+    scale_y = label_h / float(height)
+    return {
+        "keypoints": {
+            name: [xy[0] * scale_x, xy[1] * scale_y]
+            for name, xy in model_points.items()
+        },
+        "line_fit_rms_px": _error_summary([line.rms_px for line in lines.values()]),
+        "line_fit_error": None,
+    }
+
+
+def _adaptive_line_probability_mask(channel: Any, *, np: Any, min_support_px: int = 64) -> Any:
+    arr = np.asarray(channel, dtype=np.float32)
+    for percentile in (99.7, 99.3, 99.0, 98.0, 96.0, 92.0):
+        threshold = float(np.percentile(arr, percentile))
+        mask = (arr >= threshold).astype(np.float32)
+        if int(mask.sum()) >= min_support_px:
+            return mask
+    return (arr >= float(arr.mean())).astype(np.float32)
+
+
+def aggregate_static_camera_predictions(
+    model: Any,
+    rows: list[dict[str, Any]],
+    *,
+    cv2: Any,
+    np: Any,
+    torch: Any,
+    image_module: Any,
+    device: Any,
+    width: int,
+    height: int,
+    keypoint_names: list[str],
+    use_homography_refinement: bool = False,
+) -> dict[str, dict[str, list[float]]]:
+    """Per-clip median of per-frame model predictions -- the CAL static-camera aggregation
+    policy (`MASTER_PLAN.md`, "Gate ladder" section).
+
+    EVAL INTEGRITY (binding): ``rows`` must be the exact set of rows being scored (e.g. the
+    held-out rows themselves, or the owner-clip gate rows), never a separate training set.
+    Aggregating a clip's *own* held-out frame predictions together is a legitimate noise-
+    reduction technique for a camera that does not move -- true court geometry is constant
+    across those frames, so per-frame heatmap decode noise partially cancels under a median.
+    Aggregating over frames the model was *trained* on instead would leak train-time
+    memorization into a number reported as a held-out gate -- exactly the mistake flagged by
+    the "CAL static-camera aggregation policy" note (the prior uncommitted one-off PCK@5 1.0
+    check used train-side aggregation against the same checkpoint it was trained with). Every
+    caller in this module passes only held-out/gate rows here; do not reintroduce a train-row
+    caller.
+    """
+    by_clip: dict[str, dict[str, list[list[float]]]] = {}
+    for row in rows:
+        clip = str(row.get("clip") or "unknown")
+        predicted = predict_source_keypoints(
+            model,
+            row,
+            cv2=cv2,
+            np=np,
+            torch=torch,
+            image_module=image_module,
+            device=device,
+            width=width,
+            height=height,
+            keypoint_names=keypoint_names,
+            use_homography_refinement=use_homography_refinement,
+        )
+        clip_predictions = by_clip.setdefault(clip, {name: [] for name in keypoint_names})
+        for name, xy in predicted.items():
+            clip_predictions.setdefault(name, []).append(xy)
+    return {
+        clip: {
+            name: [
+                float(statistics.median([xy[0] for xy in values])),
+                float(statistics.median([xy[1] for xy in values])),
+            ]
+            for name, values in keypoints.items()
+            if values
+        }
+        for clip, keypoints in by_clip.items()
+    }
+
+
+def load_court_keypoint_checkpoint(checkpoint_path: Path, *, device: str = "cpu") -> dict[str, Any]:
+    import torch
+
+    map_location = device if device == "cuda" else "cpu"
+    # This repo-owned checkpoint stores training metadata (e.g. argparse Namespace/pathlib
+    # values), so it cannot be loaded with weights_only=True.
+    payload = torch.load(checkpoint_path, map_location=map_location, weights_only=False)
+    if not isinstance(payload, dict) or "model" not in payload:
+        raise ValueError(f"court-keypoint checkpoint must contain a model state dict: {checkpoint_path}")
+    return payload
+
+
+def build_model_from_checkpoint(payload: dict[str, Any], *, device: str = "cpu") -> tuple[Any, list[str], int, int]:
+    keypoint_names = [
+        str(name) for name in payload.get("keypoint_names", [point.name for point in PICKLEBALL_KEYPOINTS])
+    ]
+    image_size = payload.get("image_size", [160, 90])
+    model_width, model_height = int(image_size[0]), int(image_size[1])
+    logical_architecture = str(payload.get("model_architecture", "keypoint_heatmap_v1"))
+    architecture = str(payload.get("network_architecture", payload.get("model_architecture", "encoder_decoder_v1")))
+    if logical_architecture == "line_segmentation_intersection_v1":
+        output_count = len(payload.get("line_names") or [family.name for family in COURT_LINE_FAMILIES])
+    else:
+        output_count = len(keypoint_names)
+    model = make_court_keypoint_heatmap_model(output_count, architecture=architecture)
+    model.load_state_dict(payload["model"])
+    model.to(device)
+    model.eval()
+    return model, keypoint_names, model_width, model_height
+
+
+def _homography_self_consistency_px(predicted: dict[str, list[float]]) -> dict[str, float | int | None] | None:
+    """Fit ONE planar homography from ``predicted``'s points to their known regulation-court
+    world XY, then measure how well that single homography explains the same points
+    (reprojection residual, px).
+
+    This is a cheap downstream calibration-quality proxy: it reuses the same planar-homography
+    machinery `threed/racketsport/court_calibration.py` uses for real solvePnP-ready
+    calibration, but -- unlike solvePnP -- needs no camera intrinsics. A full solvePnP
+    reprojection check was intentionally skipped for the owner-clip gate: no per-clip camera
+    intrinsics (focal length, principal point) exist for `eval_clips/ball`'s four clips, and
+    assuming arbitrary intrinsics would produce a number that looks precise but is not
+    grounded in anything real. Returns ``None`` when fewer than 4 points are available (a
+    homography is underdetermined below 4 correspondences).
+    """
+    names = [name for name in predicted if name in PICKLEBALL_KEYPOINT_BY_NAME]
+    if len(names) < 4:
+        return None
+    world_pts = [PICKLEBALL_KEYPOINT_BY_NAME[name].world_xyz_m[:2] for name in names]
+    image_pts = [predicted[name] for name in names]
+    try:
+        homography = homography_from_planar_points(world_pts, image_pts)
+        projected = project_planar_points(homography, world_pts)
+    except ValueError:
+        return None
+    residuals = [math.hypot(p[0] - i[0], p[1] - i[1]) for p, i in zip(projected, image_pts, strict=True)]
+    return _error_summary(residuals)
+
+
+def evaluate_checkpoint_against_real_labels(
+    checkpoint_path: Path,
+    rows: list[dict[str, Any]],
+    *,
+    device: str = "cpu",
+    use_homography_refinement: bool = False,
+    pck_threshold_px: float = 5.0,
+) -> dict[str, Any]:
+    """Score a frozen checkpoint against real labeled rows, honestly reporting the raw
+    per-frame metric side by side with the static-camera per-clip median-aggregation metric,
+    each split into "independent human frames only" (primary) and "all rows" (secondary).
+
+    This is the single reusable implementation behind the CAL owner-clip gate evaluation
+    (`scripts/racketsport/evaluate_court_keypoint_owner_gate.py`). It is read-only inference +
+    scoring: it never fits or mutates ``checkpoint_path``, and the caller is responsible for
+    ensuring ``rows`` were never used to train it (e.g. the 32 `eval_clips/ball/*/labels/
+    court_keypoints.json` rows, which this module's training path never reads when pointed at
+    an external corpus root). Aggregation, when scored, is computed over ``rows`` themselves --
+    see `aggregate_static_camera_predictions`'s eval-integrity note.
+    """
+    import cv2
+    import numpy as np
+    import torch
+    from PIL import Image
+
+    payload = load_court_keypoint_checkpoint(checkpoint_path, device=device)
+    model, keypoint_names, model_width, model_height = build_model_from_checkpoint(payload, device=device)
+
+    raw_predictions: list[dict[str, list[float]]] = [
+        predict_source_keypoints(
+            model,
+            row,
+            cv2=cv2,
+            np=np,
+            torch=torch,
+            image_module=Image,
+            device=device,
+            width=model_width,
+            height=model_height,
+            keypoint_names=keypoint_names,
+            use_homography_refinement=use_homography_refinement,
+        )
+        for row in rows
+    ]
+    aggregated_by_clip = aggregate_static_camera_predictions(
+        model,
+        rows,
+        cv2=cv2,
+        np=np,
+        torch=torch,
+        image_module=Image,
+        device=device,
+        width=model_width,
+        height=model_height,
+        keypoint_names=keypoint_names,
+        use_homography_refinement=use_homography_refinement,
+    )
+
+    def _row_errors(row: dict[str, Any], predicted: dict[str, list[float]]) -> list[float]:
+        errors: list[float] = []
+        for name, xy in row["keypoints"].items():
+            if name not in predicted:
+                continue
+            px, py = predicted[name]
+            errors.append(math.hypot(px - xy[0], py - xy[1]))
+        return errors
+
+    def _summarize(selected_indices: list[int], *, aggregated: bool) -> dict[str, Any]:
+        errors: list[float] = []
+        by_clip: dict[str, list[float]] = {}
+        for index in selected_indices:
+            row = rows[index]
+            clip = str(row.get("clip") or "unknown")
+            predicted = aggregated_by_clip.get(clip, {}) if aggregated else raw_predictions[index]
+            if not predicted:
+                continue
+            row_errors = _row_errors(row, predicted)
+            errors.extend(row_errors)
+            by_clip.setdefault(clip, []).extend(row_errors)
+        return {
+            "mode": "aggregated_static_camera_median" if aggregated else "raw_per_frame",
+            "frame_count": len(selected_indices),
+            "keypoint_error_summary": _error_summary(errors),
+            "pck_at_5px": _pck_at_threshold(errors, pck_threshold_px),
+            "per_clip": {
+                clip: _pck_error_summary(clip_errors, pck_threshold_px) for clip, clip_errors in sorted(by_clip.items())
+            },
+        }
+
+    independent_indices = [
+        index for index, row in enumerate(rows) if row.get("label_status") == INDEPENDENT_REVIEWED_STATUS
+    ]
+    all_indices = list(range(len(rows)))
+
+    # Downstream reprojection-quality proxy (see `_homography_self_consistency_px`): one raw
+    # representative prediction per clip (the independent frame's own prediction when present)
+    # and the aggregated per-clip median prediction, each checked for planar self-consistency.
+    raw_representative_by_clip: dict[str, dict[str, list[float]]] = {}
+    for index, row in enumerate(rows):
+        clip = str(row.get("clip") or "unknown")
+        is_independent = row.get("label_status") == INDEPENDENT_REVIEWED_STATUS
+        if clip not in raw_representative_by_clip or is_independent:
+            raw_representative_by_clip[clip] = raw_predictions[index]
+    homography_self_consistency = {
+        "raw_representative_per_clip": {
+            clip: _homography_self_consistency_px(predicted) for clip, predicted in sorted(raw_representative_by_clip.items())
+        },
+        "aggregated_per_clip": {
+            clip: _homography_self_consistency_px(predicted) for clip, predicted in sorted(aggregated_by_clip.items())
+        },
+        "note": (
+            "Planar-homography self-consistency reprojection error (px), not a full solvePnP "
+            "check -- see _homography_self_consistency_px() docstring for why solvePnP was "
+            "skipped (no per-clip camera intrinsics exist for these owner clips)."
+        ),
+    }
+
+    return {
+        "schema_version": 1,
+        "artifact_type": "court_keypoint_owner_gate_report",
+        "checkpoint": str(checkpoint_path),
+        "pck_threshold_px": pck_threshold_px,
+        "independent_frame_count": len(independent_indices),
+        "all_frame_count": len(all_indices),
+        "raw_independent": _summarize(independent_indices, aggregated=False),
+        "raw_all": _summarize(all_indices, aggregated=False),
+        "aggregated_independent": _summarize(independent_indices, aggregated=True),
+        "aggregated_all": _summarize(all_indices, aggregated=True),
+        "homography_self_consistency": homography_self_consistency,
+        "notes": [
+            "raw_* scores each row from its own individual prediction.",
+            "aggregated_* scores every row in a clip against that clip's per-clip median "
+            "prediction, computed only from the rows passed in here (never training rows).",
+            "*_independent uses only status=='reviewed' rows (independent human labels); "
+            "*_all additionally includes status=='reviewed_static_camera_copy' rows.",
+        ],
+    }
+
+
+def curriculum_synthetic_fraction(
+    epoch: int,
+    total_epochs: int,
+    *,
+    start_fraction: float,
+    end_fraction: float,
+) -> float:
+    """CAL-R2 synthetic/real curriculum: linear ramp of the synthetic-corpus fraction of each
+    real-finetune mini-batch, from ``start_fraction`` at epoch 0 to ``end_fraction`` at the
+    final epoch. Default direction (see the CLI flags below) is synthetic-heavy early -- the net
+    sees clean, geometrically-exact labels while it is still learning coarse localization,
+    before real-camera appearance noise/occlusion/domain gap are introduced -- ramping to
+    real-heavy late, so the final weights are dominated by real-camera statistics rather than
+    the synthetic renderer's domain gap."""
+
+    if total_epochs <= 1:
+        return end_fraction
+    t = max(0.0, min(1.0, epoch / (total_epochs - 1)))
+    return start_fraction + (end_fraction - start_fraction) * t
+
+
+def sample_curriculum_real_batch(
+    train_real: list[dict[str, Any]],
+    *,
+    epoch: int,
+    total_epochs: int,
+    real_batch_size: int | None,
+    synthetic_curriculum_start_fraction: float,
+    synthetic_curriculum_end_fraction: float,
+    rng: random.Random,
+) -> list[dict[str, Any]]:
+    """Sample this epoch's real-finetune mini-batch, optionally following the CAL-R2
+    synthetic/real curriculum (`curriculum_synthetic_fraction`).
+
+    Rows are split into two pools by ``label_status``: ``SYNTHETIC_STATUS`` (the CAL-R2
+    domain-randomized corpus) vs everything else (independent-human / owner-approved-copy real
+    rows). When both pools are non-empty and a nonzero curriculum fraction range is configured,
+    each epoch's mini-batch mixes the two pools according to the ramped fraction; otherwise
+    (no synthetic-status rows present in ``train_real``, or both curriculum fractions are 0)
+    this reduces exactly to the original uniform ``rng.sample(train_real, real_batch_size)``
+    behavior, so existing non-curriculum runs are unaffected.
+    """
+
+    if real_batch_size is None or len(train_real) <= real_batch_size:
+        return train_real
+
+    synthetic_pool = [row for row in train_real if row.get("label_status") == SYNTHETIC_STATUS]
+    human_pool = [row for row in train_real if row.get("label_status") != SYNTHETIC_STATUS]
+    if not synthetic_pool or not human_pool or (synthetic_curriculum_start_fraction <= 0 and synthetic_curriculum_end_fraction <= 0):
+        return rng.sample(train_real, real_batch_size)
+
+    fraction = curriculum_synthetic_fraction(
+        epoch,
+        total_epochs,
+        start_fraction=synthetic_curriculum_start_fraction,
+        end_fraction=synthetic_curriculum_end_fraction,
+    )
+    synthetic_n = min(len(synthetic_pool), round(real_batch_size * fraction))
+    human_n = min(len(human_pool), real_batch_size - synthetic_n)
+    # Backfill from whichever pool has slack if the other was too small to hit real_batch_size.
+    remaining = real_batch_size - synthetic_n - human_n
+    if remaining > 0 and len(synthetic_pool) > synthetic_n:
+        extra = min(remaining, len(synthetic_pool) - synthetic_n)
+        synthetic_n += extra
+        remaining -= extra
+    if remaining > 0 and len(human_pool) > human_n:
+        human_n += min(remaining, len(human_pool) - human_n)
+
+    sample = (rng.sample(synthetic_pool, synthetic_n) if synthetic_n else []) + (
+        rng.sample(human_pool, human_n) if human_n else []
+    )
+    rng.shuffle(sample)
+    return sample
+
+
+def choose_torch_device_name(requested: str, torch_module: Any) -> str:
+    requested = str(requested).lower()
+    if requested == "cpu":
+        return "cpu"
+    if requested == "cuda":
+        return "cuda" if torch_module.cuda.is_available() else "cpu"
+    if requested == "mps":
+        mps_backend = getattr(getattr(torch_module, "backends", None), "mps", None)
+        if mps_backend is not None and mps_backend.is_available():
+            return "mps"
+        return "cpu"
+    return "cpu"
+
+
 def run_training(args: argparse.Namespace) -> dict[str, Any]:
     import cv2
     import numpy as np
@@ -422,12 +922,26 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
 
     keypoint_names = [point.name for point in PICKLEBALL_KEYPOINTS]
     width, height = args.image_width, args.image_height
+    model_architecture = str(getattr(args, "model_architecture", "keypoint_heatmap_v1"))
+    if model_architecture not in {"keypoint_heatmap_v1", "line_segmentation_intersection_v1"}:
+        raise ValueError("model_architecture must be keypoint_heatmap_v1 or line_segmentation_intersection_v1")
+    use_line_segmentation = model_architecture == "line_segmentation_intersection_v1"
+    round3_input_resolution = (
+        validate_round3_input_resolution(width, height, patch_size=getattr(args, "patch_size", None))
+        if use_line_segmentation
+        else None
+    )
+    line_names = [family.name for family in COURT_LINE_FAMILIES]
+    line_width = int(getattr(args, "line_width", 3) or 3)
     rng = random.Random(args.seed)
     torch.manual_seed(args.seed)
-    device = torch.device(args.device if args.device == "cpu" or torch.cuda.is_available() else "cpu")
-    use_homography_refinement = not bool(getattr(args, "disable_homography_refinement", False))
+    device = torch.device(choose_torch_device_name(args.device, torch))
+    use_homography_refinement = bool(getattr(args, "enable_homography_refinement", False)) and not bool(
+        getattr(args, "disable_homography_refinement", False)
+    )
+    use_static_camera_aggregation = bool(getattr(args, "static_camera_aggregate", False))
 
-    real_labels = load_real_court_keypoint_labels(args.real_root) if args.real_root else []
+    real_labels = _load_real_court_keypoint_labels_from_roots(args.real_root)
     label_status_counts = _label_status_counts(real_labels)
     holdout_frame_stride = int(getattr(args, "holdout_frame_stride", 0) or 0)
     if holdout_frame_stride > 0:
@@ -452,6 +966,20 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     if real_labels and not holdout_real:
         holdout_real = real_labels[-1:]
 
+    # Eval-clip integrity gate (fail closed): rows that actually feed gradient
+    # updates must never come from a protected eval clip, with no override.
+    # Rows used only as a held-out validation-during-fitting signal may come
+    # from Burlington/Wolverine (allow_internal_val=True), but Outdoor/Indoor
+    # are refused even there -- see threed/racketsport/eval_guard.py.
+    eval_guard_summary = {
+        "train": assert_not_training_on_eval_clip(
+            (row.get("clip") for row in train_real), allow_internal_val=False
+        ),
+        "holdout": assert_not_training_on_eval_clip(
+            (row.get("clip") for row in holdout_real), allow_internal_val=True
+        ),
+    }
+
     def synthetic_batch(batch_size: int) -> tuple[Any, Any, Any]:
         images, targets, masks = [], [], []
         for _ in range(batch_size):
@@ -475,7 +1003,10 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             ):
                 draw.line([points[a], points[b]], fill=line_color, width=rng.randint(1, 3))
             arr = np.asarray(image, dtype=np.float32) / 255.0
-            target, mask = heatmaps_for_points(points, keypoint_names, width, height, sigma=args.sigma)
+            if use_line_segmentation:
+                target, mask = line_masks_for_points(points, width, height, line_width=line_width)
+            else:
+                target, mask = heatmaps_for_points(points, keypoint_names, width, height, sigma=args.sigma)
             images.append(torch.from_numpy(arr).permute(2, 0, 1))
             targets.append(torch.from_numpy(target))
             masks.append(torch.from_numpy(mask))
@@ -494,43 +1025,117 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                 for name, xy in row["keypoints"].items()
             }
             arr = np.asarray(image, dtype=np.float32) / 255.0
-            target, mask = heatmaps_for_points(scaled, keypoint_names, width, height, sigma=args.sigma)
+            if use_line_segmentation:
+                target, mask = line_masks_for_points(scaled, width, height, line_width=line_width)
+            else:
+                target, mask = heatmaps_for_points(scaled, keypoint_names, width, height, sigma=args.sigma)
             images.append(torch.from_numpy(arr).permute(2, 0, 1))
             targets.append(torch.from_numpy(target))
             masks.append(torch.from_numpy(mask))
         return torch.stack(images), torch.stack(targets), torch.stack(masks)
 
-    def evaluate(model: nn.Module, rows: list[dict[str, Any]], synthetic_batches: int = 4) -> dict[str, Any]:
+    def predict_row_source_points(row: dict[str, Any]) -> dict[str, list[float]]:
+        if use_line_segmentation:
+            return predict_source_keypoints_from_line_model(
+                model,
+                row,
+                cv2=cv2,
+                np=np,
+                torch=torch,
+                image_module=Image,
+                device=device,
+                width=width,
+                height=height,
+                line_names=line_names,
+            )["keypoints"]
+        return predict_source_keypoints(
+            model,
+            row,
+            cv2=cv2,
+            np=np,
+            torch=torch,
+            image_module=Image,
+            device=device,
+            width=width,
+            height=height,
+            keypoint_names=keypoint_names,
+            use_homography_refinement=use_homography_refinement,
+        )
+
+    def aggregate_static_camera_points(rows: list[dict[str, Any]]) -> dict[str, dict[str, list[float]]]:
+        # See `aggregate_static_camera_predictions`'s eval-integrity note: callers below only
+        # ever pass held-out rows (never `train_real`), so this never aggregates over frames the
+        # model was fit on.
+        return aggregate_static_camera_predictions(
+            model,
+            rows,
+            cv2=cv2,
+            np=np,
+            torch=torch,
+            image_module=Image,
+            device=device,
+            width=width,
+            height=height,
+            keypoint_names=keypoint_names,
+            use_homography_refinement=use_homography_refinement,
+        )
+
+    def evaluate(
+        model: nn.Module,
+        rows: list[dict[str, Any]],
+        synthetic_batches: int = 4,
+        *,
+        aggregation_rows: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         model.eval()
         real_model_input_errors: list[float] = []
         real_source_errors: list[float] = []
         real_source_errors_by_clip: dict[str, list[float]] = {}
         synthetic_errors: list[float] = []
+        line_fit_rms_values: list[float] = []
+        homography_self_consistency_medians: list[float] = []
+        static_aggregate = aggregate_static_camera_points(aggregation_rows) if aggregation_rows and not use_line_segmentation else None
         with torch.no_grad():
             for row in rows:
-                batch = real_batch([row])
-                if batch is None:
-                    continue
-                x, _, _ = [part.to(device) for part in batch]
-                pred = court_keypoint_probabilities(model(x)).detach().cpu()[0]
                 image = load_label_image(row, cv2=cv2, image_module=Image)
                 label_w, label_h = _label_coordinate_size(row, fallback_size=image.size)
                 sx, sy = width / label_w, height / label_h
-                predicted_source_points: dict[str, list[float]] = {}
-                for name in row["keypoints"]:
-                    idx = keypoint_names.index(name)
-                    flat = int(pred[idx].argmax())
-                    py, px = divmod(flat, width)
-                    predicted_source_points[name] = [px / sx, py / sy]
-                if use_homography_refinement:
-                    predicted_source_points = refine_keypoint_xy_with_planar_homography(predicted_source_points)
+                predicted_source_points = (
+                    static_aggregate.get(str(row.get("clip") or "unknown"), {}) if static_aggregate is not None else {}
+                )
+                if not predicted_source_points:
+                    if use_line_segmentation:
+                        prediction = predict_source_keypoints_from_line_model(
+                            model,
+                            row,
+                            cv2=cv2,
+                            np=np,
+                            torch=torch,
+                            image_module=Image,
+                            device=device,
+                            width=width,
+                            height=height,
+                            line_names=line_names,
+                        )
+                        predicted_source_points = prediction["keypoints"]
+                        fit_summary = prediction.get("line_fit_rms_px")
+                        if isinstance(fit_summary, dict) and isinstance(fit_summary.get("mean"), (int, float)):
+                            line_fit_rms_values.append(float(fit_summary["mean"]))
+                    else:
+                        predicted_source_points = predict_row_source_points(row)
+                if predicted_source_points:
+                    homography_summary = _homography_self_consistency_px(predicted_source_points)
+                    if isinstance(homography_summary, dict) and isinstance(homography_summary.get("median"), (int, float)):
+                        homography_self_consistency_medians.append(float(homography_summary["median"]))
                 for name, xy in row["keypoints"].items():
+                    if name not in predicted_source_points:
+                        continue
                     source_x, source_y = predicted_source_points[name]
                     real_model_input_errors.append(math.hypot(source_x * sx - xy[0] * sx, source_y * sy - xy[1] * sy))
                     source_error = math.hypot(source_x - xy[0], source_y - xy[1])
                     real_source_errors.append(source_error)
                     real_source_errors_by_clip.setdefault(str(row.get("clip") or "unknown"), []).append(source_error)
-            for _ in range(synthetic_batches):
+            for _ in range(0 if use_line_segmentation else synthetic_batches):
                 x, target, _ = synthetic_batch(args.batch_size)
                 pred = court_keypoint_probabilities(model(x.to(device))).detach().cpu()
                 for batch_i in range(pred.shape[0]):
@@ -584,17 +1189,64 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "synthetic_median_px": synthetic_summary["median"],
             "synthetic_p95_px": synthetic_summary["p95"],
             "synthetic_count": synthetic_summary["count"],
+            "prediction_mode": "line_segmentation_intersection" if use_line_segmentation else "keypoint_heatmap_argmax",
+            "line_fit_rms_px": _error_summary(line_fit_rms_values) if use_line_segmentation else None,
+            "homography_self_consistency_px": {
+                "row_median_residual_summary": _error_summary(homography_self_consistency_medians),
+                "note": (
+                    "Median over rows of each prediction's planar-homography residual summary; "
+                    "same diagnostic family as the CAL-R1/R2 internal self-consistency comparison."
+                ),
+            },
         }
 
-    model = make_court_keypoint_heatmap_model(len(keypoint_names)).to(device)
+    output_count = len(line_names) if use_line_segmentation else len(keypoint_names)
+    net_architecture = "local_conv_v1" if use_line_segmentation else "encoder_decoder_v1"
+    model = make_court_keypoint_heatmap_model(output_count, architecture=net_architecture).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
-    before = evaluate(model, holdout_real)
+    # EVAL INTEGRITY: aggregation_rows must be the held-out rows themselves, never train_real.
+    # See `aggregate_static_camera_predictions`'s docstring -- aggregating over training rows
+    # would score a checkpoint against its own (partially memorized) training predictions and
+    # report the result as a held-out gate number, which is exactly the bug this fixes.
+    aggregation_rows = holdout_real if use_static_camera_aggregation and not use_line_segmentation else None
+    # Real-data mini-batch size: without this, every real-finetune epoch processes the ENTIRE
+    # train_real set as one full-batch gradient step, so per-epoch cost scales with corpus size
+    # (fine for a handful of owner-clip frames, but a real bottleneck once train_real is a
+    # ~750-image external-corpus tier -- full-batch on that scale turns a 300-epoch fine-tune
+    # into hours on CPU). `None` (the CLI default) preserves the original full-batch behavior
+    # for backward compatibility; passing --real-batch-size caps each epoch's real-data cost to
+    # a random sample of that size (standard mini-batch SGD), independent of corpus size.
+    real_batch_size = getattr(args, "real_batch_size", None)
+    # CAL-R2 synthetic/real curriculum fractions -- both default to 0.0 (no curriculum, uniform
+    # sampling over train_real) so runs that never pass these flags are unaffected. See
+    # `sample_curriculum_real_batch`'s docstring for the fallback behavior.
+    synthetic_curriculum_start_fraction = float(getattr(args, "synthetic_curriculum_start_fraction", 0.0) or 0.0)
+    synthetic_curriculum_end_fraction = float(getattr(args, "synthetic_curriculum_end_fraction", 0.0) or 0.0)
+    # CAL-R2 point+line geometric-consistency loss weights. `geometric_loss_weight` defaults to
+    # 0.0 (fully backward compatible: skips the extra soft-argmax/DLT work entirely, and the
+    # trained model is bit-for-bit the same round-1 point-only-supervised model). See
+    # `threed.racketsport.court_keypoint_geometric_loss` for the loss itself.
+    geometric_loss_weight = float(getattr(args, "geometric_loss_weight", 0.0) or 0.0)
+    geometric_colinearity_weight = float(getattr(args, "geometric_colinearity_weight", 1.0))
+    geometric_homography_weight = float(getattr(args, "geometric_homography_weight", 1.0))
+    before = evaluate(model, holdout_real, aggregation_rows=aggregation_rows)
     history: list[dict[str, Any]] = []
     for epoch in range(args.epochs):
         model.train()
         x, y, mask = synthetic_batch(args.batch_size)
         if train_real and epoch >= args.real_finetune_start_epoch:
-            real = real_batch(train_real)
+            sampled_train_real = train_real
+            if real_batch_size is not None and len(train_real) > real_batch_size:
+                sampled_train_real = sample_curriculum_real_batch(
+                    train_real,
+                    epoch=epoch,
+                    total_epochs=args.epochs,
+                    real_batch_size=real_batch_size,
+                    synthetic_curriculum_start_fraction=synthetic_curriculum_start_fraction,
+                    synthetic_curriculum_end_fraction=synthetic_curriculum_end_fraction,
+                    rng=rng,
+                )
+            real = real_batch(sampled_train_real)
             if real is not None:
                 rx, ry, rm = real
                 x = torch.cat([x, rx], dim=0)
@@ -602,26 +1254,56 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                 mask = torch.cat([mask, rm], dim=0)
         x, y, mask = x.to(device), y.to(device), mask.to(device)
         optimizer.zero_grad()
-        loss = court_keypoint_heatmap_loss(model(x), y, mask)
+        logits = model(x)
+        if use_line_segmentation:
+            import torch.nn.functional as F
+
+            heatmap_loss = F.binary_cross_entropy_with_logits(logits, y)
+        else:
+            heatmap_loss = court_keypoint_heatmap_loss(logits, y, mask)
+        loss = heatmap_loss
+        geometric_components: dict[str, float] | None = None
+        if geometric_loss_weight > 0.0 and use_line_segmentation:
+            raise ValueError("--geometric-loss-weight is only valid for keypoint_heatmap_v1")
+        if geometric_loss_weight > 0.0:
+            geometric = court_geometric_consistency_loss(
+                logits,
+                keypoint_names=keypoint_names,
+                image_width=float(width),
+                image_height=float(height),
+                colinearity_weight=geometric_colinearity_weight,
+                homography_weight=geometric_homography_weight,
+            )
+            loss = heatmap_loss + geometric_loss_weight * geometric["loss"]
+            geometric_components = {
+                "geometric_loss": float(geometric["loss"].detach().cpu()),
+                "geometric_colinearity": float(geometric["colinearity"].detach().cpu()),
+                "geometric_homography": float(geometric["homography"].detach().cpu()),
+                "geometric_spread_guard": float(geometric["spread_guard"].detach().cpu()),
+            }
         loss.backward()
         optimizer.step()
         if (epoch + 1) % args.eval_every == 0 or epoch == args.epochs - 1:
-            row = evaluate(model, holdout_real)
-            row.update({"epoch": epoch + 1, "loss": float(loss.detach().cpu())})
+            row = evaluate(model, holdout_real, aggregation_rows=aggregation_rows)
+            row.update({"epoch": epoch + 1, "loss": float(loss.detach().cpu()), "heatmap_loss": float(heatmap_loss.detach().cpu())})
+            if geometric_components is not None:
+                row.update(geometric_components)
             history.append(row)
             print(json.dumps(row, sort_keys=True), flush=True)
 
-    after = evaluate(model, holdout_real, synthetic_batches=8)
+    after = evaluate(model, holdout_real, synthetic_batches=8, aggregation_rows=aggregation_rows)
     args.out.mkdir(parents=True, exist_ok=True)
     checkpoint = args.out / "court_keypoint_heatmap.pt"
     torch.save(
         {
             "model": model.state_dict(),
-            "keypoint_names": keypoint_names,
             "image_size": [width, height],
-            "model_architecture": "encoder_decoder_v1",
-            "heatmap_activation": "spatial_softmax",
-            "loss": "spatial_softmax_cross_entropy",
+            "model_architecture": model_architecture,
+            "network_architecture": net_architecture,
+            "keypoint_names": keypoint_names,
+            "line_names": line_names if use_line_segmentation else [],
+            "heatmap_activation": "sigmoid" if use_line_segmentation else "spatial_softmax",
+            "loss": "binary_cross_entropy_line_masks" if use_line_segmentation else "spatial_softmax_cross_entropy",
             "args": vars(args),
         },
         checkpoint,
@@ -629,11 +1311,14 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     gate_value = after.get("real_keypoint_pck_at_5px")
     independent_reviewed_frame_count = label_status_counts["labels_independent_human_frames"]
     copied_frame_count = label_status_counts["labels_static_camera_copy_frame_count"]
+    synthetic_frame_count = label_status_counts["labels_synthetic_frame_count"]
     human_verification_note = (
         f"Independent human-verified frames = {independent_reviewed_frame_count}; "
         f"{copied_frame_count} additional frame(s) are owner-approved reviewed_static_camera_copy "
         "duplicates of an independent review on the same static camera and are NOT independent "
-        "human labels."
+        f"human labels; {synthetic_frame_count} additional frame(s) are synthetic "
+        "domain-randomized renders (status=='synthetic') and are NEITHER independent human "
+        "labels NOR owner-approved copies -- never counted as human verification of any kind."
     )
     summary = {
         "schema_version": 1,
@@ -641,16 +1326,25 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         "status": "trained_not_phase_verified",
         "checkpoint": str(checkpoint),
         "gate": {
-            "metric": "heldout_pck_at_5px",
+            "metric": (
+                "heldout_line_intersection_pck_at_5px"
+                if use_line_segmentation
+                else "heldout_static_camera_aggregate_pck_at_5px"
+                if use_static_camera_aggregation
+                else "heldout_pck_at_5px"
+            ),
             "value": gate_value,
             "threshold": 0.95,
             "pck_threshold_px": 5.0,
             "passed": bool(gate_value is not None and float(gate_value) >= 0.95),
             "not_cal3_verified": True,
             # Report independent human-verified frames separately from owner-approved
-            # static-camera copies; never collapse these into a single "reviewed" count.
+            # static-camera copies and from synthetic renders; never collapse these into a
+            # single "reviewed" count (CAL-R2 provenance fix -- gates must never count
+            # synthetic frames as human).
             "independent_reviewed_frame_count": independent_reviewed_frame_count,
             "copied_frame_count": copied_frame_count,
+            "synthetic_frame_count": synthetic_frame_count,
             "human_verification_note": human_verification_note,
         },
         "before": before,
@@ -660,12 +1354,35 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         "holdout_strategy": holdout_strategy,
         "real_train_count": len(train_real),
         "real_holdout_count": len(holdout_real),
+        "eval_guard": eval_guard_summary,
         "labels_independent_human_frames": independent_reviewed_frame_count,
         "labels_static_camera_copy_frame_count": copied_frame_count,
+        "labels_synthetic_frame_count": synthetic_frame_count,
         "postprocess": {
+            "prediction_mode": "line_segmentation_intersection" if use_line_segmentation else "keypoint_heatmap_argmax",
             "homography_refinement": use_homography_refinement,
             "homography_refinement_max_inlier_error_px": 30.0,
             "homography_refinement_min_inliers": 8,
+            "static_camera_aggregation": use_static_camera_aggregation,
+            "static_camera_aggregation_source": "holdout_rows_self_referential" if use_static_camera_aggregation else None,
+            "static_camera_aggregation_row_count": len(holdout_real) if use_static_camera_aggregation else 0,
+        },
+        "architecture": {
+            "name": model_architecture,
+            "network_architecture": net_architecture,
+            "line_names": line_names if use_line_segmentation else [],
+            "net_keypoint_height_convention": "regulation_net_top",
+        },
+        "round3_input_resolution": round3_input_resolution,
+        "geometric_loss": {
+            "enabled": geometric_loss_weight > 0.0,
+            "weight": geometric_loss_weight,
+            "colinearity_weight": geometric_colinearity_weight,
+            "homography_weight": geometric_homography_weight,
+        },
+        "curriculum": {
+            "synthetic_curriculum_start_fraction": synthetic_curriculum_start_fraction,
+            "synthetic_curriculum_end_fraction": synthetic_curriculum_end_fraction,
         },
         "note": (
             "Synthetic pretraining plus limited reviewed 15-keypoint court fine-tune; not a "
@@ -704,6 +1421,7 @@ def training_cli_summary(summary: dict[str, Any]) -> dict[str, Any]:
         "holdout_artifacts": summary.get("holdout_artifacts", []),
         "labels_independent_human_frames": summary.get("labels_independent_human_frames"),
         "labels_static_camera_copy_frame_count": summary.get("labels_static_camera_copy_frame_count"),
+        "labels_synthetic_frame_count": summary.get("labels_synthetic_frame_count"),
     }
 
 
@@ -954,7 +1672,17 @@ def _prediction_point(prediction: dict[str, Any] | None) -> tuple[int, int] | No
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Train a lightweight pickleball court-keypoint heatmap model.")
-    parser.add_argument("--real-root", type=Path, default=None)
+    parser.add_argument(
+        "--real-root",
+        type=Path,
+        default=None,
+        action="append",
+        help=(
+            "Root containing <dataset-or-clip>/labels/court_keypoints.json rows. May be passed "
+            "more than once to merge several roots (e.g. multiple external-corpus tiers) into "
+            "one training run without needing a merged directory on disk."
+        ),
+    )
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--holdout-clip", action="append", default=["wolverine_mixed_0200_mid_steep_corner"])
     parser.add_argument(
@@ -967,9 +1695,42 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--image-width", type=int, default=160)
     parser.add_argument("--image-height", type=int, default=90)
+    parser.add_argument(
+        "--model-architecture",
+        choices=("keypoint_heatmap_v1", "line_segmentation_intersection_v1"),
+        default="keypoint_heatmap_v1",
+        help=(
+            "Court detector architecture. keypoint_heatmap_v1 is the legacy 15-channel "
+            "point heatmap. line_segmentation_intersection_v1 is the CAL-R3 line-mask head "
+            "followed by fitted line equations and intersections."
+        ),
+    )
+    parser.add_argument(
+        "--line-width",
+        type=int,
+        default=3,
+        help="CAL-R3 line-mask target half-width in model pixels.",
+    )
+    parser.add_argument(
+        "--patch-size",
+        type=int,
+        default=None,
+        help="Reserved CAL-R3 patch inference size; when unset, line mode requires --image-width >= 640.",
+    )
     parser.add_argument("--sigma", type=float, default=2.5)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--real-finetune-start-epoch", type=int, default=120)
+    parser.add_argument(
+        "--real-batch-size",
+        type=int,
+        default=None,
+        help=(
+            "Cap each real-finetune epoch to a random sample of this many real-corpus rows "
+            "(mini-batch SGD), instead of the full train_real set every epoch. Default (unset) "
+            "preserves the original full-batch behavior; set this when train_real is large "
+            "(e.g. a multi-hundred-image external-corpus tier) to keep per-epoch cost bounded."
+        ),
+    )
     parser.add_argument("--eval-every", type=int, default=20)
     parser.add_argument(
         "--skip-holdout-artifacts",
@@ -977,9 +1738,63 @@ def main(argv: list[str] | None = None) -> int:
         help="Write the checkpoint and gate metrics without generating full-video holdout prediction overlays.",
     )
     parser.add_argument(
+        "--static-camera-aggregate",
+        action="store_true",
+        help=(
+            "Evaluate held-out labels with per-clip median keypoints aggregated across the "
+            "held-out rows themselves (never training rows) for static cameras -- see "
+            "aggregate_static_camera_predictions()'s eval-integrity note."
+        ),
+    )
+    parser.add_argument(
+        "--enable-homography-refinement",
+        action="store_true",
+        help="Apply planar court-geometry refinement to raw heatmap peaks before scoring.",
+    )
+    parser.add_argument(
         "--disable-homography-refinement",
         action="store_true",
-        help="Evaluate raw heatmap peaks without planar court-geometry refinement.",
+        help="Compatibility flag: keep planar court-geometry refinement disabled.",
+    )
+    parser.add_argument(
+        "--geometric-loss-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "CAL-R2 PnLCalib-style point+line geometric-consistency loss weight, added to the "
+            "per-channel heatmap cross-entropy loss every training step (see "
+            "threed.racketsport.court_keypoint_geometric_loss). Default 0.0 disables it entirely "
+            "(bit-for-bit round-1 behavior, no soft-argmax/DLT overhead)."
+        ),
+    )
+    parser.add_argument(
+        "--geometric-colinearity-weight",
+        type=float,
+        default=1.0,
+        help="Relative weight of the colinearity term within the combined geometric-consistency loss.",
+    )
+    parser.add_argument(
+        "--geometric-homography-weight",
+        type=float,
+        default=1.0,
+        help="Relative weight of the homography self-consistency term within the combined geometric-consistency loss.",
+    )
+    parser.add_argument(
+        "--synthetic-curriculum-start-fraction",
+        type=float,
+        default=0.0,
+        help=(
+            "CAL-R2 synthetic/real curriculum: fraction of each real-finetune mini-batch drawn "
+            "from synthetic-status rows at epoch 0 (requires --real-batch-size and a mix of "
+            "synthetic + real rows under --real-root). Default 0.0 (no curriculum, uniform "
+            "sampling over train_real, matching pre-curriculum behavior)."
+        ),
+    )
+    parser.add_argument(
+        "--synthetic-curriculum-end-fraction",
+        type=float,
+        default=0.0,
+        help="CAL-R2 synthetic/real curriculum: synthetic fraction at the final epoch (see --synthetic-curriculum-start-fraction).",
     )
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument("--device", default="cuda")

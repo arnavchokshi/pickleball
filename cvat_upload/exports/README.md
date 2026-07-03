@@ -9,16 +9,21 @@ Use one zip per source video. Keep these stable filenames:
 - `03_outdoor_webcam_iynbd_1500_long_high_baseline_cvat_for_video_1.1.zip`
 - `04_indoor_doubles_fwuks_0500_long_mid_baseline_cvat_for_video_1.1.zip`
 
-Current active set: videos 1, 2, and 3. Video 4 is pending and is not required
-for the current three-clip dataset/export setup.
+Current active set: videos 1, 2, 3, and 4. Video 4 (`indoor_doubles_fwuks_0500_long_mid_baseline`)
+landed 2026-07-02 and is imported at `runs/cvat_imports/2026_06_30/indoor_doubles_fwuks_0500_long_mid_baseline/`.
+Outdoor and Indoor are strict held-out eval clips (`threed/racketsport/eval_guard.py`,
+`runs/manager/heldout_eval_ledger.md`), and current YOLO/TrackNet training exporters fail closed
+if either clip appears in training or validation-during-fitting inputs. Older generated
+`runs/cvat_imports/2026_06_30/gate_inputs/` and `yolo_datasets/` artifacts are historical
+detector-label evidence, not the recommended current training/export scope.
 
 Video 3 is intentionally capped: keep source frames `0..1150` only. The raw
-CVAT export has 1800 frames, but frame 1151 onward is discarded for current
-training/export artifacts. Use:
+CVAT export has 1800 frames, but frame 1151 onward is discarded for the
+reviewed import/eval artifacts. Use:
 
 `cvat_upload/03_outdoor_webcam_iynbd_1500_long_high_baseline_frames_0000_1150.mp4`
 
-as the source video for video 3 datasets.
+as the source video when recreating video 3 reviewed import/eval artifacts.
 
 Imported artifacts go under:
 

@@ -78,6 +78,69 @@ def test_repo_manifest_records_official_ball_checkpoint_inventory_without_finetu
     assert wasb.training_data == ["official_wasb_tennis_pretrained"]
 
 
+def test_repo_manifest_records_local_racket_detector_mask_gate_weights():
+    manifest = load_model_manifest(Path("models/MANIFEST.json"))
+
+    by_id = {entry.id: entry for entry in manifest.models}
+
+    detector = by_id["grounding_dino_tiny_paddle_detector"]
+    assert detector.stage == "racket_detection"
+    assert detector.status == "available_local"
+    assert detector.local_path == "models/checkpoints/racket/grounding-dino-tiny/model.safetensors"
+    assert detector.sha256 == "1a2412ef99bd74bcd3c2a246fa1e48581f8889a1300c9051974741314fc042f3"
+    assert detector.fine_tuned_on_pickleball is False
+
+    base_probe = by_id["grounding_dino_base_paddle_detector_failed_probe"]
+    assert base_probe.stage == "racket_detection"
+    assert base_probe.status == "available_on_h100"
+    assert (
+        base_probe.local_path
+        == "/home/arnavchokshi/.cache/huggingface/hub/models--IDEA-Research--grounding-dino-base/snapshots/12bdfa3120f3e7ec7b434d90674b3396eccf88eb/model.safetensors"
+    )
+    assert base_probe.sha256 == "5548f844c928c4b6f411fa8cbcc2bfa8dbbba437cb1d513975519f93c2a9ed21"
+    assert base_probe.fine_tuned_on_pickleball is False
+    assert any("failed the detector+mask gate" in note for note in base_probe.notes)
+
+    sam2 = by_id["sam2_hiera_tiny_racket_masks"]
+    assert sam2.stage == "racket_segmentation"
+    assert sam2.status == "available_local"
+    assert sam2.local_path == "models/checkpoints/racket/sam2-hiera-tiny/sam2_hiera_tiny.pt"
+    assert sam2.sha256 == "65b50056e05bcb13694174f51bb6da89c894b57b75ccdf0ba6352c597c5d1125"
+    assert sam2.fine_tuned_on_pickleball is False
+
+    yolo_probe = by_id["yolo11n_paddle_cpu320_e2_failed_probe"]
+    assert yolo_probe.stage == "racket_detection"
+    assert yolo_probe.status == "available_local"
+    assert (
+        yolo_probe.local_path
+        == "runs/detect/runs/cvat_imports/2026_06_30/racket_yolo_train/yolo11n_paddle_cpu320_e5/weights/best.pt"
+    )
+    assert yolo_probe.sha256 == "76b9e47ce128d1300ace493d3356bd305150d0256c61c50f778b3274dac8c5cc"
+    assert yolo_probe.fine_tuned_on_pickleball is True
+
+    yolo11n_a100 = by_id["yolo11n_paddle_a100_img960_e50_failed_probe"]
+    assert yolo11n_a100.stage == "racket_detection"
+    assert yolo11n_a100.status == "available_on_h100"
+    assert (
+        yolo11n_a100.local_path
+        == "/home/arnavchokshi/pickleball_git/runs/cvat_imports/2026_06_30/racket_yolo_train_gpu/yolo11n_paddle_img960_e50/weights/best.pt"
+    )
+    assert yolo11n_a100.sha256 == "7134203e168dbcaef802f26e092d20b14a45e91a757240887becd99741b4bdbe"
+    assert yolo11n_a100.fine_tuned_on_pickleball is True
+    assert any("failed the RKT detector gate" in note for note in yolo11n_a100.notes)
+
+    yolo26s_a100 = by_id["yolo26s_paddle_a100_img1280_e80_failed_probe"]
+    assert yolo26s_a100.stage == "racket_detection"
+    assert yolo26s_a100.status == "available_on_h100"
+    assert (
+        yolo26s_a100.local_path
+        == "/home/arnavchokshi/pickleball_git/runs/detect/runs/cvat_imports/2026_06_30/racket_yolo_train_gpu/yolo26s_paddle_img1280_e80/weights/best.pt"
+    )
+    assert yolo26s_a100.sha256 == "3b6b97a41e4ec14bc61e5468ffc2a5065bef8ff65533cf5d6c82e64a7393f4d8"
+    assert yolo26s_a100.fine_tuned_on_pickleball is True
+    assert any("must not be promoted" in note for note in yolo26s_a100.notes)
+
+
 def test_model_manifest_requires_sha_for_available_entries():
     payload = {
         "schema_version": 1,

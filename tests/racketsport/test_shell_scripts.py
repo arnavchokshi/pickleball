@@ -425,3 +425,186 @@ def test_gpu_helpers_fail_closed_when_flock_is_missing(tmp_path):
 
         assert completed.returncode == 69
         assert message in completed.stderr
+
+
+# --- Finding 6: GPU lock holder metadata + optional wait timeout ---------
+
+
+def test_gpu_train_lock_writes_and_removes_holder_metadata(tmp_path):
+    _require_flock()
+
+    lease_root = tmp_path / "gpu-lease"
+    meta_path = lease_root / "full-gpu.lock.meta"
+    env = {**os.environ, "GPU_LEASE_ROOT": str(lease_root)}
+
+    completed = subprocess.run(
+        ["bash", "scripts/gpu-train-lock.sh", "bash", "-lc", f'cat "{meta_path}"'],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=10,
+    )
+
+    for field in ("pid=", "ppid=", "user=", "host=", "cwd=", "started_at_utc=", "command="):
+        assert field in completed.stdout, completed.stdout
+    # The metadata file is a diagnostic only, written/removed around the
+    # kernel flock (which remains the sole correctness mechanism) -- it must
+    # not survive past the command that held the lock.
+    assert not meta_path.exists()
+
+
+def test_gpu_train_lock_timeout_reports_holder_metadata_and_exits_75(tmp_path):
+    _require_flock()
+
+    lease_root = tmp_path / "gpu-lease"
+    marker = tmp_path / "holder-started"
+    env = {**os.environ, "GPU_LEASE_ROOT": str(lease_root)}
+    holder = subprocess.Popen(
+        ["bash", "scripts/gpu-train-lock.sh", "bash", "-lc", f"printf started > {marker}; sleep 1.5"],
+        env=env,
+    )
+    try:
+        deadline = time.monotonic() + 5.0
+        while not marker.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert marker.exists()
+
+        completed = subprocess.run(
+            ["bash", "scripts/gpu-train-lock.sh", "bash", "-lc", "echo should-not-run"],
+            capture_output=True,
+            text=True,
+            env={**env, "GPU_LOCK_TIMEOUT_S": "1"},
+            timeout=10,
+        )
+
+        assert completed.returncode == 75
+        assert "timed out after 1s" in completed.stderr
+        assert "current holder metadata" in completed.stderr
+        assert "should-not-run" not in completed.stdout
+    finally:
+        holder.wait(timeout=10)
+
+
+def test_gpu_train_lock_still_blocks_forever_by_default_without_timeout_env(tmp_path):
+    # Backward compatibility: existing callers that never set
+    # GPU_LOCK_TIMEOUT_S must keep waiting indefinitely for the exclusive
+    # lock, exactly as before this env var existed.
+    _require_flock()
+
+    lease_root = tmp_path / "gpu-lease"
+    marker = tmp_path / "holder-started"
+    env = {**os.environ, "GPU_LEASE_ROOT": str(lease_root)}
+    assert "GPU_LOCK_TIMEOUT_S" not in env
+    holder = subprocess.Popen(
+        ["bash", "scripts/gpu-train-lock.sh", "bash", "-lc", f"printf started > {marker}; sleep 0.6"],
+        env=env,
+    )
+    try:
+        deadline = time.monotonic() + 5.0
+        while not marker.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert marker.exists()
+
+        start = time.monotonic()
+        completed = subprocess.run(
+            ["bash", "scripts/gpu-train-lock.sh", "bash", "-lc", "echo waited-then-ran"],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=10,
+        )
+        elapsed = time.monotonic() - start
+
+        assert completed.stdout.strip() == "waited-then-ran"
+        assert elapsed >= 0.2
+    finally:
+        holder.wait(timeout=10)
+
+
+def test_gpu_eval_run_heartbeat_includes_enriched_metadata_fields(tmp_path):
+    _require_flock()
+
+    lease_root = tmp_path / "gpu-lease"
+    env = {**os.environ, "GPU_LEASE_ROOT": str(lease_root), "CUDA_VISIBLE_DEVICES": "5"}
+
+    completed = subprocess.run(
+        ["bash", "scripts/gpu-eval-run.sh", "bash", "-lc", 'cat "$GPU_LEASE_ROOT"/heartbeat/*'],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=10,
+    )
+
+    # First line's shape stays byte-for-byte compatible with any existing
+    # reader; new fields are additive lines after it.
+    lines = completed.stdout.splitlines()
+    assert lines[0].startswith("pid=") and " slot=" in lines[0] and " ts=" in lines[0]
+    assert any(line.startswith("ppid=") for line in lines)
+    assert any(line.startswith("started_at_utc=") for line in lines)
+
+
+def test_gpu_eval_run_timeout_waiting_on_exclusive_train_lock_reports_holder(tmp_path):
+    _require_flock()
+
+    lease_root = tmp_path / "gpu-lease"
+    marker = tmp_path / "train-started"
+    env = {**os.environ, "GPU_LEASE_ROOT": str(lease_root)}
+    train = subprocess.Popen(
+        ["bash", "scripts/gpu-train-lock.sh", "bash", "-lc", f"printf started > {marker}; sleep 1.5"],
+        env=env,
+    )
+    try:
+        deadline = time.monotonic() + 5.0
+        while not marker.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert marker.exists()
+
+        completed = subprocess.run(
+            ["bash", "scripts/gpu-eval-run.sh", "bash", "-lc", "echo should-not-run"],
+            capture_output=True,
+            text=True,
+            env={**env, "GPU_LOCK_TIMEOUT_S": "1"},
+            timeout=10,
+        )
+
+        assert completed.returncode == 75
+        assert "timed out after 1s" in completed.stderr
+        assert "current holder metadata" in completed.stderr
+        assert "should-not-run" not in completed.stdout
+    finally:
+        train.wait(timeout=10)
+
+
+def test_gpu_lock_scripts_warn_on_stderr_when_falling_back_to_tmpdir_lease_root(tmp_path):
+    # A file (not a directory) at the primary lease root path makes
+    # `mkdir -p "$LEASE_ROOT"` fail, forcing the ${TMPDIR:-/tmp}/gpu-lease
+    # fallback this test wants to exercise -- and isolates that fallback to
+    # a per-test TMPDIR so it cannot collide with any other concurrent test
+    # or agent using the real /tmp/gpu-lease.
+    primary_lease_root = tmp_path / "blocked-lease-root"
+    primary_lease_root.write_bytes(b"not a directory")
+    fallback_tmpdir = tmp_path / "fallback-tmpdir"
+    fallback_tmpdir.mkdir()
+    env = {**os.environ, "GPU_LEASE_ROOT": str(primary_lease_root), "TMPDIR": f"{fallback_tmpdir}/"}
+
+    for script, prog_name in [
+        ("scripts/gpu-eval-run.sh", "gpu-eval-run"),
+        ("scripts/gpu-train-lock.sh", "gpu-train-lock"),
+    ]:
+        completed = subprocess.run(
+            ["bash", script, "bash", "-lc", "exit 0"],
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=10,
+        )
+        assert f"{prog_name}: WARNING" in completed.stderr, completed.stderr
+        assert str(primary_lease_root) in completed.stderr
+        assert "TMPDIR" in completed.stderr
+        # Either it ran to completion under the fallback root (flock
+        # available) or it failed closed because flock is missing --
+        # either way the warning above must have been printed first.
+        assert completed.returncode in (0, 69)

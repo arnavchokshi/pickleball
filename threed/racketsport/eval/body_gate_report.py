@@ -1,3 +1,15 @@
+"""BODY promotion gate report, including the world-MPJPE accuracy gate.
+
+Owner-approved finger policy (2026-07-02, binding): the world-MPJPE gate scores the
+~17 core body joints only (standard MPJPE convention) via `CORE_BODY_JOINT_NAMES`;
+hand/finger joints are excluded from gating and reported diagnostic-only
+(`hand_mean_error_m`). Foot/toe joints are likewise diagnostic-only
+(`foot_mean_error_m`), since the standard core-17 skeleton does not include them. See
+the "Owner-approved finger policy" comment block below for the full rationale and
+`runs/body_independent_gt_plan_20260702T031104Z/DECISION_DOC.md` §8 for the original
+open question this resolves.
+"""
+
 from __future__ import annotations
 
 import json
@@ -15,6 +27,66 @@ DEFAULT_WORLD_WRIST_MPJPE_THRESHOLD_M = 0.03
 DEFAULT_WORLD_MPJPE_MIN_LABEL_SAMPLES = 20
 DEFAULT_WORLD_MPJPE_MIN_LABEL_COVERAGE_RATIO = 0.10
 BODY_WORLD_LABEL_FILENAMES = ("body_world_joints.json", "body_world_mpjpe.json")
+
+# --- Owner-approved finger policy (2026-07-02) -----------------------------------------
+#
+# Binding owner decision, 2026-07-02: "the world-MPJPE gate scores the ~17 core body
+# joints only (standard MPJPE convention); hand/finger joints are excluded from gating
+# and reported diagnostic-only." This resolves the open question raised in
+# `runs/body_independent_gt_plan_20260702T031104Z/DECISION_DOC.md` §8: the reviewed
+# `joint_names` schema for BODY world labels carries 65 names (17 core body + 6 foot +
+# 21 left-hand + 21 right-hand finger joints) backing up to 70 `joints_world` vectors per
+# sample, but finger-joint 3D position is not realistically independently measurable at
+# pickleball capture distance/resolution by any ground-truth method surveyed (DIY
+# triangulation, manual clicks, or a rented professional rig). Scoring 42 unmeasurable
+# finger joints in the same 0.05m bucket as hips/knees/ankles silently overstated gate
+# difficulty and risked laundering copied/near-copied finger predictions as "passing"
+# independent evidence.
+#
+# `CORE_BODY_JOINT_NAMES` is the canonical 17-name core-body set (matches
+# `threed.racketsport.pose_fast.BODY_17_JOINT_NAMES` byte-for-byte; see
+# `test_body_gate_report.py::test_core_body_joint_names_matches_pose_fast_schema` for the
+# drift guard) — this is the standard COCO/Human3.6M-style 17-joint body layout that the
+# MPJPE metric conventionally refers to. Only these 17 joints (by name) are eligible for
+# the pass/fail `core_mean_error_m` gate. `FOOT_JOINT_NAMES` (6 toe/heel joints) and any
+# `left_hand_*`/`right_hand_*` finger joint are reported as diagnostic-only means
+# (`foot_mean_error_m`, `hand_mean_error_m`) that never contribute to `blockers`.
+#
+# This core-joint gating mode only activates when a label sample's `joint_names` actually
+# match the canonical schema (i.e. at least one recognized core/foot/hand name is present).
+# When `joint_names` don't establish that schema (unknown/legacy naming), the code falls
+# back to the pre-2026-07-02 behavior of scoring every provided joint (see
+# `body_feet_mean_error_m`) since there is no way to identify which indices are fingers.
+DEFAULT_CORE_JOINT_GATING_ENABLED = True
+CORE_BODY_JOINT_NAMES: tuple[str, ...] = (
+    "nose",
+    "left_eye",
+    "right_eye",
+    "left_ear",
+    "right_ear",
+    "left_shoulder",
+    "right_shoulder",
+    "left_elbow",
+    "right_elbow",
+    "left_wrist",
+    "right_wrist",
+    "left_hip",
+    "right_hip",
+    "left_knee",
+    "right_knee",
+    "left_ankle",
+    "right_ankle",
+)
+FOOT_JOINT_NAMES: tuple[str, ...] = (
+    "left_big_toe",
+    "left_small_toe",
+    "left_heel",
+    "right_big_toe",
+    "right_small_toe",
+    "right_heel",
+)
+_CORE_BODY_JOINT_NAME_SET = {name.strip().lower().replace("-", "_") for name in CORE_BODY_JOINT_NAMES}
+_FOOT_JOINT_NAME_SET = {name.strip().lower().replace("-", "_") for name in FOOT_JOINT_NAMES}
 BODY_WORLD_LABEL_PACKET_FILENAME = "body_world_label_packet.json"
 BODY_PACKET_QUALITY_FILENAME = "body_joint_quality_from_packet.json"
 BODY_GROUNDING_QUALITY_FILENAME = "body_grounding_quality.json"
@@ -60,6 +132,7 @@ def build_body_gate_report(
     world_wrist_mpjpe_threshold_m: float = DEFAULT_WORLD_WRIST_MPJPE_THRESHOLD_M,
     world_mpjpe_min_label_samples: int = DEFAULT_WORLD_MPJPE_MIN_LABEL_SAMPLES,
     world_mpjpe_min_label_coverage_ratio: float = DEFAULT_WORLD_MPJPE_MIN_LABEL_COVERAGE_RATIO,
+    core_joint_gating_enabled: bool = DEFAULT_CORE_JOINT_GATING_ENABLED,
 ) -> dict[str, Any]:
     root_path = Path(root)
     labels_path = Path(labels_root) if labels_root is not None else root_path
@@ -73,6 +146,7 @@ def build_body_gate_report(
             world_wrist_mpjpe_threshold_m=world_wrist_mpjpe_threshold_m,
             world_mpjpe_min_label_samples=world_mpjpe_min_label_samples,
             world_mpjpe_min_label_coverage_ratio=world_mpjpe_min_label_coverage_ratio,
+            core_joint_gating_enabled=core_joint_gating_enabled,
         )
         for clip in clip_names
     ]
@@ -86,6 +160,7 @@ def build_body_gate_report(
         "world_wrist_mpjpe_threshold_m": world_wrist_mpjpe_threshold_m,
         "world_mpjpe_min_label_samples": world_mpjpe_min_label_samples,
         "world_mpjpe_min_label_coverage_ratio": world_mpjpe_min_label_coverage_ratio,
+        "core_joint_gating_enabled": core_joint_gating_enabled,
         "summary": {
             "clip_count": len(clip_reports),
             "pass_count": sum(1 for clip in clip_reports if clip["status"] == "pass"),
@@ -298,6 +373,7 @@ def _build_clip_report(
     world_wrist_mpjpe_threshold_m: float,
     world_mpjpe_min_label_samples: int,
     world_mpjpe_min_label_coverage_ratio: float,
+    core_joint_gating_enabled: bool = DEFAULT_CORE_JOINT_GATING_ENABLED,
 ) -> dict[str, Any]:
     run_dir = root_path / clip
     labels_dir = labels_root / clip
@@ -322,6 +398,7 @@ def _build_clip_report(
         wrist_threshold_m=world_wrist_mpjpe_threshold_m,
         min_label_samples=world_mpjpe_min_label_samples,
         min_label_coverage_ratio=world_mpjpe_min_label_coverage_ratio,
+        core_joint_gating_enabled=core_joint_gating_enabled,
     )
     body_grounding_quality = _body_grounding_quality_status(run_dir=run_dir)
     tracking_identity_quality = _tracking_identity_quality_status(run_dir=run_dir, labels_dir=labels_dir, clip=clip)
@@ -437,6 +514,7 @@ def _world_mpjpe_status(
     wrist_threshold_m: float,
     min_label_samples: int,
     min_label_coverage_ratio: float,
+    core_joint_gating_enabled: bool = DEFAULT_CORE_JOINT_GATING_ENABLED,
 ) -> dict[str, Any]:
     label_path = _find_body_label_path(labels_dir)
     if label_path is None:
@@ -495,7 +573,7 @@ def _world_mpjpe_status(
             "label_import": label_import,
         }
 
-    prediction_index, prediction_source = _prediction_index(
+    prediction_index, prediction_source, prediction_joint_names = _prediction_index(
         smpl_motion=smpl_motion,
         skeleton3d=skeleton3d,
         body_world_label_packet=_read_optional_json(run_dir / BODY_WORLD_LABEL_PACKET_FILENAME),
@@ -530,21 +608,39 @@ def _world_mpjpe_status(
     errors: list[float] = []
     body_feet_errors: list[float] = []
     wrist_errors: list[float] = []
+    core_errors: list[float] = []
+    hand_errors: list[float] = []
+    foot_errors: list[float] = []
+    core_schema_recognized = False
     unmatched_samples = 0
     for sample in samples:
         prediction = prediction_index.get((sample["frame_index"], sample["player_id"]))
         if prediction is None:
             unmatched_samples += 1
             continue
-        sample_errors = _joint_errors(prediction, sample["joints_world"])
+        sample_joint_names = _joint_names(sample.get("joint_names"))
+        sample_errors, matched_joint_names = _joint_errors(
+            prediction, prediction_joint_names, sample["joints_world"], sample_joint_names
+        )
         errors.extend(sample_errors)
-        wrist_indices = _wrist_joint_indices(sample.get("joint_names"))
+        wrist_indices = _wrist_joint_indices(matched_joint_names)
         if wrist_indices:
             wrist_error_indices = {index for index in wrist_indices if index < len(sample_errors)}
             wrist_errors.extend(sample_errors[index] for index in sorted(wrist_error_indices))
             body_feet_errors.extend(error for index, error in enumerate(sample_errors) if index not in wrist_error_indices)
         else:
             body_feet_errors.extend(sample_errors)
+
+        core_indices = set(_core_joint_indices(matched_joint_names))
+        hand_indices = set(_hand_joint_indices(matched_joint_names))
+        foot_indices = set(_foot_joint_indices(matched_joint_names))
+        if core_indices or hand_indices or foot_indices:
+            core_schema_recognized = True
+        core_errors.extend(error for index, error in enumerate(sample_errors) if index in core_indices)
+        hand_errors.extend(error for index, error in enumerate(sample_errors) if index in hand_indices)
+        foot_errors.extend(error for index, error in enumerate(sample_errors) if index in foot_indices)
+
+    core_joint_gating_active = core_joint_gating_enabled and core_schema_recognized
 
     if not errors:
         return {
@@ -557,6 +653,15 @@ def _world_mpjpe_status(
             "wrist_threshold_m": wrist_threshold_m,
             "wrist_mean_error_m": None,
             "wrist_joint_count": 0,
+            "core_joint_gating_enabled": core_joint_gating_enabled,
+            "core_joint_gating_active": False,
+            "core_mean_error_m": None,
+            "core_threshold_m": threshold_m,
+            "core_joint_count": 0,
+            "hand_mean_error_m": None,
+            "hand_joint_count": 0,
+            "foot_mean_error_m": None,
+            "foot_joint_count": 0,
             "sample_count": 0,
             "joint_count": 0,
             "prediction_source": prediction_source,
@@ -569,11 +674,28 @@ def _world_mpjpe_status(
     mean_error = round(sum(errors) / len(errors), 6)
     body_feet_mean_error = round(sum(body_feet_errors) / len(body_feet_errors), 6) if body_feet_errors else None
     wrist_mean_error = round(sum(wrist_errors) / len(wrist_errors), 6) if wrist_errors else None
-    body_feet_passed = body_feet_mean_error is not None and body_feet_mean_error <= threshold_m
+    core_mean_error = round(sum(core_errors) / len(core_errors), 6) if core_errors else None
+    hand_mean_error = round(sum(hand_errors) / len(hand_errors), 6) if hand_errors else None
+    foot_mean_error = round(sum(foot_errors) / len(foot_errors), 6) if foot_errors else None
     wrist_passed = wrist_mean_error is None or wrist_mean_error <= wrist_threshold_m
+
+    if core_joint_gating_active:
+        # Owner-approved finger policy (2026-07-02): gate on the 17-joint core-body set
+        # only. Hand/foot joints are scored above for diagnostics but never block.
+        gated_passed = core_mean_error is not None and core_mean_error <= threshold_m
+        gating_failure_blocker = "world_mpjpe_gate_failed"
+        joint_gating_mode = "core17_hand_foot_diagnostic"
+    else:
+        # Legacy fallback: joint_names didn't establish the canonical schema (or the
+        # caller explicitly disabled core-joint gating), so score every provided joint
+        # exactly as before 2026-07-02.
+        gated_passed = body_feet_mean_error is not None and body_feet_mean_error <= threshold_m
+        gating_failure_blocker = "world_mpjpe_gate_failed"
+        joint_gating_mode = "legacy_all_joints"
+
     blockers = []
-    if not body_feet_passed:
-        blockers.append("world_mpjpe_gate_failed")
+    if not gated_passed:
+        blockers.append(gating_failure_blocker)
     if not wrist_passed:
         blockers.append("wrist_mpjpe_gate_failed")
     return {
@@ -586,6 +708,16 @@ def _world_mpjpe_status(
         "wrist_threshold_m": wrist_threshold_m,
         "wrist_mean_error_m": wrist_mean_error,
         "wrist_joint_count": len(wrist_errors),
+        "core_joint_gating_enabled": core_joint_gating_enabled,
+        "core_joint_gating_active": core_joint_gating_active,
+        "joint_gating_mode": joint_gating_mode,
+        "core_mean_error_m": core_mean_error,
+        "core_threshold_m": threshold_m,
+        "core_joint_count": len(core_errors),
+        "hand_mean_error_m": hand_mean_error,
+        "hand_joint_count": len(hand_errors),
+        "foot_mean_error_m": foot_mean_error,
+        "foot_joint_count": len(foot_errors),
         "sample_count": len(samples) - unmatched_samples,
         "joint_count": len(errors),
         "prediction_source": prediction_source,
@@ -1510,17 +1642,34 @@ def _prediction_index(
     smpl_motion: Mapping[str, Any] | None,
     skeleton3d: Mapping[str, Any] | None,
     body_world_label_packet: Mapping[str, Any] | None,
-) -> tuple[dict[tuple[int, int], list[tuple[float, float, float]]], str]:
+) -> tuple[dict[tuple[int, int], list[tuple[float, float, float]]], str, list[str]]:
     smpl_index = _players_prediction_index(smpl_motion, fps=_fps(smpl_motion))
     if smpl_index:
-        return smpl_index, "smpl_motion"
+        return smpl_index, "smpl_motion", _payload_joint_names(smpl_motion)
     skeleton_index = _players_prediction_index(skeleton3d, fps=_fps(smpl_motion) or 30.0)
     if skeleton_index:
-        return skeleton_index, "skeleton3d"
+        return skeleton_index, "skeleton3d", _payload_joint_names(skeleton3d)
     packet_index = _packet_prediction_index(body_world_label_packet)
     if packet_index:
-        return packet_index, "body_world_label_packet"
-    return {}, ""
+        return packet_index, "body_world_label_packet", _payload_joint_names(body_world_label_packet)
+    return {}, "", []
+
+
+def _payload_joint_names(payload: Mapping[str, Any] | None) -> list[str]:
+    """Top-level `joint_names` for a prediction payload (smpl_motion/skeleton3d/packet).
+
+    Used to name-match prediction joints against label joints (see `_joint_errors`)
+    instead of comparing by raw positional index -- positional comparison silently
+    compares unrelated joints whenever the two sides do not share one schema/order
+    (e.g. a partial external-ground-truth joint set scored against a full-body
+    prediction schema). Returns `[]` when the payload has no joint-name metadata,
+    which is the signal `_joint_errors` uses to fall back to legacy positional
+    matching for producers that predate mandatory `joint_names`.
+    """
+
+    if not isinstance(payload, Mapping):
+        return []
+    return _joint_names(payload.get("joint_names"))
 
 
 def _packet_prediction_index(payload: Mapping[str, Any] | None) -> dict[tuple[int, int], list[tuple[float, float, float]]]:
@@ -1629,10 +1778,46 @@ def _players_prediction_index(payload: Mapping[str, Any] | None, *, fps: float) 
 
 def _joint_errors(
     prediction: list[tuple[float, float, float]],
+    prediction_joint_names: list[str],
     label: list[tuple[float, float, float]],
-) -> list[float]:
-    count = min(len(prediction), len(label))
-    return [_distance(prediction[index], label[index]) for index in range(count)]
+    label_joint_names: list[str],
+) -> tuple[list[float], list[str]]:
+    """Match prediction and label joints by name and return ``(errors, matched_names)``.
+
+    Joints are matched **only by name**, never by raw positional index. Positional
+    index matching silently compares unrelated joints whenever the prediction and
+    label do not share exactly one schema/order -- most notably when a label only
+    carries a partial joint subset (e.g. ASPset-510 external ground truth supplies
+    only the 12 shared limb joints, in a different order than this project's 17-joint
+    core-body schema; see `threed.racketsport.external_gt_aspset510`). Any label joint
+    whose name is not present on the prediction side is dropped rather than paired
+    with an unrelated prediction index, so ``matched_names[i]`` always names the exact
+    joint ``errors[i]`` was computed against.
+
+    Falls back to legacy positional matching (``range(min(len(prediction), len(label)))``)
+    only when either side has no joint-name metadata at all -- this is only safe when
+    both sides are already known (same producer, fixed schema) to share one order, and
+    exists solely for payloads that predate mandatory ``joint_names``.
+    """
+
+    if not prediction_joint_names or not label_joint_names:
+        count = min(len(prediction), len(label))
+        names = [label_joint_names[index] if index < len(label_joint_names) else "" for index in range(count)]
+        return [_distance(prediction[index], label[index]) for index in range(count)], names
+
+    prediction_by_name: dict[str, tuple[float, float, float]] = {}
+    for name, point in zip(prediction_joint_names, prediction):
+        prediction_by_name.setdefault(_normalize_joint_name(name), point)
+
+    errors: list[float] = []
+    matched_names: list[str] = []
+    for name, point in zip(label_joint_names, label):
+        predicted_point = prediction_by_name.get(_normalize_joint_name(name))
+        if predicted_point is None:
+            continue
+        errors.append(_distance(predicted_point, point))
+        matched_names.append(name)
+    return errors, matched_names
 
 
 def _wrist_joint_indices(joint_names: Any) -> list[int]:
@@ -1641,8 +1826,46 @@ def _wrist_joint_indices(joint_names: Any) -> list[int]:
 
 
 def _is_wrist_joint_name(name: str) -> bool:
-    normalized = name.strip().lower().replace("-", "_")
+    normalized = _normalize_joint_name(name)
     return normalized in {"left_wrist", "right_wrist", "lwrist", "rwrist", "wrist"} or normalized.endswith("_wrist")
+
+
+def _core_joint_indices(joint_names: Any) -> list[int]:
+    """Indices of the 17 owner-approved core-body joints (2026-07-02 finger policy)."""
+
+    names = _joint_names(joint_names)
+    return [index for index, name in enumerate(names) if _is_core_body_joint_name(name)]
+
+
+def _hand_joint_indices(joint_names: Any) -> list[int]:
+    """Indices of finger joints — diagnostic-only, never gated (2026-07-02 finger policy)."""
+
+    names = _joint_names(joint_names)
+    return [index for index, name in enumerate(names) if _is_hand_joint_name(name)]
+
+
+def _foot_joint_indices(joint_names: Any) -> list[int]:
+    """Indices of toe/heel joints — diagnostic-only, outside the core-17 gated set."""
+
+    names = _joint_names(joint_names)
+    return [index for index, name in enumerate(names) if _is_foot_joint_name(name)]
+
+
+def _is_core_body_joint_name(name: str) -> bool:
+    return _normalize_joint_name(name) in _CORE_BODY_JOINT_NAME_SET
+
+
+def _is_hand_joint_name(name: str) -> bool:
+    normalized = _normalize_joint_name(name)
+    return normalized.startswith("left_hand_") or normalized.startswith("right_hand_")
+
+
+def _is_foot_joint_name(name: str) -> bool:
+    return _normalize_joint_name(name) in _FOOT_JOINT_NAME_SET
+
+
+def _normalize_joint_name(name: str) -> str:
+    return str(name).strip().lower().replace("-", "_")
 
 
 def _joint_names(value: Any) -> list[str]:

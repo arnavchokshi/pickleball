@@ -1,0 +1,110 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000151.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            869.7902097902098,
+            1085.0386699583082
+          ],
+          "far_left_corner": [
+            708.6713286713286,
+            1072.4512143903464
+          ],
+          "far_nvz_center": [
+            789.2307692307693,
+            1113.9898177646203
+          ],
+          "far_nvz_left": [
+            590.3496503496503,
+            1088.8149066286967
+          ],
+          "far_nvz_right": [
+            1038.4615384615386,
+            1142.9409655709326
+          ],
+          "far_right_corner": [
+            1072.4475524475524,
+            1100.1436166398623
+          ],
+          "near_baseline_center": [
+            196.36363636363637,
+            1314.130361295213
+          ],
+          "near_nvz_center": [
+            621.8181818181819,
+            1165.5983855932639
+          ],
+          "near_nvz_left": [
+            399.02097902097904,
+            1125.318527775786
+          ],
+          "near_nvz_right": [
+            979.3006993006993,
+            1226.0181723194805
+          ],
+          "near_right_corner": [
+            756.5034965034965,
+            1536.9283248481372
+          ],
+          "net_center": [
+            717.4825174825174,
+            1131.612255559767
+          ],
+          "net_left_sideline": [
+            509.7902097902098,
+            1106.4373444238433
+          ],
+          "net_right_sideline": [
+            1018.3216783216783,
+            1173.1508589340408
+          ]
+        },
+        "review_id": "img1605_court_keypoints_000151",
+        "status": "reviewed_partial_visible",
+        "visibility_by_keypoint": {
+          "far_baseline_center": "visible",
+          "far_left_corner": "visible",
+          "far_nvz_center": "visible",
+          "far_nvz_left": "visible",
+          "far_nvz_right": "visible",
+          "far_right_corner": "visible",
+          "near_baseline_center": "visible",
+          "near_left_corner": "missing_occluded_or_off_frame",
+          "near_nvz_center": "visible",
+          "near_nvz_left": "visible",
+          "near_nvz_right": "visible",
+          "near_right_corner": "visible",
+          "net_center": "visible",
+          "net_left_sideline": "visible",
+          "net_right_sideline": "visible"
+        }
+      }
+    ]
+  },
+  "artifact_type": "racketsport_court_keypoint_partial_labels",
+  "clip": "owner_IMG_1605_8a193402780b",
+  "frames": {
+    "available_review_frame_count": 3,
+    "frame_count": 1,
+    "frame_dir": "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoint_partial_frames",
+    "label_coordinate_space": [
+      1080.0,
+      1920.0
+    ],
+    "sample_every_frames": null,
+    "source_resolution": [
+      1080.0,
+      1920.0
+    ]
+  },
+  "review": {
+    "not_full_metric15_calibration": true,
+    "reviewed_at_utc": "2026-07-03T02:27:41.683768+00:00",
+    "reviewer": "local_court_keypoint_review",
+    "status": "reviewed_partial",
+    "visible_keypoint_frame_count": 1
+  },
+  "schema_version": 1
+}

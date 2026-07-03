@@ -36,17 +36,38 @@ class AppearanceDiagnosticConfig:
 
 @dataclass(frozen=True)
 class ReIDEmbeddingExportConfig:
+    """Config for learned per-detection ReID embedding export.
+
+    ``batch_size=64`` default: real fresh measurements (512 real Burlington
+    crops, ``osnet_x1_0``, see ``runs/trk_speed_reid_gpu_20260702T045139Z/timing/
+    batching_device_benchmark.json``) found 64 near-optimal on *both* devices --
+    the single stacked-tensor forward pass this module already performs per
+    chunk (see ``_extract_embeddings_in_batches``) is not per-crop singleton
+    forwards, but chunk size still matters a lot: CPU improved ~2x from
+    batch=1 (312.7 ms/crop) to batch=64 (158.3 ms/crop, the measured minimum;
+    batch=128 regressed to 210.5 ms/crop), while MPS improved ~16x from
+    batch=1 (59.7 ms/crop) to batch>=32 (3.7-3.8 ms/crop, effectively flat
+    32-128) -- MPS per-call kernel-dispatch overhead dominates at small batch
+    sizes far more than on CPU.
+    """
+
+    backend: str = "ultralytics_yolo"
     max_detections: int | None = None
     sample_stride_frames: int = 1
     crop_padding_px: int = 8
-    batch_size: int = 32
+    batch_size: int = 64
     imgsz: int = 224
     embed_layer: int = 21
     device: str | None = None
     half: bool | None = None
     l2_normalize: bool = True
+    osnet_model_name: str = "osnet_x1_0"
+    osnet_image_height: int = 256
+    osnet_image_width: int = 128
 
     def __post_init__(self) -> None:
+        if self.backend not in {"ultralytics_yolo", "osnet"}:
+            raise ValueError("backend must be ultralytics_yolo or osnet")
         if self.max_detections is not None and self.max_detections <= 0:
             raise ValueError("max_detections must be positive when provided")
         if self.sample_stride_frames <= 0:
@@ -57,6 +78,8 @@ class ReIDEmbeddingExportConfig:
             raise ValueError("batch_size must be positive")
         if self.imgsz <= 0:
             raise ValueError("imgsz must be positive")
+        if self.osnet_image_height <= 0 or self.osnet_image_width <= 0:
+            raise ValueError("OSNet image size must be positive")
 
 
 FeatureExtractor = Callable[[list[Any]], Sequence[Sequence[float]]]
@@ -181,7 +204,7 @@ def build_source_reid_embedding_export(
     if not crop_records:
         raise ValueError("no valid person crops selected for ReID embedding export")
 
-    extractor = feature_extractor or _make_ultralytics_yolo_embedder(model, cfg)
+    extractor = feature_extractor or _make_feature_extractor(model, cfg)
     embeddings = _extract_embeddings_in_batches(extractor, crops, batch_size=cfg.batch_size)
     if len(embeddings) != len(crop_records):
         raise ValueError("feature extractor returned a different embedding count than the selected crops")
@@ -223,8 +246,9 @@ def build_source_reid_embedding_export(
         "source_person_detection_count": inspection["person_detection_count"],
         "model_path": str(model),
         "model_sha256": model_sha256,
-        "feature_type": "learned_model_embedding",
-        "feature_extractor": "ultralytics_yolo_embed" if feature_extractor is None else "injected_feature_extractor",
+        "feature_type": _feature_type(cfg),
+        "feature_extractor": _feature_extractor_name(cfg, injected=feature_extractor is not None),
+        "model_family": _model_family(cfg),
         "feature_layer": cfg.embed_layer,
         "feature_dim": feature_dim,
         "l2_normalized": cfg.l2_normalize,
@@ -432,6 +456,32 @@ def _select_embedding_samples(detections_payload: Mapping[str, Any], config: ReI
     return selected
 
 
+def _make_feature_extractor(model_path: Path, config: ReIDEmbeddingExportConfig) -> FeatureExtractor:
+    if config.backend == "osnet":
+        return _make_osnet_embedder(model_path, config)
+    return _make_ultralytics_yolo_embedder(model_path, config)
+
+
+def _feature_type(config: ReIDEmbeddingExportConfig) -> str:
+    if config.backend == "osnet":
+        return "osnet_reid_embedding"
+    return "learned_model_embedding"
+
+
+def _model_family(config: ReIDEmbeddingExportConfig) -> str:
+    if config.backend == "osnet":
+        return "osnet"
+    return "ultralytics_yolo"
+
+
+def _feature_extractor_name(config: ReIDEmbeddingExportConfig, *, injected: bool) -> str:
+    if injected:
+        return f"injected_{_model_family(config)}_feature_extractor"
+    if config.backend == "osnet":
+        return f"torchreid_{config.osnet_model_name}"
+    return "ultralytics_yolo_embed"
+
+
 def _make_ultralytics_yolo_embedder(model_path: Path, config: ReIDEmbeddingExportConfig) -> FeatureExtractor:
     try:
         from ultralytics import YOLO  # type: ignore[import-not-found]
@@ -455,6 +505,247 @@ def _make_ultralytics_yolo_embedder(model_path: Path, config: ReIDEmbeddingExpor
         return [_tensor_to_float_list(result) for result in results]
 
     return embed
+
+
+# Auto-detect includes mps by default -- see resolve_reid_device's docstring
+# for the full-scale correctness investigation this is based on. A per-call
+# allow_mps_auto=False override remains available if a future finding
+# reopens this question for a specific caller.
+MPS_AUTO_DETECT_ENABLED = True
+
+
+def resolve_reid_device(
+    requested_device: str | None,
+    *,
+    torch_module: Any | None = None,
+    allow_mps_auto: bool | None = None,
+) -> str:
+    """Resolve the torch device string used for OSNet ReID embedding extraction.
+
+    An explicit ``requested_device`` (``"cuda"``, ``"cuda:0"``, ``"mps"``, ``"cpu"``,
+    ...) always wins -- this is the "explicit override" the offline authority
+    device plumbing (``OfflineAuthorityConfig.reid_device`` /
+    ``RawPoolAuthorityConfig.reid_device`` / ``ReIDEmbeddingExportConfig.device``)
+    threads through unchanged.
+
+    When not provided (``None`` or empty), auto-detects the fastest available
+    backend in priority order **cuda > mps > cpu**:
+
+    - ``cuda`` covers the A100 training/inference host.
+    - ``mps`` covers Apple Silicon (the torch Metal Performance Shaders
+      backend), which was previously never selected -- ``reid_device``
+      defaulted straight to CPU on every non-CUDA machine, including this
+      Mac, even though OSNet ReID embedding extraction is the #1 measured
+      pipeline cost center (~1,665-7,586 s/min-video on CPU; see
+      ``runs/glue3_speed_budget_20260702T035746Z/RUNTIME_BUDGET.md``).
+    - ``cpu`` is the universal fallback when neither accelerator backend is
+      available (or torch itself is not importable), or when
+      ``allow_mps_auto``/``MPS_AUTO_DETECT_ENABLED`` disables mps
+      auto-detection for a specific caller.
+
+    **Correctness evidence (full investigation, including one false alarm
+    correctly resolved -- see** ``runs/trk_speed_reid_gpu_20260702T045139Z/``
+    **for full numbers):** a 200-real-crop CPU-vs-MPS proof found
+    per-embedding cosine deviation of ~1e-11 (float-rounding level) and
+    byte-identical downstream ``associate_global_identities`` clustering. A
+    follow-up full-clip re-measurement (11,095 real detections) initially
+    looked alarming -- a fresh MPS run's IDF1 (0.8390) differed from a
+    cached CPU baseline artifact (IDF1 0.8682, captured the prior day) -- but
+    controlled same-session re-measurement across **three** fresh
+    combinations (cpu/batch=64, mps/batch=32, mps/batch=64) found all three
+    agree **exactly** with each other (IDF1 0.8389904264577894 to 13+ decimal
+    digits, identical fragment/merge counts) and only the stale cached
+    artifact differs. The stale artifact's own dependency,
+    ``player_global_association.py``, was independently modified by another
+    lane in this shared, no-commits working tree between when that artifact
+    was captured and this investigation (confirmed via file mtime, after the
+    baseline capture and before any run in this investigation) -- ordinary
+    concurrent code evolution, not a device-numerics bug. **Conclusion: no
+    device-specific correctness risk was found; mps stays in auto-detect.**
+
+    ``torch_module`` lets callers/tests inject a fake torch-like object (with
+    ``.cuda.is_available()`` / ``.backends.mps.is_available()``) so this
+    resolver -- and anything that depends on it -- can be exercised without
+    requiring the real torch/torchreid stack to be importable. ``allow_mps_auto``
+    overrides the module-level ``MPS_AUTO_DETECT_ENABLED`` default per call.
+    """
+    if requested_device:
+        return requested_device
+    torch_mod = torch_module
+    if torch_mod is None:
+        try:
+            import torch as torch_mod  # type: ignore[import-not-found]
+        except ImportError:
+            return "cpu"
+    if _torch_backend_available(torch_mod, "cuda"):
+        return "cuda:0"
+    mps_auto = MPS_AUTO_DETECT_ENABLED if allow_mps_auto is None else allow_mps_auto
+    if mps_auto and _torch_backend_available(torch_mod, "mps"):
+        return "mps"
+    return "cpu"
+
+
+def _torch_backend_available(torch_module: Any, backend: str) -> bool:
+    if backend == "cuda":
+        accessor = getattr(torch_module, "cuda", None)
+    elif backend == "mps":
+        backends = getattr(torch_module, "backends", None)
+        accessor = getattr(backends, "mps", None)
+    else:
+        return False
+    is_available = getattr(accessor, "is_available", None)
+    if not callable(is_available):
+        return False
+    try:
+        return bool(is_available())
+    except Exception:
+        # A backend that raises while probing availability (e.g. a partially
+        # initialized build) is treated as unavailable rather than crashing
+        # embedding export.
+        return False
+
+
+def _make_osnet_embedder(model_path: Path, config: ReIDEmbeddingExportConfig) -> FeatureExtractor:
+    try:
+        import cv2  # type: ignore[import-not-found]
+        import numpy as np  # type: ignore[import-not-found]
+        import torch  # type: ignore[import-not-found]
+        from torchreid import models as torchreid_models  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise RuntimeError("torch, torchreid, OpenCV, and numpy are required for OSNet ReID embedding export") from exc
+
+    device = torch.device(resolve_reid_device(config.device, torch_module=torch))
+    model = torchreid_models.build_model(
+        name=config.osnet_model_name,
+        num_classes=1000,
+        loss="softmax",
+        pretrained=False,
+    )
+    checkpoint = _torch_load_checkpoint(torch, model_path)
+    state_dict = _extract_state_dict(checkpoint)
+    model.load_state_dict(_matching_state_dict(model.state_dict(), state_dict), strict=False)
+    model.to(device)
+    model.eval()
+    if config.half:
+        model.half()
+
+    mean = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(1, 1, 3)
+    std = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(1, 1, 3)
+
+    def embed(crops: list[Any]) -> Sequence[Sequence[float]]:
+        tensors = []
+        for crop in crops:
+            resized = cv2.resize(crop, (config.osnet_image_width, config.osnet_image_height), interpolation=cv2.INTER_AREA)
+            rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB).astype("float32") / 255.0
+            normalized = (rgb - mean) / std
+            chw = np.transpose(normalized, (2, 0, 1))
+            tensors.append(torch.from_numpy(chw))
+        if not tensors:
+            return []
+        batch = torch.stack(tensors).to(device)
+        if config.half:
+            batch = batch.half()
+        with torch.no_grad():
+            features = model(batch)
+        if isinstance(features, dict):
+            for key in ("features", "embeddings", "logits"):
+                if key in features:
+                    features = features[key]
+                    break
+        if isinstance(features, (list, tuple)):
+            features = features[0]
+        if hasattr(features, "detach"):
+            features = features.detach()
+        if hasattr(features, "cpu"):
+            features = features.cpu()
+        if hasattr(features, "float"):
+            features = features.float()
+        if hasattr(features, "reshape"):
+            features = features.reshape(features.shape[0], -1)
+        rows = features.tolist()
+        return [[float(value) for value in row] for row in rows]
+
+    return embed
+
+
+def _extract_state_dict(checkpoint: Any) -> dict[str, Any]:
+    if isinstance(checkpoint, dict):
+        for key in ("state_dict", "model_state_dict", "model", "net"):
+            value = checkpoint.get(key)
+            if isinstance(value, dict):
+                return _strip_state_dict_prefixes(value)
+        if checkpoint and all(isinstance(key, str) for key in checkpoint):
+            return _strip_state_dict_prefixes(checkpoint)
+    raise ValueError("OSNet checkpoint does not contain a state_dict")
+
+
+def _torch_load_checkpoint(torch_module: Any, path: Path) -> Any:
+    try:
+        return torch_module.load(str(path), map_location="cpu", weights_only=False)
+    except TypeError:
+        return torch_module.load(str(path), map_location="cpu")
+
+
+def _matching_state_dict(model_state_dict: Mapping[str, Any], checkpoint_state_dict: Mapping[str, Any]) -> dict[str, Any]:
+    """Keep only checkpoint tensors whose key and shape match the built model.
+
+    Real OSNet ReID checkpoints (e.g. Market1501/MSMT17-trained) carry a
+    classifier head sized for the training identity count, which almost never
+    matches an arbitrarily chosen ``num_classes`` used to build the inference
+    model. ``load_state_dict(..., strict=False)`` only tolerates missing or
+    unexpected *keys*; a shape mismatch on a shared key still raises. Filtering
+    here mirrors torchreid's own ``load_pretrained_weights`` helper so the
+    (unused at inference) classifier layer is dropped instead of crashing.
+    """
+
+    matched, _skipped = _filter_compatible_state_dict(checkpoint_state_dict, model_state_dict)
+    if not matched:
+        raise ValueError("OSNet checkpoint state_dict has no keys matching the model architecture")
+    return matched
+
+
+def _filter_compatible_state_dict(
+    checkpoint_state_dict: Mapping[str, Any],
+    model_state_dict: Mapping[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
+    matched: dict[str, Any] = {}
+    skipped: list[str] = []
+    for key, value in checkpoint_state_dict.items():
+        target = model_state_dict.get(key)
+        if target is None:
+            skipped.append(str(key))
+            continue
+        if _shape_tuple(target) != _shape_tuple(value):
+            skipped.append(str(key))
+            continue
+        matched[str(key)] = value
+    return matched, skipped
+
+
+def _shape_tuple(value: Any) -> tuple[int, ...] | None:
+    shape = getattr(value, "shape", None)
+    if shape is None:
+        return None
+    try:
+        return tuple(int(item) for item in shape)
+    except TypeError:
+        return None
+
+
+def _strip_state_dict_prefixes(state_dict: dict[str, Any]) -> dict[str, Any]:
+    prefixes = ("module.", "model.")
+    stripped: dict[str, Any] = {}
+    for key, value in state_dict.items():
+        clean = str(key)
+        changed = True
+        while changed:
+            changed = False
+            for prefix in prefixes:
+                if clean.startswith(prefix):
+                    clean = clean[len(prefix) :]
+                    changed = True
+        stripped[clean] = value
+    return stripped
 
 
 def _extract_embeddings_in_batches(extractor: FeatureExtractor, crops: Sequence[Any], *, batch_size: int) -> list[Sequence[float]]:
@@ -649,10 +940,130 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def reid_checkpoint_training_provenance(model_path: str | Path) -> dict[str, Any]:
+    """Report whether a ReID checkpoint carries local fine-tune provenance.
+
+    ``scripts/racketsport/train_person_osnet_reid.py`` writes a
+    ``training_summary.json`` next to any checkpoint it produces, pointing at
+    the labeled crop-dataset ``manifest.json`` it trained from. That manifest
+    records, per clip, how many crops fed the ``train`` split. A checkpoint
+    fine-tuned on a clip's reviewed identities is not safe to *score* on that
+    same clip: appearance similarity would partly reflect memorized identity
+    features rather than genuine tracker/association quality, which would
+    quietly leak labels into TRK promotion evidence.
+
+    Stock/upstream checkpoints (e.g. the Market1501-trained OSNet weights)
+    have no local ``training_summary.json`` and are reported as safe with no
+    provenance. This function only reads local training artifacts; it never
+    reads CVAT ground truth itself.
+    """
+    path = Path(model_path)
+    weights_sha256 = _sha256_file(path) if path.is_file() else None
+    training_summary_path = _find_nearby_training_summary(path)
+    if training_summary_path is None:
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_reid_checkpoint_training_provenance",
+            "weights_path": str(path),
+            "weights_sha256": weights_sha256,
+            "has_local_training_provenance": False,
+            "training_summary_path": None,
+            "dataset_manifest_path": None,
+            "trained_on_clip_ids": [],
+            "held_out_val_clip_ids": [],
+            "notes": [
+                "No training_summary.json found near this checkpoint; treated as a "
+                "stock/upstream ReID weight with no local fine-tune provenance."
+            ],
+        }
+
+    training_summary = _read_json_object_local(training_summary_path)
+    manifest_path = _resolve_dataset_manifest_path(training_summary)
+    trained_on: set[str] = set()
+    held_out: set[str] = set()
+    dataset_manifest_path: str | None = None
+    if manifest_path is not None and manifest_path.is_file():
+        dataset_manifest_path = str(manifest_path)
+        manifest = _read_json_object_local(manifest_path)
+        clip_counts = manifest.get("clip_counts")
+        if isinstance(clip_counts, dict):
+            for clip_id, counts in clip_counts.items():
+                if isinstance(counts, dict) and int(counts.get("train", 0) or 0) > 0:
+                    trained_on.add(str(clip_id))
+                else:
+                    held_out.add(str(clip_id))
+
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_reid_checkpoint_training_provenance",
+        "weights_path": str(path),
+        "weights_sha256": weights_sha256,
+        "has_local_training_provenance": True,
+        "training_summary_path": str(training_summary_path),
+        "dataset_manifest_path": dataset_manifest_path,
+        "trained_on_clip_ids": sorted(trained_on),
+        "held_out_val_clip_ids": sorted(held_out - trained_on),
+        "notes": [
+            "This checkpoint has a local training_summary.json: it was fine-tuned on "
+            "reviewed CVAT identities.",
+            "trained_on_clip_ids contributed at least one train-split crop and must "
+            "not be used as the clip scored with this checkpoint.",
+        ],
+    }
+
+
+def assert_reid_checkpoint_clip_safe(provenance: Mapping[str, Any], *, clip_id: str) -> None:
+    """Fail closed if ``provenance`` shows the checkpoint trained on ``clip_id``."""
+    trained_on = provenance.get("trained_on_clip_ids") or []
+    if clip_id in trained_on:
+        raise ValueError(
+            "reid checkpoint training-provenance leak: weights "
+            f"{provenance.get('weights_path')} (sha256={provenance.get('weights_sha256')}) "
+            f"were fine-tuned on train-split identity crops from clip_id={clip_id!r} "
+            f"(training_summary={provenance.get('training_summary_path')}, "
+            f"dataset_manifest={provenance.get('dataset_manifest_path')}); "
+            "refusing to score this clip with this checkpoint."
+        )
+
+
+def _find_nearby_training_summary(model_path: Path, *, max_levels_up: int = 3) -> Path | None:
+    directory = model_path.parent
+    for _ in range(max_levels_up):
+        candidate = directory / "training_summary.json"
+        if candidate.is_file():
+            return candidate
+        parent = directory.parent
+        if parent == directory:
+            break
+        directory = parent
+    return None
+
+
+def _resolve_dataset_manifest_path(training_summary: Mapping[str, Any]) -> Path | None:
+    manifest_path = training_summary.get("manifest_path")
+    if manifest_path:
+        return Path(str(manifest_path))
+    dataset_dir = training_summary.get("dataset_dir")
+    if dataset_dir:
+        return Path(str(dataset_dir)) / "manifest.json"
+    return None
+
+
+def _read_json_object_local(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    return payload
+
+
 __all__ = [
+    "MPS_AUTO_DETECT_ENABLED",
     "AppearanceDiagnosticConfig",
     "ReIDEmbeddingExportConfig",
+    "assert_reid_checkpoint_clip_safe",
     "build_source_appearance_diagnostic",
     "build_source_reid_embedding_export",
     "inspect_detection_appearance_inputs",
+    "reid_checkpoint_training_provenance",
+    "resolve_reid_device",
 ]

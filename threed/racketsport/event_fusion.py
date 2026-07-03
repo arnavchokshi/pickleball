@@ -18,6 +18,11 @@ from threed.racketsport.contact_windows import build_contact_event, build_contac
 DEFAULT_MAX_TIME_DELTA_S = 0.035
 DEFAULT_PRE_WINDOW_S = 0.035
 DEFAULT_POST_WINDOW_S = 0.055
+DEFAULT_WRIST_ONLY_PRE_WINDOW_S = 0.12
+DEFAULT_WRIST_ONLY_POST_WINDOW_S = 0.18
+DEFAULT_WRIST_ONLY_MIN_SEPARATION_S = 0.18
+DEFAULT_WRIST_ONLY_CONFIDENCE_CAP = 0.35
+WRIST_ONLY_TRUST_BAND_NOTE = "wrist-cue-only, unverified"
 
 
 @dataclass(frozen=True)
@@ -75,6 +80,11 @@ def fuse_contact_windows(
     max_time_delta_s: float = DEFAULT_MAX_TIME_DELTA_S,
     pre_s: float = DEFAULT_PRE_WINDOW_S,
     post_s: float = DEFAULT_POST_WINDOW_S,
+    allow_wrist_only_contact_hints: bool = False,
+    wrist_only_pre_s: float = DEFAULT_WRIST_ONLY_PRE_WINDOW_S,
+    wrist_only_post_s: float = DEFAULT_WRIST_ONLY_POST_WINDOW_S,
+    wrist_only_min_separation_s: float = DEFAULT_WRIST_ONLY_MIN_SEPARATION_S,
+    wrist_only_confidence_cap: float = DEFAULT_WRIST_ONLY_CONFIDENCE_CAP,
 ) -> dict[str, object]:
     """Fuse required audio, wrist, and ball cues into ContactWindows dicts.
 
@@ -86,12 +96,26 @@ def fuse_contact_windows(
     max_time_delta_s = _require_finite(max_time_delta_s, "max_time_delta_s")
     pre_s = _require_finite(pre_s, "pre_s")
     post_s = _require_finite(post_s, "post_s")
+    wrist_only_pre_s = _require_finite(wrist_only_pre_s, "wrist_only_pre_s")
+    wrist_only_post_s = _require_finite(wrist_only_post_s, "wrist_only_post_s")
+    wrist_only_min_separation_s = _require_finite(
+        wrist_only_min_separation_s,
+        "wrist_only_min_separation_s",
+    )
+    wrist_only_confidence_cap = _require_confidence(
+        wrist_only_confidence_cap,
+        "wrist_only_confidence_cap",
+    )
     if fps <= 0.0:
         raise ValueError("fps must be positive")
     if max_time_delta_s < 0.0:
         raise ValueError("max_time_delta_s must be non-negative")
     if pre_s < 0.0 or post_s < 0.0:
         raise ValueError("pre_s and post_s must be non-negative")
+    if wrist_only_pre_s < 0.0 or wrist_only_post_s < 0.0:
+        raise ValueError("wrist_only_pre_s and wrist_only_post_s must be non-negative")
+    if wrist_only_min_separation_s < 0.0:
+        raise ValueError("wrist_only_min_separation_s must be non-negative")
 
     normalized_audio = sorted(
         (_coerce_audio_onset(candidate) for candidate in audio_onsets),
@@ -100,9 +124,29 @@ def fuse_contact_windows(
     sorted_ball = sorted(ball_inflections, key=lambda candidate: candidate.time_s)
     sorted_wrist = sorted(wrist_velocity_peaks, key=lambda candidate: (candidate.time_s, candidate.player_id))
 
-    if require_audio and not normalized_audio:
+    if not sorted_wrist:
         return build_contact_windows_artifact([])
-    if not sorted_ball or not sorted_wrist:
+    if require_audio and not normalized_audio:
+        if allow_wrist_only_contact_hints:
+            return _wrist_only_contact_hints(
+                fps=fps,
+                wrists=sorted_wrist,
+                pre_s=wrist_only_pre_s,
+                post_s=wrist_only_post_s,
+                min_separation_s=wrist_only_min_separation_s,
+                confidence_cap=wrist_only_confidence_cap,
+            )
+        return build_contact_windows_artifact([])
+    if not sorted_ball:
+        if allow_wrist_only_contact_hints:
+            return _wrist_only_contact_hints(
+                fps=fps,
+                wrists=sorted_wrist,
+                pre_s=wrist_only_pre_s,
+                post_s=wrist_only_post_s,
+                min_separation_s=wrist_only_min_separation_s,
+                confidence_cap=wrist_only_confidence_cap,
+            )
         return build_contact_windows_artifact([])
 
     events: list[dict[str, object]] = []
@@ -148,7 +192,16 @@ def fuse_contact_windows(
             used_wrist_indices.add(wrist_idx)
 
         events.sort(key=lambda event: (float(event["t"]), int(event["frame"])))
-        return build_contact_windows_artifact(events)
+        if events or not allow_wrist_only_contact_hints:
+            return build_contact_windows_artifact(events)
+        return _wrist_only_contact_hints(
+            fps=fps,
+            wrists=sorted_wrist,
+            pre_s=wrist_only_pre_s,
+            post_s=wrist_only_post_s,
+            min_separation_s=wrist_only_min_separation_s,
+            confidence_cap=wrist_only_confidence_cap,
+        )
 
     for audio in normalized_audio:
         ball_match = _nearest_ball_match(audio, sorted_ball, used_ball_indices, max_time_delta_s)
@@ -193,7 +246,16 @@ def fuse_contact_windows(
         used_wrist_indices.add(wrist_idx)
 
     events.sort(key=lambda event: (float(event["t"]), int(event["frame"])))
-    return build_contact_windows_artifact(events)
+    if events or not allow_wrist_only_contact_hints:
+        return build_contact_windows_artifact(events)
+    return _wrist_only_contact_hints(
+        fps=fps,
+        wrists=sorted_wrist,
+        pre_s=wrist_only_pre_s,
+        post_s=wrist_only_post_s,
+        min_separation_s=wrist_only_min_separation_s,
+        confidence_cap=wrist_only_confidence_cap,
+    )
 
 
 def fuse_contact_windows_from_cue_payloads(
@@ -206,6 +268,11 @@ def fuse_contact_windows_from_cue_payloads(
     max_time_delta_s: float = DEFAULT_MAX_TIME_DELTA_S,
     pre_s: float = DEFAULT_PRE_WINDOW_S,
     post_s: float = DEFAULT_POST_WINDOW_S,
+    allow_wrist_only_contact_hints: bool = False,
+    wrist_only_pre_s: float = DEFAULT_WRIST_ONLY_PRE_WINDOW_S,
+    wrist_only_post_s: float = DEFAULT_WRIST_ONLY_POST_WINDOW_S,
+    wrist_only_min_separation_s: float = DEFAULT_WRIST_ONLY_MIN_SEPARATION_S,
+    wrist_only_confidence_cap: float = DEFAULT_WRIST_ONLY_CONFIDENCE_CAP,
 ) -> dict[str, object]:
     """Fuse canonical cue artifact payloads into a ContactWindows artifact."""
 
@@ -237,6 +304,11 @@ def fuse_contact_windows_from_cue_payloads(
         max_time_delta_s=max_time_delta_s,
         pre_s=pre_s,
         post_s=post_s,
+        allow_wrist_only_contact_hints=allow_wrist_only_contact_hints,
+        wrist_only_pre_s=wrist_only_pre_s,
+        wrist_only_post_s=wrist_only_post_s,
+        wrist_only_min_separation_s=wrist_only_min_separation_s,
+        wrist_only_confidence_cap=wrist_only_confidence_cap,
     )
 
 
@@ -245,11 +317,16 @@ def fuse_contact_windows_from_cue_files(
     fps: float,
     audio_onsets_path: str | Path | None,
     wrist_velocity_peaks_path: str | Path,
-    ball_inflections_path: str | Path,
+    ball_inflections_path: str | Path | None,
     require_audio: bool = True,
     max_time_delta_s: float = DEFAULT_MAX_TIME_DELTA_S,
     pre_s: float = DEFAULT_PRE_WINDOW_S,
     post_s: float = DEFAULT_POST_WINDOW_S,
+    allow_wrist_only_contact_hints: bool = False,
+    wrist_only_pre_s: float = DEFAULT_WRIST_ONLY_PRE_WINDOW_S,
+    wrist_only_post_s: float = DEFAULT_WRIST_ONLY_POST_WINDOW_S,
+    wrist_only_min_separation_s: float = DEFAULT_WRIST_ONLY_MIN_SEPARATION_S,
+    wrist_only_confidence_cap: float = DEFAULT_WRIST_ONLY_CONFIDENCE_CAP,
 ) -> dict[str, object]:
     """Read cue artifact files and fuse them into a ContactWindows artifact."""
 
@@ -257,12 +334,73 @@ def fuse_contact_windows_from_cue_files(
         fps=fps,
         audio_onsets_payload=_read_json(Path(audio_onsets_path)) if audio_onsets_path is not None else [],
         wrist_velocity_peaks_payload=_read_json(Path(wrist_velocity_peaks_path)),
-        ball_inflections_payload=_read_json(Path(ball_inflections_path)),
+        ball_inflections_payload=_read_json(Path(ball_inflections_path)) if ball_inflections_path is not None else [],
         require_audio=require_audio,
         max_time_delta_s=max_time_delta_s,
         pre_s=pre_s,
         post_s=post_s,
+        allow_wrist_only_contact_hints=allow_wrist_only_contact_hints,
+        wrist_only_pre_s=wrist_only_pre_s,
+        wrist_only_post_s=wrist_only_post_s,
+        wrist_only_min_separation_s=wrist_only_min_separation_s,
+        wrist_only_confidence_cap=wrist_only_confidence_cap,
     )
+
+
+def _wrist_only_contact_hints(
+    *,
+    fps: float,
+    wrists: Sequence[WristVelocityPeak],
+    pre_s: float,
+    post_s: float,
+    min_separation_s: float,
+    confidence_cap: float,
+) -> dict[str, object]:
+    events: list[dict[str, object]] = []
+    for wrist in _suppress_wrist_only_peaks(wrists, min_separation_s=min_separation_s):
+        confidence = round(min(confidence_cap, wrist.confidence), 12)
+        event_t = wrist.time_s
+        events.append(
+            build_contact_event(
+                t=event_t,
+                frame=max(0, int(round(event_t * fps))),
+                player_id=wrist.player_id,
+                confidence=confidence,
+                sources={"wrist_vel": wrist.confidence, "ball_inflection": 0.0},
+                t0=max(0.0, event_t - pre_s),
+                t1=event_t + post_s,
+                importance=confidence,
+                trust_band_note=WRIST_ONLY_TRUST_BAND_NOTE,
+            )
+        )
+    events.sort(key=lambda event: (float(event["t"]), int(event["player_id"] or 0), int(event["frame"])))
+    return build_contact_windows_artifact(events)
+
+
+def _suppress_wrist_only_peaks(
+    wrists: Sequence[WristVelocityPeak],
+    *,
+    min_separation_s: float,
+) -> list[WristVelocityPeak]:
+    grouped: dict[int, list[WristVelocityPeak]] = {}
+    for wrist in wrists:
+        grouped.setdefault(wrist.player_id, []).append(wrist)
+
+    kept: list[WristVelocityPeak] = []
+    for group in grouped.values():
+        current: list[WristVelocityPeak] = []
+        for wrist in sorted(group, key=lambda item: item.time_s):
+            if not current or wrist.time_s - current[-1].time_s >= min_separation_s:
+                current.append(wrist)
+                continue
+            if _wrist_rank(wrist) > _wrist_rank(current[-1]):
+                current[-1] = wrist
+        kept.extend(current)
+    return sorted(kept, key=lambda item: (item.time_s, item.player_id))
+
+
+def _wrist_rank(wrist: WristVelocityPeak) -> tuple[float, float]:
+    return wrist.speed_mps, wrist.confidence
 
 
 def _coerce_audio_onset(candidate: AudioOnsetCandidate | Mapping[str, Any] | Any) -> AudioOnsetCandidate:
@@ -412,7 +550,12 @@ __all__ = [
     "DEFAULT_MAX_TIME_DELTA_S",
     "DEFAULT_POST_WINDOW_S",
     "DEFAULT_PRE_WINDOW_S",
+    "DEFAULT_WRIST_ONLY_CONFIDENCE_CAP",
+    "DEFAULT_WRIST_ONLY_MIN_SEPARATION_S",
+    "DEFAULT_WRIST_ONLY_POST_WINDOW_S",
+    "DEFAULT_WRIST_ONLY_PRE_WINDOW_S",
     "WristVelocityPeak",
+    "WRIST_ONLY_TRUST_BAND_NOTE",
     "fuse_contact_windows",
     "fuse_contact_windows_from_cue_files",
     "fuse_contact_windows_from_cue_payloads",

@@ -7,7 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from threed.racketsport.eval.body_gate_report import build_body_gate_report, render_body_gate_markdown
+from threed.racketsport.eval.body_gate_report import (
+    CORE_BODY_JOINT_NAMES,
+    FOOT_JOINT_NAMES,
+    build_body_gate_report,
+    render_body_gate_markdown,
+)
+from threed.racketsport.external_gt_aspset510 import SHARED_CORE_JOINT_NAMES
+from threed.racketsport.pose_fast import BODY_17_JOINT_NAMES, FOOT_6_JOINT_NAMES
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -531,6 +538,257 @@ def test_body_gate_report_enforces_wrist_mpjpe_threshold_separately(tmp_path: Pa
     assert mpjpe["wrist_threshold_m"] == 0.03
     assert mpjpe["wrist_mean_error_m"] == 0.04
     assert mpjpe["blockers"] == ["wrist_mpjpe_gate_failed"]
+
+
+def test_core_body_joint_names_matches_pose_fast_schema() -> None:
+    """Drift guard: the gate's core-17 set must track pose_fast's canonical schema."""
+
+    assert CORE_BODY_JOINT_NAMES == BODY_17_JOINT_NAMES
+    assert len(CORE_BODY_JOINT_NAMES) == 17
+    assert FOOT_JOINT_NAMES == FOOT_6_JOINT_NAMES
+
+
+def _write_core_schema_run(
+    root: Path,
+    clip: str,
+    *,
+    joint_names: list[str],
+    predicted_joints: list[list[float]],
+) -> Path:
+    """Write a minimal BODY run whose prediction uses the real 65/70-joint naming."""
+
+    run_dir = root / clip
+    smpl_motion = {
+        "schema_version": 1,
+        "model": "smplx",
+        "fps": 30.0,
+        "world_frame": "court_Z0",
+        "joint_names": list(joint_names),
+        "players": [
+            {
+                "id": 1,
+                "betas": [0.0] * 10,
+                "skate_free": True,
+                "physics": "none",
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "global_orient": [0.0, 0.0, 0.0],
+                        "body_pose": [0.0] * 63,
+                        "left_hand_pose": [],
+                        "right_hand_pose": [],
+                        "transl_world": [0.0, 0.0, 0.0],
+                        "joints_world": predicted_joints,
+                        "joint_conf": [0.9] * len(predicted_joints),
+                        "foot_contact": {"left": False, "right": False},
+                        "grf": [],
+                        "mesh_vertices_world": [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+                    }
+                ],
+            }
+        ],
+    }
+    _write_json(run_dir / "smpl_motion.json", smpl_motion)
+    _write_json(
+        run_dir / "body_compute_execution.json",
+        _body_compute_execution(scheduled_frames=1, scheduled_player_frames=1),
+    )
+    return run_dir
+
+
+def _write_core_schema_labels(labels_root: Path, clip: str, *, joint_names: list[str], joints_world: list[list[float]]) -> None:
+    _write_json(
+        labels_root / clip / "body_world_joints.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_world_joints_labels",
+            "status": "human_reviewed",
+            "not_ground_truth": False,
+            "joint_names": joint_names,
+            "samples": [
+                {
+                    "frame_index": 0,
+                    "player_id": 1,
+                    "accepted": True,
+                    "joints_world": joints_world,
+                }
+            ],
+        },
+    )
+
+
+def test_body_gate_report_core_joint_gating_ignores_hand_finger_error_for_pass_fail(tmp_path: Path) -> None:
+    """Owner finger policy (2026-07-02): huge finger-joint error must not fail the gate."""
+
+    root = tmp_path / "runs"
+    labels_root = tmp_path / "labels"
+    joint_names = list(CORE_BODY_JOINT_NAMES) + ["left_hand_00", "right_hand_00"]
+    predicted_joints = [[0.0, 0.0, 0.0] for _ in joint_names]
+    _write_core_schema_run(root, "clip_001", joint_names=joint_names, predicted_joints=predicted_joints)
+    label_joints = [[0.01, 0.0, 0.0] for _ in CORE_BODY_JOINT_NAMES] + [[5.0, 0.0, 0.0], [5.0, 0.0, 0.0]]
+    _write_core_schema_labels(labels_root, "clip_001", joint_names=joint_names, joints_world=label_joints)
+
+    payload = build_body_gate_report(root=root, clips=["clip_001"], labels_root=labels_root, world_mpjpe_threshold_m=0.05)
+
+    mpjpe = payload["clips"][0]["world_mpjpe"]
+    assert mpjpe["core_joint_gating_enabled"] is True
+    assert mpjpe["core_joint_gating_active"] is True
+    assert mpjpe["joint_gating_mode"] == "core17_hand_foot_diagnostic"
+    assert mpjpe["core_mean_error_m"] == 0.01
+    assert mpjpe["core_joint_count"] == 17
+    assert mpjpe["wrist_mean_error_m"] == 0.01
+    assert mpjpe["hand_mean_error_m"] == 5.0
+    assert mpjpe["hand_joint_count"] == 2
+    assert mpjpe["status"] == "pass"
+    assert mpjpe["blockers"] == []
+
+
+def test_body_gate_report_core_joint_gating_still_fails_on_core_joint_error(tmp_path: Path) -> None:
+    """The core-17 gate is real: a large core-joint error still fails, hand error or not."""
+
+    root = tmp_path / "runs"
+    labels_root = tmp_path / "labels"
+    joint_names = list(CORE_BODY_JOINT_NAMES) + ["left_hand_00"]
+    predicted_joints = [[0.0, 0.0, 0.0] for _ in joint_names]
+    _write_core_schema_run(root, "clip_001", joint_names=joint_names, predicted_joints=predicted_joints)
+    label_joints = [[0.2, 0.0, 0.0] for _ in CORE_BODY_JOINT_NAMES] + [[0.0, 0.0, 0.0]]
+    _write_core_schema_labels(labels_root, "clip_001", joint_names=joint_names, joints_world=label_joints)
+
+    payload = build_body_gate_report(root=root, clips=["clip_001"], labels_root=labels_root, world_mpjpe_threshold_m=0.05)
+
+    mpjpe = payload["clips"][0]["world_mpjpe"]
+    assert mpjpe["core_mean_error_m"] == 0.2
+    assert mpjpe["hand_mean_error_m"] == 0.0
+    assert mpjpe["status"] == "fail"
+    assert "world_mpjpe_gate_failed" in mpjpe["blockers"]
+
+
+def test_body_gate_report_core_joint_gating_ignores_foot_error_for_pass_fail(tmp_path: Path) -> None:
+    """Foot/toe joints sit outside the standard core-17 set — diagnostic-only, not gated."""
+
+    root = tmp_path / "runs"
+    labels_root = tmp_path / "labels"
+    joint_names = list(CORE_BODY_JOINT_NAMES) + list(FOOT_JOINT_NAMES)
+    predicted_joints = [[0.0, 0.0, 0.0] for _ in joint_names]
+    _write_core_schema_run(root, "clip_001", joint_names=joint_names, predicted_joints=predicted_joints)
+    label_joints = [[0.01, 0.0, 0.0] for _ in CORE_BODY_JOINT_NAMES] + [[2.0, 0.0, 0.0] for _ in FOOT_JOINT_NAMES]
+    _write_core_schema_labels(labels_root, "clip_001", joint_names=joint_names, joints_world=label_joints)
+
+    payload = build_body_gate_report(root=root, clips=["clip_001"], labels_root=labels_root, world_mpjpe_threshold_m=0.05)
+
+    mpjpe = payload["clips"][0]["world_mpjpe"]
+    assert mpjpe["foot_mean_error_m"] == 2.0
+    assert mpjpe["foot_joint_count"] == 6
+    assert mpjpe["core_mean_error_m"] == 0.01
+    assert mpjpe["status"] == "pass"
+    assert mpjpe["blockers"] == []
+
+
+def test_body_gate_report_core_joint_gating_can_be_disabled_via_flag(tmp_path: Path) -> None:
+    """core_joint_gating_enabled=False reverts to the pre-2026-07-02 legacy behavior."""
+
+    root = tmp_path / "runs"
+    labels_root = tmp_path / "labels"
+    joint_names = list(CORE_BODY_JOINT_NAMES) + ["left_hand_00", "right_hand_00"]
+    predicted_joints = [[0.0, 0.0, 0.0] for _ in joint_names]
+    _write_core_schema_run(root, "clip_001", joint_names=joint_names, predicted_joints=predicted_joints)
+    label_joints = [[0.01, 0.0, 0.0] for _ in CORE_BODY_JOINT_NAMES] + [[5.0, 0.0, 0.0], [5.0, 0.0, 0.0]]
+    _write_core_schema_labels(labels_root, "clip_001", joint_names=joint_names, joints_world=label_joints)
+
+    payload = build_body_gate_report(
+        root=root,
+        clips=["clip_001"],
+        labels_root=labels_root,
+        world_mpjpe_threshold_m=0.05,
+        core_joint_gating_enabled=False,
+    )
+
+    mpjpe = payload["clips"][0]["world_mpjpe"]
+    assert mpjpe["core_joint_gating_enabled"] is False
+    assert mpjpe["core_joint_gating_active"] is False
+    assert mpjpe["joint_gating_mode"] == "legacy_all_joints"
+    # Legacy body_feet bucket still includes the huge hand-joint error.
+    assert mpjpe["body_feet_mean_error_m"] > 0.05
+    assert mpjpe["status"] == "fail"
+    assert mpjpe["blockers"] == ["world_mpjpe_gate_failed"]
+
+
+def test_body_gate_report_world_mpjpe_matches_partial_external_gt_labels_by_name_not_index(
+    tmp_path: Path,
+) -> None:
+    """Regression test for review finding F1 (2026-07-02, CRITICAL).
+
+    A partial external-ground-truth label set -- e.g. ASPset-510, whose
+    `SHARED_CORE_JOINT_NAMES` supplies only the 12 shared limb joints, in
+    `CORE_BODY_JOINT_NAMES` order but starting mid-schema (shoulders onward, no
+    face joints) -- must be scored against the matching *named* prediction joints,
+    never against whatever prediction joints happen to sit at the same raw index.
+    Before this fix, `_joint_errors` zipped `prediction[index]` against `label[index]`
+    for `index in range(min(len(prediction), len(label)))`; with a 17-joint
+    core-body prediction and this 12-joint label, that silently compared e.g.
+    predicted `nose` (index 0) to labeled `left_shoulder` (index 0), corrupting the
+    world-MPJPE gate score with meaningless distances.
+    """
+
+    root = tmp_path / "runs"
+    labels_root = tmp_path / "labels"
+
+    # Prediction: the full 17-joint core-body schema, in CORE_BODY_JOINT_NAMES order.
+    # Give every joint a distinct, known position so a positional-vs-named mismatch
+    # produces a very different (and easily distinguished) error.
+    predicted_joints = [[float(index), 0.0, 0.0] for index in range(len(CORE_BODY_JOINT_NAMES))]
+    predicted_by_name = dict(zip(CORE_BODY_JOINT_NAMES, predicted_joints))
+    run_dir = _write_core_schema_run(root, "clip_001", joint_names=list(CORE_BODY_JOINT_NAMES), predicted_joints=predicted_joints)
+    _write_json(
+        run_dir / "body_compute_execution.json",
+        _body_compute_execution(scheduled_frames=1, scheduled_player_frames=1),
+    )
+
+    # Label: only the 12 joints ASPset-510 actually supplies (SHARED_CORE_JOINT_NAMES),
+    # each offset from its *correctly named* prediction joint by exactly +0.01m on x.
+    assert set(SHARED_CORE_JOINT_NAMES) < set(CORE_BODY_JOINT_NAMES)
+    assert len(SHARED_CORE_JOINT_NAMES) == 12
+    label_joints = [
+        [predicted_by_name[name][0] + 0.01, 0.0, 0.0] for name in SHARED_CORE_JOINT_NAMES
+    ]
+    _write_json(
+        labels_root / "clip_001" / "body_world_joints.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_world_joints_labels",
+            "status": "external_ground_truth",
+            "not_ground_truth": False,
+            "trusted_for_world_mpjpe": True,
+            "joint_names": list(SHARED_CORE_JOINT_NAMES),
+            "samples": [
+                {
+                    "frame_index": 0,
+                    "player_id": 1,
+                    "accepted": True,
+                    "label_source": "external_ground_truth",
+                    "joint_names": list(SHARED_CORE_JOINT_NAMES),
+                    "joints_world": label_joints,
+                }
+            ],
+        },
+    )
+
+    payload = build_body_gate_report(root=root, clips=["clip_001"], labels_root=labels_root, world_mpjpe_threshold_m=0.05)
+
+    mpjpe = payload["clips"][0]["world_mpjpe"]
+    # Correct, name-matched scoring: every one of the 12 shared joints is off by
+    # exactly 0.01m, so mean/core error must be 0.01 and the gate must pass.
+    assert mpjpe["joint_count"] == 12
+    assert mpjpe["mean_error_m"] == pytest.approx(0.01, abs=1e-9)
+    assert mpjpe["core_mean_error_m"] == pytest.approx(0.01, abs=1e-9)
+    assert mpjpe["core_joint_count"] == 12
+    assert mpjpe["status"] == "pass"
+    assert mpjpe["blockers"] == []
+    # The old raw-index bug would have zipped label[i] against prediction[i] (both
+    # 0-indexed), which -- because SHARED_CORE_JOINT_NAMES starts at
+    # CORE_BODY_JOINT_NAMES[5] ("left_shoulder") -- pairs every label joint with a
+    # prediction joint 5 slots away, producing a ~5.01m error instead of 0.01m.
+    assert mpjpe["mean_error_m"] < 1.0
 
 
 def test_body_gate_report_can_score_world_mpjpe_from_compact_prediction_packet(tmp_path: Path) -> None:

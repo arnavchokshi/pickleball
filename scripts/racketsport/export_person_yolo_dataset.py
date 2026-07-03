@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from threed.racketsport.eval_guard import assert_not_training_on_eval_clip  # noqa: E402
 from threed.racketsport.person_yolo_dataset import yolo_label_line  # noqa: E402
 from threed.racketsport.schemas import PersonGroundTruth, validate_artifact_file  # noqa: E402
 
@@ -45,8 +46,18 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        clips = _parse_clips(args.clip or list(DEFAULT_CLIPS), require_files=False)
+        # Eval-clip integrity gate (fail closed): this builder writes YOLO
+        # person-detector training data directly from clip ground truth, so it
+        # counts as training-input creation. See threed/racketsport/eval_guard.py.
+        # (DEFAULT_CLIPS itself currently points at Burlington/Wolverine source
+        # clips -- this refuses that default until a non-eval clip is supplied.)
+        assert_not_training_on_eval_clip(
+            (value for clip in clips for value in (clip.clip_id, str(clip.video_path), str(clip.ground_truth_path))),
+            allow_internal_val=False,
+        )
         summary = export_yolo_dataset(
-            clips=_parse_clips(args.clip or list(DEFAULT_CLIPS), require_files=False),
+            clips=clips,
             out_dir=args.out_dir,
             split_mode=args.split_mode,
             val_clips=tuple(args.val_clip),

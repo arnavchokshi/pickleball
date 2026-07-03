@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from .eval_guard import INTERNAL_VAL_ONLY_CLIP_IDS, STRICT_HOLDOUT_CLIP_IDS
 from .schemas import CvatVideoAnnotations, CvatVideoBox, validate_artifact_file
 from .testclips import REQUIRED_LABEL_FILES
 
@@ -229,7 +230,7 @@ def canonical_data1_cvat_clip_specs(
         ),
         (
             "outdoor_webcam_iynbd_1500_long_high_baseline",
-            "03_outdoor_webcam_iynbd_1500_long_high_baseline_30s.mp4",
+            "03_outdoor_webcam_iynbd_1500_long_high_baseline_frames_0000_1150.mp4",
             "03_outdoor_webcam_iynbd_1500_long_high_baseline_cvat_for_video_1.1.zip",
             {
                 "camera_height": "high",
@@ -237,10 +238,12 @@ def canonical_data1_cvat_clip_specs(
                 "play_type": "doubles",
                 "environment": "outdoor",
                 "frame_rate_fps": 60,
-                "duration_s": 30.0,
+                "duration_s": 19.183333,
                 "racket_gt": False,
             },
-            ("Existing three-clip detector import is capped at source frame 1150 and remains separate.",),
+            (
+                "Outdoor import is capped to source frames 0..1150 and remains a strict held-out eval clip.",
+            ),
         ),
         (
             "indoor_doubles_fwuks_0500_long_mid_baseline",
@@ -255,7 +258,9 @@ def canonical_data1_cvat_clip_specs(
                 "duration_s": 30.03,
                 "racket_gt": False,
             },
-            ("Indoor source video exists locally, but the CVAT video export is required before import.",),
+            (
+                "Indoor export and reviewed-box import exist locally; Indoor remains a strict held-out eval clip.",
+            ),
         ),
     ]
     return [
@@ -397,6 +402,7 @@ def write_data1_substitute_package(
                 "detector_gate_inputs": detector_gate_inputs,
                 "label_skeletons": label_skeletons,
                 "metadata": _metadata_for_registration(clip.metadata),
+                "eval_policy": _eval_policy_for_clip(clip.clip_id),
                 "registration_row": registration_row,
                 "notes": list(clip.notes),
             }
@@ -471,7 +477,8 @@ def write_data1_substitute_package(
         "warnings": [
             "No DATA-1 promotion is claimed.",
             "Generated label skeletons are placeholders and are marked not_ground_truth=true.",
-            "The three-clip CVAT detector package remains separate from DATA-1 readiness.",
+            "Any CVAT detector-label package remains separate from DATA-1 readiness.",
+            "Outdoor and Indoor strict held-out eval clips are not training or validation-during-fitting inputs.",
         ],
     }
 
@@ -539,6 +546,29 @@ def _registration_row(clip: Data1CvatClipSpec) -> dict[str, Any]:
         "name": clip.clip_id,
         **_metadata_for_registration(clip.metadata),
         "symlink": True,
+    }
+
+
+def _eval_policy_for_clip(clip_id: str) -> dict[str, Any]:
+    if clip_id in STRICT_HOLDOUT_CLIP_IDS:
+        return {
+            "role": "strict_holdout",
+            "training_allowed": False,
+            "validation_during_fitting_allowed": False,
+            "reason": "protected eval clip; no override exists in eval_guard.py",
+        }
+    if clip_id in INTERNAL_VAL_ONLY_CLIP_IDS:
+        return {
+            "role": "internal_val_only",
+            "training_allowed": False,
+            "validation_during_fitting_allowed": True,
+            "reason": "internal validation only when explicitly allowed; never actual training data",
+        }
+    return {
+        "role": "unprotected",
+        "training_allowed": True,
+        "validation_during_fitting_allowed": True,
+        "reason": "not listed in eval_guard.py protected clip registry",
     }
 
 
@@ -622,14 +652,26 @@ def _data1_substitute_sanity(
         for clip in clip_reports
         for path in dict(clip["label_skeletons"]).values()
     ]
+    strict_holdout_reports = [
+        clip
+        for clip in clip_reports
+        if dict(clip.get("eval_policy", {})).get("role") == "strict_holdout"
+    ]
     checks = {
         "detector_package_not_promoted": True,
         "skeletons_marked_not_ground_truth": True,
         "required_label_skeletons_written": actual_skeleton_count == required_skeleton_count,
         "registration_manifest_has_all_canonical_clips": bool(clip_reports),
-        "indoor_export_status_recorded": any(
-            clip["metadata"]["environment"] == "indoor" and not clip["cvat_export_exists"]
+        "indoor_cvat_export_status_recorded": any(
+            clip["metadata"]["environment"] == "indoor" and isinstance(clip.get("cvat_export_exists"), bool)
             for clip in clip_reports
+        ),
+        "strict_holdouts_not_promoted": all(
+            not any(
+                dict(substitute).get("data1_substitute") is True
+                for substitute in dict(clip["detector_gate_inputs"]).values()
+            )
+            for clip in strict_holdout_reports
         ),
     }
     failures = [name for name, passed in checks.items() if not passed]
@@ -658,17 +700,20 @@ def _render_data1_substitute_markdown(
         "",
         f"Status: `{manifest['status']}`. No DATA-1 promotion is claimed.",
         "",
-        "The three-clip CVAT detector package remains separate from DATA-1. Generated label skeletons are planning placeholders only and are marked `not_ground_truth=true`.",
+        "Any CVAT detector-label package remains separate from DATA-1. Generated label skeletons are planning placeholders only and are marked `not_ground_truth=true`.",
+        "",
+        "Outdoor and Indoor remain strict held-out eval clips; current YOLO/TrackNet training exporters fail closed if either appears in training or validation-during-fitting inputs.",
         "",
         "## Canonical Clip Coverage",
         "",
-        "| clip | video | CVAT export | reviewed boxes | DATA-1 labels missing |",
-        "|---|---:|---:|---:|---:|",
+        "| clip | eval role | video | CVAT export | reviewed boxes | DATA-1 labels missing |",
+        "|---|---|---:|---:|---:|---:|",
     ]
     for clip in coverage["clips"]:
         lines.append(
             "| "
             f"`{clip['clip_id']}` | "
+            f"{clip['eval_policy']['role']} | "
             f"{_markdown_bool(bool(clip['source_video_exists']))} | "
             f"{_markdown_bool(bool(clip['cvat_export_exists']))} | "
             f"{_markdown_bool(bool(clip['reviewed_boxes_exists']))} | "
@@ -704,7 +749,7 @@ def _render_data1_substitute_markdown(
             "",
             "## Next Step",
             "",
-            "Import the missing Indoor CVAT for video 1.1 export when available, then register the canonical clips into `data/testclips` with the generated registration manifest and replace skeletons with reviewed DATA-1 labels.",
+            "Register canonical clips into `data/testclips` only after reviewed DATA-1 labels exist. Keep Outdoor and Indoor excluded from training and validation-during-fitting builds, and replace skeletons with reviewed DATA-1 labels before claiming DATA-1 readiness.",
         ]
     )
     return "\n".join(lines) + "\n"

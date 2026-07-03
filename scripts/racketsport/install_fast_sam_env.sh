@@ -63,7 +63,7 @@ python -m pip install \
   ffmpeg cython jsonlines pytest xtcocotools loguru optree fvcore black \
   pycocotools tensorboard huggingface_hub ultralytics \
   tensorrt-cu12 tensorrt-cu12-bindings tensorrt-cu12-libs onnx onnxruntime-gpu nvtx \
-  smplx numpy scipy tqdm pyzmq
+  smplx numpy scipy tqdm pyzmq pydantic==2.11.3
 
 python -m pip install git+https://github.com/microsoft/MoGe.git
 python -m pip install chumpy --no-build-isolation
@@ -73,7 +73,7 @@ python -m pip install \
 
 python - <<'PY'
 import importlib.util
-for mod in ("torch", "detectron2", "ultralytics", "cv2", "nvtx"):
+for mod in ("torch", "detectron2", "ultralytics", "cv2", "nvtx", "pydantic"):
     if importlib.util.find_spec(mod) is None:
         raise SystemExit(f"missing {mod}")
 print("fast_sam_3d_body env ready")

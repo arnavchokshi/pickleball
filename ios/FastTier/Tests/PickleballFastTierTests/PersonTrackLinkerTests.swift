@@ -43,4 +43,27 @@ final class PersonTrackLinkerTests: XCTestCase {
         XCTAssertEqual(next.map(\.trackID), [2, 3])
         XCTAssertEqual(next.count, 2)
     }
+
+    func testByteTrackStyleLowConfidenceObservationCanRescueExistingTrack() {
+        var linker = PersonTrackLinker(
+            iouThreshold: 0.3,
+            maxTrackAgeFrames: 2,
+            maxTracks: 4,
+            highConfidenceThreshold: 0.6,
+            lowConfidenceThreshold: 0.1
+        )
+
+        let first = linker.update(
+            frameIndex: 0,
+            observations: [OnDevicePersonObservation(bboxXYWH: [10, 10, 20, 20], confidence: 0.9, source: "yolo26n")]
+        )
+        let rescued = linker.update(
+            frameIndex: 1,
+            observations: [OnDevicePersonObservation(bboxXYWH: [12, 10, 20, 20], confidence: 0.2, source: "yolo26n")]
+        )
+
+        XCTAssertEqual(first.map(\.trackID), [1])
+        XCTAssertEqual(rescued.map(\.trackID), [1])
+        XCTAssertEqual(rescued.first?.confidence, 0.2)
+    }
 }

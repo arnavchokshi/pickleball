@@ -664,6 +664,11 @@ class CvatVideoBox(BaseModel):
     keyframe: bool
     occluded: bool
     source: str | None = None
+    center_convention: Literal["blur_midpoint", "disk_center", "unknown"] | None = None
+    blur_angle_deg: FiniteFloat | None = None
+    blur_length_px: FiniteFloat | None = None
+    blur_width_px: FiniteFloat | None = None
+    blur_label_quality: Literal["clear", "weak", "absent", "unknown"] | None = None
 
     @field_validator("label")
     @classmethod
@@ -686,6 +691,13 @@ class CvatVideoBox(BaseModel):
         _, _, width, height = value
         if width <= 0.0 or height <= 0.0:
             raise ValueError("bbox_xywh width and height must be positive")
+        return value
+
+    @field_validator("blur_length_px", "blur_width_px")
+    @classmethod
+    def _blur_extent_must_be_nonnegative(cls, value: float | None) -> float | None:
+        if value is not None and value < 0.0:
+            raise ValueError("blur extent must be nonnegative")
         return value
 
 
@@ -883,6 +895,8 @@ class SmplFrame(BaseModel):
     foot_contact: FootContact
     foot_lock: FootContact | None = None
     grf: list[Vector3] | None = None
+    confidence_provenance: dict[str, Any] | None = None
+    body_grounding_refinement: dict[str, Any] | None = None
 
 
 class SmplPlayer(BaseModel):
@@ -902,6 +916,7 @@ class SmplMotion(StrictArtifact):
     world_frame: Literal["court_Z0"]
     mesh_faces: list[tuple[int, int, int]] = Field(default_factory=list)
     players: list[SmplPlayer]
+    body_grounding_refinement: dict[str, Any] | None = None
 
     @field_validator("mesh_faces")
     @classmethod
@@ -911,13 +926,43 @@ class SmplMotion(StrictArtifact):
         return value
 
 
+class TrustBand(BaseModel):
+    """Per-entity confidence/gate-provenance for scrubber trust badges."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    stage: str
+    gate_id: str
+    gate_status: str
+    badge: Literal["verified", "preview", "low_confidence"]
+    reason: str
+    evidence_path: str | None = None
+
+
+class SkeletonPlausibility(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["pass", "low_confidence"]
+    reasons: list[str] = Field(default_factory=list)
+    joint_confidence_floor: FiniteFloat = Field(ge=0.0, le=1.0)
+    max_bone_zscore: FiniteFloat = Field(gt=0.0)
+    source: str
+
+
 class SkeletonFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     frame_idx: int | None = Field(default=None, ge=0)
     t: float = Field(ge=0.0)
+    transl_world: Vector3 | None = None
     joints_world: list[Vector3]
     joint_conf: list[float]
+    smoothing_flag: list[str] = Field(default_factory=list)
+    confidence_provenance: dict[str, Any] | None = None
+    body_grounding_refinement: dict[str, Any] | None = None
+    skeleton_implausible: bool | None = None
+    skeleton_plausibility: SkeletonPlausibility | None = None
+    trust_band: TrustBand | None = None
 
 
 class SkeletonPlayer(BaseModel):
@@ -936,6 +981,7 @@ class Skeleton3D(StrictArtifact):
     preview_only: bool
     players: list[SkeletonPlayer]
     provenance: dict[str, Any] = Field(default_factory=dict)
+    body_grounding_refinement: dict[str, Any] | None = None
 
 
 class BallFrame(BaseModel):
@@ -949,6 +995,33 @@ class BallFrame(BaseModel):
     spin_rpm: FiniteFloat | None = None
     speed_mps: FiniteFloat | None = Field(default=None, ge=0.0)
     approx: bool = False
+
+
+class BounceUncertaintyBreakdown(BaseModel):
+    """Inputs behind a per-bounce uncertainty_m, per BALL_TRACKING_PIPELINE.md section 5.6.
+
+    sigma_bounce = sqrt(sigma_reproj^2 + sigma_depth^2 + sigma_ballradius^2 + sigma_localization^2).
+    method "camera_geometry_elevation_parallax_v1" is the camera-geometry-derived
+    default; "fixed_override" records an explicit caller-supplied uncertainty_m.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    method: Literal["camera_geometry_elevation_parallax_v1", "fixed_override"]
+    sigma_reproj_m: FiniteFloat = Field(ge=0.0)
+    sigma_depth_m: FiniteFloat = Field(ge=0.0)
+    sigma_ballradius_m: FiniteFloat = Field(ge=0.0)
+    sigma_localization_m: FiniteFloat = Field(ge=0.0)
+    camera_height_m: FiniteFloat | None = Field(default=None, gt=0.0)
+    grazing_angle_deg: FiniteFloat | None = None
+    h_max_m: FiniteFloat | None = Field(default=None, ge=0.0)
+    v_z_ref_mps: FiniteFloat | None = Field(default=None, ge=0.0)
+    dt_s: FiniteFloat | None = Field(default=None, ge=0.0)
+    frames_window: FiniteFloat | None = Field(default=None, ge=0.0)
+    binding_axis: Literal["x", "y"] | None = None
+    ground_sample_distance_m_per_px: FiniteFloat | None = Field(default=None, ge=0.0)
+    pose_reprojection_error_px_median: FiniteFloat | None = Field(default=None, ge=0.0)
+    pose_source: str | None = None
 
 
 class Bounce(BaseModel):
@@ -968,11 +1041,12 @@ class Bounce(BaseModel):
     nearest_line: str | None = None
     region: str | None = None
     dominant_uncertainty_term: str | None = None
+    uncertainty_breakdown: BounceUncertaintyBreakdown | None = None
 
 
 class BallTrack(StrictArtifact):
     fps: float = Field(gt=0.0)
-    source: Literal["tracknet", "wasb", "fused", "tap", "pbmat", "totnet"]
+    source: Literal["tracknet", "wasb", "fused", "tap", "pbmat", "totnet", "vn_trajectories", "physics_filled", "sam31"]
     frames: list[BallFrame]
     bounces: list[Bounce] = Field(default_factory=list)
 
@@ -1300,6 +1374,7 @@ class ContactEvent(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     sources: EventSources
     window: ContactWindow
+    trust_band_note: str | None = None
 
 
 class ContactWindows(StrictArtifact):
@@ -1519,11 +1594,26 @@ class ReplayViewerManifest(StrictArtifact):
     virtual_world_url: str
     replay_scene_url: str | None = None
     body_mesh_url: str | None = None
+    body_mesh_index_url: str | None = None
     physics_refinement_url: str | None = None
     contact_windows_url: str | None = None
+    ball_inflections_url: str | None = None
+    reviewed_bounces_url: str | None = None
+    coaching_card_facts_url: str | None = None
+    rally_spans_url: str | None = None
     label_overlays: list[ReplayViewerLabelOverlay] = Field(default_factory=list)
     annotation_sources: list[ReplayViewerAnnotationSource] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+
+
+class ConfidenceProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    band: str
+    display_band: str | None = None
+    predictor: str
+    horizon_frames: int = Field(ge=0)
+    predicted_sigma_m: FiniteFloat | None = Field(default=None, ge=0.0)
 
 
 class VirtualWorldNet(BaseModel):
@@ -1532,6 +1622,16 @@ class VirtualWorldNet(BaseModel):
     endpoints: list[Vector3]
     center_height_m: float
     post_height_m: float
+
+
+class VirtualWorldPlacementCalibration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source: str | None = None
+    intrinsics_source: str | None = None
+    capture_quality_grade: str | None = None
+    metric_confidence: Literal["high", "med", "low"] | None = None
+    evidence_path: str | None = None
 
 
 class VirtualWorldCourt(BaseModel):
@@ -1543,6 +1643,17 @@ class VirtualWorldCourt(BaseModel):
     width_m: float
     line_segments: dict[str, list[Vector3]]
     net: VirtualWorldNet
+    trust_band: TrustBand | None = None
+    placement_calibration: VirtualWorldPlacementCalibration | None = None
+
+
+class VirtualWorldMeshRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    artifact: str
+    player_id: int
+    frame_idx: int = Field(ge=0)
+    t: float
 
 
 class VirtualWorldPlayerFrame(BaseModel):
@@ -1556,6 +1667,7 @@ class VirtualWorldPlayerFrame(BaseModel):
     joints_world: list[Vector3] = Field(default_factory=list)
     joint_conf: list[float] = Field(default_factory=list)
     mesh_vertices_world: list[Vector3] = Field(default_factory=list)
+    mesh_ref: VirtualWorldMeshRef | None = None
     joint_count: int
     mesh_vertex_count: int
     floor_world_xyz: Vector3 | None = None
@@ -1567,6 +1679,8 @@ class VirtualWorldPlayerFrame(BaseModel):
     contact_locked: bool = False
     physics: str | None = None
     grf: list[Vector3] | None = None
+    trust_band: TrustBand | None = None
+    confidence_provenance: ConfidenceProvenance | None = None
 
 
 class VirtualWorldPlayer(BaseModel):
@@ -1577,6 +1691,7 @@ class VirtualWorldPlayer(BaseModel):
     role: str | None = None
     representation: Literal["track_only", "joints", "mesh"]
     frames: list[VirtualWorldPlayerFrame]
+    trust_band: TrustBand | None = None
 
 
 class VirtualWorldBallFrame(BaseModel):
@@ -1588,13 +1703,18 @@ class VirtualWorldBallFrame(BaseModel):
     visible: bool
     world_xyz: Vector3 | None = None
     approx: bool = False
+    trust_band: TrustBand | None = None
+    confidence_provenance: ConfidenceProvenance | None = None
+    render_only: bool = False
+    not_for_detection_metrics: bool = False
 
 
 class VirtualWorldBall(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    source: Literal["tracknet", "wasb", "fused", "tap", "pbmat", "totnet"] | None = None
+    source: Literal["tracknet", "wasb", "fused", "tap", "pbmat", "totnet", "vn_trajectories", "physics_filled", "sam31"] | None = None
     frames: list[VirtualWorldBallFrame] = Field(default_factory=list)
+    trust_band: TrustBand | None = None
 
 
 class VirtualWorldPaddleFrame(BaseModel):
@@ -1610,6 +1730,10 @@ class VirtualWorldPaddleFrame(BaseModel):
     source: str
     reprojection_error_px: float | None = None
     ambiguous: bool = False
+    trust_band: TrustBand | None = None
+    confidence_provenance: ConfidenceProvenance | None = None
+    render_only: bool | None = None
+    not_for_detection_metrics: bool | None = None
 
 
 class VirtualWorldPaddle(BaseModel):
@@ -1618,6 +1742,32 @@ class VirtualWorldPaddle(BaseModel):
     player_id: int
     paddle_dims_in: dict[str, float]
     frames: list[VirtualWorldPaddleFrame]
+    trust_band: TrustBand | None = None
+
+
+class VirtualWorldCoverageEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    min_t: float | None = None
+    max_t: float | None = None
+    frame_span: float = 0.0
+    coverage_fraction: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class VirtualWorldPlayerCoverageEntry(VirtualWorldCoverageEntry):
+    player_id: int
+    observed_frame_count: int = 0
+    no_data_frame_count: int = 0
+
+
+class VirtualWorldTemporalCoverage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    clip_min_t: float | None = None
+    clip_max_t: float | None = None
+    clip_frame_span: float = 0.0
+    ball: VirtualWorldCoverageEntry
+    players: list[VirtualWorldPlayerCoverageEntry] = Field(default_factory=list)
 
 
 class VirtualWorldSummary(BaseModel):
@@ -1638,7 +1788,10 @@ class VirtualWorldSummary(BaseModel):
     paddle_player_count: int = 0
     paddle_frame_count: int
     ambiguous_paddle_frame_count: int = 0
+    paddle_source: str | None = None
+    hidden_paddle_frame_count: int | None = Field(default=None, ge=0)
     warnings: list[str] = Field(default_factory=list)
+    temporal_coverage: VirtualWorldTemporalCoverage | None = None
 
 
 class VirtualWorld(StrictArtifact):
@@ -1650,6 +1803,7 @@ class VirtualWorld(StrictArtifact):
     ball: VirtualWorldBall
     paddles: list[VirtualWorldPaddle]
     summary: VirtualWorldSummary
+    confidence_gate: dict[str, Any] | None = None
 
 
 class PhysicsRefinement(StrictArtifact):

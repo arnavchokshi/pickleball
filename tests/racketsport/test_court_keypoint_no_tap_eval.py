@@ -251,6 +251,45 @@ def test_build_report_records_diagnostic_min_confidence_threshold(tmp_path: Path
     assert report.summary.h100_gate_command[threshold_index + 1] == "0.05"
 
 
+def test_build_report_includes_img1605_partial_visible_gate(tmp_path: Path) -> None:
+    eval_root = Path("eval_clips/ball")
+    partial_path = eval_root / "owner_IMG_1605_8a193402780b" / "labels" / "court_keypoints_partial.json"
+    proposal_path = Path("runs/img1605_court_detector_hardened/court_corner_proposals.json")
+    if not partial_path.is_file() or not proposal_path.is_file():
+        pytest.skip("IMG_1605 partial labels and hardened proposal are unavailable")
+    checkpoint, metrics = _checkpoint_inputs(tmp_path)
+
+    report = build_court_keypoint_no_tap_eval_report(
+        run_root=tmp_path / "empty_full_clip_root",
+        checkpoint=checkpoint,
+        metrics=metrics,
+        out=tmp_path / "img1605_partial_eval.json",
+        dry_run=False,
+        device="cpu",
+        accepted_clips=(),
+        eval_root=eval_root,
+        include_partial=["owner_IMG_1605_8a193402780b"],
+    )
+
+    assert report.status == "ran_not_verified"
+    assert report.verified is False
+    assert report.not_cal3_verified is True
+    assert report.summary.partial_clip_count == 1
+    assert report.summary.partial_gate_blocked_clip_count == 1
+    partial_clip = report.clips[0]
+    assert partial_clip.clip == "owner_IMG_1605_8a193402780b"
+    assert partial_clip.partial_label_path == str(partial_path)
+    assert partial_clip.partial_visible_gate is not None
+    gate = partial_clip.partial_visible_gate
+    assert gate.visible_keypoint_count == 14
+    assert gate.missing_keypoints == ["near_left_corner"]
+    assert gate.gate_passed is False
+    assert gate.floor_visible_error_px is not None
+    assert gate.floor_visible_error_px.median > 200.0
+    assert "visible_floor_median_gt_15" in gate.blockers
+    assert "self_verification_not_promotable" in gate.blockers
+
+
 def test_prediction_validation_sweeps_thresholds_and_blocks_border_biased_low_threshold_points() -> None:
     calibration = _calibration_payload()
     prediction = _prediction_payload(calibration, confidence=0.06, border_biased=True)
@@ -344,6 +383,107 @@ def test_dry_run_cli_writes_schema_valid_report(tmp_path: Path) -> None:
     markdown = markdown_out.read_text(encoding="utf-8")
     assert "not CAL-3 verified" in markdown
     assert "| threshold |" in markdown
+
+
+def test_cli_accepts_eval_root_include_partial_for_img1605(tmp_path: Path) -> None:
+    partial_path = Path("eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoints_partial.json")
+    proposal_path = Path("runs/img1605_court_detector_hardened/court_corner_proposals.json")
+    if not partial_path.is_file() or not proposal_path.is_file():
+        pytest.skip("IMG_1605 partial labels and hardened proposal are unavailable")
+    checkpoint, metrics = _checkpoint_inputs(tmp_path)
+    out = tmp_path / "img1605_no_tap_eval.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/evaluate_court_keypoint_no_tap.py",
+            "--eval-root",
+            "eval_clips/ball",
+            "--include-partial",
+            "owner_IMG_1605_8a193402780b",
+            "--checkpoint",
+            str(checkpoint),
+            "--metrics",
+            str(metrics),
+            "--out",
+            str(out),
+            "--device",
+            "cpu",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    parsed = CourtKeypointNoTapEvalReport.model_validate(json.loads(out.read_text(encoding="utf-8")))
+    assert parsed.verified is False
+    assert parsed.not_cal3_verified is True
+    assert parsed.summary.partial_clip_count == 1
+    assert parsed.clips[0].partial_visible_gate is not None
+    assert parsed.clips[0].partial_visible_gate.gate_passed is False
+
+
+def test_cli_accepts_detector_v2_proposal_root_for_img1605(tmp_path: Path) -> None:
+    partial_path = Path("eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoints_partial.json")
+    detector_v2_root = tmp_path / "detector_v2"
+    proposal_dir = detector_v2_root / "owner_IMG_1605_8a193402780b"
+    proposal_dir.mkdir(parents=True)
+    _write_json(
+        proposal_dir / "court_detector_v2_proposals.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_court_detector_v2_proposals",
+            "clip": "owner_IMG_1605_8a193402780b",
+            "source_frame": "frame_000151.jpg",
+            "image_size": [1080, 1920],
+            "promoted": False,
+            "verified": False,
+            "not_cal3_verified": True,
+            "promotion_status": "needs_user_input",
+            "promotion_blockers": ["self_verification_not_promotable"],
+            "selected_hypothesis_id": "hypothesis_0001",
+            "hypotheses": [],
+            "net_evidence": {},
+            "surface_evidence": {},
+            "verification": {},
+            "needs_user_input": ["near_left_corner"],
+        },
+    )
+    if not partial_path.is_file():
+        pytest.skip("IMG_1605 partial labels are unavailable")
+    checkpoint, metrics = _checkpoint_inputs(tmp_path)
+    out = tmp_path / "img1605_no_tap_eval_detector_v2.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/evaluate_court_keypoint_no_tap.py",
+            "--eval-root",
+            "eval_clips/ball",
+            "--include-partial",
+            "owner_IMG_1605_8a193402780b",
+            "--detector-v2-proposal-root",
+            str(detector_v2_root),
+            "--checkpoint",
+            str(checkpoint),
+            "--metrics",
+            str(metrics),
+            "--out",
+            str(out),
+            "--device",
+            "cpu",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    parsed = CourtKeypointNoTapEvalReport.model_validate(json.loads(out.read_text(encoding="utf-8")))
+    assert parsed.verified is False
+    assert parsed.not_cal3_verified is True
+    assert "--detector-v2-proposal-root" in parsed.summary.h100_gate_command
 
 
 def test_report_schema_rejects_cal3_verified_claim() -> None:

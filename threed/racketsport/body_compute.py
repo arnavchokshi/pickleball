@@ -18,6 +18,11 @@ DEFAULT_MAX_BBOX_CENTER_STEP_FOR_BODY_PX = 300.0
 DEFAULT_MAX_TRACK_WORLD_STEP_FOR_BBOX_JITTER_M = 3.5
 UNSAFE_TRACK_CONTINUITY_REASON = "unsafe_track_continuity"
 MISSING_FRAME_COMPUTE_PLAN_REASON = "missing_frame_compute_plan"
+SAM3D_BODY_JOINTS_ALL_TRACKED_REASON = "sam3d_body_joints_all_tracked"
+SAM3D_BODY_JOINTS_SOURCE = "sam3d_body_joints"
+TIER2_BODY_JOINTS_TIER = "tier2_body_joints"
+TIER2_BODY_JOINTS_REPRESENTATION = "body_joints"
+TIER1_MESH_REPRESENTATION = "world_mesh"
 
 
 def build_body_compute_execution(
@@ -25,6 +30,7 @@ def build_body_compute_execution(
     *,
     frame_plan_path: str | Path | None = None,
     max_frames: int | None = None,
+    include_tier2_body_joints: bool = False,
     max_track_speed_for_body_mps: float = DEFAULT_MAX_TRACK_SPEED_FOR_BODY_MPS,
     max_bbox_center_speed_for_body_diag_s: float = DEFAULT_MAX_BBOX_CENTER_SPEED_FOR_BODY_DIAG_S,
     max_bbox_center_step_for_body_px: float = DEFAULT_MAX_BBOX_CENTER_STEP_FOR_BODY_PX,
@@ -67,12 +73,14 @@ def build_body_compute_execution(
             safe_track_lookup=safe_track_lookup,
             track_continuity=track_continuity,
             max_frames=max_frames,
+            include_tier2_body_joints=include_tier2_body_joints,
         )
     return _execution_without_frame_plan(
         tracks,
         track_lookup=track_lookup,
         safe_track_lookup=safe_track_lookup,
         track_continuity=track_continuity,
+        include_tier2_body_joints=include_tier2_body_joints,
     )
 
 
@@ -92,6 +100,10 @@ def body_frame_batches_from_execution(
             active = [(player_id, track_frame) for player_id, track_frame in active if player_id in target_ids]
         if active:
             batches.append((frame_idx, active))
+    # Ascending frame order so the static-intrinsics baseline is always the
+    # clip's earliest scheduled frame and size-mismatch errors name the later
+    # offending frame, regardless of deep-mesh-window scheduling order.
+    batches.sort(key=lambda item: item[0])
     return batches
 
 
@@ -109,6 +121,7 @@ def _execution_from_frame_plan(
     safe_track_lookup: dict[int, list[tuple[int, Any]]],
     track_continuity: dict[str, Any],
     max_frames: int | None,
+    include_tier2_body_joints: bool,
 ) -> dict[str, Any]:
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     frame_lookup = {int(frame["frame_idx"]): frame for frame in plan.get("frames", [])}
@@ -150,7 +163,8 @@ def _execution_from_frame_plan(
                 {
                     "frame_idx": frame_idx,
                     "t": frame_idx / tracks.fps,
-                    "target_representation": "world_mesh",
+                    "recommended_tier": str(frame_plan.get("recommended_tier", "deep_mesh")),
+                    "target_representation": TIER1_MESH_REPRESENTATION,
                     "target_player_ids": safe_target_ids,
                     "active_player_ids": [player_id for player_id, _frame in active],
                     "source_window_index": window_index,
@@ -185,6 +199,17 @@ def _execution_from_frame_plan(
             }
         )
 
+    if include_tier2_body_joints:
+        scheduled.extend(
+            _tier2_body_joint_scheduled_frames(
+                tracks,
+                frame_lookup=frame_lookup,
+                track_lookup=track_lookup,
+                safe_track_lookup=safe_track_lookup,
+                already_scheduled_targets=_scheduled_target_keys(scheduled),
+            )
+        )
+
     scheduled, limit_skipped = _apply_max_frames(scheduled, max_frames=max_frames)
     skipped.extend(limit_skipped)
     return _execution_payload(
@@ -203,14 +228,26 @@ def _execution_without_frame_plan(
     track_lookup: dict[int, list[tuple[int, Any]]],
     safe_track_lookup: dict[int, list[tuple[int, Any]]],
     track_continuity: dict[str, Any],
+    include_tier2_body_joints: bool,
 ) -> dict[str, Any]:
     skipped: list[dict[str, Any]] = []
+    scheduled: list[dict[str, Any]] = []
     for frame_idx, active in sorted(track_lookup.items()):
         active_player_ids = [player_id for player_id, _frame in active]
         safe_active = safe_track_lookup.get(frame_idx, [])
         safe_ids = {player_id for player_id, _frame in safe_active}
         unsafe_ids = [player_id for player_id in active_player_ids if player_id not in safe_ids]
-        if safe_active:
+        if include_tier2_body_joints and safe_active:
+            scheduled.append(
+                _tier2_body_joint_frame(
+                    tracks,
+                    frame_idx=frame_idx,
+                    active=active,
+                    safe_active=safe_active,
+                    frame_plan={},
+                )
+            )
+        elif safe_active:
             skipped.append(
                 {
                     "frame_idx": frame_idx,
@@ -244,12 +281,107 @@ def _execution_without_frame_plan(
             )
     return _execution_payload(
         tracks,
-        mode="lane_b_requires_frame_compute_plan",
+        mode="sam3d_tier2_body_joints_without_frame_compute_plan"
+        if include_tier2_body_joints
+        else "lane_b_requires_frame_compute_plan",
         source_plan=None,
-        scheduled=[],
+        scheduled=scheduled,
         skipped=skipped,
         track_continuity=track_continuity,
     )
+
+
+def _scheduled_target_keys(scheduled: list[dict[str, Any]]) -> set[tuple[int, int]]:
+    keys: set[tuple[int, int]] = set()
+    for frame in scheduled:
+        frame_idx = int(frame["frame_idx"])
+        for player_id in frame.get("target_player_ids", []):
+            keys.add((frame_idx, int(player_id)))
+    return keys
+
+
+def _tier2_body_joint_scheduled_frames(
+    tracks: Tracks,
+    *,
+    frame_lookup: dict[int, Any],
+    track_lookup: dict[int, list[tuple[int, Any]]],
+    safe_track_lookup: dict[int, list[tuple[int, Any]]],
+    already_scheduled_targets: set[tuple[int, int]],
+) -> list[dict[str, Any]]:
+    scheduled: list[dict[str, Any]] = []
+    for frame_idx, active in sorted(track_lookup.items()):
+        safe_active = [
+            (player_id, track_frame)
+            for player_id, track_frame in safe_track_lookup.get(frame_idx, [])
+            if (frame_idx, player_id) not in already_scheduled_targets
+        ]
+        if not safe_active:
+            continue
+        scheduled.append(
+            _tier2_body_joint_frame(
+                tracks,
+                frame_idx=frame_idx,
+                active=active,
+                safe_active=safe_active,
+                frame_plan=frame_lookup.get(frame_idx, {}),
+            )
+        )
+    return scheduled
+
+
+def _tier2_body_joint_frame(
+    tracks: Tracks,
+    *,
+    frame_idx: int,
+    active: list[tuple[int, Any]],
+    safe_active: list[tuple[int, Any]],
+    frame_plan: Mapping[str, Any],
+) -> dict[str, Any]:
+    target_ids = [int(player_id) for player_id, _frame in safe_active]
+    return {
+        "frame_idx": frame_idx,
+        "t": float(frame_plan.get("t", frame_idx / tracks.fps)) if isinstance(frame_plan, Mapping) else frame_idx / tracks.fps,
+        "recommended_tier": TIER2_BODY_JOINTS_TIER,
+        "target_representation": TIER2_BODY_JOINTS_REPRESENTATION,
+        "target_player_ids": target_ids,
+        "active_player_ids": [int(player_id) for player_id, _frame in active],
+        "source_window_index": None,
+        "fallback_representation": "lane_a_skeleton",
+        "reason_counts": {SAM3D_BODY_JOINTS_ALL_TRACKED_REASON: len(target_ids)},
+        "reasons": [SAM3D_BODY_JOINTS_ALL_TRACKED_REASON],
+        "max_score": float(frame_plan.get("score", 0.0) or 0.0) if isinstance(frame_plan, Mapping) else 0.0,
+        "source": SAM3D_BODY_JOINTS_SOURCE,
+        "player_targets": _tier2_player_targets(frame_plan, safe_active),
+    }
+
+
+def _tier2_player_targets(frame_plan: Mapping[str, Any], safe_active: list[tuple[int, Any]]) -> list[dict[str, Any]]:
+    plan_targets = _selected_player_targets(frame_plan, [player_id for player_id, _frame in safe_active])
+    if plan_targets:
+        targets = []
+        for target in plan_targets:
+            targets.append(
+                {
+                    **target,
+                    "recommended_tier": TIER2_BODY_JOINTS_TIER,
+                    "target_representation": TIER2_BODY_JOINTS_REPRESENTATION,
+                    "source": SAM3D_BODY_JOINTS_SOURCE,
+                    "reasons": [SAM3D_BODY_JOINTS_ALL_TRACKED_REASON],
+                }
+            )
+        return targets
+    return [
+        {
+            "player_id": int(player_id),
+            "track_conf": float(track_frame.conf),
+            "score": 0.0,
+            "recommended_tier": TIER2_BODY_JOINTS_TIER,
+            "target_representation": TIER2_BODY_JOINTS_REPRESENTATION,
+            "source": SAM3D_BODY_JOINTS_SOURCE,
+            "reasons": [SAM3D_BODY_JOINTS_ALL_TRACKED_REASON],
+        }
+        for player_id, track_frame in safe_active
+    ]
 
 
 def _execution_payload(
@@ -265,9 +397,16 @@ def _execution_payload(
     scheduled_by_reason: dict[str, int] = {}
     scheduled_targeted_reviewed_contact_frame_count = 0
     scheduled_coverage_incomplete_frame_count = 0
+    tier1_mesh_player_frame_count = 0
+    tier2_body_joint_player_frame_count = 0
     for frame in scheduled:
         target_representation = str(frame.get("target_representation", "unknown"))
         scheduled_by_target_representation[target_representation] = scheduled_by_target_representation.get(target_representation, 0) + 1
+        target_count = len(frame.get("target_player_ids", []))
+        if target_representation == TIER1_MESH_REPRESENTATION:
+            tier1_mesh_player_frame_count += target_count
+        if target_representation == TIER2_BODY_JOINTS_REPRESENTATION:
+            tier2_body_joint_player_frame_count += target_count
         reasons = [str(reason) for reason in frame.get("reasons", []) if reason]
         if "reviewed_contact_targeted_body" in reasons:
             scheduled_targeted_reviewed_contact_frame_count += 1
@@ -317,6 +456,8 @@ def _execution_payload(
             "scheduled_by_reason": dict(sorted(scheduled_by_reason.items())),
             "scheduled_targeted_reviewed_contact_frame_count": scheduled_targeted_reviewed_contact_frame_count,
             "scheduled_coverage_incomplete_frame_count": scheduled_coverage_incomplete_frame_count,
+            "tier1_mesh_player_frame_count": tier1_mesh_player_frame_count,
+            "tier2_body_joint_player_frame_count": tier2_body_joint_player_frame_count,
             "skipped_frame_count": len(skipped),
             "skipped_by_tier": dict(sorted(skipped_by_tier.items())),
             "skipped_by_target_representation": dict(sorted(skipped_by_target_representation.items())),
@@ -549,8 +690,8 @@ def _apply_max_frames(
         {
             "frame_idx": int(frame["frame_idx"]),
             "t": float(frame["t"]),
-            "recommended_tier": "deep_mesh",
-            "target_representation": "world_mesh",
+            "recommended_tier": str(frame.get("recommended_tier", "deep_mesh")),
+            "target_representation": str(frame.get("target_representation", "world_mesh")),
             "skip_reason": "max_frames_limit",
             "reasons": list(frame.get("reasons", [])),
             "active_player_ids": [int(player_id) for player_id in frame.get("active_player_ids", [])],

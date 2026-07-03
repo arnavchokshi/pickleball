@@ -1,4 +1,15 @@
-"""Finalize reviewed BODY world-joint labels for world-MPJPE gates."""
+"""Finalize reviewed BODY world-joint labels for world-MPJPE gates.
+
+Owner-approved finger policy (2026-07-02, binding): a finalized label sample's
+``joints_world`` does not have to cover the full 70-joint schema. Providing only the 17
+canonical core-body joints (`threed.racketsport.eval.body_gate_report.CORE_BODY_JOINT_NAMES`,
+in that order) is sufficient and expected for independent ground truth that has no
+hand/finger keypoints (e.g. external public 3D-pose datasets, which almost never
+annotate fingers) — `_vectors()` below only requires that every *provided* entry is a
+valid 3-float vector, it never requires exactly 70. `body_gate_report.py`'s world-MPJPE
+scoring aligns predictions to labels by joint index and gates on the core-17 subset only,
+so a core-only label is scored correctly without needing hand/finger ground truth at all.
+"""
 
 from __future__ import annotations
 
@@ -66,6 +77,8 @@ def finalize_body_world_labels(
         "candidate_label_sample_ids": candidate_label_ids,
         "overlay_warning_selected_sample_count": len(overlay_warning_selected_ids),
         "overlay_warning_selected_sample_ids": overlay_warning_selected_ids,
+        "review_note_sample_count": len(_samples_with_notes(accepted_samples)),
+        "review_note_sample_ids": _samples_with_notes(accepted_samples),
         "blockers": blockers,
     }
 
@@ -142,6 +155,7 @@ def _accepted_samples(
                 "player_id": player_id,
                 "accepted": True,
                 "label_source": label_source,
+                "notes": _sample_note(sample),
                 "joints_world": joints,
             }
         )
@@ -171,6 +185,17 @@ def _label_source(*, sample: Mapping[str, Any], template: Mapping[str, Any]) -> 
 
 def _is_independent_label_source(label_source: str) -> bool:
     return label_source.strip().lower() in INDEPENDENT_LABEL_SOURCES
+
+
+def _sample_note(sample: Mapping[str, Any]) -> str:
+    value = sample.get("notes")
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _samples_with_notes(samples: list[Mapping[str, Any]]) -> list[str]:
+    return [str(sample.get("sample_id", "")) for sample in samples if str(sample.get("notes", "")).strip()]
 
 
 def _selected_sample_ids(template: Mapping[str, Any]) -> list[str]:

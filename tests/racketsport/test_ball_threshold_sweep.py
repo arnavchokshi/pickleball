@@ -7,7 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from threed.racketsport.ball_threshold_sweep import _best_threshold_candidate, sweep_prediction_thresholds
+from threed.racketsport.ball_threshold_sweep import (
+    _best_threshold_candidate,
+    sweep_ball_track_cvat_thresholds,
+    sweep_prediction_thresholds,
+)
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -65,6 +69,118 @@ def _write_totnet_predictions(path: Path) -> None:
             ],
         },
     )
+
+
+def _write_ball_track(path: Path) -> None:
+    _write_json(
+        path,
+        {
+            "schema_version": 1,
+            "fps": 30.0,
+            "source": "tracknet",
+            "frames": [
+                {"t": 0.0, "xy": [100.0, 200.0], "conf": 0.91, "visible": True},
+                {"t": 1.0 / 30.0, "xy": [900.0, 500.0], "conf": 0.2, "visible": True},
+                {"t": 2.0 / 30.0, "xy": [300.0, 300.0], "conf": 0.95, "visible": False},
+            ],
+            "bounces": [],
+        },
+    )
+
+
+def _ball_box(frame_index: int, x: float, y: float) -> dict:
+    return {
+        "track_id": 8,
+        "label": "ball",
+        "frame_index": frame_index,
+        "bbox_xyxy": [x - 5.0, y - 5.0, x + 5.0, y + 5.0],
+        "bbox_xywh": [x - 5.0, y - 5.0, 10.0, 10.0],
+        "keyframe": True,
+        "occluded": False,
+        "source": "manual",
+    }
+
+
+def _write_cvat_reviewed_boxes(path: Path) -> None:
+    _write_json(
+        path,
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_cvat_video_annotations",
+            "clip_id": "clip_a",
+            "source_format": "cvat_video_1_1",
+            "source_path": "annotations.zip",
+            "task": {
+                "task_id": 1,
+                "name": "clip_a",
+                "size": 3,
+                "mode": "interpolation",
+                "start_frame": 0,
+                "stop_frame": 2,
+                "original_size": [1280, 720],
+                "source": "clip_a.mp4",
+                "dumped": None,
+            },
+            "frames": [
+                {"frame_index": 0, "boxes": [_ball_box(0, 100.0, 200.0)]},
+                {"frame_index": 1, "boxes": []},
+                {"frame_index": 2, "boxes": []},
+            ],
+            "tracks": [
+                {
+                    "track_id": 8,
+                    "label": "ball",
+                    "visible_box_count": 1,
+                    "outside_box_count": 0,
+                    "keyframe_count": 1,
+                    "first_visible_frame": 0,
+                    "last_visible_frame": 0,
+                }
+            ],
+            "summary": {
+                "frame_count": 3,
+                "visible_box_count": 1,
+                "outside_box_count": 0,
+                "labels": ["ball"],
+                "track_count_by_label": {"ball": 1},
+                "visible_box_count_by_label": {"ball": 1},
+            },
+        },
+    )
+
+
+def test_sweep_ball_track_cvat_thresholds_preserves_confidence_and_removes_hidden_false_positive(
+    tmp_path: Path,
+) -> None:
+    clip = "clip_a"
+    track = tmp_path / "tracks" / clip / "ball_track.json"
+    cvat_root = tmp_path / "cvat"
+    out_root = tmp_path / "sweep"
+    _write_ball_track(track)
+    _write_cvat_reviewed_boxes(cvat_root / clip / "reviewed_boxes.json")
+
+    summary = sweep_ball_track_cvat_thresholds(
+        tracks_by_clip={clip: track},
+        cvat_root=cvat_root,
+        out_root=out_root,
+        candidate_name_prefix="tracknet_heatmap",
+        thresholds=[0.0, 0.5],
+    )
+
+    assert summary["status"] == "TESTED-ON-REAL-DATA"
+    assert summary["not_ground_truth"] is True
+    assert summary["best_candidate"] == "tracknet_heatmap_thr_0_500"
+    assert summary["best_threshold"] == pytest.approx(0.5)
+    aggregate = summary["benchmark"]["aggregate"]
+    assert aggregate["tracknet_heatmap_thr_0_000"]["micro_hidden_false_positive_rate"] == pytest.approx(0.5)
+    assert aggregate["tracknet_heatmap_thr_0_500"]["micro_hidden_false_positive_rate"] == pytest.approx(0.0)
+    assert aggregate["tracknet_heatmap_thr_0_500"]["micro_visible_recall_at_20px"] == pytest.approx(1.0)
+
+    generated = json.loads(
+        (out_root / clip / "tracknet_heatmap_thr_0_500" / "ball_track.json").read_text(encoding="utf-8")
+    )
+    assert [frame["conf"] for frame in generated["frames"]] == [0.91, 0.2, 0.95]
+    assert [frame["visible"] for frame in generated["frames"]] == [True, False, False]
 
 
 def test_sweep_prediction_thresholds_selects_threshold_that_removes_hidden_false_positive(tmp_path: Path) -> None:
@@ -185,4 +301,40 @@ def test_sweep_ball_prediction_thresholds_cli(tmp_path: Path) -> None:
 
     summary = json.loads(completed.stdout)
     assert summary["best_candidate"] == "totnet_test_thr_0_500"
+    assert (out_root / "threshold_sweep_summary.json").is_file()
+
+
+def test_sweep_ball_track_thresholds_against_cvat_cli(tmp_path: Path) -> None:
+    clip = "clip_a"
+    track = tmp_path / "tracks" / clip / "ball_track.json"
+    cvat_root = tmp_path / "cvat"
+    out_root = tmp_path / "sweep"
+    _write_ball_track(track)
+    _write_cvat_reviewed_boxes(cvat_root / clip / "reviewed_boxes.json")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/sweep_ball_track_thresholds_against_cvat.py",
+            "--candidate-prefix",
+            "tracknet_heatmap",
+            "--cvat-root",
+            str(cvat_root),
+            "--out-root",
+            str(out_root),
+            "--threshold",
+            "0.0",
+            "--threshold",
+            "0.5",
+            "--track",
+            f"{clip}={track}",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    summary = json.loads(completed.stdout)
+    assert summary["best_candidate"] == "tracknet_heatmap_thr_0_500"
+    assert summary["best_threshold"] == pytest.approx(0.5)
     assert (out_root / "threshold_sweep_summary.json").is_file()

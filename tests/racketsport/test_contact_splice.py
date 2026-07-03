@@ -7,6 +7,7 @@ from copy import deepcopy
 import pytest
 
 from threed.racketsport.pose_fast import LANE_A_RTMW3D_JOINT_NAMES
+from threed.racketsport.skeleton3d import SAM3D_BODY_MHR70_SEMANTIC_MAP
 
 
 def _splice_func():
@@ -136,7 +137,7 @@ def test_contact_splice_keeps_lane_a_skeleton_and_flags_missing_mesh() -> None:
     assert skeleton["provenance"]["contact_splice"]["mesh_unavailable_count"] == 1
 
 
-def test_contact_splice_uses_pose_fallback_when_mesh_is_unavailable() -> None:
+def test_contact_splice_uses_explicit_skeleton_fallback_when_mesh_is_unavailable() -> None:
     splice = _splice_func()
     fallback_joints = [[float(idx), 1.0, 1.5] for idx in range(len(LANE_A_RTMW3D_JOINT_NAMES))]
     fallback_conf = [0.77] * len(fallback_joints)
@@ -175,9 +176,71 @@ def test_contact_splice_uses_pose_fallback_when_mesh_is_unavailable() -> None:
     assert hitter_frame["joints_world"][right_wrist_idx] == pytest.approx(fallback_joints[right_wrist_idx])
     assert hitter_frame["joints_world"][left_hand_idx] == pytest.approx(fallback_joints[left_hand_idx])
     assert hitter_frame["joint_conf"][left_wrist_idx] == pytest.approx(0.77)
-    assert report["events"][0]["status"] == "mesh_unavailable_pose_fallback"
+    assert report["events"][0]["status"] == "mesh_unavailable_skeleton_fallback"
     assert report["events"][0]["mesh_unavailable"] is True
-    assert report["events"][0]["fallback_source"] == "body_pose_fallback.json"
+    assert report["events"][0]["fallback_source"] == "fallback_skeleton3d.json"
     assert report["summary"]["mesh_unavailable_count"] == 1
     assert report["summary"]["fallback_spliced_count"] == 1
     assert skeleton["provenance"]["contact_splice"]["fallback_spliced_count"] == 1
+
+
+def test_contact_splice_overrides_generic_sam3d_mhr70_wrist_indices() -> None:
+    splice = _splice_func()
+    joint_names = [f"sam3dbody_joint_{idx:03d}" for idx in range(70)]
+    joints = [[float(idx), 0.0, 1.0] for idx in range(70)]
+    skeleton = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_skeleton3d",
+        "fps": 30.0,
+        "world_frame": "court_Z0",
+        "source_model": "sam3d_body_joints",
+        "joint_names": joint_names,
+        "preview_only": False,
+        "players": [
+            {
+                "id": 7,
+                "frames": [
+                    {"frame_idx": 12, "t": 0.4, "joints_world": deepcopy(joints), "joint_conf": [0.5] * 70}
+                ],
+            }
+        ],
+        "provenance": {"source": "sam3d_body_joints"},
+    }
+    mesh_joints = [[float(idx), 1.0, 2.0] for idx in range(70)]
+    body_mesh = {
+        "artifact_type": "racketsport_body_mesh",
+        "fps": 30.0,
+        "world_frame": "court_Z0",
+        "joint_names": joint_names,
+        "players": [
+            {
+                "id": 7,
+                "frames": [
+                    {
+                        "frame_idx": 12,
+                        "t": 0.4,
+                        "joints_world": mesh_joints,
+                        "joint_conf": [0.91] * 70,
+                        "mesh_vertices_world": [[9.0, 0.0, 0.0], [10.0, 0.0, 1.8]],
+                    }
+                ],
+            }
+        ],
+        "summary": {"mesh_frame_count": 1},
+    }
+
+    spliced, report = splice(
+        skeleton,
+        body_mesh=body_mesh,
+        body_compute_execution=_body_compute_execution(),
+    )
+
+    left_wrist_idx = SAM3D_BODY_MHR70_SEMANTIC_MAP.joints["left_wrist"]
+    right_wrist_idx = SAM3D_BODY_MHR70_SEMANTIC_MAP.joints["right_wrist"]
+    frame = spliced["players"][0]["frames"][0]
+    assert frame["joints_world"][left_wrist_idx] == pytest.approx(mesh_joints[left_wrist_idx])
+    assert frame["joints_world"][right_wrist_idx] == pytest.approx(mesh_joints[right_wrist_idx])
+    assert frame["joint_conf"][left_wrist_idx] == pytest.approx(0.91)
+    assert report["summary"]["spliced_contact_count"] == 1
+    assert report["summary"]["overridden_joint_count"] == 2
+    assert report["events"][0]["overridden_joint_names"] == ["left_wrist", "right_wrist"]

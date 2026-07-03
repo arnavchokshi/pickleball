@@ -1,6 +1,11 @@
 # Phase 0 local/test dependencies.
-pydantic>=2.8
+pydantic==2.11.3
 pytest>=8.0
+
+# W3-REPLAY-NATIVE (WORLD/RPL): animated GLB bake (threed/racketsport/replay_glb_bake.py)
+# and USDZ export (threed/racketsport/replay_usdz_bake.py).
+pygltflib
+usd-core
 
 # Runtime dependencies are intentionally listed without pinning until the H100
 # environment is finalized. setup_env.sh is local/CPU-only; GPU workers use

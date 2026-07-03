@@ -1,10 +1,21 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import sys
 from pathlib import Path
 
-import torch
+import pytest
+
+_TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
+pytestmark = pytest.mark.skipif(
+    not _TORCH_AVAILABLE,
+    reason="torch is optional in the local .venv test lane",
+)
+if _TORCH_AVAILABLE:
+    import torch
+else:
+    torch = None
 
 
 ROOT = Path(__file__).resolve().parents[2]

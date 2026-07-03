@@ -54,10 +54,11 @@ export function activeReplayPointForTime(scene: ReplayScene, timeSeconds: number
 }
 
 export function resolveReplaySceneAssetUrl(replaySceneUrl: string, assetPath: string): string {
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(assetPath)) return assetPath;
   if (assetPath.startsWith("/")) return assetPath;
   const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
   const resolved = new URL(assetPath, new URL(replaySceneUrl, origin));
-  if (/^https?:\/\//.test(replaySceneUrl)) {
+  if (/^(https?|file):\/\//.test(replaySceneUrl)) {
     return resolved.href;
   }
   return resolved.pathname + resolved.search + resolved.hash;

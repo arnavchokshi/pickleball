@@ -73,6 +73,10 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
         },
     )
     contacts = _write_json(run_dir / "contact_windows.json", {"schema_version": 1, "events": []})
+    ball_inflections = _write_json(
+        run_dir / "ball_inflections.json",
+        {"schema_version": 1, "artifact_type": "racketsport_ball_inflections", "candidates": []},
+    )
     body_mesh = _write_json(
         run_dir / "body_mesh.json",
         {
@@ -89,6 +93,21 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
             "summary": {"mesh_frame_count": 0, "player_count": 0, "contact_window_count": 0},
         },
     )
+    body_mesh_index = _write_json(
+        run_dir / "body_mesh_index.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_mesh_index",
+            "clip": "clip_a",
+            "model": "sam3dbody_world_joints",
+            "fps": 30.0,
+            "world_frame": "court_Z0",
+            "faces_ref": "mhr_faces_static",
+            "faces_url": "body_mesh_faces.json",
+            "windows": [],
+            "summary": {"window_count": 0, "mesh_frame_count": 0, "player_count": 0, "faces_count": 0},
+        },
+    )
 
     manifest = build_replay_viewer_manifest(
         clip="clip_a",
@@ -98,7 +117,9 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
         replay_scene_path=replay_scene,
         physics_refinement_path=physics,
         contact_windows_path=contacts,
+        ball_inflections_path=ball_inflections,
         body_mesh_path=body_mesh,
+        body_mesh_index_path=body_mesh_index,
         annotation_sources=[person_gt],
         vite_allow_root=tmp_path,
     )
@@ -109,8 +130,10 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
     assert manifest["virtual_world_url"].startswith("/@fs/")
     assert manifest["replay_scene_url"].startswith("/@fs/")
     assert manifest["body_mesh_url"].startswith("/@fs/")
+    assert manifest["body_mesh_index_url"].startswith("/@fs/")
     assert manifest["physics_refinement_url"].startswith("/@fs/")
     assert manifest["contact_windows_url"].startswith("/@fs/")
+    assert manifest["ball_inflections_url"].startswith("/@fs/")
     assert manifest["label_overlays"] == [
         {
             "kind": "player_boxes",
@@ -229,6 +252,81 @@ def test_replay_viewer_manifest_cli_writes_manifest(tmp_path: Path) -> None:
     assert payload["clip"] == "clip_a"
     assert json.loads(completed.stdout)["out"] == str(out)
     assert isinstance(validate_artifact_file("replay_viewer_manifest", out), ReplayViewerManifest)
+
+
+def test_replay_viewer_manifest_links_optional_review_coaching_and_rally_artifacts(tmp_path: Path) -> None:
+    run_dir = tmp_path / "clip_a"
+    video = run_dir / "video.mp4"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"video")
+    virtual_world = _write_json(run_dir / "virtual_world.json", {"artifact_type": "racketsport_virtual_world"})
+    reviewed_bounces = _write_json(
+        run_dir / "reviewed_ball_bounces.json",
+        {"artifact_type": "racketsport_reviewed_ball_bounces", "status": "human_reviewed", "bounces": []},
+    )
+    coaching_facts = _write_json(run_dir / "coaching_card_facts.json", {"artifact_type": "racketsport_coaching_card_facts"})
+    rally_spans = _write_json(
+        run_dir / "rally_spans.json",
+        {"artifact_type": "racketsport_rally_spans", "not_ground_truth": True, "spans": []},
+    )
+
+    manifest = build_replay_viewer_manifest(
+        clip="clip_a",
+        video_path=video,
+        virtual_world_path=virtual_world,
+        reviewed_bounces_path=reviewed_bounces,
+        coaching_card_facts_path=coaching_facts,
+        rally_spans_path=rally_spans,
+        vite_allow_root=tmp_path,
+    )
+
+    assert manifest["reviewed_bounces_url"].endswith("/reviewed_ball_bounces.json")
+    assert manifest["coaching_card_facts_url"].endswith("/coaching_card_facts.json")
+    assert manifest["rally_spans_url"].endswith("/rally_spans.json")
+
+
+def test_replay_viewer_manifest_cli_writes_optional_review_coaching_and_rally_urls(tmp_path: Path) -> None:
+    run_dir = tmp_path / "clip_a"
+    video = run_dir / "video.mp4"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"video")
+    _write_json(run_dir / "virtual_world.json", {"artifact_type": "racketsport_virtual_world"})
+    _write_json(run_dir / "reviewed_ball_bounces.json", {"artifact_type": "racketsport_reviewed_ball_bounces", "status": "human_reviewed", "bounces": []})
+    _write_json(run_dir / "coaching_card_facts.json", {"artifact_type": "racketsport_coaching_card_facts"})
+    _write_json(run_dir / "rally_spans.json", {"artifact_type": "racketsport_rally_spans", "not_ground_truth": True, "spans": []})
+    out = run_dir / "replay_viewer_manifest.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/build_replay_viewer_manifest.py",
+            "--clip",
+            "clip_a",
+            "--video",
+            str(video),
+            "--virtual-world",
+            str(run_dir / "virtual_world.json"),
+            "--reviewed-bounces",
+            str(run_dir / "reviewed_ball_bounces.json"),
+            "--coaching-card-facts",
+            str(run_dir / "coaching_card_facts.json"),
+            "--rally-spans",
+            str(run_dir / "rally_spans.json"),
+            "--vite-allow-root",
+            str(tmp_path),
+            "--out",
+            str(out),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["reviewed_bounces_url"].endswith("/reviewed_ball_bounces.json")
+    assert payload["coaching_card_facts_url"].endswith("/coaching_card_facts.json")
+    assert payload["rally_spans_url"].endswith("/rally_spans.json")
 
 
 def test_replay_viewer_manifest_writer_validates_schema(tmp_path: Path) -> None:

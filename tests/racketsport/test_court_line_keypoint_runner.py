@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -102,3 +104,46 @@ def test_run_court_line_keypoint_video_writes_prediction_overlay_and_metric(tmp_
 
 def _point(xy: list[float]) -> tuple[int, int]:
     return (int(round(xy[0])), int(round(xy[1])))
+
+
+def test_run_court_line_keypoints_cli_help_runs_from_repo_root() -> None:
+    completed = subprocess.run(
+        [sys.executable, "scripts/racketsport/run_court_line_keypoints.py", "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "usage:" in completed.stdout.lower()
+    assert "--overlay-out" in completed.stdout
+
+
+def test_run_court_line_keypoints_cli_fails_closed_on_missing_video(tmp_path: Path) -> None:
+    missing_video = tmp_path / "does_not_exist.mp4"
+    out_path = tmp_path / "court_keypoints.json"
+    overlay_path = tmp_path / "court_keypoints_overlay.mp4"
+    summary_path = tmp_path / "court_keypoints_summary.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/run_court_line_keypoints.py",
+            "--video",
+            str(missing_video),
+            "--out",
+            str(out_path),
+            "--overlay-out",
+            str(overlay_path),
+            "--summary-out",
+            str(summary_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode != 0
+    assert "ERROR" in completed.stderr
+    assert not out_path.exists()
+    assert not summary_path.exists()

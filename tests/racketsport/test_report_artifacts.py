@@ -9,6 +9,7 @@ import pytest
 
 from tests.racketsport.json_schema_assertions import assert_matches_json_schema
 import threed.racketsport.report_model as report_model
+from threed.racketsport.habit_model import MetricFact, habit_from_metric_fact
 from threed.racketsport.schemas import HabitReport, validate_artifact_file
 
 
@@ -70,6 +71,38 @@ def test_build_report_artifacts_uses_metric_facts_without_met2_claims(tmp_path: 
             "metric": "nvz_margin_ft",
             "value": -0.5,
         },
+    }
+
+
+def test_habit_metric_fact_keeps_raw_and_json_pointer_correction_paths() -> None:
+    fact = MetricFact(
+        player_id=2,
+        shot_index=3,
+        shot_time_s=4.5,
+        shot_type="drive",
+        metric="hip/shoulder~angle",
+        value=[1.0, 2.0],
+        confidence=0.77,
+        gated=False,
+    )
+
+    habit = habit_from_metric_fact(fact)
+
+    assert fact.habit_id == "p2_s003_hip_shoulder_angle"
+    assert fact.correction_paths == {
+        "/players/2/shots/3/metrics/hip/shoulder~angle",
+        "/players/2/shots/3/metrics/hip~1shoulder~0angle",
+    }
+    assert habit.id == "p2_s003_hip_shoulder_angle"
+    assert habit.summary == "Measured hip/shoulder~angle=[1.0,2.0] at t=4.500s."
+    assert habit.cue == "Placeholder only: inspect measured hip/shoulder~angle before coaching copy."
+    assert habit.source == {
+        "player_id": 2,
+        "shot_index": 3,
+        "shot_type": "drive",
+        "shot_time_s": 4.5,
+        "metric": "hip/shoulder~angle",
+        "value": [1.0, 2.0],
     }
 
 

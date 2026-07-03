@@ -246,6 +246,31 @@ def test_body_compute_without_frame_plan_does_not_schedule_all_tracks_as_mesh() 
     assert execution["summary"]["skipped_by_reason"] == {"missing_frame_compute_plan": 2}
 
 
+def test_body_compute_can_schedule_sam3d_body_joints_for_all_safe_tracked_frames(tmp_path: Path) -> None:
+    frame_plan = _write_json(tmp_path / "frame_compute_plan.json", _frame_plan_payload())
+
+    execution = build_body_compute_execution(
+        Tracks.model_validate(_tracks_payload()),
+        frame_plan_path=frame_plan,
+        include_tier2_body_joints=True,
+    )
+
+    scheduled = {(frame["frame_idx"], frame["target_representation"]): frame for frame in execution["scheduled_frames"]}
+    assert set(scheduled) == {(0, "body_joints"), (1, "world_mesh")}
+    assert scheduled[(0, "body_joints")]["target_player_ids"] == [7]
+    assert scheduled[(0, "body_joints")]["recommended_tier"] == "tier2_body_joints"
+    assert scheduled[(0, "body_joints")]["source"] == "sam3d_body_joints"
+    assert scheduled[(0, "body_joints")]["reasons"] == ["sam3d_body_joints_all_tracked"]
+    assert scheduled[(1, "world_mesh")]["recommended_tier"] == "deep_mesh"
+    assert execution["summary"]["scheduled_by_target_representation"] == {
+        "body_joints": 1,
+        "world_mesh": 1,
+    }
+    assert execution["summary"]["scheduled_player_frame_count"] == 2
+    assert execution["summary"]["tier2_body_joint_player_frame_count"] == 1
+    assert execution["summary"]["tier1_mesh_player_frame_count"] == 1
+
+
 def test_body_compute_execution_cli_writes_adaptive_manifest(tmp_path: Path) -> None:
     tracks = _write_json(tmp_path / "tracks.json", _tracks_payload())
     frame_plan = _write_json(tmp_path / "frame_compute_plan.json", _frame_plan_payload())

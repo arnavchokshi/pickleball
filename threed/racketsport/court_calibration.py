@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import math
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable, Sequence
 
 from .capture_quality import score_capture_quality
 from .court_templates import Sport, get_court_template
@@ -265,6 +265,116 @@ def calibration_from_manual_taps(path: str | Path, *, sport: Sport) -> CourtCali
     return _build_calibration(sidecar, sport=sport, image_pts=image_pts, world_pts=world_pts)
 
 
+def build_manual_tap_calibration_artifact(
+    path: str | Path,
+    *,
+    sport: Sport,
+    candidate_segments: Iterable[Sequence[Sequence[float]]] = (),
+) -> dict[str, Any]:
+    """Return a trusted manual-tap calibration payload with additive plausibility metadata.
+
+    The canonical ``CourtCalibration`` schema is intentionally unchanged here. Callers that
+    need a strict calibration model should keep using ``calibration_from_manual_taps``.
+    """
+
+    sidecar = load_capture_sidecar(path)
+    image_pts, world_pts = manual_tap_correspondences(sidecar, sport=sport)
+    calibration = _build_calibration(sidecar, sport=sport, image_pts=image_pts, world_pts=world_pts)
+    plausibility = evaluate_manual_tap_plausibility(
+        sidecar,
+        sport=sport,
+        candidate_segments=candidate_segments,
+    )
+    payload = calibration.model_dump(mode="json")
+    payload["tap_plausibility"] = plausibility
+    payload["needs_user_confirmation"] = bool(plausibility["needs_user_confirmation"])
+    return payload
+
+
+def evaluate_manual_tap_plausibility(
+    sidecar: CaptureSidecar,
+    *,
+    sport: Sport,
+    candidate_segments: Iterable[Sequence[Sequence[float]]] = (),
+) -> dict[str, Any]:
+    """Check whether trusted manual taps look like tennis-corner taps over pickleball evidence.
+
+    Human taps remain authoritative for calibration. This function only annotates whether
+    line evidence makes the pickleball interpretation suspicious enough to ask the owner to
+    confirm the taps.
+    """
+
+    if sport != "pickleball":
+        return {
+            "verdict": "consistent",
+            "needs_user_confirmation": False,
+            "owner_tap_trusted": True,
+            "reason": "tap_plausibility_check_only_applies_to_pickleball_manual_taps",
+            "trust_note": {"grade": "good", "reason": "non_pickleball_tap_check_bypassed"},
+            "evidence": {},
+        }
+
+    image_pts, _world_pts = manual_tap_correspondences(sidecar, sport=sport)
+    candidates = [_segment2(candidate) for candidate in candidate_segments]
+    if not candidates:
+        return {
+            "verdict": "consistent",
+            "needs_user_confirmation": False,
+            "owner_tap_trusted": True,
+            "reason": "no_line_evidence_available",
+            "trust_note": {"grade": "good", "reason": "trusted_manual_taps_without_line_evidence"},
+            "evidence": {},
+        }
+
+    pickleball = _score_tap_template_against_candidates(
+        image_pts=image_pts,
+        sport="pickleball",
+        candidate_segments=candidates,
+        discriminating_line_ids=("near_nvz", "far_nvz", "near_centerline", "far_centerline", "net"),
+    )
+    tennis = _score_tap_template_against_candidates(
+        image_pts=image_pts,
+        sport="tennis",
+        candidate_segments=candidates,
+        discriminating_line_ids=("near_service_line", "far_service_line", "net"),
+    )
+    margin = tennis["evidence_mass"] - pickleball["evidence_mass"]
+    pickleball_line_count = max(1, len(pickleball["line_scores"]))
+    pickleball_mean_score = pickleball["evidence_mass"] / pickleball_line_count
+    tennis_better = tennis["evidence_mass"] >= 1.6 and margin >= 0.35
+    weak_pickleball = pickleball_mean_score < 0.55
+    suspect = tennis_better or weak_pickleball
+    verdict = "suspect_tennis_corners" if suspect else "consistent"
+    if tennis_better:
+        reason = "tennis_template_explains_line_evidence_better"
+    elif weak_pickleball:
+        reason = "pickleball_line_evidence_weak"
+    else:
+        reason = "pickleball_template_consistent"
+    if tennis_better:
+        trust_reason = "Trusted taps retained, but tennis-court evidence is stronger; owner confirmation required."
+    elif weak_pickleball:
+        trust_reason = "Trusted taps retained, but pickleball line evidence is weak; owner confirmation required."
+    else:
+        trust_reason = "Trusted taps are consistent with pickleball line evidence."
+    return {
+        "verdict": verdict,
+        "needs_user_confirmation": suspect,
+        "owner_tap_trusted": True,
+        "reason": reason,
+        "trust_note": {
+            "grade": "warn" if suspect else "good",
+            "reason": trust_reason,
+        },
+        "evidence": {
+            "pickleball": pickleball,
+            "tennis": tennis,
+            "tennis_minus_pickleball_evidence_mass": round(margin, 4),
+            "pickleball_mean_line_score": round(pickleball_mean_score, 4),
+        },
+    }
+
+
 def calibration_from_manual_tap_frames(paths: Iterable[str | Path], *, sport: Sport) -> CourtCalibration:
     sidecars = [load_capture_sidecar(path) for path in paths]
     if not sidecars:
@@ -418,6 +528,42 @@ def _build_calibration(
         capture_quality=_merge_capture_quality(sidecar, error, len(image_pts)),
         image_pts=image_pts,
         world_pts=world_pts,
+    )
+
+
+def _score_tap_template_against_candidates(
+    *,
+    image_pts: Sequence[Sequence[float]],
+    sport: Sport,
+    candidate_segments: Sequence[tuple[tuple[float, float], tuple[float, float]]],
+    discriminating_line_ids: Sequence[str],
+) -> dict[str, Any]:
+    from .court_line_evidence import score_line_candidate
+
+    template = get_court_template(sport)
+    homography = homography_from_planar_points(template.corners_m, image_pts)
+    line_scores: dict[str, float] = {}
+    evidence_mass = 0.0
+    for line_id in discriminating_line_ids:
+        expected_world = template.line_segments_m.get(line_id)
+        if expected_world is None:
+            continue
+        expected_image = project_planar_points(homography, expected_world)
+        best = max((score_line_candidate(expected_image, segment) for segment in candidate_segments), key=lambda score: score.score)
+        line_scores[line_id] = round(float(best.score), 4)
+        evidence_mass += float(best.score)
+    return {
+        "evidence_mass": round(evidence_mass, 4),
+        "line_scores": line_scores,
+    }
+
+
+def _segment2(segment: Sequence[Sequence[float]]) -> tuple[tuple[float, float], tuple[float, float]]:
+    if len(segment) != 2 or len(segment[0]) != 2 or len(segment[1]) != 2:
+        raise ValueError("candidate segment must contain exactly two 2D points")
+    return (
+        (float(segment[0][0]), float(segment[0][1])),
+        (float(segment[1][0]), float(segment[1][1])),
     )
 
 

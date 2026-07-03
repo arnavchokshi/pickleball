@@ -78,6 +78,44 @@ def _pixel_grounding_calibration() -> CourtCalibration:
     )
 
 
+def _camera_y_to_court_z_calibration() -> CourtCalibration:
+    return CourtCalibration(
+        schema_version=1,
+        sport="pickleball",
+        homography=[[0.02, 0.0, -1.0], [0.0, 0.02, -1.0], [0.0, 0.0, 1.0]],
+        intrinsics=CameraIntrinsics(fx=100.0, fy=100.0, cx=50.0, cy=50.0, dist=[], source="solvepnp_test"),
+        extrinsics=CourtExtrinsics(
+            R=[[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]],
+            t=[0.0, 0.0, 2.0],
+            camera_height_m=2.0,
+        ),
+        reprojection_error_px=ReprojectionError(median=0.0, p95=0.0),
+        capture_quality=CaptureQuality(grade="good", reasons=[]),
+        image_pts=[[0.0, 0.0], [100.0, 0.0], [100.0, 100.0], [0.0, 100.0]],
+        world_pts=[[-1.0, -1.0, 0.0], [1.0, -1.0, 0.0], [1.0, 1.0, 0.0], [-1.0, 1.0, 0.0]],
+    )
+
+
+def _camera_frame_laid_body_joints() -> list[list[float]]:
+    joints = [[0.0, 0.8, 0.0] for _idx in range(133)]
+    joints[0] = [0.0, 1.62, 0.0]
+    joints[5] = [-0.18, 1.25, 0.0]
+    joints[6] = [0.18, 1.25, 0.0]
+    joints[11] = [-0.12, 0.82, 0.0]
+    joints[12] = [0.12, 0.82, 0.0]
+    joints[13] = [-0.12, 0.42, 0.0]
+    joints[14] = [0.12, 0.42, 0.0]
+    joints[15] = [-0.12, 0.05, 0.0]
+    joints[16] = [0.12, 0.05, 0.0]
+    joints[17] = [-0.18, 0.0, 0.0]
+    joints[18] = [-0.08, 0.0, 0.0]
+    joints[19] = [-0.14, 0.0, 0.0]
+    joints[20] = [0.18, 0.0, 0.0]
+    joints[21] = [0.08, 0.0, 0.0]
+    joints[22] = [0.14, 0.0, 0.0]
+    return joints
+
+
 def test_lane_a_joint_names_keep_body_feet_hands_and_drop_face() -> None:
     assert len(RTMW3D_WHOLEBODY_133_JOINT_NAMES) == 133
     assert len(LANE_A_RTMW3D_JOINT_NAMES) == 65
@@ -124,6 +162,7 @@ def test_build_lane_a_skeleton3d_keeps_all_tracked_player_frames_and_grounds_sup
     assert skeleton["joint_names"] == list(LANE_A_RTMW3D_JOINT_NAMES)
     assert [(player["id"], len(player["frames"])) for player in skeleton["players"]] == [(7, 2), (8, 1)]
     first_frame = skeleton["players"][0]["frames"][0]
+    assert first_frame["transl_world"] == pytest.approx([2.0, 3.0, 0.0])
     foot_z_values = [joint[2] for name, joint in zip(skeleton["joint_names"], first_frame["joints_world"]) if "toe" in name or "heel" in name]
     assert min(foot_z_values) == pytest.approx(0.0)
     support_xy = first_frame["joints_world"][19]
@@ -166,10 +205,53 @@ def test_build_lane_a_skeleton3d_backprojects_support_foot_pixels_when_calibrate
     )
 
     frame = skeleton["players"][0]["frames"][0]
+    assert frame["transl_world"] == pytest.approx([2.0, 3.0, 0.0])
     assert frame["joints_world"][19][:2] == pytest.approx([2.0, 0.0])
     assert frame["joints_world"][19][:2] != pytest.approx([2.0, 3.0])
     assert skeleton["provenance"]["grounding"] == "support_foot_pixel_backprojected_to_court_z0"
     assert skeleton["provenance"]["grounding_fallback_count"] == 0
+
+
+def test_build_lane_a_skeleton3d_rotates_camera_offsets_before_grounding_when_calibrated() -> None:
+    results = [
+        PoseCropResult(
+            frame_idx=0,
+            player_id=7,
+            joints_m=_camera_frame_laid_body_joints(),
+            joint_conf=[0.9] * 133,
+        ),
+        PoseCropResult(
+            frame_idx=1,
+            player_id=7,
+            joints_m=_camera_frame_laid_body_joints(),
+            joint_conf=[0.9] * 133,
+        ),
+        PoseCropResult(
+            frame_idx=0,
+            player_id=8,
+            joints_m=_camera_frame_laid_body_joints(),
+            joint_conf=[0.9] * 133,
+        ),
+    ]
+
+    skeleton = build_lane_a_skeleton3d_from_rtmw3d(
+        Tracks.model_validate(_tracks_payload()),
+        results,
+        world_frame="court_Z0",
+        source_model="rtmw3d_x",
+        calibration=_camera_y_to_court_z_calibration(),
+    )
+
+    frame = skeleton["players"][0]["frames"][0]
+    nose_z = frame["joints_world"][0][2]
+    foot_z_values = [
+        joint[2]
+        for name, joint in zip(skeleton["joint_names"], frame["joints_world"])
+        if "toe" in name or "heel" in name
+    ]
+    assert nose_z == pytest.approx(1.62)
+    assert min(foot_z_values) == pytest.approx(0.0)
+    assert skeleton["provenance"]["camera_offset_rotation_convention"] == "offset_row_times_R"
 
 
 def test_rtmw3d_runtime_fails_closed_when_manifest_checkpoint_is_not_available(tmp_path: Path) -> None:

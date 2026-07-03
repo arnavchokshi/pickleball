@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .model_manifest import load_model_manifest
+from .sam3d_body_input_prep import load_mask_prompt_arrays, normalize_body_input_size
 
 
 SCAFFOLD_NOTE = "cpu_hmr_deep_primitives_no_model_inference"
@@ -291,12 +292,14 @@ class FastSam3DBodyRuntime:
         fast_sam_repo: str | Path = DEFAULT_FAST_SAM_REPO,
         detector_name: str = "yolo",
         fov_name: str = "moge2",
+        body_input_size_px: int | None = None,
     ) -> None:
         repo = Path(fast_sam_repo)
         if not repo.is_dir():
             raise FileNotFoundError(f"missing FastSAM-3D-Body repo at {repo}")
         self.fast_sam_repo = repo
         self.detector_name = detector_name
+        self.body_input_size_px = normalize_body_input_size(body_input_size_px)
         detector_asset = assets.get("yolo26m") if detector_name else None
         if detector_name and detector_asset is None:
             raise ValueError("yolo26m asset is required when detector_name is enabled")
@@ -306,6 +309,8 @@ class FastSam3DBodyRuntime:
         setup_sam_3d_body = _load_setup_sam_3d_body(repo)
         os.environ.setdefault("FAST_SAM_CHECKPOINT_DIR", str(self.checkpoint_dir))
         os.environ.setdefault("SAM3DBODY_CHECKPOINT_DIR", str(self.checkpoint_dir))
+        if self.body_input_size_px is not None:
+            os.environ["IMG_SIZE"] = str(self.body_input_size_px)
         self.estimator = setup_sam_3d_body(
             hf_repo_id="facebook/sam-3d-body-dinov3",
             detector_name=detector_name,
@@ -314,7 +319,14 @@ class FastSam3DBodyRuntime:
             local_checkpoint_path=str(self.checkpoint_dir),
         )
 
-    def process_frame(self, image_path: Path, *, bboxes_xyxy: list[list[float]]) -> list[dict[str, Any]]:
+    def process_frame(
+        self,
+        image_path: Path,
+        *,
+        bboxes_xyxy: list[list[float]],
+        mask_paths: Sequence[str | Path | None] | None = None,
+        camera_intrinsics: Sequence[Sequence[float]] | None = None,
+    ) -> list[dict[str, Any]]:
         bbox_arg: Any = bboxes_xyxy
         try:
             import numpy as np  # type: ignore[import-not-found]
@@ -322,11 +334,15 @@ class FastSam3DBodyRuntime:
             bbox_arg = np.asarray(bboxes_xyxy, dtype=np.float32)
         except ImportError:
             pass
+        masks_arg = load_mask_prompt_arrays(mask_paths)
+        cam_int_arg = _camera_intrinsics_tensor(camera_intrinsics)
 
         raw_output = self.estimator.process_one_image(
             str(image_path.resolve()),
             bboxes=bbox_arg,
-            use_mask=False,
+            masks=masks_arg,
+            cam_int=cam_int_arg,
+            use_mask=masks_arg is not None,
             hand_box_source="body_decoder",
         )
         records = extract_fast_sam_person_records(raw_output)
@@ -346,6 +362,7 @@ class FastSam3DBodySubprocessRuntime:
         detector_name: str = "yolo",
         detector_model: str = "",
         fov_name: str = "moge2",
+        body_input_size_px: int | None = None,
         work_dir: str | Path,
         script_path: str | Path | None = None,
     ) -> None:
@@ -355,11 +372,19 @@ class FastSam3DBodySubprocessRuntime:
         self.detector_name = detector_name
         self.detector_model = detector_model
         self.fov_name = fov_name
+        self.body_input_size_px = normalize_body_input_size(body_input_size_px)
         self.work_dir = Path(work_dir)
         repo_root = Path(__file__).resolve().parents[2]
         self.script_path = Path(script_path) if script_path is not None else repo_root / "scripts/racketsport/run_sam3dbody_frame.py"
 
-    def process_frame(self, image_path: Path, *, bboxes_xyxy: list[list[float]]) -> list[dict[str, Any]]:
+    def process_frame(
+        self,
+        image_path: Path,
+        *,
+        bboxes_xyxy: list[list[float]],
+        mask_paths: Sequence[str | Path | None] | None = None,
+        camera_intrinsics: Sequence[Sequence[float]] | None = None,
+    ) -> list[dict[str, Any]]:
         self.work_dir.mkdir(parents=True, exist_ok=True)
         out_path = self.work_dir / f"{Path(image_path).stem}-{uuid.uuid4().hex}.json"
         command = [
@@ -380,6 +405,13 @@ class FastSam3DBodySubprocessRuntime:
             "--fov-name",
             self.fov_name,
         ]
+        if self.body_input_size_px is not None:
+            command.extend(["--body-input-size", str(self.body_input_size_px)])
+        for mask_path in mask_paths or []:
+            if mask_path:
+                command.extend(["--mask", str(mask_path)])
+        if camera_intrinsics is not None:
+            command.extend(["--camera-intrinsics", json.dumps(camera_intrinsics, separators=(",", ":"))])
         for bbox in bboxes_xyxy:
             command.extend(["--bbox", ",".join(str(float(value)) for value in bbox)])
         completed = subprocess.run(command, check=False, capture_output=True, text=True)
@@ -394,21 +426,54 @@ class FastSam3DBodySubprocessRuntime:
             raise RuntimeError(f"FastSAM-3D-Body subprocess output missing records: {out_path}")
         return [dict(record) for record in records if isinstance(record, Mapping)]
 
-    def process_frame_batches(self, requests: list[tuple[Path, list[list[float]]]]) -> list[list[dict[str, Any]]]:
+    def process_frame_batches(
+        self,
+        requests: list[Any],
+        *,
+        clip_intrinsics: Mapping[str, Any] | None = None,
+        sam3d_body_input_size_px: int | None = None,
+        crop_bucket_sizes: Sequence[int] = (),
+        torch_compile: bool = False,
+        compile_warmup_buckets: Sequence[int] = (),
+        steady_state_empty_cache: bool = True,
+        inner_bucket_sync: bool = True,
+        upstream_env: Mapping[str, Any] | None = None,
+        tier2_output_lite: bool = False,
+    ) -> list[list[dict[str, Any]]]:
         if not requests:
             return []
         self.work_dir.mkdir(parents=True, exist_ok=True)
         request_path = self.work_dir / f"batch_requests-{uuid.uuid4().hex}.json"
         out_path = self.work_dir / f"batch_outputs-{uuid.uuid4().hex}.json"
+        normalized_requests = [_normalize_sam3d_runtime_request(request) for request in requests]
+        body_input_size_px = normalize_body_input_size(sam3d_body_input_size_px or self.body_input_size_px)
+        request_ids = [str(request.get("request_id") or index) for index, request in enumerate(normalized_requests)]
         request_payload = {
             "schema_version": 1,
+            "clip_intrinsics": dict(clip_intrinsics) if clip_intrinsics is not None else None,
+            "optimization": {
+                "sam3d_body_input_size_px": body_input_size_px,
+                "crop_bucket_sizes": [int(value) for value in crop_bucket_sizes],
+                "torch_compile": bool(torch_compile),
+                "compile_warmup_buckets": [int(value) for value in compile_warmup_buckets],
+                "steady_state_empty_cache": bool(steady_state_empty_cache),
+                "inner_bucket_sync": bool(inner_bucket_sync),
+                "upstream_env": dict(upstream_env or {}),
+                "tier2_output_lite": bool(tier2_output_lite),
+                "batching": "static_intrinsics_cross_frame_bucketed_body_batch",
+            },
+            "bucket_plan": _sam3d_bucket_plan(request_ids, bucket_sizes=crop_bucket_sizes),
             "requests": [
                 {
-                    "request_id": str(index),
-                    "image": str(Path(image_path)),
-                    "bboxes": [[float(value) for value in bbox] for bbox in bboxes],
+                    "request_id": request_ids[index],
+                    "image": str(request["image_path"]),
+                    "bboxes": [[float(value) for value in bbox] for bbox in request["bboxes"]],
+                    "mask_paths": [str(path) for path in request.get("mask_paths", []) if path],
+                    "camera_intrinsics": request.get("camera_intrinsics"),
+                    "sam3d_body_input_size_px": body_input_size_px,
+                    "target_representation": request.get("target_representation", "world_mesh"),
                 }
-                for index, (image_path, bboxes) in enumerate(requests)
+                for index, request in enumerate(normalized_requests)
             ],
         }
         request_path.write_text(json.dumps(request_payload, separators=(",", ":")) + "\n", encoding="utf-8")
@@ -430,6 +495,8 @@ class FastSam3DBodySubprocessRuntime:
             "--fov-name",
             self.fov_name,
         ]
+        if self.body_input_size_px is not None:
+            command.extend(["--body-input-size", str(self.body_input_size_px)])
         completed = subprocess.run(command, check=False, capture_output=True, text=True)
         if completed.returncode != 0:
             stderr = (completed.stderr or "").strip()
@@ -446,12 +513,76 @@ class FastSam3DBodySubprocessRuntime:
             if isinstance(frame, Mapping)
         }
         outputs: list[list[dict[str, Any]]] = []
-        for index in range(len(requests)):
-            records = by_id.get(str(index), [])
+        for index, request_id in enumerate(request_ids):
+            records = by_id.get(str(request_id), [])
             if not isinstance(records, list):
                 raise RuntimeError(f"FastSAM-3D-Body batch records are not a list for request {index}: {out_path}")
             outputs.append([dict(record) for record in records if isinstance(record, Mapping)])
         return outputs
+
+
+def _camera_intrinsics_tensor(camera_intrinsics: Sequence[Sequence[float]] | None) -> Any | None:
+    if camera_intrinsics is None:
+        return None
+    import torch  # type: ignore[import-not-found]
+
+    rows = [[float(value) for value in row] for row in camera_intrinsics]
+    if len(rows) != 3 or any(len(row) != 3 for row in rows):
+        raise ValueError("camera_intrinsics must be a 3x3 matrix")
+    return torch.tensor([rows], dtype=torch.float32)
+
+
+def _normalize_sam3d_runtime_request(request: Any) -> dict[str, Any]:
+    if isinstance(request, Mapping):
+        image_path = request.get("image_path", request.get("image"))
+        bboxes = request.get("bboxes")
+        if bboxes is None and request.get("bbox") is not None:
+            bboxes = [request["bbox"]]
+        if image_path is None or bboxes is None:
+            raise ValueError("SAM3D runtime request mapping requires image_path/image and bboxes/bbox")
+        return {
+            "request_id": str(request.get("request_id", "")),
+            "image_path": Path(image_path),
+            "bboxes": [[float(value) for value in bbox] for bbox in bboxes],
+            "mask_paths": [Path(path) for path in request.get("mask_paths", []) if path],
+            "camera_intrinsics": request.get("camera_intrinsics"),
+            "target_representation": str(request.get("target_representation", "world_mesh")),
+        }
+    if isinstance(request, tuple) and len(request) == 2:
+        image_path, bboxes = request
+        return {
+            "request_id": "",
+            "image_path": Path(image_path),
+            "bboxes": [[float(value) for value in bbox] for bbox in bboxes],
+            "mask_paths": [],
+            "camera_intrinsics": None,
+            "target_representation": "world_mesh",
+        }
+    raise ValueError("SAM3D runtime request must be a mapping or (image_path, bboxes) tuple")
+
+
+def _sam3d_bucket_plan(request_ids: Sequence[str], *, bucket_sizes: Sequence[int]) -> list[dict[str, Any]]:
+    if not request_ids:
+        return []
+    buckets = sorted({int(size) for size in bucket_sizes if int(size) > 0})
+    if not buckets:
+        return [{"bucket_size": len(request_ids), "request_ids": list(request_ids), "padded_request_count": len(request_ids)}]
+    plan: list[dict[str, Any]] = []
+    pending = list(request_ids)
+    while pending:
+        remaining = len(pending)
+        bucket_size = next((size for size in buckets if size >= remaining), buckets[-1])
+        take = min(remaining, bucket_size)
+        group = pending[:take]
+        del pending[:take]
+        plan.append(
+            {
+                "bucket_size": int(bucket_size),
+                "request_ids": group,
+                "padded_request_count": int(bucket_size),
+            }
+        )
+    return plan
 
 
 def extract_fast_sam_person_records(raw_output: Any) -> list[dict[str, Any]]:

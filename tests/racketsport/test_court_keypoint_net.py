@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from threed.racketsport.court_templates import FT_TO_M
+from threed.racketsport.court_templates import FT_TO_M, get_court_template
 from threed.racketsport.court_keypoint_net import (
     PICKLEBALL_KEYPOINTS,
     decode_subpixel_heatmap,
@@ -53,6 +53,17 @@ def test_pickleball_keypoint_taxonomy_includes_corners_nvz_and_centerline_inters
     assert _ft(by_name["net_center"].world_xyz_m[0]) == pytest.approx(0.0)
     assert _ft(by_name["net_center"].world_xyz_m[1]) == pytest.approx(0.0)
     assert _ft(by_name["far_nvz_center"].world_xyz_m[1]) == pytest.approx(7.0)
+
+
+def test_net_keypoints_use_regulation_top_net_height_convention() -> None:
+    template = get_court_template("pickleball")
+    by_name = {point.name: point for point in PICKLEBALL_KEYPOINTS}
+
+    assert by_name["net_left_sideline"].world_xyz_m[2] == pytest.approx(template.post_net_height_m)
+    assert by_name["net_center"].world_xyz_m[2] == pytest.approx(template.post_net_height_m)
+    assert by_name["net_right_sideline"].world_xyz_m[2] == pytest.approx(template.post_net_height_m)
+    assert by_name["net_center"].world_xyz_m[2] > template.center_net_height_m
+    assert by_name["near_nvz_center"].world_xyz_m[2] == pytest.approx(0.0)
 
 
 def test_synthetic_render_and_training_plan_configs_validate_training_bounds() -> None:

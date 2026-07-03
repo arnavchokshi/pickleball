@@ -1,13 +1,23 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import math
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-import torch
+
+_TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
+pytestmark = pytest.mark.skipif(
+    not _TORCH_AVAILABLE,
+    reason="torch is optional in the local .venv test lane",
+)
+if _TORCH_AVAILABLE:
+    import torch
+else:
+    torch = None
 
 from threed.racketsport.pose_fast import LANE_A_RTMW3D_JOINT_NAMES
 from threed.racketsport.pose_temporal import MotionBERTTemporalRuntime, refine_lane_a_skeleton3d
@@ -69,7 +79,12 @@ def test_refine_lane_a_skeleton3d_one_euro_smooths_feet_and_hands() -> None:
     assert refined["provenance"]["temporal_refine"]["one_euro"] == {
         "mincutoff": 1.0,
         "beta": 0.3,
-        "applied_joint_groups": ["feet", "hands"],
+        "core_body_mincutoff": 0.45,
+        "core_body_beta": 0.05,
+        "wrist_mincutoff": 1000.0,
+        "wrist_beta": 0.0,
+        "applied_joint_groups": ["core_body", "feet", "hands", "wrists"],
+        "filtered_joint_count": 65,
     }
     assert len(refined["players"][0]["frames"]) == 3
     assert refined["players"][0]["frames"][1]["joints_world"][foot_idx][0] < 1.0
@@ -165,7 +180,7 @@ def test_refine_lane_a_skeleton3d_applies_motionbert_body17_in_243_frame_windows
     frames = []
     for frame_idx in range(244):
         joints = _base_joints()
-        joints[nose_idx] = [float(frame_idx), 0.0, 1.6]
+        joints[nose_idx] = [float(frame_idx) * 0.01, 0.0, 1.6]
         joints[foot_idx] = [10.0, 0.0, 0.0]
         joints[hand_idx] = [20.0, 0.0, 1.3]
         frames.append(_frame(frame_idx, joints))
@@ -192,6 +207,8 @@ def test_refine_lane_a_skeleton3d_applies_motionbert_body17_in_243_frame_windows
         fps=30.0,
         one_euro_mincutoff=1000.0,
         one_euro_beta=0.0,
+        core_one_euro_mincutoff=1000.0,
+        core_one_euro_beta=0.0,
         motionbert_runtime=runtime,
     )
 
@@ -200,7 +217,7 @@ def test_refine_lane_a_skeleton3d_applies_motionbert_body17_in_243_frame_windows
     assert all(call["player_id"] == 7 for call in runtime.calls)
     assert runtime.calls[0]["joint_names"] == list(LANE_A_RTMW3D_JOINT_NAMES[:17])
     assert output_frames[0]["joints_world"][nose_idx] == pytest.approx([0.25, 0.0, 1.7])
-    assert output_frames[243]["joints_world"][nose_idx] == pytest.approx([243.25, 0.0, 1.7])
+    assert output_frames[243]["joints_world"][nose_idx] == pytest.approx([2.68, 0.0, 1.7], abs=1e-4)
     assert output_frames[0]["joints_world"][foot_idx][0] == pytest.approx(10.0)
     assert output_frames[0]["joints_world"][hand_idx][0] == pytest.approx(20.0)
     temporal = refined["provenance"]["temporal_refine"]

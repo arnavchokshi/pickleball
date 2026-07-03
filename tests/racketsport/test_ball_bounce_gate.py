@@ -98,6 +98,44 @@ def _classifier_payload(
     return payload
 
 
+def _bounce_2d_payload(*, input_ball_track_path: str | None = None) -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_bounce_2d_output",
+        "status": "TESTED-ON-REAL-DATA",
+        "algorithm": "image_velocity_inflection_court_plane_2d_v1",
+        "probability_threshold": 0.5,
+        "candidate_count": 1,
+        "accepted_bounce_count": 1,
+        "accepted_bounces": [
+            {
+                "t": 1.0,
+                "frame": 60,
+                "p_bounce": 0.82,
+                "world_xy": [1.2, 2.4],
+                "contact_xy_img": [120.0, 210.0],
+                "source": "image_velocity_inflection_court_plane_2d_v1",
+            }
+        ],
+        "input_ball_track_path": input_ball_track_path,
+        "court_corners_path": "court_corners.json",
+        "command": "python scripts/racketsport/run_ball_bounce_2d.py --ball-track ...",
+    }
+
+
+def _bounce_2d_bounces() -> list[dict[str, object]]:
+    return [
+        {
+            "t": 1.0,
+            "frame": 60,
+            "p_bounce": 0.82,
+            "world_xy": [1.2, 2.4],
+            "contact_xy_img": [120.0, 210.0],
+            "source": "image_velocity_inflection_court_plane_2d_v1",
+        }
+    ]
+
+
 def _audio_onsets_payload(*, onsets: list[dict[str, object]] | None = None) -> dict[str, object]:
     return {
         "schema_version": 1,
@@ -159,6 +197,59 @@ def test_ball_bounce_gate_passes_classifier_audio_review_and_projection(tmp_path
     assert report["review_timing"]["max_abs_delta_frames"] == pytest.approx(0.0)
     assert report["violations"] == []
     assert report["not_ground_truth"] is True
+
+
+def test_ball_bounce_gate_accepts_2d_detector_audio_review_and_projection(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    track = tmp_path / "ball_track.json"
+    detector = tmp_path / "bounce_2d_output.json"
+    audio = tmp_path / "audio_onsets.json"
+    reviewed = tmp_path / "reviewed_bounces.json"
+    _write_test_video(video)
+    track.write_text(json.dumps(_ball_track_payload(bounces=_bounce_2d_bounces())), encoding="utf-8")
+    detector.write_text(json.dumps(_bounce_2d_payload(input_ball_track_path=str(track))), encoding="utf-8")
+    audio.write_text(json.dumps(_audio_onsets_payload()), encoding="utf-8")
+    reviewed.write_text(json.dumps(_reviewed_bounces_payload()), encoding="utf-8")
+
+    report = build_ball_bounce_gate_report(
+        ball_track_path=track,
+        video_path=video,
+        classifier_path=detector,
+        audio_onsets_path=audio,
+        reviewed_bounces_path=reviewed,
+    )
+
+    assert report["gate_result"] == "pass"
+    assert report["classifier"]["artifact_type"] == "racketsport_ball_bounce_2d_output"
+    assert report["classifier"]["algorithm"] == "image_velocity_inflection_court_plane_2d_v1"
+    assert report["violations"] == []
+
+
+def test_ball_bounce_gate_accepts_2d_detector_when_downstream_track_bounces_match(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    original_track = tmp_path / "ball_track_before_inout.json"
+    downstream_track = tmp_path / "ball_track_after_inout.json"
+    detector = tmp_path / "bounce_2d_output.json"
+    audio = tmp_path / "audio_onsets.json"
+    reviewed = tmp_path / "reviewed_bounces.json"
+    _write_test_video(video)
+    original_track.write_text(json.dumps(_ball_track_payload(bounces=[])), encoding="utf-8")
+    downstream_track.write_text(json.dumps(_ball_track_payload(bounces=_bounce_2d_bounces())), encoding="utf-8")
+    detector.write_text(json.dumps(_bounce_2d_payload(input_ball_track_path=str(original_track))), encoding="utf-8")
+    audio.write_text(json.dumps(_audio_onsets_payload()), encoding="utf-8")
+    reviewed.write_text(json.dumps(_reviewed_bounces_payload()), encoding="utf-8")
+
+    report = build_ball_bounce_gate_report(
+        ball_track_path=downstream_track,
+        video_path=video,
+        classifier_path=detector,
+        audio_onsets_path=audio,
+        reviewed_bounces_path=reviewed,
+    )
+
+    assert "bounce_2d_input_track_mismatch" not in report["violations"]
+    assert report["classifier"]["accepted_bounces_match_ball_track"] is True
+    assert report["gate_result"] == "pass"
 
 
 def test_ball_bounce_gate_fails_closed_when_classifier_audio_and_bounces_are_missing(tmp_path: Path) -> None:

@@ -30,6 +30,7 @@ class SourceSelectionConfig:
     seed_prior_weight: float = 0.75
     cardinality_gap_penalty: float = 8.0
     confidence_reward_weight: float = 0.25
+    margin_band_penalty: float = 2.0
     embedding_weight: float = 0.0
     embedding_bbox_scale: float = 1.0
 
@@ -44,6 +45,8 @@ class SourceSelectionConfig:
             raise ValueError("max_global_step_m must be non-negative")
         if self.embedding_weight < 0.0:
             raise ValueError("embedding_weight must be non-negative")
+        if self.margin_band_penalty < 0.0:
+            raise ValueError("margin_band_penalty must be non-negative")
         if self.embedding_bbox_scale <= 0.0:
             raise ValueError("embedding_bbox_scale must be positive")
 
@@ -83,6 +86,7 @@ class _CandidateDetection:
     bbox: tuple[float, float, float, float]
     world_xy: tuple[float, float]
     conf: float
+    inside_strict_court: bool = True
     embedding: tuple[float, ...] | None = None
 
 
@@ -122,7 +126,8 @@ def source_select_four_player_tracks(
     """Fill short seed-track gaps from tracked detections without using labels."""
 
     cfg = config or SourceSelectionConfig()
-    embedding_index = _embedding_index(embedding_payload)
+    embedding_enabled = embedding_payload is not None and cfg.embedding_weight > 0.0
+    embedding_index = _embedding_index(embedding_payload) if embedding_enabled else {}
     candidates_by_frame, source_count, kept_count, embedding_stats = _candidate_detections_by_frame(
         detections_payload,
         calibration,
@@ -213,7 +218,7 @@ def source_select_four_player_tracks(
         filled_frame_count=filled_frame_count,
         skipped_overlap_count=skipped_overlap_count,
         skipped_distance_count=skipped_distance_count,
-        uses_embeddings=embedding_payload is not None,
+        uses_embeddings=embedding_enabled,
         embedding_candidate_count=embedding_stats.candidate_count,
         embedding_joined_count=embedding_stats.joined_count,
         embedding_missing_count=embedding_stats.missing_count,
@@ -236,7 +241,8 @@ def source_select_global_four_player_tracks(
     """
 
     cfg = config or SourceSelectionConfig()
-    embedding_index = _embedding_index(embedding_payload)
+    embedding_enabled = embedding_payload is not None and cfg.embedding_weight > 0.0
+    embedding_index = _embedding_index(embedding_payload) if embedding_enabled else {}
     candidates_by_frame, source_count, kept_count, embedding_stats = _candidate_detections_by_frame(
         detections_payload,
         calibration,
@@ -323,7 +329,7 @@ def source_select_global_four_player_tracks(
         global_selected_frame_count=selected_frame_count,
         exact_cardinality_frame_count=exact_cardinality_frame_count,
         identity_reassignment_count=identity_reassignment_count,
-        uses_embeddings=embedding_payload is not None,
+        uses_embeddings=embedding_enabled,
         embedding_candidate_count=embedding_stats.candidate_count,
         embedding_joined_count=embedding_stats.joined_count,
         embedding_missing_count=embedding_stats.missing_count,
@@ -373,6 +379,7 @@ def _candidate_detections_by_frame(
             )
             if not court_polygon_filter([person], sport=calibration.sport, margin_m=config.court_margin_m):
                 continue
+            inside_strict_court = bool(court_polygon_filter([person], sport=calibration.sport, margin_m=0.0))
             embedding: tuple[float, ...] | None = None
             if embedding_index:
                 embedding_record = embedding_index.get((frame_idx, source_track_id, det_idx))
@@ -397,6 +404,7 @@ def _candidate_detections_by_frame(
                     bbox=tuple(float(value) for value in person.bbox_xyxy),  # type: ignore[arg-type]
                     world_xy=tuple(float(value) for value in person.foot_world_xy),  # type: ignore[arg-type]
                     conf=float(person.confidence),
+                    inside_strict_court=inside_strict_court,
                     embedding=embedding,
                 )
             )
@@ -618,9 +626,6 @@ def _best_global_frame_assignment(
                     best_cost = cost
                     best_assignment = assignment
                     best_selected = list(candidate_group)
-        if best_assignment:
-            break
-
     return best_selected, best_assignment, distance_rejections, overlap_rejections
 
 
@@ -646,6 +651,8 @@ def _global_lane_candidate_cost(
         cost += config.source_id_switch_penalty
     if config.embedding_weight > 0.0 and lane.last_embedding is not None and candidate.embedding is not None:
         cost += config.embedding_weight * _cosine_distance(lane.last_embedding, candidate.embedding)
+    if not candidate.inside_strict_court:
+        cost += config.margin_band_penalty
 
     seed_frame = seed_by_lane_frame.get((lane.player_id, frame_idx))
     if seed_frame is not None:

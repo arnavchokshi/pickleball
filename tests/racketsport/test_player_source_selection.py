@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
+from pathlib import Path
 
 from threed.racketsport.player_source_selection import (
     SourceSelectionConfig,
@@ -223,6 +225,71 @@ def test_global_source_selection_fails_closed_for_overlapping_and_off_court_cand
     assert summary.source_candidate_kept == 3
 
 
+def test_global_source_selection_penalizes_margin_band_candidates_when_strict_court_alternative_exists() -> None:
+    detections = [
+        _det(0, -2.0, -2.0, conf=0.9, track_id=1),
+        _det(0, 2.0, -2.0, conf=0.9, track_id=2),
+        _det(0, -2.0, 2.0, conf=0.9, track_id=3),
+        _det(0, 4.0, 0.0, conf=0.99, track_id=4),
+        _det(0, 2.0, 2.0, conf=0.55, track_id=5),
+    ]
+
+    selected, summary = source_select_global_four_player_tracks(
+        _detections_payload_for_frame_count(1, *detections),
+        _calibration(),
+        seed_tracks=None,
+        config=SourceSelectionConfig(
+            expected_players=4,
+            court_margin_m=2.0,
+            overlap_iou_threshold=0.5,
+            confidence_reward_weight=2.0,
+        ),
+    )
+
+    selected_points = {
+        (round(frame.world_xy[0], 1), round(frame.world_xy[1], 1))
+        for player in selected.players
+        for frame in player.frames
+    }
+
+    assert (2.0, 2.0) in selected_points
+    assert (4.0, 0.0) not in selected_points
+    assert summary.exact_cardinality_frame_count == 1
+
+
+def test_global_source_selection_can_leave_gap_instead_of_forcing_penalized_margin_band_candidate() -> None:
+    detections = [
+        _det(0, -2.0, -2.0, conf=0.9, track_id=1),
+        _det(0, 2.0, -2.0, conf=0.9, track_id=2),
+        _det(0, -2.0, 2.0, conf=0.9, track_id=3),
+        _det(0, 4.0, 0.0, conf=0.99, track_id=4),
+    ]
+
+    selected, summary = source_select_global_four_player_tracks(
+        _detections_payload_for_frame_count(1, *detections),
+        _calibration(),
+        seed_tracks=None,
+        config=SourceSelectionConfig(
+            expected_players=4,
+            court_margin_m=2.0,
+            margin_band_penalty=20.0,
+            overlap_iou_threshold=0.5,
+            confidence_reward_weight=2.0,
+        ),
+    )
+
+    selected_points = {
+        (round(frame.world_xy[0], 1), round(frame.world_xy[1], 1))
+        for player in selected.players
+        for frame in player.frames
+    }
+
+    assert (4.0, 0.0) not in selected_points
+    assert len(selected_points) == 3
+    assert summary.exact_cardinality_frame_count == 0
+    assert summary.global_selected_frame_count == 3
+
+
 def test_global_source_selection_can_use_embeddings_as_weak_ambiguous_tiebreaker() -> None:
     detections = [
         _det(0, -1.0, 0.0, conf=0.9, track_id=10),
@@ -265,6 +332,45 @@ def test_global_source_selection_can_use_embeddings_as_weak_ambiguous_tiebreaker
     assert summary.source_only is True
 
 
+def test_global_source_selection_ignores_embedding_export_until_weight_opted_in() -> None:
+    detections = [
+        _det(0, -1.0, 0.0, conf=0.9, track_id=10),
+        _det(0, 1.0, 0.0, conf=0.9, track_id=20),
+        _det(1, 0.0, 0.0, conf=0.9, track_id=30),
+        _det(1, 1.2, 0.0, conf=0.9, track_id=40),
+    ]
+    embeddings = _embedding_payload(
+        _emb_row(0, 10, 0, [1.0, 0.0], detections[0]["bbox"]),
+        _emb_row(0, 20, 1, [0.0, 1.0], detections[1]["bbox"]),
+        _emb_row(1, 30, 0, [0.0, 1.0], detections[2]["bbox"]),
+        _emb_row(1, 40, 1, [1.0, 0.0], detections[3]["bbox"]),
+    )
+
+    selected, summary = source_select_global_four_player_tracks(
+        _detections_payload_for_frame_count(2, *detections),
+        _calibration(),
+        seed_tracks=None,
+        embedding_payload=embeddings,
+        config=SourceSelectionConfig(
+            expected_players=2,
+            overlap_iou_threshold=0.0,
+            max_global_step_m=5.0,
+            source_id_switch_penalty=0.0,
+            continuity_weight=0.05,
+            confidence_reward_weight=0.0,
+        ),
+    )
+
+    player_10 = next(player for player in selected.players if player.id == 10)
+    player_20 = next(player for player in selected.players if player.id == 20)
+
+    assert SourceSelectionConfig().embedding_weight == 0.0
+    assert [round(frame.world_xy[0], 1) for frame in player_10.frames] == [-1.0, 0.0]
+    assert [round(frame.world_xy[0], 1) for frame in player_20.frames] == [1.0, 1.2]
+    assert summary.uses_embeddings is False
+    assert summary.embedding_cost_applied_count == 0
+
+
 def test_global_source_selection_can_join_raw_scale_embedding_bboxes() -> None:
     detections = [
         _det(0, -1.0, 0.0, conf=0.9, track_id=10),
@@ -305,3 +411,108 @@ def test_select_source_person_tracks_cli_help() -> None:
     assert "Source-only four-player selection" in completed.stdout
     assert "--embedding-export" in completed.stdout
     assert "--embedding-weight" in completed.stdout
+    assert "--margin-band-penalty" in completed.stdout
+
+
+def test_select_source_person_tracks_cli_keeps_embedding_weight_opt_in(tmp_path: Path) -> None:
+    source_dir = tmp_path / "source"
+    out_dir = tmp_path / "out"
+    source_dir.mkdir()
+    detections = [
+        _det(0, -1.0, 0.0, conf=0.9, track_id=10),
+        _det(0, 1.0, 0.0, conf=0.9, track_id=20),
+        _det(1, 0.0, 0.0, conf=0.9, track_id=30),
+        _det(1, 1.2, 0.0, conf=0.9, track_id=40),
+    ]
+    embeddings = _embedding_payload(
+        _emb_row(0, 10, 0, [1.0, 0.0], detections[0]["bbox"]),
+        _emb_row(0, 20, 1, [0.0, 1.0], detections[1]["bbox"]),
+        _emb_row(1, 30, 0, [0.0, 1.0], detections[2]["bbox"]),
+        _emb_row(1, 40, 1, [1.0, 0.0], detections[3]["bbox"]),
+    )
+    (source_dir / "tracked_detections.json").write_text(
+        json.dumps(_detections_payload_for_frame_count(2, *detections)),
+        encoding="utf-8",
+    )
+    (source_dir / "tracks.json").write_text(json.dumps(_seed_tracks().model_dump(mode="json")), encoding="utf-8")
+    calibration_path = tmp_path / "court_calibration.json"
+    embedding_path = tmp_path / "embeddings.json"
+    calibration_path.write_text(json.dumps(_calibration().model_dump(mode="json")), encoding="utf-8")
+    embedding_path.write_text(json.dumps(embeddings), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/select_source_person_tracks.py",
+            "--source-dir",
+            str(source_dir),
+            "--out-dir",
+            str(out_dir),
+            "--calibration",
+            str(calibration_path),
+            "--embedding-export",
+            str(embedding_path),
+            "--expected-players",
+            "2",
+            "--overlap-iou-threshold",
+            "0.0",
+            "--max-global-step-m",
+            "5.0",
+            "--source-id-switch-penalty",
+            "0.0",
+            "--continuity-weight",
+            "0.05",
+            "--confidence-reward-weight",
+            "0.0",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=Path(__file__).resolve().parents[2],
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    summary = json.loads((out_dir / "source_selection_summary.json").read_text(encoding="utf-8"))
+    assert summary["config"]["embedding_weight"] == 0.0
+    assert summary["summary"]["uses_embeddings"] is False
+    assert summary["summary"]["embedding_cost_applied_count"] == 0
+
+    opt_in_dir = tmp_path / "out_opt_in"
+    opt_in = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/select_source_person_tracks.py",
+            "--source-dir",
+            str(source_dir),
+            "--out-dir",
+            str(opt_in_dir),
+            "--calibration",
+            str(calibration_path),
+            "--embedding-export",
+            str(embedding_path),
+            "--embedding-weight",
+            "0.5",
+            "--expected-players",
+            "2",
+            "--overlap-iou-threshold",
+            "0.0",
+            "--max-global-step-m",
+            "5.0",
+            "--source-id-switch-penalty",
+            "0.0",
+            "--continuity-weight",
+            "0.05",
+            "--confidence-reward-weight",
+            "0.0",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=Path(__file__).resolve().parents[2],
+    )
+
+    assert opt_in.returncode == 0, opt_in.stderr
+    opt_in_summary = json.loads((opt_in_dir / "source_selection_summary.json").read_text(encoding="utf-8"))
+    assert opt_in_summary["config"]["embedding_weight"] == 0.5
+    assert opt_in_summary["summary"]["uses_embeddings"] is True
+    assert opt_in_summary["summary"]["embedding_cost_applied_count"] > 0

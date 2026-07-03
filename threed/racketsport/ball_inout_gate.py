@@ -172,7 +172,7 @@ def _call_checks(track: BallTrack) -> dict[str, Any]:
             violations.append("inout_confidence_missing")
         if bounce.nearest_line is None:
             violations.append("nearest_line_missing")
-        if bounce.region is None:
+        if bounce.region is None and call == "in":
             violations.append("region_missing")
         if bounce.dominant_uncertainty_term is None:
             violations.append("dominant_uncertainty_term_missing")
@@ -194,6 +194,9 @@ def _call_checks(track: BallTrack) -> dict[str, Any]:
                 "nearest_line": bounce.nearest_line,
                 "region": bounce.region,
                 "dominant_uncertainty_term": bounce.dominant_uncertainty_term,
+                "uncertainty_breakdown": bounce.uncertainty_breakdown.model_dump(mode="json")
+                if bounce.uncertainty_breakdown is not None
+                else None,
                 "expected_call": expected,
             }
         )

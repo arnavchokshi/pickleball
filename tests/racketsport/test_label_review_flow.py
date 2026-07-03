@@ -104,6 +104,54 @@ def test_export_review_bundle_and_cvat_task_support_court_keypoint_review(tmp_pa
     assert task["images"][0]["target_file"] == "court_keypoints.json"
 
 
+def test_export_cvat_tasks_exposes_blur_ready_ball_label_spec(tmp_path: Path) -> None:
+    review_manifest = tmp_path / "review_manifest.json"
+    frame = tmp_path / "frame_000060.jpg"
+    frame.write_bytes(b"fake owner frame")
+    review_manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_owner_capture_review_manifest",
+                "status": "candidate_prediction",
+                "capture_id": "owner_IMG_1605_8a193402780b",
+                "clips": [
+                    {
+                        "clip": "owner_IMG_1605_8a193402780b",
+                        "review_items": [
+                            {
+                                "clip": "owner_IMG_1605_8a193402780b",
+                                "frame": "frame_000060.jpg",
+                                "frame_index": 60,
+                                "image_path": str(frame),
+                                "review_id": "ball_000060_000089",
+                                "source_image_exists": True,
+                                "target_file": "ball_track.json",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    export_cvat_tasks(review_manifest=review_manifest, out=tmp_path / "cvat")
+
+    task = json.loads(
+        (tmp_path / "cvat" / "owner_IMG_1605_8a193402780b" / "task.json").read_text(encoding="utf-8")
+    )
+    ball_label = next(label for label in task["labels"] if label["name"] == "ball")
+    assert ball_label["attributes"] == [
+        "visibility",
+        "center_convention",
+        "blur_angle_deg",
+        "blur_length_px",
+        "blur_width_px",
+        "blur_label_quality",
+    ]
+
+
 def test_export_review_bundle_blocks_missing_review_images(tmp_path: Path) -> None:
     drafts_root, _frames_root, clip = _inputs(tmp_path)
     missing_frames_root = tmp_path / "missing_frames"

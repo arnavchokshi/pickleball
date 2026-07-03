@@ -13,7 +13,11 @@ if str(ROOT) not in sys.path:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Export a YOLO person model to Core ML for iPhone FastTier testing.")
-    parser.add_argument("--weights", default="yolo26n.pt", help="YOLO weights path or model name.")
+    parser.add_argument(
+        "--weights",
+        default=str(ROOT / "models" / "checkpoints" / "yolo26n.pt"),
+        help="YOLO weights path or model name.",
+    )
     parser.add_argument("--out-dir", type=Path, default=Path("models_coreml"), help="Directory for exported Core ML assets.")
     parser.add_argument("--imgsz", type=int, default=640, help="Square input image size.")
     parser.add_argument("--quantize", type=int, default=8, choices=(8, 16), help="Core ML quantization mode.")

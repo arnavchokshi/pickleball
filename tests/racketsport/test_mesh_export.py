@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import subprocess
+import sys
+from pathlib import Path
+
 from threed.racketsport.mesh_export import build_body_mesh_export
 
 
@@ -135,3 +139,40 @@ def test_build_body_mesh_export_keeps_window_metadata_and_raised_cosine_blend_we
         }
     ]
     assert [frame["blend_weight"] for frame in payload["players"][0]["frames"]] == [0.0, 1.0, 0.0]
+
+
+def test_run_build_body_mesh_export_cli_help_runs_from_repo_root() -> None:
+    completed = subprocess.run(
+        [sys.executable, "scripts/racketsport/build_body_mesh_export.py", "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "usage:" in completed.stdout.lower()
+    assert "--smpl-motion" in completed.stdout
+
+
+def test_run_build_body_mesh_export_cli_fails_closed_on_missing_smpl_motion(tmp_path: Path) -> None:
+    out_path = tmp_path / "body_mesh_export.json"
+    missing_smpl_motion = tmp_path / "does_not_exist_smpl_motion.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/build_body_mesh_export.py",
+            "--clip",
+            "clip_001",
+            "--smpl-motion",
+            str(missing_smpl_motion),
+            "--out",
+            str(out_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode != 0
+    assert not out_path.exists()

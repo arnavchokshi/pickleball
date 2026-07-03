@@ -1,22 +1,36 @@
-"""Temporal refinement for Lane A skeleton3d artifacts."""
+"""Temporal refinement for production skeleton3d artifacts."""
 
 from __future__ import annotations
 
 import copy
+import json
 import math
 import os
 import sys
+from collections import Counter
 from pathlib import Path
 from statistics import median
 from types import SimpleNamespace
 from typing import Any, Mapping, Sequence
 
 from .model_manifest import verify_model_checkpoint
+from .skeleton3d import SAM3D_BODY_MHR70_SEMANTIC_MAP
+from .skeleton_lift_2d import _DEFAULT_LEG_DERIVED_RATIOS, LEG_BONE_JOINT_PAIRS
 
 
 DEFAULT_ONE_EURO_MINCUTOFF = 1.0
 DEFAULT_ONE_EURO_BETA = 0.3
 DEFAULT_ONE_EURO_DCUTOFF = 1.0
+DEFAULT_CORE_BODY_ONE_EURO_MINCUTOFF = 0.45
+DEFAULT_CORE_BODY_ONE_EURO_BETA = 0.05
+DEFAULT_WRIST_ONE_EURO_MINCUTOFF = 1000.0
+DEFAULT_WRIST_ONE_EURO_BETA = 0.0
+DEFAULT_LOW_CONFIDENCE_JOINT_THRESHOLD = 0.25
+DEFAULT_PLAUSIBILITY_JOINT_CONFIDENCE_FLOOR = 0.25
+DEFAULT_PLAUSIBILITY_MAX_BONE_ZSCORE = 6.0
+DEFAULT_PLAUSIBILITY_MIN_BONE_SAMPLES = 4
+DEFAULT_PLAUSIBILITY_MIN_SIGMA_M = 0.03
+DEFAULT_STATURE_BAND_M = (1.4, 1.8)
 DEFAULT_MOTIONBERT_WINDOW_MAX_FRAMES = 243
 MOTIONBERT_MODEL_ID = "motionbert_lift_smooth"
 MOTIONBERT_CONFIG_ENV = "MOTIONBERT_CONFIG_PATH"
@@ -27,6 +41,17 @@ MIN_BONE_CONFIDENCE = 0.3
 GROUND_CONTACT_MAX_Z_M = 0.08
 FOOT_LOCK_MAX_VERTICAL_SPEED_MPS = 1.0
 FOOT_LOCK_REANCHOR_DISTANCE_M = 0.35
+CORE_BODY_SPEED_FLAG_MPS = 3.0
+SINGLE_FRAME_JUMP_FLAG_M = 0.5
+CORE_SPEED_SUSTAINED_FRAME_COUNT = 2
+NO_SMOOTHING_FLAG = "none"
+SAM3D_BODY_JOINT_SOURCE = "sam3d_body_joints"
+SAM3D_WRIST_BONE_LOCK_PROVENANCE_KEY = "sam3d_wrist_bone_lock"
+DEFAULT_SAM3D_WRIST_LOCK_CONFIDENCE_FLOOR = 0.25
+DEFAULT_SAM3D_WRIST_LOCK_DEGENERATE_EPSILON_M = 1e-6
+DEFAULT_PLAYER_BONE_LENGTHS_PATH = (
+    Path(__file__).resolve().parents[2] / "runs" / "bone_calib_20260703T0102Z" / "player_bone_lengths.json"
+)
 
 BODY17_JOINT_NAMES: tuple[str, ...] = (
     "nose",
@@ -110,7 +135,7 @@ class MotionBERTTemporalRuntime:
     ) -> list[list[list[float]]]:
         del player_id
         if list(joint_names) != list(BODY17_JOINT_NAMES):
-            raise ValueError("MotionBERTTemporalRuntime expects RTMW3D COCO body17 joint order")
+            raise ValueError("MotionBERTTemporalRuntime expects COCO body17 joint order")
         self._verify_manifest_checkpoint()
         loaded = self._load_model()
         torch = loaded["torch"]
@@ -207,8 +232,14 @@ def refine_lane_a_skeleton3d(
     fps: float | None = None,
     one_euro_mincutoff: float = DEFAULT_ONE_EURO_MINCUTOFF,
     one_euro_beta: float = DEFAULT_ONE_EURO_BETA,
+    core_one_euro_mincutoff: float = DEFAULT_CORE_BODY_ONE_EURO_MINCUTOFF,
+    core_one_euro_beta: float = DEFAULT_CORE_BODY_ONE_EURO_BETA,
+    wrist_one_euro_mincutoff: float = DEFAULT_WRIST_ONE_EURO_MINCUTOFF,
+    wrist_one_euro_beta: float = DEFAULT_WRIST_ONE_EURO_BETA,
+    low_confidence_threshold: float = DEFAULT_LOW_CONFIDENCE_JOINT_THRESHOLD,
     motionbert_window_max_frames: int = DEFAULT_MOTIONBERT_WINDOW_MAX_FRAMES,
     motionbert_runtime: Any | None = None,
+    apply_world_grounding: bool = True,
 ) -> dict[str, Any]:
     """Return a refined Lane A skeleton payload without fabricating frames."""
 
@@ -216,6 +247,16 @@ def refine_lane_a_skeleton3d(
         raise ValueError("one_euro_mincutoff must be positive")
     if one_euro_beta < 0.0:
         raise ValueError("one_euro_beta must be non-negative")
+    if core_one_euro_mincutoff <= 0.0:
+        raise ValueError("core_one_euro_mincutoff must be positive")
+    if core_one_euro_beta < 0.0:
+        raise ValueError("core_one_euro_beta must be non-negative")
+    if wrist_one_euro_mincutoff <= 0.0:
+        raise ValueError("wrist_one_euro_mincutoff must be positive")
+    if wrist_one_euro_beta < 0.0:
+        raise ValueError("wrist_one_euro_beta must be non-negative")
+    if not 0.0 <= low_confidence_threshold <= 1.0:
+        raise ValueError("low_confidence_threshold must be in [0, 1]")
     if motionbert_window_max_frames <= 0:
         raise ValueError("motionbert_window_max_frames must be positive")
     joint_names = skeleton3d.get("joint_names")
@@ -233,6 +274,8 @@ def refine_lane_a_skeleton3d(
     output_players: list[dict[str, Any]] = []
     grounding_metrics = _empty_grounding_metrics()
     motionbert_metrics = _empty_motionbert_metrics(motionbert_runtime)
+    smoothing_metrics = _empty_smoothing_metrics()
+    core_clamp_engagement_by_player: dict[str, dict[str, Any]] = {}
     for player in players:
         if not isinstance(player, Mapping):
             continue
@@ -252,15 +295,42 @@ def refine_lane_a_skeleton3d(
         )
         _add_motionbert_metrics(motionbert_metrics, player_motionbert_metrics)
         bone_lengths = _median_bone_lengths(motionbert_frames, joint_names)
-        filtered_frames = _apply_one_euro(motionbert_frames, joint_names, fps=inferred_fps, mincutoff=one_euro_mincutoff, beta=one_euro_beta)
+        filtered_frames, player_smoothing_metrics = _apply_one_euro(
+            motionbert_frames,
+            joint_names,
+            fps=inferred_fps,
+            mincutoff=one_euro_mincutoff,
+            beta=one_euro_beta,
+            core_mincutoff=core_one_euro_mincutoff,
+            core_beta=core_one_euro_beta,
+            wrist_mincutoff=wrist_one_euro_mincutoff,
+            wrist_beta=wrist_one_euro_beta,
+            low_confidence_threshold=low_confidence_threshold,
+        )
+        _add_smoothing_metrics(smoothing_metrics, player_smoothing_metrics)
         constrained_frames = _apply_bone_lengths(filtered_frames, joint_names, bone_lengths)
-        grounded_frames, player_grounding_metrics = _apply_lane_a_world_grounding(
-            constrained_frames,
+        if apply_world_grounding:
+            grounded_frames, player_grounding_metrics = _apply_lane_a_world_grounding(
+                constrained_frames,
+                joint_names,
+                fps=inferred_fps,
+            )
+        else:
+            grounded_frames = [copy.deepcopy(dict(frame)) for frame in constrained_frames]
+            player_grounding_metrics = _empty_grounding_metrics()
+        guarded_frames, player_final_guard_metrics = _apply_final_core_jitter_guard(
+            grounded_frames,
             joint_names,
             fps=inferred_fps,
         )
+        _add_smoothing_metrics(smoothing_metrics, player_final_guard_metrics)
         _add_grounding_metrics(grounding_metrics, player_grounding_metrics)
-        player_output["frames"] = grounded_frames
+        player_output["frames"] = guarded_frames
+        player_id = str(player.get("id", len(output_players)))
+        core_clamp_engagement_by_player[player_id] = _core_body_speed_clamp_engagement(
+            guarded_frames,
+            joint_names,
+        )
         output_players.append(player_output)
 
     output["players"] = output_players
@@ -268,10 +338,258 @@ def refine_lane_a_skeleton3d(
         output.get("provenance"),
         mincutoff=one_euro_mincutoff,
         beta=one_euro_beta,
+        core_mincutoff=core_one_euro_mincutoff,
+        core_beta=core_one_euro_beta,
+        wrist_mincutoff=wrist_one_euro_mincutoff,
+        wrist_beta=wrist_one_euro_beta,
+        low_confidence_threshold=low_confidence_threshold,
         motionbert_window_max_frames=motionbert_window_max_frames,
         motionbert_metrics=motionbert_metrics,
+        smoothing_metrics=smoothing_metrics,
         grounding_metrics=grounding_metrics,
+        core_clamp_engagement_by_player=core_clamp_engagement_by_player,
+        world_grounding_applied=apply_world_grounding,
     )
+    return output
+
+
+def refine_sam3d_skeleton3d(
+    skeleton3d: Mapping[str, Any],
+    *,
+    fps: float | None = None,
+    one_euro_mincutoff: float = DEFAULT_ONE_EURO_MINCUTOFF,
+    one_euro_beta: float = DEFAULT_ONE_EURO_BETA,
+    core_one_euro_mincutoff: float = DEFAULT_CORE_BODY_ONE_EURO_MINCUTOFF,
+    core_one_euro_beta: float = DEFAULT_CORE_BODY_ONE_EURO_BETA,
+    wrist_one_euro_mincutoff: float = DEFAULT_WRIST_ONE_EURO_MINCUTOFF,
+    wrist_one_euro_beta: float = DEFAULT_WRIST_ONE_EURO_BETA,
+    low_confidence_threshold: float = DEFAULT_LOW_CONFIDENCE_JOINT_THRESHOLD,
+    plausibility_joint_confidence_floor: float = DEFAULT_PLAUSIBILITY_JOINT_CONFIDENCE_FLOOR,
+    plausibility_max_bone_zscore: float = DEFAULT_PLAUSIBILITY_MAX_BONE_ZSCORE,
+    plausibility_min_bone_samples: int = DEFAULT_PLAUSIBILITY_MIN_BONE_SAMPLES,
+    plausibility_min_sigma_m: float = DEFAULT_PLAUSIBILITY_MIN_SIGMA_M,
+    max_wrist_peak_delta_frames: int = 1,
+    apply_world_grounding: bool = False,
+) -> dict[str, Any]:
+    """Port temporal/body plausibility gates onto SAM-3D body-mode joints.
+
+    SAM-3D MHR70 artifacts usually carry generic ``sam3dbody_joint_###``
+    names. This entrypoint keeps all 70 joints intact and uses the local
+    semantic map only for wrist/limb/ankle gates.
+    """
+
+    if not _is_sam3d_skeleton_payload(skeleton3d):
+        raise ValueError("SAM-3D post-processing requires a sam3d_body_joints skeleton3d payload")
+    if not 0.0 <= plausibility_joint_confidence_floor <= 1.0:
+        raise ValueError("plausibility_joint_confidence_floor must be in [0, 1]")
+    if plausibility_max_bone_zscore <= 0.0:
+        raise ValueError("plausibility_max_bone_zscore must be positive")
+    if plausibility_min_bone_samples <= 0:
+        raise ValueError("plausibility_min_bone_samples must be positive")
+    if plausibility_min_sigma_m <= 0.0:
+        raise ValueError("plausibility_min_sigma_m must be positive")
+    if max_wrist_peak_delta_frames < 0:
+        raise ValueError("max_wrist_peak_delta_frames must be non-negative")
+
+    before = copy.deepcopy(dict(skeleton3d))
+    plausibility_checked, plausibility = _apply_sam3d_skeleton_plausibility(
+        before,
+        confidence_floor=plausibility_joint_confidence_floor,
+        max_bone_zscore=plausibility_max_bone_zscore,
+        min_bone_samples=plausibility_min_bone_samples,
+        min_sigma_m=plausibility_min_sigma_m,
+    )
+    refined = refine_lane_a_skeleton3d(
+        skeleton3d,
+        fps=fps,
+        one_euro_mincutoff=one_euro_mincutoff,
+        one_euro_beta=one_euro_beta,
+        core_one_euro_mincutoff=core_one_euro_mincutoff,
+        core_one_euro_beta=core_one_euro_beta,
+        wrist_one_euro_mincutoff=wrist_one_euro_mincutoff,
+        wrist_one_euro_beta=wrist_one_euro_beta,
+        low_confidence_threshold=low_confidence_threshold,
+        motionbert_runtime=None,
+        apply_world_grounding=apply_world_grounding,
+    )
+    _copy_sam3d_plausibility_flags(refined, plausibility_checked)
+    wrist_timing = compare_wrist_peak_timing(
+        before,
+        refined,
+        max_allowed_delta_frames=max_wrist_peak_delta_frames,
+    )
+    provenance = dict(refined.get("provenance", {}))
+    temporal = dict(provenance.get("temporal_refine", {}))
+    one_euro = dict(temporal.get("one_euro", {}))
+    one_euro["filtered_joint_count"] = len(refined.get("joint_names", []))
+    temporal["one_euro"] = one_euro
+    temporal["source"] = SAM3D_BODY_JOINT_SOURCE
+    temporal["motionbert"] = "not_applicable_sam3d_body70"
+    temporal["wrist_peak_timing"] = wrist_timing
+    temporal["wrist_peak_timing_gate_pass"] = wrist_timing.get("status") == "pass"
+    provenance["temporal_refine"] = temporal
+    provenance["sam3d_skeleton_plausibility"] = plausibility
+    provenance["stature_check"] = _build_sam3d_stature_check(refined)
+    provenance["sam3d_postprocess"] = {
+        "source": SAM3D_BODY_JOINT_SOURCE,
+        "all_joints_preserved": True,
+        "joint_count": len(refined.get("joint_names", [])),
+        "protected_eval_labels_used": False,
+        "internal_val_only": True,
+    }
+    refined["provenance"] = provenance
+    return refined
+
+
+def apply_sam3d_wrist_bone_lock(
+    skeleton3d: Mapping[str, Any],
+    *,
+    canonical_bone_lengths: Mapping[str, Any] | str | Path | None = None,
+    enabled: bool = True,
+    confidence_floor: float = DEFAULT_SAM3D_WRIST_LOCK_CONFIDENCE_FLOOR,
+    degenerate_epsilon_m: float = DEFAULT_SAM3D_WRIST_LOCK_DEGENERATE_EPSILON_M,
+    max_wrist_peak_delta_frames: int = 0,
+) -> dict[str, Any]:
+    """Project SAM-3D wrists to canonical lower-arm length without moving elbows."""
+
+    if not enabled:
+        return copy.deepcopy(dict(skeleton3d))
+    if not 0.0 <= confidence_floor <= 1.0:
+        raise ValueError("confidence_floor must be in [0, 1]")
+    if degenerate_epsilon_m <= 0.0:
+        raise ValueError("degenerate_epsilon_m must be positive")
+    if max_wrist_peak_delta_frames < 0:
+        raise ValueError("max_wrist_peak_delta_frames must be non-negative")
+
+    before = copy.deepcopy(dict(skeleton3d))
+    output = copy.deepcopy(dict(skeleton3d))
+    provenance = dict(output.get("provenance", {}))
+    lock_record = _empty_sam3d_wrist_bone_lock_record(
+        status="applied",
+        confidence_floor=confidence_floor,
+        degenerate_epsilon_m=degenerate_epsilon_m,
+    )
+
+    if not _is_sam3d_skeleton_payload(output):
+        lock_record["status"] = "skipped_non_sam3d"
+        provenance[SAM3D_WRIST_BONE_LOCK_PROVENANCE_KEY] = lock_record
+        output["provenance"] = provenance
+        return output
+
+    joint_names = _string_joint_names(output.get("joint_names"))
+    index_by_name = _semantic_index_by_name(joint_names)
+    wrist_edges = {
+        "left_lower_arm": (index_by_name.get("left_elbow"), index_by_name.get("left_wrist")),
+        "right_lower_arm": (index_by_name.get("right_elbow"), index_by_name.get("right_wrist")),
+    }
+    if any(parent is None or child is None for parent, child in wrist_edges.values()):
+        lock_record["status"] = "skipped_missing_wrist_semantics"
+        provenance[SAM3D_WRIST_BONE_LOCK_PROVENANCE_KEY] = lock_record
+        output["provenance"] = provenance
+        return output
+
+    canonical_payload, canonical_source = _load_wrist_lock_canonical_payload(canonical_bone_lengths)
+    lock_record["canonical_source"] = canonical_source
+    players = output.get("players")
+    if not isinstance(players, list):
+        lock_record["status"] = "skipped_missing_players"
+        provenance[SAM3D_WRIST_BONE_LOCK_PROVENANCE_KEY] = lock_record
+        output["provenance"] = provenance
+        return output
+
+    total_locked = 0
+    total_unlocked = 0
+    for player_pos, player in enumerate(players):
+        if not isinstance(player, dict):
+            continue
+        player_id = str(player.get("id", player_pos))
+        frames = player.get("frames")
+        if not isinstance(frames, list):
+            frames = []
+            player["frames"] = frames
+        player_summary: dict[str, Any] = {}
+        targets = {
+            bone_name: _sam3d_wrist_lock_target_length(
+                canonical_payload,
+                player_id=player_id,
+                bone_name=bone_name,
+            )
+            for bone_name in wrist_edges
+        }
+        for bone_name, (elbow_idx, wrist_idx) in wrist_edges.items():
+            assert elbow_idx is not None and wrist_idx is not None
+            target = targets[bone_name]
+            summary = _empty_wrist_lock_bone_summary(
+                target_length_m=target["length_m"],
+                target_source=target["source"],
+                frame_count=len(frames),
+            )
+            for frame in frames:
+                if not isinstance(frame, dict):
+                    summary["missing_joint_frame_count"] += 1
+                    total_unlocked += 1
+                    continue
+                joints = frame.get("joints_world")
+                if not isinstance(joints, list) or elbow_idx >= len(joints) or wrist_idx >= len(joints):
+                    summary["missing_joint_frame_count"] += 1
+                    total_unlocked += 1
+                    continue
+                elbow = _finite_joint3(joints[elbow_idx])
+                wrist = _finite_joint3(joints[wrist_idx])
+                if elbow is None or wrist is None:
+                    summary["missing_joint_frame_count"] += 1
+                    total_unlocked += 1
+                    continue
+                if _joint_confidence_safe(frame.get("joint_conf"), elbow_idx) < confidence_floor or _joint_confidence_safe(
+                    frame.get("joint_conf"),
+                    wrist_idx,
+                ) < confidence_floor:
+                    summary["low_confidence_frame_count"] += 1
+                    _record_wrist_lock_length_sample(summary, elbow, wrist, target["length_m"])
+                    total_unlocked += 1
+                    continue
+                direction = [wrist[axis] - elbow[axis] for axis in range(3)]
+                length = math.sqrt(sum(value * value for value in direction))
+                _record_wrist_lock_length_sample(summary, elbow, wrist, target["length_m"])
+                if length <= degenerate_epsilon_m:
+                    summary["degenerate_frame_count"] += 1
+                    total_unlocked += 1
+                    continue
+                unit = [value / length for value in direction]
+                locked_wrist = [
+                    elbow[axis] + float(target["length_m"]) * unit[axis]
+                    for axis in range(3)
+                ]
+                joints[wrist_idx] = locked_wrist
+                summary["locked_frame_count"] += 1
+                total_locked += 1
+                _record_wrist_lock_post_length_sample(summary, elbow, locked_wrist, target["length_m"])
+            _finalize_wrist_lock_bone_summary(summary)
+            player_summary[bone_name] = summary
+        player_summary["locked_frame_count"] = sum(int(item["locked_frame_count"]) for item in player_summary.values())
+        player_summary["unlocked_frame_count"] = sum(
+            int(item["frame_count"]) - int(item["locked_frame_count"])
+            for item in player_summary.values()
+            if isinstance(item, Mapping)
+        )
+        lock_record["players"][player_id] = player_summary
+
+    lock_record["locked_frame_count"] = total_locked
+    lock_record["unlocked_frame_count"] = total_unlocked
+    lock_record["wrist_peak_timing_after_lock"] = compare_wrist_direction_peak_timing(
+        before,
+        output,
+        max_allowed_delta_frames=max_wrist_peak_delta_frames,
+        min_peak_direction_speed=0.0,
+    )
+    lock_record["wrist_world_velocity_peak_timing_after_lock"] = compare_wrist_peak_timing(
+        before,
+        output,
+        max_allowed_delta_frames=max_wrist_peak_delta_frames,
+        min_peak_speed_mps=0.0,
+    )
+    provenance[SAM3D_WRIST_BONE_LOCK_PROVENANCE_KEY] = lock_record
+    output["provenance"] = provenance
     return output
 
 
@@ -466,14 +784,23 @@ def _apply_one_euro(
     fps: float,
     mincutoff: float,
     beta: float,
-) -> list[dict[str, Any]]:
-    filter_indexes = [
-        idx
+    core_mincutoff: float,
+    core_beta: float,
+    wrist_mincutoff: float,
+    wrist_beta: float,
+    low_confidence_threshold: float,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    filter_indexes = list(range(len(joint_names)))
+    joint_groups = {
+        idx: _joint_smoothing_group(name, joint_names)
         for idx, name in enumerate(joint_names)
-        if name in _foot_joint_names(joint_names) or name.startswith("left_hand_") or name.startswith("right_hand_")
-    ]
+    }
     filters: dict[tuple[int, int], OneEuroFilter] = {}
+    previous_raw_by_joint: dict[int, list[float]] = {}
+    previous_output_by_joint: dict[int, list[float]] = {}
+    high_core_speed_streaks: dict[int, int] = {}
     refined_frames: list[dict[str, Any]] = []
+    metrics = _empty_smoothing_metrics(filtered_joint_count=len(filter_indexes))
     previous_t: float | None = None
     for frame in frames:
         refined = copy.deepcopy(dict(frame))
@@ -482,16 +809,71 @@ def _apply_one_euro(
         dt = (t - previous_t) if previous_t is not None else (1.0 / fps)
         current_fps = 1.0 / dt if dt > 0.0 else fps
         previous_t = t
+        frame_flags: list[list[str]] = [[] for _idx in range(len(joints))]
+        raw_joints = [list(joint) for joint in joints]
+        conf = refined.get("joint_conf", [])
+        for joint_idx in range(len(joints)):
+            if _joint_confidence(conf, joint_idx) < low_confidence_threshold:
+                _add_joint_flag(frame_flags, joint_idx, "low_confidence_joint")
         for joint_idx in filter_indexes:
             if joint_idx >= len(joints):
                 continue
+            group = joint_groups.get(joint_idx, "core_body")
+            target = list(raw_joints[joint_idx])
+            previous_raw = previous_raw_by_joint.get(joint_idx)
+            previous_output = previous_output_by_joint.get(joint_idx)
+            if previous_raw is not None and previous_output is not None and dt > 0.0:
+                displacement_m = math.dist(previous_raw, target)
+                output_displacement_m = math.dist(previous_output, target)
+                speed_mps = displacement_m / dt
+                clamp_flags: list[str] = []
+                if displacement_m > SINGLE_FRAME_JUMP_FLAG_M or (
+                    group == "wrists" and output_displacement_m > SINGLE_FRAME_JUMP_FLAG_M
+                ):
+                    clamp_flags.append("single_frame_jump_clamped")
+                if group == "core_body":
+                    if speed_mps > CORE_BODY_SPEED_FLAG_MPS:
+                        high_core_speed_streaks[joint_idx] = high_core_speed_streaks.get(joint_idx, 0) + 1
+                    else:
+                        high_core_speed_streaks[joint_idx] = 0
+                    if high_core_speed_streaks.get(joint_idx, 0) >= CORE_SPEED_SUSTAINED_FRAME_COUNT:
+                        clamp_flags.append("core_speed_clamped")
+                if clamp_flags:
+                    target = _clamp_joint_step(
+                        previous_output,
+                        target,
+                        max_step_m=_max_damped_step_m(group=group, dt=dt),
+                    )
+                    for flag in clamp_flags:
+                        _add_joint_flag(frame_flags, joint_idx, flag)
+            if group == "core_body":
+                group_mincutoff = core_mincutoff
+                group_beta = core_beta
+            elif group == "wrists":
+                group_mincutoff = wrist_mincutoff
+                group_beta = wrist_beta
+            else:
+                group_mincutoff = mincutoff
+                group_beta = beta
             for axis in range(3):
                 key = (joint_idx, axis)
-                filt = filters.setdefault(key, OneEuroFilter(freq=current_fps, mincutoff=mincutoff, beta=beta))
-                joints[joint_idx][axis] = filt.filter(float(joints[joint_idx][axis]), freq=current_fps)
+                filt = filters.setdefault(key, OneEuroFilter(freq=current_fps, mincutoff=group_mincutoff, beta=group_beta))
+                joints[joint_idx][axis] = filt.filter(float(target[axis]), freq=current_fps)
+        for flags in frame_flags:
+            for flag in flags:
+                metrics["flag_counts"][flag] += 1
         refined["joints_world"] = joints
+        refined["smoothing_flag"] = [_format_joint_flags(flags) for flags in frame_flags]
         refined_frames.append(refined)
-    return refined_frames
+        previous_raw_by_joint = {
+            idx: list(raw_joints[idx])
+            for idx in range(min(len(raw_joints), len(joint_names)))
+        }
+        previous_output_by_joint = {
+            idx: list(joints[idx])
+            for idx in range(min(len(joints), len(joint_names)))
+        }
+    return refined_frames, metrics
 
 
 def _apply_bone_lengths(
@@ -523,9 +905,11 @@ def _apply_bone_lengths(
 
 
 def _median_bone_lengths(frames: Sequence[Mapping[str, Any]], joint_names: Sequence[str]) -> dict[tuple[int, int], float]:
-    index_by_name = {name: idx for idx, name in enumerate(joint_names)}
+    index_by_name = _semantic_index_by_name(joint_names)
     lengths: dict[tuple[int, int], list[float]] = {}
     for parent_name, child_name in BODY17_BONE_EDGES:
+        if child_name in {"left_wrist", "right_wrist"}:
+            continue
         if parent_name not in index_by_name or child_name not in index_by_name:
             continue
         parent_idx = index_by_name[parent_name]
@@ -545,17 +929,530 @@ def _median_bone_lengths(frames: Sequence[Mapping[str, Any]], joint_names: Seque
     return {edge: float(median(values)) for edge, values in lengths.items() if values}
 
 
+def _apply_sam3d_skeleton_plausibility(
+    skeleton3d: Mapping[str, Any],
+    *,
+    confidence_floor: float,
+    max_bone_zscore: float,
+    min_bone_samples: int,
+    min_sigma_m: float,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    output = copy.deepcopy(dict(skeleton3d))
+    joint_names = _string_joint_names(output.get("joint_names"))
+    bone_pairs = _available_semantic_bone_pairs(joint_names)
+    players = output.get("players")
+    if not isinstance(players, list):
+        return output, _empty_sam3d_plausibility_summary()
+
+    reason_counts: Counter[str] = Counter()
+    checked_frame_count = 0
+    implausible_frame_count = 0
+    bone_stats_by_player: dict[int, dict[tuple[str, str], tuple[float, float]]] = {}
+    for player_pos, player in enumerate(players):
+        if not isinstance(player, Mapping):
+            continue
+        frames = player.get("frames")
+        if not isinstance(frames, list):
+            continue
+        bone_stats_by_player[player_pos] = _sam3d_bone_length_stats(
+            frames,
+            joint_names=joint_names,
+            bone_pairs=bone_pairs,
+            confidence_floor=confidence_floor,
+            min_bone_samples=min_bone_samples,
+            min_sigma_m=min_sigma_m,
+        )
+
+    for player_pos, player in enumerate(players):
+        if not isinstance(player, dict):
+            continue
+        frames = player.get("frames")
+        if not isinstance(frames, list):
+            continue
+        bone_stats = bone_stats_by_player.get(player_pos, {})
+        for frame in frames:
+            if not isinstance(frame, dict):
+                continue
+            checked_frame_count += 1
+            reasons = _sam3d_frame_plausibility_reasons(
+                frame,
+                joint_names=joint_names,
+                bone_pairs=bone_pairs,
+                bone_stats=bone_stats,
+                confidence_floor=confidence_floor,
+                max_bone_zscore=max_bone_zscore,
+            )
+            frame["skeleton_implausible"] = bool(reasons)
+            frame["skeleton_plausibility"] = {
+                "status": "low_confidence" if reasons else "pass",
+                "reasons": reasons,
+                "joint_confidence_floor": confidence_floor,
+                "max_bone_zscore": max_bone_zscore,
+                "source": SAM3D_BODY_JOINT_SOURCE,
+            }
+            if reasons:
+                implausible_frame_count += 1
+                reason_counts.update(reason.split(":", 1)[0] for reason in reasons)
+                frame["trust_band"] = {
+                    "stage": "BODY",
+                    "gate_id": "sam3d_skeleton_plausibility",
+                    "gate_status": "low_confidence",
+                    "badge": "low_confidence",
+                    "reason": "; ".join(reasons),
+                    "evidence_path": None,
+                }
+
+    return output, {
+        "artifact_type": "racketsport_sam3d_skeleton_plausibility",
+        "source": SAM3D_BODY_JOINT_SOURCE,
+        "checked_frame_count": checked_frame_count,
+        "implausible_frame_count": implausible_frame_count,
+        "reason_counts": dict(sorted(reason_counts.items())),
+        "bone_pair_count": len(bone_pairs),
+        "joint_confidence_floor": confidence_floor,
+        "max_bone_zscore": max_bone_zscore,
+        "min_bone_samples": min_bone_samples,
+        "min_sigma_m": min_sigma_m,
+    }
+
+
+def _copy_sam3d_plausibility_flags(target: dict[str, Any], checked: Mapping[str, Any]) -> None:
+    checked_flags: dict[tuple[str, int | None, float | None, int], dict[str, Any]] = {}
+    for player_pos, player in enumerate(checked.get("players", [])):
+        if not isinstance(player, Mapping):
+            continue
+        player_id = str(player.get("id", player_pos))
+        frames = player.get("frames")
+        if not isinstance(frames, list):
+            continue
+        for frame_pos, frame in enumerate(frames):
+            if not isinstance(frame, Mapping):
+                continue
+            payload = {
+                key: copy.deepcopy(frame[key])
+                for key in ("skeleton_implausible", "skeleton_plausibility", "trust_band")
+                if key in frame
+            }
+            if not payload:
+                continue
+            checked_flags[_frame_identity_key(player_id, frame, frame_pos)] = payload
+
+    for player_pos, player in enumerate(target.get("players", [])):
+        if not isinstance(player, dict):
+            continue
+        player_id = str(player.get("id", player_pos))
+        frames = player.get("frames")
+        if not isinstance(frames, list):
+            continue
+        for frame_pos, frame in enumerate(frames):
+            if not isinstance(frame, dict):
+                continue
+            payload = checked_flags.get(_frame_identity_key(player_id, frame, frame_pos))
+            if not payload:
+                continue
+            frame.update(copy.deepcopy(payload))
+
+
+def _frame_identity_key(player_id: str, frame: Mapping[str, Any], frame_pos: int) -> tuple[str, int | None, float | None, int]:
+    frame_idx_value = frame.get("frame_idx")
+    t_value = frame.get("t")
+    try:
+        frame_idx = int(frame_idx_value) if frame_idx_value is not None else None
+    except (TypeError, ValueError):
+        frame_idx = None
+    try:
+        t = float(t_value) if t_value is not None else None
+    except (TypeError, ValueError):
+        t = None
+    return player_id, frame_idx, t, int(frame_pos)
+
+
+def _empty_sam3d_plausibility_summary() -> dict[str, Any]:
+    return {
+        "artifact_type": "racketsport_sam3d_skeleton_plausibility",
+        "source": SAM3D_BODY_JOINT_SOURCE,
+        "checked_frame_count": 0,
+        "implausible_frame_count": 0,
+        "reason_counts": {},
+        "bone_pair_count": 0,
+    }
+
+
+def _available_semantic_bone_pairs(joint_names: Sequence[str]) -> list[tuple[str, str]]:
+    index_by_name = _semantic_index_by_name(joint_names)
+    return [
+        (parent, child)
+        for parent, child in BODY17_BONE_EDGES
+        if parent in index_by_name and child in index_by_name
+    ]
+
+
+def _sam3d_bone_length_stats(
+    frames: Sequence[Mapping[str, Any]],
+    *,
+    joint_names: Sequence[str],
+    bone_pairs: Sequence[tuple[str, str]],
+    confidence_floor: float,
+    min_bone_samples: int,
+    min_sigma_m: float,
+) -> dict[tuple[str, str], tuple[float, float]]:
+    stats: dict[tuple[str, str], tuple[float, float]] = {}
+    for bone in bone_pairs:
+        lengths = [
+            length
+            for frame in frames
+            if (length := _sam3d_frame_bone_length(frame, joint_names=joint_names, bone=bone, confidence_floor=confidence_floor)) is not None
+        ]
+        if len(lengths) < min_bone_samples:
+            continue
+        center = float(median(lengths))
+        abs_deviations = [abs(length - center) for length in lengths]
+        sigma = max(float(median(abs_deviations)) * 1.4826, min_sigma_m)
+        stats[bone] = (center, sigma)
+    return stats
+
+
+def _sam3d_frame_plausibility_reasons(
+    frame: Mapping[str, Any],
+    *,
+    joint_names: Sequence[str],
+    bone_pairs: Sequence[tuple[str, str]],
+    bone_stats: Mapping[tuple[str, str], tuple[float, float]],
+    confidence_floor: float,
+    max_bone_zscore: float,
+) -> list[str]:
+    reasons: list[str] = []
+    low_conf = _sam3d_low_confidence_joints(
+        frame,
+        joint_names=joint_names,
+        bone_pairs=bone_pairs,
+        floor=confidence_floor,
+    )
+    if low_conf:
+        reasons.append(f"joint_conf_below_floor:{','.join(low_conf[:6])}")
+    for bone, (center, sigma) in bone_stats.items():
+        length = _sam3d_frame_bone_length(
+            frame,
+            joint_names=joint_names,
+            bone=bone,
+            confidence_floor=0.0,
+        )
+        if length is None:
+            continue
+        zscore = abs(length - center) / sigma
+        if zscore > max_bone_zscore:
+            reasons.append(f"bone_length_zscore:{bone[0]}-{bone[1]}:{zscore:.2f}")
+    return reasons
+
+
+def _sam3d_low_confidence_joints(
+    frame: Mapping[str, Any],
+    *,
+    joint_names: Sequence[str],
+    bone_pairs: Sequence[tuple[str, str]],
+    floor: float,
+) -> list[str]:
+    conf = frame.get("joint_conf")
+    if not isinstance(conf, Sequence) or isinstance(conf, (str, bytes)):
+        return []
+    index_by_name = _semantic_index_by_name(joint_names)
+    required = sorted({joint for bone in bone_pairs for joint in bone})
+    low: list[str] = []
+    for name in required:
+        idx = index_by_name.get(name)
+        if idx is None or idx >= len(conf):
+            continue
+        try:
+            value = float(conf[idx])
+        except (TypeError, ValueError):
+            value = 0.0
+        if value < floor:
+            low.append(name)
+    return low
+
+
+def _sam3d_frame_bone_length(
+    frame: Mapping[str, Any],
+    *,
+    joint_names: Sequence[str],
+    bone: tuple[str, str],
+    confidence_floor: float,
+) -> float | None:
+    index_by_name = _semantic_index_by_name(joint_names)
+    parent_idx = index_by_name.get(bone[0])
+    child_idx = index_by_name.get(bone[1])
+    if parent_idx is None or child_idx is None:
+        return None
+    joints = _joint_vectors(frame)
+    if parent_idx >= len(joints) or child_idx >= len(joints):
+        return None
+    conf = frame.get("joint_conf")
+    if confidence_floor > 0.0:
+        if _joint_confidence(conf, parent_idx) < confidence_floor or _joint_confidence(conf, child_idx) < confidence_floor:
+            return None
+    return math.dist(joints[parent_idx], joints[child_idx])
+
+
+def _empty_sam3d_wrist_bone_lock_record(
+    *,
+    status: str,
+    confidence_floor: float,
+    degenerate_epsilon_m: float,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_sam3d_wrist_bone_lock",
+        "status": status,
+        "enabled": True,
+        "source": "direction_preserving_canonical_lower_arm_projection",
+        "joint_confidence_floor": confidence_floor,
+        "degenerate_epsilon_m": degenerate_epsilon_m,
+        "locked_frame_count": 0,
+        "unlocked_frame_count": 0,
+        "players": {},
+    }
+
+
+def _empty_wrist_lock_bone_summary(
+    *,
+    target_length_m: float,
+    target_source: str,
+    frame_count: int,
+) -> dict[str, Any]:
+    return {
+        "target_length_m": round(float(target_length_m), 6),
+        "target_source": target_source,
+        "frame_count": int(frame_count),
+        "locked_frame_count": 0,
+        "missing_joint_frame_count": 0,
+        "low_confidence_frame_count": 0,
+        "degenerate_frame_count": 0,
+        "mean_pre_length_m": None,
+        "mean_post_length_m": None,
+        "mean_abs_pre_length_delta_m": None,
+        "mean_abs_post_length_delta_m": None,
+        "_pre_lengths": [],
+        "_post_lengths": [],
+        "_pre_abs_deltas": [],
+        "_post_abs_deltas": [],
+    }
+
+
+def _record_wrist_lock_length_sample(
+    summary: dict[str, Any],
+    elbow: Sequence[float],
+    wrist: Sequence[float],
+    target_length_m: float,
+) -> None:
+    length = math.dist(elbow, wrist)
+    summary["_pre_lengths"].append(length)
+    summary["_pre_abs_deltas"].append(abs(length - float(target_length_m)))
+
+
+def _record_wrist_lock_post_length_sample(
+    summary: dict[str, Any],
+    elbow: Sequence[float],
+    wrist: Sequence[float],
+    target_length_m: float,
+) -> None:
+    length = math.dist(elbow, wrist)
+    summary["_post_lengths"].append(length)
+    summary["_post_abs_deltas"].append(abs(length - float(target_length_m)))
+
+
+def _finalize_wrist_lock_bone_summary(summary: dict[str, Any]) -> None:
+    for field, samples_key in (
+        ("mean_pre_length_m", "_pre_lengths"),
+        ("mean_post_length_m", "_post_lengths"),
+        ("mean_abs_pre_length_delta_m", "_pre_abs_deltas"),
+        ("mean_abs_post_length_delta_m", "_post_abs_deltas"),
+    ):
+        samples = [float(value) for value in summary.get(samples_key, [])]
+        summary[field] = round(sum(samples) / len(samples), 6) if samples else None
+        summary.pop(samples_key, None)
+
+
+def _load_wrist_lock_canonical_payload(
+    canonical_bone_lengths: Mapping[str, Any] | str | Path | None,
+) -> tuple[dict[str, Any], str]:
+    if canonical_bone_lengths is None:
+        if DEFAULT_PLAYER_BONE_LENGTHS_PATH.is_file():
+            return (
+                json.loads(DEFAULT_PLAYER_BONE_LENGTHS_PATH.read_text(encoding="utf-8")),
+                str(DEFAULT_PLAYER_BONE_LENGTHS_PATH.relative_to(Path(__file__).resolve().parents[2])),
+            )
+        return {}, "default_anthropometric_fallback_no_player_bone_lengths_file"
+    if isinstance(canonical_bone_lengths, (str, Path)):
+        path = Path(canonical_bone_lengths)
+        return json.loads(path.read_text(encoding="utf-8")), str(path)
+    return dict(canonical_bone_lengths), "argument"
+
+
+def _sam3d_wrist_lock_target_length(
+    canonical_payload: Mapping[str, Any],
+    *,
+    player_id: str,
+    bone_name: str,
+) -> dict[str, Any]:
+    exact = _canonical_bone_median(canonical_payload, player_id=player_id, bone_name=bone_name)
+    if exact is not None:
+        return {
+            "length_m": exact,
+            "source": "player_bone_lengths_exact_lower_arm",
+        }
+    leg_scale = _canonical_leg_scale_m(canonical_payload, player_id=player_id)
+    if leg_scale is not None:
+        return {
+            "length_m": float(_DEFAULT_LEG_DERIVED_RATIOS["lower_arm"]) * leg_scale,
+            "source": "player_bone_lengths_leg_derived_anthropometric_fallback",
+        }
+    default_height_m = 1.72
+    default_leg_scale_m = (0.245 + 0.246) * default_height_m
+    return {
+        "length_m": float(_DEFAULT_LEG_DERIVED_RATIOS["lower_arm"]) * default_leg_scale_m,
+        "source": "default_anthropometric_fallback",
+    }
+
+
+def _canonical_bone_median(
+    canonical_payload: Mapping[str, Any],
+    *,
+    player_id: str,
+    bone_name: str,
+) -> float | None:
+    players = canonical_payload.get("players")
+    if not isinstance(players, Mapping):
+        return None
+    player = players.get(str(player_id))
+    if not isinstance(player, Mapping):
+        return None
+    bones = player.get("bones")
+    if not isinstance(bones, Mapping):
+        return None
+    entry = bones.get(bone_name)
+    if not isinstance(entry, Mapping):
+        return None
+    try:
+        value = float(entry["median_m"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    return value if math.isfinite(value) and value > 0.0 else None
+
+
+def _canonical_leg_scale_m(
+    canonical_payload: Mapping[str, Any],
+    *,
+    player_id: str,
+) -> float | None:
+    lengths = {
+        bone_name: _canonical_bone_median(canonical_payload, player_id=player_id, bone_name=bone_name)
+        for bone_name in LEG_BONE_JOINT_PAIRS
+    }
+    if any(value is None for value in lengths.values()):
+        return None
+    thigh = (float(lengths["left_upper_leg"]) + float(lengths["right_upper_leg"])) / 2.0
+    shin = (float(lengths["left_lower_leg"]) + float(lengths["right_lower_leg"])) / 2.0
+    leg_scale = thigh + shin
+    return leg_scale if math.isfinite(leg_scale) and leg_scale > 0.0 else None
+
+
+def _finite_joint3(value: Any) -> list[float] | None:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)) or len(value) != 3:
+        return None
+    try:
+        joint = [float(value[axis]) for axis in range(3)]
+    except (TypeError, ValueError):
+        return None
+    return joint if all(math.isfinite(axis) for axis in joint) else None
+
+
+def _joint_confidence_safe(conf: Any, joint_idx: int) -> float:
+    try:
+        return _joint_confidence(conf, joint_idx)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _build_sam3d_stature_check(
+    skeleton3d: Mapping[str, Any],
+    *,
+    stature_band_m: tuple[float, float] = DEFAULT_STATURE_BAND_M,
+) -> dict[str, Any]:
+    joint_names = _string_joint_names(skeleton3d.get("joint_names"))
+    index_by_name = _semantic_index_by_name(joint_names)
+    ankle_indices = [
+        idx
+        for name in ("left_ankle", "right_ankle")
+        if (idx := index_by_name.get(name)) is not None
+    ]
+    low, high = float(stature_band_m[0]), float(stature_band_m[1])
+    by_player: dict[str, list[float]] = {}
+    for player in skeleton3d.get("players", []):
+        if not isinstance(player, Mapping):
+            continue
+        player_id = str(player.get("id", "unknown"))
+        for frame in player.get("frames", []):
+            if not isinstance(frame, Mapping):
+                continue
+            joints = _joint_vectors(frame)
+            if not joints:
+                continue
+            z_values = [float(joint[2]) for joint in joints if len(joint) >= 3 and math.isfinite(float(joint[2]))]
+            if not z_values:
+                continue
+            foot_z_values = [
+                float(joints[idx][2])
+                for idx in ankle_indices
+                if idx < len(joints) and math.isfinite(float(joints[idx][2]))
+            ]
+            if foot_z_values and min(abs(value) for value in foot_z_values) > 0.35:
+                continue
+            by_player.setdefault(player_id, []).append(max(z_values) - min(z_values))
+    players: dict[str, dict[str, Any]] = {}
+    medians: list[float] = []
+    for player_id, values in sorted(by_player.items()):
+        med = float(median(values)) if values else None
+        if med is not None:
+            medians.append(med)
+        players[player_id] = {
+            "standing_frame_count": len(values),
+            "median_standing_z_span_m": med,
+            "plausible_band_m": [low, high],
+            "scale_suspect": bool(med is None or med < low or med > high),
+        }
+    overall = float(median(medians)) if medians else None
+    return {
+        "source": SAM3D_BODY_JOINT_SOURCE,
+        "plausible_band_m": [low, high],
+        "median_standing_z_span_m": overall,
+        "scale_suspect": bool(overall is None or overall < low or overall > high or any(item["scale_suspect"] for item in players.values())),
+        "players": players,
+    }
+
+
 def _provenance_with_temporal_refine(
     provenance: Any,
     *,
     mincutoff: float,
     beta: float,
+    core_mincutoff: float,
+    core_beta: float,
+    wrist_mincutoff: float,
+    wrist_beta: float,
+    low_confidence_threshold: float,
     motionbert_window_max_frames: int,
     motionbert_metrics: Mapping[str, Any],
+    smoothing_metrics: Mapping[str, Any],
     grounding_metrics: Mapping[str, int],
+    core_clamp_engagement_by_player: Mapping[str, Mapping[str, Any]],
+    world_grounding_applied: bool,
 ) -> dict[str, Any]:
     output = dict(provenance) if isinstance(provenance, Mapping) else {}
     motionbert_status = "applied" if int(motionbert_metrics["motionbert_frame_count"]) > 0 else "not_configured"
+    smoothing_flag_counts = {
+        str(flag): int(count)
+        for flag, count in sorted(dict(smoothing_metrics.get("flag_counts", {})).items())
+    }
     output["temporal_refine"] = {
         "motionbert": motionbert_status,
         "motionbert_model_id": str(motionbert_metrics.get("motionbert_model_id", "")),
@@ -566,11 +1463,32 @@ def _provenance_with_temporal_refine(
         "one_euro": {
             "mincutoff": mincutoff,
             "beta": beta,
-            "applied_joint_groups": ["feet", "hands"],
+            "core_body_mincutoff": core_mincutoff,
+            "core_body_beta": core_beta,
+            "wrist_mincutoff": wrist_mincutoff,
+            "wrist_beta": wrist_beta,
+            "applied_joint_groups": ["core_body", "feet", "hands", "wrists"],
+            "filtered_joint_count": int(smoothing_metrics.get("filtered_joint_count", 0)),
         },
+        "physical_plausibility": {
+            "core_body_speed_flag_mps": CORE_BODY_SPEED_FLAG_MPS,
+            "core_body_speed_sustained_frame_count": CORE_SPEED_SUSTAINED_FRAME_COUNT,
+            "single_frame_jump_flag_m": SINGLE_FRAME_JUMP_FLAG_M,
+            "flagged_joints_are_damped": True,
+            "core_body_speed_clamp_engagement_by_player": {
+                str(player_id): dict(summary)
+                for player_id, summary in sorted(core_clamp_engagement_by_player.items())
+            },
+            "core_body_speed_clamp_engagement_overall": _core_body_speed_clamp_engagement_overall(
+                core_clamp_engagement_by_player
+            ),
+        },
+        "low_confidence_threshold": low_confidence_threshold,
+        "smoothing_flags": smoothing_flag_counts,
         "bone_length_constraint": "body17_median_per_player",
     }
     output["world_grounding"] = {
+        "applied": bool(world_grounding_applied),
         "support_foot_strategy": "max_conf_lowest_z_lowest_vertical_velocity_5f",
         "ground_plane_z_m": 0.0,
         "z_axis": "up",
@@ -662,6 +1580,130 @@ def _apply_lane_a_world_grounding(
         last_support_idx = support_idx
         was_airborne = False
     return grounded, metrics
+
+
+def _apply_final_core_jitter_guard(
+    frames: Sequence[Mapping[str, Any]],
+    joint_names: Sequence[str],
+    *,
+    fps: float,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    guarded: list[dict[str, Any]] = []
+    metrics = _empty_smoothing_metrics()
+    core_indexes = [
+        idx
+        for idx, name in enumerate(joint_names)
+        if _joint_smoothing_group(name, joint_names) == "core_body"
+    ]
+    previous_output_by_joint: dict[int, list[float]] = {}
+    high_core_speed_streaks: dict[int, int] = {}
+    previous_t: float | None = None
+    for frame in frames:
+        output = copy.deepcopy(dict(frame))
+        joints = _joint_vectors(output)
+        flags = [_parse_joint_flags(value) for value in output.get("smoothing_flag", [])]
+        if len(flags) < len(joints):
+            flags.extend([] for _idx in range(len(joints) - len(flags)))
+        t = float(output.get("t", 0.0))
+        dt = (t - previous_t) if previous_t is not None else (1.0 / fps)
+        previous_t = t
+        for joint_idx in core_indexes:
+            if joint_idx >= len(joints):
+                continue
+            previous = previous_output_by_joint.get(joint_idx)
+            if previous is None or dt <= 0.0:
+                continue
+            displacement_m = math.dist(previous, joints[joint_idx])
+            speed_mps = displacement_m / dt
+            clamp_flags: list[str] = []
+            if displacement_m > SINGLE_FRAME_JUMP_FLAG_M:
+                clamp_flags.append("single_frame_jump_clamped")
+            if speed_mps > CORE_BODY_SPEED_FLAG_MPS:
+                high_core_speed_streaks[joint_idx] = high_core_speed_streaks.get(joint_idx, 0) + 1
+            else:
+                high_core_speed_streaks[joint_idx] = 0
+            if high_core_speed_streaks.get(joint_idx, 0) >= CORE_SPEED_SUSTAINED_FRAME_COUNT:
+                clamp_flags.append("core_speed_clamped")
+            if not clamp_flags:
+                continue
+            joints[joint_idx] = _clamp_joint_step(
+                previous,
+                joints[joint_idx],
+                max_step_m=_max_damped_step_m(group="core_body", dt=dt),
+            )
+            for flag in clamp_flags:
+                _add_joint_flag(flags, joint_idx, flag)
+                metrics["flag_counts"][flag] += 1
+        output["joints_world"] = joints
+        output["smoothing_flag"] = [_format_joint_flags(flag_values) for flag_values in flags]
+        guarded.append(output)
+        previous_output_by_joint = {
+            idx: list(joints[idx])
+            for idx in range(min(len(joints), len(joint_names)))
+        }
+    return guarded, metrics
+
+
+def _core_body_speed_clamp_engagement(
+    frames: Sequence[Mapping[str, Any]],
+    joint_names: Sequence[str],
+) -> dict[str, Any]:
+    core_indexes = [
+        idx
+        for idx, name in enumerate(joint_names)
+        if _joint_smoothing_group(name, joint_names) == "core_body"
+    ]
+    frame_count = 0
+    clamped_frame_count = 0
+    clamped_joint_sample_count = 0
+    total_core_joint_sample_count = 0
+    for frame in frames:
+        if not isinstance(frame, Mapping):
+            continue
+        frame_count += 1
+        flags = frame.get("smoothing_flag")
+        frame_clamped = False
+        for joint_idx in core_indexes:
+            total_core_joint_sample_count += 1
+            if not isinstance(flags, list) or joint_idx >= len(flags):
+                continue
+            if "core_speed_clamped" in _parse_joint_flags(flags[joint_idx]):
+                frame_clamped = True
+                clamped_joint_sample_count += 1
+        if frame_clamped:
+            clamped_frame_count += 1
+    return {
+        "frame_count": frame_count,
+        "clamped_frame_count": clamped_frame_count,
+        "clamp_engagement_fraction": round(clamped_frame_count / frame_count, 6) if frame_count else 0.0,
+        "core_joint_sample_count": total_core_joint_sample_count,
+        "clamped_core_joint_sample_count": clamped_joint_sample_count,
+        "core_joint_clamp_fraction": round(clamped_joint_sample_count / total_core_joint_sample_count, 6)
+        if total_core_joint_sample_count
+        else 0.0,
+    }
+
+
+def _core_body_speed_clamp_engagement_overall(
+    by_player: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    frame_count = sum(int(summary.get("frame_count", 0)) for summary in by_player.values())
+    clamped_frame_count = sum(int(summary.get("clamped_frame_count", 0)) for summary in by_player.values())
+    core_joint_sample_count = sum(int(summary.get("core_joint_sample_count", 0)) for summary in by_player.values())
+    clamped_core_joint_sample_count = sum(
+        int(summary.get("clamped_core_joint_sample_count", 0))
+        for summary in by_player.values()
+    )
+    return {
+        "frame_count": frame_count,
+        "clamped_frame_count": clamped_frame_count,
+        "clamp_engagement_fraction": round(clamped_frame_count / frame_count, 6) if frame_count else 0.0,
+        "core_joint_sample_count": core_joint_sample_count,
+        "clamped_core_joint_sample_count": clamped_core_joint_sample_count,
+        "core_joint_clamp_fraction": round(clamped_core_joint_sample_count / core_joint_sample_count, 6)
+        if core_joint_sample_count
+        else 0.0,
+    }
 
 
 def _support_foot_candidates(
@@ -787,8 +1829,130 @@ def _add_motionbert_metrics(total: dict[str, Any], increment: Mapping[str, int])
     total["motionbert_frame_count"] = int(total["motionbert_frame_count"]) + int(increment.get("motionbert_frame_count", 0))
 
 
+def _empty_smoothing_metrics(*, filtered_joint_count: int = 0) -> dict[str, Any]:
+    return {
+        "filtered_joint_count": int(filtered_joint_count),
+        "flag_counts": Counter(),
+    }
+
+
+def _add_smoothing_metrics(total: dict[str, Any], increment: Mapping[str, Any]) -> None:
+    total["filtered_joint_count"] = max(int(total.get("filtered_joint_count", 0)), int(increment.get("filtered_joint_count", 0)))
+    total_counts = total.setdefault("flag_counts", Counter())
+    for flag, count in dict(increment.get("flag_counts", {})).items():
+        total_counts[str(flag)] += int(count)
+
+
+def _is_sam3d_skeleton_payload(payload: Mapping[str, Any]) -> bool:
+    if payload.get("artifact_type") != "racketsport_skeleton3d":
+        return False
+    joint_names = _string_joint_names(payload.get("joint_names"))
+    if len(joint_names) != SAM3D_BODY_MHR70_SEMANTIC_MAP.source_joint_count:
+        return False
+    accepted_sources = {SAM3D_BODY_JOINT_SOURCE, "sam3dbody_world_joints"}
+    for explicit_key in ("source_model", "model"):
+        explicit_value = str(payload.get(explicit_key, ""))
+        if explicit_value and explicit_value not in accepted_sources:
+            return False
+    provenance = payload.get("provenance")
+    source_values = {
+        str(payload.get("source_model", "")),
+        str(payload.get("model", "")),
+    }
+    if isinstance(provenance, Mapping):
+        source_values.update(
+            str(provenance.get(key, ""))
+            for key in ("source", "model_family", "skeleton_source")
+        )
+    return bool(source_values & accepted_sources)
+
+
+def _string_joint_names(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value]
+
+
+def _semantic_index_by_name(joint_names: Sequence[str]) -> dict[str, int]:
+    direct = {str(name): idx for idx, name in enumerate(joint_names)}
+    if _looks_like_sam3d_mhr70_joint_names(joint_names):
+        for name, idx in SAM3D_BODY_MHR70_SEMANTIC_MAP.joints.items():
+            direct.setdefault(name, idx)
+    return direct
+
+
+def _looks_like_sam3d_mhr70_joint_names(joint_names: Sequence[str]) -> bool:
+    if len(joint_names) != SAM3D_BODY_MHR70_SEMANTIC_MAP.source_joint_count:
+        return False
+    return all(str(name) == f"sam3dbody_joint_{idx:03d}" for idx, name in enumerate(joint_names))
+
+
+def _canonical_joint_name(name: str, joint_names: Sequence[str]) -> str:
+    if not _looks_like_sam3d_mhr70_joint_names(joint_names):
+        return name
+    try:
+        idx = list(joint_names).index(name)
+    except ValueError:
+        return name
+    for semantic_name, semantic_idx in SAM3D_BODY_MHR70_SEMANTIC_MAP.joints.items():
+        if semantic_idx == idx:
+            return semantic_name
+    return name
+
+
+def _joint_smoothing_group(name: str, joint_names: Sequence[str]) -> str:
+    name = _canonical_joint_name(name, joint_names)
+    if name in {"left_wrist", "right_wrist"}:
+        return "wrists"
+    if name.startswith("left_hand_") or name.startswith("right_hand_"):
+        return "hands"
+    if name in _foot_joint_names(joint_names) or name in {"left_ankle", "right_ankle"}:
+        return "feet"
+    return "core_body"
+
+
+def _add_joint_flag(frame_flags: list[list[str]], joint_idx: int, flag: str) -> None:
+    if joint_idx >= len(frame_flags):
+        return
+    if flag not in frame_flags[joint_idx]:
+        frame_flags[joint_idx].append(flag)
+
+
+def _format_joint_flags(flags: Sequence[str]) -> str:
+    if not flags:
+        return NO_SMOOTHING_FLAG
+    return "|".join(sorted(flags))
+
+
+def _parse_joint_flags(value: Any) -> list[str]:
+    if not isinstance(value, str) or value == NO_SMOOTHING_FLAG:
+        return []
+    return [part for part in value.split("|") if part]
+
+
+def _clamp_joint_step(previous: Sequence[float], current: Sequence[float], *, max_step_m: float) -> list[float]:
+    displacement = math.dist(previous, current)
+    if displacement <= max_step_m or displacement <= 1e-12:
+        return [float(value) for value in current]
+    scale = max_step_m / displacement
+    return [
+        float(previous[axis]) + (float(current[axis]) - float(previous[axis])) * scale
+        for axis in range(3)
+    ]
+
+
+def _max_damped_step_m(*, group: str, dt: float) -> float:
+    if group == "core_body":
+        return max(0.0, CORE_BODY_SPEED_FLAG_MPS * dt)
+    return SINGLE_FRAME_JUMP_FLAG_M
+
+
 def _foot_joint_names(joint_names: Sequence[str]) -> set[str]:
-    return {name for name in joint_names if "toe" in name or name.endswith("_heel")}
+    return {
+        name
+        for name in joint_names
+        if "toe" in _canonical_joint_name(name, joint_names) or _canonical_joint_name(name, joint_names).endswith("_heel")
+    }
 
 
 def _body17_indexes(joint_names: Sequence[str]) -> list[int]:
@@ -825,6 +1989,503 @@ def _infer_fps(players: Sequence[Any]) -> float:
     if not deltas:
         return 30.0
     return 1.0 / median(deltas)
+
+
+def compute_pose_jitter_audit(skeleton3d: Mapping[str, Any], *, source_path: str | Path | None = None) -> dict[str, Any]:
+    """Measure frame-to-frame world-joint displacement by joint group."""
+
+    joint_names = skeleton3d.get("joint_names")
+    if not isinstance(joint_names, list) or not all(isinstance(name, str) for name in joint_names):
+        raise ValueError("skeleton3d joint_names must be a list of strings")
+    players = skeleton3d.get("players")
+    if not isinstance(players, list):
+        raise ValueError("skeleton3d players must be a list")
+    fps = float(skeleton3d.get("fps") or _infer_fps(players))
+    groups_by_idx = {
+        idx: _joint_smoothing_group(name, joint_names)
+        for idx, name in enumerate(joint_names)
+    }
+    group_samples: dict[str, list[float]] = {"all": [], "core_body": [], "feet": [], "hands": [], "wrists": []}
+    per_joint_samples: dict[str, list[float]] = {name: [] for name in joint_names}
+    for player in players:
+        if not isinstance(player, Mapping):
+            continue
+        frames = player.get("frames")
+        if not isinstance(frames, list):
+            continue
+        sorted_frames = sorted(frames, key=lambda frame: (float(frame.get("t", 0.0)), int(frame.get("frame_idx", 0))))
+        for previous, current in zip(sorted_frames, sorted_frames[1:]):
+            previous_joints = _joint_vectors(previous)
+            current_joints = _joint_vectors(current)
+            joint_count = min(len(previous_joints), len(current_joints), len(joint_names))
+            for joint_idx in range(joint_count):
+                displacement = math.dist(previous_joints[joint_idx], current_joints[joint_idx])
+                joint_name = joint_names[joint_idx]
+                group = groups_by_idx[joint_idx]
+                group_samples["all"].append(displacement)
+                group_samples[group].append(displacement)
+                per_joint_samples[joint_name].append(displacement)
+
+    group_stats = {
+        group: _displacement_stats(samples)
+        for group, samples in group_samples.items()
+    }
+    per_joint_stats = {
+        joint_name: {
+            **_displacement_stats(samples),
+            "group": groups_by_idx.get(idx, "core_body"),
+        }
+        for idx, (joint_name, samples) in enumerate(per_joint_samples.items())
+    }
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_pose_jitter_audit",
+        "source_path": str(source_path or ""),
+        "fps": fps,
+        "joint_count": len(joint_names),
+        "player_count": len(players),
+        "thresholds": {
+            "target_core_body_p90_frame_displacement_m": 0.3,
+            "core_body_speed_flag_mps": CORE_BODY_SPEED_FLAG_MPS,
+            "single_frame_jump_flag_m": SINGLE_FRAME_JUMP_FLAG_M,
+        },
+        "joint_groups": {
+            "core_body": [name for idx, name in enumerate(joint_names) if groups_by_idx[idx] == "core_body"],
+            "feet": [name for idx, name in enumerate(joint_names) if groups_by_idx[idx] == "feet"],
+            "hands": [name for idx, name in enumerate(joint_names) if groups_by_idx[idx] == "hands"],
+            "wrists": [name for idx, name in enumerate(joint_names) if groups_by_idx[idx] == "wrists"],
+        },
+        "group_stats": group_stats,
+        "per_joint": per_joint_stats,
+    }
+
+
+def compare_wrist_peak_timing(
+    before_skeleton3d: Mapping[str, Any],
+    after_skeleton3d: Mapping[str, Any],
+    *,
+    top_k: int = 5,
+    max_allowed_delta_frames: int = 1,
+    min_peak_speed_mps: float = 4.0,
+) -> dict[str, Any]:
+    """Compare wrist velocity peak frame indexes before and after smoothing."""
+
+    if top_k <= 0:
+        raise ValueError("top_k must be positive")
+    if min_peak_speed_mps < 0.0:
+        raise ValueError("min_peak_speed_mps must be non-negative")
+    before_names = before_skeleton3d.get("joint_names")
+    after_names = after_skeleton3d.get("joint_names")
+    if not isinstance(before_names, list) or not isinstance(after_names, list):
+        raise ValueError("both skeleton payloads must include joint_names")
+    before_players = _players_by_id(before_skeleton3d.get("players"))
+    after_players = _players_by_id(after_skeleton3d.get("players"))
+    before_fps = float(before_skeleton3d.get("fps") or _infer_fps(list(before_players.values())))
+    after_fps = float(after_skeleton3d.get("fps") or _infer_fps(list(after_players.values())))
+    comparisons: list[dict[str, Any]] = []
+    skipped_clamped_before_peak_count = 0
+    for joint_name in ("left_wrist", "right_wrist"):
+        before_idx = _joint_index_for_semantic(before_names, joint_name)
+        after_idx = _joint_index_for_semantic(after_names, joint_name)
+        if before_idx is None or after_idx is None:
+            continue
+        for player_id, before_player in sorted(before_players.items()):
+            after_player = after_players.get(player_id)
+            if after_player is None:
+                continue
+            before_peaks = _top_wrist_speed_peaks(
+                before_player.get("frames"),
+                before_idx,
+                fps=before_fps,
+                top_k=top_k,
+                min_peak_speed_mps=min_peak_speed_mps,
+            )
+            after_peaks = _top_wrist_speed_peaks(
+                after_player.get("frames"),
+                after_idx,
+                fps=after_fps,
+                top_k=100000,
+                min_peak_speed_mps=min_peak_speed_mps,
+            )
+            used_after: set[int] = set()
+            for peak in before_peaks:
+                if _nearby_frame_has_flag(
+                    after_player.get("frames"),
+                    int(peak["frame"]),
+                    after_idx,
+                    "single_frame_jump_clamped",
+                    radius=1,
+                ):
+                    skipped_clamped_before_peak_count += 1
+                    continue
+                if not after_peaks:
+                    comparisons.append(
+                        {
+                            "player_id": player_id,
+                            "joint_name": joint_name,
+                            "before_frame": peak["frame"],
+                            "after_frame": None,
+                            "delta_frames": None,
+                            "before_speed_mps": peak["speed_mps"],
+                            "after_speed_mps": None,
+                            "status": "missing_after_peak",
+                        }
+                    )
+                    continue
+                after_pos, after_peak = min(
+                    (
+                        (pos, candidate)
+                        for pos, candidate in enumerate(after_peaks)
+                        if pos not in used_after
+                    ),
+                    key=lambda item: abs(int(item[1]["frame"]) - int(peak["frame"])),
+                    default=(0, after_peaks[0]),
+                )
+                used_after.add(after_pos)
+                delta = int(after_peak["frame"]) - int(peak["frame"])
+                comparisons.append(
+                    {
+                        "player_id": player_id,
+                        "joint_name": joint_name,
+                        "before_frame": int(peak["frame"]),
+                        "after_frame": int(after_peak["frame"]),
+                        "delta_frames": delta,
+                        "abs_delta_frames": abs(delta),
+                        "before_speed_mps": round(float(peak["speed_mps"]), 6),
+                        "after_speed_mps": round(float(after_peak["speed_mps"]), 6),
+                        "status": "matched",
+                    }
+                )
+    deltas = [
+        int(comparison["abs_delta_frames"])
+        for comparison in comparisons
+        if comparison.get("abs_delta_frames") is not None
+    ]
+    max_delta = max(deltas) if deltas else None
+    status = "pass" if max_delta is not None and max_delta <= max_allowed_delta_frames else "fail"
+    if not comparisons:
+        status = "blocked"
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_wrist_peak_timing_comparison",
+        "status": status,
+        "max_allowed_delta_frames": max_allowed_delta_frames,
+        "min_peak_speed_mps": min_peak_speed_mps,
+        "ignored_single_frame_jump_threshold_m": SINGLE_FRAME_JUMP_FLAG_M,
+        "max_abs_delta_frames": max_delta,
+        "comparison_count": len(comparisons),
+        "skipped_clamped_before_peak_count": skipped_clamped_before_peak_count,
+        "comparisons": comparisons,
+    }
+
+
+def compare_wrist_direction_peak_timing(
+    before_skeleton3d: Mapping[str, Any],
+    after_skeleton3d: Mapping[str, Any],
+    *,
+    top_k: int = 5,
+    max_allowed_delta_frames: int = 0,
+    min_peak_direction_speed: float = 0.0,
+) -> dict[str, Any]:
+    """Compare elbow-relative wrist direction-change peak frame indexes."""
+
+    if top_k <= 0:
+        raise ValueError("top_k must be positive")
+    if max_allowed_delta_frames < 0:
+        raise ValueError("max_allowed_delta_frames must be non-negative")
+    if min_peak_direction_speed < 0.0:
+        raise ValueError("min_peak_direction_speed must be non-negative")
+    before_names = before_skeleton3d.get("joint_names")
+    after_names = after_skeleton3d.get("joint_names")
+    if not isinstance(before_names, list) or not isinstance(after_names, list):
+        raise ValueError("both skeleton payloads must include joint_names")
+    before_players = _players_by_id(before_skeleton3d.get("players"))
+    after_players = _players_by_id(after_skeleton3d.get("players"))
+    before_fps = float(before_skeleton3d.get("fps") or _infer_fps(list(before_players.values())))
+    after_fps = float(after_skeleton3d.get("fps") or _infer_fps(list(after_players.values())))
+    comparisons: list[dict[str, Any]] = []
+    for side in ("left", "right"):
+        wrist_name = f"{side}_wrist"
+        elbow_name = f"{side}_elbow"
+        before_wrist_idx = _joint_index_for_semantic(before_names, wrist_name)
+        before_elbow_idx = _joint_index_for_semantic(before_names, elbow_name)
+        after_wrist_idx = _joint_index_for_semantic(after_names, wrist_name)
+        after_elbow_idx = _joint_index_for_semantic(after_names, elbow_name)
+        if (
+            before_wrist_idx is None
+            or before_elbow_idx is None
+            or after_wrist_idx is None
+            or after_elbow_idx is None
+        ):
+            continue
+        for player_id, before_player in sorted(before_players.items()):
+            after_player = after_players.get(player_id)
+            if after_player is None:
+                continue
+            before_peaks = _top_wrist_direction_peaks(
+                before_player.get("frames"),
+                elbow_idx=before_elbow_idx,
+                wrist_idx=before_wrist_idx,
+                fps=before_fps,
+                top_k=top_k,
+                min_peak_direction_speed=min_peak_direction_speed,
+            )
+            after_peaks = _top_wrist_direction_peaks(
+                after_player.get("frames"),
+                elbow_idx=after_elbow_idx,
+                wrist_idx=after_wrist_idx,
+                fps=after_fps,
+                top_k=100000,
+                min_peak_direction_speed=min_peak_direction_speed,
+            )
+            used_after: set[int] = set()
+            for peak in before_peaks:
+                if not after_peaks:
+                    comparisons.append(
+                        {
+                            "player_id": player_id,
+                            "joint_name": wrist_name,
+                            "before_frame": peak["frame"],
+                            "after_frame": None,
+                            "delta_frames": None,
+                            "before_direction_speed": peak["direction_speed"],
+                            "after_direction_speed": None,
+                            "status": "missing_after_peak",
+                        }
+                    )
+                    continue
+                after_pos, after_peak = min(
+                    (
+                        (pos, candidate)
+                        for pos, candidate in enumerate(after_peaks)
+                        if pos not in used_after
+                    ),
+                    key=lambda item: abs(int(item[1]["frame"]) - int(peak["frame"])),
+                    default=(0, after_peaks[0]),
+                )
+                used_after.add(after_pos)
+                delta = int(after_peak["frame"]) - int(peak["frame"])
+                comparisons.append(
+                    {
+                        "player_id": player_id,
+                        "joint_name": wrist_name,
+                        "before_frame": int(peak["frame"]),
+                        "after_frame": int(after_peak["frame"]),
+                        "delta_frames": delta,
+                        "abs_delta_frames": abs(delta),
+                        "before_direction_speed": round(float(peak["direction_speed"]), 6),
+                        "after_direction_speed": round(float(after_peak["direction_speed"]), 6),
+                        "status": "matched",
+                    }
+                )
+    deltas = [
+        int(comparison["abs_delta_frames"])
+        for comparison in comparisons
+        if comparison.get("abs_delta_frames") is not None
+    ]
+    max_delta = max(deltas) if deltas else None
+    status = "pass" if max_delta is not None and max_delta <= max_allowed_delta_frames else "fail"
+    if not comparisons:
+        status = "blocked"
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_wrist_direction_peak_timing_comparison",
+        "measurement": "elbow_relative_unit_direction_change",
+        "status": status,
+        "max_allowed_delta_frames": max_allowed_delta_frames,
+        "min_peak_direction_speed": min_peak_direction_speed,
+        "max_abs_delta_frames": max_delta,
+        "comparison_count": len(comparisons),
+        "comparisons": comparisons,
+    }
+
+
+def _top_wrist_direction_peaks(
+    frames: Any,
+    *,
+    elbow_idx: int,
+    wrist_idx: int,
+    fps: float,
+    top_k: int,
+    min_peak_direction_speed: float,
+) -> list[dict[str, float | int]]:
+    if not isinstance(frames, list):
+        return []
+    sorted_frames = sorted(frames, key=lambda frame: (float(frame.get("t", 0.0)), int(frame.get("frame_idx", 0))))
+    speeds: list[dict[str, float | int]] = []
+    for previous_pos, (previous, current) in enumerate(zip(sorted_frames, sorted_frames[1:])):
+        previous_direction = _elbow_relative_wrist_unit(previous, elbow_idx=elbow_idx, wrist_idx=wrist_idx)
+        current_direction = _elbow_relative_wrist_unit(current, elbow_idx=elbow_idx, wrist_idx=wrist_idx)
+        if previous_direction is None or current_direction is None:
+            continue
+        previous_t = float(previous.get("t", previous_pos / fps))
+        current_t = float(current.get("t", (previous_pos + 1) / fps))
+        dt = current_t - previous_t
+        if dt <= 0.0:
+            frame_delta = int(current.get("frame_idx", previous_pos + 1)) - int(previous.get("frame_idx", previous_pos))
+            dt = max(1, frame_delta) / fps
+        direction_speed = math.dist(previous_direction, current_direction) / dt
+        if direction_speed < min_peak_direction_speed:
+            continue
+        speeds.append(
+            {
+                "frame": int(current.get("frame_idx", previous_pos + 1)),
+                "direction_speed": direction_speed,
+            }
+        )
+    selected: list[dict[str, float | int]] = []
+    for candidate in sorted(speeds, key=lambda item: float(item["direction_speed"]), reverse=True):
+        if any(abs(int(candidate["frame"]) - int(kept["frame"])) <= 1 for kept in selected):
+            continue
+        selected.append(candidate)
+        if len(selected) >= top_k:
+            break
+    return sorted(selected, key=lambda item: int(item["frame"]))
+
+
+def _elbow_relative_wrist_unit(
+    frame: Mapping[str, Any],
+    *,
+    elbow_idx: int,
+    wrist_idx: int,
+) -> list[float] | None:
+    joints = frame.get("joints_world")
+    if not isinstance(joints, list) or elbow_idx >= len(joints) or wrist_idx >= len(joints):
+        return None
+    elbow = _finite_joint3(joints[elbow_idx])
+    wrist = _finite_joint3(joints[wrist_idx])
+    if elbow is None or wrist is None:
+        return None
+    direction = [wrist[axis] - elbow[axis] for axis in range(3)]
+    length = math.sqrt(sum(value * value for value in direction))
+    if length <= 1e-12:
+        return None
+    return [value / length for value in direction]
+
+
+def _displacement_stats(samples: Sequence[float]) -> dict[str, Any]:
+    if not samples:
+        return {
+            "sample_count": 0,
+            "p50_frame_displacement_m": None,
+            "p90_frame_displacement_m": None,
+            "max_frame_displacement_m": None,
+        }
+    return {
+        "sample_count": len(samples),
+        "p50_frame_displacement_m": round(_percentile(samples, 0.50), 6),
+        "p90_frame_displacement_m": round(_percentile(samples, 0.90), 6),
+        "max_frame_displacement_m": round(max(samples), 6),
+    }
+
+
+def _percentile(samples: Sequence[float], quantile: float) -> float:
+    if not samples:
+        raise ValueError("cannot compute percentile for empty samples")
+    ordered = sorted(float(value) for value in samples)
+    if len(ordered) == 1:
+        return ordered[0]
+    pos = quantile * (len(ordered) - 1)
+    lower = int(math.floor(pos))
+    upper = int(math.ceil(pos))
+    if lower == upper:
+        return ordered[lower]
+    weight = pos - lower
+    return ordered[lower] * (1.0 - weight) + ordered[upper] * weight
+
+
+def _players_by_id(players: Any) -> dict[int, Mapping[str, Any]]:
+    if not isinstance(players, list):
+        return {}
+    output: dict[int, Mapping[str, Any]] = {}
+    for player in players:
+        if isinstance(player, Mapping):
+            output[int(player.get("id", 0))] = player
+    return output
+
+
+def _joint_index_for_semantic(joint_names: Sequence[str], joint_name: str) -> int | None:
+    index_by_name = _semantic_index_by_name(joint_names)
+    return index_by_name.get(joint_name)
+
+
+def _top_wrist_speed_peaks(
+    frames: Any,
+    joint_idx: int,
+    *,
+    fps: float,
+    top_k: int,
+    min_peak_speed_mps: float,
+) -> list[dict[str, float | int]]:
+    if not isinstance(frames, list):
+        return []
+    sorted_frames = sorted(frames, key=lambda frame: (float(frame.get("t", 0.0)), int(frame.get("frame_idx", 0))))
+    speeds: list[dict[str, float | int]] = []
+    for previous_pos, (previous, current) in enumerate(zip(sorted_frames, sorted_frames[1:])):
+        previous_joints = _joint_vectors(previous)
+        current_joints = _joint_vectors(current)
+        if joint_idx >= len(previous_joints) or joint_idx >= len(current_joints):
+            continue
+        if _frame_joint_has_flag(previous, joint_idx, "single_frame_jump_clamped") or _frame_joint_has_flag(
+            current, joint_idx, "single_frame_jump_clamped"
+        ):
+            continue
+        previous_t = float(previous.get("t", previous_pos / fps))
+        current_t = float(current.get("t", (previous_pos + 1) / fps))
+        dt = current_t - previous_t
+        if dt <= 0.0:
+            frame_delta = int(current.get("frame_idx", previous_pos + 1)) - int(previous.get("frame_idx", previous_pos))
+            dt = max(1, frame_delta) / fps
+        displacement = math.dist(previous_joints[joint_idx], current_joints[joint_idx])
+        if displacement > SINGLE_FRAME_JUMP_FLAG_M:
+            continue
+        if previous_pos > 0:
+            pre_previous_joints = _joint_vectors(sorted_frames[previous_pos - 1])
+            if (
+                joint_idx < len(pre_previous_joints)
+                and math.dist(pre_previous_joints[joint_idx], previous_joints[joint_idx]) > SINGLE_FRAME_JUMP_FLAG_M
+            ):
+                continue
+        speed_mps = displacement / dt
+        if speed_mps < min_peak_speed_mps:
+            continue
+        speeds.append(
+            {
+                "frame": int(current.get("frame_idx", previous_pos + 1)),
+                "speed_mps": speed_mps,
+            }
+        )
+    selected: list[dict[str, float | int]] = []
+    for candidate in sorted(speeds, key=lambda item: float(item["speed_mps"]), reverse=True):
+        if any(abs(int(candidate["frame"]) - int(kept["frame"])) <= 1 for kept in selected):
+            continue
+        selected.append(candidate)
+        if len(selected) >= top_k:
+            break
+    return sorted(selected, key=lambda item: int(item["frame"]))
+
+
+def _frame_joint_has_flag(frame: Mapping[str, Any], joint_idx: int, flag: str) -> bool:
+    values = frame.get("smoothing_flag")
+    if not isinstance(values, list) or joint_idx >= len(values):
+        return False
+    return flag in _parse_joint_flags(values[joint_idx])
+
+
+def _nearby_frame_has_flag(frames: Any, frame_idx: int, joint_idx: int, flag: str, *, radius: int) -> bool:
+    if not isinstance(frames, list):
+        return False
+    for frame in frames:
+        if not isinstance(frame, Mapping):
+            continue
+        current_idx = frame.get("frame_idx")
+        if (
+            isinstance(current_idx, int)
+            and abs(current_idx - frame_idx) <= radius
+            and _frame_joint_has_flag(frame, joint_idx, flag)
+        ):
+            return True
+    return False
 
 
 class OneEuroFilter:
@@ -873,4 +2534,12 @@ def _exponential_smooth(alpha: float, value: float, previous: float) -> float:
     return alpha * value + (1.0 - alpha) * previous
 
 
-__all__ = ["OneEuroFilter", "refine_lane_a_skeleton3d"]
+__all__ = [
+    "OneEuroFilter",
+    "apply_sam3d_wrist_bone_lock",
+    "compare_wrist_direction_peak_timing",
+    "compare_wrist_peak_timing",
+    "compute_pose_jitter_audit",
+    "refine_lane_a_skeleton3d",
+    "refine_sam3d_skeleton3d",
+]

@@ -49,7 +49,7 @@ PIPELINE_STAGE_CONTRACTS: tuple[PipelineStageContract, ...] = (
         stage="body",
         phase="phase4",
         required_artifacts=("smpl_motion.json", "skeleton3d.json", "body_compute_execution.json", "body_mesh_readiness.json"),
-        depends_on=("pose",),
+        depends_on=("tracking",),
     ),
     PipelineStageContract(
         stage="physics",

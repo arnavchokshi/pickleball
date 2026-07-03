@@ -1,12 +1,30 @@
 from __future__ import annotations
 
 import json
+import threading
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
 from scripts.racketsport import review_input_server
+
+
+def _start_review_server(tmp_path: Path, *, token: str = "test-review-token"):
+    server = review_input_server.ThreadingHTTPServer(("127.0.0.1", 0), review_input_server.ReviewHandler)
+    server.repo_root = tmp_path  # type: ignore[attr-defined]
+    server.save_token = token  # type: ignore[attr-defined]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return server, thread
+
+
+def _stop_review_server(server, thread) -> None:  # noqa: ANN001
+    server.shutdown()
+    server.server_close()
+    thread.join(timeout=5)
 
 
 def test_review_input_manifest_includes_action_blockers_by_clip(tmp_path: Path) -> None:
@@ -823,3 +841,113 @@ def test_review_input_write_rejects_unknown_clip_ids_without_writing(tmp_path: P
         )
 
     assert not (tmp_path / "runs").exists()
+
+
+def test_review_input_write_survives_concurrent_saves_without_corrupting_latest(tmp_path: Path) -> None:
+    # Regression test for review_harden_20260702.md finding 2: concurrent
+    # ThreadingHTTPServer request threads calling _write_review_input for
+    # the same repo root must never leave `latest`/timestamped JSON
+    # truncated or interleaved, even if two saves race.
+    errors: list[BaseException] = []
+
+    def worker(index: int) -> None:
+        try:
+            review_input_server._write_review_input(
+                tmp_path,
+                {
+                    "schema_version": 1,
+                    "review_type": "pickleball_cv_blocker_review",
+                    "saved_from_browser_at": f"worker-{index}",
+                },
+                # Distinct timestamps so each worker gets its own timestamped
+                # file (real concurrent saves within the same second already
+                # collide on that filename by design; that is unrelated to
+                # the corruption/interleaving hazard this test targets).
+                now=datetime(2026, 1, 2, 3, 4, index, tzinfo=timezone.utc),
+            )
+        except BaseException as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(12)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+
+    assert not errors
+    latest = tmp_path / "runs" / "review_inputs" / "pickleball_cv_review_latest.json"
+    # json.loads raising here would mean a torn/interleaved write landed.
+    payload = json.loads(latest.read_text(encoding="utf-8"))
+    assert payload["saved_from_browser_at"].startswith("worker-")
+    timestamped_files = sorted((tmp_path / "runs" / "review_inputs").glob("pickleball_cv_review_2*.json"))
+    assert len(timestamped_files) == 12
+    for path in timestamped_files:
+        json.loads(path.read_text(encoding="utf-8"))
+    # No leftover atomic-write temp files should survive a successful save.
+    leftover_temp = list((tmp_path / "runs" / "review_inputs").glob(".*.tmp*"))
+    assert leftover_temp == []
+
+
+def test_review_input_post_save_rejects_missing_or_wrong_token(tmp_path: Path) -> None:
+    server, thread = _start_review_server(tmp_path, token="correct-horse-battery-staple")
+    try:
+        port = server.server_address[1]
+        body = json.dumps({"schema_version": 1, "review_type": "pickleball_cv_blocker_review"}).encode("utf-8")
+
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/save",
+            data=body,
+            method="POST",
+            headers={"Content-Type": "application/json"},
+        )
+        with pytest.raises(urllib.error.HTTPError) as exc_info:
+            urllib.request.urlopen(request, timeout=5)
+        assert exc_info.value.code == 401
+
+        bad_request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/save",
+            data=body,
+            method="POST",
+            headers={"Content-Type": "application/json", "X-Review-Token": "wrong-token"},
+        )
+        with pytest.raises(urllib.error.HTTPError) as exc_info_bad:
+            urllib.request.urlopen(bad_request, timeout=5)
+        assert exc_info_bad.value.code == 401
+
+        assert not (tmp_path / "runs" / "review_inputs" / "pickleball_cv_review_latest.json").exists()
+    finally:
+        _stop_review_server(server, thread)
+
+
+def test_review_input_post_save_accepts_correct_token(tmp_path: Path) -> None:
+    server, thread = _start_review_server(tmp_path, token="correct-horse-battery-staple")
+    try:
+        port = server.server_address[1]
+        body = json.dumps({"schema_version": 1, "review_type": "pickleball_cv_blocker_review"}).encode("utf-8")
+
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/save",
+            data=body,
+            method="POST",
+            headers={"Content-Type": "application/json", "X-Review-Token": "correct-horse-battery-staple"},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            assert response.status == 200
+            result = json.loads(response.read().decode("utf-8"))
+        assert "latest_path" in result
+        assert (tmp_path / "runs" / "review_inputs" / "pickleball_cv_review_latest.json").is_file()
+    finally:
+        _stop_review_server(server, thread)
+
+
+def test_review_input_served_pages_embed_save_token_not_placeholder(tmp_path: Path) -> None:
+    server, thread = _start_review_server(tmp_path, token="page-embedded-token")
+    try:
+        port = server.server_address[1]
+        for path in ("/", "/paddle", "/body"):
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=5) as response:
+                html = response.read().decode("utf-8")
+            assert "page-embedded-token" in html, path
+            assert review_input_server.SAVE_TOKEN_PLACEHOLDER not in html, path
+    finally:
+        _stop_review_server(server, thread)

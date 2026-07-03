@@ -42,10 +42,11 @@ final class CaptureSidecarTests: XCTestCase {
         let sidecar = try JSONDecoder().decode(CaptureSidecar.self, from: Data(json.utf8))
 
         XCTAssertEqual(sidecar.schemaVersion, 1)
+        XCTAssertEqual(sidecar.provenance, .liveRecording)
         XCTAssertEqual(sidecar.deviceTier, .standard)
         XCTAssertEqual(sidecar.format, .hevc)
         XCTAssertEqual(sidecar.orientation, .landscape)
-        XCTAssertEqual(sidecar.locked.wbLocked, true)
+        XCTAssertEqual(sidecar.locked?.wbLocked, true)
         XCTAssertEqual(sidecar.captureQuality.grade, .good)
         XCTAssertEqual(sidecar.ondevicePoseTrack, "ondevice_pose.json")
     }
@@ -74,6 +75,7 @@ final class CaptureSidecarTests: XCTestCase {
         let payload = try JSONSerialization.jsonObject(with: data) as? [String: Any]
 
         XCTAssertEqual(payload?["schema_version"] as? Int, 1)
+        XCTAssertEqual(payload?["provenance"] as? String, "live_recording")
         XCTAssertEqual(payload?["device_tier"] as? String, "B_standard")
         XCTAssertEqual(payload?["orientation"] as? String, "portrait")
         XCTAssertEqual(payload?["capture_device_orientation"] as? String, "portrait")

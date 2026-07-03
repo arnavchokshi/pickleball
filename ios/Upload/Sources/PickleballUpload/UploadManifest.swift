@@ -95,8 +95,13 @@ public enum UploadManifestValidator {
             errors.append(.invalidResolution(manifest.sidecar.resolution))
         }
 
-        if manifest.sidecar.gravity.count != 3 {
-            errors.append(.invalidGravity(manifest.sidecar.gravity))
+        if let gravity = manifest.sidecar.gravity {
+            if gravity.count != 3 {
+                errors.append(.invalidGravity(gravity))
+            }
+        } else if manifest.sidecar.provenance != .cameraRollImport
+            || manifest.sidecar.unavailableSensorReasons["core_motion_gravity"] == nil {
+            errors.append(.invalidGravity([]))
         }
 
         return UploadManifestValidationReport(errors: errors)

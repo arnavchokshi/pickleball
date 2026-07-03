@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pytest
 
 from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
@@ -266,6 +268,25 @@ def test_top_net_observation_rejects_parallel_non_overlapping_candidate():
     )
 
     observation = select_top_net_observation(calibration, net_plane, [shifted_segment])
+
+    assert observation is None
+
+
+def test_top_net_observation_rejects_full_width_tennis_overlay_candidate():
+    calibration = _synthetic_calibration()
+    net_plane = build_net_plane("pickleball")
+    net_points = project_net_plane(calibration, net_plane)
+    left = net_points["left_post"]
+    right = net_points["right_post"]
+    expected_length = math.dist(left, right)
+    tennis_length = expected_length * (42.0 / 22.0)
+    center = [(left[0] + right[0]) / 2.0, (left[1] + right[1]) / 2.0]
+    candidate_segment = (
+        (center[0] - tennis_length / 2.0, center[1]),
+        (center[0] + tennis_length / 2.0, center[1]),
+    )
+
+    observation = select_top_net_observation(calibration, net_plane, [candidate_segment])
 
     assert observation is None
 

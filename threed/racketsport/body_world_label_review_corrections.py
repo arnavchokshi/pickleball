@@ -214,13 +214,16 @@ def merge_body_world_label_review_decisions_into_corrections(
         sample_path = _sample_correction_path(path)
         if sample_path is not None:
             label_corrections += 1
-            sample_id, _field = sample_path
+            sample_id, field = sample_path
+            decision_payload = run_decisions.get(sample_id)
             state = label_decision_states.get(sample_id, "missing")
             if state == "missing":
                 missing_label_decision_samples.append(sample_id)
                 continue
             if state == "accepted":
                 correction["status"] = "accepted"
+                if field == "notes":
+                    correction["value"] = _body_label_review_note(decision_payload)
                 accepted_label_samples.append(sample_id)
                 updated_corrections += 1
             elif state == "rejected":
@@ -300,9 +303,14 @@ def run_body_world_label_review_decision_pipeline(
     out_root = Path(out_dir)
     out_root.mkdir(parents=True, exist_ok=True)
     merged_corrections_path = out_root / "body_world_label_review_corrections.merged.json"
-    reviewed_bundle_dir = out_root / "body_world_label_review_bundle"
-    reviewed_template_path = reviewed_bundle_dir / "body_world_joints.template.json"
-    reviewed_overlay_index_path = reviewed_bundle_dir / "overlays" / "body_world_label_review_overlay_index.json"
+    write_canonical_review_bundle = final_labels_path is not None or finalization_report_path is not None
+    if write_canonical_review_bundle:
+        reviewed_template_path = Path(template_path)
+        reviewed_overlay_index_path = Path(overlay_index_path)
+    else:
+        reviewed_bundle_dir = out_root / "body_world_label_review_bundle"
+        reviewed_template_path = reviewed_bundle_dir / "body_world_joints.template.json"
+        reviewed_overlay_index_path = reviewed_bundle_dir / "overlays" / "body_world_label_review_overlay_index.json"
     final_labels_out = Path(final_labels_path) if final_labels_path is not None else out_root / "labels" / "body_world_joints.json"
     finalization_report_out = (
         Path(finalization_report_path)
@@ -471,6 +479,18 @@ def _pending_template_corrections(
             annotator=annotator,
             created_at=created_at,
         )
+        _append_pending_correction(
+            corrections,
+            manifest_id=manifest_id,
+            correction_id=f"sample_{sample_id_fragment}_notes",
+            artifact=template_artifact,
+            clip_id=clip_id,
+            path=f"/samples/{sample_id}/notes",
+            value=_sample_note_value(sample.get("notes")),
+            reason="Preserve reviewer free-text notes with the accepted BODY sample.",
+            annotator=annotator,
+            created_at=created_at,
+        )
 
     if overlay_index is not None and overlay_index_path is not None:
         overlay_artifact = _artifact_for_manifest(overlay_index_path)
@@ -591,6 +611,18 @@ def _body_overlay_review_note(decision_payload: Mapping[str, Any], decision: str
     if decision in BODY_OVERLAY_ACCEPT_DECISIONS:
         return "Reviewer accepted this BODY overlay warning via body_world_label_review."
     return f"Reviewer marked this BODY overlay warning as {decision} via body_world_label_review."
+
+
+def _body_label_review_note(decision_payload: Mapping[str, Any] | None) -> str:
+    if decision_payload is None:
+        return ""
+    return _sample_note_value(decision_payload.get("notes"))
+
+
+def _sample_note_value(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
 
 
 def _append_pending_correction(

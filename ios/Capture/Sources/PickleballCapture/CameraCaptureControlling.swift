@@ -2,6 +2,7 @@
 @preconcurrency import AVFoundation
 import Foundation
 import PickleballCore
+import PickleballGuidance
 
 public protocol CameraCaptureControlling: AnyObject, Sendable {
     var session: AVCaptureSession { get }
@@ -20,6 +21,32 @@ public protocol CameraCaptureControlling: AnyObject, Sendable {
     func stopPreview() async
     func startRecording() async throws -> CapturePackageDescriptor
     func stopRecording() async throws
+
+    /// Real, live-readback signals for the pre-record capture-quality
+    /// guidance screen (W3-LIVE-MLP surface 1). Default implementation
+    /// returns an all-`nil` sample (every check renders `.unavailable`) so
+    /// test fakes that don't override this stay honest by default rather
+    /// than needing a stub.
+    func currentLiveGuidanceSample() async -> LiveGuidanceSample
+
+    /// Wires the live court-dot map (W3-LIVE-MLP surface 2). Default
+    /// implementation is a no-op for test fakes/controllers that don't have
+    /// a live overlay engine.
+    func setLiveCourtOverlayHandlers(
+        onFrame: (@Sendable (LiveCourtOverlayFrame) -> Void)?,
+        onStatusChange: (@Sendable (LiveCourtOverlayStatus) -> Void)?
+    )
+}
+
+extension CameraCaptureControlling {
+    public func currentLiveGuidanceSample() async -> LiveGuidanceSample {
+        LiveGuidanceSample()
+    }
+
+    public func setLiveCourtOverlayHandlers(
+        onFrame _: (@Sendable (LiveCourtOverlayFrame) -> Void)?,
+        onStatusChange _: (@Sendable (LiveCourtOverlayStatus) -> Void)?
+    ) {}
 }
 
 public final class QueuedCameraCaptureController: CameraCaptureControlling, @unchecked Sendable {
@@ -93,6 +120,18 @@ public final class QueuedCameraCaptureController: CameraCaptureControlling, @unc
         try await sessionQueue.run {
             try self.controller.stopRecording()
         }
+    }
+
+    public func currentLiveGuidanceSample() async -> LiveGuidanceSample {
+        (try? await sessionQueue.run { self.controller.currentLiveGuidanceSample() }) ?? LiveGuidanceSample()
+    }
+
+    public func setLiveCourtOverlayHandlers(
+        onFrame: (@Sendable (LiveCourtOverlayFrame) -> Void)?,
+        onStatusChange: (@Sendable (LiveCourtOverlayStatus) -> Void)?
+    ) {
+        controller.liveOverlayEngine.onFrame = onFrame
+        controller.liveOverlayEngine.onStatusChange = onStatusChange
     }
 }
 #endif

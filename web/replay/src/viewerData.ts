@@ -3,6 +3,32 @@ export type Vec3 = [number, number, number];
 export type Matrix3 = [Vec3, Vec3, Vec3];
 export type MeshFace = [number, number, number];
 
+export type TrustBadge = "verified" | "preview" | "low_confidence";
+export type CoachingFactTrust = "ok" | "estimated" | "unverified_cue";
+
+export type TrustBand = {
+  stage: string;
+  gate_id: string;
+  gate_status: string;
+  badge: TrustBadge;
+  reason: string;
+  evidence_path: string | null;
+};
+
+export type EntityCoverage = {
+  coverage_fraction?: number | null;
+  min_t?: number | null;
+  max_t?: number | null;
+};
+
+export type ConfidenceProvenance = {
+  band: string | null;
+  display_band: string | null;
+  horizon_frames: number | null;
+  predicted_sigma_m: number | null;
+  predictor: string | null;
+};
+
 export type LabelOverlay = {
   kind: "player_boxes" | string;
   label: string;
@@ -43,11 +69,40 @@ export type ViewerManifest = {
   virtual_world_url: string;
   replay_scene_url: string | null;
   body_mesh_url: string | null;
+  body_mesh_index_url: string | null;
   physics_refinement_url: string | null;
   contact_windows_url: string | null;
+  reviewed_bounces_url: string | null;
+  ball_inflections_url: string | null;
+  events_selected_url: string | null;
+  shots_url?: string;
+  ball_arc_solved_url?: string;
+  rally_spans_url?: string;
+  rally_metrics_url?: string;
+  coaching_card_facts_url?: string;
   label_overlays: LabelOverlay[];
   annotation_sources: AnnotationSource[];
   notes: string[];
+};
+
+export type CoachingCardFact = {
+  rally_id: string;
+  player_id: string;
+  metric: string;
+  value: number;
+  unit: string;
+  trust: CoachingFactTrust;
+  coverage_fraction: number;
+  frames_total: number;
+  frames_used: number;
+  rally_scope: string;
+};
+
+export type CoachingCardFacts = {
+  artifact_type: "coaching_card_facts";
+  rally_scope: string;
+  priority_rule: string[];
+  facts: CoachingCardFact[];
 };
 
 export type BodyMeshFrame = {
@@ -66,6 +121,73 @@ export type BodyMeshFrame = {
 export type BodyMeshPlayer = {
   id: number;
   frames: BodyMeshFrame[];
+};
+
+export type BodyMeshFaces = {
+  schema_version: 1;
+  artifact_type: "racketsport_body_mesh_faces";
+  faces_ref: string;
+  mesh_faces: MeshFace[];
+};
+
+export type BodyMeshChunkEncoding = "gzip_int16_world_vertices_v1" | "raw_int16_world_vertices_v1";
+
+export type BodyMeshIndexFrame = {
+  frame_idx: number;
+  t: number;
+  source_window_index: number | null;
+  blend_weight: number;
+  vertex_count: number;
+  joint_count: number;
+  joint_conf: number[];
+  reasons: string[];
+};
+
+export type BodyMeshIndexPlayer = {
+  id: number;
+  frames: BodyMeshIndexFrame[];
+};
+
+export type BodyMeshIndexWindow = {
+  source_window_index: number;
+  frame_start: number;
+  frame_end: number;
+  t0: number;
+  t1: number;
+  frame_count: number;
+  player_frame_count: number;
+  target_player_ids: number[];
+  player_ids: number[];
+  target_representation: string;
+  fallback_representation: string;
+  reason_counts: Record<string, number>;
+  max_score: number;
+  url: string;
+  byte_size: number;
+  encoding: BodyMeshChunkEncoding;
+  quantization: {
+    scale: number;
+    unit: "m";
+  };
+  players: BodyMeshIndexPlayer[];
+};
+
+export type BodyMeshIndex = {
+  schema_version: 1;
+  artifact_type: "racketsport_body_mesh_index";
+  clip: string;
+  model: string;
+  fps: number;
+  world_frame: "court_Z0";
+  faces_ref: string;
+  faces_url: string;
+  windows: BodyMeshIndexWindow[];
+  summary: {
+    window_count: number;
+    mesh_frame_count: number;
+    player_count: number;
+    faces_count: number;
+  };
 };
 
 export type BodyMesh = {
@@ -88,7 +210,51 @@ export type BodyMesh = {
 
 export type ActiveBodyMeshFrame = {
   playerId: number;
+  meshPlayerId: number;
   frame: BodyMeshFrame;
+  presenceOpacity: number;
+};
+
+export type BodyMeshLoadState =
+  | "idle"
+  | "index_ready"
+  | "loading"
+  | "loaded"
+  | "no_window"
+  | "fetch_failed"
+  | "parse_failed"
+  | "decode_failed";
+
+export type BodyMeshLoadStatus = {
+  state: BodyMeshLoadState;
+  label: string;
+  stage?: "index" | "faces" | "chunk" | "legacy";
+  url?: string;
+  windowId?: number | null;
+  message?: string;
+};
+
+export type BodyMeshDebugPlayer = {
+  world_player_id: number;
+  world_frame_t: number | null;
+  mesh_ref_player_id: number | null;
+  mesh_ref_frame_idx: number | null;
+  normalized_mesh_player_id: number;
+  mesh_player_present: boolean;
+  mesh_frame_present: boolean;
+  mesh_frame_idx: number | null;
+};
+
+export type BodyMeshDebugSnapshot = {
+  current_time: number;
+  active_window_id: number | null;
+  active_window_url: string | null;
+  load_state: BodyMeshLoadState;
+  load_stage: BodyMeshLoadStatus["stage"] | null;
+  load_url: string | null;
+  load_message: string | null;
+  rendered_player_count: number;
+  players: BodyMeshDebugPlayer[];
 };
 
 export type ContactWindowEvent = {
@@ -98,10 +264,10 @@ export type ContactWindowEvent = {
   player_id: number | null;
   confidence: number;
   sources: {
-    audio: number;
-    wrist_vel: number;
-    ball_inflection: number;
-    human_review: number | null;
+    audio?: number;
+    wrist_vel?: number;
+    ball_inflection?: number;
+    human_review?: number | null;
   };
   window: {
     t0: number;
@@ -113,6 +279,77 @@ export type ContactWindowEvent = {
 export type ContactWindows = {
   schema_version: 1;
   events: ContactWindowEvent[];
+};
+
+export type BallInflectionCandidate = {
+  time_s: number;
+  frame: number | null;
+  confidence: number;
+};
+
+export type BallInflections = {
+  candidates: BallInflectionCandidate[];
+};
+
+export type BallArcSelectedEvent = {
+  anchor_id: string | null;
+  kind: string;
+  frame: number | null;
+  t: number;
+};
+
+export type BallArcEventsSelected = {
+  artifact_type: string | null;
+  selected: BallArcSelectedEvent[];
+};
+
+export type ReviewedBounce = {
+  review_id: string;
+  frame: number;
+  t: number;
+};
+
+export type ReviewedBounces = {
+  schema_version: 1;
+  artifact_type: "racketsport_reviewed_ball_bounces";
+  source: string;
+  bounces: ReviewedBounce[];
+};
+
+export type TimelineMarker = {
+  kind: "contact" | "bounce" | "net_cross" | "ball_inflection" | "reviewed_bounce";
+  t: number;
+  t0: number;
+  t1: number;
+  confidence: number;
+  badge: TrustBadge;
+  label: string;
+  humanReviewed?: boolean;
+};
+
+export type TimelineChapter = {
+  index: number;
+  rallyId?: string;
+  t0: number;
+  t1: number;
+  label: string;
+  badge: TrustBadge;
+};
+
+export type RallySpan = {
+  rallyId: string;
+  t0: number;
+  t1: number;
+  sources: string[];
+};
+
+export type RallySpans = {
+  schema_version: 1;
+  artifact_type: "racketsport_rally_spans";
+  clip_id: string | null;
+  duration_s: number | null;
+  not_ground_truth: boolean;
+  spans: RallySpan[];
 };
 
 export type PhysicsRefinement = {
@@ -137,6 +374,12 @@ export type PhysicsRefinement = {
 
 export type VirtualWorldFrame = {
   t: number;
+  mesh_ref?: {
+    artifact: string;
+    player_id: number;
+    frame_idx: number;
+    t: number;
+  } | null;
   track_world_xy?: Vec2 | null;
   track_conf?: number | null;
   bbox?: [number, number, number, number] | null;
@@ -155,14 +398,17 @@ export type VirtualWorldFrame = {
   contact_locked?: boolean;
   physics?: string | null;
   grf?: Vec3[] | null;
+  skeleton_implausible?: boolean;
+  trust_band?: TrustBand | null;
 };
 
-export type VirtualWorldPlayer = {
+export type VirtualWorldPlayer = EntityCoverage & {
   id: number;
   side?: string | null;
   role?: string | null;
   representation: "track_only" | "joints" | "mesh";
   frames: VirtualWorldFrame[];
+  trust_band?: TrustBand | null;
 };
 
 export type VirtualWorldPaddleFrame = {
@@ -179,12 +425,76 @@ export type VirtualWorldPaddleFrame = {
   source: string;
   reprojection_error_px?: number | null;
   ambiguous: boolean;
+  confidence_provenance?: ConfidenceProvenance | null;
+  render_only?: boolean;
+  not_for_detection_metrics?: boolean;
+  trust_band?: TrustBand | null;
 };
 
-export type VirtualWorldPaddle = {
+export type VirtualWorldPaddle = EntityCoverage & {
   player_id: number;
   paddle_dims_in: Record<string, number>;
   frames: VirtualWorldPaddleFrame[];
+  trust_band?: TrustBand | null;
+};
+
+export type ActivePaddleFrame = {
+  playerId: number;
+  paddle: VirtualWorldPaddle;
+  frame: VirtualWorldPaddleFrame;
+  estimated: boolean;
+};
+
+export type VirtualWorldBallFrame = {
+  t: number;
+  xy: Vec2;
+  xy_interpolated?: boolean;
+  conf: number;
+  visible: boolean;
+  world_xyz?: Vec3 | null;
+  court_intersection_world_xyz?: Vec3 | null;
+  arc_segment_id?: number | string | null;
+  approx: boolean;
+  confidence_provenance?: ConfidenceProvenance | null;
+  render_only?: boolean;
+  not_for_detection_metrics?: boolean;
+  trust_band?: TrustBand | null;
+  physics_fill?: {
+    uncertainty_m?: number | null;
+    render_only?: boolean;
+    not_for_detection_metrics?: boolean;
+  } | null;
+};
+
+export type BallTrailPoint = {
+  point: Vec3;
+  courtStyle: "inside_court" | "outside_court";
+  uncertaintySigmaM: number | null;
+  opacityScale: number;
+  thicknessScale: number;
+};
+
+export type BallTrailSegment = {
+  from: Vec3;
+  to: Vec3;
+  courtStyle: "inside_court" | "outside_court";
+  opacityScale: number;
+  thicknessScale: number;
+};
+
+export type VideoBallOverlay = {
+  frame: VirtualWorldBallFrame;
+  point: Vec2;
+  confidenceClass: "high" | "medium" | "low";
+  interpolated: boolean;
+  opacity: number;
+  radius: number;
+};
+
+export type BallGhostMarker = {
+  frame: VirtualWorldBallFrame;
+  position: Vec3;
+  label: "2D-only, no 3D solve";
 };
 
 export type VirtualWorld = {
@@ -192,6 +502,7 @@ export type VirtualWorld = {
   artifact_type: "racketsport_virtual_world";
   world_frame: "court_Z0";
   fps: number;
+  joint_names?: string[];
   court: {
     sport: "pickleball" | "tennis";
     coordinate_frame: string;
@@ -203,12 +514,24 @@ export type VirtualWorld = {
       center_height_m: number;
       post_height_m: number;
     };
+    trust_band?: TrustBand | null;
   };
   players: VirtualWorldPlayer[];
   ball: {
-    source: "tracknet" | "tap" | "pbmat" | "totnet" | null;
-    frames: Array<{ t: number; xy: Vec2; conf: number; visible: boolean; world_xyz?: Vec3 | null; approx: boolean }>;
-  };
+    // `source` is opaque provenance metadata naming which ball detector/fuser
+    // produced this track (see `BallTrack.source` /
+    // `VirtualWorldBall.source` in threed/racketsport/schemas/__init__.py).
+    // It is display-only here -- nothing in the viewer branches on its
+    // value, and BALL's actual trust/confidence comes from `trust_band`
+    // below, which is validated independently. The Python-side enum has
+    // already grown once (tracknet/tap/pbmat/totnet -> +wasb, fused,
+    // vn_trajectories) and will keep growing, so we deliberately do not
+    // mirror it as a closed TS union: a stricter type would just reject
+    // valid future sources again. Any non-empty string is accepted.
+    source: string | null;
+    frames: VirtualWorldBallFrame[];
+    trust_band?: TrustBand | null;
+  } & EntityCoverage;
   paddles: VirtualWorldPaddle[];
   summary: {
     player_count: number;
@@ -237,7 +560,7 @@ export function parseViewerManifest(input: unknown): ViewerManifest {
   if (value.artifact_type !== "racketsport_replay_viewer_manifest") {
     throw new Error("manifest.artifact_type must be racketsport_replay_viewer_manifest");
   }
-  return {
+  const manifest: ViewerManifest = {
     schema_version: 1,
     artifact_type: "racketsport_replay_viewer_manifest",
     clip: readString(value.clip, "manifest.clip"),
@@ -248,6 +571,10 @@ export function parseViewerManifest(input: unknown): ViewerManifest {
       value.body_mesh_url === null || value.body_mesh_url === undefined
         ? null
         : readString(value.body_mesh_url, "manifest.body_mesh_url"),
+    body_mesh_index_url:
+      value.body_mesh_index_url === null || value.body_mesh_index_url === undefined
+        ? null
+        : readString(value.body_mesh_index_url, "manifest.body_mesh_index_url"),
     physics_refinement_url:
       value.physics_refinement_url === null || value.physics_refinement_url === undefined
         ? null
@@ -256,10 +583,60 @@ export function parseViewerManifest(input: unknown): ViewerManifest {
       value.contact_windows_url === null || value.contact_windows_url === undefined
         ? null
         : readString(value.contact_windows_url, "manifest.contact_windows_url"),
+    reviewed_bounces_url:
+      value.reviewed_bounces_url === null || value.reviewed_bounces_url === undefined
+        ? null
+        : readString(value.reviewed_bounces_url, "manifest.reviewed_bounces_url"),
+    ball_inflections_url:
+      value.ball_inflections_url === null || value.ball_inflections_url === undefined
+        ? null
+        : readString(value.ball_inflections_url, "manifest.ball_inflections_url"),
+    events_selected_url:
+      value.events_selected_url === null || value.events_selected_url === undefined
+        ? null
+        : readString(value.events_selected_url, "manifest.events_selected_url"),
     label_overlays: readArray(value.label_overlays, "manifest.label_overlays").map(readLabelOverlay),
     annotation_sources: readArray(value.annotation_sources, "manifest.annotation_sources").map(readAnnotationSource),
     notes: readArray(value.notes, "manifest.notes").map((entry, index) => readString(entry, `manifest.notes[${index}]`)),
   };
+  if (value.rally_metrics_url !== null && value.rally_metrics_url !== undefined) {
+    manifest.rally_metrics_url = readString(value.rally_metrics_url, "manifest.rally_metrics_url");
+  }
+  if (value.coaching_card_facts_url !== null && value.coaching_card_facts_url !== undefined) {
+    manifest.coaching_card_facts_url = readString(value.coaching_card_facts_url, "manifest.coaching_card_facts_url");
+  }
+  if (value.rally_spans_url !== null && value.rally_spans_url !== undefined) {
+    manifest.rally_spans_url = readString(value.rally_spans_url, "manifest.rally_spans_url");
+  }
+  if (value.shots_url !== null && value.shots_url !== undefined) {
+    manifest.shots_url = readString(value.shots_url, "manifest.shots_url");
+  }
+  if (value.ball_arc_solved_url !== null && value.ball_arc_solved_url !== undefined) {
+    manifest.ball_arc_solved_url = readString(value.ball_arc_solved_url, "manifest.ball_arc_solved_url");
+  }
+  return manifest;
+}
+
+export function parseCoachingCardFacts(input: unknown): CoachingCardFacts {
+  const value = parseMaybeJson(input);
+  assertRecord(value, "coaching_card_facts");
+  if (value.artifact_type !== "coaching_card_facts") {
+    throw new Error("coaching_card_facts.artifact_type must be coaching_card_facts");
+  }
+  return {
+    artifact_type: "coaching_card_facts",
+    rally_scope: readString(value.rally_scope, "coaching_card_facts.rally_scope"),
+    priority_rule: readArray(value.priority_rule, "coaching_card_facts.priority_rule").map((entry, index) =>
+      readString(entry, `coaching_card_facts.priority_rule[${index}]`),
+    ),
+    facts: readArray(value.facts, "coaching_card_facts.facts").map(readCoachingCardFact),
+  };
+}
+
+export function coachingTrustChipClass(trust: CoachingFactTrust): TrustBadge {
+  if (trust === "ok") return "verified";
+  if (trust === "estimated") return "preview";
+  return "low_confidence";
 }
 
 export function parseBodyMesh(input: unknown): BodyMesh {
@@ -295,6 +672,165 @@ export function parseBodyMesh(input: unknown): BodyMesh {
   };
 }
 
+export function parseBodyMeshFaces(input: unknown): BodyMeshFaces {
+  const value = parseMaybeJson(input);
+  assertRecord(value, "body_mesh_faces");
+  if (value.schema_version !== 1) throw new Error("body_mesh_faces.schema_version must be 1");
+  if (value.artifact_type !== "racketsport_body_mesh_faces") {
+    throw new Error("body_mesh_faces.artifact_type must be racketsport_body_mesh_faces");
+  }
+  return {
+    schema_version: 1,
+    artifact_type: "racketsport_body_mesh_faces",
+    faces_ref: readString(value.faces_ref, "body_mesh_faces.faces_ref"),
+    mesh_faces: readArray(value.mesh_faces, "body_mesh_faces.mesh_faces").map((face, index) =>
+      readFace(face, `body_mesh_faces.mesh_faces[${index}]`),
+    ),
+  };
+}
+
+export function parseBodyMeshIndex(input: unknown): BodyMeshIndex {
+  const value = parseMaybeJson(input);
+  assertRecord(value, "body_mesh_index");
+  if (value.schema_version !== 1) throw new Error("body_mesh_index.schema_version must be 1");
+  if (value.artifact_type !== "racketsport_body_mesh_index") {
+    throw new Error("body_mesh_index.artifact_type must be racketsport_body_mesh_index");
+  }
+  assertRecord(value.summary, "body_mesh_index.summary");
+  const windows = readArray(value.windows, "body_mesh_index.windows").map(readBodyMeshIndexWindow);
+  return {
+    schema_version: 1,
+    artifact_type: "racketsport_body_mesh_index",
+    clip: readString(value.clip, "body_mesh_index.clip"),
+    model: readString(value.model, "body_mesh_index.model"),
+    fps: readNumber(value.fps, "body_mesh_index.fps"),
+    world_frame: readEnum(value.world_frame, "body_mesh_index.world_frame", ["court_Z0"] as const),
+    faces_ref: readString(value.faces_ref, "body_mesh_index.faces_ref"),
+    faces_url: readString(value.faces_url, "body_mesh_index.faces_url"),
+    windows,
+    summary: {
+      window_count: readNonNegativeInteger(value.summary.window_count, "body_mesh_index.summary.window_count"),
+      mesh_frame_count: readNonNegativeInteger(value.summary.mesh_frame_count, "body_mesh_index.summary.mesh_frame_count"),
+      player_count: readNonNegativeInteger(value.summary.player_count, "body_mesh_index.summary.player_count"),
+      faces_count: readNonNegativeInteger(value.summary.faces_count, "body_mesh_index.summary.faces_count"),
+    },
+  };
+}
+
+export function bodyMeshIndexWindowForTime(index: BodyMeshIndex | null, timeSeconds: number): BodyMeshIndexWindow | null {
+  if (!index || !index.windows.length) return null;
+  const tolerance = Math.max(1 / Math.max(index.fps || 30, 1) * 1.5, 0.04, BODY_MESH_FADE_SECONDS);
+  const matching = index.windows.filter((window) => window.t0 - tolerance <= timeSeconds && timeSeconds <= window.t1 + tolerance);
+  if (!matching.length) return null;
+  return matching.reduce((best, window) => {
+    const bestDistance = windowDistanceFromTime(best, timeSeconds);
+    const windowDistance = windowDistanceFromTime(window, timeSeconds);
+    return windowDistance < bestDistance ? window : best;
+  });
+}
+
+export function decodeBodyMeshChunkBytes(
+  index: BodyMeshIndex,
+  window: BodyMeshIndexWindow,
+  faces: BodyMeshFaces,
+  bytes: ArrayBuffer,
+): BodyMesh {
+  const view = new DataView(bytes);
+  const scale = window.quantization.scale;
+  let offsetBytes = 0;
+  const players: BodyMeshPlayer[] = [];
+  for (const player of window.players) {
+    const frames: BodyMeshFrame[] = [];
+    for (const frameMeta of player.frames) {
+      const mesh_vertices_world = readQuantizedVec3Array(view, offsetBytes, frameMeta.vertex_count, scale);
+      offsetBytes += frameMeta.vertex_count * 3 * 2;
+      const joints_world = readQuantizedVec3Array(view, offsetBytes, frameMeta.joint_count, scale);
+      offsetBytes += frameMeta.joint_count * 3 * 2;
+      frames.push({
+        frame_idx: frameMeta.frame_idx,
+        t: frameMeta.t,
+        source_window_index: frameMeta.source_window_index,
+        blend_weight: frameMeta.blend_weight,
+        joints_world,
+        joint_conf: frameMeta.joint_conf,
+        mesh_vertices_world,
+        mesh_faces: faces.mesh_faces,
+        smplx_params: {},
+        reasons: frameMeta.reasons,
+      });
+    }
+    if (frames.length) players.push({ id: player.id, frames });
+  }
+  if (offsetBytes !== view.byteLength) {
+    throw new Error(`body mesh chunk byte length mismatch: decoded ${offsetBytes}, got ${view.byteLength}`);
+  }
+  return {
+    schema_version: 1,
+    artifact_type: "racketsport_body_mesh",
+    clip: index.clip,
+    model: index.model,
+    fps: index.fps,
+    world_frame: index.world_frame,
+    faces_ref: index.faces_ref,
+    mesh_faces: faces.mesh_faces,
+    joint_names: [],
+    players,
+    summary: {
+      mesh_frame_count: players.reduce((total, player) => total + player.frames.length, 0),
+      player_count: players.length,
+      contact_window_count: index.windows.length,
+    },
+  };
+}
+
+const bodyMeshChunkFetchCache = new Map<string, Promise<BodyMesh>>();
+
+export function clearBodyMeshChunkFetchCache(): void {
+  bodyMeshChunkFetchCache.clear();
+}
+
+export async function decodeFetchedBodyMeshChunkBytes(
+  index: BodyMeshIndex,
+  window: BodyMeshIndexWindow,
+  faces: BodyMeshFaces,
+  bytes: ArrayBuffer,
+): Promise<BodyMesh> {
+  const decoded =
+    window.encoding === "gzip_int16_world_vertices_v1" && bodyMeshBytesLookGzipped(bytes)
+      ? await decompressGzipBytes(bytes)
+      : bytes;
+  return decodeBodyMeshChunkBytes(index, window, faces, decoded);
+}
+
+export async function fetchBodyMeshChunk(
+  indexUrl: string,
+  index: BodyMeshIndex,
+  window: BodyMeshIndexWindow,
+  faces: BodyMeshFaces,
+): Promise<BodyMesh> {
+  const resolvedUrl = resolveBodyMeshAssetUrl(indexUrl, window.url);
+  const cached = bodyMeshChunkFetchCache.get(resolvedUrl);
+  if (cached) return cached;
+  const request = fetch(resolvedUrl)
+    .then(async (response) => {
+      if (!response.ok) throw new Error(`failed to fetch body mesh chunk ${resolvedUrl}: ${response.status}`);
+      const encoded = await response.arrayBuffer();
+      return decodeFetchedBodyMeshChunkBytes(index, window, faces, encoded);
+    })
+    .catch((error) => {
+      bodyMeshChunkFetchCache.delete(resolvedUrl);
+      throw error;
+    });
+  bodyMeshChunkFetchCache.set(resolvedUrl, request);
+  return request;
+}
+
+export function resolveBodyMeshAssetUrl(indexUrl: string, assetUrl: string): string {
+  if (/^(https?:|file:|\/)/.test(assetUrl)) return assetUrl;
+  const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
+  return new URL(assetUrl, new URL(indexUrl, origin)).toString();
+}
+
 export function parseContactWindows(input: unknown): ContactWindows {
   const value = parseMaybeJson(input);
   assertRecord(value, "contact_windows");
@@ -302,6 +838,80 @@ export function parseContactWindows(input: unknown): ContactWindows {
   return {
     schema_version: 1,
     events: readArray(value.events, "contact_windows.events").map(readContactWindowEvent),
+  };
+}
+
+/**
+ * `ball_inflections.json` is a review-only, non-schema-registered BALL cue
+ * artifact (see `threed/racketsport/ball_inflections.py`). This parser is
+ * intentionally lenient: it tolerates missing/extra fields and always
+ * returns a (possibly empty) candidate list rather than throwing, since the
+ * timeline strip treats these as low-confidence markers either way.
+ */
+export function parseBallInflections(input: unknown): BallInflections {
+  const value = parseMaybeJson(input);
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { candidates: [] };
+  const record = value as Record<string, unknown>;
+  const rawCandidates = Array.isArray(record.candidates) ? record.candidates : [];
+  const candidates: BallInflectionCandidate[] = [];
+  for (const entry of rawCandidates) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const candidate = entry as Record<string, unknown>;
+    const timeSeconds = readOptionalPositiveOrZeroNumber(candidate.time_s);
+    if (timeSeconds === null) continue;
+    candidates.push({
+      time_s: timeSeconds,
+      frame: readOptionalPositiveOrZeroNumber(candidate.frame),
+      confidence: readOptionalPositiveOrZeroNumber(candidate.confidence) ?? 0,
+    });
+  }
+  return { candidates };
+}
+
+export function parseBallArcEventsSelected(input: unknown): BallArcEventsSelected {
+  const value = parseMaybeJson(input);
+  assertRecord(value, "events_selected");
+  const artifactType =
+    value.artifact_type === null || value.artifact_type === undefined
+      ? null
+      : readString(value.artifact_type, "events_selected.artifact_type");
+  const selected = readArray(value.selected, "events_selected.selected")
+    .map((event, index) => readBallArcSelectedEvent(event, index))
+    .sort((left, right) => left.t - right.t);
+  return { artifact_type: artifactType, selected };
+}
+
+export function parseReviewedBounces(input: unknown): ReviewedBounces {
+  const value = parseMaybeJson(input);
+  assertRecord(value, "reviewed_bounces");
+  if (value.schema_version !== 1) throw new Error("reviewed_bounces.schema_version must be 1");
+  if (value.artifact_type !== "racketsport_reviewed_ball_bounces") {
+    throw new Error("reviewed_bounces.artifact_type must be racketsport_reviewed_ball_bounces");
+  }
+  return {
+    schema_version: 1,
+    artifact_type: "racketsport_reviewed_ball_bounces",
+    source: readString(value.source, "reviewed_bounces.source"),
+    bounces: readArray(value.bounces, "reviewed_bounces.bounces").map((bounce, index) => readReviewedBounce(bounce, index)),
+  };
+}
+
+export function parseRallySpans(input: unknown): RallySpans {
+  const value = parseMaybeJson(input);
+  assertRecord(value, "rally_spans");
+  if (value.schema_version !== 1) throw new Error("rally_spans.schema_version must be 1");
+  if (value.artifact_type !== "racketsport_rally_spans") {
+    throw new Error("rally_spans.artifact_type must be racketsport_rally_spans");
+  }
+  const spans = readArray(value.spans, "rally_spans.spans").map(readRallySpan);
+  return {
+    schema_version: 1,
+    artifact_type: "racketsport_rally_spans",
+    clip_id: value.clip_id === null || value.clip_id === undefined ? null : readString(value.clip_id, "rally_spans.clip_id"),
+    duration_s:
+      value.duration_s === null || value.duration_s === undefined ? null : readNonNegativeNumber(value.duration_s, "rally_spans.duration_s"),
+    not_ground_truth: value.not_ground_truth === undefined ? true : readBoolean(value.not_ground_truth, "rally_spans.not_ground_truth"),
+    spans,
   };
 }
 
@@ -359,7 +969,7 @@ export function parseVirtualWorld(input: unknown): VirtualWorld {
   const court = readCourt(value.court);
   const players = readArray(value.players, "virtual_world.players").map(readPlayer);
   const summary = readSummary(value.summary);
-  return {
+  const parsed: VirtualWorld = {
     schema_version: 1,
     artifact_type: "racketsport_virtual_world",
     world_frame: "court_Z0",
@@ -370,6 +980,12 @@ export function parseVirtualWorld(input: unknown): VirtualWorld {
     paddles: readArray(value.paddles, "virtual_world.paddles").map(readPaddle),
     summary,
   };
+  if (value.joint_names !== undefined) {
+    parsed.joint_names = readArray(value.joint_names, "virtual_world.joint_names").map((name, index) =>
+      readString(name, `virtual_world.joint_names[${index}]`),
+    );
+  }
+  return parsed;
 }
 
 export function frameForTime(player: VirtualWorldPlayer, timeSeconds: number): VirtualWorldFrame | undefined {
@@ -387,16 +1003,48 @@ export function ballFrameForTime(world: VirtualWorld, timeSeconds: number): Virt
   return frames.reduce((best, frame) => (Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best));
 }
 
+export function videoBallOverlayForTime(world: VirtualWorld, timeSeconds: number): VideoBallOverlay | null {
+  const frames = world.ball.frames.filter((frame) => frame.visible !== false);
+  if (!frames.length) return null;
+  if (!isWithinFrameRange(frames, timeSeconds)) return null;
+  const frame = frames.reduce((best, candidate) =>
+    Math.abs(candidate.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? candidate : best,
+  );
+  const confidenceClass = frame.conf >= 0.8 ? "high" : frame.conf >= 0.5 ? "medium" : "low";
+  const interpolated = frame.xy_interpolated === true;
+  return {
+    frame,
+    point: frame.xy,
+    confidenceClass,
+    interpolated,
+    opacity: interpolated ? 0.42 : confidenceClass === "low" ? 0.52 : confidenceClass === "medium" ? 0.72 : 0.92,
+    radius: interpolated ? 8.5 : confidenceClass === "low" ? 6.5 : 7.25,
+  };
+}
+
 export function ballRenderInfoForTime(
   world: VirtualWorld,
   timeSeconds: number,
 ): {
   frame?: VirtualWorld["ball"]["frames"][number];
-  mode: "missing" | "calibrated_3d" | "court_plane_projection" | "off_court_projection";
+  mode: "missing" | "calibrated_3d" | "court_plane_projection" | "off_court_projection" | "2d_only_no_3d_solve";
   render3d: boolean;
+  ghost?: BallGhostMarker;
 } {
   const frame = ballFrameForTime(world, timeSeconds);
-  if (!frame?.world_xyz) return { mode: "missing", render3d: false };
+  if (!frame?.world_xyz) {
+    const videoFrame = videoBallOverlayForTime(world, timeSeconds)?.frame;
+    const ghostPosition = videoFrame?.court_intersection_world_xyz ?? null;
+    if (videoFrame && ghostPosition) {
+      return {
+        frame: videoFrame,
+        mode: "2d_only_no_3d_solve",
+        render3d: false,
+        ghost: { frame: videoFrame, position: ghostPosition, label: "2D-only, no 3D solve" },
+      };
+    }
+    return { mode: "missing", render3d: false };
+  }
   if (!frame.approx) return { frame, mode: "calibrated_3d", render3d: true };
   if (!isWorldPointInsideCourt(world, frame.world_xyz, 0.35)) {
     return { frame, mode: "off_court_projection", render3d: false };
@@ -464,26 +1112,121 @@ export function activeBallContactPlayerIds(
 
 export function solidBodyMeshFramesForTime(
   bodyMesh: BodyMesh | null,
-  contactWindows: ContactWindows | null,
+  _contactWindows: ContactWindows | null,
   timeSeconds: number,
+  world?: VirtualWorld,
 ): ActiveBodyMeshFrame[] {
   if (!bodyMesh) return [];
-  const activeContacts = contactEventsForTime(contactWindows, timeSeconds);
-  if (contactWindows && activeContacts.length === 0) return [];
-  const activePlayerIds = new Set(
-    activeContacts
-      .map((event) => event.player_id)
-      .filter((playerId): playerId is number => playerId !== null),
-  );
   const results: ActiveBodyMeshFrame[] = [];
+  const meshPlayersById = new Map(bodyMesh.players.map((player) => [player.id, player]));
+  if (world) {
+    for (const worldPlayer of world.players) {
+      const worldFrame = frameForTime(worldPlayer, timeSeconds);
+      const meshPlayerId = normalizedMeshPlayerIdForWorldFrame(worldPlayer, worldFrame);
+      const meshPlayer = meshPlayersById.get(meshPlayerId);
+      if (!meshPlayer) continue;
+      const frame = bodyMeshFrameForTime(meshPlayer, timeSeconds, bodyMesh.fps);
+      if (!solidMeshFrameRenderable(frame)) continue;
+      results.push({
+        playerId: worldPlayer.id,
+        meshPlayerId: meshPlayer.id,
+        frame,
+        presenceOpacity: bodyMeshPresenceOpacityForTime(meshPlayer, timeSeconds),
+      });
+    }
+    return results;
+  }
   for (const player of bodyMesh.players) {
-    if (activePlayerIds.size > 0 && !activePlayerIds.has(player.id)) continue;
     const frame = bodyMeshFrameForTime(player, timeSeconds, bodyMesh.fps);
-    if (!frame) continue;
-    if (frame.mesh_vertices_world.length === 0 || frame.mesh_faces.length === 0) continue;
-    results.push({ playerId: player.id, frame });
+    if (!solidMeshFrameRenderable(frame)) continue;
+    results.push({ playerId: player.id, meshPlayerId: player.id, frame, presenceOpacity: bodyMeshPresenceOpacityForTime(player, timeSeconds) });
   }
   return results;
+}
+
+const BODY_MESH_FADE_SECONDS = 0.12;
+
+export function activePaddleFramesForTime(world: VirtualWorld, timeSeconds: number): ActivePaddleFrame[] {
+  return world.paddles
+    .map((paddle) => {
+      const frame = paddleFrameForTime(paddle, timeSeconds, world.fps);
+      if (!frame) return null;
+      return {
+        playerId: paddle.player_id,
+        paddle,
+        frame,
+        estimated: isEstimatedPaddleFrame(paddle, frame),
+      };
+    })
+    .filter((entry): entry is ActivePaddleFrame => entry !== null);
+}
+
+function isEstimatedPaddleFrame(paddle: VirtualWorldPaddle, frame: VirtualWorldPaddleFrame): boolean {
+  return (
+    frame.source.includes("wrist_proxy") ||
+    frame.render_only === true ||
+    frame.not_for_detection_metrics === true ||
+    paddle.trust_band?.badge !== "verified" ||
+    frame.trust_band?.badge !== "verified"
+  );
+}
+
+export function solidMeshRenderedPlayerCount(activeBodyMeshes: ActiveBodyMeshFrame[]): number {
+  return activeBodyMeshes.length;
+}
+
+export function bodyMeshStatusTileValue(renderedSolidMeshPlayers: number, status: BodyMeshLoadStatus): number | string {
+  if (status.state === "fetch_failed" || status.state === "parse_failed" || status.state === "decode_failed") return status.label;
+  if (status.state === "loading" || status.state === "no_window") return status.label;
+  return renderedSolidMeshPlayers;
+}
+
+export function bodyMeshDebugSnapshot({
+  bodyMeshIndex,
+  bodyMesh,
+  world,
+  currentTime,
+  loadStatus,
+  activeBodyMeshes,
+}: {
+  bodyMeshIndex: BodyMeshIndex | null;
+  bodyMesh: BodyMesh | null;
+  world: VirtualWorld;
+  currentTime: number;
+  loadStatus: BodyMeshLoadStatus;
+  activeBodyMeshes?: ActiveBodyMeshFrame[];
+}): BodyMeshDebugSnapshot {
+  const activeWindow = bodyMeshIndexWindowForTime(bodyMeshIndex, currentTime);
+  const meshPlayersById = new Map((bodyMesh?.players ?? []).map((player) => [player.id, player]));
+  const active = activeBodyMeshes ?? solidBodyMeshFramesForTime(bodyMesh, null, currentTime, world);
+  const rendered = new Set(active.map((frame) => `${frame.playerId}:${frame.meshPlayerId}:${frame.frame.frame_idx}`));
+  return {
+    current_time: currentTime,
+    active_window_id: activeWindow?.source_window_index ?? null,
+    active_window_url: activeWindow?.url ?? null,
+    load_state: loadStatus.state,
+    load_stage: loadStatus.stage ?? null,
+    load_url: loadStatus.url ?? null,
+    load_message: loadStatus.message ?? null,
+    rendered_player_count: active.length,
+    players: world.players.map((worldPlayer) => {
+      const worldFrame = frameForTime(worldPlayer, currentTime);
+      const normalizedMeshPlayerId = normalizedMeshPlayerIdForWorldFrame(worldPlayer, worldFrame);
+      const meshPlayer = meshPlayersById.get(normalizedMeshPlayerId);
+      const meshFrame = meshPlayer ? bodyMeshFrameForTime(meshPlayer, currentTime, bodyMesh?.fps ?? world.fps) : undefined;
+      const renderedKey = meshFrame ? `${worldPlayer.id}:${normalizedMeshPlayerId}:${meshFrame.frame_idx}` : null;
+      return {
+        world_player_id: worldPlayer.id,
+        world_frame_t: worldFrame?.t ?? null,
+        mesh_ref_player_id: worldFrame?.mesh_ref?.player_id ?? null,
+        mesh_ref_frame_idx: worldFrame?.mesh_ref?.frame_idx ?? null,
+        normalized_mesh_player_id: normalizedMeshPlayerId,
+        mesh_player_present: Boolean(meshPlayer),
+        mesh_frame_present: Boolean(renderedKey && rendered.has(renderedKey)),
+        mesh_frame_idx: renderedKey && rendered.has(renderedKey) && meshFrame ? meshFrame.frame_idx : null,
+      };
+    }),
+  };
 }
 
 export function startTimeFromSearch(search: string): number {
@@ -505,6 +1248,17 @@ export function worldStats(world: VirtualWorld) {
   };
 }
 
+// `worldStats().meshFrames` reads virtual_world.json's own embedded
+// mesh_vertices_world point-cloud path (populated only when `--smpl-motion`
+// is fed directly into build_scrubber_v0_world.py). The solid indexed-mesh
+// path added for W3-REPLAY-NATIVE ships as a separate `body_mesh.json`
+// artifact (see `body_mesh_url`/`SolidBodyMesh`), so it needs its own,
+// honestly-separate frame count rather than silently reusing (or leaving at
+// 0 next to) the unrelated point-cloud counter.
+export function solidMeshFrameCount(bodyMesh: BodyMesh | null): number {
+  return bodyMesh?.summary.mesh_frame_count ?? 0;
+}
+
 export function playerCoverageStats(world: VirtualWorld): {
   firstTime: number | null;
   lastTime: number | null;
@@ -521,6 +1275,418 @@ export function playerCoverageStats(world: VirtualWorld): {
     playerCount: world.players.length,
     coveredFrameCount: times.length,
   };
+}
+
+export function worldWarningsReadout(world: Pick<VirtualWorld, "summary">): string {
+  const warnings = world.summary.warnings;
+  if (!warnings.length) return "0 warnings";
+  const suffix = warnings.length > 2 ? `, +${warnings.length - 2} more` : "";
+  return `${warnings.length} warning${warnings.length === 1 ? "" : "s"}: ${warnings.slice(0, 2).join(", ")}${suffix}`;
+}
+
+export function entityCoverageReadout(label: string, entity: EntityCoverage | null | undefined): string {
+  const coverage = entity?.coverage_fraction;
+  const minT = entity?.min_t;
+  const maxT = entity?.max_t;
+  if (typeof coverage !== "number" || !Number.isFinite(coverage)) return `${label} coverage n/a`;
+  const coverageText = `${(coverage * 100).toFixed(1)}%`;
+  if (typeof minT === "number" && Number.isFinite(minT) && typeof maxT === "number" && Number.isFinite(maxT)) {
+    return `${label} ${coverageText} / ${minT.toFixed(2)}-${maxT.toFixed(2)}s`;
+  }
+  return `${label} ${coverageText}`;
+}
+
+const TRUST_BADGE_COLORS: Record<TrustBadge, string> = {
+  verified: "#6cb2ff",
+  preview: "#ffb454",
+  low_confidence: "#8a8f98",
+};
+
+/**
+ * Effective trust badge for styling purposes. Missing/null trust-band provenance must
+ * fail closed to "low_confidence", never "verified" -- an entity with no gate provenance
+ * (e.g. a `virtual_world.json` built by a lane/builder that has not wired trust bands
+ * through yet) has not been verified by anything, so it must render as the least-trusted
+ * state, not the default (most-trusted) one.
+ */
+export function effectiveTrustBadge(trustBand: TrustBand | null | undefined): TrustBadge {
+  return trustBand?.badge ?? "low_confidence";
+}
+
+/** Color for a trust badge, used to grey out (low_confidence) or amber-flag (preview) scrubber entities.
+ * Missing/null badges fail closed to the low_confidence color -- never verified. */
+export function trustBadgeColor(badge: TrustBadge | null | undefined): string {
+  return TRUST_BADGE_COLORS[badge ?? "low_confidence"];
+}
+
+/** Short "STAGE: badge" chip text for a trust band, or a neutral placeholder when absent. */
+export function trustBandChipText(trustBand: TrustBand | null | undefined): string {
+  if (!trustBand) return "no trust band";
+  return `${trustBand.stage}: ${trustBand.badge.replace("_", " ")}`;
+}
+
+/**
+ * Classify one contact-window event into a trust badge for timeline coloring.
+ * There is no dedicated CONTACT gate in the gate ladder, so this reads the
+ * event's own provenance: a human-reviewed contact (sources.human_review set)
+ * is a "preview"-grade marker; anything else falls back to its numeric
+ * confidence, and low-confidence detector-only events are "low_confidence".
+ */
+export function contactEventBadge(event: ContactWindowEvent): TrustBadge {
+  if (typeof event.sources.human_review === "number" && event.sources.human_review >= 0.5) return "preview";
+  return event.confidence >= 0.75 ? "preview" : "low_confidence";
+}
+
+/**
+ * BALL has 0/8 milestone gates passing today (MASTER_PLAN.md), so every ball
+ * inflection/bounce candidate is low_confidence regardless of its own
+ * reported confidence -- coloring markers by a fabricated per-event tier
+ * would overstate BALL's actual gate state.
+ */
+export function ballInflectionBadge(): TrustBadge {
+  return "low_confidence";
+}
+
+/** Build scrub-linked timeline markers from contact-window and ball-inflection cues. */
+export function timelineMarkersFromArtifacts(
+  contactWindows: ContactWindows | null,
+  ballInflections: BallInflections | null,
+  reviewedBounces: ReviewedBounces | null = null,
+): TimelineMarker[] {
+  const markers: TimelineMarker[] = [];
+  for (const event of contactWindows?.events ?? []) {
+    markers.push({
+      kind: event.type,
+      t: event.t,
+      t0: event.window.t0,
+      t1: event.window.t1,
+      confidence: event.confidence,
+      badge: contactEventBadge(event),
+      label: `${event.type}${event.player_id !== null ? ` (p${event.player_id})` : ""} @ ${event.t.toFixed(2)}s`,
+    });
+  }
+  for (const candidate of ballInflections?.candidates ?? []) {
+    markers.push({
+      kind: "ball_inflection",
+      t: candidate.time_s,
+      t0: candidate.time_s,
+      t1: candidate.time_s,
+      confidence: candidate.confidence,
+      badge: ballInflectionBadge(),
+      label: `ball inflection @ ${candidate.time_s.toFixed(2)}s`,
+    });
+  }
+  for (const bounce of reviewedBounces?.bounces ?? []) {
+    markers.push({
+      kind: "reviewed_bounce",
+      t: bounce.t,
+      t0: bounce.t,
+      t1: bounce.t,
+      confidence: 1,
+      badge: "preview",
+      label: `reviewed bounce ${bounce.review_id} @ ${bounce.t.toFixed(2)}s`,
+      humanReviewed: true,
+    });
+  }
+  return markers.sort((left, right) => left.t - right.t);
+}
+
+export function timelineEventJump(
+  markers: TimelineMarker[],
+  currentTime: number,
+  direction: "previous" | "next",
+): number | null {
+  const sorted = markers.map((marker) => marker.t).sort((left, right) => left - right);
+  if (!sorted.length) return null;
+  const epsilon = 1e-6;
+  if (direction === "next") {
+    return sorted.find((time) => time > currentTime + epsilon) ?? null;
+  }
+  const previous = sorted.filter((time) => time < currentTime - epsilon);
+  return previous.length ? previous[previous.length - 1] : null;
+}
+
+export function timelineChaptersFromMarkers(
+  markers: TimelineMarker[],
+  durationSeconds: number,
+  gapSeconds = 2,
+): TimelineChapter[] {
+  const sorted = [...markers].sort((left, right) => left.t - right.t);
+  if (!sorted.length) return [];
+  const duration = durationSeconds > 0 ? durationSeconds : sorted[sorted.length - 1].t1;
+  const chapters: TimelineChapter[] = [];
+  let group: TimelineMarker[] = [sorted[0]];
+  for (const marker of sorted.slice(1)) {
+    const previous = group[group.length - 1];
+    if (marker.t - previous.t > gapSeconds) {
+      chapters.push(chapterFromMarkers(chapters.length + 1, group, duration));
+      group = [marker];
+    } else {
+      group.push(marker);
+    }
+  }
+  chapters.push(chapterFromMarkers(chapters.length + 1, group, duration));
+  return chapters;
+}
+
+export function timelineChaptersFromRallySpans(rallySpans: RallySpans | null): TimelineChapter[] {
+  if (!rallySpans) return [];
+  return [...rallySpans.spans]
+    .sort((left, right) => left.t0 - right.t0 || left.t1 - right.t1)
+    .map((span, index) => ({
+      index: index + 1,
+      rallyId: span.rallyId,
+      t0: span.t0,
+      t1: span.t1,
+      label: labelForRallyId(span.rallyId, index + 1),
+      badge: rallySpans.not_ground_truth ? "preview" : "verified",
+    }));
+}
+
+function labelForRallyId(rallyId: string, fallbackIndex: number): string {
+  const match = rallyId.match(/^rally_(\d+)$/);
+  if (match) return `Rally ${match[1]}`;
+  return `Rally ${fallbackIndex}`;
+}
+
+function chapterFromMarkers(index: number, markers: TimelineMarker[], durationSeconds: number): TimelineChapter {
+  const t0 = Math.max(0, Math.min(...markers.map((marker) => marker.t0)));
+  const t1 = Math.min(durationSeconds, Math.max(...markers.map((marker) => marker.t1)));
+  const badge = markers.some((marker) => marker.badge === "low_confidence")
+    ? "low_confidence"
+    : markers.some((marker) => marker.badge === "preview")
+      ? "preview"
+      : "verified";
+  return {
+    index,
+    t0,
+    t1: Math.max(t0, t1),
+    label: `Rally ${index}`,
+    badge,
+  };
+}
+
+/** A single derived rally span (t0..t1) bounding every contact-window event. */
+export function rallySpanFromContactWindows(contactWindows: ContactWindows | null): { t0: number; t1: number } | null {
+  if (!contactWindows || !contactWindows.events.length) return null;
+  const times = contactWindows.events.map((event) => event.t);
+  return { t0: Math.min(...times), t1: Math.max(...times) };
+}
+
+/**
+ * Sum of consecutive floor-position displacement (meters) for one player
+ * within [t0, t1]. This is a world-frame-meter metric, so callers must
+ * surface it alongside the CAL/BODY trust band's world-scale caveat rather
+ * than presenting it as a verified number.
+ */
+export function playerCoverageDistanceM(player: VirtualWorldPlayer, t0: number, t1: number): number {
+  const points = player.frames
+    .filter((frame) => frame.t >= t0 && frame.t <= t1)
+    .map((frame) => frame.floor_world_xyz ?? (frame.track_world_xy ? ([frame.track_world_xy[0], frame.track_world_xy[1], 0] as Vec3) : null))
+    .filter((point): point is Vec3 => point !== null);
+  let total = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    total += Math.hypot(points[index][0] - points[index - 1][0], points[index][1] - points[index - 1][1]);
+  }
+  return total;
+}
+
+export function ballTrailPointsForTime(world: VirtualWorld, currentTime: number, lookbackSeconds = 0.7): BallTrailPoint[] {
+  const t0 = currentTime - Math.max(0, lookbackSeconds);
+  return world.ball.frames
+    .filter((frame) => frame.visible !== false && frame.world_xyz && t0 <= frame.t && frame.t <= currentTime)
+    .map((frame) => {
+      const point = frame.world_xyz as Vec3;
+      const insideCourt = isWorldPointInsideCourt(world, point, 0.35);
+      return ballTrailPointFromFrame(frame, point, insideCourt);
+    });
+}
+
+export function ballTrailSegmentsForTime(
+  world: VirtualWorld,
+  currentTime: number,
+  lookbackSeconds = 0.7,
+  eventsSelected: BallArcEventsSelected | null = null,
+): BallTrailSegment[] {
+  const runs = ballTrailRunsForTime(world, currentTime, lookbackSeconds, eventsSelected);
+  const segments: BallTrailSegment[] = [];
+  for (const run of runs) {
+    const points = smoothBallTrailRun(run);
+    for (let index = 1; index < points.length; index += 1) {
+      const from = points[index - 1];
+      const to = points[index];
+      const courtStyle = from.courtStyle === "outside_court" || to.courtStyle === "outside_court" ? "outside_court" : "inside_court";
+      segments.push({
+        from: from.point,
+        to: to.point,
+        courtStyle,
+        opacityScale: Math.min(from.opacityScale, to.opacityScale, courtStyle === "outside_court" ? 0.6 : 1),
+        thicknessScale: Math.min(from.thicknessScale, to.thicknessScale, courtStyle === "outside_court" ? 0.75 : 1),
+      });
+    }
+  }
+  return segments;
+}
+
+type BallTrailRunPoint = BallTrailPoint & {
+  t: number;
+  segmentKey: string | null;
+};
+
+function ballTrailRunsForTime(
+  world: VirtualWorld,
+  currentTime: number,
+  lookbackSeconds: number,
+  eventsSelected: BallArcEventsSelected | null,
+): BallTrailRunPoint[][] {
+  const t0 = currentTime - Math.max(0, lookbackSeconds);
+  const frames = world.ball.frames
+    .filter((frame) => t0 <= frame.t && frame.t <= currentTime)
+    .slice()
+    .sort((left, right) => left.t - right.t);
+  const runs: BallTrailRunPoint[][] = [];
+  let currentRun: BallTrailRunPoint[] = [];
+  let previousFrame: VirtualWorldBallFrame | null = null;
+  let previousPoint: BallTrailRunPoint | null = null;
+
+  for (const frame of frames) {
+    const point = ballTrailRunPointFromFrame(world, frame);
+    if (!point) {
+      if (currentRun.length) runs.push(currentRun);
+      currentRun = [];
+      previousFrame = frame;
+      previousPoint = null;
+      continue;
+    }
+
+    if (
+      previousPoint &&
+      previousFrame &&
+      (hasSelectedArcBoundaryBetween(previousFrame.t, frame.t, eventsSelected) || previousPoint.segmentKey !== point.segmentKey)
+    ) {
+      if (currentRun.length) runs.push(currentRun);
+      currentRun = [];
+    }
+
+    currentRun.push(point);
+    previousFrame = frame;
+    previousPoint = point;
+  }
+
+  if (currentRun.length) runs.push(currentRun);
+  return runs.filter((run) => run.length >= 2);
+}
+
+function ballTrailRunPointFromFrame(world: VirtualWorld, frame: VirtualWorldBallFrame): BallTrailRunPoint | null {
+  if (frame.visible === false || !frame.world_xyz) return null;
+  const point = frame.world_xyz;
+  const insideCourt = isWorldPointInsideCourt(world, point, 0.35);
+  return {
+    ...ballTrailPointFromFrame(frame, point, insideCourt),
+    t: frame.t,
+    segmentKey: ballFrameSegmentKey(frame),
+  };
+}
+
+function ballFrameSegmentKey(frame: VirtualWorldBallFrame): string | null {
+  if (frame.arc_segment_id !== null && frame.arc_segment_id !== undefined) return `arc:${String(frame.arc_segment_id)}`;
+  const predictor = frame.confidence_provenance?.predictor ?? null;
+  const band = frame.confidence_provenance?.band ?? frame.confidence_provenance?.display_band ?? null;
+  if (predictor && predictor.includes("arc") && band) return `${predictor}:${band}`;
+  return null;
+}
+
+function hasSelectedArcBoundaryBetween(
+  previousTime: number,
+  nextTime: number,
+  eventsSelected: BallArcEventsSelected | null,
+): boolean {
+  if (!eventsSelected?.selected.length) return false;
+  const low = Math.min(previousTime, nextTime);
+  const high = Math.max(previousTime, nextTime);
+  return eventsSelected.selected.some((event) => low < event.t && event.t <= high);
+}
+
+function smoothBallTrailRun(run: BallTrailRunPoint[]): BallTrailRunPoint[] {
+  if (run.length < 4) return run;
+  const points: BallTrailRunPoint[] = [];
+  const stepsPerPair = 4;
+  for (let index = 0; index < run.length - 1; index += 1) {
+    const p0 = run[Math.max(0, index - 1)];
+    const p1 = run[index];
+    const p2 = run[index + 1];
+    const p3 = run[Math.min(run.length - 1, index + 2)];
+    if (index === 0) points.push(p1);
+    for (let step = 1; step <= stepsPerPair; step += 1) {
+      const t = step / stepsPerPair;
+      points.push({
+        ...interpolatedTrailStyle(p1, p2, t),
+        point: catmullRomVec3(p0.point, p1.point, p2.point, p3.point, t),
+        t: p1.t + (p2.t - p1.t) * t,
+        segmentKey: p1.segmentKey === p2.segmentKey ? p1.segmentKey : null,
+      });
+    }
+  }
+  return points;
+}
+
+function interpolatedTrailStyle(from: BallTrailRunPoint, to: BallTrailRunPoint, t: number): Omit<BallTrailRunPoint, "point" | "t" | "segmentKey"> {
+  const courtStyle = from.courtStyle === "outside_court" || to.courtStyle === "outside_court" ? "outside_court" : "inside_court";
+  return {
+    courtStyle,
+    uncertaintySigmaM:
+      from.uncertaintySigmaM === null && to.uncertaintySigmaM === null
+        ? null
+        : (from.uncertaintySigmaM ?? 0) + ((to.uncertaintySigmaM ?? 0) - (from.uncertaintySigmaM ?? 0)) * t,
+    opacityScale: from.opacityScale + (to.opacityScale - from.opacityScale) * t,
+    thicknessScale: from.thicknessScale + (to.thicknessScale - from.thicknessScale) * t,
+  };
+}
+
+function catmullRomVec3(p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3, t: number): Vec3 {
+  return [0, 1, 2].map((axis) => catmullRomScalar(p0[axis], p1[axis], p2[axis], p3[axis], t)) as Vec3;
+}
+
+function catmullRomScalar(p0: number, p1: number, p2: number, p3: number, t: number): number {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
+}
+
+function ballTrailPointFromFrame(frame: VirtualWorldBallFrame, point: Vec3, insideCourt: boolean): BallTrailPoint {
+  const uncertaintySigmaM = ballFrameUncertaintySigmaM(frame);
+  const uncertaintyStyle = ballTrailStyleForSigma(uncertaintySigmaM);
+  return {
+    point,
+    courtStyle: insideCourt ? "inside_court" : "outside_court",
+    uncertaintySigmaM,
+    opacityScale: Math.min(uncertaintyStyle.opacityScale, insideCourt ? 1 : 0.6),
+    thicknessScale: Math.min(uncertaintyStyle.thicknessScale, insideCourt ? 1 : 0.75),
+  };
+}
+
+function ballFrameUncertaintySigmaM(frame: VirtualWorldBallFrame): number | null {
+  const provenanceSigma = frame.confidence_provenance?.predicted_sigma_m;
+  if (typeof provenanceSigma === "number" && Number.isFinite(provenanceSigma) && provenanceSigma >= 0) return provenanceSigma;
+  const physicsSigma = frame.physics_fill?.uncertainty_m;
+  if (typeof physicsSigma === "number" && Number.isFinite(physicsSigma) && physicsSigma >= 0) return physicsSigma;
+  return null;
+}
+
+function ballTrailStyleForSigma(sigmaM: number | null): { opacityScale: number; thicknessScale: number } {
+  if (sigmaM === null) return { opacityScale: 1, thicknessScale: 1 };
+  if (sigmaM >= 0.4) return { opacityScale: 0.35, thicknessScale: 0.55 };
+  if (sigmaM >= 0.2) return { opacityScale: 0.55, thicknessScale: 0.7 };
+  if (sigmaM >= 0.1) return { opacityScale: 0.75, thicknessScale: 0.85 };
+  return { opacityScale: 0.9, thicknessScale: 0.95 };
+}
+
+export function playerTrailPointsForTime(player: VirtualWorldPlayer, currentTime: number, lookbackSeconds = 1.2): Vec3[] {
+  const t0 = currentTime - Math.max(0, lookbackSeconds);
+  return player.frames
+    .filter((frame) => t0 <= frame.t && frame.t <= currentTime)
+    .map((frame) => frame.floor_world_xyz ?? (frame.track_world_xy ? ([frame.track_world_xy[0], frame.track_world_xy[1], 0] as Vec3) : null))
+    .filter((point): point is Vec3 => point !== null);
 }
 
 export function parseLabelOverlayPayload(input: unknown): LabelOverlayPayload {
@@ -578,6 +1744,23 @@ function readLabelOverlay(input: unknown, index: number): LabelOverlay {
   };
 }
 
+function readCoachingCardFact(input: unknown, index: number): CoachingCardFact {
+  const path = `coaching_card_facts.facts[${index}]`;
+  assertRecord(input, path);
+  return {
+    coverage_fraction: readUnitNumber(input.coverage_fraction, `${path}.coverage_fraction`),
+    frames_total: readNonNegativeInteger(input.frames_total, `${path}.frames_total`),
+    frames_used: readNonNegativeInteger(input.frames_used, `${path}.frames_used`),
+    metric: readString(input.metric, `${path}.metric`),
+    player_id: readString(input.player_id, `${path}.player_id`),
+    rally_id: readString(input.rally_id, `${path}.rally_id`),
+    rally_scope: readString(input.rally_scope, `${path}.rally_scope`),
+    trust: readEnum(input.trust, `${path}.trust`, ["ok", "estimated", "unverified_cue"] as const),
+    unit: readString(input.unit, `${path}.unit`),
+    value: readNumber(input.value, `${path}.value`),
+  };
+}
+
 function readAnnotationSource(input: unknown, index: number): AnnotationSource {
   const path = `manifest.annotation_sources[${index}]`;
   assertRecord(input, path);
@@ -592,11 +1775,91 @@ function readAnnotationSource(input: unknown, index: number): AnnotationSource {
 function readBodyMeshPlayer(input: unknown, index: number, artifactFaces: MeshFace[]): BodyMeshPlayer {
   const path = `body_mesh.players[${index}]`;
   assertRecord(input, path);
+  const rawId = input.id === undefined || input.id === null ? input.player_id : input.id;
   return {
-    id: readPlayerId(input.id, `${path}.id`),
+    id: readPlayerId(rawId, `${path}.id`),
     frames: readArray(input.frames, `${path}.frames`).map((frame, frameIndex) =>
       readBodyMeshFrame(frame, `${path}.frames[${frameIndex}]`, artifactFaces),
     ),
+  };
+}
+
+function readBodyMeshIndexWindow(input: unknown, index: number): BodyMeshIndexWindow {
+  const path = `body_mesh_index.windows[${index}]`;
+  assertRecord(input, path);
+  assertRecord(input.quantization, `${path}.quantization`);
+  const sourceWindowIndex = readNonNegativeInteger(input.source_window_index, `${path}.source_window_index`);
+  return {
+    source_window_index: sourceWindowIndex,
+    frame_start: readNonNegativeInteger(input.frame_start, `${path}.frame_start`),
+    frame_end: readNonNegativeInteger(input.frame_end, `${path}.frame_end`),
+    t0: readNonNegativeNumber(input.t0, `${path}.t0`),
+    t1: readNonNegativeNumber(input.t1, `${path}.t1`),
+    frame_count: readNonNegativeInteger(input.frame_count, `${path}.frame_count`),
+    player_frame_count:
+      input.player_frame_count === undefined
+        ? 0
+        : readNonNegativeInteger(input.player_frame_count, `${path}.player_frame_count`),
+    target_player_ids: readArray(input.target_player_ids, `${path}.target_player_ids`).map((playerId, playerIndex) =>
+      readPlayerId(playerId, `${path}.target_player_ids[${playerIndex}]`),
+    ),
+    player_ids: readArray(input.player_ids, `${path}.player_ids`).map((playerId, playerIndex) =>
+      readPlayerId(playerId, `${path}.player_ids[${playerIndex}]`),
+    ),
+    target_representation:
+      input.target_representation === undefined
+        ? "world_mesh"
+        : readString(input.target_representation, `${path}.target_representation`),
+    fallback_representation:
+      input.fallback_representation === undefined
+        ? "lane_a_skeleton"
+        : readString(input.fallback_representation, `${path}.fallback_representation`),
+    reason_counts: readNumberRecord(input.reason_counts, `${path}.reason_counts`),
+    max_score: input.max_score === undefined ? 0 : readNumber(input.max_score, `${path}.max_score`),
+    url: readString(input.url, `${path}.url`),
+    byte_size: readNonNegativeInteger(input.byte_size, `${path}.byte_size`),
+    encoding: readEnum(input.encoding, `${path}.encoding`, ["gzip_int16_world_vertices_v1", "raw_int16_world_vertices_v1"] as const),
+    quantization: {
+      scale: readPositiveNumber(input.quantization.scale, `${path}.quantization.scale`),
+      unit: readEnum(input.quantization.unit, `${path}.quantization.unit`, ["m"] as const),
+    },
+    players: readArray(input.players, `${path}.players`).map((player, playerIndex) =>
+      readBodyMeshIndexPlayer(player, `${path}.players[${playerIndex}]`, sourceWindowIndex),
+    ),
+  };
+}
+
+function readBodyMeshIndexPlayer(input: unknown, path: string, sourceWindowIndex: number): BodyMeshIndexPlayer {
+  assertRecord(input, path);
+  const rawId = input.id === undefined || input.id === null ? input.player_id : input.id;
+  return {
+    id: readPlayerId(rawId, `${path}.id`),
+    frames: readArray(input.frames, `${path}.frames`).map((frame, frameIndex) =>
+      readBodyMeshIndexFrame(frame, `${path}.frames[${frameIndex}]`, sourceWindowIndex),
+    ),
+  };
+}
+
+function readBodyMeshIndexFrame(input: unknown, path: string, defaultSourceWindowIndex: number): BodyMeshIndexFrame {
+  assertRecord(input, path);
+  return {
+    frame_idx: readNonNegativeInteger(input.frame_idx, `${path}.frame_idx`),
+    t: readNonNegativeNumber(input.t, `${path}.t`),
+    source_window_index:
+      input.source_window_index === null || input.source_window_index === undefined
+        ? defaultSourceWindowIndex
+        : readNonNegativeInteger(input.source_window_index, `${path}.source_window_index`),
+    blend_weight: input.blend_weight === undefined ? 1 : readUnitNumber(input.blend_weight, `${path}.blend_weight`),
+    vertex_count: readNonNegativeInteger(input.vertex_count, `${path}.vertex_count`),
+    joint_count: input.joint_count === undefined ? 0 : readNonNegativeInteger(input.joint_count, `${path}.joint_count`),
+    joint_conf:
+      input.joint_conf === undefined
+        ? []
+        : readArray(input.joint_conf, `${path}.joint_conf`).map((confidence, index) => readNumber(confidence, `${path}.joint_conf[${index}]`)),
+    reasons:
+      input.reasons === undefined
+        ? []
+        : readArray(input.reasons, `${path}.reasons`).map((reason, index) => readString(reason, `${path}.reasons[${index}]`)),
   };
 }
 
@@ -648,11 +1911,81 @@ function readSmplxParams(input: unknown, path: string): Record<string, number[]>
 function bodyMeshFrameForTime(player: BodyMeshPlayer, timeSeconds: number, fps: number): BodyMeshFrame | undefined {
   if (!player.frames.length) return undefined;
   const sortedFrames = [...player.frames].sort((left, right) => left.t - right.t);
+  const tolerance = Math.max(1 / Math.max(fps || 30, 1) * 1.5, 0.04, BODY_MESH_FADE_SECONDS);
+  const first = sortedFrames[0].t;
+  const last = sortedFrames[sortedFrames.length - 1].t;
+  if (timeSeconds < first - tolerance || timeSeconds > last + tolerance) return undefined;
+  return sortedFrames.reduce((best, frame) => (Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best));
+}
+
+function bodyMeshPresenceOpacityForTime(player: BodyMeshPlayer, timeSeconds: number): number {
+  if (!player.frames.length) return 0;
+  const times = player.frames.map((frame) => frame.t).sort((left, right) => left - right);
+  const first = times[0];
+  const last = times[times.length - 1];
+  if (timeSeconds < first) return clamp01((timeSeconds - (first - BODY_MESH_FADE_SECONDS)) / BODY_MESH_FADE_SECONDS);
+  if (timeSeconds > last) return clamp01(((last + BODY_MESH_FADE_SECONDS) - timeSeconds) / BODY_MESH_FADE_SECONDS);
+  return 1;
+}
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+function paddleFrameForTime(paddle: VirtualWorldPaddle, timeSeconds: number, fps: number): VirtualWorldPaddleFrame | undefined {
+  if (!paddle.frames.length) return undefined;
+  const sortedFrames = [...paddle.frames].sort((left, right) => left.t - right.t);
   const tolerance = Math.max(1 / Math.max(fps || 30, 1) * 1.5, 0.04);
   const first = sortedFrames[0].t;
   const last = sortedFrames[sortedFrames.length - 1].t;
   if (timeSeconds < first - tolerance || timeSeconds > last + tolerance) return undefined;
   return sortedFrames.reduce((best, frame) => (Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best));
+}
+
+function solidMeshFrameRenderable(frame: BodyMeshFrame | undefined): frame is BodyMeshFrame {
+  return Boolean(frame && frame.mesh_vertices_world.length > 0 && frame.mesh_faces.length > 0);
+}
+
+function normalizedMeshPlayerIdForWorldFrame(player: VirtualWorldPlayer, frame: VirtualWorldFrame | undefined): number {
+  return frame?.mesh_ref?.player_id ?? player.id;
+}
+
+function windowDistanceFromTime(window: BodyMeshIndexWindow, timeSeconds: number): number {
+  if (window.t0 <= timeSeconds && timeSeconds <= window.t1) return 0;
+  return Math.min(Math.abs(timeSeconds - window.t0), Math.abs(timeSeconds - window.t1));
+}
+
+function readQuantizedVec3Array(view: DataView, offsetBytes: number, count: number, scale: number): Vec3[] {
+  const points: Vec3[] = [];
+  let offset = offsetBytes;
+  for (let index = 0; index < count; index += 1) {
+    if (offset + 6 > view.byteLength) {
+      throw new Error(`body mesh chunk ended while reading vec3 ${index}`);
+    }
+    points.push([
+      view.getInt16(offset, true) / scale,
+      view.getInt16(offset + 2, true) / scale,
+      view.getInt16(offset + 4, true) / scale,
+    ]);
+    offset += 6;
+  }
+  return points;
+}
+
+function bodyMeshBytesLookGzipped(bytes: ArrayBuffer): boolean {
+  if (bytes.byteLength < 2) return false;
+  const view = new Uint8Array(bytes, 0, 2);
+  return view[0] === 0x1f && view[1] === 0x8b;
+}
+
+async function decompressGzipBytes(bytes: ArrayBuffer): Promise<ArrayBuffer> {
+  if (typeof DecompressionStream === "undefined") {
+    throw new Error("gzip body mesh chunks require browser DecompressionStream support");
+  }
+  const stream = new Response(bytes).body;
+  if (!stream) throw new Error("failed to create gzip decode stream");
+  return new Response(stream.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
 }
 
 function emptyLabelOverlayPayload(): LabelOverlayPayload {
@@ -664,6 +1997,15 @@ function emptyLabelOverlayPayload(): LabelOverlayPayload {
     sourceHeight: 1080,
     secondsPerFrame: 1 / 30,
   };
+}
+
+function readOptionalPositiveOrZeroNumber(value: unknown): number | null {
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : null;
+  if (typeof value === "string") {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+  return null;
 }
 
 function readOptionalPositiveNumber(value: unknown): number | null {
@@ -755,14 +2097,29 @@ function readContactWindowEvent(input: unknown, index: number): ContactWindowEve
 
 function readContactSources(input: unknown, path: string): ContactWindowEvent["sources"] {
   assertRecord(input, path);
+  const sources: ContactWindowEvent["sources"] = {};
+  let presentSourceCount = 0;
+  for (const key of ["audio", "wrist_vel", "ball_inflection"] as const) {
+    if (input[key] === null || input[key] === undefined) continue;
+    sources[key] = readUnitNumber(input[key], `${path}.${key}`);
+    presentSourceCount += 1;
+  }
+  if (input.human_review !== undefined) {
+    sources.human_review = input.human_review === null ? null : readUnitNumber(input.human_review, `${path}.human_review`);
+    if (input.human_review !== null) presentSourceCount += 1;
+  }
+  if (presentSourceCount === 0) throw new Error(`${path} must include at least one source score`);
+  return sources;
+}
+
+function readBallArcSelectedEvent(input: unknown, index: number): BallArcSelectedEvent {
+  const path = `events_selected.selected[${index}]`;
+  assertRecord(input, path);
   return {
-    audio: readUnitNumber(input.audio, `${path}.audio`),
-    wrist_vel: readUnitNumber(input.wrist_vel, `${path}.wrist_vel`),
-    ball_inflection: readUnitNumber(input.ball_inflection, `${path}.ball_inflection`),
-    human_review:
-      input.human_review === null || input.human_review === undefined
-        ? null
-        : readUnitNumber(input.human_review, `${path}.human_review`),
+    anchor_id: input.anchor_id === null || input.anchor_id === undefined ? null : readString(input.anchor_id, `${path}.anchor_id`),
+    kind: readString(input.kind, `${path}.kind`),
+    frame: input.frame === null || input.frame === undefined ? null : readNonNegativeInteger(input.frame, `${path}.frame`),
+    t: readNonNegativeNumber(input.t, `${path}.t`),
   };
 }
 
@@ -788,6 +2145,105 @@ function readCourt(input: unknown): VirtualWorld["court"] {
       center_height_m: readNumber(input.net.center_height_m, "virtual_world.court.net.center_height_m"),
       post_height_m: readNumber(input.net.post_height_m, "virtual_world.court.net.post_height_m"),
     },
+    trust_band: readTrustBand(input.trust_band, "virtual_world.court.trust_band"),
+  };
+}
+
+function readTrustBand(input: unknown, path: string): TrustBand | null {
+  if (input === null || input === undefined) return null;
+  assertRecord(input, path);
+  return {
+    stage: readString(input.stage, `${path}.stage`),
+    gate_id: readString(input.gate_id, `${path}.gate_id`),
+    gate_status: readString(input.gate_status, `${path}.gate_status`),
+    badge: readEnum(input.badge, `${path}.badge`, ["verified", "preview", "low_confidence"] as const),
+    reason: readString(input.reason, `${path}.reason`),
+    evidence_path:
+      input.evidence_path === null || input.evidence_path === undefined
+        ? null
+        : readString(input.evidence_path, `${path}.evidence_path`),
+  };
+}
+
+function readCoverageFields(input: Record<string, unknown>, path: string): EntityCoverage {
+  const coverage: EntityCoverage = {};
+  if (input.coverage_fraction !== null && input.coverage_fraction !== undefined) {
+    coverage.coverage_fraction = readUnitNumber(input.coverage_fraction, `${path}.coverage_fraction`);
+  }
+  if (input.min_t !== null && input.min_t !== undefined) {
+    coverage.min_t = readNumber(input.min_t, `${path}.min_t`);
+  }
+  if (input.max_t !== null && input.max_t !== undefined) {
+    coverage.max_t = readNumber(input.max_t, `${path}.max_t`);
+  }
+  return coverage;
+}
+
+function readConfidenceProvenance(input: unknown, path: string): ConfidenceProvenance | null {
+  if (input === null || input === undefined) return null;
+  assertRecord(input, path);
+  return {
+    band: input.band === null || input.band === undefined ? null : readString(input.band, `${path}.band`),
+    display_band:
+      input.display_band === null || input.display_band === undefined ? null : readString(input.display_band, `${path}.display_band`),
+    horizon_frames:
+      input.horizon_frames === null || input.horizon_frames === undefined
+        ? null
+        : readNonNegativeInteger(input.horizon_frames, `${path}.horizon_frames`),
+    predicted_sigma_m:
+      input.predicted_sigma_m === null || input.predicted_sigma_m === undefined
+        ? null
+        : readNonNegativeNumber(input.predicted_sigma_m, `${path}.predicted_sigma_m`),
+    predictor: input.predictor === null || input.predictor === undefined ? null : readString(input.predictor, `${path}.predictor`),
+  };
+}
+
+function readBallPhysicsFill(input: unknown, path: string): VirtualWorldBallFrame["physics_fill"] {
+  if (input === null || input === undefined) return null;
+  assertRecord(input, path);
+  const fill: NonNullable<VirtualWorldBallFrame["physics_fill"]> = {};
+  if (input.uncertainty_m !== null && input.uncertainty_m !== undefined) {
+    fill.uncertainty_m = readNonNegativeNumber(input.uncertainty_m, `${path}.uncertainty_m`);
+  }
+  if (input.render_only !== null && input.render_only !== undefined) {
+    fill.render_only = readBoolean(input.render_only, `${path}.render_only`);
+  }
+  if (input.not_for_detection_metrics !== null && input.not_for_detection_metrics !== undefined) {
+    fill.not_for_detection_metrics = readBoolean(input.not_for_detection_metrics, `${path}.not_for_detection_metrics`);
+  }
+  return fill;
+}
+
+function readReviewedBounce(input: unknown, index: number): ReviewedBounce {
+  const path = `reviewed_bounces.bounces[${index}]`;
+  assertRecord(input, path);
+  return {
+    review_id: readString(input.review_id, `${path}.review_id`),
+    frame: readNonNegativeInteger(input.frame, `${path}.frame`),
+    t: readNonNegativeNumber(input.t, `${path}.t`),
+  };
+}
+
+function readRallySpan(input: unknown, index: number): RallySpan {
+  const path = `rally_spans.spans[${index}]`;
+  assertRecord(input, path);
+  const t0 = readNonNegativeNumber(input.t0, `${path}.t0`);
+  const t1 = readNonNegativeNumber(input.t1, `${path}.t1`);
+  if (t1 < t0) throw new Error(`${path}.t1 must be greater than or equal to ${path}.t0`);
+  const explicitRallyId =
+    input.rally_id === null || input.rally_id === undefined
+      ? input.id === null || input.id === undefined
+        ? null
+        : readString(input.id, `${path}.id`)
+      : readString(input.rally_id, `${path}.rally_id`);
+  return {
+    rallyId: explicitRallyId ?? `rally_${String(index).padStart(3, "0")}`,
+    t0,
+    t1,
+    sources:
+      input.sources === undefined
+        ? []
+        : readArray(input.sources, `${path}.sources`).map((source, sourceIndex) => readString(source, `${path}.sources[${sourceIndex}]`)),
   };
 }
 
@@ -795,11 +2251,13 @@ function readPlayer(input: unknown, index: number): VirtualWorldPlayer {
   const path = `virtual_world.players[${index}]`;
   assertRecord(input, path);
   return {
+    ...readCoverageFields(input, path),
     id: readNumber(input.id, `${path}.id`, true),
     side: input.side === null || input.side === undefined ? null : readString(input.side, `${path}.side`),
     role: input.role === null || input.role === undefined ? null : readString(input.role, `${path}.role`),
     representation: readEnum(input.representation, `${path}.representation`, ["track_only", "joints", "mesh"] as const),
     frames: readArray(input.frames, `${path}.frames`).map((frame, frameIndex) => readFrame(frame, `${path}.frames[${frameIndex}]`)),
+    trust_band: readTrustBand(input.trust_band, `${path}.trust_band`),
   };
 }
 
@@ -807,6 +2265,7 @@ function readFrame(input: unknown, path: string): VirtualWorldFrame {
   assertRecord(input, path);
   return {
     t: readNumber(input.t, `${path}.t`),
+    mesh_ref: readMeshRef(input.mesh_ref, `${path}.mesh_ref`),
     track_world_xy: input.track_world_xy === null || input.track_world_xy === undefined ? null : readVec2(input.track_world_xy, `${path}.track_world_xy`),
     track_conf: input.track_conf === null || input.track_conf === undefined ? null : readNumber(input.track_conf, `${path}.track_conf`),
     bbox: input.bbox === null || input.bbox === undefined ? null : readBBox(input.bbox, `${path}.bbox`),
@@ -831,29 +2290,88 @@ function readFrame(input: unknown, path: string): VirtualWorldFrame {
       input.grf === null || input.grf === undefined
         ? null
         : readArray(input.grf, `${path}.grf`).map((point, index) => readVec3(point, `${path}.grf[${index}]`)),
+    skeleton_implausible:
+      input.skeleton_implausible === undefined ? false : readBoolean(input.skeleton_implausible, `${path}.skeleton_implausible`),
+    trust_band: readTrustBand(input.trust_band, `${path}.trust_band`),
+  };
+}
+
+function readMeshRef(input: unknown, path: string): VirtualWorldFrame["mesh_ref"] {
+  if (input === null || input === undefined) return null;
+  assertRecord(input, path);
+  return {
+    artifact: readString(input.artifact, `${path}.artifact`),
+    player_id: readPlayerId(input.player_id, `${path}.player_id`),
+    frame_idx: readNonNegativeInteger(input.frame_idx, `${path}.frame_idx`),
+    t: readNonNegativeNumber(input.t, `${path}.t`),
   };
 }
 
 function readBall(input: unknown): VirtualWorld["ball"] {
   assertRecord(input, "virtual_world.ball");
   return {
-    source:
-      input.source === null || input.source === undefined
-        ? null
-        : readEnum(input.source, "virtual_world.ball.source", ["tracknet", "tap", "pbmat", "totnet"] as const),
+    ...readCoverageFields(input, "virtual_world.ball"),
+    // See the `VirtualWorld["ball"]["source"]` type comment above: this is
+    // deliberately a free-form string read, not a closed-enum `readEnum`
+    // check, so new Python-side ball sources don't need a matching TS
+    // release before the viewer can load their runs again.
+    source: input.source === null || input.source === undefined ? null : readString(input.source, "virtual_world.ball.source"),
     frames: readArray(input.frames, "virtual_world.ball.frames").map((frame, index) => {
       const path = `virtual_world.ball.frames[${index}]`;
       assertRecord(frame, path);
       return {
         t: readNumber(frame.t, `${path}.t`),
         xy: readVec2(frame.xy, `${path}.xy`),
+        xy_interpolated: frame.xy_interpolated === undefined ? false : readBoolean(frame.xy_interpolated, `${path}.xy_interpolated`),
         conf: readNumber(frame.conf, `${path}.conf`),
         visible: readBoolean(frame.visible, `${path}.visible`),
         world_xyz: frame.world_xyz === null || frame.world_xyz === undefined ? null : readVec3(frame.world_xyz, `${path}.world_xyz`),
+        court_intersection_world_xyz: readOptionalVec3FromKeys(frame, path, [
+          "court_intersection_world_xyz",
+          "ray_court_intersection_world_xyz",
+          "floor_projected_world_xyz",
+        ]),
+        arc_segment_id: readOptionalSegmentId(frame, path),
         approx: frame.approx === undefined ? false : readBoolean(frame.approx, `${path}.approx`),
+        confidence_provenance: readConfidenceProvenance(frame.confidence_provenance, `${path}.confidence_provenance`),
+        render_only: frame.render_only === undefined ? false : readBoolean(frame.render_only, `${path}.render_only`),
+        not_for_detection_metrics:
+          frame.not_for_detection_metrics === undefined
+            ? false
+            : readBoolean(frame.not_for_detection_metrics, `${path}.not_for_detection_metrics`),
+        trust_band: readTrustBand(frame.trust_band, `${path}.trust_band`),
+        physics_fill: readBallPhysicsFill(frame.physics_fill, `${path}.physics_fill`),
       };
     }),
+    trust_band: readTrustBand(input.trust_band, "virtual_world.ball.trust_band"),
   };
+}
+
+function readOptionalVec3FromKeys(input: Record<string, unknown>, path: string, keys: string[]): Vec3 | null {
+  for (const key of keys) {
+    if (input[key] !== null && input[key] !== undefined) return readVec3(input[key], `${path}.${key}`);
+  }
+  return null;
+}
+
+function readOptionalSegmentId(input: Record<string, unknown>, path: string): number | string | null {
+  const direct = input.arc_segment_id ?? input.segment_id;
+  if (direct !== null && direct !== undefined) return readSegmentIdValue(direct, `${path}.arc_segment_id`);
+  const arcSolver = input.arc_solver;
+  if (arcSolver && typeof arcSolver === "object" && !Array.isArray(arcSolver)) {
+    const value = (arcSolver as Record<string, unknown>).segment_id;
+    if (value !== null && value !== undefined) return readSegmentIdValue(value, `${path}.arc_solver.segment_id`);
+  }
+  return null;
+}
+
+function readSegmentIdValue(value: unknown, path: string): number | string {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new Error(`${path} must be finite`);
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) return value;
+  throw new Error(`${path} must be a number or non-empty string`);
 }
 
 function readSummary(input: unknown): VirtualWorld["summary"] {
@@ -884,9 +2402,11 @@ function readPaddle(input: unknown, index: number): VirtualWorldPaddle {
   assertRecord(input.paddle_dims_in, `${path}.paddle_dims_in`);
   const paddleDims = readPaddleDims(input.paddle_dims_in, `${path}.paddle_dims_in`);
   return {
+    ...readCoverageFields(input, path),
     player_id: readNumber(input.player_id, `${path}.player_id`, true),
     paddle_dims_in: paddleDims,
     frames: readArray(input.frames, `${path}.frames`).map((frame, frameIndex) => readPaddleFrame(frame, `${path}.frames[${frameIndex}]`)),
+    trust_band: readTrustBand(input.trust_band, `${path}.trust_band`),
   };
 }
 
@@ -925,6 +2445,13 @@ function readPaddleFrame(input: unknown, path: string): VirtualWorldPaddleFrame 
         ? null
         : readNumber(input.reprojection_error_px, `${path}.reprojection_error_px`),
     ambiguous: input.ambiguous === undefined ? false : readBoolean(input.ambiguous, `${path}.ambiguous`),
+    confidence_provenance: readConfidenceProvenance(input.confidence_provenance, `${path}.confidence_provenance`),
+    render_only: input.render_only === undefined ? false : readBoolean(input.render_only, `${path}.render_only`),
+    not_for_detection_metrics:
+      input.not_for_detection_metrics === undefined
+        ? false
+        : readBoolean(input.not_for_detection_metrics, `${path}.not_for_detection_metrics`),
+    trust_band: readTrustBand(input.trust_band, `${path}.trust_band`),
   };
 }
 
@@ -979,6 +2506,22 @@ function readUnitNumber(value: unknown, path: string): number {
   const number = readNumber(value, path);
   if (number < 0 || number > 1) throw new Error(`${path} must be in [0, 1]`);
   return number;
+}
+
+function readPositiveNumber(value: unknown, path: string): number {
+  const number = readNumber(value, path);
+  if (number <= 0) throw new Error(`${path} must be positive`);
+  return number;
+}
+
+function readNumberRecord(value: unknown, path: string): Record<string, number> {
+  if (value === undefined) return {};
+  assertRecord(value, path);
+  const output: Record<string, number> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    output[key] = readNumber(entry, `${path}.${key}`, true);
+  }
+  return output;
 }
 
 function readPlayerId(value: unknown, path: string): number {

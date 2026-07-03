@@ -57,9 +57,10 @@ final class CaptureSidecarWriterTests: XCTestCase {
         XCTAssertEqual(sidecar.recordingDurationS, 3.25)
         XCTAssertEqual(sidecar.cameraPosition, "back")
         XCTAssertEqual(sidecar.cameraLens, "builtInWideAngleCamera")
-        XCTAssertEqual(sidecar.locked, context.locked)
-        XCTAssertEqual(sidecar.intrinsics, context.intrinsics)
-        XCTAssertEqual(sidecar.gravity, [0.0, -1.0, 0.0])
+        XCTAssertEqual(sidecar.provenance, .liveRecording)
+        XCTAssertEqual(sidecar.locked, .some(context.locked))
+        XCTAssertEqual(sidecar.intrinsics, .some(context.intrinsics))
+        XCTAssertEqual(sidecar.gravity, .some([0.0, -1.0, 0.0]))
         XCTAssertEqual(sidecar.captureQuality, context.captureQuality)
     }
 }

@@ -1,0 +1,147 @@
+{
+  "artifact_type": "racketsport_body_mesh",
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "faces_ref": "mhr_faces_static",
+  "fps": 30.0,
+  "joint_names": [
+    "sam3dbody_joint_000",
+    "sam3dbody_joint_001"
+  ],
+  "mesh_faces": [
+    [
+      0,
+      1,
+      2
+    ],
+    [
+      0,
+      2,
+      3
+    ]
+  ],
+  "model": "sam3dbody_world_joints",
+  "players": [
+    {
+      "player_id": 7,
+      "frames": [
+        {
+          "blend_weight": 0.5,
+          "frame_idx": 10,
+          "joint_conf": [
+            0.9,
+            0.8
+          ],
+          "joints_world": [
+            [
+              0.2,
+              1.2,
+              0.9
+            ],
+            [
+              0.2,
+              1.2,
+              1.4
+            ]
+          ],
+          "mesh_vertices_world": [
+            [
+              0.1,
+              1.0,
+              0.1
+            ],
+            [
+              0.4,
+              1.0,
+              0.1
+            ],
+            [
+              0.4,
+              1.4,
+              1.6
+            ],
+            [
+              0.1,
+              1.4,
+              1.6
+            ]
+          ],
+          "reasons": [
+            "contact_window"
+          ],
+          "smplx_params": {
+            "betas": [
+              0.1
+            ]
+          },
+          "source_window_index": 0,
+          "t": 0.3333333333333333
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "frames": [
+        {
+          "blend_weight": 1.0,
+          "frame_idx": 20,
+          "joint_conf": [
+            0.95,
+            0.85
+          ],
+          "joints_world": [
+            [
+              -0.2,
+              2.2,
+              0.9
+            ],
+            [
+              -0.2,
+              2.2,
+              1.4
+            ]
+          ],
+          "mesh_vertices_world": [
+            [
+              -0.4,
+              2.0,
+              0.1
+            ],
+            [
+              -0.1,
+              2.0,
+              0.1
+            ],
+            [
+              -0.1,
+              2.4,
+              1.6
+            ],
+            [
+              -0.4,
+              2.4,
+              1.6
+            ]
+          ],
+          "reasons": [
+            "low_track_confidence"
+          ],
+          "smplx_params": {
+            "betas": [
+              -0.1
+            ]
+          },
+          "source_window_index": 1,
+          "t": 0.6666666666666666
+        }
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "contact_window_count": 2,
+    "mesh_frame_count": 2,
+    "player_count": 2
+  },
+  "windows": [],
+  "world_frame": "court_Z0"
+}

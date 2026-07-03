@@ -5,6 +5,7 @@ import UIKit
 import PickleballCapture
 import PickleballCore
 import PickleballFastTier
+import PickleballGuidance
 import PickleballReplay
 
 @MainActor
@@ -25,9 +26,26 @@ final class CaptureViewModel: ObservableObject {
     @Published private(set) var replayBenchmarkStatus: ReplayBenchmarkStatus = .idle
     @Published private(set) var status: Status = .idle
 
+    // W3-LIVE-MLP live overlay state -- see PickleballGuidance.LiveGuidanceEvaluator,
+    // PickleballFastTier.CourtDotMapBuilder/LiveBallIndicatorPolicy/PostStopPreviewBuilder.
+    @Published private(set) var liveGuidanceState: LiveGuidanceState?
+    @Published private(set) var courtDotMapPoints: [CourtDotMapPoint] = []
+    @Published private(set) var playerFootRings: [LivePlayerFootRing] = []
+    @Published private(set) var liveOverlayVideoAspectRatio: Double = 16.0 / 9.0
+    @Published private(set) var courtOverlayStatusText: String = "Court map: starting…"
+    @Published private(set) var courtOverlayDetailText: String = ""
+    @Published private(set) var ballIndicatorState: LiveBallIndicatorState = .comingSoon
+    @Published private(set) var ballTrailPoints: [LiveBallTrailPoint] = []
+    @Published private(set) var ballContactMarkers: [LiveBallContactMarker] = []
+    @Published private(set) var postStopSummary: PostStopPreviewSummary?
+
     let controller: CameraCaptureControlling
     private let requestPermissions: () async -> CapturePermissionSnapshot
     private var didAutoStartReplayBenchmark = false
+    private var guidancePollingTask: Task<Void, Never>?
+    private var recentPlayerCountSamples: [Int] = []
+    private var lastFootRingDetectionFrameIndex: Int?
+    private var ballOverlayTracker = LiveBallOverlayTracker()
 
     static let modes: [CaptureMode] = [.standard60, .swing120, .ballPhysics240, .quality4K60]
 
@@ -39,6 +57,10 @@ final class CaptureViewModel: ObservableObject {
     ) {
         self.controller = controller
         self.requestPermissions = requestPermissions
+    }
+
+    deinit {
+        guidancePollingTask?.cancel()
     }
 
     var session: AVCaptureSession {
@@ -143,6 +165,7 @@ final class CaptureViewModel: ObservableObject {
                 case .success(let recording):
                     Task { @MainActor [weak self] in
                         self?.status = .finished(recording.descriptor.clipRelativePath)
+                        await self?.buildPostStopSummary(for: recording)
                     }
                 case .failure(let error):
                     let message = String(describing: error)
@@ -151,11 +174,132 @@ final class CaptureViewModel: ObservableObject {
                     }
                 }
             }
+            controller.setLiveCourtOverlayHandlers(
+                onFrame: { [weak self] frame in
+                    Task { @MainActor [weak self] in
+                        self?.handleLiveOverlayFrame(frame)
+                    }
+                },
+                onStatusChange: { [weak self] overlayStatus in
+                    Task { @MainActor [weak self] in
+                        self?.handleLiveOverlayStatus(overlayStatus)
+                    }
+                }
+            )
             await controller.startPreview()
             status = .ready
+            startLiveGuidancePollingIfNeeded()
         } catch {
             status = .blocked(Self.message(for: error))
         }
+    }
+
+    /// Pre-record capture-quality guidance (W3-LIVE-MLP surface 1): polls
+    /// real device readbacks every 0.5s and re-evaluates them through
+    /// `LiveGuidanceEvaluator`. Runs continuously once configured (harmless
+    /// while recording too, since none of the polled signals are
+    /// recording-destructive reads).
+    private func startLiveGuidancePollingIfNeeded() {
+        guard guidancePollingTask == nil else {
+            return
+        }
+        guidancePollingTask = Task { [weak self] in
+            while let self, !Task.isCancelled {
+                let sample = await self.controller.currentLiveGuidanceSample()
+                self.liveGuidanceState = LiveGuidanceEvaluator.evaluate(sample)
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
+        }
+    }
+
+    private func handleLiveOverlayFrame(_ frame: LiveCourtOverlayFrame) {
+        ingestLiveOverlayFrame(frame)
+    }
+
+    func ingestLiveOverlayFrame(_ frame: LiveCourtOverlayFrame) {
+        courtDotMapPoints = frame.points
+        liveOverlayVideoAspectRatio = frame.videoAspectRatio
+        if frame.detectorInvoked {
+            lastFootRingDetectionFrameIndex = frame.frameIndex
+            recentPlayerCountSamples.append(frame.points.count)
+            if recentPlayerCountSamples.count > 20 {
+                recentPlayerCountSamples.removeFirst(recentPlayerCountSamples.count - 20)
+            }
+        }
+        if frame.playerFootRings.isEmpty {
+            playerFootRings = LivePlayerFootRingBuilder.build(
+                points: frame.points,
+                frameIndex: frame.frameIndex,
+                lastDetectionFrameIndex: lastFootRingDetectionFrameIndex
+            )
+        } else {
+            playerFootRings = frame.playerFootRings
+        }
+        // v0: the live engine does not emit a trained ball state, so this
+        // remains "coming soon" and produces no trail/contact visuals.
+        // Future trained live-ball output must still pass through
+        // LiveBallIndicatorPolicy before it is attached to `LiveCourtOverlayFrame`.
+        let nextBallState = frame.ballState ?? LiveBallIndicatorPolicy.evaluate(rawConfidence: nil, rawNormalizedX: nil, rawNormalizedY: nil)
+        ballIndicatorState = nextBallState
+        let ballOverlay = ballOverlayTracker.update(frameIndex: frame.frameIndex, ballState: nextBallState)
+        ballTrailPoints = ballOverlay.trailPoints
+        ballContactMarkers = ballOverlay.contactMarkers
+    }
+
+    private func handleLiveOverlayStatus(_ overlayStatus: LiveCourtOverlayStatus) {
+        switch overlayStatus {
+        case .idle:
+            courtOverlayStatusText = "Court map: idle"
+            courtOverlayDetailText = ""
+        case .running:
+            courtOverlayStatusText = "Court map: live (screen-space proxy)"
+            courtOverlayDetailText = ""
+        case .modelUnavailable(let message):
+            courtOverlayStatusText = "Court map: detector not installed"
+            courtOverlayDetailText = message
+            playerFootRings = []
+            lastFootRingDetectionFrameIndex = nil
+            resetBallOverlay()
+        case .failed(let message):
+            courtOverlayStatusText = "Court map: error"
+            courtOverlayDetailText = message
+            playerFootRings = []
+            lastFootRingDetectionFrameIndex = nil
+            resetBallOverlay()
+        }
+    }
+
+    private func resetBallOverlay() {
+        ballOverlayTracker.reset()
+        ballIndicatorState = .comingSoon
+        ballTrailPoints = []
+        ballContactMarkers = []
+    }
+
+    /// Post-stop preview (W3-LIVE-MLP surface 4, <10s gate). Reads back the
+    /// REAL just-written `capture_sidecar.json` (duration, fps, capture
+    /// quality are all real device readbacks already persisted by
+    /// `CameraCaptureController.writeSidecar`) rather than re-deriving them
+    /// client-side, and pairs it with the player-count samples collected
+    /// from actual live cadence-scheduled detections during the just-finished
+    /// recording.
+    private func buildPostStopSummary(for recording: CameraRecordingResult) async {
+        let startedAt = CFAbsoluteTimeGetCurrent()
+        let sidecarURL = CameraCaptureController.defaultPackageRootURL()
+            .appendingPathComponent(recording.descriptor.sidecarRelativePath)
+        guard let data = try? Data(contentsOf: sidecarURL),
+              let sidecar = try? JSONDecoder().decode(CaptureSidecar.self, from: data) else {
+            return
+        }
+        let elapsedBuildSeconds = max(0, CFAbsoluteTimeGetCurrent() - startedAt)
+        postStopSummary = PostStopPreviewBuilder.summarize(
+            durationSeconds: sidecar.recordingDurationS ?? 0,
+            requestedFPS: sidecar.fps,
+            measuredFPS: nil,
+            captureQuality: sidecar.captureQuality,
+            sampledFrameDetectionCounts: recentPlayerCountSamples,
+            elapsedBuildSeconds: elapsedBuildSeconds
+        )
     }
 
     func updateOrientation(isLandscapeViewport: Bool) async {
@@ -187,6 +331,9 @@ final class CaptureViewModel: ObservableObject {
                 return
             }
 
+            recentPlayerCountSamples = []
+            resetBallOverlay()
+            postStopSummary = nil
             descriptor = try await controller.startRecording()
             status = .recording
         } catch {

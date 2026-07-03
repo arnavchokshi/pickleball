@@ -6,6 +6,17 @@ usage() {
 Usage: scripts/gpu-eval-run.sh <command> [args...]
 
 Runs a GPU eval/inference command under the shared-H100 slot lease.
+
+Env vars:
+  GPU_LEASE_ROOT      lease directory root (default: /run/gpu-lease, falls back
+                       to ${TMPDIR:-/tmp}/gpu-lease if that cannot be created --
+                       see the WARNING this script prints when that happens).
+  GPU_LOCK_TIMEOUT_S   optional wait timeout in seconds for the initial shared
+                       full-gpu.lock acquisition (default: wait forever, same
+                       as before this flag existed). On timeout, prints the
+                       full-gpu.lock.meta holder (written by
+                       scripts/gpu-train-lock.sh while it holds the exclusive
+                       lock) if present, and exits 75.
 EOF
 }
 
@@ -25,11 +36,16 @@ SLOTS_DIR="$LEASE_ROOT/slots"
 HEARTBEAT_DIR="$LEASE_ROOT/heartbeat"
 FULL_GPU_LOCK="$LEASE_ROOT/full-gpu.lock"
 if ! mkdir -p "$SLOTS_DIR" "$HEARTBEAT_DIR" 2>/dev/null; then
+  PRIMARY_LEASE_ROOT="$LEASE_ROOT"
   LEASE_ROOT="${TMPDIR:-/tmp}/gpu-lease"
   SLOTS_DIR="$LEASE_ROOT/slots"
   HEARTBEAT_DIR="$LEASE_ROOT/heartbeat"
   FULL_GPU_LOCK="$LEASE_ROOT/full-gpu.lock"
   mkdir -p "$SLOTS_DIR" "$HEARTBEAT_DIR"
+  echo "gpu-eval-run: WARNING: could not use $PRIMARY_LEASE_ROOT; falling back to" \
+       "$LEASE_ROOT (per-user TMPDIR). Another agent/user with a different TMPDIR" \
+       "will NOT share this lock -- coordinate a shared GPU_LEASE_ROOT on this host" \
+       "if concurrent GPU jobs are expected." >&2
 fi
 
 slot_files=("$SLOTS_DIR"/slot*.lock)
@@ -58,7 +74,16 @@ run_with_slot() (
   export CUDA_VISIBLE_DEVICES
   CUDA_VISIBLE_DEVICES="$(cat "$uuid_file")"
   local heartbeat="$HEARTBEAT_DIR/$$"
-  printf 'pid=%s slot=%s ts=%s\n' "$$" "$slot_name" "$(date +%s)" > "$heartbeat"
+  # First line's `pid=... slot=... ts=...` shape is kept byte-for-byte as
+  # before for any existing reader; the extra lines below are additive
+  # holder metadata (review_harden_20260702.md finding 6).
+  {
+    printf 'pid=%s slot=%s ts=%s\n' "$$" "$slot_name" "$(date +%s)"
+    printf 'ppid=%s user=%s host=%s\n' "$PPID" "${USER:-$(id -un 2>/dev/null || echo unknown)}" "$(hostname 2>/dev/null || echo unknown)"
+    printf 'cwd=%s\n' "$PWD"
+    printf 'started_at_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf 'command=%s\n' "$*"
+  } > "$heartbeat"
   trap 'rm -f "$heartbeat"' EXIT
   "$@"
 )
@@ -69,7 +94,20 @@ if ! command -v flock >/dev/null 2>&1; then
 fi
 
 exec {full_gpu_fd}>"$FULL_GPU_LOCK"
-flock -s "$full_gpu_fd"
+if [ -n "${GPU_LOCK_TIMEOUT_S:-}" ]; then
+  if ! flock -s -w "$GPU_LOCK_TIMEOUT_S" "$full_gpu_fd"; then
+    echo "gpu-eval-run: timed out after ${GPU_LOCK_TIMEOUT_S}s waiting for $FULL_GPU_LOCK" \
+         "(likely held exclusively by a training job via gpu-train-lock.sh)" >&2
+    META_FILE="$FULL_GPU_LOCK.meta"
+    if [ -f "$META_FILE" ]; then
+      echo "gpu-eval-run: current holder metadata ($META_FILE):" >&2
+      cat "$META_FILE" >&2 || true
+    fi
+    exit 75
+  fi
+else
+  flock -s "$full_gpu_fd"
+fi
 
 for lock_file in "${slot_files[@]}"; do
   exec {lock_fd}>"$lock_file"

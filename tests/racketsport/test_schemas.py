@@ -241,6 +241,7 @@ def test_smpl_motion_frame_accepts_raw_track_anchor() -> None:
             "model": "smplx",
             "fps": 30.0,
             "world_frame": "court_Z0",
+            "body_grounding_refinement": {"status": "ran"},
             "players": [
                 {
                     "id": 1,
@@ -259,6 +260,8 @@ def test_smpl_motion_frame_accepts_raw_track_anchor() -> None:
                             "joint_conf": [0.9],
                             "foot_contact": {"left": False, "right": False},
                             "grf": None,
+                            "confidence_provenance": {"band": "physics_corrected"},
+                            "body_grounding_refinement": {"correction_magnitude_m": 0.02},
                         }
                     ],
                     "skate_free": True,
@@ -269,6 +272,8 @@ def test_smpl_motion_frame_accepts_raw_track_anchor() -> None:
     )
 
     assert parsed.players[0].frames[0].track_world_xy == [1.25, -2.5]
+    assert parsed.body_grounding_refinement == {"status": "ran"}
+    assert parsed.players[0].frames[0].confidence_provenance == {"band": "physics_corrected"}
 
 
 def test_skeleton3d_accepts_real_lane_a_world_joints() -> None:
@@ -278,6 +283,7 @@ def test_skeleton3d_accepts_real_lane_a_world_joints() -> None:
             "artifact_type": "racketsport_skeleton3d",
             "joint_names": ["pelvis", "left_wrist", "right_wrist"],
             "preview_only": False,
+            "body_grounding_refinement": {"status": "ran"},
             "players": [
                 {
                     "id": 1,
@@ -285,12 +291,15 @@ def test_skeleton3d_accepts_real_lane_a_world_joints() -> None:
                         {
                             "frame_idx": 0,
                             "t": 0.0,
+                            "transl_world": [0.1, 0.2, 0.3],
                             "joints_world": [
                                 [0.0, 0.0, 0.9],
                                 [-0.35, 0.1, 1.2],
                                 [0.35, 0.1, 1.2],
                             ],
                             "joint_conf": [0.99, 0.95, 0.94],
+                            "confidence_provenance": {"band": "physics_corrected_warn"},
+                            "body_grounding_refinement": {"correction_magnitude_m": 0.2},
                         }
                     ],
                 }
@@ -299,6 +308,57 @@ def test_skeleton3d_accepts_real_lane_a_world_joints() -> None:
     )
 
     assert parsed.preview_only is False
+    assert parsed.body_grounding_refinement == {"status": "ran"}
+    assert parsed.players[0].frames[0].transl_world == [0.1, 0.2, 0.3]
+    assert parsed.players[0].frames[0].confidence_provenance == {"band": "physics_corrected_warn"}
+
+
+def test_skeleton3d_accepts_plausibility_fields_on_failed_run_frame_shape() -> None:
+    parsed = Skeleton3D.model_validate(
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_skeleton3d",
+            "source_model": "sam3d_body_joints",
+            "joint_names": [f"sam3dbody_joint_{index:03d}" for index in range(65)],
+            "preview_only": False,
+            "players": [
+                {
+                    "id": 1,
+                    "frames": [
+                        {
+                            "frame_idx": 0,
+                            "t": 0.0,
+                            "joints_world": [[0.0, 0.0, 0.0] for _ in range(65)],
+                            "joint_conf": [0.9 for _ in range(65)],
+                            "skeleton_implausible": True,
+                            "skeleton_plausibility": {
+                                "status": "low_confidence",
+                                "reasons": ["joint_conf_below_floor:left_wrist=0.01"],
+                                "joint_confidence_floor": 0.25,
+                                "max_bone_zscore": 6.0,
+                                "source": "sam3d_body_joints",
+                            },
+                            "trust_band": {
+                                "stage": "BODY",
+                                "gate_id": "sam3d_skeleton_plausibility",
+                                "gate_status": "low_confidence",
+                                "badge": "low_confidence",
+                                "reason": "joint_conf_below_floor:left_wrist=0.01",
+                                "evidence_path": None,
+                            },
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    frame = parsed.players[0].frames[0]
+    assert frame.skeleton_implausible is True
+    assert frame.skeleton_plausibility is not None
+    assert frame.skeleton_plausibility.status == "low_confidence"
+    assert frame.trust_band is not None
+    assert frame.trust_band.gate_id == "sam3d_skeleton_plausibility"
 
 
 def test_smpl_motion_accepts_sam3dbody_world_joint_representation_without_grf() -> None:
@@ -973,6 +1033,184 @@ def test_virtual_world_accepts_all_ball_track_source_enums() -> None:
     parsed = VirtualWorld.model_validate(payload)
 
     assert parsed.ball.source == "pbmat"
+
+
+def test_virtual_world_accepts_confidence_gate_provenance_fields() -> None:
+    provenance = {
+        "band": "physics_predicted",
+        "display_band": "hidden_no_prediction",
+        "predictor": "BallBallisticAdapter",
+        "horizon_frames": 2,
+        "predicted_sigma_m": 0.13530468171775023,
+    }
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_virtual_world",
+        "world_frame": "court_Z0",
+        "fps": 30.0,
+        "court": {
+            "sport": "pickleball",
+            "coordinate_frame": "court_Z0",
+            "length_m": 13.4112,
+            "width_m": 6.096,
+            "line_segments": {"net": [[-3.048, 0.0, 0.0], [3.048, 0.0, 0.0]]},
+            "net": {
+                "endpoints": [[-3.048, 0.0, 0.0], [3.048, 0.0, 0.0]],
+                "center_height_m": 0.8636,
+                "post_height_m": 0.9144,
+            },
+        },
+        "players": [
+            {
+                "id": 1,
+                "representation": "joints",
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "joints_world": [[0.0, 0.0, 1.0]],
+                        "mesh_vertices_world": [],
+                        "joint_count": 1,
+                        "mesh_vertex_count": 0,
+                        "confidence_provenance": {
+                            "band": "physics_corrected",
+                            "display_band": "physics_corrected",
+                            "predictor": "FootContactLockAdapter",
+                            "horizon_frames": 0,
+                            "predicted_sigma_m": 0.02,
+                        },
+                    }
+                ],
+            }
+        ],
+        "ball": {
+            "source": "physics_filled",
+            "frames": [
+                {
+                    "t": 0.15,
+                    "xy": [0.0, 0.0],
+                    "conf": 0.305206,
+                    "visible": False,
+                    "world_xyz": [-2.735352972773032, 2.8732401678170696, 0.0],
+                    "approx": True,
+                    "confidence_provenance": provenance,
+                    "render_only": True,
+                    "not_for_detection_metrics": True,
+                }
+            ],
+        },
+        "paddles": [
+            {
+                "player_id": 1,
+                "paddle_dims_in": {"length": 15.5, "width": 7.5},
+                "frames": [
+                    {
+                        "t": 0.15,
+                        "pose_se3": {
+                            "R": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+                            "t": [0.0, 0.0, 1.0],
+                        },
+                        "mesh_vertices_world": [],
+                        "mesh_faces": [],
+                        "conf": 0.2,
+                        "world_frame": "court_Z0",
+                        "translation_unit": "m",
+                        "source": "racket_physics_estimate",
+                        "confidence_provenance": {
+                            "band": "hidden_no_prediction",
+                            "display_band": "hidden_no_prediction",
+                            "predictor": "PaddleNullPredictor",
+                            "horizon_frames": 0,
+                            "predicted_sigma_m": None,
+                        },
+                    }
+                ],
+            }
+        ],
+        "summary": {
+            "player_count": 1,
+            "mesh_player_count": 0,
+            "ball_frame_count": 1,
+            "paddle_frame_count": 1,
+        },
+        "confidence_gate": {
+            "schema_version": 1,
+            "artifact_type": "racketsport_confidence_gate_overlay",
+            "policy": {"additive_only": True},
+        },
+    }
+
+    parsed = VirtualWorld.model_validate(payload)
+
+    ball_provenance = parsed.ball.frames[0].confidence_provenance
+    assert parsed.players[0].frames[0].confidence_provenance.band == "physics_corrected"
+    assert ball_provenance is not None
+    assert ball_provenance.model_dump() == provenance
+    assert parsed.ball.frames[0].render_only is True
+    assert parsed.ball.frames[0].not_for_detection_metrics is True
+    assert parsed.paddles[0].frames[0].confidence_provenance.predictor == "PaddleNullPredictor"
+    assert parsed.confidence_gate["artifact_type"] == "racketsport_confidence_gate_overlay"
+
+
+def test_virtual_world_defaults_confidence_provenance_fields_for_legacy_payloads() -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_virtual_world",
+        "world_frame": "court_Z0",
+        "fps": 30.0,
+        "court": {
+            "sport": "pickleball",
+            "coordinate_frame": "court_Z0",
+            "length_m": 13.4112,
+            "width_m": 6.096,
+            "line_segments": {"net": [[-3.048, 0.0, 0.0], [3.048, 0.0, 0.0]]},
+            "net": {
+                "endpoints": [[-3.048, 0.0, 0.0], [3.048, 0.0, 0.0]],
+                "center_height_m": 0.8636,
+                "post_height_m": 0.9144,
+            },
+        },
+        "players": [
+            {
+                "id": 1,
+                "representation": "track_only",
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "joints_world": [],
+                        "mesh_vertices_world": [],
+                        "joint_count": 0,
+                        "mesh_vertex_count": 0,
+                    }
+                ],
+            }
+        ],
+        "ball": {"source": "tap", "frames": [{"t": 0.0, "xy": [10.0, 20.0], "conf": 0.8, "visible": True}]},
+        "paddles": [],
+        "summary": {
+            "player_count": 1,
+            "mesh_player_count": 0,
+            "ball_frame_count": 1,
+            "paddle_frame_count": 0,
+        },
+    }
+
+    parsed = VirtualWorld.model_validate(payload)
+
+    assert parsed.players[0].frames[0].confidence_provenance is None
+    assert parsed.ball.frames[0].confidence_provenance is None
+    assert parsed.ball.frames[0].render_only is False
+    assert parsed.ball.frames[0].not_for_detection_metrics is False
+    assert parsed.confidence_gate is None
+
+
+def test_real_phys_chain_world_still_validates_with_additive_confidence_schema() -> None:
+    parsed = validate_artifact_file(
+        "virtual_world",
+        Path("runs/phys_chain_20260702T174041Z/wolverine_v1_chain/virtual_world.json"),
+    )
+
+    assert isinstance(parsed, VirtualWorld)
+    assert parsed.confidence_gate is None
 
 
 def test_timeseries_schemas_reject_impossible_numeric_values() -> None:

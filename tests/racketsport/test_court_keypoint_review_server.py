@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import threading
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -10,6 +13,23 @@ import pytest
 
 from scripts.racketsport import court_keypoint_review_server
 from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
+
+
+def _start_court_keypoint_server(tmp_path: Path, *, token: str = "test-review-token"):
+    server = court_keypoint_review_server.ThreadingHTTPServer(
+        ("127.0.0.1", 0), court_keypoint_review_server.CourtKeypointReviewHandler
+    )
+    server.repo_root = tmp_path  # type: ignore[attr-defined]
+    server.save_token = token  # type: ignore[attr-defined]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return server, thread
+
+
+def _stop_court_keypoint_server(server, thread) -> None:  # noqa: ANN001
+    server.shutdown()
+    server.server_close()
+    thread.join(timeout=5)
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -239,6 +259,15 @@ def test_write_review_progress_saves_partial_progress_without_exporting(tmp_path
     assert (tmp_path / "runs" / "court_keypoint_review_20260701" / "local_court_keypoint_review_progress.json").is_file()
     assert not (tmp_path / "eval_clips" / "ball" / "clip_a" / "labels" / "court_keypoints.json").exists()
 
+    partial_label_path = tmp_path / "eval_clips" / "ball" / "clip_a" / "labels" / "court_keypoints_partial.json"
+    partial_payload = json.loads(partial_label_path.read_text(encoding="utf-8"))
+    assert partial_payload["artifact_type"] == "racketsport_court_keypoint_partial_labels"
+    assert partial_payload["review"]["status"] == "reviewed_partial"
+    assert partial_payload["review"]["not_full_metric15_calibration"] is True
+    assert partial_payload["annotation"]["items"][0]["status"] == "reviewed_partial_visible"
+    assert partial_payload["annotation"]["items"][0]["visibility_by_keypoint"]["far_nvz_right"] == "missing_occluded_or_off_frame"
+    assert partial_payload["annotation"]["items"][0]["visibility_by_keypoint"]["near_left_corner"] == "visible"
+
 
 def test_write_review_progress_rejects_unknown_clip_without_writing(tmp_path: Path) -> None:
     _write_review_task(tmp_path)
@@ -276,3 +305,157 @@ def test_court_keypoint_review_server_runs_by_script_path() -> None:
 
     assert result.returncode == 0
     assert "Serve a local UI for reviewed 15-point court keypoint labels" in result.stdout
+
+
+def test_write_review_progress_export_survives_concurrent_saves_without_corruption(tmp_path: Path) -> None:
+    # Regression test for review_harden_20260702.md finding 2: this is the
+    # more damaging save surface (it writes eval_clips/ball/*/labels/
+    # court_keypoints.json directly), so concurrent saves for the same clip
+    # must never leave the progress JSON, label JSON, or exported frame in a
+    # torn/interleaved state.
+    _write_review_task(tmp_path)
+    errors: list[BaseException] = []
+
+    def worker(offset: float) -> None:
+        try:
+            court_keypoint_review_server._write_review_progress(
+                tmp_path,
+                {
+                    "schema_version": 1,
+                    "review_type": "court_keypoint_review",
+                    "clips": {
+                        "clip_a": {
+                            "items": [
+                                {
+                                    "frame": "frame_000001.jpg",
+                                    "status": "reviewed",
+                                    "keypoints": _full_keypoints(offset),
+                                }
+                            ]
+                        }
+                    },
+                },
+            )
+        except BaseException as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    threads = [threading.Thread(target=worker, args=(float(i),)) for i in range(10)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+
+    assert not errors
+    progress_path = tmp_path / "runs" / "court_keypoint_review_20260701" / "local_court_keypoint_review_progress.json"
+    label_path = tmp_path / "eval_clips" / "ball" / "clip_a" / "labels" / "court_keypoints.json"
+    # json.loads raising would mean a torn/interleaved write landed on disk.
+    progress_payload = json.loads(progress_path.read_text(encoding="utf-8"))
+    label_payload = json.loads(label_path.read_text(encoding="utf-8"))
+    assert progress_payload["clips"]["clip_a"]["items"][0]["frame"] == "frame_000001.jpg"
+    assert len(label_payload["annotation"]["items"]) == 1
+    frame_path = tmp_path / "eval_clips" / "ball" / "clip_a" / "labels" / "court_keypoint_frames" / "frame_000001.jpg"
+    assert frame_path.read_bytes() == b"jpg"
+    leftover_temp = list(frame_path.parent.glob(".*.tmp*"))
+    assert leftover_temp == []
+
+
+def test_copy_export_frames_removes_only_frames_outside_new_set(tmp_path: Path) -> None:
+    _write_review_task(tmp_path)
+    entry = court_keypoint_review_server._task_entries(tmp_path)["clip_a"]
+    out_dir = tmp_path / "eval_clips" / "ball" / "clip_a" / "labels" / "court_keypoint_frames"
+    out_dir.mkdir(parents=True)
+    (out_dir / "frame_000009.jpg").write_bytes(b"stale")
+
+    court_keypoint_review_server._copy_export_frames(
+        tmp_path,
+        entry,
+        images=[entry["images"][0]],
+        exported_frame_dir=Path("eval_clips/ball/clip_a/labels/court_keypoint_frames"),
+    )
+
+    remaining = sorted(path.name for path in out_dir.glob("*.jpg"))
+    assert remaining == ["frame_000001.jpg"]
+    assert not list(out_dir.glob(".*.tmp*"))
+
+
+def test_court_keypoint_post_save_rejects_missing_or_wrong_token(tmp_path: Path) -> None:
+    _write_review_task(tmp_path)
+    server, thread = _start_court_keypoint_server(tmp_path, token="correct-horse-battery-staple")
+    try:
+        port = server.server_address[1]
+        body = json.dumps(
+            {
+                "schema_version": 1,
+                "review_type": "court_keypoint_review",
+                "clips": {"clip_a": {"items": [{"frame": "frame_000001.jpg", "keypoints": _full_keypoints()}]}},
+            }
+        ).encode("utf-8")
+
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/save",
+            data=body,
+            method="POST",
+            headers={"Content-Type": "application/json"},
+        )
+        with pytest.raises(urllib.error.HTTPError) as exc_info:
+            urllib.request.urlopen(request, timeout=5)
+        assert exc_info.value.code == 401
+
+        bad_request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/save",
+            data=body,
+            method="POST",
+            headers={"Content-Type": "application/json", "X-Review-Token": "wrong-token"},
+        )
+        with pytest.raises(urllib.error.HTTPError) as exc_info_bad:
+            urllib.request.urlopen(bad_request, timeout=5)
+        assert exc_info_bad.value.code == 401
+
+        assert not (
+            tmp_path / "runs" / "court_keypoint_review_20260701" / "local_court_keypoint_review_progress.json"
+        ).exists()
+    finally:
+        _stop_court_keypoint_server(server, thread)
+
+
+def test_court_keypoint_post_save_accepts_correct_token(tmp_path: Path) -> None:
+    _write_review_task(tmp_path)
+    server, thread = _start_court_keypoint_server(tmp_path, token="correct-horse-battery-staple")
+    try:
+        port = server.server_address[1]
+        body = json.dumps(
+            {
+                "schema_version": 1,
+                "review_type": "court_keypoint_review",
+                "clips": {"clip_a": {"items": [{"frame": "frame_000001.jpg", "keypoints": _full_keypoints()}]}},
+            }
+        ).encode("utf-8")
+
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/save",
+            data=body,
+            method="POST",
+            headers={"Content-Type": "application/json", "X-Review-Token": "correct-horse-battery-staple"},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            assert response.status == 200
+            result = json.loads(response.read().decode("utf-8"))
+        assert result["status"] == "saved_partial"
+        assert (
+            tmp_path / "runs" / "court_keypoint_review_20260701" / "local_court_keypoint_review_progress.json"
+        ).is_file()
+    finally:
+        _stop_court_keypoint_server(server, thread)
+
+
+def test_court_keypoint_served_page_embeds_save_token_not_placeholder(tmp_path: Path) -> None:
+    _write_review_task(tmp_path)
+    server, thread = _start_court_keypoint_server(tmp_path, token="page-embedded-token")
+    try:
+        port = server.server_address[1]
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5) as response:
+            html = response.read().decode("utf-8")
+        assert "page-embedded-token" in html
+        assert court_keypoint_review_server.SAVE_TOKEN_PLACEHOLDER not in html
+    finally:
+        _stop_court_keypoint_server(server, thread)

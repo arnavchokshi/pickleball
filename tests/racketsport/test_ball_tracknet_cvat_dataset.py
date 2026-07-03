@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from PIL import Image, ImageChops
 
 import threed.racketsport.ball_tracknet_cvat_dataset as dataset_module
 from threed.racketsport.ball_tracknet_cvat_dataset import (
@@ -15,7 +16,13 @@ from threed.racketsport.ball_tracknet_cvat_dataset import (
 )
 
 
-def _reviewed_boxes_payload(*, clip_id: str, frame_count: int, ball_frames: dict[int, tuple[float, float, float, float]]) -> dict[str, object]:
+def _reviewed_boxes_payload(
+    *,
+    clip_id: str,
+    frame_count: int,
+    ball_frames: dict[int, tuple[float, float, float, float]],
+    ball_blur_attrs: dict[int, dict[str, object]] | None = None,
+) -> dict[str, object]:
     frames = []
     for frame_index in range(frame_count):
         boxes = []
@@ -32,6 +39,7 @@ def _reviewed_boxes_payload(*, clip_id: str, frame_count: int, ball_frames: dict
                     "keyframe": True,
                     "occluded": False,
                     "source": "manual",
+                    **(ball_blur_attrs or {}).get(frame_index, {}),
                 }
             )
         frames.append({"frame_index": frame_index, "boxes": boxes})
@@ -74,10 +82,22 @@ def _reviewed_boxes_payload(*, clip_id: str, frame_count: int, ball_frames: dict
     }
 
 
-def _write_reviewed_boxes(root: Path, *, clip_id: str, frame_count: int, ball_frames: dict[int, tuple[float, float, float, float]]) -> None:
+def _write_reviewed_boxes(
+    root: Path,
+    *,
+    clip_id: str,
+    frame_count: int,
+    ball_frames: dict[int, tuple[float, float, float, float]],
+    ball_blur_attrs: dict[int, dict[str, object]] | None = None,
+) -> None:
     clip_dir = root / clip_id
     clip_dir.mkdir(parents=True)
-    payload = _reviewed_boxes_payload(clip_id=clip_id, frame_count=frame_count, ball_frames=ball_frames)
+    payload = _reviewed_boxes_payload(
+        clip_id=clip_id,
+        frame_count=frame_count,
+        ball_frames=ball_frames,
+        ball_blur_attrs=ball_blur_attrs,
+    )
     (clip_dir / "reviewed_boxes.json").write_text(json.dumps(payload), encoding="utf-8")
 
 
@@ -208,6 +228,73 @@ def test_build_ball_tracknet_cvat_dataset_writes_disjoint_manifest_csv_and_markd
     assert "clip_val" in markdown
 
 
+def test_build_ball_tracknet_cvat_dataset_records_blur_manifest_without_changing_tracknet_csv(tmp_path: Path) -> None:
+    cvat_root = tmp_path / "cvat"
+    _write_reviewed_boxes(
+        cvat_root,
+        clip_id="clip_train",
+        frame_count=4,
+        ball_frames={0: (100.0, 200.0, 20.0, 6.0), 2: (120.0, 210.0, 8.0, 8.0)},
+        ball_blur_attrs={
+            0: {
+                "center_convention": "blur_midpoint",
+                "blur_angle_deg": 14.5,
+                "blur_length_px": 20.0,
+                "blur_width_px": 6.0,
+                "blur_label_quality": "clear",
+            },
+            2: {
+                "center_convention": "disk_center",
+                "blur_label_quality": "absent",
+            },
+        },
+    )
+    yolo_manifest = tmp_path / "yolo" / "manifest.json"
+    _write_yolo_manifest(
+        yolo_manifest,
+        [{"clip_id": "clip_train", "frame_index": 0, "split": "train"}],
+    )
+
+    manifest = build_ball_tracknet_cvat_dataset(cvat_root=cvat_root, yolo_manifest=yolo_manifest, out_dir=tmp_path / "out")
+
+    row = manifest["splits"]["train"][0]
+    assert row["blur_annotation_summary"] == {
+        "visible_ball_frame_count": 2,
+        "center_convention_counts": {"blur_midpoint": 1, "disk_center": 1, "unknown": 0},
+        "blur_label_quality_counts": {"absent": 1, "clear": 1, "unknown": 0, "weak": 0},
+        "blur_angle_labeled_count": 1,
+        "blur_length_labeled_count": 1,
+        "blur_width_labeled_count": 1,
+    }
+    assert manifest["blur_annotation_summary"] == row["blur_annotation_summary"]
+    csv_path = Path(row["csv"])
+    with csv_path.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.reader(handle))
+    assert rows[0] == ["Frame", "Visibility", "X", "Y"]
+    assert rows[1:] == [
+        ["0", "1", "110.000", "203.000"],
+        ["1", "0", "0.000", "0.000"],
+        ["2", "1", "124.000", "214.000"],
+        ["3", "0", "0.000", "0.000"],
+    ]
+
+
+def test_build_ball_tracknet_cvat_dataset_rejects_invalid_blur_center_convention(tmp_path: Path) -> None:
+    cvat_root = tmp_path / "cvat"
+    _write_reviewed_boxes(
+        cvat_root,
+        clip_id="clip_train",
+        frame_count=1,
+        ball_frames={0: (100.0, 200.0, 20.0, 6.0)},
+        ball_blur_attrs={0: {"center_convention": "front_edge"}},
+    )
+    yolo_manifest = tmp_path / "yolo" / "manifest.json"
+    _write_yolo_manifest(yolo_manifest, [{"clip_id": "clip_train", "frame_index": 0, "split": "train"}])
+
+    with pytest.raises(ValueError, match="center_convention"):
+        build_ball_tracknet_cvat_dataset(cvat_root=cvat_root, yolo_manifest=yolo_manifest, out_dir=tmp_path / "out")
+
+
 def test_build_ball_tracknet_cvat_dataset_rejects_split_leakage(tmp_path: Path) -> None:
     cvat_root = tmp_path / "cvat"
     _write_reviewed_boxes(cvat_root, clip_id="clip_leak", frame_count=1, ball_frames={0: (1.0, 2.0, 3.0, 4.0)})
@@ -266,6 +353,147 @@ def test_build_ball_tracknet_cvat_dataset_can_materialize_frame_dirs(
     assert row["source_video_path"] == str(video)
     assert calls == [(video, Path(row["frame_dir"]), 1)]
     assert (Path(row["frame_dir"]) / "median.npz").is_file()
+
+
+def test_build_ball_tracknet_cvat_dataset_materializes_train_only_visual_augmentation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cvat_root = tmp_path / "cvat"
+    _write_reviewed_boxes(
+        cvat_root,
+        clip_id="clip_train",
+        frame_count=2,
+        ball_frames={0: (1.0, 2.0, 3.0, 4.0)},
+    )
+    _write_reviewed_boxes(
+        cvat_root,
+        clip_id="clip_val",
+        frame_count=2,
+        ball_frames={1: (5.0, 6.0, 7.0, 8.0)},
+    )
+    yolo_manifest = tmp_path / "yolo" / "manifest.json"
+    _write_yolo_manifest(
+        yolo_manifest,
+        [
+            {"clip_id": "clip_train", "frame_index": 0, "split": "train"},
+            {"clip_id": "clip_val", "frame_index": 1, "split": "val"},
+        ],
+    )
+    train_video = tmp_path / "clip_train.mp4"
+    val_video = tmp_path / "clip_val.mp4"
+    train_video.write_bytes(b"fake train video")
+    val_video.write_bytes(b"fake val video")
+
+    def fake_extract_frames(video_path: Path, frame_dir: Path, frame_count: int) -> None:
+        frame_dir.mkdir(parents=True)
+        for frame in range(frame_count):
+            Image.new("RGB", (5, 5), color=(80 + frame, 96, 112)).save(frame_dir / f"{frame}.png")
+
+    def fake_write_median(frame_dir: Path, frame_count: int) -> None:
+        (frame_dir / "median.npz").write_bytes(b"fake median")
+
+    monkeypatch.setattr(dataset_module, "_extract_frames", fake_extract_frames)
+    monkeypatch.setattr(dataset_module, "_write_median", fake_write_median)
+
+    manifest = build_ball_tracknet_cvat_dataset(
+        cvat_root=cvat_root,
+        yolo_manifest=yolo_manifest,
+        out_dir=tmp_path / "out",
+        materialize_frames=True,
+        video_paths={"clip_train": train_video, "clip_val": val_video},
+        train_augmentation_profile="codec_motion_v1",
+        train_augmentation_repeat=2,
+    )
+
+    assert manifest["status"] == "tracknet_dataset_materialized_train_augmented"
+    assert manifest["train_augmentation"] == {
+        "profile": "codec_motion_v1",
+        "repeat": 2,
+        "applies_to_splits": ["train"],
+        "source_sample_count": 1,
+        "generated_sample_count": 2,
+        "source_sample_types": ["dense_clip"],
+        "label_policy": "CSV labels are copied from reviewed CVAT-derived rows; no synthetic ball labels are generated.",
+        "cache_policy": "train augmentation requires a new empty out_dir so transformed frame caches cannot be stale.",
+    }
+    assert [row["training_sample_type"] for row in manifest["splits"]["train"]] == [
+        "dense_clip",
+        "visual_augmented_dense_clip",
+        "visual_augmented_dense_clip",
+    ]
+    assert [row["training_sample_type"] for row in manifest["splits"]["val"]] == ["dense_clip"]
+    source_csv = Path(manifest["splits"]["train"][0]["csv"]).read_text(encoding="utf-8")
+    augmented_csv = Path(manifest["splits"]["train"][1]["csv"]).read_text(encoding="utf-8")
+    assert augmented_csv == source_csv
+    assert Path(manifest["splits"]["train"][1]["frame_dir"], "0.png").is_file()
+    assert all("augmentation_profile" not in row for row in manifest["splits"]["val"])
+    assert manifest["label_counts"] == {
+        "clip_count": 4,
+        "frame_count": 8,
+        "reviewed_hidden_frame_count": 4,
+        "reviewed_visible_ball_frame_count": 4,
+    }
+    next_command = manifest["next_gpu_commands"][0]
+    assert "--train-augmentation-profile codec_motion_v1" in next_command
+    assert "--train-augmentation-repeat 2" in next_command
+
+
+def test_build_ball_tracknet_cvat_dataset_rejects_visual_augmentation_without_materialized_frames(
+    tmp_path: Path,
+) -> None:
+    cvat_root = tmp_path / "cvat"
+    _write_reviewed_boxes(cvat_root, clip_id="clip_train", frame_count=1, ball_frames={})
+    yolo_manifest = tmp_path / "yolo" / "manifest.json"
+    _write_yolo_manifest(yolo_manifest, [{"clip_id": "clip_train", "frame_index": 0, "split": "train"}])
+
+    with pytest.raises(ValueError, match="train augmentation requires --materialize-frames"):
+        build_ball_tracknet_cvat_dataset(
+            cvat_root=cvat_root,
+            yolo_manifest=yolo_manifest,
+            out_dir=tmp_path / "out",
+            train_augmentation_profile="codec_motion_v1",
+        )
+
+
+def test_build_ball_tracknet_cvat_dataset_rejects_existing_out_dir_for_train_augmentation(tmp_path: Path) -> None:
+    cvat_root = tmp_path / "cvat"
+    _write_reviewed_boxes(cvat_root, clip_id="clip_train", frame_count=1, ball_frames={})
+    yolo_manifest = tmp_path / "yolo" / "manifest.json"
+    _write_yolo_manifest(yolo_manifest, [{"clip_id": "clip_train", "frame_index": 0, "split": "train"}])
+    video = tmp_path / "clip_train.mp4"
+    video.write_bytes(b"fake video")
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    (out_dir / "stale.png").write_bytes(b"old cache")
+
+    with pytest.raises(ValueError, match="new empty out_dir"):
+        build_ball_tracknet_cvat_dataset(
+            cvat_root=cvat_root,
+            yolo_manifest=yolo_manifest,
+            out_dir=out_dir,
+            materialize_frames=True,
+            video_paths={"clip_train": video},
+            train_augmentation_profile="codec_motion_v1",
+        )
+
+
+def test_augment_frame_dir_writes_changed_pngs_and_median(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    for frame in range(2):
+        Image.new("RGB", (6, 6), color=(90 + frame, 120, 150)).save(source / f"{frame}.png")
+    target = tmp_path / "target"
+
+    recipe = dataset_module._augmentation_recipe("codec_motion_v1", repeat_index=1)
+    dataset_module._augment_frame_dir(source, target, frame_count=2, recipe=recipe)
+
+    assert (target / "0.png").is_file()
+    assert (target / "1.png").is_file()
+    assert (target / "median.npz").is_file()
+    original = Image.open(source / "0.png").convert("RGB")
+    augmented = Image.open(target / "0.png").convert("RGB")
+    assert ImageChops.difference(original, augmented).getbbox() is not None
 
 
 def test_extract_frames_disables_ffmpeg_stdin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

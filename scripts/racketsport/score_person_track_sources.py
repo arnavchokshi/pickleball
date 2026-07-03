@@ -51,6 +51,15 @@ def main() -> int:
                     raise ValueError("artifact did not parse as Tracks")
                 source_id = derive_track_source_id(path, clip_ids=clip_ids)
                 bbox_scale = _read_bbox_scale(path, clip_id=clip_id, clip_resolutions=clip_resolutions)
+                # Gate v2's outside_image_false_positives bucket needs the image bounds in
+                # the *same* pixel space `bbox_scale_x`/`bbox_scale_y` scales prediction boxes
+                # into -- i.e. the clip's native manifest resolution, the same space ground
+                # truth boxes are in (see review finding F4, 2026-07-02). Without this, a
+                # prediction box centered outside the frame gets misclassified as
+                # true_spectator_or_background instead of outside_image, sending debugging
+                # toward the wrong failure mode.
+                resolution = clip_resolutions.get(clip_id)
+                image_width, image_height = resolution if resolution is not None else (None, None)
                 row = score_tracks_against_person_ground_truth(
                     ground_truth=ground_truth[clip_id],
                     tracks=parsed,
@@ -60,6 +69,8 @@ def main() -> int:
                     expected_players=args.expected_players,
                     bbox_scale_x=bbox_scale["bbox_scale_x"],
                     bbox_scale_y=bbox_scale["bbox_scale_y"],
+                    image_width=image_width,
+                    image_height=image_height,
                 )
                 row["track_source_id"] = source_id
                 row["bbox_scale_source"] = bbox_scale["source"]
@@ -178,6 +189,15 @@ def _read_bbox_scale(
             "bbox_scale_x": 1.0 / bbox_scale_x,
             "bbox_scale_y": 1.0 / bbox_scale_y,
             "source": "metrics_inverse_bbox_scale",
+        }
+
+    score_bbox_scale_x = _number(counts.get("score_bbox_scale_x"))
+    score_bbox_scale_y = _number(counts.get("score_bbox_scale_y"))
+    if score_bbox_scale_x and score_bbox_scale_y:
+        return {
+            "bbox_scale_x": score_bbox_scale_x,
+            "bbox_scale_y": score_bbox_scale_y,
+            "source": "metrics_score_bbox_scale",
         }
 
     resolution = clip_resolutions.get(clip_id)

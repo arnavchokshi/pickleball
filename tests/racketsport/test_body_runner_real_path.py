@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 from threed.racketsport.orchestrator import BodyStageRunner, StageRun, run_pipeline
-from threed.racketsport.pose_fast import PoseCropResult, RTMW3D_WHOLEBODY_133_JOINT_NAMES
 from threed.racketsport.schemas import ContactWindows, Skeleton3D, SmplMotion, validate_artifact_file
 
 
@@ -112,10 +111,13 @@ def _write_inputs(inputs_dir: Path, *, frame_indexes: tuple[int, ...] = (0,)) ->
         ),
         encoding="utf-8",
     )
+    np = pytest.importorskip("numpy")
+    cv2 = pytest.importorskip("cv2")
     frames = inputs_dir / "body_frames"
     frames.mkdir()
+    frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
     for frame_idx in frame_indexes:
-        (frames / f"frame_{frame_idx:06d}.jpg").write_bytes(b"not decoded by fake runtime")
+        assert cv2.imwrite(str(frames / f"frame_{frame_idx:06d}.jpg"), frame)
 
 
 def _write_multi_player_inputs(inputs_dir: Path) -> None:
@@ -138,9 +140,12 @@ def _write_multi_player_inputs(inputs_dir: Path) -> None:
         ),
         encoding="utf-8",
     )
+    np = pytest.importorskip("numpy")
+    cv2 = pytest.importorskip("cv2")
     frames = inputs_dir / "body_frames"
     frames.mkdir()
-    (frames / "frame_000000.jpg").write_bytes(b"not decoded by fake runtime")
+    frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+    assert cv2.imwrite(str(frames / "frame_000000.jpg"), frame)
 
 
 def _write_scaled_body_frame_inputs(inputs_dir: Path) -> None:
@@ -324,26 +329,26 @@ def _write_deep_mesh_frame_compute_plan(
     )
 
 
-def _write_lane_a_contact_skeleton(run_dir: Path) -> None:
-    joint_names = ["pelvis", "left_wrist", "right_wrist"]
+def _write_sam3d_contact_skeleton(run_dir: Path) -> None:
+    joint_names = [f"sam3dbody_joint_{idx:03d}" for idx in range(70)]
     frames = [
         {
             "frame_idx": 0,
             "t": 0.0,
-            "joints_world": [[0.0, 0.0, 1.0], [0.0, 0.0, 1.2], [0.0, 0.0, 1.2]],
-            "joint_conf": [0.9, 0.9, 0.9],
+            "joints_world": _sam3d_fixture_joints(left_wrist_x=0.0, right_wrist_x=0.0),
+            "joint_conf": [0.9] * 70,
         },
         {
             "frame_idx": 1,
             "t": 1.0 / 30.0,
-            "joints_world": [[0.0, 0.0, 1.0], [0.5, 0.0, 1.2], [0.0, 0.0, 1.2]],
-            "joint_conf": [0.9, 0.9, 0.9],
+            "joints_world": _sam3d_fixture_joints(left_wrist_x=0.5, right_wrist_x=0.0),
+            "joint_conf": [0.9] * 70,
         },
         {
             "frame_idx": 2,
             "t": 2.0 / 30.0,
-            "joints_world": [[0.0, 0.0, 1.0], [0.55, 0.0, 1.2], [0.0, 0.0, 1.2]],
-            "joint_conf": [0.9, 0.9, 0.9],
+            "joints_world": _sam3d_fixture_joints(left_wrist_x=0.55, right_wrist_x=0.0),
+            "joint_conf": [0.9] * 70,
         },
     ]
     _write_json(
@@ -353,13 +358,35 @@ def _write_lane_a_contact_skeleton(run_dir: Path) -> None:
             "artifact_type": "racketsport_skeleton3d",
             "fps": 30.0,
             "world_frame": "court_Z0",
-            "source_model": "rtmw3d_x",
+            "source_model": "sam3d_body_joints",
             "joint_names": joint_names,
             "preview_only": False,
             "players": [{"id": 7, "frames": frames}],
-            "provenance": {"lane": "A"},
+            "provenance": {
+                "lane": "BODY_TIER2",
+                "source": "sam3d_body_joints",
+                "model_family": "sam3dbody_world_joints",
+                "protected_eval_labels_used": False,
+            },
         },
     )
+
+
+def _sam3d_fixture_joints(*, left_wrist_x: float, right_wrist_x: float) -> list[list[float]]:
+    joints = [[0.0, 0.0, 1.0] for _idx in range(70)]
+    joints[5] = [-0.2, 0.0, 1.4]
+    joints[6] = [0.2, 0.0, 1.4]
+    joints[7] = [-0.35, 0.0, 1.2]
+    joints[8] = [0.35, 0.0, 1.2]
+    joints[9] = [-0.15, -0.1, 1.0]
+    joints[10] = [0.15, -0.1, 1.0]
+    joints[11] = [-0.12, -0.1, 0.5]
+    joints[12] = [0.12, -0.1, 0.5]
+    joints[13] = [-0.1, -0.1, 0.05]
+    joints[14] = [0.1, -0.1, 0.05]
+    joints[41] = [right_wrist_x, 0.0, 1.2]
+    joints[62] = [left_wrist_x, 0.0, 1.2]
+    return joints
 
 
 def _write_contact_ball_inflections(inputs: Path) -> None:
@@ -424,12 +451,18 @@ def _write_stale_mesh_wrist_velocity_peaks(inputs: Path) -> None:
 
 
 class FakeFastSamRuntime:
-    def __init__(self, *, bbox_as_numpy: bool = False, joint_count: int = 17) -> None:
+    def __init__(self, *, bbox_as_numpy: bool = False, joint_count: int = 70) -> None:
         self.calls: list[dict[str, object]] = []
         self.bbox_as_numpy = bbox_as_numpy
         self.joint_count = joint_count
 
-    def process_frame(self, image_path: Path, *, bboxes_xyxy: list[list[float]]) -> list[dict[str, object]]:
+    def process_frame(
+        self,
+        image_path: Path,
+        *,
+        bboxes_xyxy: list[list[float]],
+        **_kwargs: object,
+    ) -> list[dict[str, object]]:
         bbox: object = bboxes_xyxy[0]
         if self.bbox_as_numpy:
             np = pytest.importorskip("numpy")
@@ -460,19 +493,29 @@ class FakeBatchFastSamRuntime(FakeFastSamRuntime):
         super().__init__()
         self.batch_calls: list[dict[str, object]] = []
 
-    def process_frame(self, image_path: Path, *, bboxes_xyxy: list[list[float]]) -> list[dict[str, object]]:
+    def process_frame(
+        self,
+        image_path: Path,
+        *,
+        bboxes_xyxy: list[list[float]],
+        **_kwargs: object,
+    ) -> list[dict[str, object]]:
         raise AssertionError("batch-capable runtime should not use process_frame")
 
-    def process_frame_batches(self, requests: list[tuple[Path, list[list[float]]]]) -> list[list[dict[str, object]]]:
+    def process_frame_batches(self, requests: list[dict[str, object]], **_kwargs: object) -> list[list[dict[str, object]]]:
         self.batch_calls.append(
             {
-                "image_paths": [str(image_path) for image_path, _bboxes in requests],
-                "bboxes_xyxy": [bboxes for _image_path, bboxes in requests],
+                "image_paths": [str(request["image_path"]) for request in requests],
+                "bboxes_xyxy": [request["bboxes"] for request in requests],
             }
         )
         return [
-            FakeFastSamRuntime.process_frame(self, image_path, bboxes_xyxy=bboxes)
-            for image_path, bboxes in requests
+            FakeFastSamRuntime.process_frame(
+                self,
+                Path(str(request["image_path"])),
+                bboxes_xyxy=request["bboxes"],  # type: ignore[arg-type]
+            )
+            for request in requests
         ]
 
 
@@ -480,32 +523,15 @@ class FakeMissingFastSamRuntime:
     def __init__(self) -> None:
         self.calls: list[dict[str, object]] = []
 
-    def process_frame(self, image_path: Path, *, bboxes_xyxy: list[list[float]]) -> list[dict[str, object]]:
+    def process_frame(
+        self,
+        image_path: Path,
+        *,
+        bboxes_xyxy: list[list[float]],
+        **_kwargs: object,
+    ) -> list[dict[str, object]]:
         self.calls.append({"image_path": str(image_path), "bboxes_xyxy": bboxes_xyxy})
         return []
-
-
-class FakeBodyPoseFallbackRuntime:
-    def __init__(self) -> None:
-        self.calls: list[dict[str, object]] = []
-
-    def infer_frame(self, image_path: Path, requests: list[object]) -> list[PoseCropResult]:
-        self.calls.append({"image_path": image_path, "requests": requests})
-        results: list[PoseCropResult] = []
-        for request in requests:
-            joints = [[0.0, 0.0, 1.0] for _name in RTMW3D_WHOLEBODY_133_JOINT_NAMES]
-            joints[9] = [0.8, 0.0, 1.4]
-            joints[10] = [-0.7, 0.0, 1.45]
-            joints[19] = [0.0, 0.0, 0.0]
-            results.append(
-                PoseCropResult(
-                    frame_idx=request.frame_idx,
-                    player_id=request.player_id,
-                    joints_m=joints,
-                    joint_conf=[0.88] * len(RTMW3D_WHOLEBODY_133_JOINT_NAMES),
-                )
-            )
-        return results
 
 
 class FakePoseStageRunner:
@@ -606,12 +632,14 @@ def test_body_runner_verifies_manifest_uses_yolo26m_and_writes_contract_artifact
     assert min(joint[2] for joint in smpl.players[0].frames[0].joints_world) >= 0.0
     assert len(smpl.players[0].frames[0].mesh_vertices_world) == 3
     assert min(vertex[2] for vertex in smpl.players[0].frames[0].mesh_vertices_world) >= 0.0
-    assert skeleton.preview_only is True
+    assert skeleton.preview_only is False
+    assert skeleton.source_model == "sam3d_body_joints"
+    assert len(skeleton.joint_names) == 70
     body_joint_quality = json.loads((run_dir / "body_joint_quality.json").read_text(encoding="utf-8"))
     assert body_joint_quality["artifact_type"] == "racketsport_body_joint_quality"
     assert body_joint_quality["status"] == "quality_checked_needs_accuracy_gate"
     assert body_joint_quality["summary"]["joint_frame_count"] == 1
-    assert body_joint_quality["summary"]["joint_count_min"] == 17
+    assert body_joint_quality["summary"]["joint_count_min"] == 70
 
 
 def test_body_runner_scales_track_bboxes_to_materialized_body_frame_size(tmp_path: Path) -> None:
@@ -675,13 +703,13 @@ def test_body_runner_uses_adaptive_frame_plan_for_deep_mesh_work(tmp_path: Path)
     assert [Path(call["image_path"]).name for call in runtime.calls] == ["frame_000001.jpg"]
 
 
-def test_body_runner_derives_lane_b_plan_from_lane_a_wrist_peaks(tmp_path: Path) -> None:
+def test_body_runner_derives_body_plan_from_sam3d_wrist_peaks(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs"
     run_dir = tmp_path / "run"
     manifest = _manifest(tmp_path / "models")
     _write_inputs(inputs, frame_indexes=(0, 1, 2))
     run_dir.mkdir()
-    _write_lane_a_contact_skeleton(run_dir)
+    _write_sam3d_contact_skeleton(run_dir)
     _write_contact_ball_inflections(inputs)
     runtime = FakeFastSamRuntime()
 
@@ -702,7 +730,7 @@ def test_body_runner_derives_lane_b_plan_from_lane_a_wrist_peaks(tmp_path: Path)
     body_stage = _stage(summary, "body")
     assert body_stage["stage"] == "body"
     assert body_stage["status"] == "ran"
-    assert body_stage["metrics"]["lane_b_frame_plan_source"] == "lane_a_wrist_velocity_peaks"
+    assert body_stage["metrics"]["lane_b_frame_plan_source"] == "sam3d_wrist_velocity_peaks"
     assert body_stage["metrics"]["lane_b_contact_event_count"] == 1
     assert [Path(call["image_path"]).name for call in runtime.calls] == [
         "frame_000000.jpg",
@@ -719,8 +747,9 @@ def test_body_runner_derives_lane_b_plan_from_lane_a_wrist_peaks(tmp_path: Path)
     joint_quality = json.loads((run_dir / "body_joint_quality.json").read_text(encoding="utf-8"))
     skeleton = validate_artifact_file("skeleton3d", run_dir / "skeleton3d.json")
 
-    assert wrist_peaks["source"] == "lane_a_skeleton3d_world_joints"
-    assert wrist_peaks["source_provenance"]["lane"] == "A"
+    assert wrist_peaks["source"] == "sam3d_body_skeleton3d_world_joints"
+    assert wrist_peaks["source_provenance"]["source_model"] == "sam3d_body_joints"
+    assert wrist_peaks["source_provenance"]["joint_count"] == 70
     assert wrist_peaks["summary"]["peak_count"] == 1
     assert isinstance(contact_windows, ContactWindows)
     assert contact_windows.events[0].player_id == 7
@@ -735,8 +764,8 @@ def test_body_runner_derives_lane_b_plan_from_lane_a_wrist_peaks(tmp_path: Path)
     assert full_clip_gate["contact_mesh_coverage"] == pytest.approx(1.0)
     assert full_clip_gate["latency_seconds_per_video_minute"] is not None
     assert full_clip_gate["summary"]["scheduled_contact_count"] == 3
-    assert full_clip_gate["summary"]["contact_mesh_frame_count"] == 0
-    assert full_clip_gate["summary"]["mesh_unavailable_contact_count"] == 3
+    assert full_clip_gate["summary"]["contact_mesh_frame_count"] == 3
+    assert full_clip_gate["summary"]["mesh_unavailable_contact_count"] == 0
     assert full_clip_gate["summary"]["contact_mesh_accounted_count"] == 3
     assert full_clip_gate["paths"]["contact_splice"] == str(run_dir / "contact_splice.json")
     assert mesh_readiness["body_full_clip_gate_path"] == str(run_dir / "body_full_clip_gate.json")
@@ -753,7 +782,7 @@ def test_body_runner_regenerates_non_lane_a_input_wrist_peaks(tmp_path: Path) ->
     _write_inputs(inputs, frame_indexes=(0, 1, 2))
     _write_stale_mesh_wrist_velocity_peaks(inputs)
     run_dir.mkdir()
-    _write_lane_a_contact_skeleton(run_dir)
+    _write_sam3d_contact_skeleton(run_dir)
     _write_contact_ball_inflections(inputs)
     runtime = FakeFastSamRuntime()
 
@@ -776,11 +805,12 @@ def test_body_runner_regenerates_non_lane_a_input_wrist_peaks(tmp_path: Path) ->
     contact_windows = validate_artifact_file("contact_windows", run_dir / "contact_windows.json")
 
     assert body_stage["status"] == "ran"
-    assert body_stage["metrics"]["lane_b_frame_plan_source"] == "lane_a_wrist_velocity_peaks"
+    assert body_stage["metrics"]["lane_b_frame_plan_source"] == "sam3d_wrist_velocity_peaks"
     assert "wrist_velocity_peaks.json" in body_stage["metrics"]["lane_b_frame_plan_generated_artifacts"]
-    assert wrist_peaks["source"] == "lane_a_skeleton3d_world_joints"
+    assert wrist_peaks["source"] == "sam3d_body_skeleton3d_world_joints"
     assert wrist_peaks["source_path"] == str(run_dir / "skeleton3d.json")
-    assert wrist_peaks["source_provenance"]["lane"] == "A"
+    assert wrist_peaks["source_provenance"]["source_model"] == "sam3d_body_joints"
+    assert wrist_peaks["source_provenance"]["joint_count"] == 70
     assert wrist_peaks["summary"]["peak_count"] == 1
     assert isinstance(contact_windows, ContactWindows)
     assert contact_windows.events[0].player_id == 7
@@ -791,7 +821,7 @@ def test_body_runner_regenerates_non_lane_a_input_wrist_peaks(tmp_path: Path) ->
     ]
 
 
-def test_body_runner_preserves_existing_lane_a_skeleton3d(tmp_path: Path) -> None:
+def test_body_runner_replaces_existing_legacy_skeleton3d_with_sam3d_output(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs"
     run_dir = tmp_path / "run"
     manifest = _manifest(tmp_path / "models")
@@ -846,7 +876,7 @@ def test_body_runner_preserves_existing_lane_a_skeleton3d(tmp_path: Path) -> Non
     skeleton = validate_artifact_file("skeleton3d", run_dir / "skeleton3d.json")
     assert isinstance(skeleton, Skeleton3D)
     assert skeleton.preview_only is False
-    assert skeleton.source_model == "rtmw3d_x"
+    assert skeleton.source_model == "sam3d_body_joints"
     execution = json.loads((run_dir / "body_compute_execution.json").read_text(encoding="utf-8"))
     assert execution["artifact_type"] == "racketsport_body_compute_execution"
     assert execution["mode"] == "adaptive_frame_compute_plan"
@@ -862,26 +892,25 @@ def test_body_runner_preserves_existing_lane_a_skeleton3d(tmp_path: Path) -> Non
     skeleton_payload = json.loads((run_dir / "skeleton3d.json").read_text(encoding="utf-8"))
     body_mesh = json.loads((run_dir / "body_mesh.json").read_text(encoding="utf-8"))
     contact_splice = json.loads((run_dir / "contact_splice.json").read_text(encoding="utf-8"))
-    contact_frame = skeleton_payload["players"][0]["frames"][1]
+    contact_frame = skeleton_payload["players"][0]["frames"][0]
     body_mesh_frame = body_mesh["players"][0]["frames"][0]
     assert body_mesh["joint_names"][41] == "sam3dbody_joint_041"
-    assert contact_frame["joints_world"][1] == pytest.approx(body_mesh_frame["joints_world"][62])
-    assert contact_frame["joints_world"][2] == pytest.approx(body_mesh_frame["joints_world"][41])
+    assert contact_frame["joints_world"][62] == pytest.approx(body_mesh_frame["joints_world"][62])
+    assert contact_frame["joints_world"][41] == pytest.approx(body_mesh_frame["joints_world"][41])
     assert contact_splice["summary"]["spliced_contact_count"] == 1
     assert contact_splice["summary"]["overridden_joint_count"] == 2
     assert skeleton_payload["provenance"]["contact_splice"]["mesh_source"] == "body_mesh.json"
 
 
-def test_body_runner_uses_rtmw3d_pose_fallback_when_contact_mesh_is_missing(tmp_path: Path) -> None:
+def test_body_runner_does_not_backfill_missing_contact_mesh_with_pose_fallback(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs"
     run_dir = tmp_path / "run"
     manifest = _manifest(tmp_path / "models")
     _write_inputs(inputs, frame_indexes=(0,))
     run_dir.mkdir()
     _write_deep_mesh_frame_compute_plan(run_dir, frame_idx=0)
-    _write_lane_a_contact_skeleton(run_dir)
+    _write_sam3d_contact_skeleton(run_dir)
     runtime = FakeMissingFastSamRuntime()
-    fallback_runtime = FakeBodyPoseFallbackRuntime()
 
     summary = run_pipeline(
         clip="clip_001",
@@ -898,36 +927,31 @@ def test_body_runner_uses_rtmw3d_pose_fallback_when_contact_mesh_is_missing(tmp_
                 runtime=runtime,
                 detector_name="",
                 fov_name="",
-                fallback_pose_runtime=fallback_runtime,
             ),
         },
     )
 
     body_stage = _stage(summary, "body")
-    assert body_stage["status"] == "ran"
+    assert body_stage["status"] == "ran", body_stage
     assert body_stage["metrics"]["body_mesh_frame_count"] == 0
-    assert body_stage["metrics"]["body_pose_fallback_frame_count"] == 1
+    assert body_stage["metrics"]["sam3d_missing_output_count"] == 1
     assert body_stage["metrics"]["contact_splice_mesh_unavailable_count"] == 1
-    assert body_stage["metrics"]["contact_splice_fallback_spliced_count"] == 1
+    assert body_stage["metrics"]["contact_splice_fallback_spliced_count"] == 0
     assert len(runtime.calls) == 1
-    assert len(fallback_runtime.calls) == 1
-    assert [request.player_id for request in fallback_runtime.calls[0]["requests"]] == [7]
 
     body_mesh = json.loads((run_dir / "body_mesh.json").read_text(encoding="utf-8"))
-    fallback = validate_artifact_file("skeleton3d", run_dir / "body_pose_fallback.json")
     skeleton_payload = json.loads((run_dir / "skeleton3d.json").read_text(encoding="utf-8"))
     contact_splice = json.loads((run_dir / "contact_splice.json").read_text(encoding="utf-8"))
 
     assert body_mesh["summary"]["mesh_frame_count"] == 0
-    assert isinstance(fallback, Skeleton3D)
-    assert fallback.source_model == "rtmw3d_x_body_fallback"
-    assert contact_splice["events"][0]["status"] == "mesh_unavailable_pose_fallback"
+    assert not (run_dir / "body_pose_fallback.json").exists()
+    assert contact_splice["events"][0]["status"] == "mesh_unavailable"
     assert contact_splice["events"][0]["mesh_unavailable"] is True
     contact_frame = skeleton_payload["players"][0]["frames"][0]
-    assert contact_frame["joint_conf"][1] == pytest.approx(0.88)
+    assert contact_frame["joint_conf"][62] == pytest.approx(0.9)
 
 
-def test_body_runner_uses_rtmw3d_pose_fallback_when_fast_sam_runtime_is_unavailable(
+def test_body_runner_leaves_missing_outputs_when_fast_sam_runtime_is_unavailable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     inputs = tmp_path / "inputs"
@@ -938,8 +962,8 @@ def test_body_runner_uses_rtmw3d_pose_fallback_when_fast_sam_runtime_is_unavaila
     run_dir.mkdir()
     fast_sam_repo.mkdir()
     _write_deep_mesh_frame_compute_plan(run_dir, frame_idx=0)
-    _write_lane_a_contact_skeleton(run_dir)
-    fallback_runtime = FakeBodyPoseFallbackRuntime()
+    _write_sam3d_contact_skeleton(run_dir)
+    monkeypatch.delenv("FAST_SAM_PYTHON", raising=False)
 
     class BrokenFastSamRuntime:
         def __init__(self, **_kwargs: object) -> None:
@@ -962,28 +986,24 @@ def test_body_runner_uses_rtmw3d_pose_fallback_when_fast_sam_runtime_is_unavaila
                 fast_sam_repo=fast_sam_repo,
                 detector_name="",
                 fov_name="",
-                fallback_pose_runtime=fallback_runtime,
             ),
         },
     )
 
     body_stage = _stage(summary, "body")
-    assert body_stage["status"] == "ran"
+    assert body_stage["status"] == "ran", body_stage
     assert body_stage["metrics"]["fast_sam_runtime_unavailable"] is True
     assert body_stage["metrics"]["body_mesh_frame_count"] == 0
-    assert body_stage["metrics"]["body_pose_fallback_frame_count"] == 1
+    assert body_stage["metrics"]["sam3d_missing_output_count"] == 1
     assert body_stage["metrics"]["contact_splice_mesh_unavailable_count"] == 1
     assert any("Fast SAM-3D-Body runtime unavailable" in note for note in body_stage["notes"])
-    assert len(fallback_runtime.calls) == 1
 
     body_mesh = json.loads((run_dir / "body_mesh.json").read_text(encoding="utf-8"))
-    fallback = validate_artifact_file("skeleton3d", run_dir / "body_pose_fallback.json")
     contact_splice = json.loads((run_dir / "contact_splice.json").read_text(encoding="utf-8"))
 
     assert body_mesh["summary"]["mesh_frame_count"] == 0
-    assert isinstance(fallback, Skeleton3D)
-    assert fallback.source_model == "rtmw3d_x_body_fallback"
-    assert contact_splice["events"][0]["status"] == "mesh_unavailable_pose_fallback"
+    assert not (run_dir / "body_pose_fallback.json").exists()
+    assert contact_splice["events"][0]["status"] == "mesh_unavailable"
     assert contact_splice["events"][0]["mesh_unavailable"] is True
 
 
@@ -1038,7 +1058,13 @@ def test_body_runner_uses_fast_sam_subprocess_runtime_when_python_env_is_set(
             runtime_inits.append(kwargs)
             self.calls: list[dict[str, object]] = []
 
-        def process_frame(self, image_path: Path, *, bboxes_xyxy: list[list[float]]) -> list[dict[str, object]]:
+        def process_frame(
+            self,
+            image_path: Path,
+            *,
+            bboxes_xyxy: list[list[float]],
+            **_kwargs: object,
+        ) -> list[dict[str, object]]:
             self.calls.append({"image_path": str(image_path), "bboxes_xyxy": bboxes_xyxy})
             return [
                 {
@@ -1206,5 +1232,5 @@ def test_body_runner_fails_loudly_on_detector_sha_mismatch(tmp_path: Path) -> No
     execution = json.loads((run_dir / "body_compute_execution.json").read_text(encoding="utf-8"))
     assert execution["artifact_type"] == "racketsport_body_compute_execution"
     assert execution["mode"] == "adaptive_frame_compute_plan"
-    assert execution["summary"]["scheduled_frame_count"] == 1
+    assert execution["summary"]["scheduled_frame_count"] == 0
     assert not (run_dir / "smpl_motion.json").exists()

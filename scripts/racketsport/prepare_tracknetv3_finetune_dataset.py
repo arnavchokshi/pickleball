@@ -10,6 +10,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from threed.racketsport.eval_guard import assert_not_training_on_eval_clip  # noqa: E402
+
 
 DEFAULT_SPLITS = {
     "train": (
@@ -121,6 +127,13 @@ def build_tracknetv3_dataset(
     if splits is None:
         splits = DEFAULT_SPLITS
     _validate_disjoint_splits(splits)
+    # Eval-clip integrity gate (fail closed): every split built here is written
+    # straight into the TrackNetV3 fine-tune dataset (train rows feed gradient
+    # updates; "val"/"test" rows drive checkpoint selection), so all of them
+    # count as training-input creation. No protected eval clip may appear in
+    # any split, including DEFAULT_SPLITS -- see threed/racketsport/eval_guard.py.
+    for clips in splits.values():
+        assert_not_training_on_eval_clip(clips, allow_internal_val=False)
     if overwrite and out.exists():
         _validate_safe_overwrite_path(out)
         shutil.rmtree(out)

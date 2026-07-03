@@ -11,7 +11,7 @@ variants. The CPU-only serving readiness report is generated with:
 
 The report maps `models/MANIFEST.json` entries into two serving tiers:
 
-- `offline_deep`: server H100 deep-tier components for accurate body mesh,
+- `offline_deep`: server GPU deep-tier components for accurate body mesh,
   ball/racket, and physics runtime readiness.
 - `live_light`: server fallback/light-tier components for preview-path serving
   readiness. On-device Apple Vision/Core ML assets remain outside

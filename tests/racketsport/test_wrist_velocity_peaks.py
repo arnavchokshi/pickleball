@@ -54,7 +54,9 @@ def test_wrist_velocity_builder_detects_semantic_wrist_speed_peak() -> None:
     assert artifact["peaks"][0]["time_s"] == 0.05
     assert artifact["peaks"][0]["player_id"] == 7
     assert artifact["peaks"][0]["wrist_side"] == "left"
+    assert artifact["peaks"][0]["source"] == "smoothed_wrist_speed_world_joints"
     assert artifact["peaks"][0]["speed_mps"] >= 4.0
+    assert artifact["summary"]["speed_smoothing_window_frames"] == 3
 
 
 def test_wrist_velocity_builder_blocks_when_wrist_joint_mapping_is_missing() -> None:

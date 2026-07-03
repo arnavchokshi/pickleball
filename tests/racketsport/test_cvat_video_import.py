@@ -88,6 +88,40 @@ def _write_cvat_video_zip_with_ball_ellipse(path: Path) -> None:
         archive.writestr("annotations.xml", xml)
 
 
+def _write_cvat_video_zip_with_ball_blur_attributes(path: Path, *, center_convention: str = "blur_midpoint") -> None:
+    xml = f"""<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <id>44</id>
+      <name>blur task</name>
+      <size>1</size>
+      <mode>interpolation</mode>
+      <start_frame>0</start_frame>
+      <stop_frame>0</stop_frame>
+      <labels>
+        <label><name>ball</name></label>
+      </labels>
+      <original_size><width>640</width><height>360</height></original_size>
+      <source>blur_clip.mp4</source>
+    </task>
+  </meta>
+  <track id="4" label="ball" source="manual">
+    <ellipse frame="0" keyframe="1" outside="0" occluded="0" cx="300" cy="150" rx="12" ry="3" z_order="0">
+      <attribute name="center_convention">{center_convention}</attribute>
+      <attribute name="blur_angle_deg">22.5</attribute>
+      <attribute name="blur_length_px">24.0</attribute>
+      <attribute name="blur_width_px">6.0</attribute>
+      <attribute name="blur_label_quality">clear</attribute>
+    </ellipse>
+  </track>
+</annotations>
+"""
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("annotations.xml", xml)
+
+
 def test_import_cvat_video_zip_preserves_player_paddle_and_ball_visible_boxes(tmp_path: Path) -> None:
     zip_path = tmp_path / "annotations_cvat_video.zip"
     _write_cvat_video_zip(zip_path)
@@ -131,6 +165,29 @@ def test_import_cvat_video_zip_converts_ball_ellipses_to_boxes(tmp_path: Path) -
     assert ball_boxes[0].bbox_xyxy == pytest.approx((294.0, 146.0, 306.0, 154.0))
     assert ball_boxes[0].bbox_xywh == pytest.approx((294.0, 146.0, 12.0, 8.0))
     assert person_gt.summary.valid_label_count == 1
+
+
+def test_import_cvat_video_zip_preserves_ball_blur_attributes(tmp_path: Path) -> None:
+    zip_path = tmp_path / "annotations_cvat_video_blur.zip"
+    _write_cvat_video_zip_with_ball_blur_attributes(zip_path)
+
+    annotations, _ = import_cvat_video_zip(zip_path, clip_id="clip_blur", fps=30)
+
+    ball_box = annotations.frames[0].boxes[0]
+    assert ball_box.label == "ball"
+    assert ball_box.center_convention == "blur_midpoint"
+    assert ball_box.blur_angle_deg == pytest.approx(22.5)
+    assert ball_box.blur_length_px == pytest.approx(24.0)
+    assert ball_box.blur_width_px == pytest.approx(6.0)
+    assert ball_box.blur_label_quality == "clear"
+
+
+def test_import_cvat_video_zip_rejects_invalid_ball_blur_center_convention(tmp_path: Path) -> None:
+    zip_path = tmp_path / "annotations_cvat_video_bad_blur.zip"
+    _write_cvat_video_zip_with_ball_blur_attributes(zip_path, center_convention="front_edge")
+
+    with pytest.raises(ValueError, match="center_convention"):
+        import_cvat_video_zip(zip_path, clip_id="clip_bad_blur", fps=30)
 
 
 def test_import_cvat_video_zip_respects_max_frame_index(tmp_path: Path) -> None:

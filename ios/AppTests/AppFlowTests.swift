@@ -14,4 +14,28 @@ final class AppFlowTests: XCTestCase {
         flow.openCamera()
         XCTAssertEqual(flow.screen, .camera)
     }
+
+    @MainActor
+    func testOpenWorldViewerNavigatesFromHomeAndReturnHomeNavigatesBack() {
+        let flow = PickleballAppFlow()
+        flow.finishSplash()
+
+        flow.openWorldViewer()
+        XCTAssertEqual(flow.screen, .worldViewer)
+
+        flow.returnHome()
+        XCTAssertEqual(flow.screen, .home)
+    }
+
+    @MainActor
+    func testOpenRealityReplayNavigatesFromHomeAndReturnHomeNavigatesBack() {
+        let flow = PickleballAppFlow()
+        flow.finishSplash()
+
+        flow.openRealityReplay()
+        XCTAssertEqual(flow.screen, .realityReplay)
+
+        flow.returnHome()
+        XCTAssertEqual(flow.screen, .home)
+    }
 }

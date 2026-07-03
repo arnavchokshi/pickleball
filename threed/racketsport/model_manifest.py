@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 ModelStatus = Literal[
     "available_on_h100",
     "available_runtime_on_h100",
+    "available_local",
     "downloadable_local_checkpoint",
     "pending_download",
     "pending_auth",
@@ -48,14 +49,14 @@ class ModelEntry(BaseModel):
 
     @model_validator(mode="after")
     def _available_entries_are_falsifiable(self) -> "ModelEntry":
-        if self.status == "available_on_h100":
+        if self.status in {"available_on_h100", "available_local"}:
             missing = []
             if not self.local_path:
                 missing.append("local_path")
             if not self.sha256:
                 missing.append("sha256")
             if missing:
-                raise ValueError(f"available_on_h100 entries require {', '.join(missing)}")
+                raise ValueError(f"{self.status} entries require {', '.join(missing)}")
         return self
 
 

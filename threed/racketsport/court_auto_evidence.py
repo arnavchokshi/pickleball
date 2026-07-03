@@ -23,6 +23,7 @@ from .schemas import CourtCalibration, CourtLineEvidence, CourtLineObservation, 
 
 MAX_TRUSTED_TOP_NET_ANGLE_DELTA_DEG = 6.0
 MAX_TRUSTED_TOP_NET_LENGTH_RATIO = 4.0
+MAX_ACCEPTED_TOP_NET_CANDIDATE_LENGTH_RATIO = 1.25
 UNTRUSTED_TOP_NET_INTRINSIC_SOURCES = {"estimated_from_review_frame"}
 
 
@@ -146,7 +147,7 @@ def build_auto_court_line_evidence_from_image(
         for line_id, expected in expected_lines.items()
     ]
     net = net_plane or build_net_plane(calibration.sport)
-    top_net_observation = select_top_net_observation(
+    top_net_observation, top_net_rejection_reason = _select_top_net_observation_with_reason(
         calibration,
         net,
         candidates,
@@ -160,6 +161,9 @@ def build_auto_court_line_evidence_from_image(
         required_line_ids=resolved_required_line_ids,
         required_net_ids=resolved_required_net_ids,
     )
+    if top_net_observation is None and top_net_rejection_reason is not None:
+        if top_net_rejection_reason not in evidence.aggregate.reasons:
+            evidence.aggregate.reasons.append(top_net_rejection_reason)
     evidence.source = "auto_hough_template"
     return evidence
 
@@ -358,8 +362,30 @@ def select_top_net_observation(
     max_distance_px: float = 24.0,
     min_visible_fraction: float = 0.2,
 ) -> NetLineObservation | None:
+    observation, _reason = _select_top_net_observation_with_reason(
+        calibration,
+        net_plane,
+        candidate_segments,
+        frame_indexes=frame_indexes,
+        min_confidence=min_confidence,
+        max_distance_px=max_distance_px,
+        min_visible_fraction=min_visible_fraction,
+    )
+    return observation
+
+
+def _select_top_net_observation_with_reason(
+    calibration: CourtCalibration,
+    net_plane: NetPlane,
+    candidate_segments: Sequence[Segment2],
+    *,
+    frame_indexes: Sequence[int] = (0,),
+    min_confidence: float = 0.5,
+    max_distance_px: float = 24.0,
+    min_visible_fraction: float = 0.2,
+) -> tuple[NetLineObservation | None, str | None]:
     if calibration.intrinsics.source in UNTRUSTED_TOP_NET_INTRINSIC_SOURCES:
-        return None
+        return None, "top_net_untrusted_intrinsics"
 
     net_points = project_net_plane(calibration, net_plane)
     expected_triplet = [net_points["left_post"], net_points["center"], net_points["right_post"]]
@@ -375,28 +401,44 @@ def select_top_net_observation(
             else float("inf")
         )
         if angle_delta > MAX_TRUSTED_TOP_NET_ANGLE_DELTA_DEG or length_ratio > MAX_TRUSTED_TOP_NET_LENGTH_RATIO:
-            return None
+            return None, "top_net_projection_implausible_against_ground_net"
 
     scored = [(score_line_candidate(expected_segment, segment), segment) for segment in candidate_segments]
     if not scored:
-        return None
+        return None, "top_net_no_candidates"
     score, segment = max(scored, key=lambda item: item[0].score)
+    extent_reason = _top_net_candidate_extent_rejection_reason(expected_segment, segment)
+    if extent_reason is not None:
+        return None, extent_reason
     if (
         score.confidence < min_confidence
         or score.distance_px > max_distance_px
         or score.visible_fraction < min_visible_fraction
     ):
-        return None
+        return None, "top_net_candidate_low_confidence"
 
     observed_triplet = _candidate_triplet_for_expected_points(expected_triplet, expected_segment, segment)
-    return NetLineObservation(
-        net_id="top_net",
-        image_points=[[float(x), float(y)] for x, y in observed_triplet],
-        confidence=score.confidence,
-        frame_indexes=[int(index) for index in frame_indexes],
-        residual_px={"mean": score.distance_px, "p95": score.p95_distance_px},
-        source="auto_hough_net_top",
+    return (
+        NetLineObservation(
+            net_id="top_net",
+            image_points=[[float(x), float(y)] for x, y in observed_triplet],
+            confidence=score.confidence,
+            frame_indexes=[int(index) for index in frame_indexes],
+            residual_px={"mean": score.distance_px, "p95": score.p95_distance_px},
+            source="auto_hough_net_top",
+        ),
+        None,
     )
+
+
+def _top_net_candidate_extent_rejection_reason(expected_segment: Segment2, candidate_segment: Segment2) -> str | None:
+    expected_length = _segment_length(expected_segment)
+    candidate_length = _segment_length(candidate_segment)
+    if expected_length <= 0.0 or candidate_length <= 0.0:
+        return "top_net_candidate_degenerate_extent"
+    if candidate_length > expected_length * MAX_ACCEPTED_TOP_NET_CANDIDATE_LENGTH_RATIO:
+        return "top_net_candidate_overlength_tennis_overlay"
+    return None
 
 
 def _candidate_triplet_for_expected_points(

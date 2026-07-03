@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import os
 import time
@@ -13,14 +14,24 @@ from typing import Any, Literal, Mapping, Protocol, Sequence
 from scripts.racketsport.track import build_tracks
 
 from .ball_stage_runner import BallStageRunner
-from .body_compute import build_body_compute_execution, body_frame_batches_from_execution, write_body_compute_execution
+from .body_compute import (
+    TIER2_BODY_JOINTS_REPRESENTATION,
+    build_body_compute_execution,
+    body_frame_batches_from_execution,
+    write_body_compute_execution,
+)
 from .body_full_clip_gate import build_body_full_clip_gate
 from .body_grounding_quality import build_body_grounding_quality, write_body_grounding_quality
 from .body_joint_quality import build_body_joint_quality
 from .body_mesh_readiness import build_body_mesh_readiness
 from .ball_inflections import build_ball_inflections_from_ball_track
 from .court_auto_evidence import build_auto_court_line_evidence_from_frame, build_auto_court_line_evidence_from_video
-from .court_calibration import calibration_from_manual_taps, calibration_image_size, metric_calibration_from_sidecar_and_keypoints
+from .court_calibration import (
+    CALIBRATION_REPROJECTION_MEDIAN_GATE_PX,
+    calibration_from_manual_taps,
+    calibration_image_size,
+    metric_calibration_from_sidecar_and_keypoints,
+)
 from .court_line_evidence import aggregate_court_line_evidence, required_court_line_ids, required_court_net_ids
 from .court_templates import Sport
 from .court_zones import build_court_zones
@@ -43,18 +54,19 @@ from .model_manifest import verify_model_checkpoint
 from .net_plane import build_net_plane
 from .pipeline_contracts import PIPELINE_STAGE_CONTRACTS, PipelineContractError, PipelineStageContract, build_readiness_report
 from .mesh_export import build_body_mesh_export
-from .pose_fast import (
-    PoseCropRequest,
-    RTMW3DPoseRuntime,
-    build_lane_a_skeleton3d_from_rtmw3d,
-)
-from .pose_temporal import (
-    MOTIONBERT_CONFIG_ENV,
-    MOTIONBERT_PROJECT_PYTHONPATH_ENV,
-    MotionBERTTemporalRuntime,
-    refine_lane_a_skeleton3d,
-)
+from .pose_temporal import apply_sam3d_wrist_bone_lock
 from .racket_stage_runner import RacketStageRunner
+from .sam3d_body_input_prep import (
+    ACCURACY_OPT_SOURCE,
+    load_mask_prompt_lookup,
+    normalize_body_input_size,
+    normalize_crop_padding_scale,
+    normalize_soft_background_alpha,
+    padded_bbox_xyxy,
+    request_prep_artifact,
+    static_camera_intrinsics_k,
+    write_soft_background_image,
+)
 from .schemas import CaptureSidecar, CourtCalibration, StrictArtifact, Tracks, validate_artifact_file
 from .virtual_world import build_virtual_world_state_from_files, write_virtual_world
 from .wrist_velocity_peaks import build_wrist_velocity_peaks_from_file
@@ -70,6 +82,16 @@ DEFAULT_BODY_MAX_TRACK_ANCHOR_SMOOTHING_RESIDUAL_M = 0.75
 FAST_SAM_PYTHON_ENV = "FAST_SAM_PYTHON"
 VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".avi", ".mkv"}
 BODY_FRAME_SUFFIXES = (".jpg", ".jpeg", ".png")
+SAM3D_UPSTREAM_ENV_WHITELIST = frozenset(
+    {
+        "USE_COMPILE_BACKBONE",
+        "DECODER_COMPILE",
+        "INTERM_COMPILE",
+        "INTERM_SLIM",
+        "COMPILE_MODE",
+        "MHR_NO_CORRECTIVES",
+    }
+)
 
 ARTIFACT_SCHEMA_BY_FILENAME: dict[str, str] = {
     "court_calibration.json": "court_calibration",
@@ -179,10 +201,25 @@ class ManualCalibrationRunner:
             )
             source_mode = "arkit_plane_keypoints"
             calibration_note = "no-tap ARKit floor-plane calibration from court_keypoints.json"
+            # No-tap ARKit-only calibration is intentionally NOT treated as a trusted
+            # source for the automatic evidence gate below (Task #45 S1): the product's
+            # current v1 path is owner-tap-driven, and this fully-automatic no-tap path
+            # is the future-facing capability the evidence gate itself is designed for --
+            # leave it fail-closed exactly as before rather than assuming trust here too.
+            trusted = False
         else:
             calibration = calibration_from_manual_taps(sidecar_path, sport=context.sport)
             source_mode = self.source_mode
             calibration_note = "manual 4-corner calibration seed; requires human-reviewed corners for product verification"
+            # Task #45 S1: a capture_sidecar.json's manual_court_taps only exist because a
+            # human (the owner, in the real v1 capture flow) tapped the four court corners
+            # on a declared image_size (required upstream -- see
+            # scripts/racketsport/process_video.py's _read_declared_court_corners); that is
+            # exactly the "reviewed corner taps with declared image_size" trusted source
+            # this fix names. Treat it as trusted so a real-but-unreadable automatic
+            # court-line/net evidence result downgrades to advisory instead of hard-failing
+            # the one calibration input the current owner-tap product path actually has.
+            trusted = True
         line_evidence, evidence_notes = _calibration_line_evidence(context, calibration=calibration, net_plane=net_plane)
         artifacts = {
             "court_calibration.json": calibration,
@@ -192,7 +229,16 @@ class ManualCalibrationRunner:
         }
         for filename, artifact in artifacts.items():
             _write_json_artifact(context.run_dir / filename, artifact)
-        _raise_if_video_evidence_not_ready(context, line_evidence)
+        advisory_note = _raise_if_video_evidence_not_ready(context, line_evidence, trusted=trusted)
+
+        notes = (calibration_note, *evidence_notes)
+        metrics: dict[str, Any] = {
+            "reprojection_median_px": calibration.reprojection_error_px.median,
+            "reprojection_p95_px": calibration.reprojection_error_px.p95,
+        }
+        if advisory_note:
+            notes = (*notes, advisory_note)
+            metrics["calibration_confidence"] = _calibration_confidence_proxy(calibration)
 
         return StageRun(
             stage=self.stage,
@@ -200,13 +246,118 @@ class ManualCalibrationRunner:
             real_model=self.real_model,
             source_mode=source_mode,
             produced_artifacts=tuple(artifacts),
-            notes=(
-                calibration_note,
-                *evidence_notes,
-            ),
+            notes=notes,
+            metrics=metrics,
+        )
+
+
+class ExternalCalibrationRunner:
+    """Consumes an already-solved ``court_calibration.json``-shaped artifact instead of
+    re-deriving one from ``capture_sidecar.json`` manual taps / ARKit keypoints.
+
+    This is the seam Task #33 (CAL-MIGRATION) wires ``process_video.py --court-calibration``
+    into: e.g. the metric-15pt reviewed calibration from
+    ``threed.racketsport.court_calibration_metric15.metric_calibration_from_reviewed_keypoints_15pt``,
+    which fits real (fx, fy, k1, k2) intrinsics + a `solvePnP` pose from 15 reviewed court
+    keypoints instead of the guessed-intrinsics 4-corner PnP `ManualCalibrationRunner` falls
+    back to. Only calibrations whose ``intrinsics.source`` is in ``trusted_intrinsics_sources``
+    are accepted -- this runner exists specifically so a reviewed, real-focal-length
+    calibration can bypass the guessed-intrinsics path, not so any arbitrary
+    externally-produced calibration can skip validation.
+
+    court_zones.json/net_plane.json are pure sport-template artifacts (independent of how
+    the calibration was solved) and are always regenerated here. court_line_evidence.json
+    still runs the same real automatic video/frame line+net detection
+    (``_calibration_line_evidence``) and the same fail-closed-if-not-ready gate
+    (``_raise_if_video_evidence_not_ready``) that ``ManualCalibrationRunner`` uses, so a
+    video-backed run with unreadable court lines still hard-fails here exactly as it would
+    on the manual-taps path -- consuming an external calibration does not weaken that gate.
+    """
+
+    stage = "calibration"
+    real_model = False
+    source_mode = "external_metric_calibration"
+
+    #: intrinsics.source values accepted as already-reviewed/real (never a guessed-focal
+    #: source like "estimated_from_declared_court_corners") -- see court_calibration_metric15.py.
+    TRUSTED_INTRINSICS_SOURCES = frozenset({"metric_15pt_reviewed"})
+
+    def __init__(self, *, source_path: str | Path, trusted_intrinsics_sources: frozenset[str] | None = None) -> None:
+        self.source_path = Path(source_path)
+        self.trusted_intrinsics_sources = trusted_intrinsics_sources or self.TRUSTED_INTRINSICS_SOURCES
+
+    def run(self, context: StageContext) -> StageRun:
+        if not self.source_path.is_file():
+            raise FileNotFoundError(f"--court-calibration artifact not found: {self.source_path}")
+
+        calibration = validate_artifact_file("court_calibration", self.source_path)
+        if not isinstance(calibration, CourtCalibration):
+            raise ValueError(f"{self.source_path} did not validate as CourtCalibration")
+        if calibration.sport != context.sport:
+            raise ValueError(
+                f"{self.source_path}: calibration.sport={calibration.sport!r} does not match "
+                f"the requested sport={context.sport!r}"
+            )
+        source = calibration.intrinsics.source
+        if source not in self.trusted_intrinsics_sources:
+            raise ValueError(
+                f"{self.source_path}: intrinsics.source={source!r} is not a trusted external calibration "
+                f"source (expected one of {sorted(self.trusted_intrinsics_sources)}); refusing to consume an "
+                "unreviewed/guessed calibration through --court-calibration"
+            )
+
+        net_plane = build_net_plane(context.sport)
+        artifacts: dict[str, Any] = {
+            "court_calibration.json": calibration,
+            "court_zones.json": build_court_zones(context.sport),
+            "net_plane.json": net_plane,
+        }
+        for filename, artifact in artifacts.items():
+            _write_json_artifact(context.run_dir / filename, artifact)
+
+        line_evidence, evidence_notes = _calibration_line_evidence(context, calibration=calibration, net_plane=net_plane)
+        _write_json_artifact(context.run_dir / "court_line_evidence.json", line_evidence)
+        artifacts["court_line_evidence.json"] = line_evidence
+        # Task #45 S1: `source` has already been checked above to be in
+        # `self.trusted_intrinsics_sources` (metric_15pt_reviewed by default) -- any
+        # calibration that reaches this point is, by construction, trusted. So a
+        # not-ready automatic evidence result downgrades to an advisory note instead of
+        # hard-failing the stage; an untrusted source never gets here at all (it already
+        # raised above), so that path's fail-closed behavior is completely unchanged.
+        advisory_note = _raise_if_video_evidence_not_ready(context, line_evidence, trusted=True)
+
+        dist = [float(value) for value in (calibration.intrinsics.dist or [])]
+        notes = [
+            f"consumed externally-provided court_calibration.json from {self.source_path} "
+            f"(intrinsics.source={source!r}); PnP/homography re-derivation from manual taps skipped",
+            *evidence_notes,
+        ]
+        if any(abs(value) > 1e-9 for value in dist):
+            notes.append(
+                f"intrinsics.dist is nonzero ({dist}): homography-based footpoint consumers must undistort "
+                "pixels before applying calibration.homography or they will carry a systematic, "
+                "distortion-shaped error -- see threed/racketsport/court_calibration_metric15.py's migration "
+                "notes and runs/cal_metric_15pt_20260702T041729Z/ for the measured before/after."
+            )
+        metrics: dict[str, Any] = {
+            "reprojection_median_px": calibration.reprojection_error_px.median,
+            "reprojection_p95_px": calibration.reprojection_error_px.p95,
+        }
+        if advisory_note:
+            notes.append(advisory_note)
+            metrics["calibration_confidence"] = _calibration_confidence_proxy(calibration)
+
+        return StageRun(
+            stage=self.stage,
+            status="ran",
+            real_model=self.real_model,
+            source_mode=self.source_mode,
+            produced_artifacts=tuple(artifacts),
+            notes=tuple(notes),
             metrics={
-                "reprojection_median_px": calibration.reprojection_error_px.median,
-                "reprojection_p95_px": calibration.reprojection_error_px.p95,
+                **metrics,
+                "intrinsics_source": source,
+                "intrinsics_dist_nonzero": any(abs(value) > 1e-9 for value in dist),
             },
         )
 
@@ -298,8 +449,8 @@ class RealYOLO26BoTSORTReIDTrackingRunner:
         manifest_path: str | Path = DEFAULT_MODEL_MANIFEST,
         tracker_config_path: str | Path = DEFAULT_BOTSORT_REID_CONFIG,
         video_path: str | Path | None = None,
-        imgsz: int = 960,
-        conf: float = 0.18,
+        imgsz: int = 1536,
+        conf: float = 0.05,
         iou: float = 0.6,
         max_step_m: float = 2.0,
         max_players: int = 4,
@@ -373,32 +524,55 @@ class RealYOLO26BoTSORTReIDTrackingRunner:
         if counts["accepted"] <= 0 or not tracks.players:
             raise ValueError(f"real tracking failed: no accepted on-court tracked person boxes; counts={counts | raw_counts}")
 
+        tracking_counts = {**counts, **raw_counts, **scale_counts}
+        metrics_payload = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_person_tracker_candidate",
+            "clip": context.clip,
+            "source_mode": self.source_mode,
+            "model": str(checkpoint),
+            "tracker_config": str(tracker_config),
+            "source_video": str(video_path),
+            "imgsz": self.imgsz,
+            "conf": self.conf,
+            "iou": self.iou,
+            "max_frames": context.max_frames,
+            "max_players": self.max_players,
+            "court_margin_m": self.court_margin_m,
+            "id_strategy": self.id_strategy,
+            "counts": tracking_counts,
+        }
+        _write_json_artifact(context.run_dir / "raw_tracked_detections.json", raw_detections_payload)
+        _write_json_artifact(context.run_dir / "tracked_detections.json", detections_payload)
+        _write_json_artifact(context.run_dir / "metrics.json", metrics_payload)
         _write_json_artifact(context.run_dir / "tracks.json", tracks)
         return StageRun(
             stage=self.stage,
             status="ran",
             real_model=self.real_model,
             source_mode=self.source_mode,
-            produced_artifacts=("tracks.json",),
+            produced_artifacts=("raw_tracked_detections.json", "tracked_detections.json", "metrics.json", "tracks.json"),
             notes=(
                 "invoked manifest yolo26m checkpoint through Ultralytics model.track with BoT-SORT ReID enabled",
                 "uses Ultralytics ReID model=auto appearance encoder; not a precomputed detections adapter",
+                "exported raw/source-pixel and calibration-scaled detection pools for raw-pool global association",
             ),
             metrics={
-                **counts,
-                **raw_counts,
-                **scale_counts,
+                **tracking_counts,
                 "checkpoint_sha256_verified": checkpoint.name,
                 "tracker_config": str(tracker_config),
                 "source_video": str(video_path),
+                "imgsz": self.imgsz,
+                "conf": self.conf,
+                "iou": self.iou,
             },
         )
 
 
 class PoseStageRunner:
     stage = "pose"
-    real_model = True
-    source_mode = "rtmw3d_x_lane_a"
+    real_model = False
+    source_mode = "removed_legacy_pose_stage"
 
     def __init__(
         self,
@@ -406,7 +580,7 @@ class PoseStageRunner:
         manifest_path: str | Path = DEFAULT_MODEL_MANIFEST,
         runtime: Any | None = None,
         motionbert_runtime: Any | None = None,
-        model_id: str = "rtmw3d_x",
+        model_id: str = "removed_legacy_pose_stage",
     ) -> None:
         self.manifest_path = Path(manifest_path)
         self._runtime = runtime
@@ -414,75 +588,20 @@ class PoseStageRunner:
         self.model_id = model_id
 
     def run(self, context: StageContext) -> StageRun:
-        tracks = validate_artifact_file("tracks", context.run_dir / "tracks.json")
-        calibration = validate_artifact_file("court_calibration", context.run_dir / "court_calibration.json")
-        if not isinstance(tracks, Tracks):
-            raise ValueError("tracks.json did not validate as Tracks")
-        if not isinstance(calibration, CourtCalibration):
-            raise ValueError("court_calibration.json did not validate as CourtCalibration")
-
-        runtime = self._runtime or RTMW3DPoseRuntime(
-            manifest_path=self.manifest_path,
-            model_id=self.model_id,
-            device=context.device,
-        )
-        pose_results: list[Any] = []
-        inference_frame_count = 0
-        player_frame_count = 0
-        for frame_idx, frame_requests in _pose_frame_batches(tracks):
-            image_path = _find_body_frame_image(context, frame_idx)
-            requests = [
-                PoseCropRequest(
-                    frame_idx=frame_idx,
-                    player_id=player_id,
-                    bbox_xyxy=[float(value) for value in track_frame.bbox],
-                    track_world_xy=[float(value) for value in track_frame.world_xy],
-                    track_confidence=float(track_frame.conf),
-                )
-                for player_id, track_frame in frame_requests
-            ]
-            if not requests:
-                continue
-            frame_results = runtime.infer_frame(image_path, requests)
-            pose_results.extend(frame_results)
-            inference_frame_count += 1
-            player_frame_count += len(requests)
-
-        world_frame = "relative_only" if calibration.reprojection_error_px.median > 3.0 else "court_Z0"
-        skeleton3d = build_lane_a_skeleton3d_from_rtmw3d(
-            tracks,
-            pose_results,
-            world_frame=world_frame,
-            source_model=self.model_id,
-            calibration=calibration,
-        )
-        motionbert_runtime = self._motionbert_runtime
-        if motionbert_runtime is None and _motionbert_runtime_is_configured():
-            motionbert_runtime = MotionBERTTemporalRuntime(
-                manifest_path=self.manifest_path,
-                device=context.device,
-            )
-        skeleton3d = refine_lane_a_skeleton3d(skeleton3d, fps=tracks.fps, motionbert_runtime=motionbert_runtime)
-        _write_json_artifact(context.run_dir / "skeleton3d.json", skeleton3d)
-        notes = ["Lane A RTMW3D skeleton output covers all tracked player frames"]
-        if world_frame == "relative_only":
-            notes.append("calibration reprojection median exceeded 3 px; skeleton grounding downgraded to relative_only")
+        del context
         return StageRun(
             stage=self.stage,
-            status="ran",
+            status=PIPELINE_STATUS_FAIL,
             real_model=self.real_model,
             source_mode=self.source_mode,
-            produced_artifacts=("skeleton3d.json",),
-            notes=tuple(notes),
+            produced_artifacts=(),
+            notes=(
+                "legacy pose skeleton stage was removed from the production SAM-3D skeleton path; "
+                "run BODY to produce sam3d_body_joints skeleton3d.json",
+            ),
             metrics={
-                "source_model": self.model_id,
-                "world_frame": world_frame,
-                "inference_frame_count": inference_frame_count,
-                "player_frame_count": player_frame_count,
-                "joint_count": len(skeleton3d["joint_names"]),
-                "preview_only": skeleton3d["preview_only"],
-                "temporal_refined": True,
-                "motionbert": skeleton3d["provenance"]["temporal_refine"]["motionbert"],
+                "legacy_pose_stage_removed": True,
+                "replacement_skeleton_source": "sam3d_body_joints",
             },
         )
 
@@ -500,24 +619,110 @@ class BodyStageRunner:
         runtime: Any | None = None,
         detector_name: str = "yolo",
         fov_name: str = "moge2",
-        fallback_pose_runtime: Any | None = None,
-        fallback_pose_manifest_path: str | Path = DEFAULT_MODEL_MANIFEST,
-        fallback_pose_model_id: str = "rtmw3d_x",
         smoothing_alpha: float = 1.0,
         max_root_speed_mps: float | None = DEFAULT_BODY_MAX_ROOT_SPEED_MPS,
         max_track_anchor_smoothing_residual_m: float | None = DEFAULT_BODY_MAX_TRACK_ANCHOR_SMOOTHING_RESIDUAL_M,
+        tier2_body_joints_all_tracked: bool = False,
+        mesh_vertex_serialization_policy: Literal["all", "tier1_only"] = "all",
+        sam3d_body_input_size_px: int | None = None,
+        sam3d_crop_bucket_sizes: tuple[int, ...] = (),
+        sam3d_crop_padding_scale: float = 1.0,
+        sam3d_mask_prompt_mode: Literal["off", "manifest"] = "manifest",
+        sam3d_mask_prompt_artifact: str = "sam3d_body_mask_prompts.json",
+        sam3d_soft_background_alpha: float = 1.0,
+        sam3d_torch_compile: bool = False,
+        sam3d_compile_warmup_buckets: tuple[int, ...] = (),
+        sam3d_compile_warmup_passes: int = 2,
+        sam3d_steady_state_empty_cache: bool = True,
+        sam3d_inner_bucket_sync: bool = True,
+        sam3d_upstream_env: Mapping[str, Any] | None = None,
+        sam3d_tier2_output_lite: bool = False,
+        sam3d_wrist_bone_lock: bool = True,
     ) -> None:
         self.manifest_path = Path(manifest_path)
         self.fast_sam_repo = Path(fast_sam_repo)
         self._runtime = runtime
         self.detector_name = detector_name
         self.fov_name = fov_name
-        self._fallback_pose_runtime = fallback_pose_runtime
-        self.fallback_pose_manifest_path = Path(fallback_pose_manifest_path)
-        self.fallback_pose_model_id = fallback_pose_model_id
         self.smoothing_alpha = smoothing_alpha
         self.max_root_speed_mps = max_root_speed_mps
         self.max_track_anchor_smoothing_residual_m = max_track_anchor_smoothing_residual_m
+        self.tier2_body_joints_all_tracked = bool(tier2_body_joints_all_tracked)
+        self.mesh_vertex_serialization_policy = mesh_vertex_serialization_policy
+        self.sam3d_body_input_size_px = normalize_body_input_size(sam3d_body_input_size_px)
+        self.sam3d_crop_bucket_sizes = tuple(int(value) for value in sam3d_crop_bucket_sizes)
+        self.sam3d_crop_padding_scale = normalize_crop_padding_scale(sam3d_crop_padding_scale)
+        self.sam3d_mask_prompt_mode = sam3d_mask_prompt_mode
+        self.sam3d_mask_prompt_artifact = str(sam3d_mask_prompt_artifact)
+        self.sam3d_soft_background_alpha = normalize_soft_background_alpha(sam3d_soft_background_alpha)
+        self.sam3d_torch_compile = bool(sam3d_torch_compile)
+        self.sam3d_compile_warmup_buckets = tuple(int(value) for value in sam3d_compile_warmup_buckets)
+        if int(sam3d_compile_warmup_passes) <= 0:
+            raise ValueError("sam3d_compile_warmup_passes must be positive")
+        self.sam3d_compile_warmup_passes = int(sam3d_compile_warmup_passes)
+        self.sam3d_steady_state_empty_cache = bool(sam3d_steady_state_empty_cache)
+        self.sam3d_inner_bucket_sync = bool(sam3d_inner_bucket_sync)
+        self.sam3d_upstream_env = _normalize_sam3d_upstream_env(sam3d_upstream_env or {})
+        self.sam3d_tier2_output_lite = bool(sam3d_tier2_output_lite)
+        self.sam3d_wrist_bone_lock = bool(sam3d_wrist_bone_lock)
+
+    def _sam3d_tier2_config(self, body_execution: Mapping[str, Any]) -> dict[str, Any]:
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_sam3d_tier2_config",
+            "source": "sam3d_tier2_impl_20260703T0xZ",
+            "body_stage": {
+                "skeleton_source": "sam3d_body_joints",
+                "tier2_body_joints_all_tracked": self.tier2_body_joints_all_tracked,
+                "tier1_mesh_policy": "ball_aware_100",
+                "legacy_pose_path": "removed_from_production_skeleton_path",
+            },
+            "serialization": {
+                "mesh_vertex_serialization_policy": self.mesh_vertex_serialization_policy,
+                "tier2_mesh_vertices_serialized": self.mesh_vertex_serialization_policy != "tier1_only",
+            },
+            "optimization": {
+                "sam3d_body_input_size_px": self.sam3d_body_input_size_px,
+                "crop_bucket_sizes": list(self.sam3d_crop_bucket_sizes),
+                "crop_padding_scale": self.sam3d_crop_padding_scale,
+                "mask_prompt_mode": self.sam3d_mask_prompt_mode,
+                "mask_prompt_artifact": self.sam3d_mask_prompt_artifact,
+                "soft_background_alpha": self.sam3d_soft_background_alpha,
+                "torch_compile": self.sam3d_torch_compile,
+                "compile_warmup_buckets": list(self.sam3d_compile_warmup_buckets),
+                "compile_warmup_passes": self.sam3d_compile_warmup_passes,
+                "steady_state_empty_cache": self.sam3d_steady_state_empty_cache,
+                "inner_bucket_sync": self.sam3d_inner_bucket_sync,
+                "upstream_env": dict(self.sam3d_upstream_env),
+                "tier2_output_lite": self.sam3d_tier2_output_lite,
+                "sam3d_wrist_bone_lock": self.sam3d_wrist_bone_lock,
+                "static_clip_intrinsics": True,
+                "compile_warmup_static_intrinsics": bool(
+                    self.sam3d_torch_compile and self.sam3d_compile_warmup_buckets
+                ),
+                "compile_stall_regression_target_s": 1.0,
+                "batching": "static_intrinsics_cross_frame_bucketed_body_batch",
+            },
+            "accuracy_opt": {
+                "source": ACCURACY_OPT_SOURCE,
+                "mask_prompt_fallback": "box_only_when_mask_absent",
+                "camera_intrinsics_policy": "static_per_clip_from_court_calibration",
+                "crop_resolution_sweep_sizes_px": [384, 448, 512],
+            },
+            "scheduled_summary": {
+                "scheduled_player_frame_count": body_execution.get("summary", {}).get("scheduled_player_frame_count", 0),
+                "tier1_mesh_player_frame_count": body_execution.get("summary", {}).get("tier1_mesh_player_frame_count", 0),
+                "tier2_body_joint_player_frame_count": body_execution.get("summary", {}).get(
+                    "tier2_body_joint_player_frame_count", 0
+                ),
+            },
+            "validation": {
+                "protected_eval_labels_used": False,
+                "gpu_required_for_timing": True,
+                "local_run_is_config_only": True,
+                "target_ms_per_person_batched": 55.0,
+            },
+        }
 
     def run(self, context: StageContext) -> StageRun:
         body_wall_start = time.perf_counter()
@@ -528,16 +733,26 @@ class BodyStageRunner:
         if not isinstance(calibration, CourtCalibration):
             raise ValueError("court_calibration.json did not validate as CourtCalibration")
 
-        lane_b_plan = _ensure_lane_b_frame_plan_from_lane_a(context, tracks)
+        lane_b_plan = _ensure_body_frame_plan_from_sam3d(context, tracks)
         body_execution = build_body_compute_execution(
             tracks,
             frame_plan_path=context.run_dir / "frame_compute_plan.json",
             max_frames=context.max_frames,
+            include_tier2_body_joints=self.tier2_body_joints_all_tracked,
         )
         write_body_compute_execution(context.run_dir / "body_compute_execution.json", body_execution)
+        tier2_config = self._sam3d_tier2_config(body_execution)
+        _write_json_artifact(context.run_dir / "sam3d_tier2_config.json", tier2_config)
         frame_batches = body_frame_batches_from_execution(tracks, body_execution)
         if not frame_batches:
-            raise ValueError("adaptive BODY schedule contains no world_mesh frames")
+            raise ValueError("adaptive BODY schedule contains no SAM3D body-mode frames")
+        target_representation_by_request = _target_representation_lookup(body_execution)
+        request_metadata_by_request = _body_request_metadata_lookup(body_execution)
+        mask_lookup = load_mask_prompt_lookup(
+            context.run_dir,
+            artifact_name=self.sam3d_mask_prompt_artifact,
+            mode=self.sam3d_mask_prompt_mode,
+        )
 
         required_model_ids = fast_sam_required_model_ids(detector_name=self.detector_name, fov_name=self.fov_name)
         assets = verify_fast_sam_manifest_assets(self.manifest_path, required_model_ids=required_model_ids)
@@ -555,6 +770,7 @@ class BodyStageRunner:
                         detector_name=self.detector_name,
                         detector_model=str(assets["yolo26m"].path) if self.detector_name and "yolo26m" in assets else "",
                         fov_name=self.fov_name,
+                        body_input_size_px=self.sam3d_body_input_size_px,
                         work_dir=context.run_dir / "fast_sam_subprocess",
                     )
                 else:
@@ -563,17 +779,20 @@ class BodyStageRunner:
                         fast_sam_repo=self.fast_sam_repo,
                         detector_name=self.detector_name,
                         fov_name=self.fov_name,
+                        body_input_size_px=self.sam3d_body_input_size_px,
                     )
             except RuntimeError as exc:
                 fast_sam_runtime_mode = "unavailable"
                 fast_sam_runtime_unavailable_note = (
-                    "Fast SAM-3D-Body runtime unavailable; using RTMW3D contact fallback: "
+                    "Fast SAM-3D-Body runtime unavailable; SAM-3D samples will be absent for this run: "
                     f"{exc}"
                 )
         samples: list[dict[str, Any]] = []
-        fallback_pose_runtime = self._fallback_pose_runtime
-        fallback_pose_results: list[Any] = []
+        sam3d_missing_output_count = 0
         mesh_requests: list[dict[str, Any]] = []
+        prep_records: list[dict[str, Any]] = []
+        static_intrinsics: list[list[float]] | None = None
+        static_intrinsics_image_size: tuple[int, int] | None = None
         for frame_idx, frame_requests in frame_batches:
             image_path = _find_body_frame_image(context, frame_idx)
             track_bboxes = [list(track_frame.bbox) for _, track_frame in frame_requests]
@@ -582,6 +801,15 @@ class BodyStageRunner:
                 calibration=calibration,
                 bboxes=track_bboxes,
             )
+            if static_intrinsics_image_size is None:
+                static_intrinsics_image_size = image_size
+                static_intrinsics = static_camera_intrinsics_k(calibration, image_size_px=image_size)
+            elif image_size != static_intrinsics_image_size:
+                raise ValueError(
+                    "BODY frame image size changed across SAM3D runtime requests: "
+                    f"first size={static_intrinsics_image_size}, "
+                    f"current size={image_size} at {image_path}"
+                )
             bbox_scale_x, bbox_scale_y = _bbox_scale_from_calibration_to_image(calibration, image_size)
             scaled_frame_requests = [
                 (
@@ -592,22 +820,113 @@ class BodyStageRunner:
                 for player_id, track_frame in frame_requests
             ]
             for player_id, track_frame, bbox in scaled_frame_requests:
+                request_key = (frame_idx, int(player_id))
+                request_metadata = request_metadata_by_request.get(request_key, {})
+                prepared_bbox = padded_bbox_xyxy(
+                    bbox,
+                    image_size_px=image_size,
+                    padding_scale=self.sam3d_crop_padding_scale,
+                )
+                mask_path = mask_lookup.path_for(frame_idx=frame_idx, player_id=int(player_id))
+                runtime_image_path = image_path
+                soft_background_applied = False
+                soft_background_status = "disabled"
+                if mask_path is not None and self.sam3d_soft_background_alpha < 1.0:
+                    soft_path = (
+                        context.run_dir
+                        / "sam3d_soft_background"
+                        / f"frame_{frame_idx:06d}_player_{int(player_id)}.png"
+                    )
+                    runtime_image_path, soft_background_applied, soft_background_status = write_soft_background_image(
+                        image_path=image_path,
+                        mask_path=mask_path,
+                        out_path=soft_path,
+                        background_alpha=self.sam3d_soft_background_alpha,
+                    )
+                runtime_request = {
+                    "request_id": f"{frame_idx}:{int(player_id)}",
+                    "frame_idx": frame_idx,
+                    "player_id": int(player_id),
+                    "image_path": runtime_image_path,
+                    "bboxes": [prepared_bbox],
+                    "mask_paths": [mask_path] if mask_path is not None else [],
+                    "camera_intrinsics": static_intrinsics,
+                    "camera_intrinsics_source": "court_calibration.json",
+                    "sam3d_body_input_size_px": self.sam3d_body_input_size_px,
+                    "crop_padding_scale": self.sam3d_crop_padding_scale,
+                    "soft_background_alpha": self.sam3d_soft_background_alpha,
+                    "target_representation": target_representation_by_request.get(request_key, "world_mesh"),
+                    "reasons": list(request_metadata.get("reasons", [])),
+                }
+                prep_records.append(
+                    {
+                        "request_id": runtime_request["request_id"],
+                        "frame_idx": frame_idx,
+                        "player_id": int(player_id),
+                        "image_path": str(image_path),
+                        "runtime_image_path": str(runtime_image_path),
+                        "image_size_px": [int(image_size[0]), int(image_size[1])],
+                        "original_bbox_xyxy": [float(value) for value in bbox],
+                        "prepared_bbox_xyxy": prepared_bbox,
+                        "mask_prompt_path": str(mask_path) if mask_path is not None else "",
+                        "mask_prompt_mode": self.sam3d_mask_prompt_mode,
+                        "target_representation": runtime_request["target_representation"],
+                        "reasons": runtime_request["reasons"],
+                        "soft_background_applied": soft_background_applied,
+                        "soft_background_status": soft_background_status,
+                    }
+                )
                 mesh_requests.append(
                     {
                         "frame_idx": frame_idx,
                         "player_id": player_id,
                         "track_frame": track_frame,
-                        "bbox": bbox,
-                        "image_path": image_path,
+                        "bbox": prepared_bbox,
+                        "image_path": runtime_image_path,
                         "image_size": image_size,
+                        "target_representation": target_representation_by_request.get(
+                            request_key,
+                            "world_mesh",
+                        ),
+                        "runtime_request": runtime_request,
                     }
                 )
+
+        if static_intrinsics is None or static_intrinsics_image_size is None:
+            raise ValueError("adaptive BODY schedule produced no SAM3D runtime requests")
+        _write_json_artifact(
+            context.run_dir / "sam3d_body_input_prep.json",
+            request_prep_artifact(
+                camera_intrinsics_k=static_intrinsics,
+                camera_intrinsics_image_size_px=static_intrinsics_image_size,
+                mask_mode=self.sam3d_mask_prompt_mode,
+                mask_manifest_path=mask_lookup.manifest_path,
+                records=prep_records,
+                body_input_size_px=self.sam3d_body_input_size_px,
+                crop_padding_scale=self.sam3d_crop_padding_scale,
+                soft_background_alpha=self.sam3d_soft_background_alpha,
+            ),
+        )
 
         batched_outputs: list[list[dict[str, Any]]] | None = None
         batch_runner = getattr(runtime, "process_frame_batches", None) if runtime is not None else None
         if callable(batch_runner) and mesh_requests:
-            batched_outputs = batch_runner(
-                [(request["image_path"], [request["bbox"]]) for request in mesh_requests]
+            batched_outputs = _call_sam3d_batch_runner(
+                batch_runner,
+                [request["runtime_request"] for request in mesh_requests],
+                clip_intrinsics=_sam3d_static_clip_intrinsics_payload(
+                    calibration=calibration,
+                    camera_intrinsics_k=static_intrinsics,
+                ),
+                sam3d_body_input_size_px=self.sam3d_body_input_size_px,
+                crop_bucket_sizes=self.sam3d_crop_bucket_sizes,
+                torch_compile=self.sam3d_torch_compile,
+                compile_warmup_buckets=self.sam3d_compile_warmup_buckets,
+                compile_warmup_passes=self.sam3d_compile_warmup_passes,
+                steady_state_empty_cache=self.sam3d_steady_state_empty_cache,
+                inner_bucket_sync=self.sam3d_inner_bucket_sync,
+                upstream_env=self.sam3d_upstream_env,
+                tier2_output_lite=self.sam3d_tier2_output_lite,
             )
             if len(batched_outputs) != len(mesh_requests):
                 raise RuntimeError(
@@ -624,31 +943,28 @@ class BodyStageRunner:
             raw_outputs = (
                 batched_outputs[request_index]
                 if batched_outputs is not None
-                else ([] if runtime is None else runtime.process_frame(image_path, bboxes_xyxy=[bbox]))
-            )
-            if not raw_outputs:
-                if fallback_pose_runtime is None:
-                    fallback_pose_runtime = RTMW3DPoseRuntime(
-                        manifest_path=self.fallback_pose_manifest_path,
-                        model_id=self.fallback_pose_model_id,
-                        device=context.device,
-                    )
-                fallback_pose_results.extend(
-                    fallback_pose_runtime.infer_frame(
+                else (
+                    []
+                    if runtime is None
+                    else runtime.process_frame(
                         image_path,
-                        [
-                            PoseCropRequest(
-                                frame_idx=frame_idx,
-                                player_id=player_id,
-                                bbox_xyxy=[float(value) for value in bbox],
-                                track_world_xy=[float(value) for value in track_frame.world_xy],
-                                track_confidence=float(track_frame.conf),
-                            )
-                        ],
+                        bboxes_xyxy=[bbox],
+                        mask_paths=mesh_request["runtime_request"].get("mask_paths", []),
+                        camera_intrinsics=mesh_request["runtime_request"].get("camera_intrinsics"),
                     )
                 )
+            )
+            if not raw_outputs:
+                sam3d_missing_output_count += 1
                 continue
             raw_output = _match_body_outputs(raw_outputs, [bbox])[0]
+            target_representation = str(mesh_request["target_representation"])
+            if (
+                self.sam3d_tier2_output_lite
+                and target_representation == "world_mesh"
+                and not _body_record_has_dense_mesh(raw_output)
+            ):
+                raise ValueError("tier-1 world_mesh SAM3D output is missing pred_vertices while tier2_output_lite is enabled")
             player_request = PlayerCropRequest(
                 frame_idx=frame_idx,
                 player_id=player_id,
@@ -659,17 +975,14 @@ class BodyStageRunner:
             sample = normalize_fast_sam_body_output(raw_output, request=player_request)
             sample["t"] = track_frame.t
             sample["track_world_xy"] = list(track_frame.world_xy)
+            sample["target_representation"] = target_representation
+            if (
+                self.mesh_vertex_serialization_policy == "tier1_only"
+                and sample["target_representation"] == TIER2_BODY_JOINTS_REPRESENTATION
+            ):
+                sample["vertices_camera"] = []
+                sample["mesh_faces"] = []
             samples.append(sample)
-
-        body_pose_fallback = None
-        if fallback_pose_results:
-            body_pose_fallback = _build_body_pose_fallback_skeleton(
-                tracks,
-                fallback_pose_results,
-                calibration=calibration,
-                model_id=self.fallback_pose_model_id,
-            )
-            _write_json_artifact(context.run_dir / "body_pose_fallback.json", body_pose_fallback)
 
         if samples:
             smpl_motion, skeleton3d, grounding_metrics = build_body_artifacts_from_fast_sam(
@@ -679,6 +992,7 @@ class BodyStageRunner:
                 smoothing_alpha=self.smoothing_alpha,
                 max_root_speed_mps=self.max_root_speed_mps,
                 max_track_anchor_smoothing_residual_m=self.max_track_anchor_smoothing_residual_m,
+                sam3d_wrist_bone_lock=self.sam3d_wrist_bone_lock,
             )
         else:
             smpl_motion = _empty_smpl_motion(fps=tracks.fps)
@@ -688,8 +1002,9 @@ class BodyStageRunner:
                 "players": 0,
                 "frames": 0,
                 "world_frame": "court_Z0",
-                "grounding": "no_fast_sam_mesh_samples_pose_fallback_only",
+                "grounding": "no_fast_sam_body_samples",
             }
+        grounding_metrics = {**grounding_metrics, "calibration_confidence": _calibration_confidence_proxy(calibration)}
         _write_json_artifact(context.run_dir / "smpl_motion.json", smpl_motion)
         body_grounding_quality = build_body_grounding_quality(
             clip=context.clip,
@@ -699,11 +1014,11 @@ class BodyStageRunner:
         smpl_motion_payload = smpl_motion.model_dump(mode="json") if hasattr(smpl_motion, "model_dump") else smpl_motion
         skeleton3d_path = context.run_dir / "skeleton3d.json"
         existing_skeleton3d = _read_optional_json(skeleton3d_path)
-        preserved_lane_a_skeleton = (
-            isinstance(existing_skeleton3d, Mapping)
-            and existing_skeleton3d.get("preview_only") is False
+        preserved_existing_skeleton = (
+            _is_real_sam3d_skeleton3d(existing_skeleton3d)
+            and not self.tier2_body_joints_all_tracked
         )
-        if preserved_lane_a_skeleton:
+        if preserved_existing_skeleton:
             skeleton3d_payload = existing_skeleton3d
         else:
             _write_json_artifact(skeleton3d_path, skeleton3d)
@@ -718,8 +1033,9 @@ class BodyStageRunner:
             skeleton3d_payload,
             body_mesh=body_mesh,
             body_compute_execution=body_execution,
-            fallback_skeleton3d=body_pose_fallback,
         )
+        if self.sam3d_wrist_bone_lock:
+            skeleton3d_payload = apply_sam3d_wrist_bone_lock(skeleton3d_payload)
         _write_json_artifact(skeleton3d_path, skeleton3d_payload)
         _write_json_artifact(context.run_dir / "contact_splice.json", contact_splice)
         body_joint_quality = build_body_joint_quality(
@@ -763,6 +1079,8 @@ class BodyStageRunner:
         _write_json_artifact(context.run_dir / "body_mesh_readiness.json", body_mesh_readiness)
         produced_artifacts = (
             "body_compute_execution.json",
+            "sam3d_tier2_config.json",
+            "sam3d_body_input_prep.json",
             "smpl_motion.json",
             "body_mesh.json",
             "contact_splice.json",
@@ -772,20 +1090,23 @@ class BodyStageRunner:
             "body_full_clip_gate.json",
             "body_grounding_quality.json",
         )
-        if body_pose_fallback is not None:
-            produced_artifacts = (*produced_artifacts, "body_pose_fallback.json")
-        body_pose_fallback_frame_count = _skeleton_player_frame_count(body_pose_fallback)
         notes = [
             "Fast SAM-3D-Body runtime output converted to court/world coordinates with court_calibration.json",
             "BODY frame execution follows frame_compute_plan.json when present and skips manual-review/preview-only frames",
-            "preserved existing Lane A skeleton3d.json" if preserved_lane_a_skeleton else "wrote mesh-derived preview skeleton3d.json",
-            "spliced scheduled hitter mesh joints into Lane A skeleton3d.json at contact frames",
-            (
-                "used RTMW3D high-resolution crop fallback where contact mesh was unavailable"
-                if body_pose_fallback_frame_count
-                else "RTMW3D contact fallback was not needed"
-            ),
+            "preserved existing skeleton3d.json"
+            if preserved_existing_skeleton
+            else "wrote SAM3D body-mode skeleton3d.json as the offline skeleton source",
+            "spliced scheduled hitter mesh joints into existing skeleton3d.json at contact frames"
+            if preserved_existing_skeleton
+            else "kept SAM3D body-mode skeleton3d.json as the skeleton source while body_mesh.json carries tier-1 mesh frames",
+            f"SAM-3D returned no output for {sam3d_missing_output_count} scheduled request(s); no legacy pose fallback was used",
             "BODY artifacts are real runner outputs; BODY accuracy gate still requires labeled world-MPJPE evaluation",
+            (
+                "surfaced calibration_confidence (raw reprojection-error proxy, non-blocking) in "
+                "body_grounding_quality.json; this is a coarse proxy, not a validated BODY-quality signal -- "
+                "see runs/cal_body_projection_bias_20260702T014121Z (95.3% of observed dy-bias attributed to "
+                "BODY's own joint-layout asymmetry, not calibration error) before gating on it"
+            ),
         ]
         if fast_sam_runtime_unavailable_note:
             notes.append(fast_sam_runtime_unavailable_note)
@@ -799,13 +1120,59 @@ class BodyStageRunner:
             metrics={
                 **grounding_metrics,
                 "body_compute_mode": body_execution["mode"],
+                "sam3d_tier2_body_joints_all_tracked": self.tier2_body_joints_all_tracked,
+                "sam3d_mesh_vertex_serialization_policy": self.mesh_vertex_serialization_policy,
+                "sam3d_body_input_size_px": self.sam3d_body_input_size_px,
+                "sam3d_crop_bucket_sizes": list(self.sam3d_crop_bucket_sizes),
+                "sam3d_crop_padding_scale": self.sam3d_crop_padding_scale,
+                "sam3d_mask_prompt_mode": self.sam3d_mask_prompt_mode,
+                "sam3d_soft_background_alpha": self.sam3d_soft_background_alpha,
+                "sam3d_mask_prompt_available_count": sum(1 for record in prep_records if record.get("mask_prompt_path")),
+                "sam3d_mask_prompt_missing_count": sum(1 for record in prep_records if not record.get("mask_prompt_path")),
+                "sam3d_camera_intrinsics_static_per_clip": True,
+                "sam3d_torch_compile": self.sam3d_torch_compile,
+                "sam3d_compile_warmup_buckets": list(self.sam3d_compile_warmup_buckets),
+                "sam3d_compile_warmup_passes": self.sam3d_compile_warmup_passes,
+                "sam3d_steady_state_empty_cache": self.sam3d_steady_state_empty_cache,
+                "sam3d_inner_bucket_sync": self.sam3d_inner_bucket_sync,
+                "sam3d_upstream_env": dict(self.sam3d_upstream_env),
+                "sam3d_tier2_output_lite": self.sam3d_tier2_output_lite,
+                "sam3d_wrist_bone_lock": self.sam3d_wrist_bone_lock,
+                "sam3d_wrist_bone_lock_status": (
+                    skeleton3d_payload.get("provenance", {})
+                    .get("sam3d_wrist_bone_lock", {})
+                    .get("status", "disabled" if not self.sam3d_wrist_bone_lock else "absent")
+                    if isinstance(skeleton3d_payload, Mapping)
+                    else "absent"
+                ),
+                "sam3d_wrist_bone_lock_locked_frame_count": (
+                    skeleton3d_payload.get("provenance", {})
+                    .get("sam3d_wrist_bone_lock", {})
+                    .get("locked_frame_count", 0)
+                    if isinstance(skeleton3d_payload, Mapping)
+                    else 0
+                ),
+                "sam3d_core_body_speed_clamp_engagement_by_player": (
+                    skeleton3d_payload.get("provenance", {})
+                    .get("temporal_refine", {})
+                    .get("physical_plausibility", {})
+                    .get("core_body_speed_clamp_engagement_by_player", {})
+                    if isinstance(skeleton3d_payload, Mapping)
+                    else {}
+                ),
+                "sam3d_tier2_body_joint_player_frame_count": body_execution["summary"].get(
+                    "tier2_body_joint_player_frame_count", 0
+                ),
+                "sam3d_tier1_mesh_player_frame_count": body_execution["summary"].get(
+                    "tier1_mesh_player_frame_count", 0
+                ),
                 "lane_b_frame_plan_source": lane_b_plan["source"],
                 "lane_b_contact_event_count": lane_b_plan["contact_event_count"],
                 "lane_b_frame_plan_generated_artifacts": lane_b_plan["generated_artifacts"],
                 "scheduled_body_frames": body_execution["summary"]["scheduled_frame_count"],
                 "scheduled_body_player_frames": body_execution["summary"]["scheduled_player_frame_count"],
                 "body_mesh_frame_count": body_mesh["summary"]["mesh_frame_count"],
-                "body_pose_fallback_frame_count": body_pose_fallback_frame_count,
+                "sam3d_missing_output_count": sam3d_missing_output_count,
                 "fast_sam_runtime_mode": fast_sam_runtime_mode,
                 "fast_sam_python": fast_sam_python,
                 "fast_sam_runtime_unavailable": bool(fast_sam_runtime_unavailable_note),
@@ -828,59 +1195,35 @@ class BodyStageRunner:
         )
 
 
-def _pose_frame_batches(tracks: Tracks) -> list[tuple[int, list[tuple[int, Any]]]]:
-    by_frame: dict[int, list[tuple[int, Any]]] = {}
-    for player in tracks.players:
-        for frame in player.frames:
-            frame_idx = int(round(float(frame.t) * tracks.fps))
-            by_frame.setdefault(frame_idx, []).append((int(player.id), frame))
-    return [
-        (frame_idx, sorted(active, key=lambda item: item[0]))
-        for frame_idx, active in sorted(by_frame.items())
-    ]
+def _calibration_confidence_proxy(calibration: CourtCalibration) -> dict[str, Any]:
+    """Surface calibration reprojection error alongside BODY output (non-blocking).
 
+    This deliberately does *not* block or reject BODY mesh output: the
+    ``cal_body_projection_bias_20260702T014121Z`` diagnostic found 95.3% of the
+    observed Burlington world-joint dy-bias is attributable to BODY's own
+    joint-layout asymmetry, not calibration error, and a flat-calibration clip
+    (Wolverine) showed a comparable PnP-vs-track mismatch -- so a naive
+    "reject BODY when reprojection_error_px is high" rule would misattribute
+    BODY's own systematic bias to calibration on some clips while
+    under-flagging genuine calibration problems on others. This value is a
+    coarse proxy for visibility/debugging only.
+    """
 
-def _motionbert_runtime_is_configured() -> bool:
-    return bool(os.environ.get(MOTIONBERT_CONFIG_ENV) or os.environ.get(MOTIONBERT_PROJECT_PYTHONPATH_ENV))
-
-
-def _build_body_pose_fallback_skeleton(
-    tracks: Tracks,
-    pose_results: Sequence[Any],
-    *,
-    calibration: CourtCalibration,
-    model_id: str,
-) -> dict[str, Any]:
-    fallback_tracks = _tracks_subset_for_pose_results(tracks, pose_results)
-    world_frame = "relative_only" if calibration.reprojection_error_px.median > 3.0 else "court_Z0"
-    skeleton = build_lane_a_skeleton3d_from_rtmw3d(
-        fallback_tracks,
-        pose_results,
-        world_frame=world_frame,
-        source_model=f"{model_id}_body_fallback",
-        calibration=calibration,
-    )
-    provenance = dict(skeleton.get("provenance", {}))
-    provenance["lane"] = "B_pose_fallback"
-    provenance["fallback_for"] = "lane_b_contact_mesh_unavailable"
-    skeleton["provenance"] = provenance
-    return skeleton
-
-
-def _tracks_subset_for_pose_results(tracks: Tracks, pose_results: Sequence[Any]) -> Tracks:
-    result_keys = {(int(result.frame_idx), int(result.player_id)) for result in pose_results}
-    payload = tracks.model_dump(mode="json")
-    players: list[dict[str, Any]] = []
-    for player in payload.get("players", []):
-        player_id = int(player["id"])
-        frames = [
-            frame
-            for frame in player.get("frames", [])
-            if (int(round(float(frame["t"]) * tracks.fps)), player_id) in result_keys
-        ]
-        if frames:
-            players.append({**player, "frames": frames})
-    return Tracks.model_validate({**payload, "players": players})
+    median_px = float(calibration.reprojection_error_px.median)
+    p95_px = float(calibration.reprojection_error_px.p95)
+    return {
+        "reprojection_median_px": median_px,
+        "reprojection_p95_px": p95_px,
+        "reprojection_gate_median_px": CALIBRATION_REPROJECTION_MEDIAN_GATE_PX,
+        "below_reprojection_gate": median_px <= CALIBRATION_REPROJECTION_MEDIAN_GATE_PX,
+        "note": (
+            "coarse proxy only, not a validated BODY-quality signal -- see "
+            "runs/cal_body_projection_bias_20260702T014121Z/section_b_joint_asymmetry_explanation.json "
+            "(95.3% of observed Burlington dy-bias is BODY's own joint-layout asymmetry, not calibration "
+            "error; Wolverine's flat calibration shows a comparable mismatch). Do not gate/reject BODY "
+            "output on this value alone."
+        ),
+    }
 
 
 def _empty_smpl_motion(*, fps: float) -> dict[str, Any]:
@@ -920,7 +1263,158 @@ def _skeleton_player_frame_count(payload: Mapping[str, Any] | None) -> int:
     )
 
 
-def _ensure_lane_b_frame_plan_from_lane_a(context: StageContext, tracks: Tracks) -> dict[str, Any]:
+def _sam3d_static_clip_intrinsics_payload(
+    *,
+    calibration: CourtCalibration,
+    camera_intrinsics_k: Sequence[Sequence[float]] | None,
+) -> dict[str, Any] | None:
+    if camera_intrinsics_k is None:
+        return None
+    intrinsics = calibration.intrinsics
+    matrix = [[float(value) for value in row] for row in camera_intrinsics_k]
+    payload = {
+        "fx": float(matrix[0][0]),
+        "fy": float(matrix[1][1]),
+        "cx": float(matrix[0][2]),
+        "cy": float(matrix[1][2]),
+        "dist": [float(value) for value in (intrinsics.dist or [])],
+        "source": str(intrinsics.source),
+        "matrix": matrix,
+        "static_per_clip": True,
+    }
+    _assert_sam3d_static_clip_intrinsics_payload_consistent(payload)
+    return payload
+
+
+def _assert_sam3d_static_clip_intrinsics_payload_consistent(payload: Mapping[str, Any]) -> None:
+    matrix = payload.get("matrix")
+    if (
+        not isinstance(matrix, Sequence)
+        or len(matrix) != 3
+        or any(not isinstance(row, Sequence) or len(row) != 3 for row in matrix)
+    ):
+        raise ValueError("clip_intrinsics matrix must be 3x3")
+    checks = {
+        "fx": float(matrix[0][0]),
+        "fy": float(matrix[1][1]),
+        "cx": float(matrix[0][2]),
+        "cy": float(matrix[1][2]),
+    }
+    for name, matrix_value in checks.items():
+        payload_value = float(payload[name])
+        if abs(payload_value - matrix_value) > 1e-6:
+            raise ValueError(
+                f"clip_intrinsics payload is inconsistent: {name}={payload_value} "
+                f"but matrix value is {matrix_value}"
+            )
+
+
+def _call_sam3d_batch_runner(
+    batch_runner: Any,
+    requests: list[dict[str, Any]],
+    *,
+    clip_intrinsics: Mapping[str, Any] | None,
+    sam3d_body_input_size_px: int | None,
+    crop_bucket_sizes: Sequence[int],
+    torch_compile: bool,
+    compile_warmup_buckets: Sequence[int],
+    compile_warmup_passes: int,
+    steady_state_empty_cache: bool,
+    inner_bucket_sync: bool,
+    upstream_env: Mapping[str, Any],
+    tier2_output_lite: bool,
+) -> list[list[dict[str, Any]]]:
+    kwargs = {
+        "clip_intrinsics": dict(clip_intrinsics) if clip_intrinsics is not None else None,
+        "sam3d_body_input_size_px": sam3d_body_input_size_px,
+        "crop_bucket_sizes": tuple(int(value) for value in crop_bucket_sizes),
+        "torch_compile": bool(torch_compile),
+        "compile_warmup_buckets": tuple(int(value) for value in compile_warmup_buckets),
+        "compile_warmup_passes": int(compile_warmup_passes),
+        "steady_state_empty_cache": bool(steady_state_empty_cache),
+        "inner_bucket_sync": bool(inner_bucket_sync),
+        "upstream_env": dict(upstream_env),
+        "tier2_output_lite": bool(tier2_output_lite),
+    }
+    try:
+        signature = inspect.signature(batch_runner)
+    except (TypeError, ValueError):
+        return batch_runner(requests)
+    parameters = signature.parameters
+    accepts_kwargs = any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters.values())
+    accepted = {key: value for key, value in kwargs.items() if accepts_kwargs or key in parameters}
+    if accepted:
+        return batch_runner(requests, **accepted)
+    return batch_runner(requests)
+
+
+def _normalize_sam3d_upstream_env(raw_env: Mapping[str, Any]) -> dict[str, str]:
+    parsed: dict[str, str] = {}
+    for raw_key, raw_value in raw_env.items():
+        key = str(raw_key)
+        if key not in SAM3D_UPSTREAM_ENV_WHITELIST:
+            raise ValueError(f"unsupported SAM3D upstream env key {key!r}")
+        if isinstance(raw_value, bool):
+            value = "1" if raw_value else "0"
+        elif isinstance(raw_value, int):
+            value = str(raw_value)
+        elif isinstance(raw_value, str) and raw_value:
+            value = raw_value
+        else:
+            raise ValueError(f"SAM3D upstream env {key} must be a non-empty string, integer, or boolean")
+        parsed[key] = value
+    return parsed
+
+
+def _body_record_has_dense_mesh(raw_output: Mapping[str, Any]) -> bool:
+    for key in ("pred_vertices", "vertices", "mesh_vertices_xyz"):
+        if key not in raw_output or raw_output[key] is None:
+            continue
+        value = raw_output[key]
+        try:
+            return len(value) > 0
+        except TypeError:
+            return True
+    return False
+
+
+def _target_representation_lookup(body_execution: Mapping[str, Any]) -> dict[tuple[int, int], str]:
+    lookup: dict[tuple[int, int], str] = {}
+    for frame in body_execution.get("scheduled_frames", []):
+        if not isinstance(frame, Mapping):
+            continue
+        frame_idx = int(frame.get("frame_idx", -1))
+        target_representation = str(frame.get("target_representation", "world_mesh"))
+        for player_id in frame.get("target_player_ids", []):
+            lookup[(frame_idx, int(player_id))] = target_representation
+    return lookup
+
+
+def _body_request_metadata_lookup(body_execution: Mapping[str, Any]) -> dict[tuple[int, int], dict[str, Any]]:
+    lookup: dict[tuple[int, int], dict[str, Any]] = {}
+    for frame in body_execution.get("scheduled_frames", []):
+        if not isinstance(frame, Mapping):
+            continue
+        frame_idx = int(frame.get("frame_idx", -1))
+        frame_reasons = [str(reason) for reason in frame.get("reasons", [])]
+        player_targets = {
+            int(target.get("player_id")): target
+            for target in frame.get("player_targets", [])
+            if isinstance(target, Mapping) and target.get("player_id") is not None
+        }
+        for player_id in frame.get("target_player_ids", []):
+            player_id_int = int(player_id)
+            target = player_targets.get(player_id_int, {})
+            reasons = target.get("reasons", frame_reasons) if isinstance(target, Mapping) else frame_reasons
+            lookup[(frame_idx, player_id_int)] = {
+                "reasons": [str(reason) for reason in reasons],
+                "recommended_tier": str(frame.get("recommended_tier", "")),
+                "target_representation": str(frame.get("target_representation", "")),
+            }
+    return lookup
+
+
+def _ensure_body_frame_plan_from_sam3d(context: StageContext, tracks: Tracks) -> dict[str, Any]:
     frame_plan_path = context.run_dir / "frame_compute_plan.json"
     if frame_plan_path.is_file():
         return {
@@ -935,33 +1429,33 @@ def _ensure_lane_b_frame_plan_from_lane_a(context: StageContext, tracks: Tracks)
     skeleton_path = _existing_file(context.run_dir / "skeleton3d.json")
     if skeleton_path is None:
         return {
-            "source": "missing_lane_a_skeleton3d",
+            "source": "missing_sam3d_skeleton3d",
             "contact_event_count": 0,
             "generated_artifacts": generated_artifacts,
             "notes": ["frame_compute_plan.json not derived because skeleton3d.json is missing"],
         }
     skeleton_payload = _read_json(skeleton_path)
-    if not _is_real_lane_a_skeleton3d(skeleton_payload):
+    if not _is_real_sam3d_skeleton3d(skeleton_payload):
         return {
-            "source": "invalid_lane_a_skeleton3d",
+            "source": "invalid_sam3d_skeleton3d",
             "contact_event_count": 0,
             "generated_artifacts": generated_artifacts,
-            "notes": ["frame_compute_plan.json not derived because skeleton3d.json is not a real Lane A skeleton"],
+            "notes": ["frame_compute_plan.json not derived because skeleton3d.json is not a real SAM-3D skeleton"],
         }
 
     wrist_path = _first_existing_artifact(context, "wrist_velocity_peaks.json")
     wrist_payload = _read_json(wrist_path) if wrist_path is not None else None
-    if not _is_current_lane_a_wrist_velocity_peaks(wrist_payload, skeleton_path=skeleton_path):
-        wrist_payload = build_wrist_velocity_peaks_from_file(skeleton_path, require_lane_a=True)
+    if not _is_current_sam3d_wrist_velocity_peaks(wrist_payload, skeleton_path=skeleton_path):
+        wrist_payload = build_wrist_velocity_peaks_from_file(skeleton_path, require_lane_a=False)
         wrist_path = context.run_dir / "wrist_velocity_peaks.json"
         _write_json(wrist_path, wrist_payload)
         generated_artifacts.append("wrist_velocity_peaks.json")
-        notes.append("derived wrist_velocity_peaks.json from Lane A skeleton3d.json")
+        notes.append("derived wrist_velocity_peaks.json from SAM-3D skeleton3d.json")
     elif wrist_path.parent != context.run_dir:
         wrist_path = context.run_dir / "wrist_velocity_peaks.json"
         _write_json(wrist_path, wrist_payload)
         generated_artifacts.append("wrist_velocity_peaks.json")
-        notes.append("copied Lane A wrist_velocity_peaks.json into run output")
+        notes.append("copied SAM-3D wrist_velocity_peaks.json into run output")
 
     ball_inflections_path = _first_existing_artifact(context, "ball_inflections.json")
     if ball_inflections_path is None:
@@ -985,13 +1479,25 @@ def _ensure_lane_b_frame_plan_from_lane_a(context: StageContext, tracks: Tracks)
         ball_inflections_path = context.run_dir / "ball_inflections.json"
         _write_json(ball_inflections_path, ball_inflections)
         generated_artifacts.append("ball_inflections.json")
-        notes.append("derived ball_inflections.json from ball_track.json for Lane B contact scheduling")
+        notes.append("derived ball_inflections.json from ball_track.json for BODY contact scheduling")
 
     contact_windows_path = _first_existing_artifact(context, "contact_windows.json")
     if contact_windows_path is None:
+        # Prefer audio_onsets_v2.json (pop-tuned detector) over the older
+        # audio_onsets.json when both exist; fall back to [] (no audio cues)
+        # when neither is present -- this preserves fail-closed behavior for
+        # clips without audio. Audio only ever refines contact timing here
+        # (require_audio=False, fuse_contact_windows_from_cue_payloads already
+        # treats it as one of several cues); it never overrides or gates on
+        # visual (wrist/ball) evidence, and does not relax any downstream gate
+        # (e.g. ball_bounce_gate.py's M4 stays at its own fail-closed threshold).
+        audio_onsets_path = _first_existing_artifact(context, "audio_onsets_v2.json") or _first_existing_artifact(
+            context, "audio_onsets.json"
+        )
+        audio_onsets_payload = _read_json(audio_onsets_path) if audio_onsets_path is not None else []
         contact_windows = fuse_contact_windows_from_cue_payloads(
             fps=tracks.fps,
-            audio_onsets_payload=[],
+            audio_onsets_payload=audio_onsets_payload,
             wrist_velocity_peaks_payload=_read_json(wrist_path),
             ball_inflections_payload=_read_json(ball_inflections_path),
             require_audio=False,
@@ -999,14 +1505,20 @@ def _ensure_lane_b_frame_plan_from_lane_a(context: StageContext, tracks: Tracks)
         contact_windows_path = context.run_dir / "contact_windows.json"
         _write_json(contact_windows_path, contact_windows)
         generated_artifacts.append("contact_windows.json")
-        notes.append("fused contact_windows.json from Lane A wrists and ball inflections")
+        if audio_onsets_path is not None:
+            notes.append(
+                f"fused contact_windows.json from SAM-3D wrists, ball inflections, and audio cues ({audio_onsets_path.name}); "
+                "audio only refines timing, never overrides visual evidence"
+            )
+        else:
+            notes.append("fused contact_windows.json from SAM-3D wrists and ball inflections (no audio_onsets artifact found)")
     else:
         contact_windows = _read_json(contact_windows_path)
         if contact_windows_path.parent != context.run_dir:
             contact_windows_path = context.run_dir / "contact_windows.json"
             _write_json(contact_windows_path, contact_windows)
             generated_artifacts.append("contact_windows.json")
-            notes.append("copied contact_windows.json into run output for Lane B scheduling")
+            notes.append("copied contact_windows.json into run output for BODY scheduling")
 
     ball_track_path = _first_existing_artifact(context, "ball_track.json") or _existing_file(context.ball_source_path)
     ball_track = None
@@ -1023,7 +1535,7 @@ def _ensure_lane_b_frame_plan_from_lane_a(context: StageContext, tracks: Tracks)
     write_frame_compute_plan(frame_plan_path, frame_plan)
     generated_artifacts.append("frame_compute_plan.json")
     return {
-        "source": "lane_a_wrist_velocity_peaks",
+        "source": "sam3d_wrist_velocity_peaks",
         "contact_event_count": _contact_event_count(contact_windows),
         "generated_artifacts": generated_artifacts,
         "notes": notes,
@@ -1045,28 +1557,36 @@ def _contact_event_count(payload: Any | None) -> int:
     return len(events) if isinstance(events, list) else 0
 
 
-def _is_real_lane_a_skeleton3d(payload: Any) -> bool:
+def _is_real_sam3d_skeleton3d(payload: Any) -> bool:
     if not isinstance(payload, Mapping):
         return False
     provenance = payload.get("provenance")
+    joint_names = payload.get("joint_names")
+    model_candidates = {str(payload.get("source_model", ""))}
+    if isinstance(provenance, Mapping):
+        for key in ("source", "model_family", "skeleton_source"):
+            value = provenance.get(key)
+            if value is not None:
+                model_candidates.add(str(value))
     return (
         payload.get("artifact_type") == "racketsport_skeleton3d"
         and payload.get("preview_only") is False
-        and isinstance(provenance, Mapping)
-        and provenance.get("lane") == "A"
+        and isinstance(joint_names, list)
+        and len(joint_names) == 70
+        and bool({"sam3d_body_joints", "sam3dbody_world_joints"}.intersection(model_candidates))
     )
 
 
-def _is_current_lane_a_wrist_velocity_peaks(payload: Any, *, skeleton_path: Path) -> bool:
+def _is_current_sam3d_wrist_velocity_peaks(payload: Any, *, skeleton_path: Path) -> bool:
     if not isinstance(payload, Mapping):
         return False
     source_provenance = payload.get("source_provenance")
     return (
         payload.get("artifact_type") == "racketsport_wrist_velocity_peaks"
-        and payload.get("source") == "lane_a_skeleton3d_world_joints"
+        and payload.get("source") == "sam3d_body_skeleton3d_world_joints"
         and isinstance(source_provenance, Mapping)
-        and source_provenance.get("lane") == "A"
         and source_provenance.get("preview_only") is False
+        and source_provenance.get("joint_count") == 70
         and _same_artifact_path(payload.get("source_path"), skeleton_path)
     )
 
@@ -1170,8 +1690,35 @@ def run_pipeline(
     court_margin_m: float = 0.0,
     id_strategy: str = "auto",
     ball_source_path: str | Path | None = None,
+    reuse_existing_stage_artifacts: bool = False,
 ) -> dict[str, Any]:
-    """Run the pipeline through ``stage`` and stop rather than fabricate artifacts."""
+    """Run the pipeline through ``stage`` and stop rather than fabricate artifacts.
+
+    ``reuse_existing_stage_artifacts`` (Task #45 S2, default ``False``): by default this
+    function re-derives every dependency stage in ``stage``'s closure on every call --
+    e.g. calling ``run_pipeline(stage="tracking", ...)`` always re-runs "calibration"
+    first, even if a prior ``run_pipeline(stage="calibration", ...)`` call against the
+    same ``run_dir`` already wrote a valid ``court_calibration.json``. That is
+    deliberately left as this function's default behavior (every existing caller/test
+    relies on it, and it is the correct behavior for a fresh/standalone run), but it is
+    wasteful and can be actively wrong for a caller like
+    ``scripts/racketsport/process_video.py`` that invokes this function once per stage
+    against the *same* clip directory over the course of one pipeline run: a dependency
+    stage's automatic evidence check can behave differently the second time it runs (see
+    ``_raise_if_video_evidence_not_ready``), or the dependency runner registered for this
+    call may not even be able to re-derive it at all (``ExternalCalibrationRunner``
+    deliberately never writes a ``capture_sidecar.json``, so a plain
+    ``ManualCalibrationRunner`` re-derivation attempt inside a later stage's dependency
+    walk fails with "missing calibration sidecar" even though a good calibration already
+    exists on disk). When a caller opts in with ``reuse_existing_stage_artifacts=True``,
+    any dependency contract (every contract in the walk *except* the one actually
+    requested via ``stage``) whose required artifacts are already present and schema-valid
+    on disk is treated as authoritative and its runner is not invoked again. This does
+    NOT change re-derivation behavior for the requested ``stage`` itself (a caller that
+    asks to run "tracking" always gets a real tracking attempt), and it does not change
+    anything for callers that leave the default ``False`` -- documented here rather than
+    changed globally, since other callers/tests intentionally exercise full re-derivation.
+    """
 
     run_path = Path(run_dir)
     run_path.mkdir(parents=True, exist_ok=True)
@@ -1208,6 +1755,14 @@ def run_pipeline(
             stage_runs.append(_blocked_stage(contract, f"no runner registered for stage: {contract.stage}"))
             summary_status = PIPELINE_STATUS_BLOCKED
             break
+
+        if (
+            reuse_existing_stage_artifacts
+            and contract.stage != stage
+            and _contract_artifacts_already_valid(contract, run_path)
+        ):
+            stage_runs.append(_reused_stage_run(contract, runner, run_path).as_dict())
+            continue
 
         try:
             result = runner.run(context)
@@ -1276,12 +1831,71 @@ def _ordered_contracts_for(stage: str) -> list[PipelineStageContract]:
     return [contract for contract in PIPELINE_STAGE_CONTRACTS if contract.stage in needed]
 
 
+#: Artifacts a contract in ``pipeline_contracts.PIPELINE_STAGE_CONTRACTS`` lists as
+#: "required" for readiness bookkeeping/other tooling, but that no stage on the
+#: ``scripts/racketsport/process_video.py`` product path actually reads back as an
+#: *input* (Task #45 S4; verified by grepping every read of these filenames across
+#: ``scripts/racketsport/process_video.py`` and every module it imports artifacts
+#: through -- ``court_zones.json`` is read only by the offline
+#: ``threed.racketsport.court_keypoint_eval`` eval script, and ``net_plane.json`` only by
+#: review/visualization tooling (``threed.racketsport.calibration_overlay``,
+#: ``threed.racketsport.review_action_manifest``), neither of which sits on the
+#: process_video.py stage path). They stay pure, cheap functions of ``sport``
+#: (``build_court_zones``/``build_net_plane``) so every calibration runner keeps writing
+#: them for those other consumers -- this only stops a missing/invalid copy from
+#: hard-failing the *stage itself* here. This intentionally does NOT touch
+#: ``pipeline_contracts.PIPELINE_STAGE_CONTRACTS`` (out of this lane's scope and used by
+#: other stages/lanes); it only relaxes this function's own post-run validation.
+_SOFT_REQUIRED_ARTIFACTS: dict[str, frozenset[str]] = {
+    "calibration": frozenset({"court_zones.json", "net_plane.json"}),
+}
+
+
 def _validate_contract_artifacts(contract: PipelineStageContract, run_dir: Path) -> None:
+    soft = _SOFT_REQUIRED_ARTIFACTS.get(contract.stage, frozenset())
     for artifact in contract.required_artifacts:
+        if artifact in soft:
+            continue
         schema_name = ARTIFACT_SCHEMA_BY_FILENAME.get(artifact)
         if schema_name is None:
             raise ValueError(f"no schema mapping for required artifact: {artifact}")
         validate_artifact_file(schema_name, run_dir / artifact)
+
+
+def _contract_artifacts_already_valid(contract: PipelineStageContract, run_dir: Path) -> bool:
+    """Task #45 S2: has ``contract`` already produced valid artifacts on ``run_dir``?
+
+    Used only when a caller opts into ``run_pipeline(reuse_existing_stage_artifacts=True)``
+    -- see that parameter's docstring. Reuses the same (S4-relaxed) validation
+    ``_validate_contract_artifacts`` performs right after a runner actually runs, so
+    "already valid" means exactly what "just ran successfully" would have meant.
+    """
+
+    if not contract.required_artifacts:
+        return False
+    try:
+        _validate_contract_artifacts(contract, run_dir)
+    except Exception:
+        return False
+    return True
+
+
+def _reused_stage_run(contract: PipelineStageContract, runner: StageRunner, run_dir: Path) -> StageRun:
+    present = tuple(name for name in contract.required_artifacts if (run_dir / name).is_file())
+    return StageRun(
+        stage=contract.stage,
+        status="ran",
+        real_model=getattr(runner, "real_model", False),
+        source_mode="reused_existing_run_artifacts",
+        produced_artifacts=present,
+        notes=(
+            f"{contract.stage} artifacts already valid on disk for this run and "
+            "reuse_existing_stage_artifacts=True was requested by the caller; treating this "
+            "completed stage's artifacts as authoritative instead of re-deriving/re-validating "
+            "it again (Task #45 S2) -- re-derivation was skipped, the registered "
+            f"{type(runner).__name__} runner for {contract.stage!r} was not invoked",
+        ),
+    )
 
 
 def _blocked_stage(contract: PipelineStageContract, note: str) -> dict[str, Any]:
@@ -1319,8 +1933,11 @@ def _write_best_effort_review_artifacts(
     tracks_path = context.run_dir / "tracks.json"
     court_path = context.run_dir / "court_calibration.json"
     ball_path = _existing_file(context.run_dir / "ball_track.json") or _existing_file(context.ball_source_path)
+    ball_physics_path = _existing_file(context.run_dir / "ball_track_physics_filled.json")
     contact_windows_path = _existing_file(context.run_dir / "contact_windows.json")
     racket_path = _existing_file(context.run_dir / "racket_pose.json")
+    racket_estimate_path = _existing_file(context.run_dir / "racket_pose_estimate.json")
+    physics_footlock_path = _existing_file(context.run_dir / "physics_footlock.json")
     smpl_path = _existing_file(context.run_dir / "smpl_motion.json")
     skeleton_path = _existing_file(context.run_dir / "skeleton3d.json")
 
@@ -1377,6 +1994,9 @@ def _write_best_effort_review_artifacts(
                 skeleton3d_path=skeleton_path,
                 ball_track_path=ball_path,
                 racket_pose_path=racket_path,
+                physics_footlock_path=physics_footlock_path,
+                ball_track_physics_filled_path=ball_physics_path,
+                racket_pose_estimate_path=racket_estimate_path,
             )
             write_virtual_world(context.run_dir / "virtual_world.json", virtual_world)
             produced_artifacts.append("virtual_world.json")
@@ -1531,14 +2151,41 @@ def _unseeded_calibration_line_evidence(context: StageContext) -> tuple[Any, tup
     )
 
 
-def _raise_if_video_evidence_not_ready(context: StageContext, evidence: Any) -> None:
+def _raise_if_video_evidence_not_ready(context: StageContext, evidence: Any, *, trusted: bool = False) -> str | None:
+    """Fail-closed gate on the automatic court-line/net evidence detector.
+
+    Task #45 S1: this automatic no-tap evidence detector is a future-facing signal --
+    today it cannot reliably see every court's net/lines from a single video (see
+    runs/v1_coldstart_20260702T061658Z/summary.json's ``missing_top_net`` finding,
+    reproduced across all 4 eval clips regardless of calibration source). When
+    ``trusted`` is True the caller has already established this run's
+    ``court_calibration.json`` came from a real, owner-provided/reviewed source
+    (``ExternalCalibrationRunner`` with an intrinsics.source in
+    ``TRUSTED_INTRINSICS_SOURCES``, or ``ManualCalibrationRunner``'s human-tapped-corners
+    branch) -- for those sources a not-ready automatic evidence result is returned as an
+    advisory note instead of raised, so the one calibration input the current v1
+    owner-tap product path has does not get blocked by a gate designed for a different,
+    not-yet-built no-tap product surface. Untrusted/no-tap calibration (this function
+    called with the default ``trusted=False``) keeps the exact fail-closed behavior this
+    function always had -- see ``ManualCalibrationRunner``'s no-tap ARKit-keypoints
+    branch, which deliberately opts out of ``trusted`` too.
+    """
+
     if _calibration_video_path(context) is None:
-        return
+        return None
     aggregate = getattr(evidence, "aggregate", None)
     if aggregate is None or getattr(aggregate, "auto_calibration_ready", False):
-        return
+        return None
     reasons = ", ".join(getattr(aggregate, "reasons", []) or ["unknown"])
-    raise ValueError(f"automatic court evidence not ready for video-backed run: {reasons}")
+    message = f"automatic court evidence not ready for video-backed run: {reasons}"
+    if trusted:
+        return (
+            f"ADVISORY (not blocking -- trusted calibration source): {message}; the automatic "
+            "no-tap court-evidence detector is not yet a blocking gate for a trusted, "
+            "owner-provided calibration -- see this stage's calibration_confidence metric and "
+            "downstream trust bands for the honest confidence signal instead"
+        )
+    raise ValueError(message)
 
 
 def _fail_closed_court_line_evidence(context: StageContext, *, source: str, reason: str) -> Any:
@@ -1812,10 +2459,14 @@ def _image_size_from_body_frame_or_calibration(
     calibration: CourtCalibration,
     bboxes: list[list[float]],
 ) -> tuple[int, int]:
+    del calibration, bboxes
     frame_size = _read_image_size(image_path)
     if frame_size is not None:
         return frame_size
-    return _image_size_from_calibration_and_bboxes(calibration, bboxes)
+    raise ValueError(
+        f"unable to read BODY frame image size for {image_path}; "
+        "refusing to derive SAM3D static intrinsics from calibration/bbox fallback"
+    )
 
 
 def _read_image_size(image_path: Path) -> tuple[int, int] | None:

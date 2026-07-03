@@ -25,8 +25,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--player-labels", type=Path, help="Optional labels/players.json box overlay.")
     parser.add_argument("--replay-scene", type=Path, help="Optional replay_scene.json path.")
     parser.add_argument("--body-mesh", type=Path, help="Optional body_mesh.json path.")
+    parser.add_argument("--body-mesh-index", type=Path, help="Optional chunked body_mesh_index.json path.")
     parser.add_argument("--physics-refinement", type=Path, help="Optional physics_refinement.json path.")
     parser.add_argument("--contact-windows", type=Path, help="Optional contact_windows.json path.")
+    parser.add_argument("--ball-inflections", type=Path, help="Optional ball_inflections.json path for timeline bounce markers.")
+    parser.add_argument("--reviewed-bounces", type=Path, help="Optional reviewed_ball_bounces.json path.")
+    parser.add_argument("--coaching-card-facts", type=Path, help="Optional coaching_card_facts.json path.")
+    parser.add_argument("--rally-spans", type=Path, help="Optional rally_spans.json path.")
     parser.add_argument(
         "--annotation-source",
         type=Path,
@@ -51,8 +56,13 @@ def main(argv: list[str] | None = None) -> int:
             player_labels_path=args.player_labels,
             replay_scene_path=args.replay_scene,
             body_mesh_path=args.body_mesh,
+            body_mesh_index_path=args.body_mesh_index,
             physics_refinement_path=args.physics_refinement,
             contact_windows_path=args.contact_windows,
+            ball_inflections_path=args.ball_inflections,
+            reviewed_bounces_path=args.reviewed_bounces,
+            coaching_card_facts_path=args.coaching_card_facts,
+            rally_spans_path=args.rally_spans,
             annotation_sources=args.annotation_source,
             vite_allow_root=args.vite_allow_root,
         )

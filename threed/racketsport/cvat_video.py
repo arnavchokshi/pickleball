@@ -85,6 +85,7 @@ def import_cvat_video_zip(
                 continue
 
             x1, y1, x2, y2 = _shape_bbox_xyxy(shape_node)
+            blur_fields = _shape_ball_blur_fields(shape_node) if label.strip().lower() == "ball" else {}
             visible_box = CvatVideoBox(
                 track_id=raw_track_id,
                 label=label,
@@ -94,6 +95,7 @@ def import_cvat_video_zip(
                 keyframe=keyframe,
                 occluded=occluded,
                 source=source,
+                **blur_fields,
             )
             boxes_by_frame[frame_index].append(visible_box)
             visible_frames.append(frame_index)
@@ -264,6 +266,30 @@ def _shape_bbox_xyxy(node: ElementTree.Element) -> tuple[float, float, float, fl
         ry = _float_attr(node, "ry")
         return (cx - rx, cy - ry, cx + rx, cy + ry)
     raise ValueError(f"unsupported CVAT track shape: {node.tag}")
+
+
+def _shape_ball_blur_fields(node: ElementTree.Element) -> dict[str, Any]:
+    attributes = _shape_attributes(node)
+    fields: dict[str, Any] = {}
+    for name in ("center_convention", "blur_label_quality"):
+        value = attributes.get(name)
+        if value:
+            fields[name] = value
+    for name in ("blur_angle_deg", "blur_length_px", "blur_width_px"):
+        value = attributes.get(name)
+        if value:
+            fields[name] = float(value)
+    return fields
+
+
+def _shape_attributes(node: ElementTree.Element) -> dict[str, str]:
+    parsed: dict[str, str] = {}
+    for attribute in node.findall("attribute"):
+        name = attribute.attrib.get("name", "").strip()
+        value = _text(attribute)
+        if name and value:
+            parsed[name] = value
+    return parsed
 
 
 def _text(node: ElementTree.Element | None) -> str:

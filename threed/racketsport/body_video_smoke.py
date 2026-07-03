@@ -47,9 +47,40 @@ def run_body_video_smoke(
     body_fov_name: str | None = None,
     min_joint_count: int = 17,
     overwrite_frames: bool = True,
-    full_track_body: bool = False,
+    diagnostic_full_track: bool = False,
+    extra_runners: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Run a fail-closed video BODY smoke and write a single report."""
+    """Run a fail-closed video BODY smoke and write a single report.
+
+    ``diagnostic_full_track`` is an explicit, diagnostic-only escape hatch
+    that schedules BODY (Fast-SAM-3D-Body mesh) compute for every tracked
+    player-frame instead of the contact-aware tier rule
+    (``frame_rating.build_frame_compute_plan``, wired into the default
+    production path via the orchestrator's Lane B frame-plan derivation).
+    It exists only to reproduce past full-clip continuity/world-MPJPE
+    diagnostics; a run made with it set is never representative of
+    production BODY compute cost (~7x more player-frames go through the
+    mesh model) and must not be cited as tier-rule promotion evidence. The
+    default (``False``) path always lets the contact-aware plan through and
+    additionally refuses to silently reuse a stale diagnostic-tagged
+    ``frame_compute_plan.json`` that might already be sitting in
+    ``inputs_dir`` from a prior diagnostic run (see ``_prepare_frame_plan``).
+
+    ``extra_runners`` overrides/extends the default per-stage
+    ``threed.racketsport.orchestrator`` ``StageRunner`` registry (merged into
+    both the "tracking"-stage and "body"-stage ``run_pipeline`` calls below,
+    with ``extra_runners`` taking precedence over the stage-specific
+    defaults computed here). This exists for callers validating BODY against
+    footage that cannot go through ``ManualCalibrationRunner`` (the default,
+    unconditional "calibration" stage runner, which requires either a
+    ``capture_sidecar.json`` manual-taps seed or ``court_keypoints.json`` --
+    e.g. the external-ground-truth BODY validation lane
+    (`threed.racketsport.external_gt_aspset510_body_inputs`), which already
+    has real, trusted, non-pickleball camera calibration and needs to supply
+    a pre-built ``court_calibration.json`` directly instead. Every other
+    caller passes ``None`` (the default) and gets byte-identical behavior to
+    before this parameter existed.
+    """
 
     inputs = Path(inputs_dir)
     video = Path(video_path)
@@ -76,9 +107,10 @@ def run_body_video_smoke(
         court_margin_m=court_margin_m,
         id_strategy=id_strategy,
         ball_source_path=ball_source_path,
+        runners=dict(extra_runners) if extra_runners else None,
     )
 
-    frame_plan_path = _prepare_frame_plan(inputs, out, full_track_body=full_track_body)
+    frame_plan_path, frame_plan_notes = _prepare_frame_plan(inputs, out, diagnostic_full_track=diagnostic_full_track)
     body_execution_path = out / "body_compute_execution.json"
     scheduled_body_execution: dict[str, Any] | None = None
     frame_manifest: dict[str, Any] | None = None
@@ -93,6 +125,8 @@ def run_body_video_smoke(
         body_fov_name=body_fov_name,
         reuse_input_skeleton=reuse_input_skeleton,
     )
+    if extra_runners:
+        body_runners = {**body_runners, **extra_runners}
 
     try:
         tracks = validate_artifact_file("tracks", out / "tracks.json")
@@ -151,7 +185,7 @@ def run_body_video_smoke(
             body_runtime_timing = {"body_wall_seconds": max(0.0, time.perf_counter() - body_wall_start)}
         body_error = str(exc)
 
-    if scheduled_body_execution is not None and (full_track_body or not _body_outputs_available(out)):
+    if scheduled_body_execution is not None and (diagnostic_full_track or not _body_outputs_available(out)):
         write_body_compute_execution(body_execution_path, scheduled_body_execution)
 
     quality = build_body_joint_quality_from_paths(
@@ -232,6 +266,8 @@ def run_body_video_smoke(
         "tracking_mode": tracking_mode,
         "body_runtime_ran": body_runtime_ran,
         "body_failure_note": body_failure_note,
+        "diagnostic_full_track_mode": diagnostic_full_track,
+        "frame_plan_notes": list(frame_plan_notes),
         "paths": {
             "frame_compute_plan": str(frame_plan_path) if frame_plan_path is not None else "",
             "lane_a_pose_frame_execution": str(out / "lane_a_pose_frame_execution.json")
@@ -423,24 +459,68 @@ def _lane_a_pose_frame_execution(tracks: Tracks) -> dict[str, Any]:
     }
 
 
-def _prepare_frame_plan(inputs: Path, out: Path, *, full_track_body: bool = False) -> Path | None:
+def _prepare_frame_plan(inputs: Path, out: Path, *, diagnostic_full_track: bool = False) -> tuple[Path | None, list[str]]:
+    """Resolve which ``frame_compute_plan.json`` (if any) the BODY stage should
+    consume, and never let a diagnostic 100%-coverage plan silently stand in
+    for the contact-aware tier rule on a non-diagnostic (production-path) run.
+
+    - ``diagnostic_full_track=True`` explicitly opts into writing a
+      100%-coverage plan (every tracked player-frame scheduled ``deep_mesh``)
+      tagged ``diagnostic_full_track: true``. This is the only way to get
+      full-track scheduling; it is never the default.
+    - ``diagnostic_full_track=False`` (the default/production path) never
+      writes a full-track plan itself. If ``inputs_dir`` already contains a
+      ``frame_compute_plan.json``, it is reused *unless* it is tagged
+      ``diagnostic_full_track: true`` -- e.g. left over in a shared inputs
+      bundle from a prior diagnostic run -- in which case it is ignored (not
+      copied into the run dir) so the orchestrator's own contact-aware
+      derivation (``_ensure_lane_b_frame_plan_from_lane_a`` /
+      ``frame_rating.build_frame_compute_plan``) runs instead. This is the
+      concrete fail-safe against the diagnostic flag "silently overriding
+      contact-aware windowing in production paths".
+    """
+    notes: list[str] = []
     source = inputs / "frame_compute_plan.json"
     target = out / "frame_compute_plan.json"
-    if full_track_body:
+    if diagnostic_full_track:
         tracks = validate_artifact_file("tracks", out / "tracks.json")
         if not isinstance(tracks, Tracks):
             raise ValueError("tracks artifact did not parse as Tracks")
-        target.write_text(json.dumps(_full_track_body_frame_plan(tracks), indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        return target
+        target.write_text(
+            json.dumps(_diagnostic_full_track_frame_plan(tracks), indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        notes.append(
+            "diagnostic_full_track=True: wrote a 100%-coverage frame_compute_plan.json covering every "
+            "tracked player-frame; this bypasses the contact-aware tier rule and must not be used as "
+            "production BODY compute-cost or promotion evidence"
+        )
+        return target, notes
     if source.is_file():
+        if _is_diagnostic_full_track_plan(source):
+            notes.append(
+                f"ignored diagnostic-tagged {source}: refusing to silently reuse a diagnostic_full_track=True "
+                "plan for a non-diagnostic run; letting the contact-aware plan be derived from Lane A "
+                "artifacts (ball_track.json/contact_windows.json) instead"
+            )
+            if target.is_file():
+                target.unlink()
+            return None, notes
         shutil.copy2(source, target)
-        return target
+        return target, notes
     if target.is_file():
         target.unlink()
-    return None
+    return None, notes
 
 
-def _full_track_body_frame_plan(tracks: Tracks) -> dict[str, Any]:
+def _is_diagnostic_full_track_plan(path: Path) -> bool:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return isinstance(payload, Mapping) and payload.get("diagnostic_full_track") is True
+
+
+def _diagnostic_full_track_frame_plan(tracks: Tracks) -> dict[str, Any]:
     frames: list[dict[str, Any]] = []
     for frame_idx, active in _track_frames_by_index(tracks).items():
         player_targets = [
@@ -450,7 +530,7 @@ def _full_track_body_frame_plan(tracks: Tracks) -> dict[str, Any]:
                 "score": 1.0,
                 "recommended_tier": "deep_mesh",
                 "target_representation": "world_mesh",
-                "reasons": ["full_track_body_diagnostic"],
+                "reasons": ["diagnostic_full_track_schedule"],
             }
             for player_id, track_frame in active
         ]
@@ -461,7 +541,7 @@ def _full_track_body_frame_plan(tracks: Tracks) -> dict[str, Any]:
                 "score": 1.0,
                 "recommended_tier": "deep_mesh",
                 "target_representation": "world_mesh",
-                "reasons": ["full_track_body_diagnostic"],
+                "reasons": ["diagnostic_full_track_schedule"],
                 "active_players": len(active),
                 "active_player_ids": [player_id for player_id, _frame in active],
                 "missing_players": 0,
@@ -476,6 +556,7 @@ def _full_track_body_frame_plan(tracks: Tracks) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "artifact_type": "racketsport_frame_compute_plan",
+        "diagnostic_full_track": True,
         "fps": float(tracks.fps),
         "expected_players": len(tracks.players),
         "frame_count": len(frames),
@@ -483,7 +564,7 @@ def _full_track_body_frame_plan(tracks: Tracks) -> dict[str, Any]:
         "deep_mesh_windows": windows,
         "summary": {
             "by_tier": {"deep_mesh": len(frames)} if frames else {},
-            "by_reason": {"full_track_body_diagnostic": len(frames)} if frames else {},
+            "by_reason": {"diagnostic_full_track_schedule": len(frames)} if frames else {},
             "by_player_target_representation": {"world_mesh": player_target_count} if player_target_count else {},
             "max_score": 1.0 if frames else 0.0,
             "deep_mesh_window_count": len(windows),
@@ -539,7 +620,7 @@ def _full_track_window(frames: list[Mapping[str, Any]], *, fps: float) -> dict[s
         "target_representation": "world_mesh",
         "fallback_representation": "lane_a_skeleton",
         "target_player_ids": target_player_ids,
-        "reason_counts": {"full_track_body_diagnostic": len(frames)},
+        "reason_counts": {"diagnostic_full_track_schedule": len(frames)},
         "max_score": 1.0,
     }
 

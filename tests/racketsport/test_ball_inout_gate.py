@@ -133,6 +133,120 @@ def test_ball_inout_gate_passes_uncertainty_rule_gray_zone_and_reviewed_agreemen
     assert report["violations"] == []
 
 
+def test_ball_inout_gate_surfaces_uncertainty_breakdown_when_present(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    track = tmp_path / "ball_track.json"
+    m4 = tmp_path / "m4_report.json"
+    reviewed = tmp_path / "reviewed_inout.json"
+    _write_test_video(video)
+    payload = _ball_track_payload()
+    payload["bounces"][0]["uncertainty_breakdown"] = {
+        "method": "camera_geometry_elevation_parallax_v1",
+        "sigma_reproj_m": 0.0,
+        "sigma_depth_m": 0.15,
+        "sigma_ballradius_m": 0.02,
+        "sigma_localization_m": 0.01,
+        "camera_height_m": 4.2,
+        "h_max_m": 0.2,
+        "v_z_ref_mps": 6.23,
+        "dt_s": 0.033,
+        "frames_window": 2.0,
+        "binding_axis": "x",
+        "pose_source": "manual_corner_focal_length_search_v1",
+    }
+    track.write_text(json.dumps(payload), encoding="utf-8")
+    m4.write_text(json.dumps(_m4_report_payload(ball_track_path=str(track), bounce_count=2)), encoding="utf-8")
+    reviewed.write_text(json.dumps(_reviewed_inout_payload()), encoding="utf-8")
+
+    report = build_ball_inout_gate_report(
+        ball_track_path=track,
+        video_path=video,
+        m4_bounce_report_path=m4,
+        reviewed_inout_path=reviewed,
+    )
+
+    with_breakdown = report["calls"][0]
+    without_breakdown = report["calls"][1]
+    assert with_breakdown["uncertainty_breakdown"]["method"] == "camera_geometry_elevation_parallax_v1"
+    assert with_breakdown["uncertainty_breakdown"]["sigma_depth_m"] == pytest.approx(0.15)
+    assert without_breakdown["uncertainty_breakdown"] is None
+
+
+def test_ball_inout_gate_allows_out_calls_without_in_court_region(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    track = tmp_path / "ball_track.json"
+    m4 = tmp_path / "m4_report.json"
+    reviewed = tmp_path / "reviewed_inout.json"
+    _write_test_video(video)
+    track.write_text(
+        json.dumps(
+            _ball_track_payload(
+                bounces=[
+                    {
+                        "t": 1.0,
+                        "frame": 60,
+                        "world_xy": [-0.2, 2.4],
+                        "contact_xy_img": [120.0, 210.0],
+                        "p_bounce": 0.82,
+                        "margin_m": -0.18,
+                        "uncertainty_m": 0.06,
+                        "confidence": 0.75,
+                        "call": "out",
+                        "nearest_line": "left_sideline",
+                        "dominant_uncertainty_term": "manual_corner_homography_projection",
+                    }
+                ],
+            )
+        ),
+        encoding="utf-8",
+    )
+    m4.write_text(json.dumps(_m4_report_payload(ball_track_path=str(track), bounce_count=1)), encoding="utf-8")
+    reviewed.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_reviewed_ball_inout",
+                "fps": 60.0,
+                "calls": [{"frame": 60, "call": "out"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_ball_inout_gate_report(
+        ball_track_path=track,
+        video_path=video,
+        m4_bounce_report_path=m4,
+        reviewed_inout_path=reviewed,
+    )
+
+    assert "region_missing" not in report["violations"]
+    assert report["gate_result"] == "pass"
+
+
+def test_ball_inout_gate_allows_gray_calls_without_in_court_region(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    track = tmp_path / "ball_track.json"
+    m4 = tmp_path / "m4_report.json"
+    reviewed = tmp_path / "reviewed_inout.json"
+    _write_test_video(video)
+    payload = _ball_track_payload()
+    payload["bounces"][1].pop("region")
+    track.write_text(json.dumps(payload), encoding="utf-8")
+    m4.write_text(json.dumps(_m4_report_payload(ball_track_path=str(track), bounce_count=2)), encoding="utf-8")
+    reviewed.write_text(json.dumps(_reviewed_inout_payload()), encoding="utf-8")
+
+    report = build_ball_inout_gate_report(
+        ball_track_path=track,
+        video_path=video,
+        m4_bounce_report_path=m4,
+        reviewed_inout_path=reviewed,
+    )
+
+    assert "region_missing" not in report["violations"]
+    assert report["gate_result"] == "pass"
+
+
 def test_ball_inout_gate_fails_closed_without_bounces_m4_pass_or_review_labels(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     track = tmp_path / "ball_track.json"

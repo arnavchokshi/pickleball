@@ -24,6 +24,21 @@ def test_score_line_candidate_prefers_aligned_over_parallel_distractor():
     assert good.confidence > distractor.confidence
 
 
+def test_score_line_candidate_penalizes_tennis_width_overlong_candidate():
+    expected = ((100.0, 300.0), (900.0, 300.0))
+    regulation_pickleball_line = ((110.0, 300.0), (890.0, 300.0))
+    tennis_overlay_line = ((-250.0, 300.0), (1250.0, 300.0))
+    partially_occluded_line = ((240.0, 300.0), (760.0, 300.0))
+
+    regulation = score_line_candidate(expected, regulation_pickleball_line)
+    tennis = score_line_candidate(expected, tennis_overlay_line)
+    partial = score_line_candidate(expected, partially_occluded_line)
+
+    assert regulation.score > 0.95
+    assert partial.score > tennis.score
+    assert tennis.score < regulation.score - 0.08
+
+
 def test_select_best_line_observation_builds_semantic_schema_entry():
     observation = select_best_line_observation(
         line_id="near_nvz",

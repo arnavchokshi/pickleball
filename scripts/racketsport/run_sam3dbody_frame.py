@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -21,6 +22,7 @@ from scripts.racketsport.run_sam3dbody_probe import (  # noqa: E402
     _setup_estimator,
     parse_bbox_arg,
 )
+from threed.racketsport.sam3d_body_input_prep import load_mask_prompt_arrays, normalize_body_input_size  # noqa: E402
 
 
 EX_CONFIG = 66
@@ -36,6 +38,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--detector-model", default="")
     parser.add_argument("--detector-name", default=None)
     parser.add_argument("--fov-name", default="")
+    parser.add_argument("--mask", action="append", default=[], help="Optional repeated binary mask PNG path matching --bbox order.")
+    parser.add_argument("--camera-intrinsics", default="", help="Optional static per-clip 3x3 K JSON passed as cam_int.")
+    parser.add_argument("--body-input-size", type=int, default=None, help="Optional SAM-3D body crop size: 384, 448, or 512.")
     args = parser.parse_args(argv)
 
     try:
@@ -50,6 +55,15 @@ def main(argv: list[str] | None = None) -> int:
         return EX_CONFIG
 
     try:
+        body_input_size = normalize_body_input_size(args.body_input_size)
+        camera_intrinsics = _parse_camera_intrinsics(args.camera_intrinsics)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return EX_CONFIG
+    if body_input_size is not None:
+        os.environ["IMG_SIZE"] = str(body_input_size)
+
+    try:
         setup_sam_3d_body = _load_setup_sam_3d_body(args.fast_sam_repo)
         estimator = _setup_estimator(
             setup_sam_3d_body,
@@ -58,10 +72,13 @@ def main(argv: list[str] | None = None) -> int:
             detector_model=args.detector_model,
             fov_name=args.fov_name,
         )
+        masks_arg = load_mask_prompt_arrays(args.mask)
         raw_output = estimator.process_one_image(
             str(args.image.resolve()),
             bboxes=_bbox_array_or_list(requested_bboxes),
-            use_mask=False,
+            masks=masks_arg,
+            cam_int=_camera_intrinsics_tensor(camera_intrinsics),
+            use_mask=masks_arg is not None,
             hand_box_source="body_decoder",
         )
     except Exception as exc:
@@ -80,6 +97,9 @@ def main(argv: list[str] | None = None) -> int:
         "artifact_type": "racketsport_sam3dbody_frame",
         "image_path": str(args.image.resolve()),
         "requested_bboxes": requested_bboxes,
+        "requested_masks": [str(Path(path)) for path in args.mask],
+        "camera_intrinsics": camera_intrinsics,
+        "sam3d_body_input_size_px": body_input_size,
         "records": records,
         "summary": {"record_count": len(records)},
     }
@@ -153,6 +173,28 @@ def _as_public_mapping(value: Any) -> dict[str, Any]:
 
 def _is_sequence(value: Any) -> bool:
     return isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray)
+
+
+def _parse_camera_intrinsics(value: str) -> list[list[float]] | None:
+    if not value:
+        return None
+    payload = json.loads(value)
+    if not isinstance(payload, list) or len(payload) != 3:
+        raise ValueError("--camera-intrinsics must be a 3x3 JSON array")
+    rows = []
+    for row in payload:
+        if not isinstance(row, list) or len(row) != 3:
+            raise ValueError("--camera-intrinsics must be a 3x3 JSON array")
+        rows.append([float(item) for item in row])
+    return rows
+
+
+def _camera_intrinsics_tensor(camera_intrinsics: list[list[float]] | None) -> Any | None:
+    if camera_intrinsics is None:
+        return None
+    import torch  # type: ignore[import-not-found]
+
+    return torch.tensor([camera_intrinsics], dtype=torch.float32)
 
 
 if __name__ == "__main__":

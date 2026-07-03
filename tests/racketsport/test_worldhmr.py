@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import copy
+import json
+from pathlib import Path
+
 import pytest
 
 from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
@@ -12,6 +16,10 @@ from threed.racketsport.schemas import (
     CourtExtrinsics,
     ReprojectionError,
 )
+from threed.racketsport.skeleton_upright import ROTATION_CONVENTION_OFFSET_ROW_TIMES_R
+
+
+SAM3D_FIXTURE = Path("tests/racketsport/fixtures/sam3d_smpl_motion_237_excerpt_skeleton3d.json")
 
 
 def _identity_calibration() -> CourtCalibration:
@@ -29,6 +37,19 @@ def _identity_calibration() -> CourtCalibration:
         capture_quality=CaptureQuality(grade="good", reasons=[]),
         image_pts=minimal_calibration_image_pts(),
         world_pts=minimal_calibration_world_pts(),
+    )
+
+
+def _camera_y_to_court_z_calibration() -> CourtCalibration:
+    calibration = _identity_calibration()
+    return calibration.model_copy(
+        update={
+            "extrinsics": CourtExtrinsics(
+                R=[[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]],
+                t=[0.0, 0.0, 0.0],
+                camera_height_m=1.5,
+            )
+        }
     )
 
 
@@ -134,6 +155,7 @@ def test_build_body_artifacts_marks_floor_contact_from_grounded_joints() -> None
     assert smpl_motion["model"] == "sam3dbody_world_joints"
     assert frame["frame_idx"] == 12
     assert skeleton_frame["frame_idx"] == 12
+    assert skeleton_frame["transl_world"] == pytest.approx(frame["transl_world"])
     assert frame["foot_contact"] == {"left": True, "right": True}
     assert frame["foot_lock"] == {"left": True, "right": True}
     assert frame["grf"] is None
@@ -146,6 +168,104 @@ def test_build_body_artifacts_marks_floor_contact_from_grounded_joints() -> None
     assert metrics["foot_lock_contact_samples"] == 2
     assert metrics["grf_frames"] == 0
     assert metrics["skate_free_players"] == 0
+
+
+def test_sam3d_temporal_refine_gate_executes_on_real_fixture_before_serialization() -> None:
+    skeleton = json.loads(SAM3D_FIXTURE.read_text(encoding="utf-8"))
+
+    refined = worldhmr.apply_sam3d_temporal_refine_gate(skeleton, fps=30.0)
+
+    gate = refined["provenance"]["sam3d_temporal_refine"]
+    temporal = refined["provenance"]["temporal_refine"]
+    assert gate["status"] == "applied"
+    assert gate["wrist_peak_timing_gate_pass"] is True
+    assert temporal["wrist_peak_timing"]["status"] == "pass"
+    assert all(len(frame["joints_world"]) == 70 for player in refined["players"] for frame in player["frames"])
+
+
+def test_build_body_artifacts_runs_sam3d_temporal_refine_gate_in_pipeline_path(monkeypatch) -> None:  # noqa: ANN001
+    calls: list[dict[str, object]] = []
+
+    def fake_refine(skeleton3d, *, fps=None, **_kwargs):  # noqa: ANN001
+        calls.append({"source_model": skeleton3d["source_model"], "fps": fps})
+        refined = copy.deepcopy(skeleton3d)
+        refined["players"][0]["frames"][0]["pipeline_gate_marker"] = "refined"
+        refined["provenance"]["temporal_refine"] = {
+            "source": "sam3d_body_joints",
+            "wrist_peak_timing": {"status": "pass"},
+            "wrist_peak_timing_gate_pass": True,
+        }
+        return refined
+
+    monkeypatch.setattr(worldhmr, "refine_sam3d_skeleton3d", fake_refine)
+    joints = [[0.0, 0.0, 1.0] for _idx in range(70)]
+    joints[0] = [0.0, 0.0, 0.0]
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [2.0, 3.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": joints,
+            "vertices_camera": [],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        }
+    ]
+
+    _smpl_motion, skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+    )
+
+    assert calls == [{"source_model": "sam3d_body_joints", "fps": 30.0}]
+    assert skeleton3d["players"][0]["frames"][0]["pipeline_gate_marker"] == "refined"
+    assert skeleton3d["provenance"]["sam3d_temporal_refine"]["status"] == "applied"
+    assert metrics["sam3d_temporal_refine_status"] == "applied"
+
+
+def test_build_body_artifacts_rotates_camera_frame_offsets_upright_and_regrounds_feet() -> None:
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.93,
+            "track_world_xy": [2.0, 3.0],
+            "camera_translation": [10.0, 20.0, -5.0],
+            "joints_camera": [
+                [0.0, 0.0, 0.0],  # support foot in camera frame
+                [0.0, 1.6, 0.0],  # body long axis is camera-Y; must become court-Z
+                [0.4, 0.8, 0.0],
+            ],
+            "vertices_camera": [],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        }
+    ]
+
+    smpl_motion, skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_camera_y_to_court_z_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+    )
+
+    frame = smpl_motion["players"][0]["frames"][0]
+    assert frame["joints_world"][0] == pytest.approx([2.0, 3.0, 0.0])
+    assert frame["joints_world"][1] == pytest.approx([2.0, 3.0, 1.6])
+    assert frame["transl_world"] == pytest.approx([2.0, 3.0, 0.0])
+    assert metrics["grounding"] == "camera_offset_row_times_R_plus_track_footpoint_court_z0"
+    assert metrics["camera_offset_rotation_convention"] == ROTATION_CONVENTION_OFFSET_ROW_TIMES_R
+    skeleton_frame = skeleton3d["players"][0]["frames"][0]
+    assert skeleton3d["source_model"] == "sam3d_body_joints"
+    assert skeleton3d["provenance"]["source"] == "sam3d_body_joints"
+    assert skeleton_frame["confidence_provenance"]["source"] == "sam3d_body_joints"
 
 
 def test_build_body_artifacts_preserves_static_mesh_faces_for_body_mesh_export() -> None:

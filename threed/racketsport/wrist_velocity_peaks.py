@@ -13,6 +13,7 @@ ARTIFACT_TYPE = "racketsport_wrist_velocity_peaks"
 DEFAULT_MIN_SPEED_MPS = 4.0
 DEFAULT_MIN_CONFIDENCE = 0.25
 DEFAULT_MIN_SEPARATION_S = 0.10
+DEFAULT_SPEED_SMOOTHING_WINDOW_FRAMES = 3
 WRIST_ALIASES = {
     "left_wrist": {"left_wrist", "lwrist", "l_wrist", "left_hand", "lhand"},
     "right_wrist": {"right_wrist", "rwrist", "r_wrist", "right_hand", "rhand"},
@@ -27,6 +28,7 @@ def build_wrist_velocity_peaks_from_file(
     min_separation_s: float = DEFAULT_MIN_SEPARATION_S,
     left_wrist_index: int | None = None,
     right_wrist_index: int | None = None,
+    speed_smoothing_window_frames: int = DEFAULT_SPEED_SMOOTHING_WINDOW_FRAMES,
     require_lane_a: bool = False,
 ) -> dict[str, Any]:
     path = Path(skeleton3d_path)
@@ -41,6 +43,7 @@ def build_wrist_velocity_peaks_from_file(
         min_separation_s=min_separation_s,
         left_wrist_index=left_wrist_index,
         right_wrist_index=right_wrist_index,
+        speed_smoothing_window_frames=speed_smoothing_window_frames,
         require_lane_a=require_lane_a,
     )
 
@@ -52,6 +55,7 @@ def build_blocked_wrist_velocity_peaks(
     min_speed_mps: float = DEFAULT_MIN_SPEED_MPS,
     min_confidence: float = DEFAULT_MIN_CONFIDENCE,
     min_separation_s: float = DEFAULT_MIN_SEPARATION_S,
+    speed_smoothing_window_frames: int = DEFAULT_SPEED_SMOOTHING_WINDOW_FRAMES,
 ) -> dict[str, Any]:
     return _artifact(
         status="blocked",
@@ -66,6 +70,7 @@ def build_blocked_wrist_velocity_peaks(
         min_speed_mps=_require_non_negative(min_speed_mps, "min_speed_mps"),
         min_confidence=_require_unit(min_confidence, "min_confidence"),
         min_separation_s=_require_non_negative(min_separation_s, "min_separation_s"),
+        speed_smoothing_window_frames=_positive_int(speed_smoothing_window_frames, "speed_smoothing_window_frames"),
     )
 
 
@@ -78,6 +83,7 @@ def build_wrist_velocity_peaks_from_skeleton(
     min_separation_s: float = DEFAULT_MIN_SEPARATION_S,
     left_wrist_index: int | None = None,
     right_wrist_index: int | None = None,
+    speed_smoothing_window_frames: int = DEFAULT_SPEED_SMOOTHING_WINDOW_FRAMES,
     require_lane_a: bool = False,
 ) -> dict[str, Any]:
     """Build review-only wrist-velocity peaks from timestamped world joints."""
@@ -85,6 +91,7 @@ def build_wrist_velocity_peaks_from_skeleton(
     min_speed_mps = _require_non_negative(min_speed_mps, "min_speed_mps")
     min_confidence = _require_unit(min_confidence, "min_confidence")
     min_separation_s = _require_non_negative(min_separation_s, "min_separation_s")
+    speed_smoothing_window_frames = _positive_int(speed_smoothing_window_frames, "speed_smoothing_window_frames")
     source = _source_kind(skeleton)
     source_provenance = _source_provenance(skeleton)
     if require_lane_a and source != "lane_a_skeleton3d_world_joints":
@@ -103,6 +110,7 @@ def build_wrist_velocity_peaks_from_skeleton(
             min_speed_mps=min_speed_mps,
             min_confidence=min_confidence,
             min_separation_s=min_separation_s,
+            speed_smoothing_window_frames=speed_smoothing_window_frames,
         )
     if left_wrist_index is None and right_wrist_index is None:
         semantic_skeleton = semanticize_skeleton_payload(skeleton)
@@ -132,6 +140,7 @@ def build_wrist_velocity_peaks_from_skeleton(
             min_speed_mps=min_speed_mps,
             min_confidence=min_confidence,
             min_separation_s=min_separation_s,
+            speed_smoothing_window_frames=speed_smoothing_window_frames,
         )
 
     raw_peaks: list[dict[str, Any]] = []
@@ -151,14 +160,10 @@ def build_wrist_velocity_peaks_from_skeleton(
                 min_confidence=min_confidence,
             )
             usable_sample_count += len(samples)
-            for previous, current, following in zip(samples, samples[1:], samples[2:]):
-                dt_before = current["time_s"] - previous["time_s"]
-                dt_after = following["time_s"] - current["time_s"]
-                if dt_before <= 0.0 or dt_after <= 0.0:
-                    continue
-                speed_before = _distance(previous["point"], current["point"]) / dt_before
-                speed_after = _distance(current["point"], following["point"]) / dt_after
-                speed = max(speed_before, speed_after)
+            for previous, current, following, speed in _smoothed_wrist_speed_maxima(
+                samples,
+                smoothing_window_frames=speed_smoothing_window_frames,
+            ):
                 if speed < min_speed_mps:
                     continue
                 confidence = min(float(previous["confidence"]), float(current["confidence"]), float(following["confidence"]))
@@ -171,7 +176,7 @@ def build_wrist_velocity_peaks_from_skeleton(
                         "wrist_world_xyz": [round(float(value), 9) for value in current["point"]],
                         "speed_mps": round(speed, 6),
                         "confidence": round(confidence, 6),
-                        "source": "neighbor_segment_world_joints",
+                        "source": "smoothed_wrist_speed_world_joints",
                     }
                 )
 
@@ -195,6 +200,7 @@ def build_wrist_velocity_peaks_from_skeleton(
         min_speed_mps=min_speed_mps,
         min_confidence=min_confidence,
         min_separation_s=min_separation_s,
+        speed_smoothing_window_frames=speed_smoothing_window_frames,
     )
 
 
@@ -218,6 +224,7 @@ def _artifact(
     min_speed_mps: float,
     min_confidence: float,
     min_separation_s: float,
+    speed_smoothing_window_frames: int,
     source: str = "skeleton3d_world_joints",
     source_provenance: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -241,14 +248,29 @@ def _artifact(
             "min_speed_mps": min_speed_mps,
             "min_confidence": min_confidence,
             "min_separation_s": min_separation_s,
+            "speed_smoothing_window_frames": speed_smoothing_window_frames,
         },
         "peaks": peaks,
     }
 
 
 def _source_kind(skeleton: Mapping[str, Any]) -> str:
+    provenance = skeleton.get("provenance")
+    model_candidates = {str(skeleton.get("source_model", ""))}
+    if isinstance(provenance, Mapping):
+        for key in ("source", "model_family", "skeleton_source"):
+            value = provenance.get(key)
+            if value is not None:
+                model_candidates.add(str(value))
+    joint_names = skeleton.get("joint_names")
+    if (
+        skeleton.get("preview_only") is False
+        and isinstance(joint_names, list)
+        and len(joint_names) == 70
+        and {"sam3d_body_joints", "sam3dbody_world_joints"}.intersection(model_candidates)
+    ):
+        return "sam3d_body_skeleton3d_world_joints"
     if skeleton.get("preview_only") is False:
-        provenance = skeleton.get("provenance")
         if isinstance(provenance, Mapping) and provenance.get("lane") == "A":
             return "lane_a_skeleton3d_world_joints"
     return "skeleton3d_world_joints"
@@ -327,6 +349,54 @@ def _usable_wrist_samples(
     return sorted(samples, key=lambda sample: (sample["time_s"], sample["frame"]))
 
 
+def _smoothed_wrist_speed_maxima(
+    samples: list[dict[str, Any]],
+    *,
+    smoothing_window_frames: int,
+) -> list[tuple[dict[str, Any], dict[str, Any], dict[str, Any], float]]:
+    if len(samples) < 3:
+        return []
+
+    segment_speeds: list[float] = []
+    for previous, current in zip(samples, samples[1:]):
+        dt = float(current["time_s"]) - float(previous["time_s"])
+        if dt <= 0.0:
+            segment_speeds.append(0.0)
+            continue
+        segment_speeds.append(_distance(previous["point"], current["point"]) / dt)
+
+    smoothed_speeds = _moving_average(segment_speeds, window_frames=smoothing_window_frames)
+    interior: list[tuple[int, float]] = []
+    for sample_index in range(1, len(samples) - 1):
+        speed_before = smoothed_speeds[sample_index - 1]
+        speed_after = smoothed_speeds[sample_index]
+        interior.append((sample_index, max(speed_before, speed_after)))
+
+    maxima: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any], float]] = []
+    for interior_index, (sample_index, speed) in enumerate(interior):
+        previous_speed = interior[interior_index - 1][1] if interior_index > 0 else None
+        next_speed = interior[interior_index + 1][1] if interior_index + 1 < len(interior) else None
+        if previous_speed is not None and speed < previous_speed:
+            continue
+        if next_speed is not None and speed <= next_speed:
+            continue
+        maxima.append((samples[sample_index - 1], samples[sample_index], samples[sample_index + 1], speed))
+    return maxima
+
+
+def _moving_average(values: list[float], *, window_frames: int) -> list[float]:
+    if window_frames <= 1:
+        return list(values)
+    radius = window_frames // 2
+    smoothed: list[float] = []
+    for index, _value in enumerate(values):
+        start = max(0, index - radius)
+        end = min(len(values), index + radius + 1)
+        window = values[start:end]
+        smoothed.append(sum(window) / len(window))
+    return smoothed
+
+
 def _suppress_nearby_peaks(candidates: list[dict[str, Any]], *, min_separation_s: float) -> list[dict[str, Any]]:
     grouped: dict[tuple[int, str], list[dict[str, Any]]] = {}
     for candidate in candidates:
@@ -375,6 +445,13 @@ def _non_negative_index(value: int, name: str) -> int:
     return value
 
 
+def _positive_int(value: Any, name: str) -> int:
+    value = int(value)
+    if value <= 0:
+        raise ValueError(f"{name} must be positive")
+    return value
+
+
 def _require_unit(value: Any, name: str) -> float:
     value = _require_finite(value, name)
     if not 0.0 <= value <= 1.0:
@@ -407,6 +484,7 @@ def _read_json(path: Path) -> Any:
 
 __all__ = [
     "ARTIFACT_TYPE",
+    "DEFAULT_SPEED_SMOOTHING_WINDOW_FRAMES",
     "build_blocked_wrist_velocity_peaks",
     "build_wrist_velocity_peaks_from_file",
     "build_wrist_velocity_peaks_from_skeleton",

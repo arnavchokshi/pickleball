@@ -16,6 +16,7 @@ from typing import Any, Literal, Mapping, Sequence
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from threed.racketsport.court_calibration import project_image_points_to_world, project_planar_points
+from threed.racketsport.court_keypoint_labels import VISIBLE, load_partial_court_keypoints
 from threed.racketsport.court_keypoint_net import (
     PICKLEBALL_KEYPOINTS,
     PICKLEBALL_KEYPOINT_BY_NAME,
@@ -23,9 +24,9 @@ from threed.racketsport.court_keypoint_net import (
     decode_subpixel_heatmap,
     keypoints_to_solvepnp_correspondences,
     make_court_keypoint_heatmap_model,
-    refine_keypoint_xy_with_planar_homography,
     validate_heatmap_prediction_payload,
 )
+from threed.racketsport.court_partial_geometry import NET_TOP_KEYPOINT_NAMES, fit_visible_floor_homography
 from threed.racketsport.schemas import CourtCalibration, CourtLineEvidence, validate_artifact_file
 
 
@@ -44,6 +45,18 @@ LINE_TRIPLET_RESIDUAL_GATE_PX = 30.0
 WORLD_ERROR_P95_GATE_M = 3.0
 BORDER_KEYPOINT_RATIO_GATE = 0.15
 BORDER_MARGIN_RATIO = 0.02
+PARTIAL_VISIBLE_FLOOR_MEDIAN_GATE_PX = 15.0
+PARTIAL_VISIBLE_FLOOR_P95_GATE_PX = 30.0
+PARTIAL_VISIBLE_CORNER_MEDIAN_GATE_PX = 20.0
+PARTIAL_HIGH_CONFIDENCE_ERROR_GATE_PX = 30.0
+PARTIAL_HIGH_CONFIDENCE_THRESHOLD = 0.70
+PARTIAL_TEMPORAL_STABILITY_GATE_PX = 10.0
+OUTER_CORNER_NAMES: tuple[str, str, str, str] = (
+    "near_left_corner",
+    "near_right_corner",
+    "far_right_corner",
+    "far_left_corner",
+)
 
 
 class TopNetPoint(BaseModel):
@@ -146,6 +159,26 @@ class CourtKeypointClipValidation(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
 
+class PartialVisibleGate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    partial_label_path: str
+    proposal_path: str | None = None
+    visible_keypoint_count: int = Field(ge=0)
+    missing_keypoints: list[str] = Field(default_factory=list)
+    visible_floor_fit_verified: bool
+    visible_floor_fit_error_px: MetricSummary | None = None
+    all_visible_error_px: MetricSummary | None = None
+    floor_visible_error_px: MetricSummary | None = None
+    visible_corner_error_px: MetricSummary | None = None
+    net_top_visible_error_px: MetricSummary | None = None
+    high_confidence_over_30px_count: int = Field(default=0, ge=0)
+    self_verification_promotion_allowed: bool | None = None
+    temporal_stability_px: MetricSummary | None = None
+    gate_passed: bool
+    blockers: list[str] = Field(default_factory=list)
+
+
 class CourtKeypointClipReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -171,6 +204,8 @@ class CourtKeypointClipReport(BaseModel):
     max_confident_keypoint_count: int = Field(default=0, ge=0)
     max_solvepnp_correspondence_count: int = Field(default=0, ge=0)
     validation: CourtKeypointClipValidation | None = None
+    partial_label_path: str | None = None
+    partial_visible_gate: PartialVisibleGate | None = None
     notes: list[str] = Field(default_factory=list)
 
 
@@ -184,6 +219,9 @@ class CourtKeypointNoTapEvalSummary(BaseModel):
     ran_clip_count: int = Field(ge=0)
     diagnostic_gate_passed_clip_count: int = Field(default=0, ge=0)
     diagnostic_gate_blocked_clip_count: int = Field(default=0, ge=0)
+    partial_clip_count: int = Field(default=0, ge=0)
+    partial_gate_passed_clip_count: int = Field(default=0, ge=0)
+    partial_gate_blocked_clip_count: int = Field(default=0, ge=0)
     h100_gate_command: list[str]
 
 
@@ -356,6 +394,263 @@ def compare_reviewed_top_net(
         threshold_px=float(threshold_px),
         notes=[] if best_delta <= threshold_px else [f"top_net_review_delta_px={best_delta:.3f}"],
     )
+
+
+def build_partial_visible_clip_reports(
+    *,
+    eval_root: str | Path,
+    include_partial: Sequence[str],
+    partial_proposal_root: str | Path | None = None,
+) -> list[CourtKeypointClipReport]:
+    reports: list[CourtKeypointClipReport] = []
+    root = Path(eval_root)
+    proposal_root = Path(partial_proposal_root) if partial_proposal_root is not None else None
+    for clip in include_partial:
+        clip_dir = root / clip
+        partial_path = clip_dir / "labels" / "court_keypoints_partial.json"
+        base_report = {
+            "clip": clip,
+            "run_dir": str(clip_dir),
+            "input_video": str(clip_dir / "source.mp4"),
+            "partial_label_path": str(partial_path),
+            "top_net_review_match": _missing_top_net_match(
+                "partial visible-label lane uses 15-point partial labels instead of top-net-only review",
+                threshold_px=DEFAULT_TOP_NET_MATCH_THRESHOLD_PX,
+            ),
+        }
+        if not partial_path.is_file():
+            reports.append(
+                CourtKeypointClipReport(
+                    **base_report,
+                    status="blocked",
+                    missing_artifacts=[str(partial_path)],
+                    notes=["partial_court_keypoints_missing"],
+                )
+            )
+            continue
+        proposal_path = _resolve_partial_proposal_path(clip=clip, proposal_root=proposal_root)
+        gate = _build_partial_visible_gate(partial_path=partial_path, proposal_path=proposal_path)
+        reports.append(
+            CourtKeypointClipReport(
+                **base_report,
+                status="ran_not_verified",
+                evidence_ready=gate.gate_passed,
+                partial_visible_gate=gate,
+                notes=[
+                    "partial visible-label gate; not CAL-3 verified",
+                    *gate.blockers,
+                ],
+            )
+        )
+    return reports
+
+
+def _build_partial_visible_gate(*, partial_path: Path, proposal_path: Path | None) -> PartialVisibleGate:
+    labels = load_partial_court_keypoints(partial_path)
+    visible_points_by_frame = _partial_visible_points_by_frame(labels)
+    visible_points = _median_points_by_name(visible_points_by_frame)
+    missing = [point.name for point in PICKLEBALL_KEYPOINTS if point.name not in visible_points]
+    floor_fit = fit_visible_floor_homography(labels)
+    floor_fit_errors = [
+        float(floor_fit.per_keypoint_residual_px[name])
+        for name in floor_fit.used_keypoints
+        if name in floor_fit.per_keypoint_residual_px
+    ]
+    temporal = _partial_temporal_stability(visible_points_by_frame)
+
+    proposal_payload: Mapping[str, Any] | None = None
+    proposal_points: dict[str, tuple[float, float, float]] = {}
+    if proposal_path is not None and proposal_path.is_file():
+        proposal_payload = json.loads(proposal_path.read_text(encoding="utf-8"))
+        proposal_points = _proposal_points_native_px(proposal_payload, native_size=labels.source_resolution)
+
+    errors = {
+        name: _distance(visible_xy, proposal_points[name][:2])
+        for name, visible_xy in visible_points.items()
+        if name in proposal_points
+    }
+    high_confidence_wrong = sum(
+        1
+        for name, error in errors.items()
+        if proposal_points.get(name, (0.0, 0.0, 0.0))[2] >= PARTIAL_HIGH_CONFIDENCE_THRESHOLD
+        and error > PARTIAL_HIGH_CONFIDENCE_ERROR_GATE_PX
+    )
+    self_verification = proposal_payload.get("self_verification") if isinstance(proposal_payload, Mapping) else None
+    promotion_allowed = (
+        bool(self_verification.get("promotion_allowed"))
+        if isinstance(self_verification, Mapping)
+        else None
+    )
+
+    all_visible = _metric_summary([errors[name] for name in visible_points if name in errors])
+    floor_visible = _metric_summary(
+        [errors[name] for name in visible_points if name in errors and name not in NET_TOP_KEYPOINT_NAMES]
+    )
+    visible_corners = _metric_summary(
+        [errors[name] for name in OUTER_CORNER_NAMES if name in visible_points and name in errors]
+    )
+    net_top_visible = _metric_summary(
+        [errors[name] for name in NET_TOP_KEYPOINT_NAMES if name in visible_points and name in errors]
+    )
+    floor_fit_summary = _metric_summary(floor_fit_errors)
+
+    blockers = _partial_gate_blockers(
+        proposal_path=proposal_path,
+        floor_fit_verified=floor_fit.fit_verified,
+        floor_visible=floor_visible,
+        visible_corners=visible_corners,
+        high_confidence_wrong=high_confidence_wrong,
+        promotion_allowed=promotion_allowed,
+        temporal=temporal,
+    )
+    return PartialVisibleGate(
+        partial_label_path=str(partial_path),
+        proposal_path=str(proposal_path) if proposal_path is not None and proposal_path.is_file() else None,
+        visible_keypoint_count=len(visible_points),
+        missing_keypoints=missing,
+        visible_floor_fit_verified=floor_fit.fit_verified,
+        visible_floor_fit_error_px=floor_fit_summary,
+        all_visible_error_px=all_visible,
+        floor_visible_error_px=floor_visible,
+        visible_corner_error_px=visible_corners,
+        net_top_visible_error_px=net_top_visible,
+        high_confidence_over_30px_count=high_confidence_wrong,
+        self_verification_promotion_allowed=promotion_allowed,
+        temporal_stability_px=temporal,
+        gate_passed=not blockers,
+        blockers=blockers,
+    )
+
+
+def _partial_gate_blockers(
+    *,
+    proposal_path: Path | None,
+    floor_fit_verified: bool,
+    floor_visible: MetricSummary | None,
+    visible_corners: MetricSummary | None,
+    high_confidence_wrong: int,
+    promotion_allowed: bool | None,
+    temporal: MetricSummary | None,
+) -> list[str]:
+    blockers: list[str] = []
+    if not floor_fit_verified:
+        blockers.append("visible_floor_fit_not_verified")
+    if proposal_path is None or not proposal_path.is_file():
+        blockers.append("proposal_missing")
+    if floor_visible is None:
+        blockers.append("floor_visible_error_missing")
+    else:
+        if floor_visible.median > PARTIAL_VISIBLE_FLOOR_MEDIAN_GATE_PX:
+            blockers.append("visible_floor_median_gt_15")
+        if floor_visible.p95 > PARTIAL_VISIBLE_FLOOR_P95_GATE_PX:
+            blockers.append("visible_floor_p95_gt_30")
+    if visible_corners is None:
+        blockers.append("visible_corner_error_missing")
+    elif visible_corners.median > PARTIAL_VISIBLE_CORNER_MEDIAN_GATE_PX:
+        blockers.append("visible_corner_median_gt_20")
+    if high_confidence_wrong > 0:
+        blockers.append("high_confidence_wrong_proposals")
+    if promotion_allowed is not True:
+        blockers.append("self_verification_not_promotable")
+    if temporal is not None and temporal.p95 > PARTIAL_TEMPORAL_STABILITY_GATE_PX:
+        blockers.append("temporal_stability_gt_10")
+    return blockers
+
+
+def _partial_visible_points_by_frame(labels: Any) -> list[dict[str, tuple[float, float]]]:
+    label_w, label_h = labels.label_coordinate_space
+    scale_x = labels.source_resolution[0] / label_w
+    scale_y = labels.source_resolution[1] / label_h
+    frames: list[dict[str, tuple[float, float]]] = []
+    for frame in labels.frames:
+        points: dict[str, tuple[float, float]] = {}
+        for name, xy in frame.keypoints.items():
+            if frame.visibility_by_keypoint.get(name) != VISIBLE:
+                continue
+            points[name] = (float(xy[0]) * scale_x, float(xy[1]) * scale_y)
+        if points:
+            frames.append(points)
+    return frames
+
+
+def _median_points_by_name(frames: Sequence[Mapping[str, tuple[float, float]]]) -> dict[str, tuple[float, float]]:
+    out: dict[str, tuple[float, float]] = {}
+    for point in PICKLEBALL_KEYPOINTS:
+        xs = [frame[point.name][0] for frame in frames if point.name in frame]
+        ys = [frame[point.name][1] for frame in frames if point.name in frame]
+        if xs:
+            out[point.name] = (_percentile(xs, 50.0), _percentile(ys, 50.0))
+    return out
+
+
+def _partial_temporal_stability(frames: Sequence[Mapping[str, tuple[float, float]]]) -> MetricSummary:
+    distances: list[float] = []
+    medians = _median_points_by_name(frames)
+    for frame in frames:
+        for name, xy in frame.items():
+            if name in medians:
+                distances.append(_distance(xy, medians[name]))
+    return _metric_summary(distances) or MetricSummary(count=0, mean=0.0, median=0.0, p95=0.0, max=0.0)
+
+
+def _proposal_points_native_px(
+    payload: Mapping[str, Any],
+    *,
+    native_size: tuple[float, float],
+) -> dict[str, tuple[float, float, float]]:
+    proposal_size = _proposal_image_size(payload)
+    scale_x = 1.0
+    scale_y = 1.0
+    if proposal_size is not None and proposal_size[0] > 0.0 and proposal_size[1] > 0.0:
+        scale_x = native_size[0] / proposal_size[0]
+        scale_y = native_size[1] / proposal_size[1]
+    out: dict[str, tuple[float, float, float]] = {}
+    for name, item in (payload.get("keypoints") or {}).items():
+        if not isinstance(item, Mapping):
+            continue
+        xy = item.get("xy") or item.get("image_xy") or item.get("point")
+        if not _is_point(xy):
+            continue
+        out[str(name)] = (
+            float(xy[0]) * scale_x,
+            float(xy[1]) * scale_y,
+            float(item.get("confidence", payload.get("solver_confidence") or 0.0)),
+        )
+    return out
+
+
+def _proposal_image_size(payload: Mapping[str, Any]) -> tuple[float, float] | None:
+    source = payload.get("source")
+    if isinstance(source, Mapping):
+        image_size = source.get("image_size") or source.get("source_size")
+        if _is_point(image_size):
+            return (float(image_size[0]), float(image_size[1]))
+    for key in ("image_size", "source_size"):
+        value = payload.get(key)
+        if _is_point(value):
+            return (float(value[0]), float(value[1]))
+    return None
+
+
+def _resolve_partial_proposal_path(*, clip: str, proposal_root: Path | None) -> Path | None:
+    candidates: list[Path] = []
+    if proposal_root is not None:
+        candidates.extend(
+            [
+                proposal_root / "court_corner_proposals.json",
+                proposal_root / clip / "court_corner_proposals.json",
+            ]
+        )
+    lowered = clip.lower()
+    if "img_1605" in lowered or "img1605" in lowered:
+        candidates.append(Path("runs/img1605_court_detector_hardened/court_corner_proposals.json"))
+    candidates.extend(
+        [
+            Path("runs") / clip / "court_corner_proposals.json",
+            Path("runs") / clip.replace("owner_", "") / "court_corner_proposals.json",
+        ]
+    )
+    return next((path for path in candidates if path.is_file()), None)
 
 
 def build_court_keypoint_prediction_validation(
@@ -547,14 +842,6 @@ LINE_TRIPLETS: tuple[tuple[str, str, str, str], ...] = (
     ("net", "net_left_sideline", "net_center", "net_right_sideline"),
 )
 
-OUTER_CORNER_NAMES: tuple[str, str, str, str] = (
-    "near_left_corner",
-    "near_right_corner",
-    "far_right_corner",
-    "far_left_corner",
-)
-
-
 def _line_corner_consistency(frame_filtered: list[dict[str, tuple[float, float]]]) -> LineCornerConsistency:
     residuals: list[float] = []
     pass_count = 0
@@ -636,6 +923,11 @@ def build_court_keypoint_no_tap_eval_report(
     frames_per_clip: int = 5,
     min_confidence: float = 0.5,
     thresholds: Sequence[float] | None = None,
+    accepted_clips: Sequence[str] | None = None,
+    eval_root: str | Path | None = None,
+    include_partial: Sequence[str] = (),
+    partial_proposal_root: str | Path | None = None,
+    detector_v2_proposal_root: str | Path | None = None,
 ) -> CourtKeypointNoTapEvalReport:
     root = Path(run_root)
     checkpoint_path = Path(checkpoint)
@@ -644,7 +936,20 @@ def build_court_keypoint_no_tap_eval_report(
     confidence_threshold = _unit_interval(min_confidence, "min_confidence")
     threshold_values = _threshold_values(thresholds, confidence_threshold)
     notes = _validate_checkpoint_inputs(checkpoint_path, metrics_path)
-    selected = select_active_clip_inputs(root, frames_per_clip=frames_per_clip)
+    selected = select_active_clip_inputs(
+        root,
+        accepted_clips=DEFAULT_ACCEPTED_CLIPS if accepted_clips is None else accepted_clips,
+        frames_per_clip=frames_per_clip,
+    )
+    partial_reports = (
+        build_partial_visible_clip_reports(
+            eval_root=eval_root,
+            include_partial=include_partial,
+            partial_proposal_root=partial_proposal_root,
+        )
+        if eval_root is not None and include_partial
+        else []
+    )
 
     active_reports = list(selected.active)
     skipped_reports = list(selected.skipped.values())
@@ -660,9 +965,9 @@ def build_court_keypoint_no_tap_eval_report(
             notes=notes,
         )
 
-    clips = [*active_reports, *skipped_reports]
+    clips = [*active_reports, *partial_reports, *skipped_reports]
     status: Literal["ready_for_h100", "ran_not_verified", "blocked"]
-    if not active_reports:
+    if not active_reports and not partial_reports:
         status = "blocked"
     elif dry_run:
         status = "ready_for_h100"
@@ -695,6 +1000,13 @@ def build_court_keypoint_no_tap_eval_report(
             diagnostic_gate_blocked_clip_count=sum(
                 1 for clip in clips if clip.validation is not None and not clip.validation.best_threshold_gate_passed
             ),
+            partial_clip_count=len(partial_reports),
+            partial_gate_passed_clip_count=sum(
+                1 for clip in partial_reports if clip.partial_visible_gate is not None and clip.partial_visible_gate.gate_passed
+            ),
+            partial_gate_blocked_clip_count=sum(
+                1 for clip in partial_reports if clip.partial_visible_gate is not None and not clip.partial_visible_gate.gate_passed
+            ),
             h100_gate_command=h100_gate_command(
                 run_root=root,
                 checkpoint=checkpoint_path,
@@ -703,6 +1015,10 @@ def build_court_keypoint_no_tap_eval_report(
                 frames_per_clip=frames_per_clip,
                 min_confidence=confidence_threshold,
                 thresholds=threshold_values,
+                eval_root=eval_root,
+                include_partial=include_partial,
+                partial_proposal_root=partial_proposal_root,
+                detector_v2_proposal_root=detector_v2_proposal_root,
             ),
         ),
         clips=clips,
@@ -722,6 +1038,10 @@ def h100_gate_command(
     frames_per_clip: int,
     min_confidence: float = 0.5,
     thresholds: Sequence[float] | None = None,
+    eval_root: str | Path | None = None,
+    include_partial: Sequence[str] = (),
+    partial_proposal_root: str | Path | None = None,
+    detector_v2_proposal_root: str | Path | None = None,
 ) -> list[str]:
     h100_out = _h100_out_path(Path(out))
     confidence_threshold = _unit_interval(min_confidence, "min_confidence")
@@ -750,6 +1070,14 @@ def h100_gate_command(
     )
     if threshold_values:
         command.extend(["--thresholds", ",".join(f"{threshold:g}" for threshold in threshold_values)])
+    if eval_root is not None:
+        command.extend(["--eval-root", str(eval_root)])
+    for clip in include_partial:
+        command.extend(["--include-partial", str(clip)])
+    if partial_proposal_root is not None:
+        command.extend(["--partial-proposal-root", str(partial_proposal_root)])
+    if detector_v2_proposal_root is not None:
+        command.extend(["--detector-v2-proposal-root", str(detector_v2_proposal_root)])
     return command
 
 
@@ -1078,13 +1406,6 @@ def _decode_model_output(
             "confidence": confidence,
             "heatmap_score": float(decoded.score),
         }
-    refined = refine_keypoint_xy_with_planar_homography({name: item["xy"] for name, item in keypoints.items()})
-    for name, xy in refined.items():
-        if name not in keypoints:
-            continue
-        keypoints[name]["raw_xy"] = keypoints[name]["xy"]
-        keypoints[name]["xy"] = xy
-        keypoints[name]["postprocess"] = "planar_homography_ransac_v1"
     return keypoints
 
 

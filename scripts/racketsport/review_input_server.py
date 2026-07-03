@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import argparse
+import hmac
 import json
 import math
 import mimetypes
+import secrets
 import socket
+import sys
 import threading
 from datetime import datetime, timezone
 from http import HTTPStatus
@@ -13,6 +16,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from threed.racketsport.append_lock import file_lock, write_atomic
 
 
 CLIPS = [
@@ -30,6 +39,20 @@ MAX_SAVE_BYTES = 2_000_000
 MAX_TEXT_CHARS = 4000
 MAX_SAVE_LIST_ITEMS = 200
 PRIORITY_RANK = {"high": 0, "medium": 1, "low": 2}
+
+# In-process serialization for save/export handlers (defense in depth on top
+# of the cross-process fcntl.flock taken in _write_review_input via
+# threed.racketsport.append_lock.file_lock -- see review_harden_20260702.md
+# finding 2). ThreadingHTTPServer runs one thread per request, so two
+# simultaneous browser saves would otherwise race on the same output files.
+_SAVE_LOCK = threading.Lock()
+_SAVE_LOCK_PATH = SAVE_DIR / ".review-save.lock"
+
+# Placeholder substituted with a fresh per-process random token at serve
+# time (see main()/ReviewHandler._send_html); required as the X-Review-Token
+# header on every POST /api/save so a page loaded from this server's own
+# session is the only thing that can write review decisions (finding 1).
+SAVE_TOKEN_PLACEHOLDER = "__PICKLEBALL_REVIEW_SAVE_TOKEN__"
 REQUIRED_LABEL_FILES = (
     "court_corners.json",
     "players.json",
@@ -1461,18 +1484,26 @@ def _json_scalar(value: Any, *, field: str) -> str | int | float | bool | None:
 
 
 def _write_review_input(root: Path, payload: dict[str, Any], *, now: datetime | None = None) -> tuple[Path, Path]:
+    # Sanitize/validate outside the lock (pure, no I/O); only the write
+    # itself needs to be serialized. Two layers of mutual exclusion:
+    # _SAVE_LOCK (in-process, cheap) for concurrent threads in this one
+    # ThreadingHTTPServer, and file_lock (fcntl.flock on a sidecar lock
+    # file) for a second server process/host sharing the same repo
+    # checkout. Both files are written with write_atomic (temp + fsync +
+    # os.replace) so a crash mid-write never leaves a truncated JSON file.
     saved_at_dt = now or datetime.now(timezone.utc)
     saved_at = saved_at_dt.strftime("%Y%m%dT%H%M%SZ")
     sanitized = _sanitize_save_payload(payload)
     sanitized["server_saved_at_utc"] = saved_at_dt.isoformat()
     sanitized["repo_root"] = str(root)
     save_dir = root / SAVE_DIR
-    save_dir.mkdir(parents=True, exist_ok=True)
     latest = root / LATEST_SAVE
     timestamped = save_dir / f"pickleball_cv_review_{saved_at}.json"
     text = json.dumps(sanitized, indent=2, sort_keys=True) + "\n"
-    latest.write_text(text, encoding="utf-8")
-    timestamped.write_text(text, encoding="utf-8")
+    with _SAVE_LOCK, file_lock(root / _SAVE_LOCK_PATH):
+        save_dir.mkdir(parents=True, exist_ok=True)
+        write_atomic(latest, text)
+        write_atomic(timestamped, text)
     return latest, timestamped
 
 
@@ -2886,6 +2917,7 @@ WIZARD_HTML = r"""<!doctype html>
   </main>
 
   <script>
+    const REVIEW_SAVE_TOKEN = "__PICKLEBALL_REVIEW_SAVE_TOKEN__";
     const TASKS = [
       { id: "setup", label: "Setup", kicker: "Step 1", title: "Make three project decisions", copy: "Click the recommended choices unless you strongly want something else. This tells me how to run the next pass." },
       { id: "intake", label: "Data needed", kicker: "Step 2", title: "Source data checklist", copy: "For each clip, record the files, court evidence, and contact data you can provide. The checklist is derived from the current pipeline artifacts." },
@@ -3622,7 +3654,7 @@ WIZARD_HTML = r"""<!doctype html>
           }))
         }
       };
-      const response = await fetch("/api/save", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload) });
+      const response = await fetch("/api/save", { method: "POST", headers: {"Content-Type": "application/json", "X-Review-Token": REVIEW_SAVE_TOKEN}, body: JSON.stringify(payload) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "save failed");
       qs("#saveStatus").textContent = "Saved: " + result.latest_path;
@@ -3961,6 +3993,7 @@ PADDLE_HTML = r"""<!doctype html>
     </section>
   </main>
   <script>
+    const REVIEW_SAVE_TOKEN = "__PICKLEBALL_REVIEW_SAVE_TOKEN__";
     let manifest = null;
     let state = null;
     let mode = "paddle";
@@ -4343,7 +4376,7 @@ PADDLE_HTML = r"""<!doctype html>
           }))
         }
       };
-      const response = await fetch("/api/save", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload) });
+      const response = await fetch("/api/save", { method: "POST", headers: {"Content-Type": "application/json", "X-Review-Token": REVIEW_SAVE_TOKEN}, body: JSON.stringify(payload) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "save failed");
       qs("#saveStatus").textContent = "Saved: " + result.latest_path;
@@ -4445,6 +4478,7 @@ BODY_HTML = r"""<!doctype html>
     <section class="queue" id="bodyReviewOverlays"></section>
   </main>
   <script>
+    const REVIEW_SAVE_TOKEN = "__PICKLEBALL_REVIEW_SAVE_TOKEN__";
     let manifest = null;
     let state = { schema_version: 2, review_type: "pickleball_cv_blocker_review", body_world_label_review: {} };
     let runIndex = 0;
@@ -4561,7 +4595,7 @@ BODY_HTML = r"""<!doctype html>
           focused_review_page: "/body"
         }
       };
-      const response = await fetch("/api/save", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload) });
+      const response = await fetch("/api/save", { method: "POST", headers: {"Content-Type": "application/json", "X-Review-Token": REVIEW_SAVE_TOKEN}, body: JSON.stringify(payload) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "save failed");
       qs("#saveStatus").textContent = "Saved: " + result.latest_path;
@@ -4614,16 +4648,31 @@ class ReviewHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _send_html(self, template: str) -> None:
+        token = getattr(self.server, "save_token", "")
+        self._send_text(template.replace(SAVE_TOKEN_PLACEHOLDER, token))
+
+    def _require_save_token(self) -> bool:
+        expected = getattr(self.server, "save_token", "")
+        provided = self.headers.get("X-Review-Token", "")
+        if expected and hmac.compare_digest(provided, expected):
+            return True
+        self._send_json(
+            {"error": "missing or invalid X-Review-Token header; reload the page to pick up the current session token"},
+            HTTPStatus.UNAUTHORIZED,
+        )
+        return False
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path == "/":
-            self._send_text(WIZARD_HTML)
+            self._send_html(WIZARD_HTML)
             return
         if parsed.path == "/paddle":
-            self._send_text(PADDLE_HTML)
+            self._send_html(PADDLE_HTML)
             return
         if parsed.path == "/body":
-            self._send_text(BODY_HTML)
+            self._send_html(BODY_HTML)
             return
         if parsed.path == "/api/manifest":
             self._send_json(_manifest(self.root))
@@ -4637,6 +4686,8 @@ class ReviewHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path != "/api/save":
             self.send_error(HTTPStatus.NOT_FOUND, "not found")
+            return
+        if not self._require_save_token():
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -4708,10 +4759,17 @@ def main() -> int:
     port = _free_port(args.port) if args.host in {"127.0.0.1", "localhost"} else args.port
     server = ThreadingHTTPServer((args.host, port), ReviewHandler)
     server.repo_root = root  # type: ignore[attr-defined]
+    # Random per-process token, kept in memory only (never written to disk),
+    # required as X-Review-Token on every POST /api/save. Served pages get
+    # it injected in place of SAVE_TOKEN_PLACEHOLDER so the page's own JS can
+    # send it back automatically; anything else (another local process/user
+    # probing this port) cannot save without reading it from this stdout.
+    server.save_token = secrets.token_urlsafe(32)  # type: ignore[attr-defined]
 
     print(f"Serving review UI at http://{args.host}:{port}")
     print(f"Repo root: {root}")
     print(f"Save path: {root / LATEST_SAVE}")
+    print(f"Save token (only needed if you POST /api/save by hand): {server.save_token}")  # type: ignore[attr-defined]
     try:
         server.serve_forever()
     except KeyboardInterrupt:

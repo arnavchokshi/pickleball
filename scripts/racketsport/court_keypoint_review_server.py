@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import argparse
+import hmac
 import json
 import math
 import mimetypes
+import os
+import secrets
 import shutil
 import socket
 import sys
@@ -20,6 +23,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from threed.racketsport.append_lock import file_lock, write_atomic
+from threed.racketsport.court_keypoint_labels import build_partial_court_keypoint_label_payload
 from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
 
 
@@ -33,6 +38,22 @@ MAX_SAVE_ITEMS = 500
 MAX_TEXT_CHARS = 512
 KEYPOINT_NAMES = [point.name for point in PICKLEBALL_KEYPOINTS]
 KEYPOINT_INDEX = {name: index for index, name in enumerate(KEYPOINT_NAMES)}
+
+# In-process serialization for save/export handlers (defense in depth on top
+# of the cross-process fcntl.flock taken below via file_lock -- see
+# review_harden_20260702.md finding 2). ThreadingHTTPServer runs one thread
+# per request, and a save here writes/deletes several files (progress JSON,
+# exported label JSON, exported frame JPEGs); without a lock, two overlapping
+# browser saves could interleave those multi-file writes.
+_SAVE_LOCK = threading.Lock()
+_SAVE_LOCK_PATH = REVIEW_ROOT / ".review-save.lock"
+
+# Placeholder substituted with a fresh per-process random token at serve
+# time (see main()/CourtKeypointReviewHandler._send_html); required as the
+# X-Review-Token header on every POST /api/save so that only a page loaded
+# from this server's own session can overwrite CAL court-keypoint labels
+# (finding 1).
+SAVE_TOKEN_PLACEHOLDER = "__PICKLEBALL_REVIEW_SAVE_TOKEN__"
 
 # Per-item review status enum. "reviewed" means a human placed every keypoint for this
 # frame in this UI. "reviewed_static_camera_copy" means the frame's keypoints were copied
@@ -200,47 +221,79 @@ def _clip_manifest(entry: dict[str, Any]) -> dict[str, Any]:
 
 def _write_review_progress(root: Path, payload: dict[str, Any], *, now: datetime | None = None) -> dict[str, Any]:
     now = now or datetime.now(timezone.utc)
+    # Validation is pure/read-only and safe to run outside the lock; it must
+    # keep raising before any write happens (tests rely on this). Only the
+    # actual multi-file save/export below needs mutual exclusion: two
+    # in-process threads (_SAVE_LOCK) or two server processes on the same
+    # checkout (file_lock's fcntl.flock) could otherwise interleave the
+    # progress JSON write, the label JSON write, and the frame export.
     entries = _task_entries(root)
     sanitized = _sanitize_progress_payload(payload, entries=entries)
     sanitized["repo_root"] = str(root)
     sanitized["server_saved_at_utc"] = now.isoformat()
 
     progress_path = root / PROGRESS_SAVE
-    progress_path.parent.mkdir(parents=True, exist_ok=True)
-    progress_path.write_text(json.dumps(sanitized, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
     exported: list[dict[str, str]] = []
+    partial_exported: list[dict[str, str]] = []
     incomplete: dict[str, dict[str, int]] = {}
-    for clip, clip_payload in sanitized.get("clips", {}).items():
-        entry = entries[clip]
-        completion = _clip_completion(entry, clip_payload)
-        complete_images = _complete_labeled_images(entry, clip_payload)
-        if complete_images:
-            label_path = root / OUTPUT_ROOT / clip / "labels" / "court_keypoints.json"
-            exported_frame_dir = OUTPUT_ROOT / clip / "labels" / "court_keypoint_frames"
-            _copy_export_frames(root, entry, images=complete_images, exported_frame_dir=exported_frame_dir)
-            label_payload = _reviewed_label_payload(
-                entry,
-                clip_payload,
-                images=complete_images,
-                reviewed_at=now,
-                frame_dir=exported_frame_dir,
-            )
-            label_path.parent.mkdir(parents=True, exist_ok=True)
-            label_path.write_text(json.dumps(label_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            exported.append(
-                {
-                    "clip": clip,
-                    "label_path": _rel(label_path, root),
-                    "independent_reviewed_count": label_payload["review"]["independent_reviewed_count"],
-                    "static_camera_copy_count": label_payload["review"]["static_camera_copy_count"],
+
+    with _SAVE_LOCK, file_lock(root / _SAVE_LOCK_PATH):
+        write_atomic(progress_path, json.dumps(sanitized, indent=2, sort_keys=True) + "\n")
+
+        for clip, clip_payload in sanitized.get("clips", {}).items():
+            entry = entries[clip]
+            completion = _clip_completion(entry, clip_payload)
+            complete_images = _complete_labeled_images(entry, clip_payload)
+            if complete_images:
+                label_path = root / OUTPUT_ROOT / clip / "labels" / "court_keypoints.json"
+                exported_frame_dir = OUTPUT_ROOT / clip / "labels" / "court_keypoint_frames"
+                _copy_export_frames(root, entry, images=complete_images, exported_frame_dir=exported_frame_dir)
+                label_payload = _reviewed_label_payload(
+                    entry,
+                    clip_payload,
+                    images=complete_images,
+                    reviewed_at=now,
+                    frame_dir=exported_frame_dir,
+                )
+                write_atomic(label_path, json.dumps(label_payload, indent=2, sort_keys=True) + "\n")
+                exported.append(
+                    {
+                        "clip": clip,
+                        "label_path": _rel(label_path, root),
+                        "independent_reviewed_count": label_payload["review"]["independent_reviewed_count"],
+                        "static_camera_copy_count": label_payload["review"]["static_camera_copy_count"],
+                    }
+                )
+            partial_images = _partial_labeled_images(entry, clip_payload)
+            if partial_images:
+                partial_label_path = root / OUTPUT_ROOT / clip / "labels" / "court_keypoints_partial.json"
+                partial_frame_dir = OUTPUT_ROOT / clip / "labels" / "court_keypoint_partial_frames"
+                _copy_export_frames(root, entry, images=partial_images, exported_frame_dir=partial_frame_dir)
+                by_frame = {item["frame"]: item for item in clip_payload.get("items", [])}
+                partial_payload = build_partial_court_keypoint_label_payload(
+                    clip=clip,
+                    reviewer=clip_payload.get("reviewer", "local_court_keypoint_review"),
+                    items=[by_frame[image["frame"]] for image in partial_images],
+                    source_resolution=entry["source_resolution"],
+                    label_coordinate_space=entry["label_coordinate_space"],
+                    available_review_frame_count=len(entry["images"]),
+                    sample_every_frames=entry["sample_every_frames"],
+                    frame_dir=str(partial_frame_dir),
+                    reviewed_at_utc=now.isoformat(),
+                )
+                write_atomic(partial_label_path, json.dumps(partial_payload, indent=2, sort_keys=True) + "\n")
+                partial_exported.append(
+                    {
+                        "clip": clip,
+                        "label_path": _rel(partial_label_path, root),
+                        "visible_keypoint_frame_count": str(partial_payload["review"]["visible_keypoint_frame_count"]),
+                    }
+                )
+            if not completion["complete"]:
+                incomplete[clip] = {
+                    "missing_frame_count": completion["missing_frame_count"],
+                    "missing_keypoint_count": completion["missing_keypoint_count"],
                 }
-            )
-        if not completion["complete"]:
-            incomplete[clip] = {
-                "missing_frame_count": completion["missing_frame_count"],
-                "missing_keypoint_count": completion["missing_keypoint_count"],
-            }
 
     return {
         "schema_version": 1,
@@ -248,6 +301,8 @@ def _write_review_progress(root: Path, payload: dict[str, Any], *, now: datetime
         "progress_path": _rel(progress_path, root),
         "exported_clip_count": len(exported),
         "exported": exported,
+        "partial_exported_clip_count": len(partial_exported),
+        "partial_exported": partial_exported,
         "incomplete": incomplete,
     }
 
@@ -262,6 +317,20 @@ def _complete_labeled_images(entry: dict[str, Any], clip_payload: dict[str, Any]
         if set(item.get("keypoints", {})) == set(KEYPOINT_NAMES):
             complete.append(image)
     return complete
+
+
+def _partial_labeled_images(entry: dict[str, Any], clip_payload: dict[str, Any]) -> list[dict[str, Any]]:
+    by_frame = {item["frame"]: item for item in clip_payload.get("items", [])}
+    partial: list[dict[str, Any]] = []
+    all_names = set(KEYPOINT_NAMES)
+    for image in entry["images"]:
+        item = by_frame.get(image["frame"])
+        if item is None:
+            continue
+        keypoints = set(item.get("keypoints", {}))
+        if keypoints and keypoints != all_names:
+            partial.append(image)
+    return partial
 
 
 def _sanitize_progress_payload(payload: dict[str, Any], *, entries: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -352,15 +421,27 @@ def _clip_completion(entry: dict[str, Any], clip_payload: dict[str, Any]) -> dic
 
 
 def _copy_export_frames(root: Path, entry: dict[str, Any], *, images: list[dict[str, Any]], exported_frame_dir: Path) -> None:
+    # Copy every new frame into a per-file temp name first, then os.replace
+    # it into place, and only remove leftover stale frames *after* every new
+    # frame has landed. The previous "delete everything, then copy" order
+    # left a window where a crash mid-export could leave the exported bundle
+    # missing a frame entirely; this order guarantees every frame name in
+    # `images` is either the old file (untouched so far) or the fully-copied
+    # new file at any point, never missing/partial.
     out_dir = root / exported_frame_dir
     out_dir.mkdir(parents=True, exist_ok=True)
-    for stale in out_dir.glob("frame_*.jpg"):
-        stale.unlink()
+    keep_names = {image["file_name"] for image in images}
     for image in images:
         source = root / entry["images_dir"] / image["file_name"]
         if not source.is_file():
             raise FileNotFoundError(f"missing review image for export: {source}")
-        shutil.copy2(source, out_dir / image["file_name"])
+        dest = out_dir / image["file_name"]
+        tmp_dest = out_dir / f".{image['file_name']}.tmp{os.getpid()}"
+        shutil.copy2(source, tmp_dest)
+        os.replace(tmp_dest, dest)
+    for stale in out_dir.glob("frame_*.jpg"):
+        if stale.name not in keep_names:
+            stale.unlink()
 
 
 def _reviewed_label_payload(
@@ -777,6 +858,7 @@ HTML = r"""<!doctype html>
     </aside>
   </div>
   <script>
+    const REVIEW_SAVE_TOKEN = "__PICKLEBALL_REVIEW_SAVE_TOKEN__";
     const LINES = [
       ["near_left_corner", "near_baseline_center"], ["near_baseline_center", "near_right_corner"],
       ["near_right_corner", "net_right_sideline"], ["net_right_sideline", "far_right_corner"],
@@ -829,6 +911,19 @@ HTML = r"""<!doctype html>
     }
     function totalRequired() {
       return clips().reduce((sum, c) => sum + c.images.length * keypoints().length, 0);
+    }
+    function applyInitialSelectionFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const requestedClip = params.get("clip");
+      if (requestedClip) {
+        const index = clips().findIndex(c => c.clip === requestedClip);
+        if (index >= 0) state.clipIndex = index;
+      }
+      const requestedFrame = params.get("frame");
+      if (requestedFrame && clip()) {
+        const index = clip().images.findIndex(f => f.frame === requestedFrame || f.file_name === requestedFrame);
+        if (index >= 0) state.frameIndex = index;
+      }
     }
     function completeFrame(c, f) {
       return pointCount(c, f) === keypoints().length;
@@ -955,7 +1050,7 @@ HTML = r"""<!doctype html>
       setMessage("Saving...");
       const payload = JSON.parse(JSON.stringify(state.data));
       payload.saved_from_browser_at = new Date().toISOString();
-      const res = await fetch("/api/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res = await fetch("/api/save", { method: "POST", headers: { "Content-Type": "application/json", "X-Review-Token": REVIEW_SAVE_TOKEN }, body: JSON.stringify(payload) });
       const body = await res.json();
       if (!res.ok) {
         setMessage(body.error || "Save failed");
@@ -973,6 +1068,7 @@ HTML = r"""<!doctype html>
         document.body.innerHTML = "<pre style='padding:20px'>No court keypoint review tasks found.</pre>";
         return;
       }
+      applyInitialSelectionFromUrl();
       qs("#overlay").addEventListener("click", placePoint);
       qs("#prevFrame").onclick = () => { if (state.frameIndex > 0) state.frameIndex--; render(); };
       qs("#nextFrame").onclick = () => { if (state.frameIndex < clip().images.length - 1) state.frameIndex++; render(); };
@@ -1023,10 +1119,25 @@ class CourtKeypointReviewHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _send_html(self, template: str) -> None:
+        token = getattr(self.server, "save_token", "")
+        self._send_text(template.replace(SAVE_TOKEN_PLACEHOLDER, token))
+
+    def _require_save_token(self) -> bool:
+        expected = getattr(self.server, "save_token", "")
+        provided = self.headers.get("X-Review-Token", "")
+        if expected and hmac.compare_digest(provided, expected):
+            return True
+        self._send_json(
+            {"error": "missing or invalid X-Review-Token header; reload the page to pick up the current session token"},
+            HTTPStatus.UNAUTHORIZED,
+        )
+        return False
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path == "/":
-            self._send_text(HTML)
+            self._send_html(HTML)
             return
         if parsed.path == "/favicon.ico":
             self.send_response(HTTPStatus.NO_CONTENT)
@@ -1044,6 +1155,8 @@ class CourtKeypointReviewHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path != "/api/save":
             self.send_error(HTTPStatus.NOT_FOUND, "not found")
+            return
+        if not self._require_save_token():
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -1102,10 +1215,17 @@ def main() -> int:
     port = _free_port(args.port) if args.host in {"127.0.0.1", "localhost"} else args.port
     server = ThreadingHTTPServer((args.host, port), CourtKeypointReviewHandler)
     server.repo_root = root  # type: ignore[attr-defined]
+    # Random per-process token, kept in memory only (never written to disk),
+    # required as X-Review-Token on every POST /api/save. This is the
+    # court-keypoint label store, the more damaging save surface flagged in
+    # review_harden_20260702.md finding 1 since it directly overwrites CAL
+    # eval-label artifacts under eval_clips/ball/.
+    server.save_token = secrets.token_urlsafe(32)  # type: ignore[attr-defined]
     print(f"Serving court keypoint review UI at http://{args.host}:{port}")
     print(f"Repo root: {root}")
     print(f"Progress path: {root / PROGRESS_SAVE}")
     print(f"Final label root: {root / OUTPUT_ROOT}")
+    print(f"Save token (only needed if you POST /api/save by hand): {server.save_token}")  # type: ignore[attr-defined]
     try:
         server.serve_forever()
     except KeyboardInterrupt:

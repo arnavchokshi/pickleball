@@ -216,19 +216,39 @@ def _category(stem: str) -> str:
     normalized = stem.replace("-", "_")
     if normalized in {"gpu_train_lock", "setup_env"} or normalized.startswith("install_") or normalized.startswith("smoke_"):
         return "env"
+    if normalized == "process_video":
+        return "pipeline"
+    if "confidence" in normalized or "runtime" in normalized or "diagnostic" in normalized:
+        return "report"
+    if "download_checkpoint" in normalized:
+        return "model"
     if "pipeline_artifacts" in normalized:
         return "eval"
     if "decode" in normalized:
         return "decode"
     if "serving" in normalized:
         return "serving"
-    if "replay" in normalized:
+    if "replay" in normalized or "scrubber" in normalized or "viewer" in normalized:
         return "replay"
     if "eval" in normalized or "variant_comparison" in normalized or "benchmark" in normalized or "sweep" in normalized:
         return "eval"
-    if "calibrat" in normalized or normalized == "calibrate" or "court_line" in normalized or "court_keypoint" in normalized:
+    if (
+        "calibrat" in normalized
+        or normalized == "calibrate"
+        or "court_line" in normalized
+        or "court_keypoint" in normalized
+        or "court_detector" in normalized
+        or "court_proposal" in normalized
+        or "net_anchor_court" in normalized
+    ):
         return "calibration"
-    if "dataset" in normalized or "testclip" in normalized or "seed_manifest" in normalized or normalized.startswith("ingest_"):
+    if (
+        "dataset" in normalized
+        or "testclip" in normalized
+        or "seed_manifest" in normalized
+        or "tiled_raw_pool" in normalized
+        or normalized.startswith("ingest_")
+    ):
         return "dataset"
     if (
         "label" in normalized
@@ -240,11 +260,11 @@ def _category(stem: str) -> str:
         return "label"
     if "shot" in normalized or "tenniset" in normalized:
         return "shot"
-    if "contact" in normalized or "audio" in normalized or "wrist" in normalized:
+    if "contact" in normalized or "audio" in normalized or "wrist" in normalized or "rally" in normalized:
         return "contact"
-    if "ball" in normalized or "totnet" in normalized or "pbmat" in normalized or "tracknet" in normalized:
+    if "ball" in normalized or "totnet" in normalized or "pbmat" in normalized or "tracknet" in normalized or "inout" in normalized:
         return "ball"
-    if "racket" in normalized or "paddle" in normalized:
+    if "racket" in normalized or "paddle" in normalized or normalized.startswith("rkt_"):
         return "racket"
     if (
         "body" in normalized
@@ -252,6 +272,10 @@ def _category(stem: str) -> str:
         or "player_track" in normalized
         or "frame_compute" in normalized
         or "hmr" in normalized
+        or "pose" in normalized
+        or "skeleton" in normalized
+        or "player_scale" in normalized
+        or "vn_trajectories" in normalized
     ):
         return "body"
     if "physics" in normalized or "virtual_world" in normalized or "mujoco" in normalized:
@@ -273,6 +297,8 @@ def _category(stem: str) -> str:
         or "review_action_manifest" in normalized
         or "scaffold" in normalized
     ):
+        return "report"
+    if normalized.startswith("audit_"):
         return "report"
     if "track" in normalized:
         return "tracking"
@@ -313,6 +339,8 @@ def _guess_task(stem: str) -> tuple[str | None, str | None]:
         return "CAL", None
     if category == "tracking":
         return "TRK", None
+    if category == "pipeline":
+        return "E2E", None
     return None, None
 
 

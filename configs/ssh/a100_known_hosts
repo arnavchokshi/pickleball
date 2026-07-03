@@ -1,0 +1,11 @@
+# Pinned host keys for the shared A100 training/eval host (34.126.67.233), used by
+# scripts/racketsport/remote_body_dispatch.py in place of StrictHostKeyChecking=no
+# (see runs/manager/codex_lanes/reports/review_harden_20260702.md finding 7).
+# Captured via `ssh-keyscan -T 8 34.126.67.233` on 2026-07-02 and cross-checked
+# byte-for-byte against the pre-existing entries already trusted in this machine's
+# own ~/.ssh/known_hosts (i.e. this is not a first-contact/unverified capture).
+# If the host is legitimately rebuilt (new VM, key rotation), re-run ssh-keyscan,
+# diff against this file, and update it deliberately -- do not silently regenerate.
+34.126.67.233 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDXd/TSgPIqhPabOyZ0VN66ZZHv1TlWo8R//0AvWmnQobVL3YCdSLLAts/ZN8UDijGLBnyL7urAV2v1rwLbhJVKmFLwId19T0Pg8l/hAMIUIjMqPGQT25jSALhMwuhZnhxZHKE8o99Hsz/tg3fL7D9Ba8lp/uGac1lgjl+IkUZ5GV0iNrY8pjH4FxD05Ko83hu3o4/eJbyga5JA0+Ij0honimldlveIlsnwEUc91BRfO54pTC8071D3Ta5iloaNurQcaFx9JXzy0uG8Xr+IH4KA9OAccp+5xCs1ila7KCQ8vOWwRXslRTelFJRAFoOSPmMsLevXbjfCqMTDxpWhEos/+ui7pNT8iTHbAiGzv2d3RxLDcmUVxVcGwqvu3fZuoh3XH1X2xoowcg1KDx8lXEfdPN1tgwWpygCAr02gym0axVbi4OVY3bOY9J/f4ER/iRsqrqqgyIpTZ6C5cZvYfsr+KugZcEZZrMyXIUTn5T+CPIWpOwE8BTylM6s6582DxhM=
+34.126.67.233 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBMEk47UOZ3A7QVnKFE/drJK29h9F9FBmoTX0uCZtvLgjk3Fn6u2I2HZAh5gvDvJJNZv5eA6wyJzzpaiPegNadtI=
+34.126.67.233 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL+qb0TsZXuxkROreV0oesqs9QUkLG2TJSsUnXEkRw4z

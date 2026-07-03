@@ -13,7 +13,17 @@ CVAT_LABELS = [
     {"name": "court_corner", "attributes": ["corner_name"]},
     {"name": "court_keypoint", "attributes": ["keypoint_name"]},
     {"name": "player_box", "attributes": ["player_id"]},
-    {"name": "ball", "attributes": ["visibility"]},
+    {
+        "name": "ball",
+        "attributes": [
+            "visibility",
+            "center_convention",
+            "blur_angle_deg",
+            "blur_length_px",
+            "blur_width_px",
+            "blur_label_quality",
+        ],
+    },
     {"name": "event", "attributes": ["event_type"]},
     {"name": "racket_keypoint", "attributes": ["keypoint_name"]},
     {"name": "foot_contact", "attributes": ["foot"]},

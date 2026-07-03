@@ -16,6 +16,7 @@ def build_contact_event(
     t1: float,
     importance: float,
     player_id: int | None = None,
+    trust_band_note: str | None = None,
 ) -> dict[str, object]:
     """Return a dictionary compatible with the ContactEvent schema."""
 
@@ -38,7 +39,7 @@ def build_contact_event(
     if sources.get("human_review") is not None:
         source_scores["human_review"] = _require_confidence(sources.get("human_review"), "sources.human_review")
 
-    return {
+    event = {
         "type": "contact",
         "t": t,
         "frame": int(frame),
@@ -47,6 +48,9 @@ def build_contact_event(
         "sources": source_scores,
         "window": {"t0": t0, "t1": t1, "importance": importance},
     }
+    if trust_band_note is not None:
+        event["trust_band_note"] = str(trust_band_note)
+    return event
 
 
 def build_contact_windows_artifact(events: list[dict[str, object]]) -> dict[str, object]:

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "artifact_type": "pickleball_reality_replay_fixture_manifest",
+  "clip_id": "burlington_gold_0300_low_steep_corner",
+  "asset_filename": "body_mesh_animated_budget53.usdz",
+  "source_asset_path": "runs/usdz-compress_20260702T113045Z/body_mesh_animated_budget53.usdz",
+  "source_asset_byte_count": 11823255,
+  "timeline_duration_seconds": 9.993316666666667,
+  "preferred_frame_rate": 15.0,
+  "usd_start_time_code": 84.0,
+  "usd_end_time_code": 592.0,
+  "usd_time_codes_per_second": 59.9401,
+  "badge_title": "Budget-53 baked mesh preview",
+  "badge_detail": "Apple-strict-valid preview LOD; 53 of 152 scheduled mesh frames, review-only and not a BODY/BALL/RKT promotion."
+}

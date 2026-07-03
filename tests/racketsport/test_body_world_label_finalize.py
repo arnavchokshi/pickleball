@@ -173,6 +173,22 @@ def test_finalize_body_world_labels_writes_gate_consumable_reviewed_labels(tmp_p
     assert "predicted_joints_world" not in final["samples"][0]
 
 
+def test_finalize_body_world_labels_preserves_reviewer_notes(tmp_path: Path) -> None:
+    template = tmp_path / "body_world_joints.template.json"
+    out = tmp_path / "labels" / "clip_001" / "body_world_joints.json"
+    payload = _template(reviewed=True, accepted_count=1)
+    payload["selected_sample_ids"] = ["frame_000001_player_7"]
+    payload["samples"] = [payload["samples"][0]]
+    payload["samples"][0]["notes"] = "systematic overlay offset noted during human review"
+    _write_json(template, payload)
+
+    report = finalize_body_world_labels(template_path=template, out_path=out)
+
+    assert report["status"] == "finalized"
+    final = json.loads(out.read_text(encoding="utf-8"))
+    assert final["samples"][0]["notes"] == "systematic overlay offset noted during human review"
+
+
 def test_finalize_body_world_labels_refuses_candidate_predictions_without_independent_source(
     tmp_path: Path,
 ) -> None:

@@ -23,17 +23,26 @@ def main() -> int:
     )
     parser.add_argument("--video", type=Path, required=True, help="Source video used to crop player detections.")
     parser.add_argument("--detections", type=Path, required=True, help="tracked_detections.json or raw_tracked_detections.json.")
-    parser.add_argument("--model", type=Path, required=True, help="YOLO/ReID model path used to produce learned embeddings.")
+    parser.add_argument("--model", type=Path, required=True, help="YOLO or OSNet model path used to produce learned embeddings.")
     parser.add_argument("--output", type=Path, required=True, help="Output JSON path for per-detection embeddings.")
+    parser.add_argument(
+        "--backend",
+        choices=("ultralytics_yolo", "osnet"),
+        default="ultralytics_yolo",
+        help="Embedding backend. Use osnet for authoritative offline ReID embeddings.",
+    )
     parser.add_argument("--max-detections", type=int, default=None, help="Optional hard cap for bounded exports.")
     parser.add_argument("--sample-stride-frames", type=int, default=1)
     parser.add_argument("--crop-padding-px", type=int, default=8)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--imgsz", type=int, default=224)
     parser.add_argument("--embed-layer", type=int, default=21)
-    parser.add_argument("--device", default=None, help="Ultralytics device, e.g. 0, cuda:0, mps, or cpu.")
+    parser.add_argument("--device", default=None, help="Backend device, e.g. 0, cuda:0, mps, or cpu.")
     parser.add_argument("--half", action="store_true", help="Request FP16 inference when supported by the selected device.")
     parser.add_argument("--no-l2-normalize", action="store_true", help="Persist raw model features without L2 normalization.")
+    parser.add_argument("--osnet-model-name", default="osnet_x1_0", help="torchreid OSNet architecture name.")
+    parser.add_argument("--osnet-image-height", type=int, default=256)
+    parser.add_argument("--osnet-image-width", type=int, default=128)
     args = parser.parse_args()
 
     try:
@@ -49,6 +58,7 @@ def main() -> int:
                 "detections_path": str(args.detections),
             },
             config=ReIDEmbeddingExportConfig(
+                backend=args.backend,
                 max_detections=args.max_detections,
                 sample_stride_frames=args.sample_stride_frames,
                 crop_padding_px=args.crop_padding_px,
@@ -58,6 +68,9 @@ def main() -> int:
                 device=args.device,
                 half=True if args.half else None,
                 l2_normalize=not args.no_l2_normalize,
+                osnet_model_name=args.osnet_model_name,
+                osnet_image_height=args.osnet_image_height,
+                osnet_image_width=args.osnet_image_width,
             ),
         )
     except Exception as exc:
@@ -71,6 +84,8 @@ def main() -> int:
                 "status": report["status"],
                 "detection_count": report["detection_count"],
                 "feature_dim": report["feature_dim"],
+                "feature_extractor": report["feature_extractor"],
+                "feature_type": report["feature_type"],
                 "model_sha256": report["model_sha256"],
                 "promote_trk": report["promote_trk"],
             },

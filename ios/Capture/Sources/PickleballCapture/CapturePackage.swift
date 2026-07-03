@@ -59,6 +59,36 @@ public struct CapturePackageDescriptor: Equatable, Sendable {
         self.startedAt = startedAt
     }
 
+    public init(
+        sessionID: String,
+        fps: Int,
+        resolution: [Int],
+        format: CaptureFormat,
+        orientation: CaptureOrientation = .landscape,
+        startedAt: Date,
+        rootDirectory: String = "captures"
+    ) throws {
+        guard Self.isSafeSessionID(sessionID) else {
+            throw ValidationError.unsafeSessionID(sessionID)
+        }
+
+        let directory = "\(rootDirectory)/\(sessionID)"
+        self.sessionID = sessionID
+        self.directoryRelativePath = directory
+        self.clipRelativePath = "\(directory)/clip.mov"
+        self.sidecarRelativePath = "\(directory)/capture_sidecar.json"
+        self.onDevicePoseTrackRelativePath = "\(directory)/ondevice_pose.json"
+        self.onDevicePersonTracksRelativePath = "\(directory)/on_device_person_tracks.json"
+        self.onDevicePersonTimingRelativePath = "\(directory)/timing.json"
+        self.expectedFPS = fps
+        self.expectedResolution = resolution
+        self.expectedFormat = format
+        self.expectedOrientation = orientation
+        self.captureDeviceOrientation = orientation == .landscape ? .landscapeRight : .portrait
+        self.videoRotationAngleDegrees = 0
+        self.startedAt = startedAt
+    }
+
     private static func isSafeSessionID(_ value: String) -> Bool {
         guard !value.isEmpty else {
             return false
