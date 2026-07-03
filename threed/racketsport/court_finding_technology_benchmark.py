@@ -20,7 +20,11 @@ from scripts.racketsport.compare_court_proposals_to_reviewed_keypoints import (
 )
 
 from .court_line_keypoints import detect_court_keypoints_from_image
-from .overlapping_court_calibration import detect_hsv_paint_hough_segments, shadow_removal_preprocess
+from .overlapping_court_calibration import (
+    detect_hsv_paint_hough_segments,
+    pretrained_shadow_removal_preprocess,
+    shadow_removal_preprocess,
+)
 from .net_anchor_court import load_player_suppressed_frame, solve_net_anchor_court_from_frame
 
 
@@ -30,6 +34,7 @@ LINE_CANDIDATE_ONLY_TECHNOLOGIES = {
     "opencv_lsd",
     "opencv_hough",
     "opencv_hough_shadow_normalized",
+    "opencv_hough_pretrained_shadow_removed",
     "opencv_hough_lsd",
     "opencv_hsv_paint_hough",
     "opencv_hsv_paint_net_crop_hough",
@@ -117,7 +122,8 @@ _FLOOR_LINE_ENDPOINT_KEYPOINTS: dict[str, tuple[str, str]] = {
     "far_nvz": ("far_nvz_left", "far_nvz_right"),
     "left_sideline": ("near_left_corner", "far_left_corner"),
     "right_sideline": ("near_right_corner", "far_right_corner"),
-    "centerline": ("near_baseline_center", "far_baseline_center"),
+    "near_centerline": ("near_baseline_center", "near_nvz_center"),
+    "far_centerline": ("far_baseline_center", "far_nvz_center"),
 }
 
 
@@ -208,6 +214,25 @@ def detect_line_candidates_for_technology(image_bgr: Any, technology_id: str) ->
         segments = _opencv_hough_segments(image_bgr)
     elif technology_id == "opencv_hough_shadow_normalized":
         preprocessed, shadow_evidence = shadow_removal_preprocess(image_bgr)
+        segments = _retag_segments_source(_opencv_hough_segments(preprocessed), technology_id)
+        return {
+            "technology_id": technology_id,
+            "available": True,
+            "candidate_count": len(segments),
+            "segments": segments,
+            "shadow_preprocess": shadow_evidence,
+        }
+    elif technology_id == "opencv_hough_pretrained_shadow_removed":
+        preprocessed, shadow_evidence = pretrained_shadow_removal_preprocess(image_bgr)
+        if not shadow_evidence.get("available"):
+            return {
+                "technology_id": technology_id,
+                "available": False,
+                "candidate_count": 0,
+                "segments": [],
+                "shadow_preprocess": shadow_evidence,
+                "reason": shadow_evidence.get("reason", "pretrained_shadow_removal_unavailable"),
+            }
         segments = _retag_segments_source(_opencv_hough_segments(preprocessed), technology_id)
         return {
             "technology_id": technology_id,
@@ -385,6 +410,7 @@ def solve_regulation_court_from_line_candidates(
     clip_id: str = "",
     line_segments: Sequence[Mapping[str, Any]] | None = None,
     line_evidence: Mapping[str, Any] | None = None,
+    image_evidence_mode: str = "sparse_pixel",
 ) -> dict[str, Any]:
     """Search Hough/LSD line assignments against the regulation pickleball template.
 
@@ -408,6 +434,7 @@ def solve_regulation_court_from_line_candidates(
         segments=segments,
         image_bgr=image_bgr,
         image_size=(width, height),
+        image_evidence_mode=image_evidence_mode,
     )
     if not hypotheses:
         raise ValueError("no regulation line assignment hypothesis could be built")
@@ -674,6 +701,79 @@ def score_projected_line_pixels_against_image(
     }
 
 
+def score_projected_line_distance_transform_against_image(
+    image_bgr: Any,
+    keypoints: Mapping[str, Sequence[float]],
+    *,
+    line_pixel_mask: Any | None = None,
+    distance_map: Any | None = None,
+) -> dict[str, Any]:
+    """Score projected regulation lines by distance to the nearest line-like pixel."""
+
+    if image_bgr is None or not hasattr(image_bgr, "shape") or len(image_bgr.shape) < 2:
+        return {"available": False, "reason": "invalid_image"}
+    mask = line_pixel_mask if line_pixel_mask is not None else _court_line_pixel_mask(image_bgr, dilation_px=3)
+    distances = distance_map if distance_map is not None else _line_pixel_distance_transform(mask)
+    height, width = int(mask.shape[0]), int(mask.shape[1])
+    per_line: dict[str, dict[str, Any]] = {}
+    line_means: list[float] = []
+    line_p95s: list[float] = []
+    supported_count = 0
+    evaluated_count = 0
+    for line_name, (p1_name, p2_name) in _FLOOR_LINE_ENDPOINT_KEYPOINTS.items():
+        raw_p1 = keypoints.get(p1_name)
+        raw_p2 = keypoints.get(p2_name)
+        if not _is_xy(raw_p1) or not _is_xy(raw_p2):
+            per_line[line_name] = {
+                "status": "missing_projected_endpoint",
+                "endpoint_names": [p1_name, p2_name],
+            }
+            continue
+        p1 = (float(raw_p1[0]), float(raw_p1[1]))
+        p2 = (float(raw_p2[0]), float(raw_p2[1]))
+        samples = _sample_points_on_segment(p1, p2, spacing_px=5.0, min_count=16, max_count=96)
+        sample_distances: list[float] = []
+        inside_samples = 0
+        for x, y in samples:
+            ix = int(round(x))
+            iy = int(round(y))
+            if 0 <= ix < width and 0 <= iy < height:
+                inside_samples += 1
+                sample_distances.append(float(distances[iy, ix]))
+        if sample_distances:
+            mean_distance = sum(sample_distances) / float(len(sample_distances))
+            p95_distance = _percentile(sample_distances, 95.0)
+        else:
+            mean_distance = float(max(width, height))
+            p95_distance = float(max(width, height))
+        inside_ratio = inside_samples / float(len(samples)) if samples else 0.0
+        supported = mean_distance <= 5.0 and p95_distance <= 12.0 and inside_ratio >= 0.45
+        evaluated_count += 1
+        if supported:
+            supported_count += 1
+        line_means.append(mean_distance)
+        line_p95s.append(p95_distance)
+        per_line[line_name] = {
+            "status": "supported" if supported else "unsupported",
+            "endpoint_names": [p1_name, p2_name],
+            "sample_count": len(samples),
+            "inside_image_sample_count": int(inside_samples),
+            "inside_image_ratio": round(float(inside_ratio), 4),
+            "mean_distance_px": round(float(mean_distance), 4),
+            "p95_distance_px": round(float(p95_distance), 4),
+        }
+    return {
+        "available": evaluated_count > 0,
+        "mode": "distance_transform_local_high_contrast_mask",
+        "evaluated_line_count": int(evaluated_count),
+        "distance_supported_line_count": int(supported_count),
+        "mean_projected_line_distance_px": round(float(sum(line_means) / len(line_means)), 4) if line_means else 0.0,
+        "p95_projected_line_distance_px": round(_percentile(line_p95s, 95.0), 4) if line_p95s else 0.0,
+        "mask_support_ratio": round(float((mask > 0).sum()) / float(mask.size), 6) if mask.size else 0.0,
+        "per_line": per_line,
+    }
+
+
 def score_line_color_consistency_for_assignment(
     image_bgr: Any,
     line_assignment: Mapping[str, Any],
@@ -877,6 +977,13 @@ def _proposal_for_technology(
             technology_id=technology_id,
             clip_id=sample.clip,
         )
+    if technology_id == "opencv_hough_lsd_regulation_distance_mask":
+        return solve_regulation_court_from_line_candidates(
+            image_bgr,
+            technology_id=technology_id,
+            clip_id=sample.clip,
+            image_evidence_mode="distance_mask",
+        )
     if technology_id == "opencv_hough_lsd_temporal_regulation":
         line_evidence = detect_temporal_line_candidates_for_input(sample.frame_input)
         return solve_regulation_court_from_line_candidates(
@@ -885,6 +992,16 @@ def _proposal_for_technology(
             clip_id=sample.clip,
             line_segments=line_evidence["segments"],
             line_evidence=line_evidence,
+        )
+    if technology_id == "opencv_hough_lsd_temporal_regulation_distance_mask":
+        line_evidence = detect_temporal_line_candidates_for_input(sample.frame_input)
+        return solve_regulation_court_from_line_candidates(
+            image_bgr,
+            technology_id=technology_id,
+            clip_id=sample.clip,
+            line_segments=line_evidence["segments"],
+            line_evidence=line_evidence,
+            image_evidence_mode="distance_mask",
         )
     if technology_id == "opencv_hough_lsd_temporal_persistent_regulation":
         line_evidence = detect_temporal_line_candidates_for_input(
@@ -897,6 +1014,19 @@ def _proposal_for_technology(
             clip_id=sample.clip,
             line_segments=line_evidence["segments"],
             line_evidence=line_evidence,
+        )
+    if technology_id == "opencv_hough_lsd_temporal_persistent_regulation_distance_mask":
+        line_evidence = detect_temporal_line_candidates_for_input(
+            sample.frame_input,
+            technology_id="opencv_hough_lsd_temporal_persistent",
+        )
+        return solve_regulation_court_from_line_candidates(
+            image_bgr,
+            technology_id=technology_id,
+            clip_id=sample.clip,
+            line_segments=line_evidence["segments"],
+            line_evidence=line_evidence,
+            image_evidence_mode="distance_mask",
         )
     if technology_id == "opencv_hsv_paint_hough_regulation":
         line_evidence = detect_line_candidates_for_technology(image_bgr, "opencv_hsv_paint_hough")
@@ -918,6 +1048,12 @@ def _proposal_for_technology(
         )
     if technology_id == "hough_or_regulation_line_selector":
         return _select_hough_or_regulation_proposal(
+            image_bgr,
+            sample=sample,
+            proposal_cache=proposal_cache if proposal_cache is not None else {},
+        )
+    if technology_id == "hough_or_regulation_distance_mask_selector":
+        return _select_hough_or_regulation_distance_mask_proposal(
             image_bgr,
             sample=sample,
             proposal_cache=proposal_cache if proposal_cache is not None else {},
@@ -1054,6 +1190,68 @@ def _select_hough_or_regulation_proposal(
     for item in payload.get("keypoints", {}).values():
         if isinstance(item, dict):
             item["source"] = f"hough_or_regulation_line_selector:{selected_name}"
+    return payload
+
+
+def _select_hough_or_regulation_distance_mask_proposal(
+    image_bgr: Any,
+    *,
+    sample: CourtFindingSample,
+    proposal_cache: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    candidates: dict[str, dict[str, Any]] = {}
+    for technology_id in (
+        "hough_keypoints",
+        "opencv_hough_lsd_regulation",
+        "opencv_hough_lsd_regulation_distance_mask",
+    ):
+        proposal = proposal_cache.get(technology_id)
+        if proposal is None:
+            proposal = _proposal_for_technology(
+                image_bgr,
+                sample=sample,
+                technology_id=technology_id,
+                proposal_cache=proposal_cache,
+            )
+            proposal_cache[technology_id] = proposal
+        candidates[technology_id] = proposal
+
+    segments = detect_line_candidates_for_technology(image_bgr, "opencv_hough_lsd")["segments"]
+    candidate_scores = {
+        technology_id: _proposal_internal_line_score(proposal, segments)
+        for technology_id, proposal in candidates.items()
+    }
+    for technology_id, score in candidate_scores.items():
+        score["geometry_risk"] = _proposal_geometry_risk_score(candidates[technology_id])
+    noncollapsed_candidates = {
+        name: score
+        for name, score in candidate_scores.items()
+        if not (
+            name != "hough_keypoints"
+            and _should_prefer_hough_over_collapsed_regulation(candidate_scores["hough_keypoints"], score)
+        )
+    }
+    selected_name = min(noncollapsed_candidates, key=lambda name: float(noncollapsed_candidates[name]["selector_cost"]))
+    selected = candidates[selected_name]
+    payload = json.loads(json.dumps(selected))
+    payload["solver"] = {
+        "name": "hough_or_regulation_distance_mask_selector",
+        "version": 1,
+        "writes_court_calibration": False,
+    }
+    payload["solver_confidence"] = min(float(payload.get("solver_confidence") or 0.0), 0.62)
+    payload["needs_user_input"] = ["court_keypoints"]
+    payload["needs_user_confirmation"] = True
+    payload["selector"] = {
+        "selected_technology_id": selected_name,
+        "candidate_scores": candidate_scores,
+        "rule": "choose_lowest_projected_line_cost_across_hough_sparse_regulation_and_distance_mask_regulation_with_collapsed_geometry_guard",
+    }
+    payload.setdefault("notes", [])
+    payload["notes"].append("distance_mask_selector_proposal_only_never_writes_court_calibration_json")
+    for item in payload.get("keypoints", {}).values():
+        if isinstance(item, dict):
+            item["source"] = f"hough_or_regulation_distance_mask_selector:{selected_name}"
     return payload
 
 
@@ -1596,6 +1794,7 @@ def _regulation_hypotheses_from_groups(
     segments: Sequence[Mapping[str, Any]],
     image_bgr: Any,
     image_size: tuple[int, int],
+    image_evidence_mode: str,
 ) -> list[dict[str, Any]]:
     width, height = image_size
     cross_pool = [
@@ -1648,12 +1847,21 @@ def _regulation_hypotheses_from_groups(
     shortlist = hypotheses[:96]
     projected_line_mask = _court_line_pixel_mask(image_bgr, dilation_px=5)
     color_line_mask = _court_line_pixel_mask(image_bgr, dilation_px=2)
+    if image_evidence_mode == "distance_mask":
+        distance_line_mask = _court_line_pixel_mask(image_bgr, dilation_px=3)
+        distance_map = _line_pixel_distance_transform(distance_line_mask)
+    else:
+        distance_line_mask = None
+        distance_map = None
     enriched = [
         _hypothesis_with_image_evidence(
             hypothesis,
             image_bgr=image_bgr,
             projected_line_mask=projected_line_mask,
             color_line_mask=color_line_mask,
+            distance_line_mask=distance_line_mask,
+            distance_map=distance_map,
+            image_evidence_mode=image_evidence_mode,
         )
         for hypothesis in shortlist
     ]
@@ -1759,6 +1967,9 @@ def _hypothesis_with_image_evidence(
     image_bgr: Any,
     projected_line_mask: Any,
     color_line_mask: Any,
+    distance_line_mask: Any | None,
+    distance_map: Any | None,
+    image_evidence_mode: str,
 ) -> dict[str, Any]:
     payload = json.loads(json.dumps(hypothesis))
     keypoints = {
@@ -1783,14 +1994,44 @@ def _hypothesis_with_image_evidence(
     color_layer_penalty = min(45.0, float(line_color_consistency.get("mixed_layer_penalty") or 0.0) * 0.35)
     pixel_support_bonus = pixel_supported * 7.5 + pixel_mean_support * 26.0
     base_score = float(payload.get("score") or 0.0)
-    payload["score"] = float(base_score + projected_pixel_penalty + color_layer_penalty - pixel_support_bonus)
+    distance_support: dict[str, Any] | None = None
+    distance_penalty = 0.0
+    distance_support_bonus = 0.0
+    if image_evidence_mode == "distance_mask":
+        if distance_line_mask is None or distance_map is None:
+            raise ValueError("distance_mask scoring requires a line mask and distance map")
+        distance_support = score_projected_line_distance_transform_against_image(
+            image_bgr,
+            keypoints,
+            line_pixel_mask=distance_line_mask,
+            distance_map=distance_map,
+        )
+        distance_mean = float(distance_support.get("mean_projected_line_distance_px") or 0.0)
+        distance_p95 = float(distance_support.get("p95_projected_line_distance_px") or 0.0)
+        distance_supported = int(distance_support.get("distance_supported_line_count") or 0)
+        distance_penalty = max(0.0, distance_mean - 4.0) * 5.5 + max(0.0, distance_p95 - 12.0) * 1.2
+        distance_penalty += max(0, 5 - distance_supported) * 9.0
+        distance_support_bonus = distance_supported * 9.0 + max(0.0, 8.0 - distance_mean) * 2.5
+    payload["score"] = float(
+        base_score
+        + projected_pixel_penalty
+        + color_layer_penalty
+        + distance_penalty
+        - pixel_support_bonus
+        - distance_support_bonus
+    )
     components = payload.setdefault("score_components", {})
+    components["image_evidence_mode"] = image_evidence_mode
     components["base_score_before_image_evidence"] = round(float(base_score), 4)
     components["projected_pixel_penalty"] = round(float(projected_pixel_penalty), 4)
     components["pixel_support_bonus"] = round(float(pixel_support_bonus), 4)
     components["color_layer_penalty"] = round(float(color_layer_penalty), 4)
+    components["distance_penalty"] = round(float(distance_penalty), 4)
+    components["distance_support_bonus"] = round(float(distance_support_bonus), 4)
     components["projected_pixel_support"] = projected_pixel_support
     components["line_color_consistency"] = line_color_consistency
+    if distance_support is not None:
+        components["projected_distance_support"] = distance_support
     return payload
 
 
@@ -2197,6 +2438,15 @@ def _court_line_pixel_mask(image_bgr: Any, *, dilation_px: int) -> Any:
     return mask
 
 
+def _line_pixel_distance_transform(mask: Any) -> Any:
+    import cv2  # type: ignore[import-not-found]
+    import numpy as np
+
+    line_pixels = (mask > 0).astype(np.uint8)
+    inverse = (1 - line_pixels).astype(np.uint8) * 255
+    return cv2.distanceTransform(inverse, cv2.DIST_L2, 3)
+
+
 def _sample_points_on_segment(
     p1: tuple[float, float],
     p2: tuple[float, float],
@@ -2398,3 +2648,18 @@ def _median(values: Sequence[float]) -> float:
     if len(ordered) % 2:
         return ordered[mid]
     return (ordered[mid - 1] + ordered[mid]) / 2.0
+
+
+def _percentile(values: Sequence[float], percentile: float) -> float:
+    ordered = sorted(float(value) for value in values)
+    if not ordered:
+        return 0.0
+    if len(ordered) == 1:
+        return ordered[0]
+    position = (max(0.0, min(100.0, float(percentile))) / 100.0) * (len(ordered) - 1)
+    lower = int(math.floor(position))
+    upper = int(math.ceil(position))
+    if lower == upper:
+        return ordered[lower]
+    fraction = position - lower
+    return ordered[lower] * (1.0 - fraction) + ordered[upper] * fraction

@@ -28,6 +28,15 @@ def test_viewer_url_adds_manifest_query_param(tmp_path: Path) -> None:
     assert str(manifest.resolve()) in url
 
 
+def test_viewer_url_accepts_custom_port_for_occupied_local_dev_port(tmp_path: Path) -> None:
+    manifest = tmp_path / "replay_viewer_manifest.json"
+    manifest.write_text("{}", encoding="utf-8")
+
+    url = viewer_url_for_manifest(manifest, port=5174)
+
+    assert url.startswith("http://127.0.0.1:5174/?manifest=/@fs")
+
+
 def test_assert_non_empty_entity_counts_rejects_silent_empty_viewer() -> None:
     counts = {
         "Players": 0,

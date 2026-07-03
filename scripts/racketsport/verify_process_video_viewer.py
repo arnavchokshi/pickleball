@@ -28,9 +28,9 @@ DEV_SERVER_PORT = 5173
 ENTITY_COUNT_LABELS = ("Players", "Mesh Frames", "Solid Mesh Frames", "Floor Frames", "Ball Contacts", "Replay Points")
 
 
-def viewer_url_for_manifest(manifest_path: Path | str | None) -> str:
+def viewer_url_for_manifest(manifest_path: Path | str | None, *, port: int = DEV_SERVER_PORT) -> str:
     path = _require_manifest_path(manifest_path)
-    return f"http://{DEV_SERVER_HOST}:{DEV_SERVER_PORT}/?manifest=/@fs{path}"
+    return f"http://{DEV_SERVER_HOST}:{port}/?manifest=/@fs{path}"
 
 
 def assert_non_empty_entity_counts(loaded_counts: dict[str, Any], *, allow_empty: bool = False) -> None:
@@ -115,6 +115,7 @@ def verify_viewer_loads(
     out_dir: Path,
     timeout_s: float = 45.0,
     allow_empty: bool = False,
+    port: int = DEV_SERVER_PORT,
 ) -> dict[str, Any]:
     manifest_path = _require_manifest_path(manifest_path)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -129,19 +130,19 @@ def verify_viewer_loads(
     out_dir.mkdir(parents=True, exist_ok=True)
     started_server = False
     dev_process: subprocess.Popen | None = None
-    if not _port_open(DEV_SERVER_HOST, DEV_SERVER_PORT):
+    if not _port_open(DEV_SERVER_HOST, port):
         dev_process = subprocess.Popen(
-            ["npm", "run", "dev", "--", "--host", DEV_SERVER_HOST, "--port", str(DEV_SERVER_PORT)],
+            ["npm", "run", "dev", "--", "--host", DEV_SERVER_HOST, "--port", str(port)],
             cwd=str(WEB_REPLAY_DIR),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
         )
         started_server = True
-        if not _wait_for_port(DEV_SERVER_HOST, DEV_SERVER_PORT, timeout_s=timeout_s):
+        if not _wait_for_port(DEV_SERVER_HOST, port, timeout_s=timeout_s):
             dev_process.terminate()
             raise RuntimeError(
-                f"vite dev server did not start listening on {DEV_SERVER_HOST}:{DEV_SERVER_PORT} within {timeout_s}s"
+                f"vite dev server did not start listening on {DEV_SERVER_HOST}:{port} within {timeout_s}s"
             )
 
     console_messages: list[str] = []
@@ -152,7 +153,7 @@ def verify_viewer_loads(
     load_errors: list[str] = []
     loaded_counts: dict[str, Any] = {}
     trust_chip_count = 0
-    url = viewer_url_for_manifest(manifest_path)
+    url = viewer_url_for_manifest(manifest_path, port=port)
 
     try:
         with sync_playwright() as p:
@@ -218,9 +219,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Headless web-viewer load check for a process_video.py manifest.")
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
+    parser.add_argument("--port", type=int, default=DEV_SERVER_PORT)
     parser.add_argument("--allow-empty", action="store_true", help="Allow a manifest that intentionally renders zero viewer entities.")
     args = parser.parse_args(argv)
-    result = verify_viewer_loads(args.manifest, out_dir=args.out_dir, allow_empty=args.allow_empty)
+    result = verify_viewer_loads(args.manifest, out_dir=args.out_dir, allow_empty=args.allow_empty, port=args.port)
     print(json.dumps(result, indent=2))
     return 0 if result["ok"] else 1
 

@@ -8,8 +8,10 @@ and they should fail closed when that assumption is false.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import json
 import math
+import os
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -135,6 +137,7 @@ POINT_LINE_WEIGHT_SWEEP: tuple[float, ...] = (
     0.8,
     1.2,
 )
+NEURAL_KEYPOINT_METRICS_GLOB = "court_keypoint_metrics.json"
 FLOOR_LINE_KEYPOINT_PAIRS: dict[str, tuple[str, str]] = {
     "near_baseline": ("near_left_corner", "near_right_corner"),
     "far_baseline": ("far_left_corner", "far_right_corner"),
@@ -142,7 +145,26 @@ FLOOR_LINE_KEYPOINT_PAIRS: dict[str, tuple[str, str]] = {
     "right_sideline": ("near_right_corner", "far_right_corner"),
     "near_nvz": ("near_nvz_left", "near_nvz_right"),
     "far_nvz": ("far_nvz_left", "far_nvz_right"),
+    "near_centerline": ("near_baseline_center", "near_nvz_center"),
+    "far_centerline": ("far_nvz_center", "far_baseline_center"),
 }
+FLOOR_KEYPOINT_LINE_INTERSECTIONS: dict[str, tuple[str, str]] = {
+    "near_left_corner": ("near_baseline", "left_sideline"),
+    "near_right_corner": ("near_baseline", "right_sideline"),
+    "far_left_corner": ("far_baseline", "left_sideline"),
+    "far_right_corner": ("far_baseline", "right_sideline"),
+    "near_baseline_center": ("near_baseline", "near_centerline"),
+    "far_baseline_center": ("far_baseline", "far_centerline"),
+    "near_nvz_left": ("near_nvz", "left_sideline"),
+    "near_nvz_right": ("near_nvz", "right_sideline"),
+    "near_nvz_center": ("near_nvz", "near_centerline"),
+    "far_nvz_left": ("far_nvz", "left_sideline"),
+    "far_nvz_right": ("far_nvz", "right_sideline"),
+    "far_nvz_center": ("far_nvz", "far_centerline"),
+}
+LINE_INTERSECTION_OVERRIDE_CENTER_KEYPOINTS = frozenset(
+    {"near_baseline_center", "far_baseline_center", "near_nvz_center", "far_nvz_center"}
+)
 
 
 def hsv_paint_mask(
@@ -667,6 +689,116 @@ def shadow_removal_preprocess(image_bgr: Any) -> tuple[Any, dict[str, Any]]:
     }
 
 
+def pretrained_shadow_removal_preprocess(
+    image_bgr: Any,
+    *,
+    model_path: str | Path | None = None,
+    env_var: str = "PICKLEBALL_SHADOW_REMOVAL_TORCHSCRIPT",
+) -> tuple[Any, dict[str, Any]]:
+    """Run an explicitly configured pretrained TorchScript shadow remover.
+
+    This path is intentionally fail-closed. If no real model weights are
+    configured, callers receive the original image and evidence explaining that
+    no pretrained model was used.
+    """
+
+    image = _as_uint8_bgr(image_bgr)
+    raw_model_path = "" if model_path is None else str(model_path)
+    if not raw_model_path:
+        raw_model_path = os.environ.get(env_var, "")
+    base_evidence: dict[str, Any] = {
+        "available": False,
+        "method": "torchscript_image_to_image_shadow_removal",
+        "mode": "pretrained_ml_shadow_removal",
+        "pretrained_model_used": False,
+        "framework": "torchscript",
+        "env_var": env_var,
+        "candidate_model_families": ["ShadowFormer", "SID", "DHAN"],
+        "candidate_model_references": [
+            "https://github.com/guolanqing/shadowformer",
+            "https://github.com/cvlab-stonybrook/SID",
+            "https://github.com/mducducd/Shadow-Removal",
+        ],
+    }
+    if not raw_model_path:
+        base_evidence["reason"] = "missing_pretrained_shadow_removal_model"
+        return image, base_evidence
+    resolved_path = Path(raw_model_path)
+    if not resolved_path.is_file():
+        base_evidence.update(
+            {
+                "reason": "pretrained_shadow_removal_model_not_found",
+                "model_path": str(resolved_path),
+            }
+        )
+        return image, base_evidence
+
+    try:
+        import torch  # type: ignore[import-not-found]
+    except Exception as exc:  # pragma: no cover - depends on optional runtime
+        base_evidence.update(
+            {
+                "reason": "torch_unavailable_for_pretrained_shadow_removal",
+                "error": str(exc),
+                "model_path": str(resolved_path),
+            }
+        )
+        return image, base_evidence
+
+    cv2 = _cv2()
+    np = _np()
+    try:
+        rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        tensor = torch.from_numpy(rgb.astype(np.float32) / 255.0).permute(2, 0, 1).unsqueeze(0)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model = torch.jit.load(str(resolved_path), map_location=device)
+        model.eval()
+        with torch.no_grad():
+            output = model(tensor.to(device))
+        if isinstance(output, (tuple, list)):
+            output = output[0]
+        if not hasattr(output, "detach"):
+            raise ValueError("TorchScript shadow model output must be a tensor")
+        output_tensor = output.detach().float().cpu()
+        if output_tensor.ndim == 3:
+            output_tensor = output_tensor.unsqueeze(0)
+        if output_tensor.ndim != 4 or int(output_tensor.shape[0]) != 1 or int(output_tensor.shape[1]) != 3:
+            raise ValueError("TorchScript shadow model output must have shape [1,3,H,W] or [3,H,W]")
+        if int(output_tensor.shape[2]) != int(image.shape[0]) or int(output_tensor.shape[3]) != int(image.shape[1]):
+            output_tensor = torch.nn.functional.interpolate(
+                output_tensor,
+                size=(int(image.shape[0]), int(image.shape[1])),
+                mode="bilinear",
+                align_corners=False,
+            )
+        output_rgb = (
+            output_tensor.squeeze(0).permute(1, 2, 0).clamp(0.0, 1.0).numpy() * 255.0
+        ).round().astype(np.uint8)
+        output_bgr = cv2.cvtColor(output_rgb, cv2.COLOR_RGB2BGR)
+    except Exception as exc:
+        base_evidence.update(
+            {
+                "reason": "pretrained_shadow_removal_inference_failed",
+                "error": str(exc),
+                "model_path": str(resolved_path),
+            }
+        )
+        return image, base_evidence
+
+    base_evidence.update(
+        {
+            "available": True,
+            "pretrained_model_used": True,
+            "model_path": str(resolved_path),
+            "model_sha256": _sha256_file(resolved_path),
+            "device": str(device),
+            "input_size": [int(image.shape[1]), int(image.shape[0])],
+            "output_size": [int(output_bgr.shape[1]), int(output_bgr.shape[0])],
+        }
+    )
+    return output_bgr, base_evidence
+
+
 def build_lm_homography_reviewed_label_report(
     *,
     eval_root: str | Path,
@@ -685,6 +817,14 @@ def build_lm_homography_reviewed_label_report(
     root = Path(eval_root)
     if not root.is_dir():
         raise ValueError(f"eval_root does not exist or is not a directory: {root}")
+    repo_root = _calibration_repo_root(root)
+    neural_keypoint_evidence = _neural_keypoint_checkpoint_evidence(repo_root=repo_root)
+    best_neural_candidate = neural_keypoint_evidence.get("best_real_label_candidate")
+    best_neural_metric = (
+        best_neural_candidate.get("candidate_metric_value_px")
+        if isinstance(best_neural_candidate, Mapping)
+        else None
+    )
 
     results: list[dict[str, Any]] = []
     partial_excluded: list[dict[str, Any]] = []
@@ -769,6 +909,29 @@ def build_lm_homography_reviewed_label_report(
             object_points_m,
             image_points,
             metric_plane_camera,
+            meters_to_feet=1.0 / FT_TO_M,
+        )
+        review_line_observations = _review_line_observations_for_reviewed_clip(
+            full_label,
+            aggregated=aggregated,
+            image_size=(native_size[0], native_size[1]),
+            keypoint_by_name=PICKLEBALL_KEYPOINT_BY_NAME,
+        )
+        metric_plane_outlier_candidates = _metric_plane_outlier_review_candidates(
+            FLOOR_HOMOGRAPHY_KEYPOINT_NAMES,
+            object_points_m,
+            image_points,
+            metric_plane_camera,
+            metric_plane_residual_details_ft,
+            line_observations=review_line_observations,
+        )
+        line_intersection_override_oracle = _metric_plane_line_intersection_override_oracle(
+            FLOOR_HOMOGRAPHY_KEYPOINT_NAMES,
+            object_points_m,
+            image_points,
+            image_size=(native_size[0], native_size[1]),
+            candidates=metric_plane_outlier_candidates,
+            baseline_mean_residual_ft=metric_plane_residual_ft["mean_residual_ft"],
             meters_to_feet=1.0 / FT_TO_M,
         )
         point_line_camera = _point_line_fit_for_reviewed_clip(
@@ -857,6 +1020,8 @@ def build_lm_homography_reviewed_label_report(
                         "trimmed_mean_residual_ft_drop_worst_3"
                     ],
                     "trimmed_residual_diagnostic_only": True,
+                    "outlier_review_candidates": metric_plane_outlier_candidates,
+                    "line_intersection_override_oracle": line_intersection_override_oracle,
                     "fx": metric_plane_camera["intrinsics"]["fx"],
                     "k1": metric_plane_camera["distortion"]["k1"],
                     "k2": metric_plane_camera["distortion"]["k2"],
@@ -908,6 +1073,38 @@ def build_lm_homography_reviewed_label_report(
         float(result["metric_plane_camera"]["trimmed_mean_residual_ft_drop_worst_3"])
         for result in results
         if result.get("metric_plane_camera", {}).get("trimmed_mean_residual_ft_drop_worst_3") is not None
+    ]
+    metric_plane_outlier_candidate_counts = [
+        len(result["metric_plane_camera"].get("outlier_review_candidates", []))
+        for result in results
+        if isinstance(result.get("metric_plane_camera"), Mapping)
+    ]
+    metric_plane_line_intersection_candidate_count = sum(
+        1
+        for result in results
+        if isinstance(result.get("metric_plane_camera"), Mapping)
+        for candidate in result["metric_plane_camera"].get("outlier_review_candidates", [])
+        if candidate.get("line_intersection_available") is True
+    )
+    metric_plane_line_override_oracles = [
+        result["metric_plane_camera"].get("line_intersection_override_oracle", {})
+        for result in results
+        if isinstance(result.get("metric_plane_camera"), Mapping)
+        and isinstance(result["metric_plane_camera"].get("line_intersection_override_oracle"), Mapping)
+    ]
+    metric_plane_line_override_candidate_count = sum(
+        int(oracle.get("override_candidate_count", 0))
+        for oracle in metric_plane_line_override_oracles
+    )
+    metric_plane_line_override_means = [
+        float(oracle["mean_residual_ft"])
+        for oracle in metric_plane_line_override_oracles
+        if oracle.get("status") == "scored" and oracle.get("mean_residual_ft") is not None
+    ]
+    metric_plane_line_override_original_reviewed_means = [
+        float(oracle["original_reviewed_mean_residual_ft"])
+        for oracle in metric_plane_line_override_oracles
+        if oracle.get("status") == "scored" and oracle.get("original_reviewed_mean_residual_ft") is not None
     ]
     point_line_rmses = [
         float(result["point_line_camera"]["optimized_reprojection_rmse_px"])
@@ -975,6 +1172,18 @@ def build_lm_homography_reviewed_label_report(
         "metric_plane_per_clip_trimmed_worst3_mean_residual_ft_mean": (
             None if not metric_plane_trimmed_worst3_means else round(_mean(metric_plane_trimmed_worst3_means), 6)
         ),
+        "metric_plane_outlier_review_candidate_count": sum(metric_plane_outlier_candidate_counts),
+        "metric_plane_line_intersection_review_candidate_count": metric_plane_line_intersection_candidate_count,
+        "metric_plane_line_intersection_override_candidate_count": metric_plane_line_override_candidate_count,
+        "metric_plane_line_intersection_override_mean_residual_ft_mean": (
+            None if not metric_plane_line_override_means else round(_mean(metric_plane_line_override_means), 6)
+        ),
+        "metric_plane_line_intersection_override_original_reviewed_mean_residual_ft_mean": (
+            None
+            if not metric_plane_line_override_original_reviewed_means
+            else round(_mean(metric_plane_line_override_original_reviewed_means), 6)
+        ),
+        "metric_plane_line_intersection_override_diagnostic_only": True,
         "point_line_fit_clip_count": len(point_line_rmses),
         "point_line_camera_rmse_px_mean": None if not point_line_rmses else round(_mean(point_line_rmses), 6),
         "point_line_camera_mean_residual_ft_mean": None if not point_line_world_means else round(_mean(point_line_world_means), 6),
@@ -992,6 +1201,11 @@ def build_lm_homography_reviewed_label_report(
         "point_line_pair_subset_oracle_mean_residual_ft_median": (
             None if not point_line_pair_oracle_world_means else round(_median(point_line_pair_oracle_world_means), 6)
         ),
+        "neural_keypoint_checkpoint_candidate_count": neural_keypoint_evidence["candidate_count"],
+        "neural_keypoint_real_label_candidate_count": neural_keypoint_evidence["real_label_candidate_count"],
+        "neural_keypoint_gate_pass_count": neural_keypoint_evidence["gate_pass_count"],
+        "neural_keypoint_best_real_median_px": best_neural_metric,
+        "neural_keypoint_diagnostic_only": True,
         "safe_selected_camera_mean_residual_ft_mean": (
             None if not safe_selected_world_means else round(_mean(safe_selected_world_means), 6)
         ),
@@ -1007,12 +1221,14 @@ def build_lm_homography_reviewed_label_report(
         "verified": False,
         "not_cal3_verified": True,
         "summary": summary,
+        "neural_keypoint_checkpoint_evidence": neural_keypoint_evidence,
         "partial_excluded": partial_excluded,
         "results": results,
         "notes": [
             "LM homography residuals are measured on reviewed court keypoint labels, not raw color-mask pixels.",
             "This evaluates the proposed LM refinement seam but does not promote no-tap CAL-3 calibration.",
             "Metric-plane trimmed residuals are diagnostic-only outlier analysis and must not be used as CAL pass criteria.",
+            "Neural court-keypoint checkpoints are scored as diagnostic evidence only unless their reviewed-label gate passes.",
         ],
     }
     if out_path is not None:
@@ -1020,6 +1236,158 @@ def build_lm_homography_reviewed_label_report(
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return report
+
+
+def render_metric_plane_outlier_review_packet(
+    *,
+    report_path: str | Path,
+    eval_root: str | Path,
+    out_dir: str | Path,
+    crop_radius_px: int = 96,
+    max_candidates: int | None = None,
+    cv2_module: Any | None = None,
+) -> dict[str, Any]:
+    """Render fail-closed visual crops for metric-plane outlier candidates."""
+
+    if crop_radius_px <= 0:
+        raise ValueError("crop_radius_px must be positive")
+    if max_candidates is not None and max_candidates <= 0:
+        raise ValueError("max_candidates must be positive when provided")
+    report_file = Path(report_path)
+    report = json.loads(report_file.read_text(encoding="utf-8"))
+    if report.get("artifact_type") != "racketsport_overlapping_court_calibration_eval":
+        raise ValueError("report must be a racketsport overlapping-court calibration eval artifact")
+
+    cv2 = cv2_module or _cv2()
+    np = _np()
+    root = Path(eval_root)
+    output_dir = Path(out_dir)
+    images_dir = output_dir / "images"
+    images_dir.mkdir(parents=True, exist_ok=True)
+
+    candidates_seen = 0
+    items: list[dict[str, Any]] = []
+    contact_tiles: list[Any] = []
+    frame_cache: dict[tuple[str, int], Any] = {}
+    clip_names: set[str] = set()
+
+    for result in report.get("results", []):
+        if max_candidates is not None and candidates_seen >= max_candidates:
+            break
+        if not isinstance(result, Mapping):
+            continue
+        clip = str(result.get("clip") or "")
+        if not clip:
+            continue
+        clip_names.add(clip)
+        metric_plane = result.get("metric_plane_camera")
+        if not isinstance(metric_plane, Mapping):
+            continue
+        candidates = metric_plane.get("outlier_review_candidates")
+        if not isinstance(candidates, Sequence) or isinstance(candidates, (str, bytes)):
+            continue
+        label_path = _resolve_report_label_path(result, eval_root=root)
+        frame_index = _metric_packet_frame_index(label_path)
+        source_video = root / clip / "source.mp4"
+        cache_key = (clip, frame_index)
+        if cache_key not in frame_cache:
+            frame_cache[cache_key] = _read_video_frame(source_video, frame_index, cv2)
+        frame = frame_cache[cache_key]
+
+        for candidate_index, raw_candidate in enumerate(candidates):
+            if max_candidates is not None and candidates_seen >= max_candidates:
+                break
+            if not isinstance(raw_candidate, Mapping):
+                continue
+            candidate = dict(raw_candidate)
+            reviewed_px = _point2(candidate.get("reviewed_image_px"), "candidate.reviewed_image_px")
+            model_px = _point2(candidate.get("model_projected_image_px"), "candidate.model_projected_image_px")
+            line_px = None
+            if candidate.get("line_intersection_available") is True:
+                try:
+                    line_px = _point2(candidate.get("line_intersection_image_px"), "candidate.line_intersection_image_px")
+                except ValueError:
+                    line_px = None
+            center = _packet_crop_center([reviewed_px, model_px, line_px])
+            crop, crop_box = _crop_around_point(frame, center, radius_px=crop_radius_px)
+            annotated = crop.copy()
+            _draw_metric_plane_outlier_crop(
+                cv2,
+                annotated,
+                candidate=candidate,
+                crop_origin=(crop_box[0], crop_box[1]),
+            )
+
+            keypoint = _safe_filename_token(str(candidate.get("keypoint") or "keypoint"))
+            image_name = f"{candidates_seen + 1:03d}_{_safe_filename_token(clip)}_{keypoint}.jpg"
+            image_path = images_dir / image_name
+            if not cv2.imwrite(str(image_path), annotated):
+                raise RuntimeError(f"failed writing outlier review crop: {image_path}")
+            contact_tiles.append(_review_packet_tile(annotated, crop_radius_px * 2, np))
+            line_support = _line_intersection_support(candidate)
+            items.append(
+                {
+                    "review_id": f"metric_plane_outlier_{candidates_seen + 1:03d}",
+                    "clip": clip,
+                    "keypoint": str(candidate.get("keypoint") or ""),
+                    "source_video": str(source_video),
+                    "frame_index": frame_index,
+                    "image": str(image_path),
+                    "crop_box_xyxy": [int(value) for value in crop_box],
+                    "residual_ft": candidate.get("residual_ft"),
+                    "model_delta_px": candidate.get("model_delta_px"),
+                    "line_intersection_available": candidate.get("line_intersection_available") is True,
+                    "line_intersection_support": line_support,
+                    "reviewed_image_px": candidate.get("reviewed_image_px"),
+                    "model_projected_image_px": candidate.get("model_projected_image_px"),
+                    "line_intersection_image_px": candidate.get("line_intersection_image_px"),
+                    "diagnostic_only": True,
+                    "candidate_rank_in_clip": candidate_index + 1,
+                }
+            )
+            candidates_seen += 1
+
+    contact_sheet_path: Path | None = None
+    if contact_tiles:
+        contact_sheet = _review_packet_contact_sheet(contact_tiles, np)
+        contact_sheet_path = output_dir / "metric_plane_outlier_contact_sheet.jpg"
+        if not cv2.imwrite(str(contact_sheet_path), contact_sheet):
+            raise RuntimeError(f"failed writing outlier review contact sheet: {contact_sheet_path}")
+
+    line_support_counts = _source_counts([str(item["line_intersection_support"]) for item in items])
+    summary = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_metric_plane_outlier_review_packet",
+        "status": "needs_human_review" if items else "no_outlier_candidates",
+        "verified": False,
+        "not_cal3_verified": True,
+        "diagnostic_only": True,
+        "source_report": str(report_file),
+        "eval_root": str(root),
+        "out_dir": str(output_dir),
+        "item_count": len(items),
+        "candidate_count": len(items),
+        "clip_count": len(clip_names),
+        "line_intersection_item_count": sum(1 for item in items if item["line_intersection_available"]),
+        "line_intersection_support_counts": line_support_counts,
+        "contact_sheet": None if contact_sheet_path is None else str(contact_sheet_path),
+        "legend_bgr": {
+            "reviewed_label": [0, 220, 0],
+            "metric_plane_projection": [0, 0, 255],
+            "line_intersection_candidate": [255, 255, 0],
+        },
+        "items": items,
+        "notes": [
+            "This packet visualizes residual outliers only; it does not mutate labels or promote CAL-3.",
+            "Line-intersection support is diagnostic and must be human-reviewed before any relabel or promotion.",
+        ],
+    }
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "metric_plane_outlier_review_packet.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return summary
 
 
 def _hough_segments_from_mask(mask: Any, *, config: LineClusterConfig) -> list[tuple[tuple[float, float], tuple[float, float]]]:
@@ -1495,6 +1863,37 @@ def _line_observation_arrays(observation: Mapping[str, Any]) -> tuple[Any, Any]:
     return world, image
 
 
+def _line_intersection_from_observations(
+    first: Mapping[str, Any],
+    second: Mapping[str, Any],
+) -> tuple[float, float] | None:
+    first_segment = first.get("image_segment_px")
+    second_segment = second.get("image_segment_px")
+    if not isinstance(first_segment, Sequence) or not isinstance(second_segment, Sequence):
+        return None
+    if len(first_segment) != 2 or len(second_segment) != 2:
+        return None
+    first_p1 = _point2(first_segment[0], "first.image_segment_px[0]")
+    first_p2 = _point2(first_segment[1], "first.image_segment_px[1]")
+    second_p1 = _point2(second_segment[0], "second.image_segment_px[0]")
+    second_p2 = _point2(second_segment[1], "second.image_segment_px[1]")
+    try:
+        first_line = _line_from_segment((first_p1, first_p2))
+        second_line = _line_from_segment((second_p1, second_p2))
+    except ValueError:
+        return None
+    a1, b1, c1 = first_line
+    a2, b2, c2 = second_line
+    determinant = a1 * b2 - a2 * b1
+    if abs(determinant) <= 1e-9:
+        return None
+    x = (b1 * c2 - b2 * c1) / determinant
+    y = (c1 * a2 - c2 * a1) / determinant
+    if not math.isfinite(x) or not math.isfinite(y):
+        return None
+    return (float(x), float(y))
+
+
 def _world_plane_residual_summary_ft(
     object_points_m: Sequence[Sequence[float]],
     image_points_px: Sequence[Sequence[float]],
@@ -1551,6 +1950,199 @@ def _world_plane_residual_details_ft(
             drop_worst_count=drop_count,
         )
     return payload
+
+
+def _metric_plane_outlier_review_candidates(
+    keypoint_names: Sequence[str],
+    object_points_m: Sequence[Sequence[float]],
+    image_points_px: Sequence[Sequence[float]],
+    fit: Mapping[str, Any],
+    residual_details_ft: Mapping[str, Any],
+    *,
+    line_observations: Sequence[Mapping[str, Any]],
+    residual_threshold_ft: float = 0.45,
+    max_candidates: int = 8,
+) -> list[dict[str, Any]]:
+    if residual_threshold_ft <= 0.0:
+        raise ValueError("residual_threshold_ft must be positive")
+    if max_candidates <= 0:
+        raise ValueError("max_candidates must be positive")
+    per_keypoint = residual_details_ft.get("per_keypoint_residual_ft")
+    if not isinstance(per_keypoint, Mapping):
+        return []
+    names = [str(name) for name in keypoint_names]
+    projected = project_world_points_with_distortion_fit(object_points_m, fit)
+    observations_by_name = {str(observation.get("name")): observation for observation in line_observations}
+    candidates: list[dict[str, Any]] = []
+    for name, image_point, model_point in zip(names, image_points_px, projected, strict=True):
+        residual = per_keypoint.get(name)
+        if residual is None or float(residual) < float(residual_threshold_ft):
+            continue
+        reviewed_px = _point2(image_point, f"{name}.reviewed_image_px")
+        model_px = _point2(model_point, f"{name}.model_projected_image_px")
+        candidate: dict[str, Any] = {
+            "diagnostic_only": True,
+            "keypoint": name,
+            "residual_ft": round(float(residual), 6),
+            "reviewed_image_px": [round(reviewed_px[0], 3), round(reviewed_px[1], 3)],
+            "model_projected_image_px": [round(model_px[0], 3), round(model_px[1], 3)],
+            "model_delta_px": round(math.dist(reviewed_px, model_px), 3),
+            "line_intersection_available": False,
+        }
+        line_names = FLOOR_KEYPOINT_LINE_INTERSECTIONS.get(name)
+        if line_names is not None and all(line_name in observations_by_name for line_name in line_names):
+            first_observation = observations_by_name[line_names[0]]
+            second_observation = observations_by_name[line_names[1]]
+            intersection = _line_intersection_from_observations(
+                first_observation,
+                second_observation,
+            )
+            if intersection is not None:
+                candidate.update(
+                    {
+                        "line_names": list(line_names),
+                        "line_support_modes": [
+                            str(first_observation.get("support_mode", "unknown")),
+                            str(second_observation.get("support_mode", "unknown")),
+                        ],
+                        "line_intersection_available": True,
+                        "line_intersection_image_px": [round(intersection[0], 3), round(intersection[1], 3)],
+                        "line_intersection_delta_px": round(math.dist(reviewed_px, intersection), 3),
+                        "model_to_line_intersection_delta_px": round(math.dist(model_px, intersection), 3),
+                    }
+                )
+        candidates.append(candidate)
+    candidates.sort(key=lambda item: float(item["residual_ft"]), reverse=True)
+    return candidates[:max_candidates]
+
+
+def _metric_plane_line_intersection_override_oracle(
+    keypoint_names: Sequence[str],
+    object_points_m: Sequence[Sequence[float]],
+    image_points_px: Sequence[Sequence[float]],
+    *,
+    image_size: tuple[float, float],
+    candidates: Sequence[Mapping[str, Any]],
+    baseline_mean_residual_ft: float,
+    meters_to_feet: float,
+) -> dict[str, Any]:
+    names = [str(name) for name in keypoint_names]
+    name_to_index = {name: index for index, name in enumerate(names)}
+    override_points = [list(_point2(point, "line_override.image_point")) for point in image_points_px]
+    overrides: list[dict[str, Any]] = []
+    skipped_non_strict = 0
+    skipped_center_keypoints = 0
+    for candidate in candidates:
+        if candidate.get("line_intersection_available") is not True:
+            continue
+        name = str(candidate.get("keypoint") or "")
+        support_modes_raw = candidate.get("line_support_modes")
+        support_modes = (
+            [str(value) for value in support_modes_raw]
+            if isinstance(support_modes_raw, Sequence) and not isinstance(support_modes_raw, (str, bytes))
+            else []
+        )
+        has_strict_support = bool(support_modes) and all(mode == "overlapping_segment" for mode in support_modes)
+        is_center_keypoint = name in LINE_INTERSECTION_OVERRIDE_CENTER_KEYPOINTS
+        if not has_strict_support:
+            skipped_non_strict += 1
+        if is_center_keypoint:
+            skipped_center_keypoints += 1
+        if is_center_keypoint or not has_strict_support:
+            continue
+        index = name_to_index.get(name)
+        if index is None:
+            continue
+        try:
+            line_point = _point2(candidate.get("line_intersection_image_px"), "line_intersection_image_px")
+            reviewed_point = _point2(candidate.get("reviewed_image_px"), "reviewed_image_px")
+        except ValueError:
+            continue
+        override_points[index] = line_point
+        overrides.append(
+            {
+                "keypoint": name,
+                "reviewed_image_px": [round(reviewed_point[0], 3), round(reviewed_point[1], 3)],
+                "line_intersection_image_px": [round(line_point[0], 3), round(line_point[1], 3)],
+                "line_intersection_support": _line_intersection_support(candidate),
+                "line_support_modes": support_modes,
+                "line_intersection_delta_px": candidate.get("line_intersection_delta_px"),
+                "model_to_line_intersection_delta_px": candidate.get("model_to_line_intersection_delta_px"),
+                "source_residual_ft": candidate.get("residual_ft"),
+            }
+        )
+    if not overrides:
+        return {
+            "diagnostic_only": True,
+            "mutates_reviewed_labels": False,
+            "status": "skipped",
+            "reason": "no_line_intersection_outlier_candidates",
+            "override_candidate_count": 0,
+            "default_strategy": "endpoint_intersections_only",
+            "strict_support_required": True,
+            "skipped_non_strict_line_intersection_count": skipped_non_strict,
+            "skipped_center_keypoint_count": skipped_center_keypoints,
+        }
+
+    fit = fit_metric_plane_camera_lm(
+        object_points_m,
+        override_points,
+        image_size=image_size,
+    )
+    override_residual_ft = _world_plane_residual_summary_ft(
+        object_points_m,
+        override_points,
+        fit,
+        meters_to_feet=meters_to_feet,
+    )
+    original_reviewed_residual_ft = _world_plane_residual_summary_ft(
+        object_points_m,
+        image_points_px,
+        fit,
+        meters_to_feet=meters_to_feet,
+    )
+    override_details_ft = _world_plane_residual_details_ft(
+        names,
+        object_points_m,
+        override_points,
+        fit,
+        meters_to_feet=meters_to_feet,
+    )
+    return {
+        "diagnostic_only": True,
+        "mutates_reviewed_labels": False,
+        "status": "scored",
+        "method": fit["method"],
+        "override_candidate_count": len(overrides),
+        "default_strategy": "endpoint_intersections_only",
+        "strict_support_required": True,
+        "skipped_non_strict_line_intersection_count": skipped_non_strict,
+        "skipped_center_keypoint_count": skipped_center_keypoints,
+        "line_intersection_support_counts": _source_counts(
+            str(item["line_intersection_support"]) for item in overrides
+        ),
+        "mean_residual_ft": override_residual_ft["mean_residual_ft"],
+        "median_residual_ft": override_residual_ft["median_residual_ft"],
+        "p95_residual_ft": override_residual_ft["p95_residual_ft"],
+        "original_reviewed_mean_residual_ft": original_reviewed_residual_ft["mean_residual_ft"],
+        "original_reviewed_median_residual_ft": original_reviewed_residual_ft["median_residual_ft"],
+        "original_reviewed_p95_residual_ft": original_reviewed_residual_ft["p95_residual_ft"],
+        "delta_ft_vs_metric_plane_reviewed_baseline": round(
+            float(baseline_mean_residual_ft) - float(override_residual_ft["mean_residual_ft"]),
+            6,
+        ),
+        "original_reviewed_delta_ft_vs_metric_plane_reviewed_baseline": round(
+            float(baseline_mean_residual_ft) - float(original_reviewed_residual_ft["mean_residual_ft"]),
+            6,
+        ),
+        "per_keypoint_residual_ft": override_details_ft["per_keypoint_residual_ft"],
+        "worst_keypoint": override_details_ft["worst_keypoint"],
+        "overrides": overrides,
+        "notes": [
+            "Scores a temporary line-intersection observation set only; reviewed label JSON is unchanged.",
+            "This is an upper-bound diagnostic for human review, not a production calibration source.",
+        ],
+    }
 
 
 def _trimmed_mean_or_none(values: Sequence[float], *, drop_worst_count: int) -> float | None:
@@ -1724,6 +2316,220 @@ def _safe_selected_camera_payload(
     return baseline
 
 
+def _neural_keypoint_checkpoint_evidence(*, repo_root: Path) -> dict[str, Any]:
+    runs_root = repo_root / "runs"
+    if not runs_root.is_dir():
+        return {
+            "diagnostic_only": True,
+            "promotes_calibration": False,
+            "status": "unavailable",
+            "reason": "missing_runs_directory",
+            "candidate_count": 0,
+            "real_label_candidate_count": 0,
+            "gate_pass_count": 0,
+            "best_real_label_candidate": None,
+            "candidates": [],
+        }
+
+    candidates: list[dict[str, Any]] = []
+    for metrics_path in sorted(runs_root.glob(f"**/{NEURAL_KEYPOINT_METRICS_GLOB}")):
+        candidate = _neural_keypoint_candidate_from_metrics(metrics_path, repo_root=repo_root)
+        if candidate is not None:
+            candidates.append(candidate)
+
+    real_label_candidates = [
+        candidate
+        for candidate in candidates
+        if candidate.get("candidate_metric_name") == "after.real_keypoint_median_px"
+        and candidate.get("candidate_metric_value_px") is not None
+    ]
+    best = (
+        min(real_label_candidates, key=lambda item: float(item["candidate_metric_value_px"]))
+        if real_label_candidates
+        else None
+    )
+    return {
+        "diagnostic_only": True,
+        "promotes_calibration": False,
+        "status": "scored" if candidates else "no_checkpoint_metrics",
+        "repo_root": str(repo_root),
+        "metrics_glob": f"runs/**/{NEURAL_KEYPOINT_METRICS_GLOB}",
+        "candidate_count": len(candidates),
+        "real_label_candidate_count": len(real_label_candidates),
+        "gate_pass_count": sum(1 for candidate in candidates if candidate.get("gate_passed") is True),
+        "best_real_label_candidate": best,
+        "candidates": candidates,
+        "notes": [
+            "Neural court-keypoint evidence is read from existing training metrics only.",
+            "These checkpoint metrics do not promote calibration unless the reviewed-label gate passes separately.",
+        ],
+    }
+
+
+def _neural_keypoint_candidate_from_metrics(metrics_path: Path, *, repo_root: Path) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(metrics_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if payload.get("checkpoint") is None and payload.get("gate") is None and payload.get("after") is None:
+        return None
+
+    gate = payload.get("gate") if isinstance(payload.get("gate"), Mapping) else {}
+    after = payload.get("after") if isinstance(payload.get("after"), Mapping) else {}
+    before = payload.get("before") if isinstance(payload.get("before"), Mapping) else {}
+    architecture = payload.get("architecture") if isinstance(payload.get("architecture"), Mapping) else {}
+    postprocess = payload.get("postprocess") if isinstance(payload.get("postprocess"), Mapping) else {}
+    checkpoint_text = payload.get("checkpoint")
+    checkpoint_path = _resolve_neural_checkpoint_path(
+        metrics_path=metrics_path,
+        checkpoint_text=checkpoint_text,
+        repo_root=repo_root,
+    )
+    real_holdout_count = _optional_int(payload.get("real_holdout_count"))
+    candidate_metric_value = _optional_number(after.get("real_keypoint_median_px"))
+    promotion_blockers = _neural_candidate_promotion_blockers(
+        payload,
+        gate=gate,
+        checkpoint_exists=checkpoint_path is not None,
+        candidate_metric_value=candidate_metric_value,
+    )
+    holdout_artifacts = [
+        item for item in payload.get("holdout_artifacts", []) if isinstance(item, Mapping)
+    ] if isinstance(payload.get("holdout_artifacts"), Sequence) and not isinstance(
+        payload.get("holdout_artifacts"), (str, bytes)
+    ) else []
+    holdout_medians = [
+        value
+        for value in (_optional_number(item.get("median_keypoint_reprojection_px")) for item in holdout_artifacts)
+        if value is not None
+    ]
+    holdout_p95s = [
+        value
+        for value in (_optional_number(item.get("p95_keypoint_reprojection_px")) for item in holdout_artifacts)
+        if value is not None
+    ]
+
+    return {
+        "metrics_path": str(metrics_path),
+        "status": str(payload.get("status") or "unknown"),
+        "diagnostic_only": True,
+        "promotes_calibration": False,
+        "not_cal3_verified": payload.get("not_cal3_verified", True) is not False,
+        "checkpoint": str(checkpoint_text) if checkpoint_text is not None else None,
+        "resolved_checkpoint": None if checkpoint_path is None else str(checkpoint_path),
+        "checkpoint_exists": checkpoint_path is not None,
+        "architecture": architecture.get("name"),
+        "network_architecture": architecture.get("network_architecture"),
+        "prediction_mode": postprocess.get("prediction_mode") or after.get("prediction_mode"),
+        "gate_metric": gate.get("metric"),
+        "gate_value": _optional_number(gate.get("value")),
+        "gate_passed": gate.get("passed") is True,
+        "gate_threshold": _optional_number(gate.get("threshold")),
+        "gate_pck_threshold_px": _optional_number(gate.get("pck_threshold_px")),
+        "labels_independent_human_frames": _optional_int(
+            gate.get("independent_reviewed_frame_count", payload.get("labels_independent_human_frames"))
+        ),
+        "labels_static_camera_copy_frame_count": _optional_int(
+            gate.get("copied_frame_count", payload.get("labels_static_camera_copy_frame_count"))
+        ),
+        "labels_synthetic_frame_count": _optional_int(
+            gate.get("synthetic_frame_count", payload.get("labels_synthetic_frame_count"))
+        ),
+        "real_train_count": _optional_int(payload.get("real_train_count")),
+        "real_holdout_count": real_holdout_count,
+        "candidate_metric_name": "after.real_keypoint_median_px" if candidate_metric_value is not None else None,
+        "candidate_metric_value_px": None if candidate_metric_value is None else round(candidate_metric_value, 6),
+        "after_real_keypoint_mean_px": _round_optional_number(after.get("real_keypoint_mean_px")),
+        "after_real_keypoint_median_px": _round_optional_number(after.get("real_keypoint_median_px")),
+        "after_real_keypoint_p95_px": _round_optional_number(after.get("real_keypoint_p95_px")),
+        "after_real_keypoint_pck_at_5px": _round_optional_number(after.get("real_keypoint_pck_at_5px")),
+        "before_real_keypoint_mean_px": _round_optional_number(before.get("real_keypoint_mean_px")),
+        "before_real_keypoint_median_px": _round_optional_number(before.get("real_keypoint_median_px")),
+        "before_real_keypoint_p95_px": _round_optional_number(before.get("real_keypoint_p95_px")),
+        "best_holdout_artifact_median_px": None if not holdout_medians else round(min(holdout_medians), 6),
+        "best_holdout_artifact_p95_px": None if not holdout_p95s else round(min(holdout_p95s), 6),
+        "holdout_artifact_count": len(holdout_artifacts),
+        "promotion_blockers": promotion_blockers,
+    }
+
+
+def _neural_candidate_promotion_blockers(
+    payload: Mapping[str, Any],
+    *,
+    gate: Mapping[str, Any],
+    checkpoint_exists: bool,
+    candidate_metric_value: float | None,
+) -> list[str]:
+    blockers = ["diagnostic_only", "not_cal3_verified"]
+    if str(payload.get("status") or "") != "phase_verified":
+        blockers.append("trained_not_phase_verified")
+    if gate.get("passed") is not True:
+        blockers.append("gate_failed")
+    if not checkpoint_exists:
+        blockers.append("missing_checkpoint")
+    if candidate_metric_value is None:
+        blockers.append("missing_real_label_median_px")
+    if _optional_int(payload.get("real_holdout_count")) in (None, 0):
+        blockers.append("missing_real_holdout")
+    return blockers
+
+
+def _resolve_neural_checkpoint_path(
+    *,
+    metrics_path: Path,
+    checkpoint_text: Any,
+    repo_root: Path,
+) -> Path | None:
+    if not isinstance(checkpoint_text, str) or not checkpoint_text:
+        return None
+    raw = Path(checkpoint_text)
+    candidates: list[Path] = []
+    if raw.is_absolute():
+        candidates.append(raw)
+        parts = raw.parts
+        if "runs" in parts:
+            runs_index = parts.index("runs")
+            candidates.append(repo_root / Path(*parts[runs_index:]))
+    else:
+        candidates.append(repo_root / raw)
+        candidates.append(metrics_path.parent / raw.name)
+    candidates.append(metrics_path.with_name("court_keypoint_heatmap.pt"))
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _calibration_repo_root(eval_root: Path) -> Path:
+    resolved = eval_root.resolve()
+    for candidate in (resolved, *resolved.parents):
+        if (candidate / "runs").is_dir() and (candidate / "eval_clips").exists():
+            return candidate
+    return Path.cwd()
+
+
+def _optional_number(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    if not math.isfinite(number):
+        return None
+    return number
+
+
+def _round_optional_number(value: Any) -> float | None:
+    number = _optional_number(value)
+    return None if number is None else round(number, 6)
+
+
+def _optional_int(value: Any) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return int(value)
+
+
 def _sweep_item_for_weight(items: Sequence[Mapping[str, Any]], weight: float) -> dict[str, Any]:
     if not items:
         raise ValueError("point-line weight sweep is empty")
@@ -1806,6 +2612,231 @@ def _point_line_fit_for_reviewed_clip(
         }
     except Exception as exc:
         return {"status": "error", "line_candidate_technology_id": technology_id, "reason": str(exc)}
+
+
+def _review_line_observations_for_reviewed_clip(
+    label_path: Path,
+    *,
+    aggregated: Mapping[str, tuple[float, float]],
+    image_size: tuple[float, float],
+    keypoint_by_name: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    technology_id = "opencv_hough_lsd_temporal_persistent"
+    try:
+        evidence = _temporal_line_evidence_for_reviewed_clip(label_path, technology_id=technology_id)
+        segments = _scale_segments_to_image_size(
+            evidence.get("segments", []),
+            source_image_size=_evidence_image_size(evidence),
+            target_image_size=image_size,
+        )
+        return _line_observations_from_segments(
+            aggregated=aggregated,
+            segments=segments,
+            keypoint_by_name=keypoint_by_name,
+        )
+    except Exception:
+        return []
+
+
+def _resolve_report_label_path(result: Mapping[str, Any], *, eval_root: Path) -> Path | None:
+    raw = result.get("label_path")
+    if isinstance(raw, str) and raw:
+        direct = Path(raw)
+        if direct.is_file():
+            return direct
+        cwd_relative = Path.cwd() / direct
+        if cwd_relative.is_file():
+            return cwd_relative
+    clip = str(result.get("clip") or "")
+    if clip:
+        fallback = eval_root / clip / "labels" / "court_keypoints.json"
+        if fallback.is_file():
+            return fallback
+    return None
+
+
+def _metric_packet_frame_index(label_path: Path | None) -> int:
+    if label_path is None:
+        return 0
+    calibration_path = label_path.with_name("court_calibration_metric15pt.json")
+    if calibration_path.is_file():
+        payload = json.loads(calibration_path.read_text(encoding="utf-8"))
+        solved = payload.get("solved_over_frames")
+        if isinstance(solved, Sequence) and not isinstance(solved, (str, bytes)) and solved:
+            try:
+                return max(0, int(solved[0]))
+            except (TypeError, ValueError):
+                return 0
+    return 0
+
+
+def _read_video_frame(video_path: Path, frame_index: int, cv2: Any) -> Any:
+    if not video_path.is_file():
+        raise ValueError(f"missing source video: {video_path}")
+    capture = cv2.VideoCapture(str(video_path))
+    try:
+        if not capture.isOpened():
+            raise ValueError(f"cannot open source video: {video_path}")
+        total_frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+        index = max(0, int(frame_index))
+        if total_frames > 0 and index >= total_frames:
+            raise ValueError(f"frame_index {index} is outside source video: {video_path}")
+        capture.set(cv2.CAP_PROP_POS_FRAMES, index)
+        ok, frame = capture.read()
+        if not ok or frame is None:
+            raise ValueError(f"failed reading frame {index} from {video_path}")
+        return frame
+    finally:
+        capture.release()
+
+
+def _packet_crop_center(points: Sequence[Sequence[float] | None]) -> tuple[float, float]:
+    valid = [tuple(_point2(point, "packet_crop_center.point")) for point in points if point is not None]
+    if not valid:
+        raise ValueError("at least one crop point is required")
+    return (_mean([point[0] for point in valid]), _mean([point[1] for point in valid]))
+
+
+def _crop_around_point(frame: Any, center: tuple[float, float], *, radius_px: int) -> tuple[Any, tuple[int, int, int, int]]:
+    if frame is None or not hasattr(frame, "shape") or len(frame.shape) < 2:
+        raise ValueError("frame must be an OpenCV-style image")
+    height, width = int(frame.shape[0]), int(frame.shape[1])
+    if height <= 0 or width <= 0:
+        raise ValueError("frame must have positive size")
+    radius = int(radius_px)
+    cx, cy = center
+    x1 = max(0, int(round(cx)) - radius)
+    y1 = max(0, int(round(cy)) - radius)
+    x2 = min(width, int(round(cx)) + radius)
+    y2 = min(height, int(round(cy)) + radius)
+    if x2 <= x1:
+        x2 = min(width, x1 + 1)
+    if y2 <= y1:
+        y2 = min(height, y1 + 1)
+    return frame[y1:y2, x1:x2].copy(), (x1, y1, x2, y2)
+
+
+def _draw_metric_plane_outlier_crop(
+    cv2: Any,
+    crop: Any,
+    *,
+    candidate: Mapping[str, Any],
+    crop_origin: tuple[int, int],
+) -> None:
+    line_type = getattr(cv2, "LINE_AA", 16)
+    reviewed = _local_crop_point(candidate.get("reviewed_image_px"), crop_origin)
+    model = _local_crop_point(candidate.get("model_projected_image_px"), crop_origin)
+    cv2.line(crop, reviewed, model, (0, 0, 255), 1, line_type)
+    _draw_packet_marker(cv2, crop, reviewed, color=(0, 220, 0), label="reviewed")
+    _draw_packet_marker(cv2, crop, model, color=(0, 0, 255), label="model")
+    if candidate.get("line_intersection_available") is True and candidate.get("line_intersection_image_px") is not None:
+        try:
+            line_point = _local_crop_point(candidate.get("line_intersection_image_px"), crop_origin)
+            cv2.line(crop, reviewed, line_point, (255, 255, 0), 1, line_type)
+            _draw_packet_marker(cv2, crop, line_point, color=(255, 255, 0), label="line")
+        except ValueError:
+            pass
+    header = f"{candidate.get('keypoint', 'keypoint')}  {candidate.get('residual_ft', '?')} ft"
+    _draw_packet_text(cv2, crop, header, (6, 16), color=(255, 255, 255))
+    _draw_packet_text(
+        cv2,
+        crop,
+        f"line: {_short_line_support_label(_line_intersection_support(candidate))}",
+        (6, 34),
+        color=(220, 220, 220),
+    )
+
+
+def _local_crop_point(point: Any, crop_origin: tuple[int, int]) -> tuple[int, int]:
+    x, y = _point2(point, "crop.point")
+    return (int(round(x - crop_origin[0])), int(round(y - crop_origin[1])))
+
+
+def _draw_packet_marker(
+    cv2: Any,
+    crop: Any,
+    point: tuple[int, int],
+    *,
+    color: tuple[int, int, int],
+    label: str,
+) -> None:
+    line_type = getattr(cv2, "LINE_AA", 16)
+    cv2.circle(crop, point, 7, (0, 0, 0), 2, line_type)
+    cv2.circle(crop, point, 5, color, 2, line_type)
+    _draw_packet_text(cv2, crop, label, (point[0] + 8, point[1] - 6), color=color)
+
+
+def _draw_packet_text(
+    cv2: Any,
+    crop: Any,
+    text: str,
+    origin: tuple[int, int],
+    *,
+    color: tuple[int, int, int],
+) -> None:
+    font = getattr(cv2, "FONT_HERSHEY_SIMPLEX", 0)
+    line_type = getattr(cv2, "LINE_AA", 16)
+    safe_origin = (max(0, int(origin[0])), max(12, int(origin[1])))
+    cv2.putText(crop, text, (safe_origin[0] + 1, safe_origin[1] + 1), font, 0.42, (0, 0, 0), 2, line_type)
+    cv2.putText(crop, text, safe_origin, font, 0.42, color, 1, line_type)
+
+
+def _review_packet_tile(image: Any, tile_size: int, np: Any) -> Any:
+    tile = np.full((int(tile_size), int(tile_size), 3), 18, dtype=np.uint8)
+    height = min(int(image.shape[0]), int(tile_size))
+    width = min(int(image.shape[1]), int(tile_size))
+    tile[:height, :width] = image[:height, :width]
+    return tile
+
+
+def _review_packet_contact_sheet(tiles: Sequence[Any], np: Any) -> Any:
+    if not tiles:
+        raise ValueError("tiles must be non-empty")
+    columns = min(4, len(tiles))
+    rows = int(math.ceil(len(tiles) / columns))
+    tile_height, tile_width = int(tiles[0].shape[0]), int(tiles[0].shape[1])
+    sheet = np.full((rows * tile_height, columns * tile_width, 3), 12, dtype=np.uint8)
+    for index, tile in enumerate(tiles):
+        row = index // columns
+        column = index % columns
+        y1 = row * tile_height
+        x1 = column * tile_width
+        sheet[y1 : y1 + tile_height, x1 : x1 + tile_width] = tile
+    return sheet
+
+
+def _line_intersection_support(candidate: Mapping[str, Any], *, tie_px: float = 2.0) -> str:
+    if candidate.get("line_intersection_available") is not True:
+        return "missing_line_intersection"
+    try:
+        reviewed_to_line = _finite_float(candidate.get("line_intersection_delta_px"), "line_intersection_delta_px")
+        model_to_line = _finite_float(
+            candidate.get("model_to_line_intersection_delta_px"),
+            "model_to_line_intersection_delta_px",
+        )
+    except ValueError:
+        return "unusable_line_intersection_metrics"
+    if reviewed_to_line + tie_px < model_to_line:
+        return "reviewed_label_closer_to_line"
+    if model_to_line + tie_px < reviewed_to_line:
+        return "model_projection_closer_to_line"
+    return "ambiguous_or_tie"
+
+
+def _short_line_support_label(value: str) -> str:
+    labels = {
+        "missing_line_intersection": "none",
+        "model_projection_closer_to_line": "model",
+        "reviewed_label_closer_to_line": "review",
+        "ambiguous_or_tie": "tie",
+        "unusable_line_intersection_metrics": "bad",
+    }
+    return labels.get(value, value[:16])
+
+
+def _safe_filename_token(value: str) -> str:
+    token = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in value.strip())
+    return token.strip("_") or "item"
 
 
 def _load_first_review_frame(label_path: Path) -> Any | None:
@@ -1951,11 +2982,8 @@ def _line_observations_from_segments(
         best = _best_segment_for_reviewed_line(reviewed_p1, reviewed_p2, segments)
         if best is None:
             continue
-        if not (
-            float(best["angle_diff_deg"]) <= 14.0
-            and float(best["mean_perpendicular_distance_px"]) <= 22.0
-            and float(best["overlap_fraction"]) >= 0.05
-        ):
+        support_mode = _line_observation_support_mode(line_name, best)
+        if support_mode is None:
             continue
         observations.append(
             {
@@ -1965,9 +2993,21 @@ def _line_observations_from_segments(
                     list(keypoint_by_name[p2_name].world_xyz_m),
                 ],
                 "image_segment_px": [best["p1"], best["p2"]],
+                "support_mode": support_mode,
             }
         )
     return observations
+
+
+def _line_observation_support_mode(line_name: str, best: Mapping[str, Any]) -> str | None:
+    angle_diff = float(best["angle_diff_deg"])
+    mean_distance = float(best["mean_perpendicular_distance_px"])
+    overlap = float(best["overlap_fraction"])
+    if angle_diff <= 14.0 and mean_distance <= 22.0 and overlap >= 0.05:
+        return "overlapping_segment"
+    if line_name in {"near_centerline", "far_centerline"} and angle_diff <= 7.0 and mean_distance <= 26.0:
+        return "centerline_collinear_segment"
+    return None
 
 
 def _best_segment_for_reviewed_line(
@@ -2053,6 +3093,14 @@ def _rmse(values: Sequence[float]) -> float:
     if not values:
         return 0.0
     return math.sqrt(sum(float(value) * float(value) for value in values) / len(values))
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _cv2() -> Any:

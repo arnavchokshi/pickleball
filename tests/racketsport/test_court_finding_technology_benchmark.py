@@ -66,6 +66,49 @@ def test_shadow_normalized_hough_adapter_records_preprocess_evidence() -> None:
     assert all(segment["source"] == "opencv_hough_shadow_normalized" for segment in evidence["segments"])
 
 
+def test_pretrained_shadow_removed_hough_fails_closed_without_model(monkeypatch) -> None:
+    monkeypatch.delenv("PICKLEBALL_SHADOW_REMOVAL_TORCHSCRIPT", raising=False)
+    image = np.zeros((160, 220, 3), dtype=np.uint8)
+    image[:] = (40, 95, 55)
+    cv2.line(image, (25, 120), (195, 118), (245, 245, 245), 3, cv2.LINE_AA)
+
+    evidence = detect_line_candidates_for_technology(image, "opencv_hough_pretrained_shadow_removed")
+
+    assert evidence["technology_id"] == "opencv_hough_pretrained_shadow_removed"
+    assert evidence["available"] is False
+    assert evidence["candidate_count"] == 0
+    assert evidence["shadow_preprocess"]["pretrained_model_used"] is False
+    assert evidence["shadow_preprocess"]["reason"] == "missing_pretrained_shadow_removal_model"
+    assert "ShadowFormer" in evidence["shadow_preprocess"]["candidate_model_families"]
+
+
+def test_pretrained_shadow_removed_hough_runs_torchscript_model(tmp_path, monkeypatch) -> None:
+    torch = pytest.importorskip("torch")
+
+    class BrightenShadowModel(torch.nn.Module):
+        def forward(self, image):  # type: ignore[no-untyped-def]
+            return torch.clamp(image * 2.4, 0.0, 1.0)
+
+    model_path = tmp_path / "shadow_removal.pt"
+    example = torch.zeros(1, 3, 32, 32)
+    torch.jit.trace(BrightenShadowModel(), example).save(str(model_path))
+    monkeypatch.setenv("PICKLEBALL_SHADOW_REMOVAL_TORCHSCRIPT", str(model_path))
+
+    image = np.zeros((160, 220, 3), dtype=np.uint8)
+    image[:] = (42, 95, 55)
+    cv2.line(image, (25, 120), (195, 118), (120, 120, 120), 3, cv2.LINE_AA)
+
+    evidence = detect_line_candidates_for_technology(image, "opencv_hough_pretrained_shadow_removed")
+
+    assert evidence["technology_id"] == "opencv_hough_pretrained_shadow_removed"
+    assert evidence["available"] is True
+    assert evidence["shadow_preprocess"]["pretrained_model_used"] is True
+    assert evidence["shadow_preprocess"]["framework"] == "torchscript"
+    assert evidence["shadow_preprocess"]["model_path"].endswith("shadow_removal.pt")
+    assert evidence["candidate_count"] >= 1
+    assert all(segment["source"] == "opencv_hough_pretrained_shadow_removed" for segment in evidence["segments"])
+
+
 def test_hsv_paint_hough_line_adapter_ignores_white_tennis_lines() -> None:
     image = np.zeros((240, 320, 3), dtype=np.uint8)
     image[:] = (30, 110, 70)
@@ -214,6 +257,48 @@ def test_projected_line_pixel_support_prefers_lines_on_image_mask() -> None:
     assert aligned["mean_line_pixel_support_ratio"] > shifted["mean_line_pixel_support_ratio"] + 0.30
 
 
+def test_projected_line_distance_transform_prefers_nearby_line_pixels() -> None:
+    image = np.zeros((240, 320, 3), dtype=np.uint8)
+    image[:] = (35, 95, 55)
+    keypoints = {
+        "near_left_corner": (60.0, 190.0),
+        "near_right_corner": (260.0, 190.0),
+        "far_left_corner": (90.0, 60.0),
+        "far_right_corner": (230.0, 60.0),
+        "near_nvz_left": (70.0, 150.0),
+        "near_nvz_right": (250.0, 150.0),
+        "far_nvz_left": (85.0, 100.0),
+        "far_nvz_right": (235.0, 100.0),
+        "near_baseline_center": (160.0, 190.0),
+        "near_nvz_center": (160.0, 150.0),
+        "far_baseline_center": (160.0, 60.0),
+        "far_nvz_center": (160.0, 100.0),
+    }
+    for p1_name, p2_name in [
+        ("near_left_corner", "near_right_corner"),
+        ("far_left_corner", "far_right_corner"),
+        ("near_nvz_left", "near_nvz_right"),
+        ("far_nvz_left", "far_nvz_right"),
+        ("near_left_corner", "far_left_corner"),
+        ("near_right_corner", "far_right_corner"),
+        ("near_baseline_center", "near_nvz_center"),
+        ("far_baseline_center", "far_nvz_center"),
+    ]:
+        p1 = keypoints[p1_name]
+        p2 = keypoints[p2_name]
+        cv2.line(image, (round(p1[0]), round(p1[1])), (round(p2[0]), round(p2[1])), (40, 235, 235), 4)
+
+    shifted_keypoints = {name: (xy[0], xy[1] - 18.0) for name, xy in keypoints.items()}
+
+    aligned = court_finding_benchmark.score_projected_line_distance_transform_against_image(image, keypoints)
+    shifted = court_finding_benchmark.score_projected_line_distance_transform_against_image(image, shifted_keypoints)
+
+    assert aligned["available"] is True
+    assert aligned["mean_projected_line_distance_px"] < 1.5
+    assert shifted["mean_projected_line_distance_px"] > aligned["mean_projected_line_distance_px"] + 6.0
+    assert aligned["distance_supported_line_count"] >= 7
+
+
 def test_line_color_consistency_detects_mixed_overlay_line_layers() -> None:
     image = np.zeros((220, 320, 3), dtype=np.uint8)
     image[:] = (35, 100, 55)
@@ -270,6 +355,67 @@ def test_regulation_proposal_records_projected_pixel_and_color_evidence(tmp_path
     assert proposal["hypotheses"][0]["score_components"]["line_color_consistency"] == components["line_color_consistency"]
 
 
+def test_distance_mask_regulation_records_distance_transform_evidence(tmp_path) -> None:
+    build_court_finding_technology_report(
+        eval_root="eval_clips/ball",
+        technologies=["opencv_hough_lsd_regulation_distance_mask"],
+        out_dir=tmp_path,
+    )
+
+    proposal = json.loads(
+        (
+            tmp_path
+            / "owner_IMG_1605_8a193402780b"
+            / "opencv_hough_lsd_regulation_distance_mask"
+            / "court_proposal.json"
+        ).read_text()
+    )
+    components = proposal["score_components"]
+
+    assert proposal["solver"]["name"] == "opencv_hough_lsd_regulation_distance_mask"
+    assert proposal["solver"]["writes_court_calibration"] is False
+    assert proposal["needs_user_confirmation"] is True
+    assert components["image_evidence_mode"] == "distance_mask"
+    assert components["projected_distance_support"]["available"] is True
+    assert "mean_projected_line_distance_px" in components["projected_distance_support"]
+    assert "distance_supported_line_count" in components["projected_distance_support"]
+
+
+def test_hough_or_distance_mask_selector_scores_candidate_combination(tmp_path) -> None:
+    report = build_court_finding_technology_report(
+        eval_root="eval_clips/ball",
+        technologies=[
+            "hough_keypoints",
+            "opencv_hough_lsd_regulation",
+            "opencv_hough_lsd_regulation_distance_mask",
+            "hough_or_regulation_distance_mask_selector",
+        ],
+        out_dir=tmp_path,
+    )
+
+    selector = report["summary"]["by_technology"]["hough_or_regulation_distance_mask_selector"]
+
+    assert report["verified"] is False
+    assert report["not_cal3_verified"] is True
+    assert selector["scored_clip_count"] == 5
+    assert selector["floor_visible_median_px_mean"] < report["summary"]["by_technology"]["hough_keypoints"]["floor_visible_median_px_mean"]
+
+    proposal = json.loads(
+        (
+            tmp_path
+            / "owner_IMG_1605_8a193402780b"
+            / "hough_or_regulation_distance_mask_selector"
+            / "court_proposal.json"
+        ).read_text()
+    )
+    assert set(proposal["selector"]["candidate_scores"]) == {
+        "hough_keypoints",
+        "opencv_hough_lsd_regulation",
+        "opencv_hough_lsd_regulation_distance_mask",
+    }
+    assert proposal["needs_user_confirmation"] is True
+
+
 def test_benchmark_report_scores_existing_adapters_without_claiming_verified(tmp_path) -> None:
     report = build_court_finding_technology_report(
         eval_root="eval_clips/ball",
@@ -304,6 +450,30 @@ def test_benchmark_report_runs_hsv_paint_hough_as_line_candidate_only(tmp_path) 
     assert len(hsv_results) == 5
     assert all(result["status"] in {"line_candidates_only", "no_line_candidates"} for result in hsv_results)
     assert all("line_support_ratio" in result for result in hsv_results)
+
+
+def test_benchmark_report_records_pretrained_shadow_removal_unavailable(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("PICKLEBALL_SHADOW_REMOVAL_TORCHSCRIPT", raising=False)
+
+    report = build_court_finding_technology_report(
+        eval_root="eval_clips/ball",
+        technologies=["opencv_hough_pretrained_shadow_removed"],
+        out_dir=tmp_path,
+    )
+
+    assert report["verified"] is False
+    assert report["not_cal3_verified"] is True
+    results = [
+        result
+        for result in report["results"]
+        if result["technology_id"] == "opencv_hough_pretrained_shadow_removed"
+    ]
+    assert len(results) == 5
+    assert all(result["status"] == "no_line_candidates" for result in results)
+    evidence = json.loads((tmp_path / results[0]["line_candidate_path"]).read_text())
+    assert evidence["available"] is False
+    assert evidence["shadow_preprocess"]["reason"] == "missing_pretrained_shadow_removal_model"
+    assert evidence["shadow_preprocess"]["pretrained_model_used"] is False
 
 
 def test_hough_lsd_regulation_selector_scores_and_improves_mean_floor_error(tmp_path) -> None:

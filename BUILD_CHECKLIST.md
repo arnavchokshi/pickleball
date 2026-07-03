@@ -38,6 +38,8 @@ No row is `VERIFIED`.
 
 ## Recent Handoffs
 
+- [SAM3D-FOOT-PIN 2026-07-03, scoped Wolverine render audit] Post-hoc `apply_foot_pin.py` generated `runs/foot_pin_20260703T0924Z/`: rendered-world stance slide p95 37.7mm -> 18.9mm, root p90 improved for all 4 players, max correction 0.049m, limb-length delta ~0; headless viewer verify is blocked in this sandbox by local TCP bind `EPERM` (`viewer_verify_foot_pin/bind_blocker.json`).
+- [SAM3D-WRIST-BONE-LOCK 2026-07-03] Direction-preserving lower-arm wrist lock added after SAM3D refine and final contact splice; Wolverine offline copy locks 2204/2204 wrist frames, lower-arm CV=0.0 and median diff=0.0% for all players, with coverage and non-lower-arm metrics unchanged. Report/artifacts: `runs/sam3d_wrist_bone_lock_20260703T0906Z/`. Manager-verified + ACCEPTED 2026-07-03: 170 tests green after manager updated one stale contact-splice test to assert the real invariants (direction preserved + lock provenance) instead of the pre-lock wrist constant; swing-peak timing exact (0-frame delta / 40 peaks); lock is the final skeleton writer post-splice. Locked skeleton awaits restage COMPOSED WITH the in-flight foot-pin output.
 - [A100-SESSION-3 2026-07-03, manager-accepted] All SAM3D Phase D gates PASS on shipped defaults: steady 32.23 ms/person (≤55), first call 0.564s (≤1.0, warm-2). Wolverine ball_aware_100 dispatch succeeded, zero Skeleton3D validation errors: 4 players / 1102 annotated frames / 0 implausible / 184 mesh frames; BODY GPU 311s ≈ $0.117/clip. Artifacts: `runs/a100_sam3d_validation2_20260703T0647Z/production_remesh/wolverine_ball_aware_100/`. In flight: viewer staging of new skeletons + 4-clip wall-to-wall E2E timing with reproducibility packets.
 
 ## Rules For Updating This Board

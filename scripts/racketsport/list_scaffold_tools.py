@@ -214,7 +214,11 @@ def _tool_entry(path: Path, *, root: Path, tests_root: Path, schemas_root: Path)
 
 def _category(stem: str) -> str:
     normalized = stem.replace("-", "_")
-    if normalized in {"gpu_train_lock", "setup_env"} or normalized.startswith("install_") or normalized.startswith("smoke_"):
+    if (
+        normalized in {"gpu_train_lock", "gpu_cold_start", "setup_env"}
+        or normalized.startswith("install_")
+        or normalized.startswith("smoke_")
+    ):
         return "env"
     if normalized == "process_video":
         return "pipeline"
@@ -278,7 +282,7 @@ def _category(stem: str) -> str:
         or "vn_trajectories" in normalized
     ):
         return "body"
-    if "physics" in normalized or "virtual_world" in normalized or "mujoco" in normalized:
+    if "physics" in normalized or "foot" in normalized or "virtual_world" in normalized or "mujoco" in normalized:
         return "physics"
     if (
         "model" in normalized

@@ -11,7 +11,7 @@
       "status": "available_on_h100",
       "local_path": "/home/arnavchokshi/body_runtime/Fast-SAM-3D-Body/checkpoints/sam-3d-body-dinov3/model.ckpt",
       "sha256": "b5a2f9d305dd02626b967aa2e86021fba07065df66ce7a7e00ffb9664f150abf",
-      "repo_commit": "936894c37e51de9918012bcbc9ba2d9c20f73252",
+      "repo_commit": "808b53c7d9c26a7e511d31144f1e5efb058e15c9",
       "fallbacks": ["sat_hmr", "nlf", "hmr2"],
       "notes": [
         "A100 runtime has Fast-SAM-3D-Body repo at /home/arnavchokshi/body_runtime/Fast-SAM-3D-Body.",
@@ -32,7 +32,7 @@
       "status": "available_on_h100",
       "local_path": "/home/arnavchokshi/body_runtime/Fast-SAM-3D-Body/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt",
       "sha256": "352e271a6c42729c68554ceaea0c955e866970160c31e35506d782dc0f7377bc",
-      "repo_commit": "936894c37e51de9918012bcbc9ba2d9c20f73252",
+      "repo_commit": "808b53c7d9c26a7e511d31144f1e5efb058e15c9",
       "fallbacks": ["sat_hmr", "nlf", "hmr2"]
     },
     {

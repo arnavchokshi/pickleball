@@ -83,11 +83,12 @@ Measured state as of 2026-07-03:
 
 | Candidate | Mean floor median px | Mean floor p95 px | Notes |
 |---|---:|---:|---|
-| `hough_regulation_temporal_line_selector` | 322.3 | 742.7 | Best median, but selects a bad Burlington temporal tail. |
-| `hough_regulation_temporal_balanced_selector` | 324.1 | 611.8 | Balanced median/tail tradeoff; still mandatory-review only. |
-| `hough_regulation_temporal_persistent_tail_selector` | 330.3 | 519.2 | Best current deployable tail-risk tradeoff; still mandatory-review only. |
-| `hough_or_regulation_line_selector` | 344.7 | 569.1 | Previous tail-safer selector. |
-| `reviewed_oracle_hough_regulation_temporal` | 301.8 | 785.4 | Reviewed-label oracle; benchmark-only, not deployable. |
+| `hough_or_regulation_line_selector` | 296.4 | 547.0 | Best current deployable median prototype after projected-pixel/color scoring and geometry guard; still mandatory-review only. |
+| `hough_regulation_temporal_balanced_selector` | 296.4 | 547.0 | Matches the simple selector unless temporal evidence is a clear internal-score win; still mandatory-review only. |
+| `hough_regulation_temporal_line_selector` | 310.3 | 581.3 | Naive temporal selector is no longer best because it can worsen Indoor p95. |
+| `hough_regulation_temporal_persistent_tail_selector` | 330.4 | 518.3 | Best current deployable p95/tail-risk tradeoff; still mandatory-review only. |
+| `opencv_hough_lsd_regulation` | 338.7 | 648.7 | Pixel/color scoring improved median strongly, but Burlington remains tail-risky. |
+| `reviewed_oracle_hough_regulation_temporal` | 273.9 | 721.6 | Reviewed-label oracle; benchmark-only, not deployable. |
 
 Conclusion: net evidence is useful as a prior and 3D validator, but the needed
 system is a net-anchored line-to-regulation optimizer with tennis-template
@@ -101,6 +102,15 @@ covered by a synthetic spacing test. It did not move the current five-sample
 metrics because the selected hypotheses are not tennis-service-template-like by
 cross-line spacing; broader tennis rejection still needs sideline-width,
 service-line, overlong-line, and color/mask competition.
+
+Projected regulation-line pixel support, local line-color/layer consistency,
+shadow-normalized Hough, and selector geometry guards are now implemented in the
+benchmark. Current evidence: pixel/color scoring improved single-frame
+regulation median from the previous `459.2 px` to `338.7 px`; the geometry guard
+keeps Burlington on `hough_keypoints` because the visually supported regulation
+proposal is floor-collapsed; strict HSV paint regulation failed to build
+proposals on all five samples; shadow-normalized Hough underperformed plain
+Hough line support (`0.7167` vs `0.8083`).
 
 Additional 2026-07-03 research points to the next practical CAL lane: keep the
 net as an anchor/validator, but add swappable deep/classical line detectors

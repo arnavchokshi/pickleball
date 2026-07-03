@@ -895,8 +895,23 @@ def test_body_runner_replaces_existing_legacy_skeleton3d_with_sam3d_output(tmp_p
     contact_frame = skeleton_payload["players"][0]["frames"][0]
     body_mesh_frame = body_mesh["players"][0]["frames"][0]
     assert body_mesh["joint_names"][41] == "sam3dbody_joint_041"
-    assert contact_frame["joints_world"][62] == pytest.approx(body_mesh_frame["joints_world"][62])
-    assert contact_frame["joints_world"][41] == pytest.approx(body_mesh_frame["joints_world"][41])
+    # The wrist bone lock is the final writer after contact splice: the spliced
+    # wrist direction from the elbow is preserved, but its distance is locked to
+    # the canonical lower-arm length, so exact equality with the mesh wrist no
+    # longer holds. Assert direction preservation instead.
+    def _unit(vector: list[float]) -> list[float]:
+        norm = sum(component * component for component in vector) ** 0.5
+        assert norm > 0.0
+        return [component / norm for component in vector]
+
+    for wrist_idx, elbow_idx in ((62, 7), (41, 8)):
+        elbow = contact_frame["joints_world"][elbow_idx]
+        locked = contact_frame["joints_world"][wrist_idx]
+        spliced = body_mesh_frame["joints_world"][wrist_idx]
+        locked_dir = _unit([locked[i] - elbow[i] for i in range(3)])
+        spliced_dir = _unit([spliced[i] - elbow[i] for i in range(3)])
+        assert sum(a * b for a, b in zip(locked_dir, spliced_dir)) == pytest.approx(1.0, abs=1e-6)
+    assert skeleton_payload["provenance"]["sam3d_wrist_bone_lock"]["status"] == "applied"
     assert contact_splice["summary"]["spliced_contact_count"] == 1
     assert contact_splice["summary"]["overridden_joint_count"] == 2
     assert skeleton_payload["provenance"]["contact_splice"]["mesh_source"] == "body_mesh.json"
