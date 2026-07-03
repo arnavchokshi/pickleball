@@ -185,4 +185,33 @@ codex exec resume "$SESSION_ID" \
 
 **When to use MCP instead of exec:** Codex can also run as an MCP server (`codex mcp-server`) and be added to Claude Code (`claude mcp add codex -- codex mcp-server`) so you call it as a native tool. That is good for *short, synchronous* Codex queries. It is **worse for long lanes** — an MCP tool call blocks the turn, so an hour-long build ties you up. Keep long implementation lanes on `codex exec` + background + notification. (Experimental `codex cloud` can offload very long tasks to run remotely and apply diffs locally — a frontier option, not the default.)
 
-**Discipline that makes all of the above pay off:** the schema has a `full_suite` block with `failed` and `failures_all_preexisting`. If a report comes back `objective_result: PASS` while `failed>0` and not all pre-existing, it is lying — resume and reject. That single check replaces the manual re-running of pytest that cost the most Fable tokens last session.**
+**Discipline that makes all of the above pay off:** the schema has a `full_suite` block with `failed` and `failures_all_preexisting`. If a report comes back `objective_result: PASS` while `failed>0` and not all pre-existing, it is lying — resume and reject. That single check replaces the manual re-running of pytest that cost the most Fable tokens last session.
+
+---
+
+## 11. Orchestration — parallelize, and drive from a theory not from symptoms
+
+### 11.1 Drive from a theory of the system (the highest use of your intelligence)
+The last session fixed symptoms reactively — each owner screenshot spawned one lane (sliding→foot pin, wrists→wrist lock, feet-wander→smoothing fix, wrong-position→placement stage). Whack-a-mole works but it is slow and fixes fight each other (v3 fixed wrists and *broke* feet; v5 fixed positions and *broke* mesh alignment). Being the smartest model, your job is to hold a **system-level theory** of *why* the joints/placement are wrong and fix **root causes in dependency order** so fixes compose.
+
+Current theory (update as evidence lands): the skeleton is *over-processed* (raw SAM-3D mesh beats the refined skeleton — handoff §6.2) and placement/grounding are *bolted on after the fact* (retrofit lag — §6.1). The likely root fix is **one re-architecture**, not four patches: a single pass that places the *whole body* on the smoothed foot-anchored trajectory at refine time, with the rendered skeleton derived from (or minimally nudged toward) the raw mesh. **Sequence root causes; don't keep patching leaves.**
+
+Before committing to a direction, spend real thinking: write the theory, the candidate approaches, and *what evidence would decide between them*. Then commission that evidence (§11.3). That deliberation is where being Fable pays off; everything after is delegation.
+
+### 11.2 The agent roster — three kinds of subagent work
+1. **Research / explore** — survey external tech & SOTA (Codex `-c tools.web_search=true`) or diagnose the current system with measurements (repo Codex lane, or a Workflow fan-out). Cheap, parallel, read-only. Commission these *before* ruling on an approach.
+2. **Implement** — build the ruled approach, self-verify the full suite, iterate to green. Codex, long lanes.
+3. **Verify independently** — a *separate* agent that tries to **break** a completed change with fresh eyes (`codex review`, or an adversarial lane), distinct from the implementer's own self-check. Use for every high-stakes change. Self-verification catches "does it pass its tests"; independent verification catches "are the tests even testing the right thing" — which is how the 8-finding adversarial review caught the fake-batching blocker last session.
+
+### 11.3 The three wave shapes (pick per situation)
+- **Research-first — to DECIDE direction (make this the default when the path isn't obvious):** fan out N parallel research/diagnosis lanes → read the structured findings → **you rule on the approach** → dispatch implementation. Maximizes decision quality while keeping *your* spend low: subagents gather, you think. We did this once (placement diagnosis) and it produced the sharpest ruling of the session — make it the norm, not the exception.
+- **Diagnose → fix → independently-verify — to FIX something broken:** one diagnosis lane pins the root cause with numbers → one implementation lane fixes it → one independent verifier attacks the fix. Pipeline them.
+- **Independent parallel — for UNRELATED work:** several implementation lanes at once, but only when they touch **disjoint files**. Fence owned files explicitly. If two lanes would edit shared test files, sequence them (cross-lane test churn cost real tokens last session).
+
+### 11.4 Orchestration token rules
+- **Parallelize by default when work is independent.** Codex credits are abundant; serial dispatch wastes wall-clock. Two disjoint fixes = two simultaneous lanes.
+- **Never read a subagent transcript** — only its final structured report.
+- **Batch independent tool calls** into one message (parallel launches, parallel reads).
+- **Update the status artifact / handoff doc at real milestones only**, not every micro-step.
+- **Durable state = handoff doc + memory.** Read it once at session start; don't re-derive it.
+- **A blocked or ambiguous lane is a decision point, not a nuisance.** That is precisely the token you *should* spend your intelligence on.**

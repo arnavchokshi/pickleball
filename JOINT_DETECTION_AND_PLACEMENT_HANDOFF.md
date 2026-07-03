@@ -260,6 +260,14 @@ Then open the manifest URL (Section 4). The dev server serves any local file via
 4. **Fix 6.1 (body lag):** make grounding consume placement anchors at refine time (kill the post-hoc re-anchor), and make root smoothing stance-aware.
 5. **Then** the multi-video demo (Wolverine, Burlington, Outdoor, Indoor) and the remaining bookkept items (6.6).
 
+### 9.1 Suggested opening wave (parallel — don't do steps 2–4 serially)
+Per the operating manual §11, run a **research-first wave** before committing to fixes, because 6.1 and 6.2 are probably one root cause (over-processed skeleton + bolted-on placement), not two. Dispatch these **in parallel** (they are read-only / disjoint), then rule on a single re-architecture:
+- **R1 (Codex, repo diagnosis):** instrument the refine chain per-stage on *extreme/fast* poses (template: `runs/sam3d_foot_wander_20260703T1024Z/`) — which transforms improve vs. damage the skeleton vs. the raw mesh? Quantify "skeleton-vs-mesh silhouette error" per stage.
+- **R2 (Codex + web_search):** feasibility of deriving the rendered skeleton directly from the SAM-3D mesh vertices (joint regressor on `pred_vertices`) — accuracy, cost, prior art.
+- **R3 (Codex, repo design):** design a single refine-time pass that grounds the whole body on the placement-corrected foot-anchored trajectory (kills the post-hoc re-anchor) — what it reads, what it writes, which of `worldhmr.py`/`pose_temporal.py`/`placement.py` it touches, and the file-fence plan.
+- **R4 (owner/Sonnet):** resolve outdoor-clip calibration (§7) — independent, can run alongside.
+Read the four structured reports → **rule on the unified approach** → dispatch implementation as **sequenced** lanes with fenced files (R2 and R3 likely both touch the refine path, so order them), each with a separate independent-verify lane. Only after the joints are right, do the fresh E2E run (step 2) as the native validation, then the demo.
+
 ---
 
 *This document is the single source of truth for the joint-detection + placement effort. When you change the system, update Sections 4, 6, and 9.*
