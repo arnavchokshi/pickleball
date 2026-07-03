@@ -147,4 +147,42 @@ Split into separate lanes only when there's a genuine **decision** between them 
 5. Only read raw evidence if the ruling genuinely needs your judgment on it (§4).
 6. Keep the handoff doc's §6/§9 and your memory current. That's the durable state.
 
-**If you're about to run a test, edit a `.py`, or read a big file — pause and ask: "Can the lane do this instead?" The answer is almost always yes.**
+**If you're about to run a test, edit a `.py`, or read a big file — pause and ask: "Can the lane do this instead?" The answer is almost always yes.
+
+---
+
+## 10. Codex integration mechanics (use these — verified on codex-cli ≥0.142)
+
+The shell fire-and-forget works, but three Codex flags make the loop far cheaper and kill the fragile log-grep monitoring. Use them on every dispatch.
+
+**Dispatch a lane (background; harness notifies you on process exit — no separate monitor needed):**
+```bash
+LANE=<short-name>; ROOT=/Users/arnavchokshi/Desktop/pickleball
+mkdir -p "$ROOT/runs/lanes/$LANE"
+# write the spec to $ROOT/runs/lanes/$LANE/spec.md first, then:
+codex exec \
+  --cd "$ROOT" --sandbox workspace-write \
+  -c model_reasoning_effort=xhigh \
+  --output-schema "$ROOT/docs/racketsport/lane_report.schema.json" \
+  -o "$ROOT/runs/lanes/$LANE/report.json" \
+  < "$ROOT/runs/lanes/$LANE/spec.md" \
+  > "$ROOT/runs/lanes/$LANE/log.txt" 2>&1
+# run_in_background: true. Add `-c tools.web_search=true` for research lanes.
+```
+- **`--output-schema docs/racketsport/lane_report.schema.json`** forces Codex to return the structured report (§5) as validated JSON. You read `report.json` and rule. Never parse a free-form report again.
+- **`-o report.json`** puts the report at a known path. When the background task exits, the harness notifies you — read that one file. **Do NOT set up Monitor/strict-done-marker watchers; they false-fire and waste tokens.**
+- **Always absolute paths** for `--cd`, `--output-schema`, `-o`, spec, and log. The shell cwd drifts between calls and relative paths silently fail to launch (this actually happened last session).
+
+**Iterate cheaply — resume the thread instead of re-specifying:**
+```bash
+codex exec resume "$SESSION_ID" \
+  -c model_reasoning_effort=xhigh \
+  --output-schema "$ROOT/docs/racketsport/lane_report.schema.json" \
+  -o "$ROOT/runs/lanes/$LANE/report_r2.json" \
+  <<< "Your report says PASS but full_suite.failed=2 and failures_all_preexisting=false. Fix those two and re-report."
+```
+`session_id` comes back in the report. Resuming keeps Codex's full context, so your correction is one sentence, not a re-spec. Use this whenever a report is inadequate — it is the cheapest possible round-trip.
+
+**When to use MCP instead of exec:** Codex can also run as an MCP server (`codex mcp-server`) and be added to Claude Code (`claude mcp add codex -- codex mcp-server`) so you call it as a native tool. That is good for *short, synchronous* Codex queries. It is **worse for long lanes** — an MCP tool call blocks the turn, so an hour-long build ties you up. Keep long implementation lanes on `codex exec` + background + notification. (Experimental `codex cloud` can offload very long tasks to run remotely and apply diffs locally — a frontier option, not the default.)
+
+**Discipline that makes all of the above pay off:** the schema has a `full_suite` block with `failed` and `failures_all_preexisting`. If a report comes back `objective_result: PASS` while `failed>0` and not all pre-existing, it is lying — resume and reject. That single check replaces the manual re-running of pytest that cost the most Fable tokens last session.**

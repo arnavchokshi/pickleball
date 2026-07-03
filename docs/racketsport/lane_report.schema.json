@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Codex lane structured report",
+  "description": "Every Codex lane returns this via `codex exec --output-schema`. Fable reads ONLY this object and rules PASS/BLOCKED; it never re-parses code or re-runs tests to verify a lane.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["objective_result", "acceptance", "changes", "full_suite", "honest_issues"],
+  "properties": {
+    "objective_result": {
+      "type": "string",
+      "enum": ["PASS", "BLOCKED", "PARTIAL"],
+      "description": "PASS = every acceptance target met and full suite green. BLOCKED = hit a genuine blocker (report it, do not paper over). PARTIAL = some targets met; explain in honest_issues."
+    },
+    "acceptance": {
+      "type": "array",
+      "description": "One row per acceptance target from the spec. Empty only if the spec defined no numeric targets.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metric", "after", "target", "verdict"],
+        "properties": {
+          "metric": {"type": "string"},
+          "baseline": {"type": "string", "description": "value before the change, if known"},
+          "after": {"type": "string", "description": "measured value after the change"},
+          "target": {"type": "string"},
+          "verdict": {"type": "string", "enum": ["PASS", "FAIL"]}
+        }
+      }
+    },
+    "changes": {
+      "type": "array",
+      "description": "One line per change, file:line + what.",
+      "items": {"type": "string"}
+    },
+    "full_suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "passed", "failed", "skipped", "failures_all_preexisting"],
+      "description": "Result of running the FULL blast-radius suite named in the spec (not a subset).",
+      "properties": {
+        "command": {"type": "string", "description": "exact pytest command run"},
+        "passed": {"type": "integer"},
+        "failed": {"type": "integer"},
+        "skipped": {"type": "integer"},
+        "failures_all_preexisting": {
+          "type": "boolean",
+          "description": "true ONLY if every failure is proven to also fail at HEAD before this change. If false and failed>0, objective_result cannot be PASS."
+        },
+        "failure_notes": {"type": "string", "description": "for each failure: name + why it is pre-existing/unrelated, or why unresolved"}
+      }
+    },
+    "honest_issues": {
+      "type": "array",
+      "description": "Unsoftened. Everything still wrong, every target missed, every thing you could not fix. Do not omit to look clean.",
+      "items": {"type": "string"}
+    },
+    "next": {
+      "type": "string",
+      "description": "What you would do next, for Fable to weigh. A suggestion, not an auto-executed plan."
+    },
+    "session_id": {
+      "type": "string",
+      "description": "This lane's Codex session id, so Fable can `codex exec resume <id>` to iterate without re-specifying."
+    }
+  }
+}
