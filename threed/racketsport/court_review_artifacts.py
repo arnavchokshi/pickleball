@@ -6,7 +6,7 @@ import hashlib
 import json
 import math
 import re
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -19,6 +19,7 @@ from .court_calibration import (
 from .court_keypoint_net import PICKLEBALL_KEYPOINT_BY_NAME
 from .schemas import CameraIntrinsics, CaptureQuality, CourtCalibration, CourtExtrinsics, PICKLEBALL_COURT_KEYPOINT_NAMES
 
+UTC = timezone.utc
 COURT_REVIEW_SCHEMA_VERSION = 1
 COURT_REVIEW_ARTIFACT_TYPE = "racketsport_reviewed_court_calibration"
 COURT_REVIEW_INDEX_ARTIFACT_TYPE = "racketsport_reviewed_court_calibration_index"

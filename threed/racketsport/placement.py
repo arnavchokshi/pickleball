@@ -9,13 +9,14 @@ import math
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 
+UTC = timezone.utc
 COURT_HALF_WIDTH_M = 3.048
 COURT_HALF_LENGTH_M = 6.7056
 

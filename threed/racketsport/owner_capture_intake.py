@@ -5,13 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .eval_guard import EvalClipLeakError, PROTECTED_EVAL_CLIP_IDS, assert_not_training_on_eval_clip
 from .io_decode import probe_clip
 
+UTC = timezone.utc
 PROTECTED_OWNER_EVAL_SLUGS: tuple[str, ...] = tuple(PROTECTED_EVAL_CLIP_IDS)
 DEFAULT_OWNER_DATA_MANIFEST = Path("runs/owner_data/OWNER_DATA_MANIFEST.json")
 DEFAULT_OWNER_DATA_ROOT = Path("runs/owner_data")

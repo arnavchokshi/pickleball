@@ -860,7 +860,7 @@ def build_parity_report(
         "schema_version": 1,
         "artifact_type": "racketsport_pool_parity_diagnostic",
         "clip_id": clip_id,
-        "generated_at_utc": __import__("datetime").datetime.now(__import__("datetime").UTC).isoformat(),
+        "generated_at_utc": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
         "environment": _current_env(),
         "baseline": {
             "metadata": _pool_metadata(Path(baseline_pool_dir), Path(baseline_summary_path), Path(baseline_score_path) if baseline_score_path else None),

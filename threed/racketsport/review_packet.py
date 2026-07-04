@@ -5,13 +5,14 @@ from __future__ import annotations
 import json
 import os
 from html import escape
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
 from .schemas import ContactWindows, RacketCandidates
 
 
+UTC = timezone.utc
 SCHEMA_VERSION = 1
 ARTIFACT_TYPE = "racketsport_human_review_packet"
 GLOBAL_REVIEW_CLIP = "__global__"
