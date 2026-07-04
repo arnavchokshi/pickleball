@@ -151,3 +151,52 @@ def test_local_pipeline_runner_requires_explicit_enablement(tmp_path: Path) -> N
                 artifacts_dir=tmp_path / "artifacts",
             )
         )
+
+
+def test_local_pipeline_runner_passes_reviewed_calibration_to_process_video(tmp_path: Path) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], timeout_s: int | None) -> subprocess.CompletedProcess[str]:
+        calls.append(cmd)
+        out_dir = Path(cmd[cmd.index("--out") + 1])
+        clip = cmd[cmd.index("--clip") + 1]
+        produced_dir = out_dir / clip
+        produced_dir.mkdir(parents=True, exist_ok=True)
+        (produced_dir / "replay_viewer_manifest.json").write_text(
+            json.dumps(
+                {
+                    "video_url": str(tmp_path / "input" / "clip.mp4"),
+                    "virtual_world_url": str(produced_dir / "confidence_gated_world.json"),
+                }
+            ),
+            encoding="utf-8",
+        )
+        (produced_dir / "confidence_gated_world.json").write_text("{}", encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    input_dir = tmp_path / "input"
+    input_dir.mkdir()
+    video = input_dir / "clip.mp4"
+    calibration = input_dir / "court_calibration.json"
+    review = input_dir / "reviewed_court_calibration.json"
+    video.write_bytes(b"video")
+    calibration.write_text('{"schema_version":1}', encoding="utf-8")
+    review.write_text('{"review_status":"human_reviewed"}', encoding="utf-8")
+    request = GpuRunRequest(
+        job_id="job_1",
+        clip="clip_1",
+        input_dir=input_dir,
+        video_path=video,
+        artifacts_dir=tmp_path / "artifacts",
+        court_calibration_path=calibration,
+        court_review_path=review,
+    )
+
+    result = LocalPipelineRunner(enabled=True, python="/repo/.venv/bin/python", run=fake_run).run(request)
+
+    assert result.status == "complete"
+    command = calls[0]
+    assert command[:2] == ["/repo/.venv/bin/python", "scripts/racketsport/process_video.py"]
+    assert command[command.index("--vite-allow-root") + 1] == str(input_dir.parent)
+    assert command[command.index("--court-calibration") + 1] == str(calibration)
+    assert "--court-review" not in command

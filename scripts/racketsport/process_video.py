@@ -3167,13 +3167,7 @@ def _filter_ball_payload_to_rally_spans(payload: Mapping[str, Any], spans: Seque
 
 
 def _read_declared_court_corners(path: Path) -> tuple[dict[str, list[float]], tuple[int, int]]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    items = (payload.get("annotation") or {}).get("items")
-    if not isinstance(items, list) or not items:
-        raise ValueError(f"{path}: no annotation.items[] with court_corners found")
-    item = next((it for it in items if isinstance(it, dict) and isinstance(it.get("court_corners"), dict)), None)
-    if item is None:
-        raise ValueError(f"{path}: no item with a court_corners object found")
+    item = _read_declared_court_corners_item(path)
 
     raw_corners = item["court_corners"]
     missing = [key for key in SIDECAR_CORNER_ORDER if key not in raw_corners]
@@ -3193,6 +3187,30 @@ def _read_declared_court_corners(path: Path) -> tuple[dict[str, list[float]], tu
 
     corners = {key: [float(raw_corners[key][0]), float(raw_corners[key][1])] for key in SIDECAR_CORNER_ORDER}
     return corners, (width, height)
+
+
+def _read_declared_court_corners_item(path: Path) -> Mapping[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    items = (payload.get("annotation") or {}).get("items")
+    if not isinstance(items, list) or not items:
+        raise ValueError(f"{path}: no annotation.items[] with court_corners found")
+    item = next((it for it in items if isinstance(it, dict) and isinstance(it.get("court_corners"), dict)), None)
+    if item is None:
+        raise ValueError(f"{path}: no item with a court_corners object found")
+    return item
+
+
+def _declared_court_corners_are_auto_preview(item: Mapping[str, Any]) -> bool:
+    source = str(item.get("source") or "")
+    status = str(item.get("status") or "")
+    review_status = str(item.get("review_status") or "")
+    return (
+        bool(item.get("not_cal3_verified"))
+        or status == "auto_preview_unverified"
+        or review_status == "auto_predicted_unreviewed"
+        or "auto" in source
+        or "detector" in source
+    )
 
 
 def _capture_sidecar_has_manual_taps(path: Path) -> bool:
@@ -3317,9 +3335,27 @@ def _keypoint_xy(keypoint: Mapping[str, Any], name: str) -> list[float]:
 
 
 def _capture_sidecar_from_court_corners(court_corners_path: Path, *, fps: float) -> dict[str, Any]:
+    item = _read_declared_court_corners_item(court_corners_path)
     corners, (width, height) = _read_declared_court_corners(court_corners_path)
     manual_taps = [corners[key] for key in SIDECAR_CORNER_ORDER]
     focal = float(max(width, height) * 1.2)
+    auto_preview = _declared_court_corners_are_auto_preview(item)
+    capture_quality = (
+        {
+            "grade": "poor",
+            "reasons": [
+                "process_video_auto_court_corners_preview",
+                "manual_taps_seeded_from_unverified_detector",
+                "estimated_intrinsics",
+                "corrected_unverified",
+            ],
+        }
+        if auto_preview
+        else {
+            "grade": "warn",
+            "reasons": ["process_video_manual_court_corners", "estimated_intrinsics", "corrected_unverified"],
+        }
+    )
     return {
         "schema_version": 1,
         "device_tier": "fallback",
@@ -3343,10 +3379,7 @@ def _capture_sidecar_from_court_corners(court_corners_path: Path, *, fps: float)
         "gravity": [0.0, -1.0, 0.0],
         "lidar_depth_refs": [],
         "ondevice_pose_track": None,
-        "capture_quality": {
-            "grade": "warn",
-            "reasons": ["process_video_manual_court_corners", "estimated_intrinsics", "corrected_unverified"],
-        },
+        "capture_quality": capture_quality,
     }
 
 

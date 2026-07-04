@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { UploadPanel, jobStatusText, pipelineProgressLabel } from "./UploadPanel";
+import { UploadPanel, jobStatusText, pipelineProgressLabel, uploadErrorText } from "./UploadPanel";
 
 describe("jobStatusText", () => {
   it("maps server job states to concise user-facing labels", () => {
@@ -32,14 +32,27 @@ describe("pipelineProgressLabel", () => {
   });
 });
 
+describe("uploadErrorText", () => {
+  it("does not render raw process_video JSON blobs for trusted-calibration failures", () => {
+    const text = uploadErrorText(
+      'RuntimeError: local process_video failed (1): {"stages":[{"stage":"calibration","notes":["intrinsics.source=estimated_from_reviewed_court_calibration is not a trusted external calibration source"]}]}',
+    );
+
+    expect(text).toBe(
+      "Pipeline rejected an untrusted court calibration. The court prediction was saved as an unverified preview seed, not a trusted calibration.",
+    );
+  });
+});
+
 describe("UploadPanel", () => {
-  it("renders video, sidecar, calibration, and submit controls", () => {
+  it("renders the simple intake flow as video plus one primary Predict Court action", () => {
     const markup = renderToStaticMarkup(<UploadPanel />);
 
     expect(markup).toContain("Video");
-    expect(markup).toContain("Capture sidecar");
-    expect(markup).toContain("Court calibration");
+    expect(markup).toContain("Predict Court");
     expect(markup).toContain("Pipeline progress");
-    expect(markup).toContain("Upload and process");
+    expect(markup).not.toContain("Upload and process");
+    expect(markup).not.toContain("Capture sidecar");
+    expect(markup).not.toContain("Court calibration");
   });
 });

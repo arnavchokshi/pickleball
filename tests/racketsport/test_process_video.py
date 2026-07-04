@@ -385,6 +385,26 @@ def test_capture_sidecar_from_court_corners_is_schema_valid(tmp_path: Path) -> N
     assert len(validated.manual_court_taps) == 4
 
 
+def test_capture_sidecar_from_auto_predicted_court_corners_is_unverified_preview(tmp_path: Path) -> None:
+    from threed.racketsport.schemas import CaptureSidecar
+
+    payload = _court_corners_payload(width=960, height=540)
+    item = payload["annotation"]["items"][0]
+    item["source"] = "court_detector_v2:selected_hypothesis=hypothesis_0001"
+    item["status"] = "auto_preview_unverified"
+    item["review_status"] = "auto_predicted_unreviewed"
+    item["not_cal3_verified"] = True
+    path = tmp_path / "court_corners.json"
+    _write_json(path, payload)
+
+    sidecar = process_video._capture_sidecar_from_court_corners(path, fps=30.0)
+    validated = CaptureSidecar.model_validate(sidecar)
+
+    assert validated.capture_quality.grade == "poor"
+    assert "process_video_auto_court_corners_preview" in validated.capture_quality.reasons
+    assert "manual_taps_seeded_from_unverified_detector" in validated.capture_quality.reasons
+
+
 def test_capture_sidecar_from_court_corners_feeds_real_calibration_solve(tmp_path: Path) -> None:
     from threed.racketsport.court_calibration import calibration_from_manual_taps
 

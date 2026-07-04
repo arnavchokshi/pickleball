@@ -38,8 +38,42 @@ export type UploadVideoInput = {
   captureSidecar?: File | null;
   courtCorners?: File | null;
   courtCalibration?: File | null;
+  courtReview?: File | null;
   clip?: string;
   maxFrames?: number;
+};
+
+export type CourtPredictionPoint = { xy: [number, number]; confidence: number };
+export type CourtPrediction = {
+  schema_version: 1;
+  artifact_type: "racketsport_court_layout_prediction";
+  clip: string;
+  image_size: [number, number];
+  frame_index: number;
+  frame_time_s: number;
+  prediction_source: string;
+  verified: false;
+  not_cal3_verified: true;
+  points: Record<string, CourtPredictionPoint>;
+  lines?: Array<{ id: string; points: [[number, number], [number, number]] }>;
+  warnings?: string[];
+  video: {
+    id: string;
+    filename: string;
+    path: string;
+    sha256: string;
+    size_bytes: number;
+  };
+};
+
+export type SaveCourtReviewResponse = {
+  review: Record<string, unknown>;
+  court_calibration: Record<string, unknown>;
+  saved: {
+    review_path: string;
+    court_calibration_path: string;
+    index_path: string;
+  };
 };
 
 export type UploadApiOptions = {
@@ -77,6 +111,7 @@ export async function uploadVideoJob(input: UploadVideoInput, options: UploadApi
   if (input.captureSidecar) body.append("capture_sidecar", input.captureSidecar);
   if (input.courtCorners) body.append("court_corners", input.courtCorners);
   if (input.courtCalibration) body.append("court_calibration", input.courtCalibration);
+  if (input.courtReview) body.append("court_review", input.courtReview);
   if (input.clip?.trim()) body.append("clip", input.clip.trim());
   if (input.maxFrames !== undefined) body.append("max_frames", String(input.maxFrames));
 
@@ -88,6 +123,32 @@ export async function uploadVideoJob(input: UploadVideoInput, options: UploadApi
   return parseJobResponse(response);
 }
 
+export async function predictCourtLayout(
+  input: { video: File; clip?: string; frameIndex?: number },
+  options: UploadApiOptions = {},
+): Promise<CourtPrediction> {
+  const body = new FormData();
+  body.append("video", input.video);
+  if (input.clip?.trim()) body.append("clip", input.clip.trim());
+  if (input.frameIndex !== undefined) body.append("frame_index", String(input.frameIndex));
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(apiUrl("/api/court/predict", options.baseUrl), { method: "POST", body });
+  return parseJsonResponse<CourtPrediction>(response);
+}
+
+export async function saveCourtReview(
+  payload: Record<string, unknown>,
+  options: UploadApiOptions = {},
+): Promise<SaveCourtReviewResponse> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(apiUrl("/api/court/reviews", options.baseUrl), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseJsonResponse<SaveCourtReviewResponse>(response);
+}
+
 export async function fetchJobStatus(statusUrl: string, options: UploadApiOptions = {}): Promise<UploadJob> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const response = await fetchImpl(apiUrl(statusUrl, options.baseUrl));
@@ -95,10 +156,22 @@ export async function fetchJobStatus(statusUrl: string, options: UploadApiOption
 }
 
 async function parseJobResponse(response: Response): Promise<UploadJob> {
-  const payload = await response.json().catch(() => ({}));
+  return parseJsonResponse<UploadJob>(response);
+}
+
+async function parseJsonResponse<T>(response: Response): Promise<T> {
+  const contentType = response.headers.get("content-type") ?? "";
+  const isJson = contentType.includes("application/json");
+  const payload = isJson ? await response.json().catch(() => ({})) : {};
   if (!response.ok) {
+    if (response.status === 404 && !isJson) {
+      throw new Error("API server not found. Start the Render gateway or set VITE_API_BASE_URL.");
+    }
+    if (response.status >= 500 && !isJson) {
+      throw new Error("API server not reachable. Start the Render gateway or set VITE_API_BASE_URL.");
+    }
     const detail = typeof payload.detail === "string" ? payload.detail : `request failed with ${response.status}`;
     throw new Error(detail);
   }
-  return payload as UploadJob;
+  return payload as T;
 }

@@ -783,6 +783,7 @@ export default function App() {
   const resetView = () => {
     setViewState((state) => applyViewPreset(state, "default"));
   };
+  const replayLoaded = manifest !== null;
 
   return (
     <main className="viewer-shell" aria-label="Replay viewer">
@@ -792,28 +793,32 @@ export default function App() {
             <span />
           </div>
           <div>
-            <p className="eyebrow">Court intelligence</p>
-            <h1>{manifest?.clip ?? "Replay Review"}</h1>
+            <p className="eyebrow">{replayLoaded ? "Replay review" : "Video intake"}</p>
+            <h1>{manifest?.clip ?? "Pickleball video"}</h1>
           </div>
         </div>
-        <div className="status-grid">
-          <Metric label="Players" value={stats.players} />
-          <Metric label="Mesh Frames" value={stats.meshFrames} />
-          <Metric label="Solid Mesh" value={solidMeshTileValue} />
-          <Metric label="Floor Frames" value={stats.floorPlacedFrames} />
-          <Metric label="Ball Contacts" value={contactEventCount(contactWindows)} />
-          <Metric label="Replay Points" value={replayScene?.points.length ?? 0} />
-          <Metric label="Player Span" value={coverage.lastTime === null ? "0.0s" : `${coverage.lastTime.toFixed(1)}s`} />
-          <Metric label="Warnings" value={warningsReadout} />
-          <Metric label="Ball Coverage" value={ballCoverage} />
-          <Metric label="3D FPS" value={fps > 0 ? fps.toFixed(1) : "measuring..."} />
-        </div>
+        {replayLoaded ? (
+          <div className="status-grid">
+            <Metric label="Players" value={stats.players} />
+            <Metric label="Mesh Frames" value={stats.meshFrames} />
+            <Metric label="Solid Mesh" value={solidMeshTileValue} />
+            <Metric label="Floor Frames" value={stats.floorPlacedFrames} />
+            <Metric label="Ball Contacts" value={contactEventCount(contactWindows)} />
+            <Metric label="Replay Points" value={replayScene?.points.length ?? 0} />
+            <Metric label="Player Span" value={coverage.lastTime === null ? "0.0s" : `${coverage.lastTime.toFixed(1)}s`} />
+            <Metric label="Warnings" value={warningsReadout} />
+            <Metric label="Ball Coverage" value={ballCoverage} />
+            <Metric label="3D FPS" value={fps > 0 ? fps.toFixed(1) : "measuring..."} />
+          </div>
+        ) : null}
       </header>
 
       {loadError ? <p className="load-error">{loadError}</p> : null}
 
       <UploadPanel />
 
+      {replayLoaded ? (
+        <>
       <section className="review-layout">
         <div className="video-panel">
           <div className="video-frame">
@@ -992,6 +997,8 @@ export default function App() {
         <p>Max floor penetration: {stats.maxFloorPenetrationM.toFixed(4)} m</p>
         <p>{manifest?.notes[0] ?? "Review-only viewer. Artifact gates stay separate from visual inspection."}</p>
       </section>
+        </>
+      ) : null}
     </main>
   );
 }

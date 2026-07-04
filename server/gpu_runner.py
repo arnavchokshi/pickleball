@@ -46,6 +46,7 @@ class GpuRunRequest:
     capture_sidecar_path: Path | None = None
     court_corners_path: Path | None = None
     court_calibration_path: Path | None = None
+    court_review_path: Path | None = None
     max_frames: int | None = None
     allow_auto_court_corners_preview: bool = True
     progress_callback: ProgressCallback | None = field(default=None, compare=False, repr=False)
@@ -320,6 +321,7 @@ class HttpGpuRunner(GpuRunner):
             "capture_sidecar": request.capture_sidecar_path,
             "court_corners": request.court_corners_path,
             "court_calibration": request.court_calibration_path,
+            "court_review": request.court_review_path,
         }
         try:
             for field, path in optional_files.items():
@@ -388,6 +390,8 @@ class LocalPipelineRunner(GpuRunner):
             str(out_dir),
             "--clip",
             safe_slug(request.clip),
+            "--vite-allow-root",
+            str(request.input_dir.parent),
             "--json",
         ]
         if request.allow_auto_court_corners_preview:

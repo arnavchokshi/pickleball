@@ -207,9 +207,13 @@ dd {
 
 .upload-form {
   display: grid;
-  grid-template-columns: minmax(180px, 1.1fr) repeat(3, minmax(150px, 1fr)) minmax(130px, 0.7fr) minmax(98px, 0.45fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
   gap: 10px;
   align-items: end;
+}
+
+.simple-upload-form {
+  grid-template-columns: minmax(260px, 1fr) minmax(190px, 0.42fr);
 }
 
 .upload-form label {
@@ -241,6 +245,7 @@ dd {
 }
 
 .upload-submit {
+  width: 100%;
   min-height: 39px;
   border: 0;
   border-radius: 8px;
@@ -250,6 +255,10 @@ dd {
   padding: 0 14px;
   white-space: nowrap;
   cursor: pointer;
+}
+
+.upload-submit:not(:disabled):hover {
+  filter: brightness(1.04);
 }
 
 .upload-submit:disabled {
@@ -376,6 +385,14 @@ dd {
 
 .upload-error {
   color: #ffd8d8;
+  max-width: 920px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .simple-upload-form {
+    grid-template-columns: 1fr;
+  }
 }
 
 .review-layout {

@@ -1,6 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-import { apiUrl, fetchJobStatus, formatEta, jobProgressPercent, uploadVideoJob, type UploadJob } from "./uploadApi";
+import {
+  buildCourtCornersPayload,
+  buildReviewedCourtCorrection,
+  type CourtReviewPointMap,
+} from "./courtReview";
+import {
+  apiUrl,
+  fetchJobStatus,
+  formatEta,
+  jobProgressPercent,
+  predictCourtLayout,
+  saveCourtReview,
+  uploadVideoJob,
+  type CourtPrediction,
+  type UploadJob,
+} from "./uploadApi";
 
 type UploadPanelProps = {
   apiBaseUrl?: string;
@@ -23,18 +38,27 @@ export function pipelineProgressLabel(job: UploadJob | null): string {
   return `${stage} · ${formatEta(job.progress?.eta_seconds)} left`;
 }
 
+export function uploadErrorText(error: string | null | undefined): string | null {
+  if (!error) return null;
+  if (error.includes("intrinsics.source") && error.includes("not a trusted external calibration")) {
+    return "Pipeline rejected an untrusted court calibration. The court prediction was saved as an unverified preview seed, not a trusted calibration.";
+  }
+  if (error.includes("local process_video failed") || error.includes("GPU pipeline failed")) {
+    return "Pipeline failed while processing this video. Check the job logs for the full stage output.";
+  }
+  if (error.length > 260) return `${error.slice(0, 240).trim()}...`;
+  return error;
+}
+
 export function UploadPanel({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? "" }: UploadPanelProps) {
   const [video, setVideo] = useState<File | null>(null);
-  const [captureSidecar, setCaptureSidecar] = useState<File | null>(null);
-  const [courtCorners, setCourtCorners] = useState<File | null>(null);
-  const [courtCalibration, setCourtCalibration] = useState<File | null>(null);
-  const [clip, setClip] = useState("");
-  const [maxFrames, setMaxFrames] = useState("");
+  const [courtPrediction, setCourtPrediction] = useState<CourtPrediction | null>(null);
   const [job, setJob] = useState<UploadJob | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const visibleProgress = isUploading && !job ? 5 : jobProgressPercent(job);
-  const visibleProgressLabel = isUploading && !job ? "Uploading to Render · ETA calculating" : pipelineProgressLabel(job);
+  const [flowStage, setFlowStage] = useState<"idle" | "predicting" | "saving" | "submitting">("idle");
+  const isBusy = flowStage !== "idle";
+  const visibleProgress = isBusy && !job ? flowProgress(flowStage) : jobProgressPercent(job);
+  const visibleProgressLabel = isBusy && !job ? flowProgressLabel(flowStage) : pipelineProgressLabel(job);
 
   const replayManifestUrl = useMemo(() => {
     const manifestUrl = job?.result?.manifest_url;
@@ -47,70 +71,84 @@ export function UploadPanel({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.tr
       void fetchJobStatus(job.links.status, { baseUrl: apiBaseUrl })
         .then((nextJob) => {
           setJob(nextJob);
-          setError(nextJob.error ?? null);
+          setError(uploadErrorText(nextJob.error));
         })
-        .catch((nextError) => setError(nextError instanceof Error ? nextError.message : String(nextError)));
+        .catch((nextError) => setError(uploadErrorText(nextError instanceof Error ? nextError.message : String(nextError))));
     }, 2500);
     return () => window.clearInterval(timer);
   }, [apiBaseUrl, job]);
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function predictAndProcess(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!video) {
       setError("Choose a video first.");
       return;
     }
-    setIsUploading(true);
+    setFlowStage("predicting");
     setError(null);
+    setJob(null);
     try {
+      const prediction = await predictCourtLayout({ video }, { baseUrl: apiBaseUrl });
+      setCourtPrediction(prediction);
+
+      setFlowStage("saving");
+      const adjusted = prediction.points as CourtReviewPointMap;
+      const artifact = buildReviewedCourtCorrection({
+        videoId: prediction.video.id,
+        videoPath: prediction.video.path,
+        videoSha256: prediction.video.sha256,
+        imageSize: prediction.image_size,
+        frameIndex: prediction.frame_index,
+        frameTimeSeconds: prediction.frame_time_s,
+        autoPredictionSource: prediction.prediction_source,
+        predicted: prediction.points as CourtReviewPointMap,
+        adjusted,
+        createdAt: new Date().toISOString(),
+        reviewStatus: "auto_predicted_unreviewed",
+      });
+      const cornerSeed = buildCourtCornersPayload({
+        adjusted,
+        imageSize: prediction.image_size,
+        frameIndex: prediction.frame_index,
+        source: prediction.prediction_source,
+        reviewStatus: "auto_predicted_unreviewed",
+      });
+      const reviewResponse = await saveCourtReview(artifact as unknown as Record<string, unknown>, { baseUrl: apiBaseUrl });
+      const reviewFile = jsonFile(reviewResponse.review, "reviewed_court_calibration.json");
+      const cornerSeedFile = jsonFile(cornerSeed, "court_corners.json");
+
+      setFlowStage("submitting");
       const nextJob = await uploadVideoJob(
         {
           video,
-          captureSidecar,
-          courtCorners,
-          courtCalibration,
-          clip,
-          maxFrames: maxFrames ? Number(maxFrames) : undefined,
+          courtCorners: cornerSeedFile,
+          courtReview: reviewFile,
         },
         { baseUrl: apiBaseUrl },
       );
       setJob(nextJob);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setError(uploadErrorText(nextError instanceof Error ? nextError.message : String(nextError)));
     } finally {
-      setIsUploading(false);
+      setFlowStage("idle");
     }
+  }
+
+  function updateVideo(nextVideo: File | null) {
+    setVideo(nextVideo);
+    setCourtPrediction(null);
+    setJob(null);
   }
 
   return (
     <section className="upload-band" aria-label="Video upload">
-      <form className="upload-form" onSubmit={submit}>
+      <form className="upload-form simple-upload-form" onSubmit={predictAndProcess}>
         <label>
           <span>Video</span>
-          <input type="file" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v" onChange={(event) => setVideo(event.target.files?.[0] ?? null)} />
+          <input type="file" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v" onChange={(event) => updateVideo(event.target.files?.[0] ?? null)} />
         </label>
-        <label>
-          <span>Capture sidecar</span>
-          <input type="file" accept="application/json,.json" onChange={(event) => setCaptureSidecar(event.target.files?.[0] ?? null)} />
-        </label>
-        <label>
-          <span>Court corners</span>
-          <input type="file" accept="application/json,.json" onChange={(event) => setCourtCorners(event.target.files?.[0] ?? null)} />
-        </label>
-        <label>
-          <span>Court calibration</span>
-          <input type="file" accept="application/json,.json" onChange={(event) => setCourtCalibration(event.target.files?.[0] ?? null)} />
-        </label>
-        <label>
-          <span>Clip ID</span>
-          <input type="text" value={clip} placeholder="drill_01" onChange={(event) => setClip(event.target.value)} />
-        </label>
-        <label className="short-input">
-          <span>Frame cap</span>
-          <input type="number" min="1" value={maxFrames} onChange={(event) => setMaxFrames(event.target.value)} />
-        </label>
-        <button type="submit" className="upload-submit" disabled={isUploading || !video}>
-          {isUploading ? "Uploading" : "Upload and process"}
+        <button type="submit" className="upload-submit" disabled={isBusy || !video}>
+          {isBusy ? flowButtonLabel(flowStage) : "Predict Court"}
         </button>
       </form>
       <div className="upload-progress" aria-label="Pipeline progress">
@@ -142,9 +180,35 @@ export function UploadPanel({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.tr
       <div className="upload-status">
         <span className={`upload-state ${job?.status ?? "idle"}`}>{jobStatusText(job)}</span>
         {job?.id ? <span>{job.id}</span> : null}
+        {courtPrediction ? <span className="upload-state submitted">Court preview saved</span> : null}
         {replayManifestUrl ? <a href={`/?manifest=${encodeURIComponent(replayManifestUrl)}`}>Open replay</a> : null}
         {error ? <span className="upload-error">{error}</span> : null}
       </div>
     </section>
   );
+}
+
+function jsonFile(payload: unknown, name: string): File {
+  return new File([JSON.stringify(payload, null, 2)], name, { type: "application/json" });
+}
+
+function flowProgress(stage: "idle" | "predicting" | "saving" | "submitting"): number {
+  if (stage === "predicting") return 18;
+  if (stage === "saving") return 30;
+  if (stage === "submitting") return 42;
+  return 0;
+}
+
+function flowProgressLabel(stage: "idle" | "predicting" | "saving" | "submitting"): string {
+  if (stage === "predicting") return "Predicting court";
+  if (stage === "saving") return "Saving court seed";
+  if (stage === "submitting") return "Submitting pipeline job";
+  return "Waiting for upload";
+}
+
+function flowButtonLabel(stage: "idle" | "predicting" | "saving" | "submitting"): string {
+  if (stage === "predicting") return "Predicting";
+  if (stage === "saving") return "Saving";
+  if (stage === "submitting") return "Submitting";
+  return "Predict Court";
 }

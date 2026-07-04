@@ -8,17 +8,27 @@ import uuid
 from dataclasses import replace
 from pathlib import Path
 from threading import Lock
-from typing import Any
+from typing import Any, Callable
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, Body, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from threed.racketsport.court_review_artifacts import (
+    COURT_REVIEW_ARTIFACT_TYPE,
+    build_reviewed_court_artifacts,
+    court_calibration_from_review_artifact,
+    save_reviewed_court_artifacts,
+    sha256_file,
+)
+
+from .court_review import predict_court_layout_from_video
 from .gpu_runner import GpuRunner, GpuRunProgress, GpuRunRequest, GpuRunResult, runner_from_env, safe_slug
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_UPLOAD_ROOT = Path(os.environ.get("PICKLEBALL_UPLOAD_ROOT", "/tmp/pickleball_render_uploads"))
 DEFAULT_STATIC_DIR = ROOT / "web" / "replay" / "dist"
+CourtPredictor = Callable[..., dict[str, Any]]
 
 PIPELINE_STEPS: tuple[tuple[str, str, int], ...] = (
     ("queued", "Queued", 0),
@@ -97,14 +107,59 @@ def create_app(
     runner: GpuRunner | None = None,
     run_jobs_inline: bool = False,
     static_dir: Path = DEFAULT_STATIC_DIR,
+    court_predictor: CourtPredictor | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Pickleball Render Gateway")
     store = JobStore(upload_root)
     gpu_runner = runner if runner is not None else runner_from_env()
+    court_predictor_fn = court_predictor if court_predictor is not None else predict_court_layout_from_video
 
     @app.get("/api/health")
     def health() -> dict[str, Any]:
         return {"ok": True, "runner": gpu_runner.describe()}
+
+    @app.post("/api/court/predict")
+    async def predict_court_endpoint(
+        video: UploadFile = File(...),
+        clip: str | None = Form(default=None),
+        frame_index: int | None = Form(default=None),
+    ) -> dict[str, Any]:
+        try:
+            clip_id = _clip_id_from_upload(clip, video.filename)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        prediction_dir = upload_root / "court_predictions" / f"pred_{uuid.uuid4().hex[:16]}"
+        prediction_dir.mkdir(parents=True, exist_ok=True)
+        video_path = prediction_dir / _safe_upload_filename(video.filename, fallback=f"{clip_id}.mp4")
+        await _save_upload(video, video_path)
+        try:
+            prediction = court_predictor_fn(video_path=video_path, clip=clip_id, frame_index=frame_index)
+        except Exception as exc:  # noqa: BLE001 - preview failures must be visible API state
+            raise HTTPException(status_code=422, detail=f"court prediction failed: {type(exc).__name__}: {exc}") from None
+        payload = dict(prediction)
+        payload["video"] = {
+            "id": clip_id,
+            "filename": video.filename or video_path.name,
+            "path": str(video_path),
+            "sha256": sha256_file(video_path),
+            "size_bytes": video_path.stat().st_size,
+        }
+        payload["verified"] = False
+        payload["not_cal3_verified"] = True
+        return payload
+
+    @app.post("/api/court/reviews")
+    def save_court_review(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        try:
+            review, court_calibration = _review_and_calibration_from_payload(payload)
+            saved = save_reviewed_court_artifacts(
+                artifact=review,
+                court_calibration=court_calibration,
+                root=upload_root / "reviewed_court_calibrations",
+            )
+        except Exception as exc:  # noqa: BLE001 - validation errors are returned as API detail
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        return {"review": review, "court_calibration": court_calibration, "saved": saved}
 
     @app.post("/api/jobs", status_code=202)
     async def create_job(
@@ -115,6 +170,7 @@ def create_app(
         capture_sidecar: UploadFile | None = File(default=None),
         court_corners: UploadFile | None = File(default=None),
         court_calibration: UploadFile | None = File(default=None),
+        court_review: UploadFile | None = File(default=None),
     ) -> dict[str, Any]:
         try:
             clip_id = _clip_id_from_upload(clip, video.filename)
@@ -132,6 +188,7 @@ def create_app(
         capture_sidecar_path = await _save_optional_upload(capture_sidecar, input_dir, "capture_sidecar.json")
         court_corners_path = await _save_optional_upload(court_corners, input_dir, "court_corners.json")
         court_calibration_path = await _save_optional_upload(court_calibration, input_dir, "court_calibration.json")
+        court_review_path = await _save_optional_upload(court_review, input_dir, "reviewed_court_calibration.json")
         store.update(
             job["id"],
             progress=_progress_payload(
@@ -149,6 +206,7 @@ def create_app(
             capture_sidecar_path=capture_sidecar_path,
             court_corners_path=court_corners_path,
             court_calibration_path=court_calibration_path,
+            court_review_path=court_review_path,
             max_frames=max_frames,
         )
         if run_jobs_inline:
@@ -270,6 +328,40 @@ def _result_payload(job_id: str, result: GpuRunResult) -> dict[str, Any]:
     if result.raw:
         payload["raw"] = result.raw
     return payload
+
+
+def _review_and_calibration_from_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    if payload.get("artifact_type") == COURT_REVIEW_ARTIFACT_TYPE:
+        review = dict(payload)
+        return review, court_calibration_from_review_artifact(review)
+
+    required = (
+        "video_id",
+        "video_path",
+        "video_sha256",
+        "image_size",
+        "frame_index",
+        "frame_time_s",
+        "auto_prediction_source",
+        "predicted_points",
+        "adjusted_points",
+    )
+    missing = [key for key in required if key not in payload]
+    if missing:
+        raise ValueError(f"missing court review field(s): {', '.join(missing)}")
+    return build_reviewed_court_artifacts(
+        video_id=str(payload["video_id"]),
+        video_path=str(payload["video_path"]),
+        video_sha256=str(payload["video_sha256"]),
+        image_size=payload["image_size"],
+        frame_index=int(payload["frame_index"]),
+        frame_time_s=float(payload["frame_time_s"]),
+        auto_prediction_source=str(payload["auto_prediction_source"]),
+        predicted_points=payload["predicted_points"],
+        adjusted_points=payload["adjusted_points"],
+        created_at=str(payload["created_at"]) if payload.get("created_at") else None,
+        review_status=str(payload["review_status"]) if payload.get("review_status") else "human_reviewed",
+    )
 
 
 def _estimated_total_seconds(request: GpuRunRequest) -> int:
