@@ -15,7 +15,9 @@ import httpx
 SAFE_SLUG_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
 RESOURCE_USAGE_ARTIFACT = "gpu_resource_usage.json"
 PIPELINE_SUMMARY_ARTIFACT = "PIPELINE_SUMMARY.json"
-RESOURCE_MONITOR_SOURCE = Path(__file__).resolve().parents[1] / "scripts" / "racketsport" / "monitor_process_resources.py"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+RESOURCE_MONITOR_SOURCE = REPO_ROOT / "scripts" / "racketsport" / "monitor_process_resources.py"
+CODE_SYNC_PATHS = ("scripts", "threed", "configs")
 
 
 class MissingGpuRunnerConfig(RuntimeError):
@@ -165,6 +167,7 @@ class SshGpuRunner(GpuRunner):
 
         remote_job_dir = f"{self.remote_repo}/runs/render_jobs/{job_id}"
         remote_input_dir = f"{remote_job_dir}/input"
+        remote_code_dir = f"{remote_job_dir}/code"
         remote_out_dir = f"{remote_job_dir}/out"
         remote_artifacts_dir = f"{remote_out_dir}/{clip}"
 
@@ -178,7 +181,10 @@ class SshGpuRunner(GpuRunner):
         self._checked_run(
             [
                 *self._ssh_base(),
-                f"mkdir -p {shlex.quote(remote_input_dir)} {shlex.quote(remote_out_dir)} {shlex.quote(remote_artifacts_dir)}",
+                (
+                    f"mkdir -p {shlex.quote(remote_input_dir)} {shlex.quote(remote_code_dir)} "
+                    f"{shlex.quote(remote_out_dir)} {shlex.quote(remote_artifacts_dir)}"
+                ),
             ]
         )
         self.emit_progress(
@@ -199,11 +205,27 @@ class SshGpuRunner(GpuRunner):
         )
         self.emit_progress(
             request,
+            percent=28,
+            stage="Syncing current pipeline code",
+            message="Copying the current process_video.py bundle to the GPU host.",
+        )
+        self._checked_run(
+            [
+                "rsync",
+                "-az",
+                "-e",
+                self._rsync_ssh_command(),
+                *[str(REPO_ROOT / path) for path in CODE_SYNC_PATHS],
+                f"{self.host}:{remote_code_dir}/",
+            ]
+        )
+        self.emit_progress(
+            request,
             percent=36,
             stage="Running pipeline on GPU",
             message="GPU processing is running process_video.py.",
         )
-        self._checked_run([*self._ssh_base(), self._remote_process_command(request, remote_input_dir, remote_out_dir)])
+        self._checked_run([*self._ssh_base(), self._remote_process_command(request, remote_input_dir, remote_code_dir, remote_out_dir)])
         self.emit_progress(
             request,
             percent=88,
@@ -254,8 +276,9 @@ class SshGpuRunner(GpuRunner):
     def _rsync_ssh_command(self) -> str:
         return " ".join(shlex.quote(part) for part in ["ssh", "-i", self.key_path, *self._ssh_options()])
 
-    def _remote_process_command(self, request: GpuRunRequest, remote_input_dir: str, remote_out_dir: str) -> str:
+    def _remote_process_command(self, request: GpuRunRequest, remote_input_dir: str, remote_code_dir: str, remote_out_dir: str) -> str:
         video_name = request.video_path.name
+        remote_model_root = _remote_model_root(self.remote_python)
         process_args = [
             self.remote_python,
             "scripts/racketsport/process_video.py",
@@ -269,6 +292,10 @@ class SshGpuRunner(GpuRunner):
             "--device",
             "cuda:0",
             "--json",
+            "--manifest",
+            f"{remote_model_root}/models/MANIFEST.json",
+            "--reid-model",
+            f"{remote_model_root}/models/checkpoints/osnet_x1_0_market1501.pt",
         ]
         if request.allow_auto_court_corners_preview:
             process_args.append("--allow-auto-court-corners-preview")
@@ -297,13 +324,15 @@ class SshGpuRunner(GpuRunner):
             *process_args,
         ]
         quoted = " ".join(shlex.quote(arg) for arg in monitor_args)
-        env_prefix = self._remote_env_prefix()
-        return f"cd {shlex.quote(self.remote_repo)} && {env_prefix}{quoted}"
+        env_prefix = self._remote_env_prefix(remote_code_dir)
+        return f"cd {shlex.quote(remote_code_dir)} && {env_prefix}{quoted}"
 
-    def _remote_env_prefix(self) -> str:
-        if not self.extra_pythonpath:
-            return ""
-        return f"PYTHONPATH={shlex.quote(self.extra_pythonpath)}${{PYTHONPATH:+:$PYTHONPATH}} "
+    def _remote_env_prefix(self, remote_code_dir: str) -> str:
+        pythonpath_parts = [remote_code_dir]
+        if self.extra_pythonpath:
+            pythonpath_parts.append(self.extra_pythonpath)
+        joined = ":".join(shlex.quote(part) for part in pythonpath_parts)
+        return f"PYTHONPATH={joined}${{PYTHONPATH:+:$PYTHONPATH}} "
 
     def _checked_run(self, cmd: list[str]) -> subprocess.CompletedProcess[str]:
         completed = self._run(cmd, self.command_timeout_s)
@@ -494,6 +523,13 @@ def prepare_render_artifacts(request: GpuRunRequest) -> None:
 def _copy_resource_monitor_to_input(input_dir: Path) -> None:
     input_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy2(RESOURCE_MONITOR_SOURCE, input_dir / RESOURCE_MONITOR_SOURCE.name)
+
+
+def _remote_model_root(remote_python: str) -> str:
+    marker = "/.venv/"
+    if marker in remote_python:
+        return remote_python.split(marker, 1)[0].rstrip("/")
+    return str(Path(remote_python).parent.parent.parent)
 
 
 def _artifact_payloads(artifacts_dir: Path) -> dict[str, object]:

@@ -113,18 +113,28 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
     assert result.manifest_path == tmp_path / "artifacts" / "replay_viewer_manifest.json"
     assert calls[0][0] == "ssh"
     assert calls[1][0] == "rsync"
-    assert calls[2][0] == "ssh"
-    assert calls[3][0] == "rsync"
+    assert calls[2][0] == "rsync"
+    assert calls[3][0] == "ssh"
+    assert calls[4][0] == "rsync"
+    assert str(Path.cwd() / "scripts") in calls[2]
+    assert str(Path.cwd() / "threed") in calls[2]
+    assert str(Path.cwd() / "configs") in calls[2]
 
-    remote_command = calls[2][-1]
+    remote_command = calls[3][-1]
+    assert "cd /srv/pickleball/runs/render_jobs/job_1/code" in remote_command
     assert "/srv/pickleball/runs/render_jobs/job_1/input/monitor_process_resources.py" in remote_command
     assert "--out /srv/pickleball/runs/render_jobs/job_1/out/clip_1/gpu_resource_usage.json" in remote_command
     assert " -- /srv/pickleball/.venv/bin/python scripts/racketsport/process_video.py " in remote_command
     assert "scripts/racketsport/process_video.py" in remote_command
     assert "--body-local" in remote_command
     assert "--device cuda:0" in remote_command
+    assert "--manifest /srv/pickleball/models/MANIFEST.json" in remote_command
+    assert "--reid-model /srv/pickleball/models/checkpoints/osnet_x1_0_market1501.pt" in remote_command
     assert "--allow-auto-court-corners-preview" in remote_command
-    assert "PYTHONPATH=/srv/openmmlab/mmpose/projects/rtmpose3d${PYTHONPATH:+:$PYTHONPATH}" in remote_command
+    assert (
+        "PYTHONPATH=/srv/pickleball/runs/render_jobs/job_1/code:"
+        "/srv/openmmlab/mmpose/projects/rtmpose3d${PYTHONPATH:+:$PYTHONPATH}"
+    ) in remote_command
     assert "--wasb-repo /srv/pickleball_git/third_party/WASB-SBDT" in remote_command
     assert "--wasb-checkpoint /srv/pickleball_git/models/checkpoints/wasb/wasb_tennis_best.pth.tar" in remote_command
     assert "--capture-sidecar" in remote_command
@@ -132,6 +142,7 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
     assert [event.stage for event in progress_events] == [
         "Preparing GPU workspace",
         "Uploading inputs to GPU",
+        "Syncing current pipeline code",
         "Running pipeline on GPU",
         "Syncing replay artifacts",
     ]
