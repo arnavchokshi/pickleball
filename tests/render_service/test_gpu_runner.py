@@ -117,7 +117,7 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
     assert calls[3][0] == "rsync"
 
     remote_command = calls[2][-1]
-    assert "scripts/racketsport/monitor_process_resources.py" in remote_command
+    assert "/srv/pickleball/runs/render_jobs/job_1/input/monitor_process_resources.py" in remote_command
     assert "--out /srv/pickleball/runs/render_jobs/job_1/out/clip_1/gpu_resource_usage.json" in remote_command
     assert " -- /srv/pickleball/.venv/bin/python scripts/racketsport/process_video.py " in remote_command
     assert "scripts/racketsport/process_video.py" in remote_command
@@ -139,6 +139,7 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
     assert rewritten_manifest["video_url"] == "/api/jobs/job_1/artifacts/source.mp4"
     assert rewritten_manifest["virtual_world_url"] == "/api/jobs/job_1/artifacts/confidence_gated_world.json"
     assert (tmp_path / "artifacts" / "source.mp4").read_bytes() == b"video"
+    assert (tmp_path / "input" / "monitor_process_resources.py").is_file()
 
 
 def test_ssh_runner_exposes_resource_usage_artifact(tmp_path: Path) -> None:

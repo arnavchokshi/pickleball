@@ -15,6 +15,7 @@ import httpx
 SAFE_SLUG_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
 RESOURCE_USAGE_ARTIFACT = "gpu_resource_usage.json"
 PIPELINE_SUMMARY_ARTIFACT = "PIPELINE_SUMMARY.json"
+RESOURCE_MONITOR_SOURCE = Path(__file__).resolve().parents[1] / "scripts" / "racketsport" / "monitor_process_resources.py"
 
 
 class MissingGpuRunnerConfig(RuntimeError):
@@ -167,6 +168,7 @@ class SshGpuRunner(GpuRunner):
         remote_out_dir = f"{remote_job_dir}/out"
         remote_artifacts_dir = f"{remote_out_dir}/{clip}"
 
+        _copy_resource_monitor_to_input(request.input_dir)
         self.emit_progress(
             request,
             percent=12,
@@ -286,7 +288,7 @@ class SshGpuRunner(GpuRunner):
         telemetry_path = f"{remote_out_dir}/{safe_slug(request.clip)}/{RESOURCE_USAGE_ARTIFACT}"
         monitor_args = [
             self.remote_python,
-            "scripts/racketsport/monitor_process_resources.py",
+            f"{remote_input_dir}/{RESOURCE_MONITOR_SOURCE.name}",
             "--out",
             telemetry_path,
             "--sample-interval",
@@ -487,6 +489,11 @@ def prepare_render_artifacts(request: GpuRunRequest) -> None:
     request.artifacts_dir.mkdir(parents=True, exist_ok=True)
     _copy_source_video_artifact(request)
     _rewrite_manifest_urls_for_render(request)
+
+
+def _copy_resource_monitor_to_input(input_dir: Path) -> None:
+    input_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(RESOURCE_MONITOR_SOURCE, input_dir / RESOURCE_MONITOR_SOURCE.name)
 
 
 def _artifact_payloads(artifacts_dir: Path) -> dict[str, object]:
