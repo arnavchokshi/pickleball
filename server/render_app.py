@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -23,7 +24,16 @@ from threed.racketsport.court_review_artifacts import (
 )
 
 from .court_review import predict_court_layout_from_video
-from .gpu_runner import GpuRunner, GpuRunProgress, GpuRunRequest, GpuRunResult, runner_from_env, safe_slug
+from .gpu_runner import (
+    PIPELINE_SUMMARY_ARTIFACT,
+    RESOURCE_USAGE_ARTIFACT,
+    GpuRunner,
+    GpuRunProgress,
+    GpuRunRequest,
+    GpuRunResult,
+    runner_from_env,
+    safe_slug,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_UPLOAD_ROOT = Path(os.environ.get("PICKLEBALL_UPLOAD_ROOT", "/tmp/pickleball_render_uploads"))
@@ -325,9 +335,67 @@ def _result_payload(job_id: str, result: GpuRunResult) -> dict[str, Any]:
         "remote_run_dir": result.remote_run_dir,
         "manifest_url": f"/api/jobs/{job_id}/manifest" if result.manifest_path else None,
     }
+    artifacts_dir = result.artifacts_dir
+    resource_usage = _json_artifact(artifacts_dir / RESOURCE_USAGE_ARTIFACT) if artifacts_dir is not None else None
+    pipeline_summary = _json_artifact(artifacts_dir / PIPELINE_SUMMARY_ARTIFACT) if artifacts_dir is not None else None
+    if resource_usage is None:
+        resource_usage = _raw_json_object(result.raw.get("resource_usage")) if result.raw else None
+    if pipeline_summary is None:
+        pipeline_summary = _raw_json_object(result.raw.get("pipeline_summary")) if result.raw else None
+    if artifacts_dir is not None and (artifacts_dir / RESOURCE_USAGE_ARTIFACT).is_file():
+        payload["resource_usage_url"] = f"/api/jobs/{job_id}/artifacts/{RESOURCE_USAGE_ARTIFACT}"
+    if artifacts_dir is not None and (artifacts_dir / PIPELINE_SUMMARY_ARTIFACT).is_file():
+        payload["pipeline_summary_url"] = f"/api/jobs/{job_id}/artifacts/{PIPELINE_SUMMARY_ARTIFACT}"
+    resource_summary = _raw_json_object(resource_usage.get("summary")) if resource_usage is not None else None
+    if resource_summary is not None:
+        payload["resource_summary"] = resource_summary
+    stage_summary = _pipeline_stage_summary(pipeline_summary)
+    if stage_summary:
+        payload["pipeline_stage_summary"] = stage_summary
     if result.raw:
         payload["raw"] = result.raw
     return payload
+
+
+def _json_artifact(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _raw_json_object(value: object) -> dict[str, Any] | None:
+    return value if isinstance(value, dict) else None
+
+
+def _pipeline_stage_summary(pipeline_summary: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if pipeline_summary is None:
+        return []
+    stages = pipeline_summary.get("stages")
+    if not isinstance(stages, list):
+        return []
+    normalized: list[dict[str, Any]] = []
+    for stage in stages:
+        if not isinstance(stage, dict):
+            continue
+        stage_name = stage.get("stage")
+        if not isinstance(stage_name, str):
+            continue
+        normalized_stage: dict[str, Any] = {"stage": stage_name}
+        wall_seconds = stage.get("wall_seconds")
+        if isinstance(wall_seconds, (int, float)):
+            normalized_stage["wall_seconds"] = round(float(wall_seconds), 3)
+        status = stage.get("status")
+        if isinstance(status, str):
+            normalized_stage["status"] = status
+        trust_badge = stage.get("trust_badge")
+        if isinstance(trust_badge, str):
+            normalized_stage["trust_badge"] = trust_badge
+        normalized.append(normalized_stage)
+    return normalized
 
 
 def _review_and_calibration_from_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:

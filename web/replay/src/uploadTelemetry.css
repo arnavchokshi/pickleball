@@ -1,0 +1,130 @@
+.resource-panel {
+  border: 1px solid rgba(214, 255, 64, 0.28);
+  border-radius: 8px;
+  margin-top: 18px;
+  padding: 16px;
+  background: rgba(4, 18, 15, 0.84);
+  color: #f4ffe8;
+}
+
+.resource-panel-head,
+.resource-metric-row,
+.resource-stage,
+.resource-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.resource-panel-head {
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.resource-panel-head span,
+.resource-metric span,
+.resource-stage span {
+  color: #b8c7bd;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.resource-panel-head strong,
+.resource-metric strong,
+.resource-stage strong {
+  color: #dfff3b;
+  font-size: 0.95rem;
+}
+
+.resource-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.resource-metric {
+  min-width: 0;
+  border: 1px solid rgba(152, 240, 255, 0.18);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.resource-metric small {
+  display: block;
+  min-height: 18px;
+  color: #a4b6ad;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.resource-bar,
+.resource-stage-track {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.resource-bar {
+  margin: 10px 0 8px;
+}
+
+.resource-bar span,
+.resource-stage-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6de8ff 0%, #dfff3b 100%);
+}
+
+.resource-stages {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.resource-stage {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(120px, 2fr) minmax(58px, auto);
+  align-items: center;
+}
+
+.resource-stage-track {
+  height: 10px;
+}
+
+.resource-links {
+  justify-content: flex-start;
+  margin-top: 14px;
+}
+
+.resource-links a {
+  color: #8eefff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.resource-links a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 860px) {
+  .resource-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .resource-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .resource-stage {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}

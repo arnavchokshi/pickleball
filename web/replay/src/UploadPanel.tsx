@@ -14,8 +14,11 @@ import {
   saveCourtReview,
   uploadVideoJob,
   type CourtPrediction,
+  type PipelineStageSummary,
+  type ResourceUsageSummary,
   type UploadJob,
 } from "./uploadApi";
+import "./uploadTelemetry.css";
 
 type UploadPanelProps = {
   apiBaseUrl?: string;
@@ -184,7 +187,144 @@ export function UploadPanel({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.tr
         {replayManifestUrl ? <a href={`/?manifest=${encodeURIComponent(replayManifestUrl)}`}>Open replay</a> : null}
         {error ? <span className="upload-error">{error}</span> : null}
       </div>
+      {job?.status === "complete" ? (
+        <ResourceUsagePanel
+          resourceSummary={job.result?.resource_summary}
+          stageSummary={job.result?.pipeline_stage_summary}
+          resourceUsageUrl={job.result?.resource_usage_url}
+          pipelineSummaryUrl={job.result?.pipeline_summary_url}
+          apiBaseUrl={apiBaseUrl}
+        />
+      ) : null}
     </section>
+  );
+}
+
+export type ResourceUsagePanelProps = {
+  resourceSummary?: ResourceUsageSummary | null;
+  stageSummary?: PipelineStageSummary[] | null;
+  resourceUsageUrl?: string | null;
+  pipelineSummaryUrl?: string | null;
+  apiBaseUrl?: string;
+};
+
+export function ResourceUsagePanel({
+  resourceSummary,
+  stageSummary,
+  resourceUsageUrl,
+  pipelineSummaryUrl,
+  apiBaseUrl = "",
+}: ResourceUsagePanelProps) {
+  const stages = stageSummary ?? [];
+  const hasSummary = resourceSummary && Object.keys(resourceSummary).length > 0;
+  const hasStages = stages.length > 0;
+  const stageMaxSeconds = Math.max(1, ...stages.map((stage) => stage.wall_seconds ?? 0));
+  const resourceHref = resourceUsageUrl ? apiUrl(resourceUsageUrl, apiBaseUrl) : null;
+  const pipelineHref = pipelineSummaryUrl ? apiUrl(pipelineSummaryUrl, apiBaseUrl) : null;
+
+  if (!hasSummary && !hasStages) {
+    return (
+      <div className="resource-panel" aria-label="Pipeline resource results">
+        <div className="resource-panel-head">
+          <span>Run results</span>
+          <strong>Telemetry unavailable</strong>
+        </div>
+      </div>
+    );
+  }
+
+  const vramPercent =
+    typeof resourceSummary?.gpu_memory_used_max_mb === "number" &&
+    typeof resourceSummary?.gpu_memory_total_mb === "number" &&
+    resourceSummary.gpu_memory_total_mb > 0
+      ? (resourceSummary.gpu_memory_used_max_mb / resourceSummary.gpu_memory_total_mb) * 100
+      : undefined;
+  const systemRamPercent =
+    typeof resourceSummary?.system_memory_used_max_mb === "number" &&
+    typeof resourceSummary?.system_memory_total_mb === "number" &&
+    resourceSummary.system_memory_total_mb > 0
+      ? (resourceSummary.system_memory_used_max_mb / resourceSummary.system_memory_total_mb) * 100
+      : undefined;
+
+  const metrics = [
+    {
+      label: "GPU utilization",
+      value: percentText(resourceSummary?.gpu_utilization_avg_pct),
+      detail: peakText(resourceSummary?.gpu_utilization_max_pct),
+      percent: resourceSummary?.gpu_utilization_avg_pct,
+    },
+    {
+      label: "VRAM peak",
+      value: bytesText(resourceSummary?.gpu_memory_used_max_mb),
+      detail: resourceSummary?.gpu_memory_total_mb ? `of ${bytesText(resourceSummary.gpu_memory_total_mb)}` : "peak allocation",
+      percent: vramPercent,
+    },
+    {
+      label: "CPU avg",
+      value: percentText(resourceSummary?.cpu_utilization_avg_pct),
+      detail: peakText(resourceSummary?.cpu_utilization_max_pct),
+      percent: resourceSummary?.cpu_utilization_avg_pct,
+    },
+    {
+      label: "GPU power",
+      value: wattsText(resourceSummary?.gpu_power_avg_w),
+      detail: peakWattsText(resourceSummary?.gpu_power_max_w),
+      percent: undefined,
+    },
+    {
+      label: "System RAM",
+      value: bytesText(resourceSummary?.system_memory_used_max_mb),
+      detail: resourceSummary?.system_memory_total_mb ? `of ${bytesText(resourceSummary.system_memory_total_mb)}` : "peak system use",
+      percent: systemRamPercent,
+    },
+    {
+      label: "Run time",
+      value: durationText(resourceSummary?.duration_s),
+      detail: resourceSummary?.sample_count ? `${resourceSummary.sample_count} samples` : "resource samples",
+      percent: 100,
+    },
+  ];
+
+  return (
+    <div className="resource-panel" aria-label="Pipeline resource results">
+      <div className="resource-panel-head">
+        <span>Run results</span>
+        <strong>GPU telemetry</strong>
+      </div>
+      <div className="resource-metrics">
+        {metrics.map((metric) => (
+          <div className="resource-metric" key={metric.label}>
+            <div className="resource-metric-row">
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+            </div>
+            <div className="resource-bar" aria-hidden="true">
+              <span style={{ width: `${clampedPercent(metric.percent)}%` }} />
+            </div>
+            <small>{metric.detail}</small>
+          </div>
+        ))}
+      </div>
+      {hasStages ? (
+        <div className="resource-stages" aria-label="Pipeline stage timing">
+          {stages.map((stage) => (
+            <div className="resource-stage" key={`${stage.stage}-${stage.wall_seconds ?? "unknown"}`}>
+              <span>{stage.stage}</span>
+              <div className="resource-stage-track" aria-hidden="true">
+                <span style={{ width: `${clampedPercent(((stage.wall_seconds ?? 0) / stageMaxSeconds) * 100)}%` }} />
+              </div>
+              <strong>{durationText(stage.wall_seconds)}</strong>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {(resourceHref || pipelineHref) && (
+        <div className="resource-links">
+          {resourceHref ? <a href={resourceHref}>Resource JSON</a> : null}
+          {pipelineHref ? <a href={pipelineHref}>Stage JSON</a> : null}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -211,4 +351,50 @@ function flowButtonLabel(stage: "idle" | "predicting" | "saving" | "submitting")
   if (stage === "saving") return "Saving";
   if (stage === "submitting") return "Submitting";
   return "Predict Court";
+}
+
+function clampedPercent(value: number | undefined): number {
+  if (typeof value !== "number" || Number.isNaN(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function percentText(value: number | undefined): string {
+  if (typeof value !== "number" || Number.isNaN(value)) return "n/a";
+  return `${roundOne(value)}%`;
+}
+
+function peakText(value: number | undefined): string {
+  if (typeof value !== "number" || Number.isNaN(value)) return "peak n/a";
+  return `${roundOne(value)}% peak`;
+}
+
+function bytesText(valueMb: number | undefined): string {
+  if (typeof valueMb !== "number" || Number.isNaN(valueMb)) return "n/a";
+  if (valueMb >= 1024) return `${roundOne(valueMb / 1024)} GB`;
+  return `${Math.round(valueMb)} MB`;
+}
+
+function wattsText(valueWatts: number | undefined): string {
+  if (typeof valueWatts !== "number" || Number.isNaN(valueWatts)) return "n/a";
+  return `${roundOne(valueWatts)} W`;
+}
+
+function peakWattsText(valueWatts: number | undefined): string {
+  if (typeof valueWatts !== "number" || Number.isNaN(valueWatts)) return "peak n/a";
+  return `${roundOne(valueWatts)} W peak`;
+}
+
+function durationText(valueSeconds: number | undefined): string {
+  if (typeof valueSeconds !== "number" || Number.isNaN(valueSeconds)) return "n/a";
+  if (valueSeconds < 60) return `${roundOne(valueSeconds)}s`;
+  const minutes = Math.floor(valueSeconds / 60);
+  const seconds = Math.round(valueSeconds % 60);
+  if (minutes < 60) return seconds ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+}
+
+function roundOne(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }

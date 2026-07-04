@@ -21,6 +21,14 @@ class CompletingRunner:
         request.artifacts_dir.mkdir(parents=True, exist_ok=True)
         manifest = request.artifacts_dir / "replay_viewer_manifest.json"
         manifest.write_text('{"artifact_type":"replay_viewer_manifest"}', encoding="utf-8")
+        (request.artifacts_dir / "gpu_resource_usage.json").write_text(
+            '{"artifact_type":"racketsport_resource_usage","summary":{"gpu_utilization_avg_pct":55.5,"gpu_memory_used_max_mb":12345}}',
+            encoding="utf-8",
+        )
+        (request.artifacts_dir / "PIPELINE_SUMMARY.json").write_text(
+            '{"status":"complete","stages":[{"stage":"ingest","wall_seconds":1.25},{"stage":"body","wall_seconds":9.5}]}',
+            encoding="utf-8",
+        )
         return GpuRunResult(
             status="complete",
             notes=["fake runner complete"],
@@ -143,6 +151,9 @@ def test_upload_job_saves_inputs_runs_gpu_and_exposes_manifest(tmp_path: Path) -
     assert status["status"] == "complete"
     assert status["clip"] == "drill_01"
     assert status["result"]["manifest_url"].endswith("/manifest")
+    assert status["result"]["resource_usage_url"].endswith("/artifacts/gpu_resource_usage.json")
+    assert status["result"]["pipeline_summary_url"].endswith("/artifacts/PIPELINE_SUMMARY.json")
+    assert status["result"]["resource_summary"]["gpu_utilization_avg_pct"] == 55.5
 
     assert runner.requests[0].clip == "drill_01"
     assert runner.requests[0].max_frames == 8

@@ -117,6 +117,9 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
     assert calls[3][0] == "rsync"
 
     remote_command = calls[2][-1]
+    assert "scripts/racketsport/monitor_process_resources.py" in remote_command
+    assert "--out /srv/pickleball/runs/render_jobs/job_1/out/clip_1/gpu_resource_usage.json" in remote_command
+    assert " -- /srv/pickleball/.venv/bin/python scripts/racketsport/process_video.py " in remote_command
     assert "scripts/racketsport/process_video.py" in remote_command
     assert "--body-local" in remote_command
     assert "--device cuda:0" in remote_command
@@ -136,6 +139,46 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
     assert rewritten_manifest["video_url"] == "/api/jobs/job_1/artifacts/source.mp4"
     assert rewritten_manifest["virtual_world_url"] == "/api/jobs/job_1/artifacts/confidence_gated_world.json"
     assert (tmp_path / "artifacts" / "source.mp4").read_bytes() == b"video"
+
+
+def test_ssh_runner_exposes_resource_usage_artifact(tmp_path: Path) -> None:
+    def fake_run(cmd: list[str], timeout_s: int | None) -> subprocess.CompletedProcess[str]:
+        if cmd[0] == "rsync" and "gpu.example:/srv/pickleball/runs/render_jobs/job_1/out/clip_1/" in cmd[-2]:
+            (tmp_path / "artifacts").mkdir(parents=True, exist_ok=True)
+            (tmp_path / "artifacts" / "replay_viewer_manifest.json").write_text("{}", encoding="utf-8")
+            (tmp_path / "artifacts" / "gpu_resource_usage.json").write_text(
+                json.dumps(
+                    {
+                        "artifact_type": "racketsport_resource_usage",
+                        "summary": {"gpu_utilization_avg_pct": 64.2, "gpu_memory_used_max_mb": 22118},
+                    }
+                ),
+                encoding="utf-8",
+            )
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    input_dir = tmp_path / "input"
+    input_dir.mkdir()
+    video = input_dir / "clip.mp4"
+    video.write_bytes(b"video")
+    request = GpuRunRequest(
+        job_id="job_1",
+        clip="clip_1",
+        input_dir=input_dir,
+        video_path=video,
+        artifacts_dir=tmp_path / "artifacts",
+    )
+    runner = SshGpuRunner(
+        host="gpu.example",
+        key_path="/etc/secrets/gcp_ssh_key",
+        remote_repo="/srv/pickleball",
+        remote_python="/srv/pickleball/.venv/bin/python",
+        run=fake_run,
+    )
+
+    result = runner.run(request)
+
+    assert result.raw["resource_usage"]["summary"]["gpu_utilization_avg_pct"] == 64.2
 
 
 def test_local_pipeline_runner_requires_explicit_enablement(tmp_path: Path) -> None:

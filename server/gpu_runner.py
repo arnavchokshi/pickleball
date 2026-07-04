@@ -13,6 +13,8 @@ from typing import Callable, Mapping, Sequence
 import httpx
 
 SAFE_SLUG_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
+RESOURCE_USAGE_ARTIFACT = "gpu_resource_usage.json"
+PIPELINE_SUMMARY_ARTIFACT = "PIPELINE_SUMMARY.json"
 
 
 class MissingGpuRunnerConfig(RuntimeError):
@@ -171,7 +173,12 @@ class SshGpuRunner(GpuRunner):
             stage="Preparing GPU workspace",
             message="Creating the remote job directory.",
         )
-        self._checked_run([*self._ssh_base(), f"mkdir -p {shlex.quote(remote_input_dir)} {shlex.quote(remote_out_dir)}"])
+        self._checked_run(
+            [
+                *self._ssh_base(),
+                f"mkdir -p {shlex.quote(remote_input_dir)} {shlex.quote(remote_out_dir)} {shlex.quote(remote_artifacts_dir)}",
+            ]
+        )
         self.emit_progress(
             request,
             percent=20,
@@ -214,12 +221,14 @@ class SshGpuRunner(GpuRunner):
         prepare_render_artifacts(request)
 
         manifest_path = request.artifacts_dir / "replay_viewer_manifest.json"
+        raw = _artifact_payloads(request.artifacts_dir)
         return GpuRunResult(
             status="complete",
             notes=["processed on configured GCP GPU host via SSH"],
             artifacts_dir=request.artifacts_dir,
             manifest_path=manifest_path if manifest_path.is_file() else None,
             remote_run_dir=remote_artifacts_dir,
+            raw=raw,
         )
 
     def _ssh_options(self) -> list[str]:
@@ -245,7 +254,7 @@ class SshGpuRunner(GpuRunner):
 
     def _remote_process_command(self, request: GpuRunRequest, remote_input_dir: str, remote_out_dir: str) -> str:
         video_name = request.video_path.name
-        args = [
+        process_args = [
             self.remote_python,
             "scripts/racketsport/process_video.py",
             "--video",
@@ -260,21 +269,32 @@ class SshGpuRunner(GpuRunner):
             "--json",
         ]
         if request.allow_auto_court_corners_preview:
-            args.append("--allow-auto-court-corners-preview")
+            process_args.append("--allow-auto-court-corners-preview")
         if self.wasb_repo:
-            args.extend(["--wasb-repo", self.wasb_repo])
+            process_args.extend(["--wasb-repo", self.wasb_repo])
         if self.wasb_checkpoint:
-            args.extend(["--wasb-checkpoint", self.wasb_checkpoint])
+            process_args.extend(["--wasb-checkpoint", self.wasb_checkpoint])
         if request.max_frames is not None:
-            args.extend(["--max-frames", str(request.max_frames)])
+            process_args.extend(["--max-frames", str(request.max_frames)])
         if request.capture_sidecar_path is not None:
-            args.extend(["--capture-sidecar", f"{remote_input_dir}/{request.capture_sidecar_path.name}"])
+            process_args.extend(["--capture-sidecar", f"{remote_input_dir}/{request.capture_sidecar_path.name}"])
         if request.court_corners_path is not None:
-            args.extend(["--court-corners", f"{remote_input_dir}/{request.court_corners_path.name}"])
+            process_args.extend(["--court-corners", f"{remote_input_dir}/{request.court_corners_path.name}"])
         if request.court_calibration_path is not None and self.supports_court_calibration:
-            args.extend(["--court-calibration", f"{remote_input_dir}/{request.court_calibration_path.name}"])
+            process_args.extend(["--court-calibration", f"{remote_input_dir}/{request.court_calibration_path.name}"])
 
-        quoted = " ".join(shlex.quote(arg) for arg in args)
+        telemetry_path = f"{remote_out_dir}/{safe_slug(request.clip)}/{RESOURCE_USAGE_ARTIFACT}"
+        monitor_args = [
+            self.remote_python,
+            "scripts/racketsport/monitor_process_resources.py",
+            "--out",
+            telemetry_path,
+            "--sample-interval",
+            "5",
+            "--",
+            *process_args,
+        ]
+        quoted = " ".join(shlex.quote(arg) for arg in monitor_args)
         env_prefix = self._remote_env_prefix()
         return f"cd {shlex.quote(self.remote_repo)} && {env_prefix}{quoted}"
 
@@ -467,6 +487,27 @@ def prepare_render_artifacts(request: GpuRunRequest) -> None:
     request.artifacts_dir.mkdir(parents=True, exist_ok=True)
     _copy_source_video_artifact(request)
     _rewrite_manifest_urls_for_render(request)
+
+
+def _artifact_payloads(artifacts_dir: Path) -> dict[str, object]:
+    payloads: dict[str, object] = {}
+    resource_usage = _load_json_artifact(artifacts_dir / RESOURCE_USAGE_ARTIFACT)
+    if resource_usage is not None:
+        payloads["resource_usage"] = resource_usage
+    pipeline_summary = _load_json_artifact(artifacts_dir / PIPELINE_SUMMARY_ARTIFACT)
+    if pipeline_summary is not None:
+        payloads["pipeline_summary"] = pipeline_summary
+    return payloads
+
+
+def _load_json_artifact(path: Path) -> dict[str, object] | None:
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    return payload if isinstance(payload, dict) else None
 
 
 def _copy_source_video_artifact(request: GpuRunRequest) -> None:

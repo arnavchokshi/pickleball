@@ -16,6 +16,30 @@ export type UploadJobProgress = {
   steps?: UploadJobStep[];
 };
 
+export type ResourceUsageSummary = {
+  sample_count?: number;
+  duration_s?: number;
+  gpu_utilization_avg_pct?: number;
+  gpu_utilization_max_pct?: number;
+  gpu_memory_utilization_avg_pct?: number;
+  gpu_memory_utilization_max_pct?: number;
+  gpu_memory_used_max_mb?: number;
+  gpu_memory_total_mb?: number;
+  gpu_power_avg_w?: number;
+  gpu_power_max_w?: number;
+  cpu_utilization_avg_pct?: number;
+  cpu_utilization_max_pct?: number;
+  system_memory_used_max_mb?: number;
+  system_memory_total_mb?: number;
+};
+
+export type PipelineStageSummary = {
+  stage: string;
+  wall_seconds?: number;
+  status?: string;
+  trust_badge?: string;
+};
+
 export type UploadJob = {
   id: string;
   clip?: string;
@@ -24,6 +48,10 @@ export type UploadJob = {
   error?: string | null;
   result?: {
     manifest_url?: string | null;
+    resource_usage_url?: string | null;
+    pipeline_summary_url?: string | null;
+    resource_summary?: ResourceUsageSummary | null;
+    pipeline_stage_summary?: PipelineStageSummary[];
     notes?: string[];
     remote_run_dir?: string | null;
   } | null;

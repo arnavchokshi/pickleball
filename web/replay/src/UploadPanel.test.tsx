@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { UploadPanel, jobStatusText, pipelineProgressLabel, uploadErrorText } from "./UploadPanel";
+import { ResourceUsagePanel, UploadPanel, jobStatusText, pipelineProgressLabel, uploadErrorText } from "./UploadPanel";
 
 describe("jobStatusText", () => {
   it("maps server job states to concise user-facing labels", () => {
@@ -54,5 +54,33 @@ describe("UploadPanel", () => {
     expect(markup).not.toContain("Upload and process");
     expect(markup).not.toContain("Capture sidecar");
     expect(markup).not.toContain("Court calibration");
+  });
+});
+
+describe("ResourceUsagePanel", () => {
+  it("summarizes GPU, VRAM, CPU, and stage timing in the completed job view", () => {
+    const markup = renderToStaticMarkup(
+      <ResourceUsagePanel
+        resourceSummary={{
+          gpu_utilization_avg_pct: 55.5,
+          gpu_utilization_max_pct: 91,
+          gpu_memory_used_max_mb: 12345,
+          gpu_memory_total_mb: 24576,
+          cpu_utilization_avg_pct: 38.4,
+          sample_count: 18,
+          duration_s: 96.2,
+        }}
+        stageSummary={[
+          { stage: "ingest", wall_seconds: 1.25 },
+          { stage: "body", wall_seconds: 9.5 },
+        ]}
+      />,
+    );
+
+    expect(markup).toContain("GPU utilization");
+    expect(markup).toContain("VRAM peak");
+    expect(markup).toContain("CPU avg");
+    expect(markup).toContain("body");
+    expect(markup).toContain("9.5s");
   });
 });
