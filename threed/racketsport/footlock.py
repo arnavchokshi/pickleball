@@ -35,6 +35,7 @@ class FootKinematics:
     position_xyz: list[float]
     velocity_xyz: list[float]
     contact: bool
+    frame_index: int | None = None
 
 
 @dataclass(frozen=True)
@@ -86,12 +87,14 @@ def snap_stance_foot(foot: FootKinematics, *, court_z_m: float = 0.0) -> FootKin
             position_xyz=list(foot.position_xyz),
             velocity_xyz=list(foot.velocity_xyz),
             contact=False,
+            frame_index=foot.frame_index,
         )
 
     return FootKinematics(
         position_xyz=[foot.position_xyz[0], foot.position_xyz[1], court_z_m],
         velocity_xyz=[0.0, 0.0, 0.0],
         contact=True,
+        frame_index=foot.frame_index,
     )
 
 
@@ -99,7 +102,8 @@ def foot_lock_metrics(samples: Sequence[FootKinematics], *, court_z_m: float = 0
     max_slide_m = 0.0
     max_penetration_m = 0.0
     contact_frames = 0
-    previous_contact_sample: FootKinematics | None = None
+    phase_anchor_sample: FootKinematics | None = None
+    previous_contact_frame_index: int | None = None
 
     for sample in samples:
         _validate_vector3(sample.position_xyz, name="position_xyz")
@@ -110,15 +114,23 @@ def foot_lock_metrics(samples: Sequence[FootKinematics], *, court_z_m: float = 0
 
         if sample.contact:
             contact_frames += 1
-            if previous_contact_sample is not None:
+            frame_gap_reset = (
+                sample.frame_index is not None
+                and previous_contact_frame_index is not None
+                and int(sample.frame_index) > int(previous_contact_frame_index) + 1
+            )
+            if phase_anchor_sample is None or frame_gap_reset:
+                phase_anchor_sample = sample
+            else:
                 slide_m = math.hypot(
-                    sample.position_xyz[0] - previous_contact_sample.position_xyz[0],
-                    sample.position_xyz[1] - previous_contact_sample.position_xyz[1],
+                    sample.position_xyz[0] - phase_anchor_sample.position_xyz[0],
+                    sample.position_xyz[1] - phase_anchor_sample.position_xyz[1],
                 )
                 max_slide_m = max(max_slide_m, slide_m)
-            previous_contact_sample = sample
+            previous_contact_frame_index = int(sample.frame_index) if sample.frame_index is not None else None
         else:
-            previous_contact_sample = None
+            phase_anchor_sample = None
+            previous_contact_frame_index = None
 
     return FootLockMetrics(
         max_slide_m=max_slide_m,

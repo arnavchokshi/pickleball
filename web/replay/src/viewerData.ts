@@ -77,6 +77,9 @@ export type ViewerManifest = {
   events_selected_url: string | null;
   shots_url?: string;
   ball_arc_solved_url?: string;
+  auto_bounce_candidates_url?: string;
+  ball_bounce_candidates_url?: string;
+  ball_flight_sanity_url?: string;
   rally_spans_url?: string;
   rally_metrics_url?: string;
   coaching_card_facts_url?: string;
@@ -613,6 +616,15 @@ export function parseViewerManifest(input: unknown): ViewerManifest {
   }
   if (value.ball_arc_solved_url !== null && value.ball_arc_solved_url !== undefined) {
     manifest.ball_arc_solved_url = readString(value.ball_arc_solved_url, "manifest.ball_arc_solved_url");
+  }
+  if (value.auto_bounce_candidates_url !== null && value.auto_bounce_candidates_url !== undefined) {
+    manifest.auto_bounce_candidates_url = readString(value.auto_bounce_candidates_url, "manifest.auto_bounce_candidates_url");
+  }
+  if (value.ball_bounce_candidates_url !== null && value.ball_bounce_candidates_url !== undefined) {
+    manifest.ball_bounce_candidates_url = readString(value.ball_bounce_candidates_url, "manifest.ball_bounce_candidates_url");
+  }
+  if (value.ball_flight_sanity_url !== null && value.ball_flight_sanity_url !== undefined) {
+    manifest.ball_flight_sanity_url = readString(value.ball_flight_sanity_url, "manifest.ball_flight_sanity_url");
   }
   return manifest;
 }
@@ -1279,9 +1291,17 @@ export function playerCoverageStats(world: VirtualWorld): {
 
 export function worldWarningsReadout(world: Pick<VirtualWorld, "summary">): string {
   const warnings = world.summary.warnings;
-  if (!warnings.length) return "0 warnings";
+  if (!warnings.length) return "0 notices";
+  const readable = warnings.map(friendlyWorldWarning);
   const suffix = warnings.length > 2 ? `, +${warnings.length - 2} more` : "";
-  return `${warnings.length} warning${warnings.length === 1 ? "" : "s"}: ${warnings.slice(0, 2).join(", ")}${suffix}`;
+  return `${warnings.length} notice${warnings.length === 1 ? "" : "s"}: ${readable.slice(0, 2).join(", ")}${suffix}`;
+}
+
+function friendlyWorldWarning(warning: string): string {
+  if (warning === "unprojected_visible_ball_frames") return "2D-only ball frames outside solved arc coverage";
+  if (warning === "missing_paddle_pose") return "missing paddle pose";
+  if (warning === "missing_mesh_vertices") return "missing mesh vertices";
+  return warning.replaceAll("_", " ");
 }
 
 export function entityCoverageReadout(label: string, entity: EntityCoverage | null | undefined): string {
@@ -1294,6 +1314,30 @@ export function entityCoverageReadout(label: string, entity: EntityCoverage | nu
     return `${label} ${coverageText} / ${minT.toFixed(2)}-${maxT.toFixed(2)}s`;
   }
   return `${label} ${coverageText}`;
+}
+
+export function ballCoverageKpiReadout(world: Pick<VirtualWorld, "ball">): string {
+  const frames = world.ball.frames;
+  if (!frames.length) return "coverage n/a";
+  const counts = frames.reduce(
+    (acc, frame) => {
+      acc[ballFrameCoverageBucket(frame)] += 1;
+      return acc;
+    },
+    { measured: 0, predicted: 0, hidden: 0 },
+  );
+  if (counts.measured === 0 && counts.predicted === 0 && counts.hidden === 0) return "coverage n/a";
+  return `${counts.measured}/${frames.length} measured · ${counts.predicted} predicted · ${counts.hidden} hidden`;
+}
+
+function ballFrameCoverageBucket(frame: VirtualWorldBallFrame): "measured" | "predicted" | "hidden" {
+  const rawBand = (frame.confidence_provenance?.display_band ?? frame.confidence_provenance?.band ?? "").toLowerCase();
+  if (!frame.world_xyz || rawBand.startsWith("hidden") || rawBand.includes("no_prediction") || rawBand.includes("no_anchor")) {
+    return "hidden";
+  }
+  if (rawBand === "measured" || rawBand === "anchored_measured") return "measured";
+  if (rawBand.includes("predicted") || rawBand.startsWith("physics") || rawBand.startsWith("arc_")) return "predicted";
+  return frame.approx ? "predicted" : "measured";
 }
 
 const TRUST_BADGE_COLORS: Record<TrustBadge, string> = {

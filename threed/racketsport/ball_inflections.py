@@ -176,21 +176,27 @@ def build_ball_inflections_from_ball_track(
                 continue
 
             confidence = _candidate_confidence(current, previous, following, turn_degrees)
-            raw_candidates.append(
-                {
-                    "time_s": current["time_s"],
-                    "frame": current.get("frame"),
-                    "ball_image_xy": [round(float(value), 9) for value in current["image_xy"]],
-                    "ball_world_xyz": [round(float(value), 9) for value in current.get("world_xyz", (0.0, 0.0, 0.0))],
-                    "confidence": confidence,
-                    "turn_angle_deg": round(turn_degrees, 6),
-                    "speed_before_px_s": round(speed_before, 6),
-                    "speed_after_px_s": round(speed_after, 6),
-                    "window_frames": window_frames,
-                    "approx": bool(current.get("approx", False) or previous.get("approx", False) or following.get("approx", False)),
-                    "source": "ball_track_image_motion",
-                }
-            )
+            candidate = {
+                "time_s": current["time_s"],
+                "frame": current.get("frame"),
+                "ball_image_xy": [round(float(value), 9) for value in current["image_xy"]],
+                "confidence": confidence,
+                "turn_angle_deg": round(turn_degrees, 6),
+                "speed_before_px_s": round(speed_before, 6),
+                "speed_after_px_s": round(speed_after, 6),
+                "window_frames": window_frames,
+                "approx": bool(current.get("approx", False) or previous.get("approx", False) or following.get("approx", False)),
+                "source": "ball_track_image_motion",
+            }
+            if current.get("world_xyz") is None:
+                candidate["ball_world_xyz"] = None
+                candidate["ball_world_xyz_source"] = "missing_from_raw_ball_track"
+                candidate["render_only"] = True
+                candidate["not_for_detection_metrics"] = True
+            else:
+                candidate["ball_world_xyz"] = [round(float(value), 9) for value in current["world_xyz"]]
+                candidate["ball_world_xyz_source"] = "ball_track_world_xyz"
+            raw_candidates.append(candidate)
     candidates = _suppress_nearby_candidates(raw_candidates, min_separation_s=min_candidate_separation_s)
 
     return {

@@ -32,6 +32,7 @@ DEFAULT_WRIST_ONE_EURO_BETA = 0.0
 # stance-phase slide in the SAM-3D refine chain, not bone-length or grounding.
 DEFAULT_FOOT_ONE_EURO_MINCUTOFF = 1000.0
 DEFAULT_FOOT_ONE_EURO_BETA = 0.0
+DEFAULT_SAM3D_SMOOTHING_MAX_DISPLACEMENT_M = 0.03
 DEFAULT_LOW_CONFIDENCE_JOINT_THRESHOLD = 0.25
 DEFAULT_PLAUSIBILITY_JOINT_CONFIDENCE_FLOOR = 0.25
 DEFAULT_PLAUSIBILITY_MAX_BONE_ZSCORE = 6.0
@@ -245,6 +246,7 @@ def refine_lane_a_skeleton3d(
     wrist_one_euro_beta: float = DEFAULT_WRIST_ONE_EURO_BETA,
     foot_one_euro_mincutoff: float | None = None,
     foot_one_euro_beta: float | None = None,
+    smoothing_max_displacement_m: float | None = None,
     low_confidence_threshold: float = DEFAULT_LOW_CONFIDENCE_JOINT_THRESHOLD,
     motionbert_window_max_frames: int = DEFAULT_MOTIONBERT_WINDOW_MAX_FRAMES,
     motionbert_runtime: Any | None = None,
@@ -275,6 +277,8 @@ def refine_lane_a_skeleton3d(
         raise ValueError("foot_one_euro_mincutoff must be positive")
     if foot_one_euro_beta is not None and foot_one_euro_beta < 0.0:
         raise ValueError("foot_one_euro_beta must be non-negative")
+    if smoothing_max_displacement_m is not None and smoothing_max_displacement_m <= 0.0:
+        raise ValueError("smoothing_max_displacement_m must be positive")
     if not 0.0 <= low_confidence_threshold <= 1.0:
         raise ValueError("low_confidence_threshold must be in [0, 1]")
     if motionbert_window_max_frames <= 0:
@@ -330,6 +334,7 @@ def refine_lane_a_skeleton3d(
             wrist_beta=wrist_one_euro_beta,
             foot_mincutoff=effective_foot_mincutoff,
             foot_beta=effective_foot_beta,
+            max_displacement_m=smoothing_max_displacement_m,
             low_confidence_threshold=low_confidence_threshold,
         )
         _add_smoothing_metrics(smoothing_metrics, player_smoothing_metrics)
@@ -347,6 +352,8 @@ def refine_lane_a_skeleton3d(
             grounded_frames,
             joint_names,
             fps=inferred_fps,
+            max_displacement_m=smoothing_max_displacement_m,
+            raw_reference_frames=motionbert_frames if smoothing_max_displacement_m is not None else None,
         )
         _add_smoothing_metrics(smoothing_metrics, player_final_guard_metrics)
         _add_grounding_metrics(grounding_metrics, player_grounding_metrics)
@@ -376,6 +383,7 @@ def refine_lane_a_skeleton3d(
         grounding_metrics=grounding_metrics,
         core_clamp_engagement_by_player=core_clamp_engagement_by_player,
         world_grounding_applied=apply_world_grounding,
+        smoothing_max_displacement_m=smoothing_max_displacement_m,
     )
     return output
 
@@ -393,6 +401,7 @@ def refine_sam3d_skeleton3d(
     sam3d_foot_low_lag_smoothing: bool = True,
     foot_one_euro_mincutoff: float = DEFAULT_FOOT_ONE_EURO_MINCUTOFF,
     foot_one_euro_beta: float = DEFAULT_FOOT_ONE_EURO_BETA,
+    smoothing_max_displacement_m: float | None = DEFAULT_SAM3D_SMOOTHING_MAX_DISPLACEMENT_M,
     low_confidence_threshold: float = DEFAULT_LOW_CONFIDENCE_JOINT_THRESHOLD,
     plausibility_joint_confidence_floor: float = DEFAULT_PLAUSIBILITY_JOINT_CONFIDENCE_FLOOR,
     plausibility_max_bone_zscore: float = DEFAULT_PLAUSIBILITY_MAX_BONE_ZSCORE,
@@ -428,6 +437,8 @@ def refine_sam3d_skeleton3d(
         raise ValueError("plausibility_min_sigma_m must be positive")
     if max_wrist_peak_delta_frames < 0:
         raise ValueError("max_wrist_peak_delta_frames must be non-negative")
+    if smoothing_max_displacement_m is not None and smoothing_max_displacement_m <= 0.0:
+        raise ValueError("smoothing_max_displacement_m must be positive")
 
     before = copy.deepcopy(dict(skeleton3d))
     plausibility_checked, plausibility = _apply_sam3d_skeleton_plausibility(
@@ -448,6 +459,7 @@ def refine_sam3d_skeleton3d(
         wrist_one_euro_beta=wrist_one_euro_beta,
         foot_one_euro_mincutoff=foot_one_euro_mincutoff if sam3d_foot_low_lag_smoothing else None,
         foot_one_euro_beta=foot_one_euro_beta if sam3d_foot_low_lag_smoothing else None,
+        smoothing_max_displacement_m=smoothing_max_displacement_m,
         low_confidence_threshold=low_confidence_threshold,
         motionbert_runtime=None,
         apply_world_grounding=apply_world_grounding,
@@ -839,6 +851,7 @@ def _apply_one_euro(
     foot_mincutoff: float,
     foot_beta: float,
     low_confidence_threshold: float,
+    max_displacement_m: float | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     filter_indexes = list(range(len(joint_names)))
     joint_groups = {
@@ -912,6 +925,16 @@ def _apply_one_euro(
                 key = (joint_idx, axis)
                 filt = filters.setdefault(key, OneEuroFilter(freq=current_fps, mincutoff=group_mincutoff, beta=group_beta))
                 joints[joint_idx][axis] = filt.filter(float(target[axis]), freq=current_fps)
+            if max_displacement_m is not None:
+                capped, was_capped = _cap_joint_displacement(
+                    raw_joints[joint_idx],
+                    joints[joint_idx],
+                    max_displacement_m=max_displacement_m,
+                )
+                if was_capped:
+                    joints[joint_idx] = capped
+                    _set_one_euro_output_state(filters, joint_idx, capped)
+                    _add_joint_flag(frame_flags, joint_idx, "smoothing_displacement_capped")
         for flags in frame_flags:
             for flag in flags:
                 metrics["flag_counts"][flag] += 1
@@ -955,6 +978,36 @@ def _apply_bone_lengths(
         output["joints_world"] = joints
         constrained.append(output)
     return constrained
+
+
+def _cap_joint_displacement(
+    raw_joint: Sequence[float],
+    candidate_joint: Sequence[float],
+    *,
+    max_displacement_m: float,
+) -> tuple[list[float], bool]:
+    displacement = math.dist(raw_joint, candidate_joint)
+    if displacement <= float(max_displacement_m) or displacement <= 1e-12:
+        return [float(value) for value in candidate_joint], False
+    scale = float(max_displacement_m) / displacement
+    return (
+        [
+            float(raw_joint[axis]) + (float(candidate_joint[axis]) - float(raw_joint[axis])) * scale
+            for axis in range(3)
+        ],
+        True,
+    )
+
+
+def _set_one_euro_output_state(
+    filters: Mapping[tuple[int, int], "OneEuroFilter"],
+    joint_idx: int,
+    joint: Sequence[float],
+) -> None:
+    for axis in range(3):
+        filt = filters.get((joint_idx, axis))
+        if filt is not None:
+            filt.x_hat_previous = float(joint[axis])
 
 
 def _median_bone_lengths(frames: Sequence[Mapping[str, Any]], joint_names: Sequence[str]) -> dict[tuple[int, int], float]:
@@ -1501,6 +1554,7 @@ def _provenance_with_temporal_refine(
     grounding_metrics: Mapping[str, int],
     core_clamp_engagement_by_player: Mapping[str, Mapping[str, Any]],
     world_grounding_applied: bool,
+    smoothing_max_displacement_m: float | None,
 ) -> dict[str, Any]:
     output = dict(provenance) if isinstance(provenance, Mapping) else {}
     motionbert_status = "applied" if int(motionbert_metrics["motionbert_frame_count"]) > 0 else "not_configured"
@@ -1508,6 +1562,36 @@ def _provenance_with_temporal_refine(
         str(flag): int(count)
         for flag, count in sorted(dict(smoothing_metrics.get("flag_counts", {})).items())
     }
+    one_euro_record = {
+        "mincutoff": mincutoff,
+        "beta": beta,
+        "core_body_mincutoff": core_mincutoff,
+        "core_body_beta": core_beta,
+        "wrist_mincutoff": wrist_mincutoff,
+        "wrist_beta": wrist_beta,
+        "foot_mincutoff": foot_mincutoff,
+        "foot_beta": foot_beta,
+        "applied_joint_groups": ["core_body", "feet", "hands", "wrists"],
+        "filtered_joint_count": int(smoothing_metrics.get("filtered_joint_count", 0)),
+    }
+    if smoothing_max_displacement_m is not None:
+        one_euro_record["smoothing_max_displacement_m"] = float(smoothing_max_displacement_m)
+    physical_plausibility = {
+        "core_body_speed_flag_mps": CORE_BODY_SPEED_FLAG_MPS,
+        "core_body_speed_sustained_frame_count": CORE_SPEED_SUSTAINED_FRAME_COUNT,
+        "core_body_speed_clamp_engagement_flag": "final_core_speed_clamped",
+        "single_frame_jump_flag_m": SINGLE_FRAME_JUMP_FLAG_M,
+        "flagged_joints_are_damped": True,
+        "core_body_speed_clamp_engagement_by_player": {
+            str(player_id): dict(summary)
+            for player_id, summary in sorted(core_clamp_engagement_by_player.items())
+        },
+        "core_body_speed_clamp_engagement_overall": _core_body_speed_clamp_engagement_overall(
+            core_clamp_engagement_by_player
+        ),
+    }
+    if smoothing_max_displacement_m is not None:
+        physical_plausibility["smoothing_max_displacement_m"] = float(smoothing_max_displacement_m)
     output["temporal_refine"] = {
         "motionbert": motionbert_status,
         "motionbert_model_id": str(motionbert_metrics.get("motionbert_model_id", "")),
@@ -1515,31 +1599,8 @@ def _provenance_with_temporal_refine(
         "motionbert_window_count": int(motionbert_metrics["motionbert_window_count"]),
         "motionbert_frame_count": int(motionbert_metrics["motionbert_frame_count"]),
         "motionbert_body_format": "h36m_17",
-        "one_euro": {
-            "mincutoff": mincutoff,
-            "beta": beta,
-            "core_body_mincutoff": core_mincutoff,
-            "core_body_beta": core_beta,
-            "wrist_mincutoff": wrist_mincutoff,
-            "wrist_beta": wrist_beta,
-            "foot_mincutoff": foot_mincutoff,
-            "foot_beta": foot_beta,
-            "applied_joint_groups": ["core_body", "feet", "hands", "wrists"],
-            "filtered_joint_count": int(smoothing_metrics.get("filtered_joint_count", 0)),
-        },
-        "physical_plausibility": {
-            "core_body_speed_flag_mps": CORE_BODY_SPEED_FLAG_MPS,
-            "core_body_speed_sustained_frame_count": CORE_SPEED_SUSTAINED_FRAME_COUNT,
-            "single_frame_jump_flag_m": SINGLE_FRAME_JUMP_FLAG_M,
-            "flagged_joints_are_damped": True,
-            "core_body_speed_clamp_engagement_by_player": {
-                str(player_id): dict(summary)
-                for player_id, summary in sorted(core_clamp_engagement_by_player.items())
-            },
-            "core_body_speed_clamp_engagement_overall": _core_body_speed_clamp_engagement_overall(
-                core_clamp_engagement_by_player
-            ),
-        },
+        "one_euro": one_euro_record,
+        "physical_plausibility": physical_plausibility,
         "low_confidence_threshold": low_confidence_threshold,
         "smoothing_flags": smoothing_flag_counts,
         "bone_length_constraint": "body17_median_per_player",
@@ -1644,6 +1705,8 @@ def _apply_final_core_jitter_guard(
     joint_names: Sequence[str],
     *,
     fps: float,
+    max_displacement_m: float | None = None,
+    raw_reference_frames: Sequence[Mapping[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     guarded: list[dict[str, Any]] = []
     metrics = _empty_smoothing_metrics()
@@ -1653,11 +1716,17 @@ def _apply_final_core_jitter_guard(
         if _joint_smoothing_group(name, joint_names) == "core_body"
     ]
     previous_output_by_joint: dict[int, list[float]] = {}
+    previous_raw_reference_by_joint: dict[int, list[float]] = {}
     high_core_speed_streaks: dict[int, int] = {}
     previous_t: float | None = None
-    for frame in frames:
+    for frame_pos, frame in enumerate(frames):
         output = copy.deepcopy(dict(frame))
         joints = _joint_vectors(output)
+        raw_reference_joints = (
+            _joint_vectors(raw_reference_frames[frame_pos])
+            if raw_reference_frames is not None and frame_pos < len(raw_reference_frames)
+            else []
+        )
         flags = [_parse_joint_flags(value) for value in output.get("smoothing_flag", [])]
         if len(flags) < len(joints):
             flags.extend([] for _idx in range(len(joints) - len(flags)))
@@ -1672,10 +1741,23 @@ def _apply_final_core_jitter_guard(
                 continue
             displacement_m = math.dist(previous, joints[joint_idx])
             speed_mps = displacement_m / dt
+            raw_current = raw_reference_joints[joint_idx] if joint_idx < len(raw_reference_joints) else None
+            raw_previous = previous_raw_reference_by_joint.get(joint_idx)
+            raw_speed_mps: float | None = None
+            raw_displacement_m: float | None = None
+            if raw_current is not None and raw_previous is not None:
+                raw_displacement_m = math.dist(raw_previous, raw_current)
+                raw_speed_mps = raw_displacement_m / dt
             clamp_flags: list[str] = []
-            if displacement_m > SINGLE_FRAME_JUMP_FLAG_M:
+            single_frame_jump_is_anomaly = displacement_m > SINGLE_FRAME_JUMP_FLAG_M
+            if raw_displacement_m is not None and raw_displacement_m > SINGLE_FRAME_JUMP_FLAG_M:
+                single_frame_jump_is_anomaly = False
+            if single_frame_jump_is_anomaly:
                 clamp_flags.append("single_frame_jump_clamped")
-            if speed_mps > CORE_BODY_SPEED_FLAG_MPS:
+            core_speed_is_anomaly = speed_mps > CORE_BODY_SPEED_FLAG_MPS
+            if raw_speed_mps is not None and raw_speed_mps > CORE_BODY_SPEED_FLAG_MPS:
+                core_speed_is_anomaly = False
+            if core_speed_is_anomaly:
                 high_core_speed_streaks[joint_idx] = high_core_speed_streaks.get(joint_idx, 0) + 1
             else:
                 high_core_speed_streaks[joint_idx] = 0
@@ -1688,15 +1770,32 @@ def _apply_final_core_jitter_guard(
                 joints[joint_idx],
                 max_step_m=_max_damped_step_m(group="core_body", dt=dt),
             )
+            if max_displacement_m is not None and raw_current is not None:
+                capped, was_capped = _cap_joint_displacement(
+                    raw_current,
+                    joints[joint_idx],
+                    max_displacement_m=max_displacement_m,
+                )
+                if was_capped:
+                    joints[joint_idx] = capped
+                    _add_joint_flag(flags, joint_idx, "smoothing_displacement_capped")
+                    metrics["flag_counts"]["smoothing_displacement_capped"] += 1
             for flag in clamp_flags:
                 _add_joint_flag(flags, joint_idx, flag)
                 metrics["flag_counts"][flag] += 1
+                if flag == "core_speed_clamped":
+                    _add_joint_flag(flags, joint_idx, "final_core_speed_clamped")
+                    metrics["flag_counts"]["final_core_speed_clamped"] += 1
         output["joints_world"] = joints
         output["smoothing_flag"] = [_format_joint_flags(flag_values) for flag_values in flags]
         guarded.append(output)
         previous_output_by_joint = {
             idx: list(joints[idx])
             for idx in range(min(len(joints), len(joint_names)))
+        }
+        previous_raw_reference_by_joint = {
+            idx: list(raw_reference_joints[idx])
+            for idx in range(min(len(raw_reference_joints), len(joint_names)))
         }
     return guarded, metrics
 
@@ -1724,7 +1823,7 @@ def _core_body_speed_clamp_engagement(
             total_core_joint_sample_count += 1
             if not isinstance(flags, list) or joint_idx >= len(flags):
                 continue
-            if "core_speed_clamped" in _parse_joint_flags(flags[joint_idx]):
+            if "final_core_speed_clamped" in _parse_joint_flags(flags[joint_idx]):
                 frame_clamped = True
                 clamped_joint_sample_count += 1
         if frame_clamped:

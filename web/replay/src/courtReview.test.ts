@@ -4,6 +4,7 @@ import {
   PICKLEBALL_COURT_REVIEW_POINTS,
   buildCourtCornersPayload,
   buildReviewedCourtCorrection,
+  importCourtProposals,
   validateCourtReviewPoints,
   type CourtReviewPointMap,
 } from "./courtReview";
@@ -113,5 +114,54 @@ describe("buildReviewedCourtCorrection", () => {
     expect(artifact.training.usable_for_court_detector_training).toBe(false);
     expect(artifact.training.training_policy).toBe("auto_prediction_not_training_ready");
     expect(Object.values(artifact.points).every((point) => point.manual_moved === false)).toBe(true);
+  });
+});
+
+describe("importCourtProposals", () => {
+  it("imports an empty proposal artifact as review-needed and fail-closed", () => {
+    const state = importCourtProposals({
+      artifact_type: "racketsport_court_proposals",
+      schema_version: 1,
+      status: "ranked_not_verified",
+      verified: false,
+      not_cal3_verified: true,
+      ranking: { selected_proposal_id: null, abstain: true, abstain_reasons: ["not_cal3_verified"] },
+      assist: { mode: "none", tap_points: [], line_label: null },
+      proposals: [],
+    });
+
+    expect(state.status).toBe("needs_review");
+    expect(state.verified).toBe(false);
+    expect(state.notCal3Verified).toBe(true);
+    expect(state.proposals).toHaveLength(0);
+  });
+
+  it("imports the selected proposal points and one-tap assist constraint", () => {
+    const state = importCourtProposals({
+      artifact_type: "racketsport_court_proposals",
+      schema_version: 1,
+      status: "ranked_not_verified",
+      verified: false,
+      not_cal3_verified: true,
+      ranking: { selected_proposal_id: "proposal_0001", abstain: true, abstain_reasons: ["not_cal3_verified"] },
+      assist: { mode: "one_inside_tap", tap_points: [[500, 300]], line_label: null, trusted_calibration: false },
+      proposals: [
+        {
+          proposal_id: "proposal_0001",
+          source: "unit",
+          verified: false,
+          not_cal3_verified: true,
+          court_keypoints: { near_left_corner: [180, 520], near_right_corner: [820, 520] },
+          scores: { overall: 0.2 },
+          gate: { auto_usable: false, review_usable: true, failed: ["not_verified"], warnings: [] },
+          evidence: {},
+        },
+      ],
+    });
+
+    expect(state.selectedProposalId).toBe("proposal_0001");
+    expect(state.proposals[0].points.near_left_corner?.xy).toEqual([180, 520]);
+    expect(state.assist.mode).toBe("one_inside_tap");
+    expect(state.assist.trustedCalibration).toBe(false);
   });
 });

@@ -1,0 +1,193 @@
+{
+  "artifact_type": "racketsport_court_keypoints",
+  "coordinate_space": "undistorted_source_video_pixels",
+  "frame_indexes": [
+    151
+  ],
+  "keypoints": [
+    {
+      "confidence": 0.35,
+      "inlier_frames": [
+        151
+      ],
+      "name": "near_left_corner",
+      "recovered": true,
+      "uv": [
+        -45.54372160996544,
+        1207.1480957109418
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "near_baseline_center",
+      "recovered": false,
+      "uv": [
+        196.36363636363637,
+        1314.130361295213
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "near_right_corner",
+      "recovered": false,
+      "uv": [
+        756.5034965034965,
+        1536.9283248481372
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "far_right_corner",
+      "recovered": false,
+      "uv": [
+        1072.4475524475524,
+        1100.1436166398623
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "far_baseline_center",
+      "recovered": false,
+      "uv": [
+        869.7902097902098,
+        1085.0386699583082
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "far_left_corner",
+      "recovered": false,
+      "uv": [
+        708.6713286713286,
+        1072.4512143903464
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "near_nvz_left",
+      "recovered": false,
+      "uv": [
+        399.02097902097904,
+        1125.318527775786
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "near_nvz_center",
+      "recovered": false,
+      "uv": [
+        621.8181818181819,
+        1165.5983855932639
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "near_nvz_right",
+      "recovered": false,
+      "uv": [
+        979.3006993006993,
+        1226.0181723194805
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "net_left_sideline",
+      "recovered": false,
+      "uv": [
+        509.7902097902098,
+        1106.4373444238433
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "net_center",
+      "recovered": false,
+      "uv": [
+        717.4825174825174,
+        1131.612255559767
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "net_right_sideline",
+      "recovered": false,
+      "uv": [
+        1018.3216783216783,
+        1173.1508589340408
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "far_nvz_left",
+      "recovered": false,
+      "uv": [
+        590.3496503496503,
+        1088.8149066286967
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "far_nvz_center",
+      "recovered": false,
+      "uv": [
+        789.2307692307693,
+        1113.9898177646203
+      ]
+    },
+    {
+      "confidence": 0.98,
+      "inlier_frames": [
+        151
+      ],
+      "name": "far_nvz_right",
+      "recovered": false,
+      "uv": [
+        1038.4615384615386,
+        1142.9409655709326
+      ]
+    }
+  ],
+  "not_gate_verified": true,
+  "schema_version": 1,
+  "source": "{\"mode\":\"owner_reviewed_geometry_with_floor_homography_recovery\",\"nearest_reviewed_point\":{\"distance_px\":264.5077976002067,\"name\":\"near_baseline_center\",\"uv\":[196.36363636363637,1314.130361295213]},\"not_gate_verified\":true,\"recovered_points\":[\"near_left_corner\"],\"recovery_model\":\"visible_floor_homography_excluding_net_top\",\"recovery_residual_summary_px\":{\"count\":11,\"max_px\":7.843878458366344,\"mean_px\":3.6022223941428466,\"median_px\":2.9938555607648802,\"p95_px\":7.0105821941156385},\"source_frame\":151}",
+  "target_court_score": 0.8802457775694048
+}

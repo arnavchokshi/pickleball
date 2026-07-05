@@ -263,6 +263,11 @@ def _annotate_ball_frames(
             frame["not_for_detection_metrics"] = bool(
                 physics_fill.get("not_for_detection_metrics", fill_frame.get("not_for_detection_metrics", True))
             )
+        elif frame.get("world_xyz") is not None and bool(frame.get("approx")):
+            band = BAND_PHYSICS_PREDICTED_LOW
+            predictor = "source_artifact_court_plane_approx"
+            frame["render_only"] = True
+            frame["not_for_detection_metrics"] = True
         elif frame.get("world_xyz") is not None and _is_high_confidence(frame.get("conf"), config.confidence_threshold):
             band = BAND_MEASURED
             predictor = "source_artifact"

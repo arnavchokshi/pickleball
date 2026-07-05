@@ -7,6 +7,7 @@ final class UploadManifestTests: XCTestCase {
         let manifest = UploadManifest(
             clipRelativePath: "../clips/session.mov",
             sidecar: Self.sidecar(ondevicePoseTrack: "../sidecar_pose.json", lidarDepthRefs: ["depth/../sidecar.bin"]),
+            courtAssistSeed: "../court/assist_seed.json",
             onDevicePoseTrack: "https://example.com/pose.json",
             onDevicePersonTracks: "../tracks.json",
             onDevicePersonTiming: "https://example.com/timing.json",
@@ -21,6 +22,7 @@ final class UploadManifestTests: XCTestCase {
         XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "sidecar.ondevicePoseTrack", value: "../sidecar_pose.json")))
         XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "onDevicePersonTracks", value: "../tracks.json")))
         XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "onDevicePersonTiming", value: "https://example.com/timing.json")))
+        XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "courtAssistSeed", value: "../court/assist_seed.json")))
         XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "sidecar.lidarDepthRefs[0]", value: "depth/../sidecar.bin")))
         XCTAssertTrue(report.errors.contains(.unsafeRelativePath(field: "lidarDepthRefs[0]", value: "depth/../frame.bin")))
     }
@@ -49,6 +51,7 @@ final class UploadManifestTests: XCTestCase {
         let manifest = UploadManifest(
             clipRelativePath: "clips/session.mov",
             sidecar: Self.sidecar(ondevicePoseTrack: "pose/sidecar_pose.json", lidarDepthRefs: ["depth/from_sidecar.bin"]),
+            courtAssistSeed: "court/assist_seed.json",
             onDevicePoseTrack: "pose/ondevice_pose.json",
             onDevicePersonTracks: "tracks/on_device_person_tracks.json",
             onDevicePersonTiming: "tracks/timing.json",
@@ -62,6 +65,7 @@ final class UploadManifestTests: XCTestCase {
             .posePrior,
             .personTracks,
             .personTiming,
+            .courtAssistSeed,
             .lidarDepth,
             .lidarDepth,
             .lidarDepth,
@@ -74,6 +78,7 @@ final class UploadManifestTests: XCTestCase {
                 "pose/ondevice_pose.json",
                 "tracks/on_device_person_tracks.json",
                 "tracks/timing.json",
+                "court/assist_seed.json",
                 "depth/frame_0001.bin",
                 "depth/frame_0002.bin",
                 "depth/from_sidecar.bin",
@@ -151,13 +156,16 @@ final class UploadManifestTests: XCTestCase {
 
         let videoURL = directory.appendingPathComponent("clip.mov")
         let sidecarURL = directory.appendingPathComponent("capture_sidecar.json")
+        let assistSeedURL = directory.appendingPathComponent("court_assist_seed.json")
         try Data("video-bytes".utf8).write(to: videoURL)
         try Data("{\"schema_version\":1}".utf8).write(to: sidecarURL)
+        try Data("{\"trustedCalibration\":false}".utf8).write(to: assistSeedURL)
 
         let body = try RenderGatewayMultipartBodyWriter.write(
             RenderGatewayUploadRequest(
                 videoURL: videoURL,
                 captureSidecarURL: sidecarURL,
+                courtAssistSeedURL: assistSeedURL,
                 clip: "capture_001",
                 maxFrames: 12
             ),
@@ -169,6 +177,7 @@ final class UploadManifestTests: XCTestCase {
         XCTAssertEqual(body.contentType, "multipart/form-data; boundary=test-boundary")
         XCTAssertTrue(payload.contains(#"name="video"; filename="clip.mov""#))
         XCTAssertTrue(payload.contains(#"name="capture_sidecar"; filename="capture_sidecar.json""#))
+        XCTAssertTrue(payload.contains(#"name="court_assist_seed"; filename="court_assist_seed.json""#))
         XCTAssertTrue(payload.contains(#"name="clip""#))
         XCTAssertTrue(payload.contains("capture_001"))
         XCTAssertTrue(payload.contains(#"name="max_frames""#))

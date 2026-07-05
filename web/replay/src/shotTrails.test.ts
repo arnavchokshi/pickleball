@@ -145,4 +145,39 @@ describe("shot trails data", () => {
       to: [1.404037, -11.853341, 0.0371],
     });
   });
+
+  it("marks the real Wolverine arc-solved fixture as trusted (status=ran)", () => {
+    const arc = parseBallArcSolved(readFileSync(wolverineArcPath, "utf8"));
+
+    expect(arc.status).toBe("ran");
+    expect(arc.trusted).toBe(true);
+    expect(arc.frames.length).toBeGreaterThan(0);
+  });
+
+  it("fail-closed gates a self-killed arc-solved artifact: no frames survive and shot trails draw nothing measured from it", () => {
+    const shots = parseShots(readFileSync(wolverineShotsPath, "utf8"));
+    const arc = parseBallArcSolved(readFileSync(wolverineArcPath, "utf8"));
+    const killedArc = { ...arc, status: "experimental_off", trusted: false, killReasons: ["physical_sanity_violation_fraction 0.400000 exceeds 0.200000"], frames: [] };
+
+    const groups = buildShotTrailGroups(shots.shots, killedArc);
+
+    expect(groups.length).toBe(shots.shots.length);
+    expect(groups.every((group) => group.points.length === 0)).toBe(true);
+    expect(groups.every((group) => group.segments.length === 0)).toBe(true);
+  });
+
+  it("parseBallArcSolved itself suppresses frames when the artifact's own status is untrusted", () => {
+    const arc = parseBallArcSolved({
+      schema_version: 1,
+      artifact_type: "racketsport_ball_track_arc_solved",
+      clip_id: "unit_test_clip",
+      status: "experimental_off",
+      kill_reasons: ["physical_sanity_violation_fraction 0.400000 exceeds 0.200000"],
+      frames: [{ t: 0, visible: true, conf: 0.9, sigma_m: null, world_xyz: [0, 1, 0.3], segment_id: 0 }],
+    });
+
+    expect(arc.trusted).toBe(false);
+    expect(arc.frames).toHaveLength(0);
+    expect(arc.killReasons).toEqual(["physical_sanity_violation_fraction 0.400000 exceeds 0.200000"]);
+  });
 });

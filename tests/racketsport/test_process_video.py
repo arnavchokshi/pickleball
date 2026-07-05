@@ -110,6 +110,28 @@ def _ball_track_payload(*, frame_count: int = 1, fps: float = 30.0) -> dict[str,
     }
 
 
+def _ball_candidates_payload() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_candidates",
+        "source": "wasb",
+        "source_mode": "wasb_test",
+        "fps": 30.0,
+        "primary_output": "ball_track.json",
+        "max_candidates_per_frame": 5,
+        "not_ground_truth": True,
+        "candidate_prediction": True,
+        "frames": [
+            {
+                "frame": 0,
+                "candidates": [
+                    {"xy": [400.0, 300.0], "score": 0.95, "source_detector": "wasb_concomp"},
+                ],
+            }
+        ],
+    }
+
+
 def _wolverine_fps_mismatch_ball_track_payload(*, frame_count: int = 300) -> dict[str, Any]:
     return {
         "schema_version": 1,
@@ -1042,6 +1064,30 @@ def test_grounding_refine_stage_backfills_missing_skeleton_transl_world_from_tra
     assert frame["confidence_provenance"]["band"] == "physics_corrected"
 
 
+def test_grounding_refine_stage_disables_xy_when_body_has_r3_grounding_provenance(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    skeleton = _lane_a_skeleton_payload()
+    skeleton["provenance"]["grounding_anchor_source"] = "placement_track_world_xy"
+    skeleton["players"][0]["frames"][0]["transl_world"] = [0.2, -0.1, 0.0]
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "tracks.json", _tracks_payload())
+    _write_json(options.clip_dir / "skeleton3d.json", skeleton)
+    _write_json(options.clip_dir / "foot_contact_phases.json", _foot_contact_phases_payload())
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    outcome = pipeline._stage_grounding_refine()
+
+    assert outcome.status == "ran"
+    assert outcome.metrics["xy_translation_enabled"] is False
+    refined = json.loads((options.clip_dir / "skeleton3d.json").read_text(encoding="utf-8"))
+    frame = refined["players"][0]["frames"][0]
+    assert frame["transl_world"][:2] == pytest.approx([0.2, -0.1])
+    report = json.loads((options.clip_dir / "body_grounding_refinement.json").read_text(encoding="utf-8"))
+    assert report["summary"]["xy_translation_enabled"] is False
+
+
 def test_grounding_refine_stage_can_be_disabled(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     options = _base_options(tmp_path, video=video, court_corners=None)
@@ -1214,6 +1260,70 @@ def test_manifest_no_scene_points_option_disables_replay_scene_points(tmp_path: 
     assert outcome.metrics["replay_point_source"] == "disabled"
 
 
+def test_manifest_links_body_mesh_index_and_marks_windowed_mesh_status(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    _write_json(options.clip_dir / "virtual_world.json", _virtual_world_payload())
+    _write_json(options.clip_dir / "confidence_gated_world.json", _virtual_world_payload())
+    _write_json(options.clip_dir / "body_mesh.json", {"artifact_type": "racketsport_body_mesh"})
+    _write_json(options.clip_dir / "body_mesh_index.json", {"artifact_type": "racketsport_body_mesh_index"})
+
+    outcome = pipeline._stage_manifest()
+
+    manifest = json.loads((options.clip_dir / "replay_viewer_manifest.json").read_text(encoding="utf-8"))
+    assert outcome.status == "ran"
+    assert manifest["body_mesh_url"].endswith("/body_mesh.json")
+    assert manifest["body_mesh_index_url"].endswith("/body_mesh_index.json")
+    assert manifest["mesh_status"] == "windowed_index"
+    assert "mesh_status=windowed_index" in " ".join(outcome.notes)
+
+
+def test_manifest_uses_fetched_body_mesh_index_directory_without_monolith(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    _write_json(options.clip_dir / "virtual_world.json", _virtual_world_payload())
+    index_dir = options.clip_dir / "body_mesh_index"
+    index_dir.mkdir(parents=True)
+    _write_json(index_dir / "body_mesh_index.json", {"artifact_type": "racketsport_body_mesh_index"})
+
+    outcome = pipeline._stage_manifest()
+
+    manifest = json.loads((options.clip_dir / "replay_viewer_manifest.json").read_text(encoding="utf-8"))
+    joined_notes = " ".join(outcome.notes)
+    assert outcome.status == "ran"
+    assert manifest["body_mesh_url"] is None
+    assert manifest["body_mesh_index_url"].endswith("/body_mesh_index/body_mesh_index.json")
+    assert manifest["mesh_status"] == "windowed_index"
+    assert "body_mesh.json not fetched (speed default)" in joined_notes
+    assert "mesh_status=windowed_index" in joined_notes
+
+
+def test_manifest_marks_monolithic_mesh_without_index_as_unverified(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    _write_json(options.clip_dir / "virtual_world.json", _virtual_world_payload())
+    _write_json(options.clip_dir / "confidence_gated_world.json", _virtual_world_payload())
+    _write_json(options.clip_dir / "body_mesh.json", {"artifact_type": "racketsport_body_mesh"})
+
+    outcome = pipeline._stage_manifest()
+
+    manifest = json.loads((options.clip_dir / "replay_viewer_manifest.json").read_text(encoding="utf-8"))
+    assert outcome.status == "ran"
+    assert manifest["body_mesh_url"].endswith("/body_mesh.json")
+    assert manifest["body_mesh_index_url"] is None
+    assert manifest["mesh_status"] == "monolithic_unverified"
+    assert "mesh_status=monolithic_unverified" in " ".join(outcome.notes)
+
+
 def test_manifest_uses_raw_world_when_confidence_gate_is_disabled(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     _make_video(video)
@@ -1298,6 +1408,36 @@ def test_manifest_passes_existing_reviewed_bounces_coaching_facts_and_rally_span
     assert manifest["rally_spans_url"].endswith("/rally_spans.json")
 
 
+def test_manifest_exposes_ball_arc_artifacts_when_present(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    _write_json(options.clip_dir / "virtual_world.json", _virtual_world_payload())
+    _write_json(
+        options.clip_dir / "ball_track_arc_solved.json",
+        {"artifact_type": "racketsport_ball_track_arc_solved", "status": "ran", "frames": []},
+    )
+    _write_json(
+        options.clip_dir / "ball_bounce_candidates.json",
+        {"artifact_type": "racketsport_ball_bounce_candidates", "candidates": []},
+    )
+    _write_json(
+        options.clip_dir / "ball_flight_sanity.json",
+        {"artifact_type": "racketsport_ball_flight_sanity", "summary": {"demoted_frame_count": 0}},
+    )
+
+    outcome = pipeline._stage_manifest()
+
+    assert outcome.status == "ran"
+    manifest = json.loads((options.clip_dir / "replay_viewer_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["ball_arc_solved_url"].endswith("/ball_track_arc_solved.json")
+    assert manifest["auto_bounce_candidates_url"].endswith("/ball_bounce_candidates.json")
+    assert manifest["ball_bounce_candidates_url"].endswith("/ball_bounce_candidates.json")
+    assert manifest["ball_flight_sanity_url"].endswith("/ball_flight_sanity.json")
+
+
 # ---------------------------------------------------------------------------
 # stage sequencing + resume
 # ---------------------------------------------------------------------------
@@ -1328,6 +1468,7 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
         "placement",
         "frames",
         "ball",
+        "ball_arc",
         "events",
         "ball_fill",
         "body",
@@ -1346,6 +1487,7 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
     assert by_stage["frames"]["status"] == "blocked"
     assert "pose" not in by_stage
     assert by_stage["ball"]["status"] == "skipped"
+    assert by_stage["ball_arc"]["status"] == "skipped"
     assert by_stage["ball_fill"]["status"] == "blocked"
     assert by_stage["body"]["status"] == "degraded"
     assert "SAM-3D BODY skipped" in " ".join(by_stage["body"]["notes"])
@@ -1412,7 +1554,86 @@ def test_placement_stage_rewrites_tracks_after_tracking(tmp_path: Path, monkeypa
     assert "placement.json" in outcome.artifacts
 
 
-def test_placement_refine_stage_runs_when_sam3d_sidecar_exists(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_placement_stage_auto_discovers_camera_motion_and_surfaces_guard_notes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "tracks.json", _tracks_payload())
+    _write_json(
+        options.clip_dir / "camera_motion.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_camera_motion",
+            "frames": [],
+            "verified": False,
+            "not_gate_verified": True,
+        },
+    )
+    calls: list[dict[str, Any]] = []
+
+    def _fake_rewrite(**kwargs):  # noqa: ANN001
+        calls.append(kwargs)
+        summary = {
+            "camera_motion_frames_used": 3,
+            "camera_motion_frames_uncompensated": 1,
+            "side_quadrant_consistency": {
+                "players": {
+                    "1": {
+                        "side_label_original": "near",
+                        "side_recomputed": "far",
+                        "role_original": "left",
+                        "role_recomputed": "right",
+                    }
+                }
+            },
+            "boundary_guards": {"totals": {"net_gap_clamped_frames": 2, "centerline_gap_clamped_frames": 1}},
+            "smoothing_guards": {"totals": {"divergence_snap_frames": 4, "fallback_transition_blends": 5}},
+            "sidecar_identity": {
+                "native2d": {"totals": {"reassigned_obs": 6, "dropped_obs": 7}},
+                "sam3d": {"totals": {"reassigned_obs": 8, "dropped_obs": 9}},
+            },
+        }
+        return type(
+            "Result",
+            (),
+            {
+                "coverage_unchanged": True,
+                "source_counts": {"bbox": 2, "native2d": 1, "sam3d": 0},
+                "court_bounds_violations": 0,
+                "summary": summary,
+            },
+        )()
+
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite)
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    outcome = pipeline._stage_placement()
+
+    assert outcome.status == "ran"
+    assert calls[0]["camera_motion_path"] == options.clip_dir / "camera_motion.json"
+    joined_notes = " | ".join(outcome.notes)
+    assert "camera_motion=used" in joined_notes
+    assert "source=auto_discovered" in joined_notes
+    assert "frames_used=3" in joined_notes
+    assert "frames_uncompensated=1" in joined_notes
+    assert "side_recompute(player=1: side near->far, role left->right)" in joined_notes
+    assert "net_gap_clamped_frames=2" in joined_notes
+    assert "centerline_gap_clamped_frames=1" in joined_notes
+    assert "divergence_snap_frames=4" in joined_notes
+    assert "fallback_transition_blends=5" in joined_notes
+    assert "native2d_reassigned=6" in joined_notes
+    assert "native2d_dropped=7" in joined_notes
+    assert "sam3d_reassigned=8" in joined_notes
+    assert "sam3d_dropped=9" in joined_notes
+
+
+def test_placement_refine_stage_is_disabled_same_pass_even_when_sam3d_sidecar_exists(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     video = tmp_path / "clip.mp4"
     _make_video(video)
     options = _base_options(tmp_path, video=video, court_corners=None)
@@ -1431,47 +1652,21 @@ def test_placement_refine_stage_runs_when_sam3d_sidecar_exists(tmp_path: Path, m
         options.clip_dir / "sam3d_keypoints_2d.json",
         {"schema_version": 1, "artifact_type": "racketsport_sam3d_keypoints_2d", "source": "test", "players": []},
     )
-    calls: list[dict[str, Any]] = []
+    def _fail_rewrite(**_kwargs):  # noqa: ANN001
+        raise AssertionError("same-pass placement_refine must not rewrite tracks after BODY")
 
-    def _fake_rewrite(**kwargs):  # noqa: ANN001
-        calls.append(kwargs)
-        _write_json(
-            kwargs["placement_path"],
-            {
-                "schema_version": 1,
-                "artifact_type": "racketsport_placement",
-                "fps": 30.0,
-                "source": "test",
-                "tracks_path": "tracks.json",
-                "backup_tracks_path": "tracks_prewrite_backup.json",
-                "refine_from_sam3d": True,
-                "undistort_applied": False,
-                "players": [],
-                "summary": {
-                    "player_count": 0,
-                    "frame_count": 0,
-                    "coverage_unchanged": True,
-                    "source_counts": {"bbox": 0, "native2d": 0, "sam3d": 1},
-                    "jitter_before_after_mps": {},
-                    "court_bounds_violations": 0,
-                },
-                "provenance": {},
-            },
-        )
-        return type("Result", (), {"coverage_unchanged": True, "source_counts": {"bbox": 0, "native2d": 0, "sam3d": 1}})()
-
-    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite)
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fail_rewrite)
 
     ran = pipeline._stage_placement_refine()
 
-    assert ran.status == "ran"
-    assert calls[0]["native2d_keypoints_path"] == keypoints_path
-    assert calls[0]["sam3d_keypoints_path"] == options.clip_dir / "sam3d_keypoints_2d.json"
-    assert calls[0]["stance_phases_path"] is None
-    assert calls[0]["refine_from_sam3d"] is True
+    assert ran.status == "skipped"
+    assert ran.metrics["same_pass_track_rewrite_disabled"] is True
+    assert "second pass before a fresh BODY run" in " ".join(ran.notes)
 
 
-def test_placement_refine_stage_runs_with_stance_phases_without_sam3d_sidecar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_placement_refine_stage_is_disabled_same_pass_with_stance_phases_without_sam3d_sidecar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     video = tmp_path / "clip.mp4"
     _make_video(video)
     options = _base_options(tmp_path, video=video, court_corners=None)
@@ -1479,21 +1674,17 @@ def test_placement_refine_stage_runs_with_stance_phases_without_sam3d_sidecar(tm
     _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
     _write_json(options.clip_dir / "tracks.json", _tracks_payload())
     _write_json(options.clip_dir / "foot_contact_phases.json", _foot_contact_phases_payload())
-    calls: list[dict[str, Any]] = []
+    def _fail_rewrite(**_kwargs):  # noqa: ANN001
+        raise AssertionError("same-pass placement_refine must not rewrite tracks after BODY")
 
-    def _fake_rewrite(**kwargs):  # noqa: ANN001
-        calls.append(kwargs)
-        return type("Result", (), {"coverage_unchanged": True, "source_counts": {"bbox": 1, "native2d": 0, "sam3d": 0}, "court_bounds_violations": 0})()
-
-    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite)
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fail_rewrite)
     pipeline = process_video.ProcessVideoPipeline(options)
 
     ran = pipeline._stage_placement_refine()
 
-    assert ran.status == "ran"
-    assert calls[0]["sam3d_keypoints_path"] is None
-    assert calls[0]["stance_phases_path"] == options.clip_dir / "foot_contact_phases.json"
-    assert calls[0]["refine_from_sam3d"] is True
+    assert ran.status == "skipped"
+    assert ran.metrics["same_pass_track_rewrite_disabled"] is True
+    assert "second pass before a fresh BODY run" in " ".join(ran.notes)
 
 
 def test_pipeline_blocks_wrist_cues_before_body_without_pose_fallback(
@@ -1717,6 +1908,7 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     assert default_options.remote_config.sam3d_torch_compile is True
     assert default_options.remote_config.sam3d_compile_warmup_buckets == (8, 16)
     assert default_options.remote_config.sam3d_skip_tier2_mesh_vertices is True
+    assert default_options.remote_config.fetch_body_monoliths is False
 
     ball_aware_options = process_video.build_options_from_args(
         parser.parse_args(
@@ -1741,6 +1933,7 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
                 "--sam3d-compile-warmup-buckets",
                 "4,8",
                 "--serialize-tier2-mesh-vertices",
+                "--fetch-body-monoliths",
                 "--events-selected",
                 str(events_selected),
                 "--ball-track-arc-solved",
@@ -1759,6 +1952,7 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     assert ball_aware_options.remote_config.sam3d_torch_compile is False
     assert ball_aware_options.remote_config.sam3d_compile_warmup_buckets == (4, 8)
     assert ball_aware_options.remote_config.sam3d_skip_tier2_mesh_vertices is False
+    assert ball_aware_options.remote_config.fetch_body_monoliths is True
 
 
 def test_process_video_cli_help_direct_reference() -> None:
@@ -1788,6 +1982,7 @@ def test_process_video_cli_help_direct_reference() -> None:
     assert "--sam3d-crop-bucket-sizes" in completed.stdout
     assert "--sam3d-compile-warmup-buckets" in completed.stdout
     assert "--serialize-tier2-mesh-vertices" in completed.stdout
+    assert "--fetch-body-monoliths" in completed.stdout
 
 
 def test_process_video_cli_rejects_missing_video() -> None:
@@ -1832,6 +2027,30 @@ def test_calibration_stage_hard_fails_without_court_corners_or_sidecar(tmp_path:
 
     with pytest.raises(process_video._HardStageFailure, match="court-corners"):
         pipeline._stage_calibration()
+
+
+def test_court_proposals_preview_writes_artifact_without_bypassing_calibration(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.court_proposals_preview = True
+    options.max_frames = 2
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+
+    with pytest.raises(process_video._HardStageFailure, match="court proposals preview"):
+        pipeline._stage_calibration()
+
+    proposal_path = options.clip_dir / "court_proposals.json"
+    correction_path = options.clip_dir / "court_correction_task.json"
+    assert proposal_path.is_file()
+    assert correction_path.is_file()
+    proposal = json.loads(proposal_path.read_text())
+    correction = json.loads(correction_path.read_text())
+    assert proposal["verified"] is False
+    assert proposal["not_cal3_verified"] is True
+    assert proposal["ranking"]["abstain"] is True
+    assert correction["reason"] == "court_proposals_preview_not_trusted_calibration"
 
 
 def test_tracking_stage_reuses_precomputed_tracks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2544,6 +2763,229 @@ def test_pipeline_never_raises_on_unexpected_stage_exception(tmp_path: Path, mon
 # ---------------------------------------------------------------------------
 
 
+def test_ball_arc_stage_passes_event_sidecars_to_frozen_chain_helper(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "ball_track.json", _ball_track_payload(frame_count=9))
+    _write_json(options.clip_dir / "contact_windows.json", _contact_windows_payload())
+    _write_json(options.clip_dir / "skeleton3d.json", _sam3d_skeleton_payload())
+    _write_json(options.clip_dir / "net_plane.json", {"artifact_type": "racketsport_net_plane", "height_m": 0.86})
+    _write_json(options.clip_dir / "ball_candidates.json", _ball_candidates_payload())
+    pipeline = process_video.ProcessVideoPipeline(options)
+    captured: dict[str, Any] = {}
+
+    def _fake_default_chain(**kwargs: Any) -> dict[str, Any]:
+        captured.update(kwargs)
+        out_dir = Path(kwargs["out_dir"])
+        _write_json(
+            out_dir / "ball_bounce_candidates.json",
+            {"artifact_type": "racketsport_ball_bounce_candidates", "summary": {"final_candidate_count": 1}, "candidates": []},
+        )
+        _write_json(
+            out_dir / "ball_track_arc_solved.json",
+            {
+                "artifact_type": "racketsport_ball_track_arc_solved",
+                "status": "ran",
+                "summary": {"coverage_world_xyz_count": 7, "segment_count": 1},
+                "frames": [],
+            },
+        )
+        _write_json(
+            out_dir / "ball_flight_sanity.json",
+            {"artifact_type": "racketsport_ball_flight_sanity", "summary": {"demoted_frame_count": 2}},
+        )
+        return {
+            "status": "ran",
+            "summary": {
+                "auto_bounce_candidate_count": 1,
+                "coverage_world_xyz_count": 7,
+                "segment_count": 1,
+                "flight_sanity_demoted_frame_count": 2,
+            },
+        }
+
+    monkeypatch.setattr(process_video, "run_default_ball_arc_chain", _fake_default_chain, raising=False)
+
+    outcome = pipeline._stage_ball_arc()
+
+    assert outcome.status == "ran"
+    assert captured["clip"] == options.clip
+    assert captured["ball_track_path"] == options.clip_dir / "ball_track.json"
+    assert captured["court_calibration_path"] == options.clip_dir / "court_calibration.json"
+    assert captured["contact_windows_path"] == options.clip_dir / "contact_windows.json"
+    assert captured["skeleton3d_path"] == options.clip_dir / "skeleton3d.json"
+    assert captured["net_plane_path"] == options.clip_dir / "net_plane.json"
+    assert captured["rally_spans_path"] is None
+    assert captured["ball_candidate_paths"] == [options.clip_dir / "ball_candidates.json"]
+    assert (options.clip_dir / "ball_bounce_candidates.json").is_file()
+    assert (options.clip_dir / "ball_track_arc_solved.json").is_file()
+    assert (options.clip_dir / "ball_flight_sanity.json").is_file()
+    assert outcome.artifacts == [
+        "ball_bounce_candidates.json",
+        "ball_track_arc_solved.json",
+        "ball_flight_sanity.json",
+        "ball_chain_manifest.json",
+    ]
+    assert outcome.metrics["solver_status"] == "ran"
+    assert outcome.metrics["flight_sanity_demoted_frame_count"] == 2
+
+
+def test_ball_arc_stage_accepts_explicit_ball_candidate_sidecars(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.ball_candidates_reuse = (tmp_path / "wasb_candidates.json", tmp_path / "tracknet_candidates.json")
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "ball_track.json", _ball_track_payload(frame_count=9))
+    for path in options.ball_candidates_reuse:
+        _write_json(path, _ball_candidates_payload())
+    pipeline = process_video.ProcessVideoPipeline(options)
+    captured: dict[str, Any] = {}
+
+    def _fake_default_chain(**kwargs: Any) -> dict[str, Any]:
+        captured.update(kwargs)
+        out_dir = Path(kwargs["out_dir"])
+        _write_json(
+            out_dir / "ball_bounce_candidates.json",
+            {"artifact_type": "racketsport_ball_bounce_candidates", "summary": {"final_candidate_count": 1}, "candidates": []},
+        )
+        _write_json(
+            out_dir / "ball_track_arc_solved.json",
+            {"artifact_type": "racketsport_ball_track_arc_solved", "status": "ran", "summary": {}, "frames": []},
+        )
+        _write_json(
+            out_dir / "ball_flight_sanity.json",
+            {"artifact_type": "racketsport_ball_flight_sanity", "summary": {}},
+        )
+        return {"status": "ran", "summary": {}}
+
+    monkeypatch.setattr(process_video, "run_default_ball_arc_chain", _fake_default_chain, raising=False)
+
+    outcome = pipeline._stage_ball_arc()
+
+    assert outcome.status == "ran"
+    assert captured["ball_candidate_paths"] == list(options.ball_candidates_reuse)
+
+
+def test_wasb_ball_runtime_emits_candidate_sidecar_by_default(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    checkpoint = tmp_path / "wasb.pth.tar"
+    checkpoint.write_text("checkpoint", encoding="utf-8")
+    wasb_repo = tmp_path / "WASB-SBDT"
+    wasb_repo.mkdir()
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.wasb_checkpoint = checkpoint
+    options.wasb_repo = wasb_repo
+    pipeline = process_video.ProcessVideoPipeline(options)
+    captured: dict[str, Any] = {}
+
+    def _fake_run_wasb_or_convert(**kwargs: Any) -> dict[str, Any]:
+        captured.update(kwargs)
+        _write_json(kwargs["out"], _ball_track_payload(frame_count=5))
+        if kwargs.get("emit_candidates"):
+            _write_json(Path(kwargs["out"]).with_name("ball_candidates.json"), _ball_candidates_payload())
+        return {"status": "tested", "out": str(kwargs["out"])}
+
+    from threed.racketsport import wasb_adapter
+
+    monkeypatch.setattr(wasb_adapter, "run_wasb_or_convert", _fake_run_wasb_or_convert)
+
+    assert pipeline._run_wasb_zero_shot(options.clip_dir / "ball_track.json") is True
+
+    assert captured["emit_candidates"] is True
+    assert captured["candidate_top_k"] == 5
+    assert (options.clip_dir / "ball_candidates.json").is_file()
+
+
+def test_wasb_ball_runtime_can_opt_out_of_candidate_sidecar(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    checkpoint = tmp_path / "wasb.pth.tar"
+    checkpoint.write_text("checkpoint", encoding="utf-8")
+    wasb_repo = tmp_path / "WASB-SBDT"
+    wasb_repo.mkdir()
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.wasb_checkpoint = checkpoint
+    options.wasb_repo = wasb_repo
+    options.emit_ball_candidates = False
+    pipeline = process_video.ProcessVideoPipeline(options)
+    captured: dict[str, Any] = {}
+
+    def _fake_run_wasb_or_convert(**kwargs: Any) -> dict[str, Any]:
+        captured.update(kwargs)
+        _write_json(kwargs["out"], _ball_track_payload(frame_count=5))
+        return {"status": "tested", "out": str(kwargs["out"])}
+
+    from threed.racketsport import wasb_adapter
+
+    monkeypatch.setattr(wasb_adapter, "run_wasb_or_convert", _fake_run_wasb_or_convert)
+
+    assert pipeline._run_wasb_zero_shot(options.clip_dir / "ball_track.json") is True
+
+    assert captured["emit_candidates"] is False
+    assert not (options.clip_dir / "ball_candidates.json").exists()
+
+
+def test_ball_arc_stage_opt_out_skips_default_chain(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_ball_arc = True
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "ball_track.json", _ball_track_payload(frame_count=9))
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    def _unexpected_default_chain(**_kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("ball_arc helper should not run when --no-ball-arc is set")
+
+    monkeypatch.setattr(process_video, "run_default_ball_arc_chain", _unexpected_default_chain, raising=False)
+
+    outcome = pipeline._stage_ball_arc()
+
+    assert outcome.status == "skipped"
+    assert "--no-ball-arc set" in " ".join(outcome.notes)
+    assert not (options.clip_dir / "ball_track_arc_solved.json").exists()
+
+
+def test_ball_arc_stage_failure_degrades_without_crashing_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "ball_track.json", _ball_track_payload(frame_count=9))
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    def _failing_default_chain(**_kwargs: Any) -> dict[str, Any]:
+        raise RuntimeError("solver exploded")
+
+    monkeypatch.setattr(process_video, "run_default_ball_arc_chain", _failing_default_chain, raising=False)
+
+    outcome = pipeline._stage_ball_arc()
+
+    assert outcome.status == "degraded"
+    assert "solver exploded" in " ".join(outcome.notes)
+    assert not (options.clip_dir / "ball_track_arc_solved.json").exists()
+
+
 def test_ball_stage_reuses_precomputed_ball_track_and_runs_bounce_inout(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     _make_video(video)
@@ -2763,6 +3205,16 @@ def test_cli_parses_rally_gating_flag_into_options(tmp_path: Path) -> None:
     assert options.rally_gating is True
 
 
+def test_cli_parses_camera_motion_path_into_options(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    camera_motion = tmp_path / "camera_motion.json"
+    args = process_video.build_arg_parser().parse_args(
+        ["--video", str(video), "--camera-motion", str(camera_motion), "--out", str(tmp_path / "run")]
+    )
+    options = process_video.build_options_from_args(args)
+    assert options.camera_motion_path == camera_motion.resolve()
+
+
 def test_cli_parses_confidence_gate_opt_out_into_options(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     parser = process_video.build_arg_parser()
@@ -2774,6 +3226,19 @@ def test_cli_parses_confidence_gate_opt_out_into_options(tmp_path: Path) -> None
 
     assert default_options.confidence_gate is True
     assert disabled_options.confidence_gate is False
+
+
+def test_cli_parses_ball_arc_opt_out_into_options(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    parser = process_video.build_arg_parser()
+
+    default_options = process_video.build_options_from_args(parser.parse_args(["--video", str(video), "--out", str(tmp_path / "run")]))
+    disabled_options = process_video.build_options_from_args(
+        parser.parse_args(["--video", str(video), "--no-ball-arc", "--out", str(tmp_path / "run2")])
+    )
+
+    assert default_options.no_ball_arc is False
+    assert disabled_options.no_ball_arc is True
 
 
 def test_cli_parses_grounding_refine_opt_out_into_options(tmp_path: Path) -> None:
@@ -2866,6 +3331,34 @@ def test_body_stage_remote_dispatch_success(tmp_path: Path, monkeypatch: pytest.
     assert outcome.status == "ran"
     assert outcome.trust_badge == "preview"
     assert (options.clip_dir / "smpl_motion.json").is_file()
+
+
+def test_body_stage_reuses_sam3d_skeleton_and_gate_without_smpl_monolith(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_gpu = False
+    options.body_remote = True
+    _clip_dir_with_tracks_only(options)
+    _write_json(options.clip_dir / "skeleton3d.json", _sam3d_skeleton_payload())
+    _write_json(options.clip_dir / "body_full_clip_gate.json", {"schema_version": 1, "artifact_type": "body_full_clip_gate"})
+
+    def _fail_dispatch(**_kwargs):  # noqa: ANN001
+        raise AssertionError("no-force BODY reuse must not dispatch when skeleton3d.json + body_full_clip_gate.json are present")
+
+    monkeypatch.setattr(process_video, "dispatch_body_stage", _fail_dispatch)
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    outcome = pipeline._stage_body()
+
+    assert outcome.status == "skipped"
+    assert outcome.artifacts == ["skeleton3d.json", "body_full_clip_gate.json"]
+    joined_notes = " ".join(outcome.notes)
+    assert "reusing completed BODY evidence without smpl_motion.json" in joined_notes
+    assert "skeleton3d.json + body_full_clip_gate.json" in joined_notes
 
 
 def test_body_stage_remote_dispatch_passes_body_frames_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -3222,6 +3715,18 @@ def test_cli_parses_court_calibration_flag_into_options(tmp_path: Path) -> None:
     )
     options = process_video.build_options_from_args(args)
     assert options.court_calibration == metric_path.resolve()
+    assert options.court_corners is None
+
+
+def test_cli_parses_court_proposals_preview_flag_into_options(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    args = process_video.build_arg_parser().parse_args(
+        ["--video", str(video), "--court-proposals-preview", "--out", str(tmp_path / "run")]
+    )
+
+    options = process_video.build_options_from_args(args)
+
+    assert options.court_proposals_preview is True
     assert options.court_corners is None
 
 

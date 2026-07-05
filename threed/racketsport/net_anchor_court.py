@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .court_calibration import homography_from_planar_points, project_planar_points
+from .court_line_bank import normalize_hough_lines_p
 from .court_templates import ft_to_m
 from .schemas import PICKLEBALL_COURT_KEYPOINT_NAMES
 
@@ -438,35 +439,34 @@ def detect_net_anchor(frame_bgr: Any) -> NetDetection:
     min_len = max(80, int(width * 0.20))
     raw = cv2.HoughLinesP(edges, 1, np.pi / 180.0, threshold=45, minLineLength=min_len, maxLineGap=18)
     best: tuple[float, tuple[tuple[float, float], tuple[float, float]], dict[str, float | int]] | None = None
-    if raw is not None:
-        for item in raw[:, 0, :]:
-            x1, y1, x2, y2 = [float(v) for v in item]
-            length = math.hypot(x2 - x1, y2 - y1)
-            if length < min_len:
-                continue
-            angle = abs(_angle_distance(math.atan2(y2 - y1, x2 - x1), 0.0))
-            if angle > math.radians(14.0):
-                continue
-            y_mid = (y1 + y2) / 2.0
-            if not (height * 0.12 <= y_mid <= height * 0.88):
-                continue
-            tape_brightness = _sample_segment_gray(gray, (x1, y1), (x2, y2))
-            below_offset = max(5.0, height * 0.018)
-            below_brightness = _sample_segment_gray(gray, (x1, y1 + below_offset), (x2, y2 + below_offset))
-            mesh_contrast = max(0.0, (tape_brightness - below_brightness) / 255.0)
-            vertical_support = _post_support(edges, (x1, y1), (x2, y2), height)
-            score = (length / width) * (0.55 + mesh_contrast) * (0.75 + 0.25 * vertical_support)
-            if best is None or score > best[0]:
-                best = (
-                    score,
-                    ((x1, y1), (x2, y2)),
-                    {
-                        "support_px": int(round(length)),
-                        "mesh_band_contrast": round(mesh_contrast, 4),
-                        "post_count": int(round(vertical_support * 2.0)),
-                        "tape_brightness": round(tape_brightness, 3),
-                    },
-                )
+    for item in normalize_hough_lines_p(raw):
+        x1, y1, x2, y2 = item
+        length = math.hypot(x2 - x1, y2 - y1)
+        if length < min_len:
+            continue
+        angle = abs(_angle_distance(math.atan2(y2 - y1, x2 - x1), 0.0))
+        if angle > math.radians(14.0):
+            continue
+        y_mid = (y1 + y2) / 2.0
+        if not (height * 0.12 <= y_mid <= height * 0.88):
+            continue
+        tape_brightness = _sample_segment_gray(gray, (x1, y1), (x2, y2))
+        below_offset = max(5.0, height * 0.018)
+        below_brightness = _sample_segment_gray(gray, (x1, y1 + below_offset), (x2, y2 + below_offset))
+        mesh_contrast = max(0.0, (tape_brightness - below_brightness) / 255.0)
+        vertical_support = _post_support(edges, (x1, y1), (x2, y2), height)
+        score = (length / width) * (0.55 + mesh_contrast) * (0.75 + 0.25 * vertical_support)
+        if best is None or score > best[0]:
+            best = (
+                score,
+                ((x1, y1), (x2, y2)),
+                {
+                    "support_px": int(round(length)),
+                    "mesh_band_contrast": round(mesh_contrast, 4),
+                    "post_count": int(round(vertical_support * 2.0)),
+                    "tape_brightness": round(tape_brightness, 3),
+                },
+            )
 
     if best is None:
         y = height * 0.50
@@ -942,10 +942,8 @@ def _detect_line_segments(frame: Any) -> list[_Segment]:
         maxLineGap=max(12, int(width * 0.018)),
     )
     segments: list[_Segment] = []
-    if raw is None:
-        return segments
-    for item in raw[:, 0, :]:
-        x1, y1, x2, y2 = [float(v) for v in item]
+    for item in normalize_hough_lines_p(raw):
+        x1, y1, x2, y2 = item
         length = math.hypot(x2 - x1, y2 - y1)
         if length < max(28.0, width * 0.045):
             continue

@@ -1,0 +1,282 @@
+{
+  "schema_version": 1,
+  "artifact_type": "racketsport_ball_track_arc_solved",
+  "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+  "status": "experimental_off",
+  "kill_reasons": [
+    "physical_sanity_violation_fraction 0.400000 exceeds 0.200000"
+  ],
+  "render_only": true,
+  "trusted_for_ball_detection_metrics": false,
+  "frames": [
+    {
+      "approx": false,
+      "arc_solver": {
+        "inlier_sighting": true,
+        "lane": "BALL-ARC-SOLVER",
+        "not_for_detection_metrics": true,
+        "outlier_sighting_pruned": false,
+        "render_only": true,
+        "rescued": false,
+        "segment_id": 0,
+        "weak_segment": false
+      },
+      "band": "anchored_measured",
+      "conf": 0.86482644,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "sigma_m": 2.001736,
+      "source": "event_anchored_drag_arc_solver",
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.0,
+      "visible": true,
+      "world_xyz": [
+        -0.371067156,
+        7.063090754,
+        0.436606266
+      ],
+      "xy": [
+        354.676941,
+        307.531799
+      ]
+    },
+    {
+      "approx": false,
+      "arc_solver": {
+        "inlier_sighting": true,
+        "lane": "BALL-ARC-SOLVER",
+        "not_for_detection_metrics": true,
+        "outlier_sighting_pruned": false,
+        "render_only": true,
+        "rescued": false,
+        "segment_id": 0,
+        "weak_segment": false
+      },
+      "band": "anchored_measured",
+      "conf": 0.90758002,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "sigma_m": 1.850213,
+      "source": "event_anchored_drag_arc_solver",
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.033333,
+      "visible": true,
+      "world_xyz": [
+        -0.58048939,
+        6.887315939,
+        0.437351446
+      ],
+      "xy": [
+        332.884094,
+        311.889221
+      ]
+    },
+    {
+      "approx": false,
+      "arc_solver": {
+        "inlier_sighting": true,
+        "lane": "BALL-ARC-SOLVER",
+        "not_for_detection_metrics": true,
+        "outlier_sighting_pruned": false,
+        "render_only": true,
+        "rescued": false,
+        "segment_id": 0,
+        "weak_segment": false
+      },
+      "band": "anchored_measured",
+      "conf": 0.91200417,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "sigma_m": 1.698711,
+      "source": "event_anchored_drag_arc_solver",
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.066667,
+      "visible": true,
+      "world_xyz": [
+        -0.788012274,
+        6.713135308,
+        0.42724283
+      ],
+      "xy": [
+        312.817596,
+        317.564423
+      ]
+    },
+    {
+      "approx": false,
+      "arc_solver": {
+        "inlier_sighting": true,
+        "lane": "BALL-ARC-SOLVER",
+        "not_for_detection_metrics": true,
+        "outlier_sighting_pruned": false,
+        "render_only": true,
+        "rescued": false,
+        "segment_id": 0,
+        "weak_segment": false
+      },
+      "band": "anchored_measured",
+      "conf": 0.89288396,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "sigma_m": 1.547246,
+      "source": "event_anchored_drag_arc_solver",
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.1,
+      "visible": true,
+      "world_xyz": [
+        -0.993654937,
+        6.540532808,
+        0.40637874
+      ],
+      "xy": [
+        292.922638,
+        323.98526
+      ]
+    },
+    {
+      "approx": false,
+      "arc_solver": {
+        "inlier_sighting": true,
+        "lane": "BALL-ARC-SOLVER",
+        "not_for_detection_metrics": true,
+        "outlier_sighting_pruned": false,
+        "render_only": true,
+        "rescued": false,
+        "segment_id": 0,
+        "weak_segment": false
+      },
+      "band": "anchored_measured",
+      "conf": 0.92346591,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "sigma_m": 1.395825,
+      "source": "event_anchored_drag_arc_solver",
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.133333,
+      "visible": true,
+      "world_xyz": [
+        -1.197451449,
+        6.369479841,
+        0.374854797
+      ],
+      "xy": [
+        273.61969,
+        333.601105
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "anchors_used": [
+        {
+          "anchor_id": "rally_endpoint_0_start_000000",
+          "details": {
+            "candidate_prediction": false,
+            "role": "start"
+          },
+          "frame": 0,
+          "immovable": true,
+          "kind": "rally_endpoint",
+          "sigma_m": 2.0,
+          "source": "ball_ray_plane_weak_endpoint_prior",
+          "status": "rally_endpoint_weak",
+          "t": 0.0,
+          "world_xyz": [
+            1.499887279,
+            13.063090754,
+            0.0371
+          ]
+        },
+        {
+          "anchor_id": "auto_bounce_candidate_000012_000",
+          "details": {
+            "ball_radius_m": 0.0371,
+            "candidate_index": 0,
+            "candidate_prediction": true,
+            "human_reviewed": false,
+            "method": "image_y_cusp",
+            "not_ground_truth": true,
+            "pixel_xy": [
+              151.942,
+              391.208
+            ]
+          },
+          "frame": 12,
+          "immovable": false,
+          "kind": "bounce",
+          "sigma_m": 0.18,
+          "source": "track_geometry_candidate",
+          "status": "auto_bounce_candidate",
+          "t": 0.4,
+          "world_xyz": [
+            -2.628910043,
+            4.977288132,
+            0.0371
+          ]
+        }
+      ],
+      "end_anchor": "auto_bounce_candidate_000012_000",
+      "endpoint_error_m": 0.326386,
+      "frame_end": 12,
+      "frame_start": 0,
+      "initial_position_m": [
+        -0.371067156,
+        7.063090754,
+        0.436606266
+      ],
+      "initial_speed_mps": 8.242331,
+      "initial_velocity_mps": [
+        -6.31165846,
+        -5.297577929,
+        0.186152375
+      ],
+      "inlier_count": 9,
+      "inlier_frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        11
+      ],
+      "max_reprojection_error_px": 35.474211,
+      "net_clearance_m": null,
+      "net_clearance_ok": null,
+      "outlier_count": 2,
+      "outlier_frames": [
+        10,
+        12
+      ],
+      "physical_sanity": {
+        "apex_height_m": 0.438361,
+        "initial_speed_mps": 8.242331,
+        "net_clearance_m": null,
+        "violation": false,
+        "violations": []
+      },
+      "reprojection_rmse_px": 8.334652,
+      "segment_id": 0,
+      "size_residuals_m": {
+        "count": 0,
+        "enabled": true,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p90": null,
+        "p95": null
+      },
+      "start_anchor": "rally_endpoint_0_start_000000",
+      "status": "fit",
+      "t0": 0.0,
+      "t1": 0.4
+    }
+  ]
+}

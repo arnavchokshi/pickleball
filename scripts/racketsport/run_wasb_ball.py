@@ -37,6 +37,12 @@ def main() -> int:
     )
     parser.add_argument("--max-frames", type=int, default=None, help="Optional maximum frames for smoke runs.")
     parser.add_argument("--device", choices=("cuda", "cpu"), default="cuda")
+    parser.add_argument(
+        "--emit-candidates",
+        action="store_true",
+        help="Write top-K WASB blob candidates to ball_candidates.json next to --out during official inference.",
+    )
+    parser.add_argument("--candidate-top-k", type=int, default=5, help="Maximum ball candidates to keep per frame.")
     parser.add_argument("--fps", type=float, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--metadata-out", type=Path, default=None)
@@ -57,6 +63,8 @@ def main() -> int:
             video_range=args.video_range,
             max_frames=args.max_frames,
             device=args.device,
+            emit_candidates=args.emit_candidates,
+            candidate_top_k=args.candidate_top_k,
         )
     except Exception as exc:
         print(str(exc), file=sys.stderr)

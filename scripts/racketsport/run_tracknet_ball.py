@@ -54,6 +54,13 @@ def main() -> int:
         help="Pass official TrackNetV3 --video_range START,END for background median sampling; it does not trim prediction frames.",
     )
     parser.add_argument("--large-video", action="store_true", help="Pass --large_video to official TrackNetV3 predict.py.")
+    parser.add_argument(
+        "--emit-candidates",
+        action="store_true",
+        help="Write top-K heatmap local maxima to ball_candidates.json next to --out during heatmap inference.",
+    )
+    parser.add_argument("--candidate-top-k", type=int, default=5, help="Maximum ball candidates to keep per frame.")
+    parser.add_argument("--candidate-nms-radius-px", type=float, default=10.0, help="Source-pixel NMS radius for heatmap candidates.")
     parser.add_argument("--fps", type=float, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--metadata-out", type=Path, default=None)
@@ -77,6 +84,9 @@ def main() -> int:
             heatmap_visible_threshold=args.heatmap_visible_threshold,
             heatmap_eval_mode=args.heatmap_eval_mode,
             heatmap_large_video=args.heatmap_large_video,
+            emit_candidates=args.emit_candidates,
+            candidate_top_k=args.candidate_top_k,
+            candidate_nms_radius_px=args.candidate_nms_radius_px,
         )
     except Exception as exc:
         print(str(exc), file=sys.stderr)

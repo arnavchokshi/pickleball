@@ -19,10 +19,12 @@ from threed.racketsport.net_anchor_court import (
     _apply_hypothesis_confidence_cap,
     _build_global_fit_hypotheses,
     _confidence_cap_for_hypothesis,
+    _detect_line_segments,
     _homography_from_named_image_points,
     accept_candidate_correspondences,
     cluster_ground_line_directions,
     build_proposals_from_homography,
+    detect_net_anchor,
     draw_net_anchor_overlay,
     load_player_foot_points_from_tracks,
     project_standard_keypoints,
@@ -303,6 +305,26 @@ def test_solver_recovers_synthetic_court_and_draws_overlay() -> None:
     overlay = draw_net_anchor_overlay(frame, artifact)
     assert overlay.shape == frame.shape
     assert np.abs(overlay.astype(np.int16) - frame.astype(np.int16)).sum() > 0
+
+
+def test_net_anchor_accepts_2d_hough_lines_p_returns(monkeypatch: pytest.MonkeyPatch) -> None:
+    frame, _homography = _make_synthetic_frame()
+    raw_2d_lines = np.array(
+        [
+            [160, 278, 820, 278],
+            [170, 500, 810, 468],
+            [294, 136, 665, 126],
+        ],
+        dtype=np.int32,
+    )
+
+    monkeypatch.setattr(cv2, "HoughLinesP", lambda *args, **kwargs: raw_2d_lines)
+
+    net = detect_net_anchor(frame)
+    segments = _detect_line_segments(frame)
+
+    assert net.evidence["support_px"] > 0
+    assert segments
 
 
 def test_cluster_ground_line_directions_finds_two_dominant_families() -> None:

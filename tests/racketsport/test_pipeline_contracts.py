@@ -870,3 +870,30 @@ def test_readiness_report_matches_checked_in_json_schema(tmp_path: Path) -> None
     schema = json.loads(Path("docs/racketsport/pipeline_contracts_schema.json").read_text(encoding="utf-8"))
 
     assert_matches_json_schema(report, schema)
+
+
+def test_body_contract_validation_tolerates_absent_smpl_monolith_but_rejects_invalid(tmp_path: Path) -> None:
+    """S4 slim mode (write_body_monoliths=False) legally omits smpl_motion.json.
+
+    The body contract validator must accept its ABSENCE (skeleton3d.json et al.
+    are the slim evidence) while still failing on a PRESENT-but-invalid file and
+    on absence of the hard artifacts.
+    """
+
+    from threed.racketsport.orchestrator import _validate_contract_artifacts
+    from threed.racketsport.pipeline_contracts import PIPELINE_STAGE_CONTRACTS
+
+    body_contract = next(c for c in PIPELINE_STAGE_CONTRACTS if c.stage == "body")
+    assert "smpl_motion.json" in body_contract.required_artifacts
+
+    import pytest
+
+    # Hard artifacts absent -> still fails (absence tolerance is smpl-only).
+    with pytest.raises(Exception):
+        _validate_contract_artifacts(body_contract, tmp_path)
+
+    # Present-but-invalid smpl_motion.json -> still fails.
+    (tmp_path / "smpl_motion.json").write_text("{not json", encoding="utf-8")
+    with pytest.raises(Exception):
+        _validate_contract_artifacts(body_contract, tmp_path)
+    (tmp_path / "smpl_motion.json").unlink()

@@ -191,7 +191,7 @@ const realShapedContacts = parseContactWindows({
 });
 
 describe("view-state URL persistence", () => {
-  it("defaults to a clean scene and keeps debug point clouds off", () => {
+  it("defaults to an inspectable scene with BODY meshes on and debug layers off", () => {
     expect(DEFAULT_VIEW_STATE.layers).toMatchObject({
       ballDot: true,
       ballTrail: true,

@@ -127,7 +127,10 @@ def test_ball_inflection_builder_detects_image_track_turn_without_world_points()
     assert candidate["time_s"] == 0.1
     assert candidate["frame"] == 1
     assert candidate["ball_image_xy"] == [10.0, 0.0]
-    assert candidate["ball_world_xyz"] == [0.0, 0.0, 0.0]
+    assert candidate["ball_world_xyz"] is None
+    assert candidate["ball_world_xyz_source"] == "missing_from_raw_ball_track"
+    assert candidate["render_only"] is True
+    assert candidate["not_for_detection_metrics"] is True
     assert candidate["turn_angle_deg"] == 90.0
     assert candidate["speed_before_px_s"] == 100.0
     assert candidate["speed_after_px_s"] == 100.0

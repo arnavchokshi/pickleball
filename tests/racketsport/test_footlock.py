@@ -69,3 +69,43 @@ def test_foot_lock_metrics_report_max_contact_slide_and_penetration():
     assert metrics.max_penetration_m == pytest.approx(0.03)
     assert metrics.contact_frames == 4
     assert metrics.scaffold == "cpu_foot_lock_primitives_no_smpl_ik"
+
+
+def test_foot_lock_metrics_reset_on_frame_gaps_and_measure_phase_anchored_slide():
+    samples = [
+        FootKinematics(
+            position_xyz=[0.0, 0.0, 0.0],
+            velocity_xyz=[0.0, 0.0, 0.0],
+            contact=True,
+            frame_index=10,
+        ),
+        FootKinematics(
+            position_xyz=[0.02, 0.0, 0.0],
+            velocity_xyz=[0.0, 0.0, 0.0],
+            contact=True,
+            frame_index=11,
+        ),
+        FootKinematics(
+            position_xyz=[0.04, 0.0, 0.0],
+            velocity_xyz=[0.0, 0.0, 0.0],
+            contact=True,
+            frame_index=12,
+        ),
+        FootKinematics(
+            position_xyz=[2.00, 0.0, 0.0],
+            velocity_xyz=[0.0, 0.0, 0.0],
+            contact=True,
+            frame_index=80,
+        ),
+        FootKinematics(
+            position_xyz=[2.03, 0.0, 0.0],
+            velocity_xyz=[0.0, 0.0, 0.0],
+            contact=True,
+            frame_index=81,
+        ),
+    ]
+
+    metrics = foot_lock_metrics(samples, court_z_m=0.0)
+
+    assert metrics.max_slide_m == pytest.approx(0.04)
+    assert metrics.contact_frames == 5

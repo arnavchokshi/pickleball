@@ -81,11 +81,12 @@ def test_foot_pin_pins_confident_stance_to_median_anchor_and_preserves_limb_geom
     source = _payload([_player_frame(idx, left_x=0.01 * idx, right_x=1.0) for idx in range(5)])
     before_lengths = _bone_lengths(source["players"][0]["frames"][2])
 
-    result = apply_foot_pin_to_payload(source, settings=FootPinSettings(taper_frames=0, max_correction_m=0.15))
+    result = apply_foot_pin_to_payload(source, settings=FootPinSettings(taper_frames=0))
 
     corrected_frames = result.payload["players"][0]["frames"]
     left_xs = [corrected_frames[idx]["joints_world"][13][0] for idx in range(5)]
     assert left_xs == pytest.approx([0.02] * 5)
+    assert [frame["track_world_xy"][0] for frame in corrected_frames] == pytest.approx([0.00, 0.01, 0.02, 0.03, 0.04])
     assert result.audit["summary"]["stance_slide_after_mm"]["median"] == pytest.approx(0.0)
     assert result.audit["players"]["p1"]["phase_count"] == 1
     assert result.audit["players"]["p1"]["max_limb_length_delta_m"] == pytest.approx(0.0)
@@ -93,20 +94,31 @@ def test_foot_pin_pins_confident_stance_to_median_anchor_and_preserves_limb_geom
     assert source["players"][0]["frames"][0]["joints_world"][13][0] == pytest.approx(0.0)
 
 
-def test_foot_pin_tapers_phase_edges_and_caps_frame_corrections() -> None:
+def test_foot_pin_applies_full_strength_inside_stance_without_moving_track_or_arms() -> None:
     source = _payload([_player_frame(idx, left_x=0.08 * idx, right_x=1.0) for idx in range(5)])
+    before_left_arm = [
+        [*source["players"][0]["frames"][frame_idx]["joints_world"][joint_idx]]
+        for frame_idx in range(5)
+        for joint_idx in (5, 7, 62)
+    ]
 
     result = apply_foot_pin_to_payload(
         source,
-        settings=FootPinSettings(taper_frames=1, max_correction_m=0.05, enter_speed_mps=3.0, exit_speed_mps=3.0),
+        settings=FootPinSettings(taper_frames=0, enter_speed_mps=3.0, exit_speed_mps=3.0),
     )
 
-    corrections = result.audit["players"]["p1"]["frame_corrections"]
-    by_frame = {item["frame_index"]: item for item in corrections}
-    assert by_frame[0]["weight"] < by_frame[1]["weight"]
-    assert by_frame[4]["weight"] < by_frame[3]["weight"]
-    assert max(item["correction_m"] for item in corrections) <= 0.05 + 1e-9
-    assert result.audit["players"]["p1"]["capped_correction_frame_count"] > 0
+    corrected_frames = result.payload["players"][0]["frames"]
+    assert [frame["track_world_xy"][0] for frame in corrected_frames] == pytest.approx([0.0, 0.08, 0.16, 0.24, 0.32])
+    assert [frame["joints_world"][13][0] for frame in corrected_frames] == pytest.approx([0.16] * 5)
+    assert result.audit["summary"]["max_correction_m"] > 0.02
+    assert result.audit["summary"]["stance_slide_after_mm"]["p95"] == pytest.approx(0.0)
+    after_left_arm = [
+        [*corrected_frames[frame_idx]["joints_world"][joint_idx]]
+        for frame_idx in range(5)
+        for joint_idx in (5, 7, 62)
+    ]
+    for actual, expected in zip(after_left_arm, before_left_arm, strict=True):
+        assert actual == pytest.approx(expected)
 
 
 def test_foot_pin_solves_both_feet_with_shared_root_offset() -> None:
@@ -116,7 +128,7 @@ def test_foot_pin_solves_both_feet_with_shared_root_offset() -> None:
     ]
     source = _payload(frames)
 
-    result = apply_foot_pin_to_payload(source, settings=FootPinSettings(taper_frames=0, max_correction_m=0.15))
+    result = apply_foot_pin_to_payload(source, settings=FootPinSettings(taper_frames=0))
 
     corrected_frames = result.payload["players"][0]["frames"]
     assert [corrected_frames[idx]["joints_world"][13][0] for idx in range(5)] == pytest.approx([0.02] * 5)
@@ -153,7 +165,7 @@ def test_foot_pin_records_provenance_without_changing_unrelated_fields() -> None
 
 def test_foot_pin_preserves_no_data_world_frames_without_using_them_for_detection() -> None:
     frames = [_player_frame(0, left_x=0.00, right_x=1.0), {"t": 1 / 30.0, "joints_world": [], "joint_conf": []}]
-    frames.extend(_player_frame(idx, left_x=0.01 * idx, right_x=1.0) for idx in range(2, 5))
+    frames.extend(_player_frame(idx, left_x=0.01 * idx, right_x=1.0) for idx in range(2, 4))
     source = _payload(frames)
 
     result = apply_foot_pin_to_payload(source, settings=FootPinSettings(taper_frames=0))
@@ -163,7 +175,7 @@ def test_foot_pin_preserves_no_data_world_frames_without_using_them_for_detectio
     assert result.audit["summary"]["stance_slide_after_mm"]["median"] == pytest.approx(0.0)
 
 
-def test_foot_pin_interpolates_root_position_between_stance_knots() -> None:
+def test_foot_pin_does_not_interpolate_or_mutate_track_anchor_between_stance_knots() -> None:
     frames = [
         _player_frame(0, left_x=0.00, right_x=1.0),
         _player_frame(1, left_x=0.50, right_x=1.0),
@@ -180,13 +192,57 @@ def test_foot_pin_interpolates_root_position_between_stance_knots() -> None:
             min_phase_frames=1,
             enter_speed_mps=100.0,
             exit_speed_mps=100.0,
-            max_correction_m=1.0,
-            max_smoothing_correction_m=1.0,
+            interpolate_between_stances=True,
         ),
     )
 
     middle = result.payload["players"][0]["frames"][1]
-    assert middle["track_world_xy"] == pytest.approx([0.01, 0.0])
-    assert result.audit["players"]["p1"]["root_jitter_after"]["p90_frame_displacement_m"] < result.audit["players"]["p1"][
-        "root_jitter_before"
-    ]["p90_frame_displacement_m"]
+    assert middle["track_world_xy"] == pytest.approx([0.50, 0.0])
+    assert middle["transl_world"] == pytest.approx([0.50, 0.0, 0.0])
+    assert result.audit["summary"]["total_corrected_frame_count"] == 0
+
+
+def test_foot_pin_skips_over_cap_corrections_per_foot_frame_instead_of_failing() -> None:
+    from threed.racketsport.foot_contact import ContactPhase
+
+    # Left foot sits at x=0 for frames 0-1 and x=0.7 for frames 2-4; the phase
+    # median anchor lands at 0.7, so frames 0-1 would need a 0.7 m correction --
+    # far beyond the 0.30 m in-stance cap. The refine must NOT raise: it skips
+    # those foot/frames fail-closed and records them in the audit.
+    frames = [
+        _player_frame(idx, left_x=(0.0 if idx < 2 else 0.7), right_x=1.0) for idx in range(5)
+    ]
+    source = _payload(frames)
+    phase = ContactPhase(
+        player_id="p1",
+        foot="left",
+        frame_indices=(0, 1, 2, 3, 4),
+        start_time_s=0.0,
+        end_time_s=4 / 30.0,
+        anchor_position_xyz=(0.7, 0.0, 0.0),
+        max_height_m=0.0,
+        max_speed_mps=0.0,
+        min_confidence=0.95,
+    )
+
+    result = apply_foot_pin_to_payload(
+        source, settings=FootPinSettings(taper_frames=0), contact_phases=[phase]
+    )
+
+    summary = result.audit["summary"]
+    assert summary["cap_exceeded_skip_count"] >= 1
+    skips = result.audit["phase_detection"]["cap_exceeded_skips"]
+    assert all(event["magnitude_m"] > event["cap_m"] for event in skips)
+    # The whole inconsistent phase is dropped (not just its over-cap frames), so no
+    # pin lands anywhere in frames 0-4 and there is no on/off jump inside the stance.
+    assert any(
+        event.get("kind") == "phase_skipped"
+        and event["start_frame_index"] == 0
+        and event["end_frame_index"] == 4
+        for event in skips
+    )
+    corrected_frames = result.payload["players"][0]["frames"]
+    for idx in range(5):
+        assert corrected_frames[idx]["joints_world"][13][0] == pytest.approx(
+            source["players"][0]["frames"][idx]["joints_world"][13][0]
+        )

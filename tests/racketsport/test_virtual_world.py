@@ -572,19 +572,12 @@ def test_build_virtual_world_state_combines_court_players_mesh_ball_and_paddle()
     assert world["players"][0]["frames"][0]["floor_penetration_m"] == pytest.approx(0.0)
     assert world["ball"]["frames"][0]["world_xyz"] == [0.1, -0.8, 0.9]
     assert world["paddles"][0]["frames"][0]["pose_se3"]["t"] == [0.45, -1.9, 0.85]
-    assert world["paddles"][0]["frames"][0]["mesh_faces"] == [[0, 1, 2], [0, 2, 3]]
-    expected_paddle_vertices = [
-        [0.35475, -1.70315, 0.85],
-        [0.54525, -1.70315, 0.85],
-        [0.54525, -2.09685, 0.85],
-        [0.35475, -2.09685, 0.85],
-    ]
-    for actual_vertex, expected_vertex in zip(
-        world["paddles"][0]["frames"][0]["mesh_vertices_world"],
-        expected_paddle_vertices,
-        strict=True,
-    ):
-        assert actual_vertex == pytest.approx(expected_vertex)
+    assert len(world["paddles"][0]["frames"][0]["mesh_vertices_world"]) == 16
+    assert len(world["paddles"][0]["frames"][0]["mesh_faces"]) == 24
+    first_face_vertex = world["paddles"][0]["frames"][0]["mesh_vertices_world"][0]
+    first_back_vertex = world["paddles"][0]["frames"][0]["mesh_vertices_world"][4]
+    assert first_face_vertex == pytest.approx([0.35475, -1.70315, 0.856985])
+    assert first_back_vertex == pytest.approx([0.35475, -1.70315, 0.843015])
     assert world["summary"] == {
         "player_count": 1,
         "mesh_player_count": 1,
@@ -685,6 +678,32 @@ def test_build_virtual_world_state_marks_wrist_proxy_as_estimated_render_only_pa
     assert "missing_paddle_pose" not in world["summary"]["warnings"]
 
 
+def test_build_virtual_world_state_outputs_solid_paddle_face_and_handle_mesh() -> None:
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=_tracks(),
+        smpl_motion=_smpl_motion(),
+        ball_track=_ball_track(),
+        racket_pose=_racket_pose(),
+    )
+
+    frame = world["paddles"][0]["frames"][0]
+    assert len(frame["mesh_vertices_world"]) == 16
+    assert len(frame["mesh_faces"]) == 24
+    front_face = frame["mesh_vertices_world"][0:4]
+    back_face = frame["mesh_vertices_world"][4:8]
+    handle_front = frame["mesh_vertices_world"][8:12]
+    handle_back = frame["mesh_vertices_world"][12:16]
+    assert front_face[0] == pytest.approx([0.35475, -1.70315, 0.856985])
+    assert front_face[2] == pytest.approx([0.54525, -2.09685, 0.856985])
+    assert back_face[0] == pytest.approx([0.35475, -1.70315, 0.843015])
+    assert back_face[2] == pytest.approx([0.54525, -2.09685, 0.843015])
+    assert handle_front[0] == pytest.approx([0.434125, -2.09685, 0.856985])
+    assert handle_front[2] == pytest.approx([0.465875, -2.2302, 0.856985])
+    assert handle_back[0] == pytest.approx([0.434125, -2.09685, 0.843015])
+    assert handle_back[2] == pytest.approx([0.465875, -2.2302, 0.843015])
+
+
 def test_build_virtual_world_state_hides_visible_2d_only_ball_in_replay_mode() -> None:
     world = build_virtual_world_state(
         court_calibration=_court_calibration(),
@@ -711,6 +730,8 @@ def test_build_virtual_world_state_projects_visible_2d_ball_to_court_plane_only_
     ball_frame = world["ball"]["frames"][0]
     assert ball_frame["world_xyz"] == pytest.approx([1.0, 2.0, 0.0])
     assert ball_frame["approx"] is True
+    assert ball_frame["render_only"] is True
+    assert ball_frame["not_for_detection_metrics"] is True
     assert world["summary"]["approx_ball_frame_count"] == 1
     assert "unprojected_visible_ball_frames" not in world["summary"]["warnings"]
 
@@ -757,6 +778,36 @@ def test_apply_ball_track_arc_solved_overlay_is_a_noop_without_an_arc_artifact()
     assert apply_ball_track_arc_solved_overlay(physics_filled, None) == physics_filled
     assert apply_ball_track_arc_solved_overlay(physics_filled, {"frames": "not-a-list"}) == physics_filled
     assert apply_ball_track_arc_solved_overlay(None, _ball_track_arc_solved()) is None
+
+
+def test_apply_ball_track_arc_solved_overlay_ignores_self_killed_artifacts() -> None:
+    physics_filled = _ball_track_physics_filled()
+    for status in ("experimental_off", "degenerate_zero_segments"):
+        arc_solved = _ball_track_arc_solved()
+        arc_solved["status"] = status
+        arc_solved["kill_reasons"] = ["solver_self_killed"]
+
+        assert apply_ball_track_arc_solved_overlay(physics_filled, arc_solved) == physics_filled
+
+
+def test_build_virtual_world_state_excludes_self_killed_ball_arc_overlay() -> None:
+    arc_solved = _ball_track_arc_solved()
+    arc_solved["status"] = "experimental_off"
+    arc_solved["kill_reasons"] = ["physical_sanity_gate_failed"]
+
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=_tracks(),
+        ball_track_physics_filled=_ball_track_physics_filled(),
+        ball_track_arc_solved=arc_solved,
+    )
+
+    assert [frame["world_xyz"] for frame in world["ball"]["frames"]] == [
+        [0.1, -0.8, 0.9],
+        [0.2, -0.7, 0.05],
+        [0.22, -0.69, 0.42],
+    ]
+    assert "arc_solved_overlay" not in world["ball"]
 
 
 def test_build_virtual_world_state_arc_solved_overlay_wins_over_physics_filled_world_xyz() -> None:
@@ -914,6 +965,7 @@ def test_build_virtual_world_state_keeps_skeleton_joints_outside_sparse_mesh_fra
 
 def test_build_virtual_world_state_prefers_skeleton3d_joints_over_same_timestamp_smpl() -> None:
     smpl = _smpl_motion()
+    smpl["players"][0]["frames"][0]["transl_world"] = [9.0, 9.0, 0.0]
     smpl_fill_frame = deepcopy(smpl["players"][0]["frames"][0])
     smpl_fill_frame["t"] = 1.0 / 60.0
     smpl_fill_frame["frame_idx"] = 1
@@ -921,6 +973,7 @@ def test_build_virtual_world_state_prefers_skeleton3d_joints_over_same_timestamp
     smpl_fill_frame["joint_conf"] = [0.2, 0.2]
     smpl["players"][0]["frames"].append(smpl_fill_frame)
     skeleton = _sam3d_skeleton3d_same_first_frame()
+    skeleton["players"][0]["frames"][0]["transl_world"] = [8.0, 8.0, 0.0]
 
     world = build_virtual_world_state(
         court_calibration=_court_calibration(),
@@ -945,12 +998,60 @@ def test_build_virtual_world_state_prefers_skeleton3d_joints_over_same_timestamp
         "frame_idx": 0,
         "t": 0.0,
     }
-    assert same_timestamp["transl_world"] == [0.25, -2.0, 0.0]
+    assert same_timestamp["transl_world"] == [8.0, 8.0, 0.0]
+    assert same_timestamp["floor_world_xyz"][:2] == same_timestamp["track_world_xy"]
     assert same_timestamp["joints_world"] != _smpl_motion()["players"][0]["frames"][0]["joints_world"]
 
     smpl_fill = player["frames"][1]
     assert smpl_fill["joints_world"] == [[9.0, 9.0, 9.0], [10.0, 10.0, 10.0]]
     assert smpl_fill["joint_count"] == 2
+
+
+def test_build_virtual_world_state_rejects_nonfinite_track_world_xy() -> None:
+    tracks = _tracks()
+    tracks["players"][0]["frames"][0]["world_xy"] = [float("nan"), -2.0]
+
+    with pytest.raises(ValueError, match="finite number"):
+        build_virtual_world_state(court_calibration=_court_calibration(), tracks=tracks)
+
+
+def test_run_dir_rebuild_strips_legacy_skeleton3d_foot_pin_extra(tmp_path: Path) -> None:
+    run_dir = tmp_path / "legacy_run"
+    _write_json(run_dir / "court_calibration.json", _court_calibration())
+    _write_json(run_dir / "tracks.json", _tracks())
+    skeleton = _sam3d_skeleton3d_same_first_frame()
+    skeleton["foot_pin"] = {
+        "version": 1,
+        "audit": {
+            "artifact_type": "racketsport_foot_pin_audit",
+            "summary": {"total_corrected_frame_count": 0},
+        },
+    }
+    _write_json(run_dir / "skeleton3d.json", skeleton)
+
+    world = build_virtual_world_state_from_run_dir(run_dir)
+
+    assert world["players"][0]["frames"][0]["joint_count"] == 70
+    assert world["players"][0]["frames"][0]["transl_world"] == [0.25, -2.0, 0.0]
+
+
+def test_run_dir_rebuild_reuses_legacy_pre_r3_confidence_world_when_available(tmp_path: Path) -> None:
+    run_dir = tmp_path / "legacy_run"
+    _write_json(run_dir / "court_calibration.json", _court_calibration())
+    _write_json(run_dir / "tracks.json", _tracks())
+    skeleton = _sam3d_skeleton3d_same_first_frame()
+    skeleton["foot_pin"] = {"version": 1, "audit": {"summary": {"total_corrected_frame_count": 12}}}
+    _write_json(run_dir / "skeleton3d.json", skeleton)
+    legacy_world = build_virtual_world_state(court_calibration=_court_calibration(), tracks=_tracks())
+    legacy_world["confidence_gate"] = {"source": "legacy_pre_r3"}
+    legacy_world["players"][0]["frames"][0]["transl_world"] = [9.0, 9.0, 0.0]
+    _write_json(run_dir / "confidence_gated_world.json", legacy_world)
+
+    world = build_virtual_world_state_from_run_dir(run_dir)
+
+    assert world["confidence_gate"] == {"source": "legacy_pre_r3"}
+    assert world["players"][0]["frames"][0]["transl_world"] == [0.25, -2.0, 0.0]
+    assert any("legacy_pre_r3_world_reused" in warning for warning in world["summary"]["warnings"])
 
 
 def test_build_virtual_world_state_reports_temporal_coverage_relative_to_clip_span() -> None:
@@ -1431,3 +1532,125 @@ def test_virtual_world_cli_run_dir_refuses_eval_clip_without_internal_val_flag(t
 
     assert allowed.returncode == 0
     assert out.exists()
+
+
+def _multi_player_tracks_for_membership() -> dict:
+    payload = _tracks()
+    payload["players"].append(
+        {
+            "id": 8,
+            "side": "far",
+            "role": "right",
+            "frames": [{"t": 0.0, "bbox": [200.0, 100.0, 240.0, 240.0], "world_xy": [1.25, 2.0], "conf": 0.88}],
+        }
+    )
+    payload["players"].append(
+        {
+            "id": 9,
+            "side": "far",
+            "role": "left",
+            "frames": [{"t": 0.0, "bbox": [260.0, 100.0, 300.0, 240.0], "world_xy": [1.8, 2.0], "conf": 0.82}],
+        }
+    )
+    return payload
+
+
+def _multi_player_smpl_for_membership() -> dict:
+    payload = _smpl_motion()
+    player_8 = deepcopy(payload["players"][0])
+    player_8["id"] = 8
+    player_8["frames"][0]["transl_world"] = [1.25, 2.0, 0.0]
+    player_8["frames"][0]["joints_world"] = [[1.25, 2.0, 0.0], [1.25, 2.0, 1.6]]
+    player_8["frames"][0]["mesh_vertices_world"] = [[1.2, 1.95, 0.0], [1.3, 2.05, 1.7]]
+    player_9 = deepcopy(payload["players"][0])
+    player_9["id"] = 9
+    player_9["frames"][0]["transl_world"] = [1.8, 2.0, 0.0]
+    player_9["frames"][0]["joints_world"] = [[1.8, 2.0, 0.0], [1.8, 2.0, 1.6]]
+    player_9["frames"][0]["mesh_vertices_world"] = [[1.75, 1.95, 0.0], [1.85, 2.05, 1.7]]
+    payload["players"].extend([player_8, player_9])
+    return payload
+
+
+def _membership_payload_for_virtual_world() -> dict:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_player_court_membership",
+        "verified": False,
+        "not_gate_verified": True,
+        "per_player": {
+            "7": {"verdict": "on_target_court", "reasons": []},
+            "8": {"verdict": "adjacent_or_spectator", "reasons": ["inside_strict_frac_below_threshold"]},
+            "9": {"verdict": "uncertain", "reasons": ["too_few_frames_for_on_target"]},
+        },
+    }
+
+
+def test_build_virtual_world_state_excludes_membership_adjacent_players_and_records_preview_provenance(
+    tmp_path: Path,
+) -> None:
+    membership_path = _write_json(tmp_path / "membership.json", _membership_payload_for_virtual_world())
+    trust_bands: dict[str, dict | None] = {
+        "track": {
+            "stage": "TRK",
+            "gate_id": "track_preview",
+            "gate_status": "preview",
+            "badge": "preview",
+            "reason": "synthetic",
+            "evidence_path": None,
+        }
+    }
+
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=_multi_player_tracks_for_membership(),
+        smpl_motion=_multi_player_smpl_for_membership(),
+        trust_bands=trust_bands,
+        membership_path=membership_path,
+    )
+
+    assert [player["id"] for player in world["players"]] == [7, 9]
+    assert world["summary"]["player_count"] == 2
+    assert "player_membership_preview_not_verified" in world["summary"]["warnings"]
+    assert "player_membership_excluded_count_1" in world["summary"]["warnings"]
+    assert "player_membership_excluded_ids_8" in world["summary"]["warnings"]
+    assert "player_membership_uncertain_ids_9" in world["summary"]["warnings"]
+    assert trust_bands["player_membership"]["gate_status"] == "membership_preview_not_verified"
+    assert trust_bands["player_membership"]["excluded_players"] == [
+        {"id": 8, "verdict": "adjacent_or_spectator", "reasons": ["inside_strict_frac_below_threshold"]}
+    ]
+    assert trust_bands["player_membership"]["uncertain_players"] == [
+        {"id": 9, "verdict": "uncertain", "reasons": ["too_few_frames_for_on_target"]}
+    ]
+
+
+def test_build_virtual_world_state_without_membership_path_is_byte_identical() -> None:
+    kwargs = {
+        "court_calibration": _court_calibration(),
+        "tracks": _multi_player_tracks_for_membership(),
+        "smpl_motion": _multi_player_smpl_for_membership(),
+    }
+
+    before = build_virtual_world_state(**kwargs)
+    after = build_virtual_world_state(**kwargs, membership_path=None)
+
+    assert json.dumps(after, sort_keys=True) == json.dumps(before, sort_keys=True)
+
+
+def test_build_virtual_world_state_from_files_auto_discovers_membership_next_to_tracks(tmp_path: Path) -> None:
+    from threed.racketsport.virtual_world import build_virtual_world_state_from_files
+
+    court_path = _write_json(tmp_path / "court_calibration.json", _court_calibration())
+    tracks_path = _write_json(tmp_path / "tracks.json", _multi_player_tracks_for_membership())
+    smpl_path = _write_json(tmp_path / "smpl_motion.json", _multi_player_smpl_for_membership())
+    _write_json(tmp_path / "membership.json", _membership_payload_for_virtual_world())
+    trust_bands: dict[str, dict | None] = {}
+
+    world = build_virtual_world_state_from_files(
+        court_calibration_path=court_path,
+        tracks_path=tracks_path,
+        smpl_motion_path=smpl_path,
+        trust_bands=trust_bands,
+    )
+
+    assert [player["id"] for player in world["players"]] == [7, 9]
+    assert trust_bands["player_membership"]["evidence_path"] == str(tmp_path / "membership.json")

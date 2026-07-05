@@ -187,6 +187,72 @@ def test_fuse_contact_windows_can_opt_into_wrist_ball_fusion_without_audio() -> 
     ContactWindows.model_validate(fused)
 
 
+def test_fuse_contact_windows_marks_low_trust_ball_inflection_cues() -> None:
+    fuse_contact_windows, WristVelocityPeak, BallInflectionCandidate = _fusion_api()
+
+    fused = fuse_contact_windows(
+        fps=120.0,
+        audio_onsets=[],
+        wrist_velocity_peaks=[
+            WristVelocityPeak(
+                time_s=1.010,
+                player_id=7,
+                wrist_world_xyz=(1.02, 0.02, 0.82),
+                speed_mps=8.5,
+                confidence=0.95,
+            )
+        ],
+        ball_inflections=[
+            BallInflectionCandidate(
+                time_s=0.990,
+                ball_world_xyz=(1.00, 0.00, 0.80),
+                confidence=0.05,
+            )
+        ],
+        require_audio=False,
+        max_time_delta_s=0.030,
+    )
+
+    event = fused["events"][0]
+    assert event["confidence"] == pytest.approx(0.5)
+    assert event["trust_band_note"] == "low-trust ball-inflection cue, unverified"
+    ContactWindows.model_validate(fused)
+
+
+def test_fuse_contact_windows_accepts_image_only_ball_inflections_as_low_trust() -> None:
+    payload = event_fusion.fuse_contact_windows_from_cue_payloads(
+        fps=120.0,
+        audio_onsets_payload=[],
+        wrist_velocity_peaks_payload={
+            "peaks": [
+                {
+                    "time_s": 1.010,
+                    "player_id": 7,
+                    "wrist_world_xyz": [1.02, 0.02, 0.82],
+                    "speed_mps": 8.5,
+                    "confidence": 0.95,
+                }
+            ]
+        },
+        ball_inflections_payload={
+            "candidates": [
+                {
+                    "time_s": 0.990,
+                    "ball_world_xyz": None,
+                    "confidence": 0.80,
+                }
+            ]
+        },
+        require_audio=False,
+        max_time_delta_s=0.030,
+    )
+
+    event = payload["events"][0]
+    assert event["sources"] == {"wrist_vel": 0.95, "ball_inflection": 0.8}
+    assert event["trust_band_note"] == "image-space ball-inflection cue, unverified"
+    ContactWindows.model_validate(payload)
+
+
 def test_fuse_contact_windows_requires_flag_for_wrist_only_hints() -> None:
     fuse_contact_windows, WristVelocityPeak, _BallInflectionCandidate = _fusion_api()
 

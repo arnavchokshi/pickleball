@@ -127,6 +127,7 @@ def test_calibration_runner_prefers_metric_court_keypoints_when_available(tmp_pa
 
     assert summary["status"] == "blocked"
     assert summary["stages"][0]["status"] == "ran"
+    assert summary["stages"][0]["wall_seconds"] >= 0.0
     assert summary["stages"][0]["source_mode"] == "arkit_plane_keypoints"
     calibration = validate_artifact_file("court_calibration", run_dir / "court_calibration.json")
     assert isinstance(calibration, CourtCalibration)

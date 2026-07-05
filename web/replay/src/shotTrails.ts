@@ -1,4 +1,5 @@
 import type { Vec2, Vec3, VirtualWorld } from "./viewerData";
+import { readArcSolverStatus, readKillReasons, TRUSTED_BALL_ARC_SOLVER_STATUSES } from "./components/modules/ballTrail";
 
 export type ShotQualityBand = "high" | "mid" | "low";
 
@@ -84,6 +85,9 @@ export type BallArcSolved = {
   schema_version: 1;
   artifact_type: "racketsport_ball_track_arc_solved";
   clip_id: string | null;
+  status: string;
+  trusted: boolean;
+  killReasons: string[];
   frames: BallArcSolvedFrame[];
 };
 
@@ -124,6 +128,8 @@ export function parseBallArcSolved(input: unknown): BallArcSolved {
   if (value.artifact_type !== "racketsport_ball_track_arc_solved") {
     throw new Error("ball_track_arc_solved.artifact_type must be racketsport_ball_track_arc_solved");
   }
+  const status = readArcSolverStatus(value.status, "ball_track_arc_solved.status");
+  const trusted = TRUSTED_BALL_ARC_SOLVER_STATUSES.has(status);
   return {
     schema_version: 1,
     artifact_type: "racketsport_ball_track_arc_solved",
@@ -131,7 +137,13 @@ export function parseBallArcSolved(input: unknown): BallArcSolved {
       value.clip_id === null || value.clip_id === undefined
         ? null
         : readString(value.clip_id, "ball_track_arc_solved.clip_id"),
-    frames: readArray(value.frames, "ball_track_arc_solved.frames").map(readBallArcSolvedFrame),
+    status,
+    trusted,
+    killReasons: readKillReasons(value.kill_reasons, "ball_track_arc_solved.kill_reasons"),
+    // A self-killed or unrecognized-status solve must not let any frame be
+    // eligible for measured/anchored trail styling downstream (fail-closed
+    // trusted-status allowlist; see ballTrail.ts TRUSTED_BALL_ARC_SOLVER_STATUSES).
+    frames: trusted ? readArray(value.frames, "ball_track_arc_solved.frames").map(readBallArcSolvedFrame) : [],
   };
 }
 

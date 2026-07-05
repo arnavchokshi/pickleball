@@ -11,17 +11,20 @@ import {
   cameraPresetPose,
   cocoWholeBodyCoreBoneNames,
   createSolidBodyMeshGeometryCache,
+  defaultReviewStartTime,
   contactReadoutText,
   courtBounds,
   geometryForSolidBodyMeshFrame,
   handJointPointsForFrame,
+  hasExplicitReviewStartTime,
   manifestUrlFromSearch,
   paddleRenderGeometryForFrame,
+  shouldRenderReplayScenePointClouds,
   updateFpsSample,
   vertexDebugPointsForFrame,
 } from "./App";
 import { parseBodyMesh } from "./viewerData";
-import type { BodyMesh, TimelineChapter, VirtualWorld, VirtualWorldPlayer } from "./viewerData";
+import type { ActivePaddleFrame, BodyMesh, TimelineChapter, VirtualWorld, VirtualWorldPaddleFrame, VirtualWorldPlayer } from "./viewerData";
 import { DEFAULT_VIEW_STATE, applyViewPreset } from "./viewState";
 
 describe("manifestUrlFromSearch", () => {
@@ -92,6 +95,9 @@ describe("ViewLayerPanel", () => {
     expect(html).toContain("Paddles");
     expect(html).toContain("Skeletons");
     expect(html).toContain("Solid meshes");
+    expect(html).toContain("data-layer-key=\"paddles\"");
+    expect(html).toContain("data-layer-key=\"playerSkeletons\"");
+    expect(html).toContain("data-layer-key=\"floorContactMarkers\"");
     expect(html).toContain("Hand points");
     expect(html).toContain("Implausible skeletons");
     expect(html).toContain("aria-pressed=\"false\"");
@@ -118,6 +124,32 @@ describe("ViewLayerPanel", () => {
     expect(html).toContain("Player 2");
     expect(html).toContain("player-chip active");
     expect(html).toContain("aria-pressed=\"true\"");
+  });
+});
+
+describe("default world visibility", () => {
+  it("starts the 3D world with BODY meshes visible and leaves debug layers opt-in", () => {
+    expect(DEFAULT_VIEW_STATE.layers.ballDot).toBe(true);
+    expect(DEFAULT_VIEW_STATE.layers.ballTrail).toBe(true);
+    expect(DEFAULT_VIEW_STATE.layers.playerSkeletons).toBe(true);
+    expect(DEFAULT_VIEW_STATE.layers.playerSolidMeshes).toBe(true);
+    expect(DEFAULT_VIEW_STATE.layers.handJointPoints).toBe(false);
+    expect(DEFAULT_VIEW_STATE.layers.debugPointClouds).toBe(false);
+  });
+
+  it("keeps manifest replay point clouds behind the point-cloud debug layer", () => {
+    const replayScene = {
+      schema_version: 1 as const,
+      world_frame: "court_Z0" as const,
+      fps: 30,
+      court_glb: "replay_review/court.glb",
+      players: [1],
+      points: [{ id: 1, t0: 0, t1: 1, glb_url: "replay_review/points/point_001_review.glb", size_mb: 1.2 }],
+    };
+
+    expect(shouldRenderReplayScenePointClouds(DEFAULT_VIEW_STATE, replayScene, 0.5)).toBe(false);
+    expect(shouldRenderReplayScenePointClouds(applyViewPreset(DEFAULT_VIEW_STATE, "default"), replayScene, 0.5)).toBe(false);
+    expect(shouldRenderReplayScenePointClouds({ ...DEFAULT_VIEW_STATE, layers: { ...DEFAULT_VIEW_STATE.layers, debugPointClouds: true } }, replayScene, 0.5)).toBe(true);
   });
 });
 
@@ -416,6 +448,96 @@ describe("paddleRenderGeometryForFrame", () => {
     expect(geometry.faces.length).toBeGreaterThan(2);
     expect(geometry.vertices[1]).not.toEqual(frame.pose_se3.t);
   });
+
+  it("uses frame mesh vertices when the world artifact supplies a face-and-handle paddle mesh", () => {
+    const frame: VirtualWorldPaddleFrame = {
+      t: 0,
+      pose_se3: {
+        R: [
+          [1, 0, 0],
+          [0, 1, 0],
+          [0, 0, 1],
+        ],
+        t: [0, 0, 0],
+      },
+      mesh_vertices_world: [
+        [-1, 1, 0],
+        [1, 1, 0],
+        [1, -1, 0],
+        [-1, -1, 0],
+        [-0.2, -1, 0],
+        [0.2, -1, 0],
+        [0.2, -1.8, 0],
+        [-0.2, -1.8, 0],
+      ],
+      mesh_faces: [
+        [0, 1, 2],
+        [0, 2, 3],
+        [4, 5, 6],
+        [4, 6, 7],
+      ],
+      conf: 0.5,
+      world_frame: "court_Z0",
+      translation_unit: "m",
+      source: "wrist_proxy:court_Z0",
+      ambiguous: false,
+      render_only: true,
+      not_for_detection_metrics: true,
+      reprojection_error_px: null,
+      confidence_provenance: null,
+      trust_band: null,
+    };
+
+    const geometry = paddleRenderGeometryForFrame(frame, { length: 15.5, width: 7.5 });
+
+    expect(geometry.vertices).toEqual(frame.mesh_vertices_world);
+    expect(geometry.faces).toEqual(frame.mesh_faces);
+    expect(geometry.estimated).toBe(true);
+    expect(geometry.edgeSegments).toHaveLength(16);
+    expect(geometry.material.fillOpacity).toBeGreaterThanOrEqual(0.8);
+    expect(geometry.material.edgeOpacity).toBeGreaterThanOrEqual(0.9);
+    expect(geometry.material.edgeRadiusM).toBeGreaterThanOrEqual(0.012);
+  });
+
+  it("exposes a face-normal review segment from the paddle pose rotation", () => {
+    const frame: VirtualWorldPaddleFrame = {
+      t: 0,
+      pose_se3: {
+        R: [
+          [1, 0, 0],
+          [0, 1, -0.707106781],
+          [0, 0, 0.707106781],
+        ],
+        t: [0.2, 0.4, 1.1],
+      },
+      mesh_vertices_world: [],
+      mesh_faces: [],
+      conf: 0.5,
+      world_frame: "court_Z0",
+      translation_unit: "m",
+      source: "wrist_proxy:court_Z0",
+      ambiguous: false,
+      render_only: true,
+      not_for_detection_metrics: true,
+      reprojection_error_px: null,
+      confidence_provenance: null,
+      trust_band: null,
+    };
+
+    const geometry = paddleRenderGeometryForFrame(frame, { length: 15.5, width: 7.5 });
+
+    expect(geometry.normalSegment[0]).toEqual([0.2, 0.4, 1.1]);
+    expect(geometry.normalSegment[1]).toEqual([
+      expect.closeTo(0.2),
+      expect.closeTo(0.4 - 0.707106781 * 0.52),
+      expect.closeTo(1.1 + 0.707106781 * 0.52),
+    ]);
+    expect(geometry.material.normalColor).toBe("#23c9ff");
+    expect(geometry.material.normalRadiusM).toBeGreaterThanOrEqual(0.014);
+    expect(geometry.material.normalTipRadiusM).toBeGreaterThanOrEqual(0.05);
+    expect(geometry.normalTip).toEqual(geometry.normalSegment[1]);
+    expect(geometry.material.normalOverlay).toBe(true);
+  });
 });
 
 function makeWorld(players: VirtualWorldPlayer[]): VirtualWorld {
@@ -500,6 +622,38 @@ describe("courtBounds and cameraPresetPose", () => {
     expect(bounds.centerX).toBeCloseTo(0);
   });
 
+  it("does not add an extra apron when court coordinates are centered on the net", () => {
+    const centered = makeWorld([]);
+    centered.court.line_segments = {
+      near_baseline: [
+        [-3.05, -6.705, 0],
+        [3.05, -6.705, 0],
+      ],
+      far_baseline: [
+        [-3.05, 6.705, 0],
+        [3.05, 6.705, 0],
+      ],
+      left_sideline: [
+        [-3.05, -6.705, 0],
+        [-3.05, 6.705, 0],
+      ],
+      right_sideline: [
+        [3.05, -6.705, 0],
+        [3.05, 6.705, 0],
+      ],
+      net: [
+        [-3.35, 0, 0],
+        [3.35, 0, 0],
+      ],
+    };
+
+    const bounds = courtBounds(centered);
+
+    expect(bounds.length).toBeCloseTo(13.41);
+    expect(bounds.width).toBeCloseTo(6.1);
+    expect(bounds.centerY).toBeCloseTo(0);
+  });
+
   it("produces three distinct camera poses for broadcast/behind_baseline/top_down", () => {
     const broadcast = cameraPresetPose(world, "broadcast");
     const behindBaseline = cameraPresetPose(world, "behind_baseline");
@@ -509,6 +663,124 @@ describe("courtBounds and cameraPresetPose", () => {
     // top_down looks straight down at court level.
     expect(topDown.target[2]).toBe(0);
     expect(topDown.position[2]).toBeGreaterThan(broadcast.position[2]);
+  });
+
+  it("frames the selected player's active paddle with a close review camera", () => {
+    const playerOne = makeActivePaddle(1, [0, 1, 1]);
+    const playerTwo = makeActivePaddle(2, [1.2, 4.5, 1.1]);
+
+    const pose = cameraPresetPose(world, "paddle_review", [playerOne, playerTwo], 2);
+
+    expect(pose.target[0]).toBeCloseTo(1.2);
+    expect(pose.target[1]).toBeCloseTo(4.5);
+    expect(pose.target[2]).toBeCloseTo(1.1);
+    expect(pose.position[1]).toBeLessThan(pose.target[1]);
+    expect(pose.position[2]).toBeGreaterThan(pose.target[2]);
+    expect(Math.hypot(pose.position[0] - pose.target[0], pose.position[1] - pose.target[1], pose.position[2] - pose.target[2])).toBeLessThan(2);
+  });
+
+  it("falls back to the top-down court camera when no paddle is active", () => {
+    expect(cameraPresetPose(world, "paddle_review")).toEqual(cameraPresetPose(world, "top_down"));
+  });
+});
+
+function makeActivePaddle(playerId: number, center: [number, number, number]): ActivePaddleFrame {
+  const [x, y, z] = center;
+  const frame: VirtualWorldPaddleFrame = {
+    t: 0,
+    pose_se3: {
+      R: [
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+      ],
+      t: center,
+    },
+    mesh_vertices_world: [
+      [x - 0.1, y - 0.2, z],
+      [x + 0.1, y - 0.2, z],
+      [x + 0.1, y + 0.2, z],
+      [x - 0.1, y + 0.2, z],
+    ],
+    mesh_faces: [[0, 1, 2]],
+    conf: 0.5,
+    world_frame: "court_Z0",
+    translation_unit: "m",
+    source: "wrist_proxy:court_Z0",
+    ambiguous: false,
+    render_only: true,
+    not_for_detection_metrics: true,
+    reprojection_error_px: null,
+    confidence_provenance: null,
+    trust_band: null,
+  };
+  return {
+    playerId,
+    paddle: {
+      player_id: playerId,
+      paddle_dims_in: { length: 15.5, width: 7.5 },
+      frames: [frame],
+      coverage_fraction: 1,
+      min_t: 0,
+      max_t: 0,
+      trust_band: null,
+    },
+    frame,
+    estimated: true,
+  };
+}
+
+describe("review start time defaults", () => {
+  it("opens manifest review links on the first renderable artifact time", () => {
+    const world = makeWorld([
+      {
+        id: 1,
+        representation: "joints",
+        frames: [{ t: 2.4, floor_world_xyz: [0, 0, 0], joints_world: [], joint_conf: [], mesh_vertices_world: [], joint_count: 0, mesh_vertex_count: 0 }],
+      },
+      {
+        id: 2,
+        representation: "joints",
+        frames: [{ t: 3.1, floor_world_xyz: [1, 1, 0], joints_world: [], joint_conf: [], mesh_vertices_world: [], joint_count: 0, mesh_vertex_count: 0 }],
+      },
+    ]);
+    expect(defaultReviewStartTime(world)).toBeCloseTo(2.4);
+  });
+
+  it("skips placeholder player frames and opens where the most players are visible", () => {
+    const placeholderFrame = {
+      t: 2.0,
+      joints_world: [],
+      joint_conf: [],
+      mesh_vertices_world: [],
+      joint_count: 0,
+      mesh_vertex_count: 0,
+    };
+    const visibleFrameA = {
+      t: 4.0,
+      floor_world_xyz: [0, 0, 0] as [number, number, number],
+      joints_world: [],
+      joint_conf: [],
+      mesh_vertices_world: [],
+      joint_count: 0,
+      mesh_vertex_count: 0,
+    };
+    const visibleFrameB = {
+      ...visibleFrameA,
+      floor_world_xyz: [1, 1, 0] as [number, number, number],
+    };
+    const world = makeWorld([
+      { id: 1, representation: "joints", frames: [placeholderFrame, visibleFrameA] },
+      { id: 2, representation: "joints", frames: [placeholderFrame, visibleFrameB] },
+    ]);
+
+    expect(defaultReviewStartTime(world)).toBeCloseTo(4.0);
+  });
+
+  it("distinguishes an explicit zero start time from an omitted start time", () => {
+    expect(hasExplicitReviewStartTime("?manifest=/tmp/replay.json")).toBe(false);
+    expect(hasExplicitReviewStartTime("?manifest=/tmp/replay.json&t=0")).toBe(true);
+    expect(hasExplicitReviewStartTime("?time=1.25")).toBe(true);
   });
 });
 

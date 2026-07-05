@@ -18,7 +18,7 @@ from threed.racketsport.court_finding_technology_benchmark import (
 )
 
 
-def test_discovers_four_full_clips_and_img1605_partial() -> None:
+def test_discovers_court_finding_samples_without_label_dirs_as_media() -> None:
     samples = discover_court_finding_samples("eval_clips/ball")
 
     assert [sample.clip for sample in samples] == [
@@ -28,11 +28,40 @@ def test_discovers_four_full_clips_and_img1605_partial() -> None:
         "owner_IMG_1605_8a193402780b",
         "wolverine_mixed_0200_mid_steep_corner",
     ]
-    assert sum(1 for sample in samples if sample.label_kind == "full_15pt") == 4
     img1605 = next(sample for sample in samples if sample.clip == "owner_IMG_1605_8a193402780b")
-    assert img1605.label_kind == "partial_visible"
-    assert img1605.label_path.name == "court_keypoints_partial.json"
-    assert img1605.frame_input.name == "court_keypoint_partial_frames"
+    assert img1605.label_kind in {"partial_visible", "full_15pt"}
+    assert img1605.frame_input.exists()
+    assert "labels/court_keypoint_frames" not in str(img1605.frame_input)
+
+
+def test_discovery_falls_back_to_partial_when_full_label_lacks_frames(tmp_path) -> None:
+    labels = tmp_path / "clip_a" / "labels"
+    partial_frames = labels / "court_keypoint_partial_frames"
+    partial_frames.mkdir(parents=True)
+    (partial_frames / "frame_000001.jpg").write_bytes(b"")
+    (labels / "court_keypoints.json").write_text(
+        json.dumps({"artifact_type": "racketsport_court_keypoints", "keypoints": []}),
+        encoding="utf-8",
+    )
+    (labels / "court_keypoints_partial.json").write_text(
+        json.dumps(
+            {
+                "artifact_type": "racketsport_court_keypoint_partial_labels",
+                "frames": {
+                    "frame_count": 1,
+                    "label_coordinate_space": [1080, 1920],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    samples = discover_court_finding_samples(tmp_path)
+
+    assert len(samples) == 1
+    assert samples[0].label_kind == "partial_visible"
+    assert samples[0].label_path.name == "court_keypoints_partial.json"
+    assert samples[0].frame_input == partial_frames
 
 
 def test_opencv_lsd_line_adapter_reports_available_segments() -> None:
@@ -543,6 +572,33 @@ def test_line_refined_regulation_scores_real_samples_without_claiming_verified(t
     assert proposal["needs_user_confirmation"] is True
     assert proposal["score_components"]["line_refinement"]["available"] is True
     assert proposal["hypotheses"][0]["score_components"]["line_refinement"]["available"] is True
+    outdoor = json.loads(
+        (
+            tmp_path
+            / "outdoor_webcam_iynbd_1500_long_high_baseline"
+            / "opencv_hough_lsd_regulation_line_refined"
+            / "court_proposal.json"
+        ).read_text()
+    )
+    outdoor_refinement = outdoor["score_components"]["line_refinement"]
+    assert outdoor_refinement["available"] is True
+    assert outdoor_refinement["accepted"] is False
+    assert outdoor_refinement["rejection_reason"] == "projected_pixel_support_worse"
+    wolverine = json.loads(
+        (
+            tmp_path
+            / "wolverine_mixed_0200_mid_steep_corner"
+            / "opencv_hough_lsd_regulation_line_refined"
+            / "court_proposal.json"
+        ).read_text()
+    )
+    wolverine_refinement = wolverine["score_components"]["line_refinement"]
+    assert wolverine_refinement["available"] is True
+    assert wolverine_refinement["accepted"] is False
+    assert wolverine_refinement["rejection_reason"] in {
+        "intersection_residual_too_much_worse",
+        "line_residual_not_improved",
+    }
 
 
 def test_hough_or_distance_mask_selector_scores_candidate_combination(tmp_path) -> None:
@@ -600,6 +656,45 @@ def test_hough_or_distance_mask_selector_scores_candidate_combination(tmp_path) 
         ).read_text()
     )
     assert indoor["selector"]["selected_technology_id"] == "opencv_hough_lsd_regulation_distance_mask"
+
+
+def test_hough_or_refined_regulation_selector_uses_guarded_refinement_when_it_improves_median(tmp_path) -> None:
+    report = build_court_finding_technology_report(
+        eval_root="eval_clips/ball",
+        technologies=[
+            "hough_or_regulation_line_selector",
+            "opencv_hough_lsd_regulation_line_refined",
+            "hough_or_refined_regulation_line_selector",
+        ],
+        out_dir=tmp_path,
+    )
+
+    old_selector = report["summary"]["by_technology"]["hough_or_regulation_line_selector"]
+    refined_selector = report["summary"]["by_technology"]["hough_or_refined_regulation_line_selector"]
+
+    assert refined_selector["scored_clip_count"] == 5
+    assert refined_selector["floor_visible_median_px_mean"] < old_selector["floor_visible_median_px_mean"]
+    assert refined_selector["floor_visible_median_px_mean"] < 292.0
+    assert refined_selector["floor_visible_p95_px_mean"] < 555.0
+
+    choices = {}
+    for clip in [
+        "burlington_gold_0300_low_steep_corner",
+        "indoor_doubles_fwuks_0500_long_mid_baseline",
+        "outdoor_webcam_iynbd_1500_long_high_baseline",
+        "owner_IMG_1605_8a193402780b",
+        "wolverine_mixed_0200_mid_steep_corner",
+    ]:
+        proposal = json.loads((tmp_path / clip / "hough_or_refined_regulation_line_selector" / "court_proposal.json").read_text())
+        choices[clip] = proposal["selector"]["selected_technology_id"]
+
+    assert choices == {
+        "burlington_gold_0300_low_steep_corner": "hough_keypoints",
+        "indoor_doubles_fwuks_0500_long_mid_baseline": "opencv_hough_lsd_regulation_line_refined",
+        "outdoor_webcam_iynbd_1500_long_high_baseline": "opencv_hough_lsd_regulation",
+        "owner_IMG_1605_8a193402780b": "opencv_hough_lsd_regulation_line_refined",
+        "wolverine_mixed_0200_mid_steep_corner": "opencv_hough_lsd_regulation",
+    }
 
 
 def test_benchmark_report_scores_existing_adapters_without_claiming_verified(tmp_path) -> None:

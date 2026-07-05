@@ -122,3 +122,17 @@ Promotion requires reviewed-label evidence, not artifact existence:
 | replay | replay consumes ball samples with correct trust bands. |
 
 Until these pass, BALL remains `SCAFFOLD, not VERIFIED`.
+
+## 10. Default 3D Ball Chain (2026-07-05)
+
+`process_video.py` now runs the ball 3D chain BY DEFAULT after the ball stage: top-K candidate
+sidecar emission during detector inference -> label-free auto-bounce anchor proposal
+(`scripts/racketsport/propose_ball_bounce_candidates.py`) -> event-anchored arc solver at the frozen
+validated configuration (`threed/racketsport/ball_arc_chain.py`; config equality is fixture-tested) ->
+parabolic flight-sanity demotion (`threed/racketsport/ball_flight_sanity.py`). Outputs are render-only
+and fail closed: a self-killed solve (`experimental_off`/`degenerate_zero_segments`) is written to disk
+but never consumed by `virtual_world.py`. The web viewer renders the ball with a trail, band-honest
+measured/predicted styling, impact markers, and a coverage KPI. Opt-outs: `--no-ball-arc`,
+`--no-ball-candidates`. Standalone runner: `scripts/racketsport/run_ball_chain.py` (held-out clips
+require `--heldout-authorized`). Verification: `scripts/racketsport/verify_process_video_viewer.py
+--screenshot-at-seconds N` captures mid-playback proof.

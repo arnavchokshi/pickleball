@@ -9,23 +9,42 @@ W3-SCRUBBER-V0 build. This is best-effort: `process_video.py`'s `verify`
 stage already treats any failure here (including Playwright not being
 installed in the current interpreter) as a non-fatal `degraded` stage, never
 a pipeline crash.
+
+In addition to the generic "did something render" check, this tool enforces
+a ball-honesty acceptance gate (see `assert_ball_honesty`): if the run's
+ball-arc-solver artifact (ball_track_arc_solved.json) self-killed -- status
+not "ran" -- the viewer's BallHonestyHud must never claim "measured". A
+self-killed solve rendering as confident truth was a measured 2026-07-05
+defect (runs/lanes/e2e_synergy_audit_20260705/browser_verify/); this gate
+exists to catch any regression back to that behavior.
 """
 
 from __future__ import annotations
 
 import json
+import math
 import socket
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB_REPLAY_DIR = ROOT / "web" / "replay"
 DEV_SERVER_HOST = "127.0.0.1"
 DEV_SERVER_PORT = 5173
-ENTITY_COUNT_LABELS = ("Players", "Mesh Frames", "Solid Mesh Frames", "Floor Frames", "Ball Contacts", "Replay Points")
+ENTITY_COUNT_LABELS = ("Players", "Contacts", "Ball", "Warnings", "3D FPS")
+
+# Authoritative trusted-status allowlist for the ball-arc-solver artifact,
+# mirrored from web/replay/src/components/modules/ballTrail.ts
+# (TRUSTED_BALL_ARC_SOLVER_STATUSES). The producer
+# (threed/racketsport/ball_arc_solver.py:1329-1366) only ever writes "ran"
+# (success, :1329), "experimental_off" (self-kill, :1333 / :1339), or
+# "degenerate_zero_segments" (self-kill, :1348); only "ran" is trusted, same
+# as scripts/racketsport/solve_ball_arcs.py:363-372 and
+# scripts/racketsport/run_ball_chain.py:438 already treat it downstream.
+TRUSTED_BALL_ARC_SOLVER_STATUSES = frozenset({"ran"})
 
 
 def viewer_url_for_manifest(manifest_path: Path | str | None, *, port: int = DEV_SERVER_PORT) -> str:
@@ -42,11 +61,97 @@ def assert_non_empty_entity_counts(loaded_counts: dict[str, Any], *, allow_empty
     raise AssertionError(f"empty viewer: expected at least one nonzero entity count; loaded_counts={entity_counts}")
 
 
+def resolve_ball_arc_solved_path(manifest_path: Path | str) -> Path | None:
+    """Resolve the ball_track_arc_solved.json referenced by a replay viewer
+    manifest's `ball_arc_solved_url` (a Vite `/@fs<absolute path>` dev URL).
+
+    Returns None (not an error) if the manifest has no such field, the field
+    isn't a usable path, or the file does not exist -- callers treat that as
+    "nothing to gate on" so runs without a ball-arc-solved artifact are
+    unaffected.
+    """
+    try:
+        manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(manifest, dict):
+        return None
+    url = manifest.get("ball_arc_solved_url")
+    if not isinstance(url, str) or not url.strip():
+        return None
+    path_str = url[len("/@fs") :] if url.startswith("/@fs") else url
+    path = Path(path_str)
+    return path if path.is_file() else None
+
+
+def read_ball_arc_solver_status(manifest_path: Path | str) -> tuple[str | None, list[str]]:
+    """Read the ball-arc-solver artifact's top-level status/kill_reasons for
+    the run behind `manifest_path`.
+
+    Returns (None, []) when there is no resolvable ball_track_arc_solved.json
+    -- the ball-honesty gate is a no-op in that case, same as the TS parsers'
+    "missing status defaults to ran" precedent for anything that IS present
+    but omits the field.
+    """
+    arc_path = resolve_ball_arc_solved_path(manifest_path)
+    if arc_path is None:
+        return None, []
+    try:
+        artifact = json.loads(arc_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None, []
+    if not isinstance(artifact, dict):
+        return None, []
+    raw_status = artifact.get("status")
+    status = "ran" if raw_status in (None, "") else str(raw_status)
+    raw_kill_reasons = artifact.get("kill_reasons")
+    kill_reasons = [str(item) for item in raw_kill_reasons] if isinstance(raw_kill_reasons, list) else []
+    return status, kill_reasons
+
+
+def assert_ball_honesty(
+    hud_snapshot: dict[str, Any] | None,
+    *,
+    solver_status: str | None,
+    kill_reasons: Sequence[str] = (),
+) -> None:
+    """Fail-closed acceptance gate for the BallHonestyHud (aria-label="Ball
+    tracking honesty", data-ball-state=...).
+
+    If the run's ball-arc-solver self-killed (`solver_status` present and not
+    in TRUSTED_BALL_ARC_SOLVER_STATUSES), the HUD must never report
+    data-ball-state="measured" -- that would mean a self-killed solve is
+    rendering as confident truth. Healthy runs (solver_status == "ran", or no
+    ball-arc-solved artifact at all, i.e. solver_status is None) always pass.
+    """
+    if solver_status is None or solver_status in TRUSTED_BALL_ARC_SOLVER_STATUSES:
+        return
+    if not hud_snapshot:
+        return
+    if hud_snapshot.get("data_ball_state") == "measured":
+        reasons = "; ".join(kill_reasons) or "unspecified"
+        raise AssertionError(
+            "ball honesty violation: solver status="
+            f"{solver_status!r} ({reasons}) is untrusted, but the ball tracking "
+            f"honesty HUD reported data-ball-state=\"measured\" (hud_snapshot={hud_snapshot})"
+        )
+
+
 def write_headless_verify_report(out_dir: Path, payload: dict[str, Any]) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     report_path = out_dir / "headless_verify.json"
     report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return report_path
+
+
+def screenshot_name_for_seconds(seconds: float) -> str:
+    if not math.isfinite(seconds) or seconds < 0:
+        raise ValueError("--screenshot-at-seconds values must be finite and non-negative")
+    if int(seconds) == seconds:
+        token = str(int(seconds))
+    else:
+        token = f"{seconds:.3f}".rstrip("0").rstrip(".").replace(".", "p")
+    return f"screenshot_t{token}s.png"
 
 
 def _require_manifest_path(manifest_path: Path | str | None) -> Path:
@@ -109,6 +214,36 @@ def _collect_load_errors(page: Any) -> list[str]:
     return page.locator(".load-error").all_inner_texts()
 
 
+def _collect_ball_honesty_hud(page: Any) -> dict[str, Any] | None:
+    return page.evaluate(
+        """() => {
+          const el = document.querySelector('[aria-label="Ball tracking honesty"]');
+          if (!el) return null;
+          return {
+            text: (el.textContent ?? "").trim(),
+            data_ball_state: el.getAttribute("data-ball-state"),
+            data_low_confidence: el.getAttribute("data-low-confidence"),
+          };
+        }"""
+    )
+
+
+def _seek_viewer_to_seconds(page: Any, seconds: float) -> None:
+    page.evaluate(
+        """(seconds) => {
+          const video = document.querySelector("video");
+          if (video) {
+            video.pause();
+            video.currentTime = seconds;
+            video.dispatchEvent(new Event("seeking", { bubbles: true }));
+            video.dispatchEvent(new Event("seeked", { bubbles: true }));
+            video.dispatchEvent(new Event("timeupdate", { bubbles: true }));
+          }
+        }""",
+        seconds,
+    )
+
+
 def verify_viewer_loads(
     manifest_path: Path | str | None,
     *,
@@ -116,6 +251,7 @@ def verify_viewer_loads(
     timeout_s: float = 45.0,
     allow_empty: bool = False,
     port: int = DEV_SERVER_PORT,
+    screenshot_at_seconds: Sequence[float] = (),
 ) -> dict[str, Any]:
     manifest_path = _require_manifest_path(manifest_path)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -153,7 +289,9 @@ def verify_viewer_loads(
     load_errors: list[str] = []
     loaded_counts: dict[str, Any] = {}
     trust_chip_count = 0
+    ball_honesty_hud: dict[str, Any] | None = None
     url = viewer_url_for_manifest(manifest_path, port=port)
+    solver_status, kill_reasons = read_ball_arc_solver_status(manifest_path)
 
     try:
         with sync_playwright() as p:
@@ -167,6 +305,14 @@ def verify_viewer_loads(
             screenshot_path = out_dir / "process_video_verify.png"
             page.screenshot(path=str(screenshot_path))
             screenshots.append(str(screenshot_path))
+            ball_honesty_hud = _collect_ball_honesty_hud(page)
+            for seconds in screenshot_at_seconds:
+                screenshot_name = screenshot_name_for_seconds(seconds)
+                _seek_viewer_to_seconds(page, seconds)
+                page.wait_for_timeout(1000)
+                timed_screenshot_path = out_dir / screenshot_name
+                page.screenshot(path=str(timed_screenshot_path))
+                screenshots.append(str(timed_screenshot_path))
             loaded_counts = _collect_loaded_counts(page)
             load_errors = _collect_load_errors(page)
             trust_chip_count = page.locator(".trust-badge-chip").count()
@@ -185,6 +331,10 @@ def verify_viewer_loads(
         assert_non_empty_entity_counts(loaded_counts, allow_empty=allow_empty)
     except AssertionError as exc:
         assertion_errors.append(str(exc))
+    try:
+        assert_ball_honesty(ball_honesty_hud, solver_status=solver_status, kill_reasons=kill_reasons)
+    except AssertionError as exc:
+        assertion_errors.append(str(exc))
     page_errors.extend(load_errors)
     ok = not page_errors and not console_errors and not assertion_errors
     if page_errors:
@@ -193,6 +343,11 @@ def verify_viewer_loads(
         notes.append(f"{len(console_errors)} console error(s): {console_errors[:3]}")
     if assertion_errors:
         notes.append(f"{len(assertion_errors)} assertion error(s): {assertion_errors[:3]}")
+    if solver_status is not None:
+        notes.append(
+            f"ball-arc-solver status={solver_status!r} trusted={solver_status in TRUSTED_BALL_ARC_SOLVER_STATUSES} "
+            f"honesty_hud={ball_honesty_hud}"
+        )
 
     result = {
         "ok": ok,
@@ -208,6 +363,9 @@ def verify_viewer_loads(
         "assertion_error_count": len(assertion_errors),
         "trust_chip_count": trust_chip_count,
         "allow_empty": allow_empty,
+        "ball_arc_solver_status": solver_status,
+        "ball_arc_solver_kill_reasons": list(kill_reasons),
+        "ball_honesty_hud": ball_honesty_hud,
     }
     write_headless_verify_report(out_dir, result)
     return result
@@ -221,8 +379,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--port", type=int, default=DEV_SERVER_PORT)
     parser.add_argument("--allow-empty", action="store_true", help="Allow a manifest that intentionally renders zero viewer entities.")
+    parser.add_argument(
+        "--screenshot-at-seconds",
+        type=float,
+        action="append",
+        default=[],
+        help="After the load screenshot, seek the viewer and capture an additional screenshot_t<N>s.png. Repeatable.",
+    )
     args = parser.parse_args(argv)
-    result = verify_viewer_loads(args.manifest, out_dir=args.out_dir, allow_empty=args.allow_empty, port=args.port)
+    result = verify_viewer_loads(
+        args.manifest,
+        out_dir=args.out_dir,
+        allow_empty=args.allow_empty,
+        port=args.port,
+        screenshot_at_seconds=args.screenshot_at_seconds,
+    )
     print(json.dumps(result, indent=2))
     return 0 if result["ok"] else 1
 

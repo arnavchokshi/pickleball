@@ -5,17 +5,19 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import math
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Literal
 
 from .ball_tracknet import ball_frame
-from .schemas import BallTrack
+from .schemas import BallCandidates, BallTrack
 
 try:
     from torch.utils.data import IterableDataset as _TorchIterableDataset
@@ -31,6 +33,8 @@ LEGACY_CONFIDENCE_SEMANTICS = "official visibility mapped to conf 1.0/0.0"
 HEATMAP_CONFIDENCE_SEMANTICS = "TrackNet heatmap peak value (0..1)"
 CONFIDENCE_SEMANTICS = LEGACY_CONFIDENCE_SEMANTICS
 DEFAULT_HEATMAP_VISIBLE_THRESHOLD = 0.5
+DEFAULT_BALL_CANDIDATE_TOP_K = 5
+DEFAULT_TRACKNET_CANDIDATE_NMS_RADIUS_PX = 10.0
 
 
 def tracknet_csv_to_ball_track(
@@ -74,10 +78,16 @@ def write_ball_track_from_csv(
     runtime: dict[str, Any] | None = None,
     confidence_mode: TrackNetConfidenceMode = "legacy_visibility",
     heatmap_visible_threshold: float = DEFAULT_HEATMAP_VISIBLE_THRESHOLD,
+    emit_candidates: bool = False,
+    candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
+    candidate_frames: dict[int, Sequence[dict[str, Any]]] | None = None,
+    candidates_out: str | Path | None = None,
+    candidate_nms_radius_px: float | None = DEFAULT_TRACKNET_CANDIDATE_NMS_RADIUS_PX,
 ) -> dict[str, Any]:
     """Write ``ball_track.json`` and a sidecar run summary from official predictions."""
 
     out_path = Path(out)
+    candidate_top_k = _require_positive_int(candidate_top_k, "candidate_top_k")
     heatmap_visible_threshold = _parse_confidence(heatmap_visible_threshold, "heatmap_visible_threshold")
     payload = tracknet_csv_to_ball_track(
         predictions_csv,
@@ -86,6 +96,24 @@ def write_ball_track_from_csv(
         heatmap_visible_threshold=heatmap_visible_threshold,
     )
     _write_json(out_path, payload)
+    candidate_path: Path | None = None
+    if emit_candidates:
+        if candidate_frames is None:
+            raise ValueError("emit_candidates requires raw TrackNet heatmap candidate_frames")
+        candidate_path = Path(candidates_out) if candidates_out is not None else _ball_candidates_sidecar_path(out_path)
+        _write_ball_candidates_sidecar(
+            path=candidate_path,
+            source="tracknet",
+            source_mode=source_mode,
+            fps=float(fps),
+            primary_output=out_path,
+            max_candidates_per_frame=candidate_top_k,
+            nms_radius_px=candidate_nms_radius_px,
+            frame_ids=[int(row["frame"]) for row in _read_tracknet_rows(Path(predictions_csv), confidence_mode=confidence_mode)],
+            candidate_frames=candidate_frames,
+            default_source_detector="tracknet_heatmap_nms",
+            provenance={"predictions_csv": str(predictions_csv), "candidate_source": "provided_candidate_frames"},
+        )
     visible = sum(1 for frame in payload["frames"] if frame["visible"])
     runtime_payload = dict(runtime or {})
     _add_runtime_metrics(runtime_payload, processed_frame_count=len(payload["frames"]), fps=float(fps))
@@ -104,6 +132,17 @@ def write_ball_track_from_csv(
         "runtime": runtime_payload,
         "not_ground_truth": True,
     }
+    runtime_candidates_out = runtime_payload.get("candidates_out")
+    if candidate_path is not None:
+        metadata["candidates_out"] = str(candidate_path)
+        metadata["candidate_top_k"] = candidate_top_k
+        metadata["candidate_nms_radius_px"] = candidate_nms_radius_px
+    elif isinstance(runtime_candidates_out, str):
+        metadata["candidates_out"] = runtime_candidates_out
+        if "candidate_top_k" in runtime_payload:
+            metadata["candidate_top_k"] = runtime_payload["candidate_top_k"]
+        if "candidate_nms_radius_px" in runtime_payload:
+            metadata["candidate_nms_radius_px"] = runtime_payload["candidate_nms_radius_px"]
     if metadata_out is not None:
         _write_json(Path(metadata_out), metadata)
     return metadata
@@ -177,6 +216,12 @@ def run_tracknet_heatmap_confidence_predict(
     large_video: bool = True,
     eval_mode: Literal["nonoverlap", "average", "weight"] = "weight",
     max_sample_num: int = 1800,
+    emit_candidates: bool = False,
+    candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
+    candidate_nms_radius_px: float = DEFAULT_TRACKNET_CANDIDATE_NMS_RADIUS_PX,
+    candidates_out: str | Path | None = None,
+    candidate_fps: float | None = None,
+    primary_output: str | Path | None = None,
 ) -> Path:
     """Run TrackNet and write per-frame heatmap peak confidence values.
 
@@ -197,6 +242,8 @@ def run_tracknet_heatmap_confidence_predict(
         raise FileNotFoundError(f"missing TrackNet checkpoint: {tracknet_path}")
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
+    candidate_top_k = _require_positive_int(candidate_top_k, "candidate_top_k")
+    candidate_nms_radius_px = _require_nonnegative_float(candidate_nms_radius_px, "candidate_nms_radius_px")
     normalized_video_range = _normalize_video_range(video_range)
 
     save_path = Path(save_dir).resolve()
@@ -224,10 +271,12 @@ def run_tracknet_heatmap_confidence_predict(
         cap = cv2.VideoCapture(str(video_path))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        source_fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
         cap.release()
         if width <= 0 or height <= 0:
             raise ValueError(f"could not read video dimensions: {video_path}")
         img_scaler = (width / WIDTH, height / HEIGHT)
+        candidate_frames: dict[int, list[dict[str, Any]]] | None = {} if emit_candidates else None
 
         seq_len = int(tracknet_seq_len)
         if eval_mode == "nonoverlap":
@@ -265,6 +314,9 @@ def run_tracknet_heatmap_confidence_predict(
                 device=device,
                 img_scaler=img_scaler,
                 expected_frame_count=expected_frame_count,
+                candidate_frames=candidate_frames,
+                candidate_top_k=candidate_top_k,
+                candidate_nms_radius_px=candidate_nms_radius_px,
             )
         else:
             if large_video:
@@ -300,6 +352,34 @@ def run_tracknet_heatmap_confidence_predict(
                 seq_len=seq_len,
                 eval_mode=eval_mode,
                 img_scaler=img_scaler,
+                candidate_frames=candidate_frames,
+                candidate_top_k=candidate_top_k,
+                candidate_nms_radius_px=candidate_nms_radius_px,
+            )
+        if emit_candidates:
+            assert candidate_frames is not None
+            candidate_sidecar_path = Path(candidates_out) if candidates_out is not None else _ball_candidates_sidecar_path(out_csv)
+            sidecar_fps = _require_positive_float(
+                candidate_fps if candidate_fps is not None else source_fps,
+                "candidate_fps",
+            )
+            _write_ball_candidates_sidecar(
+                path=candidate_sidecar_path,
+                source="tracknet",
+                source_mode=f"tracknet_heatmap_{eval_mode}",
+                fps=sidecar_fps,
+                primary_output=Path(primary_output) if primary_output is not None else out_csv,
+                max_candidates_per_frame=candidate_top_k,
+                nms_radius_px=candidate_nms_radius_px,
+                frame_ids=sorted(row["Frame"] for row in rows),
+                candidate_frames=candidate_frames,
+                default_source_detector="tracknet_heatmap_nms",
+                provenance={
+                    "video": str(video_path),
+                    "tracknet_repo": str(repo),
+                    "tracknet_checkpoint": str(tracknet_path),
+                    "eval_mode": eval_mode,
+                },
             )
 
     _write_confidence_csv(out_csv, rows)
@@ -394,10 +474,24 @@ def _parse_nonnegative_int(value: object, name: str) -> int:
     return int(number)
 
 
+def _require_positive_int(value: object, name: str) -> int:
+    number = _parse_nonnegative_int(value, name)
+    if number <= 0:
+        raise ValueError(f"{name} must be positive")
+    return number
+
+
 def _require_positive_float(value: object, name: str) -> float:
     number = _parse_float(value, name)
     if number <= 0:
         raise ValueError(f"{name} must be positive")
+    return number
+
+
+def _require_nonnegative_float(value: object, name: str) -> float:
+    number = _parse_float(value, name)
+    if number < 0.0:
+        raise ValueError(f"{name} must be non-negative")
     return number
 
 
@@ -449,6 +543,9 @@ def _heatmap_prediction_rows(
     *,
     img_scaler: tuple[float, float],
     seen_frames: set[int],
+    candidate_frames: dict[int, list[dict[str, Any]]] | None = None,
+    candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
+    candidate_nms_radius_px: float = DEFAULT_TRACKNET_CANDIDATE_NMS_RADIUS_PX,
 ) -> list[dict[str, Any]]:
     import numpy as np
 
@@ -467,6 +564,13 @@ def _heatmap_prediction_rows(
                 continue
             seen_frames.add(frame)
             heatmap = heatmaps[n][f]
+            if candidate_frames is not None:
+                candidate_frames[frame] = _topk_heatmap_local_maxima(
+                    heatmap,
+                    top_k=candidate_top_k,
+                    nms_radius_px=candidate_nms_radius_px,
+                    img_scaler=img_scaler,
+                )
             confidence = _saturate_model_confidence(np.max(heatmap), "Confidence")
             if confidence >= 0.5:
                 y, x = np.unravel_index(int(np.argmax(heatmap)), heatmap.shape)
@@ -489,6 +593,114 @@ def _heatmap_prediction_rows(
     return rows
 
 
+def _topk_heatmap_local_maxima(
+    heatmap: Any,
+    *,
+    top_k: int,
+    nms_radius_px: float,
+    img_scaler: tuple[float, float],
+) -> list[dict[str, Any]]:
+    import numpy as np
+
+    top_k = _require_positive_int(top_k, "top_k")
+    nms_radius_px = _require_nonnegative_float(nms_radius_px, "nms_radius_px")
+    array = np.asarray(heatmap, dtype=np.float32)
+    if array.ndim != 2:
+        raise ValueError("heatmap must be a 2D array")
+    if img_scaler[0] <= 0.0 or img_scaler[1] <= 0.0:
+        raise ValueError("img_scaler values must be positive")
+
+    working = np.where(np.isfinite(array), array, -np.inf).copy()
+    y_grid, x_grid = np.ogrid[: working.shape[0], : working.shape[1]]
+    candidates: list[dict[str, Any]] = []
+    for _ in range(top_k):
+        flat_index = int(np.argmax(working))
+        raw_score = float(working.flat[flat_index])
+        if not math.isfinite(raw_score) or raw_score <= 0.0:
+            break
+        y, x = np.unravel_index(flat_index, working.shape)
+        candidates.append(
+            {
+                "xy": [float(x * img_scaler[0]), float(y * img_scaler[1])],
+                "score": _saturate_model_confidence(raw_score, "candidate.score"),
+                "source_detector": "tracknet_heatmap_nms",
+            }
+        )
+        if nms_radius_px <= 0.0:
+            working[y, x] = -np.inf
+            continue
+        dx = (x_grid - x) * float(img_scaler[0])
+        dy = (y_grid - y) * float(img_scaler[1])
+        working[(dx * dx + dy * dy) <= nms_radius_px * nms_radius_px] = -np.inf
+    return candidates
+
+
+def _write_ball_candidates_sidecar(
+    *,
+    path: Path,
+    source: str,
+    source_mode: str,
+    fps: float,
+    primary_output: str | Path,
+    max_candidates_per_frame: int,
+    nms_radius_px: float | None,
+    frame_ids: Sequence[int],
+    candidate_frames: dict[int, Sequence[dict[str, Any]]],
+    default_source_detector: str,
+    provenance: dict[str, Any],
+) -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_candidates",
+        "fps": float(fps),
+        "source": source,
+        "source_mode": source_mode,
+        "primary_output": str(primary_output),
+        "max_candidates_per_frame": int(max_candidates_per_frame),
+        "nms_radius_px": nms_radius_px,
+        "not_ground_truth": True,
+        "candidate_prediction": True,
+        "provenance": provenance,
+        "frames": [
+            {
+                "frame": int(frame),
+                "candidates": _topk_candidate_blobs(
+                    candidate_frames.get(int(frame), []),
+                    top_k=max_candidates_per_frame,
+                    default_source_detector=default_source_detector,
+                ),
+            }
+            for frame in sorted({int(frame) for frame in frame_ids})
+        ],
+    }
+    BallCandidates.model_validate(payload)
+    _write_json(path, payload)
+
+
+def _topk_candidate_blobs(
+    blobs: Sequence[dict[str, Any]],
+    *,
+    top_k: int,
+    default_source_detector: str,
+) -> list[dict[str, Any]]:
+    candidates = []
+    for blob in blobs:
+        xy = blob.get("xy")
+        if hasattr(xy, "tolist"):
+            xy = xy.tolist()
+        if not isinstance(xy, Sequence) or len(xy) != 2:
+            raise ValueError("candidate xy must contain exactly two numbers")
+        candidates.append(
+            {
+                "xy": [_parse_float(xy[0], "candidate.x"), _parse_float(xy[1], "candidate.y")],
+                "score": _saturate_model_confidence(blob.get("score", 0.0), "candidate.score"),
+                "source_detector": str(blob.get("source_detector") or default_source_detector),
+            }
+        )
+    candidates.sort(key=lambda item: (-float(item["score"]), float(item["xy"][0]), float(item["xy"][1])))
+    return candidates[:top_k]
+
+
 def _run_nonoverlap_heatmap_confidence(
     *,
     data_loader: Any,
@@ -497,6 +709,9 @@ def _run_nonoverlap_heatmap_confidence(
     device: Any,
     img_scaler: tuple[float, float],
     expected_frame_count: int | None = None,
+    candidate_frames: dict[int, list[dict[str, Any]]] | None = None,
+    candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
+    candidate_nms_radius_px: float = DEFAULT_TRACKNET_CANDIDATE_NMS_RADIUS_PX,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     seen_frames: set[int] = set()
@@ -506,7 +721,17 @@ def _run_nonoverlap_heatmap_confidence(
             with torch.no_grad():
                 raw_pred = tracknet(x)
             y_pred = raw_pred.detach().cpu() if hasattr(raw_pred, "detach") else raw_pred
-            rows.extend(_heatmap_prediction_rows(indices, y_pred, img_scaler=img_scaler, seen_frames=seen_frames))
+            rows.extend(
+                _heatmap_prediction_rows(
+                    indices,
+                    y_pred,
+                    img_scaler=img_scaler,
+                    seen_frames=seen_frames,
+                    candidate_frames=candidate_frames,
+                    candidate_top_k=candidate_top_k,
+                    candidate_nms_radius_px=candidate_nms_radius_px,
+                )
+            )
     except IndexError as exc:
         if not _is_tracknet_exact_end_large_video_exhaustion(exc, rows, expected_frame_count=expected_frame_count):
             raise
@@ -574,6 +799,9 @@ def _run_overlap_heatmap_confidence(
     seq_len: int,
     eval_mode: Literal["average", "weight"],
     img_scaler: tuple[float, float],
+    candidate_frames: dict[int, list[dict[str, Any]]] | None = None,
+    candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
+    candidate_nms_radius_px: float = DEFAULT_TRACKNET_CANDIDATE_NMS_RADIUS_PX,
 ) -> list[dict[str, Any]]:
     from utils.general import HEIGHT, WIDTH
 
@@ -615,7 +843,17 @@ def _run_overlap_heatmap_confidence(
                     ensemble_i = torch.cat((ensemble_i, indices[-1][f].reshape(1, 1, 2)), dim=0)
                     ensemble_y_pred = torch.cat((ensemble_y_pred, y_ensemble.reshape(1, 1, HEIGHT, WIDTH)), dim=0)
 
-        rows.extend(_heatmap_prediction_rows(ensemble_i, ensemble_y_pred, img_scaler=img_scaler, seen_frames=seen_frames))
+        rows.extend(
+            _heatmap_prediction_rows(
+                ensemble_i,
+                ensemble_y_pred,
+                img_scaler=img_scaler,
+                seen_frames=seen_frames,
+                candidate_frames=candidate_frames,
+                candidate_top_k=candidate_top_k,
+                candidate_nms_radius_px=candidate_nms_radius_px,
+            )
+        )
         y_pred_buffer = y_pred_buffer[-buffer_size:]
 
     return rows
@@ -679,6 +917,10 @@ def _persistent_prediction_csv_path(out: str | Path) -> Path:
     return out_path.with_name(f"{out_path.stem}_tracknet_predictions.csv")
 
 
+def _ball_candidates_sidecar_path(out: str | Path) -> Path:
+    return Path(out).with_name("ball_candidates.json")
+
+
 def _copy_file(source: str | Path, destination: str | Path) -> None:
     source_path = Path(source)
     destination_path = Path(destination)
@@ -696,6 +938,7 @@ def _join_tracknet_confidence_csv(
     confidence_path = Path(confidence_csv)
     out_path = Path(out)
     confidence_by_frame = _read_generated_heatmap_confidences(confidence_path)
+    last_confidence_frame = max(confidence_by_frame)
 
     if not prediction_path.is_file():
         raise FileNotFoundError(f"missing TrackNet predictions CSV: {prediction_path}")
@@ -711,17 +954,31 @@ def _join_tracknet_confidence_csv(
             for index, row in enumerate(reader):
                 frame = _parse_nonnegative_int(row["Frame"], f"Frame/{index}")
                 if frame not in confidence_by_frame:
-                    raise ValueError(f"missing heatmap Confidence for frame {frame}")
+                    if _is_terminal_hidden_zero_row(row, frame=frame, last_confidence_frame=last_confidence_frame):
+                        confidence = 0.0
+                    else:
+                        raise ValueError(f"missing heatmap Confidence for frame {frame}")
+                else:
+                    confidence = confidence_by_frame[frame]
                 writer.writerow(
                     {
                         "Frame": frame,
                         "Visibility": row["Visibility"],
                         "X": row["X"],
                         "Y": row["Y"],
-                        "Confidence": f"{confidence_by_frame[frame]:.8f}",
+                        "Confidence": f"{confidence:.8f}",
                     }
                 )
     return out_path
+
+
+def _is_terminal_hidden_zero_row(row: dict[str, str], *, frame: int, last_confidence_frame: int) -> bool:
+    return (
+        frame == last_confidence_frame + 1
+        and not _parse_visibility(row["Visibility"], "Visibility")
+        and _parse_float(row["X"], "X") == 0.0
+        and _parse_float(row["Y"], "Y") == 0.0
+    )
 
 
 def _read_generated_heatmap_confidences(confidence_path: Path) -> dict[int, float]:
@@ -827,11 +1084,18 @@ def run_tracknet_or_convert(
     heatmap_visible_threshold: float = DEFAULT_HEATMAP_VISIBLE_THRESHOLD,
     heatmap_eval_mode: TrackNetHeatmapEvalMode = "weight",
     heatmap_large_video: bool | None = None,
+    emit_candidates: bool = False,
+    candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
+    candidate_nms_radius_px: float = DEFAULT_TRACKNET_CANDIDATE_NMS_RADIUS_PX,
 ) -> dict[str, Any]:
     """CLI-oriented entrypoint that converts CSV or runs official TrackNetV3."""
 
+    candidate_top_k = _require_positive_int(candidate_top_k, "candidate_top_k")
+    candidate_nms_radius_px = _require_nonnegative_float(candidate_nms_radius_px, "candidate_nms_radius_px")
     heatmap_visible_threshold = _parse_confidence(heatmap_visible_threshold, "heatmap_visible_threshold")
     if predictions_csv is not None:
+        if emit_candidates:
+            raise ValueError("TrackNet emit_candidates requires heatmap inference; predictions CSV has only tracked argmax rows")
         return write_ball_track_from_csv(
             predictions_csv=predictions_csv,
             fps=fps,
@@ -844,6 +1108,8 @@ def run_tracknet_or_convert(
 
     if video is None or tracknet_file is None or inpaintnet_file is None or tracknet_repo is None:
         raise ValueError("either --predictions-csv or --video/--tracknet-file/--inpaintnet-file/--tracknet-repo is required")
+    if emit_candidates and confidence_mode != "heatmap_peak":
+        raise ValueError("TrackNet emit_candidates requires confidence_mode='heatmap_peak' so heatmaps are available")
 
     predict_py = Path(tracknet_repo) / "predict.py"
     if not predict_py.is_file():
@@ -861,6 +1127,10 @@ def run_tracknet_or_convert(
     if confidence_mode == "heatmap_peak":
         runtime["heatmap_eval_mode"] = heatmap_eval_mode
         runtime["heatmap_large_video"] = bool(large_video if heatmap_large_video is None else heatmap_large_video)
+    if emit_candidates:
+        runtime["candidates_out"] = str(_ball_candidates_sidecar_path(out))
+        runtime["candidate_top_k"] = candidate_top_k
+        runtime["candidate_nms_radius_px"] = candidate_nms_radius_px
     if normalized_video_range is not None:
         runtime["video_range_seconds"] = list(normalized_video_range)
         runtime["video_range_semantics"] = (
@@ -890,6 +1160,12 @@ def run_tracknet_or_convert(
                     video_range=normalized_video_range,
                     large_video=bool(large_video if heatmap_large_video is None else heatmap_large_video),
                     eval_mode=heatmap_eval_mode,
+                    emit_candidates=emit_candidates,
+                    candidate_top_k=candidate_top_k,
+                    candidate_nms_radius_px=candidate_nms_radius_px,
+                    candidates_out=_ball_candidates_sidecar_path(out) if emit_candidates else None,
+                    candidate_fps=fps,
+                    primary_output=out,
                 )
                 runtime["heatmap_confidence_csv"] = str(confidence_csv)
                 csv_path = _join_tracknet_confidence_csv(
@@ -932,6 +1208,12 @@ def run_tracknet_or_convert(
             video_range=normalized_video_range,
             large_video=bool(large_video if heatmap_large_video is None else heatmap_large_video),
             eval_mode=heatmap_eval_mode,
+            emit_candidates=emit_candidates,
+            candidate_top_k=candidate_top_k,
+            candidate_nms_radius_px=candidate_nms_radius_px,
+            candidates_out=_ball_candidates_sidecar_path(out) if emit_candidates else None,
+            candidate_fps=fps,
+            primary_output=out,
         )
         runtime["heatmap_confidence_csv"] = str(confidence_csv)
         csv_path = _join_tracknet_confidence_csv(
@@ -953,7 +1235,9 @@ def run_tracknet_or_convert(
 
 __all__ = [
     "CONFIDENCE_SEMANTICS",
+    "DEFAULT_BALL_CANDIDATE_TOP_K",
     "DEFAULT_HEATMAP_VISIBLE_THRESHOLD",
+    "DEFAULT_TRACKNET_CANDIDATE_NMS_RADIUS_PX",
     "HEATMAP_CONFIDENCE_SEMANTICS",
     "LEGACY_CONFIDENCE_SEMANTICS",
     "checkpoint_metadata",

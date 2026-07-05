@@ -83,12 +83,16 @@ Measured state as of 2026-07-03:
 
 | Candidate | Mean floor median px | Mean floor p95 px | Notes |
 |---|---:|---:|---|
-| `hough_or_regulation_line_selector` | 296.4 | 547.0 | Best current deployable median prototype after projected-pixel/color scoring and geometry guard; still mandatory-review only. |
+| `hough_or_refined_regulation_line_selector` | 289.5 | 551.0 | Best current deployable median prototype; uses guarded line-refined regulation on Indoor and `IMG_1605`; still mandatory-review only. |
+| `hough_or_regulation_line_selector` | 296.4 | 547.0 | Previous best deployable median prototype after projected-pixel/color scoring and geometry guard; still mandatory-review only. |
 | `hough_regulation_temporal_balanced_selector` | 296.4 | 547.0 | Matches the simple selector unless temporal evidence is a clear internal-score win; still mandatory-review only. |
+| `hough_or_regulation_distance_mask_selector` | 298.4 | 531.8 | Best current median/p95 compromise; uses distance-mask regulation on Indoor only. |
 | `hough_regulation_temporal_line_selector` | 310.3 | 581.3 | Naive temporal selector is no longer best because it can worsen Indoor p95. |
 | `hough_regulation_temporal_persistent_tail_selector` | 330.4 | 518.3 | Best current deployable p95/tail-risk tradeoff; still mandatory-review only. |
+| `opencv_hough_lsd_regulation_line_refined` | 331.7 | 652.7 | Guarded point-and-line homography refinement improves median slightly, but worsens p95 slightly; not best standalone. |
 | `opencv_hough_lsd_regulation` | 338.7 | 648.7 | Pixel/color scoring improved median strongly, but Burlington remains tail-risky. |
-| `reviewed_oracle_hough_regulation_temporal` | 273.9 | 721.6 | Reviewed-label oracle; benchmark-only, not deployable. |
+| `opencv_hough_lsd_skimage_regulation` | 452.3 | 880.3 | Seeded skimage probabilistic Hough merged into OpenCV Hough+LSD was measured and is worse than current OpenCV regulation. |
+| `reviewed_oracle_hough_regulation_temporal` | 243.9 | 826.2 | Reviewed-label oracle; benchmark-only, not deployable. |
 
 Conclusion: net evidence is useful as a prior and 3D validator, but the needed
 system is a net-anchored line-to-regulation optimizer with tennis-template
@@ -103,19 +107,35 @@ metrics because the selected hypotheses are not tennis-service-template-like by
 cross-line spacing; broader tennis rejection still needs sideline-width,
 service-line, overlong-line, and color/mask competition.
 
-Projected regulation-line pixel support, local line-color/layer consistency,
-shadow-normalized Hough, and selector geometry guards are now implemented in the
-benchmark. Current evidence: pixel/color scoring improved single-frame
-regulation median from the previous `459.2 px` to `338.7 px`; the geometry guard
-keeps Burlington on `hough_keypoints` because the visually supported regulation
-proposal is floor-collapsed; strict HSV paint regulation failed to build
-proposals on all five samples; shadow-normalized Hough underperformed plain
-Hough line support (`0.7167` vs `0.8083`).
+Projected regulation-line pixel support, distance-transform line-mask support,
+local line-color/layer consistency, shadow-normalized Hough, guarded scipy
+point-and-line homography refinement, and selector geometry guards are now
+implemented in the benchmark. Current evidence: pixel/color scoring improved
+single-frame regulation median from the previous `459.2 px` to `338.7 px`;
+guarded line refinement improves the best deployable median selector to
+`289.5 px` by upgrading Indoor and `IMG_1605`, but standalone refinement worsens
+mean p95 slightly (`652.7 px` vs `648.7 px`); guarded distance-mask selection
+improves p95 versus the older median selector (`531.8 px` vs `547.0 px`) with a
+small median cost; the geometry guards keep Burlington on `hough_keypoints` and
+block Wolverine's tiny distance-mask court; strict HSV paint regulation failed
+to build proposals on all five samples; shadow-normalized Hough underperformed
+plain Hough line support (`0.7167` vs `0.8083`).
+An unguarded nonlinear refinement probe overfit the Outdoor sample, moving its
+median from `12.7 px` to roughly `333 px` despite a better assigned-line
+residual, so future optimizers must include projected-pixel/mask support,
+point-drift, p95, and tennis-negative self-verification gates.
+OpenCV contrib Fast Line Detector and skimage probabilistic Hough are now
+benchmarked and runnable. Fast Line Detector scored `0.8417` floor-line support,
+seeded skimage scored `0.8167`, and the merged OpenCV+LSD+skimage regulation
+solver stayed worse than current OpenCV regulation (`452.3 px` mean floor median
+vs `338.7 px`). ELSED is wired as a fail-closed optional adapter, but local
+`pyelsed` installation is blocked by native OpenCV development package
+availability after the upstream CMake compatibility issue is patched.
 
 Additional 2026-07-03 research points to the next practical CAL lane: keep the
 net as an anchor/validator, but add swappable deep/classical line detectors
-(`ELSED`, `DeepLSD`, `ScaleLSD`), temporal line identity (`SOLD2`/`GlueStick` or
-classical persistence), SAM 2 or learned masks as evidence, and a robust
+(`DeepLSD`, `ScaleLSD`, and dependency-isolated `ELSED`), temporal line identity
+(`SOLD2`/`GlueStick` or classical persistence), SAM 2 or learned masks as evidence, and a robust
 point-and-line optimizer with explicit pickleball-vs-tennis template margins.
 These are research/implementation candidates only; they still must beat the
 five-sample benchmark and remain `verified=false` until reviewed gates pass.
@@ -136,6 +156,26 @@ current labels: `opencv_hsv_paint_hough`: 0.0000 and
 `opencv_hsv_paint_net_crop_hough`: 0.0250, versus baseline `opencv_hough`:
 0.8083. That means the current reviewed clips do not support silent promotion of
 strict colored-line masking.
+The strongest new diagnostic combines full-intrinsics metric-plane fitting with
+strict top-residual line-intersection replacements: 0.193404 ft mean residual on
+the temporary override observations, but 0.408027 ft when scored against the
+original reviewed labels. Keep it as a review/outlier-localization result only;
+the safe selected camera remains the fixed-center metric-plane fit at 0.332284 ft.
+A less label-selected all-strict endpoint line-intersection policy was measured
+too: 30 endpoint replacements, 0.230184 ft on temporary override observations,
+and 0.655275 ft against original reviewed labels. That misses the 0.2 ft target
+and shows unfiltered endpoint line intersections are too noisy for promotion.
+A fixed line-quality sweep now gates endpoint intersections by angle agreement,
+perpendicular distance, segment overlap, and optional proximity to the current
+full-intrinsics model projection. The best profile,
+`tight_overlap35_dist12_angle8_model24`, improves the all-strict endpoint
+diagnostic to 0.182784 ft with 25 replacements, but it is still diagnostic: the
+worst clip is 0.236466 ft, the fit scores 0.494922 ft against original reviewed
+labels, and the safe selected camera remains 0.332284 ft. A new model-projected
+line-observation lane reproduces the 0.182784 ft temporary result while
+reporting `uses_reviewed_line_positions_for_matching=false`, so reviewed line
+matching is no longer required for that diagnostic. Treat it as evidence for
+model-proximity/template competition, not a calibration promotion.
 
 ## Architecture
 

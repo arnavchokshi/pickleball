@@ -111,6 +111,9 @@ order is:
 | `--no-confidence-gate` | Point viewer at raw `virtual_world.json`. |
 | `--no-scene-points` | Skip point GLB scene generation. |
 | `--verify-viewer` | Start the replay verifier against the produced manifest. |
+| `--no-ball-arc` | Skip the default ball 3D arc stage (auto-bounce anchors -> arc solver -> flight-sanity gate). |
+| `--ball-candidates` | Reuse existing `ball_candidates.json` top-K detector sidecars (repeatable). Emitted by default when ball inference runs. |
+| `--no-ball-candidates` | Disable default top-K candidate sidecar emission during ball inference. |
 | `--json` | Print the full summary JSON instead of a human table. |
 
 ## Remote BODY Runtime
@@ -151,6 +154,8 @@ Common outputs include:
 - `court_calibration.json`
 - `tracks.json`
 - `ball_track.json`
+- `ball_track_arc_solved.json` (default ball 3D arc, render-only, self-kill gated)
+- `ball_flight_sanity.json` and `ball_bounce_candidates.json` (default ball-arc stage)
 - `contact_windows.json`
 - `frame_compute_plan.json`
 - `smpl_motion.json`

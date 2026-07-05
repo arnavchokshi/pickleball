@@ -54,9 +54,10 @@ class BallStageRun:
     produced_artifacts: tuple[str, ...] = ()
     notes: tuple[str, ...] = ()
     metrics: dict[str, Any] = field(default_factory=dict)
+    wall_seconds: float | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "stage": self.stage,
             "status": self.status,
             "real_model": self.real_model,
@@ -65,6 +66,9 @@ class BallStageRun:
             "notes": list(self.notes),
             "metrics": self.metrics,
         }
+        if self.wall_seconds is not None:
+            payload["wall_seconds"] = self.wall_seconds
+        return payload
 
 
 class BallStageRunner:
@@ -90,6 +94,8 @@ class BallStageRunner:
         tracknet_large_video: bool = False,
         tracknet_confidence_mode: str = "heatmap_peak",
         tracknet_heatmap_visible_threshold: float = DEFAULT_TRACKNET_HEATMAP_VISIBLE_THRESHOLD,
+        emit_ball_candidates: bool = True,
+        ball_candidate_top_k: int = 5,
         tracknet_local_search: bool = False,
         tracknet_local_search_court_filter: bool = False,
         local_search_runner: ModelRunner | None = None,
@@ -115,6 +121,8 @@ class BallStageRunner:
             raise ValueError("tracknet_confidence_mode must be legacy_visibility or heatmap_peak")
         self.tracknet_confidence_mode = tracknet_confidence_mode
         self.tracknet_heatmap_visible_threshold = float(tracknet_heatmap_visible_threshold)
+        self.emit_ball_candidates = bool(emit_ball_candidates)
+        self.ball_candidate_top_k = int(ball_candidate_top_k)
         self.tracknet_local_search = bool(tracknet_local_search)
         self.tracknet_local_search_court_filter = bool(tracknet_local_search_court_filter)
         self.local_search_runner = local_search_runner
@@ -335,6 +343,8 @@ class BallStageRunner:
             large_video=self.tracknet_large_video,
             confidence_mode=self.tracknet_confidence_mode,
             heatmap_visible_threshold=self.tracknet_heatmap_visible_threshold,
+            emit_candidates=self.emit_ball_candidates,
+            candidate_top_k=self.ball_candidate_top_k,
         )
         model_metrics = _tracknet_model_metrics(summary)
         if self.tracknet_local_search:

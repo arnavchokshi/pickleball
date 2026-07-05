@@ -20,6 +20,7 @@ from scripts.racketsport.compare_court_proposals_to_reviewed_keypoints import (
 )
 
 from .court_line_keypoints import detect_court_keypoints_from_image
+from .court_line_bank import normalize_hough_lines_p
 from .overlapping_court_calibration import (
     detect_hsv_paint_hough_segments,
     pretrained_shadow_removal_preprocess,
@@ -36,6 +37,10 @@ LINE_CANDIDATE_ONLY_TECHNOLOGIES = {
     "opencv_hough_shadow_normalized",
     "opencv_hough_pretrained_shadow_removed",
     "opencv_hough_lsd",
+    "opencv_fast_line_detector",
+    "skimage_probabilistic_hough",
+    "opencv_hough_lsd_skimage",
+    "elsed",
     "opencv_hsv_paint_hough",
     "opencv_hsv_paint_net_crop_hough",
     "opencv_hough_lsd_temporal",
@@ -68,6 +73,49 @@ class _CandidateLine:
     support_length_px: float
     source_segment_count: int
     angle_deg: float
+
+
+def resolve_sample_frame_input(sample_root: Path, candidate: Path) -> Path:
+    """Resolve sample media while refusing missing label-frame directories."""
+
+    if candidate.exists():
+        if candidate.is_dir() and not any(candidate.glob("*.jpg")):
+            return _fallback_sample_media(sample_root, candidate)
+        return candidate
+    if candidate.name in {"court_keypoint_frames", "court_keypoint_partial_frames"}:
+        return _fallback_sample_media(sample_root, candidate)
+    return candidate
+
+
+def _fallback_sample_media(sample_root: Path, candidate: Path) -> Path:
+    for name in ("source.mp4", "source.mov", "video.mp4", "frame.jpg", "source.jpg"):
+        media = sample_root / name
+        if media.exists():
+            return media
+    labels = sample_root / "labels"
+    for name in ("court_keypoint_frames", "court_keypoint_partial_frames"):
+        frame_dir = labels / name
+        if frame_dir.exists() and any(frame_dir.glob("*.jpg")):
+            return frame_dir
+    raise ValueError(f"sample {sample_root.name} has labels but no readable media file for {candidate}")
+
+
+def _review_label_has_usable_frames(label_path: Path) -> bool:
+    try:
+        payload = json.loads(label_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    frames = payload.get("frames")
+    if not isinstance(frames, Mapping):
+        return False
+    frame_count = frames.get("frame_count")
+    coordinate_space = frames.get("label_coordinate_space")
+    if not isinstance(coordinate_space, Sequence) or len(coordinate_space) != 2:
+        return False
+    try:
+        return int(frame_count) > 0
+    except (TypeError, ValueError):
+        return False
 
 
 _FLOOR_WORLD_XY: dict[str, tuple[float, float]] = {
@@ -122,6 +170,16 @@ _FLOOR_LINE_ENDPOINT_KEYPOINTS: dict[str, tuple[str, str]] = {
     "far_nvz": ("far_nvz_left", "far_nvz_right"),
     "left_sideline": ("near_left_corner", "far_left_corner"),
     "right_sideline": ("near_right_corner", "far_right_corner"),
+    "centerline": ("near_baseline_center", "far_baseline_center"),
+}
+
+_IMAGE_EVIDENCE_LINE_ENDPOINT_KEYPOINTS: dict[str, tuple[str, str]] = {
+    "near_baseline": ("near_left_corner", "near_right_corner"),
+    "far_baseline": ("far_left_corner", "far_right_corner"),
+    "near_nvz": ("near_nvz_left", "near_nvz_right"),
+    "far_nvz": ("far_nvz_left", "far_nvz_right"),
+    "left_sideline": ("near_left_corner", "far_left_corner"),
+    "right_sideline": ("near_right_corner", "far_right_corner"),
     "near_centerline": ("near_baseline_center", "near_nvz_center"),
     "far_centerline": ("far_baseline_center", "far_nvz_center"),
 }
@@ -136,13 +194,13 @@ def discover_court_finding_samples(eval_root: str | Path) -> list[CourtFindingSa
         labels = clip_dir / "labels"
         full_label = labels / "court_keypoints.json"
         partial_label = labels / "court_keypoints_partial.json"
-        if full_label.exists():
+        if full_label.exists() and _review_label_has_usable_frames(full_label):
             samples.append(
                 CourtFindingSample(
                     clip=clip_dir.name,
                     label_kind="full_15pt",
                     label_path=full_label,
-                    frame_input=labels / "court_keypoint_frames",
+                    frame_input=resolve_sample_frame_input(clip_dir, labels / "court_keypoint_frames"),
                 )
             )
         elif partial_label.exists():
@@ -151,7 +209,7 @@ def discover_court_finding_samples(eval_root: str | Path) -> list[CourtFindingSa
                     clip=clip_dir.name,
                     label_kind="partial_visible",
                     label_path=partial_label,
-                    frame_input=labels / "court_keypoint_partial_frames",
+                    frame_input=resolve_sample_frame_input(clip_dir, labels / "court_keypoint_partial_frames"),
                 )
             )
     return samples
@@ -243,6 +301,53 @@ def detect_line_candidates_for_technology(image_bgr: Any, technology_id: str) ->
         }
     elif technology_id == "opencv_hough_lsd":
         segments = _dedupe_segments(_opencv_hough_segments(image_bgr) + _opencv_lsd_segments(image_bgr))
+    elif technology_id == "opencv_fast_line_detector":
+        try:
+            segments = _opencv_fast_line_detector_segments(image_bgr)
+        except AttributeError as exc:
+            return {
+                "technology_id": technology_id,
+                "available": False,
+                "candidate_count": 0,
+                "segments": [],
+                "reason": "opencv_ximgproc_fast_line_detector_unavailable",
+                "error": str(exc),
+            }
+    elif technology_id == "skimage_probabilistic_hough":
+        try:
+            segments = _skimage_probabilistic_hough_segments(image_bgr)
+        except ImportError as exc:
+            return {
+                "technology_id": technology_id,
+                "available": False,
+                "candidate_count": 0,
+                "segments": [],
+                "reason": "skimage_unavailable",
+                "error": str(exc),
+            }
+    elif technology_id == "opencv_hough_lsd_skimage":
+        hough_segments = _opencv_hough_segments(image_bgr)
+        lsd_segments = _opencv_lsd_segments(image_bgr)
+        skimage_evidence = detect_line_candidates_for_technology(image_bgr, "skimage_probabilistic_hough")
+        skimage_segments = skimage_evidence["segments"] if skimage_evidence.get("available") else []
+        segments = _dedupe_segments(hough_segments + lsd_segments + list(skimage_segments))
+        return {
+            "technology_id": technology_id,
+            "base_technology_ids": ["opencv_hough", "opencv_lsd", "skimage_probabilistic_hough"],
+            "available": True,
+            "candidate_count": len(segments),
+            "segments": segments,
+            "component_candidate_counts": {
+                "opencv_hough": len(hough_segments),
+                "opencv_lsd": len(lsd_segments),
+                "skimage_probabilistic_hough": int(skimage_evidence.get("candidate_count") or 0),
+            },
+            "component_availability": {
+                "skimage_probabilistic_hough": bool(skimage_evidence.get("available")),
+            },
+        }
+    elif technology_id == "elsed":
+        return _elsed_line_candidate_evidence(image_bgr)
     elif technology_id == "opencv_hsv_paint_hough":
         return detect_hsv_paint_hough_segments(image_bgr, technology_id=technology_id)
     elif technology_id == "opencv_hsv_paint_net_crop_hough":
@@ -411,6 +516,7 @@ def solve_regulation_court_from_line_candidates(
     line_segments: Sequence[Mapping[str, Any]] | None = None,
     line_evidence: Mapping[str, Any] | None = None,
     image_evidence_mode: str = "sparse_pixel",
+    line_refinement: bool = False,
 ) -> dict[str, Any]:
     """Search Hough/LSD line assignments against the regulation pickleball template.
 
@@ -435,6 +541,7 @@ def solve_regulation_court_from_line_candidates(
         image_bgr=image_bgr,
         image_size=(width, height),
         image_evidence_mode=image_evidence_mode,
+        line_refinement=line_refinement,
     )
     if not hypotheses:
         raise ValueError("no regulation line assignment hypothesis could be built")
@@ -653,7 +760,7 @@ def score_projected_line_pixels_against_image(
     ratios: list[float] = []
     supported_count = 0
     evaluated_count = 0
-    for line_name, (p1_name, p2_name) in _FLOOR_LINE_ENDPOINT_KEYPOINTS.items():
+    for line_name, (p1_name, p2_name) in _IMAGE_EVIDENCE_LINE_ENDPOINT_KEYPOINTS.items():
         raw_p1 = keypoints.get(p1_name)
         raw_p2 = keypoints.get(p2_name)
         if not _is_xy(raw_p1) or not _is_xy(raw_p2):
@@ -720,7 +827,7 @@ def score_projected_line_distance_transform_against_image(
     line_p95s: list[float] = []
     supported_count = 0
     evaluated_count = 0
-    for line_name, (p1_name, p2_name) in _FLOOR_LINE_ENDPOINT_KEYPOINTS.items():
+    for line_name, (p1_name, p2_name) in _IMAGE_EVIDENCE_LINE_ENDPOINT_KEYPOINTS.items():
         raw_p1 = keypoints.get(p1_name)
         raw_p2 = keypoints.get(p2_name)
         if not _is_xy(raw_p1) or not _is_xy(raw_p2):
@@ -984,6 +1091,22 @@ def _proposal_for_technology(
             clip_id=sample.clip,
             image_evidence_mode="distance_mask",
         )
+    if technology_id == "opencv_hough_lsd_regulation_line_refined":
+        return solve_regulation_court_from_line_candidates(
+            image_bgr,
+            technology_id=technology_id,
+            clip_id=sample.clip,
+            line_refinement=True,
+        )
+    if technology_id == "opencv_hough_lsd_skimage_regulation":
+        line_evidence = detect_line_candidates_for_technology(image_bgr, "opencv_hough_lsd_skimage")
+        return solve_regulation_court_from_line_candidates(
+            image_bgr,
+            technology_id=technology_id,
+            clip_id=sample.clip,
+            line_segments=line_evidence["segments"],
+            line_evidence=line_evidence,
+        )
     if technology_id == "opencv_hough_lsd_temporal_regulation":
         line_evidence = detect_temporal_line_candidates_for_input(sample.frame_input)
         return solve_regulation_court_from_line_candidates(
@@ -1054,6 +1177,12 @@ def _proposal_for_technology(
         )
     if technology_id == "hough_or_regulation_distance_mask_selector":
         return _select_hough_or_regulation_distance_mask_proposal(
+            image_bgr,
+            sample=sample,
+            proposal_cache=proposal_cache if proposal_cache is not None else {},
+        )
+    if technology_id == "hough_or_refined_regulation_line_selector":
+        return _select_hough_or_refined_regulation_proposal(
             image_bgr,
             sample=sample,
             proposal_cache=proposal_cache if proposal_cache is not None else {},
@@ -1255,6 +1384,91 @@ def _select_hough_or_regulation_distance_mask_proposal(
     return payload
 
 
+def _select_hough_or_refined_regulation_proposal(
+    image_bgr: Any,
+    *,
+    sample: CourtFindingSample,
+    proposal_cache: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    candidates: dict[str, dict[str, Any]] = {}
+    for technology_id in (
+        "hough_keypoints",
+        "opencv_hough_lsd_regulation",
+        "opencv_hough_lsd_regulation_line_refined",
+    ):
+        proposal = proposal_cache.get(technology_id)
+        if proposal is None:
+            proposal = _proposal_for_technology(
+                image_bgr,
+                sample=sample,
+                technology_id=technology_id,
+                proposal_cache=proposal_cache,
+            )
+            proposal_cache[technology_id] = proposal
+        candidates[technology_id] = proposal
+
+    segments = detect_line_candidates_for_technology(image_bgr, "opencv_hough_lsd")["segments"]
+    candidate_scores = {
+        technology_id: _proposal_internal_line_score(proposal, segments)
+        for technology_id, proposal in candidates.items()
+    }
+    for technology_id, score in candidate_scores.items():
+        score["geometry_risk"] = _proposal_geometry_risk_score(candidates[technology_id])
+
+    if _should_prefer_hough_over_collapsed_regulation(
+        candidate_scores["hough_keypoints"],
+        candidate_scores["opencv_hough_lsd_regulation"],
+    ):
+        selected_name = "hough_keypoints"
+    else:
+        hough_cost = float(candidate_scores["hough_keypoints"]["selector_cost"])
+        regulation_cost = float(candidate_scores["opencv_hough_lsd_regulation"]["selector_cost"])
+        selected_name = "hough_keypoints" if hough_cost <= regulation_cost else "opencv_hough_lsd_regulation"
+
+    refinement = (
+        candidates["opencv_hough_lsd_regulation_line_refined"]
+        .get("score_components", {})
+        .get("line_refinement", {})
+    )
+    pixel_guard = refinement.get("pixel_guard") if isinstance(refinement, Mapping) else None
+    refined_risk = candidate_scores["opencv_hough_lsd_regulation_line_refined"]["geometry_risk"]
+    regulation_risk = candidate_scores["opencv_hough_lsd_regulation"]["geometry_risk"]
+    refined_upgrade = bool(
+        isinstance(refinement, Mapping)
+        and refinement.get("accepted") is True
+        and isinstance(pixel_guard, Mapping)
+        and float(pixel_guard.get("mean_line_pixel_support_delta") or 0.0) >= 0.015
+        and int(pixel_guard.get("supported_line_pixel_delta") or 0) >= 0
+        and float(refined_risk.get("risk_score") or 0.0) <= float(regulation_risk.get("risk_score") or 0.0) + 2.0
+    )
+    if selected_name == "opencv_hough_lsd_regulation" and refined_upgrade:
+        selected_name = "opencv_hough_lsd_regulation_line_refined"
+
+    selected = candidates[selected_name]
+    payload = json.loads(json.dumps(selected))
+    payload["solver"] = {
+        "name": "hough_or_refined_regulation_line_selector",
+        "version": 1,
+        "writes_court_calibration": False,
+    }
+    payload["solver_confidence"] = min(float(payload.get("solver_confidence") or 0.0), 0.62)
+    payload["needs_user_input"] = ["court_keypoints"]
+    payload["needs_user_confirmation"] = True
+    payload["selector"] = {
+        "selected_technology_id": selected_name,
+        "candidate_scores": candidate_scores,
+        "refined_upgrade_eligible": bool(refined_upgrade),
+        "rule": "start_from_hough_or_single_frame_regulation_then_upgrade_to_guarded_line_refinement_when_self_verification_improves_pixel_support",
+    }
+    payload.setdefault("notes", [])
+    payload["notes"].append("refined_selector_proposal_only_never_writes_court_calibration_json")
+    payload["notes"].append("line_refinement_upgrade_requires_optimizer_acceptance_and_projected_pixel_support_gain")
+    for item in payload.get("keypoints", {}).values():
+        if isinstance(item, dict):
+            item["source"] = f"hough_or_refined_regulation_line_selector:{selected_name}"
+    return payload
+
+
 def _select_hough_regulation_temporal_proposal(
     image_bgr: Any,
     *,
@@ -1298,6 +1512,7 @@ def _select_hough_regulation_temporal_proposal(
         name: score
         for name, score in candidate_scores.items()
         if not _score_has_geometry_reason(score, "projected_floor_height_too_collapsed")
+        and not _score_has_geometry_reason(score, "projected_floor_width_too_collapsed")
     }
     if (
         "hough_keypoints" in noncollapsed_candidates
@@ -1709,14 +1924,19 @@ def _proposal_geometry_risk_score(proposal: Mapping[str, Any]) -> dict[str, Any]
     )
     far_to_near = far_width / near_width if near_width > 1e-6 else float("inf")
     reasons: list[str] = []
+    min_visible_width = max(140.0, width * 0.07)
     if bbox_height < max(55.0, height * 0.07):
         reasons.append("projected_floor_height_too_collapsed")
+    if bbox_width < min_visible_width or near_width < min_visible_width:
+        reasons.append("projected_floor_width_too_collapsed")
     if far_to_near > 1.05:
         reasons.append("far_width_larger_than_near_width")
     if max_outside > max(width, height) * 0.20:
         reasons.append("projected_floor_too_far_outside_image")
     risk_score = 0.0
     risk_score += max(0.0, max(55.0, height * 0.07) - bbox_height) * 1.5
+    risk_score += max(0.0, min_visible_width - bbox_width) * 0.8
+    risk_score += max(0.0, min_visible_width - near_width) * 0.8
     risk_score += max(0.0, far_to_near - 1.05) * 80.0
     risk_score += max(0.0, max_outside - max(width, height) * 0.20) * 0.25
     return {
@@ -1744,9 +1964,15 @@ def _should_prefer_hough_over_collapsed_regulation(
     hough_score: Mapping[str, Any],
     regulation_score: Mapping[str, Any],
 ) -> bool:
-    if not _score_has_geometry_reason(regulation_score, "projected_floor_height_too_collapsed"):
+    if not (
+        _score_has_geometry_reason(regulation_score, "projected_floor_height_too_collapsed")
+        or _score_has_geometry_reason(regulation_score, "projected_floor_width_too_collapsed")
+    ):
         return False
-    if _score_has_geometry_reason(hough_score, "projected_floor_height_too_collapsed"):
+    if (
+        _score_has_geometry_reason(hough_score, "projected_floor_height_too_collapsed")
+        or _score_has_geometry_reason(hough_score, "projected_floor_width_too_collapsed")
+    ):
         return False
     if int(hough_score.get("supported_line_count") or 0) < 3:
         return False
@@ -1795,6 +2021,7 @@ def _regulation_hypotheses_from_groups(
     image_bgr: Any,
     image_size: tuple[int, int],
     image_evidence_mode: str,
+    line_refinement: bool,
 ) -> list[dict[str, Any]]:
     width, height = image_size
     cross_pool = [
@@ -1845,6 +2072,17 @@ def _regulation_hypotheses_from_groups(
                         hypotheses.append(hypothesis)
     hypotheses.sort(key=lambda item: float(item["score"]))
     shortlist = hypotheses[:96]
+    if line_refinement:
+        refinement_line_mask = _court_line_pixel_mask(image_bgr, dilation_px=5)
+        shortlist = [
+            refine_regulation_homography_for_line_assignment(
+                hypothesis,
+                image_size=image_size,
+                image_bgr=image_bgr,
+                line_pixel_mask=refinement_line_mask,
+            )
+            for hypothesis in shortlist
+        ]
     projected_line_mask = _court_line_pixel_mask(image_bgr, dilation_px=5)
     color_line_mask = _court_line_pixel_mask(image_bgr, dilation_px=2)
     if image_evidence_mode == "distance_mask":
@@ -1959,6 +2197,356 @@ def _hypothesis_from_line_assignment(
             "support_bonus": round(float(support_bonus), 4),
         },
     }
+
+
+def refine_regulation_homography_for_line_assignment(
+    hypothesis: Mapping[str, Any],
+    *,
+    image_size: tuple[int, int],
+    image_bgr: Any | None = None,
+    line_pixel_mask: Any | None = None,
+) -> dict[str, Any]:
+    """Refine a regulation homography against assigned point and line evidence.
+
+    This is benchmark/proposal-only. It does not promote calibration; it only
+    updates the hypothesis when the optimized homography improves assigned-line
+    residuals without making correspondence residuals or geometry plausibility
+    worse.
+    """
+
+    payload = json.loads(json.dumps(hypothesis))
+    line_assignment = payload.get("line_assignment")
+    if not isinstance(line_assignment, Mapping):
+        _set_line_refinement_metadata(payload, {"available": False, "reason": "missing_line_assignment"})
+        return payload
+    initial_keypoints = {
+        str(name): tuple(float(value) for value in item)
+        for name, item in (payload.get("keypoints") or {}).items()
+        if _is_xy(item)
+    }
+    if len(initial_keypoints) < 4:
+        _set_line_refinement_metadata(payload, {"available": False, "reason": "insufficient_initial_keypoints"})
+        return payload
+
+    observed_lines: dict[str, tuple[float, float, float]] = {}
+    line_endpoints: dict[str, tuple[tuple[float, float, float], tuple[float, float, float]]] = {}
+    for label, raw_segment in line_assignment.items():
+        if not isinstance(raw_segment, Mapping):
+            continue
+        endpoints = _world_line_endpoints_for_assignment(str(label))
+        if endpoints is None:
+            continue
+        try:
+            observed_lines[str(label)] = _line_from_segment_mapping(raw_segment)
+        except ValueError:
+            continue
+        line_endpoints[str(label)] = endpoints
+    if len(observed_lines) < 4:
+        _set_line_refinement_metadata(payload, {"available": False, "reason": "insufficient_assigned_lines"})
+        return payload
+
+    correspondences = _line_assignment_world_image_correspondences(line_assignment, image_size=image_size)
+    if len(correspondences) < 4:
+        _set_line_refinement_metadata(payload, {"available": False, "reason": "insufficient_line_intersections"})
+        return payload
+
+    try:
+        from scipy.optimize import least_squares
+
+        from .court_calibration import homography_from_planar_points
+    except Exception as exc:
+        _set_line_refinement_metadata(
+            payload,
+            {"available": False, "reason": "scipy_unavailable", "error": str(exc)},
+        )
+        return payload
+
+    try:
+        world_points = [[_FLOOR_WORLD_XY[name][0], _FLOOR_WORLD_XY[name][1], 0.0] for name in initial_keypoints if name in _FLOOR_WORLD_XY]
+        image_points = [initial_keypoints[name] for name in initial_keypoints if name in _FLOOR_WORLD_XY]
+        initial_h = homography_from_planar_points(world_points, image_points)
+    except Exception as exc:
+        _set_line_refinement_metadata(
+            payload,
+            {"available": False, "reason": "initial_homography_failed", "error": str(exc)},
+        )
+        return payload
+
+    initial_params = _homography_params(initial_h)
+
+    def residuals(params: Sequence[float]) -> list[float]:
+        values: list[float] = []
+        for world_xy, observed_xy in correspondences:
+            projected = _project_world_xy_with_params(params, world_xy)
+            values.append((projected[0] - observed_xy[0]) / 18.0)
+            values.append((projected[1] - observed_xy[1]) / 18.0)
+        for label, observed_line in observed_lines.items():
+            endpoints = line_endpoints[label]
+            for world_xy in endpoints:
+                projected = _project_world_xy_with_params(params, world_xy)
+                values.append(_signed_point_line_distance(projected, observed_line) / 16.0)
+        for name, initial_xy in initial_keypoints.items():
+            world_xy = _FLOOR_WORLD_XY.get(name)
+            if world_xy is None:
+                continue
+            projected = _project_world_xy_with_params(params, (world_xy[0], world_xy[1], 0.0))
+            values.append((projected[0] - initial_xy[0]) / 80.0)
+            values.append((projected[1] - initial_xy[1]) / 80.0)
+        return values
+
+    try:
+        result = least_squares(
+            residuals,
+            initial_params,
+            method="trf",
+            loss="soft_l1",
+            f_scale=1.0,
+            max_nfev=160,
+        )
+    except Exception as exc:
+        _set_line_refinement_metadata(
+            payload,
+            {"available": False, "reason": "least_squares_failed", "error": str(exc)},
+        )
+        return payload
+
+    optimized_params = [float(value) for value in result.x]
+    initial_line_rmse = _line_assignment_rmse_px(initial_params, observed_lines, line_endpoints)
+    optimized_line_rmse = _line_assignment_rmse_px(optimized_params, observed_lines, line_endpoints)
+    initial_point_rmse = _line_assignment_point_rmse_px(initial_params, correspondences)
+    optimized_point_rmse = _line_assignment_point_rmse_px(optimized_params, correspondences)
+    optimized_keypoints = {
+        name: _project_world_xy_with_params(optimized_params, (xy[0], xy[1], 0.0))
+        for name, xy in _FLOOR_WORLD_XY.items()
+    }
+    width, height = image_size
+    plausible = _projected_court_is_plausible(optimized_keypoints, width=width, height=height)
+    pixel_guard = _line_refinement_pixel_guard(
+        image_bgr=image_bgr,
+        line_pixel_mask=line_pixel_mask,
+        initial_keypoints=initial_keypoints,
+        optimized_keypoints=optimized_keypoints,
+    )
+    accepted = bool(
+        result.success
+        and plausible
+        and optimized_line_rmse <= initial_line_rmse - 0.25
+        and optimized_point_rmse <= max(initial_point_rmse * 1.15, initial_point_rmse + 4.0)
+        and bool(pixel_guard["acceptable"])
+    )
+    improvement = max(0.0, initial_line_rmse - optimized_line_rmse)
+    metadata = {
+        "available": True,
+        "method": "scipy_least_squares_point_line_homography",
+        "accepted": accepted,
+        "success": bool(result.success),
+        "status": int(result.status),
+        "message": str(result.message),
+        "assigned_line_count": int(len(observed_lines)),
+        "intersection_correspondence_count": int(len(correspondences)),
+        "initial_line_rmse_px": round(float(initial_line_rmse), 4),
+        "optimized_line_rmse_px": round(float(optimized_line_rmse), 4),
+        "initial_point_rmse_px": round(float(initial_point_rmse), 4),
+        "optimized_point_rmse_px": round(float(optimized_point_rmse), 4),
+        "line_rmse_improvement_px": round(float(improvement), 4),
+        "geometry_plausible": bool(plausible),
+        "pixel_guard": pixel_guard,
+        "max_nfev": 160,
+    }
+    if accepted:
+        payload["keypoints"] = {
+            name: (float(xy[0]), float(xy[1]))
+            for name, xy in optimized_keypoints.items()
+        }
+        bonus = min(45.0, improvement * 0.65)
+        payload["score"] = float(payload.get("score") or 0.0) - bonus
+        metadata["score_bonus"] = round(float(bonus), 4)
+    else:
+        metadata["rejection_reason"] = _line_refinement_rejection_reason(
+            success=bool(result.success),
+            plausible=plausible,
+            initial_line_rmse=initial_line_rmse,
+            optimized_line_rmse=optimized_line_rmse,
+            initial_point_rmse=initial_point_rmse,
+            optimized_point_rmse=optimized_point_rmse,
+            pixel_guard=pixel_guard,
+        )
+        metadata["score_bonus"] = 0.0
+    _set_line_refinement_metadata(payload, metadata)
+    return payload
+
+
+def _set_line_refinement_metadata(payload: dict[str, Any], metadata: Mapping[str, Any]) -> None:
+    components = payload.setdefault("score_components", {})
+    components["line_refinement"] = dict(metadata)
+
+
+def _line_refinement_rejection_reason(
+    *,
+    success: bool,
+    plausible: bool,
+    initial_line_rmse: float,
+    optimized_line_rmse: float,
+    initial_point_rmse: float,
+    optimized_point_rmse: float,
+    pixel_guard: Mapping[str, Any],
+) -> str:
+    if not success:
+        return "optimizer_unsuccessful"
+    if not plausible:
+        return "optimized_geometry_implausible"
+    if optimized_line_rmse > initial_line_rmse - 0.25:
+        return "line_residual_not_improved"
+    if optimized_point_rmse > max(initial_point_rmse * 1.15, initial_point_rmse + 4.0):
+        return "intersection_residual_too_much_worse"
+    if not bool(pixel_guard.get("acceptable", True)):
+        return "projected_pixel_support_worse"
+    return "not_accepted"
+
+
+def _line_refinement_pixel_guard(
+    *,
+    image_bgr: Any | None,
+    line_pixel_mask: Any | None,
+    initial_keypoints: Mapping[str, tuple[float, float]],
+    optimized_keypoints: Mapping[str, tuple[float, float]],
+) -> dict[str, Any]:
+    if image_bgr is None:
+        return {
+            "available": False,
+            "acceptable": True,
+            "reason": "image_not_provided",
+        }
+    initial_support = score_projected_line_pixels_against_image(
+        image_bgr,
+        initial_keypoints,
+        line_pixel_mask=line_pixel_mask,
+    )
+    optimized_support = score_projected_line_pixels_against_image(
+        image_bgr,
+        optimized_keypoints,
+        line_pixel_mask=line_pixel_mask,
+    )
+    initial_mean = float(initial_support.get("mean_line_pixel_support_ratio") or 0.0)
+    optimized_mean = float(optimized_support.get("mean_line_pixel_support_ratio") or 0.0)
+    initial_supported = int(initial_support.get("supported_line_pixel_count") or 0)
+    optimized_supported = int(optimized_support.get("supported_line_pixel_count") or 0)
+    mean_delta = optimized_mean - initial_mean
+    supported_delta = optimized_supported - initial_supported
+    acceptable = mean_delta >= -0.03 and supported_delta >= 0
+    return {
+        "available": True,
+        "acceptable": bool(acceptable),
+        "initial_mean_line_pixel_support_ratio": round(float(initial_mean), 4),
+        "optimized_mean_line_pixel_support_ratio": round(float(optimized_mean), 4),
+        "mean_line_pixel_support_delta": round(float(mean_delta), 4),
+        "initial_supported_line_pixel_count": int(initial_supported),
+        "optimized_supported_line_pixel_count": int(optimized_supported),
+        "supported_line_pixel_delta": int(supported_delta),
+    }
+
+
+def _world_line_endpoints_for_assignment(
+    label: str,
+) -> tuple[tuple[float, float, float], tuple[float, float, float]] | None:
+    if label in {"near_baseline", "near_nvz", "net", "far_nvz", "far_baseline"}:
+        world_y = float(_LINE_WORLD_COORDS[label][0])
+        return ((-10.0, world_y, 0.0), (10.0, world_y, 0.0))
+    if label in {"left_sideline", "centerline", "right_sideline"}:
+        world_x = float(_LINE_WORLD_COORDS[label][0])
+        return ((world_x, -22.0, 0.0), (world_x, 22.0, 0.0))
+    return None
+
+
+def _line_assignment_world_image_correspondences(
+    line_assignment: Mapping[str, Any],
+    *,
+    image_size: tuple[int, int],
+) -> list[tuple[tuple[float, float, float], tuple[float, float]]]:
+    width, height = image_size
+    cross_lines: dict[str, tuple[float, float, float]] = {}
+    longitudinal_lines: dict[str, tuple[float, float, float]] = {}
+    for label, raw_segment in line_assignment.items():
+        if not isinstance(raw_segment, Mapping) or label not in _LINE_WORLD_COORDS:
+            continue
+        try:
+            line = _line_from_segment_mapping(raw_segment)
+        except ValueError:
+            continue
+        axis = _LINE_WORLD_COORDS[str(label)][2]
+        if axis == "y":
+            cross_lines[str(label)] = line
+        elif axis == "x":
+            longitudinal_lines[str(label)] = line
+    correspondences: list[tuple[tuple[float, float, float], tuple[float, float]]] = []
+    for cross_name, cross_line in cross_lines.items():
+        world_y = float(_LINE_WORLD_COORDS[cross_name][0])
+        for long_name, long_line in longitudinal_lines.items():
+            world_x = float(_LINE_WORLD_COORDS[long_name][0])
+            try:
+                xy = _line_intersection(cross_line, long_line)
+            except ValueError:
+                continue
+            if _point_is_finite(xy) and _point_inside_loose_bounds(xy, width=width, height=height):
+                correspondences.append(((world_x, world_y, 0.0), (float(xy[0]), float(xy[1]))))
+    return correspondences
+
+
+def _homography_params(homography: Sequence[Sequence[float]]) -> list[float]:
+    return [
+        float(homography[0][0]),
+        float(homography[0][1]),
+        float(homography[0][2]),
+        float(homography[1][0]),
+        float(homography[1][1]),
+        float(homography[1][2]),
+        float(homography[2][0]),
+        float(homography[2][1]),
+    ]
+
+
+def _project_world_xy_with_params(
+    params: Sequence[float],
+    world_xy: Sequence[float],
+) -> tuple[float, float]:
+    x = float(world_xy[0])
+    y = float(world_xy[1])
+    u_num = float(params[0]) * x + float(params[1]) * y + float(params[2])
+    v_num = float(params[3]) * x + float(params[4]) * y + float(params[5])
+    scale = float(params[6]) * x + float(params[7]) * y + 1.0
+    if abs(scale) <= 1e-9:
+        return (float("inf"), float("inf"))
+    return (float(u_num / scale), float(v_num / scale))
+
+
+def _signed_point_line_distance(point: Sequence[float], line: tuple[float, float, float]) -> float:
+    return float(line[0] * float(point[0]) + line[1] * float(point[1]) + line[2])
+
+
+def _line_assignment_rmse_px(
+    params: Sequence[float],
+    observed_lines: Mapping[str, tuple[float, float, float]],
+    line_endpoints: Mapping[str, tuple[tuple[float, float, float], tuple[float, float, float]]],
+) -> float:
+    distances: list[float] = []
+    for label, line in observed_lines.items():
+        endpoints = line_endpoints[label]
+        for world_xy in endpoints:
+            projected = _project_world_xy_with_params(params, world_xy)
+            distances.append(_signed_point_line_distance(projected, line))
+    return _rmse(distances)
+
+
+def _line_assignment_point_rmse_px(
+    params: Sequence[float],
+    correspondences: Sequence[tuple[tuple[float, float, float], tuple[float, float]]],
+) -> float:
+    residuals: list[float] = []
+    for world_xy, observed_xy in correspondences:
+        projected = _project_world_xy_with_params(params, world_xy)
+        residuals.append(projected[0] - observed_xy[0])
+        residuals.append(projected[1] - observed_xy[1])
+    return _rmse(residuals)
 
 
 def _hypothesis_with_image_evidence(
@@ -2221,7 +2809,7 @@ def _opencv_hough_segments(image_bgr: Any) -> list[dict[str, Any]]:
 
     gray = _gray(image_bgr)
     edges = cv2.Canny(cv2.GaussianBlur(gray, (5, 5), 0), 45, 145)
-    height, width = gray.shape[:2]
+    _height, width = gray.shape[:2]
     raw = cv2.HoughLinesP(
         edges,
         1,
@@ -2230,15 +2818,123 @@ def _opencv_hough_segments(image_bgr: Any) -> list[dict[str, Any]]:
         minLineLength=max(24, int(round(width * 0.045))),
         maxLineGap=max(10, int(round(width * 0.018))),
     )
-    if raw is None:
-        return []
     segments: list[dict[str, Any]] = []
-    for x1, y1, x2, y2 in raw.reshape(-1, 4):
-        item = _segment_item(float(x1), float(y1), float(x2), float(y2), source="opencv_hough")
+    for x1, y1, x2, y2 in normalize_hough_lines_p(raw):
+        item = _segment_item(x1, y1, x2, y2, source="opencv_hough")
         if item["length_px"] >= 20.0:
             segments.append(item)
     segments.sort(key=lambda item: float(item["length_px"]), reverse=True)
     return segments[:96]
+
+
+def _opencv_fast_line_detector_segments(image_bgr: Any) -> list[dict[str, Any]]:
+    import cv2  # type: ignore[import-not-found]
+
+    if not hasattr(cv2, "ximgproc") or not hasattr(cv2.ximgproc, "createFastLineDetector"):
+        raise AttributeError("cv2.ximgproc.createFastLineDetector is unavailable")
+    gray = _gray(image_bgr)
+    height, width = gray.shape[:2]
+    detector = cv2.ximgproc.createFastLineDetector(
+        length_threshold=max(24, int(round(width * 0.04))),
+        distance_threshold=1.414213562,
+        canny_th1=45.0,
+        canny_th2=145.0,
+        canny_aperture_size=3,
+        do_merge=True,
+    )
+    raw = detector.detect(gray)
+    if raw is None:
+        return []
+    segments: list[dict[str, Any]] = []
+    for x1, y1, x2, y2 in raw.reshape(-1, 4):
+        item = _segment_item(float(x1), float(y1), float(x2), float(y2), source="opencv_fast_line_detector")
+        if item["length_px"] >= 20.0:
+            segments.append(item)
+    segments.sort(key=lambda item: float(item["length_px"]), reverse=True)
+    return segments[:96]
+
+
+def _skimage_probabilistic_hough_segments(image_bgr: Any) -> list[dict[str, Any]]:
+    import numpy as np
+    from skimage.feature import canny
+    from skimage.transform import probabilistic_hough_line
+
+    gray = _gray(image_bgr)
+    height, width = gray.shape[:2]
+    edges = canny(
+        gray.astype(np.float32) / 255.0,
+        sigma=1.6,
+        low_threshold=0.08,
+        high_threshold=0.24,
+    )
+    raw = probabilistic_hough_line(
+        edges,
+        threshold=12,
+        line_length=max(24, int(round(width * 0.04))),
+        line_gap=max(8, int(round(width * 0.016))),
+        rng=0,
+    )
+    segments: list[dict[str, Any]] = []
+    for (x1, y1), (x2, y2) in raw:
+        item = _segment_item(float(x1), float(y1), float(x2), float(y2), source="skimage_probabilistic_hough")
+        if item["length_px"] >= 20.0:
+            segments.append(item)
+    segments.sort(key=lambda item: float(item["length_px"]), reverse=True)
+    return segments[:96]
+
+
+def _elsed_line_candidate_evidence(image_bgr: Any) -> dict[str, Any]:
+    try:
+        import pyelsed  # type: ignore[import-not-found]
+        import numpy as np
+    except ImportError as exc:
+        return {
+            "technology_id": "elsed",
+            "available": False,
+            "candidate_count": 0,
+            "segments": [],
+            "reason": "pyelsed_unavailable",
+            "error": str(exc),
+            "install_hint": "pip install git+https://github.com/iago-suarez/ELSED.git",
+        }
+
+    gray = _gray(image_bgr)
+    detected = pyelsed.detect(gray)
+    if not isinstance(detected, tuple) or not detected:
+        raw_segments = detected
+        scores = []
+    else:
+        raw_segments = detected[0]
+        scores = detected[1] if len(detected) > 1 else []
+    array = np.asarray(raw_segments, dtype=float)
+    if array.size == 0:
+        return {
+            "technology_id": "elsed",
+            "available": True,
+            "candidate_count": 0,
+            "segments": [],
+        }
+    segments: list[dict[str, Any]] = []
+    score_array = np.asarray([], dtype=float)
+    if scores is not None:
+        raw_scores = np.asarray(scores, dtype=float)
+        if raw_scores.size:
+            score_array = raw_scores.reshape(-1)
+    for index, line in enumerate(array.reshape(-1, 4)):
+        x1, y1, x2, y2 = [float(value) for value in line]
+        item = _segment_item(x1, y1, x2, y2, source="elsed")
+        if item["length_px"] < 20.0:
+            continue
+        if index < len(score_array):
+            item["score"] = round(float(score_array[index]), 6)
+        segments.append(item)
+    segments.sort(key=lambda item: float(item["length_px"]), reverse=True)
+    return {
+        "technology_id": "elsed",
+        "available": True,
+        "candidate_count": len(segments[:128]),
+        "segments": segments[:128],
+    }
 
 
 def _gray(image_bgr: Any) -> Any:
@@ -2648,6 +3344,12 @@ def _median(values: Sequence[float]) -> float:
     if len(ordered) % 2:
         return ordered[mid]
     return (ordered[mid - 1] + ordered[mid]) / 2.0
+
+
+def _rmse(values: Sequence[float]) -> float:
+    if not values:
+        return 0.0
+    return math.sqrt(sum(float(value) * float(value) for value in values) / float(len(values)))
 
 
 def _percentile(values: Sequence[float], percentile: float) -> float:

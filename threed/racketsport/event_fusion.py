@@ -23,6 +23,9 @@ DEFAULT_WRIST_ONLY_POST_WINDOW_S = 0.18
 DEFAULT_WRIST_ONLY_MIN_SEPARATION_S = 0.18
 DEFAULT_WRIST_ONLY_CONFIDENCE_CAP = 0.35
 WRIST_ONLY_TRUST_BAND_NOTE = "wrist-cue-only, unverified"
+LOW_TRUST_BALL_INFLECTION_CONFIDENCE_THRESHOLD = 0.25
+LOW_TRUST_BALL_INFLECTION_NOTE = "low-trust ball-inflection cue, unverified"
+IMAGE_SPACE_BALL_INFLECTION_NOTE = "image-space ball-inflection cue, unverified"
 
 
 @dataclass(frozen=True)
@@ -49,12 +52,13 @@ class BallInflectionCandidate:
     """Ball trajectory inflection near a possible racket contact."""
 
     time_s: float
-    ball_world_xyz: tuple[float, float, float]
+    ball_world_xyz: tuple[float, float, float] | None
     confidence: float
 
     def __post_init__(self) -> None:
         _require_non_negative_time(self.time_s, "time_s")
-        _require_vector3(self.ball_world_xyz, "ball_world_xyz")
+        if self.ball_world_xyz is not None:
+            _require_vector3(self.ball_world_xyz, "ball_world_xyz")
         _require_confidence(self.confidence, "confidence")
 
 
@@ -186,6 +190,7 @@ def fuse_contact_windows(
                     t0=max(0.0, event_t - pre_s),
                     t1=event_t + post_s,
                     importance=confidence,
+                    trust_band_note=_ball_contact_trust_note(ball),
                 )
             )
             used_ball_indices.add(ball_idx)
@@ -240,6 +245,7 @@ def fuse_contact_windows(
                 t0=max(0.0, event_t - pre_s),
                 t1=event_t + post_s,
                 importance=confidence,
+                trust_band_note=_ball_contact_trust_note(ball),
             )
         )
         used_ball_indices.add(ball_idx)
@@ -290,7 +296,7 @@ def fuse_contact_windows_from_cue_payloads(
     ball_inflections = [
         BallInflectionCandidate(
             time_s=float(item["time_s"]),
-            ball_world_xyz=tuple(item["ball_world_xyz"]),
+            ball_world_xyz=_optional_vector3(item.get("ball_world_xyz")),
             confidence=float(item["confidence"]),
         )
         for item in _items(ball_inflections_payload, keys=("candidates", "ball_inflections", "items"))
@@ -455,7 +461,7 @@ def _nearest_wrist_to_ball_match(
     return min(
         matches,
         key=lambda item: (
-            _distance_m(item[1].wrist_world_xyz, ball.ball_world_xyz),
+            _distance_to_ball(item[1], ball),
             abs(item[1].time_s - center_t),
             -item[1].confidence,
             item[1].player_id,
@@ -481,13 +487,27 @@ def _nearest_wrist_to_ball_only_match(
     return min(
         matches,
         key=lambda item: (
-            _distance_m(item[1].wrist_world_xyz, ball.ball_world_xyz),
+            _distance_to_ball(item[1], ball),
             abs(item[1].time_s - ball.time_s),
             -item[1].confidence,
             item[1].player_id,
             item[0],
         ),
     )
+
+
+def _distance_to_ball(wrist: WristVelocityPeak, ball: BallInflectionCandidate) -> float:
+    if ball.ball_world_xyz is None:
+        return math.inf
+    return _distance_m(wrist.wrist_world_xyz, ball.ball_world_xyz)
+
+
+def _ball_contact_trust_note(ball: BallInflectionCandidate) -> str | None:
+    if ball.ball_world_xyz is None:
+        return IMAGE_SPACE_BALL_INFLECTION_NOTE
+    if ball.confidence < LOW_TRUST_BALL_INFLECTION_CONFIDENCE_THRESHOLD:
+        return LOW_TRUST_BALL_INFLECTION_NOTE
+    return None
 
 
 def _distance_m(left: Sequence[float], right: Sequence[float]) -> float:
@@ -512,6 +532,12 @@ def _require_vector3(value: Sequence[float], name: str) -> tuple[float, float, f
     if len(value) != 3:
         raise ValueError(f"{name} must be a 3-vector")
     return tuple(_require_finite(component, name) for component in value)
+
+
+def _optional_vector3(value: Sequence[float] | None) -> tuple[float, float, float] | None:
+    if value is None:
+        return None
+    return _require_vector3(value, "ball_world_xyz")
 
 
 def _require_finite(value: float | None, name: str) -> float:
@@ -554,6 +580,9 @@ __all__ = [
     "DEFAULT_WRIST_ONLY_MIN_SEPARATION_S",
     "DEFAULT_WRIST_ONLY_POST_WINDOW_S",
     "DEFAULT_WRIST_ONLY_PRE_WINDOW_S",
+    "IMAGE_SPACE_BALL_INFLECTION_NOTE",
+    "LOW_TRUST_BALL_INFLECTION_CONFIDENCE_THRESHOLD",
+    "LOW_TRUST_BALL_INFLECTION_NOTE",
     "WristVelocityPeak",
     "WRIST_ONLY_TRUST_BAND_NOTE",
     "fuse_contact_windows",

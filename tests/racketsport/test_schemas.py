@@ -7,21 +7,24 @@ import pytest
 from pydantic import ValidationError
 
 from threed.racketsport.schemas import (
+    BallCandidates,
     BallFrame,
+    BallTrack,
+    BodyStagePhaseTiming,
     CallsArtifact,
     CaptureSidecar,
+    ContactWindowCandidates,
     CourtCalibration,
     CourtLineEvidence,
     CourtKeypoints,
-    DriftLog,
     ContactWindows,
-    ContactWindowCandidates,
-    BallTrack,
+    DriftLog,
     MetricValue,
-    PlayerGroundArtifact,
-    RacketCandidates,
     PhaseEvalMetrics,
+    PipelineRun,
+    PlayerGroundArtifact,
     PlacementArtifact,
+    RacketCandidates,
     RacketPose,
     ReprojectionError,
     Sam3DKeypoints2D,
@@ -30,6 +33,7 @@ from threed.racketsport.schemas import (
     TrackFrame,
     Tracks,
     VirtualWorld,
+    load_ball_candidates_file,
     validate_artifact_file,
 )
 
@@ -86,6 +90,83 @@ def test_capture_sidecar_schema_accepts_documented_payload(tmp_path):
     assert parsed.video_rotation_angle_degrees == 0
     assert parsed.recording_duration_s == 4.5
     assert parsed.capture_quality.grade == "good"
+
+
+def test_pipeline_run_schema_accepts_optional_stage_wall_seconds() -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_pipeline_run",
+        "clip": "clip_001",
+        "requested_stage": "body",
+        "status": "fail",
+        "run_dir": "/tmp/run",
+        "inputs_dir": "/tmp/inputs",
+        "stages": [
+            {
+                "stage": "body",
+                "status": "fail",
+                "real_model": True,
+                "source_mode": "fast_sam_3d_body",
+                "produced_artifacts": [],
+                "notes": ["unit-test failure"],
+                "metrics": {},
+                "wall_seconds": 1.25,
+            }
+        ],
+        "review_artifacts": {},
+        "readiness": {"status": "blocked", "blockers": ["body_failed"]},
+    }
+
+    parsed = PipelineRun.model_validate(payload)
+
+    assert parsed.stages[0].wall_seconds == pytest.approx(1.25)
+    del payload["stages"][0]["wall_seconds"]
+    assert PipelineRun.model_validate(payload).stages[0].wall_seconds is None
+
+
+def test_body_stage_phase_timing_schema_round_trips_optional_not_instrumentable_phases() -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_body_stage_phase_timing",
+        "stage_wall_seconds": 10.0,
+        "model_load_s": 1.0,
+        "compile_warmup_s": None,
+        "inference_s": 4.0,
+        "person_frame_count": 12,
+        "keypoints_2d_s": 0.2,
+        "contact_splice_s": 0.3,
+        "gates_s": 0.5,
+        "serialization_s": 2.0,
+        "input_prep_s": 0.4,
+        "subprocess_outer_call_s": 5.5,
+        "orchestrator_model_setup_s": 0.1,
+        "runner_preprocessing_s": 0.6,
+        "runner_postprocessing_s": 0.1,
+        "runner_result_serialization_handoff_s": 0.2,
+        "runner_other_s": 0.3,
+        "subprocess_wrapper_handoff_s": 0.2,
+        "mesh_smpl_payload_assembly_s": 0.7,
+        "smpl_motion_payload_assembly_s": 0.5,
+        "mesh_export_payload_assembly_s": 0.2,
+        "index_build_s": 0.9,
+        "ms_per_person_steady": 333.33,
+        "per_bucket_timing": [{"bucket_size": 8, "warmup_s": 1.0, "steady_s": 4.0, "frames": 12}],
+        "timing_sources": {"sam3d_batch_timing": "fast_sam_subprocess/batch_outputs-abc.json.timing.json"},
+        "attributed_s": 8.0,
+        "other_s": 2.0,
+        "phase_boundaries": {"inference_s": "runtime.process_frame/process_frame_batches outer call"},
+        "not_instrumentable": {
+            "compile_warmup_s": "batch subprocess does not expose this as a BodyStageRunner boundary"
+        },
+        "notes": ["unit-test"],
+    }
+
+    parsed = BodyStagePhaseTiming.model_validate(payload)
+
+    assert parsed.person_frame_count == 12
+    assert parsed.compile_warmup_s is None
+    assert parsed.index_build_s == pytest.approx(0.9)
+    assert parsed.per_bucket_timing[0]["bucket_size"] == 8
 
 
 def test_court_calibration_requires_current_schema_version():
@@ -226,6 +307,43 @@ def test_ball_track_schema_accepts_blurball_source() -> None:
     )
 
     assert parsed.source == "blurball"
+
+
+def test_ball_candidates_schema_round_trips_as_not_ground_truth_candidate_predictions(tmp_path: Path) -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_candidates",
+        "fps": 60.0,
+        "source": "tracknet",
+        "source_mode": "tracknet_heatmap",
+        "primary_output": "ball_track.json",
+        "max_candidates_per_frame": 2,
+        "nms_radius_px": 10.0,
+        "not_ground_truth": True,
+        "candidate_prediction": True,
+        "provenance": {"video": "clip.mp4", "checkpoint": "TrackNet_best.pt"},
+        "frames": [
+            {
+                "frame": 0,
+                "candidates": [
+                    {"xy": [321.0, 240.0], "score": 0.91, "source_detector": "tracknet_heatmap_nms"},
+                    {"xy": [125.5, 80.25], "score": 0.52, "source_detector": "tracknet_heatmap_nms"},
+                ],
+            },
+            {"frame": 1, "candidates": []},
+        ],
+    }
+    path = tmp_path / "ball_candidates.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    parsed = validate_artifact_file("racketsport_ball_candidates", path)
+    loaded = load_ball_candidates_file(path)
+
+    assert isinstance(parsed, BallCandidates)
+    assert loaded == parsed
+    assert parsed.not_ground_truth is True
+    assert parsed.candidate_prediction is True
+    assert parsed.frames[0].candidates[0].source_detector == "tracknet_heatmap_nms"
 
 
 def test_common_numeric_fields_reject_bool_nan_and_infinity() -> None:
