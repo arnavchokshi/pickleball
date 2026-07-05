@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import subprocess
 import sys
 from pathlib import Path
@@ -9,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 
 from scripts.racketsport import solve_ball_arcs as solve_ball_arcs_cli
+from threed.racketsport import ball_arc_solver as ball_arc_solver_module
 from threed.racketsport.ball_arc_solver import (
     AnchorEvent,
     BallArcSolverConfig,
@@ -194,8 +196,8 @@ def test_solve_track_adds_arc_weak_tail_after_rejected_rally_endpoint() -> None:
             "schema_version": 1,
             "status": "human_reviewed",
             "bounces": [
-                {"frame": 0, "t": 0.0, "review_id": "bounce_start"},
-                {"frame": int(round(bounce1_t * fps)), "t": bounce1_t, "review_id": "bounce_mid"},
+                _human_bounce(0, 0.0, "bounce_start"),
+                _human_bounce(int(round(bounce1_t * fps)), bounce1_t, "bounce_mid"),
             ],
         },
         rally_spans={"spans": [{"t0": 0.0, "t1": bounce1_t}]},
@@ -249,7 +251,7 @@ def test_solve_track_hides_weak_tail_when_speed_gate_fails() -> None:
         reviewed_bounces={
             "schema_version": 1,
             "status": "human_reviewed",
-            "bounces": [{"frame": 0, "t": 0.0, "review_id": "bounce_start"}],
+            "bounces": [_human_bounce(0, 0.0, "bounce_start")],
         },
         rally_spans={"spans": [{"t0": 0.0, "t1": 0.0}]},
         physics=physics,
@@ -293,8 +295,8 @@ def test_event_subset_selection_rejects_oversegmented_false_contacts() -> None:
             "schema_version": 1,
             "status": "human_reviewed",
             "bounces": [
-                {"frame": int(t0 * fps), "t": t0, "review_id": "bounce_start"},
-                {"frame": int(t1 * fps), "t": t1, "review_id": "bounce_end"},
+                _human_bounce(int(t0 * fps), t0, "bounce_start"),
+                _human_bounce(int(t1 * fps), t1, "bounce_end"),
             ],
         },
         extra_anchors=false_contacts,
@@ -308,6 +310,532 @@ def test_event_subset_selection_rejects_oversegmented_false_contacts() -> None:
     assert artifact["event_selection"]["selected_optional_count"] == 0
     assert artifact["event_selection"]["rejected_optional_count"] == len(false_contacts)
     assert {event["status"] for event in artifact["event_selection"]["rejected"]} == {"candidate_prediction"}
+
+
+def test_candidate_event_score_gain_handles_parent_unfit_accepted_path() -> None:
+    gain = ball_arc_solver_module._candidate_event_score_gain(
+        {"accepted": True, "reason": "parent_unfit_children_plausible", "score_gain": None}
+    )
+
+    assert math.isinf(gain)
+    assert gain > ball_arc_solver_module._candidate_event_score_gain({"accepted": True, "score_gain": 0.5})
+
+
+def test_candidate_association_falls_back_to_primary_fit_when_candidate_sets_underconstrain_segment() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    t1 = 0.5
+    p0 = (0.2, -2.0, 1.15)
+    v0 = (2.4, 3.0, _vz_for_endpoint(p0[2], BALL_RADIUS_M, t1))
+    p1 = _no_drag_position(p0, v0, t1)
+    start = _anchor("contact-0", "contact", 0.0, p0, sigma_m=0.04)
+    end = _anchor("bounce-0", "bounce", t1, p1, sigma_m=0.04, status="human_reviewed")
+    primary = _observations_from_arc(calibration, p0, v0, t0=0.0, t1=t1, fps=60.0)
+    sparse_candidate_sets = {
+        primary[5].frame: [
+            BallObservation(
+                frame=primary[5].frame,
+                t=primary[5].t,
+                xy=primary[5].xy,
+                confidence=0.9,
+                visible=True,
+                observation_source="tracknet:tracknet_heatmap_nms",
+            )
+        ]
+    }
+
+    result = fit_flight_segment(
+        segment_id=3,
+        start_anchor=start,
+        end_anchor=end,
+        observations=primary,
+        candidate_sets_by_frame=sparse_candidate_sets,
+        calibration=calibration,
+        physics=physics,
+        config=BallArcSolverConfig(max_reprojection_inlier_px=8.0, robust_pixel_sigma=2.0),
+    )
+
+    assert result.status == "fit"
+    assert result.inlier_count >= len(primary) - 1
+    assert result.candidate_association is not None
+    assert result.candidate_association["stopped_reason"] == "insufficient_selected_candidates_fallback_primary"
+    assert result.candidate_association["fallback_to_primary_fit"] is True
+
+
+def test_auto_bounce_candidates_seed_selection_without_claiming_human_review() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    fps = 60.0
+    bounce_t = 0.5
+    contact0 = (0.0, -2.0, 1.05)
+    v_before = (1.4, 3.0, _vz_for_endpoint(contact0[2], BALL_RADIUS_M, bounce_t))
+    bounce_xyz = _no_drag_position(contact0, v_before, bounce_t)
+    v_after = (1.2, 2.4, _vz_for_endpoint(BALL_RADIUS_M, 1.0, bounce_t))
+    frames = _piecewise_track_frames(
+        calibration=calibration,
+        p0=contact0,
+        v0=v_before,
+        bounce_t=bounce_t,
+        v1=v_after,
+        t_end=1.0,
+        fps=fps,
+    )
+    bounce_frame = int(round(bounce_t * fps))
+    auto_candidates = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_bounce_candidates_track_geometry",
+        "clip_id": "synthetic_auto",
+        "source": "track_geometry_candidate",
+        "not_ground_truth": True,
+        "human_reviewed": False,
+        "candidate_prediction": True,
+        "candidates": [
+            {
+                "frame": bounce_frame,
+                "t": bounce_t,
+                "xy": list(_project(calibration, bounce_xyz)),
+                "method": "image_y_cusp",
+                "source": "track_geometry_candidate",
+                "not_ground_truth": True,
+                "human_reviewed": False,
+            }
+        ],
+    }
+
+    artifact = solve_ball_arc_track(
+        ball_track={"schema_version": 1, "fps": fps, "source": "synthetic", "frames": frames, "bounces": []},
+        calibration=calibration,
+        auto_bounce_candidates=auto_candidates,
+        physics=physics,
+        config=BallArcSolverConfig(
+            enable_event_discovery=False,
+            enable_weak_segments=False,
+            robust_pixel_sigma=2.0,
+            max_reprojection_inlier_px=8.0,
+        ),
+    )
+
+    assert artifact["status"] == "ran"
+    assert artifact["summary"]["human_reviewed_bounce_count"] == 0
+    assert artifact["summary"]["auto_bounce_candidate_count"] == 1
+    assert artifact["summary"]["discovered_bounce_count"] == 0
+    assert artifact["summary"]["confident_segment_count"] == 2
+    auto = [anchor for anchor in artifact["anchors"] if anchor["status"] == "auto_bounce_candidate"]
+    assert len(auto) == 1
+    assert auto[0]["source"] == "track_geometry_candidate"
+    assert auto[0]["sigma_m"] == pytest.approx(0.18)
+    assert auto[0]["details"]["human_reviewed"] is False
+    assert auto[0]["details"]["not_ground_truth"] is True
+    selected = [item for item in artifact["event_selection"]["selected"] if item["anchor_id"] == auto[0]["anchor_id"]]
+    assert selected[0]["selection"] == "mandatory"
+    assert selected[0]["selection_reason"] == "auto_bounce_candidate"
+
+
+def test_multihyp_candidate_association_recovers_non_primary_candidate_and_reports_provenance() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    fps = 60.0
+    start = (0.0, -2.0, 1.05)
+    end_t = 0.8
+    velocity = (1.2, 3.4, _vz_for_endpoint(start[2], BALL_RADIUS_M, end_t))
+    frames = [
+        {"t": obs.t, "xy": list(obs.xy), "conf": 0.95, "visible": True, "world_xyz": None, "approx": False}
+        for obs in _observations_from_arc(calibration, start, velocity, t0=0.0, t1=end_t, fps=fps)
+    ]
+    recovery_frame = 24
+    true_xy = frames[recovery_frame]["xy"]
+    frames[recovery_frame] = {
+        **frames[recovery_frame],
+        "xy": [true_xy[0] + 95.0, true_xy[1] - 65.0],
+        "conf": 0.99,
+    }
+    candidate_sidecar = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_candidates",
+        "fps": fps,
+        "source": "tracknet",
+        "source_mode": "tracknet_heatmap_nonoverlap",
+        "primary_output": "ball_track.json",
+        "max_candidates_per_frame": 2,
+        "nms_radius_px": 10.0,
+        "not_ground_truth": True,
+        "candidate_prediction": True,
+        "provenance": {"test": "non_primary_recovery"},
+        "frames": [
+            {
+                "frame": recovery_frame,
+                "candidates": [
+                    {"xy": true_xy, "score": 0.94, "source_detector": "tracknet_heatmap_nms"},
+                    {
+                        "xy": [true_xy[0] + 130.0, true_xy[1] + 80.0],
+                        "score": 0.2,
+                        "source_detector": "tracknet_heatmap_nms",
+                    },
+                ],
+            }
+        ],
+    }
+
+    artifact = solve_ball_arc_track(
+        ball_track={"schema_version": 1, "fps": fps, "source": "fused", "frames": frames, "bounces": []},
+        calibration=calibration,
+        reviewed_bounces={
+            "schema_version": 1,
+            "status": "human_reviewed",
+            "bounces": [
+                _human_bounce(0, 0.0, "bounce_start"),
+                _human_bounce(int(round(end_t * fps)), end_t, "bounce_end"),
+            ],
+        },
+        ball_candidate_sidecars=[candidate_sidecar],
+        physics=physics,
+        config=BallArcSolverConfig(
+            enable_event_discovery=False,
+            enable_weak_segments=False,
+            robust_pixel_sigma=2.0,
+            max_reprojection_inlier_px=8.0,
+            candidate_selection_max_iterations=5,
+        ),
+    )
+
+    recovered = artifact["frames"][recovery_frame]
+    assert artifact["status"] == "ran"
+    assert recovered["band"] == "anchored_measured"
+    assert recovered["observation_source"] == "tracknet:tracknet_heatmap_nms"
+    assert recovered["candidate_selection"] == "arc_irls_v1"
+    assert recovered["arc_solver"]["candidate_residual_px"] < 8.0
+    assert artifact["summary"]["candidate_selection_source_counts"]["tracknet:tracknet_heatmap_nms"] >= 1
+    assert artifact["validation"]["candidate_association"]["enabled"] is True
+    assert artifact["validation"]["candidate_association"]["selection_counts_by_source"]["tracknet:tracknet_heatmap_nms"] >= 1
+    candidate_segment = next(segment for segment in artifact["segments"] if "candidate_association" in segment)
+    assert candidate_segment["candidate_association"]["initial_fit"] == "primary_track_observations"
+    assert candidate_segment["candidate_association"]["refit_max_nfev"] == 350
+
+
+def test_rescue_only_candidate_association_keeps_primary_inlier_over_candidate() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    fps = 60.0
+    start = (0.0, -2.0, 1.05)
+    end_t = 0.8
+    velocity = (1.2, 3.4, _vz_for_endpoint(start[2], BALL_RADIUS_M, end_t))
+    frames = [
+        {"t": obs.t, "xy": list(obs.xy), "conf": 0.95, "visible": True, "world_xyz": None, "approx": False}
+        for obs in _observations_from_arc(calibration, start, velocity, t0=0.0, t1=end_t, fps=fps)
+    ]
+    frame = 24
+    true_xy = frames[frame]["xy"]
+    primary_xy = [true_xy[0] + 3.0, true_xy[1] - 2.0]
+    frames[frame] = {**frames[frame], "xy": primary_xy, "conf": 0.99}
+    candidate_sidecar = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_candidates",
+        "fps": fps,
+        "source": "tracknet",
+        "source_mode": "tracknet_heatmap_nonoverlap",
+        "primary_output": "ball_track.json",
+        "max_candidates_per_frame": 1,
+        "nms_radius_px": 10.0,
+        "not_ground_truth": True,
+        "candidate_prediction": True,
+        "provenance": {"test": "rescue_only_keeps_primary"},
+        "frames": [
+            {
+                "frame": frame,
+                "candidates": [{"xy": true_xy, "score": 0.99, "source_detector": "tracknet_heatmap_nms"}],
+            }
+        ],
+    }
+
+    artifact = solve_ball_arc_track(
+        ball_track={"schema_version": 1, "fps": fps, "source": "fused", "frames": frames, "bounces": []},
+        calibration=calibration,
+        reviewed_bounces={
+            "schema_version": 1,
+            "status": "human_reviewed",
+            "bounces": [
+                _human_bounce(0, 0.0, "bounce_start"),
+                _human_bounce(int(round(end_t * fps)), end_t, "bounce_end"),
+            ],
+        },
+        ball_candidate_sidecars=[candidate_sidecar],
+        physics=physics,
+        config=BallArcSolverConfig(
+            enable_event_discovery=False,
+            enable_weak_segments=False,
+            robust_pixel_sigma=2.0,
+            max_reprojection_inlier_px=8.0,
+            candidate_association_mode="rescue_only",
+        ),
+    )
+
+    recovered = artifact["frames"][frame]
+    assert recovered["band"] == "anchored_measured"
+    assert recovered["observation_source"] == "primary:fused"
+    assert recovered["arc_solver"]["rescued"] is False
+    assert artifact["validation"]["candidate_association"]["mode"] == "rescue_only"
+    assert artifact["validation"]["candidate_association"]["rescue_counts_by_source"] == {}
+
+
+def test_rescue_only_score_floor_blocks_low_score_rescue_and_leaves_interpolated() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    fps = 60.0
+    start = (0.0, -2.0, 1.05)
+    end_t = 0.8
+    velocity = (1.2, 3.4, _vz_for_endpoint(start[2], BALL_RADIUS_M, end_t))
+    frames = [
+        {"t": obs.t, "xy": list(obs.xy), "conf": 0.95, "visible": True, "world_xyz": None, "approx": False}
+        for obs in _observations_from_arc(calibration, start, velocity, t0=0.0, t1=end_t, fps=fps)
+    ]
+    frame = 24
+    true_xy = frames[frame]["xy"]
+    frames[frame] = {**frames[frame], "xy": [true_xy[0] + 90.0, true_xy[1] - 70.0], "conf": 0.99}
+    candidate_sidecar = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_candidates",
+        "fps": fps,
+        "source": "tracknet",
+        "source_mode": "tracknet_heatmap_nonoverlap",
+        "primary_output": "ball_track.json",
+        "max_candidates_per_frame": 1,
+        "nms_radius_px": 10.0,
+        "not_ground_truth": True,
+        "candidate_prediction": True,
+        "provenance": {"test": "floor_blocks_rescue"},
+        "frames": [
+            {
+                "frame": frame,
+                "candidates": [{"xy": true_xy, "score": 0.2, "source_detector": "tracknet_heatmap_nms"}],
+            }
+        ],
+    }
+
+    artifact = solve_ball_arc_track(
+        ball_track={"schema_version": 1, "fps": fps, "source": "fused", "frames": frames, "bounces": []},
+        calibration=calibration,
+        reviewed_bounces={
+            "schema_version": 1,
+            "status": "human_reviewed",
+            "bounces": [
+                _human_bounce(0, 0.0, "bounce_start"),
+                _human_bounce(int(round(end_t * fps)), end_t, "bounce_end"),
+            ],
+        },
+        ball_candidate_sidecars=[candidate_sidecar],
+        physics=physics,
+        config=BallArcSolverConfig(
+            enable_event_discovery=False,
+            enable_weak_segments=False,
+            robust_pixel_sigma=2.0,
+            max_reprojection_inlier_px=8.0,
+            candidate_association_mode="rescue_only",
+            candidate_score_floors={"tracknet": 0.5},
+        ),
+    )
+
+    recovered = artifact["frames"][frame]
+    assert recovered["band"] == "arc_interpolated"
+    assert "observation_source" not in recovered
+    assert recovered["arc_solver"]["rescued"] is False
+    association = artifact["validation"]["candidate_association"]
+    assert association["candidate_score_floors"] == {"tracknet": 0.5}
+    assert association["selection_counts_by_source"].get("tracknet:tracknet_heatmap_nms", 0) == 0
+    assert association["score_floor_rejected_counts_by_source"]["tracknet:tracknet_heatmap_nms"] >= 1
+
+
+def test_rescued_candidate_reports_provenance_and_final_residual_distribution() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    fps = 60.0
+    start = (0.0, -2.0, 1.05)
+    end_t = 0.8
+    velocity = (1.2, 3.4, _vz_for_endpoint(start[2], BALL_RADIUS_M, end_t))
+    frames = [
+        {"t": obs.t, "xy": list(obs.xy), "conf": 0.95, "visible": True, "world_xyz": None, "approx": False}
+        for obs in _observations_from_arc(calibration, start, velocity, t0=0.0, t1=end_t, fps=fps)
+    ]
+    frame = 24
+    true_xy = frames[frame]["xy"]
+    frames[frame] = {**frames[frame], "xy": [true_xy[0] + 95.0, true_xy[1] - 65.0], "conf": 0.99}
+    candidate_sidecar = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_candidates",
+        "fps": fps,
+        "source": "tracknet",
+        "source_mode": "tracknet_heatmap_nonoverlap",
+        "primary_output": "ball_track.json",
+        "max_candidates_per_frame": 1,
+        "nms_radius_px": 10.0,
+        "not_ground_truth": True,
+        "candidate_prediction": True,
+        "provenance": {"test": "rescued_provenance"},
+        "frames": [
+            {
+                "frame": frame,
+                "candidates": [{"xy": true_xy, "score": 0.94, "source_detector": "tracknet_heatmap_nms"}],
+            }
+        ],
+    }
+
+    artifact = solve_ball_arc_track(
+        ball_track={"schema_version": 1, "fps": fps, "source": "fused", "frames": frames, "bounces": []},
+        calibration=calibration,
+        reviewed_bounces={
+            "schema_version": 1,
+            "status": "human_reviewed",
+            "bounces": [
+                _human_bounce(0, 0.0, "bounce_start"),
+                _human_bounce(int(round(end_t * fps)), end_t, "bounce_end"),
+            ],
+        },
+        ball_candidate_sidecars=[candidate_sidecar],
+        physics=physics,
+        config=BallArcSolverConfig(
+            enable_event_discovery=False,
+            enable_weak_segments=False,
+            robust_pixel_sigma=2.0,
+            max_reprojection_inlier_px=8.0,
+            candidate_association_mode="rescue_only",
+            candidate_score_floors={"tracknet": 0.5},
+        ),
+    )
+
+    recovered = artifact["frames"][frame]
+    association = artifact["validation"]["candidate_association"]
+    assert recovered["band"] == "anchored_measured"
+    assert recovered["observation_source"] == "tracknet:tracknet_heatmap_nms"
+    assert recovered["rescued"] is True
+    assert recovered["arc_solver"]["rescued"] is True
+    assert association["rescue_counts_by_source"]["tracknet:tracknet_heatmap_nms"] == 1
+    assert association["final_residual_px_by_source"]["tracknet:tracknet_heatmap_nms"]["count"] == 1
+
+
+def test_multihyp_leave_one_out_excludes_all_candidates_from_held_out_frame() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    fps = 60.0
+    start = (0.0, -2.0, 1.05)
+    end_t = 0.7
+    velocity = (1.0, 3.1, _vz_for_endpoint(start[2], BALL_RADIUS_M, end_t))
+    frames = [
+        {"t": obs.t, "xy": list(obs.xy), "conf": 0.95, "visible": True, "world_xyz": None, "approx": False}
+        for obs in _observations_from_arc(calibration, start, velocity, t0=0.0, t1=end_t, fps=fps)
+    ]
+    heldout_frame = 18
+    true_xy = frames[heldout_frame]["xy"]
+    frames[heldout_frame] = {
+        **frames[heldout_frame],
+        "xy": [true_xy[0] + 80.0, true_xy[1] + 70.0],
+        "conf": 0.98,
+    }
+    candidate_sidecar = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_candidates",
+        "fps": fps,
+        "source": "wasb",
+        "source_mode": "wasb_predict",
+        "primary_output": "ball_track.json",
+        "max_candidates_per_frame": 3,
+        "nms_radius_px": None,
+        "not_ground_truth": True,
+        "candidate_prediction": True,
+        "provenance": {"test": "loo_whole_frame_holdout"},
+        "frames": [
+            {
+                "frame": heldout_frame,
+                "candidates": [
+                    {"xy": true_xy, "score": 1.0, "source_detector": "wasb_concomp"},
+                    {
+                        "xy": [true_xy[0] - 55.0, true_xy[1] + 45.0],
+                        "score": 1.0,
+                        "source_detector": "wasb_concomp",
+                    },
+                ],
+            }
+        ],
+    }
+
+    artifact = solve_ball_arc_track(
+        ball_track={"schema_version": 1, "fps": fps, "source": "fused", "frames": frames, "bounces": []},
+        calibration=calibration,
+        reviewed_bounces={
+            "schema_version": 1,
+            "status": "human_reviewed",
+            "bounces": [
+                _human_bounce(0, 0.0, "bounce_start"),
+                _human_bounce(int(round(end_t * fps)), end_t, "bounce_end"),
+            ],
+        },
+        ball_candidate_sidecars=[candidate_sidecar],
+        physics=physics,
+        config=BallArcSolverConfig(
+            enable_event_discovery=False,
+            enable_weak_segments=False,
+            robust_pixel_sigma=2.0,
+            max_reprojection_inlier_px=8.0,
+            candidate_selection_max_iterations=5,
+        ),
+    )
+
+    loo = artifact["validation"]["leave_one_out"]
+    assert loo["holdout_policy"] == "whole_frame_candidate_sets_excluded"
+    assert loo["retained_candidate_policy"] == "fixed_non_heldout_frame_selections"
+    assert loo["candidate_selection"] == "arc_irls_v1"
+    assert loo["candidate_sibling_leakage_prevented"] is True
+    heldout_samples = [sample for sample in loo["samples"] if sample["frame"] == heldout_frame]
+    assert heldout_samples
+    assert heldout_samples[0]["held_out_observation_source"] == "wasb:wasb_concomp"
+    assert heldout_samples[0]["held_out_frame_candidate_count"] == 3
+
+
+def test_reviewed_bounce_payload_rejects_top_level_human_review_without_per_item_provenance() -> None:
+    calibration = _projection_calibration()
+    fps = 60.0
+    p0 = (0.0, -1.0, 1.0)
+    t1 = 0.5
+    v0 = (0.8, 2.0, _vz_for_endpoint(p0[2], BALL_RADIUS_M, t1))
+    frames = [
+        {"t": obs.t, "xy": list(obs.xy), "conf": obs.confidence, "visible": True}
+        for obs in _observations_from_arc(calibration, p0, v0, t0=0.0, t1=t1, fps=fps)
+    ]
+
+    with pytest.raises(ValueError, match="per-bounce human-review provenance"):
+        solve_ball_arc_track(
+            ball_track={"schema_version": 1, "fps": fps, "source": "synthetic", "frames": frames, "bounces": []},
+            calibration=calibration,
+            reviewed_bounces={
+                "schema_version": 1,
+                "status": "human_reviewed",
+                "source": "human_review",
+                "bounces": [{"frame": int(round(t1 * fps)), "t": t1, "review_id": "missing_per_item_provenance"}],
+            },
+            physics=PhysicsParameters.no_drag(),
+            config=BallArcSolverConfig(enable_event_discovery=False, enable_weak_segments=False),
+        )
+
+
+def test_solver_reports_degenerate_zero_segments_when_rally_anchor_cannot_form_segment() -> None:
+    calibration = _projection_calibration()
+    frame = {
+        "t": 0.0,
+        "xy": list(_project(calibration, (0.0, -1.0, BALL_RADIUS_M))),
+        "conf": 0.95,
+        "visible": True,
+    }
+
+    artifact = solve_ball_arc_track(
+        ball_track={"schema_version": 1, "fps": 30.0, "source": "synthetic", "frames": [frame], "bounces": []},
+        calibration=calibration,
+        physics=PhysicsParameters.no_drag(),
+        config=BallArcSolverConfig(enable_event_discovery=False, enable_weak_segments=False),
+    )
+
+    assert artifact["status"] == "degenerate_zero_segments"
+    assert artifact["render_only"] is True
+    assert artifact["summary"]["confident_segment_count"] == 0
+    assert artifact["event_selection"]["selected_count"] >= 1
+    assert "zero accepted segments" in artifact["kill_reasons"][0]
 
 
 def test_solve_track_discovers_missing_bounce_and_refits_two_segments() -> None:
@@ -387,7 +915,7 @@ def test_solve_ball_arcs_cli_writes_render_only_reference_artifact(tmp_path: Pat
             "artifact_type": "racketsport_reviewed_ball_bounces",
             "status": "human_reviewed",
             "source": "human_review",
-            "bounces": [{"frame": int(round(bounce_t * 60.0)), "t": bounce_t, "review_id": "bounce_0001"}],
+            "bounces": [_human_bounce(int(round(bounce_t * 60.0)), bounce_t, "bounce_0001")],
         },
     )
     contact_path = _write_json(
@@ -450,6 +978,207 @@ def test_solve_ball_arcs_cli_writes_render_only_reference_artifact(tmp_path: Pat
     assert "process_video.py integration is intentionally not applied" in report_path.read_text(encoding="utf-8")
 
 
+def test_solve_ball_arcs_cli_accepts_auto_bounce_candidates_and_reports_separate_count(tmp_path: Path) -> None:
+    calibration = _projection_calibration()
+    fps = 60.0
+    bounce_t = 0.5
+    start = (0.0, -1.8, 1.0)
+    v0 = (1.8, 3.2, _vz_for_endpoint(start[2], BALL_RADIUS_M, bounce_t))
+    bounce_xyz = _no_drag_position(start, v0, bounce_t)
+    v1 = (1.6, 2.4, _vz_for_endpoint(BALL_RADIUS_M, 1.0, bounce_t))
+    frames = _piecewise_track_frames(
+        calibration=calibration,
+        p0=start,
+        v0=v0,
+        bounce_t=bounce_t,
+        v1=v1,
+        t_end=1.0,
+        fps=fps,
+    )
+    ball_path = _write_json(
+        tmp_path / "ball_track.json",
+        {"schema_version": 1, "fps": fps, "source": "synthetic", "frames": frames, "bounces": []},
+    )
+    calibration_path = _write_json(tmp_path / "court_calibration.json", calibration)
+    auto_path = _write_json(
+        tmp_path / "auto_bounce_candidates.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_ball_bounce_candidates_track_geometry",
+            "clip_id": "synthetic_cli_auto",
+            "source": "track_geometry_candidate",
+            "not_ground_truth": True,
+            "human_reviewed": False,
+            "candidate_prediction": True,
+            "candidates": [
+                {
+                    "frame": int(round(bounce_t * fps)),
+                    "t": bounce_t,
+                    "xy": list(_project(calibration, bounce_xyz)),
+                    "method": "image_y_cusp",
+                    "source": "track_geometry_candidate",
+                    "not_ground_truth": True,
+                    "human_reviewed": False,
+                }
+            ],
+        },
+    )
+    out_dir = tmp_path / "out"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/solve_ball_arcs.py",
+            "--clip",
+            "synthetic_cli_auto",
+            "--ball-track",
+            str(ball_path),
+            "--court-calibration",
+            str(calibration_path),
+            "--auto-bounce-candidates",
+            str(auto_path),
+            "--out-dir",
+            str(out_dir),
+            "--ball-type",
+            "no_drag_test",
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    artifact = json.loads((out_dir / "synthetic_cli_auto" / "ball_track_arc_solved.json").read_text(encoding="utf-8"))
+    report_md = (out_dir / "synthetic_cli_auto" / "REPORT.md").read_text(encoding="utf-8")
+    assert artifact["summary"]["human_reviewed_bounce_count"] == 0
+    assert artifact["summary"]["auto_bounce_candidate_count"] == 1
+    assert "- Auto-bounce candidates: `1`" in report_md
+    assert "- Human-reviewed bounces: `0`" in report_md
+
+
+def test_solve_ball_arcs_cli_accepts_candidate_sidecars_and_extra_tracks(tmp_path: Path) -> None:
+    calibration = _projection_calibration()
+    fps = 60.0
+    end_t = 0.7
+    start = (0.0, -1.8, 1.0)
+    velocity = (1.3, 3.0, _vz_for_endpoint(start[2], BALL_RADIUS_M, end_t))
+    frames = [
+        {"t": obs.t, "xy": list(obs.xy), "conf": obs.confidence, "visible": True, "world_xyz": None, "approx": False}
+        for obs in _observations_from_arc(calibration, start, velocity, t0=0.0, t1=end_t, fps=fps)
+    ]
+    recovery_frame = 21
+    true_xy = frames[recovery_frame]["xy"]
+    frames[recovery_frame] = {
+        **frames[recovery_frame],
+        "xy": [true_xy[0] + 100.0, true_xy[1] - 40.0],
+        "conf": 0.99,
+    }
+    ball_path = _write_json(
+        tmp_path / "ball_track.json",
+        {"schema_version": 1, "fps": fps, "source": "fused", "frames": frames, "bounces": []},
+    )
+    calibration_path = _write_json(tmp_path / "court_calibration.json", calibration)
+    reviewed_bounces_path = _write_json(
+        tmp_path / "reviewed_ball_bounces.json",
+        {
+            "schema_version": 1,
+            "status": "human_reviewed",
+            "bounces": [
+                _human_bounce(0, 0.0, "bounce_start"),
+                _human_bounce(int(round(end_t * fps)), end_t, "bounce_end"),
+            ],
+        },
+    )
+    sidecar_path = _write_json(
+        tmp_path / "ball_candidates.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_ball_candidates",
+            "fps": fps,
+            "source": "tracknet",
+            "source_mode": "tracknet_heatmap_nonoverlap",
+            "primary_output": str(ball_path),
+            "max_candidates_per_frame": 1,
+            "nms_radius_px": 10.0,
+            "not_ground_truth": True,
+            "candidate_prediction": True,
+            "provenance": {"test": "cli_sidecar"},
+            "frames": [{"frame": recovery_frame, "candidates": []}],
+        },
+    )
+    extra_frames = [
+        {**frame, "visible": False, "conf": 0.0}
+        for frame in frames
+    ]
+    extra_frames[recovery_frame] = {
+        "t": frames[recovery_frame]["t"],
+        "xy": true_xy,
+        "conf": 0.92,
+        "visible": True,
+        "world_xyz": None,
+        "approx": False,
+    }
+    extra_path = _write_json(
+        tmp_path / "blurball_track.json",
+        {"schema_version": 1, "fps": fps, "source": "blurball", "frames": extra_frames, "bounces": []},
+    )
+    out_dir = tmp_path / "out"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/solve_ball_arcs.py",
+            "--clip",
+            "synthetic_candidate_cli",
+            "--ball-track",
+            str(ball_path),
+            "--court-calibration",
+            str(calibration_path),
+            "--reviewed-bounces",
+            str(reviewed_bounces_path),
+            "--ball-candidates",
+            str(sidecar_path),
+            "--candidate-extra-track",
+            f"blurball={extra_path}",
+            "--candidate-association-mode",
+            "rescue_only",
+            "--candidate-score-floor",
+            "tracknet=0.5",
+            "--max-candidates-per-frame",
+            "12",
+            "--out-dir",
+            str(out_dir),
+            "--ball-type",
+            "no_drag_test",
+            "--max-reprojection-inlier-px",
+            "8",
+            "--robust-pixel-sigma",
+            "2",
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    artifact = json.loads((out_dir / "synthetic_candidate_cli" / "ball_track_arc_solved.json").read_text(encoding="utf-8"))
+    report = json.loads((out_dir / "synthetic_candidate_cli" / "ball_arc_solver_report.json").read_text(encoding="utf-8"))
+    report_md = (out_dir / "synthetic_candidate_cli" / "REPORT.md").read_text(encoding="utf-8")
+    recovered = artifact["frames"][recovery_frame]
+    assert recovered["observation_source"] == "extra:blurball"
+    assert recovered["candidate_selection"] == "arc_irls_v1"
+    assert artifact["inputs"]["ball_candidates"] == [str(sidecar_path)]
+    assert artifact["inputs"]["candidate_extra_tracks"] == {"blurball": str(extra_path)}
+    assert artifact["config"]["candidate_association_mode"] == "rescue_only"
+    assert artifact["config"]["candidate_score_floors"] == {"tracknet": 0.5}
+    assert report["candidate_association"]["selection_counts_by_source"]["extra:blurball"] == 1
+    assert report["candidate_association"]["candidate_score_floors"] == {"tracknet": 0.5}
+    assert "- Candidate association: `arc_irls_v1`" in report_md
+    assert "- Candidate selections from extra:blurball: `1`" in report_md
+
+
 def test_solve_ball_arcs_cli_accepts_size_sidecar_and_reports_size_residuals(tmp_path: Path) -> None:
     calibration = _projection_calibration()
     physics = PhysicsParameters.no_drag()
@@ -494,8 +1223,8 @@ def test_solve_ball_arcs_cli_accepts_size_sidecar_and_reports_size_residuals(tmp
             "schema_version": 1,
             "status": "human_reviewed",
             "bounces": [
-                {"frame": 0, "t": 0.0, "review_id": "bounce_start"},
-                {"frame": int(round(bounce_t * 60.0)), "t": bounce_t, "review_id": "bounce_end"},
+                _human_bounce(0, 0.0, "bounce_start"),
+                _human_bounce(int(round(bounce_t * 60.0)), bounce_t, "bounce_end"),
             ],
         },
     )
@@ -614,9 +1343,197 @@ def test_clip_dir_default_reviewed_bounces_uses_inferred_clip_id(tmp_path: Path,
     assert Path(tasks[0]["reviewed_bounces"]).resolve() == review_path
 
 
+def test_product_view_arc_veto_drops_only_weak_fallback_outside_arc() -> None:
+    calibration = _projection_calibration()
+    fps = 30.0
+    world_points = [
+        (0.0, 0.0, 1.0),
+        (0.1, 0.0, 1.0),
+        (0.2, 0.0, 1.0),
+        (0.3, 0.0, 1.0),
+        None,
+    ]
+    arc_frames = []
+    fused_frames = []
+    for frame, world in enumerate(world_points):
+        arc_xy = _project(calibration, world) if world is not None else (0.0, 0.0)
+        arc_frames.append(
+            {
+                "t": frame / fps,
+                "band": "anchored_measured" if frame == 0 else "arc_interpolated",
+                "world_xyz": list(world) if world is not None else None,
+            }
+        )
+        fused_frames.append(
+            {
+                "t": frame / fps,
+                "xy": [arc_xy[0] + 80.0, arc_xy[1]],
+                "conf": 0.9,
+                "visible": True,
+                "world_xyz": None,
+                "spin_rpm": None,
+                "speed_mps": None,
+                "approx": False,
+            }
+        )
+    fused_frames[3]["conf"] = 0.55
+    decisions = {
+        "frames": [
+            {"frame": 0, "type": "LONE_TRUSTED", "dets": ["blurball"]},
+            {"frame": 1, "type": "LONE_TRUSTED", "dets": ["blurball"]},
+            {"frame": 2, "type": "CONSENSUS", "dets": ["blurball", "wasb"]},
+            {"frame": 3, "type": "CONSENSUS", "dets": ["blurball", "wasb"]},
+            {"frame": 4, "type": "LONE_OTHER", "dets": ["tracknetv3"]},
+        ]
+    }
+
+    view, report = solve_ball_arcs_cli.build_product_ball_track_view(
+        arc_solved={"frames": arc_frames},
+        fused_track={"schema_version": 1, "fps": fps, "source": "fused", "frames": fused_frames, "bounces": []},
+        calibration=calibration,
+        measured_bands={"anchored_measured"},
+        veto_px=40.0,
+        weak_support_required=True,
+        fusion_decisions=decisions,
+    )
+    no_veto, no_veto_report = solve_ball_arcs_cli.build_product_ball_track_view(
+        arc_solved={"frames": arc_frames},
+        fused_track={"schema_version": 1, "fps": fps, "source": "fused", "frames": fused_frames, "bounces": []},
+        calibration=calibration,
+        measured_bands={"anchored_measured"},
+        veto_px=None,
+        weak_support_required=True,
+        fusion_decisions=decisions,
+    )
+
+    measured_xy = _project(calibration, world_points[0])  # type: ignore[arg-type]
+    assert view["frames"][0]["visible"] is True
+    assert view["frames"][0]["xy"] == pytest.approx(measured_xy)
+    assert view["frames"][1]["visible"] is False
+    assert view["frames"][2]["visible"] is True
+    assert view["frames"][3]["visible"] is False
+    assert view["frames"][4]["visible"] is True
+    assert no_veto["frames"][1]["visible"] is True
+    assert report["veto"]["dropped_frames"] == [1, 3]
+    assert report["veto"]["dropped_count"] == 2
+    assert report["veto"]["kept_strong_support_count"] == 1
+    assert no_veto_report["veto"]["enabled"] is False
+
+
+def test_product_view_arc_veto_can_run_without_weak_support_requirement() -> None:
+    calibration = _projection_calibration()
+    fps = 30.0
+    world = (0.1, 0.0, 1.0)
+    arc_xy = _project(calibration, world)
+    arc_frames = [{"t": 0.0, "band": "arc_interpolated", "world_xyz": list(world)}]
+    fused_frames = [
+        {
+            "t": 0.0,
+            "xy": [arc_xy[0] + 65.0, arc_xy[1]],
+            "conf": 0.95,
+            "visible": True,
+            "world_xyz": None,
+            "spin_rpm": None,
+            "speed_mps": None,
+            "approx": False,
+        }
+    ]
+
+    view, report = solve_ball_arcs_cli.build_product_ball_track_view(
+        arc_solved={"frames": arc_frames},
+        fused_track={"schema_version": 1, "fps": fps, "source": "fused", "frames": fused_frames, "bounces": []},
+        calibration=calibration,
+        measured_bands={"anchored_measured"},
+        veto_px=60.0,
+        weak_support_required=False,
+        fusion_decisions={"frames": [{"frame": 0, "type": "CONSENSUS", "dets": ["blurball", "wasb"]}]},
+    )
+
+    assert view["frames"][0]["visible"] is False
+    assert report["veto"]["dropped_frames"] == [0]
+    assert report["veto"]["weak_support_required"] is False
+
+
+def test_product_view_degrades_to_fused_only_when_arc_solver_killed() -> None:
+    calibration = _projection_calibration()
+    fps = 30.0
+    measured_world = (0.0, 0.0, 1.0)
+    fused_frames = [
+        {
+            "t": 0.0,
+            "xy": [101.0, 201.0],
+            "conf": 0.91,
+            "visible": True,
+            "world_xyz": None,
+            "spin_rpm": None,
+            "speed_mps": None,
+            "approx": False,
+        },
+        {
+            "t": 1.0 / fps,
+            "xy": [111.0, 211.0],
+            "conf": 0.72,
+            "visible": True,
+            "world_xyz": None,
+            "spin_rpm": None,
+            "speed_mps": None,
+            "approx": False,
+        },
+        {
+            "t": 2.0 / fps,
+            "xy": [0.0, 0.0],
+            "conf": 0.0,
+            "visible": False,
+            "world_xyz": None,
+            "spin_rpm": None,
+            "speed_mps": None,
+            "approx": False,
+        },
+    ]
+    arc_frames = [
+        {"t": 0.0, "band": "anchored_measured", "world_xyz": list(measured_world)},
+        {"t": 1.0 / fps, "band": "arc_interpolated", "world_xyz": [0.2, 0.0, 1.0]},
+        {"t": 2.0 / fps, "band": "hidden", "world_xyz": None},
+    ]
+
+    view, report = solve_ball_arcs_cli.build_product_ball_track_view(
+        arc_solved={
+            "status": "experimental_off",
+            "kill_reasons": ["physical_sanity_violation_fraction 1.000000 exceeds 0.200000"],
+            "frames": arc_frames,
+        },
+        fused_track={"schema_version": 1, "fps": fps, "source": "fused", "frames": fused_frames, "bounces": []},
+        calibration=calibration,
+        measured_bands={"anchored_measured"},
+        veto_px=1.0,
+        weak_support_required=False,
+        fusion_decisions={"frames": [{"frame": 1, "type": "LONE_TRUSTED", "dets": ["tracknet"]}]},
+    )
+
+    assert view["product_view_mode"] == "fused_only_solver_killed"
+    assert view["frames"] == fused_frames
+    assert report["product_view_mode"] == "fused_only_solver_killed"
+    assert report["solver_killed"] is True
+    assert report["solver_status"] == "experimental_off"
+    assert report["kill_reasons"] == ["physical_sanity_violation_fraction 1.000000 exceeds 0.200000"]
+    assert report["veto"]["enabled"] is False
+    assert report["veto"]["dropped_count"] == 0
+
+
 def _write_json(path: Path, payload: dict) -> Path:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
+
+
+def _human_bounce(frame: int, t: float, review_id: str) -> dict:
+    return {
+        "frame": frame,
+        "t": t,
+        "review_id": review_id,
+        "source": "human_review",
+        "human_reviewed": True,
+        "not_ground_truth": False,
+    }
 
 
 def _anchor(

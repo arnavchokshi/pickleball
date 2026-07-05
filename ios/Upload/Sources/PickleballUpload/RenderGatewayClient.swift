@@ -4,6 +4,7 @@ public struct RenderGatewayUploadRequest: Equatable, Sendable {
     public var videoURL: URL
     public var captureSidecarURL: URL?
     public var courtCornersURL: URL?
+    public var courtAssistSeedURL: URL?
     public var clip: String?
     public var maxFrames: Int?
 
@@ -11,12 +12,14 @@ public struct RenderGatewayUploadRequest: Equatable, Sendable {
         videoURL: URL,
         captureSidecarURL: URL? = nil,
         courtCornersURL: URL? = nil,
+        courtAssistSeedURL: URL? = nil,
         clip: String? = nil,
         maxFrames: Int? = nil
     ) {
         self.videoURL = videoURL
         self.captureSidecarURL = captureSidecarURL
         self.courtCornersURL = courtCornersURL
+        self.courtAssistSeedURL = courtAssistSeedURL
         self.clip = clip
         self.maxFrames = maxFrames
     }
@@ -68,6 +71,9 @@ public enum RenderGatewayMultipartBodyWriter {
         }
         if let courtCornersURL = upload.courtCornersURL {
             try appendFile(name: "court_corners", url: courtCornersURL, mimeType: "application/json")
+        }
+        if let courtAssistSeedURL = upload.courtAssistSeedURL {
+            try appendFile(name: "court_assist_seed", url: courtAssistSeedURL, mimeType: "application/json")
         }
         if let clip = upload.clip?.trimmingCharacters(in: .whitespacesAndNewlines), !clip.isEmpty {
             appendField(name: "clip", value: clip)

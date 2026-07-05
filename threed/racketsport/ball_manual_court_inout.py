@@ -225,6 +225,9 @@ def apply_manual_court_inout_to_ball_track(
         bounce["region"] = line_call["zone"]
         bounce["dominant_uncertainty_term"] = dominant_uncertainty_term
         bounce["uncertainty_breakdown"] = uncertainty_breakdown
+        bounce["not_ground_truth"] = True
+        bounce["render_only"] = True
+        bounce["not_for_detection_metrics"] = True
         updated_bounces.append(bounce)
         projected_count += 1
 

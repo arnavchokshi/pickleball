@@ -18,6 +18,7 @@ def _finite_number(value: Any) -> float:
 
 
 FiniteFloat = Annotated[float, BeforeValidator(_finite_number)]
+NonNegativeFiniteFloat = Annotated[float, BeforeValidator(_finite_number), Field(ge=0.0)]
 Vector2 = Annotated[list[FiniteFloat], Field(min_length=2, max_length=2)]
 Vector3 = Annotated[list[FiniteFloat], Field(min_length=3, max_length=3)]
 MatrixRow3 = Annotated[list[FiniteFloat], Field(min_length=3, max_length=3)]
@@ -397,6 +398,7 @@ class CourtKeypoints(StrictArtifact):
 class TrackFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    frame_idx: int | None = Field(default=None, ge=0)
     t: FiniteFloat = Field(ge=0.0)
     bbox: tuple[FiniteFloat, FiniteFloat, FiniteFloat, FiniteFloat]
     world_xy: Vector2
@@ -417,6 +419,10 @@ class PlayerTrack(BaseModel):
     id: int
     side: str
     role: str
+    side_original: str | None = None
+    role_original: str | None = None
+    side_source: str | None = None
+    role_source: str | None = None
     frames: list[TrackFrame]
 
 
@@ -449,6 +455,8 @@ class PlacementSignal(BaseModel):
     covariance_m2: Matrix2 | None = None
     used: bool
     reason: str | None = None
+    sidecar_player_id: int | None = None
+    mapped_player_id: int | None = None
 
 
 class PlacementFrame(BaseModel):
@@ -463,6 +471,8 @@ class PlacementFrame(BaseModel):
     stance: bool
     signals: list[PlacementSignal] = Field(default_factory=list)
     source_counts: dict[str, int] = Field(default_factory=dict)
+    gap_hold: bool | None = None
+    output_source: str | None = None
 
     @field_validator("source_counts")
     @classmethod
@@ -489,6 +499,15 @@ class PlacementSummary(BaseModel):
     jitter_before_after_mps: dict[str, dict[str, FiniteFloat]] = Field(default_factory=dict)
     stance_wobble_before_after_m: dict[str, dict[str, FiniteFloat]] = Field(default_factory=dict)
     court_bounds_violations: int = Field(ge=0)
+    sidecar_identity: dict[str, Any] = Field(default_factory=dict)
+    boundary_guards: dict[str, Any] = Field(default_factory=dict)
+    smoothing_guards: dict[str, Any] = Field(default_factory=dict)
+    side_quadrant_consistency: dict[str, Any] = Field(default_factory=dict)
+    camera_motion_path: str | None = None
+    camera_motion_frames_used: int | None = Field(default=None, ge=0)
+    camera_motion_frames_uncompensated: int | None = Field(default=None, ge=0)
+    camera_motion_artifact_frame_count: int | None = Field(default=None, ge=0)
+    camera_motion_artifact_compensated_frame_count: int | None = Field(default=None, ge=0)
 
     @field_validator("source_counts")
     @classmethod
@@ -505,6 +524,7 @@ class PlacementArtifact(StrictArtifact):
     tracks_path: str
     backup_tracks_path: str
     refine_from_sam3d: bool
+    homography_pixel_convention: str | None = None
     undistort_applied: bool
     players: list[PlacementPlayer]
     summary: PlacementSummary
@@ -1147,6 +1167,9 @@ class Bounce(BaseModel):
     region: str | None = None
     dominant_uncertainty_term: str | None = None
     uncertainty_breakdown: BounceUncertaintyBreakdown | None = None
+    not_ground_truth: bool = False
+    render_only: bool = False
+    not_for_detection_metrics: bool = False
 
 
 class BallTrack(StrictArtifact):
@@ -1165,6 +1188,46 @@ class BallTrack(StrictArtifact):
     ]
     frames: list[BallFrame]
     bounces: list[Bounce] = Field(default_factory=list)
+
+
+class BallCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    xy: Vector2
+    score: FiniteFloat = Field(ge=0.0, le=1.0)
+    source_detector: str
+
+
+class BallCandidateFrame(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    frame: int = Field(ge=0)
+    candidates: list[BallCandidate] = Field(default_factory=list)
+
+
+class BallCandidates(StrictArtifact):
+    artifact_type: Literal["racketsport_ball_candidates"]
+    fps: float = Field(gt=0.0)
+    source: Literal["tracknet", "wasb", "pbmat", "totnet", "blurball"]
+    source_mode: str
+    primary_output: str
+    max_candidates_per_frame: int = Field(ge=1)
+    nms_radius_px: FiniteFloat | None = Field(default=None, ge=0.0)
+    not_ground_truth: Literal[True]
+    candidate_prediction: Literal[True]
+    provenance: dict[str, Any] = Field(default_factory=dict)
+    frames: list[BallCandidateFrame]
+
+    @model_validator(mode="after")
+    def _frames_must_be_unique_and_within_top_k(self) -> "BallCandidates":
+        seen: set[int] = set()
+        for frame in self.frames:
+            if frame.frame in seen:
+                raise ValueError("ball candidate frame ids must be unique")
+            seen.add(frame.frame)
+            if len(frame.candidates) > self.max_candidates_per_frame:
+                raise ValueError("frame candidate count exceeds max_candidates_per_frame")
+        return self
 
 
 class BallLineCall(BaseModel):
@@ -1714,11 +1777,16 @@ class ReplayViewerManifest(StrictArtifact):
     physics_refinement_url: str | None = None
     contact_windows_url: str | None = None
     ball_inflections_url: str | None = None
+    ball_arc_solved_url: str | None = None
+    auto_bounce_candidates_url: str | None = None
+    ball_bounce_candidates_url: str | None = None
+    ball_flight_sanity_url: str | None = None
     reviewed_bounces_url: str | None = None
     coaching_card_facts_url: str | None = None
     rally_spans_url: str | None = None
     label_overlays: list[ReplayViewerLabelOverlay] = Field(default_factory=list)
     annotation_sources: list[ReplayViewerAnnotationSource] = Field(default_factory=list)
+    mesh_status: Literal["windowed_index", "monolithic_unverified", "skeleton_only"] | None = None
     notes: list[str] = Field(default_factory=list)
 
 
@@ -1951,6 +2019,69 @@ class BodyComputeExecution(StrictArtifact):
     scheduled_frames: list[dict[str, Any]]
     skipped_frames: list[dict[str, Any]] = Field(default_factory=list)
     summary: dict[str, Any]
+
+
+class BodySerializationTimingItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    artifact: str
+    path: str
+    bytes: int = Field(ge=0)
+    serialization_seconds: NonNegativeFiniteFloat
+    skipped: bool = False
+    reason: str | None = None
+
+
+class BodySerializationTimingSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    artifact_count: int = Field(ge=0)
+    total_bytes: int = Field(ge=0)
+    total_serialization_seconds: NonNegativeFiniteFloat
+    json_format: str
+    written_count: int | None = Field(default=None, ge=0)
+    skipped_count: int | None = Field(default=None, ge=0)
+
+
+class BodySerializationTiming(StrictArtifact):
+    artifact_type: Literal["racketsport_body_serialization_timing"]
+    artifacts: list[BodySerializationTimingItem]
+    summary: BodySerializationTimingSummary
+
+
+class BodyStagePhaseTiming(StrictArtifact):
+    artifact_type: Literal["racketsport_body_stage_phase_timing"]
+    stage_wall_seconds: NonNegativeFiniteFloat
+    model_load_s: NonNegativeFiniteFloat | None = None
+    orchestrator_model_setup_s: NonNegativeFiniteFloat | None = None
+    compile_warmup_s: NonNegativeFiniteFloat | None = None
+    inference_s: NonNegativeFiniteFloat | None = None
+    subprocess_outer_call_s: NonNegativeFiniteFloat | None = None
+    person_frame_count: int = Field(ge=0)
+    ms_per_person_steady: NonNegativeFiniteFloat | None = None
+    input_prep_s: NonNegativeFiniteFloat | None = None
+    runner_request_parse_s: NonNegativeFiniteFloat | None = None
+    runner_preprocessing_s: NonNegativeFiniteFloat | None = None
+    runner_postprocessing_s: NonNegativeFiniteFloat | None = None
+    runner_result_serialization_handoff_s: NonNegativeFiniteFloat | None = None
+    runner_other_s: NonNegativeFiniteFloat | None = None
+    subprocess_wrapper_handoff_s: NonNegativeFiniteFloat | None = None
+    mesh_smpl_payload_assembly_s: NonNegativeFiniteFloat | None = None
+    smpl_motion_payload_assembly_s: NonNegativeFiniteFloat | None = None
+    mesh_export_payload_assembly_s: NonNegativeFiniteFloat | None = None
+    keypoints_2d_s: NonNegativeFiniteFloat | None = None
+    contact_splice_s: NonNegativeFiniteFloat | None = None
+    gates_s: NonNegativeFiniteFloat | None = None
+    serialization_s: NonNegativeFiniteFloat | None = None
+    index_build_s: NonNegativeFiniteFloat | None = None
+    artifact_io_s: NonNegativeFiniteFloat | None = None
+    attributed_s: NonNegativeFiniteFloat
+    other_s: NonNegativeFiniteFloat
+    per_bucket_timing: list[dict[str, Any]] = Field(default_factory=list)
+    timing_sources: dict[str, str] = Field(default_factory=dict)
+    phase_boundaries: dict[str, str] = Field(default_factory=dict)
+    not_instrumentable: dict[str, str] = Field(default_factory=dict)
+    notes: list[str] = Field(default_factory=list)
 
 
 class BodyMeshFrame(BaseModel):
@@ -2240,6 +2371,31 @@ class PhaseEvalMetrics(StrictArtifact):
     notes: list[str] = Field(default_factory=list)
 
 
+class PipelineStageRun(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stage: str
+    status: str
+    real_model: bool
+    source_mode: str
+    produced_artifacts: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    wall_seconds: NonNegativeFiniteFloat | None = None
+
+
+class PipelineRun(StrictArtifact):
+    artifact_type: Literal["racketsport_pipeline_run"]
+    clip: str
+    requested_stage: str
+    status: str
+    run_dir: str
+    inputs_dir: str
+    stages: list[PipelineStageRun] = Field(default_factory=list)
+    review_artifacts: dict[str, Any] = Field(default_factory=dict)
+    readiness: dict[str, Any] = Field(default_factory=dict)
+
+
 ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "capture_sidecar": CaptureSidecar,
     "court_calibration": CourtCalibration,
@@ -2261,9 +2417,12 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "smpl_motion": SmplMotion,
     "skeleton3d": Skeleton3D,
     "body_compute_execution": BodyComputeExecution,
+    "body_serialization_timing": BodySerializationTiming,
+    "body_stage_phase_timing": BodyStagePhaseTiming,
     "body_mesh": BodyMesh,
     "body_mesh_readiness": BodyMeshReadiness,
     "ball_track": BallTrack,
+    "racketsport_ball_candidates": BallCandidates,
     "ball_line_calls": BallLineCalls,
     "ball_model_runtime_profile": BallModelRuntimeProfile,
     "contact_window_candidates": ContactWindowCandidates,
@@ -2283,6 +2442,7 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "serving_manifest": ServingManifest,
     "drill_report": DrillReport,
     "phase_eval_metrics": PhaseEvalMetrics,
+    "pipeline_run": PipelineRun,
 }
 
 
@@ -2291,3 +2451,9 @@ def validate_artifact_file(artifact: str, path: str | Path) -> BaseModel:
     with Path(path).open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
     return model.model_validate(payload)
+
+
+def load_ball_candidates_file(path: str | Path) -> BallCandidates:
+    with Path(path).open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    return BallCandidates.model_validate(payload)

@@ -239,7 +239,9 @@ def _category(stem: str) -> str:
     if (
         "calibrat" in normalized
         or normalized == "calibrate"
+        or "camera_motion" in normalized
         or "court_line" in normalized
+        or "line_family" in normalized
         or "court_keypoint" in normalized
         or "court_detector" in normalized
         or "court_proposal" in normalized
@@ -279,10 +281,11 @@ def _category(stem: str) -> str:
         or "pose" in normalized
         or "skeleton" in normalized
         or "player_scale" in normalized
+        or "player_court_membership" in normalized
         or "vn_trajectories" in normalized
     ):
         return "body"
-    if "physics" in normalized or "foot" in normalized or "virtual_world" in normalized or "mujoco" in normalized:
+    if "physics" in normalized or "foot" in normalized or "placement" in normalized or "virtual_world" in normalized or "mujoco" in normalized:
         return "physics"
     if (
         "model" in normalized

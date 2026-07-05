@@ -6,9 +6,11 @@ import argparse
 import inspect
 import json
 import os
+import subprocess
 import time
+import uuid
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Literal, Mapping, Protocol, Sequence
 
@@ -24,6 +26,7 @@ from .body_compute import (
 from .body_full_clip_gate import build_body_full_clip_gate
 from .body_grounding_quality import build_body_grounding_quality, write_body_grounding_quality
 from .body_joint_quality import build_body_joint_quality
+from .body_mesh_index import build_body_mesh_index_from_arrays, build_body_mesh_index_from_payload
 from .body_mesh_readiness import build_body_mesh_readiness
 from .ball_inflections import build_ball_inflections_from_ball_track
 from .court_auto_evidence import build_auto_court_line_evidence_from_frame, build_auto_court_line_evidence_from_video
@@ -55,6 +58,7 @@ from .hmr_deep import (
 from .model_manifest import verify_model_checkpoint
 from .net_plane import build_net_plane
 from .pipeline_contracts import PIPELINE_STAGE_CONTRACTS, PipelineContractError, PipelineStageContract, build_readiness_report
+from . import mesh_export as _mesh_export
 from .mesh_export import build_body_mesh_export
 from .pose_temporal import apply_sam3d_wrist_bone_lock
 from .racket_stage_runner import RacketStageRunner
@@ -81,6 +85,8 @@ DEFAULT_BODY_MODEL_MANIFEST = DEFAULT_BODY_MANIFEST_PATH
 DEFAULT_BOTSORT_REID_CONFIG = Path("configs/racketsport/botsort_reid.yaml")
 DEFAULT_BODY_MAX_ROOT_SPEED_MPS = 8.0
 DEFAULT_BODY_MAX_TRACK_ANCHOR_SMOOTHING_RESIDUAL_M = 0.75
+R3_GROUNDING_ANCHOR_SOURCE = "placement_track_world_xy"
+DEFAULT_GROUNDING_ANCHOR_SOURCE = "track_world_xy"
 FAST_SAM_PYTHON_ENV = "FAST_SAM_PYTHON"
 VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".avi", ".mkv"}
 BODY_FRAME_SUFFIXES = (".jpg", ".jpeg", ".png")
@@ -108,6 +114,8 @@ ARTIFACT_SCHEMA_BY_FILENAME: dict[str, str] = {
     "smpl_motion.json": "smpl_motion",
     "skeleton3d.json": "skeleton3d",
     "body_compute_execution.json": "body_compute_execution",
+    "body_serialization_timing.json": "body_serialization_timing",
+    "body_stage_phase_timing.json": "body_stage_phase_timing",
     "body_mesh_readiness.json": "body_mesh_readiness",
     "ball_track.json": "ball_track",
     "contact_windows.json": "contact_windows",
@@ -121,6 +129,7 @@ ARTIFACT_SCHEMA_BY_FILENAME: dict[str, str] = {
     "physics_refinement.json": "physics_refinement",
     "drill_report.json": "drill_report",
     "replay_scene.json": "replay_scene",
+    "pipeline_run.json": "pipeline_run",
 }
 
 PIPELINE_STATUS_PASS = "pass"
@@ -150,9 +159,10 @@ class StageRun:
     produced_artifacts: tuple[str, ...] = ()
     notes: tuple[str, ...] = ()
     metrics: dict[str, Any] = field(default_factory=dict)
+    wall_seconds: float | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "stage": self.stage,
             "status": self.status,
             "real_model": self.real_model,
@@ -161,6 +171,9 @@ class StageRun:
             "notes": list(self.notes),
             "metrics": self.metrics,
         }
+        if self.wall_seconds is not None:
+            payload["wall_seconds"] = self.wall_seconds
+        return payload
 
 
 class StageRunner(Protocol):
@@ -211,16 +224,26 @@ class ManualCalibrationRunner:
             trusted = False
         else:
             calibration = calibration_from_manual_taps(sidecar_path, sport=context.sport)
-            source_mode = self.source_mode
-            calibration_note = "manual 4-corner calibration seed; requires human-reviewed corners for product verification"
-            # Task #45 S1: a capture_sidecar.json's manual_court_taps only exist because a
-            # human (the owner, in the real v1 capture flow) tapped the four court corners
-            # on a declared image_size (required upstream -- see
-            # scripts/racketsport/process_video.py's _read_declared_court_corners); that is
-            # exactly the "reviewed corner taps with declared image_size" trusted source
-            # this fix names. Treat it as trusted so a real-but-unreadable automatic
-            # court-line/net evidence result downgrades to advisory instead of hard-failing
-            # the one calibration input the current owner-tap product path actually has.
+            capture_quality = calibration.capture_quality
+            quality_reasons = {str(reason) for reason in (capture_quality.reasons or [])}
+            auto_seeded = bool(
+                {
+                    "process_video_auto_court_corners_preview",
+                    "manual_taps_seeded_from_unverified_detector",
+                }
+                & quality_reasons
+            )
+            source_mode = "auto_preview_sidecar" if auto_seeded else self.source_mode
+            calibration_note = (
+                "auto-predicted 4-corner calibration seed; unverified preview, not human-reviewed"
+                if auto_seeded
+                else "manual 4-corner calibration seed; requires human-reviewed corners for product verification"
+            )
+            # Product intake must be able to produce a preview replay from an automatic
+            # court seed. "trusted" here only controls whether weak automatic line
+            # evidence blocks the calibration stage; the calibration itself remains
+            # low-confidence via capture_quality/trust-band metadata and is not a
+            # metric-15pt or training-ready source.
             trusted = True
         line_evidence, evidence_notes = _calibration_line_evidence(context, calibration=calibration, net_plane=net_plane)
         artifacts = {
@@ -626,6 +649,7 @@ class BodyStageRunner:
         max_track_anchor_smoothing_residual_m: float | None = DEFAULT_BODY_MAX_TRACK_ANCHOR_SMOOTHING_RESIDUAL_M,
         tier2_body_joints_all_tracked: bool = False,
         mesh_vertex_serialization_policy: Literal["all", "tier1_only"] = "all",
+        write_body_monoliths: bool = False,
         sam3d_body_input_size_px: int | None = None,
         sam3d_crop_bucket_sizes: tuple[int, ...] = (),
         sam3d_crop_padding_scale: float = 1.0,
@@ -651,6 +675,7 @@ class BodyStageRunner:
         self.max_track_anchor_smoothing_residual_m = max_track_anchor_smoothing_residual_m
         self.tier2_body_joints_all_tracked = bool(tier2_body_joints_all_tracked)
         self.mesh_vertex_serialization_policy = mesh_vertex_serialization_policy
+        self.write_body_monoliths = bool(write_body_monoliths)
         self.sam3d_body_input_size_px = normalize_body_input_size(sam3d_body_input_size_px)
         self.sam3d_crop_bucket_sizes = tuple(int(value) for value in sam3d_crop_bucket_sizes)
         self.sam3d_crop_padding_scale = normalize_crop_padding_scale(sam3d_crop_padding_scale)
@@ -682,6 +707,7 @@ class BodyStageRunner:
             "serialization": {
                 "mesh_vertex_serialization_policy": self.mesh_vertex_serialization_policy,
                 "tier2_mesh_vertices_serialized": self.mesh_vertex_serialization_policy != "tier1_only",
+                "write_body_monoliths": self.write_body_monoliths,
             },
             "optimization": {
                 "sam3d_body_input_size_px": self.sam3d_body_input_size_px,
@@ -728,13 +754,50 @@ class BodyStageRunner:
 
     def run(self, context: StageContext) -> StageRun:
         body_wall_start = time.perf_counter()
+        phase_timings: dict[str, Any] = {}
+        phase_boundaries: dict[str, str] = {
+            "model_load_s": "true FastSAM model_setup_load from run_sam3dbody_batch.py when subprocess timing is available; otherwise BodyStageRunner-visible model construction",
+            "orchestrator_model_setup_s": "manifest asset verification plus BodyStageRunner-visible subprocess runtime construction",
+            "input_prep_s": "BodyStageRunner-visible frame, bbox, mask, soft-background, and request-payload preparation",
+            "subprocess_outer_call_s": "wall around runtime.process_frame_batches including subprocess launch/result handoff",
+            "inference_s": "steady SAM3D bucket inference from run_sam3dbody_batch.py when available; otherwise runtime process_frame/process_frame_batches outer call",
+            "runner_preprocessing_s": "run_sam3dbody_batch.py request/crop/bucket/tensor preparation",
+            "runner_postprocessing_s": "run_sam3dbody_batch.py output record conversion outside model inference",
+            "runner_result_serialization_handoff_s": "run_sam3dbody_batch.py stream chunk/monolithic output serialization",
+            "runner_other_s": "run_sam3dbody_batch.py timing summary remainder after runner-local attribution",
+            "subprocess_wrapper_handoff_s": "BodyStageRunner outer batch wall not covered by the runner timing sidecar",
+            "keypoints_2d_s": "sam3d_keypoints_2d sidecar derivation and write",
+            "mesh_smpl_payload_assembly_s": "building smpl_motion/skeleton3d/body_mesh Python payloads before JSON serialization",
+            "smpl_motion_payload_assembly_s": "build_body_artifacts_from_fast_sam or empty BODY payload construction before serialization",
+            "mesh_export_payload_assembly_s": "build_body_mesh_export Python payload construction before serialization",
+            "contact_splice_s": "contact skeleton splice, optional wrist lock, skeleton/contact artifact writes",
+            "gates_s": "BODY quality, full-clip gate, grounding quality, and mesh-readiness artifact builds/writes",
+            "serialization_s": "sum from body_serialization_timing.json for compact smpl_motion/body_mesh writes",
+            "index_build_s": "body_mesh_index built from the in-memory body_mesh payload after body_mesh.json write",
+            "artifact_io_s": "small BODY config/plan artifact writes outside compact monolith serialization",
+        }
+        not_instrumentable: dict[str, str] = {}
+        timing_sources: dict[str, str] = {}
         tracks = validate_artifact_file("tracks", context.run_dir / "tracks.json")
         calibration = validate_artifact_file("court_calibration", context.run_dir / "court_calibration.json")
         if not isinstance(tracks, Tracks):
             raise ValueError("tracks.json did not validate as Tracks")
         if not isinstance(calibration, CourtCalibration):
             raise ValueError("court_calibration.json did not validate as CourtCalibration")
+        placement_payload = _read_optional_json(context.run_dir / "placement.json")
+        foot_contact_phases_payload = _read_optional_json(context.run_dir / "foot_contact_phases.json")
+        stance_index = _body_stance_index_from_placement(
+            placement_payload,
+            foot_contact_phases=foot_contact_phases_payload,
+            fps=float(tracks.fps),
+        )
+        grounding_anchor_source = (
+            R3_GROUNDING_ANCHOR_SOURCE
+            if stance_index and getattr(tracks, "placement_provenance", None)
+            else DEFAULT_GROUNDING_ANCHOR_SOURCE
+        )
 
+        artifact_io_start = time.perf_counter()
         lane_b_plan = _ensure_body_frame_plan_from_sam3d(context, tracks)
         body_execution = build_body_compute_execution(
             tracks,
@@ -745,6 +808,11 @@ class BodyStageRunner:
         write_body_compute_execution(context.run_dir / "body_compute_execution.json", body_execution)
         tier2_config = self._sam3d_tier2_config(body_execution)
         _write_json_artifact(context.run_dir / "sam3d_tier2_config.json", tier2_config)
+        phase_timings["artifact_io_s"] = phase_timings.get("artifact_io_s", 0.0) + max(
+            0.0,
+            time.perf_counter() - artifact_io_start,
+        )
+        input_prep_start = time.perf_counter()
         frame_batches = body_frame_batches_from_execution(tracks, body_execution)
         if not frame_batches:
             raise ValueError("adaptive BODY schedule contains no SAM3D body-mode frames")
@@ -756,39 +824,50 @@ class BodyStageRunner:
             mode=self.sam3d_mask_prompt_mode,
         )
 
-        required_model_ids = fast_sam_required_model_ids(detector_name=self.detector_name, fov_name=self.fov_name)
-        assets = verify_fast_sam_manifest_assets(self.manifest_path, required_model_ids=required_model_ids)
-        fast_sam_runtime_unavailable_note = ""
-        runtime = self._runtime
-        fast_sam_python = os.environ.get(FAST_SAM_PYTHON_ENV, "").strip()
-        fast_sam_runtime_mode = "injected" if runtime is not None else ("subprocess" if fast_sam_python else "in_process")
-        if runtime is None:
-            try:
-                if fast_sam_python:
-                    runtime = FastSam3DBodySubprocessRuntime(
-                        python_executable=fast_sam_python,
-                        fast_sam_repo=self.fast_sam_repo,
-                        checkpoint_dir=assets["fast_sam_3d_body_dinov3"].path.parent,
-                        detector_name=self.detector_name,
-                        detector_model=str(assets["yolo26m"].path) if self.detector_name and "yolo26m" in assets else "",
-                        fov_name=self.fov_name,
-                        body_input_size_px=self.sam3d_body_input_size_px,
-                        work_dir=context.run_dir / "fast_sam_subprocess",
+        model_load_start = time.perf_counter()
+        try:
+            required_model_ids = fast_sam_required_model_ids(detector_name=self.detector_name, fov_name=self.fov_name)
+            assets = verify_fast_sam_manifest_assets(self.manifest_path, required_model_ids=required_model_ids)
+            fast_sam_runtime_unavailable_note = ""
+            runtime = self._runtime
+            fast_sam_python = os.environ.get(FAST_SAM_PYTHON_ENV, "").strip()
+            fast_sam_runtime_mode = "injected" if runtime is not None else ("subprocess" if fast_sam_python else "in_process")
+            if runtime is None:
+                try:
+                    if fast_sam_python:
+                        runtime = FastSam3DBodySubprocessRuntime(
+                            python_executable=fast_sam_python,
+                            fast_sam_repo=self.fast_sam_repo,
+                            checkpoint_dir=assets["fast_sam_3d_body_dinov3"].path.parent,
+                            detector_name=self.detector_name,
+                            detector_model=str(assets["yolo26m"].path) if self.detector_name and "yolo26m" in assets else "",
+                            fov_name=self.fov_name,
+                            body_input_size_px=self.sam3d_body_input_size_px,
+                            work_dir=context.run_dir / "fast_sam_subprocess",
+                        )
+                        not_instrumentable["model_load_s"] = (
+                            "subprocess mode performs real FastSAM model_setup_load inside "
+                            "scripts/racketsport/run_sam3dbody_batch.py; BodyStageRunner can only time "
+                            "manifest verification and subprocess-runtime construction without touching forbidden files"
+                        )
+                    else:
+                        runtime = FastSam3DBodyRuntime(
+                            assets=assets,
+                            fast_sam_repo=self.fast_sam_repo,
+                            detector_name=self.detector_name,
+                            fov_name=self.fov_name,
+                            body_input_size_px=self.sam3d_body_input_size_px,
+                        )
+                except RuntimeError as exc:
+                    fast_sam_runtime_mode = "unavailable"
+                    fast_sam_runtime_unavailable_note = (
+                        "Fast SAM-3D-Body runtime unavailable; SAM-3D samples will be absent for this run: "
+                        f"{exc}"
                     )
-                else:
-                    runtime = FastSam3DBodyRuntime(
-                        assets=assets,
-                        fast_sam_repo=self.fast_sam_repo,
-                        detector_name=self.detector_name,
-                        fov_name=self.fov_name,
-                        body_input_size_px=self.sam3d_body_input_size_px,
-                    )
-            except RuntimeError as exc:
-                fast_sam_runtime_mode = "unavailable"
-                fast_sam_runtime_unavailable_note = (
-                    "Fast SAM-3D-Body runtime unavailable; SAM-3D samples will be absent for this run: "
-                    f"{exc}"
-                )
+        finally:
+            phase_timings["model_load_s"] = max(0.0, time.perf_counter() - model_load_start)
+        if isinstance(runtime, FastSam3DBodySubprocessRuntime):
+            runtime = _BinaryHandoffSubprocessRuntime(runtime)
         samples: list[dict[str, Any]] = []
         sam3d_missing_output_count = 0
         mesh_requests: list[dict[str, Any]] = []
@@ -909,10 +988,18 @@ class BodyStageRunner:
                 soft_background_alpha=self.sam3d_soft_background_alpha,
             ),
         )
+        phase_timings["input_prep_s"] = max(0.0, time.perf_counter() - input_prep_start)
 
         batched_outputs: list[list[dict[str, Any]]] | None = None
         batch_runner = getattr(runtime, "process_frame_batches", None) if runtime is not None else None
         if callable(batch_runner) and mesh_requests:
+            if self.sam3d_torch_compile and self.sam3d_compile_warmup_buckets:
+                not_instrumentable["compile_warmup_s"] = (
+                    "compile warmup is executed inside the process_frame_batches implementation/subprocess; "
+                    "BodyStageRunner has no clean timer boundary for warmup separate from the outer batch call"
+                )
+            timing_sidecars_before = _sam3d_batch_timing_sidecars(runtime)
+            batch_start = time.perf_counter()
             batched_outputs = _call_sam3d_batch_runner(
                 batch_runner,
                 [request["runtime_request"] for request in mesh_requests],
@@ -930,6 +1017,15 @@ class BodyStageRunner:
                 upstream_env=self.sam3d_upstream_env,
                 tier2_output_lite=self.sam3d_tier2_output_lite,
             )
+            subprocess_outer_call_s = max(0.0, time.perf_counter() - batch_start)
+            subprocess_timing = _read_new_sam3d_batch_timing(runtime, before=timing_sidecars_before)
+            _merge_sam3d_batch_timing(
+                phase_timings,
+                not_instrumentable=not_instrumentable,
+                timing_sources=timing_sources,
+                subprocess_timing=subprocess_timing,
+                subprocess_outer_call_s=subprocess_outer_call_s,
+            )
             if len(batched_outputs) != len(mesh_requests):
                 raise RuntimeError(
                     f"FastSAM-3D-Body batch returned {len(batched_outputs)} outputs for {len(mesh_requests)} requests"
@@ -945,17 +1041,19 @@ class BodyStageRunner:
             raw_outputs = (
                 batched_outputs[request_index]
                 if batched_outputs is not None
-                else (
-                    []
-                    if runtime is None
-                    else runtime.process_frame(
-                        image_path,
-                        bboxes_xyxy=[bbox],
-                        mask_paths=mesh_request["runtime_request"].get("mask_paths", []),
-                        camera_intrinsics=mesh_request["runtime_request"].get("camera_intrinsics"),
-                    )
-                )
+                else []
             )
+            if batched_outputs is None and runtime is not None:
+                frame_inference_start = time.perf_counter()
+                raw_outputs = runtime.process_frame(
+                    image_path,
+                    bboxes_xyxy=[bbox],
+                    mask_paths=mesh_request["runtime_request"].get("mask_paths", []),
+                    camera_intrinsics=mesh_request["runtime_request"].get("camera_intrinsics"),
+                )
+                phase_timings["inference_s"] = phase_timings.get("inference_s", 0.0) + max(
+                    0.0, time.perf_counter() - frame_inference_start
+                )
             if not raw_outputs:
                 sam3d_missing_output_count += 1
                 continue
@@ -986,10 +1084,13 @@ class BodyStageRunner:
                 sample["mesh_faces"] = []
             samples.append(sample)
 
+        keypoints_start = time.perf_counter()
         sam3d_keypoints_sidecar = _sam3d_keypoints_sidecar_from_samples(samples)
         if sam3d_keypoints_sidecar["players"]:
             _write_json_artifact(context.run_dir / "sam3d_keypoints_2d.json", sam3d_keypoints_sidecar)
+        phase_timings["keypoints_2d_s"] = max(0.0, time.perf_counter() - keypoints_start)
 
+        smpl_payload_start = time.perf_counter()
         if samples:
             smpl_motion, skeleton3d, grounding_metrics = build_body_artifacts_from_fast_sam(
                 samples,
@@ -999,6 +1100,8 @@ class BodyStageRunner:
                 max_root_speed_mps=self.max_root_speed_mps,
                 max_track_anchor_smoothing_residual_m=self.max_track_anchor_smoothing_residual_m,
                 sam3d_wrist_bone_lock=self.sam3d_wrist_bone_lock,
+                stance_index=stance_index,
+                grounding_anchor_source=grounding_anchor_source,
             )
         else:
             smpl_motion = _empty_smpl_motion(fps=tracks.fps)
@@ -1010,13 +1113,23 @@ class BodyStageRunner:
                 "world_frame": "court_Z0",
                 "grounding": "no_fast_sam_body_samples",
             }
+        phase_timings["smpl_motion_payload_assembly_s"] = max(0.0, time.perf_counter() - smpl_payload_start)
         grounding_metrics = {**grounding_metrics, "calibration_confidence": _calibration_confidence_proxy(calibration)}
-        _write_json_artifact(context.run_dir / "smpl_motion.json", smpl_motion)
+        monolith_skip_reason = "not built (speed default; rerun with --fetch-body-monoliths to produce them)"
+        serialization_timings = []
+        if self.write_body_monoliths:
+            serialization_timings.append(_write_compact_json_artifact(context.run_dir / "smpl_motion.json", smpl_motion))
+        else:
+            serialization_timings.append(
+                _skipped_compact_json_artifact(context.run_dir / "smpl_motion.json", reason=monolith_skip_reason)
+            )
+        gates_start = time.perf_counter()
         body_grounding_quality = build_body_grounding_quality(
             clip=context.clip,
             grounding_metrics=grounding_metrics,
         )
         write_body_grounding_quality(context.run_dir / "body_grounding_quality.json", body_grounding_quality)
+        phase_timings["gates_s"] = phase_timings.get("gates_s", 0.0) + max(0.0, time.perf_counter() - gates_start)
         smpl_motion_payload = smpl_motion.model_dump(mode="json") if hasattr(smpl_motion, "model_dump") else smpl_motion
         skeleton3d_path = context.run_dir / "skeleton3d.json"
         existing_skeleton3d = _read_optional_json(skeleton3d_path)
@@ -1029,21 +1142,70 @@ class BodyStageRunner:
         else:
             _write_json_artifact(skeleton3d_path, skeleton3d)
             skeleton3d_payload = skeleton3d.model_dump(mode="json") if hasattr(skeleton3d, "model_dump") else skeleton3d
-        body_mesh = build_body_mesh_export(
-            smpl_motion_payload,
-            clip=context.clip,
-            body_compute_execution=body_execution,
+        mesh_export_start = time.perf_counter()
+        body_mesh: dict[str, Any] | None = None
+        body_mesh_metadata: dict[str, Any] | None = None
+        body_mesh_players: list[dict[str, Any]] | None = None
+        if self.write_body_monoliths:
+            body_mesh = build_body_mesh_export(
+                smpl_motion_payload,
+                clip=context.clip,
+                body_compute_execution=body_execution,
+            )
+            body_mesh_summary = dict(body_mesh["summary"])
+        else:
+            body_mesh_metadata, body_mesh_players, body_mesh_summary = _body_mesh_export_parts_from_smpl_motion(
+                smpl_motion_payload,
+                clip=context.clip,
+                body_compute_execution=body_execution,
+            )
+        phase_timings["mesh_export_payload_assembly_s"] = max(0.0, time.perf_counter() - mesh_export_start)
+        phase_timings["mesh_smpl_payload_assembly_s"] = (
+            phase_timings.get("smpl_motion_payload_assembly_s", 0.0)
+            + phase_timings.get("mesh_export_payload_assembly_s", 0.0)
         )
-        _write_json_artifact(context.run_dir / "body_mesh.json", body_mesh)
+        if self.write_body_monoliths:
+            assert body_mesh is not None
+            serialization_timings.append(_write_compact_json_artifact(context.run_dir / "body_mesh.json", body_mesh))
+        else:
+            serialization_timings.append(
+                _skipped_compact_json_artifact(context.run_dir / "body_mesh.json", reason=monolith_skip_reason)
+            )
+        index_build_start = time.perf_counter()
+        if self.write_body_monoliths:
+            assert body_mesh is not None
+            body_mesh_index_result = build_body_mesh_index_from_payload(
+                body_mesh,
+                out_dir=context.run_dir / "body_mesh_index",
+            )
+            body_mesh_for_splice = body_mesh
+        else:
+            assert body_mesh_metadata is not None and body_mesh_players is not None
+            body_mesh_index_result = build_body_mesh_index_from_arrays(
+                metadata=body_mesh_metadata,
+                players=body_mesh_players,
+                out_dir=context.run_dir / "body_mesh_index",
+            )
+            body_mesh_for_splice = _body_mesh_payload_from_parts(
+                body_mesh_metadata,
+                body_mesh_players,
+                summary=body_mesh_summary,
+            )
+        phase_timings["index_build_s"] = max(0.0, time.perf_counter() - index_build_start)
+        _write_body_serialization_timing(context.run_dir, serialization_timings)
+        phase_timings["serialization_s"] = sum(float(item["serialization_seconds"]) for item in serialization_timings)
+        contact_splice_start = time.perf_counter()
         skeleton3d_payload, contact_splice = splice_contact_skeleton_with_body_mesh(
             skeleton3d_payload,
-            body_mesh=body_mesh,
+            body_mesh=body_mesh_for_splice,
             body_compute_execution=body_execution,
         )
         if self.sam3d_wrist_bone_lock:
             skeleton3d_payload = apply_sam3d_wrist_bone_lock(skeleton3d_payload)
         _write_json_artifact(skeleton3d_path, skeleton3d_payload)
         _write_json_artifact(context.run_dir / "contact_splice.json", contact_splice)
+        phase_timings["contact_splice_s"] = max(0.0, time.perf_counter() - contact_splice_start)
+        gates_start = time.perf_counter()
         body_joint_quality = build_body_joint_quality(
             clip=context.clip,
             smpl_motion=smpl_motion_payload,
@@ -1082,20 +1244,45 @@ class BodyStageRunner:
             body_compute_execution_path=str(context.run_dir / "body_compute_execution.json"),
             body_full_clip_gate_path=str(context.run_dir / "body_full_clip_gate.json"),
         )
+        if not self.write_body_monoliths:
+            body_mesh_readiness["monoliths"] = {
+                "status": "not_built",
+                "note": monolith_skip_reason,
+                "smpl_motion_path": "",
+                "body_mesh_path": "",
+            }
+            body_mesh_readiness["warnings"] = _dedupe_strings(
+                [*body_mesh_readiness.get("warnings", []), "body_monoliths_not_built_speed_default"]
+            )
         _write_json_artifact(context.run_dir / "body_mesh_readiness.json", body_mesh_readiness)
-        produced_artifacts = (
+        phase_timings["gates_s"] = phase_timings.get("gates_s", 0.0) + max(0.0, time.perf_counter() - gates_start)
+        body_stage_wall_seconds = max(0.0, time.perf_counter() - body_wall_start)
+        _write_body_stage_phase_timing(
+            context.run_dir,
+            stage_wall_seconds=body_stage_wall_seconds,
+            phase_timings=phase_timings,
+            person_frame_count=len(mesh_requests),
+            phase_boundaries=phase_boundaries,
+            not_instrumentable=not_instrumentable,
+            timing_sources=timing_sources,
+        )
+        produced_artifacts = [
             "body_compute_execution.json",
             "sam3d_tier2_config.json",
             "sam3d_body_input_prep.json",
-            "smpl_motion.json",
-            "body_mesh.json",
+            "body_mesh_index/body_mesh_index.json",
+            "body_mesh_index/body_mesh_faces.json",
+            "body_serialization_timing.json",
+            "body_stage_phase_timing.json",
             "contact_splice.json",
             "skeleton3d.json",
             "body_mesh_readiness.json",
             "body_joint_quality.json",
             "body_full_clip_gate.json",
             "body_grounding_quality.json",
-        )
+        ]
+        if self.write_body_monoliths:
+            produced_artifacts[3:3] = ["smpl_motion.json", "body_mesh.json"]
         notes = [
             "Fast SAM-3D-Body runtime output converted to court/world coordinates with court_calibration.json",
             "BODY frame execution follows frame_compute_plan.json when present and skips manual-review/preview-only frames",
@@ -1104,7 +1291,11 @@ class BodyStageRunner:
             else "wrote SAM3D body-mode skeleton3d.json as the offline skeleton source",
             "spliced scheduled hitter mesh joints into existing skeleton3d.json at contact frames"
             if preserved_existing_skeleton
-            else "kept SAM3D body-mode skeleton3d.json as the skeleton source while body_mesh.json carries tier-1 mesh frames",
+            else (
+                "kept SAM3D body-mode skeleton3d.json as the skeleton source while body_mesh.json carries tier-1 mesh frames"
+                if self.write_body_monoliths
+                else "kept SAM3D body-mode skeleton3d.json as the skeleton source while body_mesh_index/ carries tier-1 mesh frames"
+            ),
             f"SAM-3D returned no output for {sam3d_missing_output_count} scheduled request(s); no legacy pose fallback was used",
             "BODY artifacts are real runner outputs; BODY accuracy gate still requires labeled world-MPJPE evaluation",
             (
@@ -1116,13 +1307,19 @@ class BodyStageRunner:
         ]
         if fast_sam_runtime_unavailable_note:
             notes.append(fast_sam_runtime_unavailable_note)
+        binary_handoff_note = str(getattr(runtime, "binary_handoff_note", "") or "")
+        if binary_handoff_note:
+            notes.append(binary_handoff_note)
+        if not self.write_body_monoliths:
+            notes.append("BODY monoliths smpl_motion.json/body_mesh.json were not built (speed default; rerun with --fetch-body-monoliths to produce them)")
         return StageRun(
             stage=self.stage,
             status="ran",
             real_model=self.real_model,
             source_mode=self.source_mode,
-            produced_artifacts=produced_artifacts,
+            produced_artifacts=tuple(produced_artifacts),
             notes=tuple(notes),
+            wall_seconds=body_stage_wall_seconds,
             metrics={
                 **grounding_metrics,
                 "body_compute_mode": body_execution["mode"],
@@ -1177,7 +1374,11 @@ class BodyStageRunner:
                 "lane_b_frame_plan_generated_artifacts": lane_b_plan["generated_artifacts"],
                 "scheduled_body_frames": body_execution["summary"]["scheduled_frame_count"],
                 "scheduled_body_player_frames": body_execution["summary"]["scheduled_player_frame_count"],
-                "body_mesh_frame_count": body_mesh["summary"]["mesh_frame_count"],
+                "body_mesh_frame_count": body_mesh_summary["mesh_frame_count"],
+                "body_mesh_index_window_count": body_mesh_index_result["summary"].get("window_count", 0),
+                "body_mesh_index_build_s": phase_timings.get("index_build_s", 0.0),
+                "body_monoliths_written": self.write_body_monoliths,
+                "sam3d_binary_handoff_status": str(getattr(runtime, "binary_handoff_status", "")),
                 "sam3d_missing_output_count": sam3d_missing_output_count,
                 "fast_sam_runtime_mode": fast_sam_runtime_mode,
                 "fast_sam_python": fast_sam_python,
@@ -1253,6 +1454,105 @@ def _empty_body_preview_skeleton(*, fps: float) -> dict[str, Any]:
         "preview_only": True,
         "players": [],
         "provenance": {"lane": "B", "body_samples": 0},
+    }
+
+
+def _body_mesh_export_parts_from_smpl_motion(
+    smpl_motion: Mapping[str, Any],
+    *,
+    clip: str,
+    body_compute_execution: Mapping[str, Any] | None,
+    faces_ref: str = _mesh_export.DEFAULT_FACES_REF,
+) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
+    scheduled = _mesh_export._scheduled_targets(body_compute_execution)
+    windows = _mesh_export._scheduled_windows(body_compute_execution)
+    joint_names = _mesh_export._joint_names(smpl_motion)
+    mesh_faces = _mesh_export._mesh_faces(smpl_motion)
+    players_payload: list[dict[str, Any]] = []
+    contact_window_indexes: set[int] = set()
+    mesh_frame_count = 0
+    for player in smpl_motion.get("players", []):
+        if not isinstance(player, Mapping):
+            continue
+        player_id = int(player.get("id", 0))
+        betas = _mesh_export._float_list(player.get("betas", []))
+        frames_payload: list[dict[str, Any]] = []
+        for frame in player.get("frames", []):
+            if not isinstance(frame, Mapping):
+                continue
+            frame_idx = int(frame.get("frame_idx", round(float(frame.get("t", 0.0)) * float(smpl_motion.get("fps", 30.0)))))
+            scheduled_record = scheduled.get((frame_idx, player_id))
+            if scheduled and scheduled_record is None:
+                continue
+            vertices = frame.get("mesh_vertices_world", [])
+            if not isinstance(vertices, list) or not vertices:
+                continue
+            source_window_index = scheduled_record.get("source_window_index") if scheduled_record else None
+            if source_window_index is not None:
+                contact_window_indexes.add(int(source_window_index))
+            frame_payload = {
+                "frame_idx": frame_idx,
+                "t": float(frame.get("t", frame_idx / float(smpl_motion.get("fps", 30.0)))),
+                "source_window_index": source_window_index,
+                "blend_weight": _mesh_export._blend_weight_for_frame(frame_idx, scheduled_record),
+                "mesh_vertices_world": frame.get("mesh_vertices_world", []),
+                "smplx_params": {
+                    "global_orient": _mesh_export._float_list(frame.get("global_orient", [])),
+                    "body_pose": _mesh_export._float_list(frame.get("body_pose", [])),
+                    "left_hand_pose": _mesh_export._float_list(frame.get("left_hand_pose", [])),
+                    "right_hand_pose": _mesh_export._float_list(frame.get("right_hand_pose", [])),
+                    "betas": betas,
+                    "transl_world": _mesh_export._float_list(frame.get("transl_world", [])),
+                },
+                "reasons": list(scheduled_record.get("reasons", [])) if scheduled_record else [],
+            }
+            joints_world = _mesh_export._vector3_list(frame.get("joints_world", []))
+            if joints_world:
+                frame_payload["joints_world"] = joints_world
+            joint_conf = _mesh_export._float_list(frame.get("joint_conf", []))
+            if joint_conf:
+                frame_payload["joint_conf"] = joint_conf
+            frames_payload.append(frame_payload)
+        if frames_payload:
+            mesh_frame_count += len(frames_payload)
+            players_payload.append({"id": player_id, "frames": frames_payload})
+    metadata = {
+        "clip": clip,
+        "model": str(smpl_motion.get("model", "")),
+        "fps": float(smpl_motion.get("fps", 0.0)),
+        "world_frame": str(smpl_motion.get("world_frame", "")),
+        "faces_ref": faces_ref,
+        "mesh_faces": mesh_faces,
+        "joint_names": joint_names,
+        "windows": windows,
+    }
+    summary = {
+        "mesh_frame_count": mesh_frame_count,
+        "player_count": len(players_payload),
+        "contact_window_count": len(contact_window_indexes) if scheduled else 0,
+    }
+    return metadata, players_payload, summary
+
+
+def _body_mesh_payload_from_parts(
+    metadata: Mapping[str, Any],
+    players: Sequence[Mapping[str, Any]],
+    *,
+    summary: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_body_mesh",
+        "clip": metadata["clip"],
+        "model": metadata["model"],
+        "fps": metadata["fps"],
+        "world_frame": metadata["world_frame"],
+        "faces_ref": metadata["faces_ref"],
+        "mesh_faces": metadata.get("mesh_faces", []),
+        "joint_names": metadata.get("joint_names", []),
+        "windows": metadata.get("windows", []),
+        "players": [dict(player) for player in players],
+        "summary": dict(summary),
     }
 
 
@@ -1352,6 +1652,287 @@ def _call_sam3d_batch_runner(
     if accepted:
         return batch_runner(requests, **accepted)
     return batch_runner(requests)
+
+
+class _BinaryHandoffSubprocessRuntime:
+    def __init__(self, runtime: FastSam3DBodySubprocessRuntime) -> None:
+        self._runtime = runtime
+        self.work_dir = runtime.work_dir
+        self.binary_handoff_note = ""
+        self.binary_handoff_status = "not_started"
+
+    def process_frame_batches(
+        self,
+        requests: list[Any],
+        *,
+        clip_intrinsics: Mapping[str, Any] | None = None,
+        sam3d_body_input_size_px: int | None = None,
+        crop_bucket_sizes: Sequence[int] = (),
+        torch_compile: bool = False,
+        compile_warmup_buckets: Sequence[int] = (),
+        compile_warmup_passes: int = 2,
+        steady_state_empty_cache: bool = True,
+        inner_bucket_sync: bool = True,
+        upstream_env: Mapping[str, Any] | None = None,
+        tier2_output_lite: bool = False,
+    ) -> list[list[dict[str, Any]]]:
+        if not requests:
+            return []
+        normalized_requests = [_normalize_sam3d_subprocess_request(request) for request in requests]
+        request_ids = [str(request.get("request_id") or index) for index, request in enumerate(normalized_requests)]
+        body_input_size_px = normalize_body_input_size(sam3d_body_input_size_px or self._runtime.body_input_size_px)
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        request_path = self.work_dir / f"batch_requests-{uuid.uuid4().hex}.json"
+        out_path = self.work_dir / f"batch_outputs-{uuid.uuid4().hex}.json"
+        request_payload = {
+            "schema_version": 1,
+            "clip_intrinsics": dict(clip_intrinsics) if clip_intrinsics is not None else None,
+            "optimization": {
+                "sam3d_body_input_size_px": body_input_size_px,
+                "crop_bucket_sizes": [int(value) for value in crop_bucket_sizes],
+                "torch_compile": bool(torch_compile),
+                "compile_warmup_buckets": [int(value) for value in compile_warmup_buckets],
+                "compile_warmup_passes": int(compile_warmup_passes),
+                "steady_state_empty_cache": bool(steady_state_empty_cache),
+                "inner_bucket_sync": bool(inner_bucket_sync),
+                "upstream_env": dict(upstream_env or {}),
+                "tier2_output_lite": bool(tier2_output_lite),
+                "batching": "static_intrinsics_cross_frame_bucketed_body_batch",
+            },
+            "requests": [
+                {
+                    "request_id": request_ids[index],
+                    "image": str(request["image_path"]),
+                    "bboxes": [[float(value) for value in bbox] for bbox in request["bboxes"]],
+                    "mask_paths": [str(path) for path in request.get("mask_paths", []) if path],
+                    "camera_intrinsics": request.get("camera_intrinsics"),
+                    "sam3d_body_input_size_px": body_input_size_px,
+                    "target_representation": request.get("target_representation", "world_mesh"),
+                }
+                for index, request in enumerate(normalized_requests)
+            ],
+        }
+        request_path.write_text(json.dumps(request_payload, separators=(",", ":")) + "\n", encoding="utf-8")
+        command = [
+            str(self._runtime.python_executable),
+            str(Path(__file__).resolve().parents[2] / "scripts/racketsport/run_sam3dbody_batch.py"),
+            "--requests",
+            str(request_path),
+            "--out",
+            str(out_path),
+            "--fast-sam-repo",
+            str(self._runtime.fast_sam_repo),
+            "--checkpoint-dir",
+            str(self._runtime.checkpoint_dir),
+            "--detector-model",
+            self._runtime.detector_model,
+            "--detector-name",
+            self._runtime.detector_name,
+            "--fov-name",
+            self._runtime.fov_name,
+            "--chunk-format",
+            # pickle, NOT binary: measured live on the A100 2026-07-05 (Wolverine,
+            # 1177 person-frames) the .npy-sidecar transport regressed the whole
+            # BODY dispatch 1057->1301s (handoff 376->490s, wrapper 55->304s,
+            # preprocessing 13->137s, steady inference polluted 15.3->151ms/person
+            # by in-loop array saves). The pickle chunk path is the proven-fast
+            # transport; binary remains available for explicit experiments.
+            "pickle",
+            "--no-monolithic-output",
+        ]
+        if body_input_size_px is not None:
+            command.extend(["--body-input-size", str(body_input_size_px)])
+        try:
+            completed = subprocess.run(command, check=False, capture_output=True, text=True)
+        except OSError as exc:
+            # A missing/unspawnable FAST_SAM python must degrade to the
+            # per-frame runtime path, exactly like a nonzero exit does --
+            # subprocess.run raises instead of returning in that case.
+            return self._fallback(
+                requests,
+                reason=f"batch runner spawn failed ({type(exc).__name__}: {exc})",
+                clip_intrinsics=clip_intrinsics,
+                sam3d_body_input_size_px=sam3d_body_input_size_px,
+                crop_bucket_sizes=crop_bucket_sizes,
+                torch_compile=torch_compile,
+                compile_warmup_buckets=compile_warmup_buckets,
+                steady_state_empty_cache=steady_state_empty_cache,
+                inner_bucket_sync=inner_bucket_sync,
+                upstream_env=upstream_env,
+                tier2_output_lite=tier2_output_lite,
+            )
+        if completed.returncode != 0:
+            return self._fallback(
+                requests,
+                reason=_binary_handoff_failure_reason(completed),
+                clip_intrinsics=clip_intrinsics,
+                sam3d_body_input_size_px=sam3d_body_input_size_px,
+                crop_bucket_sizes=crop_bucket_sizes,
+                torch_compile=torch_compile,
+                compile_warmup_buckets=compile_warmup_buckets,
+                steady_state_empty_cache=steady_state_empty_cache,
+                inner_bucket_sync=inner_bucket_sync,
+                upstream_env=upstream_env,
+                tier2_output_lite=tier2_output_lite,
+            )
+        index_path = out_path.with_name(f"{out_path.name}.chunks") / "index.json"
+        try:
+            from scripts.racketsport.run_sam3dbody_batch import load_sam3dbody_binary_outputs_from_chunk_index
+
+            outputs = load_sam3dbody_binary_outputs_from_chunk_index(
+                index_path,
+                request_ids=request_ids,
+                mmap_mode="r",
+            )
+        except Exception as exc:  # noqa: BLE001 - compatibility fallback reports the exact mismatch.
+            return self._fallback(
+                requests,
+                reason=f"binary sidecar load failed ({type(exc).__name__}: {exc})",
+                clip_intrinsics=clip_intrinsics,
+                sam3d_body_input_size_px=sam3d_body_input_size_px,
+                crop_bucket_sizes=crop_bucket_sizes,
+                torch_compile=torch_compile,
+                compile_warmup_buckets=compile_warmup_buckets,
+                steady_state_empty_cache=steady_state_empty_cache,
+                inner_bucket_sync=inner_bucket_sync,
+                upstream_env=upstream_env,
+                tier2_output_lite=tier2_output_lite,
+            )
+        self.binary_handoff_status = "binary_sidecar_v1"
+        self.binary_handoff_note = "SAM3D subprocess returned BODY records through binary numpy sidecar chunks (contract v1)"
+        return outputs
+
+    def _fallback(self, requests: list[Any], *, reason: str, **kwargs: Any) -> list[list[dict[str, Any]]]:
+        self.binary_handoff_status = "legacy_fallback"
+        self.binary_handoff_note = (
+            "SAM3D binary sidecar handoff was unavailable; fell back to legacy subprocess result transport "
+            f"for compatibility ({reason})"
+        )
+        batch_runner = getattr(self._runtime, "process_frame_batches", None)
+        if batch_runner is not None:
+            return batch_runner(requests, **kwargs)
+        # Base runtime contract (process_frame only): degrade per-frame, same
+        # guarded convention the stage loop itself uses for unbatched runtimes.
+        outputs: list[list[dict[str, Any]]] = []
+        for request in requests:
+            normalized = _normalize_sam3d_subprocess_request(request)
+            outputs.append(
+                self._runtime.process_frame(
+                    normalized["image_path"],
+                    bboxes_xyxy=normalized["bboxes"],
+                )
+            )
+        return outputs
+
+
+def _normalize_sam3d_subprocess_request(request: Any) -> dict[str, Any]:
+    if not isinstance(request, Mapping):
+        raise ValueError("SAM3D subprocess batch request must be a mapping")
+    image_path = request.get("image_path", request.get("image"))
+    bboxes = request.get("bboxes")
+    if bboxes is None and request.get("bbox") is not None:
+        bboxes = [request["bbox"]]
+    if image_path is None or bboxes is None:
+        raise ValueError("SAM3D subprocess batch request requires image_path/image and bboxes/bbox")
+    return {
+        "request_id": str(request.get("request_id", "")),
+        "image_path": Path(image_path),
+        "bboxes": [[float(value) for value in bbox] for bbox in bboxes],
+        "mask_paths": [Path(path) for path in request.get("mask_paths", []) if path],
+        "camera_intrinsics": request.get("camera_intrinsics"),
+        "target_representation": str(request.get("target_representation", "world_mesh")),
+    }
+
+
+def _binary_handoff_failure_reason(completed: subprocess.CompletedProcess[str]) -> str:
+    stderr = (completed.stderr or "").strip()
+    stdout = (completed.stdout or "").strip()
+    detail = stderr or stdout or f"exit={completed.returncode}"
+    if "unrecognized arguments" in detail and ("--chunk-format" in detail or "--no-monolithic-output" in detail):
+        return "runner does not support binary sidecar flags"
+    return detail
+
+
+def _sam3d_batch_timing_sidecars(runtime: Any) -> set[Path]:
+    work_dir = getattr(runtime, "work_dir", None)
+    if work_dir is None:
+        return set()
+    root = Path(work_dir)
+    if not root.is_dir():
+        return set()
+    return {path.resolve() for path in root.glob("batch_outputs-*.json.timing.json") if path.is_file()}
+
+
+def _read_new_sam3d_batch_timing(runtime: Any, *, before: set[Path]) -> tuple[dict[str, Any], Path] | None:
+    after = _sam3d_batch_timing_sidecars(runtime)
+    candidates = sorted(after - before, key=lambda path: path.stat().st_mtime)
+    if not candidates:
+        return None
+    path = candidates[-1]
+    payload = _read_json(path)
+    if not isinstance(payload, Mapping):
+        return None
+    if payload.get("artifact_type") != "racketsport_sam3dbody_batch_timing":
+        return None
+    return dict(payload), path
+
+
+def _timing_float(payload: Mapping[str, Any], key: str) -> float | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _merge_sam3d_batch_timing(
+    phase_timings: dict[str, Any],
+    *,
+    not_instrumentable: dict[str, str],
+    timing_sources: dict[str, str],
+    subprocess_timing: tuple[dict[str, Any], Path] | None,
+    subprocess_outer_call_s: float,
+) -> None:
+    phase_timings["subprocess_outer_call_s"] = phase_timings.get("subprocess_outer_call_s", 0.0) + float(
+        subprocess_outer_call_s
+    )
+    if subprocess_timing is None:
+        phase_timings["inference_s"] = phase_timings.get("inference_s", 0.0) + float(subprocess_outer_call_s)
+        return
+
+    payload, path = subprocess_timing
+    timing_sources["sam3d_batch_timing"] = str(path)
+    local_model_setup_s = phase_timings.get("model_load_s")
+    if local_model_setup_s is not None:
+        phase_timings["orchestrator_model_setup_s"] = phase_timings.get("orchestrator_model_setup_s", 0.0) + float(
+            local_model_setup_s
+        )
+    for source_key, target_key in (
+        ("model_setup_load_s", "model_load_s"),
+        ("compile_warmup_s", "compile_warmup_s"),
+        ("steady_inference_s", "inference_s"),
+        ("ms_per_person_steady", "ms_per_person_steady"),
+        ("request_parse_s", "runner_request_parse_s"),
+        ("crop_bucket_tensor_prep_s", "runner_preprocessing_s"),
+        ("postprocessing_s", "runner_postprocessing_s"),
+        ("result_serialization_handoff_s", "runner_result_serialization_handoff_s"),
+        ("other_s", "runner_other_s"),
+    ):
+        value = _timing_float(payload, source_key)
+        if value is not None:
+            phase_timings[target_key] = value
+    total_s = _timing_float(payload, "total_s")
+    if total_s is not None:
+        phase_timings["subprocess_wrapper_handoff_s"] = max(0.0, float(subprocess_outer_call_s) - total_s)
+    per_bucket = payload.get("per_bucket")
+    if isinstance(per_bucket, list):
+        phase_timings["per_bucket_timing"] = [dict(item) for item in per_bucket if isinstance(item, Mapping)]
+    if phase_timings.get("model_load_s") is not None:
+        not_instrumentable.pop("model_load_s", None)
+    if phase_timings.get("compile_warmup_s") is not None:
+        not_instrumentable.pop("compile_warmup_s", None)
 
 
 def _normalize_sam3d_upstream_env(raw_env: Mapping[str, Any]) -> dict[str, str]:
@@ -1756,9 +2337,15 @@ def run_pipeline(
     summary_status = PIPELINE_STATUS_PASS
 
     for contract in _ordered_contracts_for(stage):
+        stage_wall_start = time.perf_counter()
         runner = registry.get(contract.stage)
         if runner is None:
-            stage_runs.append(_blocked_stage(contract, f"no runner registered for stage: {contract.stage}"))
+            stage_runs.append(
+                _with_stage_wall_seconds(
+                    _blocked_stage_run(contract, f"no runner registered for stage: {contract.stage}"),
+                    stage_wall_start,
+                ).as_dict()
+            )
             summary_status = PIPELINE_STATUS_BLOCKED
             break
 
@@ -1767,7 +2354,7 @@ def run_pipeline(
             and contract.stage != stage
             and _contract_artifacts_already_valid(contract, run_path)
         ):
-            stage_runs.append(_reused_stage_run(contract, runner, run_path).as_dict())
+            stage_runs.append(_with_stage_wall_seconds(_reused_stage_run(contract, runner, run_path), stage_wall_start).as_dict())
             continue
 
         try:
@@ -1775,16 +2362,20 @@ def run_pipeline(
             _validate_contract_artifacts(contract, run_path)
         except Exception as exc:
             stage_runs.append(
-                StageRun(
-                    stage=contract.stage,
-                    status=PIPELINE_STATUS_FAIL,
-                    real_model=getattr(runner, "real_model", False),
-                    source_mode=getattr(runner, "source_mode", "unknown"),
-                    notes=(f"{contract.stage} failed: {exc}",),
+                _with_stage_wall_seconds(
+                    StageRun(
+                        stage=contract.stage,
+                        status=PIPELINE_STATUS_FAIL,
+                        real_model=getattr(runner, "real_model", False),
+                        source_mode=getattr(runner, "source_mode", "unknown"),
+                        notes=(f"{contract.stage} failed: {exc}",),
+                    ),
+                    stage_wall_start,
                 ).as_dict()
             )
             summary_status = PIPELINE_STATUS_FAIL
             break
+        result = _with_stage_wall_seconds(result, stage_wall_start)
         stage_runs.append(result.as_dict())
         if result.status == PIPELINE_STATUS_FAIL:
             summary_status = PIPELINE_STATUS_FAIL
@@ -1856,11 +2447,23 @@ _SOFT_REQUIRED_ARTIFACTS: dict[str, frozenset[str]] = {
     "calibration": frozenset({"court_zones.json", "net_plane.json"}),
 }
 
+# Contract artifacts a stage may legitimately omit by configuration, validated
+# only when present: BODY writes smpl_motion.json only under
+# write_body_monoliths=True (fetch_body_monoliths); the slim speed default
+# ships skeleton3d.json + body_mesh_index/ instead, so absence is legal while
+# a present-but-invalid file must still fail.
+_PRESENT_ONLY_REQUIRED_ARTIFACTS: dict[str, frozenset[str]] = {
+    "body": frozenset({"smpl_motion.json"}),
+}
+
 
 def _validate_contract_artifacts(contract: PipelineStageContract, run_dir: Path) -> None:
     soft = _SOFT_REQUIRED_ARTIFACTS.get(contract.stage, frozenset())
+    present_only = _PRESENT_ONLY_REQUIRED_ARTIFACTS.get(contract.stage, frozenset())
     for artifact in contract.required_artifacts:
         if artifact in soft:
+            continue
+        if artifact in present_only and not (run_dir / artifact).is_file():
             continue
         schema_name = ARTIFACT_SCHEMA_BY_FILENAME.get(artifact)
         if schema_name is None:
@@ -1904,14 +2507,20 @@ def _reused_stage_run(contract: PipelineStageContract, runner: StageRunner, run_
     )
 
 
-def _blocked_stage(contract: PipelineStageContract, note: str) -> dict[str, Any]:
+def _with_stage_wall_seconds(stage_run: StageRun, started: float) -> StageRun:
+    if stage_run.wall_seconds is not None:
+        return stage_run
+    return replace(stage_run, wall_seconds=max(0.0, time.perf_counter() - started))
+
+
+def _blocked_stage_run(contract: PipelineStageContract, note: str) -> StageRun:
     return StageRun(
         stage=contract.stage,
         status=PIPELINE_STATUS_BLOCKED,
         real_model=False,
         source_mode="unregistered",
         notes=(note,),
-    ).as_dict()
+    )
 
 
 def _successful_stage_artifacts(stage_runs: Sequence[dict[str, Any]]) -> set[str]:
@@ -2621,6 +3230,124 @@ def _to_python_container(value: Any) -> Any:
     return value
 
 
+def _body_stance_index_from_placement(
+    placement_payload: Any,
+    *,
+    foot_contact_phases: Any,
+    fps: float,
+) -> dict[tuple[int, int], dict[str, Any]]:
+    if not isinstance(placement_payload, Mapping):
+        return {}
+    stance_frames = _stance_frames_from_contact_phases(foot_contact_phases)
+    index: dict[tuple[int, int], dict[str, Any]] = {}
+    for player in placement_payload.get("players", []) or []:
+        if not isinstance(player, Mapping):
+            continue
+        try:
+            player_id = int(player.get("id"))
+        except (TypeError, ValueError):
+            continue
+        frames = [frame for frame in player.get("frames", []) or [] if isinstance(frame, Mapping)]
+        frames.sort(key=lambda frame: int(frame.get("frame_idx", 0)))
+        xy_by_frame: dict[int, list[float]] = {}
+        t_by_frame: dict[int, float] = {}
+        for frame in frames:
+            try:
+                frame_idx = int(frame.get("frame_idx"))
+                xy = frame.get("smoothed_world_xy")
+                if not isinstance(xy, Sequence) or isinstance(xy, (str, bytes)) or len(xy) < 2:
+                    continue
+                xy_by_frame[frame_idx] = [float(xy[0]), float(xy[1])]
+                t_by_frame[frame_idx] = float(frame.get("t", frame_idx / fps))
+            except (TypeError, ValueError):
+                continue
+        sorted_indices = sorted(xy_by_frame)
+        for pos, frame_idx in enumerate(sorted_indices):
+            frame = next(item for item in frames if int(item.get("frame_idx", -1)) == frame_idx)
+            velocity = _derived_xy_velocity(
+                frame_idx,
+                pos=pos,
+                sorted_indices=sorted_indices,
+                xy_by_frame=xy_by_frame,
+                t_by_frame=t_by_frame,
+                fps=fps,
+            )
+            index[(player_id, frame_idx)] = {
+                "stance": bool(frame.get("stance", False)) or frame_idx in stance_frames.get(player_id, set()),
+                "velocity": velocity,
+                "covariance_m2": frame.get("covariance_m2"),
+                "source": "placement.json",
+            }
+    return index
+
+
+def _stance_frames_from_contact_phases(payload: Any) -> dict[int, set[int]]:
+    if not isinstance(payload, Mapping):
+        return {}
+    phases = payload.get("phases")
+    if not isinstance(phases, Sequence) or isinstance(phases, (str, bytes)):
+        return {}
+    out: dict[int, set[int]] = {}
+    for phase in phases:
+        if not isinstance(phase, Mapping):
+            continue
+        try:
+            player_id = int(phase.get("player_id"))
+        except (TypeError, ValueError):
+            continue
+        frame_indices = phase.get("frame_indices", [])
+        if not isinstance(frame_indices, Sequence) or isinstance(frame_indices, (str, bytes)):
+            continue
+        for frame_idx in frame_indices:
+            try:
+                out.setdefault(player_id, set()).add(int(frame_idx))
+            except (TypeError, ValueError):
+                continue
+    return out
+
+
+def _derived_xy_velocity(
+    frame_idx: int,
+    *,
+    pos: int,
+    sorted_indices: Sequence[int],
+    xy_by_frame: Mapping[int, Sequence[float]],
+    t_by_frame: Mapping[int, float],
+    fps: float,
+) -> list[float]:
+    if len(sorted_indices) <= 1:
+        return [0.0, 0.0]
+    if pos == 0:
+        other_idx = sorted_indices[1]
+    elif pos == len(sorted_indices) - 1:
+        other_idx = sorted_indices[pos - 1]
+    else:
+        before_idx = sorted_indices[pos - 1]
+        after_idx = sorted_indices[pos + 1]
+        before_t = t_by_frame.get(before_idx, before_idx / fps)
+        after_t = t_by_frame.get(after_idx, after_idx / fps)
+        dt = after_t - before_t
+        if dt > 0.0:
+            before_xy = xy_by_frame[before_idx]
+            after_xy = xy_by_frame[after_idx]
+            return [
+                (float(after_xy[0]) - float(before_xy[0])) / dt,
+                (float(after_xy[1]) - float(before_xy[1])) / dt,
+            ]
+        other_idx = before_idx
+    current_xy = xy_by_frame[frame_idx]
+    other_xy = xy_by_frame[other_idx]
+    current_t = t_by_frame.get(frame_idx, frame_idx / fps)
+    other_t = t_by_frame.get(other_idx, other_idx / fps)
+    dt = other_t - current_t
+    if dt == 0.0:
+        return [0.0, 0.0]
+    return [
+        (float(other_xy[0]) - float(current_xy[0])) / dt,
+        (float(other_xy[1]) - float(current_xy[1])) / dt,
+    ]
+
+
 def _read_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
@@ -2638,6 +3365,135 @@ def _write_json_artifact(path: Path, artifact: StrictArtifact | Any) -> None:
     else:
         payload = artifact
     _write_json(path, payload)
+
+
+def _json_artifact_payload(artifact: StrictArtifact | Any) -> Any:
+    return artifact.model_dump(mode="json") if hasattr(artifact, "model_dump") else artifact
+
+
+def _write_compact_json(path: Path, payload: Any) -> dict[str, Any]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    started = time.perf_counter()
+    path.write_text(json.dumps(payload, separators=(",", ":")) + "\n", encoding="utf-8")
+    return {
+        "path": str(path),
+        "bytes": path.stat().st_size,
+        "serialization_seconds": max(0.0, time.perf_counter() - started),
+    }
+
+
+def _write_compact_json_artifact(path: Path, artifact: StrictArtifact | Any) -> dict[str, Any]:
+    return _write_compact_json(path, _json_artifact_payload(artifact))
+
+
+def _skipped_compact_json_artifact(path: Path, *, reason: str) -> dict[str, Any]:
+    return {
+        "path": str(path),
+        "bytes": 0,
+        "serialization_seconds": 0.0,
+        "skipped": True,
+        "reason": reason,
+    }
+
+
+def _write_body_serialization_timing(run_dir: Path, timings: list[dict[str, Any]]) -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_body_serialization_timing",
+        "artifacts": [
+            {
+                "artifact": Path(item["path"]).name,
+                "path": item["path"],
+                "bytes": int(item["bytes"]),
+                "serialization_seconds": float(item["serialization_seconds"]),
+                "skipped": bool(item.get("skipped", False)),
+                "reason": str(item["reason"]) if item.get("reason") else None,
+            }
+            for item in timings
+        ],
+        "summary": {
+            "artifact_count": len(timings),
+            "total_bytes": sum(int(item["bytes"]) for item in timings),
+            "total_serialization_seconds": sum(float(item["serialization_seconds"]) for item in timings),
+            "json_format": "compact_no_indent_no_sort_keys_newline_terminated",
+            "written_count": sum(1 for item in timings if not item.get("skipped", False)),
+            "skipped_count": sum(1 for item in timings if item.get("skipped", False)),
+        },
+    }
+    _write_json(run_dir / "body_serialization_timing.json", payload)
+
+
+def _write_body_stage_phase_timing(
+    run_dir: Path,
+    *,
+    stage_wall_seconds: float,
+    phase_timings: Mapping[str, Any],
+    person_frame_count: int,
+    phase_boundaries: Mapping[str, str],
+    not_instrumentable: Mapping[str, str],
+    timing_sources: Mapping[str, str],
+) -> None:
+    timed_keys = (
+        "orchestrator_model_setup_s",
+        "model_load_s",
+        "compile_warmup_s",
+        "inference_s",
+        "input_prep_s",
+        "runner_request_parse_s",
+        "runner_preprocessing_s",
+        "runner_postprocessing_s",
+        "runner_result_serialization_handoff_s",
+        "runner_other_s",
+        "subprocess_wrapper_handoff_s",
+        "mesh_smpl_payload_assembly_s",
+        "keypoints_2d_s",
+        "contact_splice_s",
+        "gates_s",
+        "serialization_s",
+        "index_build_s",
+        "artifact_io_s",
+    )
+    attributed = sum(float(phase_timings.get(key, 0.0)) for key in timed_keys if phase_timings.get(key) is not None)
+    other_s = max(0.0, float(stage_wall_seconds) - attributed)
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_body_stage_phase_timing",
+        "stage_wall_seconds": float(stage_wall_seconds),
+        "model_load_s": float(phase_timings.get("model_load_s", 0.0)),
+        "orchestrator_model_setup_s": phase_timings.get("orchestrator_model_setup_s"),
+        "compile_warmup_s": phase_timings.get("compile_warmup_s"),
+        "inference_s": float(phase_timings.get("inference_s", 0.0)),
+        "subprocess_outer_call_s": phase_timings.get("subprocess_outer_call_s"),
+        "person_frame_count": int(person_frame_count),
+        "ms_per_person_steady": phase_timings.get("ms_per_person_steady"),
+        "input_prep_s": phase_timings.get("input_prep_s"),
+        "runner_request_parse_s": phase_timings.get("runner_request_parse_s"),
+        "runner_preprocessing_s": phase_timings.get("runner_preprocessing_s"),
+        "runner_postprocessing_s": phase_timings.get("runner_postprocessing_s"),
+        "runner_result_serialization_handoff_s": phase_timings.get("runner_result_serialization_handoff_s"),
+        "runner_other_s": phase_timings.get("runner_other_s"),
+        "subprocess_wrapper_handoff_s": phase_timings.get("subprocess_wrapper_handoff_s"),
+        "mesh_smpl_payload_assembly_s": phase_timings.get("mesh_smpl_payload_assembly_s"),
+        "smpl_motion_payload_assembly_s": phase_timings.get("smpl_motion_payload_assembly_s"),
+        "mesh_export_payload_assembly_s": phase_timings.get("mesh_export_payload_assembly_s"),
+        "keypoints_2d_s": float(phase_timings.get("keypoints_2d_s", 0.0)),
+        "contact_splice_s": float(phase_timings.get("contact_splice_s", 0.0)),
+        "gates_s": float(phase_timings.get("gates_s", 0.0)),
+        "serialization_s": float(phase_timings.get("serialization_s", 0.0)),
+        "index_build_s": phase_timings.get("index_build_s"),
+        "artifact_io_s": phase_timings.get("artifact_io_s"),
+        "attributed_s": float(attributed),
+        "other_s": float(other_s),
+        "per_bucket_timing": list(phase_timings.get("per_bucket_timing", [])),
+        "timing_sources": dict(timing_sources),
+        "phase_boundaries": dict(phase_boundaries),
+        "not_instrumentable": dict(not_instrumentable),
+        "notes": [
+            "Phase timings are speed instrumentation only; subprocess_outer_call_s is retained for comparison and is not double-counted in attributed_s when runner timing is available.",
+            "VERIFIED=0 unchanged; this artifact is speed instrumentation only.",
+        ],
+    }
+    _write_json(run_dir / "body_stage_phase_timing.json", payload)
 
 
 def _write_json(path: Path, payload: Any) -> None:

@@ -1,0 +1,158 @@
+{
+  "chain_manifest": {
+    "artifact_type": "racketsport_ball_chain_run_manifest",
+    "schema_version": 1,
+    "clip": "wolverine_mixed_0200_mid_steep_corner",
+    "generated_at": "2026-07-04T13:52:29Z",
+    "manifest_path": "runs/lanes/ball_w3_2_arc_veto_chain_20260704/chain_runs_selected_v40_weak/wolverine_mixed_0200_mid_steep_corner/ball_chain_manifest.json",
+    "outputs": {
+      "auto_bounce_candidates": {
+        "path": "runs/lanes/ball_w3_2_arc_veto_chain_20260704/chain_runs_selected_v40_weak/wolverine_mixed_0200_mid_steep_corner/auto_bounce_candidates.json",
+        "sha256": "6f20f11468a1a136dc3d852c10d0925e09bc5b94ae3043779d06b5f4a678e1f1"
+      },
+      "solver_a_ball_track_arc_solved": {
+        "path": "runs/lanes/ball_w3_2_arc_veto_chain_20260704/chain_runs_selected_v40_weak/wolverine_mixed_0200_mid_steep_corner/solver_a_free/wolverine_mixed_0200_mid_steep_corner/ball_track_arc_solved.json",
+        "sha256": "522a74d93af3d8dcbf0708a024d1cc1325928e835d69d8cc5515cd1f22f04d75"
+      },
+      "product_veto": {
+        "path": "runs/lanes/ball_w3_2_arc_veto_chain_20260704/chain_runs_selected_v40_weak/wolverine_mixed_0200_mid_steep_corner/product_view/arc_measured_fallback_fused_veto_v40_weak.json",
+        "sha256": "625b1be56e63a21373a205996bc50689f70a640cf181cb71aa38757c0914e170"
+      }
+    },
+    "policy": {
+      "extra_anchor_artifact_overrides_fresh_auto_bounces": true,
+      "outdoor_indoor_labels_read": false,
+      "product_view_veto_layer_only": true,
+      "render_only_3d": true
+    }
+  },
+  "ball_track_arc_solved": {
+    "artifact_type": "racketsport_ball_track_arc_solved",
+    "schema_version": 1,
+    "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+    "render_only": true,
+    "trusted_for_ball_detection_metrics": false,
+    "frames": [
+      {
+        "t": 0,
+        "visible": true,
+        "band": "anchored_measured",
+        "conf": 1,
+        "render_only": true,
+        "world_xyz": [0.913576209, 12.023295155, 0],
+        "xy": [352.2960223625727, 304.834887381838],
+        "arc_solver": { "segment_id": 0, "render_only": true, "weak_segment": false }
+      },
+      {
+        "t": 0.16666666666666666,
+        "visible": true,
+        "band": "arc_interpolated",
+        "conf": 0.87900174,
+        "render_only": true,
+        "sigma_m": 1.301818,
+        "world_xyz": [-0.565548463, 9.562427073, 0.180442711],
+        "xy": [253.40080440084762, 339.42214702477315],
+        "arc_solver": { "segment_id": 0, "render_only": true, "weak_segment": false }
+      },
+      {
+        "t": 0.3,
+        "visible": false,
+        "band": "arc_interpolated",
+        "conf": 0,
+        "render_only": true,
+        "sigma_m": 0.743189,
+        "world_xyz": [-1.653983512, 7.751562091, 0.124546322],
+        "xy": [0, 0],
+        "arc_solver": { "segment_id": 0, "render_only": true, "weak_segment": false }
+      },
+      {
+        "t": 0.36666666666666664,
+        "visible": true,
+        "band": "arc_interpolated",
+        "conf": 1,
+        "render_only": true,
+        "sigma_m": 0.465113,
+        "world_xyz": [-2.170504476, 6.892209273, 0.034108315],
+        "xy": [159.16820224112314, 401.57918164877145],
+        "arc_solver": { "segment_id": 0, "render_only": true, "weak_segment": false }
+      },
+      {
+        "t": 0.4,
+        "visible": true,
+        "band": "anchored_measured",
+        "conf": 1,
+        "render_only": true,
+        "world_xyz": [-2.42235271, 6.473201131, -0.02615267],
+        "xy": [146.25, 386.25],
+        "arc_solver": { "segment_id": 0, "render_only": true, "weak_segment": false }
+      },
+      {
+        "t": 0.43333333333333335,
+        "visible": true,
+        "band": "anchored_measured",
+        "conf": 1,
+        "render_only": true,
+        "world_xyz": [-2.590755584, 6.046809011, 0.059120769],
+        "xy": [135, 375],
+        "arc_solver": { "segment_id": 1, "render_only": true, "weak_segment": false }
+      }
+    ],
+    "segments": [
+      {
+        "segment_id": 0,
+        "t0": 0,
+        "t1": 0.433333333,
+        "frame_start": 0,
+        "frame_end": 13,
+        "net_clearance_m": null,
+        "net_clearance_ok": null
+      }
+    ]
+  },
+  "auto_bounce_candidates": {
+    "artifact_type": "racketsport_ball_bounce_candidates_track_geometry",
+    "candidate_prediction": true,
+    "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+    "candidates": [
+      {
+        "candidate_prediction": true,
+        "conf": 1,
+        "frame": 13,
+        "human_reviewed": false,
+        "method": "image_y_cusp",
+        "not_ground_truth": true,
+        "source": "track_geometry_candidate",
+        "t": 0.43333333333333335,
+        "world_xy_at_ball_radius": [-2.5664, 6.0426],
+        "xy": [137.027, 378.847]
+      }
+    ]
+  },
+  "contact_windows": {
+    "schema_version": 1,
+    "events": [
+      {
+        "confidence": 0.79,
+        "frame": 12,
+        "player_id": 3,
+        "sources": { "ball_inflection": 0.7, "wrist_vel": 0.6 },
+        "t": 0.4,
+        "type": "contact",
+        "window": { "importance": 1, "t0": 0.35, "t1": 0.45 }
+      }
+    ]
+  },
+  "net_plane": {
+    "schema_version": 1,
+    "endpoints": [
+      [-3.05, 6.705, 0.91],
+      [3.05, 6.705, 0.91]
+    ],
+    "center_height_m": 0.86,
+    "post_height_m": 0.91,
+    "plane": {
+      "normal": [0, 1, 0],
+      "point": [0, 6.705, 0]
+    }
+  }
+}

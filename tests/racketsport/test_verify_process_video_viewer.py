@@ -5,6 +5,7 @@ import pytest
 
 from scripts.racketsport.verify_process_video_viewer import (
     assert_non_empty_entity_counts,
+    screenshot_name_for_seconds,
     viewer_url_for_manifest,
     write_headless_verify_report,
 )
@@ -53,6 +54,14 @@ def test_assert_non_empty_entity_counts_rejects_silent_empty_viewer() -> None:
 
 def test_assert_non_empty_entity_counts_allows_explicit_empty_opt_out() -> None:
     assert_non_empty_entity_counts({"Players": 0}, allow_empty=True)
+
+
+def test_screenshot_name_for_seconds_is_repeatable_and_filesystem_safe() -> None:
+    assert screenshot_name_for_seconds(3) == "screenshot_t3s.png"
+    assert screenshot_name_for_seconds(6.25) == "screenshot_t6p25s.png"
+
+    with pytest.raises(ValueError, match="non-negative"):
+        screenshot_name_for_seconds(-1)
 
 
 def test_write_headless_verify_report_records_counts_and_page_errors(tmp_path: Path) -> None:

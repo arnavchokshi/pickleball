@@ -8,14 +8,16 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from threed.racketsport.schemas import BallTrack, validate_artifact_file
+from threed.racketsport.schemas import BallCandidates, BallTrack, validate_artifact_file
 from threed.racketsport.tracknet_adapter import (
     _join_tracknet_confidence_csv,
     _TrackNetVideoIterableDatasetEofGuard,
     _run_nonoverlap_heatmap_confidence,
+    _topk_heatmap_local_maxima,
     run_official_tracknet_predict,
     run_tracknet_or_convert,
     tracknet_csv_to_ball_track,
+    write_ball_track_from_csv,
 )
 
 
@@ -171,6 +173,69 @@ def test_tracknet_csv_to_ball_track_rejects_missing_columns(tmp_path: Path) -> N
 
     with pytest.raises(ValueError, match="missing TrackNet column"):
         tracknet_csv_to_ball_track(csv_path, fps=60.0)
+
+
+def test_tracknet_heatmap_candidate_extraction_uses_source_pixel_nms_radius() -> None:
+    heatmap = np.zeros((16, 16), dtype=np.float32)
+    heatmap[4, 5] = 0.91
+    heatmap[5, 7] = 0.89
+    heatmap[12, 13] = 0.72
+
+    candidates = _topk_heatmap_local_maxima(heatmap, top_k=2, nms_radius_px=10.0, img_scaler=(2.0, 2.0))
+
+    assert len(candidates) == 2
+    assert candidates[0]["xy"] == [10.0, 8.0]
+    assert candidates[0]["score"] == pytest.approx(0.91)
+    assert candidates[1]["xy"] == [26.0, 24.0]
+    assert candidates[1]["score"] == pytest.approx(0.72)
+    assert all(candidate["source_detector"] == "tracknet_heatmap_nms" for candidate in candidates)
+
+
+def test_write_tracknet_candidate_sidecar_is_opt_in_and_preserves_primary_track_bytes(tmp_path: Path) -> None:
+    csv_path = tmp_path / "clip_ball.csv"
+    csv_path.write_text(
+        "Frame,Visibility,X,Y,Confidence\n"
+        "0,1,321,240,0.60\n"
+        "1,0,0,0,0.20\n",
+        encoding="utf-8",
+    )
+    off_dir = tmp_path / "off"
+    on_dir = tmp_path / "on"
+    off_out = off_dir / "ball_track.json"
+    on_out = on_dir / "ball_track.json"
+
+    off_summary = write_ball_track_from_csv(
+        predictions_csv=csv_path,
+        fps=60.0,
+        out=off_out,
+        confidence_mode="heatmap_peak",
+    )
+    on_summary = write_ball_track_from_csv(
+        predictions_csv=csv_path,
+        fps=60.0,
+        out=on_out,
+        confidence_mode="heatmap_peak",
+        emit_candidates=True,
+        candidate_top_k=1,
+        candidate_frames={
+            0: [
+                {"xy": [111.0, 222.0], "score": 0.55},
+                {"xy": [321.0, 240.0], "score": 0.95},
+            ],
+            1: [],
+        },
+    )
+
+    assert off_out.read_bytes() == on_out.read_bytes()
+    assert "candidates_out" not in off_summary
+    assert not (off_dir / "ball_candidates.json").exists()
+    assert on_summary["candidates_out"] == str(on_dir / "ball_candidates.json")
+    sidecar = validate_artifact_file("racketsport_ball_candidates", on_dir / "ball_candidates.json")
+    assert isinstance(sidecar, BallCandidates)
+    assert sidecar.source == "tracknet"
+    assert sidecar.frames[0].candidates[0].xy == [321.0, 240.0]
+    assert sidecar.frames[0].candidates[0].score == pytest.approx(0.95)
+    assert sidecar.frames[0].candidates[0].source_detector == "tracknet_heatmap_nms"
 
 
 def test_run_tracknet_ball_cli_converts_existing_predictions(tmp_path: Path) -> None:

@@ -4,6 +4,7 @@ import PickleballCore
 public struct UploadManifest: Codable, Equatable, Sendable {
     public var clipRelativePath: String
     public var sidecar: CaptureSidecar
+    public var courtAssistSeed: String?
     public var onDevicePoseTrack: String?
     public var onDevicePersonTracks: String?
     public var onDevicePersonTiming: String?
@@ -12,6 +13,7 @@ public struct UploadManifest: Codable, Equatable, Sendable {
     public init(
         clipRelativePath: String,
         sidecar: CaptureSidecar,
+        courtAssistSeed: String? = nil,
         onDevicePoseTrack: String? = nil,
         onDevicePersonTracks: String? = nil,
         onDevicePersonTiming: String? = nil,
@@ -19,6 +21,7 @@ public struct UploadManifest: Codable, Equatable, Sendable {
     ) {
         self.clipRelativePath = clipRelativePath
         self.sidecar = sidecar
+        self.courtAssistSeed = courtAssistSeed
         self.onDevicePoseTrack = onDevicePoseTrack
         self.onDevicePersonTracks = onDevicePersonTracks
         self.onDevicePersonTiming = onDevicePersonTiming
@@ -78,6 +81,9 @@ public enum UploadManifestValidator {
         }
         if let personTiming = manifest.onDevicePersonTiming {
             appendPathIssue(field: "onDevicePersonTiming", path: personTiming, to: &errors)
+        }
+        if let courtAssistSeed = manifest.courtAssistSeed {
+            appendPathIssue(field: "courtAssistSeed", path: courtAssistSeed, to: &errors)
         }
 
         for (index, depthRef) in manifest.sidecar.lidarDepthRefs.enumerated() {
@@ -141,6 +147,7 @@ public struct UploadPart: Equatable, Sendable {
         case posePrior
         case personTracks
         case personTiming
+        case courtAssistSeed
         case lidarDepth
         case clip
     }
@@ -188,6 +195,9 @@ public enum UploadPlan {
         }
         if let personTiming = manifest.onDevicePersonTiming {
             parts.append(UploadPart(kind: .personTiming, relativePath: personTiming, priority: 12))
+        }
+        if let courtAssistSeed = manifest.courtAssistSeed {
+            parts.append(UploadPart(kind: .courtAssistSeed, relativePath: courtAssistSeed, priority: 13))
         }
 
         let depthRefs = Set(manifest.lidarDepthRefs)

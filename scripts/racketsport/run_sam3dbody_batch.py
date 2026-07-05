@@ -2,9 +2,14 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import json
 import os
+import pickle
+import queue
 import sys
+import threading
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,6 +64,39 @@ TIER2_OUTPUT_LITE_OMIT_FIELDS = frozenset(
         "faces",
     }
 )
+CHUNK_FORMATS = frozenset({"binary", "jsonl", "pickle"})
+PRODUCTION_CALLABLE_IDENTITY_ATTR = "_sam3d_body_batch_warmed_production_callable_identity"
+SAM3D_BATCH_TIMING_ARTIFACT_TYPE = "racketsport_sam3dbody_batch_timing"
+SAM3D_BATCH_TIMING_STDOUT_MARKER = "SAM3DBODY_BATCH_TIMING_JSON "
+SAM3D_BATCH_BINARY_CHUNK_ARTIFACT_TYPE = "racketsport_sam3dbody_batch_binary_chunk"
+SAM3D_BATCH_BINARY_CONTRACT_VERSION = 1
+SAM3D_ARRAY_REF_KEY = "__sam3d_array_ref__"
+SAM3D_BULK_ARRAY_FIELDS = frozenset(
+    {
+        "pred_vertices",
+        "vertices",
+        "mesh_vertices_xyz",
+        "pred_keypoints_3d",
+        "pred_joint_coords",
+        "joints3d",
+        "joints3d_xyz",
+        "pred_keypoints_2d",
+        "pred_cam_t",
+        "global_rot",
+        "global_orient",
+        "pred_global_orient",
+        "body_pose_params",
+        "body_pose",
+        "pred_pose_raw",
+        "hand_pose_params",
+        "hand_pose",
+        "shape_params",
+        "betas",
+        "scale_params",
+        "expr_params",
+        "pred_global_rots",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -68,6 +106,167 @@ class _Sam3DBodyBatch:
     mask_scores: list[float]
 
 
+@dataclass(frozen=True)
+class _PreparedBucket:
+    bucket_index: int
+    bucket_size: int
+    request_ids: list[str]
+    real_items: list[dict[str, Any]]
+    bucket_items: list[dict[str, Any]]
+    execution_entry: dict[str, Any]
+    prepared_bucket: Any
+
+
+@dataclass(frozen=True)
+class _BucketInferenceOutput:
+    prepared: _PreparedBucket
+    raw_records: list[Any]
+    faces: Any
+    body_input_size: int | None
+    clip_intrinsics: Mapping[str, Any] | None
+    optimization: Mapping[str, Any]
+
+
+@dataclass(frozen=True)
+class _WriterFinish:
+    status: str
+    error: BaseException | None = None
+
+
+class _TimingRecorder:
+    def __init__(self) -> None:
+        self.origin_monotonic = time.monotonic()
+        self.events: list[dict[str, Any]] = []
+        self._lock = threading.Lock()
+
+    @contextmanager
+    def span(self, name: str, **fields: Any) -> Any:
+        start = time.monotonic()
+        try:
+            yield
+        finally:
+            self.record(name, start, time.monotonic(), **fields)
+
+    def record(self, name: str, start: float, end: float, **fields: Any) -> dict[str, Any]:
+        event = {
+            "name": str(name),
+            "start_s": round(float(start - self.origin_monotonic), 6),
+            "end_s": round(float(end - self.origin_monotonic), 6),
+            "duration_s": round(float(end - start), 6),
+        }
+        for key, value in fields.items():
+            event[str(key)] = _json_safe(value)
+        with self._lock:
+            self.events.append(event)
+        return event
+
+
+def _timing_sidecar_path(out_path: Path) -> Path:
+    return out_path.with_name(f"{out_path.name}.timing.json")
+
+
+def _event_duration_s(event: Mapping[str, Any]) -> float:
+    try:
+        return float(event.get("duration_s", 0.0))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _event_int(event: Mapping[str, Any], key: str, default: int = 0) -> int:
+    try:
+        return int(event.get(key, default))
+    except (TypeError, ValueError):
+        return default
+
+
+def _round_s(value: float) -> float:
+    return round(float(value), 6)
+
+
+def _sum_events(events: Sequence[Mapping[str, Any]], names: set[str]) -> float:
+    return _round_s(sum(_event_duration_s(event) for event in events if str(event.get("name", "")) in names))
+
+
+def _sam3d_batch_timing_summary(events: Sequence[Mapping[str, Any]], *, person_frame_count: int) -> dict[str, Any]:
+    """Summarize runner-internal timing events without changing inference behavior."""
+
+    timing_events = [dict(event) for event in events]
+    request_parse_s = _sum_events(timing_events, {"request_parse"})
+    model_setup_load_s = _sum_events(timing_events, {"model_setup_load"})
+    compile_warmup_bucket_s = _sum_events(timing_events, {"compile_warmup_bucket"})
+    compile_warmup_s = compile_warmup_bucket_s or _sum_events(timing_events, {"compile_warmup"})
+    steady_inference_s = _sum_events(timing_events, {"bucket_inference"})
+    crop_bucket_tensor_prep_s = _sum_events(timing_events, {"request_prep"})
+    postprocessing_s = _sum_events(timing_events, {"bucket_postprocess"})
+    result_serialization_handoff_s = _sum_events(timing_events, {"output_write_bucket", "output_write_monolithic"})
+    total_s = _round_s(max((float(event.get("end_s", 0.0)) for event in timing_events), default=0.0))
+    attributed_s = _round_s(
+        request_parse_s
+        + model_setup_load_s
+        + compile_warmup_s
+        + steady_inference_s
+        + crop_bucket_tensor_prep_s
+        + postprocessing_s
+        + result_serialization_handoff_s
+    )
+    person_count = int(person_frame_count)
+    per_bucket = _per_bucket_timing_summary(timing_events)
+    return {
+        "schema_version": 1,
+        "artifact_type": SAM3D_BATCH_TIMING_ARTIFACT_TYPE,
+        "total_s": total_s,
+        "request_parse_s": request_parse_s,
+        "model_setup_load_s": model_setup_load_s,
+        "compile_warmup_s": compile_warmup_s,
+        "steady_inference_s": steady_inference_s,
+        "person_frame_count": person_count,
+        "ms_per_person_steady": _round_s((steady_inference_s * 1000.0) / person_count) if person_count > 0 else None,
+        "crop_bucket_tensor_prep_s": crop_bucket_tensor_prep_s,
+        "preprocessing_s": crop_bucket_tensor_prep_s,
+        "postprocessing_s": postprocessing_s,
+        "result_serialization_handoff_s": result_serialization_handoff_s,
+        "attributed_s": attributed_s,
+        "other_s": _round_s(max(0.0, total_s - attributed_s)),
+        "per_bucket": per_bucket,
+    }
+
+
+def _per_bucket_timing_summary(events: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    buckets: dict[int, dict[str, float | int]] = {}
+    for event in events:
+        name = str(event.get("name", ""))
+        if name not in {"compile_warmup_bucket", "bucket_inference"}:
+            continue
+        bucket_size = _event_int(event, "bucket_size", 0)
+        if bucket_size <= 0:
+            continue
+        bucket = buckets.setdefault(bucket_size, {"bucket_size": bucket_size, "warmup_s": 0.0, "steady_s": 0.0, "frames": 0})
+        if name == "compile_warmup_bucket":
+            bucket["warmup_s"] = float(bucket["warmup_s"]) + _event_duration_s(event)
+        elif name == "bucket_inference":
+            bucket["steady_s"] = float(bucket["steady_s"]) + _event_duration_s(event)
+            bucket["frames"] = int(bucket["frames"]) + _event_int(event, "request_count", _event_int(event, "frame_count", bucket_size))
+    return [
+        {
+            "bucket_size": int(bucket["bucket_size"]),
+            "warmup_s": _round_s(float(bucket["warmup_s"])),
+            "steady_s": _round_s(float(bucket["steady_s"])),
+            "frames": int(bucket["frames"]),
+        }
+        for _size, bucket in sorted(buckets.items())
+    ]
+
+
+def parse_sam3d_batch_timing_stdout(stdout: str) -> dict[str, Any] | None:
+    for line in stdout.splitlines():
+        if not line.startswith(SAM3D_BATCH_TIMING_STDOUT_MARKER):
+            continue
+        payload = json.loads(line[len(SAM3D_BATCH_TIMING_STDOUT_MARKER) :])
+        if isinstance(payload, dict):
+            return payload
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -75,23 +274,73 @@ def main(argv: list[str] | None = None) -> int:
             "Request JSON may include mask_paths and static camera_intrinsics for Phase C."
         )
     )
-    parser.add_argument("--requests", required=True, type=Path)
-    parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--fast-sam-repo", required=True, type=Path)
-    parser.add_argument("--checkpoint-dir", required=True, type=Path)
+    parser.add_argument("--requests", type=Path)
+    parser.add_argument("--out", type=Path)
+    parser.add_argument("--fast-sam-repo", type=Path)
+    parser.add_argument("--checkpoint-dir", type=Path)
     parser.add_argument("--detector-model", default="")
     parser.add_argument("--detector-name", default=None)
     parser.add_argument("--fov-name", default="")
     parser.add_argument("--body-input-size", type=int, default=None, help="Optional SAM-3D body crop size: 384, 448, or 512.")
+    parser.add_argument(
+        "--bucket-size",
+        type=int,
+        default=None,
+        help="Override request-payload crop_bucket_sizes/compile_warmup_buckets for bucket-size experiments.",
+    )
+    parser.add_argument(
+        "--chunk-dir",
+        type=Path,
+        default=None,
+        help="Directory for incremental per-bucket chunks. Defaults to <out>.chunks.",
+    )
+    parser.add_argument(
+        "--convert-chunks",
+        type=Path,
+        default=None,
+        help="Convert a chunk index written by this runner back to the monolithic --out JSON and exit.",
+    )
+    parser.add_argument(
+        "--chunk-format",
+        choices=sorted(CHUNK_FORMATS),
+        default="binary",
+        help=(
+            "Per-bucket stream chunk encoding. binary stores bulk numeric fields in numpy .npy sidecars; "
+            "pickle is legacy compatibility; jsonl is human-readable but slower."
+        ),
+    )
+    parser.add_argument(
+        "--no-monolithic-output",
+        action="store_true",
+        help="Write only stream chunks and index; use --convert-chunks later to materialize the legacy monolithic JSON.",
+    )
     args = parser.parse_args(argv)
+    if args.out is None:
+        parser.error("--out is required")
+    if args.convert_chunks is not None:
+        _convert_chunked_output_to_monolithic(args.convert_chunks, args.out)
+        print(args.out)
+        return 0
+    for required_name in ("requests", "fast_sam_repo", "checkpoint_dir"):
+        if getattr(args, required_name) is None:
+            parser.error(f"--{required_name.replace('_', '-')} is required unless --convert-chunks is used")
 
+    timer = _TimingRecorder()
     try:
-        payload = json.loads(args.requests.read_text(encoding="utf-8"))
-        batch_payload = _parse_batch_payload(payload)
-        requests = batch_payload["requests"]
-        optimization = dict(batch_payload["optimization"])
-        body_input_size = normalize_body_input_size(args.body_input_size or optimization.get("sam3d_body_input_size_px"))
-        optimization["sam3d_body_input_size_px"] = body_input_size
+        with timer.span("request_parse"):
+            payload = json.loads(args.requests.read_text(encoding="utf-8"))
+            batch_payload = _parse_batch_payload(payload)
+            requests = batch_payload["requests"]
+            optimization = dict(batch_payload["optimization"])
+            optimization = _apply_bucket_size_override(optimization, bucket_size=args.bucket_size)
+            batch_payload["optimization"] = optimization
+            if args.bucket_size is not None:
+                batch_payload["bucket_plan"] = _bucket_plan(
+                    [str(request["request_id"]) for request in requests],
+                    bucket_sizes=optimization["crop_bucket_sizes"],
+                )
+            body_input_size = normalize_body_input_size(args.body_input_size or optimization.get("sam3d_body_input_size_px"))
+            optimization["sam3d_body_input_size_px"] = body_input_size
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"invalid request batch: {exc}", file=sys.stderr)
         return EX_CONFIG
@@ -110,25 +359,52 @@ def main(argv: list[str] | None = None) -> int:
             print(error, file=sys.stderr)
         return EX_CONFIG
 
+    output_stream: _BatchOutputStream | None = None
     try:
-        setup_sam_3d_body = _load_setup_sam_3d_body(args.fast_sam_repo)
-        estimator = _setup_estimator(
-            setup_sam_3d_body,
-            checkpoint_dir=args.checkpoint_dir.resolve(),
-            detector_name=_detector_name(args.detector_name, [bbox for request in requests for bbox in request["bboxes"]]),
-            detector_model=args.detector_model,
-            fov_name=args.fov_name,
-        )
-        compile_warmup = _warmup_static_clip_intrinsics(
-            estimator,
-            clip_intrinsics=batch_payload["clip_intrinsics"],
-            optimization=optimization,
-        )
+        with timer.span("model_setup_load"):
+            setup_sam_3d_body = _load_setup_sam_3d_body(args.fast_sam_repo)
+            estimator = _setup_estimator(
+                setup_sam_3d_body,
+                checkpoint_dir=args.checkpoint_dir.resolve(),
+                detector_name=_detector_name(args.detector_name, [bbox for request in requests for bbox in request["bboxes"]]),
+                detector_model=args.detector_model,
+                fov_name=args.fov_name,
+            )
+        with timer.span("compile_warmup"):
+            compile_warmup = _warmup_static_clip_intrinsics(
+                estimator,
+                clip_intrinsics=batch_payload["clip_intrinsics"],
+                optimization=optimization,
+                timing=timer,
+            )
         mhr_correctives = _detect_mhr_correctives_active(estimator)
         faces = _json_safe(getattr(estimator, "faces", None))
-        frames = []
         clip_cam_int = _camera_intrinsics_tensor(
             batch_payload["clip_intrinsics"]["matrix"] if batch_payload["clip_intrinsics"] is not None else None
+        )
+        metadata = _output_metadata(
+            optimization,
+            runtime_environment=runtime_environment,
+            mhr_correctives=mhr_correctives,
+            timing_events=timer.events,
+        )
+        output_stream = _BatchOutputStream(
+            out_path=args.out,
+            chunk_dir=args.chunk_dir or _default_chunk_dir(args.out),
+            request_ids=[str(request["request_id"]) for request in requests],
+            payload_header={
+                "schema_version": 1,
+                "artifact_type": "racketsport_sam3dbody_batch",
+                "request_count": len(requests),
+                "clip_intrinsics": batch_payload["clip_intrinsics"],
+                "optimization": optimization,
+                "metadata": metadata,
+                "bucket_plan": batch_payload["bucket_plan"],
+                "compile_warmup": compile_warmup,
+            },
+            write_monolithic=not args.no_monolithic_output,
+            chunk_format=args.chunk_format,
+            timing=timer,
         )
         frames, batch_execution = _run_bucketed_inference(
             estimator,
@@ -139,6 +415,9 @@ def main(argv: list[str] | None = None) -> int:
             faces=faces,
             body_input_size=body_input_size,
             optimization=optimization,
+            output_stream=output_stream,
+            timing=timer,
+            materialize_streamed_frames=False,
         )
     except Exception as exc:
         _write_failure_output(
@@ -151,24 +430,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FastSAM-3D-Body batch failed: {exc}", file=sys.stderr)
         return 1
 
-    out_payload = {
-        "schema_version": 1,
-        "artifact_type": "racketsport_sam3dbody_batch",
-        "request_count": len(requests),
-        "clip_intrinsics": batch_payload["clip_intrinsics"],
-        "optimization": optimization,
-        "metadata": _output_metadata(
-            optimization,
-            runtime_environment=runtime_environment,
-            mhr_correctives=mhr_correctives,
-        ),
-        "bucket_plan": batch_payload["bucket_plan"],
-        "compile_warmup": compile_warmup,
-        "batch_execution": batch_execution,
-        "frames": frames,
-    }
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(out_payload, separators=(",", ":")) + "\n", encoding="utf-8")
+    timing_summary = _sam3d_batch_timing_summary(timer.events, person_frame_count=len(requests))
+    _write_json_payload(_timing_sidecar_path(args.out), timing_summary)
+    print(SAM3D_BATCH_TIMING_STDOUT_MARKER + json.dumps(timing_summary, separators=(",", ":"), sort_keys=True))
     print(args.out)
     return 0
 
@@ -198,6 +462,563 @@ def _write_failure_output(
         out_path.write_text(json.dumps(_json_safe(payload), separators=(",", ":")) + "\n", encoding="utf-8")
     except OSError:
         pass
+
+
+def _default_chunk_dir(out_path: Path) -> Path:
+    return out_path.with_name(f"{out_path.name}.chunks")
+
+
+def _encode_json(payload: Any) -> str:
+    return json.dumps(_json_safe(payload), separators=(",", ":")) + "\n"
+
+
+def _write_jsonl_lines(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("".join(_encode_json(row) for row in rows), encoding="utf-8")
+
+
+def _write_json_payload(path: Path, payload: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(_encode_json(payload), encoding="utf-8")
+
+
+def _write_pickle_payload(path: Path, payload: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("wb") as handle:
+        pickle.dump(dict(payload), handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def _read_pickle_payload(path: Path) -> dict[str, Any]:
+    with path.open("rb") as handle:
+        payload = pickle.load(handle)
+    if not isinstance(payload, dict):
+        raise ValueError(f"pickle chunk is not an object: {path}")
+    return payload
+
+
+class _BinaryArrayWriter:
+    def __init__(self, *, chunk_path: Path) -> None:
+        self.chunk_path = chunk_path
+        self.array_dir = chunk_path.with_suffix("")
+        self.array_dir.mkdir(parents=True, exist_ok=True)
+        self.count = 0
+
+    def maybe_ref(self, field_name: str, value: Any) -> Any:
+        if field_name not in SAM3D_BULK_ARRAY_FIELDS:
+            return _json_safe(value)
+        array = _numpy_array_or_none(value)
+        if array is None:
+            return _json_safe(value)
+        rel_path = f"arrays/{_safe_array_name(field_name)}_{self.count:06d}.npy"
+        path = self.array_dir / rel_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        _numpy_save(path, array)
+        self.count += 1
+        return {
+            SAM3D_ARRAY_REF_KEY: {
+                "path": rel_path,
+                "dtype": str(array.dtype),
+                "shape": [int(value) for value in array.shape],
+            }
+        }
+
+
+def _safe_array_name(field_name: str) -> str:
+    return "".join(char if char.isalnum() or char == "_" else "_" for char in field_name)
+
+
+def _numpy_array_or_none(value: Any) -> Any | None:
+    try:
+        import numpy as np  # type: ignore[import-not-found]
+    except ImportError:
+        return None
+    item = value
+    for method_name in ("detach", "cpu"):
+        method = getattr(item, method_name, None)
+        if callable(method):
+            try:
+                item = method()
+            except Exception:
+                return None
+    numpy_method = getattr(item, "numpy", None)
+    if callable(numpy_method):
+        try:
+            item = numpy_method()
+        except Exception:
+            return None
+    try:
+        array = np.asarray(item)
+    except Exception:
+        return None
+    if array.dtype == object or array.ndim == 0:
+        return None
+    if not (np.issubdtype(array.dtype, np.number) or np.issubdtype(array.dtype, np.bool_)):
+        return None
+    return array
+
+
+def _numpy_save(path: Path, array: Any) -> None:
+    import numpy as np  # type: ignore[import-not-found]
+
+    np.save(path, array, allow_pickle=False)
+
+
+def _numpy_load(path: Path, *, mmap_mode: str | None) -> Any:
+    import numpy as np  # type: ignore[import-not-found]
+
+    return np.load(path, mmap_mode=mmap_mode, allow_pickle=False)
+
+
+def _record_public_mapping_preserve_arrays(record: Any) -> dict[str, Any]:
+    if isinstance(record, Mapping):
+        return {str(key): value for key, value in record.items()}
+    return _json_safe(record)
+
+
+def _write_binary_chunk_payload(chunk_path: Path, frames: Sequence[Mapping[str, Any]]) -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": SAM3D_BATCH_BINARY_CHUNK_ARTIFACT_TYPE,
+        "contract_version": SAM3D_BATCH_BINARY_CONTRACT_VERSION,
+        "array_encoding": "npy_per_bulk_field",
+        "frames": list(frames),
+    }
+    _write_json_payload(chunk_path, payload)
+
+
+def _resolve_binary_refs(value: Any, *, chunk_path: Path, mmap_mode: str | None, arrays_as: str) -> Any:
+    if isinstance(value, Mapping):
+        ref = value.get(SAM3D_ARRAY_REF_KEY)
+        if isinstance(ref, Mapping):
+            rel_path = str(ref.get("path", ""))
+            if not rel_path:
+                raise ValueError(f"binary SAM3D array ref missing path in {chunk_path}")
+            array = _numpy_load(chunk_path.with_suffix("") / rel_path, mmap_mode=mmap_mode)
+            return array.tolist() if arrays_as == "list" else array
+        return {str(key): _resolve_binary_refs(item, chunk_path=chunk_path, mmap_mode=mmap_mode, arrays_as=arrays_as) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_resolve_binary_refs(item, chunk_path=chunk_path, mmap_mode=mmap_mode, arrays_as=arrays_as) for item in value]
+    return value
+
+
+def _frames_from_binary_chunk(
+    chunk_path: Path,
+    *,
+    mmap_mode: str | None = None,
+    arrays_as: str = "list",
+) -> list[dict[str, Any]]:
+    payload = json.loads(chunk_path.read_text(encoding="utf-8"))
+    if payload.get("artifact_type") != SAM3D_BATCH_BINARY_CHUNK_ARTIFACT_TYPE:
+        raise ValueError(f"binary SAM3D chunk has unexpected artifact_type: {chunk_path}")
+    if int(payload.get("contract_version", 0)) != SAM3D_BATCH_BINARY_CONTRACT_VERSION:
+        raise ValueError(
+            f"unsupported SAM3D binary chunk contract {payload.get('contract_version')!r}; "
+            f"expected {SAM3D_BATCH_BINARY_CONTRACT_VERSION}"
+        )
+    frames = payload.get("frames", [])
+    if not isinstance(frames, list):
+        raise ValueError(f"binary SAM3D chunk frames are not a list: {chunk_path}")
+    resolved = _resolve_binary_refs(frames, chunk_path=chunk_path, mmap_mode=mmap_mode, arrays_as=arrays_as)
+    return [dict(frame) for frame in resolved if isinstance(frame, Mapping)]
+
+
+def _monolithic_payload_from_header(
+    payload_header: Mapping[str, Any],
+    *,
+    frames: Sequence[Mapping[str, Any]],
+    batch_execution: Mapping[str, Any],
+) -> dict[str, Any]:
+    payload = dict(payload_header)
+    payload["batch_execution"] = dict(batch_execution)
+    payload["frames"] = list(frames)
+    return payload
+
+
+def _read_chunk_index(index_path: Path) -> dict[str, Any]:
+    return json.loads(index_path.read_text(encoding="utf-8"))
+
+
+def _frames_from_chunk_index(index_path: Path) -> list[dict[str, Any]]:
+    index = _read_chunk_index(index_path)
+    chunk_dir = index_path.parent
+    frames: list[dict[str, Any]] = []
+    for chunk in index.get("chunks", []):
+        chunk_path = chunk_dir / str(chunk["path"])
+        frames.extend(_frames_from_chunk(chunk_path, chunk_format=str(chunk.get("format", ""))))
+    return frames
+
+
+def _frames_from_chunk(chunk_path: Path, *, chunk_format: str) -> list[dict[str, Any]]:
+    if chunk_format == "binary" or chunk_path.name.endswith(".binary.json"):
+        return _frames_from_binary_chunk(chunk_path, mmap_mode=None, arrays_as="list")
+    if chunk_format == "pickle" or chunk_path.suffix == ".pkl":
+        output = _bucket_output_from_raw_chunk_payload(_read_pickle_payload(chunk_path))
+        frames, _execution = _bucket_output_to_frames_and_execution(output)
+        return frames
+    if chunk_format in ("", "jsonl") or chunk_path.suffix == ".jsonl":
+        frames: list[dict[str, Any]] = []
+        for line in chunk_path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                frame = json.loads(line)
+                if isinstance(frame, dict):
+                    frames.append(frame)
+        return frames
+    raise ValueError(f"unsupported SAM3D chunk format {chunk_format!r} for {chunk_path}")
+
+
+def _ordered_frames_from_chunk_index(index_path: Path, request_ids: Sequence[str]) -> list[dict[str, Any]]:
+    frames_by_request: dict[str, dict[str, Any]] = {}
+    for frame in _frames_from_chunk_index(index_path):
+        request_id = str(frame.get("request_id"))
+        if request_id in frames_by_request:
+            raise RuntimeError(f"duplicate SAM3D output for request {request_id!r}")
+        frames_by_request[request_id] = frame
+    missing = [str(request_id) for request_id in request_ids if str(request_id) not in frames_by_request]
+    if missing:
+        raise RuntimeError(f"SAM3D bucket execution produced no output for request {missing[0]!r}")
+    return [frames_by_request[str(request_id)] for request_id in request_ids]
+
+
+def load_sam3dbody_binary_outputs_from_chunk_index(
+    index_path: Path,
+    *,
+    request_ids: Sequence[str],
+    mmap_mode: str | None = "r",
+) -> list[list[dict[str, Any]]]:
+    index = _read_chunk_index(index_path)
+    chunk_dir = index_path.parent
+    frames_by_request: dict[str, dict[str, Any]] = {}
+    for chunk in index.get("chunks", []):
+        chunk_path = chunk_dir / str(chunk["path"])
+        if str(chunk.get("format", "")) == "binary" or chunk_path.name.endswith(".binary.json"):
+            frames = _frames_from_binary_chunk(chunk_path, mmap_mode=mmap_mode, arrays_as="numpy")
+        else:
+            frames = _frames_from_chunk(chunk_path, chunk_format=str(chunk.get("format", "")))
+        for frame in frames:
+            request_id = str(frame.get("request_id"))
+            if request_id in frames_by_request:
+                raise RuntimeError(f"duplicate SAM3D output for request {request_id!r}")
+            frames_by_request[request_id] = frame
+    missing = [str(request_id) for request_id in request_ids if str(request_id) not in frames_by_request]
+    if missing:
+        raise RuntimeError(f"SAM3D bucket execution produced no output for request {missing[0]!r}")
+    outputs: list[list[dict[str, Any]]] = []
+    for request_id in request_ids:
+        records = frames_by_request[str(request_id)].get("records", [])
+        if not isinstance(records, list):
+            raise RuntimeError(f"SAM3D batch records are not a list for request {request_id!r}: {index_path}")
+        outputs.append([dict(record) for record in records if isinstance(record, Mapping)])
+    return outputs
+
+
+def _monolithic_payload_from_chunk_index(index_path: Path) -> dict[str, Any]:
+    index = _read_chunk_index(index_path)
+    template = index.get("monolithic_template")
+    if not isinstance(template, Mapping):
+        raise ValueError(f"chunk index missing monolithic_template: {index_path}")
+    batch_execution = template.get("batch_execution")
+    if not isinstance(batch_execution, Mapping):
+        raise ValueError(f"chunk index template missing batch_execution: {index_path}")
+    return _monolithic_payload_from_header(
+        template,
+        frames=_frames_from_chunk_index(index_path),
+        batch_execution=batch_execution,
+    )
+
+
+def _convert_chunked_output_to_monolithic(index_path: Path, out_path: Path) -> None:
+    payload = _monolithic_payload_from_chunk_index(index_path)
+    _write_json_payload(out_path, payload)
+
+
+def _raw_bucket_chunk_payload(output: _BucketInferenceOutput) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_sam3dbody_batch_raw_bucket",
+        "bucket_index": int(output.prepared.bucket_index),
+        "bucket_size": int(output.prepared.bucket_size),
+        "request_ids": [str(request_id) for request_id in output.prepared.request_ids],
+        "bucket_items": [dict(item) for item in output.prepared.bucket_items],
+        "execution_entry": dict(output.prepared.execution_entry),
+        "raw_records": list(output.raw_records),
+        "faces": output.faces,
+        "body_input_size": output.body_input_size,
+        "clip_intrinsics": dict(output.clip_intrinsics) if output.clip_intrinsics is not None else None,
+        "optimization": dict(output.optimization),
+    }
+
+
+def _bucket_output_from_raw_chunk_payload(payload: Mapping[str, Any]) -> _BucketInferenceOutput:
+    if payload.get("artifact_type") != "racketsport_sam3dbody_batch_raw_bucket":
+        raise ValueError("SAM3D pickle chunk has unexpected artifact_type")
+    bucket_items = [dict(item) for item in payload.get("bucket_items", [])]
+    request_ids = [str(request_id) for request_id in payload.get("request_ids", [])]
+    real_items = [item for item in bucket_items if not bool(item.get("is_padding"))]
+    prepared = _PreparedBucket(
+        bucket_index=int(payload["bucket_index"]),
+        bucket_size=int(payload["bucket_size"]),
+        request_ids=request_ids,
+        real_items=real_items,
+        bucket_items=bucket_items,
+        execution_entry=dict(payload.get("execution_entry", {})),
+        prepared_bucket=None,
+    )
+    return _BucketInferenceOutput(
+        prepared=prepared,
+        raw_records=list(payload.get("raw_records", [])),
+        faces=payload.get("faces"),
+        body_input_size=payload.get("body_input_size"),
+        clip_intrinsics=payload.get("clip_intrinsics"),
+        optimization=payload.get("optimization", {}),
+    )
+
+
+class _BatchOutputStream:
+    def __init__(
+        self,
+        *,
+        out_path: Path,
+        chunk_dir: Path,
+        request_ids: Sequence[str],
+        payload_header: Mapping[str, Any],
+        write_monolithic: bool,
+        chunk_format: str = "pickle",
+        timing: _TimingRecorder | None = None,
+    ) -> None:
+        if chunk_format not in CHUNK_FORMATS:
+            raise ValueError(f"unsupported chunk format {chunk_format!r}")
+        self.out_path = out_path
+        self.chunk_dir = chunk_dir
+        self.index_path = chunk_dir / "index.json"
+        self.request_ids = [str(request_id) for request_id in request_ids]
+        self.payload_header = dict(payload_header)
+        self.write_monolithic = bool(write_monolithic)
+        self.chunk_format = str(chunk_format)
+        self.timing = timing or _TimingRecorder()
+        self._queue: queue.Queue[_BucketInferenceOutput | _WriterFinish] = queue.Queue()
+        self._thread: threading.Thread | None = None
+        self._error: BaseException | None = None
+        self._frames_by_request: dict[str, dict[str, Any]] = {}
+        self._seen_request_ids: dict[str, None] = {}
+        self._execution_buckets: list[dict[str, Any]] = []
+        self._chunks: list[dict[str, Any]] = []
+
+    def start(self) -> None:
+        if self._thread is not None:
+            return
+        self.chunk_dir.mkdir(parents=True, exist_ok=True)
+        self._thread = threading.Thread(target=self._run, name="sam3dbody-batch-writer", daemon=True)
+        self._thread.start()
+
+    def submit(self, output: _BucketInferenceOutput) -> None:
+        self._raise_if_failed()
+        self._queue.put(output)
+
+    def finish_success(self, *, materialize_frames: bool = True) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        return self._finish(_WriterFinish(status="complete"), materialize_frames=materialize_frames)
+
+    def finish_failure(self, exc: BaseException) -> None:
+        try:
+            self._finish(_WriterFinish(status="failed", error=exc))
+        except BaseException:
+            raise
+
+    def _finish(
+        self,
+        finish: _WriterFinish,
+        *,
+        materialize_frames: bool = True,
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        self.start()
+        self._queue.put(finish)
+        assert self._thread is not None
+        self._thread.join()
+        self._raise_if_failed()
+        batch_execution = self._batch_execution()
+        if finish.status != "complete":
+            return list(self._frames_by_request.values()), batch_execution
+        if not materialize_frames:
+            return [], batch_execution
+        frames = _ordered_frames_from_chunk_index(self.index_path, self.request_ids)
+        return frames, batch_execution
+
+    def _run(self) -> None:
+        finish = _WriterFinish(status="failed", error=RuntimeError("writer stopped before final status"))
+        try:
+            while True:
+                item = self._queue.get()
+                if isinstance(item, _WriterFinish):
+                    finish = item
+                    break
+                self._write_bucket_output(item)
+            if finish.status == "complete":
+                self._validate_complete()
+                batch_execution = self._batch_execution()
+                payload = _monolithic_payload_from_header(
+                    self.payload_header,
+                    frames=[],
+                    batch_execution=batch_execution,
+                )
+                self._write_index(status="complete", batch_execution=batch_execution, template=payload, error=None)
+                if self.write_monolithic:
+                    with self.timing.span("output_write_monolithic", path=str(self.out_path)):
+                        _convert_chunked_output_to_monolithic(self.index_path, self.out_path)
+            else:
+                self._write_index(status="failed", batch_execution=self._batch_execution(), template=None, error=finish.error)
+        except BaseException as exc:  # noqa: BLE001 - writer must report failures through the main thread.
+            self._error = exc
+            try:
+                self._write_index(status="failed", batch_execution=self._batch_execution(), template=None, error=exc)
+            except OSError:
+                pass
+
+    def _write_bucket_output(self, output: _BucketInferenceOutput) -> None:
+        execution_entry = dict(output.prepared.execution_entry)
+        if self.chunk_format == "jsonl":
+            with self.timing.span(
+                "bucket_postprocess",
+                bucket_index=output.prepared.bucket_index,
+                bucket_size=output.prepared.bucket_size,
+                request_count=len(output.prepared.real_items),
+            ):
+                frames, execution_entry = _bucket_output_to_frames_and_execution(output)
+            chunk_path = self.chunk_dir / f"bucket_{output.prepared.bucket_index:06d}.jsonl"
+            request_ids = [str(frame["request_id"]) for frame in frames]
+            with self.timing.span(
+                "output_write_bucket",
+                bucket_index=output.prepared.bucket_index,
+                bucket_size=output.prepared.bucket_size,
+                path=str(chunk_path),
+                frame_count=len(frames),
+                chunk_format=self.chunk_format,
+            ):
+                _write_jsonl_lines(chunk_path, frames)
+            for frame in frames:
+                request_id = str(frame["request_id"])
+                self._mark_request_id(request_id)
+                self._frames_by_request[request_id] = frame
+        elif self.chunk_format == "binary":
+            with self.timing.span(
+                "bucket_postprocess",
+                bucket_index=output.prepared.bucket_index,
+                bucket_size=output.prepared.bucket_size,
+                request_count=len(output.prepared.real_items),
+            ):
+                frames, execution_entry = _bucket_output_to_frames_and_execution(output, preserve_arrays=True)
+            chunk_path = self.chunk_dir / f"bucket_{output.prepared.bucket_index:06d}.binary.json"
+            request_ids = [str(frame["request_id"]) for frame in frames]
+            with self.timing.span(
+                "output_write_bucket",
+                bucket_index=output.prepared.bucket_index,
+                bucket_size=output.prepared.bucket_size,
+                path=str(chunk_path),
+                frame_count=len(frames),
+                chunk_format=self.chunk_format,
+            ):
+                writer = _BinaryArrayWriter(chunk_path=chunk_path)
+                binary_frames = [_frame_with_binary_arrays(frame, writer=writer) for frame in frames]
+                _write_binary_chunk_payload(chunk_path, binary_frames)
+            for frame in frames:
+                request_id = str(frame["request_id"])
+                self._mark_request_id(request_id)
+                self._frames_by_request[request_id] = frame
+        else:
+            frames = []
+            chunk_path = self.chunk_dir / f"bucket_{output.prepared.bucket_index:06d}.pkl"
+            request_ids = [str(request_id) for request_id in output.prepared.request_ids]
+            payload = _raw_bucket_chunk_payload(output)
+            with self.timing.span(
+                "output_write_bucket",
+                bucket_index=output.prepared.bucket_index,
+                bucket_size=output.prepared.bucket_size,
+                path=str(chunk_path),
+                frame_count=len(request_ids),
+                chunk_format=self.chunk_format,
+            ):
+                _write_pickle_payload(chunk_path, payload)
+            for request_id in request_ids:
+                self._mark_request_id(request_id)
+        execution_entry = dict(execution_entry)
+        execution_entry["output_chunk"] = str(chunk_path.relative_to(self.chunk_dir))
+        execution_entry["output_chunk_format"] = self.chunk_format
+        self._execution_buckets.append(execution_entry)
+        self._chunks.append(
+            {
+                "bucket_index": output.prepared.bucket_index,
+                "path": str(chunk_path.relative_to(self.chunk_dir)),
+                "format": self.chunk_format,
+                "request_ids": request_ids,
+                "result_count": len(request_ids),
+            }
+        )
+
+    def _mark_request_id(self, request_id: str) -> None:
+        if request_id in self._seen_request_ids:
+            raise RuntimeError(f"duplicate SAM3D output for request {request_id!r}")
+        self._seen_request_ids[request_id] = None
+
+    def _batch_execution(self) -> dict[str, Any]:
+        timing_mode = _timing_mode(self.payload_header.get("optimization", {}))
+        return {
+            "mode": "real_bucketed_body_batch",
+            "timing_mode": timing_mode,
+            "timing_notes": _timing_notes(timing_mode),
+            "buckets": list(self._execution_buckets),
+            "request_count": len(self.request_ids),
+            "output_count": len(self._seen_request_ids),
+            "streaming_output": {
+                "format": f"{self.chunk_format}_chunks_with_monolithic_converter",
+                "chunk_dir": str(self.chunk_dir),
+                "index_path": str(self.index_path),
+                "chunk_count": len(self._chunks),
+                "monolithic_written": bool(self.write_monolithic),
+            },
+        }
+
+    def _validate_complete(self) -> None:
+        missing = [request_id for request_id in self.request_ids if request_id not in self._seen_request_ids]
+        if missing:
+            raise RuntimeError(f"SAM3D bucket execution produced no output for request {missing[0]!r}")
+        if len(self._seen_request_ids) != len(self.request_ids):
+            raise RuntimeError(
+                f"SAM3D bucket execution produced {len(self._seen_request_ids)} unique outputs "
+                f"for {len(self.request_ids)} requests"
+            )
+
+    def _write_index(
+        self,
+        *,
+        status: str,
+        batch_execution: Mapping[str, Any],
+        template: Mapping[str, Any] | None,
+        error: BaseException | None,
+    ) -> None:
+        payload = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_sam3dbody_batch_chunk_index",
+            "status": status,
+            "out_path": str(self.out_path),
+            "chunk_dir": str(self.chunk_dir),
+            "request_count": len(self.request_ids),
+            "result_count": len(self._seen_request_ids),
+            "request_ids": list(self._seen_request_ids.keys()),
+            "chunks": list(self._chunks),
+            "batch_execution": dict(batch_execution),
+            "monolithic_template": dict(template) if template is not None else None,
+            "error": (
+                {
+                    "type": type(error).__name__,
+                    "message": str(error),
+                }
+                if error is not None
+                else None
+            ),
+        }
+        _write_json_payload(self.index_path, payload)
+
+    def _raise_if_failed(self) -> None:
+        if self._error is not None:
+            raise self._error
 
 
 def _parse_batch_payload(payload: Any) -> dict[str, Any]:
@@ -248,6 +1069,10 @@ def _parse_optimization(raw_value: Any) -> dict[str, Any]:
         "tier2_output_lite": _bool_flag(
             raw.get("tier2_output_lite", False),
             name="optimization.tier2_output_lite",
+        ),
+        "prefetch_buckets": _nonnegative_int(
+            raw.get("prefetch_buckets", 1),
+            name="optimization.prefetch_buckets",
         ),
     }
 
@@ -401,6 +1226,29 @@ def _positive_int(raw_value: Any, *, name: str) -> int:
     return value
 
 
+def _nonnegative_int(raw_value: Any, *, name: str) -> int:
+    if isinstance(raw_value, bool):
+        raise ValueError(f"{name} must be a non-negative integer")
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a non-negative integer") from exc
+    if value < 0:
+        raise ValueError(f"{name} must be non-negative")
+    return value
+
+
+def _apply_bucket_size_override(optimization: Mapping[str, Any], *, bucket_size: int | None) -> dict[str, Any]:
+    parsed = _parse_optimization(optimization)
+    if bucket_size is None:
+        return parsed
+    size = _positive_int(bucket_size, name="--bucket-size")
+    parsed["crop_bucket_sizes"] = [size]
+    if parsed.get("torch_compile"):
+        parsed["compile_warmup_buckets"] = [size]
+    return parsed
+
+
 def _bucket_plan(request_ids: list[str], *, bucket_sizes: list[int]) -> list[dict[str, Any]]:
     if not request_ids:
         return []
@@ -438,6 +1286,64 @@ def _bucket_plan(request_ids: list[str], *, bucket_sizes: list[int]) -> list[dic
     return plan
 
 
+def _production_decoder_callable(estimator: Any) -> Any | None:
+    model = getattr(estimator, "model", None)
+    if model is None:
+        return None
+    candidate = getattr(model, "forward_decoder", None)
+    return candidate if callable(candidate) else None
+
+
+def _callable_identity(callable_obj: Any) -> dict[str, Any]:
+    bound_self = getattr(callable_obj, "__self__", None)
+    bound_func = getattr(callable_obj, "__func__", None)
+    if bound_self is not None and bound_func is not None:
+        return {
+            "kind": "bound_method",
+            "self_type": type(bound_self).__name__,
+            "self_id": id(bound_self),
+            "function_module": str(getattr(bound_func, "__module__", "")),
+            "function_qualname": str(getattr(bound_func, "__qualname__", "")),
+            "function_id": id(bound_func),
+        }
+    return {
+        "kind": "callable",
+        "callable_type": type(callable_obj).__name__,
+        "callable_id": id(callable_obj),
+        "module": str(getattr(callable_obj, "__module__", "")),
+        "qualname": str(getattr(callable_obj, "__qualname__", "")),
+    }
+
+
+def _production_callable_identity(estimator: Any) -> dict[str, Any] | None:
+    candidate = _production_decoder_callable(estimator)
+    if candidate is None:
+        return None
+    identity = _callable_identity(candidate)
+    identity["path"] = "estimator.model.forward_decoder"
+    return identity
+
+
+def _remember_warmed_production_callable(estimator: Any) -> dict[str, Any] | None:
+    identity = _production_callable_identity(estimator)
+    if identity is not None:
+        setattr(estimator, PRODUCTION_CALLABLE_IDENTITY_ATTR, identity)
+    return identity
+
+
+def _assert_warmed_production_callable(estimator: Any) -> dict[str, Any] | None:
+    expected = getattr(estimator, PRODUCTION_CALLABLE_IDENTITY_ATTR, None)
+    if expected is None:
+        return None
+    current = _production_callable_identity(estimator)
+    if current != expected:
+        raise RuntimeError(
+            "production SAM3D decoder callable changed after warmup; "
+            f"warmed={expected}, current={current}"
+        )
+    return current
+
+
 def _run_bucketed_inference(
     estimator: Any,
     requests: Sequence[Mapping[str, Any]],
@@ -448,131 +1354,356 @@ def _run_bucketed_inference(
     body_input_size: int | None,
     clip_intrinsics: Mapping[str, Any] | None = None,
     optimization: Mapping[str, Any] | None = None,
+    output_stream: _BatchOutputStream | None = None,
+    timing: _TimingRecorder | None = None,
+    materialize_streamed_frames: bool = True,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     optimization = _parse_optimization(optimization or {})
     request_by_id = {str(request["request_id"]): request for request in requests}
     frames_by_request: dict[str, dict[str, Any]] = {}
     execution_buckets: list[dict[str, Any]] = []
+    timing = timing or _TimingRecorder()
+    if output_stream is not None:
+        output_stream.start()
     if not optimization["inner_bucket_sync"]:
         _synchronize_cuda_boundary()
-    for bucket_index, bucket in enumerate(bucket_plan):
-        request_ids = [str(request_id) for request_id in bucket.get("request_ids", [])]
-        real_items: list[dict[str, Any]] = []
-        for request_id in request_ids:
-            if request_id not in request_by_id:
-                raise ValueError(f"bucket_plan/{bucket_index} references unknown request_id {request_id!r}")
-            request = request_by_id[request_id]
-            bboxes = request.get("bboxes", [])
-            if len(bboxes) != 1:
-                raise ValueError(
-                    "real SAM3D bucketed body execution requires exactly one crop per request; "
-                    f"request {request_id!r} has {len(bboxes)} bboxes"
+    try:
+        for prepared in _iter_prepared_buckets(
+            estimator,
+            bucket_plan,
+            request_by_id=request_by_id,
+            clip_cam_int=clip_cam_int,
+            optimization=optimization,
+            timing=timing,
+        ):
+            with timing.span(
+                "bucket_inference",
+                bucket_index=prepared.bucket_index,
+                bucket_size=prepared.bucket_size,
+                request_count=len(prepared.real_items),
+                padded_request_count=len(prepared.bucket_items),
+            ):
+                _assert_warmed_production_callable(estimator)
+                raw_records = _process_sam3d_body_bucket(
+                    estimator,
+                    prepared.bucket_items,
+                    clip_cam_int=clip_cam_int,
+                    optimization=optimization,
+                    prepared_bucket=prepared.prepared_bucket,
                 )
-            mask_paths = list(request.get("mask_paths", []))
-            real_items.append(
-                {
-                    "request": request,
-                    "request_id": request_id,
-                    "bbox": list(bboxes[0]),
-                    "bbox_index": 0,
-                    "mask_path": mask_paths[0] if mask_paths else None,
-                    "is_padding": False,
-                    "target_representation": str(request.get("target_representation", "world_mesh")),
-                }
+            output = _BucketInferenceOutput(
+                prepared=prepared,
+                raw_records=raw_records,
+                faces=faces,
+                body_input_size=body_input_size,
+                clip_intrinsics=clip_intrinsics,
+                optimization=optimization,
             )
-        if not real_items:
-            continue
-        bucket_size = int(bucket.get("bucket_size", len(real_items)))
-        if bucket_size < len(real_items):
+            if output_stream is not None:
+                output_stream.submit(output)
+            else:
+                with timing.span(
+                    "bucket_postprocess",
+                    bucket_index=prepared.bucket_index,
+                    bucket_size=prepared.bucket_size,
+                    request_count=len(prepared.real_items),
+                ):
+                    frames, execution_entry = _bucket_output_to_frames_and_execution(output)
+                for frame in frames:
+                    request_id = str(frame["request_id"])
+                    if request_id in frames_by_request:
+                        raise RuntimeError(f"duplicate SAM3D output for request {request_id!r}")
+                    frames_by_request[request_id] = frame
+                execution_buckets.append(execution_entry)
+        if output_stream is not None:
+            frames, batch_execution = output_stream.finish_success(materialize_frames=materialize_streamed_frames)
+        else:
+            frames = []
+            for request in requests:
+                request_id = str(request["request_id"])
+                if request_id not in frames_by_request:
+                    raise RuntimeError(f"SAM3D bucket execution produced no output for request {request_id!r}")
+                frames.append(frames_by_request[request_id])
+            timing_mode = _timing_mode(optimization)
+            batch_execution = {
+                "mode": "real_bucketed_body_batch",
+                "timing_mode": timing_mode,
+                "timing_notes": _timing_notes(timing_mode),
+                "buckets": execution_buckets,
+                "request_count": len(requests),
+                "output_count": len(frames),
+            }
+    except BaseException as exc:
+        if output_stream is not None:
+            output_stream.finish_failure(exc)
+        raise
+    if output_stream is None:
+        frames = []
+        for request in requests:
+            request_id = str(request["request_id"])
+            frames.append(frames_by_request[request_id])
+    if not optimization["inner_bucket_sync"]:
+        _synchronize_cuda_boundary()
+    return frames, batch_execution
+
+
+def _iter_prepared_buckets(
+    estimator: Any,
+    bucket_plan: Sequence[Mapping[str, Any]],
+    *,
+    request_by_id: Mapping[str, Mapping[str, Any]],
+    clip_cam_int: Any | None,
+    optimization: Mapping[str, Any],
+    timing: _TimingRecorder,
+) -> Any:
+    prefetch_buckets = int(optimization.get("prefetch_buckets", 1))
+    if prefetch_buckets <= 0:
+        for bucket_index, bucket in enumerate(bucket_plan):
+            prepared = _prepare_bucket_job(
+                estimator,
+                bucket_index,
+                bucket,
+                request_by_id=request_by_id,
+                clip_cam_int=clip_cam_int,
+                optimization=optimization,
+                timing=timing,
+            )
+            if prepared is not None:
+                yield prepared
+        return
+
+    work_queue: queue.Queue[_PreparedBucket | BaseException | None] = queue.Queue(maxsize=prefetch_buckets)
+    stop_event = threading.Event()
+
+    def put_item(item: _PreparedBucket | BaseException | None) -> None:
+        while not stop_event.is_set():
+            try:
+                work_queue.put(item, timeout=0.1)
+                return
+            except queue.Full:
+                continue
+
+    def load() -> None:
+        try:
+            for bucket_index, bucket in enumerate(bucket_plan):
+                if stop_event.is_set():
+                    return
+                prepared = _prepare_bucket_job(
+                    estimator,
+                    bucket_index,
+                    bucket,
+                    request_by_id=request_by_id,
+                    clip_cam_int=clip_cam_int,
+                    optimization=optimization,
+                    timing=timing,
+                )
+                if prepared is not None:
+                    put_item(prepared)
+        except BaseException as exc:  # noqa: BLE001 - propagated on the consumer thread.
+            put_item(exc)
+        finally:
+            put_item(None)
+
+    thread = threading.Thread(target=load, name="sam3dbody-bucket-prefetch", daemon=True)
+    thread.start()
+    try:
+        while True:
+            item = work_queue.get()
+            if item is None:
+                break
+            if isinstance(item, BaseException):
+                raise item
+            yield item
+    finally:
+        stop_event.set()
+        thread.join()
+
+
+def _prepare_bucket_job(
+    estimator: Any,
+    bucket_index: int,
+    bucket: Mapping[str, Any],
+    *,
+    request_by_id: Mapping[str, Mapping[str, Any]],
+    clip_cam_int: Any | None,
+    optimization: Mapping[str, Any],
+    timing: _TimingRecorder,
+) -> _PreparedBucket | None:
+    request_ids = [str(request_id) for request_id in bucket.get("request_ids", [])]
+    real_items: list[dict[str, Any]] = []
+    for request_id in request_ids:
+        if request_id not in request_by_id:
+            raise ValueError(f"bucket_plan/{bucket_index} references unknown request_id {request_id!r}")
+        request = request_by_id[request_id]
+        bboxes = request.get("bboxes", [])
+        if len(bboxes) != 1:
             raise ValueError(
-                f"bucket_plan/{bucket_index} bucket_size {bucket_size} is smaller than real request count "
-                f"{len(real_items)}"
+                "real SAM3D bucketed body execution requires exactly one crop per request; "
+                f"request {request_id!r} has {len(bboxes)} bboxes"
             )
-        bucket_items = list(real_items)
-        while len(bucket_items) < bucket_size:
-            padded = dict(real_items[-1])
-            padded["is_padding"] = True
-            bucket_items.append(padded)
-        raw_records = _process_sam3d_body_bucket(
+        mask_paths = list(request.get("mask_paths", []))
+        real_items.append(
+            {
+                "request": request,
+                "request_id": request_id,
+                "bbox": list(bboxes[0]),
+                "bbox_index": 0,
+                "mask_path": mask_paths[0] if mask_paths else None,
+                "is_padding": False,
+                "target_representation": str(request.get("target_representation", "world_mesh")),
+            }
+        )
+    if not real_items:
+        return None
+    bucket_size = int(bucket.get("bucket_size", len(real_items)))
+    if bucket_size < len(real_items):
+        raise ValueError(
+            f"bucket_plan/{bucket_index} bucket_size {bucket_size} is smaller than real request count "
+            f"{len(real_items)}"
+        )
+    bucket_items = list(real_items)
+    while len(bucket_items) < bucket_size:
+        padded = dict(real_items[-1])
+        padded["is_padding"] = True
+        bucket_items.append(padded)
+    with timing.span("request_prep", bucket_index=bucket_index, bucket_size=bucket_size, request_count=len(real_items)):
+        prepared_bucket = _prepare_sam3d_body_bucket(
             estimator,
             bucket_items,
             clip_cam_int=clip_cam_int,
-            optimization=optimization,
         )
-        records = [_json_safe(record) for record in _extract_person_records(raw_records)]
-        if len(records) != len(bucket_items):
-            raise RuntimeError(
-                f"SAM3D bucket {bucket_index} returned {len(records)} records for bucket size {len(bucket_items)}"
-            )
-        for item, record in zip(bucket_items, records, strict=True):
-            if item["is_padding"]:
-                continue
-            target_representation = str(item.get("target_representation", "world_mesh"))
-            record = _output_record_for_representation(
-                record,
-                target_representation=target_representation,
-                tier2_output_lite=optimization["tier2_output_lite"],
-            )
-            if (
-                faces
-                and target_representation != TIER2_BODY_JOINTS_REPRESENTATION
-                and isinstance(record, dict)
-                and "mesh_faces" not in record
-                and "faces" not in record
-            ):
-                record["mesh_faces"] = faces
-            request = item["request"]
-            request_id = str(request["request_id"])
-            frames_by_request[request_id] = {
+    return _PreparedBucket(
+        bucket_index=bucket_index,
+        bucket_size=bucket_size,
+        request_ids=request_ids,
+        real_items=real_items,
+        bucket_items=bucket_items,
+        execution_entry={
+            "bucket_index": bucket_index,
+            "bucket_size": bucket_size,
+            "real_request_count": len(real_items),
+            "padding_count": bucket_size - len(real_items),
+            "padded_request_count": len(bucket_items),
+            "padded_crop_ratio": (bucket_size - len(real_items)) / bucket_size if bucket_size else 0.0,
+            "request_ids": request_ids,
+            "execution_shape": [1, bucket_size],
+            "warmup_shape_contract": "same_batch_size_as_real_execution",
+        },
+        prepared_bucket=prepared_bucket,
+    )
+
+
+def _prepare_sam3d_body_bucket(
+    estimator: Any,
+    bucket_items: Sequence[Mapping[str, Any]],
+    *,
+    clip_cam_int: Any | None,
+) -> Any:
+    prepare_hook = getattr(estimator, "prepare_body_bucket", None)
+    if callable(prepare_hook):
+        return prepare_hook(list(bucket_items), cam_int=clip_cam_int)
+    if callable(getattr(estimator, "process_body_bucket", None)):
+        return None
+    return _build_sam3d_body_batch(
+        estimator,
+        bucket_items,
+        clip_cam_int=clip_cam_int,
+        target_device=None,
+    )
+
+
+def _bucket_output_to_frames_and_execution(
+    output: _BucketInferenceOutput,
+    *,
+    preserve_arrays: bool = False,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if preserve_arrays:
+        records = [_record_public_mapping_preserve_arrays(record) for record in _extract_person_records(output.raw_records)]
+    else:
+        records = [_json_safe(record) for record in _extract_person_records(output.raw_records)]
+    bucket_items = output.prepared.bucket_items
+    if len(records) != len(bucket_items):
+        raise RuntimeError(
+            f"SAM3D bucket {output.prepared.bucket_index} returned {len(records)} records "
+            f"for bucket size {len(bucket_items)}"
+        )
+    frames: list[dict[str, Any]] = []
+    optimization = _parse_optimization(output.optimization)
+    for item, record in zip(bucket_items, records, strict=True):
+        if item["is_padding"]:
+            continue
+        target_representation = str(item.get("target_representation", "world_mesh"))
+        record = _output_record_for_representation(
+            dict(record),
+            target_representation=target_representation,
+            tier2_output_lite=optimization["tier2_output_lite"],
+        )
+        if (
+            _has_faces(output.faces)
+            and target_representation != TIER2_BODY_JOINTS_REPRESENTATION
+            and isinstance(record, dict)
+            and "mesh_faces" not in record
+            and "faces" not in record
+        ):
+            record["mesh_faces"] = output.faces
+        request = item["request"]
+        request_id = str(request["request_id"])
+        frames.append(
+            {
                 "request_id": request_id,
                 "image_path": str(Path(request["image"]).resolve()),
                 "requested_bboxes": request["bboxes"],
                 "requested_masks": [str(path) for path in request.get("mask_paths", [])],
                 "camera_intrinsics": (
-                    clip_intrinsics["matrix"]
-                    if clip_intrinsics is not None
+                    output.clip_intrinsics["matrix"]
+                    if output.clip_intrinsics is not None
                     else request.get("camera_intrinsics")
                 ),
                 "camera_intrinsics_source": (
-                    clip_intrinsics.get("source", "")
-                    if clip_intrinsics is not None
+                    output.clip_intrinsics.get("source", "")
+                    if output.clip_intrinsics is not None
                     else ("request" if request.get("camera_intrinsics") is not None else "")
                 ),
-                "sam3d_body_input_size_px": body_input_size or request.get("sam3d_body_input_size_px"),
+                "sam3d_body_input_size_px": output.body_input_size or request.get("sam3d_body_input_size_px"),
                 "records": [record],
                 "summary": {"record_count": 1},
                 "target_representation": target_representation,
             }
-        execution_buckets.append(
-            {
-                "bucket_index": bucket_index,
-                "bucket_size": bucket_size,
-                "real_request_count": len(real_items),
-                "padding_count": bucket_size - len(real_items),
-                "padded_request_count": len(bucket_items),
-                "padded_crop_ratio": (bucket_size - len(real_items)) / bucket_size if bucket_size else 0.0,
-                "request_ids": request_ids,
-                "execution_shape": [1, bucket_size],
-                "warmup_shape_contract": "same_batch_size_as_real_execution",
-            }
         )
-    frames = []
-    for request in requests:
-        request_id = str(request["request_id"])
-        if request_id not in frames_by_request:
-            raise RuntimeError(f"SAM3D bucket execution produced no output for request {request_id!r}")
-        frames.append(frames_by_request[request_id])
-    if not optimization["inner_bucket_sync"]:
-        _synchronize_cuda_boundary()
-    timing_mode = _timing_mode(optimization)
-    return frames, {
-        "mode": "real_bucketed_body_batch",
-        "timing_mode": timing_mode,
-        "timing_notes": _timing_notes(timing_mode),
-        "buckets": execution_buckets,
-        "request_count": len(requests),
-        "output_count": len(frames),
-    }
+    return frames, dict(output.prepared.execution_entry)
+
+
+def _has_faces(value: Any) -> bool:
+    if value is None:
+        return False
+    item = value
+    tolist = getattr(item, "tolist", None)
+    if callable(tolist):
+        try:
+            item = tolist()
+        except Exception:
+            return True
+    if isinstance(item, Sequence) and not isinstance(item, str | bytes | bytearray):
+        return len(item) > 0
+    return bool(item)
+
+
+def _frame_with_binary_arrays(frame: Mapping[str, Any], *, writer: _BinaryArrayWriter) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key, value in frame.items():
+        if key == "records" and isinstance(value, list):
+            out[key] = [
+                {
+                    str(record_key): writer.maybe_ref(str(record_key), record_value)
+                    for record_key, record_value in record.items()
+                }
+                if isinstance(record, Mapping)
+                else _json_safe(record)
+                for record in value
+            ]
+        else:
+            out[str(key)] = _json_safe(value)
+    return out
 
 
 def _process_sam3d_body_bucket(
@@ -581,7 +1712,11 @@ def _process_sam3d_body_bucket(
     *,
     clip_cam_int: Any | None,
     optimization: Mapping[str, Any],
+    prepared_bucket: Any = None,
 ) -> list[Any]:
+    prepared_hook = getattr(estimator, "process_prepared_body_bucket", None)
+    if callable(prepared_hook):
+        return list(prepared_hook(list(bucket_items), prepared_bucket, cam_int=clip_cam_int))
     test_hook = getattr(estimator, "process_body_bucket", None)
     if callable(test_hook):
         return list(test_hook(list(bucket_items), cam_int=clip_cam_int))
@@ -590,6 +1725,7 @@ def _process_sam3d_body_bucket(
         bucket_items,
         clip_cam_int=clip_cam_int,
         optimization=optimization,
+        prepared_batch=prepared_bucket,
     )
 
 
@@ -606,6 +1742,7 @@ def _build_sam3d_body_batch(
     bucket_items: Sequence[Mapping[str, Any]],
     *,
     clip_cam_int: Any | None,
+    target_device: str | None = "cuda",
 ) -> _Sam3DBodyBatch:
     import cv2  # type: ignore[import-not-found]
     import numpy as np  # type: ignore[import-not-found]
@@ -667,7 +1804,7 @@ def _build_sam3d_body_batch(
         )
 
     return _Sam3DBodyBatch(
-        batch=recursive_to(batch, "cuda"),
+        batch=recursive_to(batch, target_device) if target_device is not None else batch,
         rgb_images=rgb_images,
         mask_scores=mask_scores,
     )
@@ -800,12 +1937,23 @@ def _sam3d_batch_guard_signature(batch: Mapping[str, Any], torch_module: Any | N
     }
 
 
+def _sam3d_body_batch_to_cuda(batch_input: _Sam3DBodyBatch) -> _Sam3DBodyBatch:
+    from sam_3d_body.utils import recursive_to  # type: ignore[import-not-found]
+
+    return _Sam3DBodyBatch(
+        batch=recursive_to(batch_input.batch, "cuda"),
+        rgb_images=batch_input.rgb_images,
+        mask_scores=batch_input.mask_scores,
+    )
+
+
 def _process_sam3d_body_bucket_direct(
     estimator: Any,
     bucket_items: Sequence[Mapping[str, Any]],
     *,
     clip_cam_int: Any | None,
     optimization: Mapping[str, Any],
+    prepared_batch: Any = None,
 ) -> list[dict[str, Any]]:
     import numpy as np  # type: ignore[import-not-found]
     import torch  # type: ignore[import-not-found]
@@ -813,11 +1961,14 @@ def _process_sam3d_body_bucket_direct(
 
     with torch.inference_mode():
         _prepare_estimator_for_bucket(estimator, torch, optimization=optimization)
-        batch_input = _build_sam3d_body_batch(
-            estimator,
-            bucket_items,
-            clip_cam_int=clip_cam_int,
-        )
+        if isinstance(prepared_batch, _Sam3DBodyBatch):
+            batch_input = _sam3d_body_batch_to_cuda(prepared_batch)
+        else:
+            batch_input = _build_sam3d_body_batch(
+                estimator,
+                bucket_items,
+                clip_cam_int=clip_cam_int,
+            )
         pose_output = _run_sam3d_body_model(
             estimator,
             batch_input,
@@ -969,19 +2120,24 @@ def _output_metadata(
     *,
     runtime_environment: Mapping[str, Any],
     mhr_correctives: Mapping[str, Any],
+    timing_events: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     timing_mode = _timing_mode(optimization)
     return {
         "timing_mode": timing_mode,
         "timing_notes": _timing_notes(timing_mode),
         "upstream_env": dict(runtime_environment.get("upstream_env", {})),
+        "compile_environment": dict(runtime_environment.get("compile_environment", {})),
         "mhr_correctives": dict(mhr_correctives),
+        "timings": timing_events if timing_events is not None else [],
     }
 
 
 def _configure_runtime_environment(optimization: Mapping[str, Any]) -> dict[str, Any]:
-    _configure_compile_environment(optimization)
-    return {"upstream_env": _apply_upstream_env(optimization.get("upstream_env", {}))}
+    return {
+        "compile_environment": _configure_compile_environment(optimization),
+        "upstream_env": _apply_upstream_env(optimization.get("upstream_env", {})),
+    }
 
 
 def _apply_upstream_env(raw_env: Mapping[str, Any], *, environ: Any = os.environ) -> dict[str, str]:
@@ -1017,14 +2173,28 @@ def _detect_mhr_correctives_active(estimator: Any) -> dict[str, Any]:
     return {"status": "unknown", "active": None, "source": "apply_correctives_not_found"}
 
 
-def _configure_compile_environment(optimization: Mapping[str, Any]) -> None:
+def _configure_compile_environment(optimization: Mapping[str, Any], *, environ: Any = os.environ) -> dict[str, Any]:
+    warmup_buckets = [int(value) for value in optimization.get("compile_warmup_buckets", [])]
     if optimization.get("torch_compile"):
-        os.environ["USE_COMPILE"] = "1"
-        warmup_buckets = [int(value) for value in optimization.get("compile_warmup_buckets", [])]
-        if warmup_buckets:
-            os.environ["COMPILE_WARMUP_BATCH_SIZES"] = ",".join(str(value) for value in warmup_buckets)
-    else:
-        os.environ["USE_COMPILE"] = "0"
+        environ["USE_COMPILE"] = "1"
+        # Upstream Fast-SAM warmup calls forward_step_merged, which compiles
+        # _forward_decoders_combined. Production buckets use run_inference body
+        # mode and forward_decoder_body, so the runner owns the shape warmup.
+        environ["COMPILE_WARMUP_BATCH_SIZES"] = ""
+        return {
+            "use_compile": True,
+            "upstream_estimator_compile_warmup": "disabled",
+            "script_compile_warmup_buckets": warmup_buckets,
+            "warmup_path": "run_inference_body_forward_decoder_body",
+        }
+    environ["USE_COMPILE"] = "0"
+    environ["COMPILE_WARMUP_BATCH_SIZES"] = ""
+    return {
+        "use_compile": False,
+        "upstream_estimator_compile_warmup": "disabled",
+        "script_compile_warmup_buckets": warmup_buckets,
+        "warmup_path": "skipped_torch_compile_disabled",
+    }
 
 
 def _warmup_static_clip_intrinsics(
@@ -1032,6 +2202,7 @@ def _warmup_static_clip_intrinsics(
     *,
     clip_intrinsics: Mapping[str, Any] | None,
     optimization: Mapping[str, Any],
+    timing: _TimingRecorder | None = None,
 ) -> dict[str, Any]:
     warmup_buckets = [int(value) for value in optimization.get("compile_warmup_buckets", [])]
     warmup_passes = _positive_int(
@@ -1044,10 +2215,12 @@ def _warmup_static_clip_intrinsics(
             "reason": "torch_compile_or_static_intrinsics_disabled",
             "warmup_buckets": warmup_buckets,
             "warmup_passes_per_shape": warmup_passes,
+            "production_callable_identity": _production_callable_identity(estimator),
         }
     try:
         import torch  # type: ignore[import-not-found]
 
+        production_callable_identity_before = _production_callable_identity(estimator)
         image_size_hw = _warmup_image_size_hw(estimator, clip_intrinsics=clip_intrinsics)
         cam_int = _camera_intrinsics_tensor(clip_intrinsics["matrix"])
         warmed = []
@@ -1056,6 +2229,7 @@ def _warmup_static_clip_intrinsics(
         warmup_call_sequence = []
         for batch_size in warmup_buckets:
             real_batch_size = int(batch_size)
+            bucket_start = time.monotonic()
             warmup_items = _synthetic_sam3d_warmup_bucket_items(
                 real_batch_size,
                 image_size_hw=image_size_hw,
@@ -1081,7 +2255,16 @@ def _warmup_static_clip_intrinsics(
                     torch.cuda.synchronize()
                 warmup_call_count_by_bucket[str(real_batch_size)] += 1
                 warmup_call_sequence.append({"bucket_size": real_batch_size, "pass_index": pass_index + 1})
+            if timing is not None:
+                timing.record(
+                    "compile_warmup_bucket",
+                    bucket_start,
+                    time.monotonic(),
+                    bucket_size=real_batch_size,
+                    pass_count=warmup_passes,
+                )
             warmed.append(real_batch_size)
+        production_callable_identity_after = _remember_warmed_production_callable(estimator)
         return {
             "status": "ran",
             "warmup_buckets": warmed,
@@ -1092,6 +2275,9 @@ def _warmup_static_clip_intrinsics(
             "warmup_shape_contract": "same_batch_sizes_as_real_bucketed_body_execution",
             "warmup_batch_builder": "shared_with_real_bucketed_body_execution",
             "model_entrypoint": "run_inference",
+            "production_callable_identity_before": production_callable_identity_before,
+            "production_callable_identity_after": production_callable_identity_after,
+            "production_callable_identity_contract": "warmup_and_bucket_execution_must_match",
             "grad_enabled": False,
             "inference_mode": True,
             "batch_guard_signatures": warmup_signatures,
@@ -1104,6 +2290,7 @@ def _warmup_static_clip_intrinsics(
             "warmup_buckets": warmup_buckets,
             "warmup_passes_per_shape": warmup_passes,
             "static_clip_intrinsics": True,
+            "production_callable_identity": _production_callable_identity(estimator),
             "error": str(exc),
         }
 

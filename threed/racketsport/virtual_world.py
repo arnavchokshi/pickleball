@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
-from typing import Any, Callable, Literal, Mapping
+from typing import Any, Callable, Literal, Mapping, Sequence
 
 from pydantic import ValidationError
 
 from .court_calibration import project_image_points_to_world
 from .court_templates import get_court_template
 from .eval_guard import assert_not_training_on_eval_clip
+from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
+from .pose_fast import RTMW3D_WHOLEBODY_133_JOINT_NAMES
 from .racket6dof import SE3PoseConfidence, camera_paddle_pose_to_court_world, paddle_face_corners_object_cm
 from .racket_true_corners import is_box_derived_source
 from .schemas import (
@@ -23,12 +26,42 @@ from .schemas import (
     VirtualWorld,
     validate_artifact_file,
 )
+from .skeleton3d import SAM3D_BODY_MHR70_SEMANTIC_MAP
 from .trust_band import build_trust_band, derive_court_trust_band
 
 
 SCHEMA_VERSION = 1
 ARTIFACT_TYPE = "racketsport_virtual_world"
 WORLD_FRAME = "court_Z0"
+PADDLE_HANDLE_LENGTH_M = 5.25 * 0.0254
+PADDLE_HANDLE_WIDTH_M = 1.25 * 0.0254
+PADDLE_THICKNESS_M = 0.55 * 0.0254
+PADDLE_MESH_FACES = [
+    [0, 1, 2],
+    [0, 2, 3],
+    [4, 6, 5],
+    [4, 7, 6],
+    [0, 4, 5],
+    [0, 5, 1],
+    [1, 5, 6],
+    [1, 6, 2],
+    [2, 6, 7],
+    [2, 7, 3],
+    [3, 7, 4],
+    [3, 4, 0],
+    [8, 9, 10],
+    [8, 10, 11],
+    [12, 14, 13],
+    [12, 15, 14],
+    [8, 12, 13],
+    [8, 13, 9],
+    [9, 13, 14],
+    [9, 14, 10],
+    [10, 14, 15],
+    [10, 15, 11],
+    [11, 15, 12],
+    [11, 12, 8],
+]
 ROOT = Path(__file__).resolve().parents[2]
 EVAL_CLIPS_ROOT = ROOT / "eval_clips" / "ball"
 PHYSICS_TRUST_STATUSES = {"corrected", "interpolated", "physics_derived"}
@@ -60,6 +93,7 @@ def build_virtual_world_state(
     racket_pose_estimate: Mapping[str, Any] | None = None,
     placement_calibration_path: str | Path | None = None,
     artifact_paths: Mapping[str, str | Path | None] | None = None,
+    membership_path: str | Path | None = None,
     ball_world_policy: BallWorldPolicy | str = DEFAULT_BALL_WORLD_POLICY,
 ) -> dict[str, Any]:
     """Build one inspectable world artifact from already-produced stage outputs.
@@ -98,9 +132,20 @@ def build_virtual_world_state(
     )
     racket_estimate_obj = _raw_mapping(racket_pose_estimate, artifact="racket_pose_estimate")
     paths = {key: str(value) for key, value in (artifact_paths or {}).items() if value is not None}
+    membership_preview = _load_player_membership_preview(
+        membership_path,
+        placement_calibration_path=placement_calibration_path,
+        artifact_paths=paths,
+    )
 
     fps = _world_fps(tracks_obj, smpl_obj, skeleton_obj, ball_physics_obj, ball_obj, racket_estimate_obj, racket_obj)
     players = _players(tracks_obj=tracks_obj, smpl_obj=smpl_obj, skeleton_obj=skeleton_obj)
+    membership_summary = _apply_player_membership_preview(
+        players,
+        membership_preview=membership_preview,
+        trust_bands=trust_bands,
+    )
+    joint_names = _world_joint_names_from_skeleton(skeleton_obj)
     _fill_no_data_player_frames(players)
     _apply_physics_footlock(players, footlock_obj, evidence_path=paths.get("physics_footlock"))
     ball = _ball(
@@ -116,7 +161,13 @@ def build_virtual_world_state(
         estimate=racket_estimate_obj is not None,
         evidence_path=paths.get("racket_pose_estimate"),
     )
-    warnings = [*_warnings(players=players, ball=ball, paddles=paddles), *paddle_warnings]
+    if membership_summary is not None:
+        paddles = _filter_membership_excluded_paddles(paddles, membership_summary=membership_summary)
+    warnings = [
+        *_warnings(players=players, ball=ball, paddles=paddles),
+        *paddle_warnings,
+        *_membership_preview_warnings(membership_summary),
+    ]
     court = _court(calibration, placement_calibration_path=placement_calibration_path)
     _attach_trust_bands(court=court, players=players, ball=ball, paddles=paddles, trust_bands=trust_bands)
     payload = {
@@ -137,6 +188,8 @@ def build_virtual_world_state(
             paddle_metadata=paddle_metadata,
         ),
     }
+    if joint_names:
+        payload["joint_names"] = joint_names
     validation_payload = dict(payload)
     validation_payload["summary"] = _schema_summary(payload["summary"])
     validated = VirtualWorld.model_validate(validation_payload).model_dump(mode="json")
@@ -158,6 +211,7 @@ def build_virtual_world_state_from_files(
     ball_track_physics_filled_path: str | Path | None = None,
     ball_track_arc_solved_path: str | Path | None = None,
     racket_pose_estimate_path: str | Path | None = None,
+    membership_path: str | Path | None = None,
     ball_world_policy: BallWorldPolicy | str = DEFAULT_BALL_WORLD_POLICY,
 ) -> dict[str, Any]:
     calibration = validate_artifact_file("court_calibration", Path(court_calibration_path))
@@ -167,7 +221,7 @@ def build_virtual_world_state_from_files(
         court_calibration=calibration,
         tracks=_optional_artifact("tracks", tracks_path, Tracks),
         smpl_motion=_optional_artifact("smpl_motion", smpl_motion_path, SmplMotion),
-        skeleton3d=_optional_artifact("skeleton3d", skeleton3d_path, Skeleton3D),
+        skeleton3d=_optional_skeleton3d_artifact(skeleton3d_path),
         ball_track=_optional_artifact("ball_track", ball_track_path, BallTrack),
         racket_pose=_optional_artifact("racket_pose", racket_pose_path, RacketPose),
         trust_bands=trust_bands,
@@ -176,8 +230,10 @@ def build_virtual_world_state_from_files(
         ball_track_arc_solved=_optional_json_mapping(ball_track_arc_solved_path),
         racket_pose_estimate=_optional_json_mapping(racket_pose_estimate_path),
         placement_calibration_path=court_calibration_path,
+        membership_path=membership_path,
         ball_world_policy=ball_world_policy,
         artifact_paths={
+            "tracks": tracks_path,
             "physics_footlock": physics_footlock_path,
             "ball_track_physics_filled": ball_track_physics_filled_path,
             "ball_track_arc_solved": ball_track_arc_solved_path,
@@ -192,6 +248,7 @@ def build_virtual_world_state_from_run_dir(
     court_calibration_path: str | Path | None = None,
     clip: str | None = None,
     allow_internal_val: bool = False,
+    membership_path: str | Path | None = None,
     ball_world_policy: BallWorldPolicy | str = DEFAULT_BALL_WORLD_POLICY,
 ) -> dict[str, Any]:
     """Build a world by consuming the best available artifacts in a run directory.
@@ -217,6 +274,9 @@ def build_virtual_world_state_from_run_dir(
     if inferred_clip:
         guard_inputs.append(inferred_clip)
     assert_not_training_on_eval_clip(guard_inputs, allow_internal_val=allow_internal_val)
+    legacy_world_path = _legacy_pre_r3_world_path(root)
+    if legacy_world_path is not None:
+        return _load_legacy_pre_r3_world(legacy_world_path)
     court_path = resolve_best_court_calibration_path(root, explicit=court_calibration_path, clip=clip)
     trust_bands = _optional_json_mapping(_existing_file(root / "trust_bands.json"))
     calibration_payload = _optional_json_mapping(court_path)
@@ -236,6 +296,7 @@ def build_virtual_world_state_from_run_dir(
         ball_track_physics_filled_path=_existing_file(root / "ball_track_physics_filled.json"),
         ball_track_arc_solved_path=_existing_file(root / "ball_track_arc_solved.json"),
         racket_pose_estimate_path=_existing_file(root / "racket_pose_estimate.json"),
+        membership_path=membership_path,
         ball_world_policy=ball_world_policy,
     )
 
@@ -321,6 +382,8 @@ def apply_ball_track_arc_solved_overlay(
         return None
     if not isinstance(ball_track_arc_solved, Mapping):
         return ball_track_physics_filled
+    if str(ball_track_arc_solved.get("status", "ran")) != "ran":
+        return ball_track_physics_filled
     arc_frames = ball_track_arc_solved.get("frames")
     if not isinstance(arc_frames, list):
         return ball_track_physics_filled
@@ -393,6 +456,87 @@ def _optional_artifact(artifact: str, path: str | Path | None, model: type[Any])
     return parsed
 
 
+def _optional_skeleton3d_artifact(path: str | Path | None) -> Skeleton3D | None:
+    if path is None:
+        return None
+    payload = _optional_json_mapping(path)
+    if payload is None:
+        return None
+    return _skeleton3d(_strip_legacy_skeleton3d_extras(payload))
+
+
+def _legacy_pre_r3_world_path(run_dir: Path) -> Path | None:
+    skeleton = _optional_json_mapping(_existing_file(run_dir / "skeleton3d.json"))
+    if not isinstance(skeleton, Mapping) or "foot_pin" not in skeleton:
+        return None
+    smpl = _optional_json_mapping(_existing_file(run_dir / "smpl_motion.json"))
+    if _payload_has_r3_grounding_provenance(skeleton) or _payload_has_r3_grounding_provenance(smpl):
+        return None
+    return _existing_file(run_dir / "confidence_gated_world.json") or _existing_file(run_dir / "virtual_world.json")
+
+
+def _load_legacy_pre_r3_world(path: Path) -> dict[str, Any]:
+    parsed = validate_artifact_file("virtual_world", path)
+    if not isinstance(parsed, VirtualWorld):
+        raise ValueError(f"{path} did not parse as VirtualWorld")
+    payload = parsed.model_dump(mode="json")
+    repaired_transl = _repair_legacy_world_transl_world(payload)
+    summary = dict(payload.get("summary") or {})
+    warnings = list(summary.get("warnings") or [])
+    warnings.append(
+        "legacy_pre_r3_world_reused: run-dir BODY artifacts lack placement_track_world_xy grounding provenance; "
+        f"reused {path.name} instead of reconstructing stale skeleton joints. Fresh A100 R3 BODY is the acceptance gate."
+    )
+    if repaired_transl:
+        warnings.append(f"legacy_pre_r3_transl_world_repaired: reset {repaired_transl} stale transl_world anchors to track_world_xy")
+    summary["warnings"] = warnings
+    payload["summary"] = summary
+    _drop_empty_optional_world_fields(payload)
+    return payload
+
+
+def _repair_legacy_world_transl_world(payload: dict[str, Any]) -> int:
+    repaired = 0
+    for player in payload.get("players", []) or []:
+        if not isinstance(player, dict):
+            continue
+        for frame in player.get("frames", []) or []:
+            if not isinstance(frame, dict):
+                continue
+            transl = _vector3(frame.get("transl_world"))
+            track_xy = _vector2(frame.get("track_world_xy"))
+            if transl is None or track_xy is None:
+                continue
+            if _distance2(transl[:2], track_xy) <= 0.02:
+                continue
+            frame["transl_world"] = [track_xy[0], track_xy[1], 0.0]
+            repaired += 1
+    return repaired
+
+
+def _payload_has_r3_grounding_provenance(payload: Any) -> bool:
+    if not isinstance(payload, Mapping):
+        return False
+    if payload.get("grounding_anchor_source") == "placement_track_world_xy":
+        return True
+    provenance = payload.get("provenance")
+    if isinstance(provenance, Mapping) and provenance.get("grounding_anchor_source") == "placement_track_world_xy":
+        return True
+    grounding_metrics = payload.get("grounding_metrics")
+    if isinstance(grounding_metrics, Mapping) and grounding_metrics.get("grounding_anchor_source") == "placement_track_world_xy":
+        return True
+    for player in payload.get("players", []) or []:
+        if not isinstance(player, Mapping):
+            continue
+        for frame in player.get("frames", []) or []:
+            if not isinstance(frame, Mapping):
+                continue
+            confidence = frame.get("confidence_provenance")
+            if isinstance(confidence, Mapping) and confidence.get("grounding_anchor_source") == "placement_track_world_xy":
+                return True
+    return False
+
+
 def _optional_json_mapping(path: str | Path | None) -> dict[str, Any] | None:
     if path is None:
         return None
@@ -404,6 +548,160 @@ def _optional_json_mapping(path: str | Path | None) -> dict[str, Any] | None:
 
 def _existing_file(path: Path | None) -> Path | None:
     return path if path is not None and path.is_file() else None
+
+
+def _load_player_membership_preview(
+    membership_path: str | Path | None,
+    *,
+    placement_calibration_path: str | Path | None,
+    artifact_paths: Mapping[str, str | Path | None],
+) -> dict[str, Any] | None:
+    resolved = _resolve_player_membership_path(
+        membership_path,
+        placement_calibration_path=placement_calibration_path,
+        artifact_paths=artifact_paths,
+    )
+    if resolved is None:
+        return None
+    payload = _optional_json_mapping(resolved)
+    if payload is None:
+        return None
+    if payload.get("artifact_type") != "racketsport_player_court_membership":
+        raise ValueError(f"{resolved} is not a player-court membership artifact")
+    if payload.get("verified") is not False or payload.get("not_gate_verified") is not True:
+        raise ValueError(f"{resolved} must remain verified=false and not_gate_verified=true")
+    per_player = payload.get("per_player")
+    if not isinstance(per_player, Mapping):
+        raise ValueError(f"{resolved} must contain per_player membership verdicts")
+    return {
+        "path": str(resolved),
+        "per_player": per_player,
+    }
+
+
+def _resolve_player_membership_path(
+    membership_path: str | Path | None,
+    *,
+    placement_calibration_path: str | Path | None,
+    artifact_paths: Mapping[str, str | Path | None],
+) -> Path | None:
+    if membership_path is not None:
+        explicit = Path(membership_path)
+        if not explicit.is_file():
+            raise FileNotFoundError(f"membership artifact not found: {explicit}")
+        return explicit
+
+    candidates: list[Path] = []
+    candidate_dirs: list[Path] = []
+    for raw in [placement_calibration_path, *artifact_paths.values()]:
+        if raw is None:
+            continue
+        path = Path(raw)
+        parent = path.parent if path.suffix else path
+        if parent not in candidate_dirs:
+            candidate_dirs.append(parent)
+    for directory in candidate_dirs:
+        candidates.append(directory / "membership.json")
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _apply_player_membership_preview(
+    players: list[dict[str, Any]],
+    *,
+    membership_preview: Mapping[str, Any] | None,
+    trust_bands: Mapping[str, Mapping[str, Any] | None] | None,
+) -> dict[str, Any] | None:
+    if membership_preview is None:
+        return None
+    per_player = membership_preview.get("per_player")
+    if not isinstance(per_player, Mapping):
+        return None
+
+    excluded: list[dict[str, Any]] = []
+    uncertain: list[dict[str, Any]] = []
+    for raw_player_id, raw_membership in sorted(per_player.items(), key=lambda item: int(item[0])):
+        if not isinstance(raw_membership, Mapping):
+            continue
+        player_id = _maybe_int(raw_player_id)
+        if player_id is None:
+            continue
+        verdict = str(raw_membership.get("verdict") or "uncertain")
+        record = {
+            "id": player_id,
+            "verdict": verdict,
+            "reasons": [str(reason) for reason in _sequence(raw_membership.get("reasons"))],
+        }
+        if verdict == "adjacent_or_spectator":
+            excluded.append(record)
+        elif verdict == "uncertain":
+            uncertain.append(record)
+
+    excluded_ids = {int(record["id"]) for record in excluded}
+    if excluded_ids:
+        players[:] = [player for player in players if int(player["id"]) not in excluded_ids]
+
+    summary = {
+        "path": str(membership_preview.get("path") or ""),
+        "excluded_players": excluded,
+        "uncertain_players": uncertain,
+    }
+    if isinstance(trust_bands, dict):
+        trust_bands["player_membership"] = {
+            "stage": "TRK",
+            "gate_id": "player_court_membership_preview",
+            "gate_status": "membership_preview_not_verified",
+            "badge": "low_confidence",
+            "reason": (
+                "Preview target-court membership consumed by virtual_world; adjacent_or_spectator players are excluded, "
+                "uncertain players remain rendered."
+            ),
+            "evidence_path": summary["path"] or None,
+            "excluded_players": excluded,
+            "uncertain_players": uncertain,
+        }
+    return summary
+
+
+def _filter_membership_excluded_paddles(
+    paddles: list[dict[str, Any]],
+    *,
+    membership_summary: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    excluded_ids = {
+        int(record["id"])
+        for record in _sequence(membership_summary.get("excluded_players"))
+        if isinstance(record, Mapping) and _maybe_int(record.get("id")) is not None
+    }
+    if not excluded_ids:
+        return paddles
+    return [paddle for paddle in paddles if int(paddle["player_id"]) not in excluded_ids]
+
+
+def _membership_preview_warnings(membership_summary: Mapping[str, Any] | None) -> list[str]:
+    if membership_summary is None:
+        return []
+    excluded = [
+        int(record["id"])
+        for record in _sequence(membership_summary.get("excluded_players"))
+        if isinstance(record, Mapping) and _maybe_int(record.get("id")) is not None
+    ]
+    uncertain = [
+        int(record["id"])
+        for record in _sequence(membership_summary.get("uncertain_players"))
+        if isinstance(record, Mapping) and _maybe_int(record.get("id")) is not None
+    ]
+    warnings = [
+        "player_membership_preview_not_verified",
+        f"player_membership_excluded_count_{len(excluded)}",
+    ]
+    if excluded:
+        warnings.append("player_membership_excluded_ids_" + "_".join(str(player_id) for player_id in sorted(excluded)))
+    if uncertain:
+        warnings.append("player_membership_uncertain_ids_" + "_".join(str(player_id) for player_id in sorted(uncertain)))
+    return warnings
 
 
 def _infer_eval_clip(run_dir: Path) -> str | None:
@@ -468,7 +766,7 @@ def _players(
             smpl_frames = {_time_key(frame.t): frame for frame in player.frames} if player is not None else {}
             skeleton_player = skeleton_players.get(player_id)
             skeleton_frames = {_time_key(frame.t): frame for frame in skeleton_player.frames} if skeleton_player is not None else {}
-            frames = _combined_smpl_skeleton_player_frames(
+            frames, joints_source = _combined_smpl_skeleton_player_frames(
                 player_id=player_id,
                 track_frames=track_frames,
                 smpl_frames_by_key=smpl_frames,
@@ -481,7 +779,14 @@ def _players(
                     fps=fps,
                 ),
             )
-            players.append(_player_record(player_id=player_id, track_meta=track_meta, frames=frames))
+            players.append(
+                _player_record(
+                    player_id=player_id,
+                    track_meta=track_meta,
+                    frames=frames,
+                    joints_source=joints_source,
+                )
+            )
         return players
 
     if skeleton_obj is not None:
@@ -497,7 +802,17 @@ def _players(
                 world_frames_by_key=skeleton_frames,
                 frame_builder=_skeleton_player_frame_from_sources,
             )
-            players.append(_player_record(player_id=player_id, track_meta=track_meta, frames=frames))
+            players.append(
+                _player_record(
+                    player_id=player_id,
+                    track_meta=track_meta,
+                    frames=frames,
+                    joints_source={
+                        "skeleton3d": sum(1 for frame in frames if int(frame["joint_count"]) > 0),
+                        "smpl_fill": 0,
+                    },
+                )
+            )
         return players
 
     if tracks_obj is None:
@@ -511,7 +826,7 @@ def _players(
             "frames": [
                 {
                     "t": frame.t,
-                    "track_world_xy": list(frame.world_xy),
+                    "track_world_xy": _track_world_xy(frame),
                     "track_conf": float(frame.conf),
                     "bbox": tuple(float(value) for value in frame.bbox),
                     "transl_world": None,
@@ -527,6 +842,42 @@ def _players(
         }
         for player in tracks_obj.players
     ]
+
+
+def _world_joint_names_from_skeleton(skeleton_obj: Skeleton3D | None) -> list[str] | None:
+    if skeleton_obj is None:
+        return None
+    joint_names = [str(name) for name in skeleton_obj.joint_names]
+    joint_count = _skeleton_source_joint_count(skeleton_obj) or len(joint_names)
+    if joint_count == len(MHR70_JOINT_NAMES) and _is_sam3d_skeleton_source(skeleton_obj, joint_names):
+        _assert_mhr70_names_match_semantic_map()
+        return list(MHR70_JOINT_NAMES)
+    if joint_count == len(RTMW3D_WHOLEBODY_133_JOINT_NAMES):
+        return list(RTMW3D_WHOLEBODY_133_JOINT_NAMES)
+    return joint_names or None
+
+
+def _skeleton_source_joint_count(skeleton_obj: Skeleton3D) -> int | None:
+    for player in skeleton_obj.players:
+        for frame in player.frames:
+            return len(frame.joints_world)
+    return None
+
+
+def _is_sam3d_skeleton_source(skeleton_obj: Skeleton3D, joint_names: list[str]) -> bool:
+    source_model = str(skeleton_obj.source_model or "").lower()
+    if "sam3d" in source_model or "sam_3d" in source_model:
+        return True
+    return joint_names == [f"sam3dbody_joint_{index:03d}" for index in range(len(MHR70_JOINT_NAMES))]
+
+
+def _assert_mhr70_names_match_semantic_map() -> None:
+    for semantic_name, source_index in SAM3D_BODY_MHR70_SEMANTIC_MAP.joints.items():
+        if MHR70_JOINT_NAMES[source_index] != semantic_name:
+            raise ValueError(
+                "MHR70_JOINT_NAMES does not match SAM3D_BODY_MHR70_SEMANTIC_MAP "
+                f"at index {source_index}: expected {semantic_name!r}, got {MHR70_JOINT_NAMES[source_index]!r}"
+            )
 
 
 def _apply_physics_footlock(
@@ -613,8 +964,8 @@ def _combined_smpl_skeleton_player_frames(
     smpl_frames_by_key: Mapping[str, Any],
     skeleton_frames_by_key: Mapping[str, Any],
     smpl_frame_builder: Callable[[Any | None, Any | None], dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Union track, sparse mesh, and Lane-A skeleton timestamps for one player."""
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """Union track, sparse mesh, and quality-gated skeleton timestamps for one player."""
 
     frame_keys = sorted(
         {key for key_player_id, key in track_frames if key_player_id == player_id}
@@ -623,14 +974,29 @@ def _combined_smpl_skeleton_player_frames(
         key=float,
     )
     frames = []
+    joints_source = {"skeleton3d": 0, "smpl_fill": 0}
     for frame_key in frame_keys:
         track_frame = track_frames.get((player_id, frame_key))
         smpl_frame = smpl_frames_by_key.get(frame_key)
-        if smpl_frame is not None:
-            frames.append(smpl_frame_builder(track_frame, smpl_frame))
+        skeleton_frame = skeleton_frames_by_key.get(frame_key)
+        if skeleton_frame is not None:
+            if smpl_frame is not None:
+                frame = smpl_frame_builder(track_frame, smpl_frame)
+                _replace_frame_joints_from_skeleton(frame, skeleton_frame)
+            else:
+                frame = _skeleton_player_frame_from_sources(track_frame, skeleton_frame)
+            if int(frame["joint_count"]) > 0:
+                joints_source["skeleton3d"] += 1
+            frames.append(frame)
             continue
-        frames.append(_skeleton_player_frame_from_sources(track_frame, skeleton_frames_by_key.get(frame_key)))
-    return frames
+        if smpl_frame is not None:
+            frame = smpl_frame_builder(track_frame, smpl_frame)
+            if int(frame["joint_count"]) > 0:
+                joints_source["smpl_fill"] += 1
+            frames.append(frame)
+            continue
+        frames.append(_skeleton_player_frame_from_sources(track_frame, None))
+    return frames, joints_source
 
 
 def _fill_no_data_player_frames(players: list[dict[str, Any]]) -> None:
@@ -679,15 +1045,39 @@ def _no_data_player_frame(t: float) -> dict[str, Any]:
     }
 
 
-def _player_record(*, player_id: int, track_meta: Mapping[int, Mapping[str, str]], frames: list[dict[str, Any]]) -> dict[str, Any]:
+def _player_record(
+    *,
+    player_id: int,
+    track_meta: Mapping[int, Mapping[str, str]],
+    frames: list[dict[str, Any]],
+    joints_source: Mapping[str, int] | None = None,
+) -> dict[str, Any]:
     meta = track_meta.get(player_id, {})
-    return {
+    record = {
         "id": player_id,
         "side": meta.get("side"),
         "role": meta.get("role"),
         "representation": _player_representation(frames),
         "frames": frames,
     }
+    if joints_source is not None:
+        record["joints_source"] = {
+            "skeleton3d": int(joints_source.get("skeleton3d", 0)),
+            "smpl_fill": int(joints_source.get("smpl_fill", 0)),
+        }
+    return record
+
+
+def _replace_frame_joints_from_skeleton(frame: dict[str, Any], skeleton_frame: Any) -> None:
+    transl_world, joint_delta = _skeleton_alignment(
+        skeleton_frame,
+        track_world_xy=frame.get("track_world_xy"),
+    )
+    joints = _translated_vectors(skeleton_frame.joints_world, joint_delta)
+    frame["joints_world"] = joints
+    frame["joint_conf"] = [float(conf) for conf in skeleton_frame.joint_conf]
+    frame["joint_count"] = len(joints)
+    frame["transl_world"] = transl_world
 
 
 def _skeleton_player_frame_from_sources(track_frame: Any | None, skeleton_frame: Any | None) -> dict[str, Any]:
@@ -696,7 +1086,7 @@ def _skeleton_player_frame_from_sources(track_frame: Any | None, skeleton_frame:
             raise ValueError("player frame requires track_frame or skeleton_frame")
         return {
             "t": track_frame.t,
-            "track_world_xy": list(track_frame.world_xy),
+            "track_world_xy": _track_world_xy(track_frame),
             "track_conf": float(track_frame.conf),
             "bbox": tuple(float(value) for value in track_frame.bbox),
             "transl_world": None,
@@ -707,19 +1097,44 @@ def _skeleton_player_frame_from_sources(track_frame: Any | None, skeleton_frame:
             "mesh_vertex_count": 0,
             **_track_floor_fields(track_frame),
         }
+    track_world_xy = _track_world_xy(track_frame) if track_frame is not None else None
+    transl_world, joint_delta = _skeleton_alignment(skeleton_frame, track_world_xy=track_world_xy)
     return {
         "t": skeleton_frame.t,
-        "track_world_xy": list(track_frame.world_xy) if track_frame is not None else None,
+        "track_world_xy": track_world_xy,
         "track_conf": float(track_frame.conf) if track_frame is not None else None,
         "bbox": tuple(float(value) for value in track_frame.bbox) if track_frame is not None else None,
-        "transl_world": None,
-        "joints_world": [list(joint) for joint in skeleton_frame.joints_world],
+        "transl_world": transl_world,
+        "joints_world": _translated_vectors(skeleton_frame.joints_world, joint_delta),
         "joint_conf": [float(conf) for conf in skeleton_frame.joint_conf],
         "mesh_vertices_world": [],
         "joint_count": len(skeleton_frame.joints_world),
         "mesh_vertex_count": 0,
         **_skeleton_floor_fields(track_frame=track_frame),
     }
+
+
+def _skeleton_transl_world(skeleton_frame: Any, *, track_world_xy: Any) -> list[float] | None:
+    transl, _joint_delta = _skeleton_alignment(skeleton_frame, track_world_xy=track_world_xy)
+    return transl
+
+
+def _skeleton_alignment(skeleton_frame: Any, *, track_world_xy: Any) -> tuple[list[float] | None, list[float]]:
+    transl = _vector3(getattr(skeleton_frame, "transl_world", None))
+    track_xy = _vector2(track_world_xy)
+    if transl is not None:
+        return [transl[0], transl[1], transl[2]], [0.0, 0.0, 0.0]
+    if track_xy is not None:
+        target = [track_xy[0], track_xy[1], 0.0]
+        return target, [0.0, 0.0, 0.0]
+    return None, [0.0, 0.0, 0.0]
+
+
+def _translated_vectors(vectors: Sequence[Sequence[float]], delta: Sequence[float]) -> list[list[float]]:
+    return [
+        [float(vector[0]) + float(delta[0]), float(vector[1]) + float(delta[1]), float(vector[2]) + float(delta[2])]
+        for vector in vectors
+    ]
 
 
 def _skeleton_floor_fields(*, track_frame: Any | None) -> dict[str, Any]:
@@ -744,7 +1159,7 @@ def _player_frame_from_sources(
             raise ValueError("player frame requires track_frame or smpl_frame")
         return {
             "t": track_frame.t,
-            "track_world_xy": list(track_frame.world_xy),
+            "track_world_xy": _track_world_xy(track_frame),
             "track_conf": float(track_frame.conf),
             "bbox": tuple(float(value) for value in track_frame.bbox),
             "transl_world": None,
@@ -760,7 +1175,7 @@ def _player_frame_from_sources(
     frame_idx = _mesh_frame_index(smpl_frame, fps=fps)
     return {
         "t": smpl_frame.t,
-        "track_world_xy": list(track_frame.world_xy) if track_frame is not None else None,
+        "track_world_xy": _track_world_xy(track_frame) if track_frame is not None else None,
         "track_conf": float(track_frame.conf) if track_frame is not None else None,
         "bbox": tuple(float(value) for value in track_frame.bbox) if track_frame is not None else None,
         "transl_world": list(smpl_frame.transl_world),
@@ -793,8 +1208,9 @@ def _mesh_ref(*, player_id: int | None, frame_idx: int, t: float, vertex_count: 
 
 
 def _track_floor_fields(track_frame: Any) -> dict[str, Any]:
+    track_xy = _track_world_xy(track_frame)
     return {
-        "floor_world_xyz": [float(track_frame.world_xy[0]), float(track_frame.world_xy[1]), 0.0],
+        "floor_world_xyz": [track_xy[0], track_xy[1], 0.0],
         "floor_source": "track_footpoint",
         "floor_offset_m": 0.0,
         "min_mesh_z_m": None,
@@ -816,7 +1232,7 @@ def _smpl_floor_fields(
     floor_xy: list[float] | None = None
     source = "smpl_world"
     if track_frame is not None:
-        floor_xy = [float(track_frame.world_xy[0]), float(track_frame.world_xy[1])]
+        floor_xy = _track_world_xy(track_frame)
         source = "track_footpoint+smpl_world"
     elif smpl_frame.transl_world is not None:
         floor_xy = [float(smpl_frame.transl_world[0]), float(smpl_frame.transl_world[1])]
@@ -919,13 +1335,16 @@ def _ball_frame(
 ) -> dict[str, Any]:
     world_xyz = _ball_world_xyz(frame, calibration=calibration, ball_world_policy=ball_world_policy)
     status = _physics_ball_frame_status(frame) if physics_filled else None
-    return {
+    approx = bool(_get(frame, "approx") or (_get(frame, "world_xyz") is None and world_xyz is not None))
+    physics_fill_meta = _get(frame, "physics_fill")
+    render_only = bool(_get(frame, "render_only")) or approx or isinstance(physics_fill_meta, Mapping)
+    payload = {
         "t": float(_get(frame, "t")),
         "xy": list(_get(frame, "xy")),
         "conf": float(_get(frame, "conf")),
         "visible": bool(_get(frame, "visible")),
         "world_xyz": world_xyz,
-        "approx": bool(_get(frame, "approx") or (_get(frame, "world_xyz") is None and world_xyz is not None)),
+        "approx": approx,
         "trust_band": _physics_trust_band(
             stage="PHYS-BALL",
             gate_id="ball_track_physics_filled",
@@ -939,6 +1358,10 @@ def _ball_frame(
         if physics_filled
         else None,
     }
+    if render_only:
+        payload["render_only"] = True
+        payload["not_for_detection_metrics"] = True
+    return payload
 
 
 def _legacy_ball(ball_obj: BallTrack | None, *, calibration: CourtCalibration) -> dict[str, Any]:
@@ -1063,7 +1486,7 @@ def _paddle_frame(
         "t": float(_get(frame, "t")),
         "pose_se3": pose_se3,
         "mesh_vertices_world": mesh_vertices_world,
-        "mesh_faces": [[0, 1, 2], [0, 2, 3]],
+        "mesh_faces": PADDLE_MESH_FACES,
         "conf": conf,
         "world_frame": WORLD_FRAME,
         "translation_unit": "m",
@@ -1174,15 +1597,55 @@ def _paddle_mesh_vertices_world(pose_se3: Mapping[str, Any], paddle_dims_in: Map
     rotation = pose_se3["R"]
     translation = pose_se3["t"]
     vertices = []
-    for corner_cm in paddle_face_corners_object_cm(paddle_dims_in):
-        corner_m = [float(value) / 100.0 for value in corner_cm]
+    face_corners_cm = paddle_face_corners_object_cm(paddle_dims_in)
+    face_points_m = [[float(value) / 100.0 for value in corner_cm] for corner_cm in face_corners_cm]
+    face_bottom_y_m = min(float(corner[1]) / 100.0 for corner in face_corners_cm)
+    handle_half_width_m = PADDLE_HANDLE_WIDTH_M / 2.0
+    handle_bottom_y_m = face_bottom_y_m - PADDLE_HANDLE_LENGTH_M
+    handle_points_m = [
+        [-handle_half_width_m, face_bottom_y_m, 0.0],
+        [handle_half_width_m, face_bottom_y_m, 0.0],
+        [handle_half_width_m, handle_bottom_y_m, 0.0],
+        [-handle_half_width_m, handle_bottom_y_m, 0.0],
+    ]
+    half_thickness_m = PADDLE_THICKNESS_M / 2.0
+    for point_m in face_points_m:
         vertices.append(
-            [
-                sum(float(rotation[row][col]) * corner_m[col] for col in range(3)) + float(translation[row])
-                for row in range(3)
-            ]
+            _transform_paddle_local_m(rotation=rotation, translation=translation, point_m=[point_m[0], point_m[1], half_thickness_m])
+        )
+    for point_m in face_points_m:
+        vertices.append(
+            _transform_paddle_local_m(rotation=rotation, translation=translation, point_m=[point_m[0], point_m[1], -half_thickness_m])
+        )
+    for handle_point_m in handle_points_m:
+        vertices.append(
+            _transform_paddle_local_m(
+                rotation=rotation,
+                translation=translation,
+                point_m=[handle_point_m[0], handle_point_m[1], half_thickness_m],
+            )
+        )
+    for handle_point_m in handle_points_m:
+        vertices.append(
+            _transform_paddle_local_m(
+                rotation=rotation,
+                translation=translation,
+                point_m=[handle_point_m[0], handle_point_m[1], -half_thickness_m],
+            )
         )
     return vertices
+
+
+def _transform_paddle_local_m(
+    *,
+    rotation: Sequence[Sequence[float]],
+    translation: Sequence[float],
+    point_m: Sequence[float],
+) -> list[float]:
+    return [
+        sum(float(rotation[row][col]) * float(point_m[col]) for col in range(3)) + float(translation[row])
+        for row in range(3)
+    ]
 
 
 def _attach_trust_bands(
@@ -1445,7 +1908,32 @@ def _vector3(value: Any) -> list[float] | None:
     items = list(value)
     if len(items) != 3:
         return None
-    return [float(items[0]), float(items[1]), float(items[2])]
+    vector = [float(items[0]), float(items[1]), float(items[2])]
+    return vector if all(math.isfinite(item) for item in vector) else None
+
+
+def _vector2(value: Any) -> list[float] | None:
+    if value is None:
+        return None
+    items = list(value)
+    if len(items) < 2:
+        return None
+    try:
+        vector = [float(items[0]), float(items[1])]
+    except (TypeError, ValueError):
+        return None
+    return vector if all(math.isfinite(item) for item in vector) else None
+
+
+def _track_world_xy(track_frame: Any) -> list[float]:
+    track_xy = _vector2(getattr(track_frame, "world_xy", None))
+    if track_xy is None:
+        raise ValueError("track world_xy must be a finite 2-vector")
+    return track_xy
+
+
+def _distance2(left: Sequence[float], right: Sequence[float]) -> float:
+    return ((float(left[0]) - float(right[0])) ** 2 + (float(left[1]) - float(right[1])) ** 2) ** 0.5
 
 
 def _vectors3(value: Any) -> list[list[float]] | None:
@@ -1501,11 +1989,20 @@ def _trust_status(value: Any) -> str | None:
 
 
 def _drop_empty_optional_world_fields(payload: dict[str, Any]) -> None:
+    if payload.get("joint_names") in (None, []):
+        payload.pop("joint_names", None)
+    if payload.get("foot_pin") is None:
+        payload.pop("foot_pin", None)
     summary = payload.get("summary")
     if isinstance(summary, dict):
         for key in ("paddle_source", "hidden_paddle_frame_count"):
             if summary.get(key) is None:
                 summary.pop(key, None)
+    for player in payload.get("players", []):
+        if not isinstance(player, dict):
+            continue
+        if player.get("joints_source") is None:
+            player.pop("joints_source", None)
     for paddle in payload.get("paddles", []):
         if not isinstance(paddle, dict):
             continue
@@ -1567,9 +2064,15 @@ def _skeleton3d(value: Skeleton3D | Mapping[str, Any] | None) -> Skeleton3D | No
     if value is None or isinstance(value, Skeleton3D):
         return value
     try:
-        return Skeleton3D.model_validate(value)
+        return Skeleton3D.model_validate(_strip_legacy_skeleton3d_extras(value))
     except ValidationError as exc:
         raise ValueError(f"skeleton3d failed validation: {exc}") from exc
+
+
+def _strip_legacy_skeleton3d_extras(value: Mapping[str, Any]) -> dict[str, Any]:
+    payload = dict(value)
+    payload.pop("foot_pin", None)
+    return payload
 
 
 def _ball_track(value: BallTrack | Mapping[str, Any] | None) -> BallTrack | None:

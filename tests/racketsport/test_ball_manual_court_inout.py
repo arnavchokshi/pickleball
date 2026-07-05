@@ -98,6 +98,9 @@ def test_apply_manual_court_inout_projects_contact_points_and_sets_uncertainty_c
     assert parsed.bounces[0].nearest_line in {"near_baseline", "far_baseline", "left_sideline", "right_sideline"}
     assert parsed.bounces[0].region is not None
     assert parsed.bounces[0].dominant_uncertainty_term == "manual_corner_homography_projection"
+    assert parsed.bounces[0].not_ground_truth is True
+    assert parsed.bounces[0].render_only is True
+    assert parsed.bounces[0].not_for_detection_metrics is True
     assert parsed.bounces[1].call == "out"
     assert parsed.bounces[1].margin_m is not None and parsed.bounces[1].margin_m < 0.0
     assert parsed.bounces[2].call == "too_close_to_call"

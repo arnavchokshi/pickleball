@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -652,6 +653,106 @@ def test_ball_stage_runner_real_tracknet_mode_runs_model_inference_before_contac
     emitted = json.loads((run_dir / "ball_track.json").read_text(encoding="utf-8"))
     assert emitted["source"] == "tracknet"
     assert emitted["frames"][0]["xy"] == [444.0, 222.0]
+
+
+def test_ball_stage_runner_tracknet_emits_candidate_sidecar_by_default(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "clip_001"
+    video = inputs / "input.mp4"
+    tracknet_file = tmp_path / "TrackNet_best.pt"
+    inpaintnet_file = tmp_path / "InpaintNet_best.pt"
+    tracknet_repo = tmp_path / "TrackNetV3"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"fake video bytes")
+    tracknet_file.write_bytes(b"fake tracknet checkpoint")
+    inpaintnet_file.write_bytes(b"fake inpaintnet checkpoint")
+    tracknet_repo.mkdir(parents=True)
+    (tracknet_repo / "predict.py").write_text("print('fake')\n", encoding="utf-8")
+
+    calls: list[dict[str, object]] = []
+
+    def fake_tracknet_runner(**kwargs):
+        calls.append(kwargs)
+        _write_model_ball_track(Path(kwargs["out"]), source="tracknet")
+        if kwargs.get("emit_candidates"):
+            _write_json(
+                Path(kwargs["out"]).with_name("ball_candidates.json"),
+                {
+                    "schema_version": 1,
+                    "artifact_type": "racketsport_ball_candidates",
+                    "source": "tracknet",
+                    "source_mode": "tracknet_predict",
+                    "fps": 30.0,
+                    "frames": [],
+                },
+            )
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_tracknet_ball_run",
+            "source_mode": "tracknet_predict",
+            "frame_count": 3,
+            "visible_frame_count": 2,
+        }
+
+    runner = BallStageRunner(
+        tracknet_repo=tracknet_repo,
+        tracknet_file=tracknet_file,
+        inpaintnet_file=inpaintnet_file,
+        video_path=video,
+        tracknet_runner=fake_tracknet_runner,
+        tracknet_fps=30.0,
+    )
+
+    runner._run_tracknet_inference(SimpleNamespace(run_dir=run_dir, inputs_dir=inputs))
+
+    assert calls
+    assert calls[0]["emit_candidates"] is True
+    assert calls[0]["candidate_top_k"] == 5
+    assert (run_dir / "ball_candidates.json").is_file()
+
+
+def test_ball_stage_runner_tracknet_candidate_sidecar_can_be_disabled(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs" / "clip_001"
+    run_dir = tmp_path / "runs" / "clip_001"
+    video = inputs / "input.mp4"
+    tracknet_file = tmp_path / "TrackNet_best.pt"
+    inpaintnet_file = tmp_path / "InpaintNet_best.pt"
+    tracknet_repo = tmp_path / "TrackNetV3"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"fake video bytes")
+    tracknet_file.write_bytes(b"fake tracknet checkpoint")
+    inpaintnet_file.write_bytes(b"fake inpaintnet checkpoint")
+    tracknet_repo.mkdir(parents=True)
+    (tracknet_repo / "predict.py").write_text("print('fake')\n", encoding="utf-8")
+
+    calls: list[dict[str, object]] = []
+
+    def fake_tracknet_runner(**kwargs):
+        calls.append(kwargs)
+        _write_model_ball_track(Path(kwargs["out"]), source="tracknet")
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_tracknet_ball_run",
+            "source_mode": "tracknet_predict",
+            "frame_count": 3,
+            "visible_frame_count": 2,
+        }
+
+    runner = BallStageRunner(
+        tracknet_repo=tracknet_repo,
+        tracknet_file=tracknet_file,
+        inpaintnet_file=inpaintnet_file,
+        video_path=video,
+        tracknet_runner=fake_tracknet_runner,
+        tracknet_fps=30.0,
+        emit_ball_candidates=False,
+    )
+
+    runner._run_tracknet_inference(SimpleNamespace(run_dir=run_dir, inputs_dir=inputs))
+
+    assert calls
+    assert calls[0]["emit_candidates"] is False
+    assert not (run_dir / "ball_candidates.json").exists()
 
 
 def test_ball_stage_runner_derives_ball_inflections_from_current_tracknet_output(tmp_path: Path) -> None:

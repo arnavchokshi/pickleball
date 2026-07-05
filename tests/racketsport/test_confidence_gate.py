@@ -164,6 +164,48 @@ def test_apply_confidence_gate_preserves_existing_world_values_and_adds_provenan
     assert gated["ball"]["frames"][1]["not_for_detection_metrics"] is True
 
 
+def test_apply_confidence_gate_does_not_measure_approx_ball_world_points() -> None:
+    world = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_virtual_world",
+        "world_frame": "court_Z0",
+        "fps": 30.0,
+        "court": {"sport": "pickleball", "coordinate_frame": "court_Z0"},
+        "players": [],
+        "ball": {
+            "source": "virtual_world",
+            "frames": [
+                {
+                    "t": 0.0,
+                    "xy": [10.0, 20.0],
+                    "conf": 0.99,
+                    "visible": True,
+                    "world_xyz": [1.0, 2.0, 0.0],
+                    "approx": True,
+                }
+            ],
+        },
+        "paddles": [],
+        "summary": {"player_count": 0, "ball_frame_count": 1, "paddle_frame_count": 0},
+    }
+
+    gated = apply_confidence_gate_to_world(
+        world,
+        ball_track_physics_filled=None,
+        physics_footlock=None,
+        racket_pose_estimate={"summary": {"estimate_count": 0}},
+        contact_windows=None,
+        calibration_curves=None,
+        config=ConfidenceGateConfig(confidence_threshold=0.5, hysteresis_frames=1),
+    )
+
+    frame = gated["ball"]["frames"][0]
+    assert frame["confidence_provenance"]["band"] == "physics_predicted_low"
+    assert frame["confidence_provenance"]["predictor"] == "source_artifact_court_plane_approx"
+    assert frame["render_only"] is True
+    assert frame["not_for_detection_metrics"] is True
+
+
 def test_calibrate_confidence_bands_cli_writes_curves_from_existing_loo(tmp_path) -> None:
     run_dir = tmp_path / "chain"
     run_dir.mkdir()

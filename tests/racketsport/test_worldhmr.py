@@ -228,6 +228,187 @@ def test_build_body_artifacts_runs_sam3d_temporal_refine_gate_in_pipeline_path(m
     assert metrics["sam3d_temporal_refine_status"] == "applied"
 
 
+def _install_pass_through_sam3d_refine(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_refine(skeleton3d, *, fps=None, **_kwargs):  # noqa: ANN001, ARG001
+        refined = copy.deepcopy(skeleton3d)
+        refined["provenance"]["temporal_refine"] = {
+            "source": "sam3d_body_joints",
+            "wrist_peak_timing": {"status": "pass"},
+            "wrist_peak_timing_gate_pass": True,
+        }
+        return refined
+
+    monkeypatch.setattr(worldhmr, "refine_sam3d_skeleton3d", fake_refine)
+
+
+def _camera_motion_payload(matrix: list[list[float]], *, compensated: bool = True) -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_camera_motion",
+        "fps": 30.0,
+        "frames": [
+            {
+                "frame_idx": 0,
+                "compensated": bool(compensated),
+                "model": "homography" if compensated else "identity",
+                "reason": None if compensated else "unit_test_uncompensated",
+                "M": matrix if compensated else [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            }
+        ],
+    }
+
+
+def _sam3d_foot_pixel_sample() -> dict[str, object]:
+    joints = [[0.0, 0.0, 1.0] for _idx in range(70)]
+    joints[13] = [-0.5, 0.0, 0.0]
+    joints[14] = [0.5, 0.0, 0.0]
+    return {
+        "frame_idx": 0,
+        "player_id": 1,
+        "t": 0.0,
+        "confidence": 0.95,
+        "track_world_xy": [0.0, 0.0],
+        "bbox_xyxy": [940.0, 800.0, 1060.0, 1000.0],
+        "joints_camera": joints,
+        "vertices_camera": [],
+        "pred_foot_keypoints_2d": [
+            {"name": "left_ankle", "index": 13, "xy_px": [950.0, 1000.0], "conf": 0.95},
+            {"name": "right_ankle", "index": 14, "xy_px": [1050.0, 1000.0], "conf": 0.95},
+        ],
+        "global_orient": [0.0, 0.0, 0.0],
+        "body_pose": [0.0, 0.0, 0.0],
+        "betas": [0.0],
+    }
+
+
+def test_camera_motion_warps_sam3d_foot_pixels_before_world_grounding(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_pass_through_sam3d_refine(monkeypatch)
+    samples = [_sam3d_foot_pixel_sample()]
+    camera_motion_path = tmp_path / "camera_motion.json"
+    camera_motion_path.write_text(
+        json.dumps(_camera_motion_payload([[1.2, 0.0, -180.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])),
+        encoding="utf-8",
+    )
+
+    static_smpl, _static_skeleton, static_metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        copy.deepcopy(samples),
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        camera_motion_path=None,
+    )
+    motion_smpl, motion_skeleton, motion_metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        copy.deepcopy(samples),
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        camera_motion_path=camera_motion_path,
+    )
+
+    static_joints = static_smpl["players"][0]["frames"][0]["joints_world"]
+    motion_joints = motion_smpl["players"][0]["frames"][0]["joints_world"]
+    static_foot_span_m = static_joints[14][0] - static_joints[13][0]
+    motion_foot_span_m = motion_joints[14][0] - motion_joints[13][0]
+
+    assert static_foot_span_m == pytest.approx(1.0)
+    assert motion_foot_span_m == pytest.approx(1.2)
+    assert motion_joints[13][0] == pytest.approx(-0.6)
+    assert motion_joints[14][0] == pytest.approx(0.6)
+    assert "camera_motion_frames_used" not in static_metrics
+    assert motion_metrics["camera_motion_frames_used"] == 1
+    assert motion_metrics["camera_motion_frames_uncompensated"] == 0
+    assert motion_skeleton["provenance"]["camera_motion"]["frames_used"] == 1
+    assert motion_skeleton["provenance"]["camera_motion"]["frames_uncompensated"] == 0
+
+
+def test_uncompensated_camera_motion_frame_uses_static_world_grounding(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_pass_through_sam3d_refine(monkeypatch)
+    samples = [_sam3d_foot_pixel_sample()]
+    camera_motion_path = tmp_path / "camera_motion.json"
+    camera_motion_path.write_text(
+        json.dumps(_camera_motion_payload([[1.2, 0.0, -180.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], compensated=False)),
+        encoding="utf-8",
+    )
+
+    static_smpl, _static_skeleton, _static_metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        copy.deepcopy(samples),
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        camera_motion_path=None,
+    )
+    motion_smpl, motion_skeleton, motion_metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        copy.deepcopy(samples),
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        camera_motion_path=camera_motion_path,
+    )
+
+    assert motion_smpl == static_smpl
+    assert motion_metrics["camera_motion_frames_used"] == 0
+    assert motion_metrics["camera_motion_frames_uncompensated"] == 1
+    assert motion_skeleton["provenance"]["camera_motion"]["frames_used"] == 0
+    assert motion_skeleton["provenance"]["camera_motion"]["frames_uncompensated"] == 1
+
+
+def test_omitted_camera_motion_keeps_worldhmr_outputs_byte_identical(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_pass_through_sam3d_refine(monkeypatch)
+    samples = [_sam3d_foot_pixel_sample()]
+
+    first = worldhmr.build_body_artifacts_from_fast_sam(
+        copy.deepcopy(samples),
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+    )
+    second = worldhmr.build_body_artifacts_from_fast_sam(
+        copy.deepcopy(samples),
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        camera_motion_path=None,
+    )
+
+    assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
+
+
+def test_malformed_camera_motion_is_ignored_with_warning_metrics(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_pass_through_sam3d_refine(monkeypatch)
+    samples = [_sam3d_foot_pixel_sample()]
+    camera_motion_path = tmp_path / "camera_motion.json"
+    camera_motion_path.write_text("{not-json", encoding="utf-8")
+
+    static_smpl, _static_skeleton, _static_metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        copy.deepcopy(samples),
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        camera_motion_path=None,
+    )
+    motion_smpl, motion_skeleton, motion_metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        copy.deepcopy(samples),
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        camera_motion_path=camera_motion_path,
+    )
+
+    assert motion_smpl == static_smpl
+    assert motion_metrics["camera_motion_status"] == "ignored_malformed"
+    assert motion_metrics["camera_motion_warnings"]
+    assert motion_skeleton["provenance"]["camera_motion"]["status"] == "ignored_malformed"
+
+
 def test_build_body_artifacts_rotates_camera_frame_offsets_upright_and_regrounds_feet() -> None:
     samples = [
         {

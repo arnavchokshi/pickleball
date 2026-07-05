@@ -32,10 +32,11 @@ import re
 import shlex
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -126,6 +127,9 @@ BODY_INPUT_ARTIFACTS: tuple[str, ...] = (
     "net_plane.json",
     "court_line_evidence.json",
     "tracks.json",
+    "camera_motion.json",
+    "placement.json",
+    "foot_contact_phases.json",
     "skeleton3d.json",
     "ball_track.json",
     "ball_inflections.json",
@@ -143,16 +147,23 @@ SAM3D_MASK_INPUT_DIRS: tuple[str, ...] = (
     "sam2_body_masklets",
 )
 
-# Results a BODY run produces, synced back.
-BODY_OUTPUT_ARTIFACTS: tuple[str, ...] = (
+# Results a BODY run produces. Heavy monoliths are opt-in downloads because the
+# VM can spend minutes serializing and transferring multi-GB pretty JSON that
+# the local replay path normally does not consume.
+BODY_OUTPUT_ARTIFACTS_HEAVY: tuple[str, ...] = (
     "smpl_motion.json",
+    "body_mesh.json",
+)
+BODY_OUTPUT_ARTIFACTS_DEFAULT: tuple[str, ...] = (
     "skeleton3d.json",
     "body_compute_execution.json",
-    "body_mesh.json",
     "body_mesh_readiness.json",
     "body_joint_quality.json",
     "body_full_clip_gate.json",
     "body_grounding_quality.json",
+    "body_serialization_timing.json",
+    "body_stage_phase_timing.json",
+    "sam3d_keypoints_2d.json",
     "sam3d_tier2_config.json",
     "sam3d_body_input_prep.json",
     "remote_sam3d_tier2_dispatch_config.json",
@@ -163,6 +174,10 @@ BODY_OUTPUT_ARTIFACTS: tuple[str, ...] = (
     "contact_windows.json",
     "pipeline_run.json",
 )
+BODY_OUTPUT_DIRS_DEFAULT: tuple[str, ...] = (
+    "body_mesh_index/",
+)
+BODY_OUTPUT_ARTIFACTS: tuple[str, ...] = BODY_OUTPUT_ARTIFACTS_DEFAULT + BODY_OUTPUT_ARTIFACTS_HEAVY
 
 RunFn = Callable[[Sequence[str], float | None], "subprocess.CompletedProcess[str]"]
 
@@ -207,6 +222,7 @@ class RemoteConfig:
     sam3d_upstream_env: dict[str, str] = field(default_factory=dict)
     sam3d_tier2_output_lite: bool = False
     sam3d_wrist_bone_lock: bool = True
+    fetch_body_monoliths: bool = False
     gpu_lock_script: str = DEFAULT_GPU_LOCK_SCRIPT
     run_root: str = DEFAULT_RUN_ROOT
     connect_timeout_s: int = DEFAULT_SSH_CONNECT_TIMEOUT_S
@@ -259,6 +275,7 @@ class RemoteBodyDispatchResult:
     wall_seconds: float = 0.0
     notes: list[str] = field(default_factory=list)
     stdout_tail: str = ""
+    timing: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -269,6 +286,7 @@ class RemoteBodyDispatchResult:
             "wall_seconds": round(self.wall_seconds, 3),
             "notes": list(self.notes),
             "stdout_tail": self.stdout_tail,
+            "timing": dict(self.timing),
         }
 
 
@@ -279,6 +297,97 @@ def _run(cmd: Sequence[str], timeout_s: float | None = None) -> "subprocess.Comp
         text=True,
         timeout=timeout_s,
     )
+
+
+REMOTE_OUTPUT_LOG_MAX_BYTES = 500 * 1024
+
+
+def _write_json_file(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _path_size_bytes(path: Path) -> int:
+    if path.is_file():
+        return path.stat().st_size
+    if path.is_dir():
+        return sum(item.stat().st_size for item in path.rglob("*") if item.is_file())
+    return 0
+
+
+def _upload_size_bytes(
+    *,
+    synced_inputs: Sequence[str],
+    clip_dir: Path,
+    video_path: Path,
+    body_frames_dir: str | Path | None,
+    camera_motion_path: str | Path | None,
+) -> int:
+    frames_dir = Path(body_frames_dir) if body_frames_dir is not None else clip_dir / "body_frames"
+    explicit_camera_motion = Path(camera_motion_path) if camera_motion_path is not None else None
+    total = 0
+    for name in synced_inputs:
+        if name == "source.mp4":
+            total += _path_size_bytes(video_path)
+        elif name == "body_frames/":
+            total += _path_size_bytes(frames_dir)
+        elif name in {f"{dirname}/" for dirname in SAM3D_MASK_INPUT_DIRS}:
+            total += _path_size_bytes(clip_dir / name.rstrip("/"))
+        elif (
+            name == CAMERA_MOTION_ARTIFACT
+            and explicit_camera_motion is not None
+            and explicit_camera_motion.is_file()
+            and explicit_camera_motion.resolve() != (clip_dir / CAMERA_MOTION_ARTIFACT).resolve()
+        ):
+            total += _path_size_bytes(explicit_camera_motion)
+        else:
+            total += _path_size_bytes(clip_dir / name)
+    return total
+
+
+def _download_size_bytes(*, synced_outputs: Sequence[str], clip_dir: Path) -> int:
+    return sum(_path_size_bytes(clip_dir / name.rstrip("/")) for name in synced_outputs)
+
+
+def _tail_bytes_text(text: str, *, max_bytes: int = REMOTE_OUTPUT_LOG_MAX_BYTES) -> str:
+    raw = text.encode("utf-8", errors="replace")
+    if len(raw) <= max_bytes:
+        return text
+    return raw[-max_bytes:].decode("utf-8", errors="replace")
+
+
+def _write_remote_output_log(clip_dir: Path, *, stdout: str, stderr: str) -> None:
+    combined = "\n".join(
+        [
+            "### remote stdout",
+            stdout or "",
+            "### remote stderr",
+            stderr or "",
+        ]
+    )
+    clip_dir.mkdir(parents=True, exist_ok=True)
+    (clip_dir / "remote_body_stdout.log").write_text(_tail_bytes_text(combined), encoding="utf-8")
+
+
+def _runner_marker_epoch(stdout: str, event: str) -> float | None:
+    for line in (stdout or "").splitlines():
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(payload, dict) or payload.get("event") != event:
+            continue
+        try:
+            return float(payload["epoch_s"])
+        except (KeyError, TypeError, ValueError):
+            return None
+    return None
+
+
+def _download_artifacts_for_config(config: RemoteConfig) -> tuple[str, ...]:
+    if config.fetch_body_monoliths:
+        return BODY_OUTPUT_ARTIFACTS_DEFAULT + BODY_OUTPUT_ARTIFACTS_HEAVY
+    return BODY_OUTPUT_ARTIFACTS_DEFAULT
 
 
 def check_remote_reachable(config: RemoteConfig, *, run: RunFn = _run) -> bool:
@@ -377,6 +486,7 @@ def dispatch_body_stage(
     clip_dir: str | Path,
     video_path: str | Path,
     body_frames_dir: str | Path | None = None,
+    camera_motion_path: str | Path | None = None,
     config: RemoteConfig | None = None,
     max_frames: int | None = None,
     max_players: int = 4,
@@ -396,7 +506,12 @@ def dispatch_body_stage(
     clip_dir = Path(clip_dir)
     video_path = Path(video_path)
     started = time.monotonic()
+    phase_seconds: dict[str, float] = {}
+    upload_bytes = 0
+    download_bytes = 0
+    lock_wait_estimate_s: float | None = None
 
+    preflight_started = time.monotonic()
     if not check_remote_reachable(config, run=run):
         raise RemoteBodyDispatchError(
             f"remote host {config.host} unreachable over SSH within {config.connect_timeout_s}s "
@@ -409,14 +524,17 @@ def dispatch_body_stage(
     # exist, letting rsync "succeed" into a directory that isn't the real
     # repo before the remote command fails with a much less specific error.
     check_remote_layout(config, run=run)
+    phase_seconds["preflight_s"] = time.monotonic() - preflight_started
 
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     remote_run_dir = f"{config.repo}/{config.run_root}/{clip}_{stamp}"
 
+    mkdir_started = time.monotonic()
     mkdir_result = run(
         [*config.ssh_base(), f"mkdir -p {shlex.quote(remote_run_dir + '/body_frames')}"],
         config.connect_timeout_s + 10,
     )
+    phase_seconds["mkdir_s"] = time.monotonic() - mkdir_started
     if mkdir_result.returncode != 0:
         raise RemoteBodyDispatchError(f"failed to create remote run dir {remote_run_dir}: {mkdir_result.stderr.strip()}")
 
@@ -432,32 +550,100 @@ def dispatch_body_stage(
     )
     (clip_dir / REMOTE_BODY_RUNNER_FILENAME).write_text(runner_script, encoding="utf-8")
 
-    synced_inputs = _rsync_up(clip_dir, video_path, body_frames_dir, remote_run_dir, config, run=run)
+    upload_started = time.monotonic()
+    synced_inputs = _rsync_up(
+        clip_dir,
+        video_path,
+        body_frames_dir,
+        remote_run_dir,
+        config,
+        run=run,
+        camera_motion_path=camera_motion_path,
+    )
+    phase_seconds["upload_s"] = time.monotonic() - upload_started
+    upload_bytes = _upload_size_bytes(
+        synced_inputs=synced_inputs,
+        clip_dir=clip_dir,
+        video_path=video_path,
+        body_frames_dir=body_frames_dir,
+        camera_motion_path=camera_motion_path,
+    )
 
     remote_cmd = _remote_body_command(
         remote_run_dir=remote_run_dir,
         config=config,
     )
+    remote_command_started = time.monotonic()
+    remote_command_started_epoch = time.time()
     try:
         # Local subprocess guard slightly above the remote `timeout` budget so
         # a dead SSH transport cannot hang dispatch forever; the remote-side
         # `timeout {command_timeout_s}s` (exit 124) is the primary bound.
         command_result = run([*config.ssh_base(), remote_cmd], config.command_timeout_s + 120)
     except subprocess.TimeoutExpired as exc:
+        phase_seconds["remote_command_s"] = time.monotonic() - remote_command_started
+        _write_remote_output_log(
+            clip_dir,
+            stdout="",
+            stderr=f"remote BODY ssh subprocess timed out after {config.command_timeout_s + 120}s",
+        )
+        timing = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_remote_body_dispatch_timing",
+            "status": "failed",
+            "remote_host": config.host,
+            "remote_run_dir": remote_run_dir,
+            "phases": {name: round(value, 6) for name, value in phase_seconds.items()},
+            "upload_bytes": int(upload_bytes),
+            "download_bytes": 0,
+            "lock_wait_estimate_s": None,
+        }
+        _write_json_file(clip_dir / "remote_body_dispatch_timing.json", timing)
         raise RemoteBodyDispatchError(
             f"remote BODY command on {config.host} produced no result within "
             f"{config.command_timeout_s + 120}s (SSH transport hung past the remote-side "
             f"timeout {config.command_timeout_s}s budget)"
         ) from exc
+    phase_seconds["remote_command_s"] = time.monotonic() - remote_command_started
+    _write_remote_output_log(clip_dir, stdout=command_result.stdout or "", stderr=command_result.stderr or "")
     stdout_tail = "\n".join((command_result.stdout or "").splitlines()[-40:])
+    runner_start_epoch = _runner_marker_epoch(command_result.stdout or "", "script_start")
+    if runner_start_epoch is not None:
+        # This is an estimate: it includes SSH command startup and remote shell
+        # wrapper overhead before the runner's first Python marker prints.
+        lock_wait_estimate_s = runner_start_epoch - remote_command_started_epoch
 
     if command_result.returncode == 75:
+        timing = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_remote_body_dispatch_timing",
+            "status": "lock_busy",
+            "remote_host": config.host,
+            "remote_run_dir": remote_run_dir,
+            "phases": {name: round(value, 6) for name, value in phase_seconds.items()},
+            "upload_bytes": int(upload_bytes),
+            "download_bytes": 0,
+            "lock_wait_estimate_s": lock_wait_estimate_s,
+        }
+        _write_json_file(clip_dir / "remote_body_dispatch_timing.json", timing)
         # scripts/gpu-eval-run.sh's own GPU_LOCK_TIMEOUT_S flock timeout.
         raise RemoteBodyDispatchError(
             f"shared GPU lock busy on {config.host}: did not acquire {config.gpu_lock_script} within "
             f"{config.lock_wait_timeout_s}s (another job likely holds scripts/gpu-train-lock.sh's exclusive lock)"
         )
     if command_result.returncode == 124:
+        timing = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_remote_body_dispatch_timing",
+            "status": "timeout",
+            "remote_host": config.host,
+            "remote_run_dir": remote_run_dir,
+            "phases": {name: round(value, 6) for name, value in phase_seconds.items()},
+            "upload_bytes": int(upload_bytes),
+            "download_bytes": 0,
+            "lock_wait_estimate_s": lock_wait_estimate_s,
+        }
+        _write_json_file(clip_dir / "remote_body_dispatch_timing.json", timing)
         raise RemoteBodyDispatchError(
             f"remote BODY run on {config.host} exceeded its overall {config.command_timeout_s}s "
             f"command budget and was killed (raise --remote-command-timeout-s if the run is "
@@ -465,16 +651,62 @@ def dispatch_body_stage(
             f"at {config.lock_wait_timeout_s}s via GPU_LOCK_TIMEOUT_S"
         )
     if command_result.returncode != 0:
+        timing = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_remote_body_dispatch_timing",
+            "status": "failed",
+            "remote_host": config.host,
+            "remote_run_dir": remote_run_dir,
+            "phases": {name: round(value, 6) for name, value in phase_seconds.items()},
+            "upload_bytes": int(upload_bytes),
+            "download_bytes": 0,
+            "lock_wait_estimate_s": lock_wait_estimate_s,
+        }
+        _write_json_file(clip_dir / "remote_body_dispatch_timing.json", timing)
         raise RemoteBodyDispatchError(
             f"remote BODY stage failed (exit {command_result.returncode}): "
             f"{(command_result.stderr or '').strip()[-2000:] or stdout_tail}"
         )
 
+    download_started = time.monotonic()
     synced_outputs = _rsync_down(remote_run_dir, clip_dir, config, run=run)
+    phase_seconds["download_s"] = time.monotonic() - download_started
+    download_bytes = _download_size_bytes(synced_outputs=synced_outputs, clip_dir=clip_dir)
+    timing = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_remote_body_dispatch_timing",
+        "status": "ran",
+        "remote_host": config.host,
+        "remote_run_dir": remote_run_dir,
+        "phases": {name: round(value, 6) for name, value in phase_seconds.items()},
+        "upload_bytes": int(upload_bytes),
+        "download_bytes": int(download_bytes),
+        "lock_wait_estimate_s": lock_wait_estimate_s,
+        "fetched_default_artifacts": list(BODY_OUTPUT_ARTIFACTS_DEFAULT),
+        "fetched_heavy_artifacts": list(BODY_OUTPUT_ARTIFACTS_HEAVY) if config.fetch_body_monoliths else [],
+        "skipped_heavy_artifacts": [] if config.fetch_body_monoliths else list(BODY_OUTPUT_ARTIFACTS_HEAVY),
+        "fetched_directories": [name for name in BODY_OUTPUT_DIRS_DEFAULT if name in synced_outputs],
+    }
+    _write_json_file(clip_dir / "remote_body_dispatch_timing.json", timing)
     if "smpl_motion.json" not in synced_outputs and "skeleton3d.json" not in synced_outputs:
         raise RemoteBodyDispatchError(
             f"remote BODY command exited 0 but produced no smpl_motion.json/skeleton3d.json in {remote_run_dir}"
         )
+    fetch_notes = [
+        f"remote BODY phase timing: preflight={phase_seconds.get('preflight_s', 0.0):.3f}s "
+        f"mkdir={phase_seconds.get('mkdir_s', 0.0):.3f}s upload={phase_seconds.get('upload_s', 0.0):.3f}s "
+        f"remote_command={phase_seconds.get('remote_command_s', 0.0):.3f}s download={phase_seconds.get('download_s', 0.0):.3f}s "
+        f"upload_bytes={upload_bytes} download_bytes={download_bytes}",
+        (
+            "fetched BODY default artifacts plus heavy monoliths because fetch_body_monoliths=True"
+            if config.fetch_body_monoliths
+            else "fetched BODY default artifacts only; smpl_motion.json and body_mesh.json were not built on the VM (speed default; rerun with --fetch-body-monoliths to produce them)"
+        ),
+    ]
+    if "body_mesh_index/" in synced_outputs:
+        fetch_notes.append("fetched body_mesh_index/ windowed mesh directory for replay review; not a BODY verification claim")
+    else:
+        fetch_notes.append("body_mesh_index/ was not fetched because the remote run did not produce it or rsync reported it absent")
 
     return RemoteBodyDispatchResult(
         status="ran",
@@ -482,12 +714,17 @@ def dispatch_body_stage(
         synced_inputs=synced_inputs,
         synced_outputs=synced_outputs,
         wall_seconds=time.monotonic() - started,
-        notes=[f"dispatched BODY stage to {config.host}:{remote_run_dir} under {config.gpu_lock_script} (shared slot lease)"],
+        notes=[
+            f"dispatched BODY stage to {config.host}:{remote_run_dir} under {config.gpu_lock_script} (shared slot lease)",
+            *fetch_notes,
+        ],
         stdout_tail=stdout_tail,
+        timing=timing,
     )
 
 
 REMOTE_BODY_RUNNER_FILENAME = "remote_body_runner.py"
+CAMERA_MOTION_ARTIFACT = "camera_motion.json"
 
 
 def build_phase_d_sam3d_dispatch_config(config: RemoteConfig) -> dict[str, Any]:
@@ -643,17 +880,33 @@ def _remote_body_runner_script(
     return f"""#!/usr/bin/env python
 # Generated by scripts/racketsport/remote_body_dispatch.py (Task #46).
 import json
+import time
+
+
+def _emit_marker(event, **extra):
+    payload = {{"event": event, "epoch_s": time.time()}}
+    payload.update(extra)
+    print(json.dumps(payload, sort_keys=True), flush=True)
+
+
+_emit_marker("script_start")
+
 import os
 import sys
 
 sys.path.insert(0, {config.repo!r})
 
+from threed.racketsport.body_mesh_index import build_body_mesh_index, build_body_mesh_index_cli_summary
 from threed.racketsport.orchestrator import BodyStageRunner, run_pipeline
+
+_emit_marker("imports_done")
 
 remote_dispatch_sam3d_config = json.loads({dispatch_config_json!r})
 with open({remote_run_dir + '/remote_sam3d_tier2_dispatch_config.json'!r}, "w", encoding="utf-8") as config_file:
     json.dump(remote_dispatch_sam3d_config, config_file, indent=2, sort_keys=True)
     config_file.write("\\n")
+
+os.chdir({remote_run_dir!r})
 
 summary = run_pipeline(
     clip={clip!r},
@@ -666,6 +919,7 @@ summary = run_pipeline(
     tracking_video={remote_run_dir + '/source.mp4'!r},
     manifest_path={manifest_path!r},
     max_players={max_players!r},
+    reuse_existing_stage_artifacts=True,
     runners={{
         "body": BodyStageRunner(
             manifest_path={manifest_path!r},
@@ -673,6 +927,7 @@ summary = run_pipeline(
             fov_name={config.body_fov_name!r},
             tier2_body_joints_all_tracked=True,
             mesh_vertex_serialization_policy={'tier1_only' if config.sam3d_skip_tier2_mesh_vertices else 'all'!r},
+            write_body_monoliths={bool(config.fetch_body_monoliths)!r},
             sam3d_body_input_size_px={int(config.sam3d_body_input_size_px)!r},
             sam3d_crop_bucket_sizes={tuple(int(value) for value in config.sam3d_crop_bucket_sizes)!r},
             sam3d_crop_padding_scale={float(config.sam3d_crop_padding_scale)!r},
@@ -690,6 +945,7 @@ summary = run_pipeline(
         )
     }},
 )
+_emit_marker("run_pipeline_done", aggregate_status=summary["status"])
 stages = summary["stages"]
 body_stages = [stage for stage in stages if stage.get("stage") == "body"]
 body_ran = bool(body_stages) and body_stages[-1].get("status") == "ran"
@@ -703,6 +959,18 @@ skeleton_level_only = (
     and body_status in {{"failed", "blocked", "skipped"}}
     and no_sam3d_body_mode_frames
 )
+body_mesh_path = {remote_run_dir + '/body_mesh.json'!r}
+body_mesh_index_path = {remote_run_dir + '/body_mesh_index/body_mesh_index.json'!r}
+if os.path.isfile(body_mesh_index_path):
+    _emit_marker("mesh_index_skipped", mesh_index="existing", produced_by="orchestrator_in_memory", reason="body_mesh_index already exists")
+elif os.path.isfile(body_mesh_path):
+    try:
+        mesh_index_result = build_body_mesh_index({remote_run_dir!r}, out_dir={remote_run_dir + '/body_mesh_index'!r})
+        _emit_marker("mesh_index_done", mesh_index=build_body_mesh_index_cli_summary(mesh_index_result))
+    except Exception as exc:  # noqa: BLE001 - mesh index is an optimization only
+        print(json.dumps({{"event": "mesh_index_failed", "epoch_s": time.time(), "mesh_index": "failed", "error": str(exc)}}, sort_keys=True), flush=True)
+else:
+    _emit_marker("mesh_index_skipped", mesh_index="skipped", reason="body_mesh.json not found", skeleton_level_only=skeleton_level_only)
 print(json.dumps({{
     "aggregate_status": summary["status"],
     "stages": [[stage.get("stage"), stage.get("status")] for stage in stages],
@@ -711,7 +979,9 @@ print(json.dumps({{
     "no_sam3d_body_mode_frames": no_sam3d_body_mode_frames,
     "skeleton_level_only": skeleton_level_only,
 }}))
-raise SystemExit(0 if (body_ran or skeleton_level_only) else 1)
+exit_code = 0 if (body_ran or skeleton_level_only) else 1
+_emit_marker("exit", exit_code=exit_code)
+raise SystemExit(exit_code)
 """
 
 
@@ -748,27 +1018,42 @@ def _rsync_up(
     config: RemoteConfig,
     *,
     run: RunFn,
+    camera_motion_path: str | Path | None = None,
 ) -> list[str]:
     if not (clip_dir / "tracks.json").is_file():
         raise RemoteBodyDispatchError("refusing remote BODY dispatch without a local tracks.json to sync (nothing to run body on)")
 
     synced: list[str] = []
     rsync_ssh = config.rsync_ssh_command()
+    single_file_inputs: dict[str, Path] = {}
 
     if video_path.is_file():
-        result = run(["rsync", "-az", "-e", rsync_ssh, str(video_path), f"{config.host}:{remote_run_dir}/source.mp4"], None)
-        if result.returncode != 0:
-            raise RemoteBodyDispatchError(f"rsync of source video failed: {result.stderr.strip()}")
-        synced.append("source.mp4")
+        single_file_inputs["source.mp4"] = video_path
 
+    explicit_camera_motion = Path(camera_motion_path) if camera_motion_path is not None else None
     for name in BODY_INPUT_ARTIFACTS:
+        if name == CAMERA_MOTION_ARTIFACT and explicit_camera_motion is not None and explicit_camera_motion.is_file():
+            continue
         local_path = clip_dir / name
         if not local_path.is_file():
             continue
-        result = run(["rsync", "-az", "-e", rsync_ssh, str(local_path), f"{config.host}:{remote_run_dir}/{name}"], None)
-        if result.returncode != 0:
-            raise RemoteBodyDispatchError(f"rsync of {name} failed: {result.stderr.strip()}")
-        synced.append(name)
+        single_file_inputs[name] = local_path
+
+    if explicit_camera_motion is not None and explicit_camera_motion.is_file():
+        canonical_clip_camera_motion = clip_dir / CAMERA_MOTION_ARTIFACT
+        if not canonical_clip_camera_motion.is_file() or explicit_camera_motion.resolve() != canonical_clip_camera_motion.resolve():
+            single_file_inputs[CAMERA_MOTION_ARTIFACT] = explicit_camera_motion
+
+    if single_file_inputs:
+        synced.extend(
+            _rsync_single_file_batch_up(
+                single_file_inputs,
+                remote_run_dir=remote_run_dir,
+                config=config,
+                rsync_ssh=rsync_ssh,
+                run=run,
+            )
+        )
 
     frames_dir = Path(body_frames_dir) if body_frames_dir is not None else clip_dir / "body_frames"
     if frames_dir.is_dir() and any(frames_dir.iterdir()):
@@ -800,14 +1085,116 @@ def _rsync_down(remote_run_dir: str, clip_dir: Path, config: RemoteConfig, *, ru
     rsync_ssh = config.rsync_ssh_command()
     clip_dir.mkdir(parents=True, exist_ok=True)
 
-    for name in BODY_OUTPUT_ARTIFACTS:
+    requested_files = list(_download_artifacts_for_config(config))
+    existing_files = _remote_existing_output_files(remote_run_dir, requested_files, config, run=run)
+    if existing_files:
+        with tempfile.TemporaryDirectory(prefix="remote_body_rsync_down_") as tmp:
+            files_from = Path(tmp) / "outputs.txt"
+            files_from.write_text("".join(f"{name}\n" for name in existing_files), encoding="utf-8")
+            result = run(
+                [
+                    "rsync",
+                    "-az",
+                    "--files-from",
+                    str(files_from),
+                    "-e",
+                    rsync_ssh,
+                    f"{config.host}:{remote_run_dir}/",
+                    f"{clip_dir}/",
+                ],
+                None,
+            )
+            if result.returncode != 0 and not _rsync_missing_only(result.stderr):
+                raise RemoteBodyDispatchError(f"rsync of BODY output batch failed: {result.stderr.strip()}")
+        for name in requested_files:
+            if name in existing_files and (clip_dir / name).is_file():
+                synced.append(name)
+    for dirname in BODY_OUTPUT_DIRS_DEFAULT:
+        local_dir = clip_dir / dirname.rstrip("/")
         result = run(
-            ["rsync", "-az", "-e", rsync_ssh, f"{config.host}:{remote_run_dir}/{name}", str(clip_dir / name)],
+            ["rsync", "-az", "-e", rsync_ssh, f"{config.host}:{remote_run_dir}/{dirname}", str(local_dir)],
             None,
         )
-        if result.returncode == 0 and (clip_dir / name).is_file():
-            synced.append(name)
+        if result.returncode == 0 and local_dir.is_dir():
+            synced.append(dirname)
     return synced
+
+
+def _rsync_single_file_batch_up(
+    files_by_remote_name: Mapping[str, Path],
+    *,
+    remote_run_dir: str,
+    config: RemoteConfig,
+    rsync_ssh: str,
+    run: RunFn,
+) -> list[str]:
+    with tempfile.TemporaryDirectory(prefix="remote_body_rsync_up_") as tmp:
+        staging_dir = Path(tmp) / "files"
+        staging_dir.mkdir()
+        ordered_names: list[str] = []
+        for remote_name, source_path in files_by_remote_name.items():
+            if "/" in remote_name or remote_name in {"", ".", ".."}:
+                raise RemoteBodyDispatchError(f"refusing unsafe rsync batch filename {remote_name!r}")
+            staged_path = staging_dir / remote_name
+            staged_path.symlink_to(source_path.resolve())
+            ordered_names.append(remote_name)
+        files_from = Path(tmp) / "inputs.txt"
+        files_from.write_text("".join(f"{name}\n" for name in ordered_names), encoding="utf-8")
+        result = run(
+            [
+                "rsync",
+                "-azL",
+                "--files-from",
+                str(files_from),
+                "-e",
+                rsync_ssh,
+                f"{staging_dir}/",
+                f"{config.host}:{remote_run_dir}/",
+            ],
+            None,
+        )
+        if result.returncode != 0:
+            raise RemoteBodyDispatchError(f"rsync of BODY input file batch failed: {result.stderr.strip()}")
+    return ordered_names
+
+
+def _remote_existing_output_files(
+    remote_run_dir: str,
+    requested_files: Sequence[str],
+    config: RemoteConfig,
+    *,
+    run: RunFn,
+) -> list[str]:
+    if not requested_files:
+        return []
+    q = shlex.quote
+    names = [str(name) for name in requested_files]
+    for name in names:
+        if "/" in name or name in {"", ".", ".."}:
+            raise RemoteBodyDispatchError(f"refusing unsafe remote output filename {name!r}")
+    name_args = " ".join(q(name) for name in names)
+    command = (
+        f"cd {q(remote_run_dir)} && "
+        f"for f in {name_args}; do if [ -f \"$f\" ]; then printf '%s\\n' \"$f\"; fi; done "
+        "# BODY_OUTPUT_FILE_LIST"
+    )
+    result = run([*config.ssh_base(), command], config.connect_timeout_s + 10)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()
+        raise RemoteBodyDispatchError(f"remote BODY output listing failed: {detail}")
+    requested = set(names)
+    existing = [line.strip() for line in result.stdout.splitlines() if line.strip() in requested]
+    return [name for name in names if name in set(existing)]
+
+
+def _rsync_missing_only(stderr: str) -> bool:
+    text = (stderr or "").lower()
+    if not text:
+        return False
+    missing_markers = ("no such file", "vanished file", "link_stat", "(l)stat")
+    return any(marker in text for marker in missing_markers) and not any(
+        marker in text for marker in ("permission denied", "connection refused", "connection reset", "ssh:")
+    )
 
 
 def _parse_int_tuple(value: str, *, flag_name: str) -> tuple[int, ...]:
@@ -849,6 +1236,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--clip-dir", type=Path, required=True, help="Local directory with tracks.json/skeleton3d.json/etc.")
     parser.add_argument("--video", type=Path, required=True)
     parser.add_argument("--body-frames-dir", type=Path, default=None)
+    parser.add_argument("--camera-motion", type=Path, default=None, help="Optional camera_motion.json to sync as camera_motion.json in the remote BODY working dir.")
     parser.add_argument("--host", default=DEFAULT_REMOTE_HOST)
     parser.add_argument("--ssh-key", default=DEFAULT_SSH_KEY)
     parser.add_argument("--repo", default=DEFAULT_REMOTE_REPO)
@@ -876,6 +1264,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--sam3d-upstream-env", default="")
     parser.add_argument("--sam3d-tier2-output-lite", action="store_true")
     parser.add_argument("--no-sam3d-wrist-bone-lock", action="store_true")
+    parser.add_argument(
+        "--fetch-body-monoliths",
+        action="store_true",
+        help="Also download smpl_motion.json and body_mesh.json. Default skips them for faster BODY round trips.",
+    )
     parser.add_argument("--max-frames", type=int, default=None)
     parser.add_argument("--max-players", type=int, default=4)
     parser.add_argument(
@@ -913,6 +1306,7 @@ def main(argv: list[str] | None = None) -> int:
         sam3d_upstream_env=_parse_sam3d_upstream_env_tuple(args.sam3d_upstream_env),
         sam3d_tier2_output_lite=bool(args.sam3d_tier2_output_lite),
         sam3d_wrist_bone_lock=not args.no_sam3d_wrist_bone_lock,
+        fetch_body_monoliths=bool(args.fetch_body_monoliths),
         lock_wait_timeout_s=args.lock_wait_timeout_s,
         command_timeout_s=args.command_timeout_s,
         known_hosts_file=args.known_hosts_file,
@@ -923,6 +1317,7 @@ def main(argv: list[str] | None = None) -> int:
             clip_dir=args.clip_dir,
             video_path=args.video,
             body_frames_dir=args.body_frames_dir,
+            camera_motion_path=args.camera_motion,
             config=config,
             max_frames=args.max_frames,
             max_players=args.max_players,

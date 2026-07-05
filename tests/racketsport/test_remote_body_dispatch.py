@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import gzip
 import json
+import hashlib
 import shlex
 import subprocess
 import sys
@@ -11,6 +13,10 @@ from typing import Any
 import pytest
 
 from scripts.racketsport import remote_body_dispatch as rbd
+from scripts.racketsport import run_sam3dbody_batch as batch
+from threed.racketsport import orchestrator
+from threed.racketsport.orchestrator import BodyStageRunner, StageContext
+from threed.racketsport.schemas import BodyStagePhaseTiming, validate_artifact_file
 
 
 def _completed(returncode: int, stdout: str = "", stderr: str = "") -> "subprocess.CompletedProcess[str]":
@@ -22,12 +28,390 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def _rsync_files_from_names(cmd: list[str]) -> list[str]:
+    if "--files-from" not in cmd:
+        return []
+    files_from = Path(cmd[cmd.index("--files-from") + 1])
+    return [line for line in files_from.read_text(encoding="utf-8").splitlines() if line]
+
+
+def _is_rsync_download_batch(cmd: list[str]) -> bool:
+    return cmd[0] == "rsync" and "--files-from" in cmd and ":" in cmd[-2] and ":" not in cmd[-1]
+
+
+def _is_remote_output_listing(cmd: list[str]) -> bool:
+    return cmd[0] == "ssh" and "BODY_OUTPUT_FILE_LIST" in cmd[-1]
+
+
 def _clip_dir_with_tracks(tmp_path: Path) -> Path:
     clip_dir = tmp_path / "clip"
     clip_dir.mkdir()
     _write_json(clip_dir / "tracks.json", {"schema_version": 1, "fps": 30.0, "players": [], "rally_spans": []})
     (clip_dir / "source.mp4").write_bytes(b"not a real video")
     return clip_dir
+
+
+def _body_dispatch_dir(tmp_path: Path, *, name: str) -> Path:
+    dispatch_dir = tmp_path / name
+    dispatch_dir.mkdir()
+    _write_json(dispatch_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(dispatch_dir / "tracks.json", _dispatch_tracks_payload())
+    _write_json(dispatch_dir / "placement.json", _placement_payload())
+    _write_json(dispatch_dir / "frame_compute_plan.json", _frame_compute_plan_payload())
+    body_frames = dispatch_dir / "body_frames"
+    body_frames.mkdir()
+    (body_frames / "frame_000000.jpg").write_bytes(b"stub")
+    return dispatch_dir
+
+
+def _model_entry(model_id: str, stage: str, path: Path) -> dict[str, object]:
+    return {
+        "id": model_id,
+        "stage": stage,
+        "use": "test",
+        "source": "test",
+        "license": "test",
+        "commercial_posture": "ok",
+        "status": "available_on_h100",
+        "local_path": str(path),
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "fallbacks": [],
+    }
+
+
+def _body_manifest(root: Path) -> Path:
+    fast = root / "sam-3d-body-dinov3" / "model.ckpt"
+    mhr = root / "sam-3d-body-dinov3" / "assets" / "mhr_model.pt"
+    for path, body in ((fast, b"fast-sam-body"), (mhr, b"mhr-model")):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(body)
+    manifest = root / "MANIFEST.json"
+    _write_json(
+        manifest,
+        {
+            "schema_version": 1,
+            "models": [
+                _model_entry("fast_sam_3d_body_dinov3", "3d_body_backbone", fast),
+                _model_entry("sam_3d_body_mhr_model", "3d_body_backbone", mhr),
+            ],
+        },
+    )
+    return manifest
+
+
+def _court_calibration_payload() -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "sport": "pickleball",
+        "homography": [[100.0, 0.0, 1000.0], [0.0, 100.0, 1000.0], [0.0, 0.0, 1.0]],
+        "intrinsics": {"fx": 1000.0, "fy": 1000.0, "cx": 960.0, "cy": 540.0, "dist": [], "source": "manual"},
+        "extrinsics": {
+            "R": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            "t": [0.0, 0.0, 0.0],
+            "camera_height_m": 1.5,
+        },
+        "reprojection_error_px": {"median": 1.0, "p95": 2.0},
+        "capture_quality": {"grade": "good", "reasons": []},
+        "image_pts": [[756.8, 88.4896], [1163.2, 88.4896], [1163.2, 991.5104], [756.8, 991.5104]],
+        "world_pts": [[-3.048, -6.7056, 0.0], [3.048, -6.7056, 0.0], [3.048, 6.7056, 0.0], [-3.048, 6.7056, 0.0]],
+    }
+
+
+def _dispatch_tracks_payload() -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "fps": 30.0,
+        "placement_provenance": {"stage": "placement", "stance_phase_count": 1},
+        "players": [
+            {
+                "id": 7,
+                "side": "near",
+                "role": "left",
+                "frames": [{"t": 0.0, "bbox": [940.0, 440.0, 980.0, 540.0], "world_xy": [0.25, 0.5], "conf": 0.91}],
+            }
+        ],
+        "rally_spans": [],
+    }
+
+
+def _placement_payload() -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_placement",
+        "fps": 30.0,
+        "source": "unit-test",
+        "tracks_path": "tracks.json",
+        "backup_tracks_path": "tracks_prewrite_backup.json",
+        "refine_from_sam3d": False,
+        "undistort_applied": False,
+        "players": [
+            {
+                "id": 7,
+                "frames": [
+                    {
+                        "frame_idx": 0,
+                        "t": 0.0,
+                        "original_world_xy": [0.25, 0.5],
+                        "fused_world_xy": [0.25, 0.5],
+                        "smoothed_world_xy": [0.25, 0.5],
+                        "covariance_m2": [[0.01, 0.0], [0.0, 0.01]],
+                        "stance": True,
+                        "signals": [],
+                        "source_counts": {"bbox": 1},
+                    }
+                ],
+            }
+        ],
+        "summary": {
+            "player_count": 1,
+            "frame_count": 1,
+            "coverage_unchanged": True,
+            "source_counts": {"bbox": 1},
+            "jitter_before_after_mps": {},
+            "stance_wobble_before_after_m": {},
+            "court_bounds_violations": 0,
+        },
+        "provenance": {"stage": "placement", "stance_phase_count": 1},
+    }
+
+
+def _frame_compute_plan_payload() -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_frame_compute_plan",
+        "fps": 30.0,
+        "expected_players": 1,
+        "frame_count": 1,
+        "frames": [
+            {
+                "frame_idx": 0,
+                "t": 0.0,
+                "score": 0.75,
+                "recommended_tier": "deep_mesh",
+                "target_representation": "world_mesh",
+                "reasons": ["contact_window"],
+                "active_players": 1,
+                "active_player_ids": [7],
+                "missing_players": 0,
+                "min_track_conf": 0.91,
+                "ball_conf": None,
+                "player_targets": [
+                    {
+                        "player_id": 7,
+                        "track_conf": 0.91,
+                        "score": 0.75,
+                        "recommended_tier": "deep_mesh",
+                        "target_representation": "world_mesh",
+                        "reasons": ["contact_window"],
+                    }
+                ],
+            }
+        ],
+        "deep_mesh_windows": [
+            {
+                "frame_start": 0,
+                "frame_end": 0,
+                "t0": 0.0,
+                "t1": 1.0 / 30.0,
+                "frame_count": 1,
+                "target_representation": "world_mesh",
+                "fallback_representation": "skeleton_preview",
+                "target_player_ids": [7],
+                "reason_counts": {"contact_window": 1},
+                "max_score": 0.75,
+            }
+        ],
+        "summary": {
+            "by_tier": {"deep_mesh": 1},
+            "by_reason": {"contact_window": 1},
+            "by_player_target_representation": {"world_mesh": 1},
+            "max_score": 0.75,
+            "deep_mesh_window_count": 1,
+            "deep_mesh_frame_count": 1,
+            "human_review_frame_count": 0,
+        },
+    }
+
+
+def _sam3d_skeleton_payload() -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_skeleton3d",
+        "fps": 30.0,
+        "world_frame": "court_Z0",
+        "source_model": "sam3d_body_joints",
+        "joint_names": [f"sam3dbody_joint_{idx:03d}" for idx in range(70)],
+        "preview_only": False,
+        "players": [],
+        "provenance": {"source": "sam3d_body_joints"},
+    }
+
+
+class _FakeFastSamRuntime:
+    def process_frame(self, image_path: Path, *, bboxes_xyxy: list[list[float]], **_kwargs: object) -> list[dict[str, object]]:
+        joints = [[0.02 * idx, 0.0, 0.2 + 0.05 * (idx % 12)] for idx in range(70)]
+        joints[41] = [0.41, 0.0, 1.3]
+        joints[62] = [0.62, 0.0, 1.4]
+        return [
+            {
+                "bbox": bboxes_xyxy[0],
+                "global_rot": [0.01, 0.02, 0.03],
+                "body_pose_params": [0.1] * 63,
+                "hand_pose_params": [0.2] * 108,
+                "shape_params": [0.0] * 10,
+                "pred_cam_t": [0.0, 0.0, 10.0],
+                "pred_vertices": [[0.0, 0.0, 0.1], [0.1, 0.0, 1.7], [0.1, 0.2, 0.9]],
+                "mesh_faces": [[0, 1, 2]],
+                "pred_keypoints_3d": joints,
+                "confidence": 0.86,
+            }
+        ]
+
+
+class _FakeBatchFastSamRuntime(_FakeFastSamRuntime):
+    def __init__(self, work_dir: Path) -> None:
+        self.work_dir = work_dir
+
+    def process_frame_batches(self, requests: list[dict[str, object]], **_kwargs: object) -> list[list[dict[str, object]]]:
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        timing_payload = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_sam3dbody_batch_timing",
+            "total_s": 10.0,
+            "request_parse_s": 0.1,
+            "model_setup_load_s": 2.0,
+            "compile_warmup_s": 1.5,
+            "steady_inference_s": 3.0,
+            "person_frame_count": len(requests),
+            "ms_per_person_steady": 3000.0 / max(1, len(requests)),
+            "crop_bucket_tensor_prep_s": 0.5,
+            "preprocessing_s": 0.5,
+            "postprocessing_s": 0.25,
+            "result_serialization_handoff_s": 0.75,
+            "attributed_s": 8.1,
+            "other_s": 1.9,
+            "per_bucket": [{"bucket_size": 8, "warmup_s": 1.5, "steady_s": 3.0, "frames": len(requests)}],
+        }
+        _write_json(self.work_dir / "batch_outputs-unit.json.timing.json", timing_payload)
+        outputs: list[list[dict[str, object]]] = []
+        for request in requests:
+            outputs.append(
+                self.process_frame(
+                    Path(request["image_path"]),
+                    bboxes_xyxy=request["bboxes"],  # type: ignore[arg-type]
+                )
+            )
+        return outputs
+
+
+class _FakeSubprocessRuntimeForBinary:
+    def __init__(self, work_dir: Path) -> None:
+        self.python_executable = Path(sys.executable)
+        self.fast_sam_repo = Path("/tmp/fast-sam")
+        self.checkpoint_dir = Path("/tmp/checkpoints")
+        self.detector_name = ""
+        self.detector_model = ""
+        self.fov_name = ""
+        self.body_input_size_px = 384
+        self.work_dir = work_dir
+        self.fallback_calls: list[dict[str, Any]] = []
+
+    def process_frame_batches(self, requests: list[Any], **kwargs: Any) -> list[list[dict[str, Any]]]:
+        self.fallback_calls.append({"requests": requests, "kwargs": kwargs})
+        return [[{"pred_vertices": [[9.0, 0.0, 0.0]], "pred_keypoints_3d": [[0.0, 0.0, 1.0]]}]]
+
+
+def test_binary_handoff_subprocess_runtime_loads_sidecar_arrays(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import numpy as np
+
+    runtime = _FakeSubprocessRuntimeForBinary(tmp_path / "work")
+    wrapper = orchestrator._BinaryHandoffSubprocessRuntime(runtime)  # type: ignore[arg-type]
+
+    def fake_run(cmd: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        assert "--chunk-format" in cmd
+        # pickle is the dispatch default since the 2026-07-05 live A100 measurement
+        # showed the .npy transport regressing BODY 1057->1301s; chunk loading stays
+        # format-agnostic (chunks self-describe), which is what this test proves.
+        assert cmd[cmd.index("--chunk-format") + 1] == "pickle"
+        assert "--no-monolithic-output" in cmd
+        out_path = Path(cmd[cmd.index("--out") + 1])
+        chunk_dir = out_path.with_name(f"{out_path.name}.chunks")
+        array_dir = chunk_dir / "bucket_000000.binary" / "arrays"
+        array_dir.mkdir(parents=True)
+        np.save(array_dir / "pred_vertices_000000.npy", np.asarray([[1.0, 2.0, 0.3]], dtype=np.float32), allow_pickle=False)
+        chunk = {
+            "schema_version": 1,
+            "artifact_type": batch.SAM3D_BATCH_BINARY_CHUNK_ARTIFACT_TYPE,
+            "contract_version": batch.SAM3D_BATCH_BINARY_CONTRACT_VERSION,
+            "array_encoding": "npy_per_bulk_field",
+            "frames": [
+                {
+                    "request_id": "0:7",
+                    "records": [
+                        {
+                            "pred_vertices": {
+                                batch.SAM3D_ARRAY_REF_KEY: {
+                                    "path": "arrays/pred_vertices_000000.npy",
+                                    "dtype": "float32",
+                                    "shape": [1, 3],
+                                }
+                            },
+                            "confidence": 0.75,
+                        }
+                    ],
+                }
+            ],
+        }
+        (chunk_dir / "bucket_000000.binary.json").write_text(json.dumps(chunk), encoding="utf-8")
+        index = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_sam3dbody_batch_chunk_index",
+            "status": "complete",
+            "request_count": 1,
+            "result_count": 1,
+            "request_ids": ["0:7"],
+            "chunks": [{"bucket_index": 0, "path": "bucket_000000.binary.json", "format": "binary", "request_ids": ["0:7"]}],
+            "batch_execution": {},
+            "monolithic_template": None,
+            "error": None,
+        }
+        (chunk_dir / "index.json").write_text(json.dumps(index), encoding="utf-8")
+        return _completed(0)
+
+    monkeypatch.setattr(orchestrator.subprocess, "run", fake_run)
+
+    outputs = wrapper.process_frame_batches(
+        [{"request_id": "0:7", "image_path": tmp_path / "frame.jpg", "bboxes": [[1.0, 2.0, 3.0, 4.0]]}],
+        crop_bucket_sizes=(1,),
+    )
+
+    np.testing.assert_allclose(outputs[0][0]["pred_vertices"], np.asarray([[1.0, 2.0, 0.3]], dtype=np.float32))
+    assert outputs[0][0]["confidence"] == 0.75
+    assert wrapper.binary_handoff_status == "binary_sidecar_v1"
+    assert "binary numpy sidecar" in wrapper.binary_handoff_note
+    assert runtime.fallback_calls == []
+
+
+def test_binary_handoff_subprocess_runtime_falls_back_on_old_runner_flags(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime = _FakeSubprocessRuntimeForBinary(tmp_path / "work")
+    wrapper = orchestrator._BinaryHandoffSubprocessRuntime(runtime)  # type: ignore[arg-type]
+
+    def fake_run(_cmd: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        return _completed(2, stderr="error: unrecognized arguments: --chunk-format binary --no-monolithic-output")
+
+    monkeypatch.setattr(orchestrator.subprocess, "run", fake_run)
+
+    outputs = wrapper.process_frame_batches(
+        [{"request_id": "0:7", "image_path": tmp_path / "frame.jpg", "bboxes": [[1.0, 2.0, 3.0, 4.0]]}],
+        crop_bucket_sizes=(1,),
+    )
+
+    assert outputs == [[{"pred_vertices": [[9.0, 0.0, 0.0]], "pred_keypoints_3d": [[0.0, 0.0, 1.0]]}]]
+    assert wrapper.binary_handoff_status == "legacy_fallback"
+    assert "runner does not support binary sidecar flags" in wrapper.binary_handoff_note
+    assert len(runtime.fallback_calls) == 1
 
 
 def test_check_remote_reachable_true_on_zero_exit() -> None:
@@ -188,15 +572,18 @@ def test_dispatch_body_stage_success_syncs_outputs_back(tmp_path: Path) -> None:
             return _completed(0)
         if cmd[0] == "ssh" and cmd[-1].startswith("mkdir"):
             return _completed(0)
+        if _is_remote_output_listing(list(cmd)):
+            return _completed(0, stdout="smpl_motion.json\n")
         if cmd[0] == "rsync":
             src, dst = cmd[-2], cmd[-1]
             if dst.startswith(str(rbd.DEFAULT_REMOTE_HOST)) or ":" in dst:
                 # rsync "up": local -> remote (dst contains host:path)
-                remote_marker[Path(src).name if Path(src).exists() else src] = "uploaded"
+                for name in _rsync_files_from_names(list(cmd)) or [Path(src).name if Path(src).exists() else src]:
+                    remote_marker[name] = "uploaded"
             else:
                 # rsync "down": remote -> local; simulate the remote producing smpl_motion.json
-                if src.endswith("smpl_motion.json"):
-                    _write_json(Path(dst), {"schema_version": 1, "model": "sam3dbody_world_joints", "fps": 30.0, "world_frame": "court_Z0", "players": []})
+                if _is_rsync_download_batch(list(cmd)) and "smpl_motion.json" in _rsync_files_from_names(list(cmd)):
+                    _write_json(Path(dst) / "smpl_motion.json", {"schema_version": 1, "model": "sam3dbody_world_joints", "fps": 30.0, "world_frame": "court_Z0", "players": []})
                     return _completed(0)
                 return _completed(1, stderr="not found")
             return _completed(0)
@@ -208,6 +595,7 @@ def test_dispatch_body_stage_success_syncs_outputs_back(tmp_path: Path) -> None:
         clip="wolverine",
         clip_dir=clip_dir,
         video_path=clip_dir / "source.mp4",
+        config=rbd.RemoteConfig(fetch_body_monoliths=True),
         run=fake_run,
     )
     assert result.status == "ran"
@@ -222,6 +610,439 @@ def test_remote_body_outputs_cannot_overwrite_local_calibration_or_world_bundle(
     assert "virtual_world.json" not in rbd.BODY_OUTPUT_ARTIFACTS
 
 
+def test_rsync_down_excludes_heavy_body_monoliths_by_default(tmp_path: Path) -> None:
+    clip_dir = tmp_path / "clip"
+    attempted: list[str] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        command = list(cmd)
+        if _is_remote_output_listing(command):
+            return _completed(0, stdout="skeleton3d.json\nbody_serialization_timing.json\nbody_stage_phase_timing.json\n")
+        if _is_rsync_download_batch(command):
+            names = _rsync_files_from_names(command)
+            attempted.extend(names)
+            for name in names:
+                _write_json(Path(command[-1]) / name, {"artifact_type": name})
+            return _completed(0)
+        src = command[-2]
+        attempted.append(src.rsplit("/", 1)[-1])
+        return _completed(1, stderr="not found")
+
+    synced = rbd._rsync_down("/remote/run", clip_dir, rbd.RemoteConfig(), run=fake_run)
+
+    assert "skeleton3d.json" in synced
+    assert "smpl_motion.json" not in attempted
+    assert "body_mesh.json" not in attempted
+    assert "body_serialization_timing.json" in attempted
+    assert "body_stage_phase_timing.json" in attempted
+
+
+def test_rsync_down_fetches_heavy_body_monoliths_when_requested(tmp_path: Path) -> None:
+    clip_dir = tmp_path / "clip"
+    downloaded: list[str] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        command = list(cmd)
+        if _is_remote_output_listing(command):
+            return _completed(0, stdout="smpl_motion.json\nbody_mesh.json\n")
+        if _is_rsync_download_batch(command):
+            names = _rsync_files_from_names(command)
+            downloaded.extend(names)
+            for name in names:
+                _write_json(Path(command[-1]) / name, {"artifact_type": name})
+            return _completed(0)
+        return _completed(1, stderr="not found")
+
+    synced = rbd._rsync_down(
+        "/remote/run",
+        clip_dir,
+        rbd.RemoteConfig(fetch_body_monoliths=True),
+        run=fake_run,
+    )
+
+    assert "smpl_motion.json" in downloaded
+    assert "body_mesh.json" in downloaded
+    assert "smpl_motion.json" in synced
+    assert "body_mesh.json" in synced
+
+
+def test_rsync_down_batches_existing_single_files_and_tolerates_missing_outputs(tmp_path: Path) -> None:
+    clip_dir = tmp_path / "clip"
+    commands: list[list[str]] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        command = list(cmd)
+        commands.append(command)
+        if _is_remote_output_listing(command):
+            assert "smpl_motion.json" not in command[-1]
+            return _completed(0, stdout="skeleton3d.json\nbody_stage_phase_timing.json\n")
+        if _is_rsync_download_batch(command):
+            assert _rsync_files_from_names(command) == ["skeleton3d.json", "body_stage_phase_timing.json"]
+            _write_json(Path(command[-1]) / "skeleton3d.json", {"artifact_type": "racketsport_skeleton3d"})
+            return _completed(23, stderr="vanished file: body_stage_phase_timing.json: No such file or directory")
+        return _completed(1, stderr="not found")
+
+    synced = rbd._rsync_down("/remote/run", clip_dir, rbd.RemoteConfig(), run=fake_run)
+
+    assert synced == ["skeleton3d.json"]
+    ssh_commands = [cmd for cmd in commands if cmd[0] == "ssh"]
+    rsync_commands = [cmd for cmd in commands if cmd[0] == "rsync"]
+    assert len(ssh_commands) == 1
+    assert len([cmd for cmd in rsync_commands if "--files-from" in cmd]) == 1
+
+
+def test_rsync_down_fetches_body_mesh_index_directory_when_present(tmp_path: Path) -> None:
+    clip_dir = tmp_path / "clip"
+    directory_downloads: list[tuple[str, str]] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        src, dst = cmd[-2], cmd[-1]
+        if _is_remote_output_listing(list(cmd)):
+            return _completed(0, stdout="")
+        if src.endswith("/body_mesh_index/"):
+            directory_downloads.append((src, dst))
+            index_dir = Path(dst)
+            index_dir.mkdir(parents=True, exist_ok=True)
+            _write_json(index_dir / "body_mesh_index.json", {"artifact_type": "racketsport_body_mesh_index"})
+            return _completed(0)
+        return _completed(1, stderr="not found")
+
+    synced = rbd._rsync_down("/remote/run", clip_dir, rbd.RemoteConfig(), run=fake_run)
+
+    assert directory_downloads == [
+        (f"{rbd.DEFAULT_REMOTE_HOST}:/remote/run/body_mesh_index/", str(clip_dir / "body_mesh_index/"))
+    ]
+    assert "body_mesh_index/" in synced
+    assert (clip_dir / "body_mesh_index" / "body_mesh_index.json").is_file()
+
+
+def test_body_input_artifacts_ship_placement_stance_and_calibration_inputs() -> None:
+    assert "placement.json" in rbd.BODY_INPUT_ARTIFACTS
+    assert "foot_contact_phases.json" in rbd.BODY_INPUT_ARTIFACTS
+    assert "court_calibration.json" in rbd.BODY_INPUT_ARTIFACTS
+    assert "camera_motion.json" in rbd.BODY_INPUT_ARTIFACTS
+
+
+def test_rsync_up_syncs_optional_placement_and_foot_contact_inputs(tmp_path: Path) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    _write_json(clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(clip_dir / "placement.json", _placement_payload())
+    _write_json(clip_dir / "foot_contact_phases.json", {"schema_version": 1, "artifact_type": "foot_contact_phases", "phases": []})
+    _write_json(
+        clip_dir / "camera_motion.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_camera_motion",
+            "frames": [
+                {
+                    "frame_idx": 0,
+                    "compensated": True,
+                    "model": "homography",
+                    "M": [[1.0, 0.0, 20.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+                }
+            ],
+        },
+    )
+    uploaded: list[str] = []
+    rsync_commands: list[list[str]] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        if cmd[0] == "rsync":
+            rsync_commands.append(list(cmd))
+            uploaded.extend(_rsync_files_from_names(list(cmd)))
+            return _completed(0)
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    rbd._rsync_up(clip_dir, clip_dir / "source.mp4", None, "/remote/run", rbd.RemoteConfig(), run=fake_run)
+
+    assert len(rsync_commands) == 1
+    assert "--files-from" in rsync_commands[0]
+    assert "court_calibration.json" in uploaded
+    assert "placement.json" in uploaded
+    assert "foot_contact_phases.json" in uploaded
+    assert "camera_motion.json" in uploaded
+    assert "source.mp4" in uploaded
+    assert "tracks.json" in uploaded
+
+
+def test_rsync_up_batches_single_file_inputs_and_keeps_directories_separate(tmp_path: Path) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    _write_json(clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(clip_dir / "placement.json", _placement_payload())
+    body_frames = clip_dir / "body_frames"
+    body_frames.mkdir()
+    (body_frames / "frame_000000.jpg").write_bytes(b"frame")
+    mask_dir = clip_dir / "sam3d_body_masks"
+    mask_dir.mkdir()
+    (mask_dir / "frame_000000_player_7.png").write_bytes(b"mask")
+    rsync_commands: list[list[str]] = []
+    files_from: list[str] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        if cmd[0] == "rsync":
+            command = list(cmd)
+            rsync_commands.append(command)
+            files_from.extend(_rsync_files_from_names(command))
+            return _completed(0)
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    synced = rbd._rsync_up(clip_dir, clip_dir / "source.mp4", None, "/remote/run", rbd.RemoteConfig(), run=fake_run)
+
+    assert len([cmd for cmd in rsync_commands if "--files-from" in cmd]) == 1
+    assert len(rsync_commands) == 3
+    assert {"source.mp4", "tracks.json", "court_calibration.json", "placement.json"}.issubset(set(files_from))
+    assert "body_frames/" in synced
+    assert "sam3d_body_masks/" in synced
+
+
+def test_rsync_up_batch_failure_includes_rsync_stderr(tmp_path: Path) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        if cmd[0] == "rsync" and "--files-from" in cmd:
+            return _completed(12, stderr="ssh handshake failed")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    with pytest.raises(rbd.RemoteBodyDispatchError, match="ssh handshake failed"):
+        rbd._rsync_up(clip_dir, clip_dir / "source.mp4", None, "/remote/run", rbd.RemoteConfig(), run=fake_run)
+
+
+def test_rsync_up_does_not_sync_absent_camera_motion_input(tmp_path: Path) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    _write_json(clip_dir / "court_calibration.json", _court_calibration_payload())
+    uploaded: list[str] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        if cmd[0] == "rsync":
+            uploaded.extend(_rsync_files_from_names(list(cmd)))
+            return _completed(0)
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    rbd._rsync_up(clip_dir, clip_dir / "source.mp4", None, "/remote/run", rbd.RemoteConfig(), run=fake_run)
+
+    assert "camera_motion.json" not in uploaded
+
+
+def test_rsync_up_syncs_explicit_camera_motion_path_as_canonical_remote_name(tmp_path: Path) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    external_motion = tmp_path / "sidecars" / "owner_camera_motion.json"
+    _write_json(
+        external_motion,
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_camera_motion",
+            "frames": [
+                {
+                    "frame_idx": 0,
+                    "compensated": True,
+                    "model": "homography",
+                    "M": [[1.0, 0.0, 20.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+                }
+            ],
+        },
+    )
+    uploaded: list[str] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        if cmd[0] == "rsync":
+            uploaded.extend(_rsync_files_from_names(list(cmd)))
+            return _completed(0)
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    rbd._rsync_up(
+        clip_dir,
+        clip_dir / "source.mp4",
+        None,
+        "/remote/run",
+        rbd.RemoteConfig(),
+        run=fake_run,
+        camera_motion_path=external_motion,
+    )
+
+    assert "camera_motion.json" in uploaded
+    assert "owner_camera_motion.json" not in uploaded
+
+
+def test_body_stage_runner_engages_stance_grounding_from_dispatch_dir_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dispatch_dir = tmp_path / "dispatch"
+    dispatch_dir.mkdir()
+    _write_json(dispatch_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(dispatch_dir / "tracks.json", _dispatch_tracks_payload())
+    _write_json(dispatch_dir / "placement.json", _placement_payload())
+    _write_json(dispatch_dir / "frame_compute_plan.json", _frame_compute_plan_payload())
+    body_frames = dispatch_dir / "body_frames"
+    body_frames.mkdir()
+    (body_frames / "frame_000000.jpg").write_bytes(b"stub")
+    monkeypatch.setattr(orchestrator, "_read_image_size", lambda _path: (1920, 1080))
+
+    runner = BodyStageRunner(
+        manifest_path=_body_manifest(tmp_path / "models"),
+        runtime=_FakeFastSamRuntime(),
+        detector_name="",
+        fov_name="",
+        tier2_body_joints_all_tracked=True,
+        write_body_monoliths=True,
+    )
+    result = runner.run(
+        StageContext(
+            clip="wolverine",
+            inputs_dir=dispatch_dir,
+            run_dir=dispatch_dir,
+            sport="pickleball",
+            max_frames=1,
+            expected_players=1,
+        )
+    )
+
+    skeleton = json.loads((dispatch_dir / "skeleton3d.json").read_text(encoding="utf-8"))
+    timing = json.loads((dispatch_dir / "body_serialization_timing.json").read_text(encoding="utf-8"))
+    phase_timing = validate_artifact_file("body_stage_phase_timing", dispatch_dir / "body_stage_phase_timing.json")
+    assert isinstance(phase_timing, BodyStagePhaseTiming)
+    assert result.status == "ran"
+    assert result.wall_seconds is not None
+    assert result.metrics["grounding_anchor_source"] == "placement_track_world_xy"
+    assert result.metrics["stance_aware_grounding"]["stance_frame_count"] == 1
+    assert skeleton["provenance"]["grounding_anchor_source"] == "placement_track_world_xy"
+    assert skeleton["provenance"]["stance_aware_grounding"] is True
+    assert [item["artifact"] for item in timing["artifacts"]] == ["smpl_motion.json", "body_mesh.json"]
+    assert all(item["bytes"] > 0 for item in timing["artifacts"])
+    assert all(item["serialization_seconds"] >= 0.0 for item in timing["artifacts"])
+    assert phase_timing.person_frame_count == 1
+    assert phase_timing.serialization_s == pytest.approx(timing["summary"]["total_serialization_seconds"])
+    assert phase_timing.other_s >= 0.0
+
+
+def test_body_stage_runner_merges_subprocess_timing_and_builds_index_from_memory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dispatch_dir = tmp_path / "dispatch"
+    dispatch_dir.mkdir()
+    _write_json(dispatch_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(dispatch_dir / "tracks.json", _dispatch_tracks_payload())
+    _write_json(dispatch_dir / "placement.json", _placement_payload())
+    _write_json(dispatch_dir / "frame_compute_plan.json", _frame_compute_plan_payload())
+    body_frames = dispatch_dir / "body_frames"
+    body_frames.mkdir()
+    (body_frames / "frame_000000.jpg").write_bytes(b"stub")
+    monkeypatch.setattr(orchestrator, "_read_image_size", lambda _path: (1920, 1080))
+
+    runner = BodyStageRunner(
+        manifest_path=_body_manifest(tmp_path / "models"),
+        runtime=_FakeBatchFastSamRuntime(dispatch_dir / "fast_sam_subprocess"),
+        detector_name="",
+        fov_name="",
+        tier2_body_joints_all_tracked=True,
+        sam3d_torch_compile=True,
+        sam3d_compile_warmup_buckets=(8,),
+    )
+    result = runner.run(
+        StageContext(
+            clip="wolverine",
+            inputs_dir=dispatch_dir,
+            run_dir=dispatch_dir,
+            sport="pickleball",
+            max_frames=1,
+            expected_players=1,
+        )
+    )
+
+    phase_timing = validate_artifact_file("body_stage_phase_timing", dispatch_dir / "body_stage_phase_timing.json")
+    assert isinstance(phase_timing, BodyStagePhaseTiming)
+    assert result.status == "ran"
+    assert phase_timing.model_load_s == pytest.approx(2.0)
+    assert phase_timing.compile_warmup_s == pytest.approx(1.5)
+    assert phase_timing.inference_s == pytest.approx(3.0)
+    assert phase_timing.ms_per_person_steady == pytest.approx(3000.0)
+    assert phase_timing.runner_preprocessing_s == pytest.approx(0.5)
+    assert phase_timing.runner_result_serialization_handoff_s == pytest.approx(0.75)
+    assert phase_timing.runner_other_s == pytest.approx(1.9)
+    assert phase_timing.subprocess_outer_call_s is not None
+    assert phase_timing.subprocess_wrapper_handoff_s is not None
+    assert phase_timing.index_build_s is not None and phase_timing.index_build_s >= 0.0
+    assert phase_timing.per_bucket_timing == [{"bucket_size": 8, "warmup_s": 1.5, "steady_s": 3.0, "frames": 1}]
+    assert "model_load_s" not in phase_timing.not_instrumentable
+    assert "compile_warmup_s" not in phase_timing.not_instrumentable
+    assert (dispatch_dir / "body_mesh_index" / "body_mesh_index.json").is_file()
+    assert "body_mesh_index/body_mesh_index.json" in result.produced_artifacts
+
+
+def test_body_stage_runner_slim_mode_skips_monoliths_but_preserves_replay_artifacts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monolith_dir = _body_dispatch_dir(tmp_path, name="monolith")
+    slim_dir = _body_dispatch_dir(tmp_path, name="slim")
+    monkeypatch.setattr(orchestrator, "_read_image_size", lambda _path: (1920, 1080))
+
+    common_kwargs = {
+        "manifest_path": _body_manifest(tmp_path / "models"),
+        "detector_name": "",
+        "fov_name": "",
+        "tier2_body_joints_all_tracked": True,
+    }
+    monolith_result = BodyStageRunner(
+        runtime=_FakeFastSamRuntime(),
+        write_body_monoliths=True,
+        **common_kwargs,
+    ).run(
+        StageContext(
+            clip="wolverine",
+            inputs_dir=monolith_dir,
+            run_dir=monolith_dir,
+            sport="pickleball",
+            max_frames=1,
+            expected_players=1,
+        )
+    )
+    slim_result = BodyStageRunner(
+        runtime=_FakeFastSamRuntime(),
+        write_body_monoliths=False,
+        **common_kwargs,
+    ).run(
+        StageContext(
+            clip="wolverine",
+            inputs_dir=slim_dir,
+            run_dir=slim_dir,
+            sport="pickleball",
+            max_frames=1,
+            expected_players=1,
+        )
+    )
+
+    assert monolith_result.status == "ran"
+    assert slim_result.status == "ran"
+    assert (monolith_dir / "smpl_motion.json").is_file()
+    assert (monolith_dir / "body_mesh.json").is_file()
+    assert not (slim_dir / "smpl_motion.json").exists()
+    assert not (slim_dir / "body_mesh.json").exists()
+    assert (slim_dir / "skeleton3d.json").read_bytes() == (monolith_dir / "skeleton3d.json").read_bytes()
+    slim_joint_quality = json.loads((slim_dir / "body_joint_quality.json").read_text(encoding="utf-8"))
+    monolith_joint_quality = json.loads((monolith_dir / "body_joint_quality.json").read_text(encoding="utf-8"))
+    for key in ("status", "usable_for_review", "world_joints_available", "summary", "quality_blockers", "warnings"):
+        assert slim_joint_quality[key] == monolith_joint_quality[key]
+    assert (slim_dir / "contact_splice.json").read_bytes() == (monolith_dir / "contact_splice.json").read_bytes()
+    assert (slim_dir / "body_mesh_index" / "body_mesh_index.json").read_bytes() == (
+        monolith_dir / "body_mesh_index" / "body_mesh_index.json"
+    ).read_bytes()
+    assert (slim_dir / "body_mesh_index" / "body_mesh_faces.json").read_bytes() == (
+        monolith_dir / "body_mesh_index" / "body_mesh_faces.json"
+    ).read_bytes()
+    assert gzip.decompress((slim_dir / "body_mesh_index" / "body_mesh_chunks" / "window_000.bin.gz").read_bytes()) == gzip.decompress(
+        (monolith_dir / "body_mesh_index" / "body_mesh_chunks" / "window_000.bin.gz").read_bytes()
+    )
+    slim_timing = json.loads((slim_dir / "body_serialization_timing.json").read_text(encoding="utf-8"))
+    assert [item["artifact"] for item in slim_timing["artifacts"]] == ["smpl_motion.json", "body_mesh.json"]
+    assert all(item["skipped"] is True for item in slim_timing["artifacts"])
+    assert slim_timing["summary"]["skipped_count"] == 2
+    readiness = json.loads((slim_dir / "body_mesh_readiness.json").read_text(encoding="utf-8"))
+    assert readiness["monoliths"]["status"] == "not_built"
+    assert "rerun with --fetch-body-monoliths" in readiness["monoliths"]["note"]
+    assert "smpl_motion.json" not in slim_result.produced_artifacts
+    assert "body_mesh.json" not in slim_result.produced_artifacts
+    assert any("not built (speed default" in note for note in slim_result.notes)
+
+
 def test_dispatch_body_stage_raises_when_no_outputs_synced(tmp_path: Path) -> None:
     clip_dir = _clip_dir_with_tracks(tmp_path)
 
@@ -230,6 +1051,8 @@ def test_dispatch_body_stage_raises_when_no_outputs_synced(tmp_path: Path) -> No
             return _completed(0)
         if cmd[0] == "ssh" and cmd[-1].startswith("mkdir"):
             return _completed(0)
+        if _is_remote_output_listing(list(cmd)):
+            return _completed(0, stdout="")
         if cmd[0] == "rsync":
             src = cmd[-2]
             is_upload = ":" in cmd[-1]
@@ -324,6 +1147,8 @@ def test_remote_body_dispatch_cli_help_direct_reference() -> None:
     assert "--no-sam3d-inner-bucket-sync" in completed.stdout
     assert "--sam3d-upstream-env" in completed.stdout
     assert "--sam3d-tier2-output-lite" in completed.stdout
+    assert "--camera-motion" in completed.stdout
+    assert "--fetch-body-monoliths" in completed.stdout
     config = rbd.RemoteConfig(lock_wait_timeout_s=42, command_timeout_s=1234)
     command = rbd._remote_body_command(remote_run_dir="/remote/run", config=config)
     assert config.gpu_lock_script in command
@@ -357,7 +1182,30 @@ def test_remote_body_runner_script_registers_vm_proven_body_configuration() -> N
     assert "pose_ran" not in script
     assert "adaptive BODY schedule contains no SAM3D body-mode frames" in script
     assert "no world_mesh frames" not in script
+    assert "os.chdir('/remote/run')" in script
+    assert '_emit_marker("script_start")' in script
+    assert '_emit_marker("imports_done")' in script
+    assert '_emit_marker("run_pipeline_done"' in script
+    assert "build_body_mesh_index" in script
+    assert "body_mesh_index/body_mesh_index.json" in script
+    assert "orchestrator_in_memory" in script
+    assert "body_mesh_index already exists" in script
+    assert '_emit_marker("mesh_index_done"' in script
+    assert '_emit_marker("mesh_index_skipped"' in script
+    assert '"mesh_index": "failed"' in script
+    assert '_emit_marker("exit"' in script
     # the script must compile as valid python.
+    compile(script, "remote_body_runner.py", "exec")
+
+
+def test_remote_body_runner_reuses_shipped_calibration_and_tracking_artifacts() -> None:
+    script = rbd._remote_body_runner_script(
+        clip="wolverine", remote_run_dir="/remote/run", config=rbd.RemoteConfig(), max_frames=None, max_players=4
+    )
+
+    assert "reuse_existing_stage_artifacts=True" in script
+    assert '"source_artifact": "court_calibration.json"' in script
+    assert 'tracking_mode="precomputed_tracks"' in script
     compile(script, "remote_body_runner.py", "exec")
 
 
@@ -427,6 +1275,28 @@ def test_remote_body_runner_script_wires_sam3d_tier2_bench_config() -> None:
     compile(script, "remote_body_runner.py", "exec")
 
 
+def test_remote_body_runner_script_threads_fetch_body_monoliths_to_body_stage_runner() -> None:
+    slim_script = rbd._remote_body_runner_script(
+        clip="wolverine",
+        remote_run_dir="/remote/run",
+        config=rbd.RemoteConfig(fetch_body_monoliths=False),
+        max_frames=None,
+        max_players=4,
+    )
+    monolith_script = rbd._remote_body_runner_script(
+        clip="wolverine",
+        remote_run_dir="/remote/run",
+        config=rbd.RemoteConfig(fetch_body_monoliths=True),
+        max_frames=None,
+        max_players=4,
+    )
+
+    assert "write_body_monoliths=False" in slim_script
+    assert "write_body_monoliths=True" in monolith_script
+    compile(slim_script, "remote_body_runner.py", "exec")
+    compile(monolith_script, "remote_body_runner.py", "exec")
+
+
 def test_parse_sam3d_upstream_env_tuple_allows_only_approved_keys() -> None:
     parsed = rbd._parse_sam3d_upstream_env_tuple(
         "USE_COMPILE_BACKBONE=1,DECODER_COMPILE=1,INTERM_COMPILE=0,INTERM_SLIM=1,COMPILE_MODE=reduce-overhead,MHR_NO_CORRECTIVES=1"
@@ -452,12 +1322,14 @@ def test_dispatch_body_stage_writes_and_syncs_runner_script(tmp_path: Path) -> N
     def fake_run(cmd, timeout_s):  # noqa: ANN001
         if cmd[0] == "ssh" and (cmd[-1] == "true" or cmd[-1].startswith(("test -e", "mkdir"))):
             return _completed(0)
+        if _is_remote_output_listing(list(cmd)):
+            return _completed(0, stdout="smpl_motion.json\n")
         if cmd[0] == "rsync":
             if ":" in cmd[-1]:  # upload
-                uploaded.append(Path(cmd[-2]).name)
+                uploaded.extend(_rsync_files_from_names(list(cmd)) or [Path(cmd[-2]).name])
                 return _completed(0)
-            if cmd[-2].endswith("smpl_motion.json"):
-                _write_json(Path(cmd[-1]), {"schema_version": 1, "model": "sam3dbody_world_joints", "fps": 30.0, "world_frame": "court_Z0", "players": []})
+            if _is_rsync_download_batch(list(cmd)) and "smpl_motion.json" in _rsync_files_from_names(list(cmd)):
+                _write_json(Path(cmd[-1]) / "smpl_motion.json", {"schema_version": 1, "model": "sam3dbody_world_joints", "fps": 30.0, "world_frame": "court_Z0", "players": []})
                 return _completed(0)
             return _completed(1, stderr="not found")
         if cmd[0] == "ssh":
@@ -468,11 +1340,66 @@ def test_dispatch_body_stage_writes_and_syncs_runner_script(tmp_path: Path) -> N
         clip="wolverine",
         clip_dir=clip_dir,
         video_path=clip_dir / "source.mp4",
+        config=rbd.RemoteConfig(fetch_body_monoliths=True),
         run=fake_run,
     )
     assert result.status == "ran"
     assert (clip_dir / "remote_body_runner.py").is_file()
     assert "remote_body_runner.py" in uploaded
+
+
+def test_dispatch_body_stage_writes_timing_and_remote_output_log(tmp_path: Path) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    (clip_dir / "body_frames").mkdir()
+    (clip_dir / "body_frames" / "frame_000000.jpg").write_bytes(b"frame")
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        if cmd[0] == "ssh" and cmd[-1] == "true":
+            return _completed(0)
+        if cmd[0] == "ssh" and cmd[-1].startswith(("test -e", "mkdir")):
+            return _completed(0)
+        if _is_remote_output_listing(list(cmd)):
+            return _completed(0, stdout="skeleton3d.json\nbody_serialization_timing.json\nbody_stage_phase_timing.json\n")
+        if cmd[0] == "rsync":
+            src, dst = cmd[-2], cmd[-1]
+            if ":" in dst:
+                return _completed(0)
+            if _is_rsync_download_batch(list(cmd)):
+                names = _rsync_files_from_names(list(cmd))
+                if "skeleton3d.json" in names:
+                    _write_json(Path(dst) / "skeleton3d.json", _sam3d_skeleton_payload())
+                if "body_serialization_timing.json" in names:
+                    _write_json(Path(dst) / "body_serialization_timing.json", {"artifact_type": "racketsport_body_serialization_timing"})
+                if "body_stage_phase_timing.json" in names:
+                    _write_json(Path(dst) / "body_stage_phase_timing.json", {"artifact_type": "racketsport_body_stage_phase_timing"})
+                return _completed(0)
+            return _completed(1, stderr="not found")
+        if cmd[0] == "ssh":
+            stdout = "\n".join(
+                [
+                    json.dumps({"event": "script_start", "epoch_s": 1001.25}),
+                    json.dumps({"event": "imports_done", "epoch_s": 1002.0}),
+                    json.dumps({"event": "exit", "epoch_s": 1003.0, "exit_code": 0}),
+                ]
+            )
+            return _completed(0, stdout=stdout, stderr="remote warning")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    result = rbd.dispatch_body_stage(
+        clip="wolverine",
+        clip_dir=clip_dir,
+        video_path=clip_dir / "source.mp4",
+        run=fake_run,
+    )
+
+    timing = json.loads((clip_dir / "remote_body_dispatch_timing.json").read_text(encoding="utf-8"))
+    assert result.timing["phases"].keys() >= {"preflight_s", "mkdir_s", "upload_s", "remote_command_s", "download_s"}
+    assert timing["upload_bytes"] >= len(b"not a real video") + len(b"frame")
+    assert timing["download_bytes"] > 0
+    assert timing["lock_wait_estimate_s"] is not None
+    log_text = (clip_dir / "remote_body_stdout.log").read_text(encoding="utf-8")
+    assert '"event": "script_start"' in log_text
+    assert "remote warning" in log_text
 
 
 # --- Finding 7: SSH host-key verification is pinned, not disabled --------

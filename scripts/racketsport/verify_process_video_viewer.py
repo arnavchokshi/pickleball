@@ -14,12 +14,13 @@ a pipeline crash.
 from __future__ import annotations
 
 import json
+import math
 import socket
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB_REPLAY_DIR = ROOT / "web" / "replay"
@@ -47,6 +48,16 @@ def write_headless_verify_report(out_dir: Path, payload: dict[str, Any]) -> Path
     report_path = out_dir / "headless_verify.json"
     report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return report_path
+
+
+def screenshot_name_for_seconds(seconds: float) -> str:
+    if not math.isfinite(seconds) or seconds < 0:
+        raise ValueError("--screenshot-at-seconds values must be finite and non-negative")
+    if int(seconds) == seconds:
+        token = str(int(seconds))
+    else:
+        token = f"{seconds:.3f}".rstrip("0").rstrip(".").replace(".", "p")
+    return f"screenshot_t{token}s.png"
 
 
 def _require_manifest_path(manifest_path: Path | str | None) -> Path:
@@ -109,6 +120,22 @@ def _collect_load_errors(page: Any) -> list[str]:
     return page.locator(".load-error").all_inner_texts()
 
 
+def _seek_viewer_to_seconds(page: Any, seconds: float) -> None:
+    page.evaluate(
+        """(seconds) => {
+          const video = document.querySelector("video");
+          if (video) {
+            video.pause();
+            video.currentTime = seconds;
+            video.dispatchEvent(new Event("seeking", { bubbles: true }));
+            video.dispatchEvent(new Event("seeked", { bubbles: true }));
+            video.dispatchEvent(new Event("timeupdate", { bubbles: true }));
+          }
+        }""",
+        seconds,
+    )
+
+
 def verify_viewer_loads(
     manifest_path: Path | str | None,
     *,
@@ -116,6 +143,7 @@ def verify_viewer_loads(
     timeout_s: float = 45.0,
     allow_empty: bool = False,
     port: int = DEV_SERVER_PORT,
+    screenshot_at_seconds: Sequence[float] = (),
 ) -> dict[str, Any]:
     manifest_path = _require_manifest_path(manifest_path)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -167,6 +195,13 @@ def verify_viewer_loads(
             screenshot_path = out_dir / "process_video_verify.png"
             page.screenshot(path=str(screenshot_path))
             screenshots.append(str(screenshot_path))
+            for seconds in screenshot_at_seconds:
+                screenshot_name = screenshot_name_for_seconds(seconds)
+                _seek_viewer_to_seconds(page, seconds)
+                page.wait_for_timeout(1000)
+                timed_screenshot_path = out_dir / screenshot_name
+                page.screenshot(path=str(timed_screenshot_path))
+                screenshots.append(str(timed_screenshot_path))
             loaded_counts = _collect_loaded_counts(page)
             load_errors = _collect_load_errors(page)
             trust_chip_count = page.locator(".trust-badge-chip").count()
@@ -221,8 +256,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--port", type=int, default=DEV_SERVER_PORT)
     parser.add_argument("--allow-empty", action="store_true", help="Allow a manifest that intentionally renders zero viewer entities.")
+    parser.add_argument(
+        "--screenshot-at-seconds",
+        type=float,
+        action="append",
+        default=[],
+        help="After the load screenshot, seek the viewer and capture an additional screenshot_t<N>s.png. Repeatable.",
+    )
     args = parser.parse_args(argv)
-    result = verify_viewer_loads(args.manifest, out_dir=args.out_dir, allow_empty=args.allow_empty, port=args.port)
+    result = verify_viewer_loads(
+        args.manifest,
+        out_dir=args.out_dir,
+        allow_empty=args.allow_empty,
+        port=args.port,
+        screenshot_at_seconds=args.screenshot_at_seconds,
+    )
     print(json.dumps(result, indent=2))
     return 0 if result["ok"] else 1
 

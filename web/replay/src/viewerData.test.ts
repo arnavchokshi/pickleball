@@ -8,6 +8,7 @@ import * as viewerData from "./viewerData";
 import {
   activeBallContactPlayerIds,
   activePaddleFramesForTime,
+  ballCoverageKpiReadout,
   ballFrameForTime,
   ballInflectionBadge,
   bodyMeshDebugSnapshot,
@@ -425,16 +426,25 @@ describe("viewer data contracts", () => {
     const parsedWithoutShots = parseViewerManifest(manifest);
     expect(parsedWithoutShots.shots_url).toBeUndefined();
     expect(parsedWithoutShots.ball_arc_solved_url).toBeUndefined();
+    expect(parsedWithoutShots.auto_bounce_candidates_url).toBeUndefined();
+    expect(parsedWithoutShots.ball_bounce_candidates_url).toBeUndefined();
+    expect(parsedWithoutShots.ball_flight_sanity_url).toBeUndefined();
 
     expect(
       parseViewerManifest({
         ...manifest,
         shots_url: "/@fs/tmp/clip_a/shots.json",
         ball_arc_solved_url: "/@fs/tmp/clip_a/ball_track_arc_solved.json",
+        auto_bounce_candidates_url: "/@fs/tmp/clip_a/ball_bounce_candidates.json",
+        ball_bounce_candidates_url: "/@fs/tmp/clip_a/ball_bounce_candidates.json",
+        ball_flight_sanity_url: "/@fs/tmp/clip_a/ball_flight_sanity.json",
       }),
     ).toMatchObject({
       shots_url: "/@fs/tmp/clip_a/shots.json",
       ball_arc_solved_url: "/@fs/tmp/clip_a/ball_track_arc_solved.json",
+      auto_bounce_candidates_url: "/@fs/tmp/clip_a/ball_bounce_candidates.json",
+      ball_bounce_candidates_url: "/@fs/tmp/clip_a/ball_bounce_candidates.json",
+      ball_flight_sanity_url: "/@fs/tmp/clip_a/ball_flight_sanity.json",
     });
   });
 
@@ -1713,12 +1723,53 @@ describe("timeline markers and coaching-card metrics", () => {
       ],
     });
 
-    expect(worldWarningsReadout(parsed)).toBe("2 warnings: unprojected_visible_ball_frames, missing_paddle_pose");
+    expect(worldWarningsReadout(parsed)).toBe("2 notices: 2D-only ball frames outside solved arc coverage, missing paddle pose");
     expect(entityCoverageReadout("Ball", parsed.ball)).toBe("Ball 42.0% / 0.20-4.40s");
     expect(entityCoverageReadout("Player 1", parsed.players[0])).toBe("Player 1 100.0% / 0.00-10.00s");
 
     const absent = parseVirtualWorld(world);
-    expect(worldWarningsReadout(absent)).toBe("0 warnings");
+    expect(worldWarningsReadout(absent)).toBe("0 notices");
     expect(entityCoverageReadout("Ball", absent.ball)).toBe("Ball coverage n/a");
+  });
+
+  it("builds the ball KPI from confidence-gated world bands instead of legacy coverage_fraction", () => {
+    const parsed = parseVirtualWorld({
+      ...world,
+      ball: {
+        ...world.ball,
+        frames: [
+          {
+            t: 0,
+            xy: [10, 20],
+            world_xyz: [0, 0, 0.4],
+            visible: true,
+            conf: 0.91,
+            approx: false,
+            confidence_provenance: { band: "measured", display_band: "measured" },
+          },
+          {
+            t: 0.033,
+            xy: [11, 21],
+            world_xyz: [0, 1, 0.5],
+            visible: true,
+            conf: 0.7,
+            approx: true,
+            confidence_provenance: { band: "physics_predicted", display_band: "physics_predicted" },
+          },
+          {
+            t: 0.066,
+            xy: [12, 22],
+            world_xyz: null,
+            visible: true,
+            conf: 0.8,
+            approx: false,
+            confidence_provenance: { band: "hidden_no_prediction", display_band: "hidden_no_prediction" },
+          },
+        ],
+      },
+    });
+
+    expect(ballCoverageKpiReadout(parsed)).toBe("1/3 measured · 1 predicted · 1 hidden");
+    expect(ballCoverageKpiReadout(parseVirtualWorld(world))).toBe("coverage n/a");
   });
 });

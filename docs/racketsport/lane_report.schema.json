@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Codex lane structured report",
-  "description": "Every Codex lane returns this via `codex exec --output-schema`. Fable reads ONLY this object and rules PASS/BLOCKED; it never re-parses code or re-runs tests to verify a lane.",
+  "description": "Every Codex lane returns this via `codex exec --output-schema`. Fable reads ONLY this object and rules PASS/BLOCKED; it never re-parses code or re-runs tests to verify a lane. NOTE: OpenAI strict structured output requires every property to be listed in `required`; optional fields are expressed as nullable (type [X, null]) instead of being omitted from `required`.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["objective_result", "acceptance", "changes", "full_suite", "honest_issues"],
+  "required": ["objective_result", "acceptance", "changes", "full_suite", "honest_issues", "next", "session_id"],
   "properties": {
     "objective_result": {
       "type": "string",
@@ -17,10 +17,10 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["metric", "after", "target", "verdict"],
+        "required": ["metric", "baseline", "after", "target", "verdict"],
         "properties": {
           "metric": {"type": "string"},
-          "baseline": {"type": "string", "description": "value before the change, if known"},
+          "baseline": {"type": ["string", "null"], "description": "value before the change, or null if unknown/not applicable"},
           "after": {"type": "string", "description": "measured value after the change"},
           "target": {"type": "string"},
           "verdict": {"type": "string", "enum": ["PASS", "FAIL"]}
@@ -29,16 +29,16 @@
     },
     "changes": {
       "type": "array",
-      "description": "One line per change, file:line + what.",
+      "description": "One line per change, file:line + what. Empty array for read-only lanes.",
       "items": {"type": "string"}
     },
     "full_suite": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["command", "passed", "failed", "skipped", "failures_all_preexisting"],
+      "required": ["command", "passed", "failed", "skipped", "failures_all_preexisting", "failure_notes"],
       "description": "Result of running the FULL blast-radius suite named in the spec (not a subset).",
       "properties": {
-        "command": {"type": "string", "description": "exact pytest command run"},
+        "command": {"type": "string", "description": "exact pytest command run (or the read-only git-status check the spec authorizes)"},
         "passed": {"type": "integer"},
         "failed": {"type": "integer"},
         "skipped": {"type": "integer"},
@@ -46,7 +46,7 @@
           "type": "boolean",
           "description": "true ONLY if every failure is proven to also fail at HEAD before this change. If false and failed>0, objective_result cannot be PASS."
         },
-        "failure_notes": {"type": "string", "description": "for each failure: name + why it is pre-existing/unrelated, or why unresolved"}
+        "failure_notes": {"type": ["string", "null"], "description": "for each failure: name + why it is pre-existing/unrelated, or why unresolved; null if failed=0"}
       }
     },
     "honest_issues": {
@@ -55,12 +55,12 @@
       "items": {"type": "string"}
     },
     "next": {
-      "type": "string",
+      "type": ["string", "null"],
       "description": "What you would do next, for Fable to weigh. A suggestion, not an auto-executed plan."
     },
     "session_id": {
-      "type": "string",
-      "description": "This lane's Codex session id, so Fable can `codex exec resume <id>` to iterate without re-specifying."
+      "type": ["string", "null"],
+      "description": "This lane's Codex session id if known, so Fable can `codex exec resume <id>` to iterate without re-specifying. null if unknown (Fable reads it from the log header)."
     }
   }
 }

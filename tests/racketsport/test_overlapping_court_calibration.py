@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -15,7 +16,13 @@ from threed.racketsport.overlapping_court_calibration import (
     detect_hsv_paint_hough_segments,
     fit_joint_camera_point_line_lm,
     fit_joint_distorted_camera_lm,
+    fit_full_intrinsics_metric_plane_camera_lm,
     fit_metric_plane_camera_lm,
+    FLOOR_HOMOGRAPHY_KEYPOINT_NAMES,
+    _line_intersection_diagnostic_for_keypoint,
+    _line_intersection_quality_gate_decision,
+    _line_observations_from_segments,
+    _line_observations_from_projected_model,
     _mobilenet_v3_keypoint_checkpoint_evidence,
     hsv_paint_mask,
     image_points_to_world_plane_with_distortion_fit,
@@ -248,12 +255,13 @@ def _project_camera(
     rotation: np.ndarray,
     translation: np.ndarray,
     fx: float,
+    fy: float | None = None,
     cx: float,
     cy: float,
     dist: list[float] | None = None,
 ) -> list[list[float]]:
     rvec, _ = cv2.Rodrigues(rotation)
-    k = np.asarray([[fx, 0.0, cx], [0.0, fx, cy], [0.0, 0.0, 1.0]], dtype=np.float64)
+    k = np.asarray([[fx, 0.0, cx], [0.0, fy or fx, cy], [0.0, 0.0, 1.0]], dtype=np.float64)
     projected, _ = cv2.projectPoints(
         np.asarray(object_points_m, dtype=np.float64),
         rvec,
@@ -301,6 +309,26 @@ def test_joint_distorted_camera_lm_recovers_radial_distortion_and_reduces_reproj
     assert fit["intrinsics"]["fx"] == pytest.approx(1420.0, rel=0.02)
     assert fit["distortion"]["k1"] == pytest.approx(-0.18, abs=0.03)
     assert fit["distortion"]["k2"] == pytest.approx(0.055, abs=0.04)
+
+
+def test_project_world_points_round_trips_camera_fit_payload() -> None:
+    image_size = (1920, 1080)
+    rotation, translation = _look_at_pose((0.0, -10.5, 4.6), (0.0, 0.0, 0.0))
+    true_points = _project_camera(
+        COURT_OBJECT_POINTS_M,
+        rotation=rotation,
+        translation=translation,
+        fx=1420.0,
+        cx=image_size[0] / 2.0,
+        cy=image_size[1] / 2.0,
+        dist=[-0.18, 0.055, 0.0, 0.0],
+    )
+
+    fit = fit_joint_distorted_camera_lm(COURT_OBJECT_POINTS_M, true_points, image_size=image_size)
+    round_tripped = project_world_points_with_distortion_fit(COURT_OBJECT_POINTS_M, fit)
+    rmse = float(np.sqrt(np.mean(np.sum((np.asarray(round_tripped) - np.asarray(true_points)) ** 2, axis=1))))
+
+    assert rmse < 0.1
 
 
 def test_point_line_lm_uses_line_evidence_to_reduce_clean_geometry_error() -> None:
@@ -381,6 +409,119 @@ def test_point_line_lm_uses_line_evidence_to_reduce_clean_geometry_error() -> No
     assert point_line_clean_rmse < point_only_clean_rmse
 
 
+def test_line_observations_preserve_quality_metrics_for_gating() -> None:
+    aggregated = {
+        "near_left_corner": (10.0, 10.0),
+        "near_right_corner": (110.0, 10.0),
+        "far_left_corner": (10.0, 150.0),
+        "far_right_corner": (110.0, 150.0),
+        "near_baseline_center": (60.0, 10.0),
+        "far_baseline_center": (60.0, 150.0),
+        "near_nvz_left": (10.0, 60.0),
+        "near_nvz_right": (110.0, 60.0),
+        "near_nvz_center": (60.0, 60.0),
+        "far_nvz_left": (10.0, 100.0),
+        "far_nvz_right": (110.0, 100.0),
+        "far_nvz_center": (60.0, 100.0),
+    }
+    keypoint_by_name = {
+        name: SimpleNamespace(world_xyz_m=[float(point[0]), float(point[1]), 0.0])
+        for name, point in aggregated.items()
+    }
+
+    observations = _line_observations_from_segments(
+        aggregated=aggregated,
+        segments=[{"p1": [11.0, 11.0], "p2": [109.0, 11.0], "length_px": 98.0}],
+        keypoint_by_name=keypoint_by_name,
+    )
+    near_baseline = next(item for item in observations if item["name"] == "near_baseline")
+    diagnostic = _line_intersection_diagnostic_for_keypoint(
+        "near_left_corner",
+        (10.0, 10.0),
+        (12.0, 10.5),
+        {
+            "near_baseline": near_baseline,
+            "left_sideline": {
+                "name": "left_sideline",
+                "image_segment_px": [[10.0, 10.0], [10.0, 150.0]],
+                "support_mode": "overlapping_segment",
+                "quality": {
+                    "angle_diff_deg": 0.0,
+                    "mean_perpendicular_distance_px": 0.0,
+                    "overlap_fraction": 1.0,
+                },
+            },
+        },
+    )
+
+    assert near_baseline["quality"]["angle_diff_deg"] == pytest.approx(0.0)
+    assert near_baseline["quality"]["mean_perpendicular_distance_px"] == pytest.approx(1.0)
+    assert near_baseline["quality"]["overlap_fraction"] == pytest.approx(0.98)
+    assert diagnostic["line_quality_min_overlap_fraction"] == pytest.approx(0.98)
+    assert diagnostic["line_quality_max_mean_perpendicular_distance_px"] == pytest.approx(1.0)
+
+
+def test_line_quality_gate_can_reject_intersections_far_from_model_projection() -> None:
+    diagnostic = {
+        "line_quality_max_angle_diff_deg": 1.25,
+        "line_quality_max_mean_perpendicular_distance_px": 6.0,
+        "line_quality_min_overlap_fraction": 0.55,
+        "model_to_line_intersection_delta_px": 18.0,
+    }
+    profile = {
+        "profile_id": "model_proximity",
+        "max_angle_diff_deg": 8.0,
+        "max_mean_perpendicular_distance_px": 12.0,
+        "min_overlap_fraction": 0.35,
+        "max_model_to_line_intersection_delta_px": 16.0,
+    }
+
+    assert _line_intersection_quality_gate_decision(diagnostic, profile) == "failed"
+    profile["max_model_to_line_intersection_delta_px"] = 18.0
+    assert _line_intersection_quality_gate_decision(diagnostic, profile) == "passed"
+
+
+def test_line_observations_can_be_selected_from_model_projection_without_reviewed_points() -> None:
+    image_size = (1280, 720)
+    rotation, translation = _look_at_pose((0.0, -10.5, 4.6), (0.0, 0.0, 0.0))
+    image_points = _project_camera(
+        COURT_OBJECT_POINTS_M,
+        rotation=rotation,
+        translation=translation,
+        fx=980.0,
+        cx=image_size[0] / 2.0,
+        cy=image_size[1] / 2.0,
+        dist=[-0.08, 0.015, 0.0, 0.0],
+    )
+    fit = fit_full_intrinsics_metric_plane_camera_lm(COURT_OBJECT_POINTS_M, image_points, image_size=image_size)
+    projected = project_world_points_with_distortion_fit(COURT_OBJECT_POINTS_M, fit)
+    left = projected[FLOOR_HOMOGRAPHY_KEYPOINT_NAMES.index("near_left_corner")]
+    right = projected[FLOOR_HOMOGRAPHY_KEYPOINT_NAMES.index("near_right_corner")]
+    keypoint_by_name = {
+        name: SimpleNamespace(world_xyz_m=COURT_OBJECT_POINTS_M[index])
+        for index, name in enumerate(FLOOR_HOMOGRAPHY_KEYPOINT_NAMES)
+    }
+
+    observations = _line_observations_from_projected_model(
+        keypoint_names=FLOOR_HOMOGRAPHY_KEYPOINT_NAMES,
+        object_points_m=COURT_OBJECT_POINTS_M,
+        model_fit=fit,
+        segments=[
+            {
+                "p1": [left[0] + 3.0, left[1] + 1.0],
+                "p2": [right[0] - 3.0, right[1] + 1.0],
+                "length_px": abs(right[0] - left[0]) - 6.0,
+            }
+        ],
+        keypoint_by_name=keypoint_by_name,
+    )
+
+    near_baseline = next(item for item in observations if item["name"] == "near_baseline")
+    assert near_baseline["reference_source"] == "model_projection"
+    assert near_baseline["support_mode"] == "overlapping_segment"
+    assert near_baseline["quality"]["mean_perpendicular_distance_px"] < 3.0
+
+
 def test_camera_fit_backprojects_image_points_to_world_court_plane() -> None:
     image_size = (1920, 1080)
     rotation, translation = _look_at_pose((0.0, -10.5, 4.6), (0.0, 0.0, 0.0))
@@ -457,6 +598,55 @@ def test_metric_plane_camera_lm_reduces_world_residual_for_noisy_floor_points() 
     assert metric_fit["method"] == "metric_plane_focal_pose_radial_soft_l1_lm"
     assert metric_fit["objective"] == "world_plane_backprojection_m"
     assert metric_world_rmse < pixel_world_rmse
+
+
+def test_full_intrinsics_metric_plane_camera_lm_diagnoses_principal_point_and_aspect_bias() -> None:
+    image_size = (1920, 1080)
+    rotation, translation = _look_at_pose((0.6, -10.2, 4.8), (0.0, 0.0, 0.0))
+    image_points = _project_camera(
+        COURT_OBJECT_POINTS_M,
+        rotation=rotation,
+        translation=translation,
+        fx=1320.0,
+        fy=1485.0,
+        cx=1035.0,
+        cy=500.0,
+        dist=[-0.16, 0.048, 0.0, 0.0],
+    )
+
+    fixed_center = fit_metric_plane_camera_lm(COURT_OBJECT_POINTS_M, image_points, image_size=image_size)
+    full_intrinsics = fit_full_intrinsics_metric_plane_camera_lm(
+        COURT_OBJECT_POINTS_M,
+        image_points,
+        image_size=image_size,
+    )
+    fixed_backprojected = image_points_to_world_plane_with_distortion_fit(image_points, fixed_center)
+    full_backprojected = image_points_to_world_plane_with_distortion_fit(image_points, full_intrinsics)
+
+    fixed_world_rmse = np.sqrt(
+        np.mean(
+            np.sum(
+                (np.asarray(fixed_backprojected)[:, :2] - np.asarray(COURT_OBJECT_POINTS_M)[:, :2]) ** 2,
+                axis=1,
+            )
+        )
+    )
+    full_world_rmse = np.sqrt(
+        np.mean(
+            np.sum(
+                (np.asarray(full_backprojected)[:, :2] - np.asarray(COURT_OBJECT_POINTS_M)[:, :2]) ** 2,
+                axis=1,
+            )
+        )
+    )
+
+    assert full_intrinsics["method"] == "full_intrinsics_metric_plane_pose_radial_soft_l1_lm"
+    assert full_intrinsics["diagnostic_only"] is True
+    assert full_intrinsics["promotes_calibration"] is False
+    assert full_intrinsics["intrinsics"]["cx"] == pytest.approx(1035.0, abs=35.0)
+    assert full_intrinsics["intrinsics"]["cy"] == pytest.approx(500.0, abs=35.0)
+    assert abs(full_intrinsics["intrinsics"]["fx"] - full_intrinsics["intrinsics"]["fy"]) > 50.0
+    assert full_world_rmse < fixed_world_rmse * 0.25
 
 
 def test_shadow_removal_preprocess_recovers_shadowed_white_line_support() -> None:

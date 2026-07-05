@@ -23,6 +23,8 @@ from threed.racketsport.skeleton3d import SAM3D_BODY_MHR70_SEMANTIC_MAP
 
 VERSION = 1
 CORE_BODY_SPEED_CLAMP_MPS = 3.0
+R3_MAX_XY_CORRECTION_M = 0.02
+STANCE_MAX_XY_CORRECTION_M = 0.30
 
 
 @dataclass(frozen=True)
@@ -35,9 +37,9 @@ class FootPinSettings:
     min_phase_frames: int = 2
     low_foot_band_m: float = 0.025
     taper_frames: int = 0
-    max_correction_m: float = 0.15
-    max_smoothing_correction_m: float = 0.049
-    interpolate_between_stances: bool = True
+    max_correction_m: float = STANCE_MAX_XY_CORRECTION_M
+    max_smoothing_correction_m: float = 0.0
+    interpolate_between_stances: bool = False
     root_speed_clamp_mps: float = CORE_BODY_SPEED_CLAMP_MPS
 
     def to_dict(self) -> dict[str, float | int | bool]:
@@ -100,13 +102,19 @@ class _Correction:
 
     @property
     def magnitude(self) -> float:
-        return math.hypot(self.dx, self.dy)
+        contact_magnitudes = [
+            math.hypot(float(contact["delta_xy_m"][0]), float(contact["delta_xy_m"][1]))
+            for contact in self.active_contacts
+            if isinstance(contact.get("delta_xy_m"), Sequence) and len(contact["delta_xy_m"]) >= 2
+        ]
+        return max(contact_magnitudes, default=math.hypot(self.dx, self.dy))
 
 
 def apply_foot_pin_to_payload(
     payload: Mapping[str, Any],
     *,
     settings: FootPinSettings = FootPinSettings(),
+    contact_phases: Sequence[ContactPhase] | None = None,
     audit_path: str | None = None,
 ) -> FootPinResult:
     """Return a corrected copy plus an always-on audit JSON payload."""
@@ -130,10 +138,14 @@ def apply_foot_pin_to_payload(
         )
         for frame in frames
     ]
-    candidate_phases = detect_contact_phases(
-        detection_frames,
-        joint_names=joint_names,
-        thresholds=settings.contact_thresholds(min_confidence=0.0),
+    candidate_phases = (
+        list(contact_phases)
+        if contact_phases is not None
+        else detect_contact_phases(
+            detection_frames,
+            joint_names=joint_names,
+            thresholds=settings.contact_thresholds(min_confidence=0.0),
+        )
     )
     eligible_source_phases = [
         phase for phase in candidate_phases if phase.min_confidence >= settings.min_phase_confidence
@@ -142,11 +154,14 @@ def apply_foot_pin_to_payload(
         phase for phase in candidate_phases if phase.min_confidence < settings.min_phase_confidence
     ]
     pinned_phases = _median_anchor_phases(detection_frames, eligible_source_phases, joint_names, settings=settings)
-    raw_corrections = _stance_corrections(detection_frames, pinned_phases, joint_names, settings=settings)
+    cap_exceeded_skips: list[dict[str, Any]] = []
+    raw_corrections = _stance_corrections(
+        detection_frames, pinned_phases, joint_names, settings=settings, cap_exceeded_skips=cap_exceeded_skips
+    )
     corrections = _interpolated_corrections(frames, raw_corrections, settings=settings, joint_names=joint_names)
 
     before_roots = _root_xy_by_player(frames, corrections=None, joint_names=joint_names)
-    _apply_corrections(frames, corrections)
+    _apply_corrections(frames, corrections, joint_names=joint_names)
     after_roots = _root_xy_by_player(frames, corrections=None, joint_names=joint_names)
 
     after_frames, _unused = _skeleton_frames_from_payload(corrected)
@@ -167,6 +182,7 @@ def apply_foot_pin_to_payload(
         before_roots=before_roots,
         after_roots=after_roots,
         audit_path=audit_path,
+        cap_exceeded_skips=cap_exceeded_skips,
     )
     _attach_provenance(corrected, settings=settings, audit=audit, audit_path=audit_path)
     return FootPinResult(payload=corrected, audit=audit)
@@ -267,13 +283,53 @@ def _stance_corrections(
     joint_names: Sequence[str],
     *,
     settings: FootPinSettings,
+    cap_exceeded_skips: list[dict[str, Any]] | None = None,
 ) -> dict[tuple[str, int], _Correction]:
     if not frames or not phases:
         return {}
     indices = resolve_foot_joint_indices(joint_names, joint_count=len(frames[0].joints_world))
     frame_map = {(str(frame.player_id), frame.frame_index): frame for frame in frames}
-    active_by_frame: dict[tuple[str, int], list[_PinnedPhase]] = {}
+
+    # Phase-level cap filter: a stance phase whose anchor demands a correction beyond
+    # the in-stance cap at ANY of its frames is inconsistent evidence. Pinning only its
+    # under-cap frames would create an on/off discontinuity INSIDE the stance (measured
+    # live as a 0.32 m foot jump on IMG_1605), so the whole phase is dropped fail-closed
+    # and recorded; its feet stay unpinned and the slide metrics report them honestly.
+    effective_cap = _effective_max_correction_m(settings)
+    kept_phases: list[_PinnedPhase] = []
     for phase in phases:
+        max_magnitude = 0.0
+        for frame_index in phase.frame_indices:
+            frame = frame_map.get((phase.player_id, frame_index))
+            if frame is None:
+                continue
+            current = foot_contact_point(
+                frame,
+                indices.for_foot(phase.foot),
+                low_foot_band_m=settings.low_foot_band_m,
+            )
+            max_magnitude = max(
+                max_magnitude,
+                math.hypot(phase.anchor_xy[0] - current[0], phase.anchor_xy[1] - current[1]),
+            )
+        if max_magnitude > effective_cap + 1e-9:
+            if cap_exceeded_skips is not None:
+                cap_exceeded_skips.append(
+                    {
+                        "kind": "phase_skipped",
+                        "player_id": phase.player_id,
+                        "foot": phase.foot,
+                        "start_frame_index": phase.source.start_frame_index,
+                        "end_frame_index": phase.source.end_frame_index,
+                        "magnitude_m": round(max_magnitude, 6),
+                        "cap_m": round(effective_cap, 6),
+                    }
+                )
+            continue
+        kept_phases.append(phase)
+
+    active_by_frame: dict[tuple[str, int], list[_PinnedPhase]] = {}
+    for phase in kept_phases:
         for frame_index in phase.frame_indices:
             active_by_frame.setdefault((phase.player_id, frame_index), []).append(phase)
 
@@ -282,9 +338,9 @@ def _stance_corrections(
         frame = frame_map.get(key)
         if frame is None:
             continue
-        weighted_dx = 0.0
-        weighted_dy = 0.0
-        weight_sum = 0.0
+        weighted_dx_by_foot: dict[str, float] = {}
+        weighted_dy_by_foot: dict[str, float] = {}
+        weight_sum_by_foot: dict[str, float] = {}
         contacts: list[dict[str, Any]] = []
         for phase in active:
             phase_weight = _phase_weight(phase, frame.frame_index, settings.taper_frames)
@@ -297,9 +353,9 @@ def _stance_corrections(
             )
             dx = phase.anchor_xy[0] - current[0]
             dy = phase.anchor_xy[1] - current[1]
-            weighted_dx += dx * phase_weight
-            weighted_dy += dy * phase_weight
-            weight_sum += phase_weight
+            weighted_dx_by_foot[phase.foot] = weighted_dx_by_foot.get(phase.foot, 0.0) + dx * phase_weight
+            weighted_dy_by_foot[phase.foot] = weighted_dy_by_foot.get(phase.foot, 0.0) + dy * phase_weight
+            weight_sum_by_foot[phase.foot] = weight_sum_by_foot.get(phase.foot, 0.0) + phase_weight
             contacts.append(
                 {
                     "foot": phase.foot,
@@ -310,17 +366,50 @@ def _stance_corrections(
                     "min_confidence": phase.source.min_confidence,
                 }
             )
-        if weight_sum <= 0:
+        if not weight_sum_by_foot:
             continue
-        dx = weighted_dx / weight_sum
-        dy = weighted_dy / weight_sum
-        dx, dy, capped = _cap_xy(dx, dy, settings.max_correction_m)
+        effective_cap = _effective_max_correction_m(settings)
+        foot_deltas: dict[str, tuple[float, float, bool]] = {}
+        for foot, weight_sum in weight_sum_by_foot.items():
+            dx = weighted_dx_by_foot[foot] / weight_sum
+            dy = weighted_dy_by_foot[foot] / weight_sum
+            magnitude = math.hypot(dx, dy)
+            if magnitude > effective_cap + 1e-9:
+                # Fail closed per foot/frame: a correction beyond the in-stance cap is
+                # untrustworthy evidence, so no pin is applied there. The skip is
+                # recorded in the audit instead of killing the whole BODY refine.
+                if cap_exceeded_skips is not None:
+                    cap_exceeded_skips.append(
+                        {
+                            "player_id": key[0],
+                            "frame_index": key[1],
+                            "foot": foot,
+                            "magnitude_m": round(magnitude, 6),
+                            "cap_m": round(effective_cap, 6),
+                        }
+                    )
+                continue
+            foot_deltas[foot] = (*_cap_xy(dx, dy, effective_cap),)
+        enriched_contacts: list[dict[str, Any]] = []
+        for contact in contacts:
+            delta = foot_deltas.get(str(contact["foot"]))
+            if delta is None:
+                continue
+            enriched = dict(contact)
+            enriched["delta_xy_m"] = [delta[0], delta[1]]
+            enriched["capped"] = bool(delta[2])
+            enriched_contacts.append(enriched)
+        if not enriched_contacts:
+            continue
+        dx = sum(float(contact["delta_xy_m"][0]) for contact in enriched_contacts) / len(enriched_contacts)
+        dy = sum(float(contact["delta_xy_m"][1]) for contact in enriched_contacts) / len(enriched_contacts)
+        capped = any(bool(contact["capped"]) for contact in enriched_contacts)
         corrections[key] = _Correction(
             dx=dx,
             dy=dy,
-            weight=weight_sum / len(active),
+            weight=sum(weight_sum_by_foot.values()) / len(active),
             capped=capped,
-            active_contacts=tuple(contacts),
+            active_contacts=tuple(enriched_contacts),
         )
     return corrections
 
@@ -345,96 +434,53 @@ def _interpolated_corrections(
     settings: FootPinSettings,
     joint_names: Sequence[str],
 ) -> dict[tuple[str, int], _Correction]:
-    if not settings.interpolate_between_stances or not raw:
-        return dict(raw)
-    by_player: dict[str, list[_FrameRef]] = {}
-    for frame in frames:
-        by_player.setdefault(frame.player_id, []).append(frame)
-
-    out = dict(raw)
-    for player_id, player_frames in by_player.items():
-        ordered = sorted(player_frames, key=lambda item: (item.frame_index, item.order))
-        knot_positions = [
-            index
-            for index, frame in enumerate(ordered)
-            if (player_id, frame.frame_index) in raw
-        ]
-        player_candidate: dict[tuple[str, int], _Correction] = {
-            key: value for key, value in raw.items() if key[0] == player_id
-        }
-        for left_pos, right_pos in zip(knot_positions, knot_positions[1:]):
-            left = ordered[left_pos]
-            right = ordered[right_pos]
-            left_corr = raw[(player_id, left.frame_index)]
-            right_corr = raw[(player_id, right.frame_index)]
-            gap = right_pos - left_pos
-            if gap <= 1:
-                continue
-            left_root = _root_xy(left.frame, left.joints_world, joint_names=joint_names)
-            right_root = _root_xy(right.frame, right.joints_world, joint_names=joint_names)
-            left_target = (left_root[0] + left_corr.dx, left_root[1] + left_corr.dy)
-            right_target = (right_root[0] + right_corr.dx, right_root[1] + right_corr.dy)
-            for pos in range(left_pos + 1, right_pos):
-                frame = ordered[pos]
-                key = (player_id, frame.frame_index)
-                if key in out:
-                    continue
-                alpha = (pos - left_pos) / gap
-                desired_root = (
-                    left_target[0] + (right_target[0] - left_target[0]) * alpha,
-                    left_target[1] + (right_target[1] - left_target[1]) * alpha,
-                )
-                current_root = _root_xy(frame.frame, frame.joints_world, joint_names=joint_names)
-                dx = desired_root[0] - current_root[0]
-                dy = desired_root[1] - current_root[1]
-                dx, dy, capped = _cap_xy(
-                    dx,
-                    dy,
-                    min(settings.max_correction_m, settings.max_smoothing_correction_m),
-                )
-                player_candidate[key] = _Correction(
-                    dx=dx,
-                    dy=dy,
-                    weight=0.0,
-                    capped=capped,
-                    active_contacts=(),
-                )
-        candidate_p90 = _root_p90_with_corrections(
-            ordered,
-            player_candidate,
-            joint_names=joint_names,
-            settings=settings,
-        )
-        baseline_p90 = _root_p90_with_corrections(
-            ordered,
-            {},
-            joint_names=joint_names,
-            settings=settings,
-        )
-        if candidate_p90 <= baseline_p90 + 1e-12:
-            out.update(player_candidate)
-    return out
+    if not raw:
+        return {}
+    return dict(raw)
 
 
-def _apply_corrections(frames: Sequence[_FrameRef], corrections: Mapping[tuple[str, int], _Correction]) -> None:
+def _apply_corrections(
+    frames: Sequence[_FrameRef],
+    corrections: Mapping[tuple[str, int], _Correction],
+    *,
+    joint_names: Sequence[str],
+) -> None:
     for frame in frames:
         correction = corrections.get((frame.player_id, frame.frame_index))
         if correction is None or correction.magnitude == 0.0:
             continue
-        _translate_frame(frame.frame, dx=correction.dx, dy=correction.dy)
+        _translate_stance_chains(frame.frame, correction.active_contacts, joint_names=joint_names)
 
 
-def _translate_frame(frame: MutableMapping[str, Any], *, dx: float, dy: float) -> None:
-    for field in ("joints_world", "mesh_vertices_world"):
-        values = frame.get(field)
-        if isinstance(values, list):
-            frame[field] = [_translated_vec3(point, dx=dx, dy=dy) for point in values]
-    if isinstance(frame.get("transl_world"), list):
-        frame["transl_world"] = _translated_vec3(frame["transl_world"], dx=dx, dy=dy)
-    if isinstance(frame.get("floor_world_xyz"), list):
-        frame["floor_world_xyz"] = _translated_vec3(frame["floor_world_xyz"], dx=dx, dy=dy)
-    if isinstance(frame.get("track_world_xy"), list) and len(frame["track_world_xy"]) >= 2:
-        frame["track_world_xy"] = [float(frame["track_world_xy"][0]) + dx, float(frame["track_world_xy"][1]) + dy]
+def _translate_stance_chains(
+    frame: MutableMapping[str, Any],
+    active_contacts: Sequence[Mapping[str, Any]],
+    *,
+    joint_names: Sequence[str],
+) -> None:
+    joints = frame.get("joints_world")
+    if not isinstance(joints, list):
+        return
+    translated = [[float(value) for value in joint] for joint in joints]
+    deltas = [
+        (str(contact.get("foot", "")), float(contact["delta_xy_m"][0]), float(contact["delta_xy_m"][1]))
+        for contact in active_contacts
+        if isinstance(contact.get("delta_xy_m"), Sequence) and len(contact["delta_xy_m"]) >= 2
+    ]
+    if not deltas:
+        return
+    shared_dx = sum(delta[1] for delta in deltas) / len(deltas)
+    shared_dy = sum(delta[2] for delta in deltas) / len(deltas)
+    for joint_idx in _lower_body_chain_indices(joint_names, joint_count=len(translated)):
+        translated[joint_idx] = _translated_vec3(translated[joint_idx], dx=shared_dx, dy=shared_dy)
+    for foot, dx, dy in deltas:
+        residual_dx = dx - shared_dx
+        residual_dy = dy - shared_dy
+        if abs(residual_dx) <= 1e-12 and abs(residual_dy) <= 1e-12:
+            continue
+        for joint_idx in _stance_foot_indices(joint_names, foot=foot, joint_count=len(translated)):
+            translated[joint_idx] = _translated_vec3(translated[joint_idx], dx=residual_dx, dy=residual_dy)
+    frame["joints_world"] = translated
 
 
 def _translated_vec3(value: Any, *, dx: float, dy: float) -> Any:
@@ -459,6 +505,7 @@ def _audit_payload(
     before_roots: Mapping[str, list[tuple[int, tuple[float, float]]]],
     after_roots: Mapping[str, list[tuple[int, tuple[float, float]]]],
     audit_path: str | None,
+    cap_exceeded_skips: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     players = _player_stats(
         frames=frames,
@@ -486,12 +533,14 @@ def _audit_payload(
             "skipped_low_confidence_phase_count": len(skipped_low_confidence),
             "phases": [_phase_dict(phase) for phase in eligible_phases],
             "skipped_low_confidence_phases": [_phase_dict(phase) for phase in skipped_low_confidence],
+            "cap_exceeded_skips": [dict(event) for event in cap_exceeded_skips],
         },
         "summary": {
             "stance_slide_before_mm": _distribution(before_phase_slides),
             "stance_slide_after_mm": _distribution(after_phase_slides),
             "total_phase_count": len(eligible_phases),
             "total_skipped_low_confidence_phases": len(skipped_low_confidence),
+            "cap_exceeded_skip_count": len(cap_exceeded_skips),
             "total_corrected_frame_count": len([corr for corr in corrections.values() if corr.magnitude > 0.0]),
             "max_correction_m": max((corr.magnitude for corr in corrections.values()), default=0.0),
             "max_limb_length_delta_m": max(
@@ -717,6 +766,40 @@ def _wrist_indices(joint_names: Sequence[str]) -> tuple[int, ...]:
     return tuple(index for index, name in enumerate(names) if name in {"left_wrist", "right_wrist"})
 
 
+def _lower_body_chain_indices(joint_names: Sequence[str], *, joint_count: int) -> tuple[int, ...]:
+    names = _effective_joint_names(joint_names)
+    wanted = {
+        "left_hip",
+        "left_knee",
+        "left_ankle",
+        "left_big_toe",
+        "left_big_toe_tip",
+        "left_small_toe",
+        "left_small_toe_tip",
+        "left_heel",
+        "right_hip",
+        "right_knee",
+        "right_ankle",
+        "right_big_toe",
+        "right_big_toe_tip",
+        "right_small_toe",
+        "right_small_toe_tip",
+        "right_heel",
+    }
+    return tuple(index for index, name in enumerate(names[:joint_count]) if name in wanted)
+
+
+def _stance_foot_indices(joint_names: Sequence[str], *, foot: str, joint_count: int) -> tuple[int, ...]:
+    names = _effective_joint_names(joint_names)
+    if foot == "left":
+        wanted = {"left_ankle", "left_big_toe", "left_big_toe_tip", "left_small_toe", "left_small_toe_tip", "left_heel"}
+    elif foot == "right":
+        wanted = {"right_ankle", "right_big_toe", "right_big_toe_tip", "right_small_toe", "right_small_toe_tip", "right_heel"}
+    else:
+        return ()
+    return tuple(index for index, name in enumerate(names[:joint_count]) if name in wanted)
+
+
 def _effective_joint_names(joint_names: Sequence[str]) -> tuple[str, ...]:
     if _looks_like_sam3d_joint_names(joint_names):
         semantic = [f"sam3dbody_joint_{index:03d}" for index in range(len(joint_names))]
@@ -765,6 +848,10 @@ def _cap_xy(dx: float, dy: float, max_magnitude: float) -> tuple[float, float, b
         return dx, dy, False
     scale = max_magnitude / magnitude
     return dx * scale, dy * scale, True
+
+
+def _effective_max_correction_m(settings: FootPinSettings) -> float:
+    return float(settings.max_correction_m)
 
 
 def _copy_joints(value: Any) -> list[list[float]] | None:

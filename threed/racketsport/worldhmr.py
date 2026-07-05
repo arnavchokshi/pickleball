@@ -7,9 +7,11 @@ run Fast SAM-3D-Body or infer SMPL parameters.
 from __future__ import annotations
 
 import copy
+import json
 from dataclasses import dataclass, field
-from math import sqrt
-from typing import Any, Mapping, Sequence
+from math import isfinite, sqrt
+from pathlib import Path
+from typing import Any, Mapping, MutableMapping, Sequence
 
 from .footlock import (
     ContactHysteresis,
@@ -19,6 +21,13 @@ from .footlock import (
     foot_lock_metrics,
     snap_stance_foot,
 )
+from .foot_contact import (
+    ContactPhase,
+    SkeletonFrame as ContactSkeletonFrame,
+    detect_contact_phases,
+    measure_contact_metrics,
+)
+from .foot_pin import FootPinSettings, apply_foot_pin_to_payload
 from .pose_temporal import apply_sam3d_wrist_bone_lock, refine_sam3d_skeleton3d
 from .schemas import CourtCalibration
 from .skeleton_upright import ROTATION_CONVENTION_OFFSET_ROW_TIMES_R, rotate_camera_offsets_row_times_R
@@ -30,6 +39,27 @@ LOW_GROUNDING_ANCHOR_HEIGHT_M = 0.08
 FOOT_LOCK_SKATE_FREE_MAX_SLIDE_M = 0.003
 FOOT_LOCK_RELATIVE_ENTER_SPEED_MPS = 5.0
 FOOT_LOCK_RELATIVE_EXIT_SPEED_MPS = 6.0
+R3_GROUNDING_ANCHOR_SOURCE = "placement_track_world_xy"
+DEFAULT_GROUNDING_ANCHOR_SOURCE = "track_world_xy"
+STANCE_AWARE_STANCE_ALPHA_XY = 1.0
+STANCE_AWARE_TRANSITION_ALPHA_XY = 0.92
+STANCE_AWARE_TRANSITION_FALLBACK_ALPHA_XY = 0.85
+STANCE_AWARE_STANCE_RESIDUAL_RESET_M = 0.02
+STANCE_AWARE_TRANSITION_RESIDUAL_RESET_M = 0.20
+STANCE_AWARE_TRANSITION_BOUNDARY_FRAMES = 12
+STANCE_AWARE_HIGH_COVARIANCE_TRACE_M2 = 0.25
+STANCE_AWARE_PHASE_ANCHOR_DRIFT_SPLIT_M = 0.25
+FOOT_LOCK_MAX_XY_CORRECTION_M = 0.02
+REFINED_STANCE_FOOT_PIN_MAX_CORRECTION_M = 0.30
+CAMERA_MOTION_ARTIFACT = "camera_motion.json"
+SAM3D_FOOT_KEYPOINT_INDICES = {
+    "left_ankle": 13,
+    "right_ankle": 14,
+    "left_toe": 15,
+    "right_toe": 16,
+    "left_heel": 17,
+    "right_heel": 20,
+}
 FOOT_LOCK_CONTACT_HYSTERESIS = ContactHysteresis(
     enter_height_m=FLOOR_CONTACT_EPSILON_M,
     exit_height_m=FLOOR_CONTACT_EPSILON_M,
@@ -71,6 +101,19 @@ class WorldGroundingMetrics:
     rms_ground_z_error_m: float
     max_ground_z_error_m: float
     scaffold: str = SCAFFOLD_NOTE
+
+
+@dataclass(frozen=True)
+class _CameraMotionObservation:
+    matrix: list[list[float]]
+
+
+@dataclass(frozen=True)
+class _CameraMotionContext:
+    path: Path
+    frames: dict[int, _CameraMotionObservation]
+    artifact_frame_count: int
+    artifact_compensated_frame_count: int
 
 
 def snap_player_translation_to_court(
@@ -172,6 +215,9 @@ def build_body_artifacts_from_fast_sam(
     max_track_anchor_smoothing_residual_m: float | None = None,
     model: str = "sam3dbody_world_joints",
     sam3d_wrist_bone_lock: bool = True,
+    stance_index: Mapping[tuple[int | str, int], Mapping[str, Any]] | None = None,
+    grounding_anchor_source: str | None = None,
+    camera_motion_path: str | Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Build BODY contract artifacts from real Fast SAM-3D-Body outputs."""
 
@@ -185,16 +231,44 @@ def build_body_artifacts_from_fast_sam(
         raise ValueError("max_track_anchor_smoothing_residual_m must be positive when provided")
     if not samples:
         raise ValueError("at least one Fast SAM-3D-Body sample is required")
-    grounded = [
-        _ground_fast_sam_sample(sample, calibration=calibration)
-        for sample in sorted(samples, key=lambda item: (int(item["frame_idx"]), int(item["player_id"])))
-    ]
-    smoothed, smoothing_metrics = _smooth_grounded_frames(
-        grounded,
-        alpha=smoothing_alpha,
-        max_root_speed_mps=max_root_speed_mps,
-        max_track_anchor_smoothing_residual_m=max_track_anchor_smoothing_residual_m,
+    camera_motion, camera_motion_warnings = _load_camera_motion_context(camera_motion_path)
+    camera_motion_seen: set[int] = set()
+    camera_motion_used: set[int] = set()
+    grounded = []
+    for sample in sorted(samples, key=lambda item: (int(item["frame_idx"]), int(item["player_id"]))):
+        frame_idx = int(sample["frame_idx"])
+        motion_frame = camera_motion.frames.get(frame_idx) if camera_motion is not None else None
+        if camera_motion is not None:
+            camera_motion_seen.add(frame_idx)
+            if motion_frame is not None:
+                camera_motion_used.add(frame_idx)
+        grounded.append(_ground_fast_sam_sample(sample, calibration=calibration, camera_motion=motion_frame))
+    camera_motion_metrics, camera_motion_provenance = _camera_motion_artifact_summary(
+        camera_motion,
+        warnings=camera_motion_warnings,
+        frames_used=len(camera_motion_used),
+        frames_uncompensated=len(camera_motion_seen - camera_motion_used),
     )
+    anchor_source = str(
+        grounding_anchor_source
+        or (R3_GROUNDING_ANCHOR_SOURCE if stance_index else DEFAULT_GROUNDING_ANCHOR_SOURCE)
+    )
+    stance_aware_grounding = anchor_source == R3_GROUNDING_ANCHOR_SOURCE and stance_index is not None
+    if stance_aware_grounding:
+        smoothed, smoothing_metrics = _smooth_grounded_frames_stance_aware(
+            grounded,
+            stance_index=stance_index or {},
+            fps=fps,
+            max_root_speed_mps=max_root_speed_mps,
+            max_track_anchor_smoothing_residual_m=max_track_anchor_smoothing_residual_m,
+        )
+    else:
+        smoothed, smoothing_metrics = _smooth_grounded_frames(
+            grounded,
+            alpha=smoothing_alpha,
+            max_root_speed_mps=max_root_speed_mps,
+            max_track_anchor_smoothing_residual_m=max_track_anchor_smoothing_residual_m,
+        )
     mesh_faces = _common_mesh_faces(smoothed)
     players: list[dict[str, Any]] = []
     skeleton_players: list[dict[str, Any]] = []
@@ -204,7 +278,9 @@ def build_body_artifacts_from_fast_sam(
         player_frames = [frame for frame in smoothed if int(frame["player_id"]) == player_id]
         player_frames, foot_lock_summary = _apply_footlock_to_player_frames(
             player_frames,
-            max_root_speed_mps=max_root_speed_mps,
+            max_root_speed_mps=None if stance_aware_grounding else max_root_speed_mps,
+            xy_translation_enabled=not stance_aware_grounding,
+            max_allowed_xy_correction_m=FOOT_LOCK_MAX_XY_CORRECTION_M if stance_aware_grounding else None,
         )
         foot_lock_player_summaries.append(foot_lock_summary)
         betas = _first_list(player_frames, "betas")
@@ -231,10 +307,15 @@ def build_body_artifacts_from_fast_sam(
                         "foot_contact": contact,
                         "foot_lock": frame["foot_lock"],
                         "grf": None,
+                        "confidence_provenance": {
+                            "source": "sam3d_body_joints",
+                            "model": model,
+                            "grounding_anchor_source": anchor_source,
+                        },
                     }
                     for frame, contact in zip(player_frames, contact_by_frame)
                 ],
-                "foot_lock": foot_lock_summary,
+                "foot_lock": _smpl_foot_lock_summary(foot_lock_summary),
                 "skate_free": bool(foot_lock_summary["skate_free"]),
                 "physics": "worldhmr_floor_contact_footlock_z_snap"
                 if player_has_contact
@@ -254,6 +335,7 @@ def build_body_artifacts_from_fast_sam(
                         "confidence_provenance": {
                             "source": "sam3d_body_joints",
                             "model": model,
+                            "grounding_anchor_source": anchor_source,
                         },
                     }
                     for frame in player_frames
@@ -270,6 +352,18 @@ def build_body_artifacts_from_fast_sam(
     }
     if mesh_faces:
         smpl_motion["mesh_faces"] = mesh_faces
+    skeleton_provenance = {
+        "lane": "BODY_TIER2",
+        "source": "sam3d_body_joints",
+        "model_family": model,
+        "camera_offset_rotation_convention": ROTATION_CONVENTION_OFFSET_ROW_TIMES_R,
+        "grounding": "camera_offset_row_times_R_plus_track_footpoint_court_z0",
+        "grounding_anchor_source": anchor_source,
+        "stance_aware_grounding": bool(stance_aware_grounding),
+        "protected_eval_labels_used": False,
+    }
+    if camera_motion_provenance:
+        skeleton_provenance["camera_motion"] = camera_motion_provenance
     skeleton3d = {
         "schema_version": 1,
         "artifact_type": "racketsport_skeleton3d",
@@ -279,20 +373,21 @@ def build_body_artifacts_from_fast_sam(
         "joint_names": [f"sam3dbody_joint_{idx:03d}" for idx in range(max_joint_count)],
         "preview_only": False,
         "players": skeleton_players,
-        "provenance": {
-            "lane": "BODY_TIER2",
-            "source": "sam3d_body_joints",
-            "model_family": model,
-            "camera_offset_rotation_convention": ROTATION_CONVENTION_OFFSET_ROW_TIMES_R,
-            "grounding": "camera_offset_row_times_R_plus_track_footpoint_court_z0",
-            "protected_eval_labels_used": False,
-        },
+        "provenance": skeleton_provenance,
     }
     skeleton3d = apply_sam3d_temporal_refine_gate(
         skeleton3d,
         fps=fps,
         sam3d_wrist_bone_lock=sam3d_wrist_bone_lock,
     )
+    refined_stance_metrics: dict[str, Any] = {}
+    if anchor_source == R3_GROUNDING_ANCHOR_SOURCE:
+        smpl_motion, skeleton3d, refined_stance_metrics = _apply_refined_stance_phase_lock_and_pin(
+            smpl_motion,
+            skeleton3d,
+            fps=fps,
+        )
+        players = smpl_motion["players"]
     sam3d_temporal_refine = dict(skeleton3d.get("provenance", {}).get("sam3d_temporal_refine", {}))
     sam3d_lock = dict(skeleton3d.get("provenance", {}).get("sam3d_wrist_bone_lock", {}))
     temporal_refine = dict(skeleton3d.get("provenance", {}).get("temporal_refine", {}))
@@ -303,6 +398,8 @@ def build_body_artifacts_from_fast_sam(
         "frames": len({int(frame["frame_idx"]) for frame in smoothed}),
         "world_frame": "court_Z0",
         "grounding": "camera_offset_row_times_R_plus_track_footpoint_court_z0",
+        "grounding_anchor_source": anchor_source,
+        "stance_aware_grounding": bool(stance_aware_grounding),
         "camera_offset_rotation_convention": ROTATION_CONVENTION_OFFSET_ROW_TIMES_R,
         "grounding_anchor": _common_grounding_anchor(smoothed),
         "smoothing_alpha": smoothing_alpha,
@@ -332,6 +429,9 @@ def build_body_artifacts_from_fast_sam(
         "foot_lock_root_speed_limited_frames": sum(
             int(summary["root_speed_limited_frames"]) for summary in foot_lock_player_summaries
         ),
+        "foot_lock_xy_capped_frames": sum(
+            int(summary.get("xy_capped_frames", 0)) for summary in foot_lock_player_summaries
+        ),
         "max_foot_lock_slide_m": max(
             (float(summary["max_slide_m"]) for summary in foot_lock_player_summaries),
             default=0.0,
@@ -348,7 +448,9 @@ def build_body_artifacts_from_fast_sam(
             if frame["grf"] is not None
         ),
         "skate_free_players": sum(1 for player in players if player["skate_free"]),
+        **camera_motion_metrics,
     }
+    metrics.update(refined_stance_metrics)
     return smpl_motion, skeleton3d, metrics
 
 
@@ -394,6 +496,108 @@ def apply_sam3d_temporal_refine_gate(
         wrist_peak_timing=wrist_timing,
     )
     return apply_sam3d_wrist_bone_lock(rejected) if sam3d_wrist_bone_lock else rejected
+
+
+def _apply_refined_stance_phase_lock_and_pin(
+    smpl_motion: Mapping[str, Any],
+    skeleton3d: Mapping[str, Any],
+    *,
+    fps: float,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    phases = _detect_refined_contact_phases(skeleton3d)
+    if not phases:
+        return copy.deepcopy(dict(smpl_motion)), copy.deepcopy(dict(skeleton3d)), {
+            "refined_stance_phase_count": 0,
+            "refined_stance_phase_split_count": 0,
+            "foot_pin_phase_count": 0,
+            "foot_lock_slide_metric": "phase_anchored_contiguous_contact",
+        }
+    track_xy_by_key = _track_xy_by_key_from_smpl_motion(smpl_motion)
+    split_phases, split_count = _split_contact_phases_by_anchor_drift(
+        phases,
+        track_xy_by_key=track_xy_by_key,
+        max_anchor_drift_m=STANCE_AWARE_PHASE_ANCHOR_DRIFT_SPLIT_M,
+    )
+    locked_smpl, root_lock_summary = _apply_root_phase_median_lock_to_payload(
+        smpl_motion,
+        split_phases,
+        track_xy_by_key=track_xy_by_key,
+        translate_mesh=True,
+    )
+    locked_skeleton, _unused = _apply_root_phase_median_lock_to_payload(
+        skeleton3d,
+        split_phases,
+        track_xy_by_key=track_xy_by_key,
+        translate_mesh=False,
+    )
+    foot_pin = apply_foot_pin_to_payload(
+        locked_skeleton,
+        settings=FootPinSettings(
+            taper_frames=0,
+            max_correction_m=REFINED_STANCE_FOOT_PIN_MAX_CORRECTION_M,
+            max_smoothing_correction_m=0.0,
+            interpolate_between_stances=False,
+        ),
+    )
+    pinned_skeleton = copy.deepcopy(foot_pin.payload)
+    foot_pin_audit = dict(foot_pin.audit)
+    pinned_skeleton.pop("foot_pin", None)
+    provenance = dict(pinned_skeleton.get("provenance", {}))
+    provenance["refined_stance_phase_lock"] = {
+        "source": "post_temporal_refine_skeleton_contact_phases",
+        "phase_count": len(phases),
+        "split_phase_count": len(split_phases),
+        "anchor_drift_split_m": STANCE_AWARE_PHASE_ANCHOR_DRIFT_SPLIT_M,
+        **root_lock_summary,
+    }
+    provenance["foot_pin"] = {
+        "version": foot_pin_audit.get("foot_pin_version", 1),
+        "source": "post_root_lock_skeleton_contact_phases",
+        "settings": foot_pin_audit.get("settings", {}),
+        "phase_detection": {
+            "candidate_phase_count": foot_pin_audit.get("phase_detection", {}).get("candidate_phase_count", 0),
+            "confident_phase_count": foot_pin_audit.get("phase_detection", {}).get("confident_phase_count", 0),
+            "skipped_low_confidence_phase_count": foot_pin_audit.get("phase_detection", {}).get(
+                "skipped_low_confidence_phase_count",
+                0,
+            ),
+        },
+        "summary": foot_pin_audit.get("summary", {}),
+        "players": {
+            str(player_id): {
+                "phase_count": player.get("phase_count", 0),
+                "corrected_frame_count": player.get("corrected_frame_count", 0),
+                "max_correction_m": player.get("max_correction_m", 0.0),
+                "frame_corrections": player.get("frame_corrections", []),
+            }
+            for player_id, player in dict(foot_pin_audit.get("players", {})).items()
+            if isinstance(player, Mapping)
+        },
+        "correction_scope": "stance_leg_chains_only_no_track_world_xy_mutation",
+    }
+    pinned_skeleton["provenance"] = provenance
+
+    final_metrics = _contact_metrics_for_skeleton3d(pinned_skeleton)
+    max_slide_m = max(
+        (float(metric.get("slide_mm", 0.0)) / 1000.0 for metric in final_metrics.get("phase_metrics", [])),
+        default=0.0,
+    )
+    p95_slide_m = _percentile(
+        [float(metric.get("slide_mm", 0.0)) / 1000.0 for metric in final_metrics.get("phase_metrics", [])],
+        95.0,
+    )
+    return locked_smpl, pinned_skeleton, {
+        "refined_stance_phase_count": len(phases),
+        "refined_stance_split_phase_count": len(split_phases),
+        "refined_stance_phase_split_count": split_count,
+        "refined_stance_root_lock": root_lock_summary,
+        "foot_pin_phase_count": int(foot_pin_audit.get("summary", {}).get("total_phase_count", 0)),
+        "foot_pin_corrected_frame_count": int(foot_pin_audit.get("summary", {}).get("total_corrected_frame_count", 0)),
+        "foot_pin_max_correction_m": float(foot_pin_audit.get("summary", {}).get("max_correction_m", 0.0)),
+        "foot_lock_slide_metric": "phase_anchored_contiguous_contact",
+        "max_foot_lock_slide_m": max_slide_m,
+        "foot_lock_slide_p95_m": p95_slide_m,
+    }
 
 
 def _with_sam3d_temporal_refine_status(
@@ -447,10 +651,183 @@ def _infer_floor_contact(frame: Mapping[str, Any], *, floor_z_m: float = 0.0) ->
     return {"left": left, "right": right}
 
 
+def _detect_refined_contact_phases(skeleton3d: Mapping[str, Any]) -> list[ContactPhase]:
+    frames, joint_names = _contact_frames_from_skeleton3d(skeleton3d)
+    if not frames:
+        return []
+    try:
+        return detect_contact_phases(frames, joint_names=joint_names)
+    except ValueError:
+        return []
+
+
+def _contact_metrics_for_skeleton3d(skeleton3d: Mapping[str, Any]) -> dict[str, Any]:
+    frames, joint_names = _contact_frames_from_skeleton3d(skeleton3d)
+    if not frames:
+        return {"phase_metrics": [], "summary_by_player": {}, "penetration": {}}
+    phases = detect_contact_phases(frames, joint_names=joint_names)
+    return measure_contact_metrics(frames, phases, joint_names=joint_names).to_dict()
+
+
+def _contact_frames_from_skeleton3d(skeleton3d: Mapping[str, Any]) -> tuple[list[ContactSkeletonFrame], list[str]]:
+    joint_names = [str(name) for name in skeleton3d.get("joint_names", [])]
+    frames: list[ContactSkeletonFrame] = []
+    for player in skeleton3d.get("players", []):
+        if not isinstance(player, Mapping):
+            continue
+        player_id = str(player.get("id", "unknown"))
+        for frame in player.get("frames", []):
+            if not isinstance(frame, Mapping):
+                continue
+            joints = frame.get("joints_world")
+            if not isinstance(joints, Sequence) or isinstance(joints, (str, bytes)) or not joints:
+                continue
+            frames.append(
+                ContactSkeletonFrame(
+                    player_id=player_id,
+                    frame_index=int(frame.get("frame_idx", round(float(frame.get("t", 0.0)) * 30.0))),
+                    t=float(frame.get("t", 0.0)),
+                    joints_world=[[float(value) for value in joint] for joint in joints],
+                    joint_conf=[float(value) for value in frame.get("joint_conf", [])]
+                    if isinstance(frame.get("joint_conf"), Sequence)
+                    else None,
+                )
+            )
+    return frames, joint_names
+
+
+def _track_xy_by_key_from_smpl_motion(smpl_motion: Mapping[str, Any]) -> dict[tuple[str, int], list[float]]:
+    out: dict[tuple[str, int], list[float]] = {}
+    for player in smpl_motion.get("players", []):
+        if not isinstance(player, Mapping):
+            continue
+        player_id = str(player.get("id", "unknown"))
+        for frame in player.get("frames", []):
+            if not isinstance(frame, Mapping):
+                continue
+            track_xy = frame.get("track_world_xy")
+            if not isinstance(track_xy, Sequence) or isinstance(track_xy, (str, bytes)) or len(track_xy) < 2:
+                continue
+            frame_idx = int(frame.get("frame_idx", round(float(frame.get("t", 0.0)) * 30.0)))
+            out[(player_id, frame_idx)] = [float(track_xy[0]), float(track_xy[1])]
+    return out
+
+
+def _split_contact_phases_by_anchor_drift(
+    phases: Sequence[ContactPhase],
+    *,
+    track_xy_by_key: Mapping[tuple[str, int], Sequence[float]],
+    max_anchor_drift_m: float,
+) -> tuple[list[ContactPhase], int]:
+    split_phases: list[ContactPhase] = []
+    split_count = 0
+    for phase in phases:
+        current_segment: list[int] = []
+        segment_start_xy: Sequence[float] | None = None
+        for frame_idx in phase.frame_indices:
+            track_xy = track_xy_by_key.get((str(phase.player_id), int(frame_idx)))
+            if track_xy is None:
+                continue
+            if (
+                segment_start_xy is not None
+                and _distance2(track_xy, segment_start_xy) > max_anchor_drift_m
+                and current_segment
+            ):
+                split_phases.append(_copy_contact_phase_with_frames(phase, current_segment))
+                split_count += 1
+                current_segment = []
+                segment_start_xy = None
+            if segment_start_xy is None:
+                segment_start_xy = track_xy
+            current_segment.append(int(frame_idx))
+        if current_segment:
+            split_phases.append(_copy_contact_phase_with_frames(phase, current_segment))
+    return split_phases, split_count
+
+
+def _copy_contact_phase_with_frames(phase: ContactPhase, frame_indices: Sequence[int]) -> ContactPhase:
+    return ContactPhase(
+        player_id=phase.player_id,
+        foot=phase.foot,
+        frame_indices=tuple(int(frame_idx) for frame_idx in frame_indices),
+        start_time_s=phase.start_time_s,
+        end_time_s=phase.end_time_s,
+        anchor_position_xyz=phase.anchor_position_xyz,
+        max_height_m=phase.max_height_m,
+        max_speed_mps=phase.max_speed_mps,
+        min_confidence=phase.min_confidence,
+    )
+
+
+def _apply_root_phase_median_lock_to_payload(
+    payload: Mapping[str, Any],
+    phases: Sequence[ContactPhase],
+    *,
+    track_xy_by_key: Mapping[tuple[str, int], Sequence[float]],
+    translate_mesh: bool,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    output = copy.deepcopy(dict(payload))
+    targets: dict[tuple[str, int], list[float]] = {}
+    for phase in phases:
+        xys = [
+            track_xy_by_key[(str(phase.player_id), int(frame_idx))]
+            for frame_idx in phase.frame_indices
+            if (str(phase.player_id), int(frame_idx)) in track_xy_by_key
+        ]
+        if not xys:
+            continue
+        anchor = [
+            _median_sorted(sorted(float(xy[0]) for xy in xys)),
+            _median_sorted(sorted(float(xy[1]) for xy in xys)),
+        ]
+        for frame_idx in phase.frame_indices:
+            targets[(str(phase.player_id), int(frame_idx))] = list(anchor)
+
+    corrected_frame_count = 0
+    correction_magnitudes: list[float] = []
+    for player in output.get("players", []):
+        if not isinstance(player, MutableMapping):
+            continue
+        player_id = str(player.get("id", "unknown"))
+        for frame in player.get("frames", []):
+            if not isinstance(frame, MutableMapping):
+                continue
+            frame_idx = int(frame.get("frame_idx", round(float(frame.get("t", 0.0)) * 30.0)))
+            target = targets.get((player_id, frame_idx))
+            transl = frame.get("transl_world")
+            if target is None or not isinstance(transl, Sequence) or isinstance(transl, (str, bytes)) or len(transl) < 3:
+                continue
+            dx = float(target[0]) - float(transl[0])
+            dy = float(target[1]) - float(transl[1])
+            if abs(dx) <= 1e-12 and abs(dy) <= 1e-12:
+                continue
+            correction_magnitudes.append(_distance2([0.0, 0.0], [dx, dy]))
+            corrected_frame_count += 1
+            frame["transl_world"] = [float(target[0]), float(target[1]), float(transl[2])]
+            _translate_frame_vectors(frame, "joints_world", dx=dx, dy=dy)
+            if translate_mesh:
+                _translate_frame_vectors(frame, "mesh_vertices_world", dx=dx, dy=dy)
+    return output, {
+        "phase_count": len(phases),
+        "corrected_frame_count": corrected_frame_count,
+        "max_correction_m": max(correction_magnitudes, default=0.0),
+        "p95_correction_m": _percentile(correction_magnitudes, 95.0),
+    }
+
+
+def _translate_frame_vectors(frame: MutableMapping[str, Any], field: str, *, dx: float, dy: float) -> None:
+    vectors = frame.get(field)
+    if not isinstance(vectors, list):
+        return
+    frame[field] = [[float(vector[0]) + dx, float(vector[1]) + dy, float(vector[2])] for vector in vectors]
+
+
 def _apply_footlock_to_player_frames(
     frames: Sequence[dict[str, Any]],
     *,
     max_root_speed_mps: float | None = None,
+    xy_translation_enabled: bool = True,
+    max_allowed_xy_correction_m: float | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     samples_by_joint: dict[int, list[FootKinematics]] = {}
     locked_xy_by_joint: dict[int, list[float]] = {}
@@ -462,6 +839,8 @@ def _apply_footlock_to_player_frames(
     previous_relative_by_joint: dict[int, list[float]] = {}
     contact_by_joint: dict[int, bool] = {}
     root_speed_limited_frames = 0
+    xy_capped_frames = 0
+    max_observed_xy_correction_m = 0.0
 
     for frame in frames:
         frame_idx = int(frame["frame_idx"])
@@ -512,6 +891,7 @@ def _apply_footlock_to_player_frames(
                     position_xyz=joint,
                     velocity_xyz=[relative_speed, 0.0, 0.0],
                     contact=True,
+                    frame_index=frame_idx,
                 ),
                 court_z_m=0.0,
             )
@@ -519,7 +899,7 @@ def _apply_footlock_to_player_frames(
             contact_joint_indices.append(joint_idx)
             contact_sample_count += 1
 
-        can_pin_contact_xy = bool(contact_joint_indices) and len(contact_joint_indices) < len(joints)
+        can_pin_contact_xy = xy_translation_enabled and bool(contact_joint_indices) and len(contact_joint_indices) < len(joints)
         if not can_pin_contact_xy:
             for joint_idx, locked_xy in list(locked_xy_by_joint.items()):
                 _append_footlock_reset(samples_by_joint, joint_idx, locked_xy)
@@ -543,6 +923,11 @@ def _apply_footlock_to_player_frames(
         if lock_deltas:
             dx = sum(delta[0] for delta in lock_deltas) / len(lock_deltas)
             dy = sum(delta[1] for delta in lock_deltas) / len(lock_deltas)
+            max_observed_xy_correction_m = max(max_observed_xy_correction_m, _distance2([0.0, 0.0], [dx, dy]))
+            if max_allowed_xy_correction_m is not None:
+                dx, dy, capped = _limit_xy_delta(dx, dy, max_magnitude=max_allowed_xy_correction_m)
+                if capped:
+                    xy_capped_frames += 1
             transl = [transl[0] + dx, transl[1] + dy, transl[2]]
             joints = [[joint[0] + dx, joint[1] + dy, joint[2]] for joint in joints]
             vertices = [[vertex[0] + dx, vertex[1] + dy, vertex[2]] for vertex in vertices]
@@ -587,6 +972,7 @@ def _apply_footlock_to_player_frames(
                     position_xyz=[joints[joint_idx][0], joints[joint_idx][1], joints[joint_idx][2]],
                     velocity_xyz=[0.0, 0.0, 0.0],
                     contact=True,
+                    frame_index=frame_idx,
                 )
             )
 
@@ -614,6 +1000,10 @@ def _apply_footlock_to_player_frames(
         "contact_frames": contact_frame_count,
         "contact_samples": contact_samples,
         "root_speed_limited_frames": root_speed_limited_frames,
+        "xy_translation_enabled": bool(xy_translation_enabled),
+        "xy_capped_frames": xy_capped_frames,
+        "max_xy_correction_m": max_observed_xy_correction_m,
+        "max_allowed_xy_correction_m": max_allowed_xy_correction_m if max_allowed_xy_correction_m is not None else 0.0,
         "max_slide_m": max_slide_m,
         "max_penetration_m": max_penetration_m,
         "skate_free": skate_free,
@@ -632,6 +1022,18 @@ def _append_footlock_reset(
             contact=False,
         )
     )
+
+
+def _smpl_foot_lock_summary(summary: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "scaffold": str(summary.get("scaffold", "")),
+        "contact_frames": int(summary.get("contact_frames", 0)),
+        "contact_samples": int(summary.get("contact_samples", 0)),
+        "root_speed_limited_frames": int(summary.get("root_speed_limited_frames", 0)),
+        "max_slide_m": float(summary.get("max_slide_m", 0.0)),
+        "max_penetration_m": float(summary.get("max_penetration_m", 0.0)),
+        "skate_free": bool(summary.get("skate_free", False)),
+    }
 
 
 def _distance3(left: Sequence[float], right: Sequence[float]) -> float:
@@ -690,7 +1092,160 @@ def _common_mesh_faces(frames: Sequence[Mapping[str, Any]]) -> list[list[int]]:
     return canonical or []
 
 
-def _ground_fast_sam_sample(sample: Mapping[str, Any], *, calibration: CourtCalibration) -> dict[str, Any]:
+def _load_camera_motion_context(path: str | Path | None) -> tuple[_CameraMotionContext | None, list[str]]:
+    motion_path = Path(path) if path is not None else Path.cwd() / CAMERA_MOTION_ARTIFACT
+    if not motion_path.is_file():
+        return None, []
+    try:
+        payload = json.loads(motion_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, Mapping):
+            raise ValueError("payload must be a JSON object")
+        raw_frames = payload.get("frames", [])
+        if not isinstance(raw_frames, Sequence) or isinstance(raw_frames, (str, bytes)):
+            raise ValueError("frames must be a sequence")
+        frames: dict[int, _CameraMotionObservation] = {}
+        artifact_frame_count = 0
+        artifact_compensated_frame_count = 0
+        fps = float(payload.get("fps") or 30.0)
+        for item in raw_frames:
+            if not isinstance(item, Mapping):
+                continue
+            frame_idx = int(item.get("frame_idx", round(float(item.get("t", 0.0)) * fps)))
+            artifact_frame_count += 1
+            if not bool(item.get("compensated", False)):
+                continue
+            frames[frame_idx] = _CameraMotionObservation(
+                matrix=_matrix3(item.get("M"), name=f"camera_motion.frames[{frame_idx}].M")
+            )
+            artifact_compensated_frame_count += 1
+        return (
+            _CameraMotionContext(
+                path=motion_path,
+                frames=frames,
+                artifact_frame_count=artifact_frame_count,
+                artifact_compensated_frame_count=artifact_compensated_frame_count,
+            ),
+            [],
+        )
+    except Exception as exc:
+        return None, [f"ignored malformed camera_motion.json ({motion_path.name}): {exc}"]
+
+
+def _camera_motion_artifact_summary(
+    camera_motion: _CameraMotionContext | None,
+    *,
+    warnings: Sequence[str],
+    frames_used: int,
+    frames_uncompensated: int,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    if camera_motion is None and not warnings:
+        return {}, {}
+    if camera_motion is None:
+        summary = {
+            "camera_motion_status": "ignored_malformed",
+            "camera_motion_frames_used": 0,
+            "camera_motion_frames_uncompensated": 0,
+            "camera_motion_warnings": list(warnings),
+        }
+        provenance = {
+            "status": "ignored_malformed",
+            "frames_used": 0,
+            "frames_uncompensated": 0,
+            "warnings": list(warnings),
+        }
+        return summary, provenance
+    summary = {
+        "camera_motion_status": "used",
+        "camera_motion_path": camera_motion.path.name,
+        "camera_motion_frames_used": int(frames_used),
+        "camera_motion_frames_uncompensated": int(frames_uncompensated),
+        "camera_motion_artifact_frame_count": int(camera_motion.artifact_frame_count),
+        "camera_motion_artifact_compensated_frame_count": int(camera_motion.artifact_compensated_frame_count),
+    }
+    provenance = {
+        "status": "used",
+        "path": camera_motion.path.name,
+        "frames_used": int(frames_used),
+        "frames_uncompensated": int(frames_uncompensated),
+        "artifact_frame_count": int(camera_motion.artifact_frame_count),
+        "artifact_compensated_frame_count": int(camera_motion.artifact_compensated_frame_count),
+        "scope": "pixel_to_world_grounding_inputs_only",
+    }
+    return summary, provenance
+
+
+def _apply_camera_motion_grounding_correction(
+    joints_world_raw: Sequence[Sequence[float]],
+    *,
+    sample: Mapping[str, Any],
+    calibration: CourtCalibration,
+    camera_motion: _CameraMotionObservation | None,
+) -> list[list[float]]:
+    corrected = [[float(value) for value in joint] for joint in joints_world_raw]
+    if camera_motion is None or not corrected:
+        return corrected
+    homography_inv = _invert_matrix3(_matrix3(calibration.homography, name="calibration.homography"))
+    corrected_indices: set[int] = set()
+    for item in sample.get("pred_foot_keypoints_2d", []) or []:
+        if not isinstance(item, Mapping):
+            continue
+        try:
+            joint_index = int(item.get("index"))
+        except (TypeError, ValueError):
+            name = str(item.get("name", ""))
+            if name not in SAM3D_FOOT_KEYPOINT_INDICES:
+                continue
+            joint_index = SAM3D_FOOT_KEYPOINT_INDICES[name]
+        if joint_index < 0 or joint_index >= len(corrected):
+            continue
+        xy_px = _vector2(item.get("xy_px"), name=f"pred_foot_keypoints_2d/{joint_index}/xy_px")
+        dx, dy = _camera_motion_world_delta(xy_px, homography_inv=homography_inv, camera_motion=camera_motion)
+        corrected[joint_index][0] += dx
+        corrected[joint_index][1] += dy
+        corrected_indices.add(joint_index)
+    if corrected_indices:
+        return corrected
+    bbox = sample.get("bbox_xyxy")
+    if not isinstance(bbox, Sequence) or isinstance(bbox, (str, bytes)) or len(bbox) < 4:
+        return corrected
+    bbox_xyxy = _float_list(bbox[:4], name="bbox_xyxy")
+    foot_pixel = [(bbox_xyxy[0] + bbox_xyxy[2]) / 2.0, bbox_xyxy[3]]
+    dx, dy = _camera_motion_world_delta(foot_pixel, homography_inv=homography_inv, camera_motion=camera_motion)
+    for joint_index in _low_joint_indices(corrected):
+        corrected[joint_index][0] += dx
+        corrected[joint_index][1] += dy
+    return corrected
+
+
+def _camera_motion_world_delta(
+    pixel_xy: Sequence[float],
+    *,
+    homography_inv: Sequence[Sequence[float]],
+    camera_motion: _CameraMotionObservation,
+) -> tuple[float, float]:
+    static_world = _apply_homography_xy(homography_inv, pixel_xy)
+    reference_pixel = _apply_homography_xy(camera_motion.matrix, pixel_xy)
+    reference_world = _apply_homography_xy(homography_inv, reference_pixel)
+    return reference_world[0] - static_world[0], reference_world[1] - static_world[1]
+
+
+def _low_joint_indices(joints_world: Sequence[Sequence[float]]) -> list[int]:
+    if not joints_world:
+        return []
+    min_z = min(float(joint[2]) for joint in joints_world)
+    return [
+        index
+        for index, joint in enumerate(joints_world)
+        if float(joint[2]) <= min_z + LOW_GROUNDING_ANCHOR_HEIGHT_M
+    ]
+
+
+def _ground_fast_sam_sample(
+    sample: Mapping[str, Any],
+    *,
+    calibration: CourtCalibration,
+    camera_motion: _CameraMotionObservation | None = None,
+) -> dict[str, Any]:
     joints_camera = _vector3_list(sample.get("joints_camera"), name="joints_camera")
     vertices_camera = _vector3_list(sample.get("vertices_camera", []), name="vertices_camera")
     if not joints_camera and not vertices_camera:
@@ -702,6 +1257,12 @@ def _ground_fast_sam_sample(sample: Mapping[str, Any], *, calibration: CourtCali
         raise ValueError("confidence must be between 0 and 1")
 
     joints_world_raw = _camera_offsets_to_world(joints_camera, calibration=calibration)
+    joints_world_raw = _apply_camera_motion_grounding_correction(
+        joints_world_raw,
+        sample=sample,
+        calibration=calibration,
+        camera_motion=camera_motion,
+    )
     vertices_world_raw = _camera_offsets_to_world(
         vertices_camera,
         calibration=calibration,
@@ -777,6 +1338,177 @@ def _translate_points(points: Sequence[Sequence[float]], *, dx: float, dy: float
     return [[float(point[0]) + dx, float(point[1]) + dy, float(point[2]) + dz] for point in points]
 
 
+def _smooth_grounded_frames_stance_aware(
+    frames: Sequence[dict[str, Any]],
+    *,
+    stance_index: Mapping[tuple[int | str, int], Mapping[str, Any]],
+    fps: float,
+    max_root_speed_mps: float | None,
+    max_track_anchor_smoothing_residual_m: float | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    normalized_index = _normalize_stance_index(stance_index)
+    transition_frames = _transition_frame_keys(frames, stance_index=normalized_index)
+    phase_anchor_targets, phase_anchor_split_count = _stance_phase_anchor_targets(
+        frames,
+        stance_index=normalized_index,
+        max_anchor_drift_m=STANCE_AWARE_PHASE_ANCHOR_DRIFT_SPLIT_M,
+    )
+    previous_by_player: dict[int, list[float]] = {}
+    previous_t_by_player: dict[int, float] = {}
+    previous_track_by_player: dict[int, list[float]] = {}
+    smoothed: list[dict[str, Any]] = []
+    track_anchor_residuals: list[float] = []
+    transition_anchor_residuals: list[float] = []
+    pre_reset_track_anchor_residuals: list[float] = []
+    body_marker_transition_divergence: list[float] = []
+    track_anchor_residual_reset_frames = 0
+    stance_frame_count = 0
+    transition_frame_count = 0
+    root_speed_anomaly_frames = 0
+    root_speed_anomaly_by_player: dict[int, int] = {}
+    root_step_count_by_player: dict[int, int] = {}
+    residual_reset_m = (
+        min(max_track_anchor_smoothing_residual_m, STANCE_AWARE_TRANSITION_RESIDUAL_RESET_M)
+        if max_track_anchor_smoothing_residual_m is not None
+        else STANCE_AWARE_TRANSITION_RESIDUAL_RESET_M
+    )
+
+    for frame in frames:
+        player_id = int(frame["player_id"])
+        frame_idx = int(frame["frame_idx"])
+        key = (player_id, frame_idx)
+        info = normalized_index.get(key, {})
+        is_stance = bool(info.get("stance", False))
+        is_transition = key in transition_frames
+        if is_stance:
+            stance_frame_count += 1
+        elif is_transition:
+            transition_frame_count += 1
+        previous = previous_by_player.get(player_id)
+        previous_t = previous_t_by_player.get(player_id)
+        previous_track = previous_track_by_player.get(player_id)
+        transl = [float(value) for value in frame["transl_world"]]
+        track_xy = [float(value) for value in frame["track_world_xy"]]
+        frame_t = float(frame["t"])
+        temporal_smoothing_reset = False
+
+        if is_stance:
+            phase_target_xy = phase_anchor_targets.get(key, track_xy)
+            pre_reset_residual = _distance2(previous[:2], phase_target_xy) if previous is not None else 0.0
+            smoothed_xy = phase_target_xy
+            temporal_smoothing_reset = previous is not None and pre_reset_residual > STANCE_AWARE_STANCE_RESIDUAL_RESET_M
+            if temporal_smoothing_reset:
+                track_anchor_residual_reset_frames += 1
+        elif previous is None:
+            smoothed_xy = track_xy
+            pre_reset_residual = 0.0
+        else:
+            dt = _positive_dt(frame_t, previous_t, fps=fps)
+            velocity = _placement_velocity_xy(info, current_track_xy=track_xy, previous_track_xy=previous_track, dt=dt)
+            alpha = (
+                STANCE_AWARE_TRANSITION_FALLBACK_ALPHA_XY
+                if velocity is None or _placement_covariance_is_high(info)
+                else STANCE_AWARE_TRANSITION_ALPHA_XY
+            )
+            if velocity is None:
+                predicted_xy = previous[:2]
+            else:
+                predicted_xy = [previous[0] + velocity[0] * dt, previous[1] + velocity[1] * dt]
+            smoothed_xy = [
+                alpha * track_xy[idx] + (1.0 - alpha) * predicted_xy[idx]
+                for idx in range(2)
+            ]
+            pre_reset_residual = _distance2(smoothed_xy, track_xy)
+            if pre_reset_residual > residual_reset_m:
+                smoothed_xy = track_xy
+                temporal_smoothing_reset = True
+                track_anchor_residual_reset_frames += 1
+
+        smoothed_transl = [smoothed_xy[0], smoothed_xy[1], transl[2]]
+        if previous is not None and max_root_speed_mps is not None and previous_t is not None:
+            dt = _positive_dt(frame_t, previous_t, fps=fps)
+            if dt > 0.0:
+                root_step_count_by_player[player_id] = root_step_count_by_player.get(player_id, 0) + 1
+                if _distance2(previous[:2], smoothed_transl[:2]) > max_root_speed_mps * dt + 1e-12:
+                    root_speed_anomaly_frames += 1
+                    root_speed_anomaly_by_player[player_id] = root_speed_anomaly_by_player.get(player_id, 0) + 1
+        previous_by_player[player_id] = smoothed_transl
+        previous_t_by_player[player_id] = frame_t
+        previous_track_by_player[player_id] = track_xy
+        delta = [smoothed_transl[idx] - transl[idx] for idx in range(3)]
+        residual = _distance2(smoothed_transl[:2], track_xy)
+        pre_reset_track_anchor_residuals.append(pre_reset_residual)
+        track_anchor_residuals.append(residual)
+        if is_transition:
+            transition_anchor_residuals.append(residual)
+            body_marker_transition_divergence.append(residual)
+        smoothed_frame = dict(frame)
+        smoothed_frame["grounding_anchor"] = frame.get("grounding_anchor", "")
+        smoothed_frame["transl_world"] = smoothed_transl
+        smoothed_frame["temporal_smoothing_reset"] = temporal_smoothing_reset
+        smoothed_frame["stance_aware_grounding"] = {
+            "stance": is_stance,
+            "transition": is_transition,
+            "anchor_residual_m": residual,
+            "pre_reset_anchor_residual_m": pre_reset_residual,
+        }
+        smoothed_frame["joints_world"] = [
+            [joint[0] + delta[0], joint[1] + delta[1], joint[2] + delta[2]]
+            for joint in frame["joints_world"]
+        ]
+        smoothed_frame["vertices_world"] = [
+            [vertex[0] + delta[0], vertex[1] + delta[1], vertex[2] + delta[2]]
+            for vertex in frame["vertices_world"]
+        ]
+        smoothed.append(smoothed_frame)
+
+    clamp_fraction_by_player = {
+        str(player_id): (
+            root_speed_anomaly_by_player.get(player_id, 0) / step_count
+            if step_count
+            else 0.0
+        )
+        for player_id, step_count in sorted(root_step_count_by_player.items())
+    }
+    total_steps = sum(root_step_count_by_player.values())
+    root_speed_engagement_overall = root_speed_anomaly_frames / total_steps if total_steps else 0.0
+    transition_summary = _distribution_m(transition_anchor_residuals)
+    divergence_summary = _distribution_m(body_marker_transition_divergence)
+    return smoothed, {
+        "root_speed_limited_frames": 0,
+        "root_speed_anomaly_frames": root_speed_anomaly_frames,
+        "root_speed_clamp_engagement_overall": root_speed_engagement_overall,
+        "root_speed_anomaly_fraction_overall": root_speed_engagement_overall,
+        "root_speed_clamp_engagement_by_player": clamp_fraction_by_player,
+        "root_speed_anomaly_fraction_by_player": clamp_fraction_by_player,
+        "track_anchor_residual_reset_frames": track_anchor_residual_reset_frames,
+        "max_pre_reset_track_anchor_residual_m": max(pre_reset_track_anchor_residuals, default=0.0),
+        "max_track_anchor_residual_m": max(track_anchor_residuals, default=0.0),
+        "transition_anchor_lag_p95_m": transition_summary["p95"],
+        "transition_anchor_lag_median_m": transition_summary["p50"],
+        "body_marker_transition_divergence_p90_m": divergence_summary["p90"],
+        "stance_aware_grounding": {
+            "source": R3_GROUNDING_ANCHOR_SOURCE,
+            "alpha_stance_xy": STANCE_AWARE_STANCE_ALPHA_XY,
+            "alpha_transition_xy": STANCE_AWARE_TRANSITION_ALPHA_XY,
+            "alpha_transition_fallback_xy": STANCE_AWARE_TRANSITION_FALLBACK_ALPHA_XY,
+            "phase_anchor_drift_split_m": STANCE_AWARE_PHASE_ANCHOR_DRIFT_SPLIT_M,
+            "phase_anchor_split_count": phase_anchor_split_count,
+            "phase_median_anchor_frame_count": len(phase_anchor_targets),
+            "stance_frame_count": stance_frame_count,
+            "transition_frame_count": transition_frame_count,
+            "track_anchor_residual_m": _distribution_m(track_anchor_residuals),
+            "transition_anchor_lag_m": transition_summary,
+            "transition_anchor_lag_p95_m": transition_summary["p95"],
+            "transition_anchor_lag_median_m": transition_summary["p50"],
+            "body_marker_transition_divergence": divergence_summary,
+            "residual_reset_frames": track_anchor_residual_reset_frames,
+            "root_speed_clamp_engagement_overall": root_speed_engagement_overall,
+            "root_speed_clamp_engagement_by_player": clamp_fraction_by_player,
+        },
+    }
+
+
 def _smooth_grounded_frames(
     frames: Sequence[dict[str, Any]],
     *,
@@ -848,6 +1580,168 @@ def _smooth_grounded_frames(
     }
 
 
+def _normalize_stance_index(
+    stance_index: Mapping[tuple[int | str, int], Mapping[str, Any]],
+) -> dict[tuple[int, int], Mapping[str, Any]]:
+    normalized: dict[tuple[int, int], Mapping[str, Any]] = {}
+    for key, value in stance_index.items():
+        if not isinstance(value, Mapping):
+            continue
+        try:
+            player_id, frame_idx = key
+            normalized[(int(player_id), int(frame_idx))] = value
+        except (TypeError, ValueError):
+            continue
+    return normalized
+
+
+def _transition_frame_keys(
+    frames: Sequence[Mapping[str, Any]],
+    *,
+    stance_index: Mapping[tuple[int, int], Mapping[str, Any]],
+) -> set[tuple[int, int]]:
+    frames_by_player: dict[int, list[int]] = {}
+    stance_by_player: dict[int, set[int]] = {}
+    for frame in frames:
+        player_id = int(frame["player_id"])
+        frame_idx = int(frame["frame_idx"])
+        frames_by_player.setdefault(player_id, []).append(frame_idx)
+        if bool(stance_index.get((player_id, frame_idx), {}).get("stance", False)):
+            stance_by_player.setdefault(player_id, set()).add(frame_idx)
+    transitions: set[tuple[int, int]] = set()
+    for player_id, frame_indices in frames_by_player.items():
+        stance_frames = sorted(stance_by_player.get(player_id, set()))
+        if not stance_frames:
+            continue
+        ordered = sorted(set(frame_indices))
+        for frame_idx in ordered:
+            if frame_idx in stance_frames:
+                continue
+            nearest = min(abs(frame_idx - stance_frame) for stance_frame in stance_frames)
+            before = [stance_frame for stance_frame in stance_frames if stance_frame < frame_idx]
+            after = [stance_frame for stance_frame in stance_frames if stance_frame > frame_idx]
+            if nearest <= STANCE_AWARE_TRANSITION_BOUNDARY_FRAMES or (before and after):
+                transitions.add((player_id, frame_idx))
+    return transitions
+
+
+def _stance_phase_anchor_targets(
+    frames: Sequence[Mapping[str, Any]],
+    *,
+    stance_index: Mapping[tuple[int, int], Mapping[str, Any]],
+    max_anchor_drift_m: float,
+) -> tuple[dict[tuple[int, int], list[float]], int]:
+    stance_runs: dict[tuple[int, str], list[tuple[int, list[float]]]] = {}
+    fallback_run_by_player: dict[int, int] = {}
+    previous_frame_by_player: dict[int, int] = {}
+    previous_was_stance_by_player: dict[int, bool] = {}
+    for frame in sorted(frames, key=lambda item: (int(item["player_id"]), int(item["frame_idx"]))):
+        player_id = int(frame["player_id"])
+        frame_idx = int(frame["frame_idx"])
+        info = stance_index.get((player_id, frame_idx), {})
+        if not bool(info.get("stance", False)):
+            previous_was_stance_by_player[player_id] = False
+            previous_frame_by_player[player_id] = frame_idx
+            continue
+        phase_id = info.get("phase_id")
+        if phase_id is None:
+            previous_frame = previous_frame_by_player.get(player_id)
+            starts_new_run = (
+                previous_frame is None
+                or not previous_was_stance_by_player.get(player_id, False)
+                or frame_idx > previous_frame + 1
+            )
+            if starts_new_run:
+                fallback_run_by_player[player_id] = fallback_run_by_player.get(player_id, 0) + 1
+            phase_id = f"stance_run_{fallback_run_by_player.get(player_id, 0)}"
+        track_xy = [float(value) for value in frame["track_world_xy"][:2]]
+        stance_runs.setdefault((player_id, str(phase_id)), []).append((frame_idx, track_xy))
+        previous_was_stance_by_player[player_id] = True
+        previous_frame_by_player[player_id] = frame_idx
+
+    targets: dict[tuple[int, int], list[float]] = {}
+    split_count = 0
+    for (player_id, phase_id), samples in stance_runs.items():
+        current_segment: list[tuple[int, list[float]]] = []
+        segment_start_xy: list[float] | None = None
+        for frame_idx, track_xy in samples:
+            if (
+                segment_start_xy is not None
+                and _distance2(track_xy, segment_start_xy) > max_anchor_drift_m
+                and current_segment
+            ):
+                _assign_phase_anchor_targets(targets, player_id=player_id, segment=current_segment)
+                split_count += 1
+                current_segment = []
+                segment_start_xy = None
+            if segment_start_xy is None:
+                segment_start_xy = track_xy
+            current_segment.append((frame_idx, track_xy))
+        if current_segment:
+            _assign_phase_anchor_targets(targets, player_id=player_id, segment=current_segment)
+    return targets, split_count
+
+
+def _assign_phase_anchor_targets(
+    targets: dict[tuple[int, int], list[float]],
+    *,
+    player_id: int,
+    segment: Sequence[tuple[int, Sequence[float]]],
+) -> None:
+    xs = sorted(float(track_xy[0]) for _frame_idx, track_xy in segment)
+    ys = sorted(float(track_xy[1]) for _frame_idx, track_xy in segment)
+    anchor = [_median_sorted(xs), _median_sorted(ys)]
+    for frame_idx, _track_xy in segment:
+        targets[(player_id, int(frame_idx))] = list(anchor)
+
+
+def _median_sorted(values: Sequence[float]) -> float:
+    if not values:
+        return 0.0
+    mid = len(values) // 2
+    if len(values) % 2:
+        return float(values[mid])
+    return (float(values[mid - 1]) + float(values[mid])) / 2.0
+
+
+def _placement_velocity_xy(
+    info: Mapping[str, Any],
+    *,
+    current_track_xy: Sequence[float],
+    previous_track_xy: Sequence[float] | None,
+    dt: float,
+) -> list[float] | None:
+    raw = info.get("velocity")
+    if isinstance(raw, Sequence) and not isinstance(raw, (str, bytes)) and len(raw) >= 2:
+        try:
+            return [float(raw[0]), float(raw[1])]
+        except (TypeError, ValueError):
+            return None
+    if previous_track_xy is not None and dt > 0.0:
+        return [
+            (float(current_track_xy[0]) - float(previous_track_xy[0])) / dt,
+            (float(current_track_xy[1]) - float(previous_track_xy[1])) / dt,
+        ]
+    return None
+
+
+def _placement_covariance_is_high(info: Mapping[str, Any]) -> bool:
+    raw = info.get("covariance_m2")
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)) or len(raw) < 2:
+        return False
+    try:
+        return float(raw[0][0]) + float(raw[1][1]) > STANCE_AWARE_HIGH_COVARIANCE_TRACE_M2
+    except (TypeError, ValueError, IndexError):
+        return False
+
+
+def _positive_dt(current_t: float, previous_t: float | None, *, fps: float) -> float:
+    if previous_t is None:
+        return 1.0 / fps
+    dt = float(current_t) - float(previous_t)
+    return dt if dt > 0.0 else 1.0 / fps
+
+
 def _limit_step(previous: Sequence[float], current: Sequence[float], *, max_distance: float) -> tuple[list[float], bool]:
     distance = _distance3(previous, current)
     if distance <= max_distance:
@@ -856,6 +1750,14 @@ def _limit_step(previous: Sequence[float], current: Sequence[float], *, max_dist
         return [float(value) for value in current], False
     scale = max_distance / distance
     return [float(previous[idx]) + (float(current[idx]) - float(previous[idx])) * scale for idx in range(3)], True
+
+
+def _limit_xy_delta(dx: float, dy: float, *, max_magnitude: float) -> tuple[float, float, bool]:
+    magnitude = sqrt(dx * dx + dy * dy)
+    if magnitude <= max_magnitude or magnitude == 0.0:
+        return dx, dy, False
+    scale = max_magnitude / magnitude
+    return dx * scale, dy * scale, True
 
 
 def _common_grounding_anchor(frames: Sequence[Mapping[str, Any]]) -> str:
@@ -867,6 +1769,30 @@ def _common_grounding_anchor(frames: Sequence[Mapping[str, Any]]) -> str:
 
 def _distance2(left: Sequence[float], right: Sequence[float]) -> float:
     return sqrt(sum((left[idx] - right[idx]) ** 2 for idx in range(2)))
+
+
+def _distribution_m(values: Sequence[float]) -> dict[str, float | int]:
+    return {
+        "count": len(values),
+        "p50": _percentile(values, 50.0),
+        "p90": _percentile(values, 90.0),
+        "p95": _percentile(values, 95.0),
+        "max": max(values, default=0.0),
+    }
+
+
+def _percentile(values: Sequence[float], percentile: float) -> float:
+    if not values:
+        return 0.0
+    sorted_values = sorted(float(value) for value in values)
+    if len(sorted_values) == 1:
+        return sorted_values[0]
+    rank = (len(sorted_values) - 1) * (percentile / 100.0)
+    lower = int(rank)
+    upper = min(lower + 1, len(sorted_values) - 1)
+    if lower == upper:
+        return sorted_values[lower]
+    return sorted_values[lower] + (sorted_values[upper] - sorted_values[lower]) * (rank - lower)
 
 
 def _first_list(frames: Sequence[Mapping[str, Any]], field: str) -> list[float]:
@@ -899,13 +1825,57 @@ def _vector2(values: Any, *, name: str) -> list[float]:
     return result
 
 
+def _matrix3(values: Any, *, name: str) -> list[list[float]]:
+    if values is None or isinstance(values, (str, bytes)) or not isinstance(values, Sequence) or len(values) != 3:
+        raise ValueError(f"{name} must be a 3x3 matrix")
+    rows = [_float_list(row, name=f"{name}/{idx}") for idx, row in enumerate(values)]
+    if any(len(row) != 3 for row in rows):
+        raise ValueError(f"{name} must be a 3x3 matrix")
+    return rows
+
+
+def _apply_homography_xy(matrix: Sequence[Sequence[float]], pixel_xy: Sequence[float]) -> list[float]:
+    xy = _vector2(pixel_xy, name="pixel_xy")
+    x = float(xy[0])
+    y = float(xy[1])
+    w = float(matrix[2][0]) * x + float(matrix[2][1]) * y + float(matrix[2][2])
+    if abs(w) < 1e-12:
+        raise ValueError("camera_motion homography projection reached zero scale")
+    return [
+        (float(matrix[0][0]) * x + float(matrix[0][1]) * y + float(matrix[0][2])) / w,
+        (float(matrix[1][0]) * x + float(matrix[1][1]) * y + float(matrix[1][2])) / w,
+    ]
+
+
+def _invert_matrix3(matrix: Sequence[Sequence[float]]) -> list[list[float]]:
+    a, b, c = [float(value) for value in matrix[0]]
+    d, e, f = [float(value) for value in matrix[1]]
+    g, h, i = [float(value) for value in matrix[2]]
+    det = (
+        a * (e * i - f * h)
+        - b * (d * i - f * g)
+        + c * (d * h - e * g)
+    )
+    if abs(det) < 1e-12:
+        raise ValueError("calibration homography is singular")
+    inv_det = 1.0 / det
+    return [
+        [(e * i - f * h) * inv_det, (c * h - b * i) * inv_det, (b * f - c * e) * inv_det],
+        [(f * g - d * i) * inv_det, (a * i - c * g) * inv_det, (c * d - a * f) * inv_det],
+        [(d * h - e * g) * inv_det, (b * g - a * h) * inv_det, (a * e - b * d) * inv_det],
+    ]
+
+
 def _float_list(values: Any, *, name: str) -> list[float]:
     if values is None or isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
         raise ValueError(f"{name} must be a sequence")
     result: list[float] = []
     for idx, value in enumerate(values):
         try:
-            result.append(float(value))
+            number = float(value)
         except (TypeError, ValueError) as exc:
             raise ValueError(f"{name}/{idx} must be numeric") from exc
+        if not isfinite(number):
+            raise ValueError(f"{name}/{idx} must be finite")
+        result.append(number)
     return result

@@ -36,6 +36,7 @@ class GroundingRefineConfig:
     root_joint_names: tuple[str, ...] = DEFAULT_ROOT_JOINT_NAMES
     smoothness_weight: float = 0.15
     max_correction_warn_m: float = 0.15
+    xy_translation_enabled: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -127,6 +128,7 @@ def refine_body_grounding(
         "summary": {
             "frame_count": len(frame_refs),
             "player_count": len({ref.player_id for ref in frame_refs}),
+            "xy_translation_enabled": bool(cfg.xy_translation_enabled),
             "foot_plane_residual_m": _residual_summary(before_foot, after_foot, absolute=True),
             "track_residual_m": _residual_summary(before_track, after_track, absolute=False),
             "correction_magnitude_m": _magnitude_summary(
@@ -144,6 +146,7 @@ def refine_body_grounding(
             "rigid_root_level_only": True,
             "joint_angles_changed": False,
             "yaw_rotation_enabled": False,
+            "xy_translation_enabled": bool(cfg.xy_translation_enabled),
             "protected_eval_labels_used": False,
         },
     }
@@ -230,7 +233,7 @@ def _phase_deltas(
             dz = _foot_plane_delta(ref, foot=foot, config=config)
             track_xy = tracks.track_xy(ref)
             dx, dy = (0.0, 0.0)
-            if track_xy is not None:
+            if config.xy_translation_enabled and track_xy is not None:
                 root_xy = _root_xy(ref, config=config)
                 dx = track_xy[0] - root_xy[0]
                 dy = track_xy[1] - root_xy[1]
@@ -265,7 +268,7 @@ def _raw_frame_deltas(
         else:
             dx, dy = 0.0, 0.0
             track_xy = tracks.track_xy(ref)
-            if track_xy is not None:
+            if config.xy_translation_enabled and track_xy is not None:
                 root_xy = _root_xy(ref, config=config)
                 dx = track_xy[0] - root_xy[0]
                 dy = track_xy[1] - root_xy[1]

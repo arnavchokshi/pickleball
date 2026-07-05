@@ -593,7 +593,7 @@ def test_body_runner_verifies_manifest_uses_yolo26m_and_writes_contract_artifact
         stage="body",
         max_frames=1,
         tracking_mode="precomputed",
-        runners={"pose": FakePoseStageRunner(), "body": BodyStageRunner(manifest_path=manifest, runtime=runtime)},
+        runners={"pose": FakePoseStageRunner(), "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, runtime=runtime)},
     )
 
     _assert_pipeline_semantically_blocked(
@@ -659,7 +659,7 @@ def test_body_runner_scales_track_bboxes_to_materialized_body_frame_size(tmp_pat
         tracking_mode="precomputed",
         runners={
             "pose": FakePoseStageRunner(),
-            "body": BodyStageRunner(manifest_path=manifest, runtime=runtime, detector_name="", fov_name=""),
+            "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, runtime=runtime, detector_name="", fov_name=""),
         },
     )
 
@@ -668,7 +668,7 @@ def test_body_runner_scales_track_bboxes_to_materialized_body_frame_size(tmp_pat
 
 
 def test_body_runner_default_caps_root_speed_for_smoother_world_alignment(tmp_path: Path) -> None:
-    runner = BodyStageRunner(manifest_path=tmp_path / "MANIFEST.json", runtime=FakeFastSamRuntime())
+    runner = BodyStageRunner(write_body_monoliths=True, manifest_path=tmp_path / "MANIFEST.json", runtime=FakeFastSamRuntime())
 
     assert runner.smoothing_alpha == pytest.approx(1.0)
     assert runner.max_root_speed_mps == pytest.approx(8.0)
@@ -691,7 +691,7 @@ def test_body_runner_uses_adaptive_frame_plan_for_deep_mesh_work(tmp_path: Path)
         max_frames=None,
         max_players=1,
         tracking_mode="precomputed",
-        runners={"pose": FakePoseStageRunner(), "body": BodyStageRunner(manifest_path=manifest, runtime=runtime)},
+        runners={"pose": FakePoseStageRunner(), "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, runtime=runtime)},
     )
 
     _assert_pipeline_semantically_blocked(
@@ -723,7 +723,7 @@ def test_body_runner_derives_body_plan_from_sam3d_wrist_peaks(tmp_path: Path) ->
         tracking_mode="precomputed",
         runners={
             "pose": FakePoseStageRunner(),
-            "body": BodyStageRunner(manifest_path=manifest, runtime=runtime, detector_name="", fov_name=""),
+            "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, runtime=runtime, detector_name="", fov_name=""),
         },
     )
 
@@ -796,7 +796,7 @@ def test_body_runner_regenerates_non_lane_a_input_wrist_peaks(tmp_path: Path) ->
         tracking_mode="precomputed",
         runners={
             "pose": FakePoseStageRunner(),
-            "body": BodyStageRunner(manifest_path=manifest, runtime=runtime, detector_name="", fov_name=""),
+            "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, runtime=runtime, detector_name="", fov_name=""),
         },
     )
 
@@ -870,7 +870,7 @@ def test_body_runner_replaces_existing_legacy_skeleton3d_with_sam3d_output(tmp_p
         max_frames=None,
         max_players=1,
         tracking_mode="precomputed",
-        runners={"pose": FakePoseStageRunner(), "body": BodyStageRunner(manifest_path=manifest, runtime=runtime)},
+        runners={"pose": FakePoseStageRunner(), "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, runtime=runtime)},
     )
 
     skeleton = validate_artifact_file("skeleton3d", run_dir / "skeleton3d.json")
@@ -937,7 +937,7 @@ def test_body_runner_does_not_backfill_missing_contact_mesh_with_pose_fallback(t
         tracking_mode="precomputed",
         runners={
             "pose": FakePoseStageRunner(),
-            "body": BodyStageRunner(
+            "body": BodyStageRunner(write_body_monoliths=True, 
                 manifest_path=manifest,
                 runtime=runtime,
                 detector_name="",
@@ -996,7 +996,7 @@ def test_body_runner_leaves_missing_outputs_when_fast_sam_runtime_is_unavailable
         tracking_mode="precomputed",
         runners={
             "pose": FakePoseStageRunner(),
-            "body": BodyStageRunner(
+            "body": BodyStageRunner(write_body_monoliths=True, 
                 manifest_path=manifest,
                 fast_sam_repo=fast_sam_repo,
                 detector_name="",
@@ -1039,7 +1039,7 @@ def test_body_runner_can_disable_detector_and_fov_asset_checks_for_tracked_bboxe
         tracking_mode="precomputed",
         runners={
             "pose": FakePoseStageRunner(),
-            "body": BodyStageRunner(manifest_path=manifest, runtime=runtime, detector_name="", fov_name=""),
+            "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, runtime=runtime, detector_name="", fov_name=""),
         },
     )
 
@@ -1071,6 +1071,12 @@ def test_body_runner_uses_fast_sam_subprocess_runtime_when_python_env_is_set(
     class FakeSubprocessRuntime:
         def __init__(self, **kwargs: object) -> None:
             runtime_inits.append(kwargs)
+            # The S4 batch-executor wrapper reads the runtime contract's
+            # constructor kwargs back as attributes (work_dir, checkpoint_dir,
+            # body_input_size_px, ...) -- mirror them all like the real runtime.
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+            self.work_dir = kwargs.get("work_dir") or (tmp_path / "fast_sam_subprocess")
             self.calls: list[dict[str, object]] = []
 
         def process_frame(
@@ -1107,7 +1113,7 @@ def test_body_runner_uses_fast_sam_subprocess_runtime_when_python_env_is_set(
         tracking_mode="precomputed",
         runners={
             "pose": FakePoseStageRunner(),
-            "body": BodyStageRunner(manifest_path=manifest, fast_sam_repo=fast_sam_repo, detector_name="", fov_name=""),
+            "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, fast_sam_repo=fast_sam_repo, detector_name="", fov_name=""),
         },
     )
 
@@ -1138,7 +1144,7 @@ def test_body_runner_processes_multi_player_bboxes_individually_to_preserve_iden
         tracking_mode="precomputed",
         runners={
             "pose": FakePoseStageRunner(),
-            "body": BodyStageRunner(manifest_path=manifest, runtime=runtime, detector_name="", fov_name=""),
+            "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, runtime=runtime, detector_name="", fov_name=""),
         },
     )
 
@@ -1174,7 +1180,7 @@ def test_body_runner_batches_fast_sam_subprocess_requests_without_merging_player
         tracking_mode="precomputed",
         runners={
             "pose": FakePoseStageRunner(),
-            "body": BodyStageRunner(manifest_path=manifest, runtime=runtime, detector_name="", fov_name=""),
+            "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, runtime=runtime, detector_name="", fov_name=""),
         },
     )
 
@@ -1210,7 +1216,7 @@ def test_body_runner_accepts_numpy_bbox_from_real_fast_sam_runtime(tmp_path: Pat
         tracking_mode="precomputed",
         runners={
             "pose": FakePoseStageRunner(),
-            "body": BodyStageRunner(manifest_path=manifest, runtime=FakeFastSamRuntime(bbox_as_numpy=True)),
+            "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, runtime=FakeFastSamRuntime(bbox_as_numpy=True)),
         },
     )
 
@@ -1237,7 +1243,7 @@ def test_body_runner_fails_loudly_on_detector_sha_mismatch(tmp_path: Path) -> No
         stage="body",
         max_frames=1,
         tracking_mode="precomputed",
-        runners={"pose": FakePoseStageRunner(), "body": BodyStageRunner(manifest_path=manifest, runtime=FakeFastSamRuntime())},
+        runners={"pose": FakePoseStageRunner(), "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, runtime=FakeFastSamRuntime())},
     )
 
     assert summary["status"] == "fail"

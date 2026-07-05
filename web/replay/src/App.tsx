@@ -1,12 +1,21 @@
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { BufferAttribute, BufferGeometry, Color, DoubleSide, Quaternion, Vector3 as ThreeVector3 } from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { BufferAttribute, BufferGeometry, Color, DoubleSide, Quaternion, Spherical, Vector3 as ThreeVector3, type Camera } from "three";
+import { MapControls } from "three/examples/jsm/controls/MapControls.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-import { CoachingCardPanel, coachingCardForTimeline } from "./CoachingCard";
 import { activeReplayPointForTime, parseReplayScene, resolveReplaySceneAssetUrl, type ReplayScene } from "./replayScene";
+import { BallHonestyHud } from "./components/modules/BallHonestyHud";
+import { BallTrailLayer } from "./components/modules/BallTrailLayer";
+import { ImpactMarkers } from "./components/modules/ImpactMarkers";
+import {
+  parseAutoBounceCandidates,
+  parseBallTrailArtifact,
+  type BallTrailArtifact,
+  type BounceCandidate,
+} from "./components/modules/ballTrail";
+import { UploadPanel } from "./UploadPanel";
 import {
   buildShotTrailGroups,
   filterShots,
@@ -21,16 +30,15 @@ import {
   type ShotTrailFilters,
   type ShotTrailGroup,
 } from "./shotTrails";
-import { UploadPanel } from "./UploadPanel";
 import {
   activeBallContactPlayerIds,
+  ballCoverageKpiReadout,
   ballTrailSegmentsForTime,
   ballRenderInfoForTime,
   bodyMeshDebugSnapshot,
   bodyMeshIndexWindowForTime,
   bodyMeshStatusTileValue,
   contactEventCount,
-  entityCoverageReadout,
   effectiveTrustBadge,
   fetchBodyMeshChunk,
   frameForTime,
@@ -111,7 +119,52 @@ import {
 
 export { CoachingCardPanel, coachingCardForTimeline } from "./CoachingCard";
 
-export type CameraPreset = "broadcast" | "behind_baseline" | "top_down" | "shot_trails";
+export type CameraPreset = "broadcast" | "behind_baseline" | "top_down" | "paddle_review" | "shot_trails";
+type CameraDragKind = "pan" | "orbit";
+type CameraDragCommand = { kind: CameraDragKind; dx: number; dy: number; seq: number };
+
+export function hasExplicitReviewStartTime(search: string): boolean {
+  const params = new URLSearchParams(search);
+  return params.has("t") || params.has("time");
+}
+
+export function defaultReviewStartTime(world: VirtualWorld): number {
+  const playerTimesByPlayer = world.players.map((player) =>
+    player.frames.filter(frameHasReviewGeometry).map((frame) => frame.t).filter((time) => Number.isFinite(time) && time >= 0),
+  );
+  const playerTimes = playerTimesByPlayer.flat();
+  if (playerTimes.length) {
+    const tolerance = 0.55 / Math.max(1, world.fps || 30);
+    const candidates = Array.from(new Set(playerTimes)).sort((a, b) => a - b);
+    let best = candidates[0] ?? 0;
+    let bestVisiblePlayers = 0;
+    for (const candidate of candidates) {
+      const visiblePlayers = playerTimesByPlayer.filter((times) => times.some((time) => Math.abs(time - candidate) <= tolerance)).length;
+      if (visiblePlayers > bestVisiblePlayers) {
+        best = candidate;
+        bestVisiblePlayers = visiblePlayers;
+      }
+    }
+    return best;
+  }
+
+  const ballTimes = world.ball.frames.map((frame) => frame.t).filter((time) => Number.isFinite(time) && time >= 0);
+  return ballTimes.length ? Math.min(...ballTimes) : 0;
+}
+
+export function shouldRenderReplayScenePointClouds(viewState: Pick<ViewState, "layers">, replayScene: ReplayScene | null, currentTime: number): boolean {
+  return viewState.layers.debugPointClouds && replayScene !== null && activeReplayPointForTime(replayScene, currentTime) !== undefined;
+}
+
+function frameHasReviewGeometry(frame: VirtualWorldFrame): boolean {
+  return Boolean(
+    frame.floor_world_xyz ||
+      frame.track_world_xy ||
+      frame.mesh_ref ||
+      frame.joints_world.length > 0 ||
+      frame.mesh_vertices_world.length > 0,
+  );
+}
 
 export type FpsSample = { framesSinceReport: number; windowStartMs: number; fps: number };
 
@@ -284,9 +337,10 @@ export function contactReadoutText(
 
 const CAMERA_PRESET_LABELS: Record<CameraPreset, string> = {
   broadcast: "Broadcast",
-  behind_baseline: "Behind Baseline",
-  top_down: "Top Down",
-  shot_trails: "Shot Trails",
+  behind_baseline: "Behind",
+  top_down: "Top",
+  paddle_review: "Paddles",
+  shot_trails: "Trails",
 };
 
 const DEFAULT_SHOT_TRAIL_FILTERS: ShotTrailFilters = {
@@ -342,6 +396,7 @@ function errorMessage(error: unknown): string {
 
 export default function App() {
   const initialTime = useMemo(() => startTimeFromSearch(window.location.search), []);
+  const hasExplicitInitialTime = useMemo(() => hasExplicitReviewStartTime(window.location.search), []);
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
   const [world, setWorld] = useState<VirtualWorld>(() => parseVirtualWorld(sampleWorld));
   const [labelOverlay, setLabelOverlay] = useState<LabelOverlayPayload>(() => parseLabelOverlayPayload(null));
@@ -354,6 +409,8 @@ export default function App() {
   const [coachingFacts, setCoachingFacts] = useState<CoachingCardFacts | null>(null);
   const [shots, setShots] = useState<RacketsportShots | null>(null);
   const [ballArcSolved, setBallArcSolved] = useState<BallArcSolved | null>(null);
+  const [ballTrailArtifact, setBallTrailArtifact] = useState<BallTrailArtifact | null>(null);
+  const [autoBounceCandidates, setAutoBounceCandidates] = useState<BounceCandidate[]>([]);
   const [shotTrailFilters, setShotTrailFilters] = useState<ShotTrailFilters>(DEFAULT_SHOT_TRAIL_FILTERS);
   const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
   const [correctionStatus, setCorrectionStatus] = useState<string | null>(null);
@@ -366,12 +423,17 @@ export default function App() {
   const [videoDuration, setVideoDuration] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>("broadcast");
+  const [cameraResetToken, setCameraResetToken] = useState(0);
+  const [cameraDragCommand, setCameraDragCommand] = useState<CameraDragCommand | null>(null);
+  const [showShotsPanel, setShowShotsPanel] = useState(false);
   const [viewState, setViewState] = useState<ViewState>(() => parseViewStateFromSearch(window.location.search));
   const [fps, setFps] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const bodyMeshChunkCacheRef = useRef<Map<number, BodyMesh>>(new Map());
   const bodyMeshChunkInflightRef = useRef<Map<number, Promise<BodyMesh>>>(new Map());
   const currentTimeRef = useRef(0);
+  const preferredInitialTimeRef = useRef(initialTime);
+  const cameraDragSeqRef = useRef(0);
   const initialSeekAppliedRef = useRef(false);
 
   useEffect(() => {
@@ -387,6 +449,8 @@ export default function App() {
       setCoachingFacts(null);
       setShots(null);
       setBallArcSolved(null);
+      setBallTrailArtifact(null);
+      setAutoBounceCandidates([]);
       setSelectedShotId(null);
       setCorrectionStatus(null);
       setBodyMeshIndex(null);
@@ -400,6 +464,7 @@ export default function App() {
       try {
         const manifestPayload = parseViewerManifest(await fetchJson(resolvedManifestUrl));
         const worldPayload = parseVirtualWorld(await fetchJson(manifestPayload.virtual_world_url));
+        const reviewStartTime = hasExplicitInitialTime ? initialTime : defaultReviewStartTime(worldPayload);
         const firstOverlay = manifestPayload.label_overlays.find((overlay) => overlay.kind === "player_boxes");
         const labelPayload = firstOverlay ? await fetchJson(firstOverlay.url) : null;
         const physicsPayload = manifestPayload.physics_refinement_url
@@ -448,12 +513,18 @@ export default function App() {
         const coachingFactsUrl = coachingFactsUrlFromSearch(window.location.search, manifestPayload);
         const coachingFactsPayload = coachingFactsUrl ? parseCoachingCardFacts(await fetchJson(coachingFactsUrl)) : null;
         const shotsPayload = manifestPayload.shots_url ? parseShots(await fetchJson(manifestPayload.shots_url)) : null;
-        const ballArcSolvedPayload = manifestPayload.ball_arc_solved_url
-          ? parseBallArcSolved(await fetchJson(manifestPayload.ball_arc_solved_url))
-          : null;
+        const ballArcSolvedJson = manifestPayload.ball_arc_solved_url ? await fetchJson(manifestPayload.ball_arc_solved_url) : null;
+        const ballArcSolvedPayload = ballArcSolvedJson ? parseBallArcSolved(ballArcSolvedJson) : null;
+        const ballTrailArtifactPayload = ballArcSolvedJson ? parseBallTrailArtifact(ballArcSolvedJson) : null;
+        const autoBounceCandidatesUrl = manifestPayload.auto_bounce_candidates_url ?? manifestPayload.ball_bounce_candidates_url ?? null;
+        const autoBounceCandidatesPayload = autoBounceCandidatesUrl
+          ? parseAutoBounceCandidates(await fetchJson(autoBounceCandidatesUrl))
+          : [];
         if (cancelled) return;
         setManifest(manifestPayload);
         setWorld(worldPayload);
+        preferredInitialTimeRef.current = reviewStartTime;
+        setCurrentTime(reviewStartTime);
         setLabelOverlay(parseLabelOverlayPayload(labelPayload));
         setPhysics(physicsPayload);
         setContactWindows(contactPayload);
@@ -464,6 +535,8 @@ export default function App() {
         setCoachingFacts(coachingFactsPayload);
         setShots(shotsPayload);
         setBallArcSolved(ballArcSolvedPayload);
+        setBallTrailArtifact(ballTrailArtifactPayload);
+        setAutoBounceCandidates(autoBounceCandidatesPayload);
         setSelectedShotId(null);
         setCorrectionStatus(null);
         setBodyMeshIndex(bodyMeshIndexPayload);
@@ -619,10 +692,6 @@ export default function App() {
     () => manifest?.label_overlays.find((overlay) => overlay.kind === "player_boxes") ?? null,
     [manifest],
   );
-  const trustedAnnotationSources = useMemo(
-    () => manifest?.annotation_sources.filter((source) => source.trusted_for_metrics) ?? [],
-    [manifest],
-  );
   const activeContactPlayerIds = useMemo(
     () => activeBallContactPlayerIds(world, contactWindows, currentTime),
     [world, contactWindows, currentTime],
@@ -672,12 +741,11 @@ export default function App() {
     [activeContactPlayerIds, activeBodyMeshes],
   );
   const viewBox = useMemo(() => labelViewBox(labelOverlay), [labelOverlay]);
-  const activeReplayPoint = useMemo(() => (replayScene ? activeReplayPointForTime(replayScene, currentTime) : undefined), [replayScene, currentTime]);
   const coverageGapActive = coverage.lastTime !== null && currentTime > coverage.lastTime + Math.max(0.12, 1 / (world.fps || 30));
   const contactReadout = contactReadoutText(activeContactPlayerIds, activeBodyMeshes);
   const ballReadout = ballRenderText(ballRenderInfo.mode, videoBallOverlay);
   const warningsReadout = useMemo(() => worldWarningsReadout(world), [world]);
-  const ballCoverage = useMemo(() => entityCoverageReadout("Ball", world.ball).replace(/^Ball\s+/, ""), [world.ball]);
+  const ballCoverage = useMemo(() => ballCoverageKpiReadout(world), [world]);
   const timelineMarkers = useMemo(
     () => timelineMarkersFromArtifacts(contactWindows, ballInflections, reviewedBounces),
     [contactWindows, ballInflections, reviewedBounces],
@@ -689,11 +757,6 @@ export default function App() {
       return authoritativeChapters.length ? authoritativeChapters : timelineChaptersFromMarkers(timelineMarkers, timelineDuration);
     },
     [rallySpans, timelineMarkers, timelineDuration],
-  );
-  const coachingPlayerIds = useMemo(() => world.players.map((player) => String(player.id)), [world.players]);
-  const coachingCard = useMemo(
-    () => coachingCardForTimeline(coachingFacts, timelineChapters, currentTime, coachingPlayerIds),
-    [coachingFacts, timelineChapters, currentTime, coachingPlayerIds],
   );
   const playerIds = useMemo(() => world.players.map((player) => player.id), [world.players]);
   const shotTrailsMode = cameraPreset === "shot_trails";
@@ -714,7 +777,6 @@ export default function App() {
     () => shotTrailGroups.filter((group) => group.segments.length > 0).length,
     [shotTrailGroups],
   );
-
   const seekTo = (seconds: number) => {
     const video = videoRef.current;
     if (video) video.currentTime = Math.max(0, seconds);
@@ -736,9 +798,10 @@ export default function App() {
     if (Number.isFinite(video.duration)) {
       setVideoDuration(video.duration);
     }
-    if (!initialSeekAppliedRef.current && initialTime > 0) {
-      const duration = Number.isFinite(video.duration) ? video.duration : initialTime;
-      video.currentTime = Math.min(initialTime, duration);
+    const preferredInitialTime = preferredInitialTimeRef.current;
+    if (!initialSeekAppliedRef.current && preferredInitialTime > 0) {
+      const duration = Number.isFinite(video.duration) ? video.duration : preferredInitialTime;
+      video.currentTime = Math.min(preferredInitialTime, duration);
       initialSeekAppliedRef.current = true;
     }
     syncVideoTime(video);
@@ -783,6 +846,27 @@ export default function App() {
   const resetView = () => {
     setViewState((state) => applyViewPreset(state, "default"));
   };
+
+  const selectCameraPreset = (preset: CameraPreset) => {
+    setCameraPreset(preset);
+    setCameraResetToken((token) => token + 1);
+  };
+
+  const applyCameraDrag = (kind: CameraDragKind, dx: number, dy: number) => {
+    if (dx === 0 && dy === 0) return;
+    cameraDragSeqRef.current += 1;
+    setCameraDragCommand({ kind, dx, dy, seq: cameraDragSeqRef.current });
+  };
+
+  const toggleShotsPanel = () => {
+    if (showShotsPanel) {
+      setShowShotsPanel(false);
+      if (cameraPreset === "shot_trails") selectCameraPreset("broadcast");
+      return;
+    }
+    setShowShotsPanel(true);
+    selectCameraPreset("shot_trails");
+  };
   const replayLoaded = manifest !== null;
 
   return (
@@ -794,21 +878,16 @@ export default function App() {
           </div>
           <div>
             <p className="eyebrow">{replayLoaded ? "Replay review" : "Video intake"}</p>
-            <h1>{manifest?.clip ?? "Pickleball video"}</h1>
+            <h1 title={manifest?.clip ?? "Pickleball video"}>{manifest?.clip ?? "Pickleball video"}</h1>
           </div>
         </div>
         {replayLoaded ? (
           <div className="status-grid">
             <Metric label="Players" value={stats.players} />
-            <Metric label="Mesh Frames" value={stats.meshFrames} />
-            <Metric label="Solid Mesh" value={solidMeshTileValue} />
-            <Metric label="Floor Frames" value={stats.floorPlacedFrames} />
-            <Metric label="Ball Contacts" value={contactEventCount(contactWindows)} />
-            <Metric label="Replay Points" value={replayScene?.points.length ?? 0} />
-            <Metric label="Player Span" value={coverage.lastTime === null ? "0.0s" : `${coverage.lastTime.toFixed(1)}s`} />
+            <Metric label="Contacts" value={contactEventCount(contactWindows)} />
+            <Metric label="Ball" value={ballCoverage} />
             <Metric label="Warnings" value={warningsReadout} />
-            <Metric label="Ball Coverage" value={ballCoverage} />
-            <Metric label="3D FPS" value={fps > 0 ? fps.toFixed(1) : "measuring..."} />
+            <Metric label="3D FPS" value={fps > 0 ? fps.toFixed(1) : "--"} />
           </div>
         ) : null}
       </header>
@@ -818,7 +897,51 @@ export default function App() {
       <UploadPanel />
 
       {replayLoaded ? (
-        <>
+        <section className="review-control-strip" aria-label="Replay review controls">
+          <ViewLayerPanel
+            viewState={viewState}
+            playerIds={playerIds}
+            onToggleLayer={toggleLayer}
+            onBallFocus={focusBall}
+            onPlayerFocus={focusPlayer}
+            onClearFocus={resetFocus}
+            onResetView={resetView}
+          />
+          <button
+            type="button"
+            className={showShotsPanel ? "shots-toggle active" : "shots-toggle"}
+            aria-expanded={showShotsPanel}
+            aria-controls="shots-panel"
+            onClick={toggleShotsPanel}
+          >
+            {showShotsPanel ? "Hide shots" : "Shots"}
+          </button>
+        </section>
+      ) : null}
+
+      {replayLoaded && showShotsPanel ? (
+        <section id="shots-panel" className="shots-panel" aria-label="Shots panel">
+          <div className="shot-workspace">
+            <ShotTrailsControls
+              filters={shotTrailFilters}
+              options={shotFilterOptions}
+              totalCount={shots?.shots.length ?? 0}
+              visibleCount={filteredShots.length}
+              drawableCount={drawableShotCount}
+              hasArcSource={Boolean(ballArcSolved)}
+              onFilterChange={updateShotFilter}
+            />
+            <ShotDetailPanel
+              shot={selectedShot}
+              groups={shotTrailGroups}
+              correctionStatus={correctionStatus}
+              onWrong={writeCorrection}
+            />
+          </div>
+        </section>
+      ) : null}
+
+      {replayLoaded ? (
       <section className="review-layout">
         <div className="video-panel">
           <div className="video-frame">
@@ -877,53 +1000,48 @@ export default function App() {
         </div>
 
         <div className="world-panel">
-          <div className="camera-preset-bar" role="group" aria-label="Camera presets">
+          <div className="camera-preset-bar" role="group" aria-label="3D camera">
             {(Object.keys(CAMERA_PRESET_LABELS) as CameraPreset[]).map((preset) => (
               <button
                 key={preset}
                 type="button"
                 className={preset === cameraPreset ? "camera-preset active" : "camera-preset"}
-                onClick={() => setCameraPreset(preset)}
+                data-camera-preset={preset}
+                onClick={() => selectCameraPreset(preset)}
+                title={CAMERA_PRESET_LABELS[preset]}
               >
                 {CAMERA_PRESET_LABELS[preset]}
               </button>
             ))}
           </div>
-          {shotTrailsMode ? (
-            <ShotTrailsControls
-              filters={shotTrailFilters}
-              options={shotFilterOptions}
-              totalCount={shots?.shots.length ?? 0}
-              visibleCount={filteredShots.length}
-              drawableCount={drawableShotCount}
-              hasArcSource={Boolean(ballArcSolved)}
-              onFilterChange={updateShotFilter}
-            />
-          ) : (
-            <ViewLayerPanel
-              viewState={viewState}
-              playerIds={playerIds}
-              onToggleLayer={toggleLayer}
-              onBallFocus={focusBall}
-              onPlayerFocus={focusPlayer}
-              onClearFocus={resetFocus}
-              onResetView={resetView}
-            />
-          )}
-          <Canvas dpr={[1, 1.5]} camera={{ position: [0, -18, 8.5], fov: 50, near: 0.05, far: 100 }}>
-            <color attach="background" args={[shotTrailsMode ? "#fbfaf4" : "#111315"]} />
-            <ambientLight intensity={shotTrailsMode ? 2.25 : 1.8} />
-            <directionalLight position={[0, -4, 8]} intensity={shotTrailsMode ? 1.4 : 2.2} />
+          <Canvas
+            dpr={[1.5, 2]}
+            gl={{ powerPreference: "high-performance", antialias: true }}
+            camera={{ position: [0, -18, 8.5], fov: 50, near: 0.05, far: 100 }}
+            onContextMenu={(event) => event.preventDefault()}
+          >
+            <color attach="background" args={["#f4f1e8"]} />
+            <ambientLight intensity={2.25} />
+            <directionalLight position={[0, -4, 8]} intensity={1.75} />
             <FpsProbe onSample={setFps} />
-            <OrbitRig world={world} preset={cameraPreset} />
-            <CourtSurface world={world} muted={shotTrailsMode} />
-            <CourtLines world={world} muted={shotTrailsMode} />
-            <NetAssembly world={world} muted={shotTrailsMode} />
+            <OrbitRig
+              world={world}
+              preset={cameraPreset}
+              activePaddles={activePaddles}
+              selectedPlayerId={viewState.selectedPlayerId}
+              resetToken={cameraResetToken}
+              dragCommand={cameraDragCommand}
+            />
+            <CourtSurface world={world} />
+            <CourtLines world={world} />
+            <NetAssembly world={world} />
             {shotTrailsMode ? (
               <ShotTrailsLayer groups={shotTrailGroups} selectedShotId={selectedShotId} onSelectShot={selectShot} />
             ) : (
               <>
-                <ReplayGlbLayer replayScene={replayScene} replaySceneUrl={manifest?.replay_scene_url ?? null} currentTime={currentTime} />
+                {shouldRenderReplayScenePointClouds(viewState, replayScene, currentTime) ? (
+                  <ReplayGlbLayer replayScene={replayScene} replaySceneUrl={manifest?.replay_scene_url ?? null} currentTime={currentTime} />
+                ) : null}
                 {sceneLayers.playerTrails.visible ? <PlayerMotionTrails world={world} currentTime={currentTime} viewState={viewState} /> : null}
                 <Players
                   world={world}
@@ -941,64 +1059,42 @@ export default function App() {
                 {sceneLayers.playerSolidMeshes.visible ? (
                   <SolidBodyMeshes meshes={activeBodyMeshes} geometryCache={solidGeometryCache} viewState={viewState} onSelectPlayer={focusPlayer} />
                 ) : null}
-                {sceneLayers.eventMarkers.visible ? <WorldEventMarkers markers={worldEventMarkers} viewState={viewState} /> : null}
-                {sceneLayers.ballTrail.visible ? (
-                  <BallTrail
+                {sceneLayers.eventMarkers.visible ? (
+                  <ImpactMarkers
                     world={world}
+                    arcSolved={ballTrailArtifact}
                     currentTime={currentTime}
-                    ballArcEventsSelected={ballArcEventsSelected}
-                    focusStyle={entityFocusStyle(viewState, { kind: "ball" })}
+                    contactWindows={contactWindows}
+                    bounceCandidates={autoBounceCandidates}
                   />
                 ) : null}
-                {sceneLayers.ballDot.visible ? (
-                  <Ball world={world} currentTime={currentTime} focusStyle={entityFocusStyle(viewState, { kind: "ball" })} />
+                {sceneLayers.ballTrail.visible || sceneLayers.ballDot.visible ? (
+                  <BallTrailLayer
+                    world={world}
+                    arcSolved={ballTrailArtifact}
+                    currentTime={currentTime}
+                    showTrail={sceneLayers.ballTrail.visible}
+                    showBall={sceneLayers.ballDot.visible}
+                    focusStyle={entityFocusStyle(viewState, { kind: "ball" })}
+                  />
                 ) : null}
               </>
             )}
           </Canvas>
+          <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 2, pointerEvents: "none" }}>
+            <BallHonestyHud world={world} arcSolved={ballTrailArtifact} currentTime={currentTime} />
+          </div>
           {coverageGapActive ? <div className="world-warning">No player artifact coverage after {coverage.lastTime?.toFixed(2)}s</div> : null}
           {sceneLayers.debugPointClouds.visible ? <MeshDebugReadout snapshot={meshDebugSnapshot} /> : null}
-          {shotTrailsMode ? (
-            <ShotDetailPanel
-              shot={selectedShot}
-              groups={shotTrailGroups}
-              correctionStatus={correctionStatus}
-              onWrong={writeCorrection}
-            />
-          ) : null}
-          <div className="scene-legend">
-            <span><i className="swatch floor" /> floor</span>
-            <span><i className="swatch mesh" /> BODY mesh</span>
-            <span><i className="swatch joints" /> BODY joints</span>
-            <span><i className="swatch ball" /> ball</span>
-            {shotTrailsMode ? <span><i className="swatch shot" /> shot trail</span> : null}
-            <span><i className="swatch ball-ghost" /> 2D-only ball</span>
-            <span><i className="swatch badge-preview" /> preview</span>
-            <span><i className="swatch badge-low" /> low confidence</span>
+          <div className="world-mini-readout">
+            <span>{CAMERA_PRESET_LABELS[cameraPreset]}</span>
+            <span>{solidMeshTileValue}</span>
           </div>
+          <CameraDragPads onDrag={applyCameraDrag} onReset={() => selectCameraPreset(cameraPreset)} />
         </div>
       </section>
-
-      <section className="provenance-band">
-        <TrustBandPanel label="Court (CAL)" trustBand={world.court.trust_band} />
-        <TrustBandPanel label="Ball (BALL)" trustBand={world.ball.trust_band} />
-        <PlayerTrustBandPanels players={world.players} />
-      </section>
-
-      <CoachingCardPanel card={coachingCard} />
-
-      <section className="details-band">
-        <p>Physics modes: {stats.physicsModes.length ? stats.physicsModes.join(", ") : "none"}</p>
-        <p>{physics ? `Physics artifact: ${physics.physics}; FOOT-2 done: ${String(physics.foot2_done)}` : "Physics artifact: none"}</p>
-        <p>{replayScene ? replaySceneReadout(replayScene, activeReplayPoint?.id ?? null) : "Replay scene: none"}</p>
-        <p>{annotationSourceReadout(trustedAnnotationSources)}</p>
-        <p>{coverageReadout(coverage, videoDuration)}</p>
-        <p>{entityCoverageReadout("Ball", world.ball)}</p>
-        <p>Max floor penetration: {stats.maxFloorPenetrationM.toFixed(4)} m</p>
-        <p>{manifest?.notes[0] ?? "Review-only viewer. Artifact gates stay separate from visual inspection."}</p>
-      </section>
-        </>
       ) : null}
+
     </main>
   );
 }
@@ -1261,6 +1357,7 @@ function LayerToggleButton({
     <button
       type="button"
       className={pressed ? "layer-toggle active" : "layer-toggle"}
+      data-layer-key={definition.key}
       aria-pressed={pressed}
       title={definition.description}
       onClick={onToggle}
@@ -1410,19 +1507,101 @@ function PlayerTrustBandPanels({ players }: { players: VirtualWorldPlayer[] }) {
   );
 }
 
-function OrbitRig({ world, preset }: { world: VirtualWorld; preset: CameraPreset }) {
+function CameraDragPads({
+  onDrag,
+  onReset,
+}: {
+  onDrag: (kind: CameraDragKind, dx: number, dy: number) => void;
+  onReset: () => void;
+}) {
+  return (
+    <div className="camera-drag-pads" aria-label="Camera drag controls">
+      <CameraDragPad kind="pan" label="Move" onDrag={onDrag} />
+      <CameraDragPad kind="orbit" label="Orbit" onDrag={onDrag} />
+      <button type="button" className="camera-reset-pad" onClick={onReset}>
+        Reset
+      </button>
+    </div>
+  );
+}
+
+function CameraDragPad({
+  kind,
+  label,
+  onDrag,
+}: {
+  kind: CameraDragKind;
+  label: string;
+  onDrag: (kind: CameraDragKind, dx: number, dy: number) => void;
+}) {
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const startDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    lastPointRef.current = { x: event.clientX, y: event.clientY };
+  };
+  const moveDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const lastPoint = lastPointRef.current;
+    if (!lastPoint) return;
+    const dx = event.clientX - lastPoint.x;
+    const dy = event.clientY - lastPoint.y;
+    lastPointRef.current = { x: event.clientX, y: event.clientY };
+    onDrag(kind, dx, dy);
+  };
+  const endDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    lastPointRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+  return (
+    <button
+      type="button"
+      className={`camera-drag-pad ${kind}`}
+      onPointerDown={startDrag}
+      onPointerMove={moveDrag}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+    >
+      <span>{label}</span>
+      <small>drag</small>
+    </button>
+  );
+}
+
+function OrbitRig({
+  world,
+  preset,
+  activePaddles,
+  selectedPlayerId,
+  resetToken,
+  dragCommand,
+}: {
+  world: VirtualWorld;
+  preset: CameraPreset;
+  activePaddles: ActivePaddleFrame[];
+  selectedPlayerId: number | null;
+  resetToken: number;
+  dragCommand: CameraDragCommand | null;
+}) {
   const { camera, gl } = useThree();
-  const controlsRef = useRef<OrbitControls | null>(null);
-  const pose = useMemo(() => cameraPresetPose(world, preset), [world, preset]);
+  const controlsRef = useRef<MapControls | null>(null);
+  const pose = useMemo(
+    () => cameraPresetPose(world, preset, activePaddles, selectedPlayerId),
+    [activePaddles, selectedPlayerId, world, preset],
+  );
   useEffect(() => {
-    const controls = new OrbitControls(camera, gl.domElement);
+    const controls = new MapControls(camera, gl.domElement);
     camera.up.set(0, 0, 1);
     camera.position.set(...pose.position);
     controls.target.set(...pose.target);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.minDistance = 3;
-    controls.maxDistance = 32;
+    controls.rotateSpeed = 0.48;
+    controls.panSpeed = 0.78;
+    controls.zoomSpeed = 0.72;
+    controls.screenSpacePanning = false;
+    controls.minDistance = preset === "paddle_review" ? 0.35 : 2.2;
+    controls.maxDistance = Math.max(24, courtBounds(world).length * 2.1);
     controls.maxPolarAngle = Math.PI * 0.48;
     controls.update();
     controlsRef.current = controls;
@@ -1430,33 +1609,72 @@ function OrbitRig({ world, preset }: { world: VirtualWorld; preset: CameraPreset
       controlsRef.current = null;
       controls.dispose();
     };
-  }, [camera, gl, pose.position, pose.target]);
+  }, [camera, gl, pose.position, pose.target, resetToken, world]);
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls || !dragCommand) return;
+    if (dragCommand.kind === "pan") {
+      applyCameraPan(camera, controls, dragCommand.dx, dragCommand.dy);
+    } else {
+      applyCameraOrbit(camera, controls, dragCommand.dx, dragCommand.dy);
+    }
+    controls.update();
+  }, [camera, dragCommand]);
   useFrame(() => controlsRef.current?.update());
   return null;
 }
 
-function CourtSurface({ world, muted = false }: { world: VirtualWorld; muted?: boolean }) {
+function applyCameraPan(camera: Camera, controls: MapControls, dx: number, dy: number) {
+  const distance = camera.position.distanceTo(controls.target);
+  const scale = Math.max(0.006, distance * 0.0014);
+  const elements = camera.matrix.elements;
+  const right = new ThreeVector3(elements[0], elements[1], elements[2]);
+  const up = new ThreeVector3(elements[4], elements[5], elements[6]);
+  const delta = right.multiplyScalar(-dx * scale).add(up.multiplyScalar(dy * scale));
+  camera.position.add(delta);
+  controls.target.add(delta);
+}
+
+function applyCameraOrbit(camera: Camera, controls: MapControls, dx: number, dy: number) {
+  const offset = new ThreeVector3().subVectors(camera.position, controls.target);
+  const spherical = new Spherical().setFromVector3(offset);
+  spherical.theta -= dx * 0.006;
+  spherical.phi = Math.min(Math.PI * 0.48, Math.max(0.1, spherical.phi - dy * 0.006));
+  offset.setFromSpherical(spherical);
+  camera.position.copy(controls.target).add(offset);
+  camera.lookAt(controls.target);
+}
+
+const COURT_RENDER_COLORS = {
+  surface: "#f7f5ee",
+  boundary: "#656f68",
+  netTape: "#4d5752",
+  netMesh: "#7f8a83",
+  post: "#58625d",
+};
+
+function CourtSurface({ world }: { world: VirtualWorld }) {
   const bounds = courtBounds(world);
   return (
     <mesh position={[bounds.centerX, bounds.centerY, -0.012]}>
       <planeGeometry args={[bounds.width, bounds.length]} />
-      <meshStandardMaterial color={muted ? "#ece8df" : "#1d7250"} roughness={0.82} metalness={0.02} />
+      <meshStandardMaterial color={COURT_RENDER_COLORS.surface} roughness={0.78} metalness={0.01} />
     </mesh>
   );
 }
 
-function CourtLines({ world, muted = false }: { world: VirtualWorld; muted?: boolean }) {
+function CourtLines({ world }: { world: VirtualWorld }) {
   const courtPoints = Object.values(world.court.line_segments).flat();
   const netPoints = world.court.net.endpoints;
   return (
     <>
-      <LineSegments points={courtPoints} color={muted ? "#9ca39f" : "#e9f4e8"} opacity={muted ? 0.7 : 1} />
-      <LineSegments points={netPoints} color={muted ? "#727a76" : "#ffcf5a"} opacity={muted ? 0.7 : 1} />
+      <WorldLineSegments points={courtPoints} color={COURT_RENDER_COLORS.boundary} radius={0.015} zOffset={0.018} />
+      <WorldLineSegments points={netPoints} color={COURT_RENDER_COLORS.netTape} radius={0.012} />
     </>
   );
 }
 
-function NetAssembly({ world, muted = false }: { world: VirtualWorld; muted?: boolean }) {
+function NetAssembly({ world }: { world: VirtualWorld }) {
   const [left, right] = world.court.net.endpoints;
   const width = Math.hypot(right[0] - left[0], right[1] - left[1]);
   const center: Vec3 = [(left[0] + right[0]) / 2, (left[1] + right[1]) / 2, world.court.net.post_height_m / 2];
@@ -1467,19 +1685,39 @@ function NetAssembly({ world, muted = false }: { world: VirtualWorld; muted?: bo
     <>
       <mesh position={center}>
         <boxGeometry args={[width, 0.045, world.court.net.post_height_m]} />
-        <meshStandardMaterial color={muted ? "#767e7a" : "#9fd3d6"} transparent opacity={muted ? 0.14 : 0.24} roughness={0.7} />
+        <meshStandardMaterial color={COURT_RENDER_COLORS.netMesh} transparent opacity={0.16} roughness={0.7} />
       </mesh>
       <mesh position={[left[0], left[1], world.court.net.post_height_m / 2]}>
         <boxGeometry args={[0.075, 0.075, world.court.net.post_height_m]} />
-        <meshStandardMaterial color={muted ? "#767e7a" : "#f2f2e8"} />
+        <meshStandardMaterial color={COURT_RENDER_COLORS.post} />
       </mesh>
       <mesh position={[right[0], right[1], world.court.net.post_height_m / 2]}>
         <boxGeometry args={[0.075, 0.075, world.court.net.post_height_m]} />
-        <meshStandardMaterial color={muted ? "#767e7a" : "#f2f2e8"} />
+        <meshStandardMaterial color={COURT_RENDER_COLORS.post} />
       </mesh>
-      <LineSegments points={[topLeft, centerTop, centerTop, topRight]} color={muted ? "#606966" : "#ffcf5a"} opacity={muted ? 0.7 : 1} />
+      <WorldLineSegments points={[topLeft, centerTop, centerTop, topRight]} color={COURT_RENDER_COLORS.netTape} radius={0.012} />
     </>
   );
+}
+
+function WorldLineSegments({
+  points,
+  color,
+  radius,
+  zOffset = 0,
+  opacity = 1,
+}: {
+  points: Vec3[];
+  color: string;
+  radius: number;
+  zOffset?: number;
+  opacity?: number;
+}) {
+  const raisedPoints = useMemo(
+    () => points.map((point) => [point[0], point[1], point[2] + zOffset] as Vec3),
+    [points, zOffset],
+  );
+  return <BoneSegments points={raisedPoints} color={color} opacity={opacity} radius={radius} />;
 }
 
 function ReplayGlbLayer({
@@ -1747,27 +1985,59 @@ function PaddleProxy({
     () => geometryFromIndexedMesh(renderGeometry.vertices, renderGeometry.faces),
     [renderGeometry.faces, renderGeometry.vertices],
   );
-  const opacity = focusStyle.dimmed ? 0.18 : focusStyle.highlighted ? 0.72 : paddle.estimated ? 0.46 : 0.64;
+  const opacity = focusStyle.dimmed ? 0.22 : focusStyle.highlighted ? 0.92 : renderGeometry.material.fillOpacity;
+  const edgeOpacity = focusStyle.dimmed ? 0.28 : focusStyle.highlighted ? 1 : renderGeometry.material.edgeOpacity;
+  const fillColor = focusStyle.highlighted ? "#dfff3d" : renderGeometry.material.fillColor;
+  const emissiveColor = focusStyle.highlighted ? "#425800" : renderGeometry.material.emissiveColor;
   return (
-    <mesh
-      geometry={geometry}
-      renderOrder={22}
+    <group
       onClick={(event) => {
         event.stopPropagation();
         onSelectPlayer(paddle.playerId);
       }}
     >
-      <meshStandardMaterial
-        color={focusStyle.highlighted ? "#dfff3d" : paddle.estimated ? "#ffb454" : "#e8ff34"}
-        emissive={focusStyle.highlighted ? "#425800" : paddle.estimated ? "#3c2600" : "#526000"}
-        roughness={0.5}
-        metalness={0.02}
-        transparent
-        opacity={opacity}
-        side={DoubleSide}
-        depthWrite={false}
+      <mesh geometry={geometry} renderOrder={22}>
+        <meshStandardMaterial
+          color={fillColor}
+          emissive={emissiveColor}
+          roughness={0.44}
+          metalness={0.02}
+          transparent
+          opacity={opacity}
+          side={DoubleSide}
+          depthWrite
+        />
+      </mesh>
+      <BoneSegments
+        points={renderGeometry.edgeSegments}
+        color={renderGeometry.material.edgeColor}
+        opacity={edgeOpacity}
+        radius={renderGeometry.material.edgeRadiusM}
       />
-    </mesh>
+      <BoneSegments
+        points={renderGeometry.normalSegment}
+        color={renderGeometry.material.normalColor}
+        opacity={edgeOpacity}
+        radius={renderGeometry.material.normalRadiusM}
+        renderOrder={26}
+        depthTest={!renderGeometry.material.normalOverlay}
+      />
+      {renderGeometry.normalTip ? (
+        <mesh position={renderGeometry.normalTip} renderOrder={27}>
+          <sphereGeometry args={[renderGeometry.material.normalTipRadiusM, 18, 18]} />
+          <meshStandardMaterial
+            color={renderGeometry.material.normalColor}
+            emissive={renderGeometry.material.normalColor}
+            roughness={0.35}
+            metalness={0.01}
+            transparent
+            opacity={edgeOpacity}
+            depthWrite={false}
+            depthTest={!renderGeometry.material.normalOverlay}
+          />
+        </mesh>
+      ) : null}
+    </group>
   );
 }
 
@@ -2082,7 +2352,21 @@ function SkeletonGraph({
   );
 }
 
-function BoneSegments({ points, color, opacity, radius }: { points: Vec3[]; color: string; opacity: number; radius: number }) {
+function BoneSegments({
+  points,
+  color,
+  opacity,
+  radius,
+  renderOrder = 19,
+  depthTest = true,
+}: {
+  points: Vec3[];
+  color: string;
+  opacity: number;
+  radius: number;
+  renderOrder?: number;
+  depthTest?: boolean;
+}) {
   const segments = useMemo(() => {
     const pairs: Array<[Vec3, Vec3]> = [];
     for (let index = 1; index < points.length; index += 2) {
@@ -2093,7 +2377,16 @@ function BoneSegments({ points, color, opacity, radius }: { points: Vec3[]; colo
   return (
     <>
       {segments.map(([from, to], index) => (
-        <BoneSegment key={`${index}-${from.join(",")}-${to.join(",")}`} from={from} to={to} color={color} opacity={opacity} radius={radius} />
+        <BoneSegment
+          key={`${index}-${from.join(",")}-${to.join(",")}`}
+          from={from}
+          to={to}
+          color={color}
+          opacity={opacity}
+          radius={radius}
+          renderOrder={renderOrder}
+          depthTest={depthTest}
+        />
       ))}
     </>
   );
@@ -2105,12 +2398,16 @@ function BoneSegment({
   color,
   opacity,
   radius,
+  renderOrder = 19,
+  depthTest = true,
 }: {
   from: Vec3;
   to: Vec3;
   color: string;
   opacity: number;
   radius: number;
+  renderOrder?: number;
+  depthTest?: boolean;
 }) {
   const transform = useMemo(() => {
     const start = new ThreeVector3(...from);
@@ -2130,9 +2427,9 @@ function BoneSegment({
   }, [from, to]);
   if (transform.length <= 1e-6) return null;
   return (
-    <mesh position={transform.position} quaternion={transform.quaternion} renderOrder={19}>
+    <mesh position={transform.position} quaternion={transform.quaternion} renderOrder={renderOrder}>
       <cylinderGeometry args={[radius, radius, transform.length, 8]} />
-      <meshStandardMaterial color={color} transparent opacity={opacity} roughness={0.5} metalness={0.02} depthWrite={false} />
+      <meshStandardMaterial color={color} transparent opacity={opacity} roughness={0.5} metalness={0.02} depthWrite={false} depthTest={depthTest} />
     </mesh>
   );
 }
@@ -2367,20 +2664,33 @@ function geometryFromIndexedMesh(points: Vec3[], faces: Array<[number, number, n
 }
 
 export function courtBounds(world: VirtualWorld) {
-  const points = Object.values(world.court.line_segments).flat();
-  const xs = points.map((point) => point[0]);
-  const ys = points.map((point) => point[1]);
-  const minX = Math.min(...xs, -world.court.width_m / 2);
-  const maxX = Math.max(...xs, world.court.width_m / 2);
-  const minY = Math.min(...ys, 0);
-  const maxY = Math.max(...ys, world.court.length_m);
+  const playableSegments = Object.entries(world.court.line_segments)
+    .filter(([key]) => key !== "net")
+    .map(([, segment]) => segment);
+  const points = (playableSegments.length ? playableSegments : Object.values(world.court.line_segments)).flat();
+  const xs = points.map((point) => point[0]).filter(Number.isFinite);
+  const ys = points.map((point) => point[1]).filter(Number.isFinite);
+  const rawMinX = xs.length ? Math.min(...xs) : -world.court.width_m / 2;
+  const rawMaxX = xs.length ? Math.max(...xs) : world.court.width_m / 2;
+  const rawMinY = ys.length ? Math.min(...ys) : -world.court.length_m / 2;
+  const rawMaxY = ys.length ? Math.max(...ys) : world.court.length_m / 2;
+  const rawCenterX = (rawMinX + rawMaxX) / 2;
+  const rawCenterY = (rawMinY + rawMaxY) / 2;
+  const rawWidth = Math.max(0, rawMaxX - rawMinX);
+  const rawLength = Math.max(0, rawMaxY - rawMinY);
+  const width = rawWidth >= world.court.width_m * 0.8 ? rawWidth : world.court.width_m;
+  const length = rawLength >= world.court.length_m * 0.8 ? rawLength : world.court.length_m;
+  const minX = rawCenterX - width / 2;
+  const maxX = rawCenterX + width / 2;
+  const minY = rawCenterY - length / 2;
+  const maxY = rawCenterY + length / 2;
   return {
     centerX: (minX + maxX) / 2,
     centerY: (minY + maxY) / 2,
     minY,
     maxY,
-    width: Math.max(1, maxX - minX),
-    length: Math.max(1, maxY - minY),
+    width: Math.max(1, width),
+    length: Math.max(1, length),
   };
 }
 
@@ -2388,14 +2698,21 @@ export function courtBounds(world: VirtualWorld) {
  * Free-viewpoint orbit already exists (OrbitControls); these are fixed
  * starting poses a coach can jump to before continuing to orbit freely.
  */
-export function cameraPresetPose(world: VirtualWorld, preset: CameraPreset): { position: Vec3; target: Vec3 } {
+export function cameraPresetPose(
+  world: VirtualWorld,
+  preset: CameraPreset,
+  activePaddles: ActivePaddleFrame[] = [],
+  selectedPlayerId: number | null = null,
+): { position: Vec3; target: Vec3 } {
   const bounds = courtBounds(world);
   const groundTarget: Vec3 = [bounds.centerX, bounds.centerY, 0.35];
+  if (preset === "paddle_review") {
+    const paddlePose = paddleReviewCameraPose(activePaddles, selectedPlayerId);
+    if (paddlePose) return paddlePose;
+    return topDownCameraPose(bounds, false);
+  }
   if (preset === "top_down" || preset === "shot_trails") {
-    return {
-      position: [bounds.centerX, bounds.centerY, Math.max(preset === "shot_trails" ? 14 : 10, bounds.length * (preset === "shot_trails" ? 1.35 : 1.1))],
-      target: [bounds.centerX, bounds.centerY, 0],
-    };
+    return topDownCameraPose(bounds, preset === "shot_trails");
   }
   if (preset === "behind_baseline") {
     return {
@@ -2404,9 +2721,43 @@ export function cameraPresetPose(world: VirtualWorld, preset: CameraPreset): { p
     };
   }
   return {
-    position: [bounds.centerX, bounds.minY - bounds.length * 0.86, Math.max(6.5, bounds.length * 0.64)],
+    position: [bounds.centerX, bounds.minY - bounds.length * 0.62, Math.max(5.4, bounds.length * 0.5)],
     target: groundTarget,
   };
+}
+
+function topDownCameraPose(bounds: ReturnType<typeof courtBounds>, wide: boolean): { position: Vec3; target: Vec3 } {
+  return {
+    position: [bounds.centerX, bounds.centerY, Math.max(wide ? 14 : 10, bounds.length * (wide ? 1.35 : 1.1))],
+    target: [bounds.centerX, bounds.centerY, 0],
+  };
+}
+
+function paddleReviewCameraPose(activePaddles: ActivePaddleFrame[], selectedPlayerId: number | null): { position: Vec3; target: Vec3 } | null {
+  const selectedPaddles =
+    selectedPlayerId === null ? activePaddles : activePaddles.filter((paddle) => paddle.playerId === selectedPlayerId);
+  const paddles = selectedPaddles.length ? selectedPaddles : activePaddles;
+  const points = paddles.flatMap((paddle) => paddleReviewPoints(paddle.frame));
+  if (!points.length) return null;
+  const center: Vec3 = [
+    points.reduce((sum, point) => sum + point[0], 0) / points.length,
+    points.reduce((sum, point) => sum + point[1], 0) / points.length,
+    points.reduce((sum, point) => sum + point[2], 0) / points.length,
+  ];
+  const radius = Math.max(
+    0.25,
+    ...points.map((point) => Math.hypot(point[0] - center[0], point[1] - center[1], point[2] - center[2])),
+  );
+  const distance = Math.max(1.15, radius * 2.8);
+  return {
+    position: [center[0], center[1] - distance * 0.75, center[2] + distance * 1.35],
+    target: center,
+  };
+}
+
+function paddleReviewPoints(frame: VirtualWorldPaddleFrame): Vec3[] {
+  if (frame.mesh_vertices_world.length) return frame.mesh_vertices_world;
+  return [frame.pose_se3.t];
 }
 
 function floorWorldForFrame(frame: VirtualWorldFrame | undefined): Vec3 | null {
@@ -2581,7 +2932,41 @@ function isHandJointName(name: string): boolean {
 export function paddleRenderGeometryForFrame(
   frame: VirtualWorldPaddleFrame,
   dimsIn: Record<string, number>,
-): { vertices: Vec3[]; faces: Array<[number, number, number]>; estimated: boolean } {
+): {
+  vertices: Vec3[];
+  faces: Array<[number, number, number]>;
+  edgeSegments: Vec3[];
+  normalSegment: Vec3[];
+  normalTip: Vec3 | null;
+  estimated: boolean;
+  material: {
+    fillColor: string;
+    emissiveColor: string;
+    edgeColor: string;
+    normalColor: string;
+    fillOpacity: number;
+    edgeOpacity: number;
+    edgeRadiusM: number;
+    normalRadiusM: number;
+    normalLengthM: number;
+    normalTipRadiusM: number;
+    normalOverlay: boolean;
+  };
+} {
+  const estimated = frame.source.includes("wrist_proxy") || frame.render_only === true || frame.not_for_detection_metrics === true;
+  const material = paddleRenderMaterial(estimated);
+  const normalSegment = paddleFaceNormalSegment(frame);
+  if (frame.mesh_vertices_world.length > 4 && frame.mesh_faces.length > 2) {
+    return {
+      vertices: frame.mesh_vertices_world,
+      faces: frame.mesh_faces,
+      edgeSegments: paddleEdgeSegmentsForIndexedMesh(frame.mesh_vertices_world, frame.mesh_faces),
+      normalSegment,
+      normalTip: normalSegment.length === 2 ? normalSegment[1] : null,
+      estimated,
+      material,
+    };
+  }
   const widthM = (dimsIn.width ?? dimsIn.w ?? 7.5) * 0.0254;
   const lengthM = (dimsIn.length ?? dimsIn.h ?? 15.5) * 0.0254;
   const radius = Math.min(widthM, lengthM) * 0.18;
@@ -2593,7 +2978,90 @@ export function paddleRenderGeometryForFrame(
     const next = index === vertices.length - 1 ? 1 : index + 1;
     faces.push([0, index, next]);
   }
-  return { vertices, faces, estimated: frame.source.includes("wrist_proxy") || frame.render_only === true || frame.not_for_detection_metrics === true };
+  return {
+    vertices,
+    faces,
+    edgeSegments: paddleEdgeSegmentsForIndexedMesh(vertices, faces),
+    normalSegment,
+    normalTip: normalSegment.length === 2 ? normalSegment[1] : null,
+    estimated,
+    material,
+  };
+}
+
+function paddleRenderMaterial(estimated: boolean) {
+  return estimated
+    ? {
+        fillColor: "#ffb454",
+        emissiveColor: "#5a3500",
+        edgeColor: "#2a1700",
+        normalColor: "#23c9ff",
+        fillOpacity: 0.84,
+        edgeOpacity: 0.95,
+        edgeRadiusM: 0.014,
+        normalRadiusM: 0.026,
+        normalLengthM: 0.52,
+        normalTipRadiusM: 0.052,
+        normalOverlay: true,
+      }
+    : {
+        fillColor: "#e8ff34",
+        emissiveColor: "#526000",
+        edgeColor: "#2b3000",
+        normalColor: "#1fa9ff",
+        fillOpacity: 0.88,
+        edgeOpacity: 0.96,
+        edgeRadiusM: 0.012,
+        normalRadiusM: 0.022,
+        normalLengthM: 0.48,
+        normalTipRadiusM: 0.046,
+        normalOverlay: true,
+      };
+}
+
+function paddleFaceNormalSegment(frame: VirtualWorldPaddleFrame): Vec3[] {
+  const normal = normalizeVec3([
+    frame.pose_se3.R[0]?.[2] ?? 0,
+    frame.pose_se3.R[1]?.[2] ?? 0,
+    frame.pose_se3.R[2]?.[2] ?? 0,
+  ]);
+  if (!normal) return [];
+  const center = frame.pose_se3.t;
+  const lengthM = paddleRenderMaterial(frame.source.includes("wrist_proxy") || frame.render_only === true || frame.not_for_detection_metrics === true)
+    .normalLengthM;
+  return [center, [center[0] + normal[0] * lengthM, center[1] + normal[1] * lengthM, center[2] + normal[2] * lengthM]];
+}
+
+function normalizeVec3(vector: Vec3): Vec3 | null {
+  const length = Math.hypot(vector[0], vector[1], vector[2]);
+  if (length <= 1e-9) return null;
+  return [vector[0] / length, vector[1] / length, vector[2] / length];
+}
+
+export function paddleEdgeSegmentsForIndexedMesh(vertices: Vec3[], faces: Array<[number, number, number]>): Vec3[] {
+  const edgeCounts = new Map<string, { count: number; edge: [number, number] }>();
+  for (const face of faces) {
+    for (const [left, right] of [
+      [face[0], face[1]],
+      [face[1], face[2]],
+      [face[2], face[0]],
+    ] as Array<[number, number]>) {
+      if (!vertices[left] || !vertices[right]) continue;
+      const key = left < right ? `${left}:${right}` : `${right}:${left}`;
+      const existing = edgeCounts.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        edgeCounts.set(key, { count: 1, edge: [left, right] });
+      }
+    }
+  }
+  const segments: Vec3[] = [];
+  for (const { count, edge } of edgeCounts.values()) {
+    if (count !== 1) continue;
+    segments.push(vertices[edge[0]], vertices[edge[1]]);
+  }
+  return segments;
 }
 
 function roundedRectanglePoints(widthM: number, lengthM: number, radiusM: number, cornerSteps: number): Array<[number, number]> {

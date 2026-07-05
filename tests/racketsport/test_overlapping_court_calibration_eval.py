@@ -30,6 +30,40 @@ def test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verif
     assert report["summary"]["distorted_camera_mean_residual_ft_mean"] is not None
     assert report["summary"]["all15_camera_floor_mean_residual_ft_mean"] is not None
     assert report["summary"]["metric_plane_camera_mean_residual_ft_mean"] is not None
+    assert report["summary"]["full_intrinsics_metric_plane_mean_residual_ft_mean"] == 0.270737
+    assert report["summary"]["full_intrinsics_metric_plane_diagnostic_only"] is True
+    assert report["summary"]["full_intrinsics_top_residual_line_override_candidate_count"] == 13
+    assert report["summary"]["full_intrinsics_top_residual_line_override_mean_residual_ft_mean"] == 0.193404
+    assert report["summary"]["full_intrinsics_top_residual_line_override_mean_residual_ft_mean"] < 0.2
+    assert (
+        report["summary"]["full_intrinsics_top_residual_line_override_original_reviewed_mean_residual_ft_mean"]
+        == 0.408027
+    )
+    assert report["summary"]["full_intrinsics_top_residual_line_override_diagnostic_only"] is True
+    assert report["summary"]["full_intrinsics_all_strict_line_override_candidate_count"] == 30
+    assert report["summary"]["full_intrinsics_all_strict_line_override_mean_residual_ft_mean"] == 0.230184
+    assert (
+        report["summary"]["full_intrinsics_all_strict_line_override_mean_residual_ft_mean"]
+        > report["summary"]["full_intrinsics_top_residual_line_override_mean_residual_ft_mean"]
+    )
+    assert (
+        report["summary"]["full_intrinsics_all_strict_line_override_original_reviewed_mean_residual_ft_mean"]
+        == 0.655275
+    )
+    assert report["summary"]["full_intrinsics_all_strict_line_override_diagnostic_only"] is True
+    assert report["summary"]["full_intrinsics_quality_gated_line_override_profile_count"] == 5
+    assert (
+        report["summary"]["full_intrinsics_quality_gated_line_override_best_profile_id"]
+        == "tight_overlap35_dist12_angle8_model24"
+    )
+    assert report["summary"]["full_intrinsics_quality_gated_line_override_best_candidate_count"] == 25
+    assert report["summary"]["full_intrinsics_quality_gated_line_override_best_mean_residual_ft_mean"] == 0.182784
+    assert report["summary"]["full_intrinsics_quality_gated_line_override_best_mean_residual_ft_max"] == 0.236466
+    assert (
+        report["summary"]["full_intrinsics_quality_gated_line_override_best_original_reviewed_mean_residual_ft_mean"]
+        == 0.494922
+    )
+    assert report["summary"]["full_intrinsics_quality_gated_line_override_diagnostic_only"] is True
     assert (
         report["summary"]["metric_plane_camera_mean_residual_ft_mean"]
         < report["summary"]["distorted_camera_mean_residual_ft_mean"]
@@ -130,6 +164,81 @@ def test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verif
     assert first["metric_plane_camera"]["method"] == "metric_plane_focal_pose_radial_soft_l1_lm"
     assert first["metric_plane_camera"]["mean_residual_ft"] < first["distorted_camera"]["mean_residual_ft"]
     assert len(first["metric_plane_camera"]["per_keypoint_residual_ft"]) == 12
+    assert first["full_intrinsics_metric_plane_camera"]["method"] == "full_intrinsics_metric_plane_pose_radial_soft_l1_lm"
+    assert first["full_intrinsics_metric_plane_camera"]["diagnostic_only"] is True
+    assert first["full_intrinsics_metric_plane_camera"]["promotes_calibration"] is False
+    assert first["full_intrinsics_metric_plane_camera"]["mean_residual_ft"] >= 0.0
+    full_intrinsics_top_line_override = first["full_intrinsics_metric_plane_camera"][
+        "top_residual_line_intersection_override_oracle"
+    ]
+    assert full_intrinsics_top_line_override["diagnostic_only"] is True
+    assert full_intrinsics_top_line_override["promotes_calibration"] is False
+    assert full_intrinsics_top_line_override["mutates_reviewed_labels"] is False
+    assert full_intrinsics_top_line_override["status"] == "scored"
+    assert full_intrinsics_top_line_override["method"] == "full_intrinsics_metric_plane_pose_radial_soft_l1_lm"
+    assert full_intrinsics_top_line_override["camera_fit_model"] == "full_intrinsics_metric_plane"
+    assert full_intrinsics_top_line_override["drop_count"] == 4
+    assert full_intrinsics_top_line_override["override_candidate_count"] >= 1
+    full_intrinsics_all_strict_override = first["full_intrinsics_metric_plane_camera"][
+        "all_strict_endpoint_line_intersection_override_oracle"
+    ]
+    assert full_intrinsics_all_strict_override["diagnostic_only"] is True
+    assert full_intrinsics_all_strict_override["promotes_calibration"] is False
+    assert full_intrinsics_all_strict_override["mutates_reviewed_labels"] is False
+    assert full_intrinsics_all_strict_override["uses_residual_rank_selection"] is False
+    assert full_intrinsics_all_strict_override["source_strategy"] == "all_strict_endpoint_line_intersections"
+    assert full_intrinsics_all_strict_override["camera_fit_model"] == "full_intrinsics_metric_plane"
+    assert full_intrinsics_all_strict_override["override_candidate_count"] == 8
+    assert full_intrinsics_all_strict_override["mean_residual_ft"] == 0.426068
+    quality_gated_sweep = first["full_intrinsics_metric_plane_camera"]["quality_gated_line_intersection_override_sweep"]
+    assert quality_gated_sweep["diagnostic_only"] is True
+    assert quality_gated_sweep["promotes_calibration"] is False
+    assert quality_gated_sweep["uses_residual_rank_selection"] is False
+    assert len(quality_gated_sweep["profiles"]) == 5
+    assert quality_gated_sweep["best_profile"]["quality_profile_id"] == "tight_overlap35_dist12_angle8_model24"
+    assert (
+        quality_gated_sweep["best_profile"]["quality_profile"]["max_model_to_line_intersection_delta_px"] == 24.0
+    )
+    assert quality_gated_sweep["best_profile"]["override_candidate_count"] == 3
+    assert quality_gated_sweep["best_profile"]["mean_residual_ft"] == 0.236466
+    assert quality_gated_sweep["best_profile"]["source_strategy"] == "quality_gated_endpoint_line_intersections"
+    model_projected_sweep = first["full_intrinsics_metric_plane_camera"][
+        "model_projected_quality_gated_line_intersection_override_sweep"
+    ]
+    assert model_projected_sweep["diagnostic_only"] is True
+    assert model_projected_sweep["promotes_calibration"] is False
+    assert model_projected_sweep["uses_reviewed_line_positions_for_matching"] is False
+    assert model_projected_sweep["line_reference_source"] == "model_projection"
+    assert len(model_projected_sweep["profiles"]) == 5
+    assert (
+        report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_profile_count"] == 5
+    )
+    assert (
+        report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_best_profile_id"]
+        == "tight_overlap35_dist12_angle8_model24"
+    )
+    assert (
+        report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_best_candidate_count"] == 25
+    )
+    assert (
+        report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_best_mean_residual_ft_mean"]
+        == 0.182784
+    )
+    assert (
+        report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_best_mean_residual_ft_max"]
+        == 0.236466
+    )
+    assert (
+        report[
+            "summary"
+        ]["full_intrinsics_model_projected_quality_gated_line_override_best_original_reviewed_mean_residual_ft_mean"]
+        == 0.494922
+    )
+    assert (
+        report["summary"]["full_intrinsics_model_projected_quality_gated_uses_reviewed_line_positions_for_matching"]
+        is False
+    )
+    assert first["safe_selected_camera"]["source"] != "full_intrinsics_top_residual_line_override"
     assert first["metric_plane_camera"]["trimmed_mean_residual_ft_drop_worst_3"] < first["metric_plane_camera"]["mean_residual_ft"]
     assert first["metric_plane_camera"]["top_residual_refit_diagnostic"]["diagnostic_only"] is True
     assert first["metric_plane_camera"]["top_residual_refit_diagnostic"]["promotes_calibration"] is False

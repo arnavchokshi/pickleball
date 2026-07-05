@@ -119,6 +119,10 @@ class BallArcSolverConfig:
     weak_segment_pixel_sigma_multiplier: float = 2.5
     weak_size_depth_sigma_m: float = 6.0
     weak_segment_max_nfev: int = 800
+    candidate_selection_max_iterations: int = 5
+    max_candidates_per_frame: int = 12
+    candidate_association_mode: str = "free"
+    candidate_score_floors: Mapping[str, float] | None = None
 
     def __post_init__(self) -> None:
         if self.robust_pixel_sigma <= 0.0:
@@ -169,6 +173,18 @@ class BallArcSolverConfig:
             raise ValueError("weak_size_depth_sigma_m must be positive")
         if self.weak_segment_max_nfev <= 0:
             raise ValueError("weak_segment_max_nfev must be positive")
+        if self.candidate_selection_max_iterations <= 0:
+            raise ValueError("candidate_selection_max_iterations must be positive")
+        if self.max_candidates_per_frame <= 0:
+            raise ValueError("max_candidates_per_frame must be positive")
+        if self.candidate_association_mode not in {"free", "rescue_only"}:
+            raise ValueError("candidate_association_mode must be 'free' or 'rescue_only'")
+        for source, floor in dict(self.candidate_score_floors or {}).items():
+            if not str(source):
+                raise ValueError("candidate_score_floors source keys must be non-empty")
+            value = float(floor)
+            if not math.isfinite(value) or value < 0.0 or value > 1.0:
+                raise ValueError("candidate_score_floors values must be finite values in [0, 1]")
 
 
 @dataclass(frozen=True)
@@ -181,6 +197,10 @@ class BallObservation:
     diameter_px: float | None = None
     size_confidence: float | None = None
     size_source: str | None = None
+    observation_source: str = "primary:ball_track"
+    candidate_score: float | None = None
+    candidate_rank: int | None = None
+    candidate_selection: str | None = None
 
 
 @dataclass(frozen=True)
@@ -236,6 +256,10 @@ class FlightSegmentFit:
     net_clearance_ok: bool | None
     physical_sanity: Mapping[str, Any]
     size_residuals_m: Mapping[str, Any]
+    primary_observations: tuple[BallObservation, ...] = ()
+    candidate_sets_by_frame: Mapping[int, tuple[BallObservation, ...]] | None = None
+    selected_observations_by_frame: Mapping[int, BallObservation] | None = None
+    candidate_association: Mapping[str, Any] | None = None
 
     @property
     def inlier_count(self) -> int:
@@ -256,7 +280,7 @@ class FlightSegmentFit:
         )[0]
 
     def to_json(self) -> dict[str, Any]:
-        return {
+        payload = {
             "segment_id": self.segment_id,
             "status": self.status,
             "t0": _round(self.start_anchor.t, 9),
@@ -281,6 +305,14 @@ class FlightSegmentFit:
             "physical_sanity": dict(self.physical_sanity),
             "size_residuals_m": dict(self.size_residuals_m),
         }
+        if self.candidate_association:
+            payload["candidate_association"] = dict(self.candidate_association)
+            selected = self.selected_observations_by_frame or {}
+            payload["candidate_selection_by_frame"] = {
+                str(frame): _observation_candidate_payload(obs)
+                for frame, obs in sorted(selected.items())
+            }
+        return payload
 
 
 def build_bounce_anchor(
@@ -291,6 +323,8 @@ def build_bounce_anchor(
     ball_xy: Sequence[float] | None = None,
     status: str = "human_reviewed",
     sigma_m: float | None = None,
+    source: str | None = None,
+    details: Mapping[str, Any] | None = None,
 ) -> AnchorEvent:
     """Build an exact court-plane anchor from a reviewed or proposed bounce."""
 
@@ -310,6 +344,9 @@ def build_bounce_anchor(
         sigma_m = anchor_sigma_for_bounce(calibration, xy, base_sigma_m=0.05 if status == "human_reviewed" else 0.12)
     review_id = bounce.get("review_id")
     anchor_id = str(review_id) if isinstance(review_id, str) and review_id else f"{status}_bounce_{frame:06d}"
+    anchor_details = {"pixel_xy": [float(xy[0]), float(xy[1])], "ball_radius_m": ball_radius_m}
+    if details:
+        anchor_details.update(dict(details))
     return AnchorEvent(
         anchor_id=anchor_id,
         kind="bounce",
@@ -319,15 +356,15 @@ def build_bounce_anchor(
         sigma_m=float(sigma_m),
         status=status,
         immovable=status == "human_reviewed",
-        source="ray_intersection_z_ball_radius",
-        details={"pixel_xy": [float(xy[0]), float(xy[1])], "ball_radius_m": ball_radius_m},
+        source=source or "ray_intersection_z_ball_radius",
+        details=anchor_details,
     )
 
 
 def order_event_anchors(anchors: Sequence[AnchorEvent]) -> list[AnchorEvent]:
     """Sort anchors by time and prefer human-reviewed duplicates."""
 
-    priority = {"human_reviewed": 0, "contact_prior": 1, "solver_proposed": 2}
+    priority = {"human_reviewed": 0, "auto_bounce_candidate": 1, "contact_prior": 2, "solver_proposed": 3}
     ordered = sorted(
         anchors,
         key=lambda item: (
@@ -366,11 +403,54 @@ def fit_flight_segment(
     config: BallArcSolverConfig | None = None,
     net_plane: Mapping[str, Any] | None = None,
     max_nfev: int | None = None,
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]] | None = None,
 ) -> FlightSegmentFit:
     """Fit one event-bounded free-flight segment."""
 
     cfg = config or BallArcSolverConfig()
     phys = physics or PhysicsParameters()
+    if candidate_sets_by_frame:
+        return _fit_flight_segment_with_candidate_association(
+            segment_id=segment_id,
+            start_anchor=start_anchor,
+            end_anchor=end_anchor,
+            observations=observations,
+            candidate_sets_by_frame=candidate_sets_by_frame,
+            calibration=calibration,
+            physics=phys,
+            config=cfg,
+            net_plane=net_plane,
+            max_nfev=max_nfev,
+        )
+    return _fit_flight_segment_once(
+        segment_id=segment_id,
+        start_anchor=start_anchor,
+        end_anchor=end_anchor,
+        observations=observations,
+        calibration=calibration,
+        physics=phys,
+        config=cfg,
+        net_plane=net_plane,
+        max_nfev=max_nfev,
+    )
+
+
+def _fit_flight_segment_once(
+    *,
+    segment_id: int,
+    start_anchor: AnchorEvent,
+    end_anchor: AnchorEvent,
+    observations: Sequence[BallObservation],
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+    net_plane: Mapping[str, Any] | None = None,
+    max_nfev: int | None = None,
+) -> FlightSegmentFit:
+    """Fit one event-bounded free-flight segment against one chosen observation per frame."""
+
+    cfg = config
+    phys = physics
     if end_anchor.t - start_anchor.t < cfg.min_segment_dt_s:
         return _blocked_segment(segment_id, start_anchor, end_anchor, "duration_below_minimum")
     try:
@@ -505,6 +585,406 @@ def fit_flight_segment(
         physical_sanity=physical,
         size_residuals_m=size_residuals,
     )
+
+
+def _fit_flight_segment_with_candidate_association(
+    *,
+    segment_id: int,
+    start_anchor: AnchorEvent,
+    end_anchor: AnchorEvent,
+    observations: Sequence[BallObservation],
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]],
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+    net_plane: Mapping[str, Any] | None = None,
+    max_nfev: int | None = None,
+) -> FlightSegmentFit:
+    """EM-style per-frame candidate association around the existing robust segment fit.
+
+    Leave-one-out callers pass a candidate set with the held-out frame removed;
+    this keeps all sibling candidates from that frame out of the refit.
+    """
+
+    primary_observations = tuple(
+        obs for obs in observations if start_anchor.t - 1e-9 <= obs.t <= end_anchor.t + 1e-9 and obs.visible
+    )
+    span_candidate_sets = _candidate_sets_in_span(
+        candidate_sets_by_frame,
+        start_t=start_anchor.t,
+        end_t=end_anchor.t,
+        max_per_frame=config.max_candidates_per_frame,
+    )
+    base = _fit_flight_segment_once(
+        segment_id=segment_id,
+        start_anchor=start_anchor,
+        end_anchor=end_anchor,
+        observations=primary_observations,
+        calibration=calibration,
+        physics=physics,
+        config=config,
+        net_plane=net_plane,
+        max_nfev=max_nfev,
+    )
+    if not span_candidate_sets or not base.status.startswith("fit"):
+        return replace(
+            base,
+            primary_observations=primary_observations,
+            candidate_sets_by_frame=span_candidate_sets,
+            candidate_association=_candidate_association_report(
+                enabled=bool(span_candidate_sets),
+                converged=False,
+                iterations=[],
+                selected_by_frame={},
+                unassigned_best_residual_px={},
+                reason="initial_fit_not_available" if span_candidate_sets else "no_candidate_sets_in_span",
+                config=config,
+            ),
+        )
+
+    current = base
+    refit_max_nfev = max_nfev or config.selection_max_nfev
+    previous_signature: tuple[tuple[int, str, float, float], ...] | None = None
+    selected_by_frame: dict[int, BallObservation] = {}
+    unassigned_best_residual_px: dict[int, float] = {}
+    iterations: list[dict[str, Any]] = []
+    converged = False
+    stopped_reason = "max_iterations_reached"
+    for iteration in range(1, config.candidate_selection_max_iterations + 1):
+        selected_by_frame, unassigned_best_residual_px, iteration_report = _select_candidates_for_segment(
+            current,
+            span_candidate_sets,
+            calibration=calibration,
+            physics=physics,
+            config=config,
+            iteration=iteration,
+        )
+        signature = _candidate_selection_signature(selected_by_frame)
+        iterations.append(iteration_report)
+        if signature == previous_signature:
+            converged = True
+            stopped_reason = "selection_stable"
+            break
+        if len(selected_by_frame) < config.min_segment_observations:
+            return replace(
+                base,
+                primary_observations=primary_observations,
+                candidate_sets_by_frame=span_candidate_sets,
+                candidate_association=_candidate_association_report(
+                    enabled=True,
+                    converged=False,
+                    iterations=iterations,
+                    selected_by_frame=selected_by_frame,
+                    unassigned_best_residual_px=unassigned_best_residual_px,
+                    reason="insufficient_selected_candidates_fallback_primary",
+                    refit_max_nfev=refit_max_nfev,
+                    fallback_to_primary_fit=True,
+                    config=config,
+                ),
+            )
+        refit = _fit_flight_segment_once(
+            segment_id=segment_id,
+            start_anchor=start_anchor,
+            end_anchor=end_anchor,
+            observations=tuple(selected_by_frame.values()),
+            calibration=calibration,
+            physics=physics,
+            config=config,
+            net_plane=net_plane,
+            max_nfev=refit_max_nfev,
+        )
+        current = refit
+        previous_signature = signature
+        if not current.status.startswith("fit"):
+            stopped_reason = current.status
+            return replace(
+                base,
+                primary_observations=primary_observations,
+                candidate_sets_by_frame=span_candidate_sets,
+                candidate_association=_candidate_association_report(
+                    enabled=True,
+                    converged=False,
+                    iterations=iterations,
+                    selected_by_frame=selected_by_frame,
+                    unassigned_best_residual_px=unassigned_best_residual_px,
+                    reason=f"{stopped_reason}_fallback_primary",
+                    refit_max_nfev=refit_max_nfev,
+                    fallback_to_primary_fit=True,
+                    config=config,
+                ),
+            )
+
+    selected_by_frame = {
+        frame: replace(obs, candidate_selection="arc_irls_v1")
+        for frame, obs in selected_by_frame.items()
+    }
+    unassigned_frames = set(unassigned_best_residual_px)
+    merged_outliers = tuple(sorted(set(current.outlier_frames) | unassigned_frames))
+    merged_errors = {**dict(current.reprojection_errors_px), **unassigned_best_residual_px}
+    association_report = _candidate_association_report(
+        enabled=True,
+        converged=converged,
+        iterations=iterations,
+        selected_by_frame=selected_by_frame,
+        unassigned_best_residual_px=unassigned_best_residual_px,
+        reason=stopped_reason,
+        refit_max_nfev=refit_max_nfev,
+        config=config,
+    )
+    association_report.update(
+        _candidate_final_residual_diagnostics(
+            selected_by_frame,
+            current.reprojection_errors_px,
+            inlier_frames=set(current.inlier_frames),
+        )
+    )
+    return replace(
+        current,
+        observations=tuple(selected_by_frame.values()),
+        outlier_frames=merged_outliers,
+        reprojection_errors_px=merged_errors,
+        primary_observations=primary_observations,
+        candidate_sets_by_frame=span_candidate_sets,
+        selected_observations_by_frame=selected_by_frame,
+        candidate_association=association_report,
+    )
+
+
+def _candidate_sets_in_span(
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]],
+    *,
+    start_t: float,
+    end_t: float,
+    max_per_frame: int,
+) -> dict[int, tuple[BallObservation, ...]]:
+    output: dict[int, tuple[BallObservation, ...]] = {}
+    for frame, candidates in candidate_sets_by_frame.items():
+        selected = tuple(
+            candidate
+            for candidate in candidates[:max_per_frame]
+            if candidate.visible and start_t - 1e-9 <= candidate.t <= end_t + 1e-9
+        )
+        if selected:
+            output[int(frame)] = selected
+    return output
+
+
+def _select_candidates_for_segment(
+    segment: FlightSegmentFit,
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]],
+    *,
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+    iteration: int,
+) -> tuple[dict[int, BallObservation], dict[int, float], dict[str, Any]]:
+    selected: dict[int, BallObservation] = {}
+    unassigned: dict[int, float] = {}
+    score_floor_rejected_counts: dict[str, int] = {}
+    for frame, candidates in sorted(candidate_sets_by_frame.items()):
+        scored: list[tuple[float, int, str, BallObservation]] = []
+        for rank, candidate in enumerate(candidates):
+            predicted = segment.predict(candidate.t, physics, config)
+            projected = _project_world_point(calibration, predicted)
+            residual_px = _distance2(projected, candidate.xy)
+            if not _candidate_passes_score_floor(candidate, config):
+                source = candidate.observation_source
+                score_floor_rejected_counts[source] = score_floor_rejected_counts.get(source, 0) + 1
+                continue
+            scored.append((residual_px, rank, candidate.observation_source, candidate))
+        if not scored:
+            continue
+        residual_px, rank, _source, candidate = _winning_candidate_for_mode(scored, config)
+        if residual_px <= config.max_reprojection_inlier_px:
+            selected[int(frame)] = replace(
+                candidate,
+                candidate_rank=rank if candidate.candidate_rank is None else candidate.candidate_rank,
+                candidate_selection="arc_irls_v1",
+            )
+        else:
+            unassigned[int(frame)] = float(residual_px)
+    source_counts = _observation_source_counts(selected.values())
+    return (
+        selected,
+        unassigned,
+        {
+            "iteration": int(iteration),
+            "selected_count": len(selected),
+            "unassigned_count": len(unassigned),
+            "selection_counts_by_source": source_counts,
+            "score_floor_rejected_counts_by_source": score_floor_rejected_counts,
+            "max_reprojection_inlier_px": config.max_reprojection_inlier_px,
+            "candidate_association_mode": config.candidate_association_mode,
+            "candidate_score_floors": _candidate_score_floors_payload(config),
+        },
+    )
+
+
+def _winning_candidate_for_mode(
+    scored: Sequence[tuple[float, int, str, BallObservation]],
+    config: BallArcSolverConfig,
+) -> tuple[float, int, str, BallObservation]:
+    if config.candidate_association_mode != "rescue_only":
+        return min(scored, key=lambda item: (item[0], item[1], item[2]))
+    primary = [item for item in scored if _is_primary_observation(item[3])]
+    if primary:
+        primary_best = min(primary, key=lambda item: (item[0], item[1], item[2]))
+        if primary_best[0] <= config.max_reprojection_inlier_px:
+            return primary_best
+    rescue = [item for item in scored if not _is_primary_observation(item[3])]
+    if rescue:
+        return min(rescue, key=lambda item: (item[0], item[1], item[2]))
+    return min(scored, key=lambda item: (item[0], item[1], item[2]))
+
+
+def _candidate_passes_score_floor(candidate: BallObservation, config: BallArcSolverConfig) -> bool:
+    floor = _candidate_score_floor(candidate, config)
+    if floor is None:
+        return True
+    score = candidate.candidate_score if candidate.candidate_score is not None else candidate.confidence
+    return float(score) >= floor
+
+
+def _candidate_score_floor(candidate: BallObservation, config: BallArcSolverConfig) -> float | None:
+    floors = dict(config.candidate_score_floors or {})
+    if not floors:
+        return None
+    source = candidate.observation_source
+    if source in floors:
+        return float(floors[source])
+    source_prefix = source.split(":", 1)[0]
+    if source_prefix in floors:
+        return float(floors[source_prefix])
+    return None
+
+
+def _candidate_score_floors_payload(config: BallArcSolverConfig) -> dict[str, float]:
+    return {str(source): float(value) for source, value in sorted(dict(config.candidate_score_floors or {}).items())}
+
+
+def _is_primary_observation(obs: BallObservation) -> bool:
+    return obs.observation_source.startswith("primary:")
+
+
+def _candidate_selection_signature(selected_by_frame: Mapping[int, BallObservation]) -> tuple[tuple[int, str, float, float], ...]:
+    return tuple(
+        (
+            int(frame),
+            obs.observation_source,
+            round(float(obs.xy[0]), 3),
+            round(float(obs.xy[1]), 3),
+        )
+        for frame, obs in sorted(selected_by_frame.items())
+    )
+
+
+def _candidate_association_report(
+    *,
+    enabled: bool,
+    converged: bool,
+    iterations: Sequence[Mapping[str, Any]],
+    selected_by_frame: Mapping[int, BallObservation],
+    unassigned_best_residual_px: Mapping[int, float],
+    reason: str,
+    refit_max_nfev: int | None = None,
+    fallback_to_primary_fit: bool = False,
+    config: BallArcSolverConfig | None = None,
+) -> dict[str, Any]:
+    mode = config.candidate_association_mode if config is not None else "free"
+    score_floors = _candidate_score_floors_payload(config) if config is not None else {}
+    return {
+        "enabled": bool(enabled),
+        "candidate_selection": "arc_irls_v1" if enabled else None,
+        "mode": mode,
+        "candidate_score_floors": score_floors,
+        "converged": bool(converged),
+        "stopped_reason": reason,
+        "iteration_count": len(iterations),
+        "initial_fit": "primary_track_observations",
+        "refit_max_nfev": refit_max_nfev,
+        "fallback_to_primary_fit": bool(fallback_to_primary_fit),
+        "iterations": [dict(item) for item in iterations],
+        "selected_count": len(selected_by_frame),
+        "unassigned_count": len(unassigned_best_residual_px),
+        "selection_counts_by_source": _observation_source_counts(selected_by_frame.values()),
+        "rescue_counts_by_source": _rescue_counts_by_source(selected_by_frame, inlier_frames=None),
+        "score_floor_rejected_counts_by_source": _aggregate_score_floor_rejections(iterations),
+        "unassigned_best_residual_px": {str(frame): _round(value, 6) for frame, value in sorted(unassigned_best_residual_px.items())},
+        "policy": {
+            "initialization": "primary_track_observations",
+            "candidate_selection": "min_reprojection_residual_to_current_arc",
+            "inlier_threshold": "max_reprojection_inlier_px",
+            "loo_holdout": "whole_frame_candidate_sets_excluded",
+            "mode": mode,
+        },
+    }
+
+
+def _aggregate_score_floor_rejections(iterations: Sequence[Mapping[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for iteration in iterations:
+        for source, count in dict(iteration.get("score_floor_rejected_counts_by_source") or {}).items():
+            counts[str(source)] = counts.get(str(source), 0) + int(count)
+    return counts
+
+
+def _rescue_counts_by_source(
+    selected_by_frame: Mapping[int, BallObservation],
+    *,
+    inlier_frames: set[int] | None,
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for frame, obs in selected_by_frame.items():
+        if inlier_frames is not None and int(frame) not in inlier_frames:
+            continue
+        if _is_primary_observation(obs):
+            continue
+        counts[obs.observation_source] = counts.get(obs.observation_source, 0) + 1
+    return counts
+
+
+def _candidate_final_residual_diagnostics(
+    selected_by_frame: Mapping[int, BallObservation],
+    residuals_by_frame: Mapping[int, float],
+    *,
+    inlier_frames: set[int] | None,
+) -> dict[str, Any]:
+    residuals_by_source: dict[str, list[float]] = {}
+    for frame, obs in selected_by_frame.items():
+        residual = residuals_by_frame.get(int(frame))
+        if residual is None:
+            continue
+        residuals_by_source.setdefault(obs.observation_source, []).append(float(residual))
+    return {
+        "final_residual_px_by_source": {
+            source: _distribution(values)
+            for source, values in sorted(residuals_by_source.items())
+        },
+        "rescue_counts_by_source": _rescue_counts_by_source(selected_by_frame, inlier_frames=inlier_frames),
+    }
+
+
+def _observation_source_counts(observations: Sequence[BallObservation]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for obs in observations:
+        counts[obs.observation_source] = counts.get(obs.observation_source, 0) + 1
+    return counts
+
+
+def _observation_candidate_payload(obs: BallObservation) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "frame": int(obs.frame),
+        "t": _round(obs.t, 9),
+        "xy": [_round(obs.xy[0], 6), _round(obs.xy[1], 6)],
+        "observation_source": obs.observation_source,
+        "candidate_selection": obs.candidate_selection,
+        "confidence": _round(obs.confidence, 6),
+    }
+    if obs.candidate_score is not None:
+        payload["candidate_score"] = _round(obs.candidate_score, 6)
+    if obs.candidate_rank is not None:
+        payload["candidate_rank"] = int(obs.candidate_rank)
+    return payload
 
 
 def fit_weak_flight_segment(
@@ -685,9 +1165,12 @@ def solve_ball_arc_track(
     ball_track: Mapping[str, Any],
     calibration: Mapping[str, Any],
     ball_sizes: Mapping[str, Any] | None = None,
+    ball_candidate_sidecars: Sequence[Mapping[str, Any]] = (),
+    candidate_extra_tracks: Mapping[str, Mapping[str, Any]] | None = None,
     contact_windows: Mapping[str, Any] | None = None,
     skeleton3d: Mapping[str, Any] | None = None,
     reviewed_bounces: Mapping[str, Any] | None = None,
+    auto_bounce_candidates: Mapping[str, Any] | None = None,
     rally_spans: Mapping[str, Any] | None = None,
     net_plane: Mapping[str, Any] | None = None,
     extra_anchors: Sequence[AnchorEvent] = (),
@@ -701,12 +1184,31 @@ def solve_ball_arc_track(
     phys = physics or PhysicsParameters()
     frames = _frames(ball_track)
     fps = _payload_fps(ball_track, frames)
-    observations = _ball_observations(frames, fps=fps, ball_sizes=ball_sizes)
+    primary_source = f"primary:{ball_track.get('source') or 'ball_track'}"
+    observations = _ball_observations(frames, fps=fps, ball_sizes=ball_sizes, source_label=primary_source)
+    candidate_sets_by_frame = _combined_candidate_sets_by_frame(
+        frames=frames,
+        fps=fps,
+        ball_track=ball_track,
+        primary_observations=observations,
+        ball_candidate_sidecars=ball_candidate_sidecars,
+        candidate_extra_tracks=candidate_extra_tracks or {},
+        max_candidates_per_frame=cfg.max_candidates_per_frame,
+    )
     observation_by_frame = {obs.frame: obs for obs in observations}
     anchors: list[AnchorEvent] = list(extra_anchors)
     anchors.extend(
         _reviewed_bounce_anchors(
             reviewed_bounces,
+            calibration=calibration,
+            observations_by_frame=observation_by_frame,
+            physics=phys,
+            config=cfg,
+        )
+    )
+    anchors.extend(
+        _auto_bounce_candidate_anchors(
+            auto_bounce_candidates,
             calibration=calibration,
             observations_by_frame=observation_by_frame,
             physics=phys,
@@ -727,6 +1229,7 @@ def solve_ball_arc_track(
         anchors, segments, event_selection = _select_event_subset(
             candidate_anchors,
             observations=observations,
+            candidate_sets_by_frame=None,
             calibration=calibration,
             physics=phys,
             config=cfg,
@@ -738,6 +1241,7 @@ def solve_ball_arc_track(
         segments = _fit_segments_from_anchors(
             anchors,
             observations=observations,
+            candidate_sets_by_frame=candidate_sets_by_frame,
             calibration=calibration,
             physics=phys,
             config=cfg,
@@ -760,6 +1264,7 @@ def solve_ball_arc_track(
                 anchors, segments, event_selection = _select_event_subset(
                     candidate_anchors,
                     observations=observations,
+                    candidate_sets_by_frame=None,
                     calibration=calibration,
                     physics=phys,
                     config=cfg,
@@ -771,12 +1276,23 @@ def solve_ball_arc_track(
                 segments = _fit_segments_from_anchors(
                     anchors,
                     observations=observations,
+                    candidate_sets_by_frame=candidate_sets_by_frame,
                     calibration=calibration,
                     physics=phys,
                     config=cfg,
                     net_plane=net_plane,
                 )
                 event_selection = _event_selection_passthrough(anchors)
+    if cfg.enable_event_subset_selection and candidate_sets_by_frame is not None:
+        segments = _fit_segments_from_anchors(
+            anchors,
+            observations=observations,
+            candidate_sets_by_frame=candidate_sets_by_frame,
+            calibration=calibration,
+            physics=phys,
+            config=cfg,
+            net_plane=net_plane,
+        )
     confident_segments = list(segments)
     weak_segments, weak_validation = _build_weak_segments(
         anchors,
@@ -809,6 +1325,7 @@ def solve_ball_arc_track(
     )
     physical_summary = _physical_summary(confident_segments, config=cfg)
     size_summary = _size_depth_validation_summary(confident_segments, weak_segments)
+    candidate_association_summary = _candidate_association_summary(confident_segments)
     status = "ran"
     kill_reasons: list[str] = []
     loo_median = loo["ray_distance_m"]["median"]
@@ -823,6 +1340,13 @@ def solve_ball_arc_track(
         kill_reasons.append(
             f"physical_sanity_violation_fraction {violation_fraction:.6f} exceeds {cfg.max_physical_violation_fraction:.6f}"
         )
+    if (
+        status == "ran"
+        and not confident_segments
+        and any(item.get("kind") == "rally_endpoint" for item in event_selection.get("selected", []))
+    ):
+        status = "degenerate_zero_segments"
+        kill_reasons.append("zero accepted segments with at least one rally anchor")
     try:
         physics3d_summary = reconstruct_bounce_arcs_from_image_track(
             ball_track,
@@ -878,7 +1402,9 @@ def solve_ball_arc_track(
             "weak_segment_count": len(weak_segments),
             "fit_segment_count": sum(1 for segment in all_segments if segment.status.startswith("fit")),
             "fp_sightings_pruned_count": sum(segment.outlier_count for segment in confident_segments),
+            "candidate_selection_source_counts": candidate_association_summary["selection_counts_by_source"],
             "human_reviewed_bounce_count": sum(1 for anchor in anchors if anchor.kind == "bounce" and anchor.status == "human_reviewed"),
+            "auto_bounce_candidate_count": sum(1 for anchor in anchors if anchor.kind == "bounce" and anchor.status == "auto_bounce_candidate"),
             "discovered_bounce_count": sum(1 for anchor in anchors if anchor.kind == "bounce" and anchor.status == "solver_proposed"),
             "contact_anchor_count": sum(1 for anchor in anchors if anchor.kind == "contact"),
             "selected_event_count": event_selection["selected_count"],
@@ -890,6 +1416,7 @@ def solve_ball_arc_track(
             "leave_one_out_size_ablation": loo_size_ablation,
             "size_depth_residuals_m": size_summary,
             "weak_segments": weak_validation,
+            "candidate_association": candidate_association_summary,
             "physical_sanity": physical_summary,
             "ball_physics3d_reference": physics3d_summary,
         },
@@ -950,6 +1477,7 @@ def _fit_segments_from_anchors(
     anchors: Sequence[AnchorEvent],
     *,
     observations: Sequence[BallObservation],
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]] | None = None,
     calibration: Mapping[str, Any],
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
@@ -962,6 +1490,7 @@ def _fit_segments_from_anchors(
             start,
             end,
             observations=observations,
+            candidate_sets_by_frame=candidate_sets_by_frame,
             calibration=calibration,
             physics=physics,
             config=config,
@@ -980,6 +1509,7 @@ def _fit_anchor_pair(
     end: AnchorEvent,
     *,
     observations: Sequence[BallObservation],
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]] | None = None,
     calibration: Mapping[str, Any],
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
@@ -1004,6 +1534,7 @@ def _fit_anchor_pair(
         config=config,
         net_plane=net_plane,
         max_nfev=max_nfev,
+        candidate_sets_by_frame=candidate_sets_by_frame,
     )
 
 
@@ -1011,6 +1542,7 @@ def _select_event_subset(
     anchors: Sequence[AnchorEvent],
     *,
     observations: Sequence[BallObservation],
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]] | None,
     calibration: Mapping[str, Any],
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
@@ -1048,6 +1580,7 @@ def _select_event_subset(
                 candidate,
                 selected,
                 observations=observations,
+                candidate_sets_by_frame=candidate_sets_by_frame,
                 calibration=calibration,
                 physics=physics,
                 config=config,
@@ -1057,7 +1590,7 @@ def _select_event_subset(
             rejected_rationales[key] = evaluation
             if not evaluation.get("accepted"):
                 continue
-            if best_eval is None or float(evaluation["score_gain"]) > float(best_eval["score_gain"]):
+            if best_eval is None or _candidate_event_score_gain(evaluation) > _candidate_event_score_gain(best_eval):
                 best_anchor = candidate
                 best_eval = evaluation
         if best_anchor is None or best_eval is None:
@@ -1072,6 +1605,7 @@ def _select_event_subset(
     segments = _fit_segments_from_anchors(
         selected,
         observations=observations,
+        candidate_sets_by_frame=candidate_sets_by_frame,
         calibration=calibration,
         physics=physics,
         config=config,
@@ -1081,6 +1615,7 @@ def _select_event_subset(
         selected,
         segments,
         observations=observations,
+        candidate_sets_by_frame=candidate_sets_by_frame,
         calibration=calibration,
         physics=physics,
         config=config,
@@ -1103,7 +1638,7 @@ def _select_event_subset(
         "candidate_prediction": True,
         "not_ground_truth": True,
         "selection_policy": {
-            "mandatory": "human-reviewed bounces and weak rally endpoints",
+            "mandatory": "human-reviewed bounces, auto-bounce candidates, and weak rally endpoints",
             "optional": "fused contacts and solver-proposed bounces",
             "selection_max_speed_mps": config.selection_max_speed_mps,
             "min_residual_reduction": config.selection_min_residual_reduction,
@@ -1124,6 +1659,7 @@ def _evaluate_candidate_event(
     selected: Sequence[AnchorEvent],
     *,
     observations: Sequence[BallObservation],
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]] | None,
     calibration: Mapping[str, Any],
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
@@ -1153,6 +1689,7 @@ def _evaluate_candidate_event(
         left,
         right,
         observations=observations,
+        candidate_sets_by_frame=candidate_sets_by_frame,
         calibration=calibration,
         physics=physics,
         config=config,
@@ -1163,6 +1700,7 @@ def _evaluate_candidate_event(
         left,
         candidate,
         observations=observations,
+        candidate_sets_by_frame=candidate_sets_by_frame,
         calibration=calibration,
         physics=physics,
         config=config,
@@ -1173,6 +1711,7 @@ def _evaluate_candidate_event(
         candidate,
         right,
         observations=observations,
+        candidate_sets_by_frame=candidate_sets_by_frame,
         calibration=calibration,
         physics=physics,
         config=config,
@@ -1212,11 +1751,19 @@ def _evaluate_candidate_event(
     return payload
 
 
+def _candidate_event_score_gain(evaluation: Mapping[str, Any]) -> float:
+    value = _float_or_none(evaluation.get("score_gain"))
+    if value is not None:
+        return value
+    return math.inf if evaluation.get("accepted") is True else -math.inf
+
+
 def _prune_implausible_weak_endpoints(
     selected: Sequence[AnchorEvent],
     segments: Sequence[FlightSegmentFit],
     *,
     observations: Sequence[BallObservation],
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]] | None,
     calibration: Mapping[str, Any],
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
@@ -1253,6 +1800,7 @@ def _prune_implausible_weak_endpoints(
         current_segments = _fit_segments_from_anchors(
             anchors,
             observations=observations,
+            candidate_sets_by_frame=candidate_sets_by_frame,
             calibration=calibration,
             physics=physics,
             config=config,
@@ -1422,6 +1970,7 @@ def _cached_selection_fit(
     end: AnchorEvent,
     *,
     observations: Sequence[BallObservation],
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]] | None,
     calibration: Mapping[str, Any],
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
@@ -1434,6 +1983,7 @@ def _cached_selection_fit(
             start,
             end,
             observations=observations,
+            candidate_sets_by_frame=candidate_sets_by_frame,
             calibration=calibration,
             physics=physics,
             config=selection_config,
@@ -1516,6 +2066,8 @@ def _is_mandatory_event(anchor: AnchorEvent) -> bool:
         return True
     if anchor.kind == "bounce" and anchor.status == "human_reviewed":
         return True
+    if anchor.kind == "bounce" and anchor.status == "auto_bounce_candidate":
+        return True
     return bool(anchor.immovable and anchor.status != "solver_proposed")
 
 
@@ -1524,6 +2076,8 @@ def _mandatory_reason(anchor: AnchorEvent) -> str:
         return "rally_endpoint"
     if anchor.kind == "bounce" and anchor.status == "human_reviewed":
         return "human_reviewed_bounce"
+    if anchor.kind == "bounce" and anchor.status == "auto_bounce_candidate":
+        return "auto_bounce_candidate"
     return "immovable_anchor"
 
 
@@ -1713,6 +2267,66 @@ def _discover_bounce_anchors(
     return discovered
 
 
+def _auto_bounce_candidate_anchors(
+    payload: Mapping[str, Any] | None,
+    *,
+    calibration: Mapping[str, Any],
+    observations_by_frame: Mapping[int, BallObservation],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> list[AnchorEvent]:
+    if not isinstance(payload, Mapping):
+        return []
+    if payload.get("source") != "track_geometry_candidate":
+        raise ValueError("auto-bounce candidates must use source='track_geometry_candidate'")
+    if payload.get("human_reviewed") is not False or payload.get("not_ground_truth") is not True:
+        raise ValueError("auto-bounce candidates must declare human_reviewed=false and not_ground_truth=true")
+    candidates = payload.get("candidates")
+    if not isinstance(candidates, list):
+        return []
+    anchors: list[AnchorEvent] = []
+    for index, item in enumerate(candidates):
+        if not isinstance(item, Mapping):
+            continue
+        source = item.get("source", payload.get("source"))
+        human_reviewed = item.get("human_reviewed", payload.get("human_reviewed"))
+        not_ground_truth = item.get("not_ground_truth", payload.get("not_ground_truth"))
+        if source != "track_geometry_candidate" or human_reviewed is not False or not_ground_truth is not True:
+            raise ValueError("auto-bounce candidate items must carry honest track-geometry provenance")
+        frame = _frame_from_mapping(item)
+        if frame is None:
+            continue
+        xy = _xy_tuple(item.get("xy"))
+        obs = observations_by_frame.get(frame) or _nearest_observation_by_frame(observations_by_frame, frame, max_gap=2)
+        if xy is None and obs is not None:
+            xy = obs.xy
+        if xy is None:
+            continue
+        review_id = item.get("review_id")
+        candidate_id = str(review_id) if isinstance(review_id, str) and review_id else f"auto_bounce_candidate_{frame:06d}_{index:03d}"
+        try:
+            anchor = build_bounce_anchor(
+                {**dict(item), "frame": frame, "review_id": candidate_id, "xy": xy},
+                calibration,
+                ball_radius_m=physics.radius_m,
+                ball_xy=xy,
+                status="auto_bounce_candidate",
+                sigma_m=config.proposed_bounce_sigma_m,
+                source="track_geometry_candidate",
+                details={
+                    "candidate_prediction": True,
+                    "human_reviewed": False,
+                    "not_ground_truth": True,
+                    "method": item.get("method", "unknown"),
+                    "candidate_index": index,
+                },
+            )
+        except ValueError:
+            continue
+        anchors.append(replace(anchor, immovable=False))
+    return anchors
+
+
 def _reviewed_bounce_anchors(
     reviewed_bounces: Mapping[str, Any] | None,
     *,
@@ -1732,6 +2346,8 @@ def _reviewed_bounce_anchors(
     for item in bounces:
         if not isinstance(item, Mapping):
             continue
+        if not _has_per_bounce_human_review_provenance(item):
+            raise ValueError("reviewed_bounces status=human_reviewed requires per-bounce human-review provenance")
         frame = _frame_from_mapping(item)
         if frame is None:
             continue
@@ -1751,11 +2367,27 @@ def _reviewed_bounce_anchors(
                         obs.xy,
                         base_sigma_m=config.reviewed_bounce_base_sigma_m,
                     ),
+                    details={
+                        "human_reviewed": True,
+                        "not_ground_truth": False,
+                        "review_source": item.get("source"),
+                    },
                 )
             )
         except ValueError:
             continue
     return anchors
+
+
+def _has_per_bounce_human_review_provenance(item: Mapping[str, Any]) -> bool:
+    source = item.get("source")
+    if source not in {"human_review", "manual_review", "review_input_server", "human_reviewed"}:
+        return False
+    if item.get("human_reviewed") is not True:
+        return False
+    if item.get("not_ground_truth") is True:
+        return False
+    return True
 
 
 def _contact_anchors(
@@ -1981,6 +2613,15 @@ def _solved_frames(
         frame["source"] = SOURCE
         frame["render_only"] = True
         frame["not_for_detection_metrics"] = True
+        selected_observation = None
+        if segment.selected_observations_by_frame:
+            selected_observation = segment.selected_observations_by_frame.get(frame_index)
+        selected_is_rescue = selected_observation is not None and not _is_primary_observation(selected_observation)
+        selected_is_inlier = selected_observation is not None and frame_index in segment.inlier_frames
+        if selected_observation is not None and frame_index in segment.inlier_frames:
+            frame["observation_source"] = selected_observation.observation_source
+            frame["candidate_selection"] = selected_observation.candidate_selection or "arc_irls_v1"
+            frame["rescued"] = bool(selected_is_rescue)
         frame["arc_solver"] = {
             "lane": LANE,
             "segment_id": segment.segment_id,
@@ -1989,7 +2630,12 @@ def _solved_frames(
             "outlier_sighting_pruned": frame_index in segment.outlier_frames,
             "render_only": True,
             "not_for_detection_metrics": True,
+            "rescued": bool(selected_is_rescue and selected_is_inlier),
         }
+        if selected_observation is not None:
+            frame["arc_solver"]["observation_source"] = selected_observation.observation_source
+            frame["arc_solver"]["candidate_selection"] = selected_observation.candidate_selection or "arc_irls_v1"
+            frame["arc_solver"]["candidate_residual_px"] = _optional_round(segment.reprojection_errors_px.get(frame_index), 6)
         counts["coverage_world_xyz_count"] += 1
         counts[f"{band}_count"] += 1
         payloads.append(frame)
@@ -2006,38 +2652,97 @@ def _leave_one_out_validation(
     errors_m: list[float] = []
     errors_px: list[float] = []
     skipped: list[dict[str, Any]] = []
+    samples: list[dict[str, Any]] = []
+    candidate_mode = any(segment.candidate_association and segment.candidate_sets_by_frame for segment in segments)
     for segment in segments:
-        candidate_obs = [
-            obs
-            for obs in segment.observations
-            if obs.frame in segment.inlier_frames and obs.confidence >= config.visible_confidence_min
-        ]
+        if segment.candidate_association and segment.selected_observations_by_frame and segment.candidate_sets_by_frame:
+            selected_observations = list(segment.selected_observations_by_frame.values())
+            candidate_obs = [
+                obs
+                for obs in selected_observations
+                if obs.frame in segment.inlier_frames and obs.confidence >= config.visible_confidence_min
+            ]
+            primary_observations = selected_observations
+            all_candidates_by_frame = segment.candidate_sets_by_frame
+        else:
+            candidate_obs = [
+                obs
+                for obs in segment.observations
+                if obs.frame in segment.inlier_frames and obs.confidence >= config.visible_confidence_min
+            ]
+            primary_observations = segment.observations
+            all_candidates_by_frame = None
         for held_out in candidate_obs:
-            retained = [obs for obs in segment.observations if obs.frame != held_out.frame]
+            retained = [obs for obs in primary_observations if obs.frame != held_out.frame]
             if len(retained) < config.min_segment_observations:
                 skipped.append({"frame": held_out.frame, "reason": "insufficient_observations_after_holdout"})
                 continue
-            refit = fit_flight_segment(
-                segment_id=segment.segment_id,
-                start_anchor=segment.start_anchor,
-                end_anchor=segment.end_anchor,
-                observations=retained,
-                calibration=calibration,
-                physics=physics,
-                config=config,
-                max_nfev=config.loo_max_nfev,
-            )
+            retained_candidate_sets = None
+            held_out_candidate_count = None
+            if all_candidates_by_frame is not None:
+                held_out_candidate_count = len(all_candidates_by_frame.get(held_out.frame, ()))
+                retained_candidate_sets = {
+                    frame: candidates
+                    for frame, candidates in all_candidates_by_frame.items()
+                    if frame != held_out.frame
+                }
+            if all_candidates_by_frame is not None:
+                refit = _fit_flight_segment_once(
+                    segment_id=segment.segment_id,
+                    start_anchor=segment.start_anchor,
+                    end_anchor=segment.end_anchor,
+                    observations=retained,
+                    calibration=calibration,
+                    physics=physics,
+                    config=config,
+                    net_plane=None,
+                    max_nfev=config.loo_max_nfev,
+                )
+            else:
+                refit = fit_flight_segment(
+                    segment_id=segment.segment_id,
+                    start_anchor=segment.start_anchor,
+                    end_anchor=segment.end_anchor,
+                    observations=retained,
+                    calibration=calibration,
+                    physics=physics,
+                    config=config,
+                    max_nfev=config.loo_max_nfev,
+                    candidate_sets_by_frame=retained_candidate_sets,
+                )
             if not refit.status.startswith("fit"):
                 skipped.append({"frame": held_out.frame, "reason": refit.status})
                 continue
             predicted = refit.predict(held_out.t, physics, config)
             origin, direction = pixel_ray_world(calibration, held_out.xy)
-            errors_m.append(_distance_point_to_ray(predicted, origin, direction))
+            ray_error = _distance_point_to_ray(predicted, origin, direction)
+            errors_m.append(ray_error)
             projected = _project_world_point(calibration, predicted)
-            errors_px.append(_distance2(projected, held_out.xy))
+            pixel_error = _distance2(projected, held_out.xy)
+            errors_px.append(pixel_error)
+            sample = {
+                "frame": int(held_out.frame),
+                "segment_id": int(segment.segment_id),
+                "ray_distance_m": _round(ray_error, 6),
+                "reprojection_error_px": _round(pixel_error, 6),
+            }
+            if all_candidates_by_frame is not None:
+                sample.update(
+                    {
+                        "held_out_observation_source": held_out.observation_source,
+                        "held_out_frame_candidate_count": int(held_out_candidate_count or 0),
+                        "held_out_entire_frame": True,
+                    }
+                )
+            samples.append(sample)
     return {
         "sample_count": len(errors_m),
         "skipped": skipped,
+        "holdout_policy": "whole_frame_candidate_sets_excluded" if candidate_mode else "single_observation_primary_track",
+        "retained_candidate_policy": "fixed_non_heldout_frame_selections" if candidate_mode else None,
+        "candidate_selection": "arc_irls_v1" if candidate_mode else None,
+        "candidate_sibling_leakage_prevented": bool(candidate_mode),
+        "samples": samples,
         "ray_distance_m": _distribution(errors_m),
         "reprojection_error_px": _distribution(errors_px),
     }
@@ -2053,6 +2758,55 @@ def _physical_summary(segments: Sequence[FlightSegmentFit], *, config: BallArcSo
         "violation_fraction": _optional_round(violation_fraction, 6),
         "kill_threshold_fraction": config.max_physical_violation_fraction,
         "segments": items,
+    }
+
+
+def _candidate_association_summary(segments: Sequence[FlightSegmentFit]) -> dict[str, Any]:
+    reports = [dict(segment.candidate_association) for segment in segments if segment.candidate_association]
+    enabled = [report for report in reports if report.get("enabled") is True]
+    counts: dict[str, int] = {}
+    floor_rejections: dict[str, int] = {}
+    rescue_counts: dict[str, int] = {}
+    final_residuals: dict[str, list[float]] = {}
+    iteration_counts: list[float] = []
+    for report in enabled:
+        for source, count in dict(report.get("selection_counts_by_source") or {}).items():
+            counts[str(source)] = counts.get(str(source), 0) + int(count)
+        for source, count in dict(report.get("score_floor_rejected_counts_by_source") or {}).items():
+            floor_rejections[str(source)] = floor_rejections.get(str(source), 0) + int(count)
+        value = _float_or_none(report.get("iteration_count"))
+        if value is not None:
+            iteration_counts.append(value)
+    for segment in segments:
+        selected = segment.selected_observations_by_frame or {}
+        inlier_frames = set(segment.inlier_frames)
+        for frame, obs in selected.items():
+            residual = segment.reprojection_errors_px.get(int(frame))
+            if residual is not None:
+                final_residuals.setdefault(obs.observation_source, []).append(float(residual))
+            if int(frame) in inlier_frames and not _is_primary_observation(obs):
+                rescue_counts[obs.observation_source] = rescue_counts.get(obs.observation_source, 0) + 1
+    modes = sorted({str(report.get("mode") or "free") for report in enabled})
+    floors: dict[str, float] = {}
+    for report in enabled:
+        for source, floor in dict(report.get("candidate_score_floors") or {}).items():
+            floors[str(source)] = float(floor)
+    return {
+        "enabled": bool(enabled),
+        "candidate_selection": "arc_irls_v1" if enabled else None,
+        "mode": modes[0] if len(modes) == 1 else modes,
+        "candidate_score_floors": floors,
+        "segment_count": len(enabled),
+        "converged_segment_count": sum(1 for report in enabled if report.get("converged") is True),
+        "selection_counts_by_source": counts,
+        "rescue_counts_by_source": rescue_counts,
+        "score_floor_rejected_counts_by_source": floor_rejections,
+        "final_residual_px_by_source": {
+            source: _distribution(values)
+            for source, values in sorted(final_residuals.items())
+        },
+        "iteration_count": _distribution(iteration_counts),
+        "segments": enabled,
     }
 
 
@@ -2403,6 +3157,96 @@ def _anchor_with_sigma_floor(anchor: AnchorEvent, config: BallArcSolverConfig) -
     return replace(anchor, sigma_m=sigma)
 
 
+def _combined_candidate_sets_by_frame(
+    *,
+    frames: Sequence[Mapping[str, Any]],
+    fps: float,
+    ball_track: Mapping[str, Any],
+    primary_observations: Sequence[BallObservation],
+    ball_candidate_sidecars: Sequence[Mapping[str, Any]],
+    candidate_extra_tracks: Mapping[str, Mapping[str, Any]],
+    max_candidates_per_frame: int,
+) -> dict[int, tuple[BallObservation, ...]] | None:
+    if not ball_candidate_sidecars and not candidate_extra_tracks:
+        return None
+    frame_times = _frame_times(frames, fps=fps)
+    combined: dict[int, list[BallObservation]] = {}
+    for obs in primary_observations:
+        combined.setdefault(obs.frame, []).append(
+            replace(
+                obs,
+                observation_source=f"primary:{ball_track.get('source') or 'ball_track'}",
+                candidate_score=obs.confidence,
+                candidate_rank=0,
+            )
+        )
+    for name, track in candidate_extra_tracks.items():
+        extra_frames = _frames(track)
+        extra_fps = _payload_fps(track, extra_frames)
+        for obs in _ball_observations(extra_frames, fps=extra_fps, source_label=f"extra:{name}"):
+            t = frame_times.get(obs.frame, obs.t)
+            combined.setdefault(obs.frame, []).append(replace(obs, t=t))
+    for sidecar in ball_candidate_sidecars:
+        _validate_candidate_sidecar_policy(sidecar)
+        sidecar_fps = _float_or_none(sidecar.get("fps")) or fps
+        source = str(sidecar.get("source") or "candidate")
+        candidate_frames = sidecar.get("frames")
+        if not isinstance(candidate_frames, Sequence) or isinstance(candidate_frames, (str, bytes)):
+            continue
+        for frame_payload in candidate_frames:
+            if not isinstance(frame_payload, Mapping):
+                continue
+            frame = _frame_from_mapping(frame_payload)
+            if frame is None:
+                continue
+            t = frame_times.get(frame, frame / max(sidecar_fps, 1e-9))
+            candidates = frame_payload.get("candidates")
+            if not isinstance(candidates, Sequence) or isinstance(candidates, (str, bytes)):
+                continue
+            for rank, candidate in enumerate(candidates):
+                if not isinstance(candidate, Mapping):
+                    continue
+                xy = _xy_tuple(candidate.get("xy"))
+                if xy is None:
+                    continue
+                score = _float_or_none(candidate.get("score"))
+                confidence = max(0.0, min(1.0, score if score is not None else 0.5))
+                source_detector = str(candidate.get("source_detector") or source)
+                combined.setdefault(frame, []).append(
+                    BallObservation(
+                        frame=frame,
+                        t=t,
+                        xy=xy,
+                        confidence=confidence,
+                        visible=True,
+                        observation_source=f"{source}:{source_detector}",
+                        candidate_score=confidence,
+                        candidate_rank=rank + 1,
+                        candidate_selection=None,
+                    )
+                )
+    capped = {
+        frame: tuple(candidates[:max_candidates_per_frame])
+        for frame, candidates in sorted(combined.items())
+        if candidates[:max_candidates_per_frame]
+    }
+    return capped or None
+
+
+def _validate_candidate_sidecar_policy(sidecar: Mapping[str, Any]) -> None:
+    if sidecar.get("artifact_type") != "racketsport_ball_candidates":
+        raise ValueError("ball candidate sidecar must have artifact_type='racketsport_ball_candidates'")
+    if sidecar.get("not_ground_truth") is not True or sidecar.get("candidate_prediction") is not True:
+        raise ValueError("ball candidate sidecar must declare not_ground_truth=true and candidate_prediction=true")
+
+
+def _frame_times(frames: Sequence[Mapping[str, Any]], *, fps: float) -> dict[int, float]:
+    output: dict[int, float] = {}
+    for index, frame in enumerate(frames):
+        output[index] = _float_or_none(frame.get("t")) or index / max(fps, 1e-9)
+    return output
+
+
 def _frames(ball_track: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     frames = ball_track.get("frames")
     if not isinstance(frames, list):
@@ -2415,6 +3259,7 @@ def _ball_observations(
     *,
     fps: float,
     ball_sizes: Mapping[str, Any] | None = None,
+    source_label: str = "primary:ball_track",
 ) -> list[BallObservation]:
     observations: list[BallObservation] = []
     size_by_frame = _ball_size_observations_by_frame(ball_sizes)
@@ -2439,6 +3284,8 @@ def _ball_observations(
                 diameter_px=size["diameter_px"] if size else None,
                 size_confidence=size["confidence"] if size else None,
                 size_source=size["source"] if size else None,
+                observation_source=source_label,
+                candidate_score=confidence,
             )
         )
     return sorted(observations, key=lambda obs: (obs.t, obs.frame))
@@ -2688,11 +3535,13 @@ def _joint_confidence(confs: Any, index: int) -> float:
 
 
 def _config_summary(config: BallArcSolverConfig) -> dict[str, Any]:
-    return {
+    payload = {
         key: value
         for key, value in config.__dict__.items()
         if isinstance(value, (str, int, float, bool)) or value is None
     }
+    payload["candidate_score_floors"] = _candidate_score_floors_payload(config)
+    return payload
 
 
 def _distribution(values: Sequence[float]) -> dict[str, float | int | None]:

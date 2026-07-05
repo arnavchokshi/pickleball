@@ -22,6 +22,28 @@ export type CourtReviewPointMap = Partial<Record<CourtReviewPointName, CourtRevi
 export type CourtReviewWarning = { code: string; severity: "warning"; point?: CourtReviewPointName; points?: CourtReviewPointName[]; message: string };
 export type CourtReviewValidation = { status: "pass" | "warn"; warnings: CourtReviewWarning[]; point_count: number; required_point_count: number };
 export type CourtReviewStatus = "human_reviewed" | "auto_predicted_unreviewed";
+export type CourtAssistMode = "none" | "one_inside_tap" | "two_line_taps" | "two_known_corners";
+export type CourtAssistSeed = {
+  mode: CourtAssistMode;
+  tapPoints: Array<{ x: number; y: number }>;
+  lineLabel?: string | null;
+  trustedCalibration: false;
+};
+export type ImportedCourtProposal = {
+  proposalId: string;
+  source: string;
+  points: CourtReviewPointMap;
+  scores: Record<string, unknown>;
+  reviewUsable: boolean;
+};
+export type CourtProposalReviewState = {
+  status: "needs_review";
+  proposals: ImportedCourtProposal[];
+  selectedProposalId: string | null;
+  assist: CourtAssistSeed;
+  verified: false;
+  notCal3Verified: true;
+};
 export type CourtCornersPayload = {
   annotation: {
     items: Array<{
@@ -40,6 +62,87 @@ export type CourtCornersPayload = {
     }>;
   };
 };
+
+export function importCourtProposals(payload: unknown): CourtProposalReviewState {
+  const parsed = parseCourtProposalPayload(payload);
+  return {
+    status: "needs_review",
+    proposals: parsed.proposals,
+    selectedProposalId: parsed.selectedProposalId,
+    assist: parsed.assist,
+    verified: false,
+    notCal3Verified: true,
+  };
+}
+
+function parseCourtProposalPayload(payload: unknown): {
+  proposals: ImportedCourtProposal[];
+  selectedProposalId: string | null;
+  assist: CourtAssistSeed;
+} {
+  if (!isRecord(payload) || payload.artifact_type !== "racketsport_court_proposals") {
+    throw new Error("invalid court proposal artifact");
+  }
+  if (payload.verified !== false || payload.not_cal3_verified !== true) {
+    throw new Error("court proposal artifact must remain fail-closed");
+  }
+  const ranking = isRecord(payload.ranking) ? payload.ranking : {};
+  const assist = parseAssistSeed(payload.assist);
+  const proposals = Array.isArray(payload.proposals)
+    ? payload.proposals.filter(isRecord).map((proposal) => parseCourtProposal(proposal))
+    : [];
+  return {
+    proposals,
+    selectedProposalId: typeof ranking.selected_proposal_id === "string" ? ranking.selected_proposal_id : null,
+    assist,
+  };
+}
+
+function parseAssistSeed(raw: unknown): CourtAssistSeed {
+  const payload = isRecord(raw) ? raw : {};
+  const mode = isCourtAssistMode(payload.mode) ? payload.mode : "none";
+  const rawPoints = Array.isArray(payload.tap_points) ? payload.tap_points : [];
+  return {
+    mode,
+    tapPoints: rawPoints.filter(isXy).map((xy) => ({ x: Number(xy[0]), y: Number(xy[1]) })),
+    lineLabel: typeof payload.line_label === "string" ? payload.line_label : null,
+    trustedCalibration: false,
+  };
+}
+
+function parseCourtProposal(proposal: Record<string, unknown>): ImportedCourtProposal {
+  if (proposal.verified !== false || proposal.not_cal3_verified !== true) {
+    throw new Error("court proposal must remain fail-closed");
+  }
+  const points: CourtReviewPointMap = {};
+  const keypoints = isRecord(proposal.court_keypoints) ? proposal.court_keypoints : {};
+  for (const name of PICKLEBALL_COURT_REVIEW_POINTS) {
+    const xy = keypoints[name];
+    if (isXy(xy)) {
+      points[name] = { xy: [Number(xy[0]), Number(xy[1])], confidence: 0.5 };
+    }
+  }
+  const gate = isRecord(proposal.gate) ? proposal.gate : {};
+  return {
+    proposalId: typeof proposal.proposal_id === "string" ? proposal.proposal_id : "",
+    source: typeof proposal.source === "string" ? proposal.source : "unknown",
+    points,
+    scores: isRecord(proposal.scores) ? proposal.scores : {},
+    reviewUsable: gate.review_usable === true,
+  };
+}
+
+function isCourtAssistMode(value: unknown): value is CourtAssistMode {
+  return value === "none" || value === "one_inside_tap" || value === "two_line_taps" || value === "two_known_corners";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isXy(value: unknown): value is [number, number] {
+  return Array.isArray(value) && value.length === 2 && value.every((item) => typeof item === "number" && Number.isFinite(item));
+}
 
 export const COURT_REVIEW_LINES: Array<{ id: string; points: [CourtReviewPointName, CourtReviewPointName] }> = [
   { id: "near_baseline", points: ["near_left_corner", "near_right_corner"] },

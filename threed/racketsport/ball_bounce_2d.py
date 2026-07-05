@@ -93,6 +93,9 @@ def detect_2d_bounces_from_ball_track(
                 "contact_xy_img": cur["xy"],
                 "p_bounce": p_bounce,
                 "source": ALGORITHM,
+                "not_ground_truth": True,
+                "render_only": True,
+                "not_for_detection_metrics": True,
             }
         )
         last_accepted_t = cur["t"]

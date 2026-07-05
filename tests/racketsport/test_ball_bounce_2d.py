@@ -81,6 +81,9 @@ def test_detect_2d_bounces_uses_image_velocity_inflection_and_court_plane() -> N
     assert parsed.bounces[0].world_xy == pytest.approx([0.0, 0.0])
     assert parsed.bounces[0].p_bounce is not None and parsed.bounces[0].p_bounce >= 0.5
     assert parsed.bounces[0].source == "image_velocity_inflection_court_plane_2d_v1"
+    assert parsed.bounces[0].not_ground_truth is True
+    assert parsed.bounces[0].render_only is True
+    assert parsed.bounces[0].not_for_detection_metrics is True
 
 
 def test_detect_2d_bounces_rejects_flight_apex_image_y_minimum() -> None:

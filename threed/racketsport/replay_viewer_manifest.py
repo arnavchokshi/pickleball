@@ -15,6 +15,9 @@ OPTIONAL_URL_FIELDS = {
     "reviewed_bounces_url",
     "coaching_card_facts_url",
     "rally_spans_url",
+    "auto_bounce_candidates_url",
+    "ball_bounce_candidates_url",
+    "ball_flight_sanity_url",
 }
 
 
@@ -30,11 +33,15 @@ def build_replay_viewer_manifest(
     physics_refinement_path: str | Path | None = None,
     contact_windows_path: str | Path | None = None,
     ball_inflections_path: str | Path | None = None,
+    ball_arc_solved_path: str | Path | None = None,
+    ball_bounce_candidates_path: str | Path | None = None,
+    ball_flight_sanity_path: str | Path | None = None,
     reviewed_bounces_path: str | Path | None = None,
     coaching_card_facts_path: str | Path | None = None,
     rally_spans_path: str | Path | None = None,
     annotation_sources: Iterable[str | Path] = (),
     vite_allow_root: str | Path | None = None,
+    mesh_status: str | None = None,
 ) -> dict[str, Any]:
     """Return a manifest the local Vite replay viewer can load via /@fs URLs."""
 
@@ -53,6 +60,13 @@ def build_replay_viewer_manifest(
     )
     contact_windows = _optional_existing_file(contact_windows_path, "contact_windows", allow_root=allow_root)
     ball_inflections = _optional_existing_file(ball_inflections_path, "ball_inflections", allow_root=allow_root)
+    ball_arc_solved = _optional_existing_file(ball_arc_solved_path, "ball_arc_solved", allow_root=allow_root)
+    ball_bounce_candidates = _optional_existing_file(
+        ball_bounce_candidates_path,
+        "ball_bounce_candidates",
+        allow_root=allow_root,
+    )
+    ball_flight_sanity = _optional_existing_file(ball_flight_sanity_path, "ball_flight_sanity", allow_root=allow_root)
     reviewed_bounces = _optional_existing_file(reviewed_bounces_path, "reviewed_bounces", allow_root=allow_root)
     coaching_card_facts = _optional_existing_file(coaching_card_facts_path, "coaching_card_facts", allow_root=allow_root)
     rally_spans = _optional_existing_file(rally_spans_path, "rally_spans", allow_root=allow_root)
@@ -74,11 +88,16 @@ def build_replay_viewer_manifest(
         "physics_refinement_url": _vite_file_url(physics_refinement) if physics_refinement is not None else None,
         "contact_windows_url": _vite_file_url(contact_windows) if contact_windows is not None else None,
         "ball_inflections_url": _vite_file_url(ball_inflections) if ball_inflections is not None else None,
+        "ball_arc_solved_url": _vite_file_url(ball_arc_solved) if ball_arc_solved is not None else None,
+        "auto_bounce_candidates_url": _vite_file_url(ball_bounce_candidates) if ball_bounce_candidates is not None else None,
+        "ball_bounce_candidates_url": _vite_file_url(ball_bounce_candidates) if ball_bounce_candidates is not None else None,
+        "ball_flight_sanity_url": _vite_file_url(ball_flight_sanity) if ball_flight_sanity is not None else None,
         "reviewed_bounces_url": _vite_file_url(reviewed_bounces) if reviewed_bounces is not None else None,
         "coaching_card_facts_url": _vite_file_url(coaching_card_facts) if coaching_card_facts is not None else None,
         "rally_spans_url": _vite_file_url(rally_spans) if rally_spans is not None else None,
         "label_overlays": label_overlays,
         "annotation_sources": [_annotation_source(path, allow_root=allow_root) for path in annotation_sources],
+        "mesh_status": mesh_status,
         "notes": [
             "Viewer evidence is review-only and does not promote BODY, PHYSICS, RKT, or E2E gates.",
             "Vite /@fs URLs are intended for local review server use.",

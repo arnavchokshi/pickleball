@@ -10,12 +10,13 @@ import subprocess
 import sys
 import time
 from collections import defaultdict, deque
+from collections.abc import Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator, Sequence
+from typing import Any, Iterator
 
 from .ball_tracknet import ball_frame
-from .schemas import BallTrack
+from .schemas import BallCandidates, BallTrack
 
 
 WASB_REPO_URL = "https://github.com/nttcom/WASB-SBDT"
@@ -24,6 +25,7 @@ WASB_COLUMNS = ("Frame", "Visibility", "X", "Y", "Confidence")
 WASB_CONFIDENCE_SEMANTICS = "WASB heatmap peak value (0..1)"
 STATUS_TESTED = "TESTED-ON-REAL-DATA"
 DEFAULT_WASB_VISIBLE_THRESHOLD = 0.5
+DEFAULT_BALL_CANDIDATE_TOP_K = 5
 WASB_INPUT_WH = (512, 288)
 WASB_FRAMES_IN = 3
 WASB_FRAMES_OUT = 3
@@ -66,13 +68,36 @@ def write_ball_track_from_wasb_predictions(
     source_mode: str = "wasb_csv",
     runtime: dict[str, Any] | None = None,
     visible_threshold: float = DEFAULT_WASB_VISIBLE_THRESHOLD,
+    emit_candidates: bool = False,
+    candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
+    candidate_frames: dict[int, Sequence[dict[str, Any]]] | None = None,
+    candidates_out: str | Path | None = None,
 ) -> dict[str, Any]:
     """Write ``ball_track.json`` plus WASB run metadata."""
 
     out_path = Path(out)
+    candidate_top_k = _require_positive_int(candidate_top_k, "candidate_top_k")
     visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
     payload = wasb_csv_to_ball_track(predictions_csv, fps=fps, visible_threshold=visible_threshold)
     _write_json(out_path, payload)
+    candidate_path: Path | None = None
+    if emit_candidates:
+        if candidate_frames is None:
+            raise ValueError("emit_candidates requires raw WASB blob candidate_frames")
+        candidate_path = Path(candidates_out) if candidates_out is not None else _ball_candidates_sidecar_path(out_path)
+        _write_ball_candidates_sidecar(
+            path=candidate_path,
+            source="wasb",
+            source_mode=source_mode,
+            fps=float(fps),
+            primary_output=out_path,
+            max_candidates_per_frame=candidate_top_k,
+            nms_radius_px=None,
+            frame_ids=[int(row["frame"]) for row in _read_wasb_rows(Path(predictions_csv))],
+            candidate_frames=candidate_frames,
+            default_source_detector="wasb_concomp",
+            provenance={"predictions_csv": str(predictions_csv), "candidate_source": "provided_candidate_frames"},
+        )
     visible_count = sum(1 for frame in payload["frames"] if frame["visible"])
     runtime_payload = dict(runtime or {})
     _add_runtime_metrics(runtime_payload, processed_frame_count=len(payload["frames"]), fps=float(fps))
@@ -93,6 +118,14 @@ def write_ball_track_from_wasb_predictions(
         "official_model_zoo_url": WASB_MODEL_ZOO_URL,
         "runtime": runtime_payload,
     }
+    runtime_candidates_out = runtime_payload.get("candidates_out")
+    if candidate_path is not None:
+        metadata["candidates_out"] = str(candidate_path)
+        metadata["candidate_top_k"] = candidate_top_k
+    elif isinstance(runtime_candidates_out, str):
+        metadata["candidates_out"] = runtime_candidates_out
+        if "candidate_top_k" in runtime_payload:
+            metadata["candidate_top_k"] = runtime_payload["candidate_top_k"]
     if metadata_out is not None:
         _write_json(Path(metadata_out), metadata)
     return metadata
@@ -109,6 +142,11 @@ def run_official_wasb_predict(
     video_range: tuple[int, int] | list[int] | None = None,
     max_frames: int | None = None,
     device: str = "cuda",
+    emit_candidates: bool = False,
+    candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
+    candidates_out: str | Path | None = None,
+    candidate_fps: float | None = None,
+    primary_output: str | Path | None = None,
 ) -> dict[str, Any]:
     """Run official WASB model code on a video and write per-frame predictions CSV."""
 
@@ -126,6 +164,7 @@ def run_official_wasb_predict(
         raise FileNotFoundError(f"missing video: {video_path}")
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
+    candidate_top_k = _require_positive_int(candidate_top_k, "candidate_top_k")
     visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
     normalized_range = _normalize_video_range(video_range)
 
@@ -242,11 +281,37 @@ def run_official_wasb_predict(
             confidence_results=confidence_results,
             visible_threshold=visible_threshold,
         )
+        candidate_sidecar_path: Path | None = None
+        if emit_candidates:
+            candidate_sidecar_path = Path(candidates_out) if candidates_out is not None else _ball_candidates_sidecar_path(out_csv)
+            sidecar_fps = _require_positive_float(
+                candidate_fps if candidate_fps is not None else source_fps,
+                "candidate_fps",
+            )
+            _write_ball_candidates_sidecar(
+                path=candidate_sidecar_path,
+                source="wasb",
+                source_mode="wasb_predict",
+                fps=sidecar_fps,
+                primary_output=Path(primary_output) if primary_output is not None else Path(out_csv),
+                max_candidates_per_frame=candidate_top_k,
+                nms_radius_px=None,
+                frame_ids=sorted(confidence_results),
+                candidate_frames=det_results,
+                default_source_detector="wasb_concomp",
+                provenance={
+                    "video": str(video_path),
+                    "wasb_repo": str(repo),
+                    "wasb_checkpoint": str(checkpoint_path),
+                    "postprocessor": "TracknetV2Postprocessor",
+                    "blob_det_method": "concomp",
+                },
+            )
 
     out_path = Path(out_csv)
     _write_wasb_csv(out_path, rows)
     wall_seconds = time.perf_counter() - start
-    return {
+    runtime = {
         "wasb_repo": str(repo),
         "wasb_repo_commit": _git_commit(repo),
         "wasb_checkpoint": checkpoint_metadata(checkpoint_path),
@@ -263,6 +328,10 @@ def run_official_wasb_predict(
         "device": device,
         "wall_seconds": wall_seconds,
     }
+    if emit_candidates and candidate_sidecar_path is not None:
+        runtime["candidates_out"] = str(candidate_sidecar_path)
+        runtime["candidate_top_k"] = candidate_top_k
+    return runtime
 
 
 def run_wasb_or_convert(
@@ -280,11 +349,16 @@ def run_wasb_or_convert(
     video_range: tuple[int, int] | list[int] | None = None,
     max_frames: int | None = None,
     device: str = "cuda",
+    emit_candidates: bool = False,
+    candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
 ) -> dict[str, Any]:
     """CLI-oriented entrypoint that converts CSV or runs official WASB-SBDT."""
 
+    candidate_top_k = _require_positive_int(candidate_top_k, "candidate_top_k")
     visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
     if predictions_csv is not None:
+        if emit_candidates:
+            raise ValueError("WASB emit_candidates requires official inference; predictions CSV has only tracked argmax rows")
         return write_ball_track_from_wasb_predictions(
             predictions_csv=predictions_csv,
             fps=fps,
@@ -307,6 +381,11 @@ def run_wasb_or_convert(
         video_range=video_range,
         max_frames=max_frames,
         device=device,
+        emit_candidates=emit_candidates,
+        candidate_top_k=candidate_top_k,
+        candidates_out=_ball_candidates_sidecar_path(out) if emit_candidates else None,
+        candidate_fps=fps,
+        primary_output=out,
     )
     return write_ball_track_from_wasb_predictions(
         predictions_csv=prediction_csv_path,
@@ -416,6 +495,72 @@ def _track_wasb_rows(
             }
         )
     return rows
+
+
+def _write_ball_candidates_sidecar(
+    *,
+    path: Path,
+    source: str,
+    source_mode: str,
+    fps: float,
+    primary_output: str | Path,
+    max_candidates_per_frame: int,
+    nms_radius_px: float | None,
+    frame_ids: Sequence[int],
+    candidate_frames: dict[int, Sequence[dict[str, Any]]],
+    default_source_detector: str,
+    provenance: dict[str, Any],
+) -> None:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_candidates",
+        "fps": float(fps),
+        "source": source,
+        "source_mode": source_mode,
+        "primary_output": str(primary_output),
+        "max_candidates_per_frame": int(max_candidates_per_frame),
+        "nms_radius_px": nms_radius_px,
+        "not_ground_truth": True,
+        "candidate_prediction": True,
+        "provenance": provenance,
+        "frames": [
+            {
+                "frame": int(frame),
+                "candidates": _topk_candidate_blobs(
+                    candidate_frames.get(int(frame), []),
+                    top_k=max_candidates_per_frame,
+                    default_source_detector=default_source_detector,
+                ),
+            }
+            for frame in sorted({int(frame) for frame in frame_ids})
+        ],
+    }
+    BallCandidates.model_validate(payload)
+    _write_json(path, payload)
+
+
+def _topk_candidate_blobs(
+    blobs: Sequence[dict[str, Any]],
+    *,
+    top_k: int,
+    default_source_detector: str,
+) -> list[dict[str, Any]]:
+    candidates = []
+    for blob in blobs:
+        xy = blob.get("xy")
+        if hasattr(xy, "tolist"):
+            xy = xy.tolist()
+        if not isinstance(xy, Sequence) or len(xy) != 2:
+            raise ValueError("candidate xy must contain exactly two numbers")
+        candidates.append(
+            {
+                "xy": [_parse_float(xy[0], "candidate.x"), _parse_float(xy[1], "candidate.y")],
+                "score": _saturate_candidate_score(blob.get("score", 0.0), "candidate.score"),
+                "source_detector": str(blob.get("source_detector") or default_source_detector),
+            }
+        )
+    candidates.sort(key=lambda item: (-float(item["score"]), float(item["xy"][0]), float(item["xy"][1])))
+    return candidates[:top_k]
 
 
 def _write_wasb_csv(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -598,11 +743,23 @@ def _parse_confidence(value: object, name: str) -> float:
     return number
 
 
+def _saturate_candidate_score(value: object, name: str) -> float:
+    number = _parse_float(value, name)
+    return min(1.0, max(0.0, number))
+
+
 def _parse_nonnegative_int(value: object, name: str) -> int:
     number = _parse_float(value, name)
     if int(number) != number or number < 0:
         raise ValueError(f"{name} must be a non-negative integer")
     return int(number)
+
+
+def _require_positive_int(value: object, name: str) -> int:
+    number = _parse_nonnegative_int(value, name)
+    if number <= 0:
+        raise ValueError(f"{name} must be positive")
+    return number
 
 
 def _require_positive_float(value: object, name: str) -> float:
@@ -625,6 +782,10 @@ def _parse_float(value: object, name: str) -> float:
 def _persistent_prediction_csv_path(out: str | Path) -> Path:
     out_path = Path(out)
     return out_path.with_name(f"{out_path.stem}_wasb_predictions.csv")
+
+
+def _ball_candidates_sidecar_path(out: str | Path) -> Path:
+    return Path(out).with_name("ball_candidates.json")
 
 
 def _add_runtime_metrics(runtime: dict[str, Any], *, processed_frame_count: int, fps: float) -> None:
@@ -688,6 +849,7 @@ def _wasb_repo_imports(src: Path) -> Iterator[None]:
 
 
 __all__ = [
+    "DEFAULT_BALL_CANDIDATE_TOP_K",
     "DEFAULT_WASB_VISIBLE_THRESHOLD",
     "WASB_CONFIDENCE_SEMANTICS",
     "checkpoint_metadata",

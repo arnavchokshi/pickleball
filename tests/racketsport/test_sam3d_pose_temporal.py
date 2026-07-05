@@ -168,7 +168,7 @@ def test_sam3d_wrist_bone_lock_disabled_preserves_payload() -> None:
     assert locked == skeleton
 
 
-def test_core_body_speed_clamp_engagement_is_recorded_per_player() -> None:
+def test_core_body_speed_clamp_engagement_ignores_raw_fast_motion() -> None:
     joint_names = ["nose", "left_shoulder", "right_shoulder", "left_elbow", "right_elbow", "left_wrist", "right_wrist"]
     frames = []
     for frame_idx, nose_x in enumerate([0.0, 0.0, 0.4, 0.8]):
@@ -183,14 +183,39 @@ def test_core_body_speed_clamp_engagement_is_recorded_per_player() -> None:
         "players": [{"id": 3, "frames": frames}],
     }
 
-    refined = refine_lane_a_skeleton3d(skeleton, fps=30.0, apply_world_grounding=False)
+    refined = refine_lane_a_skeleton3d(
+        skeleton,
+        fps=30.0,
+        apply_world_grounding=False,
+        smoothing_max_displacement_m=0.03,
+    )
 
     engagement = refined["provenance"]["temporal_refine"]["physical_plausibility"][
         "core_body_speed_clamp_engagement_by_player"
     ]["3"]
     assert engagement["frame_count"] == 4
-    assert engagement["clamped_frame_count"] >= 1
-    assert engagement["clamp_engagement_fraction"] > 0.0
+    assert engagement["clamped_frame_count"] == 0
+    assert engagement["clamp_engagement_fraction"] == 0.0
+    assert refined["provenance"]["temporal_refine"]["physical_plausibility"][
+        "core_body_speed_clamp_engagement_flag"
+    ] == "final_core_speed_clamped"
+
+
+def test_refine_sam3d_skeleton3d_caps_temporal_displacement_from_raw_by_default() -> None:
+    skeleton = _minimal_sam3d_lock_skeleton()
+    nose_idx = MHR70_JOINT_NAMES.index("nose")
+    for frame_pos, frame in enumerate(skeleton["players"][0]["frames"]):
+        frame["joints_world"][nose_idx] = [float(frame_pos), 0.0, 1.6]
+
+    refined = refine_sam3d_skeleton3d(skeleton, fps=30.0)
+
+    temporal = refined["provenance"]["temporal_refine"]
+    assert temporal["one_euro"]["smoothing_max_displacement_m"] == pytest.approx(0.03)
+    assert temporal["physical_plausibility"]["smoothing_max_displacement_m"] == pytest.approx(0.03)
+    for before, after in zip(skeleton["players"][0]["frames"], refined["players"][0]["frames"]):
+        raw_joint = before["joints_world"][nose_idx]
+        refined_joint = after["joints_world"][nose_idx]
+        assert _distance(raw_joint, refined_joint) <= 0.03 + 1e-9
 
 
 def test_sam3d_plausibility_gate_flags_bone_zscore_and_confidence_floor() -> None:
@@ -353,7 +378,12 @@ def test_refine_sam3d_skeleton3d_foot_low_lag_smoothing_reduces_heel_lag_vs_lega
     left_heel = MHR70_JOINT_NAMES.index("left_heel")
 
     low_lag = refine_sam3d_skeleton3d(skeleton, fps=30.0)
-    legacy = refine_sam3d_skeleton3d(skeleton, fps=30.0, sam3d_foot_low_lag_smoothing=False)
+    legacy = refine_sam3d_skeleton3d(
+        skeleton,
+        fps=30.0,
+        sam3d_foot_low_lag_smoothing=False,
+        smoothing_max_displacement_m=None,
+    )
 
     # Frame 2 is the first frame after the heel's step change to 1.0; near-pass-through
     # foot smoothing must track the step much more closely than the legacy generic

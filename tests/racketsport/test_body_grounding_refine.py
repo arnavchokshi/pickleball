@@ -148,3 +148,20 @@ def test_large_corrections_use_physics_corrected_warn_band() -> None:
     assert frame_report["confidence_provenance"]["band"] == "physics_corrected_warn"
     assert frame_payload["confidence_provenance"]["band"] == "physics_corrected_warn"
     assert frame_report["correction_magnitude_m"] > 0.15
+
+
+def test_xy_disabled_mode_keeps_placement_anchor_and_only_repairs_z() -> None:
+    source = _skeleton(offsets_by_frame={0: (0.40, -0.20, 0.08)}, frames=range(0, 1))
+    source["players"][0]["frames"][0]["transl_world"] = [1.0, 2.0, 0.08]
+
+    refined, report = refine_body_grounding(
+        source,
+        foot_contact_phases=_phases(range(0, 1)),
+        tracks=_tracks(range(0, 1)),
+        config=GroundingRefineConfig(smoothness_weight=0.0, max_correction_warn_m=1.0, xy_translation_enabled=False),
+    )
+
+    correction = report["players"]["p1"]["frames"][0]["translation_delta_xyz"]
+    assert correction == pytest.approx([0.0, 0.0, -0.08], abs=1e-9)
+    assert refined["players"][0]["frames"][0]["transl_world"] == pytest.approx([1.0, 2.0, 0.0], abs=1e-9)
+    assert report["policy"]["xy_translation_enabled"] is False
