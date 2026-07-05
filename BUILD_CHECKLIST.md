@@ -38,6 +38,27 @@ No row is `VERIFIED`.
 
 ## Recent Handoffs
 
+- [CAL-SYNTH LANDED 2026-07-05, court-autofind lane] Synthetic court corpus generator v2 shipped:
+  NEW threed/racketsport/court_synth_scenes.py (shared procedural render engine, PIL/numpy only, no
+  torch, no eval-clip reads) + NEW threed/racketsport/court_synth_stream.py (zero-disk streaming
+  trainer contract iter_synthetic_court_samples(config, seed) -> image_bgr/keypoints_xy(15x2)/
+  keypoints_vis{0=off_frame,1=occluded,2=visible}/line_family_mask{0=other,1=pickleball,2=tennis,
+  3=net}/surface_mask{0=bg,1=apron,2=interior}/meta{homography,distortion,scenario,image_size};
+  deterministic per (config, seed)). 7 mixture-weighted scenario families incl. tennis-overlay
+  (both line families, distinct colors/widths/wear), adjacent 2-4 courts, portrait-phone 9:16 +
+  radial/tangential distortion + off-frame keypoints, harsh directional shadows (one shared light
+  direction, person-cast), portable-net/clutter. Self-consistency: meta replays the exact
+  pinhole+Brown-Conrady projection -> 0.000px max error over the full 2000-sample probe (bar was
+  <0.5px), net keypoints at regulation post height included. Throughput ~65-87 samples/s at
+  640x360 on the dev Mac idle (33-44/s under full-suite CPU contention; bar >=25/s).
+  generate_synthetic_court_keypoints.py CLI kept backward-compatible (same court_keypoints.json
+  envelope, synthetic status, manifest schema_version 2 adds scenario_counts + per-sample
+  scenario; new optional --scenarios/--scenario-weights). Probe corpus + per-family
+  contact_sheet.jpg (keypoints color-coded by visibility) under
+  runs/lanes/cal_synth_20260705/samples/. Tests: test_generate_synthetic_court_keypoints.py
+  extended (11) + NEW test_court_synth_stream.py (13), all green. CAL-MODEL: consume the stream
+  contract as documented in court_synth_stream.py's docstring; do not renumber class ints.
+
 - [VIEWER FAIL-OPEN FIX DISPATCHED 2026-07-05 ~19:1xZ, synergy-audit session] Live browser verification
   of the ball_i1 smoke found a fail-open honesty bug: ball_track_arc_solved.json status=experimental_off
   (solver self-killed) but web/replay trail parsers (ballTrail.ts parseBallTrailArtifact, shotTrails.ts

@@ -98,6 +98,21 @@ function parseCourtProposalPayload(payload: unknown): {
   };
 }
 
+/**
+ * Serializes a CourtAssistSeed back to the snake_case wire format (the symmetric
+ * counterpart of parseAssistSeed/importCourtProposals). Used when a court review is
+ * NOT confirmed: the upload includes this advisory assist seed instead of trusted
+ * court_corners, matching the iOS "court_assist_seed" multipart field.
+ */
+export function buildCourtAssistSeedPayload(assist: CourtAssistSeed): Record<string, unknown> {
+  return {
+    mode: assist.mode,
+    tap_points: assist.tapPoints.map((point) => [point.x, point.y]),
+    line_label: assist.lineLabel ?? null,
+    trusted_calibration: false,
+  };
+}
+
 function parseAssistSeed(raw: unknown): CourtAssistSeed {
   const payload = isRecord(raw) ? raw : {};
   const mode = isCourtAssistMode(payload.mode) ? payload.mode : "none";

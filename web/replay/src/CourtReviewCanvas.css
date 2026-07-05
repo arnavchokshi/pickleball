@@ -1,0 +1,79 @@
+.court-review-canvas {
+  margin-top: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.court-review-stage {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid rgba(214, 255, 64, 0.28);
+  background: rgba(4, 18, 15, 0.84);
+}
+
+.court-review-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.court-review-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.court-review-line {
+  fill: none;
+  stroke: #6de8ff;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.court-review-point {
+  fill: #dfff3b;
+  stroke: #04120f;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  cursor: grab;
+  touch-action: none;
+}
+
+.court-review-point-needs_review {
+  fill: #ff6d6d;
+}
+
+.court-review-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.court-review-actions button {
+  border-radius: 999px;
+  border: 1px solid rgba(214, 255, 64, 0.4);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f4ffe8;
+  font-weight: 800;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.court-review-confirm {
+  background: #dfff3b;
+  color: #04120f;
+  border-color: #dfff3b;
+}
+
+.court-review-hint {
+  color: #ffb84d;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin: 0;
+}

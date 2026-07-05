@@ -32,6 +32,7 @@ describe("uploadVideoJob", () => {
         courtCorners: new File(["{}"], "court_corners.json", { type: "application/json" }),
         courtReview: new File(["{}"], "reviewed_court_calibration.json", { type: "application/json" }),
         courtCalibration: new File(["{}"], "court_calibration.json", { type: "application/json" }),
+        courtAssistSeed: new File(["{}"], "court_assist_seed.json", { type: "application/json" }),
         clip: "drill_01",
         maxFrames: 8,
       },
@@ -49,6 +50,26 @@ describe("uploadVideoJob", () => {
     expect((form.get("court_corners") as File).name).toBe("court_corners.json");
     expect((form.get("court_review") as File).name).toBe("reviewed_court_calibration.json");
     expect((form.get("court_calibration") as File).name).toBe("court_calibration.json");
+    expect((form.get("court_assist_seed") as File).name).toBe("court_assist_seed.json");
+  });
+
+  it("omits the court_assist_seed field when none is provided", async () => {
+    let postedBody: FormData | null = null;
+    const fetchImpl: typeof fetch = async (_url, init) => {
+      postedBody = init?.body as FormData;
+      return new Response(JSON.stringify({ id: "job_1", status: "queued", links: { status: "/api/jobs/job_1" } }), {
+        status: 202,
+        headers: { "content-type": "application/json" },
+      });
+    };
+
+    await uploadVideoJob(
+      { video: new File(["video"], "drill.mp4", { type: "video/mp4" }) },
+      { fetchImpl },
+    );
+
+    const form = postedBody as unknown as FormData;
+    expect(form.get("court_assist_seed")).toBeNull();
   });
 
   it("raises the server message for failed uploads", async () => {

@@ -1,18 +1,28 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+import numpy as np
 import pytest
 
 from threed.racketsport.court_templates import FT_TO_M, get_court_template
 from threed.racketsport.court_keypoint_net import (
+    COURT_UNET_V2_HEATMAP_STRIDE,
+    COURT_UNET_V2_SEG_CLASS_NAMES,
     PICKLEBALL_KEYPOINTS,
     decode_subpixel_heatmap,
     keypoint_labels_from_court_corners,
     keypoints_to_solvepnp_correspondences,
+    make_court_keypoint_heatmap_model,
+    merge_line_family_and_surface_targets,
     refine_keypoint_xy_with_planar_homography,
+    split_line_family_segmentation,
     validate_heatmap_prediction_payload,
     validate_synthetic_render_config,
     validate_training_plan_config,
 )
+
+RESNET34_LOCAL_CHECKPOINT = Path("models/checkpoints/court_external/torchvision/resnet34-b627a593.pth")
 
 
 def _ft(value_m: float) -> float:
@@ -244,3 +254,86 @@ def test_refine_keypoint_xy_with_planar_homography_recovers_scattered_outliers()
 
     for name, expected_xy in labels.items():
         assert refined[name] == pytest.approx(expected_xy, abs=1e-6)
+
+
+def test_merge_and_split_line_family_surface_targets_round_trip() -> None:
+    line_family_mask = np.array([[0, 1], [2, 3]])
+    surface_mask = np.array([[2, 0], [0, 1]])
+
+    merged = merge_line_family_and_surface_targets(line_family_mask, surface_mask)
+    # (0,0): other + interior -> surface (4). (0,1): pickleball_line takes priority over
+    # whatever surface value sits under it -> stays 1. (1,0)/(1,1): tennis_line/net likewise
+    # keep their line class regardless of surface.
+    assert merged.tolist() == [[4, 1], [2, 3]]
+
+    recovered_line_family, recovered_surface = split_line_family_segmentation(merged)
+    assert recovered_line_family.tolist() == [[0, 1], [2, 3]]
+    # This head has no separate "apron" class, so the (1,1) apron=1 pixel is lost on the round
+    # trip and correctly reports as background (0), not apron.
+    assert recovered_surface.tolist() == [[2, 0], [0, 0]]
+
+    with pytest.raises(ValueError, match="same shape"):
+        merge_line_family_and_surface_targets(np.zeros((2, 2)), np.zeros((3, 3)))
+
+
+def test_make_court_unet_v2_model_shapes_and_param_budget() -> None:
+    torch = pytest.importorskip("torch")
+
+    model = make_court_keypoint_heatmap_model(len(PICKLEBALL_KEYPOINTS), architecture="court_unet_v2")
+    param_count = sum(p.numel() for p in model.parameters())
+    assert 10_000_000 <= param_count <= 35_000_000
+
+    assert model.heatmap_stride == COURT_UNET_V2_HEATMAP_STRIDE
+    assert model.seg_class_names == COURT_UNET_V2_SEG_CLASS_NAMES
+
+    batch = torch.randn(2, 3, 360, 640)
+    outputs = model(batch)
+    assert set(outputs) == {"keypoint_heatmaps", "line_family_logits", "keypoint_vis_logits"}
+    assert outputs["keypoint_heatmaps"].shape == (2, len(PICKLEBALL_KEYPOINTS), 90, 160)
+    assert outputs["line_family_logits"].shape == (2, len(COURT_UNET_V2_SEG_CLASS_NAMES), 90, 160)
+    assert outputs["keypoint_vis_logits"].shape == (2, len(PICKLEBALL_KEYPOINTS))
+    # Stride is exactly input_size / head_size on both axes -- "stride <= 4" per the CAL-MODEL
+    # spec, not merely quantized down to some coarser grid.
+    assert 640 / outputs["keypoint_heatmaps"].shape[-1] == COURT_UNET_V2_HEATMAP_STRIDE
+    assert 360 / outputs["keypoint_heatmaps"].shape[-2] == COURT_UNET_V2_HEATMAP_STRIDE
+
+
+def test_make_court_unet_v2_model_rejects_unsupported_keypoint_count() -> None:
+    pytest.importorskip("torch")
+
+    with pytest.raises(ValueError, match="positive integer"):
+        make_court_keypoint_heatmap_model(0, architecture="court_unet_v2")
+
+
+@pytest.mark.skipif(not RESNET34_LOCAL_CHECKPOINT.is_file(), reason="local resnet34 checkpoint not present in this environment")
+def test_make_court_unet_v2_model_loads_local_resnet34_encoder_weights() -> None:
+    torch = pytest.importorskip("torch")
+
+    model = make_court_keypoint_heatmap_model(
+        len(PICKLEBALL_KEYPOINTS),
+        architecture="court_unet_v2",
+        encoder_weights_path=RESNET34_LOCAL_CHECKPOINT,
+    )
+    param_count = sum(p.numel() for p in model.parameters())
+    assert 10_000_000 <= param_count <= 35_000_000
+
+    # Loaded weights must differ from a fresh random init (proves the checkpoint was actually
+    # applied, not silently ignored).
+    baseline = make_court_keypoint_heatmap_model(len(PICKLEBALL_KEYPOINTS), architecture="court_unet_v2")
+    loaded_conv1 = dict(model.named_parameters())["stem.0.weight"]
+    random_conv1 = dict(baseline.named_parameters())["stem.0.weight"]
+    assert not torch.allclose(loaded_conv1, random_conv1)
+
+
+def test_make_court_unet_v2_model_rejects_encoder_checkpoint_with_wrong_layout(tmp_path: Path) -> None:
+    torch = pytest.importorskip("torch")
+
+    bogus_checkpoint = tmp_path / "not_a_resnet34.pth"
+    torch.save({"totally": "unrelated"}, bogus_checkpoint)
+
+    with pytest.raises(ValueError, match="does not match the expected backbone layout"):
+        make_court_keypoint_heatmap_model(
+            len(PICKLEBALL_KEYPOINTS),
+            architecture="court_unet_v2",
+            encoder_weights_path=bogus_checkpoint,
+        )

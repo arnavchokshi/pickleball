@@ -67,11 +67,23 @@ export type UploadVideoInput = {
   courtCorners?: File | null;
   courtCalibration?: File | null;
   courtReview?: File | null;
+  courtAssistSeed?: File | null;
   clip?: string;
   maxFrames?: number;
 };
 
 export type CourtPredictionPoint = { xy: [number, number]; confidence: number };
+export type CourtPredictionAssist = {
+  mode: string;
+  tap_points: Array<[number, number]>;
+  line_label: string | null;
+};
+export type CourtPredictionProposalSummary = {
+  proposal_id: string | null;
+  source: string | null;
+  scores: Record<string, unknown>;
+  review_usable: boolean;
+};
 export type CourtPrediction = {
   schema_version: 1;
   artifact_type: "racketsport_court_layout_prediction";
@@ -85,6 +97,12 @@ export type CourtPrediction = {
   points: Record<string, CourtPredictionPoint>;
   lines?: Array<{ id: string; points: [[number, number], [number, number]] }>;
   warnings?: string[];
+  needs_user_input?: string[];
+  assist?: CourtPredictionAssist;
+  proposals?: CourtPredictionProposalSummary[];
+  proposal_report?: Record<string, unknown> | null;
+  preview_frame_index?: number;
+  preview_frame_url?: string | null;
   video: {
     id: string;
     filename: string;
@@ -140,6 +158,7 @@ export async function uploadVideoJob(input: UploadVideoInput, options: UploadApi
   if (input.courtCorners) body.append("court_corners", input.courtCorners);
   if (input.courtCalibration) body.append("court_calibration", input.courtCalibration);
   if (input.courtReview) body.append("court_review", input.courtReview);
+  if (input.courtAssistSeed) body.append("court_assist_seed", input.courtAssistSeed);
   if (input.clip?.trim()) body.append("clip", input.clip.trim());
   if (input.maxFrames !== undefined) body.append("max_frames", String(input.maxFrames));
 

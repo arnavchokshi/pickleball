@@ -1,3 +1,4 @@
+import base64
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -207,6 +208,70 @@ def test_court_prediction_endpoint_uses_configured_predictor_and_returns_preview
     assert payload["not_cal3_verified"] is True
     assert payload["video"]["sha256"]
     assert payload["points"]["near_left_corner"]["xy"] == [180.0, 520.0]
+    assert payload["preview_frame_url"] is None
+    assert "preview_frame_jpeg_base64" not in payload
+
+
+def test_court_prediction_endpoint_persists_preview_frame_and_exposes_follow_up_url(tmp_path: Path) -> None:
+    frame_bytes = b"\xff\xd8\xff\xdb-fake-jpeg-bytes"
+
+    def fake_predictor(*, video_path: Path, clip: str, frame_index: int | None) -> dict[str, object]:
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_court_layout_prediction",
+            "clip": clip,
+            "image_size": [1000, 600],
+            "frame_index": 12,
+            "frame_time_s": 0.4,
+            "prediction_source": "court_proposals:selected_proposal=proposal_0001",
+            "verified": False,
+            "not_cal3_verified": True,
+            "points": _prediction_points(),
+            "lines": [],
+            "warnings": ["auto_court_detection_preview_not_verified"],
+            "needs_user_input": [],
+            "assist": {"mode": "none", "tap_points": [], "line_label": None},
+            "preview_frame_index": 12,
+            "preview_frame_jpeg_base64": base64.b64encode(frame_bytes).decode("ascii"),
+        }
+
+    app = create_app(
+        upload_root=tmp_path,
+        runner=CompletingRunner(),
+        run_jobs_inline=True,
+        static_dir=tmp_path / "dist",
+        court_predictor=fake_predictor,
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/court/predict",
+        data={"clip": "drill_01"},
+        files={"video": ("drill.mp4", b"fake-video", "video/mp4")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "preview_frame_jpeg_base64" not in payload
+    assert payload["preview_frame_index"] == 12
+    preview_frame_url = payload["preview_frame_url"]
+    assert preview_frame_url is not None
+    assert preview_frame_url.startswith("/api/court/predict/")
+    assert preview_frame_url.endswith("/frame")
+
+    frame_response = client.get(preview_frame_url)
+    assert frame_response.status_code == 200
+    assert frame_response.headers["content-type"] == "image/jpeg"
+    assert frame_response.content == frame_bytes
+
+
+def test_court_prediction_frame_endpoint_404s_for_unknown_prediction_id(tmp_path: Path) -> None:
+    app = create_app(upload_root=tmp_path, runner=CompletingRunner(), run_jobs_inline=True, static_dir=tmp_path / "dist")
+    client = TestClient(app)
+
+    response = client.get("/api/court/predict/pred_does_not_exist/frame")
+
+    assert response.status_code == 404
 
 
 def test_court_review_endpoint_saves_training_artifacts_and_returns_pipeline_calibration(tmp_path: Path) -> None:
@@ -264,6 +329,56 @@ def test_upload_job_saves_reviewed_court_artifact_and_passes_derived_calibration
     assert runner.requests[0].court_calibration_path is not None
     assert runner.requests[0].court_review_path is not None
     assert runner.requests[0].court_review_path.read_text(encoding="utf-8") == '{"review_status":"human_reviewed"}'
+
+
+def test_upload_job_accepts_court_assist_seed_and_surfaces_it_in_job_status(tmp_path: Path) -> None:
+    """iOS parity: the RenderGatewayClient multipart field is named "court_assist_seed"
+    (RenderGatewayClient.swift:75-77). Today FastAPI silently drops unknown fields; this
+    field must now be persisted to the job input dir and surfaced in job status so a later
+    pipeline session can consume it. It is intentionally NOT forwarded into GpuRunRequest
+    this wave."""
+
+    runner = CompletingRunner()
+    app = create_app(upload_root=tmp_path, runner=runner, run_jobs_inline=True, static_dir=tmp_path / "dist")
+    client = TestClient(app)
+
+    assist_seed_body = b'{"mode":"one_inside_tap","tap_points":[[500.0,300.0]],"line_label":null,"trusted_calibration":false}'
+    response = client.post(
+        "/api/jobs",
+        data={"clip": "drill_01"},
+        files={
+            "video": ("drill.mp4", b"fake-video", "video/mp4"),
+            "court_assist_seed": ("court_assist_seed.json", assist_seed_body, "application/json"),
+        },
+    )
+
+    assert response.status_code == 202
+    job_id = response.json()["id"]
+
+    status = client.get(f"/api/jobs/{job_id}").json()
+    assert status["court_assist_seed"]["present"] is True
+
+    saved_path = Path(status["court_assist_seed"]["path"])
+    assert saved_path.is_file()
+    assert saved_path.read_bytes() == assist_seed_body
+    assert saved_path.name == "court_assist_seed.json"
+
+    # gpu_runner forwarding is explicitly untouched this wave (owned by another lane).
+    assert not hasattr(runner.requests[0], "court_assist_seed_path")
+
+
+def test_upload_job_without_court_assist_seed_reports_it_as_absent(tmp_path: Path) -> None:
+    app = create_app(upload_root=tmp_path, runner=CompletingRunner(), run_jobs_inline=True, static_dir=tmp_path / "dist")
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/jobs",
+        data={"clip": "drill_01"},
+        files={"video": ("drill.mp4", b"fake-video", "video/mp4")},
+    )
+
+    status = client.get(f"/api/jobs/{response.json()['id']}").json()
+    assert status["court_assist_seed"] is None
 
 
 def test_upload_job_reports_progress_and_eta(tmp_path: Path) -> None:

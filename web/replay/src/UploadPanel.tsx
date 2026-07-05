@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 
+import { CourtReviewCanvas } from "./CourtReviewCanvas";
 import {
+  buildCourtAssistSeedPayload,
   buildCourtCornersPayload,
   buildReviewedCourtCorrection,
+  importCourtProposals,
+  type CourtAssistSeed,
   type CourtReviewPointMap,
+  type CourtReviewStatus,
 } from "./courtReview";
 import {
   apiUrl,
@@ -16,6 +21,7 @@ import {
   type CourtPrediction,
   type PipelineStageSummary,
   type ResourceUsageSummary,
+  type UploadApiOptions,
   type UploadJob,
 } from "./uploadApi";
 import "./uploadTelemetry.css";
@@ -23,6 +29,89 @@ import "./uploadTelemetry.css";
 type UploadPanelProps = {
   apiBaseUrl?: string;
 };
+
+type FlowStage = "idle" | "predicting" | "reviewing" | "submitting";
+
+/** Only "Confirm court" produces a decision of "confirmed"; every other exit (Skip, or
+ * simply never confirming) is "skipped" and must never carry court_corners. This is the
+ * trust-discipline gate: an unconfirmed machine guess must never ride the trusted channel. */
+export type CourtReviewDecision = "confirmed" | "skipped";
+
+const NO_ASSIST_SEED: CourtAssistSeed = { mode: "none", tapPoints: [], lineLabel: null, trustedCalibration: false };
+
+/**
+ * Extracts the fail-closed-validated assist seed from a prediction's raw proposal report
+ * (when the "proposals" predictor mode produced one), reusing courtReview.ts's
+ * importCourtProposals parser. Falls back to "no assist" for template/detector predictions
+ * or if the report fails validation, defensively, since the proposals contract may still
+ * be evolving upstream.
+ */
+export function assistSeedFromPrediction(prediction: CourtPrediction): CourtAssistSeed {
+  if (!prediction.proposal_report) return NO_ASSIST_SEED;
+  try {
+    return importCourtProposals(prediction.proposal_report).assist;
+  } catch {
+    return NO_ASSIST_SEED;
+  }
+}
+
+/**
+ * Builds and submits the reviewed-court artifacts for a prediction, gated strictly by
+ * decision: ONLY "confirmed" includes court_corners (the trusted channel, review_status
+ * human_reviewed). Any other outcome uploads ONLY court_review
+ * (auto_predicted_unreviewed) plus the advisory court_assist_seed — never court_corners.
+ */
+export async function submitCourtReview(
+  {
+    decision,
+    video,
+    prediction,
+    adjustedPoints,
+  }: {
+    decision: CourtReviewDecision;
+    video: File;
+    prediction: CourtPrediction;
+    adjustedPoints: CourtReviewPointMap;
+  },
+  options: UploadApiOptions = {},
+): Promise<UploadJob> {
+  const reviewStatus: CourtReviewStatus = decision === "confirmed" ? "human_reviewed" : "auto_predicted_unreviewed";
+  const artifact = buildReviewedCourtCorrection({
+    videoId: prediction.video.id,
+    videoPath: prediction.video.path,
+    videoSha256: prediction.video.sha256,
+    imageSize: prediction.image_size,
+    frameIndex: prediction.frame_index,
+    frameTimeSeconds: prediction.frame_time_s,
+    autoPredictionSource: prediction.prediction_source,
+    predicted: prediction.points as CourtReviewPointMap,
+    adjusted: adjustedPoints,
+    createdAt: new Date().toISOString(),
+    reviewStatus,
+  });
+  const reviewResponse = await saveCourtReview(artifact as unknown as Record<string, unknown>, options);
+  const reviewFile = jsonFile(reviewResponse.review, "reviewed_court_calibration.json");
+
+  if (decision === "confirmed") {
+    const cornerSeed = buildCourtCornersPayload({
+      adjusted: adjustedPoints,
+      imageSize: prediction.image_size,
+      frameIndex: prediction.frame_index,
+      source: prediction.prediction_source,
+      reviewStatus: "human_reviewed",
+    });
+    return uploadVideoJob(
+      { video, courtCorners: jsonFile(cornerSeed, "court_corners.json"), courtReview: reviewFile },
+      options,
+    );
+  }
+
+  const assistPayload = buildCourtAssistSeedPayload(assistSeedFromPrediction(prediction));
+  return uploadVideoJob(
+    { video, courtReview: reviewFile, courtAssistSeed: jsonFile(assistPayload, "court_assist_seed.json") },
+    options,
+  );
+}
 
 export function jobStatusText(job: UploadJob | null): string {
   if (!job) return "No upload queued";
@@ -56,17 +145,25 @@ export function uploadErrorText(error: string | null | undefined): string | null
 export function UploadPanel({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? "" }: UploadPanelProps) {
   const [video, setVideo] = useState<File | null>(null);
   const [courtPrediction, setCourtPrediction] = useState<CourtPrediction | null>(null);
+  const [adjustedPoints, setAdjustedPoints] = useState<CourtReviewPointMap | null>(null);
   const [job, setJob] = useState<UploadJob | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [flowStage, setFlowStage] = useState<"idle" | "predicting" | "saving" | "submitting">("idle");
-  const isBusy = flowStage !== "idle";
-  const visibleProgress = isBusy && !job ? flowProgress(flowStage) : jobProgressPercent(job);
-  const visibleProgressLabel = isBusy && !job ? flowProgressLabel(flowStage) : pipelineProgressLabel(job);
+  const [flowStage, setFlowStage] = useState<FlowStage>("idle");
+  const isBusy = flowStage === "predicting" || flowStage === "submitting";
+  const isReviewing = flowStage === "reviewing";
+  const showFlowProgress = (isBusy || isReviewing) && !job;
+  const visibleProgress = showFlowProgress ? flowProgress(flowStage) : jobProgressPercent(job);
+  const visibleProgressLabel = showFlowProgress ? flowProgressLabel(flowStage) : pipelineProgressLabel(job);
 
   const replayManifestUrl = useMemo(() => {
     const manifestUrl = job?.result?.manifest_url;
     return manifestUrl ? apiUrl(manifestUrl, apiBaseUrl) : null;
   }, [apiBaseUrl, job?.result?.manifest_url]);
+
+  const previewFrameUrl = useMemo(() => {
+    const url = courtPrediction?.preview_frame_url;
+    return url ? apiUrl(url, apiBaseUrl) : null;
+  }, [apiBaseUrl, courtPrediction?.preview_frame_url]);
 
   useEffect(() => {
     if (!job || !["queued", "running", "submitted"].includes(job.status)) return;
@@ -81,79 +178,80 @@ export function UploadPanel({ apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.tr
     return () => window.clearInterval(timer);
   }, [apiBaseUrl, job]);
 
-  async function predictAndProcess(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!video) {
-      setError("Choose a video first.");
-      return;
-    }
+  async function runPrediction() {
+    if (!video) return;
     setFlowStage("predicting");
     setError(null);
     setJob(null);
     try {
       const prediction = await predictCourtLayout({ video }, { baseUrl: apiBaseUrl });
       setCourtPrediction(prediction);
+      setAdjustedPoints(prediction.points as CourtReviewPointMap);
+      setFlowStage("reviewing");
+    } catch (nextError) {
+      setError(uploadErrorText(nextError instanceof Error ? nextError.message : String(nextError)));
+      setFlowStage("idle");
+    }
+  }
 
-      setFlowStage("saving");
-      const adjusted = prediction.points as CourtReviewPointMap;
-      const artifact = buildReviewedCourtCorrection({
-        videoId: prediction.video.id,
-        videoPath: prediction.video.path,
-        videoSha256: prediction.video.sha256,
-        imageSize: prediction.image_size,
-        frameIndex: prediction.frame_index,
-        frameTimeSeconds: prediction.frame_time_s,
-        autoPredictionSource: prediction.prediction_source,
-        predicted: prediction.points as CourtReviewPointMap,
-        adjusted,
-        createdAt: new Date().toISOString(),
-        reviewStatus: "auto_predicted_unreviewed",
-      });
-      const cornerSeed = buildCourtCornersPayload({
-        adjusted,
-        imageSize: prediction.image_size,
-        frameIndex: prediction.frame_index,
-        source: prediction.prediction_source,
-        reviewStatus: "auto_predicted_unreviewed",
-      });
-      const reviewResponse = await saveCourtReview(artifact as unknown as Record<string, unknown>, { baseUrl: apiBaseUrl });
-      const reviewFile = jsonFile(reviewResponse.review, "reviewed_court_calibration.json");
-      const cornerSeedFile = jsonFile(cornerSeed, "court_corners.json");
+  async function requestPrediction(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!video) {
+      setError("Choose a video first.");
+      return;
+    }
+    await runPrediction();
+  }
 
-      setFlowStage("submitting");
-      const nextJob = await uploadVideoJob(
-        {
-          video,
-          courtCorners: cornerSeedFile,
-          courtReview: reviewFile,
-        },
+  async function resolveReview(decision: CourtReviewDecision) {
+    if (!video || !courtPrediction || !adjustedPoints) return;
+    setFlowStage("submitting");
+    setError(null);
+    try {
+      const nextJob = await submitCourtReview(
+        { decision, video, prediction: courtPrediction, adjustedPoints },
         { baseUrl: apiBaseUrl },
       );
       setJob(nextJob);
+      setFlowStage("idle");
     } catch (nextError) {
       setError(uploadErrorText(nextError instanceof Error ? nextError.message : String(nextError)));
-    } finally {
-      setFlowStage("idle");
+      setFlowStage("reviewing");
     }
   }
 
   function updateVideo(nextVideo: File | null) {
     setVideo(nextVideo);
     setCourtPrediction(null);
+    setAdjustedPoints(null);
     setJob(null);
+    setFlowStage("idle");
   }
 
   return (
     <section className="upload-band" aria-label="Video upload">
-      <form className="upload-form simple-upload-form" onSubmit={predictAndProcess}>
+      <form className="upload-form simple-upload-form" onSubmit={requestPrediction}>
         <label>
           <span>Video</span>
           <input type="file" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v" onChange={(event) => updateVideo(event.target.files?.[0] ?? null)} />
         </label>
-        <button type="submit" className="upload-submit" disabled={isBusy || !video}>
-          {isBusy ? flowButtonLabel(flowStage) : "Predict Court"}
+        <button type="submit" className="upload-submit" disabled={isBusy || isReviewing || !video}>
+          {isBusy ? flowButtonLabel(flowStage) : isReviewing ? "Reviewing" : "Predict Court"}
         </button>
       </form>
+      {(flowStage === "reviewing" || flowStage === "submitting") && courtPrediction && adjustedPoints ? (
+        <CourtReviewCanvas
+          imageUrl={previewFrameUrl}
+          imageSize={courtPrediction.image_size}
+          points={adjustedPoints}
+          needsUserInput={courtPrediction.needs_user_input}
+          onPointsChange={setAdjustedPoints}
+          onConfirm={() => void resolveReview("confirmed")}
+          onRepredict={() => void runPrediction()}
+          onSkip={() => void resolveReview("skipped")}
+          disabled={flowStage === "submitting"}
+        />
+      ) : null}
       <div className="upload-progress" aria-label="Pipeline progress">
         <div className="upload-progress-head">
           <span>Pipeline progress</span>
@@ -332,23 +430,23 @@ function jsonFile(payload: unknown, name: string): File {
   return new File([JSON.stringify(payload, null, 2)], name, { type: "application/json" });
 }
 
-function flowProgress(stage: "idle" | "predicting" | "saving" | "submitting"): number {
+function flowProgress(stage: FlowStage): number {
   if (stage === "predicting") return 18;
-  if (stage === "saving") return 30;
-  if (stage === "submitting") return 42;
+  if (stage === "reviewing") return 40;
+  if (stage === "submitting") return 65;
   return 0;
 }
 
-function flowProgressLabel(stage: "idle" | "predicting" | "saving" | "submitting"): string {
+function flowProgressLabel(stage: FlowStage): string {
   if (stage === "predicting") return "Predicting court";
-  if (stage === "saving") return "Saving court seed";
+  if (stage === "reviewing") return "Reviewing predicted court";
   if (stage === "submitting") return "Submitting pipeline job";
   return "Waiting for upload";
 }
 
-function flowButtonLabel(stage: "idle" | "predicting" | "saving" | "submitting"): string {
+function flowButtonLabel(stage: FlowStage): string {
   if (stage === "predicting") return "Predicting";
-  if (stage === "saving") return "Saving";
+  if (stage === "reviewing") return "Reviewing";
   if (stage === "submitting") return "Submitting";
   return "Predict Court";
 }

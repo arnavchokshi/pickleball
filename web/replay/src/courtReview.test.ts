@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   PICKLEBALL_COURT_REVIEW_POINTS,
+  buildCourtAssistSeedPayload,
   buildCourtCornersPayload,
   buildReviewedCourtCorrection,
   importCourtProposals,
   validateCourtReviewPoints,
+  type CourtAssistSeed,
   type CourtReviewPointMap,
 } from "./courtReview";
 
@@ -163,5 +165,54 @@ describe("importCourtProposals", () => {
     expect(state.proposals[0].points.near_left_corner?.xy).toEqual([180, 520]);
     expect(state.assist.mode).toBe("one_inside_tap");
     expect(state.assist.trustedCalibration).toBe(false);
+  });
+});
+
+describe("buildCourtAssistSeedPayload", () => {
+  it("serializes tap points and mode to the snake_case wire format, always untrusted", () => {
+    const assist: CourtAssistSeed = {
+      mode: "two_line_taps",
+      tapPoints: [
+        { x: 120, y: 340 },
+        { x: 480, y: 340 },
+      ],
+      lineLabel: "near_baseline",
+      trustedCalibration: false,
+    };
+
+    const payload = buildCourtAssistSeedPayload(assist);
+
+    expect(payload).toEqual({
+      mode: "two_line_taps",
+      tap_points: [
+        [120, 340],
+        [480, 340],
+      ],
+      line_label: "near_baseline",
+      trusted_calibration: false,
+    });
+  });
+
+  it("round-trips through importCourtProposals's assist parser", () => {
+    const assist: CourtAssistSeed = {
+      mode: "one_inside_tap",
+      tapPoints: [{ x: 500, y: 300 }],
+      lineLabel: null,
+      trustedCalibration: false,
+    };
+
+    const wirePayload = buildCourtAssistSeedPayload(assist);
+    const state = importCourtProposals({
+      artifact_type: "racketsport_court_proposals",
+      schema_version: 1,
+      status: "ranked_not_verified",
+      verified: false,
+      not_cal3_verified: true,
+      ranking: { selected_proposal_id: null, abstain: true, abstain_reasons: ["not_cal3_verified"] },
+      assist: wirePayload,
+      proposals: [],
+    });
+
+    expect(state.assist).toEqual(assist);
   });
 });

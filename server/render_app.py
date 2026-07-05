@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 import re
@@ -156,7 +158,24 @@ def create_app(
         }
         payload["verified"] = False
         payload["not_cal3_verified"] = True
+        payload["preview_frame_url"] = _persist_preview_frame(
+            prediction_dir=prediction_dir,
+            prediction_id=prediction_dir.name,
+            preview_frame_jpeg_base64=payload.pop("preview_frame_jpeg_base64", None),
+        )
+        payload.setdefault("preview_frame_index", payload.get("frame_index", 0))
         return payload
+
+    @app.get("/api/court/predict/{prediction_id}/frame")
+    def get_court_prediction_frame(prediction_id: str) -> FileResponse:
+        try:
+            safe_id = safe_slug(prediction_id)
+        except ValueError:
+            raise HTTPException(status_code=404, detail="preview frame not found") from None
+        frame_path = upload_root / "court_predictions" / safe_id / "preview_frame.jpg"
+        if not frame_path.is_file():
+            raise HTTPException(status_code=404, detail="preview frame not found")
+        return FileResponse(frame_path, media_type="image/jpeg")
 
     @app.post("/api/court/reviews")
     def save_court_review(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
@@ -181,6 +200,7 @@ def create_app(
         court_corners: UploadFile | None = File(default=None),
         court_calibration: UploadFile | None = File(default=None),
         court_review: UploadFile | None = File(default=None),
+        court_assist_seed: UploadFile | None = File(default=None),
     ) -> dict[str, Any]:
         try:
             clip_id = _clip_id_from_upload(clip, video.filename)
@@ -199,8 +219,14 @@ def create_app(
         court_corners_path = await _save_optional_upload(court_corners, input_dir, "court_corners.json")
         court_calibration_path = await _save_optional_upload(court_calibration, input_dir, "court_calibration.json")
         court_review_path = await _save_optional_upload(court_review, input_dir, "reviewed_court_calibration.json")
+        # court_assist_seed parity with iOS (RenderGatewayClient multipart field "court_assist_seed"):
+        # stored alongside the other optional court artifacts and surfaced in job status so a later
+        # pipeline session can consume it. Intentionally NOT forwarded into GpuRunRequest/gpu_runner
+        # this wave (that dataclass/runner is owned by another lane).
+        court_assist_seed_path = await _save_optional_upload(court_assist_seed, input_dir, "court_assist_seed.json")
         store.update(
             job["id"],
+            court_assist_seed=_optional_artifact_status(court_assist_seed_path),
             progress=_progress_payload(
                 GpuRunProgress(percent=8, stage="Inputs saved", message="Upload received by Render."),
                 status="queued",
@@ -574,6 +600,29 @@ def _safe_artifact_path(root: Path, artifact_path: str) -> Path:
     if root_resolved != candidate and root_resolved not in candidate.parents:
         raise ValueError("unsafe artifact path")
     return candidate
+
+
+def _persist_preview_frame(
+    *,
+    prediction_dir: Path,
+    prediction_id: str,
+    preview_frame_jpeg_base64: Any,
+) -> str | None:
+    if not isinstance(preview_frame_jpeg_base64, str) or not preview_frame_jpeg_base64:
+        return None
+    try:
+        frame_bytes = base64.b64decode(preview_frame_jpeg_base64, validate=True)
+    except (binascii.Error, ValueError):
+        return None
+    frame_path = prediction_dir / "preview_frame.jpg"
+    frame_path.write_bytes(frame_bytes)
+    return f"/api/court/predict/{prediction_id}/frame"
+
+
+def _optional_artifact_status(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    return {"present": True, "path": str(path)}
 
 
 app = create_app()
