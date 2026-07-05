@@ -1,0 +1,14 @@
+# pickleball addition, not upstream
+name: pickleball
+root_dir: /root/datasets/pickleball_blurball
+csv_filename: Label.csv
+ext: '.png'
+visible_flags: [1]
+train:
+  matches: []
+  num_clip_ratio: 1.0
+  refine_npz_path:
+test:
+  matches: []
+  num_clip_ratio: 1.0
+  refine_npz_path:

@@ -1,0 +1,15 @@
+# pickleball addition, not upstream
+name: pickleball
+root_dir: /root/datasets/pickleball_wasb
+frame_dirname: videos
+csv_dirname: pickleball_ball_annotation
+ext: '.png'
+train:
+  matches: []
+  num_clip_ratio: 1.0
+val:
+  matches: []
+  num_clip_ratio: 1.0
+test:
+  matches: []
+  num_clip_ratio: 1.0
