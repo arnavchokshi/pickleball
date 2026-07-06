@@ -38,11 +38,12 @@ stopping:** check each item against live evidence (BUILD_CHECKLIST last bullets 
 may already be satisfied; tick an item only WITH a dated evidence pointer. Re-verify at every run
 start: stale-blank boxes cause false STOPs, silently-ignored boxes destroy the rule:
 
-- [ ] **GPU access:** SPEND CAP APPROVED (owner 2026-07-06): ≤$5/GPU/hr, max 4 GPUs, always
-  teardown/delete on lane completion. AUTH: one final `gcloud auth login` by the owner, after which
-  the manager creates a SERVICE ACCOUNT + key at `~/.secrets/` (outside repo, chmod 600, never in
-  git/chat) so all future sessions auth non-interactively — this box ticks when the service-account
-  key is verified working. Old VM `pickleball-a100-spot-ase1a`: owner ruled DELETE + start fresh.
+- [x] **GPU access:** SATISFIED 2026-07-06 — owner re-authed (`hello@`); old A100 DELETED; fleet GPU
+  #1 `pickleball-a100-fleet1` (A100-40GB spot, asia-southeast1-a, ~$1.2/hr) cold-started 257s + smoke
+  PASS (evidence: runs/lanes/gpu_coldstart_20260706/report.md; ledger runs/manager/gpu_fleet.md).
+  Spend cap: ≤$5/GPU/hr, max 4 GPUs, teardown-on-completion. REMAINING HARDENING: service-account key
+  at `~/.secrets/pickleball-fleet-sa.json` (owner runs the 4-command block once, or grants the gcloud
+  iam Bash permission) so sessions never depend on interactive tokens again.
 - [x] **Commit the docs of record:** SATISFIED by the owner-authorized 2026-07-06 docs-of-record
   commit (this file's presence in git history is the evidence; includes EDGE_PLAYBOOK, CLAUDE.md,
   the manual, skills, fleet scaffolds, allowlist test).
