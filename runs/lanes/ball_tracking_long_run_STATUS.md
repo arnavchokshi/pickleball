@@ -127,6 +127,44 @@ OUTSTANDING (non-blocking, handed off): 16 ball tests broken by the OTHER sessio
 orchestrator.py wall_seconds edit (flagged twice in BUILD_CHECKLIST); ALL ball work uncommitted per
 owner joint-commit rule (~25 files; hashes in ledger row 22 + lane reports).
 
+## P4 VERIFIED — DELIVERED TO OWNER 2026-07-05 (committed e5789028, manager browser-verified)
+ALL 3 CLIPS RENDER HONESTLY NOW:
+- wolverine: status ran, 214/300 measured ball, ball in-court+airborne (was: parking-lot then nothing).
+- burlington: ran, 471/600 measured. outdoor: ran, ball+court.
+- COURT MAP VIEW (P2+P4, PB-Vision-style top-down) WORKS: shot-path lines, bounce dots, P3/P4 + ball
+  markers. This is the view that makes PB Vision placement look good — now ours.
+- Ball never off-court; honest measured/predicted/hidden KPI; continuous trail.
+Screenshots: runs/lanes/ball_p4_render_fix_20260706/{wolverine,burlington}/mgr_verify + wolverine/mgr_courtmap.
+REMAINING HONEST LIMIT (owner decision pending): confident-AT-NET on occluded/no-detection stretches
+(e.g. some of wolverine 6.66s) needs a CONTACT anchor = SAM-3D 70-joint skeleton = GPU body run (cached
+skeleton is RTMW 65-joint, wrist-cue-blocked). Options for owner: (a) GPU SAM-3D body run per clip for
+contact anchors, (b) accept current in-court low-confidence containment, (c) owner captures for detection.
+
+## FINAL-VERIFY FINDINGS + P4 FIX LANE (2026-07-05)
+Final-verify surfaced 3 render bugs (why the viewer looked bad):
+1. CRITICAL: my Phase A commit f1865300 bumped ball_arc_solver SCHEMA_VERSION 1->2 but the web viewer's
+   ball_track_arc_solved consumer still requires ==1 -> ball trail fails to load for ALL clips. My regression.
+2. Wolverine self-kills (experimental_off) -> renders NOTHING: whole-artifact kill is obsolete vs
+   per-segment fallback; seg5/6 have net-clearance/speed violations that don't trigger demotion so they
+   stay confident-implausible AND trip the kill; denominator bug (violations/total vs violations/eligible).
+3. Court-map view empty (no markers) — P2 CourtMapPanel data-flow bug.
+Fresh-contact facts: ball_inflections NOW regenerates at correct 30fps past frame 148 (candidate at
+frame 201/6.7s = the hit!) BUT contact_windows=0 because wrist cues need a 70-joint SAM-3D skeleton;
+cached skeleton is RTMW3D (65-joint, pre-SAM-3D-migration). So confident-at-net 6.66s needs a GPU SAM-3D
+body run (contact anchor) — a STRATEGIC decision after P4. Burlington 466/600 + outdoor 346/1151 measured
+(good). -> P4 CODEX LANE RUNNING (runs/lanes/ball_p4_render_unblock_20260705/): schema unblock +
+per-segment containment replacing whole-artifact kill (wolverine renders) + court-map markers. Then
+manager browser-verify + owner delivery + SAM-3D decision.
+
+## FULL STACK COMMITTED (2026-07-05): Phase A f1865300 + Phase B (winddown 14b68c68 + tests d96790a6)
++ P2 continuous-trail/court-map (winddown). Working tree clean, all pushed.
+KEY DIAGNOSIS: wolverine 6.66s low-confidence = STALE contact_windows (60fps time_s vs 30fps track)
+truncated contacts at frame 148 -> no contact anchor to pin the hit. Ball IS detected there (~29/30f
+bin) so RECOVERY IS POSSIBLE with fresh contacts. -> FINAL-VERIFY LANE RUNNING
+(runs/lanes/ball_final_verify_20260705/, Sonnet): regenerate 3 clips with FRESH contacts (no stale
+reuse), report whether 6.66s recovers to confident-near-net vs contained, browser-verify all 3 +
+court-map with screenshots for manager inspection. Then manager rules + owner delivery.
+
 ## OWNER FINISH-LINE ORDER 2026-07-05 ~00:5x: clean up stale agents (DONE — T5 MPS lane + orphan
 process killed; its value expired when T6 settled training); then: verify on the 3 CVAT videos that the
 implemented 3D-viewer ball looks as good as we can make it, runs fast/efficiently/accurately, and runs
