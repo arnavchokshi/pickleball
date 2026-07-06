@@ -1,0 +1,19 @@
+{
+  "status": "ran",
+  "summary": {
+    "auto_bounce_candidate_count": 6,
+    "ball_arc_render_bridge_sample_count": 96,
+    "ball_arc_render_sample_count": 2960,
+    "chain_config_degraded": "no_candidate_sidecars",
+    "coverage_world_xyz_count": 588,
+    "flight_sanity_demoted_frame_count": 46,
+    "flight_sanity_failed_segment_count": 1,
+    "net_plane_provenance": {
+      "consumed_net_plane": true,
+      "reason": "consumed"
+    },
+    "seed_anchor_count": 14,
+    "segment_count": 13
+  },
+  "wall_seconds": 105.211
+}

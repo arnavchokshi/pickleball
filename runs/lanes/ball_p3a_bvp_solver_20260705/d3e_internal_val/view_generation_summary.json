@@ -1,0 +1,43 @@
+{
+  "artifact_type": "racketsport_ball_p3a_d3e_view_generation_summary",
+  "clips": {
+    "burlington_gold_0300_low_steep_corner": {
+      "baseline_arc_path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/ball_track_arc_solved.json",
+      "baseline_detection_path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/ball_track.json",
+      "baseline_detection_visible_frames": 479,
+      "baseline_measured_grade_visible_frames": 269,
+      "baseline_product_visible_frames": 479,
+      "detection_input_max_xy_delta_px": 0.0,
+      "detection_visible_frame_sets_identical": true,
+      "frame_count": 600,
+      "product_view_max_xy_delta_px": 0.0,
+      "product_visible_frame_sets_identical": true,
+      "regen_arc_path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_track_arc_solved.json",
+      "regen_detection_input_visible_frames": 479,
+      "regen_detection_recorded_input_path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/ball_track.json",
+      "regen_measured_grade_visible_frames": 130,
+      "regen_product_visible_frames": 479
+    },
+    "wolverine_mixed_0200_mid_steep_corner": {
+      "baseline_arc_path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/ball_track_arc_solved.json",
+      "baseline_detection_path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/ball_track.json",
+      "baseline_detection_visible_frames": 229,
+      "baseline_measured_grade_visible_frames": 112,
+      "baseline_product_visible_frames": 229,
+      "detection_input_max_xy_delta_px": 0.0,
+      "detection_visible_frame_sets_identical": true,
+      "frame_count": 300,
+      "product_view_max_xy_delta_px": 0.0,
+      "product_visible_frame_sets_identical": true,
+      "regen_arc_path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/wolverine_mixed_0200_mid_steep_corner/ball_track_arc_solved.json",
+      "regen_detection_input_visible_frames": 229,
+      "regen_detection_recorded_input_path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/ball_track.json",
+      "regen_measured_grade_visible_frames": 51,
+      "regen_product_visible_frames": 229
+    }
+  },
+  "comparison_root": "runs/lanes/ball_p3a_bvp_solver_20260705/d3e_internal_val/comparison_root",
+  "measured_grade_rule": "visible frames with band == anchored_measured in the arc-solved product artifact",
+  "product_view_rule": "schema-valid BallTrack projection of arc-solved product frames; xy/conf/visible/world_xyz/speed/spin/approx preserved; source set to physics_filled for benchmark loader compatibility",
+  "schema_version": 1
+}

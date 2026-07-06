@@ -22,6 +22,7 @@ from threed.racketsport.ball_arc_solver import (
     order_event_anchors,
     solve_ball_arc_track,
 )
+from threed.racketsport.ball_arc_chain import build_ball_arc_render_artifact
 
 
 BALL_RADIUS_M = 0.0371
@@ -90,6 +91,272 @@ def test_fit_flight_segment_recovers_velocity_and_prunes_planted_fp() -> None:
     assert result.outlier_count == 1
     assert result.inlier_count >= len(observations) - 1
     assert result.reprojection_rmse_px < 2.0
+
+
+def test_fit_flight_segment_shoots_drag_bvp_to_anchor_with_diagnostics() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.for_ball_type("outdoor")
+    config = BallArcSolverConfig(max_reprojection_inlier_px=8.0, robust_pixel_sigma=2.0)
+    t0 = 0.0
+    t1 = 0.72
+    p0 = (0.15, -2.2, 1.05)
+    v0 = (2.4, 4.1, 3.2)
+    p1 = ball_arc_solver_module._integrate_positions(
+        p0,
+        v0,
+        [t1],
+        t0=t0,
+        physics=physics,
+        config=config,
+    )[0]
+    start = _anchor("contact-drag-start", "contact", t0, p0, sigma_m=0.04)
+    end = _anchor("bounce-drag-end", "bounce", t1, p1, sigma_m=0.04, status="human_reviewed")
+    observations = _observations_from_integrated_arc(calibration, p0, v0, t0=t0, t1=t1, fps=60.0, physics=physics, config=config)
+
+    result = fit_flight_segment(
+        segment_id=19,
+        start_anchor=start,
+        end_anchor=end,
+        observations=observations,
+        calibration=calibration,
+        physics=physics,
+        config=config,
+    )
+
+    shooting = result.diagnostics["bvp_shooting"]
+    assert shooting["status"] == "converged"
+    assert shooting["iterations"] <= 6
+    assert shooting["endpoint_error_m"] <= 0.005
+    assert result.endpoint_error_m <= 0.005
+    assert result.initial_velocity_mps == pytest.approx(v0, abs=0.03)
+
+
+def test_endpoint_refinement_respects_anchor_and_time_corridor_caps() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    fps = 60.0
+    t1 = 0.6
+    p0 = (0.0, -2.0, 1.0)
+    p1 = (0.4, -0.4, BALL_RADIUS_M)
+    v0 = (
+        (p1[0] - p0[0]) / t1,
+        (p1[1] - p0[1]) / t1,
+        _vz_for_endpoint(p0[2], p1[2], t1),
+    )
+    start = _anchor("contact-refine", "contact", 0.0, p0, sigma_m=0.6)
+    end = _anchor("bounce-refine", "bounce", t1, p1, sigma_m=0.6, status="auto_bounce_candidate")
+    observations = [
+        BallObservation(
+            frame=frame,
+            t=frame / fps,
+            xy=_project(calibration, _no_drag_position((8.0, 8.0, 2.0), v0, frame / fps)),
+            confidence=0.98,
+            visible=True,
+        )
+        for frame in range(0, int(t1 * fps) + 1, 3)
+    ]
+
+    result = fit_flight_segment(
+        segment_id=20,
+        start_anchor=start,
+        end_anchor=end,
+        observations=observations,
+        calibration=calibration,
+        physics=physics,
+        config=BallArcSolverConfig(max_reprojection_inlier_px=8.0, robust_pixel_sigma=2.0),
+    )
+
+    refinement = result.diagnostics["endpoint_refinement"]
+    assert refinement["status"] in {"converged", "not_improved", "skipped"}
+    assert max(abs(value) for value in refinement["delta_p0_m"]) <= 0.5 + 1e-9
+    assert max(abs(value) for value in refinement["delta_p1_m"]) <= 0.2 + 1e-9
+    assert abs(refinement["delta_t0_s"]) <= 1.0 / fps + 1e-9
+    assert abs(refinement["delta_t1_s"]) <= 1.0 / fps + 1e-9
+
+
+def test_zero_inlier_segment_becomes_bvp_fallback_and_preserves_original_fit() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    fps = 30.0
+    t0 = 0.0
+    t1 = 0.8
+    start = _anchor("start-bounce", "bounce", t0, (0.0, -2.0, BALL_RADIUS_M), sigma_m=0.05, status="human_reviewed")
+    end = _anchor("end-bounce", "bounce", t1, (0.2, 1.0, BALL_RADIUS_M), sigma_m=0.05, status="human_reviewed")
+    frames = []
+    for frame in range(int(t1 * fps) + 1):
+        t = frame / fps
+        frames.append(
+            {
+                "t": t,
+                "xy": list(_project(calibration, (8.0, 9.0, 1.4))),
+                "conf": 0.99,
+                "visible": True,
+                "world_xyz": None,
+                "approx": False,
+            }
+        )
+
+    artifact = solve_ball_arc_track(
+        ball_track={"schema_version": 1, "fps": fps, "source": "synthetic", "frames": frames, "bounces": []},
+        calibration=calibration,
+        extra_anchors=[start, end],
+        physics=physics,
+        config=BallArcSolverConfig(
+            enable_event_discovery=False,
+            enable_event_subset_selection=False,
+            enable_weak_segments=False,
+            max_reprojection_inlier_px=1.0,
+            robust_pixel_sigma=1.0,
+        ),
+    )
+
+    segment = artifact["segments"][0]
+    assert segment["status"] == "fit_bvp_fallback"
+    assert segment["endpoint_error_m"] <= 0.005
+    assert segment["diagnostics"]["fit_validity_gate"]["reason"] == "zero_inliers"
+    assert segment["diagnostics"]["fit_validity_gate"]["original_status"] == "fit"
+    assert segment["diagnostics"]["fit_validity_gate"]["original_inlier_count"] == 0
+    assert segment["diagnostics"]["fit_validity_gate"]["original_endpoint_error_m"] > 0.5
+    assert all(frame["band"] == "arc_weak" for frame in artifact["frames"] if frame.get("world_xyz") is not None)
+
+
+def test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds(tmp_path: Path) -> None:
+    fixture_path = Path(__file__).resolve().parent / "fixtures" / "wolverine_seg6_bvp_regression.json"
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    artifact = solve_ball_arc_track(
+        ball_track=fixture["ball_track"],
+        calibration=fixture["court_calibration"],
+        auto_bounce_candidates=fixture["auto_bounce_candidates"],
+        physics=PhysicsParameters.for_ball_type("outdoor"),
+        config=BallArcSolverConfig(
+            enable_event_subset_selection=False,
+            enable_event_discovery=False,
+            enable_weak_segments=False,
+            max_reprojection_inlier_px=18.0,
+        ),
+        clip_id=fixture["clip_id"],
+    )
+
+    assert artifact["status"] == "ran"
+    segment = artifact["segments"][0]
+    assert segment["status"] == "fit_bvp_fallback"
+    assert segment["diagnostics"]["fit_validity_gate"]["original_endpoint_error_m"] == pytest.approx(
+        fixture["expected_original_endpoint_error_m"],
+        abs=0.02,
+    )
+    frame_200 = artifact["frames"][fixture["frames"]["assert_frame"]]
+    assert frame_200["world_xyz"] is not None
+    assert _inside_pickleball_court_volume(frame_200["world_xyz"])
+    assert frame_200["band"] == "arc_weak"
+
+    render = build_ball_arc_render_artifact(
+        artifact,
+        flight_sanity={"schema_version": 2, "segments": [{"segment_id": 0, "verdict": "pass", "reasons": []}]},
+        generated_at="2026-07-05T00:00:00Z",
+    )
+    render_path = tmp_path / "ball_arc_render.json"
+    render_path.write_text(json.dumps(render, indent=2), encoding="utf-8")
+    reloaded = json.loads(render_path.read_text(encoding="utf-8"))
+    segment_samples = [sample for sample in reloaded["samples"] if sample["segment_id"] == 0 and sample["bridge"] is False]
+    assert segment_samples
+    assert all(_inside_pickleball_court_volume(sample["world_xyz"]) for sample in segment_samples)
+
+
+def test_physical_sanity_checks_pickleball_court_volume_boundaries() -> None:
+    physics = PhysicsParameters.no_drag()
+    config = BallArcSolverConfig(
+        min_plausible_speed_mps=0.0,
+        max_plausible_speed_mps=50.0,
+        court_margin_m=4.0,
+        court_z_min_m=-0.15,
+    )
+    x_hi = 3.048 + 4.0
+    y_hi = 6.7056 + 4.0
+
+    inside = ball_arc_solver_module._physical_sanity(
+        (x_hi - 0.001, y_hi - 0.001, 0.2),
+        (0.0, 0.0, 0.1),
+        0.0,
+        0.1,
+        physics,
+        config,
+        None,
+    )
+    outside_x = ball_arc_solver_module._physical_sanity(
+        (x_hi + 0.001, 0.0, 0.2),
+        (0.0, 0.0, 0.1),
+        0.0,
+        0.1,
+        physics,
+        config,
+        None,
+    )
+    underground = ball_arc_solver_module._physical_sanity(
+        (0.0, 0.0, -0.151),
+        (0.0, 0.0, 0.1),
+        0.0,
+        0.1,
+        physics,
+        config,
+        None,
+    )
+
+    assert "outside_court_volume" not in inside["violations"]
+    assert "outside_court_volume" in outside_x["violations"]
+    assert "outside_court_volume" in underground["violations"]
+
+
+def test_contact_anchor_sigma_interpolates_from_joint_and_event_confidence() -> None:
+    assert ball_arc_solver_module._contact_anchor_sigma_from_confidence(0.95, 0.85) == pytest.approx(0.15)
+    assert ball_arc_solver_module._contact_anchor_sigma_from_confidence(0.34, 0.9) == pytest.approx(0.45)
+    assert ball_arc_solver_module._contact_anchor_sigma_from_confidence(0.9, 0.5) == pytest.approx(0.35)
+
+
+def test_candidate_association_refits_freeze_refined_endpoints() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    fps = 60.0
+    t1 = 0.6
+    p0 = (0.2, -2.0, 1.1)
+    v0 = (0.8, 3.2, _vz_for_endpoint(p0[2], BALL_RADIUS_M, t1))
+    p1 = _no_drag_position(p0, v0, t1)
+    start = _anchor("contact-irls-freeze", "contact", 0.0, p0, sigma_m=0.3)
+    end = _anchor("bounce-irls-freeze", "bounce", t1, p1, sigma_m=0.3, status="auto_bounce_candidate")
+    primary = _observations_from_arc(calibration, p0, v0, t0=0.0, t1=t1, fps=fps)
+    candidate_sets = {
+        obs.frame: [
+            obs,
+            BallObservation(
+                frame=obs.frame,
+                t=obs.t,
+                xy=(obs.xy[0] + 6.0, obs.xy[1] - 4.0),
+                confidence=0.9,
+                visible=True,
+                observation_source="tracknet:shifted_candidate",
+            ),
+        ]
+        for obs in primary
+    }
+
+    result = fit_flight_segment(
+        segment_id=21,
+        start_anchor=start,
+        end_anchor=end,
+        observations=primary,
+        candidate_sets_by_frame=candidate_sets,
+        calibration=calibration,
+        physics=physics,
+        config=BallArcSolverConfig(
+            max_reprojection_inlier_px=10.0,
+            robust_pixel_sigma=2.0,
+            candidate_selection_max_iterations=3,
+        ),
+    )
+
+    assert result.candidate_association is not None
+    assert result.candidate_association["endpoint_refinement_frozen"] is True
+    assert result.diagnostics["endpoint_refinement"]["frozen_for_candidate_association"] is True
 
 
 def test_fit_flight_segment_blocks_invalid_bounds_from_below_floor_anchor() -> None:
@@ -1614,6 +1881,14 @@ def _no_drag_position(
     )
 
 
+def _inside_pickleball_court_volume(world_xyz: list[float] | tuple[float, float, float]) -> bool:
+    return (
+        -7.048 <= float(world_xyz[0]) <= 7.048
+        and -10.7056 <= float(world_xyz[1]) <= 10.7056
+        and float(world_xyz[2]) >= -0.15
+    )
+
+
 def _observations_from_arc(
     calibration: dict,
     p0: tuple[float, float, float],
@@ -1640,6 +1915,35 @@ def _observations_from_arc(
                 visible=True,
                 diameter_px=diameter,
                 size_confidence=0.95 if diameter is not None else None,
+            )
+        )
+    return observations
+
+
+def _observations_from_integrated_arc(
+    calibration: dict,
+    p0: tuple[float, float, float],
+    v0: tuple[float, float, float],
+    *,
+    t0: float,
+    t1: float,
+    fps: float,
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> list[BallObservation]:
+    observations: list[BallObservation] = []
+    start = int(round(t0 * fps))
+    end = int(round(t1 * fps))
+    times = [frame / fps for frame in range(start, end + 1)]
+    worlds = ball_arc_solver_module._integrate_positions(p0, v0, times, t0=t0, physics=physics, config=config)
+    for frame, t, world in zip(range(start, end + 1), times, worlds, strict=True):
+        observations.append(
+            BallObservation(
+                frame=frame,
+                t=t,
+                xy=_project(calibration, world),
+                confidence=0.95,
+                visible=True,
             )
         )
     return observations

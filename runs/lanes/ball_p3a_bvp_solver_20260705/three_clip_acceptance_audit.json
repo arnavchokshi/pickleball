@@ -1,0 +1,406 @@
+{
+  "clips": {
+    "burlington_gold_0300_low_steep_corner": {
+      "bad_fit_segments": [],
+      "d3b_reclassification": {
+        "accepted_as_is": true,
+        "boundary_shift_benign": [
+          {
+            "baseline_interval": [
+              139,
+              151
+            ],
+            "baseline_segment_id": 4,
+            "current_overlap": [
+              {
+                "frames": [
+                  132,
+                  169
+                ],
+                "status": "fit"
+              }
+            ],
+            "reason": "missing_exact_interval_boundary_shift_benign"
+          },
+          {
+            "baseline_interval": [
+              497,
+              543
+            ],
+            "baseline_segment_id": 16,
+            "current_overlap": [
+              {
+                "frames": [
+                  497,
+                  520
+                ],
+                "status": "fit"
+              },
+              {
+                "frames": [
+                  520,
+                  588
+                ],
+                "status": "fit_bvp_fallback"
+              }
+            ],
+            "reason": "missing_exact_interval_boundary_shift_benign"
+          }
+        ],
+        "genuinely_demoted_court_volume": [
+          {
+            "accepted": true,
+            "artifact_interval": [
+              75,
+              132
+            ],
+            "baseline_interval": [
+              107,
+              132
+            ],
+            "baseline_segment_id": 2,
+            "reason": "outside_court_volume",
+            "status": "fit_bvp_fallback"
+          },
+          {
+            "accepted": true,
+            "artifact_interval": [
+              424,
+              497
+            ],
+            "baseline_interval": [
+              447,
+              497
+            ],
+            "baseline_segment_id": 15,
+            "manager_interval": [
+              423,
+              497
+            ],
+            "reason": "outside_court_volume",
+            "status": "fit_bvp_fallback"
+          }
+        ],
+        "manager_ruling": "D.3(b) accepted as-is by manager ruling on 2026-07-05: exact interval changes are not a Phase A failure; court-volume demotions are expected honest low-confidence downgrades for depth-ambiguous arcs that reproject to detections but exit court+4m. Do not loosen the court-volume gate; Phase B anchor recovery owns future recovery.",
+        "phase_b_followup": "anchor recovery only; Phase A should keep the strict court-volume gate",
+        "previous_missing_exact_interval_flags": [
+          {
+            "baseline_endpoint_error_m": 0.033695,
+            "baseline_segment_id": 2,
+            "frames": [
+              107,
+              132
+            ],
+            "reason": "missing_exact_interval"
+          },
+          {
+            "baseline_endpoint_error_m": 0.019624,
+            "baseline_segment_id": 4,
+            "frames": [
+              139,
+              151
+            ],
+            "reason": "missing_exact_interval"
+          },
+          {
+            "baseline_endpoint_error_m": 0.1741,
+            "baseline_segment_id": 15,
+            "frames": [
+              447,
+              497
+            ],
+            "reason": "missing_exact_interval"
+          },
+          {
+            "baseline_endpoint_error_m": 0.0,
+            "baseline_segment_id": 16,
+            "frames": [
+              497,
+              543
+            ],
+            "reason": "missing_exact_interval"
+          }
+        ]
+      },
+      "kill_reasons": [],
+      "named": {
+        "burlington_seg0": {
+          "baseline_interval": [
+            19,
+            92
+          ],
+          "converted": true,
+          "overlaps": [
+            {
+              "frames": [
+                0,
+                75
+              ],
+              "overlap": 56,
+              "reason": "outside_court_volume",
+              "segment_id": 0,
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "frames": [
+                75,
+                132
+              ],
+              "overlap": 17,
+              "reason": "outside_court_volume",
+              "segment_id": 1,
+              "status": "fit_bvp_fallback"
+            }
+          ]
+        },
+        "burlington_seg13": {
+          "baseline_interval": [
+            347,
+            423
+          ],
+          "converted": true,
+          "overlaps": [
+            {
+              "frames": [
+                347,
+                355
+              ],
+              "overlap": 8,
+              "reason": "low_inlier_fraction",
+              "segment_id": 8,
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "frames": [
+                355,
+                423
+              ],
+              "overlap": 68,
+              "reason": "outside_court_volume",
+              "segment_id": 9,
+              "status": "fit_bvp_fallback"
+            }
+          ]
+        }
+      },
+      "physical_new": {
+        "fallback_excluded_segment_count": 8,
+        "segment_count": 13,
+        "violation_count": 0,
+        "violation_eligible_segment_count": 5,
+        "violation_fraction": 0.0
+      },
+      "physical_old": {
+        "fallback_excluded_segment_count": null,
+        "segment_count": 16,
+        "violation_count": 2,
+        "violation_fraction": 0.125
+      },
+      "render_bad_samples": [],
+      "status": "ran"
+    },
+    "outdoor_webcam_iynbd_1500_long_high_baseline": {
+      "bad_fit_segments": [],
+      "d3b_reclassification": {
+        "accepted_as_is": true,
+        "boundary_shift_benign": [],
+        "genuinely_demoted_court_volume": [],
+        "manager_ruling": "D.3(b) accepted as-is by manager ruling on 2026-07-05: exact interval changes are not a Phase A failure; court-volume demotions are expected honest low-confidence downgrades for depth-ambiguous arcs that reproject to detections but exit court+4m. Do not loosen the court-volume gate; Phase B anchor recovery owns future recovery.",
+        "phase_b_followup": "anchor recovery only; Phase A should keep the strict court-volume gate",
+        "previous_missing_exact_interval_flags": []
+      },
+      "kill_reasons": [],
+      "named": {
+        "outdoor_seg1": {
+          "baseline_interval": [
+            321,
+            426
+          ],
+          "converted": true,
+          "overlaps": [
+            {
+              "frames": [
+                321,
+                426
+              ],
+              "overlap": 105,
+              "reason": "outside_court_volume",
+              "segment_id": 1,
+              "status": "fit_bvp_fallback"
+            }
+          ]
+        },
+        "outdoor_seg2": {
+          "baseline_interval": [
+            426,
+            596
+          ],
+          "converted": true,
+          "overlaps": [
+            {
+              "frames": [
+                426,
+                596
+              ],
+              "overlap": 170,
+              "reason": "outside_court_volume",
+              "segment_id": 2,
+              "status": "fit_bvp_fallback"
+            }
+          ]
+        }
+      },
+      "physical_new": {
+        "fallback_excluded_segment_count": 3,
+        "segment_count": 7,
+        "violation_count": 1,
+        "violation_eligible_segment_count": 4,
+        "violation_fraction": 0.142857
+      },
+      "physical_old": {
+        "fallback_excluded_segment_count": null,
+        "segment_count": 7,
+        "violation_count": 3,
+        "violation_fraction": 0.428571
+      },
+      "render_bad_samples": [],
+      "status": "ran"
+    },
+    "wolverine_mixed_0200_mid_steep_corner": {
+      "bad_fit_segments": [],
+      "d3b_reclassification": {
+        "accepted_as_is": true,
+        "boundary_shift_benign": [],
+        "genuinely_demoted_court_volume": [
+          {
+            "accepted": true,
+            "artifact_interval": [
+              85,
+              105
+            ],
+            "baseline_interval": [
+              70,
+              104
+            ],
+            "baseline_segment_id": 4,
+            "inliers": "13/16",
+            "manager_interval": [
+              84,
+              104
+            ],
+            "original_endpoint_error_m": 0.862,
+            "reason": "outside_court_volume",
+            "status": "fit_bvp_fallback"
+          }
+        ],
+        "manager_ruling": "D.3(b) accepted as-is by manager ruling on 2026-07-05: exact interval changes are not a Phase A failure; court-volume demotions are expected honest low-confidence downgrades for depth-ambiguous arcs that reproject to detections but exit court+4m. Do not loosen the court-volume gate; Phase B anchor recovery owns future recovery.",
+        "phase_b_followup": "anchor recovery only; Phase A should keep the strict court-volume gate",
+        "previous_missing_exact_interval_flags": [
+          {
+            "baseline_endpoint_error_m": 0.465495,
+            "baseline_segment_id": 4,
+            "frames": [
+              70,
+              104
+            ],
+            "reason": "missing_exact_interval"
+          }
+        ]
+      },
+      "kill_reasons": [],
+      "named": {
+        "wolverine_seg6": {
+          "baseline_interval": [
+            156,
+            217
+          ],
+          "converted": true,
+          "overlaps": [
+            {
+              "frames": [
+                156,
+                217
+              ],
+              "overlap": 61,
+              "reason": "outside_court_volume",
+              "segment_id": 6,
+              "status": "fit_bvp_fallback"
+            }
+          ]
+        }
+      },
+      "physical_new": {
+        "fallback_excluded_segment_count": 7,
+        "segment_count": 10,
+        "violation_count": 2,
+        "violation_eligible_segment_count": 3,
+        "violation_fraction": 0.2
+      },
+      "physical_old": {
+        "fallback_excluded_segment_count": null,
+        "segment_count": 10,
+        "violation_count": 2,
+        "violation_fraction": 0.2
+      },
+      "render_bad_samples": [],
+      "status": "ran"
+    }
+  },
+  "criteria": {
+    "a_no_bad_fit_segments_and_named_violators_convert": true,
+    "b_bad_fit_segments_empty_all_clips": true,
+    "b_manager_ruling_accepts_boundary_shift_and_court_volume_demotions": true,
+    "b_render_bad_samples_empty_all_clips": true,
+    "c_render_samples_in_bounds": true,
+    "d_outdoor_violation_fraction_improves": true,
+    "e_internal_val_no_detection_or_product_view_f1_regresses_gt_1pt": true,
+    "e_measured_grade_recall_drop_accepted_honesty_tradeoff": true
+  },
+  "d3b_manager_ruling": {
+    "accepted_as_is": true,
+    "real_acceptance_surface": "bad_fit_segments == [] and render_bad_samples == [] on all three clips",
+    "recorded_at": "2026-07-05",
+    "ruling": "D.3(b) accepted as-is by manager ruling on 2026-07-05: exact interval changes are not a Phase A failure; court-volume demotions are expected honest low-confidence downgrades for depth-ambiguous arcs that reproject to detections but exit court+4m. Do not loosen the court-volume gate; Phase B anchor recovery owns future recovery."
+  },
+  "d3e_internal_val": {
+    "acceptance": {
+      "detection_f1_regression_floor": -0.01,
+      "measured_grade_recall_drop_is_accepted_honesty_tradeoff": true,
+      "no_detection_or_product_view_f1_regresses_more_than_1pt": true,
+      "worst_detection_delta": 0.0,
+      "worst_product_view_delta": 0.0
+    },
+    "aggregate": {
+      "detection_f1_at_20": {
+        "after": 0.7852257181942545,
+        "baseline": 0.7852257181942545,
+        "delta": 0.0
+      },
+      "measured_grade_f1_at_20": {
+        "after": 0.3700534759358289,
+        "baseline": 0.6237885462555066,
+        "delta": -0.25373507031967774
+      },
+      "measured_grade_hit_recall": {
+        "after": 0.23872679045092837,
+        "baseline": 0.47877984084880637,
+        "delta": -0.240053050397878
+      },
+      "measured_grade_recall_at_20": {
+        "after": 0.22944297082228116,
+        "baseline": 0.46949602122015915,
+        "delta": -0.240053050397878
+      },
+      "product_view_f1_at_20": {
+        "after": 0.7852257181942545,
+        "baseline": 0.7852257181942545,
+        "delta": 0.0
+      }
+    },
+    "benchmark_json": "runs/lanes/ball_p3a_bvp_solver_20260705/d3e_internal_val/benchmark_ball_tracks_against_cvat.json",
+    "comparison_json": "runs/lanes/ball_p3a_bvp_solver_20260705/d3e_internal_val/comparison.json",
+    "comparison_md": "runs/lanes/ball_p3a_bvp_solver_20260705/d3e_internal_val/comparison.md"
+  },
+  "failures": [],
+  "objective_result": "PASS"
+}

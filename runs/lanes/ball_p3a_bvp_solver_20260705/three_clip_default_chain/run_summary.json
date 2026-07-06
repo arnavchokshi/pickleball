@@ -1,0 +1,59 @@
+{
+  "burlington_gold_0300_low_steep_corner": {
+    "status": "ran",
+    "summary": {
+      "auto_bounce_candidate_count": 6,
+      "ball_arc_render_bridge_sample_count": 96,
+      "ball_arc_render_sample_count": 2883,
+      "chain_config_degraded": "no_candidate_sidecars",
+      "coverage_world_xyz_count": 588,
+      "flight_sanity_demoted_frame_count": 46,
+      "flight_sanity_failed_segment_count": 1,
+      "net_plane_provenance": {
+        "consumed_net_plane": true,
+        "reason": "consumed"
+      },
+      "seed_anchor_count": 14,
+      "segment_count": 13
+    },
+    "wall_seconds": 106.454
+  },
+  "outdoor_webcam_iynbd_1500_long_high_baseline": {
+    "status": "ran",
+    "summary": {
+      "auto_bounce_candidate_count": 8,
+      "ball_arc_render_bridge_sample_count": 0,
+      "ball_arc_render_sample_count": 2249,
+      "chain_config_degraded": "no_candidate_sidecars",
+      "coverage_world_xyz_count": 473,
+      "flight_sanity_demoted_frame_count": 0,
+      "flight_sanity_failed_segment_count": 0,
+      "net_plane_provenance": {
+        "consumed_net_plane": true,
+        "reason": "consumed"
+      },
+      "seed_anchor_count": 8,
+      "segment_count": 7
+    },
+    "wall_seconds": 87.267
+  },
+  "wolverine_mixed_0200_mid_steep_corner": {
+    "status": "ran",
+    "summary": {
+      "auto_bounce_candidate_count": 7,
+      "ball_arc_render_bridge_sample_count": 83,
+      "ball_arc_render_sample_count": 1400,
+      "chain_config_degraded": "no_candidate_sidecars",
+      "coverage_world_xyz_count": 290,
+      "flight_sanity_demoted_frame_count": 3,
+      "flight_sanity_failed_segment_count": 5,
+      "net_plane_provenance": {
+        "consumed_net_plane": true,
+        "reason": "consumed"
+      },
+      "seed_anchor_count": 11,
+      "segment_count": 10
+    },
+    "wall_seconds": 116.838
+  }
+}

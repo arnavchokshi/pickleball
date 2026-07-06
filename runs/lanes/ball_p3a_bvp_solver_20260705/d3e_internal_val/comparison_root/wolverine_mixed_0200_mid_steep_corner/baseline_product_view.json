@@ -1,0 +1,5068 @@
+{
+  "bounces": [],
+  "fps": 30.0,
+  "frames": [
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.0,
+      "visible": true,
+      "world_xyz": [
+        1.251090168,
+        12.926018167,
+        0.0
+      ],
+      "xy": [
+        352.2960223625727,
+        304.834887381838
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.03333333333333333,
+      "visible": true,
+      "world_xyz": [
+        0.916087115,
+        12.326917478,
+        0.066651244
+      ],
+      "xy": [
+        331.20937464661347,
+        308.9895060988852
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.06666666666666667,
+      "visible": true,
+      "world_xyz": [
+        0.588660451,
+        11.741365978,
+        0.12102152
+      ],
+      "xy": [
+        310.75558205912955,
+        315.54841616736013
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.1,
+      "visible": true,
+      "world_xyz": [
+        0.268465804,
+        11.168747812,
+        0.163414458
+      ],
+      "xy": [
+        290.51555732305246,
+        322.64901135396565
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.13333333333333333,
+      "visible": true,
+      "world_xyz": [
+        -0.044816629,
+        10.608491063,
+        0.194113106
+      ],
+      "xy": [
+        271.9080447022619,
+        329.0940611472507
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.87900174,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.16666666666666666,
+      "visible": true,
+      "world_xyz": [
+        -0.351484224,
+        10.060063918,
+        0.213381887
+      ],
+      "xy": [
+        253.40080440084762,
+        339.42214702477315
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.2,
+      "visible": true,
+      "world_xyz": [
+        -0.651813843,
+        9.522971255,
+        0.221468349
+      ],
+      "xy": [
+        1534.2683926538928,
+        208.90735706155712
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.23333333333333334,
+      "visible": true,
+      "world_xyz": [
+        -0.946063544,
+        8.996751578,
+        0.218604743
+      ],
+      "xy": [
+        1559.443351093217,
+        217.5566489067833
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.26666666666666666,
+      "visible": true,
+      "world_xyz": [
+        -1.234474114,
+        8.480974275,
+        0.205009448
+      ],
+      "xy": [
+        1579.7064469165755,
+        225.2935530834247
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.3,
+      "visible": false,
+      "world_xyz": [
+        -1.517270454,
+        7.975237147,
+        0.180888249
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.3333333333333333,
+      "visible": false,
+      "world_xyz": [
+        -1.794662821,
+        7.479164179,
+        0.146435515
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.36666666666666664,
+      "visible": true,
+      "world_xyz": [
+        -2.066847958,
+        6.992403531,
+        0.101835247
+      ],
+      "xy": [
+        159.16820224112314,
+        401.57918164877145
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.4,
+      "visible": true,
+      "world_xyz": [
+        -2.334010113,
+        6.514625703,
+        0.047262056
+      ],
+      "xy": [
+        152.48613600649875,
+        392.1462084434411
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.43333333333333335,
+      "visible": true,
+      "world_xyz": [
+        -2.592825499,
+        6.039534774,
+        0.05377363
+      ],
+      "xy": [
+        137.02712891190632,
+        378.84731156030307
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.4666666666666667,
+      "visible": true,
+      "world_xyz": [
+        -2.727577894,
+        5.582227779,
+        0.174428324
+      ],
+      "xy": [
+        125.21518353296611,
+        370.67381632325095
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.5,
+      "visible": true,
+      "world_xyz": [
+        -2.860147052,
+        5.13233,
+        0.282319786
+      ],
+      "xy": [
+        114.13969071726564,
+        363.98829938132167
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.5333333333333333,
+      "visible": true,
+      "world_xyz": [
+        -2.990613115,
+        4.689569459,
+        0.377689425
+      ],
+      "xy": [
+        101.77248822848509,
+        358.4739307728429
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.5666666666666667,
+      "visible": true,
+      "world_xyz": [
+        -3.119051126,
+        4.253691489,
+        0.460764638
+      ],
+      "xy": [
+        91.78762658248911,
+        353.94151476847986
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.6,
+      "visible": true,
+      "world_xyz": [
+        -3.245531359,
+        3.824457594,
+        0.531759983
+      ],
+      "xy": [
+        80.77479314129067,
+        351.02591466659186
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.6333333333333333,
+      "visible": true,
+      "world_xyz": [
+        -3.370119635,
+        3.401644403,
+        0.590878261
+      ],
+      "xy": [
+        70.65207756079428,
+        349.9090906500411
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.6666666666666666,
+      "visible": true,
+      "world_xyz": [
+        -3.4928776,
+        2.98504271,
+        0.638311522
+      ],
+      "xy": [
+        59.697568037520334,
+        349.77104685290016
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.7,
+      "visible": true,
+      "world_xyz": [
+        -3.613862984,
+        2.574456594,
+        0.674242001
+      ],
+      "xy": [
+        50.648739516331446,
+        351.4093926937285
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.7333333333333333,
+      "visible": true,
+      "world_xyz": [
+        2.288667095,
+        3.064639351,
+        0.141468453
+      ],
+      "xy": [
+        41.36509688683998,
+        353.1971193461973
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.7666666666666667,
+      "visible": true,
+      "world_xyz": [
+        2.63480348,
+        3.036080521,
+        0.247005873
+      ],
+      "xy": [
+        33.9605265598336,
+        357.4064555009992
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.8,
+      "visible": true,
+      "world_xyz": [
+        2.976789296,
+        3.007864143,
+        0.340446517
+      ],
+      "xy": [
+        25.548749083391435,
+        361.7425265053509
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.8333333333333334,
+      "visible": false,
+      "world_xyz": [
+        3.314754988,
+        2.979979455,
+        0.42195622
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.8666666666666667,
+      "visible": true,
+      "world_xyz": [
+        3.648822184,
+        2.952416422,
+        0.491691995
+      ],
+      "xy": [
+        1092.9293146245664,
+        240.00000000000003
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.9,
+      "visible": true,
+      "world_xyz": [
+        3.979104114,
+        2.925165702,
+        0.549802817
+      ],
+      "xy": [
+        1070.187865274363,
+        247.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.9333333333333333,
+      "visible": true,
+      "world_xyz": [
+        4.305705984,
+        2.898218614,
+        0.596430368
+      ],
+      "xy": [
+        1047.617309847342,
+        254.53910328244734
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.9666666666666667,
+      "visible": true,
+      "world_xyz": [
+        4.628725349,
+        2.87156711,
+        0.63170975
+      ],
+      "xy": [
+        1023.6581621951232,
+        266.41784544786896
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.0,
+      "visible": true,
+      "world_xyz": [
+        4.948252444,
+        2.845203743,
+        0.655770172
+      ],
+      "xy": [
+        1002.8931088792907,
+        275.66955516838675
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.0333333333333334,
+      "visible": true,
+      "world_xyz": [
+        5.264370526,
+        2.819121646,
+        0.668735601
+      ],
+      "xy": [
+        982.0372089511263,
+        285.89757344158545
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.0666666666666667,
+      "visible": false,
+      "world_xyz": [
+        5.577156178,
+        2.793314499,
+        0.67072539
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.8,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.1,
+      "visible": true,
+      "world_xyz": [
+        5.886679629,
+        2.767776508,
+        0.661854877
+      ],
+      "xy": [
+        941.0,
+        308.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.8,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.1333333333333333,
+      "visible": true,
+      "world_xyz": [
+        6.193005046,
+        2.742502379,
+        0.642235963
+      ],
+      "xy": [
+        924.0,
+        318.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.1666666666666667,
+      "visible": false,
+      "world_xyz": [
+        6.496190841,
+        2.717487292,
+        0.611977648
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.2,
+      "visible": false,
+      "world_xyz": [
+        6.796289956,
+        2.692726879,
+        0.571186559
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.2333333333333334,
+      "visible": false,
+      "world_xyz": [
+        3.520499657,
+        2.064389755,
+        0.632286604
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.2666666666666666,
+      "visible": true,
+      "world_xyz": [
+        3.966944877,
+        2.218240894,
+        0.771265397
+      ],
+      "xy": [
+        926.5544137190245,
+        276.574894703079
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.3,
+      "visible": true,
+      "world_xyz": [
+        4.406153128,
+        2.369598073,
+        0.897182931
+      ],
+      "xy": [
+        949.1453502987406,
+        264.8115581843117
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.3333333333333333,
+      "visible": true,
+      "world_xyz": [
+        4.838395988,
+        2.518554884,
+        1.010293272
+      ],
+      "xy": [
+        970.8074553501817,
+        254.9587967544144
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.3666666666666667,
+      "visible": true,
+      "world_xyz": [
+        5.26392773,
+        2.665198951,
+        1.110835372
+      ],
+      "xy": [
+        995.7035157234856,
+        244.12835763920532
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.4,
+      "visible": true,
+      "world_xyz": [
+        5.682986464,
+        2.809612331,
+        1.199034316
+      ],
+      "xy": [
+        1018.8806662367056,
+        233.5948203667914
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.4333333333333333,
+      "visible": true,
+      "world_xyz": [
+        6.095795187,
+        2.951871871,
+        1.27510248
+      ],
+      "xy": [
+        1042.2559501576714,
+        225.49188982645785
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.4666666666666666,
+      "visible": false,
+      "world_xyz": [
+        6.502562743,
+        3.092049543,
+        1.33924059
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.5,
+      "visible": false,
+      "world_xyz": [
+        6.9034847,
+        3.230212741,
+        1.391638719
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.5333333333333334,
+      "visible": false,
+      "world_xyz": [
+        7.298744158,
+        3.366424565,
+        1.432477208
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.5666666666666667,
+      "visible": false,
+      "world_xyz": [
+        7.688512499,
+        3.500744074,
+        1.461927529
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.6,
+      "visible": false,
+      "world_xyz": [
+        8.072950073,
+        3.633226528,
+        1.48015309
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.6333333333333333,
+      "visible": false,
+      "world_xyz": [
+        8.452206846,
+        3.763923608,
+        1.487309995
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.6666666666666667,
+      "visible": false,
+      "world_xyz": [
+        8.826422997,
+        3.892883619,
+        1.483547747
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.7,
+      "visible": false,
+      "world_xyz": [
+        9.195729478,
+        4.020151691,
+        1.469009919
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.7333333333333334,
+      "visible": false,
+      "world_xyz": [
+        9.560248544,
+        4.145769955,
+        1.443834776
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.7666666666666666,
+      "visible": false,
+      "world_xyz": [
+        9.920094253,
+        4.269777715,
+        1.408155866
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.8,
+      "visible": false,
+      "world_xyz": [
+        10.275372933,
+        4.392211615,
+        1.362102572
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.8333333333333333,
+      "visible": false,
+      "world_xyz": [
+        10.626183636,
+        4.513105789,
+        1.305800626
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.8666666666666667,
+      "visible": false,
+      "world_xyz": [
+        10.972618561,
+        4.63249201,
+        1.239372598
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.9,
+      "visible": false,
+      "world_xyz": [
+        11.314763469,
+        4.750399831,
+        1.162938346
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.9333333333333333,
+      "visible": false,
+      "world_xyz": [
+        11.65269807,
+        4.866856724,
+        1.076615436
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 1.9666666666666666,
+      "visible": false,
+      "world_xyz": [
+        11.986496404,
+        4.981888202,
+        0.98051954
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.0,
+      "visible": false,
+      "world_xyz": [
+        12.316227203,
+        5.095517952,
+        0.874764789
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.033333333333333,
+      "visible": false,
+      "world_xyz": [
+        12.641954242,
+        5.207767952,
+        0.759464108
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.066666666666667,
+      "visible": false,
+      "world_xyz": [
+        12.963736673,
+        5.318658585,
+        0.634729522
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.1,
+      "visible": false,
+      "world_xyz": [
+        13.281629355,
+        5.428208758,
+        0.500672426
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.1333333333333333,
+      "visible": false,
+      "world_xyz": [
+        13.595683164,
+        5.536436003,
+        0.357403839
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.1666666666666665,
+      "visible": false,
+      "world_xyz": [
+        13.905945296,
+        5.643356584,
+        0.205034617
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.2,
+      "visible": false,
+      "world_xyz": [
+        14.21245956,
+        5.748985598,
+        0.043675654
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.2333333333333334,
+      "visible": false,
+      "world_xyz": [
+        14.515266654,
+        5.85333707,
+        -0.126561952
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.2666666666666666,
+      "visible": false,
+      "world_xyz": [
+        14.814404434,
+        5.956424047,
+        -0.305566751
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.3,
+      "visible": false,
+      "world_xyz": [
+        15.109908171,
+        6.058258682,
+        -0.493226824
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.3333333333333335,
+      "visible": false,
+      "world_xyz": [
+        1.238591132,
+        5.27158192,
+        0.6059191
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.3666666666666667,
+      "visible": false,
+      "world_xyz": [
+        1.096250974,
+        4.831672877,
+        0.787221655
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.4,
+      "visible": false,
+      "world_xyz": [
+        0.956236433,
+        4.398951266,
+        0.954754266
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.433333333333333,
+      "visible": true,
+      "world_xyz": [
+        0.818455598,
+        3.97313303,
+        1.108804349
+      ],
+      "xy": [
+        555.2372722181353,
+        276.8016445186594
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.466666666666667,
+      "visible": true,
+      "world_xyz": [
+        0.682822425,
+        3.553952245,
+        1.249641388
+      ],
+      "xy": [
+        558.1981964672776,
+        259.6451200684412
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.5,
+      "visible": true,
+      "world_xyz": [
+        0.549256342,
+        3.141159901,
+        1.377518375
+      ],
+      "xy": [
+        562.274889990577,
+        243.68541048397134
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.533333333333333,
+      "visible": true,
+      "world_xyz": [
+        0.417681888,
+        2.734522783,
+        1.492673142
+      ],
+      "xy": [
+        567.1635148554723,
+        228.00081060124504
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.566666666666667,
+      "visible": true,
+      "world_xyz": [
+        0.288028388,
+        2.333822462,
+        1.595329585
+      ],
+      "xy": [
+        571.5570980058195,
+        213.85639760582853
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.6,
+      "visible": true,
+      "world_xyz": [
+        0.160229648,
+        1.938854366,
+        1.685698798
+      ],
+      "xy": [
+        577.6724228104405,
+        200.86485753095064
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.6333333333333333,
+      "visible": true,
+      "world_xyz": [
+        0.034223688,
+        1.549426942,
+        1.763980137
+      ],
+      "xy": [
+        584.2547936837709,
+        188.5617401713632
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.6666666666666665,
+      "visible": true,
+      "world_xyz": [
+        -0.090047513,
+        1.165360874,
+        1.830362193
+      ],
+      "xy": [
+        590.858433533912,
+        175.62577669033948
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.7,
+      "visible": true,
+      "world_xyz": [
+        -0.212638245,
+        0.786488373,
+        1.885023722
+      ],
+      "xy": [
+        597.0531828191957,
+        166.7256526285634
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.7333333333333334,
+      "visible": true,
+      "world_xyz": [
+        -0.333599286,
+        0.412652513,
+        1.9281345
+      ],
+      "xy": [
+        603.959744185052,
+        158.14334909204155
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.7666666666666666,
+      "visible": true,
+      "world_xyz": [
+        -0.452978091,
+        0.043706626,
+        1.959856133
+      ],
+      "xy": [
+        611.0143876335302,
+        150.77461544932282
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.8,
+      "visible": true,
+      "world_xyz": [
+        -0.570818986,
+        -0.320486275,
+        1.980342821
+      ],
+      "xy": [
+        620.8269352161229,
+        143.80107977990917
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.8333333333333335,
+      "visible": true,
+      "world_xyz": [
+        -0.687163333,
+        -0.680054022,
+        1.989742073
+      ],
+      "xy": [
+        628.6091520879445,
+        140.06972294639021
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.8666666666666667,
+      "visible": true,
+      "world_xyz": [
+        -0.802049694,
+        -1.035115796,
+        1.988195382
+      ],
+      "xy": [
+        637.4502923814078,
+        136.38730099527143
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.9,
+      "visible": true,
+      "world_xyz": [
+        -0.915513987,
+        -1.3857826,
+        1.975838869
+      ],
+      "xy": [
+        648.154931508912,
+        136.4351652697939
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.933333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.027589626,
+        -1.732157703,
+        1.952803878
+      ],
+      "xy": [
+        659.5075001210356,
+        138.25830223224474
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 2.966666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.138307661,
+        -2.074337066,
+        1.919217551
+      ],
+      "xy": [
+        674.0291423717744,
+        145.59851261357528
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.0,
+      "visible": true,
+      "world_xyz": [
+        -1.247696909,
+        -2.412409752,
+        1.87520336
+      ],
+      "xy": [
+        685.3277087585617,
+        150.54374102519392
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.033333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.355784084,
+        -2.746458314,
+        1.820881609
+      ],
+      "xy": [
+        700.2951077261292,
+        163.02191921031957
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.066666666666667,
+      "visible": false,
+      "world_xyz": [
+        -1.46259391,
+        -3.076559174,
+        1.756369909
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.1,
+      "visible": true,
+      "world_xyz": [
+        -1.56814925,
+        -3.40278298,
+        1.681783618
+      ],
+      "xy": [
+        731.6533098403121,
+        192.88443661343737
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.1333333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.672471209,
+        -3.725194967,
+        1.597236252
+      ],
+      "xy": [
+        748.3797847514878,
+        214.8397130019838
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.1666666666666665,
+      "visible": true,
+      "world_xyz": [
+        -1.775579252,
+        -4.043855288,
+        1.502839864
+      ],
+      "xy": [
+        768.6980056383314,
+        242.59734085110864
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.2,
+      "visible": true,
+      "world_xyz": [
+        -1.877491308,
+        -4.358819351,
+        1.398705396
+      ],
+      "xy": [
+        788.7978591491333,
+        275.0451830855499
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.2333333333333334,
+      "visible": true,
+      "world_xyz": [
+        -1.978223871,
+        -4.67013814,
+        1.284943004
+      ],
+      "xy": [
+        812.0386691503392,
+        313.4628154775033
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.2666666666666666,
+      "visible": true,
+      "world_xyz": [
+        -2.077792108,
+        -4.977858521,
+        1.161662345
+      ],
+      "xy": [
+        839.665429078863,
+        358.25351775202205
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.3,
+      "visible": true,
+      "world_xyz": [
+        -2.17620995,
+        -5.282023552,
+        1.028972841
+      ],
+      "xy": [
+        863.4092384599569,
+        407.72073305442996
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.3333333333333335,
+      "visible": false,
+      "world_xyz": [
+        -2.273490191,
+        -5.582672771,
+        0.886983918
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.3666666666666667,
+      "visible": false,
+      "world_xyz": [
+        -2.369644576,
+        -5.879842481,
+        0.73580521
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.4,
+      "visible": false,
+      "world_xyz": [
+        -2.464683895,
+        -6.173566025,
+        0.575546741
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.8,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.433333333333333,
+      "visible": true,
+      "world_xyz": [
+        -2.558618063,
+        -6.463874047,
+        0.406319078
+      ],
+      "xy": [
+        995.0,
+        712.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.8,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.466666666666667,
+      "visible": true,
+      "world_xyz": [
+        -2.651456204,
+        -6.750794747,
+        0.228233463
+      ],
+      "xy": [
+        1031.0,
+        802.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.5,
+      "visible": false,
+      "world_xyz": [
+        -1.823332972,
+        -5.93244656,
+        0.304991218
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.533333333333333,
+      "visible": false,
+      "world_xyz": [
+        -1.758564115,
+        -5.525645251,
+        0.593992898
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.566666666666667,
+      "visible": false,
+      "world_xyz": [
+        -1.694864843,
+        -5.125561807,
+        0.867415111
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.6,
+      "visible": false,
+      "world_xyz": [
+        -1.632187785,
+        -4.731898703,
+        1.125640132
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.6333333333333333,
+      "visible": false,
+      "world_xyz": [
+        -1.570488574,
+        -4.344377277,
+        1.369024637
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.6666666666666665,
+      "visible": false,
+      "world_xyz": [
+        -1.509725632,
+        -3.962736382,
+        1.597901693
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.7,
+      "visible": false,
+      "world_xyz": [
+        -1.449859976,
+        -3.586731174,
+        1.812582569
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.7333333333333334,
+      "visible": false,
+      "world_xyz": [
+        -1.390855044,
+        -3.21613202,
+        2.013358395
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.7666666666666666,
+      "visible": false,
+      "world_xyz": [
+        -1.332676541,
+        -2.850723515,
+        2.200501681
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.8,
+      "visible": false,
+      "world_xyz": [
+        -1.275292295,
+        -2.490303589,
+        2.374267714
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.8333333333333335,
+      "visible": false,
+      "world_xyz": [
+        -1.218672128,
+        -2.134682707,
+        2.534895854
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.8666666666666667,
+      "visible": false,
+      "world_xyz": [
+        -1.162787744,
+        -1.783683142,
+        2.682610726
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.9,
+      "visible": false,
+      "world_xyz": [
+        -1.10761262,
+        -1.437138309,
+        2.817623341
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.933333333333333,
+      "visible": false,
+      "world_xyz": [
+        -1.053121913,
+        -1.094892171,
+        2.940132134
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 3.966666666666667,
+      "visible": false,
+      "world_xyz": [
+        -0.99929237,
+        -0.756798686,
+        3.050323945
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.0,
+      "visible": true,
+      "world_xyz": [
+        -0.946102252,
+        -0.422721311,
+        3.148374938
+      ],
+      "xy": [
+        726.7367780361849,
+        64.02537820241135
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.8,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.033333333333333,
+      "visible": true,
+      "world_xyz": [
+        -0.893531257,
+        -0.092532536,
+        3.234451474
+      ],
+      "xy": [
+        695.0,
+        41.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.8,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.066666666666666,
+      "visible": true,
+      "world_xyz": [
+        -0.841560456,
+        0.233886535,
+        3.30871094
+      ],
+      "xy": [
+        661.0,
+        16.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.1,
+      "visible": false,
+      "world_xyz": [
+        -0.790172226,
+        0.55664658,
+        3.371302531
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.133333333333334,
+      "visible": false,
+      "world_xyz": [
+        -0.739350196,
+        0.875850428,
+        3.422368009
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.166666666666667,
+      "visible": false,
+      "world_xyz": [
+        -0.689079189,
+        1.191593404,
+        3.462042417
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.2,
+      "visible": false,
+      "world_xyz": [
+        -0.63934517,
+        1.503963658,
+        3.490454772
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.233333333333333,
+      "visible": false,
+      "world_xyz": [
+        -0.590135196,
+        1.813042477,
+        3.507728727
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.266666666666667,
+      "visible": false,
+      "world_xyz": [
+        -0.541437369,
+        2.118904593,
+        3.513983205
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.3,
+      "visible": false,
+      "world_xyz": [
+        -0.493240789,
+        2.421618473,
+        3.509333008
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.333333333333333,
+      "visible": false,
+      "world_xyz": [
+        -0.445535505,
+        2.721246612,
+        3.493889397
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.366666666666666,
+      "visible": false,
+      "world_xyz": [
+        -0.398312473,
+        3.017845818,
+        3.467760656
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.4,
+      "visible": false,
+      "world_xyz": [
+        -0.351563507,
+        3.311467494,
+        3.43105261
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.433333333333334,
+      "visible": false,
+      "world_xyz": [
+        -0.30528124,
+        3.602157924,
+        3.383869138
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.466666666666667,
+      "visible": true,
+      "world_xyz": [
+        -0.259459073,
+        3.889958553,
+        3.326312633
+      ],
+      "xy": [
+        452.394970471002,
+        8.80251476449899
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.5,
+      "visible": true,
+      "world_xyz": [
+        -0.214091131,
+        4.174906273,
+        3.258484452
+      ],
+      "xy": [
+        444.8767039178209,
+        21.165009212924485
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.533333333333333,
+      "visible": true,
+      "world_xyz": [
+        -0.169172222,
+        4.457033702,
+        3.180485325
+      ],
+      "xy": [
+        435.5654178781703,
+        31.147357190931785
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.566666666666666,
+      "visible": true,
+      "world_xyz": [
+        -0.124697787,
+        4.736369474,
+        3.092415729
+      ],
+      "xy": [
+        428.13139025529784,
+        43.355952366444164
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.6,
+      "visible": true,
+      "world_xyz": [
+        -0.080663856,
+        5.012938513,
+        2.994376236
+      ],
+      "xy": [
+        420.75726038872466,
+        56.3294050953168
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.633333333333334,
+      "visible": true,
+      "world_xyz": [
+        -0.037067008,
+        5.28676232,
+        2.886467826
+      ],
+      "xy": [
+        414.31929566700376,
+        69.54694821922574
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.666666666666667,
+      "visible": true,
+      "world_xyz": [
+        0.00609568,
+        5.557859248,
+        2.768792161
+      ],
+      "xy": [
+        407.2561763092236,
+        83.94594891334671
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.7,
+      "visible": true,
+      "world_xyz": [
+        0.048826673,
+        5.826244777,
+        2.641451831
+      ],
+      "xy": [
+        402.08809041840925,
+        96.73091965973985
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.733333333333333,
+      "visible": true,
+      "world_xyz": [
+        0.09112802,
+        6.091931781,
+        2.504550564
+      ],
+      "xy": [
+        396.8463069069497,
+        111.85500619574417
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.766666666666667,
+      "visible": true,
+      "world_xyz": [
+        0.133001399,
+        6.354930793,
+        2.358193403
+      ],
+      "xy": [
+        392.00036954718695,
+        126.84281424629054
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.8,
+      "visible": true,
+      "world_xyz": [
+        0.174448154,
+        6.615250257,
+        2.202486856
+      ],
+      "xy": [
+        386.87696991581663,
+        142.98313986171263
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.833333333333333,
+      "visible": true,
+      "world_xyz": [
+        0.215469336,
+        6.872896777,
+        2.037539005
+      ],
+      "xy": [
+        384.0356852109276,
+        159.02663196144476
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.866666666666666,
+      "visible": true,
+      "world_xyz": [
+        0.256065741,
+        7.127875353,
+        1.8634596
+      ],
+      "xy": [
+        379.5786882597052,
+        177.22615790598323
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.9,
+      "visible": true,
+      "world_xyz": [
+        0.296237947,
+        7.380189607,
+        1.680360114
+      ],
+      "xy": [
+        375.46484596556803,
+        194.2377428706626
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.933333333333334,
+      "visible": true,
+      "world_xyz": [
+        0.335986344,
+        7.629841999,
+        1.488353778
+      ],
+      "xy": [
+        372.03592114285334,
+        210.81012182918298
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 4.966666666666667,
+      "visible": true,
+      "world_xyz": [
+        0.375311172,
+        7.876834033,
+        1.287555592
+      ],
+      "xy": [
+        369.6366315373592,
+        228.10542374160784
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.0,
+      "visible": true,
+      "world_xyz": [
+        0.414212549,
+        8.121166446,
+        1.078082312
+      ],
+      "xy": [
+        366.78535668314606,
+        246.38934500766322
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.033333333333333,
+      "visible": true,
+      "world_xyz": [
+        0.452690499,
+        8.362839393,
+        0.860052418
+      ],
+      "xy": [
+        364.6447540150465,
+        263.904053186815
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.066666666666666,
+      "visible": true,
+      "world_xyz": [
+        0.49074498,
+        8.601852609,
+        0.633586067
+      ],
+      "xy": [
+        361.12013709074546,
+        281.45772052880807
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.1,
+      "visible": true,
+      "world_xyz": [
+        0.52837591,
+        8.838205573,
+        0.398805026
+      ],
+      "xy": [
+        359.76214158775133,
+        300.35387872166166
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.133333333333334,
+      "visible": true,
+      "world_xyz": [
+        0.565583185,
+        9.071897645,
+        0.15583259
+      ],
+      "xy": [
+        357.12817600130154,
+        317.9699960764718
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.166666666666667,
+      "visible": true,
+      "world_xyz": [
+        0.602366707,
+        9.302928201,
+        -0.095206506
+      ],
+      "xy": [
+        356.1360713576778,
+        334.5319124927068
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.2,
+      "visible": true,
+      "world_xyz": [
+        0.638726399,
+        9.531296756,
+        -0.354186193
+      ],
+      "xy": [
+        353.58366185866555,
+        356.46984060843596
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.233333333333333,
+      "visible": true,
+      "world_xyz": [
+        -0.779094494,
+        7.241931088,
+        0.280881333
+      ],
+      "xy": [
+        352.1817184740792,
+        364.3870646206753
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.266666666666667,
+      "visible": true,
+      "world_xyz": [
+        -0.541055177,
+        7.517336085,
+        0.546667521
+      ],
+      "xy": [
+        348.8351186887475,
+        351.5909060850562
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.3,
+      "visible": false,
+      "world_xyz": [
+        -0.306539847,
+        7.788663925,
+        0.797702743
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.333333333333333,
+      "visible": true,
+      "world_xyz": [
+        -0.075397909,
+        8.056088843,
+        1.034308472
+      ],
+      "xy": [
+        342.0172348463121,
+        327.53089081758463
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.366666666666666,
+      "visible": true,
+      "world_xyz": [
+        0.152512026,
+        8.319774422,
+        1.256785162
+      ],
+      "xy": [
+        338.3938148309152,
+        317.27190217438283
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.4,
+      "visible": true,
+      "world_xyz": [
+        0.377322732,
+        8.579874277,
+        1.465413797
+      ],
+      "xy": [
+        334.88986882438223,
+        308.3645140417486
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.433333333333334,
+      "visible": true,
+      "world_xyz": [
+        0.599158897,
+        8.836532669,
+        1.660457314
+      ],
+      "xy": [
+        331.6191233802522,
+        301.3648772464272
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.466666666666667,
+      "visible": true,
+      "world_xyz": [
+        0.818137607,
+        9.089885064,
+        1.842161915
+      ],
+      "xy": [
+        329.84105964511934,
+        295.9634162722568
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.5,
+      "visible": true,
+      "world_xyz": [
+        1.034368777,
+        9.340058629,
+        2.010758286
+      ],
+      "xy": [
+        327.7163356266381,
+        289.99642459136305
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.533333333333333,
+      "visible": true,
+      "world_xyz": [
+        1.247955542,
+        9.58717269,
+        2.166462725
+      ],
+      "xy": [
+        324.7354288660618,
+        286.5080604881236
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.566666666666666,
+      "visible": true,
+      "world_xyz": [
+        1.45899461,
+        9.831339136,
+        2.309478199
+      ],
+      "xy": [
+        321.87375344140787,
+        283.38404644405693
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.6,
+      "visible": true,
+      "world_xyz": [
+        1.667576583,
+        10.072662789,
+        2.439995337
+      ],
+      "xy": [
+        319.8775420983784,
+        281.51330339811875
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.633333333333334,
+      "visible": true,
+      "world_xyz": [
+        1.873786246,
+        10.311241745,
+        2.558193365
+      ],
+      "xy": [
+        317.57592250485567,
+        280.2829591761255
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.666666666666667,
+      "visible": true,
+      "world_xyz": [
+        2.077702832,
+        10.547167673,
+        2.664240987
+      ],
+      "xy": [
+        314.45131582994543,
+        282.4288835305708
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.7,
+      "visible": false,
+      "world_xyz": [
+        2.279400262,
+        10.780526098,
+        2.758297229
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.733333333333333,
+      "visible": true,
+      "world_xyz": [
+        2.478947369,
+        11.011396658,
+        2.840512245
+      ],
+      "xy": [
+        321.14380079055866,
+        273.6750814569226
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.766666666666667,
+      "visible": true,
+      "world_xyz": [
+        2.6764081,
+        11.239853338,
+        2.911028082
+      ],
+      "xy": [
+        337.1434371806662,
+        257.75260291636476
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.8,
+      "visible": true,
+      "world_xyz": [
+        2.871841712,
+        11.465964697,
+        2.969979425
+      ],
+      "xy": [
+        351.8516885554873,
+        244.68309395403233
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.833333333333333,
+      "visible": true,
+      "world_xyz": [
+        3.065302948,
+        11.68979407,
+        3.01749431
+      ],
+      "xy": [
+        368.00123757060504,
+        231.36181301473488
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.866666666666666,
+      "visible": true,
+      "world_xyz": [
+        3.256842213,
+        11.911399775,
+        3.053694815
+      ],
+      "xy": [
+        383.4165558227343,
+        218.6870205563584
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.9,
+      "visible": true,
+      "world_xyz": [
+        3.446505736,
+        12.130835298,
+        3.078697729
+      ],
+      "xy": [
+        400.8717828112143,
+        206.92511176753402
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.933333333333334,
+      "visible": true,
+      "world_xyz": [
+        3.634335735,
+        12.348149483,
+        3.092615194
+      ],
+      "xy": [
+        418.27887375843267,
+        194.55400997135956
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 5.966666666666667,
+      "visible": true,
+      "world_xyz": [
+        3.820370576,
+        12.56338672,
+        3.095555335
+      ],
+      "xy": [
+        435.4269620623218,
+        184.45379999096835
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.0,
+      "visible": true,
+      "world_xyz": [
+        4.004644931,
+        12.776587123,
+        3.087622856
+      ],
+      "xy": [
+        452.37935396927986,
+        175.2941315510081
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.033333333333333,
+      "visible": true,
+      "world_xyz": [
+        4.187189942,
+        12.987786722,
+        3.068919621
+      ],
+      "xy": [
+        470.95054074443647,
+        168.25544558096888
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.066666666666666,
+      "visible": true,
+      "world_xyz": [
+        4.368033381,
+        13.197017647,
+        3.039545212
+      ],
+      "xy": [
+        492.1555814246834,
+        159.22303872524392
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.1,
+      "visible": true,
+      "world_xyz": [
+        4.547199814,
+        13.404308324,
+        2.999597446
+      ],
+      "xy": [
+        510.2390224876882,
+        153.49743359941962
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.133333333333334,
+      "visible": true,
+      "world_xyz": [
+        4.724710776,
+        13.609683665,
+        2.949172885
+      ],
+      "xy": [
+        530.68216920096,
+        147.19478601699967
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.166666666666667,
+      "visible": true,
+      "world_xyz": [
+        4.900584935,
+        13.81316527,
+        2.888367295
+      ],
+      "xy": [
+        551.2197512585537,
+        142.74100349957047
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.2,
+      "visible": true,
+      "world_xyz": [
+        5.074838275,
+        14.014771631,
+        2.817276089
+      ],
+      "xy": [
+        575.7870964987526,
+        141.62908094953687
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.233333333333333,
+      "visible": true,
+      "world_xyz": [
+        5.247484267,
+        14.214518335,
+        2.735994724
+      ],
+      "xy": [
+        595.7624564499522,
+        139.59051284594466
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.266666666666667,
+      "visible": true,
+      "world_xyz": [
+        5.418534054,
+        14.412418272,
+        2.644619072
+      ],
+      "xy": [
+        617.9586041543586,
+        139.50063225917913
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.3,
+      "visible": true,
+      "world_xyz": [
+        5.587996626,
+        14.608481847,
+        2.543245744
+      ],
+      "xy": [
+        642.0789138158655,
+        139.0954779398448
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.333333333333333,
+      "visible": true,
+      "world_xyz": [
+        5.755879008,
+        14.802717184,
+        2.431972392
+      ],
+      "xy": [
+        664.2384704877666,
+        141.26944650685138
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.366666666666666,
+      "visible": true,
+      "world_xyz": [
+        5.92218643,
+        14.995130335,
+        2.310897958
+      ],
+      "xy": [
+        685.6279909744912,
+        144.77253460283012
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.4,
+      "visible": true,
+      "world_xyz": [
+        6.086922511,
+        15.185725487,
+        2.180122897
+      ],
+      "xy": [
+        714.0212576795428,
+        152.48479598593784
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.433333333333334,
+      "visible": true,
+      "world_xyz": [
+        6.250089427,
+        15.374505158,
+        2.039749359
+      ],
+      "xy": [
+        739.8597879211816,
+        157.6546922736252
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.466666666666667,
+      "visible": true,
+      "world_xyz": [
+        6.411688084,
+        15.561470397,
+        1.889881341
+      ],
+      "xy": [
+        761.6995221969928,
+        164.75924067961253
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.5,
+      "visible": true,
+      "world_xyz": [
+        6.571718279,
+        15.746620967,
+        1.730624796
+      ],
+      "xy": [
+        785.2775313814811,
+        173.4892788912158
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.533333333333333,
+      "visible": true,
+      "world_xyz": [
+        6.730178857,
+        15.929955534,
+        1.56208772
+      ],
+      "xy": [
+        817.5316928047312,
+        187.35988170594953
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.566666666666666,
+      "visible": true,
+      "world_xyz": [
+        6.887067862,
+        16.111471834,
+        1.384380203
+      ],
+      "xy": [
+        845.5884360847225,
+        200.38514578170899
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.6,
+      "visible": true,
+      "world_xyz": [
+        7.04238268,
+        16.291166842,
+        1.197614459
+      ],
+      "xy": [
+        870.6922266407955,
+        213.86383702782615
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.633333333333334,
+      "visible": true,
+      "world_xyz": [
+        7.196120174,
+        16.469036929,
+        1.001904817
+      ],
+      "xy": [
+        899.8972713280732,
+        230.53136476213544
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.666666666666667,
+      "visible": true,
+      "world_xyz": [
+        7.34827681,
+        16.645078006,
+        0.797367705
+      ],
+      "xy": [
+        928.6629684302852,
+        248.81436965131533
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.7,
+      "visible": true,
+      "world_xyz": [
+        7.498848775,
+        16.819285662,
+        0.584121598
+      ],
+      "xy": [
+        952.600094974442,
+        265.7430895398495
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.733333333333333,
+      "visible": true,
+      "world_xyz": [
+        7.647832089,
+        16.991655293,
+        0.362286961
+      ],
+      "xy": [
+        933.9053779270859,
+        272.22634448177143
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.766666666666667,
+      "visible": true,
+      "world_xyz": [
+        7.795222707,
+        17.162182218,
+        0.131986159
+      ],
+      "xy": [
+        873.5296891204882,
+        272.99999999999994
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.8,
+      "visible": true,
+      "world_xyz": [
+        7.941016611,
+        17.330861788,
+        -0.106656631
+      ],
+      "xy": [
+        818.5429943297496,
+        273.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.833333333333333,
+      "visible": true,
+      "world_xyz": [
+        8.085209895,
+        17.497689485,
+        -0.353515533
+      ],
+      "xy": [
+        769.8690330993462,
+        275.45899632229487
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.866666666666666,
+      "visible": true,
+      "world_xyz": [
+        8.227798845,
+        17.662661011,
+        -0.608463091
+      ],
+      "xy": [
+        725.5818073537208,
+        277.11636147074415
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.9,
+      "visible": false,
+      "world_xyz": [
+        8.368780008,
+        17.825772371,
+        -0.871370398
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.933333333333334,
+      "visible": true,
+      "world_xyz": [
+        8.508150253,
+        17.987019944,
+        -1.142107231
+      ],
+      "xy": [
+        633.4294756436256,
+        290.705618749499
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 6.966666666666667,
+      "visible": true,
+      "world_xyz": [
+        8.645906831,
+        18.146400546,
+        -1.420542194
+      ],
+      "xy": [
+        599.6412090662237,
+        297.30669428393213
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.0,
+      "visible": true,
+      "world_xyz": [
+        8.782047418,
+        18.303911492,
+        -1.706542863
+      ],
+      "xy": [
+        565.341686153378,
+        304.276513498875
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.033333333333333,
+      "visible": true,
+      "world_xyz": [
+        8.916570164,
+        18.45955064,
+        -1.99997594
+      ],
+      "xy": [
+        532.3925353223486,
+        314.22261949438644
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.066666666666666,
+      "visible": true,
+      "world_xyz": [
+        9.049473726,
+        18.613316437,
+        -2.300707396
+      ],
+      "xy": [
+        502.7891989732904,
+        323.07371063917907
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.1,
+      "visible": false,
+      "world_xyz": [
+        9.180757301,
+        18.765207952,
+        -2.608602633
+      ],
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.133333333333334,
+      "visible": true,
+      "world_xyz": [
+        9.310420649,
+        18.915224909,
+        -2.923526628
+      ],
+      "xy": [
+        445.14429810466453,
+        344.2590936030758
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.166666666666667,
+      "visible": true,
+      "world_xyz": [
+        9.43846412,
+        19.063367713,
+        -3.245344089
+      ],
+      "xy": [
+        418.89928792920546,
+        353.9878135618932
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.2,
+      "visible": true,
+      "world_xyz": [
+        9.564888664,
+        19.209637462,
+        -3.573919601
+      ],
+      "xy": [
+        395.55572203645954,
+        366.6663922303666
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.233333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.33277313,
+        5.21900543,
+        0.0
+      ],
+      "xy": [
+        375.8479354339545,
+        374.90114881731256
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.266666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.351983911,
+        5.081466741,
+        0.173710931
+      ],
+      "xy": [
+        356.6573706650541,
+        362.13484408337945
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.3,
+      "visible": true,
+      "world_xyz": [
+        -1.371054984,
+        4.944928286,
+        0.335301355
+      ],
+      "xy": [
+        340.1736380064919,
+        351.83829185093055
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.333333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.389993597,
+        4.809338173,
+        0.484910458
+      ],
+      "xy": [
+        330.18787283981857,
+        346.6151159772764
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.366666666666666,
+      "visible": true,
+      "world_xyz": [
+        -1.408806616,
+        4.674647236,
+        0.622666749
+      ],
+      "xy": [
+        309.3149451695513,
+        335.4298129598959
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.4,
+      "visible": true,
+      "world_xyz": [
+        -1.42750053,
+        4.540809033,
+        0.748688615
+      ],
+      "xy": [
+        295.8148249085949,
+        330.33372482591966
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.433333333333334,
+      "visible": true,
+      "world_xyz": [
+        -1.44608144,
+        4.407779876,
+        0.863084867
+      ],
+      "xy": [
+        281.09643005457906,
+        325.27889921456415
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.466666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.464555056,
+        4.275518884,
+        0.965955282
+      ],
+      "xy": [
+        268.09655754534407,
+        323.33942858072834
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.5,
+      "visible": true,
+      "world_xyz": [
+        -1.482926684,
+        4.143988071,
+        1.057391158
+      ],
+      "xy": [
+        269.73110793759105,
+        315.4200827506146
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.533333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.50120121,
+        4.013152458,
+        1.137475887
+      ],
+      "xy": [
+        274.8248341681024,
+        302.01834511751633
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.566666666666666,
+      "visible": true,
+      "world_xyz": [
+        -1.51938308,
+        3.882980212,
+        1.206285565
+      ],
+      "xy": [
+        277.19601929681676,
+        293.3588184451656
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.6,
+      "visible": true,
+      "world_xyz": [
+        -1.537476277,
+        3.753442808,
+        1.263889644
+      ],
+      "xy": [
+        279.37975032179315,
+        286.43631121416877
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.633333333333334,
+      "visible": true,
+      "world_xyz": [
+        -1.555484301,
+        3.624515204,
+        1.310351656
+      ],
+      "xy": [
+        282.9884319751628,
+        279.132851643867
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.666666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.573410138,
+        3.496176011,
+        1.345729989
+      ],
+      "xy": [
+        285.95458683830014,
+        273.11874774078257
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.7,
+      "visible": true,
+      "world_xyz": [
+        -1.591256242,
+        3.36840766,
+        1.370078751
+      ],
+      "xy": [
+        289.79266725159584,
+        267.9196214929059
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.733333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.609024517,
+        3.241196527,
+        1.383448693
+      ],
+      "xy": [
+        293.0361031665466,
+        264.29756900617605
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.766666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.626716303,
+        3.114533014,
+        1.385888197
+      ],
+      "xy": [
+        297.00984733813107,
+        260.4430326501262
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.8,
+      "visible": true,
+      "world_xyz": [
+        -1.644332377,
+        2.988411555,
+        1.377444299
+      ],
+      "xy": [
+        300.54486908362423,
+        258.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.833333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.661872962,
+        2.862830553,
+        1.358163708
+      ],
+      "xy": [
+        304.71906871888854,
+        258.37185288052376
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.866666666666666,
+      "visible": true,
+      "world_xyz": [
+        -1.679337748,
+        2.737792231,
+        1.32809381
+      ],
+      "xy": [
+        309.7537693747331,
+        258.3233935775162
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.9,
+      "visible": true,
+      "world_xyz": [
+        -1.696725923,
+        2.613302403,
+        1.2872836
+      ],
+      "xy": [
+        314.5012329724505,
+        261.64580212971885
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.933333333333334,
+      "visible": true,
+      "world_xyz": [
+        -1.714036213,
+        2.489370189,
+        1.235784524
+      ],
+      "xy": [
+        318.70211297689366,
+        264.1989794319857
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 7.966666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.731266929,
+        2.366007683,
+        1.173651207
+      ],
+      "xy": [
+        322.32047597706463,
+        270.0217479549559
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.0,
+      "visible": true,
+      "world_xyz": [
+        -1.748416016,
+        2.243229598,
+        1.100942069
+      ],
+      "xy": [
+        329.28750719557263,
+        276.8434677118597
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.033333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.765481104,
+        2.121052895,
+        1.017719809
+      ],
+      "xy": [
+        335.99073126845497,
+        285.5925902025435
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.066666666666666,
+      "visible": true,
+      "world_xyz": [
+        -1.782459561,
+        1.999496429,
+        0.924051776
+      ],
+      "xy": [
+        340.8319254930337,
+        296.88859042764994
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.1,
+      "visible": true,
+      "world_xyz": [
+        -1.799348535,
+        1.878580607,
+        0.820010231
+      ],
+      "xy": [
+        348.39785498279076,
+        310.5401348129276
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.133333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.816145004,
+        1.758327072,
+        0.705672526
+      ],
+      "xy": [
+        355.18335385186,
+        325.4286367676563
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.166666666666666,
+      "visible": true,
+      "world_xyz": [
+        -1.832845813,
+        1.63875841,
+        0.581121188
+      ],
+      "xy": [
+        359.1396236141998,
+        346.261826473589
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.2,
+      "visible": true,
+      "world_xyz": [
+        -1.849447712,
+        1.51989789,
+        0.446443944
+      ],
+      "xy": [
+        371.25430111637155,
+        363.67213804447255
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.233333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.865947388,
+        1.401769231,
+        0.301733686
+      ],
+      "xy": [
+        378.5421542136577,
+        386.56430912788113
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.266666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.882341494,
+        1.284396392,
+        0.147088386
+      ],
+      "xy": [
+        387.353451077917,
+        413.8086021750585
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.3,
+      "visible": true,
+      "world_xyz": [
+        -1.898626676,
+        1.167803391,
+        -0.017389021
+      ],
+      "xy": [
+        398.45461738464644,
+        448.21128373561896
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.333333333333334,
+      "visible": true,
+      "world_xyz": [
+        -1.983968008,
+        0.096776857,
+        0.195424874
+      ],
+      "xy": [
+        403.18412433306605,
+        460.9781881785387
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.366666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.968267425,
+        0.085998199,
+        0.303674785
+      ],
+      "xy": [
+        405.59882831335955,
+        430.191798193517
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.4,
+      "visible": true,
+      "world_xyz": [
+        -1.952621765,
+        0.075257246,
+        0.400668148
+      ],
+      "xy": [
+        408.96713096343547,
+        411.63511293088294
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.433333333333334,
+      "visible": true,
+      "world_xyz": [
+        -1.937025063,
+        0.064549904,
+        0.486478106
+      ],
+      "xy": [
+        412.3140798930339,
+        393.5385134024748
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.466666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.921471478,
+        0.053872161,
+        0.561168981
+      ],
+      "xy": [
+        414.15535190296174,
+        378.2033640136815
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.5,
+      "visible": true,
+      "world_xyz": [
+        -1.905955283,
+        0.043220089,
+        0.62479647
+      ],
+      "xy": [
+        417.1182627370956,
+        366.16645205894616
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.533333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.890470887,
+        0.032589845,
+        0.677407818
+      ],
+      "xy": [
+        419.9481024585417,
+        355.63303214565025
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.566666666666666,
+      "visible": true,
+      "world_xyz": [
+        -1.875012852,
+        0.021977699,
+        0.719041977
+      ],
+      "xy": [
+        424.1965339988312,
+        348.72732455245813
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.6,
+      "visible": true,
+      "world_xyz": [
+        -1.859575966,
+        0.011380073,
+        0.749729759
+      ],
+      "xy": [
+        427.28182578421064,
+        345.6558004372769
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.633333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.844155411,
+        0.000793658,
+        0.769494032
+      ],
+      "xy": [
+        430.8505998519037,
+        340.53198316786086
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.666666666666666,
+      "visible": true,
+      "world_xyz": [
+        -1.828747181,
+        -0.009784296,
+        0.778350192
+      ],
+      "xy": [
+        434.55147064677834,
+        340.9216669920146
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.7,
+      "visible": true,
+      "world_xyz": [
+        -1.813349027,
+        -0.020355333,
+        0.776307734
+      ],
+      "xy": [
+        437.79033220821765,
+        340.97789332845457
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.733333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.797961486,
+        -0.030919084,
+        0.763374395
+      ],
+      "xy": [
+        441.7179578775253,
+        344.73919426983673
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.766666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.782587569,
+        -0.041473481,
+        0.739561511
+      ],
+      "xy": [
+        445.44961835601157,
+        348.00000000000006
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.8,
+      "visible": true,
+      "world_xyz": [
+        -1.767231586,
+        -0.052015567,
+        0.704887038
+      ],
+      "xy": [
+        446.56348685848343,
+        352.69046057545035
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.833333333333334,
+      "visible": true,
+      "world_xyz": [
+        -1.751898398,
+        -0.062542004,
+        0.659376443
+      ],
+      "xy": [
+        449.43484112352564,
+        360.5651588764743
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.866666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.736593098,
+        -0.073049295,
+        0.603062876
+      ],
+      "xy": [
+        450.5762615120843,
+        369.30504604833715
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.9,
+      "visible": true,
+      "world_xyz": [
+        -1.721320875,
+        -0.083533879,
+        0.535987138
+      ],
+      "xy": [
+        454.6952524575775,
+        382.5904611599079
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.933333333333334,
+      "visible": true,
+      "world_xyz": [
+        -1.706086943,
+        -0.093992175,
+        0.458197594
+      ],
+      "xy": [
+        457.43091028861807,
+        395.82170036984854
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 8.966666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.690896502,
+        -0.104420614,
+        0.369750046
+      ],
+      "xy": [
+        460.5609437500401,
+        409.1091411522511
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.0,
+      "visible": true,
+      "world_xyz": [
+        -1.67575471,
+        -0.114815654,
+        0.270707576
+      ],
+      "xy": [
+        463.4598520202807,
+        426.4358132969558
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.033333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.660666667,
+        -0.125173796,
+        0.161140377
+      ],
+      "xy": [
+        466.68328038674116,
+        444.7901331445912
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.066666666666666,
+      "visible": true,
+      "world_xyz": [
+        -1.700343398,
+        -0.168048528,
+        0.022508325
+      ],
+      "xy": [
+        469.59288413313897,
+        459.01056072498557
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.1,
+      "visible": true,
+      "world_xyz": [
+        -1.70160302,
+        -0.185950084,
+        0.109297521
+      ],
+      "xy": [
+        470.01938359275704,
+        450.9544182104837
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.90788907,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.133333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.702859128,
+        -0.203801712,
+        0.18496292
+      ],
+      "xy": [
+        469.322894556716,
+        436.82978087049776
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.8968612,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.166666666666666,
+      "visible": true,
+      "world_xyz": [
+        -1.704112188,
+        -0.221610009,
+        0.249560959
+      ],
+      "xy": [
+        469.7936333678802,
+        427.38227122324184
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.91448975,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.2,
+      "visible": true,
+      "world_xyz": [
+        -1.705362653,
+        -0.239381434,
+        0.303139609
+      ],
+      "xy": [
+        469.37169045370365,
+        419.9509998651683
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.89974731,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.233333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.706610966,
+        -0.257122275,
+        0.345738526
+      ],
+      "xy": [
+        469.1080444565477,
+        412.6379181610653
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.85716391,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.266666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.707857553,
+        -0.274838589,
+        0.377389206
+      ],
+      "xy": [
+        470.4442034372214,
+        409.9933013257159
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.90345287,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.3,
+      "visible": true,
+      "world_xyz": [
+        -1.709102813,
+        -0.292536035,
+        0.398115155
+      ],
+      "xy": [
+        471.35089883495266,
+        405.50803469111827
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.85386646,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.333333333333334,
+      "visible": true,
+      "world_xyz": [
+        -1.710347084,
+        -0.310219433,
+        0.407932276
+      ],
+      "xy": [
+        472.6016995097565,
+        404.93080532107
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.88619882,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.366666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.711590572,
+        -0.327891701,
+        0.406850219
+      ],
+      "xy": [
+        472.32836640428997,
+        405.1911165377472
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.92595637,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.4,
+      "visible": true,
+      "world_xyz": [
+        -1.712833254,
+        -0.345552504,
+        0.394876339
+      ],
+      "xy": [
+        473.45034739999016,
+        408.55333759300737
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.90937907,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.433333333333334,
+      "visible": true,
+      "world_xyz": [
+        -1.714074891,
+        -0.363198467,
+        0.372021276
+      ],
+      "xy": [
+        474.30683500813626,
+        411.8239199328177
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.93155998,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.466666666666667,
+      "visible": true,
+      "world_xyz": [
+        -1.715315135,
+        -0.380824626,
+        0.338302257
+      ],
+      "xy": [
+        476.77028889734936,
+        417.43870038414457
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.5,
+      "visible": true,
+      "world_xyz": [
+        -1.71655359,
+        -0.398425369,
+        0.293744041
+      ],
+      "xy": [
+        476.6041737816192,
+        425.05008766941137
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.533333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.717789843,
+        -0.415994817,
+        0.238379081
+      ],
+      "xy": [
+        479.6128490544597,
+        435.1158100800387
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.566666666666666,
+      "visible": true,
+      "world_xyz": [
+        -1.719023474,
+        -0.433526989,
+        0.172247504
+      ],
+      "xy": [
+        480.3671120300663,
+        445.66386984623597
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.6,
+      "visible": true,
+      "world_xyz": [
+        -1.720254058,
+        -0.451015874,
+        0.095397013
+      ],
+      "xy": [
+        482.4852150462185,
+        457.7203384086617
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.633333333333333,
+      "visible": true,
+      "world_xyz": [
+        -1.721481176,
+        -0.468455485,
+        0.007882762
+      ],
+      "xy": [
+        484.0567014759703,
+        466.3871285803845
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.666666666666666,
+      "visible": true,
+      "world_xyz": null,
+      "xy": [
+        484.6286577640172,
+        457.15877722643677
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.7,
+      "visible": true,
+      "world_xyz": null,
+      "xy": [
+        486.42783169278124,
+        450.8638531789141
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.733333333333333,
+      "visible": true,
+      "world_xyz": null,
+      "xy": [
+        486.94021183197486,
+        446.0536178169298
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 1.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.766666666666667,
+      "visible": true,
+      "world_xyz": null,
+      "xy": [
+        486.1725527460857,
+        440.6344225639452
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.0,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.8,
+      "visible": false,
+      "world_xyz": null,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.93609965,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.833333333333334,
+      "visible": true,
+      "world_xyz": null,
+      "xy": [
+        489.83107187504424,
+        438.2634179714197
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.90223217,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.866666666666667,
+      "visible": true,
+      "world_xyz": null,
+      "xy": [
+        491.4067513788182,
+        442.1435150621719
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.88531214,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.9,
+      "visible": true,
+      "world_xyz": null,
+      "xy": [
+        492.8833782804273,
+        447.47809612473424
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.84247112,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.933333333333334,
+      "visible": true,
+      "world_xyz": null,
+      "xy": [
+        495.51489844356246,
+        450.3379172707166
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.81581223,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 9.966666666666667,
+      "visible": true,
+      "world_xyz": null,
+      "xy": [
+        491.68490126435034,
+        450.31808138210476
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "source": "physics_filled"
+}

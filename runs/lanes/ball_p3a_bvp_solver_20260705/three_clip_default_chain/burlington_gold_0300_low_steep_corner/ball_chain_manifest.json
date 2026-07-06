@@ -1,0 +1,99 @@
+{
+  "artifact_type": "racketsport_ball_chain_run_manifest",
+  "chain_config_degraded": "no_candidate_sidecars",
+  "clip": "burlington_gold_0300_low_steep_corner",
+  "configs": {
+    "product_veto": {
+      "veto_px": 40.0,
+      "weak_support_required": true
+    },
+    "solver_a_free": {
+      "candidate_association_mode": "free",
+      "candidate_score_floors": {},
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": true,
+      "enable_event_subset_selection": true,
+      "max_candidates_per_frame": 12
+    },
+    "solver_b_rescue_tn05": {
+      "candidate_association_mode": "rescue_only",
+      "candidate_score_floors": {
+        "tracknet": 0.5,
+        "wasb": 0.0
+      },
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": false,
+      "enable_event_subset_selection": false,
+      "max_candidates_per_frame": 12
+    }
+  },
+  "generated_at": "2026-07-05T23:31:45Z",
+  "heldout_authorized": false,
+  "inputs": {
+    "ball_track": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/ball_track.json",
+      "sha256": "813f7f52ecca9383a8d866b463d214a3ce43485369a6ea18d6a01a4b5d5f4128"
+    },
+    "court_calibration": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/court_calibration.json",
+      "sha256": "aec27ecc0f377ee930f363173032316332811ac573199a633ebe499747abed1d"
+    },
+    "net_plane": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/net_plane.json",
+      "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057"
+    }
+  },
+  "net_plane_provenance": {
+    "consumed_net_plane": true,
+    "reason": "consumed"
+  },
+  "outputs": {
+    "auto_bounce_candidates": {
+      "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_bounce_candidates.json",
+      "sha256": "c87056f332884522bcc93813059f25dfa1ff155350590c804e6c5569258ebc4e"
+    },
+    "ball_arc_render": {
+      "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_arc_render.json",
+      "sha256": "ad1f5140c1c6eb08b82af99f53a4372e2e54417e3ac47fb83a2a7ac584cf51b4"
+    },
+    "ball_flight_sanity": {
+      "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_flight_sanity.json",
+      "sha256": "d3af23be5fd1948d0c7d3b86e49dab356c6ecc9848f8bbefa4741d31468697f7"
+    },
+    "ball_track_arc_solved": {
+      "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_track_arc_solved.json",
+      "sha256": "df7a6a835946b6891a0d536d6b438c106fd1d3232c6d29f1712ddef30266cad6"
+    },
+    "seed_anchor_ball_track_arc_solved": {
+      "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_arc_seed/ball_track_arc_solved.json",
+      "sha256": "40755d5a1434c3958ebd1b06239f52a382ca4cd1c79eb539870f9b1611483eca"
+    },
+    "seed_anchor_flight_sanity": {
+      "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_arc_seed/ball_flight_sanity.json",
+      "sha256": "813334667c8166dfa93bc1e19ea6c40066dff54b4181f9dd2ceab03817773eb3"
+    }
+  },
+  "policy": {
+    "ball_arc_render_only": true,
+    "candidate_sidecars_consumed_when_present": true,
+    "net_plane_consumed_when_valid": true,
+    "outdoor_indoor_labels_read": false,
+    "render_only_3d": true,
+    "seed_anchor_prepass": true
+  },
+  "schema_version": 1,
+  "summary": {
+    "auto_bounce_candidate_count": 6,
+    "ball_arc_render_bridge_sample_count": 96,
+    "ball_arc_render_sample_count": 2883,
+    "chain_config_degraded": "no_candidate_sidecars",
+    "coverage_world_xyz_count": 588,
+    "net_plane_provenance": {
+      "consumed_net_plane": true,
+      "reason": "consumed"
+    },
+    "seed_anchor_count": 14,
+    "segment_count": 13,
+    "solver_status": "ran"
+  }
+}

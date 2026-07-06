@@ -25,8 +25,10 @@ import math
 from typing import Any, Mapping, Sequence
 
 from .ball_arc_solver import BallArcSolverConfig, PhysicsParameters
+from .court_templates import get_court_template
 
 
+SCHEMA_VERSION = 2
 ARTIFACT_TYPE = "racketsport_ball_flight_sanity"
 SOURCE = "ball_flight_sanity_render_gate_v1"
 DEMOTED_BAND = "arc_weak"
@@ -69,6 +71,9 @@ class FlightSanityConfig:
             "solver_max_plausible_speed_mps": float(solver_config.max_plausible_speed_mps),
             "solver_max_plausible_apex_m": float(solver_config.max_plausible_apex_m),
             "gravity_mps2": float(physics.gravity_mps2),
+            "court_sport": str(solver_config.court_sport),
+            "court_margin_m": float(solver_config.court_margin_m),
+            "court_z_min_m": float(solver_config.court_z_min_m),
         }
 
 
@@ -89,7 +94,7 @@ def evaluate_ball_flight_sanity(
     """Evaluate rendered airborne segments and return per-frame demotion flags."""
 
     gate_config = config or FlightSanityConfig()
-    solver_cfg = solver_config or BallArcSolverConfig()
+    solver_cfg = solver_config or _solver_config_from_artifact(arc_solved)
     phys = physics or _physics_from_artifact(arc_solved)
     frames = list(arc_solved.get("frames") or [])
     fps = _fps(arc_solved, frames)
@@ -118,11 +123,23 @@ def evaluate_ball_flight_sanity(
             solver_config=solver_cfg,
         )
         segments.append(segment_report)
+        frame_reasons = segment_report.get("frame_reasons")
+        per_frame = frame_reasons if isinstance(frame_reasons, Mapping) else {}
+        segment_wide_reasons = [
+            str(reason)
+            for reason in segment_report["reasons"]
+            if str(reason) != "outside_court_volume"
+        ]
         for sample in samples:
             frame_reports[sample.frame]["segment_id"] = segment_id
             if segment_report["verdict"] == "fail":
                 reasons = demote_reasons_by_frame.setdefault(sample.frame, set())
-                reasons.update(str(reason) for reason in segment_report["reasons"])
+                reasons.update(segment_wide_reasons)
+                sample_reasons = per_frame.get(str(sample.frame), per_frame.get(sample.frame, []))
+                if isinstance(sample_reasons, Sequence) and not isinstance(sample_reasons, (str, bytes)):
+                    reasons.update(str(reason) for reason in sample_reasons)
+                if not reasons:
+                    demote_reasons_by_frame.pop(sample.frame, None)
 
     for frame_index, reasons in demote_reasons_by_frame.items():
         if 0 <= frame_index < len(frame_reports):
@@ -133,14 +150,15 @@ def evaluate_ball_flight_sanity(
     passed_segment_count = sum(1 for segment in segments if segment["verdict"] == "pass")
     skipped_segment_count = sum(1 for segment in segments if segment["verdict"] == "not_evaluated")
     return {
-        "schema_version": 1,
+        "schema_version": SCHEMA_VERSION,
         "artifact_type": ARTIFACT_TYPE,
         "source": SOURCE,
         "clip_id": str(arc_solved.get("clip_id") or ""),
         "config": gate_config.to_json(solver_config=solver_cfg, physics=phys),
         "policy": {
             "render_gate_only": True,
-            "does_not_create_or_adjust_world_xyz": True,
+            "suppresses_world_xyz_on_court_volume_failure": True,
+            "world_xyz_replacement_source": "bvp_anchor_fallback_or_null",
             "demotion_only_removes_measured_status": True,
             "demoted_band": DEMOTED_BAND,
         },
@@ -160,14 +178,29 @@ def apply_flight_sanity_demotions(arc_solved: Mapping[str, Any], report: Mapping
     """Return a copy of an arc artifact with failing-segment frames demoted."""
 
     demoted = _demoted_frames(report)
+    segment_status_by_id = _segment_status_by_id(arc_solved)
     payload = dict(arc_solved)
     frames: list[dict[str, Any]] = []
     for index, raw_frame in enumerate(list(arc_solved.get("frames") or [])):
         frame = dict(raw_frame) if isinstance(raw_frame, Mapping) else {}
-        if index in demoted:
+        reasons = list(demoted.get(index, []))
+        segment_status = _frame_segment_status(frame, index, arc_solved, segment_status_by_id)
+        if segment_status == "fit_bvp_fallback" and "fit_bvp_fallback" not in reasons:
+            reasons.append("fit_bvp_fallback")
+        if reasons:
+            if "flight_sanity_original" not in frame:
+                frame["flight_sanity_original"] = {
+                    "world_xyz": frame.get("world_xyz"),
+                    "band": frame.get("band"),
+                    "sigma_m": frame.get("sigma_m"),
+                }
             frame["flight_sanity_demoted"] = True
-            frame["flight_sanity_reasons"] = demoted[index]
-            if _has_world_xyz(frame) and str(frame.get("band") or "") != "hidden":
+            frame["flight_sanity_reasons"] = sorted(set(reasons))
+            if "outside_court_volume" in reasons and segment_status != "fit_bvp_fallback":
+                frame["world_xyz"] = None
+                frame["sigma_m"] = None
+                frame["band"] = "hidden"
+            elif _has_world_xyz(frame) and str(frame.get("band") or "") != "hidden":
                 frame["band"] = DEMOTED_BAND
         frames.append(frame)
     payload["frames"] = frames
@@ -218,9 +251,17 @@ def _evaluate_segment(
             "sample_count": len(samples),
         }
 
-    vertical_changes = _vertical_sign_changes(samples, config)
-    heading = _horizontal_heading_report(samples, config)
-    speed = _speed_continuity_report(samples, config, solver_config)
+    court_volume = _court_volume_report(samples, solver_config)
+    outside_frames = set(court_volume["outside_frames"])
+    kinematic_samples = [sample for sample in samples if sample.frame not in outside_frames]
+    if len(kinematic_samples) < config.min_segment_samples:
+        vertical_changes = _vertical_sign_changes([], config)
+        heading = _horizontal_heading_report([], config)
+        speed = _speed_continuity_report([], config, solver_config)
+    else:
+        vertical_changes = _vertical_sign_changes(kinematic_samples, config)
+        heading = _horizontal_heading_report(kinematic_samples, config)
+        speed = _speed_continuity_report(kinematic_samples, config, solver_config)
     reasons: list[str] = []
     if vertical_changes["sign_change_count"] > 1:
         reasons.append("vertical_multi_apex")
@@ -228,6 +269,8 @@ def _evaluate_segment(
         reasons.append("horizontal_direction_reversal")
     if speed["max_speed_jump_mps"] > config.speed_jump_limit_mps(solver_config):
         reasons.append("speed_jump")
+    if court_volume["outside_frame_count"] > 0:
+        reasons.append("outside_court_volume")
 
     return {
         "segment_id": segment_id,
@@ -243,6 +286,11 @@ def _evaluate_segment(
         "vertical": vertical_changes,
         "horizontal": heading,
         "speed_continuity": speed,
+        "court_volume": court_volume,
+        "frame_reasons": {
+            str(frame): ["outside_court_volume"]
+            for frame in court_volume["outside_frames"]
+        },
     }
 
 
@@ -354,6 +402,47 @@ def _samples_for_segment(frames: Sequence[Any], *, fps: float, start_t: float, e
     return samples
 
 
+def _court_volume_report(samples: Sequence[_Sample], solver_config: BallArcSolverConfig) -> dict[str, Any]:
+    x_min, x_max, y_min, y_max, z_min = _court_volume_bounds(solver_config)
+    outside_frames: list[int] = []
+    max_overage = 0.0
+    for sample in samples:
+        x, y, z = sample.world_xyz
+        overage = max(x_min - x, x - x_max, y_min - y, y - y_max, z_min - z, 0.0)
+        if overage > 1e-9:
+            outside_frames.append(sample.frame)
+            max_overage = max(max_overage, overage)
+    return {
+        "sport": str(solver_config.court_sport),
+        "margin_m": round(float(solver_config.court_margin_m), 6),
+        "z_min_m": round(float(solver_config.court_z_min_m), 6),
+        "bounds_m": {
+            "x_min": round(x_min, 6),
+            "x_max": round(x_max, 6),
+            "y_min": round(y_min, 6),
+            "y_max": round(y_max, 6),
+            "z_min": round(z_min, 6),
+        },
+        "outside_frames": outside_frames,
+        "outside_frame_count": len(outside_frames),
+        "max_overage_m": round(max_overage, 6),
+    }
+
+
+def _court_volume_bounds(solver_config: BallArcSolverConfig) -> tuple[float, float, float, float, float]:
+    template = get_court_template(str(solver_config.court_sport))  # type: ignore[arg-type]
+    margin = float(solver_config.court_margin_m)
+    half_width = template.width_m / 2.0
+    half_length = template.length_m / 2.0
+    return (
+        -half_width - margin,
+        half_width + margin,
+        -half_length - margin,
+        half_length + margin,
+        float(solver_config.court_z_min_m),
+    )
+
+
 def _anchors(arc_solved: Mapping[str, Any]) -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
     for item in list(arc_solved.get("anchors") or []):
@@ -417,6 +506,47 @@ def _demoted_frames(report: Mapping[str, Any]) -> dict[int, list[str]]:
     return demoted
 
 
+def _segment_status_by_id(arc_solved: Mapping[str, Any]) -> dict[str, str]:
+    output: dict[str, str] = {}
+    for item in list(arc_solved.get("segments") or []):
+        if not isinstance(item, Mapping):
+            continue
+        segment_id = item.get("segment_id")
+        if segment_id is None:
+            continue
+        output[str(segment_id)] = str(item.get("status") or "")
+    return output
+
+
+def _frame_segment_status(
+    frame: Mapping[str, Any],
+    frame_index: int,
+    arc_solved: Mapping[str, Any],
+    segment_status_by_id: Mapping[str, str],
+) -> str | None:
+    arc_solver = frame.get("arc_solver")
+    if isinstance(arc_solver, Mapping):
+        if arc_solver.get("segment_status") is not None:
+            return str(arc_solver.get("segment_status"))
+        segment_id = arc_solver.get("segment_id")
+        if segment_id is not None and str(segment_id) in segment_status_by_id:
+            return segment_status_by_id[str(segment_id)]
+    t = _float_or_none(frame.get("t"))
+    for item in list(arc_solved.get("segments") or []):
+        if not isinstance(item, Mapping):
+            continue
+        status = str(item.get("status") or "")
+        frame_start = _int_or_none(item.get("frame_start"))
+        frame_end = _int_or_none(item.get("frame_end"))
+        if frame_start is not None and frame_end is not None and frame_start <= frame_index <= frame_end:
+            return status
+        t0 = _float_or_none(item.get("t0"))
+        t1 = _float_or_none(item.get("t1"))
+        if t is not None and t0 is not None and t1 is not None and min(t0, t1) - 1e-9 <= t <= max(t0, t1) + 1e-9:
+            return status
+    return None
+
+
 def _moving_average(values: Sequence[float], window: int) -> list[float]:
     width = max(1, int(window))
     half = width // 2
@@ -434,6 +564,18 @@ def _physics_from_artifact(arc_solved: Mapping[str, Any]) -> PhysicsParameters:
         return PhysicsParameters()
     ball_type = str(raw.get("ball_type") or "outdoor")
     return PhysicsParameters.for_ball_type(ball_type)
+
+
+def _solver_config_from_artifact(arc_solved: Mapping[str, Any]) -> BallArcSolverConfig:
+    raw = arc_solved.get("config")
+    if not isinstance(raw, Mapping):
+        return BallArcSolverConfig()
+    allowed = set(BallArcSolverConfig.__dataclass_fields__)
+    kwargs = {key: value for key, value in raw.items() if key in allowed}
+    try:
+        return BallArcSolverConfig(**kwargs)
+    except (TypeError, ValueError):
+        return BallArcSolverConfig()
 
 
 def _fps(arc_solved: Mapping[str, Any], frames: Sequence[Any]) -> float:

@@ -1,0 +1,173 @@
+{
+  "artifact_type": "racketsport_ball_bounce_candidates_track_geometry",
+  "candidate_prediction": true,
+  "candidates": [
+    {
+      "candidate_prediction": true,
+      "conf": 1.0,
+      "frame": 132,
+      "human_reviewed": false,
+      "in_extended_court_bounds": true,
+      "method": "image_y_cusp",
+      "not_ground_truth": true,
+      "sharpness_px_s": 234.899,
+      "source": "track_geometry_candidate",
+      "t": 2.2022,
+      "vy_after_px_s": -69.593,
+      "vy_before_px_s": 165.305,
+      "world_xy_at_ball_radius": [
+        -0.9856,
+        3.0027
+      ],
+      "xy": [
+        1428.145,
+        524.428
+      ]
+    },
+    {
+      "candidate_prediction": true,
+      "conf": 1.0,
+      "frame": 266,
+      "human_reviewed": false,
+      "in_extended_court_bounds": true,
+      "method": "image_y_cusp",
+      "not_ground_truth": true,
+      "sharpness_px_s": 259.334,
+      "source": "track_geometry_candidate",
+      "t": 4.437766666666667,
+      "vy_after_px_s": -51.433,
+      "vy_before_px_s": 207.901,
+      "world_xy_at_ball_radius": [
+        -1.684,
+        1.095
+      ],
+      "xy": [
+        1254.162,
+        539.512
+      ]
+    },
+    {
+      "candidate_prediction": true,
+      "conf": 1.0,
+      "frame": 334,
+      "human_reviewed": false,
+      "in_extended_court_bounds": true,
+      "method": "image_y_cusp",
+      "not_ground_truth": true,
+      "sharpness_px_s": 1183.925,
+      "source": "track_geometry_candidate",
+      "t": 5.572233333333333,
+      "vy_after_px_s": -529.117,
+      "vy_before_px_s": 654.808,
+      "world_xy_at_ball_radius": [
+        -2.392,
+        8.3628
+      ],
+      "xy": [
+        1513.17,
+        483.84
+      ]
+    },
+    {
+      "candidate_prediction": true,
+      "conf": 1.0,
+      "frame": 347,
+      "human_reviewed": false,
+      "in_extended_court_bounds": true,
+      "method": "image_y_cusp",
+      "not_ground_truth": true,
+      "sharpness_px_s": 1655.287,
+      "source": "track_geometry_candidate",
+      "t": 5.789116666666667,
+      "vy_after_px_s": -1652.739,
+      "vy_before_px_s": 2.548,
+      "world_xy_at_ball_radius": [
+        1.9524,
+        -0.503
+      ],
+      "xy": [
+        1628.497,
+        599.826
+      ]
+    },
+    {
+      "candidate_prediction": true,
+      "conf": 1.0,
+      "frame": 423,
+      "human_reviewed": false,
+      "in_extended_court_bounds": true,
+      "method": "image_y_cusp",
+      "not_ground_truth": true,
+      "sharpness_px_s": 652.098,
+      "source": "track_geometry_candidate",
+      "t": 7.05705,
+      "vy_after_px_s": -27.875,
+      "vy_before_px_s": 624.223,
+      "world_xy_at_ball_radius": [
+        -1.4678,
+        1.1357
+      ],
+      "xy": [
+        1277.804,
+        540.455
+      ]
+    },
+    {
+      "candidate_prediction": true,
+      "conf": 1.0,
+      "frame": 497,
+      "human_reviewed": false,
+      "in_extended_court_bounds": true,
+      "method": "image_y_cusp",
+      "not_ground_truth": true,
+      "sharpness_px_s": 347.854,
+      "source": "track_geometry_candidate",
+      "t": 8.291616666666666,
+      "vy_after_px_s": -130.934,
+      "vy_before_px_s": 216.92,
+      "world_xy_at_ball_radius": [
+        -1.6084,
+        -1.7827
+      ],
+      "xy": [
+        1043.37,
+        578.057
+      ]
+    }
+  ],
+  "clip_id": "burlington_gold_0300_low_steep_corner",
+  "diagnostic_only": false,
+  "human_reviewed": false,
+  "method": {
+    "court_margin_m": 2.0,
+    "gap_max_ray_rms_m": 2.0,
+    "gap_max_speed_mps": 35.0,
+    "gap_min_image_speed_px_s": 40.0,
+    "gap_min_vertical_speed_mps": 0.5,
+    "gap_window_frames": 4,
+    "max_gap_hidden_frames": 24,
+    "max_visible_gap_frames": 3,
+    "min_candidate_separation_frames": 6,
+    "min_gap_hidden_frames": 2,
+    "min_run_len": 7,
+    "sharpness_relative_floor": 0.15,
+    "smoothing_window": 5
+  },
+  "not_ground_truth": true,
+  "policy": {
+    "notes": [
+      "Built from the 2D ball track + court calibration geometry only.",
+      "No reviewed label or reviewed-bounce file is required or consumed.",
+      "These are algorithmic geometric candidates, not human-reviewed ground truth."
+    ]
+  },
+  "schema_version": 1,
+  "source": "track_geometry_candidate",
+  "summary": {
+    "final_candidate_count": 6,
+    "gap_ballistic_intersection_count": 0,
+    "in_court_bounds_count": 11,
+    "raw_candidate_count": 17,
+    "raw_local_extrema_count": 17
+  }
+}

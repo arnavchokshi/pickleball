@@ -1,0 +1,99 @@
+{
+  "artifact_type": "racketsport_ball_chain_run_manifest",
+  "chain_config_degraded": "no_candidate_sidecars",
+  "clip": "outdoor_webcam_iynbd_1500_long_high_baseline",
+  "configs": {
+    "product_veto": {
+      "veto_px": 40.0,
+      "weak_support_required": true
+    },
+    "solver_a_free": {
+      "candidate_association_mode": "free",
+      "candidate_score_floors": {},
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": true,
+      "enable_event_subset_selection": true,
+      "max_candidates_per_frame": 12
+    },
+    "solver_b_rescue_tn05": {
+      "candidate_association_mode": "rescue_only",
+      "candidate_score_floors": {
+        "tracknet": 0.5,
+        "wasb": 0.0
+      },
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": false,
+      "enable_event_subset_selection": false,
+      "max_candidates_per_frame": 12
+    }
+  },
+  "generated_at": "2026-07-05T23:35:28Z",
+  "heldout_authorized": false,
+  "inputs": {
+    "ball_track": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/outdoor_webcam_iynbd_1500_long_high_baseline/ball_track.json",
+      "sha256": "d6e7e5d722a7028d1e57349ab7b16a0581d2a43fad0dda5f4109d2079eb7f086"
+    },
+    "court_calibration": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/outdoor_webcam_iynbd_1500_long_high_baseline/court_calibration.json",
+      "sha256": "bb7bb05b55af2799f49308be6e5b5e5b184af4862c1de8efe05e794f71e8dbd9"
+    },
+    "net_plane": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/outdoor_webcam_iynbd_1500_long_high_baseline/net_plane.json",
+      "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057"
+    }
+  },
+  "net_plane_provenance": {
+    "consumed_net_plane": true,
+    "reason": "consumed"
+  },
+  "outputs": {
+    "auto_bounce_candidates": {
+      "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/outdoor_webcam_iynbd_1500_long_high_baseline/ball_bounce_candidates.json",
+      "sha256": "13699e14f3943b7b915fdb07c6491d6bfc03363ac235a59c671e04f11e0f4a8a"
+    },
+    "ball_arc_render": {
+      "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/outdoor_webcam_iynbd_1500_long_high_baseline/ball_arc_render.json",
+      "sha256": "ba2c921dd63170b09368eab1e0b576735907f8c5a6dbb71ca34c11a3740a174e"
+    },
+    "ball_flight_sanity": {
+      "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/outdoor_webcam_iynbd_1500_long_high_baseline/ball_flight_sanity.json",
+      "sha256": "8de76cfa0ee69e1d8e424d806bc265b09df895ea9f6d435f67f519cc595fec7d"
+    },
+    "ball_track_arc_solved": {
+      "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/outdoor_webcam_iynbd_1500_long_high_baseline/ball_track_arc_solved.json",
+      "sha256": "5edae44643529609f832a5e564ae21f26c7d210c0a6ef8fe14cb4af699c8a2a2"
+    },
+    "seed_anchor_ball_track_arc_solved": {
+      "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/outdoor_webcam_iynbd_1500_long_high_baseline/ball_arc_seed/ball_track_arc_solved.json",
+      "sha256": "55c2b1a96a6fc706134428cff41129afbae28b7c4b4d0984cdf6f3c91501524d"
+    },
+    "seed_anchor_flight_sanity": {
+      "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/outdoor_webcam_iynbd_1500_long_high_baseline/ball_arc_seed/ball_flight_sanity.json",
+      "sha256": "60822d4e6292e103f900f369e5cb5cc6a5e3a7c6e6fcf76546589158d7347542"
+    }
+  },
+  "policy": {
+    "ball_arc_render_only": true,
+    "candidate_sidecars_consumed_when_present": true,
+    "net_plane_consumed_when_valid": true,
+    "outdoor_indoor_labels_read": false,
+    "render_only_3d": true,
+    "seed_anchor_prepass": true
+  },
+  "schema_version": 1,
+  "summary": {
+    "auto_bounce_candidate_count": 8,
+    "ball_arc_render_bridge_sample_count": 0,
+    "ball_arc_render_sample_count": 2249,
+    "chain_config_degraded": "no_candidate_sidecars",
+    "coverage_world_xyz_count": 473,
+    "net_plane_provenance": {
+      "consumed_net_plane": true,
+      "reason": "consumed"
+    },
+    "seed_anchor_count": 8,
+    "segment_count": 7,
+    "solver_status": "ran"
+  }
+}

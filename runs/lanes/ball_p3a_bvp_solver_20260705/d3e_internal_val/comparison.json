@@ -1,0 +1,145 @@
+{
+  "acceptance": {
+    "detection_f1_regression_floor": -0.01,
+    "measured_grade_recall_drop_is_accepted_honesty_tradeoff": true,
+    "no_detection_or_product_view_f1_regresses_more_than_1pt": true,
+    "worst_detection_delta": 0.0,
+    "worst_product_view_delta": 0.0
+  },
+  "aggregate": {
+    "detection_f1_at_20": {
+      "after": 0.7852257181942545,
+      "baseline": 0.7852257181942545,
+      "delta": 0.0
+    },
+    "measured_grade_f1_at_20": {
+      "after": 0.3700534759358289,
+      "baseline": 0.6237885462555066,
+      "delta": -0.25373507031967774
+    },
+    "measured_grade_hit_recall": {
+      "after": 0.23872679045092837,
+      "baseline": 0.47877984084880637,
+      "delta": -0.240053050397878
+    },
+    "measured_grade_recall_at_20": {
+      "after": 0.22944297082228116,
+      "baseline": 0.46949602122015915,
+      "delta": -0.240053050397878
+    },
+    "product_view_f1_at_20": {
+      "after": 0.7852257181942545,
+      "baseline": 0.7852257181942545,
+      "delta": 0.0
+    }
+  },
+  "artifact_type": "racketsport_ball_p3a_d3e_internal_val_comparison",
+  "benchmark_json": "runs/lanes/ball_p3a_bvp_solver_20260705/d3e_internal_val/benchmark_ball_tracks_against_cvat.json",
+  "clips": {
+    "burlington_gold_0300_low_steep_corner": {
+      "detection_f1_at_20": {
+        "after": 0.7789046653144016,
+        "baseline": 0.7789046653144016,
+        "delta": 0.0
+      },
+      "measured_grade_f1_at_20": {
+        "after": 0.40188383045525905,
+        "baseline": 0.6623711340206185,
+        "delta": -0.2604873035653595
+      },
+      "measured_grade_hit_recall": {
+        "after": 0.25443786982248523,
+        "baseline": 0.5088757396449705,
+        "delta": -0.25443786982248523
+      },
+      "measured_grade_recall_at_20": {
+        "after": 0.252465483234714,
+        "baseline": 0.5069033530571992,
+        "delta": -0.25443786982248523
+      },
+      "measured_grade_visible_predictions": {
+        "after": 129,
+        "baseline": 259
+      },
+      "product_view_f1_at_20": {
+        "after": 0.7789046653144016,
+        "baseline": 0.7789046653144016,
+        "delta": 0.0
+      },
+      "view_generation": {
+        "baseline_arc_path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/ball_track_arc_solved.json",
+        "baseline_detection_path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/ball_track.json",
+        "baseline_detection_visible_frames": 479,
+        "baseline_measured_grade_visible_frames": 269,
+        "baseline_product_visible_frames": 479,
+        "detection_input_max_xy_delta_px": 0.0,
+        "detection_visible_frame_sets_identical": true,
+        "frame_count": 600,
+        "product_view_max_xy_delta_px": 0.0,
+        "product_visible_frame_sets_identical": true,
+        "regen_arc_path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_track_arc_solved.json",
+        "regen_detection_input_visible_frames": 479,
+        "regen_detection_recorded_input_path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/ball_track.json",
+        "regen_measured_grade_visible_frames": 130,
+        "regen_product_visible_frames": 479
+      }
+    },
+    "wolverine_mixed_0200_mid_steep_corner": {
+      "detection_f1_at_20": {
+        "after": 0.7983193277310925,
+        "baseline": 0.7983193277310925,
+        "delta": 0.0
+      },
+      "measured_grade_f1_at_20": {
+        "after": 0.30201342281879195,
+        "baseline": 0.5403899721448467,
+        "delta": -0.2383765493260548
+      },
+      "measured_grade_hit_recall": {
+        "after": 0.20647773279352227,
+        "baseline": 0.41700404858299595,
+        "delta": -0.21052631578947367
+      },
+      "measured_grade_recall_at_20": {
+        "after": 0.18218623481781376,
+        "baseline": 0.39271255060728744,
+        "delta": -0.21052631578947367
+      },
+      "measured_grade_visible_predictions": {
+        "after": 51,
+        "baseline": 103
+      },
+      "product_view_f1_at_20": {
+        "after": 0.7983193277310925,
+        "baseline": 0.7983193277310925,
+        "delta": 0.0
+      },
+      "view_generation": {
+        "baseline_arc_path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/ball_track_arc_solved.json",
+        "baseline_detection_path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/ball_track.json",
+        "baseline_detection_visible_frames": 229,
+        "baseline_measured_grade_visible_frames": 112,
+        "baseline_product_visible_frames": 229,
+        "detection_input_max_xy_delta_px": 0.0,
+        "detection_visible_frame_sets_identical": true,
+        "frame_count": 300,
+        "product_view_max_xy_delta_px": 0.0,
+        "product_visible_frame_sets_identical": true,
+        "regen_arc_path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/wolverine_mixed_0200_mid_steep_corner/ball_track_arc_solved.json",
+        "regen_detection_input_visible_frames": 229,
+        "regen_detection_recorded_input_path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/ball_track.json",
+        "regen_measured_grade_visible_frames": 51,
+        "regen_product_visible_frames": 229
+      }
+    }
+  },
+  "cvat_root": "runs/cvat_imports/2026_06_30",
+  "notes": [
+    "Detection-input F1 compares the regenerated chain recorded ball_track input against the pre-change ball_track baseline; max xy delta is 0 in both clips.",
+    "Product-view F1 uses schema-valid projections of ball_track_arc_solved outputs because canonical benchmark_ball_tracks_against_cvat.py accepts BallTrack-schema artifacts only.",
+    "Measured-grade recall uses schema-valid projections where only anchored_measured arc-solved frames remain visible.",
+    "Measured-grade recall drops because the accepted court-volume gate demotes mathematically invalid ambiguous arcs out of anchored_measured into lower-confidence bands."
+  ],
+  "schema_version": 1,
+  "view_generation_summary": "runs/lanes/ball_p3a_bvp_solver_20260705/d3e_internal_val/view_generation_summary.json"
+}
