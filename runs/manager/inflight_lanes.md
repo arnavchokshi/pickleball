@@ -4,7 +4,6 @@ One row per still-running lane so the next session neither double-dispatches nor
 
 | lane | kind (codex/sonnet/workflow) | session/task id | resume command | owned files | vm (if any) | expected done | dispatched |
 |---|---|---|---|---|---|---|---|
-| online-harvest-batch1 | sonnet agent | (running) | SendMessage: 'finish: manifest + screening + report' | data/online_harvest_20260706/ | none (local) | ~1-2h more (throttled) | 2026-07-06 |
 | p06-freshworlds | sonnet agent | (running) | SendMessage: 'continue bounded polls; report per-clip' | fresh runs/ dirs + a100_known_hosts + fleet ledger status | fleet1 (A100) | ~2-4h (4 clips serial) | 2026-07-06 |
 | p02-hygiene | codex | pid 20178 | codex exec resume <session> | third_party pins, calib shim, gpu_cold_start.sh, ball_arc_chain events_selected | none | ~1h | 2026-07-06 |
 | p07-flightsim | codex | pid 20179 | codex exec resume <session> | NEW flight_simulator.py + corpus CLI + tests | none | ~1-2h | 2026-07-06 |
