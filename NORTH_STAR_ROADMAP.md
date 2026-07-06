@@ -41,9 +41,12 @@ start: stale-blank boxes cause false STOPs, silently-ignored boxes destroy the r
 - [x] **GPU access:** SATISFIED 2026-07-06 — owner re-authed (`hello@`); old A100 DELETED; fleet GPU
   #1 `pickleball-a100-fleet1` (A100-40GB spot, asia-southeast1-a, ~$1.2/hr) cold-started 257s + smoke
   PASS (evidence: runs/lanes/gpu_coldstart_20260706/report.md; ledger runs/manager/gpu_fleet.md).
-  Spend cap: ≤$5/GPU/hr, max 4 GPUs, teardown-on-completion. REMAINING HARDENING: service-account key
-  at `~/.secrets/pickleball-fleet-sa.json` (owner runs the 4-command block once, or grants the gcloud
-  iam Bash permission) so sessions never depend on interactive tokens again.
+  Spend cap: ≤$5/GPU/hr, max 4 GPUs, teardown-on-completion. AUTH MECHANISM (final, 2026-07-06): SA `pickleball-fleet@` exists with
+  compute.admin, but ORG POLICY blocks key creation (iam.disableServiceAccountKeyCreation) — so the
+  standing mechanism is the OWNER's gcloud refresh token (persists indefinitely across sessions;
+  refreshed 2026-07-06). If auth ever dies: that is a typed `needs-decision` STOP asking the owner
+  for one `gcloud auth login` — never work around it. Optional future hardening: SA impersonation
+  (keyless) via roles/iam.serviceAccountTokenCreator, or an org-policy exception.
 - [x] **Commit the docs of record:** SATISFIED by the owner-authorized 2026-07-06 docs-of-record
   commit (this file's presence in git history is the evidence; includes EDGE_PLAYBOOK, CLAUDE.md,
   the manual, skills, fleet scaffolds, allowlist test).

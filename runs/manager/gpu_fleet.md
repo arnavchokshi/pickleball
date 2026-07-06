@@ -10,4 +10,4 @@ teardown. A session MUST reconcile this against `gcloud compute instances list
 
 Fleet cost cap (owner 2026-07-06): ≤$5/GPU/hr, max 4 concurrent GPUs; teardown/DELETE the moment a
 lane ends (idle spend never acceptable); 5th GPU or >$5/hr = `needs-purchase-approval` STOP.
-Auth: service-account key `~/.secrets/pickleball-fleet-sa.json` (never in git/chat).
+Auth: owner gcloud refresh token (hello@; SA key creation org-blocked); dead auth = typed STOP for one owner login.

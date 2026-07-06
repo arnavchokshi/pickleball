@@ -246,9 +246,11 @@ research backing: `runs/research_sota_20260705/fable5_manager_setup.md`.
   a NEW GPU when no idle match exists AND ≥2 GPU-bound lanes are truly safe-parallel — one GPU per lane,
   hard cap 4 concurrent lanes (a 5th = `needs-purchase-approval` STOP). NEVER provision speculatively;
   NEVER double-book a GPU (set `EXCLUSIVE_PROCESS` compute mode so a 2nd CUDA context fails loud).
-- **Auth:** non-interactive via the fleet SERVICE ACCOUNT key at `~/.secrets/pickleball-fleet-sa.json`
-  (`gcloud auth activate-service-account --key-file=...`; created once after the owner's final
-  interactive login; NEVER in git/chat/repo). If the key is missing/invalid → needs-decision STOP.
+- **Auth (final 2026-07-06):** the owner's gcloud refresh token (`hello@`, persists indefinitely).
+  SA `pickleball-fleet@` exists (compute.admin) but org policy BLOCKS key creation — do not retry key
+  creation. Verify auth at session start with one cheap list call; if dead → typed needs-decision
+  STOP for one owner `gcloud auth login` (historically rare). Optional hardening: keyless SA
+  impersonation (TokenCreator) — only if tokens prove flaky.
 - **Provisioning is delegated** (Fable never hand-runs gcloud): a SONNET subagent or a manager-run
   detached script runs it — NOT Codex (its sandbox has no network; §8),
   `gcloud compute instances create … --provisioning-model=SPOT --instance-termination-action=STOP
