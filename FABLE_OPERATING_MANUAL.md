@@ -373,3 +373,45 @@ now, the narrow labeled exception: ONE Sonnet agent implements a bounded leg und
 report + full-blast-radius verification bar (worked as two manager-checkpointed legs via SendMessage
 on 2026-07-05, ~400k tokens/leg); never let Sonnet absorb Codex's role silently or beyond the named
 leg. Record the exception in the lane report.
+
+## 18. Wave-1 field lessons (2026-07-06 — the first real implementation wave; keep what worked, fix what didn't)
+
+**KEEP (proven this wave):**
+- **Resumable long lanes.** One Sonnet GPU agent was resumed 3× via SendMessage (fresh run → post-fix
+  retry → grounding wave), keeping full context each time — far cheaper than fresh agents. Design GPU
+  lanes for resumption; record resume handles in `inflight_lanes.md`.
+- **Fix-verify with the exact failing artifact.** The rsync fix was proven on the exact 245-file
+  payload that failed; the placement fix was reproduced from the real tracks.json before touching
+  code. Always reproduce → fix → re-run the same repro.
+- **Agents that push back structurally are gold.** The P0-6 agent refused to report stale grounding
+  numbers as fresh (grounding is computed INSIDE the BODY stage — the manager's request was
+  structurally impossible). Verify where a metric is COMPUTED (see the synergy-audit stage graph)
+  before demanding it from a pass that can't produce it.
+- **Local adjudication of sandbox failures.** Codex lanes honestly reported suite failures that were
+  sandbox artifacts (socket binds, .git locks); ONE clean local wide-suite run adjudicated all three
+  lanes at once. Never let a lane's sandbox suite be the final word, in either direction.
+- **Schema-validated lane reports + detached dispatch** worked; boards (PART 0, gpu_fleet,
+  inflight_lanes, BUILD_CHECKLIST bullets) were actually load-bearing across 3 blocker cycles.
+
+**FIX (cost us real time/tokens this wave):**
+- **Doc-edit anchor failures.** Multi-edit python batches died repeatedly on inexact string anchors,
+  re-sending large heredocs each retry. Rule: grep-verify every anchor in the SAME command before the
+  edit batch, or use small single Edits.
+- **Validate workflow args + substantive output.** Four research workflows once ran EMPTY (args
+  arrived as a JSON string) and one audit agent returned a literal stub ("test") that satisfied the
+  schema. Rules: fail-loud arg guards (already templated) AND check substantive fields (a re-run
+  prompt saying "a stub is a failed mission" fixed it).
+- **Don't pipe long-running servers** (`| head` killed the dev server via SIGPIPE); don't write
+  `find|head && echo` success-echoes that fire unconditionally.
+- **Serialized clips on one GPU = 75 min that could be ~25.** Wave 1 ran 4 clips serially by design
+  (correctness proof); wave 2+ fans multi-clip jobs across fleet GPUs (one clip per GPU).
+- **Know the stage graph before sequencing reruns.** The BODY→grounding dependency cost one extra
+  GPU wave; `runs/lanes/e2e_synergy_audit_20260705/stage_graph.json` exists — consult it.
+- **Notification reality:** nohup-detached processes do NOT notify (poll via ScheduleWakeup);
+  `run_in_background` Bash tasks DO notify and survived fine this session (the 2026-07-04 kill-sweep
+  did not recur) — prefer run_in_background unless a job must survive session death.
+- **gcloud reauth challenges arrive same-day** (§12 auth note): verify before any create/stop; ssh
+  poweroff is the gcloud-free fallback; keyless SA impersonation is the permanent fix (one owner
+  grant of roles/iam.serviceAccountTokenCreator).
+- **Cost governor on research fan-outs** (§15 item 11 stands): state agent/token budgets up front;
+  tier effort; this session's three passes were worth it but ran with no declared ceiling.
