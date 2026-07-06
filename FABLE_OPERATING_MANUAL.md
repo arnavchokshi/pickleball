@@ -246,11 +246,14 @@ research backing: `runs/research_sota_20260705/fable5_manager_setup.md`.
   a NEW GPU when no idle match exists AND ≥2 GPU-bound lanes are truly safe-parallel — one GPU per lane,
   hard cap 4 concurrent lanes (a 5th = `needs-purchase-approval` STOP). NEVER provision speculatively;
   NEVER double-book a GPU (set `EXCLUSIVE_PROCESS` compute mode so a 2nd CUDA context fails loud).
-- **Auth (final 2026-07-06):** the owner's gcloud refresh token (`hello@`, persists indefinitely).
-  SA `pickleball-fleet@` exists (compute.admin) but org policy BLOCKS key creation — do not retry key
-  creation. Verify auth at session start with one cheap list call; if dead → typed needs-decision
-  STOP for one owner `gcloud auth login` (historically rare). Optional hardening: keyless SA
-  impersonation (TokenCreator) — only if tokens prove flaky.
+- **Auth (final 2026-07-06, updated same day):** the owner's gcloud refresh token (`hello@`) — but
+  Google issues PERIODIC REAUTH challenges (observed: token worked at 12:00, challenged by 16:40 the
+  same day), which fail non-interactively. Protocol: verify with one cheap list call at session start
+  AND before any create/stop; on challenge → typed needs-decision STOP for one owner
+  `gcloud auth login`. gcloud-FREE fallbacks that keep working (key-based ssh): power a VM off with
+  `ssh ... 'sudo shutdown -h now'` (proven twice); dispatch/list state via the fleet ledger. SA
+  `pickleball-fleet@` exists but org policy blocks key creation. Real hardening candidate for wave 2:
+  keyless SA impersonation (owner grants roles/iam.serviceAccountTokenCreator once).
 - **Provisioning is delegated** (Fable never hand-runs gcloud): a SONNET subagent or a manager-run
   detached script runs it — NOT Codex (its sandbox has no network; §8),
   `gcloud compute instances create … --provisioning-model=SPOT --instance-termination-action=STOP
