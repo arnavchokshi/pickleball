@@ -110,7 +110,7 @@ def test_build_serving_manifest_cli_writes_json_and_preserves_manifest(tmp_path:
         manifest_path,
         [
             _available_model("yolo26m", "person_detect", "/workspace/checkpoints/body4d/yolo26/yolo26m.pt"),
-            _available_model("rtmw_l_384", "2d_pose", "/workspace/checkpoints/body4d/rtmw/rtmw-l_384x288.pth"),
+            _available_model("fast_sam_3d_body_dinov3", "3d_body_backbone", "/workspace/checkpoints/body4d/sam3d/model.ckpt"),
         ],
     )
     before = manifest_path.read_text(encoding="utf-8")

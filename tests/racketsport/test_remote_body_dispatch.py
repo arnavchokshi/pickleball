@@ -387,8 +387,8 @@ def test_binary_handoff_subprocess_runtime_loads_sidecar_arrays(tmp_path: Path, 
 
     np.testing.assert_allclose(outputs[0][0]["pred_vertices"], np.asarray([[1.0, 2.0, 0.3]], dtype=np.float32))
     assert outputs[0][0]["confidence"] == 0.75
-    assert wrapper.binary_handoff_status == "binary_sidecar_v1"
-    assert "binary numpy sidecar" in wrapper.binary_handoff_note
+    assert wrapper.binary_handoff_status == "pickle_chunks_v1"
+    assert "pickle chunks" in wrapper.binary_handoff_note
     assert runtime.fallback_calls == []
 
 

@@ -87,6 +87,7 @@ class PlacementConfig:
     continuity_max_frame_displacement_m: float = 0.50
     continuity_max_supported_speed_mps: float = 2.50
     fallback_transition_blend_frames: int = 5
+    visual_max_root_step_m: float | None = 0.10
 
 
 @dataclass(frozen=True)
@@ -232,6 +233,8 @@ def rewrite_tracks_with_placement(
         }
     )
     gap_reacquisition_speed_violations: list[dict[str, Any]] = []
+    visual_smoothing_players: dict[str, dict[str, int | float]] = {}
+    visual_smoothing_totals: Counter[str] = Counter({"frames_adjusted_count": 0, "infeasible_segment_count": 0})
     camera_motion_seen: set[int] = set()
     camera_motion_used: set[int] = set()
 
@@ -499,6 +502,15 @@ def rewrite_tracks_with_placement(
             previous_written_frame_idx = int(frame_idx)
             previous_used_measurement = used_measurement
             previous_stance = stance
+        visual_counts = _apply_visual_root_step_bound(
+            placement_frames,
+            rewritten_frames,
+            config=config,
+            fps=fps,
+        )
+        for frame in placement_frames:
+            frame_idx = int(frame["frame_idx"])
+            rewritten_by_frame[frame_idx] = [float(frame["smoothed_world_xy"][0]), float(frame["smoothed_world_xy"][1])]
         placement_players.append({"id": player_id, "frames": placement_frames})
         jitter_summary[str(player_id)] = _jitter_before_after(frames, rewritten_frames, fps=fps)
         player_stance_wobble = _stance_wobble_before_after(original_by_frame, rewritten_by_frame, stance_frames)
@@ -506,6 +518,8 @@ def rewrite_tracks_with_placement(
             stance_wobble_summary[str(player_id)] = player_stance_wobble
         smoothing_guard_players[str(player_id)] = dict(smoothing_counts)
         smoothing_guard_totals.update(smoothing_counts)
+        visual_smoothing_players[str(player_id)] = visual_counts
+        visual_smoothing_totals.update({key: int(value) for key, value in visual_counts.items() if key.endswith("_count")})
 
     side_consistency_summary = _recompute_side_roles_and_consistency(
         tracks_payload=tracks_payload,
@@ -516,6 +530,12 @@ def rewrite_tracks_with_placement(
     stance_phase_count = external_stance_phase_count + native_stance_phase_count
     boundary_guard_summary = {"totals": dict(boundary_guard_totals), "players": boundary_guard_players}
     smoothing_guard_summary = {"totals": dict(smoothing_guard_totals), "players": smoothing_guard_players}
+    visual_smoothing_summary = {
+        "visual_max_root_step_m": config.visual_max_root_step_m,
+        "frames_adjusted_count": int(visual_smoothing_totals.get("frames_adjusted_count", 0)),
+        "infeasible_segment_count": int(visual_smoothing_totals.get("infeasible_segment_count", 0)),
+        "players": visual_smoothing_players,
+    }
     camera_motion_counts: dict[str, Any] = {}
     if camera_motion_path is not None:
         camera_motion_counts = {
@@ -552,6 +572,7 @@ def rewrite_tracks_with_placement(
         "sidecar_identity": sidecar_identity_summary,
         "boundary_guards": boundary_guard_summary,
         "smoothing_guards": smoothing_guard_summary,
+        "visual_smoothing": visual_smoothing_summary,
         "side_quadrant_consistency": side_consistency_summary,
         **camera_motion_counts,
     }
@@ -576,6 +597,7 @@ def rewrite_tracks_with_placement(
         "sidecar_identity": sidecar_identity_summary,
         "boundary_guards": boundary_guard_summary,
         "smoothing_guards": smoothing_guard_summary,
+        "visual_smoothing": visual_smoothing_summary,
         "side_quadrant_consistency": side_consistency_summary,
         "jitter_before_after_mps": jitter_summary,
         "stance_wobble_before_after_m": stance_wobble_summary,
@@ -1007,6 +1029,214 @@ def _limit_step(previous_xy: Sequence[float], target_xy: Sequence[float], *, max
         float(previous_xy[0]) + (float(target_xy[0]) - float(previous_xy[0])) * scale,
         float(previous_xy[1]) + (float(target_xy[1]) - float(previous_xy[1])) * scale,
     ]
+
+
+def _apply_visual_root_step_bound(
+    placement_frames: list[dict[str, Any]],
+    rewritten_frames: Sequence[dict[str, Any]],
+    *,
+    config: PlacementConfig,
+    fps: float,
+) -> dict[str, int | float]:
+    if config.visual_max_root_step_m is None:
+        return {
+            "visual_max_root_step_m": 0.0,
+            "frames_adjusted_count": 0,
+            "infeasible_segment_count": 0,
+        }
+    max_step = float(config.visual_max_root_step_m)
+    if max_step <= 0.0:
+        raise ValueError("visual_max_root_step_m must be positive when set")
+    xy_by_frame = {
+        int(frame["frame_idx"]): [float(frame["smoothed_world_xy"][0]), float(frame["smoothed_world_xy"][1])]
+        for frame in placement_frames
+    }
+    edge_max_steps = _visual_root_step_edge_limits(
+        placement_frames,
+        config=config,
+        fps=fps,
+        visual_max_step_m=max_step,
+    )
+    adjusted, frames_adjusted, infeasible = _redistribute_visual_root_steps(
+        xy_by_frame,
+        max_step_m=max_step,
+        edge_max_steps=edge_max_steps,
+        return_infeasible=True,
+    )
+    if frames_adjusted <= 0:
+        return {
+            "visual_max_root_step_m": max_step,
+            "frames_adjusted_count": 0,
+            "infeasible_segment_count": infeasible,
+        }
+    rewritten_by_frame = {
+        _frame_index(frame, 30.0): frame
+        for frame in rewritten_frames
+        if isinstance(frame, dict)
+    }
+    for frame in placement_frames:
+        frame_idx = int(frame["frame_idx"])
+        bounded_xy = adjusted.get(frame_idx)
+        if bounded_xy is None:
+            continue
+        old_xy = [float(frame["smoothed_world_xy"][0]), float(frame["smoothed_world_xy"][1])]
+        if _distance_xy(old_xy, bounded_xy) <= 1e-12:
+            continue
+        frame["smoothed_world_xy"] = [float(bounded_xy[0]), float(bounded_xy[1])]
+        frame["visual_root_step_bounded"] = True
+        frame["output_source"] = f"{frame.get('output_source', 'smoothed')}_visual_bound"
+        rewritten = rewritten_by_frame.get(frame_idx)
+        if rewritten is not None:
+            rewritten["world_xy"] = [float(bounded_xy[0]), float(bounded_xy[1])]
+    return {
+        "visual_max_root_step_m": max_step,
+        "frames_adjusted_count": frames_adjusted,
+        "infeasible_segment_count": infeasible,
+    }
+
+
+def _redistribute_visual_root_steps(
+    xy_by_frame: Mapping[int, Sequence[float]],
+    *,
+    max_step_m: float,
+    edge_max_steps: Mapping[tuple[int, int], float] | None = None,
+    return_infeasible: bool = False,
+) -> tuple[dict[int, list[float]], int] | tuple[dict[int, list[float]], int, int]:
+    if max_step_m <= 0.0:
+        raise ValueError("max_step_m must be positive")
+    adjusted = {int(idx): [float(xy[0]), float(xy[1])] for idx, xy in xy_by_frame.items()}
+    changed_frames: set[int] = set()
+    infeasible_count = 0
+    for run in _contiguous_runs(sorted(adjusted)):
+        if len(run) < 3:
+            continue
+        start = adjusted[run[0]]
+        end = adjusted[run[-1]]
+        run_capacity = sum(
+            _visual_root_step_edge_limit(left_idx, right_idx, max_step_m=max_step_m, edge_max_steps=edge_max_steps)
+            for left_idx, right_idx in zip(run, run[1:], strict=False)
+        )
+        if _distance_xy(start, end) > run_capacity + 1e-9:
+            infeasible_count += 1
+            continue
+        for _iteration in range(max(4, len(run) * 2)):
+            changed = False
+            for left_idx, right_idx in zip(run, run[1:], strict=False):
+                left = adjusted[left_idx]
+                right = adjusted[right_idx]
+                edge_limit = _visual_root_step_edge_limit(
+                    left_idx,
+                    right_idx,
+                    max_step_m=max_step_m,
+                    edge_max_steps=edge_max_steps,
+                )
+                if _distance_xy(left, right) <= edge_limit + 1e-12:
+                    continue
+                limited = _limit_step(left, right, max_step=edge_limit)
+                if right_idx != run[-1]:
+                    adjusted[right_idx] = limited
+                    changed_frames.add(right_idx)
+                    changed = True
+            for right_idx, left_idx in zip(reversed(run), reversed(run[:-1]), strict=False):
+                right = adjusted[right_idx]
+                left = adjusted[left_idx]
+                edge_limit = _visual_root_step_edge_limit(
+                    left_idx,
+                    right_idx,
+                    max_step_m=max_step_m,
+                    edge_max_steps=edge_max_steps,
+                )
+                if _distance_xy(right, left) <= edge_limit + 1e-12:
+                    continue
+                limited = _limit_step(right, left, max_step=edge_limit)
+                if left_idx != run[0]:
+                    adjusted[left_idx] = limited
+                    changed_frames.add(left_idx)
+                    changed = True
+            if not changed:
+                break
+        for left_idx, right_idx in zip(run, run[1:], strict=False):
+            edge_limit = _visual_root_step_edge_limit(
+                left_idx,
+                right_idx,
+                max_step_m=max_step_m,
+                edge_max_steps=edge_max_steps,
+            )
+            if _distance_xy(adjusted[left_idx], adjusted[right_idx]) > edge_limit + 1e-9:
+                infeasible_count += 1
+                break
+    if return_infeasible:
+        return adjusted, len(changed_frames), infeasible_count
+    return adjusted, len(changed_frames)
+
+
+def _visual_root_step_edge_limits(
+    placement_frames: Sequence[Mapping[str, Any]],
+    *,
+    config: PlacementConfig,
+    fps: float,
+    visual_max_step_m: float,
+) -> dict[tuple[int, int], float]:
+    sorted_frames = sorted(placement_frames, key=lambda frame: int(frame.get("frame_idx", 0)))
+    limits: dict[tuple[int, int], float] = {}
+    for previous, current in zip(sorted_frames, sorted_frames[1:], strict=False):
+        previous_idx = int(previous.get("frame_idx", 0))
+        current_idx = int(current.get("frame_idx", 0))
+        if current_idx <= previous_idx:
+            continue
+        frame_delta = current_idx - previous_idx
+        limit = float(visual_max_step_m)
+        current_source = str(current.get("output_source") or "")
+        previous_source = str(previous.get("output_source") or "")
+        divergence_snap = current_source.startswith("fused_divergence")
+        gap_transition = "gap_hold" in previous_source or "gap_transition" in previous_source
+        if (
+            _placement_frame_has_used_measurement(previous)
+            and _placement_frame_has_used_measurement(current)
+            and not divergence_snap
+            and not gap_transition
+        ):
+            limit = min(
+                limit,
+                _max_written_step(
+                    config=config,
+                    fps=fps,
+                    frame_delta=frame_delta,
+                    max_speed_mps=float(config.continuity_max_supported_speed_mps),
+                ),
+            )
+        if previous.get("stance") is True and current.get("stance") is True and not divergence_snap and not gap_transition:
+            limit = min(
+                limit,
+                _max_written_step(
+                    config=config,
+                    fps=fps,
+                    frame_delta=frame_delta,
+                    max_speed_mps=float(config.stance_speed_mps),
+                ),
+            )
+        limits[(previous_idx, current_idx)] = max(limit, 0.0)
+    return limits
+
+
+def _visual_root_step_edge_limit(
+    left_idx: int,
+    right_idx: int,
+    *,
+    max_step_m: float,
+    edge_max_steps: Mapping[tuple[int, int], float] | None,
+) -> float:
+    if edge_max_steps is None:
+        return float(max_step_m)
+    key = (min(int(left_idx), int(right_idx)), max(int(left_idx), int(right_idx)))
+    return max(float(edge_max_steps.get(key, max_step_m)), 0.0)
+
+
+def _placement_frame_has_used_measurement(frame: Mapping[str, Any]) -> bool:
+    source_counts = frame.get("source_counts") or {}
+    if not isinstance(source_counts, Mapping):
+        return False
+    return any(int(count) > 0 for count in source_counts.values())
 
 
 def _max_written_step(

@@ -1,4 +1,23 @@
+import subprocess
+import sys
+
 from scripts.racketsport.monitor_process_resources import build_artifact, summarize
+
+
+def test_monitor_process_resources_cli_help_direct_reference() -> None:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/monitor_process_resources.py",
+            "--help",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "--out" in completed.stdout
+    assert "--sample-interval" in completed.stdout
 
 
 def test_resource_usage_summary_aggregates_gpu_vram_cpu_and_duration() -> None:

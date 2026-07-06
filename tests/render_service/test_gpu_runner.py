@@ -101,7 +101,7 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
         remote_repo="/srv/pickleball",
         remote_python="/srv/pickleball/.venv/bin/python",
         known_hosts_path="/etc/secrets/gcp_known_hosts",
-        extra_pythonpath="/srv/openmmlab/mmpose/projects/rtmpose3d",
+        extra_pythonpath="/srv/pickleball/extra_pythonpath",
         wasb_repo="/srv/pickleball_git/third_party/WASB-SBDT",
         wasb_checkpoint="/srv/pickleball_git/models/checkpoints/wasb/wasb_tennis_best.pth.tar",
         run=fake_run,
@@ -133,7 +133,7 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
     assert "--allow-auto-court-corners-preview" in remote_command
     assert (
         "PYTHONPATH=/srv/pickleball/runs/render_jobs/job_1/code:"
-        "/srv/openmmlab/mmpose/projects/rtmpose3d${PYTHONPATH:+:$PYTHONPATH}"
+        "/srv/pickleball/extra_pythonpath${PYTHONPATH:+:$PYTHONPATH}"
     ) in remote_command
     assert "--wasb-repo /srv/pickleball_git/third_party/WASB-SBDT" in remote_command
     assert "--wasb-checkpoint /srv/pickleball_git/models/checkpoints/wasb/wasb_tennis_best.pth.tar" in remote_command

@@ -5,7 +5,7 @@ import Foundation
 /// every frame is unnecessary: `runs/ios_device_gate_20260702T025809Z/LATENCY_TABLE_DEVICE.md`
 /// measured the real iPhone 14 Pro ANE at ~3.19ms/frame for `yolo26n_640`
 /// (~218fps headroom for the detector+ball-student compute alone), but that
-/// number excludes RTMPose, person tracking, rendering, and thermal
+/// number excludes pose, person tracking, rendering, and thermal
 /// throttling under sustained load -- none of which are proven yet on a real
 /// camera+render loop. Running detection every 3rd-5th frame (not every
 /// frame) leaves a wide, honest safety margin for everything not yet
@@ -26,7 +26,7 @@ public struct LiveDetectionCadenceScheduler: Equatable, Sendable {
 
     /// Budgeted default per the milestone spec ("every 3rd-5th frame").
     /// Picks the middle of that explicit range rather than the fastest
-    /// extreme, keeping headroom for the still-unmeasured RTMPose/tracking/
+    /// extreme, keeping headroom for the still-unmeasured pose/tracking/
     /// render/thermal cost documented above.
     public static let budgeted = LiveDetectionCadenceScheduler(everyNFrames: 4)
 }

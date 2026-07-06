@@ -1,7 +1,7 @@
 """process_video.py's "frames" stage: decide which BODY-runtime JPEGs to
 extract from the source video, then materialize them.
 
-Both ``PoseStageRunner`` (Lane A RTMW3D, "joints everywhere") and
+Both the retired ``PoseStageRunner`` and
 ``BodyStageRunner`` (Fast SAM-3D-Body mesh, tier-scheduled at contact
 windows) read per-frame crops from a ``body_frames/`` directory
 (``threed.racketsport.orchestrator._find_body_frame_image``,

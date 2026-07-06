@@ -116,7 +116,7 @@ def _lane_a_skeleton_payload() -> dict:
         "artifact_type": "racketsport_skeleton3d",
         "fps": 30.0,
         "world_frame": "court_Z0",
-        "source_model": "rtmw3d_x",
+        "source_model": "sam3d_body_joints",
         "joint_names": ["pelvis", "left_wrist", "right_wrist"],
         "preview_only": False,
         "players": [
@@ -269,7 +269,7 @@ def test_body_video_smoke_reuses_input_lane_a_skeleton_for_body_stage(tmp_path: 
         assert pose_result.status == "ran"
         assert pose_result.produced_artifacts == ("skeleton3d.json",)
         skeleton = json.loads((out / "skeleton3d.json").read_text(encoding="utf-8"))
-        assert skeleton["source_model"] == "rtmw3d_x"
+        assert skeleton["source_model"] == "sam3d_body_joints"
         assert skeleton["provenance"]["lane"] == "A"
 
         frame = {
@@ -388,7 +388,7 @@ def test_body_video_smoke_does_not_treat_ran_body_stage_notes_as_failure_note(
                 {
                     "stage": "body",
                     "status": "ran",
-                    "notes": ["Fast SAM-3D-Body runtime unavailable; using RTMW3D contact fallback"],
+                    "notes": ["Fast SAM-3D-Body runtime unavailable; no legacy contact fallback"],
                 }
             ],
         }

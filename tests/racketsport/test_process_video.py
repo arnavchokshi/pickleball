@@ -4,6 +4,8 @@ import json
 import os
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -157,7 +159,7 @@ def _lane_a_skeleton_payload() -> dict[str, Any]:
         "artifact_type": "racketsport_skeleton3d",
         "fps": 30.0,
         "world_frame": "court_Z0",
-        "source_model": "rtmw3d_x",
+        "source_model": "legacy_body65_joints",
         "joint_names": ["left_wrist", "right_wrist", "left_hip", "right_hip", "left_ankle", "right_ankle"],
         "preview_only": False,
         "players": [
@@ -2800,12 +2802,18 @@ def test_ball_arc_stage_passes_event_sidecars_to_frozen_chain_helper(
             out_dir / "ball_flight_sanity.json",
             {"artifact_type": "racketsport_ball_flight_sanity", "summary": {"demoted_frame_count": 2}},
         )
+        _write_json(
+            out_dir / "ball_arc_render.json",
+            {"artifact_type": "racketsport_ball_arc_render", "summary": {"sample_count": 11, "bridge_sample_count": 3}},
+        )
         return {
             "status": "ran",
             "summary": {
                 "auto_bounce_candidate_count": 1,
                 "coverage_world_xyz_count": 7,
                 "segment_count": 1,
+                "ball_arc_render_sample_count": 11,
+                "ball_arc_render_bridge_sample_count": 3,
                 "flight_sanity_demoted_frame_count": 2,
             },
         }
@@ -2825,14 +2833,18 @@ def test_ball_arc_stage_passes_event_sidecars_to_frozen_chain_helper(
     assert captured["ball_candidate_paths"] == [options.clip_dir / "ball_candidates.json"]
     assert (options.clip_dir / "ball_bounce_candidates.json").is_file()
     assert (options.clip_dir / "ball_track_arc_solved.json").is_file()
+    assert (options.clip_dir / "ball_arc_render.json").is_file()
     assert (options.clip_dir / "ball_flight_sanity.json").is_file()
     assert outcome.artifacts == [
         "ball_bounce_candidates.json",
         "ball_track_arc_solved.json",
+        "ball_arc_render.json",
         "ball_flight_sanity.json",
         "ball_chain_manifest.json",
     ]
     assert outcome.metrics["solver_status"] == "ran"
+    assert outcome.metrics["ball_arc_render_sample_count"] == 11
+    assert outcome.metrics["ball_arc_render_bridge_sample_count"] == 3
     assert outcome.metrics["flight_sanity_demoted_frame_count"] == 2
 
 
@@ -3775,3 +3787,384 @@ def test_cli_end_to_end_smoke_with_court_calibration_flag(tmp_path: Path, monkey
     assert any("consumed externally-provided" in note for note in calibration_stage["notes"])
     [call] = fake_run_pipeline.calls  # type: ignore[attr-defined]
     assert call["runners"]["calibration"].source_path == metric_path.resolve()
+
+
+# ---------------------------------------------------------------------------
+# --body-schedule=overlap (SCHED-A) + B12 camera-motion threading into remote
+# BODY dispatch
+# ---------------------------------------------------------------------------
+
+
+def test_cli_parses_body_schedule_flag_into_options(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    args = process_video.build_arg_parser().parse_args(["--video", str(video), "--out", str(tmp_path / "run")])
+    options = process_video.build_options_from_args(args)
+    assert options.body_schedule == "serial"
+
+    args = process_video.build_arg_parser().parse_args(
+        ["--video", str(video), "--out", str(tmp_path / "run"), "--body-schedule", "overlap"]
+    )
+    options = process_video.build_options_from_args(args)
+    assert options.body_schedule == "overlap"
+
+
+def test_dispatch_body_remote_threads_explicit_camera_motion_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """B12 green: an explicit --camera-motion path must reach dispatch_body_stage."""
+
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_gpu = False
+    options.body_remote = True
+    _clip_dir_with_tracks_and_sam3d_skeleton(options)
+    external_motion = tmp_path / "sidecars" / "owner_camera_motion.json"
+    _write_json(external_motion, {"schema_version": 1, "artifact_type": "racketsport_camera_motion", "frames": []})
+    options.camera_motion_path = external_motion
+
+    calls: list[dict[str, Any]] = []
+
+    def _fake_dispatch(**kwargs):  # noqa: ANN001
+        calls.append(kwargs)
+        clip_dir = Path(kwargs["clip_dir"])
+        _write_json(
+            clip_dir / "smpl_motion.json",
+            {"schema_version": 1, "model": "sam3dbody_world_joints", "fps": 30.0, "world_frame": "court_Z0", "players": []},
+        )
+        return RemoteBodyDispatchResult(status="ran", remote_run_dir="remote:/tmp/fake", synced_outputs=["smpl_motion.json"], wall_seconds=1.0, notes=[])
+
+    monkeypatch.setattr(process_video, "dispatch_body_stage", _fake_dispatch)
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    pipeline._stage_body()
+
+    [call] = calls
+    assert call["camera_motion_path"] == external_motion
+
+
+def test_dispatch_body_remote_clip_dir_only_camera_motion_stays_unthreaded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """B12 "clip-dir case unchanged": with no explicit --camera-motion, an
+    auto-discovered clip_dir/camera_motion.json must keep relying on
+    remote_body_dispatch's own BODY_INPUT_ARTIFACTS clip-dir autosync (this
+    call site must pass None here) -- threading the resolved clip-dir path
+    through as "explicit" would make _rsync_up's explicit-vs-canonical
+    dedupe (remote_body_dispatch.py:1033-1046) skip syncing it entirely."""
+
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_gpu = False
+    options.body_remote = True
+    _clip_dir_with_tracks_and_sam3d_skeleton(options)
+    _write_json(
+        options.clip_dir / "camera_motion.json",
+        {"schema_version": 1, "artifact_type": "racketsport_camera_motion", "frames": []},
+    )
+    assert options.camera_motion_path is None
+
+    calls: list[dict[str, Any]] = []
+
+    def _fake_dispatch(**kwargs):  # noqa: ANN001
+        calls.append(kwargs)
+        clip_dir = Path(kwargs["clip_dir"])
+        _write_json(
+            clip_dir / "smpl_motion.json",
+            {"schema_version": 1, "model": "sam3dbody_world_joints", "fps": 30.0, "world_frame": "court_Z0", "players": []},
+        )
+        return RemoteBodyDispatchResult(status="ran", remote_run_dir="remote:/tmp/fake", synced_outputs=["smpl_motion.json"], wall_seconds=1.0, notes=[])
+
+    monkeypatch.setattr(process_video, "dispatch_body_stage", _fake_dispatch)
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    pipeline._stage_body()
+
+    [call] = calls
+    assert call["camera_motion_path"] is None
+
+
+class _FakePlacementResult:
+    def __init__(self) -> None:
+        self.coverage_unchanged = True
+        self.source_counts = {"bbox": 2, "native2d": 0, "sam3d": 0}
+        self.court_bounds_violations = 0
+        self.summary: dict[str, Any] = {}
+
+
+def _fake_rewrite_tracks_with_placement_noop(**kwargs: Any) -> _FakePlacementResult:
+    """Deterministic stand-in for rewrite_tracks_with_placement so the
+    --body-schedule overlap tests exercise real pipeline scheduling without
+    depending on the real placement solver's behavior on synthetic tracks."""
+
+    placement_path = kwargs["placement_path"]
+    _write_json(
+        placement_path,
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_placement",
+            "fps": 30.0,
+            "source": "test",
+            "tracks_path": "tracks.json",
+            "backup_tracks_path": "tracks_prewrite_backup.json",
+            "refine_from_sam3d": False,
+            "undistort_applied": False,
+            "players": [],
+            "summary": {
+                "player_count": 0,
+                "frame_count": 0,
+                "coverage_unchanged": True,
+                "source_counts": {"bbox": 0, "native2d": 0, "sam3d": 0},
+                "jitter_before_after_mps": {},
+                "court_bounds_violations": 0,
+            },
+            "provenance": {},
+        },
+    )
+    return _FakePlacementResult()
+
+
+def _overlap_ready_options(tmp_path: Path) -> process_video.PipelineOptions:
+    """A clip_dir with tracks.json (via --tracks reuse), a valid
+    court_calibration.json (no-force reuse skip), and an already-extracted
+    body_frames/ JPEG (no-force reuse skip) -- exactly the BODY dispatch
+    inputs design item 1 requires to be "ready" before overlap can dispatch
+    BODY, with --skip-ball so ball/ball_arc/ball_fill resolve instantly and
+    only real pipeline code (never a mocked orchestrator.run_pipeline) runs
+    for calibration/tracking/placement/frames."""
+
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    reuse_tracks = tmp_path / "reuse_tracks.json"
+    _write_json(reuse_tracks, _tracks_payload())
+
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_gpu = False
+    options.body_remote = True
+    options.tracks_reuse = reuse_tracks
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    body_frames = options.clip_dir / "body_frames"
+    body_frames.mkdir(parents=True, exist_ok=True)
+    (body_frames / "frame_000000.jpg").write_bytes(b"fake-jpeg-bytes")
+    return options
+
+
+def _run_pipeline_with_schedule(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    schedule: str,
+    dispatch_fn,
+) -> dict[str, Any]:
+    options = _overlap_ready_options(tmp_path)
+    options.body_schedule = schedule
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite_tracks_with_placement_noop)
+    monkeypatch.setattr(process_video, "dispatch_body_stage", dispatch_fn)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    return pipeline.run()
+
+
+def _successful_fake_dispatch(**kwargs: Any):  # noqa: ANN001
+    clip_dir = Path(kwargs["clip_dir"])
+    _write_json(clip_dir / "skeleton3d.json", _sam3d_skeleton_payload())
+    _write_json(clip_dir / "body_full_clip_gate.json", {"schema_version": 1, "artifact_type": "body_full_clip_gate"})
+    return RemoteBodyDispatchResult(
+        status="ran",
+        remote_run_dir="remote:/tmp/fake",
+        synced_outputs=["skeleton3d.json", "body_full_clip_gate.json"],
+        wall_seconds=0.01,
+        notes=["dispatched to fake host"],
+    )
+
+
+def test_overlap_mode_matches_serial_stage_shape_with_parallel_body_block(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SELF-VERIFICATION (a): overlap mode on the fake runtime produces the
+    identical artifact set + summary stage list as serial (golden compare),
+    modulo the parallel_body block, wall values, and the mandatory overlap
+    readiness note (HONESTY CONTRACTS b: an extra note must be added, so
+    notes cannot be byte-identical -- it must be a strict superset)."""
+
+    serial_summary = _run_pipeline_with_schedule(
+        tmp_path / "serial", monkeypatch, schedule="serial", dispatch_fn=_successful_fake_dispatch
+    )
+    overlap_summary = _run_pipeline_with_schedule(
+        tmp_path / "overlap", monkeypatch, schedule="overlap", dispatch_fn=_successful_fake_dispatch
+    )
+
+    def _shape(summary: dict[str, Any]) -> list[tuple[str, str, tuple[str, ...], str | None]]:
+        return [(s["stage"], s["status"], tuple(s["artifacts"]), s["trust_badge"]) for s in summary["stages"]]
+
+    assert _shape(serial_summary) == _shape(overlap_summary)
+    assert "parallel_body" not in serial_summary
+    assert "parallel_body" in overlap_summary
+
+    parallel_body = overlap_summary["parallel_body"]
+    assert parallel_body["enabled"] is True
+    assert parallel_body["body_started_after"] == "frames"
+    assert parallel_body["overlapped_stages"] == ["ball", "ball_arc", "events", "ball_fill"]
+    assert parallel_body["input_mutation_guard"]["tripped"] is False
+    assert parallel_body["input_mutation_guard"]["mutated_inputs"] == []
+    assert isinstance(parallel_body["body_wall_s"], float)
+    assert isinstance(parallel_body["join_wait_s"], float)
+    assert isinstance(parallel_body["overlap_saved_s_estimate"], float)
+    assert parallel_body["body_inputs_missing_due_to_overlap"]  # non-empty on this cold fixture
+
+    serial_body = next(s for s in serial_summary["stages"] if s["stage"] == "body")
+    overlap_body = next(s for s in overlap_summary["stages"] if s["stage"] == "body")
+    assert serial_body["notes"] == [note for note in overlap_body["notes"] if "overlap readiness note" not in note]
+    assert any("overlap readiness note" in note for note in overlap_body["notes"])
+
+
+def test_overlap_body_thread_failure_matches_serial_failure_shape(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SELF-VERIFICATION (b): a BODY-thread failure in overlap mode must
+    surface the same status/trust_badge/artifacts as a serial BODY failure
+    (HONESTY CONTRACTS d), modulo the mandatory overlap readiness note."""
+
+    def _fail_dispatch(**_kwargs: Any):
+        raise RemoteBodyDispatchError(
+            "shared GPU lock busy on arnavchokshi@34.126.67.233: did not acquire scripts/gpu-eval-run.sh within 60s"
+        )
+
+    serial_summary = _run_pipeline_with_schedule(
+        tmp_path / "serial", monkeypatch, schedule="serial", dispatch_fn=_fail_dispatch
+    )
+    overlap_summary = _run_pipeline_with_schedule(
+        tmp_path / "overlap", monkeypatch, schedule="overlap", dispatch_fn=_fail_dispatch
+    )
+
+    serial_body = next(s for s in serial_summary["stages"] if s["stage"] == "body")
+    overlap_body = next(s for s in overlap_summary["stages"] if s["stage"] == "body")
+
+    assert serial_body["status"] == overlap_body["status"] == "degraded"
+    assert serial_body["trust_badge"] == overlap_body["trust_badge"] is None
+    assert serial_body["artifacts"] == overlap_body["artifacts"] == []
+    assert serial_body["notes"] == [note for note in overlap_body["notes"] if "overlap readiness note" not in note]
+    assert "no fallback pose skeleton" in " ".join(serial_body["notes"])
+    assert "no fallback pose skeleton" in " ".join(overlap_body["notes"])
+
+
+def test_overlap_input_mutation_guard_trips_and_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SELF-VERIFICATION (c) / HONESTY CONTRACTS c: an overlapped local stage
+    that mutates a BODY dispatch input (tracks.json here) while BODY is in
+    flight must trip the guard, fail the body stage closed, and stop the
+    pipeline before any BODY-dependent stage runs."""
+
+    options = _overlap_ready_options(tmp_path)
+    options.body_schedule = "overlap"
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite_tracks_with_placement_noop)
+
+    mutate_ready = threading.Event()
+
+    def _fake_dispatch(**kwargs: Any):
+        # Block until the main thread has mutated a guarded BODY input, so
+        # the post-join hash snapshot deterministically observes the change
+        # regardless of thread scheduling.
+        assert mutate_ready.wait(timeout=5.0), "overlapped local stage never signaled its mutation"
+        clip_dir = Path(kwargs["clip_dir"])
+        _write_json(clip_dir / "skeleton3d.json", _sam3d_skeleton_payload())
+        return RemoteBodyDispatchResult(status="ran", remote_run_dir="remote:/tmp/fake", synced_outputs=["skeleton3d.json"], wall_seconds=0.01, notes=[])
+
+    monkeypatch.setattr(process_video, "dispatch_body_stage", _fake_dispatch)
+
+    original_stage_events = process_video.ProcessVideoPipeline._stage_events
+
+    def _mutating_stage_events(self):  # noqa: ANN001
+        outcome = original_stage_events(self)
+        (self.clip_dir / "tracks.json").write_text(
+            json.dumps({"schema_version": 1, "fps": 30.0, "players": [], "rally_spans": [], "mutated_by_test": True}),
+            encoding="utf-8",
+        )
+        mutate_ready.set()
+        return outcome
+
+    monkeypatch.setattr(process_video.ProcessVideoPipeline, "_stage_events", _mutating_stage_events)
+
+    pipeline = process_video.ProcessVideoPipeline(options)
+    summary = pipeline.run()
+
+    body_stage = next(s for s in summary["stages"] if s["stage"] == "body")
+    assert body_stage["status"] == "failed"
+    assert "GUARD TRIPPED" in " ".join(body_stage["notes"])
+
+    guard = summary["parallel_body"]["input_mutation_guard"]
+    assert guard["tripped"] is True
+    assert "tracks.json" in guard["mutated_inputs"]
+
+    stage_names = [s["stage"] for s in summary["stages"]]
+    assert stage_names[-1] == "body"
+    assert "world" not in stage_names
+    assert "manifest" not in stage_names
+    assert summary["status"] == "failed"
+
+
+def test_overlap_join_barrier_world_never_starts_before_body_thread_completes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SELF-VERIFICATION (d): world must never start before the BODY thread
+    has completed, proven via event ordering rather than timing alone."""
+
+    options = _overlap_ready_options(tmp_path)
+    options.body_schedule = "overlap"
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite_tracks_with_placement_noop)
+
+    events: list[str] = []
+
+    def _fake_dispatch(**kwargs: Any):
+        events.append("body_start")
+        time.sleep(0.05)
+        clip_dir = Path(kwargs["clip_dir"])
+        _write_json(clip_dir / "skeleton3d.json", _sam3d_skeleton_payload())
+        events.append("body_end")
+        return RemoteBodyDispatchResult(status="ran", remote_run_dir="remote:/tmp/fake", synced_outputs=["skeleton3d.json"], wall_seconds=0.05, notes=[])
+
+    monkeypatch.setattr(process_video, "dispatch_body_stage", _fake_dispatch)
+
+    original_build_virtual_world_state = process_video.build_virtual_world_state
+
+    def _tracking_build_virtual_world_state(*args: Any, **kwargs: Any):
+        events.append("world_start")
+        return original_build_virtual_world_state(*args, **kwargs)
+
+    monkeypatch.setattr(process_video, "build_virtual_world_state", _tracking_build_virtual_world_state)
+
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline.run()
+
+    assert "body_start" in events
+    assert "body_end" in events
+    assert "world_start" in events
+    assert events.index("body_end") < events.index("world_start")
+
+
+def test_overlap_takes_serial_path_with_no_thread_when_body_artifacts_valid_for_reuse(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Design item 1: "Reuse semantics unchanged: if BODY artifacts are valid
+    for no-force reuse, take the serial path (no thread)." dispatch_body_stage
+    must never be called at all in that case."""
+
+    options = _overlap_ready_options(tmp_path)
+    options.body_schedule = "overlap"
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite_tracks_with_placement_noop)
+    _write_json(options.clip_dir / "skeleton3d.json", _sam3d_skeleton_payload())
+    _write_json(options.clip_dir / "body_full_clip_gate.json", {"schema_version": 1, "artifact_type": "body_full_clip_gate"})
+
+    def _fail_if_dispatched(**_kwargs: Any):
+        raise AssertionError("no-force BODY reuse must not dispatch (and must not spend a thread) in overlap mode")
+
+    monkeypatch.setattr(process_video, "dispatch_body_stage", _fail_if_dispatched)
+
+    pipeline = process_video.ProcessVideoPipeline(options)
+    summary = pipeline.run()
+
+    body_stage = next(s for s in summary["stages"] if s["stage"] == "body")
+    assert body_stage["status"] == "skipped"
+    assert summary["parallel_body"]["enabled"] is False
+    assert summary["parallel_body"]["overlapped_stages"] == []

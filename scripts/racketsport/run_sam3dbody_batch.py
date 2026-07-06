@@ -71,6 +71,17 @@ SAM3D_BATCH_TIMING_STDOUT_MARKER = "SAM3DBODY_BATCH_TIMING_JSON "
 SAM3D_BATCH_BINARY_CHUNK_ARTIFACT_TYPE = "racketsport_sam3dbody_batch_binary_chunk"
 SAM3D_BATCH_BINARY_CONTRACT_VERSION = 1
 SAM3D_ARRAY_REF_KEY = "__sam3d_array_ref__"
+# Pickle chunks may cross a venv boundary (subprocess python_executable vs the
+# orchestrator's interpreter). numpy's OWN pickle protocol embeds the writer's
+# internal module path (e.g. numpy 2.x's numpy._core.numeric vs numpy 1.x's
+# numpy.core.numeric) and fails to load across a numpy major-version gap --
+# measured live on the A100 2026-07-05 (FAST_SAM_PYTHON venv numpy 2.2.6 vs
+# orchestrator venv numpy 1.26.4): ModuleNotFoundError: numpy._core.numeric.
+# _pickle_safe_arrays/_restore_pickle_safe_arrays replace bulk ndarrays with a
+# dtype+shape+raw-bytes descriptor built from built-in types only (bytes,
+# str, list), which pickle/unpickle identically regardless of numpy version
+# on either end, then reconstruct via np.frombuffer on read.
+SAM3D_PICKLE_NDARRAY_MARKER = "__sam3d_pickle_ndarray__"
 SAM3D_BULK_ARRAY_FIELDS = frozenset(
     {
         "pred_vertices",
@@ -303,10 +314,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--chunk-format",
         choices=sorted(CHUNK_FORMATS),
-        default="binary",
+        default="pickle",
         help=(
-            "Per-bucket stream chunk encoding. binary stores bulk numeric fields in numpy .npy sidecars; "
-            "pickle is legacy compatibility; jsonl is human-readable but slower."
+            "Per-bucket stream chunk encoding. pickle (default) writes each bucket synchronously "
+            "in the caller's thread for the fastest subprocess handoff (avoids writer-thread GIL "
+            "contention with SAM3D inference/prep, measured live on the A100 2026-07-05); binary "
+            "streams bulk numeric fields to numpy .npy sidecars via an async writer thread (opt-in, "
+            "useful for very large mmap-friendly payloads); jsonl is human-readable but slower."
         ),
     )
     parser.add_argument(
@@ -405,6 +419,10 @@ def main(argv: list[str] | None = None) -> int:
             write_monolithic=not args.no_monolithic_output,
             chunk_format=args.chunk_format,
             timing=timer,
+            # Restore the pre-S4 direct handoff profile as default: pickle writes
+            # synchronously (no writer thread => no GIL contention with inference);
+            # binary/jsonl keep the async writer thread (opt-in, mmap-friendly).
+            async_write=(args.chunk_format != "pickle"),
         )
         frames, batch_execution = _run_bucketed_inference(
             estimator,
@@ -557,6 +575,44 @@ def _numpy_array_or_none(value: Any) -> Any | None:
     return array
 
 
+def _pickle_safe_arrays(value: Any) -> Any:
+    # Container types are recursed into FIRST (not array-probed): np.asarray([])
+    # happily coerces an empty *plain* Python list into array([], dtype=float64),
+    # so probing containers before recursing would wrongly treat ordinary empty
+    # list metadata (e.g. optimization.crop_bucket_sizes=[]) as a bulk ndarray.
+    if isinstance(value, Mapping):
+        return {str(key): _pickle_safe_arrays(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_pickle_safe_arrays(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_pickle_safe_arrays(item) for item in value)
+    array = _numpy_array_or_none(value)
+    if array is not None:
+        return {
+            SAM3D_PICKLE_NDARRAY_MARKER: True,
+            "dtype": str(array.dtype),
+            "shape": list(array.shape),
+            "data": array.tobytes(),
+        }
+    return value
+
+
+def _restore_pickle_safe_arrays(value: Any) -> Any:
+    import numpy as np  # type: ignore[import-not-found]
+
+    if isinstance(value, Mapping):
+        if value.get(SAM3D_PICKLE_NDARRAY_MARKER):
+            array = np.frombuffer(value["data"], dtype=value["dtype"])
+            shape = value.get("shape") or []
+            return array.reshape(shape).copy() if shape else array.copy()
+        return {str(key): _restore_pickle_safe_arrays(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_restore_pickle_safe_arrays(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_restore_pickle_safe_arrays(item) for item in value)
+    return value
+
+
 def _numpy_save(path: Path, array: Any) -> None:
     import numpy as np  # type: ignore[import-not-found]
 
@@ -652,9 +708,7 @@ def _frames_from_chunk(chunk_path: Path, *, chunk_format: str) -> list[dict[str,
     if chunk_format == "binary" or chunk_path.name.endswith(".binary.json"):
         return _frames_from_binary_chunk(chunk_path, mmap_mode=None, arrays_as="list")
     if chunk_format == "pickle" or chunk_path.suffix == ".pkl":
-        output = _bucket_output_from_raw_chunk_payload(_read_pickle_payload(chunk_path))
-        frames, _execution = _bucket_output_to_frames_and_execution(output)
-        return frames
+        return _frames_from_pickle_chunk(chunk_path, preserve_arrays=False)
     if chunk_format in ("", "jsonl") or chunk_path.suffix == ".jsonl":
         frames: list[dict[str, Any]] = []
         for line in chunk_path.read_text(encoding="utf-8").splitlines():
@@ -664,6 +718,12 @@ def _frames_from_chunk(chunk_path: Path, *, chunk_format: str) -> list[dict[str,
                     frames.append(frame)
         return frames
     raise ValueError(f"unsupported SAM3D chunk format {chunk_format!r} for {chunk_path}")
+
+
+def _frames_from_pickle_chunk(chunk_path: Path, *, preserve_arrays: bool) -> list[dict[str, Any]]:
+    output = _bucket_output_from_raw_chunk_payload(_read_pickle_payload(chunk_path))
+    frames, _execution = _bucket_output_to_frames_and_execution(output, preserve_arrays=preserve_arrays)
+    return frames
 
 
 def _ordered_frames_from_chunk_index(index_path: Path, request_ids: Sequence[str]) -> list[dict[str, Any]]:
@@ -692,6 +752,8 @@ def load_sam3dbody_binary_outputs_from_chunk_index(
         chunk_path = chunk_dir / str(chunk["path"])
         if str(chunk.get("format", "")) == "binary" or chunk_path.name.endswith(".binary.json"):
             frames = _frames_from_binary_chunk(chunk_path, mmap_mode=mmap_mode, arrays_as="numpy")
+        elif str(chunk.get("format", "")) == "pickle" or chunk_path.suffix == ".pkl":
+            frames = _frames_from_pickle_chunk(chunk_path, preserve_arrays=True)
         else:
             frames = _frames_from_chunk(chunk_path, chunk_format=str(chunk.get("format", "")))
         for frame in frames:
@@ -749,6 +811,7 @@ def _raw_bucket_chunk_payload(output: _BucketInferenceOutput) -> dict[str, Any]:
 
 
 def _bucket_output_from_raw_chunk_payload(payload: Mapping[str, Any]) -> _BucketInferenceOutput:
+    payload = _restore_pickle_safe_arrays(payload)
     if payload.get("artifact_type") != "racketsport_sam3dbody_batch_raw_bucket":
         raise ValueError("SAM3D pickle chunk has unexpected artifact_type")
     bucket_items = [dict(item) for item in payload.get("bucket_items", [])]
@@ -784,6 +847,7 @@ class _BatchOutputStream:
         write_monolithic: bool,
         chunk_format: str = "pickle",
         timing: _TimingRecorder | None = None,
+        async_write: bool = True,
     ) -> None:
         if chunk_format not in CHUNK_FORMATS:
             raise ValueError(f"unsupported chunk format {chunk_format!r}")
@@ -795,6 +859,14 @@ class _BatchOutputStream:
         self.write_monolithic = bool(write_monolithic)
         self.chunk_format = str(chunk_format)
         self.timing = timing or _TimingRecorder()
+        # Sync (non-threaded) writes are the default for chunk_format="pickle" (main()
+        # passes async_write=False for it): live A100 measurement 2026-07-05 showed the
+        # background writer thread contending for the GIL with the main SAM3D
+        # inference/prep thread, inflating steady inference 15.3->150ms/person,
+        # preprocessing 13->131s, and handoff 376->489s far more than the write I/O
+        # itself costs. binary/jsonl keep the async writer thread (opt-in, useful for
+        # overlapping slow/large writes with compute).
+        self.async_write = bool(async_write)
         self._queue: queue.Queue[_BucketInferenceOutput | _WriterFinish] = queue.Queue()
         self._thread: threading.Thread | None = None
         self._error: BaseException | None = None
@@ -804,6 +876,9 @@ class _BatchOutputStream:
         self._chunks: list[dict[str, Any]] = []
 
     def start(self) -> None:
+        if not self.async_write:
+            self.chunk_dir.mkdir(parents=True, exist_ok=True)
+            return
         if self._thread is not None:
             return
         self.chunk_dir.mkdir(parents=True, exist_ok=True)
@@ -812,6 +887,13 @@ class _BatchOutputStream:
 
     def submit(self, output: _BucketInferenceOutput) -> None:
         self._raise_if_failed()
+        if not self.async_write:
+            try:
+                self._write_bucket_output(output)
+            except BaseException as exc:  # noqa: BLE001 - mirrors the async writer's failure handling.
+                self._error = exc
+                raise
+            return
         self._queue.put(output)
 
     def finish_success(self, *, materialize_frames: bool = True) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -830,9 +912,19 @@ class _BatchOutputStream:
         materialize_frames: bool = True,
     ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         self.start()
-        self._queue.put(finish)
-        assert self._thread is not None
-        self._thread.join()
+        if self.async_write:
+            self._queue.put(finish)
+            assert self._thread is not None
+            self._thread.join()
+        else:
+            try:
+                self._finalize(finish)
+            except BaseException as exc:  # noqa: BLE001 - mirrors the async writer's failure handling.
+                self._error = exc
+                try:
+                    self._write_index(status="failed", batch_execution=self._batch_execution(), template=None, error=exc)
+                except OSError:
+                    pass
         self._raise_if_failed()
         batch_execution = self._batch_execution()
         if finish.status != "complete":
@@ -841,6 +933,22 @@ class _BatchOutputStream:
             return [], batch_execution
         frames = _ordered_frames_from_chunk_index(self.index_path, self.request_ids)
         return frames, batch_execution
+
+    def _finalize(self, finish: _WriterFinish) -> None:
+        if finish.status == "complete":
+            self._validate_complete()
+            batch_execution = self._batch_execution()
+            payload = _monolithic_payload_from_header(
+                self.payload_header,
+                frames=[],
+                batch_execution=batch_execution,
+            )
+            self._write_index(status="complete", batch_execution=batch_execution, template=payload, error=None)
+            if self.write_monolithic:
+                with self.timing.span("output_write_monolithic", path=str(self.out_path)):
+                    _convert_chunked_output_to_monolithic(self.index_path, self.out_path)
+        else:
+            self._write_index(status="failed", batch_execution=self._batch_execution(), template=None, error=finish.error)
 
     def _run(self) -> None:
         finish = _WriterFinish(status="failed", error=RuntimeError("writer stopped before final status"))
@@ -851,20 +959,7 @@ class _BatchOutputStream:
                     finish = item
                     break
                 self._write_bucket_output(item)
-            if finish.status == "complete":
-                self._validate_complete()
-                batch_execution = self._batch_execution()
-                payload = _monolithic_payload_from_header(
-                    self.payload_header,
-                    frames=[],
-                    batch_execution=batch_execution,
-                )
-                self._write_index(status="complete", batch_execution=batch_execution, template=payload, error=None)
-                if self.write_monolithic:
-                    with self.timing.span("output_write_monolithic", path=str(self.out_path)):
-                        _convert_chunked_output_to_monolithic(self.index_path, self.out_path)
-            else:
-                self._write_index(status="failed", batch_execution=self._batch_execution(), template=None, error=finish.error)
+            self._finalize(finish)
         except BaseException as exc:  # noqa: BLE001 - writer must report failures through the main thread.
             self._error = exc
             try:
@@ -926,7 +1021,7 @@ class _BatchOutputStream:
             frames = []
             chunk_path = self.chunk_dir / f"bucket_{output.prepared.bucket_index:06d}.pkl"
             request_ids = [str(request_id) for request_id in output.prepared.request_ids]
-            payload = _raw_bucket_chunk_payload(output)
+            payload = _pickle_safe_arrays(_raw_bucket_chunk_payload(output))
             with self.timing.span(
                 "output_write_bucket",
                 bucket_index=output.prepared.bucket_index,

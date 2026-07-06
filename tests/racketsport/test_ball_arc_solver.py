@@ -1151,6 +1151,109 @@ def test_solve_track_discovers_missing_bounce_and_refits_two_segments() -> None:
     assert artifact["summary"]["coverage_world_xyz_count"] == len(frames)
 
 
+def test_bounce_bounce_gate_failure_discovers_solver_anchor_and_recovers_fit_subarcs() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    fps = 60.0
+    start = (0.0, -4.0, BALL_RADIUS_M)
+    bounce_t = 0.55
+    end_t = 1.1
+    v_before = (1.2, 5.0, _vz_for_endpoint(BALL_RADIUS_M, BALL_RADIUS_M, bounce_t))
+    bounce_xyz = _no_drag_position(start, v_before, bounce_t)
+    v_after = (-0.9, 4.2, _vz_for_endpoint(BALL_RADIUS_M, BALL_RADIUS_M, end_t - bounce_t))
+    end = _no_drag_position(bounce_xyz, v_after, end_t - bounce_t)
+    frames = _piecewise_track_frames(
+        calibration=calibration,
+        p0=start,
+        v0=v_before,
+        bounce_t=bounce_t,
+        v1=v_after,
+        t_end=end_t,
+        fps=fps,
+    )
+
+    artifact = solve_ball_arc_track(
+        ball_track={"schema_version": 1, "fps": fps, "source": "synthetic", "frames": frames, "bounces": []},
+        calibration=calibration,
+        reviewed_bounces={
+            "schema_version": 1,
+            "status": "human_reviewed",
+            "bounces": [
+                _human_bounce(0, 0.0, "bounce_start"),
+                _human_bounce(int(round(end_t * fps)), end_t, "bounce_end"),
+            ],
+        },
+        physics=physics,
+        config=BallArcSolverConfig(
+            enable_event_discovery=True,
+            enable_weak_segments=False,
+            discovery_reprojection_px=8.0,
+            discovery_min_interior_observations=4,
+            max_reprojection_inlier_px=4.0,
+            robust_pixel_sigma=1.0,
+        ),
+    )
+
+    assert artifact["status"] == "ran"
+    assert artifact["summary"]["discovered_bounce_count"] == 1
+    assert artifact["summary"]["confident_segment_count"] == 2
+    assert [segment["status"] for segment in artifact["segments"]] == ["fit", "fit"]
+    assert all(segment["physical_sanity"]["court_volume"]["violation"] is False for segment in artifact["segments"])
+    assert all(
+        segment["inlier_count"] / max(segment["inlier_count"] + segment["outlier_count"], 1) > 0.15
+        for segment in artifact["segments"]
+    )
+    proposed = [anchor for anchor in artifact["anchors"] if anchor["status"] == "solver_proposed"]
+    assert len(proposed) == 1
+    assert proposed[0]["frame"] == pytest.approx(round(bounce_t * fps), abs=1)
+    split = next(item for item in artifact["event_selection"]["selected"] if item["anchor_id"] == proposed[0]["anchor_id"])
+    assert split["selection"] == "selected_optional"
+    assert split["score_gain"] > 0.0
+    assert split["residual_reduction"] > 0.0
+
+
+def test_bounce_bounce_gate_failure_without_plausible_split_stays_bvp_fallback() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    fps = 60.0
+    t0 = 0.0
+    t1 = 1.0
+    start = _anchor("start-bounce", "bounce", t0, (0.0, -3.0, BALL_RADIUS_M), sigma_m=0.05, status="human_reviewed")
+    end = _anchor("end-bounce", "bounce", t1, (0.0, 3.0, BALL_RADIUS_M), sigma_m=0.05, status="human_reviewed")
+    bad_xy = _project(calibration, (8.4, 9.0, 1.4))
+    frames = [
+        {
+            "t": frame / fps,
+            "xy": list(bad_xy),
+            "conf": 0.99,
+            "visible": True,
+            "world_xyz": None,
+            "approx": False,
+        }
+        for frame in range(int(t1 * fps) + 1)
+    ]
+
+    artifact = solve_ball_arc_track(
+        ball_track={"schema_version": 1, "fps": fps, "source": "synthetic", "frames": frames, "bounces": []},
+        calibration=calibration,
+        extra_anchors=[start, end],
+        physics=physics,
+        config=BallArcSolverConfig(
+            enable_event_discovery=True,
+            enable_weak_segments=False,
+            discovery_reprojection_px=8.0,
+            discovery_min_interior_observations=4,
+            max_reprojection_inlier_px=4.0,
+            robust_pixel_sigma=1.0,
+        ),
+    )
+
+    assert artifact["status"] == "ran"
+    assert artifact["summary"]["discovered_bounce_count"] == 0
+    assert artifact["summary"]["confident_segment_count"] == 1
+    assert artifact["segments"][0]["status"] == "fit_bvp_fallback"
+
+
 def test_solve_ball_arcs_cli_writes_render_only_reference_artifact(tmp_path: Path) -> None:
     calibration = _projection_calibration()
     physics = PhysicsParameters.no_drag()

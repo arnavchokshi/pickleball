@@ -19,7 +19,7 @@ if _TORCH_AVAILABLE:
 else:
     torch = None
 
-from threed.racketsport.pose_fast import LANE_A_RTMW3D_JOINT_NAMES
+from threed.racketsport.joint_schema import BODY65_JOINT_NAMES
 from threed.racketsport.pose_temporal import MotionBERTTemporalRuntime, refine_lane_a_skeleton3d
 
 
@@ -28,7 +28,7 @@ def _frame(frame_idx: int, joints: list[list[float]]) -> dict:
         "frame_idx": frame_idx,
         "t": frame_idx / 30.0,
         "joints_world": joints,
-        "joint_conf": [0.9 for _name in LANE_A_RTMW3D_JOINT_NAMES],
+        "joint_conf": [0.9 for _name in BODY65_JOINT_NAMES],
     }
 
 
@@ -42,7 +42,7 @@ def _frame_with_conf(frame_idx: int, joints: list[list[float]], conf_by_name: di
 
 
 def _base_joints() -> list[list[float]]:
-    return [[0.0, 0.0, 1.0] for _name in LANE_A_RTMW3D_JOINT_NAMES]
+    return [[0.0, 0.0, 1.0] for _name in BODY65_JOINT_NAMES]
 
 
 def _skeleton(frames: list[dict]) -> dict:
@@ -51,8 +51,8 @@ def _skeleton(frames: list[dict]) -> dict:
         "artifact_type": "racketsport_skeleton3d",
         "fps": 30.0,
         "world_frame": "court_Z0",
-        "source_model": "rtmw3d_x",
-        "joint_names": list(LANE_A_RTMW3D_JOINT_NAMES),
+        "source_model": "sam3d_body_joints",
+        "joint_names": list(BODY65_JOINT_NAMES),
         "preview_only": False,
         "players": [{"id": 7, "frames": frames}],
         "provenance": {"lane": "A"},
@@ -60,7 +60,7 @@ def _skeleton(frames: list[dict]) -> dict:
 
 
 def _idx(name: str) -> int:
-    return list(LANE_A_RTMW3D_JOINT_NAMES).index(name)
+    return list(BODY65_JOINT_NAMES).index(name)
 
 
 def test_refine_lane_a_skeleton3d_one_euro_smooths_feet_and_hands() -> None:
@@ -269,7 +269,7 @@ def test_refine_lane_a_skeleton3d_applies_motionbert_body17_in_243_frame_windows
     output_frames = refined["players"][0]["frames"]
     assert [call["frame_count"] for call in runtime.calls] == [243, 1]
     assert all(call["player_id"] == 7 for call in runtime.calls)
-    assert runtime.calls[0]["joint_names"] == list(LANE_A_RTMW3D_JOINT_NAMES[:17])
+    assert runtime.calls[0]["joint_names"] == list(BODY65_JOINT_NAMES[:17])
     assert output_frames[0]["joints_world"][nose_idx] == pytest.approx([0.25, 0.0, 1.7])
     assert output_frames[243]["joints_world"][nose_idx] == pytest.approx([2.68, 0.0, 1.7], abs=1e-4)
     assert output_frames[0]["joints_world"][foot_idx][0] == pytest.approx(10.0)
@@ -309,10 +309,10 @@ def test_motionbert_runtime_fails_closed_when_manifest_checkpoint_is_not_availab
     runtime = MotionBERTTemporalRuntime(manifest_path=manifest_path, config_path=tmp_path / "config.yaml")
 
     with pytest.raises(RuntimeError, match="model motionbert_lift_smooth is not available_on_h100: status=pending_download"):
-        runtime.refine_body17_window(player_id=7, frames=[_frame(0, _base_joints())], joint_names=list(LANE_A_RTMW3D_JOINT_NAMES[:17]))
+        runtime.refine_body17_window(player_id=7, frames=[_frame(0, _base_joints())], joint_names=list(BODY65_JOINT_NAMES[:17]))
 
 
-def test_motionbert_runtime_maps_rtmw3d_body17_to_h36m_and_merges_supported_joints(tmp_path: Path) -> None:
+def test_motionbert_runtime_maps_body17_to_h36m_and_merges_supported_joints(tmp_path: Path) -> None:
     checkpoint_path = tmp_path / "best_epoch.bin"
     checkpoint_bytes = b"fake motionbert checkpoint"
     checkpoint_path.write_bytes(checkpoint_bytes)
@@ -385,7 +385,7 @@ def test_motionbert_runtime_maps_rtmw3d_body17_to_h36m_and_merges_supported_join
     refined = runtime.refine_body17_window(
         player_id=7,
         frames=[frame],
-        joint_names=list(LANE_A_RTMW3D_JOINT_NAMES[:17]),
+        joint_names=list(BODY65_JOINT_NAMES[:17]),
     )
 
     assert fake_model.seen is not None

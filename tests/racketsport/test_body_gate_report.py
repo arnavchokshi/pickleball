@@ -14,7 +14,7 @@ from threed.racketsport.eval.body_gate_report import (
     render_body_gate_markdown,
 )
 from threed.racketsport.external_gt_aspset510 import SHARED_CORE_JOINT_NAMES
-from threed.racketsport.pose_fast import BODY_17_JOINT_NAMES, FOOT_6_JOINT_NAMES
+from threed.racketsport.joint_schema import BODY_17_JOINT_NAMES, FOOT_6_JOINT_NAMES
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -540,8 +540,8 @@ def test_body_gate_report_enforces_wrist_mpjpe_threshold_separately(tmp_path: Pa
     assert mpjpe["blockers"] == ["wrist_mpjpe_gate_failed"]
 
 
-def test_core_body_joint_names_matches_pose_fast_schema() -> None:
-    """Drift guard: the gate's core-17 set must track pose_fast's canonical schema."""
+def test_core_body_joint_names_matches_joint_schema() -> None:
+    """Drift guard: the gate's core-17 set must track the canonical schema."""
 
     assert CORE_BODY_JOINT_NAMES == BODY_17_JOINT_NAMES
     assert len(CORE_BODY_JOINT_NAMES) == 17

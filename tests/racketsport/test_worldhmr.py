@@ -714,7 +714,7 @@ def test_footlock_resets_slide_when_contact_breaks() -> None:
     assert smpl_motion["players"][0]["foot_lock"]["max_slide_m"] == pytest.approx(0.0)
 
 
-def test_footlock_marks_temporal_reset_after_sparse_output_gap() -> None:
+def test_footlock_marks_temporal_reset_after_long_sparse_output_gap() -> None:
     samples = [
         {
             "frame_idx": 0,
@@ -734,9 +734,9 @@ def test_footlock_marks_temporal_reset_after_sparse_output_gap() -> None:
             "betas": [0.0],
         },
         {
-            "frame_idx": 4,
+            "frame_idx": 12,
             "player_id": 1,
-            "t": 4.0 / 30.0,
+            "t": 12.0 / 30.0,
             "confidence": 0.9,
             "track_world_xy": [4.0, 0.0],
             "camera_translation": [0.0, 0.0, 0.0],
@@ -771,6 +771,134 @@ def test_footlock_marks_temporal_reset_after_sparse_output_gap() -> None:
     first, second = smpl_motion["players"][0]["frames"]
     assert first["temporal_smoothing_reset"] is False
     assert second["temporal_smoothing_reset"] is True
+    assert quality["summary"]["temporal_smoothing_reset_count"] == 1
+    assert "root_motion_temporal_jump" not in quality["quality_blockers"]
+
+
+def test_short_sparse_output_gap_carries_filter_state_without_reset_metadata_loss() -> None:
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [
+                [0.0, 0.0, 1.2],
+                [-0.2, 0.0, 0.0],
+                [0.2, 0.0, 0.0],
+            ],
+            "vertices_camera": [[0.0, 0.0, 0.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+        {
+            "frame_idx": 4,
+            "player_id": 1,
+            "t": 4.0 / 30.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.25, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [
+                [0.0, 0.0, 1.2],
+                [-0.2, 0.0, 0.0],
+                [0.2, 0.0, 0.0],
+            ],
+            "vertices_camera": [[0.0, 0.0, 0.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+    ]
+
+    smpl_motion, skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        max_root_speed_mps=8.0,
+        smoothing_gap_carry_frames=8,
+    )
+    quality = build_body_joint_quality(
+        clip="clip_001",
+        smpl_motion=smpl_motion,
+        skeleton3d=skeleton3d,
+        body_compute_execution={"summary": {"scheduled_frame_count": 2, "scheduled_player_frame_count": 2}},
+        max_root_speed_for_review_mps=10.0,
+        max_track_anchor_residual_for_review_m=12.0,
+    )
+
+    first, second = smpl_motion["players"][0]["frames"]
+    assert first["temporal_smoothing_reset"] is False
+    assert second["temporal_smoothing_reset"] is False
+    assert second["temporal_smoothing_metadata"]["gap"]["status"] == "carried"
+    assert second["temporal_smoothing_metadata"]["gap"]["missing_frame_count"] == 3
+    assert metrics["foot_lock_gap_carried_frames"] == 1
+    assert quality["summary"]["temporal_smoothing_reset_count"] == 0
+
+
+def test_long_sparse_output_gap_remains_honest_reset() -> None:
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [
+                [0.0, 0.0, 1.2],
+                [-0.2, 0.0, 0.0],
+                [0.2, 0.0, 0.0],
+            ],
+            "vertices_camera": [[0.0, 0.0, 0.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+        {
+            "frame_idx": 12,
+            "player_id": 1,
+            "t": 12.0 / 30.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.35, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [
+                [0.0, 0.0, 1.2],
+                [-0.2, 0.0, 0.0],
+                [0.2, 0.0, 0.0],
+            ],
+            "vertices_camera": [[0.0, 0.0, 0.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+    ]
+
+    smpl_motion, skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        max_root_speed_mps=8.0,
+        smoothing_gap_carry_frames=8,
+    )
+    quality = build_body_joint_quality(
+        clip="clip_001",
+        smpl_motion=smpl_motion,
+        skeleton3d=skeleton3d,
+        body_compute_execution={"summary": {"scheduled_frame_count": 2, "scheduled_player_frame_count": 2}},
+        max_root_speed_for_review_mps=10.0,
+        max_track_anchor_residual_for_review_m=12.0,
+    )
+
+    second = smpl_motion["players"][0]["frames"][1]
+    assert second["temporal_smoothing_reset"] is True
+    assert second["temporal_smoothing_metadata"]["reset_reason"] == "sparse_output_gap"
+    assert second["temporal_smoothing_metadata"]["gap"]["missing_frame_count"] == 11
+    assert metrics["foot_lock_gap_reset_frames"] == 1
     assert quality["summary"]["temporal_smoothing_reset_count"] == 1
     assert "root_motion_temporal_jump" not in quality["quality_blockers"]
 
@@ -955,6 +1083,197 @@ def test_body_artifact_track_anchor_reset_prevents_wrong_player_smoothing() -> N
     assert metrics["track_anchor_residual_reset_frames"] == 1
     assert metrics["max_pre_reset_track_anchor_residual_m"] == pytest.approx(1.9)
     assert metrics["max_track_anchor_residual_m"] == pytest.approx(0.0)
+
+
+def test_track_anchor_residual_carry_respects_root_speed_cap_without_reset() -> None:
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [[1.0, 0.0, 1.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+        {
+            "frame_idx": 1,
+            "player_id": 1,
+            "t": 1.0 / 30.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.6, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [[1.0, 0.0, 1.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+    ]
+
+    smpl_motion, skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        max_root_speed_mps=8.0,
+        max_track_anchor_smoothing_residual_m=0.2,
+        smoothing_residual_identity_reset_m=1.0,
+    )
+    quality = build_body_joint_quality(
+        clip="clip_001",
+        smpl_motion=smpl_motion,
+        skeleton3d=skeleton3d,
+        body_compute_execution={"summary": {"scheduled_frame_count": 2, "scheduled_player_frame_count": 2}},
+        min_joint_count=1,
+        max_root_speed_for_review_mps=10.0,
+        max_track_anchor_residual_for_review_m=12.0,
+    )
+
+    second = smpl_motion["players"][0]["frames"][1]
+    assert second["temporal_smoothing_reset"] is False
+    assert second["transl_world"] == pytest.approx([8.0 / 30.0, 0.0, 0.0])
+    assert second["temporal_smoothing_metadata"]["residual"]["status"] == "carried"
+    assert metrics["track_anchor_residual_reset_frames"] == 0
+    assert metrics["track_anchor_residual_carried_frames"] == 1
+    assert quality["summary"]["root_motion_temporal_jump_count"] == 0
+    assert quality["summary"]["max_root_speed_mps"] <= 8.0 + 1e-9
+
+
+def test_world_joint_visual_smoothing_keeps_wrist_peak_frame_and_limb_lengths() -> None:
+    joint_names = [
+        "nose",
+        "left_eye",
+        "right_eye",
+        "left_ear",
+        "right_ear",
+        "left_shoulder",
+        "right_shoulder",
+        "left_elbow",
+        "right_elbow",
+        "left_hip",
+        "right_hip",
+        "left_knee",
+        "right_knee",
+        "left_ankle",
+        "right_ankle",
+        "left_big_toe_tip",
+        "left_small_toe_tip",
+        "left_heel",
+        "right_big_toe_tip",
+        "right_small_toe_tip",
+        "right_heel",
+        *[f"unused_{idx}" for idx in range(21, 41)],
+        "right_wrist",
+        *[f"unused_{idx}" for idx in range(42, 62)],
+        "left_wrist",
+        *[f"unused_{idx}" for idx in range(63, 70)],
+    ]
+    idx = {name: pos for pos, name in enumerate(joint_names)}
+    wrist_offsets = [0.0, 0.45, 1.20, 0.45, 0.0]
+    ankle_noise = [0.0, 0.08, -0.08, 0.08, 0.0]
+    frames = []
+    for frame_idx, wrist_offset in enumerate(wrist_offsets):
+        joints = [[0.0, 0.0, 1.0] for _ in joint_names]
+        joints[idx["left_shoulder"]] = [0.0, 0.0, 1.5]
+        joints[idx["left_elbow"]] = [0.3, 0.0, 1.2]
+        joints[idx["left_wrist"]] = [0.3 + wrist_offset, 0.0, 1.2]
+        joints[idx["right_shoulder"]] = [0.0, 0.0, 1.5]
+        joints[idx["right_elbow"]] = [-0.3, 0.0, 1.2]
+        joints[idx["right_wrist"]] = [-0.6, 0.0, 1.2]
+        joints[idx["left_hip"]] = [0.0, 0.0, 1.0]
+        joints[idx["left_knee"]] = [0.0, 0.0, 0.5]
+        joints[idx["left_ankle"]] = [ankle_noise[frame_idx], 0.0, 0.0]
+        joints[idx["left_heel"]] = [ankle_noise[frame_idx] - 0.1, 0.0, 0.0]
+        frames.append(
+            {
+                "frame_idx": frame_idx,
+                "t": frame_idx / 30.0,
+                "transl_world": [0.0, 0.0, 0.0],
+                "track_world_xy": [0.0, 0.0],
+                "joints_world": joints,
+                "joint_conf": [0.9] * len(joints),
+            }
+        )
+    smpl_motion = {
+        "schema_version": 1,
+        "model": "sam3dbody_world_joints",
+        "fps": 30.0,
+        "world_frame": "court_Z0",
+        "players": [
+            {
+                "id": 1,
+                "betas": [0.0],
+                "skate_free": False,
+                "physics": "worldhmr_grounded_not_footlocked",
+                "frames": [
+                    {
+                        **frame,
+                        "global_orient": [0.0, 0.0, 0.0],
+                        "body_pose": [0.0, 0.0, 0.0],
+                        "left_hand_pose": [],
+                        "right_hand_pose": [],
+                        "mesh_vertices_world": [],
+                        "foot_contact": {"left": False, "right": False},
+                        "foot_lock": {"left": False, "right": False},
+                        "grf": None,
+                    }
+                    for frame in frames
+                ],
+            }
+        ],
+    }
+    skeleton3d = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_skeleton3d",
+        "fps": 30.0,
+        "world_frame": "court_Z0",
+        "source_model": "sam3d_body_joints",
+        "joint_names": joint_names,
+        "preview_only": False,
+        "players": [{"id": 1, "frames": copy.deepcopy(frames)}],
+        "provenance": {},
+    }
+
+    smoothed_smpl, smoothed_skeleton, metrics = worldhmr._apply_world_joint_visual_smoothing(
+        smpl_motion,
+        skeleton3d,
+        fps=30.0,
+    )
+
+    before_frames = skeleton3d["players"][0]["frames"]
+    after_frames = smoothed_skeleton["players"][0]["frames"]
+    before_peak = max(before_frames, key=lambda frame: frame["joints_world"][idx["left_wrist"]][0])["frame_idx"]
+    after_peak = max(after_frames, key=lambda frame: frame["joints_world"][idx["left_wrist"]][0])["frame_idx"]
+    assert after_peak == before_peak
+    for before, after in zip(before_frames, after_frames, strict=True):
+        assert worldhmr._distance3(
+            before["joints_world"][idx["left_elbow"]],
+            before["joints_world"][idx["left_wrist"]],
+        ) == pytest.approx(
+            worldhmr._distance3(
+                after["joints_world"][idx["left_elbow"]],
+                after["joints_world"][idx["left_wrist"]],
+            )
+        )
+        assert worldhmr._distance3(
+            before["joints_world"][idx["left_knee"]],
+            before["joints_world"][idx["left_ankle"]],
+        ) == pytest.approx(
+            worldhmr._distance3(
+                after["joints_world"][idx["left_knee"]],
+                after["joints_world"][idx["left_ankle"]],
+            )
+        )
+    assert metrics["enabled"] is True
+    assert metrics["max_wrist_peak_delta_frames"] == 0
+    assert metrics["max_lag_frames"] <= 1
+    assert metrics["limb_length_max_delta_m"] <= 1e-9
+    assert smoothed_smpl["players"][0]["frames"][2]["joints_world"][idx["left_wrist"]][0] > 0.0
 
 
 def test_body_artifact_default_speed_cap_feeds_review_quality_gate() -> None:

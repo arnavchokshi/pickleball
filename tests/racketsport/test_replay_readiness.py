@@ -158,7 +158,7 @@ def test_build_replay_readiness_report_separates_visual_review_from_production_g
     _write_clip(run_root, "clip_with_body", body_status="mesh_available_needs_accuracy_gate")
     _write_clip(run_root, "clip_without_body", body_status="missing_body_output", mesh_frames=0)
 
-    report = build_replay_readiness_report(run_root=run_root, clips=["clip_with_body", "clip_without_body"])
+    report = build_replay_readiness_report(run_root=run_root, clips=["clip_with_body", "clip_without_body"], labels_root=tmp_path / "labels_absent")
     by_clip = {clip["clip"]: clip for clip in report["clips"]}
 
     assert report["status"] == "blocked"

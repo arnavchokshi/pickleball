@@ -26,6 +26,11 @@ from .body_compute import (
 from .body_full_clip_gate import build_body_full_clip_gate
 from .body_grounding_quality import build_body_grounding_quality, write_body_grounding_quality
 from .body_joint_quality import build_body_joint_quality
+from .body_array_native import (
+    body_mesh_export_parts_from_smpl_motion_view,
+    body_mesh_payload_from_parts,
+    build_body_array_native_artifacts_from_fast_sam,
+)
 from .body_mesh_index import build_body_mesh_index_from_arrays, build_body_mesh_index_from_payload
 from .body_mesh_readiness import build_body_mesh_readiness
 from .ball_inflections import build_ball_inflections_from_ball_track
@@ -76,7 +81,7 @@ from .sam3d_body_input_prep import (
 from .schemas import CaptureSidecar, CourtCalibration, StrictArtifact, Tracks, validate_artifact_file
 from .virtual_world import build_virtual_world_state_from_files, write_virtual_world
 from .wrist_velocity_peaks import build_wrist_velocity_peaks_from_file
-from .worldhmr import build_body_artifacts_from_fast_sam
+from .worldhmr import assemble_body_monolith_payloads, build_body_artifacts_from_fast_sam
 
 
 YOLO26M_MODEL_ID = "yolo26m"
@@ -664,6 +669,7 @@ class BodyStageRunner:
         sam3d_upstream_env: Mapping[str, Any] | None = None,
         sam3d_tier2_output_lite: bool = False,
         sam3d_wrist_bone_lock: bool = True,
+        experimental_body_array_native: bool = True,
     ) -> None:
         self.manifest_path = Path(manifest_path)
         self.fast_sam_repo = Path(fast_sam_repo)
@@ -692,6 +698,7 @@ class BodyStageRunner:
         self.sam3d_upstream_env = _normalize_sam3d_upstream_env(sam3d_upstream_env or {})
         self.sam3d_tier2_output_lite = bool(sam3d_tier2_output_lite)
         self.sam3d_wrist_bone_lock = bool(sam3d_wrist_bone_lock)
+        self.experimental_body_array_native = bool(experimental_body_array_native)
 
     def _sam3d_tier2_config(self, body_execution: Mapping[str, Any]) -> dict[str, Any]:
         return {
@@ -724,6 +731,12 @@ class BodyStageRunner:
                 "upstream_env": dict(self.sam3d_upstream_env),
                 "tier2_output_lite": self.sam3d_tier2_output_lite,
                 "sam3d_wrist_bone_lock": self.sam3d_wrist_bone_lock,
+                "experimental_body_array_native": self.experimental_body_array_native,
+                "body_joint_builder": (
+                    "array_native_shared_worldhmr_compute"
+                    if self.experimental_body_array_native
+                    else "legacy_worldhmr_build_body_artifacts_from_fast_sam"
+                ),
                 "static_clip_intrinsics": True,
                 "compile_warmup_static_intrinsics": bool(
                     self.sam3d_torch_compile and self.sam3d_compile_warmup_buckets
@@ -767,8 +780,9 @@ class BodyStageRunner:
             "runner_other_s": "run_sam3dbody_batch.py timing summary remainder after runner-local attribution",
             "subprocess_wrapper_handoff_s": "BodyStageRunner outer batch wall not covered by the runner timing sidecar",
             "keypoints_2d_s": "sam3d_keypoints_2d sidecar derivation and write",
-            "mesh_smpl_payload_assembly_s": "building smpl_motion/skeleton3d/body_mesh Python payloads before JSON serialization",
-            "smpl_motion_payload_assembly_s": "build_body_artifacts_from_fast_sam or empty BODY payload construction before serialization",
+            "mesh_smpl_payload_assembly_s": "smpl_motion/body_mesh Python payload construction; zero in default slim array-native mode",
+            "smpl_motion_payload_assembly_s": "build_body_artifacts_from_fast_sam/monolith assembly or empty BODY payload construction before serialization; zero in default slim array-native mode",
+            "array_native_gate_feed_s": "default slim mode BODY gate/readiness/splice/skeleton/index payload views built from shared worldhmr joint compute without monolithic smpl/body payloads",
             "mesh_export_payload_assembly_s": "build_body_mesh_export Python payload construction before serialization",
             "contact_splice_s": "contact skeleton splice, optional wrist lock, skeleton/contact artifact writes",
             "gates_s": "BODY quality, full-clip gate, grounding quality, and mesh-readiness artifact builds/writes",
@@ -1090,8 +1104,44 @@ class BodyStageRunner:
             _write_json_artifact(context.run_dir / "sam3d_keypoints_2d.json", sam3d_keypoints_sidecar)
         phase_timings["keypoints_2d_s"] = max(0.0, time.perf_counter() - keypoints_start)
 
+        body_mesh_metadata: dict[str, Any] | None = None
+        body_mesh_players: list[dict[str, Any]] | None = None
+        body_mesh_summary: dict[str, Any] | None = None
+        body_joint_builder = "legacy_worldhmr_build_body_artifacts_from_fast_sam"
         smpl_payload_start = time.perf_counter()
-        if samples:
+        if samples and self.experimental_body_array_native:
+            body_joint_builder = "array_native_shared_worldhmr_compute"
+            array_native_start = time.perf_counter()
+            array_native = build_body_array_native_artifacts_from_fast_sam(
+                samples,
+                calibration=calibration,
+                fps=tracks.fps,
+                clip=context.clip,
+                body_compute_execution=body_execution,
+                smoothing_alpha=self.smoothing_alpha,
+                max_root_speed_mps=self.max_root_speed_mps,
+                max_track_anchor_smoothing_residual_m=self.max_track_anchor_smoothing_residual_m,
+                sam3d_wrist_bone_lock=self.sam3d_wrist_bone_lock,
+                stance_index=stance_index,
+                grounding_anchor_source=grounding_anchor_source,
+            )
+            if self.write_body_monoliths:
+                smpl_motion, skeleton3d, grounding_metrics = assemble_body_monolith_payloads(
+                    array_native.smpl_motion_view,
+                    array_native.skeleton3d,
+                    array_native.grounding_metrics,
+                )
+                phase_timings["smpl_motion_payload_assembly_s"] = max(0.0, time.perf_counter() - smpl_payload_start)
+            else:
+                smpl_motion = array_native.smpl_motion_view
+                skeleton3d = array_native.skeleton3d
+                grounding_metrics = array_native.grounding_metrics
+                phase_timings["smpl_motion_payload_assembly_s"] = 0.0
+            body_mesh_metadata = array_native.body_mesh_metadata
+            body_mesh_players = array_native.body_mesh_players
+            body_mesh_summary = array_native.body_mesh_summary
+            phase_timings["array_native_gate_feed_s"] = max(0.0, time.perf_counter() - array_native_start)
+        elif samples:
             smpl_motion, skeleton3d, grounding_metrics = build_body_artifacts_from_fast_sam(
                 samples,
                 calibration=calibration,
@@ -1103,6 +1153,7 @@ class BodyStageRunner:
                 stance_index=stance_index,
                 grounding_anchor_source=grounding_anchor_source,
             )
+            phase_timings["smpl_motion_payload_assembly_s"] = max(0.0, time.perf_counter() - smpl_payload_start)
         else:
             smpl_motion = _empty_smpl_motion(fps=tracks.fps)
             skeleton3d = _empty_body_preview_skeleton(fps=tracks.fps)
@@ -1113,7 +1164,7 @@ class BodyStageRunner:
                 "world_frame": "court_Z0",
                 "grounding": "no_fast_sam_body_samples",
             }
-        phase_timings["smpl_motion_payload_assembly_s"] = max(0.0, time.perf_counter() - smpl_payload_start)
+            phase_timings["smpl_motion_payload_assembly_s"] = max(0.0, time.perf_counter() - smpl_payload_start)
         grounding_metrics = {**grounding_metrics, "calibration_confidence": _calibration_confidence_proxy(calibration)}
         monolith_skip_reason = "not built (speed default; rerun with --fetch-body-monoliths to produce them)"
         serialization_timings = []
@@ -1144,8 +1195,6 @@ class BodyStageRunner:
             skeleton3d_payload = skeleton3d.model_dump(mode="json") if hasattr(skeleton3d, "model_dump") else skeleton3d
         mesh_export_start = time.perf_counter()
         body_mesh: dict[str, Any] | None = None
-        body_mesh_metadata: dict[str, Any] | None = None
-        body_mesh_players: list[dict[str, Any]] | None = None
         if self.write_body_monoliths:
             body_mesh = build_body_mesh_export(
                 smpl_motion_payload,
@@ -1154,16 +1203,20 @@ class BodyStageRunner:
             )
             body_mesh_summary = dict(body_mesh["summary"])
         else:
-            body_mesh_metadata, body_mesh_players, body_mesh_summary = _body_mesh_export_parts_from_smpl_motion(
-                smpl_motion_payload,
-                clip=context.clip,
-                body_compute_execution=body_execution,
-            )
+            if body_mesh_metadata is None or body_mesh_players is None or body_mesh_summary is None:
+                body_mesh_metadata, body_mesh_players, body_mesh_summary = body_mesh_export_parts_from_smpl_motion_view(
+                    smpl_motion_payload,
+                    clip=context.clip,
+                    body_compute_execution=body_execution,
+                )
         phase_timings["mesh_export_payload_assembly_s"] = max(0.0, time.perf_counter() - mesh_export_start)
-        phase_timings["mesh_smpl_payload_assembly_s"] = (
-            phase_timings.get("smpl_motion_payload_assembly_s", 0.0)
-            + phase_timings.get("mesh_export_payload_assembly_s", 0.0)
-        )
+        if self.write_body_monoliths or body_joint_builder != "array_native_shared_worldhmr_compute":
+            phase_timings["mesh_smpl_payload_assembly_s"] = (
+                phase_timings.get("smpl_motion_payload_assembly_s", 0.0)
+                + phase_timings.get("mesh_export_payload_assembly_s", 0.0)
+            )
+        else:
+            phase_timings["mesh_smpl_payload_assembly_s"] = 0.0
         if self.write_body_monoliths:
             assert body_mesh is not None
             serialization_timings.append(_write_compact_json_artifact(context.run_dir / "body_mesh.json", body_mesh))
@@ -1186,7 +1239,7 @@ class BodyStageRunner:
                 players=body_mesh_players,
                 out_dir=context.run_dir / "body_mesh_index",
             )
-            body_mesh_for_splice = _body_mesh_payload_from_parts(
+            body_mesh_for_splice = body_mesh_payload_from_parts(
                 body_mesh_metadata,
                 body_mesh_players,
                 summary=body_mesh_summary,
@@ -1285,6 +1338,12 @@ class BodyStageRunner:
             produced_artifacts[3:3] = ["smpl_motion.json", "body_mesh.json"]
         notes = [
             "Fast SAM-3D-Body runtime output converted to court/world coordinates with court_calibration.json",
+            (
+                "BODY skeleton/joint computation used legacy worldhmr.build_body_artifacts_from_fast_sam; "
+                "array-native shared compute was explicitly disabled"
+                if body_joint_builder != "array_native_shared_worldhmr_compute"
+                else "BODY skeleton/joint computation used shared worldhmr.compute_body_skeleton_and_metrics; monolith assembly skipped unless requested"
+            ),
             "BODY frame execution follows frame_compute_plan.json when present and skips manual-review/preview-only frames",
             "preserved existing skeleton3d.json"
             if preserved_existing_skeleton
@@ -1341,6 +1400,8 @@ class BodyStageRunner:
                 "sam3d_upstream_env": dict(self.sam3d_upstream_env),
                 "sam3d_tier2_output_lite": self.sam3d_tier2_output_lite,
                 "sam3d_wrist_bone_lock": self.sam3d_wrist_bone_lock,
+                "experimental_body_array_native": self.experimental_body_array_native,
+                "body_joint_builder": body_joint_builder,
                 "sam3d_wrist_bone_lock_status": (
                     skeleton3d_payload.get("provenance", {})
                     .get("sam3d_wrist_bone_lock", {})
@@ -1713,6 +1774,7 @@ class _BinaryHandoffSubprocessRuntime:
             ],
         }
         request_path.write_text(json.dumps(request_payload, separators=(",", ":")) + "\n", encoding="utf-8")
+        chunk_format = "pickle"
         command = [
             str(self._runtime.python_executable),
             str(Path(__file__).resolve().parents[2] / "scripts/racketsport/run_sam3dbody_batch.py"),
@@ -1737,7 +1799,7 @@ class _BinaryHandoffSubprocessRuntime:
             # preprocessing 13->137s, steady inference polluted 15.3->151ms/person
             # by in-loop array saves). The pickle chunk path is the proven-fast
             # transport; binary remains available for explicit experiments.
-            "pickle",
+            chunk_format,
             "--no-monolithic-output",
         ]
         if body_input_size_px is not None:
@@ -1798,8 +1860,8 @@ class _BinaryHandoffSubprocessRuntime:
                 upstream_env=upstream_env,
                 tier2_output_lite=tier2_output_lite,
             )
-        self.binary_handoff_status = "binary_sidecar_v1"
-        self.binary_handoff_note = "SAM3D subprocess returned BODY records through binary numpy sidecar chunks (contract v1)"
+        self.binary_handoff_status = f"{chunk_format}_chunks_v1"
+        self.binary_handoff_note = f"SAM3D subprocess returned BODY records through {chunk_format} chunks (contract v1)"
         return outputs
 
     def _fallback(self, requests: list[Any], *, reason: str, **kwargs: Any) -> list[list[dict[str, Any]]]:
@@ -3446,6 +3508,7 @@ def _write_body_stage_phase_timing(
         "runner_other_s",
         "subprocess_wrapper_handoff_s",
         "mesh_smpl_payload_assembly_s",
+        "array_native_gate_feed_s",
         "keypoints_2d_s",
         "contact_splice_s",
         "gates_s",
@@ -3475,6 +3538,7 @@ def _write_body_stage_phase_timing(
         "subprocess_wrapper_handoff_s": phase_timings.get("subprocess_wrapper_handoff_s"),
         "mesh_smpl_payload_assembly_s": phase_timings.get("mesh_smpl_payload_assembly_s"),
         "smpl_motion_payload_assembly_s": phase_timings.get("smpl_motion_payload_assembly_s"),
+        "array_native_gate_feed_s": phase_timings.get("array_native_gate_feed_s"),
         "mesh_export_payload_assembly_s": phase_timings.get("mesh_export_payload_assembly_s"),
         "keypoints_2d_s": float(phase_timings.get("keypoints_2d_s", 0.0)),
         "contact_splice_s": float(phase_timings.get("contact_splice_s", 0.0)),

@@ -77,6 +77,7 @@ export type ViewerManifest = {
   events_selected_url: string | null;
   shots_url?: string;
   ball_arc_solved_url?: string;
+  ball_arc_render_url?: string;
   auto_bounce_candidates_url?: string;
   ball_bounce_candidates_url?: string;
   ball_flight_sanity_url?: string;
@@ -119,6 +120,26 @@ export type BodyMeshFrame = {
   mesh_faces: MeshFace[];
   smplx_params: Record<string, number[]>;
   reasons: string[];
+  mesh_interpolated: boolean;
+  interpolation: BodyMeshInterpolation | null;
+  mesh_alignment?: BodyMeshAlignmentDebug | null;
+};
+
+export type BodyMeshInterpolation = {
+  from_frame_idx: number;
+  to_frame_idx: number;
+  alpha: number;
+  max_gap_s: number;
+};
+
+export type BodyMeshAlignmentDebug = {
+  applied: boolean;
+  reason: "skeleton_root" | "missing_world_frame" | "missing_skeleton_root" | "missing_mesh_root";
+  delta: Vec3;
+  mesh_root: Vec3 | null;
+  skeleton_root: Vec3 | null;
+  floor_guard_applied: boolean;
+  floor_lift_m: number;
 };
 
 export type BodyMeshPlayer = {
@@ -216,6 +237,8 @@ export type ActiveBodyMeshFrame = {
   meshPlayerId: number;
   frame: BodyMeshFrame;
   presenceOpacity: number;
+  renderTranslation: Vec3;
+  alignmentDebug?: BodyMeshAlignmentDebug;
 };
 
 export type BodyMeshLoadState =
@@ -257,7 +280,40 @@ export type BodyMeshDebugSnapshot = {
   load_url: string | null;
   load_message: string | null;
   rendered_player_count: number;
+  alignment_floor_guard_count: number;
   players: BodyMeshDebugPlayer[];
+};
+
+export type BodyMeshInterpolationStats = {
+  computedFrameCount: number;
+  eligiblePairCount: number;
+  heldPairCount: number;
+  gapRefusedPairCount: number;
+  boundaryRefusedPairCount: number;
+  mismatchedVertexRefusedPairCount: number;
+  displayMultiplier: 1 | 2;
+};
+
+export type DisplayFpsStats = {
+  enabled: boolean;
+  sourceFps: number;
+  displayFps: number;
+  worldComputedFrameCount: number;
+  worldInterpolatedFrameCount: number;
+  meshComputedFrameCount: number;
+  meshInterpolatedFrameCount: number;
+  meshMaxInterpolatedGapMs: number;
+  meshRefusedPairCount: number;
+};
+
+export type DisplayFpsReplayData = {
+  world: VirtualWorld;
+  bodyMesh: BodyMesh | null;
+  stats: DisplayFpsStats;
+};
+
+export type DisplayFpsOptions = {
+  meshMaxGapSeconds?: number;
 };
 
 export type ContactWindowEvent = {
@@ -617,6 +673,9 @@ export function parseViewerManifest(input: unknown): ViewerManifest {
   if (value.ball_arc_solved_url !== null && value.ball_arc_solved_url !== undefined) {
     manifest.ball_arc_solved_url = readString(value.ball_arc_solved_url, "manifest.ball_arc_solved_url");
   }
+  if (value.ball_arc_render_url !== null && value.ball_arc_render_url !== undefined) {
+    manifest.ball_arc_render_url = readString(value.ball_arc_render_url, "manifest.ball_arc_render_url");
+  }
   if (value.auto_bounce_candidates_url !== null && value.auto_bounce_candidates_url !== undefined) {
     manifest.auto_bounce_candidates_url = readString(value.auto_bounce_candidates_url, "manifest.auto_bounce_candidates_url");
   }
@@ -769,6 +828,8 @@ export function decodeBodyMeshChunkBytes(
         mesh_faces: faces.mesh_faces,
         smplx_params: {},
         reasons: frameMeta.reasons,
+        mesh_interpolated: false,
+        interpolation: null,
       });
     }
     if (frames.length) players.push({ id: player.id, frames });
@@ -1139,11 +1200,14 @@ export function solidBodyMeshFramesForTime(
       if (!meshPlayer) continue;
       const frame = bodyMeshFrameForTime(meshPlayer, timeSeconds, bodyMesh.fps);
       if (!solidMeshFrameRenderable(frame)) continue;
+      const aligned = alignBodyMeshFrameToWorldSkeleton(frame, worldFrame, bodyMesh.joint_names, world.joint_names);
       results.push({
         playerId: worldPlayer.id,
         meshPlayerId: meshPlayer.id,
-        frame,
+        frame: aligned.frame,
         presenceOpacity: bodyMeshPresenceOpacityForTime(meshPlayer, timeSeconds),
+        renderTranslation: aligned.renderTranslation,
+        alignmentDebug: aligned.debug,
       });
     }
     return results;
@@ -1151,7 +1215,13 @@ export function solidBodyMeshFramesForTime(
   for (const player of bodyMesh.players) {
     const frame = bodyMeshFrameForTime(player, timeSeconds, bodyMesh.fps);
     if (!solidMeshFrameRenderable(frame)) continue;
-    results.push({ playerId: player.id, meshPlayerId: player.id, frame, presenceOpacity: bodyMeshPresenceOpacityForTime(player, timeSeconds) });
+    results.push({
+      playerId: player.id,
+      meshPlayerId: player.id,
+      frame,
+      presenceOpacity: bodyMeshPresenceOpacityForTime(player, timeSeconds),
+      renderTranslation: [0, 0, 0],
+    });
   }
   return results;
 }
@@ -1221,6 +1291,7 @@ export function bodyMeshDebugSnapshot({
     load_url: loadStatus.url ?? null,
     load_message: loadStatus.message ?? null,
     rendered_player_count: active.length,
+    alignment_floor_guard_count: active.filter((frame) => frame.alignmentDebug?.floor_guard_applied === true).length,
     players: world.players.map((worldPlayer) => {
       const worldFrame = frameForTime(worldPlayer, currentTime);
       const normalizedMeshPlayerId = normalizedMeshPlayerIdForWorldFrame(worldPlayer, worldFrame);
@@ -1940,6 +2011,8 @@ function readBodyMeshFrame(input: unknown, path: string, artifactFaces: MeshFace
       input.reasons === undefined
         ? []
         : readArray(input.reasons, `${path}.reasons`).map((reason, index) => readString(reason, `${path}.reasons[${index}]`)),
+    mesh_interpolated: false,
+    interpolation: null,
   };
 }
 
@@ -1952,14 +2025,582 @@ function readSmplxParams(input: unknown, path: string): Record<string, number[]>
   return params;
 }
 
+const BODY_MESH_INTERPOLATION_MAX_GAP_SECONDS = 0.066;
+const BODY_MESH_HOLD_MAX_GAP_SECONDS = 0.15;
+const DISPLAY_FPS_MESH_MAX_GAP_SECONDS = 0.15;
+const MESH_INTERPOLATION_REASON = "client_midpoint_interpolation";
+const DISPLAY_FPS_INTERPOLATION_REASON = "user_enabled_2x_display";
+
+type BodyMeshInterpolationPair = {
+  from: BodyMeshFrame;
+  to: BodyMeshFrame;
+  key: string;
+  gapSeconds: number;
+  sameWindow: boolean;
+  sameRun: boolean;
+  holdEligible: boolean;
+  matchingVertexCount: boolean;
+  matchingJointCount: boolean;
+  eligible: boolean;
+};
+
+type BodyMeshInterpolationState = {
+  sortedFrames: BodyMeshFrame[];
+  pairs: BodyMeshInterpolationPair[];
+  reusableFrames: Map<string, BodyMeshFrame>;
+};
+
+const bodyMeshInterpolationStateCache = new WeakMap<BodyMeshPlayer, BodyMeshInterpolationState>();
+
 function bodyMeshFrameForTime(player: BodyMeshPlayer, timeSeconds: number, fps: number): BodyMeshFrame | undefined {
   if (!player.frames.length) return undefined;
-  const sortedFrames = [...player.frames].sort((left, right) => left.t - right.t);
+  const state = bodyMeshInterpolationStateForPlayer(player);
+  const sortedFrames = state.sortedFrames;
   const tolerance = Math.max(1 / Math.max(fps || 30, 1) * 1.5, 0.04, BODY_MESH_FADE_SECONDS);
   const first = sortedFrames[0].t;
   const last = sortedFrames[sortedFrames.length - 1].t;
   if (timeSeconds < first - tolerance || timeSeconds > last + tolerance) return undefined;
-  return sortedFrames.reduce((best, frame) => (Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best));
+
+  const exactFrame = sortedFrames.find((frame) => Math.abs(frame.t - timeSeconds) <= 1e-6);
+  if (exactFrame) return exactFrame;
+  if (timeSeconds <= first) return sortedFrames[0];
+  for (const pair of state.pairs) {
+    if (pair.from.t <= timeSeconds && timeSeconds < pair.to.t) {
+      if (Math.abs(timeSeconds - pair.from.t) <= 1e-9) return pair.from;
+      if (pair.holdEligible) {
+        return pair.from;
+      }
+      if (timeSeconds - pair.from.t <= BODY_MESH_FADE_SECONDS) return pair.from;
+      if (pair.to.t - timeSeconds <= BODY_MESH_FADE_SECONDS) return pair.to;
+      return undefined;
+    }
+  }
+  if (timeSeconds >= last) return sortedFrames[sortedFrames.length - 1];
+
+  return sortedFrames.reduce((best, frame) =>
+    Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best,
+  );
+}
+
+function bodyMeshInterpolationStateForPlayer(player: BodyMeshPlayer): BodyMeshInterpolationState {
+  const cached = bodyMeshInterpolationStateCache.get(player);
+  if (cached) return cached;
+  const sortedFrames = [...player.frames].sort((left, right) => left.t - right.t);
+  const pairs: BodyMeshInterpolationPair[] = [];
+  for (let index = 0; index < sortedFrames.length - 1; index += 1) {
+    const from = sortedFrames[index];
+    const to = sortedFrames[index + 1];
+    const gapSeconds = to.t - from.t;
+    const sameWindow =
+      from.source_window_index !== null &&
+      to.source_window_index !== null &&
+      from.source_window_index === to.source_window_index;
+    const sameRun = from.source_window_index === to.source_window_index;
+    const matchingVertexCount = from.mesh_vertices_world.length === to.mesh_vertices_world.length;
+    const matchingJointCount = from.joints_world.length === to.joints_world.length;
+    const holdEligible = gapSeconds > 0 && gapSeconds <= BODY_MESH_HOLD_MAX_GAP_SECONDS && sameRun;
+    pairs.push({
+      from,
+      to,
+      key: `${from.source_window_index ?? "none"}:${from.frame_idx}:${to.frame_idx}`,
+      gapSeconds,
+      sameWindow,
+      sameRun,
+      holdEligible,
+      matchingVertexCount,
+      matchingJointCount,
+      eligible:
+        gapSeconds > 0 &&
+        gapSeconds <= BODY_MESH_INTERPOLATION_MAX_GAP_SECONDS &&
+        sameWindow &&
+        matchingVertexCount &&
+        matchingJointCount,
+    });
+  }
+  const state = { sortedFrames, pairs, reusableFrames: new Map<string, BodyMeshFrame>() };
+  bodyMeshInterpolationStateCache.set(player, state);
+  return state;
+}
+
+function interpolatedBodyMeshFrameForPair(
+  state: BodyMeshInterpolationState,
+  pair: BodyMeshInterpolationPair,
+  timeSeconds: number,
+): BodyMeshFrame {
+  let frame = state.reusableFrames.get(pair.key);
+  if (!frame) {
+    frame = {
+      frame_idx: pair.from.frame_idx,
+      t: pair.from.t,
+      source_window_index: pair.from.source_window_index,
+      blend_weight: pair.from.blend_weight,
+      joints_world: pair.from.joints_world.map(() => [0, 0, 0] as Vec3),
+      joint_conf: pair.from.joint_conf.map(() => 0),
+      mesh_vertices_world: pair.from.mesh_vertices_world.map(() => [0, 0, 0] as Vec3),
+      mesh_faces: pair.from.mesh_faces,
+      smplx_params: {},
+      reasons: Array.from(new Set([...pair.from.reasons, ...pair.to.reasons, MESH_INTERPOLATION_REASON])),
+      mesh_interpolated: true,
+      interpolation: {
+        from_frame_idx: pair.from.frame_idx,
+        to_frame_idx: pair.to.frame_idx,
+        alpha: 0,
+        max_gap_s: BODY_MESH_INTERPOLATION_MAX_GAP_SECONDS,
+      },
+    };
+    state.reusableFrames.set(pair.key, frame);
+  }
+
+  const alpha = clamp01((timeSeconds - pair.from.t) / pair.gapSeconds);
+  frame.frame_idx = pair.from.frame_idx + (pair.to.frame_idx - pair.from.frame_idx) * alpha;
+  frame.t = timeSeconds;
+  frame.source_window_index = pair.from.source_window_index;
+  frame.blend_weight = pair.from.blend_weight + (pair.to.blend_weight - pair.from.blend_weight) * alpha;
+  frame.mesh_interpolated = true;
+  if (frame.interpolation) {
+    frame.interpolation.from_frame_idx = pair.from.frame_idx;
+    frame.interpolation.to_frame_idx = pair.to.frame_idx;
+    frame.interpolation.alpha = Number(alpha.toFixed(6));
+    frame.interpolation.max_gap_s = BODY_MESH_INTERPOLATION_MAX_GAP_SECONDS;
+  }
+  interpolateVec3ArrayInPlace(frame.mesh_vertices_world, pair.from.mesh_vertices_world, pair.to.mesh_vertices_world, alpha);
+  interpolateVec3ArrayInPlace(frame.joints_world, pair.from.joints_world, pair.to.joints_world, alpha);
+  interpolateNumberArrayInPlace(frame.joint_conf, pair.from.joint_conf, pair.to.joint_conf, alpha);
+  return frame;
+}
+
+function interpolateVec3ArrayInPlace(target: Vec3[], from: Vec3[], to: Vec3[], alpha: number): void {
+  for (let index = 0; index < target.length; index += 1) {
+    target[index][0] = cleanInterpolatedNumber(from[index][0] + (to[index][0] - from[index][0]) * alpha);
+    target[index][1] = cleanInterpolatedNumber(from[index][1] + (to[index][1] - from[index][1]) * alpha);
+    target[index][2] = cleanInterpolatedNumber(from[index][2] + (to[index][2] - from[index][2]) * alpha);
+  }
+}
+
+function interpolateNumberArrayInPlace(target: number[], from: number[], to: number[], alpha: number): void {
+  const length = Math.min(target.length, from.length, to.length);
+  for (let index = 0; index < length; index += 1) {
+    target[index] = cleanInterpolatedNumber(from[index] + (to[index] - from[index]) * alpha);
+  }
+}
+
+function cleanInterpolatedNumber(value: number): number {
+  const rounded = Number(value.toFixed(12));
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
+export function bodyMeshInterpolationStats(bodyMesh: BodyMesh | null): BodyMeshInterpolationStats {
+  if (!bodyMesh) {
+    return {
+      computedFrameCount: 0,
+      eligiblePairCount: 0,
+      heldPairCount: 0,
+      gapRefusedPairCount: 0,
+      boundaryRefusedPairCount: 0,
+      mismatchedVertexRefusedPairCount: 0,
+      displayMultiplier: 1,
+    };
+  }
+  let computedFrameCount = 0;
+  let eligiblePairCount = 0;
+  let heldPairCount = 0;
+  let gapRefusedPairCount = 0;
+  let boundaryRefusedPairCount = 0;
+  let mismatchedVertexRefusedPairCount = 0;
+  for (const player of bodyMesh.players) {
+    const state = bodyMeshInterpolationStateForPlayer(player);
+    computedFrameCount += state.sortedFrames.length;
+    for (const pair of state.pairs) {
+      if (pair.eligible) {
+        eligiblePairCount += 1;
+        continue;
+      }
+      if (pair.holdEligible) {
+        heldPairCount += 1;
+      }
+      if (pair.gapSeconds <= 0 || pair.gapSeconds > BODY_MESH_INTERPOLATION_MAX_GAP_SECONDS) {
+        gapRefusedPairCount += 1;
+      }
+      if (!pair.sameWindow) {
+        boundaryRefusedPairCount += 1;
+      }
+      if (!pair.matchingVertexCount || !pair.matchingJointCount) {
+        mismatchedVertexRefusedPairCount += 1;
+      }
+    }
+  }
+  return {
+    computedFrameCount,
+    eligiblePairCount,
+    heldPairCount,
+    gapRefusedPairCount,
+    boundaryRefusedPairCount,
+    mismatchedVertexRefusedPairCount,
+    displayMultiplier: eligiblePairCount > 0 ? 2 : 1,
+  };
+}
+
+export function bodyMeshInterpolationReadout(bodyMesh: BodyMesh | null): string {
+  const stats = bodyMeshInterpolationStats(bodyMesh);
+  if (!stats.computedFrameCount) return "mesh: no computed frames";
+  if (stats.eligiblePairCount > 0) {
+    const fps = Math.round(bodyMesh?.fps || 30);
+    const pairWord = stats.eligiblePairCount === 1 ? "pair" : "pairs";
+    return `mesh: computed ${fps}fps + interpolated x2 (${stats.eligiblePairCount} safe ${pairWord})`;
+  }
+  if (stats.heldPairCount > 0) {
+    const gapWord = stats.heldPairCount === 1 ? "gap" : "gaps";
+    return `mesh: computed sparse (${stats.computedFrameCount} frames, held ${stats.heldPairCount} ${gapWord})`;
+  }
+  return `mesh: computed sparse (${stats.computedFrameCount} frames, 0 safe pairs)`;
+}
+
+function alignBodyMeshFrameToWorldSkeleton(
+  frame: BodyMeshFrame,
+  worldFrame: VirtualWorldFrame | undefined,
+  meshJointNames: readonly string[] | undefined,
+  worldJointNames: readonly string[] | undefined,
+): { frame: BodyMeshFrame; renderTranslation: Vec3; debug: BodyMeshAlignmentDebug } {
+  const meshRoot = meshRootForFrame(frame, jointNamesForFrame(frame, meshJointNames, worldJointNames));
+  const skeletonRoot = skeletonRootForWorldFrame(worldFrame, worldJointNames);
+  if (!worldFrame) {
+    return { frame, renderTranslation: [0, 0, 0], debug: bodyMeshAlignmentDebug(false, "missing_world_frame", meshRoot, null) };
+  }
+  if (!skeletonRoot) {
+    return { frame, renderTranslation: [0, 0, 0], debug: bodyMeshAlignmentDebug(false, "missing_skeleton_root", meshRoot, null) };
+  }
+  if (!meshRoot) {
+    return { frame, renderTranslation: [0, 0, 0], debug: bodyMeshAlignmentDebug(false, "missing_mesh_root", null, skeletonRoot) };
+  }
+  const rootDelta = subtractVec3(skeletonRoot, meshRoot);
+  const floorLift = meshFloorLiftForTranslation(frame.mesh_vertices_world, rootDelta);
+  const delta: Vec3 = floorLift > 0 ? [rootDelta[0], rootDelta[1], cleanInterpolatedNumber(rootDelta[2] + floorLift)] : rootDelta;
+  const debug = bodyMeshAlignmentDebug(true, "skeleton_root", meshRoot, skeletonRoot, delta, floorLift);
+  return { frame, renderTranslation: delta, debug };
+}
+
+function bodyMeshAlignmentDebug(
+  applied: boolean,
+  reason: BodyMeshAlignmentDebug["reason"],
+  meshRoot: Vec3 | null,
+  skeletonRoot: Vec3 | null,
+  delta: Vec3 = [0, 0, 0],
+  floorLiftM = 0,
+): BodyMeshAlignmentDebug {
+  return {
+    applied,
+    reason,
+    delta,
+    mesh_root: meshRoot,
+    skeleton_root: skeletonRoot,
+    floor_guard_applied: floorLiftM > 0,
+    floor_lift_m: cleanInterpolatedNumber(floorLiftM),
+  };
+}
+
+function skeletonRootForWorldFrame(frame: VirtualWorldFrame | undefined, jointNames: readonly string[] | undefined): Vec3 | null {
+  if (!frame || !frame.joints_world.length) return null;
+  return rootFromNamedJoints(frame.joints_world, frame.joint_conf, jointNames);
+}
+
+function meshRootForFrame(frame: BodyMeshFrame, jointNames: readonly string[] | undefined): Vec3 | null {
+  return rootFromNamedJoints(frame.joints_world, frame.joint_conf, jointNames);
+}
+
+function jointNamesForFrame(
+  frame: BodyMeshFrame,
+  meshJointNames: readonly string[] | undefined,
+  worldJointNames: readonly string[] | undefined,
+): readonly string[] | undefined {
+  if (meshJointNames?.length) return meshJointNames;
+  if (worldJointNames?.length && worldJointNames.length === frame.joints_world.length) return worldJointNames;
+  return undefined;
+}
+
+function rootFromNamedJoints(joints: Vec3[], conf: number[], jointNames: readonly string[] | undefined): Vec3 | null {
+  if (!jointNames?.length) return null;
+  const points = new Map<string, Vec3>();
+  jointNames.forEach((name, index) => {
+    const point = joints[index];
+    const confidence = conf[index];
+    if (point && (confidence === undefined || !Number.isFinite(confidence) || confidence >= 0.05)) {
+      points.set(name.toLowerCase(), point);
+    }
+  });
+  const leftHip = points.get("left_hip");
+  const rightHip = points.get("right_hip");
+  if (leftHip && rightHip) return midpointVec3(leftHip, rightHip);
+  return points.get("pelvis") ?? points.get("root") ?? points.get("smpl_root") ?? points.get("hips") ?? null;
+}
+
+function midpointVec3(left: Vec3, right: Vec3): Vec3 {
+  return [(left[0] + right[0]) / 2, (left[1] + right[1]) / 2, (left[2] + right[2]) / 2];
+}
+
+function subtractVec3(left: Vec3, right: Vec3): Vec3 {
+  return [
+    cleanInterpolatedNumber(left[0] - right[0]),
+    cleanInterpolatedNumber(left[1] - right[1]),
+    cleanInterpolatedNumber(left[2] - right[2]),
+  ];
+}
+
+function meshFloorLiftForTranslation(vertices: Vec3[], delta: Vec3): number {
+  if (!vertices.length) return 0;
+  const translatedLowest = Math.min(...vertices.map((vertex) => vertex[2] + delta[2]));
+  return translatedLowest < -0.08 ? cleanInterpolatedNumber(-translatedLowest) : 0;
+}
+
+export function displayFpsReplayData(
+  world: VirtualWorld,
+  bodyMesh: BodyMesh | null,
+  enabled: boolean,
+  options: DisplayFpsOptions = {},
+): DisplayFpsReplayData {
+  const sourceFps = Math.round(world.fps || bodyMesh?.fps || 30);
+  const baseStats: DisplayFpsStats = {
+    enabled,
+    sourceFps,
+    displayFps: enabled ? sourceFps * 2 : sourceFps,
+    worldComputedFrameCount: countWorldPlayerFrames(world),
+    worldInterpolatedFrameCount: 0,
+    meshComputedFrameCount: countBodyMeshFrames(bodyMesh),
+    meshInterpolatedFrameCount: 0,
+    meshMaxInterpolatedGapMs: 0,
+    meshRefusedPairCount: 0,
+  };
+  if (!enabled) return { world, bodyMesh, stats: baseStats };
+
+  const doubledWorld = doubleFpsWorld(world);
+  const doubledBodyMesh = doubleFpsBodyMesh(bodyMesh, options.meshMaxGapSeconds ?? DISPLAY_FPS_MESH_MAX_GAP_SECONDS);
+  return {
+    world: doubledWorld.world,
+    bodyMesh: doubledBodyMesh.bodyMesh,
+    stats: {
+      ...baseStats,
+      displayFps: sourceFps * 2,
+      worldInterpolatedFrameCount: doubledWorld.interpolatedFrameCount,
+      meshInterpolatedFrameCount: doubledBodyMesh.interpolatedFrameCount,
+      meshMaxInterpolatedGapMs: doubledBodyMesh.maxInterpolatedGapMs,
+      meshRefusedPairCount: doubledBodyMesh.refusedPairCount,
+    },
+  };
+}
+
+export function displayFpsReadout(stats: DisplayFpsStats): string {
+  if (!stats.enabled) return `${stats.sourceFps}fps display: original`;
+  const skeletonWord = stats.worldInterpolatedFrameCount === 1 ? "skeleton" : "skeletons";
+  const meshText = `${stats.meshInterpolatedFrameCount} mesh`;
+  const cadenceText =
+    stats.meshInterpolatedFrameCount > 0 && stats.meshMaxInterpolatedGapMs > 0
+      ? `; mesh interpolated across ${stats.meshMaxInterpolatedGapMs}ms gaps`
+      : "";
+  return `${stats.displayFps}fps display: computed ${stats.sourceFps} + interpolated ${stats.worldInterpolatedFrameCount} ${skeletonWord}, ${meshText}${cadenceText}`;
+}
+
+function doubleFpsWorld(world: VirtualWorld): { world: VirtualWorld; interpolatedFrameCount: number } {
+  let interpolatedFrameCount = 0;
+  const players = world.players.map((player) => {
+    const frames: VirtualWorldFrame[] = [];
+    const sorted = [...player.frames].sort((left, right) => left.t - right.t);
+    for (let index = 0; index < sorted.length; index += 1) {
+      const current = sorted[index];
+      frames.push(current);
+      const next = sorted[index + 1];
+      if (!next) continue;
+      const midpoint = interpolatedWorldFrame(current, next);
+      if (midpoint) {
+        frames.push(midpoint);
+        interpolatedFrameCount += 1;
+      }
+    }
+    return { ...player, frames };
+  });
+  return {
+    world: {
+      ...world,
+      fps: (world.fps || 30) * 2,
+      players,
+      summary: {
+        ...world.summary,
+        joint_player_frame_count: players.reduce(
+          (total, player) => total + player.frames.filter((frame) => frame.joints_world.length > 0).length,
+          0,
+        ),
+        floor_placed_player_frame_count: players.reduce(
+          (total, player) => total + player.frames.filter((frame) => frame.floor_world_xyz || frame.track_world_xy).length,
+          0,
+        ),
+      },
+    },
+    interpolatedFrameCount,
+  };
+}
+
+function interpolatedWorldFrame(from: VirtualWorldFrame, to: VirtualWorldFrame): VirtualWorldFrame | null {
+  const gapSeconds = to.t - from.t;
+  if (gapSeconds <= 0) return null;
+  if (from.joints_world.length !== to.joints_world.length || from.joints_world.length === 0) return null;
+  const alpha = 0.5;
+  const joints_world = interpolateVec3Array(from.joints_world, to.joints_world, alpha);
+  const mesh_vertices_world =
+    from.mesh_vertices_world.length === to.mesh_vertices_world.length
+      ? interpolateVec3Array(from.mesh_vertices_world, to.mesh_vertices_world, alpha)
+      : [];
+  return {
+    ...from,
+    t: cleanInterpolatedNumber(from.t + gapSeconds * alpha),
+    mesh_ref:
+      from.mesh_ref && to.mesh_ref && from.mesh_ref.player_id === to.mesh_ref.player_id
+        ? {
+            ...from.mesh_ref,
+            t: cleanInterpolatedNumber(from.mesh_ref.t + ((to.mesh_ref.t ?? to.t) - from.mesh_ref.t) * alpha),
+            frame_idx: Math.round(from.mesh_ref.frame_idx + (to.mesh_ref.frame_idx - from.mesh_ref.frame_idx) * alpha),
+          }
+        : from.mesh_ref ?? null,
+    track_world_xy:
+      from.track_world_xy && to.track_world_xy
+        ? interpolateVec2(from.track_world_xy, to.track_world_xy, alpha)
+        : from.track_world_xy ?? null,
+    transl_world: from.transl_world && to.transl_world ? interpolateVec3(from.transl_world, to.transl_world, alpha) : from.transl_world ?? null,
+    joints_world,
+    joint_conf: interpolateNumberArray(from.joint_conf, to.joint_conf, alpha),
+    mesh_vertices_world,
+    joint_count: joints_world.length,
+    mesh_vertex_count: mesh_vertices_world.length,
+    floor_world_xyz:
+      from.floor_world_xyz && to.floor_world_xyz
+        ? interpolateVec3(from.floor_world_xyz, to.floor_world_xyz, alpha)
+        : from.floor_world_xyz ?? null,
+  };
+}
+
+function doubleFpsBodyMesh(
+  bodyMesh: BodyMesh | null,
+  meshMaxGapSeconds: number,
+): { bodyMesh: BodyMesh | null; interpolatedFrameCount: number; maxInterpolatedGapMs: number; refusedPairCount: number } {
+  if (!bodyMesh) return { bodyMesh: null, interpolatedFrameCount: 0, maxInterpolatedGapMs: 0, refusedPairCount: 0 };
+  const maxGap = Math.max(BODY_MESH_INTERPOLATION_MAX_GAP_SECONDS, Math.min(meshMaxGapSeconds, DISPLAY_FPS_MESH_MAX_GAP_SECONDS));
+  let interpolatedFrameCount = 0;
+  let maxInterpolatedGapMs = 0;
+  let refusedPairCount = 0;
+  const players = bodyMesh.players.map((player) => {
+    const sorted = [...player.frames].sort((left, right) => left.t - right.t);
+    const frames: BodyMeshFrame[] = [];
+    for (let index = 0; index < sorted.length; index += 1) {
+      const current = sorted[index];
+      frames.push(current);
+      const next = sorted[index + 1];
+      if (!next) continue;
+      const pair = bodyMeshInterpolationPairForFrames(current, next);
+      if (
+        pair.gapSeconds > 0 &&
+        pair.gapSeconds <= maxGap &&
+        pair.sameWindow &&
+        pair.matchingVertexCount &&
+        pair.matchingJointCount
+      ) {
+        frames.push(interpolatedBodyMeshFrame(current, next, 0.5, maxGap, DISPLAY_FPS_INTERPOLATION_REASON));
+        interpolatedFrameCount += 1;
+        maxInterpolatedGapMs = Math.max(maxInterpolatedGapMs, Math.round(pair.gapSeconds * 1000));
+      } else {
+        refusedPairCount += 1;
+      }
+    }
+    return { ...player, frames };
+  });
+  return {
+    bodyMesh: {
+      ...bodyMesh,
+      fps: (bodyMesh.fps || 30) * 2,
+      players,
+      summary: {
+        ...bodyMesh.summary,
+        mesh_frame_count: players.reduce((total, player) => total + player.frames.length, 0),
+      },
+    },
+    interpolatedFrameCount,
+    maxInterpolatedGapMs,
+    refusedPairCount,
+  };
+}
+
+function bodyMeshInterpolationPairForFrames(from: BodyMeshFrame, to: BodyMeshFrame): Omit<BodyMeshInterpolationPair, "key" | "eligible"> {
+  const gapSeconds = to.t - from.t;
+  const sameWindow =
+    from.source_window_index !== null &&
+    to.source_window_index !== null &&
+    from.source_window_index === to.source_window_index;
+  const sameRun = from.source_window_index === to.source_window_index;
+  const matchingVertexCount = from.mesh_vertices_world.length === to.mesh_vertices_world.length;
+  const matchingJointCount = from.joints_world.length === to.joints_world.length;
+  return {
+    from,
+    to,
+    gapSeconds,
+    sameWindow,
+    sameRun,
+    holdEligible: gapSeconds > 0 && gapSeconds <= BODY_MESH_HOLD_MAX_GAP_SECONDS && sameRun,
+    matchingVertexCount,
+    matchingJointCount,
+  };
+}
+
+function interpolatedBodyMeshFrame(
+  from: BodyMeshFrame,
+  to: BodyMeshFrame,
+  alpha: number,
+  maxGapSeconds: number,
+  reason: string,
+): BodyMeshFrame {
+  return {
+    frame_idx: cleanInterpolatedNumber(from.frame_idx + (to.frame_idx - from.frame_idx) * alpha),
+    t: cleanInterpolatedNumber(from.t + (to.t - from.t) * alpha),
+    source_window_index: from.source_window_index,
+    blend_weight: cleanInterpolatedNumber(from.blend_weight + (to.blend_weight - from.blend_weight) * alpha),
+    joints_world: interpolateVec3Array(from.joints_world, to.joints_world, alpha),
+    joint_conf: interpolateNumberArray(from.joint_conf, to.joint_conf, alpha),
+    mesh_vertices_world: interpolateVec3Array(from.mesh_vertices_world, to.mesh_vertices_world, alpha),
+    mesh_faces: from.mesh_faces,
+    smplx_params: {},
+    reasons: Array.from(new Set([...from.reasons, ...to.reasons, reason])),
+    mesh_interpolated: true,
+    interpolation: {
+      from_frame_idx: from.frame_idx,
+      to_frame_idx: to.frame_idx,
+      alpha: cleanInterpolatedNumber(alpha),
+      max_gap_s: maxGapSeconds,
+    },
+  };
+}
+
+function countWorldPlayerFrames(world: VirtualWorld): number {
+  return world.players.reduce((total, player) => total + player.frames.length, 0);
+}
+
+function countBodyMeshFrames(bodyMesh: BodyMesh | null): number {
+  return bodyMesh?.players.reduce((total, player) => total + player.frames.length, 0) ?? 0;
+}
+
+function interpolateVec2(from: Vec2, to: Vec2, alpha: number): Vec2 {
+  return [cleanInterpolatedNumber(from[0] + (to[0] - from[0]) * alpha), cleanInterpolatedNumber(from[1] + (to[1] - from[1]) * alpha)];
+}
+
+function interpolateVec3(from: Vec3, to: Vec3, alpha: number): Vec3 {
+  return [
+    cleanInterpolatedNumber(from[0] + (to[0] - from[0]) * alpha),
+    cleanInterpolatedNumber(from[1] + (to[1] - from[1]) * alpha),
+    cleanInterpolatedNumber(from[2] + (to[2] - from[2]) * alpha),
+  ];
+}
+
+function interpolateVec3Array(from: Vec3[], to: Vec3[], alpha: number): Vec3[] {
+  return from.map((point, index) => interpolateVec3(point, to[index], alpha));
+}
+
+function interpolateNumberArray(from: number[], to: number[], alpha: number): number[] {
+  const length = Math.min(from.length, to.length);
+  return Array.from({ length }, (_, index) => cleanInterpolatedNumber(from[index] + (to[index] - from[index]) * alpha));
 }
 
 function bodyMeshPresenceOpacityForTime(player: BodyMeshPlayer, timeSeconds: number): number {

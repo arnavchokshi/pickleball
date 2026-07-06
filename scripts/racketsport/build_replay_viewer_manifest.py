@@ -29,6 +29,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--physics-refinement", type=Path, help="Optional physics_refinement.json path.")
     parser.add_argument("--contact-windows", type=Path, help="Optional contact_windows.json path.")
     parser.add_argument("--ball-inflections", type=Path, help="Optional ball_inflections.json path for timeline bounce markers.")
+    parser.add_argument("--ball-arc-render", type=Path, help="Optional ball_arc_render.json path for dense parametric trail rendering.")
     parser.add_argument("--reviewed-bounces", type=Path, help="Optional reviewed_ball_bounces.json path.")
     parser.add_argument("--coaching-card-facts", type=Path, help="Optional coaching_card_facts.json path.")
     parser.add_argument("--rally-spans", type=Path, help="Optional rally_spans.json path.")
@@ -60,6 +61,7 @@ def main(argv: list[str] | None = None) -> int:
             physics_refinement_path=args.physics_refinement,
             contact_windows_path=args.contact_windows,
             ball_inflections_path=args.ball_inflections,
+            ball_arc_render_path=args.ball_arc_render,
             reviewed_bounces_path=args.reviewed_bounces,
             coaching_card_facts_path=args.coaching_card_facts,
             rally_spans_path=args.rally_spans,

@@ -15,7 +15,7 @@ from threed.racketsport.skeleton_video_overlay import render_skeleton_overlay  #
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Render RTMW3D/BODY skeleton inference overlays on video pixels.")
+    parser = argparse.ArgumentParser(description="Render BODY skeleton inference overlays on video pixels.")
     parser.add_argument("--run-dir", type=Path, required=True, help="Run directory containing skeleton3d.json and court_calibration.json.")
     parser.add_argument("--video", type=Path, required=True, help="Source video path.")
     parser.add_argument("--out-dir", type=Path, default=None, help="Output packet directory.")

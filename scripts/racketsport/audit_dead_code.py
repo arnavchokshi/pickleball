@@ -96,7 +96,11 @@ def _git_worktree_paths(root: Path) -> list[str]:
         text=True,
     )
     paths = [line for line in completed.stdout.splitlines() if line]
-    return [path for path in sorted(paths) if not IGNORED_PARTS.intersection(Path(path).parts)]
+    return [
+        path
+        for path in sorted(paths)
+        if not IGNORED_PARTS.intersection(Path(path).parts) and (root / path).is_file()
+    ]
 
 
 def _python_source_paths(paths: Iterable[str]) -> list[str]:

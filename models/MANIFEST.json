@@ -226,47 +226,48 @@
     {
       "id": "rtmw_l_384",
       "stage": "2d_pose",
-      "use": "Server whole-body pose candidate",
+      "use": "Retired RTMW whole-body pose candidate; replaced by Fast SAM-3D-Body",
       "source": "https://mmpose.readthedocs.io/ and https://download.openmmlab.com/mmpose/v1/projects/rtmw/rtmw-dw-x-l_simcc-cocktail14_270e-384x288-20231122.pth",
       "license": "Apache-2.0",
       "commercial_posture": "ok",
-      "status": "available_on_h100",
+      "status": "retired",
       "local_path": "/workspace/checkpoints/body4d/rtmw/rtmw-l_384x288.pth",
       "sha256": "afa589fa16bf8b9bab0807c806538a43bead39ed0151b79f41adcf551e3bcfb0",
-      "fallbacks": ["rtmw_x_384", "rtmpose_x_wholebody_384", "rtmpose_m_body26_384"],
-      "notes": ["MMPose model-zoo row is RTMW-l cocktail14 384x288."]
+      "fallbacks": [],
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ]
     },
     {
       "id": "rtmw_x_384",
       "stage": "2d_pose",
-      "use": "Highest-accuracy RTMW whole-body pose candidate for server-side EVAL-0 comparison",
+      "use": "Retired RTMW whole-body pose candidate; replaced by Fast SAM-3D-Body",
       "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmw/rtmw-x_simcc-cocktail14_pt-ucoco_270e-384x288-f840f204_20231122.pth",
       "license": "Apache-2.0",
       "commercial_posture": "ok",
-      "status": "available_on_h100",
+      "status": "retired",
       "local_path": "/workspace/checkpoints/body4d/mmpose/rtmw-x_384x288.pth",
       "sha256": "f840f2044fe46cb3821b7cea86be83e1f6cba406ccd28f5475ac010412dcda95",
-      "fallbacks": ["rtmw_l_384", "rtmpose_x_wholebody_384"],
-      "notes": ["MMPose project README lists RTMW-x cocktail14 384x288 as 70.2 whole-body AP; this is an EVAL-0 candidate, not an approved default."]
+      "fallbacks": [],
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ]
     },
     {
       "id": "rtmw3d_x",
-      "stage": "lane_a_3d_pose",
-      "use": "Lane A always-on 3D whole-body pose source for continuous per-player skeleton3d.json",
+      "stage": "retired_pose",
+      "use": "Retired RTMW3D pose source; replaced by Fast SAM-3D-Body",
       "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose3d",
       "license": "Apache-2.0",
       "commercial_posture": "ok",
-      "status": "available_on_h100",
+      "status": "retired",
       "local_path": "/home/arnavchokshi/checkpoints/body4d/mmpose/rtmw3d-x_8xb64_cocktail14-384x288-b0a0eab7_20240626.pth",
       "sha256": "b0a0eab7ca501e2c88028fe1cfd78b50c7130e220d39541da7f669e5de25e6ca",
       "repo_commit": "759b39c13fea6ba094afc1fa932f51dc1b11cbf9",
-      "fallbacks": ["rtmw_x_384", "rtmpose_x_wholebody_384"],
+      "fallbacks": [],
       "notes": [
-        "MMPose documents RTMW3D/RTMPose3D as a real-time 3D whole-body pose project.",
-        "Pipeline keeps 65 joints from its 133-keypoint whole-body output: body17, feet6, hands42; face68 is dropped.",
-        "A100 validation on pickleball-a100-spot-ase1a used config /home/arnavchokshi/checkpoints/body4d/mmpose/rtmw3d-x_8xb32_cocktail14-384x288.py with sha256 dadd68acdc0dbc47cdd0f362b77f845fd4ce7e1100c99d4d377c6c4923fd9c25.",
-        "MMPose projects/rtmpose3d was cloned at repo_commit so the config custom_imports=['rtmpose3d'] resolves.",
-        "CUDA smoke on 2026-07-01 initialized TopdownPoseEstimator3D and returned keypoints shape (1, 133, 3) on an A100."
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates.",
+        "Kept only as historical checkpoint inventory; no production runner or fallback may load this model."
       ]
     },
     {
@@ -286,87 +287,99 @@
         "A100 validation on pickleball-a100-spot-ase1a downloaded the official Hugging Face mirror checkpoint for FT_MB_lite_MB_ft_h36m_global_lite/best_epoch.bin.",
         "Torch checkpoint smoke on 2026-07-01 loaded model_pos and first tensor module.temp_embed with shape (1, 243, 1, 256).",
         "Config /home/arnavchokshi/research/MotionBERT/configs/pose3d/MB_ft_h36m_global_lite.yaml declares maxlen 243 and num_joints 17.",
-        "Repo runtime adapter maps RTMW3D COCO body17 to MotionBERT H36M17, runs 243-frame windows, and merges supported body joints back while preserving unsupported COCO eye/ear joints.",
+        "MotionBERT was tied to the retired legacy pose lane and is not a production SAM-3D-Body fallback.",
         "A100 runtime smoke on 2026-07-01 loaded the checkpoint through MotionBERTTemporalRuntime and returned 17 refined body joints; it is not gate-bearing until cold-clip and labeled accuracy validation pass."
       ]
     },
     {
       "id": "rtmpose_m_body26_384",
       "stage": "2d_pose_per_crop",
-      "use": "Canonical per-crop Body26 RTMPose-m @384 candidate from TECH_STACK §2.3 row 3b",
+      "use": "Retired RTMPose per-crop candidate; replaced by Fast SAM-3D-Body",
       "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-m_simcc-body7_pt-body7-halpe26_700e-384x288-89e6428b_20230605.pth",
       "license": "Apache-2.0",
       "commercial_posture": "ok",
-      "status": "available_on_h100",
+      "status": "retired",
       "local_path": "/workspace/checkpoints/body4d/mmpose/rtmpose-m_body26_384x288.pth",
       "sha256": "89e6428b38901b5003d0f753619e94d269999e1f5a922349f9068430387863f2",
-      "fallbacks": ["rtmpose_l_body26_384", "rtmpose_x_body26_384"],
-      "notes": ["Body26/Halpe26 checkpoint; separate from COCO-WholeBody 133-keypoint checkpoints."]
+      "fallbacks": [],
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ]
     },
     {
       "id": "rtmpose_l_body26_384",
       "stage": "2d_pose_per_crop",
-      "use": "Per-crop Body26 RTMPose-l @384 EVAL-0 comparison candidate",
+      "use": "Retired RTMPose per-crop candidate; replaced by Fast SAM-3D-Body",
       "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-l_simcc-body7_pt-body7-halpe26_700e-384x288-734182ce_20230605.pth",
       "license": "Apache-2.0",
       "commercial_posture": "ok",
-      "status": "available_on_h100",
+      "status": "retired",
       "local_path": "/workspace/checkpoints/body4d/mmpose/rtmpose-l_body26_384x288.pth",
       "sha256": "734182ce2409ba84e96ea2a6361aedb0eb40722f7ab52bb69331c73477d6a650",
-      "fallbacks": ["rtmpose_m_body26_384", "rtmpose_x_body26_384"],
-      "notes": ["Body26/Halpe26 checkpoint; use only after throughput/quality comparison against RTMPose-m."]
+      "fallbacks": [],
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ]
     },
     {
       "id": "rtmpose_x_body26_384",
       "stage": "2d_pose_per_crop",
-      "use": "Per-crop Body26 RTMPose-x @384 EVAL-0 comparison candidate",
+      "use": "Retired RTMPose per-crop candidate; replaced by Fast SAM-3D-Body",
       "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-x_simcc-body7_pt-body7-halpe26_700e-384x288-7fb6e239_20230606.pth",
       "license": "Apache-2.0",
       "commercial_posture": "ok",
-      "status": "available_on_h100",
+      "status": "retired",
       "local_path": "/workspace/checkpoints/body4d/mmpose/rtmpose-x_body26_384x288.pth",
       "sha256": "7fb6e239601082a06ca8442feb7a9774b8d77a1c37911b2ad0f27c1e84be4d21",
-      "fallbacks": ["rtmpose_l_body26_384", "rtmpose_m_body26_384"],
-      "notes": ["Largest Body26/Halpe26 per-crop candidate; EVAL-0 must prove the added cost is useful."]
+      "fallbacks": [],
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ]
     },
     {
       "id": "rtmpose_m_wholebody_256",
       "stage": "2d_pose",
-      "use": "Light COCO-WholeBody 133-keypoint RTMPose-m candidate",
+      "use": "Retired RTMPose whole-body candidate; replaced by Fast SAM-3D-Body",
       "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-m_simcc-coco-wholebody_pt-aic-coco_270e-256x192-cd5e845c_20230123.pth",
       "license": "Apache-2.0",
       "commercial_posture": "ok",
-      "status": "available_on_h100",
+      "status": "retired",
       "local_path": "/workspace/checkpoints/body4d/mmpose/rtmpose-m_wholebody_256x192.pth",
       "sha256": "3da02694cd6479d3b333ff42ebd0723f96bfa06adac1db1e2e815ed2e9e1b02d",
-      "fallbacks": ["rtmpose_l_wholebody_384", "rtmw_l_384"],
-      "notes": ["Official MMPose whole-body RTMPose-m is 256x192; there is no official 384x288 m whole-body row in the fetched COCO-WholeBody table."]
+      "fallbacks": [],
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ]
     },
     {
       "id": "rtmpose_l_wholebody_384",
       "stage": "2d_pose",
-      "use": "COCO-WholeBody 133-keypoint RTMPose-l @384 comparison candidate",
+      "use": "Retired RTMPose whole-body candidate; replaced by Fast SAM-3D-Body",
       "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-l_simcc-coco-wholebody_pt-aic-coco_270e-384x288-eaeb96c8_20230125.pth",
       "license": "Apache-2.0",
       "commercial_posture": "ok",
-      "status": "available_on_h100",
+      "status": "retired",
       "local_path": "/workspace/checkpoints/body4d/mmpose/rtmpose-l_wholebody_384x288.pth",
       "sha256": "13ce77ad08808333e2d4f850c632ac6068c837108e15f1c3902dcbcf30842db9",
-      "fallbacks": ["rtmpose_m_wholebody_256", "rtmw_l_384"],
-      "notes": ["Official MMPose COCO-WholeBody checkpoint."]
+      "fallbacks": [],
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ]
     },
     {
       "id": "rtmpose_x_wholebody_384",
       "stage": "2d_pose",
-      "use": "COCO-WholeBody 133-keypoint RTMPose-x @384 comparison candidate",
+      "use": "Retired RTMPose whole-body candidate; replaced by Fast SAM-3D-Body",
       "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-x_simcc-coco-wholebody_pt-body7_270e-384x288-401dfc90_20230629.pth",
       "license": "Apache-2.0",
       "commercial_posture": "ok",
-      "status": "available_on_h100",
+      "status": "retired",
       "local_path": "/workspace/checkpoints/body4d/mmpose/rtmpose-x_wholebody_384x288.pth",
       "sha256": "401dfc904a12d2cbb44ba83c17cd2a45399fead4e29b6fd73137724cadc03419",
-      "fallbacks": ["rtmpose_l_wholebody_384", "rtmw_l_384"],
-      "notes": ["Official MMPose COCO-WholeBody checkpoint; EVAL-0 must justify the heavier model before defaulting to it."]
+      "fallbacks": [],
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ]
     },
     {
       "id": "tracknetv3",

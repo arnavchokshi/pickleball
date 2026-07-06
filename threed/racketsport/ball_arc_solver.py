@@ -23,6 +23,8 @@ ARTIFACT_TYPE = "racketsport_ball_track_arc_solved"
 LANE = "BALL-ARC-SOLVER"
 SOURCE = "event_anchored_drag_arc_solver"
 BALL_RADIUS_M = 0.0371
+FIT_VALIDITY_MIN_OBSERVATIONS_FOR_INLIER_GATE = 6
+FIT_VALIDITY_MIN_INLIER_FRACTION = 0.15
 
 
 @dataclass(frozen=True)
@@ -102,6 +104,8 @@ class BallArcSolverConfig:
     discovery_reprojection_px: float = 60.0
     discovery_min_neighbor_px: float = 18.0
     discovery_anchor_separation_frames: int = 4
+    bounce_bounce_discovery_on_gate_failure: bool = True
+    discovery_min_interior_observations: int = 4
     visible_confidence_min: float = 0.50
     net_clearance_slack_m: float = 0.08
     min_plausible_speed_mps: float = 3.0
@@ -169,6 +173,8 @@ class BallArcSolverConfig:
             raise ValueError("reviewed_bounce_base_sigma_m must be positive")
         if self.proposed_bounce_sigma_m <= 0.0:
             raise ValueError("proposed_bounce_sigma_m must be positive")
+        if self.discovery_min_interior_observations < 1:
+            raise ValueError("discovery_min_interior_observations must be positive")
         if self.size_depth_sigma_m <= 0.0:
             raise ValueError("size_depth_sigma_m must be positive")
         if self.size_depth_relative_sigma < 0.0:
@@ -1899,6 +1905,7 @@ def solve_ball_arc_track(
             physics=phys,
             config=cfg,
             existing_anchors=anchors,
+            net_plane=net_plane,
         )
         if discovered:
             candidate_anchors = [_anchor_with_sigma_floor(anchor, cfg) for anchor in order_event_anchors([*candidate_anchors, *discovered])]
@@ -2575,12 +2582,36 @@ def _fit_validity_failure_reason(segment: FlightSegmentFit) -> str | None:
         return "outside_court_volume"
     if segment.inlier_count == 0:
         return "zero_inliers"
-    observation_count = len(segment.observations)
-    if observation_count >= 6 and (segment.inlier_count / max(observation_count, 1)) < 0.15:
+    if _segment_inlier_fraction_below_fit_gate(segment):
         return "low_inlier_fraction"
     if segment.endpoint_error_m > 0.5:
         return "endpoint_error_gt_0_5m"
     return None
+
+
+def _segment_inlier_fraction(segment: FlightSegmentFit) -> float | None:
+    observation_count = len(segment.observations)
+    if observation_count <= 0:
+        return None
+    return segment.inlier_count / observation_count
+
+
+def _segment_inlier_fraction_below_fit_gate(segment: FlightSegmentFit) -> bool:
+    fraction = _segment_inlier_fraction(segment)
+    return (
+        fraction is not None
+        and len(segment.observations) >= FIT_VALIDITY_MIN_OBSERVATIONS_FOR_INLIER_GATE
+        and fraction < FIT_VALIDITY_MIN_INLIER_FRACTION
+    )
+
+
+def _segment_fails_discovery_inlier_gate(segment: FlightSegmentFit) -> bool:
+    fraction = _segment_inlier_fraction(segment)
+    if fraction is None:
+        return False
+    if segment.inlier_count == 0:
+        return True
+    return _segment_inlier_fraction_below_fit_gate(segment)
 
 
 def _fit_bvp_fallback_segment(
@@ -2905,6 +2936,15 @@ def _segment_plausible_for_selection(
     return True
 
 
+def _segment_has_court_volume_violation(segment: FlightSegmentFit) -> bool:
+    physical = segment.physical_sanity
+    court_volume = physical.get("court_volume") if isinstance(physical, Mapping) else None
+    if isinstance(court_volume, Mapping) and court_volume.get("violation") is True:
+        return True
+    violations = physical.get("violations") if isinstance(physical, Mapping) else None
+    return isinstance(violations, Sequence) and not isinstance(violations, (str, bytes)) and "outside_court_volume" in violations
+
+
 def _segment_speed(segment: FlightSegmentFit | None) -> float | None:
     if segment is None:
         return None
@@ -2976,16 +3016,24 @@ def _discover_bounce_anchors(
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
     existing_anchors: Sequence[AnchorEvent],
+    net_plane: Mapping[str, Any] | None,
 ) -> list[AnchorEvent]:
     discovered: list[AnchorEvent] = []
     existing_frames = [anchor.frame for anchor in existing_anchors]
+    observations = tuple(sorted(observations_by_frame.values(), key=lambda item: (item.t, item.frame)))
     for segment in segments:
         trigger_px = min(config.discovery_reprojection_px, config.max_reprojection_inlier_px * 0.8)
         neighbor_px = min(config.discovery_min_neighbor_px, config.max_reprojection_inlier_px * 0.75)
         if segment.max_reprojection_error_px is None or segment.max_reprojection_error_px < trigger_px:
             continue
+        bounce_bounce_gate_recovery = False
         if segment.start_anchor.kind == "bounce" or segment.end_anchor.kind == "bounce":
-            continue
+            if segment.start_anchor.kind != "bounce" or segment.end_anchor.kind != "bounce":
+                continue
+            interior_observations = _interior_segment_observations(segment, observations)
+            if not _bounce_bounce_discovery_allowed_on_gate_failure(segment, interior_observations, config):
+                continue
+            bounce_bounce_gate_recovery = True
         errors = dict(segment.reprojection_errors_px)
         if not errors:
             continue
@@ -3024,10 +3072,144 @@ def _discover_bounce_anchors(
                     "confidence": "lower_confidence_solver_proposed",
                 },
             )
+            if bounce_bounce_gate_recovery:
+                acceptance = _evaluate_bounce_bounce_discovery_candidate(
+                    segment,
+                    anchor,
+                    observations=observations,
+                    calibration=calibration,
+                    physics=physics,
+                    config=config,
+                    net_plane=net_plane,
+                )
+                if not acceptance.get("accepted"):
+                    continue
+                anchor = replace(
+                    anchor,
+                    details={
+                        **dict(anchor.details or {}),
+                        "bounce_bounce_gate_failure_recovery": True,
+                        "discovery_acceptance": acceptance,
+                    },
+                )
             discovered.append(anchor)
             existing_frames.append(frame)
             break
     return discovered
+
+
+def _interior_segment_observations(
+    segment: FlightSegmentFit,
+    observations: Sequence[BallObservation],
+) -> tuple[BallObservation, ...]:
+    return tuple(
+        obs
+        for obs in observations
+        if segment.start_anchor.t + 1e-9 < obs.t < segment.end_anchor.t - 1e-9
+    )
+
+
+def _bounce_bounce_discovery_allowed_on_gate_failure(
+    segment: FlightSegmentFit,
+    interior_observations: Sequence[BallObservation],
+    config: BallArcSolverConfig,
+) -> bool:
+    if not config.bounce_bounce_discovery_on_gate_failure:
+        return False
+    if len(interior_observations) < config.discovery_min_interior_observations:
+        return False
+    if segment.status == "fit_bvp_fallback":
+        return True
+    return _segment_fails_discovery_inlier_gate(segment)
+
+
+def _evaluate_bounce_bounce_discovery_candidate(
+    parent: FlightSegmentFit,
+    candidate: AnchorEvent,
+    *,
+    observations: Sequence[BallObservation],
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+    net_plane: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    child_left = _fit_selection_segment_once(
+        segment_id=0,
+        start_anchor=parent.start_anchor,
+        end_anchor=candidate,
+        observations=observations,
+        calibration=calibration,
+        physics=physics,
+        config=replace(config, enable_size_depth_residual=False),
+    )
+    child_right = _fit_selection_segment_once(
+        segment_id=1,
+        start_anchor=candidate,
+        end_anchor=parent.end_anchor,
+        observations=observations,
+        calibration=calibration,
+        physics=physics,
+        config=replace(config, enable_size_depth_residual=False),
+    )
+    parent_fraction = _segment_inlier_fraction(parent)
+    split_fraction = _combined_inlier_fraction((child_left, child_right))
+    parent_score = _segment_residual_score(parent, config)
+    child_score = _segment_residual_score(child_left, config) + _segment_residual_score(child_right, config)
+    score_gain = parent_score - child_score
+    payload = {
+        "accepted": False,
+        "reason": "not_evaluated",
+        "parent_inlier_fraction": _optional_round(parent_fraction, 6),
+        "split_inlier_fraction": _optional_round(split_fraction, 6),
+        "parent_score": _optional_round(parent_score if math.isfinite(parent_score) else None, 6),
+        "split_score": _optional_round(child_score if math.isfinite(child_score) else None, 6),
+        "score_gain": _optional_round(score_gain if math.isfinite(score_gain) else None, 6),
+        "selection_split_penalty": _round(config.selection_split_penalty, 6),
+        "child_statuses": [child_left.status, child_right.status],
+        "child_initial_speed_mps": [
+            _optional_round(_segment_speed(child_left), 6),
+            _optional_round(_segment_speed(child_right), 6),
+        ],
+    }
+    if split_fraction is None or split_fraction <= FIT_VALIDITY_MIN_INLIER_FRACTION:
+        payload["reason"] = "split_inlier_fraction_below_gate"
+        return payload
+    if _segment_has_court_volume_violation(child_left) or _segment_has_court_volume_violation(child_right):
+        payload["reason"] = "split_not_court_plausible"
+        return payload
+    if not _segment_plausible_for_selection(child_left, config, physics, net_plane) or not _segment_plausible_for_selection(child_right, config, physics, net_plane):
+        payload["reason"] = "split_not_court_plausible"
+        return payload
+    if not math.isfinite(parent_score) or not math.isfinite(child_score):
+        payload["reason"] = "nonfinite_residual_score"
+        return payload
+    if score_gain <= config.selection_split_penalty:
+        payload["reason"] = "split_residual_reduction_below_penalty"
+        return payload
+    payload["accepted"] = True
+    payload["reason"] = "gate_failure_split_recovered"
+    return payload
+
+
+def _combined_inlier_fraction(segments: Sequence[FlightSegmentFit]) -> float | None:
+    observation_count = sum(len(segment.observations) for segment in segments)
+    if observation_count <= 0:
+        return None
+    return sum(segment.inlier_count for segment in segments) / observation_count
+
+
+def _segment_residual_score(segment: FlightSegmentFit | None, config: BallArcSolverConfig) -> float:
+    if segment is None or not segment.status.startswith("fit") or not segment.reprojection_errors_px:
+        return math.inf
+    sigma = max(config.robust_pixel_sigma, 1e-9)
+    total = 0.0
+    for error in segment.reprojection_errors_px.values():
+        scaled = abs(error) / sigma
+        if scaled <= config.robust_f_scale:
+            total += 0.5 * scaled * scaled
+        else:
+            total += config.robust_f_scale * (scaled - 0.5 * config.robust_f_scale)
+    return total
 
 
 def _auto_bounce_candidate_anchors(

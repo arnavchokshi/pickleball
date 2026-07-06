@@ -17,6 +17,7 @@ OPTIONAL_URL_FIELDS = {
     "rally_spans_url",
     "auto_bounce_candidates_url",
     "ball_bounce_candidates_url",
+    "ball_arc_render_url",
     "ball_flight_sanity_url",
 }
 
@@ -34,6 +35,7 @@ def build_replay_viewer_manifest(
     contact_windows_path: str | Path | None = None,
     ball_inflections_path: str | Path | None = None,
     ball_arc_solved_path: str | Path | None = None,
+    ball_arc_render_path: str | Path | None = None,
     ball_bounce_candidates_path: str | Path | None = None,
     ball_flight_sanity_path: str | Path | None = None,
     reviewed_bounces_path: str | Path | None = None,
@@ -61,6 +63,7 @@ def build_replay_viewer_manifest(
     contact_windows = _optional_existing_file(contact_windows_path, "contact_windows", allow_root=allow_root)
     ball_inflections = _optional_existing_file(ball_inflections_path, "ball_inflections", allow_root=allow_root)
     ball_arc_solved = _optional_existing_file(ball_arc_solved_path, "ball_arc_solved", allow_root=allow_root)
+    ball_arc_render = _optional_existing_file(ball_arc_render_path, "ball_arc_render", allow_root=allow_root)
     ball_bounce_candidates = _optional_existing_file(
         ball_bounce_candidates_path,
         "ball_bounce_candidates",
@@ -89,6 +92,7 @@ def build_replay_viewer_manifest(
         "contact_windows_url": _vite_file_url(contact_windows) if contact_windows is not None else None,
         "ball_inflections_url": _vite_file_url(ball_inflections) if ball_inflections is not None else None,
         "ball_arc_solved_url": _vite_file_url(ball_arc_solved) if ball_arc_solved is not None else None,
+        "ball_arc_render_url": _vite_file_url(ball_arc_render) if ball_arc_render is not None else None,
         "auto_bounce_candidates_url": _vite_file_url(ball_bounce_candidates) if ball_bounce_candidates is not None else None,
         "ball_bounce_candidates_url": _vite_file_url(ball_bounce_candidates) if ball_bounce_candidates is not None else None,
         "ball_flight_sanity_url": _vite_file_url(ball_flight_sanity) if ball_flight_sanity is not None else None,

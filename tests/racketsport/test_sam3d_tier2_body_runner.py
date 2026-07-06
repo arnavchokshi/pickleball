@@ -150,6 +150,7 @@ def test_body_runner_serializes_mesh_vertices_only_for_tier1_frames(tmp_path: Pa
     runtime = _FakeSam3DRuntime()
     runner = orchestrator.BodyStageRunner(
         runtime=runtime,
+        write_body_monoliths=True,
         tier2_body_joints_all_tracked=True,
         mesh_vertex_serialization_policy="tier1_only",
         sam3d_body_input_size_px=384,
@@ -252,6 +253,7 @@ def test_body_runner_output_lite_tolerates_tier2_without_dense_mesh_fields(tmp_p
     runtime = _LiteSam3DRuntime()
     runner = orchestrator.BodyStageRunner(
         runtime=runtime,
+        write_body_monoliths=True,
         tier2_body_joints_all_tracked=True,
         mesh_vertex_serialization_policy="tier1_only",
         sam3d_crop_bucket_sizes=(16, 24, 32, 48, 64),

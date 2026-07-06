@@ -246,3 +246,75 @@ def test_foot_pin_skips_over_cap_corrections_per_foot_frame_instead_of_failing()
         assert corrected_frames[idx]["joints_world"][13][0] == pytest.approx(
             source["players"][0]["frames"][idx]["joints_world"][13][0]
         )
+
+
+def test_foot_pin_hysteresis_keeps_brief_speed_blip_in_one_phase() -> None:
+    source = _payload(
+        [
+            _player_frame(0, left_x=0.00, right_x=1.0),
+            _player_frame(1, left_x=0.01, right_x=1.0),
+            _player_frame(2, left_x=0.05, right_x=1.0),
+            _player_frame(3, left_x=0.06, right_x=1.0),
+            _player_frame(4, left_x=0.07, right_x=1.0),
+        ]
+    )
+
+    result = apply_foot_pin_to_payload(source, settings=FootPinSettings(taper_frames=0))
+
+    phases = result.audit["phase_detection"]["phases"]
+    left_phases = [phase for phase in phases if phase["foot"] == "left"]
+    assert len(left_phases) == 1
+    assert left_phases[0]["frame_indices"] == [0, 1, 2, 3, 4]
+
+
+def test_foot_pin_soft_static_anchor_ramps_between_explicit_stances_and_preserves_limb_lengths() -> None:
+    from threed.racketsport.foot_contact import ContactPhase
+
+    frames = [_player_frame(idx, left_x=0.02 * idx, right_x=1.0) for idx in range(9)]
+    source = _payload(frames)
+    before_lengths = [_bone_lengths(frame) for frame in source["players"][0]["frames"]]
+    phases = [
+        ContactPhase(
+            player_id="p1",
+            foot="left",
+            frame_indices=(0, 1),
+            start_time_s=0.0,
+            end_time_s=1 / 30.0,
+            anchor_position_xyz=(0.01, 0.0, 0.0),
+            max_height_m=0.0,
+            max_speed_mps=0.0,
+            min_confidence=0.95,
+        ),
+        ContactPhase(
+            player_id="p1",
+            foot="left",
+            frame_indices=(7, 8),
+            start_time_s=7 / 30.0,
+            end_time_s=8 / 30.0,
+            anchor_position_xyz=(0.15, 0.0, 0.0),
+            max_height_m=0.0,
+            max_speed_mps=0.0,
+            min_confidence=0.95,
+        ),
+    ]
+
+    result = apply_foot_pin_to_payload(
+        source,
+        settings=FootPinSettings(taper_frames=0, soft_anchor_ramp_frames=3),
+        contact_phases=phases,
+    )
+
+    corrected_frames = result.payload["players"][0]["frames"]
+    assert corrected_frames[2]["joints_world"][13][0] > source["players"][0]["frames"][2]["joints_world"][13][0]
+    assert corrected_frames[2]["joints_world"][13][0] < corrected_frames[4]["joints_world"][13][0]
+    assert result.audit["players"]["p1"]["max_limb_length_delta_m"] == pytest.approx(0.0)
+    for after, before in zip([_bone_lengths(frame) for frame in corrected_frames], before_lengths, strict=True):
+        assert after == pytest.approx(before)
+    soft_contacts = [
+        contact
+        for correction in result.audit["players"]["p1"]["frame_corrections"]
+        for contact in correction["active_contacts"]
+        if contact.get("source") == "soft_static"
+    ]
+    assert soft_contacts
+    assert min(contact["weight"] for contact in soft_contacts) <= (1.0 / 3.0) + 1e-9

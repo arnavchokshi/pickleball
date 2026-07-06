@@ -24,6 +24,15 @@ CANONICAL_DOCS = [
 ]
 
 ALLOWED_MARKDOWN_DOCS = set(CANONICAL_DOCS) | {
+    "FABLE_OPERATING_MANUAL.md",
+    "JOINT_DETECTION_AND_PLACEMENT_HANDOFF.md",
+    "JOINT_PLACEMENT_HANDOFF_20260704.md",
+    "OVERLAPPING_COURT_CALIBRATION_GOAL.md",
+    "OWNER_CHECKIN_20260703.md",
+    "OWNER_CHECKIN_20260705.md",
+    "PIPELINE_STATUS.md",
+    "RACKET_6DOF_GOAL.md",
+    "RESET_HANDOFF_20260705.md",
     "corrections/README.md",
     "cvat_upload/CVAT_LABELING_INSTRUCTIONS.md",
     "cvat_upload/exports/README.md",
@@ -106,8 +115,10 @@ def test_markdown_doc_inventory_stays_small_and_explicit() -> None:
         ".mypy_cache",
         ".pytest_cache",
         ".ruff_cache",
+        ".claude",
         ".venv",
         ".venv_yolo_coreml",
+        "models",
         "runs",
         "third_party",
         "node_modules",

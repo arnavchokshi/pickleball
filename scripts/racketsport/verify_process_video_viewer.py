@@ -47,9 +47,10 @@ ENTITY_COUNT_LABELS = ("Players", "Contacts", "Ball", "Warnings", "3D FPS")
 TRUSTED_BALL_ARC_SOLVER_STATUSES = frozenset({"ran"})
 
 
-def viewer_url_for_manifest(manifest_path: Path | str | None, *, port: int = DEV_SERVER_PORT) -> str:
+def viewer_url_for_manifest(manifest_path: Path | str | None, *, port: int = DEV_SERVER_PORT, view: str | None = None) -> str:
     path = _require_manifest_path(manifest_path)
-    return f"http://{DEV_SERVER_HOST}:{port}/?manifest=/@fs{path}"
+    suffix = f"&view={view}" if view else ""
+    return f"http://{DEV_SERVER_HOST}:{port}/?manifest=/@fs{path}{suffix}"
 
 
 def assert_non_empty_entity_counts(loaded_counts: dict[str, Any], *, allow_empty: bool = False) -> None:
@@ -252,6 +253,7 @@ def verify_viewer_loads(
     allow_empty: bool = False,
     port: int = DEV_SERVER_PORT,
     screenshot_at_seconds: Sequence[float] = (),
+    view: str | None = None,
 ) -> dict[str, Any]:
     manifest_path = _require_manifest_path(manifest_path)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -290,7 +292,7 @@ def verify_viewer_loads(
     loaded_counts: dict[str, Any] = {}
     trust_chip_count = 0
     ball_honesty_hud: dict[str, Any] | None = None
-    url = viewer_url_for_manifest(manifest_path, port=port)
+    url = viewer_url_for_manifest(manifest_path, port=port, view=view)
     solver_status, kill_reasons = read_ball_arc_solver_status(manifest_path)
 
     try:
@@ -300,7 +302,7 @@ def verify_viewer_loads(
             page.on("console", lambda msg: console_messages.append(f"[{msg.type}] {msg.text}"))
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
             page.goto(url, wait_until="networkidle", timeout=30000)
-            page.wait_for_selector(".world-panel canvas", timeout=15000)
+            page.wait_for_selector(".court-map-panel" if view == "courtmap" else ".world-panel canvas", timeout=15000)
             page.wait_for_timeout(1500)
             screenshot_path = out_dir / "process_video_verify.png"
             page.screenshot(path=str(screenshot_path))
@@ -366,6 +368,7 @@ def verify_viewer_loads(
         "ball_arc_solver_status": solver_status,
         "ball_arc_solver_kill_reasons": list(kill_reasons),
         "ball_honesty_hud": ball_honesty_hud,
+        "view": view or "world",
     }
     write_headless_verify_report(out_dir, result)
     return result
@@ -379,6 +382,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--port", type=int, default=DEV_SERVER_PORT)
     parser.add_argument("--allow-empty", action="store_true", help="Allow a manifest that intentionally renders zero viewer entities.")
+    parser.add_argument("--view", choices=["world", "courtmap"], default=None, help="Open a dedicated viewer mode such as ?view=courtmap.")
     parser.add_argument(
         "--screenshot-at-seconds",
         type=float,
@@ -393,6 +397,7 @@ def main(argv: list[str] | None = None) -> int:
         allow_empty=args.allow_empty,
         port=args.port,
         screenshot_at_seconds=args.screenshot_at_seconds,
+        view=args.view,
     )
     print(json.dumps(result, indent=2))
     return 0 if result["ok"] else 1

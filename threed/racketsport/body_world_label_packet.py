@@ -71,6 +71,9 @@ def build_body_world_label_packet(
             }
             if frame.get("temporal_smoothing_reset") is True:
                 sample["temporal_smoothing_reset"] = True
+            metadata = frame.get("temporal_smoothing_metadata")
+            if isinstance(metadata, Mapping):
+                sample["temporal_smoothing_metadata"] = dict(metadata)
             samples.append(sample)
             player_ids.add(player_id)
             frame_indexes.add(frame_index)

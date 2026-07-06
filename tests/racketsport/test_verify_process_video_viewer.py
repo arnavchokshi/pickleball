@@ -42,6 +42,16 @@ def test_viewer_url_accepts_custom_port_for_occupied_local_dev_port(tmp_path: Pa
     assert url.startswith("http://127.0.0.1:5174/?manifest=/@fs")
 
 
+def test_viewer_url_can_open_court_map_mode_for_second_screenshot(tmp_path: Path) -> None:
+    manifest = tmp_path / "replay_viewer_manifest.json"
+    manifest.write_text("{}", encoding="utf-8")
+
+    url = viewer_url_for_manifest(manifest, view="courtmap")
+
+    assert "manifest=/@fs" in url
+    assert "&view=courtmap" in url
+
+
 def test_assert_non_empty_entity_counts_rejects_silent_empty_viewer() -> None:
     # Matches the *current* status-grid render (App.tsx status-grid Metric
     # labels: Players, Contacts, Ball, Warnings, 3D FPS) -- the previous

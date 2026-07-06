@@ -1,7 +1,7 @@
 # Racket 6-DOF Goal
 
 Date opened: 2026-07-05
-Status: open — research wave. VERIFIED=0. RKT board row: SCAFFOLD.
+Status: PHASE 1 FINAL_V3 LANDED 2026-07-05 as render-only internal-val. VERIFIED=0 unchanged. RKT board row: SCAFFOLD.
 Render band for everything this goal ships: ESTIMATED/preview, never silent truth.
 
 ## Goal (owner directive, 2026-07-05)
@@ -101,4 +101,24 @@ contact where reflection+mask agree) > `mask_fitted` > `grip_extrapolated` (wris
 
 ## Log
 
-- 2026-07-05: goal opened (owner directive); repo scout + goal doc; research wave dispatching.
+- 2026-07-05: goal opened (owner directive); repo scout + goal doc; research wave dispatched.
+- 2026-07-05 ~19:00Z: R1+R2 landed. Fingers 100% available all clips; proxy baseline weak
+  (IoU 0.11/0.03, jitter 23-53 deg/f); ball channel empty in vp1 run dirs; WiLoR = top external
+  hand-frame candidate; reflection = soft-cone only. Ruling: phase 1 = grip-transform fusion,
+  CPU-only, no new models.
+- 2026-07-05 ~20:30Z: I1 LANDED (Sonnet legs after Codex quota exhaustion).
+  Initial report numbers were superseded by final_v3 acceptance evidence.
+- 2026-07-05 final_v3: phase-1 fused estimator accepted for render-only
+  review, not RKT promotion. Evidence:
+  `runs/lanes/racket_6dof_20260705/i1_fused_estimator/acceptance_record_v2.json`
+  and `runs/lanes/racket_6dof_20260705/STATUS.md`. Wolverine internal-val
+  IoU is 0.2356, median center error 23.4px, rotation jitter max p95 27.9 deg;
+  Burlington IoU is 0.3424, median center error 13.4px. Coverage is 100% in the
+  scored clips, bands are 100% `palm_fitted`, and `contact_locked` remains
+  dormant until real 3D contacts exist. The final teleport census is 29 -> 0
+  undeclared one-frame jumps >0.35m across the four clips; five declared switch
+  jumps remain. The Wolverine IoU is below the earlier 0.24 leg-2 floor, so do
+  not repeat "all acceptance bars met" as a global statement. RKT stays
+  SCAFFOLD and render-only until true-corner/reference GT passes.
+  Phase 2 remains queued: P2a wrist-gated masks, P2b WiLoR pronation, P2c
+  IMG_1605 GPU ball track (30 audio onsets = first real reflection test bed).

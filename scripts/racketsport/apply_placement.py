@@ -20,7 +20,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--tracks", type=Path, required=True, help="tracks.json to rewrite in place.")
     parser.add_argument("--court-calibration", type=Path, required=True, help="court_calibration.json with homography/intrinsics.")
     parser.add_argument("--placement-out", type=Path, required=True, help="placement.json output path.")
-    parser.add_argument("--keypoints-2d", type=Path, default=None, help="Optional native RTMW keypoints_2d.json.")
+    parser.add_argument("--keypoints-2d", type=Path, default=None, help="Optional native/body keypoints_2d.json.")
     parser.add_argument("--sam3d-keypoints-2d", type=Path, default=None, help="Optional sam3d_keypoints_2d.json sidecar.")
     parser.add_argument("--stance-phases", type=Path, default=None, help="Optional foot_contact_phases.json or foot_pin_audit.json stance phase artifact.")
     parser.add_argument("--refine-from-sam3d", action="store_true", help="Run the post-BODY SAM3D refinement pass.")

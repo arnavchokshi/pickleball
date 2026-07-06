@@ -41,6 +41,11 @@ class FootPinSettings:
     max_smoothing_correction_m: float = 0.0
     interpolate_between_stances: bool = False
     root_speed_clamp_mps: float = CORE_BODY_SPEED_CLAMP_MPS
+    soft_anchor_enabled: bool = True
+    soft_anchor_max_height_m: float = 0.075
+    soft_anchor_max_speed_mps: float = 0.80
+    soft_anchor_min_frames: int = 3
+    soft_anchor_ramp_frames: int = 3
 
     def to_dict(self) -> dict[str, float | int | bool]:
         return asdict(self)
@@ -78,6 +83,7 @@ class _FrameRef:
 class _PinnedPhase:
     source: ContactPhase
     anchor_xy: tuple[float, float]
+    kind: str = "stance"
 
     @property
     def frame_indices(self) -> tuple[int, ...]:
@@ -154,6 +160,13 @@ def apply_foot_pin_to_payload(
         phase for phase in candidate_phases if phase.min_confidence < settings.min_phase_confidence
     ]
     pinned_phases = _median_anchor_phases(detection_frames, eligible_source_phases, joint_names, settings=settings)
+    soft_static_phases = _soft_static_anchor_phases(
+        detection_frames,
+        existing_phases=pinned_phases,
+        joint_names=joint_names,
+        settings=settings,
+    )
+    pinned_phases = [*pinned_phases, *soft_static_phases]
     cap_exceeded_skips: list[dict[str, Any]] = []
     raw_corrections = _stance_corrections(
         detection_frames, pinned_phases, joint_names, settings=settings, cap_exceeded_skips=cap_exceeded_skips
@@ -183,6 +196,7 @@ def apply_foot_pin_to_payload(
         after_roots=after_roots,
         audit_path=audit_path,
         cap_exceeded_skips=cap_exceeded_skips,
+        soft_static_phases=soft_static_phases,
     )
     _attach_provenance(corrected, settings=settings, audit=audit, audit_path=audit_path)
     return FootPinResult(payload=corrected, audit=audit)
@@ -277,6 +291,85 @@ def _median_anchor_phases(
     return pinned
 
 
+def _soft_static_anchor_phases(
+    frames: Sequence[SkeletonFrame],
+    *,
+    existing_phases: Sequence[_PinnedPhase],
+    joint_names: Sequence[str],
+    settings: FootPinSettings,
+) -> list[_PinnedPhase]:
+    if not settings.soft_anchor_enabled or not frames:
+        return []
+    indices = resolve_foot_joint_indices(joint_names, joint_count=len(frames[0].joints_world))
+    occupied = {
+        (phase.player_id, phase.foot, frame_index)
+        for phase in existing_phases
+        for frame_index in phase.frame_indices
+    }
+    stance_bounds: dict[tuple[str, str], list[tuple[int, int]]] = {}
+    for phase in existing_phases:
+        stance_bounds.setdefault((phase.player_id, phase.foot), []).append((phase.source.start_frame_index, phase.source.end_frame_index))
+
+    soft: list[_PinnedPhase] = []
+    for player_id, player_frames in _frames_by_player(frames).items():
+        ordered = sorted(player_frames, key=lambda frame: frame.frame_index)
+        for foot in ("left", "right"):
+            foot_indices = indices.for_foot(foot)
+            candidates: list[tuple[int, tuple[float, float, float], float, float]] = []
+            previous_point: tuple[float, float, float] | None = None
+            previous_t: float | None = None
+            for frame in ordered:
+                point = foot_contact_point(frame, foot_indices, low_foot_band_m=settings.low_foot_band_m)
+                frame_t = frame.t if frame.t is not None else frame.frame_index / 30.0
+                speed = 0.0
+                if previous_point is not None and previous_t is not None:
+                    dt = max(float(frame_t) - previous_t, 1.0 / 30.0)
+                    speed = math.hypot(point[0] - previous_point[0], point[1] - previous_point[1]) / dt
+                previous_point = point
+                previous_t = float(frame_t)
+                if (str(player_id), foot, frame.frame_index) in occupied:
+                    continue
+                if not _has_bracketing_stances(stance_bounds.get((str(player_id), foot), []), frame.frame_index):
+                    continue
+                confidence = _foot_confidence(frame, foot_indices)
+                if (
+                    point[2] <= settings.soft_anchor_max_height_m
+                    and speed <= settings.soft_anchor_max_speed_mps
+                    and confidence >= settings.min_phase_confidence
+                ):
+                    candidates.append((frame.frame_index, point, speed, confidence))
+            for run in _contiguous_runs([item[0] for item in candidates]):
+                if len(run) < settings.soft_anchor_min_frames:
+                    continue
+                by_frame = {item[0]: item for item in candidates}
+                points = [by_frame[idx][1] for idx in run]
+                speeds = [by_frame[idx][2] for idx in run]
+                confidences = [by_frame[idx][3] for idx in run]
+                phase = ContactPhase(
+                    player_id=str(player_id),
+                    foot=foot,
+                    frame_indices=tuple(run),
+                    start_time_s=run[0] / 30.0,
+                    end_time_s=run[-1] / 30.0,
+                    anchor_position_xyz=(
+                        float(median(point[0] for point in points)),
+                        float(median(point[1] for point in points)),
+                        float(median(point[2] for point in points)),
+                    ),
+                    max_height_m=max(point[2] for point in points),
+                    max_speed_mps=max(speeds, default=0.0),
+                    min_confidence=min(confidences, default=1.0),
+                )
+                soft.append(
+                    _PinnedPhase(
+                        source=phase,
+                        anchor_xy=(float(phase.anchor_position_xyz[0]), float(phase.anchor_position_xyz[1])),
+                        kind="soft_static",
+                    )
+                )
+    return soft
+
+
 def _stance_corrections(
     frames: Sequence[SkeletonFrame],
     phases: Sequence[_PinnedPhase],
@@ -343,7 +436,7 @@ def _stance_corrections(
         weight_sum_by_foot: dict[str, float] = {}
         contacts: list[dict[str, Any]] = []
         for phase in active:
-            phase_weight = _phase_weight(phase, frame.frame_index, settings.taper_frames)
+            phase_weight = _phase_weight(phase, frame.frame_index, settings)
             if phase_weight <= 0:
                 continue
             current = foot_contact_point(
@@ -364,6 +457,7 @@ def _stance_corrections(
                     "anchor_xy": [phase.anchor_xy[0], phase.anchor_xy[1]],
                     "weight": phase_weight,
                     "min_confidence": phase.source.min_confidence,
+                    "source": phase.kind,
                 }
             )
         if not weight_sum_by_foot:
@@ -371,8 +465,9 @@ def _stance_corrections(
         effective_cap = _effective_max_correction_m(settings)
         foot_deltas: dict[str, tuple[float, float, bool]] = {}
         for foot, weight_sum in weight_sum_by_foot.items():
-            dx = weighted_dx_by_foot[foot] / weight_sum
-            dy = weighted_dy_by_foot[foot] / weight_sum
+            strength = min(float(weight_sum), 1.0)
+            dx = (weighted_dx_by_foot[foot] / weight_sum) * strength
+            dy = (weighted_dy_by_foot[foot] / weight_sum) * strength
             magnitude = math.hypot(dx, dy)
             if magnitude > effective_cap + 1e-9:
                 # Fail closed per foot/frame: a correction beyond the in-stance cap is
@@ -414,7 +509,8 @@ def _stance_corrections(
     return corrections
 
 
-def _phase_weight(phase: _PinnedPhase, frame_index: int, taper_frames: int) -> float:
+def _phase_weight(phase: _PinnedPhase, frame_index: int, settings: FootPinSettings) -> float:
+    taper_frames = settings.soft_anchor_ramp_frames if phase.kind == "soft_static" else settings.taper_frames
     if taper_frames <= 0 or len(phase.frame_indices) <= 1:
         return 1.0
     try:
@@ -424,6 +520,8 @@ def _phase_weight(phase: _PinnedPhase, frame_index: int, taper_frames: int) -> f
     edge_distance = min(position, len(phase.frame_indices) - 1 - position)
     if edge_distance >= taper_frames:
         return 1.0
+    if phase.kind == "soft_static":
+        return min(1.0, float(edge_distance + 1) / float(max(taper_frames, 1)))
     return float(edge_distance + 1) / float(taper_frames + 1)
 
 
@@ -506,6 +604,7 @@ def _audit_payload(
     after_roots: Mapping[str, list[tuple[int, tuple[float, float]]]],
     audit_path: str | None,
     cap_exceeded_skips: Sequence[Mapping[str, Any]] = (),
+    soft_static_phases: Sequence[_PinnedPhase] = (),
 ) -> dict[str, Any]:
     players = _player_stats(
         frames=frames,
@@ -534,6 +633,8 @@ def _audit_payload(
             "phases": [_phase_dict(phase) for phase in eligible_phases],
             "skipped_low_confidence_phases": [_phase_dict(phase) for phase in skipped_low_confidence],
             "cap_exceeded_skips": [dict(event) for event in cap_exceeded_skips],
+            "soft_static_phase_count": len(soft_static_phases),
+            "soft_static_phases": [_pinned_phase_dict(phase) for phase in soft_static_phases],
         },
         "summary": {
             "stance_slide_before_mm": _distribution(before_phase_slides),
@@ -766,6 +867,40 @@ def _wrist_indices(joint_names: Sequence[str]) -> tuple[int, ...]:
     return tuple(index for index, name in enumerate(names) if name in {"left_wrist", "right_wrist"})
 
 
+def _frames_by_player(frames: Sequence[SkeletonFrame]) -> dict[str, list[SkeletonFrame]]:
+    grouped: dict[str, list[SkeletonFrame]] = {}
+    for frame in frames:
+        grouped.setdefault(str(frame.player_id), []).append(frame)
+    return grouped
+
+
+def _contiguous_runs(indices: Sequence[int]) -> list[list[int]]:
+    runs: list[list[int]] = []
+    for idx in sorted(dict.fromkeys(int(value) for value in indices)):
+        if not runs or idx != runs[-1][-1] + 1:
+            runs.append([idx])
+        else:
+            runs[-1].append(idx)
+    return runs
+
+
+def _has_bracketing_stances(bounds: Sequence[tuple[int, int]], frame_index: int) -> bool:
+    has_before = any(end < frame_index for _start, end in bounds)
+    has_after = any(start > frame_index for start, _end in bounds)
+    return has_before and has_after
+
+
+def _foot_confidence(frame: SkeletonFrame, foot_indices: Sequence[int]) -> float:
+    if frame.joint_conf is None:
+        return 1.0
+    values = [
+        float(frame.joint_conf[idx])
+        for idx in foot_indices
+        if idx < len(frame.joint_conf)
+    ]
+    return min(values, default=1.0)
+
+
 def _lower_body_chain_indices(joint_names: Sequence[str], *, joint_count: int) -> tuple[int, ...]:
     names = _effective_joint_names(joint_names)
     wanted = {
@@ -815,6 +950,13 @@ def _effective_joint_names(joint_names: Sequence[str]) -> tuple[str, ...]:
 
 def _phase_dict(phase: ContactPhase) -> dict[str, Any]:
     return phase.to_dict()
+
+
+def _pinned_phase_dict(phase: _PinnedPhase) -> dict[str, Any]:
+    payload = phase.source.to_dict()
+    payload["source"] = phase.kind
+    payload["anchor_xy"] = [phase.anchor_xy[0], phase.anchor_xy[1]]
+    return payload
 
 
 def _distribution(values: Sequence[float]) -> dict[str, float | int]:
@@ -923,6 +1065,14 @@ def _validate_settings(settings: FootPinSettings) -> None:
         raise ValueError("min_phase_confidence must be in [0, 1]")
     if settings.min_phase_frames < 1:
         raise ValueError("min_phase_frames must be >= 1")
+    if settings.soft_anchor_max_height_m < 0.0:
+        raise ValueError("soft_anchor_max_height_m must be non-negative")
+    if settings.soft_anchor_max_speed_mps < 0.0:
+        raise ValueError("soft_anchor_max_speed_mps must be non-negative")
+    if settings.soft_anchor_min_frames < 1:
+        raise ValueError("soft_anchor_min_frames must be >= 1")
+    if settings.soft_anchor_ramp_frames < 1:
+        raise ValueError("soft_anchor_ramp_frames must be >= 1")
 
 
 def _empty_audit(*, settings: FootPinSettings, audit_path: str | None) -> dict[str, Any]:

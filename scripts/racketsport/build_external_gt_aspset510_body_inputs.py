@@ -35,7 +35,7 @@ from threed.racketsport.eval.body_gate_report import CORE_BODY_JOINT_NAMES  # no
 from threed.racketsport.schemas import CourtCalibration, Skeleton3D, Tracks  # noqa: E402
 
 # A structurally-valid but inert placeholder for the pipeline's separate Lane A
-# ("pose" stage, RTMW3D) skeleton. `--diagnostic-full-track` schedules every GT-sampled
+# legacy pose skeleton. `--diagnostic-full-track` schedules every GT-sampled
 # frame as `deep_mesh` (real Fast-SAM-3D-Body/BODY-stage compute), so Lane A's own output
 # is never consulted as a prediction source for any frame in this lane (see
 # `threed.racketsport.eval.body_gate_report._prediction_index`, which only falls back to
@@ -43,7 +43,7 @@ from threed.racketsport.schemas import CourtCalibration, Skeleton3D, Tracks  # n
 # here). This placeholder exists solely to satisfy the "pose" stage's structural
 # `skeleton3d.json` contract via `threed.racketsport.body_video_smoke._InputSkeletonPoseRunner`
 # (reused-as-is, not run for real), so the remote GPU host does not need a working
-# `rtmpose3d`/mmpose Lane A environment for this external-GT lane. Values are a fixed,
+# removed pose environment for this external-GT lane. Values are a fixed,
 # arbitrary small pose (NOT derived from ASPset GT in any way) with near-zero confidence
 # so nothing could mistake it for a real measurement if it were ever inspected directly.
 _PLACEHOLDER_JOINT_XYZ: dict[str, list[float]] = {

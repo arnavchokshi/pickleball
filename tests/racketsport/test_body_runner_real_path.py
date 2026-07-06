@@ -835,7 +835,7 @@ def test_body_runner_replaces_existing_legacy_skeleton3d_with_sam3d_output(tmp_p
             "artifact_type": "racketsport_skeleton3d",
             "fps": 30.0,
             "world_frame": "court_Z0",
-            "source_model": "rtmw3d_x",
+            "source_model": "legacy_body65_joints",
             "joint_names": ["pelvis", "left_wrist", "right_wrist"],
             "preview_only": False,
             "players": [

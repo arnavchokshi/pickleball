@@ -1,4 +1,4 @@
-"""Render RTMW3D/BODY skeleton inference overlays on source video pixels."""
+"""Render BODY skeleton inference overlays on source video pixels."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ SCHEMA_VERSION = 1
 ARTIFACT_TYPE = "racketsport_skeleton_video_overlay"
 INDEX_FILENAME = "skeleton_video_overlay_index.json"
 LOW_CONFIDENCE_THRESHOLD = 0.25
-CAPTION = "RTMW3D lane-A inference, unverified — review copy"
+CAPTION = "BODY skeleton inference, unverified — review copy"
 TEXT_COLOR = (255, 255, 255)
 LOW_CONFIDENCE_COLOR = (80, 80, 255)
 SMOOTHING_COLOR = (0, 220, 255)
@@ -588,7 +588,6 @@ def _native_2d_candidates(run_dir: Path, skeleton: Mapping[str, Any]) -> list[Pa
         "skeleton2d.json",
         "pose2d.json",
         "native_pose2d.json",
-        "rtmw3d_pose2d.json",
         "keypoints2d.json",
     ):
         candidates.append(run_dir / name)

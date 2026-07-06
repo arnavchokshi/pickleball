@@ -13,7 +13,7 @@ from .court_calibration import project_image_points_to_world
 from .court_templates import get_court_template
 from .eval_guard import assert_not_training_on_eval_clip
 from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
-from .pose_fast import RTMW3D_WHOLEBODY_133_JOINT_NAMES
+from .joint_schema import WHOLEBODY_133_JOINT_NAMES
 from .racket6dof import SE3PoseConfidence, camera_paddle_pose_to_court_world, paddle_face_corners_object_cm
 from .racket_true_corners import is_box_derived_source
 from .schemas import (
@@ -852,8 +852,8 @@ def _world_joint_names_from_skeleton(skeleton_obj: Skeleton3D | None) -> list[st
     if joint_count == len(MHR70_JOINT_NAMES) and _is_sam3d_skeleton_source(skeleton_obj, joint_names):
         _assert_mhr70_names_match_semantic_map()
         return list(MHR70_JOINT_NAMES)
-    if joint_count == len(RTMW3D_WHOLEBODY_133_JOINT_NAMES):
-        return list(RTMW3D_WHOLEBODY_133_JOINT_NAMES)
+    if joint_count == len(WHOLEBODY_133_JOINT_NAMES):
+        return list(WHOLEBODY_133_JOINT_NAMES)
     return joint_names or None
 
 

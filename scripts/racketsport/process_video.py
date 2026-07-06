@@ -83,17 +83,19 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import os
 import shutil
 import sys
+import threading
 import time
 import traceback
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import median
-from typing import Any, Literal, Mapping, Sequence
+from typing import Any, Callable, Literal, Mapping, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -330,6 +332,7 @@ class PipelineOptions:
 
     no_gpu: bool = False
     body_remote: bool = True
+    body_schedule: str = "serial"
     remote_config: RemoteConfig = field(default_factory=RemoteConfig)
 
     grounding_refine: bool = True
@@ -358,6 +361,7 @@ class ProcessVideoPipeline:
         self.clip_dir.mkdir(parents=True, exist_ok=True)
         self.trust_bands: dict[str, dict[str, Any] | None] = {}
         self.stage_outcomes: list[StageOutcome] = []
+        self._parallel_body_block: dict[str, Any] | None = None
         if options.force:
             self._clear_force_regenerated_artifacts()
 
@@ -410,9 +414,32 @@ class ProcessVideoPipeline:
     # top-level driver
     # ------------------------------------------------------------------
 
+    # Optional BODY-adjacent artifacts a --body-schedule=overlap run may not
+    # have produced yet at the moment BODY is dispatched, because they are
+    # computed by ball/ball_arc/events/ball_fill running concurrently on the
+    # main thread. Today's serial order already fires BODY dispatch without
+    # waiting for ball-aware triggers, so this is not a practical regression
+    # -- but overlap must record it, never hide it (HONESTY CONTRACTS b).
+    _OPTIONAL_BODY_OVERLAP_INPUTS: tuple[str, ...] = (
+        "ball_track.json",
+        "ball_track_arc_solved.json",
+        "ball_inflections.json",
+        "wrist_velocity_peaks.json",
+        "contact_windows.json",
+        "frame_compute_plan.json",
+    )
+
     def run(self) -> dict[str, Any]:
         started = time.monotonic()
-        stage_fns = [
+        if self.options.body_schedule == "overlap":
+            self._run_overlap()
+        else:
+            self._run_serial()
+        summary = self._write_summary(wall_seconds=time.monotonic() - started)
+        return summary
+
+    def _build_prefix_stage_fns(self) -> list[tuple[str, Callable[[], StageOutcome]]]:
+        stage_fns: list[tuple[str, Callable[[], StageOutcome]]] = [
             ("ingest", self._stage_ingest),
             ("calibration", self._stage_calibration),
             ("tracking", self._stage_tracking),
@@ -420,36 +447,201 @@ class ProcessVideoPipeline:
         ]
         if self.options.rally_gating:
             stage_fns.append(("rally_gating", self._stage_rally_gating))
-        stage_fns.extend(
-            [
-                ("frames", self._stage_frames),
-                ("ball", self._stage_ball),
-                ("ball_arc", self._stage_ball_arc),
-                ("events", self._stage_events),
-                ("ball_fill", self._stage_ball_fill),
-                ("body", self._stage_body),
-                ("placement_refine", self._stage_placement_refine),
-                ("grounding_refine", self._stage_grounding_refine),
-                ("world", self._stage_world),
-                ("confidence_gate", self._stage_confidence_gate),
-                ("manifest", self._stage_manifest),
-            ]
-        )
+        stage_fns.append(("frames", self._stage_frames))
+        return stage_fns
+
+    def _middle_stage_fns(self) -> list[tuple[str, Callable[[], StageOutcome]]]:
+        return [
+            ("ball", self._stage_ball),
+            ("ball_arc", self._stage_ball_arc),
+            ("events", self._stage_events),
+            ("ball_fill", self._stage_ball_fill),
+        ]
+
+    def _build_suffix_stage_fns(self) -> list[tuple[str, Callable[[], StageOutcome]]]:
+        stage_fns: list[tuple[str, Callable[[], StageOutcome]]] = [
+            ("placement_refine", self._stage_placement_refine),
+            ("grounding_refine", self._stage_grounding_refine),
+            ("world", self._stage_world),
+            ("confidence_gate", self._stage_confidence_gate),
+            ("manifest", self._stage_manifest),
+        ]
         if self.options.verify_viewer:
             stage_fns.append(("verify", self._stage_verify))
+        return stage_fns
+
+    def _run_stage_list(self, stage_fns: list[tuple[str, Callable[[], StageOutcome]]]) -> bool:
+        """Run stage functions in order, appending outcomes. Returns True iff
+        a hard failure was hit (nothing downstream can substitute for it, so
+        the caller must stop instead of cascading confusing "degraded" noise
+        through every later stage that also needs this input)."""
 
         for name, fn in stage_fns:
             outcome = self._run_stage_safely(name, fn)
             self.stage_outcomes.append(outcome)
             if outcome.status == "failed":
-                # A hard failure (currently only ingest/calibration) means
-                # nothing downstream can substitute for it -- stop instead of
-                # cascading confusing "degraded" noise through every later
-                # stage that also needs this input.
-                break
+                return True
+        return False
 
-        summary = self._write_summary(wall_seconds=time.monotonic() - started)
-        return summary
+    def _run_serial(self) -> None:
+        """--body-schedule=serial (the default): today's stage order,
+        byte-identical to the pre-overlap behavior."""
+
+        stage_fns = (
+            self._build_prefix_stage_fns()
+            + self._middle_stage_fns()
+            + [("body", self._stage_body)]
+            + self._build_suffix_stage_fns()
+        )
+        self._run_stage_list(stage_fns)
+
+    def _run_overlap(self) -> None:
+        """--body-schedule=overlap: once frames/tracks/calibration BODY
+        inputs are ready, dispatch BODY on a background thread running the
+        exact same stage code path, and run ball/ball_arc/events/ball_fill on
+        the main thread while BODY is in flight, joining before any
+        BODY-dependent stage (placement_refine/grounding_refine/world)."""
+
+        if self._run_stage_list(self._build_prefix_stage_fns()):
+            return
+
+        reuse_outcome = self._body_stage_reuse_skip()
+        if reuse_outcome is not None:
+            # Reuse semantics unchanged: valid BODY artifacts already exist,
+            # so this run takes the plain serial path -- no thread spun up.
+            remaining = self._middle_stage_fns() + [("body", lambda: reuse_outcome)] + self._build_suffix_stage_fns()
+            self._run_stage_list(remaining)
+            body_final = next((o for o in self.stage_outcomes if o.stage == "body"), None)
+            self._parallel_body_block = {
+                "enabled": False,
+                "body_started_after": "frames",
+                "overlapped_stages": [],
+                "body_wall_s": round(body_final.wall_seconds, 3) if body_final else 0.0,
+                "join_wait_s": 0.0,
+                "overlap_saved_s_estimate": 0.0,
+                "body_inputs_missing_due_to_overlap": [],
+                "input_mutation_guard": {"checked_inputs": [], "mutated_inputs": [], "tripped": False},
+            }
+            return
+
+        if self._run_overlap_body(self._middle_stage_fns()):
+            return
+        self._run_stage_list(self._build_suffix_stage_fns())
+
+    def _body_dispatch_input_paths(self) -> dict[str, Path]:
+        """The exact BODY dispatch inputs the overlap input-mutation guard
+        watches (HONESTY CONTRACTS c): tracks.json, body_frames/,
+        court_calibration.json, and whichever camera_motion.json this run
+        would actually dispatch with (explicit --camera-motion, else the
+        canonical clip-dir file, present or not)."""
+
+        camera_motion_path = self.options.camera_motion_path
+        if camera_motion_path is None:
+            camera_motion_path = self.clip_dir / "camera_motion.json"
+        return {
+            "tracks.json": self.clip_dir / "tracks.json",
+            "body_frames/": self.clip_dir / "body_frames",
+            "court_calibration.json": self.clip_dir / "court_calibration.json",
+            "camera_motion.json": camera_motion_path,
+        }
+
+    def _snapshot_body_dispatch_input_hashes(self) -> dict[str, str | None]:
+        return {name: _content_hash(path) for name, path in self._body_dispatch_input_paths().items()}
+
+    def _run_overlap_body(self, middle_stage_fns: list[tuple[str, Callable[[], StageOutcome]]]) -> bool:
+        """Dispatch BODY on a background thread while ball/ball_arc/events/
+        ball_fill run on the main thread; hard-join before returning. Returns
+        True iff the pipeline must stop (BODY or an overlapped local stage
+        hard failed) -- the caller must not run placement_refine/
+        grounding_refine/world/confidence_gate/manifest in that case."""
+
+        before_hashes = self._snapshot_body_dispatch_input_hashes()
+        missing_optional_inputs = [
+            name for name in self._OPTIONAL_BODY_OVERLAP_INPUTS if not (self.clip_dir / name).is_file()
+        ]
+
+        thread_result: dict[str, Any] = {}
+
+        def _run_body_thread() -> None:
+            body_thread_started = time.monotonic()
+            try:
+                outcome = self._run_stage_safely("body", self._stage_body)
+            except Exception as exc:  # noqa: BLE001 - the BODY thread must never crash the process
+                trace = traceback.format_exc(limit=6)
+                outcome = StageOutcome(
+                    stage="body",
+                    status="failed",
+                    wall_seconds=time.monotonic() - body_thread_started,
+                    notes=[f"BODY overlap thread raised {type(exc).__name__}: {exc}", trace],
+                )
+            thread_result["outcome"] = outcome
+
+        body_thread = threading.Thread(target=_run_body_thread, name="process-video-body-overlap")
+        body_thread.start()
+
+        local_failed = self._run_stage_list(middle_stage_fns)
+        overlapped_stage_names = [name for name, _ in middle_stage_fns]
+        overlapped_names_set = set(overlapped_stage_names)
+        overlapped_wall_sum = sum(
+            outcome.wall_seconds for outcome in self.stage_outcomes if outcome.stage in overlapped_names_set
+        )
+
+        join_started = time.monotonic()
+        body_thread.join()
+        join_wait_s = time.monotonic() - join_started
+
+        body_outcome = thread_result.get("outcome")
+        if body_outcome is None:
+            body_outcome = StageOutcome(
+                stage="body",
+                status="failed",
+                wall_seconds=0.0,
+                notes=["BODY overlap thread ended without producing a stage outcome"],
+            )
+        if missing_optional_inputs:
+            body_outcome.notes.append(
+                "overlap readiness note: BODY dispatch started before these optional same-run inputs existed "
+                "(they are computed concurrently by ball/ball_arc/events/ball_fill in overlap mode): "
+                f"{', '.join(missing_optional_inputs)}"
+            )
+
+        after_hashes = self._snapshot_body_dispatch_input_hashes()
+        mutated_inputs = sorted(name for name in before_hashes if before_hashes[name] != after_hashes.get(name))
+        guard_tripped = bool(mutated_inputs)
+        if guard_tripped:
+            body_outcome = StageOutcome(
+                stage="body",
+                status="failed",
+                wall_seconds=body_outcome.wall_seconds,
+                notes=[
+                    *body_outcome.notes,
+                    "OVERLAP INPUT-MUTATION GUARD TRIPPED: an overlapped local stage changed BODY dispatch "
+                    f"input(s) {', '.join(mutated_inputs)} while the BODY thread was in flight; fail-closed "
+                    "per the parallel_body honesty contract",
+                ],
+                artifacts=body_outcome.artifacts,
+                metrics=body_outcome.metrics,
+            )
+            self.trust_bands.pop("body", None)
+
+        self.stage_outcomes.append(body_outcome)
+
+        self._parallel_body_block = {
+            "enabled": True,
+            "body_started_after": "frames",
+            "overlapped_stages": overlapped_stage_names,
+            "body_wall_s": round(body_outcome.wall_seconds, 3),
+            "join_wait_s": round(join_wait_s, 3),
+            "overlap_saved_s_estimate": round(min(body_outcome.wall_seconds, overlapped_wall_sum), 3),
+            "body_inputs_missing_due_to_overlap": missing_optional_inputs,
+            "input_mutation_guard": {
+                "checked_inputs": sorted(before_hashes),
+                "mutated_inputs": mutated_inputs,
+                "tripped": guard_tripped,
+            },
+        }
+
+        return local_failed or body_outcome.status == "failed"
 
     def _run_stage_safely(self, name: str, fn) -> StageOutcome:
         started = time.monotonic()
@@ -1604,6 +1796,7 @@ class ProcessVideoPipeline:
         artifact_paths = [
             self.clip_dir / "ball_bounce_candidates.json",
             self.clip_dir / "ball_track_arc_solved.json",
+            self.clip_dir / "ball_arc_render.json",
             self.clip_dir / "ball_flight_sanity.json",
             self.clip_dir / "ball_chain_manifest.json",
         ]
@@ -1656,12 +1849,14 @@ class ProcessVideoPipeline:
             status="ran",
             wall_seconds=time.monotonic() - started,
             notes=notes,
-            artifacts=["ball_bounce_candidates.json", "ball_track_arc_solved.json", "ball_flight_sanity.json", "ball_chain_manifest.json"],
+            artifacts=["ball_bounce_candidates.json", "ball_track_arc_solved.json", "ball_arc_render.json", "ball_flight_sanity.json", "ball_chain_manifest.json"],
             metrics={
                 "solver_status": status,
                 "auto_bounce_candidate_count": summary.get("auto_bounce_candidate_count"),
                 "coverage_world_xyz_count": summary.get("coverage_world_xyz_count"),
                 "segment_count": summary.get("segment_count"),
+                "ball_arc_render_sample_count": summary.get("ball_arc_render_sample_count"),
+                "ball_arc_render_bridge_sample_count": summary.get("ball_arc_render_bridge_sample_count"),
                 "flight_sanity_demoted_frame_count": summary.get("flight_sanity_demoted_frame_count"),
                 "flight_sanity_failed_segment_count": summary.get("flight_sanity_failed_segment_count"),
                 "chain_config_degraded": summary.get("chain_config_degraded"),
@@ -2043,7 +2238,14 @@ class ProcessVideoPipeline:
     # stage 8: body
     # ------------------------------------------------------------------
 
-    def _stage_body(self) -> StageOutcome:
+    def _body_stage_reuse_skip(self) -> StageOutcome | None:
+        """The no-force-reuse checks `_stage_body` short-circuits on, factored
+        out so the overlap scheduler can decide -- before spending a thread --
+        whether this run takes the plain serial path (spec design 1: "Reuse
+        semantics unchanged: if BODY artifacts are valid for no-force reuse,
+        take the serial path (no thread)"). Returns None when BODY must
+        actually run (dispatch or local)."""
+
         opts = self.options
         target = self.clip_dir / "smpl_motion.json"
 
@@ -2069,7 +2271,14 @@ class ProcessVideoPipeline:
                 ],
                 artifacts=["skeleton3d.json", "body_full_clip_gate.json"],
             )
+        return None
 
+    def _stage_body(self) -> StageOutcome:
+        reuse_outcome = self._body_stage_reuse_skip()
+        if reuse_outcome is not None:
+            return reuse_outcome
+
+        opts = self.options
         if opts.no_gpu:
             return StageOutcome(
                 stage="body",
@@ -2224,6 +2433,19 @@ class ProcessVideoPipeline:
                 # directory; pass it explicitly so the remote A100 sees the
                 # same SAM-3D body inputs as the local wrapper.
                 body_frames_dir=self.clip_dir / "body_frames",
+                # B12: thread the pipeline's RESOLVED --camera-motion path
+                # (already .expanduser().resolve()'d in build_options_from_args)
+                # into remote dispatch so it is not left to placement alone.
+                # This is intentionally opts.camera_motion_path *raw* (not
+                # `_placement_camera_motion_path()`'s auto-discovery result):
+                # remote_body_dispatch._rsync_up already auto-syncs the
+                # canonical clip_dir/camera_motion.json via BODY_INPUT_ARTIFACTS
+                # whenever camera_motion_path is None, so the clip-dir-only
+                # case (no explicit flag) must stay None here to keep that
+                # existing sync path unchanged -- passing the resolved-equal
+                # path through as "explicit" would make _rsync_up's own
+                # explicit-vs-canonical dedupe skip syncing it entirely.
+                camera_motion_path=opts.camera_motion_path,
                 config=opts.remote_config,
                 max_frames=opts.max_frames,
                 max_players=opts.max_players,
@@ -2604,6 +2826,7 @@ class ProcessVideoPipeline:
         contact_windows_path = self.clip_dir / "contact_windows.json"
         ball_inflections_path = self.clip_dir / "ball_inflections.json"
         ball_arc_solved_path = self.clip_dir / "ball_track_arc_solved.json"
+        ball_arc_render_path = self.clip_dir / "ball_arc_render.json"
         ball_bounce_candidates_path = self.clip_dir / "ball_bounce_candidates.json"
         ball_flight_sanity_path = self.clip_dir / "ball_flight_sanity.json"
         reviewed_bounces_path = self.clip_dir / "reviewed_ball_bounces.json"
@@ -2647,6 +2870,7 @@ class ProcessVideoPipeline:
             contact_windows_path=contact_windows_path if contact_windows_path.is_file() else None,
             ball_inflections_path=ball_inflections_path if ball_inflections_path.is_file() else None,
             ball_arc_solved_path=ball_arc_solved_path if ball_arc_solved_path.is_file() else None,
+            ball_arc_render_path=ball_arc_render_path if ball_arc_render_path.is_file() else None,
             ball_bounce_candidates_path=ball_bounce_candidates_path if ball_bounce_candidates_path.is_file() else None,
             ball_flight_sanity_path=ball_flight_sanity_path if ball_flight_sanity_path.is_file() else None,
             reviewed_bounces_path=reviewed_bounces_path if reviewed_bounces_path.is_file() else None,
@@ -2818,6 +3042,8 @@ class ProcessVideoPipeline:
             "stages": [outcome.as_dict() for outcome in self.stage_outcomes],
             "trust_bands": self.trust_bands,
         }
+        if self._parallel_body_block is not None:
+            summary["parallel_body"] = self._parallel_body_block
         _write_json(self.options.run_dir / "PIPELINE_SUMMARY.json", summary)
         _write_json(self.clip_dir / "PIPELINE_SUMMARY.json", summary)
         return summary
@@ -2830,6 +3056,28 @@ class _HardStageFailure(RuntimeError):
 # ----------------------------------------------------------------------
 # module-level helpers
 # ----------------------------------------------------------------------
+
+
+def _content_hash(path: Path) -> str | None:
+    """A stable content hash for the --body-schedule=overlap input-mutation
+    guard: None when the path does not exist, a file hash for a single
+    artifact, or a hash over every (relative path, content) pair for a
+    directory (e.g. body_frames/). This only detects same-run mutation while
+    BODY runs on a background thread -- never a promotion/accuracy signal."""
+
+    if path.is_file():
+        digest = hashlib.sha256()
+        digest.update(path.read_bytes())
+        return digest.hexdigest()
+    if path.is_dir():
+        digest = hashlib.sha256()
+        for child in sorted(path.rglob("*")):
+            if not child.is_file():
+                continue
+            digest.update(child.relative_to(path).as_posix().encode("utf-8"))
+            digest.update(child.read_bytes())
+        return digest.hexdigest()
+    return None
 
 
 def _foot_contact_phase_count(payload: Mapping[str, Any]) -> int:
@@ -4275,6 +4523,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         ball_track_arc_solved=Path(args.ball_track_arc_solved).expanduser().resolve() if args.ball_track_arc_solved else None,
         no_gpu=args.no_gpu,
         body_remote=not args.body_local,
+        body_schedule=args.body_schedule,
         remote_config=remote_config,
         grounding_refine=not args.no_grounding_refine,
         confidence_gate=not args.no_confidence_gate,
@@ -4373,7 +4622,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--wasb-repo", default=None, help=f"WASB-SBDT repo checkout (default: {DEFAULT_WASB_REPO} if present).")
     parser.add_argument("--skip-audio", action="store_true", help="Skip audio-onset extraction for contact-window fusion.")
     parser.add_argument("--rally-gating", action="store_true", help="Opt in to loose rally-span gating before frame/pose/body/world stages; preserves full pre-gating artifacts with *_pre_rally_gating.json copies.")
-    parser.add_argument("--placement-keypoints-2d", default=None, help="Optional native RTMW keypoints_2d.json for the pre-BODY placement pass.")
+    parser.add_argument("--placement-keypoints-2d", default=None, help="Optional native/body keypoints_2d.json for the pre-BODY placement pass.")
     parser.add_argument("--camera-motion", default=None, help="Optional camera_motion.json mapping frame pixels into the calibration-reference frame before placement homography projection.")
     parser.add_argument("--no-placement-undistort", action="store_true", help="Disable placement-stage pixel undistortion before homography projection.")
 
@@ -4427,6 +4676,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--no-gpu", action="store_true", help="Degrade to skeleton-only: skip BODY mesh, and skip live tracking/pose unless --tracks/--ball-track reuse artifacts are given.")
     parser.add_argument("--body-local", action="store_true", help="Run BODY in-process instead of dispatching to the remote A100 (use when already running on a GPU host).")
+    parser.add_argument(
+        "--body-schedule",
+        choices=("serial", "overlap"),
+        default="serial",
+        help=(
+            "serial (default): today's stage order, byte-identical. overlap: once frames/tracks/calibration "
+            "BODY inputs are ready, dispatch BODY on a background thread running the exact same stage code "
+            "path while ball/ball_arc/events/ball_fill run on the main thread, then hard-join before "
+            "placement_refine/grounding_refine/world. Reuse semantics are unchanged: a no-force-valid BODY "
+            "artifact still takes the plain serial path with no thread spun up."
+        ),
+    )
     parser.add_argument("--remote-host", default=RemoteConfig().host)
     parser.add_argument("--remote-ssh-key", default=RemoteConfig().ssh_key)
     parser.add_argument("--remote-repo", default=RemoteConfig().repo)

@@ -473,6 +473,7 @@ class PlacementFrame(BaseModel):
     source_counts: dict[str, int] = Field(default_factory=dict)
     gap_hold: bool | None = None
     output_source: str | None = None
+    visual_root_step_bounded: bool | None = None
 
     @field_validator("source_counts")
     @classmethod
@@ -502,6 +503,7 @@ class PlacementSummary(BaseModel):
     sidecar_identity: dict[str, Any] = Field(default_factory=dict)
     boundary_guards: dict[str, Any] = Field(default_factory=dict)
     smoothing_guards: dict[str, Any] = Field(default_factory=dict)
+    visual_smoothing: dict[str, Any] = Field(default_factory=dict)
     side_quadrant_consistency: dict[str, Any] = Field(default_factory=dict)
     camera_motion_path: str | None = None
     camera_motion_frames_used: int | None = Field(default=None, ge=0)
@@ -1014,6 +1016,7 @@ class SmplFrame(BaseModel):
     transl_world: Vector3
     track_world_xy: Vector2 | None = None
     temporal_smoothing_reset: bool = False
+    temporal_smoothing_metadata: dict[str, Any] | None = None
     joints_world: list[Vector3]
     mesh_vertices_world: list[Vector3] = Field(default_factory=list)
     joint_conf: list[float]
@@ -1083,6 +1086,7 @@ class SkeletonFrame(BaseModel):
     joints_world: list[Vector3]
     joint_conf: list[float]
     smoothing_flag: list[str] = Field(default_factory=list)
+    temporal_smoothing_metadata: dict[str, Any] | None = None
     confidence_provenance: dict[str, Any] | None = None
     body_grounding_refinement: dict[str, Any] | None = None
     skeleton_implausible: bool | None = None
@@ -1188,6 +1192,100 @@ class BallTrack(StrictArtifact):
     ]
     frames: list[BallFrame]
     bounces: list[Bounce] = Field(default_factory=list)
+
+
+class BallArcRenderPoint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    world_xyz: Vector3
+    court_xy: Vector2
+
+
+class BallArcRenderShot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    start: BallArcRenderPoint
+    peak: BallArcRenderPoint
+    end: BallArcRenderPoint
+    speed_mps: NonNegativeFiniteFloat
+    speed_mph: NonNegativeFiniteFloat
+    height_over_net_m: FiniteFloat | None = None
+    height_over_net_definition: str | None = None
+    distance_m: NonNegativeFiniteFloat
+    path_distance_m: NonNegativeFiniteFloat
+    render_only: Literal[True]
+    not_for_detection_metrics: Literal[True]
+
+
+class BallArcRenderSegment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    segment_id: int | str
+    t0: FiniteFloat
+    t1: FiniteFloat
+    frame_start: int = Field(ge=0)
+    frame_end: int = Field(ge=0)
+    anchor_types: list[str]
+    anchor_frames: list[int]
+    confidence: FiniteFloat = Field(ge=0.0, le=1.0)
+    flight_sanity_verdict: str
+    flight_sanity_reasons: list[str] = Field(default_factory=list)
+    fit_status: str
+    reprojection_rmse_px: FiniteFloat | None = Field(default=None, ge=0.0)
+    max_reprojection_error_px: FiniteFloat | None = Field(default=None, ge=0.0)
+    endpoint_error_m: FiniteFloat | None = Field(default=None, ge=0.0)
+    net_clearance_m: FiniteFloat | None = None
+    net_clearance_ok: bool | None = None
+    bridge: Literal[False]
+    render_only: Literal[True]
+    not_for_detection_metrics: Literal[True]
+    shot: BallArcRenderShot
+
+
+class BallArcRenderBridge(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    bridge_id: str
+    t0: FiniteFloat
+    t1: FiniteFloat
+    reason: str
+    confidence: FiniteFloat = Field(ge=0.0, le=1.0)
+    render_only: Literal[True]
+    not_for_detection_metrics: Literal[True]
+
+
+class BallArcRenderSample(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    t: FiniteFloat
+    frame_float: FiniteFloat | None = None
+    segment_id: int | str
+    world_xyz: Vector3
+    court_xy: Vector2
+    confidence: FiniteFloat = Field(ge=0.0, le=1.0)
+    band: str
+    bridge: bool
+    bridge_id: str | None = None
+    render_only: Literal[True]
+    not_for_detection_metrics: Literal[True]
+
+
+class BallArcRender(StrictArtifact):
+    artifact_type: Literal["racketsport_ball_arc_render"]
+    clip_id: str
+    generated_at: str | None = None
+    source: str | None = None
+    source_artifact: str
+    solver_status: str
+    solver_trusted_for_render: bool = False
+    render_only: Literal[True]
+    not_for_detection_metrics: Literal[True]
+    trusted_for_ball_detection_metrics: Literal[False]
+    policy: dict[str, Any] = Field(default_factory=dict)
+    segments: list[BallArcRenderSegment]
+    bridges: list[BallArcRenderBridge]
+    samples: list[BallArcRenderSample]
+    summary: dict[str, Any]
 
 
 class BallCandidate(BaseModel):
@@ -1778,6 +1876,7 @@ class ReplayViewerManifest(StrictArtifact):
     contact_windows_url: str | None = None
     ball_inflections_url: str | None = None
     ball_arc_solved_url: str | None = None
+    ball_arc_render_url: str | None = None
     auto_bounce_candidates_url: str | None = None
     ball_bounce_candidates_url: str | None = None
     ball_flight_sanity_url: str | None = None
@@ -2068,6 +2167,7 @@ class BodyStagePhaseTiming(StrictArtifact):
     subprocess_wrapper_handoff_s: NonNegativeFiniteFloat | None = None
     mesh_smpl_payload_assembly_s: NonNegativeFiniteFloat | None = None
     smpl_motion_payload_assembly_s: NonNegativeFiniteFloat | None = None
+    array_native_gate_feed_s: NonNegativeFiniteFloat | None = None
     mesh_export_payload_assembly_s: NonNegativeFiniteFloat | None = None
     keypoints_2d_s: NonNegativeFiniteFloat | None = None
     contact_splice_s: NonNegativeFiniteFloat | None = None
@@ -2422,6 +2522,7 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "body_mesh": BodyMesh,
     "body_mesh_readiness": BodyMeshReadiness,
     "ball_track": BallTrack,
+    "ball_arc_render": BallArcRender,
     "racketsport_ball_candidates": BallCandidates,
     "ball_line_calls": BallLineCalls,
     "ball_model_runtime_profile": BallModelRuntimeProfile,

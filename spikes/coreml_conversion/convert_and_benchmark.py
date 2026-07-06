@@ -443,57 +443,43 @@ def load_manifest_models() -> list[dict[str, Any]]:
     return payload.get("models", [])
 
 
-def rtmpose_status(run_dir: Path) -> dict[str, Any]:
-    patterns = ("*rtmpose*m*.pth", "*rtmpose-m*.pth", "*rtmpose_m*.pth", "*mmpose*rtmpose*.pth")
-    local_matches: list[Path] = []
-    for base in (REPO_ROOT / "models", REPO_ROOT / "third_party"):
-        if base.exists():
-            for pattern in patterns:
-                local_matches.extend(base.rglob(pattern))
-    local_matches = sorted(set(local_matches))
+def retired_pose_family_status(run_dir: Path) -> dict[str, Any]:
     manifest_records = [
         item
         for item in load_manifest_models()
-        if item.get("id") in {"rtmpose_m_body26_384", "rtmpose_m_wholebody_256"}
+        if item.get("id")
+        in {
+            "rtmw_l_384",
+            "rtmw_x_384",
+            "rtmw3d_x",
+            "rtmpose_m_body26_384",
+            "rtmpose_l_body26_384",
+            "rtmpose_x_body26_384",
+            "rtmpose_m_wholebody_256",
+            "rtmpose_l_wholebody_384",
+            "rtmpose_x_wholebody_384",
+        }
     ]
-    body26 = next((item for item in manifest_records if item.get("id") == "rtmpose_m_body26_384"), None)
     status = {
-        "local_rtmpose_weight_matches": local_matches,
+        "status": "retired",
         "manifest_records": manifest_records,
-        "will_convert": bool(local_matches),
-        "decision": "",
-        "acquisition_path": {
-            "repo": "https://github.com/open-mmlab/mmpose",
-            "checkpoint_url": (
-                (body26 or {}).get("source", "").split(" and ")[-1]
-                or "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-m_simcc-body7_pt-body7-halpe26_700e-384x288-89e6428b_20230605.pth"
-            ),
-            "expected_manifest_id": "rtmpose_m_body26_384",
-            "expected_manifest_sha256": (body26 or {}).get("sha256"),
-            "expected_manifest_local_path": (body26 or {}).get("local_path"),
-            "note": "Acquire the MMPose RTMPose project/config plus this checkpoint before conversion; do not use YOLO pose weights as an RTMPose substitute.",
-        },
+        "will_convert": False,
+        "replacement": "Fast SAM-3D-Body",
+        "decision": "RTMW/RTMW3D/RTMPose are retired; this spike must not scan for, acquire, or convert legacy pose weights.",
+        "reason": "Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it is more accurate on pickleball joints and optimized speed matched or beat the retired family.",
     }
-    if local_matches:
-        status["decision"] = "Local RTMPose-looking weights exist, but this script does not auto-convert MMPose graphs without the matching config/runtime path."
-    else:
-        status["decision"] = "No RTMPose-m weights found under models/ or third_party/ on this Mac; conversion skipped and acquisition path documented."
-    write_json(run_dir / "rtmpose_status.json", status)
+    write_json(run_dir / "retired_pose_family_status.json", status)
     md = [
-        "# RTMPose-m Status",
+        "# Retired Pose Family Status",
         "",
-        "No RTMPose-m conversion was run unless `local_rtmpose_weight_matches` is non-empty and a matching MMPose config/runtime is present.",
+        "RTMW/RTMW3D/RTMPose are retired. This CoreML spike does not scan for, acquire, or convert those weights.",
         "",
         f"- Decision: {status['decision']}",
-        f"- MMPose repo: {status['acquisition_path']['repo']}",
-        f"- Checkpoint URL: {status['acquisition_path']['checkpoint_url']}",
-        "- Official source context checked: MMPose repository/model zoo and RTMPose paper/project references list RTMPose as an MMPose/OpenMMLab model family and include RTMPose-m 384x288 rows for Halpe/body variants.",
-        f"- Manifest id: {status['acquisition_path']['expected_manifest_id']}",
-        f"- Manifest sha256: {status['acquisition_path']['expected_manifest_sha256']}",
-        f"- Manifest local path: {status['acquisition_path']['expected_manifest_local_path']}",
+        f"- Replacement: {status['replacement']}",
+        f"- Reason: {status['reason']}",
         "",
     ]
-    (run_dir / "RTMPOSE_STATUS.md").write_text("\n".join(md))
+    (run_dir / "RETIRED_POSE_FAMILY_STATUS.md").write_text("\n".join(md))
     return status
 
 
@@ -533,7 +519,7 @@ def summarize_total_loop(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "status": "pass" if total_ms <= LIVE_BUDGET_MS else "fail",
                     "median_ms_sum": total_ms,
                     "projected_fps": 1000.0 / total_ms,
-                    "note": "Player detector + ball student only; RTMPose/iOS camera/render overhead absent.",
+                    "note": "Player detector + ball student only; retired pose family, iOS camera, and render overhead absent.",
                 }
             )
     return totals
@@ -585,7 +571,7 @@ def write_latency_table(run_dir: Path, rows: list[dict[str, Any]], conversions: 
             "",
             "## Total Loop Projection",
             "",
-            "This is a partial live-loop projection only. It sums the player detector and untrained ball student medians where both benchmarks succeeded. It excludes RTMPose, camera capture, tracking, rendering, thermal throttling, and physical iPhone overhead.",
+            "This is a partial live-loop projection only. It sums the player detector and untrained ball student medians where both benchmarks succeeded. It excludes the retired pose family, camera capture, tracking, rendering, thermal throttling, and physical iPhone overhead.",
             "",
             "| Loop | Compute unit | Status vs 30fps total loop | Median sum ms/frame | Projected fps | Note |",
             "|---|---|---|---:|---:|---|",
@@ -659,7 +645,7 @@ def main() -> int:
     if ball_result.get("status") == "ok":
         rows.extend(benchmark_model(Path(ball_result["exported_path"]), "ball_student_untrained", BALL_IMGSZ, run_dir, args.iterations))
 
-    conversions["rtmpose_m"] = rtmpose_status(run_dir)
+    conversions["retired_pose_family"] = retired_pose_family_status(run_dir)
 
     write_json(run_dir / "benchmark_rows.json", rows)
     write_json(run_dir / "conversion_summary.json", conversions)

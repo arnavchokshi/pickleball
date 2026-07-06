@@ -78,7 +78,7 @@ def _native2d_payload() -> dict[str, object]:
         "schema_version": 1,
         "artifact_type": "racketsport_keypoints_2d",
         "clip": "test_clip",
-        "model": "rtmw-test",
+        "model": "body-keypoints-test",
         "players": [
             {
                 "id": 1,
@@ -143,7 +143,7 @@ def _moving_native2d_payload() -> dict[str, object]:
         "schema_version": 1,
         "artifact_type": "racketsport_keypoints_2d",
         "clip": "test_clip",
-        "model": "rtmw-test",
+        "model": "body-keypoints-test",
         "players": [{"id": 1, "frames": frames}],
     }
 
@@ -189,7 +189,7 @@ def _native2d_payload_for_frames(frame_indices: list[int]) -> dict[str, object]:
         "schema_version": 1,
         "artifact_type": "racketsport_keypoints_2d",
         "clip": "test_clip",
-        "model": "rtmw-test",
+        "model": "body-keypoints-test",
         "players": [
             {
                 "id": 1,
@@ -267,7 +267,7 @@ def _fast_native2d_excursion_payload() -> tuple[dict[str, object], dict[str, obj
             "schema_version": 1,
             "artifact_type": "racketsport_keypoints_2d",
             "clip": "test_clip",
-            "model": "rtmw-test",
+            "model": "body-keypoints-test",
             "players": [{"id": 1, "frames": keypoint_frames}],
         },
     )
@@ -616,7 +616,7 @@ def _lane_native2d_payload(player_pixels: dict[int, dict[int, tuple[float, float
         "schema_version": 1,
         "artifact_type": "racketsport_keypoints_2d",
         "clip": "lane_p_synthetic",
-        "model": "rtmw-test",
+        "model": "body-keypoints-test",
         "players": [
             {
                 "id": player_id,
@@ -1234,3 +1234,80 @@ def test_gap_interpolation_still_uses_net_crossing_guard_for_opposite_side_endpo
     assert all(placement_frames[idx].get("gap_interpolated") is True for idx in range(1, 20))
     assert placement_frames[10]["smoothed_world_xy"][1] == pytest.approx(-PlacementConfig().net_clamp_epsilon_m)
     assert placement["summary"]["boundary_guards"]["players"]["1"]["net_gap_clamped_frames"] > 0
+
+
+def test_visual_root_step_redistribution_preserves_endpoints_and_bounds_steps() -> None:
+    adjusted, adjusted_count = placement_module._redistribute_visual_root_steps(
+        {
+            0: [0.0, 0.0],
+            1: [0.30, 0.0],
+            2: [0.30, 0.0],
+            3: [0.30, 0.0],
+        },
+        max_step_m=0.10,
+    )
+
+    assert adjusted_count > 0
+    assert adjusted[0] == pytest.approx([0.0, 0.0])
+    assert adjusted[3] == pytest.approx([0.30, 0.0])
+    steps = [
+        float(np.linalg.norm(np.asarray(adjusted[idx], dtype=float) - np.asarray(adjusted[idx - 1], dtype=float)))
+        for idx in range(1, 4)
+    ]
+    assert max(steps) <= 0.10 + 1e-9
+
+
+def test_rewrite_tracks_records_visual_root_step_bound_provenance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    tracks_path = tmp_path / "tracks.json"
+    calibration_path = tmp_path / "court_calibration.json"
+    placement_path = tmp_path / "placement.json"
+    frames = [_lane_frame(idx, 0.0, -5.0) for idx in range(4)]
+    _write_json(
+        tracks_path,
+        _lane_tracks_payload([{"id": 1, "side": "near", "role": "left", "frames": frames}], fps=30.0),
+    )
+    _write_json(calibration_path, _calibration_payload())
+
+    def fake_smooth(_measurements, *, frame_indices, fps, player_id, config):  # noqa: ANN001
+        del fps, player_id, config
+        path = {
+            0: [0.0, -5.0],
+            1: [0.30, -5.0],
+            2: [0.30, -5.0],
+            3: [0.30, -5.0],
+        }
+        return placement_module._SegmentedSmoothingResult(
+            smoothed={
+                int(idx): placement_module.SmoothedPlacement(
+                    xy=list(path[int(idx)]),
+                    covariance=[[0.5, 0.0], [0.0, 0.5]],
+                    velocity=[0.0, 0.0],
+                )
+                for idx in frame_indices
+            },
+            gap_hold_frames=set(),
+            gap_interpolated_frames=set(),
+            gap_reacquisition_speed_violations=[],
+        )
+
+    monkeypatch.setattr(placement_module, "_smooth_measurement_segments", fake_smooth)
+
+    rewrite_tracks_with_placement(
+        tracks_path=tracks_path,
+        calibration_path=calibration_path,
+        placement_path=placement_path,
+        config=PlacementConfig(
+            visual_max_root_step_m=0.10,
+            stance_min_duration_s=99.0,
+            max_written_speed_mps=100.0,
+            continuity_max_supported_speed_mps=100.0,
+        ),
+    )
+
+    rewritten = json.loads(tracks_path.read_text(encoding="utf-8"))
+    placement = json.loads(placement_path.read_text(encoding="utf-8"))
+    visual = placement["provenance"]["visual_smoothing"]
+
+    assert visual["visual_max_root_step_m"] == pytest.approx(0.10)
+    assert visual["frames_adjusted_count"] > 0
+    assert _max_written_speed_mps(rewritten) <= 8.0 + 1e-6

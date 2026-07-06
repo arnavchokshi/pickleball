@@ -60,6 +60,7 @@ export type BallTrailSample = {
   segmentId?: number | string | null;
   sigmaM?: number | null;
   source?: string | null;
+  bridge?: boolean;
 };
 
 export type BallArcSegment = {

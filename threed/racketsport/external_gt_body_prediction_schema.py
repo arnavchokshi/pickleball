@@ -27,7 +27,7 @@ Platforms, Inc. copyright header) -- re-derived with
 ``[pose_info["original_keypoint_info"][i] for i in range(70)]`` against the live file, not
 transcribed from memory or from a different/assumed convention. The first 17 entries are
 byte-for-byte the same 17 names as `threed.racketsport.eval.body_gate_report.
-CORE_BODY_JOINT_NAMES` / `threed.racketsport.pose_fast.BODY_17_JOINT_NAMES`, just in a
+CORE_BODY_JOINT_NAMES` / `threed.racketsport.joint_schema.BODY_17_JOINT_NAMES`, just in a
 different order (MHR is body-part-grouped: face, then shoulders/elbows, then
 hips/knees/ankles/feet, then fingers, then wrists near the fingers they belong to, then a
 few extra biomechanical landmarks and neck).

@@ -230,6 +230,231 @@ def _targeted_reviewed_contact_frame_plan_payload() -> dict:
     return payload
 
 
+def _contact_dense_ball_aware_frame_plan_payload() -> dict:
+    frames = []
+    for frame_idx in range(41):
+        t = frame_idx / 30.0
+        player_targets = [
+            {
+                "player_id": 7,
+                "track_conf": 0.9,
+                "score": 0.0,
+                "recommended_tier": "baseline",
+                "target_representation": "track_only",
+                "reasons": [],
+            },
+            {
+                "player_id": 8,
+                "track_conf": 0.9,
+                "score": 0.0,
+                "recommended_tier": "baseline",
+                "target_representation": "track_only",
+                "reasons": [],
+            },
+        ]
+        reasons = []
+        recommended_tier = "baseline"
+        target_representation = "track_only"
+        score = 0.0
+        if frame_idx == 15:
+            reasons = ["ball_aware_contact"]
+            recommended_tier = "deep_mesh"
+            target_representation = "world_mesh"
+            score = 0.9
+            player_targets[0] = {
+                "player_id": 7,
+                "track_conf": 0.9,
+                "score": 0.9,
+                "recommended_tier": "deep_mesh",
+                "target_representation": "world_mesh",
+                "reasons": ["ball_aware_contact"],
+            }
+        elif frame_idx in {0, 40}:
+            reasons = ["uniform_mesh_coverage"]
+            recommended_tier = "deep_mesh"
+            target_representation = "world_mesh"
+            score = 1.0
+            player_targets = [
+                {
+                    "player_id": player_id,
+                    "track_conf": 0.9,
+                    "score": 1.0,
+                    "recommended_tier": "deep_mesh",
+                    "target_representation": "world_mesh",
+                    "reasons": ["uniform_mesh_coverage"],
+                }
+                for player_id in (7, 8)
+            ]
+        frames.append(
+            {
+                "frame_idx": frame_idx,
+                "t": t,
+                "score": score,
+                "recommended_tier": recommended_tier,
+                "target_representation": target_representation,
+                "reasons": reasons,
+                "active_players": 2,
+                "active_player_ids": [7, 8],
+                "missing_players": 0,
+                "min_track_conf": 0.9,
+                "ball_conf": None,
+                "player_targets": player_targets,
+                "tier_rationale": {
+                    "base_recommended_tier": recommended_tier,
+                    "base_target_representation": target_representation,
+                    "coverage_policy_mode": "ball_aware",
+                    "mesh_selected": recommended_tier == "deep_mesh",
+                    "selection_reasons": ["uniform_mesh_coverage"] if frame_idx in {0, 40} else [],
+                },
+            }
+        )
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_frame_compute_plan",
+        "fps": 30.0,
+        "expected_players": 2,
+        "frame_count": len(frames),
+        "mesh_coverage_policy": {
+            "mode": "ball_aware",
+            "target_mesh_frame_budget": 100,
+            "selected_mesh_frame_count": 3,
+            "ball_aware_trigger_source_counts": {"events": 1, "proximity": 0, "swing": 0, "uniform_fill": 2},
+        },
+        "frames": frames,
+        "deep_mesh_windows": [
+            {
+                "frame_start": 0,
+                "frame_end": 0,
+                "t0": 0.0,
+                "t1": 1 / 30.0,
+                "frame_count": 1,
+                "target_representation": "world_mesh",
+                "fallback_representation": "lane_a_skeleton",
+                "target_player_ids": [7, 8],
+                "reason_counts": {"uniform_mesh_coverage": 1},
+                "max_score": 1.0,
+            },
+            {
+                "frame_start": 15,
+                "frame_end": 15,
+                "t0": 15 / 30.0,
+                "t1": 16 / 30.0,
+                "frame_count": 1,
+                "target_representation": "world_mesh",
+                "fallback_representation": "lane_a_skeleton",
+                "target_player_ids": [7],
+                "reason_counts": {"ball_aware_contact": 1},
+                "max_score": 0.9,
+            },
+            {
+                "frame_start": 40,
+                "frame_end": 40,
+                "t0": 40 / 30.0,
+                "t1": 41 / 30.0,
+                "frame_count": 1,
+                "target_representation": "world_mesh",
+                "fallback_representation": "lane_a_skeleton",
+                "target_player_ids": [7, 8],
+                "reason_counts": {"uniform_mesh_coverage": 1},
+                "max_score": 1.0,
+            },
+        ],
+        "summary": {
+            "by_tier": {"baseline": 38, "deep_mesh": 3},
+            "by_reason": {"ball_aware_contact": 1, "uniform_mesh_coverage": 2},
+            "by_player_target_representation": {"track_only": 76, "world_mesh": 5},
+            "max_score": 1.0,
+            "deep_mesh_window_count": 3,
+            "deep_mesh_frame_count": 3,
+            "world_mesh_frame_count": 3,
+            "mesh_coverage_mode": "ball_aware",
+        },
+    }
+
+
+def _two_player_dense_tracks_payload() -> dict:
+    frames = [
+        {"t": frame_idx / 30.0, "bbox": [100 + frame_idx, 100.0, 200 + frame_idx, 300.0], "world_xy": [-1.0, -3.0], "conf": 0.9}
+        for frame_idx in range(41)
+    ]
+    return {
+        "schema_version": 1,
+        "fps": 30.0,
+        "players": [
+            {"id": 7, "side": "near", "role": "left", "frames": frames},
+            {
+                "id": 8,
+                "side": "far",
+                "role": "right",
+                "frames": [
+                    {
+                        "t": frame["t"],
+                        "bbox": [value + 220 if isinstance(value, (int, float)) else value for value in frame["bbox"]],
+                        "world_xy": [1.0, -3.0],
+                        "conf": 0.9,
+                    }
+                    for frame in frames
+                ],
+            },
+        ],
+        "rally_spans": [],
+    }
+
+
+def _ball_aware_uniform_only_frame_plan_payload() -> dict:
+    payload = _contact_dense_ball_aware_frame_plan_payload()
+    payload["frames"] = [frame for frame in payload["frames"] if frame["frame_idx"] in {0, 1, 2}]
+    for frame in payload["frames"]:
+        frame["reasons"] = []
+        frame["recommended_tier"] = "baseline"
+        frame["target_representation"] = "track_only"
+        for target in frame["player_targets"]:
+            target["reasons"] = []
+            target["recommended_tier"] = "baseline"
+            target["target_representation"] = "track_only"
+    payload["frames"][1]["reasons"] = ["uniform_mesh_coverage"]
+    payload["frames"][1]["recommended_tier"] = "deep_mesh"
+    payload["frames"][1]["target_representation"] = "world_mesh"
+    payload["frames"][1]["player_targets"] = [
+        {
+            "player_id": player_id,
+            "track_conf": 0.9,
+            "score": 1.0,
+            "recommended_tier": "deep_mesh",
+            "target_representation": "world_mesh",
+            "reasons": ["uniform_mesh_coverage"],
+        }
+        for player_id in (7, 8)
+    ]
+    payload["frame_count"] = 3
+    payload["deep_mesh_windows"] = [
+        {
+            "frame_start": 1,
+            "frame_end": 1,
+            "t0": 1 / 30.0,
+            "t1": 2 / 30.0,
+            "frame_count": 1,
+            "target_representation": "world_mesh",
+            "fallback_representation": "lane_a_skeleton",
+            "target_player_ids": [7, 8],
+            "reason_counts": {"uniform_mesh_coverage": 1},
+            "max_score": 1.0,
+        }
+    ]
+    payload["mesh_coverage_policy"]["ball_aware_trigger_source_counts"] = {"events": 0, "proximity": 0, "swing": 0, "uniform_fill": 1}
+    payload["summary"] = {
+        "by_tier": {"baseline": 2, "deep_mesh": 1},
+        "by_reason": {"uniform_mesh_coverage": 1},
+        "by_player_target_representation": {"track_only": 4, "world_mesh": 2},
+        "max_score": 1.0,
+        "deep_mesh_window_count": 1,
+        "deep_mesh_frame_count": 1,
+        "world_mesh_frame_count": 1,
+        "mesh_coverage_mode": "ball_aware",
+    }
+    return payload
+
+
 def _write_json(path: Path, payload: dict) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload), encoding="utf-8")
@@ -367,6 +592,44 @@ def test_body_compute_execution_reports_targeted_reviewed_contact_schedule(tmp_p
     assert payload["summary"]["scheduled_by_target_representation"] == {"world_mesh": 1}
     assert payload["summary"]["scheduled_coverage_incomplete_frame_count"] == 1
     assert payload["summary"]["scheduled_targeted_reviewed_contact_frame_count"] == 1
+
+
+def test_body_compute_contact_dense_ball_aware_schedules_hitter_every_frame_with_sparse_uniform_floor(tmp_path: Path) -> None:
+    frame_plan = _write_json(tmp_path / "frame_compute_plan.json", _contact_dense_ball_aware_frame_plan_payload())
+
+    execution = build_body_compute_execution(
+        Tracks.model_validate(_two_player_dense_tracks_payload()),
+        frame_plan_path=frame_plan,
+    )
+
+    scheduled_by_frame = {int(frame["frame_idx"]): frame for frame in execution["scheduled_frames"]}
+    assert sorted(scheduled_by_frame) == list(range(31)) + [40]
+    assert all(7 in frame["target_player_ids"] for frame_idx, frame in scheduled_by_frame.items() if frame_idx <= 30)
+    assert [frame_idx for frame_idx, frame in scheduled_by_frame.items() if 8 in frame["target_player_ids"]] == [0, 40]
+    assert execution["mesh_density_profile"]["mode"] == "contact_dense"
+    assert execution["mesh_density_profile"]["status"] == "applied"
+    assert execution["mesh_density_profile"]["contact_dense_pad_s"] == 0.5
+    assert execution["mesh_density_profile"]["contact_dense_player_frame_count"] == 31
+    assert execution["mesh_density_profile"]["uniform_floor_player_frame_count"] == 4
+    assert execution["summary"]["tier1_mesh_player_frame_count"] == 34
+    assert execution["summary"]["scheduled_by_reason"]["contact_dense_hitter_window"] == 31
+    assert execution["summary"]["scheduled_by_reason"]["uniform_mesh_coverage"] == 2
+
+
+def test_body_compute_contact_dense_ball_aware_falls_back_to_existing_uniform_when_contacts_missing(tmp_path: Path) -> None:
+    frame_plan = _write_json(tmp_path / "frame_compute_plan.json", _ball_aware_uniform_only_frame_plan_payload())
+
+    execution = build_body_compute_execution(
+        Tracks.model_validate(_two_player_dense_tracks_payload()),
+        frame_plan_path=frame_plan,
+    )
+
+    assert [frame["frame_idx"] for frame in execution["scheduled_frames"]] == [1]
+    assert execution["scheduled_frames"][0]["target_player_ids"] == [7, 8]
+    assert execution["mesh_density_profile"]["mode"] == "contact_dense"
+    assert execution["mesh_density_profile"]["status"] == "uniform_fallback_missing_contact_evidence"
+    assert any("falling back to existing ball_aware/uniform mesh windows" in note for note in execution["mesh_density_profile"]["notes"])
+    assert execution["summary"]["tier1_mesh_player_frame_count"] == 2
 
 
 def test_body_compute_execution_skips_track_player_frames_after_impossible_body_motion(tmp_path: Path) -> None:

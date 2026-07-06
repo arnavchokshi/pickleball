@@ -23,6 +23,18 @@ SAM3D_BODY_JOINTS_SOURCE = "sam3d_body_joints"
 TIER2_BODY_JOINTS_TIER = "tier2_body_joints"
 TIER2_BODY_JOINTS_REPRESENTATION = "body_joints"
 TIER1_MESH_REPRESENTATION = "world_mesh"
+CONTACT_DENSE_PROFILE_MODE = "contact_dense"
+DEFAULT_CONTACT_DENSE_PAD_S = 0.5
+CONTACT_DENSE_HITTER_WINDOW_REASON = "contact_dense_hitter_window"
+CONTACT_DENSE_TRIGGER_REASONS = frozenset(
+    {
+        "ball_aware_contact",
+        "high_confidence_swing",
+        "contact_window",
+        "reviewed_contact_targeted_body",
+    }
+)
+UNIFORM_MESH_SELECTION_REASON = "uniform_mesh_coverage"
 
 
 def build_body_compute_execution(
@@ -31,6 +43,7 @@ def build_body_compute_execution(
     frame_plan_path: str | Path | None = None,
     max_frames: int | None = None,
     include_tier2_body_joints: bool = False,
+    contact_dense_pad_s: float = DEFAULT_CONTACT_DENSE_PAD_S,
     max_track_speed_for_body_mps: float = DEFAULT_MAX_TRACK_SPEED_FOR_BODY_MPS,
     max_bbox_center_speed_for_body_diag_s: float = DEFAULT_MAX_BBOX_CENTER_SPEED_FOR_BODY_DIAG_S,
     max_bbox_center_step_for_body_px: float = DEFAULT_MAX_BBOX_CENTER_STEP_FOR_BODY_PX,
@@ -46,6 +59,8 @@ def build_body_compute_execution(
 
     if max_frames is not None and max_frames < 0:
         raise ValueError("max_frames must be non-negative")
+    if contact_dense_pad_s < 0.0:
+        raise ValueError("contact_dense_pad_s must be non-negative")
     if max_track_speed_for_body_mps <= 0.0:
         raise ValueError("max_track_speed_for_body_mps must be positive")
     if max_bbox_center_speed_for_body_diag_s <= 0.0:
@@ -74,6 +89,7 @@ def build_body_compute_execution(
             track_continuity=track_continuity,
             max_frames=max_frames,
             include_tier2_body_joints=include_tier2_body_joints,
+            contact_dense_pad_s=contact_dense_pad_s,
         )
     return _execution_without_frame_plan(
         tracks,
@@ -122,9 +138,41 @@ def _execution_from_frame_plan(
     track_continuity: dict[str, Any],
     max_frames: int | None,
     include_tier2_body_joints: bool,
+    contact_dense_pad_s: float,
 ) -> dict[str, Any]:
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     frame_lookup = {int(frame["frame_idx"]): frame for frame in plan.get("frames", [])}
+    if _plan_uses_contact_dense_profile(plan):
+        scheduled, skipped, profile = _contact_dense_execution_frames(
+            tracks,
+            plan=plan,
+            frame_lookup=frame_lookup,
+            track_lookup=track_lookup,
+            safe_track_lookup=safe_track_lookup,
+            contact_dense_pad_s=contact_dense_pad_s,
+        )
+        if include_tier2_body_joints:
+            scheduled.extend(
+                _tier2_body_joint_scheduled_frames(
+                    tracks,
+                    frame_lookup=frame_lookup,
+                    track_lookup=track_lookup,
+                    safe_track_lookup=safe_track_lookup,
+                    already_scheduled_targets=_scheduled_target_keys(scheduled),
+                )
+            )
+        scheduled, limit_skipped = _apply_max_frames(scheduled, max_frames=max_frames)
+        skipped.extend(limit_skipped)
+        return _execution_payload(
+            tracks,
+            mode="adaptive_frame_compute_plan",
+            source_plan=str(plan_path),
+            scheduled=scheduled,
+            skipped=sorted(skipped, key=lambda item: (int(item["frame_idx"]), str(item["skip_reason"]))),
+            track_continuity=track_continuity,
+            mesh_density_profile=profile,
+        )
+
     scheduled: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     scheduled_indexes: set[int] = set()
@@ -220,6 +268,377 @@ def _execution_from_frame_plan(
         skipped=sorted(skipped, key=lambda item: (int(item["frame_idx"]), str(item["skip_reason"]))),
         track_continuity=track_continuity,
     )
+
+
+def _plan_uses_contact_dense_profile(plan: Mapping[str, Any]) -> bool:
+    policy = plan.get("mesh_coverage_policy")
+    if not isinstance(policy, Mapping):
+        return False
+    return str(policy.get("mode", "")) == "ball_aware"
+
+
+def _contact_dense_execution_frames(
+    tracks: Tracks,
+    *,
+    plan: Mapping[str, Any],
+    frame_lookup: dict[int, Any],
+    track_lookup: dict[int, list[tuple[int, Any]]],
+    safe_track_lookup: dict[int, list[tuple[int, Any]]],
+    contact_dense_pad_s: float,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+    pad_frames = int(round(contact_dense_pad_s * tracks.fps))
+    uniform_targets_by_frame = _targets_from_existing_deep_mesh_windows(plan, frame_lookup=frame_lookup, track_lookup=track_lookup)
+    dense_targets_by_frame: dict[int, set[int]] = {}
+    contact_seed_frames: dict[int, set[int]] = {}
+    fallback_seed_frame_count = 0
+
+    for frame_idx, frame_plan in sorted(frame_lookup.items()):
+        seed_target_ids, used_fallback = _contact_dense_seed_target_ids(frame_plan)
+        if not seed_target_ids:
+            continue
+        if used_fallback:
+            fallback_seed_frame_count += 1
+        contact_seed_frames[frame_idx] = set(seed_target_ids)
+        for dense_frame_idx in range(max(0, frame_idx - pad_frames), frame_idx + pad_frames + 1):
+            if dense_frame_idx not in frame_lookup:
+                continue
+            active_ids = {player_id for player_id, _frame in track_lookup.get(dense_frame_idx, [])}
+            for player_id in seed_target_ids:
+                if player_id in active_ids:
+                    dense_targets_by_frame.setdefault(dense_frame_idx, set()).add(player_id)
+
+    combined_targets_by_frame: dict[int, set[int]] = {}
+    for frame_idx, target_ids in uniform_targets_by_frame.items():
+        combined_targets_by_frame.setdefault(frame_idx, set()).update(target_ids)
+    for frame_idx, target_ids in dense_targets_by_frame.items():
+        combined_targets_by_frame.setdefault(frame_idx, set()).update(target_ids)
+
+    if contact_seed_frames:
+        status = "applied"
+        notes = [
+            "contact_dense applied inside existing ball_aware BODY execution plumbing: hitter targets are scheduled on every tracked frame within the contact pad; existing selected ball_aware/uniform windows remain the sparse continuity floor."
+        ]
+    else:
+        status = "uniform_fallback_missing_contact_evidence"
+        notes = [
+            "contact_dense found no contact-attributed ball_aware/contact trigger frames; falling back to existing ball_aware/uniform mesh windows."
+        ]
+    if fallback_seed_frame_count:
+        notes.append(
+            "one or more contact_dense seeds lacked per-player attribution in player_targets; used active/player-target fallback from frame_compute_plan rather than fabricating nearest-player evidence in body_compute."
+        )
+
+    frame_window_ids = _contact_dense_window_ids(
+        sorted(combined_targets_by_frame),
+        combined_targets_by_frame=combined_targets_by_frame,
+        dense_targets_by_frame=dense_targets_by_frame,
+        uniform_targets_by_frame=uniform_targets_by_frame,
+    )
+    window_bounds = _window_bounds_from_frame_window_ids(frame_window_ids)
+    window_reason_counts = _window_reason_counts(
+        frame_window_ids,
+        frame_lookup=frame_lookup,
+        dense_targets_by_frame=dense_targets_by_frame,
+        uniform_targets_by_frame=uniform_targets_by_frame,
+    )
+
+    scheduled: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    scheduled_indexes: set[int] = set()
+    continuity_skipped_indexes: set[int] = set()
+    for frame_idx in sorted(combined_targets_by_frame):
+        active = track_lookup.get(frame_idx, [])
+        if not active:
+            continue
+        target_ids = sorted(combined_targets_by_frame[frame_idx])
+        safe_ids = {player_id for player_id, _frame in safe_track_lookup.get(frame_idx, [])}
+        safe_target_ids = [player_id for player_id in target_ids if player_id in safe_ids]
+        unsafe_target_ids = [player_id for player_id in target_ids if player_id not in safe_ids]
+        frame_plan = frame_lookup.get(frame_idx, {})
+        if unsafe_target_ids:
+            continuity_skipped_indexes.add(frame_idx)
+            skipped.append(
+                _continuity_skipped_frame(
+                    tracks,
+                    frame_idx=frame_idx,
+                    target_player_ids=unsafe_target_ids,
+                    active_player_ids=[player_id for player_id, _frame in active],
+                    player_targets=_contact_dense_player_targets(
+                        frame_plan,
+                        active=active,
+                        target_ids=unsafe_target_ids,
+                        dense_target_ids=dense_targets_by_frame.get(frame_idx, set()),
+                        uniform_target_ids=uniform_targets_by_frame.get(frame_idx, set()),
+                    ),
+                )
+            )
+        if not safe_target_ids:
+            continue
+        scheduled_indexes.add(frame_idx)
+        source_window_index = frame_window_ids[frame_idx]
+        window_start, window_end = window_bounds[source_window_index]
+        reasons = _contact_dense_frame_reasons(
+            frame_plan,
+            frame_idx=frame_idx,
+            dense_target_ids=dense_targets_by_frame.get(frame_idx, set()),
+            uniform_target_ids=uniform_targets_by_frame.get(frame_idx, set()),
+        )
+        scheduled.append(
+            {
+                "frame_idx": frame_idx,
+                "t": frame_idx / tracks.fps,
+                "recommended_tier": "deep_mesh",
+                "target_representation": TIER1_MESH_REPRESENTATION,
+                "target_player_ids": safe_target_ids,
+                "active_player_ids": [player_id for player_id, _frame in active],
+                "source_window_index": source_window_index,
+                "window_frame_start": window_start,
+                "window_frame_end": window_end,
+                "window_frame_count": window_end - window_start + 1,
+                "window_t0": window_start / tracks.fps,
+                "window_t1": (window_end + 1) / tracks.fps,
+                "fallback_representation": "lane_a_skeleton",
+                "reason_counts": window_reason_counts[source_window_index],
+                "reasons": reasons,
+                "max_score": _contact_dense_frame_score(frame_plan, frame_idx=frame_idx, dense_targets_by_frame=dense_targets_by_frame),
+                "player_targets": _contact_dense_player_targets(
+                    frame_plan,
+                    active=active,
+                    target_ids=safe_target_ids,
+                    dense_target_ids=dense_targets_by_frame.get(frame_idx, set()),
+                    uniform_target_ids=uniform_targets_by_frame.get(frame_idx, set()),
+                ),
+            }
+        )
+
+    for frame_idx, frame_plan in sorted(frame_lookup.items()):
+        if frame_idx in scheduled_indexes or frame_idx in continuity_skipped_indexes:
+            continue
+        tier = str(frame_plan.get("recommended_tier", "unknown"))
+        target_representation = str(frame_plan.get("target_representation", "unknown"))
+        skipped.append(
+            {
+                "frame_idx": frame_idx,
+                "t": float(frame_plan.get("t", frame_idx / tracks.fps)),
+                "recommended_tier": tier,
+                "target_representation": target_representation,
+                "skip_reason": _skip_reason(tier=tier, target_representation=target_representation),
+                "reasons": list(frame_plan.get("reasons", [])),
+                "active_player_ids": [int(player_id) for player_id in frame_plan.get("active_player_ids", [])],
+                "player_targets": _all_player_targets(frame_plan),
+            }
+        )
+
+    profile = {
+        "mode": CONTACT_DENSE_PROFILE_MODE,
+        "status": status,
+        "source_policy_mode": "ball_aware",
+        "contact_dense_pad_s": float(contact_dense_pad_s),
+        "contact_dense_pad_frames": pad_frames,
+        "contact_seed_frame_count": len(contact_seed_frames),
+        "contact_seed_player_frame_count": sum(len(targets) for targets in contact_seed_frames.values()),
+        "contact_dense_frame_count": len(dense_targets_by_frame),
+        "contact_dense_player_frame_count": sum(len(targets) for targets in dense_targets_by_frame.values()),
+        "uniform_floor_frame_count": len(uniform_targets_by_frame),
+        "uniform_floor_player_frame_count": sum(len(targets) for targets in uniform_targets_by_frame.values()),
+        "scheduled_world_mesh_frame_count": len(combined_targets_by_frame),
+        "scheduled_world_mesh_player_frame_count": sum(len(targets) for targets in combined_targets_by_frame.values()),
+        "unattributed_contact_seed_frame_count": fallback_seed_frame_count,
+        "notes": notes,
+    }
+    return scheduled, skipped, profile
+
+
+def _targets_from_existing_deep_mesh_windows(
+    plan: Mapping[str, Any],
+    *,
+    frame_lookup: Mapping[int, Any],
+    track_lookup: Mapping[int, list[tuple[int, Any]]],
+) -> dict[int, set[int]]:
+    targets_by_frame: dict[int, set[int]] = {}
+    for window in plan.get("deep_mesh_windows", []) or []:
+        if not isinstance(window, Mapping):
+            continue
+        try:
+            frame_start = int(window["frame_start"])
+            frame_end = int(window["frame_end"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        window_target_ids = [int(player_id) for player_id in window.get("target_player_ids", [])]
+        for frame_idx in range(frame_start, frame_end + 1):
+            active = list(track_lookup.get(frame_idx, []))
+            if not active:
+                continue
+            frame_plan = frame_lookup.get(frame_idx, {})
+            frame_reasons = {str(reason) for reason in frame_plan.get("reasons", [])} if isinstance(frame_plan, Mapping) else set()
+            if frame_reasons & CONTACT_DENSE_TRIGGER_REASONS:
+                continue
+            selected = _target_player_ids(active, window_target_ids, frame_plan if isinstance(frame_plan, Mapping) else {})
+            if selected:
+                targets_by_frame.setdefault(frame_idx, set()).update(selected)
+    return targets_by_frame
+
+
+def _contact_dense_seed_target_ids(frame_plan: Mapping[str, Any]) -> tuple[set[int], bool]:
+    frame_reasons = {str(reason) for reason in frame_plan.get("reasons", [])}
+    target_ids: set[int] = set()
+    for target in _all_player_targets(frame_plan):
+        target_reasons = {str(reason) for reason in target.get("reasons", [])}
+        if target_reasons & CONTACT_DENSE_TRIGGER_REASONS and target.get("player_id") is not None:
+            target_ids.add(int(target["player_id"]))
+    if target_ids:
+        return target_ids, False
+    if frame_reasons & CONTACT_DENSE_TRIGGER_REASONS:
+        fallback_ids = {
+            int(target["player_id"])
+            for target in _all_player_targets(frame_plan)
+            if target.get("player_id") is not None
+        }
+        if not fallback_ids:
+            fallback_ids = {int(player_id) for player_id in frame_plan.get("active_player_ids", [])}
+        return fallback_ids, True
+    return set(), False
+
+
+def _contact_dense_window_ids(
+    frame_indexes: list[int],
+    *,
+    combined_targets_by_frame: Mapping[int, set[int]],
+    dense_targets_by_frame: Mapping[int, set[int]],
+    uniform_targets_by_frame: Mapping[int, set[int]],
+) -> dict[int, int]:
+    frame_window_ids: dict[int, int] = {}
+    current_window = -1
+    previous_frame_idx: int | None = None
+    previous_signature: tuple[tuple[int, ...], bool, bool] | None = None
+    for frame_idx in frame_indexes:
+        signature = (
+            tuple(sorted(combined_targets_by_frame.get(frame_idx, set()))),
+            bool(dense_targets_by_frame.get(frame_idx)),
+            bool(uniform_targets_by_frame.get(frame_idx)),
+        )
+        if previous_frame_idx is None or frame_idx != previous_frame_idx + 1 or signature != previous_signature:
+            current_window += 1
+        frame_window_ids[frame_idx] = current_window
+        previous_frame_idx = frame_idx
+        previous_signature = signature
+    return frame_window_ids
+
+
+def _window_bounds_from_frame_window_ids(frame_window_ids: Mapping[int, int]) -> dict[int, tuple[int, int]]:
+    bounds: dict[int, tuple[int, int]] = {}
+    for frame_idx, window_id in frame_window_ids.items():
+        if window_id not in bounds:
+            bounds[window_id] = (frame_idx, frame_idx)
+        else:
+            start, end = bounds[window_id]
+            bounds[window_id] = (min(start, frame_idx), max(end, frame_idx))
+    return bounds
+
+
+def _window_reason_counts(
+    frame_window_ids: Mapping[int, int],
+    *,
+    frame_lookup: Mapping[int, Any],
+    dense_targets_by_frame: Mapping[int, set[int]],
+    uniform_targets_by_frame: Mapping[int, set[int]],
+) -> dict[int, dict[str, int]]:
+    counts: dict[int, dict[str, int]] = {}
+    for frame_idx, window_id in frame_window_ids.items():
+        frame_counts = counts.setdefault(window_id, {})
+        reasons = _contact_dense_frame_reasons(
+            frame_lookup.get(frame_idx, {}),
+            frame_idx=frame_idx,
+            dense_target_ids=dense_targets_by_frame.get(frame_idx, set()),
+            uniform_target_ids=uniform_targets_by_frame.get(frame_idx, set()),
+        )
+        for reason in reasons:
+            frame_counts[reason] = frame_counts.get(reason, 0) + 1
+    return {window_id: dict(sorted(reason_counts.items())) for window_id, reason_counts in counts.items()}
+
+
+def _contact_dense_frame_reasons(
+    frame_plan: Mapping[str, Any],
+    *,
+    frame_idx: int,
+    dense_target_ids: set[int],
+    uniform_target_ids: set[int],
+) -> list[str]:
+    reasons: list[str] = []
+    if dense_target_ids:
+        reasons.append(CONTACT_DENSE_HITTER_WINDOW_REASON)
+    frame_reasons = [str(reason) for reason in frame_plan.get("reasons", [])]
+    for reason in frame_reasons:
+        if reason in CONTACT_DENSE_TRIGGER_REASONS and reason not in reasons:
+            reasons.append(reason)
+    if uniform_target_ids:
+        uniform_reason_present = False
+        for reason in frame_reasons:
+            if reason == UNIFORM_MESH_SELECTION_REASON:
+                uniform_reason_present = True
+            if reason not in reasons and (reason == UNIFORM_MESH_SELECTION_REASON or not dense_target_ids):
+                reasons.append(reason)
+        if not uniform_reason_present and UNIFORM_MESH_SELECTION_REASON not in reasons:
+            reasons.append(UNIFORM_MESH_SELECTION_REASON)
+    return reasons or list(frame_reasons)
+
+
+def _contact_dense_frame_score(
+    frame_plan: Mapping[str, Any],
+    *,
+    frame_idx: int,
+    dense_targets_by_frame: Mapping[int, set[int]],
+) -> float:
+    base = float(frame_plan.get("score", 0.0) or 0.0)
+    if dense_targets_by_frame.get(frame_idx):
+        base = max(base, 0.9)
+    return round(min(base, 1.0), 3)
+
+
+def _contact_dense_player_targets(
+    frame_plan: Mapping[str, Any],
+    *,
+    active: list[tuple[int, Any]],
+    target_ids: list[int],
+    dense_target_ids: set[int],
+    uniform_target_ids: set[int],
+) -> list[dict[str, Any]]:
+    active_by_id = {int(player_id): track_frame for player_id, track_frame in active}
+    original_by_id = {
+        int(target["player_id"]): dict(target)
+        for target in _all_player_targets(frame_plan)
+        if target.get("player_id") is not None
+    }
+    targets: list[dict[str, Any]] = []
+    for player_id in sorted(int(target_id) for target_id in target_ids):
+        track_frame = active_by_id.get(player_id)
+        original = original_by_id.get(player_id, {})
+        reasons = [str(reason) for reason in original.get("reasons", [])]
+        if player_id in dense_target_ids and CONTACT_DENSE_HITTER_WINDOW_REASON not in reasons:
+            reasons.insert(0, CONTACT_DENSE_HITTER_WINDOW_REASON)
+        if player_id in uniform_target_ids and UNIFORM_MESH_SELECTION_REASON not in reasons:
+            reasons.append(UNIFORM_MESH_SELECTION_REASON)
+        score = float(original.get("score", 0.0) or 0.0)
+        if player_id in dense_target_ids:
+            score = max(score, 0.9)
+        if player_id in uniform_target_ids:
+            score = max(score, 1.0)
+        targets.append(
+            {
+                "player_id": player_id,
+                "track_conf": round(float(original.get("track_conf", getattr(track_frame, "conf", 0.0))), 3),
+                "score": round(min(score, 1.0), 3),
+                "recommended_tier": "deep_mesh",
+                "target_representation": TIER1_MESH_REPRESENTATION,
+                "reasons": reasons or _contact_dense_frame_reasons(
+                    frame_plan,
+                    frame_idx=int(frame_plan.get("frame_idx", 0)),
+                    dense_target_ids={player_id} if player_id in dense_target_ids else set(),
+                    uniform_target_ids={player_id} if player_id in uniform_target_ids else set(),
+                ),
+            }
+        )
+    return targets
 
 
 def _execution_without_frame_plan(
@@ -392,6 +811,7 @@ def _execution_payload(
     scheduled: list[dict[str, Any]],
     skipped: list[dict[str, Any]],
     track_continuity: dict[str, Any],
+    mesh_density_profile: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     scheduled_by_target_representation: dict[str, int] = {}
     scheduled_by_reason: dict[str, int] = {}
@@ -440,7 +860,7 @@ def _execution_payload(
     max_bbox_center_speed_for_body_diag_s = float(track_continuity["max_bbox_center_speed_for_body_diag_s"])
     max_bbox_center_step_for_body_px = float(track_continuity["max_bbox_center_step_for_body_px"])
     max_track_world_step_for_bbox_jitter_m = float(track_continuity["max_track_world_step_for_bbox_jitter_m"])
-    return {
+    payload = {
         "schema_version": SCHEMA_VERSION,
         "artifact_type": ARTIFACT_TYPE,
         "mode": mode,
@@ -474,6 +894,9 @@ def _execution_payload(
             "track_continuity_skipped_player_frame_count": track_continuity_skipped_player_frame_count,
         },
     }
+    if mesh_density_profile is not None:
+        payload["mesh_density_profile"] = dict(mesh_density_profile)
+    return payload
 
 
 def _body_safe_track_lookup(

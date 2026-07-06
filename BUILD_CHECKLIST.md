@@ -36,7 +36,246 @@ No row is `VERIFIED`.
 | SCOPED PASS | 2 |
 | SCAFFOLD/SCOPED PASS | 1 |
 
-## Recent Handoffs
+## Dated Lane Handoffs
+
+- [WORLDHMR-SPLIT COMPLETE + LIVE-VERIFIED 2026-07-06 ~00:2xZ, synergy-audit session] The BODY
+  speed-vs-accuracy tradeoff is RESOLVED at the root. Split build_body_artifacts_from_fast_sam into
+  shared compute_body_skeleton_and_metrics + separate assemble_body_monolith_payloads; fast path now
+  calls the shared compute (deleted its divergent reimpl). LIVE PROOF (restarted spot VM, manager
+  Bash-driven): post-split fast-default skeleton vs pre-split legacy = ALL 82390 joints <1mm, MAX
+  0.0009mm (float noise); the prior 84.6mm arm/wrist regression is GONE. E2E 565.3s / BODY 516.9s
+  (assembly 0.0), gate PASS cov 1.0, foot-slide 0.0201m, lock-free. Fast path is DEFAULT again, now
+  accuracy-clean. Day: 2141s->565s = 3.8x, wrists correct. VP-A2: worldhmr smoothing PRESERVED
+  (foot-slide 0.0201m unchanged); worldhmr.py synced to VM both repo paths (md5 e3fe1ea5). VM was
+  spot-PREEMPTED + restarted (NEW IP 35.240.205.82, disk intact). Remaining lever to 6-8min:
+  array_native_gate_feed 145s is now the biggest single BODY chunk. No schema change.
+
+- [WORLDHMR-SPLIT LANE EDITING worldhmr.py 2026-07-05 ~23:5xZ, synergy-audit session — VP-A2 COORDINATION]
+  Now editing threed/racketsport/worldhmr.py (your VP-A2 file, landed 15:00, idle 8h). Lane
+  worldhmr_compute_assemble_split_20260705 splits build_body_artifacts_from_fast_sam into shared
+  joint-compute + separate monolith-assemble so the fast BODY path gets byte-identical joints + ~473s
+  (this is the TRUE fix for the array-native arm/wrist regression). Your reset/jitter/centered-smoothing
+  changes are PRESERVED (extend-only; lane STOPs if you re-touch worldhmr mid-flight). If your session
+  needs worldhmr.py in the next ~40min, ping here and I'll pause. The split does NOT change joint math —
+  only factors compute vs assembly apart. VM sync of worldhmr still pending for BOTH our lanes; I'll
+  Bash-drive a combined live A100 verify after the split lands (Sonnet spend-reset but GPU verify stays
+  manager-driven).
+
+- [ARRAY-NATIVE BODY = REGRESSION, default reverted to legacy 2026-07-05 ~23:2xZ, synergy-audit session]
+  Decisive same-worldhmr isolation (manager Bash diff): the array-native slim BODY path is a ~100-145s
+  speed win BUT diverges upper-body joints_world[9..20] (arms/WRISTS) up to 84.6mm vs the legacy path
+  (feet/gates byte-identical). Cause: body_array_native.py reimplements wrist/stance finalization with
+  shallow copies instead of sharing worldhmr.build_body_artifacts_from_fast_sam. NOT accuracy-clean ->
+  Codex lane body_array_native_gate_20260705 defaulting BODY back to legacy byte-identical joints
+  (accuracy-clean 702s, 3x this morning), keeping monolith-skip, gating array-native experimental.
+  TRUE FIX needs splitting build_body_artifacts_from_fast_sam in worldhmr.py (VP-A2 OWNS IT) into
+  joint-compute + payload-assemble so both paths share joint math AND keep the speed. VP-A2 session:
+  this is the cross-session coordination item — that split is the clean way to get BODY to ~473s
+  without moving wrists. Evidence: runs/lanes/e2e_synergy_audit_20260705/STATUS.md 23:2xZ + the two
+  run dirs (payload_collapse_isolation_20260705T223802Z legacy, body_payload_collapse_verify_20260705T221027Z array).
+
+- [PAYLOAD-COLLAPSE SPEED PROVEN + ENTANGLEMENT FLAG 2026-07-05 ~22:5xZ, synergy-audit session] BODY
+  payload-collapse live-verified: BODY stage_wall 618.5->473.0s (-145.5s), wrapper 142->14.6s,
+  deconfounded E2E ~533s (matches VP session's 532s). ACCURACY isolation pending. ENTANGLEMENT FLAG
+  for the VISUAL-POLISH session (VP-A2 owns worldhmr.py): my payload-collapse lane's new
+  threed/racketsport/body_array_native.py HARD-IMPORTS worldhmr.py smoothing symbols
+  (DEFAULT_SMOOTHING_GAP_CARRY_FRAMES etc.) that exist only in your uncommitted worldhmr rewrite. So
+  BODY assembly now depends on your lane's code — when you commit/change worldhmr smoothing constants,
+  my array-native path picks them up. This is likely FINE (both legacy + array-native call the same
+  worldhmr fns, so they stay consistent), but it couples the two lanes: please keep those symbol NAMES
+  stable, and ping here before renaming/removing them. The live skeleton divergence vs the old 702s
+  baseline (foot-slide 14.7->20mm) is attributed to YOUR grounding change, not the payload refactor —
+  confirming via a same-worldhmr legacy-vs-array isolation run now. Files I touched:
+  orchestrator.py + run_sam3dbody_batch.py + body_array_native.py (NEW) + schemas/__init__.py (VM-synced).
+
+- [VISUAL-POLISH LIVE-VERIFIED 2026-07-05 ~23:4xZ, manager] Combined E2E Wolverine
+  (runs/visual1_wolverine_20260705T220517Z): 532.3s total (4.0x vs 2141 baseline), gates green,
+  0 jumps. VP-A/A2 smoothing verified LIVE: temporal resets 14->2, feet jitter RMS 101-231 ->
+  41-78 mm/f^2, wrists -40-46%, worst root-step p95 0.267->0.100 m/frame, stance slide p95 improved
+  3/4 players (P2 30->47, within gate). VM synced: worldhmr 15148bb4, body_world_label_packet
+  e6cf3ad2, visual_quality 764152cb, schemas 37b6cce2, foot_pin 1a164d7f, pose_temporal 54ccbb16.
+  REQUEST to ball session: contact_dense hitter-mesh scheduling (VP-B, landed) fell back to uniform
+  because the default ball chain reports "no current BALL runtime/source available" in this
+  environment — please share/land the ball runtime config (WASB repo+checkpoint flags or default
+  wiring) that your browser-verified runs used, so contact evidence exists and hitter-dense meshes
+  engage. VP-C2 mesh-in-floor/render-perf/UI cleanup is booked below.
+
+- [VP-C2 MESH ALIGNMENT/FPS UX 2026-07-05, lane VP-C2] Web replay follow-up fixed
+  the VP-C regression: chunked `body_mesh_index.json` has no mesh `joint_names`,
+  so 70-joint mesh frames now reuse world MHR70 joint names for hip-root alignment
+  and never fall back to `transl_world`/first joint/centroid roots. Mesh alignment
+  is now an object-level transform with a floor-penetration guard and debug count;
+  cached geometry is no longer rewritten during held playback. The 2x FPS toggle
+  moved into the Layers panel with a compact readout, and Debug layer controls are
+  behind a default-closed expander. Tests: full web Vitest 181 passed; typecheck
+  clean; build clean with existing Vite chunk-size warning. Browser verification
+  remains manager-owned due no-localhost sandbox. VERIFIED=0 unchanged.
+
+- [VP-A2 WORLDHMR RESET/JITTER 2026-07-05, lane VP-A2] Offline CPU proof
+  landed for the worldhmr chain only. Residual stance-anchor resets are now
+  carried with honest metadata, long sparse output gaps remain resets, and
+  output-stage centered joint smoothing protects stance lower-body samples while
+  restoring wrist peak frames. Local Wolverine proof: speed1 resets 14->2,
+  vp1 resets 10->2; feet jitter reduction 56.7%/59.4%; wrist jitter reduction
+  40.4%/41.2%; lag 0 frames; wrist peak delta 0 frames; root jitter not worse;
+  stance slide p95 unchanged; root_motion_temporal_jump_count 0. No VERIFIED
+  claim; manager still owns VM sync and live E2E rerun. Required sync set:
+  `threed/racketsport/worldhmr.py`,
+  `threed/racketsport/body_world_label_packet.py`,
+  `threed/racketsport/visual_quality.py`, plus additive schema validation file
+  `threed/racketsport/schemas/__init__.py`. Report:
+  `runs/lanes/visual_polish_20260705/lane_VPA2_resets_jitter/REPORT.md`.
+
+- [VP-C MESH RENDER CORRECTNESS 2026-07-05, lane VP-C] Web replay mesh render
+  lane landed scoped viewer-only fixes: sparse same-window meshes now hold the
+  previous computed frame instead of snapping/popping through 10 Hz gaps, mesh
+  honesty readout counts held gaps, solid meshes are rigidly translated per
+  player/current frame to the rendered skeleton root with debug deltas, and an
+  additive "2x FPS (interpolated)" control idle-schedules doubled display data
+  for world skeletons plus eligible mesh midpoint frames (user mesh ceiling
+  150 ms). Forbidden ball/HUD/python files untouched; browser QA remains
+  manager-owned due no-localhost sandbox. Tests: focused viewerData/App Vitest
+  110 passed; full web Vitest 178 passed; typecheck clean; build clean with
+  existing Vite chunk-size warning. VERIFIED=0 unchanged. Report:
+  `runs/lanes/visual_polish_20260705/lane_VPC_mesh_render/REPORT.md`.
+
+- [BODY-PAYLOAD-COLLAPSE (P1/P2) LAUNCHED + P3 FEEDER NOTE 2026-07-05 ~21:5xZ, synergy-audit session,
+  Codex xhigh] Codex lane runs/lanes/body_payload_collapse_20260705/ OWNS threed/racketsport/
+  orchestrator.py + scripts/racketsport/run_sam3dbody_batch.py + BODY gate/splice helper modules +
+  BODY tests (these were my chunkfix lane's files, now free). Goal: feed BODY gates/readiness/splice/
+  skeleton3d/mesh-index from per-chunk ARRAYS, skip the 171s smpl/mesh payload assembly + 142s wrapper
+  handoff in slim mode (the ONLY remaining lever: inference is 18s). Accuracy guard = byte-identical
+  golden diff vs runs/body_chunkfix_verify_20260705T204618Z/source outputs. Live A100 verify is a
+  follow-up Sonnet lane, NOT in this Codex lane. Do NOT edit orchestrator.py / run_sam3dbody_batch.py
+  until this lands — shout here if you must.
+  P3 FEEDER FINDING for the VISUAL-POLISH session: your VP-B contact_dense profile starves because
+  contact_windows.json is EMPTY on cold Wolverine (events runs AFTER frames, so no same-run contacts
+  feed the mesh scheduler). The fix = events-before-frames reordering in process_video.py (my audit's
+  P3/B14). That file is YOURS right now (VP-A2). Either you take P3, or ping here and I'll run it once
+  process_video.py is free — it's the missing half that makes VP-B's "mesh near ball" fire on first runs.
+
+- [CAL-SYNTH LANDED 2026-07-05 ~15:0xZ, court lane, worktree — manager-accepted DONE]
+  Synthetic court corpus engine: 7 mixture-weighted families (incl. tennis_overlay with dual
+  line-family masks, adjacent_multi_court, portrait_phone w/ distortion + off-frame keypoints,
+  harsh_shadow), streaming zero-disk API court_synth_stream.iter_synthetic_court_samples
+  (deterministic; consumed by CAL-MODEL trainer 13/13), keypoint reprojection self-consistency
+  0.000000px over 2000 probe samples, throughput 64-87/s @640x360. Probe corpus + per-family
+  contact sheets: runs/lanes/cal_synth_20260705/samples/ (worktree; sheets copied to main).
+  Renders are stylized-procedural by design — texture realism is a booked follow-up if training
+  demands it. 24/24 lane tests green; suite failures all stash-proven pre-existing/other-lane.
+
+- [CAL-GEO ROUND 2 FINAL 2026-07-05 ~14:4xZ, court lane, worktree — manager-accepted PARTIAL]
+  Manager's 6 fixes implemented+measured. Cross-line slot assignment under perspective FIXED where
+  evidence supports it: Outdoor 356->4.4px floor median (beats old 12.7px; overlay pixel-accurate),
+  aggregate 300.5->213.3px mean median (26.3% under 289.5 baseline; <=200 hard bar missed by 13.3).
+  Root causes found by measurement: affine spacing ranking excluded true perspective fits (replaced
+  with cross-ratio invariant); garbage net-ROI tie-break vetoed correct courts (confidence-gated);
+  self-confirming verify metric now scores vs full persistent bank (wrong fits FAIL gates).
+  Remaining: Burlington/Wolverine adjacent-court lock-on (correctly BLOCKED, not promoted; top-3
+  cross-frame vote = next geometric idea), Indoor 46->93 median trade (net-positive, reported),
+  fallback trigger saturates (temporal-median trigger proposed, unactivated — not predeclared),
+  IMG_1605 single-frame tennis-overlay needs the neural track. Zero false-confident promotions.
+  Artifacts: runs/lanes/cal_geo_20260705/{benchmark_r2_final_v2,overlays_r2,report.md} (worktree).
+
+- [VP-A2 CLAIM 2026-07-05 ~22:2xZ, manager session] Visual-polish round 2 additionally OWNS
+  threed/racketsport/worldhmr.py + body_world_label_packet.py (+ visual_quality.py extension):
+  VP-A proved the 10-14 temporal smoothing resets/clip are emitted there (outside VP-A ownership) and
+  world-joint jitter RMS feet 100-235 mm/f^2 is the owner-visible shake. VP-A landed: root-step
+  redistribution (worst-player p95 0.267->0.100 m/frame), foot-pin hysteresis/soft-anchor plumbing,
+  visual_quality harness (48+4 tests green). Conflicts: shout here.
+
+- [VP-A VISUAL SMOOTHNESS PARTIAL 2026-07-05, lane VP-A] Added CPU-only
+  `visual_quality` harness/CLI plus foot-pin hysteresis+soft-static anchors and
+  placement visual root-step redistribution. Baselines and offline copies live
+  under `runs/lanes/visual_polish_20260705/lane_VPA_smoothness/`. Touched
+  tests green: 83 passed. Reset reduction is BLOCKED by file ownership:
+  `temporal_smoothing_reset` is emitted in `threed/racketsport/worldhmr.py`,
+  not VP-A's allowed `pose_temporal.py`; no VM/GPU rerun attempted.
+
+- [CAL-MODEL LANDED 2026-07-05 ~14:2xZ, court lane, worktree court-autofind-20260705 — manager-accepted PASS]
+  court_unet_v2 (23.9M params, resnet34 U-Net @640x360; 15 kp heatmaps stride-4 + 5-class
+  line-family seg + visibility; sub-pixel decode; geometric loss enabled) + new trainer
+  scripts/racketsport/train_court_model_v2.py (AMP/cosine/resume, consumes CAL-SYNTH
+  court_synth_stream contract + eval-guarded real tiers) + court_model_infer.py stable adapter +
+  evaluate_court_model_v2.py 32-row real gate harness (PCK@5>=0.95 gate unweakened). CPU smoke:
+  loss 9.68->8.41, PCK@40 0.075->0.200 <5min. A100 run staged NOT run:
+  `bash scripts/gpu-train-lock.sh bash runs/lanes/cal_model_20260705/train_a100.sh` (worktree).
+  Suite 2672P/36F — all 36 attributed to other lanes' in-flight files/missing worktree fixtures
+  (incl. known pre-existing monitor_process_resources scaffold-index gap). Legacy trainer zero-diff.
+
+- [VP-B MESH FPS LANDED 2026-07-05, lane VP-B] BODY execution now applies a
+  `contact_dense` profile behind existing `--mesh-coverage-mode ball_aware`
+  plumbing: when ball-aware/contact-attributed frame-plan triggers exist, the
+  attributed hitter is scheduled for `world_mesh` on every tracked frame within
+  the default +/-0.5s pad; existing selected ball-aware/uniform windows remain
+  the sparse continuity floor for other players. No new CLI enum was added
+  because `process_video.py` owns the choices list and this lane was forbidden
+  to touch it. Viewer solid meshes now interpolate client-side between
+  same-player, same-window computed frames only when gap <=66ms and vertex/joint
+  counts match; the mini readout exposes computed/interpolated status. Real
+  Wolverine vp1 read-only proof found `contact_windows.json` present but empty,
+  so the profile honestly fell back to the current uniform-fill schedule (200
+  frames, 785 player-frames). Tests: pytest body/body_mesh/ball-stage 37 passed,
+  1 skipped; web Vitest 172 passed; typecheck/build clean. VERIFIED=0 unchanged.
+
+- [BODY-CHUNKFIX LANDED 2026-07-05 ~22:0xZ, synergy-audit session, manager-verified] Wolverine E2E
+  1144.0 -> 702.4s live (runs/body_chunkfix_verify_20260705T204618Z), gates green, slide bit-identical.
+  Root causes: S4 async-writer GIL contention (pickle now synchronous) + a PRE-EXISTING silent
+  cross-venv numpy pickle fallback to legacy monolithic JSON that invalidated all prior "pickle"
+  handoff measurements (fixed w/ version-agnostic array descriptors). handoff 489 -> 0.83s,
+  prep 131 -> 12.9s. Files: scripts/racketsport/run_sam3dbody_batch.py + its tests only; VM synced
+  both repo paths (md5 9271c9e6). NEXT measured targets: mesh/smpl payload assembly 171.65s +
+  subprocess wrapper 142.0s (P1/P2 in the handoff doc) -> booked 6-8min/clip is in reach; then the
+  combined --body-schedule=overlap live proof (command in runs/lanes/sched_parallel_body_20260705/
+  REPORT.md). Report: runs/lanes/body_chunkfix_20260705/REPORT.md.
+
+- [SYNERGY SESSION CLOSED BY OWNER 2026-07-05 ~21:5xZ] Landed today by this session (all uncommitted,
+  joint-commit rule): viewer fail-closed honesty gate (independently re-verified, pixel-proven) +
+  acceptance-tool real coverage; B08 net_plane->default arc solve; SCHED-A --body-schedule=overlap
+  (CPU||GPU, serial default byte-identical, 201 tests) + B12 camera-motion threading. Audit canon:
+  runs/lanes/e2e_synergy_audit_20260705/ (stage graph, dead/redundant, 18-candidate synergy matrix,
+  parallelism DAG) — reconciled 1:1 with runs/lanes/pipeline_speed_accuracy_handoff_20260705/HANDOFF.md.
+  IN FLIGHT AT CLOSE: BODY-CHUNKFIX (P0/P1) live A100 verify #2 running
+  (runs/body_chunkfix_verify_20260705T204618Z); ruling criteria + next steps in
+  runs/lanes/e2e_synergy_audit_20260705/STATUS.md tail. NEXT QUEUE (in order): finish CHUNKFIX ruling ->
+  combined overlap live proof -> P3 accuracy-first ball-aware frame plan + P5 membership BODY
+  exclusions (claim process_video.py + process_video_body_frames.py + frame_rating.py) -> P2 mmap
+  handoff (use CHUNKFIX's measured numbers) -> P7 freshness keys. Codex quota returns Jul 9 ~1:31PM.
+
+- [VISUAL-POLISH LANES OPEN 2026-07-05 ~21:4xZ, manager session] Owner watched the four previews:
+  approved a dedicated visual-polish effort. Lane VP-A OWNS threed/racketsport/pose_temporal.py +
+  foot_pin.py + placement.py + NEW visual_quality.py/measure_visual_quality.py + their tests
+  (smoothing resets 14->≤4, extended foot anchoring w/ hysteresis, visual root-step bound; the
+  27cm/frame root steps + 14 resets/300f are the measured targets). Lane VP-B OWNS
+  threed/racketsport/body_compute.py + body_mesh_index.py + web/replay MESH-layer components + tests
+  (owner directive: hitter-only dense mesh ~30fps in contact windows, sparse elsewhere; client-side
+  midpoint interpolation to double display rate, honest labeling; NOT touching ballTrail/shotTrails/
+  courtReview/uploadApi or today's HUD honesty logic). Also rebuilding body_mesh_index for the four
+  vp1 clips from their existing monoliths (no GPU) so all previews get the mesh layer. Conflicts:
+  shout here. Lane home: runs/lanes/visual_polish_20260705/.
+
+- [SCHED-A LANDED 2026-07-05 ~21:1xZ, synergy-audit session] process_video.py now has
+  --body-schedule={serial(default)|overlap}: overlap dispatches remote BODY on a background thread
+  after frames and runs ball/ball_arc/events/ball_fill on CPU underneath it, hard join before
+  placement_refine/world; PIPELINE_SUMMARY gains a parallel_body honesty block (incl.
+  body_inputs_missing_due_to_overlap); sha256 input-mutation guard fails the body stage closed if any
+  BODY dispatch input changes mid-overlap; serial default is byte-identical (201 tests green).
+  B12 landed: explicit --camera-motion now reaches remote BODY dispatch. Live verification pending
+  (one combined GPU run with the chunk fix). Report: runs/lanes/sched_parallel_body_20260705/REPORT.md.
+
+- [RACKET-6DOF PHASE 1 LANDED 2026-07-05 ~20:3xZ] Fused wrist+palm+box paddle estimator shipped
+  (threed/racketsport/paddle_pose_fused.py + build_paddle_pose_fused.py CLI + 31 tests, all green;
+  1 known-unowned scaffold fail pre-existing). Internal-val bars ALL MET: Wolverine IoU 0.258
+  (proxy baseline 0.111), center 20.3px, face-normal jitter 5.4/28.2 deg/f med/p95 (was 23-53 med);
+  Burlington identical config IoU 0.355 (13x baseline). Renders through UNMODIFIED
+  virtual_world/viewer (racket_pose_estimate.json contract, source=wrist_palm_grip_fused,
+  render-only/estimated band). Rectangle-to-6DoF kill respected; CVAT rects scoring-only;
+  Outdoor/Indoor labels untouched. NOT promotion evidence (RKT-1 stays SCAFFOLD; face-angle GT
+  still the gate). Ball-reflection factor dormant until arc-stage 3D contacts exist (ball session:
+  your landed default ball_arc stage is exactly what activates it — coordinate at integration).
+  Pipeline integration ships as deferred patch AFTER ball/speed sessions' process_video/
+  virtual_world changes are verified+committed. Goal doc: RACKET_6DOF_GOAL.md; trail:
+  runs/lanes/racket_6dof_20260705/STATUS.md.
 
 - [BALL-3D-CHAIN-DEFAULT 2026-07-05, manager-verified 3 clips] The ball 3D chain (candidate sidecars ->
   auto-bounce anchors -> frozen-config arc solver -> flight-sanity gate -> viewer trail/honesty UI) now
@@ -160,6 +399,27 @@ No row is `VERIFIED`.
   (court session). Implementation lanes will be posted here with explicit file ownership BEFORE
   dispatch; A100 stays with the speed session — this session provisions its own GPU if needed
   (owner-authorized).
+
+- [WIND-DOWN COMPLETE 2026-07-05 ~18:2x PDT] Everything committed+pushed on main (this commit);
+  A100 VM powered off 17:00 PDT (delete staged for owner); RESET_HANDOFF_20260705.md is the
+  canonical restart doc. Suites at close: wide pytest green except 2 booked pre-existing
+  court-eval failures (IMG_1605 label schema drift — see handoff §8); vitest 182/182; doc/storage/
+  scaffold consistency all green. P3-A BVP solver committed as documented WIP; array-native BODY
+  path opt-in OFF (stance-protection gap, fix booked); court Wave A on pushed branch
+  worktree-court-autofind-20260705. NO further GPU jobs — the VM is down.
+
+- [WIND-DOWN MANAGER SESSION OPEN 2026-07-05 ~16:4xPDT] Owner directive: verify all five
+  sessions' work, produce the reset handoff doc, get EVERYTHING committed+pushed, then terminate
+  the A100 VM (new GPU + fresh agent later). Canonical doc being built: RESET_HANDOFF_20260705.md
+  (repo root). Lanes running: wiring_audit_20260705 (integration truth table + deferred-patch
+  ledger, READ-ONLY on source), docs_recon_winddown_20260705 (owns MASTER_PLAN/CAPABILITIES/
+  RUNBOOK/TECH_STACK/RACKET_6DOF_GOAL only). Court Wave A branch pushed to origin
+  (worktree-court-autofind-20260705). VM archive of unique checkpoints in flight
+  (models/checkpoints/vm_archive_20260705/). TO THE TWO LIVE SESSIONS (ball P3-A Codex lane;
+  payload-collapse isolation): land + commit your own files per your specs; the final sweep
+  commit here will wait for you and will NOT touch ball_arc_solver/ball_flight_sanity/
+  ball_arc_chain or PIPELINE_STATUS.md until your lanes report. A100 SHUTDOWN happens at the end
+  of this session — dispatch NO new GPU jobs after your current queue empties.
 
 - [RACKET-6DOF GOAL OPENED 2026-07-05 ~08:1xZ] Owner directive: new goal — full 6-DOF paddle
   rendering in the world whenever possible, driven by wrist + ball direction. Goal doc:
@@ -311,3 +571,6 @@ No row is `VERIFIED`.
    promotion paths.
 5. **iOS/RPL:** prove real-device capture/import/live overlay and current replay
    playback from the same artifact chain.
+- [DOCS-RECON-WINDDOWN 2026-07-05] Owned root docs reconciled against run evidence with `VERIFIED=0` unchanged; report artifacts: `runs/lanes/docs_recon_winddown_20260705/RECON_NOTES.md` and `runs/lanes/docs_recon_winddown_20260705/report.json`.
+- [WIRING-AUDIT 2026-07-05] Pipeline integration truth table and deferred-patch ledger written to `runs/lanes/wiring_audit_20260705/WIRING_TRUTH_TABLE.md`, `runs/lanes/wiring_audit_20260705/DEFERRED_PATCH_LEDGER.md`, and `runs/lanes/wiring_audit_20260705/report.json`. Top gaps: dirty/untracked BODY-viewer-placement work needs reset-safe packaging, `monitor_process_resources.py` still lacks a direct CLI reference test, and SAM3D subprocess status text still says binary while default transport is pickle.
+- [WINDDOWN-SWEEP 2026-07-05] Final mechanical sweep covered doc inventory, storage index cleanup, monitor CLI reference coverage, and SAM3D subprocess chunk-status wording before the manager reset commit.

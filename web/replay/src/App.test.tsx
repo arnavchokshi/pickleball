@@ -23,7 +23,7 @@ import {
   updateFpsSample,
   vertexDebugPointsForFrame,
 } from "./App";
-import { parseBodyMesh } from "./viewerData";
+import { parseBodyMesh, solidBodyMeshFramesForTime } from "./viewerData";
 import type { ActivePaddleFrame, BodyMesh, TimelineChapter, VirtualWorld, VirtualWorldPaddleFrame, VirtualWorldPlayer } from "./viewerData";
 import { DEFAULT_VIEW_STATE, applyViewPreset } from "./viewState";
 
@@ -36,6 +36,33 @@ describe("manifestUrlFromSearch", () => {
 
   it("does not fall back to a checkout-specific absolute path", () => {
     expect(manifestUrlFromSearch("")).toBeNull();
+  });
+});
+
+describe("RecentRunSwitcher", () => {
+  it("renders the three current review videos and keeps the selected replay view query", () => {
+    const RecentRunSwitcher = (AppModule as any).RecentRunSwitcher;
+    const recentRuns = (AppModule as any).RECENT_REPLAY_RUNS;
+    expect(typeof RecentRunSwitcher).toBe("function");
+    expect(recentRuns).toHaveLength(3);
+
+    const html = renderToStaticMarkup(
+      React.createElement(RecentRunSwitcher, {
+        currentManifestUrl: "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/visual1_wolverine_20260705T220517Z/wolverine_mixed_0200_mid_steep_corner/replay_viewer_manifest.json",
+        replayViewMode: "courtmap",
+      }),
+    );
+
+    expect(html).toContain("Latest video runs");
+    expect(html).toContain("Burlington");
+    expect(html).toContain("Wolverine");
+    expect(html).toContain("Outdoor");
+    expect(html).toContain("recent-run-chip active");
+    expect(html).toContain("aria-current=\"page\"");
+    expect(html).toContain("view=courtmap");
+    expect(html).toContain("runs%2Fvisual1_wolverine_20260705T220517Z");
+    expect(html).toContain("runs%2Flanes%2Fball_f1_three_clip_runs_20260705%2Fburlington_gold_0300_low_steep_corner");
+    expect(html).toContain("runs%2Flanes%2Fball_f1_three_clip_runs_20260705%2Foutdoor_webcam_iynbd_1500_long_high_baseline");
   });
 });
 
@@ -81,6 +108,12 @@ describe("ViewLayerPanel", () => {
       React.createElement(ViewLayerPanel, {
         viewState: DEFAULT_VIEW_STATE,
         playerIds: [1, 2],
+        displayFps: {
+          enabled: true,
+          processing: false,
+          readout: "60fps display: computed 30 + interpolated 12 skeletons, 4 mesh",
+          onToggle: () => undefined,
+        },
         onToggleLayer: () => undefined,
         onBallFocus: () => undefined,
         onPlayerFocus: () => undefined,
@@ -99,8 +132,12 @@ describe("ViewLayerPanel", () => {
     expect(html).toContain("data-layer-key=\"playerSkeletons\"");
     expect(html).toContain("data-layer-key=\"floorContactMarkers\"");
     expect(html).toContain("Hand points");
-    expect(html).toContain("Implausible skeletons");
+    expect(html).toContain("2x FPS (interpolated)");
+    expect(html).toContain("60fps display");
+    expect(html).toContain("Debug");
     expect(html).toContain("aria-pressed=\"false\"");
+    expect(html).toContain("<details class=\"layer-group debug-layer-group\">");
+    expect(html).toContain("Implausible skeletons");
     expect(html).toContain("Point clouds");
   });
 
@@ -124,6 +161,28 @@ describe("ViewLayerPanel", () => {
     expect(html).toContain("Player 2");
     expect(html).toContain("player-chip active");
     expect(html).toContain("aria-pressed=\"true\"");
+  });
+});
+
+describe("DisplayFpsControl", () => {
+  it("renders compactly inside the layer panel where the owner already looks", () => {
+    const DisplayFpsControl = (AppModule as any).DisplayFpsControl;
+    expect(typeof DisplayFpsControl).toBe("function");
+
+    const html = renderToStaticMarkup(
+      React.createElement(DisplayFpsControl, {
+        enabled: true,
+        processing: false,
+        readout: "60fps display: computed 30 + interpolated 12 skeleton, 4 mesh",
+        onToggle: () => undefined,
+      }),
+    );
+
+    expect(html).toContain("2x FPS (interpolated)");
+    expect(html).toContain("aria-pressed=\"true\"");
+    expect(html).toContain("layer-fps-control");
+    expect(html).toContain("display-fps-badge");
+    expect(html).toContain("60fps display: computed 30 + interpolated 12 skeleton, 4 mesh");
   });
 });
 
@@ -169,6 +228,7 @@ describe("MeshDebugReadout", () => {
           load_url: "body_mesh_chunks/window_000.bin.gz",
           load_message: null,
           rendered_player_count: 2,
+          alignment_floor_guard_count: 0,
           players: [
             {
               world_player_id: 1,
@@ -240,6 +300,67 @@ describe("solid mesh geometry cache", () => {
     const second = geometryForSolidBodyMeshFrame(cache, 4, frame);
 
     expect(first).toBe(second);
+    expect(cache.geometryCount).toBe(1);
+    expect(cache.normalComputeCount).toBe(1);
+  });
+
+  it("does not rewrite cached mesh geometry while playback reuses a held aligned frame", () => {
+    const bodyMesh = parseBodyMesh({
+      ...meshPayload,
+      joint_names: ["left_hip", "right_hip"],
+      players: [
+        {
+          id: 4,
+          frames: [
+            {
+              ...meshPayload.players[0].frames[0],
+              t: 1,
+              joints_world: [
+                [0, 0, 1],
+                [1, 0, 1],
+              ],
+              joint_conf: [1, 1],
+            },
+          ],
+        },
+      ],
+    }) as BodyMesh;
+    const world = makeWorld([
+      {
+        id: 4,
+        side: "near",
+        role: "left",
+        representation: "mesh",
+        frames: Array.from({ length: 100 }, (_, index) => ({
+          t: 1 + index / 1000,
+          track_world_xy: [index / 1000, 1],
+          floor_world_xyz: [index / 1000, 1, 0],
+          floor_source: "track_footpoint",
+          contact_locked: false,
+          floor_penetration_m: 0,
+          joints_world: [
+            [index / 1000, 0, 1],
+            [1 + index / 1000, 0, 1],
+          ],
+          joint_conf: [1, 1],
+          mesh_vertices_world: [],
+          joint_count: 2,
+          mesh_vertex_count: 0,
+          mesh_ref: { artifact: "body_mesh.json", player_id: 4, frame_idx: 42, t: 1 },
+        })),
+      },
+    ]);
+    world.joint_names = ["left_hip", "right_hip"];
+    const cache = createSolidBodyMeshGeometryCache(null);
+
+    const geometries = Array.from({ length: 100 }, (_, index) => {
+      const active = solidBodyMeshFramesForTime(bodyMesh, null, 1 + index / 1000, world);
+      expect(active).toHaveLength(1);
+      expect(active[0].renderTranslation).toEqual([index / 1000, 0, 0]);
+      return geometryForSolidBodyMeshFrame(cache, active[0].meshPlayerId, active[0].frame);
+    });
+
+    expect(new Set(geometries).size).toBe(1);
     expect(cache.geometryCount).toBe(1);
     expect(cache.normalComputeCount).toBe(1);
   });
@@ -909,6 +1030,7 @@ describe("contactReadoutText", () => {
           playerId: 1,
           meshPlayerId: 1,
           presenceOpacity: 1,
+          renderTranslation: [0, 0, 0],
           frame: {
             frame_idx: 150,
             t: 2.5,
@@ -920,6 +1042,8 @@ describe("contactReadoutText", () => {
             mesh_faces: [],
             smplx_params: {},
             reasons: ["contact_window"],
+            mesh_interpolated: false,
+            interpolation: null,
           },
         },
       ]),

@@ -112,6 +112,10 @@ def test_body_world_label_packet_prefers_explicit_frame_idx() -> None:
 def test_body_world_label_packet_preserves_temporal_smoothing_reset_metadata() -> None:
     smpl_motion = _smpl_motion()
     smpl_motion["players"][0]["frames"][0]["temporal_smoothing_reset"] = True
+    smpl_motion["players"][0]["frames"][0]["temporal_smoothing_metadata"] = {
+        "reset_reason": "sparse_output_gap",
+        "gap": {"status": "reset", "missing_frame_count": 11},
+    }
 
     payload = build_body_world_label_packet(
         clip="clip_001",
@@ -121,6 +125,10 @@ def test_body_world_label_packet_preserves_temporal_smoothing_reset_metadata() -
     )
 
     assert payload["samples"][0]["temporal_smoothing_reset"] is True
+    assert payload["samples"][0]["temporal_smoothing_metadata"] == {
+        "reset_reason": "sparse_output_gap",
+        "gap": {"status": "reset", "missing_frame_count": 11},
+    }
 
 
 def test_body_world_label_packet_includes_representative_review_plan() -> None:

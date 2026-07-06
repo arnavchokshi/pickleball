@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import pickle
 import subprocess
 import sys
 import threading
@@ -273,6 +274,7 @@ def test_run_sam3dbody_batch_cli_help_direct_reference() -> None:
     assert "--chunk-format" in completed.stdout
     assert "--convert-chunks" in completed.stdout
     assert "--no-monolithic-output" in completed.stdout
+    assert "synchronously" in completed.stdout  # pickle (default) documents the sync fast-handoff path
 
 
 def test_compile_environment_disables_upstream_combined_warmup_but_preserves_script_warmup_contract() -> None:
@@ -746,6 +748,220 @@ def test_stream_only_pickle_writer_does_not_space_inference_on_slow_writer(tmp_p
     assert len(starts) == len(requests)
     assert max(later - earlier for earlier, later in zip(starts, starts[1:])) < 0.05
     assert len(write_events) == len(requests)
+
+
+def test_pickle_safe_arrays_round_trips_and_leaves_no_raw_ndarray_for_cross_version_pickling(tmp_path: Path) -> None:  # noqa: E501
+    import numpy as np
+
+    payload = {
+        "bucket_index": 0,
+        "raw_records": [
+            {
+                "request_id": "0:7",
+                "pred_vertices": np.asarray([[1.0, 2.0, 0.3], [1.1, 2.1, 0.4]], dtype=np.float32),
+                "confidence": 0.75,
+            }
+        ],
+        "faces": np.asarray([[0, 1, 2]], dtype=np.int64),
+        # Ordinary (non-numpy) empty-list metadata must NOT be mistaken for an
+        # ndarray: np.asarray([]) coerces to array([], dtype=float64), which is
+        # exactly the false-positive this test guards against.
+        "optimization": {"crop_bucket_sizes": [], "upstream_env": {}, "tier2_output_lite": False},
+        "bucket_items": [],
+    }
+
+    safe = batch._pickle_safe_arrays(payload)
+
+    def _assert_no_raw_ndarray(value: Any) -> None:
+        assert not isinstance(value, np.ndarray), "raw ndarray must not survive _pickle_safe_arrays"
+        if isinstance(value, dict):
+            for item in value.values():
+                _assert_no_raw_ndarray(item)
+        elif isinstance(value, (list, tuple)):
+            for item in value:
+                _assert_no_raw_ndarray(item)
+
+    _assert_no_raw_ndarray(safe)
+    assert safe["optimization"]["crop_bucket_sizes"] == []  # untouched, not a marker dict
+    assert safe["raw_records"][0]["pred_vertices"][batch.SAM3D_PICKLE_NDARRAY_MARKER] is True
+
+    # The payload must survive an actual pickle round trip (this is what
+    # crosses the FAST_SAM_PYTHON subprocess <-> orchestrator venv boundary).
+    round_tripped = pickle.loads(pickle.dumps(safe))
+    restored = batch._restore_pickle_safe_arrays(round_tripped)
+
+    np.testing.assert_allclose(restored["raw_records"][0]["pred_vertices"], payload["raw_records"][0]["pred_vertices"])
+    np.testing.assert_allclose(restored["faces"], payload["faces"])
+    assert restored["optimization"]["crop_bucket_sizes"] == []
+    assert restored["raw_records"][0]["confidence"] == 0.75
+
+
+def test_pickle_chunk_loader_preserves_arrays_for_orchestrator_handoff(tmp_path: Path) -> None:
+    import numpy as np
+
+    requests = _simple_requests(tmp_path, 1)
+    plan = batch._bucket_plan([request["request_id"] for request in requests], bucket_sizes=[1])
+
+    class FakeEstimator:
+        faces = np.asarray([[0, 1, 2]], dtype=np.int32)
+
+        def process_body_bucket(self, bucket_items: list[dict[str, Any]], **_kwargs: Any) -> list[dict[str, Any]]:
+            return [
+                {
+                    "request_id": bucket_items[0]["request"]["request_id"],
+                    "pred_vertices": np.asarray([[1.0, 2.0, 0.3], [1.1, 2.1, 0.4], [1.2, 2.2, 0.5]], dtype=np.float32),
+                    "pred_keypoints_3d": np.asarray([[0.1, 0.2, 1.0]], dtype=np.float32),
+                    "confidence": 0.75,
+                }
+            ]
+
+    stream = batch._BatchOutputStream(
+        out_path=tmp_path / "out.json",
+        chunk_dir=tmp_path / "out.json.chunks",
+        request_ids=[request["request_id"] for request in requests],
+        payload_header={**_payload_header(len(requests)), "bucket_plan": plan},
+        write_monolithic=False,
+        chunk_format="pickle",
+        async_write=False,
+    )
+    batch._run_bucketed_inference(
+        FakeEstimator(),
+        requests,
+        bucket_plan=plan,
+        clip_cam_int=None,
+        faces=FakeEstimator.faces,
+        body_input_size=384,
+        optimization=batch._parse_optimization({}),
+        output_stream=stream,
+    )
+
+    outputs = batch.load_sam3dbody_binary_outputs_from_chunk_index(
+        tmp_path / "out.json.chunks" / "index.json",
+        request_ids=[request["request_id"] for request in requests],
+    )
+
+    assert isinstance(outputs[0][0]["pred_vertices"], np.ndarray)
+    assert isinstance(outputs[0][0]["pred_keypoints_3d"], np.ndarray)
+    np.testing.assert_allclose(outputs[0][0]["pred_vertices"][0], np.asarray([1.0, 2.0, 0.3], dtype=np.float32))
+
+
+def test_sync_pickle_writer_avoids_background_thread_and_matches_async_output(tmp_path: Path) -> None:
+    requests = _simple_requests(tmp_path, 3)
+    plan = batch._bucket_plan([request["request_id"] for request in requests], bucket_sizes=[1])
+
+    class FakeEstimator:
+        faces = [[0, 1, 2]]
+
+        def process_body_bucket(self, bucket_items: list[dict[str, Any]], **_kwargs: Any) -> list[dict[str, Any]]:
+            return [
+                {
+                    "request_id": item["request"]["request_id"],
+                    "bbox_echo": list(item["bbox"]),
+                }
+                for item in bucket_items
+            ]
+
+    header = _payload_header(len(requests))
+    header["bucket_plan"] = plan
+
+    async_stream = batch._BatchOutputStream(
+        out_path=tmp_path / "async_out.json",
+        chunk_dir=tmp_path / "async_out.json.chunks",
+        request_ids=[request["request_id"] for request in requests],
+        payload_header=header,
+        write_monolithic=False,
+        chunk_format="pickle",
+    )
+    async_frames, _async_execution = batch._run_bucketed_inference(
+        FakeEstimator(),
+        requests,
+        bucket_plan=plan,
+        clip_cam_int=None,
+        faces=[[0, 1, 2]],
+        body_input_size=384,
+        optimization=batch._parse_optimization({}),
+        output_stream=async_stream,
+    )
+    assert async_stream._thread is not None  # default (async_write=True) still spawns the writer thread
+
+    sync_stream = batch._BatchOutputStream(
+        out_path=tmp_path / "sync_out.json",
+        chunk_dir=tmp_path / "sync_out.json.chunks",
+        request_ids=[request["request_id"] for request in requests],
+        payload_header=header,
+        write_monolithic=False,
+        chunk_format="pickle",
+        async_write=False,
+    )
+    sync_frames, _sync_execution = batch._run_bucketed_inference(
+        FakeEstimator(),
+        requests,
+        bucket_plan=plan,
+        clip_cam_int=None,
+        faces=[[0, 1, 2]],
+        body_input_size=384,
+        optimization=batch._parse_optimization({}),
+        output_stream=sync_stream,
+    )
+
+    assert sync_stream._thread is None  # no writer thread => no GIL contention with inference
+    assert async_frames == sync_frames  # sync vs async writer produce byte-for-byte identical results
+
+
+def test_sync_pickle_writer_writes_inline_without_overlapping_next_bucket_inference(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    requests = _simple_requests(tmp_path, 3)
+    plan = batch._bucket_plan([request["request_id"] for request in requests], bucket_sizes=[1])
+    process_events: list[tuple[str, float]] = []
+    write_events: list[tuple[str, float]] = []
+
+    class FakeEstimator:
+        faces = []
+
+        def process_body_bucket(self, bucket_items: list[dict[str, Any]], **_kwargs: Any) -> list[dict[str, Any]]:
+            process_events.append(("process_start", time.monotonic()))
+            time.sleep(0.005)
+            process_events.append(("process_end", time.monotonic()))
+            return [{"request_id": item["request"]["request_id"]} for item in bucket_items]
+
+    def slow_pickle_write(path: Path, payload: Mapping[str, Any]) -> None:
+        write_events.append(("write_start", time.monotonic()))
+        time.sleep(0.02)
+        batch._write_pickle_payload_original(path, payload)
+        write_events.append(("write_end", time.monotonic()))
+
+    monkeypatch.setattr(batch, "_write_pickle_payload_original", batch._write_pickle_payload, raising=False)
+    monkeypatch.setattr(batch, "_write_pickle_payload", slow_pickle_write)
+
+    stream = batch._BatchOutputStream(
+        out_path=tmp_path / "out.json",
+        chunk_dir=tmp_path / "out.json.chunks",
+        request_ids=[request["request_id"] for request in requests],
+        payload_header={**_payload_header(len(requests)), "bucket_plan": plan},
+        write_monolithic=False,
+        chunk_format="pickle",
+        async_write=False,
+    )
+
+    batch._run_bucketed_inference(
+        FakeEstimator(),
+        requests,
+        bucket_plan=plan,
+        clip_cam_int=None,
+        faces=[],
+        body_input_size=384,
+        optimization=batch._parse_optimization({"prefetch_buckets": 0}),
+        output_stream=stream,
+        materialize_streamed_frames=False,
+    )
+
+    assert stream._thread is None
+    assert len(write_events) == 2 * len(requests)
+    # Synchronous handoff: each bucket's write fully completes before the next
+    # bucket's inference starts -- there is no writer thread to overlap them.
+    for index in range(len(requests) - 1):
+        write_end = write_events[2 * index + 1][1]
+        next_process_start = process_events[2 * (index + 1)][1]
+        assert write_end <= next_process_start
 
 
 def test_warmed_production_callable_identity_assertion_detects_path_change() -> None:

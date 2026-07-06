@@ -1,6 +1,6 @@
 # Pickleball Master Plan
 
-Last updated: 2026-07-03.
+Last updated: 2026-07-05.
 
 ## Final Goal
 
@@ -44,22 +44,68 @@ This section lists repo reality, not promotion evidence:
 
 The current `scripts/racketsport/process_video.py` glue can complete scoped
 accepted-clip runs and write scrubber-ready artifacts, but that is not a global
-acceptance pass. The scoped Wolverine run recorded in prior evidence completed
-the intended stage chain and produced a replay manifest, but CAL remained
-metric-preview, TRK remained do-not-promote, BALL remained low-confidence, and
-BODY still lacked the representative world-MPJPE gate.
+acceptance pass. Recent speed and visual runs made the bundle faster and more
+inspectable, but CAL, TRK, BALL, BODY, RKT, replay, and E2E all remain below
+their promotion gates.
 
 | Area | Current status | What is true now | Promotion gate |
 |---|---|---|---|
-| CAL | Scaffold/preview | Manual/sidecar and metric-15pt calibration paths can feed the pipeline. No no-tap automatic court solver has passed. | Held-out PCK@5px gate on reviewed owner viewpoints. |
+| CAL | Scaffold/preview | Manual/sidecar and metric-15pt calibration paths can feed the pipeline. The 2026-07-05 court-autofind Wave A patch is worktree-only, not mainline, and still misses the aggregate hard bar. | Held-out PCK@5px gate on reviewed owner viewpoints. |
 | TRK | In progress | YOLO26m plus BoT-SORT/ReID/raw-pool tooling exists. Pre-registered gate runs still fail coverage/identity/spectator constraints. | Per-clip IDF1, zero ID switches where required, zero true spectator/background FP, coverage gate. |
-| BALL | Scaffold | WASB/TrackNet tooling, reviewed labels, bounce/in-out utilities, audio onset, and confidence-gated display paths exist. M0-M8 remains unpromoted. | Reviewed ball F1/contact/in-out gates, with gray-zone behavior for uncertain calls. |
-| BODY | Scaffold | Fast SAM-3D-Body runtime and structural BODY artifacts exist for scoped clips. Candidate-label review cannot become independent GT. | Representative independent-GT world-MPJPE gate. |
+| BALL | Scaffold | The default 3D ball chain landed in commit `790930ed`, but held-out quality did not promote: the product chain is cleaner and lower-FP than the standing zero-shot baseline while still losing F1/recall. The training campaign concluded negative. | Reviewed ball F1/contact/in-out gates, with gray-zone behavior for uncertain calls. |
+| BODY | Scaffold | Fast SAM-3D-Body runtime, mesh index artifacts, speed improvements, and stance-aware visual smoothing exist for scoped clips. Candidate-label review and current visual runs are not independent GT. | Representative independent-GT world-MPJPE gate. |
 | FOOT/PHYS | Internal-val done | Wolverine internal-val foot-lock reached zero slide/penetration in a scoped chain. | Strict protected-clip physics/replay verification before user-facing promotion. |
-| RKT | Scaffold | Paddle boxes, masks, and review candidates exist. True paddle-face corner/reference GT is still missing. | Face-angle/contact-point error against true-corner/reference GT. |
+| RKT | Scaffold | Phase-1 fused paddle estimator final_v3 is render-only: useful internal-val paddle orientation/position for review, no true-reference GT promotion. | Face-angle/contact-point error against true-corner/reference GT. |
 | iOS | Scoped passes | Swift modules, capture/import sidecars, upload manifest, and live-tier slices have tests. Physical capture/import/live thermal/render proof is still incomplete. | Real device capture plus live overlay and replay verification under the documented budget. |
-| Replay | Scoped review pass | Web review viewer and scoped GLB/USDZ/replay artifacts can load and display trust-banded data. | Production replay asset, native/web perf, and visual QA gates. |
-| E2E | SCAFFOLD/SCOPED PASS, not VERIFIED | `process_video.py` can write a complete/partial bundle with fail-closed trust bands. | One real clip meeting component quality gates and replay SLA from a clean command. |
+| Replay | Scoped review pass | Web review viewer and scoped mesh-index/replay artifacts can load review bundles. Visual artifacts are viewer-consumable, not product replay proof. | Production replay asset, native/web perf, and visual QA gates. |
+| E2E | SCAFFOLD/SCOPED PASS, not VERIFIED | `process_video.py` can write complete or partial bundles with fail-closed trust bands. The latest Wolverine visual run is faster, but still partial and ball/BODY gates remain scoped. | One real clip meeting component quality gates and replay SLA from a clean command. |
+
+## 2026-07-05 Evidence Reconciliation
+
+The following claims are evidence-linked but do not change `VERIFIED=0`:
+
+- Speed: Wolverine E2E moved from 2141.1s to 1144.0s in the speed handoff
+  (`runs/lanes/pipeline_speed_accuracy_handoff_20260705/HANDOFF.md`), then to
+  702.425s after chunkfix
+  (`runs/body_chunkfix_verify_20260705T204618Z/PIPELINE_SUMMARY.json`), and to
+  532.252s in the latest visual run
+  (`runs/visual1_wolverine_20260705T220517Z/PIPELINE_SUMMARY.json`). BODY
+  remote-instrumented `stage_wall_seconds` moved from 618.536s to 473.037s
+  across chunkfix and payload-collapse timing artifacts
+  (`runs/body_chunkfix_verify_20260705T204618Z/source/body_stage_phase_timing.json`,
+  `runs/body_payload_collapse_verify_20260705T221027Z/source/body_stage_phase_timing.json`).
+  The payload-collapse live report records this as a real speed win, but also
+  records accuracy-invariant divergence caused by an entangled concurrent
+  `worldhmr.py` change; do not claim a clean isolation verdict from it
+  (`runs/lanes/body_payload_collapse_livecheck_20260705/REPORT.md`).
+- Visual BODY review: stance-aware smoothing and placement redistribution are
+  live in the visual artifact. Reset count moved from 14 to 2 and worst
+  root-step p95 moved from 0.267m/frame to 0.100m/frame in the before/after
+  visual-quality artifacts
+  (`runs/lanes/visual_polish_20260705/lane_VPA2_resets_jitter/before_speed1_wolverine_source/visual_quality.json`,
+  `runs/lanes/visual_polish_20260705/after_visual1/visual_quality.json`).
+  The same lane notes that ball runtime was absent in that run, so contact-dense
+  mesh scheduling fell back to uniform coverage
+  (`runs/lanes/visual_polish_20260705/STATUS.md`).
+- Ball: the default 3D chain landed in `790930ed`, but the held-out product
+  chain scored 0.6969 F1 versus the standing zero-shot WASB-tennis 0.7248 bar;
+  it improved precision, hidden-FP, tail error, and teleports while losing
+  recall. Evidence:
+  `runs/lanes/ball_heldout_chain_run_20260704/scoring/outdoor_webcam_iynbd_1500_long_high_baseline_benchmark.json`,
+  `runs/lanes/ball_tracking_long_run_STATUS.md`, and
+  `runs/lanes/ball_t4_train_20260704/EVIDENCE_REPORT.md`.
+- Racket: phase-1 fused paddle estimator final_v3 is render-only. Internal-val
+  scoring is Wolverine IoU 0.2356 and Burlington IoU 0.3424 with zero
+  undeclared >0.35m teleports after final_v3; five declared switch jumps remain.
+  Evidence:
+  `runs/lanes/racket_6dof_20260705/i1_fused_estimator/acceptance_record_v2.json`
+  and `runs/lanes/racket_6dof_20260705/STATUS.md`.
+- Court auto-find: Wave A evidence is a handoff patch on worktree branch
+  `worktree-court-autofind-20260705`, not a mainline capability. Outdoor no-tap
+  median is 4.4px, but aggregate mean floor median is 213.3px versus the 200px
+  hard bar and the prior 289.5px baseline. Evidence:
+  `runs/lanes/court_autofind_20260705/handoff/cal_geo_r2_report.md` and
+  `runs/lanes/court_autofind_20260705/handoff/court_autofind_wave_a.patch`.
 
 ## Automatic Court Finding Research Snapshot
 
@@ -187,6 +233,16 @@ priority cue, upload priors. This tier is fast and conservative.
 processing, Fast SAM-3D-Body mesh, grounding, foot-lock/physics, paddle 6DoF
 when available, metrics, replay bake, and coaching copy. This tier is the
 accuracy authority.
+
+**GPU reset state:** the July 2026 A100 spot runtime is reset-pending during
+winddown. Do not treat any named VM as currently available without a fresh
+connectivity, disk, and GPU-lock check.
+
+**RTMW retirement:** RTMW/RTMW3D/RTMPose are retired from the pipeline. BODY is
+SAM-3D-Body only: Fast SAM-3D-Body is the offline skeleton/mesh source because
+the prior RTMW family was less accurate on visible pickleball joints, and the
+current optimized SAM-3D-Body path reached equal-or-better speed while producing
+the mesh/joint artifacts the replay stack needs.
 
 `CAPABILITIES.md` owns the exact tier split. `RUNBOOK.md` owns the runnable
 pipeline command.

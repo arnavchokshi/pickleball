@@ -574,7 +574,7 @@
       "fixture_source": "wolverine_real_frame"
     },
     "schema_version": 1,
-    "source_model": "rtmw3d_x",
+    "source_model": "sam3d_body_joints",
     "world_frame": "court_Z0"
   },
   "source": "runs/manager_rebuild_wolverine_20260702T23Z/skeleton3d.json"

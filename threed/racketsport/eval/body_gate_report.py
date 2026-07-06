@@ -44,8 +44,8 @@ BODY_WORLD_LABEL_FILENAMES = ("body_world_joints.json", "body_world_mpjpe.json")
 # independent evidence.
 #
 # `CORE_BODY_JOINT_NAMES` is the canonical 17-name core-body set (matches
-# `threed.racketsport.pose_fast.BODY_17_JOINT_NAMES` byte-for-byte; see
-# `test_body_gate_report.py::test_core_body_joint_names_matches_pose_fast_schema` for the
+# `threed.racketsport.joint_schema.BODY_17_JOINT_NAMES` byte-for-byte; see
+# `test_body_gate_report.py::test_core_body_joint_names_matches_joint_schema` for the
 # drift guard) — this is the standard COCO/Human3.6M-style 17-joint body layout that the
 # MPJPE metric conventionally refers to. Only these 17 joints (by name) are eligible for
 # the pass/fail `core_mean_error_m` gate. `FOOT_JOINT_NAMES` (6 toe/heel joints) and any

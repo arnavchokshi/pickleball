@@ -6,6 +6,14 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { activeReplayPointForTime, parseReplayScene, resolveReplaySceneAssetUrl, type ReplayScene } from "./replayScene";
+import { CourtMapPanel } from "./CourtMapPanel";
+import {
+  parseBallArcRender,
+  replayViewFromSearch,
+  sampleBallArcRenderAtTime,
+  type BallArcRender,
+  type ReplayViewMode,
+} from "./ballArcRender";
 import { BallHonestyHud } from "./components/modules/BallHonestyHud";
 import { BallTrailLayer } from "./components/modules/BallTrailLayer";
 import { ImpactMarkers } from "./components/modules/ImpactMarkers";
@@ -37,8 +45,11 @@ import {
   ballRenderInfoForTime,
   bodyMeshDebugSnapshot,
   bodyMeshIndexWindowForTime,
+  bodyMeshInterpolationReadout,
   bodyMeshStatusTileValue,
   contactEventCount,
+  displayFpsReadout,
+  displayFpsReplayData,
   effectiveTrustBadge,
   fetchBodyMeshChunk,
   frameForTime,
@@ -84,6 +95,7 @@ import {
   type BodyMeshLoadStatus,
   type CoachingCardFacts,
   type ContactWindows,
+  type DisplayFpsReplayData,
   type LabelOverlayPayload,
   type PhysicsRefinement,
   type ReviewedBounces,
@@ -179,6 +191,53 @@ export function updateFpsSample(sample: FpsSample, nowMs: number): FpsSample {
 }
 
 const DEFAULT_REPLAY_MANIFEST_URL = import.meta.env.VITE_REPLAY_MANIFEST_URL?.trim() || null;
+const LOCAL_REPO_ROOT = import.meta.env.VITE_PICKLEBALL_REPO_ROOT?.trim() || "/Users/arnavchokshi/Desktop/pickleball";
+
+export type RecentReplayRun = {
+  id: string;
+  label: string;
+  clip: string;
+  runLabel: string;
+  updatedLabel: string;
+  manifestUrl: string;
+};
+
+function localManifestUrl(relativePath: string): string {
+  return `/@fs/${LOCAL_REPO_ROOT.replace(/\/+$/, "")}/${relativePath}`;
+}
+
+export const RECENT_REPLAY_RUNS: readonly RecentReplayRun[] = [
+  {
+    id: "burlington",
+    label: "Burlington",
+    clip: "burlington_gold_0300_low_steep_corner",
+    runLabel: "ball_f1_three_clip_runs",
+    updatedLabel: "Jul 5 2:09 PM",
+    manifestUrl: localManifestUrl(
+      "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/replay_viewer_manifest.json",
+    ),
+  },
+  {
+    id: "wolverine",
+    label: "Wolverine",
+    clip: "wolverine_mixed_0200_mid_steep_corner",
+    runLabel: "visual1_wolverine",
+    updatedLabel: "Jul 5 3:14 PM",
+    manifestUrl: localManifestUrl(
+      "runs/visual1_wolverine_20260705T220517Z/wolverine_mixed_0200_mid_steep_corner/replay_viewer_manifest.json",
+    ),
+  },
+  {
+    id: "outdoor",
+    label: "Outdoor",
+    clip: "outdoor_webcam_iynbd_1500_long_high_baseline",
+    runLabel: "ball_f1_three_clip_runs",
+    updatedLabel: "Jul 5 2:09 PM",
+    manifestUrl: localManifestUrl(
+      "runs/lanes/ball_f1_three_clip_runs_20260705/outdoor_webcam_iynbd_1500_long_high_baseline/replay_viewer_manifest.json",
+    ),
+  },
+];
 
 const sampleWorld = {
   schema_version: 1,
@@ -243,6 +302,17 @@ const sampleWorld = {
 export function manifestUrlFromSearch(search: string): string | null {
   const url = new URLSearchParams(search).get("manifest");
   return url && url.trim() ? url : DEFAULT_REPLAY_MANIFEST_URL;
+}
+
+export function recentRunHref(run: Pick<RecentReplayRun, "manifestUrl">, replayViewMode: ReplayViewMode, pathname = "/"): string {
+  const params = new URLSearchParams();
+  params.set("manifest", run.manifestUrl);
+  if (replayViewMode === "courtmap") params.set("view", "courtmap");
+  return `${pathname}?${params.toString()}`;
+}
+
+function sameManifestUrl(left: string | null, right: string): boolean {
+  return (left ?? "").trim() === right.trim();
 }
 
 export function coachingFactsUrlFromSearch(
@@ -311,6 +381,9 @@ export function geometryForSolidBodyMeshFrame(
 }
 
 function solidBodyMeshGeometryKey(playerId: number, frame: ActiveBodyMeshFrame["frame"]): string {
+  if (frame.mesh_interpolated && frame.interpolation) {
+    return `${playerId}:interp:${frame.interpolation.from_frame_idx}:${frame.interpolation.to_frame_idx}:${frame.interpolation.alpha}`;
+  }
   return `${playerId}:${frame.frame_idx}`;
 }
 
@@ -394,6 +467,19 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function scheduleViewerIdleWork(callback: () => void): () => void {
+  const idleWindow = window as Window & {
+    requestIdleCallback?: (handler: () => void, options?: { timeout?: number }) => number;
+    cancelIdleCallback?: (handle: number) => void;
+  };
+  if (idleWindow.requestIdleCallback && idleWindow.cancelIdleCallback) {
+    const handle = idleWindow.requestIdleCallback(callback, { timeout: 120 });
+    return () => idleWindow.cancelIdleCallback?.(handle);
+  }
+  const handle = window.setTimeout(callback, 0);
+  return () => window.clearTimeout(handle);
+}
+
 export default function App() {
   const initialTime = useMemo(() => startTimeFromSearch(window.location.search), []);
   const hasExplicitInitialTime = useMemo(() => hasExplicitReviewStartTime(window.location.search), []);
@@ -409,6 +495,7 @@ export default function App() {
   const [coachingFacts, setCoachingFacts] = useState<CoachingCardFacts | null>(null);
   const [shots, setShots] = useState<RacketsportShots | null>(null);
   const [ballArcSolved, setBallArcSolved] = useState<BallArcSolved | null>(null);
+  const [ballArcRender, setBallArcRender] = useState<BallArcRender | null>(null);
   const [ballTrailArtifact, setBallTrailArtifact] = useState<BallTrailArtifact | null>(null);
   const [autoBounceCandidates, setAutoBounceCandidates] = useState<BounceCandidate[]>([]);
   const [shotTrailFilters, setShotTrailFilters] = useState<ShotTrailFilters>(DEFAULT_SHOT_TRAIL_FILTERS);
@@ -418,11 +505,15 @@ export default function App() {
   const [bodyMeshIndex, setBodyMeshIndex] = useState<BodyMeshIndex | null>(null);
   const [bodyMeshFaces, setBodyMeshFaces] = useState<BodyMeshFaces | null>(null);
   const [bodyMeshLoadStatus, setBodyMeshLoadStatus] = useState<BodyMeshLoadStatus>(INITIAL_BODY_MESH_STATUS);
+  const [displayFpsEnabled, setDisplayFpsEnabled] = useState(false);
+  const [displayFpsProcessing, setDisplayFpsProcessing] = useState(false);
+  const [displayFpsData, setDisplayFpsData] = useState<DisplayFpsReplayData | null>(null);
   const [replayScene, setReplayScene] = useState<ReplayScene | null>(null);
   const [currentTime, setCurrentTime] = useState(initialTime);
   const [videoDuration, setVideoDuration] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>("broadcast");
+  const [replayViewMode, setReplayViewMode] = useState<ReplayViewMode>(() => replayViewFromSearch(window.location.search));
   const [cameraResetToken, setCameraResetToken] = useState(0);
   const [cameraDragCommand, setCameraDragCommand] = useState<CameraDragCommand | null>(null);
   const [showShotsPanel, setShowShotsPanel] = useState(false);
@@ -449,12 +540,15 @@ export default function App() {
       setCoachingFacts(null);
       setShots(null);
       setBallArcSolved(null);
+      setBallArcRender(null);
       setBallTrailArtifact(null);
       setAutoBounceCandidates([]);
       setSelectedShotId(null);
       setCorrectionStatus(null);
       setBodyMeshIndex(null);
       setBodyMeshFaces(null);
+      setDisplayFpsData(null);
+      setDisplayFpsProcessing(false);
       setLoadError(null);
       return;
     }
@@ -516,6 +610,9 @@ export default function App() {
         const ballArcSolvedJson = manifestPayload.ball_arc_solved_url ? await fetchJson(manifestPayload.ball_arc_solved_url) : null;
         const ballArcSolvedPayload = ballArcSolvedJson ? parseBallArcSolved(ballArcSolvedJson) : null;
         const ballTrailArtifactPayload = ballArcSolvedJson ? parseBallTrailArtifact(ballArcSolvedJson) : null;
+        const ballArcRenderPayload = manifestPayload.ball_arc_render_url
+          ? parseBallArcRender(await fetchJson(manifestPayload.ball_arc_render_url))
+          : null;
         const autoBounceCandidatesUrl = manifestPayload.auto_bounce_candidates_url ?? manifestPayload.ball_bounce_candidates_url ?? null;
         const autoBounceCandidatesPayload = autoBounceCandidatesUrl
           ? parseAutoBounceCandidates(await fetchJson(autoBounceCandidatesUrl))
@@ -535,6 +632,7 @@ export default function App() {
         setCoachingFacts(coachingFactsPayload);
         setShots(shotsPayload);
         setBallArcSolved(ballArcSolvedPayload);
+        setBallArcRender(ballArcRenderPayload);
         setBallTrailArtifact(ballTrailArtifactPayload);
         setAutoBounceCandidates(autoBounceCandidatesPayload);
         setSelectedShotId(null);
@@ -655,6 +753,27 @@ export default function App() {
   }, [bodyMeshFaces, bodyMeshIndex, currentTime, manifest?.body_mesh_index_url]);
 
   useEffect(() => {
+    if (!displayFpsEnabled) {
+      setDisplayFpsData(null);
+      setDisplayFpsProcessing(false);
+      return;
+    }
+    let cancelled = false;
+    setDisplayFpsProcessing(true);
+    const cancelIdle = scheduleViewerIdleWork(() => {
+      const doubled = displayFpsReplayData(world, bodyMesh, true);
+      if (!cancelled) {
+        setDisplayFpsData(doubled);
+        setDisplayFpsProcessing(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+      cancelIdle();
+    };
+  }, [bodyMesh, displayFpsEnabled, world]);
+
+  useEffect(() => {
     currentTimeRef.current = currentTime;
   }, [currentTime]);
 
@@ -683,6 +802,10 @@ export default function App() {
     return () => window.cancelAnimationFrame(animationFrame);
   }, [manifest?.video_url, world.fps]);
 
+  const displayFpsStats = displayFpsData?.stats ?? displayFpsReplayData(world, bodyMesh, false).stats;
+  const displayFpsControlReadout = displayFpsEnabled && displayFpsProcessing ? `${displayFpsStats.displayFps}fps display: processing` : displayFpsReadout(displayFpsStats);
+  const renderWorld = displayFpsEnabled && displayFpsData ? displayFpsData.world : world;
+  const renderBodyMesh = displayFpsEnabled && displayFpsData ? displayFpsData.bodyMesh : bodyMesh;
   const stats = useMemo(() => worldStats(world), [world]);
   const coverage = useMemo(() => playerCoverageStats(world), [world]);
   const activeLabels = useMemo(() => labelOverlayForTime(labelOverlay, currentTime), [labelOverlay, currentTime]);
@@ -697,40 +820,41 @@ export default function App() {
     [world, contactWindows, currentTime],
   );
   const activeBodyMeshes = useMemo(
-    () => solidBodyMeshFramesForTime(bodyMesh, contactWindows, currentTime, world),
-    [bodyMesh, contactWindows, currentTime, world],
+    () => solidBodyMeshFramesForTime(renderBodyMesh, contactWindows, currentTime, renderWorld),
+    [contactWindows, currentTime, renderBodyMesh, renderWorld],
   );
   const activePaddles = useMemo(() => activePaddleFramesForTime(world, currentTime), [currentTime, world]);
-  const solidGeometryCache = useMemo(() => createSolidBodyMeshGeometryCache(bodyMesh), [bodyMesh]);
+  const solidGeometryCache = useMemo(() => createSolidBodyMeshGeometryCache(renderBodyMesh), [renderBodyMesh]);
   useEffect(() => () => solidGeometryCache.dispose(), [solidGeometryCache]);
   const renderedSolidMeshPlayers = useMemo(() => solidMeshRenderedPlayerCount(activeBodyMeshes), [activeBodyMeshes]);
   const solidMeshTileValue = useMemo(
     () => bodyMeshStatusTileValue(renderedSolidMeshPlayers, bodyMeshLoadStatus),
     [bodyMeshLoadStatus, renderedSolidMeshPlayers],
   );
+  const meshInterpolationReadout = useMemo(() => bodyMeshInterpolationReadout(renderBodyMesh), [renderBodyMesh]);
   const meshDebugSnapshot = useMemo(
     () =>
       bodyMeshDebugSnapshot({
         bodyMeshIndex,
-        bodyMesh,
-        world,
+        bodyMesh: renderBodyMesh,
+        world: renderWorld,
         currentTime,
         loadStatus: bodyMeshLoadStatus,
         activeBodyMeshes,
       }),
-    [activeBodyMeshes, bodyMesh, bodyMeshIndex, bodyMeshLoadStatus, currentTime, world],
+    [activeBodyMeshes, bodyMeshIndex, bodyMeshLoadStatus, currentTime, renderBodyMesh, renderWorld],
   );
   const sceneLayers = useMemo(
     () =>
       sceneLayerSnapshotForTime({
-        world,
-        bodyMesh,
+        world: renderWorld,
+        bodyMesh: renderBodyMesh,
         contactWindows,
         ballArcEventsSelected,
         currentTime,
         viewState,
       }),
-    [ballArcEventsSelected, bodyMesh, contactWindows, currentTime, viewState, world],
+    [ballArcEventsSelected, contactWindows, currentTime, renderBodyMesh, renderWorld, viewState],
   );
   const worldEventMarkers = useMemo(
     () => eventMarkersForTime(world, contactWindows, currentTime),
@@ -768,6 +892,13 @@ export default function App() {
     () => buildShotTrailGroups(filteredShots, ballArcSolved, world),
     [ballArcSolved, filteredShots, world],
   );
+  const ballArcRenderSamples = useMemo(() => {
+    const samples = ballArcRender?.samples ?? [];
+    const current = sampleBallArcRenderAtTime(samples, currentTime);
+    if (!current) return samples;
+    const withoutDuplicate = samples.filter((sample) => Math.abs(sample.t - current.t) > 1e-6);
+    return [...withoutDuplicate, current].sort((left, right) => left.t - right.t);
+  }, [ballArcRender, currentTime]);
   const selectedShot = useMemo(
     () => (selectedShotId ? (shots?.shots ?? []).find((shot) => shot.shot_id === selectedShotId) ?? null : null),
     [selectedShotId, shots],
@@ -867,7 +998,19 @@ export default function App() {
     setShowShotsPanel(true);
     selectCameraPreset("shot_trails");
   };
+  const selectReplayViewMode = (mode: ReplayViewMode) => {
+    setReplayViewMode(mode);
+    const params = new URLSearchParams(window.location.search);
+    if (mode === "courtmap") {
+      params.set("view", "courtmap");
+    } else {
+      params.delete("view");
+    }
+    const nextSearch = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`);
+  };
   const replayLoaded = manifest !== null;
+  const currentManifestUrl = manifestUrlFromSearch(window.location.search);
 
   return (
     <main className="viewer-shell" aria-label="Replay viewer">
@@ -896,11 +1039,19 @@ export default function App() {
 
       <UploadPanel />
 
+      <RecentRunSwitcher currentManifestUrl={currentManifestUrl} replayViewMode={replayViewMode} />
+
       {replayLoaded ? (
         <section className="review-control-strip" aria-label="Replay review controls">
           <ViewLayerPanel
             viewState={viewState}
             playerIds={playerIds}
+            displayFps={{
+              enabled: displayFpsEnabled,
+              processing: displayFpsProcessing,
+              readout: displayFpsControlReadout,
+              onToggle: () => setDisplayFpsEnabled((enabled) => !enabled),
+            }}
             onToggleLayer={toggleLayer}
             onBallFocus={focusBall}
             onPlayerFocus={focusPlayer}
@@ -916,6 +1067,24 @@ export default function App() {
           >
             {showShotsPanel ? "Hide shots" : "Shots"}
           </button>
+          <div className="replay-view-toggle" role="group" aria-label="Replay view">
+            <button
+              type="button"
+              className={replayViewMode === "world" ? "view-mode-button active" : "view-mode-button"}
+              aria-pressed={replayViewMode === "world"}
+              onClick={() => selectReplayViewMode("world")}
+            >
+              3D
+            </button>
+            <button
+              type="button"
+              className={replayViewMode === "courtmap" ? "view-mode-button active" : "view-mode-button"}
+              aria-pressed={replayViewMode === "courtmap"}
+              onClick={() => selectReplayViewMode("courtmap")}
+            >
+              Court map
+            </button>
+          </div>
         </section>
       ) : null}
 
@@ -1000,6 +1169,10 @@ export default function App() {
         </div>
 
         <div className="world-panel">
+          {replayViewMode === "courtmap" ? (
+            <CourtMapPanel world={renderWorld} arcRender={ballArcRender} currentTime={currentTime} />
+          ) : (
+          <>
           <div className="camera-preset-bar" role="group" aria-label="3D camera">
             {(Object.keys(CAMERA_PRESET_LABELS) as CameraPreset[]).map((preset) => (
               <button
@@ -1025,16 +1198,16 @@ export default function App() {
             <directionalLight position={[0, -4, 8]} intensity={1.75} />
             <FpsProbe onSample={setFps} />
             <OrbitRig
-              world={world}
+              world={renderWorld}
               preset={cameraPreset}
               activePaddles={activePaddles}
               selectedPlayerId={viewState.selectedPlayerId}
               resetToken={cameraResetToken}
               dragCommand={cameraDragCommand}
             />
-            <CourtSurface world={world} />
-            <CourtLines world={world} />
-            <NetAssembly world={world} />
+            <CourtSurface world={renderWorld} />
+            <CourtLines world={renderWorld} />
+            <NetAssembly world={renderWorld} />
             {shotTrailsMode ? (
               <ShotTrailsLayer groups={shotTrailGroups} selectedShotId={selectedShotId} onSelectShot={selectShot} />
             ) : (
@@ -1042,9 +1215,9 @@ export default function App() {
                 {shouldRenderReplayScenePointClouds(viewState, replayScene, currentTime) ? (
                   <ReplayGlbLayer replayScene={replayScene} replaySceneUrl={manifest?.replay_scene_url ?? null} currentTime={currentTime} />
                 ) : null}
-                {sceneLayers.playerTrails.visible ? <PlayerMotionTrails world={world} currentTime={currentTime} viewState={viewState} /> : null}
+                {sceneLayers.playerTrails.visible ? <PlayerMotionTrails world={renderWorld} currentTime={currentTime} viewState={viewState} /> : null}
                 <Players
-                  world={world}
+                  world={renderWorld}
                   currentTime={currentTime}
                   activeContactPlayerIds={viewerContactPlayerIds}
                   showSkeletons={sceneLayers.playerSkeletons.visible}
@@ -1070,7 +1243,8 @@ export default function App() {
                 ) : null}
                 {sceneLayers.ballTrail.visible || sceneLayers.ballDot.visible ? (
                   <BallTrailLayer
-                    world={world}
+                    world={ballArcRenderSamples.length ? null : world}
+                    samples={ballArcRenderSamples.length ? ballArcRenderSamples : null}
                     arcSolved={ballTrailArtifact}
                     currentTime={currentTime}
                     showTrail={sceneLayers.ballTrail.visible}
@@ -1089,8 +1263,12 @@ export default function App() {
           <div className="world-mini-readout">
             <span>{CAMERA_PRESET_LABELS[cameraPreset]}</span>
             <span>{solidMeshTileValue}</span>
+            <span>{meshInterpolationReadout}</span>
+            {displayFpsEnabled ? <span>{displayFpsControlReadout}</span> : null}
           </div>
           <CameraDragPads onDrag={applyCameraDrag} onReset={() => selectCameraPreset(cameraPreset)} />
+          </>
+          )}
         </div>
       </section>
       ) : null}
@@ -1108,6 +1286,43 @@ function Metric({ label, value }: { label: string; value: number | string }) {
   );
 }
 
+export function RecentRunSwitcher({
+  currentManifestUrl,
+  replayViewMode,
+}: {
+  currentManifestUrl: string | null;
+  replayViewMode: ReplayViewMode;
+}) {
+  const pathname = typeof window === "undefined" ? "/" : window.location.pathname;
+  return (
+    <nav className="recent-run-switcher" aria-label="Latest video runs">
+      <div className="recent-run-heading">
+        <span>Latest video runs</span>
+        <small>Most recent local manifests</small>
+      </div>
+      <div className="recent-run-list" role="list">
+        {RECENT_REPLAY_RUNS.map((run) => {
+          const active = sameManifestUrl(currentManifestUrl, run.manifestUrl);
+          return (
+            <a
+              key={run.id}
+              className={active ? "recent-run-chip active" : "recent-run-chip"}
+              href={recentRunHref(run, replayViewMode, pathname)}
+              aria-current={active ? "page" : undefined}
+              title={run.clip}
+              role="listitem"
+            >
+              <span className="recent-run-name">{run.label}</span>
+              <span className="recent-run-meta">{run.runLabel}</span>
+              <span className="recent-run-time">{run.updatedLabel}</span>
+            </a>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
 export function MeshDebugReadout({ snapshot }: { snapshot: BodyMeshDebugSnapshot }) {
   const players = snapshot.players
     .map((player) => {
@@ -1119,6 +1334,7 @@ export function MeshDebugReadout({ snapshot }: { snapshot: BodyMeshDebugSnapshot
     `window=${snapshot.active_window_id ?? "none"}`,
     `load=${snapshot.load_state}`,
     `rendered=${snapshot.rendered_player_count}`,
+    `floorGuards=${snapshot.alignment_floor_guard_count}`,
     players,
   ]
     .filter(Boolean)
@@ -1133,6 +1349,7 @@ export function MeshDebugReadout({ snapshot }: { snapshot: BodyMeshDebugSnapshot
 export function ViewLayerPanel({
   viewState,
   playerIds,
+  displayFps,
   onToggleLayer,
   onBallFocus,
   onPlayerFocus,
@@ -1141,6 +1358,12 @@ export function ViewLayerPanel({
 }: {
   viewState: ViewState;
   playerIds: number[];
+  displayFps?: {
+    enabled: boolean;
+    processing: boolean;
+    readout: string;
+    onToggle: () => void;
+  };
   onToggleLayer: (layer: ViewLayerKey) => void;
   onBallFocus: () => void;
   onPlayerFocus: (playerId: number) => void;
@@ -1148,6 +1371,7 @@ export function ViewLayerPanel({
   onResetView: () => void;
 }) {
   const groups = groupLayerDefinitions(VIEW_LAYER_DEFINITIONS);
+  const debugDefinitions = groups.find(([group]) => group === "Debug")?.[1] ?? [];
   return (
     <div className="layer-panel" aria-label="Layer controls">
       <div className="layer-panel-header">
@@ -1156,7 +1380,7 @@ export function ViewLayerPanel({
           Reset
         </button>
       </div>
-      {groups.map(([group, definitions]) => (
+      {groups.filter(([group]) => group !== "Debug").map(([group, definitions]) => (
         <div key={group} className="layer-group">
           <span className="layer-group-title">{group}</span>
           <div className="layer-buttons">
@@ -1171,6 +1395,25 @@ export function ViewLayerPanel({
           </div>
         </div>
       ))}
+      {displayFps ? (
+        <div className="layer-group layer-fps-group">
+          <span className="layer-group-title">Playback</span>
+          <DisplayFpsControl {...displayFps} />
+        </div>
+      ) : null}
+      <details className="layer-group debug-layer-group">
+        <summary className="layer-group-title">Debug</summary>
+        <div className="layer-buttons">
+          {debugDefinitions.map((definition) => (
+            <LayerToggleButton
+              key={definition.key}
+              definition={definition}
+              pressed={viewState.layers[definition.key]}
+              onToggle={() => onToggleLayer(definition.key)}
+            />
+          ))}
+        </div>
+      </details>
       <div className="focus-group">
         <span className="layer-group-title">Isolate</span>
         <div className="focus-buttons">
@@ -1202,6 +1445,43 @@ export function ViewLayerPanel({
       </div>
     </div>
   );
+}
+
+export function DisplayFpsControl({
+  enabled,
+  processing,
+  readout,
+  onToggle,
+}: {
+  enabled: boolean;
+  processing: boolean;
+  readout: string;
+  onToggle: () => void;
+}) {
+  const badge = displayFpsBadgeText({ enabled, processing, readout });
+  return (
+    <div className="layer-fps-control" role="group" aria-label="Display FPS">
+      <button
+        type="button"
+        className={enabled ? "layer-toggle active" : "layer-toggle"}
+        aria-pressed={enabled}
+        onClick={onToggle}
+        title={readout}
+      >
+        2x FPS (interpolated)
+      </button>
+      <span className="display-fps-badge" aria-live="polite" title={readout}>
+        {badge}
+      </span>
+    </div>
+  );
+}
+
+function displayFpsBadgeText({ enabled, processing, readout }: { enabled: boolean; processing: boolean; readout: string }): string {
+  if (processing) return "processing";
+  if (!enabled) return "original";
+  const leading = readout.match(/^\d+fps display/)?.[0];
+  return leading ?? readout;
 }
 
 type ShotTrailFilterOptions = {
@@ -1929,13 +2209,14 @@ function SolidBodyMeshes({
 }) {
   return (
     <>
-      {meshes.map(({ playerId, meshPlayerId, frame, presenceOpacity }) => (
+      {meshes.map(({ playerId, meshPlayerId, frame, presenceOpacity, renderTranslation }) => (
         <SolidBodyMesh
-          key={`${playerId}-${frame.frame_idx}`}
+          key={solidBodyMeshRenderKey(playerId, frame)}
           playerId={playerId}
           meshPlayerId={meshPlayerId}
           frame={frame}
           presenceOpacity={presenceOpacity}
+          renderTranslation={renderTranslation}
           geometryCache={geometryCache}
           focusStyle={entityFocusStyle(viewState, { kind: "player", playerId })}
           onSelectPlayer={onSelectPlayer}
@@ -2046,6 +2327,7 @@ function SolidBodyMesh({
   meshPlayerId,
   frame,
   presenceOpacity,
+  renderTranslation,
   geometryCache,
   focusStyle,
   onSelectPlayer,
@@ -2054,6 +2336,7 @@ function SolidBodyMesh({
   meshPlayerId: number;
   frame: ActiveBodyMeshFrame["frame"];
   presenceOpacity: number;
+  renderTranslation: Vec3;
   geometryCache: SolidBodyMeshGeometryCache;
   focusStyle: EntityFocusStyle;
   onSelectPlayer: (playerId: number) => void;
@@ -2067,6 +2350,7 @@ function SolidBodyMesh({
   return (
     <mesh
       geometry={geometry}
+      position={renderTranslation}
       renderOrder={20}
       onClick={(event) => {
         event.stopPropagation();
@@ -2085,6 +2369,13 @@ function SolidBodyMesh({
       />
     </mesh>
   );
+}
+
+function solidBodyMeshRenderKey(playerId: number, frame: ActiveBodyMeshFrame["frame"]): string {
+  if (frame.mesh_interpolated && frame.interpolation) {
+    return `${playerId}-interp-${frame.interpolation.from_frame_idx}-${frame.interpolation.to_frame_idx}`;
+  }
+  return `${playerId}-${frame.frame_idx}`;
 }
 
 function BallTrail({

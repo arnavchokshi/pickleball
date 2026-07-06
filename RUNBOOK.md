@@ -1,6 +1,6 @@
 # Process Video Runbook
 
-Last updated: 2026-07-03.
+Last updated: 2026-07-05.
 
 `scripts/racketsport/process_video.py` is the current one-command pipeline for a
 video-to-scrubber bundle. It is the entrypoint future agents should start from
@@ -78,19 +78,29 @@ order is:
    plane, and court evidence. Calibration is the only hard dependency.
 3. **tracking** - run or reuse person tracks, optionally with raw-pool global
    association.
-4. **rally_gating** - optional loose rally-span gating before downstream work.
-5. **frames** - materialize BODY frames from tracks and planned mesh windows.
-6. **ball** - run/reuse ball track, bounce, and court in/out artifacts.
-7. **events** - fuse ball/audio/wrist cues into `contact_windows.json` and
+4. **placement** - project tracks into court/world placement when inputs exist.
+5. **rally_gating** - optional loose rally-span gating before downstream work.
+6. **frames** - materialize BODY frames from tracks and planned mesh windows.
+7. **ball** - run/reuse ball track, bounce, and court in/out artifacts.
+8. **ball_arc** - default 3D ball chain: auto-bounce anchors, arc solver, and
+   flight-sanity gate. Use `--no-ball-arc` to skip it.
+9. **events** - fuse ball/audio/wrist cues into `contact_windows.json` and
    `frame_compute_plan.json`.
-8. **body** - dispatch Fast SAM-3D-Body to the configured remote GPU path by
+10. **ball_fill** - render-honest fill from accepted ball arc/contact evidence.
+11. **body** - dispatch Fast SAM-3D-Body to the configured remote GPU path by
    default, run local BODY only with `--body-local`, or skip with `--no-gpu`.
-9. **grounding** - render-honest BODY grounding refinement when inputs exist.
-10. **world** - write `virtual_world.json` and `trust_bands.json`.
-11. **confidence** - write `confidence_gated_world.json` unless
+   RTMW/RTMW3D/RTMPose are retired; the pipeline is SAM-3D-Body only for
+   offline body joints/mesh because it is the more accurate path and current
+   optimizations made it equal-or-better speed.
+12. **placement_refine** - refine person placement from BODY/world evidence.
+13. **grounding** / **grounding_refine** - render-honest BODY grounding
+    refinement when inputs exist.
+14. **world** - write `virtual_world.json` and `trust_bands.json`.
+15. **confidence** / **confidence_gate** - write `confidence_gated_world.json`
+    unless
     `--no-confidence-gate` is set.
-12. **manifest** - write `replay_viewer_manifest.json` and optional point scene.
-13. **verify** - optional `--verify-viewer` headless web viewer check.
+16. **manifest** - write `replay_viewer_manifest.json` and optional point scene.
+17. **verify** - optional `--verify-viewer` headless web viewer check.
 
 ## Important Flags
 
@@ -105,8 +115,10 @@ order is:
 | `--skip-audio` | Omit audio onsets from contact fusion. |
 | `--rally-gating` | Opt into loose rally-span gating and preserve pre-gating copies. |
 | `--mesh-coverage-mode ball_aware` | Default mesh scheduling policy. Uses physically validated ball/contact/proximity triggers, not low-confidence wrist cues alone. |
+| `--body-schedule {serial,overlap}` | BODY scheduling mode. `serial` is the conservative default; `overlap` overlaps CPU pipeline work with remote BODY dispatch and needs fresh run-specific proof. |
 | `--no-gpu` | Skip live tracking/pose/BODY unless reuse artifacts are supplied. |
 | `--body-local` | Run BODY in-process on a GPU host instead of remote dispatch. |
+| `--fetch-body-monoliths` | Opt into fetching/writing the large `smpl_motion.json` and `body_mesh.json` monoliths. Default runs fetch `body_mesh_index/` for replay review instead. |
 | `--no-grounding-refine` | Skip BODY grounding refinement. |
 | `--no-confidence-gate` | Point viewer at raw `virtual_world.json`. |
 | `--no-scene-points` | Skip point GLB scene generation. |
@@ -114,6 +126,8 @@ order is:
 | `--no-ball-arc` | Skip the default ball 3D arc stage (auto-bounce anchors -> arc solver -> flight-sanity gate). |
 | `--ball-candidates` | Reuse existing `ball_candidates.json` top-K detector sidecars (repeatable). Emitted by default when ball inference runs. |
 | `--no-ball-candidates` | Disable default top-K candidate sidecar emission during ball inference. |
+| `--wasb-checkpoint` | Explicit WASB checkpoint path for ball inference. Missing or stale runtime config should fail closed, not silently promote. |
+| `--wasb-repo` | Explicit WASB repo/runtime path for ball inference. |
 | `--json` | Print the full summary JSON instead of a human table. |
 
 ## Remote BODY Runtime
@@ -123,6 +137,13 @@ remote dispatch is the default BODY path unless `--body-local` or `--no-gpu` is 
 The remote path is operational plumbing plus model execution. A completed remote
 run can still be `partial`, skeleton-only, or gated by downstream trust bands, so
 these flags are not promotion evidence by themselves.
+
+The July 2026 A100 runtime is reset-pending during winddown. Before using any
+remote BODY command, recheck SSH connectivity, disk, `nvidia-smi`, and the
+shared GPU lock instead of assuming a named VM is live.
+
+There is no RTMW fallback in this path. If SAM-3D-Body is unavailable, BODY is
+missing/partial rather than replaced by legacy pose output.
 
 | Flag | Effect |
 |---|---|
@@ -136,6 +157,7 @@ these flags are not promotion evidence by themselves.
 | `--remote-command-timeout-s` | Maximum wall-clock time for the remote BODY command after the lock is held. |
 | `--sam3d-body-input-size-px` | BODY input-size benchmark/runtime knob. Changing it creates a new run condition. |
 | `--sam3d-crop-bucket-sizes` | Cross-frame crop bucket sizes used by the SAM3D body-mode path. |
+| `--no-sam3d-wrist-bone-lock` | Disable the default wrist-bone lock. Use only for controlled ablations. |
 | `--no-sam3d-torch-compile` | Disable `torch.compile` for the SAM3D body-mode decoder path. |
 | `--sam3d-compile-warmup-buckets` | Bucket sizes warmed before timing or running compiled SAM3D decode. |
 | `--serialize-tier2-mesh-vertices` | Debug/storage-heavy override that serializes tier-2 mesh vertices instead of joints-only tier-2 output. |
@@ -158,8 +180,11 @@ Common outputs include:
 - `ball_flight_sanity.json` and `ball_bounce_candidates.json` (default ball-arc stage)
 - `contact_windows.json`
 - `frame_compute_plan.json`
-- `smpl_motion.json`
-- `body_mesh.json`
+- `body_mesh_index/body_mesh_index.json` and chunked mesh files
+- `body_stage_phase_timing.json`
+- `body_full_clip_gate.json`
+- `smpl_motion.json` only when `--fetch-body-monoliths` is requested
+- `body_mesh.json` only when `--fetch-body-monoliths` is requested
 - `virtual_world.json`
 - `confidence_gated_world.json`
 - `trust_bands.json`

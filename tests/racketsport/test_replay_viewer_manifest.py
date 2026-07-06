@@ -285,6 +285,42 @@ def test_replay_viewer_manifest_links_optional_review_coaching_and_rally_artifac
     assert manifest["rally_spans_url"].endswith("/rally_spans.json")
 
 
+def test_replay_viewer_manifest_links_ball_arc_render_artifact(tmp_path: Path) -> None:
+    run_dir = tmp_path / "clip_a"
+    video = run_dir / "video.mp4"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"video")
+    virtual_world = _write_json(run_dir / "virtual_world.json", {"artifact_type": "racketsport_virtual_world"})
+    ball_arc_render = _write_json(
+        run_dir / "ball_arc_render.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_ball_arc_render",
+            "clip_id": "clip_a",
+            "source_artifact": "ball_track_arc_solved.json",
+            "solver_status": "ran",
+            "render_only": True,
+            "not_for_detection_metrics": True,
+            "trusted_for_ball_detection_metrics": False,
+            "segments": [],
+            "bridges": [],
+            "samples": [],
+            "summary": {"segment_count": 0, "sample_count": 0, "bridge_sample_count": 0, "rally_span_count": 0},
+        },
+    )
+
+    manifest = build_replay_viewer_manifest(
+        clip="clip_a",
+        video_path=video,
+        virtual_world_path=virtual_world,
+        ball_arc_render_path=ball_arc_render,
+        vite_allow_root=tmp_path,
+    )
+
+    assert manifest["ball_arc_render_url"].endswith("/ball_arc_render.json")
+    assert isinstance(ReplayViewerManifest.model_validate(manifest), ReplayViewerManifest)
+
+
 def test_replay_viewer_manifest_cli_writes_optional_review_coaching_and_rally_urls(tmp_path: Path) -> None:
     run_dir = tmp_path / "clip_a"
     video = run_dir / "video.mp4"

@@ -17,6 +17,7 @@ ModelStatus = Literal[
     "pending_auth",
     "pending_benchmark",
     "fallback_only",
+    "retired",
 ]
 
 CommercialPosture = Literal[

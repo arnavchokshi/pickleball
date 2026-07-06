@@ -147,6 +147,7 @@ def test_body_stage_phase_timing_schema_round_trips_optional_not_instrumentable_
         "subprocess_wrapper_handoff_s": 0.2,
         "mesh_smpl_payload_assembly_s": 0.7,
         "smpl_motion_payload_assembly_s": 0.5,
+        "array_native_gate_feed_s": 0.4,
         "mesh_export_payload_assembly_s": 0.2,
         "index_build_s": 0.9,
         "ms_per_person_steady": 333.33,
@@ -166,6 +167,7 @@ def test_body_stage_phase_timing_schema_round_trips_optional_not_instrumentable_
     assert parsed.person_frame_count == 12
     assert parsed.compile_warmup_s is None
     assert parsed.index_build_s == pytest.approx(0.9)
+    assert parsed.array_native_gate_feed_s == pytest.approx(0.4)
     assert parsed.per_bucket_timing[0]["bucket_size"] == 8
 
 
@@ -500,6 +502,10 @@ def test_smpl_motion_frame_accepts_raw_track_anchor() -> None:
                             "grf": None,
                             "confidence_provenance": {"band": "physics_corrected"},
                             "body_grounding_refinement": {"correction_magnitude_m": 0.02},
+                            "temporal_smoothing_metadata": {
+                                "reset_reason": "sparse_output_gap",
+                                "gap": {"status": "reset", "missing_frame_count": 11},
+                            },
                         }
                     ],
                     "skate_free": True,
@@ -512,6 +518,10 @@ def test_smpl_motion_frame_accepts_raw_track_anchor() -> None:
     assert parsed.players[0].frames[0].track_world_xy == [1.25, -2.5]
     assert parsed.body_grounding_refinement == {"status": "ran"}
     assert parsed.players[0].frames[0].confidence_provenance == {"band": "physics_corrected"}
+    assert parsed.players[0].frames[0].temporal_smoothing_metadata == {
+        "reset_reason": "sparse_output_gap",
+        "gap": {"status": "reset", "missing_frame_count": 11},
+    }
 
 
 def test_skeleton3d_accepts_real_lane_a_world_joints() -> None:
@@ -538,6 +548,9 @@ def test_skeleton3d_accepts_real_lane_a_world_joints() -> None:
                             "joint_conf": [0.99, 0.95, 0.94],
                             "confidence_provenance": {"band": "physics_corrected_warn"},
                             "body_grounding_refinement": {"correction_magnitude_m": 0.2},
+                            "temporal_smoothing_metadata": {
+                                "residual": {"status": "carried", "pre_reset_anchor_residual_m": 0.24}
+                            },
                         }
                     ],
                 }
@@ -549,6 +562,9 @@ def test_skeleton3d_accepts_real_lane_a_world_joints() -> None:
     assert parsed.body_grounding_refinement == {"status": "ran"}
     assert parsed.players[0].frames[0].transl_world == [0.1, 0.2, 0.3]
     assert parsed.players[0].frames[0].confidence_provenance == {"band": "physics_corrected_warn"}
+    assert parsed.players[0].frames[0].temporal_smoothing_metadata == {
+        "residual": {"status": "carried", "pre_reset_anchor_residual_m": 0.24}
+    }
 
 
 def test_skeleton3d_accepts_plausibility_fields_on_failed_run_frame_shape() -> None:

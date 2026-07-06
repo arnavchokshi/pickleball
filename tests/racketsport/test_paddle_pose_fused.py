@@ -711,3 +711,196 @@ def test_detector_box_channel_reports_reason_when_calibration_invalid() -> None:
     box_info = out["players"][0]["segments"][0]["detector_box"]
     assert box_info["used"] is False
     assert "invalid_calibration" in box_info["reason"]
+
+
+# --------------------------------------------------------------------------------------
+# Hand-switch intervals (detector-box votes; >=2s hysteresis) and reprojection roll solve
+# --------------------------------------------------------------------------------------
+
+
+def test_hand_intervals_switch_on_sustained_majority_and_resist_blips() -> None:
+    from threed.racketsport.paddle_pose_fused import _hand_intervals_from_box_votes
+
+    votes = []
+    t = 0.0
+    for _ in range(60):  # 2s right votes
+        votes.append((t, "right")); t += 1.0 / 30.0
+    for _ in range(9):  # 0.3s left blip: must NOT switch
+        votes.append((t, "left")); t += 1.0 / 30.0
+    for _ in range(30):
+        votes.append((t, "right")); t += 1.0 / 30.0
+    switch_t = t
+    for _ in range(90):  # 3s sustained left: must switch
+        votes.append((t, "left")); t += 1.0 / 30.0
+
+    intervals, evidence = _hand_intervals_from_box_votes(votes, initial_side="right", min_hold_s=2.0)
+    sides = [side for _a, _b, side in intervals]
+    assert sides == ["right", "left"]
+    assert intervals[0][1] == pytest.approx(switch_t, abs=0.5)
+    assert evidence["interval_count"] == 2
+    assert len(evidence["switches"]) == 1
+    assert evidence["switches"][0]["reason"] == "sustained_majority"
+
+
+def test_hand_intervals_opening_window_majority_overrides_wrong_initial_side() -> None:
+    from threed.racketsport.paddle_pose_fused import _hand_intervals_from_box_votes
+
+    votes = [(i / 30.0, "left") for i in range(90)]
+    intervals, evidence = _hand_intervals_from_box_votes(votes, initial_side="right", min_hold_s=2.0)
+    assert [side for _a, _b, side in intervals] == ["left"]
+    assert evidence["switches"][0]["reason"] == "opening_window_majority"
+
+
+def test_grip_roll_solve_recovers_synthetic_roll_against_boxes() -> None:
+    from threed.racketsport.court_calibration import project_world_points
+    from threed.racketsport.paddle_pose_fused import (
+        _gated_boxes_by_frame,
+        _paddle_footprint_local,
+        _project_paddle_bbox,
+        _solve_grip_roll_against_boxes,
+    )
+    from threed.racketsport.schemas import CourtCalibration
+
+    calibration = CourtCalibration.model_validate(_synthetic_calibration())
+    dims = {"length": 16.0, "width": 8.0}
+    true_roll_deg = 45.0
+    true_r_g = Rotation.from_euler("y", true_roll_deg, degrees=True).as_matrix()
+    t_g = np.array([0.0, 0.3, 0.0])
+    footprint = _paddle_footprint_local(dims)
+
+    samples = []
+    detector_records = []
+    for i in range(12):
+        wrist = np.array([0.0, 0.0, 5.0])
+        hand_rotation = Rotation.from_euler("z", 5.0 * i, degrees=True).as_matrix()
+        sample = _HandFrame(
+            t=i / 30.0,
+            frame_idx=i,
+            wrist=wrist,
+            rotation=hand_rotation,
+            z_candidate_raw=hand_rotation[:, 2],
+            joint_confidence=0.9,
+            used_finger_grip_axis=True,
+            used_finger_palm_normal=True,
+        )
+        samples.append(sample)
+        # Detector box = exact bbox of the TRUE-roll paddle footprint.
+        true_bbox = _project_paddle_bbox(
+            hand_rotation @ true_r_g, wrist + hand_rotation @ t_g, footprint, calibration, project_world_points
+        )
+        assert true_bbox is not None
+        detector_records.append((i, tuple(true_bbox), 0.9))
+
+    gated = _gated_boxes_by_frame(
+        detector_records, samples, calibration, project_world_points, wrist_gate_radius_px=400.0
+    )
+    solved, info = _solve_grip_roll_against_boxes(
+        samples,
+        r_g=np.eye(3),
+        t_g=t_g,
+        gated_boxes=gated,
+        dims=dims,
+        calibration_model=calibration,
+        project_world_points=project_world_points,
+    )
+    assert info["applied"] is True
+    # Coordinate-descent grid resolution is 7.5 deg; recovered roll must be within one step.
+    assert abs(info["roll_deg"] - true_roll_deg) <= 7.5 + 1e-9
+    assert np.max(np.abs(solved.T @ solved - np.eye(3))) < 1e-9
+
+
+# --------------------------------------------------------------------------------------
+# I1c: deviation slew limit, position jump clamp, membership per_player verdicts,
+# distinct fused trust-band wording
+# --------------------------------------------------------------------------------------
+
+
+def test_per_frame_deviation_is_slew_limited_to_1cm_per_frame() -> None:
+    from threed.racketsport.court_calibration import project_world_points
+    from threed.racketsport.paddle_pose_fused import _ComposedFrame, _per_frame_box_deviation
+    from threed.racketsport.schemas import CourtCalibration
+
+    calibration = CourtCalibration.model_validate(_synthetic_calibration())
+    # A far-off detector box demands a large correction; the deviation may only add <=1cm/frame.
+    composed = [
+        _ComposedFrame(
+            t=i / 30.0,
+            frame_idx=i,
+            rotation=np.eye(3),
+            translation=np.array([0.0, 0.0, 5.0]),
+            used_finger_palm_normal=True,
+            joint_confidence=0.9,
+        )
+        for i in range(10)
+    ]
+    baseline = [frame.translation.copy() for frame in composed]
+    gated = {i: [((700.0, 280.0, 740.0, 320.0), 0.9)] for i in range(10)}
+    samples = []  # unused by the deviation routine
+    info = _per_frame_box_deviation(
+        samples,
+        composed,
+        gated_boxes=gated,
+        calibration_model=calibration,
+        project_world_points=project_world_points,
+        max_deviation_m=0.25,
+        decay=0.85,
+        slew_m_per_frame=0.01,
+    )
+    assert info["slew_m_per_frame"] == 0.01
+    added = [np.linalg.norm(frame.translation - base) for frame, base in zip(composed, baseline)]
+    # Deviation magnitude may grow by at most slew per frame.
+    assert added[0] <= 0.01 + 1e-9
+    for previous, current in zip(added, added[1:]):
+        assert current - previous <= 0.01 + 1e-9
+
+
+def test_output_position_jump_clamped_outside_declared_switches() -> None:
+    # A raw wrist teleport (2 m in one frame) must not produce a >0.30 m one-frame jump in the
+    # output when it is not a declared hand switch.
+    frames = []
+    for i in range(20):
+        wrist = (0.0, 0.0, 1.0) if i != 10 else (2.0, 0.0, 1.0)
+        middle = (wrist[0], 0.1, 1.0)
+        index_pt = (wrist[0] + 0.05, 0.05, 1.0)
+        pinky = (wrist[0] - 0.05, 0.05, 1.0)
+        elbow = (wrist[0], -0.3, 1.0)
+        frames.append(_frame(i / 30.0, wrist=wrist, elbow=elbow, middle=middle, index_pt=index_pt, pinky=pinky))
+    out = build_paddle_pose_fused_from_skeleton(_skeleton(frames), clip_id="synthetic")
+    player = out["players"][0]
+    positions = [np.array(f["pose_se3"]["t"]) for f in sorted(player["frames"], key=lambda f: f["t"])]
+    deltas = [float(np.linalg.norm(b - a)) for a, b in zip(positions, positions[1:])]
+    assert player["declared_hand_switch_times"] == []
+    assert max(deltas) <= 0.30 + 1e-6
+    assert player["position_jump_clamped_frame_count"] > 0
+
+
+def test_membership_per_player_adjacent_or_spectator_is_excluded() -> None:
+    frames = [_frame(i / 30.0) for i in range(3)]
+    skeleton = _skeleton(frames, player_id=3)
+    membership = {"per_player": {"3": {"verdict": "adjacent_or_spectator"}}}
+    out = build_paddle_pose_fused_from_skeleton(skeleton, clip_id="synthetic", membership=membership)
+    player = out["players"][0]
+    assert player["frames"] == []
+    assert player.get("membership_excluded") is True
+    # "uncertain" and "on_target_court" must NOT exclude.
+    for verdict in ("uncertain", "on_target_court"):
+        out2 = build_paddle_pose_fused_from_skeleton(
+            skeleton, clip_id="synthetic", membership={"per_player": {"3": {"verdict": verdict}}}
+        )
+        assert len(out2["players"][0]["frames"]) == 3
+
+
+def test_fused_trust_band_wording_is_distinct_from_wrist_proxy() -> None:
+    frames = [_frame(i / 30.0) for i in range(2)]
+    out = build_paddle_pose_fused_from_skeleton(_skeleton(frames), clip_id="synthetic")
+    top = out["trust_band"]
+    assert top["gate_id"] == "wrist_palm_grip_fused_estimated_paddle"
+    assert top["gate_status"] == "estimated_from_wrist"  # stays a status virtual_world recognizes
+    assert "fused" in top["reason"].lower()
+    assert "wrist_proxy" not in top["gate_id"]
+    frame = out["players"][0]["frames"][0]
+    band = frame["trust_band"]
+    assert band["gate_id"] == "wrist_palm_grip_fused_estimated_paddle"
+    assert band["status"] == "estimated_from_wrist"
+    assert band["gate_status"] == "estimated_from_wrist"
+    assert "not the legacy wrist proxy" in band["reason"].lower()

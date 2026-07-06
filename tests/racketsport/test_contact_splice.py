@@ -6,7 +6,7 @@ from copy import deepcopy
 
 import pytest
 
-from threed.racketsport.pose_fast import LANE_A_RTMW3D_JOINT_NAMES
+from threed.racketsport.joint_schema import BODY65_JOINT_NAMES
 from threed.racketsport.skeleton3d import SAM3D_BODY_MHR70_SEMANTIC_MAP
 
 
@@ -18,14 +18,14 @@ def _splice_func():
 
 
 def _skeleton3d() -> dict:
-    joints = [[float(idx), 0.0, 1.0] for idx in range(len(LANE_A_RTMW3D_JOINT_NAMES))]
+    joints = [[float(idx), 0.0, 1.0] for idx in range(len(BODY65_JOINT_NAMES))]
     return {
         "schema_version": 1,
         "artifact_type": "racketsport_skeleton3d",
         "fps": 30.0,
         "world_frame": "court_Z0",
-        "source_model": "rtmw3d_x",
-        "joint_names": list(LANE_A_RTMW3D_JOINT_NAMES),
+        "source_model": "sam3d_body_joints",
+        "joint_names": list(BODY65_JOINT_NAMES),
         "preview_only": False,
         "players": [
             {
@@ -139,15 +139,15 @@ def test_contact_splice_keeps_lane_a_skeleton_and_flags_missing_mesh() -> None:
 
 def test_contact_splice_uses_explicit_skeleton_fallback_when_mesh_is_unavailable() -> None:
     splice = _splice_func()
-    fallback_joints = [[float(idx), 1.0, 1.5] for idx in range(len(LANE_A_RTMW3D_JOINT_NAMES))]
+    fallback_joints = [[float(idx), 1.0, 1.5] for idx in range(len(BODY65_JOINT_NAMES))]
     fallback_conf = [0.77] * len(fallback_joints)
     fallback = {
         "schema_version": 1,
         "artifact_type": "racketsport_skeleton3d",
         "fps": 30.0,
         "world_frame": "court_Z0",
-        "source_model": "rtmw3d_x_body_fallback",
-        "joint_names": list(LANE_A_RTMW3D_JOINT_NAMES),
+        "source_model": "sam3d_body_joints_fallback",
+        "joint_names": list(BODY65_JOINT_NAMES),
         "preview_only": False,
         "players": [
             {

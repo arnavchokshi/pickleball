@@ -303,7 +303,7 @@ def test_sam3d_plausibility_annotations_validate_through_skeleton3d_schema() -> 
 
 def test_sam3d_postprocess_rejects_non_sam3d_skeleton() -> None:
     skeleton = _load_fixture()
-    skeleton["source_model"] = "rtmw3d_x"
+    skeleton["source_model"] = "legacy_body65_joints"
 
     with pytest.raises(ValueError, match="SAM-3D"):
         refine_sam3d_skeleton3d(skeleton)

@@ -21,7 +21,7 @@ def _skeleton(*, height_m: float = 1.62) -> dict:
         "schema_version": 1,
         "artifact_type": "racketsport_skeleton3d",
         "fps": 30.0,
-        "source_model": "rtmw3d_x",
+        "source_model": "sam3d_body_joints",
         "world_frame": "court_Z0",
         "preview_only": False,
         "joint_names": ["nose", "left_hip", "right_hip", "left_ankle", "right_ankle", "left_big_toe", "right_big_toe"],

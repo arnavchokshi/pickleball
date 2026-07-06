@@ -28,9 +28,11 @@ from .foot_contact import (
     measure_contact_metrics,
 )
 from .foot_pin import FootPinSettings, apply_foot_pin_to_payload
-from .pose_temporal import apply_sam3d_wrist_bone_lock, refine_sam3d_skeleton3d
+from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
+from .pose_temporal import apply_sam3d_wrist_bone_lock, compare_wrist_peak_timing, refine_sam3d_skeleton3d
 from .schemas import CourtCalibration
 from .skeleton_upright import ROTATION_CONVENTION_OFFSET_ROW_TIMES_R, rotate_camera_offsets_row_times_R
+from .visual_quality import estimate_integer_lag_frames
 
 
 SCAFFOLD_NOTE = "cpu_worldhmr_primitives_no_sam3dbody_integration"
@@ -52,6 +54,25 @@ STANCE_AWARE_PHASE_ANCHOR_DRIFT_SPLIT_M = 0.25
 FOOT_LOCK_MAX_XY_CORRECTION_M = 0.02
 REFINED_STANCE_FOOT_PIN_MAX_CORRECTION_M = 0.30
 CAMERA_MOTION_ARTIFACT = "camera_motion.json"
+DEFAULT_SMOOTHING_GAP_CARRY_FRAMES = 8
+DEFAULT_SMOOTHING_RESIDUAL_IDENTITY_RESET_M = 1.0
+WORLD_JOINT_VISUAL_SMOOTHING_WEIGHTS = (0.30, 0.40, 0.30)
+WORLD_JOINT_VISUAL_SMOOTHING_BONE_PAIRS = (
+    ("left_shoulder", "left_elbow"),
+    ("left_elbow", "left_wrist"),
+    ("right_shoulder", "right_elbow"),
+    ("right_elbow", "right_wrist"),
+    ("left_hip", "left_knee"),
+    ("left_knee", "left_ankle"),
+    ("right_hip", "right_knee"),
+    ("right_knee", "right_ankle"),
+    ("left_ankle", "left_big_toe_tip"),
+    ("left_ankle", "left_small_toe_tip"),
+    ("left_ankle", "left_heel"),
+    ("right_ankle", "right_big_toe_tip"),
+    ("right_ankle", "right_small_toe_tip"),
+    ("right_ankle", "right_heel"),
+)
 SAM3D_FOOT_KEYPOINT_INDICES = {
     "left_ankle": 13,
     "right_ankle": 14,
@@ -114,6 +135,15 @@ class _CameraMotionContext:
     frames: dict[int, _CameraMotionObservation]
     artifact_frame_count: int
     artifact_compensated_frame_count: int
+
+
+@dataclass(frozen=True)
+class BodySkeletonAndMetrics:
+    """Shared BODY joint-compute result before optional monolith assembly."""
+
+    smpl_motion_view: dict[str, Any]
+    skeleton3d: dict[str, Any]
+    metrics: dict[str, Any]
 
 
 def snap_player_translation_to_court(
@@ -218,8 +248,53 @@ def build_body_artifacts_from_fast_sam(
     stance_index: Mapping[tuple[int | str, int], Mapping[str, Any]] | None = None,
     grounding_anchor_source: str | None = None,
     camera_motion_path: str | Path | None = None,
+    smoothing_gap_carry_frames: int = DEFAULT_SMOOTHING_GAP_CARRY_FRAMES,
+    smoothing_residual_identity_reset_m: float = DEFAULT_SMOOTHING_RESIDUAL_IDENTITY_RESET_M,
+    world_joint_visual_smoothing: bool = True,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Build BODY contract artifacts from real Fast SAM-3D-Body outputs."""
+
+    computed = compute_body_skeleton_and_metrics(
+        samples,
+        calibration=calibration,
+        fps=fps,
+        smoothing_alpha=smoothing_alpha,
+        max_root_speed_mps=max_root_speed_mps,
+        max_track_anchor_smoothing_residual_m=max_track_anchor_smoothing_residual_m,
+        model=model,
+        sam3d_wrist_bone_lock=sam3d_wrist_bone_lock,
+        stance_index=stance_index,
+        grounding_anchor_source=grounding_anchor_source,
+        camera_motion_path=camera_motion_path,
+        smoothing_gap_carry_frames=smoothing_gap_carry_frames,
+        smoothing_residual_identity_reset_m=smoothing_residual_identity_reset_m,
+        world_joint_visual_smoothing=world_joint_visual_smoothing,
+    )
+    return assemble_body_monolith_payloads(
+        computed.smpl_motion_view,
+        computed.skeleton3d,
+        computed.metrics,
+    )
+
+
+def compute_body_skeleton_and_metrics(
+    samples: Sequence[Mapping[str, Any]],
+    *,
+    calibration: CourtCalibration,
+    fps: float,
+    smoothing_alpha: float = 0.65,
+    max_root_speed_mps: float | None = None,
+    max_track_anchor_smoothing_residual_m: float | None = None,
+    model: str = "sam3dbody_world_joints",
+    sam3d_wrist_bone_lock: bool = True,
+    stance_index: Mapping[tuple[int | str, int], Mapping[str, Any]] | None = None,
+    grounding_anchor_source: str | None = None,
+    camera_motion_path: str | Path | None = None,
+    smoothing_gap_carry_frames: int = DEFAULT_SMOOTHING_GAP_CARRY_FRAMES,
+    smoothing_residual_identity_reset_m: float = DEFAULT_SMOOTHING_RESIDUAL_IDENTITY_RESET_M,
+    world_joint_visual_smoothing: bool = True,
+) -> BodySkeletonAndMetrics:
+    """Compute shared BODY skeleton, joint metrics, and light SMPL motion view."""
 
     if fps <= 0.0:
         raise ValueError("fps must be positive")
@@ -229,6 +304,10 @@ def build_body_artifacts_from_fast_sam(
         raise ValueError("max_root_speed_mps must be positive when provided")
     if max_track_anchor_smoothing_residual_m is not None and max_track_anchor_smoothing_residual_m <= 0.0:
         raise ValueError("max_track_anchor_smoothing_residual_m must be positive when provided")
+    if smoothing_gap_carry_frames < 0:
+        raise ValueError("smoothing_gap_carry_frames must be non-negative")
+    if smoothing_residual_identity_reset_m <= 0.0:
+        raise ValueError("smoothing_residual_identity_reset_m must be positive")
     if not samples:
         raise ValueError("at least one Fast SAM-3D-Body sample is required")
     camera_motion, camera_motion_warnings = _load_camera_motion_context(camera_motion_path)
@@ -261,6 +340,7 @@ def build_body_artifacts_from_fast_sam(
             fps=fps,
             max_root_speed_mps=max_root_speed_mps,
             max_track_anchor_smoothing_residual_m=max_track_anchor_smoothing_residual_m,
+            smoothing_residual_identity_reset_m=smoothing_residual_identity_reset_m,
         )
     else:
         smoothed, smoothing_metrics = _smooth_grounded_frames(
@@ -268,6 +348,7 @@ def build_body_artifacts_from_fast_sam(
             alpha=smoothing_alpha,
             max_root_speed_mps=max_root_speed_mps,
             max_track_anchor_smoothing_residual_m=max_track_anchor_smoothing_residual_m,
+            smoothing_residual_identity_reset_m=smoothing_residual_identity_reset_m,
         )
     mesh_faces = _common_mesh_faces(smoothed)
     players: list[dict[str, Any]] = []
@@ -281,6 +362,7 @@ def build_body_artifacts_from_fast_sam(
             max_root_speed_mps=None if stance_aware_grounding else max_root_speed_mps,
             xy_translation_enabled=not stance_aware_grounding,
             max_allowed_xy_correction_m=FOOT_LOCK_MAX_XY_CORRECTION_M if stance_aware_grounding else None,
+            smoothing_gap_carry_frames=smoothing_gap_carry_frames,
         )
         foot_lock_player_summaries.append(foot_lock_summary)
         betas = _first_list(player_frames, "betas")
@@ -302,7 +384,7 @@ def build_body_artifacts_from_fast_sam(
                         "track_world_xy": list(frame["track_world_xy"]),
                         "temporal_smoothing_reset": bool(frame["temporal_smoothing_reset"]),
                         "joints_world": [list(joint) for joint in frame["joints_world"]],
-                        "mesh_vertices_world": [list(vertex) for vertex in frame["vertices_world"]],
+                        "mesh_vertices_world": frame["vertices_world"],
                         "joint_conf": [float(frame["confidence"])] * len(frame["joints_world"]),
                         "foot_contact": contact,
                         "foot_lock": frame["foot_lock"],
@@ -312,6 +394,7 @@ def build_body_artifacts_from_fast_sam(
                             "model": model,
                             "grounding_anchor_source": anchor_source,
                         },
+                        **_temporal_smoothing_metadata_export(frame),
                     }
                     for frame, contact in zip(player_frames, contact_by_frame)
                 ],
@@ -337,6 +420,7 @@ def build_body_artifacts_from_fast_sam(
                             "model": model,
                             "grounding_anchor_source": anchor_source,
                         },
+                        **_temporal_smoothing_metadata_export(frame),
                     }
                     for frame in player_frames
                 ],
@@ -386,8 +470,19 @@ def build_body_artifacts_from_fast_sam(
             smpl_motion,
             skeleton3d,
             fps=fps,
+            deep_copy_payload=False,
         )
         players = smpl_motion["players"]
+    mesh_vertices_by_key = _detach_smpl_motion_mesh_vertices(smpl_motion)
+    smpl_motion, skeleton3d, world_joint_visual_smoothing_metrics = _apply_world_joint_visual_smoothing(
+        smpl_motion,
+        skeleton3d,
+        fps=fps,
+        enabled=world_joint_visual_smoothing,
+        stance_index=stance_index,
+    )
+    _reattach_smpl_motion_mesh_vertices(smpl_motion, mesh_vertices_by_key)
+    players = smpl_motion["players"]
     sam3d_temporal_refine = dict(skeleton3d.get("provenance", {}).get("sam3d_temporal_refine", {}))
     sam3d_lock = dict(skeleton3d.get("provenance", {}).get("sam3d_wrist_bone_lock", {}))
     temporal_refine = dict(skeleton3d.get("provenance", {}).get("temporal_refine", {}))
@@ -413,6 +508,8 @@ def build_body_artifacts_from_fast_sam(
         ),
         "max_root_speed_mps": max_root_speed_mps,
         "max_track_anchor_smoothing_residual_m": max_track_anchor_smoothing_residual_m,
+        "smoothing_gap_carry_frames": smoothing_gap_carry_frames,
+        "smoothing_residual_identity_reset_m": smoothing_residual_identity_reset_m,
         **smoothing_metrics,
         "min_joint_z_m": min(
             (joint[2] for frame in smoothed for joint in frame["joints_world"]),
@@ -432,6 +529,12 @@ def build_body_artifacts_from_fast_sam(
         "foot_lock_xy_capped_frames": sum(
             int(summary.get("xy_capped_frames", 0)) for summary in foot_lock_player_summaries
         ),
+        "foot_lock_gap_carried_frames": sum(
+            int(summary.get("gap_carried_frames", 0)) for summary in foot_lock_player_summaries
+        ),
+        "foot_lock_gap_reset_frames": sum(
+            int(summary.get("gap_reset_frames", 0)) for summary in foot_lock_player_summaries
+        ),
         "max_foot_lock_slide_m": max(
             (float(summary["max_slide_m"]) for summary in foot_lock_player_summaries),
             default=0.0,
@@ -441,6 +544,7 @@ def build_body_artifacts_from_fast_sam(
             default=0.0,
         ),
         "foot_lock_skate_free_players": sum(1 for summary in foot_lock_player_summaries if summary["skate_free"]),
+        "world_joint_visual_smoothing": world_joint_visual_smoothing_metrics,
         "grf_frames": sum(
             1
             for player in players
@@ -451,7 +555,25 @@ def build_body_artifacts_from_fast_sam(
         **camera_motion_metrics,
     }
     metrics.update(refined_stance_metrics)
-    return smpl_motion, skeleton3d, metrics
+    return BodySkeletonAndMetrics(
+        smpl_motion_view=smpl_motion,
+        skeleton3d=skeleton3d,
+        metrics=metrics,
+    )
+
+
+def assemble_body_monolith_payloads(
+    smpl_motion_view: Mapping[str, Any],
+    skeleton3d: Mapping[str, Any],
+    metrics: Mapping[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Materialize JSON-safe legacy BODY monolith payloads from shared compute."""
+
+    return (
+        copy.deepcopy(dict(smpl_motion_view)),
+        copy.deepcopy(dict(skeleton3d)),
+        copy.deepcopy(dict(metrics)),
+    )
 
 
 def apply_sam3d_temporal_refine_gate(
@@ -503,10 +625,11 @@ def _apply_refined_stance_phase_lock_and_pin(
     skeleton3d: Mapping[str, Any],
     *,
     fps: float,
+    deep_copy_payload: bool = True,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     phases = _detect_refined_contact_phases(skeleton3d)
     if not phases:
-        return copy.deepcopy(dict(smpl_motion)), copy.deepcopy(dict(skeleton3d)), {
+        return _copy_body_payload(smpl_motion, deep=deep_copy_payload), copy.deepcopy(dict(skeleton3d)), {
             "refined_stance_phase_count": 0,
             "refined_stance_phase_split_count": 0,
             "foot_pin_phase_count": 0,
@@ -523,6 +646,7 @@ def _apply_refined_stance_phase_lock_and_pin(
         split_phases,
         track_xy_by_key=track_xy_by_key,
         translate_mesh=True,
+        deep_copy_payload=deep_copy_payload,
     )
     locked_skeleton, _unused = _apply_root_phase_median_lock_to_payload(
         skeleton3d,
@@ -765,8 +889,9 @@ def _apply_root_phase_median_lock_to_payload(
     *,
     track_xy_by_key: Mapping[tuple[str, int], Sequence[float]],
     translate_mesh: bool,
+    deep_copy_payload: bool = True,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    output = copy.deepcopy(dict(payload))
+    output = _copy_body_payload(payload, deep=deep_copy_payload)
     targets: dict[tuple[str, int], list[float]] = {}
     for phase in phases:
         xys = [
@@ -822,12 +947,30 @@ def _translate_frame_vectors(frame: MutableMapping[str, Any], field: str, *, dx:
     frame[field] = [[float(vector[0]) + dx, float(vector[1]) + dy, float(vector[2])] for vector in vectors]
 
 
+def _copy_body_payload(payload: Mapping[str, Any], *, deep: bool) -> dict[str, Any]:
+    if deep:
+        return copy.deepcopy(dict(payload))
+    output = dict(payload)
+    players: list[dict[str, Any]] = []
+    for player in payload.get("players", []):
+        if not isinstance(player, Mapping):
+            continue
+        player_copy = dict(player)
+        frames = player.get("frames")
+        if isinstance(frames, list):
+            player_copy["frames"] = [dict(frame) if isinstance(frame, Mapping) else frame for frame in frames]
+        players.append(player_copy)
+    output["players"] = players
+    return output
+
+
 def _apply_footlock_to_player_frames(
     frames: Sequence[dict[str, Any]],
     *,
     max_root_speed_mps: float | None = None,
     xy_translation_enabled: bool = True,
     max_allowed_xy_correction_m: float | None = None,
+    smoothing_gap_carry_frames: int = DEFAULT_SMOOTHING_GAP_CARRY_FRAMES,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     samples_by_joint: dict[int, list[FootKinematics]] = {}
     locked_xy_by_joint: dict[int, list[float]] = {}
@@ -841,20 +984,41 @@ def _apply_footlock_to_player_frames(
     root_speed_limited_frames = 0
     xy_capped_frames = 0
     max_observed_xy_correction_m = 0.0
+    gap_carried_frames = 0
+    gap_reset_frames = 0
 
     for frame in frames:
         frame_idx = int(frame["frame_idx"])
         sparse_output_reset = False
+        gap_metadata: dict[str, Any] | None = None
         if previous_frame_idx is not None and frame_idx > previous_frame_idx + 1:
-            for joint_idx, locked_xy in list(locked_xy_by_joint.items()):
-                _append_footlock_reset(samples_by_joint, joint_idx, locked_xy)
-            locked_xy_by_joint.clear()
-            previous_relative_by_joint.clear()
-            contact_by_joint.clear()
-            sparse_output_reset = True
+            missing_frames = frame_idx - previous_frame_idx - 1
+            gap_metadata = {
+                "previous_frame_idx": previous_frame_idx,
+                "frame_idx": frame_idx,
+                "missing_frame_count": missing_frames,
+                "carry_limit_frames": smoothing_gap_carry_frames,
+            }
+            if missing_frames <= smoothing_gap_carry_frames:
+                gap_carried_frames += 1
+                gap_metadata["status"] = "carried"
+            else:
+                for joint_idx, locked_xy in list(locked_xy_by_joint.items()):
+                    _append_footlock_reset(samples_by_joint, joint_idx, locked_xy)
+                locked_xy_by_joint.clear()
+                previous_relative_by_joint.clear()
+                contact_by_joint.clear()
+                sparse_output_reset = True
+                gap_reset_frames += 1
+                gap_metadata["status"] = "reset"
         previous_frame_idx = frame_idx
 
         snapped = dict(frame)
+        metadata = _temporal_smoothing_metadata(snapped)
+        if gap_metadata is not None:
+            metadata["gap"] = gap_metadata
+            if sparse_output_reset:
+                metadata["reset_reason"] = "sparse_output_gap"
         joints = [[float(value) for value in joint] for joint in frame["joints_world"]]
         vertices = [[float(value) for value in vertex] for vertex in frame["vertices_world"]]
         transl = [float(value) for value in frame["transl_world"]]
@@ -979,6 +1143,8 @@ def _apply_footlock_to_player_frames(
         if contact_sample_count:
             contact_frame_count += 1
         snapped["temporal_smoothing_reset"] = temporal_smoothing_reset
+        if metadata:
+            snapped["temporal_smoothing_metadata"] = metadata
         snapped["transl_world"] = transl
         snapped["joints_world"] = joints
         snapped["vertices_world"] = vertices
@@ -1002,6 +1168,8 @@ def _apply_footlock_to_player_frames(
         "root_speed_limited_frames": root_speed_limited_frames,
         "xy_translation_enabled": bool(xy_translation_enabled),
         "xy_capped_frames": xy_capped_frames,
+        "gap_carried_frames": gap_carried_frames,
+        "gap_reset_frames": gap_reset_frames,
         "max_xy_correction_m": max_observed_xy_correction_m,
         "max_allowed_xy_correction_m": max_allowed_xy_correction_m if max_allowed_xy_correction_m is not None else 0.0,
         "max_slide_m": max_slide_m,
@@ -1034,6 +1202,457 @@ def _smpl_foot_lock_summary(summary: Mapping[str, Any]) -> dict[str, Any]:
         "max_penetration_m": float(summary.get("max_penetration_m", 0.0)),
         "skate_free": bool(summary.get("skate_free", False)),
     }
+
+
+def _temporal_smoothing_metadata(frame: Mapping[str, Any]) -> dict[str, Any]:
+    raw = frame.get("temporal_smoothing_metadata")
+    return copy.deepcopy(dict(raw)) if isinstance(raw, Mapping) else {}
+
+
+def _temporal_smoothing_metadata_export(frame: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = frame.get("temporal_smoothing_metadata")
+    if not isinstance(metadata, Mapping) or not metadata:
+        return {}
+    return {"temporal_smoothing_metadata": copy.deepcopy(dict(metadata))}
+
+
+def _detach_smpl_motion_mesh_vertices(smpl_motion: MutableMapping[str, Any]) -> dict[tuple[int, int], Any]:
+    vertices_by_key: dict[tuple[int, int], Any] = {}
+    for player in smpl_motion.get("players", []) or []:
+        if not isinstance(player, Mapping):
+            continue
+        player_id = int(player.get("id", 0))
+        frames = player.get("frames")
+        if not isinstance(frames, list):
+            continue
+        for frame in frames:
+            if not isinstance(frame, MutableMapping):
+                continue
+            frame_idx = int(frame.get("frame_idx", round(float(frame.get("t", 0.0)) * float(smpl_motion.get("fps", 30.0)))))
+            vertices_by_key[(player_id, frame_idx)] = frame.pop("mesh_vertices_world", [])
+    return vertices_by_key
+
+
+def _reattach_smpl_motion_mesh_vertices(
+    smpl_motion: MutableMapping[str, Any],
+    vertices_by_key: Mapping[tuple[int, int], Any],
+) -> None:
+    for player in smpl_motion.get("players", []) or []:
+        if not isinstance(player, Mapping):
+            continue
+        player_id = int(player.get("id", 0))
+        frames = player.get("frames")
+        if not isinstance(frames, list):
+            continue
+        for frame in frames:
+            if not isinstance(frame, MutableMapping):
+                continue
+            frame_idx = int(frame.get("frame_idx", round(float(frame.get("t", 0.0)) * float(smpl_motion.get("fps", 30.0)))))
+            frame["mesh_vertices_world"] = vertices_by_key.get((player_id, frame_idx), [])
+
+
+def _apply_world_joint_visual_smoothing(
+    smpl_motion: Mapping[str, Any],
+    skeleton3d: Mapping[str, Any],
+    *,
+    fps: float,
+    enabled: bool = True,
+    stance_index: Mapping[tuple[int | str, int], Mapping[str, Any]] | None = None,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    smpl_out = copy.deepcopy(dict(smpl_motion))
+    skeleton_out = copy.deepcopy(dict(skeleton3d))
+    joint_names = _semantic_joint_names(skeleton_out.get("joint_names", []))
+    normalized_stance_index = _normalize_stance_index(stance_index or {})
+    metrics: dict[str, Any] = {
+        "enabled": bool(enabled),
+        "filter": "centered_three_tap",
+        "weights": list(WORLD_JOINT_VISUAL_SMOOTHING_WEIGHTS),
+        "frames_smoothed": 0,
+        "stance_lower_body_frames_protected": 0,
+        "limb_length_max_delta_m": 0.0,
+        "max_lag_frames": 0,
+        "max_wrist_peak_delta_frames": 0,
+    }
+    if not enabled:
+        return smpl_out, skeleton_out, metrics
+
+    index_by_name = _semantic_joint_index_by_name(joint_names)
+    total_smoothed = 0
+    max_limb_delta = 0.0
+    max_lag = 0
+    for payload in (smpl_out, skeleton_out):
+        for player in payload.get("players", []) or []:
+            if not isinstance(player, MutableMapping):
+                continue
+            frames = player.get("frames")
+            if not isinstance(frames, list) or len(frames) < 3:
+                continue
+            smoothed_joints, player_metrics = _smoothed_player_joints(
+                frames,
+                player_id=int(player.get("id", 0)),
+                joint_names=joint_names,
+                index_by_name=index_by_name,
+                stance_index=normalized_stance_index,
+            )
+            total_smoothed += int(player_metrics["frames_smoothed"])
+            metrics["stance_lower_body_frames_protected"] = int(metrics["stance_lower_body_frames_protected"]) + int(
+                player_metrics["stance_lower_body_frames_protected"]
+            )
+            max_limb_delta = max(max_limb_delta, float(player_metrics["limb_length_max_delta_m"]))
+            max_lag = max(max_lag, int(player_metrics["max_lag_frames"]))
+            for frame, joints in zip(frames, smoothed_joints, strict=True):
+                if joints is not None:
+                    frame["joints_world"] = joints
+
+    peak_restore_iterations = _restore_wrist_peak_timing_windows(
+        smpl_motion,
+        smpl_out,
+        skeleton3d,
+        skeleton_out,
+    )
+    wrist_timing = compare_wrist_peak_timing(
+        skeleton3d,
+        skeleton_out,
+        max_allowed_delta_frames=0,
+    )
+    metrics["frames_smoothed"] = total_smoothed
+    metrics["limb_length_max_delta_m"] = max_limb_delta
+    metrics["max_lag_frames"] = max_lag
+    metrics["wrist_peak_timing"] = wrist_timing
+    metrics["max_wrist_peak_delta_frames"] = int(wrist_timing.get("max_abs_delta_frames", 0) or 0)
+    metrics["wrist_peak_restore_iterations"] = peak_restore_iterations
+    provenance = dict(skeleton_out.get("provenance", {}))
+    provenance["worldhmr_visual_smoothing"] = metrics
+    skeleton_out["provenance"] = provenance
+    return smpl_out, skeleton_out, metrics
+
+
+def _restore_wrist_peak_timing_windows(
+    smpl_original: Mapping[str, Any],
+    smpl_out: MutableMapping[str, Any],
+    skeleton_original: Mapping[str, Any],
+    skeleton_out: MutableMapping[str, Any],
+) -> int:
+    joint_names = _semantic_joint_names(skeleton_out.get("joint_names", []))
+    index_by_name = _semantic_joint_index_by_name(joint_names)
+    iterations = 0
+    for _attempt in range(4):
+        timing = compare_wrist_peak_timing(
+            skeleton_original,
+            skeleton_out,
+            max_allowed_delta_frames=0,
+        )
+        if int(timing.get("max_abs_delta_frames", 0) or 0) == 0:
+            break
+        restore_plan: dict[tuple[int, int, int], set[int]] = {}
+        for comparison in timing.get("comparisons", []) or []:
+            if not isinstance(comparison, Mapping) or not comparison.get("abs_delta_frames"):
+                continue
+            player_id = int(comparison.get("player_id", 0))
+            wrist_name = str(comparison.get("joint_name", ""))
+            elbow_name = wrist_name.replace("_wrist", "_elbow")
+            joint_indices = {
+                idx
+                for idx in (index_by_name.get(wrist_name), index_by_name.get(elbow_name))
+                if idx is not None
+            }
+            frame_values = [comparison.get("before_frame"), comparison.get("after_frame")]
+            for raw_frame in frame_values:
+                if raw_frame is None:
+                    continue
+                frame_idx = int(raw_frame)
+                for neighbor in (frame_idx - 1, frame_idx, frame_idx + 1):
+                    for joint_idx in joint_indices:
+                        restore_plan.setdefault((player_id, neighbor, joint_idx), set()).add(joint_idx)
+        if not restore_plan:
+            break
+        _restore_joint_samples(skeleton_original, skeleton_out, restore_plan)
+        _restore_joint_samples(smpl_original, smpl_out, restore_plan)
+        iterations += 1
+    return iterations
+
+
+def _restore_joint_samples(
+    original_payload: Mapping[str, Any],
+    output_payload: MutableMapping[str, Any],
+    restore_plan: Mapping[tuple[int, int, int], set[int]],
+) -> None:
+    original_by_key: dict[tuple[int, int], Mapping[str, Any]] = {}
+    for player in original_payload.get("players", []) or []:
+        if not isinstance(player, Mapping):
+            continue
+        player_id = int(player.get("id", 0))
+        for frame in player.get("frames", []) or []:
+            if isinstance(frame, Mapping):
+                original_by_key[(player_id, int(frame.get("frame_idx", round(float(frame.get("t", 0.0)) * 30.0))))] = frame
+    for player in output_payload.get("players", []) or []:
+        if not isinstance(player, MutableMapping):
+            continue
+        player_id = int(player.get("id", 0))
+        for frame in player.get("frames", []) or []:
+            if not isinstance(frame, MutableMapping):
+                continue
+            frame_idx = int(frame.get("frame_idx", round(float(frame.get("t", 0.0)) * 30.0)))
+            original_frame = original_by_key.get((player_id, frame_idx))
+            if original_frame is None:
+                continue
+            original_joints = _valid_joint_list(original_frame.get("joints_world"))
+            output_joints = _valid_joint_list(frame.get("joints_world"))
+            if original_joints is None or output_joints is None:
+                continue
+            changed = False
+            for player_key, frame_key, joint_idx in restore_plan:
+                if player_key != player_id or frame_key != frame_idx:
+                    continue
+                if joint_idx < len(original_joints) and joint_idx < len(output_joints):
+                    output_joints[joint_idx] = list(original_joints[joint_idx])
+                    changed = True
+            if changed:
+                frame["joints_world"] = output_joints
+
+
+def _smoothed_player_joints(
+    frames: Sequence[Mapping[str, Any]],
+    *,
+    player_id: int,
+    joint_names: Sequence[str],
+    index_by_name: Mapping[str, int],
+    stance_index: Mapping[tuple[int, int], Mapping[str, Any]],
+) -> tuple[list[list[list[float]] | None], dict[str, Any]]:
+    original = [_valid_joint_list(frame.get("joints_world")) for frame in frames]
+    frame_indices = [int(frame.get("frame_idx", idx)) for idx, frame in enumerate(frames)]
+    smoothed: list[list[list[float]] | None] = [copy.deepcopy(joints) if joints is not None else None for joints in original]
+    protected_by_pos = _visual_smoothing_protected_joint_positions(
+        original,
+        frame_indices=frame_indices,
+        index_by_name=index_by_name,
+    )
+    stance_lower_body_frames_protected = _add_stance_lower_body_protected_positions(
+        protected_by_pos,
+        player_id=player_id,
+        frame_indices=frame_indices,
+        stance_index=stance_index,
+        index_by_name=index_by_name,
+    )
+    frames_smoothed = 0
+    max_limb_delta = 0.0
+    max_lag = 0
+    for pos in range(1, len(frames) - 1):
+        prev_joints = original[pos - 1]
+        cur_joints = original[pos]
+        next_joints = original[pos + 1]
+        if (
+            prev_joints is None
+            or cur_joints is None
+            or next_joints is None
+            or len(prev_joints) != len(cur_joints)
+            or len(next_joints) != len(cur_joints)
+            or frame_indices[pos] != frame_indices[pos - 1] + 1
+            or frame_indices[pos + 1] != frame_indices[pos] + 1
+        ):
+            continue
+        smoothed_frame = []
+        for joint_idx in range(len(cur_joints)):
+            smoothed_frame.append(
+                [
+                    WORLD_JOINT_VISUAL_SMOOTHING_WEIGHTS[0] * prev_joints[joint_idx][axis]
+                    + WORLD_JOINT_VISUAL_SMOOTHING_WEIGHTS[1] * cur_joints[joint_idx][axis]
+                    + WORLD_JOINT_VISUAL_SMOOTHING_WEIGHTS[2] * next_joints[joint_idx][axis]
+                    for axis in range(3)
+                ]
+            )
+        max_limb_delta = max(
+            max_limb_delta,
+            _preserve_visual_smoothing_limb_lengths(
+                original_joints=cur_joints,
+                smoothed_joints=smoothed_frame,
+                index_by_name=index_by_name,
+            ),
+        )
+        for joint_idx in protected_by_pos.get(pos, set()):
+            if joint_idx < len(smoothed_frame):
+                smoothed_frame[joint_idx] = list(cur_joints[joint_idx])
+        smoothed[pos] = smoothed_frame
+        frames_smoothed += 1
+
+    for joint_name in ("left_wrist", "right_wrist", "left_ankle", "right_ankle", "left_heel", "right_heel"):
+        joint_idx = index_by_name.get(joint_name)
+        if joint_idx is None:
+            continue
+        original_signal = [joints[joint_idx][0] for joints in original if joints is not None and joint_idx < len(joints)]
+        smoothed_signal = [joints[joint_idx][0] for joints in smoothed if joints is not None and joint_idx < len(joints)]
+        if len(original_signal) == len(smoothed_signal) and len(original_signal) >= 3:
+            max_lag = max(
+                max_lag,
+                abs(estimate_integer_lag_frames(original_signal, smoothed_signal, max_lag_frames=1)),
+            )
+    return smoothed, {
+        "frames_smoothed": frames_smoothed,
+        "stance_lower_body_frames_protected": stance_lower_body_frames_protected,
+        "limb_length_max_delta_m": max_limb_delta,
+        "max_lag_frames": max_lag,
+    }
+
+
+def _add_stance_lower_body_protected_positions(
+    protected: dict[int, set[int]],
+    *,
+    player_id: int,
+    frame_indices: Sequence[int],
+    stance_index: Mapping[tuple[int, int], Mapping[str, Any]],
+    index_by_name: Mapping[str, int],
+) -> int:
+    protected_joint_names = (
+        "left_hip",
+        "left_knee",
+        "left_ankle",
+        "left_big_toe_tip",
+        "left_small_toe_tip",
+        "left_heel",
+        "right_hip",
+        "right_knee",
+        "right_ankle",
+        "right_big_toe_tip",
+        "right_small_toe_tip",
+        "right_heel",
+    )
+    protected_indices = {
+        index_by_name[name]
+        for name in protected_joint_names
+        if name in index_by_name
+    }
+    if not protected_indices:
+        return 0
+    protected_frame_count = 0
+    for pos, frame_idx in enumerate(frame_indices):
+        if bool(stance_index.get((int(player_id), int(frame_idx)), {}).get("stance", False)):
+            protected.setdefault(pos, set()).update(protected_indices)
+            protected_frame_count += 1
+    return protected_frame_count
+
+
+def _visual_smoothing_protected_joint_positions(
+    original: Sequence[list[list[float]] | None],
+    *,
+    frame_indices: Sequence[int],
+    index_by_name: Mapping[str, int],
+) -> dict[int, set[int]]:
+    protected: dict[int, set[int]] = {}
+    frame_pos_by_idx = {int(frame_idx): pos for pos, frame_idx in enumerate(frame_indices)}
+    for wrist_name, elbow_name in (("left_wrist", "left_elbow"), ("right_wrist", "right_elbow")):
+        wrist_idx = index_by_name.get(wrist_name)
+        elbow_idx = index_by_name.get(elbow_name)
+        if wrist_idx is None or elbow_idx is None:
+            continue
+        for peak_frame in _top_joint_speed_peak_frames(
+            original,
+            frame_indices=frame_indices,
+            joint_idx=wrist_idx,
+            top_k=5,
+            min_peak_speed_mps=4.0,
+            fps=30.0,
+        ):
+            for frame_idx in (peak_frame - 1, peak_frame):
+                pos = frame_pos_by_idx.get(frame_idx)
+                if pos is not None:
+                    protected.setdefault(pos, set()).update({wrist_idx, elbow_idx})
+    return protected
+
+
+def _top_joint_speed_peak_frames(
+    frames: Sequence[list[list[float]] | None],
+    *,
+    frame_indices: Sequence[int],
+    joint_idx: int,
+    top_k: int,
+    min_peak_speed_mps: float,
+    fps: float,
+) -> list[int]:
+    speeds: list[tuple[int, float]] = []
+    for pos, (previous, current) in enumerate(zip(frames, frames[1:], strict=False), start=1):
+        if previous is None or current is None or joint_idx >= len(previous) or joint_idx >= len(current):
+            continue
+        frame_delta = max(int(frame_indices[pos]) - int(frame_indices[pos - 1]), 1)
+        displacement = _distance3(previous[joint_idx], current[joint_idx])
+        if displacement > 0.5:
+            continue
+        speed = displacement / (frame_delta / fps)
+        if speed >= min_peak_speed_mps:
+            speeds.append((int(frame_indices[pos]), speed))
+    selected: list[int] = []
+    for frame_idx, _speed in sorted(speeds, key=lambda item: item[1], reverse=True):
+        if any(abs(frame_idx - kept) <= 1 for kept in selected):
+            continue
+        selected.append(frame_idx)
+        if len(selected) >= top_k:
+            break
+    return selected
+
+
+def _preserve_visual_smoothing_limb_lengths(
+    *,
+    original_joints: Sequence[Sequence[float]],
+    smoothed_joints: list[list[float]],
+    index_by_name: Mapping[str, int],
+) -> float:
+    max_delta = 0.0
+    for parent_name, child_name in WORLD_JOINT_VISUAL_SMOOTHING_BONE_PAIRS:
+        parent_idx = index_by_name.get(parent_name)
+        child_idx = index_by_name.get(child_name)
+        if parent_idx is None or child_idx is None or parent_idx >= len(smoothed_joints) or child_idx >= len(smoothed_joints):
+            continue
+        original_length = _distance3(original_joints[parent_idx], original_joints[child_idx])
+        if original_length <= 0.0:
+            continue
+        current = smoothed_joints[child_idx]
+        parent = smoothed_joints[parent_idx]
+        direction = [current[axis] - parent[axis] for axis in range(3)]
+        direction_length = sqrt(sum(axis * axis for axis in direction))
+        if direction_length <= 1e-12:
+            original_direction = [original_joints[child_idx][axis] - original_joints[parent_idx][axis] for axis in range(3)]
+            direction_length = sqrt(sum(axis * axis for axis in original_direction))
+            if direction_length <= 1e-12:
+                continue
+            direction = original_direction
+        scale = original_length / direction_length
+        smoothed_joints[child_idx] = [parent[axis] + direction[axis] * scale for axis in range(3)]
+        max_delta = max(max_delta, abs(_distance3(smoothed_joints[parent_idx], smoothed_joints[child_idx]) - original_length))
+    return max_delta
+
+
+def _valid_joint_list(value: Any) -> list[list[float]] | None:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return None
+    joints: list[list[float]] = []
+    for joint in value:
+        if not isinstance(joint, Sequence) or isinstance(joint, (str, bytes)) or len(joint) < 3:
+            return None
+        try:
+            point = [float(joint[0]), float(joint[1]), float(joint[2])]
+        except (TypeError, ValueError):
+            return None
+        if not all(isfinite(axis) for axis in point):
+            return None
+        joints.append(point)
+    return joints
+
+
+def _semantic_joint_names(raw_names: Any) -> list[str]:
+    if isinstance(raw_names, Sequence) and not isinstance(raw_names, (str, bytes)):
+        names = [str(name) for name in raw_names]
+    else:
+        names = []
+    if len(names) == len(MHR70_JOINT_NAMES) and all(name.startswith("sam3dbody_joint_") for name in names):
+        return list(MHR70_JOINT_NAMES)
+    return names
+
+
+def _semantic_joint_index_by_name(joint_names: Sequence[str]) -> dict[str, int]:
+    direct = {str(name): idx for idx, name in enumerate(joint_names)}
+    if len(joint_names) == len(MHR70_JOINT_NAMES):
+        for idx, name in enumerate(MHR70_JOINT_NAMES):
+            direct.setdefault(str(name), idx)
+    return direct
 
 
 def _distance3(left: Sequence[float], right: Sequence[float]) -> float:
@@ -1345,6 +1964,7 @@ def _smooth_grounded_frames_stance_aware(
     fps: float,
     max_root_speed_mps: float | None,
     max_track_anchor_smoothing_residual_m: float | None,
+    smoothing_residual_identity_reset_m: float = DEFAULT_SMOOTHING_RESIDUAL_IDENTITY_RESET_M,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     normalized_index = _normalize_stance_index(stance_index)
     transition_frames = _transition_frame_keys(frames, stance_index=normalized_index)
@@ -1367,6 +1987,9 @@ def _smooth_grounded_frames_stance_aware(
     root_speed_anomaly_frames = 0
     root_speed_anomaly_by_player: dict[int, int] = {}
     root_step_count_by_player: dict[int, int] = {}
+    root_speed_limited_frames = 0
+    track_anchor_residual_carried_frames = 0
+    track_anchor_residual_identity_reset_frames = 0
     residual_reset_m = (
         min(max_track_anchor_smoothing_residual_m, STANCE_AWARE_TRANSITION_RESIDUAL_RESET_M)
         if max_track_anchor_smoothing_residual_m is not None
@@ -1391,14 +2014,26 @@ def _smooth_grounded_frames_stance_aware(
         track_xy = [float(value) for value in frame["track_world_xy"]]
         frame_t = float(frame["t"])
         temporal_smoothing_reset = False
+        reset_reason = ""
+        residual_status = "ok"
+        residual_threshold_m = STANCE_AWARE_STANCE_RESIDUAL_RESET_M if is_stance else residual_reset_m
+        root_speed_limited_this_frame = False
 
         if is_stance:
             phase_target_xy = phase_anchor_targets.get(key, track_xy)
             pre_reset_residual = _distance2(previous[:2], phase_target_xy) if previous is not None else 0.0
             smoothed_xy = phase_target_xy
-            temporal_smoothing_reset = previous is not None and pre_reset_residual > STANCE_AWARE_STANCE_RESIDUAL_RESET_M
-            if temporal_smoothing_reset:
-                track_anchor_residual_reset_frames += 1
+            would_reset = previous is not None and pre_reset_residual > STANCE_AWARE_STANCE_RESIDUAL_RESET_M
+            if would_reset:
+                if pre_reset_residual > smoothing_residual_identity_reset_m:
+                    temporal_smoothing_reset = True
+                    reset_reason = "stance_anchor_identity_reset"
+                    track_anchor_residual_reset_frames += 1
+                    track_anchor_residual_identity_reset_frames += 1
+                    residual_status = "reset"
+                else:
+                    track_anchor_residual_carried_frames += 1
+                    residual_status = "carried"
         elif previous is None:
             smoothed_xy = track_xy
             pre_reset_residual = 0.0
@@ -1420,9 +2055,16 @@ def _smooth_grounded_frames_stance_aware(
             ]
             pre_reset_residual = _distance2(smoothed_xy, track_xy)
             if pre_reset_residual > residual_reset_m:
-                smoothed_xy = track_xy
-                temporal_smoothing_reset = True
-                track_anchor_residual_reset_frames += 1
+                if pre_reset_residual > smoothing_residual_identity_reset_m:
+                    smoothed_xy = track_xy
+                    temporal_smoothing_reset = True
+                    reset_reason = "transition_anchor_identity_reset"
+                    track_anchor_residual_reset_frames += 1
+                    track_anchor_residual_identity_reset_frames += 1
+                    residual_status = "reset"
+                else:
+                    track_anchor_residual_carried_frames += 1
+                    residual_status = "carried"
 
         smoothed_transl = [smoothed_xy[0], smoothed_xy[1], transl[2]]
         if previous is not None and max_root_speed_mps is not None and previous_t is not None:
@@ -1446,6 +2088,21 @@ def _smooth_grounded_frames_stance_aware(
         smoothed_frame["grounding_anchor"] = frame.get("grounding_anchor", "")
         smoothed_frame["transl_world"] = smoothed_transl
         smoothed_frame["temporal_smoothing_reset"] = temporal_smoothing_reset
+        metadata = _temporal_smoothing_metadata(frame)
+        if residual_status != "ok":
+            metadata["residual"] = {
+                "status": residual_status,
+                "reason": reset_reason or "stance_anchor_residual",
+                "pre_reset_anchor_residual_m": pre_reset_residual,
+                "threshold_m": residual_threshold_m,
+                "identity_reset_m": smoothing_residual_identity_reset_m,
+            }
+        if reset_reason:
+            metadata["reset_reason"] = reset_reason
+        if root_speed_limited_this_frame:
+            metadata["root_speed_limited"] = True
+        if metadata:
+            smoothed_frame["temporal_smoothing_metadata"] = metadata
         smoothed_frame["stance_aware_grounding"] = {
             "stance": is_stance,
             "transition": is_transition,
@@ -1475,13 +2132,15 @@ def _smooth_grounded_frames_stance_aware(
     transition_summary = _distribution_m(transition_anchor_residuals)
     divergence_summary = _distribution_m(body_marker_transition_divergence)
     return smoothed, {
-        "root_speed_limited_frames": 0,
+        "root_speed_limited_frames": root_speed_limited_frames,
         "root_speed_anomaly_frames": root_speed_anomaly_frames,
         "root_speed_clamp_engagement_overall": root_speed_engagement_overall,
         "root_speed_anomaly_fraction_overall": root_speed_engagement_overall,
         "root_speed_clamp_engagement_by_player": clamp_fraction_by_player,
         "root_speed_anomaly_fraction_by_player": clamp_fraction_by_player,
         "track_anchor_residual_reset_frames": track_anchor_residual_reset_frames,
+        "track_anchor_residual_carried_frames": track_anchor_residual_carried_frames,
+        "track_anchor_residual_identity_reset_frames": track_anchor_residual_identity_reset_frames,
         "max_pre_reset_track_anchor_residual_m": max(pre_reset_track_anchor_residuals, default=0.0),
         "max_track_anchor_residual_m": max(track_anchor_residuals, default=0.0),
         "transition_anchor_lag_p95_m": transition_summary["p95"],
@@ -1503,6 +2162,8 @@ def _smooth_grounded_frames_stance_aware(
             "transition_anchor_lag_median_m": transition_summary["p50"],
             "body_marker_transition_divergence": divergence_summary,
             "residual_reset_frames": track_anchor_residual_reset_frames,
+            "residual_carried_frames": track_anchor_residual_carried_frames,
+            "residual_identity_reset_frames": track_anchor_residual_identity_reset_frames,
             "root_speed_clamp_engagement_overall": root_speed_engagement_overall,
             "root_speed_clamp_engagement_by_player": clamp_fraction_by_player,
         },
@@ -1515,6 +2176,7 @@ def _smooth_grounded_frames(
     alpha: float,
     max_root_speed_mps: float | None,
     max_track_anchor_smoothing_residual_m: float | None,
+    smoothing_residual_identity_reset_m: float,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     if alpha <= 0.0 or alpha > 1.0:
         raise ValueError("alpha must be greater than 0 and less than or equal to 1")
@@ -1525,6 +2187,8 @@ def _smooth_grounded_frames(
     track_anchor_residuals: list[float] = []
     pre_reset_track_anchor_residuals: list[float] = []
     track_anchor_residual_reset_frames = 0
+    track_anchor_residual_carried_frames = 0
+    track_anchor_residual_identity_reset_frames = 0
     for frame in frames:
         player_id = int(frame["player_id"])
         previous = previous_by_player.get(player_id)
@@ -1532,29 +2196,50 @@ def _smooth_grounded_frames(
         transl = [float(value) for value in frame["transl_world"]]
         if previous is None:
             smoothed_transl = transl
+            root_speed_limited_this_frame = False
         else:
             smoothed_transl = [
                 alpha * transl[idx] + (1.0 - alpha) * previous[idx]
                 for idx in range(3)
             ]
+            root_speed_limited_this_frame = False
             if max_root_speed_mps is not None and previous_t is not None:
                 dt = max(float(frame["t"]) - previous_t, 0.0)
                 if dt > 0.0:
                     smoothed_transl, limited = _limit_step(previous, smoothed_transl, max_distance=max_root_speed_mps * dt)
                     if limited:
                         root_speed_limited_frames += 1
+                        root_speed_limited_this_frame = True
         track_xy = [float(value) for value in frame["track_world_xy"]]
         pre_reset_residual = _distance2(smoothed_transl[:2], track_xy)
         pre_reset_track_anchor_residuals.append(pre_reset_residual)
         temporal_smoothing_reset = False
+        metadata = _temporal_smoothing_metadata(frame)
         if (
             previous is not None
             and max_track_anchor_smoothing_residual_m is not None
             and pre_reset_residual > max_track_anchor_smoothing_residual_m
         ):
-            smoothed_transl = transl
-            temporal_smoothing_reset = True
-            track_anchor_residual_reset_frames += 1
+            residual_metadata = {
+                "pre_reset_anchor_residual_m": pre_reset_residual,
+                "threshold_m": max_track_anchor_smoothing_residual_m,
+                "identity_reset_m": smoothing_residual_identity_reset_m,
+            }
+            if pre_reset_residual > smoothing_residual_identity_reset_m:
+                smoothed_transl = transl
+                temporal_smoothing_reset = True
+                track_anchor_residual_reset_frames += 1
+                track_anchor_residual_identity_reset_frames += 1
+                residual_metadata["status"] = "reset"
+                residual_metadata["reason"] = "track_anchor_identity_reset"
+                metadata["reset_reason"] = "track_anchor_identity_reset"
+            else:
+                track_anchor_residual_carried_frames += 1
+                residual_metadata["status"] = "carried"
+                residual_metadata["reason"] = "track_anchor_residual"
+            metadata["residual"] = residual_metadata
+        if root_speed_limited_this_frame:
+            metadata["root_speed_limited"] = True
         previous_by_player[player_id] = smoothed_transl
         previous_t_by_player[player_id] = float(frame["t"])
         delta = [smoothed_transl[idx] - transl[idx] for idx in range(3)]
@@ -1563,6 +2248,8 @@ def _smooth_grounded_frames(
         smoothed_frame["grounding_anchor"] = frame.get("grounding_anchor", "")
         smoothed_frame["transl_world"] = smoothed_transl
         smoothed_frame["temporal_smoothing_reset"] = temporal_smoothing_reset
+        if metadata:
+            smoothed_frame["temporal_smoothing_metadata"] = metadata
         smoothed_frame["joints_world"] = [
             [joint[0] + delta[0], joint[1] + delta[1], joint[2] + delta[2]]
             for joint in frame["joints_world"]
@@ -1575,6 +2262,8 @@ def _smooth_grounded_frames(
     return smoothed, {
         "root_speed_limited_frames": root_speed_limited_frames,
         "track_anchor_residual_reset_frames": track_anchor_residual_reset_frames,
+        "track_anchor_residual_carried_frames": track_anchor_residual_carried_frames,
+        "track_anchor_residual_identity_reset_frames": track_anchor_residual_identity_reset_frames,
         "max_pre_reset_track_anchor_residual_m": max(pre_reset_track_anchor_residuals, default=0.0),
         "max_track_anchor_residual_m": max(track_anchor_residuals, default=0.0),
     }

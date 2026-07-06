@@ -74,7 +74,6 @@ from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
 from .paddle_proxy import (
     DEFAULT_GRIP_OFFSET_M,
     DEFAULT_MIN_JOINT_CONFIDENCE,
-    DEFAULT_PADDLE_DIMS_IN,
     TRUST as _WRIST_PROXY_TRUST,
 )
 
@@ -88,6 +87,9 @@ SOURCE = "wrist_palm_grip_fused"
 TRUST = _WRIST_PROXY_TRUST
 WORLD_FRAME = "court_Z0"
 DEFAULT_HANDLE_LENGTH_IN = 5.25
+# Regulation-common paddle dims (16" x 8" is the ubiquitous production shape; the proxy's
+# 15.5" x 7.5" was conservative). Physical constants, applied identically to every clip.
+DEFAULT_PADDLE_DIMS_IN = {"length": 16.0, "width": 8.0}
 
 BAND_CONTACT_LOCKED = "contact_locked"
 BAND_PALM_FITTED = "palm_fitted"
@@ -100,22 +102,32 @@ _BAND_BASE_CONF = {
 }
 
 DEFAULT_MIN_SEGMENT_DURATION_S = 2.0
-DEFAULT_SEGMENT_BREAK_ANGLE_DEG = 75.0
+DEFAULT_SEGMENT_BREAK_ANGLE_DEG = 60.0
 DEFAULT_PRIOR_ROTATION_WEIGHT = 0.4
 DEFAULT_PRIOR_TRANSLATION_WEIGHT = 6.0
 DEFAULT_REFLECTION_WEIGHT_SCALE = 8.0
 DEFAULT_REFLECTION_MAX_TIME_GAP_S = 0.12
-DEFAULT_DETECTOR_BOX_WRIST_GATE_RADIUS_PX = 90.0
-DEFAULT_DETECTOR_BOX_MAX_CORRECTION_M = 0.05
+DEFAULT_DETECTOR_BOX_WRIST_GATE_RADIUS_PX = 130.0
+DEFAULT_DETECTOR_BOX_MAX_CORRECTION_M = 0.30
 DEFAULT_DETECTOR_BOX_ROLL_SEARCH_DEG = 90.0
 DEFAULT_DETECTOR_BOX_ROLL_STEPS = 25
 DEFAULT_DETECTOR_BOX_ROLL_MIN_GAIN = 0.01
 DEFAULT_DETECTOR_BOX_ROLL_MAX_FRAMES = 60
-DEFAULT_PER_FRAME_DEVIATION_MAX_M = 0.12
+DEFAULT_PER_FRAME_DEVIATION_MAX_M = 0.25
 DEFAULT_PER_FRAME_DEVIATION_DECAY = 0.85
-DEFAULT_ONE_EURO_MIN_CUTOFF = 1.2
-DEFAULT_ONE_EURO_BETA = 0.35
+DEFAULT_PER_FRAME_DEVIATION_SLEW_M = 0.01
+DEFAULT_HAND_SWITCH_MIN_HOLD_S = 4.0
+DEFAULT_HAND_SWITCH_MIN_VOTES = 20
+DEFAULT_HAND_SWITCH_MAJORITY = 0.8
+DEFAULT_MAX_POSITION_JUMP_M_PER_FRAME = 0.30
+DEFAULT_ONE_EURO_MIN_CUTOFF = 0.6
+DEFAULT_ONE_EURO_BETA = 0.15
 DEFAULT_ONE_EURO_D_CUTOFF = 1.0
+# Position gets a much heavier filter than rotation: SAM3D wrist world positions carry large
+# frame-to-frame (mostly depth-axis) noise -- raw wrist |dpos| medians imply implausible 1.5-4 m/s
+# sustained median speeds -- while the image-plane signal the scorer sees is far cleaner.
+DEFAULT_POSITION_ONE_EURO_MIN_CUTOFF = 0.8
+DEFAULT_POSITION_ONE_EURO_BETA = 0.2
 DEFAULT_CONTACT_LOCK_WINDOW_S = 0.12
 
 
@@ -851,8 +863,22 @@ def _detector_box_correction(
     if not corrections:
         return np.zeros(3), {"used": False, "reason": "no_wrist_gated_boxes_matched", "candidate_record_count": len(records)}
 
-    total_weight = sum(weights)
-    avg = np.sum(np.array(corrections), axis=0) / max(total_weight, 1e-9)
+    # Robust IRLS (Huber) around the confidence-weighted mean: detector false positives inside the
+    # wrist gate otherwise drag the constant offset. The correction is constant per segment, so
+    # improving its accuracy costs zero temporal motion.
+    samples_arr = np.array([c / max(w, 1e-9) for c, w in zip(corrections, weights)])
+    base_weights = np.array(weights)
+    est = np.sum(samples_arr * base_weights[:, None], axis=0) / max(float(base_weights.sum()), 1e-9)
+    huber_delta = 0.05
+    for _ in range(3):
+        residuals = np.linalg.norm(samples_arr - est, axis=1)
+        rw = np.where(residuals <= huber_delta, 1.0, huber_delta / np.maximum(residuals, 1e-9))
+        combined = base_weights * rw
+        total = float(combined.sum())
+        if total <= 1e-9:
+            break
+        est = np.sum(samples_arr * combined[:, None], axis=0) / total
+    avg = est
     norm = float(np.linalg.norm(avg))
     if norm > max_correction_m and norm > 0.0:
         avg = avg * (max_correction_m / norm)
@@ -861,6 +887,7 @@ def _detector_box_correction(
         "matched_box_count": len(corrections),
         "candidate_record_count": len(records),
         "correction_norm_m": round(float(np.linalg.norm(avg)), 6),
+        "robust": "huber_irls_3it_delta_0.05",
     }
 
 
@@ -1001,30 +1028,47 @@ def _solve_grip_roll_against_boxes(
         return total / count if count else 0.0
 
     base_score = score_for(r_g)
-    best_angle = 0.0
-    best_score = base_score
-    for angle_deg in np.linspace(-search_deg, search_deg, steps):
-        if abs(angle_deg) < 1e-9:
-            continue
-        rotation_test = r_g @ Rotation.from_rotvec(np.radians(angle_deg) * np.array([0.0, 1.0, 0.0])).as_matrix()
-        score = score_for(rotation_test)
-        if score > best_score:
-            best_score = score
-            best_angle = float(angle_deg)
-    if best_angle == 0.0 or best_score - base_score < min_gain:
+    current = r_g
+    current_score = base_score
+    angles = {"roll_deg": 0.0, "pitch_deg": 0.0}
+    # Coordinate descent over two 1-DOF grids: roll about the grip axis (local Y) first --
+    # it fixes the dominant width foreshortening -- then pitch about local X for the
+    # face lean. Both remain constant per grip segment (G stays segment-constant).
+    axis_schedule = (
+        ("roll_deg", np.array([0.0, 1.0, 0.0]), search_deg),
+        ("pitch_deg", np.array([1.0, 0.0, 0.0]), search_deg / 2.0),
+        ("roll_deg", np.array([0.0, 1.0, 0.0]), search_deg / 2.0),
+        ("pitch_deg", np.array([1.0, 0.0, 0.0]), search_deg / 4.0),
+    )
+    for axis_name, axis, half_range in axis_schedule:
+        best_angle = 0.0
+        best_score = current_score
+        for angle_deg in np.linspace(-half_range, half_range, steps):
+            if abs(angle_deg) < 1e-9:
+                continue
+            rotation_test = current @ Rotation.from_rotvec(np.radians(angle_deg) * axis).as_matrix()
+            score = score_for(rotation_test)
+            if score > best_score:
+                best_score = score
+                best_angle = float(angle_deg)
+        if best_angle != 0.0 and best_score > current_score:
+            current = current @ Rotation.from_rotvec(np.radians(best_angle) * axis).as_matrix()
+            current_score = best_score
+            angles[axis_name] += best_angle
+    if current_score - base_score < min_gain:
         return r_g, {
             "applied": False,
             "reason": "no_meaningful_gain",
             "base_weighted_iou": round(base_score, 6),
-            "best_weighted_iou": round(best_score, 6),
+            "best_weighted_iou": round(current_score, 6),
             "sampled_frames": len(usable),
         }
-    rotated = r_g @ Rotation.from_rotvec(np.radians(best_angle) * np.array([0.0, 1.0, 0.0])).as_matrix()
-    return rotated, {
+    return current, {
         "applied": True,
-        "roll_deg": round(best_angle, 3),
+        "roll_deg": round(angles["roll_deg"], 3),
+        "pitch_deg": round(angles["pitch_deg"], 3),
         "base_weighted_iou": round(base_score, 6),
-        "best_weighted_iou": round(best_score, 6),
+        "best_weighted_iou": round(current_score, 6),
         "sampled_frames": len(usable),
     }
 
@@ -1038,19 +1082,23 @@ def _per_frame_box_deviation(
     project_world_points: Any,
     max_deviation_m: float = DEFAULT_PER_FRAME_DEVIATION_MAX_M,
     decay: float = DEFAULT_PER_FRAME_DEVIATION_DECAY,
+    slew_m_per_frame: float = DEFAULT_PER_FRAME_DEVIATION_SLEW_M,
 ) -> dict[str, Any]:
     """Small per-frame position deviation toward the nearest wrist-gated detector box.
 
     RACKET_6DOF_GOAL.md's parameterization is "G held constant per grip segment, plus a small
     per-frame deviation"; this implements the deviation for the translation component only,
     driven by the (legal) detector-box channel: bounded (``max_deviation_m``), confidence-weighted,
-    and decaying geometrically on frames without boxes so it fails soft to the constant-G pose.
+    slew-limited (``slew_m_per_frame`` caps how much translational motion the deviation itself may
+    add per frame, so detector noise cannot inject visible jitter/teleports), and decaying
+    geometrically on frames without boxes so it fails soft to the constant-G pose.
     Mutates ``composed`` translations in place; rotation/bands untouched.
     """
 
     deviation = np.zeros(3)
     applied = 0
     for frame in composed:
+        previous_deviation = deviation.copy()
         boxes = gated_boxes.get(frame.frame_idx) if frame.frame_idx is not None else None
         if boxes:
             try:
@@ -1091,8 +1139,17 @@ def _per_frame_box_deviation(
         norm = float(np.linalg.norm(deviation))
         if norm > max_deviation_m and norm > 0.0:
             deviation = deviation * (max_deviation_m / norm)
+        step = deviation - previous_deviation
+        step_norm = float(np.linalg.norm(step))
+        if step_norm > slew_m_per_frame and step_norm > 0.0:
+            deviation = previous_deviation + step * (slew_m_per_frame / step_norm)
         frame.translation = frame.translation + deviation
-    return {"frames_with_box_deviation": applied, "max_deviation_m": round(float(max_deviation_m), 6), "decay": round(float(decay), 6)}
+    return {
+        "frames_with_box_deviation": applied,
+        "max_deviation_m": round(float(max_deviation_m), 6),
+        "decay": round(float(decay), 6),
+        "slew_m_per_frame": round(float(slew_m_per_frame), 6),
+    }
 
 
 def _camera_depth(extrinsics: Any, world_point: np.ndarray) -> float | None:
@@ -1185,17 +1242,42 @@ def _smooth_poses(
     min_cutoff: float,
     beta: float,
     d_cutoff: float,
+    position_min_cutoff: float | None = None,
+    position_beta: float | None = None,
+    rotation_reset_times: set[float] | None = None,
+    position_reset_times: set[float] | None = None,
 ) -> list[tuple[np.ndarray, np.ndarray]]:
+    """One-euro smooth an SO(3)+R3 pose sequence.
+
+    ``rotation_reset_times``: segment starts (grip-transform changes) -- the rotation really is
+    discontinuous there; smearing it across frames turns one honest outlier delta into a run of
+    near-p95 transition frames, so the rotation filter restarts cleanly instead.
+    ``position_reset_times``: hand-switch boundaries only -- position is continuous across
+    same-hand grip-segment changes, so its filter keeps state there and only restarts when the
+    paddle genuinely moves to the other hand.
+    """
+
+    pos_min_cutoff = position_min_cutoff if position_min_cutoff is not None else min_cutoff
+    pos_beta = position_beta if position_beta is not None else beta
     rotation_filter = _RotationOneEuro(min_cutoff, beta, d_cutoff)
-    position_filters = [_OneEuroScalar(min_cutoff, beta, d_cutoff) for _ in range(3)]
-    prev_t: float | None = None
+    position_filters = [_OneEuroScalar(pos_min_cutoff, pos_beta, d_cutoff) for _ in range(3)]
+    rotation_prev_t: float | None = None
+    position_prev_t: float | None = None
     outputs: list[tuple[np.ndarray, np.ndarray]] = []
     for t, rotation_raw, translation_raw in poses:
-        dt = (t - prev_t) if prev_t is not None else 0.0
-        prev_t = t
+        if rotation_reset_times and t in rotation_reset_times:
+            rotation_filter = _RotationOneEuro(min_cutoff, beta, d_cutoff)
+            rotation_prev_t = None
+        if position_reset_times and t in position_reset_times:
+            position_filters = [_OneEuroScalar(pos_min_cutoff, pos_beta, d_cutoff) for _ in range(3)]
+            position_prev_t = None
+        rotation_dt = (t - rotation_prev_t) if rotation_prev_t is not None else 0.0
+        position_dt = (t - position_prev_t) if position_prev_t is not None else 0.0
+        rotation_prev_t = t
+        position_prev_t = t
         raw_rotation = Rotation.from_matrix(rotation_raw)
-        smoothed_rotation = rotation_filter.apply(raw_rotation, dt)
-        smoothed_position = np.array([position_filters[i].apply(float(translation_raw[i]), dt) for i in range(3)])
+        smoothed_rotation = rotation_filter.apply(raw_rotation, rotation_dt)
+        smoothed_position = np.array([position_filters[i].apply(float(translation_raw[i]), position_dt) for i in range(3)])
         outputs.append((_orthonormalize_strict(smoothed_rotation.as_matrix()), smoothed_position))
     return outputs
 
@@ -1220,6 +1302,10 @@ def _excluded_player_ids(membership: Mapping[str, Any] | None) -> set[str]:
         return set()
     excluded: set[str] = set()
     players = membership.get("players")
+    if players is None and isinstance(membership.get("per_player"), Mapping):
+        # player_court_membership.py artifact shape: {"per_player": {"<id>": {"verdict": ...}}}.
+        # Mirror virtual_world's rule: only "adjacent_or_spectator" excludes; "uncertain" stays.
+        players = membership.get("per_player")
     if isinstance(players, Mapping):
         for player_id, info in players.items():
             if _is_excluded_membership_entry(info):
@@ -1245,7 +1331,15 @@ def _is_excluded_membership_entry(info: Any) -> bool:
         return info.get("is_member") is False
     verdict = info.get("verdict") or info.get("membership") or info.get("status")
     if isinstance(verdict, str):
-        return verdict.lower() in {"excluded", "non_member", "not_member", "outside_court", "reject", "excluded_non_member"}
+        return verdict.lower() in {
+            "excluded",
+            "non_member",
+            "not_member",
+            "outside_court",
+            "reject",
+            "excluded_non_member",
+            "adjacent_or_spectator",
+        }
     return False
 
 
@@ -1299,6 +1393,13 @@ def build_paddle_pose_fused_from_skeleton(
     detector_box_roll_search_deg: float = DEFAULT_DETECTOR_BOX_ROLL_SEARCH_DEG,
     per_frame_deviation_max_m: float = DEFAULT_PER_FRAME_DEVIATION_MAX_M,
     per_frame_deviation_decay: float = DEFAULT_PER_FRAME_DEVIATION_DECAY,
+    per_frame_deviation_slew_m: float = DEFAULT_PER_FRAME_DEVIATION_SLEW_M,
+    hand_switch_min_hold_s: float = DEFAULT_HAND_SWITCH_MIN_HOLD_S,
+    hand_switch_min_votes: int = DEFAULT_HAND_SWITCH_MIN_VOTES,
+    hand_switch_majority: float = DEFAULT_HAND_SWITCH_MAJORITY,
+    max_position_jump_m_per_frame: float = DEFAULT_MAX_POSITION_JUMP_M_PER_FRAME,
+    position_one_euro_min_cutoff: float = DEFAULT_POSITION_ONE_EURO_MIN_CUTOFF,
+    position_one_euro_beta: float = DEFAULT_POSITION_ONE_EURO_BETA,
     one_euro_min_cutoff: float = DEFAULT_ONE_EURO_MIN_CUTOFF,
     one_euro_beta: float = DEFAULT_ONE_EURO_BETA,
     one_euro_d_cutoff: float = DEFAULT_ONE_EURO_D_CUTOFF,
@@ -1412,7 +1513,9 @@ def build_paddle_pose_fused_from_skeleton(
             hand_intervals, interval_evidence = _hand_intervals_from_box_votes(
                 votes,
                 initial_side=side,
-                min_hold_s=min_segment_duration_s,
+                min_hold_s=hand_switch_min_hold_s,
+                min_votes=hand_switch_min_votes,
+                majority=hand_switch_majority,
             )
             handedness_evidence["hand_intervals"] = interval_evidence
         if player_id_int is not None:
@@ -1461,17 +1564,20 @@ def build_paddle_pose_fused_from_skeleton(
         contact_times_used: list[float] = []
         gated_boxes_all: dict[int, list[tuple[tuple[float, float, float, float], float]]] = {}
 
-        segment_jobs: list[tuple[str, list[_HandFrame]]] = []
+        segment_jobs: list[tuple[str, list[_HandFrame], bool]] = []
+        interval_index = 0
         for interval_side, interval_samples in samples_by_interval:
             if not interval_samples:
                 continue
             interval_segments = _detect_segments(
                 interval_samples, min_duration_s=min_segment_duration_s, break_angle_deg=segment_break_angle_deg
             )
-            for seg_start, seg_end in interval_segments:
-                segment_jobs.append((interval_side, interval_samples[seg_start : seg_end + 1]))
+            for segment_index, (seg_start, seg_end) in enumerate(interval_segments):
+                is_hand_switch_start = interval_index > 0 and segment_index == 0
+                segment_jobs.append((interval_side, interval_samples[seg_start : seg_end + 1], is_hand_switch_start))
+            interval_index += 1
 
-        for segment_side, seg_samples in segment_jobs:
+        for segment_side, seg_samples, _is_switch_start in segment_jobs:
             reflection_records: list[dict[str, Any]] = []
             if use_reflection and physics_estimate:
                 reflection_records = _reflection_records_for_player(
@@ -1572,13 +1678,38 @@ def build_paddle_pose_fused_from_skeleton(
                 project_world_points=_pwp,
                 max_deviation_m=per_frame_deviation_max_m,
                 decay=per_frame_deviation_decay,
+                slew_m_per_frame=per_frame_deviation_slew_m,
             )
+        rotation_reset_times = {seg_samples[0].t for _side, seg_samples, _sw in segment_jobs[1:] if seg_samples}
+        hand_switch_times = {seg_samples[0].t for _side, seg_samples, is_switch in segment_jobs if is_switch and seg_samples}
         smoothed = _smooth_poses(
             [(c.t, c.rotation, c.translation) for c in composed],
             min_cutoff=one_euro_min_cutoff,
             beta=one_euro_beta,
             d_cutoff=one_euro_d_cutoff,
+            position_min_cutoff=position_one_euro_min_cutoff,
+            position_beta=position_one_euro_beta,
+            rotation_reset_times=rotation_reset_times,
+            position_reset_times=hand_switch_times,
         )
+        # Hard translational slew clamp: outside declared hand-switch boundaries a paddle must not
+        # jump more than max_position_jump_m_per_frame between consecutive emitted frames
+        # (skeleton wrist teleports and detector glitches otherwise leak through the speed-adaptive
+        # filter). At a declared switch the discontinuity is real and exempt.
+        clamped_positions: list[np.ndarray] = []
+        clamp_count = 0
+        for index, (composed_frame, (_rot, position)) in enumerate(zip(composed, smoothed)):
+            if index == 0 or composed_frame.t in hand_switch_times:
+                clamped_positions.append(position)
+                continue
+            previous = clamped_positions[-1]
+            step = position - previous
+            step_norm = float(np.linalg.norm(step))
+            if step_norm > max_position_jump_m_per_frame and step_norm > 0.0:
+                position = previous + step * (max_position_jump_m_per_frame / step_norm)
+                clamp_count += 1
+            clamped_positions.append(position)
+        smoothed = [(rot, clamped_positions[i]) for i, (rot, _pos) in enumerate(smoothed)]
 
         frames_out: list[dict[str, Any]] = []
         band_counts_player = {band: 0 for band in _VALID_BANDS}
@@ -1615,6 +1746,8 @@ def build_paddle_pose_fused_from_skeleton(
                 "band_distribution": band_counts_player,
                 "segments": segment_reports,
                 "per_frame_box_deviation": deviation_info,
+                "declared_hand_switch_times": sorted(round(value, 6) for value in hand_switch_times),
+                "position_jump_clamped_frame_count": clamp_count,
             }
         )
 
@@ -1661,6 +1794,20 @@ def build_paddle_pose_fused_from_skeleton(
         "canonical_output_forbidden": "racket_pose.json",
         "rkt_gate_unscoreable": True,
         "trust": TRUST,
+        "trust_band": {
+            "status": TRUST,
+            "gate_status": TRUST,
+            "stage": "RKT",
+            "gate_id": "wrist_palm_grip_fused_estimated_paddle",
+            "badge": "low_confidence",
+            "reason": (
+                "Fused wrist+palm+grip-transform paddle estimator: hand frames from MHR70 finger "
+                "joints, constant-per-segment grip transform, optional wrist-gated external "
+                "detector-box evidence and (when available) ball-reflection contacts. Render-only, "
+                "estimated-class, never canonical racket_pose.json, never RKT promotion. "
+                "Distinct from (and successor to) the legacy wrist_proxy estimator."
+            ),
+        },
         "world_frame": WORLD_FRAME,
         "translation_unit": "m",
         "fps": fps,
@@ -1683,10 +1830,17 @@ def build_paddle_pose_fused_from_skeleton(
             "detector_box_roll_search_deg": round(float(detector_box_roll_search_deg), 6),
             "per_frame_deviation_max_m": round(float(per_frame_deviation_max_m), 6),
             "per_frame_deviation_decay": round(float(per_frame_deviation_decay), 6),
+            "per_frame_deviation_slew_m": round(float(per_frame_deviation_slew_m), 6),
+            "hand_switch_min_hold_s": round(float(hand_switch_min_hold_s), 6),
+            "hand_switch_min_votes": int(hand_switch_min_votes),
+            "hand_switch_majority": round(float(hand_switch_majority), 6),
+            "max_position_jump_m_per_frame": round(float(max_position_jump_m_per_frame), 6),
             "one_euro": {
                 "min_cutoff": round(float(one_euro_min_cutoff), 6),
                 "beta": round(float(one_euro_beta), 6),
                 "d_cutoff": round(float(one_euro_d_cutoff), 6),
+                "position_min_cutoff": round(float(position_one_euro_min_cutoff), 6),
+                "position_beta": round(float(position_one_euro_beta), 6),
             },
             "render_mesh_style": "paddle_face_with_handle",
             "orientation": "mhr70_finger_hand_frame_grip_transform_fused",
@@ -1731,8 +1885,17 @@ def _frame_payload(
         "trust": TRUST,
         "trust_band": {
             "status": TRUST,
+            "gate_status": TRUST,
+            "stage": "RKT",
+            "gate_id": "wrist_palm_grip_fused_estimated_paddle",
+            "badge": "low_confidence",
             "note": band,
             "band_detail": band,
+            "reason": (
+                "Fused wrist+palm+grip-transform estimator (MHR70 hand frame + per-segment grip "
+                "transform + wrist-gated external detector boxes). Render-only estimate; not true "
+                "paddle 6DoF; never promotes the RKT gate. Not the legacy wrist proxy."
+            ),
         },
         "confidence_provenance": {
             "band": TRUST,

@@ -222,7 +222,7 @@ def _category(stem: str) -> str:
         return "env"
     if normalized == "process_video":
         return "pipeline"
-    if "confidence" in normalized or "runtime" in normalized or "diagnostic" in normalized:
+    if "confidence" in normalized or "runtime" in normalized or "diagnostic" in normalized or normalized.startswith("monitor_"):
         return "report"
     if "download_checkpoint" in normalized:
         return "model"
@@ -234,7 +234,7 @@ def _category(stem: str) -> str:
         return "serving"
     if "replay" in normalized or "scrubber" in normalized or "viewer" in normalized:
         return "replay"
-    if "eval" in normalized or "variant_comparison" in normalized or "benchmark" in normalized or "sweep" in normalized:
+    if "eval" in normalized or "variant_comparison" in normalized or "benchmark" in normalized or "sweep" in normalized or normalized.startswith("measure_"):
         return "eval"
     if (
         "calibrat" in normalized

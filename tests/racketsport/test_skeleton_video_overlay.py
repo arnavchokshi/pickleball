@@ -53,7 +53,7 @@ def _skeleton(path: Path) -> Path:
         {
             "schema_version": 1,
             "artifact_type": "racketsport_skeleton3d",
-            "source_model": "rtmw3d_x",
+            "source_model": "sam3d_body_joints",
             "world_frame": "court_Z0",
             "fps": 30.0,
             "joint_names": ["nose", "left_shoulder", "right_shoulder", "left_wrist", "right_wrist"],
@@ -218,7 +218,7 @@ def test_render_skeleton_overlay_cli_writes_video_contact_sheet_and_index(tmp_pa
     assert summary["status"] == "rendered"
     assert summary["qualitative_status"] == "review_copy_not_gate_verified"
     assert summary["frame_count"] == 3
-    assert summary["skeleton_source_model"] == "rtmw3d_x"
+    assert summary["skeleton_source_model"] == "sam3d_body_joints"
     assert Path(summary["overlay_path"]).is_file()
     assert Path(summary["contact_sheet_path"]).is_file()
     assert Path(summary["index_path"]).is_file()

@@ -24,8 +24,15 @@ from threed.racketsport.paddle_pose_fused import (  # noqa: E402
     DEFAULT_DETECTOR_BOX_MAX_CORRECTION_M,
     DEFAULT_DETECTOR_BOX_ROLL_SEARCH_DEG,
     DEFAULT_DETECTOR_BOX_WRIST_GATE_RADIUS_PX,
+    DEFAULT_HAND_SWITCH_MAJORITY,
+    DEFAULT_HAND_SWITCH_MIN_HOLD_S,
+    DEFAULT_HAND_SWITCH_MIN_VOTES,
+    DEFAULT_MAX_POSITION_JUMP_M_PER_FRAME,
     DEFAULT_PER_FRAME_DEVIATION_DECAY,
     DEFAULT_PER_FRAME_DEVIATION_MAX_M,
+    DEFAULT_PER_FRAME_DEVIATION_SLEW_M,
+    DEFAULT_POSITION_ONE_EURO_BETA,
+    DEFAULT_POSITION_ONE_EURO_MIN_CUTOFF,
     DEFAULT_GRIP_OFFSET_M,
     DEFAULT_MIN_JOINT_CONFIDENCE,
     DEFAULT_MIN_SEGMENT_DURATION_S,
@@ -92,6 +99,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--detector-box-roll-search-deg", type=float, default=DEFAULT_DETECTOR_BOX_ROLL_SEARCH_DEG)
     parser.add_argument("--per-frame-deviation-max-m", type=float, default=DEFAULT_PER_FRAME_DEVIATION_MAX_M)
     parser.add_argument("--per-frame-deviation-decay", type=float, default=DEFAULT_PER_FRAME_DEVIATION_DECAY)
+    parser.add_argument("--per-frame-deviation-slew-m", type=float, default=DEFAULT_PER_FRAME_DEVIATION_SLEW_M)
+    parser.add_argument("--hand-switch-min-hold-s", type=float, default=DEFAULT_HAND_SWITCH_MIN_HOLD_S)
+    parser.add_argument("--hand-switch-min-votes", type=int, default=DEFAULT_HAND_SWITCH_MIN_VOTES)
+    parser.add_argument("--hand-switch-majority", type=float, default=DEFAULT_HAND_SWITCH_MAJORITY)
+    parser.add_argument("--max-position-jump-m-per-frame", type=float, default=DEFAULT_MAX_POSITION_JUMP_M_PER_FRAME)
+    parser.add_argument("--position-one-euro-min-cutoff", type=float, default=DEFAULT_POSITION_ONE_EURO_MIN_CUTOFF)
+    parser.add_argument("--position-one-euro-beta", type=float, default=DEFAULT_POSITION_ONE_EURO_BETA)
     parser.add_argument("--one-euro-min-cutoff", type=float, default=DEFAULT_ONE_EURO_MIN_CUTOFF)
     parser.add_argument("--one-euro-beta", type=float, default=DEFAULT_ONE_EURO_BETA)
     parser.add_argument("--one-euro-d-cutoff", type=float, default=DEFAULT_ONE_EURO_D_CUTOFF)
@@ -126,6 +140,13 @@ def main(argv: list[str] | None = None) -> int:
             detector_box_roll_search_deg=args.detector_box_roll_search_deg,
             per_frame_deviation_max_m=args.per_frame_deviation_max_m,
             per_frame_deviation_decay=args.per_frame_deviation_decay,
+            per_frame_deviation_slew_m=args.per_frame_deviation_slew_m,
+            hand_switch_min_hold_s=args.hand_switch_min_hold_s,
+            hand_switch_min_votes=args.hand_switch_min_votes,
+            hand_switch_majority=args.hand_switch_majority,
+            max_position_jump_m_per_frame=args.max_position_jump_m_per_frame,
+            position_one_euro_min_cutoff=args.position_one_euro_min_cutoff,
+            position_one_euro_beta=args.position_one_euro_beta,
             one_euro_min_cutoff=args.one_euro_min_cutoff,
             one_euro_beta=args.one_euro_beta,
             one_euro_d_cutoff=args.one_euro_d_cutoff,

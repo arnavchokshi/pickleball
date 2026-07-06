@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from scripts.racketsport.audit_pose_temporal_jitter import main as audit_pose_temporal_jitter_main
-from threed.racketsport.pose_fast import LANE_A_RTMW3D_JOINT_NAMES
+from threed.racketsport.joint_schema import BODY65_JOINT_NAMES
 from threed.racketsport.pose_temporal import (
     compare_wrist_peak_timing,
     compute_pose_jitter_audit,
@@ -18,11 +18,11 @@ FIXTURE = Path("tests/racketsport/fixtures/pose_jitter_real_excerpt_skeleton3d.j
 
 
 def _idx(name: str) -> int:
-    return list(LANE_A_RTMW3D_JOINT_NAMES).index(name)
+    return list(BODY65_JOINT_NAMES).index(name)
 
 
 def _base_joints() -> list[list[float]]:
-    return [[0.0, 0.0, 1.0] for _name in LANE_A_RTMW3D_JOINT_NAMES]
+    return [[0.0, 0.0, 1.0] for _name in BODY65_JOINT_NAMES]
 
 
 def _frame(frame_idx: int, joints: list[list[float]], *, conf: list[float] | None = None) -> dict:
@@ -30,7 +30,7 @@ def _frame(frame_idx: int, joints: list[list[float]], *, conf: list[float] | Non
         "frame_idx": frame_idx,
         "t": frame_idx / 30.0,
         "joints_world": joints,
-        "joint_conf": conf or [0.9 for _name in LANE_A_RTMW3D_JOINT_NAMES],
+        "joint_conf": conf or [0.9 for _name in BODY65_JOINT_NAMES],
     }
 
 
@@ -40,8 +40,8 @@ def _skeleton(frames: list[dict]) -> dict:
         "artifact_type": "racketsport_skeleton3d",
         "fps": 30.0,
         "world_frame": "court_Z0",
-        "source_model": "rtmw3d_x",
-        "joint_names": list(LANE_A_RTMW3D_JOINT_NAMES),
+        "source_model": "sam3d_body_joints",
+        "joint_names": list(BODY65_JOINT_NAMES),
         "preview_only": False,
         "players": [{"id": 7, "frames": frames}],
         "provenance": {"lane": "POSE-SMOOTH-test"},
@@ -59,7 +59,7 @@ def test_full_body_one_euro_covers_all_65_joints_and_marks_low_confidence() -> N
         joints[shoulder_idx] = [offset, 0.0, 1.5]
         joints[hand_idx] = [offset, 0.0, 1.4]
         joints[toe_idx] = [offset, 0.0, 0.0]
-        conf = [0.9 for _name in LANE_A_RTMW3D_JOINT_NAMES]
+        conf = [0.9 for _name in BODY65_JOINT_NAMES]
         conf[hip_idx] = 0.1
         frames.append(_frame(frame_idx, joints, conf=conf))
 
@@ -72,7 +72,7 @@ def test_full_body_one_euro_covers_all_65_joints_and_marks_low_confidence() -> N
     assert out_frame["joints_world"][shoulder_idx][0] < 1.0
     assert out_frame["joints_world"][hand_idx][0] < 1.0
     assert out_frame["joints_world"][toe_idx][0] < 1.0
-    assert len(out_frame["smoothing_flag"]) == len(LANE_A_RTMW3D_JOINT_NAMES)
+    assert len(out_frame["smoothing_flag"]) == len(BODY65_JOINT_NAMES)
     assert "low_confidence_joint" in out_frame["smoothing_flag"][hip_idx]
 
 

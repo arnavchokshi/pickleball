@@ -27,6 +27,9 @@ models/*.pt
 models/*.pth
 models/*.onnx
 models/*.engine
+ios/Replay/Sources/PickleballReplay/Resources/RealityReplayFixture/body_mesh_animated_budget53.usdz
+ios/Replay/Sources/PickleballReplay/Resources/WorldFixture/virtual_world.json
+tests/racketsport/fixtures/solid_mesh_real_window_000/body_mesh_faces.json
 
 # Swift/iOS build products.
 ios/.build/

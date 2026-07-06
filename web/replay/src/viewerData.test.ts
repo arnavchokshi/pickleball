@@ -16,11 +16,15 @@ import {
   ballTrailPointsForTime,
   ballRenderInfoForTime,
   bodyMeshIndexWindowForTime,
+  bodyMeshInterpolationReadout,
+  bodyMeshInterpolationStats,
   bodyMeshStatusTileValue,
   clearBodyMeshChunkFetchCache,
   contactEventBadge,
   contactEventCount,
   decodeBodyMeshChunkBytes,
+  displayFpsReadout,
+  displayFpsReplayData,
   entityCoverageReadout,
   effectiveTrustBadge,
   frameForTime,
@@ -66,6 +70,34 @@ function fixtureJson(name: string): unknown {
 
 function arrayBufferFrom(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+function vectorDelta(left: [number, number, number], right: [number, number, number]): [number, number, number] {
+  return [left[0] - right[0], left[1] - right[1], left[2] - right[2]];
+}
+
+function mhr70JointNames(): string[] {
+  const names = Array.from({ length: 70 }, (_, index) => `mhr70_joint_${index}`);
+  names[0] = "nose";
+  names[9] = "left_hip";
+  names[10] = "right_hip";
+  return names;
+}
+
+function mhr70Joints({
+  nose = [0, 0, 1.3],
+  leftHip = [-0.2, 0, 0.9],
+  rightHip = [0.2, 0, 0.9],
+}: {
+  nose?: [number, number, number];
+  leftHip?: [number, number, number];
+  rightHip?: [number, number, number];
+} = {}): [number, number, number][] {
+  const joints = Array.from({ length: 70 }, () => [0, 0, 0] as [number, number, number]);
+  joints[0] = nose;
+  joints[9] = leftHip;
+  joints[10] = rightHip;
+  return joints;
 }
 
 const manifest = {
@@ -285,6 +317,72 @@ const bodyMesh = {
   },
 };
 
+function twoComputedFrameBodyMesh({
+  secondT = 1 + 1 / 30,
+  secondFrameIdx = 31,
+  secondWindow = 0,
+  mismatchedVertexCount = false,
+}: {
+  secondT?: number;
+  secondFrameIdx?: number;
+  secondWindow?: number;
+  mismatchedVertexCount?: boolean;
+} = {}) {
+  return {
+    ...bodyMesh,
+    mesh_faces: [[0, 1, 2]],
+    players: [
+      {
+        id: 2,
+        frames: [
+          {
+            frame_idx: 30,
+            t: 1,
+            source_window_index: 0,
+            blend_weight: 1,
+            joints_world: [[1, 1, 1]],
+            joint_conf: [0.9],
+            mesh_vertices_world: [
+              [1, 1, 0],
+              [2, 1, 0],
+              [1, 2, 0],
+            ],
+            smplx_params: {},
+            reasons: ["contact_dense_hitter_window"],
+          },
+          {
+            frame_idx: secondFrameIdx,
+            t: secondT,
+            source_window_index: secondWindow,
+            blend_weight: 1,
+            joints_world: [[2, 2, 2]],
+            joint_conf: [0.8],
+            mesh_vertices_world: mismatchedVertexCount
+              ? [
+                  [2, 2, 1],
+                  [3, 2, 1],
+                  [2, 3, 1],
+                  [3, 3, 1],
+                ]
+              : [
+                  [2, 2, 1],
+                  [3, 2, 1],
+                  [2, 3, 1],
+                ],
+            smplx_params: {},
+            reasons: ["contact_dense_hitter_window"],
+          },
+        ],
+      },
+    ],
+    summary: {
+      mesh_frame_count: 2,
+      player_count: 1,
+      contact_window_count: 1,
+    },
+  };
+}
+
 const contactWorld = {
   ...world,
   players: [
@@ -428,6 +526,7 @@ describe("viewer data contracts", () => {
     expect(parsedWithoutShots.ball_arc_solved_url).toBeUndefined();
     expect(parsedWithoutShots.auto_bounce_candidates_url).toBeUndefined();
     expect(parsedWithoutShots.ball_bounce_candidates_url).toBeUndefined();
+    expect(parsedWithoutShots.ball_arc_render_url).toBeUndefined();
     expect(parsedWithoutShots.ball_flight_sanity_url).toBeUndefined();
 
     expect(
@@ -435,6 +534,7 @@ describe("viewer data contracts", () => {
         ...manifest,
         shots_url: "/@fs/tmp/clip_a/shots.json",
         ball_arc_solved_url: "/@fs/tmp/clip_a/ball_track_arc_solved.json",
+        ball_arc_render_url: "/@fs/tmp/clip_a/ball_arc_render.json",
         auto_bounce_candidates_url: "/@fs/tmp/clip_a/ball_bounce_candidates.json",
         ball_bounce_candidates_url: "/@fs/tmp/clip_a/ball_bounce_candidates.json",
         ball_flight_sanity_url: "/@fs/tmp/clip_a/ball_flight_sanity.json",
@@ -442,6 +542,7 @@ describe("viewer data contracts", () => {
     ).toMatchObject({
       shots_url: "/@fs/tmp/clip_a/shots.json",
       ball_arc_solved_url: "/@fs/tmp/clip_a/ball_track_arc_solved.json",
+      ball_arc_render_url: "/@fs/tmp/clip_a/ball_arc_render.json",
       auto_bounce_candidates_url: "/@fs/tmp/clip_a/ball_bounce_candidates.json",
       ball_bounce_candidates_url: "/@fs/tmp/clip_a/ball_bounce_candidates.json",
       ball_flight_sanity_url: "/@fs/tmp/clip_a/ball_flight_sanity.json",
@@ -650,6 +751,475 @@ describe("viewer data contracts", () => {
     expect(solidBodyMeshFramesForTime(parsedBodyMesh, null, 1.3)).toEqual([]);
   });
 
+  it("keeps base playback on computed mesh frames until 2x display data is explicitly built", () => {
+    const parsedBodyMesh = parseBodyMesh(twoComputedFrameBodyMesh());
+    const baseActive = solidBodyMeshFramesForTime(parsedBodyMesh, null, 1 + 1 / 60);
+    const doubled = displayFpsReplayData(parseVirtualWorld(world), parsedBodyMesh, true);
+    const doubledActive = solidBodyMeshFramesForTime(doubled.bodyMesh, null, 1 + 1 / 60);
+
+    expect(baseActive).toHaveLength(1);
+    expect(baseActive[0].frame.mesh_interpolated).toBe(false);
+    expect(baseActive[0].frame.frame_idx).toBe(30);
+    expect(doubledActive).toHaveLength(1);
+    expect(doubledActive[0].frame.mesh_interpolated).toBe(true);
+    expect(doubledActive[0].frame.interpolation).toMatchObject({ from_frame_idx: 30, to_frame_idx: 31, alpha: 0.5 });
+    expect(doubledActive[0].frame.mesh_vertices_world).toEqual([
+      [1.5, 1.5, 0.5],
+      [2.5, 1.5, 0.5],
+      [1.5, 2.5, 0.5],
+    ]);
+    expect(doubledActive[0].frame.joints_world).toEqual([[1.5, 1.5, 1.5]]);
+  });
+
+  it("refuses solid mesh interpolation across wide gaps, window boundaries, and mismatched vertex counts", () => {
+    const wideGap = solidBodyMeshFramesForTime(parseBodyMesh(twoComputedFrameBodyMesh({ secondT: 1.2, secondFrameIdx: 36 })), null, 1.1);
+    expect(wideGap[0].frame.mesh_interpolated).toBe(false);
+
+    const boundary = solidBodyMeshFramesForTime(parseBodyMesh(twoComputedFrameBodyMesh({ secondWindow: 1 })), null, 1 + 1 / 60);
+    expect(boundary[0].frame.mesh_interpolated).toBe(false);
+
+    const mismatched = solidBodyMeshFramesForTime(parseBodyMesh(twoComputedFrameBodyMesh({ mismatchedVertexCount: true })), null, 1 + 1 / 60);
+    expect(mismatched[0].frame.mesh_interpolated).toBe(false);
+  });
+
+  it("reuses the same held computed mesh frame buffers between arbitrary display times", () => {
+    const parsedBodyMesh = parseBodyMesh(twoComputedFrameBodyMesh());
+    const first = solidBodyMeshFramesForTime(parsedBodyMesh, null, 1 + 1 / 120)[0].frame;
+    const verticesRef = first.mesh_vertices_world;
+    const jointsRef = first.joints_world;
+    const firstX = first.mesh_vertices_world[0][0];
+    const second = solidBodyMeshFramesForTime(parsedBodyMesh, null, 1 + 3 / 120)[0].frame;
+
+    expect(second).toBe(first);
+    expect(second.mesh_vertices_world).toBe(verticesRef);
+    expect(second.joints_world).toBe(jointsRef);
+    expect(second.mesh_vertices_world[0][0]).toBe(firstX);
+    expect(second.interpolation).toBeNull();
+  });
+
+  it("reports interpolation eligibility counts for the mesh honesty indicator", () => {
+    const parsedBodyMesh = parseBodyMesh(twoComputedFrameBodyMesh());
+    expect(bodyMeshInterpolationStats(parsedBodyMesh)).toMatchObject({
+      computedFrameCount: 2,
+      eligiblePairCount: 1,
+      heldPairCount: 0,
+      gapRefusedPairCount: 0,
+      boundaryRefusedPairCount: 0,
+      mismatchedVertexRefusedPairCount: 0,
+      displayMultiplier: 2,
+    });
+    expect(bodyMeshInterpolationReadout(parsedBodyMesh)).toBe("mesh: computed 30fps + interpolated x2 (1 safe pair)");
+
+    const refused = parseBodyMesh(twoComputedFrameBodyMesh({ secondT: 1.2, secondFrameIdx: 36, secondWindow: 1 }));
+    expect(bodyMeshInterpolationStats(refused)).toMatchObject({
+      eligiblePairCount: 0,
+      heldPairCount: 0,
+      gapRefusedPairCount: 1,
+      boundaryRefusedPairCount: 1,
+    });
+    expect(bodyMeshInterpolationReadout(refused)).toBe("mesh: computed sparse (2 frames, 0 safe pairs)");
+  });
+
+  it("holds sparse same-window mesh presence on the previous computed frame without per-frame gaps", () => {
+    const parsedBodyMesh = parseBodyMesh(twoComputedFrameBodyMesh({ secondT: 1.1, secondFrameIdx: 33 }));
+
+    const activeFrames = [1.0, 1 + 1 / 30, 1 + 2 / 30, 1.099, 1.1].map((time) =>
+      solidBodyMeshFramesForTime(parsedBodyMesh, null, time),
+    );
+
+    expect(activeFrames.every((frames) => frames.length === 1)).toBe(true);
+    expect(activeFrames.slice(0, -1).map((frames) => frames[0].frame.frame_idx)).toEqual([30, 30, 30, 30]);
+    expect(activeFrames.at(-1)?.[0].frame.frame_idx).toBe(33);
+    expect(activeFrames.some((frames) => frames[0].frame.mesh_interpolated)).toBe(false);
+    expect(bodyMeshInterpolationStats(parsedBodyMesh)).toMatchObject({
+      computedFrameCount: 2,
+      eligiblePairCount: 0,
+      heldPairCount: 1,
+    });
+    expect(bodyMeshInterpolationReadout(parsedBodyMesh)).toBe("mesh: computed sparse (2 frames, held 1 gap)");
+  });
+
+  it("aligns held meshes with an object-level transform without deforming relative geometry", () => {
+    const parsedBodyMesh = parseBodyMesh({
+      ...bodyMesh,
+      mesh_faces: [[0, 1, 2]],
+      joint_names: ["left_hip", "right_hip"],
+      players: [
+        {
+          id: 1,
+          frames: [
+            {
+              frame_idx: 30,
+              t: 1,
+              source_window_index: 0,
+              blend_weight: 1,
+              joints_world: [
+                [1, 1, 1],
+                [3, 1, 1],
+              ],
+              joint_conf: [1, 1],
+              mesh_vertices_world: [
+                [1, 1, 0],
+                [3, 1, 0],
+                [1, 2, 0],
+              ],
+              smplx_params: {},
+              reasons: ["contact_window"],
+            },
+          ],
+        },
+      ],
+    });
+    const parsedWorld = parseVirtualWorld({
+      ...world,
+      joint_names: ["left_hip", "right_hip"],
+      players: [
+        {
+          ...world.players[0],
+          id: 1,
+          frames: [
+            {
+              ...world.players[0].frames[0],
+              t: 1.05,
+              joints_world: [
+                [4, 6, 1],
+                [6, 6, 1],
+              ],
+              joint_conf: [1, 1],
+              mesh_ref: { artifact: "body_mesh.json", player_id: 1, frame_idx: 30, t: 1 },
+            },
+          ],
+        },
+      ],
+    });
+
+    const active = solidBodyMeshFramesForTime(parsedBodyMesh, null, 1.05, parsedWorld);
+
+    expect(active).toHaveLength(1);
+    expect(active[0].alignmentDebug).toMatchObject({ applied: true, delta: [3, 5, 0] });
+    expect(active[0].renderTranslation).toEqual([3, 5, 0]);
+    expect(active[0].frame.mesh_vertices_world).toEqual(parsedBodyMesh.players[0].frames[0].mesh_vertices_world);
+    expect(vectorDelta(active[0].frame.mesh_vertices_world[0], active[0].frame.mesh_vertices_world[1])).toEqual([-2, 0, 0]);
+    expect(vectorDelta(active[0].frame.mesh_vertices_world[0], active[0].frame.mesh_vertices_world[2])).toEqual([0, -1, 0]);
+  });
+
+  it("uses world MHR70 joint names for real-shaped chunked meshes that omit mesh joint_names", () => {
+    const jointNames = mhr70JointNames();
+    const parsedBodyMesh = parseBodyMesh({
+      ...bodyMesh,
+      mesh_faces: [[0, 1, 2]],
+      joint_names: [],
+      players: [
+        {
+          id: 1,
+          frames: [
+            {
+              frame_idx: 30,
+              t: 1,
+              source_window_index: 0,
+              blend_weight: 1,
+              joints_world: mhr70Joints({
+                nose: [0, 0, 1.34],
+                leftHip: [-0.2, 0, 0.9],
+                rightHip: [0.2, 0, 0.88],
+              }),
+              joint_conf: Array(70).fill(1),
+              mesh_vertices_world: [
+                [-0.25, 0, 0.05],
+                [0.25, 0, 0.05],
+                [0, 0.3, 1.4],
+              ],
+              smplx_params: { transl_world: [0, 0, 1.34] },
+              reasons: ["real_shape_no_mesh_joint_names"],
+            },
+          ],
+        },
+      ],
+    });
+    const parsedWorld = parseVirtualWorld({
+      ...world,
+      joint_names: jointNames,
+      players: [
+        {
+          ...world.players[0],
+          id: 1,
+          frames: [
+            {
+              ...world.players[0].frames[0],
+              t: 1,
+              joints_world: mhr70Joints({
+                nose: [0, 0, 1.33],
+                leftHip: [-0.2, 0, 0.92],
+                rightHip: [0.2, 0, 0.9],
+              }),
+              joint_conf: Array(70).fill(1),
+              mesh_ref: { artifact: "body_mesh.json", player_id: 1, frame_idx: 30, t: 1 },
+            },
+          ],
+        },
+      ],
+    });
+
+    const active = solidBodyMeshFramesForTime(parsedBodyMesh, null, 1, parsedWorld);
+
+    expect(active).toHaveLength(1);
+    expect(active[0].alignmentDebug).toMatchObject({
+      applied: true,
+      reason: "skeleton_root",
+      delta: [0, 0, 0.02],
+      floor_guard_applied: false,
+    });
+    expect(active[0].renderTranslation).toEqual([0, 0, 0.02]);
+    const translatedLowest = Math.min(...active[0].frame.mesh_vertices_world.map((vertex) => vertex[2] + active[0].renderTranslation[2]));
+    expect(translatedLowest).toBeCloseTo(0.07);
+  });
+
+  it("does not translate a mesh when no reliable named mesh root exists", () => {
+    const parsedBodyMesh = parseBodyMesh({
+      ...bodyMesh,
+      mesh_faces: [[0, 1, 2]],
+      joint_names: [],
+      players: [
+        {
+          id: 1,
+          frames: [
+            {
+              frame_idx: 30,
+              t: 1,
+              source_window_index: 0,
+              blend_weight: 1,
+              joints_world: [[0, 0, 1.4]],
+              joint_conf: [1],
+              mesh_vertices_world: [
+                [-0.25, 0, 0.02],
+                [0.25, 0, 0.02],
+                [0, 0.3, 1.3],
+              ],
+              smplx_params: { transl_world: [0, 0, 1.4] },
+              reasons: ["real_shape_no_mesh_joint_names"],
+            },
+          ],
+        },
+      ],
+    });
+    const parsedWorld = parseVirtualWorld({
+      ...world,
+      joint_names: mhr70JointNames(),
+      players: [
+        {
+          ...world.players[0],
+          id: 1,
+          frames: [
+            {
+              ...world.players[0].frames[0],
+              t: 1,
+              joints_world: mhr70Joints(),
+              joint_conf: Array(70).fill(1),
+              mesh_ref: { artifact: "body_mesh.json", player_id: 1, frame_idx: 30, t: 1 },
+            },
+          ],
+        },
+      ],
+    });
+
+    const active = solidBodyMeshFramesForTime(parsedBodyMesh, null, 1, parsedWorld);
+
+    expect(active).toHaveLength(1);
+    expect(active[0].alignmentDebug).toMatchObject({ applied: false, reason: "missing_mesh_root" });
+    expect(active[0].renderTranslation).toEqual([0, 0, 0]);
+    expect(active[0].frame.mesh_vertices_world).toEqual(parsedBodyMesh.players[0].frames[0].mesh_vertices_world);
+  });
+
+  it("lifts the object transform when hip-aligned mesh vertices would sink below the floor plane", () => {
+    const jointNames = mhr70JointNames();
+    const parsedBodyMesh = parseBodyMesh({
+      ...bodyMesh,
+      mesh_faces: [[0, 1, 2]],
+      joint_names: [],
+      players: [
+        {
+          id: 1,
+          frames: [
+            {
+              frame_idx: 30,
+              t: 1,
+              source_window_index: 0,
+              blend_weight: 1,
+              joints_world: mhr70Joints({
+                nose: [0, 0, 1.45],
+                leftHip: [-0.2, 0, 1.0],
+                rightHip: [0.2, 0, 1.0],
+              }),
+              joint_conf: Array(70).fill(1),
+              mesh_vertices_world: [
+                [-0.25, 0, -0.1],
+                [0.25, 0, -0.1],
+                [0, 0.3, 1.4],
+              ],
+              smplx_params: {},
+              reasons: ["floor_guard_probe"],
+            },
+          ],
+        },
+      ],
+    });
+    const parsedWorld = parseVirtualWorld({
+      ...world,
+      joint_names: jointNames,
+      players: [
+        {
+          ...world.players[0],
+          id: 1,
+          frames: [
+            {
+              ...world.players[0].frames[0],
+              t: 1,
+              joints_world: mhr70Joints({
+                nose: [0, 0, 1.35],
+                leftHip: [-0.2, 0, 0.9],
+                rightHip: [0.2, 0, 0.9],
+              }),
+              joint_conf: Array(70).fill(1),
+              mesh_ref: { artifact: "body_mesh.json", player_id: 1, frame_idx: 30, t: 1 },
+            },
+          ],
+        },
+      ],
+    });
+
+    const active = solidBodyMeshFramesForTime(parsedBodyMesh, null, 1, parsedWorld);
+    const translatedLowest = Math.min(...active[0].frame.mesh_vertices_world.map((vertex) => vertex[2] + active[0].renderTranslation[2]));
+    const snapshot = bodyMeshDebugSnapshot({
+      bodyMeshIndex: null,
+      bodyMesh: parsedBodyMesh,
+      world: parsedWorld,
+      currentTime: 1,
+      loadStatus: { state: "loaded", label: "loaded" },
+      activeBodyMeshes: active,
+    });
+
+    expect(active[0].alignmentDebug).toMatchObject({
+      applied: true,
+      floor_guard_applied: true,
+      floor_lift_m: 0.2,
+      delta: [0, 0, 0.1],
+    });
+    expect(active[0].renderTranslation).toEqual([0, 0, 0.1]);
+    expect(translatedLowest).toBeCloseTo(0);
+    expect(snapshot.alignment_floor_guard_count).toBe(1);
+  });
+
+  it("falls back to the mesh position when the current skeleton root is missing", () => {
+    const parsedBodyMesh = parseBodyMesh(twoComputedFrameBodyMesh());
+    const parsedWorld = parseVirtualWorld({
+      ...world,
+      players: [
+        {
+          ...world.players[0],
+          id: 2,
+          frames: [
+            {
+              ...world.players[0].frames[0],
+              t: 1,
+              joints_world: [],
+              joint_conf: [],
+              mesh_ref: { artifact: "body_mesh.json", player_id: 2, frame_idx: 30, t: 1 },
+            },
+          ],
+        },
+      ],
+    });
+
+    const active = solidBodyMeshFramesForTime(parsedBodyMesh, null, 1, parsedWorld);
+
+    expect(active).toHaveLength(1);
+    expect(active[0].alignmentDebug).toMatchObject({ applied: false, reason: "missing_skeleton_root" });
+    expect(active[0].renderTranslation).toEqual([0, 0, 0]);
+    expect(active[0].frame.mesh_vertices_world).toEqual(parsedBodyMesh.players[0].frames[0].mesh_vertices_world);
+  });
+
+  it("builds a doubled display-FPS world and body mesh sequence while preserving originals for OFF", () => {
+    const parsedWorld = parseVirtualWorld({
+      ...world,
+      joint_names: ["left_hip", "right_hip"],
+      players: [
+        {
+          ...world.players[0],
+          frames: [
+            {
+              ...world.players[0].frames[0],
+              t: 1,
+              floor_world_xyz: [0, 0, 0],
+              joints_world: [
+                [0, 0, 1],
+                [2, 0, 1],
+              ],
+              joint_conf: [0.8, 0.6],
+            },
+            {
+              ...world.players[0].frames[0],
+              t: 1 + 1 / 30,
+              floor_world_xyz: [0, 2, 0],
+              joints_world: [
+                [0, 2, 1],
+                [2, 2, 1],
+              ],
+              joint_conf: [0.6, 0.4],
+            },
+          ],
+        },
+      ],
+    });
+    const parsedBodyMesh = parseBodyMesh(twoComputedFrameBodyMesh());
+
+    const off = displayFpsReplayData(parsedWorld, parsedBodyMesh, false);
+    const on = displayFpsReplayData(parsedWorld, parsedBodyMesh, true);
+
+    expect(off.world).toBe(parsedWorld);
+    expect(off.bodyMesh).toBe(parsedBodyMesh);
+    expect(on.world).not.toBe(parsedWorld);
+    expect(on.world.fps).toBe(60);
+    expect(on.world.players[0].frames.map((frame) => frame.t)).toHaveLength(3);
+    expect(on.world.players[0].frames[0].t).toBeCloseTo(1);
+    expect(on.world.players[0].frames[1].t).toBeCloseTo(1 + 1 / 60);
+    expect(on.world.players[0].frames[2].t).toBeCloseTo(1 + 1 / 30);
+    expect(on.world.players[0].frames[1].joints_world).toEqual([
+      [0, 1, 1],
+      [2, 1, 1],
+    ]);
+    expect(on.bodyMesh?.players[0].frames).toHaveLength(3);
+    expect(on.bodyMesh?.players[0].frames[1].t).toBeCloseTo(1 + 1 / 60);
+    expect(on.bodyMesh?.players[0].frames[1]).toMatchObject({
+      mesh_interpolated: true,
+      interpolation: { from_frame_idx: 30, to_frame_idx: 31, alpha: 0.5 },
+    });
+    expect(on.stats).toMatchObject({
+      enabled: true,
+      sourceFps: 30,
+      displayFps: 60,
+      worldComputedFrameCount: 2,
+      worldInterpolatedFrameCount: 1,
+      meshComputedFrameCount: 2,
+      meshInterpolatedFrameCount: 1,
+    });
+  });
+
+  it("relaxes mesh midpoint interpolation to the user-enabled cadence ceiling and reports the real counts", () => {
+    const parsedWorld = parseVirtualWorld(world);
+    const parsedBodyMesh = parseBodyMesh(twoComputedFrameBodyMesh({ secondT: 1.1, secondFrameIdx: 33 }));
+
+    const on = displayFpsReplayData(parsedWorld, parsedBodyMesh, true, { meshMaxGapSeconds: 0.15 });
+
+    expect(on.bodyMesh?.players[0].frames.map((frame) => [Number(frame.t.toFixed(3)), frame.mesh_interpolated])).toEqual([
+      [1, false],
+      [1.05, true],
+      [1.1, false],
+    ]);
+    expect(on.stats.meshInterpolatedFrameCount).toBe(1);
+    expect(on.stats.meshMaxInterpolatedGapMs).toBe(100);
+    expect(displayFpsReadout(on.stats)).toBe("60fps display: computed 30 + interpolated 0 skeletons, 1 mesh; mesh interpolated across 100ms gaps");
+  });
+
   it("parses a chunked body-mesh index and selects the active mesh window by scrub time", () => {
     const index = parseBodyMeshIndex({
       schema_version: 1,
@@ -786,6 +1356,81 @@ describe("viewer data contracts", () => {
     expect(solidMeshRenderedPlayerCount(active)).toBe(1);
   });
 
+  it("proves midpoint interpolation and boundary refusal from a synthetic two-window index", () => {
+    const faces = parseBodyMeshFaces({
+      schema_version: 1,
+      artifact_type: "racketsport_body_mesh_faces",
+      faces_ref: "mhr_faces_static",
+      mesh_faces: [[0, 1, 2]],
+    });
+    const index = parseBodyMeshIndex({
+      schema_version: 1,
+      artifact_type: "racketsport_body_mesh_index",
+      clip: "clip_a",
+      model: "sam3dbody_world_joints",
+      fps: 30,
+      world_frame: "court_Z0",
+      faces_ref: "mhr_faces_static",
+      faces_url: "body_mesh_faces.json",
+      windows: [0, 1].map((windowIndex) => ({
+        source_window_index: windowIndex,
+        frame_start: 30 + windowIndex * 10,
+        frame_end: 31 + windowIndex * 10,
+        t0: 1 + windowIndex / 3,
+        t1: 1 + windowIndex / 3 + 2 / 30,
+        frame_count: 2,
+        player_frame_count: 2,
+        target_player_ids: [2],
+        player_ids: [2],
+        url: `body_mesh_chunks/window_00${windowIndex}.bin`,
+        byte_size: 48,
+        encoding: "raw_int16_world_vertices_v1",
+        quantization: { scale: 10, unit: "m" },
+        players: [
+          {
+            id: 2,
+            frames: [0, 1].map((offset) => ({
+              frame_idx: 30 + windowIndex * 10 + offset,
+              t: 1 + windowIndex / 3 + offset / 30,
+              source_window_index: windowIndex,
+              blend_weight: 1,
+              vertex_count: 3,
+              joint_count: 1,
+              joint_conf: [0.9],
+              reasons: ["contact_dense_hitter_window"],
+            })),
+          },
+        ],
+      })),
+      summary: { window_count: 2, mesh_frame_count: 4, player_count: 1, faces_count: 1 },
+    });
+    const window0 = decodeBodyMeshChunkBytes(
+      index,
+      index.windows[0],
+      faces,
+      new Int16Array([
+        10, 10, 0,
+        20, 10, 0,
+        10, 20, 0,
+        10, 10, 10,
+        20, 20, 10,
+        30, 20, 10,
+        20, 30, 10,
+        20, 20, 20,
+      ]).buffer,
+    );
+    const doubledWindow0 = displayFpsReplayData(parseVirtualWorld(world), window0, true).bodyMesh!;
+    const midpoint = solidBodyMeshFramesForTime(doubledWindow0, null, 1 + 1 / 60)[0].frame;
+    expect(midpoint.mesh_interpolated).toBe(true);
+    expect(midpoint.mesh_vertices_world[0]).toEqual([1.5, 1.5, 0.5]);
+
+    const acrossWindows = {
+      ...window0,
+      players: [{ id: 2, frames: [window0.players[0].frames[1], { ...window0.players[0].frames[1], frame_idx: 40, t: 1 + 1 / 30, source_window_index: 1 }] }],
+    };
+    expect(solidBodyMeshFramesForTime(acrossWindows, null, 1 + 1 / 30 - 1 / 120)[0].frame.mesh_interpolated).toBe(false);
+  });
+
   it("decodes the real staged window_000 when Vite has already decoded gzip content", async () => {
     const index = parseBodyMeshIndex(fixtureJson("body_mesh_index.json"));
     const faces = parseBodyMeshFaces(fixtureJson("body_mesh_faces.json"));
@@ -804,9 +1449,9 @@ describe("viewer data contracts", () => {
     const active = solidBodyMeshFramesForTime(chunk, null, 0.266, parsedWorld);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(active.map((frame) => [frame.playerId, frame.meshPlayerId, frame.frame.frame_idx])).toEqual([
-      [1, 1, 8],
-      [3, 3, 8],
+    expect(active.map((frame) => [frame.playerId, frame.meshPlayerId, Number(frame.frame.frame_idx.toFixed(2))])).toEqual([
+      [1, 1, 7],
+      [3, 3, 7],
     ]);
     expect(solidMeshRenderedPlayerCount(active)).toBe(2);
   });
@@ -859,11 +1504,11 @@ describe("viewer data contracts", () => {
       world: player.world_player_id,
       normalized: player.normalized_mesh_player_id,
       present: player.mesh_player_present,
-      frame: player.mesh_frame_idx,
+      frame: player.mesh_frame_idx === null ? null : Number(player.mesh_frame_idx.toFixed(2)),
     }))).toEqual([
-      { world: 1, normalized: 1, present: true, frame: 8 },
+      { world: 1, normalized: 1, present: true, frame: 7 },
       { world: 2, normalized: 2, present: false, frame: null },
-      { world: 3, normalized: 3, present: true, frame: 8 },
+      { world: 3, normalized: 3, present: true, frame: 7 },
       { world: 4, normalized: 4, present: false, frame: null },
     ]);
   });
