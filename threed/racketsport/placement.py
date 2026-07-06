@@ -2067,8 +2067,14 @@ def _inside_court_bounds(xy: Sequence[float] | np.ndarray, *, margin_m: float) -
 
 
 def _frame_index(frame: Mapping[str, Any], fps: float) -> int:
-    if "frame_idx" in frame:
-        return int(frame["frame_idx"])
+    # frame_idx is OPTIONAL on track frames (schemas: `int | None = None`) and fresh
+    # tracker output serializes the None default explicitly — treat present-but-null
+    # exactly like absent and fall back to the authoritative time value.
+    # (2026-07-06: fresh --force runs emitted frame_idx=None on 680/680 wolverine
+    # frames, crashing placement 4/4 clips; t was valid throughout.)
+    idx = frame.get("frame_idx")
+    if idx is not None:
+        return int(idx)
     return int(round(float(frame.get("t", 0.0)) * fps))
 
 

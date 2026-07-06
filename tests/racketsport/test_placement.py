@@ -1311,3 +1311,14 @@ def test_rewrite_tracks_records_visual_root_step_bound_provenance(tmp_path: Path
     assert visual["visual_max_root_step_m"] == pytest.approx(0.10)
     assert visual["frames_adjusted_count"] > 0
     assert _max_written_speed_mps(rewritten) <= 8.0 + 1e-6
+
+def test_frame_index_treats_null_frame_idx_like_absent() -> None:
+    # Regression (2026-07-06): fresh tracker output serializes the schema's optional
+    # frame_idx as an explicit null; placement must fall back to `t` instead of
+    # crashing with int(None) (reproduced 4/4 clips in the P0-6 fresh-worlds runs).
+    from threed.racketsport.placement import _frame_index
+
+    assert _frame_index({"frame_idx": None, "t": 2.5}, fps=30.0) == 75
+    assert _frame_index({"t": 2.5}, fps=30.0) == 75
+    assert _frame_index({"frame_idx": 7, "t": 2.5}, fps=30.0) == 7
+
