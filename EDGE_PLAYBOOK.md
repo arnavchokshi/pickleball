@@ -263,7 +263,7 @@ lane gates.
 
 - [ ] **H22. Paddle blur-streak axis as swing-plane cue** (novel — nobody has published it for
   elongated implements; P3-8). One-lane spike on contact-window frames.
-- [ ] **H23. Ball diameter-depth cue [now has a paper + formula].** SoccerNet-v3D (arXiv:2504.10106) does exactly this and improved detector IoU 0.57→0.66 (size error 19%→7.3%) — reuse its Eq.5-7. Known 74mm diameter + calibrated focal length → apparent
+- [ ] **H23. Ball diameter-depth cue [ALREADY LANDED — tech-audit: `enable_size_depth_residual=True` is default-on in all three arc-solver fit paths; keep for reference].** SoccerNet-v3D (arXiv:2504.10106) does exactly this and improved detector IoU 0.57→0.66 (size error 19%→7.3%) — reuse its Eq.5-7. Known 74mm diameter + calibrated focal length → apparent
   diameter gives depth along the ray. Noisy at 10m+ (ball ≈ 10-15px at 1080p) but integrated over
   an arc it's a real monocular-3D constraint; at 4K near-court it's strong. Feed as a weak
   per-detection depth factor into P1-4 (the solver weighs it by pixel size).
@@ -287,9 +287,11 @@ app (7 modules: Capture, Core, Calibration, FastTier, Guidance, Upload, Replay) 
 sidecar contract (`CaptureSidecar.swift`) ALREADY carries per-frame **intrinsics, ARKit camera pose,
 gravity, court plane, locked exposure/ISO/focus/WB, LiDAR refs, and capture modes incl. `ballPhysics240`
 (240fps) + `swing120`** — plus a CoreMotion gravity sampler, camera-roll importer, and live overlays.
-The server ingest already reads the sidecar (provenance, intrinsics fingerprint, taps). So most hacks
-below are NOT "build an app" — they are (a) prove capture on a real device, (b) wire the SERVER to
-consume the ARKit-pose/gravity/exposure fields it currently ignores, (c) add profile-capture flows.
+The server ingest already reads the sidecar (provenance, intrinsics fingerprint, taps) and
+`metric_calibration_from_sidecar_and_keypoints` already consumes ARKit pose/plane/intrinsics. BUT
+(tech-audit 2026-07-06): zero `import ARKit` exists in ios/ — the ARSession itself is UNBUILT
+(schema-only); only CoreMotion gravity is real. So the work is (a) BUILD the ARKit session +
+real-device proof, (b) profile-capture flows, (c) per-frame-ify the sidecar (P0-10).
 Two tiers: **Tier 1** = any file including stock-Camera video from friends (parse metadata, correct
 VFR); **Tier 2** = video through our app (the rich sidecar). Both matter — friends may sideload stock
 clips before they install the app. Consolidated as roadmap task **P0-10**.
@@ -371,7 +373,7 @@ already vendored/landed; 🔜 = to bring in; the fallback column is the pre-regi
 
 | Stage | Choice (exact) | Where it lives / comes from | Fallback |
 |---|---|---|---|
-| Ball detect ensemble | ✅ WASB-SBDT (tennis ckpt anchor) + ✅ blurball fork (training + blur cues) + ✅ TOTNet (occlusion recipe: 4-level visibility-weighted BCE + occlusion aug TOGETHER) + TrackNetV4 motion-prompt layer re-implemented (paper recipe; upstream weights unusable) | `third_party/{WASB-SBDT,blurball,TOTNet,TrackNetV3}`; ckpts `models/checkpoints/` + ledger sha256s | RF-DETR-S (Roboflow, Apache) as an architecture-diversity check only |
+| Ball detect ensemble | ✅ WASB-SBDT (tennis ckpt anchor) + ✅ blurball fork (training + blur cues) + ✅ TOTNet (occlusion recipe: 4-level visibility-weighted BCE + occlusion aug TOGETHER) + TrackNetV4 vendored; motion-prompt re-implementation NOT started (tech-audit 2026-07-06) | `third_party/{WASB-SBDT,blurball,TOTNet,TrackNetV3}`; ckpts `models/checkpoints/` + ledger sha256s | RF-DETR-S (Roboflow, Apache) as an architecture-diversity check only |
 | Ball data engine | H11 compositor (ours) + SST teacher-student (github.com/rvandeghen/SST recipe) + CVAT | P0-7 sim + H6 backgrounds; owner labels via `ingest/prelabel_owner_capture.py` | pure owner-label fine-tune (P1-1 without SST) |
 | Ball 3D lift | Ours: P3-A BVP/IRLS solver + drag-Magnus ODE (scipy RK4, H13 constants) + H13 blur-speed factors + H23 diameter-depth + net/court constraints; then learned lift: UpliftingTableTennis-style transformer (github.com/KieDani/UpliftingTableTennis, code released) retrained on P0-7 pickleball sim | solver in `threed/racketsport/ball_arc_*`; sim = P0-7 | TT4D-style lift-first transformer (paper recipe; no code) |
 | Events/contacts | H10 rally-grammar Viterbi (ours) + H12 audio onsets (librosa/madmom) + wrist-peak cues (landed) + H9 double-bounce calibration | new `threed/racketsport/` module; audio already in owner protocol | TTNet-style learned event head once labels accumulate |

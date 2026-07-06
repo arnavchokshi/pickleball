@@ -73,7 +73,9 @@ green-field construction.
 ### ✅ BUILT & RUNNING (server pipeline) — needs accuracy + gate proof, not construction
 - **End-to-end orchestrator**: one command (`process_video.py`) → 17 stages → 3D world bundle with
   trust bands, artifact reuse, fail-closed gaps, `PIPELINE_SUMMARY.json`. Runs on real clips.
-- **Ball 3D chain (pipeline default)**: detector ensemble (WASB+blurball+TrackNet) → candidate
+- **Ball 3D chain (pipeline default)**: detector zoo (WASB+blurball+TrackNet; TECH-AUDIT: value is
+  the CANDIDATE POOL — union recall 0.879; the consensus-VOTING fusion is a measured liability,
+  hidden-FP 0.349 vs single-WASB 0.063) → candidate
   sidecars → label-free auto-bounce anchors → frozen arc solver → flight-sanity gate → **top-down
   court-map view (pb.vision-style shot lines + bounce dots)** → viewer trail + honesty KPI,
   fail-closed parsing. *(Accuracy below bar — that's P1.)*
@@ -557,7 +559,9 @@ the capstone of the whole project → new **PHASE F**.
 - **Hybrid physics+NN trajectory** (arXiv:2503.18584): closed-form drag/Magnus + tiny MLP (3 coeffs),
   **includes a pickleball test split**, needs only ~90 trajectories, 0.97ms → P0-7/P1-4 (less data
   than a pure-learned lift).
-- **ForeHOI** (arXiv:2602.06226, code+weights): feed-forward 3D geometry + 6-DoF pose of an arbitrary
+- **ForeHOI** (arXiv:2602.06226, code+weights) [CORRECTED by tech-audit: runs ~1 MINUTE/clip not <1s,
+  and its pose comes from bolting on FoundationPose — inheriting the documented HANDAL weakness
+  (0.04-0.26 AP on thin handheld objects); demoted to backlog spike]: feed-forward 3D geometry of an arbitrary
   HELD object from monocular hand-object video in <1s → P3 paddle (feed-forward alternative to the
   fused estimator; trained on synthetic GraspXL).
 - **Body scene+human backbones** (P2-7 bake-off additions): UniCon3R (contact-aware, floating
@@ -658,8 +662,9 @@ consumption (P0-10), expanded eval suite with audio, fresh gate-passing worlds.
   verified via `verify_process_video_viewer.py`; contact-dense scheduling reports non-uniform
   coverage; ball-reflection factor PLUMBING verified pre-activation (it stays dormant until P1-4's 3D
   velocities exist — a Phase 1 task — so non-dormancy is P3-5's gate, not P0-6's); AND confirm which
-  body backbone is actually live (SAM-3D-Body per the ruling vs vendored `third_party/SAT-HMR`) from
-  the run artifacts — verify, don't assume (Part II-B caution).
+  body backbone is actually live from the run artifacts — verify, don't assume (Part II-B caution;
+  tech-audit 2026-07-06 verified the CURRENT answer: SAM-3D-Body is the live default, SAT-HMR is
+  vendored-only — keep the cheap per-run check anyway).
 - [ ] **P0-7 Pickleball flight simulator (no data needed — start immediately).** Ballistic + drag +
   Magnus generator for a 26g holey plastic ball; **SEED with the real measured pickleball
   coefficients** (Lindsey TWU 2025: outdoor Cd≈0.33 / indoor Cd≈0.45, asymmetric topspin>backspin
@@ -690,8 +695,13 @@ consumption (P0-10), expanded eval suite with audio, fresh gate-passing worlds.
   Owner is profile #1; a friend onboards through the identical setup steps. Gate: a court profile
   round-trips (store → match on next upload → skip re-calibration); missing-profile clip degrades to
   the generic path with the right trust band.
-- [ ] **P0-10 iPhone app: on-device capture proof + deep server wiring (the app EXISTS — this is
-  proof + consumption, NOT construction).** Our app (`ios/`, 110 Swift files) already writes a
+- [ ] **P0-10 iPhone app: BUILD the ARKit session + on-device proof + server wiring. TECH-AUDIT
+  CORRECTION to this doc's earlier claim: the sidecar SCHEMA carries ARKit fields, but zero `import
+  ARKit` exists anywhere in ios/ — `ARKitSetupPassSidecar` is schema-only/orphaned; only CoreMotion
+  gravity is real today, and 0/20 real capture sidecars carry any pose. So (a) below is real
+  engineering (ARSession/ARWorldTrackingConfiguration + plane anchors), not just wiring. The GOOD
+  news: the server consumer ALREADY exists (`metric_calibration_from_sidecar_and_keypoints` consumes
+  arkit_camera_pose/court_plane/intrinsics) — it's waiting on the producer.** Our app (`ios/`, 110 Swift files) already writes a
   capture sidecar carrying per-frame intrinsics, ARKit camera pose, gravity, court plane, locked
   exposure/ISO/focus/WB, LiDAR refs, and 240/120fps modes; the server ingest already reads intrinsics/
   provenance/taps. The work: (a) **physical-device proof** — record a real game, land the sidecar,
@@ -708,7 +718,10 @@ consumption (P0-10), expanded eval suite with audio, fresh gate-passing worlds.
 
 ## PHASE 1 — Ball to (and past) the pb.vision bar
 
-**Already built:** detector ensemble (WASB+blurball+TrackNet) + consensus fusion, label-free
+**Already built:** detector zoo (WASB+blurball+TrackNet — running VANILLA zero-shot weights + a
+naive nearest-neighbor gate; the paper's HLSM training lever + online-filter are TO-BUILD, tech-audit
+verified) + consensus fusion (candidate pool = real value; the voting mechanism = measured liability,
+see P1-1), label-free
 auto-bounce anchors, frozen arc solver + flight-sanity gate, candidate sidecars, court-map view,
 viewer trail + honesty KPI, P3-A BVP solver (WIP), held-out ledger discipline. **To build:**
 in-domain fine-tune that beats 0.7248, recall rescue, true 3D flight + spin, learned contact events,
@@ -732,13 +745,24 @@ in/out with gray zone.
   teaches "what it looks like on THIS camera" — the second is what moved held-out in every measured
   case. Architectures in bake-off: WASB (anchor, 1.5M params) with TOTNet visibility-weighted 4-level
   BCE + occlusion augmentation TOGETHER (aug alone hurts: RMSE 29.6→54.3) + TrackNetV4 motion-prompt
-  + RacketVision background modeling. Eval discipline: eval_guard keeps Burlington/Wolverine
+  (NOT yet re-implemented — vendored raw upstream only, tech-audit verified) + RacketVision background
+  modeling. **PREREQUISITE (tech-audit):** `BallFrame.visible` is a plain bool — extend schema + CVAT
+  export/labeling to the 4-level occlusion taxonomy (clear/partial/full/out-of-frame) BEFORE the WBCE
+  loss is trainable as specified. **Portable starting recipe (from third_party/TOTNet/src/train.sh):**
+  AdamW lr=5e-4 wd=5e-5, WBCE weights 1/2/3/3, occluded_prob=0.25, frames_in=5, 288×512, heatmap
+  radius 8 train / 4 test. **FUSION CHANGE (measured):** stop using 2D spatial-consensus voting as the
+  final answer (hidden-FP floor 0.349 = 5.5× worse than single WASB 0.063 — an ensemble ARTIFACT);
+  keep all detectors as CANDIDATE GENERATORS (top-K sidecars already emit) and select via
+  physics-consistency (the arc solver) — run as a pre-registered A/B before flipping the default. Eval discipline: eval_guard keeps Burlington/Wolverine
   never-gradient-trained; every held-out shot pre-registered. Kill criteria: any internal→held-out
   inversion = stop, analyze, don't re-tune (that's the 4-inversions rule).
   Gate (INTERIM MILESTONE, not the full BALL M1): beat 0.7248 F1@20 held-out, recall ≥ 0.70, hidden-FP
   ≤ 0.05. P1-3 closes the rest to the true BALL M1 in I.2 (F1≥0.90/recall≥0.75). Loader trap: blurball↔WASB strict-incompatible
   (36 SE keys) — always key-diff checkpoints (`strict=False` silently amputates).
-- [ ] **P1-2 SST semi-supervised bootstrap.** Teacher = current frozen ensemble; run over ALL owner
+- [ ] **P1-2 SST semi-supervised bootstrap.** Teacher = the PHYSICS-GATED chain output (hidden-FP
+  0.021), falling back to single zero-shot WASB-tennis (0.063) when the solver self-kills — NEVER the
+  raw un-gated fusion (0.349 hidden-FP would bake correlated multi-detector hallucinations into
+  pseudo-labels at scale; tech-audit). Run over ALL owner
   unlabeled footage → confidence/doubt-weighted pseudo-labels (Vandeghen recipe, BSD-3,
   github.com/rvandeghen/SST) → student trains on labeled+pseudo → iterate 2×; active-learning
   loop: frames where detectors disagree go to the human label queue first. Once running, schedule it
@@ -755,11 +779,21 @@ in/out with gray zone.
   frame missed the ball, marked render-only/derived — NEVER counted as measured evidence. Budget:
   candidate union recall ceiling measured at 0.8793 — get fused recall from 0.578 toward ≥0.75.
   Gate: BALL M1 recall bar on held-out without hidden-FP regression.
-- [ ] **P1-4 True 3D flight lift.** Two tracks, run both, pre-register the bake-off: (P1-4a) finish the
+- [ ] **P1-4 True 3D flight lift.** SEQUENCED (tech-audit: a symmetric bake-off is premature — P1-4a is itself PARTIAL with a live
+  regression and P0-7 has zero code): (1) STABILIZE (P1-4a) — finish the
   P3-A BVP anchor-first solver (committed WIP — 5 baseline intervals lose `fit` status on
   reselection + internal F1 never rerun; finish steps in
   `runs/lanes/ball_p3a_bvp_anchor_first_20260705/report.json` `next`), upgraded with drag+Magnus
-  from P0-7 (pure ballistic is measurably wrong for a wiffle ball); (P1-4b) learned lift: transformer
+  from P0-7. (2) ADD MAGNUS to the existing solver: extend `_rk4_step` state with a SCALAR spin number
+  S on a FIXED horizontal axis ⊥ to segment velocity (classic top/backspin; skip sidespin/3-axis for
+  v1 — the free fit has only 6 unknowns on as few as 3 observations, a full spin vector is
+  unidentifiable); F_magnus = Cl(S)·½ρA|v|²·n̂, Cl=0.195·S (Steyn). NOTE (tech-audit): Cd constants
+  0.33/0.45 are ALREADY in `PhysicsParameters.for_ball_type` (that half is DONE); Cl/Magnus is 0%
+  built. The size-depth (74mm) residual is ALSO already wired default-on (plan under-credited it);
+  blur-speed + direct ARKit residuals have zero code. (3) BUILD P0-7 reusing `_rk4_step`/deriv() as
+  the literal simulator core (kills sim/solver physics-mismatch bugs). (4) ONLY THEN (P1-4b) learned
+  lift as a NARROW RESCUE model — applied solely to segments the anchored solver can't fit
+  (status∈{fit_weak,fit_bvp_fallback,blocked_*} or observations<min) — not a parallel system: transformer
   (UpliftingTT pattern, time-aware RoPE, GPL-3.0 code reference — internal-use OK) trained on P0-7
   synthetic pairs, robust-to-gaps by construction (97.1% spin accuracy under half-FPS + 10% missing
   in TT). Camera-angle sensitivity is real (TT3D: 12.4cm side vs 29.8cm back view) — emit a
@@ -767,7 +801,10 @@ in/out with gray zone.
   full-flight 3D on ≥90% of trusted rally segments across 4 clips; net-clearance/court-volume checks;
   zero teleports; held-out F1 unharmed. THEN: activate paddle ball-reflection factor (P3-5) and 3D
   speed/spin stats (P6).
-- [ ] **P1-5 Spin estimate (stretch, after the P1-4b learned-lift track).** From the learned lift + rebound deviation
+- [ ] **P1-5 Spin estimate (stretch).** PRECONDITION (tech-audit): H13's measured court-surface
+  friction/restitution MUST exist first — spin-sign-from-bounce-kink is UNIDENTIFIABLE without it
+  (the same kink fits a family of (friction, spin) pairs). 3-way sign only (top/back/flat), never
+  magnitude, never user-facing without the gray zone. From the learned lift + rebound deviation
   (spin changes bounce direction — measurable from our court-plane events). Report with wide trust
   bands; never user-facing without the gray zone. Gate: sign-accuracy on labeled slow-mo owner clips.
 - [ ] **P1-6 Learned bounce/contact events.** Replace heuristic cusp+gap anchors as the PRIMARY
@@ -800,11 +837,15 @@ p95 8-23mm tripod), mesh index, contact-dense scheduling. **To build:** raw-nois
 GT + world-MPJPE gate, challenger benchmark.
 
 - [ ] **P2-1 SMART-recipe hardening lane.** Port the validated pieces into our stack (all classical,
-  no backbone change): (a) RAFT-small optical-flow camera tracking + MAD outlier filtering (0.041°
-  rotation error @ 55ms/frame — beats homography-only) feeding placement (directly attacks IMG_1605
-  handheld drift; combine with (b)) ; (b) mask-the-players before camera estimation (TRAM's ablated
+  no backbone change): (a) camera tracking — TECH-AUDIT: `camera_motion.py`/`estimate_camera_motion.py`
+  ALREADY implement classical LK+RANSAC with person-masking (TRAM's masking insight partially landed)
+  but are NOT a default stage, not RAFT, not MAD-gated → upgrade the existing module (RAFT-small +
+  MAD outlier filter, 0.041° rot err @55ms/frame) and make it default, feeding placement (attacks
+  IMG_1605 handheld drift; combine with (b)) ; (b) mask-the-players before camera estimation (TRAM's ablated
   insight: camera ATE 2.42m→0.32m) — we already have person masks; (c) per-track shape/scale locking
-  (constant bone lengths per player per clip); (d) two-pass MAD-then-Gaussian smoothing where our
+  (constant bone lengths per player per clip) — QUICK WIN (tech-audit): a correct MAD bone-length
+  outlier detector ALREADY exists but feeds only trust-band metadata; wire it into the smoothing
+  weights; (d) two-pass MAD-then-Gaussian smoothing where our
   one-euro chain currently stacks. Files: `threed/racketsport/worldhmr.py` (VP-A2 owns
   smoothing — coordinate!), `placement.py`, `pose_temporal.py`. Measure with
   `threed/racketsport/visual_quality.py` (+ new camera-motion metric). Gate: IMG_1605 foot-slide
@@ -817,16 +858,19 @@ GT + world-MPJPE gate, challenger benchmark.
   optimization + differentiable soft foot-contact — Part II-B; qualitative-only evidence, prototype
   against our defects), then decode: mesh, skeleton, and all 70 joints move COHERENTLY. Use SOMA-X
   (Apache, `py-soma-x`) for MHR↔SMPL-X so SMPL-X-space priors (SmoothNet/DPoser-X) compose here.
-  Requires emitting per-frame MHR pose codes from the BODY runner (cheap — codes already computed
-  in-model; plumb through `scripts/racketsport/run_sam3dbody_batch.py` + orchestrator contract +
-  `schemas/__init__.py` remote-sync). Evaluate AGAINST the current classical chain with
+  TECH-AUDIT (verified): the emission prerequisite is ALREADY DONE — `global_orient`/`body_pose`/
+  `betas` are emitted and schema'd end-to-end. The REAL gap is the decode-back (FK/skinning) path,
+  which exists only inside vendored `third_party/Fast-SAM-3D-Body/.../mhr_head.py::MHRHead` — expose/
+  wrap it for local re-decode after latent smoothing. Evaluate AGAINST the current classical chain with
   visual_quality.py + skeleton-vs-mesh divergence + paddle-stability downstream metric (paddle lane
   measured skeleton noise as ITS binding constraint — this is the fix). Gate: raw-equivalent joint
   noise 2-8cm/frame → ≤ 1cm effective without lag artifacts (wrist swing-peak timing must stay
   0-frame-delta — regression harness exists); mesh-skeleton divergence ≤ 5mm p95. Kill: if latent
   smoothing over-smooths fast swings (SMART's failure mode) — fall back to hybrid (latent for
   torso/legs, classical wrist protection).
-- [ ] **P2-3 Far/small-player quality.** High-res crop re-inference pass for players whose bbox
+- [ ] **P2-3 Far/small-player quality.** TECH-AUDIT: the body model's input is hard-capped at
+  384/448/512px regardless of source resolution — so "run the whole frame at higher res" is NOT a
+  distinct lever; the crop-based path below is the right family. High-res crop re-inference pass for players whose bbox
   height < threshold (research: MPJPE 33→43mm large→small, cause = input resolution): upscale crops
   (optionally light SR) → SAM-3D re-run on far players only (contact-dense scheduling already
   prioritizes the hitter; extend the same budget logic). Gate: far-player jitter RMS within 1.5× of
@@ -853,6 +897,16 @@ GT + world-MPJPE gate, challenger benchmark.
   deliverable) (training-time-only rig is allowed;
   product stays single-cam) for triangulated joint GT on ≥ 20 samples. Gate: world-MPJPE ≤ 0.05m
   threshold pass per `pickleball-manager-setup` gate; per-player far/near breakdown reported.
+- [ ] **P2-7a [EARLY, decoupled — tech-audit: don't trap cheap narrow tests inside the all-or-nothing
+  backbone gate] GVHMR gravity-view spike.** VERIFIED at source: `get_R_c2gv(R_w2c, axis_gravity_in_w)`
+  cleanly accepts EXTERNAL camera pose + gravity (no DPVO needed for that path) — and on TRIPOD clips
+  both are already known WITHOUT ARKit (constant R from court calibration; gravity = court-plane
+  normal), so this spike can run TODAY on eval clips. Caveat (verified): GVHMR is single-person-
+  hardcoded (`get_one_track`; a rumored demo_multi.py does NOT exist) → 4 players = 4 crop-track runs;
+  measure that cost honestly. Gate: single-player world-metrics vs our stack on 2 clips; informs P2-7.
+- [ ] **P2-7b [EARLY, decoupled] Far-player full-image-conditioning probe.** PromptHMR-Vid/BLADE-style
+  full-image context vs our crop pipeline, specifically for the far pair. Gate: far-player jitter/
+  accuracy delta on 2 clips; informs both P2-3 and P2-7.
 - [ ] **P2-7 Challenger benchmark (the ruling re-opener, AFTER P2-1/2/3 land).** GVHMR +
   PromptHMR-Vid (+ optionally WHAM) on our 4 eval clips + owner handheld clip, scored with OUR
   metrics (visual_quality.py + P2-6 GT + placement gates). Licenses are a non-constraint now (owner
@@ -883,7 +937,7 @@ hands, 5-keypoint detector, impact-factor activation, hi-def scanned asset + mar
   exist only for the 3 CVAT clips) + the `_paddle_estimate_trust_band` wording patch + ESTIMATED
   band enforced. Gate: fresh E2E on any clip emits paddle track by default, fail-closed when
   evidence is absent; suite green.
-- [ ] **P3-2 P2a wrist-gated masks → silhouette factor.** The seg checkpoint exists
+- [ ] **P3-2 [DEFERRED-PENDING-GT-GAP — tech-audit resequence] P2a wrist-gated masks → silhouette factor.** The seg checkpoint exists
   (`runs/rkt_train_20260702T072800Z/seg_yolo_external_split/`) and is IDLE. Run it wrist-gated,
   add mask-silhouette residual to the fusion. THEN the white-space play: mask → oriented
   quadrilateral corners → IPPE planar PnP (BSD-3; 4-point coplanar; 50-80× faster) as a direct
@@ -891,12 +945,15 @@ hands, 5-keypoint detector, impact-factor activation, hi-def scanned asset + mar
   must know). Gate: Wolverine IoU 0.236 → ≥ 0.35 AND Burlington 0.342 → ≥ 0.45 internal-val, jitter
   ≤ 5°/f held, no new teleports. Kill: mask Dice < 0.6 on contact-window frames after one tuning
   round → keep silhouette factor only where masks are clean.
-- [ ] **P3-3 P2b WiLoR hand crops.** A100; CC-BY-NC-ND (internal OK — ledger it). Replaces
+- [ ] **P3-3 [DO SECOND, right after P3-1 — tech-audit: this targets the MEASURED defect (palm-only
+  IoU 0.065 rest-pose bias); boxes supply ~100% of current gain] P2b WiLoR hand crops.** A100; CC-BY-NC-ND (internal OK — ledger it). Replaces
   rest-pose-biased MHR fingers as palm-frame source (measured: palm-only IoU 0.065 — the weak
   link). Blend: WiLoR palm frame where crop confidence high, else MHR. Gate: absolute pronation
   improves on CVAT-box orientation proxy; downstream fused IoU +≥0.03; jitter not worse. Note: the
   constant-grip-transform assumption stays — measure per-segment grip re-fit as part of this lane.
-- [ ] **P3-4 Paddle 5-keypoint detector (owner data).** RacketVision schema (Top/Bottom/Handle/
+- [ ] **P3-4 [DEFERRED-PENDING-GT-GAP; pixel-math gate: only favorable <6-8m on sharp frames — worst
+  exactly at impact; eval RacketVision's public RTMPose-M checkpoint at ZERO training cost first]
+  Paddle 5-keypoint detector (owner data).** RacketVision schema (Top/Bottom/Handle/
   Left/Right); **start from RacketVision's released RTMPose-M racket-keypoint checkpoint** (PCK@0.2
   81.8-89.6, handle 92.6-97.9 — MIT, public) rather than from scratch, then fine-tune on P0-4 labels
   (low-thousands of frames; their side/edge-keypoint weakness [64.8-80.1% PCK] tells us to oversample
@@ -906,16 +963,19 @@ hands, 5-keypoint detector, impact-factor activation, hi-def scanned asset + mar
   fusion (keypoint→corner correspondence with the known paddle rectangle). Cross-attention (ball as
   query) if we later joint-train — naive concat hurts (RacketVision ablation). Gate: face-normal error
   vs CVAT-derived orientation proxies improves ≥25%; center error ≤ 10px.
-- [ ] **P3-4b Face-texture homography anchors (EDGE H7 — the self-labeling pose factor).** On sharp
+- [ ] **P3-4b [DEFERRED-PENDING-GT-GAP] Face-texture homography anchors (EDGE H7 — the self-labeling pose factor).** On sharp
   wrist-crop frames, feature-match the scanned paddle face graphic (SuperPoint+LightGlue) → planar
   homography → direct 6-DOF pose. Use as (a) gold anchors that continuously re-fit the per-segment
   grip transform, (b) free auto-labels for P3-4 keypoint training. Gate: anchor-frame pose agrees
   with marker GT ≤10° where both exist; grip-transform drift measurably reduced between anchors.
-- [ ] **P3-5 Ball-reflection factor activation.** Already built + tested, DORMANT pending P1-4 3D
+- [ ] **P3-5 [FAST-TRACK — tech-audit: the strongest orientation evidence at exactly the frames
+  coaches care about; cheaper than any new vision signal. Unlock = P2c IMG_1605 GPU ball track (30
+  real audio onsets), shared with P1] Ball-reflection factor activation.** Already built + tested, DORMANT pending P1-4 3D
   velocities. TT4D existence proof: 26.4°±4.4 orientation from trajectory inversion alone — treat as
   target band at impact frames. Fuse as impact-window prior (highest-value frames). Gate: impact-
   frame face-angle error vs owner 4-marker GT ≤ 30° p90 (first pass), tightening with data.
-- [ ] **P3-6 Sparse differentiable-render refinement (optional, after P3-2).** nvdiffrast render-
+- [ ] **P3-6 [DEFERRED — last, only if marker GT shows a residual impact-frame gap] Sparse
+  differentiable-render refinement (optional, after P3-2).** nvdiffrast render-
   and-compare at impact keyframes only (Diff-DOPE evidence: 3.5s/frame full-config — keyframes only;
   resolution-insensitive so cheapen aggressively). Uses the P3-7 textured asset. Gate: measurable
   face-angle improvement at impacts on GT; ≤ 20s/clip added. Kill if masks/keypoints already
@@ -938,7 +998,9 @@ synthetic generator v2 w/ tennis overlays), external checkpoints local (PnLCalib
 DeepLSD/ScaleLSD). **To build:** land Wave A on main, train the model, GEO r3 (adjacent-court vote),
 distortion-aware handheld calibration, court-profile library (P4-0), downstream impact gate.
 
-- [ ] **P4-0 Court-profile library + color + intrinsics-at-ingest (EDGE_PLAYBOOK H1/H2/H3; do BEFORE
+- [ ] **P4-0 [START HERE — 0% built today (no CourtProfile module exists; `camera_fingerprint()` is a
+  device key only, tech-audit verified). THE v1 court path.] Court-profile library + color +
+  intrinsics-at-ingest (EDGE_PLAYBOOK H1/H2/H3; do BEFORE
   Wave B matters for owner clips).** Per registered court: store one precise calibration + line-paint
   color + lens intrinsics/distortion (from the H3 ChArUco sweep or the app sidecar); on upload,
   re-identify the court (image-retrieval embedding + color histogram, trivial at N≤3 courts; reuse the
@@ -958,7 +1020,9 @@ distortion-aware handheld calibration, court-profile library (P4-0), downstream 
   `worktree-court-autofind-20260705`. Gate: 31 pytest + 156 vitest from the lane green on main;
   upload guess+confirm UI keeps the trust hole closed (unconfirmed guesses NEVER ride the TRUSTED
   channel).
-- [ ] **P4-2 Train court_unet_v2 (STAGED — one command).**
+- [ ] **P4-2 [UNKNOWN-COURT EPIC — NOT in DONE-v1 (tech-audit: real clips calibrate via manual/
+  sidecar precedence; the auto-find solver only runs behind an explicit preview flag; v1 = P4-0
+  profiles + P4-4 distortion + measured net heights)] Train court_unet_v2 (STAGED — one command).**
   `bash scripts/gpu-train-lock.sh bash runs/lanes/cal_model_20260705/train_a100.sh` (script now present
   at that path; NOTE `runs/` is gitignored → it is a LOCAL untracked artifact and won't survive a fresh
   clone — promote to `scripts/` or re-stage from the court lane on a clean machine).
@@ -966,11 +1030,17 @@ distortion-aware handheld calibration, court-profile library (P4-0), downstream 
   attempts). Then eval harness + E4 fusion into the geometric solver
   (`court_model_infer.infer_court_model` contract is ready). Gate: aggregate ≤ 200px hard bar
   (currently 213.3); IMG_1605 tennis-overlay case solved by the neural channel.
-- [ ] **P4-3 GEO r3.** Temporal-median fallback trigger (predeclare this time) + top-3 cross-frame
+- [ ] **P4-3 [UNKNOWN-COURT EPIC — NOT in DONE-v1; the one real fix here is the top-3 cross-frame
+  court-identity vote (the 19.8px number is THIS path's discrete lock-on bug)] GEO r3.** Temporal-median fallback trigger (predeclare this time) + top-3 cross-frame
   vote for the adjacent-identical-court lock-on (Burlington/Wolverine failure). PnLCalib SV_kp/
   SV_lines weights already local (`models/checkpoints/court_external/` — GPL v2, internal OK,
   ledger it). Gate: all 5 samples ≤ 200px; Outdoor stays ≤ 5px; no Indoor regression past 93px.
-- [ ] **P4-4 Distortion-aware calibration for owner captures.** IMG_1605's 330mm foot-slide FAIL is
+- [ ] **P4-4 [TECH-AUDIT: the SINGLE highest-leverage v1 accuracy fix. Two SEPARATE error budgets —
+  the oft-cited 19.8px p95 is the GEO/auto-find path (a discrete adjacent-court lock-on bug, v1-
+  irrelevant); the owner/metric15 v1 path already runs 12.3px p95 / 4.8px median, and ITS floor is
+  IMG_1605-class edge-of-frame distortion (~53px). Fix = ChArUco k1/k2 per lens NOW (decoupled from
+  ARKit timeline) + VERIFY `back_project_pixel_to_floor` actually applies `intrinsics.dist` (audit
+  suggests it may not).] Distortion-aware calibration for owner captures.** IMG_1605's 330mm foot-slide FAIL is
   edge-of-frame lens distortion (zero-distortion 15pt model breaks at x̄≈53px). Add k1/k2 estimation
   to the metric15 fit (or per-camera profile from the owner-capture association profile); handheld
   composes with P2-1 camera tracking. Gate: IMG_1605 placement residual at frame edges ≤ 2× center;
@@ -980,7 +1050,13 @@ distortion-aware handheld calibration, court-profile library (P4-0), downstream 
   calibration-noise-floor finding: reproj p95 ≈ 19.8px ≈ the F1@20 radius — pushing CAL down lifts
   BALL headroom). Held-out PCK@5px gate on owner-reviewed viewpoints for promotion; fail-closed
   mandatory-review below bar. Gate: CAL promotion row in ledger or documented miss.
-- [ ] **P4-6 NET as full 3D geometry (not a plane) — novel; nobody does this in any sport. STAGED
+- [ ] **P4-6 NET geometry. TECH-AUDIT CORRECTION: `net_plane.py` ALREADY does linear post-to-center
+  sag interpolation (36/34in regulation constants) — NOT a single flat plane. The v1 gap is (a)
+  heights are regulation DEFAULTS not per-court tape measurements → **P4-6.0 (v1, ~1-line data
+  change): add tape-measured `net_post_height_in`/`net_center_height_in` to the H0 court profile and
+  override the template at `net_plane_from_template` call sites** — and (b) zero pixel-level net
+  verification. The full seg+catenary build below is the v2 path — novel (nobody does it in any
+  sport) but NOT v1-blocking. STAGED
   (don't bundle into one checkbox): P4-6a net-cord/post detection bootstrap with its OWN segmentation-
   quality gate (fallback if seg fails: keep the current single net_plane + trust-band, don't block the
   pipeline); P4-6b catenary fit validated on synthetic/known geometry first; P4-6c real-clip
@@ -1012,23 +1088,36 @@ smoothing.
 
 - [ ] **PF-1 Cheap consistency priors first (stopgap before the full optimizer).** Before building a
   joint optimizer, add the two highest-value cross-system residuals as post-hoc corrections and
-  measure them: (a) **ball↔paddle impact** — at each contact event (P1-6) snap the ball's 3D impact
-  point and the paddle face to coincide (MonoTrack/TT4D-style), which also cross-checks both; (b)
+  measure them — implement in the `foot_pin.py` HOUSE PATTERN (bounded max-correction caps +
+  confidence-gated application, the repo's established can-only-nudge idiom): (a) **ball↔paddle
+  impact** — at each P1-6 contact window ABOVE a fused-confidence threshold (contact detection is
+  heuristic today — a spurious window would create false 'consistency'), snap ball 3D and paddle face
+  toward coincidence, each moved ≤ half a ball radius (~37mm), tapered ±2 frames; (b)
   **foot↔ground + non-penetration** — clamp feet to the calibrated court plane at stance (extends
   foot-pin) and forbid mesh-below-floor. Gate: measurable reduction in ball-paddle gap at impacts +
   floor penetration, zero regression to standalone metrics. Confidence: high (cheap, decomposable).
 - [ ] **PF-2 Contact-coupled joint optimizer (JOSH-pattern, our metric priors + ARKit init).** One
-  offline optimization (ceres/GTSAM factor graph or differentiable render) over {camera trajectory
+  offline optimization — SOLVER RULED (tech-audit): torch-autograd Levenberg-Marquardt or
+  scipy.optimize.least_squares(method='trf', loss='huber') with block-sparse Jacobians — the house
+  idiom (every solver in this repo is scipy least_squares; ceres/GTSAM are uninstalled, unused, and
+  not even what JOSH uses; differentiable render fits none of the residuals). Optimize over {camera trajectory
   (seeded + locked-ish from ARKit when the P0-10 sidecar is present+valid; ELSE seeded from P2-1
   RAFT+MAD for stock-camera/capture-failure clips — and degrade the WHOLE-world trust band on the
   fallback path, not just occluded frames), each player's root+pose, ball arc segments, paddle 6-DoF} with
-  residuals: 2D reprojection of every subsystem + human-scene contact (JOSH) + ball↔paddle impact +
+  residuals (weights = the pipeline's EXISTING per-subsystem confidence fields — event_fusion,
+  SE3PoseConfidence, ball-chain trust — zero new modeling): 2D reprojection of every subsystem +
+  human-scene contact (JOSH; NOTE the 314→149mm number is a WITHIN-optimizer loss ablation, cite as
+  directional only) + ball↔paddle impact +
   ball↔ground bounce + **net-occlusion/height consistency** (ball/player behind the P4-6 net cord must
   respect its fitted height; occluded frames trust-banded, not fabricated) + **hand↔paddle grip**
   (paddle handle bounded to a slowly-varying offset from the gripping hand's palm frame) +
   non-penetration + known-scale anchors (court 20×44ft, net 36/34in, ball 74mm,
   per-player heights from H4). Whole-clip (offline) — JOSH shows whole-clip beats chunked by ~12%
-  (TT4D). Kill/guard: JOSH's own limitation is it needs VISIBLE contact — fail-closed to PF-1 +
+  (TT4D). Per-player variable: reuse P2-2's latent MHR pose-code through the frozen decoder (anatomical
+  validity by construction, drastically fewer DOF). De-risk path: contact events are SPARSE → a
+  coordinate-descent/alternating-block approximation (re-run each subsystem's own solver with
+  cross-terms as soft constraints) is a legitimate cheaper PF-2 v0. Kill/guard: JOSH's own limitation
+  is it needs VISIBLE contact — fail-closed to PF-1 +
   trust-band the frames where contact is occluded (don't fabricate consistency). Gate: world-MPJPE +
   foot-float-rate + ball-paddle-impact-gap all improve vs the PF-1 baseline on ≥2 clips; nothing
   regresses; runtime within the offline budget (JOSH full opt ≈ 0.8 FPS is acceptable on A100).
@@ -1059,7 +1148,10 @@ per-court cache, cost metering, pre-flight QA, and the P5-7 BODY redesign.
 
 - [ ] **P5-1 Land the remaining booked levers** (all measured, from
   `runs/lanes/pipeline_speed_20260705/FINAL_REPORT.md` + chunkfix/payload lanes): shared-memory/mmap
-  subprocess handoff (489→<40s partially proven), gates-from-arrays everywhere (P3+P5 of that plan),
+  subprocess handoff — TECH-AUDIT CORRECTION: the one live attempt (S4 chunked binary transport) was
+  a measured REGRESSION (1057.4→1300.7s; handoff 376→489s) and was reverted; only round-trip
+  correctness is proven, the <40-60s target is NOT banked. Next attempt = large flat arrays, not
+  chunked streaming (S4's own root-cause). Plus gates-from-arrays everywhere (P3+P5 of that plan),
   dispatch-dir auto-clean (A100 disk hit 100% once — REQUIRED before unattended runs), P7 freshness.
   Gate: Wolverine ≤ 400s; Outdoor ≤ 2× its video duration; six-run variance report; foot-slide
   bit-identical vs. pre-change.
@@ -1067,8 +1159,10 @@ per-court cache, cost metering, pre-flight QA, and the P5-7 BODY redesign.
   landed opt-in, byte-identical serial default; rally gating actually pays off on real captures
   (dead time — eval clips have none). Flip default for owner-profile clips after a 3-clip
   correctness A/B. Gate: byte-identical worlds; wall reduction measured.
-- [ ] **P5-3 Detector engine optimization.** TensorRT/FP16 engines for WASB/TrackNet/YOLO26 on the
-  VM (research: standard practice; our detectors are small — expect 2-5×); batch rally-window frames.
+- [ ] **P5-3 Detector engine optimization — SCOPE (tech-audit): WASB (1.5M CNN) + YOLO26 ONLY via
+  the official Ultralytics TensorRT/FP16 path (2-5× realistic). Do NOT convert SAM-3D's ViT/MHR
+  (highest risk, and detectors are <3% of wall — this lever does NOT touch the 6-8min floor; don't
+  conflate). Batch rally-window frames.**
   Gate: ball+track stage wall −50% at identical F1 (bitwise-identical not required — score-identical
   on internal-val is).
 - [ ] **P5-4 FULLY-LOADED cost metering (not just GPU).** A per-clip $ tracker summing: GPU-seconds ×
@@ -1096,9 +1190,13 @@ per-court cache, cost metering, pre-flight QA, and the P5-7 BODY redesign.
 
 - [ ] **P5-7 BODY-runtime redesign (the unbooked ≤1× stretch — this task is what could unlock it).**
   Booked levers floor at ~300-400s BODY; ≤1× video duration needs an order-of-magnitude BODY change.
-  Candidates: persistent warm worker POOL across a clip queue (re-measure at fleet scale — the ~67s
-  single-clip verdict doesn't cover queue amortization), batched multi-clip inference, TensorRT/
-  compiled SAM-3D, frame-plan sparsification beyond ball_aware. Gate: BODY wall ≤ video duration on a
+  HONEST CEILING (tech-audit): warm-worker-addressable fixed cost = model_load 23.3s + compile_warmup
+  42.3s = 65.6s/clip; queue-amortized best case 65.6·(N−1)/N (~59s/clip at N=10) — 15-20% of the
+  post-P5-1 floor, NOT an order of magnitude. So the warm pool MUST pair with **batched multi-clip
+  inference** (the bigger lever) + cheap first: **disk-cache the compiled graph keyed by model
+  version + input shape (~42s/clip back, near-zero risk)**. Also evaluate Triton-style persistent
+  serving vs extending remote_body_dispatch (currently strictly one-shot-per-clip, flock lease, no
+  queue). Other candidates: frame-plan sparsification beyond ball_aware. Gate: BODY wall ≤ video duration on a
   full owner game, gates green. Kill: if two candidates fail to beat the booked floor ≥2×, accept ≤2×
   as the product SLA and close the stretch.
 - [ ] **P5-8 Per-court warm caches + cascade inference (EDGE H17).** Cache per-court/per-session
@@ -1244,6 +1342,12 @@ legal review, the VERIFIED promotion ladder.
    resume); headless far-camera screenshots miss body-scale misalignment (zoomed browser checks
    required); synthetic byte-identity tests miss real finalizer interactions (verify on a real GPU
    run); doc-consistency tests drift within days (register new docs same-lane).
+10. **Signal-adoption discipline (tech-audit 2026-07-06).** Before adopting ANY new vision signal
+   into a fusion stack: (a) re-derive the CURRENT ablation from repo artifacts — which existing
+   signal actually moves the metric (the paddle lesson: palm-only IoU 0.065 vs boxes carrying +0.19
+   — the aspirational signal list didn't match measured reality); (b) run the 10-line pixel-math
+   conditioning check (arctan(keypoint-noise px / apparent-baseline px) at real working distance)
+   — if the geometry can't beat the incumbent at the ranges/blur that matter, don't build it.
 9. **STOP-AND-ASK when genuinely blocked (owner 2026-07-06).** Blocked = a decision needing info,
    judgment, money, or authority ONLY the owner has AND no standing rule/kill-list/ruling covers it.
    If a standing rule answers it, proceed and log the ruling — do NOT stop. Otherwise classify into
