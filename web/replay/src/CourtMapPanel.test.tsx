@@ -107,8 +107,21 @@ const arcRender = parseBallArcRender({
     },
   ],
   bridges: [],
-  samples: [],
-  summary: { segment_count: 1, sample_count: 0, bridge_sample_count: 0, rally_span_count: 0 },
+  samples: [
+    {
+      t: 0.2,
+      frame_float: 6,
+      segment_id: 0,
+      world_xyz: [0.35, 2.6, 1.1],
+      court_xy: [0.35, 2.6],
+      confidence: 0.72,
+      band: "arc_interpolated",
+      bridge: false,
+      render_only: true,
+      not_for_detection_metrics: true,
+    },
+  ],
+  summary: { segment_count: 1, sample_count: 1, bridge_sample_count: 0, rally_span_count: 0 },
 });
 
 describe("CourtMapPanel", () => {
@@ -119,6 +132,7 @@ describe("CourtMapPanel", () => {
     expect(html).toContain("data-active=\"true\"");
     expect(html).toContain("court-map-shot-line");
     expect(html).toContain("court-map-bounce-dot");
+    expect(html).toContain("court-map-current-ball");
     expect(html).toContain("court-map-player");
     expect(html).toContain("aria-label=\"Top-down court map\"");
   });

@@ -82,7 +82,7 @@ export type BallArcSolvedFrame = {
 };
 
 export type BallArcSolved = {
-  schema_version: 1;
+  schema_version: 1 | 2;
   artifact_type: "racketsport_ball_track_arc_solved";
   clip_id: string | null;
   status: string;
@@ -124,14 +124,14 @@ export function parseShots(input: unknown): RacketsportShots {
 export function parseBallArcSolved(input: unknown): BallArcSolved {
   const value = parseMaybeJson(input);
   assertRecord(value, "ball_track_arc_solved");
-  if (value.schema_version !== 1) throw new Error("ball_track_arc_solved.schema_version must be 1");
+  if (value.schema_version !== 1 && value.schema_version !== 2) throw new Error("ball_track_arc_solved.schema_version must be 1 or 2");
   if (value.artifact_type !== "racketsport_ball_track_arc_solved") {
     throw new Error("ball_track_arc_solved.artifact_type must be racketsport_ball_track_arc_solved");
   }
   const status = readArcSolverStatus(value.status, "ball_track_arc_solved.status");
   const trusted = TRUSTED_BALL_ARC_SOLVER_STATUSES.has(status);
   return {
-    schema_version: 1,
+    schema_version: value.schema_version,
     artifact_type: "racketsport_ball_track_arc_solved",
     clip_id:
       value.clip_id === null || value.clip_id === undefined

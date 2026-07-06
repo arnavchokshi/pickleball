@@ -149,7 +149,7 @@ def test_ball_arc_render_uses_bvp_fallback_segment_and_dense_samples_stay_in_bou
     artifact = _arc_solved_render_payload()
     segment = artifact["segments"][0]
     segment["status"] = "fit_bvp_fallback"
-    segment["initial_position_m"] = [0.0, -11.0, 0.0371]
+    segment["initial_position_m"] = [0.0, -7.0, 0.0371]
     segment["initial_velocity_mps"] = [0.4, 2.0, 1.5]
     segment["endpoint_error_m"] = 0.001
     segment["diagnostics"] = {
@@ -173,8 +173,8 @@ def test_ball_arc_render_uses_bvp_fallback_segment_and_dense_samples_stay_in_bou
     assert render["segments"][0]["fit_status"] == "fit_bvp_fallback"
     assert render["segments"][0]["confidence"] < 0.38
     assert all(sample["band"] == "arc_weak" for sample in samples)
-    assert all(-7.048 <= sample["world_xyz"][0] <= 7.048 for sample in samples)
-    assert all(-10.7056 <= sample["world_xyz"][1] <= 10.7056 for sample in samples)
+    assert all(-3.048 <= sample["world_xyz"][0] <= 3.048 for sample in samples)
+    assert all(-6.7056 <= sample["world_xyz"][1] <= 6.7056 for sample in samples)
     assert all(sample["world_xyz"][2] >= -0.15 for sample in samples)
 
 

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -109,6 +111,45 @@ describe("court map geometry", () => {
       peak: [0.42, 3.1],
       confidence: 0.82,
     });
+  });
+
+  it("projects real final-verify court-map ball paths and current ball samples inside the SVG viewport", () => {
+    const root = process.cwd();
+    const world = JSON.parse(
+      readFileSync(resolve(root, "../../runs/lanes/ball_final_verify_20260705/burlington/virtual_world.json"), "utf8"),
+    );
+    const render = parseBallArcRender(
+      readFileSync(resolve(root, "../../runs/lanes/ball_final_verify_20260705/burlington/ball_arc_render.json"), "utf8"),
+    );
+    const firstShotTime = render.segments[0].t0 + 0.1;
+    const shots = buildCourtMapShots(render, firstShotTime);
+    const ball = sampleBallArcRenderAtTime(render.samples, firstShotTime);
+    const courtPoints = Object.values(world.court.line_segments).flat() as [number, number, number][];
+    const xs = courtPoints.map((point) => point[0]);
+    const ys = courtPoints.map((point) => point[1]);
+    const projector = svgCourtProjector({
+      widthM: world.court.width_m,
+      lengthM: world.court.length_m,
+      paddingPx: 24,
+      widthPx: 305,
+      heightPx: 520,
+      xMin: Math.min(...xs),
+      xMax: Math.max(...xs),
+      yMin: Math.min(...ys),
+      yMax: Math.max(...ys),
+    });
+
+    expect(shots.length).toBeGreaterThan(0);
+    expect(ball?.world_xyz).not.toBeNull();
+    const projectedPoints = shots.flatMap((shot) => [shot.start, shot.end]);
+    projectedPoints.push([ball!.world_xyz![0], ball!.world_xyz![1]]);
+    for (const point of projectedPoints) {
+      const [x, y] = projector(point);
+      expect(x).toBeGreaterThanOrEqual(24);
+      expect(x).toBeLessThanOrEqual(281);
+      expect(y).toBeGreaterThanOrEqual(24);
+      expect(y).toBeLessThanOrEqual(496);
+    }
   });
 
   it("supports the ?view=courtmap verifier hook", () => {

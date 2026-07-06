@@ -21,6 +21,10 @@ describe("shot trails data", () => {
     process.cwd(),
     "../../runs/ball_arc_event_subset_20260703T02Z/wolverine_mixed_0200_mid_steep_corner/ball_track_arc_solved.json",
   );
+  const finalVerifyBurlingtonArcPath = resolve(
+    process.cwd(),
+    "../../runs/lanes/ball_final_verify_20260705/burlington/ball_track_arc_solved.json",
+  );
 
   it("parses the real Wolverine shots.json fixture including landing uncertainty ellipses", () => {
     const shots = parseShots(readFileSync(wolverineShotsPath, "utf8"));
@@ -152,6 +156,18 @@ describe("shot trails data", () => {
     expect(arc.status).toBe("ran");
     expect(arc.trusted).toBe(true);
     expect(arc.frames.length).toBeGreaterThan(0);
+  });
+
+  it("loads the final-verify schema v2 arc-solved fixture without rejecting the unchanged render fields", () => {
+    const arc = parseBallArcSolved(readFileSync(finalVerifyBurlingtonArcPath, "utf8"));
+
+    expect(arc.schema_version).toBe(2);
+    expect(arc.status).toBe("ran");
+    expect(arc.trusted).toBe(true);
+    expect(arc.clip_id).toBe("burlington");
+    expect(arc.killReasons).toEqual([]);
+    expect(arc.frames.length).toBeGreaterThan(0);
+    expect(arc.frames.some((frame) => frame.world_xyz !== null && frame.segment_id !== null)).toBe(true);
   });
 
   it("fail-closed gates a self-killed arc-solved artifact: no frames survive and shot trails draw nothing measured from it", () => {

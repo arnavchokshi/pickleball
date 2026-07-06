@@ -148,19 +148,38 @@ export function svgCourtProjector({
   paddingPx,
   widthPx,
   heightPx,
+  xMin,
+  xMax,
+  yMin,
+  yMax,
 }: {
   widthM: number;
   lengthM: number;
   paddingPx: number;
   widthPx: number;
   heightPx: number;
+  xMin?: number;
+  xMax?: number;
+  yMin?: number;
+  yMax?: number;
 }): (point: Vec2) => Vec2 {
   const innerWidth = widthPx - paddingPx * 2;
   const innerHeight = heightPx - paddingPx * 2;
+  const minX = Number.isFinite(xMin) ? Number(xMin) : -widthM / 2;
+  const maxX = Number.isFinite(xMax) ? Number(xMax) : widthM / 2;
+  const minY = Number.isFinite(yMin) ? Number(yMin) : 0;
+  const maxY = Number.isFinite(yMax) ? Number(yMax) : lengthM;
+  const xSpan = maxX > minX ? maxX - minX : widthM;
+  const ySpan = maxY > minY ? maxY - minY : lengthM;
   return ([x, y]) => [
-    Math.round(paddingPx + ((x + widthM / 2) / widthM) * innerWidth),
-    Math.round(heightPx - paddingPx - (y / lengthM) * innerHeight),
+    clampSvgCoordinate(Math.round(paddingPx + ((x - minX) / xSpan) * innerWidth), paddingPx, widthPx - paddingPx),
+    clampSvgCoordinate(Math.round(heightPx - paddingPx - ((y - minY) / ySpan) * innerHeight), paddingPx, heightPx - paddingPx),
   ];
+}
+
+function clampSvgCoordinate(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, value));
 }
 
 export function replayViewFromSearch(search: string): ReplayViewMode {

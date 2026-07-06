@@ -2575,11 +2575,13 @@ def _apply_fit_validity_gates(
 
 
 def _fit_validity_failure_reason(segment: FlightSegmentFit) -> str | None:
-    if not segment.status.startswith("fit") or segment.status == "fit_weak":
+    if not segment.status.startswith("fit") or segment.status in {"fit_weak", "fit_bvp_fallback"}:
         return None
     violations = segment.physical_sanity.get("violations") if isinstance(segment.physical_sanity, Mapping) else None
-    if isinstance(violations, Sequence) and not isinstance(violations, (str, bytes)) and "outside_court_volume" in violations:
-        return "outside_court_volume"
+    if isinstance(violations, Sequence) and not isinstance(violations, (str, bytes)) and violations:
+        return str(violations[0])
+    if isinstance(segment.physical_sanity, Mapping) and segment.physical_sanity.get("violation") is True:
+        return "physical_sanity_violation"
     if segment.inlier_count == 0:
         return "zero_inliers"
     if _segment_inlier_fraction_below_fit_gate(segment):
@@ -3724,10 +3726,15 @@ def _physical_summary(segments: Sequence[FlightSegmentFit], *, config: BallArcSo
         if segment.status != "fit_bvp_fallback"
     ]
     violations = [item for _segment, item in violation_eligible if item.get("violation") is True]
-    violation_fraction = (len(violations) / len(items)) if items else None
+    if not items:
+        violation_fraction = None
+    elif violation_eligible:
+        violation_fraction = len(violations) / len(violation_eligible)
+    else:
+        violation_fraction = 0.0
     return {
         "segment_count": len(items),
-        "kill_eligible_segment_count": len(items),
+        "kill_eligible_segment_count": len(violation_eligible),
         "violation_eligible_segment_count": len(violation_eligible),
         "fallback_excluded_segment_count": sum(1 for segment in segments if segment.status == "fit_bvp_fallback"),
         "violation_count": len(violations),

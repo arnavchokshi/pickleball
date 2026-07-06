@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 
-import { buildCourtMapShots, svgCourtProjector, type BallArcRender, type CourtMapShot } from "./ballArcRender";
+import { buildCourtMapShots, sampleBallArcRenderAtTime, svgCourtProjector, type BallArcRender, type CourtMapShot } from "./ballArcRender";
 import { frameForTime, type Vec2, type VirtualWorld } from "./viewerData";
 
 const SVG_WIDTH = 305;
@@ -17,17 +17,24 @@ export function CourtMapPanel({
   currentTime: number;
 }) {
   const project = useMemo(
-    () =>
-      svgCourtProjector({
+    () => {
+      const bounds = courtCoordinateBounds(world);
+      return svgCourtProjector({
         widthM: world.court.width_m,
         lengthM: world.court.length_m,
         paddingPx: SVG_PADDING,
         widthPx: SVG_WIDTH,
         heightPx: SVG_HEIGHT,
-      }),
-    [world.court.length_m, world.court.width_m],
+        ...bounds,
+      });
+    },
+    [world],
   );
   const shots = useMemo(() => buildCourtMapShots(arcRender, currentTime), [arcRender, currentTime]);
+  const currentBall = useMemo(
+    () => (arcRender ? sampleBallArcRenderAtTime(arcRender.samples, currentTime) : null),
+    [arcRender, currentTime],
+  );
   const playerPositions = useMemo(
     () =>
       world.players
@@ -55,6 +62,11 @@ export function CourtMapPanel({
             return <circle key={`bounce-${String(shot.segmentId)}`} className="court-map-bounce-dot" cx={cx} cy={cy} r={shot.active ? 5.6 : 3.8} />;
           })}
         </g>
+        {currentBall?.world_xyz ? (
+          <g className="court-map-current-ball" transform={`translate(${project([currentBall.world_xyz[0], currentBall.world_xyz[1]]).join(" ")})`}>
+            <circle r="6.2" />
+          </g>
+        ) : null}
         <g className="court-map-players">
           {playerPositions.map(({ playerId, xy }) => {
             const [cx, cy] = project(xy);
@@ -74,6 +86,19 @@ export function CourtMapPanel({
       </div>
     </div>
   );
+}
+
+function courtCoordinateBounds(world: VirtualWorld): { xMin: number; xMax: number; yMin: number; yMax: number } {
+  const points = Object.values(world.court.line_segments).flat();
+  const xs = points.map((point) => point[0]);
+  const ys = points.map((point) => point[1]);
+  const centeredY = ys.some((y) => y < 0);
+  return {
+    xMin: Math.min(...xs, -world.court.width_m / 2),
+    xMax: Math.max(...xs, world.court.width_m / 2),
+    yMin: centeredY ? Math.min(...ys) : Math.min(...ys, 0),
+    yMax: centeredY ? Math.max(...ys) : Math.max(...ys, world.court.length_m),
+  };
 }
 
 function CourtOutline({ world, project }: { world: VirtualWorld; project: (point: Vec2) => Vec2 }) {

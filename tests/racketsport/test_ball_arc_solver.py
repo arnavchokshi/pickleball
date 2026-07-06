@@ -220,6 +220,47 @@ def test_zero_inlier_segment_becomes_bvp_fallback_and_preserves_original_fit() -
     assert all(frame["band"] == "arc_weak" for frame in artifact["frames"] if frame.get("world_xyz") is not None)
 
 
+@pytest.mark.parametrize(
+    "violation",
+    [
+        "net_clearance_below_slack",
+        "apex_height_implausible",
+        "initial_speed_outside_plausible_range_mps",
+    ],
+)
+def test_fit_validity_gate_demotes_any_physical_sanity_violation_to_bvp_fallback(violation: str) -> None:
+    segment = _segment_with_physical_sanity(0, status="fit", violation=violation)
+
+    gated = ball_arc_solver_module._apply_fit_validity_gates(
+        [segment],
+        physics=PhysicsParameters.no_drag(),
+        config=BallArcSolverConfig(),
+        net_plane=None,
+    )
+
+    assert gated[0].status == "fit_bvp_fallback"
+    assert gated[0].diagnostics["fit_validity_gate"]["reason"] == violation
+    assert gated[0].diagnostics["fit_validity_gate"]["original_status"] == "fit"
+    assert gated[0].diagnostics["fit_validity_gate"]["original_inlier_count"] == segment.inlier_count
+
+
+def test_physical_summary_violation_fraction_excludes_bvp_fallback_segments_from_denominator() -> None:
+    good_fit = _segment_with_physical_sanity(0, status="fit", violation=None)
+    violating_fit = _segment_with_physical_sanity(1, status="fit", violation="apex_height_implausible")
+    contained_fallback = _segment_with_physical_sanity(2, status="fit_bvp_fallback", violation="outside_court_volume")
+
+    summary = ball_arc_solver_module._physical_summary(
+        [good_fit, violating_fit, contained_fallback],
+        config=BallArcSolverConfig(),
+    )
+
+    assert summary["segment_count"] == 3
+    assert summary["violation_eligible_segment_count"] == 2
+    assert summary["fallback_excluded_segment_count"] == 1
+    assert summary["violation_count"] == 1
+    assert summary["violation_fraction"] == 0.5
+
+
 def test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds(tmp_path: Path) -> None:
     fixture_path = Path(__file__).resolve().parent / "fixtures" / "wolverine_seg6_bvp_regression.json"
     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
@@ -1908,6 +1949,69 @@ def _human_bounce(frame: int, t: float, review_id: str) -> dict:
         "human_reviewed": True,
         "not_ground_truth": False,
     }
+
+
+def _segment_with_physical_sanity(
+    segment_id: int,
+    *,
+    status: str,
+    violation: str | None,
+) -> ball_arc_solver_module.FlightSegmentFit:
+    p0 = (0.0, -1.0 + segment_id * 0.1, 1.0)
+    v0 = (1.0, 2.0, 1.5)
+    t0 = 0.0
+    t1 = 0.5
+    p1 = _no_drag_position(p0, v0, t1)
+    start = _anchor(f"start-{segment_id}", "contact", t0, p0)
+    end = _anchor(f"end-{segment_id}", "bounce", t1, p1, status="human_reviewed")
+    observations = tuple(
+        BallObservation(
+            frame=index,
+            t=index / 60.0,
+            xy=(960.0 + index, 540.0 + index),
+            confidence=0.9,
+            visible=True,
+        )
+        for index in range(5)
+    )
+    violations = [] if violation is None else [violation]
+    physical = {
+        "initial_speed_mps": 2.692582,
+        "apex_height_m": 1.0,
+        "net_clearance_m": None,
+        "court_volume": {"violation": violation == "outside_court_volume"},
+        "violations": violations,
+        "violation": bool(violations),
+    }
+    return ball_arc_solver_module.FlightSegmentFit(
+        segment_id=segment_id,
+        status=status,
+        start_anchor=start,
+        end_anchor=end,
+        initial_position_m=p0,
+        initial_velocity_mps=v0,
+        observations=observations,
+        inlier_frames=tuple(obs.frame for obs in observations),
+        outlier_frames=(),
+        reprojection_errors_px={obs.frame: 0.5 for obs in observations},
+        reprojection_rmse_px=0.5,
+        max_reprojection_error_px=0.5,
+        endpoint_error_m=0.0,
+        net_clearance_m=None,
+        net_clearance_ok=None,
+        physical_sanity=physical,
+        size_residuals_m={},
+        diagnostics={
+            "legacy_free_fit": {
+                "status": status,
+                "initial_position_m": list(p0),
+                "initial_velocity_mps": list(v0),
+                "endpoint_error_m": 0.0,
+                "inlier_count": len(observations),
+                "outlier_count": 0,
+            }
+        },
+    )
 
 
 def _anchor(

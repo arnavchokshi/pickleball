@@ -1445,6 +1445,13 @@ dd {
   fill: var(--lime);
 }
 
+.court-map-current-ball circle {
+  fill: #63d9ff;
+  stroke: var(--ink);
+  stroke-width: 1.8;
+  vector-effect: non-scaling-stroke;
+}
+
 .court-map-player circle {
   fill: #a7ff95;
   stroke: var(--ink);

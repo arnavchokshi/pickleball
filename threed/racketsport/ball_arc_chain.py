@@ -20,6 +20,7 @@ from threed.racketsport.ball_arc_solver import (
 )
 from threed.racketsport.ball_bounce_candidates import BounceCandidateConfig, write_bounce_candidate_payload
 from threed.racketsport.ball_flight_sanity import apply_flight_sanity_demotions, evaluate_ball_flight_sanity
+from threed.racketsport.court_templates import get_court_template
 from threed.racketsport.schemas import NetPlane, load_ball_candidates_file
 from pydantic import ValidationError
 
@@ -513,11 +514,14 @@ def _evaluate_segment_samples(
     out: list[dict[str, Any]] = []
     frame_start = _float_or_none(segment.get("frame_start"))
     fps = _segment_fps_from_times(segment, times)
+    status = str(segment.get("status") or "")
     bounds = _court_volume_bounds(config)
+    fallback_bounds = _strict_court_xy_bounds(config) if status == "fit_bvp_fallback" else None
     for t, xyz in zip(times, evaluated, strict=True):
         if not _point_inside_court_volume(xyz, bounds):
             continue
-        status = str(segment.get("status") or "")
+        if fallback_bounds is not None and not _point_inside_strict_court_xy(xyz, fallback_bounds):
+            continue
         band = "arc_weak" if bridge or confidence < 0.45 or status in {"fit_weak", "fit_bvp_fallback"} else "arc_interpolated"
         frame_float = frame_start + (t - t0) * fps if frame_start is not None else None
         out.append(
@@ -544,6 +548,25 @@ def _point_inside_court_volume(
     x_min, x_max, y_min, y_max, z_min = bounds
     x, y, z = xyz
     return x_min <= x <= x_max and y_min <= y <= y_max and z >= z_min
+
+
+def _strict_court_xy_bounds(config: BallArcSolverConfig) -> tuple[float, float, float, float]:
+    template = get_court_template(config.court_sport)
+    return (
+        -template.width_m / 2.0,
+        template.width_m / 2.0,
+        -template.length_m / 2.0,
+        template.length_m / 2.0,
+    )
+
+
+def _point_inside_strict_court_xy(
+    xyz: tuple[float, float, float],
+    bounds: tuple[float, float, float, float],
+) -> bool:
+    x_min, x_max, y_min, y_max = bounds
+    x, y = xyz[0], xyz[1]
+    return x_min <= x <= x_max and y_min <= y <= y_max
 
 
 def _render_segment_summary(
