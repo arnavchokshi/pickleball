@@ -1255,6 +1255,42 @@ the grounded-LLM coach, direct visual feedback overlays, session reports.
   priorities, drills) + cross-session trends (needs stable player identity per account). Gate: owner
   dogfood approval on their own games.
 
+- [ ] **P6-7 UX/experience backlog (owner-requested 2026-07-06; curated from competitive research +
+  what only OUR 3D world enables — pull items forward as their dependencies land):**
+  **Only-possible-with-our-3D (differentiators):**
+  (a) *Free-camera replay* — orbit/drone/first-person any rally; watch your shot from your OPPONENT'S
+  eyes to see why it was attackable [needs PF world];
+  (b) *Ghost coach* — replay with a translucent "ghost you" at the positions the reference ranges say
+  you should have held (kitchen approach, split-step timing); the owner's "direct visual feedback"
+  ask, literally rendered [P6-3/P6-5];
+  (c) *What-if shot simulator* — at any contact, render alternative shot choices (drop vs drive vs
+  lob) physics-simulated with YOUR measured speeds + success odds from your own history [P0-7 sim +
+  P6-1 stats];
+  (d) *3D line-call challenge* — tap any bounce → zoomed 3D bounce view with the honest uncertainty
+  band; settles arguments without claiming officiating [P1-4/P1-7];
+  (e) *AR on-court replay* — stand on the real court, replay the point through the phone via ARKit
+  anchors [P0-10];
+  **Retention/social:**
+  (f) *Auto highlight reels with cinematic 3D camera paths* (longest rally, fastest drive, best get)
+  — the share loop;
+  (g) *Skill fingerprint + trend* — DUPR-style estimate from measured metrics, week-over-week deltas
+  ("3rd-shot-drop success 46%→58% this month") [P6-2/P6-3];
+  (h) *Partner chemistry (doubles)* — coverage-overlap heatmaps, who-takes-the-middle, stacking
+  effectiveness; nobody serves doubles-specific analytics;
+  (i) *Club/friends leaderboards + season stats* on the profile registry [P0-9];
+  (j) *Voice-narrated 2-min match recap* (grounded-LLM script → TTS) — "listen on the drive home";
+  **Trust/utility (cheap, high-retention):**
+  (k) *Per-shot correction UI* — the #1 pb.vision user complaint (only final score is correctable);
+  every correction ALSO feeds the active-learning flywheel [P1-2 — data + UX in one];
+  (l) *Instant "3 things" card* — strengths/fix-next within minutes of upload, PlaySight-style but
+  with jump-to-3D-moment links [P6-4];
+  (m) *Serve/return placement maps vs outcomes* ("you win 68% returning deep-backhand") [P6-2];
+  (n) *Movement load / injury angle* — distance, sprints, deceleration load per session (pb.vision
+  lists this as "exploring" = unclaimed space) [P2 skeletons already carry it];
+  (o) *Opponent tendency card* from YOUR matches vs them ("Alex dinks cross-court 80% under
+  pressure") [P6-1 + profiles].
+  Gate for any item: same trust-band honesty as everything else; no fabricated stats.
+
 ## PHASE 7 — Productization (brief; expand when P6 demos)
 
 **Already built:** the iOS app shell + capture/upload/replay modules (`ios/`, 110 Swift files),
