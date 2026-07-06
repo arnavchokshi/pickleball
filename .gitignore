@@ -23,6 +23,8 @@ configs/ssh/*
 runs/
 data/testclips/
 data/online_harvest*/
+data/credentials/
+data/roboflow_universe*/
 models/checkpoints/
 models/*.pt
 models/*.pth

@@ -55,7 +55,7 @@ start: stale-blank boxes cause false STOPs, silently-ignored boxes destroy the r
   a concern by the owner). First batch dispatched same day (P0-1b; `data/online_harvest_20260706/`).
   Owner capture batches (P0-3/§I.5) remain the in-domain finisher. Unchanged: NO persistent
   ReID/biometric profiles of non-owner people (that's the separate consent item below).
-- [ ] **Roboflow API key** re-issued (for P1-0 public corpus + court keypoints), if using public data.
+- [x] **Roboflow API key:** SATISFIED 2026-07-06 — owner supplied the key mid-wave-2; stored gitignored+chmod600 at `data/credentials/roboflow.env` (never committed; workspace arnav-chokshi-tnfjx). P1-0 Universe download lane dispatched same day (`runs/lanes/p10_roboflow_universe_20260706/`).
 - [ ] **Biometric consent decision (blocking before PERSISTING any non-owner person's biometric
   profile — ReID gallery / shape betas, H4):** how consent is obtained + recorded for friends
   (P7-4b). SCOPE (default ruling until owner refines): gates biometric PERSISTENCE of identifiable

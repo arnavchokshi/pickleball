@@ -1,17 +1,11 @@
 # OWNER CHECK-IN — 2026-07-06 (wave 2)
 
-## STOP: needs-decision
-**One-line ask:** Paste a re-issued Roboflow API key (PART 0 blank item) so the P1-0 public-corpus aggregation lane can run — or reply "skip P1-0 this wave".
-**Why this needs you:** PART 0 owner-setup item is blank; no standing rule lets a lane mint credentials.
-**Evidence:** NORTH_STAR_ROADMAP.md PART 0 (Roboflow line) + P1-0 block (~line 740); the T4 lesson (distractor-lock) makes ALL-projects aggregation the diversity fix.
-**Options considered:** (A) key now → P1-0 aggregation lane (network-capable) queued this wave or next; (B) skip → the P1-1 prerequisite (4-level visibility schema) still lands this wave (already in flight), aggregation waits. Leaning: A when convenient — fuel, not critical path.
-**If you don't answer:** safe default = (B); nothing else blocks on it.
-**Everything else keeps running:** all 7 wave-2 lanes in flight (below).
+## STOP — RESOLVED (2026-07-06): you supplied the Roboflow key. Stored gitignored at data/credentials/roboflow.env (chmod 600, never committed); PART 0 item ticked; P1-0 Universe download lane dispatched (option A). Nothing awaits you here.
 
 ⭐ HEADLINE: Wave 2 dispatched — 6 file-fenced Codex lanes + the GVHMR GPU spike; gcloud auth ALIVE and service-account impersonation verified working (no login needed from you; wave-1 queue item 8 is thereby DONE); fleet1 restarting for the spike.
 
 ## Blockers
-Only the Roboflow STOP above.
+None — Roboflow resolved; all lanes running.
 
 ## Wave-2 lanes (your priority order)
 1. rootjump_slide_fix — burlington/outdoor blocker root-caused to a per-frame ABAB flip between two self-consistent positions (0.85m / 3.0m alternation) = selection/identity bug; fixing at source, slide → ≤30mm, plus frame_idx-null producer + foot_contact_phases producer ride along.
