@@ -42,6 +42,31 @@ def test_fast_sam_wrapper_records_machine_readable_profile_metrics():
     assert "sam3dbody_benchmark.json" in script
 
 
+def test_gpu_cold_start_checks_venv_ensurepip_not_only_venv_importability():
+    script = Path("scripts/racketsport/gpu_cold_start.sh").read_text(encoding="utf-8")
+
+    assert "import ensurepip" in script
+    assert 'python3.10 -c "import venv"' not in script
+
+
+def test_gpu_cold_start_body_venv_step_fails_on_install_command_failures():
+    script = Path("scripts/racketsport/gpu_cold_start.sh").read_text(encoding="utf-8")
+    step = script[script.index("step_build_body_venv() {") : script.index("# --- step 5: fetch")]
+
+    assert "python3.10 -m venv \"$BODY_VENV_DIR\" || return 1" in step
+    assert '"$BODY_VENV_DIR/bin/python" -m pip install --upgrade pip || return 1' in step
+    assert "pip cache purge || true" not in step
+
+
+def test_gpu_cold_start_pytest_smoke_is_count_agnostic_and_checks_exit_status():
+    script = Path("scripts/racketsport/gpu_cold_start.sh").read_text(encoding="utf-8")
+    step = script[script.index("step_pytest_smoke() {") : script.index("# --- step 7: minimal")]
+
+    assert "pytest_status" in step
+    assert "13 passed" not in step
+    assert "0 failed" in step
+
+
 def test_fast_sam_wrapper_normalizes_relative_output_dir_before_cd():
     script = Path("scripts/racketsport/run_fast_sam_benchmark.sh").read_text(encoding="utf-8")
 

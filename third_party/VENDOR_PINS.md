@@ -7,6 +7,7 @@ Local-only additions inside them are marked "pickleball addition, not upstream" 
 
 | dir | pinned sha | origin | role | local-only large files (never commit) |
 |---|---|---|---|---|
+| third_party/SAT-HMR | 920b1380e1d4967e47b1de1782408ac30f4f44da | https://github.com/ChiSu001/SAT-HMR.git | vendored-only BODY candidate/provenance; not live default | weights/* |
 | third_party/TOTNet | 8a757f63391b262c14d18b4095486336852dbeef | https://github.com/AugustRushG/TOTNet.git | measured-dead zero-shot candidate (kept for provenance) | weights/*best.pth (~94MB) |
 | third_party/TrackNetV4 | cb7eea7988474771ceac7e880bbffc35bfa87bca | https://github.com/TrackNetV4/TrackNetV4.git | blocked-no-usable-weights (motion-fusion ckpt undeserializable upstream) | none |
 | third_party/WASB-SBDT | 923462cacdeb3353b84ddebdedb3f4b7a8553b0f | https://github.com/nttcom/WASB-SBDT.git | WASB inference (default ball stage) | none |

@@ -206,7 +206,10 @@ step_os_deps() {
   local missing=()
   command -v git >/dev/null 2>&1 || missing+=(git)
   command -v python3.10 >/dev/null 2>&1 || missing+=(python3.10)
-  python3.10 -c "import venv" >/dev/null 2>&1 || missing+=(python3.10-venv)
+  python3.10 - <<'PY' >/dev/null 2>&1 || missing+=(python3.10-venv)
+import ensurepip
+import venv
+PY
   command -v flock >/dev/null 2>&1 || missing+=(util-linux)
   if [ "${#missing[@]}" -eq 0 ]; then
     log "OS deps already present: git, python3.10, python3.10-venv, flock"
@@ -341,11 +344,11 @@ REQS
 step_build_body_venv() {
   if [ ! -x "$BODY_VENV_DIR/bin/python" ]; then
     log "creating venv at $BODY_VENV_DIR"
-    python3.10 -m venv "$BODY_VENV_DIR"
+    python3.10 -m venv "$BODY_VENV_DIR" || return 1
   else
     log "venv already exists at $BODY_VENV_DIR, reusing (pip install below is idempotent)"
   fi
-  "$BODY_VENV_DIR/bin/python" -m pip install --upgrade pip
+  "$BODY_VENV_DIR/bin/python" -m pip install --upgrade pip || return 1
   # torch/torchvision pinned exactly to what VM1's real remote FAST_SAM_PYTHON
   # venv (/home/arnavchokshi/body_runtime/fast_sam_venv) has today, verified
   # via `pip freeze` on 2026-07-03. detector_name=""/fov_name="" (the only
@@ -357,8 +360,8 @@ step_build_body_venv() {
   # GPU_COLD_START.md).
   "$BODY_VENV_DIR/bin/python" -m pip install \
     torch==2.5.1+cu124 torchvision==0.20.1+cu124 \
-    --extra-index-url https://download.pytorch.org/whl/cu124
-  printf '%s\n' "$FAST_SAM_VENV_REQUIREMENTS" | "$BODY_VENV_DIR/bin/python" -m pip install -r /dev/stdin
+    --extra-index-url https://download.pytorch.org/whl/cu124 || return 1
+  printf '%s\n' "$FAST_SAM_VENV_REQUIREMENTS" | "$BODY_VENV_DIR/bin/python" -m pip install -r /dev/stdin || return 1
   # chumpy is a legacy setup.py package; --no-build-isolation (matching
   # install_fast_sam_env.sh's own approach, needed because chumpy's setup.py
   # unconditionally imports numpy at build time) requires setuptools+wheel to
@@ -366,8 +369,8 @@ step_build_body_venv() {
   # not guarantee on this pip/Python combination (pip 22.0.2 as shipped by
   # Ubuntu 22.04's python3.10-venv does not vendor `wheel`) -- without this,
   # the build fails with "invalid command 'bdist_wheel'".
-  "$BODY_VENV_DIR/bin/python" -m pip install wheel setuptools
-  "$BODY_VENV_DIR/bin/python" -m pip install chumpy==0.70 --no-build-isolation
+  "$BODY_VENV_DIR/bin/python" -m pip install wheel setuptools || return 1
+  "$BODY_VENV_DIR/bin/python" -m pip install chumpy==0.70 --no-build-isolation || return 1
   # pytest is NOT part of the real production fast_sam_venv (it is added here
   # only so this same venv can run the smoke tests below). On the real VM1
   # venv, someone previously worked around a missing pytest by PYTHONPATH-
@@ -375,7 +378,7 @@ step_build_body_venv() {
   # (/home/arnavchokshi/sam3d_validation2_bench/vendor) rather than installing
   # it directly -- see GPU_COLD_START.md "vendor workaround" section for why
   # that workaround is unnecessary on a fresh venv like this one.
-  "$BODY_VENV_DIR/bin/python" -m pip install 'pytest>=8.0'
+  "$BODY_VENV_DIR/bin/python" -m pip install 'pytest>=8.0' || return 1
   "$BODY_VENV_DIR/bin/python" - <<'PY'
 import importlib.util
 for mod in ("torch", "torchvision", "cv2", "pydantic", "pytest", "huggingface_hub", "smplx"):
@@ -383,13 +386,19 @@ for mod in ("torch", "torchvision", "cv2", "pydantic", "pytest", "huggingface_hu
         raise SystemExit(f"missing {mod}")
 print("body_venv ready")
 PY
+  local import_status=$?
+  if [ "$import_status" -ne 0 ]; then
+    return "$import_status"
+  fi
   # A fresh venv build downloads several GB into pip's HTTP cache
   # (~/.cache/pip) on top of the venv's own installed-package bytes. On a
   # tight boot disk (VM1 was observed at 93-98% full / single-digit GB free
   # throughout this audit) that transient cache is exactly what pushes the
   # checkpoint download in the next step over the edge -- purge it now that
   # the venv itself is built and verified importable.
-  "$BODY_VENV_DIR/bin/python" -m pip cache purge || true
+  if ! "$BODY_VENV_DIR/bin/python" -m pip cache purge; then
+    log "WARNING: pip cache purge failed after body_venv verification; continuing"
+  fi
 }
 
 # --- step 5: fetch + verify the SAM-3D-Body checkpoint -----------------------
@@ -479,27 +488,38 @@ PY
 }
 
 # --- step 6: pytest GPU regression smoke -------------------------------------
-# test_run_sam3dbody_batch.py has 13 tests; 3 of them
+# test_run_sam3dbody_batch.py includes GPU-gated tests; several of them
 # (test_direct_bucket_model_calls_and_numpy_conversion_run_under_inference_mode,
 # test_warmup_and_real_synthetic_batches_have_matching_guard_signatures,
 # test_static_clip_intrinsics_warmup_runs_each_bucket_shape_configured_passes)
 # gate on `pytest.importorskip("torch")` and SKIP silently on a torch-less
 # interpreter instead of failing loudly -- exactly the failure mode a cold
 # start must catch. The bar here is strictly stronger than "2 GPU tests
-# pass": 0 skipped, all 13 passed, on this venv's real CUDA torch build.
+# pass": pytest exits 0, 0 failed, and 0 skipped on this venv's real CUDA torch build.
 step_pytest_smoke() {
+  local pytest_status=0
   ( cd "$REPO_DIR" && \
     GPU_LOCK_TIMEOUT_S="$GPU_LOCK_TIMEOUT_S" "$REPO_DIR/scripts/gpu-eval-run.sh" \
     "$BODY_VENV_DIR/bin/python" -m pytest tests/racketsport/test_run_sam3dbody_batch.py -v \
-    2>&1 | tee "$SMOKE_DIR/pytest_full_file.log" )
+    2>&1 | tee "$SMOKE_DIR/pytest_full_file.log" ) || pytest_status=$?
+  if [ "$pytest_status" -ne 0 ]; then
+    log "FATAL: pytest smoke exited nonzero ($pytest_status)"
+    return 1
+  fi
   if grep -qE "[1-9][0-9]* skipped" "$SMOKE_DIR/pytest_full_file.log"; then
     log "FATAL: one or more tests in test_run_sam3dbody_batch.py SKIPPED (torch not importable in body_venv?)"
     return 1
   fi
-  grep -q "13 passed" "$SMOKE_DIR/pytest_full_file.log" || {
-    log "FATAL: expected all 13 tests in test_run_sam3dbody_batch.py to pass"
+  if grep -qE "[1-9][0-9]* failed" "$SMOKE_DIR/pytest_full_file.log"; then
+    log "FATAL: one or more tests in test_run_sam3dbody_batch.py FAILED"
     return 1
-  }
+  fi
+  if ! grep -qE "[1-9][0-9]* passed" "$SMOKE_DIR/pytest_full_file.log"; then
+    log "FATAL: pytest smoke did not report any passing tests"
+    return 1
+  fi
+  printf 'pytest smoke gate: exit_code=0 0 failed\n' >> "$SMOKE_DIR/pytest_full_file.log"
+  log "pytest smoke gate passed: exit code 0, 0 failed"
 }
 
 # --- step 7: minimal single-bucket GPU inference smoke ------------------------

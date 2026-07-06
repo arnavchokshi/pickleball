@@ -1,11 +1,7 @@
-# Pinned host keys for the shared A100 training/eval host (34.126.67.233), used by
-# scripts/racketsport/remote_body_dispatch.py in place of StrictHostKeyChecking=no
-# (see runs/manager/codex_lanes/reports/review_harden_20260702.md finding 7).
-# Captured via `ssh-keyscan -T 8 34.126.67.233` on 2026-07-02 and cross-checked
-# byte-for-byte against the pre-existing entries already trusted in this machine's
-# own ~/.ssh/known_hosts (i.e. this is not a first-contact/unverified capture).
-# If the host is legitimately rebuilt (new VM, key rotation), re-run ssh-keyscan,
-# diff against this file, and update it deliberately -- do not silently regenerate.
-34.126.67.233 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDXd/TSgPIqhPabOyZ0VN66ZZHv1TlWo8R//0AvWmnQobVL3YCdSLLAts/ZN8UDijGLBnyL7urAV2v1rwLbhJVKmFLwId19T0Pg8l/hAMIUIjMqPGQT25jSALhMwuhZnhxZHKE8o99Hsz/tg3fL7D9Ba8lp/uGac1lgjl+IkUZ5GV0iNrY8pjH4FxD05Ko83hu3o4/eJbyga5JA0+Ij0honimldlveIlsnwEUc91BRfO54pTC8071D3Ta5iloaNurQcaFx9JXzy0uG8Xr+IH4KA9OAccp+5xCs1ila7KCQ8vOWwRXslRTelFJRAFoOSPmMsLevXbjfCqMTDxpWhEos/+ui7pNT8iTHbAiGzv2d3RxLDcmUVxVcGwqvu3fZuoh3XH1X2xoowcg1KDx8lXEfdPN1tgwWpygCAr02gym0axVbi4OVY3bOY9J/f4ER/iRsqrqqgyIpTZ6C5cZvYfsr+KugZcEZZrMyXIUTn5T+CPIWpOwE8BTylM6s6582DxhM=
-34.126.67.233 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBMEk47UOZ3A7QVnKFE/drJK29h9F9FBmoTX0uCZtvLgjk3Fn6u2I2HZAh5gvDvJJNZv5eA6wyJzzpaiPegNadtI=
-34.126.67.233 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL+qb0TsZXuxkROreV0oesqs9QUkLG2TJSsUnXEkRw4z
+# Pinned host keys for fleet GPU #1 `pickleball-a100-fleet1` (34.143.175.207) — see
+# runs/manager/gpu_fleet.md. Used by scripts/racketsport/remote_body_dispatch.py in place of
+# StrictHostKeyChecking=no. Old host 34.126.67.233 DELETED 2026-07-06; keys removed.
+# When the fleet changes: ssh-keyscan the new host, replace deliberately — never silently.
+34.143.175.207 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJBT8F9umgxXqaUKXe+50DBLtuIpdKg4ArZmgS12eWlXiHATGeJNXrU9B0Jnh6cPzQIp5Jh+h0X0Wxx95EYm8+w=
+34.143.175.207 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5H49uDy2naR8QiKblsKnvGhSyYPwIXxxeoQ4m2JF4WnfEArco3/fn85XD8sS3Cx0/yyDkahVsoCR1jjAdKRsdpchta4N2epCoodySFtx6FaT2dCUloi48fzp0KRsonhe0Vuyy7wN8ExExmHBADf48mrKsHX+STPV7Bc9CSGNm0huj+HwGeQ6TtGSClm35OgfhCgElGI4tARZL/SV1q19rVOlxrI/K5SnGkIqTdGJU+5ARzcQBd4lAhO1DKSC/wg5BMYChldPjg8v4tap/cjVj26JBf0JoRu7T7Ttachj+AdmpXq3dI+qWX0qlEP0ylRgMW1g6T/1o7RCDJVPRTbsGGwhMy7MtmdMKfYdlf6v/n23Gbp/z0sCWpLSxYIcU71vgjTh7kG+z364R5UX5rTi5Zmw2aCqOZLHTrd61vxSAHfUdWPLGIBGJuO1tjsD3JC1DSgRGJZ+oq0/Yjst7WOTkXsv414eReqOfTXUc/VmhSJg3CN6zc6oIBH5vbZ2TEp0=
+34.143.175.207 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIErI2eAMFp6/kNmFlZ+XKIqt8Fc9zsAuEWTx5qhlPkXu

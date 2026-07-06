@@ -1,0 +1,1014 @@
+{
+  "$defs": {
+    "CameraIntrinsics": {
+      "additionalProperties": false,
+      "properties": {
+        "cx": {
+          "title": "Cx",
+          "type": "number"
+        },
+        "cy": {
+          "title": "Cy",
+          "type": "number"
+        },
+        "dist": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Dist",
+          "type": "array"
+        },
+        "fx": {
+          "exclusiveMinimum": 0.0,
+          "title": "Fx",
+          "type": "number"
+        },
+        "fy": {
+          "exclusiveMinimum": 0.0,
+          "title": "Fy",
+          "type": "number"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fx",
+        "fy",
+        "cx",
+        "cy",
+        "source"
+      ],
+      "title": "CameraIntrinsics",
+      "type": "object"
+    },
+    "CourtProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "account_id": {
+          "minLength": 1,
+          "title": "Account Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "const": "racketsport_court_profile",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "background_frame_ref": {
+          "$ref": "#/$defs/ProfileArtifactRef"
+        },
+        "camera_fingerprint": {
+          "minLength": 1,
+          "title": "Camera Fingerprint",
+          "type": "string"
+        },
+        "created_at_utc": {
+          "title": "Created At Utc",
+          "type": "string"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "frozen_calibration_ref": {
+          "$ref": "#/$defs/ProfileArtifactRef"
+        },
+        "gps_hint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GpsHint"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "line_paint_color_lab": {
+          "$ref": "#/$defs/LabColor"
+        },
+        "net_center_height_in": {
+          "default": 34.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Net Center Height In",
+          "type": "number"
+        },
+        "net_height_provenance": {
+          "default": "regulation_default",
+          "enum": [
+            "regulation_default",
+            "tape_measured"
+          ],
+          "title": "Net Height Provenance",
+          "type": "string"
+        },
+        "net_height_source_trace": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceTrace"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "net_post_height_in": {
+          "default": 36.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Net Post Height In",
+          "type": "number"
+        },
+        "profile_id": {
+          "minLength": 1,
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "profile_type": {
+          "const": "court",
+          "default": "court",
+          "title": "Profile Type",
+          "type": "string"
+        },
+        "retention": {
+          "$ref": "#/$defs/RetentionPolicy"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_trace": {
+          "$ref": "#/$defs/SourceTrace"
+        },
+        "updated_at_utc": {
+          "title": "Updated At Utc",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "wifi_hint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WifiHint"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "schema_version",
+        "account_id",
+        "profile_id",
+        "display_name",
+        "source_trace",
+        "retention",
+        "artifact_type",
+        "frozen_calibration_ref",
+        "line_paint_color_lab",
+        "background_frame_ref",
+        "camera_fingerprint"
+      ],
+      "title": "CourtProfile",
+      "type": "object"
+    },
+    "DeviceProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "account_id": {
+          "minLength": 1,
+          "title": "Account Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "const": "racketsport_device_profile",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "created_at_utc": {
+          "title": "Created At Utc",
+          "type": "string"
+        },
+        "device_key": {
+          "minLength": 1,
+          "title": "Device Key",
+          "type": "string"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "exposure_constant": {
+          "exclusiveMinimum": 0.0,
+          "title": "Exposure Constant",
+          "type": "number"
+        },
+        "intrinsics_by_lens_zoom": {
+          "items": {
+            "$ref": "#/$defs/LensZoomIntrinsics"
+          },
+          "minItems": 1,
+          "title": "Intrinsics By Lens Zoom",
+          "type": "array"
+        },
+        "profile_id": {
+          "minLength": 1,
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "profile_type": {
+          "const": "device",
+          "default": "device",
+          "title": "Profile Type",
+          "type": "string"
+        },
+        "retention": {
+          "$ref": "#/$defs/RetentionPolicy"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_trace": {
+          "$ref": "#/$defs/SourceTrace"
+        },
+        "updated_at_utc": {
+          "title": "Updated At Utc",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "account_id",
+        "profile_id",
+        "display_name",
+        "source_trace",
+        "retention",
+        "artifact_type",
+        "device_key",
+        "intrinsics_by_lens_zoom",
+        "exposure_constant"
+      ],
+      "title": "DeviceProfile",
+      "type": "object"
+    },
+    "GearProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "account_id": {
+          "minLength": 1,
+          "title": "Account Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "const": "racketsport_gear_profile",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "ball_color_window_lab": {
+          "$ref": "#/$defs/LabColorWindow"
+        },
+        "ball_diameter_mm": {
+          "exclusiveMinimum": 0.0,
+          "title": "Ball Diameter Mm",
+          "type": "number"
+        },
+        "ball_sku": {
+          "minLength": 1,
+          "title": "Ball Sku",
+          "type": "string"
+        },
+        "created_at_utc": {
+          "title": "Created At Utc",
+          "type": "string"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "paddle_dims": {
+          "$ref": "#/$defs/PaddleDimensions"
+        },
+        "paddle_scan_ref": {
+          "$ref": "#/$defs/ProfileArtifactRef"
+        },
+        "profile_id": {
+          "minLength": 1,
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "profile_type": {
+          "const": "gear",
+          "default": "gear",
+          "title": "Profile Type",
+          "type": "string"
+        },
+        "retention": {
+          "$ref": "#/$defs/RetentionPolicy"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_trace": {
+          "$ref": "#/$defs/SourceTrace"
+        },
+        "updated_at_utc": {
+          "title": "Updated At Utc",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "account_id",
+        "profile_id",
+        "display_name",
+        "source_trace",
+        "retention",
+        "artifact_type",
+        "paddle_scan_ref",
+        "paddle_dims",
+        "ball_sku",
+        "ball_color_window_lab",
+        "ball_diameter_mm"
+      ],
+      "title": "GearProfile",
+      "type": "object"
+    },
+    "GpsHint": {
+      "additionalProperties": false,
+      "properties": {
+        "latitude": {
+          "maximum": 90.0,
+          "minimum": -90.0,
+          "title": "Latitude",
+          "type": "number"
+        },
+        "longitude": {
+          "maximum": 180.0,
+          "minimum": -180.0,
+          "title": "Longitude",
+          "type": "number"
+        },
+        "radius_m": {
+          "exclusiveMinimum": 0.0,
+          "title": "Radius M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "latitude",
+        "longitude",
+        "radius_m"
+      ],
+      "title": "GpsHint",
+      "type": "object"
+    },
+    "LabColor": {
+      "additionalProperties": false,
+      "properties": {
+        "a": {
+          "maximum": 127.0,
+          "minimum": -128.0,
+          "title": "A",
+          "type": "number"
+        },
+        "b": {
+          "maximum": 127.0,
+          "minimum": -128.0,
+          "title": "B",
+          "type": "number"
+        },
+        "l": {
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "L",
+          "type": "number"
+        }
+      },
+      "required": [
+        "l",
+        "a",
+        "b"
+      ],
+      "title": "LabColor",
+      "type": "object"
+    },
+    "LabColorWindow": {
+      "additionalProperties": false,
+      "properties": {
+        "max": {
+          "$ref": "#/$defs/LabColor"
+        },
+        "min": {
+          "$ref": "#/$defs/LabColor"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "title": "LabColorWindow",
+      "type": "object"
+    },
+    "LensZoomIntrinsics": {
+      "additionalProperties": false,
+      "properties": {
+        "intrinsics": {
+          "$ref": "#/$defs/CameraIntrinsics"
+        },
+        "lens": {
+          "minLength": 1,
+          "title": "Lens",
+          "type": "string"
+        },
+        "source_trace": {
+          "$ref": "#/$defs/SourceTrace"
+        },
+        "zoom": {
+          "exclusiveMinimum": 0.0,
+          "title": "Zoom",
+          "type": "number"
+        }
+      },
+      "required": [
+        "lens",
+        "zoom",
+        "intrinsics",
+        "source_trace"
+      ],
+      "title": "LensZoomIntrinsics",
+      "type": "object"
+    },
+    "PaddleDimensions": {
+      "additionalProperties": false,
+      "properties": {
+        "length_in": {
+          "exclusiveMinimum": 0.0,
+          "title": "Length In",
+          "type": "number"
+        },
+        "thickness_in": {
+          "exclusiveMinimum": 0.0,
+          "title": "Thickness In",
+          "type": "number"
+        },
+        "width_in": {
+          "exclusiveMinimum": 0.0,
+          "title": "Width In",
+          "type": "number"
+        }
+      },
+      "required": [
+        "length_in",
+        "width_in",
+        "thickness_in"
+      ],
+      "title": "PaddleDimensions",
+      "type": "object"
+    },
+    "PlayerProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "account_id": {
+          "minLength": 1,
+          "title": "Account Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "const": "racketsport_player_profile",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "consent_source_trace": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceTrace"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "consent_status": {
+          "enum": [
+            "owner",
+            "granted",
+            "denied",
+            "unknown",
+            "revoked"
+          ],
+          "title": "Consent Status",
+          "type": "string"
+        },
+        "created_at_utc": {
+          "title": "Created At Utc",
+          "type": "string"
+        },
+        "cross_account_shareable": {
+          "title": "Cross Account Shareable",
+          "type": "boolean"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "frozen_shape_betas_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProfileArtifactRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "handedness": {
+          "enum": [
+            "right",
+            "left",
+            "ambidextrous",
+            "unknown"
+          ],
+          "title": "Handedness",
+          "type": "string"
+        },
+        "height_m": {
+          "exclusiveMinimum": 0.0,
+          "title": "Height M",
+          "type": "number"
+        },
+        "height_provenance": {
+          "enum": [
+            "tape_measured",
+            "self_reported",
+            "estimated"
+          ],
+          "title": "Height Provenance",
+          "type": "string"
+        },
+        "is_account_owner": {
+          "title": "Is Account Owner",
+          "type": "boolean"
+        },
+        "profile_id": {
+          "minLength": 1,
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "profile_type": {
+          "const": "player",
+          "default": "player",
+          "title": "Profile Type",
+          "type": "string"
+        },
+        "reid_gallery_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProfileArtifactRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "retention": {
+          "$ref": "#/$defs/RetentionPolicy"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_trace": {
+          "$ref": "#/$defs/SourceTrace"
+        },
+        "updated_at_utc": {
+          "title": "Updated At Utc",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "account_id",
+        "profile_id",
+        "display_name",
+        "source_trace",
+        "retention",
+        "artifact_type",
+        "is_account_owner",
+        "height_m",
+        "height_provenance",
+        "handedness",
+        "cross_account_shareable",
+        "consent_status"
+      ],
+      "title": "PlayerProfile",
+      "type": "object"
+    },
+    "ProfileArtifactRef": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "source_trace": {
+          "$ref": "#/$defs/SourceTrace"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "uri",
+        "artifact_type",
+        "source_trace"
+      ],
+      "title": "ProfileArtifactRef",
+      "type": "object"
+    },
+    "RetentionPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "delete_with_source_clip": {
+          "title": "Delete With Source Clip",
+          "type": "boolean"
+        },
+        "delete_with_source_profile": {
+          "title": "Delete With Source Profile",
+          "type": "boolean"
+        },
+        "legal_basis": {
+          "title": "Legal Basis",
+          "type": "string"
+        },
+        "retention_days": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retention Days"
+        },
+        "scope": {
+          "enum": [
+            "account_lifetime",
+            "clip_lifetime",
+            "session_only",
+            "delete_after_days"
+          ],
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scope",
+        "delete_with_source_clip",
+        "delete_with_source_profile",
+        "legal_basis"
+      ],
+      "title": "RetentionPolicy",
+      "type": "object"
+    },
+    "SessionCache": {
+      "additionalProperties": false,
+      "properties": {
+        "account_id": {
+          "minLength": 1,
+          "title": "Account Id",
+          "type": "string"
+        },
+        "apparel_color_lab_by_player": {
+          "additionalProperties": {
+            "$ref": "#/$defs/LabColor"
+          },
+          "title": "Apparel Color Lab By Player",
+          "type": "object"
+        },
+        "artifact_type": {
+          "const": "racketsport_session_cache",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "background_model_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProfileArtifactRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "court_profile_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Court Profile Id"
+        },
+        "created_at_utc": {
+          "title": "Created At Utc",
+          "type": "string"
+        },
+        "device_profile_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Device Profile Id"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "gear_profile_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gear Profile Id"
+        },
+        "lighting_variant_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProfileArtifactRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "player_profile_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Player Profile Ids",
+          "type": "array"
+        },
+        "profile_id": {
+          "minLength": 1,
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "profile_type": {
+          "const": "session_cache",
+          "default": "session_cache",
+          "title": "Profile Type",
+          "type": "string"
+        },
+        "retention": {
+          "$ref": "#/$defs/RetentionPolicy"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "source_trace": {
+          "$ref": "#/$defs/SourceTrace"
+        },
+        "updated_at_utc": {
+          "title": "Updated At Utc",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "account_id",
+        "profile_id",
+        "display_name",
+        "source_trace",
+        "retention",
+        "artifact_type",
+        "session_id"
+      ],
+      "title": "SessionCache",
+      "type": "object"
+    },
+    "SourceTrace": {
+      "additionalProperties": false,
+      "properties": {
+        "source_clip_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Clip Id"
+        },
+        "source_clip_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Clip Ref"
+        },
+        "source_profile_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Profile Id"
+        }
+      },
+      "title": "SourceTrace",
+      "type": "object"
+    },
+    "WifiHint": {
+      "additionalProperties": false,
+      "properties": {
+        "bssid": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bssid"
+        },
+        "ssid": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ssid"
+        }
+      },
+      "title": "WifiHint",
+      "type": "object"
+    }
+  },
+  "$id": "https://example.local/racketsport/profile_registry_schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "account_id": {
+      "minLength": 1,
+      "title": "Account Id",
+      "type": "string"
+    },
+    "artifact_type": {
+      "const": "racketsport_profile_registry",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "court_profiles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CourtProfile"
+      },
+      "title": "Court Profiles",
+      "type": "object"
+    },
+    "created_at_utc": {
+      "title": "Created At Utc",
+      "type": "string"
+    },
+    "device_profiles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/DeviceProfile"
+      },
+      "title": "Device Profiles",
+      "type": "object"
+    },
+    "gear_profiles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/GearProfile"
+      },
+      "title": "Gear Profiles",
+      "type": "object"
+    },
+    "player_profiles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/PlayerProfile"
+      },
+      "title": "Player Profiles",
+      "type": "object"
+    },
+    "registry_version": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Registry Version",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "session_caches": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SessionCache"
+      },
+      "title": "Session Caches",
+      "type": "object"
+    },
+    "updated_at_utc": {
+      "title": "Updated At Utc",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "account_id"
+  ],
+  "title": "Racket-sport profile registry",
+  "type": "object"
+}

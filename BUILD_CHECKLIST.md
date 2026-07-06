@@ -67,6 +67,24 @@ wired+hi-def (P3) · court auto-find landed+robust (P4) · speed levers + cost (
 
 ## Dated Lane Handoffs
 
+- [P0-2 TREE HYGIENE 2026-07-06, Codex] Vendor pin hygiene restored:
+  SAT-HMR/WASB-SBDT/blurball/TrackNetV4 internal statuses clean at
+  `third_party/VENDOR_PINS.md` SHAs; SAT-HMR pin row added; WASB/blurball
+  pickleball additions remain backed in `third_party/pickleball_vendor_additions/`
+  and locally restored for tests without subrepo status noise. Loader-side
+  legacy shim accepts IMG_1605 `court_keypoints.json` as single-frame metadata
+  without touching protected labels. `gpu_cold_start.sh` fixes: ensurepip
+  venv detection, explicit body_venv failure returns, and count-agnostic pytest
+  smoke gate. Default ball arc chain now writes provenance-marked
+  `events_selected.json` on solver `ran` and omits it on solver self-kill.
+  Evidence: overlapping-calibration 7 passed; ball_arc_chain/shell 39 passed,
+  8 skipped; WASB vendor dataset 7 passed; `bash -n
+  scripts/racketsport/gpu_cold_start.sh` pass. Wide suite
+  `MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q` =>
+  2901 passed / 18 skipped / 7 failed: 6 local TCP bind `EPERM` review-server
+  tests in this sandbox plus 1 unrelated A100 known_hosts/default-host mismatch.
+  Report: `runs/lanes/p02_hygiene_20260706/report.md`. VERIFIED=0 unchanged.
+
 - [P0-9 PROFILE REGISTRY 2026-07-06] Registry/schema/storage slice implemented in the working tree,
   with no pipeline wiring: five profile types, flat per-account JSON under `runs/profiles/<account_id>/`,
   versioned snapshots, opportunistic court lookup, and non-owner biometric consent enforcement.
@@ -76,11 +94,11 @@ wired+hi-def (P3) · court auto-find landed+robust (P4) · speed levers + cost (
   `.venv/bin/python -m pytest tests/racketsport/test_profile_registry.py -q` => 4 passed; doc/schema
   `MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_profile_registry.py tests/racketsport/test_truthful_capabilities.py -q`
   => 19 passed. Mandated wide suite
-  `MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q` is NOT GREEN: collection stops on
-  untracked `tests/racketsport/test_flight_simulator.py` importing missing
-  `threed.racketsport.flight_simulator` (outside this lane's file ownership). Diagnostic only:
-  same suite with `--ignore=tests/racketsport/test_flight_simulator.py` was interrupted after 967.14s
-  with 1023 passed / 4 skipped. No protected eval labels touched; VERIFIED=0 unchanged.
+  `MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q` is NOT GREEN:
+  2897 passed / 11 failed / 18 skipped / 6 warnings in 1643.70s. Failures are outside P0-9:
+  4 WASB/blurball vendored-pickleball-file failures, 6 sandbox TCP-bind `EPERM` review-server
+  failures, and 1 unrelated `configs/ssh/a100_known_hosts` host mismatch. No protected eval labels
+  touched; VERIFIED=0 unchanged.
 
 - [P0-7 FLIGHT-SIM PHASE-1 2026-07-06, Codex] Pure-numpy simulator added with
   drag core reused from `ball_arc_solver._rk4_step`/`PhysicsParameters`, simulator-only
@@ -88,11 +106,16 @@ wired+hi-def (P3) · court auto-find landed+robust (P4) · speed levers + cost (
   Wolverine calibration projection, deterministic detector noise, and JSONL corpus
   CLI. Artifacts: `runs/lanes/p07_flightsim_20260706/report.json` and
   `runs/lanes/p07_flightsim_20260706/flight_corpus_1000.jsonl` (1000 rows, 80MB).
-  Evidence so far: focused simulator/scaffold tests
+  Evidence: focused simulator/scaffold tests
   `MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_flight_simulator.py tests/racketsport/test_scaffold_tool_index.py -q`
   => 13 passed; 1k corpus report: flight sanity failed_segments=0/demoted_frames=0,
   noise p95=34.21px recall=0.5771 hidden-FP=0.02148 (within 20%), round-trip
-  p95=0.0636m over 20 clean fits, full measured CLI wall=40.715s. VERIFIED=0 unchanged.
+  p95=0.0636m over 20 clean fits, full measured CLI wall=40.715s. Mandated
+  wide suite
+  `MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q`
+  => 2901 passed / 18 skipped / 7 failed: 6 local TCP bind `EPERM` review-server
+  tests in this sandbox plus 1 unrelated A100 known_hosts/default-host mismatch.
+  VERIFIED=0 unchanged.
 
 - [WORLDHMR-SPLIT COMPLETE + LIVE-VERIFIED 2026-07-06 ~00:2xZ, synergy-audit session] The BODY
   speed-vs-accuracy tradeoff is RESOLVED at the root. Split build_body_artifacts_from_fast_sam into

@@ -52,7 +52,7 @@ import math
 import re
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 from .capture_quality import score_capture_quality
 from .court_calibration import homography_from_planar_points, reprojection_error
@@ -123,6 +123,9 @@ def load_reviewed_court_keypoints_15pt(path: str | Path) -> ReviewedCourtKeypoin
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     frames_meta = payload.get("frames")
     if not isinstance(frames_meta, dict):
+        legacy = _load_legacy_single_frame_court_keypoints(payload, Path(path))
+        if legacy is not None:
+            return legacy
         raise ValueError(f"{path}: missing 'frames' metadata block")
     label_space = frames_meta.get("label_coordinate_space")
     source_res = frames_meta.get("source_resolution")
@@ -162,6 +165,107 @@ def load_reviewed_court_keypoints_15pt(path: str | Path) -> ReviewedCourtKeypoin
         source_resolution=(float(source_res[0]), float(source_res[1])),
         frames=frames,
     )
+
+
+def _load_legacy_single_frame_court_keypoints(
+    payload: Mapping[str, Any],
+    path: Path,
+) -> ReviewedCourtKeypoints | None:
+    """Accept the old single-frame court-keypoint artifact shape.
+
+    The legacy IMG_1605 reviewed label predates the `frames` metadata wrapper
+    but is already in source-video pixel coordinates. Treat it as one reviewed
+    static frame instead of mutating the protected label file.
+    """
+
+    raw_keypoints = payload.get("keypoints")
+    if not isinstance(raw_keypoints, Sequence) or isinstance(raw_keypoints, (str, bytes)):
+        return None
+    keypoints_by_name: dict[str, tuple[float, float]] = {}
+    for item in raw_keypoints:
+        if not isinstance(item, Mapping):
+            continue
+        name = str(item.get("name") or "")
+        uv = item.get("uv")
+        if name not in PICKLEBALL_COURT_KEYPOINT_NAMES:
+            continue
+        if not isinstance(uv, Sequence) or isinstance(uv, (str, bytes)) or len(uv) < 2:
+            continue
+        keypoints_by_name[name] = (float(uv[0]), float(uv[1]))
+    missing = sorted(set(PICKLEBALL_COURT_KEYPOINT_NAMES) - set(keypoints_by_name))
+    if missing:
+        return None
+
+    frame_indexes = payload.get("frame_indexes")
+    frame_id = ""
+    if isinstance(frame_indexes, Sequence) and not isinstance(frame_indexes, (str, bytes)) and frame_indexes:
+        frame_id = str(frame_indexes[0])
+    image_size = _legacy_single_frame_image_size(payload, path, frame_id=frame_id)
+    return ReviewedCourtKeypoints(
+        clip=str(payload.get("clip") or path.parent.parent.name),
+        label_coordinate_space=image_size,
+        source_resolution=image_size,
+        frames=[
+            ReviewedKeypointFrame(
+                frame=frame_id,
+                status="legacy_single_frame_no_frames_metadata",
+                keypoints=keypoints_by_name,
+            )
+        ],
+    )
+
+
+def _legacy_single_frame_image_size(
+    payload: Mapping[str, Any],
+    path: Path,
+    *,
+    frame_id: str,
+) -> tuple[float, float]:
+    for key in ("label_coordinate_space", "source_resolution", "image_size"):
+        value = payload.get(key)
+        parsed = _size_pair(value)
+        if parsed is not None:
+            return parsed
+    frame_path = _legacy_single_frame_image_path(path, frame_id=frame_id)
+    if frame_path is not None:
+        try:
+            from PIL import Image  # type: ignore[import-not-found]
+
+            with Image.open(frame_path) as image:
+                width, height = image.size
+            return (float(width), float(height))
+        except Exception as exc:  # pragma: no cover - defensive fallback path
+            raise ValueError(f"{path}: could not read legacy frame image size from {frame_path}: {exc}") from exc
+    raise ValueError(
+        f"{path}: legacy single-frame court keypoints need label_coordinate_space/source_resolution "
+        "or a readable sibling court_keypoint_partial_frames image"
+    )
+
+
+def _legacy_single_frame_image_path(path: Path, *, frame_id: str) -> Path | None:
+    frame_dir = path.parent / "court_keypoint_partial_frames"
+    if not frame_dir.is_dir():
+        return None
+    candidates: list[Path] = []
+    if frame_id:
+        try:
+            candidates.append(frame_dir / f"frame_{int(frame_id):06d}.jpg")
+        except ValueError:
+            candidates.append(frame_dir / f"frame_{frame_id}.jpg")
+    candidates.extend(sorted(frame_dir.glob("*.jpg")))
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _size_pair(value: Any) -> tuple[float, float] | None:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)) or len(value) < 2:
+        return None
+    width, height = float(value[0]), float(value[1])
+    if width <= 0.0 or height <= 0.0:
+        return None
+    return (width, height)
 
 
 def aggregate_reviewed_keypoints_native_px(

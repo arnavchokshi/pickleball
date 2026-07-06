@@ -53,16 +53,18 @@ if str(ROOT) not in sys.path:
 # shared venv for the orchestrator CLI vs. Fast-SAM-3D-Body's own separate
 # venv/checkout under body_runtime/) -- that split is real, not a bug -- but
 # now they all derive from a single root constant to update.
-DEFAULT_REMOTE_HOME = "/home/arnavchokshi"
-DEFAULT_REMOTE_HOST = "arnavchokshi@34.126.67.233"
+# FLEET NOTE (2026-07-06): the old standing VM (34.126.67.233) was DELETED; defaults now point at
+# fleet GPU #1 `pickleball-a100-fleet1` with the cold-start layout under ~/coldstart_20260706
+# (see runs/manager/gpu_fleet.md — THE source of truth; wave-2 improvement booked: derive these
+# from the fleet ledger instead of constants). Per-lane dispatches may still override via flags.
+DEFAULT_REMOTE_HOME = "/home/arnavchokshi/coldstart_20260706"
+DEFAULT_REMOTE_HOST = "arnavchokshi@34.143.175.207"
 DEFAULT_SSH_KEY = "~/.ssh/google_compute_engine"
-DEFAULT_REMOTE_REPO = f"{DEFAULT_REMOTE_HOME}/pickleball_train_main"
-# This venv (not FAST_SAM's own) has ultralytics+torch+cuda+opencv+pydantic
-# and matches this repo's dependency set closely enough to run the
-# orchestrator CLI end to end; Fast-SAM-3D-Body itself is invoked as a
-# subprocess by BodyStageRunner via FAST_SAM_PYTHON, set separately below.
-DEFAULT_REMOTE_PYTHON = f"{DEFAULT_REMOTE_HOME}/pickleball_git/.venv/bin/python"
-DEFAULT_REMOTE_FAST_SAM_PYTHON = f"{DEFAULT_REMOTE_HOME}/body_runtime/fast_sam_venv/bin/python"
+DEFAULT_REMOTE_REPO = f"{DEFAULT_REMOTE_HOME}/repo"
+# On fleet1 the cold-start builds ONE body venv that serves both the orchestrator CLI and
+# Fast-SAM-3D-Body subprocess (P0-1 lane verified 27/27 GPU tests through it).
+DEFAULT_REMOTE_PYTHON = f"{DEFAULT_REMOTE_HOME}/body_runtime/body_venv/bin/python"
+DEFAULT_REMOTE_FAST_SAM_PYTHON = f"{DEFAULT_REMOTE_HOME}/body_runtime/body_venv/bin/python"
 DEFAULT_REMOTE_FAST_SAM_ROOT = f"{DEFAULT_REMOTE_HOME}/body_runtime/Fast-SAM-3D-Body"
 DEFAULT_GPU_LOCK_SCRIPT = "scripts/gpu-eval-run.sh"
 DEFAULT_SSH_CONNECT_TIMEOUT_S = 12
@@ -81,7 +83,7 @@ DEFAULT_LOCK_WAIT_TIMEOUT_S = 60
 # (exit 124).
 DEFAULT_COMMAND_TIMEOUT_S = 3600
 DEFAULT_RUN_ROOT = "runs/process_video_body_dispatch"
-# Pinned host key for DEFAULT_REMOTE_HOST (34.126.67.233), captured via
+# Pinned host key for DEFAULT_REMOTE_HOST (fleet1, 34.143.175.207), captured via
 # ssh-keyscan and cross-checked against this machine's own trusted
 # ~/.ssh/known_hosts -- see configs/ssh/a100_known_hosts's header comment
 # and review_harden_20260702.md finding 7. Used in place of

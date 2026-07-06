@@ -1416,7 +1416,8 @@ def test_ssh_base_enables_strict_host_key_checking_with_pinned_known_hosts() -> 
     known_hosts_path = Path(known_hosts_arg.split("=", 1)[1])
     assert known_hosts_path.name == "a100_known_hosts"
     assert known_hosts_path.is_file()
-    assert "34.126.67.233" in known_hosts_path.read_text(encoding="utf-8")
+    host_ip = rbd.DEFAULT_REMOTE_HOST.split("@", 1)[-1]
+    assert host_ip in known_hosts_path.read_text(encoding="utf-8")
 
 
 def test_default_known_hosts_file_is_a_valid_pinned_entry_for_the_default_host() -> None:
@@ -1602,14 +1603,18 @@ def test_default_remote_paths_share_one_canonical_root() -> None:
     # each used to hardcode their own copy of "/home/arnavchokshi"; now they
     # all derive from DEFAULT_REMOTE_HOME so a VM/user change is one edit.
     home = rbd.DEFAULT_REMOTE_HOME
-    assert home == "/home/arnavchokshi"
+    # Fleet1 layout (2026-07-06): the cold-start root under the remote user's home.
+    # See runs/manager/gpu_fleet.md; update this pin deliberately on fleet changes.
+    assert home == "/home/arnavchokshi/coldstart_20260706"
     assert rbd.DEFAULT_REMOTE_REPO.startswith(home + "/")
     assert rbd.DEFAULT_REMOTE_PYTHON.startswith(home + "/")
     assert rbd.DEFAULT_REMOTE_FAST_SAM_PYTHON.startswith(home + "/")
     assert rbd.DEFAULT_REMOTE_FAST_SAM_ROOT.startswith(home + "/")
-    # The venv split (orchestrator venv vs. Fast-SAM's own venv) stays real
-    # and intentional -- canonicalizing the root must not paper over it.
-    assert rbd.DEFAULT_REMOTE_PYTHON != rbd.DEFAULT_REMOTE_FAST_SAM_PYTHON
+    # Fleet1's cold start builds ONE body venv serving both the orchestrator CLI
+    # and the Fast-SAM subprocess (P0-1 lane: 27/27 GPU tests through it), so the
+    # old two-venv split no longer holds by default. RemoteConfig still supports
+    # separate --remote-python/--remote-fast-sam-python overrides per dispatch.
+    assert rbd.DEFAULT_REMOTE_PYTHON == rbd.DEFAULT_REMOTE_FAST_SAM_PYTHON
 
 
 def test_remote_layout_checks_cover_repo_python_lock_script_and_fast_sam_paths() -> None:

@@ -184,6 +184,12 @@ def run_default_ball_arc_chain(
     bounce_summary = auto_bounces.get("summary") if isinstance(auto_bounces.get("summary"), Mapping) else {}
     flight_summary = flight_sanity_manifest_summary(run.flight_sanity)
     manifest_path = out_dir / "ball_chain_manifest.json"
+    events_selected_path = _write_events_selected_from_arc_solution(
+        run.artifact,
+        out_dir=out_dir,
+        generated_at=generated_at,
+        writer="run_default_ball_arc_chain",
+    )
     manifest: dict[str, Any] = {
         "schema_version": 1,
         "artifact_type": "racketsport_ball_chain_run_manifest",
@@ -205,6 +211,7 @@ def run_default_ball_arc_chain(
                 "seed_anchor_ball_track_arc_solved": seed_run.artifact_path if seed_run is not None else None,
                 "seed_anchor_flight_sanity": seed_run.flight_sanity_path if seed_run is not None else None,
                 "ball_track_arc_solved": run.artifact_path,
+                "events_selected": events_selected_path,
                 "ball_arc_render": ball_arc_render_path,
                 "ball_flight_sanity": run.flight_sanity_path,
             }
@@ -246,16 +253,20 @@ def run_default_ball_arc_chain(
     }
     if chain_config_degraded is not None:
         result_summary["chain_config_degraded"] = chain_config_degraded
+    output_paths = {
+        "ball_bounce_candidates": str(bounce_candidates_path),
+        "ball_track_arc_solved": str(run.artifact_path),
+        "ball_arc_render": str(ball_arc_render_path),
+        "ball_flight_sanity": str(run.flight_sanity_path),
+        "ball_chain_manifest": str(manifest_path),
+    }
+    events_selected = manifest["outputs"].get("events_selected")
+    if isinstance(events_selected, Mapping) and isinstance(events_selected.get("path"), str):
+        output_paths["events_selected"] = str(events_selected["path"])
     return {
         "status": str(run.artifact.get("status") or "unknown"),
         "summary": result_summary,
-        "outputs": {
-            "ball_bounce_candidates": str(bounce_candidates_path),
-            "ball_track_arc_solved": str(run.artifact_path),
-            "ball_arc_render": str(ball_arc_render_path),
-            "ball_flight_sanity": str(run.flight_sanity_path),
-            "ball_chain_manifest": str(manifest_path),
-        },
+        "outputs": output_paths,
     }
 
 
@@ -402,9 +413,13 @@ def solve_arc_with_flight_sanity(
     write_json(artifact_path, gated_artifact)
     write_json(flight_sanity_path, flight_sanity)
     events_selected_path = None
-    if write_events_selected and isinstance(gated_artifact.get("event_selection"), Mapping):
-        events_selected_path = out_dir / "events_selected.json"
-        write_json(events_selected_path, gated_artifact["event_selection"])
+    if write_events_selected:
+        events_selected_path = _write_events_selected_from_arc_solution(
+            gated_artifact,
+            out_dir=out_dir,
+            generated_at=generated_at,
+            writer="solve_arc_with_flight_sanity",
+        )
     return BallArcSolverRun(
         artifact=gated_artifact,
         flight_sanity=dict(flight_sanity),
@@ -412,6 +427,34 @@ def solve_arc_with_flight_sanity(
         flight_sanity_path=flight_sanity_path,
         events_selected_path=events_selected_path,
     )
+
+
+def _write_events_selected_from_arc_solution(
+    artifact: Mapping[str, Any],
+    *,
+    out_dir: Path,
+    generated_at: str | None,
+    writer: str,
+) -> Path | None:
+    if str(artifact.get("status") or "") != "ran":
+        return None
+    event_selection = artifact.get("event_selection")
+    if not isinstance(event_selection, Mapping):
+        return None
+    payload = json.loads(json.dumps(event_selection))
+    payload["generated_at"] = generated_at or utc_stamp()
+    payload["clip_id"] = str(artifact.get("clip_id") or "")
+    payload["source"] = "default_ball_arc_chain_event_selection"
+    payload["source_artifact"] = "ball_track_arc_solved.json"
+    payload["provenance"] = {
+        "derived_from": "ball_track_arc_solved.json",
+        "writer": writer,
+        "solver_status": str(artifact.get("status") or ""),
+        "clip_id": str(artifact.get("clip_id") or ""),
+    }
+    events_selected_path = out_dir / "events_selected.json"
+    write_json(events_selected_path, payload)
+    return events_selected_path
 
 
 def flight_sanity_manifest_summary(report: Mapping[str, Any]) -> dict[str, int]:

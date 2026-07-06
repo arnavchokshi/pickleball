@@ -85,6 +85,129 @@ def test_default_chain_records_degraded_marker_without_candidate_sidecars(
     assert result["summary"]["chain_config_degraded"] == "no_candidate_sidecars"
 
 
+def test_default_chain_writes_events_selected_from_final_arc_solution(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    ball_track_path = _write_json(tmp_path / "ball_track.json", _ball_track_payload())
+    calibration_path = _write_json(tmp_path / "court_calibration.json", _calibration_payload())
+
+    def _fake_write_bounces(**kwargs: Any) -> dict[str, Any]:
+        payload = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_ball_bounce_candidates_track_geometry",
+            "summary": {"final_candidate_count": 1},
+            "candidates": [],
+        }
+        _write_json(kwargs["out_path"], payload)
+        return payload
+
+    def _fake_solve(**kwargs: Any) -> BallArcSolverRun:
+        out_dir = Path(kwargs["out_dir"])
+        artifact = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_ball_track_arc_solved",
+            "clip_id": "unit_clip",
+            "status": "ran",
+            "summary": {"coverage_world_xyz_count": 3, "segment_count": 1},
+            "event_selection": _events_selected_payload(),
+            "frames": [],
+        }
+        flight_sanity = _flight_sanity_payload(verdicts={0: "pass"})
+        artifact_path = _write_json(out_dir / "ball_track_arc_solved.json", artifact)
+        flight_path = _write_json(out_dir / "ball_flight_sanity.json", flight_sanity)
+        return BallArcSolverRun(
+            artifact=artifact,
+            flight_sanity=flight_sanity,
+            artifact_path=artifact_path,
+            flight_sanity_path=flight_path,
+            events_selected_path=None,
+        )
+
+    monkeypatch.setattr(ball_arc_chain, "write_bounce_candidate_payload", _fake_write_bounces)
+    monkeypatch.setattr(ball_arc_chain, "solve_arc_with_flight_sanity", _fake_solve)
+
+    result = ball_arc_chain.run_default_ball_arc_chain(
+        clip="unit_clip",
+        ball_track_path=ball_track_path,
+        court_calibration_path=calibration_path,
+        out_dir=tmp_path / "out",
+        generated_at="2026-07-05T00:00:00Z",
+    )
+
+    events_path = Path(result["outputs"]["events_selected"])
+    assert events_path.name == "events_selected.json"
+    assert events_path.is_file()
+    payload = json.loads(events_path.read_text(encoding="utf-8"))
+    assert payload["artifact_type"] == "racketsport_ball_arc_events_selected"
+    assert [event["kind"] for event in payload["selected"]] == ["contact", "bounce"]
+    assert payload["provenance"] == {
+        "derived_from": "ball_track_arc_solved.json",
+        "writer": "run_default_ball_arc_chain",
+        "solver_status": "ran",
+        "clip_id": "unit_clip",
+    }
+    manifest = json.loads((tmp_path / "out" / "ball_chain_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["outputs"]["events_selected"]["path"] == str(events_path)
+
+
+def test_default_chain_omits_events_selected_when_solver_self_kills(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    ball_track_path = _write_json(tmp_path / "ball_track.json", _ball_track_payload())
+    calibration_path = _write_json(tmp_path / "court_calibration.json", _calibration_payload())
+
+    def _fake_write_bounces(**kwargs: Any) -> dict[str, Any]:
+        payload = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_ball_bounce_candidates_track_geometry",
+            "summary": {"final_candidate_count": 1},
+            "candidates": [],
+        }
+        _write_json(kwargs["out_path"], payload)
+        return payload
+
+    def _fake_solve(**kwargs: Any) -> BallArcSolverRun:
+        out_dir = Path(kwargs["out_dir"])
+        artifact = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_ball_track_arc_solved",
+            "clip_id": "unit_clip",
+            "status": "experimental_off",
+            "kill_reasons": ["self_kill_for_test"],
+            "summary": {"coverage_world_xyz_count": 0, "segment_count": 0},
+            "event_selection": _events_selected_payload(),
+            "frames": [],
+        }
+        flight_sanity = _flight_sanity_payload(verdicts={})
+        artifact_path = _write_json(out_dir / "ball_track_arc_solved.json", artifact)
+        flight_path = _write_json(out_dir / "ball_flight_sanity.json", flight_sanity)
+        return BallArcSolverRun(
+            artifact=artifact,
+            flight_sanity=flight_sanity,
+            artifact_path=artifact_path,
+            flight_sanity_path=flight_path,
+            events_selected_path=None,
+        )
+
+    monkeypatch.setattr(ball_arc_chain, "write_bounce_candidate_payload", _fake_write_bounces)
+    monkeypatch.setattr(ball_arc_chain, "solve_arc_with_flight_sanity", _fake_solve)
+
+    result = ball_arc_chain.run_default_ball_arc_chain(
+        clip="unit_clip",
+        ball_track_path=ball_track_path,
+        court_calibration_path=calibration_path,
+        out_dir=tmp_path / "out",
+        generated_at="2026-07-05T00:00:00Z",
+    )
+
+    assert "events_selected" not in result["outputs"]
+    assert not (tmp_path / "out" / "events_selected.json").exists()
+    manifest = json.loads((tmp_path / "out" / "ball_chain_manifest.json").read_text(encoding="utf-8"))
+    assert "events_selected" not in manifest["outputs"]
+
+
 def test_ball_arc_render_builds_dense_parametric_samples_and_pbvision_summary() -> None:
     artifact = _arc_solved_render_payload()
     flight_sanity = _flight_sanity_payload(verdicts={0: "pass"})
@@ -704,6 +827,48 @@ def _flight_sanity_payload(*, verdicts: Mapping[int, str]) -> dict[str, Any]:
             for segment_id, verdict in sorted(verdicts.items())
         ],
         "frames": [],
+    }
+
+
+def _events_selected_payload() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_arc_events_selected",
+        "candidate_prediction": True,
+        "not_ground_truth": True,
+        "selection_policy": {"mode": "unit_test"},
+        "selected_count": 2,
+        "selected_optional_count": 1,
+        "rejected_count": 0,
+        "rejected_optional_count": 0,
+        "selected": [
+            {
+                "anchor_id": "contact_0",
+                "kind": "contact",
+                "t": 0.0,
+                "frame": 0,
+                "player_id": 7,
+                "world_xyz": [0.0, 0.0, 0.5],
+                "selected": True,
+                "selection": "selected_optional",
+                "status": "candidate_prediction",
+                "selection_reason": "unit_test_contact",
+                "candidate_confidence": 0.8,
+            },
+            {
+                "anchor_id": "bounce_3",
+                "kind": "bounce",
+                "t": 0.3,
+                "frame": 3,
+                "world_xyz": [0.6, 0.0, 0.04],
+                "selected": True,
+                "selection": "selected_passthrough",
+                "status": "auto_bounce_candidate",
+                "selection_reason": "unit_test_bounce",
+                "candidate_confidence": 0.7,
+            },
+        ],
+        "rejected": [],
     }
 
 

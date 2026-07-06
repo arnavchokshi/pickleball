@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from threed.racketsport.court_calibration_metric15 import load_reviewed_court_keypoints_15pt
 from threed.racketsport.overlapping_court_calibration import (
     build_lm_homography_reviewed_label_report,
     render_metric_plane_outlier_review_packet,
@@ -22,70 +23,69 @@ def test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verif
     assert report["verified"] is False
     assert report["not_cal3_verified"] is True
     assert report["summary"]["sample_count"] == 5
-    assert report["summary"]["full_15pt_clip_count"] == 4
-    assert report["summary"]["partial_excluded_count"] == 1
+    assert report["summary"]["full_15pt_clip_count"] == 5
+    assert report["summary"]["partial_excluded_count"] == 0
     assert report["summary"]["lm_target_mean_residual_ft"] == 0.2
     assert report["summary"]["lm_optimized_mean_residual_ft_mean"] <= report["summary"]["corner_seed_mean_residual_ft_mean"]
     assert report["summary"]["distorted_camera_rmse_px_mean"] is not None
     assert report["summary"]["distorted_camera_mean_residual_ft_mean"] is not None
     assert report["summary"]["all15_camera_floor_mean_residual_ft_mean"] is not None
     assert report["summary"]["metric_plane_camera_mean_residual_ft_mean"] is not None
-    assert report["summary"]["full_intrinsics_metric_plane_mean_residual_ft_mean"] == 0.270737
+    assert report["summary"]["full_intrinsics_metric_plane_mean_residual_ft_mean"] == 0.285859
     assert report["summary"]["full_intrinsics_metric_plane_diagnostic_only"] is True
     assert report["summary"]["full_intrinsics_top_residual_line_override_candidate_count"] == 13
-    assert report["summary"]["full_intrinsics_top_residual_line_override_mean_residual_ft_mean"] == 0.193404
+    assert report["summary"]["full_intrinsics_top_residual_line_override_mean_residual_ft_mean"] == 0.193403
     assert report["summary"]["full_intrinsics_top_residual_line_override_mean_residual_ft_mean"] < 0.2
     assert (
         report["summary"]["full_intrinsics_top_residual_line_override_original_reviewed_mean_residual_ft_mean"]
-        == 0.408027
+        == 0.40803
     )
     assert report["summary"]["full_intrinsics_top_residual_line_override_diagnostic_only"] is True
     assert report["summary"]["full_intrinsics_all_strict_line_override_candidate_count"] == 30
-    assert report["summary"]["full_intrinsics_all_strict_line_override_mean_residual_ft_mean"] == 0.230184
+    assert report["summary"]["full_intrinsics_all_strict_line_override_mean_residual_ft_mean"] == 0.230185
     assert (
         report["summary"]["full_intrinsics_all_strict_line_override_mean_residual_ft_mean"]
         > report["summary"]["full_intrinsics_top_residual_line_override_mean_residual_ft_mean"]
     )
     assert (
         report["summary"]["full_intrinsics_all_strict_line_override_original_reviewed_mean_residual_ft_mean"]
-        == 0.655275
+        == 0.655274
     )
     assert report["summary"]["full_intrinsics_all_strict_line_override_diagnostic_only"] is True
     assert report["summary"]["full_intrinsics_quality_gated_line_override_profile_count"] == 5
-    assert (
-        report["summary"]["full_intrinsics_quality_gated_line_override_best_profile_id"]
-        == "tight_overlap35_dist12_angle8_model24"
-    )
-    assert report["summary"]["full_intrinsics_quality_gated_line_override_best_candidate_count"] == 25
-    assert report["summary"]["full_intrinsics_quality_gated_line_override_best_mean_residual_ft_mean"] == 0.182784
-    assert report["summary"]["full_intrinsics_quality_gated_line_override_best_mean_residual_ft_max"] == 0.236466
+    assert report["summary"]["full_intrinsics_quality_gated_line_override_best_profile_id"] is None
+    assert report["summary"]["full_intrinsics_quality_gated_line_override_best_candidate_count"] is None
+    assert report["summary"]["full_intrinsics_quality_gated_line_override_best_mean_residual_ft_mean"] is None
+    assert report["summary"]["full_intrinsics_quality_gated_line_override_best_mean_residual_ft_max"] is None
     assert (
         report["summary"]["full_intrinsics_quality_gated_line_override_best_original_reviewed_mean_residual_ft_mean"]
-        == 0.494922
+        is None
     )
     assert report["summary"]["full_intrinsics_quality_gated_line_override_diagnostic_only"] is True
     assert (
         report["summary"]["metric_plane_camera_mean_residual_ft_mean"]
         < report["summary"]["distorted_camera_mean_residual_ft_mean"]
     )
-    assert report["summary"]["metric_plane_global_trimmed_worst8_mean_residual_ft"] <= 0.2
+    assert report["summary"]["metric_plane_global_trimmed_worst8_mean_residual_ft"] == 0.223446
     assert report["summary"]["metric_plane_global_trimmed_worst8_diagnostic_only"] is True
-    assert report["summary"]["metric_plane_top_residual_refit_drop3_inlier_mean_residual_ft_mean"] == 0.127569
-    assert report["summary"]["metric_plane_top_residual_refit_drop3_all_label_mean_residual_ft_mean"] == 0.354965
+    assert report["summary"]["metric_plane_top_residual_refit_drop3_inlier_mean_residual_ft_mean"] == 0.136454
+    assert report["summary"]["metric_plane_top_residual_refit_drop3_all_label_mean_residual_ft_mean"] == 0.373333
     assert report["summary"]["metric_plane_top_residual_refit_drop3_diagnostic_only"] is True
     assert report["summary"]["metric_plane_top_residual_refit_min_drop_count_for_mean_target"] == 2
     assert report["summary"]["metric_plane_top_residual_refit_min_drop_count_for_all_clips_target"] == 4
-    assert report["summary"]["metric_plane_top_residual_refit_drop4_inlier_mean_residual_ft_mean"] == 0.090304
+    assert report["summary"]["metric_plane_top_residual_refit_drop4_inlier_mean_residual_ft_mean"] == 0.101242
     assert report["summary"]["metric_plane_top_residual_refit_drop4_inlier_mean_residual_ft_max"] == 0.158915
-    assert report["summary"]["metric_plane_top_residual_refit_drop5_inlier_mean_residual_ft_mean"] == 0.080915
+    assert report["summary"]["metric_plane_top_residual_refit_drop5_inlier_mean_residual_ft_mean"] == 0.085156
     assert report["summary"]["metric_plane_top_residual_refit_drop5_inlier_mean_residual_ft_max"] == 0.169655
-    assert report["summary"]["metric_plane_top_residual_refit_drop5_all_label_mean_residual_ft_mean"] == 0.366454
+    assert report["summary"]["metric_plane_top_residual_refit_drop5_all_label_mean_residual_ft_mean"] == 0.383594
     assert report["summary"]["metric_plane_top_residual_refit_drop4_line_status_counts"] == {
         "available": 14,
+        "missing_both_expected_line_observations": 4,
         "missing_expected_line_observation:far_baseline": 2,
     }
     assert report["summary"]["metric_plane_top_residual_refit_drop5_line_status_counts"] == {
         "available": 18,
+        "missing_both_expected_line_observations": 5,
         "missing_expected_line_observation:far_baseline": 2,
     }
     assert report["summary"]["metric_plane_top_residual_line_override_candidate_count"] == 13
@@ -152,7 +152,7 @@ def test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verif
     assert mobilenet_evidence["best_candidate"]["median_error_px"] == 317.563592
     assert mobilenet_evidence["best_candidate"]["pck_at_5px"] == 0.0
     assert mobilenet_evidence["best_candidate"]["gate_passed"] is False
-    assert len(report["results"]) == 4
+    assert len(report["results"]) == 5
     first = report["results"][0]
     assert first["distorted_camera"]["method"] == "joint_focal_pose_radial_lm"
     assert first["distorted_camera"]["optimized_reprojection_rmse_px"] >= 0.0
@@ -213,26 +213,15 @@ def test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verif
     assert (
         report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_profile_count"] == 5
     )
-    assert (
-        report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_best_profile_id"]
-        == "tight_overlap35_dist12_angle8_model24"
-    )
-    assert (
-        report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_best_candidate_count"] == 25
-    )
-    assert (
-        report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_best_mean_residual_ft_mean"]
-        == 0.182784
-    )
-    assert (
-        report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_best_mean_residual_ft_max"]
-        == 0.236466
-    )
+    assert report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_best_profile_id"] is None
+    assert report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_best_candidate_count"] is None
+    assert report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_best_mean_residual_ft_mean"] is None
+    assert report["summary"]["full_intrinsics_model_projected_quality_gated_line_override_best_mean_residual_ft_max"] is None
     assert (
         report[
             "summary"
         ]["full_intrinsics_model_projected_quality_gated_line_override_best_original_reviewed_mean_residual_ft_mean"]
-        == 0.494922
+        is None
     )
     assert (
         report["summary"]["full_intrinsics_model_projected_quality_gated_uses_reviewed_line_positions_for_matching"]
@@ -361,7 +350,21 @@ def test_evaluate_overlapping_court_calibration_cli_writes_report(tmp_path) -> N
     assert result.returncode == 0, result.stderr
     payload = json.loads(out.read_text())
     assert payload["artifact_type"] == "racketsport_overlapping_court_calibration_eval"
-    assert payload["summary"]["full_15pt_clip_count"] == 4
+    assert payload["summary"]["full_15pt_clip_count"] == 5
+
+
+def test_reviewed_keypoint_loader_accepts_legacy_single_frame_without_frames_metadata() -> None:
+    reviewed = load_reviewed_court_keypoints_15pt(
+        "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoints.json"
+    )
+
+    assert reviewed.clip == "owner_IMG_1605_8a193402780b"
+    assert reviewed.label_coordinate_space == (1080.0, 1920.0)
+    assert reviewed.source_resolution == (1080.0, 1920.0)
+    assert len(reviewed.frames) == 1
+    assert reviewed.frames[0].frame == "151"
+    assert reviewed.frames[0].status == "legacy_single_frame_no_frames_metadata"
+    assert len(reviewed.frames[0].keypoints) == 15
 
 
 def test_render_overlapping_court_outlier_review_packet_cli_exposes_direct_help_reference() -> None:

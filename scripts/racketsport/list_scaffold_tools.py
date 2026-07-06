@@ -285,7 +285,14 @@ def _category(stem: str) -> str:
         or "vn_trajectories" in normalized
     ):
         return "body"
-    if "physics" in normalized or "foot" in normalized or "placement" in normalized or "virtual_world" in normalized or "mujoco" in normalized:
+    if (
+        "physics" in normalized
+        or "flight" in normalized
+        or "foot" in normalized
+        or "placement" in normalized
+        or "virtual_world" in normalized
+        or "mujoco" in normalized
+    ):
         return "physics"
     if (
         "model" in normalized
