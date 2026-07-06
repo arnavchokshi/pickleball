@@ -38,8 +38,11 @@ stopping:** check each item against live evidence (BUILD_CHECKLIST last bullets 
 may already be satisfied; tick an item only WITH a dated evidence pointer. Re-verify at every run
 start: stale-blank boxes cause false STOPs, silently-ignored boxes destroy the rule:
 
-- [ ] **GPU access:** `gcloud auth login` (hello@ account) done, and a spend cap approved (default
-  <$2/hr × active-lane-count; a 5th concurrent GPU or any >$3/hr VM is a `needs-purchase-approval` STOP).
+- [ ] **GPU access:** SPEND CAP APPROVED (owner 2026-07-06): ≤$5/GPU/hr, max 4 GPUs, always
+  teardown/delete on lane completion. AUTH: one final `gcloud auth login` by the owner, after which
+  the manager creates a SERVICE ACCOUNT + key at `~/.secrets/` (outside repo, chmod 600, never in
+  git/chat) so all future sessions auth non-interactively — this box ticks when the service-account
+  key is verified working. Old VM `pickleball-a100-spot-ase1a`: owner ruled DELETE + start fresh.
 - [x] **Commit the docs of record:** SATISFIED by the owner-authorized 2026-07-06 docs-of-record
   commit (this file's presence in git history is the evidence; includes EDGE_PLAYBOOK, CLAUDE.md,
   the manual, skills, fleet scaffolds, allowlist test).
@@ -223,6 +226,9 @@ the coaching product.
    court colors and stick to it (H5); 30-60s empty-court clip per court (H6); ball-drop +
    known-speed drill for physics constants (H13); paddle photo orbit + 4-corner-marker clips (H7).
 7. Monthly 10-min slow-mo (1080p240) drill session — precision contact/spin GT (H25).
+
+*Owner ETA (2026-07-06): items 1-6 in "a few days" — no lane blocks on them meanwhile (harvest +
+eval clips carry the interim); the moment they land, P4-4/P4-0/H13/P3-7 unlock.*
 
 ## I.6 Direct next steps (the first ~2 weeks, in order)
 
@@ -1326,7 +1332,8 @@ legal review, the VERIFIED promotion ladder.
    lane; `EXCLUSIVE_PROCESS` compute mode). Fable DECIDES provision/reuse/teardown; a Codex/script lane
    runs the `gcloud` calls (SPOT + `--instance-termination-action=STOP` + `fable-lane=<lane>` label) and
    returns a VM report. Track the fleet in `runs/manager/gpu_fleet.md`; tear down a VM the moment its
-   lane ends; cost cap ≈ $2/hr × active-lane-count (a 5th concurrent GPU or any >$3/hr VM = a
+   lane ends; cost cap (OWNER RULING 2026-07-06): **≤$5/GPU/hr, max 4 concurrent GPUs; teardown/delete the moment
+   a lane ends — idle spend is never acceptable** (a 5th GPU or any >$5/hr VM = a
    `needs-purchase-approval` STOP). Full model: `FABLE_OPERATING_MANUAL.md` §12 + `runs/research_sota_20260705/fable5_manager_setup.md`. (Legacy single-GPU serialize via
    `scripts/gpu-train-lock.sh` / `gpu-eval-run.sh`; verify with nvidia-smi before claiming
    availability; auto-clean dispatch dirs (until P5-1 lands, clean manually); md5/schema-sync

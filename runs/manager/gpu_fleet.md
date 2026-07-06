@@ -8,4 +8,6 @@ teardown. A session MUST reconcile this against `gcloud compute instances list
 |---|---|---|---|---|---|---|---|---|
 | _(none — fleet empty; old `pickleball-a100-spot-ase1a` powered off 2026-07-05, delete staged w/ owner)_ | | | | | | | | |
 
-Fleet cost cap: ≈$2/hr × active-lane-count; any single VM >$3/hr or a 5th concurrent lane = `needs-purchase-approval` STOP.
+Fleet cost cap (owner 2026-07-06): ≤$5/GPU/hr, max 4 concurrent GPUs; teardown/DELETE the moment a
+lane ends (idle spend never acceptable); 5th GPU or >$5/hr = `needs-purchase-approval` STOP.
+Auth: service-account key `~/.secrets/pickleball-fleet-sa.json` (never in git/chat).

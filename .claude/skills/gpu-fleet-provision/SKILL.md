@@ -16,8 +16,10 @@ NEVER Codex (its sandbox has no network). Full model: FABLE_OPERATING_MANUAL §1
    matches (verify `nvidia-smi` on it first). Provision NEW only when no idle match AND ≥2 GPU-bound
    lanes are genuinely safe-parallel. One physical GPU per lane. **Hard cap 4 concurrent lanes** — a
    5th is a `needs-purchase-approval` STOP (stop-and-ask). Never provision speculatively.
-3. **Cost:** refuse if it pushes fleet total over ≈$2/hr × active-lane-count; any single VM >$3/hr
-   needs owner OK first.
+3. **Cost (owner 2026-07-06):** ≤$5/GPU/hr, max 4 GPUs; teardown/DELETE on lane completion — idle
+   spend never acceptable; 5th GPU or >$5/hr = needs-purchase-approval STOP.
+4. **Auth:** service-account key `~/.secrets/pickleball-fleet-sa.json` (activate-service-account);
+   missing/invalid key = STOP, never fall back to interactive auth inside a lane.
 
 ## Provision (delegated to a Sonnet/network-capable lane — never hand-run on Fable, never Codex)
 The lane runs, with a preflight quota check (fall back to next region on SKU exhaustion, don't

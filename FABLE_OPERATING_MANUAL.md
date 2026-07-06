@@ -246,6 +246,9 @@ research backing: `runs/research_sota_20260705/fable5_manager_setup.md`.
   a NEW GPU when no idle match exists AND ≥2 GPU-bound lanes are truly safe-parallel — one GPU per lane,
   hard cap 4 concurrent lanes (a 5th = `needs-purchase-approval` STOP). NEVER provision speculatively;
   NEVER double-book a GPU (set `EXCLUSIVE_PROCESS` compute mode so a 2nd CUDA context fails loud).
+- **Auth:** non-interactive via the fleet SERVICE ACCOUNT key at `~/.secrets/pickleball-fleet-sa.json`
+  (`gcloud auth activate-service-account --key-file=...`; created once after the owner's final
+  interactive login; NEVER in git/chat/repo). If the key is missing/invalid → needs-decision STOP.
 - **Provisioning is delegated** (Fable never hand-runs gcloud): a SONNET subagent or a manager-run
   detached script runs it — NOT Codex (its sandbox has no network; §8),
   `gcloud compute instances create … --provisioning-model=SPOT --instance-termination-action=STOP
@@ -260,8 +263,8 @@ research backing: `runs/research_sota_20260705/fable5_manager_setup.md`.
   metadata-poll watcher); idempotent atomically-renamed checkpoints to durable storage at every
   >15-30min stage boundary; a `scripts/fleet/reconcile.sh` sweep (run by a Sonnet lane or a scheduled local job — needs network,
   so never Codex) restarts STOP'd VMs and resumes — a script action, not Fable babysitting.
-- **Cost:** soft = Fable refuses a lane that pushes the fleet over ≈$2/hr × active-lane-count (flag any
-  single VM >$3/hr for owner OK first). HARD = a GCP Budget → Pub/Sub → Cloud Function that STOPs all
+- **Cost (owner ruling 2026-07-06):** ≤$5/GPU/hr, max 4 concurrent GPUs; teardown/DELETE the moment a
+  lane ends — idle spend never acceptable; a 5th GPU or >$5/hr VM = needs-purchase-approval STOP. HARD = a GCP Budget → Pub/Sub → Cloud Function that STOPs all
   `fable-fleet` VMs on breach, independent of Fable. Reconcile orphaned VMs from prior sessions at
   session start before picking new work.
 
