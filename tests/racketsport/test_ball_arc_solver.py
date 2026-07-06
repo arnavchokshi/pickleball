@@ -231,7 +231,7 @@ def test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay
         physics=PhysicsParameters.for_ball_type("outdoor"),
         config=BallArcSolverConfig(
             enable_event_subset_selection=False,
-            enable_event_discovery=False,
+            enable_event_discovery=True,
             enable_weak_segments=False,
             max_reprojection_inlier_px=18.0,
         ),
@@ -239,6 +239,8 @@ def test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay
     )
 
     assert artifact["status"] == "ran"
+    assert artifact["summary"]["discovered_bounce_count"] == 0
+    assert all(anchor["status"] != "solver_proposed" for anchor in artifact["anchors"])
     segment = artifact["segments"][0]
     assert segment["status"] == "fit_bvp_fallback"
     assert segment["diagnostics"]["fit_validity_gate"]["original_endpoint_error_m"] == pytest.approx(
@@ -249,6 +251,8 @@ def test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay
     assert frame_200["world_xyz"] is not None
     assert _inside_pickleball_court_volume(frame_200["world_xyz"])
     assert frame_200["band"] == "arc_weak"
+    assert frame_200["arc_solver"]["segment_status"] == "fit_bvp_fallback"
+    assert frame_200["arc_solver"]["bvp_fallback_segment"] is True
 
     render = build_ball_arc_render_artifact(
         artifact,
