@@ -1,28 +1,19 @@
-# OWNER CHECK-IN — 2026-07-06 (wave 2)
+# OWNER CHECK-IN — wave 2 CLOSED (2026-07-07)
 
-## STOP — RESOLVED (2026-07-06): you supplied the Roboflow key. Stored gitignored at data/credentials/roboflow.env (chmod 600, never committed); PART 0 item ticked; P1-0 Universe download lane dispatched (option A). Nothing awaits you here.
-
-⭐ HEADLINE: Wave 2 dispatched — 6 file-fenced Codex lanes + the GVHMR GPU spike; gcloud auth ALIVE and service-account impersonation verified working (no login needed from you; wave-1 queue item 8 is thereby DONE); fleet1 restarting for the spike.
+⭐ HEADLINE: Wave 2 complete and committed. Root-jump blocker killed (outdoor 55→0 jumps, burlington 24→1 marginal; root cause was a hardcoded 30fps frame-index bug), data engine fully lit (43 rally clips + 40/40 prelabels + 61k-sample public corpus + 4-level labels, all zero-leakage), tar_batch transport live-proven, both decisive worlds browser-verified. Fleet fully down. ~$7-8 total GPU.
 
 ## Blockers
-None — Roboflow resolved; all lanes running.
+None. The one carried gap (honest): the foot-slide MAX gate still fails burlington (40.6mm) / outdoor (56.0mm) vs the 30mm bar — p95 is under bar everywhere (outlier frames only), evidence + suspect trail banked, wave-3 priority 1. MAD ruled innocent by a true A/B; the trail points at the placement fix's error redistribution (its guard counters scale with the shift).
 
-## Wave-2 lanes (your priority order)
-1. rootjump_slide_fix — burlington/outdoor blocker root-caused to a per-frame ABAB flip between two self-consistent positions (0.85m / 3.0m alternation) = selection/identity bug; fixing at source, slide → ≤30mm, plus frame_idx-null producer + foot_contact_phases producer ride along.
-2. p01b_harvest_ingest — 8 games → rally clips + roles + dedup + corpus card; GPU prelabel run queued after; 2 held-out game PROPOSALS will await your go (ledger stays manager-written).
-3. p08_vfr_pts — iPhone VFR/PTS correctness audit + frame-time tables (H27b).
-4. p21_cammotion — camera-motion module upgrade (handheld robustness), wiring via deferred patches.
-5. p27a_gvhmr_spike — GVHMR vs our stack, 2 tripod clips × 4 players on fleet1; also triangulates the burlington flip.
-6. p11_visibility_schema — 4-level ball-visibility taxonomy end-to-end (P1-1 training prereq).
-7. dispatch_hardening — wave-1's rsync failure class killed (tar-batch transport + bounded retries).
+## Your two optional items
+1. Disk: `bash /Users/arnavchokshi/Desktop/pickleball/runs/manager/disk_cleanup_20260707.sh` (~48GB back; every line commented; CV_pipeline KEPT per your ruling).
+2. Nothing else — commits are handled (your grant is encoded in .claude/settings.json for future agents; pushes remain yours).
 
 ## Money / GPU log
-fleet1 (A100-40GB spot, ~$1.2/hr) RESTARTED for the GVHMR spike; likely reused for the burlington/outdoor verify re-runs after the fix lands; STOP/teardown at wave end per standing rule. No new VMs yet; cap 4 × ≤$5/hr stands.
+fleet1 A100 spot ~5.2h ≈ $6.2 (includes ~$2.5 manager idle-reserve between jobs — logged as a dent; next wave stops the VM in gaps >1h). fleet2 A100 spot 1.1h ≈ $1.3, self-deleted by its lane. Both VMs now down (fleet1 STOPPED disk-intact, fleet2 DELETED). Total ≈ $7.5.
 
-## Quick wins
-- Mac volume at 96% (~12GB free) after the 6.9GB Roboflow pull — worth clearing space when convenient; wave-2 continues fine (aggregation is index-based, no copies).
-
-## Verify when back
-- The Roboflow ask above.
-- Wave-2 closeout table: burlington/outdoor blockers gone + slide ≤30mm (manager browser-verifies before claiming).
-- The 2 proposed held-out harvest games (listed here when the lane reports).
+## Verify when back (all pre-verified by manager; spot-check freely)
+- Fresh worlds + screenshots: runs/manager/wave2_browser_verify/{burlington2,wolverine2}/
+- Closing tables: runs/lanes/wave2_freshworlds_20260707/summary.md; MAD A/B: runs/lanes/wave2_mad_ab_20260707/
+- Held-out reservations HARVEST-1/2: runs/manager/heldout_eval_ledger.md (zero prelabel exposure, assert-guarded)
+- Wave-3 queue: BUILD_CHECKLIST [WAVE-2 COMPLETE 2026-07-07] bullet.
