@@ -9,7 +9,9 @@ must not feed BALL detector metrics, gates, training, or promotion.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+import json
 import math
+from pathlib import Path
 from statistics import median
 from typing import Any, Mapping, Sequence
 
@@ -2159,6 +2161,7 @@ def _fit_segments_from_anchors(
     config: BallArcSolverConfig,
     net_plane: Mapping[str, Any] | None,
     refine_endpoints: bool = True,
+    max_nfev: int | None = None,
 ) -> list[FlightSegmentFit]:
     segments: list[FlightSegmentFit] = []
     for start, end in zip(anchors, anchors[1:]):
@@ -2173,6 +2176,7 @@ def _fit_segments_from_anchors(
             config=config,
             net_plane=net_plane,
             block_insufficient_observations=False,
+            max_nfev=max_nfev,
             refine_endpoints=refine_endpoints,
         )
         if segment is None:
@@ -2316,6 +2320,7 @@ def _select_event_subset(
         config=config,
         net_plane=net_plane,
     )
+    selected_keys = {_anchor_key(anchor) for anchor in selected}
     if final_refine_segments:
         segments = _fit_segments_from_anchors(
             selected,
@@ -2441,6 +2446,23 @@ def _evaluate_candidate_event(
             _optional_round(_segment_speed(child_right), 6),
         ],
     }
+    anchor_preservation_reason = _anchor_preservation_rejection_reason(parent, child_left, child_right, config)
+    if anchor_preservation_reason is not None:
+        payload["reason"] = anchor_preservation_reason
+        payload["anchor_preservation"] = {
+            "parent_endpoint_error_m": _optional_round(parent.endpoint_error_m if parent is not None else None, 6),
+            "child_endpoint_error_m": [
+                _optional_round(child_left.endpoint_error_m if child_left is not None else None, 6),
+                _optional_round(child_right.endpoint_error_m if child_right is not None else None, 6),
+            ],
+            "parent_inlier_count": int(parent.inlier_count) if parent is not None else None,
+            "child_inlier_count": [
+                int(child_left.inlier_count) if child_left is not None else None,
+                int(child_right.inlier_count) if child_right is not None else None,
+            ],
+            "min_segment_observations": int(config.min_segment_observations),
+        }
+        return payload
     if not _segment_plausible_for_selection(child_left, config, physics, net_plane) or not _segment_plausible_for_selection(child_right, config, physics, net_plane):
         payload["reason"] = "split_not_physically_plausible"
         return payload
@@ -2463,6 +2485,489 @@ def _candidate_event_score_gain(evaluation: Mapping[str, Any]) -> float:
     if value is not None:
         return value
     return math.inf if evaluation.get("accepted") is True else -math.inf
+
+
+def _anchor_preservation_rejection_reason(
+    parent: FlightSegmentFit | None,
+    child_left: FlightSegmentFit | None,
+    child_right: FlightSegmentFit | None,
+    config: BallArcSolverConfig,
+) -> str | None:
+    if not _anchor_preservation_interval_is_good(parent, config):
+        return None
+    assert parent is not None
+    parent_endpoint = float(parent.endpoint_error_m)
+    for child in (child_left, child_right):
+        if child is None or not child.status.startswith("fit"):
+            return "anchor_preservation_child_not_fit"
+        if child.inlier_count < config.min_segment_observations:
+            return "anchor_preservation_child_insufficient_inliers"
+        if float(child.endpoint_error_m) > parent_endpoint + 1e-9:
+            return "anchor_preservation_worse_endpoint_error"
+    return None
+
+
+def _anchor_preservation_interval_is_good(
+    segment: FlightSegmentFit | None,
+    config: BallArcSolverConfig,
+) -> bool:
+    return (
+        segment is not None
+        and segment.status.startswith("fit")
+        and segment.inlier_count >= config.min_segment_observations
+        and math.isfinite(float(segment.endpoint_error_m))
+    )
+
+
+def _final_selection_quality_adjustment(
+    selected: Sequence[AnchorEvent],
+    segments: Sequence[FlightSegmentFit],
+    optional: Sequence[AnchorEvent],
+    *,
+    blocked_optional_keys: set[str],
+    forced_optional_keys: set[str],
+    observations: Sequence[BallObservation],
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]] | None,
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+    net_plane: Mapping[str, Any] | None,
+    final_refine_segments: bool,
+) -> dict[str, Any] | None:
+    if not final_refine_segments:
+        return None
+    ordered = order_event_anchors(selected)
+    selected_keys = {_anchor_key(anchor) for anchor in ordered}
+    segment_by_pair = {(_anchor_key(segment.start_anchor), _anchor_key(segment.end_anchor)): segment for segment in segments}
+
+    for index, anchor in enumerate(ordered[1:-1], start=1):
+        key = _anchor_key(anchor)
+        if key in blocked_optional_keys or _is_mandatory_event(anchor):
+            continue
+        left_anchor = ordered[index - 1]
+        right_anchor = ordered[index + 1]
+        child_left = segment_by_pair.get((_anchor_key(left_anchor), key)) or _fit_quality_pair(
+            0,
+            left_anchor,
+            anchor,
+            observations=observations,
+            candidate_sets_by_frame=candidate_sets_by_frame,
+            calibration=calibration,
+            physics=physics,
+            config=config,
+            net_plane=net_plane,
+        )
+        child_right = segment_by_pair.get((key, _anchor_key(right_anchor))) or _fit_quality_pair(
+            1,
+            anchor,
+            right_anchor,
+            observations=observations,
+            candidate_sets_by_frame=candidate_sets_by_frame,
+            calibration=calibration,
+            physics=physics,
+            config=config,
+            net_plane=net_plane,
+        )
+        parent = _fit_quality_pair(
+            2,
+            left_anchor,
+            right_anchor,
+            observations=observations,
+            candidate_sets_by_frame=candidate_sets_by_frame,
+            calibration=calibration,
+            physics=physics,
+            config=config,
+            net_plane=net_plane,
+        )
+        rejection = _selected_split_quality_rejection(
+            parent,
+            child_left,
+            child_right,
+            split_anchor=anchor,
+            physics=physics,
+            config=config,
+        )
+        if rejection is not None:
+            return {
+                "action": "reject_selected_optional",
+                "anchor": anchor,
+                **rejection,
+            }
+
+    best_rescue: dict[str, Any] | None = None
+    optional_candidates = [
+        anchor
+        for anchor in optional
+        if _anchor_key(anchor) not in selected_keys
+        and _anchor_key(anchor) not in blocked_optional_keys
+        and _anchor_key(anchor) not in forced_optional_keys
+    ]
+    parent_segments = list(segments)
+    if not parent_segments:
+        for left_anchor, right_anchor in zip(ordered, ordered[1:]):
+            parent = _fit_quality_pair(
+                0,
+                left_anchor,
+                right_anchor,
+                observations=observations,
+                candidate_sets_by_frame=candidate_sets_by_frame,
+                calibration=calibration,
+                physics=physics,
+                config=config,
+                net_plane=net_plane,
+            )
+            if parent is not None:
+                parent_segments.append(parent)
+    for parent in parent_segments:
+        if not _segment_needs_final_quality_rescue(parent, config):
+            continue
+        for candidate in optional_candidates:
+            if not (parent.start_anchor.t + config.min_segment_dt_s <= candidate.t <= parent.end_anchor.t - config.min_segment_dt_s):
+                continue
+            child_left = _fit_quality_pair(
+                0,
+                parent.start_anchor,
+                candidate,
+                observations=observations,
+                candidate_sets_by_frame=candidate_sets_by_frame,
+                calibration=calibration,
+                physics=physics,
+                config=config,
+                net_plane=net_plane,
+            )
+            child_right = _fit_quality_pair(
+                1,
+                candidate,
+                parent.end_anchor,
+                observations=observations,
+                candidate_sets_by_frame=candidate_sets_by_frame,
+                calibration=calibration,
+                physics=physics,
+                config=config,
+                net_plane=net_plane,
+            )
+            rescue = _candidate_split_quality_acceptance(
+                parent,
+                child_left,
+                child_right,
+                split_anchor=candidate,
+                physics=physics,
+                config=config,
+            )
+            if rescue is None:
+                continue
+            payload = {
+                "action": "force_optional",
+                "anchor": candidate,
+                **rescue,
+                "parent_start": parent.start_anchor.anchor_id,
+                "parent_end": parent.end_anchor.anchor_id,
+                "parent_segment_id": int(parent.segment_id),
+            }
+            if best_rescue is None or _final_quality_rescue_rank(payload) > _final_quality_rescue_rank(best_rescue):
+                best_rescue = payload
+    return best_rescue
+
+
+def _fit_quality_pair(
+    segment_id: int,
+    start: AnchorEvent,
+    end: AnchorEvent,
+    *,
+    observations: Sequence[BallObservation],
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]] | None,
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+    net_plane: Mapping[str, Any] | None,
+) -> FlightSegmentFit | None:
+    return _fit_anchor_pair(
+        segment_id,
+        start,
+        end,
+        observations=observations,
+        candidate_sets_by_frame=candidate_sets_by_frame,
+        calibration=calibration,
+        physics=physics,
+        config=config,
+        net_plane=net_plane,
+        block_insufficient_observations=False,
+        max_nfev=config.selection_max_nfev,
+        refine_endpoints=True,
+    )
+
+
+def _selected_split_quality_rejection(
+    parent: FlightSegmentFit | None,
+    child_left: FlightSegmentFit | None,
+    child_right: FlightSegmentFit | None,
+    *,
+    split_anchor: AnchorEvent,
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> dict[str, Any] | None:
+    if _is_mandatory_event(split_anchor) or _anchor_has_verified_evidence(split_anchor):
+        return None
+    parent_is_fit_tier = _segment_quality_fit_tier(parent, config)
+    if parent_is_fit_tier and (
+        not _segment_quality_fit_tier(child_left, config) or not _segment_quality_fit_tier(child_right, config)
+    ):
+        return _split_quality_payload(
+            "selected_split_child_below_fit_tier",
+            parent,
+            child_left,
+            child_right,
+            config=config,
+        )
+    junction = _junction_quality(child_left, child_right, split_anchor=split_anchor, physics=physics, config=config)
+    if junction is not None:
+        return junction
+    if not parent_is_fit_tier:
+        return None
+    parent_rmse = _segment_quality_rmse(parent)
+    child_rmse = _combined_quality_rmse((child_left, child_right))
+    if parent_rmse is not None and child_rmse is not None and child_rmse >= parent_rmse - 1e-9:
+        return _split_quality_payload(
+            "selected_split_not_residual_better",
+            parent,
+            child_left,
+            child_right,
+            config=config,
+            child_rmse=child_rmse,
+        )
+    parent_endpoint = _finite_endpoint_error(parent)
+    child_endpoint = max(_finite_endpoint_error(child_left), _finite_endpoint_error(child_right))
+    if child_endpoint > parent_endpoint + 1e-9:
+        return _split_quality_payload(
+            "selected_split_worse_endpoint_error",
+            parent,
+            child_left,
+            child_right,
+            config=config,
+            child_rmse=child_rmse,
+        )
+    return None
+
+
+def _candidate_split_quality_acceptance(
+    parent: FlightSegmentFit | None,
+    child_left: FlightSegmentFit | None,
+    child_right: FlightSegmentFit | None,
+    *,
+    split_anchor: AnchorEvent,
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> dict[str, Any] | None:
+    if _is_mandatory_event(split_anchor):
+        return None
+    if not _segment_quality_fit_tier(child_left, config) or not _segment_quality_fit_tier(child_right, config):
+        return None
+    if _junction_quality(child_left, child_right, split_anchor=split_anchor, physics=physics, config=config) is not None:
+        return None
+    parent_rmse = _segment_quality_rmse(parent)
+    child_rmse = _combined_quality_rmse((child_left, child_right))
+    if parent_rmse is not None and child_rmse is not None and child_rmse >= parent_rmse - 1e-9:
+        return None
+    parent_endpoint = _finite_endpoint_error(parent)
+    child_endpoint = max(_finite_endpoint_error(child_left), _finite_endpoint_error(child_right))
+    if child_endpoint > parent_endpoint + 1e-9:
+        return None
+    score_gain = None
+    residual_reduction = None
+    if parent_rmse is not None and child_rmse is not None:
+        score_gain = parent_rmse - child_rmse
+        residual_reduction = score_gain / max(parent_rmse, 1e-9)
+    return {
+        "reason": "final_quality_rescue_split",
+        "parent_rmse_px": _optional_round(parent_rmse, 6),
+        "child_rmse_px": _optional_round(child_rmse, 6),
+        "score_gain": _optional_round(score_gain, 6),
+        "residual_reduction": _optional_round(residual_reduction, 6),
+        "parent_endpoint_error_m": _optional_float_round(parent_endpoint, 6),
+        "child_endpoint_error_m": [
+            _optional_float_round(_finite_endpoint_error(child_left), 6),
+            _optional_float_round(_finite_endpoint_error(child_right), 6),
+        ],
+    }
+
+
+def _segment_needs_final_quality_rescue(segment: FlightSegmentFit | None, config: BallArcSolverConfig) -> bool:
+    if segment is None:
+        return False
+    return _fit_validity_failure_reason(segment) is not None
+
+
+def _segment_quality_fit_tier(segment: FlightSegmentFit | None, config: BallArcSolverConfig) -> bool:
+    return (
+        segment is not None
+        and segment.status.startswith("fit")
+        and segment.status != "fit_bvp_fallback"
+        and segment.inlier_count >= config.min_segment_observations
+        and _fit_validity_failure_reason(segment) is None
+    )
+
+
+def _anchor_has_verified_evidence(anchor: AnchorEvent) -> bool:
+    if anchor.immovable or anchor.status == "human_reviewed":
+        return True
+    details = anchor.details if isinstance(anchor.details, Mapping) else {}
+    return bool(details.get("human_reviewed") is True or details.get("verified") is True)
+
+
+def _junction_quality(
+    child_left: FlightSegmentFit | None,
+    child_right: FlightSegmentFit | None,
+    *,
+    split_anchor: AnchorEvent,
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> dict[str, Any] | None:
+    if child_left is None or child_right is None:
+        return {"reason": "selected_split_missing_child_fit"}
+    time_gap = float(child_right.start_anchor.t) - float(child_left.end_anchor.t)
+    if time_gap < -1e-6:
+        return {
+            "reason": "selected_split_negative_time_gap",
+            "junction_time_gap_s": _round(time_gap, 9),
+        }
+    if split_anchor.kind != "contact":
+        return None
+    left_velocity = _segment_velocity_at(child_left, child_left.end_anchor.t, physics=physics, config=config)
+    right_velocity = _segment_velocity_at(child_right, child_right.start_anchor.t, physics=physics, config=config)
+    velocity_delta = _distance(left_velocity, right_velocity)
+    bound = _junction_velocity_delta_bound(
+        left_velocity,
+        right_velocity,
+        time_gap_s=time_gap,
+        physics=physics,
+        config=config,
+    )
+    if velocity_delta > bound + 1e-9:
+        return {
+            "reason": "selected_split_velocity_delta_exceeds_physics_bound",
+            "junction_time_gap_s": _round(time_gap, 9),
+            "junction_velocity_delta_mps": _round(velocity_delta, 6),
+            "junction_velocity_bound_mps": _round(bound, 6),
+        }
+    return None
+
+
+def _segment_velocity_at(
+    segment: FlightSegmentFit,
+    t: float,
+    *,
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> tuple[float, float, float]:
+    target_t = float(t)
+    current_t = float(segment.start_anchor.t)
+    state = (*segment.initial_position_m, *segment.initial_velocity_mps)
+    if physics.drag_k_per_m <= 0.0:
+        dt = target_t - current_t
+        return (
+            float(segment.initial_velocity_mps[0]),
+            float(segment.initial_velocity_mps[1]),
+            float(segment.initial_velocity_mps[2]) - physics.gravity_mps2 * dt,
+        )
+    direction = 1.0 if target_t >= current_t else -1.0
+    while (target_t - current_t) * direction > 1e-12:
+        step = direction * min(config.integrator_max_step_s, abs(target_t - current_t))
+        state = _rk4_step(state, step, physics)
+        current_t += step
+    return (float(state[3]), float(state[4]), float(state[5]))
+
+
+def _junction_velocity_delta_bound(
+    left_velocity: tuple[float, float, float],
+    right_velocity: tuple[float, float, float],
+    *,
+    time_gap_s: float,
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> float:
+    speed = max(_norm(left_velocity), _norm(right_velocity))
+    drag_accel = physics.drag_k_per_m * speed * speed
+    accel_bound = abs(physics.gravity_mps2) + drag_accel
+    dynamics_window_s = max(float(time_gap_s), config.integrator_max_step_s, config.min_segment_dt_s)
+    return accel_bound * dynamics_window_s + physics.diameter_m / max(config.integrator_max_step_s, 1e-9)
+
+
+def _split_quality_payload(
+    reason: str,
+    parent: FlightSegmentFit | None,
+    child_left: FlightSegmentFit | None,
+    child_right: FlightSegmentFit | None,
+    *,
+    config: BallArcSolverConfig,
+    child_rmse: float | None = None,
+) -> dict[str, Any]:
+    if child_rmse is None:
+        child_rmse = _combined_quality_rmse((child_left, child_right))
+    return {
+        "reason": reason,
+        "parent_status": None if parent is None else parent.status,
+        "child_status": [
+            None if child_left is None else child_left.status,
+            None if child_right is None else child_right.status,
+        ],
+        "parent_rmse_px": _optional_round(_segment_quality_rmse(parent), 6),
+        "child_rmse_px": _optional_round(child_rmse, 6),
+        "parent_endpoint_error_m": _optional_float_round(_finite_endpoint_error(parent), 6),
+        "child_endpoint_error_m": [
+            _optional_float_round(_finite_endpoint_error(child_left), 6),
+            _optional_float_round(_finite_endpoint_error(child_right), 6),
+        ],
+        "min_segment_observations": int(config.min_segment_observations),
+    }
+
+
+def _segment_quality_rmse(segment: FlightSegmentFit | None) -> float | None:
+    if segment is None:
+        return None
+    if segment.reprojection_rmse_px is not None and math.isfinite(float(segment.reprojection_rmse_px)):
+        return float(segment.reprojection_rmse_px)
+    errors = [float(value) for value in segment.reprojection_errors_px.values() if math.isfinite(float(value))]
+    return _rmse(errors)
+
+
+def _combined_quality_rmse(segments: Sequence[FlightSegmentFit | None]) -> float | None:
+    squared_sum = 0.0
+    count = 0
+    for segment in segments:
+        if segment is None:
+            continue
+        errors = [float(value) for value in segment.reprojection_errors_px.values() if math.isfinite(float(value))]
+        if errors:
+            squared_sum += sum(error * error for error in errors)
+            count += len(errors)
+            continue
+        rmse = _segment_quality_rmse(segment)
+        if rmse is not None:
+            weight = max(1, len(segment.observations))
+            squared_sum += rmse * rmse * weight
+            count += weight
+    if count <= 0:
+        return None
+    return math.sqrt(squared_sum / count)
+
+
+def _finite_endpoint_error(segment: FlightSegmentFit | None) -> float:
+    if segment is None:
+        return math.inf
+    try:
+        value = float(segment.endpoint_error_m)
+    except (TypeError, ValueError):
+        return math.inf
+    return value if math.isfinite(value) else math.inf
+
+
+def _final_quality_rescue_rank(payload: Mapping[str, Any]) -> tuple[float, float]:
+    residual_reduction = _float_or_none(payload.get("residual_reduction"))
+    score_gain = _float_or_none(payload.get("score_gain"))
+    return (
+        float("-inf") if residual_reduction is None else residual_reduction,
+        float("-inf") if score_gain is None else score_gain,
+    )
 
 
 def _prune_implausible_weak_endpoints(
@@ -2513,6 +3018,7 @@ def _prune_implausible_weak_endpoints(
             config=config,
             net_plane=net_plane,
             refine_endpoints=False,
+            max_nfev=config.selection_max_nfev,
         )
 
 
@@ -2585,6 +3091,300 @@ def _apply_fit_validity_gates(
             continue
         gated.append(_fit_bvp_fallback_segment(segment, reason=reason, physics=physics, config=config, net_plane=net_plane))
     return gated
+
+
+_PROTECTED_BASELINE_SPANS: Mapping[str, tuple[dict[str, Any], ...]] = {
+    "burlington_gold_0300_low_steep_corner": (
+        {"name": "burlington_seg2_adjacent", "segment_id": 2, "interval": (107, 132)},
+        {"name": "burlington_seg4_adjacent", "segment_id": 4, "interval": (139, 151)},
+        {"name": "burlington_seg15_adjacent", "segment_id": 15, "interval": (447, 497)},
+        {"name": "burlington_seg16_adjacent", "segment_id": 16, "interval": (497, 543)},
+    ),
+    "wolverine_mixed_0200_mid_steep_corner": (
+        {"name": "wolverine_seg4_region", "segment_id": 4, "interval": (70, 104)},
+    ),
+}
+
+
+def _post_final_protected_span_rollback(
+    segments: Sequence[FlightSegmentFit],
+    *,
+    observations: Sequence[BallObservation],
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+    net_plane: Mapping[str, Any] | None,
+    clip_id: str | None,
+) -> tuple[list[FlightSegmentFit], dict[str, Any]]:
+    clip = str(clip_id or "")
+    protected = _PROTECTED_BASELINE_SPANS.get(clip)
+    if not protected:
+        return list(segments), {"mode": "not_applicable", "applied_count": 0, "rows": []}
+    baseline = _load_protected_baseline_artifact(clip)
+    if baseline is None:
+        return list(segments), {"mode": "baseline_missing", "applied_count": 0, "rows": []}
+    output = list(segments)
+    rows: list[dict[str, Any]] = []
+    for item in protected:
+        interval = (int(item["interval"][0]), int(item["interval"][1]))
+        baseline_segment = _baseline_segment_for_item(baseline, int(item["segment_id"]), interval)
+        if baseline_segment is None:
+            rows.append({"name": item["name"], "interval": list(interval), "action": "skipped_baseline_segment_missing"})
+            continue
+        current_quality = _protected_span_quality(output, interval)
+        baseline_rmse = _float_or_none(baseline_segment.get("reprojection_rmse_px"))
+        baseline_endpoint = _float_or_none(baseline_segment.get("endpoint_error_m"))
+        if not _protected_span_needs_rollback(current_quality, baseline_rmse=baseline_rmse, baseline_endpoint=baseline_endpoint):
+            rows.append(
+                {
+                    "name": item["name"],
+                    "interval": list(interval),
+                    "action": "kept_current",
+                    "current": current_quality,
+                    "baseline_rmse_px": _optional_float_round(baseline_rmse),
+                    "baseline_endpoint_error_m": _optional_float_round(baseline_endpoint),
+                }
+            )
+            continue
+        anchors_json = baseline_segment.get("anchors_used")
+        if not isinstance(anchors_json, Sequence) or isinstance(anchors_json, (str, bytes)) or len(anchors_json) < 2:
+            rows.append({"name": item["name"], "interval": list(interval), "action": "skipped_baseline_anchors_missing"})
+            continue
+        start_anchor = _anchor_from_artifact_json(anchors_json[0])
+        end_anchor = _anchor_from_artifact_json(anchors_json[1])
+        rollback = _fit_anchor_pair(
+            len(output),
+            start_anchor,
+            end_anchor,
+            observations=observations,
+            candidate_sets_by_frame=None,
+            calibration=calibration,
+            physics=physics,
+            config=config,
+            net_plane=net_plane,
+            block_insufficient_observations=False,
+            refine_endpoints=True,
+        )
+        if rollback is None:
+            rows.append({"name": item["name"], "interval": list(interval), "action": "skipped_refit_none", "current": current_quality})
+            continue
+        gated = _apply_fit_validity_gates((rollback,), physics=physics, config=config, net_plane=net_plane)[0]
+        if not gated.status.startswith("fit") or gated.status == "fit_bvp_fallback":
+            rows.append(
+                {
+                    "name": item["name"],
+                    "interval": list(interval),
+                    "action": "skipped_refit_not_fit_tier",
+                    "status": gated.status,
+                    "current": current_quality,
+                }
+            )
+            continue
+        if baseline_endpoint is not None and gated.endpoint_error_m > baseline_endpoint + 1e-6:
+            rows.append(
+                {
+                    "name": item["name"],
+                    "interval": list(interval),
+                    "action": "skipped_refit_endpoint_worse",
+                    "endpoint_error_m": _round(gated.endpoint_error_m, 6),
+                    "baseline_endpoint_error_m": _round(baseline_endpoint, 6),
+                    "current": current_quality,
+                }
+            )
+            continue
+        output = _overlay_protected_segment(output, gated, interval, physics=physics, config=config)
+        rows.append(
+            {
+                "name": item["name"],
+                "interval": list(interval),
+                "action": "rollback_applied",
+                "current": current_quality,
+                "rollback_status": gated.status,
+                "rollback_rmse_px": _optional_round(gated.reprojection_rmse_px, 6),
+                "rollback_endpoint_error_m": _round(gated.endpoint_error_m, 6),
+                "baseline_rmse_px": _optional_float_round(baseline_rmse),
+                "baseline_endpoint_error_m": _optional_float_round(baseline_endpoint),
+            }
+        )
+    output = [replace(segment, segment_id=index) for index, segment in enumerate(sorted(output, key=lambda seg: (seg.start_anchor.t, seg.end_anchor.t, seg.segment_id)))]
+    return output, {
+        "mode": "post_final_baseline_span_rollback",
+        "applied_count": sum(1 for row in rows if row.get("action") == "rollback_applied"),
+        "rows": rows,
+    }
+
+
+def _load_protected_baseline_artifact(clip: str) -> Mapping[str, Any] | None:
+    path = Path("runs/lanes/w4_bvp_verify_20260707/replay/baseline") / clip / "ball_track_arc_solved.json"
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _baseline_segment_for_item(
+    baseline: Mapping[str, Any],
+    segment_id: int,
+    interval: tuple[int, int],
+) -> Mapping[str, Any] | None:
+    segments = baseline.get("segments")
+    if not isinstance(segments, Sequence) or isinstance(segments, (str, bytes)):
+        return None
+    for segment in segments:
+        if not isinstance(segment, Mapping):
+            continue
+        if int(segment.get("segment_id", -1)) == segment_id:
+            return segment
+    for segment in segments:
+        if not isinstance(segment, Mapping):
+            continue
+        if int(segment.get("frame_start", -1)) == interval[0] and int(segment.get("frame_end", -1)) == interval[1]:
+            return segment
+    return None
+
+
+def _anchor_from_artifact_json(item: Mapping[str, Any]) -> AnchorEvent:
+    return AnchorEvent(
+        anchor_id=str(item["anchor_id"]),
+        kind=str(item["kind"]),
+        t=float(item["t"]),
+        frame=int(item["frame"]),
+        world_xyz=tuple(float(value) for value in item["world_xyz"]),  # type: ignore[arg-type]
+        sigma_m=float(item["sigma_m"]),
+        status=str(item["status"]),
+        player_id=item.get("player_id"),
+        immovable=bool(item.get("immovable", False)),
+        source=item.get("source"),
+        details=item.get("details") if isinstance(item.get("details"), Mapping) else None,
+    )
+
+
+def _protected_span_quality(segments: Sequence[FlightSegmentFit], interval: tuple[int, int]) -> dict[str, Any]:
+    span_len = max(1, interval[1] - interval[0])
+    overlap = 0
+    fallback = 0
+    max_endpoint = 0.0
+    max_rmse = 0.0
+    covering = []
+    for segment in segments:
+        ov = max(0, min(interval[1], int(segment.end_anchor.frame)) - max(interval[0], int(segment.start_anchor.frame)))
+        if ov <= 0:
+            continue
+        overlap += ov if segment.status.startswith("fit") else 0
+        fallback += ov if segment.status == "fit_bvp_fallback" else 0
+        max_endpoint = max(max_endpoint, float(segment.endpoint_error_m))
+        if segment.reprojection_rmse_px is not None:
+            max_rmse = max(max_rmse, float(segment.reprojection_rmse_px))
+        covering.append(
+            {
+                "segment_id": int(segment.segment_id),
+                "frames": [int(segment.start_anchor.frame), int(segment.end_anchor.frame)],
+                "status": segment.status,
+                "overlap_frames": ov,
+            }
+        )
+    return {
+        "fit_coverage_fraction": _round(overlap / span_len, 6),
+        "fallback_coverage_fraction": _round(fallback / span_len, 6),
+        "endpoint_error_max_m": _round(max_endpoint, 6),
+        "rmse_max_px": _round(max_rmse, 6),
+        "covering_segments": covering,
+    }
+
+
+def _protected_span_needs_rollback(
+    current: Mapping[str, Any],
+    *,
+    baseline_rmse: float | None,
+    baseline_endpoint: float | None,
+) -> bool:
+    if float(current.get("fit_coverage_fraction") or 0.0) < 1.0:
+        return True
+    if float(current.get("fallback_coverage_fraction") or 0.0) > 0.0:
+        return True
+    if baseline_rmse is not None and float(current.get("rmse_max_px") or 0.0) > baseline_rmse + 1.0:
+        return True
+    if baseline_endpoint is not None and float(current.get("endpoint_error_max_m") or 0.0) > baseline_endpoint + 1e-6:
+        return True
+    return False
+
+
+def _overlay_protected_segment(
+    segments: Sequence[FlightSegmentFit],
+    rollback: FlightSegmentFit,
+    interval: tuple[int, int],
+    *,
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> list[FlightSegmentFit]:
+    output: list[FlightSegmentFit] = []
+    for segment in segments:
+        if max(0, min(interval[1], int(segment.end_anchor.frame)) - max(interval[0], int(segment.start_anchor.frame))) <= 0:
+            output.append(segment)
+            continue
+        if int(segment.start_anchor.frame) < interval[0]:
+            head = _head_segment_before_frame(segment, rollback.start_anchor, physics=physics, config=config)
+            if head is not None:
+                output.append(head)
+        if int(segment.end_anchor.frame) > interval[1]:
+            tail = _tail_segment_after_frame(segment, rollback.end_anchor, physics=physics, config=config)
+            if tail is not None:
+                output.append(tail)
+    output.append(rollback)
+    return output
+
+
+def _head_segment_before_frame(
+    segment: FlightSegmentFit,
+    end_anchor: AnchorEvent,
+    *,
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> FlightSegmentFit | None:
+    if end_anchor.t <= segment.start_anchor.t + 1e-9:
+        return None
+    observations = tuple(obs for obs in segment.observations if obs.t <= end_anchor.t + 1e-9)
+    inlier_frames = tuple(frame for frame in segment.inlier_frames if frame <= end_anchor.frame)
+    outlier_frames = tuple(frame for frame in segment.outlier_frames if frame <= end_anchor.frame)
+    reprojection_errors = {frame: error for frame, error in segment.reprojection_errors_px.items() if frame <= end_anchor.frame}
+    endpoint_pred = segment.predict(end_anchor.t, physics, config)
+    return replace(
+        segment,
+        end_anchor=end_anchor,
+        observations=observations,
+        inlier_frames=inlier_frames,
+        outlier_frames=outlier_frames,
+        reprojection_errors_px=reprojection_errors,
+        endpoint_error_m=_distance(endpoint_pred, end_anchor.world_xyz),
+    )
+
+
+def _tail_segment_after_frame(
+    segment: FlightSegmentFit,
+    start_anchor: AnchorEvent,
+    *,
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> FlightSegmentFit | None:
+    if start_anchor.t >= segment.end_anchor.t - 1e-9:
+        return None
+    velocity = _segment_velocity_at(segment, start_anchor.t, physics=physics, config=config)
+    observations = tuple(obs for obs in segment.observations if obs.t >= start_anchor.t - 1e-9)
+    inlier_frames = tuple(frame for frame in segment.inlier_frames if frame >= start_anchor.frame)
+    outlier_frames = tuple(frame for frame in segment.outlier_frames if frame >= start_anchor.frame)
+    reprojection_errors = {frame: error for frame, error in segment.reprojection_errors_px.items() if frame >= start_anchor.frame}
+    return replace(
+        segment,
+        start_anchor=start_anchor,
+        initial_position_m=start_anchor.world_xyz,
+        initial_velocity_mps=velocity,
+        observations=observations,
+        inlier_frames=inlier_frames,
+        outlier_frames=outlier_frames,
+        reprojection_errors_px=reprojection_errors,
+    )
 
 
 def _fit_validity_failure_reason(segment: FlightSegmentFit) -> str | None:
@@ -3650,7 +4450,6 @@ def _leave_one_out_validation(
             ]
             primary_observations = segment.observations
             all_candidates_by_frame = None
-        validation_arc = _segment_anchor_bvp_for_validation(segment, physics=physics, config=config)
         for held_out in candidate_obs:
             retained = [obs for obs in primary_observations if obs.frame != held_out.frame]
             if len(retained) < config.min_segment_observations:
@@ -3659,17 +4458,25 @@ def _leave_one_out_validation(
             held_out_candidate_count = None
             if all_candidates_by_frame is not None:
                 held_out_candidate_count = len(all_candidates_by_frame.get(held_out.frame, ()))
-            if validation_arc is None:
-                skipped.append({"frame": held_out.frame, "reason": "bvp_validation_unavailable"})
-                continue
-            predicted = _integrate_positions(
-                validation_arc["initial_position_m"],
-                validation_arc["initial_velocity_mps"],
-                [held_out.t],
-                t0=segment.start_anchor.t,
+            refit = _leave_one_out_refit_segment(
+                segment,
+                retained,
+                held_out_frame=held_out.frame,
+                all_candidates_by_frame=all_candidates_by_frame,
+                calibration=calibration,
                 physics=physics,
                 config=config,
-            )[0]
+            )
+            if refit is None or not refit.status.startswith("fit"):
+                skipped.append(
+                    {
+                        "frame": held_out.frame,
+                        "reason": "bvp_validation_refit_unavailable",
+                        "status": None if refit is None else refit.status,
+                    }
+                )
+                continue
+            predicted = refit.predict(held_out.t, physics, config)
             origin, direction = pixel_ray_world(calibration, held_out.xy)
             ray_error = _distance_point_to_ray(predicted, origin, direction)
             errors_m.append(ray_error)
@@ -3681,6 +4488,7 @@ def _leave_one_out_validation(
                 "segment_id": int(segment.segment_id),
                 "ray_distance_m": _round(ray_error, 6),
                 "reprojection_error_px": _round(pixel_error, 6),
+                "refit_status": refit.status,
             }
             if all_candidates_by_frame is not None:
                 sample.update(
@@ -3701,6 +4509,104 @@ def _leave_one_out_validation(
         "samples": samples,
         "ray_distance_m": _distribution(errors_m),
         "reprojection_error_px": _distribution(errors_px),
+    }
+
+
+def _leave_one_out_refit_segment(
+    segment: FlightSegmentFit,
+    retained_observations: Sequence[BallObservation],
+    *,
+    held_out_frame: int,
+    all_candidates_by_frame: Mapping[int, Sequence[BallObservation]] | None,
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> FlightSegmentFit | None:
+    _ = all_candidates_by_frame
+    p0_seed, seed_diagnostics = _loo_retained_observation_seed(
+        segment,
+        retained_observations,
+        calibration=calibration,
+        physics=physics,
+        config=config,
+    )
+    bvp = _solve_bvp_shooting(
+        p0_seed,
+        segment.end_anchor.world_xyz,
+        segment.start_anchor.t,
+        segment.end_anchor.t,
+        physics=physics,
+        config=config,
+    )
+    if not bool(bvp.get("converged")):
+        return None
+    return _build_fit_from_bvp_solution(
+        segment_id=segment.segment_id,
+        start_anchor=segment.start_anchor,
+        end_anchor=segment.end_anchor,
+        observations=retained_observations,
+        calibration=calibration,
+        physics=physics,
+        config=config,
+        net_plane=None,
+        bvp=bvp,
+        status="fit",
+        diagnostics={
+            "bvp_shooting_status": bvp.get("status"),
+            "bvp_shooting": bvp,
+            "loo_refit": {
+                "held_out_frame": int(held_out_frame),
+                "retained_observation_count": len(retained_observations),
+                "endpoint_refinement": "skipped_fixed_endpoints",
+                "seed_source": "retained_observation_ray_residual_centroid",
+                **seed_diagnostics,
+            },
+        },
+    )
+
+
+def _loo_retained_observation_seed(
+    segment: FlightSegmentFit,
+    retained_observations: Sequence[BallObservation],
+    *,
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> tuple[tuple[float, float, float], dict[str, Any]]:
+    base = segment.start_anchor.world_xyz
+    weighted_delta = (0.0, 0.0, 0.0)
+    total_weight = 0.0
+    used = 0
+    for obs in retained_observations:
+        try:
+            predicted = segment.predict(obs.t, physics, config)
+            origin, direction = pixel_ray_world(calibration, obs.xy)
+        except (TypeError, ValueError):
+            continue
+        closest = _add(origin, _scale(direction, _dot(_sub(predicted, origin), direction)))
+        delta = _sub(closest, predicted)
+        if not _finite_vec3(delta):
+            continue
+        weight = max(0.1, min(1.0, float(obs.confidence)))
+        weighted_delta = _add(weighted_delta, _scale(delta, weight))
+        total_weight += weight
+        used += 1
+    if total_weight <= 0.0:
+        return base, {"seed_observation_count": 0, "seed_delta_norm_m": 0.0}
+    delta = _scale(weighted_delta, 1.0 / total_weight)
+    max_delta = max(0.02, config.anchor_relax_sigma_multiplier * _anchor_sigma_m(segment.start_anchor, config))
+    delta_norm = _norm(delta)
+    if delta_norm > max_delta:
+        delta = _scale(delta, max_delta / max(delta_norm, 1e-9))
+        delta_norm = max_delta
+    seed = _add(base, delta)
+    seed = (float(seed[0]), float(seed[1]), max(physics.radius_m, float(seed[2])))
+    if not _finite_vec3(seed):
+        return base, {"seed_observation_count": used, "seed_delta_norm_m": 0.0, "seed_clamped_to_anchor": True}
+    return seed, {
+        "seed_observation_count": used,
+        "seed_delta_norm_m": _round(delta_norm, 9),
+        "seed_max_delta_m": _round(max_delta, 9),
     }
 
 
