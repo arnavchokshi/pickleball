@@ -1,0 +1,12 @@
+md5 pull-verify: ok=8 fail=0
+md5 pull-verify outdoor: ok=8 fail=0
+md5 crosscheck burlington (fan2 dispatch vs local): ok=4 fail=0
+md5 crosscheck wolverine (fan3 dispatch vs local): ok=4 fail=0
+delete start 2026-07-07T22:21:31Z
+Deleted [https://www.googleapis.com/compute/v1/projects/gifted-electron-498923-h1/zones/asia-southeast1-a/instances/pickleball-a100-w4fan1].
+Deleted [https://www.googleapis.com/compute/v1/projects/gifted-electron-498923-h1/zones/asia-southeast1-a/instances/pickleball-a100-w4fan2].
+Deleted [https://www.googleapis.com/compute/v1/projects/gifted-electron-498923-h1/zones/asia-southeast1-a/instances/pickleball-a100-w4fan3].
+NAME                       ZONE               MACHINE_TYPE   PREEMPTIBLE  INTERNAL_IP  EXTERNAL_IP    STATUS
+pickleball-a100-fleet1     asia-southeast1-a  a2-highgpu-1g  true         10.148.0.5                  TERMINATED
+pickleball-h100-w4ballgpu  asia-southeast1-b  a3-highgpu-1g  true         10.148.0.11  34.21.216.249  RUNNING
+delete done 2026-07-07T22:22:33Z

@@ -1,0 +1,67 @@
+PIPELINE SUMMARY
+status: partial
+clip: outdoor_webcam_iynbd_1500_long_high_baseline
+wall_seconds: 945.841
+clip_dir: /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w4_freshproof_20260707/outdoor/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline
+stages:
+- ingest: ran (4.046s)
+    ingested /Users/arnavchokshi/Desktop/pickleball/eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/source.mp4 as source.mp4 (1920x1080 @ 60.000fps)
+    wrote frame_times.json from ffprobe PTS
+- calibration: ran [preview] (5.464s)
+    auto-discovered externally-provided court calibration from /Users/arnavchokshi/Desktop/pickleball/eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/labels/court_calibration_metric15pt.json (intrinsics.source='metric_15pt_reviewed'); schema + intrinsics.source validated (threed.racketsport.orchestrator.ExternalCalibrationRunner), PnP re-derivation from --court-corners/--capture-sidecar skipped
+- tracking: reused [low_confidence] (0.219s)
+    reused already-computed champion tracks.json from /Users/arnavchokshi/Desktop/pickleball/runs/lanes/p06_freshworlds_20260706/outdoor/outdoor_webcam_iynbd_1500_long_high_baseline/tracks_prewrite_backup.json (resume/reuse path)
+- camera_motion: skipped [preview] (2.865s)
+    camera_motion AUTO probe classified clip as static; placement will use the default no-camera-motion path
+    motion_score=0.568424 threshold=2.5
+- placement: ran (6.463s)
+    rewrote tracks.json world_xy via foot-keypoint placement fusion
+    coverage_unchanged=True
+    source_counts(bbox=2653)
+    camera_motion=not_used source=auto_disabled frames_used=0 frames_uncompensated=0
+    side_recompute(player=1: side None->far, role None->left)
+    side_recompute(player=2: side None->near, role None->left)
+    side_recompute(player=3: side None->near, role None->right)
+    side_recompute(player=4: side None->far, role None->right)
+    placement_guards(centerline_gap_clamped_frames=0, divergence_snap_frames=624, fallback_transition_blends=580, gap_hold_frames=0, gap_interpolated_frames=0, native2d_dropped=0, native2d_reassigned=0, net_gap_clamped_frames=0, sam3d_dropped=0, sam3d_reassigned=0, written_speed_capped_frames=544)
+    foot_contact_phases=foot_contact_phases.json
+- frames: ran (13.139s)
+    bounded default schedule: 1151 frame(s) carry at least one tracked player (Lane A pose is joints-everywhere, not tier-scheduled -- frame_compute_plan.json does not exist yet on a cold start, since process_video.py's events stage runs after pose)
+    extracted 1151 scheduled JPEG(s) into body_frames/ (51.49 MB) via ffmpeg (threed.racketsport.body_frame_materialization, the same extraction body_video_smoke.py already exercises)
+- ball: reused [low_confidence] (1.402s)
+    reused explicit --ball-track ball_track.json from /Users/arnavchokshi/Desktop/pickleball/runs/lanes/p06_freshworlds_20260706/outdoor/outdoor_webcam_iynbd_1500_long_high_baseline/ball_track.json
+    no court_corners.json available for bounce/in-out geometry; ball_track.json has trajectory only
+- ball_arc: ran (97.792s)
+    ran default ball_arc chain: auto-bounce candidates -> single-primary-track arc solver -> flight-sanity demotion
+    ball_arc chain ran in degraded config mode: no candidate sidecars were available
+- events: ran (0.786s)
+    SAM-3D skeleton unavailable before BODY; wrist_velocity_peaks.json is blocked, not pose-derived
+    derived ball_inflections.json from ball_track.json
+    extracted audio_onsets_v2.json (0 onsets; refines contact timing only)
+    fused contact_windows.json; cues used: wrist=missing, ball_inflections=available, audio=missing, reviewed_contacts=missing, missing=wrist,audio,reviewed_contacts
+    wrote frame_compute_plan.json (deep_mesh_windows authoritative: MESH only at contact windows, 100 frames, JOINTS everywhere else)
+    ball_aware mesh scheduling: loaded events_selected.json from /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w4_freshproof_20260707/outdoor/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/events_selected.json
+    ball_aware mesh scheduling: loaded ball_track_arc_solved.json from /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w4_freshproof_20260707/outdoor/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/ball_track_arc_solved.json
+- ball_fill: ran (3.134s)
+    built render-only ball_track_physics_filled.json; output is not for BALL detection metrics, gates, training, or promotion
+    applied ball_physics3d calibrated two-arc z reconstruction (rmse_px=0.8833392085024989)
+- body: degraded (809.915s)
+    remote calibration seed: derived capture_sidecar.json corner taps from the external court_calibration.json's own image_pts/world_pts (remote's committed orchestrator re-derives calibration from manual taps; the local world keeps the trusted external calibration)
+    remote BODY dispatch to arnavchokshi@34.126.94.44 did not complete: tar-batch upload archive failed after 12 attempts (last exit 1): client_loop: ssh_packet_write_poll: Connection to 34.126.94.44 port 22: Result too large
+    remote SAM-3D BODY did not complete; no fallback pose skeleton was generated
+- placement_refine: skipped (0.0s)
+    same-pass post-BODY placement_refine is disabled by R3; SAM3D foot pixels may only feed a second pass before a fresh BODY run, never an in-place tracks.json rewrite before world build
+- grounding_refine: skipped (0.002s)
+    grounding_refine skipped_no_contact_phases: zero contact phases detected, so BODY/skeleton artifacts passed through untouched
+    render-honest estimated grounding, not gate evidence
+- world: ran (0.303s)
+    assembled virtual_world.json with per-entity trust bands (never invented; read from real upstream state)
+- confidence_gate: ran (0.311s)
+    applied Wave-B confidence gate additively; raw virtual_world.json remains on disk
+    no Outdoor/Indoor labels read; gate consumes run-dir artifacts only
+    no calibration_curves.json found; physics predictions fall back to conservative low bands
+    absent PHYS artifact(s) passed through with provenance where possible: physics_footlock.json, racket_pose_estimate.json
+- manifest: ran (0.001s)
+    built replay_viewer_manifest.json with confidence_gated_world.json as world URL
+    mesh_status=skeleton_only
+    no replay_scene.json written: no tight contact-window/rally point spans available

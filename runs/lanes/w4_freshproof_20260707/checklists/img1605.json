@@ -1,0 +1,83 @@
+{
+  "ball_chain": {
+    "ball_track_arc_solved_present": true,
+    "chain_config_degraded": "no_candidate_sidecars",
+    "frames_total": 297,
+    "frames_visible": 100,
+    "frames_world_xyz_non_null": 0,
+    "kill_reasons": [],
+    "segment_count": 0,
+    "segment_status_census": {}
+  },
+  "body_full_clip_gate": {
+    "blockers": [],
+    "passed": true
+  },
+  "camera_motion_auto": {
+    "decode_orientation_consequential_mismatch": false,
+    "decode_orientation_mismatch": false,
+    "decode_orientation_mismatch_reason": null,
+    "decode_orientation_untrusted": false,
+    "enabled": true,
+    "forced": "auto",
+    "probe_wall_seconds": 2.100654,
+    "sampled_frame_count": 4,
+    "score": 50.015915,
+    "threshold": 2.5
+  },
+  "clip_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w4_freshproof_20260707/img1605/owner_IMG_1605_8a193402780b/owner_IMG_1605_8a193402780b",
+  "mesh": {
+    "body_mesh_index_chunk_count": 100,
+    "mesh_fallback": {
+      "engaged": true,
+      "policy": "uniform_stride",
+      "reason": "eligible_zero_all_manual_review",
+      "selected": 100
+    },
+    "selected_mesh_frame_count": 100,
+    "virtual_world_warnings": [
+      "missing_embedded_mesh_vertices",
+      "unprojected_visible_ball_frames",
+      "missing_paddle_pose"
+    ]
+  },
+  "root_jumps": {
+    "max_root_speed_mps": 2.9948457762350986,
+    "quality_blockers": [],
+    "root_motion_temporal_jump_count": 0
+  },
+  "run": {
+    "manifest_present": true,
+    "pipeline_status": "complete",
+    "remote_download_bytes": null,
+    "remote_status": null,
+    "remote_transport": null,
+    "remote_upload_bytes": null,
+    "wall_seconds": 264.307
+  },
+  "slide_gate": {
+    "blockers": [],
+    "candidate_phase_rejected_count": 13,
+    "candidate_phase_rejection_reason_counts": {
+      "low_body_contact_confidence": 13
+    },
+    "foot_slide_gate_passed": true,
+    "foot_slide_gate_threshold_m": 0.03,
+    "foot_slide_gate_value_m": 0.02306662624662327,
+    "grounding_metrics.foot_lock_slide_p95_m": 0.010379981810981924,
+    "grounding_metrics.max_candidate_phase_slide_m": 0.023927254199792615,
+    "grounding_metrics.max_foot_lock_slide_m": 0.02306662624662327,
+    "phase_slide_exceeds_lock_gate_count": 0
+  },
+  "version_stamp": {
+    "dirty_tracked_runtime_files": null,
+    "git_head_sha": null,
+    "present": false,
+    "remote_verification_expected_sha": null,
+    "remote_verification_remote_sha": null,
+    "remote_verification_verified": null,
+    "remote_version_verification_checked_file_count": null,
+    "remote_version_verification_drifted": null,
+    "remote_version_verification_verified": null
+  }
+}

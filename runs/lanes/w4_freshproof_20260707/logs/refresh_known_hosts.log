@@ -1,0 +1,6 @@
+--- w4fan1 ---
+PASS refresh_remote_host host=34.126.94.44 alias=w4fan1 known_hosts=/Users/arnavchokshi/Desktop/pickleball/configs/ssh/a100_known_hosts connectivity_check=passed
+--- w4fan2 ---
+PASS refresh_remote_host host=34.87.20.4 alias=w4fan2 known_hosts=/Users/arnavchokshi/Desktop/pickleball/configs/ssh/a100_known_hosts connectivity_check=passed
+--- w4fan3 ---
+PASS refresh_remote_host host=34.21.239.35 alias=w4fan3 known_hosts=/Users/arnavchokshi/Desktop/pickleball/configs/ssh/a100_known_hosts connectivity_check=passed

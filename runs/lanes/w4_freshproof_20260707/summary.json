@@ -1,0 +1,169 @@
+{
+  "lane": "w4_freshproof_20260707",
+  "objective": "wave-4 decisive fresh-GPU proof: 4 eval clips E2E through scripts/racketsport/process_video.py on A100 (proven BODY SKU), re-checking exact gated keys after wave-4 landings",
+  "code_sha": "9405764959976d1ea893456849e6d010666e6c50",
+  "code_provenance": "committed main HEAD at run time (940576495 = docs-only commit on top of the required 1588b110f; zero runtime-file deltas; local driver ran from pinned detached worktree /tmp/pickleball_w4_pinned_940576495; all VM checkouts fetch-synced from origin/main and blob-hash stamp-verified 73/73 at this sha)",
+  "fleet_branch": "FAN-3 (sibling pickleball-h100-w4ballgpu RUNNING at every check -> max 3 fans; wolverine+img1605 chained on w4fan3 by plan; final shape shifted to VM-local reruns for outdoor+img1605 after the Mac uplink broke)",
+  "run_shapes": {
+    "burlington": "Mac driver (pinned worktree) + remote BODY dispatch to w4fan2 (tar_batch, per-clip version stamp verified)",
+    "wolverine": "Mac driver (pinned worktree) + remote BODY dispatch to w4fan3 (tar_batch, per-clip version stamp verified)",
+    "outdoor": "VM-local full pipeline on w4fan1 (--body-local; Mac uplink dead: tar-batch upload failed 12+12 attempts 'ssh_packet_write_poll: Result too large'); code identity: RUN_CODE_IDENTITY.txt + run_version_verification.json (verified 73/73 at sha)",
+    "img1605": "VM-local full pipeline on w4fan3 (--body-local, same uplink reason); code identity same mechanism; FIRST DECISIVE COMPENSATED RUN (camera_motion_auto enabled=true)"
+  },
+  "gated_keys": {
+    "max_foot_lock_slide_m": {
+      "bar": 0.03,
+      "burlington": 0.020250415407963348,
+      "outdoor": 0.020044589253261472,
+      "wolverine": 0.01797567227077209,
+      "img1605": 0.02306662624662327,
+      "verdict": "PASS 4/4"
+    },
+    "foot_lock_slide_p95_m": {
+      "burlington": 0.009090643954616586,
+      "outdoor": 0.01193881256499872,
+      "wolverine": 1.9121084768245403e-15,
+      "img1605": 0.010379981810981924
+    },
+    "root_motion_temporal_jump_count": {
+      "expect": 0,
+      "actual": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "verdict": "PASS 4/4"
+    },
+    "body_full_clip_gate": {
+      "passed": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "blockers": [],
+      "verdict": "PASS 4/4"
+    },
+    "phase_slide_exceeds_lock_gate_count": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "rejection_reasons_all": "low_body_contact_confidence only (burlington 19, outdoor 56, wolverine 6, img1605 13)"
+  },
+  "camera_motion_auto": {
+    "burlington": {
+      "score": 0.523811,
+      "enabled": false,
+      "probe_host": "mac"
+    },
+    "outdoor": {
+      "score": 0.384636,
+      "enabled": false,
+      "probe_host": "vm (w3 mac value 0.568424; classification unchanged)"
+    },
+    "wolverine": {
+      "score": 0.128824,
+      "enabled": false,
+      "probe_host": "mac"
+    },
+    "img1605": {
+      "score": 50.015915,
+      "enabled": true,
+      "probe_host": "vm",
+      "note": "WAVE-4 ORIENTATION FIX DECISIVE PROOF: w3 decisive was 0.329/OFF (bug); lane harness predicted ~53.7; live pipeline probes measured 48.84 (mac, degraded attempt) and 50.02 (vm, decisive run) -> AUTO ON, ran COMPENSATED"
+    },
+    "decode_orientation_keys": "present first-class on all 4 (decode_orientation_mismatch=false, consequential=false, untrusted=false, reason=null)"
+  },
+  "ball_chain": {
+    "burlington": {
+      "segments": 8,
+      "census": {
+        "fit": 2,
+        "fit_bvp_fallback": 6
+      },
+      "frames_world_xyz": "588/600",
+      "kill_reasons": []
+    },
+    "outdoor": {
+      "segments": 7,
+      "census": {
+        "fit": 4,
+        "fit_bvp_fallback": 3
+      },
+      "frames_world_xyz": "454/1151",
+      "kill_reasons": [],
+      "note": "identical census measured on mac (attempt-2) and vm (decisive) solves"
+    },
+    "wolverine": {
+      "segments": 7,
+      "census": {
+        "fit_bvp_fallback": 7
+      },
+      "frames_world_xyz": "290/300",
+      "kill_reasons": []
+    },
+    "img1605": {
+      "segments": 0,
+      "census": {},
+      "frames_world_xyz": "0/297",
+      "kill_reasons": [],
+      "note": "HONEST FINDING: arc solver produced ZERO segments on img1605 (viewer shows 0/297 measured ball frames); no bad_fit anywhere but empty census on the owner clip"
+    },
+    "bad_fit_count": 0
+  },
+  "mesh": {
+    "selected_mesh_frame_count": {
+      "burlington": 100,
+      "outdoor": 100,
+      "wolverine": 100,
+      "img1605": 100
+    },
+    "img1605_mesh_fallback": {
+      "engaged": true,
+      "policy": "uniform_stride",
+      "reason": "eligible_zero_all_manual_review",
+      "selected": 100
+    },
+    "body_mesh_index_chunks": {
+      "burlington": 27,
+      "outdoor": 8,
+      "wolverine": 69,
+      "img1605": 100
+    },
+    "virtual_world_warning_strings": "missing_embedded_mesh_vertices on ALL 4 (mesh index present everywhere; the old dishonest missing_mesh_vertices string appears NOWHERE) + unprojected_visible_ball_frames (outdoor/wolverine/img1605) + missing_paddle_pose (all 4)"
+  },
+  "browser_verify": {
+    "assertion_errors": {
+      "burlington": [],
+      "outdoor": [],
+      "wolverine": [],
+      "img1605": []
+    },
+    "note": "outdoor+img1605 manifests rebuilt locally via build_replay_viewer_manifest from the pinned worktree (VM-built originals kept as replay_viewer_manifest.vm_built.json) because VM-built manifests embed VM-absolute /@fs/ paths"
+  },
+  "pipeline_status": {
+    "all_4": "complete (w3 was partial x4)"
+  },
+  "fleet": {
+    "vms": [
+      "pickleball-a100-w4fan1 (34.126.94.44)",
+      "pickleball-a100-w4fan2 (34.87.20.4)",
+      "pickleball-a100-w4fan3 (34.21.239.35)"
+    ],
+    "created": "2026-07-07T20:33:04Z (single create call, snapshot pickleball-fleet1-snap-20260707, SPOT a2-highgpu-1g ase1-a, labels fable-lane=w4-freshproof)",
+    "deleted": "2026-07-07T22:21:31Z->22:22:33Z, list-confirmed zero w4-freshproof VMs (only fleet1 TERMINATED + sibling h100 remain)",
+    "uptime_h_per_vm": 1.824,
+    "est_cost_usd": "5.47 GPU-h x $1.1-1.3/hr = $6.02-7.11 total",
+    "code_sync": "git fetch from origin (github) per VM + blob-hash stamp verify (bundle-over-ssh abandoned: Mac uplink stalled/failed on MB-scale streams all evening)"
+  },
+  "wall_seconds": {
+    "burlington": 1486.182,
+    "wolverine": 869.76,
+    "outdoor_vm_local": 702.925,
+    "img1605_vm_local": 264.307
+  },
+  "artifacts": "runs/lanes/w4_freshproof_20260707/{outdoor,burlington,wolverine,img1605}/<clip>/<clip>/ + checklists/ + browser_verify/ + logs/"
+}
