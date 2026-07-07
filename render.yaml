@@ -27,6 +27,32 @@ services:
         sync: false
       - key: PICKLEBALL_GPU_WORKER_TOKEN
         sync: false
+      # Product infra (INFRA-1): accounts land DARK — flip to "1" only after
+      # Atlas/S3 provisioning + secrets are set in the Render dashboard.
+      - key: PICKLEBALL_ACCOUNTS_ENABLED
+        value: "0"
+      - key: PICKLEBALL_MONGODB_DB_NAME
+        value: pickleball
+      - key: PICKLEBALL_S3_BUCKET
+        value: pickleball-app-media
+      - key: PICKLEBALL_S3_REGION
+        value: us-east-1
+      - key: PICKLEBALL_JWT_ACCESS_TTL_S
+        value: "900"
+      - key: PICKLEBALL_JWT_REFRESH_TTL_DAYS
+        value: "30"
+      - key: PICKLEBALL_STRIPE_ENABLED
+        value: "0"
+      - key: PICKLEBALL_MONGODB_URI
+        sync: false
+      - key: PICKLEBALL_AWS_ACCESS_KEY_ID
+        sync: false
+      - key: PICKLEBALL_AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: PICKLEBALL_JWT_SECRET
+        sync: false
+      - key: PICKLEBALL_INVITE_CODE
+        sync: false
 
 previews:
   generation: "off"
