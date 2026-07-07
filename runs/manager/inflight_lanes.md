@@ -5,3 +5,4 @@ One row per still-running lane so the next session neither double-dispatches nor
 | lane | kind (codex/sonnet/workflow) | session/task id | resume command | owned files | vm (if any) | expected done | dispatched |
 |---|---|---|---|---|---|---|---|
 | ios_p010a_20260707 | codex | bash (wave-2 manager session, still open for owner support) | `codex exec resume <session_id from report.json>` | ios/** ONLY + runs/lanes/ios_p010a_20260707/** — CROSS-MANAGER FENCE: wave-3 session owns all racketsport files; this lane touches nothing outside ios/ | — | 2026-07-07 +2-3h | 2026-07-07 |
+| ios_ui_dinkvision_20260707 | codex (QUEUED — dispatches after ios_p010a lands + manager xcodebuild verify) | wave-2 manager session | spec ready at runs/lanes/ios_ui_dinkvision_20260707/spec.md | ios/** ONLY (same cross-manager fence; sequenced AFTER p010a so never two lanes in ios/ at once) | — | 2026-07-07 evening | queued 2026-07-07 |
