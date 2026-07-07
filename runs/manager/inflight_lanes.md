@@ -33,7 +33,7 @@ this wave; wave-3 banked 41/41 standalone cited. OUTAGE RECOVERY: spend-limit st
 freshproof pre-VM (no orphans, verified) and idled the ballgpu driver ~2h (VM GPU idle 2h43m
 total per its honest PROGRESS.md; ~$5.50-11 incl. idle); both agents resumed, SST capped at 12k
 steps by manager ruling, 3 A100 fans (w4fan1/2/3) staging 20:33Z — fleet at exactly the 4-GPU cap;
-w4_freshproof GPU lane (Sonnet bg agent — A100 snapshot fans, cap-aware ≤4 incl. sibling
+~~W4-F docs lane~~ RULED PASS, LANDED+PUSHED 940576495 (5 docs, 12 pending markers, 32/0 suites; WASB local blocker CONFIRMED closed w/ exact sha match). w4_freshproof GPU lane (Sonnet bg agent — A100 snapshot fans, cap-aware ≤4 incl. sibling
 w4ballgpu H100, syncs committed HEAD ≥ 1588b110f, gated keys + camera_motion decisive proof +
 warning-string + browser verify ×4). Then: rule ballgpu → docs lane (W4-F) → scorecard + wave-5
 boot prompt + memory + branch merge.
