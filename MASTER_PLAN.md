@@ -2,6 +2,11 @@
 
 Last updated: 2026-07-05.
 
+Doc-role note (2026-07-07, resolves a two-masters ambiguity): `NORTH_STAR_ROADMAP.md` is the
+master phased TO-DO plan (phases P0-P7/PF, task IDs, PART VI wave playbook); THIS file remains
+canonical for the final goal and the truth/no-overclaim boundaries below. On planning/sequencing
+conflicts, NORTH_STAR wins; on truth-claim boundaries, this file + `CAPABILITIES.md` win.
+
 ## Final Goal
 
 Build the best single-camera pickleball video-to-3D analysis pipeline:
