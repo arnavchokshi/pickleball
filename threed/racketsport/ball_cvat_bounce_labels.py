@@ -173,7 +173,11 @@ def _load_cvat_annotations(value: Mapping[str, Any] | str | Path) -> CvatVideoAn
 def _ball_center_samples(labels: CvatVideoAnnotations) -> list[dict[str, Any]]:
     samples: list[dict[str, Any]] = []
     for frame in labels.frames:
-        ball_boxes = [box for box in frame.boxes if box.label.strip().lower() == "ball"]
+        ball_boxes = [
+            box
+            for box in frame.boxes
+            if box.label.strip().lower() == "ball" and box.visibility_level not in {"full", "out_of_frame"}
+        ]
         if len(ball_boxes) > 1:
             raise ValueError(f"multiple ball boxes in {labels.clip_id} frame {frame.frame_index}")
         if not ball_boxes:

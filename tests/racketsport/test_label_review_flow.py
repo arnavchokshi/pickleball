@@ -144,12 +144,16 @@ def test_export_cvat_tasks_exposes_blur_ready_ball_label_spec(tmp_path: Path) ->
     ball_label = next(label for label in task["labels"] if label["name"] == "ball")
     assert ball_label["attributes"] == [
         "visibility",
+        "visibility_level",
         "center_convention",
         "blur_angle_deg",
         "blur_length_px",
         "blur_width_px",
         "blur_label_quality",
     ]
+    assert ball_label["attribute_values"]["visibility_level"] == ["clear", "partial", "full", "out_of_frame"]
+    assert ball_label["wbce_weights"] == {"clear": 1, "full": 3, "out_of_frame": 3, "partial": 2}
+    assert "legacy_visible" in ball_label["legacy_visibility_mapping"]
 
 
 def test_export_review_bundle_blocks_missing_review_images(tmp_path: Path) -> None:

@@ -145,6 +145,33 @@ def test_build_cvat_gate_input_payloads_are_consumed_by_label_checks(tmp_path: P
     ]
     assert combined["summary"]["label_counts_by_name"] == {"ball": 1, "paddle": 1, "player": 1}
 
+
+def test_build_cvat_gate_input_payloads_pass_through_ball_visibility_level(tmp_path: Path) -> None:
+    annotations = _annotations()
+    partial_ball = annotations.frames[0].boxes[1].model_copy(update={"visibility_level": "partial"})
+    annotations = annotations.model_copy(
+        update={
+            "frames": [
+                annotations.frames[0].model_copy(
+                    update={"boxes": [annotations.frames[0].boxes[0], partial_ball, annotations.frames[0].boxes[2]]}
+                ),
+                annotations.frames[1],
+            ]
+        }
+    )
+
+    payloads = build_cvat_gate_input_payloads(
+        annotations,
+        reviewed_boxes_path=tmp_path / "reviewed_boxes.json",
+    )
+
+    ball_item = payloads["ball"]["annotation"]["items"][0]
+    assert ball_item["visible"] is True
+    assert ball_item["visibility"] == "partial"
+    assert ball_item["visibility_level"] == "partial"
+    assert ball_item["wbce_weight"] == 2
+
+
 def test_cvat_gate_player_and_ball_payloads_drive_existing_gates(tmp_path: Path) -> None:
     payloads = build_cvat_gate_input_payloads(
         _annotations(),

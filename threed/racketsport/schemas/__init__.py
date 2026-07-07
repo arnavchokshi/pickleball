@@ -44,6 +44,21 @@ PICKLEBALL_COURT_KEYPOINT_NAMES: tuple[str, ...] = (
     "far_nvz_center",
     "far_nvz_right",
 )
+BallVisibilityLevel = Literal["clear", "partial", "full", "out_of_frame"]
+BALL_VISIBILITY_LEVELS: tuple[BallVisibilityLevel, ...] = ("clear", "partial", "full", "out_of_frame")
+BALL_VISIBILITY_WBCE_WEIGHTS: dict[BallVisibilityLevel, int] = {
+    "clear": 1,
+    "partial": 2,
+    "full": 3,
+    "out_of_frame": 3,
+}
+LEGACY_BALL_VISIBILITY_MAPPING = (
+    "Absent visibility_level means legacy-only visibility. A legacy visible=True ball frame or CVAT ball box is "
+    "legacy_visible: it has a localizable ball but does not prove clear versus partial occlusion. A legacy "
+    "visible=False frame or missing CVAT ball box is legacy_hidden: it does not distinguish full occlusion from "
+    "out-of-frame. Legacy rows keep visibility_level=null and wbce_weight=null; the 1/2/3/3 WBCE weights apply "
+    "only to explicit clear/partial/full/out_of_frame labels."
+)
 
 
 class StrictArtifact(BaseModel):
@@ -791,6 +806,7 @@ class CvatVideoBox(BaseModel):
     keyframe: bool
     occluded: bool
     source: str | None = None
+    visibility_level: BallVisibilityLevel | None = None
     center_convention: Literal["blur_midpoint", "disk_center", "unknown"] | None = None
     blur_angle_deg: FiniteFloat | None = None
     blur_length_px: FiniteFloat | None = None
@@ -833,6 +849,7 @@ class CvatVideoFrame(BaseModel):
 
     frame_index: int = Field(ge=0)
     boxes: list[CvatVideoBox]
+    visibility_levels_by_label: dict[str, BallVisibilityLevel] = Field(default_factory=dict)
 
 
 class CvatVideoTrackSummary(BaseModel):
@@ -1114,12 +1131,21 @@ class Skeleton3D(StrictArtifact):
 
 
 class BallFrame(BaseModel):
+    """Ball sample schema with additive four-level visibility labels.
+
+    `visible` is the legacy raw bool and is intentionally preserved. New reviewed labels may set
+    `visibility_level` to clear/partial/full/out_of_frame. Visibility-weighted BCE uses weights
+    clear=1, partial=2, full=3, out_of_frame=3. If `visibility_level` is absent, keep the legacy
+    bool readable as ambiguous legacy_visible/legacy_hidden instead of inventing a 4-level label.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     t: FiniteFloat = Field(ge=0.0)
     xy: Vector2
     conf: FiniteFloat = Field(ge=0.0, le=1.0)
     visible: bool
+    visibility_level: BallVisibilityLevel | None = None
     world_xyz: Vector3 | None = None
     spin_rpm: FiniteFloat | None = None
     speed_mps: FiniteFloat | None = Field(default=None, ge=0.0)

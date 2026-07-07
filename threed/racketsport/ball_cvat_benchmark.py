@@ -464,6 +464,8 @@ def _ball_centers_for_frames(frames: Sequence[Any]) -> dict[int, list[tuple[floa
         for box in frame.boxes:
             if box.label.strip().lower() != "ball":
                 continue
+            if box.visibility_level in {"full", "out_of_frame"}:
+                continue
             x1, y1, x2, y2 = box.bbox_xyxy
             ball_centers.append(((float(x1) + float(x2)) / 2.0, (float(y1) + float(y2)) / 2.0))
         if ball_centers:

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .eval_guard import INTERNAL_VAL_ONLY_CLIP_IDS, STRICT_HOLDOUT_CLIP_IDS
-from .schemas import CvatVideoAnnotations, CvatVideoBox, validate_artifact_file
+from .schemas import BALL_VISIBILITY_WBCE_WEIGHTS, CvatVideoAnnotations, CvatVideoBox, validate_artifact_file
 from .testclips import REQUIRED_LABEL_FILES
 
 
@@ -513,8 +513,14 @@ def _item_from_box(box: CvatVideoBox, *, clip_id: str) -> dict[str, Any]:
     }
     if box.label == "ball":
         item["xy_px"] = [(x1 + x2) * 0.5, (y1 + y2) * 0.5]
-        item["visible"] = True
-        item["visibility"] = "visible"
+        if box.visibility_level in {"full", "out_of_frame"}:
+            item["visible"] = False
+        else:
+            item["visible"] = True
+        item["visibility"] = box.visibility_level or "visible"
+        if box.visibility_level is not None:
+            item["visibility_level"] = box.visibility_level
+            item["wbce_weight"] = BALL_VISIBILITY_WBCE_WEIGHTS[box.visibility_level]
     return item
 
 

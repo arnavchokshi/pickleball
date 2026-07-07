@@ -13,7 +13,15 @@ from statistics import median
 from typing import Any, Mapping, Sequence
 
 from .eval_guard import assert_not_training_on_eval_clip
-from .schemas import CvatVideoAnnotations, validate_artifact_file
+from .schemas import (
+    BALL_VISIBILITY_LEVELS,
+    BALL_VISIBILITY_WBCE_WEIGHTS,
+    LEGACY_BALL_VISIBILITY_MAPPING,
+    BallVisibilityLevel,
+    CvatVideoAnnotations,
+    CvatVideoFrame,
+    validate_artifact_file,
+)
 
 
 ARTIFACT_TYPE = "racketsport_ball_tracknet_cvat_dataset"
@@ -22,6 +30,7 @@ MANIFEST_MD = "ball_tracknet_cvat_dataset_manifest.md"
 TRACKNET_COLUMNS = ("Frame", "Visibility", "X", "Y")
 CENTER_CONVENTION_VALUES = ("blur_midpoint", "disk_center", "unknown")
 BLUR_LABEL_QUALITY_VALUES = ("absent", "clear", "unknown", "weak")
+LEGACY_VISIBILITY_STATES = ("legacy_visible", "legacy_hidden")
 SPLIT_ORDER = ("train", "val", "test")
 TRAIN_AUGMENTATION_PROFILES: dict[str, tuple[dict[str, Any], ...]] = {
     "codec_motion_v1": (
@@ -64,6 +73,9 @@ class TrackNetCvatLabel:
     blur_length_px: float | None = None
     blur_width_px: float | None = None
     blur_label_quality: str | None = None
+    visibility_level: BallVisibilityLevel | None = None
+    wbce_weight: int | None = None
+    legacy_visibility_state: str | None = None
 
 
 def dense_tracknet_labels_from_cvat(reviewed_boxes_path: str | Path) -> list[TrackNetCvatLabel]:
@@ -143,6 +155,9 @@ def build_ball_tracknet_cvat_dataset(
             "reviewed_visible_ball_frame_count": 0,
             "reviewed_hidden_frame_count": 0,
         },
+        "visibility_level_counts": _empty_visibility_level_counts(),
+        "wbce_weight_counts": _empty_wbce_weight_counts(),
+        "legacy_visibility_mapping": LEGACY_BALL_VISIBILITY_MAPPING,
         "blur_annotation_summary": _empty_blur_annotation_summary(),
         "leakage_checks": _leakage_checks(split_map, selected_clips),
         "limitations": _limitations(
@@ -188,8 +203,10 @@ def build_ball_tracknet_cvat_dataset(
             match_dir = out / split / match_name
             csv_dir = match_dir / ("corrected_csv" if split == "test" else "csv")
             csv_path = csv_dir / f"{rally_id}_ball.csv"
+            visibility_metadata_path = _visibility_metadata_path(csv_path, rally_id=rally_id)
             frame_dir = match_dir / "frame" / rally_id
             _write_tracknet_csv(csv_path, labels)
+            _write_visibility_metadata_json(visibility_metadata_path, labels)
             source_video_path = normalized_video_paths.get(clip)
             if materialize_frames:
                 assert source_video_path is not None
@@ -200,6 +217,7 @@ def build_ball_tracknet_cvat_dataset(
                 labels=labels,
                 reviewed_path=reviewed_path,
                 csv_path=csv_path,
+                visibility_metadata_path=visibility_metadata_path,
                 split=split,
                 match_name=match_name,
                 rally_id=rally_id,
@@ -210,6 +228,8 @@ def build_ball_tracknet_cvat_dataset(
             row["training_sample_type"] = "dense_clip"
             split_rows.append(row)
             _add_counts(manifest["label_counts"], row)
+            _add_visibility_counts(manifest["visibility_level_counts"], row["visibility_level_counts"])
+            _add_wbce_weight_counts(manifest["wbce_weight_counts"], row["wbce_weight_counts"])
             _add_blur_annotation_counts(manifest["blur_annotation_summary"], row["blur_annotation_summary"])
             match_index += 1
         if split_rows:
@@ -233,6 +253,8 @@ def build_ball_tracknet_cvat_dataset(
             manifest["splits"].setdefault("train", []).extend(hard_negative_rows)
             for row in hard_negative_rows:
                 _add_counts(manifest["label_counts"], row)
+                _add_visibility_counts(manifest["visibility_level_counts"], row["visibility_level_counts"])
+                _add_wbce_weight_counts(manifest["wbce_weight_counts"], row["wbce_weight_counts"])
                 _add_blur_annotation_counts(manifest["blur_annotation_summary"], row["blur_annotation_summary"])
         hard_negative_manifest = manifest["hard_negative_plan"]
         hard_negative_manifest["generated_window_count"] = len(hard_negative_rows)
@@ -263,6 +285,8 @@ def build_ball_tracknet_cvat_dataset(
             manifest["splits"].setdefault("train", []).extend(train_augmented_rows)
             for row in train_augmented_rows:
                 _add_counts(manifest["label_counts"], row)
+                _add_visibility_counts(manifest["visibility_level_counts"], row["visibility_level_counts"])
+                _add_wbce_weight_counts(manifest["wbce_weight_counts"], row["wbce_weight_counts"])
                 _add_blur_annotation_counts(manifest["blur_annotation_summary"], row["blur_annotation_summary"])
         train_augmentation_manifest = manifest["train_augmentation"]
         train_augmentation_manifest["source_sample_count"] = len(source_train_rows)
@@ -286,6 +310,8 @@ def build_ball_tracknet_cvat_dataset(
 def render_ball_tracknet_cvat_dataset_markdown(manifest: Mapping[str, Any]) -> str:
     counts = manifest.get("label_counts", {})
     blur_summary = manifest.get("blur_annotation_summary", {})
+    visibility_counts = manifest.get("visibility_level_counts", {})
+    wbce_counts = manifest.get("wbce_weight_counts", {})
     status = str(manifest.get("status", ""))
     lines = [
         "# BALL TrackNet CVAT Dataset",
@@ -300,6 +326,19 @@ def render_ball_tracknet_cvat_dataset_markdown(manifest: Mapping[str, Any]) -> s
         f"- Frames: {counts.get('frame_count', 0)}",
         f"- Visible ball frames: {counts.get('reviewed_visible_ball_frame_count', 0)}",
         f"- Hidden negative frames: {counts.get('reviewed_hidden_frame_count', 0)}",
+        "",
+        "## Visibility Levels",
+        "",
+        f"- clear: {visibility_counts.get('clear', 0)}",
+        f"- partial: {visibility_counts.get('partial', 0)}",
+        f"- full: {visibility_counts.get('full', 0)}",
+        f"- out_of_frame: {visibility_counts.get('out_of_frame', 0)}",
+        f"- legacy visible: {visibility_counts.get('legacy_visible', 0)}",
+        f"- legacy hidden: {visibility_counts.get('legacy_hidden', 0)}",
+        f"- WBCE weight 1: {wbce_counts.get('1', 0)}",
+        f"- WBCE weight 2: {wbce_counts.get('2', 0)}",
+        f"- WBCE weight 3: {wbce_counts.get('3', 0)}",
+        f"- unweighted legacy: {wbce_counts.get('unweighted_legacy', 0)}",
         "",
         "## Blur Annotation Summary",
         "",
@@ -366,10 +405,48 @@ def _dense_tracknet_labels_from_annotations(annotations: CvatVideoAnnotations) -
         ball_boxes = [box for box in (frame.boxes if frame is not None else []) if box.label == "ball"]
         if len(ball_boxes) > 1:
             raise ValueError(f"multiple ball boxes in {annotations.clip_id} frame {frame_index}")
+        frame_visibility_level = _frame_ball_visibility_level(frame)
         if not ball_boxes:
-            labels.append(TrackNetCvatLabel(frame=frame_index, visibility=0, x=0.0, y=0.0, source="reviewed_hidden"))
+            if frame_visibility_level in {"clear", "partial"}:
+                raise ValueError(f"{annotations.clip_id} frame {frame_index} has {frame_visibility_level} without a ball box")
+            labels.append(
+                TrackNetCvatLabel(
+                    frame=frame_index,
+                    visibility=0,
+                    x=0.0,
+                    y=0.0,
+                    source="reviewed_cvat_ball_visibility_level" if frame_visibility_level is not None else "reviewed_hidden",
+                    visibility_level=frame_visibility_level,
+                    wbce_weight=_visibility_wbce_weight(frame_visibility_level),
+                    legacy_visibility_state=None if frame_visibility_level is not None else "legacy_hidden",
+                )
+            )
             continue
         box = ball_boxes[0]
+        visibility_level = _merge_box_and_frame_visibility_level(
+            box.visibility_level,
+            frame_visibility_level,
+            clip_id=annotations.clip_id,
+            frame_index=frame_index,
+        )
+        if visibility_level in {"full", "out_of_frame"}:
+            labels.append(
+                TrackNetCvatLabel(
+                    frame=frame_index,
+                    visibility=0,
+                    x=0.0,
+                    y=0.0,
+                    source="reviewed_cvat_ball_visibility_level",
+                    center_convention=box.center_convention,
+                    blur_angle_deg=box.blur_angle_deg,
+                    blur_length_px=box.blur_length_px,
+                    blur_width_px=box.blur_width_px,
+                    blur_label_quality=box.blur_label_quality,
+                    visibility_level=visibility_level,
+                    wbce_weight=_visibility_wbce_weight(visibility_level),
+                )
+            )
+            continue
         x, y, width, height = box.bbox_xywh
         labels.append(
             TrackNetCvatLabel(
@@ -383,6 +460,9 @@ def _dense_tracknet_labels_from_annotations(annotations: CvatVideoAnnotations) -
                 blur_length_px=box.blur_length_px,
                 blur_width_px=box.blur_width_px,
                 blur_label_quality=box.blur_label_quality,
+                visibility_level=visibility_level,
+                wbce_weight=_visibility_wbce_weight(visibility_level),
+                legacy_visibility_state=None if visibility_level is not None else "legacy_visible",
             )
         )
     return labels
@@ -401,6 +481,32 @@ def _annotation_frame_count(annotations: CvatVideoAnnotations) -> int:
     return max(int(annotations.task.size), max_frame)
 
 
+def _frame_ball_visibility_level(frame: CvatVideoFrame | None) -> BallVisibilityLevel | None:
+    if frame is None:
+        return None
+    return frame.visibility_levels_by_label.get("ball")
+
+
+def _merge_box_and_frame_visibility_level(
+    box_level: BallVisibilityLevel | None,
+    frame_level: BallVisibilityLevel | None,
+    *,
+    clip_id: str,
+    frame_index: int,
+) -> BallVisibilityLevel | None:
+    if box_level is not None and frame_level is not None and box_level != frame_level:
+        raise ValueError(
+            f"{clip_id} frame {frame_index} has conflicting ball visibility levels: {box_level} vs {frame_level}"
+        )
+    return box_level or frame_level
+
+
+def _visibility_wbce_weight(visibility_level: BallVisibilityLevel | None) -> int | None:
+    if visibility_level is None:
+        return None
+    return BALL_VISIBILITY_WBCE_WEIGHTS[visibility_level]
+
+
 def _write_tracknet_csv(path: Path, labels: Sequence[TrackNetCvatLabel]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -410,12 +516,42 @@ def _write_tracknet_csv(path: Path, labels: Sequence[TrackNetCvatLabel]) -> None
             writer.writerow([label.frame, label.visibility, f"{label.x:.3f}", f"{label.y:.3f}"])
 
 
+def _visibility_metadata_path(csv_path: Path, *, rally_id: str) -> Path:
+    return csv_path.with_name(f"{rally_id}_visibility.json")
+
+
+def _write_visibility_metadata_json(path: Path, labels: Sequence[TrackNetCvatLabel]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_visibility_metadata",
+        "visibility_levels": list(BALL_VISIBILITY_LEVELS),
+        "wbce_weights": dict(BALL_VISIBILITY_WBCE_WEIGHTS),
+        "legacy_visibility_mapping": LEGACY_BALL_VISIBILITY_MAPPING,
+        "rows": [
+            {
+                "frame": int(label.frame),
+                "tracknet_visibility": int(label.visibility),
+                "x": float(label.x),
+                "y": float(label.y),
+                "visibility_level": label.visibility_level,
+                "wbce_weight": label.wbce_weight,
+                "legacy_visibility_state": label.legacy_visibility_state,
+                "source": label.source,
+            }
+            for label in labels
+        ],
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def _clip_manifest_row(
     *,
     annotations: CvatVideoAnnotations,
     labels: Sequence[TrackNetCvatLabel],
     reviewed_path: Path,
     csv_path: Path,
+    visibility_metadata_path: Path,
     split: str,
     match_name: str,
     rally_id: str,
@@ -439,6 +575,7 @@ def _clip_manifest_row(
         "rally_id": rally_id,
         "reviewed_boxes": str(reviewed_path),
         "csv": str(csv_path),
+        "visibility_metadata_json": str(visibility_metadata_path),
         "frame_dir": str(frame_dir),
         "frames_materialized": bool(frames_materialized),
         "source_video_path": str(source_video_path) if source_video_path is not None else None,
@@ -452,6 +589,8 @@ def _clip_manifest_row(
         "ball_bbox_width_px_median": median(widths) if widths else None,
         "ball_bbox_height_px_median": median(heights) if heights else None,
         "blur_annotation_summary": _blur_annotation_summary(labels),
+        "visibility_level_counts": _visibility_level_counts(labels),
+        "wbce_weight_counts": _wbce_weight_counts(labels),
     }
 
 
@@ -591,6 +730,36 @@ def _blur_annotation_summary(labels: Sequence[TrackNetCvatLabel]) -> dict[str, A
     return summary
 
 
+def _empty_visibility_level_counts() -> dict[str, int]:
+    counts = {value: 0 for value in BALL_VISIBILITY_LEVELS}
+    counts.update({value: 0 for value in LEGACY_VISIBILITY_STATES})
+    return counts
+
+
+def _visibility_level_counts(labels: Sequence[TrackNetCvatLabel]) -> dict[str, int]:
+    counts = _empty_visibility_level_counts()
+    for label in labels:
+        if label.visibility_level is not None:
+            counts[label.visibility_level] += 1
+        elif label.legacy_visibility_state is not None:
+            counts[label.legacy_visibility_state] += 1
+    return counts
+
+
+def _empty_wbce_weight_counts() -> dict[str, int]:
+    return {"1": 0, "2": 0, "3": 0, "unweighted_legacy": 0}
+
+
+def _wbce_weight_counts(labels: Sequence[TrackNetCvatLabel]) -> dict[str, int]:
+    counts = _empty_wbce_weight_counts()
+    for label in labels:
+        if label.wbce_weight is None:
+            counts["unweighted_legacy"] += 1
+        else:
+            counts[str(label.wbce_weight)] += 1
+    return counts
+
+
 def _increment_required_count(counts: dict[str, int], value: str, field_name: str) -> None:
     if value not in counts:
         raise ValueError(f"unsupported {field_name}: {value}")
@@ -613,6 +782,20 @@ def _add_blur_annotation_counts(target: dict[str, Any], source: Mapping[str, Any
             target_counts[value_key] = int(target_counts[value_key]) + int(count)
     for key in ("blur_angle_labeled_count", "blur_length_labeled_count", "blur_width_labeled_count"):
         target[key] = int(target.get(key, 0)) + int(source.get(key, 0))
+
+
+def _add_visibility_counts(target: dict[str, int], source: Mapping[str, int]) -> None:
+    for key, value in source.items():
+        if key not in target:
+            raise ValueError(f"unsupported visibility count key: {key}")
+        target[key] = int(target[key]) + int(value)
+
+
+def _add_wbce_weight_counts(target: dict[str, int], source: Mapping[str, int]) -> None:
+    for key, value in source.items():
+        if key not in target:
+            raise ValueError(f"unsupported WBCE weight count key: {key}")
+        target[key] = int(target[key]) + int(value)
 
 
 def _add_counts(counts: dict[str, Any], row: Mapping[str, Any]) -> None:
@@ -661,9 +844,11 @@ def _build_hard_negative_rows(
                 match_name = f"match{match_index}"
                 match_dir = out / "train" / match_name
                 csv_path = match_dir / "csv" / f"{rally_id}_ball.csv"
+                visibility_metadata_path = _visibility_metadata_path(csv_path, rally_id=rally_id)
                 frame_dir = match_dir / "frame" / rally_id
                 window_labels = _slice_labels_for_window(labels, start_frame=start_frame, end_frame=end_frame)
                 _write_tracknet_csv(csv_path, window_labels)
+                _write_visibility_metadata_json(visibility_metadata_path, window_labels)
                 if materialize_frames:
                     if source_video_path is None:
                         raise ValueError(f"--materialize-frames requires --video for hard-negative clip: {clip}")
@@ -674,6 +859,7 @@ def _build_hard_negative_rows(
                     labels=window_labels,
                     reviewed_path=reviewed_path,
                     csv_path=csv_path,
+                    visibility_metadata_path=visibility_metadata_path,
                     split="train",
                     match_name=match_name,
                     rally_id=rally_id,
@@ -803,6 +989,9 @@ def _slice_labels_for_window(
                 blur_length_px=label.blur_length_px,
                 blur_width_px=label.blur_width_px,
                 blur_label_quality=label.blur_label_quality,
+                visibility_level=label.visibility_level,
+                wbce_weight=label.wbce_weight,
+                legacy_visibility_state=label.legacy_visibility_state,
             )
         )
     return sliced
@@ -840,15 +1029,21 @@ def _build_train_augmentation_rows(
         if not source_frame_dir.is_dir():
             raise FileNotFoundError(f"missing source frame dir for train augmentation: {source_frame_dir}")
         source_sample_type = str(source_row.get("training_sample_type", "dense_clip"))
+        source_visibility_metadata = Path(str(source_row.get("visibility_metadata_json", "")))
+        if not source_visibility_metadata.is_file():
+            raise FileNotFoundError(f"missing source visibility metadata for train augmentation: {source_visibility_metadata}")
         for repeat_index in range(1, repeat + 1):
             recipe = _augmentation_recipe(profile, repeat_index=repeat_index)
             rally_id = f"{match_index}_01_00"
             match_name = f"match{match_index}"
             match_dir = out / "train" / match_name
             csv_path = match_dir / "csv" / f"{rally_id}_ball.csv"
+            visibility_metadata_path = _visibility_metadata_path(csv_path, rally_id=rally_id)
             frame_dir = match_dir / "frame" / rally_id
             csv_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source_csv, csv_path)
+            visibility_metadata_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source_visibility_metadata, visibility_metadata_path)
             _augment_frame_dir(
                 source_frame_dir,
                 frame_dir,
@@ -861,6 +1056,7 @@ def _build_train_augmentation_rows(
                     "match": match_name,
                     "rally_id": rally_id,
                     "csv": str(csv_path),
+                    "visibility_metadata_json": str(visibility_metadata_path),
                     "frame_dir": str(frame_dir),
                     "frames_materialized": True,
                     "training_sample_type": f"visual_augmented_{source_sample_type}",
@@ -868,6 +1064,7 @@ def _build_train_augmentation_rows(
                     "source_match": source_row.get("match"),
                     "source_rally_id": source_row.get("rally_id"),
                     "source_csv": source_row.get("csv"),
+                    "source_visibility_metadata_json": source_row.get("visibility_metadata_json"),
                     "source_frame_dir": source_row.get("frame_dir"),
                     "augmentation_profile": profile,
                     "augmentation_repeat_index": repeat_index,

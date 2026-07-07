@@ -311,6 +311,34 @@ def test_ball_track_schema_accepts_blurball_source() -> None:
     assert parsed.source == "blurball"
 
 
+def test_ball_frame_visibility_level_is_additive_and_validated() -> None:
+    legacy = BallFrame.model_validate({"t": 0.0, "xy": [100.0, 200.0], "conf": 0.75, "visible": True})
+    explicit = BallFrame.model_validate(
+        {
+            "t": 0.0,
+            "xy": [100.0, 200.0],
+            "conf": 0.75,
+            "visible": True,
+            "visibility_level": "partial",
+        }
+    )
+
+    assert legacy.visible is True
+    assert legacy.visibility_level is None
+    assert explicit.visibility_level == "partial"
+
+    with pytest.raises(ValidationError):
+        BallFrame.model_validate(
+            {
+                "t": 0.0,
+                "xy": [100.0, 200.0],
+                "conf": 0.75,
+                "visible": True,
+                "visibility_level": "mostly_visible",
+            }
+        )
+
+
 def test_ball_candidates_schema_round_trips_as_not_ground_truth_candidate_predictions(tmp_path: Path) -> None:
     payload = {
         "schema_version": 1,

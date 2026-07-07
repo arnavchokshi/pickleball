@@ -10,6 +10,8 @@ from typing import Any
 from xml.etree import ElementTree
 
 from .schemas import (
+    BALL_VISIBILITY_LEVELS,
+    BallVisibilityLevel,
     CvatVideoAnnotationSummary,
     CvatVideoAnnotations,
     CvatVideoBox,
@@ -53,6 +55,7 @@ def import_cvat_video_zip(
     task = _parse_task(root)
     stable_clip_id = clip_id or _clip_id_from_zip(zip_path)
     boxes_by_frame: dict[int, list[CvatVideoBox]] = defaultdict(list)
+    visibility_levels_by_frame: dict[int, dict[str, BallVisibilityLevel]] = defaultdict(dict)
     labels_in_order = _task_labels(root)
     track_summaries: list[CvatVideoTrackSummary] = []
     track_count_by_label: Counter[str] = Counter()
@@ -79,9 +82,20 @@ def import_cvat_video_zip(
                 continue
             if keyframe:
                 track_keyframe_count += 1
+            visibility_fields = _shape_ball_visibility_fields(shape_node) if label.strip().lower() == "ball" else {}
+            visibility_level = visibility_fields.get("visibility_level")
             if outside:
                 track_outside_count += 1
                 outside_box_count += 1
+                if visibility_level is not None:
+                    if visibility_level in {"clear", "partial"}:
+                        raise ValueError("outside ball shape visibility_level must be full or out_of_frame")
+                    _set_frame_visibility_level(
+                        visibility_levels_by_frame,
+                        frame_index=frame_index,
+                        label=label,
+                        visibility_level=visibility_level,
+                    )
                 continue
 
             x1, y1, x2, y2 = _shape_bbox_xyxy(shape_node)
@@ -95,9 +109,17 @@ def import_cvat_video_zip(
                 keyframe=keyframe,
                 occluded=occluded,
                 source=source,
+                **visibility_fields,
                 **blur_fields,
             )
             boxes_by_frame[frame_index].append(visible_box)
+            if visibility_level is not None:
+                _set_frame_visibility_level(
+                    visibility_levels_by_frame,
+                    frame_index=frame_index,
+                    label=label,
+                    visibility_level=visibility_level,
+                )
             visible_frames.append(frame_index)
             visible_count += 1
             visible_box_count_by_label[label] += 1
@@ -120,7 +142,11 @@ def import_cvat_video_zip(
         frame_count = min(task.size, max_frame_index + 1) if task.size > 0 else max_frame_index + 1
         task = task.model_copy(update={"size": frame_count, "stop_frame": frame_count - 1 if frame_count else 0})
     frames = [
-        CvatVideoFrame(frame_index=frame_index, boxes=sorted(boxes_by_frame.get(frame_index, []), key=lambda box: box.track_id))
+        CvatVideoFrame(
+            frame_index=frame_index,
+            boxes=sorted(boxes_by_frame.get(frame_index, []), key=lambda box: box.track_id),
+            visibility_levels_by_label=dict(sorted(visibility_levels_by_frame.get(frame_index, {}).items())),
+        )
         for frame_index in range(frame_count)
     ]
     all_labels = _ordered_labels(labels_in_order, track_count_by_label)
@@ -280,6 +306,49 @@ def _shape_ball_blur_fields(node: ElementTree.Element) -> dict[str, Any]:
         if value:
             fields[name] = float(value)
     return fields
+
+
+def _shape_ball_visibility_fields(node: ElementTree.Element) -> dict[str, BallVisibilityLevel]:
+    attributes = _shape_attributes(node)
+    value = attributes.get("visibility_level")
+    if value is None:
+        legacy_value = attributes.get("visibility")
+        if legacy_value is not None and _normalizes_to_ball_visibility_level(legacy_value):
+            value = legacy_value
+    if value is None:
+        return {}
+    return {"visibility_level": _normalize_ball_visibility_level(value)}
+
+
+def _normalizes_to_ball_visibility_level(value: str) -> bool:
+    try:
+        _normalize_ball_visibility_level(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _normalize_ball_visibility_level(value: str) -> BallVisibilityLevel:
+    normalized = value.strip().lower().replace("-", "_").replace(" ", "_")
+    if normalized not in BALL_VISIBILITY_LEVELS:
+        raise ValueError(f"visibility_level must be one of {', '.join(BALL_VISIBILITY_LEVELS)}: {value}")
+    return normalized  # type: ignore[return-value]
+
+
+def _set_frame_visibility_level(
+    target: dict[int, dict[str, BallVisibilityLevel]],
+    *,
+    frame_index: int,
+    label: str,
+    visibility_level: BallVisibilityLevel,
+) -> None:
+    label_key = label.strip().lower()
+    existing = target[frame_index].get(label_key)
+    if existing is not None and existing != visibility_level:
+        raise ValueError(
+            f"conflicting visibility_level values for {label_key} frame {frame_index}: {existing} vs {visibility_level}"
+        )
+    target[frame_index][label_key] = visibility_level
 
 
 def _shape_attributes(node: ElementTree.Element) -> dict[str, str]:

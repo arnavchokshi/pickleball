@@ -122,6 +122,46 @@ def _write_cvat_video_zip_with_ball_blur_attributes(path: Path, *, center_conven
         archive.writestr("annotations.xml", xml)
 
 
+def _write_cvat_video_zip_with_ball_visibility_levels(path: Path, *, invalid_level: str | None = None) -> None:
+    third_level = invalid_level or "full"
+    xml = f"""<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <id>45</id>
+      <name>visibility task</name>
+      <size>4</size>
+      <mode>interpolation</mode>
+      <start_frame>0</start_frame>
+      <stop_frame>3</stop_frame>
+      <labels>
+        <label><name>ball</name></label>
+      </labels>
+      <original_size><width>640</width><height>360</height></original_size>
+      <source>visibility_clip.mp4</source>
+    </task>
+  </meta>
+  <track id="4" label="ball" source="manual">
+    <ellipse frame="0" keyframe="1" outside="0" occluded="0" cx="300" cy="150" rx="6" ry="4" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </ellipse>
+    <ellipse frame="1" keyframe="1" outside="0" occluded="1" cx="302" cy="151" rx="6" ry="4" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </ellipse>
+    <ellipse frame="2" keyframe="1" outside="1" occluded="1" cx="302" cy="151" rx="6" ry="4" z_order="0">
+      <attribute name="visibility_level">{third_level}</attribute>
+    </ellipse>
+    <ellipse frame="3" keyframe="1" outside="1" occluded="0" cx="302" cy="151" rx="6" ry="4" z_order="0">
+      <attribute name="visibility_level">out-of-frame</attribute>
+    </ellipse>
+  </track>
+</annotations>
+"""
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("annotations.xml", xml)
+
+
 def test_import_cvat_video_zip_preserves_player_paddle_and_ball_visible_boxes(tmp_path: Path) -> None:
     zip_path = tmp_path / "annotations_cvat_video.zip"
     _write_cvat_video_zip(zip_path)
@@ -180,6 +220,36 @@ def test_import_cvat_video_zip_preserves_ball_blur_attributes(tmp_path: Path) ->
     assert ball_box.blur_length_px == pytest.approx(24.0)
     assert ball_box.blur_width_px == pytest.approx(6.0)
     assert ball_box.blur_label_quality == "clear"
+
+
+def test_import_cvat_video_zip_preserves_four_ball_visibility_levels(tmp_path: Path) -> None:
+    zip_path = tmp_path / "annotations_cvat_video_visibility.zip"
+    _write_cvat_video_zip_with_ball_visibility_levels(zip_path)
+
+    annotations, _ = import_cvat_video_zip(zip_path, clip_id="clip_visibility", fps=30)
+
+    assert annotations.summary.visible_box_count_by_label == {"ball": 2}
+    assert annotations.summary.outside_box_count == 2
+    assert annotations.frames[0].boxes[0].visibility_level == "clear"
+    assert annotations.frames[1].boxes[0].visibility_level == "partial"
+    assert annotations.frames[2].boxes == []
+    assert annotations.frames[2].visibility_levels_by_label == {"ball": "full"}
+    assert annotations.frames[3].boxes == []
+    assert annotations.frames[3].visibility_levels_by_label == {"ball": "out_of_frame"}
+
+    out_path = tmp_path / "reviewed_boxes.json"
+    write_cvat_video_annotations(out_path, annotations)
+    parsed = validate_artifact_file("cvat_video_annotations", out_path)
+    assert isinstance(parsed, CvatVideoAnnotations)
+    assert parsed.frames[3].visibility_levels_by_label["ball"] == "out_of_frame"
+
+
+def test_import_cvat_video_zip_rejects_unknown_ball_visibility_level(tmp_path: Path) -> None:
+    zip_path = tmp_path / "annotations_cvat_video_bad_visibility.zip"
+    _write_cvat_video_zip_with_ball_visibility_levels(zip_path, invalid_level="mostly_hidden")
+
+    with pytest.raises(ValueError, match="visibility_level"):
+        import_cvat_video_zip(zip_path, clip_id="clip_bad_visibility", fps=30)
 
 
 def test_import_cvat_video_zip_rejects_invalid_ball_blur_center_convention(tmp_path: Path) -> None:

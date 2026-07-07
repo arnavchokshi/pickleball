@@ -22,6 +22,7 @@ def _reviewed_boxes_payload(
     frame_count: int,
     ball_frames: dict[int, tuple[float, float, float, float]],
     ball_blur_attrs: dict[int, dict[str, object]] | None = None,
+    frame_visibility_levels: dict[int, str] | None = None,
 ) -> dict[str, object]:
     frames = []
     for frame_index in range(frame_count):
@@ -42,7 +43,10 @@ def _reviewed_boxes_payload(
                     **(ball_blur_attrs or {}).get(frame_index, {}),
                 }
             )
-        frames.append({"frame_index": frame_index, "boxes": boxes})
+        frame_payload: dict[str, object] = {"frame_index": frame_index, "boxes": boxes}
+        if frame_visibility_levels and frame_index in frame_visibility_levels:
+            frame_payload["visibility_levels_by_label"] = {"ball": frame_visibility_levels[frame_index]}
+        frames.append(frame_payload)
     return {
         "schema_version": 1,
         "artifact_type": "racketsport_cvat_video_annotations",
@@ -166,6 +170,41 @@ def test_dense_tracknet_labels_from_cvat_preserves_hidden_negatives(tmp_path: Pa
     ]
 
 
+def test_dense_tracknet_labels_from_cvat_preserves_four_level_visibility_metadata(tmp_path: Path) -> None:
+    reviewed = tmp_path / "reviewed_boxes.json"
+    reviewed.write_text(
+        json.dumps(
+            _reviewed_boxes_payload(
+                clip_id="clip_train",
+                frame_count=5,
+                ball_frames={
+                    0: (10.0, 20.0, 8.0, 10.0),
+                    1: (30.0, 40.0, 6.0, 4.0),
+                },
+                ball_blur_attrs={
+                    0: {"visibility_level": "clear"},
+                    1: {"visibility_level": "partial"},
+                },
+                frame_visibility_levels={2: "full", 3: "out_of_frame"},
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    labels = dense_tracknet_labels_from_cvat(reviewed)
+
+    assert [
+        (row.frame, row.visibility, row.x, row.y, row.visibility_level, row.wbce_weight, row.legacy_visibility_state)
+        for row in labels
+    ] == [
+        (0, 1, 14.0, 25.0, "clear", 1, None),
+        (1, 1, 33.0, 42.0, "partial", 2, None),
+        (2, 0, 0.0, 0.0, "full", 3, None),
+        (3, 0, 0.0, 0.0, "out_of_frame", 3, None),
+        (4, 0, 0.0, 0.0, None, None, "legacy_hidden"),
+    ]
+
+
 def test_build_ball_tracknet_cvat_dataset_writes_disjoint_manifest_csv_and_markdown(tmp_path: Path) -> None:
     cvat_root = tmp_path / "cvat"
     _write_reviewed_boxes(
@@ -222,6 +261,11 @@ def test_build_ball_tracknet_cvat_dataset_writes_disjoint_manifest_csv_and_markd
         ["2", "1", "123.000", "213.000"],
     ]
     assert (tmp_path / "out" / "ball_tracknet_cvat_dataset_manifest.json").is_file()
+    visibility_metadata = Path(manifest["splits"]["train"][0]["visibility_metadata_json"])
+    metadata_rows = json.loads(visibility_metadata.read_text(encoding="utf-8"))["rows"]
+    assert metadata_rows[0]["legacy_visibility_state"] == "legacy_visible"
+    assert metadata_rows[0]["visibility_level"] is None
+    assert metadata_rows[0]["wbce_weight"] is None
     markdown = (tmp_path / "out" / "ball_tracknet_cvat_dataset_manifest.md").read_text(encoding="utf-8")
     assert "BALL is not verified by this artifact." in markdown
     assert "clip_train" in markdown

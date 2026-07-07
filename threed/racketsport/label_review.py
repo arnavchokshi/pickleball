@@ -8,6 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from threed.racketsport.autolabel import PROTOTYPE_GATE_CLIPS
+from threed.racketsport.schemas import (
+    BALL_VISIBILITY_LEVELS,
+    BALL_VISIBILITY_WBCE_WEIGHTS,
+    LEGACY_BALL_VISIBILITY_MAPPING,
+)
 
 CVAT_LABELS = [
     {"name": "court_corner", "attributes": ["corner_name"]},
@@ -17,12 +22,16 @@ CVAT_LABELS = [
         "name": "ball",
         "attributes": [
             "visibility",
+            "visibility_level",
             "center_convention",
             "blur_angle_deg",
             "blur_length_px",
             "blur_width_px",
             "blur_label_quality",
         ],
+        "attribute_values": {"visibility_level": list(BALL_VISIBILITY_LEVELS)},
+        "wbce_weights": dict(BALL_VISIBILITY_WBCE_WEIGHTS),
+        "legacy_visibility_mapping": LEGACY_BALL_VISIBILITY_MAPPING,
     },
     {"name": "event", "attributes": ["event_type"]},
     {"name": "racket_keypoint", "attributes": ["keypoint_name"]},
