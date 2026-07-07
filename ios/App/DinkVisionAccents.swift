@@ -1,5 +1,40 @@
 import SwiftUI
 
+struct StrokeDrawOn: ViewModifier {
+    var parameters: DinkVisionStrokeDrawOnParameters
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var trimEnd: CGFloat = 1
+
+    init(parameters: DinkVisionStrokeDrawOnParameters = .default) {
+        self.parameters = parameters
+    }
+
+    func body(content: Content) -> some View {
+        let resolved = reduceMotion ? .resolved(reducedMotion: true) : parameters
+        content
+            .mask(alignment: .leading) {
+                Rectangle()
+                    .scaleEffect(x: trimEnd, y: 1, anchor: .leading)
+            }
+            .onAppear {
+                trimEnd = resolved.initialTrimEnd
+                guard resolved.durationSeconds > 0 else {
+                    trimEnd = resolved.finalTrimEnd
+                    return
+                }
+                withAnimation(.easeOut(duration: resolved.durationSeconds)) {
+                    trimEnd = resolved.finalTrimEnd
+                }
+            }
+    }
+}
+
+extension View {
+    func strokeDrawOn(parameters: DinkVisionStrokeDrawOnParameters = .default) -> some View {
+        modifier(StrokeDrawOn(parameters: parameters))
+    }
+}
+
 struct SketchSlashes: View {
     var color: Color = DinkVisionColor.ink
     var lineWidth: CGFloat = 5
@@ -8,6 +43,7 @@ struct SketchSlashes: View {
         SketchSlashesShape()
             .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
             .aspectRatio(1, contentMode: .fit)
+            .strokeDrawOn()
             .accessibilityHidden(true)
     }
 
@@ -58,6 +94,7 @@ struct HandArrow: View {
         HandArrowShape()
             .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
             .aspectRatio(10.0 / 7.0, contentMode: .fit)
+            .strokeDrawOn()
             .accessibilityHidden(true)
     }
 }

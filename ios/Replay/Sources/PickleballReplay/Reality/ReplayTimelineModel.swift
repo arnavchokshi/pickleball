@@ -5,6 +5,7 @@ import Foundation
 public final class ReplayTimelineModel: ObservableObject {
     @Published public private(set) var currentTime: Double
     @Published public private(set) var isPlaying: Bool
+    @Published public private(set) var playbackRate: Double
 
     public let durationSeconds: Double
     public let preferredFrameRate: Double
@@ -16,6 +17,7 @@ public final class ReplayTimelineModel: ObservableObject {
         self.preferredFrameRate = max(1, preferredFrameRate)
         self.currentTime = min(max(0, currentTime), self.durationSeconds)
         self.isPlaying = false
+        self.playbackRate = 1.0
     }
 
     public func seek(to timeSeconds: Double) {
@@ -24,6 +26,13 @@ public final class ReplayTimelineModel: ObservableObject {
 
     public func togglePlayback() {
         isPlaying ? pause() : play()
+    }
+
+    public func setPlaybackRate(_ rate: Double) {
+        playbackRate = min(2.0, max(0.5, rate))
+        if isPlaying {
+            startPlaybackLoop()
+        }
     }
 
     public func play() {
@@ -42,7 +51,7 @@ public final class ReplayTimelineModel: ObservableObject {
         playbackTask?.cancel()
         playbackTask = Task { @MainActor [weak self] in
             while let self, !Task.isCancelled, self.isPlaying {
-                let next = self.currentTime + (1.0 / self.preferredFrameRate)
+                let next = self.currentTime + (self.playbackRate / self.preferredFrameRate)
                 if next >= self.durationSeconds {
                     self.seek(to: 0)
                     self.pause()

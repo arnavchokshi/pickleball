@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import PickleballCapture
 import PickleballCore
 import PickleballFastTier
@@ -191,108 +192,382 @@ private struct SplashLidStrokeShape: Shape {
     }
 }
 
-private enum DinkVisionTab: String, CaseIterable, Identifiable {
-    case record
-    case replays
-    case stats
-    case profile
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .record:
-            return "Record"
-        case .replays:
-            return "Replays"
-        case .stats:
-            return "Stats"
-        case .profile:
-            return "Profile"
-        }
-    }
-
-    var symbolName: String {
-        switch self {
-        case .record:
-            return "record.circle"
-        case .replays:
-            return "play.rectangle"
-        case .stats:
-            return "chart.bar"
-        case .profile:
-            return "person.crop.circle"
-        }
-    }
-}
-
 private struct DinkVisionTabShell: View {
     var isActive: Bool = true
-    @State private var selectedTab: DinkVisionTab = .record
+    @State private var selectedTab: DinkVisionTabKind = .record
+    @StateObject private var recordModel = CaptureViewModel()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack(alignment: .bottom) {
             Group {
                 switch selectedTab {
-                case .record:
-                    DinkVisionRecordScreen(isActive: isActive)
                 case .replays:
                     DinkVisionReplaysScreen()
                 case .stats:
                     DinkVisionStatsScreen()
+                case .record:
+                    DinkVisionRecordScreen(isActive: isActive, model: recordModel)
+                case .coach:
+                    DinkVisionCoachScreen()
                 case .profile:
                     DinkVisionProfileScreen()
                 }
             }
+            .id(selectedTab)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .transition(reduceMotion ? .opacity : .asymmetric(
+                insertion: .modifier(
+                    active: DinkVisionStickerTransitionModifier(
+                        offsetX: DinkVisionScreenMotionParameters.default.slidePoints,
+                        rotationDegrees: DinkVisionScreenMotionParameters.default.rotationDegrees
+                    ),
+                    identity: DinkVisionStickerTransitionModifier(offsetX: 0, rotationDegrees: 0)
+                ).combined(with: .opacity),
+                removal: .modifier(
+                    active: DinkVisionStickerTransitionModifier(
+                        offsetX: -DinkVisionScreenMotionParameters.default.slidePoints,
+                        rotationDegrees: -DinkVisionScreenMotionParameters.default.rotationDegrees
+                    ),
+                    identity: DinkVisionStickerTransitionModifier(offsetX: 0, rotationDegrees: 0)
+                ).combined(with: .opacity)
+            ))
 
-            DinkVisionTabBar(selectedTab: $selectedTab)
+            DinkVisionTabBar(selectedTab: $selectedTab, recordModel: recordModel)
         }
+        .animation(.spring(response: 0.34, dampingFraction: 0.72), value: selectedTab)
         .ignoresSafeArea(edges: selectedTab == .record ? .all : .bottom)
     }
 }
 
+private struct DinkVisionStickerTransitionModifier: ViewModifier {
+    var offsetX: CGFloat
+    var rotationDegrees: Double
+
+    func body(content: Content) -> some View {
+        content
+            .offset(x: offsetX, y: 0)
+            .rotationEffect(.degrees(rotationDegrees), anchor: .bottom)
+    }
+}
+
 private struct DinkVisionTabBar: View {
-    @Binding var selectedTab: DinkVisionTab
+    @Binding var selectedTab: DinkVisionTabKind
+    @ObservedObject var recordModel: CaptureViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let layout = DinkVisionTabLayoutModel.brandV4
 
     var body: some View {
-        HStack {
-            ForEach(DinkVisionTab.allCases) { tab in
-                Button {
-                    selectedTab = tab
-                } label: {
-                    VStack(spacing: 4) {
-                        if tab == .record {
-                            PaddleEyeMark(
-                                size: 26,
-                                foreground: selectedTab == tab ? DinkVisionColor.cream : Color.white.opacity(0.46),
-                                background: DinkVisionColor.ink
-                            )
-                            .frame(width: 30, height: 30)
-                        } else {
-                            Image(systemName: tab.symbolName)
-                                .font(.system(size: 22, weight: .heavy))
-                                .frame(width: 30, height: 30)
+        ZStack(alignment: .top) {
+            HStack(alignment: .bottom, spacing: 0) {
+                ForEach(layout.tabs) { tab in
+                    if tab == .record {
+                        Color.clear
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                    } else {
+                        Button {
+                            selectedTab = tab
+                        } label: {
+                            DinkVisionTabItem(tab: tab, isSelected: selectedTab == tab)
+                                .frame(maxWidth: .infinity, minHeight: 54)
                         }
-                        Text(tab.title)
-                            .font(.system(size: 10, weight: .heavy, design: .rounded))
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(tab.title)
                     }
-                    .foregroundStyle(selectedTab == tab ? DinkVisionColor.cream : Color.white.opacity(0.46))
-                    .frame(maxWidth: .infinity, minHeight: 54)
-                    .contentShape(Rectangle())
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 15)
+            .padding(.bottom, 18)
+            .frame(height: DinkVisionMetric.tabBarHeight)
+            .background(
+                TopRoundedRectangle(radius: DinkVisionMetric.tabBarRadius)
+                    .fill(DinkVisionColor.ink)
+            )
+
+            VStack(spacing: 4) {
+                if recordModel.isRecording {
+                    recordElapsedPill
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+                Button {
+                    Task {
+                        await handleRecordTap()
+                    }
+                } label: {
+                    DinkVisionTexturedRecordButton(
+                        isRecording: recordModel.isRecording,
+                        isEnabled: canRecordFromTab,
+                        reduceMotion: reduceMotion
+                    )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(tab.title)
+                .disabled(!canRecordFromTab)
+                .frame(width: 86, height: 86)
+                .offset(y: -layout.recordRaisedOffset)
+                .accessibilityLabel(recordModel.isRecording ? "Stop recording" : "Start recording")
+                Text("Record")
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .foregroundStyle(selectedTab == .record ? DinkVisionColor.cream : Color.white.opacity(0.58))
+                    .offset(y: -layout.recordRaisedOffset - 11)
+                    .overlay(alignment: .bottom) {
+                        if selectedTab == .record {
+                            SketchyUnderline()
+                                .stroke(DinkVisionColor.ballYellow, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                                .frame(width: 43, height: 8)
+                                .offset(y: 6)
+                                .strokeDrawOn()
+                        }
+                    }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 18)
         .frame(height: DinkVisionMetric.tabBarHeight)
-        .background(
-            TopRoundedRectangle(radius: DinkVisionMetric.tabBarRadius)
-            .fill(DinkVisionColor.ink)
+    }
+
+    private var recordElapsedPill: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let elapsed = recordModel.recordingStartedAt.map { max(0, Int(context.date.timeIntervalSince($0))) } ?? 0
+            Text("\(elapsed / 60):\(String(format: "%02d", elapsed % 60))")
+                .font(.system(size: 12, weight: .black, design: .rounded).monospacedDigit())
+                .foregroundStyle(DinkVisionColor.ink)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(DinkVisionColor.ballYellow, in: Capsule())
+                .shadow(color: .black.opacity(0.22), radius: 8, y: 4)
+        }
+        .offset(y: -20)
+    }
+
+    private var canRecordFromTab: Bool {
+        switch recordModel.status {
+        case .ready, .recording, .finished, .idle:
+            return true
+        case .requestingAccess, .blocked:
+            return false
+        }
+    }
+
+    private func handleRecordTap() async {
+        selectedTab = .record
+        DinkVisionHaptics.impact(.medium)
+        if recordModel.status == .idle {
+            await recordModel.prepare()
+        }
+        await recordModel.toggleRecording()
+    }
+}
+
+private struct DinkVisionTabItem: View {
+    let tab: DinkVisionTabKind
+    let isSelected: Bool
+
+    var body: some View {
+        VStack(spacing: 5) {
+            Image(systemName: tab.symbolName)
+                .font(.system(size: 20, weight: .heavy))
+                .frame(width: 30, height: 26)
+            Text(tab.title)
+                .font(.system(size: 10, weight: .heavy, design: .rounded))
+                .overlay(alignment: .bottom) {
+                    if isSelected {
+                        SketchyUnderline()
+                            .stroke(DinkVisionColor.ballYellow, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                            .frame(height: 8)
+                            .offset(y: 8)
+                            .strokeDrawOn()
+                    }
+                }
+        }
+        .foregroundStyle(isSelected ? DinkVisionColor.cream : Color.white.opacity(0.48))
+        .contentShape(Rectangle())
+    }
+}
+
+private struct SketchyUnderline: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + 2, y: rect.midY + 1))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX - 2, y: rect.midY),
+            control: CGPoint(x: rect.midX, y: rect.minY)
         )
+        return path
+    }
+}
+
+private enum DinkVisionHaptics {
+    static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.prepare()
+        generator.impactOccurred()
+    }
+}
+
+private struct DinkVisionTexturedRecordButton: View {
+    var isRecording: Bool
+    var isEnabled: Bool
+    var reduceMotion: Bool
+    @State private var isPressed = false
+    @State private var breath = false
+    @State private var wobbleDegrees: Double = 0
+
+    private let layout = DinkVisionTabLayoutModel.brandV4
+
+    var body: some View {
+        let visual = visualState
+        ZStack {
+            recordDisc(visual: visual)
+                .frame(width: layout.recordButtonDiameter, height: layout.recordButtonDiameter)
+                .scaleEffect(visual.scale * (breathScale(for: visual)))
+                .rotationEffect(.degrees(wobbleDegrees))
+                .shadow(color: .black.opacity(isPressed ? 0.16 : 0.28), radius: isPressed ? 5 : 12, y: isPressed ? 3 : 8)
+
+            if isRecording {
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(DinkVisionColor.cream)
+                    .frame(width: 30, height: 30)
+                    .shadow(color: DinkVisionColor.cream.opacity(0.26), radius: 8)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .frame(width: 86, height: 86)
+        .opacity(isEnabled ? 1 : 0.62)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: DinkVisionRecordButtonVisual.idle.breathingDurationSeconds).repeatForever(autoreverses: true)) {
+                breath = true
+            }
+        }
+        .onChange(of: isRecording) { _, newValue in
+            guard newValue, !reduceMotion else { return }
+            wobbleDegrees = -2
+            withAnimation(.easeInOut(duration: 0.09)) {
+                wobbleDegrees = 2
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
+                withAnimation(.easeInOut(duration: 0.09)) {
+                    wobbleDegrees = 0
+                }
+            }
+        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false }
+        )
+    }
+
+    private var visualState: DinkVisionRecordButtonVisual {
+        if isRecording {
+            return .recording
+        }
+        return isPressed ? .pressed : .idle
+    }
+
+    private func breathScale(for visual: DinkVisionRecordButtonVisual) -> CGFloat {
+        guard !reduceMotion, !isRecording, !isPressed else {
+            return 1
+        }
+        return breath ? visual.breathingScaleRange.upperBound : visual.breathingScaleRange.lowerBound
+    }
+
+    private func recordDisc(visual: DinkVisionRecordButtonVisual) -> some View {
+        ZStack {
+            if visual.centerShape == .roundedSquareStop {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(hex: 0xFF705D), DinkVisionColor.trailRed, Color(hex: 0xB82D22)],
+                            center: .topLeading,
+                            startRadius: 4,
+                            endRadius: 68
+                        )
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(DinkVisionColor.trailRed, lineWidth: 4)
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.white.opacity(0.22), lineWidth: 1.5)
+                            .blur(radius: 0.4)
+                            .offset(x: -1, y: -1)
+                            .padding(5)
+                    }
+            } else {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(hex: 0xFFD85A), DinkVisionColor.ballYellow, Color(hex: 0xE4B437)],
+                            center: .topLeading,
+                            startRadius: 4,
+                            endRadius: 68
+                        )
+                    )
+                    .overlay {
+                        Circle()
+                            .stroke(visual.ring == .trailRed ? DinkVisionColor.trailRed : DinkVisionColor.ink, lineWidth: 4)
+                    }
+                    .overlay {
+                        Circle()
+                            .stroke(Color.white.opacity(0.30), lineWidth: 1.5)
+                            .blur(radius: 0.4)
+                            .offset(x: -1, y: -1)
+                            .mask(Circle().padding(5))
+                    }
+
+                ForEach(0..<visual.holeCount, id: \.self) { index in
+                    embossedHole(index: index, visual: visual)
+                }
+            }
+        }
+    }
+
+    private func embossedHole(index: Int, visual: DinkVisionRecordButtonVisual) -> some View {
+        let diameter = layout.recordButtonDiameter * visual.holeDiameterRatio
+        let point = Self.holePoint(index)
+        return Circle()
+            .fill(
+                RadialGradient(
+                    colors: [Color(hex: 0xB9851F), Color(hex: 0xD9A82F), Color(hex: 0xF5CC48).opacity(0.55)],
+                    center: .bottomTrailing,
+                    startRadius: 1,
+                    endRadius: diameter
+                )
+            )
+            .overlay(alignment: .topLeading) {
+                Circle()
+                    .stroke(Color.black.opacity(visual.innerShadowStrength), lineWidth: 2)
+                    .blur(radius: 1.2)
+                    .offset(x: -1.2, y: -1.2)
+                    .mask(Circle())
+            }
+            .overlay(alignment: .bottomTrailing) {
+                Circle()
+                    .stroke(Color.white.opacity(0.28), lineWidth: 1)
+                    .blur(radius: 0.5)
+                    .offset(x: 1, y: 1)
+                    .mask(Circle())
+            }
+            .frame(width: diameter, height: diameter)
+            .position(
+                x: layout.recordButtonDiameter * point.x,
+                y: layout.recordButtonDiameter * point.y
+            )
+    }
+
+    nonisolated private static func holePoint(_ index: Int) -> CGPoint {
+        switch index % 8 {
+        case 0: return CGPoint(x: 0.50, y: 0.25)
+        case 1: return CGPoint(x: 0.71, y: 0.32)
+        case 2: return CGPoint(x: 0.76, y: 0.55)
+        case 3: return CGPoint(x: 0.62, y: 0.74)
+        case 4: return CGPoint(x: 0.38, y: 0.74)
+        case 5: return CGPoint(x: 0.24, y: 0.55)
+        case 6: return CGPoint(x: 0.29, y: 0.32)
+        default: return CGPoint(x: 0.50, y: 0.50)
+        }
     }
 }
 
@@ -315,16 +590,16 @@ private struct TopRoundedRectangle: Shape {
 
 private struct DinkVisionRecordScreen: View {
     var isActive: Bool
-    @StateObject private var model: CaptureViewModel
+    @ObservedObject private var model: CaptureViewModel
     @State private var isCourtOverlayEnabled = true
     @State private var selectedPolicyHint: String?
 
     init(
         isActive: Bool = true,
-        model: @autoclosure @escaping () -> CaptureViewModel = CaptureViewModel()
+        model: CaptureViewModel = CaptureViewModel()
     ) {
         self.isActive = isActive
-        _model = StateObject(wrappedValue: model())
+        self.model = model
     }
 
     var body: some View {
@@ -460,48 +735,17 @@ private struct DinkVisionRecordScreen: View {
     }
 
     private var recordFooter: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 10) {
             Text(model.isRecording ? model.courtOverlayStatusText : "Frame the full court, then one tap")
                 .font(.system(size: 15, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .shadow(color: .black.opacity(0.38), radius: 8, y: 1)
 
-            recordButton
+            DinkVisionTrailPulseView()
+                .frame(width: 108, height: 34)
+                .opacity(model.isRecording ? 0.9 : 0.28)
         }
-    }
-
-    private var recordButton: some View {
-        Button {
-            Task {
-                await model.toggleRecording()
-            }
-        } label: {
-            ZStack {
-                Circle()
-                    .stroke(DinkVisionColor.ballYellow, lineWidth: 7)
-                    .frame(width: 92, height: 92)
-                if model.isRecording {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(DinkVisionColor.trailRed)
-                        .frame(width: 40, height: 40)
-                } else {
-                    Circle()
-                        .fill(canRecord ? DinkVisionColor.ballYellow : DinkVisionColor.mutedText.opacity(0.7))
-                        .frame(width: 58, height: 58)
-                }
-            }
-            .overlay {
-                if model.isRecording {
-                    DinkVisionTrailPulseView()
-                        .frame(width: 118, height: 118)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .disabled(!canRecord)
-        .frame(width: 112, height: 112)
-        .accessibilityLabel(model.isRecording ? "Stop recording" : "Start recording")
     }
 
     private var recordingBadge: some View {
@@ -792,6 +1036,44 @@ private struct LiveBallTrajectoryOverlay: View {
     }
 }
 
+private struct DinkVisionCoachScreen: View {
+    private let model = DinkVisionCoachPlaceholderModel.brandV4
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            DinkVisionColor.cream.ignoresSafeArea()
+            VStack(spacing: 18) {
+                Spacer(minLength: 44)
+                ZStack(alignment: .topTrailing) {
+                    DotGrid(rows: 4, columns: 5, dotSize: 9, color: DinkVisionColor.ink.opacity(0.18))
+                        .frame(width: 150, height: 120)
+                        .offset(x: 54, y: -34)
+                    DinkVisionOwnerLockup(height: 148)
+                        .padding(.top, 12)
+                }
+                Text(model.title)
+                    .font(.system(size: 25, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DinkVisionColor.ink)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.78)
+                    .lineLimit(2)
+                Text("Coming soon · roadmap \(model.roadmapID)")
+                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .foregroundStyle(DinkVisionColor.mutedText)
+                    .textCase(.uppercase)
+                Spacer(minLength: 150)
+            }
+            .padding(.horizontal, 24)
+
+            HandArrow(color: DinkVisionColor.trailRed, lineWidth: 6)
+                .frame(width: 118, height: 82)
+                .rotationEffect(.degrees(112))
+                .offset(x: -8, y: -DinkVisionMetric.tabBarHeight - 26)
+        }
+        .accessibilityElement(children: .contain)
+    }
+}
+
 private struct DinkVisionReplaysScreen: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var rows: [DinkVisionReplayRow] = []
@@ -834,13 +1116,11 @@ private struct DinkVisionReplaysScreen: View {
                 }
 
                 if let openingRow {
-                    VStack {
-                        Spacer()
-                        BallTrailLoadingView(title: "Opening\nreplay", detail: openingRow.durationText)
-                            .padding(.horizontal, 18)
-                            .padding(.bottom, DinkVisionMetric.tabBarHeight + 34)
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    DinkVisionReplaySwooshOverlay(
+                        durationText: openingRow.durationText,
+                        reduceMotion: reduceMotion
+                    )
+                    .transition(.opacity)
                 }
             }
             .navigationBarHidden(true)
@@ -888,6 +1168,86 @@ private struct DinkVisionReplaysScreen: View {
     }
 }
 
+private struct DinkVisionReplaySwooshOverlay: View {
+    var durationText: String
+    var reduceMotion: Bool
+    @State private var progress: CGFloat = 0
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                if reduceMotion {
+                    DinkVisionColor.ink.opacity(Double(progress) * 0.82)
+                } else {
+                    diagonalWipe(size: proxy.size)
+                    trailComposition(size: proxy.size)
+                }
+                VStack {
+                    Spacer()
+                    Text(durationText)
+                        .font(.system(size: 12, weight: .black, design: .rounded))
+                        .foregroundStyle(DinkVisionColor.cream.opacity(0.74))
+                        .padding(.bottom, DinkVisionMetric.tabBarHeight + 28)
+                }
+            }
+            .ignoresSafeArea()
+            .onAppear {
+                let seconds = Double(DinkVisionReplayOpenTransition.durationNanoseconds(reducedMotion: reduceMotion)) / 1_000_000_000
+                withAnimation(reduceMotion ? .easeOut(duration: seconds) : .easeOut(duration: seconds)) {
+                    progress = 1
+                }
+            }
+        }
+        .accessibilityLabel("Opening replay")
+    }
+
+    private func diagonalWipe(size: CGSize) -> some View {
+        let width = max(size.width, size.height) * 1.7
+        let offsetX = -size.width * 0.82 + progress * size.width * 1.70
+        let offsetY = size.height * 0.42 - progress * size.height * 0.88
+        return DinkVisionDiagonalWipe(width: width, offsetX: offsetX, offsetY: offsetY)
+    }
+
+    private func trailComposition(size: CGSize) -> some View {
+        let x = -size.width * 0.18 + progress * size.width * 0.94
+        let y = size.height * 0.88 - progress * size.height * 0.62
+        return ZStack {
+            swooshLine(color: .white, width: 184, y: -42)
+            swooshLine(color: DinkVisionColor.trailYellow, width: 132, y: -18)
+            swooshLine(color: DinkVisionColor.trailBlue, width: 156, y: 10)
+            swooshLine(color: DinkVisionColor.trailRed, width: 96, y: 35)
+            PerforatedBallView(fill: .white, hole: DinkVisionColor.ink)
+                .frame(width: 66, height: 66)
+                .rotationEffect(.degrees(progress * 210))
+                .offset(x: 94, y: -5)
+        }
+        .rotationEffect(.degrees(-17))
+        .position(x: x, y: y)
+    }
+
+    private func swooshLine(color: Color, width: CGFloat, y: CGFloat) -> some View {
+        Capsule()
+            .fill(color)
+            .frame(width: width * (0.34 + progress * 0.66), height: 6)
+            .offset(x: -40 - progress * 20, y: y)
+    }
+}
+
+private struct DinkVisionDiagonalWipe: View {
+    var width: CGFloat
+    var offsetX: CGFloat
+    var offsetY: CGFloat
+
+    var body: some View {
+        Rectangle()
+            .fill(DinkVisionColor.ink)
+            .frame(width: width, height: width * 0.72)
+            .rotationEffect(.degrees(-34))
+            .offset(x: offsetX, y: offsetY)
+            .shadow(color: DinkVisionColor.ink.opacity(0.5), radius: 24)
+    }
+}
+
 private struct DinkVisionReplayRowView: View {
     let row: DinkVisionReplayRow
 
@@ -906,6 +1266,14 @@ private struct DinkVisionReplayRowView: View {
                 TrailArcThumbnail()
                     .stroke(DinkVisionColor.trailBlue, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                     .frame(width: 86, height: 54)
+                TrailArcThumbnail()
+                    .stroke(DinkVisionColor.trailRed, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(10))
+                    .frame(width: 74, height: 46)
+                Circle()
+                    .fill(DinkVisionColor.ballYellow)
+                    .frame(width: 8, height: 8)
+                    .offset(x: -62, y: -40)
                 Text(row.durationText)
                     .font(.system(size: 10, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
@@ -921,12 +1289,10 @@ private struct DinkVisionReplayRowView: View {
                     .foregroundStyle(DinkVisionColor.mutedText)
                     .textCase(.uppercase)
                     .lineLimit(2)
-                Text(row.trustBadgeText)
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(DinkVisionColor.courtGreen, in: Capsule())
+                HStack(spacing: 6) {
+                    replayTrustChip(row.trusted3DText, fill: DinkVisionColor.courtGreen)
+                    replayTrustChip(row.ballTrustText, fill: DinkVisionColor.ink.opacity(0.72))
+                }
             }
 
             Spacer()
@@ -940,6 +1306,17 @@ private struct DinkVisionReplayRowView: View {
                 .fill(.white)
         )
         .accessibilityLabel("\(row.title), \(row.subtitle)")
+    }
+
+    private func replayTrustChip(_ title: String, fill: Color) -> some View {
+        Text(title)
+            .font(.system(size: 10, weight: .heavy, design: .rounded))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(fill, in: Capsule())
     }
 }
 
@@ -1263,12 +1640,13 @@ private struct DinkVisionProfileScreen: View {
             ForEach(flow.steps.indices, id: \.self) { index in
                 let step = flow.steps[index]
                 Button {
+                    DinkVisionHaptics.impact(.light)
                     complete(step.kind)
                 } label: {
                     HStack(spacing: 14) {
                         Text(step.status == .complete ? "OK" : "\(index + 1)")
                             .font(.system(size: 15, weight: .heavy, design: .rounded))
-                            .foregroundStyle(step.status == .complete ? .white : DinkVisionColor.ink)
+                            .foregroundStyle(DinkVisionColor.ink)
                             .frame(width: 40, height: 40)
                             .background(stepColor(step: step), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         VStack(alignment: .leading, spacing: 3) {
@@ -1364,14 +1742,14 @@ private struct DinkVisionProfileScreen: View {
 
     private func stepColor(step: ProfileCaptureStepRecord) -> Color {
         if step.status == .complete {
-            return DinkVisionColor.courtGreen
+            return DinkVisionColor.ballYellow
         }
         return flow.currentStep?.kind == step.kind ? DinkVisionColor.ballYellow : DinkVisionColor.line
     }
 
     private func borderColor(step: ProfileCaptureStepRecord) -> Color {
         if step.status == .complete {
-            return DinkVisionColor.courtGreen
+            return Color(hex: 0xD9A82F)
         }
         return flow.currentStep?.kind == step.kind ? DinkVisionColor.ballYellow : .clear
     }

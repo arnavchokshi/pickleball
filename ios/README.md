@@ -91,6 +91,32 @@ Screen map:
 - Profile/Settings exposes the H0 profile checklist steps, app info, and the
   capture-policy explainer.
 
+## DinkVision Brand V4
+
+Brand v4 keeps the v3 owner raster artwork untouched and moves the app shell to
+a record-first five-tab layout: Replays, Stats, raised Record, Coach, Profile.
+The center Record control is code-drawn, not raster-backed: a 72 pt ball-yellow
+disc, 4 pt ink ring, eight embossed perforations, and a subtle drop shadow. It
+breathes gently when idle, depresses on press, and turns into a trail-red stop
+state with an elapsed pill while recording. The tab button calls the existing
+`CaptureViewModel.prepare()` / `toggleRecording()` flow so the camfix ARKit
+setup-pass ordering stays intact.
+
+The reusable motion layer is intentionally hand-drawn: `StrokeDrawOn` reveals
+accent strokes, active tabs get a sketch underline, screen changes use a small
+sticker-like slide, record start wobbles briefly, and replay open uses the
+diagonal ball-trail swoosh. Reduced-motion users get crossfades or static
+states. Coach is an honest P6 placeholder only, with the owner lockup, dot-grid
+accent, and no fake coaching features.
+
+Stats, Replays, and Profile share the 24 pt card rhythm. Stats remains
+sample-watermarked. Replays reads local capture packages and shows em-dash trust
+chips when no real 3D/ball sidecar fields exist. Profile completion uses the
+yellow embossed perforation state with light haptics. The native 3D viewer keeps
+world-data semantics untouched while adding branded cream controls, simple
+camera chips, autoplay, speed cycling, follow selection, and a one-time
+coach-mark overlay.
+
 ## Local Verification
 
 `swift test` covers the Swift package modules. The shared Xcode scheme now has a

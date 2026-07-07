@@ -1,5 +1,8 @@
 import SceneKit
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// The GLUE-4 in-app 3D world viewer screen: the same court + tiered
 /// player representation + trust badges as the web scrubber
@@ -23,27 +26,58 @@ public struct WorldViewerView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            header
-            cameraPresetBar
-            ZStack(alignment: .bottomLeading) {
-                SceneView(
-                    scene: viewModel.sceneBuilder.scene,
-                    pointOfView: viewModel.sceneBuilder.cameraNode,
-                    options: [.allowsCameraControl, .autoenablesDefaultLighting],
-                    delegate: nil
-                )
+        ZStack {
+            LinearGradient(
+                colors: [WorldViewerChromeColor.deepGreen, WorldViewerChromeColor.ink],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                ZStack(alignment: .bottomLeading) {
+                    WorldSceneKitView(
+                        scene: viewModel.sceneBuilder.scene,
+                        cameraNode: viewModel.sceneBuilder.cameraNode,
+                        onPlayerTap: { playerID in _ = viewModel.selectFollowedPlayer(id: playerID) },
+                        onEmptyTap: { viewModel.clearFollowedPlayer() },
+                        onDoubleTap: { viewModel.selectCameraPreset(.broadcast) }
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityIdentifier("WorldSceneView")
+
+                    legend
+
+                    if let followedPlayerID = viewModel.followedPlayerID {
+                        followedChip(playerID: followedPlayerID)
+                            .padding(.leading, 14)
+                            .padding(.bottom, 54)
+                    }
+                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .accessibilityIdentifier("WorldSceneView")
-                legend
+                .layoutPriority(1)
+
+                bottomControlCard
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, ReplayScrubberLayout.bottomPadding)
+                    .padding(.top, 8)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .layoutPriority(1)
-            trustBandRow
-            timelineControls
+
+            VStack(spacing: 10) {
+                header
+                cameraPresetBar
+                Spacer()
+            }
+
+            if viewModel.isCoachMarkVisible {
+                coachMarkOverlay
+                    .transition(.opacity)
+            }
         }
-        .background(Color.black.opacity(0.92))
-        .foregroundStyle(.white)
+        .foregroundStyle(WorldViewerChromeColor.ink)
+        .task {
+            viewModel.autoplayOnOpen()
+        }
     }
 
     private var header: some View {
@@ -60,22 +94,33 @@ public struct WorldViewerView: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(viewModel.bundle.manifest.clip)
-                    .font(.headline.weight(.heavy))
+                    .font(.system(size: 17, weight: .heavy, design: .rounded))
                 Text("3D World Viewer")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(WorldViewerChromeColor.ink.opacity(0.62))
             }
             Spacer()
-            Text("Players visible: \(viewModel.snapshot.visiblePlayerCount)")
-                .font(.caption.weight(.bold))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(.ultraThinMaterial, in: Capsule())
-                .accessibilityIdentifier("WorldPlayersVisibleLabel")
+            VStack(alignment: .trailing, spacing: 6) {
+                Text("Players visible: \(viewModel.snapshot.visiblePlayerCount)")
+                    .font(.caption.weight(.bold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(WorldViewerChromeColor.cream.opacity(0.92), in: Capsule())
+                    .accessibilityIdentifier("WorldPlayersVisibleLabel")
+                HStack(spacing: 6) {
+                    chromeChip("Trusted 3D \(TrustBandPresentation.chipText(viewModel.bundle.world.court.trustBand))")
+                    chromeChip(viewModel.bundle.manifest.notes.isEmpty ? "sample" : "sample")
+                }
+            }
         }
         .padding(.horizontal, 14)
         .padding(.top, 10)
         .padding(.bottom, 6)
+        .background(
+            LinearGradient(colors: [WorldViewerChromeColor.cream.opacity(0.96), WorldViewerChromeColor.cream.opacity(0)], startPoint: .top, endPoint: .bottom)
+                .frame(height: 130),
+            alignment: .top
+        )
     }
 
     private var cameraPresetBar: some View {
@@ -86,9 +131,10 @@ public struct WorldViewerView: View {
                 }
                 .font(.caption.weight(.bold))
                 .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(preset == viewModel.cameraPreset ? Color.accentColor : Color.white.opacity(0.12), in: Capsule())
-                .foregroundStyle(preset == viewModel.cameraPreset ? Color.black : Color.white)
+                .padding(.vertical, 9)
+                .frame(minHeight: 44)
+                .background(preset == viewModel.cameraPreset ? WorldViewerChromeColor.ballYellow : WorldViewerChromeColor.cream.opacity(0.92), in: Capsule())
+                .foregroundStyle(WorldViewerChromeColor.ink)
                 .accessibilityIdentifier("WorldCameraPreset-\(preset.rawValue)")
             }
             Spacer()
@@ -114,7 +160,7 @@ public struct WorldViewerView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(.ultraThinMaterial, in: Capsule())
+        .background(WorldViewerChromeColor.cream.opacity(0.92), in: Capsule())
         .padding(10)
     }
 
@@ -125,62 +171,261 @@ public struct WorldViewerView: View {
         }
     }
 
-    private var trustBandRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                trustChip(label: "Court (CAL)", trustBand: viewModel.bundle.world.court.trustBand)
-                trustChip(label: "Ball (BALL)", trustBand: viewModel.bundle.world.ball.trustBand)
-                ForEach(viewModel.bundle.world.players, id: \.id) { player in
-                    trustChip(label: "Player \(player.id) (\(player.representation.rawValue))", trustBand: player.trustBand)
-                }
-            }
-            .padding(.horizontal, 14)
-        }
-        .padding(.vertical, 6)
+    private func followedChip(playerID: Int) -> some View {
+        chromeChip("Following P\(playerID)")
+            .accessibilityIdentifier("WorldFollowedPlayerChip")
     }
 
-    private func trustChip(label: String, trustBand: TrustBand?) -> some View {
-        let badge = TrustBandPresentation.badge(for: trustBand)
-        return VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption2.weight(.semibold)).foregroundStyle(.white.opacity(0.7))
-            Text(TrustBandPresentation.chipText(trustBand))
-                .font(.caption.weight(.bold))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(WorldTrustColors.swiftUIColor(for: badge).opacity(0.85), in: Capsule())
-                .foregroundStyle(Color.black)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("WorldTrustChip-\(label)")
-    }
-
-    private var timelineControls: some View {
+    private var bottomControlCard: some View {
         VStack(spacing: 4) {
             HStack {
                 Button(action: viewModel.togglePlayback) {
                     Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
-                        .frame(width: 28, height: 28)
+                        .font(.title3.weight(.black))
+                        .frame(width: 52, height: 52)
                 }
                 .buttonStyle(.plain)
-                .background(.ultraThinMaterial, in: Circle())
+                .background(WorldViewerChromeColor.ballYellow, in: Circle())
                 .accessibilityIdentifier("WorldPlayPauseButton")
 
-                Slider(
-                    value: Binding(
-                        get: { viewModel.currentTime },
-                        set: { viewModel.seek(to: $0) }
-                    ),
-                    in: 0...max(viewModel.durationSeconds, 0.001)
-                )
-                .accessibilityIdentifier("WorldTimelineSlider")
+                ZStack(alignment: .topLeading) {
+                    rallyTicks
+                        .padding(.horizontal, 3)
+                        .offset(y: -4)
+                    Slider(
+                        value: Binding(
+                            get: { viewModel.currentTime },
+                            set: { viewModel.seek(to: $0) }
+                        ),
+                        in: 0...max(viewModel.durationSeconds, 0.001)
+                    )
+                    .accessibilityIdentifier("WorldTimelineSlider")
+                }
 
                 Text(String(format: "%.2fs", viewModel.currentTime))
                     .font(.caption.monospacedDigit())
                     .frame(width: 56, alignment: .trailing)
+
+                Button(viewModel.playbackSpeed.rawValue) {
+                    viewModel.cyclePlaybackSpeed()
+                }
+                .font(.caption.weight(.black))
+                .frame(minWidth: 48, minHeight: 44)
+                .background(WorldViewerChromeColor.ink, in: Capsule())
+                .foregroundStyle(WorldViewerChromeColor.cream)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.bottom, ReplayScrubberLayout.bottomPadding)
-        .padding(.top, 4)
+        .padding(12)
+        .background(WorldViewerChromeColor.cream, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Color.black.opacity(0.18), radius: 18, y: 8)
+    }
+
+    private var rallyTicks: some View {
+        GeometryReader { proxy in
+            ForEach(rallyTickFractions.indices, id: \.self) { index in
+                Capsule()
+                    .fill(WorldViewerChromeColor.trailRed.opacity(0.75))
+                    .frame(width: 3, height: 10)
+                    .position(x: proxy.size.width * rallyTickFractions[index], y: 5)
+            }
+        }
+        .frame(height: 12)
+    }
+
+    private var rallyTickFractions: [CGFloat] {
+        let duration = max(viewModel.durationSeconds, 0.001)
+        return (viewModel.bundle.contactWindows?.events ?? [])
+            .filter { $0.type == "contact" }
+            .prefix(18)
+            .map { CGFloat(min(1, max(0, $0.t / duration))) }
+    }
+
+    private var coachMarkOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.38).ignoresSafeArea()
+            VStack(spacing: 18) {
+                Spacer()
+                VStack(spacing: 12) {
+                    Text("drag to orbit - tap a player to follow")
+                        .font(.system(size: 18, weight: .heavy, design: .rounded))
+                        .multilineTextAlignment(.center)
+                    HStack(spacing: 24) {
+                        CoachArrowShape()
+                            .stroke(WorldViewerChromeColor.trailBlue, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                            .frame(width: 92, height: 62)
+                        CoachArrowShape()
+                            .stroke(WorldViewerChromeColor.trailRed, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                            .frame(width: 92, height: 62)
+                            .scaleEffect(x: -1, y: 1)
+                    }
+                    Button("Got it") {
+                        viewModel.dismissCoachMark()
+                    }
+                    .font(.system(size: 14, weight: .black, design: .rounded))
+                    .frame(minWidth: 120, minHeight: 44)
+                    .background(WorldViewerChromeColor.ballYellow, in: Capsule())
+                }
+                .padding(22)
+                .background(WorldViewerChromeColor.cream, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .padding(.horizontal, 22)
+                Spacer()
+            }
+        }
+    }
+
+    private func chromeChip(_ text: String) -> some View {
+        Text(text)
+            .font(.caption2.weight(.black))
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .background(WorldViewerChromeColor.cream.opacity(0.92), in: Capsule())
+            .foregroundStyle(WorldViewerChromeColor.ink)
     }
 }
+
+private enum WorldViewerChromeColor {
+    static let cream = Color(red: 244.0 / 255.0, green: 238.0 / 255.0, blue: 227.0 / 255.0)
+    static let ink = Color(red: 20.0 / 255.0, green: 20.0 / 255.0, blue: 20.0 / 255.0)
+    static let deepGreen = Color(red: 35.0 / 255.0, green: 71.0 / 255.0, blue: 49.0 / 255.0)
+    static let ballYellow = Color(red: 242.0 / 255.0, green: 198.0 / 255.0, blue: 63.0 / 255.0)
+    static let trailBlue = Color(red: 62.0 / 255.0, green: 142.0 / 255.0, blue: 240.0 / 255.0)
+    static let trailRed = Color(red: 232.0 / 255.0, green: 80.0 / 255.0, blue: 58.0 / 255.0)
+}
+
+private struct CoachArrowShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.10, y: rect.maxY * 0.78))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX * 0.86, y: rect.minY + rect.height * 0.22),
+            control: CGPoint(x: rect.midX * 0.8, y: rect.minY + rect.height * 0.10)
+        )
+        path.move(to: CGPoint(x: rect.maxX * 0.72, y: rect.minY + rect.height * 0.16))
+        path.addLine(to: CGPoint(x: rect.maxX * 0.88, y: rect.minY + rect.height * 0.22))
+        path.addLine(to: CGPoint(x: rect.maxX * 0.78, y: rect.minY + rect.height * 0.38))
+        return path
+    }
+}
+
+private struct WorldSceneKitView: View {
+    let scene: SCNScene
+    let cameraNode: SCNNode
+    let onPlayerTap: (Int) -> Void
+    let onEmptyTap: () -> Void
+    let onDoubleTap: () -> Void
+
+    var body: some View {
+#if canImport(UIKit)
+        WorldSceneUIKitView(
+            scene: scene,
+            cameraNode: cameraNode,
+            onPlayerTap: onPlayerTap,
+            onEmptyTap: onEmptyTap,
+            onDoubleTap: onDoubleTap
+        )
+#else
+        SceneView(
+            scene: scene,
+            pointOfView: cameraNode,
+            options: [.allowsCameraControl, .autoenablesDefaultLighting],
+            delegate: nil
+        )
+        .onTapGesture {
+            onEmptyTap()
+        }
+#endif
+    }
+}
+
+#if canImport(UIKit)
+private struct WorldSceneUIKitView: UIViewRepresentable {
+    let scene: SCNScene
+    let cameraNode: SCNNode
+    let onPlayerTap: (Int) -> Void
+    let onEmptyTap: () -> Void
+    let onDoubleTap: () -> Void
+
+    func makeUIView(context: Context) -> SCNView {
+        let view = SCNView()
+        view.scene = scene
+        view.pointOfView = cameraNode
+        view.allowsCameraControl = true
+        view.autoenablesDefaultLighting = true
+        view.backgroundColor = .clear
+
+        let singleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.singleTap(_:)))
+        singleTap.numberOfTapsRequired = 1
+        let doubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.doubleTap(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        singleTap.require(toFail: doubleTap)
+        let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinch(_:)))
+        view.addGestureRecognizer(singleTap)
+        view.addGestureRecognizer(doubleTap)
+        view.addGestureRecognizer(pinch)
+        context.coordinator.view = view
+        return view
+    }
+
+    func updateUIView(_ view: SCNView, context: Context) {
+        view.scene = scene
+        view.pointOfView = cameraNode
+        context.coordinator.onPlayerTap = onPlayerTap
+        context.coordinator.onEmptyTap = onEmptyTap
+        context.coordinator.onDoubleTap = onDoubleTap
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPlayerTap: onPlayerTap, onEmptyTap: onEmptyTap, onDoubleTap: onDoubleTap)
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        weak var view: SCNView?
+        var onPlayerTap: (Int) -> Void
+        var onEmptyTap: () -> Void
+        var onDoubleTap: () -> Void
+
+        init(onPlayerTap: @escaping (Int) -> Void, onEmptyTap: @escaping () -> Void, onDoubleTap: @escaping () -> Void) {
+            self.onPlayerTap = onPlayerTap
+            self.onEmptyTap = onEmptyTap
+            self.onDoubleTap = onDoubleTap
+        }
+
+        @objc func singleTap(_ recognizer: UITapGestureRecognizer) {
+            guard let view else { return }
+            let location = recognizer.location(in: view)
+            for hit in view.hitTest(location, options: nil) {
+                if let playerID = Self.playerID(from: hit.node) {
+                    onPlayerTap(playerID)
+                    return
+                }
+            }
+            onEmptyTap()
+        }
+
+        @objc func doubleTap(_: UITapGestureRecognizer) {
+            onDoubleTap()
+        }
+
+        @objc func pinch(_ recognizer: UIPinchGestureRecognizer) {
+            guard let camera = view?.pointOfView?.camera else { return }
+            let next = max(35, min(70, camera.fieldOfView / Double(recognizer.scale)))
+            camera.fieldOfView = next
+            recognizer.scale = 1
+        }
+
+        private static func playerID(from node: SCNNode?) -> Int? {
+            var current = node
+            while let node = current {
+                if let name = node.name, name.hasPrefix("player-") {
+                    return Int(name.dropFirst("player-".count))
+                }
+                current = node.parent
+            }
+            return nil
+        }
+    }
+}
+#endif
