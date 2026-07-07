@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <id>13</id>
+      <name>racketsport_metric15_court_keypoints_20260707_6frames</name>
+      <size>6</size>
+      <mode>annotation</mode>
+      <overlap>0</overlap>
+      <bugtracker></bugtracker>
+      <created>2026-07-07 16:05:29.105217+00:00</created>
+      <updated>2026-07-07 16:26:10.632435+00:00</updated>
+      <subset>default</subset>
+      <start_frame>0</start_frame>
+      <stop_frame>5</stop_frame>
+      <frame_filter></frame_filter>
+      <segments>
+        <segment>
+          <id>13</id>
+          <start>0</start>
+          <stop>5</stop>
+          <url>http://localhost:8080/api/tasks/13/dataset/export/api/jobs/13</url>
+        </segment>
+      </segments>
+      <owner>
+        <username>admin</username>
+        <email>admin@labelfactory.local</email>
+      </owner>
+      <assignee></assignee>
+      <labels>
+        <label>
+          <name>near_left_corner</name>
+          <color>#a707aa</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>near_baseline_center</name>
+          <color>#19dad8</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>near_right_corner</name>
+          <color>#31ea29</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>far_right_corner</name>
+          <color>#98af5f</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>far_baseline_center</name>
+          <color>#30cadd</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>far_left_corner</name>
+          <color>#c68238</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>near_nvz_left</name>
+          <color>#2c0e9c</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>near_nvz_center</name>
+          <color>#9d4d53</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>near_nvz_right</name>
+          <color>#34236d</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>net_left_sideline</name>
+          <color>#1cb06b</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>net_center</name>
+          <color>#ae1d3e</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>net_right_sideline</name>
+          <color>#920fbd</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>far_nvz_left</name>
+          <color>#3d7c3e</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>far_nvz_center</name>
+          <color>#66eb79</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>far_nvz_right</name>
+          <color>#3893aa</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+      </labels>
+    </task>
+    <dumped>2026-07-07 16:26:37.712801+00:00</dumped>
+  </meta>
+  <image id="0" name="73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png" width="1920" height="1080">
+    <points label="near_left_corner" source="manual" occluded="0" points="1200.20,935.58" z_order="0">
+    </points>
+    <points label="near_baseline_center" source="manual" occluded="0" points="1611.53,814.27" z_order="0">
+    </points>
+    <points label="near_right_corner" source="manual" occluded="0" points="1827.62,742.23" z_order="0">
+    </points>
+    <points label="far_right_corner" source="manual" occluded="0" points="623.81,595.30" z_order="0">
+    </points>
+    <points label="far_baseline_center" source="manual" occluded="0" points="375.56,606.94" z_order="0">
+    </points>
+    <points label="far_left_corner" source="manual" occluded="0" points="58.44,622.61" z_order="0">
+    </points>
+    <points label="near_nvz_left" source="manual" occluded="0" points="526.66,748.54" z_order="0">
+    </points>
+    <points label="near_nvz_center" source="manual" occluded="0" points="937.65,696.62" z_order="0">
+    </points>
+    <points label="near_nvz_right" source="manual" occluded="0" points="1203.51,663.79" z_order="0">
+    </points>
+    <points label="far_nvz_left" source="manual" occluded="0" points="234.19,671.75" z_order="0">
+    </points>
+    <points label="far_nvz_center" source="manual" occluded="0" points="600.35,644.02" z_order="0">
+    </points>
+    <points label="far_nvz_right" source="manual" occluded="0" points="868.20,623.44" z_order="0">
+    </points>
+    <points label="net_left_sideline" source="manual" occluded="0" points="347.60,566.60" z_order="0">
+    </points>
+    <points label="net_center" source="manual" occluded="0" points="750.60,556.90" z_order="0">
+    </points>
+    <points label="net_right_sideline" source="manual" occluded="0" points="1013.90,547.10" z_order="0">
+    </points>
+  </image>
+  <image id="1" name="Ezz6HDNHlnk__Ezz6HDNHlnk_rally_0004__abs_010677.png" width="1920" height="1080">
+    <points label="near_baseline_center" source="manual" occluded="0" points="906.00,905.83" z_order="0">
+    </points>
+  </image>
+  <image id="2" name="HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195.png" width="1920" height="1080">
+    <points label="near_left_corner" source="manual" occluded="0" points="0.80,812.05" z_order="0">
+    </points>
+    <points label="near_baseline_center" source="manual" occluded="0" points="338.91,872.35" z_order="0">
+    </points>
+    <points label="near_right_corner" source="manual" occluded="0" points="1034.51,977.88" z_order="0">
+    </points>
+    <points label="far_right_corner" source="manual" occluded="0" points="1870.10,715.14" z_order="0">
+    </points>
+    <points label="far_baseline_center" source="manual" occluded="0" points="1523.77,708.21" z_order="0">
+    </points>
+    <points label="far_left_corner" source="manual" occluded="0" points="1223.13,705.88" z_order="0">
+    </points>
+    <points label="near_nvz_left" source="manual" occluded="0" points="694.62,749.07" z_order="0">
+    </points>
+    <points label="near_nvz_center" source="manual" occluded="0" points="1025.92,777.27" z_order="0">
+    </points>
+    <points label="near_nvz_right" source="manual" occluded="0" points="1583.04,807.76" z_order="0">
+    </points>
+    <points label="net_left_sideline" source="manual" occluded="0" points="921.00,628.60" z_order="0">
+    </points>
+    <points label="net_center" source="manual" occluded="0" points="1239.90,630.90" z_order="0">
+    </points>
+    <points label="far_nvz_left" source="manual" occluded="0" points="990.23,721.61" z_order="0">
+    </points>
+    <points label="far_nvz_center" source="manual" occluded="0" points="1343.02,738.07" z_order="0">
+    </points>
+    <points label="far_nvz_right" source="manual" occluded="0" points="1766.58,751.79" z_order="0">
+    </points>
+    <points label="net_right_sideline" source="manual" occluded="0" points="1696.16,614.68" z_order="0">
+    </points>
+  </image>
+  <image id="3" name="_L0HVmAlCQI___L0HVmAlCQI_rally_0001__abs_000509.png" width="1920" height="1080">
+    <points label="near_baseline_center" source="manual" occluded="0" points="1078.06,941.09" z_order="0">
+    </points>
+    <points label="far_right_corner" source="manual" occluded="0" points="1181.70,605.70" z_order="0">
+    </points>
+    <points label="far_baseline_center" source="manual" occluded="0" points="923.24,597.54" z_order="0">
+    </points>
+    <points label="far_left_corner" source="manual" occluded="0" points="683.70,588.10" z_order="0">
+    </points>
+    <points label="net_left_sideline" source="manual" occluded="0" points="516.78,516.78" z_order="0">
+    </points>
+    <points label="net_center" source="manual" occluded="0" points="935.20,543.21" z_order="0">
+    </points>
+    <points label="net_right_sideline" source="manual" occluded="0" points="1310.20,549.13" z_order="0">
+    </points>
+  </image>
+  <image id="4" name="wBu8bC4OfUY__wBu8bC4OfUY_rally_0001__abs_010248.png" width="1920" height="1080">
+    <points label="net_left_sideline" source="manual" occluded="0" points="284.12,484.32" z_order="0">
+    </points>
+    <points label="net_center" source="manual" occluded="0" points="941.40,502.41" z_order="0">
+    </points>
+    <points label="net_right_sideline" source="manual" occluded="0" points="1500.20,488.34" z_order="0">
+    </points>
+    <points label="near_baseline_center" source="manual" occluded="0" points="1009.70,996.72" z_order="0">
+    </points>
+  </image>
+  <image id="5" name="zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636.png" width="1920" height="1080">
+    <points label="near_left_corner" source="manual" occluded="0" points="214.04,918.89" z_order="0">
+    </points>
+    <points label="near_baseline_center" source="manual" occluded="0" points="983.75,918.89" z_order="0">
+    </points>
+    <points label="near_right_corner" source="manual" occluded="0" points="1744.81,925.37" z_order="0">
+    </points>
+    <points label="far_baseline_center" source="manual" occluded="0" points="975.47,621.85" z_order="0">
+    </points>
+    <points label="far_left_corner" source="manual" occluded="0" points="716.39,621.00" z_order="0">
+    </points>
+    <points label="far_right_corner" source="manual" occluded="0" points="1225.29,623.02" z_order="0">
+    </points>
+    <points label="near_nvz_left" source="manual" occluded="0" points="526.53,738.12" z_order="0">
+    </points>
+    <points label="near_nvz_center" source="manual" occluded="0" points="980.73,742.48" z_order="0">
+    </points>
+    <points label="near_nvz_right" source="manual" occluded="0" points="1432.87,746.76" z_order="0">
+    </points>
+    <points label="net_left_sideline" source="manual" occluded="0" points="633.58,591.95" z_order="0">
+    </points>
+    <points label="net_center" source="manual" occluded="0" points="977.62,591.95" z_order="0">
+    </points>
+    <points label="net_right_sideline" source="manual" occluded="0" points="1300.30,594.10" z_order="0">
+    </points>
+    <points label="far_nvz_left" source="manual" occluded="0" points="647.38,665.11" z_order="0">
+    </points>
+    <points label="far_nvz_center" source="manual" occluded="0" points="975.50,666.28" z_order="0">
+    </points>
+    <points label="far_nvz_right" source="manual" occluded="0" points="1301.49,669.47" z_order="0">
+    </points>
+  </image>
+</annotations>
