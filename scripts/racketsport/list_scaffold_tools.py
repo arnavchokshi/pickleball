@@ -105,6 +105,7 @@ TASK_HINTS = {
     "calibrate": ("CAL", "CAL-2"),
     "check_eval_regression": ("EVAL", "EVAL-1"),
     "corpus_dashboard": ("DATA", "P0-4"),
+    "doctor": ("ENV", "ENV-2"),
     "extract_label_frames": ("DATA", "DATA-1"),
     "finetune_pose": ("BODY", "BODY-4"),
     "generate_flight_corpus": ("BALL", "P0-7"),
@@ -220,7 +221,7 @@ def _tool_entry(path: Path, *, root: Path, tests_root: Path, schemas_root: Path)
 def _category(stem: str) -> str:
     normalized = stem.replace("-", "_")
     if (
-        normalized in {"gpu_train_lock", "gpu_cold_start", "setup_env"}
+        normalized in {"doctor", "gpu_train_lock", "gpu_cold_start", "setup_env"}
         or normalized.startswith("install_")
         or normalized.startswith("smoke_")
     ):
