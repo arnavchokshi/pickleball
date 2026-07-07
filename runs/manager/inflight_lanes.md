@@ -12,7 +12,8 @@ runs/lanes/<lane>/log.txt`); harness bg-task ids listed for TaskOutput monitorin
 |---|---|---|---|---|---|---|---|
 | w4_cammotion_diag_20260707 | codex xhigh READ-ONLY | bg task broazt3p3; codex session in log | see header | runs/lanes/w4_cammotion_diag_20260707/ only | — | ~1-2h | 2026-07-07 |
 | w4_footattr_diag_20260707 | codex xhigh READ-ONLY | bg task b329ofe32 | see header | runs/lanes/w4_footattr_diag_20260707/ only | — | ~2-3h | 2026-07-07 |
-| w4_burlmesh_diag_20260707 | codex medium READ-ONLY | bg task b5e43s1au | see header | runs/lanes/w4_burlmesh_diag_20260707/ only | — | ~30-60m | 2026-07-07 |
+| ~~w4_burlmesh_diag_20260707~~ RULED PASS: warning is NOT burlington-specific — `virtual_world.py:_warnings()` checks embedded vertices only, ignores healthy `body_mesh_index/` sidecar (all 4 clips affected); cosmetic/misleading telemetry, no gate impact | codex medium DONE | b5e43s1au | — | — | — | done | 2026-07-07 |
+| w4_burlmesh_fix_20260707 | codex medium | bg task br1brmo31 | see header | virtual_world.py, web/replay/src/viewerData.ts, their tests | — | ~30-60m | 2026-07-07 |
 | w4_fleethosts_20260707 | codex medium | bg task bsw3ivn10 | see header | remote_body_dispatch.py, test_remote_body_dispatch.py, scripts/fleet/refresh_remote_host.*, configs/ssh/ (add-only) | — | ~30-60m | 2026-07-07 |
 | w4_bvp_20260707 | codex xhigh | bg task bk3kmgnv1 | see header | ball_arc_solver.py, test_ball_arc_solver.py | — | ~2-4h | 2026-07-07 |
 | w4_ballcode_20260707 | codex xhigh | bg task b8k3t8n6d | see header | train_ball_stage2.py(new), ball_sst_dataset.py(new), export_sst_disagreements.py(new), test_ball_stage2_*(new), train_ball_pretrain.py(minimal) | — | ~2-4h | 2026-07-07 |
