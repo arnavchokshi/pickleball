@@ -22,8 +22,10 @@ thin-seed student NEVER takes the shot (4 inversions on record). VERIFIED=0 unti
    loader) + re-run the seed fine-tune on the aligned base; score everything through the bridge in
    OFFICIAL mode. Evidence: w4 finding (harness ckpts degenerate F1 0.0 under official mode vs
    official ckpt 0.714/0.783 same path; w4_bridgefix landed the measurement-mode stopgap at
-   67298e599). [BALLGPU: splice the harness_v0 internal-val card numbers here as the pre-alignment
-   reference row.]
+   67298e599). Pre-alignment reference rows (harness_v0, non-promotable, small-N ±4%/label):
+   stage-1 f1@20 0.8936/0.2000 (wolverine failure threshold-invariant); seed 0.7368/0.5946
+   (best hidden-FP 0.20); SST-3k 0.7442/0.7273 + recall 0.7708 (above the 0.6685 internal ref on
+   BOTH clips); official control 0.7143/0.7826.
 2. **img1605 ball-arc empty-census diagnosis (read-only first):** first COMPENSATED decisive run
    produced 0 arc segments / 0 world frames (p06-era code had 7 segments; no w3 reference).
    Suspect: compensated 2D geometry feeding event selection/anchor logic. Evidence:
@@ -40,7 +42,10 @@ thin-seed student NEVER takes the shot (4 inversions on record). VERIFIED=0 unti
 5. **W4-E → W5 owner-data intake** (fires the moment captures land): P0-3 ingest runbook
    (TECH_BLUEPRINTS DATA D2 — roles-at-ingest build gap), ≥2 held-out WITH AUDIO pre-registered,
    P0-4 labeling throughput toward budget. The SST disagreement queue
-   [BALLGPU: path + clip/frame counts] front-loads the owner's next ball-labeling session; the
+   (runs/lanes/w4_ballgpu_20260707/vm_artifacts/: 12,075 ranked rows — 4,307 teacher-only /
+   2,194 student-only / 5,574 large-offset — over 16/40 clips from 2/6 sources; extend student
+   predictions to the other 24 clips ~45 GPU-min for source balance) front-loads the owner's
+   next ball-labeling session; the
    court-kp relabel ask (HyUqT7zFiwk + zwCtH_i1_S4 net/far-side points + replacement frames)
    extends harvest-cal coverage past 1/6 sources.
 6. **Fleet/infra follow-ups:** transport hardening (Mac→GCP bulk upload unreliability — either a
@@ -59,7 +64,8 @@ thin-seed student NEVER takes the shot (4 inversions on record). VERIFIED=0 unti
   create. Version stamps hash committed blobs (190dea09f); --remote-host is REQUIRED everywhere.
 - Ball assets: official WASB anchor LOCAL + sha-verified (models/checkpoints/wasb/); stage-1 ckpts
   runs/lanes/w3_p11_train_20260707/checkpoints/; wave-4 seed + SST-3k ckpts
-  [BALLGPU: pulled paths]; SST manifest recipe proven (40 clips / 58,353 samples / 35-0
+  runs/lanes/w4_ballgpu_20260707/vm_artifacts/ (md5-verified; SST checkpoint_step_003000.pt
+  resumable for the remaining 9k steps after predecoding frames to fix the video-seek loader); SST manifest recipe proven (40 clips / 58,353 samples / 35-0
   protected-hash); harvest court cal: 1/6 sources manual_bar covering 8/40 clips
   (data/online_harvest_20260706/court_calibrations/).
 - Frozen gates stand green on fresh GPU proof @ a93764203-adjacent tree: slide
