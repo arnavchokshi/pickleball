@@ -1,0 +1,38 @@
+{
+  "lane": "w4_ballgpu_20260707",
+  "sha": "5b268aa6dcf2b5518fb3e7dda235eb8fb89dcad9",
+  "sync_method": "git_bundle_full_history_pinned_ref",
+  "sync_detail": {
+    "note": "Fresh VM (no pre-existing repo), so the w3_fleetseed INCREMENTAL bundle pattern (prerequisite..head) did not apply directly -- adapted: (1) first tried a shallow (--depth 1) local re-clone + `git bundle create HEAD`, which produced a smaller 89MB bundle but FAILED on the VM (`fatal: Failed to traverse parents ... did not send all necessary objects`) because a shallow clone's bundle omits the parent chain and this git version does not auto-embed shallow-grafting metadata for a bare `git fetch` into an empty repo; abandoned. (2) Fell back to a full-history bundle from the ORIGINAL (non-shallow) Mac working repo: `git branch -f temp-w4-ballgpu-pin 5b268aa6dcf2b5518fb3e7dda235eb8fb89dcad9 && git bundle create w4_code_full.bundle temp-w4-ballgpu-pin` (a bare positive commit SHA is rejected by `git bundle create` with 'Refusing to create empty bundle' -- it needs a real ref, hence the temp branch, deleted immediately after bundling). This full bundle was only 96,763,904 bytes (96MB) -- barely larger than the broken shallow attempt -- and is unconditionally correct (real full history, no missing-parent risk).",
+    "bundle_sha_ref": "5b268aa6dcf2b5518fb3e7dda235eb8fb89dcad9 (temp-w4-ballgpu-pin, deleted locally after bundling)",
+    "bundle_size_bytes": 96763904,
+    "bundle_md5": "ceeb41afaad50c76d5e2965561bbf352",
+    "transfer_flake_reproduced": true,
+    "transfer_flake_detail": "macOS ssh client hit `ssh_packet_write_poll: ... Result too large` (EMSGSIZE) reproducibly (not merely intermittent this run) on plain scp AND plain rsync for every file over roughly 10MB, mid-stream, at unpredictable byte offsets. Workaround: `rsync -a --partial --append-verify --timeout=90 --bwlimit=6000..8000` in a bounded retry loop (append-verify resumes from the last good byte instead of restarting) -- this is the tar_batch + bounded-retries + rsync-fallback pattern named in the spec, applied here as bwlimit-throttled-rsync-with-resume since plain rsync/scp both failed outright, and chunking (`split -b 50m`) was also used for the largest (1.1GB) payload to keep per-attempt blast radius small.",
+    "prerequisite": "none (full history from repo root, not incremental)"
+  },
+  "vm": {
+    "name": "pickleball-h100-w4ballgpu",
+    "zone": "asia-southeast1-b",
+    "external_ip": "34.21.216.249",
+    "repo_path": "/home/arnavchokshi/w4_ballgpu_20260707/repo",
+    "post_sync_head": "5b268aa6dcf2b5518fb3e7dda235eb8fb89dcad9",
+    "checkout_mode": "detached_HEAD_via_git_fetch_bundle_then_checkout_FETCH_HEAD",
+    "vendor_pins_touched": true,
+    "vendor_pin_note": "third_party/WASB-SBDT is tracked in the superproject as a bare gitlink (mode 160000, no .gitmodules registered -- per third_party/VENDOR_PINS.md) so the bundle/checkout alone leaves it EMPTY. Its real on-disk content (1.2MB, including any pickleball-local additions layered on top of the pinned upstream sha 923462cacdeb3353b84ddebdedb3f4b7a8553b0f) was tarred directly from the Mac's actual checkout (not re-cloned from GitHub, to guarantee byte-identical local-only additions) and shipped in w4_extra_small.tar, extracted over the empty gitlink directory. `git status --short` on the VM after checkout shows exactly one expected line for this (` ? third_party/WASB-SBDT`, git's gitlink-vs-real-directory marker) -- not a real drift, documented here."
+  },
+  "full_tree_proof": "remote `git status --short` inside repo/ after checkout is empty except the single expected third_party/WASB-SBDT gitlink marker (explained above) and untracked .venv/ -- i.e. every TRACKED file in the remote checkout byte-matches the 5b268aa6d commit tree, not just the explicit md5 sample below.",
+  "files": {
+    "scripts/racketsport/train_ball_stage2.py": {"local_committed_md5": "0232b538e1437f054814459256debff4", "remote_md5": "0232b538e1437f054814459256debff4", "match": true},
+    "threed/racketsport/ball_sst_dataset.py": {"local_committed_md5": "1ade9cbdb693f5e470266d56543146aa", "remote_md5": "1ade9cbdb693f5e470266d56543146aa", "match": true},
+    "threed/racketsport/wasb_adapter.py": {"local_committed_md5": "dc04e27aceb3dbea7b572af0e4d0a89c", "remote_md5": "dc04e27aceb3dbea7b572af0e4d0a89c", "match": true},
+    "scripts/racketsport/run_wasb_ball.py": {"local_committed_md5": "5a117e248e16f1846ec399e15cdac6ad", "remote_md5": "5a117e248e16f1846ec399e15cdac6ad", "match": true},
+    "scripts/racketsport/fuse_ball_tracks.py": {"local_committed_md5": "9f516167a607f549a9ef4fb3d75f3249", "remote_md5": "9f516167a607f549a9ef4fb3d75f3249", "match": true},
+    "scripts/racketsport/run_ball_tracking_eval_suite.py": {"local_committed_md5": "fb6061bbd3f340b6d50a2e44853aa9f1", "remote_md5": "fb6061bbd3f340b6d50a2e44853aa9f1", "match": true},
+    "threed/racketsport/ball_benchmark.py": {"local_committed_md5": "eb4d9f1d3e79072fc7c1d6295ed7d2ba", "remote_md5": "eb4d9f1d3e79072fc7c1d6295ed7d2ba", "match": true},
+    "threed/racketsport/ball_model_fusion.py": {"local_committed_md5": "d675313e1cef2b18ad228936200450d0", "remote_md5": "d675313e1cef2b18ad228936200450d0", "match": true},
+    "scripts/racketsport/export_sst_disagreements.py": {"local_committed_md5": "8eeeb2098fdfff94fbf2910bf8904183", "remote_md5": "8eeeb2098fdfff94fbf2910bf8904183", "match": true},
+    "scripts/racketsport/train_ball_pretrain.py": {"local_committed_md5": "6e605b2e6ca7b946eba17ab30fc8bbb2", "remote_md5": "6e605b2e6ca7b946eba17ab30fc8bbb2", "match": true}
+  },
+  "verified_at": "2026-07-07T18:44:00Z"
+}
