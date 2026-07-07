@@ -440,12 +440,12 @@ arms split across 2 VMs when >20 min serial. Teardown-on-completion stands; the 
 lane (provision→run→verify→DELETE→report, wave-2 prelabel pattern) is the preferred shape.
 
 **OWNER DIRECTIVE 2 — buy the FASTEST cost-effective GPU within the cap, not the familiar one.**
-Wave-2 anchored on A100-40GB @ ~$1.2/hr and never priced alternatives; the cap was $5/hr. New rule:
-default heavy worker = **H100-80GB spot if ≤$5/hr in a reachable zone**, else A100-80GB, else
-A100-40GB — chosen by a 2-minute price/availability check, not by habit. First H100 use runs a
-one-time cold-start validation lane (image/driver/CUDA compat vs our BODY runtime), after which it
-becomes the recorded default; the fleet ledger gains per-SKU minutes/clip + $/clip columns so SKU
-choice is data-driven. Caveat honestly measured in wave 2: much BODY-dispatch wall time is
+Wave-2 anchored on A100-40GB @ ~$1.2/hr and never priced alternatives; the cap was $5/hr. Current
+rule after wave-4 BODY validation: default heavy worker = **H100-80GB spot if ≤$5/hr in a reachable
+zone** for training AND BODY within cap, else A100-80GB, else A100-40GB; decisive gate runs should
+still use a proven SKU/path and pass version-stamp first. Evidence: H100 BODY wolverine 479.6s vs
+A100-40GB 1134.4s (~2.37x), snapshot→a3 boot with pd-balanced, 73/73 version files verified
+(`runs/lanes/w4_h100body_20260707/REPORT.md`). Caveat: much BODY-dispatch wall time is
 transfer/orchestration-bound (GPU util ~0% for stretches) — SKU upgrades help inference, FAN-OUT
 helps E2E; do both.
 
@@ -524,9 +524,10 @@ helps E2E; do both.
   extra 22 minutes. Same class: a Sonnet brief stated clip paths as fact that were false for 34/40
   (the lane recovered honestly). Rule: state assumptions as CHECKS ("verify X exists; if not, report
   and do Y"), and grep-verify every literal path/filename in a spec before dispatch.
-- **Lane-local acceptance harnesses can diverge from the pipeline.** The camera-motion lane measured
-  img1605 probe score 53.7 in its harness; the real pipeline probe scored 0.329 → auto-OFF in the
-  decisive run (the mechanism is live but the handheld clip runs uncompensated; wave-4 #1). Rule:
+- **Lane-local acceptance harnesses can diverge from the pipeline.** The wave-3 camera-motion lane
+  measured img1605 probe score 53.7 in its harness while the real pipeline probe scored 0.329; wave-4
+  fixed the decode-orientation seam and first-class summary keys, but the standing rule remains
+  (cd0b59390; 1588b110f; `runs/lanes/w4_cammotion_fix_20260707/report_r2.json`). Rule:
   acceptance for pipeline-integrated features is measured THROUGH the pipeline entry point
   (process_video), not through a lane-local replica of it. The general form of phasefix-r1's
   failure too: offline surrogates that don't share the production code path prove nothing.
@@ -549,6 +550,6 @@ helps E2E; do both.
 - **GCP quota `describe` lags admission control** after a grant — a create attempt is the
   definitive test (wave-3's H100 create succeeded while `describe` still showed 0). Also:
   a3-highgpu-1g (H100) lives in asia-southeast1-b/-c, NOT -a; fleet IPs RECYCLE across VMs on
-  restart (fan1 received fleet1's old IP) — always pass --remote-host explicitly and refresh
-  known_hosts + DEFAULT_REMOTE_HOST at each restart (wave-4 queue item).
-
+  restart (fan1 received fleet1's old IP). Wave-4 removed `DEFAULT_REMOTE_HOST`; always pass
+  `--remote-host` explicitly and run `scripts/fleet/refresh_remote_host.sh` against the current
+  ledger host (dcc4dae42; `runs/lanes/w4_fleethosts_20260707/report.json`).
