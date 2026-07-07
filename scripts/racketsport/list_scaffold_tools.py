@@ -126,6 +126,7 @@ TASK_HINTS = {
     "validate_pipeline_artifacts": ("EVAL", "EVAL-4"),
     "validate_pose_dataset": ("DATA", "DATA-2"),
     "validate_racket_dataset": ("DATA", "DATA-4"),
+    "validate_reference_ranges": ("COACH", "P6-3"),
     "validate_shot_dataset": ("DATA", "DATA-5"),
     "validate_testclips": ("DATA", "DATA-1"),
 }
@@ -320,6 +321,7 @@ def _category(stem: str) -> str:
     if (
         "report" in normalized
         or "corrections" in normalized
+        or "reference_ranges" in normalized
         or "readiness" in normalized
         or "promotion_audit" in normalized
         or "review_packet" in normalized

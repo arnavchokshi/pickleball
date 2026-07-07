@@ -651,7 +651,7 @@ consumption (P0-10), expanded eval suite with audio, fresh gate-passing worlds.
 - [x] **P0-1 GPU cold start — DONE 2026-07-06** (fleet1 A100-40GB cold start 257s, 27/27 GPU BODY
   tests, smoke inference w/ GPU util confirmed; evidence `runs/lanes/gpu_coldstart_20260706/report.md`.
   The single-VM wording below is superseded by the §12/§19 FLEET protocol — H100-first, ≤$5/hr,
-  parallelize-by-default). Original spec: Follow `RESET_HANDOFF_20260705.md` §7: create ONE spot VM (<$2/hr;
+  parallelize-by-default). Original spec (archived, historical): `runs/archive/root_docs_20260707/RESET_HANDOFF_20260705.md` §7 said: create ONE spot VM (<$2/hr;
   L4 for detector work, A100-40GB when VRAM-bound e.g. BODY/SAM-3D), `git clone` for the GPU-VM compute env (code is pushed — do NOT resurrect scp-sync; NOTE: the
   docs-of-record incl. this file + EDGE_PLAYBOOK are pending the owner joint-commit, so a fresh clone
   lacks them until that lands — §0 owner-setup), restore vendor pins per `third_party/VENDOR_PINS.md`, run
@@ -1525,8 +1525,9 @@ legal review, the VERIFIED promotion ladder.
 1. **Read order for a fresh session:** `CLAUDE.md` (auto-loads the pointer) → `FABLE_OPERATING_MANUAL.md`
    → this file PART 0 (any blank owner item = typed STOP) + Part I (incl. I.7 critical path) →
    `BUILD_CHECKLIST.md` (last ~15 bullets) → `runs/manager/gpu_fleet.md` (reconcile orphaned VMs) →
-   `CAPABILITIES.md` (canonical truth) + `PIPELINE_STATUS.md` as truth-checks → the linked lane/run
-   evidence. `RESET_HANDOFF_20260705.md` = historical restart context when needed.
+   `CAPABILITIES.md` (canonical truth) → the linked lane/run
+   evidence. `PIPELINE_STATUS.md` and `RESET_HANDOFF_20260705.md` were archived 2026-07-07 (superseded by
+   `CAPABILITIES.md` + `BUILD_CHECKLIST.md`); see `runs/archive/root_docs_20260707/` if historical context is needed.
 2. **Protected data:** Outdoor + Indoor labels NEVER touched without a pre-registered
    `runs/manager/heldout_eval_ledger.md` row + explicit STOP for manager go. Burlington/Wolverine =
    internal-val only. CVAT labels = scoring only, never construction. New owner captures get a role
@@ -1618,8 +1619,9 @@ legal review, the VERIFIED promotion ladder.
    lanes). Expect concurrent lanes' wide suites to see each other's dirty files mid-wave — only the
    wave-end clean run adjudicates. Worktree-per-lane remains MANDATORY for VM/rsync contexts and
    for any two lanes that would touch the same files.
-14. **Wave-end docs reconciliation is MANDATORY, not optional:** `CAPABILITIES.md` +
-   `PIPELINE_STATUS.md` (the canonical-on-conflict docs) went stale through wave 2. Every wave
+14. **Wave-end docs reconciliation is MANDATORY, not optional:** `CAPABILITIES.md`
+   (the canonical-on-conflict doc; `PIPELINE_STATUS.md` was archived 2026-07-07 as a duplicate that
+   went stale through wave 2 — see `runs/archive/root_docs_20260707/`) went stale through wave 2 in the same way. Every wave
    closeout runs a docs lane that refreshes them + ticks this file's checkboxes + updates the
    PART VI wave log — a plan doc that diverges from reality poisons every future session's boot.
 
@@ -1629,8 +1631,9 @@ legal review, the VERIFIED promotion ladder.
 - Companion: `EDGE_PLAYBOOK.md` — profile-first hacks H0-H26 + iPhone-capture hacks H27-H34, exact stack, exact data sources, task deltas
 - Pass 2/3 research addenda: PART II-B (citation-graph deep dive) + PART II-C (court/net + global fusion + production); reports in `runs/research_sota_20260705/pass2_*.md` + `pass3_*.md`
 - Research (this doc's Part II): `runs/research_sota_20260705/{README,ball_report,body_report,paddle_report,product_report}.md`
-- Current-state canon: `RESET_HANDOFF_20260705.md`, `CAPABILITIES.md`, `PIPELINE_STATUS.md`,
-  `MASTER_PLAN.md`, `runs/lanes/wiring_audit_20260705/WIRING_TRUTH_TABLE.md`
+- Current-state canon: `CAPABILITIES.md`, `MASTER_PLAN.md`,
+  `runs/lanes/wiring_audit_20260705/WIRING_TRUTH_TABLE.md` (`RESET_HANDOFF_20260705.md` and
+  `PIPELINE_STATUS.md` archived 2026-07-07 — `runs/archive/root_docs_20260707/`)
 - Ball: `runs/manager/heldout_eval_ledger.md` (rows 4, 19-23), `runs/lanes/ball_tracking_long_run_STATUS.md`,
   `runs/lanes/ball_t4_train_20260704/EVIDENCE_REPORT.md`, `runs/lanes/ball_p3a_bvp_anchor_first_20260705/`
 - Body/visual: `runs/lanes/joint_placement_4videos_20260704/FINAL_REPORT.md`,

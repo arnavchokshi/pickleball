@@ -35,10 +35,10 @@ bounce; the return must bounce (double-bounce rule); play alternates sides over 
 are illegal in the kitchen. Every one of these prunes hypotheses in calibration, ball tracking,
 event detection, and placement — for free.
 
-**C. We are offline.** No causal filters (no lag), whole-clip global optimization, unlimited
-lookahead, compute concentrated where coaching value lives (contact windows), everything cacheable
-across runs. Real-time products (SwingVision) can't do any of this; we should never leave it on the
-table.
+**C. We are offline for authority, and advisory live for immediacy.** L3 keeps the offline moat:
+whole-clip global optimization, unlimited lookahead, and compute concentrated where coaching value
+lives. We also ship L0/L1 advisory live tiers with uncertainty/no-call behavior; `CAPABILITIES.md`
+is canonical on the split. Live hints never replace the offline authority or promotion gates.
 
 Deep nets only where they pay: after one-time calibration the court/background never sees a deep
 model again; the ball gets tiny heatmap nets on motion ROIs; only PEOPLE get big models — and only

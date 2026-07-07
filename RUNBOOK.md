@@ -11,18 +11,24 @@ unless the task explicitly targets older contract plumbing.
 Use a trusted calibration seed when possible:
 
 ```bash
-python3 scripts/racketsport/process_video.py \
+.venv/bin/python scripts/racketsport/process_video.py \
   --video eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4 \
+  --clip wolverine_mixed_0200_mid_steep_corner \
   --court-calibration eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/labels/court_calibration_metric15pt.json \
   --out runs/process_video_wolverine_current \
   --verify-viewer
 ```
 
+Use `--clip` explicitly for eval clips. The committed eval videos are usually
+named `source.mp4`; if `--clip` is omitted, the clip id becomes `source`, which
+silently misses clip-keyed tracker tuning and default raw-pool profiles.
+
 Manual four-corner seed path:
 
 ```bash
-python3 scripts/racketsport/process_video.py \
+.venv/bin/python scripts/racketsport/process_video.py \
   --video path/to/clip.mp4 \
+  --clip <stable_clip_id> \
   --court-corners path/to/court_corners.json \
   --out runs/process_video_<clip>
 ```
@@ -30,8 +36,9 @@ python3 scripts/racketsport/process_video.py \
 Reuse precomputed tracks or ball track when evaluating downstream stages:
 
 ```bash
-python3 scripts/racketsport/process_video.py \
+.venv/bin/python scripts/racketsport/process_video.py \
   --video path/to/clip.mp4 \
+  --clip <stable_clip_id> \
   --court-calibration path/to/court_calibration.json \
   --tracks path/to/tracks.json \
   --ball-track path/to/ball_track.json \
@@ -42,8 +49,9 @@ python3 scripts/racketsport/process_video.py \
 CPU/skeleton-only smoke:
 
 ```bash
-python3 scripts/racketsport/process_video.py \
+.venv/bin/python scripts/racketsport/process_video.py \
   --video path/to/clip.mp4 \
+  --clip <stable_clip_id> \
   --court-calibration path/to/court_calibration.json \
   --tracks path/to/tracks.json \
   --ball-track path/to/ball_track.json \
@@ -56,6 +64,8 @@ python3 scripts/racketsport/process_video.py \
 | Input | Flag | Notes |
 |---|---|---|
 | Source video | `--video` | Required. `--clip` defaults to the video stem. |
+| Stable clip id | `--clip` | Set explicitly for eval clips whose video file is `source.mp4`; clip-keyed tuning uses this id. |
+| Run directory | `--out` | Defaults to `runs/process_video_<clip>/`; use a lane/run-specific path. |
 | Manual corner seed | `--court-corners` | `court_corners.json` with declared `image_size`. |
 | Capture sidecar | `--capture-sidecar` | Pre-built sidecar, e.g. ARKit/manual capture metadata. |
 | Court keypoints | `--court-keypoints` | Optional no-tap/metric path paired with a capture sidecar. |
@@ -64,57 +74,94 @@ python3 scripts/racketsport/process_video.py \
 | Ball reuse | `--ball-track` | Reuses a valid `ball_track.json`; otherwise WASB path may run. |
 | Arc/contact sidecars | `--events-selected`, `--ball-track-arc-solved` | Optional ball-aware mesh scheduling inputs. |
 
+## Environment gotchas
+
+Use `.venv/bin/python` for repo Python CLIs and tests. On Apple Silicon, a
+shell that looks like it has PyTorch installed can still be the wrong Anaconda
+or Homebrew interpreter, which changes MPS behavior and package visibility.
+
+Set `MPLBACKEND=Agg` before pytest or other matplotlib-touching checks:
+
+```bash
+MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q
+```
+
+Long pipeline/debug commands can run for minutes in zsh. Do not assume a command
+is hung only because it has been quiet; check stage logs, remote stdout, or the
+process table before killing it.
+
 `--allow-auto-court-corners-preview` can seed preview taps from line detection
 when no trusted calibration exists. It is unverified by definition and must not
 be called CAL promotion.
 
 ## Stage Order
 
-`process_video.py` writes `PIPELINE_SUMMARY.json` even on partial runs. The stage
-order is:
+After argument parsing and option construction succeed, `process_video.py`
+writes `PIPELINE_SUMMARY.json` even on partial runs. Pre-flight argument/path
+failures can exit before any run directory or `PIPELINE_SUMMARY.json` exists.
+The stage order is:
 
 1. **ingest** - validate video and build/consume capture sidecar.
 2. **calibration** - create or consume `court_calibration.json`, court zones, net
    plane, and court evidence. Calibration is the only hard dependency.
 3. **tracking** - run or reuse person tracks, optionally with raw-pool global
    association.
-4. **placement** - project tracks into court/world placement when inputs exist.
-5. **rally_gating** - optional loose rally-span gating before downstream work.
-6. **frames** - materialize BODY frames from tracks and planned mesh windows.
-7. **ball** - run/reuse ball track, bounce, and court in/out artifacts.
-8. **ball_arc** - default 3D ball chain: auto-bounce anchors, arc solver, and
+4. **camera_motion** - optional/auto preview camera-motion compensation before
+   placement homography projection.
+5. **placement** - project tracks into court/world placement when inputs exist.
+6. **rally_gating** - optional loose rally-span gating before downstream work.
+7. **frames** - materialize BODY frames from tracks and planned mesh windows.
+8. **ball** - run/reuse ball track, bounce, and court in/out artifacts.
+9. **ball_arc** - default 3D ball chain: auto-bounce anchors, arc solver, and
    flight-sanity gate. Use `--no-ball-arc` to skip it.
-9. **events** - fuse ball/audio/wrist cues into `contact_windows.json` and
+10. **events** - fuse ball/audio/wrist cues into `contact_windows.json` and
    `frame_compute_plan.json`.
-10. **ball_fill** - render-honest fill from accepted ball arc/contact evidence.
-11. **body** - dispatch Fast SAM-3D-Body to the configured remote GPU path by
+11. **ball_fill** - render-honest fill from accepted ball arc/contact evidence.
+12. **body** - dispatch Fast SAM-3D-Body to the configured remote GPU path by
    default, run local BODY only with `--body-local`, or skip with `--no-gpu`.
    RTMW/RTMW3D/RTMPose are retired; the pipeline is SAM-3D-Body only for
    offline body joints/mesh because it is the more accurate path and current
    optimizations made it equal-or-better speed.
-12. **placement_refine** - refine person placement from BODY/world evidence.
-13. **grounding** / **grounding_refine** - render-honest BODY grounding
+13. **placement_refine** - refine person placement from BODY/world evidence.
+14. **grounding** / **grounding_refine** - render-honest BODY grounding
     refinement when inputs exist.
-14. **world** - write `virtual_world.json` and `trust_bands.json`.
-15. **confidence** / **confidence_gate** - write `confidence_gated_world.json`
+15. **world** - write `virtual_world.json` and `trust_bands.json`.
+16. **confidence** / **confidence_gate** - write `confidence_gated_world.json`
     unless
     `--no-confidence-gate` is set.
-16. **manifest** - write `replay_viewer_manifest.json` and optional point scene.
-17. **verify** - optional `--verify-viewer` headless web viewer check.
+17. **manifest** - write `replay_viewer_manifest.json` and optional point scene.
+18. **verify** - optional `--verify-viewer` headless web viewer check.
 
 ## Important Flags
 
 | Flag | Effect |
 |---|---|
+| `--clip` | Stable clip id. Set it explicitly when the source file is named `source.mp4`; otherwise clip-keyed defaults use `source`. |
+| `--sport {pickleball,tennis}` | Sport/rules hint for downstream court/event semantics. Pickleball is the v1 product target. |
+| `--max-players {2,4}` | Expected player count for tracking/BODY selection. Use 4 for doubles clips. |
+| `--court-proposals-preview` | Write fail-closed court proposals/correction task when no trusted calibration seed exists; preview only. |
 | `--force` | Recompute stages even when valid artifacts already exist. |
 | `--max-frames` | Cap frames for smoke runs only. Do not use capped runs as promotion evidence. |
+| `--device` | Device hint for tracking/ReID/pose code that supports it, e.g. `cuda:0`, `mps`, or `cpu`. |
 | `--no-global-association` | Skip raw-pool global association after loose-pool tracking. |
 | `--global-association-profile` | Explicit internal-val tuning profile. Defaults are not universal proof. |
+| `--reid-model` | OSNet ReID checkpoint used by global association. Treat path changes as a new run condition. |
 | `--allow-auto-ball-track` | Opt into clip-id discovery of old ball tracks under `runs/`; preview reuse only. |
 | `--skip-ball` | Omit ball stage. Downstream ball/event outputs will be absent or degraded. |
 | `--skip-audio` | Omit audio onsets from contact fusion. |
 | `--rally-gating` | Opt into loose rally-span gating and preserve pre-gating copies. |
+| `--placement-keypoints-2d` | Optional native/body 2D keypoints for pre-BODY placement. |
+| `--camera-motion` | Reuse a `camera_motion.json` artifact for placement compensation. |
+| `--enable-camera-motion` | Force camera-motion estimation on, bypassing the auto decision. |
+| `--disable-camera-motion` / `--skip-camera-motion` | Force camera-motion estimation off; this wins over `--enable-camera-motion`. |
+| `--camera-motion-estimator {hardened,legacy}` | Select the camera-motion estimator profile. The hardened profile is the default. |
+| `--camera-motion-flow-backend {lk,raft-small}` | Select optical flow backend. `raft-small` is flag-gated and does not download weights. |
+| `--no-camera-motion-person-mask` | Disable person masking in the camera-motion estimator for ablations/debug. |
+| `--no-placement-undistort` | Disable placement-stage pixel undistortion before homography projection. |
 | `--mesh-coverage-mode ball_aware` | Default mesh scheduling policy. Uses physically validated ball/contact/proximity triggers, not low-confidence wrist cues alone. |
+| `--target-mesh-frame-budget` | Tier-1 deep-mesh frame budget. Use 0 for no cap only in controlled runs. |
+| `--ball-proximity-m` | Ball-aware scheduling distance threshold for player-to-arc-solved-ball proximity. |
+| `--high-confidence-swing-floor` | Minimum contact-window confidence for swing-triggered ball-aware mesh scheduling. |
 | `--body-schedule {serial,overlap}` | BODY scheduling mode. `serial` is the conservative default; `overlap` overlaps CPU pipeline work with remote BODY dispatch and needs fresh run-specific proof. |
 | `--no-gpu` | Skip live tracking/pose/BODY unless reuse artifacts are supplied. |
 | `--body-local` | Run BODY in-process on a GPU host instead of remote dispatch. |
@@ -122,7 +169,11 @@ order is:
 | `--no-grounding-refine` | Skip BODY grounding refinement. |
 | `--no-confidence-gate` | Point viewer at raw `virtual_world.json`. |
 | `--no-scene-points` | Skip point GLB scene generation. |
+| `--confidence-calibration-curves` | Confidence-curve artifact for trust-band calibration; omitted runs use the default only when present. |
+| `--manifest` | Override the output replay manifest path/shape consumed by viewer tooling. |
+| `--tracker-config` | Tracker runtime config override. Treat as a new run condition. |
 | `--verify-viewer` | Start the replay verifier against the produced manifest. |
+| `--vite-allow-root` | Root directory the local Vite replay server may serve for off-root manifests/assets. |
 | `--no-ball-arc` | Skip the default ball 3D arc stage (auto-bounce anchors -> arc solver -> flight-sanity gate). |
 | `--ball-candidates` | Reuse existing `ball_candidates.json` top-K detector sidecars (repeatable). Emitted by default when ball inference runs. |
 | `--no-ball-candidates` | Disable default top-K candidate sidecar emission during ball inference. |
@@ -162,6 +213,16 @@ missing/partial rather than replaced by legacy pose output.
 | `--sam3d-compile-warmup-buckets` | Bucket sizes warmed before timing or running compiled SAM3D decode. |
 | `--serialize-tier2-mesh-vertices` | Debug/storage-heavy override that serializes tier-2 mesh vertices instead of joints-only tier-2 output. |
 
+Standalone `remote_body_dispatch.py` debug flags:
+
+| Flag | Effect |
+|---|---|
+| `--verify-version-stamp` | Remote-side/internal check that the VM repo files match the local BODY version stamp before trusting VM timings or outputs. |
+| `--sync-remote-code` | Sync the remote checkout to local HEAD via git bundle and verify the version stamp; it does not run BODY. |
+| `--allow-dirty` | Permit dirty tracked runtime files in the version-stamp metadata for local development only; still records the dirty state. |
+| `--known-hosts-file` | Pinned SSH known_hosts file. Use `scripts/fleet/refresh_remote_host.sh` when fleet IPs are recycled. |
+| `--transport {tar_batch,rsync}` | Remote BODY input/output transport. `tar_batch` is the hardened default; `rsync` is the fallback. |
+
 Shared GPU lock wait and remote command timeout are separate budgets. Raising
 one does not raise the other, and either timeout can make the BODY stage partial.
 Keep `--serialize-tier2-mesh-vertices` off unless inspecting tier-2 mesh frames;
@@ -175,6 +236,7 @@ Common outputs include:
 - `capture_sidecar.json`
 - `court_calibration.json`
 - `tracks.json`
+- `camera_motion.json` when camera-motion estimation or explicit reuse is active
 - `ball_track.json`
 - `ball_track_arc_solved.json` (default ball 3D arc, render-only, self-kill gated)
 - `ball_flight_sanity.json` and `ball_bounce_candidates.json` (default ball-arc stage)
@@ -182,6 +244,7 @@ Common outputs include:
 - `frame_compute_plan.json`
 - `body_mesh_index/body_mesh_index.json` and chunked mesh files
 - `body_stage_phase_timing.json`
+- `remote_body_stdout.log` when remote BODY dispatch runs; check it before guessing at VM failures
 - `body_full_clip_gate.json`
 - `smpl_motion.json` only when `--fetch-body-monoliths` is requested
 - `body_mesh.json` only when `--fetch-body-monoliths` is requested
@@ -193,6 +256,50 @@ Common outputs include:
 Treat each artifact according to its trust band. Existence and schema validity
 are not accuracy proof.
 
+## View your replay in a browser
+
+The viewer takes `replay_viewer_manifest.json`, not `PIPELINE_SUMMARY.json`.
+Start the local Vite app from `web/replay`:
+
+```bash
+cd web/replay
+npm install
+npm run dev -- --host 127.0.0.1
+```
+
+Open the produced manifest with an absolute `/@fs/` URL:
+
+```text
+http://127.0.0.1:5173/?manifest=/@fs/absolute/path/to/replay_viewer_manifest.json
+```
+
+If the manifest references files outside the repo root, create/verify the bundle
+with `--vite-allow-root <directory>` or start Vite with a matching
+`server.fs.allow` policy. The viewer flow is also documented in
+`web/replay/README.md`.
+
+## When a run fails - where to look
+
+Start with the top-level and clip-local `PIPELINE_SUMMARY.json` when they exist.
+Each stage records `stage`, `status`, `wall_seconds`, notes, artifacts, and
+trust badges. `complete` or `partial` means an inspectable bundle exists; it is
+not a VERIFIED claim.
+
+If the command failed before options/path validation finished, there may be no
+run directory and no `PIPELINE_SUMMARY.json`. In that case, fix the CLI/path
+error first instead of searching for missing stage artifacts.
+
+Common traps and fixes:
+
+| Symptom | Check/Fix |
+|---|---|
+| Browser loads the wrong file | Use `replay_viewer_manifest.json`, not `PIPELINE_SUMMARY.json`. |
+| Large BODY monoliths are missing | Default remote BODY fetches `body_mesh_index/`; rerun with `--fetch-body-monoliths` only when `smpl_motion.json` or `body_mesh.json` is required. |
+| Remote BODY failed or looks silent | Inspect `remote_body_stdout.log`, then SSH/disk/`nvidia-smi`/lock state. |
+| VM timings or outputs look suspicious after a sync/rebuild | Run `scripts/racketsport/remote_body_dispatch.py --verify-version-stamp` before trusting VM numbers; use `--sync-remote-code` when the VM checkout is stale. |
+| Recycled fleet IP causes host-key failures | Refresh the pinned known_hosts entry with `scripts/fleet/refresh_remote_host.sh`. |
+| Storage audit fails immediately after tests/builds | Rerun with `--ignore-generated-artifacts` or remove fresh generated caches. |
+
 ## Status Interpretation
 
 `process_video.py` returns success for `complete` and `partial` summary status.
@@ -203,25 +310,28 @@ Promotion still depends on the gates in `MASTER_PLAN.md` and `CAPABILITIES.md`.
 
 `threed/racketsport/pipeline_cli.py` still exists for public contract/schema
 plumbing and fixture-copy tests. It is not the current full offline pipeline.
+Invoke it as `.venv/bin/python -m threed.racketsport.pipeline_cli`; running the
+file path directly can crash on relative imports.
 If you use `--allow-fixture-fallback`, you are copying old sample artifacts, not
 running models.
 
 ## Focused Verification
 
 ```bash
-.venv/bin/python -m pytest tests/racketsport/test_process_video.py -q
-.venv/bin/python -m pytest tests/racketsport/test_pipeline_contracts.py -q
-python3 scripts/racketsport/process_video.py --help
+MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_process_video.py -q
+MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_pipeline_contracts.py -q
+.venv/bin/python scripts/racketsport/process_video.py --help
+.venv/bin/python scripts/racketsport/doctor.py --json
 ```
 
 Before claiming the repo is clean or adding another tool, also run the hygiene
 checks that guard this simplified layout:
 
 ```bash
+.venv/bin/python scripts/racketsport/audit_storage_policy.py --root . --ignore-generated-artifacts --json
 .venv/bin/python scripts/racketsport/audit_dead_code.py --root .
-python3 scripts/racketsport/audit_storage_policy.py --root . --json
 .venv/bin/python scripts/racketsport/list_scaffold_tools.py --root .
-.venv/bin/python -m pytest tests/racketsport/test_truthful_capabilities.py tests/racketsport/test_scaffold_tool_index.py tests/racketsport/test_dead_code_audit.py tests/racketsport/test_storage_policy_audit.py -q
+MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_truthful_capabilities.py tests/racketsport/test_scaffold_tool_index.py tests/racketsport/test_dead_code_audit.py tests/racketsport/test_storage_policy_audit.py -q
 ```
 
 These commands are reference and storage checks only. They do not prove semantic
@@ -231,5 +341,5 @@ For viewer changes:
 
 ```bash
 npm test -- --run --dir web/replay
-python3 scripts/racketsport/verify_process_video_viewer.py --manifest <run>/replay_viewer_manifest.json --out-dir <run>/viewer_verify
+.venv/bin/python scripts/racketsport/verify_process_video_viewer.py --manifest <run>/replay_viewer_manifest.json --out-dir <run>/viewer_verify
 ```

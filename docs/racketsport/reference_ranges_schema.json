@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinkvision.local/schemas/reference_ranges_schema.json",
+  "title": "Pickleball coaching reference ranges",
+  "description": "Versioned per-skill-band coaching reference ranges with per-range provenance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "library_version",
+    "created_utc",
+    "updated_at",
+    "signed_off_by",
+    "ranges"
+  ],
+  "properties": {
+    "schema_version": {"type": "integer", "minimum": 1},
+    "library_version": {"type": "string", "minLength": 1},
+    "created_utc": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "signed_off_by": {"type": ["string", "null"]},
+    "ranges": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/definitions/range_entry"}
+    }
+  },
+  "definitions": {
+    "range_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "updated_at",
+        "metric_id",
+        "metric_family",
+        "measured_by",
+        "shot_class",
+        "skill_band",
+        "range",
+        "band",
+        "percentile_bands",
+        "provenance"
+      ],
+      "properties": {
+        "version": {"type": "string", "minLength": 1},
+        "updated_at": {"type": "string", "format": "date-time"},
+        "metric_id": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+        "metric_family": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+        "measured_by": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+        "shot_class": {"type": ["string", "null"]},
+        "skill_band": {"type": "string", "enum": ["3.0", "3.5", "4.0", "4.5+"]},
+        "range": {"$ref": "#/definitions/band"},
+        "band": {"$ref": "#/definitions/band"},
+        "percentile_bands": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["p10", "p50", "p90", "unit"],
+          "properties": {
+            "p10": {"type": "number"},
+            "p50": {"type": "number"},
+            "p90": {"type": "number"},
+            "unit": {"type": "string"}
+          }
+        },
+        "provenance": {"$ref": "#/definitions/provenance"}
+      }
+    },
+    "band": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lo", "hi", "unit", "direction"],
+      "properties": {
+        "lo": {"type": ["number", "null"]},
+        "hi": {"type": ["number", "null"]},
+        "unit": {
+          "type": "string",
+          "enum": [
+            "fraction",
+            "shots",
+            "seconds",
+            "meters",
+            "body_height_fraction"
+          ]
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["higher_better", "lower_better", "target_window"]
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "url",
+        "tier",
+        "source_type",
+        "source_ref",
+        "confidence",
+        "notes"
+      ],
+      "properties": {
+        "source": {"type": ["string", "null"]},
+        "url": {"type": ["string", "null"], "format": "uri"},
+        "tier": {
+          "type": "string",
+          "enum": [
+            "measured",
+            "trade_benchmark",
+            "coach_estimate",
+            "placeholder_unverified"
+          ]
+        },
+        "source_type": {
+          "type": "string",
+          "enum": [
+            "trade_benchmark",
+            "coach_review",
+            "our_user_data",
+            "placeholder_unverified"
+          ]
+        },
+        "source_ref": {"type": ["string", "null"]},
+        "confidence": {
+          "type": "string",
+          "enum": ["seed", "reviewed", "data_backed", "placeholder"]
+        },
+        "notes": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}
