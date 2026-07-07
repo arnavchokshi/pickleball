@@ -43,8 +43,6 @@ def build_body_grounding_quality(
     )
     if stream_gate_failures:
         blockers.append("foot_lock_gate_stream_over_threshold_phase")
-        if any(row.get("rejection_reason") == "phase_slide_exceeds_lock_gate" for row in stream_gate_failures):
-            blockers.append("foot_lock_gate_stream_phase_slide_exclusion")
         notes.append("foot_lock_gate_stream contains over-threshold lock-metric phase rows")
 
     status = "pass" if not blockers else "blocked" if blockers == ["missing_foot_slide_metric"] else "fail"
@@ -92,9 +90,6 @@ def _over_threshold_gate_stream_rows(
         if slide_m is None or slide_m <= max_foot_slide_m:
             continue
         rejection_reason = row.get("rejection_reason")
-        if rejection_reason == "phase_slide_exceeds_lock_gate":
-            failures.append(row)
-            continue
         if rejection_reason in INDEPENDENT_PHASE_REJECTION_REASONS:
             continue
         failures.append(row)

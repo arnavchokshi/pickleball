@@ -19,6 +19,29 @@ from threed.racketsport.external_gt_body_prediction_schema import MHR70_JOINT_NA
 
 
 FootName = str
+FOOT_CONTACT_PHASES_ARTIFACT_TYPE = "foot_contact_phases"
+FOOT_CONTACT_PHASES_SCHEMA_VERSION = 1
+BODY_SKELETON_DIRECT_SOURCE_KIND = "body_skeleton_direct"
+BODY_CONTACT_CONFIDENCE_MIN = 0.90
+BODY_CONTACT_CONFIDENCE_FORMULA = (
+    "confident iff foot in {left,right}, min_confidence >= 0.90, "
+    "source_phase_foot agrees with foot when present, "
+    "assignment_evidence.body_detector_agreement >= 0.90, required quality fields present, "
+    "no simultaneous confident opposite-foot single overlaps the same frame, "
+    "and no independent rejection reason"
+)
+INDEPENDENT_BODY_PHASE_REJECTION_REASONS = {
+    "unknown_or_invalid_foot",
+    "source_phase_foot_mismatch",
+    "missing_confidence_fields",
+    "low_body_contact_confidence",
+    "low_body_detector_agreement",
+    "phase_penetrates_ground",
+    "simultaneous_bilateral_contact",
+    "weak_bilateral_unknown_foot",
+    "weak_phase",
+    "demoted_phase",
+}
 
 
 @dataclass(frozen=True)
@@ -299,6 +322,194 @@ def measure_contact_metrics(
     )
 
 
+def build_body_skeleton_foot_contact_phases(
+    skeleton_payload: Mapping[str, Any],
+    *,
+    clip: str | None = None,
+    thresholds: ContactThresholds | None = None,
+    confidence_min: float = BODY_CONTACT_CONFIDENCE_MIN,
+    court_z_m: float = 0.0,
+) -> dict[str, Any]:
+    """Build schema-compatible confident per-foot phases from BODY skeleton joints.
+
+    Confidence is a measurable phase statistic:
+    ``min_confidence >= confidence_min`` and
+    ``assignment_evidence.body_detector_agreement >= confidence_min``. The
+    BODY detector supplies exact left/right phases, so detector agreement is
+    1.0 by construction for valid phases. Frames/phases that miss those
+    measurable bars are rejected with an explicit reason rather than fabricated
+    into confident contact.
+    """
+
+    if confidence_min < 0.0 or confidence_min > 1.0:
+        raise ValueError("confidence_min must be in [0, 1]")
+    effective_thresholds = thresholds or body_skeleton_direct_contact_thresholds()
+    try:
+        frames, joint_names = contact_frames_from_skeleton3d(skeleton_payload)
+        phases = detect_contact_phases(
+            frames,
+            joint_names=joint_names,
+            thresholds=effective_thresholds,
+            court_z_m=court_z_m,
+        )
+        metrics = measure_contact_metrics(frames, phases, joint_names=joint_names, court_z_m=court_z_m).to_dict()
+    except (TypeError, ValueError) as exc:
+        return _body_phase_payload(
+            clip=clip or str(skeleton_payload.get("clip") or ""),
+            thresholds=effective_thresholds,
+            phases=[],
+            rejected=[],
+            metrics={"phase_metrics": []},
+            confidence_min=confidence_min,
+            status="no_confident_phases_invalid_skeleton",
+            notes=[f"BODY skeleton contact phase production failed closed: {type(exc).__name__}: {exc}"],
+        )
+
+    metric_by_key = {
+        _metric_phase_key(row): row
+        for row in metrics.get("phase_metrics", [])
+        if isinstance(row, Mapping)
+    }
+    accepted: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    for ordinal, phase in enumerate(phases):
+        row = _body_phase_dict(phase, ordinal=ordinal, thresholds=effective_thresholds)
+        reason = _body_phase_rejection_reason(
+            row,
+            metric=metric_by_key.get(_contact_phase_key(phase)),
+            confidence_min=confidence_min,
+        )
+        if reason is None:
+            accepted.append(row)
+            continue
+        rejected.append(_rejected_phase_payload(row, reason=reason))
+    accepted, overlap_rejected = _demote_simultaneous_confident_singles(accepted)
+    rejected.extend(overlap_rejected)
+    return _body_phase_payload(
+        clip=clip or str(skeleton_payload.get("clip") or ""),
+        thresholds=effective_thresholds,
+        phases=accepted,
+        rejected=rejected,
+        metrics=metrics,
+        confidence_min=confidence_min,
+        status="ran",
+        notes=[],
+    )
+
+
+def build_body_skeleton_foot_contact_phases_from_gate_stream(
+    gate_stream: Mapping[str, Any],
+    *,
+    clip: str | None = None,
+    thresholds: ContactThresholds | None = None,
+    confidence_min: float = BODY_CONTACT_CONFIDENCE_MIN,
+) -> dict[str, Any]:
+    """Build BODY-direct phases from the persisted BODY foot-lock gate stream.
+
+    This is the post-BODY/pre-refine producer surface for existing runs: the
+    stream is already emitted by the BODY skeleton contact detector and carries
+    the per-foot confidence, height, speed, and independent demotion reason
+    for every candidate phase. Over-threshold slide is deliberately not a
+    rejection input here.
+    """
+
+    if confidence_min < 0.0 or confidence_min > 1.0:
+        raise ValueError("confidence_min must be in [0, 1]")
+    effective_thresholds = thresholds or body_skeleton_direct_contact_thresholds()
+    accepted: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    rows = gate_stream.get("phase_rows")
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
+        return _body_phase_payload(
+            clip=clip or str(gate_stream.get("clip") or ""),
+            thresholds=effective_thresholds,
+            phases=[],
+            rejected=[],
+            metrics={"phase_metrics": []},
+            confidence_min=confidence_min,
+            status="no_confident_phases_missing_gate_stream",
+            notes=["BODY gate stream missing phase_rows; producer failed closed."],
+        )
+    for ordinal, row in enumerate(rows):
+        if not isinstance(row, Mapping):
+            continue
+        phase = _phase_dict_from_gate_stream_row(row, ordinal=ordinal, thresholds=effective_thresholds)
+        reason = _gate_stream_phase_rejection_reason(phase, source_row=row, confidence_min=confidence_min)
+        if reason is None:
+            accepted.append(phase)
+            continue
+        rejected.append(_rejected_phase_payload(phase, reason=reason))
+    accepted, overlap_rejected = _demote_simultaneous_confident_singles(accepted)
+    rejected.extend(overlap_rejected)
+    metrics = _metrics_from_gate_stream_rows(rows)
+    return _body_phase_payload(
+        clip=clip or str(gate_stream.get("clip") or ""),
+        thresholds=effective_thresholds,
+        phases=accepted,
+        rejected=rejected,
+        metrics=metrics,
+        confidence_min=confidence_min,
+        status="ran",
+        notes=[],
+    )
+
+
+def body_skeleton_direct_contact_thresholds() -> ContactThresholds:
+    """Return the BODY-direct producer thresholds shared with foot-lock gate contact."""
+
+    base = ContactThresholds()
+    return ContactThresholds(
+        enter_height_m=base.enter_height_m,
+        exit_height_m=base.exit_height_m,
+        enter_speed_mps=base.enter_speed_mps,
+        exit_speed_mps=base.exit_speed_mps,
+        min_confidence=base.min_confidence,
+        min_phase_frames=base.min_phase_frames,
+        low_foot_band_m=base.low_foot_band_m,
+        split_speed_mps=base.enter_speed_mps,
+    )
+
+
+def contact_frames_from_skeleton3d(skeleton_payload: Mapping[str, Any]) -> tuple[list[SkeletonFrame], list[str]]:
+    """Extract BODY contact frames from a ``skeleton3d.json`` payload."""
+
+    joint_names = [str(name) for name in skeleton_payload.get("joint_names", [])]
+    frames: list[SkeletonFrame] = []
+    fps = _optional_float(skeleton_payload.get("fps")) or 30.0
+    players = skeleton_payload.get("players")
+    if not isinstance(players, Sequence) or isinstance(players, (str, bytes)):
+        return frames, joint_names
+    for player in players:
+        if not isinstance(player, Mapping):
+            continue
+        player_id = str(player.get("id", player.get("player_id", "unknown")))
+        player_frames = player.get("frames")
+        if not isinstance(player_frames, Sequence) or isinstance(player_frames, (str, bytes)):
+            continue
+        for ordinal, frame in enumerate(player_frames):
+            if not isinstance(frame, Mapping):
+                continue
+            joints = frame.get("joints_world")
+            if not isinstance(joints, Sequence) or isinstance(joints, (str, bytes)) or not joints:
+                continue
+            t = _optional_float(frame.get("t"))
+            frame_index = _frame_index(frame, fallback=round((t or 0.0) * fps) if t is not None else ordinal)
+            joint_conf = frame.get("joint_conf")
+            frames.append(
+                SkeletonFrame(
+                    player_id=player_id,
+                    frame_index=frame_index,
+                    t=t,
+                    joints_world=[_point3_list(joint, name="joints_world[]") for joint in joints],
+                    joint_conf=[float(value) for value in joint_conf]
+                    if isinstance(joint_conf, Sequence) and not isinstance(joint_conf, (str, bytes))
+                    else None,
+                    source=frame,
+                )
+            )
+    return frames, joint_names
+
+
 def foot_contact_point(
     frame: SkeletonFrame,
     foot_indices: Sequence[int],
@@ -311,6 +522,313 @@ def foot_contact_point(
     x = sum(point[0] for point in low_points) / len(low_points)
     y = sum(point[1] for point in low_points) / len(low_points)
     return (x, y, min_z)
+
+
+def _body_phase_payload(
+    *,
+    clip: str,
+    thresholds: ContactThresholds,
+    phases: Sequence[Mapping[str, Any]],
+    rejected: Sequence[Mapping[str, Any]],
+    metrics: Mapping[str, Any],
+    confidence_min: float,
+    status: str,
+    notes: Sequence[str],
+) -> dict[str, Any]:
+    rejected_reasons = _counts(
+        str(phase.get("rejection_reason") or phase.get("reason") or "unknown")
+        for phase in rejected
+    )
+    return {
+        "artifact_type": FOOT_CONTACT_PHASES_ARTIFACT_TYPE,
+        "schema_version": FOOT_CONTACT_PHASES_SCHEMA_VERSION,
+        "clip": clip,
+        "source_kind": BODY_SKELETON_DIRECT_SOURCE_KIND,
+        "source": BODY_SKELETON_DIRECT_SOURCE_KIND,
+        "source_phase_count": len(phases) + len(rejected),
+        "phase_count": len(phases),
+        "rejected_phase_count": len(rejected),
+        "phases": [dict(phase) for phase in phases],
+        "rejected_phases": [dict(phase) for phase in rejected],
+        "summary": {
+            "status": status,
+            "confidence_formula": BODY_CONTACT_CONFIDENCE_FORMULA,
+            "confidence_min": float(confidence_min),
+            "phase_frame_count": _phase_frame_total(phases),
+            "rejected_phase_frame_count": _phase_frame_total(rejected),
+            "rejected_reasons": rejected_reasons,
+            "max_candidate_phase_slide_m": _max_phase_slide_m(metrics),
+            "candidate_phase_count": len(metrics.get("phase_metrics", []))
+            if isinstance(metrics.get("phase_metrics"), list)
+            else 0,
+            "source_thresholds": thresholds.to_dict(),
+            "notes": list(notes),
+        },
+        "policy": {
+            "producer": BODY_SKELETON_DIRECT_SOURCE_KIND,
+            "fail_closed_uncertain_frames": True,
+            "rejects_on_gate_threshold": False,
+            "protected_eval_labels_used": False,
+        },
+    }
+
+
+def _body_phase_dict(phase: ContactPhase, *, ordinal: int, thresholds: ContactThresholds) -> dict[str, Any]:
+    payload = phase.to_dict()
+    payload["phase_id"] = (
+        f"{phase.player_id}:{phase.foot}:{phase.start_frame_index}-{phase.end_frame_index}:{ordinal}"
+    )
+    payload["source"] = "body_foot_contact_detector"
+    payload["source_kind"] = BODY_SKELETON_DIRECT_SOURCE_KIND
+    payload["source_phase_foot"] = phase.foot
+    payload["foot_assignment"] = "per_foot_body_contact"
+    payload["weak"] = False
+    payload["demoted"] = False
+    payload["rejection_reason"] = None
+    payload["source_thresholds"] = thresholds.to_dict()
+    evidence = dict(payload.get("assignment_evidence") or {})
+    evidence.update(
+        {
+            "body_detector_agreement": 1.0,
+            "body_detector_exact_agreement": 1.0,
+            "source_phase_foot": phase.foot,
+            "support_frame_count": phase.frame_count,
+        }
+    )
+    payload["assignment_evidence"] = evidence
+    return payload
+
+
+def _phase_dict_from_gate_stream_row(
+    row: Mapping[str, Any],
+    *,
+    ordinal: int,
+    thresholds: ContactThresholds,
+) -> dict[str, Any]:
+    start = int(row.get("start_frame_index", -1))
+    end = int(row.get("end_frame_index", start))
+    frame_indices = list(range(start, end + 1)) if start >= 0 and end >= start else []
+    foot = str(row.get("foot"))
+    player_id = str(row.get("player_id", "unknown"))
+    phase_id = str(row.get("phase_id") or f"{player_id}:{foot}:{start}-{end}:{ordinal}")
+    min_confidence = _optional_float(row.get("min_confidence"))
+    max_height_m = _optional_float(row.get("max_height_m"))
+    max_speed_mps = _optional_float(row.get("max_speed_mps"))
+    source_phase_foot = str(row.get("source_phase_foot") or foot)
+    source_evidence = row.get("assignment_evidence") if isinstance(row.get("assignment_evidence"), Mapping) else {}
+    detector_agreement = _optional_float(source_evidence.get("body_detector_agreement"))
+    if detector_agreement is None:
+        detector_agreement = _optional_float(row.get("body_detector_agreement"))
+    if detector_agreement is None and source_phase_foot == foot:
+        detector_agreement = 1.0
+    detector_exact_agreement = _optional_float(source_evidence.get("body_detector_exact_agreement"))
+    if detector_exact_agreement is None:
+        detector_exact_agreement = _optional_float(row.get("body_detector_exact_agreement"))
+    if detector_exact_agreement is None:
+        detector_exact_agreement = detector_agreement
+    return {
+        "phase_id": phase_id,
+        "player_id": player_id,
+        "foot": foot,
+        "start_frame_index": start,
+        "end_frame_index": end,
+        "frame_indices": frame_indices,
+        "frame_count": len(frame_indices),
+        "start_time_s": row.get("start_time_s"),
+        "end_time_s": row.get("end_time_s"),
+        "anchor_position_xyz": list(row.get("anchor_position_xyz") or [0.0, 0.0, 0.0]),
+        "max_height_m": max_height_m if max_height_m is not None else 0.0,
+        "max_speed_mps": max_speed_mps if max_speed_mps is not None else 0.0,
+        "min_confidence": min_confidence if min_confidence is not None else 0.0,
+        "source": str(row.get("contact_source") or "body_foot_contact_detector"),
+        "source_kind": BODY_SKELETON_DIRECT_SOURCE_KIND,
+        "source_phase_foot": source_phase_foot,
+        "foot_assignment": str(row.get("foot_assignment") or "per_foot_body_contact"),
+        "weak": False,
+        "demoted": False,
+        "split": bool(row.get("split", False)),
+        "split_reason": row.get("split_reason"),
+        "rejection_reason": None,
+        "source_thresholds": thresholds.to_dict(),
+        "assignment_evidence": {
+            "body_detector_agreement": detector_agreement,
+            "body_detector_exact_agreement": detector_exact_agreement,
+            "source_phase_foot": source_phase_foot,
+            "support_frame_count": len(frame_indices),
+            "gate_stream_phase_id": phase_id,
+        },
+    }
+
+
+def _body_phase_rejection_reason(
+    phase: Mapping[str, Any],
+    *,
+    metric: Mapping[str, Any] | None,
+    confidence_min: float,
+) -> str | None:
+    foot = str(phase.get("foot"))
+    if foot not in {"left", "right"}:
+        return "unknown_or_invalid_foot"
+    source_phase_foot = _phase_source_foot(phase)
+    if source_phase_foot in {"left", "right"} and source_phase_foot != foot:
+        return "source_phase_foot_mismatch"
+    for field in ("min_confidence", "max_height_m", "max_speed_mps", "source_thresholds"):
+        if field not in phase:
+            return "missing_confidence_fields"
+    confidence = _optional_float(phase.get("min_confidence"))
+    if confidence is None or confidence < confidence_min:
+        return "low_body_contact_confidence"
+    evidence = phase.get("assignment_evidence") if isinstance(phase.get("assignment_evidence"), Mapping) else {}
+    agreement = _optional_float(evidence.get("body_detector_agreement"))
+    if agreement is None or agreement < confidence_min:
+        return "low_body_detector_agreement"
+    penetration_m = (
+        float(metric.get("max_penetration_mm", 0.0)) / 1000.0
+        if isinstance(metric, Mapping)
+        else 0.0
+    )
+    if penetration_m > 0.0:
+        return "phase_penetrates_ground"
+    return None
+
+
+def _gate_stream_phase_rejection_reason(
+    phase: Mapping[str, Any],
+    *,
+    source_row: Mapping[str, Any],
+    confidence_min: float,
+) -> str | None:
+    source_reason = source_row.get("rejection_reason")
+    if source_reason and str(source_reason) in INDEPENDENT_BODY_PHASE_REJECTION_REASONS:
+        return str(source_reason)
+    if not source_reason and not bool(source_row.get("lock_metric_included", True)):
+        return "not_lock_metric_included"
+    return _body_phase_rejection_reason(phase, metric=None, confidence_min=confidence_min)
+
+
+def _phase_source_foot(phase: Mapping[str, Any]) -> str | None:
+    value = phase.get("source_phase_foot")
+    if value is None:
+        evidence = phase.get("assignment_evidence") if isinstance(phase.get("assignment_evidence"), Mapping) else {}
+        value = evidence.get("source_phase_foot")
+    if value is None:
+        return None
+    return str(value)
+
+
+def _rejected_phase_payload(phase: Mapping[str, Any], *, reason: str) -> dict[str, Any]:
+    return {
+        **phase,
+        "weak": True,
+        "demoted": True,
+        "rejection_reason": reason,
+        "reason": reason,
+    }
+
+
+def _demote_simultaneous_confident_singles(
+    phases: Sequence[Mapping[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    by_player_frame: dict[tuple[str, int], list[int]] = {}
+    for index, phase in enumerate(phases):
+        for frame_index in _phase_frame_indices(phase):
+            by_player_frame.setdefault((str(phase.get("player_id")), frame_index), []).append(index)
+
+    conflicted_indices: set[int] = set()
+    for indices in by_player_frame.values():
+        feet = {str(phases[index].get("foot")) for index in indices}
+        if "left" in feet and "right" in feet:
+            conflicted_indices.update(indices)
+    if not conflicted_indices:
+        return [dict(phase) for phase in phases], []
+
+    accepted: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    for index, phase in enumerate(phases):
+        if index in conflicted_indices:
+            rejected.append(_rejected_phase_payload(phase, reason="simultaneous_bilateral_contact"))
+        else:
+            accepted.append(dict(phase))
+    return accepted, rejected
+
+
+def _phase_frame_indices(phase: Mapping[str, Any]) -> list[int]:
+    frame_indices = phase.get("frame_indices")
+    if isinstance(frame_indices, Sequence) and not isinstance(frame_indices, (str, bytes)):
+        return [int(frame_index) for frame_index in frame_indices]
+    start = int(phase.get("start_frame_index", -1))
+    end = int(phase.get("end_frame_index", start))
+    if start < 0 or end < start:
+        return []
+    return list(range(start, end + 1))
+
+
+def _metrics_from_gate_stream_rows(rows: Sequence[Any]) -> dict[str, Any]:
+    phase_metrics: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        slide_m = _optional_float(row.get("slide_m")) or 0.0
+        phase_metrics.append(
+            {
+                "player_id": row.get("player_id"),
+                "foot": row.get("foot"),
+                "start_frame_index": row.get("start_frame_index"),
+                "end_frame_index": row.get("end_frame_index"),
+                "frame_count": row.get("frame_count"),
+                "slide_mm": slide_m * 1000.0,
+                "max_penetration_mm": 0.0,
+                "anchor_position_xyz": row.get("anchor_position_xyz") or [0.0, 0.0, 0.0],
+            }
+        )
+    return {"phase_metrics": phase_metrics}
+
+
+def _contact_phase_key(phase: ContactPhase) -> tuple[str, str, int, int]:
+    return (
+        str(phase.player_id),
+        str(phase.foot),
+        int(phase.start_frame_index),
+        int(phase.end_frame_index),
+    )
+
+
+def _metric_phase_key(row: Mapping[str, Any]) -> tuple[str, str, int, int]:
+    return (
+        str(row.get("player_id", "unknown")),
+        str(row.get("foot", "unknown")),
+        int(row.get("start_frame_index", -1)),
+        int(row.get("end_frame_index", -1)),
+    )
+
+
+def _phase_frame_total(phases: Sequence[Mapping[str, Any]]) -> int:
+    total = 0
+    for phase in phases:
+        frame_indices = phase.get("frame_indices")
+        if isinstance(frame_indices, Sequence) and not isinstance(frame_indices, (str, bytes)):
+            total += len(frame_indices)
+            continue
+        total += int(phase.get("frame_count", 0) or 0)
+    return total
+
+
+def _max_phase_slide_m(metrics: Mapping[str, Any]) -> float:
+    return max(
+        (
+            float(row.get("slide_mm", 0.0)) / 1000.0
+            for row in metrics.get("phase_metrics", [])
+            if isinstance(row, Mapping)
+        ),
+        default=0.0,
+    )
+
+
+def _counts(values: Iterable[str]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        counts[value] = counts.get(value, 0) + 1
+    return counts
 
 
 def _observations_for_foot(
@@ -390,6 +908,8 @@ def _append_phase(
                 assignment_evidence={
                     "support_frame_count": len(segment),
                     "source_phase_foot": foot,
+                    "body_detector_agreement": 1.0,
+                    "body_detector_exact_agreement": 1.0,
                 },
             )
         )
@@ -555,6 +1075,31 @@ def _point3(values: Sequence[float], *, name: str) -> tuple[float, float, float]
     return (float(values[0]), float(values[1]), float(values[2]))
 
 
+def _point3_list(values: Any, *, name: str) -> list[float]:
+    if not isinstance(values, Sequence) or isinstance(values, (str, bytes)) or len(values) != 3:
+        raise ValueError(f"{name} must be a 3-vector")
+    return [float(values[0]), float(values[1]), float(values[2])]
+
+
+def _optional_float(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _frame_index(frame: Mapping[str, Any], *, fallback: int) -> int:
+    for key in ("frame_idx", "frame_index"):
+        if key in frame:
+            try:
+                return int(frame[key])
+            except (TypeError, ValueError):
+                break
+    return int(fallback)
+
+
 def _validate_thresholds(thresholds: ContactThresholds) -> None:
     if thresholds.enter_height_m < 0 or thresholds.exit_height_m < 0:
         raise ValueError("height thresholds must be non-negative")
@@ -584,6 +1129,10 @@ __all__ = [
     "FootPhaseMetric",
     "PlayerContactSummary",
     "SkeletonFrame",
+    "body_skeleton_direct_contact_thresholds",
+    "build_body_skeleton_foot_contact_phases",
+    "build_body_skeleton_foot_contact_phases_from_gate_stream",
+    "contact_frames_from_skeleton3d",
     "detect_contact_phases",
     "foot_contact_point",
     "measure_contact_metrics",
