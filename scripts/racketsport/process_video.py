@@ -1286,16 +1286,23 @@ class ProcessVideoPipeline:
                     trust_badge="preview",
                     metrics={"camera_motion_auto": self._camera_motion_auto},
                 )
-            self._set_camera_motion_auto(
-                self._camera_motion_auto_decision(
-                    score=float(probe.get("motion_score", 0.0) or 0.0),
-                    threshold=float(probe.get("threshold", threshold) or threshold),
-                    enabled=bool(probe.get("enabled")),
-                    forced=str(probe.get("forced") or "auto"),
-                    probe_wall_seconds=float(probe.get("wall_seconds", 0.0) or 0.0),
-                    sampled_frame_count=int(probe.get("sampled_frame_count", 0) or 0),
-                )
+            camera_motion_auto = self._camera_motion_auto_decision(
+                score=float(probe.get("motion_score", 0.0) or 0.0),
+                threshold=float(probe.get("threshold", threshold) or threshold),
+                enabled=bool(probe.get("enabled")),
+                forced=str(probe.get("forced") or "auto"),
+                probe_wall_seconds=float(probe.get("wall_seconds", 0.0) or 0.0),
+                sampled_frame_count=int(probe.get("sampled_frame_count", 0) or 0),
             )
+            for key in (
+                "decode_orientation_mismatch",
+                "decode_orientation_consequential_mismatch",
+                "decode_orientation_untrusted",
+                "decode_orientation_mismatch_reason",
+            ):
+                if key in probe:
+                    camera_motion_auto[key] = probe[key]
+            self._set_camera_motion_auto(camera_motion_auto)
             if not self._camera_motion_auto["enabled"]:
                 return StageOutcome(
                     stage="camera_motion",
