@@ -34,9 +34,17 @@ freshproof pre-VM (no orphans, verified) and idled the ballgpu driver ~2h (VM GP
 total per its honest PROGRESS.md; ~$5.50-11 incl. idle); both agents resumed, SST capped at 12k
 steps by manager ruling, 3 A100 fans (w4fan1/2/3) staging 20:33Z — fleet at exactly the 4-GPU cap;
 ~~W4-F docs lane~~ RULED PASS, LANDED+PUSHED 940576495 (5 docs, 12 pending markers, 32/0 suites; WASB local blocker CONFIRMED closed w/ exact sha match). w4_freshproof GPU lane (Sonnet bg agent — A100 snapshot fans, cap-aware ≤4 incl. sibling
-w4ballgpu H100, syncs committed HEAD ≥ 1588b110f, gated keys + camera_motion decisive proof +
-warning-string + browser verify ×4). Then: rule ballgpu → docs lane (W4-F) → scorecard + wave-5
-boot prompt + memory + branch merge.
+w4ballgpu H100, ...). ~~w4_freshproof~~ RULED PASS, evidence LANDED+PUSHED a93764203 — ALL
+FROZEN GATES GREEN 4/4 (slide 20.25/20.04/17.98/23.07mm vs 30mm; img1605 first COMPENSATED run,
+probe 50.02 AUTO ON = decisive orientation-fix proof; statics OFF at baselines; zero circular
+exclusions; root jumps 0/0/0/0; mesh-warning fix live ×4; browser verify [] ×4; pipeline_status
+complete ×4 vs w3 partial ×4; fans DELETED list-proven ~$6-7; fan-3 branch honored cap;
+blob-hash stamps survived main moving 2× mid-lane). FINDINGS→wave-5: img1605 arc census EMPTY
+(0 segments; compensated-geometry suspect → diagnosis lane); compensated-slide +6.4mm watch item;
+Mac-uplink bulk-upload unreliability (VM-local run-shape deviation for outdoor+img1605, same
+entry point + stamps — transport hardening lesson); known_hosts→pinned-worktree + ffmpeg→snapshot
+recipe items. VI.0 step 9 DONE. Then: rule ballgpu → fill doc PENDING markers → scorecard +
+wave-5 boot prompt + memory + branch merge.
 
 LATE-WAVE ADDITIONS (all landed+pushed): w4_bridgefix 67298e599 (torch-2.9 lane-ckpt loading +
 --input-preprocessing {official,harness_v0} w/ artifact stamping; official bit-identity PROVEN;
