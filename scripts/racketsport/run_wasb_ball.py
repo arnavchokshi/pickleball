@@ -38,6 +38,15 @@ def main() -> int:
     parser.add_argument("--max-frames", type=int, default=None, help="Optional maximum frames for smoke runs.")
     parser.add_argument("--device", choices=("cuda", "cpu"), default="cuda")
     parser.add_argument(
+        "--input-preprocessing",
+        choices=("official", "harness_v0"),
+        default="official",
+        help=(
+            "Input preprocessing for checkpoint inference. official keeps the WASB affine+ImageNet path; "
+            "harness_v0 is resize+/255 and is a non-promotable measurement mode."
+        ),
+    )
+    parser.add_argument(
         "--emit-candidates",
         action="store_true",
         help="Write top-K WASB blob candidates to ball_candidates.json next to --out during official inference.",
@@ -67,6 +76,7 @@ def main() -> int:
             device=args.device,
             emit_candidates=args.emit_candidates,
             candidate_top_k=args.candidate_top_k,
+            input_preprocessing=args.input_preprocessing,
         )
     except Exception as exc:
         print(str(exc), file=sys.stderr)
