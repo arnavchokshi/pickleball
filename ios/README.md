@@ -22,7 +22,7 @@ not phone-real-time; LiDAR is a near-field (~5 m) bonus only.
 - `PickleballUpload`: upload manifest boundaries for IOS-5.
 - `PickleballReplay`: playback boundaries for server-rendered replay assets in IOS-6.
 
-## DinkVision Brand V2
+## DinkVision Brand V3
 
 The app-facing display name is `DinkVisionBrand.displayName` in
 `ios/App/DinkVisionDesignSystem.swift`. Bundle identifiers remain unchanged.
@@ -33,30 +33,34 @@ Tokens are mirrored from `runs/lanes/ios_brand_v2_20260707/mockups/tokens.css`:
   `#141414`, ball yellow `#F2C63F`, trail blue `#3E8EF0`, trail red
   `#E8503A`, card white `#FFFFFF`, and line `#E7DFD1`.
 - Shapes: 24 pt card radius, 32 pt top tab-bar radius, black bottom tab rail,
-  very-rounded mark head, thin twin-line neck, wide striped grip, and tangent
-  butt circle.
+  and owner raster artwork for all app-icon and in-app logo placements.
 - Type: SF rounded/system heavy numerals and sentence-case labels. Stat cards
   use dynamic SwiftUI text with scale limits rather than fixed bitmap copy.
-- Iconography: the app icon asset is the single 1024 px master PNG from the
-  lane mockup. The in-app `PaddleEyeMark` is the same v4 geometry in SwiftUI:
-  240 x 270 head with roughly 104 pt corner radius in the source viewBox,
-  twin-line neck, 78 x 72 striped grip, and a clipped almond eye aperture.
-  The iris is a ball circle clipped to the aperture, with seven cream holes in
-  the hex pattern. Keep the clipped-iris construction; do not approximate it
-  with an unclipped circle or filled eye background.
+- Iconography: the app icon and in-app logo use the owner's actual raster
+  masters from `runs/lanes/ios_brand_v3_20260707/assets/`: `app_icon_1024.png`,
+  `mark_master.png`, and `lockup_master.png`. Do not redraw, re-vector, trace,
+  recolor, or "improve" those files. `PaddleEyeMark` remains only for tiny
+  template glyph use such as the tab bar.
 
-Owner taste board, 2026-07-07: ink-on-cream mono mark; zoomed-eye-opens splash
-with no extra layers; speed-streak trail card as the motion motif; perforation
-panels as texture; hand-drawn double-slashes, dot grids, and curvy orange arrow
-around empty/onboarding content only. The tone is playful but super clean.
+Owner taste board, 2026-07-07: ink-on-cream raster mark; aligned slow-blink
+splash with no extra layers; speed-streak trail card as the motion motif;
+perforation panels as texture; hand-drawn double-slashes, dot grids, and curvy
+orange arrow around empty/onboarding content only. The tone is playful but super
+clean.
 
 Signature animations:
 
-- Splash: the app shell renders behind the overlay. The overlay starts as the
-  zoomed-in closed eye spanning about 1.6x screen width, then the two lid curves
-  part vertically to reveal the live app behind them and accelerate past the
-  screen edges. Total timing stays under 0.9s. Reduced-motion users get a simple
-  crossfade with no lid sweep.
+- Splash v3: the app shell renders behind the overlay. Phase A `settle` is
+  150 ms on full cream, with the raster mark centered at 34% screen width and a
+  1.06 -> 1.00 spring scale. Phase B `blink` draws only cream lids plus ink edge
+  strokes over the raster eye: close 260 ms, hold 120 ms, open 340 ms,
+  ease-in-out. Phase C `openUp` is 380 ms: the mark/lids scale up from the eye
+  center while the cream overlay and mark fade to reveal the live app. Total
+  duration is 1.25 s. Reduced-motion users get a 180 ms crossfade.
+- Splash v3 eye constants: eye center is `(0.50, 0.361)` of the mark frame,
+  aperture half-height is `0.145 * markHeight`, lid span is `0.86 * markWidth`,
+  and ink stroke width is `0.075 * markWidth`. Geometry helpers are nonisolated
+  so SwiftUI `Shape.path(in:)` does not call MainActor-isolated code.
 - Loader: `BallTrailLoadingView` is the reusable black-card speed-streak loader
   used for capture save/sidecar processing, replay loading states, and the
   brief replay-open transition.

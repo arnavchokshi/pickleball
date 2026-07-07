@@ -37,28 +37,28 @@ private struct DinkVisionSplashView: View {
     let onFinish: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var machine = DinkVisionSplashStateMachine(reducedMotion: false)
-    @State private var phase: DinkVisionSplashPhase = .zoomedClosed
-    @State private var lidProgress: CGFloat = 0
+    @State private var phase: DinkVisionSplashPhase = .settle
+    @State private var settleScale: CGFloat = 1.06
+    @State private var lidClosure: CGFloat = 0
+    @State private var openUpScale: CGFloat = 1
+    @State private var overlayOpacity: Double = 1
 
     var body: some View {
         GeometryReader { proxy in
+            let markFrame = DinkVisionSplashLidGeometry.markFrame(in: proxy.size)
             ZStack {
-                if phase == .zoomedClosed {
-                    DinkVisionColor.cream.ignoresSafeArea()
-                    SplashClosedEyeShape()
-                        .stroke(DinkVisionColor.ink, style: StrokeStyle(lineWidth: max(18, proxy.size.width * 0.067), lineCap: .round))
-                    SplashClosedEyeLashesShape()
-                        .stroke(DinkVisionColor.ink, style: StrokeStyle(lineWidth: max(10, proxy.size.width * 0.038), lineCap: .round))
-                } else if phase == .lidsOpening {
-                    SplashLidCoverShape(isUpper: true, progress: lidProgress)
-                        .fill(DinkVisionColor.cream)
-                    SplashLidCoverShape(isUpper: false, progress: lidProgress)
-                        .fill(DinkVisionColor.cream)
-                    SplashLidStrokeShape(isUpper: true, progress: lidProgress)
-                        .stroke(DinkVisionColor.ink, style: StrokeStyle(lineWidth: max(14, proxy.size.width * 0.056), lineCap: .round, lineJoin: .round))
-                    SplashLidStrokeShape(isUpper: false, progress: lidProgress)
-                        .stroke(DinkVisionColor.ink, style: StrokeStyle(lineWidth: max(14, proxy.size.width * 0.056), lineCap: .round, lineJoin: .round))
-                }
+                DinkVisionColor.cream
+                    .opacity(overlayOpacity)
+                    .ignoresSafeArea()
+
+                DinkVisionSplashMarkComposition(lidClosure: lidClosure)
+                    .frame(width: markFrame.width, height: markFrame.height)
+                    .scaleEffect(settleScale * openUpScale, anchor: UnitPoint(
+                        x: DinkVisionSplashLidGeometry.eyeCenterXRatio,
+                        y: DinkVisionSplashLidGeometry.eyeCenterYRatio
+                    ))
+                    .opacity(overlayOpacity)
+                    .position(x: markFrame.midX, y: markFrame.midY)
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
             .ignoresSafeArea()
@@ -67,84 +67,97 @@ private struct DinkVisionSplashView: View {
         .task {
             machine = DinkVisionSplashStateMachine(reducedMotion: reduceMotion)
             if reduceMotion {
-                try? await Task.sleep(nanoseconds: 180_000_000)
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    overlayOpacity = 0
+                }
+                try? await Task.sleep(nanoseconds: DinkVisionSplashTiming.reducedMotionCrossfadeNanoseconds)
                 onFinish()
                 return
             }
 
-            try? await Task.sleep(nanoseconds: DinkVisionSplashTiming.closedHoldNanoseconds)
-            phase = machine.advance()
-            await Task.yield()
-            withAnimation(.interpolatingSpring(stiffness: 126, damping: 16)) {
-                lidProgress = 1
+            phase = .settle
+            settleScale = 1.06
+            lidClosure = 0
+            openUpScale = 1
+            overlayOpacity = 1
+            withAnimation(.interpolatingSpring(stiffness: 210, damping: 20)) {
+                settleScale = 1
             }
-            try? await Task.sleep(nanoseconds: DinkVisionSplashTiming.lidOpeningNanoseconds)
+            try? await Task.sleep(nanoseconds: DinkVisionSplashTiming.settleNanoseconds)
+
+            phase = machine.advance()
+            withAnimation(.easeInOut(duration: 0.26)) {
+                lidClosure = 1
+            }
+            try? await Task.sleep(nanoseconds: DinkVisionSplashTiming.blinkCloseNanoseconds)
+            try? await Task.sleep(nanoseconds: DinkVisionSplashTiming.blinkHoldNanoseconds)
+            withAnimation(.easeInOut(duration: 0.34)) {
+                lidClosure = 0
+            }
+            try? await Task.sleep(nanoseconds: DinkVisionSplashTiming.blinkOpenNanoseconds)
+
+            phase = machine.advance()
+            withAnimation(.easeInOut(duration: 0.38)) {
+                openUpScale = 3.2
+                overlayOpacity = 0
+            }
+            try? await Task.sleep(nanoseconds: DinkVisionSplashTiming.openUpNanoseconds)
+
             phase = machine.advance()
             onFinish()
         }
     }
 }
 
-private nonisolated enum SplashEyeGeometry {
-    static let designWidth: CGFloat = 620
-    static let designHeight: CGFloat = 560
+private struct DinkVisionSplashMarkComposition: View {
+    var lidClosure: CGFloat
 
-    static func frame(in rect: CGRect) -> CGRect {
-        let targetWidth = rect.width * 1.60
-        let targetHeight = targetWidth * designHeight / designWidth
-        return CGRect(
-            x: rect.midX - targetWidth / 2,
-            y: rect.midY - targetHeight / 2,
-            width: targetWidth,
-            height: targetHeight
-        )
-    }
+    var body: some View {
+        GeometryReader { proxy in
+            let markFrame = CGRect(origin: .zero, size: proxy.size)
+            ZStack {
+                DinkVisionOwnerMark(height: proxy.size.height)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
 
-    static func point(_ x: CGFloat, _ y: CGFloat, in rect: CGRect) -> CGPoint {
-        let frame = frame(in: rect)
-        return CGPoint(
-            x: frame.minX + frame.width * x / designWidth,
-            y: frame.minY + frame.height * y / designHeight
-        )
-    }
-}
-
-private struct SplashClosedEyeShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: SplashEyeGeometry.point(20, 280, in: rect))
-        path.addQuadCurve(to: SplashEyeGeometry.point(600, 280, in: rect), control: SplashEyeGeometry.point(310, 200, in: rect))
-        path.move(to: SplashEyeGeometry.point(20, 280, in: rect))
-        path.addQuadCurve(to: SplashEyeGeometry.point(600, 280, in: rect), control: SplashEyeGeometry.point(310, 360, in: rect))
-        return path
-    }
-}
-
-private struct SplashClosedEyeLashesShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: SplashEyeGeometry.point(140, 322, in: rect))
-        path.addLine(to: SplashEyeGeometry.point(120, 368, in: rect))
-        path.move(to: SplashEyeGeometry.point(310, 336, in: rect))
-        path.addLine(to: SplashEyeGeometry.point(310, 386, in: rect))
-        path.move(to: SplashEyeGeometry.point(480, 322, in: rect))
-        path.addLine(to: SplashEyeGeometry.point(500, 368, in: rect))
-        return path
+                SplashLidCoverShape(isUpper: true, closure: lidClosure)
+                    .fill(DinkVisionColor.cream)
+                SplashLidCoverShape(isUpper: false, closure: lidClosure)
+                    .fill(DinkVisionColor.cream)
+                SplashLidStrokeShape(isUpper: true, closure: lidClosure)
+                    .stroke(
+                        DinkVisionColor.ink,
+                        style: StrokeStyle(
+                            lineWidth: DinkVisionSplashLidGeometry.strokeWidth(in: markFrame),
+                            lineCap: .round,
+                            lineJoin: .round
+                        )
+                    )
+                SplashLidStrokeShape(isUpper: false, closure: lidClosure)
+                    .stroke(
+                        DinkVisionColor.ink,
+                        style: StrokeStyle(
+                            lineWidth: DinkVisionSplashLidGeometry.strokeWidth(in: markFrame),
+                            lineCap: .round,
+                            lineJoin: .round
+                        )
+                    )
+            }
+        }
     }
 }
 
 private struct SplashLidCoverShape: Shape {
     var isUpper: Bool
-    var progress: CGFloat
+    var closure: CGFloat
 
     var animatableData: CGFloat {
-        get { progress }
-        set { progress = newValue }
+        get { closure }
+        set { closure = newValue }
     }
 
     func path(in rect: CGRect) -> Path {
-        let curve = SplashLidCurve(isUpper: isUpper, progress: progress, rect: rect)
-        let overscan = rect.height * 0.12
+        let curve = DinkVisionSplashLidGeometry.curve(isUpper: isUpper, closure: closure, markFrame: rect)
+        let overscan = rect.height * 0.08
         var path = Path()
         path.move(to: curve.left)
         path.addQuadCurve(to: curve.right, control: curve.control)
@@ -162,41 +175,19 @@ private struct SplashLidCoverShape: Shape {
 
 private struct SplashLidStrokeShape: Shape {
     var isUpper: Bool
-    var progress: CGFloat
+    var closure: CGFloat
 
     var animatableData: CGFloat {
-        get { progress }
-        set { progress = newValue }
+        get { closure }
+        set { closure = newValue }
     }
 
     func path(in rect: CGRect) -> Path {
-        let curve = SplashLidCurve(isUpper: isUpper, progress: progress, rect: rect)
+        let curve = DinkVisionSplashLidGeometry.curve(isUpper: isUpper, closure: closure, markFrame: rect)
         var path = Path()
         path.move(to: curve.left)
         path.addQuadCurve(to: curve.right, control: curve.control)
         return path
-    }
-}
-
-private nonisolated struct SplashLidCurve {
-    let left: CGPoint
-    let right: CGPoint
-    let control: CGPoint
-
-    init(isUpper: Bool, progress: CGFloat, rect: CGRect) {
-        let p = min(1, max(0, progress))
-        let eased = p * p * (3 - 2 * p)
-        let sign: CGFloat = isUpper ? -1 : 1
-        let leftX = rect.minX - rect.width * 0.10
-        let rightX = rect.maxX + rect.width * 0.10
-        // At p=0 BOTH lids coincide on one gently drooping closed-eye curve (aperture = zero).
-        // They diverge with eased progress so the app is revealed only as the eye opens.
-        let closedDroop = rect.height * 0.10
-        let endpointY = rect.midY + sign * rect.height * 0.62 * eased
-        let controlY = rect.midY + closedDroop * (1 - eased) + sign * rect.height * 0.93 * eased
-        left = CGPoint(x: leftX, y: endpointY)
-        right = CGPoint(x: rightX, y: endpointY)
-        control = CGPoint(x: rect.midX, y: controlY)
     }
 }
 
@@ -420,8 +411,11 @@ private struct DinkVisionRecordScreen: View {
 
     private var recordHeader: some View {
         HStack(alignment: .top) {
-            PaddleEyeMark(size: 31, foreground: .white, background: DinkVisionColor.courtGreen)
-                .frame(width: 34, height: 48)
+            DinkVisionOwnerMark(height: 44)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 5)
+                .background(DinkVisionColor.cream, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .shadow(color: .black.opacity(0.24), radius: 10, y: 4)
             Spacer()
             VStack(alignment: .trailing, spacing: 8) {
                 if model.isRecording {
@@ -540,8 +534,7 @@ private struct DinkVisionRecordScreen: View {
 
     private var permissionPrimer: some View {
         VStack(spacing: 12) {
-            PaddleEyeMark(size: 56)
-                .frame(width: 62, height: 82)
+            DinkVisionOwnerMark(height: 82)
             Text("Camera + mic")
                 .font(.system(size: 22, weight: .heavy, design: .rounded))
                 .foregroundStyle(DinkVisionColor.ink)
@@ -940,15 +933,19 @@ private struct DinkVisionEmptyReplaysView: View {
     let message: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.system(size: 22, weight: .heavy, design: .rounded))
-                .foregroundStyle(DinkVisionColor.ink)
-            Text(detail)
-                .font(.system(size: 12, weight: .heavy, design: .rounded))
-                .foregroundStyle(DinkVisionColor.mutedText)
-                .textCase(.uppercase)
-                .fixedSize(horizontal: false, vertical: true)
+        HStack(alignment: .center, spacing: 18) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DinkVisionColor.ink)
+                Text(detail)
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DinkVisionColor.mutedText)
+                    .textCase(.uppercase)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+            DinkVisionOwnerMark(height: 86)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(22)
@@ -1313,8 +1310,7 @@ private struct DinkVisionProfileScreen: View {
     private var appInfo: some View {
         DinkVisionCard {
             HStack {
-                PaddleEyeMark(size: 42)
-                    .frame(width: 48, height: 62)
+                DinkVisionOwnerMark(height: 62)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(DinkVisionBrand.displayName)
                         .font(.system(size: 20, weight: .heavy, design: .rounded))

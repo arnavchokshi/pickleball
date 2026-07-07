@@ -1,29 +1,56 @@
 import XCTest
 import Foundation
+import CoreGraphics
 import PickleballCapture
 import PickleballCore
 @testable import Pickleball
 
 final class DinkVisionStateTests: XCTestCase {
     @MainActor
-    func testSplashStateMachineOpensLidsThenCompletes() {
+    func testSplashStateMachineRunsSettleBlinkOpenUpThenCompletes() {
         var machine = DinkVisionSplashStateMachine(reducedMotion: false)
 
-        XCTAssertEqual(machine.phase, .zoomedClosed)
+        XCTAssertEqual(machine.phase, .settle)
         XCTAssertEqual(machine.animationPlan, .lidReveal)
-        XCTAssertEqual(machine.advance(), .lidsOpening)
+        XCTAssertEqual(machine.advance(), .blink)
+        XCTAssertEqual(machine.advance(), .openUp)
         XCTAssertEqual(machine.advance(), .done)
         XCTAssertEqual(machine.advance(), .done)
-        XCTAssertLessThanOrEqual(DinkVisionSplashTiming.totalDurationNanoseconds, 900_000_000)
+        XCTAssertEqual(DinkVisionSplashTiming.settleNanoseconds, 150_000_000)
+        XCTAssertEqual(DinkVisionSplashTiming.blinkCloseNanoseconds, 260_000_000)
+        XCTAssertEqual(DinkVisionSplashTiming.blinkHoldNanoseconds, 120_000_000)
+        XCTAssertEqual(DinkVisionSplashTiming.blinkOpenNanoseconds, 340_000_000)
+        XCTAssertEqual(DinkVisionSplashTiming.openUpNanoseconds, 380_000_000)
+        XCTAssertEqual(DinkVisionSplashTiming.totalDurationNanoseconds, 1_250_000_000)
     }
 
     @MainActor
     func testSplashStateMachineUsesCrossfadeWhenReducedMotionIsEnabled() {
         var machine = DinkVisionSplashStateMachine(reducedMotion: true)
 
-        XCTAssertEqual(machine.phase, .zoomedClosed)
+        XCTAssertEqual(machine.phase, .settle)
         XCTAssertEqual(machine.advance(), .done)
         XCTAssertEqual(machine.animationPlan, .crossfade)
+        XCTAssertEqual(DinkVisionSplashTiming.reducedMotionCrossfadeNanoseconds, 180_000_000)
+    }
+
+    @MainActor
+    func testSplashLidGeometryMatchesOwnerArtworkFrame() {
+        let markFrame = CGRect(x: 20, y: 40, width: 322, height: 579)
+        let eyeCenter = DinkVisionSplashLidGeometry.eyeCenter(in: markFrame)
+
+        XCTAssertEqual(eyeCenter.x, 181, accuracy: 0.001)
+        XCTAssertEqual(eyeCenter.y, 249.019, accuracy: 0.001)
+        XCTAssertEqual(DinkVisionSplashLidGeometry.apertureHalfHeight(in: markFrame), 83.955, accuracy: 0.001)
+        XCTAssertEqual(DinkVisionSplashLidGeometry.lidSpan(in: markFrame), 276.92, accuracy: 0.001)
+        XCTAssertEqual(DinkVisionSplashLidGeometry.strokeWidth(in: markFrame), 24.15, accuracy: 0.001)
+
+        let openUpper = DinkVisionSplashLidGeometry.curve(isUpper: true, closure: 0, markFrame: markFrame)
+        let closedUpper = DinkVisionSplashLidGeometry.curve(isUpper: true, closure: 1, markFrame: markFrame)
+        XCTAssertEqual(openUpper.left.x, 42.54, accuracy: 0.001)
+        XCTAssertEqual(openUpper.right.x, 319.46, accuracy: 0.001)
+        XCTAssertEqual(openUpper.edgeY, eyeCenter.y - 83.955, accuracy: 0.001)
+        XCTAssertEqual(closedUpper.edgeY, eyeCenter.y, accuracy: 0.001)
     }
 
     @MainActor

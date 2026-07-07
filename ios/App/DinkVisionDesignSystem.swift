@@ -52,6 +52,34 @@ struct DinkVisionCard<Content: View>: View {
     }
 }
 
+struct DinkVisionOwnerMark: View {
+    var height: CGFloat
+
+    var body: some View {
+        Image("DinkVisionMark")
+            .renderingMode(.original)
+            .resizable()
+            .interpolation(.high)
+            .scaledToFit()
+            .frame(width: height * 322 / 579, height: height)
+            .accessibilityLabel("\(DinkVisionBrand.displayName) mark")
+    }
+}
+
+struct DinkVisionOwnerLockup: View {
+    var height: CGFloat
+
+    var body: some View {
+        Image("DinkVisionLockup")
+            .renderingMode(.original)
+            .resizable()
+            .interpolation(.high)
+            .scaledToFit()
+            .frame(width: height * 662 / 764, height: height)
+            .accessibilityLabel(DinkVisionBrand.displayName)
+    }
+}
+
 struct PaddleEyeMark: View {
     var size: CGFloat
     var foreground: Color = DinkVisionColor.ink

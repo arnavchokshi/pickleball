@@ -1,10 +1,12 @@
 import Foundation
+import CoreGraphics
 import PickleballCapture
 import PickleballCore
 
 enum DinkVisionSplashPhase: Equatable {
-    case zoomedClosed
-    case lidsOpening
+    case settle
+    case blink
+    case openUp
     case done
 }
 
@@ -14,13 +16,22 @@ enum DinkVisionSplashAnimationPlan: Equatable {
 }
 
 enum DinkVisionSplashTiming {
-    static let closedHoldNanoseconds: UInt64 = 280_000_000
-    static let lidOpeningNanoseconds: UInt64 = 620_000_000
-    static let totalDurationNanoseconds = closedHoldNanoseconds + lidOpeningNanoseconds
+    static let settleNanoseconds: UInt64 = 150_000_000
+    static let blinkCloseNanoseconds: UInt64 = 260_000_000
+    static let blinkHoldNanoseconds: UInt64 = 120_000_000
+    static let blinkOpenNanoseconds: UInt64 = 340_000_000
+    static let openUpNanoseconds: UInt64 = 380_000_000
+    static let reducedMotionCrossfadeNanoseconds: UInt64 = 180_000_000
+
+    static let totalDurationNanoseconds = settleNanoseconds
+        + blinkCloseNanoseconds
+        + blinkHoldNanoseconds
+        + blinkOpenNanoseconds
+        + openUpNanoseconds
 }
 
 struct DinkVisionSplashStateMachine: Equatable {
-    private(set) var phase: DinkVisionSplashPhase = .zoomedClosed
+    private(set) var phase: DinkVisionSplashPhase = .settle
     let reducedMotion: Bool
 
     var animationPlan: DinkVisionSplashAnimationPlan {
@@ -34,12 +45,82 @@ struct DinkVisionSplashStateMachine: Equatable {
         }
 
         switch phase {
-        case .zoomedClosed:
-            phase = .lidsOpening
-        case .lidsOpening, .done:
+        case .settle:
+            phase = .blink
+        case .blink:
+            phase = .openUp
+        case .openUp, .done:
             phase = .done
         }
         return phase
+    }
+}
+
+struct DinkVisionSplashLidCurve: Equatable {
+    let left: CGPoint
+    let right: CGPoint
+    let control: CGPoint
+
+    var edgeY: CGFloat {
+        (left.y + right.y) / 2
+    }
+}
+
+nonisolated enum DinkVisionSplashLidGeometry {
+    static let markPixelWidth: CGFloat = 322
+    static let markPixelHeight: CGFloat = 579
+    static let markWidthToViewportRatio: CGFloat = 0.34
+    static let eyeCenterXRatio: CGFloat = 0.50
+    static let eyeCenterYRatio: CGFloat = 0.361
+    static let apertureHalfHeightToMarkHeight: CGFloat = 0.145
+    static let lidSpanToMarkWidth: CGFloat = 0.86
+    static let strokeWidthToMarkWidth: CGFloat = 0.075
+
+    static func markFrame(in viewport: CGSize) -> CGRect {
+        let width = viewport.width * markWidthToViewportRatio
+        let height = width * markPixelHeight / markPixelWidth
+        return CGRect(
+            x: (viewport.width - width) / 2,
+            y: (viewport.height - height) / 2,
+            width: width,
+            height: height
+        )
+    }
+
+    static func eyeCenter(in markFrame: CGRect) -> CGPoint {
+        CGPoint(
+            x: markFrame.minX + markFrame.width * eyeCenterXRatio,
+            y: markFrame.minY + markFrame.height * eyeCenterYRatio
+        )
+    }
+
+    static func apertureHalfHeight(in markFrame: CGRect) -> CGFloat {
+        markFrame.height * apertureHalfHeightToMarkHeight
+    }
+
+    static func lidSpan(in markFrame: CGRect) -> CGFloat {
+        markFrame.width * lidSpanToMarkWidth
+    }
+
+    static func strokeWidth(in markFrame: CGRect) -> CGFloat {
+        markFrame.width * strokeWidthToMarkWidth
+    }
+
+    static func curve(isUpper: Bool, closure: CGFloat, markFrame: CGRect) -> DinkVisionSplashLidCurve {
+        let clampedClosure = min(1, max(0, closure))
+        let openAmount = 1 - clampedClosure
+        let center = eyeCenter(in: markFrame)
+        let halfSpan = lidSpan(in: markFrame) / 2
+        let halfHeight = apertureHalfHeight(in: markFrame)
+        let sign: CGFloat = isUpper ? -1 : 1
+        let edgeY = center.y + sign * halfHeight * openAmount
+        let controlY = center.y + sign * halfHeight * 1.52 * openAmount
+
+        return DinkVisionSplashLidCurve(
+            left: CGPoint(x: center.x - halfSpan, y: edgeY),
+            right: CGPoint(x: center.x + halfSpan, y: edgeY),
+            control: CGPoint(x: center.x, y: controlY)
+        )
     }
 }
 
