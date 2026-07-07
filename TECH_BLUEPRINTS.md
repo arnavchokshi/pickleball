@@ -431,6 +431,15 @@ nonzero leakage → STOP, quarantine the batch, surface to manager.
 
 ## PILLAR: BALL 2D — detection/tracking from 0.6969 to the M1 bar (F1@20>=0.90, recall>=0.75, hidden-FP<=0.05)
 
+**[WAVE-3 CLOSEOUT CORRECTIONS 2026-07-07 — these supersede conflicting lines below]:** (1) STAGE-1
+pretrain is DONE (H100, harness internal_val f1@20 0.0615→0.6104, precision@20 0.848, recall 0.477;
+ckpts runs/lanes/w3_p11_train_20260707/checkpoints/; cycle-caching + output_channels harness bugs
+fixed in repo) — the missing-WASB-checkpoint blocker is resolved. (2) SST teacher RE-RULED by
+measurement: raw single-WASB (pooled F1 0.680) BEATS 2D-gated teachers (0.395) on human GT — the
+blessed seed is raw single-WASB; consensus-fusion ban intact; physics-gated-chain teacher deferred
+behind P4 court auto-cal (3D chain hard-requires calibration). (3) Owner labeling throughput
+measured: ~240 frames/hr (480 frames / ~2h first session).**
+
 > Audience: the successor manager. Every step here is pre-ruled. Where judgment could creep in, the branch
 > ends in "typed STOP: <bucket>". Do NOT re-decide the standing rulings in §0/§4 — they are owner+Fable-settled.
 > Two scoring worlds exist; confusing them is the #1 trap — read §1 before running anything.
@@ -991,6 +1000,15 @@ NEVER emit an officiating-grade boolean. No new gate beyond "gray-zone present a
   data → the real unlock for beating the held-out BALL bar (Roboflow alone proven insufficient).
 
 ## PILLAR: BODY — raw-noise kill (latent smoothing), camera motion, far players, GT, challenger protocol
+
+**[WAVE-3 CLOSEOUT CORRECTIONS 2026-07-07 — supersede conflicting lines below]:** (1) STEP 0 is
+DONE: slide gate GREEN 4/4 on fresh GPU proof @ ad75c875c (max_foot_lock_slide_m 20.25/22.50/17.98/
+16.66mm vs 30mm frozen bar; p95 <12mm; 0 root jumps; fix survived 3 adversarial-verify rounds).
+(2) grounding_refine = honest NO-OP posture (0 confident phases on eval clips); un-kill requires
+UPSTREAM per-foot attribution at source — wave-4 queue #2. (3) Camera-motion motion-conditional
+landed but PARTIAL: img1605 in-pipeline probe scored 0.329 vs 53.7 offline (probe-context bug) →
+auto-OFF; diagnosis = wave-4 queue #1. (4) Version-stamp/code-sync LIVE-PROVEN (73 files, 0 drift,
+4/4 stamp echo).**
 
 > Audience: the successor manager. Every step names exact files/functions (grep-verified 2026-07-07),
 > exact metric keys copied from gate code, and a decision tree. Reserved word `VERIFIED` = passed

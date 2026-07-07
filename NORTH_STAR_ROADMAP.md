@@ -777,10 +777,13 @@ consumption (P0-10), expanded eval suite with audio, fresh gate-passing worlds.
   Owner is profile #1; a friend onboards through the identical setup steps. Gate: a court profile
   round-trips (store → match on next upload → skip re-calibration); missing-profile clip degrades to
   the generic path with the right trust band.
-- [ ] **P0-10 iPhone app: BUILD the ARKit session + on-device proof + server wiring.** *(2026-07-07:
-  NOT STARTED — zero ARKit code exists; needs owner device/Xcode time. This has now slipped waves
-  1-3 unscheduled; PART VI pins it no later than wave 8 (M5) with the owner-dependency called out,
-  so it stops slipping silently.)* **TECH-AUDIT
+- [ ] **P0-10 iPhone app: BUILD the ARKit session + on-device proof + server wiring.** *(UPDATED 2026-07-07 late — APP-SIDE LANDED during wave 3 by a parallel session: P0-10a real
+  ARSession producer + PTS-aligned AR sidecar samples + CapturePolicyEnforcer + H0 profile flows,
+  plus the DinkVision UI shell, live-verified on simulator (20/20 app tests, SPM 174/174; commits
+  8abf694f8/4790b571e). REMAINING for the P0-10 gate: (a) owner 5-minute on-device recording smoke
+  (no court needed), (b) server consumption wiring (P0-10b — the consumer already exists), (c)
+  profile-capture flow deepening. The 'slipped 3 waves' concern is CLOSED; server wiring can pull
+  forward to wave 5 alongside P4-0/ARKit-consuming integrations.)* **TECH-AUDIT
   CORRECTION to this doc's earlier claim: the sidecar SCHEMA carries ARKit fields, but zero `import
   ARKit` exists anywhere in ios/ — `ARKitSetupPassSidecar` is schema-only/orphaned; only CoreMotion
   gravity is real today, and 0/20 real capture sidecars carry any pose. So (a) below is real
@@ -859,7 +862,12 @@ in/out with gray zone.
   sidecars from fleet2, visible-fraction 48.5-73.9%. Wave-3 teacher-gate tuning sweep
   (`w3_teachertune`) hit a DATA-LOCALITY blocker: only 6/40 raw sidecars exist locally — pull the
   fleet2 artifacts home or regenerate on fleet; manager resumed it at 8-clip scope. First full SST
-  round = wave 4.)* Teacher = the PHYSICS-GATED chain output (hidden-FP
+  round = wave 4.)* **[WAVE-3 MEASURED RE-RULING 2026-07-07 — supersedes the 'teacher =
+  physics-gated chain' sentence below for harvest footage: on human GT, 2D-gated teachers LOSE to
+  raw single-WASB (pooled F1 0.395 vs 0.680 — gates cut ~60% of true balls for +0.03 precision).
+  Blessed SST seed = RAW SINGLE-WASB; the consensus-FUSION ban stays intact; the physics-gated
+  chain teacher is DEFERRED until P4 court auto-cal exists (the 3D chain CLIs hard-require court
+  calibration — structural dependency). Evidence: BUILD_CHECKLIST [WAVE-3 COMPLETE] item 5.]** Teacher = the PHYSICS-GATED chain output (hidden-FP
   0.021), falling back to single zero-shot WASB-tennis (0.063) when the solver self-kills — NEVER the
   raw un-gated fusion (0.349 hidden-FP would bake correlated multi-detector hallucinations into
   pseudo-labels at scale; tech-audit). Run over ALL owner
@@ -1658,6 +1666,21 @@ Snapshot 2026-07-07 ~00:30 (all wave-3 numbers UNRULED until its closeout bullet
    `[WAVE-3 COMPLETE]` scorecard + wave-4 boot prompt.
 
 ## VI.2 WAVE 4 — THE FIRST TRAINING WAVE (M3 opener: "the ball actually learns")
+
+**[RE-DERIVED BY THE WAVE-3 CLOSEOUT 2026-07-07 — the closeout bullet's WAVE-4 QUEUE wins where it
+differs from the lanes below]:** (a) W4-A stage-1 pretrain was PRE-COMPLETED inside wave 3 on the
+first fleet H100 (internal_val 2640 harness f1@20 0.0615→0.6104, median 167.9→2.73px, precision@20
+0.848, recall 0.477; ckpts runs/lanes/w3_p11_train_20260707/checkpoints/) — wave 4's ball work is
+fine-tune on owner labels + threshold/recall sweep (recall 0.477 → 0.70), not first-train; scoring
+for promotion still goes through the product scorer per the BALL2D blueprint, never the harness
+proxy. (b) SST teacher RE-RULED by measurement: raw single-WASB seed (see P1-2 note above).
+(c) NEW: P4 court auto-cal enters the wave-4 queue — it structurally unlocks the physics-gated
+teacher on harvest footage, so P4 work now feeds the BALL critical path, earlier than the wave-5
+slot planned below. (d) Carried diagnoses: camera-motion probe-context bug (in-pipeline 0.329 vs
+offline 53.7 on img1605), upstream foot-attribution (grounding_refine un-kill). (e) W4-D (P1-4a
+BVP stabilization) is NOT in the closeout queue — it remains critical-path (the dependency spine's
+highest-leverage artifact) and must not slip past wave 5. (f) H100 = recorded default for TRAINING
+(~2.3× A100-40); BODY stays A100 until compat validation (queue #7).**
 
 Honest framing: waves 1-3 built infrastructure; **zero training runs have happened**. The ball wall
 (held-out 0.6969 vs the 0.7248 zero-shot anchor) still stands untouched. Wave 4 converts fuel into
