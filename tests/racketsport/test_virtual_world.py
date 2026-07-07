@@ -620,6 +620,69 @@ def test_build_virtual_world_state_combines_court_players_mesh_ball_and_paddle()
     }
 
 
+def test_build_virtual_world_state_warns_softly_when_only_embedded_mesh_vertices_are_missing(tmp_path: Path) -> None:
+    run_dir = tmp_path / "clip"
+    court_path = _write_json(run_dir / "court_calibration.json", _court_calibration())
+    _write_json(
+        run_dir / "body_mesh_index" / "body_mesh_index.json",
+        {
+            "artifact_type": "racketsport_body_mesh_index",
+            "summary": {"mesh_frame_count": 3},
+            "windows": [{"frame_start": 0, "frame_end": 2}],
+        },
+    )
+
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=_tracks(),
+        skeleton3d=_sam3d_skeleton3d_same_first_frame(),
+        ball_track=_ball_track(),
+        racket_pose=_racket_pose(),
+        placement_calibration_path=court_path,
+    )
+
+    assert "missing_embedded_mesh_vertices" in world["summary"]["warnings"]
+    assert "missing_mesh_vertices" not in world["summary"]["warnings"]
+
+
+def test_build_virtual_world_state_keeps_strong_mesh_warning_when_embedded_and_index_are_absent() -> None:
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=_tracks(),
+        skeleton3d=_sam3d_skeleton3d_same_first_frame(),
+        ball_track=_ball_track(),
+        racket_pose=_racket_pose(),
+    )
+
+    assert "missing_mesh_vertices" in world["summary"]["warnings"]
+    assert "missing_embedded_mesh_vertices" not in world["summary"]["warnings"]
+
+
+def test_build_virtual_world_state_does_not_warn_when_embedded_mesh_vertices_exist(tmp_path: Path) -> None:
+    run_dir = tmp_path / "clip"
+    court_path = _write_json(run_dir / "court_calibration.json", _court_calibration())
+    _write_json(
+        run_dir / "body_mesh_index" / "body_mesh_index.json",
+        {
+            "artifact_type": "racketsport_body_mesh_index",
+            "summary": {"mesh_frame_count": 3},
+            "windows": [{"frame_start": 0, "frame_end": 2}],
+        },
+    )
+
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=_tracks(),
+        smpl_motion=_smpl_motion(),
+        ball_track=_ball_track(),
+        racket_pose=_racket_pose(),
+        placement_calibration_path=court_path,
+    )
+
+    assert "missing_mesh_vertices" not in world["summary"]["warnings"]
+    assert "missing_embedded_mesh_vertices" not in world["summary"]["warnings"]
+
+
 def test_build_virtual_world_state_warns_on_ambiguous_paddle_preview() -> None:
     world = build_virtual_world_state(
         court_calibration=_court_calibration(),

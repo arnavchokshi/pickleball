@@ -1371,6 +1371,7 @@ export function worldWarningsReadout(world: Pick<VirtualWorld, "summary">): stri
 function friendlyWorldWarning(warning: string): string {
   if (warning === "unprojected_visible_ball_frames") return "2D-only ball frames outside solved arc coverage";
   if (warning === "missing_paddle_pose") return "missing paddle pose";
+  if (warning === "missing_embedded_mesh_vertices") return "mesh rendered from mesh index; embedded world is skeleton-only";
   if (warning === "missing_mesh_vertices") return "missing mesh vertices";
   return warning.replaceAll("_", " ");
 }

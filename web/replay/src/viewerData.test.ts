@@ -593,6 +593,19 @@ describe("viewer data contracts", () => {
     });
   });
 
+  it("maps true mesh absence and indexed-sidecar mesh warnings to distinct notice copy", () => {
+    expect(
+      worldWarningsReadout({
+        summary: { ...world.summary, warnings: ["missing_mesh_vertices"] },
+      }),
+    ).toContain("missing mesh vertices");
+    expect(
+      worldWarningsReadout({
+        summary: { ...world.summary, warnings: ["missing_embedded_mesh_vertices"] },
+      }),
+    ).toContain("mesh rendered from mesh index; embedded world is skeleton-only");
+  });
+
   it("accepts every Python-schema ball source, plus future/unknown sources, as opaque metadata", () => {
     // Mirrors threed/racketsport/schemas/__init__.py's BallTrack.source /
     // VirtualWorldBall.source Literal set, plus one made-up value standing
