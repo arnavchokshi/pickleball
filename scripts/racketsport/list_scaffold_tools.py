@@ -14,6 +14,7 @@ SCHEMA_ROOT = Path("docs/racketsport")
 INDEXED_GLOBS = ("scripts/racketsport/*.py", "scripts/racketsport/*.sh", "scripts/*.py", "scripts/*.sh")
 
 PREFIXES = (
+    "aggregate_",
     "audit_",
     "benchmark_",
     "build_",
@@ -92,6 +93,7 @@ SCHEMA_OVERRIDES = {
 }
 
 TASK_HINTS = {
+    "aggregate_roboflow_corpus": ("DATA", "P1-0"),
     "audit_label_drafts": ("DATA", "DATA-1"),
     "benchmark_decode": ("EVAL", "EVAL-0"),
     "benchmark_sam3dbody": ("EVAL", "EVAL-0"),
@@ -250,6 +252,8 @@ def _category(stem: str) -> str:
         return "calibration"
     if (
         "dataset" in normalized
+        or "corpus" in normalized
+        or "roboflow" in normalized
         or "testclip" in normalized
         or "seed_manifest" in normalized
         or "tiled_raw_pool" in normalized

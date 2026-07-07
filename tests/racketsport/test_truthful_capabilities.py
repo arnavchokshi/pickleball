@@ -46,6 +46,10 @@ ALLOWED_MARKDOWN_DOCS = set(CANONICAL_DOCS) | {
     "web/replay/README.md",
 }
 
+GENERATED_MARKDOWN_ARTIFACTS = {
+    "data/roboflow_universe_20260706/aggregated/corpus_card.md",
+}
+
 REMOVED_NARRATIVE_DOCS = [
     "ACCURACY_AND_TRAINING.md",
     "IMPLEMENTATION_PHASES.md",
@@ -131,6 +135,7 @@ def test_markdown_doc_inventory_stays_small_and_explicit() -> None:
         path.relative_to(ROOT).as_posix()
         for path in ROOT.rglob("*.md")
         if ignored_parts.isdisjoint(path.relative_to(ROOT).parts)
+        and path.relative_to(ROOT).as_posix() not in GENERATED_MARKDOWN_ARTIFACTS
     }
 
     assert markdown_docs == ALLOWED_MARKDOWN_DOCS
