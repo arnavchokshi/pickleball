@@ -16,6 +16,8 @@ Hard rules (full set: NORTH_STAR Part IV — these override defaults):
 - Subagents NEVER run on Fable — pin an explicit `model` on every Agent/Workflow dispatch.
 - Outdoor/Indoor eval labels are NEVER touched without a pre-registered `heldout_eval_ledger.md` row.
 - `VERIFIED` means a passed documented gate on real labels, nothing else (`VERIFIED=0` until earned).
-- No commits/pushes unless the owner says so (joint-commit rule).
+- Commits AND pushes: STANDING OWNER GRANT (2026-07-07, encoded in .claude/settings.json) — commit
+  at real checkpoints with clear messages and push after committing. Never force-push, never rewrite
+  history; destructive git ops still require an explicit owner ask.
 - Genuinely blocked → STOP and surface a typed ask (needs-validation / advice / labeling / decision /
   purchase-approval) as the RESULT. Never guess past a real blocker; everything else keeps running.

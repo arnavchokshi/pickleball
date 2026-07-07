@@ -1617,7 +1617,7 @@ close; that prompt + this part must agree.
    worlds on the eval clips; re-check the exact gated keys; browser-verify via
    `verify_process_video_viewer.py` on `replay_viewer_manifest.json` (NOT PIPELINE_SUMMARY.json).
 10. **CLOSE:** docs-reconciliation lane (CAPABILITIES + PIPELINE_STATUS + this file's checkboxes +
-   PART VI wave log — rule 14); commit (standing grant: add/commit yes, PUSH remains owner-only);
+   PART VI wave log — rule 14); commit AND push (standing owner grant 2026-07-07: add/commit/push all authorized; no force-push);
    fleet STOP/DELETE with cost honesty in the scorecard; `[WAVE-N COMPLETE]` bullet with the ruled
    next-wave queue; write the next boot prompt; update `inflight_lanes.md` + memory. If blocked at
    any step: typed STOP per Part IV rule 9 — a blocker surfaced cleanly IS the deliverable.
@@ -1767,7 +1767,7 @@ surfaces as a typed STOP at wave boot if still blank).
   `inflight_lanes.md` + memory.
 - **Owner-dependency ladder** (surface at wave boot, never mid-wave): captures (W4-E/W5) · labeling
   passes (every wave from 4 on) · profile + paddle-GT sessions (W5-C/D) · device/Xcode time (W8) ·
-  pushes (every wave) · typed STOPs as they fire. Everything else must keep running when an owner
+  typed STOPs as they fire (pushes no longer owner-gated — standing grant 2026-07-07). Everything else must keep running when an owner
   item is pending — harvest data carries the interim.
 - **Critical-path guard:** at every wave boot, check the wave plan against I.7 — if a wave contains
   zero critical-path lanes (DATA→BALL→flight→contacts→paddle-impact→stats→fusion→coaching), that is

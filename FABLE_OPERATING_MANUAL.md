@@ -453,7 +453,9 @@ helps E2E; do both.
 - Owner-run script pattern for mass deletions (classifier blocks agent-chosen rm targets even with
   broad authorization): write a commented per-line script, owner reviews + runs.
 - Commit permissions now in .claude/settings.json (owner grant 2026-07-07): Bash(git add *) +
-  Bash(git commit *). Pushes remain owner-gated.
+  Bash(git commit *). UPDATED 2026-07-07 (later same day): owner granted FULL push access too —
+  Bash(git push *) encoded; commit at checkpoints, push after committing; no force-push/history
+  rewrites ever.
 
 **FIX (new failure classes found in wave 2):**
 - **BODY dispatch ships DATA, never code.** fleet1's repo sat 16 commits stale through the whole wave
