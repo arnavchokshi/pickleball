@@ -20,6 +20,10 @@ runs/lanes/<lane>/log.txt`); harness bg-task ids listed for TaskOutput monitorin
 | ~~w4_cammotion_fix r2~~ REPAIR PASS: verifier's unmodified proof defect=false; consequential(rotated)→untrusted+OFF-w/-reason, inconsequential→proceed+flag; img1605 53.70515 / statics bit-exact preserved; 4 ruled regression tests; 292/0; fenced first-class-keys patch banked | codex DONE (r2) | bq48lw5dr | — | — | — | done | 2026-07-07 |
 | ~~w4_cammotion verify r2~~ CODE CONFIRMED-GOOD on all behavioral attacks → **THREAD CLOSED, LANDED+PUSHED cd0b59390** (queue #1 done). Residual defect = malformed deferred-patch FILE only (bare @@ headers) → integration lane edits fenced process_video directly from verifier's key spec (decode_orientation_mismatch/_consequential_mismatch/_untrusted/_mismatch_reason). LESSON booked: codex deferred 'patches' = design notes, never applyable artifacts — integration lanes re-derive + git apply --check | codex DONE | b921p735z | — | — | — | done | 2026-07-07 |
 
+INTEGRATION LANE DISPATCHED (bg task bfp44r5bm, exclusive process_video.py fence): item 1 =
+cammotion first-class summary keys (re-derived, patches are design notes); item 2 = optional
+--remote-host parser posture (judged, may be no-change).
+
 INTEGRATION-LANE QUEUE (wave close, ONE lane, fenced files): (1) DROPPED — footattr stage
 insertion deferred to wave 5 behind P2-2 (predictor forbids: 3/4 clips would breach the frozen
 gate; valid patch banked in the fix lane dir for when phases become gate-safe); (2) cammotion
