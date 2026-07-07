@@ -3,41 +3,59 @@ import PickleballCapture
 import PickleballCore
 
 enum DinkVisionSplashPhase: Equatable {
-    case mark
-    case blinkClosed
-    case irisExpand
-    case complete
+    case zoomedClosed
+    case lidsOpening
+    case done
 }
 
 enum DinkVisionSplashAnimationPlan: Equatable {
-    case blinkAndIris
+    case lidReveal
     case crossfade
 }
 
+enum DinkVisionSplashTiming {
+    static let closedHoldNanoseconds: UInt64 = 280_000_000
+    static let lidOpeningNanoseconds: UInt64 = 620_000_000
+    static let totalDurationNanoseconds = closedHoldNanoseconds + lidOpeningNanoseconds
+}
+
 struct DinkVisionSplashStateMachine: Equatable {
-    private(set) var phase: DinkVisionSplashPhase = .mark
+    private(set) var phase: DinkVisionSplashPhase = .zoomedClosed
     let reducedMotion: Bool
 
     var animationPlan: DinkVisionSplashAnimationPlan {
-        reducedMotion ? .crossfade : .blinkAndIris
+        reducedMotion ? .crossfade : .lidReveal
     }
 
     mutating func advance() -> DinkVisionSplashPhase {
         if reducedMotion {
-            phase = .complete
+            phase = .done
             return phase
         }
 
         switch phase {
-        case .mark:
-            phase = .blinkClosed
-        case .blinkClosed:
-            phase = .irisExpand
-        case .irisExpand, .complete:
-            phase = .complete
+        case .zoomedClosed:
+            phase = .lidsOpening
+        case .lidsOpening, .done:
+            phase = .done
         }
         return phase
     }
+}
+
+enum DinkVisionReplayOpenTransition {
+    static let durationNanoseconds: UInt64 = 420_000_000
+
+    static func durationNanoseconds(reducedMotion: Bool) -> UInt64 {
+        reducedMotion ? 0 : durationNanoseconds
+    }
+}
+
+enum DinkVisionAccentSite: String, CaseIterable {
+    case replaysEmptyState
+    case statsSampleWatermark
+    case profileCompletedStep
+    case permissionPrimer
 }
 
 enum DinkVisionRecordFlowPhase: Equatable {

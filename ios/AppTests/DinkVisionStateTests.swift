@@ -6,23 +6,42 @@ import PickleballCore
 
 final class DinkVisionStateTests: XCTestCase {
     @MainActor
-    func testSplashStateMachineBlinksThenExpandsThenCompletes() {
+    func testSplashStateMachineOpensLidsThenCompletes() {
         var machine = DinkVisionSplashStateMachine(reducedMotion: false)
 
-        XCTAssertEqual(machine.phase, .mark)
-        XCTAssertEqual(machine.advance(), .blinkClosed)
-        XCTAssertEqual(machine.advance(), .irisExpand)
-        XCTAssertEqual(machine.advance(), .complete)
-        XCTAssertEqual(machine.advance(), .complete)
+        XCTAssertEqual(machine.phase, .zoomedClosed)
+        XCTAssertEqual(machine.animationPlan, .lidReveal)
+        XCTAssertEqual(machine.advance(), .lidsOpening)
+        XCTAssertEqual(machine.advance(), .done)
+        XCTAssertEqual(machine.advance(), .done)
+        XCTAssertLessThanOrEqual(DinkVisionSplashTiming.totalDurationNanoseconds, 900_000_000)
     }
 
     @MainActor
     func testSplashStateMachineUsesCrossfadeWhenReducedMotionIsEnabled() {
         var machine = DinkVisionSplashStateMachine(reducedMotion: true)
 
-        XCTAssertEqual(machine.phase, .mark)
-        XCTAssertEqual(machine.advance(), .complete)
+        XCTAssertEqual(machine.phase, .zoomedClosed)
+        XCTAssertEqual(machine.advance(), .done)
         XCTAssertEqual(machine.animationPlan, .crossfade)
+    }
+
+    @MainActor
+    func testReplayOpenTrailIsBriefAndDisabledForReducedMotion() {
+        XCTAssertLessThanOrEqual(DinkVisionReplayOpenTransition.durationNanoseconds, 450_000_000)
+        XCTAssertEqual(DinkVisionReplayOpenTransition.durationNanoseconds(reducedMotion: true), 0)
+        XCTAssertEqual(
+            DinkVisionReplayOpenTransition.durationNanoseconds(reducedMotion: false),
+            DinkVisionReplayOpenTransition.durationNanoseconds
+        )
+    }
+
+    @MainActor
+    func testBrandV2AccentSitesStayLimitedToOwnerApprovedScreens() {
+        XCTAssertEqual(
+            DinkVisionAccentSite.allCases,
+            [.replaysEmptyState, .statsSampleWatermark, .profileCompletedStep, .permissionPrimer]
+        )
     }
 
     @MainActor

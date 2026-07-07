@@ -16,7 +16,7 @@ private struct DinkVisionAppRootView: View {
     var body: some View {
         ZStack {
             DinkVisionTabShell(isActive: !isSplashVisible)
-                .opacity(isSplashVisible ? 0 : 1)
+                .allowsHitTesting(!isSplashVisible)
 
             if isSplashVisible {
                 DinkVisionSplashView {
@@ -37,31 +37,33 @@ private struct DinkVisionSplashView: View {
     let onFinish: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var machine = DinkVisionSplashStateMachine(reducedMotion: false)
-    @State private var phase: DinkVisionSplashPhase = .mark
-    @State private var irisScale: CGFloat = 0.16
-    @State private var markOpacity: Double = 1
+    @State private var phase: DinkVisionSplashPhase = .zoomedClosed
+    @State private var lidProgress: CGFloat = 0
 
     var body: some View {
-        ZStack {
-            DinkVisionColor.cream.ignoresSafeArea()
-
-            if phase == .irisExpand {
-                expandingIris
-            } else {
-                VStack(spacing: 30) {
-                    Spacer()
-                    PaddleEyeMark(size: 190, isBlinking: phase == .blinkClosed)
-                        .opacity(markOpacity)
-                    Spacer()
-                    if phase == .mark {
-                        Text(DinkVisionBrand.displayName)
-                            .font(.system(size: 30, weight: .heavy, design: .rounded))
-                            .foregroundStyle(DinkVisionColor.ink)
-                            .padding(.bottom, 62)
-                    }
+        GeometryReader { proxy in
+            ZStack {
+                if phase == .zoomedClosed {
+                    DinkVisionColor.cream.ignoresSafeArea()
+                    SplashClosedEyeShape()
+                        .stroke(DinkVisionColor.ink, style: StrokeStyle(lineWidth: max(18, proxy.size.width * 0.067), lineCap: .round))
+                    SplashClosedEyeLashesShape()
+                        .stroke(DinkVisionColor.ink, style: StrokeStyle(lineWidth: max(10, proxy.size.width * 0.038), lineCap: .round))
+                } else if phase == .lidsOpening {
+                    SplashLidCoverShape(isUpper: true, progress: lidProgress)
+                        .fill(DinkVisionColor.cream)
+                    SplashLidCoverShape(isUpper: false, progress: lidProgress)
+                        .fill(DinkVisionColor.cream)
+                    SplashLidStrokeShape(isUpper: true, progress: lidProgress)
+                        .stroke(DinkVisionColor.ink, style: StrokeStyle(lineWidth: max(14, proxy.size.width * 0.056), lineCap: .round, lineJoin: .round))
+                    SplashLidStrokeShape(isUpper: false, progress: lidProgress)
+                        .stroke(DinkVisionColor.ink, style: StrokeStyle(lineWidth: max(14, proxy.size.width * 0.056), lineCap: .round, lineJoin: .round))
                 }
             }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .ignoresSafeArea()
         }
+        .accessibilityHidden(true)
         .task {
             machine = DinkVisionSplashStateMachine(reducedMotion: reduceMotion)
             if reduceMotion {
@@ -70,39 +72,131 @@ private struct DinkVisionSplashView: View {
                 return
             }
 
-            try? await Task.sleep(nanoseconds: 170_000_000)
-            withAnimation(.easeInOut(duration: 0.125)) {
-                phase = machine.advance()
+            try? await Task.sleep(nanoseconds: DinkVisionSplashTiming.closedHoldNanoseconds)
+            phase = machine.advance()
+            await Task.yield()
+            withAnimation(.interpolatingSpring(stiffness: 126, damping: 16)) {
+                lidProgress = 1
             }
-            try? await Task.sleep(nanoseconds: 125_000_000)
-            withAnimation(.easeInOut(duration: 0.125)) {
-                phase = machine.advance()
-            }
-            withAnimation(.spring(response: 0.36, dampingFraction: 0.88)) {
-                irisScale = 1.0
-                markOpacity = 0
-            }
-            try? await Task.sleep(nanoseconds: 450_000_000)
-            _ = machine.advance()
+            try? await Task.sleep(nanoseconds: DinkVisionSplashTiming.lidOpeningNanoseconds)
+            phase = machine.advance()
             onFinish()
         }
     }
+}
 
-    private var expandingIris: some View {
-        GeometryReader { proxy in
-            let diameter = max(proxy.size.width, proxy.size.height) * 1.48
-            ZStack {
-                Circle()
-                    .fill(DinkVisionColor.ink)
-                    .frame(width: diameter, height: diameter)
-                    .scaleEffect(irisScale)
-                PerforatedBallView(fill: DinkVisionColor.ink, hole: DinkVisionColor.cream)
-                    .frame(width: min(330, diameter * 0.54), height: min(330, diameter * 0.54))
-                    .scaleEffect(irisScale)
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height)
+private nonisolated enum SplashEyeGeometry {
+    static let designWidth: CGFloat = 620
+    static let designHeight: CGFloat = 560
+
+    static func frame(in rect: CGRect) -> CGRect {
+        let targetWidth = rect.width * 1.60
+        let targetHeight = targetWidth * designHeight / designWidth
+        return CGRect(
+            x: rect.midX - targetWidth / 2,
+            y: rect.midY - targetHeight / 2,
+            width: targetWidth,
+            height: targetHeight
+        )
+    }
+
+    static func point(_ x: CGFloat, _ y: CGFloat, in rect: CGRect) -> CGPoint {
+        let frame = frame(in: rect)
+        return CGPoint(
+            x: frame.minX + frame.width * x / designWidth,
+            y: frame.minY + frame.height * y / designHeight
+        )
+    }
+}
+
+private struct SplashClosedEyeShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: SplashEyeGeometry.point(20, 280, in: rect))
+        path.addQuadCurve(to: SplashEyeGeometry.point(600, 280, in: rect), control: SplashEyeGeometry.point(310, 200, in: rect))
+        path.move(to: SplashEyeGeometry.point(20, 280, in: rect))
+        path.addQuadCurve(to: SplashEyeGeometry.point(600, 280, in: rect), control: SplashEyeGeometry.point(310, 360, in: rect))
+        return path
+    }
+}
+
+private struct SplashClosedEyeLashesShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: SplashEyeGeometry.point(140, 322, in: rect))
+        path.addLine(to: SplashEyeGeometry.point(120, 368, in: rect))
+        path.move(to: SplashEyeGeometry.point(310, 336, in: rect))
+        path.addLine(to: SplashEyeGeometry.point(310, 386, in: rect))
+        path.move(to: SplashEyeGeometry.point(480, 322, in: rect))
+        path.addLine(to: SplashEyeGeometry.point(500, 368, in: rect))
+        return path
+    }
+}
+
+private struct SplashLidCoverShape: Shape {
+    var isUpper: Bool
+    var progress: CGFloat
+
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let curve = SplashLidCurve(isUpper: isUpper, progress: progress, rect: rect)
+        let overscan = rect.height * 0.12
+        var path = Path()
+        path.move(to: curve.left)
+        path.addQuadCurve(to: curve.right, control: curve.control)
+        if isUpper {
+            path.addLine(to: CGPoint(x: curve.right.x, y: rect.minY - overscan))
+            path.addLine(to: CGPoint(x: curve.left.x, y: rect.minY - overscan))
+        } else {
+            path.addLine(to: CGPoint(x: curve.right.x, y: rect.maxY + overscan))
+            path.addLine(to: CGPoint(x: curve.left.x, y: rect.maxY + overscan))
         }
-        .ignoresSafeArea()
+        path.closeSubpath()
+        return path
+    }
+}
+
+private struct SplashLidStrokeShape: Shape {
+    var isUpper: Bool
+    var progress: CGFloat
+
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let curve = SplashLidCurve(isUpper: isUpper, progress: progress, rect: rect)
+        var path = Path()
+        path.move(to: curve.left)
+        path.addQuadCurve(to: curve.right, control: curve.control)
+        return path
+    }
+}
+
+private nonisolated struct SplashLidCurve {
+    let left: CGPoint
+    let right: CGPoint
+    let control: CGPoint
+
+    init(isUpper: Bool, progress: CGFloat, rect: CGRect) {
+        let p = min(1, max(0, progress))
+        let eased = p * p * (3 - 2 * p)
+        let sign: CGFloat = isUpper ? -1 : 1
+        let leftX = rect.minX - rect.width * 0.10
+        let rightX = rect.maxX + rect.width * 0.10
+        // At p=0 BOTH lids coincide on one gently drooping closed-eye curve (aperture = zero).
+        // They diverge with eased progress so the app is revealed only as the eye opens.
+        let closedDroop = rect.height * 0.10
+        let endpointY = rect.midY + sign * rect.height * 0.62 * eased
+        let controlY = rect.midY + closedDroop * (1 - eased) + sign * rect.height * 0.93 * eased
+        left = CGPoint(x: leftX, y: endpointY)
+        right = CGPoint(x: rightX, y: endpointY)
+        control = CGPoint(x: rect.midX, y: controlY)
     }
 }
 
@@ -459,6 +553,11 @@ private struct DinkVisionRecordScreen: View {
         .padding(22)
         .frame(maxWidth: 270)
         .background(.white, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
+        .overlay(alignment: .topTrailing) {
+            SketchSlashes(color: DinkVisionColor.ink, lineWidth: 4)
+                .frame(width: 38, height: 38)
+                .offset(x: -18, y: -10)
+        }
         .shadow(color: .black.opacity(0.20), radius: 24, y: 12)
         .transition(.opacity.combined(with: .scale(scale: 0.96)))
     }
@@ -678,10 +777,12 @@ private struct LiveBallTrajectoryOverlay: View {
 }
 
 private struct DinkVisionReplaysScreen: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var rows: [DinkVisionReplayRow] = []
     @State private var isLoading = true
     @State private var errorText: String?
     @State private var selectedRow: DinkVisionReplayRow?
+    @State private var openingRow: DinkVisionReplayRow?
     private let dataSource: DinkVisionReplayListDataSource
 
     init(dataSource: DinkVisionReplayListDataSource = DinkVisionReplayListDataSource()) {
@@ -703,7 +804,7 @@ private struct DinkVisionReplaysScreen: View {
                         } else {
                             ForEach(rows) { row in
                                 Button {
-                                    selectedRow = row
+                                    openReplay(row)
                                 } label: {
                                     DinkVisionReplayRowView(row: row)
                                 }
@@ -715,11 +816,22 @@ private struct DinkVisionReplaysScreen: View {
                     .padding(.top, 58)
                     .padding(.bottom, DinkVisionMetric.tabBarHeight + 24)
                 }
+
+                if let openingRow {
+                    VStack {
+                        Spacer()
+                        BallTrailLoadingView(title: "Opening\nreplay", detail: openingRow.durationText)
+                            .padding(.horizontal, 18)
+                            .padding(.bottom, DinkVisionMetric.tabBarHeight + 34)
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
             }
             .navigationBarHidden(true)
             .task {
                 loadRows()
             }
+            .animation(.spring(response: 0.28, dampingFraction: 0.86), value: openingRow?.id)
             .fullScreenCover(item: $selectedRow) { row in
                 DinkVisionReplayPlaybackScreen(row: row) {
                     selectedRow = nil
@@ -738,6 +850,25 @@ private struct DinkVisionReplaysScreen: View {
             errorText = "Could not read local captures"
         }
         isLoading = false
+    }
+
+    private func openReplay(_ row: DinkVisionReplayRow) {
+        let delay = DinkVisionReplayOpenTransition.durationNanoseconds(reducedMotion: reduceMotion)
+        guard delay > 0 else {
+            selectedRow = row
+            return
+        }
+
+        openingRow = row
+        Task {
+            try? await Task.sleep(nanoseconds: delay)
+            await MainActor.run {
+                if openingRow?.id == row.id {
+                    selectedRow = row
+                    openingRow = nil
+                }
+            }
+        }
     }
 }
 
@@ -809,27 +940,32 @@ private struct DinkVisionEmptyReplaysView: View {
     let message: String
 
     var body: some View {
-        VStack(spacing: 18) {
-            ZStack {
-                ForEach(0..<16, id: \.self) { index in
-                    Circle()
-                        .fill(DinkVisionColor.ink.opacity(index.isMultiple(of: 3) ? 0.75 : 0.20))
-                        .frame(width: 8, height: 8)
-                        .offset(
-                            x: CGFloat((index % 4) - 2) * 22,
-                            y: CGFloat((index / 4) - 2) * 20
-                        )
-                }
-            }
-            .frame(height: 110)
-            Text(message)
-                .font(.system(size: 19, weight: .heavy, design: .rounded))
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 22, weight: .heavy, design: .rounded))
                 .foregroundStyle(DinkVisionColor.ink)
-                .multilineTextAlignment(.center)
+            Text(detail)
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundStyle(DinkVisionColor.mutedText)
+                .textCase(.uppercase)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity)
-        .padding(30)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(22)
         .background(.white, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
+        .overlay(alignment: .topTrailing) {
+            SketchSlashes(color: DinkVisionColor.ink, lineWidth: 5)
+                .frame(width: 42, height: 42)
+                .offset(x: -18, y: -14)
+        }
+    }
+
+    private var title: String {
+        message.localizedCaseInsensitiveContains("could") ? "Could not read captures" : "No rallies yet"
+    }
+
+    private var detail: String {
+        message.localizedCaseInsensitiveContains("could") ? "Check local capture storage." : "Hit record - your first 3D replay lands here"
     }
 }
 
@@ -921,13 +1057,26 @@ private struct DinkVisionStatsScreen: View {
     }
 
     private var sampleWatermark: some View {
-        Text("Sample data")
-            .font(.system(size: 12, weight: .heavy, design: .rounded))
-            .foregroundStyle(DinkVisionColor.ink)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(DinkVisionColor.ballYellow, in: Capsule())
+        HStack {
+            Spacer()
+            ZStack(alignment: .topTrailing) {
+                DotGrid(rows: 3, columns: 4, dotSize: 8, color: DinkVisionColor.ink.opacity(0.72))
+                    .frame(width: 72, height: 54)
+                    .offset(x: -72, y: 18)
+                HandArrow()
+                    .frame(width: 86, height: 60)
+                    .rotationEffect(.degrees(4))
+                    .offset(x: -42, y: 6)
+                Text("Sample data")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DinkVisionColor.ink)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(DinkVisionColor.ballYellow, in: Capsule())
+            }
+            .frame(width: 180, height: 72, alignment: .topTrailing)
             .accessibilityLabel("Sample data, not real match stats")
+        }
     }
 }
 
@@ -1122,7 +1271,19 @@ private struct DinkVisionProfileScreen: View {
                         }
                     }
                     .padding(14)
-                    .background(.white, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
+                    .background {
+                        RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous)
+                            .fill(.white)
+                        if step.status == .complete {
+                            HStack {
+                                Spacer()
+                                PerforationPanel(style: .yellowEmbossed, cornerRadius: 16)
+                                    .frame(width: 88, height: 48)
+                                    .opacity(0.22)
+                                    .padding(.trailing, 10)
+                            }
+                        }
+                    }
                     .overlay(
                         RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous)
                             .stroke(borderColor(step: step), lineWidth: 3)

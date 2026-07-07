@@ -54,40 +54,37 @@ struct DinkVisionCard<Content: View>: View {
 
 struct PaddleEyeMark: View {
     var size: CGFloat
-    var isBlinking: Bool = false
-    var irisScale: CGFloat = 1.0
     var foreground: Color = DinkVisionColor.ink
     var background: Color = DinkVisionColor.cream
 
     var body: some View {
         GeometryReader { proxy in
-            let side = min(proxy.size.width, proxy.size.height)
-            let line = max(3, side * 0.045)
+            let bounds = CGRect(origin: .zero, size: proxy.size)
+            let scale = PaddleEyeMarkGeometry.scale(in: bounds)
 
             ZStack {
-                PaddleBodyShape()
-                    .stroke(foreground, style: StrokeStyle(lineWidth: line, lineCap: .round, lineJoin: .round))
+                PaddleHeadShape()
+                    .stroke(foreground, style: StrokeStyle(lineWidth: 22 * scale, lineCap: .round, lineJoin: .round))
+                PaddleNeckShape()
+                    .stroke(foreground, style: StrokeStyle(lineWidth: 14 * scale, lineCap: .round))
+                PaddleGripShape()
+                    .stroke(foreground, style: StrokeStyle(lineWidth: 15 * scale, lineCap: .round, lineJoin: .round))
+                PaddleGripStripeShape()
+                    .stroke(foreground, style: StrokeStyle(lineWidth: 8 * scale, lineCap: .round))
 
-                if isBlinking {
-                    BlinkedEyeShape()
-                        .stroke(foreground, style: StrokeStyle(lineWidth: line * 0.94, lineCap: .round, lineJoin: .round))
-                    BlinkLashesShape()
-                        .stroke(foreground, style: StrokeStyle(lineWidth: line * 0.62, lineCap: .round))
-                } else {
-                    EyeShape()
-                        .fill(background)
-                    EyeShape()
-                        .stroke(foreground, style: StrokeStyle(lineWidth: line * 0.86, lineCap: .round, lineJoin: .round))
-                    PerforatedBallView(fill: foreground, hole: background)
-                        .scaleEffect(irisScale)
-                        .frame(width: side * 0.28, height: side * 0.28)
-                        .position(x: side * 0.50, y: side * 0.38)
-                }
+                PaddleButtCircleShape()
+                    .fill(background)
+                PaddleButtCircleShape()
+                    .stroke(foreground, style: StrokeStyle(lineWidth: 13 * scale, lineCap: .round, lineJoin: .round))
+
+                PaddleEyeIrisView(fill: foreground, hole: background)
+                PaddleEyeLidShape()
+                    .stroke(foreground, style: StrokeStyle(lineWidth: 20 * scale, lineCap: .round, lineJoin: .round))
             }
-            .frame(width: side, height: side)
+            .frame(width: proxy.size.width, height: proxy.size.height)
             .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
         }
-        .frame(width: size, height: size * 1.42)
+        .frame(width: size, height: size * PaddleEyeMarkGeometry.aspectRatio)
         .accessibilityLabel("\(DinkVisionBrand.displayName) mark")
     }
 }
@@ -101,11 +98,13 @@ struct PerforatedBallView: View {
             let side = min(proxy.size.width, proxy.size.height)
             ZStack {
                 Circle().fill(fill)
-                ballHole(x: 0.35, y: 0.33, side: side)
-                ballHole(x: 0.65, y: 0.33, side: side)
-                ballHole(x: 0.27, y: 0.56, side: side)
-                ballHole(x: 0.50, y: 0.67, side: side)
-                ballHole(x: 0.73, y: 0.56, side: side)
+                ballHole(x: 0.50, y: 0.50, side: side)
+                ballHole(x: 0.50, y: 0.22, side: side)
+                ballHole(x: 0.75, y: 0.36, side: side)
+                ballHole(x: 0.75, y: 0.64, side: side)
+                ballHole(x: 0.50, y: 0.78, side: side)
+                ballHole(x: 0.25, y: 0.64, side: side)
+                ballHole(x: 0.25, y: 0.36, side: side)
             }
             .frame(width: side, height: side)
             .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
@@ -116,7 +115,7 @@ struct PerforatedBallView: View {
     private func ballHole(x: CGFloat, y: CGFloat, side: CGFloat) -> some View {
         Circle()
             .fill(hole)
-            .frame(width: side * 0.12, height: side * 0.12)
+            .frame(width: side * 0.174, height: side * 0.174)
             .position(x: side * x, y: side * y)
     }
 }
@@ -180,57 +179,143 @@ struct BallTrailLoadingView: View {
     }
 }
 
-private struct PaddleBodyShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let body = CGRect(
-            x: rect.width * 0.20,
-            y: rect.height * 0.07,
-            width: rect.width * 0.60,
-            height: rect.height * 0.62
+private nonisolated enum PaddleEyeMarkGeometry {
+    static let designWidth: CGFloat = 360
+    static let designHeight: CGFloat = 420
+    static let aspectRatio = designHeight / designWidth
+
+    static func scale(in rect: CGRect) -> CGFloat {
+        min(rect.width / designWidth, rect.height / designHeight)
+    }
+
+    static func frame(in rect: CGRect) -> CGRect {
+        let scale = scale(in: rect)
+        let size = CGSize(width: designWidth * scale, height: designHeight * scale)
+        return CGRect(
+            x: rect.midX - size.width / 2,
+            y: rect.midY - size.height / 2,
+            width: size.width,
+            height: size.height
         )
-        path.addRoundedRect(in: body, cornerSize: CGSize(width: body.width * 0.48, height: body.width * 0.48))
-        path.move(to: CGPoint(x: rect.midX, y: rect.height * 0.69))
-        path.addLine(to: CGPoint(x: rect.midX, y: rect.height * 0.84))
-        let handle = CGRect(x: rect.width * 0.41, y: rect.height * 0.84, width: rect.width * 0.18, height: rect.height * 0.12)
-        path.addRoundedRect(in: handle, cornerSize: CGSize(width: handle.width * 0.28, height: handle.width * 0.28))
+    }
+
+    static func point(_ x: CGFloat, _ y: CGFloat, in rect: CGRect) -> CGPoint {
+        let frame = frame(in: rect)
+        let scale = scale(in: rect)
+        return CGPoint(x: frame.minX + x * scale, y: frame.minY + y * scale)
+    }
+
+    static func rect(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, in rect: CGRect) -> CGRect {
+        let frame = frame(in: rect)
+        let scale = scale(in: rect)
+        return CGRect(x: frame.minX + x * scale, y: frame.minY + y * scale, width: width * scale, height: height * scale)
+    }
+}
+
+private struct PaddleHeadShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let scale = PaddleEyeMarkGeometry.scale(in: rect)
+        let head = PaddleEyeMarkGeometry.rect(x: 60, y: 16, width: 240, height: 270, in: rect)
+        var path = Path()
+        path.addRoundedRect(in: head, cornerSize: CGSize(width: 104 * scale, height: 104 * scale))
         return path
     }
 }
 
-private struct EyeShape: Shape {
+private struct PaddleNeckShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        path.move(to: CGPoint(x: rect.width * 0.26, y: rect.height * 0.38))
-        path.addQuadCurve(to: CGPoint(x: rect.width * 0.74, y: rect.height * 0.38), control: CGPoint(x: rect.midX, y: rect.height * 0.22))
-        path.addQuadCurve(to: CGPoint(x: rect.width * 0.26, y: rect.height * 0.38), control: CGPoint(x: rect.midX, y: rect.height * 0.54))
+        path.move(to: PaddleEyeMarkGeometry.point(171, 286, in: rect))
+        path.addLine(to: PaddleEyeMarkGeometry.point(171, 310, in: rect))
+        path.move(to: PaddleEyeMarkGeometry.point(189, 286, in: rect))
+        path.addLine(to: PaddleEyeMarkGeometry.point(189, 310, in: rect))
+        return path
+    }
+}
+
+private struct PaddleGripShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let scale = PaddleEyeMarkGeometry.scale(in: rect)
+        let grip = PaddleEyeMarkGeometry.rect(x: 141, y: 310, width: 78, height: 72, in: rect)
+        var path = Path()
+        path.addRoundedRect(in: grip, cornerSize: CGSize(width: 22 * scale, height: 22 * scale))
+        return path
+    }
+}
+
+private struct PaddleGripStripeShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: PaddleEyeMarkGeometry.point(152, 332, in: rect))
+        path.addLine(to: PaddleEyeMarkGeometry.point(208, 323, in: rect))
+        path.move(to: PaddleEyeMarkGeometry.point(152, 351, in: rect))
+        path.addLine(to: PaddleEyeMarkGeometry.point(208, 342, in: rect))
+        path.move(to: PaddleEyeMarkGeometry.point(152, 368, in: rect))
+        path.addLine(to: PaddleEyeMarkGeometry.point(208, 360, in: rect))
+        return path
+    }
+}
+
+private struct PaddleButtCircleShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let center = PaddleEyeMarkGeometry.point(180, 403, in: rect)
+        let radius = 18 * PaddleEyeMarkGeometry.scale(in: rect)
+        var path = Path()
+        path.addEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
+        return path
+    }
+}
+
+private struct PaddleEyeIrisView: View {
+    var fill: Color
+    var hole: Color
+
+    var body: some View {
+        GeometryReader { proxy in
+            let bounds = CGRect(origin: .zero, size: proxy.size)
+            let scale = PaddleEyeMarkGeometry.scale(in: bounds)
+            let center = PaddleEyeMarkGeometry.point(180, 151, in: bounds)
+            ZStack {
+                PerforatedBallView(fill: fill, hole: hole)
+                    .frame(width: 132 * scale, height: 132 * scale)
+                    .position(x: center.x, y: center.y)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .clipShape(PaddleEyeApertureShape())
+        }
+    }
+}
+
+private struct PaddleEyeApertureShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: PaddleEyeMarkGeometry.point(86, 151, in: rect))
+        path.addQuadCurve(
+            to: PaddleEyeMarkGeometry.point(274, 151, in: rect),
+            control: PaddleEyeMarkGeometry.point(180, 76, in: rect)
+        )
+        path.addQuadCurve(
+            to: PaddleEyeMarkGeometry.point(86, 151, in: rect),
+            control: PaddleEyeMarkGeometry.point(180, 226, in: rect)
+        )
         path.closeSubpath()
         return path
     }
 }
 
-private struct BlinkedEyeShape: Shape {
+private struct PaddleEyeLidShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        path.move(to: CGPoint(x: rect.width * 0.28, y: rect.height * 0.39))
-        path.addQuadCurve(to: CGPoint(x: rect.width * 0.72, y: rect.height * 0.39), control: CGPoint(x: rect.midX, y: rect.height * 0.47))
-        return path
-    }
-}
-
-private struct BlinkLashesShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let anchors: [(CGFloat, CGFloat, CGFloat)] = [
-            (0.39, 0.44, -0.05),
-            (0.50, 0.46, 0.00),
-            (0.61, 0.44, 0.05),
-        ]
-        for anchor in anchors {
-            let start = CGPoint(x: rect.width * anchor.0, y: rect.height * anchor.1)
-            path.move(to: start)
-            path.addLine(to: CGPoint(x: start.x + rect.width * anchor.2, y: start.y + rect.height * 0.08))
-        }
+        path.move(to: PaddleEyeMarkGeometry.point(86, 151, in: rect))
+        path.addQuadCurve(
+            to: PaddleEyeMarkGeometry.point(274, 151, in: rect),
+            control: PaddleEyeMarkGeometry.point(180, 76, in: rect)
+        )
+        path.move(to: PaddleEyeMarkGeometry.point(86, 151, in: rect))
+        path.addQuadCurve(
+            to: PaddleEyeMarkGeometry.point(274, 151, in: rect),
+            control: PaddleEyeMarkGeometry.point(180, 226, in: rect)
+        )
         return path
     }
 }
