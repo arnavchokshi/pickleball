@@ -7,6 +7,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import pytest
 
 from threed.racketsport.camera_motion import (
     CameraMotionParams,
@@ -226,6 +227,235 @@ def test_motion_probe_scores_pan_above_static_and_reports_sampling_budget(tmp_pa
     assert pan_probe["forced"] == "auto"
     assert pan_probe["verified"] is False
     assert pan_probe["not_gate_verified"] is True
+
+
+def test_motion_probe_sets_and_reports_decode_orientation_policy(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    frames = _translated_frames([(0.0, 0.0), (2.0, 0.0), (4.0, 0.0)])
+    capture_instances: list[object] = []
+
+    class FakeRotatedCapture:
+        def __init__(self, _path: str) -> None:
+            self.pos = 0
+            self.released = False
+            self.set_calls: list[tuple[int, float]] = []
+            self.props = {
+                cv2.CAP_PROP_FRAME_COUNT: float(len(frames)),
+                cv2.CAP_PROP_FRAME_WIDTH: float(frames[0].shape[1]),
+                cv2.CAP_PROP_FRAME_HEIGHT: float(frames[0].shape[0]),
+                cv2.CAP_PROP_ORIENTATION_META: 90.0,
+                cv2.CAP_PROP_ORIENTATION_AUTO: 0.0,
+            }
+            capture_instances.append(self)
+
+        def isOpened(self) -> bool:
+            return True
+
+        def set(self, prop: int, value: float) -> bool:
+            self.set_calls.append((int(prop), float(value)))
+            if int(prop) == cv2.CAP_PROP_POS_FRAMES:
+                self.pos = int(value)
+            else:
+                self.props[int(prop)] = float(value)
+            return True
+
+        def get(self, prop: int) -> float:
+            return float(self.props.get(int(prop), 0.0))
+
+        def read(self) -> tuple[bool, np.ndarray | None]:
+            if self.pos >= len(frames):
+                return False, None
+            frame = frames[self.pos].copy()
+            self.pos += 1
+            return True, frame
+
+        def release(self) -> None:
+            self.released = True
+
+    monkeypatch.setattr(camera_motion_module.cv2, "VideoCapture", FakeRotatedCapture)
+    calibration = _calibration(tmp_path / "court_calibration.json")
+
+    probe = camera_motion_module.estimate_camera_motion_probe(
+        tmp_path / "rotated.mov",
+        calibration,
+        params=CameraMotionParams(
+            processing_scale=0.5,
+            temporal_smoothing=False,
+            min_homography_inliers=8,
+            max_ransac_reproj_px=2.0,
+        ),
+        frame_step=1,
+        max_probe_frames=3,
+    )
+
+    capture = capture_instances[0]
+    assert (cv2.CAP_PROP_ORIENTATION_AUTO, 1.0) in capture.set_calls
+    assert probe["decode_orientation"]["orientation_auto_requested"] == 1
+    assert probe["decode_orientation"]["orientation_auto_reported"] == 1.0
+    assert probe["decode_orientation"]["orientation_meta"] == 90.0
+    assert probe["decoded_frame_shape_hwc"] == list(frames[0].shape)
+    assert probe["decoded_frame_width_height"] == [frames[0].shape[1], frames[0].shape[0]]
+    assert probe["reference_feature_count"] >= 0
+    assert probe["sampled_frame_indices"] == [0, 1, 2]
+
+
+def test_full_camera_motion_sets_decode_orientation_policy_and_keeps_threshold_constant(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    frames = _translated_frames([(0.0, 0.0), (1.0, 0.0)])
+    capture_instances: list[object] = []
+
+    class FakeRotatedCapture:
+        def __init__(self, _path: str) -> None:
+            self.pos = 0
+            self.set_calls: list[tuple[int, float]] = []
+            self.props = {
+                cv2.CAP_PROP_FRAME_COUNT: float(len(frames)),
+                cv2.CAP_PROP_FRAME_WIDTH: float(frames[0].shape[1]),
+                cv2.CAP_PROP_FRAME_HEIGHT: float(frames[0].shape[0]),
+                cv2.CAP_PROP_ORIENTATION_META: 90.0,
+                cv2.CAP_PROP_ORIENTATION_AUTO: 0.0,
+            }
+            capture_instances.append(self)
+
+        def isOpened(self) -> bool:
+            return True
+
+        def set(self, prop: int, value: float) -> bool:
+            self.set_calls.append((int(prop), float(value)))
+            if int(prop) == cv2.CAP_PROP_POS_FRAMES:
+                self.pos = int(value)
+            else:
+                self.props[int(prop)] = float(value)
+            return True
+
+        def get(self, prop: int) -> float:
+            return float(self.props.get(int(prop), 0.0))
+
+        def read(self) -> tuple[bool, np.ndarray | None]:
+            if self.pos >= len(frames):
+                return False, None
+            frame = frames[self.pos].copy()
+            self.pos += 1
+            return True, frame
+
+        def release(self) -> None:
+            pass
+
+    monkeypatch.setattr(camera_motion_module.cv2, "VideoCapture", FakeRotatedCapture)
+    calibration = _calibration(tmp_path / "court_calibration.json")
+
+    payload = estimate_camera_motion(
+        tmp_path / "rotated.mov",
+        calibration,
+        params=CameraMotionParams(temporal_smoothing=False),
+    )
+
+    capture = capture_instances[0]
+    assert camera_motion_module.CAMERA_MOTION_AUTO_THRESHOLD == 2.5
+    assert (cv2.CAP_PROP_ORIENTATION_AUTO, 1.0) in capture.set_calls
+    assert payload["decode_orientation"]["orientation_auto_requested"] == 1
+    assert payload["decode_orientation"]["orientation_auto_reported"] == 1.0
+    assert payload["decode_orientation"]["orientation_meta"] == 90.0
+    assert payload["decoded_frame_shape_hwc"] == list(frames[0].shape)
+
+
+@pytest.mark.parametrize(
+    ("case_name", "orientation_meta", "set_ok", "reported_auto", "expected_consequential", "reason"),
+    [
+        ("set_false_rotated", 90.0, False, 0.0, True, "orientation_auto_set_failed"),
+        ("readback_mismatch_rotated", 90.0, True, 0.0, True, "orientation_auto_readback_mismatch"),
+        ("set_false_nonrotated", 0.0, False, 0.0, False, "orientation_auto_set_failed"),
+        ("readback_mismatch_nonrotated", 0.0, True, 0.0, False, "orientation_auto_readback_mismatch"),
+    ],
+)
+def test_probe_marks_orientation_policy_mismatch_and_demotes_only_consequential_cases(
+    tmp_path: Path,
+    monkeypatch,
+    case_name: str,
+    orientation_meta: float,
+    set_ok: bool,
+    reported_auto: float,
+    expected_consequential: bool,
+    reason: str,
+) -> None:
+    frames = _translated_frames([(0.0, 0.0), (5.0, 0.0), (10.0, 0.0)])
+    captures: list[object] = []
+
+    class FakeOrientationMismatchCapture:
+        def __init__(self, _path: str) -> None:
+            self.pos = 0
+            self.props = {
+                cv2.CAP_PROP_FRAME_COUNT: float(len(frames)),
+                cv2.CAP_PROP_FRAME_WIDTH: float(frames[0].shape[1]),
+                cv2.CAP_PROP_FRAME_HEIGHT: float(frames[0].shape[0]),
+                cv2.CAP_PROP_ORIENTATION_META: orientation_meta,
+                cv2.CAP_PROP_ORIENTATION_AUTO: 0.0,
+            }
+            captures.append(self)
+
+        def isOpened(self) -> bool:
+            return True
+
+        def set(self, prop: int, value: float) -> bool:
+            if int(prop) == cv2.CAP_PROP_POS_FRAMES:
+                self.pos = int(value)
+                return True
+            if int(prop) == cv2.CAP_PROP_ORIENTATION_AUTO:
+                self.props[int(prop)] = reported_auto
+                return set_ok
+            self.props[int(prop)] = float(value)
+            return True
+
+        def get(self, prop: int) -> float:
+            return float(self.props.get(int(prop), 0.0))
+
+        def read(self) -> tuple[bool, np.ndarray | None]:
+            if self.pos >= len(frames):
+                return False, None
+            frame = frames[self.pos].copy()
+            self.pos += 1
+            return True, frame
+
+        def release(self) -> None:
+            pass
+
+    monkeypatch.setattr(camera_motion_module.cv2, "VideoCapture", FakeOrientationMismatchCapture)
+    calibration = _calibration(tmp_path / f"{case_name}_court_calibration.json")
+
+    probe = camera_motion_module.estimate_camera_motion_probe(
+        tmp_path / f"{case_name}.mov",
+        calibration,
+        params=CameraMotionParams(
+            processing_scale=0.5,
+            temporal_smoothing=False,
+            min_homography_inliers=8,
+            max_ransac_reproj_px=2.0,
+        ),
+        frame_step=1,
+        max_probe_frames=3,
+        threshold=0.01,
+    )
+
+    assert captures
+    assert probe["decode_orientation_mismatch"] is True
+    assert probe["decode_orientation_consequential_mismatch"] is expected_consequential
+    assert probe["decode_orientation_untrusted"] is expected_consequential
+    assert reason in probe["decode_orientation_mismatch_reason"]
+    assert probe["decode_orientation"]["orientation_policy_mismatch"] is True
+    assert probe["decode_orientation"]["orientation_policy_mismatch_reason"] == probe["decode_orientation_mismatch_reason"]
+    assert probe["decode_orientation"]["orientation_policy_consequential_mismatch"] is expected_consequential
+    if expected_consequential:
+        assert probe["enabled"] is False
+        assert str(probe["forced"]).startswith("auto_decode_orientation_untrusted")
+        assert reason in str(probe["forced"])
+        assert probe["failure_reasons"][probe["decode_orientation_mismatch_reason"]] == probe["sampled_frame_count"]
+    else:
+        assert probe["enabled"] == (probe["motion_score"] > probe["threshold"])
+        assert probe["forced"] == "auto"
 
 
 def test_dense_flow_backend_adapter_uses_synthetic_flow_without_weights() -> None:
