@@ -24,8 +24,15 @@ runs/lanes/<lane>/log.txt`); harness bg-task ids listed for TaskOutput monitorin
 first-class in camera_motion_auto (present→verbatim, absent→absent, base keys byte-compatible);
 item 2 judged NO-CHANGE-NEEDED w/ evidence; 226/0. VI.0 step 7 DONE.
 
-WAVE-CLOSE IN FLIGHT: wide-suite adjudication (bg b3z0e0a52, full census no fail-fast, minus
-22-min court benchmark — no court code touched this wave, wave-3 banked 41/41 standalone cited);
+WAVE-CLOSE: wide-suite adjudication DONE + RULED GREEN — 3041 passed / 15 skipped / 1 failed in
+8m29s (log runs/manager/wave4_final_wide_suite.log); the 1 failure = scaffold-index 'unknown'
+category caused by UNTRACKED foreign scripts/racketsport/doctor.py (a concurrent session's
+in-flight uncommitted work, NOT wave-4-owned; owning session must register it same-lane —
+cross-lane note for the closeout bullet). Court benchmark excluded: no court-solver code touched
+this wave; wave-3 banked 41/41 standalone cited. OUTAGE RECOVERY: spend-limit stall killed
+freshproof pre-VM (no orphans, verified) and idled the ballgpu driver ~2h (VM GPU idle 2h43m
+total per its honest PROGRESS.md; ~$5.50-11 incl. idle); both agents resumed, SST capped at 12k
+steps by manager ruling, 3 A100 fans (w4fan1/2/3) staging 20:33Z — fleet at exactly the 4-GPU cap;
 w4_freshproof GPU lane (Sonnet bg agent — A100 snapshot fans, cap-aware ≤4 incl. sibling
 w4ballgpu H100, syncs committed HEAD ≥ 1588b110f, gated keys + camera_motion decisive proof +
 warning-string + browser verify ×4). Then: rule ballgpu → docs lane (W4-F) → scorecard + wave-5
