@@ -697,7 +697,8 @@ consumption (P0-10), expanded eval suite with audio, fresh gate-passing worlds.
   round-trip PASS, and the FIRST owner review batch returned; a CVAT UI naming trap
   (visibility_level 'full' vs 'clear') was caught and deterministically remapped — see
   `cvat_upload/exports/harvest_review_20260707/*/MANAGER_NOTE.md`. OPEN: labels/hour measurement +
-  the volume budgets below; current corpus ~486 review frames vs the ≥10-20k budget.)* Throughput
+  the volume budgets below; current corpus ~486 review frames vs the ≥10-20k budget; corpus_dashboard.py LANDED 2026-07-07
+  (stream-4 `p04_corpus_dashboard_20260707`) — D6 gate tool, leakage re-check clean 0/0.)* Throughput
   plan for owner+helpers: (a) ball: prelabel with current
   ensemble, human corrects (SST teacher output = prelabels — see P1-2; CVAT SAM3 integration is
   per-frame only, no video propagation — don't plan around it); (b) paddle: boxes + 4 visible-corner
@@ -738,8 +739,11 @@ consumption (P0-10), expanded eval suite with audio, fresh gate-passing worlds.
 - [ ] **P0-7 Pickleball flight simulator. PHASE 1 DONE 2026-07-06** (`p07_flightsim_20260706`:
   pure-numpy ODE generator reusing the arc solver's `_rk4_step` LITERALLY — sim/solver physics
   mismatch killed by construction; Lindsey/Steyn constants seeded; Wolverine-calibration camera
-  projection). *OPEN: phase 2 MuJoCo (needs the network prestage — Codex has no network) + the
-  detector-noise/error-profile match report + fitting refinement from owner captures.* Original
+  projection). *PHASE 2 CORPUS DONE 2026-07-07 (stream-4 `p07_flight_corpus_20260707`: 50k train / 5k val at
+  `runs/flight_corpus_20260707/`, flight-sanity 100%, error-profile match all metrics <3% off the
+  measured 34px/0.578/0.021 profile; mujoco 3.10.0 prestaged into .venv w/ stepping smoke PASS —
+  MJX itself stays VM-deferred, install script is CUDA-shaped). OPEN: MuJoCo bounce/hit stitching +
+  fitting refinement from owner captures.* Original
   spec: Ballistic + drag +
   Magnus generator for a 26g holey plastic ball; **SEED with the real measured pickleball
   coefficients** (Lindsey TWU 2025: outdoor Cd≈0.33 / indoor Cd≈0.45, asymmetric topspin>backspin
@@ -1345,7 +1349,10 @@ framework with trust bands, court-map view, viewer moment-jump surface. **To bui
 classification, the stat layer users value, the pickleball reference-range library (the moat),
 the grounded-LLM coach, direct visual feedback overlays, session reports.
 
-- [ ] **P6-1 Shot classification.** Serve/return/drive/drop/dink/lob/volley/smash from (ball 3D arc,
+- [ ] **P6-1 Shot classification.** *(DESIGN v0 DONE 2026-07-07, stream-4 `p61_shot_rules_20260707`:
+  rule table `docs/racketsport/shot_rules_v0.json` + pure-function `threed/racketsport/shot_rules.py`,
+  design-only, no pipeline wiring — shot_taxonomy.py stays the sole shots producer; integration lane
+  + the 0.85-agreement gate remain OPEN.)* Serve/return/drive/drop/dink/lob/volley/smash from (ball 3D arc,
   contact events, hitter pose features, court zones). Start rule-based on P1 outputs (interpretable,
   trust-banded), add a learned classifier when owner-label volume allows (Talking-Tennis used
   EfficientNet-B0+LSTM at 79% on 12 tennis classes — our 3D features should beat video-only).

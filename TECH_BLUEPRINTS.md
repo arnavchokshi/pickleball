@@ -355,8 +355,8 @@ across sessions after 2 iters → bank negative, keep session-only ReID (`associ
 do not ship a persistent gallery.
 
 **D6 — Corpus/dashboard bookkeeping + leakage (f).** *Obj:* one place that answers "how much labeled
-data, what diversity, any leakage." *Files to BUILD:* `scripts/racketsport/corpus_dashboard.py` (does
-NOT exist — P0-4 gate requires it). *Recipe:* aggregate corpus manifests (harvest corpus_card.json +
+data, what diversity, any leakage." *Files:* `scripts/racketsport/corpus_dashboard.py` (LANDED
+2026-07-07, stream-4 `p04_corpus_dashboard_20260707` — the P0-4 gate tool). *Recipe:* aggregate corpus manifests (harvest corpus_card.json +
 `runs/training_corpora_20260702/owner_capture/manifest.json` + Roboflow index) → counts by label type,
 distinct sessions/courts, roles; re-run `assert_no_protected_eval_hash_collisions` + a video-hash check
 of every train/val clip vs the 35 eval hashes + the 2 harvest held-out + owner held-out; emit a corpus
@@ -826,7 +826,8 @@ multi-file. Every lane: dispatch via `/run-lane`, pin an explicit `model`, no co
   segments benefited. Do NOT attempt full 3-axis spin — UNIDENTIFIABLE (see DO-NOT). Do NOT attempt
   spin-SIGN disambiguation — parked on H13.
 
-**STEP 3 — P0-7 extension: harden sim as the training oracle (Codex, CPU).**
+**STEP 3 — P0-7 extension: harden sim as the training oracle (Codex, CPU). [CORPUS DONE 2026-07-07,
+stream-4 `p07_flight_corpus_20260707` — both files at `runs/flight_corpus_20260707/`, acceptance met]**
 - Objective: the simulator already emits noise-matched pairs; extend it so its label distribution
   matches our real error profile tightly enough to train STEP 4. File: `flight_simulator.py`
   (`DetectorNoiseProfile` p95_jitter_px/recall=0.578/hidden_fp_rate=0.021; `generate_corpus` :640;
@@ -2299,7 +2300,8 @@ Order is fixed: **S1 features → S2 reference library → S3 comparator → S4 
 S2 can run in parallel with S1 (it is pure JSON + owner review). Do NOT start S4 before S3's finding
 schema is frozen.
 
-**S1 — Shot segmentation + feature vector (P6-1) [Codex lane, CPU-only, no GPU].**
+**S1 — Shot segmentation + feature vector (P6-1) [Codex lane, CPU-only, no GPU]. [RULE-TABLE v0 DONE
+2026-07-07, stream-4 `p61_shot_rules_20260707` (design-only; feature extraction + integration OPEN)]**
 - Objective: from existing artifacts, produce `shots.json` = ordered list of shots, each with a feature
   vector + a rule-based class + confidence. No new model. No held-out labels touched.
 - **STEP 0 (mandatory): read `shot_taxonomy.py` first.** It already emits ARTIFACT_TYPE `racketsport_shots`
