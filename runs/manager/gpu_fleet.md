@@ -21,6 +21,16 @@ WAVE-4 FLEET LOG (2026-07-07, manager):
   working tree not shipped committed blobs (false drift under concurrent-session dirt); tar_batch
   transport failure exit-1 non-retryable while ssh transport bug (`ssh_packet_write_poll: Result
   too large`) recurs on large transfers — rsync fallback exit-255 IS retryable.
+WAVE-4 FINAL FLEET ACCOUNTING (2026-07-08 close): ALL wave-4 VMs DELETED, list-confirmed by
+manager + each lane. (1) pickleball-h100-w4body: 58m01s, $0.55-4.11 (BODY-validated 2.37×).
+(2) pickleball-h100-w4ballgpu: created 17:43:49Z deleted 23:38:18Z, 5.90h, $3.4-25 honest span
+($12-24 mid-band) — ~2.5h of uptime was transfer/outage-idle (macOS ssh EMSGSIZE flake + two
+API stalls; nohup pattern preserved all VM-side work), zero preemptions. (3) w4fan1/2/3 (A100
+snapshot fans): 1.824h each, 5.47 GPU-h, $6.0-7.1 total. WAVE TOTAL ≈ $10-36 (mid-band ~$19-32)
+vs the stated ~$12-25 budget — top-band overage driven entirely by the outage/transfer idle;
+per-VM ≤$5/hr and ≤4-concurrent caps NEVER breached. fleet1 remains STOPPED disk-intact
+(snapshot source). Snapshot template gap: lacks ffmpeg (wave-5 recipe item).
+
 Cap compliance: ≤$5/hr × ≤4 concurrent holds; wave budget ~$12-25 per wave4_boot_prompt.md.
 
 | vm_name | zone | gpu | model | status (provisioning/idle/busy/preempted/tearing-down) | lane | $/hr | created_at | notes |
