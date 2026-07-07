@@ -38,6 +38,18 @@ w4ballgpu H100, syncs committed HEAD ≥ 1588b110f, gated keys + camera_motion d
 warning-string + browser verify ×4). Then: rule ballgpu → docs lane (W4-F) → scorecard + wave-5
 boot prompt + memory + branch merge.
 
+LATE-WAVE ADDITIONS (all landed+pushed): w4_bridgefix 67298e599 (torch-2.9 lane-ckpt loading +
+--input-preprocessing {official,harness_v0} w/ artifact stamping; official bit-identity PROVEN;
+non-promotable measurement mode) — root context: CRITICAL ballgpu finding that train-vs-bridge
+preprocessing contracts DIFFER (harness ckpts degenerate F1 0.0 under official mode vs official
+ckpt 0.714/0.783 same path) → wave-5 queue item: align training harness to official preprocessing
++ retrain. w4_doctorreg 1b335bba0 (foreign doctor.py registered ENV/ENV-2 — main suite green
+again; foreign session had landed it unregistered in fb987892f). Ballgpu rulings mid-flight: SST
+re-capped 3k steps (video-seek loader 0.9 steps/s ⇒ 12k would be 3.5-4h); SST-init ELSE-branch
+fired mechanically (seed-vs-stage-1 bridge comparison unmeasurable pre-fix) → student inits from
+stage-1; seed fine-tune DONE (1830 steps, 34 min, key-diff empty); SST manifest 40 clips / 58,353
+samples / protected-hash 35-0 banked.
+
 INTEGRATION-LANE QUEUE (wave close, ONE lane, fenced files): (1) DROPPED — footattr stage
 insertion deferred to wave 5 behind P2-2 (predictor forbids: 3/4 clips would breach the frozen
 gate; valid patch banked in the fix lane dir for when phases become gate-safe); (2) cammotion
