@@ -1,0 +1,31 @@
+        actual_missing = {[90m[39;49;00m
+            tool[[33m"[39;49;00m[33mcommand_path[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+            [94mfor[39;49;00m tool [95min[39;49;00m payload[[33m"[39;49;00m[33mtools[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+            [94mif[39;49;00m tool.get([33m"[39;49;00m[33mdirect_cli_reference_test[39;49;00m[33m"[39;49;00m) [95mis[39;49;00m [94mNone[39;49;00m[90m[39;49;00m
+        }[90m[39;49;00m
+        [94massert[39;49;00m actual_missing == EXPECTED_MISSING_DIRECT_CLI_REFERENCE, ([90m[39;49;00m
+            [33m"[39;49;00m[33mscaffold CLI coverage drifted: new uncovered CLIs must ship a direct [39;49;00m[33m"[39;49;00m[90m[39;49;00m
+            [33m"[39;49;00m[33mreference test in the same lane; newly covered CLIs must be removed [39;49;00m[33m"[39;49;00m[90m[39;49;00m
+            [33mf[39;49;00m[33m"[39;49;00m[33mfrom EXPECTED_MISSING_DIRECT_CLI_REFERENCE. delta=[39;49;00m[33m{[39;49;00mactual_missing[90m [39;49;00m^[90m [39;49;00mEXPECTED_MISSING_DIRECT_CLI_REFERENCE[33m}[39;49;00m[33m"[39;49;00m[90m[39;49;00m
+        )[90m[39;49;00m
+        [94massert[39;49;00m payload[[33m"[39;49;00m[33msummary[39;49;00m[33m"[39;49;00m][[33m"[39;49;00m[33mmissing_direct_cli_reference_tests[39;49;00m[33m"[39;49;00m] == [94m0[39;49;00m[90m[39;49;00m
+>       [94massert[39;49;00m payload[[33m"[39;49;00m[33msummary[39;49;00m[33m"[39;49;00m][[33m"[39;49;00m[33mcategory_counts[39;49;00m[33m"[39;49;00m].get([33m"[39;49;00m[33munknown[39;49;00m[33m"[39;49;00m, [94m0[39;49;00m) == [94m0[39;49;00m[90m[39;49;00m
+[1m[31mE       AssertionError: assert 1 == 0[0m
+[1m[31mE        +  where 1 = <built-in method get of dict object at 0x164862c80>('unknown', 0)[0m
+[1m[31mE        +    where <built-in method get of dict object at 0x164862c80> = {'ball': 44, 'body': 43, 'calibration': 20, 'contact': 11, ...}.get[0m
+
+[1m[31mtests/racketsport/test_scaffold_tool_index.py[0m:197: AssertionError
+[33m=============================== warnings summary ===============================[0m
+tests/racketsport/test_body_mesh_index.py:223
+  /Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_body_mesh_index.py:223: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+.venv/lib/python3.14/site-packages/torchreid/reid/metrics/rank.py:11
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torchreid/reid/metrics/rank.py:11: UserWarning: Cython evaluation (very fast so highly recommended) is unavailable, now use python evaluation.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/racketsport/test_scaffold_tool_index.py::[1mtest_real_scaffold_tool_index_matches_checked_in_schema[0m - AssertionError: assert 1 == 0
+[31m[31m[1m1 failed[0m, [32m3041 passed[0m, [33m15 skipped[0m, [33m2 warnings[0m[31m in 509.68s (0:08:29)[0m[0m
+exit_code_marker=0
