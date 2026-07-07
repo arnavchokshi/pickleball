@@ -54,6 +54,31 @@ final class DinkVisionStateTests: XCTestCase {
     }
 
     @MainActor
+    func testSplashLidsCoverOnlyTheEyeLensAndOpenToZeroCoverage() {
+        let markFrame = CGRect(x: 20, y: 40, width: 322, height: 579)
+        let eyeCenter = DinkVisionSplashLidGeometry.eyeCenter(in: markFrame)
+        let halfHeight = DinkVisionSplashLidGeometry.apertureHalfHeight(in: markFrame)
+
+        let openUpper = DinkVisionSplashLidGeometry.lidCover(isUpper: true, closure: 0, markFrame: markFrame)
+        let openLower = DinkVisionSplashLidGeometry.lidCover(isUpper: false, closure: 0, markFrame: markFrame)
+        XCTAssertEqual(openUpper.coverRect.height, 0, accuracy: 0.001)
+        XCTAssertEqual(openLower.coverRect.height, 0, accuracy: 0.001)
+
+        let closedUpper = DinkVisionSplashLidGeometry.lidCover(isUpper: true, closure: 1, markFrame: markFrame)
+        let closedLower = DinkVisionSplashLidGeometry.lidCover(isUpper: false, closure: 1, markFrame: markFrame)
+
+        XCTAssertEqual(closedUpper.outerCurve.edgeY, eyeCenter.y - halfHeight, accuracy: 0.001)
+        XCTAssertEqual(closedUpper.innerCurve.edgeY, eyeCenter.y, accuracy: 0.001)
+        XCTAssertEqual(closedUpper.coverRect.minY, eyeCenter.y - halfHeight, accuracy: 0.001)
+        XCTAssertEqual(closedUpper.coverRect.maxY, eyeCenter.y, accuracy: 0.001)
+
+        XCTAssertEqual(closedLower.outerCurve.edgeY, eyeCenter.y + halfHeight, accuracy: 0.001)
+        XCTAssertEqual(closedLower.innerCurve.edgeY, eyeCenter.y, accuracy: 0.001)
+        XCTAssertEqual(closedLower.coverRect.minY, eyeCenter.y, accuracy: 0.001)
+        XCTAssertEqual(closedLower.coverRect.maxY, eyeCenter.y + halfHeight, accuracy: 0.001)
+    }
+
+    @MainActor
     func testReplayOpenTrailIsBriefAndDisabledForReducedMotion() {
         XCTAssertEqual(DinkVisionReplayOpenTransition.durationNanoseconds, 550_000_000)
         XCTAssertEqual(DinkVisionReplayOpenTransition.durationNanoseconds(reducedMotion: true), 180_000_000)
@@ -80,7 +105,10 @@ final class DinkVisionStateTests: XCTestCase {
         XCTAssertEqual(model.tabs.map(\.title), ["Replays", "Stats", "Record", "Coach", "Profile"])
         XCTAssertEqual(model.centerTab, .record)
         XCTAssertEqual(model.recordButtonDiameter, 72)
-        XCTAssertEqual(model.recordRaisedOffset, 14)
+        XCTAssertEqual(model.recordButtonCenterAboveBarTop, 26)
+        XCTAssertEqual(model.totalOverlayHeight(tabBarHeight: DinkVisionMetric.tabBarHeight), 150)
+        XCTAssertEqual(model.recordButtonFrame(tabBarHeight: DinkVisionMetric.tabBarHeight), CGRect(x: -36, y: 0, width: 72, height: 72))
+        XCTAssertEqual(model.recordButtonCenterY(tabBarHeight: DinkVisionMetric.tabBarHeight), 36)
         XCTAssertGreaterThanOrEqual(model.minimumHitTarget, 44)
     }
 

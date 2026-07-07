@@ -12,11 +12,17 @@ struct AppRootView: View {
 }
 
 private struct DinkVisionAppRootView: View {
-    @State private var isSplashVisible = true
+    private let configuration: DinkVisionRuntimeConfiguration
+    @State private var isSplashVisible: Bool
+
+    init(configuration: DinkVisionRuntimeConfiguration = .current()) {
+        self.configuration = configuration
+        _isSplashVisible = State(initialValue: !configuration.skipSplash)
+    }
 
     var body: some View {
         ZStack {
-            DinkVisionTabShell(isActive: !isSplashVisible)
+            DinkVisionTabShell(isActive: !isSplashVisible, configuration: configuration)
                 .allowsHitTesting(!isSplashVisible)
 
             if isSplashVisible {
@@ -31,6 +37,18 @@ private struct DinkVisionAppRootView: View {
         }
         .background(DinkVisionColor.cream)
         .preferredColorScheme(.light)
+    }
+}
+
+private enum DinkVisionChromeLayout {
+    static let tabLayout = DinkVisionTabLayoutModel.brandV4
+
+    static var tabOverlayHeight: CGFloat {
+        tabLayout.totalOverlayHeight(tabBarHeight: DinkVisionMetric.tabBarHeight)
+    }
+
+    static var scrollBottomPadding: CGFloat {
+        tabLayout.contentBottomPadding(tabBarHeight: DinkVisionMetric.tabBarHeight)
     }
 }
 
@@ -65,6 +83,7 @@ private struct DinkVisionSplashView: View {
             .ignoresSafeArea()
         }
         .accessibilityHidden(true)
+        .accessibilityIdentifier("DinkVisionSplash")
         .task {
             machine = DinkVisionSplashStateMachine(reducedMotion: reduceMotion)
             if reduceMotion {
@@ -157,18 +176,15 @@ private struct SplashLidCoverShape: Shape {
     }
 
     func path(in rect: CGRect) -> Path {
-        let curve = DinkVisionSplashLidGeometry.curve(isUpper: isUpper, closure: closure, markFrame: rect)
-        let overscan = rect.height * 0.08
-        var path = Path()
-        path.move(to: curve.left)
-        path.addQuadCurve(to: curve.right, control: curve.control)
-        if isUpper {
-            path.addLine(to: CGPoint(x: curve.right.x, y: rect.minY - overscan))
-            path.addLine(to: CGPoint(x: curve.left.x, y: rect.minY - overscan))
-        } else {
-            path.addLine(to: CGPoint(x: curve.right.x, y: rect.maxY + overscan))
-            path.addLine(to: CGPoint(x: curve.left.x, y: rect.maxY + overscan))
+        let cover = DinkVisionSplashLidGeometry.lidCover(isUpper: isUpper, closure: closure, markFrame: rect)
+        guard cover.coverRect.height > 0.001 else {
+            return Path()
         }
+        var path = Path()
+        path.move(to: cover.outerCurve.left)
+        path.addQuadCurve(to: cover.outerCurve.right, control: cover.outerCurve.control)
+        path.addLine(to: cover.innerCurve.right)
+        path.addQuadCurve(to: cover.innerCurve.left, control: cover.innerCurve.control)
         path.closeSubpath()
         return path
     }
@@ -184,7 +200,10 @@ private struct SplashLidStrokeShape: Shape {
     }
 
     func path(in rect: CGRect) -> Path {
-        let curve = DinkVisionSplashLidGeometry.curve(isUpper: isUpper, closure: closure, markFrame: rect)
+        guard closure > 0.001 else {
+            return Path()
+        }
+        let curve = DinkVisionSplashLidGeometry.lidCover(isUpper: isUpper, closure: closure, markFrame: rect).innerCurve
         var path = Path()
         path.move(to: curve.left)
         path.addQuadCurve(to: curve.right, control: curve.control)
@@ -194,16 +213,26 @@ private struct SplashLidStrokeShape: Shape {
 
 private struct DinkVisionTabShell: View {
     var isActive: Bool = true
+    private let configuration: DinkVisionRuntimeConfiguration
     @State private var selectedTab: DinkVisionTabKind = .record
-    @StateObject private var recordModel = CaptureViewModel()
+    @StateObject private var recordModel: CaptureViewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    init(isActive: Bool = true, configuration: DinkVisionRuntimeConfiguration = .current()) {
+        self.isActive = isActive
+        self.configuration = configuration
+        _recordModel = StateObject(wrappedValue: configuration.makeCaptureViewModel())
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
             Group {
                 switch selectedTab {
                 case .replays:
-                    DinkVisionReplaysScreen()
+                    DinkVisionReplaysScreen(
+                        dataSource: configuration.makeReplayDataSource(),
+                        configuration: configuration
+                    )
                 case .stats:
                     DinkVisionStatsScreen()
                 case .record:
@@ -216,6 +245,7 @@ private struct DinkVisionTabShell: View {
             }
             .id(selectedTab)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityIdentifier("DinkVisionSelectedTab-\(selectedTab.rawValue)")
             .transition(reduceMotion ? .opacity : .asymmetric(
                 insertion: .modifier(
                     active: DinkVisionStickerTransitionModifier(
@@ -233,7 +263,11 @@ private struct DinkVisionTabShell: View {
                 ).combined(with: .opacity)
             ))
 
-            DinkVisionTabBar(selectedTab: $selectedTab, recordModel: recordModel)
+            DinkVisionTabBar(
+                selectedTab: $selectedTab,
+                recordModel: recordModel,
+                forceRecordPressed: configuration.forceRecordPressed
+            )
         }
         .animation(.spring(response: 0.34, dampingFraction: 0.72), value: selectedTab)
         .ignoresSafeArea(edges: selectedTab == .record ? .all : .bottom)
@@ -254,43 +288,43 @@ private struct DinkVisionStickerTransitionModifier: ViewModifier {
 private struct DinkVisionTabBar: View {
     @Binding var selectedTab: DinkVisionTabKind
     @ObservedObject var recordModel: CaptureViewModel
+    var forceRecordPressed: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let layout = DinkVisionTabLayoutModel.brandV4
+    private let layout = DinkVisionChromeLayout.tabLayout
 
     var body: some View {
-        ZStack(alignment: .top) {
-            HStack(alignment: .bottom, spacing: 0) {
-                ForEach(layout.tabs) { tab in
-                    if tab == .record {
-                        Color.clear
-                            .frame(maxWidth: .infinity, minHeight: 54)
-                    } else {
-                        Button {
-                            selectedTab = tab
-                        } label: {
-                            DinkVisionTabItem(tab: tab, isSelected: selectedTab == tab)
+        GeometryReader { proxy in
+            ZStack(alignment: .bottom) {
+                HStack(alignment: .bottom, spacing: 0) {
+                    ForEach(layout.tabs) { tab in
+                        if tab == .record {
+                            Color.clear
                                 .frame(maxWidth: .infinity, minHeight: 54)
+                                .accessibilityHidden(true)
+                        } else {
+                            Button {
+                                selectedTab = tab
+                            } label: {
+                                DinkVisionTabItem(tab: tab, isSelected: selectedTab == tab)
+                                    .frame(maxWidth: .infinity, minHeight: 54)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(tab.title)
+                            .accessibilityIdentifier("DinkVisionTab-\(tab.rawValue)")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(tab.title)
                     }
                 }
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 15)
-            .padding(.bottom, 18)
-            .frame(height: DinkVisionMetric.tabBarHeight)
-            .background(
-                TopRoundedRectangle(radius: DinkVisionMetric.tabBarRadius)
-                    .fill(DinkVisionColor.ink)
-            )
+                .padding(.horizontal, 12)
+                .padding(.top, 15)
+                .padding(.bottom, 18)
+                .frame(height: DinkVisionMetric.tabBarHeight)
+                .background(
+                    TopRoundedRectangle(radius: DinkVisionMetric.tabBarRadius)
+                        .fill(DinkVisionColor.ink)
+                )
+                .accessibilityIdentifier("DinkVisionTabBarRail")
 
-            VStack(spacing: 4) {
-                if recordModel.isRecording {
-                    recordElapsedPill
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
                 Button {
                     Task {
                         await handleRecordTap()
@@ -299,44 +333,23 @@ private struct DinkVisionTabBar: View {
                     DinkVisionTexturedRecordButton(
                         isRecording: recordModel.isRecording,
                         isEnabled: canRecordFromTab,
-                        reduceMotion: reduceMotion
+                        reduceMotion: reduceMotion,
+                        forcePressed: forceRecordPressed
                     )
                 }
                 .buttonStyle(.plain)
                 .disabled(!canRecordFromTab)
-                .frame(width: 86, height: 86)
-                .offset(y: -layout.recordRaisedOffset)
+                .frame(width: layout.recordButtonDiameter + 14, height: layout.recordButtonDiameter + 14)
+                .position(
+                    x: proxy.size.width / 2,
+                    y: layout.recordButtonCenterY(tabBarHeight: DinkVisionMetric.tabBarHeight)
+                )
                 .accessibilityLabel(recordModel.isRecording ? "Stop recording" : "Start recording")
-                Text("Record")
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .foregroundStyle(selectedTab == .record ? DinkVisionColor.cream : Color.white.opacity(0.58))
-                    .offset(y: -layout.recordRaisedOffset - 11)
-                    .overlay(alignment: .bottom) {
-                        if selectedTab == .record {
-                            SketchyUnderline()
-                                .stroke(DinkVisionColor.ballYellow, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                                .frame(width: 43, height: 8)
-                                .offset(y: 6)
-                                .strokeDrawOn()
-                        }
-                    }
+                .accessibilityIdentifier("DinkVisionRecordButton")
             }
         }
-        .frame(height: DinkVisionMetric.tabBarHeight)
-    }
-
-    private var recordElapsedPill: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            let elapsed = recordModel.recordingStartedAt.map { max(0, Int(context.date.timeIntervalSince($0))) } ?? 0
-            Text("\(elapsed / 60):\(String(format: "%02d", elapsed % 60))")
-                .font(.system(size: 12, weight: .black, design: .rounded).monospacedDigit())
-                .foregroundStyle(DinkVisionColor.ink)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(DinkVisionColor.ballYellow, in: Capsule())
-                .shadow(color: .black.opacity(0.22), radius: 8, y: 4)
-        }
-        .offset(y: -20)
+        .frame(height: layout.totalOverlayHeight(tabBarHeight: DinkVisionMetric.tabBarHeight))
+        .accessibilityIdentifier("DinkVisionTabBarOverlay")
     }
 
     private var canRecordFromTab: Bool {
@@ -397,6 +410,7 @@ private struct SketchyUnderline: Shape {
 }
 
 private enum DinkVisionHaptics {
+    @MainActor
     static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
         let generator = UIImpactFeedbackGenerator(style: style)
         generator.prepare()
@@ -408,11 +422,12 @@ private struct DinkVisionTexturedRecordButton: View {
     var isRecording: Bool
     var isEnabled: Bool
     var reduceMotion: Bool
+    var forcePressed: Bool = false
     @State private var isPressed = false
     @State private var breath = false
     @State private var wobbleDegrees: Double = 0
 
-    private let layout = DinkVisionTabLayoutModel.brandV4
+    private let layout = DinkVisionChromeLayout.tabLayout
 
     var body: some View {
         let visual = visualState
@@ -462,11 +477,11 @@ private struct DinkVisionTexturedRecordButton: View {
         if isRecording {
             return .recording
         }
-        return isPressed ? .pressed : .idle
+        return (isPressed || forcePressed) ? .pressed : .idle
     }
 
     private func breathScale(for visual: DinkVisionRecordButtonVisual) -> CGFloat {
-        guard !reduceMotion, !isRecording, !isPressed else {
+        guard !reduceMotion, !isRecording, !isPressed, !forcePressed else {
             return 1
         }
         return breath ? visual.breathingScaleRange.upperBound : visual.breathingScaleRange.lowerBound
@@ -628,7 +643,7 @@ private struct DinkVisionRecordScreen: View {
                     policyChips
                     Spacer(minLength: 20)
                     recordFooter
-                        .padding(.bottom, DinkVisionMetric.tabBarHeight + 22)
+                        .padding(.bottom, DinkVisionChromeLayout.scrollBottomPadding)
                 }
                 .padding(.horizontal, 18)
 
@@ -652,7 +667,7 @@ private struct DinkVisionRecordScreen: View {
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
                             .background(DinkVisionColor.ballYellow, in: Capsule())
-                            .padding(.bottom, DinkVisionMetric.tabBarHeight + 118)
+                            .padding(.bottom, DinkVisionChromeLayout.scrollBottomPadding + 72)
                             .onTapGesture {
                                 self.selectedPolicyHint = nil
                             }
@@ -661,6 +676,7 @@ private struct DinkVisionRecordScreen: View {
                 }
             }
             .animation(.spring(response: 0.32, dampingFraction: 0.86), value: model.recordFlowPhase)
+            .accessibilityIdentifier("DinkVisionScreen-Record")
             .task(id: isActive) {
                 guard isActive else {
                     return
@@ -741,10 +757,6 @@ private struct DinkVisionRecordScreen: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .shadow(color: .black.opacity(0.38), radius: 8, y: 1)
-
-            DinkVisionTrailPulseView()
-                .frame(width: 108, height: 34)
-                .opacity(model.isRecording ? 0.9 : 0.28)
         }
     }
 
@@ -776,7 +788,7 @@ private struct DinkVisionRecordScreen: View {
             Spacer()
             BallTrailLoadingView(title: title, detail: detail)
                 .padding(.horizontal, 18)
-                .padding(.bottom, DinkVisionMetric.tabBarHeight + 88)
+                .padding(.bottom, DinkVisionChromeLayout.scrollBottomPadding + 42)
         }
         .transition(.opacity.combined(with: .scale(scale: 0.98)))
     }
@@ -802,6 +814,8 @@ private struct DinkVisionRecordScreen: View {
         }
         .shadow(color: .black.opacity(0.20), radius: 24, y: 12)
         .transition(.opacity.combined(with: .scale(scale: 0.96)))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("DinkVisionPermissionPrimer")
     }
 
     private var shouldShowPermissionPrimer: Bool {
@@ -891,31 +905,6 @@ private struct CourtPerspectiveLines: Shape {
         path.move(to: CGPoint(x: rect.width * 0.20, y: rect.height * 0.27))
         path.addLine(to: CGPoint(x: rect.width * 0.80, y: rect.height * 0.27))
         return path
-    }
-}
-
-private struct DinkVisionTrailPulseView: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
-            let phase = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 0.9) / 0.9
-            ZStack {
-                Circle()
-                    .trim(from: 0.06, to: 0.30)
-                    .stroke(DinkVisionColor.trailBlue.opacity(0.82), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                    .rotationEffect(.degrees(phase * 360))
-                Circle()
-                    .trim(from: 0.40, to: 0.62)
-                    .stroke(DinkVisionColor.trailYellow.opacity(0.82), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                    .rotationEffect(.degrees(phase * 360 + 24))
-                Circle()
-                    .trim(from: 0.72, to: 0.92)
-                    .stroke(DinkVisionColor.trailRed.opacity(0.82), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                    .rotationEffect(.degrees(phase * 360 + 48))
-            }
-        }
-        .accessibilityHidden(true)
     }
 }
 
@@ -1061,16 +1050,17 @@ private struct DinkVisionCoachScreen: View {
                     .font(.system(size: 12, weight: .black, design: .rounded))
                     .foregroundStyle(DinkVisionColor.mutedText)
                     .textCase(.uppercase)
-                Spacer(minLength: 150)
+                Spacer(minLength: DinkVisionChromeLayout.scrollBottomPadding)
             }
             .padding(.horizontal, 24)
 
             HandArrow(color: DinkVisionColor.trailRed, lineWidth: 6)
                 .frame(width: 118, height: 82)
                 .rotationEffect(.degrees(112))
-                .offset(x: -8, y: -DinkVisionMetric.tabBarHeight - 26)
+                .offset(x: -8, y: -DinkVisionChromeLayout.tabOverlayHeight - 8)
         }
         .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("DinkVisionScreen-Coach")
     }
 }
 
@@ -1082,9 +1072,14 @@ private struct DinkVisionReplaysScreen: View {
     @State private var selectedRow: DinkVisionReplayRow?
     @State private var openingRow: DinkVisionReplayRow?
     private let dataSource: DinkVisionReplayListDataSource
+    private let configuration: DinkVisionRuntimeConfiguration
 
-    init(dataSource: DinkVisionReplayListDataSource = DinkVisionReplayListDataSource()) {
+    init(
+        dataSource: DinkVisionReplayListDataSource = DinkVisionReplayListDataSource(),
+        configuration: DinkVisionRuntimeConfiguration = .current()
+    ) {
         self.dataSource = dataSource
+        self.configuration = configuration
     }
 
     var body: some View {
@@ -1107,12 +1102,13 @@ private struct DinkVisionReplaysScreen: View {
                                     DinkVisionReplayRowView(row: row)
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityIdentifier("DinkVisionReplayRow-\(row.id)")
                             }
                         }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 58)
-                    .padding(.bottom, DinkVisionMetric.tabBarHeight + 24)
+                    .padding(.bottom, DinkVisionChromeLayout.scrollBottomPadding)
                 }
 
                 if let openingRow {
@@ -1123,13 +1119,14 @@ private struct DinkVisionReplaysScreen: View {
                     .transition(.opacity)
                 }
             }
+            .accessibilityIdentifier("DinkVisionScreen-Replays")
             .navigationBarHidden(true)
             .task {
                 loadRows()
             }
             .animation(.spring(response: 0.28, dampingFraction: 0.86), value: openingRow?.id)
             .fullScreenCover(item: $selectedRow) { row in
-                DinkVisionReplayPlaybackScreen(row: row) {
+                DinkVisionReplayPlaybackScreen(row: row, configuration: configuration) {
                     selectedRow = nil
                 }
             }
@@ -1187,7 +1184,7 @@ private struct DinkVisionReplaySwooshOverlay: View {
                     Text(durationText)
                         .font(.system(size: 12, weight: .black, design: .rounded))
                         .foregroundStyle(DinkVisionColor.cream.opacity(0.74))
-                        .padding(.bottom, DinkVisionMetric.tabBarHeight + 28)
+                        .padding(.bottom, DinkVisionChromeLayout.scrollBottomPadding)
                 }
             }
             .ignoresSafeArea()
@@ -1199,6 +1196,7 @@ private struct DinkVisionReplaySwooshOverlay: View {
             }
         }
         .accessibilityLabel("Opening replay")
+        .accessibilityIdentifier("DinkVisionReplaySwooshOverlay")
     }
 
     private func diagonalWipe(size: CGSize) -> some View {
@@ -1355,6 +1353,8 @@ private struct DinkVisionEmptyReplaysView: View {
                 .frame(width: 42, height: 42)
                 .offset(x: -18, y: -14)
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("DinkVisionReplaysEmptyState")
     }
 
     private var title: String {
@@ -1368,6 +1368,7 @@ private struct DinkVisionEmptyReplaysView: View {
 
 private struct DinkVisionReplayPlaybackScreen: View {
     let row: DinkVisionReplayRow
+    let configuration: DinkVisionRuntimeConfiguration
     let onClose: () -> Void
     @State private var loadedBundle: WorldBundle?
     @State private var loadError: String?
@@ -1376,8 +1377,19 @@ private struct DinkVisionReplayPlaybackScreen: View {
         ZStack(alignment: .top) {
             DinkVisionColor.ink.ignoresSafeArea()
             if let loadedBundle {
-                WorldViewerView(bundle: loadedBundle, onClose: onClose)
+                if configuration.forceWorldCoachMark {
+                    WorldViewerView(
+                        viewModel: WorldViewerViewModel(
+                            bundle: loadedBundle,
+                            coachMarkStore: DinkVisionForcedCoachMarkStore()
+                        ),
+                        onClose: onClose
+                    )
                     .ignoresSafeArea()
+                } else {
+                    WorldViewerView(bundle: loadedBundle, onClose: onClose)
+                        .ignoresSafeArea()
+                }
             } else if let loadError {
                 VStack(spacing: 16) {
                     Image(systemName: "exclamationmark.triangle")
@@ -1419,6 +1431,7 @@ private struct DinkVisionReplayPlaybackScreen: View {
                 alignment: .top
             )
         }
+        .accessibilityIdentifier("DinkVisionScreen-ReplayPlayback")
         .task {
             do {
                 loadedBundle = try WorldBundle.loadBundledSample()
@@ -1448,9 +1461,11 @@ private struct DinkVisionStatsScreen: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 58)
-                .padding(.bottom, DinkVisionMetric.tabBarHeight + 24)
+                .padding(.bottom, DinkVisionChromeLayout.scrollBottomPadding)
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("DinkVisionScreen-Stats")
     }
 
     private var sampleWatermark: some View {
@@ -1630,9 +1645,11 @@ private struct DinkVisionProfileScreen: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 58)
-                .padding(.bottom, DinkVisionMetric.tabBarHeight + 24)
+                .padding(.bottom, DinkVisionChromeLayout.scrollBottomPadding)
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("DinkVisionScreen-Profile")
     }
 
     private var profileChecklist: some View {
@@ -1798,6 +1815,14 @@ private struct FlowLayout<Content: View>: View {
 
 #Preview("Splash") {
     DinkVisionSplashView {}
+}
+
+#Preview("Splash closed lid snapshot") {
+    ZStack {
+        DinkVisionColor.cream
+        DinkVisionSplashMarkComposition(lidClosure: 1)
+            .frame(width: 148, height: 266)
+    }
 }
 
 #Preview("Record") {

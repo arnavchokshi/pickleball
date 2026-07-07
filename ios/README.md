@@ -4,13 +4,13 @@ This scaffold is the native iOS entry point for the Pickleball capture client.
 It contains the app shell, partial AVFoundation capture scaffolding, sensor
 sidecar contracts, and module boundaries for the video-to-pipeline workflow.
 
-Canonical split: the iOS app owns ON-DEVICE LIVE / fast tier work only
-(cached ARKit court seed, person detect+track+N-lock, 2D pose/joints, the
-~288p CoreML ball heatmap spike, cheap line/contact cues, court map, one cue,
-and capture-quality guidance). SERVER OFFLINE / deep tier work is async GPU
-(mesh, world grounding, foot-lock/physics, paddle 6DoF, full biomech, replay
-render, LLM copy, week-over-week). Camera-space mesh preview is `server-fast`,
-not phone-real-time; LiDAR is a near-field (~5 m) bonus only.
+Canonical split: the iOS app owns L0/L1 work only: on-device advisory capture
+guidance, cached ARKit/manual court seed, person detect+track foot rings,
+2D pose/joints, the ~288p CoreML ball heatmap spike, cheap line/contact cues,
+court map, upload priors, and post-stop replay summaries. L2 server fast
+verdict and L3 server deep world work are async server tiers. Camera-space mesh
+preview is `server-fast`, not phone-real-time; LiDAR is a near-field (~5 m)
+bonus only.
 
 ## Modules
 

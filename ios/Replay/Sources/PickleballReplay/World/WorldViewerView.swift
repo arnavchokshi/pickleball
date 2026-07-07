@@ -213,11 +213,13 @@ public struct WorldViewerView: View {
                 .frame(minWidth: 48, minHeight: 44)
                 .background(WorldViewerChromeColor.ink, in: Capsule())
                 .foregroundStyle(WorldViewerChromeColor.cream)
+                .accessibilityIdentifier("WorldSpeedCycleButton")
             }
         }
         .padding(12)
         .background(WorldViewerChromeColor.cream, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: Color.black.opacity(0.18), radius: 18, y: 8)
+        .accessibilityIdentifier("WorldBottomControlCard")
     }
 
     private var rallyTicks: some View {
@@ -271,6 +273,7 @@ public struct WorldViewerView: View {
                 Spacer()
             }
         }
+        .accessibilityIdentifier("WorldViewerCoachMark")
     }
 
     private func chromeChip(_ text: String) -> some View {

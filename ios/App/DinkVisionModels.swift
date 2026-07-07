@@ -56,7 +56,7 @@ struct DinkVisionSplashStateMachine: Equatable {
     }
 }
 
-struct DinkVisionSplashLidCurve: Equatable {
+nonisolated struct DinkVisionSplashLidCurve: Equatable {
     let left: CGPoint
     let right: CGPoint
     let control: CGPoint
@@ -64,6 +64,12 @@ struct DinkVisionSplashLidCurve: Equatable {
     var edgeY: CGFloat {
         (left.y + right.y) / 2
     }
+}
+
+nonisolated struct DinkVisionSplashLidCover: Equatable {
+    let outerCurve: DinkVisionSplashLidCurve
+    let innerCurve: DinkVisionSplashLidCurve
+    let coverRect: CGRect
 }
 
 nonisolated enum DinkVisionSplashLidGeometry {
@@ -120,6 +126,20 @@ nonisolated enum DinkVisionSplashLidGeometry {
             left: CGPoint(x: center.x - halfSpan, y: edgeY),
             right: CGPoint(x: center.x + halfSpan, y: edgeY),
             control: CGPoint(x: center.x, y: controlY)
+        )
+    }
+
+    static func lidCover(isUpper: Bool, closure: CGFloat, markFrame: CGRect) -> DinkVisionSplashLidCover {
+        let outerCurve = curve(isUpper: isUpper, closure: 0, markFrame: markFrame)
+        let innerCurve = curve(isUpper: isUpper, closure: closure, markFrame: markFrame)
+        let minY = min(outerCurve.edgeY, innerCurve.edgeY)
+        let maxY = max(outerCurve.edgeY, innerCurve.edgeY)
+        let minX = min(outerCurve.left.x, innerCurve.left.x)
+        let maxX = max(outerCurve.right.x, innerCurve.right.x)
+        return DinkVisionSplashLidCover(
+            outerCurve: outerCurve,
+            innerCurve: innerCurve,
+            coverRect: CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
         )
     }
 }
@@ -183,19 +203,40 @@ enum DinkVisionTabKind: String, CaseIterable, Identifiable, Equatable {
 struct DinkVisionTabLayoutModel: Equatable {
     var tabs: [DinkVisionTabKind]
     var recordButtonDiameter: CGFloat
-    var recordRaisedOffset: CGFloat
+    var recordButtonCenterAboveBarTop: CGFloat
     var minimumHitTarget: CGFloat
 
     static let brandV4 = DinkVisionTabLayoutModel(
         tabs: [.replays, .stats, .record, .coach, .profile],
         recordButtonDiameter: 72,
-        recordRaisedOffset: 14,
+        recordButtonCenterAboveBarTop: 26,
         minimumHitTarget: 44
     )
 
     var centerTab: DinkVisionTabKind? {
         guard !tabs.isEmpty else { return nil }
         return tabs[tabs.count / 2]
+    }
+
+    func totalOverlayHeight(tabBarHeight: CGFloat) -> CGFloat {
+        tabBarHeight + recordButtonDiameter / 2 + recordButtonCenterAboveBarTop
+    }
+
+    func recordButtonCenterY(tabBarHeight _: CGFloat) -> CGFloat {
+        recordButtonDiameter / 2
+    }
+
+    func recordButtonFrame(tabBarHeight: CGFloat) -> CGRect {
+        CGRect(
+            x: -recordButtonDiameter / 2,
+            y: recordButtonCenterY(tabBarHeight: tabBarHeight) - recordButtonDiameter / 2,
+            width: recordButtonDiameter,
+            height: recordButtonDiameter
+        )
+    }
+
+    func contentBottomPadding(tabBarHeight: CGFloat) -> CGFloat {
+        totalOverlayHeight(tabBarHeight: tabBarHeight) + 24
     }
 }
 
