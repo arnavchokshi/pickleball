@@ -9,6 +9,9 @@ Read in this order before acting:
 2. `NORTH_STAR_ROADMAP.md` — THE master plan (the *what*). PART 0 first — any blank owner-setup item
    is a typed STOP, not a proceed. Then Part I (esp. I.7: definition of done, critical path, demo
    milestones M1-M5). Part III holds your tasks (P0…P7 + PF); EDGE_PLAYBOOK.md holds the hacks/stack.
+   `TECH_BLUEPRINTS.md` holds the HOW — per-pillar executable specs + the successor primer (its
+   PART A): read PART A before dispatching anything; pull lane recipes + acceptance keys from the
+   matching pillar section.
 3. `BUILD_CHECKLIST.md` (last ~15 dated bullets — live coordination) and `runs/manager/gpu_fleet.md`
    (fleet state; reconcile orphaned VMs before new work).
 

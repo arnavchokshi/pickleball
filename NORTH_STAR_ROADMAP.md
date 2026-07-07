@@ -1580,7 +1580,10 @@ and wave 3 (in flight) proved the shape; §VI.0 is that shape as an invariant ch
 the concrete waves. **Waves ≤4 are commitments; waves ≥5 are planned trajectories** — each wave's
 closing scorecard re-derives the next wave's exact queue (the milestone mapping M1-M5 is the stable
 part, not the lane lists). The manager writes `runs/manager/wave<N+1>_boot_prompt.md` at every
-close; that prompt + this part must agree.
+close; that prompt + this part must agree. **Companion (2026-07-07): `TECH_BLUEPRINTS.md`** — the
+executable per-pillar specs (algorithms, recipes, file targets, decision trees) + the successor
+manager primer; every wave lane spec pulls its recipes and acceptance keys from the matching
+pillar there.
 
 ## VI.0 The wave lifecycle (invariant — run every wave exactly like this)
 
