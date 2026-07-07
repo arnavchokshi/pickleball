@@ -1,7 +1,9 @@
 # LANE w4_ballgpu_20260707 — Sonnet GPU: seed fine-tune + SST round 1 + threshold sweep (INTERNAL-VAL ONLY)
 
-STATUS: DRAFT at wave open. Dispatch ONLY after w4_ballcode_20260707 rules PASS; splice its
-report's `next` CLI invocations into §RUN below before dispatch.
+STATUS: FINAL (w4_ballcode RULED PASS + LANDED at 5b268aa6d). Exact CLIs spliced below.
+CODE SYNC NOTE: sync the VM from COMMITTED main HEAD (>= 5b268aa6d) via the git-bundle method —
+NEVER rsync the Mac working tree (it carries other live lanes' half-done edits, e.g. an in-flight
+ball_arc_solver.py change that must NOT ship).
 
 ## OBJECTIVE
 Bank internal-val-scored ball checkpoints on a self-provisioned H100 spot VM, then DELETE it:
@@ -64,16 +66,29 @@ stage-1's bridge score (measure stage-1 through the bridge too — it has never 
   never-gradient-trained; run the protected-hash collision assert on the training corpus before any
   training step and report 35/0).
 
-## RUN (exact CLIs come from w4_ballcode's report `next` — splice before dispatch)
-1. Seed fine-tune (bounded ≤30 epochs; init key-diff must be empty — abort otherwise). Bank ckpts.
-2. Bridge-score: stage-1, seed-fine-tune. 
-3. SST: build manifest from the 40 teacher sidecars (protected-hash assert), train student from
-   stage-1 init, bridge-score.
-4. Threshold sweep on the best-by-bridge candidate + stage-1: sweep the detector's candidate
+## RUN (exact CLIs from the w4_ballcode report; substitute <TS>; --device cuda; run on the VM)
+1. SEED FINE-TUNE (init key-diff must be empty — the CLI aborts otherwise; bank ckpts):
+   `.venv/bin/python scripts/racketsport/train_ball_stage2.py --cvat-export-root cvat_upload/exports/harvest_review_20260707 --init-checkpoint runs/lanes/w3_p11_train_20260707/checkpoints/latest.pt --out-dir runs/lanes/w4_ball_stage2_owner_<TS> --model-family wasb_hrnet --wasb-repo third_party/WASB-SBDT --device cuda --batch-size 8 --epochs 30 --learning-rate 5e-4 --weight-decay 5e-5 --image-size 512x288 --frames-in 3 --heatmap-radius-px 4 --checkpoint-every 500 --num-workers 4 --seed 1337`
+2. BRIDGE-SCORE stage-1 AND the seed-fine-tune on both DEFAULT_CLIPS.
+3. SST MANIFEST (protected-hash assert 35 expected):
+   `.venv/bin/python scripts/racketsport/train_ball_stage2.py --mode build-sst-manifest --prelabel-root data/online_harvest_20260706/prelabels --rally-root data/online_harvest_20260706/rallies --sst-manifest-out runs/lanes/w4_ball_stage2_sst_round1_<TS>/sst_manifest.json --expected-protected-eval-hash-count 35`
+   (Teacher sidecar layout per clip dir: ball_track.json + metadata JSON + WASB CSV; rally videos
+   under data/online_harvest_20260706/rallies/<source_id>/.)
+4. SST STUDENT TRAIN — MANAGER RULING on init (conditional, decided by step 2's bridge scores):
+   IF seed-fine-tune >= stage-1 on bridge `label_f1_at_20px` (both clips, no hidden-FP regression)
+   → `--init-checkpoint runs/lanes/w4_ball_stage2_owner_<TS>/checkpoints/latest.pt`;
+   ELSE → `--init-checkpoint runs/lanes/w3_p11_train_20260707/checkpoints/latest.pt`.
+   State which branch fired and why in the report. Rest of the command verbatim:
+   `.venv/bin/python scripts/racketsport/train_ball_stage2.py --cvat-export-root cvat_upload/exports/harvest_review_20260707 --sst-manifest runs/lanes/w4_ball_stage2_sst_round1_<TS>/sst_manifest.json --init-checkpoint <PER RULING> --out-dir runs/lanes/w4_ball_stage2_sst_round1_<TS>/student_train --model-family wasb_hrnet --wasb-repo third_party/WASB-SBDT --device cuda --batch-size 8 --epochs 30 --learning-rate 5e-4 --weight-decay 5e-5 --image-size 512x288 --frames-in 3 --heatmap-radius-px 4 --checkpoint-every 500 --num-workers 4 --seed 1337`
+5. BRIDGE-SCORE the SST student.
+6. THRESHOLD SWEEP on the best-by-bridge candidate + stage-1: sweep the detector's candidate
    threshold (find the exact knob in run_wasb_ball/its config — report which) across ~5 values;
    re-run the bridge per point; table of recall vs hidden-FP (`mean_visible_hit_recall` /
-   `mean_hidden_false_positive_rate`). No re-tuning spiral: measure and report, don't chase.
-5. Disagreement export (teacher vs best student) → queue JSON → pull to Mac.
+   `mean_hidden_false_positive_rate`). Measure and report — no re-tuning spiral.
+7. DISAGREEMENT QUEUE (teacher vs best student; student predictions in the same JSON shape as
+   teacher sidecars — generate them with run_wasb_ball from the student checkpoint over the 40
+   harvest clips, or the subset time allows — state coverage honestly):
+   `.venv/bin/python scripts/racketsport/export_sst_disagreements.py --teacher-predictions data/online_harvest_20260706/prelabels --student-predictions <student_predictions_root_same_shape> --out runs/lanes/w4_ball_stage2_sst_round1_<TS>/sst_disagreements.json --large-offset-px 25` → pull to Mac.
 KILL (commitments): internal-val bridge F1 regression vs 0.6685 for a candidate after 2 recipe
 iterations → bank the negative, stop that arm (no spiral). Preemption mid-train → resume from the
 atomically-saved checkpoint (checkpoint_every 500 gives ≤~1min loss); if the SPOT pool is hostile
