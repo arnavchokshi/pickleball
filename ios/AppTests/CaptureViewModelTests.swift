@@ -56,6 +56,69 @@ final class CaptureViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testPrepareRunsARKitSetupPassBeforeStartingAVCapturePreview() async throws {
+        let controller = FakeCameraCaptureController()
+        controller.setupPass = ARKitSetupPassSidecar(
+            intrinsics: CameraIntrinsics(fx: 1180, fy: 1192, cx: 960, cy: 540, source: "arkit"),
+            cameraPose: RigidPose(R: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], t: [0, 1.4, 0]),
+            courtPlane: Plane(point: [0, 0, 0], normal: [0, 1, 0]),
+            trackingState: .normal,
+            gravity: [0, -1, 0]
+        )
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            }
+        )
+
+        await model.prepare()
+
+        XCTAssertEqual(controller.events, ["configure", "setupPass", "startPreview"])
+        XCTAssertEqual(model.setupPassStatus, .aligned)
+        XCTAssertEqual(model.setupPassStatusText, "Aligned ✓")
+        XCTAssertEqual(model.setupPassChipStatus, .pass)
+    }
+
+    @MainActor
+    func testRefreshAfterFinishedRecordingRerunsStaleSetupPassAndRestartsPreview() async throws {
+        let controller = FakeCameraCaptureController()
+        let recordingDescriptor = try Self.captureDescriptor(sessionID: "recording")
+        controller.configureDescriptor = try Self.captureDescriptor(sessionID: "configured")
+        controller.startRecordingDescriptor = recordingDescriptor
+        controller.setupPass = ARKitSetupPassSidecar.unavailable(reason: "first_timeout", gravity: [0, -1, 0])
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            }
+        )
+
+        await model.prepare()
+        await model.toggleRecording()
+        await model.toggleRecording()
+        controller.onRecordingFinished?(.success(CameraRecordingResult(
+            descriptor: recordingDescriptor,
+            clipURL: URL(fileURLWithPath: "/tmp/recording.mov")
+        )))
+        await Task.yield()
+
+        controller.gravity = [0.4, -0.6, 0]
+        controller.setupPass = ARKitSetupPassSidecar(
+            intrinsics: CameraIntrinsics(fx: 1180, fy: 1192, cx: 960, cy: 540, source: "arkit"),
+            cameraPose: RigidPose(R: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], t: [0, 1.4, 0]),
+            courtPlane: Plane(point: [0, 0, 0], normal: [0, 1, 0]),
+            trackingState: .normal,
+            gravity: [0.4, -0.6, 0]
+        )
+
+        await model.refreshSetupPassIfNeeded()
+
+        XCTAssertEqual(Array(controller.events.suffix(2)), ["setupPass", "startPreview"])
+        XCTAssertEqual(model.setupPassStatus, .aligned)
+    }
+
+    @MainActor
     func testPrepareSurfacesCapturePolicyViolations() async throws {
         let controller = FakeCameraCaptureController()
         controller.policyEnforcementReport = CapturePolicyEnforcementReport(
@@ -191,6 +254,9 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
     var configureError: Error?
     var startRecordingDescriptor: CapturePackageDescriptor?
     var policyEnforcementReport: CapturePolicyEnforcementReport?
+    var setupPass: ARKitSetupPassSidecar = .unavailable(reason: "test_setup_pass_unavailable", gravity: [0, -1, 0])
+    var gravity: [Double] = [0, -1, 0]
+    private(set) var events: [String] = []
     private(set) var configureCalls: [ConfigureCall] = []
     private(set) var startPreviewCallCount = 0
     private(set) var stopPreviewCallCount = 0
@@ -205,6 +271,7 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
         sessionID _: String,
         packageRootURL _: URL
     ) async throws -> CapturePackageDescriptor {
+        events.append("configure")
         configureCalls.append(ConfigureCall(mode: mode, orientation: captureDeviceOrientation))
         if let configureError {
             throw configureError
@@ -216,14 +283,26 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
     }
 
     func startPreview() async {
+        events.append("startPreview")
         startPreviewCallCount += 1
     }
 
     func stopPreview() async {
+        events.append("stopPreview")
         stopPreviewCallCount += 1
     }
 
+    func performARKitSetupPass(timeoutSeconds _: Double) async -> ARKitSetupPassSidecar {
+        events.append("setupPass")
+        return setupPass
+    }
+
+    func latestGravity() async -> [Double] {
+        gravity
+    }
+
     func startRecording() async throws -> CapturePackageDescriptor {
+        events.append("startRecording")
         startRecordingCallCount += 1
         if let startRecordingDescriptor {
             return startRecordingDescriptor
@@ -232,6 +311,7 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
     }
 
     func stopRecording() async throws {
+        events.append("stopRecording")
         stopRecordingCallCount += 1
     }
 

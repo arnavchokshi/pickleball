@@ -387,8 +387,13 @@ private struct DinkVisionRecordScreen: View {
             }
             .animation(.spring(response: 0.32, dampingFraction: 0.86), value: model.recordFlowPhase)
             .task(id: isActive) {
-                if isActive && model.status == .idle {
+                guard isActive else {
+                    return
+                }
+                if model.status == .idle {
                     await model.prepare()
+                } else {
+                    await model.refreshSetupPassIfNeeded()
                 }
             }
             .onChange(of: proxy.size.width > proxy.size.height) {
@@ -421,7 +426,7 @@ private struct DinkVisionRecordScreen: View {
                 if model.isRecording {
                     recordingBadge
                 } else {
-                    statusChip(title: statusText, status: model.status == .ready ? .pass : .warning)
+                    statusChip(title: preRecordStatusText, status: preRecordChipStatus)
                 }
                 Button {
                     isCourtOverlayEnabled.toggle()
@@ -588,6 +593,24 @@ private struct DinkVisionRecordScreen: View {
             return "Saved"
         case .blocked(let message):
             return message
+        }
+    }
+
+    private var preRecordStatusText: String {
+        switch model.setupPassStatus {
+        case .aligning, .aligned, .unavailable:
+            return model.setupPassStatusText
+        case .idle:
+            return statusText
+        }
+    }
+
+    private var preRecordChipStatus: DinkVisionPolicyChipStatus {
+        switch model.setupPassStatus {
+        case .aligning, .aligned, .unavailable:
+            return model.setupPassChipStatus
+        case .idle:
+            return model.status == .ready ? .pass : .warning
         }
     }
 }

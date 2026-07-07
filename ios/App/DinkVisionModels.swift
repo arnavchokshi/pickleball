@@ -149,6 +149,13 @@ enum DinkVisionRecordFlowPhase: Equatable {
     case blocked(String)
 }
 
+enum DinkVisionSetupPassStatus: Equatable {
+    case idle
+    case aligning
+    case aligned
+    case unavailable(String)
+}
+
 enum DinkVisionPolicyChipStatus: String, Equatable {
     case pass
     case warning
