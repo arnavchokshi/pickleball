@@ -104,8 +104,10 @@ TASK_HINTS = {
     "build_variant_comparison": ("EVAL", "EVAL-0"),
     "calibrate": ("CAL", "CAL-2"),
     "check_eval_regression": ("EVAL", "EVAL-1"),
+    "corpus_dashboard": ("DATA", "P0-4"),
     "extract_label_frames": ("DATA", "DATA-1"),
     "finetune_pose": ("BODY", "BODY-4"),
+    "generate_flight_corpus": ("BALL", "P0-7"),
     "ingest_testclips": ("DATA", "DATA-1"),
     "init_label_workdir": ("DATA", "DATA-1"),
     "manifest_report": ("RPT", "RPT-1"),
@@ -234,6 +236,8 @@ def _category(stem: str) -> str:
         return "decode"
     if "serving" in normalized:
         return "serving"
+    if normalized == "generate_flight_corpus":
+        return "physics"
     if "replay" in normalized or "scrubber" in normalized or "viewer" in normalized:
         return "replay"
     if "eval" in normalized or "variant_comparison" in normalized or "benchmark" in normalized or "sweep" in normalized or normalized.startswith("measure_"):
