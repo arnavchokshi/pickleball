@@ -14,6 +14,26 @@ in-flight lane per BUILD_CHECKLIST), **data-disjoint** (no held-out/protected la
 row — else STOP), **resource-disjoint** (GPU? idle one or provision new per §12). If it needs a GPU,
 provision/assign the VM FIRST (gpu-fleet-provision skill) and record it in `runs/manager/gpu_fleet.md`.
 
+## Wave-4 standing spec lines (manual §21 — include the ones that apply)
+- **Training lane** → mandatory acceptance item: push ONE sample through the training dataloader AND
+  the production inference preprocessor; assert identical tensors (or a documented, stamped mapping).
+  Product-metric scoring always includes a healthy-checkpoint CONTROL row.
+- **GPU wall-clock** → never quote a cap from a different data path: the lane runs a ~100-step probe,
+  reports measured steps/s, THEN the manager sets the step/wall cap. Budgets carry +~50%
+  outage/idle contingency; VMs expected >2h get an in-VM idle watchdog (no-ssh self-stop).
+- **GPU lane resilience** → nohup every long VM step (survives driver outages); chunked-transfer
+  fallback for Mac→VM uploads (bwlimit + append-verify + 50MB chunks; uplink is assumed-unreliable);
+  prefer VM `git fetch` from origin for code when origin is current; refresh known_hosts INTO any
+  pinned worktree the lane runs from.
+- **Deliverables** → NEVER a .patch file (both wave-4 attempts were invalid): deferred fenced-file
+  changes = inline diff hunks in the report; the integration lane re-derives + `git apply --check`s
+  its own work. Regenerated/derived artifacts go under YOUR lane dir — other lanes' run dirs are
+  READ-ONLY evidence.
+- **Verify rounds** → gate-adjacent fixes get one adversarial round per repair round, scored by the
+  verifier's UNMODIFIED harness; fix results matching a diagnosis's predictions to the digit =
+  provenance-check before acceptance. Round-3 resumes encode an explicit fallback so the thread
+  ends decidable in one round-trip.
+
 ## The spec (write to `runs/lanes/<lane>_<date>/spec.md`)
 1. **HARD RULES block:** no branches/commits (owner joint-commit rule); read NORTH_STAR + BUILD_CHECKLIST
    last note; 4 protected clips EVAL-ONLY (Burlington/Wolverine internal-val OK; Outdoor/Indoor labels

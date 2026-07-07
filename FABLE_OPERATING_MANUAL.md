@@ -553,3 +553,64 @@ helps E2E; do both.
   restart (fan1 received fleet1's old IP). Wave-4 removed `DEFAULT_REMOTE_HOST`; always pass
   `--remote-host` explicitly and run `scripts/fleet/refresh_remote_host.sh` against the current
   ledger host (dcc4dae42; `runs/lanes/w4_fleethosts_20260707/report.json`).
+
+## 21. Wave-4 field lessons (2026-07-08 — the first training wave; standing rules)
+
+**KEEP (proven in wave 4 — several are now non-negotiable):**
+- **One adversarial verify round per repair round, verifier's harness UNMODIFIED, paid off ×3:**
+  caught a gate-stream circularity masquerading as a perfect fix (exact-match to diagnosis
+  predictions = the tell), a fabricated-confidence formula, a REINTRODUCED gate-referencing
+  exclusion, vacuous tests (mutation checks), a sham LOO validation, and a false span-equivalence
+  claim (endpoint error improved while fit-tier/residual/junction quality regressed — one metric
+  is never an equivalence proof). Standing: numbers that match a diagnosis's predictions TO THE
+  DIGIT mean the "fix" probably re-ran the diagnosis — check provenance before celebrating.
+- **Training lanes found the deepest bug because the spec demanded product-bridge scoring WITH a
+  healthy-checkpoint control row.** Control rows are mandatory on every measurement pipeline.
+- **nohup-on-VM for every long GPU step** survived 3 driver outages (spend limit, session restart,
+  transient API refusal) with ZERO lost compute. Mandatory line in every GPU lane spec.
+- **Docs two-pass pattern:** mid-wave evidence-complete reconciliation with explicit
+  `[PENDING <proof> — manager fills at closeout]` markers + a closeout resume that fills them.
+  Parallelizes the docs tail into the GPU window; markers grep-assert to zero at close.
+- **Fallback-encoded final rounds:** when a repair thread hits round 3, encode the fallback INTO
+  the resume ("if the primary fails criterion X, execute fallback Y without asking") so the thread
+  ends decidable in one round-trip either way (w4_bvp landed exactly this way).
+- Blob-hash version stamps (committed-blob, not working-tree) survived main moving twice mid-proof;
+  selective-hunk staging (`git apply --cached` with filtered hunks) handles shared files under
+  concurrent sessions; transcript-resume + boards-pushed made 3 outages recoverable in minutes.
+
+**FIX (cost us real time/tokens/dollars in wave 4):**
+- **Never quote a GPU wall-clock from a different data path.** The "12k steps ≈ 26 min" estimate
+  came from the image-corpus loader; the SST video-seek loader ran 0.6-1.0 steps/s (~8× slower).
+  Rule: training budgets are stated in STEPS; the lane runs a ~100-step probe, reports measured
+  steps/s, and THEN the manager sets the wall-clock cap. No cap before a measured rate.
+- **Train/inference contract check is now a mandatory acceptance item for every training lane:**
+  push ONE sample through the training dataloader AND the production inference preprocessor and
+  assert identical tensors (or a documented, stamped mapping). The wave-4 preprocessing-contract
+  bug (train resize+/255 vs bridge affine+ImageNet; harness ckpts degenerate F1 0.0) lived through
+  an entire prior wave because nothing asserted this.
+- **Lane deliverables NEVER include .patch files.** Both wave-4 attempts produced invalid diffs
+  ("garbage at line N"). Deferred fenced-file changes = inline diff hunks in the report (design
+  notes) + the integration lane re-derives and verifies with `git apply --check` on its own work.
+- **Lanes never write into another lane's run dir.** A fix lane overwrote banked wave-3 proof
+  artifacts in place (originals reconstructed, but provenance was at risk). Fence text now says:
+  regenerated/derived artifacts go under YOUR lane dir; other lanes' dirs are read-only evidence.
+- **Adjudication suite runs never use `-x`/fail-fast** — the census is the product. (Cost one
+  10-min rerun.) Manager board edits use the Edit tool on the worktree; Bash-python exact-replace
+  only for files the manager cannot Edit, with SHORT single-line anchors (two multi-line-anchor
+  heredocs failed and one half-executed compound command committed early).
+- **Budget statements include an outage/idle contingency (+~50%)** and any VM expected to live
+  >2h carries an in-VM idle watchdog (no-ssh-activity self-stop) — wave-4's overage ($19-32 mid
+  vs $12-25 stated) was entirely outage/transfer idle, not compute. Before dispatching multi-hour
+  agent lanes, confirm API-credit headroom with the owner (a spend-limit wall mid-lane idles GPUs).
+- **Anti-passive-wait phrasing still fails ~once per wave** ("monitors armed" turn-end). Budget one
+  SendMessage nudge per Sonnet GPU lane; phrase specs as "structure any wait as a single foreground
+  until-loop COMMAND; a final message containing 'waiting/monitoring' is a failed lane."
+- **Mac→GCP bulk uplink is assumed-unreliable** (EMSGSIZE class, 3rd session): every GPU lane spec
+  ships the chunked-transfer fallback (bwlimit + append-verify + 50MB chunks); code syncs prefer
+  VM `git fetch` from origin over Mac-push when origin is current. Transport hardening is wave-5
+  queue #6; known_hosts goes INTO pinned worktrees; snapshot template needs ffmpeg.
+- **Shared registration files are contention magnets** (list_scaffold_tools.py: 3 wave lanes + 2
+  foreign sessions in one file, one foreign landing left main red). Interim: registrations are
+  single-line appends + selective staging; candidate wave-5+ refactor: per-tool metadata instead
+  of one shared map. Wave-close adjudication catches unregistered tools — classify THEN repair
+  cross-lane in minutes (the doctor.py pattern), don't leave main red overnight.
