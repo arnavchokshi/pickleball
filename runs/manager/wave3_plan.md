@@ -1,3 +1,5 @@
+# WAVE 3 PLAN — CLOSED 2026-07-07 ~02:5x PDT (scorecard: BUILD_CHECKLIST [WAVE-3 COMPLETE] bullet; owner summary: OWNER_CHECKIN_20260707.md)
+
 # WAVE 3 PLAN (opened 2026-07-07 UTC / 2026-07-06 22:2x PDT, manager)
 
 Queue source: owner boot message + BUILD_CHECKLIST [WAVE-2 COMPLETE 2026-07-07] bullet. HEAD at
