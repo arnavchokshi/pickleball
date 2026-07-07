@@ -9,6 +9,9 @@ public struct CaptureSidecarWriteContext: Equatable, Sendable {
     public var locked: LockedCapture
     public var intrinsics: CameraIntrinsics
     public var gravity: [Double]
+    public var arkit: ARCaptureSidecarPayload?
+    public var policyEnforcement: CapturePolicyEnforcementReport?
+    public var profileCapture: ProfileCapturePayload?
     public var captureQuality: CaptureQuality
 
     public init(
@@ -19,6 +22,9 @@ public struct CaptureSidecarWriteContext: Equatable, Sendable {
         locked: LockedCapture,
         intrinsics: CameraIntrinsics,
         gravity: [Double],
+        arkit: ARCaptureSidecarPayload? = nil,
+        policyEnforcement: CapturePolicyEnforcementReport? = nil,
+        profileCapture: ProfileCapturePayload? = nil,
         captureQuality: CaptureQuality
     ) {
         self.deviceTier = deviceTier
@@ -28,6 +34,9 @@ public struct CaptureSidecarWriteContext: Equatable, Sendable {
         self.locked = locked
         self.intrinsics = intrinsics
         self.gravity = gravity
+        self.arkit = arkit
+        self.policyEnforcement = policyEnforcement
+        self.profileCapture = profileCapture
         self.captureQuality = captureQuality
     }
 }
@@ -66,7 +75,14 @@ public enum CaptureSidecarWriter {
         finishedAt: Date,
         context: CaptureSidecarWriteContext
     ) -> CaptureSidecar {
-        CaptureSidecar(
+        let latestARFrame = context.arkit?.latestFrame
+        let courtPlane = context.arkit?.courtPlane
+        let arkitFrameSamples = context.arkit?.frameSamples ?? []
+        let unavailableSensorReasons = unavailableSensorReasons(
+            arkitFrameSamples: arkitFrameSamples,
+            courtPlane: courtPlane
+        )
+        return CaptureSidecar(
             deviceTier: context.deviceTier,
             deviceModel: context.deviceModel,
             fps: descriptor.expectedFPS,
@@ -80,11 +96,65 @@ public enum CaptureSidecarWriter {
             cameraPosition: context.cameraPosition,
             cameraLens: context.cameraLens,
             locked: context.locked,
-            intrinsics: context.intrinsics,
+            intrinsics: latestARFrame?.intrinsics ?? context.intrinsics,
+            arkitCameraPose: latestARFrame?.cameraPose,
+            courtPlane: courtPlane,
             gravity: context.gravity,
+            arkitFrameSamples: arkitFrameSamples,
             ondevicePoseTrack: nil,
-            captureQuality: context.captureQuality
+            unavailableSensorReasons: unavailableSensorReasons,
+            policyEnforcement: context.policyEnforcement,
+            profileCapture: context.profileCapture,
+            captureQuality: captureQuality(
+                context.captureQuality,
+                arkitFrameSamples: arkitFrameSamples,
+                courtPlane: courtPlane,
+                policyEnforcement: context.policyEnforcement
+            )
         )
+    }
+
+    private static func unavailableSensorReasons(
+        arkitFrameSamples: [ARKitFrameSample],
+        courtPlane: Plane?
+    ) -> [String: String] {
+        var reasons: [String: String] = [:]
+        if arkitFrameSamples.isEmpty {
+            reasons["arkit_camera_pose"] = "no_arkit_frame_samples_recorded"
+        }
+        if courtPlane == nil {
+            reasons["court_plane"] = "no_horizontal_arkit_plane_recorded"
+        }
+        return reasons
+    }
+
+    private static func captureQuality(
+        _ original: CaptureQuality,
+        arkitFrameSamples: [ARKitFrameSample],
+        courtPlane: Plane?,
+        policyEnforcement: CapturePolicyEnforcementReport?
+    ) -> CaptureQuality {
+        var reasons = original.reasons.filter { reason in
+            if !arkitFrameSamples.isEmpty && (reason == "arkit_seed_missing" || reason == "intrinsics_estimated_from_fov") {
+                return false
+            }
+            if courtPlane != nil && reason == "court_plane_missing" {
+                return false
+            }
+            return true
+        }
+        if let policyEnforcement, !policyEnforcement.isCompliant {
+            reasons.append(contentsOf: policyEnforcement.violations.map { "policy_\($0)" })
+        }
+        let grade: CaptureQuality.Grade
+        if reasons.isEmpty {
+            grade = .good
+        } else if original.grade == .poor {
+            grade = .poor
+        } else {
+            grade = .warn
+        }
+        return CaptureQuality(grade: grade, reasons: reasons)
     }
 
     private static func iso8601String(from date: Date) -> String {

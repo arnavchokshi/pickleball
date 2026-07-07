@@ -619,7 +619,18 @@ private struct CameraCaptureScreen: View {
                     VStack {
                         Spacer()
                         HStack(alignment: .bottom, spacing: 10) {
-                            LiveGuidancePanel(state: model.liveGuidanceState)
+                            VStack(alignment: .leading, spacing: 8) {
+                                LiveGuidancePanel(state: model.liveGuidanceState)
+                                CapturePolicyBadge(report: model.capturePolicyEnforcement, statusText: model.capturePolicyStatusText)
+                                ProfileSetupChecklistPanel(
+                                    flow: model.profileFlow,
+                                    playerHeightCM: $model.profilePlayerHeightCM,
+                                    ballSKU: $model.profileBallSKU,
+                                    completeCurrentStep: {
+                                        model.completeCurrentProfileStepFromUI()
+                                    }
+                                )
+                            }
                             Spacer(minLength: 8)
                             VStack(alignment: .trailing, spacing: 8) {
                                 BallIndicatorBadge(state: model.ballIndicatorState)
@@ -1315,6 +1326,117 @@ private struct LiveGuidancePanel: View {
         .frame(maxWidth: 260, alignment: .leading)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
+    }
+}
+
+private struct CapturePolicyBadge: View {
+    let report: CapturePolicyEnforcementReport?
+    let statusText: String
+
+    var body: some View {
+        Label(statusText, systemImage: iconName)
+            .font(.caption2.weight(.black))
+            .foregroundStyle(report?.isCompliant == false ? PickleballPalette.ink : PickleballPalette.cream)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .frame(maxWidth: 260, alignment: .leading)
+            .background(background, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
+    }
+
+    private var iconName: String {
+        guard let report else {
+            return "hourglass"
+        }
+        return report.isCompliant ? "lock.shield" : "exclamationmark.triangle"
+    }
+
+    private var background: Color {
+        guard let report else {
+            return Color.black.opacity(0.34)
+        }
+        return report.isCompliant ? Color.black.opacity(0.34) : PickleballPalette.coral
+    }
+}
+
+private struct ProfileSetupChecklistPanel: View {
+    let flow: ProfileCaptureFlowState
+    @Binding var playerHeightCM: Double
+    @Binding var ballSKU: String
+    let completeCurrentStep: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 8) {
+                Text("Profile")
+                    .font(.caption2.weight(.black))
+                    .foregroundStyle(.white.opacity(0.56))
+                Spacer(minLength: 8)
+                Button(action: completeCurrentStep) {
+                    Image(systemName: flow.isComplete ? "checkmark.seal.fill" : "checkmark")
+                        .font(.caption.weight(.heavy))
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(flow.isComplete ? PickleballPalette.lime : PickleballPalette.ink)
+                .background(flow.isComplete ? Color.white.opacity(0.10) : PickleballPalette.lime, in: Circle())
+                .disabled(flow.isComplete)
+                .accessibilityLabel(flow.isComplete ? "Profile checklist complete" : "Complete profile step")
+            }
+
+            ForEach(flow.steps, id: \.kind) { step in
+                HStack(spacing: 7) {
+                    Image(systemName: step.status == .complete ? "checkmark.circle.fill" : "circle")
+                        .font(.caption2.weight(.heavy))
+                        .foregroundStyle(step.status == .complete ? PickleballPalette.lime : .white.opacity(0.42))
+                        .frame(width: 14)
+                    Text(step.kind.title)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(step.status == .complete ? PickleballPalette.cream : .white.opacity(0.66))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            }
+
+            if flow.currentStep?.kind == .playerHeightEntry {
+                Stepper(value: $playerHeightCM, in: 120...230, step: 1) {
+                    Text("\(Int(playerHeightCM.rounded())) cm")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(PickleballPalette.cream)
+                }
+            }
+
+            if flow.currentStep?.kind == .ballPick {
+                Picker("Ball", selection: $ballSKU) {
+                    Text("Outdoor").tag("outdoor_yellow")
+                    Text("Indoor").tag("indoor_yellow")
+                }
+                .pickerStyle(.segmented)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: 260, alignment: .leading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
+    }
+}
+
+private extension ProfileCaptureStepKind {
+    var title: String {
+        switch self {
+        case .emptyCourtClip:
+            return "Empty court"
+        case .calibrationGridSweep:
+            return "Grid sweep"
+        case .paddleOrbit:
+            return "Paddle orbit"
+        case .playerHeightEntry:
+            return "Player height"
+        case .ballPick:
+            return "Ball pick"
+        }
     }
 }
 

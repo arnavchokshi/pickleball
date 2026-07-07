@@ -29,6 +29,7 @@ final class CaptureViewModelTests: XCTestCase {
         let controller = FakeCameraCaptureController()
         let descriptor = try Self.captureDescriptor(sessionID: "prepare-test")
         controller.configureDescriptor = descriptor
+        controller.policyEnforcementReport = .compliant60FPS
         var permissionRequestCount = 0
         let model = CaptureViewModel(
             controller: controller,
@@ -48,6 +49,58 @@ final class CaptureViewModelTests: XCTestCase {
             FakeCameraCaptureController.ConfigureCall(mode: .standard60, orientation: .landscapeRight),
         ])
         XCTAssertEqual(controller.startPreviewCallCount, 1)
+        XCTAssertEqual(model.capturePolicyStatusText, "Capture policy locked")
+    }
+
+    @MainActor
+    func testPrepareSurfacesCapturePolicyViolations() async throws {
+        let controller = FakeCameraCaptureController()
+        controller.policyEnforcementReport = CapturePolicyEnforcementReport(
+            requested: CapturePolicyRequestedState(
+                fps: 60,
+                resolution: [1920, 1080],
+                format: .hevc,
+                orientation: .landscape,
+                electronicStabilizationEnabled: false,
+                exposureLocked: true,
+                focusLocked: true,
+                whiteBalanceLocked: true
+            ),
+            achieved: CapturePolicyAchievedState(
+                fps: 60,
+                resolution: [1920, 1080],
+                format: .hevc,
+                orientation: .landscape,
+                electronicStabilizationEnabled: true,
+                exposureLocked: true,
+                focusLocked: true,
+                whiteBalanceLocked: true
+            ),
+            violations: ["electronic_stabilization_enabled"]
+        )
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            }
+        )
+
+        await model.prepare()
+
+        XCTAssertEqual(model.capturePolicyStatusText, "Policy issue: electronic_stabilization_enabled")
+        XCTAssertEqual(model.capturePolicyEnforcement?.violations, ["electronic_stabilization_enabled"])
+    }
+
+    @MainActor
+    func testProfileChecklistRecordsStepMetadataForSidecarPayload() {
+        let model = CaptureViewModel()
+
+        model.recordCurrentProfileStep(artifactRef: "captures/profile-empty/clip.mov", metadata: ["duration_s": "8.0"])
+        model.recordProfileStep(.playerHeightEntry, artifactRef: nil, metadata: ["height_cm": "180"])
+
+        XCTAssertEqual(model.profileFlow.steps[0].status, .complete)
+        XCTAssertEqual(model.profileFlow.steps[0].artifactRef, "captures/profile-empty/clip.mov")
+        XCTAssertEqual(model.profileFlow.payload.steps[3].metadata["height_cm"], "180")
     }
 
     @MainActor
@@ -123,6 +176,7 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
     var configureDescriptor: CapturePackageDescriptor?
     var configureError: Error?
     var startRecordingDescriptor: CapturePackageDescriptor?
+    var policyEnforcementReport: CapturePolicyEnforcementReport?
     private(set) var configureCalls: [ConfigureCall] = []
     private(set) var startPreviewCallCount = 0
     private(set) var stopPreviewCallCount = 0
@@ -166,4 +220,34 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
     func stopRecording() async throws {
         stopRecordingCallCount += 1
     }
+
+    func currentPolicyEnforcementReport() async -> CapturePolicyEnforcementReport? {
+        policyEnforcementReport
+    }
+}
+
+private extension CapturePolicyEnforcementReport {
+    static let compliant60FPS = CapturePolicyEnforcementReport(
+        requested: CapturePolicyRequestedState(
+            fps: 60,
+            resolution: [1920, 1080],
+            format: .hevc,
+            orientation: .landscape,
+            electronicStabilizationEnabled: false,
+            exposureLocked: true,
+            focusLocked: true,
+            whiteBalanceLocked: true
+        ),
+        achieved: CapturePolicyAchievedState(
+            fps: 60,
+            resolution: [1920, 1080],
+            format: .hevc,
+            orientation: .landscape,
+            electronicStabilizationEnabled: false,
+            exposureLocked: true,
+            focusLocked: true,
+            whiteBalanceLocked: true
+        ),
+        violations: []
+    )
 }

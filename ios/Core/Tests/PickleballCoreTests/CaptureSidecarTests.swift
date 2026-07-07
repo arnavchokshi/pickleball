@@ -86,4 +86,63 @@ final class CaptureSidecarTests: XCTestCase {
         XCTAssertEqual(payload?["camera_lens"] as? String, "wide")
         XCTAssertEqual(payload?["capture_quality"] as? [String: Any]? != nil, true)
     }
+
+    func testCaptureSidecarRoundTripsARKitPolicyAndProfilePayloads() throws {
+        let arkitFrame = ARKitFrameSample(
+            videoPTSS: 0.041,
+            arkitTimestampS: 10.04,
+            cameraPose: RigidPose(R: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], t: [0.2, 1.4, 0]),
+            intrinsics: CameraIntrinsics(fx: 1180, fy: 1190, cx: 960, cy: 540, source: "arkit"),
+            tracking: ARTrackingSnapshot(state: .normal, quality: .good)
+        )
+        let enforcement = CapturePolicyEnforcementReport(
+            requested: CapturePolicyRequestedState(
+                fps: 60,
+                resolution: [1920, 1080],
+                format: .hevc,
+                orientation: .landscape,
+                electronicStabilizationEnabled: false,
+                exposureLocked: true,
+                focusLocked: true,
+                whiteBalanceLocked: true
+            ),
+            achieved: CapturePolicyAchievedState(
+                fps: 60,
+                resolution: [1920, 1080],
+                format: .hevc,
+                orientation: .landscape,
+                electronicStabilizationEnabled: false,
+                exposureLocked: true,
+                focusLocked: true,
+                whiteBalanceLocked: true
+            ),
+            violations: []
+        )
+        let profile = ProfileCapturePayload(steps: [
+            ProfileCaptureStepRecord(kind: .emptyCourtClip, status: .complete, artifactRef: "captures/empty/clip.mov"),
+            ProfileCaptureStepRecord(kind: .playerHeightEntry, status: .complete, metadata: ["height_cm": "180"]),
+        ])
+        let sidecar = CaptureSidecar(
+            deviceTier: .standard,
+            deviceModel: "iPhone16,2",
+            fps: 60,
+            format: .hevc,
+            resolution: [1920, 1080],
+            locked: LockedCapture(exposureS: 0.001, iso: 200, focus: 0.7, wbLocked: true),
+            intrinsics: arkitFrame.intrinsics,
+            arkitCameraPose: arkitFrame.cameraPose,
+            gravity: [0, -1, 0],
+            arkitFrameSamples: [arkitFrame],
+            policyEnforcement: enforcement,
+            profileCapture: profile,
+            captureQuality: CaptureQuality(grade: .good)
+        )
+
+        let data = try JSONEncoder().encode(sidecar)
+        let decoded = try JSONDecoder().decode(CaptureSidecar.self, from: data)
+
+        XCTAssertEqual(decoded.arkitFrameSamples, [arkitFrame])
+        XCTAssertEqual(decoded.policyEnforcement, enforcement)
+        XCTAssertEqual(decoded.profileCapture, profile)
+    }
 }

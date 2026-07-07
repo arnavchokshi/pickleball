@@ -29,6 +29,10 @@ public protocol CameraCaptureControlling: AnyObject, Sendable {
     /// than needing a stub.
     func currentLiveGuidanceSample() async -> LiveGuidanceSample
 
+    func currentPolicyEnforcementReport() async -> CapturePolicyEnforcementReport?
+
+    func setProfileCapturePayload(_ payload: ProfileCapturePayload?)
+
     /// Wires the live court-dot map (W3-LIVE-MLP surface 2). Default
     /// implementation is a no-op for test fakes/controllers that don't have
     /// a live overlay engine.
@@ -42,6 +46,12 @@ extension CameraCaptureControlling {
     public func currentLiveGuidanceSample() async -> LiveGuidanceSample {
         LiveGuidanceSample()
     }
+
+    public func currentPolicyEnforcementReport() async -> CapturePolicyEnforcementReport? {
+        nil
+    }
+
+    public func setProfileCapturePayload(_: ProfileCapturePayload?) {}
 
     public func setLiveCourtOverlayHandlers(
         onFrame _: (@Sendable (LiveCourtOverlayFrame) -> Void)?,
@@ -124,6 +134,14 @@ public final class QueuedCameraCaptureController: CameraCaptureControlling, @unc
 
     public func currentLiveGuidanceSample() async -> LiveGuidanceSample {
         (try? await sessionQueue.run { self.controller.currentLiveGuidanceSample() }) ?? LiveGuidanceSample()
+    }
+
+    public func currentPolicyEnforcementReport() async -> CapturePolicyEnforcementReport? {
+        try? await sessionQueue.run { self.controller.currentPolicyEnforcementReport() }
+    }
+
+    public func setProfileCapturePayload(_ payload: ProfileCapturePayload?) {
+        controller.setProfileCapturePayload(payload)
     }
 
     public func setLiveCourtOverlayHandlers(

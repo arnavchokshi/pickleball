@@ -41,8 +41,11 @@ public final class CameraCaptureController: NSObject {
 
     private let movieOutput = AVCaptureMovieFileOutput()
     private let motionSampler = CaptureMotionSampler()
+    private let arFrameRecorder: ARFrameSidecarRecorder
     private var activeDevice: AVCaptureDevice?
     private var activePolicy: CapturePolicy?
+    private var activePolicyEnforcement: CapturePolicyEnforcementReport?
+    private var activeProfileCapture: ProfileCapturePayload?
     private var activePackageRootURL: URL?
     private var activeCaptureDeviceOrientation: CaptureDeviceOrientation?
     private var activeClipURL: URL?
@@ -50,8 +53,12 @@ public final class CameraCaptureController: NSObject {
     private var recordingStartedAt: Date?
     private var sessionIDFactory = CaptureSessionIDFactory()
 
-    public override init() {
+    public init(arSessionProvider: ARSessionProviding = DefaultARSessionProviderFactory.make()) {
+        self.arFrameRecorder = ARFrameSidecarRecorder(provider: arSessionProvider)
         super.init()
+        liveOverlayEngine.onFramePresentationTimestamp = { [weak self] _, presentationSeconds in
+            self?.arFrameRecorder.recordVideoFrame(ptsS: presentationSeconds)
+        }
     }
 
     public static func permissionSnapshot() -> CapturePermissionSnapshot {
@@ -144,6 +151,7 @@ public final class CameraCaptureController: NSObject {
 
         activeDevice = camera
         activePolicy = policy
+        activePolicyEnforcement = policyEnforcementReport(policy: policy, descriptor: descriptor)
         activePackageRootURL = packageRootURL
         activeCaptureDeviceOrientation = captureDeviceOrientation
         activeDescriptor = descriptor
@@ -157,6 +165,7 @@ public final class CameraCaptureController: NSObject {
             return
         }
         motionSampler.start()
+        arFrameRecorder.startSession()
         session.startRunning()
     }
 
@@ -165,6 +174,7 @@ public final class CameraCaptureController: NSObject {
             return
         }
         session.stopRunning()
+        arFrameRecorder.stopSession()
         motionSampler.stop()
     }
 
@@ -236,6 +246,7 @@ public final class CameraCaptureController: NSObject {
 
         recordingStartedAt = Date()
         lastRecordingResult = nil
+        arFrameRecorder.beginRecording()
         movieOutput.startRecording(to: clipURL, recordingDelegate: self)
     }
 
@@ -253,6 +264,14 @@ public final class CameraCaptureController: NSObject {
 
     public static func defaultSessionID(now: Date = Date()) -> String {
         CaptureSessionIDFactory.uniqueSessionID(now: now)
+    }
+
+    public func currentPolicyEnforcementReport() -> CapturePolicyEnforcementReport? {
+        activePolicyEnforcement
+    }
+
+    public func setProfileCapturePayload(_ payload: ProfileCapturePayload?) {
+        activeProfileCapture = payload
     }
 
     private func rotateRecordingPackage() throws {
@@ -369,6 +388,9 @@ public final class CameraCaptureController: NSObject {
         if movieOutput.availableVideoCodecTypes.contains(codec) {
             movieOutput.setOutputSettings([AVVideoCodecKey: codec], for: connection)
         }
+        if connection.isVideoStabilizationSupported {
+            connection.preferredVideoStabilizationMode = .off
+        }
     }
 
     private func videoCodec(for format: CaptureFormat) -> AVVideoCodecType {
@@ -405,6 +427,9 @@ public final class CameraCaptureController: NSObject {
             locked: lockedCaptureSnapshot(),
             intrinsics: estimatedIntrinsics(for: descriptor.expectedResolution),
             gravity: latestGravity,
+            arkit: arFrameRecorder.sidecarPayload(),
+            policyEnforcement: activePolicyEnforcement,
+            profileCapture: activeProfileCapture,
             captureQuality: CaptureQuality(
                 grade: .warn,
                 reasons: [
@@ -421,6 +446,58 @@ public final class CameraCaptureController: NSObject {
             finishedAt: finishedAt,
             context: context
         )
+    }
+
+    private func policyEnforcementReport(
+        policy: CapturePolicy,
+        descriptor: CapturePackageDescriptor
+    ) -> CapturePolicyEnforcementReport {
+        CapturePolicyEnforcer.evaluate(
+            policy: policy,
+            achieved: CapturePolicyAchievedState(
+                fps: achievedFPS(),
+                resolution: activeResolution(),
+                format: policy.codec,
+                orientation: descriptor.expectedOrientation,
+                electronicStabilizationEnabled: electronicStabilizationEnabled(),
+                exposureLocked: isExposureLocked(),
+                focusLocked: activeDevice?.focusMode == .locked,
+                whiteBalanceLocked: activeDevice?.whiteBalanceMode == .locked
+            )
+        )
+    }
+
+    private func achievedFPS() -> Int? {
+        guard let device = activeDevice else {
+            return nil
+        }
+        let seconds = device.activeVideoMinFrameDuration.seconds
+        guard seconds > 0 else {
+            return nil
+        }
+        return Int((1.0 / seconds).rounded())
+    }
+
+    private func activeResolution() -> [Int]? {
+        guard let device = activeDevice else {
+            return nil
+        }
+        let dimensions = CMVideoFormatDescriptionGetDimensions(device.activeFormat.formatDescription)
+        return [Int(dimensions.width), Int(dimensions.height)]
+    }
+
+    private func electronicStabilizationEnabled() -> Bool? {
+        guard let connection = movieOutput.connection(with: .video) else {
+            return nil
+        }
+        return connection.activeVideoStabilizationMode != .off
+    }
+
+    private func isExposureLocked() -> Bool? {
+        guard let device = activeDevice else {
+            return nil
+        }
+        return device.exposureMode == .locked || device.exposureMode == .custom
     }
 
     private func lockedCaptureSnapshot() -> LockedCapture {
@@ -473,16 +550,21 @@ extension CameraCaptureController: AVCaptureFileOutputRecordingDelegate {
         error: Error?
     ) {
         if let error {
+            arFrameRecorder.endRecording()
             onRecordingFinished?(.failure(error))
             return
         }
 
         guard let descriptor = activeDescriptor else {
+            arFrameRecorder.endRecording()
             onRecordingFinished?(.failure(CameraCaptureControllerError.noConfiguredPackage))
             return
         }
 
         do {
+            defer {
+                arFrameRecorder.endRecording()
+            }
             try writeSidecar(for: descriptor, outputFileURL: outputFileURL, finishedAt: Date())
         } catch {
             onRecordingFinished?(.failure(error))

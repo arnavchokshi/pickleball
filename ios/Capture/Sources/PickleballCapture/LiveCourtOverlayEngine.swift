@@ -60,6 +60,7 @@ public enum LiveCourtOverlayStatus: Equatable, Sendable {
 public final class LiveCourtOverlayEngine: @unchecked Sendable {
     public var onFrame: (@Sendable (LiveCourtOverlayFrame) -> Void)?
     public var onStatusChange: (@Sendable (LiveCourtOverlayStatus) -> Void)?
+    public var onFramePresentationTimestamp: (@Sendable (Int, Double) -> Void)?
 
     private let tap: LiveFrameTap
     private let cadence: LiveDetectionCadenceScheduler
@@ -87,7 +88,8 @@ public final class LiveCourtOverlayEngine: @unchecked Sendable {
         self.cadence = cadence
         self.tap = tap
         self.modelURLProvider = modelURLProvider
-        self.tap.onFrame = { [weak self] pixelBuffer, frameIndex, _ in
+        self.tap.onFrame = { [weak self] pixelBuffer, frameIndex, presentationSeconds in
+            self?.onFramePresentationTimestamp?(frameIndex, presentationSeconds)
             self?.stateQueue.async {
                 self?.process(pixelBuffer: pixelBuffer, frameIndex: frameIndex)
             }

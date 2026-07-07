@@ -25,6 +25,10 @@ final class CaptureViewModel: ObservableObject {
     @Published private(set) var permissions = CapturePermissionSnapshot(camera: .notDetermined, microphone: .notDetermined)
     @Published private(set) var replayBenchmarkStatus: ReplayBenchmarkStatus = .idle
     @Published private(set) var status: Status = .idle
+    @Published private(set) var capturePolicyEnforcement: CapturePolicyEnforcementReport?
+    @Published private(set) var profileFlow = ProfileCaptureFlowState.h0Checklist()
+    @Published var profilePlayerHeightCM: Double = 180
+    @Published var profileBallSKU: String = "outdoor_yellow"
 
     // W3-LIVE-MLP live overlay state -- see PickleballGuidance.LiveGuidanceEvaluator,
     // PickleballFastTier.CourtDotMapBuilder/LiveBallIndicatorPolicy/PostStopPreviewBuilder.
@@ -143,6 +147,16 @@ final class CaptureViewModel: ObservableObject {
         CaptureOrientationPolicy.rotationAngleDegrees(for: captureDeviceOrientation)
     }
 
+    var capturePolicyStatusText: String {
+        guard let capturePolicyEnforcement else {
+            return "Policy pending"
+        }
+        if capturePolicyEnforcement.isCompliant {
+            return "Capture policy locked"
+        }
+        return "Policy issue: \(capturePolicyEnforcement.violations.first ?? "unknown")"
+    }
+
     func prepare() async {
         status = .requestingAccess
         permissions = await requestPermissions()
@@ -187,6 +201,7 @@ final class CaptureViewModel: ObservableObject {
                 }
             )
             await controller.startPreview()
+            capturePolicyEnforcement = await controller.currentPolicyEnforcementReport()
             status = .ready
             startLiveGuidancePollingIfNeeded()
         } catch {
@@ -334,11 +349,63 @@ final class CaptureViewModel: ObservableObject {
             recentPlayerCountSamples = []
             resetBallOverlay()
             postStopSummary = nil
+            controller.setProfileCapturePayload(profileFlow.payload)
             descriptor = try await controller.startRecording()
             status = .recording
         } catch {
             status = .blocked(Self.message(for: error))
         }
+    }
+
+    func recordCurrentProfileStep(artifactRef: String? = nil, metadata: [String: String] = [:]) {
+        profileFlow.recordCurrentStep(artifactRef: artifactRef, metadata: metadata)
+        controller.setProfileCapturePayload(profileFlow.payload)
+    }
+
+    func completeCurrentProfileStepFromUI() {
+        guard let kind = profileFlow.currentStep?.kind else {
+            return
+        }
+        let directory = descriptor?.directoryRelativePath ?? "captures/profile_setup_pending"
+        switch kind {
+        case .emptyCourtClip:
+            recordProfileStep(
+                kind,
+                artifactRef: descriptor?.clipRelativePath ?? "\(directory)/empty_court_clip.mov",
+                metadata: ["clip_type": "empty_court"]
+            )
+        case .calibrationGridSweep:
+            recordProfileStep(
+                kind,
+                artifactRef: "\(directory)/calibration_grid_sweep.json",
+                metadata: ["pattern": "charuco_or_aprilgrid"]
+            )
+        case .paddleOrbit:
+            recordProfileStep(
+                kind,
+                artifactRef: "\(directory)/paddle_orbit.mov",
+                metadata: ["orbit": "single_paddle"]
+            )
+        case .playerHeightEntry:
+            recordProfileStep(
+                kind,
+                metadata: ["height_cm": "\(Int(profilePlayerHeightCM.rounded()))"]
+            )
+        case .ballPick:
+            recordProfileStep(
+                kind,
+                metadata: ["sku": profileBallSKU]
+            )
+        }
+    }
+
+    func recordProfileStep(
+        _ kind: ProfileCaptureStepKind,
+        artifactRef: String? = nil,
+        metadata: [String: String] = [:]
+    ) {
+        profileFlow.recordStep(kind, artifactRef: artifactRef, metadata: metadata)
+        controller.setProfileCapturePayload(profileFlow.payload)
     }
 
     func runReplayBenchmarkFromStagedManifest() async {

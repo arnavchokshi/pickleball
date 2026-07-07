@@ -85,9 +85,12 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
     public var courtPlane: Plane?
     public var manualCourtTaps: [[Double]]
     public var gravity: [Double]?
+    public var arkitFrameSamples: [ARKitFrameSample]
     public var lidarDepthRefs: [String]
     public var ondevicePoseTrack: String?
     public var unavailableSensorReasons: [String: String]
+    public var policyEnforcement: CapturePolicyEnforcementReport?
+    public var profileCapture: ProfileCapturePayload?
     public var captureQuality: CaptureQuality
 
     public init(
@@ -111,9 +114,12 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         courtPlane: Plane? = nil,
         manualCourtTaps: [[Double]] = [],
         gravity: [Double]?,
+        arkitFrameSamples: [ARKitFrameSample] = [],
         lidarDepthRefs: [String] = [],
         ondevicePoseTrack: String? = nil,
         unavailableSensorReasons: [String: String] = [:],
+        policyEnforcement: CapturePolicyEnforcementReport? = nil,
+        profileCapture: ProfileCapturePayload? = nil,
         captureQuality: CaptureQuality
     ) {
         self.schemaVersion = schemaVersion
@@ -136,9 +142,12 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         self.courtPlane = courtPlane
         self.manualCourtTaps = manualCourtTaps
         self.gravity = gravity
+        self.arkitFrameSamples = arkitFrameSamples
         self.lidarDepthRefs = lidarDepthRefs
         self.ondevicePoseTrack = ondevicePoseTrack
         self.unavailableSensorReasons = unavailableSensorReasons
+        self.policyEnforcement = policyEnforcement
+        self.profileCapture = profileCapture
         self.captureQuality = captureQuality
     }
 
@@ -163,9 +172,12 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         case courtPlane = "court_plane"
         case manualCourtTaps = "manual_court_taps"
         case gravity
+        case arkitFrameSamples = "arkit_frame_samples"
         case lidarDepthRefs = "lidar_depth_refs"
         case ondevicePoseTrack = "ondevice_pose_track"
         case unavailableSensorReasons = "unavailable_sensor_reasons"
+        case policyEnforcement = "policy_enforcement"
+        case profileCapture = "profile_capture"
         case captureQuality = "capture_quality"
     }
 
@@ -191,9 +203,12 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         self.courtPlane = try container.decodeIfPresent(Plane.self, forKey: .courtPlane)
         self.manualCourtTaps = try container.decodeIfPresent([[Double]].self, forKey: .manualCourtTaps) ?? []
         self.gravity = try container.decodeIfPresent([Double].self, forKey: .gravity)
+        self.arkitFrameSamples = try container.decodeIfPresent([ARKitFrameSample].self, forKey: .arkitFrameSamples) ?? []
         self.lidarDepthRefs = try container.decodeIfPresent([String].self, forKey: .lidarDepthRefs) ?? []
         self.ondevicePoseTrack = try container.decodeIfPresent(String.self, forKey: .ondevicePoseTrack)
         self.unavailableSensorReasons = try container.decodeIfPresent([String: String].self, forKey: .unavailableSensorReasons) ?? [:]
+        self.policyEnforcement = try container.decodeIfPresent(CapturePolicyEnforcementReport.self, forKey: .policyEnforcement)
+        self.profileCapture = try container.decodeIfPresent(ProfileCapturePayload.self, forKey: .profileCapture)
         self.captureQuality = try container.decode(CaptureQuality.self, forKey: .captureQuality)
     }
 
@@ -219,9 +234,12 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         try container.encodeIfPresent(courtPlane, forKey: .courtPlane)
         try container.encode(manualCourtTaps, forKey: .manualCourtTaps)
         try container.encodeIfPresent(gravity, forKey: .gravity)
+        try container.encode(arkitFrameSamples, forKey: .arkitFrameSamples)
         try container.encode(lidarDepthRefs, forKey: .lidarDepthRefs)
         try container.encodeIfPresent(ondevicePoseTrack, forKey: .ondevicePoseTrack)
         try container.encode(unavailableSensorReasons, forKey: .unavailableSensorReasons)
+        try container.encodeIfPresent(policyEnforcement, forKey: .policyEnforcement)
+        try container.encodeIfPresent(profileCapture, forKey: .profileCapture)
         try container.encode(captureQuality, forKey: .captureQuality)
     }
 }
