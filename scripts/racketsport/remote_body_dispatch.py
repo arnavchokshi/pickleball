@@ -57,14 +57,9 @@ if str(ROOT) not in sys.path:
 # shared venv for the orchestrator CLI vs. Fast-SAM-3D-Body's own separate
 # venv/checkout under body_runtime/) -- that split is real, not a bug -- but
 # now they all derive from a single root constant to update.
-# FLEET NOTE (2026-07-07): the old standing VM (34.126.67.233) was DELETED; defaults now point at
-# fleet GPU #1 `pickleball-a100-fleet1` with the cold-start layout under ~/coldstart_20260706.
-# Fleet1 restarted with external IP 35.240.183.195; prior 34.143.175.207 is kept in known_hosts
-# as historical evidence for the same host key/disk mapping.
-# (see runs/manager/gpu_fleet.md — THE source of truth; wave-2 improvement booked: derive these
-# from the fleet ledger instead of constants). Per-lane dispatches may still override via flags.
+# Fleet VM external IPs recycle on stop/start. Keep remote host selection out of
+# defaults; callers must pass the current value from runs/manager/gpu_fleet.md.
 DEFAULT_REMOTE_HOME = "/home/arnavchokshi/coldstart_20260706"
-DEFAULT_REMOTE_HOST = "arnavchokshi@35.240.183.195"
 DEFAULT_SSH_KEY = "~/.ssh/google_compute_engine"
 DEFAULT_REMOTE_REPO = f"{DEFAULT_REMOTE_HOME}/repo"
 # On fleet1 the cold-start builds ONE body venv that serves both the orchestrator CLI and
@@ -89,13 +84,15 @@ DEFAULT_LOCK_WAIT_TIMEOUT_S = 60
 # (exit 124).
 DEFAULT_COMMAND_TIMEOUT_S = 3600
 DEFAULT_RUN_ROOT = "runs/process_video_body_dispatch"
-# Pinned host key for DEFAULT_REMOTE_HOST (fleet1, 35.240.183.195), captured via
-# ssh-keyscan and cross-checked against this machine's own trusted
-# ~/.ssh/known_hosts -- see configs/ssh/a100_known_hosts's header comment
-# and review_harden_20260702.md finding 7. Used in place of
-# StrictHostKeyChecking=no so a wrong/spoofed host cannot silently receive
-# source videos or return fabricated BODY artifacts.
+# Pinned host keys are refreshed per fleet restart from the current fleet ledger.
+# Used in place of StrictHostKeyChecking=no so a wrong/spoofed host cannot
+# silently receive source videos or return fabricated BODY artifacts.
 DEFAULT_KNOWN_HOSTS_FILE = str(ROOT / "configs" / "ssh" / "a100_known_hosts")
+REMOTE_HOST_REQUIRED_MESSAGE = (
+    "explicit remote host is required; fleet VM external IPs recycle on stop/start. "
+    "Find the current host in runs/manager/gpu_fleet.md and pass it with --host "
+    "(process_video.py: --remote-host)."
+)
 TRANSPORT_TAR_BATCH = "tar_batch"
 TRANSPORT_RSYNC = "rsync"
 TRANSPORT_CHOICES = (TRANSPORT_TAR_BATCH, TRANSPORT_RSYNC)
@@ -206,9 +203,16 @@ class RemoteBodyDispatchError(RuntimeError):
     """Raised when the remote BODY dispatch cannot complete for a real reason."""
 
 
+def _require_remote_host(host: str, *, flag_name: str = "--host") -> str:
+    host = host.strip()
+    if not host:
+        raise RemoteBodyDispatchError(f"{flag_name} missing: {REMOTE_HOST_REQUIRED_MESSAGE}")
+    return host
+
+
 @dataclass(frozen=True)
 class RemoteConfig:
-    host: str = DEFAULT_REMOTE_HOST
+    host: str = ""
     ssh_key: str = DEFAULT_SSH_KEY
     repo: str = DEFAULT_REMOTE_REPO
     python: str = DEFAULT_REMOTE_PYTHON
@@ -279,6 +283,7 @@ class RemoteConfig:
         return args
 
     def ssh_base(self) -> list[str]:
+        _require_remote_host(self.host)
         return ["ssh", "-i", self.ssh_key, *self.ssh_option_args(), self.host]
 
     def scp_base(self) -> list[str]:
@@ -292,6 +297,7 @@ class RemoteConfig:
         as defense in depth matching finding 8's quoting requirement.
         """
 
+        _require_remote_host(self.host)
         parts = ["ssh", "-i", self.ssh_key, *self.ssh_option_args()]
         return " ".join(shlex.quote(part) for part in parts)
 
@@ -977,9 +983,10 @@ def dispatch_body_stage(
     a pipeline-fatal error.
     """
 
-    config = config or RemoteConfig()
-    transport = _validate_transport_name(config.transport)
     clip = _validate_clip_id(clip)
+    config = config or RemoteConfig()
+    _require_remote_host(config.host)
+    transport = _validate_transport_name(config.transport)
     clip_dir = Path(clip_dir)
     video_path = Path(video_path)
     started = time.monotonic()
@@ -1983,6 +1990,7 @@ def sync_remote_checkout_to_local_head(
     """
 
     config = config or RemoteConfig()
+    _require_remote_host(config.host)
     repo_root = repo_root or ROOT
     dirty_files = _git_dirty_tracked_files(repo_root)
     if dirty_files and not allow_dirty:
@@ -2086,7 +2094,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--video", type=Path)
     parser.add_argument("--body-frames-dir", type=Path, default=None)
     parser.add_argument("--camera-motion", type=Path, default=None, help="Optional camera_motion.json to sync as camera_motion.json in the remote BODY working dir.")
-    parser.add_argument("--host", default=DEFAULT_REMOTE_HOST)
+    parser.add_argument("--host", default="")
     parser.add_argument("--ssh-key", default=DEFAULT_SSH_KEY)
     parser.add_argument("--repo", default=DEFAULT_REMOTE_REPO)
     parser.add_argument("--python", default=DEFAULT_REMOTE_PYTHON)
