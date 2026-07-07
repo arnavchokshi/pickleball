@@ -33,6 +33,7 @@ GENERATED_RELATIVE_DIRS = {
 
 ALLOWED_LARGE_TRACKED_FILES = {
     "cvat_upload/04_indoor_doubles_fwuks_0500_long_mid_baseline_30s.mp4",
+    "cvat_upload/court_keypoints_20260707/packages/court_keypoints_metric15_20260707_6frames.zip",
     "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4",
     "models_coreml/yolo26m_img416_int8/yolo26m.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
     "models_coreml/yolo26s_img416_int8/yolo26s.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
