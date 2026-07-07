@@ -1,0 +1,27 @@
+# LANE w3_reviewimport_20260707 — import the owner's harvest review labels (DISK ONLY) + register + baseline eval proof
+
+## HARD RULES
+- You are Codex lane `w3_reviewimport_20260707`. Work ONLY inside /Users/arnavchokshi/Desktop/pickleball.
+- You own NO repo source files (repo CLIs are run, not edited; an import-path bug = STOP + proposed diff in report). Writes allowed ONLY under: runs/lanes/w3_reviewimport_20260707/ and runs/cvat_imports/harvest_review_20260707/ (the registration target). No git commit/branch/push; write commit_manifest.md in your lane dir listing the registration files.
+- DISK ONLY: the label source is cvat_upload/exports/harvest_review_20260707/<clip_id>/annotations.xml — six folders. NEVER talk to the local CVAT instance (its copies of the 2 cloud-labeled clips are untouched prelabels; touching CVAT here can only contaminate). No network.
+- Held-out: pwxNwFfYQlQ / vQhtz8l6VqU appear nowhere (the README asserts it; re-assert yourself on everything you write).
+- Honest reporting; every number with artifact path + repro snippet. `.venv/bin/python` always.
+- Read FIRST: cvat_upload/exports/harvest_review_20260707/README.md (the owner/manager import contract — its rules BIND you), the per-folder MANAGER_NOTE.md files, and BUILD_CHECKLIST last ~5 bullets.
+
+## CONTEXT
+- This is the project's FIRST human-verified harvest label set: ~274 ball boxes + 4-level visibility across 6 clips (one per source), incl. 60 balls the machine missed. Registration roles: P1-1 human-verified harvest seed + P1-2 teacher-eval material. It is NOT held-out (these are the review clips; the held-out reservations are different videos).
+- The 4 locally-labeled clips carry a manager-applied full→clear visibility remap (annotations.xml = canonical; annotations_raw.xml = owner original; MANAGER_NOTE.md explains). The 2 cloud-labeled clips (73VurrTKCZ8_rally_0002, wBu8bC4OfUY_rally_0001) have annotations.xml only.
+- CVAT exports may carry ABSOLUTE source frame numbers (the local tasks used frame_step≈uniform sampling; cloud tasks may differ) — the wave-2 4-level import path (scripts/racketsport/import_cvat_video_annotations.py + validate_artifact_file("cvat_video_annotations", ...)) handled absolute frames in the labelfactory round-trip. Validate frame indices against each clip's real frame count; any out-of-range or suspicious framing = loud report, not silent clamp.
+
+## OBJECTIVE
+1. **Import all 6** annotations.xml through the repo's 4-level import + validation path, applying the README rules EXACTLY: (a) VERIFY (do not re-apply) the full→clear remap on the 4 remapped clips — diff annotations.xml vs annotations_raw.xml and confirm the delta is exactly the documented remap (+ report any other unexplained delta); (b) dedupe the 5 documented duplicate-box frames (Ezz6HDNHlnk f1848, HyUqT7zFiwk f9100, _L0HVmAlCQI f1008, zwCtH_i1_S4 f2951+f3405) preferring the owner's shape — the README's dedupe semantics; (c) drop the single out_of_frame-tagged box wBu8bC4OfUY f320. Record every applied rule in a per-clip import log.
+2. **Cross-check counts** vs the README table (boxes 48/47/34/42/58/45; total ~274): parsed-vs-README discrepancies are REPORTED (a mismatch after documented corrections is expected — e.g., wBu8bC4OfUY 48→47 after the drop; model the expectation and flag only real surprises).
+3. **Register** at runs/cvat_imports/harvest_review_20260707/: per-clip validated artifacts (the import CLI's native output format, same convention as runs/cvat_imports/2026_06_30/), plus set_manifest.json: {set: harvest_review_20260707, clips: [...per-clip stats...], roles: {p11_human_seed: true, p12_teacher_eval: true, held_out: false}, provenance: {source_dir, owner_labeled: true, manager_verified: true, remap: "full->clear on 4 clips (raws preserved)", labels_per_hour_datum: {frames: 480, hours: 2.0, note: "incl tooling friction"}}, local_cvat_warning: "local CVAT tasks for 73VurrTKCZ8_rally_0002 + wBu8bC4OfUY_rally_0001 hold UNTOUCHED PRELABELS — never export them as reviews"}.
+4. **Eval-path proof + raw-WASB baseline**: run threed/racketsport's CVAT ball benchmark CLI (ball_cvat_benchmark or its script wrapper — find it, read --help) scoring the RAW WASB sidecar as candidate against the imported human labels, per clip, for the clips whose raw sidecars exist locally (6 review clips have surviving prelabel dirs; note which used data/online_harvest_20260706/prelabels vs any gap). Output: per-clip {recall, precision, F1 @ the benchmark's px convention} = the raw-WASB-vs-human baseline table that teacher operating points must beat. If the benchmark CLI can't consume these imports directly, report the exact adapter gap (do NOT build a new format) — that becomes the follow-up.
+5. Held-out assertion output + a one-paragraph data-honesty note (what these labels are and are not: ~480 sampled frames/6 clips, mostly clear-vs-absent visibility signal per the README's own limitation).
+
+## ACCEPTANCE
+6/6 imported + schema-valid; rules a/b/c verified/applied with per-clip logs; counts reconciled vs README (expected deltas modeled); registration manifest complete w/ roles + datum; baseline table produced (or the adapter gap precisely named); held-out clean; no source edits.
+
+## STRUCTURED REPORT
+objective_result; acceptance table; per-clip import log summary; the baseline table (this is the headline — the manager consumes it for the teacher ruling); count reconciliation; HONEST ISSUES; NEXT; commit_manifest path; BUILD_CHECKLIST bullet DRAFT.

@@ -1,0 +1,26 @@
+# LANE w3_phaseverify_20260707 — ADVERSARIAL VERIFY of the phasefix (break it before the GPU does)
+
+## HARD RULES
+- You are Codex lane `w3_phaseverify_20260707` — an INDEPENDENT verifier with fresh eyes. Your job is to BREAK the w3_phasefix_20260707 change, not to confirm it. A verify lane that finds nothing must show its attacks were real (wave-2's verify lane found the fix lane tracked the wrong statistic and its counterfactual guaranteed its own success — that is the bar).
+- You own NO repo source files and may NOT edit any (analysis scripts + artifacts ONLY under runs/lanes/w3_phaseverify_20260707/). Exception: you MAY add NEW test files named test_phaseverify_*.py under tests/racketsport/ if a failing test is the cleanest proof of a defect (never modify existing tests). No git commit/branch/push.
+- Protected data: 4 eval clips EVAL-ONLY (artifacts fine; Outdoor/Indoor labels never). Held-out IDs (runs/manager/heldout_eval_ledger.md) nowhere.
+- THRESHOLDS FROZEN context: DEFAULT_MAX_FOOT_SLIDE_M = 0.03 and all guard constants must be unchanged — verify this first (a sneaky constant change = instant headline finding).
+- Honest reporting; every claim with artifact path + repro. `.venv/bin/python`.
+- Read FIRST: runs/lanes/w3_phasefix_20260707/REPORT.md + its report.json + commit_manifest.md; runs/lanes/w3_slidediag_20260707/REPORT.md; runs/lanes/w3_groundref_diag_20260707/REPORT.md; BUILD_CHECKLIST last ~15 bullets ([ROOTJUMP VERIFY RULED] is the exemplar of what a verify lane is for).
+
+## THE CHANGE UNDER ATTACK (manager's independent summary — verify, don't trust)
+The fix: (A) foot_contact/placement now emit per-foot confidence-bearing phases and mark `bilateral_from_player_stance`+unknown-foot as weak/rejected; (B) foot_lock_solver excludes weak/demoted/bilateral phases from lock eligibility; (C) body_grounding_refine consumes only confident per-foot phases, else honest no-op; (D) worldhmr/body_grounding_quality persist a bounded foot_lock_gate_stream. Manager's suspicions, in priority order:
+1. **VACUOUS ACCEPTANCE**: on saved wave-2 artifacts, 0 phases are consumed anywhere (all rejected) and the producer emitted no confident per-foot phases from saved inputs — so the fix lane's "surrogate max 0.000000" tables prove rejection works, NOT that slide improves. Attack: what does the pipeline DO with zero eligible contact phases — is there a fallback lock path (stance-based? none?), and what happens to the ACTUAL foot-lock/slide behavior on replayed saved inputs vs pre-fix code? If locking silently disengages, slide could be UNCHANGED or WORSE on the fresh run while every offline table looks perfect.
+2. **PRODUCER STARVATION**: does the new producer emit confident per-foot phases on realistic FRESH-like inputs? Re-derive phases from the saved skeletons/keypoints (the fix lane's own diagnostic path did this) across all 4 clips: what fraction of ground-contact time yields confident per-foot phases at the shipped confidence bar? If ~0%, the fix = "disable phases everywhere" — evaluate whether that is actually better/worse/neutral for the gated metric and say so plainly.
+3. **THE GATED METRIC**: `grounding_metrics.max_foot_lock_slide_m` (MAX). Confirm the fix's effect pathway to THIS key (not p95, not a consumed-phase surrogate). The fix lane's own diagnostic showed over-threshold instrumentation rows on some clips — locate them, characterize them, and state what they predict for the fresh GPU run per clip (burlington/outdoor must land ≤0.03 for the gate to clear).
+4. **ROOT-JUMP REGRESSION**: replay the root-jump metrics on saved inputs with new code — outdoor must stay 0, burlington ≤1. The isolation test covers placement outputs; attack the INTEGRATION (lock exclusion changing world output paths).
+5. **INSTRUMENTATION CORRECTNESS**: the gate stream must record the TRUE max-contributing phase/frame (validate on a synthetic case where you construct the expected max by hand) and respect its size bound; wrong instrumentation would poison the wave-end attribution.
+6. **REFINE NO-OP HONESTY**: no-op must not alter the world (byte-compare), and kill_recommended=false semantics must not accidentally suppress a legitimate future kill signal.
+
+## DELIVERABLES
+- VERDICT per suspicion (BROKEN w/ repro | HOLDS w/ attack shown) + an overall recommendation: (a) fix is GPU-proof-ready as-is, (b) needs specific pre-GPU repairs (list exact minimal repairs — the manager will resume the fix lane's session with your list), or (c) fundamentally wrong approach (justify).
+- Per-clip PREDICTION table for the fresh GPU run (your best evidence-based estimate of max_foot_lock_slide_m outcome + confidence) — this is what the GPU run will be scored against, so be honest, not optimistic.
+- Any new test_phaseverify_*.py files that pin found defects (failing = defect proof; they get fixed by the fix lane, not you).
+
+## STRUCTURED REPORT
+objective_result (PASS = verification completed, regardless of verdict); the 6 verdicts; the recommendation; the prediction table; changes (should be lane-dir + optional new test files only); full_suite: run ONLY the focused suites relevant to your new tests + the fix lane's 76 focused tests (wide suite NOT required — the wave-end clean run owns it; state this); HONEST ISSUES; NEXT.
