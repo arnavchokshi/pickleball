@@ -7,7 +7,6 @@ import json
 import os
 import sys
 import time
-from itertools import cycle
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -158,7 +157,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if mode in {"train", "smoke"}:
         if train_loader is None or train_dataset is None or len(train_dataset) == 0:
             raise ValueError("training mode requires at least one train sample")
-        batches = cycle(train_loader)
+        batches = _no_cache_cycle(train_loader)
         model.train()
         for local_step in range(1, int(args.steps) + 1):
             batch = next(batches)
@@ -699,7 +698,12 @@ def _build_parser(defaults: Mapping[str, Any]) -> argparse.ArgumentParser:
     parser.add_argument("--device", choices=("cpu", "cuda", "mps"), default=defaults.get("device", "cuda"))
     parser.add_argument("--image-size", default=defaults.get("image_size", f"{DEFAULT_BALL_PRETRAIN_IMAGE_SIZE[0]}x{DEFAULT_BALL_PRETRAIN_IMAGE_SIZE[1]}"))
     parser.add_argument("--frames-in", type=int, default=int(defaults.get("frames_in", DEFAULT_BALL_PRETRAIN_FRAMES_IN)))
-    parser.add_argument("--output-channels", type=int, default=int(defaults.get("output_channels", 1)))
+    parser.add_argument(
+        "--output-channels",
+        type=int,
+        default=int(defaults.get("output_channels", 3)),
+        help="Final heatmap channels. Official WASB tennis checkpoints use 3 output channels.",
+    )
     parser.add_argument("--heatmap-radius-px", type=float, default=float(defaults.get("heatmap_radius_px", DEFAULT_BALL_PRETRAIN_HEATMAP_RADIUS_PX)))
     parser.add_argument("--core-to-aux-ratio", type=int, default=int(defaults.get("core_to_aux_ratio", DEFAULT_CORE_TO_AUX_RATIO)))
     parser.add_argument("--include-aux-val", action="store_true", default=bool(defaults.get("include_aux_val", False)))
@@ -726,6 +730,12 @@ def _build_parser(defaults: Mapping[str, Any]) -> argparse.ArgumentParser:
     )
     parser.add_argument("--skip-policy", choices=("fail", "skip"), default=defaults.get("skip_policy", "fail"))
     return parser
+
+
+def _no_cache_cycle(loader: Any) -> Any:
+    while True:
+        for batch in loader:
+            yield batch
 
 
 if __name__ == "__main__":

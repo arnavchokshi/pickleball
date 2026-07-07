@@ -9,7 +9,7 @@
     "wasb_repo": "third_party/WASB-SBDT",
     "image_size": "512x288",
     "frames_in": 3,
-    "output_channels": 1,
+    "output_channels": 3,
     "heatmap_radius_px": 4.0,
     "core_to_aux_ratio": 8,
     "include_aux_val": false,
@@ -39,6 +39,10 @@
     "public_visibility_level": null,
     "unknown_visibility_wbce_weight": 1,
     "reason": "Public Roboflow labels lack the four-level visibility taxonomy, so they keep visibility_level absent and receive the clear-frame WBCE weight instead of invented occlusion weights."
+  },
+  "checkpoint_shape_policy": {
+    "output_channels": 3,
+    "reason": "Official WASB tennis checkpoints use a 3-channel final heatmap head; keep the default compatible unless a checkpoint-specific override is passed."
   },
   "mixing_policy": {
     "core_pickleball_to_adjacent_sport_aux": "8:1",

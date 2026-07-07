@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import gc
+import importlib.util
 import json
 import subprocess
 import sys
+import weakref
 from pathlib import Path
 
 import pytest
@@ -106,6 +109,78 @@ def test_train_ball_pretrain_cpu_smoke_decreases_loss_and_round_trips_checkpoint
     assert (out_dir / "skip_list.json").is_file()
 
 
+def test_train_loader_cycle_does_not_cache_first_epoch_batches() -> None:
+    harness = _load_train_harness_module()
+
+    class Batch:
+        pass
+
+    class CountingLoader:
+        def __init__(self, size: int) -> None:
+            self.size = size
+            self.iter_calls = 0
+            self.created = 0
+            self.alive: weakref.WeakSet[Batch] = weakref.WeakSet()
+
+        def __iter__(self):
+            self.iter_calls += 1
+            for _ in range(self.size):
+                batch = Batch()
+                self.created += 1
+                self.alive.add(batch)
+                yield batch
+
+    loader = CountingLoader(size=8)
+    batches = harness._no_cache_cycle(loader)
+    last = None
+    for _ in range(19):
+        last = next(batches)
+        gc.collect()
+
+    assert loader.iter_calls == 3
+    assert loader.created == 19
+    assert last is not None
+    gc.collect()
+    assert len(loader.alive) <= 2
+
+
+def test_default_config_loads_three_channel_checkpoint_shape(tmp_path: Path) -> None:
+    harness = _load_train_harness_module()
+    torch = pytest.importorskip("torch")
+
+    config = json.loads(Path("configs/racketsport/ball_pretrain_roboflow_wasb.json").read_text(encoding="utf-8"))
+    output_channels = int(config["defaults"]["output_channels"])
+    assert output_channels == 3
+
+    model = harness.build_model(
+        model_family="tiny_wasb",
+        frames_in=3,
+        output_channels=output_channels,
+        image_size=(32, 32),
+        wasb_repo=Path("third_party/WASB-SBDT"),
+    )
+    checkpoint = tmp_path / "wasb_three_channel_shape.pt"
+    torch.save({"state_dict": model.state_dict()}, checkpoint)
+
+    reloaded = harness.build_model(
+        model_family="tiny_wasb",
+        frames_in=3,
+        output_channels=output_channels,
+        image_size=(32, 32),
+        wasb_repo=Path("third_party/WASB-SBDT"),
+    )
+    summary = harness.load_model_weights(
+        checkpoint,
+        model=reloaded,
+        device=torch.device("cpu"),
+        strict=True,
+    )
+
+    assert summary["missing_keys"] == []
+    assert summary["unexpected_keys"] == []
+    assert tuple(reloaded.state_dict()["net.4.weight"].shape) == (3, 16, 1, 1)
+
+
 def _write_smoke_corpus(tmp_path: Path) -> Path:
     samples = []
     for split, count in (("train", 4), ("valid", 4)):
@@ -182,3 +257,12 @@ def _write_ball_image(path: Path, *, x: int, y: int) -> None:
             py = min(31, max(0, y + dy))
             image.putpixel((px, py), (230, 230, 30))
     image.save(path)
+
+
+def _load_train_harness_module():
+    spec = importlib.util.spec_from_file_location("train_ball_pretrain_under_test", CLI_PATH)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
