@@ -89,7 +89,8 @@ def solve_foot_lock(
             settings=settings,
         )
     indices = resolve_foot_joint_indices(joint_names, joint_count=len(frames[0].joints_world))
-    active_by_frame = _active_phases_by_frame(phases)
+    eligible_phases = [phase for phase in phases if not _phase_is_weak(phase)]
+    active_by_frame = _active_phases_by_frame(eligible_phases)
     corrected_frames: list[SkeletonFrame] = []
     corrections: list[FrameCorrection] = []
     max_any = 0.0
@@ -241,7 +242,15 @@ def _contact_metadata(phase: ContactPhase) -> dict[str, object]:
         "start_frame_index": phase.start_frame_index,
         "end_frame_index": phase.end_frame_index,
         "anchor_position_xyz": list(phase.anchor_position_xyz),
+        "foot_assignment": phase.foot_assignment,
+        "weak": phase.weak,
+        "demoted": phase.demoted,
+        "source": phase.source,
     }
+
+
+def _phase_is_weak(phase: ContactPhase) -> bool:
+    return bool(phase.weak or phase.demoted or phase.foot_assignment == "bilateral_from_player_stance")
 
 
 def _effective_joint_names(joint_names: Sequence[str], joint_count: int) -> tuple[str, ...]:

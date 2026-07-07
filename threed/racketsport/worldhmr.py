@@ -23,9 +23,12 @@ from .footlock import (
 )
 from .foot_contact import (
     ContactPhase,
+    ContactThresholds,
     SkeletonFrame as ContactSkeletonFrame,
     detect_contact_phases,
+    foot_contact_point,
     measure_contact_metrics,
+    resolve_foot_joint_indices,
 )
 from .foot_pin import FootPinSettings, apply_foot_pin_to_payload
 from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
@@ -53,6 +56,8 @@ STANCE_AWARE_HIGH_COVARIANCE_TRACE_M2 = 0.25
 STANCE_AWARE_PHASE_ANCHOR_DRIFT_SPLIT_M = 0.25
 FOOT_LOCK_MAX_XY_CORRECTION_M = 0.02
 REFINED_STANCE_FOOT_PIN_MAX_CORRECTION_M = 0.30
+FOOT_LOCK_GATE_STREAM_MAX_BYTES = 20_000_000
+FOOT_LOCK_GATE_STREAM_MAX_FRAME_ROWS = 20_000
 CAMERA_MOTION_ARTIFACT = "camera_motion.json"
 DEFAULT_SMOOTHING_GAP_CARRY_FRAMES = 8
 DEFAULT_SMOOTHING_RESIDUAL_IDENTITY_RESET_M = 1.0
@@ -701,7 +706,11 @@ def _apply_refined_stance_phase_lock_and_pin(
     }
     pinned_skeleton["provenance"] = provenance
 
-    final_metrics = _contact_metrics_for_skeleton3d(pinned_skeleton)
+    final_metrics, gate_stream = _contact_gate_stream_for_skeleton3d(
+        pinned_skeleton,
+        clip=str(pinned_skeleton.get("clip", "unknown")),
+        threshold_m=0.03,
+    )
     max_slide_m = max(
         (float(metric.get("slide_mm", 0.0)) / 1000.0 for metric in final_metrics.get("phase_metrics", [])),
         default=0.0,
@@ -721,6 +730,15 @@ def _apply_refined_stance_phase_lock_and_pin(
         "foot_lock_slide_metric": "phase_anchored_contiguous_contact",
         "max_foot_lock_slide_m": max_slide_m,
         "foot_lock_slide_p95_m": p95_slide_m,
+        "max_candidate_phase_slide_m": float(final_metrics.get("max_candidate_phase_slide_m", max_slide_m)),
+        "candidate_phase_count": int(final_metrics.get("candidate_phase_count", 0)),
+        "candidate_phase_rejected_count": int(final_metrics.get("candidate_phase_rejected_count", 0)),
+        "candidate_phase_rejection_reason_counts": dict(
+            final_metrics.get("candidate_phase_rejection_reason_counts", {})
+        )
+        if isinstance(final_metrics.get("candidate_phase_rejection_reason_counts"), Mapping)
+        else {},
+        "foot_lock_gate_stream": gate_stream,
     }
 
 
@@ -780,17 +798,147 @@ def _detect_refined_contact_phases(skeleton3d: Mapping[str, Any]) -> list[Contac
     if not frames:
         return []
     try:
-        return detect_contact_phases(frames, joint_names=joint_names)
+        return detect_contact_phases(frames, joint_names=joint_names, thresholds=_gate_contact_thresholds())
     except ValueError:
         return []
 
 
 def _contact_metrics_for_skeleton3d(skeleton3d: Mapping[str, Any]) -> dict[str, Any]:
+    metrics, _gate_stream = _contact_gate_stream_for_skeleton3d(skeleton3d, clip="unknown", threshold_m=0.03)
+    return metrics
+
+
+def _contact_gate_stream_for_skeleton3d(
+    skeleton3d: Mapping[str, Any],
+    *,
+    clip: str,
+    threshold_m: float,
+) -> tuple[dict[str, Any], dict[str, Any]]:
     frames, joint_names = _contact_frames_from_skeleton3d(skeleton3d)
     if not frames:
-        return {"phase_metrics": [], "summary_by_player": {}, "penetration": {}}
-    phases = detect_contact_phases(frames, joint_names=joint_names)
-    return measure_contact_metrics(frames, phases, joint_names=joint_names).to_dict()
+        metrics = {
+            "phase_metrics": [],
+            "summary_by_player": {},
+            "penetration": {},
+            "max_candidate_phase_slide_m": 0.0,
+            "candidate_phase_count": 0,
+            "candidate_phase_rejected_count": 0,
+            "candidate_phase_rejection_reason_counts": {},
+        }
+        return metrics, _empty_gate_stream(clip=clip)
+    phases = detect_contact_phases(frames, joint_names=joint_names, thresholds=_gate_contact_thresholds())
+    raw_metrics = measure_contact_metrics(frames, phases, joint_names=joint_names).to_dict()
+    phase_rejection_reasons = (
+        _gate_phase_rejection_reasons(phases, raw_metrics=raw_metrics)
+        if _use_lock_eligible_gate_metric(skeleton3d)
+        else {}
+    )
+    if phase_rejection_reasons:
+        accepted_phases = [phase for phase in phases if _contact_phase_key(phase) not in phase_rejection_reasons]
+        metrics = measure_contact_metrics(frames, accepted_phases, joint_names=joint_names).to_dict()
+    else:
+        metrics = raw_metrics
+    metrics["max_candidate_phase_slide_m"] = _max_phase_slide_m(raw_metrics)
+    metrics["candidate_phase_count"] = len(raw_metrics.get("phase_metrics", []))
+    metrics["candidate_phase_rejected_count"] = len(phase_rejection_reasons)
+    metrics["candidate_phase_rejection_reason_counts"] = _counts(tuple(phase_rejection_reasons.values()))
+    return metrics, _foot_lock_gate_stream(
+        skeleton3d,
+        frames=frames,
+        phases=phases,
+        metrics=metrics,
+        joint_names=joint_names,
+        clip=clip,
+        threshold_m=threshold_m,
+        phase_rejection_reasons=phase_rejection_reasons,
+    )
+
+
+def _gate_contact_thresholds() -> ContactThresholds:
+    base = ContactThresholds()
+    return ContactThresholds(
+        enter_height_m=base.enter_height_m,
+        exit_height_m=base.exit_height_m,
+        enter_speed_mps=base.enter_speed_mps,
+        exit_speed_mps=base.exit_speed_mps,
+        min_confidence=base.min_confidence,
+        min_phase_frames=base.min_phase_frames,
+        low_foot_band_m=base.low_foot_band_m,
+        split_speed_mps=base.enter_speed_mps,
+    )
+
+
+def _use_lock_eligible_gate_metric(skeleton3d: Mapping[str, Any]) -> bool:
+    provenance = skeleton3d.get("provenance")
+    return isinstance(provenance, Mapping) and (
+        "refined_stance_phase_lock" in provenance or "foot_pin" in provenance
+    )
+
+
+def _gate_phase_rejection_reasons(
+    phases: Sequence[ContactPhase],
+    *,
+    raw_metrics: Mapping[str, Any],
+) -> dict[tuple[str, str, int, int], str]:
+    metric_by_key = {
+        _metric_phase_key(row): row
+        for row in raw_metrics.get("phase_metrics", [])
+        if isinstance(row, Mapping)
+    }
+    reasons: dict[tuple[str, str, int, int], str] = {}
+    for phase in phases:
+        key = _contact_phase_key(phase)
+        reason: str | None = None
+        if phase.weak:
+            reason = phase.rejection_reason or "weak_phase"
+        elif phase.demoted:
+            reason = phase.rejection_reason or "demoted_phase"
+        elif phase.min_confidence < 0.90:
+            reason = "low_body_contact_confidence"
+        else:
+            metric = metric_by_key.get(key)
+            penetration_m = float(metric.get("max_penetration_mm", 0.0)) / 1000.0 if isinstance(metric, Mapping) else 0.0
+            if penetration_m > 0.0:
+                reason = "phase_penetrates_ground"
+        if reason is not None:
+            reasons[key] = reason
+    return reasons
+
+
+def _max_phase_slide_m(metrics: Mapping[str, Any]) -> float:
+    return max(
+        (
+            float(row.get("slide_mm", 0.0)) / 1000.0
+            for row in metrics.get("phase_metrics", [])
+            if isinstance(row, Mapping)
+        ),
+        default=0.0,
+    )
+
+
+def _contact_phase_key(phase: ContactPhase) -> tuple[str, str, int, int]:
+    return (
+        str(phase.player_id),
+        str(phase.foot),
+        int(phase.start_frame_index),
+        int(phase.end_frame_index),
+    )
+
+
+def _metric_phase_key(row: Mapping[str, Any]) -> tuple[str, str, int, int]:
+    return (
+        str(row.get("player_id", "unknown")),
+        str(row.get("foot", "unknown")),
+        int(row.get("start_frame_index", -1)),
+        int(row.get("end_frame_index", -1)),
+    )
+
+
+def _counts(values: Sequence[str] | Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        counts[str(value)] = counts.get(str(value), 0) + 1
+    return counts
 
 
 def _contact_frames_from_skeleton3d(skeleton3d: Mapping[str, Any]) -> tuple[list[ContactSkeletonFrame], list[str]]:
@@ -818,6 +966,231 @@ def _contact_frames_from_skeleton3d(skeleton3d: Mapping[str, Any]) -> tuple[list
                 )
             )
     return frames, joint_names
+
+
+def _foot_lock_gate_stream(
+    skeleton3d: Mapping[str, Any],
+    *,
+    frames: Sequence[ContactSkeletonFrame],
+    phases: Sequence[ContactPhase],
+    metrics: Mapping[str, Any],
+    joint_names: Sequence[str],
+    clip: str,
+    threshold_m: float,
+    phase_rejection_reasons: Mapping[tuple[str, str, int, int], str] | None = None,
+) -> dict[str, Any]:
+    if not frames:
+        return _empty_gate_stream(clip=clip)
+    try:
+        foot_indices = resolve_foot_joint_indices(joint_names, joint_count=len(frames[0].joints_world))
+    except ValueError:
+        return _empty_gate_stream(clip=clip)
+    frame_by_key = {(str(frame.player_id), int(frame.frame_index)): frame for frame in frames}
+    payload_by_key = _skeleton_frame_payload_by_key(skeleton3d)
+    phase_rows: list[dict[str, Any]] = []
+    frame_rows_unbounded: list[dict[str, Any]] = []
+    rejection_reasons = phase_rejection_reasons or {}
+    for phase_ordinal, phase in enumerate(phases):
+        phase_id = f"{phase.player_id}:{phase.foot}:{phase.start_frame_index}-{phase.end_frame_index}:{phase_ordinal}"
+        rejection_reason = rejection_reasons.get(_contact_phase_key(phase))
+        anchor_frame = frame_by_key.get((str(phase.player_id), int(phase.start_frame_index)))
+        if anchor_frame is None:
+            continue
+        anchor = foot_contact_point(anchor_frame, foot_indices.for_foot(phase.foot))
+        max_slide_m = 0.0
+        max_frame_index = int(phase.start_frame_index)
+        for frame_index in phase.frame_indices:
+            frame = frame_by_key.get((str(phase.player_id), int(frame_index)))
+            if frame is None:
+                continue
+            point = foot_contact_point(frame, foot_indices.for_foot(phase.foot))
+            slide_m = _distance2(point[:2], anchor[:2])
+            if slide_m >= max_slide_m:
+                max_slide_m = slide_m
+                max_frame_index = int(frame_index)
+            payload_frame = payload_by_key.get((str(phase.player_id), int(frame_index)), {})
+            frame_rows_unbounded.append(
+                {
+                    "clip": clip,
+                    "player_id": str(phase.player_id),
+                    "foot": phase.foot,
+                    "phase_id": phase_id,
+                    "frame_idx": int(frame_index),
+                    "contact_state": True,
+                    "selected_foot": phase.foot,
+                    "lock_anchor_xyz": [float(anchor[0]), float(anchor[1]), float(anchor[2])],
+                    "raw_xy": [float(point[0]), float(point[1])],
+                    "fused_xy": [float(point[0]), float(point[1])],
+                    "smoothed_xy": [float(point[0]), float(point[1])],
+                    "original_xy": [float(point[0]), float(point[1])],
+                    "body_root_world": _body_root_world(payload_frame),
+                    "output_source": str(payload_frame.get("output_source", payload_frame.get("grounding_anchor", "body"))),
+                    "divergence_flag": _frame_has_divergence_flag(payload_frame),
+                    "speed_cap_flag": _frame_has_speed_cap_flag(payload_frame),
+                    "residuals": _frame_residuals(payload_frame),
+                    "bbox_margin_px": payload_frame.get("bbox_margin_px"),
+                    "source_counts": dict(payload_frame.get("source_counts", {}))
+                    if isinstance(payload_frame.get("source_counts"), Mapping)
+                    else {},
+                    "foot_pin_correction_m": _foot_pin_correction_m(payload_frame),
+                }
+            )
+        phase_rows.append(
+            {
+                "clip": clip,
+                "player_id": str(phase.player_id),
+                "foot": phase.foot,
+                "phase_id": phase_id,
+                "start_frame_index": int(phase.start_frame_index),
+                "end_frame_index": int(phase.end_frame_index),
+                "frame_count": int(phase.frame_count),
+                "slide_m": float(max_slide_m),
+                "max_contributing_frame_index": int(max_frame_index),
+                "anchor_position_xyz": [float(anchor[0]), float(anchor[1]), float(anchor[2])],
+                "contact_source": phase.source,
+                "source_phase_id": phase_id,
+                "foot_assignment": phase.foot_assignment,
+                "source_phase_foot": phase.source_phase_foot or phase.foot,
+                "weak": bool(phase.weak or rejection_reason),
+                "demoted": bool(phase.demoted or rejection_reason),
+                "split": bool(phase.split),
+                "split_reason": phase.split_reason,
+                "rejection_reason": rejection_reason or phase.rejection_reason,
+                "lock_metric_included": rejection_reason is None,
+                "min_confidence": float(phase.min_confidence),
+                "max_height_m": float(phase.max_height_m),
+                "max_speed_mps": float(phase.max_speed_mps),
+            }
+        )
+    frame_rows, stride = _bounded_gate_frame_rows(frame_rows_unbounded)
+    top = sorted(phase_rows, key=lambda row: float(row["slide_m"]), reverse=True)
+    weak_reasons = _counts(
+        str(row.get("rejection_reason"))
+        for row in phase_rows
+        if row.get("rejection_reason")
+    )
+    candidate_max_slide_m = max((float(row["slide_m"]) for row in phase_rows), default=0.0)
+    return {
+        "schema_version": 1,
+        "artifact_type": "foot_lock_gate_stream",
+        "clip": clip,
+        "phase_rows": phase_rows,
+        "frame_rows": frame_rows,
+        "summary": {
+            "top_20_phases_by_slide_m": top[:20],
+            "phases_over_threshold": [row for row in top if float(row["slide_m"]) > threshold_m],
+            "weak_rejection_reasons": weak_reasons,
+            "candidate_phase_rejection_reason_counts": weak_reasons,
+            "max_candidate_phase_slide_m": float(candidate_max_slide_m),
+            "frame_row_stride": stride,
+            "frame_rows_unstrided_count": len(frame_rows_unbounded),
+            "phase_count": len(phase_rows),
+            "threshold_m": float(threshold_m),
+            "metric_phase_count": len(metrics.get("phase_metrics", [])) if isinstance(metrics.get("phase_metrics"), list) else 0,
+        },
+        "artifact_size_policy": _gate_artifact_size_policy(),
+    }
+
+
+def _empty_gate_stream(*, clip: str) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "foot_lock_gate_stream",
+        "clip": clip,
+        "phase_rows": [],
+        "frame_rows": [],
+        "summary": {
+            "top_20_phases_by_slide_m": [],
+            "phases_over_threshold": [],
+            "weak_rejection_reasons": {},
+            "candidate_phase_rejection_reason_counts": {},
+            "max_candidate_phase_slide_m": 0.0,
+            "frame_row_stride": 1,
+            "frame_rows_unstrided_count": 0,
+            "phase_count": 0,
+            "threshold_m": 0.03,
+            "metric_phase_count": 0,
+        },
+        "artifact_size_policy": _gate_artifact_size_policy(),
+    }
+
+
+def _bounded_gate_frame_rows(rows: Sequence[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    if len(rows) <= FOOT_LOCK_GATE_STREAM_MAX_FRAME_ROWS:
+        return list(rows), 1
+    stride = max(1, (len(rows) + FOOT_LOCK_GATE_STREAM_MAX_FRAME_ROWS - 1) // FOOT_LOCK_GATE_STREAM_MAX_FRAME_ROWS)
+    return [dict(row) for index, row in enumerate(rows) if index % stride == 0], stride
+
+
+def _gate_artifact_size_policy() -> dict[str, Any]:
+    return {
+        "max_bytes": FOOT_LOCK_GATE_STREAM_MAX_BYTES,
+        "action": "stride_frame_rows_when_needed",
+        "max_frame_rows_before_stride": FOOT_LOCK_GATE_STREAM_MAX_FRAME_ROWS,
+    }
+
+
+def _skeleton_frame_payload_by_key(skeleton3d: Mapping[str, Any]) -> dict[tuple[str, int], Mapping[str, Any]]:
+    out: dict[tuple[str, int], Mapping[str, Any]] = {}
+    for player in skeleton3d.get("players", []) or []:
+        if not isinstance(player, Mapping):
+            continue
+        player_id = str(player.get("id", "unknown"))
+        for frame in player.get("frames", []) or []:
+            if not isinstance(frame, Mapping):
+                continue
+            frame_idx = int(frame.get("frame_idx", round(float(frame.get("t", 0.0)) * 30.0)))
+            out[(player_id, frame_idx)] = frame
+    return out
+
+
+def _body_root_world(frame: Mapping[str, Any]) -> list[float] | None:
+    transl = frame.get("transl_world")
+    if isinstance(transl, Sequence) and not isinstance(transl, (str, bytes)) and len(transl) >= 3:
+        return [float(transl[0]), float(transl[1]), float(transl[2])]
+    joints = frame.get("joints_world")
+    if isinstance(joints, Sequence) and not isinstance(joints, (str, bytes)) and joints:
+        first = joints[0]
+        if isinstance(first, Sequence) and not isinstance(first, (str, bytes)) and len(first) >= 3:
+            return [float(first[0]), float(first[1]), float(first[2])]
+    return None
+
+
+def _frame_has_divergence_flag(frame: Mapping[str, Any]) -> bool:
+    output_source = str(frame.get("output_source", ""))
+    metadata = frame.get("temporal_smoothing_metadata")
+    return output_source.startswith("fused_divergence") or (
+        isinstance(metadata, Mapping) and str(metadata.get("residual_status", "")) == "reset"
+    )
+
+
+def _frame_has_speed_cap_flag(frame: Mapping[str, Any]) -> bool:
+    metadata = frame.get("temporal_smoothing_metadata")
+    return isinstance(metadata, Mapping) and bool(metadata.get("root_speed_limited", False))
+
+
+def _frame_residuals(frame: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = frame.get("temporal_smoothing_metadata")
+    if not isinstance(metadata, Mapping):
+        return {}
+    keys = (
+        "track_anchor_residual_m",
+        "pre_reset_track_anchor_residual_m",
+        "body_marker_transition_divergence_m",
+        "residual_status",
+        "reset_reason",
+    )
+    return {key: metadata.get(key) for key in keys if key in metadata}
+
+
+def _foot_pin_correction_m(frame: Mapping[str, Any]) -> float:
+    raw = frame.get("foot_pin")
+    if isinstance(raw, Mapping) and isinstance(raw.get("correction_magnitude_m"), (int, float)):
+        return float(raw["correction_magnitude_m"])
+    raw = frame.get("body_grounding_refinement")
+    if isinstance(raw, Mapping) and isinstance(raw.get("correction_magnitude_m"), (int, float)):
+        return float(raw["correction_magnitude_m"])
+    return 0.0
 
 
 def _track_xy_by_key_from_smpl_motion(smpl_motion: Mapping[str, Any]) -> dict[tuple[str, int], list[float]]:
@@ -880,6 +1253,16 @@ def _copy_contact_phase_with_frames(phase: ContactPhase, frame_indices: Sequence
         max_height_m=phase.max_height_m,
         max_speed_mps=phase.max_speed_mps,
         min_confidence=phase.min_confidence,
+        source=phase.source,
+        source_phase_foot=phase.source_phase_foot,
+        foot_assignment=phase.foot_assignment,
+        weak=phase.weak,
+        demoted=phase.demoted,
+        split=True,
+        split_reason=phase.split_reason or "anchor_drift_split",
+        rejection_reason=phase.rejection_reason,
+        source_thresholds=phase.source_thresholds,
+        assignment_evidence=phase.assignment_evidence,
     )
 
 
@@ -1966,7 +2349,7 @@ def _smooth_grounded_frames_stance_aware(
     max_track_anchor_smoothing_residual_m: float | None,
     smoothing_residual_identity_reset_m: float = DEFAULT_SMOOTHING_RESIDUAL_IDENTITY_RESET_M,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    normalized_index = _normalize_stance_index(stance_index)
+    normalized_index, rejected_stance_reasons = _lock_eligible_stance_index(_normalize_stance_index(stance_index))
     transition_frames = _transition_frame_keys(frames, stance_index=normalized_index)
     phase_anchor_targets, phase_anchor_split_count = _stance_phase_anchor_targets(
         frames,
@@ -1988,6 +2371,7 @@ def _smooth_grounded_frames_stance_aware(
     root_speed_anomaly_by_player: dict[int, int] = {}
     root_step_count_by_player: dict[int, int] = {}
     root_speed_limited_frames = 0
+    rejected_stance_frame_count = sum(rejected_stance_reasons.values())
     track_anchor_residual_carried_frames = 0
     track_anchor_residual_identity_reset_frames = 0
     residual_reset_m = (
@@ -2155,6 +2539,8 @@ def _smooth_grounded_frames_stance_aware(
             "phase_anchor_split_count": phase_anchor_split_count,
             "phase_median_anchor_frame_count": len(phase_anchor_targets),
             "stance_frame_count": stance_frame_count,
+            "rejected_stance_frame_count": rejected_stance_frame_count,
+            "rejected_stance_reasons": rejected_stance_reasons,
             "transition_frame_count": transition_frame_count,
             "track_anchor_residual_m": _distribution_m(track_anchor_residuals),
             "transition_anchor_lag_m": transition_summary,
@@ -2282,6 +2668,66 @@ def _normalize_stance_index(
         except (TypeError, ValueError):
             continue
     return normalized
+
+
+def _lock_eligible_stance_index(
+    stance_index: Mapping[tuple[int, int], Mapping[str, Any]],
+) -> tuple[dict[tuple[int, int], Mapping[str, Any]], dict[str, int]]:
+    filtered: dict[tuple[int, int], Mapping[str, Any]] = {}
+    rejected_reasons: dict[str, int] = {}
+    for key, info in stance_index.items():
+        if not bool(info.get("stance", False)):
+            filtered[key] = info
+            continue
+        reason = _stance_info_rejection_reason(info)
+        if reason is None:
+            filtered[key] = info
+            continue
+        rejected_reasons[reason] = rejected_reasons.get(reason, 0) + 1
+        filtered[key] = {**dict(info), "stance": False, "rejected_stance_reason": reason}
+    return filtered, rejected_reasons
+
+
+def _stance_info_rejection_reason(info: Mapping[str, Any]) -> str | None:
+    if bool(info.get("weak", False)):
+        return str(info.get("rejection_reason") or "weak_phase")
+    if bool(info.get("demoted", False)):
+        return str(info.get("rejection_reason") or "demoted_phase")
+    foot_assignment = str(info.get("foot_assignment", ""))
+    if foot_assignment == "bilateral_from_player_stance":
+        return str(info.get("rejection_reason") or "weak_bilateral_unknown_foot")
+    if foot_assignment not in {"per_foot_keypoint_support", "per_foot_body_contact"}:
+        return "missing_per_foot_assignment"
+    if str(info.get("source_phase_foot") or info.get("phase_foot") or "") not in {"left", "right"}:
+        return "missing_per_foot_assignment"
+    missing = [
+        field
+        for field in ("min_confidence", "max_height_m", "max_speed_mps", "source_thresholds")
+        if field not in info
+    ]
+    if missing:
+        return "missing_confidence_fields"
+    confidence = _optional_float(info.get("min_confidence"))
+    if confidence is None:
+        return "invalid_min_confidence"
+    if confidence < 0.90:
+        return "low_body_contact_confidence"
+    evidence = info.get("assignment_evidence") if isinstance(info.get("assignment_evidence"), Mapping) else {}
+    agreement = _optional_float(info.get("body_detector_agreement"))
+    if agreement is None:
+        agreement = _optional_float(evidence.get("body_detector_agreement"))
+    if agreement is None:
+        return "missing_body_detector_agreement"
+    if agreement < 0.90:
+        return "low_body_detector_agreement"
+    return None
+
+
+def _optional_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _transition_frame_keys(

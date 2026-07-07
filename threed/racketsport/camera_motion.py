@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import time
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -13,6 +14,11 @@ import numpy as np
 
 
 IDENTITY_3X3: list[list[float]] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+CAMERA_MOTION_AUTO_THRESHOLD = 2.5
+CAMERA_MOTION_PROBE_FRAME_STEP = 75
+CAMERA_MOTION_PROBE_MAX_FRAMES = 4
+CAMERA_MOTION_PROBE_PROCESSING_SCALE = 0.3
+CAMERA_MOTION_PROBE_MAX_CORNERS = 250
 
 
 @dataclass(frozen=True)
@@ -212,6 +218,142 @@ def estimate_camera_motion(
             )
         validate_camera_motion_payload(payload)
         return payload
+    finally:
+        cap.release()
+
+
+def estimate_camera_motion_probe(
+    video_path: str | Path,
+    calibration_path: str | Path,
+    *,
+    tracks_path: str | Path | None = None,
+    reference_frame_idx: int | None = None,
+    params: CameraMotionParams | None = None,
+    frame_step: int = CAMERA_MOTION_PROBE_FRAME_STEP,
+    max_probe_frames: int = CAMERA_MOTION_PROBE_MAX_FRAMES,
+    threshold: float = CAMERA_MOTION_AUTO_THRESHOLD,
+) -> dict[str, Any]:
+    if params is None:
+        params = replace(
+            CameraMotionParams(),
+            processing_scale=CAMERA_MOTION_PROBE_PROCESSING_SCALE,
+            max_corners=CAMERA_MOTION_PROBE_MAX_CORNERS,
+            temporal_smoothing=False,
+        )
+    _validate_params(params)
+    video = Path(video_path)
+    calibration_file = Path(calibration_path)
+    calibration = _load_json(calibration_file)
+    reference_idx = _reference_frame_idx(calibration, override=reference_frame_idx)
+    tracks_by_frame = load_tracks_by_frame(tracks_path) if tracks_path is not None and params.use_person_masks else {}
+    started = time.monotonic()
+
+    cap = cv2.VideoCapture(str(video))
+    if not cap.isOpened():
+        raise ValueError(f"could not open video: {video}")
+    try:
+        frame_count = _frame_count(cap, max_frames=None)
+        if frame_count <= 0:
+            raise ValueError(f"video has no readable frames: {video}")
+        if reference_idx < 0 or reference_idx >= frame_count:
+            raise ValueError(f"reference frame {reference_idx} outside processed frame range 0..{frame_count - 1}")
+        reference_bgr = _read_frame_at(cap, reference_idx)
+        if reference_bgr is None:
+            raise ValueError(f"could not read reference frame {reference_idx} from {video}")
+
+        frame_shape = reference_bgr.shape[:2]
+        processing_scale = float(params.processing_scale)
+        estimation_params = _params_for_processing_scale(params, processing_scale)
+        court_mask = build_court_mask(calibration, frame_shape, apron_px=params.apron_px)
+        reference_mask_full = mask_people_for_frame(
+            court_mask,
+            tracks_by_frame,
+            frame_idx=reference_idx,
+            padding_px=params.person_padding_px,
+        ) if params.use_person_masks else np.array(court_mask, copy=True)
+        reference_bgr_est = _resize_for_processing(reference_bgr, processing_scale, is_mask=False)
+        reference_mask = _resize_for_processing(reference_mask_full, processing_scale, is_mask=True)
+        reference_gray = cv2.cvtColor(reference_bgr_est, cv2.COLOR_BGR2GRAY)
+        reference_points = detect_reference_features(reference_bgr_est, reference_mask, estimation_params)
+        sample_indices = _probe_frame_indices(
+            frame_count,
+            reference_idx=reference_idx,
+            frame_step=frame_step,
+            max_probe_frames=max_probe_frames,
+        )
+        court_polygon = court_reference_polygon(calibration, frame_shape)
+        court_polygon_est = court_polygon * processing_scale
+        centroid = _polygon_centroid(court_polygon)
+
+        drift_values: list[float] = []
+        compensated_count = 0
+        failure_reasons: dict[str, int] = {}
+        if len(reference_points) < params.min_similarity_inliers:
+            failure_reasons["too_few_reference_features"] = len(sample_indices)
+        else:
+            for frame_idx in sample_indices:
+                if frame_idx == reference_idx:
+                    drift_values.append(0.0)
+                    compensated_count += 1
+                    continue
+                frame_bgr = _read_frame_at(cap, frame_idx)
+                if frame_bgr is None:
+                    failure_reasons["frame_read_failed"] = failure_reasons.get("frame_read_failed", 0) + 1
+                    continue
+                frame_bgr_est = _resize_for_processing(frame_bgr, processing_scale, is_mask=False)
+                frame_gray = cv2.cvtColor(frame_bgr_est, cv2.COLOR_BGR2GRAY)
+                current_mask_full = mask_people_for_frame(
+                    court_mask,
+                    tracks_by_frame,
+                    frame_idx=frame_idx,
+                    padding_px=params.person_padding_px,
+                ) if params.use_person_masks else np.array(court_mask, copy=True)
+                current_mask = _resize_for_processing(current_mask_full, processing_scale, is_mask=True)
+                estimate = _estimate_frame_transform(
+                    reference_gray,
+                    frame_gray,
+                    reference_points,
+                    current_mask,
+                    court_polygon_est,
+                    estimation_params,
+                )
+                estimate = _rescale_estimate_to_original(estimate, processing_scale)
+                drift_values.append(_motion_magnitude_at_point(estimate.matrix_for_metrics, centroid))
+                if estimate.compensated:
+                    compensated_count += 1
+                else:
+                    reason = estimate.reason or "uncompensated"
+                    failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
+
+        motion_score = _percentile(drift_values, 95)
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_camera_motion_probe",
+            "video": video.as_posix(),
+            "reference_frame_idx": int(reference_idx),
+            "method": f"{_method_name(params)}_probe",
+            "params": {
+                **asdict(params),
+                "frame_step": int(max(1, frame_step)),
+                "max_probe_frames": int(max(1, max_probe_frames)),
+            },
+            "threshold": _round_float(float(threshold)),
+            "motion_score": motion_score,
+            "enabled": bool(motion_score > float(threshold)),
+            "forced": "auto",
+            "sampled_frame_indices": sample_indices,
+            "sampled_frame_count": int(len(sample_indices)),
+            "frame_step": int(max(1, frame_step)),
+            "max_probe_frames": int(max(1, max_probe_frames)),
+            "n_compensated": int(compensated_count),
+            "drift_px_p50": _percentile(drift_values, 50),
+            "drift_px_p95": motion_score,
+            "drift_px_max": _max_or_zero(drift_values),
+            "failure_reasons": failure_reasons,
+            "wall_seconds": _round_float(time.monotonic() - started),
+            "verified": False,
+            "not_gate_verified": True,
+        }
     finally:
         cap.release()
 
@@ -1135,6 +1277,37 @@ def _frame_count(cap: cv2.VideoCapture, *, max_frames: int | None) -> int:
     if max_frames is not None:
         total = min(total, int(max_frames))
     return total
+
+
+def _probe_frame_indices(
+    frame_count: int,
+    *,
+    reference_idx: int,
+    frame_step: int,
+    max_probe_frames: int,
+) -> list[int]:
+    frame_total = max(0, int(frame_count))
+    if frame_total <= 0:
+        return []
+    step = max(1, int(frame_step))
+    budget = max(1, int(max_probe_frames))
+    indices = list(range(0, frame_total, step))
+    if (frame_total - 1) not in indices:
+        indices.append(frame_total - 1)
+    ref = min(max(0, int(reference_idx)), frame_total - 1)
+    if ref not in indices:
+        indices.append(ref)
+    indices = sorted(set(indices))
+    if len(indices) <= budget:
+        return indices
+    positions = np.linspace(0, len(indices) - 1, num=budget)
+    selected = {indices[int(round(pos))] for pos in positions}
+    selected.add(ref)
+    if len(selected) > budget and ref in selected:
+        non_ref = sorted(idx for idx in selected if idx != ref)
+        selected = set(non_ref[: max(0, budget - 1)])
+        selected.add(ref)
+    return sorted(selected)
 
 
 def _count_readable_frames(cap: cv2.VideoCapture) -> int:

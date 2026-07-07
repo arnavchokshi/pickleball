@@ -95,6 +95,66 @@ def _write_cvat(path: Path) -> None:
     )
 
 
+def _write_sparse_cvat(path: Path) -> None:
+    frames = [
+        {"frame_index": 0, "boxes": [_ball_box(0, 10.0, 10.0)], "visibility_levels_by_label": {"ball": "clear"}},
+        {"frame_index": 1, "boxes": [], "visibility_levels_by_label": {}},
+        {
+            "frame_index": 2,
+            "boxes": [{**_ball_box(2, 65.0, 10.0), "visibility_level": "partial"}],
+            "visibility_levels_by_label": {"ball": "partial"},
+        },
+        {"frame_index": 3, "boxes": [], "visibility_levels_by_label": {}},
+        {"frame_index": 4, "boxes": [], "visibility_levels_by_label": {}},
+    ]
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_cvat_video_annotations",
+                "clip_id": "clip_sparse",
+                "source_format": "cvat_video_1_1",
+                "source_path": "annotations.zip",
+                "reviewed_frame_indices": [0, 2, 4],
+                "reviewed_frame_indices_source": "cvat_frame_filter",
+                "task": {
+                    "task_id": 1,
+                    "name": "clip_sparse",
+                    "size": 5,
+                    "mode": "interpolation",
+                    "start_frame": 0,
+                    "stop_frame": 4,
+                    "frame_filter": "step=2",
+                    "original_size": [640, 360],
+                    "source": "clip_sparse.mp4",
+                    "dumped": None,
+                },
+                "frames": frames,
+                "tracks": [
+                    {
+                        "track_id": 8,
+                        "label": "ball",
+                        "visible_box_count": 2,
+                        "outside_box_count": 0,
+                        "keyframe_count": 2,
+                        "first_visible_frame": 0,
+                        "last_visible_frame": 2,
+                    }
+                ],
+                "summary": {
+                    "frame_count": 5,
+                    "visible_box_count": 2,
+                    "outside_box_count": 0,
+                    "labels": ["ball"],
+                    "track_count_by_label": {"ball": 1},
+                    "visible_box_count_by_label": {"ball": 2},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_cvat_candidate_scores_ball_f1_hidden_false_positives_error_and_teleports(tmp_path: Path) -> None:
     track_path = tmp_path / "ball_track.json"
     cvat_path = tmp_path / "reviewed_boxes.json"
@@ -130,6 +190,70 @@ def test_cvat_candidate_scores_ball_f1_hidden_false_positives_error_and_teleport
     assert report["label_metrics"]["p95_error_px"] == pytest.approx(23.8)
     assert report["jitter_metrics"]["teleport_count"] == 2
     assert report["quality_score"] < 0.5
+
+
+def test_cvat_candidate_scores_sparse_reviewed_frames_only(tmp_path: Path) -> None:
+    track_path = tmp_path / "ball_track.json"
+    cvat_path = tmp_path / "reviewed_boxes.json"
+    _write_track(track_path)
+    _write_sparse_cvat(cvat_path)
+    payload = json.loads(track_path.read_text(encoding="utf-8"))
+    payload["frames"][4]["visible"] = True
+    payload["frames"][4]["xy"] = [80.0, 80.0]
+    payload["frames"][4]["conf"] = 0.7
+    track_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    report = benchmark_cvat_ball_track_candidate(
+        ball_track_path=track_path,
+        cvat_labels_path=cvat_path,
+        candidate_name="sparse_candidate",
+    )
+
+    assert report["reviewed_frame_indices_source"] == "cvat_frame_filter"
+    assert report["reviewed_frame_count"] == 3
+    assert report["evaluated_reviewed_frame_count"] == 3
+    assert report["label_metrics"]["visible_label_count"] == 2
+    assert report["label_metrics"]["hidden_label_count"] == 1
+    assert report["label_metrics"]["hidden_false_positive_count"] == 1
+    assert report["label_metrics"]["f1_true_positive_count"] == 2
+    assert report["label_metrics"]["precision_at_20px"] == pytest.approx(2.0 / 3.0)
+    assert report["label_metrics"]["visible_recall_at_20px"] == pytest.approx(1.0)
+    assert report["label_metrics"]["label_f1_at_20px"] == pytest.approx(0.8)
+
+
+def test_cvat_candidate_can_exclude_approx_candidate_points(tmp_path: Path) -> None:
+    track_path = tmp_path / "ball_track.json"
+    cvat_path = tmp_path / "reviewed_boxes.json"
+    _write_track(track_path)
+    _write_sparse_cvat(cvat_path)
+    payload = json.loads(track_path.read_text(encoding="utf-8"))
+    payload["frames"][0]["approx"] = True
+    payload["frames"][4]["visible"] = True
+    payload["frames"][4]["xy"] = [80.0, 80.0]
+    payload["frames"][4]["conf"] = 0.7
+    payload["frames"][4]["approx"] = True
+    track_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with_approx = benchmark_cvat_ball_track_candidate(
+        ball_track_path=track_path,
+        cvat_labels_path=cvat_path,
+        candidate_name="with_approx",
+        include_approx=True,
+    )
+    without_approx = benchmark_cvat_ball_track_candidate(
+        ball_track_path=track_path,
+        cvat_labels_path=cvat_path,
+        candidate_name="without_approx",
+        include_approx=False,
+    )
+
+    assert with_approx["label_metrics"]["f1_true_positive_count"] == 2
+    assert with_approx["label_metrics"]["hidden_false_positive_count"] == 1
+    assert without_approx["excluded_candidate_approx_frame_count"] == 2
+    assert without_approx["label_metrics"]["f1_true_positive_count"] == 1
+    assert without_approx["label_metrics"]["hidden_false_positive_count"] == 0
+    assert without_approx["label_metrics"]["precision_at_20px"] == pytest.approx(1.0)
+    assert without_approx["label_metrics"]["visible_recall_at_20px"] == pytest.approx(0.5)
 
 
 def test_cvat_candidate_reports_excluded_cvat_label_counts_and_frame_ranges(tmp_path: Path) -> None:

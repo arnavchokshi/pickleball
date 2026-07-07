@@ -199,6 +199,35 @@ def test_default_params_are_hardened_and_legacy_params_preserve_baseline_switch(
     assert legacy.use_person_masks is True
 
 
+def test_motion_probe_scores_pan_above_static_and_reports_sampling_budget(tmp_path: Path) -> None:
+    assert hasattr(camera_motion_module, "estimate_camera_motion_probe")
+    probe_fn = camera_motion_module.estimate_camera_motion_probe
+    static_video = tmp_path / "static.avi"
+    pan_video = tmp_path / "pan.avi"
+    calibration = _calibration(tmp_path / "court_calibration.json")
+    _write_video(static_video, _translated_frames([(0.0, 0.0) for _ in range(6)]))
+    _write_video(pan_video, _translated_frames([(float(i * 4), 0.0) for i in range(6)]))
+
+    params = CameraMotionParams(
+        processing_scale=0.5,
+        temporal_smoothing=False,
+        min_homography_inliers=8,
+        max_ransac_reproj_px=2.0,
+    )
+    static_probe = probe_fn(static_video, calibration, params=params, frame_step=2, max_probe_frames=4)
+    pan_probe = probe_fn(pan_video, calibration, params=params, frame_step=2, max_probe_frames=4)
+
+    assert static_probe["motion_score"] <= 0.05
+    assert pan_probe["motion_score"] > static_probe["motion_score"] + 6.0
+    assert pan_probe["sampled_frame_count"] <= 4
+    assert pan_probe["frame_step"] == 2
+    assert pan_probe["threshold"] > 0.0
+    assert pan_probe["enabled"] == (pan_probe["motion_score"] > pan_probe["threshold"])
+    assert pan_probe["forced"] == "auto"
+    assert pan_probe["verified"] is False
+    assert pan_probe["not_gate_verified"] is True
+
+
 def test_dense_flow_backend_adapter_uses_synthetic_flow_without_weights() -> None:
     reference_points = np.array([[[16.0, 12.0]], [[40.0, 12.0]], [[16.0, 32.0]], [[40.0, 32.0]]], dtype=np.float32)
     flow = np.zeros((48, 64, 2), dtype=np.float32)

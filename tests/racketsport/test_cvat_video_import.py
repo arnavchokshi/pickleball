@@ -162,6 +162,145 @@ def _write_cvat_video_zip_with_ball_visibility_levels(path: Path, *, invalid_lev
         archive.writestr("annotations.xml", xml)
 
 
+def _write_project_wrapped_cvat_video_zip(path: Path) -> None:
+    xml = """<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <project>
+      <labels>
+        <label><name>ball</name></label>
+      </labels>
+      <tasks>
+        <task>
+          <id>2406058</id>
+          <name>wBu8bC4OfUY_rally_0001</name>
+          <size>3</size>
+          <mode>interpolation</mode>
+          <start_frame>0</start_frame>
+          <stop_frame>2</stop_frame>
+          <original_size><width>1920</width><height>1080</height></original_size>
+          <source>wBu8bC4OfUY_rally_0001.mp4</source>
+        </task>
+      </tasks>
+    </project>
+    <dumped>2026-07-07 00:00:00+00:00</dumped>
+  </meta>
+  <track id="8" label="ball" source="manual">
+    <box frame="1" keyframe="1" outside="0" occluded="0" xtl="700" ytl="100" xbr="708" ybr="108" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+</annotations>
+"""
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("annotations.xml", xml)
+
+
+def _write_sparse_absolute_frame_cvat_video_zip(path: Path) -> None:
+    xml = """<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <id>46</id>
+      <name>sparse absolute task</name>
+      <size>3</size>
+      <mode>interpolation</mode>
+      <start_frame>0</start_frame>
+      <stop_frame>20</stop_frame>
+      <frame_filter>step=10</frame_filter>
+      <labels>
+        <label><name>ball</name></label>
+      </labels>
+      <original_size><width>640</width><height>360</height></original_size>
+      <source>sparse_clip.mp4</source>
+    </task>
+  </meta>
+  <track id="4" label="ball" source="manual">
+    <ellipse frame="20" keyframe="1" outside="0" occluded="0" cx="300" cy="150" rx="6" ry="4" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </ellipse>
+  </track>
+</annotations>
+"""
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("annotations.xml", xml)
+
+
+def _write_out_of_frame_and_duplicate_ball_zip(path: Path) -> None:
+    xml = """<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <id>47</id>
+      <name>dedupe task</name>
+      <size>4</size>
+      <mode>interpolation</mode>
+      <start_frame>0</start_frame>
+      <stop_frame>3</stop_frame>
+      <labels>
+        <label><name>ball</name></label>
+      </labels>
+      <original_size><width>640</width><height>360</height></original_size>
+      <source>dedupe_clip.mp4</source>
+    </task>
+  </meta>
+  <track id="4" label="ball" source="manual">
+    <box frame="1" keyframe="1" outside="0" occluded="0" xtl="100" ytl="100" xbr="108" ybr="108" z_order="0">
+      <attribute name="visibility_level">out_of_frame</attribute>
+    </box>
+    <box frame="2" keyframe="1" outside="0" occluded="0" xtl="200" ytl="200" xbr="216" ybr="216" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="5" label="ball" source="manual">
+    <box frame="2" keyframe="1" outside="0" occluded="0" xtl="201" ytl="201" xbr="207" ybr="207" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+</annotations>
+"""
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("annotations.xml", xml)
+
+
+def _write_outside_marker_and_visible_same_frame_zip(path: Path) -> None:
+    xml = """<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <id>48</id>
+      <name>same frame marker task</name>
+      <size>3</size>
+      <mode>interpolation</mode>
+      <start_frame>0</start_frame>
+      <stop_frame>2</stop_frame>
+      <labels>
+        <label><name>ball</name></label>
+      </labels>
+      <original_size><width>640</width><height>360</height></original_size>
+      <source>same_frame_marker.mp4</source>
+    </task>
+  </meta>
+  <track id="4" label="ball" source="manual">
+    <box frame="1" keyframe="1" outside="1" occluded="0" xtl="100" ytl="100" xbr="108" ybr="108" z_order="0">
+      <attribute name="visibility_level">out_of_frame</attribute>
+    </box>
+  </track>
+  <track id="5" label="ball" source="manual">
+    <box frame="1" keyframe="1" outside="0" occluded="0" xtl="200" ytl="200" xbr="216" ybr="216" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+</annotations>
+"""
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("annotations.xml", xml)
+
+
 def test_import_cvat_video_zip_preserves_player_paddle_and_ball_visible_boxes(tmp_path: Path) -> None:
     zip_path = tmp_path / "annotations_cvat_video.zip"
     _write_cvat_video_zip(zip_path)
@@ -242,6 +381,75 @@ def test_import_cvat_video_zip_preserves_four_ball_visibility_levels(tmp_path: P
     parsed = validate_artifact_file("cvat_video_annotations", out_path)
     assert isinstance(parsed, CvatVideoAnnotations)
     assert parsed.frames[3].visibility_levels_by_label["ball"] == "out_of_frame"
+
+
+def test_import_cvat_video_zip_treats_outside_clear_partial_as_track_end(tmp_path: Path) -> None:
+    zip_path = tmp_path / "annotations_cvat_video_outside_clear.zip"
+    _write_cvat_video_zip_with_ball_visibility_levels(zip_path, invalid_level="clear")
+
+    annotations, _ = import_cvat_video_zip(zip_path, clip_id="clip_outside_clear", fps=30)
+
+    assert annotations.summary.visible_box_count_by_label == {"ball": 2}
+    assert annotations.summary.outside_box_count == 2
+    assert annotations.frames[2].boxes == []
+    assert annotations.frames[2].visibility_levels_by_label == {}
+    assert annotations.frames[3].visibility_levels_by_label == {"ball": "out_of_frame"}
+
+
+def test_import_cvat_video_zip_parses_project_wrapped_exports(tmp_path: Path) -> None:
+    zip_path = tmp_path / "project_wrapped.zip"
+    _write_project_wrapped_cvat_video_zip(zip_path)
+
+    annotations, _ = import_cvat_video_zip(zip_path, clip_id="wBu8bC4OfUY_rally_0001", fps=30)
+
+    assert annotations.task.task_id == 2406058
+    assert annotations.task.source == "wBu8bC4OfUY_rally_0001.mp4"
+    assert annotations.task.original_size == (1920, 1080)
+    assert annotations.summary.labels == ["ball"]
+    assert annotations.summary.visible_box_count_by_label == {"ball": 1}
+
+
+def test_import_cvat_video_zip_infers_absolute_sparse_frame_count_and_reviewed_indices(tmp_path: Path) -> None:
+    zip_path = tmp_path / "sparse_absolute.zip"
+    _write_sparse_absolute_frame_cvat_video_zip(zip_path)
+
+    annotations, person_gt = import_cvat_video_zip(zip_path, clip_id="clip_sparse", fps=30)
+
+    assert annotations.task.size == 21
+    assert annotations.task.stop_frame == 20
+    assert annotations.task.frame_filter == "step=10"
+    assert annotations.summary.frame_count == 21
+    assert len(annotations.frames) == 21
+    assert annotations.reviewed_frame_indices == [0, 10, 20]
+    assert annotations.reviewed_frame_indices_source == "cvat_frame_filter"
+    assert annotations.frames[20].boxes[0].visibility_level == "partial"
+    assert person_gt.summary.frame_count == 21
+
+
+def test_import_cvat_video_zip_drops_out_of_frame_ball_boxes_and_dedupes_single_ball_frames(tmp_path: Path) -> None:
+    zip_path = tmp_path / "out_of_frame_and_duplicate.zip"
+    _write_out_of_frame_and_duplicate_ball_zip(zip_path)
+
+    annotations, _ = import_cvat_video_zip(zip_path, clip_id="clip_dedupe", fps=30)
+
+    assert annotations.summary.visible_box_count_by_label == {"ball": 1}
+    assert annotations.summary.outside_box_count == 1
+    assert annotations.frames[1].boxes == []
+    assert annotations.frames[1].visibility_levels_by_label == {"ball": "out_of_frame"}
+    assert len(annotations.frames[2].boxes) == 1
+    assert annotations.frames[2].boxes[0].bbox_xyxy == pytest.approx((200.0, 200.0, 216.0, 216.0))
+
+
+def test_import_cvat_video_zip_visible_ball_overrides_same_frame_track_end_marker(tmp_path: Path) -> None:
+    zip_path = tmp_path / "same_frame_marker.zip"
+    _write_outside_marker_and_visible_same_frame_zip(zip_path)
+
+    annotations, _ = import_cvat_video_zip(zip_path, clip_id="clip_same_frame_marker", fps=30)
+
+    assert annotations.summary.visible_box_count_by_label == {"ball": 1}
+    assert annotations.summary.outside_box_count == 1
+    assert len(annotations.frames[1].boxes) == 1
+    assert annotations.frames[1].visibility_levels_by_label == {"ball": "clear"}
 
 
 def test_import_cvat_video_zip_rejects_unknown_ball_visibility_level(tmp_path: Path) -> None:

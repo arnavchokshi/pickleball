@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import asdict, dataclass
-from typing import Iterable, Mapping, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 from threed.racketsport.external_gt_body_prediction_schema import MHR70_JOINT_NAMES
 
@@ -30,8 +30,9 @@ class ContactThresholds:
     min_confidence: float = 0.20
     min_phase_frames: int = 2
     low_foot_band_m: float = 0.025
+    split_speed_mps: float | None = None
 
-    def to_dict(self) -> dict[str, float | int]:
+    def to_dict(self) -> dict[str, float | int | None]:
         return asdict(self)
 
 
@@ -84,6 +85,16 @@ class ContactPhase:
     max_height_m: float
     max_speed_mps: float
     min_confidence: float
+    source: str = "body_foot_contact_detector"
+    source_phase_foot: str | None = None
+    foot_assignment: str = "per_foot_body_contact"
+    weak: bool = False
+    demoted: bool = False
+    split: bool = False
+    split_reason: str | None = None
+    rejection_reason: str | None = None
+    source_thresholds: Mapping[str, Any] | None = None
+    assignment_evidence: Mapping[str, Any] | None = None
 
     @property
     def start_frame_index(self) -> int:
@@ -111,6 +122,16 @@ class ContactPhase:
             "max_height_m": self.max_height_m,
             "max_speed_mps": self.max_speed_mps,
             "min_confidence": self.min_confidence,
+            "source": self.source,
+            "source_phase_foot": self.source_phase_foot if self.source_phase_foot is not None else self.foot,
+            "foot_assignment": self.foot_assignment,
+            "weak": self.weak,
+            "demoted": self.demoted,
+            "split": self.split,
+            "split_reason": self.split_reason,
+            "rejection_reason": self.rejection_reason,
+            "source_thresholds": dict(self.source_thresholds or {}),
+            "assignment_evidence": dict(self.assignment_evidence or {}),
         }
 
 
@@ -348,22 +369,57 @@ def _append_phase(
     active: Sequence[FootObservation],
     thresholds: ContactThresholds,
 ) -> None:
-    if len(active) < thresholds.min_phase_frames:
-        return
-    anchor = active[0].position_xyz
-    phases.append(
-        ContactPhase(
-            player_id=player_id,
-            foot=foot,
-            frame_indices=tuple(observation.frame_index for observation in active),
-            start_time_s=active[0].t,
-            end_time_s=active[-1].t,
-            anchor_position_xyz=(anchor[0], anchor[1], 0.0),
-            max_height_m=max(observation.height_m for observation in active),
-            max_speed_mps=max(observation.speed_mps for observation in active),
-            min_confidence=min(observation.confidence for observation in active),
+    for segment, split_reason in _quality_segments(active, thresholds):
+        if len(segment) < thresholds.min_phase_frames:
+            continue
+        anchor = segment[0].position_xyz
+        phases.append(
+            ContactPhase(
+                player_id=player_id,
+                foot=foot,
+                frame_indices=tuple(observation.frame_index for observation in segment),
+                start_time_s=segment[0].t,
+                end_time_s=segment[-1].t,
+                anchor_position_xyz=(anchor[0], anchor[1], 0.0),
+                max_height_m=max(observation.height_m for observation in segment),
+                max_speed_mps=max(observation.speed_mps for observation in segment),
+                min_confidence=min(observation.confidence for observation in segment),
+                split=split_reason is not None,
+                split_reason=split_reason,
+                source_thresholds=thresholds.to_dict(),
+                assignment_evidence={
+                    "support_frame_count": len(segment),
+                    "source_phase_foot": foot,
+                },
+            )
         )
-    )
+
+
+def _quality_segments(
+    active: Sequence[FootObservation],
+    thresholds: ContactThresholds,
+) -> list[tuple[list[FootObservation], str | None]]:
+    if len(active) < thresholds.min_phase_frames:
+        return []
+    split_speed = thresholds.split_speed_mps
+    if split_speed is None:
+        return [(list(active), None)]
+
+    segments: list[list[FootObservation]] = []
+    current: list[FootObservation] = []
+    split_triggered = False
+    for observation in active:
+        if observation.speed_mps > split_speed + 1e-12:
+            if current:
+                segments.append(current)
+                current = []
+            split_triggered = True
+            continue
+        current.append(observation)
+    if current:
+        segments.append(current)
+    split_reason = "internal_speed_inflection" if split_triggered else None
+    return [(segment, split_reason) for segment in segments]
 
 
 def _classify_observation(
@@ -514,6 +570,8 @@ def _validate_thresholds(thresholds: ContactThresholds) -> None:
         raise ValueError("min_phase_frames must be >= 1")
     if thresholds.low_foot_band_m < 0:
         raise ValueError("low_foot_band_m must be non-negative")
+    if thresholds.split_speed_mps is not None and thresholds.split_speed_mps <= 0:
+        raise ValueError("split_speed_mps must be positive when provided")
 
 
 __all__ = [

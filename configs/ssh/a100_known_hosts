@@ -1,7 +1,14 @@
-# Pinned host keys for fleet GPU #1 `pickleball-a100-fleet1` (34.143.175.207) — see
+# Pinned host keys for fleet GPU #1 `pickleball-a100-fleet1` (current 35.240.183.195;
+# prior 34.143.175.207 retained below for restart history) — see
 # runs/manager/gpu_fleet.md. Used by scripts/racketsport/remote_body_dispatch.py in place of
 # StrictHostKeyChecking=no. Old host 34.126.67.233 DELETED 2026-07-06; keys removed.
 # When the fleet changes: ssh-keyscan the new host, replace deliberately — never silently.
+# 2026-07-07: fleet1 restart changed external IP 34.143.175.207 -> 35.240.183.195.
+# w3_fleetseed_20260707 live-verified same host key/disk; keep old 34.143.175.207 lines
+# below as prior mapping evidence.
+35.240.183.195 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJBT8F9umgxXqaUKXe+50DBLtuIpdKg4ArZmgS12eWlXiHATGeJNXrU9B0Jnh6cPzQIp5Jh+h0X0Wxx95EYm8+w=
+35.240.183.195 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5H49uDy2naR8QiKblsKnvGhSyYPwIXxxeoQ4m2JF4WnfEArco3/fn85XD8sS3Cx0/yyDkahVsoCR1jjAdKRsdpchta4N2epCoodySFtx6FaT2dCUloi48fzp0KRsonhe0Vuyy7wN8ExExmHBADf48mrKsHX+STPV7Bc9CSGNm0huj+HwGeQ6TtGSClm35OgfhCgElGI4tARZL/SV1q19rVOlxrI/K5SnGkIqTdGJU+5ARzcQBd4lAhO1DKSC/wg5BMYChldPjg8v4tap/cjVj26JBf0JoRu7T7Ttachj+AdmpXq3dI+qWX0qlEP0ylRgMW1g6T/1o7RCDJVPRTbsGGwhMy7MtmdMKfYdlf6v/n23Gbp/z0sCWpLSxYIcU71vgjTh7kG+z364R5UX5rTi5Zmw2aCqOZLHTrd61vxSAHfUdWPLGIBGJuO1tjsD3JC1DSgRGJZ+oq0/Yjst7WOTkXsv414eReqOfTXUc/VmhSJg3CN6zc6oIBH5vbZ2TEp0=
+35.240.183.195 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIErI2eAMFp6/kNmFlZ+XKIqt8Fc9zsAuEWTx5qhlPkXu
 34.143.175.207 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJBT8F9umgxXqaUKXe+50DBLtuIpdKg4ArZmgS12eWlXiHATGeJNXrU9B0Jnh6cPzQIp5Jh+h0X0Wxx95EYm8+w=
 34.143.175.207 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5H49uDy2naR8QiKblsKnvGhSyYPwIXxxeoQ4m2JF4WnfEArco3/fn85XD8sS3Cx0/yyDkahVsoCR1jjAdKRsdpchta4N2epCoodySFtx6FaT2dCUloi48fzp0KRsonhe0Vuyy7wN8ExExmHBADf48mrKsHX+STPV7Bc9CSGNm0huj+HwGeQ6TtGSClm35OgfhCgElGI4tARZL/SV1q19rVOlxrI/K5SnGkIqTdGJU+5ARzcQBd4lAhO1DKSC/wg5BMYChldPjg8v4tap/cjVj26JBf0JoRu7T7Ttachj+AdmpXq3dI+qWX0qlEP0ylRgMW1g6T/1o7RCDJVPRTbsGGwhMy7MtmdMKfYdlf6v/n23Gbp/z0sCWpLSxYIcU71vgjTh7kG+z364R5UX5rTi5Zmw2aCqOZLHTrd61vxSAHfUdWPLGIBGJuO1tjsD3JC1DSgRGJZ+oq0/Yjst7WOTkXsv414eReqOfTXUc/VmhSJg3CN6zc6oIBH5vbZ2TEp0=
 34.143.175.207 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIErI2eAMFp6/kNmFlZ+XKIqt8Fc9zsAuEWTx5qhlPkXu

@@ -112,6 +112,18 @@ class _PixelObservation:
 
 
 @dataclass(frozen=True)
+class _FootPixelObservation:
+    source: str
+    foot: str
+    pixel_xy: list[float]
+    confidence: float
+    valid: bool = True
+    reason: str | None = None
+    sidecar_player_id: int | None = None
+    mapped_player_id: int | None = None
+
+
+@dataclass(frozen=True)
 class _CameraMotionObservation:
     matrix: np.ndarray
     model: str | None = None
@@ -133,6 +145,16 @@ class _StancePhase:
     foot: str
     frame_indices: tuple[int, ...]
     source: str
+    min_confidence: float | None = None
+    max_height_m: float | None = None
+    max_speed_mps: float | None = None
+    source_thresholds: Mapping[str, Any] | None = None
+    foot_assignment: str | None = None
+    source_phase_foot: str | None = None
+    weak: bool = False
+    demoted: bool = False
+    rejection_reason: str | None = None
+    assignment_evidence: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -175,6 +197,10 @@ def rewrite_tracks_with_placement(
     )
     native2d = _load_native2d_foot_pixels(native2d_keypoints_path, config=config) if native2d_keypoints_path else {}
     sam3d = _load_sam3d_foot_pixels(sam3d_keypoints_path, config=config) if sam3d_keypoints_path else {}
+    native2d_feet = (
+        _load_native2d_foot_pixels_by_foot(native2d_keypoints_path, config=config) if native2d_keypoints_path else {}
+    )
+    sam3d_feet = _load_sam3d_foot_pixels_by_foot(sam3d_keypoints_path, config=config) if sam3d_keypoints_path else {}
     bbox_index = _build_track_bbox_index(tracks_payload)
     native2d, native2d_identity = _reassociate_sidecar_pixels(
         native2d,
@@ -188,7 +214,24 @@ def rewrite_tracks_with_placement(
         source_name="sam3d",
         config=config,
     )
-    sidecar_identity_summary = {"native2d": native2d_identity, "sam3d": sam3d_identity}
+    native2d_feet, native2d_feet_identity = _reassociate_sidecar_foot_pixels(
+        native2d_feet,
+        bbox_index=bbox_index,
+        source_name="native2d",
+        config=config,
+    )
+    sam3d_feet, sam3d_feet_identity = _reassociate_sidecar_foot_pixels(
+        sam3d_feet,
+        bbox_index=bbox_index,
+        source_name="sam3d",
+        config=config,
+    )
+    sidecar_identity_summary = {
+        "native2d": native2d_identity,
+        "sam3d": sam3d_identity,
+        "native2d_per_foot": native2d_feet_identity,
+        "sam3d_per_foot": sam3d_feet_identity,
+    }
     stance_phases = _load_stance_phases(stance_phases_path) if stance_phases_path else {}
     external_stance_phase_count = sum(len(phases) for phases in stance_phases.values())
 
@@ -251,6 +294,9 @@ def rewrite_tracks_with_placement(
         frame_signals: dict[int, _FrameSignals] = {}
         keypoint_xy_for_stance: dict[int, list[float]] = {}
         trajectory_xy_for_stance: dict[int, list[float]] = {}
+        foot_keypoint_xy_for_stance: dict[str, dict[int, list[float]]] = {"left": {}, "right": {}}
+        foot_keypoint_conf_for_stance: dict[str, dict[int, float]] = {"left": {}, "right": {}}
+        foot_keypoint_source_for_stance: dict[str, dict[int, str]] = {"left": {}, "right": {}}
         original_by_frame: dict[int, list[float]] = {}
         frame_indices: list[int] = []
 
@@ -297,6 +343,24 @@ def rewrite_tracks_with_placement(
                 keypoint_xy_for_stance[frame_idx] = [float(keypoint_signal["xy"][0]), float(keypoint_signal["xy"][1])]
             if used_signals:
                 trajectory_xy_for_stance[frame_idx] = [float(fused_xy[0]), float(fused_xy[1])]
+            for foot in ("left", "right"):
+                foot_signal = _phase_foot_signal_for_frame(
+                    player_id=player_id,
+                    frame_idx=frame_idx,
+                    foot=foot,
+                    source_maps=(("native2d", native2d_feet), ("sam3d", sam3d_feet)),
+                    side=side,
+                    homography=homography,
+                    camera_matrix=camera_matrix,
+                    dist=dist,
+                    undistort_applied=undistort_applied,
+                    pixel_transform=camera_motion.matrix if camera_motion is not None else None,
+                    config=config,
+                )
+                if foot_signal is not None:
+                    foot_keypoint_xy_for_stance[foot][frame_idx] = [float(foot_signal["xy"][0]), float(foot_signal["xy"][1])]
+                    foot_keypoint_conf_for_stance[foot][frame_idx] = float(foot_signal["confidence"])
+                    foot_keypoint_source_for_stance[foot][frame_idx] = str(foot_signal["source"])
             frame_signals[frame_idx] = _FrameSignals(
                 fused_xy=[float(fused_xy[0]), float(fused_xy[1])],
                 fused_covariance=_covariance_to_list(fused_cov),
@@ -329,13 +393,28 @@ def rewrite_tracks_with_placement(
             player_id=player_id,
             stance_frames=keypoint_stance_frames or fallback_stance_frames,
             source="native_keypoint_low_speed" if keypoint_stance_frames else "native_placement_low_speed",
+            config=config,
+        )
+        per_foot_stance_phases = _per_foot_stance_phases_from_keypoints(
+            player_id=player_id,
+            foot_xy_by_frame=foot_keypoint_xy_for_stance,
+            foot_confidence_by_frame=foot_keypoint_conf_for_stance,
+            foot_source_by_frame=foot_keypoint_source_for_stance,
+            frame_indices=frame_indices,
+            fps=fps,
+            config=config,
         )
         native_stance_phase_count += len(native_stance_phases)
         emitted_stance_phases.extend(player_stance_phases)
         emitted_stance_phases.extend(native_stance_phases)
+        emitted_stance_phases.extend(per_foot_stance_phases)
         native_stance_frames = _phase_frame_set(native_stance_phases, frame_indices=frame_indices)
-        stance_frames = set(native_stance_frames)
-        stance_frames.update(external_stance_frames)
+        placement_stance_frames = set(native_stance_frames)
+        placement_stance_frames.update(external_stance_frames)
+        body_lock_stance_phases = [
+            phase for phase in (*player_stance_phases, *per_foot_stance_phases) if _stance_phase_is_body_lock_eligible(phase)
+        ]
+        body_lock_stance_frames = _phase_frame_set(body_lock_stance_phases, frame_indices=frame_indices)
         if not native_stance_phases and not player_stance_phases:
             stance_detection_warnings.append(
                 f"player {player_id}: emitted zero native stance phases at "
@@ -343,17 +422,20 @@ def rewrite_tracks_with_placement(
             )
         stance_detection_players[str(player_id)] = {
             "native_phase_count": len(native_stance_phases),
+            "native_per_foot_phase_count": len(per_foot_stance_phases),
             "external_phase_count": len(player_stance_phases),
-            "stance_frame_count": len(stance_frames),
+            "stance_frame_count": len(placement_stance_frames),
+            "body_lock_stance_frame_count": len(body_lock_stance_frames),
             "frame_count": len(frame_indices),
-            "coverage_fraction": (len(stance_frames) / len(frame_indices)) if frame_indices else 0.0,
+            "coverage_fraction": (len(placement_stance_frames) / len(frame_indices)) if frame_indices else 0.0,
+            "body_lock_coverage_fraction": (len(body_lock_stance_frames) / len(frame_indices)) if frame_indices else 0.0,
             "source": "native_keypoint_low_speed" if keypoint_stance_frames else "native_placement_low_speed",
         }
         measurements = {
             frame_idx: (
                 frame_signals[frame_idx].fused_xy,
                 frame_signals[frame_idx].fused_covariance,
-                frame_idx in stance_frames,
+                frame_idx in placement_stance_frames,
             )
             for frame_idx in frame_indices
             if frame_idx in frame_signals and any(frame_signals[frame_idx].source_counts.values())
@@ -437,7 +519,7 @@ def rewrite_tracks_with_placement(
             else:
                 written_source = "smoothed"
             divergence_limit = min(float(config.divergence_max_m), float(config.measurement_adherence_max_m))
-            if used_measurement and frame_idx not in stance_frames and _distance_xy(xy, fs.fused_xy) > divergence_limit:
+            if used_measurement and frame_idx not in placement_stance_frames and _distance_xy(xy, fs.fused_xy) > divergence_limit:
                 xy = list(fs.fused_xy)
                 written_source = "fused_divergence"
                 smoothing_counts["divergence_snap_frames"] += 1
@@ -463,7 +545,7 @@ def rewrite_tracks_with_placement(
                 max_speed_mps = float(config.max_written_speed_mps)
                 if consecutive_supported and not divergence_snap and not gap_transition:
                     max_speed_mps = min(max_speed_mps, float(config.continuity_max_supported_speed_mps))
-                if previous_stance and frame_idx in stance_frames and not divergence_snap and not gap_transition:
+                if previous_stance and frame_idx in placement_stance_frames and not divergence_snap and not gap_transition:
                     max_speed_mps = min(max_speed_mps, float(config.stance_speed_mps))
                 max_step = _max_written_step(
                     config=config,
@@ -485,7 +567,8 @@ def rewrite_tracks_with_placement(
             rewritten_frame["world_xy"] = [float(xy[0]), float(xy[1])]
             rewritten_by_frame[frame_idx] = [float(xy[0]), float(xy[1])]
             frame_count += 1
-            stance = frame_idx in stance_frames
+            placement_stance = frame_idx in placement_stance_frames
+            body_lock_stance = frame_idx in body_lock_stance_frames
             placement_frame = {
                 "frame_idx": int(frame_idx),
                 "t": float(frame.get("t", frame_idx / fps)),
@@ -493,7 +576,7 @@ def rewrite_tracks_with_placement(
                 "fused_world_xy": fs.fused_xy,
                 "smoothed_world_xy": [float(xy[0]), float(xy[1])],
                 "covariance_m2": smoothed_frame.covariance,
-                "stance": bool(stance),
+                "stance": bool(body_lock_stance),
                 "signals": fs.signals,
                 "source_counts": fs.source_counts,
                 "output_source": written_source,
@@ -507,7 +590,7 @@ def rewrite_tracks_with_placement(
             previous_written_source = written_source
             previous_written_frame_idx = int(frame_idx)
             previous_used_measurement = used_measurement
-            previous_stance = stance
+            previous_stance = placement_stance
         visual_counts = _apply_visual_root_step_bound(
             placement_frames,
             rewritten_frames,
@@ -519,7 +602,7 @@ def rewrite_tracks_with_placement(
             rewritten_by_frame[frame_idx] = [float(frame["smoothed_world_xy"][0]), float(frame["smoothed_world_xy"][1])]
         placement_players.append({"id": player_id, "frames": placement_frames})
         jitter_summary[str(player_id)] = _jitter_before_after(frames, rewritten_frames, fps=fps)
-        player_stance_wobble = _stance_wobble_before_after(original_by_frame, rewritten_by_frame, stance_frames)
+        player_stance_wobble = _stance_wobble_before_after(original_by_frame, rewritten_by_frame, placement_stance_frames)
         if player_stance_wobble["phase_count"] > 0:
             stance_wobble_summary[str(player_id)] = player_stance_wobble
         smoothing_guard_players[str(player_id)] = dict(smoothing_counts)
@@ -774,6 +857,104 @@ def _reassociate_sidecar_pixels(
                 )
                 current = remapped.get(key)
                 if current is None:
+                    remapped[key] = invalid_observation
+                totals["dropped_obs"] += 1
+                dropped_identity_mismatch_by_player[str(winning_track_id)] += 1
+
+    return remapped, {
+        "players": players_diag,
+        "totals": dict(totals),
+        "dropped_identity_mismatch_by_player": dict(dropped_identity_mismatch_by_player),
+    }
+
+
+def _reassociate_sidecar_foot_pixels(
+    observations: Mapping[tuple[int, str, int], _FootPixelObservation],
+    *,
+    bbox_index: Mapping[int, Mapping[int, Sequence[float]]],
+    source_name: str,
+    config: PlacementConfig,
+) -> tuple[dict[tuple[int, str, int], _FootPixelObservation], dict[str, Any]]:
+    del source_name
+    by_sidecar: dict[int, list[tuple[int, str, _FootPixelObservation]]] = defaultdict(list)
+    for (sidecar_player_id, foot, frame_idx), observation in observations.items():
+        by_sidecar[int(sidecar_player_id)].append((int(frame_idx), str(foot), observation))
+
+    remapped: dict[tuple[int, str, int], _FootPixelObservation] = {}
+    players_diag: dict[str, dict[str, Any]] = {}
+    totals: Counter[str] = Counter({"raw_obs": 0, "reassigned_obs": 0, "dropped_obs": 0, "used_obs": 0})
+    dropped_identity_mismatch_by_player: Counter[str] = Counter()
+
+    for sidecar_player_id, player_observations in sorted(by_sidecar.items()):
+        totals["raw_obs"] += len(player_observations)
+        votes: Counter[int] = Counter()
+        none_votes = 0
+        for frame_idx, _foot, observation in player_observations:
+            frame_boxes = bbox_index.get(frame_idx, {})
+            if not frame_boxes:
+                continue
+            winning_track_id = _track_id_for_pixel(observation.pixel_xy, frame_boxes, config=config)
+            if winning_track_id is None:
+                none_votes += 1
+            else:
+                votes[int(winning_track_id)] += 1
+        winning_track_id: int | None = None
+        winning_votes = 0
+        if votes:
+            winning_track_id, winning_votes = sorted(votes.items(), key=lambda item: (-item[1], item[0]))[0]
+        non_none_votes = int(sum(votes.values()))
+        vote_share = (float(winning_votes) / float(non_none_votes)) if non_none_votes else 0.0
+        accepted = (
+            winning_track_id is not None
+            and winning_votes >= int(config.vote_min)
+            and vote_share >= float(config.vote_share_min)
+        )
+        players_diag[str(sidecar_player_id)] = {
+            "vote_share": vote_share,
+            "votes": int(winning_votes),
+            "non_none_votes": int(non_none_votes),
+            "none_votes": int(none_votes),
+            "mapped_track_id": int(winning_track_id) if accepted and winning_track_id is not None else None,
+            "dropped": not accepted,
+            "raw_obs": int(len(player_observations)),
+        }
+        if not accepted or winning_track_id is None:
+            totals["dropped_obs"] += len(player_observations)
+            continue
+
+        for frame_idx, foot, observation in player_observations:
+            frame_boxes = bbox_index.get(frame_idx, {})
+            mapped_bbox = frame_boxes.get(int(winning_track_id))
+            key = (int(winning_track_id), str(foot), int(frame_idx))
+            if mapped_bbox is not None and _pixel_matches_mapped_foot_bbox(observation.pixel_xy, mapped_bbox, config=config):
+                valid_observation = _FootPixelObservation(
+                    source=observation.source,
+                    foot=str(foot),
+                    pixel_xy=list(observation.pixel_xy),
+                    confidence=float(observation.confidence),
+                    valid=True,
+                    reason=None,
+                    sidecar_player_id=int(sidecar_player_id),
+                    mapped_player_id=int(winning_track_id),
+                )
+                current = remapped.get(key)
+                if current is None or not current.valid or valid_observation.confidence >= current.confidence:
+                    remapped[key] = valid_observation
+                totals["used_obs"] += 1
+                if winning_track_id != sidecar_player_id:
+                    totals["reassigned_obs"] += 1
+            else:
+                invalid_observation = _FootPixelObservation(
+                    source=observation.source,
+                    foot=str(foot),
+                    pixel_xy=list(observation.pixel_xy),
+                    confidence=float(observation.confidence),
+                    valid=False,
+                    reason="identity_pixel_mismatch",
+                    sidecar_player_id=int(sidecar_player_id),
+                    mapped_player_id=int(winning_track_id),
+                )
+                if key not in remapped:
                     remapped[key] = invalid_observation
                 totals["dropped_obs"] += 1
                 dropped_identity_mismatch_by_player[str(winning_track_id)] += 1
@@ -1624,6 +1805,55 @@ def _signals_for_frame(
     return signals
 
 
+def _phase_foot_signal_for_frame(
+    *,
+    player_id: int,
+    frame_idx: int,
+    foot: str,
+    source_maps: Sequence[tuple[str, Mapping[tuple[int, str, int], _FootPixelObservation]]],
+    side: str,
+    homography: np.ndarray,
+    camera_matrix: np.ndarray,
+    dist: Sequence[float],
+    undistort_applied: bool,
+    pixel_transform: np.ndarray | None,
+    config: PlacementConfig,
+) -> dict[str, Any] | None:
+    candidates: list[dict[str, Any]] = []
+    for source_name, source_map in source_maps:
+        observation = source_map.get((player_id, foot, frame_idx))
+        if observation is None or not observation.valid:
+            continue
+        sigma_px = _keypoint_sigma_px(
+            observation.confidence,
+            base_sigma_px=config.keypoint_base_sigma_px,
+            config=config,
+        )
+        if str(side).lower() == "far":
+            sigma_px *= config.far_keypoint_sigma_multiplier
+        signal = _signal_from_pixel(
+            name=source_name,
+            pixel_xy=_apply_pixel_transform(observation.pixel_xy, pixel_transform),
+            confidence=observation.confidence,
+            sigma_px=sigma_px,
+            side=side,
+            homography=homography,
+            camera_matrix=camera_matrix,
+            dist=dist,
+            undistort_applied=undistort_applied,
+            config=config,
+        )
+        if not signal.get("used") or signal.get("xy") is None:
+            continue
+        signal["confidence"] = _normalized_phase_confidence(float(observation.confidence))
+        signal["source"] = source_name
+        signal["foot"] = foot
+        candidates.append(signal)
+    if not candidates:
+        return None
+    return sorted(candidates, key=lambda item: (float(item["confidence"]), str(item["source"]) == "native2d"), reverse=True)[0]
+
+
 def _signal_from_pixel(
     *,
     name: str,
@@ -1755,6 +1985,33 @@ def _load_native2d_foot_pixels(path: Path | None, *, config: PlacementConfig) ->
     return out
 
 
+def _load_native2d_foot_pixels_by_foot(
+    path: Path | None,
+    *,
+    config: PlacementConfig,
+) -> dict[tuple[int, str, int], _FootPixelObservation]:
+    if path is None or not path.is_file():
+        return {}
+    payload = _read_json(path)
+    out: dict[tuple[int, str, int], _FootPixelObservation] = {}
+    for player in payload.get("players", []) or []:
+        player_id = int(player["id"])
+        for frame in player.get("frames", []) or []:
+            frame_idx = int(frame.get("frame_idx", round(float(frame.get("t", 0.0)) * float(payload.get("fps") or 30.0))))
+            by_name = {str(joint.get("name")): joint for joint in frame.get("joints", []) or [] if isinstance(joint, Mapping)}
+            for foot, names in NATIVE2D_FOOT_NAMES.items():
+                point = _weighted_named_pixel(by_name, names, conf_min=config.keypoint_conf_min)
+                if point is not None:
+                    out[(player_id, foot, frame_idx)] = _FootPixelObservation(
+                        source="native2d",
+                        foot=foot,
+                        pixel_xy=point[0],
+                        confidence=point[1],
+                        sidecar_player_id=player_id,
+                    )
+    return out
+
+
 def _load_sam3d_foot_pixels(path: Path | None, *, config: PlacementConfig) -> dict[tuple[int, int], _PixelObservation]:
     if path is None or not path.is_file():
         return {}
@@ -1775,6 +2032,37 @@ def _load_sam3d_foot_pixels(path: Path | None, *, config: PlacementConfig) -> di
                 out[(player_id, frame_idx)] = _PixelObservation(
                     "sam3d", combined[0], combined[1], sidecar_player_id=player_id
                 )
+    return out
+
+
+def _load_sam3d_foot_pixels_by_foot(
+    path: Path | None,
+    *,
+    config: PlacementConfig,
+) -> dict[tuple[int, str, int], _FootPixelObservation]:
+    if path is None or not path.is_file():
+        return {}
+    payload = _read_json(path)
+    out: dict[tuple[int, str, int], _FootPixelObservation] = {}
+    foot_names = {
+        "left": ("left_ankle", "left_heel", "left_toe"),
+        "right": ("right_ankle", "right_heel", "right_toe"),
+    }
+    for player in payload.get("players", []) or []:
+        player_id = int(player["id"])
+        for frame in player.get("frames", []) or []:
+            frame_idx = int(frame["frame_idx"])
+            by_name = {str(item.get("name")): item for item in frame.get("keypoints", []) or [] if isinstance(item, Mapping)}
+            for foot, names in foot_names.items():
+                point = _weighted_sidecar_pixel(by_name, names, conf_min=config.sam3d_conf_min)
+                if point is not None:
+                    out[(player_id, foot, frame_idx)] = _FootPixelObservation(
+                        source="sam3d",
+                        foot=foot,
+                        pixel_xy=point[0],
+                        confidence=point[1],
+                        sidecar_player_id=player_id,
+                    )
     return out
 
 
@@ -1803,12 +2091,29 @@ def _load_stance_phases(path: Path | None) -> dict[int, list[_StancePhase]]:
         frame_indices = _phase_frame_indices(item)
         if not frame_indices:
             continue
+        min_confidence = _maybe_float(item.get("min_confidence"))
+        max_height_m = _maybe_float(item.get("max_height_m"))
+        max_speed_mps = _maybe_float(item.get("max_speed_mps"))
+        source_thresholds = item.get("source_thresholds") if isinstance(item.get("source_thresholds"), Mapping) else None
+        assignment_evidence = (
+            item.get("assignment_evidence") if isinstance(item.get("assignment_evidence"), Mapping) else None
+        )
         by_player[player_id].append(
             _StancePhase(
                 player_id=player_id,
                 foot=foot,
                 frame_indices=tuple(frame_indices),
                 source=source,
+                min_confidence=min_confidence,
+                max_height_m=max_height_m,
+                max_speed_mps=max_speed_mps,
+                source_thresholds=source_thresholds,
+                foot_assignment=str(item.get("foot_assignment")) if item.get("foot_assignment") is not None else None,
+                source_phase_foot=str(item.get("source_phase_foot")) if item.get("source_phase_foot") is not None else foot,
+                weak=bool(item.get("weak", False)),
+                demoted=bool(item.get("demoted", False)),
+                rejection_reason=str(item.get("rejection_reason")) if item.get("rejection_reason") is not None else None,
+                assignment_evidence=assignment_evidence,
             )
         )
     return dict(by_player)
@@ -1842,7 +2147,82 @@ def _phase_frame_set(phases: Sequence[_StancePhase], *, frame_indices: Sequence[
     return out
 
 
-def _stance_phases_from_frames(*, player_id: int, stance_frames: set[int], source: str) -> list[_StancePhase]:
+def _stance_phase_is_body_lock_eligible(phase: _StancePhase) -> bool:
+    if phase.foot not in {"left", "right"}:
+        return False
+    if phase.weak or phase.demoted:
+        return False
+    if phase.foot_assignment == "bilateral_from_player_stance":
+        return False
+    return all(
+        value is not None
+        for value in (
+            phase.min_confidence,
+            phase.max_height_m,
+            phase.max_speed_mps,
+            phase.source_thresholds,
+        )
+    )
+
+
+def _per_foot_stance_phases_from_keypoints(
+    *,
+    player_id: int,
+    foot_xy_by_frame: Mapping[str, Mapping[int, Sequence[float]]],
+    foot_confidence_by_frame: Mapping[str, Mapping[int, float]],
+    foot_source_by_frame: Mapping[str, Mapping[int, str]],
+    frame_indices: Sequence[int],
+    fps: float,
+    config: PlacementConfig,
+) -> list[_StancePhase]:
+    phases: list[_StancePhase] = []
+    source_thresholds = {
+        "keypoint_stance_speed_mps": float(config.keypoint_stance_speed_mps),
+        "stance_min_duration_s": float(config.stance_min_duration_s),
+        "keypoint_conf_min": float(config.keypoint_conf_min),
+        "sam3d_conf_min": float(config.sam3d_conf_min),
+    }
+    for foot in ("left", "right"):
+        xy_by_frame = foot_xy_by_frame.get(foot, {})
+        if not xy_by_frame:
+            continue
+        stance_frames = _detect_stance_frames(
+            xy_by_frame,
+            frame_indices=frame_indices,
+            fps=fps,
+            config=config,
+            speed_mps=config.keypoint_stance_speed_mps,
+        )
+        for run in _contiguous_runs(sorted(stance_frames)):
+            if len(run) < 2:
+                continue
+            confidences = [float(foot_confidence_by_frame.get(foot, {}).get(frame_idx, 0.0)) for frame_idx in run]
+            sources = sorted({str(foot_source_by_frame.get(foot, {}).get(frame_idx, "unknown")) for frame_idx in run})
+            phases.append(
+                _StancePhase(
+                    player_id=int(player_id),
+                    foot=foot,
+                    frame_indices=tuple(int(idx) for idx in run),
+                    source="per_foot_keypoint_low_speed",
+                    min_confidence=min(confidences, default=0.0),
+                    max_height_m=0.0,
+                    max_speed_mps=_max_pair_speed_mps(run, xy_by_frame, fps=fps),
+                    source_thresholds=source_thresholds,
+                    foot_assignment="per_foot_keypoint_support",
+                    source_phase_foot=foot,
+                    weak=False,
+                    demoted=False,
+                    assignment_evidence={
+                        "support_frame_count": len(run),
+                        "sources": sources,
+                        "per_foot_keypoint_support": True,
+                    },
+                )
+            )
+    return phases
+
+
+def _stance_phases_from_frames(*, player_id: int, stance_frames: set[int], source: str, config: PlacementConfig) -> list[_StancePhase]:
     phases = []
     for run in _contiguous_runs(sorted(stance_frames)):
         if len(run) < 2:
@@ -1853,6 +2233,16 @@ def _stance_phases_from_frames(*, player_id: int, stance_frames: set[int], sourc
                 foot="unknown",
                 frame_indices=tuple(int(idx) for idx in run),
                 source=source,
+                foot_assignment="bilateral_from_player_stance",
+                source_phase_foot="unknown",
+                weak=True,
+                demoted=True,
+                rejection_reason="weak_bilateral_unknown_foot",
+                source_thresholds={
+                    "stance_speed_mps": float(config.stance_speed_mps),
+                    "keypoint_stance_speed_mps": float(config.keypoint_stance_speed_mps),
+                    "stance_min_duration_s": float(config.stance_min_duration_s),
+                },
             )
         )
     return phases
@@ -1866,26 +2256,63 @@ def _foot_contact_phases_payload(
     generated_at: str,
 ) -> dict[str, Any]:
     phase_items = []
+    rejected_phase_items = []
     for phase in phases:
         frame_indices = [int(idx) for idx in phase.frame_indices]
         if not frame_indices:
             continue
         requested_foot = str(phase.foot)
-        phase_feet = (requested_foot,) if requested_foot in {"left", "right"} else ("left", "right")
-        for foot in phase_feet:
-            phase_items.append(
-                {
-                    "player_id": int(phase.player_id),
-                    "foot": foot,
-                    "start_frame_index": int(frame_indices[0]),
-                    "end_frame_index": int(frame_indices[-1]),
-                    "frame_indices": frame_indices,
-                    "frame_count": len(frame_indices),
-                    "source": str(phase.source),
-                    "source_phase_foot": requested_foot,
-                    "foot_assignment": "source_foot" if requested_foot in {"left", "right"} else "bilateral_from_player_stance",
-                }
+        if requested_foot not in {"left", "right"}:
+            rejected_phase_items.append(
+                _rejected_stance_phase_dict(
+                    phase,
+                    frame_indices=frame_indices,
+                    reason=phase.rejection_reason or "weak_bilateral_unknown_foot",
+                )
             )
+            continue
+        missing_fields = [
+            field
+            for field, value in (
+                ("min_confidence", phase.min_confidence),
+                ("max_height_m", phase.max_height_m),
+                ("max_speed_mps", phase.max_speed_mps),
+                ("source_thresholds", phase.source_thresholds),
+            )
+            if value is None
+        ]
+        if phase.weak or phase.demoted or missing_fields:
+            rejected_phase_items.append(
+                _rejected_stance_phase_dict(
+                    phase,
+                    frame_indices=frame_indices,
+                    reason=phase.rejection_reason
+                    or ("missing_confidence_fields" if missing_fields else "weak_or_demoted_phase"),
+                )
+            )
+            continue
+        phase_items.append(
+            {
+                "phase_id": f"{int(phase.player_id)}:{requested_foot}:{int(frame_indices[0])}-{int(frame_indices[-1])}",
+                "player_id": int(phase.player_id),
+                "foot": requested_foot,
+                "start_frame_index": int(frame_indices[0]),
+                "end_frame_index": int(frame_indices[-1]),
+                "frame_indices": frame_indices,
+                "frame_count": len(frame_indices),
+                "source": str(phase.source),
+                "source_phase_foot": phase.source_phase_foot or requested_foot,
+                "foot_assignment": phase.foot_assignment or "source_foot",
+                "min_confidence": float(phase.min_confidence),
+                "max_height_m": float(phase.max_height_m),
+                "max_speed_mps": float(phase.max_speed_mps),
+                "source_thresholds": dict(phase.source_thresholds or {}),
+                "assignment_evidence": dict(phase.assignment_evidence or {}),
+                "weak": False,
+                "demoted": False,
+                "rejection_reason": None,
+            }
+        )
     return {
         "artifact_type": "foot_contact_phases",
         "schema_version": 1,
@@ -1895,7 +2322,31 @@ def _foot_contact_phases_payload(
         "generated_at": generated_at,
         "source_phase_count": len(phases),
         "phase_count": len(phase_items),
+        "rejected_phase_count": len(rejected_phase_items),
         "phases": phase_items,
+        "rejected_phases": rejected_phase_items,
+    }
+
+
+def _rejected_stance_phase_dict(phase: _StancePhase, *, frame_indices: Sequence[int], reason: str) -> dict[str, Any]:
+    return {
+        "player_id": int(phase.player_id),
+        "foot": phase.foot if phase.foot in {"left", "right"} else "unknown",
+        "start_frame_index": int(frame_indices[0]),
+        "end_frame_index": int(frame_indices[-1]),
+        "frame_indices": [int(idx) for idx in frame_indices],
+        "frame_count": len(frame_indices),
+        "source": str(phase.source),
+        "source_phase_foot": phase.source_phase_foot or phase.foot,
+        "foot_assignment": phase.foot_assignment or "bilateral_from_player_stance",
+        "weak": True,
+        "demoted": True,
+        "reason": reason,
+        "rejection_reason": reason,
+        "min_confidence": phase.min_confidence,
+        "max_height_m": phase.max_height_m,
+        "max_speed_mps": phase.max_speed_mps,
+        "source_thresholds": dict(phase.source_thresholds or {}),
     }
 
 
@@ -1974,6 +2425,28 @@ def _combine_weighted_pixels(weighted: Sequence[tuple[Sequence[float], float]]) 
     ]
     confidence = total / len(weighted)
     return ([float(xy[0]), float(xy[1])], float(confidence))
+
+
+def _normalized_phase_confidence(confidence: float) -> float:
+    if confidence <= 0:
+        return 0.0
+    return min(float(confidence), 1.0)
+
+
+def _max_pair_speed_mps(indices: Sequence[int], xy_by_frame: Mapping[int, Sequence[float]], *, fps: float) -> float:
+    speeds = []
+    for prev, current in zip(indices, indices[1:], strict=False):
+        if prev not in xy_by_frame or current not in xy_by_frame:
+            continue
+        dt = max((int(current) - int(prev)) / fps, 1.0 / fps)
+        speeds.append(
+            math.hypot(
+                float(xy_by_frame[current][0]) - float(xy_by_frame[prev][0]),
+                float(xy_by_frame[current][1]) - float(xy_by_frame[prev][1]),
+            )
+            / dt
+        )
+    return max(speeds, default=0.0)
 
 
 def _detect_stance_frames(
@@ -2217,6 +2690,16 @@ def _covariance_to_list(covariance: Sequence[Sequence[float]] | np.ndarray) -> l
 
 def _dist_nonzero(dist: Sequence[float]) -> bool:
     return any(abs(float(value)) > 1e-12 for value in dist)
+
+
+def _maybe_float(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
 
 
 def _read_json(path: Path) -> dict[str, Any]:

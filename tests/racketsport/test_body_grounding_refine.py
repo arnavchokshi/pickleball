@@ -73,6 +73,38 @@ def _phases(*ranges: range) -> dict:
                 "frame_indices": list(frame_range),
                 "frame_count": len(frame_range),
                 "anchor_position_xyz": [0.0, 0.0, 0.0],
+                "min_confidence": 0.95,
+                "max_height_m": 0.01,
+                "max_speed_mps": 0.10,
+                "source_thresholds": {"min_confidence": 0.20},
+                "source_phase_foot": "left",
+                "foot_assignment": "per_foot_body_contact",
+                "assignment_evidence": {"body_detector_agreement": 0.95},
+            }
+            for frame_range in ranges
+        ],
+    }
+
+
+def _weak_bilateral_phases(*ranges: range) -> dict:
+    return {
+        "artifact_type": "foot_contact_phases",
+        "schema_version": 1,
+        "phase_count": len(ranges),
+        "phases": [
+            {
+                "player_id": "p1",
+                "foot": "left",
+                "start_frame_index": frame_range.start,
+                "end_frame_index": frame_range.stop - 1,
+                "frame_indices": list(frame_range),
+                "frame_count": len(frame_range),
+                "source": "native_keypoint_low_speed",
+                "source_phase_foot": "unknown",
+                "foot_assignment": "bilateral_from_player_stance",
+                "weak": True,
+                "demoted": True,
+                "rejection_reason": "weak_bilateral_unknown_foot",
             }
             for frame_range in ranges
         ],
@@ -165,3 +197,43 @@ def test_xy_disabled_mode_keeps_placement_anchor_and_only_repairs_z() -> None:
     assert correction == pytest.approx([0.0, 0.0, -0.08], abs=1e-9)
     assert refined["players"][0]["frames"][0]["transl_world"] == pytest.approx([1.0, 2.0, 0.0], abs=1e-9)
     assert report["policy"]["xy_translation_enabled"] is False
+
+
+def test_weak_bilateral_phases_are_filtered_and_noop_honestly() -> None:
+    frames = range(0, 3)
+    source = _skeleton(offsets_by_frame={frame_idx: (0.40, -0.20, 0.08) for frame_idx in frames}, frames=frames)
+
+    refined, report = refine_body_grounding(
+        source,
+        foot_contact_phases=_weak_bilateral_phases(frames),
+        tracks=_tracks(frames),
+        config=GroundingRefineConfig(smoothness_weight=0.0, max_correction_warn_m=1.0),
+    )
+
+    assert refined["players"][0]["frames"] == source["players"][0]["frames"]
+    assert report["summary"]["status"] == "no_op_no_confident_per_foot_phases"
+    assert report["summary"]["kill_recommended"] is False
+    assert report["source"]["foot_contact_phase_count"] == 1
+    assert report["source"]["consumed_foot_contact_phase_count"] == 0
+    assert report["phase_filter"]["rejected_phase_count"] == 1
+    assert report["phase_filter"]["rejected_phases"][0]["reason"] == "weak_bilateral_unknown_foot"
+    assert report["summary"]["foot_plane_residual_m"]["count"] == 0
+
+
+def test_per_foot_phases_without_body_detector_agreement_noop_honestly() -> None:
+    frames = range(0, 3)
+    source = _skeleton(offsets_by_frame={frame_idx: (0.0, 0.0, 0.05) for frame_idx in frames}, frames=frames)
+    phases = _phases(frames)
+    phases["phases"][0].pop("assignment_evidence")
+
+    refined, report = refine_body_grounding(
+        source,
+        foot_contact_phases=phases,
+        config=GroundingRefineConfig(smoothness_weight=0.0),
+    )
+
+    assert refined["players"] == source["players"]
+    assert report["summary"]["status"] == "no_op_no_confident_per_foot_phases"
+    assert report["summary"]["kill_recommended"] is False
+    assert report["source"]["consumed_foot_contact_phase_count"] == 0
+    assert report["phase_filter"]["rejected_reasons"] == {"missing_body_detector_agreement": 1}

@@ -51,6 +51,8 @@ def main() -> int:
                     "visible_box_count_by_label": annotations.summary.visible_box_count_by_label,
                     "track_count_by_label": annotations.summary.track_count_by_label,
                     "outside_box_count": annotations.summary.outside_box_count,
+                    "reviewed_frame_count": len(annotations.reviewed_frame_indices or annotations.frames),
+                    "reviewed_frame_indices_source": annotations.reviewed_frame_indices_source or "dense_all_frames",
                     "max_frame_index": args.max_frame_index,
                 },
                 indent=2,

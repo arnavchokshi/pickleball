@@ -117,6 +117,116 @@ def _write_json(path: Path, payload: dict) -> Path:
     return path
 
 
+def _wave2_freshworlds_clip_root(relative_clip_path: str) -> Path:
+    root = Path("runs/lanes/wave2_freshworlds_20260707") / relative_clip_path
+    if not root.is_dir():
+        pytest.skip(f"wave2 fresh-worlds artifact missing: {root}")
+    return root
+
+
+def _wave2_frame_plan_inputs(root: Path) -> dict:
+    return {
+        "tracks": json.loads((root / "tracks.json").read_text(encoding="utf-8")),
+        "ball_track": json.loads((root / "ball_track.json").read_text(encoding="utf-8")),
+        "contact_windows": json.loads((root / "contact_windows.json").read_text(encoding="utf-8")),
+        "expected_players": 4,
+        "mesh_coverage_mode": "ball_aware",
+        "target_mesh_frame_budget": 100,
+        "ball_aware_events": json.loads((root / "events_selected.json").read_text(encoding="utf-8")),
+        "ball_track_arc_solved": json.loads((root / "ball_track_arc_solved.json").read_text(encoding="utf-8")),
+    }
+
+
+def _trust_review_fields(plan: dict) -> dict:
+    return {
+        "frames": [
+            {
+                "frame_idx": frame["frame_idx"],
+                "score": frame["score"],
+                "recommended_tier": frame["recommended_tier"],
+                "target_representation": frame["target_representation"],
+                "reasons": frame["reasons"],
+                "active_players": frame["active_players"],
+                "active_player_ids": frame["active_player_ids"],
+                "missing_players": frame["missing_players"],
+                "min_track_conf": frame["min_track_conf"],
+                "ball_conf": frame["ball_conf"],
+                "player_targets": frame["player_targets"],
+            }
+            for frame in plan["frames"]
+        ],
+        "by_tier": plan["summary"]["by_tier"],
+        "by_reason": plan["summary"]["by_reason"],
+        "by_player_target_representation": plan["summary"]["by_player_target_representation"],
+        "human_review_frame_count": plan["summary"]["human_review_frame_count"],
+        "targeted_reviewed_contact_frame_count": plan["summary"]["targeted_reviewed_contact_frame_count"],
+        "coverage_incomplete_deep_mesh_frame_count": plan["summary"]["coverage_incomplete_deep_mesh_frame_count"],
+    }
+
+
+def test_frame_compute_plan_img1605_uses_non_promotional_mesh_fallback_for_all_manual_review() -> None:
+    root = _wave2_freshworlds_clip_root("img1605/owner_IMG_1605_8a193402780b")
+    baseline = json.loads((root / "frame_compute_plan.json").read_text(encoding="utf-8"))
+
+    plan = build_frame_compute_plan(**_wave2_frame_plan_inputs(root))
+
+    assert baseline["mesh_coverage_policy"]["eligible_mesh_frame_count"] == 0
+    assert baseline["mesh_coverage_policy"]["selected_mesh_frame_count"] == 0
+    assert baseline["summary"]["human_review_frame_count"] == 297
+    assert plan["mesh_coverage_policy"]["eligible_mesh_frame_count"] == 0
+    assert plan["mesh_coverage_policy"]["selected_mesh_frame_count"] == 100
+    assert plan["mesh_coverage_policy"]["uniform_selected_frame_count"] == 100
+    assert plan["mesh_coverage_policy"]["uniform_stride_frames"] == 3
+    assert plan["mesh_coverage_policy"]["budget_limited"] is True
+    assert plan["mesh_coverage_policy"]["ball_aware_trigger_source_counts"] == {
+        "events": 0,
+        "proximity": 0,
+        "swing": 0,
+        "uniform_fill": 100,
+    }
+    assert plan["mesh_coverage_policy"]["mesh_fallback"] == {
+        "engaged": True,
+        "reason": "eligible_zero_all_manual_review",
+        "selected": 100,
+        "policy": "uniform_stride",
+    }
+    assert plan["summary"]["world_mesh_frame_count"] == 100
+    assert plan["summary"]["deep_mesh_window_count"] == 100
+    assert len(plan["deep_mesh_windows"]) == 100
+
+    by_idx = {frame["frame_idx"]: frame for frame in plan["frames"]}
+    selected_indexes = [
+        frame["frame_idx"]
+        for frame in plan["frames"]
+        if frame["tier_rationale"]["mesh_selected"]
+    ]
+    assert len(selected_indexes) == 100
+    assert selected_indexes == sorted(selected_indexes)
+    assert all(
+        by_idx[index]["target_representation"] == "manual_review_required"
+        for index in selected_indexes
+    )
+    assert _trust_review_fields(plan) == _trust_review_fields(baseline)
+
+
+@pytest.mark.parametrize(
+    "relative_clip_path",
+    [
+        "burlington/burlington_gold_0300_low_steep_corner",
+        "wolverine/wolverine_mixed_0200_mid_steep_corner",
+        "outdoor/outdoor_webcam_iynbd_1500_long_high_baseline",
+    ],
+)
+def test_frame_compute_plan_mesh_fallback_does_not_change_normal_wave2_plans(relative_clip_path: str) -> None:
+    root = _wave2_freshworlds_clip_root(relative_clip_path)
+    baseline = json.loads((root / "frame_compute_plan.json").read_text(encoding="utf-8"))
+
+    plan = build_frame_compute_plan(**_wave2_frame_plan_inputs(root))
+
+    assert "mesh_fallback" not in plan["mesh_coverage_policy"]
+    assert plan == baseline
+
+
 def test_frame_compute_plan_prioritizes_contact_low_confidence_and_ball_uncertainty() -> None:
     plan = build_frame_compute_plan(
         _tracks_payload(),

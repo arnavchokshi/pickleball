@@ -1,0 +1,245 @@
+{
+  "artifact_type": "racketsport_metric15_court_keypoint_cvat_label_spec",
+  "cvat_labels": [
+    {
+      "attributes": [],
+      "name": "near_left_corner",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "near_baseline_center",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "near_right_corner",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "far_right_corner",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "far_baseline_center",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "far_left_corner",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "near_nvz_left",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "near_nvz_center",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "near_nvz_right",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "net_left_sideline",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "net_center",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "net_right_sideline",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "far_nvz_left",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "far_nvz_center",
+      "type": "points"
+    },
+    {
+      "attributes": [],
+      "name": "far_nvz_right",
+      "type": "points"
+    }
+  ],
+  "keypoints": [
+    {
+      "description": "near baseline left sideline corner",
+      "index": 0,
+      "name": "near_left_corner",
+      "world_xyz_m": [
+        -3.048,
+        -6.7056000000000004,
+        0.0
+      ]
+    },
+    {
+      "description": "near baseline at centerline",
+      "index": 1,
+      "name": "near_baseline_center",
+      "world_xyz_m": [
+        0.0,
+        -6.7056000000000004,
+        0.0
+      ]
+    },
+    {
+      "description": "near baseline right sideline corner",
+      "index": 2,
+      "name": "near_right_corner",
+      "world_xyz_m": [
+        3.048,
+        -6.7056000000000004,
+        0.0
+      ]
+    },
+    {
+      "description": "far baseline right sideline corner",
+      "index": 3,
+      "name": "far_right_corner",
+      "world_xyz_m": [
+        3.048,
+        6.7056000000000004,
+        0.0
+      ]
+    },
+    {
+      "description": "far baseline at centerline",
+      "index": 4,
+      "name": "far_baseline_center",
+      "world_xyz_m": [
+        0.0,
+        6.7056000000000004,
+        0.0
+      ]
+    },
+    {
+      "description": "far baseline left sideline corner",
+      "index": 5,
+      "name": "far_left_corner",
+      "world_xyz_m": [
+        -3.048,
+        6.7056000000000004,
+        0.0
+      ]
+    },
+    {
+      "description": "near NVZ line at left sideline",
+      "index": 6,
+      "name": "near_nvz_left",
+      "world_xyz_m": [
+        -3.048,
+        -2.1336,
+        0.0
+      ]
+    },
+    {
+      "description": "near NVZ line at centerline",
+      "index": 7,
+      "name": "near_nvz_center",
+      "world_xyz_m": [
+        0.0,
+        -2.1336,
+        0.0
+      ]
+    },
+    {
+      "description": "near NVZ line at right sideline",
+      "index": 8,
+      "name": "near_nvz_right",
+      "world_xyz_m": [
+        3.048,
+        -2.1336,
+        0.0
+      ]
+    },
+    {
+      "description": "net top at left sideline",
+      "index": 9,
+      "name": "net_left_sideline",
+      "world_xyz_m": [
+        -3.048,
+        0.0,
+        0.9144
+      ]
+    },
+    {
+      "description": "net top at centerline",
+      "index": 10,
+      "name": "net_center",
+      "world_xyz_m": [
+        0.0,
+        0.0,
+        0.9144
+      ]
+    },
+    {
+      "description": "net top at right sideline",
+      "index": 11,
+      "name": "net_right_sideline",
+      "world_xyz_m": [
+        3.048,
+        0.0,
+        0.9144
+      ]
+    },
+    {
+      "description": "far NVZ line at left sideline",
+      "index": 12,
+      "name": "far_nvz_left",
+      "world_xyz_m": [
+        -3.048,
+        2.1336,
+        0.0
+      ]
+    },
+    {
+      "description": "far NVZ line at centerline",
+      "index": 13,
+      "name": "far_nvz_center",
+      "world_xyz_m": [
+        0.0,
+        2.1336,
+        0.0
+      ]
+    },
+    {
+      "description": "far NVZ line at right sideline",
+      "index": 14,
+      "name": "far_nvz_right",
+      "world_xyz_m": [
+        3.048,
+        2.1336,
+        0.0
+      ]
+    }
+  ],
+  "occlusion_attribute": {
+    "attribute_name": null,
+    "partial_visible_reference": "threed/racketsport/court_keypoint_labels.py:10-49 VISIBLE/MISSING_OCCLUDED_OR_OFF_FRAME partial artifact",
+    "reason": "The full metric-15 loader accepts only frames containing all 15 canonical keypoints and does not define per-point occlusion. The separate partial visible-label artifact has visibility_by_keypoint values, but that artifact is explicitly not full metric-15 calibration.",
+    "supported_in_full_metric15_convention": false
+  },
+  "schema_version": 1,
+  "source_of_truth": {
+    "metric_loader": "threed/racketsport/court_calibration_metric15.py:111-150 load_reviewed_court_keypoints_15pt",
+    "metric_world_points": "threed/racketsport/court_keypoint_net.py:161-177 PICKLEBALL_KEYPOINTS",
+    "schema_order": "threed/racketsport/schemas/__init__.py:30-46 PICKLEBALL_COURT_KEYPOINT_NAMES"
+  },
+  "status": "ready_for_cvat_project"
+}

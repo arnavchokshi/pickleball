@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -53,14 +54,16 @@ def import_cvat_video_zip(
         raise ValueError("CVAT video annotations.xml must be version 1.1")
 
     task = _parse_task(root)
+    reviewed_frame_indices, reviewed_frame_indices_source = _derive_reviewed_frame_indices(task)
     stable_clip_id = clip_id or _clip_id_from_zip(zip_path)
     boxes_by_frame: dict[int, list[CvatVideoBox]] = defaultdict(list)
     visibility_levels_by_frame: dict[int, dict[str, BallVisibilityLevel]] = defaultdict(dict)
     labels_in_order = _task_labels(root)
-    track_summaries: list[CvatVideoTrackSummary] = []
+    track_stats: dict[tuple[str, int], dict[str, Any]] = {}
     track_count_by_label: Counter[str] = Counter()
     visible_box_count_by_label: Counter[str] = Counter()
     outside_box_count = 0
+    max_seen_frame_index = -1
 
     for track in root.findall("track"):
         raw_track_id = _int_attr(track, "id", field="track.id", minimum=0)
@@ -68,10 +71,11 @@ def import_cvat_video_zip(
         source = track.attrib.get("source")
         track_count_by_label[label] += 1
 
-        visible_frames: list[int] = []
-        track_outside_count = 0
-        track_keyframe_count = 0
-        visible_count = 0
+        stats_key = (label, raw_track_id)
+        stats = track_stats.setdefault(
+            stats_key,
+            {"label": label, "track_id": raw_track_id, "outside_box_count": 0, "keyframe_count": 0},
+        )
 
         for shape_node in _track_shapes(track):
             frame_index = _int_attr(shape_node, "frame", field=f"{shape_node.tag}.frame", minimum=0)
@@ -80,26 +84,40 @@ def import_cvat_video_zip(
             occluded = _bool_attr(shape_node, "occluded")
             if max_frame_index is not None and frame_index > max_frame_index:
                 continue
+            max_seen_frame_index = max(max_seen_frame_index, frame_index)
             if keyframe:
-                track_keyframe_count += 1
-            visibility_fields = _shape_ball_visibility_fields(shape_node) if label.strip().lower() == "ball" else {}
+                stats["keyframe_count"] += 1
+            is_ball = label.strip().lower() == "ball"
+            visibility_fields = _shape_ball_visibility_fields(shape_node) if is_ball else {}
             visibility_level = visibility_fields.get("visibility_level")
             if outside:
-                track_outside_count += 1
+                stats["outside_box_count"] += 1
                 outside_box_count += 1
                 if visibility_level is not None:
                     if visibility_level in {"clear", "partial"}:
-                        raise ValueError("outside ball shape visibility_level must be full or out_of_frame")
-                    _set_frame_visibility_level(
-                        visibility_levels_by_frame,
-                        frame_index=frame_index,
-                        label=label,
-                        visibility_level=visibility_level,
-                    )
+                        visibility_level = None
+                    if visibility_level is not None:
+                        _set_frame_visibility_level(
+                            visibility_levels_by_frame,
+                            frame_index=frame_index,
+                            label=label,
+                            visibility_level=visibility_level,
+                        )
+                continue
+
+            if is_ball and visibility_level == "out_of_frame":
+                stats["outside_box_count"] += 1
+                outside_box_count += 1
+                _set_frame_visibility_level(
+                    visibility_levels_by_frame,
+                    frame_index=frame_index,
+                    label=label,
+                    visibility_level=visibility_level,
+                )
                 continue
 
             x1, y1, x2, y2 = _shape_bbox_xyxy(shape_node)
-            blur_fields = _shape_ball_blur_fields(shape_node) if label.strip().lower() == "ball" else {}
+            blur_fields = _shape_ball_blur_fields(shape_node) if is_ball else {}
             visible_box = CvatVideoBox(
                 track_id=raw_track_id,
                 label=label,
@@ -120,27 +138,22 @@ def import_cvat_video_zip(
                     label=label,
                     visibility_level=visibility_level,
                 )
-            visible_frames.append(frame_index)
-            visible_count += 1
             visible_box_count_by_label[label] += 1
 
-        track_summaries.append(
-            CvatVideoTrackSummary(
-                track_id=raw_track_id,
-                label=label,
-                visible_box_count=visible_count,
-                outside_box_count=track_outside_count,
-                keyframe_count=track_keyframe_count,
-                first_visible_frame=min(visible_frames) if visible_frames else None,
-                last_visible_frame=max(visible_frames) if visible_frames else None,
-            )
-        )
+    dedupe_count = _dedupe_single_ball_boxes_by_frame(boxes_by_frame)
+    if dedupe_count:
+        visible_box_count_by_label["ball"] -= dedupe_count
 
+    track_summaries = _track_summaries_from_boxes(boxes_by_frame, track_stats)
+
+    inferred_frame_count = max(task.size, task.stop_frame + 1, _max_frame_index(boxes_by_frame) + 1, max_seen_frame_index + 1)
     if max_frame_index is None:
-        frame_count = task.size if task.size > 0 else (_max_frame_index(boxes_by_frame) + 1)
+        frame_count = inferred_frame_count
     else:
-        frame_count = min(task.size, max_frame_index + 1) if task.size > 0 else max_frame_index + 1
-        task = task.model_copy(update={"size": frame_count, "stop_frame": frame_count - 1 if frame_count else 0})
+        frame_count = min(inferred_frame_count, max_frame_index + 1)
+    task = task.model_copy(update={"size": frame_count, "stop_frame": frame_count - 1 if frame_count else 0})
+    if reviewed_frame_indices is not None:
+        reviewed_frame_indices = [index for index in reviewed_frame_indices if index < frame_count]
     frames = [
         CvatVideoFrame(
             frame_index=frame_index,
@@ -156,6 +169,8 @@ def import_cvat_video_zip(
         clip_id=stable_clip_id,
         source_format="cvat_video_1_1",
         source_path=str(zip_path),
+        reviewed_frame_indices=reviewed_frame_indices,
+        reviewed_frame_indices_source=reviewed_frame_indices_source,
         task=task,
         frames=frames,
         tracks=sorted(track_summaries, key=lambda item: (item.label, item.track_id)),
@@ -232,7 +247,9 @@ def _person_ground_truth_from_annotations(annotations: CvatVideoAnnotations, *, 
 def _parse_task(root: ElementTree.Element) -> CvatVideoTask:
     task = root.find("./meta/task")
     if task is None:
-        raise ValueError("annotations.xml missing meta/task")
+        task = root.find("./meta/project/tasks/task")
+    if task is None:
+        raise ValueError("annotations.xml missing meta/task or meta/project/tasks/task")
     original_size = task.find("original_size")
     if original_size is None:
         raise ValueError("annotations.xml missing original_size")
@@ -243,6 +260,7 @@ def _parse_task(root: ElementTree.Element) -> CvatVideoTask:
         mode=_text(task.find("mode")) or None,
         start_frame=_optional_int(_text(task.find("start_frame"))) or 0,
         stop_frame=_optional_int(_text(task.find("stop_frame"))) or 0,
+        frame_filter=_text(task.find("frame_filter")) or None,
         original_size=(
             _required_positive_int(_text(original_size.find("width")), field="original_size.width"),
             _required_positive_int(_text(original_size.find("height")), field="original_size.height"),
@@ -254,11 +272,31 @@ def _parse_task(root: ElementTree.Element) -> CvatVideoTask:
 
 def _task_labels(root: ElementTree.Element) -> list[str]:
     labels: list[str] = []
-    for label in root.findall("./meta/task/labels/label/name"):
+    for label in [
+        *root.findall("./meta/task/labels/label/name"),
+        *root.findall("./meta/project/labels/label/name"),
+        *root.findall("./meta/project/tasks/task/labels/label/name"),
+    ]:
         name = _text(label)
         if name:
             labels.append(name)
     return labels
+
+
+def _derive_reviewed_frame_indices(task: CvatVideoTask) -> tuple[list[int] | None, str | None]:
+    frame_filter = (task.frame_filter or "").strip()
+    if not frame_filter:
+        return None, None
+    step_match = re.search(r"(?:^|[;&\s])step\s*=\s*(\d+)(?:$|[;&\s])", frame_filter)
+    if step_match is None:
+        return None, None
+    step = int(step_match.group(1))
+    if step <= 0:
+        raise ValueError(f"CVAT frame_filter step must be positive: {frame_filter}")
+    reviewed = list(range(task.start_frame, task.stop_frame + 1, step))
+    if task.size > 0 and len(reviewed) > task.size:
+        reviewed = reviewed[: task.size]
+    return reviewed, "cvat_frame_filter"
 
 
 def _ordered_labels(labels_in_order: list[str], track_counts: Counter[str]) -> list[str]:
@@ -271,6 +309,49 @@ def _ordered_labels(labels_in_order: list[str], track_counts: Counter[str]) -> l
 
 def _max_frame_index(boxes_by_frame: dict[int, list[CvatVideoBox]]) -> int:
     return max(boxes_by_frame, default=-1)
+
+
+def _dedupe_single_ball_boxes_by_frame(boxes_by_frame: dict[int, list[CvatVideoBox]]) -> int:
+    dropped = 0
+    for frame_index, boxes in list(boxes_by_frame.items()):
+        ball_boxes = [box for box in boxes if box.label.strip().lower() == "ball"]
+        if len(ball_boxes) <= 1:
+            continue
+        keep = max(ball_boxes, key=lambda box: (_box_area(box), -box.track_id))
+        boxes_by_frame[frame_index] = [
+            box for box in boxes if box.label.strip().lower() != "ball" or (box.track_id == keep.track_id and box.bbox_xyxy == keep.bbox_xyxy)
+        ]
+        dropped += len(ball_boxes) - 1
+    return dropped
+
+
+def _track_summaries_from_boxes(
+    boxes_by_frame: dict[int, list[CvatVideoBox]],
+    track_stats: dict[tuple[str, int], dict[str, Any]],
+) -> list[CvatVideoTrackSummary]:
+    visible_frames_by_track: dict[tuple[str, int], list[int]] = defaultdict(list)
+    for frame_index, boxes in boxes_by_frame.items():
+        for box in boxes:
+            visible_frames_by_track[(box.label, box.track_id)].append(frame_index)
+    summaries: list[CvatVideoTrackSummary] = []
+    for (label, track_id), stats in track_stats.items():
+        visible_frames = visible_frames_by_track.get((label, track_id), [])
+        summaries.append(
+            CvatVideoTrackSummary(
+                track_id=track_id,
+                label=label,
+                visible_box_count=len(visible_frames),
+                outside_box_count=int(stats["outside_box_count"]),
+                keyframe_count=int(stats["keyframe_count"]),
+                first_visible_frame=min(visible_frames) if visible_frames else None,
+                last_visible_frame=max(visible_frames) if visible_frames else None,
+            )
+        )
+    return summaries
+
+
+def _box_area(box: CvatVideoBox) -> float:
+    return float(box.bbox_xywh[2]) * float(box.bbox_xywh[3])
 
 
 def _track_shapes(track: ElementTree.Element) -> list[ElementTree.Element]:
@@ -344,6 +425,13 @@ def _set_frame_visibility_level(
 ) -> None:
     label_key = label.strip().lower()
     existing = target[frame_index].get(label_key)
+    visible_levels = {"clear", "partial"}
+    hidden_levels = {"full", "out_of_frame"}
+    if existing in hidden_levels and visibility_level in visible_levels:
+        target[frame_index][label_key] = visibility_level
+        return
+    if existing in visible_levels and visibility_level in hidden_levels:
+        return
     if existing is not None and existing != visibility_level:
         raise ValueError(
             f"conflicting visibility_level values for {label_key} frame {frame_index}: {existing} vs {visibility_level}"

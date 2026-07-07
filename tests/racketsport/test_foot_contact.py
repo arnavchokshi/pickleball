@@ -89,6 +89,42 @@ def test_detect_contact_phases_uses_floor_height_speed_and_hysteresis():
     assert phases[0].frame_count == 4
 
 
+def test_detect_contact_phases_splits_internal_speed_inflection_and_exports_quality_fields():
+    frames = [
+        _frame(0, left_x=0.000, left_z=0.020),
+        _frame(1, left_x=0.005, left_z=0.020),
+        _frame(2, left_x=0.010, left_z=0.020),
+        _frame(3, left_x=0.060, left_z=0.020),
+        _frame(4, left_x=0.065, left_z=0.020),
+        _frame(5, left_x=0.070, left_z=0.020),
+    ]
+
+    phases = detect_contact_phases(
+        frames,
+        joint_names=JOINT_NAMES_65,
+        thresholds=ContactThresholds(
+            enter_height_m=0.030,
+            exit_height_m=0.080,
+            enter_speed_mps=0.75,
+            exit_speed_mps=2.00,
+            split_speed_mps=0.75,
+            min_phase_frames=2,
+        ),
+    )
+
+    left_phases = [phase for phase in phases if phase.foot == "left"]
+    assert [(phase.start_frame_index, phase.end_frame_index) for phase in left_phases] == [(0, 1), (4, 5)]
+    payload = left_phases[0].to_dict()
+    assert payload["foot_assignment"] == "per_foot_body_contact"
+    assert payload["weak"] is False
+    assert payload["demoted"] is False
+    assert payload["split_reason"] == "internal_speed_inflection"
+    assert payload["source_thresholds"]["split_speed_mps"] == pytest.approx(0.75)
+    assert payload["min_confidence"] == pytest.approx(0.9)
+    assert payload["max_height_m"] <= 0.03
+    assert payload["max_speed_mps"] <= 0.75
+
+
 def test_measure_contact_metrics_reports_phase_slide_and_foot_penetration():
     frames = [
         _frame(0, left_x=0.000, left_z=0.000),

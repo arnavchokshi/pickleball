@@ -27,6 +27,8 @@ and invokes the existing, already-tested orchestrator CLI on a remote host.
 from __future__ import annotations
 
 import argparse
+import ast
+import hashlib
 import json
 import os
 import re
@@ -55,12 +57,14 @@ if str(ROOT) not in sys.path:
 # shared venv for the orchestrator CLI vs. Fast-SAM-3D-Body's own separate
 # venv/checkout under body_runtime/) -- that split is real, not a bug -- but
 # now they all derive from a single root constant to update.
-# FLEET NOTE (2026-07-06): the old standing VM (34.126.67.233) was DELETED; defaults now point at
-# fleet GPU #1 `pickleball-a100-fleet1` with the cold-start layout under ~/coldstart_20260706
+# FLEET NOTE (2026-07-07): the old standing VM (34.126.67.233) was DELETED; defaults now point at
+# fleet GPU #1 `pickleball-a100-fleet1` with the cold-start layout under ~/coldstart_20260706.
+# Fleet1 restarted with external IP 35.240.183.195; prior 34.143.175.207 is kept in known_hosts
+# as historical evidence for the same host key/disk mapping.
 # (see runs/manager/gpu_fleet.md — THE source of truth; wave-2 improvement booked: derive these
 # from the fleet ledger instead of constants). Per-lane dispatches may still override via flags.
 DEFAULT_REMOTE_HOME = "/home/arnavchokshi/coldstart_20260706"
-DEFAULT_REMOTE_HOST = "arnavchokshi@34.143.175.207"
+DEFAULT_REMOTE_HOST = "arnavchokshi@35.240.183.195"
 DEFAULT_SSH_KEY = "~/.ssh/google_compute_engine"
 DEFAULT_REMOTE_REPO = f"{DEFAULT_REMOTE_HOME}/repo"
 # On fleet1 the cold-start builds ONE body venv that serves both the orchestrator CLI and
@@ -85,7 +89,7 @@ DEFAULT_LOCK_WAIT_TIMEOUT_S = 60
 # (exit 124).
 DEFAULT_COMMAND_TIMEOUT_S = 3600
 DEFAULT_RUN_ROOT = "runs/process_video_body_dispatch"
-# Pinned host key for DEFAULT_REMOTE_HOST (fleet1, 34.143.175.207), captured via
+# Pinned host key for DEFAULT_REMOTE_HOST (fleet1, 35.240.183.195), captured via
 # ssh-keyscan and cross-checked against this machine's own trusted
 # ~/.ssh/known_hosts -- see configs/ssh/a100_known_hosts's header comment
 # and review_harden_20260702.md finding 7. Used in place of
@@ -98,6 +102,9 @@ TRANSPORT_CHOICES = (TRANSPORT_TAR_BATCH, TRANSPORT_RSYNC)
 RETRYABLE_TRANSPORT_EXIT_CODES = (10, 12, 30, 35, 255)
 DEFAULT_TRANSPORT_RETRY_MAX_ATTEMPTS = 12
 DEFAULT_TRANSPORT_RETRY_BACKOFF_S = 4.0
+VERSION_STAMP_ARTIFACT = "version_stamp.json"
+REMOTE_VERSION_VERIFICATION_ARTIFACT = "remote_version_verification.json"
+REMOTE_CODE_SYNC_DIR = ".body_code_sync"
 
 # Remote clip ids are interpolated into a single shell command string sent
 # over SSH (_remote_body_command) and into a remote directory path (mkdir).
@@ -131,6 +138,7 @@ def _validate_clip_id(clip: str) -> str:
 # directory of many small JPEGs, not a single artifact file).
 BODY_INPUT_ARTIFACTS: tuple[str, ...] = (
     "remote_body_runner.py",
+    VERSION_STAMP_ARTIFACT,
     "capture_sidecar.json",
     "court_calibration.json",
     "court_zones.json",
@@ -165,6 +173,8 @@ BODY_OUTPUT_ARTIFACTS_HEAVY: tuple[str, ...] = (
     "body_mesh.json",
 )
 BODY_OUTPUT_ARTIFACTS_DEFAULT: tuple[str, ...] = (
+    VERSION_STAMP_ARTIFACT,
+    REMOTE_VERSION_VERIFICATION_ARTIFACT,
     "skeleton3d.json",
     "body_compute_execution.json",
     "body_mesh_readiness.json",
@@ -310,6 +320,28 @@ class RemoteBodyDispatchResult:
         }
 
 
+@dataclass
+class RemoteCodeSyncResult:
+    status: str
+    local_git_head_sha: str
+    remote_git_head_sha_before: str
+    remote_git_head_sha_after: str
+    verified: bool
+    dirty_tracked_files: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "local_git_head_sha": self.local_git_head_sha,
+            "remote_git_head_sha_before": self.remote_git_head_sha_before,
+            "remote_git_head_sha_after": self.remote_git_head_sha_after,
+            "verified": self.verified,
+            "dirty_tracked_files": list(self.dirty_tracked_files),
+            "notes": list(self.notes),
+        }
+
+
 def _run(cmd: Sequence[str], timeout_s: float | None = None) -> "subprocess.CompletedProcess[str]":
     return subprocess.run(
         list(cmd),
@@ -325,6 +357,302 @@ REMOTE_OUTPUT_LOG_MAX_BYTES = 500 * 1024
 def _write_json_file(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _utc_now_iso() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _git_stdout(repo_root: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), *args],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()
+        raise RemoteBodyDispatchError(f"git {' '.join(args)} failed under {repo_root}: {detail}")
+    return result.stdout.strip()
+
+
+def _git_head_sha(repo_root: Path) -> str:
+    return _git_stdout(repo_root, "rev-parse", "HEAD")
+
+
+def _git_dirty_tracked_files(repo_root: Path, paths: Sequence[str] | None = None) -> list[str]:
+    cmd = ["status", "--porcelain", "--untracked-files=no"]
+    if paths:
+        cmd.append("--")
+        cmd.extend(paths)
+    output = _git_stdout(repo_root, *cmd)
+    dirty: list[str] = []
+    for line in output.splitlines():
+        if not line:
+            continue
+        name = line[3:] if len(line) > 3 and line[2] == " " else line[2:].lstrip()
+        if " -> " in name:
+            name = name.rsplit(" -> ", 1)[-1]
+        if name:
+            dirty.append(name)
+    return sorted(set(dirty))
+
+
+def _md5_file(path: Path) -> str:
+    digest = hashlib.md5(usedforsecurity=False)
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _module_name_for_file(repo_root: Path, path: Path) -> str | None:
+    try:
+        rel = path.relative_to(repo_root)
+    except ValueError:
+        return None
+    if rel.suffix != ".py":
+        return None
+    parts = list(rel.with_suffix("").parts)
+    if parts and parts[-1] == "__init__":
+        parts.pop()
+    return ".".join(parts) if parts else None
+
+
+def _module_file(repo_root: Path, module_name: str) -> str | None:
+    if not module_name:
+        return None
+    if not (
+        module_name == "threed"
+        or module_name.startswith("threed.")
+        or module_name == "scripts"
+        or module_name.startswith("scripts.")
+    ):
+        return None
+    module_rel = Path(*module_name.split("."))
+    candidates = (module_rel.with_suffix(".py"), module_rel / "__init__.py")
+    for candidate in candidates:
+        if (repo_root / candidate).is_file():
+            return candidate.as_posix()
+    return None
+
+
+def _resolve_import_from_module(current_module: str, current_is_package: bool, level: int, module: str | None) -> str:
+    if level <= 0:
+        return module or ""
+    parts = current_module.split(".")
+    package_parts = parts if current_is_package else parts[:-1]
+    keep = max(0, len(package_parts) - level + 1)
+    resolved_parts = package_parts[:keep]
+    if module:
+        resolved_parts.extend(module.split("."))
+    return ".".join(part for part in resolved_parts if part)
+
+
+def _project_imports_for_file(repo_root: Path, rel_path: str) -> list[str]:
+    path = repo_root / rel_path
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (OSError, SyntaxError):
+        return []
+    current_module = _module_name_for_file(repo_root, path)
+    if current_module is None:
+        return []
+    current_is_package = path.name == "__init__.py"
+    imports: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                target = _module_file(repo_root, alias.name)
+                if target is not None:
+                    imports.add(target)
+        elif isinstance(node, ast.ImportFrom):
+            base_module = _resolve_import_from_module(
+                current_module,
+                current_is_package,
+                int(node.level or 0),
+                node.module,
+            )
+            base_target = _module_file(repo_root, base_module)
+            if base_target is not None:
+                imports.add(base_target)
+            if node.module is None:
+                for alias in node.names:
+                    target = _module_file(repo_root, f"{base_module}.{alias.name}" if base_module else alias.name)
+                    if target is not None:
+                        imports.add(target)
+    return sorted(imports)
+
+
+def _remote_runtime_critical_files(repo_root: Path | None = None) -> tuple[str, ...]:
+    """Repo files the remote command or generated BODY runner actually depends on.
+
+    The explicit roots come from `_remote_body_command` and
+    `_remote_body_runner_script`: the remote verifies through this module,
+    enters the shared GPU lock script, imports `orchestrator` and
+    `body_mesh_index`, and the BODY runner shells out to
+    `run_sam3dbody_batch.py` for the binary handoff path. The Python files are
+    then expanded through a project-local AST import closure so newly introduced
+    BODY runtime dependencies are stamped without hand-maintaining a long list.
+    """
+
+    repo_root = repo_root or ROOT
+    explicit = {
+        "scripts/racketsport/remote_body_dispatch.py",
+        "scripts/gpu-eval-run.sh",
+        "scripts/racketsport/run_sam3dbody_batch.py",
+        "threed/racketsport/orchestrator.py",
+        "threed/racketsport/body_mesh_index.py",
+        "models/MANIFEST.json",
+    }
+    closure_roots = [
+        "scripts/racketsport/remote_body_dispatch.py",
+        "scripts/racketsport/run_sam3dbody_batch.py",
+        "threed/racketsport/orchestrator.py",
+        "threed/racketsport/body_mesh_index.py",
+    ]
+    seen: set[str] = set()
+    stack = [rel for rel in closure_roots if (repo_root / rel).is_file()]
+    while stack:
+        rel = stack.pop()
+        if rel in seen:
+            continue
+        seen.add(rel)
+        for imported in _project_imports_for_file(repo_root, rel):
+            if imported not in seen:
+                stack.append(imported)
+    files = explicit | seen
+    missing = sorted(rel for rel in files if not (repo_root / rel).is_file())
+    if missing:
+        raise RemoteBodyDispatchError(
+            "cannot build remote BODY version stamp; critical runtime files are missing locally: "
+            + ", ".join(missing)
+        )
+    return tuple(sorted(files))
+
+
+def build_version_stamp(
+    *,
+    repo_root: Path | None = None,
+    remote_run_dir: str,
+    generated_runner_sha256: str,
+    allow_dirty: bool = False,
+) -> dict[str, Any]:
+    repo_root = repo_root or ROOT
+    critical_files = _remote_runtime_critical_files(repo_root)
+    dirty_files = _git_dirty_tracked_files(repo_root, critical_files)
+    if dirty_files and not allow_dirty:
+        raise RemoteBodyDispatchError(
+            "refusing remote BODY dispatch with dirty tracked runtime file(s): "
+            + ", ".join(dirty_files)
+            + " (pass --allow-dirty only for local development; remote md5 verification still must match)"
+        )
+    file_records = []
+    for rel in critical_files:
+        path = repo_root / rel
+        file_records.append(
+            {
+                "path": rel,
+                "md5": _md5_file(path),
+                "size_bytes": path.stat().st_size,
+            }
+        )
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_remote_body_version_stamp",
+        "created_at_utc": _utc_now_iso(),
+        "git_head_sha": _git_head_sha(repo_root),
+        "git_dirty": bool(dirty_files),
+        "dirty_tracked_runtime_files": dirty_files,
+        "allow_dirty": bool(allow_dirty),
+        "remote_run_dir": remote_run_dir,
+        "critical_file_set": {
+            "derivation": {
+                "remote_command_entrypoints": [
+                    "scripts/racketsport/remote_body_dispatch.py --verify-version-stamp",
+                    "scripts/gpu-eval-run.sh",
+                    REMOTE_BODY_RUNNER_FILENAME,
+                ],
+                "generated_runner_import_roots": [
+                    "threed/racketsport/orchestrator.py",
+                    "threed/racketsport/body_mesh_index.py",
+                    "scripts/racketsport/run_sam3dbody_batch.py",
+                ],
+                "method": "project-local AST import closure plus shell/model-manifest entrypoints",
+            },
+            "files": file_records,
+        },
+        "payloads": {
+            REMOTE_BODY_RUNNER_FILENAME: {
+                "sha256": generated_runner_sha256,
+            }
+        },
+        "remote_verification": None,
+    }
+
+
+def _verify_version_stamp_payload(stamp: Mapping[str, Any], *, repo_root: Path) -> tuple[bool, dict[str, Any]]:
+    expected_sha = str(stamp.get("git_head_sha", ""))
+    remote_sha = _git_head_sha(repo_root)
+    files_payload = stamp.get("critical_file_set", {}).get("files", []) if isinstance(stamp.get("critical_file_set"), dict) else []
+    drifted_files: list[dict[str, Any]] = []
+    checked = 0
+    if not isinstance(files_payload, list):
+        files_payload = []
+    for item in files_payload:
+        if not isinstance(item, dict):
+            continue
+        rel = str(item.get("path", ""))
+        expected_md5 = str(item.get("md5", ""))
+        parts = Path(rel).parts
+        if not rel or Path(rel).is_absolute() or ".." in parts:
+            drifted_files.append({"path": rel, "expected_md5": expected_md5, "remote_md5": None, "status": "unsafe_path"})
+            continue
+        path = repo_root / rel
+        checked += 1
+        if not path.is_file():
+            drifted_files.append({"path": rel, "expected_md5": expected_md5, "remote_md5": None, "status": "missing"})
+            continue
+        remote_md5 = _md5_file(path)
+        if remote_md5 != expected_md5:
+            drifted_files.append(
+                {
+                    "path": rel,
+                    "expected_md5": expected_md5,
+                    "remote_md5": remote_md5,
+                    "status": "md5_mismatch",
+                }
+            )
+    sha_match = bool(expected_sha) and remote_sha == expected_sha
+    verified = sha_match and not drifted_files
+    verification = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_remote_body_version_verification",
+        "verified": verified,
+        "verified_at_utc": _utc_now_iso(),
+        "expected_git_head_sha": expected_sha,
+        "remote_git_head_sha": remote_sha,
+        "checked_file_count": checked,
+        "drifted_files": drifted_files,
+    }
+    return verified, verification
+
+
+def verify_version_stamp_file(*, stamp_path: Path, repo_root: Path) -> dict[str, Any]:
+    stamp = json.loads(stamp_path.read_text(encoding="utf-8"))
+    verified, verification = _verify_version_stamp_payload(stamp, repo_root=repo_root)
+    stamp["remote_verification"] = verification
+    _write_json_file(stamp_path, stamp)
+    _write_json_file(stamp_path.with_name(REMOTE_VERSION_VERIFICATION_ARTIFACT), verification)
+    if not verified:
+        drifted = ", ".join(item["path"] for item in verification["drifted_files"]) or "<sha-only mismatch>"
+        raise RemoteBodyDispatchError(
+            "remote BODY version verification failed: "
+            f"local_sha={verification['expected_git_head_sha']} "
+            f"remote_sha={verification['remote_git_head_sha']} "
+            f"drifted_files={drifted}"
+        )
+    return verification
 
 
 def _path_size_bytes(path: Path) -> int:
@@ -637,6 +965,7 @@ def dispatch_body_stage(
     config: RemoteConfig | None = None,
     max_frames: int | None = None,
     max_players: int = 4,
+    allow_dirty: bool = False,
     run: RunFn = _run,
 ) -> RemoteBodyDispatchResult:
     """Dispatch the BODY stage to the remote A100 and sync results back.
@@ -659,6 +988,21 @@ def dispatch_body_stage(
     download_bytes = 0
     lock_wait_estimate_s: float | None = None
 
+    run_stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    remote_run_dir = f"{config.repo}/{config.run_root}/{clip}_{run_stamp}"
+    runner_script = _remote_body_runner_script(
+        clip=clip,
+        remote_run_dir=remote_run_dir,
+        config=config,
+        max_frames=max_frames,
+        max_players=max_players,
+    )
+    version_stamp = build_version_stamp(
+        remote_run_dir=remote_run_dir,
+        generated_runner_sha256=hashlib.sha256(runner_script.encode("utf-8")).hexdigest(),
+        allow_dirty=allow_dirty,
+    )
+
     preflight_started = time.monotonic()
     if not check_remote_reachable(config, run=run):
         raise RemoteBodyDispatchError(
@@ -674,9 +1018,6 @@ def dispatch_body_stage(
     check_remote_layout(config, run=run)
     phase_seconds["preflight_s"] = time.monotonic() - preflight_started
 
-    stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-    remote_run_dir = f"{config.repo}/{config.run_root}/{clip}_{stamp}"
-
     mkdir_started = time.monotonic()
     mkdir_result = run(
         [*config.ssh_base(), f"mkdir -p {shlex.quote(remote_run_dir + '/body_frames')}"],
@@ -689,14 +1030,8 @@ def dispatch_body_stage(
     # Task #46: write the generated remote runner script into the clip dir (it
     # lands in the run artifacts for debugging) so _rsync_up ships it with the
     # other inputs; the remote command then executes it in place.
-    runner_script = _remote_body_runner_script(
-        clip=clip,
-        remote_run_dir=remote_run_dir,
-        config=config,
-        max_frames=max_frames,
-        max_players=max_players,
-    )
     (clip_dir / REMOTE_BODY_RUNNER_FILENAME).write_text(runner_script, encoding="utf-8")
+    _write_json_file(clip_dir / VERSION_STAMP_ARTIFACT, version_stamp)
 
     upload_started = time.monotonic()
     transport_phases: dict[str, float] = {}
@@ -1060,6 +1395,20 @@ from threed.racketsport.orchestrator import BodyStageRunner, run_pipeline
 _emit_marker("imports_done")
 
 remote_dispatch_sam3d_config = json.loads({dispatch_config_json!r})
+try:
+    with open({remote_run_dir + '/' + VERSION_STAMP_ARTIFACT!r}, "r", encoding="utf-8") as version_file:
+        _version_stamp = json.load(version_file)
+    _remote_verification = _version_stamp.get("remote_verification") or {{}}
+    remote_dispatch_sam3d_config["version_stamp"] = {{
+        "git_head_sha": _version_stamp.get("git_head_sha"),
+        "git_dirty": bool(_version_stamp.get("git_dirty")),
+        "allow_dirty": bool(_version_stamp.get("allow_dirty")),
+        "verified": bool(_remote_verification.get("verified")),
+        "verified_at_utc": _remote_verification.get("verified_at_utc"),
+        "remote_git_head_sha": _remote_verification.get("remote_git_head_sha"),
+    }}
+except Exception as exc:  # noqa: BLE001 - provenance echo should not mask BODY failures
+    remote_dispatch_sam3d_config["version_stamp"] = {{"verified": False, "error": str(exc)}}
 with open({remote_run_dir + '/remote_sam3d_tier2_dispatch_config.json'!r}, "w", encoding="utf-8") as config_file:
     json.dump(remote_dispatch_sam3d_config, config_file, indent=2, sort_keys=True)
     config_file.write("\\n")
@@ -1159,8 +1508,14 @@ def _remote_body_command(
     # the real BODY run itself (exit 124 only when the run genuinely hangs).
     # Previously the outer `timeout` used lock_wait_timeout_s (60s) and
     # SIGKILLed any real BODY run mid-inference, misreported as "lock busy".
+    verifier = (
+        f"{q(config.python)} {q(config.repo + '/scripts/racketsport/remote_body_dispatch.py')} "
+        f"--verify-version-stamp {q(remote_run_dir + '/' + VERSION_STAMP_ARTIFACT)} "
+        f"--repo {q(config.repo)}"
+    )
     return (
         f"cd {q(config.repo)} && "
+        f"{verifier} && "
         f"FAST_SAM_PYTHON={q(config.fast_sam_python)} FAST_SAM_ROOT={q(config.fast_sam_root)} "
         f"GPU_LOCK_TIMEOUT_S={int(config.lock_wait_timeout_s)} "
         f"timeout {int(config.command_timeout_s)}s {q(config.gpu_lock_script)} "
@@ -1604,11 +1959,131 @@ def _parse_sam3d_upstream_env_tuple(value: str) -> dict[str, str]:
     return parsed
 
 
+def _remote_git_head_sha(config: RemoteConfig, *, run: RunFn) -> str:
+    result = run([*config.ssh_base(), f"git -C {shlex.quote(config.repo)} rev-parse HEAD"], config.connect_timeout_s + 10)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()
+        raise RemoteBodyDispatchError(f"failed to read remote git HEAD from {config.repo}: {detail}")
+    return result.stdout.strip().splitlines()[-1]
+
+
+def sync_remote_checkout_to_local_head(
+    *,
+    config: RemoteConfig | None = None,
+    run: RunFn = _run,
+    repo_root: Path | None = None,
+    allow_dirty: bool = False,
+) -> RemoteCodeSyncResult:
+    """Ship local HEAD to the remote repo and verify the BODY runtime stamp.
+
+    The sync is repo-only: it fetches a git bundle into ``config.repo`` and
+    force-checks out the target commit, but deliberately does not run
+    ``git clean``. Untracked VM-local vendor pins, checkpoint symlinks, and
+    coldstart-side directories therefore remain untouched.
+    """
+
+    config = config or RemoteConfig()
+    repo_root = repo_root or ROOT
+    dirty_files = _git_dirty_tracked_files(repo_root)
+    if dirty_files and not allow_dirty:
+        raise RemoteBodyDispatchError(
+            "refusing to sync remote checkout from a dirty local tree: "
+            + ", ".join(dirty_files)
+            + " (pass --allow-dirty to explicitly sync committed HEAD while recording dirty state)"
+        )
+    if not check_remote_reachable(config, run=run):
+        raise RemoteBodyDispatchError(
+            f"remote host {config.host} unreachable over SSH within {config.connect_timeout_s}s "
+            "(check network/VPN, VM power state, or ssh key path)"
+        )
+    before_sha = _remote_git_head_sha(config, run=run)
+    local_sha = _git_head_sha(repo_root)
+    remote_sync_dir = f"{config.repo}/{REMOTE_CODE_SYNC_DIR}"
+    mkdir_result = run([*config.ssh_base(), f"mkdir -p {shlex.quote(remote_sync_dir)}"], config.connect_timeout_s + 10)
+    if mkdir_result.returncode != 0:
+        raise RemoteBodyDispatchError(f"failed to create remote sync dir {remote_sync_dir}: {mkdir_result.stderr.strip()}")
+
+    with tempfile.TemporaryDirectory(prefix="remote_body_code_sync_") as tmp:
+        tmp_path = Path(tmp)
+        bundle_path = tmp_path / "body_code_sync.bundle"
+        bundle_result = subprocess.run(
+            ["git", "-C", str(repo_root), "bundle", "create", str(bundle_path), "HEAD"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if bundle_result.returncode != 0:
+            raise RemoteBodyDispatchError(
+                f"failed to create local git bundle for {local_sha}: {(bundle_result.stderr or bundle_result.stdout).strip()}"
+            )
+        remote_bundle = f"{remote_sync_dir}/body_code_sync.bundle"
+        _run_transport_command(
+            [*config.scp_base(), str(bundle_path), f"{config.host}:{remote_bundle}"],
+            None,
+            config=config,
+            run=run,
+            operation="remote code-sync bundle upload",
+        )
+        sync_ref = f"refs/fable-sync/{local_sha}"
+        sync_cmd = (
+            f"cd {shlex.quote(config.repo)} && "
+            f"git fetch {shlex.quote(remote_bundle)} HEAD:{shlex.quote(sync_ref)} && "
+            f"git checkout --detach -f {shlex.quote(local_sha)} && "
+            f"git reset --hard {shlex.quote(local_sha)} && "
+            f"rm -f {shlex.quote(remote_bundle)} && "
+            "git rev-parse HEAD"
+        )
+        sync_result = run([*config.ssh_base(), sync_cmd], config.command_timeout_s + 120)
+        if sync_result.returncode != 0:
+            detail = (sync_result.stderr or sync_result.stdout or "").strip()
+            raise RemoteBodyDispatchError(f"remote code sync to {local_sha} failed: {detail}")
+        after_sha = sync_result.stdout.strip().splitlines()[-1]
+
+        stamp_path = tmp_path / VERSION_STAMP_ARTIFACT
+        stamp = build_version_stamp(
+            repo_root=repo_root,
+            remote_run_dir=remote_sync_dir,
+            generated_runner_sha256="sync-only-no-runner",
+            allow_dirty=allow_dirty,
+        )
+        _write_json_file(stamp_path, stamp)
+        remote_stamp_path = f"{remote_sync_dir}/{VERSION_STAMP_ARTIFACT}"
+        _run_transport_command(
+            [*config.scp_base(), str(stamp_path), f"{config.host}:{remote_stamp_path}"],
+            None,
+            config=config,
+            run=run,
+            operation="remote code-sync stamp upload",
+        )
+        verify_cmd = (
+            f"cd {shlex.quote(config.repo)} && "
+            f"{shlex.quote(config.python)} {shlex.quote(config.repo + '/scripts/racketsport/remote_body_dispatch.py')} "
+            f"--verify-version-stamp {shlex.quote(remote_stamp_path)} --repo {shlex.quote(config.repo)}"
+        )
+        verify_result = run([*config.ssh_base(), verify_cmd], config.connect_timeout_s + 60)
+        if verify_result.returncode != 0:
+            detail = (verify_result.stderr or verify_result.stdout or "").strip()
+            raise RemoteBodyDispatchError(f"remote code sync verification failed after checkout: {detail}")
+
+    return RemoteCodeSyncResult(
+        status="synced",
+        local_git_head_sha=local_sha,
+        remote_git_head_sha_before=before_sha,
+        remote_git_head_sha_after=after_sha,
+        verified=True,
+        dirty_tracked_files=dirty_files,
+        notes=[
+            "synced repo files via git bundle and checkout --detach -f; did not run git clean",
+            f"remote version stamp verified for {after_sha}",
+        ],
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Dispatch the BODY (Fast SAM-3D-Body) stage to the remote A100.")
-    parser.add_argument("--clip", required=True)
-    parser.add_argument("--clip-dir", type=Path, required=True, help="Local directory with tracks.json/skeleton3d.json/etc.")
-    parser.add_argument("--video", type=Path, required=True)
+    parser.add_argument("--clip")
+    parser.add_argument("--clip-dir", type=Path, help="Local directory with tracks.json/skeleton3d.json/etc.")
+    parser.add_argument("--video", type=Path)
     parser.add_argument("--body-frames-dir", type=Path, default=None)
     parser.add_argument("--camera-motion", type=Path, default=None, help="Optional camera_motion.json to sync as camera_motion.json in the remote BODY working dir.")
     parser.add_argument("--host", default=DEFAULT_REMOTE_HOST)
@@ -1647,6 +2122,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--sam3d-tier2-output-lite", action="store_true")
     parser.add_argument("--no-sam3d-wrist-bone-lock", action="store_true")
     parser.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="Allow dirty tracked runtime files only for local development; the stamp records this and remote md5 verification still must match.",
+    )
+    parser.add_argument(
+        "--sync-remote-code",
+        action="store_true",
+        help="Sync the remote repo checkout to local HEAD via git bundle, then verify the BODY version stamp. Does not run BODY.",
+    )
+    parser.add_argument(
+        "--verify-version-stamp",
+        type=Path,
+        default=None,
+        help="Remote-side internal mode: verify a version_stamp.json against --repo and exit before BODY compute.",
+    )
+    parser.add_argument(
         "--fetch-body-monoliths",
         action="store_true",
         help="Also download smpl_motion.json and body_mesh.json. Default skips them for faster BODY round trips.",
@@ -1663,6 +2154,15 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     args = parser.parse_args(argv)
+
+    if args.verify_version_stamp is not None:
+        try:
+            verification = verify_version_stamp_file(stamp_path=args.verify_version_stamp, repo_root=Path(args.repo))
+        except (RemoteBodyDispatchError, OSError, json.JSONDecodeError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(json.dumps(verification, indent=2, sort_keys=True))
+        return 0
 
     config = RemoteConfig(
         host=args.host,
@@ -1696,6 +2196,31 @@ def main(argv: list[str] | None = None) -> int:
         command_timeout_s=args.command_timeout_s,
         known_hosts_file=args.known_hosts_file,
     )
+
+    if args.sync_remote_code:
+        try:
+            result = sync_remote_checkout_to_local_head(
+                config=config,
+                allow_dirty=bool(args.allow_dirty),
+            )
+        except RemoteBodyDispatchError as exc:
+            print(json.dumps({"status": "failed", "error": str(exc)}, indent=2), file=sys.stderr)
+            return 1
+        print(json.dumps(result.as_dict(), indent=2, sort_keys=True))
+        return 0
+
+    missing = [
+        flag
+        for flag, value in (
+            ("--clip", args.clip),
+            ("--clip-dir", args.clip_dir),
+            ("--video", args.video),
+        )
+        if value is None
+    ]
+    if missing:
+        parser.error(f"{', '.join(missing)} required unless --sync-remote-code or --verify-version-stamp is used")
+
     try:
         result = dispatch_body_stage(
             clip=args.clip,
@@ -1706,6 +2231,7 @@ def main(argv: list[str] | None = None) -> int:
             config=config,
             max_frames=args.max_frames,
             max_players=args.max_players,
+            allow_dirty=bool(args.allow_dirty),
         )
     except RemoteBodyDispatchError as exc:
         print(json.dumps({"status": "failed", "error": str(exc)}, indent=2), file=sys.stderr)

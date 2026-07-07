@@ -1,0 +1,465 @@
+{
+  "actual_non_heldout_source_count": 6,
+  "artifact_type": "racketsport_metric15_court_keypoint_taskset",
+  "corpus_source_ids": [
+    "HyUqT7zFiwk",
+    "73VurrTKCZ8",
+    "wBu8bC4OfUY",
+    "Ezz6HDNHlnk",
+    "zwCtH_i1_S4",
+    "_L0HVmAlCQI",
+    "pwxNwFfYQlQ",
+    "vQhtz8l6VqU"
+  ],
+  "created_at_utc": "2026-07-07T07:21:48.451316Z",
+  "downloaded_source_ids": [
+    "HyUqT7zFiwk",
+    "73VurrTKCZ8",
+    "wBu8bC4OfUY",
+    "Ezz6HDNHlnk",
+    "zwCtH_i1_S4",
+    "_L0HVmAlCQI",
+    "pwxNwFfYQlQ",
+    "vQhtz8l6VqU"
+  ],
+  "expected_non_heldout_source_count_from_lane_spec": 8,
+  "heldout_proposals_from_corpus_card": [
+    {
+      "channel": "Schwarz Pickleball",
+      "duration_s": 862.3,
+      "fps": 30.0,
+      "ledger_action": "manager_registers_only; this lane did not write heldout_eval_ledger.md",
+      "rationale": "distinct channel/court context; reserved from prelabel and training until manager ledger registration",
+      "resolution": [
+        1280,
+        720
+      ],
+      "source_id": "pwxNwFfYQlQ",
+      "title": "Rec Play (Dale/Ryan vs Rich/Yar) - Game 5 at Mega Courts on June 27, 2026"
+    },
+    {
+      "channel": "Jack Munro",
+      "duration_s": 583.3,
+      "fps": 25.0,
+      "ledger_action": "manager_registers_only; this lane did not write heldout_eval_ledger.md",
+      "rationale": "distinct channel/court context; reserved from prelabel and training until manager ledger registration",
+      "resolution": [
+        1920,
+        1080
+      ],
+      "source_id": "vQhtz8l6VqU",
+      "title": "CRAZY Pro Pickleball Rec Game (Uncut Full Match)"
+    }
+  ],
+  "heldout_source_ids": [
+    "pwxNwFfYQlQ",
+    "vQhtz8l6VqU"
+  ],
+  "keypoint_names_in_order": [
+    "near_left_corner",
+    "near_baseline_center",
+    "near_right_corner",
+    "far_right_corner",
+    "far_baseline_center",
+    "far_left_corner",
+    "near_nvz_left",
+    "near_nvz_center",
+    "near_nvz_right",
+    "net_left_sideline",
+    "net_center",
+    "net_right_sideline",
+    "far_nvz_left",
+    "far_nvz_center",
+    "far_nvz_right"
+  ],
+  "label_spec_path": "cvat_upload/court_keypoints_20260707/label_spec.json",
+  "non_heldout_source_ids": [
+    "HyUqT7zFiwk",
+    "73VurrTKCZ8",
+    "wBu8bC4OfUY",
+    "Ezz6HDNHlnk",
+    "zwCtH_i1_S4",
+    "_L0HVmAlCQI"
+  ],
+  "not_ground_truth": true,
+  "package_frame_count": 6,
+  "package_zip_path": "cvat_upload/court_keypoints_20260707/packages/court_keypoints_metric15_20260707_6frames.zip",
+  "schema_version": 1,
+  "selected_frame_count": 6,
+  "selections": [
+    {
+      "absolute_frame_index": 10195,
+      "clip_duration_s": 971.0,
+      "clip_frame_index": 10195,
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "clip_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "clip_start_s": 0.0,
+      "fps": 30.0,
+      "height": 1080,
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195.png",
+      "role": "internal_val",
+      "sample_scores": [
+        {
+          "clip_frame_index": 5826,
+          "dark_occlusion_fraction": 0.00253298,
+          "hough_line_count": 719.0,
+          "score": 230.9761,
+          "white_edge_fraction": 0.00085412,
+          "white_fraction": 0.19672068
+        },
+        {
+          "clip_frame_index": 10195,
+          "dark_occlusion_fraction": 0.01245361,
+          "hough_line_count": 633.0,
+          "score": 275.438717,
+          "white_edge_fraction": 0.00729542,
+          "white_fraction": 0.20903635
+        },
+        {
+          "clip_frame_index": 14564,
+          "dark_occlusion_fraction": 0.00189916,
+          "hough_line_count": 641.0,
+          "score": 274.018312,
+          "white_edge_fraction": 0.00509045,
+          "white_fraction": 0.21857746
+        },
+        {
+          "clip_frame_index": 18934,
+          "dark_occlusion_fraction": 0.00828557,
+          "hough_line_count": 605.0,
+          "score": 243.491953,
+          "white_edge_fraction": 0.00501222,
+          "white_fraction": 0.18848058
+        },
+        {
+          "clip_frame_index": 23303,
+          "dark_occlusion_fraction": 0.00756908,
+          "hough_line_count": 579.0,
+          "score": 272.888506,
+          "white_edge_fraction": 0.00841103,
+          "white_fraction": 0.20087877
+        }
+      ],
+      "selection_heuristic": "Longest materialized non-held-out rally clip for the source; sampled five in-clip frames and chose the frame with the highest white-line/edge score minus a near-camera dark-occlusion penalty.",
+      "selection_score": 275.438717,
+      "source_channel": "The Pickleball Pirates",
+      "source_frame_count": 29130,
+      "source_id": "HyUqT7zFiwk",
+      "source_title": "Intense Pickleball Men's Doubles Advanced rec Game from the Court Level",
+      "width": 1920
+    },
+    {
+      "absolute_frame_index": 3808,
+      "clip_duration_s": 90.5,
+      "clip_frame_index": 2188,
+      "clip_id": "73VurrTKCZ8_rally_0002",
+      "clip_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0002.mp4",
+      "clip_start_s": 54.0,
+      "fps": 30.0,
+      "height": 1080,
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+      "role": "train",
+      "sample_scores": [
+        {
+          "clip_frame_index": 547,
+          "dark_occlusion_fraction": 0.18637934,
+          "hough_line_count": 2236.0,
+          "score": 764.336435,
+          "white_edge_fraction": 0.05188829,
+          "white_fraction": 0.47601327
+        },
+        {
+          "clip_frame_index": 957,
+          "dark_occlusion_fraction": 0.18952546,
+          "hough_line_count": 2215.0,
+          "score": 766.250322,
+          "white_edge_fraction": 0.05169539,
+          "white_fraction": 0.47891054
+        },
+        {
+          "clip_frame_index": 1368,
+          "dark_occlusion_fraction": 0.17274535,
+          "hough_line_count": 2102.0,
+          "score": 763.613412,
+          "white_edge_fraction": 0.05287584,
+          "white_fraction": 0.4702707
+        },
+        {
+          "clip_frame_index": 1778,
+          "dark_occlusion_fraction": 0.04813115,
+          "hough_line_count": 2325.0,
+          "score": 652.194388,
+          "white_edge_fraction": 0.0386917,
+          "white_fraction": 0.42902467
+        },
+        {
+          "clip_frame_index": 2188,
+          "dark_occlusion_fraction": 0.1887286,
+          "hough_line_count": 2398.0,
+          "score": 770.691831,
+          "white_edge_fraction": 0.05306016,
+          "white_fraction": 0.47652338
+        }
+      ],
+      "selection_heuristic": "Longest materialized non-held-out rally clip for the source; sampled five in-clip frames and chose the frame with the highest white-line/edge score minus a near-camera dark-occlusion penalty.",
+      "selection_score": 770.691831,
+      "source_channel": " Game 1 | High-Quality Multi-Cam|The Pickleball Shaman",
+      "source_frame_count": 10020,
+      "source_id": "73VurrTKCZ8",
+      "source_title": "Pro Pickleball Rec Match ",
+      "width": 1920
+    },
+    {
+      "absolute_frame_index": 10248,
+      "clip_duration_s": 427.0,
+      "clip_frame_index": 10248,
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "clip_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "clip_start_s": 0.0,
+      "fps": 30.0,
+      "height": 1080,
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/wBu8bC4OfUY__wBu8bC4OfUY_rally_0001__abs_010248.png",
+      "role": "internal_val",
+      "sample_scores": [
+        {
+          "clip_frame_index": 2562,
+          "dark_occlusion_fraction": 6.889e-05,
+          "hough_line_count": 932.0,
+          "score": 613.376859,
+          "white_edge_fraction": 0.02758166,
+          "white_fraction": 0.44546896
+        },
+        {
+          "clip_frame_index": 4484,
+          "dark_occlusion_fraction": 0.00092547,
+          "hough_line_count": 1198.0,
+          "score": 621.376585,
+          "white_edge_fraction": 0.02946298,
+          "white_fraction": 0.44406722
+        },
+        {
+          "clip_frame_index": 6405,
+          "dark_occlusion_fraction": 0.00053277,
+          "hough_line_count": 1069.0,
+          "score": 596.742774,
+          "white_edge_fraction": 0.02741073,
+          "white_fraction": 0.42969232
+        },
+        {
+          "clip_frame_index": 8326,
+          "dark_occlusion_fraction": 0.0014215,
+          "hough_line_count": 1038.0,
+          "score": 577.417847,
+          "white_edge_fraction": 0.02687436,
+          "white_fraction": 0.41305459
+        },
+        {
+          "clip_frame_index": 10248,
+          "dark_occlusion_fraction": 7.578e-05,
+          "hough_line_count": 1135.0,
+          "score": 623.836887,
+          "white_edge_fraction": 0.02921704,
+          "white_fraction": 0.44775216
+        }
+      ],
+      "selection_heuristic": "Longest materialized non-held-out rally clip for the source; sampled five in-clip frames and chose the frame with the highest white-line/edge score minus a near-camera dark-occlusion penalty.",
+      "selection_score": 623.836887,
+      "source_channel": "Rich Pickleball",
+      "source_frame_count": 16295,
+      "source_id": "wBu8bC4OfUY",
+      "source_title": "Lily / Glenn vs Rich Full-court vs Half-court Dec 14th Pickleball match play",
+      "width": 1920
+    },
+    {
+      "absolute_frame_index": 10677,
+      "clip_duration_s": 257.0,
+      "clip_frame_index": 4946,
+      "clip_id": "Ezz6HDNHlnk_rally_0004",
+      "clip_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0004.mp4",
+      "clip_start_s": 239.0,
+      "fps": 23.976023976023978,
+      "height": 1080,
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/Ezz6HDNHlnk__Ezz6HDNHlnk_rally_0004__abs_010677.png",
+      "role": "train",
+      "sample_scores": [
+        {
+          "clip_frame_index": 1236,
+          "dark_occlusion_fraction": 0.00605572,
+          "hough_line_count": 965.0,
+          "score": 311.791298,
+          "white_edge_fraction": 0.00974633,
+          "white_fraction": 0.23309596
+        },
+        {
+          "clip_frame_index": 2164,
+          "dark_occlusion_fraction": 0.02239951,
+          "hough_line_count": 977.0,
+          "score": 309.639909,
+          "white_edge_fraction": 0.00934821,
+          "white_fraction": 0.23303326
+        },
+        {
+          "clip_frame_index": 3091,
+          "dark_occlusion_fraction": 0.00119874,
+          "hough_line_count": 524.0,
+          "score": 329.378203,
+          "white_edge_fraction": 0.00858196,
+          "white_fraction": 0.25647559
+        },
+        {
+          "clip_frame_index": 4018,
+          "dark_occlusion_fraction": 0.00129519,
+          "hough_line_count": 570.0,
+          "score": 332.062702,
+          "white_edge_fraction": 0.00905511,
+          "white_fraction": 0.25679495
+        },
+        {
+          "clip_frame_index": 4946,
+          "dark_occlusion_fraction": 0.01093107,
+          "hough_line_count": 845.0,
+          "score": 339.830247,
+          "white_edge_fraction": 0.00971954,
+          "white_fraction": 0.26129812
+        }
+      ],
+      "selection_heuristic": "Longest materialized non-held-out rally clip for the source; sampled five in-clip frames and chose the frame with the highest white-line/edge score minus a near-camera dark-occlusion penalty.",
+      "selection_score": 339.830247,
+      "source_channel": " Pickleball Rec Game (November, 2024)|Alston Pickleball",
+      "source_frame_count": 19887,
+      "source_id": "Ezz6HDNHlnk",
+      "source_title": "2.5-3.0 Men's Doubles ",
+      "width": 1920
+    },
+    {
+      "absolute_frame_index": 3636,
+      "clip_duration_s": 606.0,
+      "clip_frame_index": 3636,
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "clip_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "clip_start_s": 0.0,
+      "fps": 30.0,
+      "height": 1080,
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636.png",
+      "role": "internal_val",
+      "sample_scores": [
+        {
+          "clip_frame_index": 3636,
+          "dark_occlusion_fraction": 0.01829117,
+          "hough_line_count": 470.0,
+          "score": 273.686871,
+          "white_edge_fraction": 0.02722962,
+          "white_fraction": 0.10764853
+        },
+        {
+          "clip_frame_index": 6363,
+          "dark_occlusion_fraction": 0.0034837,
+          "hough_line_count": 487.0,
+          "score": 261.012084,
+          "white_edge_fraction": 0.02605828,
+          "white_fraction": 0.1007416
+        },
+        {
+          "clip_frame_index": 9090,
+          "dark_occlusion_fraction": 0.01856215,
+          "hough_line_count": 446.0,
+          "score": 245.258569,
+          "white_edge_fraction": 0.02398084,
+          "white_fraction": 0.09546575
+        },
+        {
+          "clip_frame_index": 11817,
+          "dark_occlusion_fraction": 0.01443544,
+          "hough_line_count": 415.0,
+          "score": 233.384002,
+          "white_edge_fraction": 0.02189697,
+          "white_fraction": 0.09398577
+        },
+        {
+          "clip_frame_index": 14544,
+          "dark_occlusion_fraction": 0.00320813,
+          "hough_line_count": 401.0,
+          "score": 229.582624,
+          "white_edge_fraction": 0.02191787,
+          "white_fraction": 0.09001254
+        }
+      ],
+      "selection_heuristic": "Longest materialized non-held-out rally clip for the source; sampled five in-clip frames and chose the frame with the highest white-line/edge score minus a near-camera dark-occlusion penalty.",
+      "selection_score": 273.686871,
+      "source_channel": " #Pickleball|RallyPoint by Suffolk Pickleball Co.",
+      "source_frame_count": 18295,
+      "source_id": "zwCtH_i1_S4",
+      "source_title": "Rec-Play Doubles 3.0\u20133.5 DUPR in Woodbridge ",
+      "width": 1920
+    },
+    {
+      "absolute_frame_index": 509,
+      "clip_duration_s": 48.5,
+      "clip_frame_index": 509,
+      "clip_id": "_L0HVmAlCQI_rally_0001",
+      "clip_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0001.mp4",
+      "clip_start_s": 0.0,
+      "fps": 30.0,
+      "height": 1080,
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/_L0HVmAlCQI___L0HVmAlCQI_rally_0001__abs_000509.png",
+      "role": "internal_val",
+      "sample_scores": [
+        {
+          "clip_frame_index": 291,
+          "dark_occlusion_fraction": 0.00590416,
+          "hough_line_count": 1339.0,
+          "score": 479.70523,
+          "white_edge_fraction": 0.01516954,
+          "white_fraction": 0.37389296
+        },
+        {
+          "clip_frame_index": 509,
+          "dark_occlusion_fraction": 0.00019749,
+          "hough_line_count": 735.0,
+          "score": 538.914067,
+          "white_edge_fraction": 0.01732843,
+          "white_fraction": 0.42227313
+        },
+        {
+          "clip_frame_index": 728,
+          "dark_occlusion_fraction": 0.00014468,
+          "hough_line_count": 724.0,
+          "score": 538.161533,
+          "white_edge_fraction": 0.01679741,
+          "white_fraction": 0.42417535
+        },
+        {
+          "clip_frame_index": 946,
+          "dark_occlusion_fraction": 0.00870811,
+          "hough_line_count": 985.0,
+          "score": 503.683177,
+          "white_edge_fraction": 0.01621817,
+          "white_fraction": 0.39264457
+        },
+        {
+          "clip_frame_index": 1164,
+          "dark_occlusion_fraction": 0.00018601,
+          "hough_line_count": 859.0,
+          "score": 537.225714,
+          "white_edge_fraction": 0.01692548,
+          "white_fraction": 0.42259945
+        }
+      ],
+      "selection_heuristic": "Longest materialized non-held-out rally clip for the source; sampled five in-clip frames and chose the frame with the highest white-line/edge score minus a near-camera dark-occlusion penalty.",
+      "selection_score": 538.914067,
+      "source_channel": "Rich Pickleball",
+      "source_frame_count": 17302,
+      "source_id": "_L0HVmAlCQI",
+      "source_title": "Lily / Glenn vs Rich Half-court vs Full-court Oct 19th Pickleball match play",
+      "width": 1920
+    }
+  ],
+  "source_count_conflict": {
+    "present": true,
+    "summary": "The current corpus card has 8 downloaded/corpus sources total, and two of those are the explicitly excluded held-out proposals. The legal non-held-out set is 6."
+  },
+  "status": "partial_source_count",
+  "task_layout": "single_image_task_all_legal_sources",
+  "task_layout_justification": "One image task minimizes owner import/export clicks while filenames and manifest rows preserve source provenance.",
+  "task_name": "racketsport_metric15_court_keypoints_20260707_6frames"
+}

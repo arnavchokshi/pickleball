@@ -1,0 +1,66 @@
+{
+  "artifact_type": "racketsport_metric15_court_keypoint_taskset_validation",
+  "errors": [],
+  "expected_non_heldout_source_count": 8,
+  "heldout_clean": true,
+  "package_zip_entries": [
+    "73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+    "Ezz6HDNHlnk__Ezz6HDNHlnk_rally_0004__abs_010677.png",
+    "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195.png",
+    "_L0HVmAlCQI___L0HVmAlCQI_rally_0001__abs_000509.png",
+    "wBu8bC4OfUY__wBu8bC4OfUY_rally_0001__abs_010248.png",
+    "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636.png"
+  ],
+  "preview_checks": [
+    {
+      "absolute_frame_index_in_range": true,
+      "clip_frame_index_in_range": true,
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195.png",
+      "renders": true,
+      "source_id": "HyUqT7zFiwk"
+    },
+    {
+      "absolute_frame_index_in_range": true,
+      "clip_frame_index_in_range": true,
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+      "renders": true,
+      "source_id": "73VurrTKCZ8"
+    },
+    {
+      "absolute_frame_index_in_range": true,
+      "clip_frame_index_in_range": true,
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/wBu8bC4OfUY__wBu8bC4OfUY_rally_0001__abs_010248.png",
+      "renders": true,
+      "source_id": "wBu8bC4OfUY"
+    },
+    {
+      "absolute_frame_index_in_range": true,
+      "clip_frame_index_in_range": true,
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/Ezz6HDNHlnk__Ezz6HDNHlnk_rally_0004__abs_010677.png",
+      "renders": true,
+      "source_id": "Ezz6HDNHlnk"
+    },
+    {
+      "absolute_frame_index_in_range": true,
+      "clip_frame_index_in_range": true,
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636.png",
+      "renders": true,
+      "source_id": "zwCtH_i1_S4"
+    },
+    {
+      "absolute_frame_index_in_range": true,
+      "clip_frame_index_in_range": true,
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/_L0HVmAlCQI___L0HVmAlCQI_rally_0001__abs_000509.png",
+      "renders": true,
+      "source_id": "_L0HVmAlCQI"
+    }
+  ],
+  "preview_pngs_render": 6,
+  "repo_cvat_tooling_applicability": "Existing repo CVAT validators target video ball/person review packages. This image point-label taskset is checked against the repo metric-15 keypoint schema constants and package/preview/frame-range invariants here.",
+  "schema_version": 1,
+  "selected_frame_count": 6,
+  "status": "partial_source_count",
+  "warnings": [
+    "source_count_target_missed: selected 6 legal frames, lane target was 8"
+  ]
+}

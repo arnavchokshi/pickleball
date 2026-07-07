@@ -91,6 +91,34 @@ def _native2d_payload() -> dict[str, object]:
     }
 
 
+def _per_foot_native2d_payload() -> dict[str, object]:
+    frames = []
+    for frame_idx in range(12):
+        frames.append(
+            {
+                "frame_idx": frame_idx,
+                "t": frame_idx / 30.0,
+                "joints": [
+                    {"name": "left_ankle", "x_px": 1050.0, "y_px": 1050.0, "conf": 9.0},
+                    {"name": "left_heel", "x_px": 1050.0, "y_px": 1050.0, "conf": 9.0},
+                    {"name": "left_big_toe", "x_px": 1050.0, "y_px": 1050.0, "conf": 9.0},
+                    {"name": "left_small_toe", "x_px": 1050.0, "y_px": 1050.0, "conf": 9.0},
+                    {"name": "right_ankle", "x_px": 1050.0 + frame_idx * 4.0, "y_px": 1050.0, "conf": 9.0},
+                    {"name": "right_heel", "x_px": 1050.0 + frame_idx * 4.0, "y_px": 1050.0, "conf": 9.0},
+                    {"name": "right_big_toe", "x_px": 1050.0 + frame_idx * 4.0, "y_px": 1050.0, "conf": 9.0},
+                    {"name": "right_small_toe", "x_px": 1050.0 + frame_idx * 4.0, "y_px": 1050.0, "conf": 9.0},
+                ],
+            }
+        )
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_keypoints_2d",
+        "clip": "test_clip",
+        "model": "body-keypoints-test",
+        "players": [{"id": 1, "frames": frames}],
+    }
+
+
 def _sam3d_sidecar_payload() -> dict[str, object]:
     return {
         "schema_version": 1,
@@ -503,32 +531,94 @@ def test_rewrite_tracks_emits_native_stance_from_low_speed_dwell_without_externa
     placement = json.loads(placement_path.read_text(encoding="utf-8"))
     placement_frames = placement["players"][0]["frames"]
     stance_frames = [frame for frame in placement_frames if frame["stance"]]
-    coverage = len(stance_frames) / len(placement_frames)
-    stance_frame_indices = {frame["frame_idx"] for frame in stance_frames}
-    pair_speeds = []
-    for left, right in zip(placement_frames, placement_frames[1:], strict=False):
-        if left["frame_idx"] not in stance_frame_indices or right["frame_idx"] not in stance_frame_indices:
-            continue
-        dt = (right["frame_idx"] - left["frame_idx"]) / 30.0
-        pair_speeds.append(
-            np.linalg.norm(np.array(right["smoothed_world_xy"]) - np.array(left["smoothed_world_xy"])) / dt
-        )
 
     assert placement["provenance"]["stance_phases"] is None
     assert placement["provenance"]["stance_phase_count"] > 0
     assert placement["provenance"]["stance_detection"]["players"]["1"]["native_phase_count"] == 2
+    assert placement["provenance"]["stance_detection"]["players"]["1"]["body_lock_stance_frame_count"] == 0
     phases = json.loads(phases_out_path.read_text(encoding="utf-8"))
     assert phases["artifact_type"] == "foot_contact_phases"
     assert phases["source_kind"] == "placement_low_speed_stance"
     assert phases["source_phase_count"] == placement["provenance"]["stance_phase_count"]
-    assert phases["phase_count"] == placement["provenance"]["stance_phase_count"] * 2
-    assert phases["phases"]
-    assert all(phase["frame_indices"] for phase in phases["phases"])
-    assert {phase["foot"] for phase in phases["phases"]} == {"left", "right"}
-    assert {phase["foot_assignment"] for phase in phases["phases"]} == {"bilateral_from_player_stance"}
-    assert 0.15 <= coverage <= 0.80
-    assert pair_speeds
-    assert max(pair_speeds) <= PlacementConfig().stance_speed_mps
+    assert phases["phase_count"] == 0
+    assert phases["rejected_phase_count"] == placement["provenance"]["stance_phase_count"]
+    assert phases["phases"] == []
+    assert {phase["reason"] for phase in phases["rejected_phases"]} == {"weak_bilateral_unknown_foot"}
+    assert stance_frames == []
+
+
+def test_rewrite_tracks_emits_confident_per_foot_phase_when_keypoint_support_agrees(tmp_path: Path) -> None:
+    tracks_path = tmp_path / "tracks.json"
+    calibration_path = tmp_path / "court_calibration.json"
+    keypoints_path = tmp_path / "keypoints_2d.json"
+    placement_path = tmp_path / "placement.json"
+    phases_out_path = tmp_path / "foot_contact_phases.json"
+    _write_json(tracks_path, _tracks_payload())
+    _write_json(calibration_path, _calibration_payload())
+    _write_json(keypoints_path, _per_foot_native2d_payload())
+
+    rewrite_tracks_with_placement(
+        tracks_path=tracks_path,
+        calibration_path=calibration_path,
+        placement_path=placement_path,
+        native2d_keypoints_path=keypoints_path,
+        foot_contact_phases_out_path=phases_out_path,
+        config=PlacementConfig(vote_min=3, keypoint_base_sigma_px=1.0, bbox_base_sigma_px=200.0),
+    )
+
+    phases = json.loads(phases_out_path.read_text(encoding="utf-8"))
+    assert phases["phase_count"] == 1
+    phase = phases["phases"][0]
+    assert phase["foot"] == "left"
+    assert phase["foot_assignment"] == "per_foot_keypoint_support"
+    assert phase["source_phase_foot"] == "left"
+    assert phase["min_confidence"] == pytest.approx(1.0)
+    assert phase["max_height_m"] == pytest.approx(0.0)
+    assert phase["max_speed_mps"] <= PlacementConfig().keypoint_stance_speed_mps
+    assert phase["source_thresholds"]["keypoint_stance_speed_mps"] == pytest.approx(
+        PlacementConfig().keypoint_stance_speed_mps
+    )
+    assert phase["weak"] is False
+    assert phase["demoted"] is False
+    assert all(item["foot_assignment"] != "bilateral_from_player_stance" for item in phases["phases"])
+    placement = json.loads(placement_path.read_text(encoding="utf-8"))
+    phase_frames = set(phase["frame_indices"])
+    assert any(
+        frame["stance"] and frame["frame_idx"] in phase_frames
+        for frame in placement["players"][0]["frames"]
+    )
+
+
+def test_foot_phase_artifact_output_does_not_change_placement_or_track_roots(tmp_path: Path) -> None:
+    def _run(run_dir: Path, *, write_phases: bool) -> tuple[list[list[float]], list[list[float]]]:
+        tracks_path = run_dir / "tracks.json"
+        calibration_path = run_dir / "court_calibration.json"
+        keypoints_path = run_dir / "keypoints_2d.json"
+        placement_path = run_dir / "placement.json"
+        phases_out_path = run_dir / "foot_contact_phases.json"
+        run_dir.mkdir()
+        _write_json(tracks_path, _tracks_payload())
+        _write_json(calibration_path, _calibration_payload())
+        _write_json(keypoints_path, _per_foot_native2d_payload())
+        rewrite_tracks_with_placement(
+            tracks_path=tracks_path,
+            calibration_path=calibration_path,
+            placement_path=placement_path,
+            native2d_keypoints_path=keypoints_path,
+            foot_contact_phases_out_path=phases_out_path if write_phases else None,
+            config=PlacementConfig(vote_min=3, keypoint_base_sigma_px=1.0, bbox_base_sigma_px=200.0),
+        )
+        tracks = json.loads(tracks_path.read_text(encoding="utf-8"))
+        placement = json.loads(placement_path.read_text(encoding="utf-8"))
+        return (
+            [frame["world_xy"] for frame in tracks["players"][0]["frames"]],
+            [frame["smoothed_world_xy"] for frame in placement["players"][0]["frames"]],
+        )
+
+    without_phases = _run(tmp_path / "without", write_phases=False)
+    with_phases = _run(tmp_path / "with", write_phases=True)
+
+    assert with_phases == without_phases
 
 
 def test_rejected_out_of_bounds_gap_does_not_become_smoothing_measurement(tmp_path: Path) -> None:

@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <id>2406148</id>
+      <name>73VurrTKCZ8_rally_0002</name>
+      <size>81</size>
+      <mode>interpolation</mode>
+      <overlap>0</overlap>
+      <bugtracker></bugtracker>
+      <created>2026-07-07 06:16:09.805458+00:00</created>
+      <updated>2026-07-07 06:22:40.881365+00:00</updated>
+      <subset>default</subset>
+      <start_frame>0</start_frame>
+      <stop_frame>2720</stop_frame>
+      <frame_filter>step=34</frame_filter>
+      <segments>
+        <segment>
+          <id>4201779</id>
+          <start>0</start>
+          <stop>80</stop>
+          <url>https://app.cvat.ai/api/tasks/2406148/dataset/export/api/jobs/4203742</url>
+        </segment>
+      </segments>
+      <owner>
+        <username>achokshi38</username>
+        <email>chokshi.arnav@gmail.com</email>
+      </owner>
+      <assignee></assignee>
+      <labels>
+        <label>
+          <name>ball</name>
+          <color>#804080</color>
+          <type>rectangle</type>
+          <attributes>
+            <attribute>
+              <name>visibility_level</name>
+              <mutable>False</mutable>
+              <input_type>select</input_type>
+              <default_value>clear</default_value>
+              <values>clear
+partial
+full
+out_of_frame</values>
+            </attribute>
+          </attributes>
+        </label>
+      </labels>
+      <original_size>
+        <width>1920</width>
+        <height>1080</height>
+      </original_size>
+      <source>73VurrTKCZ8_rally_0002.mp4</source>
+    </task>
+    <dumped>2026-07-07 06:22:52.424163+00:00</dumped>
+  </meta>
+  <track id="0" label="ball" source="manual">
+    <box frame="0" keyframe="1" outside="0" occluded="0" xtl="741.86" ytl="506.06" xbr="762.23" ybr="523.04" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="34" keyframe="1" outside="1" occluded="0" xtl="741.86" ytl="506.06" xbr="762.23" ybr="523.04" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="1" label="ball" source="manual">
+    <box frame="34" keyframe="1" outside="0" occluded="0" xtl="402.34" ytl="670.73" xbr="429.50" ybr="697.89" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="68" keyframe="1" outside="1" occluded="0" xtl="402.34" ytl="670.73" xbr="429.50" ybr="697.89" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="2" label="ball" source="manual">
+    <box frame="68" keyframe="1" outside="0" occluded="0" xtl="1274.91" ytl="356.67" xbr="1288.49" ybr="378.74" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="102" keyframe="1" outside="1" occluded="0" xtl="1274.91" ytl="356.67" xbr="1288.49" ybr="378.74" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="3" label="ball" source="manual">
+    <box frame="102" keyframe="1" outside="1" occluded="0" xtl="1459.95" ytl="567.18" xbr="1483.72" ybr="602.83" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="4" label="ball" source="manual">
+    <box frame="136" keyframe="1" outside="1" occluded="0" xtl="1807.96" ytl="674.13" xbr="1826.64" ybr="706.38" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="5" label="ball" source="manual">
+    <box frame="136" keyframe="1" outside="0" occluded="0" xtl="1809.66" ytl="679.22" xbr="1838.52" ybr="702.99" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="170" keyframe="1" outside="1" occluded="0" xtl="1809.66" ytl="679.22" xbr="1838.52" ybr="702.99" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="6" label="ball" source="manual">
+    <box frame="238" keyframe="1" outside="0" occluded="0" xtl="1682.34" ytl="687.71" xbr="1726.48" ybr="731.85" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="272" keyframe="1" outside="1" occluded="0" xtl="1682.34" ytl="687.71" xbr="1726.48" ybr="731.85" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="7" label="ball" source="manual">
+    <box frame="306" keyframe="1" outside="0" occluded="0" xtl="1015.18" ytl="543.41" xbr="1049.13" ybr="579.06" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="340" keyframe="1" outside="1" occluded="0" xtl="1015.18" ytl="543.41" xbr="1049.13" ybr="579.06" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="8" label="ball" source="manual">
+    <box frame="340" keyframe="1" outside="0" occluded="0" xtl="578.89" ytl="451.74" xbr="619.63" ybr="480.60" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="374" keyframe="1" outside="1" occluded="0" xtl="578.89" ytl="451.74" xbr="619.63" ybr="480.60" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="9" label="ball" source="manual">
+    <box frame="374" keyframe="1" outside="0" occluded="0" xtl="1263.03" ytl="551.90" xbr="1308.86" ybr="601.13" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="408" keyframe="1" outside="1" occluded="0" xtl="1263.03" ytl="551.90" xbr="1308.86" ybr="601.13" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="10" label="ball" source="manual">
+    <box frame="442" keyframe="1" outside="0" occluded="0" xtl="903.14" ytl="629.99" xbr="933.69" ybr="660.55" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="476" keyframe="1" outside="1" occluded="0" xtl="903.14" ytl="629.99" xbr="933.69" ybr="660.55" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="11" label="ball" source="manual">
+    <box frame="476" keyframe="1" outside="0" occluded="0" xtl="471.94" ytl="477.20" xbr="497.41" ybr="499.27" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="510" keyframe="1" outside="1" occluded="0" xtl="471.94" ytl="477.20" xbr="497.41" ybr="499.27" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="12" label="ball" source="manual">
+    <box frame="510" keyframe="1" outside="0" occluded="0" xtl="1446.37" ytl="764.10" xbr="1507.49" ybr="833.70" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="544" keyframe="1" outside="1" occluded="0" xtl="1446.37" ytl="764.10" xbr="1507.49" ybr="833.70" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="13" label="ball" source="manual">
+    <box frame="578" keyframe="1" outside="0" occluded="0" xtl="1161.17" ytl="460.23" xbr="1193.43" ybr="516.25" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="612" keyframe="1" outside="1" occluded="0" xtl="1161.17" ytl="460.23" xbr="1193.43" ybr="516.25" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="14" label="ball" source="manual">
+    <box frame="612" keyframe="1" outside="0" occluded="0" xtl="714.70" ytl="536.62" xbr="760.54" ybr="579.06" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="646" keyframe="1" outside="1" occluded="0" xtl="714.70" ytl="536.62" xbr="760.54" ybr="579.06" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="15" label="ball" source="manual">
+    <box frame="714" keyframe="1" outside="0" occluded="0" xtl="974.43" ytl="487.39" xbr="1004.99" ybr="511.16" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="748" keyframe="1" outside="1" occluded="0" xtl="974.43" ytl="487.39" xbr="1004.99" ybr="511.16" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="16" label="ball" source="manual">
+    <box frame="782" keyframe="1" outside="0" occluded="0" xtl="1621.23" ytl="553.60" xbr="1651.78" ybr="587.55" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="816" keyframe="1" outside="1" occluded="0" xtl="1621.23" ytl="553.60" xbr="1651.78" ybr="587.55" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="17" label="ball" source="manual">
+    <box frame="918" keyframe="1" outside="0" occluded="0" xtl="585.68" ytl="521.34" xbr="617.94" ybr="556.99" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="952" keyframe="1" outside="1" occluded="0" xtl="585.68" ytl="521.34" xbr="617.94" ybr="556.99" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="18" label="ball" source="manual">
+    <box frame="952" keyframe="1" outside="0" occluded="0" xtl="1117.03" ytl="439.86" xbr="1137.41" ybr="460.23" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="986" keyframe="1" outside="1" occluded="0" xtl="1117.03" ytl="439.86" xbr="1137.41" ybr="460.23" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="19" label="ball" source="manual">
+    <box frame="1020" keyframe="1" outside="0" occluded="0" xtl="1804.57" ytl="619.80" xbr="1850.40" ybr="662.24" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1054" keyframe="1" outside="1" occluded="0" xtl="1804.57" ytl="619.80" xbr="1850.40" ybr="662.24" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="20" label="ball" source="manual">
+    <box frame="1054" keyframe="1" outside="0" occluded="0" xtl="1188.33" ytl="565.48" xbr="1217.19" ybr="594.34" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1088" keyframe="1" outside="1" occluded="0" xtl="1188.33" ytl="565.48" xbr="1217.19" ybr="594.34" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="21" label="ball" source="manual">
+    <box frame="1156" keyframe="1" outside="0" occluded="0" xtl="1789.29" ytl="619.80" xbr="1816.45" ybr="653.76" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1190" keyframe="1" outside="1" occluded="0" xtl="1789.29" ytl="619.80" xbr="1816.45" ybr="653.76" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="22" label="ball" source="manual">
+    <box frame="1224" keyframe="1" outside="0" occluded="0" xtl="1063.76" ytl="415.44" xbr="1097.71" ybr="440.90" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1258" keyframe="1" outside="1" occluded="0" xtl="1063.76" ytl="415.44" xbr="1097.71" ybr="440.90" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="23" label="ball" source="manual">
+    <box frame="1258" keyframe="1" outside="0" occluded="0" xtl="914.94" ytl="356.59" xbr="943.30" ybr="384.94" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1292" keyframe="1" outside="1" occluded="0" xtl="914.94" ytl="356.59" xbr="943.30" ybr="384.94" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="24" label="ball" source="manual">
+    <box frame="1292" keyframe="1" outside="0" occluded="0" xtl="1155.95" ytl="441.65" xbr="1189.76" ybr="482.00" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1326" keyframe="1" outside="1" occluded="0" xtl="1155.95" ytl="441.65" xbr="1189.76" ybr="482.00" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="25" label="ball" source="manual">
+    <box frame="1326" keyframe="1" outside="0" occluded="0" xtl="970.56" ytl="563.79" xbr="990.19" ybr="591.05" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1360" keyframe="1" outside="1" occluded="0" xtl="970.56" ytl="563.79" xbr="990.19" ybr="591.05" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="26" label="ball" source="manual">
+    <box frame="1360" keyframe="1" outside="0" occluded="0" xtl="833.15" ytl="514.71" xbr="857.14" ybr="541.98" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1394" keyframe="1" outside="1" occluded="0" xtl="833.15" ytl="514.71" xbr="857.14" ybr="541.98" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="27" label="ball" source="manual">
+    <box frame="1428" keyframe="1" outside="0" occluded="0" xtl="811.34" ytl="654.30" xbr="847.33" ybr="687.02" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1462" keyframe="1" outside="1" occluded="0" xtl="811.34" ytl="654.30" xbr="847.33" ybr="687.02" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="28" label="ball" source="manual">
+    <box frame="1530" keyframe="1" outside="0" occluded="0" xtl="1000.19" ytl="444.94" xbr="1028.85" ybr="491.51" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1564" keyframe="1" outside="1" occluded="0" xtl="1000.19" ytl="444.94" xbr="1028.85" ybr="491.51" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="29" label="ball" source="manual">
+    <box frame="1564" keyframe="1" outside="0" occluded="0" xtl="869.44" ytl="450.32" xbr="907.05" ybr="493.30" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1598" keyframe="1" outside="1" occluded="0" xtl="869.44" ytl="450.32" xbr="907.05" ybr="493.30" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="30" label="ball" source="manual">
+    <box frame="1598" keyframe="1" outside="0" occluded="0" xtl="837.20" ytl="505.84" xbr="894.51" ybr="561.36" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1632" keyframe="1" outside="1" occluded="0" xtl="837.20" ytl="505.84" xbr="894.51" ybr="561.36" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="31" label="ball" source="manual">
+    <box frame="1632" keyframe="1" outside="0" occluded="0" xtl="498.68" ytl="498.68" xbr="563.16" ybr="541.66" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1666" keyframe="1" outside="1" occluded="0" xtl="498.68" ytl="498.68" xbr="563.16" ybr="541.66" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="32" label="ball" source="manual">
+    <box frame="1666" keyframe="1" outside="0" occluded="0" xtl="466.44" ytl="611.52" xbr="491.51" ybr="631.22" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1700" keyframe="1" outside="1" occluded="0" xtl="466.44" ytl="611.52" xbr="491.51" ybr="631.22" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="33" label="ball" source="manual">
+    <box frame="1734" keyframe="1" outside="0" occluded="0" xtl="1190.03" ytl="492.48" xbr="1234.17" ybr="533.23" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1768" keyframe="1" outside="1" occluded="0" xtl="1190.03" ytl="492.48" xbr="1234.17" ybr="533.23" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="34" label="ball" source="manual">
+    <box frame="1768" keyframe="1" outside="0" occluded="0" xtl="724.89" ytl="465.32" xbr="767.33" ybr="506.06" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1802" keyframe="1" outside="1" occluded="0" xtl="724.89" ytl="465.32" xbr="767.33" ybr="506.06" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="35" label="ball" source="manual">
+    <box frame="1836" keyframe="1" outside="0" occluded="0" xtl="746.95" ytl="601.13" xbr="791.09" ybr="640.17" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1870" keyframe="1" outside="1" occluded="0" xtl="746.95" ytl="601.13" xbr="791.09" ybr="640.17" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="36" label="ball" source="manual">
+    <box frame="1938" keyframe="1" outside="0" occluded="0" xtl="230.88" ytl="572.27" xbr="269.93" ybr="604.52" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1972" keyframe="1" outside="1" occluded="0" xtl="230.88" ytl="572.27" xbr="269.93" ybr="604.52" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="37" label="ball" source="manual">
+    <box frame="1972" keyframe="1" outside="0" occluded="0" xtl="385.36" ytl="519.64" xbr="410.83" ybr="550.20" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2006" keyframe="1" outside="1" occluded="0" xtl="385.36" ytl="519.64" xbr="410.83" ybr="550.20" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="38" label="ball" source="manual">
+    <box frame="2006" keyframe="1" outside="0" occluded="0" xtl="590.77" ytl="592.64" xbr="631.52" ybr="631.69" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2040" keyframe="1" outside="1" occluded="0" xtl="590.77" ytl="592.64" xbr="631.52" ybr="631.69" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="39" label="ball" source="manual">
+    <box frame="2040" keyframe="1" outside="0" occluded="0" xtl="468.55" ytl="660.55" xbr="507.59" ybr="706.38" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2074" keyframe="1" outside="1" occluded="0" xtl="468.55" ytl="660.55" xbr="507.59" ybr="706.38" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="40" label="ball" source="manual">
+    <box frame="2074" keyframe="1" outside="0" occluded="0" xtl="926.90" ytl="660.55" xbr="967.64" ybr="702.99" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2108" keyframe="1" outside="1" occluded="0" xtl="926.90" ytl="660.55" xbr="967.64" ybr="702.99" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="41" label="ball" source="manual">
+    <box frame="2244" keyframe="1" outside="0" occluded="0" xtl="877.67" ytl="361.77" xbr="915.02" ybr="397.42" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2278" keyframe="1" outside="1" occluded="0" xtl="877.67" ytl="361.77" xbr="915.02" ybr="397.42" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="42" label="ball" source="manual">
+    <box frame="2278" keyframe="1" outside="0" occluded="0" xtl="291.99" ytl="648.66" xbr="334.43" ybr="691.10" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2312" keyframe="1" outside="1" occluded="0" xtl="291.99" ytl="648.66" xbr="334.43" ybr="691.10" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="43" label="ball" source="manual">
+    <box frame="2346" keyframe="1" outside="0" occluded="0" xtl="729.98" ytl="628.29" xbr="769.02" ybr="670.73" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2380" keyframe="1" outside="1" occluded="0" xtl="729.98" ytl="628.29" xbr="769.02" ybr="670.73" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="44" label="ball" source="manual">
+    <box frame="2380" keyframe="1" outside="0" occluded="0" xtl="1397.14" ytl="750.52" xbr="1441.28" ybr="791.26" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2414" keyframe="1" outside="1" occluded="0" xtl="1397.14" ytl="750.52" xbr="1441.28" ybr="791.26" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="45" label="ball" source="manual">
+    <box frame="2482" keyframe="1" outside="0" occluded="0" xtl="1066.11" ytl="475.51" xbr="1098.36" ybr="506.06" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2516" keyframe="1" outside="1" occluded="0" xtl="1066.11" ytl="475.51" xbr="1098.36" ybr="506.06" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="46" label="ball" source="manual">
+    <box frame="2516" keyframe="1" outside="0" occluded="0" xtl="1013.48" ytl="446.65" xbr="1035.55" ybr="475.51" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2550" keyframe="1" outside="1" occluded="0" xtl="1013.48" ytl="446.65" xbr="1035.55" ybr="475.51" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="47" label="ball" source="manual">
+    <box frame="2686" keyframe="1" outside="0" occluded="0" xtl="1213.80" ytl="723.36" xbr="1273.21" ybr="762.40" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2720" keyframe="1" outside="1" occluded="0" xtl="1213.80" ytl="723.36" xbr="1273.21" ybr="762.40" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="48" label="ball" source="manual">
+    <box frame="2720" keyframe="1" outside="0" occluded="0" xtl="650.19" ytl="467.02" xbr="684.14" ybr="489.09" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+</annotations>

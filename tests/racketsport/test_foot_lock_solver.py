@@ -5,7 +5,7 @@ import copy
 import pytest
 
 from tests.racketsport.test_foot_contact import JOINT_NAMES_65, _frame
-from threed.racketsport.foot_contact import ContactThresholds, detect_contact_phases, measure_contact_metrics
+from threed.racketsport.foot_contact import ContactPhase, ContactThresholds, detect_contact_phases, measure_contact_metrics
 from threed.racketsport.foot_lock_solver import FootLockSolverSettings, solve_foot_lock
 
 
@@ -68,3 +68,31 @@ def test_solve_foot_lock_clamps_penetrating_foot_joints_even_without_contact_pha
     assert metrics.penetration.max_penetration_mm == pytest.approx(0.0)
     assert result.frames[0].joints_world[15][2] == pytest.approx(0.0)
     assert result.frames[0].joints_world[0] == frames[0].joints_world[0]
+
+
+def test_solve_foot_lock_demotes_weak_unknown_phase_evidence():
+    frames = [
+        _frame(0, left_x=0.000, left_z=0.000),
+        _frame(1, left_x=0.040, left_z=0.000),
+        _frame(2, left_x=0.080, left_z=0.000),
+    ]
+    weak_phase = ContactPhase(
+        player_id="p1",
+        foot="left",
+        frame_indices=(0, 1, 2),
+        start_time_s=0.0,
+        end_time_s=2 / 30.0,
+        anchor_position_xyz=(0.0, 0.0, 0.0),
+        max_height_m=0.0,
+        max_speed_mps=1.2,
+        min_confidence=0.0,
+        foot_assignment="bilateral_from_player_stance",
+        weak=True,
+        demoted=True,
+        rejection_reason="weak_bilateral_unknown_foot",
+    )
+
+    result = solve_foot_lock(frames, [weak_phase], joint_names=JOINT_NAMES_65)
+
+    assert result.frame_corrections == []
+    assert [frame.joints_world for frame in result.frames] == [frame.joints_world for frame in frames]

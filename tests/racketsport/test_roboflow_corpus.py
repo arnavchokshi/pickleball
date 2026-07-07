@@ -12,7 +12,11 @@ pytest.importorskip("torch")
 
 from threed.racketsport.roboflow_corpus import (
     ADJACENT_SPORT_SLUGS,
+    ProtectedEvalHashCollisionError,
+    RoboflowBallPretrainDataset,
     aggregate_roboflow_corpus,
+    file_sha256,
+    image_dhash,
     load_smoke_samples,
     normalize_dataset_entry,
 )
@@ -210,6 +214,244 @@ def test_scaffold_index_covers_aggregate_roboflow_corpus_cli() -> None:
     assert by_path[CLI_PATH]["direct_cli_reference_test"] == "tests/racketsport/test_roboflow_corpus.py"
 
 
+def test_ball_pretrain_dataset_resolves_index_paths_and_uses_unknown_visibility_weight(tmp_path: Path) -> None:
+    image = tmp_path / "source" / "train" / "frame_000001.jpg"
+    _write_image(image, color=(20, 80, 140))
+    corpus_index = tmp_path / "aggregated" / "corpus_index.json"
+    _write_ball_corpus_index(
+        corpus_index,
+        [
+            _ball_sample(
+                sample_id="core:train:1",
+                image_path=image,
+                split="train",
+                bucket="core_pickleball",
+                xy=[11.0, 13.0],
+                temporal={"kind": "isolated_still", "sequence_id": None, "sequence_order": None},
+            )
+        ],
+    )
+
+    dataset = RoboflowBallPretrainDataset(
+        corpus_index,
+        split_role="train",
+        image_size=(32, 32),
+        frames_in=3,
+        protected_eval_hashes={"synthetic": [0xFFFFFFFFFFFFFFFF]},
+        expected_protected_eval_hash_count=1,
+        skip_list_path=tmp_path / "skip_list.json",
+    )
+    item = dataset[0]
+
+    assert dataset.summary["selected_sample_count"] == 1
+    assert dataset.summary["visibility_policy"]["unknown_visibility_wbce_weight"] == 1
+    assert item["sample_id"] == "core:train:1"
+    assert item["image_path"] == str(image)
+    assert tuple(item["input"].shape) == (9, 32, 32)
+    assert tuple(item["target"].shape) == (1, 32, 32)
+    assert item["visibility_level"] is None
+    assert float(item["wbce_weight"]) == pytest.approx(1.0)
+    assert item["temporal_sample_kind"] == "still_aux_repeated"
+    assert item["window_sample_ids"] == ["core:train:1", "core:train:1", "core:train:1"]
+    assert json.loads((tmp_path / "skip_list.json").read_text(encoding="utf-8"))["skip_count"] == 0
+
+
+def test_ball_pretrain_dataset_rewrites_absolute_image_roots_for_vm_paths(tmp_path: Path) -> None:
+    vm_root = tmp_path / "vm_checkout"
+    actual_image = vm_root / "data" / "roboflow_universe_20260706" / "source" / "train" / "frame_000001.jpg"
+    _write_image(actual_image, color=(30, 90, 150))
+    old_image_path = Path("/Users/arnavchokshi/Desktop/pickleball") / actual_image.relative_to(vm_root)
+    sample = _ball_sample(
+        sample_id="core:train:rewritten",
+        image_path=actual_image,
+        split="train",
+        bucket="core_pickleball",
+        xy=[11.0, 13.0],
+        temporal={"kind": "isolated_still", "sequence_id": None, "sequence_order": None},
+    )
+    sample["image_path"] = str(old_image_path)
+    corpus_index = tmp_path / "aggregated" / "corpus_index.json"
+    _write_ball_corpus_index(corpus_index, [sample])
+
+    dataset = RoboflowBallPretrainDataset(
+        corpus_index,
+        split_role="train",
+        image_size=(32, 32),
+        frames_in=3,
+        protected_eval_hashes={"synthetic": [0xFFFFFFFFFFFFFFFF]},
+        expected_protected_eval_hash_count=1,
+        skip_list_path=tmp_path / "skip_list.json",
+        image_path_rewrites={"/Users/arnavchokshi/Desktop/pickleball": str(vm_root)},
+    )
+    item = dataset[0]
+
+    assert item["image_path"] == str(actual_image)
+    assert dataset.summary["image_path_rewrites"] == {
+        "/Users/arnavchokshi/Desktop/pickleball": str(vm_root)
+    }
+
+
+def test_ball_pretrain_dataset_uses_corpus_card_leakage_summary_by_default(tmp_path: Path) -> None:
+    image = tmp_path / "source" / "train" / "frame_000001.jpg"
+    _write_image(image, color=(40, 90, 130))
+    corpus_index = tmp_path / "aggregated" / "corpus_index.json"
+    sample = _ball_sample(
+        sample_id="core:train:card",
+        image_path=image,
+        split="train",
+        bucket="core_pickleball",
+        xy=[11.0, 13.0],
+        temporal={"kind": "isolated_still", "sequence_id": None, "sequence_order": None},
+    )
+    sample["leakage"] = {"eval_collision": False, "collisions": []}
+    _write_ball_corpus_index(corpus_index, [sample])
+    _write_corpus_card(corpus_index.with_name("corpus_card.json"))
+
+    dataset = RoboflowBallPretrainDataset(
+        corpus_index,
+        split_role="train",
+        image_size=(32, 32),
+        frames_in=3,
+        eval_root=tmp_path / "missing_eval_root",
+        skip_list_path=tmp_path / "skip_list.json",
+    )
+
+    assert dataset.summary["protected_eval_hash_check"]["hash_count"] == 35
+    assert dataset.summary["protected_eval_hash_check"]["hash_source"] == str(
+        corpus_index.with_name("corpus_card.json")
+    )
+
+
+def test_ball_pretrain_dataset_fails_loud_on_eval_hash_collision(tmp_path: Path) -> None:
+    image = tmp_path / "source" / "train" / "frame_000001.jpg"
+    _write_image(image, color=(200, 20, 20))
+    collision_hash = image_dhash(image)
+    corpus_index = tmp_path / "aggregated" / "corpus_index.json"
+    _write_ball_corpus_index(
+        corpus_index,
+        [
+            _ball_sample(
+                sample_id="core:train:1",
+                image_path=image,
+                split="train",
+                bucket="core_pickleball",
+                xy=[16.0, 15.0],
+                temporal={"kind": "isolated_still", "sequence_id": None, "sequence_order": None},
+            )
+        ],
+    )
+
+    with pytest.raises(ProtectedEvalHashCollisionError, match="protected eval hash collision"):
+        RoboflowBallPretrainDataset(
+            corpus_index,
+            split_role="train",
+            image_size=(32, 32),
+            frames_in=3,
+            protected_eval_hashes={"eval_clip": [collision_hash]},
+            expected_protected_eval_hash_count=1,
+            skip_list_path=tmp_path / "skip_list.json",
+            collision_hamming_threshold=0,
+        )
+
+
+def test_ball_pretrain_dataset_builds_sequence_windows_and_still_aux_samples(tmp_path: Path) -> None:
+    paths = []
+    for frame in range(3):
+        path = tmp_path / "source" / "train" / f"seq_{frame:06d}.jpg"
+        _write_image(path, color=(20 + frame * 20, 90, 120))
+        paths.append(path)
+    still = tmp_path / "source" / "train" / "still.jpg"
+    _write_image(still, color=(100, 40, 140))
+    corpus_index = tmp_path / "aggregated" / "corpus_index.json"
+    _write_ball_corpus_index(
+        corpus_index,
+        [
+            _ball_sample(
+                sample_id=f"seq:{frame}",
+                image_path=path,
+                split="train",
+                bucket="core_pickleball",
+                xy=[10.0 + frame, 12.0 + frame],
+                temporal={
+                    "kind": "temporal_sequence",
+                    "sequence_id": "seq-a",
+                    "sequence_order": frame,
+                    "frame_number": frame,
+                    "sequence_group_size": 3,
+                },
+            )
+            for frame, path in enumerate(paths)
+        ]
+        + [
+            _ball_sample(
+                sample_id="still:0",
+                image_path=still,
+                split="train",
+                bucket="core_pickleball",
+                xy=[20.0, 21.0],
+                temporal={"kind": "isolated_still", "sequence_id": None, "sequence_order": None},
+            )
+        ],
+    )
+
+    dataset = RoboflowBallPretrainDataset(
+        corpus_index,
+        split_role="train",
+        image_size=(32, 32),
+        frames_in=3,
+        protected_eval_hashes={"synthetic": [0xFFFFFFFFFFFFFFFF]},
+        expected_protected_eval_hash_count=1,
+        skip_list_path=tmp_path / "skip_list.json",
+    )
+    by_id = {dataset[index]["sample_id"]: dataset[index] for index in range(len(dataset))}
+
+    assert by_id["seq:1"]["temporal_sample_kind"] == "sequence_window"
+    assert by_id["seq:1"]["window_sample_ids"] == ["seq:0", "seq:1", "seq:2"]
+    assert by_id["still:0"]["temporal_sample_kind"] == "still_aux_repeated"
+    assert by_id["still:0"]["window_sample_ids"] == ["still:0", "still:0", "still:0"]
+    assert dataset.summary["temporal_sample_counts"] == {
+        "sequence_window": 3,
+        "still_aux_repeated": 1,
+    }
+
+
+def test_ball_pretrain_dataset_applies_core_to_aux_mixing_ratio(tmp_path: Path) -> None:
+    samples = []
+    for index, bucket in enumerate(["core_pickleball", "core_pickleball", "adjacent_sport_aux"], start=1):
+        image = tmp_path / "source" / "train" / f"{bucket}_{index}.jpg"
+        _write_image(image, color=(index * 40, index * 30, index * 20))
+        samples.append(
+            _ball_sample(
+                sample_id=f"{bucket}:{index}",
+                image_path=image,
+                split="train",
+                bucket=bucket,
+                xy=[12.0, 14.0],
+                temporal={"kind": "isolated_still", "sequence_id": None, "sequence_order": None},
+            )
+        )
+    corpus_index = tmp_path / "aggregated" / "corpus_index.json"
+    _write_ball_corpus_index(corpus_index, samples)
+
+    dataset = RoboflowBallPretrainDataset(
+        corpus_index,
+        split_role="train",
+        image_size=(32, 32),
+        frames_in=3,
+        core_to_aux_ratio=2,
+        protected_eval_hashes={"synthetic": [0xFFFFFFFFFFFFFFFF]},
+        expected_protected_eval_hash_count=1,
+        skip_list_path=tmp_path / "skip_list.json",
+    )
+
+    assert [dataset[index]["bucket"] for index in range(len(dataset))] == [
+        "core_pickleball",
+        "core_pickleball",
+        "adjacent_sport_aux",
+    ]
+    assert dataset.summary["mixing"]["core_to_aux_ratio"] == 2
+
+
 def _write_image(path: Path, *, color: tuple[int, int, int]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (64, 48), color=color).save(path)
@@ -280,4 +522,91 @@ def _manifest_entry(slug: str, dataset: Path, count: int) -> dict:
         "local_path": str(dataset),
         "temporal_hint": "likely_video_sequential",
         "temporal_hint_detail": {"hint": "likely_video_sequential"},
+    }
+
+
+def _write_ball_corpus_index(path: Path, samples: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_roboflow_public_pretrain_corpus_index",
+                "index_policy": "index_based_original_image_paths_no_image_copies",
+                "hash": {"collision_hamming_threshold": 3},
+                "sample_count": len(samples),
+                "samples": samples,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_corpus_card(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_roboflow_public_pretrain_corpus_card",
+                "leakage_check": {
+                    "eval_collision_count": 0,
+                    "eval_hash_counts": {
+                        "burlington": 5,
+                        "indoor": 15,
+                        "outdoor": 10,
+                        "wolverine": 5,
+                    },
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _ball_sample(
+    *,
+    sample_id: str,
+    image_path: Path,
+    split: str,
+    bucket: str,
+    xy: list[float],
+    temporal: dict,
+) -> dict:
+    return {
+        "sample_id": sample_id,
+        "source_slug": sample_id.split(":")[0],
+        "bucket": bucket,
+        "split": split,
+        "image_path": str(image_path),
+        "width": 64,
+        "height": 48,
+        "labels": {
+            "ball": [
+                {
+                    "t": 0.0,
+                    "xy": xy,
+                    "conf": 1.0,
+                    "visible": True,
+                    "source_bbox_xywh": [xy[0] - 2.0, xy[1] - 2.0, 4.0, 4.0],
+                    "original_category": "ball",
+                    "annotation_id": 1,
+                }
+            ],
+            "court": [],
+            "other": [],
+            "paddle": [],
+            "person": [],
+        },
+        "label_kinds": ["ball"],
+        "temporal": temporal,
+        "hashes": {
+            "dhash": f"{image_dhash(image_path):016x}",
+            "sha256": file_sha256(image_path),
+        },
     }

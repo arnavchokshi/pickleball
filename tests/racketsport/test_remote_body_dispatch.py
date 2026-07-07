@@ -66,6 +66,155 @@ def _run_mocked_ssh_shell(command: str) -> "subprocess.CompletedProcess[str]":
     )
 
 
+def _run_local_ssh_and_scp(command: list[str], timeout_s: float | None) -> "subprocess.CompletedProcess[str]":
+    if command[0] == "ssh":
+        # macOS test hosts do not provide GNU coreutils `timeout`; the real VM
+        # does. Strip the wrapper in this local SSH fixture so the same remote
+        # shell command can exercise the verifier and fake GPU lock script.
+        return _run_mocked_ssh_shell(command[-1].replace("timeout 3600s ", ""))
+    if command[0] == "scp":
+        source, dest = command[-2], command[-1]
+        if ":" in dest:
+            remote_dest = _scp_remote_path(dest)
+            remote_dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, remote_dest)
+        else:
+            local_dest = Path(dest)
+            local_dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(_scp_remote_path(source), local_dest)
+        return _completed(0)
+    raise AssertionError(f"unexpected command for local ssh/scp fixture: {command}")
+
+
+def _git(repo: Path, *args: str) -> str:
+    completed = subprocess.run(
+        ["git", "-C", str(repo), *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout.strip()
+
+
+def _git_commit(repo: Path, message: str) -> str:
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repo),
+            "-c",
+            "user.email=tests@example.invalid",
+            "-c",
+            "user.name=Tests",
+            "commit",
+            "-m",
+            message,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return _git(repo, "rev-parse", "HEAD")
+
+
+def _write_fake_gpu_eval_lock(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+runner="${2:?runner script path missing}"
+run_dir="$(dirname "$runner")"
+printf '{"event":"script_start","epoch_s":1001.25}\\n'
+cat > "$run_dir/skeleton3d.json" <<'JSON'
+{"schema_version":1,"artifact_type":"racketsport_skeleton3d","fps":30.0,"world_frame":"court_Z0","source_model":"sam3d_body_joints","joint_names":[],"players":[],"provenance":{"source":"fixture"}}
+JSON
+python - "$run_dir" <<'PY'
+import json
+import pathlib
+import sys
+
+run_dir = pathlib.Path(sys.argv[1])
+stamp = json.loads((run_dir / "version_stamp.json").read_text(encoding="utf-8"))
+remote = stamp.get("remote_verification") or {}
+payload = {
+    "schema_version": 1,
+    "artifact_type": "racketsport_remote_sam3d_tier2_dispatch_config",
+    "version_stamp": {
+        "git_head_sha": stamp.get("git_head_sha"),
+        "git_dirty": bool(stamp.get("git_dirty")),
+        "allow_dirty": bool(stamp.get("allow_dirty")),
+        "verified": bool(remote.get("verified")),
+        "verified_at_utc": remote.get("verified_at_utc"),
+        "remote_git_head_sha": remote.get("remote_git_head_sha"),
+    },
+}
+(run_dir / "remote_sam3d_tier2_dispatch_config.json").write_text(json.dumps(payload), encoding="utf-8")
+PY
+exit 0
+""",
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+
+
+def _version_fixture_repos(tmp_path: Path, *, stale_remote: bool) -> tuple[Path, Path]:
+    local_repo = tmp_path / "local_repo"
+    local_repo.mkdir()
+    subprocess.run(["git", "-C", str(local_repo), "init", "-q"], check=True)
+    dispatch_path = local_repo / "scripts" / "racketsport" / "remote_body_dispatch.py"
+    dispatch_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(Path(rbd.__file__).resolve(), dispatch_path)
+    _write_fake_gpu_eval_lock(local_repo / "scripts" / "gpu-eval-run.sh")
+    _git(local_repo, "add", "scripts/racketsport/remote_body_dispatch.py", "scripts/gpu-eval-run.sh")
+    _git_commit(local_repo, "base remote dispatch")
+
+    if stale_remote:
+        remote_repo = tmp_path / "remote_repo"
+        subprocess.run(["git", "clone", "-q", str(local_repo), str(remote_repo)], check=True)
+        dispatch_path.write_text(
+            dispatch_path.read_text(encoding="utf-8") + "\n# local head fixture change\n",
+            encoding="utf-8",
+        )
+        _git(local_repo, "add", "scripts/racketsport/remote_body_dispatch.py")
+        _git_commit(local_repo, "advance local dispatch")
+    else:
+        dispatch_path.write_text(
+            dispatch_path.read_text(encoding="utf-8") + "\n# local head fixture change\n",
+            encoding="utf-8",
+        )
+        _git(local_repo, "add", "scripts/racketsport/remote_body_dispatch.py")
+        _git_commit(local_repo, "advance local dispatch")
+        remote_repo = tmp_path / "remote_repo"
+        subprocess.run(["git", "clone", "-q", str(local_repo), str(remote_repo)], check=True)
+
+    (remote_repo / "body_runtime" / "Fast-SAM-3D-Body").mkdir(parents=True, exist_ok=True)
+    return local_repo, remote_repo
+
+
+def _version_fixture_config(remote_repo: Path) -> rbd.RemoteConfig:
+    return rbd.RemoteConfig(
+        host="fixture@local",
+        repo=str(remote_repo),
+        python=sys.executable,
+        fast_sam_python=sys.executable,
+        fast_sam_root=str(remote_repo / "body_runtime" / "Fast-SAM-3D-Body"),
+        known_hosts_file="",
+        transport="tar_batch",
+        transport_retry_max_attempts=1,
+        transport_retry_backoff_s=0.0,
+    )
+
+
+def _patch_version_fixture_runtime(monkeypatch: pytest.MonkeyPatch, local_repo: Path) -> None:
+    monkeypatch.setattr(rbd, "ROOT", local_repo)
+    monkeypatch.setattr(
+        rbd,
+        "_remote_runtime_critical_files",
+        lambda _repo_root=None: ("scripts/racketsport/remote_body_dispatch.py",),
+        raising=False,
+    )
+
+
 def _clip_dir_with_tracks(tmp_path: Path) -> Path:
     clip_dir = tmp_path / "clip"
     clip_dir.mkdir()
@@ -467,6 +616,7 @@ def test_dispatch_body_stage_raises_when_unreachable(tmp_path: Path) -> None:
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
             config=rbd.RemoteConfig(transport="rsync"),
+            allow_dirty=True,
             run=fake_run,
         )
 
@@ -495,6 +645,7 @@ def test_dispatch_body_stage_raises_without_local_tracks(tmp_path: Path) -> None
             clip="wolverine",
             clip_dir=empty_clip_dir,
             video_path=empty_clip_dir / "source.mp4",
+            allow_dirty=True,
             run=fake_run,
         )
     assert call_sequence == ["reachable", "preflight", "mkdir"]
@@ -528,6 +679,7 @@ def test_dispatch_body_stage_reports_lock_busy_on_gpu_lock_wait_exit_code(tmp_pa
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
             config=rbd.RemoteConfig(transport="rsync"),
+            allow_dirty=True,
             run=fake_run,
         )
     assert "remote_command" in steps
@@ -555,6 +707,7 @@ def test_dispatch_body_stage_reports_command_budget_exceeded_on_timeout_exit_cod
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
             config=rbd.RemoteConfig(transport="rsync"),
+            allow_dirty=True,
             run=fake_run,
         )
     message = str(exc_info.value)
@@ -583,6 +736,7 @@ def test_dispatch_body_stage_bounds_local_ssh_wait_and_reports_hang(tmp_path: Pa
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
             config=config,
+            allow_dirty=True,
             run=fake_run,
         )
     # the local subprocess guard sits slightly above the remote-side budget.
@@ -622,6 +776,7 @@ def test_dispatch_body_stage_success_syncs_outputs_back(tmp_path: Path) -> None:
         clip_dir=clip_dir,
         video_path=clip_dir / "source.mp4",
         config=rbd.RemoteConfig(fetch_body_monoliths=True, transport="rsync"),
+        allow_dirty=True,
         run=fake_run,
     )
     assert result.status == "ran"
@@ -1106,6 +1261,7 @@ def test_dispatch_body_stage_tar_transport_records_transport_and_tar_phase_entri
         clip_dir=clip_dir,
         video_path=clip_dir / "source.mp4",
         config=config,
+        allow_dirty=True,
         run=fake_run,
     )
 
@@ -1337,6 +1493,7 @@ def test_dispatch_body_stage_raises_when_no_outputs_synced(tmp_path: Path) -> No
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
             config=rbd.RemoteConfig(transport="rsync"),
+            allow_dirty=True,
             run=fake_run,
         )
 
@@ -1417,6 +1574,9 @@ def test_remote_body_dispatch_cli_help_direct_reference() -> None:
     assert "--sam3d-tier2-output-lite" in completed.stdout
     assert "--camera-motion" in completed.stdout
     assert "--fetch-body-monoliths" in completed.stdout
+    assert "--allow-dirty" in completed.stdout
+    assert "--sync-remote-code" in completed.stdout
+    assert "--verify-version-stamp" in completed.stdout
     assert "--transport" in completed.stdout
     assert "tar_batch" in completed.stdout
     assert "rsync" in completed.stdout
@@ -1612,6 +1772,7 @@ def test_dispatch_body_stage_writes_and_syncs_runner_script(tmp_path: Path) -> N
         clip_dir=clip_dir,
         video_path=clip_dir / "source.mp4",
         config=rbd.RemoteConfig(fetch_body_monoliths=True, transport="rsync"),
+        allow_dirty=True,
         run=fake_run,
     )
     assert result.status == "ran"
@@ -1661,6 +1822,7 @@ def test_dispatch_body_stage_writes_timing_and_remote_output_log(tmp_path: Path)
         clip_dir=clip_dir,
         video_path=clip_dir / "source.mp4",
         config=rbd.RemoteConfig(transport="rsync"),
+        allow_dirty=True,
         run=fake_run,
     )
 
@@ -1698,18 +1860,26 @@ def test_default_known_hosts_file_is_a_valid_pinned_entry_for_the_default_host()
     # default remote host's IP, with a real-looking base64 key blob, so a
     # copy/paste or content mistake here would fail this test rather than
     # silently degrade host-key checking once it's wired into ssh_base().
+    assert rbd.DEFAULT_REMOTE_HOST == "arnavchokshi@35.240.183.195"
+
     known_hosts_path = Path(rbd.DEFAULT_KNOWN_HOSTS_FILE)
     text = known_hosts_path.read_text(encoding="utf-8")
     host = rbd.DEFAULT_REMOTE_HOST.split("@", 1)[-1]
+    prior_host = "34.143.175.207"
     data_lines = [line for line in text.splitlines() if line.strip() and not line.startswith("#")]
     assert data_lines, "known_hosts file has no key entries"
+    keys_by_host: dict[str, list[tuple[str, str]]] = {}
     for line in data_lines:
         fields = line.split()
         assert len(fields) == 3, line
         addr, key_type, blob = fields
-        assert addr == host
         assert key_type in {"ssh-rsa", "ssh-ed25519", "ecdsa-sha2-nistp256"}
         assert len(blob) > 60
+        keys_by_host.setdefault(addr, []).append((key_type, blob))
+
+    assert host in keys_by_host
+    assert prior_host in keys_by_host
+    assert keys_by_host[host] == keys_by_host[prior_host]
 
 
 def test_private_ssh_material_under_configs_ssh_is_ignored_but_pinned_known_hosts_is_trackable() -> None:
@@ -1853,6 +2023,7 @@ def test_mkdir_command_quotes_remote_run_dir_for_hostile_clip(tmp_path: Path) ->
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
             config=rbd.RemoteConfig(transport="rsync"),
+            allow_dirty=True,
             run=fake_run,
         )
     except rbd.RemoteBodyDispatchError:
@@ -1985,6 +2156,7 @@ def test_dispatch_body_stage_runs_preflight_before_mkdir_and_rsync(tmp_path: Pat
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
             config=rbd.RemoteConfig(transport="rsync"),
+            allow_dirty=True,
             run=fake_run,
         )
 
@@ -2017,6 +2189,7 @@ def test_dispatch_body_stage_fails_fast_on_preflight_before_any_mkdir_or_rsync(t
             clip="wolverine",
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
+            allow_dirty=True,
             run=fake_run,
         )
 
@@ -2024,3 +2197,121 @@ def test_dispatch_body_stage_fails_fast_on_preflight_before_any_mkdir_or_rsync(t
     # no rsync -- proving the VM-layout check happens before any of that.
     assert [call[0] for call in calls] == ["ssh", "ssh"]
     assert calls[1][-1].startswith("test -e")
+
+
+# --- Wave-3: code-sync version stamp must fail closed on remote drift -----
+
+
+def test_dispatch_body_stage_fails_remote_version_verification_for_stale_runtime_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local_repo, remote_repo = _version_fixture_repos(tmp_path, stale_remote=True)
+    _patch_version_fixture_runtime(monkeypatch, local_repo)
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    local_sha = _git(local_repo, "rev-parse", "HEAD")
+    remote_sha = _git(remote_repo, "rev-parse", "HEAD")
+
+    with pytest.raises(rbd.RemoteBodyDispatchError) as exc_info:
+        rbd.dispatch_body_stage(
+            clip="wolverine",
+            clip_dir=clip_dir,
+            video_path=clip_dir / "source.mp4",
+            config=_version_fixture_config(remote_repo),
+            run=_run_local_ssh_and_scp,
+        )
+
+    message = str(exc_info.value)
+    assert "remote BODY version verification failed" in message
+    assert "scripts/racketsport/remote_body_dispatch.py" in message
+    assert local_sha in message
+    assert remote_sha in message
+
+
+def test_dispatch_body_stage_echoes_verified_version_stamp_for_matching_remote(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local_repo, remote_repo = _version_fixture_repos(tmp_path, stale_remote=False)
+    _patch_version_fixture_runtime(monkeypatch, local_repo)
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+
+    result = rbd.dispatch_body_stage(
+        clip="wolverine",
+        clip_dir=clip_dir,
+        video_path=clip_dir / "source.mp4",
+        config=_version_fixture_config(remote_repo),
+        run=_run_local_ssh_and_scp,
+    )
+
+    stamp = json.loads((clip_dir / "version_stamp.json").read_text(encoding="utf-8"))
+    verification = json.loads((clip_dir / "remote_version_verification.json").read_text(encoding="utf-8"))
+    dispatch_config = json.loads((clip_dir / "remote_sam3d_tier2_dispatch_config.json").read_text(encoding="utf-8"))
+    assert result.status == "ran"
+    assert "version_stamp.json" in result.synced_outputs
+    assert stamp["remote_verification"]["verified"] is True
+    assert stamp["remote_verification"]["remote_git_head_sha"] == stamp["git_head_sha"]
+    assert verification["verified"] is True
+    assert verification["checked_file_count"] == 1
+    assert dispatch_config["version_stamp"]["verified"] is True
+    assert dispatch_config["version_stamp"]["git_head_sha"] == stamp["git_head_sha"]
+    assert "verified_at_utc" in dispatch_config["version_stamp"]
+
+
+def test_dispatch_body_stage_refuses_dirty_tracked_runtime_file_without_allow_dirty(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local_repo, remote_repo = _version_fixture_repos(tmp_path, stale_remote=False)
+    _patch_version_fixture_runtime(monkeypatch, local_repo)
+    dirty_file = local_repo / "scripts" / "racketsport" / "remote_body_dispatch.py"
+    dirty_file.write_text(dirty_file.read_text(encoding="utf-8") + "\n# dirty runtime edit\n", encoding="utf-8")
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        calls.append(list(cmd))
+        return _run_local_ssh_and_scp(list(cmd), timeout_s)
+
+    with pytest.raises(rbd.RemoteBodyDispatchError) as exc_info:
+        rbd.dispatch_body_stage(
+            clip="wolverine",
+            clip_dir=_clip_dir_with_tracks(tmp_path),
+            video_path=tmp_path / "clip" / "source.mp4",
+            config=_version_fixture_config(remote_repo),
+            run=fake_run,
+        )
+
+    assert "dirty tracked runtime file" in str(exc_info.value)
+    assert "scripts/racketsport/remote_body_dispatch.py" in str(exc_info.value)
+    assert calls == []
+
+    stamp = rbd.build_version_stamp(
+        repo_root=local_repo,
+        remote_run_dir="/remote/run",
+        generated_runner_sha256="0" * 64,
+        allow_dirty=True,
+    )
+    assert stamp["git_dirty"] is True
+    assert stamp["allow_dirty"] is True
+    assert stamp["dirty_tracked_runtime_files"] == ["scripts/racketsport/remote_body_dispatch.py"]
+
+
+def test_sync_remote_checkout_to_local_head_then_version_verification_passes_and_preserves_vendor_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local_repo, remote_repo = _version_fixture_repos(tmp_path, stale_remote=True)
+    _patch_version_fixture_runtime(monkeypatch, local_repo)
+    vendor_pin = remote_repo / "vendor_pins" / "keep.txt"
+    vendor_pin.parent.mkdir(parents=True)
+    vendor_pin.write_text("remote-only vendor pin\n", encoding="utf-8")
+    local_sha = _git(local_repo, "rev-parse", "HEAD")
+
+    result = rbd.sync_remote_checkout_to_local_head(
+        config=_version_fixture_config(remote_repo),
+        run=_run_local_ssh_and_scp,
+        repo_root=local_repo,
+        allow_dirty=False,
+    )
+
+    assert result.status == "synced"
+    assert result.local_git_head_sha == local_sha
+    assert result.remote_git_head_sha_after == local_sha
+    assert result.verified is True
+    assert vendor_pin.read_text(encoding="utf-8") == "remote-only vendor pin\n"

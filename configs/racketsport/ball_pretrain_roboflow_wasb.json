@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "artifact_type": "racketsport_ball_pretrain_config",
+  "description": "P1-1 Roboflow public-corpus warm-start defaults. Public-only pretrain; owner in-domain labels remain the finisher.",
+  "defaults": {
+    "mode": "train",
+    "corpus_index": "data/roboflow_universe_20260706/aggregated/corpus_index.json",
+    "model_family": "wasb_hrnet",
+    "wasb_repo": "third_party/WASB-SBDT",
+    "image_size": "512x288",
+    "frames_in": 3,
+    "output_channels": 1,
+    "heatmap_radius_px": 4.0,
+    "core_to_aux_ratio": 8,
+    "include_aux_val": false,
+    "steps": 12000,
+    "batch_size": 8,
+    "learning_rate": 0.0005,
+    "weight_decay": 0.00005,
+    "checkpoint_every": 500,
+    "num_workers": 4,
+    "visible_threshold": 0.5,
+    "seed": 1337,
+    "eval_root": "eval_clips/ball",
+    "eval_sample_every_s": 2.0,
+    "expected_protected_eval_hash_count": 35,
+    "collision_hamming_threshold": 3,
+    "image_root_rewrite": [],
+    "skip_policy": "fail",
+    "zero_shot_baseline": true
+  },
+  "data_policy": {
+    "allowed_root": "data/roboflow_universe_20260706/",
+    "heldout_policy": "No Outdoor/Indoor/Burlington/Wolverine labels or held-out ledger rows are read. Loader construction checks 35 protected eval dHashes before training.",
+    "image_copy_policy": "Index-based original image paths only; no image cache is created by default.",
+    "vm_path_policy": "If the VM checkout root differs from the Mac path stored in the index, pass --image-root-rewrite OLD_PREFIX=NEW_PREFIX."
+  },
+  "visibility_policy": {
+    "public_visibility_level": null,
+    "unknown_visibility_wbce_weight": 1,
+    "reason": "Public Roboflow labels lack the four-level visibility taxonomy, so they keep visibility_level absent and receive the clear-frame WBCE weight instead of invented occlusion weights."
+  },
+  "mixing_policy": {
+    "core_pickleball_to_adjacent_sport_aux": "8:1",
+    "reason": "Core pickleball should dominate; adjacent racket-sport sources are a small regularizer for ball appearance and occlusion, not pickleball-domain diversity."
+  }
+}

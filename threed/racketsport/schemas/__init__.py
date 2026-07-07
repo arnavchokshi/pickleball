@@ -782,6 +782,7 @@ class CvatVideoTask(BaseModel):
     mode: str | None = None
     start_frame: int = Field(ge=0)
     stop_frame: int = Field(ge=0)
+    frame_filter: str | None = None
     original_size: tuple[int, int]
     source: str | None = None
     dumped: str | None = None
@@ -880,10 +881,23 @@ class CvatVideoAnnotations(StrictArtifact):
     clip_id: str
     source_format: Literal["cvat_video_1_1"]
     source_path: str
+    reviewed_frame_indices: list[int] | None = None
+    reviewed_frame_indices_source: Literal["cvat_frame_filter", "explicit", "dense_all_frames"] | None = None
     task: CvatVideoTask
     frames: list[CvatVideoFrame]
     tracks: list[CvatVideoTrackSummary]
     summary: CvatVideoAnnotationSummary
+
+    @field_validator("reviewed_frame_indices")
+    @classmethod
+    def _reviewed_indices_must_be_sorted_unique(cls, value: list[int] | None) -> list[int] | None:
+        if value is None:
+            return None
+        if any(index < 0 for index in value):
+            raise ValueError("reviewed_frame_indices must be nonnegative")
+        if value != sorted(set(value)):
+            raise ValueError("reviewed_frame_indices must be sorted and unique")
+        return value
 
 
 class OnDevicePersonDetection(BaseModel):

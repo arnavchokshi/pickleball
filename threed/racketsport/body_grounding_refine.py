@@ -66,17 +66,31 @@ def refine_body_grounding(
     refined = copy.deepcopy(dict(skeleton_payload))
     frame_refs = _frame_refs(refined)
     track_index = _TrackIndex(tracks or {})
-    phase_deltas = _phase_deltas(frame_refs, foot_contact_phases=foot_contact_phases, tracks=track_index, config=cfg)
+    phase_filter = _phase_filter_report(foot_contact_phases)
+    consumed_phase_payload = dict(foot_contact_phases)
+    consumed_phase_payload["phases"] = phase_filter["consumed_phases"]
+    if not phase_filter["consumed_phases"]:
+        report = _no_op_report(
+            skeleton_payload,
+            refined=refined,
+            frame_refs=frame_refs,
+            tracks=tracks,
+            config=cfg,
+            phase_filter=phase_filter,
+        )
+        return refined, report
+
+    phase_deltas = _phase_deltas(frame_refs, foot_contact_phases=consumed_phase_payload, tracks=track_index, config=cfg)
     raw_deltas = _raw_frame_deltas(
         frame_refs,
-        foot_contact_phases=foot_contact_phases,
+        foot_contact_phases=consumed_phase_payload,
         phase_deltas=phase_deltas,
         tracks=track_index,
         config=cfg,
     )
     deltas = _smooth_deltas_by_player(raw_deltas, frame_refs=frame_refs, smoothness_weight=cfg.smoothness_weight)
 
-    before_foot = _foot_plane_residuals(frame_refs, foot_contact_phases=foot_contact_phases, config=cfg)
+    before_foot = _foot_plane_residuals(frame_refs, foot_contact_phases=consumed_phase_payload, config=cfg)
     before_track = _track_residuals(frame_refs, tracks=track_index, config=cfg)
     frame_reports: dict[str, list[dict[str, Any]]] = {}
     for ref in frame_refs:
@@ -114,7 +128,7 @@ def refine_body_grounding(
         )
 
     after_refs = _frame_refs(refined)
-    after_foot = _foot_plane_residuals(after_refs, foot_contact_phases=foot_contact_phases, config=cfg)
+    after_foot = _foot_plane_residuals(after_refs, foot_contact_phases=consumed_phase_payload, config=cfg)
     after_track = _track_residuals(after_refs, tracks=track_index, config=cfg)
     report = {
         "schema_version": SCHEMA_VERSION,
@@ -124,6 +138,8 @@ def refine_body_grounding(
             "input_artifact_type": skeleton_payload.get("artifact_type"),
             "track_source_present": bool(tracks),
             "foot_contact_phase_count": len(_phase_items(foot_contact_phases)),
+            "consumed_foot_contact_phase_count": len(phase_filter["consumed_phases"]),
+            "rejected_foot_contact_phase_count": len(phase_filter["rejected_phases"]),
         },
         "summary": {
             "frame_count": len(frame_refs),
@@ -142,6 +158,9 @@ def refine_body_grounding(
             or (_mean(after_track) > _mean(before_track) + 1e-12),
         },
         "players": {player_id: {"frames": frames} for player_id, frames in sorted(frame_reports.items())},
+        "phase_filter": {
+            key: value for key, value in phase_filter.items() if key != "consumed_phases"
+        },
         "policy": {
             "rigid_root_level_only": True,
             "joint_angles_changed": False,
@@ -157,6 +176,73 @@ def refine_body_grounding(
         "policy": report["policy"],
     }
     return refined, report
+
+
+def _no_op_report(
+    skeleton_payload: Mapping[str, Any],
+    *,
+    refined: dict[str, Any],
+    frame_refs: Sequence[_FrameRef],
+    tracks: Mapping[str, Any] | None,
+    config: GroundingRefineConfig,
+    phase_filter: Mapping[str, Any],
+) -> dict[str, Any]:
+    report = {
+        "schema_version": SCHEMA_VERSION,
+        "artifact_type": ARTIFACT_TYPE,
+        "config": config.to_dict(),
+        "source": {
+            "input_artifact_type": skeleton_payload.get("artifact_type"),
+            "track_source_present": bool(tracks),
+            "foot_contact_phase_count": int(phase_filter["input_phase_count"]),
+            "consumed_foot_contact_phase_count": 0,
+            "rejected_foot_contact_phase_count": int(phase_filter["rejected_phase_count"]),
+        },
+        "summary": {
+            "status": "no_op_no_confident_per_foot_phases",
+            "frame_count": len(frame_refs),
+            "player_count": len({ref.player_id for ref in frame_refs}),
+            "xy_translation_enabled": bool(config.xy_translation_enabled),
+            "foot_plane_residual_m": _residual_summary([], [], absolute=True),
+            "track_residual_m": _residual_summary([], [], absolute=False),
+            "correction_magnitude_m": _magnitude_summary([], max_correction_warn_m=config.max_correction_warn_m),
+            "residual_family_worse": {"foot_plane": False, "track": False},
+            "kill_recommended": False,
+            "no_op_reason": "no_confident_per_foot_contact_phases",
+        },
+        "players": {
+            player_id: {
+                "frames": [
+                    {
+                        "frame_index": ref.frame_index,
+                        "t": ref.time_s,
+                        "translation_delta_xyz": [0.0, 0.0, 0.0],
+                        "yaw_delta_rad": 0.0,
+                        "correction_magnitude_m": 0.0,
+                    }
+                    for ref in refs
+                ]
+            }
+            for player_id, refs in _refs_by_player(frame_refs).items()
+        },
+        "phase_filter": {
+            key: value for key, value in phase_filter.items() if key != "consumed_phases"
+        },
+        "policy": {
+            "rigid_root_level_only": True,
+            "joint_angles_changed": False,
+            "yaw_rotation_enabled": False,
+            "xy_translation_enabled": bool(config.xy_translation_enabled),
+            "protected_eval_labels_used": False,
+        },
+    }
+    refined["body_grounding_refinement"] = {
+        "schema_version": SCHEMA_VERSION,
+        "artifact_type": ARTIFACT_TYPE,
+        "summary": report["summary"],
+        "policy": report["policy"],
+    }
+    return report
 
 
 def _validate_config(config: GroundingRefineConfig) -> None:
@@ -357,6 +443,85 @@ class _TrackIndex:
 def _phase_items(foot_contact_phases: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     phases = foot_contact_phases.get("phases")
     return [phase for phase in phases if isinstance(phase, Mapping)] if isinstance(phases, list) else []
+
+
+def _phase_filter_report(foot_contact_phases: Mapping[str, Any]) -> dict[str, Any]:
+    consumed: list[Mapping[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    reason_counts: dict[str, int] = {}
+    for index, phase in enumerate(_phase_items(foot_contact_phases)):
+        reason = _phase_rejection_reason(phase)
+        if reason is None:
+            consumed.append(phase)
+            continue
+        reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        rejected.append(
+            {
+                "phase_index": index,
+                "reason": reason,
+                "player_id": phase.get("player_id"),
+                "foot": phase.get("foot"),
+                "start_frame_index": phase.get("start_frame_index"),
+                "end_frame_index": phase.get("end_frame_index"),
+                "foot_assignment": phase.get("foot_assignment"),
+                "source_phase_foot": phase.get("source_phase_foot"),
+            }
+        )
+    return {
+        "required_fields": [
+            "min_confidence",
+            "max_height_m",
+            "max_speed_mps",
+            "source_thresholds",
+            "assignment_evidence.body_detector_agreement",
+        ],
+        "input_phase_count": len(_phase_items(foot_contact_phases)),
+        "consumed_phase_count": len(consumed),
+        "rejected_phase_count": len(rejected),
+        "rejected_reasons": reason_counts,
+        "rejected_phases": rejected,
+        "consumed_phases": consumed,
+    }
+
+
+def _phase_rejection_reason(phase: Mapping[str, Any]) -> str | None:
+    foot = str(phase.get("foot", ""))
+    if foot not in {"left", "right"}:
+        return "unknown_or_invalid_foot"
+    if str(phase.get("foot_assignment", "")) == "bilateral_from_player_stance":
+        return str(phase.get("rejection_reason") or "weak_bilateral_unknown_foot")
+    if bool(phase.get("weak", False)):
+        return str(phase.get("rejection_reason") or "weak_phase")
+    if bool(phase.get("demoted", False)):
+        return str(phase.get("rejection_reason") or "demoted_phase")
+    missing = [
+        field
+        for field in ("min_confidence", "max_height_m", "max_speed_mps", "source_thresholds")
+        if field not in phase
+    ]
+    if missing:
+        return "missing_confidence_fields"
+    confidence = _optional_float(phase.get("min_confidence"))
+    if confidence is None:
+        return "invalid_min_confidence"
+    if confidence < 0.90:
+        return "low_min_confidence"
+    evidence = phase.get("assignment_evidence") if isinstance(phase.get("assignment_evidence"), Mapping) else {}
+    agreement = _optional_float(phase.get("body_detector_agreement"))
+    if agreement is None:
+        agreement = _optional_float(evidence.get("body_detector_agreement"))
+    if agreement is None:
+        return "missing_body_detector_agreement"
+    if agreement < 0.90:
+        return "low_body_detector_agreement"
+    return None
+
+
+def _refs_by_player(frame_refs: Sequence[_FrameRef]) -> dict[str, list[_FrameRef]]:
+    by_player: dict[str, list[_FrameRef]] = {}
+    for ref in frame_refs:
+        by_player.setdefault(ref.player_id, []).append(ref)
+    return by_player
 
 
 def _foot_plane_delta(ref: _FrameRef, *, foot: str, config: GroundingRefineConfig) -> float:

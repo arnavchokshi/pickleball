@@ -49,6 +49,13 @@ def _write_inputs(tmp_path: Path) -> tuple[Path, Path, Path]:
                 "frame_indices": [0],
                 "frame_count": 1,
                 "anchor_position_xyz": [0.0, 0.0, 0.0],
+                "min_confidence": 0.95,
+                "max_height_m": 0.01,
+                "max_speed_mps": 0.10,
+                "source_thresholds": {"min_confidence": 0.20},
+                "source_phase_foot": "left",
+                "foot_assignment": "per_foot_body_contact",
+                "assignment_evidence": {"body_detector_agreement": 0.95},
             }
         ],
     }

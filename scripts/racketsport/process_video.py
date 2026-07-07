@@ -124,8 +124,12 @@ from threed.racketsport.frame_rating import (  # noqa: E402
 )
 from threed.racketsport.io_decode import time_for_frame, write_frame_time_table  # noqa: E402
 from threed.racketsport.camera_motion import (  # noqa: E402
+    CAMERA_MOTION_AUTO_THRESHOLD,
+    CAMERA_MOTION_PROBE_MAX_CORNERS,
+    CAMERA_MOTION_PROBE_PROCESSING_SCALE,
     CameraMotionParams,
     estimate_camera_motion,
+    estimate_camera_motion_probe,
     validate_camera_motion_payload,
     write_camera_motion_json,
 )
@@ -328,7 +332,9 @@ class PipelineOptions:
 
     placement_keypoints_2d: Path | None = None
     camera_motion_path: Path | None = None
-    skip_camera_motion: bool = True
+    enable_camera_motion: bool = False
+    skip_camera_motion: bool = False
+    camera_motion_auto_threshold: float = CAMERA_MOTION_AUTO_THRESHOLD
     camera_motion_estimator: str = "hardened"
     camera_motion_flow_backend: str = "lk"
     camera_motion_person_masks: bool = True
@@ -373,6 +379,15 @@ class ProcessVideoPipeline:
         self.trust_bands: dict[str, dict[str, Any] | None] = {}
         self.stage_outcomes: list[StageOutcome] = []
         self._parallel_body_block: dict[str, Any] | None = None
+        self._camera_motion_auto: dict[str, Any] = self._camera_motion_auto_decision(
+            score=None,
+            threshold=self.options.camera_motion_auto_threshold,
+            enabled=False,
+            forced="auto",
+            probe_wall_seconds=0.0,
+            sampled_frame_count=0,
+        )
+        self._camera_motion_auto_decision_made = False
         if options.force:
             self._clear_force_regenerated_artifacts()
 
@@ -420,6 +435,30 @@ class ProcessVideoPipeline:
                 continue
             if path.is_file():
                 path.unlink()
+
+    @staticmethod
+    def _camera_motion_auto_decision(
+        *,
+        score: float | None,
+        threshold: float,
+        enabled: bool,
+        forced: str,
+        probe_wall_seconds: float,
+        sampled_frame_count: int,
+    ) -> dict[str, Any]:
+        return {
+            "score": None if score is None else round(float(score), 6),
+            "threshold": round(float(threshold), 6),
+            "enabled": bool(enabled),
+            "forced": str(forced),
+            "probe_wall_seconds": round(float(probe_wall_seconds), 6),
+            "sampled_frame_count": int(sampled_frame_count),
+        }
+
+    def _set_camera_motion_auto(self, decision: dict[str, Any]) -> dict[str, Any]:
+        self._camera_motion_auto = decision
+        self._camera_motion_auto_decision_made = True
+        return decision
 
     # ------------------------------------------------------------------
     # top-level driver
@@ -1130,17 +1169,24 @@ class ProcessVideoPipeline:
 
     def _stage_camera_motion(self) -> StageOutcome:
         opts = self.options
-        if opts.skip_camera_motion:
-            return StageOutcome(
-                stage="camera_motion",
-                status="skipped",
-                wall_seconds=0.0,
-                notes=[
-                    "camera_motion default stage is wired but default-OFF after offline placement stability regression; "
-                    "use --enable-camera-motion to run the preview estimator or --camera-motion to provide an explicit artifact"
-                ],
-            )
+        threshold = float(opts.camera_motion_auto_threshold)
+        params = CameraMotionParams.legacy() if opts.camera_motion_estimator == "legacy" else CameraMotionParams()
+        params = replace(
+            params,
+            flow_backend=opts.camera_motion_flow_backend,
+            use_person_masks=opts.camera_motion_person_masks,
+        )
         if opts.camera_motion_path is not None:
+            self._set_camera_motion_auto(
+                self._camera_motion_auto_decision(
+                    score=None,
+                    threshold=threshold,
+                    enabled=True,
+                    forced="explicit",
+                    probe_wall_seconds=0.0,
+                    sampled_frame_count=0,
+                )
+            )
             return StageOutcome(
                 stage="camera_motion",
                 status="skipped",
@@ -1148,9 +1194,121 @@ class ProcessVideoPipeline:
                 notes=[f"camera_motion explicit artifact supplied: {opts.camera_motion_path}"],
                 artifacts=[],
                 trust_badge="preview",
+                metrics={"camera_motion_auto": self._camera_motion_auto},
+            )
+        if opts.skip_camera_motion:
+            self._set_camera_motion_auto(
+                self._camera_motion_auto_decision(
+                    score=None,
+                    threshold=threshold,
+                    enabled=False,
+                    forced="off",
+                    probe_wall_seconds=0.0,
+                    sampled_frame_count=0,
+                )
+            )
+            return StageOutcome(
+                stage="camera_motion",
+                status="skipped",
+                wall_seconds=0.0,
+                trust_badge="preview",
+                notes=["camera_motion force-disabled by --disable-camera-motion"],
+                metrics={"camera_motion_auto": self._camera_motion_auto},
             )
 
         target = self.clip_dir / "camera_motion.json"
+        source_video = self.clip_dir / f"source{opts.video.suffix.lower()}"
+        calibration_path = self.clip_dir / "court_calibration.json"
+        tracks_path = self.clip_dir / "tracks.json"
+        missing = [path.name for path in (source_video, calibration_path, tracks_path) if not path.is_file()]
+        if missing:
+            self._set_camera_motion_auto(
+                self._camera_motion_auto_decision(
+                    score=None,
+                    threshold=threshold,
+                    enabled=False,
+                    forced="on" if opts.enable_camera_motion else "auto",
+                    probe_wall_seconds=0.0,
+                    sampled_frame_count=0,
+                )
+            )
+            return StageOutcome(
+                stage="camera_motion",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=[f"camera_motion requires source video, court_calibration.json, and tracks.json; missing={missing}"],
+                trust_badge="preview",
+                metrics={"camera_motion_auto": self._camera_motion_auto},
+            )
+
+        if opts.enable_camera_motion:
+            self._set_camera_motion_auto(
+                self._camera_motion_auto_decision(
+                    score=None,
+                    threshold=threshold,
+                    enabled=True,
+                    forced="on",
+                    probe_wall_seconds=0.0,
+                    sampled_frame_count=0,
+                )
+            )
+        else:
+            probe_params = replace(
+                params,
+                processing_scale=min(float(params.processing_scale), CAMERA_MOTION_PROBE_PROCESSING_SCALE),
+                max_corners=min(int(params.max_corners), CAMERA_MOTION_PROBE_MAX_CORNERS),
+                temporal_smoothing=False,
+            )
+            try:
+                probe = estimate_camera_motion_probe(
+                    source_video,
+                    calibration_path,
+                    tracks_path=tracks_path,
+                    params=probe_params,
+                    threshold=threshold,
+                )
+            except Exception as exc:  # noqa: BLE001
+                self._set_camera_motion_auto(
+                    self._camera_motion_auto_decision(
+                        score=None,
+                        threshold=threshold,
+                        enabled=False,
+                        forced="auto",
+                        probe_wall_seconds=0.0,
+                        sampled_frame_count=0,
+                    )
+                )
+                return StageOutcome(
+                    stage="camera_motion",
+                    status="degraded",
+                    wall_seconds=0.0,
+                    notes=[f"camera_motion AUTO probe failed ({type(exc).__name__}: {exc}); placement will proceed without camera compensation"],
+                    trust_badge="preview",
+                    metrics={"camera_motion_auto": self._camera_motion_auto},
+                )
+            self._set_camera_motion_auto(
+                self._camera_motion_auto_decision(
+                    score=float(probe.get("motion_score", 0.0) or 0.0),
+                    threshold=float(probe.get("threshold", threshold) or threshold),
+                    enabled=bool(probe.get("enabled")),
+                    forced=str(probe.get("forced") or "auto"),
+                    probe_wall_seconds=float(probe.get("wall_seconds", 0.0) or 0.0),
+                    sampled_frame_count=int(probe.get("sampled_frame_count", 0) or 0),
+                )
+            )
+            if not self._camera_motion_auto["enabled"]:
+                return StageOutcome(
+                    stage="camera_motion",
+                    status="skipped",
+                    wall_seconds=self._camera_motion_auto["probe_wall_seconds"],
+                    notes=[
+                        "camera_motion AUTO probe classified clip as static; placement will use the default no-camera-motion path",
+                        f"motion_score={self._camera_motion_auto['score']} threshold={self._camera_motion_auto['threshold']}",
+                    ],
+                    trust_badge="preview",
+                    metrics={"camera_motion_auto": self._camera_motion_auto},
+                )
+
         if target.is_file() and not opts.force:
             try:
                 validate_camera_motion_payload(_read_json(target))
@@ -1161,6 +1319,7 @@ class ProcessVideoPipeline:
                     wall_seconds=0.0,
                     notes=[f"existing camera_motion.json failed validation ({type(exc).__name__}: {exc}); placement will proceed without rewriting it"],
                     trust_badge="preview",
+                    metrics={"camera_motion_auto": self._camera_motion_auto},
                 )
             return StageOutcome(
                 stage="camera_motion",
@@ -1169,27 +1328,9 @@ class ProcessVideoPipeline:
                 notes=["reusing existing valid camera_motion.json"],
                 artifacts=["camera_motion.json"],
                 trust_badge="preview",
+                metrics={"camera_motion_auto": self._camera_motion_auto},
             )
 
-        source_video = self.clip_dir / f"source{opts.video.suffix.lower()}"
-        calibration_path = self.clip_dir / "court_calibration.json"
-        tracks_path = self.clip_dir / "tracks.json"
-        missing = [path.name for path in (source_video, calibration_path, tracks_path) if not path.is_file()]
-        if missing:
-            return StageOutcome(
-                stage="camera_motion",
-                status="skipped",
-                wall_seconds=0.0,
-                notes=[f"camera_motion requires source video, court_calibration.json, and tracks.json; missing={missing}"],
-                trust_badge="preview",
-            )
-
-        params = CameraMotionParams.legacy() if opts.camera_motion_estimator == "legacy" else CameraMotionParams()
-        params = replace(
-            params,
-            flow_backend=opts.camera_motion_flow_backend,
-            use_person_masks=opts.camera_motion_person_masks,
-        )
         started = time.monotonic()
         try:
             payload = estimate_camera_motion(source_video, calibration_path, tracks_path=tracks_path, params=params)
@@ -1201,6 +1342,7 @@ class ProcessVideoPipeline:
                 wall_seconds=time.monotonic() - started,
                 notes=[f"camera_motion failed ({type(exc).__name__}: {exc}); placement will proceed without camera compensation"],
                 trust_badge="preview",
+                metrics={"camera_motion_auto": self._camera_motion_auto},
             )
         summary = payload.get("summary", {}) if isinstance(payload, Mapping) else {}
         frame_count = int(summary.get("n_frames", 0) or 0)
@@ -1216,7 +1358,12 @@ class ProcessVideoPipeline:
             ],
             artifacts=["camera_motion.json"],
             trust_badge="preview",
-            metrics={"n_frames": frame_count, "n_compensated": int(summary.get("n_compensated", 0) or 0), "runtime_ms_per_frame": runtime_ms_per_frame},
+            metrics={
+                "n_frames": frame_count,
+                "n_compensated": int(summary.get("n_compensated", 0) or 0),
+                "runtime_ms_per_frame": runtime_ms_per_frame,
+                "camera_motion_auto": self._camera_motion_auto,
+            },
         )
 
     def _stage_placement(self) -> StageOutcome:
@@ -1331,6 +1478,8 @@ class ProcessVideoPipeline:
         explicit = self.options.camera_motion_path
         if explicit is not None:
             return explicit, "explicit"
+        if self._camera_motion_auto_decision_made and not bool(self._camera_motion_auto.get("enabled")):
+            return None, "auto_disabled"
         candidate = self.clip_dir / "camera_motion.json"
         if candidate.is_file():
             return candidate, "auto_discovered"
@@ -3172,6 +3321,7 @@ class ProcessVideoPipeline:
             "wall_seconds": round(wall_seconds, 3),
             "stages": [outcome.as_dict() for outcome in self.stage_outcomes],
             "trust_bands": self.trust_bands,
+            "camera_motion_auto": self._camera_motion_auto,
         }
         if self._parallel_body_block is not None:
             summary["parallel_body"] = self._parallel_body_block
@@ -3496,7 +3646,7 @@ def _ball_timeline_coverage_fraction(
 
 def _placement_camera_motion_notes(path: Path | None, source: str, summary: Mapping[str, Any]) -> list[str]:
     if path is None:
-        return ["camera_motion=not_used source=absent frames_used=0 frames_uncompensated=0"]
+        return [f"camera_motion=not_used source={source} frames_used=0 frames_uncompensated=0"]
     frames_used = int(summary.get("camera_motion_frames_used", 0) or 0)
     frames_uncompensated = int(summary.get("camera_motion_frames_uncompensated", 0) or 0)
     return [
@@ -4645,7 +4795,8 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         if args.placement_keypoints_2d
         else None,
         camera_motion_path=Path(args.camera_motion).expanduser().resolve() if args.camera_motion else None,
-        skip_camera_motion=(not args.enable_camera_motion) or args.skip_camera_motion,
+        enable_camera_motion=bool(args.enable_camera_motion) and not bool(args.disable_camera_motion),
+        skip_camera_motion=bool(args.disable_camera_motion),
         camera_motion_estimator=args.camera_motion_estimator,
         camera_motion_flow_backend=args.camera_motion_flow_backend,
         camera_motion_person_masks=not args.no_camera_motion_person_mask,
@@ -4762,9 +4913,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--enable-camera-motion",
         action="store_true",
-        help="Opt in to the preview camera_motion.json estimation stage. Default remains off until offline placement regression is resolved.",
+        help="Force the preview camera_motion.json estimation stage ON, bypassing the default motion-CONDITIONAL AUTO decision.",
     )
-    parser.add_argument("--skip-camera-motion", action="store_true", help="Force-disable the preview camera_motion.json estimation stage; wins over --enable-camera-motion.")
+    parser.add_argument(
+        "--disable-camera-motion",
+        "--skip-camera-motion",
+        dest="disable_camera_motion",
+        action="store_true",
+        help="Force-disable the preview camera_motion.json estimation stage; wins over --enable-camera-motion.",
+    )
     parser.add_argument(
         "--camera-motion-estimator",
         choices=("hardened", "legacy"),

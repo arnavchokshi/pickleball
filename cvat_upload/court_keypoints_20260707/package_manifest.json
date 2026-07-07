@@ -1,0 +1,51 @@
+{
+  "artifact_type": "racketsport_metric15_court_keypoint_package_manifest",
+  "image_count": 6,
+  "images": [
+    {
+      "absolute_frame_index": 10195,
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "file_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195.png",
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195.png",
+      "source_id": "HyUqT7zFiwk"
+    },
+    {
+      "absolute_frame_index": 3808,
+      "clip_id": "73VurrTKCZ8_rally_0002",
+      "file_name": "73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+      "source_id": "73VurrTKCZ8"
+    },
+    {
+      "absolute_frame_index": 10248,
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "file_name": "wBu8bC4OfUY__wBu8bC4OfUY_rally_0001__abs_010248.png",
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/wBu8bC4OfUY__wBu8bC4OfUY_rally_0001__abs_010248.png",
+      "source_id": "wBu8bC4OfUY"
+    },
+    {
+      "absolute_frame_index": 10677,
+      "clip_id": "Ezz6HDNHlnk_rally_0004",
+      "file_name": "Ezz6HDNHlnk__Ezz6HDNHlnk_rally_0004__abs_010677.png",
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/Ezz6HDNHlnk__Ezz6HDNHlnk_rally_0004__abs_010677.png",
+      "source_id": "Ezz6HDNHlnk"
+    },
+    {
+      "absolute_frame_index": 3636,
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "file_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636.png",
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636.png",
+      "source_id": "zwCtH_i1_S4"
+    },
+    {
+      "absolute_frame_index": 509,
+      "clip_id": "_L0HVmAlCQI_rally_0001",
+      "file_name": "_L0HVmAlCQI___L0HVmAlCQI_rally_0001__abs_000509.png",
+      "preview_path": "cvat_upload/court_keypoints_20260707/frames/_L0HVmAlCQI___L0HVmAlCQI_rally_0001__abs_000509.png",
+      "source_id": "_L0HVmAlCQI"
+    }
+  ],
+  "package_zip_path": "cvat_upload/court_keypoints_20260707/packages/court_keypoints_metric15_20260707_6frames.zip",
+  "schema_version": 1,
+  "status": "ready_for_import_script"
+}

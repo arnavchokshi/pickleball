@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import random
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -11,6 +12,11 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 from PIL import Image, ImageOps
+
+from .ball_tracknet_cvat_dataset import (
+    PUBLIC_UNKNOWN_VISIBILITY_POLICY,
+    PUBLIC_UNKNOWN_VISIBILITY_WBCE_WEIGHT,
+)
 
 
 ADJACENT_SPORT_SLUGS = {
@@ -32,6 +38,13 @@ BUCKET_DEAD = "excluded_dead"
 HASH_TYPE = "dhash_8x8_64bit"
 DEFAULT_DEDUP_THRESHOLD = 3
 DEFAULT_EVAL_SAMPLE_EVERY_S = 2.0
+DEFAULT_PROTECTED_EVAL_HASH_COUNT = 35
+DEFAULT_BALL_PRETRAIN_IMAGE_SIZE = (512, 288)
+DEFAULT_BALL_PRETRAIN_FRAMES_IN = 3
+DEFAULT_BALL_PRETRAIN_HEATMAP_RADIUS_PX = 4.0
+DEFAULT_CORE_TO_AUX_RATIO = 8
+TRAIN_SOURCE_SPLITS = {"train"}
+INTERNAL_VAL_SOURCE_SPLITS = {"valid", "val", "test"}
 
 
 def normalize_dataset_entry(entry: Mapping[str, Any], *, repo_root: str | Path = ".") -> dict[str, Any]:
@@ -366,6 +379,639 @@ def load_smoke_samples(
         "label_kinds_seen": sorted(label_kinds),
         "missing_paths": missing_paths,
     }
+
+
+class ProtectedEvalHashCollisionError(ValueError):
+    """Raised when a Roboflow pretrain sample collides with a protected eval hash."""
+
+
+class RoboflowCorpusIntegrityError(ValueError):
+    """Raised when index-backed corpus construction finds missing/corrupt source images."""
+
+
+@dataclass(frozen=True)
+class RoboflowBallPretrainRecord:
+    sample: Mapping[str, Any]
+    label: Mapping[str, Any]
+    window_samples: tuple[Mapping[str, Any], ...]
+    temporal_sample_kind: str
+    wbce_weight: int
+
+
+class RoboflowBallPretrainDataset:
+    """Torch Dataset over the index-only aggregated Roboflow ball corpus.
+
+    The dataset reads images from their original Roboflow download locations.
+    It never copies frames into a training cache. Public labels keep
+    ``visibility_level=None`` and use the explicit unknown-visibility WBCE
+    weight documented by ``PUBLIC_UNKNOWN_VISIBILITY_POLICY``.
+    """
+
+    def __init__(
+        self,
+        corpus_index_path: str | Path,
+        *,
+        split_role: str,
+        image_size: tuple[int, int] = DEFAULT_BALL_PRETRAIN_IMAGE_SIZE,
+        frames_in: int = DEFAULT_BALL_PRETRAIN_FRAMES_IN,
+        heatmap_radius_px: float = DEFAULT_BALL_PRETRAIN_HEATMAP_RADIUS_PX,
+        core_to_aux_ratio: int | None = DEFAULT_CORE_TO_AUX_RATIO,
+        seed: int = 0,
+        max_samples: int | None = None,
+        include_aux_in_internal_val: bool = False,
+        protected_eval_hashes: Mapping[str, Sequence[int | str]] | None = None,
+        eval_root: str | Path = "eval_clips/ball",
+        eval_sample_every_s: float = DEFAULT_EVAL_SAMPLE_EVERY_S,
+        expected_protected_eval_hash_count: int | None = DEFAULT_PROTECTED_EVAL_HASH_COUNT,
+        collision_hamming_threshold: int | None = None,
+        skip_list_path: str | Path | None = None,
+        skip_policy: str = "fail",
+        image_path_rewrites: Mapping[str, str] | Sequence[str] | None = None,
+    ) -> None:
+        if split_role not in {"train", "internal_val"}:
+            raise ValueError("split_role must be train or internal_val")
+        if frames_in <= 0 or frames_in % 2 == 0:
+            raise ValueError("frames_in must be a positive odd integer")
+        if image_size[0] <= 0 or image_size[1] <= 0:
+            raise ValueError("image_size must contain positive width,height")
+        if heatmap_radius_px <= 0.0:
+            raise ValueError("heatmap_radius_px must be positive")
+        if skip_policy not in {"fail", "skip"}:
+            raise ValueError("skip_policy must be fail or skip")
+        if core_to_aux_ratio is not None and core_to_aux_ratio < 0:
+            raise ValueError("core_to_aux_ratio must be >= 0")
+
+        self._torch = _require_torch()
+        self._np = _require_numpy()
+        self.corpus_index_path = Path(corpus_index_path)
+        self.split_role = split_role
+        self.image_size = (int(image_size[0]), int(image_size[1]))
+        self.frames_in = int(frames_in)
+        self.heatmap_radius_px = float(heatmap_radius_px)
+        self.skip_list_path = Path(skip_list_path) if skip_list_path is not None else None
+        self.image_path_rewrites = _normalize_image_path_rewrites(image_path_rewrites)
+
+        payload = _read_json(self.corpus_index_path)
+        samples = list(payload.get("samples", []))
+        threshold = (
+            int(collision_hamming_threshold)
+            if collision_hamming_threshold is not None
+            else int(payload.get("hash", {}).get("collision_hamming_threshold", DEFAULT_DEDUP_THRESHOLD))
+        )
+        if protected_eval_hashes is None:
+            eval_hash_count, eval_hash_source = _protected_eval_hash_summary_from_corpus_card(self.corpus_index_path)
+            eval_hashes = None
+        else:
+            eval_hashes, eval_hash_source = _protected_eval_hashes(
+                protected_eval_hashes=protected_eval_hashes,
+                eval_root=Path(eval_root),
+                eval_sample_every_s=eval_sample_every_s,
+            )
+            eval_hash_count = sum(len(values) for values in eval_hashes.values())
+        if expected_protected_eval_hash_count is not None and eval_hash_count != expected_protected_eval_hash_count:
+            raise ProtectedEvalHashCollisionError(
+                "protected eval hash count mismatch: "
+                f"expected {expected_protected_eval_hash_count}, got {eval_hash_count} from {eval_hash_source}"
+            )
+
+        eligible = [
+            sample
+            for sample in samples
+            if _sample_has_visible_ball(sample)
+            and _sample_split_matches_role(sample, split_role=split_role)
+            and _sample_bucket_allowed(
+                sample,
+                split_role=split_role,
+                include_aux_in_internal_val=include_aux_in_internal_val,
+            )
+        ]
+        if eval_hashes is None:
+            assert_no_index_marked_protected_eval_collisions(eligible, eval_hash_count=eval_hash_count)
+        else:
+            assert_no_protected_eval_hash_collisions(
+                eligible,
+                eval_hashes=eval_hashes,
+                threshold=threshold,
+            )
+        selected = _apply_ball_pretrain_mixing(
+            eligible,
+            split_role=split_role,
+            core_to_aux_ratio=core_to_aux_ratio,
+            seed=seed,
+            max_samples=max_samples,
+        )
+        sequence_lookup = _sequence_lookup(eligible)
+        records = [
+            _record_for_sample(
+                sample,
+                sequence_lookup=sequence_lookup,
+                frames_in=self.frames_in,
+            )
+            for sample in selected
+        ]
+
+        skip_records = _find_unreadable_record_images(records, image_path_rewrites=self.image_path_rewrites)
+        _write_skip_list(
+            self.skip_list_path,
+            skip_records=skip_records,
+            split_role=split_role,
+            corpus_index_path=self.corpus_index_path,
+            skip_policy=skip_policy,
+        )
+        if skip_records and skip_policy == "fail":
+            raise RoboflowCorpusIntegrityError(
+                f"Roboflow pretrain dataset found {len(skip_records)} unreadable image(s); "
+                f"skip list: {self.skip_list_path}"
+            )
+        if skip_records:
+            skipped_ids = {str(item["sample_id"]) for item in skip_records}
+            records = [record for record in records if str(record.sample["sample_id"]) not in skipped_ids]
+
+        self.records = tuple(records)
+        temporal_counts = Counter(record.temporal_sample_kind for record in self.records)
+        bucket_counts = Counter(str(record.sample.get("bucket")) for record in self.records)
+        split_counts = Counter(str(record.sample.get("split")) for record in self.records)
+        self.summary = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_roboflow_ball_pretrain_dataset_summary",
+            "corpus_index_path": str(self.corpus_index_path),
+            "index_policy": payload.get("index_policy", "index_based_original_image_paths_no_image_copies"),
+            "image_path_rewrites": self.image_path_rewrites,
+            "split_role": split_role,
+            "source_splits": sorted(split_counts),
+            "selected_sample_count": len(self.records),
+            "bucket_counts": dict(sorted(bucket_counts.items())),
+            "source_split_counts": dict(sorted(split_counts.items())),
+            "temporal_sample_counts": dict(sorted(temporal_counts.items())),
+            "image_size": list(self.image_size),
+            "frames_in": self.frames_in,
+            "heatmap_radius_px": self.heatmap_radius_px,
+            "mixing": {
+                "core_to_aux_ratio": core_to_aux_ratio,
+                "include_aux_in_internal_val": include_aux_in_internal_val,
+                "seed": seed,
+                "max_samples": max_samples,
+            },
+            "visibility_policy": {
+                "visibility_level": None,
+                "unknown_visibility_wbce_weight": PUBLIC_UNKNOWN_VISIBILITY_WBCE_WEIGHT,
+                "policy": PUBLIC_UNKNOWN_VISIBILITY_POLICY,
+            },
+            "protected_eval_hash_check": {
+                "hash_count": eval_hash_count,
+                "hash_source": eval_hash_source,
+                "collision_hamming_threshold": threshold,
+                "collision_count": 0,
+            },
+            "skip_list_path": str(self.skip_list_path) if self.skip_list_path is not None else None,
+            "skip_count": len(skip_records),
+        }
+
+    def __len__(self) -> int:
+        return len(self.records)
+
+    def __getitem__(self, index: int) -> dict[str, Any]:
+        record = self.records[index]
+        sample = record.sample
+        image_path = _resolve_sample_image_path(sample, self.image_path_rewrites)
+        width = int(sample.get("width") or 0)
+        height = int(sample.get("height") or 0)
+        if width <= 0 or height <= 0:
+            with Image.open(image_path) as image:
+                width, height = image.size
+        target_w, target_h = self.image_size
+        x, y = _label_xy(record.label)
+        scaled_x = float(x) * float(target_w) / float(width)
+        scaled_y = float(y) * float(target_h) / float(height)
+        frames = [
+            _image_tensor(_resolve_sample_image_path(window_sample, self.image_path_rewrites), image_size=self.image_size)
+            for window_sample in record.window_samples
+        ]
+        torch = self._torch
+        input_tensor = torch.cat(frames, dim=0)
+        target = _gaussian_heatmap(
+            scaled_x,
+            scaled_y,
+            width=target_w,
+            height=target_h,
+            radius=self.heatmap_radius_px,
+            torch=torch,
+        )
+        return {
+            "sample_id": str(sample["sample_id"]),
+            "source_slug": str(sample.get("source_slug")),
+            "bucket": str(sample.get("bucket")),
+            "source_split": str(sample.get("split")),
+            "image_path": str(image_path),
+            "window_sample_ids": [str(window_sample["sample_id"]) for window_sample in record.window_samples],
+            "temporal_sample_kind": record.temporal_sample_kind,
+            "input": input_tensor,
+            "target": target,
+            "target_xy_px": torch.tensor([scaled_x, scaled_y], dtype=torch.float32),
+            "source_xy_px": torch.tensor([float(x), float(y)], dtype=torch.float32),
+            "ball_present": torch.tensor(1.0, dtype=torch.float32),
+            "wbce_weight": torch.tensor(float(record.wbce_weight), dtype=torch.float32),
+            "visibility_level": None,
+        }
+
+
+def load_protected_eval_hashes(
+    *,
+    eval_root: str | Path = "eval_clips/ball",
+    eval_sample_every_s: float = DEFAULT_EVAL_SAMPLE_EVERY_S,
+) -> tuple[dict[str, list[int]], str]:
+    return _load_eval_hashes(eval_root=Path(eval_root), sample_every_s=eval_sample_every_s)
+
+
+def assert_no_protected_eval_hash_collisions(
+    samples: Sequence[Mapping[str, Any]],
+    *,
+    eval_hashes: Mapping[str, Sequence[int]],
+    threshold: int = DEFAULT_DEDUP_THRESHOLD,
+) -> dict[str, Any]:
+    collisions: list[dict[str, Any]] = []
+    for sample in samples:
+        hashes = sample.get("hashes")
+        if not isinstance(hashes, Mapping) or not hashes.get("dhash"):
+            continue
+        collisions.extend(
+            _eval_collisions_for_hash(
+                sample,
+                dhash_value=int(str(hashes["dhash"]), 16),
+                eval_hashes=eval_hashes,
+                threshold=threshold,
+            )
+        )
+    if collisions:
+        first = collisions[0]
+        raise ProtectedEvalHashCollisionError(
+            "protected eval hash collision in Roboflow pretrain corpus: "
+            f"{first['sample_id']} vs {first['eval_clip']} hamming={first['hamming_distance']}"
+        )
+    return {
+        "hash_type": HASH_TYPE,
+        "collision_hamming_threshold": threshold,
+        "sample_count": len(samples),
+        "eval_hash_count": sum(len(values) for values in eval_hashes.values()),
+        "collision_count": 0,
+    }
+
+
+def assert_no_index_marked_protected_eval_collisions(
+    samples: Sequence[Mapping[str, Any]],
+    *,
+    eval_hash_count: int,
+) -> dict[str, Any]:
+    collisions: list[Mapping[str, Any]] = []
+    for sample in samples:
+        leakage = sample.get("leakage")
+        if isinstance(leakage, Mapping) and leakage.get("eval_collision"):
+            collisions.append(sample)
+    if collisions:
+        first = collisions[0]
+        raise ProtectedEvalHashCollisionError(
+            "protected eval hash collision already marked in Roboflow pretrain corpus index: "
+            f"{first.get('sample_id')}"
+        )
+    return {
+        "hash_type": HASH_TYPE,
+        "sample_count": len(samples),
+        "eval_hash_count": int(eval_hash_count),
+        "collision_count": 0,
+        "source": "corpus_index_leakage_flags",
+    }
+
+
+def _protected_eval_hash_summary_from_corpus_card(corpus_index_path: Path) -> tuple[int, str]:
+    card_path = corpus_index_path.with_name("corpus_card.json")
+    if not card_path.is_file():
+        raise ProtectedEvalHashCollisionError(
+            f"missing corpus_card.json next to {corpus_index_path}; "
+            "pass explicit protected_eval_hashes for synthetic tests or regenerate the aggregate corpus card"
+        )
+    card = _read_json(card_path)
+    leakage_check = card.get("leakage_check")
+    if not isinstance(leakage_check, Mapping):
+        raise ProtectedEvalHashCollisionError(f"corpus card missing leakage_check: {card_path}")
+    if int(leakage_check.get("eval_collision_count", -1)) != 0:
+        raise ProtectedEvalHashCollisionError(
+            f"corpus card reports protected eval collisions: {card_path}"
+        )
+    counts = leakage_check.get("eval_hash_counts")
+    if not isinstance(counts, Mapping):
+        raise ProtectedEvalHashCollisionError(f"corpus card missing eval_hash_counts: {card_path}")
+    return sum(int(value) for value in counts.values()), str(card_path)
+
+
+def _protected_eval_hashes(
+    *,
+    protected_eval_hashes: Mapping[str, Sequence[int | str]] | None,
+    eval_root: Path,
+    eval_sample_every_s: float,
+) -> tuple[dict[str, list[int]], str]:
+    if protected_eval_hashes is None:
+        return load_protected_eval_hashes(eval_root=eval_root, eval_sample_every_s=eval_sample_every_s)
+    normalized: dict[str, list[int]] = {}
+    for clip_id, values in protected_eval_hashes.items():
+        normalized[str(clip_id)] = [_parse_hash_value(value) for value in values]
+    return normalized, "constructor_provided_protected_eval_hashes"
+
+
+def _parse_hash_value(value: int | str) -> int:
+    if isinstance(value, int):
+        return value
+    text = str(value).strip().lower()
+    if text.startswith("0x"):
+        text = text[2:]
+    return int(text, 16)
+
+
+def _sample_split_matches_role(sample: Mapping[str, Any], *, split_role: str) -> bool:
+    split = str(sample.get("split") or "").lower()
+    if split_role == "train":
+        return split in TRAIN_SOURCE_SPLITS
+    return split in INTERNAL_VAL_SOURCE_SPLITS
+
+
+def _sample_bucket_allowed(
+    sample: Mapping[str, Any],
+    *,
+    split_role: str,
+    include_aux_in_internal_val: bool,
+) -> bool:
+    bucket = str(sample.get("bucket") or "")
+    if bucket == BUCKET_CORE:
+        return True
+    if bucket == BUCKET_ADJACENT:
+        return split_role == "train" or include_aux_in_internal_val
+    return False
+
+
+def _sample_has_visible_ball(sample: Mapping[str, Any]) -> bool:
+    return _ball_label_for_sample(sample) is not None
+
+
+def _ball_label_for_sample(sample: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    labels = sample.get("labels")
+    ball_labels: object = None
+    if isinstance(labels, Mapping):
+        ball_labels = labels.get("ball")
+    if not isinstance(ball_labels, Sequence) or isinstance(ball_labels, (str, bytes)):
+        return None
+    candidates = [label for label in ball_labels if isinstance(label, Mapping) and label.get("xy") is not None]
+    if not candidates:
+        return None
+    return sorted(candidates, key=lambda label: (-_bbox_area(label), str(label.get("annotation_id"))))[0]
+
+
+def _bbox_area(label: Mapping[str, Any]) -> float:
+    bbox = label.get("source_bbox_xywh")
+    if isinstance(bbox, Sequence) and len(bbox) == 4:
+        try:
+            return float(bbox[2]) * float(bbox[3])
+        except (TypeError, ValueError):
+            return 0.0
+    return 0.0
+
+
+def _apply_ball_pretrain_mixing(
+    samples: Sequence[Mapping[str, Any]],
+    *,
+    split_role: str,
+    core_to_aux_ratio: int | None,
+    seed: int,
+    max_samples: int | None,
+) -> list[Mapping[str, Any]]:
+    ordered = sorted(samples, key=lambda sample: str(sample.get("sample_id")))
+    if split_role == "train":
+        core = [sample for sample in ordered if sample.get("bucket") == BUCKET_CORE]
+        aux = [sample for sample in ordered if sample.get("bucket") == BUCKET_ADJACENT]
+        if core_to_aux_ratio is None:
+            mixed = [*core, *aux]
+        elif core_to_aux_ratio == 0:
+            mixed = core
+        else:
+            max_aux = math.ceil(len(core) / float(core_to_aux_ratio)) if core else len(aux)
+            mixed = [*core, *aux[:max_aux]]
+    else:
+        mixed = ordered
+    if max_samples is not None:
+        max_count = int(max_samples)
+        if max_count < 0:
+            raise ValueError("max_samples must be non-negative")
+        if len(mixed) > max_count:
+            rng = random.Random(seed)
+            mixed = sorted(rng.sample(mixed, max_count), key=lambda sample: str(sample.get("sample_id")))
+    return mixed
+
+
+def _sequence_lookup(samples: Sequence[Mapping[str, Any]]) -> dict[str, list[Mapping[str, Any]]]:
+    grouped: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    for sample in samples:
+        temporal = sample.get("temporal")
+        if not isinstance(temporal, Mapping):
+            continue
+        if temporal.get("kind") != "temporal_sequence" or not temporal.get("sequence_id"):
+            continue
+        grouped[str(temporal["sequence_id"])].append(sample)
+    return {
+        sequence_id: sorted(
+            values,
+            key=lambda sample: (
+                _temporal_order(sample),
+                str(sample.get("sample_id")),
+            ),
+        )
+        for sequence_id, values in grouped.items()
+    }
+
+
+def _temporal_order(sample: Mapping[str, Any]) -> int:
+    temporal = sample.get("temporal")
+    if isinstance(temporal, Mapping):
+        value = temporal.get("sequence_order")
+        if value is None:
+            value = temporal.get("frame_number")
+        try:
+            return int(value)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return 0
+    return 0
+
+
+def _record_for_sample(
+    sample: Mapping[str, Any],
+    *,
+    sequence_lookup: Mapping[str, Sequence[Mapping[str, Any]]],
+    frames_in: int,
+) -> RoboflowBallPretrainRecord:
+    label = _ball_label_for_sample(sample)
+    if label is None:
+        raise ValueError(f"sample has no ball label: {sample.get('sample_id')}")
+    temporal = sample.get("temporal")
+    temporal_sample_kind = "still_aux_repeated"
+    window_samples: list[Mapping[str, Any]]
+    if isinstance(temporal, Mapping) and temporal.get("kind") == "temporal_sequence" and temporal.get("sequence_id"):
+        group = list(sequence_lookup.get(str(temporal["sequence_id"]), []))
+        position = next(
+            (idx for idx, candidate in enumerate(group) if candidate.get("sample_id") == sample.get("sample_id")),
+            None,
+        )
+        if position is not None and group:
+            radius = frames_in // 2
+            window_samples = []
+            for offset in range(-radius, radius + 1):
+                group_index = min(len(group) - 1, max(0, position + offset))
+                window_samples.append(group[group_index])
+            temporal_sample_kind = "sequence_window"
+        else:
+            window_samples = [sample for _ in range(frames_in)]
+    else:
+        window_samples = [sample for _ in range(frames_in)]
+    return RoboflowBallPretrainRecord(
+        sample=sample,
+        label=label,
+        window_samples=tuple(window_samples),
+        temporal_sample_kind=temporal_sample_kind,
+        wbce_weight=PUBLIC_UNKNOWN_VISIBILITY_WBCE_WEIGHT,
+    )
+
+
+def _find_unreadable_record_images(
+    records: Sequence[RoboflowBallPretrainRecord],
+    *,
+    image_path_rewrites: Mapping[str, str],
+) -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for record in records:
+        for window_sample in record.window_samples:
+            sample_id = str(record.sample.get("sample_id"))
+            image_path = _resolve_sample_image_path(window_sample, image_path_rewrites)
+            key = (sample_id, str(image_path))
+            if key in seen:
+                continue
+            seen.add(key)
+            try:
+                with Image.open(image_path) as image:
+                    image.verify()
+            except Exception as exc:
+                issues.append(
+                    {
+                        "sample_id": sample_id,
+                        "window_sample_id": str(window_sample.get("sample_id")),
+                        "image_path": str(image_path),
+                        "reason": "image_missing_or_unreadable",
+                        "error": str(exc),
+                    }
+                )
+    return issues
+
+
+def _normalize_image_path_rewrites(image_path_rewrites: Mapping[str, str] | Sequence[str] | None) -> dict[str, str]:
+    if image_path_rewrites is None:
+        return {}
+    if isinstance(image_path_rewrites, Mapping):
+        items = image_path_rewrites.items()
+    else:
+        parsed: list[tuple[str, str]] = []
+        for item in image_path_rewrites:
+            text = str(item)
+            if "=" not in text:
+                raise ValueError("image_path_rewrites entries must be OLD_PREFIX=NEW_PREFIX")
+            old_prefix, new_prefix = text.split("=", 1)
+            parsed.append((old_prefix, new_prefix))
+        items = parsed
+    normalized: dict[str, str] = {}
+    for old_prefix, new_prefix in items:
+        old = str(old_prefix).rstrip("/")
+        new = str(new_prefix).rstrip("/")
+        if not old or not new:
+            raise ValueError("image_path_rewrites prefixes must be non-empty")
+        normalized[old] = new
+    return dict(sorted(normalized.items(), key=lambda item: len(item[0]), reverse=True))
+
+
+def _resolve_sample_image_path(sample: Mapping[str, Any], image_path_rewrites: Mapping[str, str]) -> Path:
+    raw = str(sample.get("image_path") or "")
+    if not raw:
+        raise RoboflowCorpusIntegrityError(f"sample missing image_path: {sample.get('sample_id')}")
+    for old_prefix, new_prefix in image_path_rewrites.items():
+        if raw == old_prefix:
+            return Path(new_prefix)
+        if raw.startswith(old_prefix + "/"):
+            return Path(new_prefix + raw[len(old_prefix) :])
+    return Path(raw)
+
+
+def _write_skip_list(
+    path: Path | None,
+    *,
+    skip_records: Sequence[Mapping[str, Any]],
+    split_role: str,
+    corpus_index_path: Path,
+    skip_policy: str,
+) -> None:
+    if path is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_roboflow_ball_pretrain_skip_list",
+        "corpus_index_path": str(corpus_index_path),
+        "split_role": split_role,
+        "skip_policy": skip_policy,
+        "skip_count": len(skip_records),
+        "skips": list(skip_records),
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _label_xy(label: Mapping[str, Any]) -> tuple[float, float]:
+    xy = label.get("xy")
+    if not isinstance(xy, Sequence) or len(xy) != 2:
+        raise ValueError(f"ball label missing xy: {label}")
+    return float(xy[0]), float(xy[1])
+
+
+def _image_tensor(path: Path, *, image_size: tuple[int, int]) -> Any:
+    torch = _require_torch()
+    np = _require_numpy()
+    with Image.open(path) as image:
+        rgb = image.convert("RGB").resize(image_size, Image.Resampling.BILINEAR)
+        array = np.asarray(rgb, dtype=np.float32) / 255.0
+    return torch.from_numpy(array).permute(2, 0, 1).contiguous()
+
+
+def _gaussian_heatmap(
+    x: float,
+    y: float,
+    *,
+    width: int,
+    height: int,
+    radius: float,
+    torch: Any,
+) -> Any:
+    xx = torch.arange(width, dtype=torch.float32).view(1, width)
+    yy = torch.arange(height, dtype=torch.float32).view(height, 1)
+    heatmap = torch.exp(-((xx - float(x)) ** 2 + (yy - float(y)) ** 2) / (2.0 * float(radius) ** 2))
+    return heatmap.unsqueeze(0).clamp(0.0, 1.0)
+
+
+def _require_torch() -> Any:
+    try:
+        import torch
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("torch is required for RoboflowBallPretrainDataset; use pytest.importorskip('torch') in tests") from exc
+    return torch
+
+
+def _require_numpy() -> Any:
+    try:
+        import numpy as np
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("numpy is required for RoboflowBallPretrainDataset") from exc
+    return np
 
 
 def initial_bucket_for_entry(entry: Mapping[str, Any]) -> tuple[str, str]:

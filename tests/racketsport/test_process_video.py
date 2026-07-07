@@ -1013,6 +1013,14 @@ def _foot_contact_phases_payload(*, phases: list[dict[str, Any]] | None = None) 
             "frame_indices": [0],
             "frame_count": 1,
             "anchor_position_xyz": [0.0, 0.0, 0.0],
+            "min_confidence": 0.95,
+            "max_height_m": 0.01,
+            "max_speed_mps": 0.05,
+            "source": "unit_test",
+            "source_phase_foot": "left",
+            "foot_assignment": "per_foot_keypoint_support",
+            "source_thresholds": {"min_confidence": 0.20},
+            "assignment_evidence": {"body_detector_agreement": 0.95},
         }
     ]
     return {
@@ -1609,15 +1617,152 @@ def test_default_stage_order_runs_camera_motion_before_placement(tmp_path: Path)
     ]
 
 
-def test_camera_motion_stage_is_default_off_after_offline_regression_check(tmp_path: Path) -> None:
+def test_camera_motion_auto_default_skips_static_probe_without_writing_artifact(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     video = tmp_path / "clip.mp4"
+    _make_video(video)
     options = _base_options(tmp_path, video=video, court_corners=None)
     pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "tracks.json", _tracks_payload())
+    probe_calls: list[dict[str, Any]] = []
+
+    def _fake_probe(
+        video_path: Path,
+        calibration_path: Path,
+        *,
+        tracks_path: Path | None,
+        params: Any,
+        threshold: float,
+    ) -> dict[str, Any]:
+        probe_calls.append(
+            {
+                "video_path": video_path,
+                "calibration_path": calibration_path,
+                "tracks_path": tracks_path,
+                "params": params,
+            }
+        )
+        return {
+            "motion_score": 0.5,
+            "threshold": 5.0,
+            "enabled": False,
+            "forced": "auto",
+            "sampled_frame_count": 6,
+            "wall_seconds": 0.123,
+            "verified": False,
+            "not_gate_verified": True,
+        }
+
+    monkeypatch.setattr(process_video, "estimate_camera_motion_probe", _fake_probe, raising=False)
+    monkeypatch.setattr(
+        process_video,
+        "estimate_camera_motion",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("full estimator should not run when AUTO is off")),
+    )
 
     outcome = pipeline._stage_camera_motion()
 
     assert outcome.status == "skipped"
-    assert any("--enable-camera-motion" in note for note in outcome.notes)
+    assert len(probe_calls) == 1
+    assert probe_calls[0]["video_path"] == options.clip_dir / "source.mp4"
+    assert probe_calls[0]["calibration_path"] == options.clip_dir / "court_calibration.json"
+    assert probe_calls[0]["tracks_path"] == options.clip_dir / "tracks.json"
+    assert probe_calls[0]["params"].estimator_mode == "hardened"
+    assert not (options.clip_dir / "camera_motion.json").exists()
+    assert pipeline._camera_motion_auto == {
+        "score": 0.5,
+        "threshold": 5.0,
+        "enabled": False,
+        "forced": "auto",
+        "probe_wall_seconds": 0.123,
+        "sampled_frame_count": 6,
+    }
+    assert outcome.metrics["camera_motion_auto"] == pipeline._camera_motion_auto
+
+
+def test_pipeline_summary_persists_camera_motion_auto_decision(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._camera_motion_auto = {
+        "score": 0.5,
+        "threshold": 5.0,
+        "enabled": False,
+        "forced": "auto",
+        "probe_wall_seconds": 0.123,
+        "sampled_frame_count": 6,
+    }
+
+    summary = pipeline._write_summary(wall_seconds=1.25)
+
+    assert summary["camera_motion_auto"] == pipeline._camera_motion_auto
+    assert json.loads((options.run_dir / "PIPELINE_SUMMARY.json").read_text(encoding="utf-8"))["camera_motion_auto"] == pipeline._camera_motion_auto
+    assert json.loads((options.clip_dir / "PIPELINE_SUMMARY.json").read_text(encoding="utf-8"))["camera_motion_auto"] == pipeline._camera_motion_auto
+
+
+def test_camera_motion_auto_off_prevents_stale_clip_artifact_from_reaching_placement(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "tracks.json", _tracks_payload())
+    _write_json(
+        options.clip_dir / "camera_motion.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_camera_motion",
+            "frames": [],
+            "verified": False,
+            "not_gate_verified": True,
+        },
+    )
+    calls: list[dict[str, Any]] = []
+
+    monkeypatch.setattr(
+        process_video,
+        "estimate_camera_motion_probe",
+        lambda *_args, **_kwargs: {
+            "motion_score": 0.5,
+            "threshold": 5.0,
+            "enabled": False,
+            "forced": "auto",
+            "sampled_frame_count": 6,
+            "wall_seconds": 0.123,
+        },
+        raising=False,
+    )
+
+    def _fake_rewrite(**kwargs):  # noqa: ANN001
+        calls.append(kwargs)
+        return type(
+            "Result",
+            (),
+            {
+                "coverage_unchanged": True,
+                "source_counts": {"bbox": 2},
+                "court_bounds_violations": 0,
+                "summary": {},
+            },
+        )()
+
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite)
+
+    camera_outcome = pipeline._stage_camera_motion()
+    placement_outcome = pipeline._stage_placement()
+
+    assert camera_outcome.status == "skipped"
+    assert placement_outcome.status == "ran"
+    assert calls[0]["camera_motion_path"] is None
+    assert any("camera_motion=not_used source=auto_disabled" in note for note in placement_outcome.notes)
 
 
 def test_camera_motion_stage_runs_hardened_default_estimator(
@@ -1627,7 +1772,7 @@ def test_camera_motion_stage_runs_hardened_default_estimator(
     video = tmp_path / "clip.mp4"
     _make_video(video)
     options = _base_options(tmp_path, video=video, court_corners=None)
-    options.skip_camera_motion = False
+    options.enable_camera_motion = True
     pipeline = process_video.ProcessVideoPipeline(options)
     pipeline._stage_ingest()
     _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
@@ -1665,6 +1810,12 @@ def test_camera_motion_stage_runs_hardened_default_estimator(
             "not_gate_verified": True,
         }
 
+    monkeypatch.setattr(
+        process_video,
+        "estimate_camera_motion_probe",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("force-on should bypass AUTO probe")),
+        raising=False,
+    )
     monkeypatch.setattr(process_video, "estimate_camera_motion", _fake_estimate_camera_motion)
 
     outcome = pipeline._stage_camera_motion()
@@ -1678,6 +1829,39 @@ def test_camera_motion_stage_runs_hardened_default_estimator(
     assert calls[0]["params"].flow_backend == "lk"
     assert calls[0]["params"].use_person_masks is True
     assert outcome.metrics["n_compensated"] == 2
+    assert pipeline._camera_motion_auto["enabled"] is True
+    assert pipeline._camera_motion_auto["forced"] == "on"
+
+
+def test_camera_motion_force_off_records_decision_without_probe(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.skip_camera_motion = True
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    monkeypatch.setattr(
+        process_video,
+        "estimate_camera_motion_probe",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("force-off should bypass AUTO probe")),
+        raising=False,
+    )
+
+    outcome = pipeline._stage_camera_motion()
+
+    assert outcome.status == "skipped"
+    assert pipeline._camera_motion_auto == {
+        "score": None,
+        "threshold": process_video.CAMERA_MOTION_AUTO_THRESHOLD,
+        "enabled": False,
+        "forced": "off",
+        "probe_wall_seconds": 0.0,
+        "sampled_frame_count": 0,
+    }
+    assert outcome.metrics["camera_motion_auto"] == pipeline._camera_motion_auto
 
 
 def test_placement_stage_auto_discovers_camera_motion_and_surfaces_guard_notes(
@@ -2104,6 +2288,8 @@ def test_process_video_cli_help_direct_reference() -> None:
     assert "--high-confidence-swing-floor" in completed.stdout
     assert "--events-selected" in completed.stdout
     assert "--ball-track-arc-solved" in completed.stdout
+    assert "--enable-camera-motion" in completed.stdout
+    assert "--disable-camera-motion" in completed.stdout
     assert "--sam3d-body-input-size-px" in completed.stdout
     assert "--sam3d-crop-bucket-sizes" in completed.stdout
     assert "--sam3d-compile-warmup-buckets" in completed.stdout
@@ -3400,7 +3586,7 @@ def test_cli_parses_default_camera_motion_stage_controls(tmp_path: Path) -> None
                 str(video),
                 "--out",
                 str(tmp_path / "run"),
-                "--skip-camera-motion",
+                "--disable-camera-motion",
                 "--camera-motion-estimator",
                 "legacy",
                 "--camera-motion-flow-backend",
@@ -3410,9 +3596,12 @@ def test_cli_parses_default_camera_motion_stage_controls(tmp_path: Path) -> None
         )
     )
 
-    assert default_options.skip_camera_motion is True
+    assert default_options.skip_camera_motion is False
+    assert default_options.enable_camera_motion is False
     assert enabled_options.skip_camera_motion is False
+    assert enabled_options.enable_camera_motion is True
     assert options.skip_camera_motion is True
+    assert options.enable_camera_motion is False
     assert options.camera_motion_estimator == "legacy"
     assert options.camera_motion_flow_backend == "raft-small"
     assert options.camera_motion_person_masks is False

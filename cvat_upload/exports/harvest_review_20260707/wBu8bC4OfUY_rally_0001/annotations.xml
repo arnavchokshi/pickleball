@@ -1,0 +1,462 @@
+<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <project>
+      <id>421374</id>
+      <name>harvest_review_20260707</name>
+      <bugtracker></bugtracker>
+      <created>2026-07-07 05:57:35.512250+00:00</created>
+      <updated>2026-07-07 06:11:45.540185+00:00</updated>
+      <tasks>
+        <task>
+          <id>2406058</id>
+          <name>wBu8bC4OfUY_rally_0001</name>
+          <size>81</size>
+          <mode>interpolation</mode>
+          <overlap>0</overlap>
+          <bugtracker></bugtracker>
+          <created>2026-07-07 06:00:02.566683+00:00</created>
+          <updated>2026-07-07 06:11:45.538121+00:00</updated>
+          <subset>default</subset>
+          <start_frame>0</start_frame>
+          <stop_frame>12800</stop_frame>
+          <frame_filter>step=160</frame_filter>
+          <segments>
+            <segment>
+              <id>4201693</id>
+              <start>0</start>
+              <stop>80</stop>
+              <url>https://app.cvat.ai/api/projects/421374/dataset/export/api/jobs/4203656</url>
+            </segment>
+          </segments>
+          <owner>
+            <username>achokshi38</username>
+            <email>chokshi.arnav@gmail.com</email>
+          </owner>
+          <assignee></assignee>
+          <original_size>
+            <width>1920</width>
+            <height>1080</height>
+          </original_size>
+          <source>wBu8bC4OfUY_rally_0001.mp4</source>
+        </task>
+      </tasks>
+      <subsets>default</subsets>
+      <owner>
+        <username>achokshi38</username>
+        <email>chokshi.arnav@gmail.com</email>
+      </owner>
+      <assignee></assignee>
+      <labels>
+        <label>
+          <name>ball</name>
+          <color>#804080</color>
+          <type>rectangle</type>
+          <attributes>
+            <attribute>
+              <name>visibility_level</name>
+              <mutable>False</mutable>
+              <input_type>select</input_type>
+              <default_value>clear</default_value>
+              <values>clear
+partial
+full
+out_of_frame</values>
+            </attribute>
+          </attributes>
+        </label>
+      </labels>
+    </project>
+    <dumped>2026-07-07 06:12:10.202107+00:00</dumped>
+  </meta>
+  <track id="0" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="320" keyframe="1" outside="0" occluded="0" xtl="650.19" ytl="229.35" xbr="697.72" ybr="278.58" z_order="0">
+      <attribute name="visibility_level">out_of_frame</attribute>
+    </box>
+    <box frame="480" keyframe="1" outside="1" occluded="0" xtl="650.19" ytl="229.35" xbr="697.72" ybr="278.58" z_order="0">
+      <attribute name="visibility_level">out_of_frame</attribute>
+    </box>
+    <box frame="640" keyframe="1" outside="1" occluded="0" xtl="650.19" ytl="229.35" xbr="697.72" ybr="278.58" z_order="0">
+      <attribute name="visibility_level">out_of_frame</attribute>
+    </box>
+  </track>
+  <track id="1" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="640" keyframe="1" outside="0" occluded="0" xtl="915.02" ytl="378.74" xbr="962.55" ybr="433.07" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="800" keyframe="1" outside="1" occluded="0" xtl="915.02" ytl="378.74" xbr="962.55" ybr="433.07" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="2" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="1120" keyframe="1" outside="0" occluded="0" xtl="825.04" ytl="127.50" xbr="864.09" ybr="175.03" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1280" keyframe="1" outside="1" occluded="0" xtl="825.04" ytl="127.50" xbr="864.09" ybr="175.03" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="3" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="1280" keyframe="1" outside="0" occluded="0" xtl="1030.46" ytl="626.59" xbr="1057.62" ybr="660.55" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1440" keyframe="1" outside="1" occluded="0" xtl="1030.46" ytl="626.59" xbr="1057.62" ybr="660.55" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="4" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="1600" keyframe="1" outside="0" occluded="0" xtl="940.48" ytl="326.12" xbr="971.04" ybr="360.07" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="1760" keyframe="1" outside="1" occluded="0" xtl="940.48" ytl="326.12" xbr="971.04" ybr="360.07" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="5" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="1920" keyframe="1" outside="0" occluded="0" xtl="614.54" ytl="107.12" xbr="701.12" ybr="207.28" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="2080" keyframe="1" outside="1" occluded="0" xtl="614.54" ytl="107.12" xbr="701.12" ybr="207.28" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="6" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="2240" keyframe="1" outside="0" occluded="0" xtl="1013.48" ytl="310.84" xbr="1059.32" ybr="353.28" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="2400" keyframe="1" outside="1" occluded="0" xtl="1013.48" ytl="310.84" xbr="1059.32" ybr="353.28" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="7" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="2400" keyframe="1" outside="0" occluded="0" xtl="825.04" ytl="329.51" xbr="843.72" ybr="356.67" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2560" keyframe="1" outside="1" occluded="0" xtl="825.04" ytl="329.51" xbr="843.72" ybr="356.67" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="8" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="2720" keyframe="1" outside="0" occluded="0" xtl="631.52" ytl="631.69" xbr="668.86" ybr="674.13" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="2880" keyframe="1" outside="1" occluded="0" xtl="631.52" ytl="631.69" xbr="668.86" ybr="674.13" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="9" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="3040" keyframe="1" outside="0" occluded="0" xtl="892.95" ytl="472.11" xbr="928.60" ybr="499.27" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="3200" keyframe="1" outside="1" occluded="0" xtl="892.95" ytl="472.11" xbr="928.60" ybr="499.27" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="10" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="3360" keyframe="1" outside="0" occluded="0" xtl="899.74" ytl="224.26" xbr="938.78" ybr="276.89" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="3520" keyframe="1" outside="1" occluded="0" xtl="899.74" ytl="224.26" xbr="938.78" ybr="276.89" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="11" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="3520" keyframe="1" outside="0" occluded="0" xtl="580.59" ytl="293.86" xbr="604.36" ybr="332.91" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="3680" keyframe="1" outside="1" occluded="0" xtl="580.59" ytl="293.86" xbr="604.36" ybr="332.91" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="12" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="3680" keyframe="1" outside="0" occluded="0" xtl="903.14" ytl="640.17" xbr="930.30" ybr="686.01" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="3840" keyframe="1" outside="1" occluded="0" xtl="903.14" ytl="640.17" xbr="930.30" ybr="686.01" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="13" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="3840" keyframe="1" outside="0" occluded="0" xtl="458.36" ytl="265.00" xbr="529.66" ybr="324.42" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="4000" keyframe="1" outside="1" occluded="0" xtl="458.36" ytl="265.00" xbr="529.66" ybr="324.42" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="14" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="4000" keyframe="1" outside="0" occluded="0" xtl="1037.25" ytl="361.77" xbr="1071.20" ybr="394.02" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="4160" keyframe="1" outside="1" occluded="0" xtl="1037.25" ytl="361.77" xbr="1071.20" ybr="394.02" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="15" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="4160" keyframe="1" outside="0" occluded="0" xtl="1006.69" ytl="309.14" xbr="1069.50" ybr="351.58" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="4320" keyframe="1" outside="1" occluded="0" xtl="1006.69" ytl="309.14" xbr="1069.50" ybr="351.58" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="16" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="4320" keyframe="1" outside="0" occluded="0" xtl="636.61" ytl="453.44" xbr="679.05" ybr="492.48" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="4480" keyframe="1" outside="1" occluded="0" xtl="636.61" ytl="453.44" xbr="679.05" ybr="492.48" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="17" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="4640" keyframe="1" outside="0" occluded="0" xtl="714.70" ytl="324.42" xbr="752.05" ybr="360.07" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="4800" keyframe="1" outside="1" occluded="0" xtl="714.70" ytl="324.42" xbr="752.05" ybr="360.07" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="18" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="4800" keyframe="1" outside="0" occluded="0" xtl="879.37" ytl="188.61" xbr="935.39" ybr="268.40" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="4960" keyframe="1" outside="1" occluded="0" xtl="879.37" ytl="188.61" xbr="935.39" ybr="268.40" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="19" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="4960" keyframe="1" outside="0" occluded="0" xtl="631.52" ytl="344.79" xbr="663.77" ybr="373.65" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="5120" keyframe="1" outside="1" occluded="0" xtl="631.52" ytl="344.79" xbr="663.77" ybr="373.65" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="20" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="5440" keyframe="1" outside="0" occluded="0" xtl="1115.34" ytl="514.55" xbr="1152.68" ybr="560.39" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="5600" keyframe="1" outside="1" occluded="0" xtl="1115.34" ytl="514.55" xbr="1152.68" ybr="560.39" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="21" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="5600" keyframe="1" outside="0" occluded="0" xtl="1234.17" ytl="689.41" xbr="1324.14" ybr="816.73" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="5760" keyframe="1" outside="1" occluded="0" xtl="1234.17" ytl="689.41" xbr="1324.14" ybr="816.73" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="22" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="5760" keyframe="1" outside="0" occluded="0" xtl="1120.43" ytl="441.55" xbr="1159.47" ybr="478.90" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="5920" keyframe="1" outside="1" occluded="0" xtl="1120.43" ytl="441.55" xbr="1159.47" ybr="478.90" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="23" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="5920" keyframe="1" outside="1" occluded="0" xtl="954.06" ytl="378.74" xbr="1001.60" ybr="412.69" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="24" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="6400" keyframe="1" outside="0" occluded="0" xtl="836.93" ytl="370.25" xbr="886.16" ybr="407.60" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="6560" keyframe="1" outside="1" occluded="0" xtl="836.93" ytl="370.25" xbr="886.16" ybr="407.60" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="25" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="6560" keyframe="1" outside="0" occluded="0" xtl="1028.76" ytl="66.38" xbr="1050.83" ybr="103.73" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="6720" keyframe="1" outside="1" occluded="0" xtl="1028.76" ytl="66.38" xbr="1050.83" ybr="103.73" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="26" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="6720" keyframe="1" outside="0" occluded="0" xtl="1351.30" ytl="309.14" xbr="1390.35" ybr="360.07" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="6880" keyframe="1" outside="1" occluded="0" xtl="1351.30" ytl="309.14" xbr="1390.35" ybr="360.07" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="27" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="6880" keyframe="1" outside="0" occluded="0" xtl="1531.25" ytl="636.78" xbr="1573.69" ybr="679.22" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="7040" keyframe="1" outside="1" occluded="0" xtl="1531.25" ytl="636.78" xbr="1573.69" ybr="679.22" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="28" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="7040" keyframe="1" outside="0" occluded="0" xtl="1154.38" ytl="353.28" xbr="1220.59" ybr="400.81" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="7200" keyframe="1" outside="1" occluded="0" xtl="1154.38" ytl="353.28" xbr="1220.59" ybr="400.81" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="29" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="7200" keyframe="1" outside="0" occluded="0" xtl="1229.08" ytl="377.04" xbr="1259.63" ybr="417.79" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="7360" keyframe="1" outside="1" occluded="0" xtl="1229.08" ytl="377.04" xbr="1259.63" ybr="417.79" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="30" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="7360" keyframe="1" outside="0" occluded="0" xtl="1008.39" ytl="616.41" xbr="1055.92" ybr="660.55" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="7520" keyframe="1" outside="1" occluded="0" xtl="1008.39" ytl="616.41" xbr="1055.92" ybr="660.55" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="31" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="7520" keyframe="1" outside="0" occluded="0" xtl="1021.97" ytl="556.99" xbr="1059.32" ybr="596.04" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="7680" keyframe="1" outside="1" occluded="0" xtl="1021.97" ytl="556.99" xbr="1059.32" ybr="596.04" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="32" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="7680" keyframe="1" outside="0" occluded="0" xtl="1084.78" ytl="523.04" xbr="1128.92" ybr="562.08" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="7840" keyframe="1" outside="1" occluded="0" xtl="1084.78" ytl="523.04" xbr="1128.92" ybr="562.08" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="33" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="7840" keyframe="1" outside="0" occluded="0" xtl="1125.52" ytl="477.20" xbr="1156.08" ybr="509.46" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="8000" keyframe="1" outside="1" occluded="0" xtl="1125.52" ytl="477.20" xbr="1156.08" ybr="509.46" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="34" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="8000" keyframe="1" outside="0" occluded="0" xtl="1196.82" ytl="276.89" xbr="1223.98" ybr="304.05" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="8160" keyframe="1" outside="1" occluded="0" xtl="1196.82" ytl="276.89" xbr="1223.98" ybr="304.05" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="35" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="8160" keyframe="1" outside="0" occluded="0" xtl="1050.83" ytl="528.13" xbr="1086.48" ybr="575.67" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="8320" keyframe="1" outside="1" occluded="0" xtl="1050.83" ytl="528.13" xbr="1086.48" ybr="575.67" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="36" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="8320" keyframe="1" outside="0" occluded="0" xtl="733.37" ytl="434.76" xbr="753.75" ybr="460.23" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="8480" keyframe="1" outside="1" occluded="0" xtl="733.37" ytl="434.76" xbr="753.75" ybr="460.23" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="37" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="8480" keyframe="1" outside="0" occluded="0" xtl="551.73" ytl="309.14" xbr="672.26" ybr="392.32" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="8640" keyframe="1" outside="1" occluded="0" xtl="551.73" ytl="309.14" xbr="672.26" ybr="392.32" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="38" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="8800" keyframe="1" outside="0" occluded="0" xtl="689.24" ytl="293.86" xbr="748.65" ybr="346.49" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="8960" keyframe="1" outside="1" occluded="0" xtl="689.24" ytl="293.86" xbr="748.65" ybr="346.49" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="39" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="9600" keyframe="1" outside="0" occluded="0" xtl="1023.67" ytl="548.50" xbr="1042.34" ybr="567.18" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="9760" keyframe="1" outside="1" occluded="0" xtl="1023.67" ytl="548.50" xbr="1042.34" ybr="567.18" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="40" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="9760" keyframe="1" outside="0" occluded="0" xtl="808.07" ytl="461.93" xbr="835.23" ybr="487.39" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="9920" keyframe="1" outside="1" occluded="0" xtl="808.07" ytl="461.93" xbr="835.23" ybr="487.39" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="41" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="9920" keyframe="1" outside="0" occluded="0" xtl="741.86" ytl="546.81" xbr="765.63" ybr="580.76" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="10080" keyframe="1" outside="1" occluded="0" xtl="741.86" ytl="546.81" xbr="765.63" ybr="580.76" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="42" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="10080" keyframe="1" outside="0" occluded="0" xtl="502.50" ytl="567.18" xbr="583.98" ybr="643.57" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="10240" keyframe="1" outside="1" occluded="0" xtl="502.50" ytl="567.18" xbr="583.98" ybr="643.57" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="43" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="10400" keyframe="1" outside="0" occluded="0" xtl="1142.50" ytl="528.13" xbr="1173.06" ybr="560.39" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="10560" keyframe="1" outside="1" occluded="0" xtl="1142.50" ytl="528.13" xbr="1173.06" ybr="560.39" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="44" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="10560" keyframe="1" outside="0" occluded="0" xtl="1122.13" ytl="607.92" xbr="1159.47" ybr="648.66" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="10720" keyframe="1" outside="1" occluded="0" xtl="1122.13" ytl="607.92" xbr="1159.47" ybr="648.66" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="45" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="10720" keyframe="1" outside="0" occluded="0" xtl="1217.19" ytl="290.47" xbr="1268.12" ybr="336.30" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+    <box frame="10880" keyframe="1" outside="1" occluded="0" xtl="1217.19" ytl="290.47" xbr="1268.12" ybr="336.30" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </track>
+  <track id="46" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="11040" keyframe="1" outside="0" occluded="0" xtl="777.50" ytl="376.82" xbr="814.85" ybr="395.45" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="11200" keyframe="1" outside="1" occluded="0" xtl="777.50" ytl="376.82" xbr="814.85" ybr="395.45" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="47" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="12320" keyframe="1" outside="0" occluded="0" xtl="791.09" ytl="548.50" xbr="838.63" ybr="596.04" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+    <box frame="12480" keyframe="1" outside="1" occluded="0" xtl="791.09" ytl="548.50" xbr="838.63" ybr="596.04" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+  <track id="48" label="ball" source="manual" task_id="2406058" subset="default">
+    <box frame="12800" keyframe="1" outside="0" occluded="0" xtl="794.49" ytl="283.68" xbr="833.53" ybr="315.93" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+    </box>
+  </track>
+</annotations>

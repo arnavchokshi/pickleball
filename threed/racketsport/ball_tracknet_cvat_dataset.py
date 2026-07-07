@@ -31,6 +31,12 @@ TRACKNET_COLUMNS = ("Frame", "Visibility", "X", "Y")
 CENTER_CONVENTION_VALUES = ("blur_midpoint", "disk_center", "unknown")
 BLUR_LABEL_QUALITY_VALUES = ("absent", "clear", "unknown", "weak")
 LEGACY_VISIBILITY_STATES = ("legacy_visible", "legacy_hidden")
+PUBLIC_UNKNOWN_VISIBILITY_WBCE_WEIGHT = BALL_VISIBILITY_WBCE_WEIGHTS["clear"]
+PUBLIC_UNKNOWN_VISIBILITY_POLICY = (
+    "Roboflow/public corpus ball boxes do not carry the four-level visibility taxonomy. "
+    "Keep visibility_level=None and use WBCE weight 1, matching clear, so uncertain public "
+    "labels are never overweighted as occlusion evidence."
+)
 SPLIT_ORDER = ("train", "val", "test")
 TRAIN_AUGMENTATION_PROFILES: dict[str, tuple[dict[str, Any], ...]] = {
     "codec_motion_v1": (
@@ -1335,6 +1341,8 @@ __all__ = [
     "MANIFEST_JSON",
     "MANIFEST_MD",
     "TRACKNET_COLUMNS",
+    "PUBLIC_UNKNOWN_VISIBILITY_POLICY",
+    "PUBLIC_UNKNOWN_VISIBILITY_WBCE_WEIGHT",
     "TrackNetCvatLabel",
     "build_ball_tracknet_cvat_dataset",
     "dense_tracknet_labels_from_cvat",

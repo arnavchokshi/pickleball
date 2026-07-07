@@ -23,6 +23,7 @@ DEFAULT_TARGET_MESH_FRAME_BUDGET = 200
 MESH_COVERAGE_MODES = ("contact_only", "uniform", "hybrid", "ball_aware")
 CONTACT_BOOST_SELECTION_REASON = "contact_boost"
 UNIFORM_MESH_SELECTION_REASON = "uniform_mesh_coverage"
+MESH_FALLBACK_REASON_ELIGIBLE_ZERO_ALL_MANUAL_REVIEW = "eligible_zero_all_manual_review"
 
 # --- ball-aware tier-1 (SAM-3D mesh) scheduling ---------------------------
 #
@@ -685,6 +686,7 @@ def _apply_mesh_coverage_policy(
 
     contact_selected: set[int] = set()
     uniform_selected: set[int] = set()
+    mesh_fallback: dict[str, Any] | None = None
     if mode == "contact_only":
         contact_selected = set(base_deep_indexes & eligible_index_set)
         if target_budget is not None and len(contact_selected) > budget:
@@ -712,6 +714,24 @@ def _apply_mesh_coverage_policy(
                     tracks_obj=tracks_obj,
                 )
             )
+        if not contact_selected and not uniform_selected:
+            fallback_pool = _manual_review_mesh_fallback_pool(frames, tracks_obj=tracks_obj)
+            if fallback_pool:
+                fallback_budget = len(fallback_pool) if target_budget is None else min(int(target_budget), len(fallback_pool))
+                uniform_selected = set(
+                    _select_uniform_indexes(
+                        fallback_pool,
+                        target_count=fallback_budget,
+                        tracks_obj=tracks_obj,
+                    )
+                )
+                if uniform_selected:
+                    mesh_fallback = {
+                        "engaged": True,
+                        "reason": MESH_FALLBACK_REASON_ELIGIBLE_ZERO_ALL_MANUAL_REVIEW,
+                        "selected": len(uniform_selected),
+                        "policy": "uniform_stride",
+                    }
     else:
         contact_budget = min(len(contact_candidate_indexes), budget)
         contact_selected = set(_select_priority_indexes(frames, contact_candidate_indexes & eligible_index_set, contact_budget))
@@ -738,7 +758,8 @@ def _apply_mesh_coverage_policy(
                 selection_reasons.append(boost_reason)
             if frame_idx in uniform_selected:
                 selection_reasons.append(UNIFORM_MESH_SELECTION_REASON)
-            _promote_frame_to_mesh(frame, selection_reasons=selection_reasons)
+            if mesh_fallback is None or frame_idx not in uniform_selected:
+                _promote_frame_to_mesh(frame, selection_reasons=selection_reasons)
         else:
             _restore_non_selected_tier(
                 frame,
@@ -757,7 +778,8 @@ def _apply_mesh_coverage_policy(
 
     uniform_stride = _uniform_stride(uniform_selected)
     selected_count = len(selected_indexes)
-    return {
+    budget_limited_pool_count = len(_manual_review_mesh_fallback_pool(frames, tracks_obj=tracks_obj)) if mesh_fallback else len(eligible_indexes)
+    policy = {
         "mode": mode,
         "target_mesh_frame_budget": target_budget,
         "eligible_mesh_frame_count": len(eligible_indexes),
@@ -767,12 +789,41 @@ def _apply_mesh_coverage_policy(
         "contact_selected_frame_count": len(contact_selected),
         "rally_span_count": _rally_span_count(tracks_obj),
         "uniform_stride_frames": uniform_stride,
-        "budget_limited": selected_count < len(eligible_indexes),
+        "budget_limited": selected_count < budget_limited_pool_count,
         "ball_aware_candidate_frame_count": len(ball_aware_candidate_indexes & eligible_index_set) if mode == "ball_aware" else None,
         "ball_aware_trigger_source_counts": _ball_aware_trigger_source_counts(frames, contact_selected, uniform_selected)
         if mode == "ball_aware"
         else None,
     }
+    if mesh_fallback is not None:
+        policy["mesh_fallback"] = mesh_fallback
+    return policy
+
+
+def _manual_review_mesh_fallback_pool(frames: list[Mapping[str, Any]], *, tracks_obj: Tracks) -> list[int]:
+    if not any(_frame_has_ball_evidence(frame) for frame in frames):
+        return []
+    active_rally_indexes = [
+        int(frame["frame_idx"])
+        for frame in frames
+        if int(frame.get("active_players", 0)) > 0 and _frame_in_rally_spans(frame, tracks_obj=tracks_obj)
+    ]
+    if not active_rally_indexes:
+        return []
+    active_rally_lookup = {int(frame["frame_idx"]): frame for frame in frames if int(frame["frame_idx"]) in active_rally_indexes}
+    if not all(
+        active_rally_lookup[frame_idx].get("target_representation") == "manual_review_required"
+        for frame_idx in active_rally_indexes
+    ):
+        return []
+    return sorted(active_rally_indexes)
+
+
+def _frame_has_ball_evidence(frame: Mapping[str, Any]) -> bool:
+    if frame.get("ball_conf") is not None:
+        return True
+    reasons = {str(reason) for reason in frame.get("reasons", [])}
+    return bool(reasons & {"ball_missing", "ball_uncertain"})
 
 
 def _selection_reasons_for_frame(
@@ -992,7 +1043,7 @@ def _deep_mesh_windows(frames: list[Mapping[str, Any]], *, fps: float) -> list[d
 
     for frame in sorted(frames, key=lambda item: int(item["frame_idx"])):
         frame_idx = int(frame["frame_idx"])
-        if frame.get("recommended_tier") != "deep_mesh":
+        if not _frame_selected_for_mesh_compute(frame):
             if current:
                 windows.append(_deep_mesh_window(current, fps=fps))
                 current = []
@@ -1012,14 +1063,7 @@ def _deep_mesh_windows(frames: list[Mapping[str, Any]], *, fps: float) -> list[d
 def _deep_mesh_window(frames: list[Mapping[str, Any]], *, fps: float) -> dict[str, Any]:
     frame_start = int(frames[0]["frame_idx"])
     frame_end = int(frames[-1]["frame_idx"])
-    target_player_ids = sorted(
-        {
-            int(target["player_id"])
-            for frame in frames
-            for target in frame.get("player_targets", [])
-            if target.get("target_representation") == "world_mesh"
-        }
-    )
+    target_player_ids = _deep_mesh_window_target_player_ids(frames)
     return {
         "frame_start": frame_start,
         "frame_end": frame_end,
@@ -1032,6 +1076,32 @@ def _deep_mesh_window(frames: list[Mapping[str, Any]], *, fps: float) -> dict[st
         "reason_counts": _reason_counts(frames),
         "max_score": max(float(frame["score"]) for frame in frames),
     }
+
+
+def _frame_selected_for_mesh_compute(frame: Mapping[str, Any]) -> bool:
+    if frame.get("recommended_tier") == "deep_mesh":
+        return True
+    tier_rationale = frame.get("tier_rationale")
+    return isinstance(tier_rationale, Mapping) and bool(tier_rationale.get("mesh_selected"))
+
+
+def _deep_mesh_window_target_player_ids(frames: list[Mapping[str, Any]]) -> list[int]:
+    world_mesh_targets = {
+        int(target["player_id"])
+        for frame in frames
+        for target in frame.get("player_targets", [])
+        if target.get("target_representation") == "world_mesh"
+    }
+    if world_mesh_targets:
+        return sorted(world_mesh_targets)
+    return sorted(
+        {
+            int(player_id)
+            for frame in frames
+            if _frame_selected_for_mesh_compute(frame)
+            for player_id in frame.get("active_player_ids", [])
+        }
+    )
 
 
 def _reason_counts(frames: list[Mapping[str, Any]]) -> dict[str, int]:

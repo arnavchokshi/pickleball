@@ -1,0 +1,1113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <id>10</id>
+      <name>racketsport_online_harvest__L0HVmAlCQI_rally_0001</name>
+      <size>81</size>
+      <mode>interpolation</mode>
+      <overlap>0</overlap>
+      <bugtracker></bugtracker>
+      <created>2026-07-07 06:19:28.952830+00:00</created>
+      <updated>2026-07-07 06:56:38.044127+00:00</updated>
+      <subset>default</subset>
+      <start_frame>0</start_frame>
+      <stop_frame>1440</stop_frame>
+      <frame_filter>step=18</frame_filter>
+      <segments>
+        <segment>
+          <id>10</id>
+          <start>0</start>
+          <stop>80</stop>
+          <url>http://localhost:8080/api/tasks/10/dataset/export/api/jobs/10</url>
+        </segment>
+      </segments>
+      <owner>
+        <username>admin</username>
+        <email>admin@labelfactory.local</email>
+      </owner>
+      <assignee></assignee>
+      <labels>
+        <label>
+          <name>court_corner</name>
+          <color>#28bfd8</color>
+          <type>points</type>
+          <attributes>
+            <attribute>
+              <name>corner_name</name>
+              <mutable>True</mutable>
+              <input_type>text</input_type>
+              <default_value></default_value>
+              <values></values>
+            </attribute>
+          </attributes>
+        </label>
+        <label>
+          <name>court_keypoint</name>
+          <color>#86a0c8</color>
+          <type>points</type>
+          <attributes>
+            <attribute>
+              <name>keypoint_name</name>
+              <mutable>True</mutable>
+              <input_type>text</input_type>
+              <default_value></default_value>
+              <values></values>
+            </attribute>
+          </attributes>
+        </label>
+        <label>
+          <name>player_box</name>
+          <color>#09d7ad</color>
+          <type>rectangle</type>
+          <attributes>
+            <attribute>
+              <name>player_id</name>
+              <mutable>True</mutable>
+              <input_type>text</input_type>
+              <default_value></default_value>
+              <values></values>
+            </attribute>
+          </attributes>
+        </label>
+        <label>
+          <name>ball</name>
+          <color>#804080</color>
+          <type>rectangle</type>
+          <attributes>
+            <attribute>
+              <name>visibility</name>
+              <mutable>True</mutable>
+              <input_type>checkbox</input_type>
+              <default_value>true</default_value>
+              <values>true
+false</values>
+            </attribute>
+            <attribute>
+              <name>visibility_level</name>
+              <mutable>True</mutable>
+              <input_type>select</input_type>
+              <default_value>clear</default_value>
+              <values>clear
+partial
+full
+out_of_frame</values>
+            </attribute>
+            <attribute>
+              <name>center_convention</name>
+              <mutable>True</mutable>
+              <input_type>text</input_type>
+              <default_value></default_value>
+              <values></values>
+            </attribute>
+            <attribute>
+              <name>blur_angle_deg</name>
+              <mutable>True</mutable>
+              <input_type>number</input_type>
+              <default_value>0</default_value>
+              <values>0
+360
+1</values>
+            </attribute>
+            <attribute>
+              <name>blur_length_px</name>
+              <mutable>True</mutable>
+              <input_type>number</input_type>
+              <default_value>0</default_value>
+              <values>0
+5000
+1</values>
+            </attribute>
+            <attribute>
+              <name>blur_width_px</name>
+              <mutable>True</mutable>
+              <input_type>number</input_type>
+              <default_value>0</default_value>
+              <values>0
+5000
+1</values>
+            </attribute>
+            <attribute>
+              <name>blur_label_quality</name>
+              <mutable>True</mutable>
+              <input_type>text</input_type>
+              <default_value></default_value>
+              <values></values>
+            </attribute>
+          </attributes>
+        </label>
+        <label>
+          <name>event</name>
+          <color>#d76534</color>
+          <type>tag</type>
+          <attributes>
+            <attribute>
+              <name>event_type</name>
+              <mutable>True</mutable>
+              <input_type>text</input_type>
+              <default_value></default_value>
+              <values></values>
+            </attribute>
+          </attributes>
+        </label>
+        <label>
+          <name>racket_keypoint</name>
+          <color>#89fb99</color>
+          <type>points</type>
+          <attributes>
+            <attribute>
+              <name>keypoint_name</name>
+              <mutable>True</mutable>
+              <input_type>text</input_type>
+              <default_value></default_value>
+              <values></values>
+            </attribute>
+          </attributes>
+        </label>
+        <label>
+          <name>foot_contact</name>
+          <color>#05e0c2</color>
+          <type>points</type>
+          <attributes>
+            <attribute>
+              <name>foot</name>
+              <mutable>True</mutable>
+              <input_type>text</input_type>
+              <default_value></default_value>
+              <values></values>
+            </attribute>
+          </attributes>
+        </label>
+      </labels>
+      <original_size>
+        <width>1920</width>
+        <height>1080</height>
+      </original_size>
+      <source>_L0HVmAlCQI_rally_0001.mp4</source>
+    </task>
+    <dumped>2026-07-07 06:56:58.175126+00:00</dumped>
+  </meta>
+  <track id="0" label="ball" source="manual">
+    <box frame="18" keyframe="1" outside="0" occluded="0" xtl="965.24" ytl="486.61" xbr="981.24" ybr="502.61" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="36" keyframe="1" outside="1" occluded="0" xtl="965.24" ytl="486.61" xbr="981.24" ybr="502.61" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="54" keyframe="1" outside="1" occluded="0" xtl="965.24" ytl="486.61" xbr="981.24" ybr="502.61" z_order="0">
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">false</attribute>
+    </box>
+    <box frame="72" keyframe="1" outside="0" occluded="0" xtl="138.25" ytl="33.25" xbr="154.25" ybr="49.25" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="90" keyframe="1" outside="1" occluded="0" xtl="138.25" ytl="33.25" xbr="154.25" ybr="49.25" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="108" keyframe="1" outside="1" occluded="0" xtl="138.25" ytl="33.25" xbr="154.25" ybr="49.25" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="126" keyframe="1" outside="0" occluded="0" xtl="957.70" ytl="494.56" xbr="973.70" ybr="510.56" z_order="0">
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+    </box>
+    <box frame="144" keyframe="1" outside="1" occluded="0" xtl="957.70" ytl="494.56" xbr="973.70" ybr="510.56" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="162" keyframe="1" outside="1" occluded="0" xtl="957.70" ytl="494.56" xbr="973.70" ybr="510.56" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="180" keyframe="1" outside="1" occluded="0" xtl="957.70" ytl="494.56" xbr="973.70" ybr="510.56" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="198" keyframe="1" outside="0" occluded="0" xtl="834.27" ytl="509.25" xbr="850.27" ybr="525.25" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="216" keyframe="1" outside="0" occluded="0" xtl="776.22" ytl="501.45" xbr="792.22" ybr="517.45" z_order="0">
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+    </box>
+    <box frame="234" keyframe="1" outside="0" occluded="0" xtl="811.52" ytl="419.87" xbr="827.52" ybr="435.87" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="252" keyframe="1" outside="1" occluded="0" xtl="811.52" ytl="419.87" xbr="827.52" ybr="435.87" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="270" keyframe="1" outside="0" occluded="0" xtl="863.14" ytl="312.50" xbr="879.14" ybr="328.50" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="288" keyframe="1" outside="0" occluded="0" xtl="917.68" ytl="426.62" xbr="933.68" ybr="442.62" z_order="0">
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+    </box>
+    <box frame="306" keyframe="1" outside="0" occluded="0" xtl="979.14" ytl="525.13" xbr="995.14" ybr="541.13" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="324" keyframe="1" outside="0" occluded="0" xtl="719.01" ytl="476.54" xbr="735.01" ybr="492.54" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="342" keyframe="1" outside="1" occluded="0" xtl="719.01" ytl="476.54" xbr="735.01" ybr="492.54" z_order="0">
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="visibility">false</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="360" keyframe="1" outside="1" occluded="0" xtl="719.01" ytl="476.54" xbr="735.01" ybr="492.54" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="378" keyframe="1" outside="0" occluded="0" xtl="922.56" ytl="497.69" xbr="938.56" ybr="513.69" z_order="0">
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+    </box>
+    <box frame="396" keyframe="1" outside="0" occluded="0" xtl="1538.86" ytl="642.65" xbr="1554.86" ybr="658.65" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="414" keyframe="1" outside="0" occluded="0" xtl="1108.16" ytl="326.89" xbr="1124.16" ybr="342.89" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="432" keyframe="1" outside="0" occluded="0" xtl="849.77" ytl="441.94" xbr="865.77" ybr="457.94" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="450" keyframe="1" outside="0" occluded="0" xtl="298.61" ytl="3.68" xbr="314.61" ybr="19.68" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="468" keyframe="1" outside="0" occluded="0" xtl="338.19" ytl="34.24" xbr="354.19" ybr="50.24" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="486" keyframe="1" outside="0" occluded="0" xtl="741.41" ytl="465.96" xbr="757.41" ybr="481.96" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="504" keyframe="1" outside="0" occluded="0" xtl="858.67" ytl="519.00" xbr="874.67" ybr="535.00" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="522" keyframe="1" outside="0" occluded="0" xtl="959.79" ytl="509.15" xbr="975.79" ybr="525.15" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="540" keyframe="1" outside="0" occluded="0" xtl="1587.58" ytl="612.37" xbr="1603.58" ybr="628.37" z_order="0">
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+    </box>
+    <box frame="558" keyframe="1" outside="1" occluded="0" xtl="732.51" ytl="177.61" xbr="748.51" ybr="193.61" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="576" keyframe="1" outside="1" occluded="0" xtl="408.79" ytl="138.08" xbr="424.79" ybr="154.08" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="594" keyframe="1" outside="1" occluded="0" xtl="408.79" ytl="138.08" xbr="424.79" ybr="154.08" z_order="0">
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="visibility">false</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="612" keyframe="1" outside="0" occluded="0" xtl="907.89" ytl="529.84" xbr="923.89" ybr="545.84" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="630" keyframe="1" outside="0" occluded="0" xtl="875.44" ytl="530.14" xbr="891.44" ybr="546.14" z_order="0">
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">true</attribute>
+    </box>
+    <box frame="648" keyframe="1" outside="0" occluded="0" xtl="1044.64" ytl="530.83" xbr="1060.64" ybr="546.83" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="666" keyframe="1" outside="1" occluded="0" xtl="1044.64" ytl="530.83" xbr="1060.64" ybr="546.83" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="684" keyframe="1" outside="0" occluded="0" xtl="914.72" ytl="468.15" xbr="930.72" ybr="484.15" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="702" keyframe="1" outside="1" occluded="0" xtl="914.72" ytl="468.15" xbr="930.72" ybr="484.15" z_order="0">
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="visibility">false</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+    </box>
+    <box frame="720" keyframe="1" outside="1" occluded="0" xtl="588.25" ytl="46.50" xbr="604.25" ybr="62.50" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="738" keyframe="1" outside="1" occluded="0" xtl="588.25" ytl="46.50" xbr="604.25" ybr="62.50" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="756" keyframe="1" outside="1" occluded="0" xtl="993.76" ytl="88.39" xbr="1009.76" ybr="104.39" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="774" keyframe="1" outside="1" occluded="0" xtl="959.44" ytl="63.97" xbr="975.44" ybr="79.97" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="792" keyframe="1" outside="1" occluded="0" xtl="921.80" ytl="44.10" xbr="937.80" ybr="60.10" z_order="0">
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+    </box>
+    <box frame="810" keyframe="1" outside="1" occluded="0" xtl="886.38" ytl="25.75" xbr="902.38" ybr="41.75" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="828" keyframe="1" outside="1" occluded="0" xtl="886.38" ytl="25.75" xbr="902.38" ybr="41.75" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="846" keyframe="1" outside="1" occluded="0" xtl="886.38" ytl="25.75" xbr="902.38" ybr="41.75" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="864" keyframe="1" outside="0" occluded="0" xtl="819.80" ytl="357.68" xbr="835.80" ybr="373.68" z_order="0">
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+    </box>
+    <box frame="882" keyframe="1" outside="0" occluded="0" xtl="1027.30" ytl="505.71" xbr="1043.30" ybr="521.71" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="900" keyframe="1" outside="1" occluded="0" xtl="1027.30" ytl="505.71" xbr="1043.30" ybr="521.71" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="918" keyframe="1" outside="0" occluded="0" xtl="964.31" ytl="452.56" xbr="980.31" ybr="468.56" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="936" keyframe="1" outside="1" occluded="0" xtl="964.31" ytl="452.56" xbr="980.31" ybr="468.56" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="954" keyframe="1" outside="0" occluded="0" xtl="757.50" ytl="380.54" xbr="773.50" ybr="396.54" z_order="0">
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+    </box>
+    <box frame="972" keyframe="1" outside="0" occluded="0" xtl="923.24" ytl="529.25" xbr="939.24" ybr="545.25" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="990" keyframe="1" outside="0" occluded="0" xtl="1182.07" ytl="585.78" xbr="1198.07" ybr="601.78" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1008" keyframe="1" outside="0" occluded="0" xtl="497.35" ytl="148.49" xbr="513.35" ybr="164.49" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1026" keyframe="1" outside="0" occluded="0" xtl="1098.91" ytl="473.65" xbr="1114.91" ybr="489.65" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1044" keyframe="1" outside="0" occluded="0" xtl="1060.73" ytl="554.27" xbr="1076.73" ybr="570.27" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1062" keyframe="1" outside="1" occluded="0" xtl="1060.73" ytl="554.27" xbr="1076.73" ybr="570.27" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1080" keyframe="1" outside="0" occluded="0" xtl="976.36" ytl="537.05" xbr="992.36" ybr="553.05" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1098" keyframe="1" outside="0" occluded="0" xtl="943.53" ytl="406.90" xbr="959.53" ybr="422.90" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1116" keyframe="1" outside="0" occluded="0" xtl="953.97" ytl="523.41" xbr="969.97" ybr="539.41" z_order="0">
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+    </box>
+    <box frame="1134" keyframe="1" outside="0" occluded="0" xtl="978.70" ytl="505.98" xbr="994.70" ybr="521.98" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1152" keyframe="1" outside="0" occluded="0" xtl="944.76" ytl="456.52" xbr="960.76" ybr="472.52" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1170" keyframe="1" outside="0" occluded="0" xtl="905.47" ytl="567.46" xbr="921.47" ybr="583.46" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1188" keyframe="1" outside="1" occluded="0" xtl="905.47" ytl="567.46" xbr="921.47" ybr="583.46" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1206" keyframe="1" outside="1" occluded="0" xtl="905.47" ytl="567.46" xbr="921.47" ybr="583.46" z_order="0">
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">false</attribute>
+    </box>
+    <box frame="1224" keyframe="1" outside="0" occluded="0" xtl="838.55" ytl="542.77" xbr="854.55" ybr="558.77" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1242" keyframe="1" outside="1" occluded="0" xtl="838.55" ytl="542.77" xbr="854.55" ybr="558.77" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1260" keyframe="1" outside="0" occluded="0" xtl="888.34" ytl="408.14" xbr="904.34" ybr="424.14" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1278" keyframe="1" outside="1" occluded="0" xtl="888.34" ytl="408.14" xbr="904.34" ybr="424.14" z_order="0">
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+    </box>
+    <box frame="1296" keyframe="1" outside="0" occluded="0" xtl="798.25" ytl="262.00" xbr="814.25" ybr="278.00" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1314" keyframe="1" outside="0" occluded="0" xtl="678.02" ytl="463.04" xbr="694.02" ybr="479.04" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1332" keyframe="1" outside="0" occluded="0" xtl="1533.24" ytl="509.45" xbr="1549.24" ybr="525.45" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1350" keyframe="1" outside="1" occluded="0" xtl="1533.24" ytl="509.45" xbr="1549.24" ybr="525.45" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1368" keyframe="1" outside="0" occluded="0" xtl="741.62" ytl="434.43" xbr="757.62" ybr="450.43" z_order="0">
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+    </box>
+    <box frame="1386" keyframe="1" outside="0" occluded="0" xtl="770.95" ytl="458.94" xbr="786.95" ybr="474.94" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1404" keyframe="1" outside="0" occluded="0" xtl="784.16" ytl="541.92" xbr="800.16" ybr="557.92" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1422" keyframe="1" outside="1" occluded="0" xtl="784.16" ytl="541.92" xbr="800.16" ybr="557.92" z_order="0">
+      <attribute name="visibility">false</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1440" keyframe="1" outside="0" occluded="0" xtl="774.06" ytl="546.56" xbr="790.06" ybr="562.56" z_order="0">
+      <attribute name="blur_label_quality"></attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">full</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+    </box>
+  </track>
+  <track id="1" label="ball" source="manual">
+    <box frame="252" keyframe="1" outside="0" occluded="0" xtl="741.86" ytl="623.20" xbr="802.98" ybr="699.59" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="270" keyframe="1" outside="1" occluded="0" xtl="741.86" ytl="623.20" xbr="802.98" ybr="699.59" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+  </track>
+  <track id="2" label="ball" source="manual">
+    <box frame="594" keyframe="1" outside="0" occluded="0" xtl="1503.85" ytl="448.34" xbr="1600.66" ybr="499.27" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="612" keyframe="1" outside="1" occluded="0" xtl="1503.85" ytl="448.34" xbr="1600.66" ybr="499.27" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+  </track>
+  <track id="3" label="ball" source="manual">
+    <box frame="702" keyframe="1" outside="0" occluded="0" xtl="790.63" ytl="560.60" xbr="802.23" ybr="589.60" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="720" keyframe="1" outside="1" occluded="0" xtl="790.63" ytl="560.60" xbr="802.23" ybr="589.60" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+  </track>
+  <track id="4" label="ball" source="manual">
+    <box frame="756" keyframe="1" outside="0" occluded="0" xtl="595.40" ytl="612.79" xbr="618.59" ybr="637.92" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="774" keyframe="1" outside="1" occluded="0" xtl="595.40" ytl="612.79" xbr="618.59" ybr="637.92" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+  </track>
+  <track id="5" label="ball" source="manual">
+    <box frame="774" keyframe="1" outside="0" occluded="0" xtl="566.40" ytl="606.99" xbr="599.26" ybr="639.86" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="792" keyframe="1" outside="1" occluded="0" xtl="566.40" ytl="606.99" xbr="599.26" ybr="639.86" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+  </track>
+  <track id="6" label="ball" source="manual">
+    <box frame="792" keyframe="1" outside="0" occluded="0" xtl="535.47" ytl="605.06" xbr="564.47" ybr="647.59" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="810" keyframe="1" outside="1" occluded="0" xtl="535.47" ytl="605.06" xbr="564.47" ybr="647.59" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+  </track>
+  <track id="7" label="ball" source="manual">
+    <box frame="936" keyframe="1" outside="0" occluded="0" xtl="483.28" ytl="622.46" xbr="520.01" ybr="663.05" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="954" keyframe="1" outside="1" occluded="0" xtl="483.28" ytl="622.46" xbr="520.01" ybr="663.05" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+  </track>
+  <track id="8" label="ball" source="manual">
+    <box frame="1008" keyframe="1" outside="0" occluded="0" xtl="1212.03" ytl="361.50" xbr="1270.02" ybr="421.43" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1026" keyframe="1" outside="1" occluded="0" xtl="1212.03" ytl="361.50" xbr="1270.02" ybr="421.43" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+  </track>
+  <track id="9" label="ball" source="manual">
+    <box frame="1206" keyframe="1" outside="0" occluded="0" xtl="1343.47" ytl="452.35" xbr="1399.53" ybr="483.28" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1224" keyframe="1" outside="1" occluded="0" xtl="1343.47" ytl="452.35" xbr="1399.53" ybr="483.28" z_order="0">
+      <attribute name="visibility_level">partial</attribute>
+      <attribute name="visibility">true</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+  </track>
+  <track id="10" label="ball" source="manual">
+    <box frame="1278" keyframe="1" outside="0" occluded="0" xtl="1256.48" ytl="813.83" xbr="1349.27" ybr="889.21" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+    <box frame="1296" keyframe="1" outside="1" occluded="0" xtl="1256.48" ytl="813.83" xbr="1349.27" ybr="889.21" z_order="0">
+      <attribute name="visibility">true</attribute>
+      <attribute name="visibility_level">clear</attribute>
+      <attribute name="center_convention"></attribute>
+      <attribute name="blur_angle_deg">0</attribute>
+      <attribute name="blur_length_px">0</attribute>
+      <attribute name="blur_width_px">0</attribute>
+      <attribute name="blur_label_quality"></attribute>
+    </box>
+  </track>
+</annotations>
