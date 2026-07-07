@@ -1,0 +1,18 @@
+{
+  "package_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/court_keypoints_20260707/packages/court_keypoints_metric15_20260707_6frames.zip",
+  "project_id": 3,
+  "project_name": "racketsport_metric15_court_keypoints_20260707",
+  "schema_version": 1,
+  "selected_frame_count": 6,
+  "source_ids": [
+    "HyUqT7zFiwk",
+    "73VurrTKCZ8",
+    "wBu8bC4OfUY",
+    "Ezz6HDNHlnk",
+    "zwCtH_i1_S4",
+    "_L0HVmAlCQI"
+  ],
+  "status": "imported",
+  "task_id": 13,
+  "task_name": "racketsport_metric15_court_keypoints_20260707_6frames"
+}

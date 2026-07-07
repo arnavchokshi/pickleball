@@ -1,0 +1,403 @@
+{
+  "T_world_court": [
+    [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "artifact_type": "racketsport_harvest_source_court_calibration",
+  "calibration_grade": "manual_bar",
+  "capture_quality": {
+    "grade": "good",
+    "reasons": [
+      "single_view_metric_camera_fit",
+      "distortion_model=k1_k2_calibrate_camera_seeded",
+      "point_count=15"
+    ]
+  },
+  "coordinate_frame": "court_netcenter_z_up_m",
+  "cross_frame_consistency": {
+    "focal_px_spread": 0.0,
+    "frame_count": 1,
+    "note": "single_labeled_frame_for_static_source",
+    "rotation_deg_spread": 0.0,
+    "translation_l2_m_spread": 0.0
+  },
+  "distortion_model": "k1_k2_calibrate_camera_seeded",
+  "extrinsics": {
+    "R": [
+      [
+        0.719125615583969,
+        -0.6947272645458327,
+        0.014573157092477806
+      ],
+      [
+        -0.017231815839904352,
+        -0.038794880329531295,
+        -0.9990986046347362
+      ],
+      [
+        0.6946664044948747,
+        0.7182262771278157,
+        -0.03986980448009492
+      ]
+    ],
+    "camera_height_m": 1.510426268180262,
+    "t": [
+      -1.6611742276520534,
+      1.0047498785370412,
+      12.09871781012271
+    ]
+  },
+  "failure_reason": null,
+  "homography": [
+    [
+      151.16497260728949,
+      -30.748235000768638,
+      743.9979899028679
+    ],
+    [
+      31.119646757342636,
+      28.607453595730313,
+      644.5276505674108
+    ],
+    [
+      0.060969815757242585,
+      0.06170324128868596,
+      1.0
+    ]
+  ],
+  "identifiability_notes": [
+    "principal point fixed at the geometric image center (cx=W/2, cy=H/2): a single planar view cannot separate principal-point offset from a compensating pose change (classic single-image calibration degeneracy).",
+    "fx constrained equal to fy (square-pixel / unit aspect-ratio assumption): a single view cannot independently resolve fx vs fy without this assumption.",
+    "k1,k2 allowed to vary (tangential distortion fixed at zero, k3 fixed at zero) via cv2.calibrateCamera, seeded from the zero-distortion grid-search focal/pose.",
+    "k1,k2 accepted: reduced median reprojection error by 41.3%, >= the 15% gate required to justify 2 extra single-view degrees of freedom."
+  ],
+  "image_pts": [
+    [
+      1200.2,
+      935.58
+    ],
+    [
+      1611.53,
+      814.27
+    ],
+    [
+      1827.62,
+      742.23
+    ],
+    [
+      623.81,
+      595.3
+    ],
+    [
+      375.56,
+      606.94
+    ],
+    [
+      58.44,
+      622.61
+    ],
+    [
+      526.66,
+      748.54
+    ],
+    [
+      937.65,
+      696.62
+    ],
+    [
+      1203.51,
+      663.79
+    ],
+    [
+      347.6,
+      566.6
+    ],
+    [
+      750.6,
+      556.9
+    ],
+    [
+      1013.9,
+      547.1
+    ],
+    [
+      234.19,
+      671.75
+    ],
+    [
+      600.35,
+      644.02
+    ],
+    [
+      868.2,
+      623.44
+    ]
+  ],
+  "image_size": [
+    1920,
+    1080
+  ],
+  "intrinsics": {
+    "cx": 960.0,
+    "cy": 540.0,
+    "dist": [
+      0.3188408456620067,
+      -0.676382990261708,
+      0.0,
+      0.0
+    ],
+    "fx": 1520.2061485867682,
+    "fy": 1520.2061485867682,
+    "source": "metric_15pt_reviewed"
+  },
+  "keypoint_names": [
+    "near_left_corner",
+    "near_baseline_center",
+    "near_right_corner",
+    "far_right_corner",
+    "far_baseline_center",
+    "far_left_corner",
+    "near_nvz_left",
+    "near_nvz_center",
+    "near_nvz_right",
+    "net_left_sideline",
+    "net_center",
+    "net_right_sideline",
+    "far_nvz_left",
+    "far_nvz_center",
+    "far_nvz_right"
+  ],
+  "metric_confidence": "med",
+  "per_frame_reprojection_stats": [
+    {
+      "absolute_frame_index": 3808,
+      "clip_id": "73VurrTKCZ8_rally_0002",
+      "failure_reason": null,
+      "frame_name": "73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+      "grade": "manual_bar",
+      "point_count": 15,
+      "points_used": [
+        "far_baseline_center",
+        "far_left_corner",
+        "far_nvz_center",
+        "far_nvz_left",
+        "far_nvz_right",
+        "far_right_corner",
+        "near_baseline_center",
+        "near_left_corner",
+        "near_nvz_center",
+        "near_nvz_left",
+        "near_nvz_right",
+        "near_right_corner",
+        "net_center",
+        "net_left_sideline",
+        "net_right_sideline"
+      ],
+      "reprojection_error_px": {
+        "median": 2.9309636434166437,
+        "p95": 5.999294904111693
+      },
+      "residuals_by_keypoint_px": {
+        "far_baseline_center": 2.561555793335679,
+        "far_left_corner": 1.8270371156945555,
+        "far_nvz_center": 3.445334207814171,
+        "far_nvz_left": 5.304209545565897,
+        "far_nvz_right": 0.7098244672308,
+        "far_right_corner": 2.0541048731510756,
+        "near_baseline_center": 2.9309636434166437,
+        "near_left_corner": 2.592627610560119,
+        "near_nvz_center": 3.4968937623023106,
+        "near_nvz_left": 4.046486485968042,
+        "near_nvz_right": 1.435637689791074,
+        "near_right_corner": 1.0431752460491674,
+        "net_center": 5.36982766718203,
+        "net_left_sideline": 7.4680517902809,
+        "net_right_sideline": 5.345533476248669
+      }
+    }
+  ],
+  "per_keypoint_residual_by_name_px": {
+    "far_baseline_center": 2.561555793335679,
+    "far_left_corner": 1.8270371156945555,
+    "far_nvz_center": 3.445334207814171,
+    "far_nvz_left": 5.304209545565897,
+    "far_nvz_right": 0.7098244672308,
+    "far_right_corner": 2.0541048731510756,
+    "near_baseline_center": 2.9309636434166437,
+    "near_left_corner": 2.592627610560119,
+    "near_nvz_center": 3.4968937623023106,
+    "near_nvz_left": 4.046486485968042,
+    "near_nvz_right": 1.435637689791074,
+    "near_right_corner": 1.0431752460491674,
+    "net_center": 5.36982766718203,
+    "net_left_sideline": 7.4680517902809,
+    "net_right_sideline": 5.345533476248669
+  },
+  "per_keypoint_residual_px": [
+    2.592627610560119,
+    2.9309636434166437,
+    1.0431752460491674,
+    2.0541048731510756,
+    2.561555793335679,
+    1.8270371156945555,
+    4.046486485968042,
+    3.4968937623023106,
+    1.435637689791074,
+    7.4680517902809,
+    5.36982766718203,
+    5.345533476248669,
+    5.304209545565897,
+    3.445334207814171,
+    0.7098244672308
+  ],
+  "provenance": {
+    "cvat_export_xml": "cvat_upload/exports/court_keypoints_20260707/annotations.xml",
+    "frames_used": [
+      {
+        "absolute_frame_index": 3808,
+        "clip_id": "73VurrTKCZ8_rally_0002",
+        "frame_name": "73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+        "image_size": [
+          1920,
+          1080
+        ],
+        "point_count": 15,
+        "points_used": [
+          "far_baseline_center",
+          "far_left_corner",
+          "far_nvz_center",
+          "far_nvz_left",
+          "far_nvz_right",
+          "far_right_corner",
+          "near_baseline_center",
+          "near_left_corner",
+          "near_nvz_center",
+          "near_nvz_left",
+          "near_nvz_right",
+          "near_right_corner",
+          "net_center",
+          "net_left_sideline",
+          "net_right_sideline"
+        ],
+        "quality_flags": []
+      }
+    ],
+    "owner_review_readme": "cvat_upload/exports/court_keypoints_20260707/README.md",
+    "source_id": "73VurrTKCZ8",
+    "stray_drops_applied": []
+  },
+  "quality_flags": [],
+  "reprojection_error_px": {
+    "median": 2.9309636434166437,
+    "p95": 5.999294904111693
+  },
+  "schema_version": 1,
+  "selected_absolute_frame_index": 3808,
+  "selected_frame": "73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+  "selection_rule": "lowest p95 reprojection, then lowest median, then highest point count, then frame name",
+  "solved_over_frames": [
+    3808
+  ],
+  "source": "metric_15pt_reviewed",
+  "source_id": "73VurrTKCZ8",
+  "sport": "pickleball",
+  "world_pts": [
+    [
+      -3.048,
+      -6.7056000000000004,
+      0.0
+    ],
+    [
+      0.0,
+      -6.7056000000000004,
+      0.0
+    ],
+    [
+      3.048,
+      -6.7056000000000004,
+      0.0
+    ],
+    [
+      3.048,
+      6.7056000000000004,
+      0.0
+    ],
+    [
+      0.0,
+      6.7056000000000004,
+      0.0
+    ],
+    [
+      -3.048,
+      6.7056000000000004,
+      0.0
+    ],
+    [
+      -3.048,
+      -2.1336,
+      0.0
+    ],
+    [
+      0.0,
+      -2.1336,
+      0.0
+    ],
+    [
+      3.048,
+      -2.1336,
+      0.0
+    ],
+    [
+      -3.048,
+      0.0,
+      0.9144
+    ],
+    [
+      0.0,
+      0.0,
+      0.9144
+    ],
+    [
+      3.048,
+      0.0,
+      0.9144
+    ],
+    [
+      -3.048,
+      2.1336,
+      0.0
+    ],
+    [
+      0.0,
+      2.1336,
+      0.0
+    ],
+    [
+      3.048,
+      2.1336,
+      0.0
+    ]
+  ]
+}
