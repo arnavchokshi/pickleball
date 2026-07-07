@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import asdict, dataclass
+import os
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, Mapping, Sequence
+from urllib.parse import urlparse
 
 import cv2
 import numpy as np
@@ -15,6 +17,17 @@ IDENTITY_3X3: list[list[float]] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 
 
 @dataclass(frozen=True)
 class CameraMotionParams:
+    estimator_mode: str = "hardened"
+    use_person_masks: bool = True
+    flow_backend: str = "lk"
+    processing_scale: float = 0.6
+    flow_mad_filter: bool = True
+    flow_mad_z: float = 8.0
+    min_flow_mad_survivors: int = 12
+    temporal_smoothing: bool = True
+    temporal_mad_z: float = 4.0
+    temporal_gaussian_sigma_frames: float = 0.4
+    temporal_gaussian_radius_frames: int = 2
     max_corners: int = 900
     quality_level: float = 0.01
     min_distance: float = 8.0
@@ -38,6 +51,17 @@ class CameraMotionParams:
     max_projective_abs: float = 0.002
     rng_seed: int = 1337
 
+    @classmethod
+    def legacy(cls) -> "CameraMotionParams":
+        return cls(
+            estimator_mode="legacy",
+            flow_mad_filter=False,
+            temporal_smoothing=False,
+            use_person_masks=True,
+            flow_backend="lk",
+            processing_scale=1.0,
+        )
+
 
 def estimate_camera_motion(
     video_path: str | Path,
@@ -50,11 +74,12 @@ def estimate_camera_motion(
     params: CameraMotionParams | None = None,
 ) -> dict[str, Any]:
     params = params or CameraMotionParams()
+    _validate_params(params)
     video = Path(video_path)
     calibration_file = Path(calibration_path)
     calibration = _load_json(calibration_file)
     reference_idx = _reference_frame_idx(calibration, override=reference_frame_idx)
-    tracks_by_frame = load_tracks_by_frame(tracks_path) if tracks_path is not None else {}
+    tracks_by_frame = load_tracks_by_frame(tracks_path) if tracks_path is not None and params.use_person_masks else {}
 
     cap = cv2.VideoCapture(str(video))
     if not cap.isOpened():
@@ -70,16 +95,21 @@ def estimate_camera_motion(
             raise ValueError(f"could not read reference frame {reference_idx} from {video}")
 
         frame_shape = reference_bgr.shape[:2]
+        processing_scale = float(params.processing_scale)
+        estimation_params = _params_for_processing_scale(params, processing_scale)
         court_mask = build_court_mask(calibration, frame_shape, apron_px=params.apron_px)
-        reference_mask = mask_people_for_frame(
+        reference_mask_full = mask_people_for_frame(
             court_mask,
             tracks_by_frame,
             frame_idx=reference_idx,
             padding_px=params.person_padding_px,
-        )
-        reference_gray = cv2.cvtColor(reference_bgr, cv2.COLOR_BGR2GRAY)
-        reference_points = detect_reference_features(reference_bgr, reference_mask, params)
+        ) if params.use_person_masks else np.array(court_mask, copy=True)
+        reference_bgr_est = _resize_for_processing(reference_bgr, processing_scale, is_mask=False)
+        reference_mask = _resize_for_processing(reference_mask_full, processing_scale, is_mask=True)
+        reference_gray = cv2.cvtColor(reference_bgr_est, cv2.COLOR_BGR2GRAY)
+        reference_points = detect_reference_features(reference_bgr_est, reference_mask, estimation_params)
         court_polygon = court_reference_polygon(calibration, frame_shape)
+        court_polygon_est = court_polygon * processing_scale
         centroid = _polygon_centroid(court_polygon)
 
         if len(reference_points) < params.min_similarity_inliers:
@@ -94,6 +124,7 @@ def estimate_camera_motion(
                 frames=frames,
                 drift_values=[0.0 for _ in frames],
                 residual_values=[],
+                smoothing_stats=_empty_smoothing_stats(),
             )
             if diagnostics_dir is not None:
                 _write_diagnostics(
@@ -123,32 +154,44 @@ def estimate_camera_motion(
                     "rms_px": 0.0,
                     "compensated": True,
                     "model": "identity",
+                    "flow_raw_track_count": int(len(reference_points)),
+                    "flow_track_count": int(len(reference_points)),
+                    "flow_mad_filtered_count": 0,
+                    "inlier_ratio": 1.0 if len(reference_points) else 0.0,
                 }
                 frames.append(entry)
                 drift_values.append(0.0)
                 residual_values.append(0.0)
                 continue
 
-            frame_gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
-            current_mask = mask_people_for_frame(
+            frame_bgr_est = _resize_for_processing(frame_bgr, processing_scale, is_mask=False)
+            frame_gray = cv2.cvtColor(frame_bgr_est, cv2.COLOR_BGR2GRAY)
+            current_mask_full = mask_people_for_frame(
                 court_mask,
                 tracks_by_frame,
                 frame_idx=frame_idx,
                 padding_px=params.person_padding_px,
-            )
+            ) if params.use_person_masks else np.array(court_mask, copy=True)
+            current_mask = _resize_for_processing(current_mask_full, processing_scale, is_mask=True)
             estimate = _estimate_frame_transform(
                 reference_gray,
                 frame_gray,
                 reference_points,
                 current_mask,
-                court_polygon,
-                params,
+                court_polygon_est,
+                estimation_params,
             )
+            estimate = _rescale_estimate_to_original(estimate, processing_scale)
             frames.append(_frame_entry(frame_idx, estimate))
             drift_values.append(_motion_magnitude_at_point(estimate.matrix_for_metrics, centroid))
             if estimate.compensated:
                 residual_values.append(estimate.rms_px)
 
+        frames, smoothing_stats = _smooth_camera_motion_frames(frames, params, reference_frame_idx=reference_idx)
+        drift_values = [
+            _motion_magnitude_at_point(np.asarray(frame["M"], dtype=np.float64), centroid)
+            for frame in frames
+        ]
         payload = _payload(
             video=video,
             reference_idx=reference_idx,
@@ -156,6 +199,7 @@ def estimate_camera_motion(
             frames=frames,
             drift_values=drift_values,
             residual_values=residual_values,
+            smoothing_stats=smoothing_stats,
         )
         if diagnostics_dir is not None:
             max_drift_idx = _max_drift_frame_idx(payload["frames"], drift_values)
@@ -332,6 +376,9 @@ class _FrameEstimate:
     compensated: bool
     model: str
     reason: str | None = None
+    flow_raw_track_count: int = 0
+    flow_track_count: int = 0
+    flow_mad_filtered_count: int = 0
 
 
 def _estimate_frame_transform(
@@ -342,6 +389,12 @@ def _estimate_frame_transform(
     court_polygon: np.ndarray,
     params: CameraMotionParams,
 ) -> _FrameEstimate:
+    if params.flow_backend == "raft-small":
+        status = raft_small_backend_status()
+        if status["status"] != "enabled":
+            raise RuntimeError(f"raft_backend={status['status']}")
+        raise RuntimeError("raft_backend=not_enabled_pending_weights")
+
     cv2.setRNGSeed(params.rng_seed)
     next_points, status, errors = cv2.calcOpticalFlowPyrLK(
         reference_gray,
@@ -366,9 +419,19 @@ def _estimate_frame_transform(
         keep = _mask_indices_in_mask(cur, current_mask)
         ref = ref[keep]
         cur = cur[keep]
+    flow_raw_track_count = int(len(cur))
 
     if len(cur) < params.min_similarity_inliers:
-        return _failed_estimate("too_few_tracked_features", inlier_count=int(len(cur)))
+        return _failed_estimate(
+            "too_few_tracked_features",
+            inlier_count=int(len(cur)),
+            flow_raw_track_count=flow_raw_track_count,
+            flow_track_count=int(len(cur)),
+        )
+
+    ref, cur, mad_stats = _mad_filter_flow_tracks(ref, cur, params)
+    flow_track_count = int(len(cur))
+    flow_mad_filtered_count = int(mad_stats["flow_mad_filtered_count"])
 
     homography_result = _fit_homography(cur, ref, params)
     similarity_result = _fit_similarity(cur, ref, params)
@@ -384,17 +447,48 @@ def _estimate_frame_transform(
         else:
             invalid_sanity.append((candidate.inlier_count, reason))
     if valid_candidates:
-        return _best_candidate(valid_candidates)
+        return _with_flow_stats(
+            _best_candidate(valid_candidates),
+            flow_raw_track_count=flow_raw_track_count,
+            flow_track_count=flow_track_count,
+            flow_mad_filtered_count=flow_mad_filtered_count,
+        )
     if invalid_sanity:
         inlier_count, reason = max(invalid_sanity, key=lambda item: item[0])
-        return _failed_estimate(reason, inlier_count=inlier_count)
+        return _failed_estimate(
+            reason,
+            inlier_count=inlier_count,
+            flow_raw_track_count=flow_raw_track_count,
+            flow_track_count=flow_track_count,
+            flow_mad_filtered_count=flow_mad_filtered_count,
+        )
 
     best = homography_result or similarity_result
     if best is None:
-        return _failed_estimate("transform_fit_failed", inlier_count=int(len(cur)))
+        return _failed_estimate(
+            "transform_fit_failed",
+            inlier_count=int(len(cur)),
+            flow_raw_track_count=flow_raw_track_count,
+            flow_track_count=flow_track_count,
+            flow_mad_filtered_count=flow_mad_filtered_count,
+        )
     if best.rms_px > max(params.max_homography_rms_px, params.max_similarity_rms_px):
-        return _failed_estimate("rms_above_threshold", inlier_count=best.inlier_count, metric_matrix=best.matrix)
-    return _failed_estimate("too_few_transform_inliers", inlier_count=best.inlier_count, metric_matrix=best.matrix)
+        return _failed_estimate(
+            "rms_above_threshold",
+            inlier_count=best.inlier_count,
+            metric_matrix=best.matrix,
+            flow_raw_track_count=flow_raw_track_count,
+            flow_track_count=flow_track_count,
+            flow_mad_filtered_count=flow_mad_filtered_count,
+        )
+    return _failed_estimate(
+        "too_few_transform_inliers",
+        inlier_count=best.inlier_count,
+        metric_matrix=best.matrix,
+        flow_raw_track_count=flow_raw_track_count,
+        flow_track_count=flow_track_count,
+        flow_mad_filtered_count=flow_mad_filtered_count,
+    )
 
 
 def _is_valid_candidate(candidate: _FrameEstimate, params: CameraMotionParams) -> bool:
@@ -541,11 +635,116 @@ def _fit_phase_translation(
     )
 
 
+def _mad_filter_flow_tracks(
+    ref: np.ndarray,
+    cur: np.ndarray,
+    params: CameraMotionParams,
+) -> tuple[np.ndarray, np.ndarray, dict[str, int]]:
+    ref_arr = np.asarray(ref, dtype=np.float32).reshape(-1, 2)
+    cur_arr = np.asarray(cur, dtype=np.float32).reshape(-1, 2)
+    count = int(min(len(ref_arr), len(cur_arr)))
+    ref_arr = ref_arr[:count]
+    cur_arr = cur_arr[:count]
+    stats = {"flow_track_count": count, "flow_mad_filtered_count": 0}
+    if (
+        not params.flow_mad_filter
+        or count < max(3, int(params.min_flow_mad_survivors))
+    ):
+        return ref_arr, cur_arr, stats
+
+    flow = cur_arr - ref_arr
+    median_flow = np.median(flow, axis=0)
+    radial = np.linalg.norm(flow - median_flow, axis=1)
+    radial_median = float(np.median(radial))
+    mad = float(np.median(np.abs(radial - radial_median)))
+    robust_sigma = 1.4826 * mad
+    if robust_sigma <= 1e-9:
+        threshold = radial_median + 1e-6
+    else:
+        threshold = radial_median + float(params.flow_mad_z) * robust_sigma
+    keep = radial <= threshold
+    survivors = int(np.count_nonzero(keep))
+    if survivors < int(params.min_flow_mad_survivors):
+        return ref_arr, cur_arr, stats
+    stats["flow_mad_filtered_count"] = int(count - survivors)
+    return ref_arr[keep], cur_arr[keep], stats
+
+
+def _tracks_from_dense_flow(
+    reference_points: np.ndarray,
+    dense_flow_xy: np.ndarray,
+    current_mask: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+    points = np.asarray(reference_points, dtype=np.float32).reshape(-1, 2)
+    flow = np.asarray(dense_flow_xy, dtype=np.float32)
+    if flow.ndim != 3 or flow.shape[2] != 2:
+        raise ValueError("dense_flow_xy must have shape HxWx2")
+    height, width = flow.shape[:2]
+    if current_mask.shape[:2] != (height, width):
+        raise ValueError("current_mask shape must match dense_flow_xy")
+    ref: list[list[float]] = []
+    cur: list[list[float]] = []
+    for x, y in points:
+        ix = int(round(float(x)))
+        iy = int(round(float(y)))
+        if not (0 <= ix < width and 0 <= iy < height):
+            continue
+        dx, dy = flow[iy, ix]
+        cx = float(x + dx)
+        cy = float(y + dy)
+        cix = int(round(cx))
+        ciy = int(round(cy))
+        if 0 <= cix < width and 0 <= ciy < height and current_mask[ciy, cix] > 0:
+            ref.append([float(x), float(y)])
+            cur.append([cx, cy])
+    stats = {
+        "flow_backend": "dense",
+        "flow_track_count": len(ref),
+        "flow_mad_filtered_count": 0,
+    }
+    return np.asarray(ref, dtype=np.float32), np.asarray(cur, dtype=np.float32), stats
+
+
+def raft_small_backend_status() -> dict[str, Any]:
+    try:
+        import torch  # type: ignore
+        from torchvision.models.optical_flow import Raft_Small_Weights, raft_small  # type: ignore  # noqa: F401
+    except Exception as exc:
+        return {
+            "backend": "raft-small",
+            "status": "not_available",
+            "enabled": False,
+            "reason": f"{type(exc).__name__}: {exc}",
+        }
+
+    weights = Raft_Small_Weights.C_T_V2
+    filename = os.path.basename(urlparse(str(weights.url)).path)
+    checkpoint_path = Path(torch.hub.get_dir()) / "checkpoints" / filename
+    if checkpoint_path.exists():
+        return {
+            "backend": "raft-small",
+            "status": "enabled",
+            "enabled": True,
+            "weights": weights.name,
+            "checkpoint_path": checkpoint_path.as_posix(),
+        }
+    return {
+        "backend": "raft-small",
+        "status": "not_enabled_pending_weights",
+        "enabled": False,
+        "weights": weights.name,
+        "expected_checkpoint_path": checkpoint_path.as_posix(),
+    }
+
+
 def _failed_estimate(
     reason: str,
     *,
     inlier_count: int = 0,
     metric_matrix: np.ndarray | None = None,
+    flow_raw_track_count: int = 0,
+    flow_track_count: int = 0,
+    flow_mad_filtered_count: int = 0,
 ) -> _FrameEstimate:
     identity = np.eye(3, dtype=np.float64)
     return _FrameEstimate(
@@ -556,7 +755,57 @@ def _failed_estimate(
         compensated=False,
         model="identity",
         reason=reason,
+        flow_raw_track_count=int(flow_raw_track_count),
+        flow_track_count=int(flow_track_count),
+        flow_mad_filtered_count=int(flow_mad_filtered_count),
     )
+
+
+def _with_flow_stats(
+    estimate: _FrameEstimate,
+    *,
+    flow_raw_track_count: int,
+    flow_track_count: int,
+    flow_mad_filtered_count: int,
+) -> _FrameEstimate:
+    return _FrameEstimate(
+        matrix=estimate.matrix,
+        matrix_for_metrics=estimate.matrix_for_metrics,
+        inlier_count=estimate.inlier_count,
+        rms_px=estimate.rms_px,
+        compensated=estimate.compensated,
+        model=estimate.model,
+        reason=estimate.reason,
+        flow_raw_track_count=int(flow_raw_track_count),
+        flow_track_count=int(flow_track_count),
+        flow_mad_filtered_count=int(flow_mad_filtered_count),
+    )
+
+
+def _rescale_estimate_to_original(estimate: _FrameEstimate, scale: float) -> _FrameEstimate:
+    if abs(float(scale) - 1.0) <= 1e-12:
+        return estimate
+    matrix = _rescale_matrix_to_original(estimate.matrix, scale)
+    metric_matrix = _rescale_matrix_to_original(estimate.matrix_for_metrics, scale)
+    return _FrameEstimate(
+        matrix=matrix,
+        matrix_for_metrics=metric_matrix,
+        inlier_count=estimate.inlier_count,
+        rms_px=_round_float(estimate.rms_px / scale) if scale > 1e-12 else estimate.rms_px,
+        compensated=estimate.compensated,
+        model=estimate.model,
+        reason=estimate.reason,
+        flow_raw_track_count=estimate.flow_raw_track_count,
+        flow_track_count=estimate.flow_track_count,
+        flow_mad_filtered_count=estimate.flow_mad_filtered_count,
+    )
+
+
+def _rescale_matrix_to_original(matrix: np.ndarray, scale: float) -> np.ndarray:
+    scale = float(scale)
+    to_scaled = np.array([[scale, 0.0, 0.0], [0.0, scale, 0.0], [0.0, 0.0, 1.0]], dtype=np.float64)
+    to_original = np.array([[1.0 / scale, 0.0, 0.0], [0.0, 1.0 / scale, 0.0], [0.0, 0.0, 1.0]], dtype=np.float64)
+    return _normalize_homography(to_original @ np.asarray(matrix, dtype=np.float64) @ to_scaled)
 
 
 def _mask_indices_in_mask(points: np.ndarray, mask: np.ndarray) -> np.ndarray:
@@ -570,6 +819,11 @@ def _mask_indices_in_mask(points: np.ndarray, mask: np.ndarray) -> np.ndarray:
 
 
 def _frame_entry(frame_idx: int, estimate: _FrameEstimate) -> dict[str, Any]:
+    inlier_ratio = (
+        float(estimate.inlier_count) / float(estimate.flow_track_count)
+        if estimate.flow_track_count > 0
+        else 0.0
+    )
     entry: dict[str, Any] = {
         "frame_idx": int(frame_idx),
         "M": _matrix_to_json(estimate.matrix),
@@ -577,6 +831,10 @@ def _frame_entry(frame_idx: int, estimate: _FrameEstimate) -> dict[str, Any]:
         "rms_px": _round_float(estimate.rms_px),
         "compensated": bool(estimate.compensated),
         "model": estimate.model,
+        "flow_raw_track_count": int(estimate.flow_raw_track_count),
+        "flow_track_count": int(estimate.flow_track_count),
+        "flow_mad_filtered_count": int(estimate.flow_mad_filtered_count),
+        "inlier_ratio": _round_float(inlier_ratio),
     }
     if estimate.reason is not None:
         entry["reason"] = estimate.reason
@@ -592,7 +850,144 @@ def _identity_frame(frame_idx: int, *, compensated: bool, reason: str) -> dict[s
         "compensated": bool(compensated),
         "model": "identity",
         "reason": reason,
+        "flow_raw_track_count": 0,
+        "flow_track_count": 0,
+        "flow_mad_filtered_count": 0,
+        "inlier_ratio": 0.0,
     }
+
+
+def _smooth_camera_motion_frames(
+    frames: Sequence[Mapping[str, Any]],
+    params: CameraMotionParams,
+    *,
+    reference_frame_idx: int | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    out = [dict(frame) for frame in frames]
+    stats = _empty_smoothing_stats()
+    if not params.temporal_smoothing:
+        return out, stats
+    compensated_indices = [
+        idx
+        for idx, frame in enumerate(out)
+        if frame.get("compensated") is True and int(frame.get("frame_idx", -1)) != reference_frame_idx
+    ]
+    if len(compensated_indices) < 3:
+        return out, stats
+
+    vectors = np.asarray(
+        [_matrix_to_smooth_vector(np.asarray(out[idx]["M"], dtype=np.float64)) for idx in compensated_indices],
+        dtype=np.float64,
+    )
+    filtered = _replace_temporal_mad_outliers(
+        vectors,
+        z=float(params.temporal_mad_z),
+        radius=max(1, int(params.temporal_gaussian_radius_frames)),
+    )
+    stats["temporal_mad_replaced_count"] = int(np.count_nonzero(np.any(np.abs(filtered - vectors) > 1e-9, axis=1)))
+    smoothed = _gaussian_smooth_vectors(
+        filtered,
+        sigma=max(float(params.temporal_gaussian_sigma_frames), 1e-6),
+        radius=max(1, int(params.temporal_gaussian_radius_frames)),
+    )
+    stats["temporal_smoothed_frame_count"] = int(len(compensated_indices))
+    for row_idx, frame_idx in enumerate(compensated_indices):
+        matrix = _smooth_vector_to_matrix(smoothed[row_idx])
+        original_matrix = np.asarray(out[frame_idx]["M"], dtype=np.float64)
+        out[frame_idx]["M"] = _matrix_to_json(matrix)
+        if not np.allclose(matrix, original_matrix, atol=1e-9):
+            out[frame_idx]["temporal_smoothed"] = True
+    return out, stats
+
+
+def _replace_temporal_mad_outliers(vectors: np.ndarray, *, z: float, radius: int) -> np.ndarray:
+    out = np.array(vectors, copy=True)
+    if len(out) < 3:
+        return out
+    for idx in range(len(vectors)):
+        start = max(0, idx - radius)
+        end = min(len(vectors), idx + radius + 1)
+        local = vectors[start:end]
+        if len(local) < 3:
+            continue
+        median = np.median(local, axis=0)
+        distances = np.linalg.norm(local - median, axis=1)
+        center_distance = float(np.linalg.norm(vectors[idx] - median))
+        distance_median = float(np.median(distances))
+        mad = float(np.median(np.abs(distances - distance_median)))
+        sigma = 1.4826 * mad
+        threshold = distance_median + (z * sigma if sigma > 1e-9 else 1e-6)
+        if center_distance > threshold:
+            out[idx] = median
+    return out
+
+
+def _gaussian_smooth_vectors(vectors: np.ndarray, *, sigma: float, radius: int) -> np.ndarray:
+    out = np.zeros_like(vectors, dtype=np.float64)
+    for idx in range(len(vectors)):
+        start = max(0, idx - radius)
+        end = min(len(vectors), idx + radius + 1)
+        offsets = np.arange(start, end, dtype=np.float64) - float(idx)
+        weights = np.exp(-0.5 * np.square(offsets / sigma))
+        weights_sum = float(np.sum(weights))
+        if weights_sum <= 1e-12:
+            out[idx] = vectors[idx]
+        else:
+            out[idx] = np.sum(vectors[start:end] * (weights / weights_sum)[:, None], axis=0)
+    return out
+
+
+def _matrix_to_smooth_vector(matrix: np.ndarray) -> np.ndarray:
+    normalized = _normalize_homography(matrix)
+    return np.array(
+        [
+            normalized[0, 0] - 1.0,
+            normalized[0, 1],
+            normalized[0, 2],
+            normalized[1, 0],
+            normalized[1, 1] - 1.0,
+            normalized[1, 2],
+            normalized[2, 0],
+            normalized[2, 1],
+        ],
+        dtype=np.float64,
+    )
+
+
+def _smooth_vector_to_matrix(vector: np.ndarray) -> np.ndarray:
+    values = np.asarray(vector, dtype=np.float64).reshape(8)
+    return np.array(
+        [
+            [1.0 + values[0], values[1], values[2]],
+            [values[3], 1.0 + values[4], values[5]],
+            [values[6], values[7], 1.0],
+        ],
+        dtype=np.float64,
+    )
+
+
+def _empty_smoothing_stats() -> dict[str, int]:
+    return {
+        "temporal_mad_replaced_count": 0,
+        "temporal_smoothed_frame_count": 0,
+    }
+
+
+def _method_name(params: CameraMotionParams) -> str:
+    if params.estimator_mode == "legacy":
+        return "shi_tomasi_reference_lk_ransac_homography_similarity_fallback_legacy"
+    return "shi_tomasi_reference_lk_mad_ransac_temporal_smoothing"
+
+
+def _validate_params(params: CameraMotionParams) -> None:
+    if params.estimator_mode not in {"hardened", "legacy"}:
+        raise ValueError("estimator_mode must be 'hardened' or 'legacy'")
+    if params.flow_backend not in {"lk", "raft-small"}:
+        raise ValueError("flow_backend must be 'lk' or 'raft-small'")
+    if not (0.0 < float(params.processing_scale) <= 1.0):
+        raise ValueError("processing_scale must be in the interval (0, 1]")
+    if params.estimator_mode == "legacy" and (params.flow_mad_filter or params.temporal_smoothing):
+        raise ValueError("legacy estimator_mode requires flow_mad_filter=false and temporal_smoothing=false")
 
 
 def _payload(
@@ -603,13 +998,22 @@ def _payload(
     frames: list[dict[str, Any]],
     drift_values: Sequence[float],
     residual_values: Sequence[float],
+    smoothing_stats: Mapping[str, int],
 ) -> dict[str, Any]:
+    inlier_ratios = [
+        float(frame.get("inlier_ratio", 0.0) or 0.0)
+        for frame in frames
+        if int(frame.get("flow_track_count", 0) or 0) > 0
+    ]
+    flow_track_total = int(sum(int(frame.get("flow_track_count", 0) or 0) for frame in frames))
+    flow_raw_track_total = int(sum(int(frame.get("flow_raw_track_count", 0) or 0) for frame in frames))
+    flow_mad_filtered_total = int(sum(int(frame.get("flow_mad_filtered_count", 0) or 0) for frame in frames))
     return {
         "schema_version": 1,
         "artifact_type": "racketsport_camera_motion",
         "video": video.as_posix(),
         "reference_frame_idx": int(reference_idx),
-        "method": "shi_tomasi_reference_lk_ransac_homography_similarity_fallback",
+        "method": _method_name(params),
         "params": asdict(params),
         "frames": frames,
         "summary": {
@@ -621,6 +1025,12 @@ def _payload(
             "residual_px_p50": _percentile(residual_values, 50),
             "residual_px_p95": _percentile(residual_values, 95),
             "residual_px_max": _max_or_zero(residual_values),
+            "flow_raw_track_count_total": flow_raw_track_total,
+            "flow_track_count_total": flow_track_total,
+            "flow_mad_filtered_count_total": flow_mad_filtered_total,
+            "inlier_ratio_p50": _percentile(inlier_ratios, 50),
+            "inlier_ratio_p95": _percentile(inlier_ratios, 95),
+            **{key: int(value) for key, value in smoothing_stats.items()},
         },
         "verified": False,
         "not_gate_verified": True,
@@ -683,6 +1093,39 @@ def _read_frame_at(cap: cv2.VideoCapture, frame_idx: int) -> np.ndarray | None:
     if not ok:
         return None
     return frame
+
+
+def _resize_for_processing(image: np.ndarray, scale: float, *, is_mask: bool) -> np.ndarray:
+    scale = float(scale)
+    if abs(scale - 1.0) <= 1e-12:
+        return image
+    height, width = image.shape[:2]
+    out_width = max(8, int(round(width * scale)))
+    out_height = max(8, int(round(height * scale)))
+    interpolation = cv2.INTER_NEAREST if is_mask else cv2.INTER_AREA
+    return cv2.resize(image, (out_width, out_height), interpolation=interpolation)
+
+
+def _params_for_processing_scale(params: CameraMotionParams, scale: float) -> CameraMotionParams:
+    scale = float(scale)
+    if abs(scale - 1.0) <= 1e-12:
+        return params
+    return replace(
+        params,
+        min_distance=max(2.0, float(params.min_distance) * scale),
+        block_size=max(3, _odd_int(round(float(params.block_size) * scale))),
+        lk_win_size=max(15, _odd_int(round(float(params.lk_win_size) * scale))),
+        max_ransac_reproj_px=max(0.75, float(params.max_ransac_reproj_px) * scale),
+        max_homography_rms_px=max(1.0, float(params.max_homography_rms_px) * scale),
+        max_similarity_rms_px=max(1.0, float(params.max_similarity_rms_px) * scale),
+        max_corner_motion_px=max(10.0, float(params.max_corner_motion_px) * scale),
+        processing_scale=scale,
+    )
+
+
+def _odd_int(value: float | int) -> int:
+    ivalue = max(1, int(round(float(value))))
+    return ivalue if ivalue % 2 == 1 else ivalue + 1
 
 
 def _frame_count(cap: cv2.VideoCapture, *, max_frames: int | None) -> int:

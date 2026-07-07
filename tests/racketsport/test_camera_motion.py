@@ -18,6 +18,7 @@ from threed.racketsport.camera_motion import (
     validate_camera_motion_payload,
     write_camera_motion_json,
 )
+import threed.racketsport.camera_motion as camera_motion_module
 
 
 CLI_PATH = "scripts/racketsport/estimate_camera_motion.py"
@@ -101,6 +102,122 @@ def test_known_synthetic_pan_recovers_frame_to_reference_transform(tmp_path: Pat
         assert np.allclose(matrix[0, 2], -dx, atol=1.75)
         assert np.allclose(matrix[1, 2], -dy, atol=1.75)
         assert frame["rms_px"] <= 2.0
+
+
+def test_scaled_processing_preserves_original_pixel_transform_units(tmp_path: Path) -> None:
+    offsets = [(0.0, 0.0), (6.0, -4.0), (10.0, 3.0)]
+    video = tmp_path / "scaled_pan.avi"
+    _write_video(video, _translated_frames(offsets))
+    calibration = _calibration(tmp_path / "court_calibration.json")
+
+    payload = estimate_camera_motion(
+        video,
+        calibration,
+        params=CameraMotionParams(
+            processing_scale=0.5,
+            temporal_smoothing=False,
+            min_homography_inliers=8,
+            max_ransac_reproj_px=2.0,
+        ),
+    )
+
+    for frame, (dx, dy) in zip(payload["frames"], offsets, strict=True):
+        matrix = np.asarray(frame["M"], dtype=np.float64)
+        assert np.allclose(matrix[0, 2], -dx, atol=2.0)
+        assert np.allclose(matrix[1, 2], -dy, atol=2.0)
+
+
+def test_flow_mad_filter_removes_large_moving_player_outliers() -> None:
+    ref = np.array(
+        [
+            [20.0, 20.0],
+            [40.0, 20.0],
+            [60.0, 20.0],
+            [20.0, 45.0],
+            [40.0, 45.0],
+            [60.0, 45.0],
+            [35.0, 35.0],
+            [55.0, 35.0],
+        ],
+        dtype=np.float32,
+    )
+    cur = ref + np.array([4.0, -2.0], dtype=np.float32)
+    cur[-2:] += np.array([[38.0, 20.0], [-42.0, -18.0]], dtype=np.float32)
+    params = CameraMotionParams(flow_mad_z=3.0, min_flow_mad_survivors=4)
+
+    filtered_ref, filtered_cur, stats = camera_motion_module._mad_filter_flow_tracks(ref, cur, params)
+
+    assert len(filtered_ref) == 6
+    assert len(filtered_cur) == 6
+    assert stats["flow_track_count"] == 8
+    assert stats["flow_mad_filtered_count"] == 2
+    assert np.allclose(filtered_cur - filtered_ref, np.array([4.0, -2.0]), atol=1e-6)
+
+
+def test_temporal_smoothing_mad_then_gaussian_reduces_camera_path_spike() -> None:
+    translations = [0.0, -1.0, -2.0, -28.0, -4.0, -5.0, -6.0]
+    frames = []
+    for frame_idx, tx in enumerate(translations):
+        matrix = [[1.0, 0.0, tx], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+        frames.append(
+            {
+                "frame_idx": frame_idx,
+                "M": matrix,
+                "inlier_count": 20,
+                "rms_px": 0.2,
+                "compensated": True,
+                "model": "similarity",
+            }
+        )
+    params = CameraMotionParams(
+        temporal_smoothing=True,
+        temporal_mad_z=3.0,
+        temporal_gaussian_sigma_frames=0.8,
+        temporal_gaussian_radius_frames=2,
+    )
+
+    smoothed, stats = camera_motion_module._smooth_camera_motion_frames(frames, params)
+    raw_path = np.array([[frame["M"][0][2], frame["M"][1][2]] for frame in frames], dtype=np.float64)
+    smooth_path = np.array([[frame["M"][0][2], frame["M"][1][2]] for frame in smoothed], dtype=np.float64)
+
+    assert abs(smooth_path[3, 0] + 3.0) < abs(raw_path[3, 0] + 3.0)
+    assert _path_jerk_rms(smooth_path) < _path_jerk_rms(raw_path)
+    assert stats["temporal_mad_replaced_count"] >= 1
+    assert stats["temporal_smoothed_frame_count"] == len(frames)
+
+
+def test_default_params_are_hardened_and_legacy_params_preserve_baseline_switch() -> None:
+    default = CameraMotionParams()
+    legacy = CameraMotionParams.legacy()
+
+    assert default.estimator_mode == "hardened"
+    assert default.flow_mad_filter is True
+    assert default.temporal_smoothing is True
+    assert legacy.estimator_mode == "legacy"
+    assert legacy.flow_mad_filter is False
+    assert legacy.temporal_smoothing is False
+    assert legacy.use_person_masks is True
+
+
+def test_dense_flow_backend_adapter_uses_synthetic_flow_without_weights() -> None:
+    reference_points = np.array([[[16.0, 12.0]], [[40.0, 12.0]], [[16.0, 32.0]], [[40.0, 32.0]]], dtype=np.float32)
+    flow = np.zeros((48, 64, 2), dtype=np.float32)
+    flow[..., 0] = 5.0
+    flow[..., 1] = -3.0
+    mask = np.full((48, 64), 255, dtype=np.uint8)
+    params = CameraMotionParams(min_similarity_inliers=4)
+
+    ref, cur, stats = camera_motion_module._tracks_from_dense_flow(reference_points, flow, mask)
+    estimate = camera_motion_module._fit_similarity(cur, ref, params)
+    status = camera_motion_module.raft_small_backend_status()
+
+    assert stats["flow_backend"] == "dense"
+    assert np.allclose(cur - ref, np.array([5.0, -3.0]), atol=1e-6)
+    assert estimate is not None
+    assert estimate.matrix[0, 2] == np.float64(-5.0)
+    assert estimate.matrix[1, 2] == np.float64(3.0)
+    assert status["backend"] == "raft-small"
+    assert status["status"] in {"enabled", "not_enabled_pending_weights", "not_available"}
 
 
 def test_feature_poor_black_frames_fail_closed_with_identity(tmp_path: Path) -> None:
@@ -188,3 +305,11 @@ def test_estimate_camera_motion_cli_help_is_registered() -> None:
     assert completed.returncode == 0
     assert "--calibration" in completed.stdout
     assert "--reference-frame" in completed.stdout
+    assert "--estimator" in completed.stdout
+    assert "--no-person-mask" in completed.stdout
+    assert "--flow-backend" in completed.stdout
+
+
+def _path_jerk_rms(path_xy: np.ndarray) -> float:
+    second_diff = np.diff(np.asarray(path_xy, dtype=np.float64), n=2, axis=0)
+    return float(np.sqrt(np.mean(np.sum(np.square(second_diff), axis=1))))

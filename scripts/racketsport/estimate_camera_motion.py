@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 from threed.racketsport.camera_motion import (  # noqa: E402
     CameraMotionParams,
     estimate_camera_motion,
+    raft_small_backend_status,
     write_camera_motion_json,
 )
 
@@ -34,6 +35,23 @@ def main() -> int:
     parser.add_argument("--tracks", type=Path, default=None, help="Optional tracks.json for padded person masks.")
     parser.add_argument("--out", required=True, type=Path, help="Output camera_motion.json path.")
     parser.add_argument(
+        "--estimator",
+        choices=["hardened", "legacy"],
+        default="hardened",
+        help="Estimator profile. hardened enables LK MAD filtering plus temporal smoothing; legacy preserves the previous LK+RANSAC behavior for ablations.",
+    )
+    parser.add_argument(
+        "--no-person-mask",
+        action="store_true",
+        help="Disable track-bbox person masking for masked-vs-unmasked ablations.",
+    )
+    parser.add_argument(
+        "--flow-backend",
+        choices=["lk", "raft-small"],
+        default="lk",
+        help="Optical-flow backend. raft-small is flag-gated and requires already-cached torchvision weights; this CLI never downloads weights.",
+    )
+    parser.add_argument(
         "--reference-frame",
         type=int,
         default=None,
@@ -53,6 +71,18 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.estimator == "legacy":
+        params = CameraMotionParams.legacy()
+    else:
+        params = CameraMotionParams()
+    params = CameraMotionParams(
+        **{
+            **params.__dict__,
+            "use_person_masks": not args.no_person_mask,
+            "flow_backend": args.flow_backend,
+        }
+    )
+    raft_status = raft_small_backend_status() if args.flow_backend == "raft-small" else {"backend": "raft-small", "status": "not_requested"}
     payload = estimate_camera_motion(
         args.video,
         args.calibration,
@@ -60,7 +90,7 @@ def main() -> int:
         reference_frame_idx=args.reference_frame,
         max_frames=args.max_frames,
         diagnostics_dir=args.diagnostics_dir,
-        params=CameraMotionParams(),
+        params=params,
     )
     write_camera_motion_json(payload, args.out)
     print(
@@ -69,6 +99,7 @@ def main() -> int:
                 "out": args.out.as_posix(),
                 "diagnostics_dir": args.diagnostics_dir.as_posix() if args.diagnostics_dir else None,
                 "reference_frame_idx": payload["reference_frame_idx"],
+                "raft_backend": raft_status["status"],
                 "summary": payload["summary"],
                 "verified": payload["verified"],
                 "not_gate_verified": payload["not_gate_verified"],
