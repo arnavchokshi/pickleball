@@ -840,8 +840,8 @@ in/out with gray zone.
   1/2/3/3 (`p11_visibility_schema_20260706`). Pretrain harness + `RoboflowBallPretrainDataset` +
   `train_ball_pretrain.py` landed in wave-3 `w3_p11_prep` (CPU smoke loss 0.75→0.21; UNRULED at
   write time). **LOCAL BLOCKER CLOSED 2026-07-07:** `models/checkpoints/wasb/wasb_tennis_best.pth.tar`
-  is now local and sha-verified by w4_ballgpu prestage [PENDING wave-4 decisive proof — manager fills
-  at closeout]. Stage-1 pretrain on the 61k
+  is local and sha256 9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb is verified
+  on VM and Mac (28c9244bd; `runs/lanes/w4_ballgpu_20260707/REPORT.md`). Stage-1 pretrain on the 61k
   corpus = the WAVE-4 HEADLINE, INTERNAL-VAL ONLY — a public-only student NEVER takes a held-out
   shot; the owner-data stage-2 fine-tune + pre-registered held-out shot is wave 5. PART VI.)* The
   corrected recipe after the T4 lesson (public-only fine-tunes degraded held-out): **pretrain/warm-
@@ -869,8 +869,13 @@ in/out with gray zone.
   plumbing — sparse reviewed-only owner labels are represented as 486 reviewed rows = 268 positive +
   218 reviewed-absent; occlusion augmentation is paired with WBCE; SST manifest + disagreement CLIs
   exist; dense CVAT helper is documented unsafe-for-sparse and bypassed. Stage-2 seed-tune + SST-r1
-  internal-val cards remain [PENDING wave-4 decisive proof — manager fills at closeout]. Evidence:
-  5b268aa6d; `runs/lanes/w4_ballcode_20260707/report.json`.)* *(Prior seed status: seed DONE — 40/40 WASB prelabel
+  internal-val cards are banked as harness_v0 NON-PROMOTABLE measurement cards: official control
+  0.7143/0.7826, stage-1 bridge 0.8936/0.2000, seed fine-tune 0.7368/0.5946 with best hidden-FP
+  0.20, SST-3k 0.7442/0.7273 with recall 0.7708, threshold sweep banked, 12,075-row disagreement
+  queue, protected-hash 35/0. Wave-5 prereq stands: align training preprocessing to official transform,
+  retrain, and re-score official-mode before promotion candidacy. Evidence: 5b268aa6d;
+  `runs/lanes/w4_ballcode_20260707/report.json`; 28c9244bd;
+  `runs/lanes/w4_ballgpu_20260707/REPORT.md`.)* *(Prior seed status: seed DONE — 40/40 WASB prelabel
   sidecars from fleet2, visible-fraction 48.5-73.9%. Wave-3 teacher-gate tuning sweep
   (`w3_teachertune`) hit a DATA-LOCALITY blocker: only 6/40 raw sidecars exist locally — pull the
   fleet2 artifacts home or regenerate on fleet; manager resumed it at 8-clip scope. First full SST
@@ -963,14 +968,17 @@ p95 8-23mm tripod), mesh index, contact-dense scheduling. **To build:** raw-nois
 (latent smoothing), camera-motion/handheld robustness, far-player quality, IDF1 scoring, independent
 GT + world-MPJPE gate, challenger benchmark.
 
-- [ ] **P2-1 SMART-recipe hardening lane.** *(STATUS 2026-07-07 — WAVE-4 RESOLVED-PENDING-PROOF:
+- [ ] **P2-1 SMART-recipe hardening lane.** *(STATUS 2026-07-07 — WAVE-4 FRESH-PROOF RESOLVED:
   decode-orientation policy + fail-safe mismatch semantics landed after two adversarial verify rounds;
   img1605 production probe is 53.70515 AUTO ON, statics are bit-exact, and first-class
-  `camera_motion_auto` decode-orientation keys landed in the integration lane. Decisive in-pipeline
-  proof remains [PENDING wave-4 decisive proof — manager fills at closeout]. Evidence: cd0b59390;
-  1588b110f; `runs/lanes/w4_cammotion_fix_20260707/report_r2.json`;
+  `camera_motion_auto` decode-orientation keys landed in the integration lane. Fresh proof at committed
+  940576495 closes the wave-3 probe-context defect: img1605 probe 50.02 > 2.5 AUTO ON, statics OFF at
+  0.129/0.524/0.385-0.568, first-class decode_orientation_* keys present x4; probe score is not
+  host-deterministic but never flips classification. Evidence: cd0b59390; 1588b110f; a93764203;
+  `runs/lanes/w4_cammotion_fix_20260707/report_r2.json`;
   `runs/lanes/w4_cammotion_verify_20260707/report_r2.json`;
-  `runs/lanes/w4_integration_20260707/report.json`.)* *(Prior wave-2 correction: (a) module
+  `runs/lanes/w4_integration_20260707/report.json`;
+  `runs/lanes/w4_freshproof_20260707/summary.json`.)* *(Prior wave-2 correction: (a) module
   HARDENED + ACCEPTED (`p21_cammotion_20260706`): person-masked LK + MAD flow-track filter +
   MAD+Gaussian smoothing, img1605 handheld wins all 3 proxies, static-clip guard IMPROVED, runtime
   halved 98→50ms/frame — BUT the default-stage kill-criterion FIRED (wolverine placement jitter p90
@@ -1752,10 +1760,9 @@ proxy. (b) SST teacher RE-RULED by measurement: raw single-WASB seed (see P1-2 n
 (c) NEW: P4 court auto-cal enters the wave-4 queue — it structurally unlocks the physics-gated
 teacher on harvest footage, so P4 work now feeds the BALL critical path, earlier than the wave-5
 slot planned below. (d) Wave-4 reconciliation update: camera-motion probe-context diagnosis is
-resolved-pending-proof (cd0b59390 + 1588b110f), upstream foot-attribution landed unwired and measured
-negative (75e438223), P1-4a BVP is PARTIAL (5633c4b48), and H100 is now BODY-validated runtime
-evidence (`runs/lanes/w4_h100body_20260707/REPORT.md`); decisive closeout metrics remain
-[PENDING wave-4 decisive proof — manager fills at closeout].**
+resolved by fresh proof (cd0b59390 + 1588b110f + a93764203), upstream foot-attribution landed unwired
+and measured negative (75e438223), P1-4a BVP is PARTIAL (5633c4b48), and H100 is now BODY-validated
+runtime evidence (`runs/lanes/w4_h100body_20260707/REPORT.md`); closeout metrics are recorded below.**
 
 Honest framing: waves 1-3 built infrastructure; **zero training runs have happened**. The ball wall
 (held-out 0.6969 vs the 0.7248 zero-shot anchor) still stands untouched. Wave 4 converts fuel into
@@ -1802,9 +1809,17 @@ camera-motion (cd0b59390 + 1588b110f), foot-attribution as an unwired measured-n
 (75e438223), BVP as PARTIAL with real LOO but failed span protection (5633c4b48), harvest court
 calibration (83e090168), BALL stage-2/SST build plumbing (5b268aa6d), fleet host/version-stamp fixes
 (dcc4dae42 + 190dea09f), H100 BODY runtime validation (`runs/lanes/w4_h100body_20260707/REPORT.md`),
-and mesh-warning telemetry (684d03380). Carried items: decisive in-pipeline proof, stage-2 seed-tune,
-SST-r1 internal-val, and final wave-4 scorecard numbers are all [PENDING wave-4 decisive proof —
-manager fills at closeout].
+and mesh-warning telemetry (684d03380). Closeout fill: fresh-GPU proof at committed 940576495 passed
+all frozen BODY gates GREEN 4/4 (`max_foot_lock_slide_m` 0.02025/0.02004/0.01798/0.02307, root jumps
+0/0/0/0, body_full_clip_gate 4/4, zero `phase_slide_exceeds_lock_gate`, browser assertion_errors [] x4,
+pipeline_status complete x4) with img1605 camera_motion_auto 50.02 AUTO ON and decode_orientation_* keys
+present x4 (a93764203; `runs/lanes/w4_freshproof_20260707/summary.json`). Ballgpu banked harness_v0
+NON-PROMOTABLE cards: official control 0.7143/0.7826, stage-1 bridge 0.8936/0.2000, seed fine-tune
+0.7368/0.5946 hidden-FP 0.20, SST-3k 0.7442/0.7273 recall 0.7708, threshold sweep, 12,075-row
+disagreement queue, protected-hash 35/0 (28c9244bd; `runs/lanes/w4_ballgpu_20260707/REPORT.md`).
+Wave-5 carry: align training preprocessing to official transform, retrain/re-score official-mode, extend
+disagreement coverage for source balance, and diagnose img1605's empty compensated ball-arc census
+(0 segments, 0/297 world frames; p06-era code had 7 segments).
 
 ## VI.3 WAVE 5 — OWNER DATA IN + THE FIRST HELD-OUT SHOT (M2 complete; M3 attempted)
 

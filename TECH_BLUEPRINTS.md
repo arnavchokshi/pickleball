@@ -773,10 +773,13 @@ nonzero leakage → STOP, quarantine the batch, surface to manager.
 **[WAVE-4 RECONCILIATION 2026-07-07 — these supersede conflicting lines below]:** STEP-3 build gap
 CLOSED: `train_ball_stage2.py` implements sparse-review semantics (486 reviewed rows = 268 positives
 + 218 reviewed-absent), occlusion augmentation paired with WBCE, SST manifests, and disagreement CLIs;
-the dense CVAT helper is unsafe-for-sparse and bypassed. LOCAL BLOCKER CLOSED: the WASB tennis anchor is
-local and sha-verified by w4_ballgpu prestage [PENDING wave-4 decisive proof — manager fills at closeout].
-Stage-2 seed-tune + SST-r1 internal-val cards remain [PENDING wave-4 decisive proof — manager fills at
-closeout]. Evidence: 5b268aa6d; `runs/lanes/w4_ballcode_20260707/report.json`.**
+the dense CVAT helper is unsafe-for-sparse and bypassed. LOCAL BLOCKER CLOSED: the WASB tennis anchor
+sha256 9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb is verified on VM and Mac.
+Ballgpu banked harness_v0 NON-PROMOTABLE cards: official control 0.7143/0.7826, stage-1 bridge
+0.8936/0.2000, seed fine-tune 0.7368/0.5946 with best hidden-FP 0.20, SST-3k 0.7442/0.7273 with
+recall 0.7708, threshold sweep banked, 12,075-row disagreement queue, protected-hash 35/0. Evidence:
+5b268aa6d; `runs/lanes/w4_ballcode_20260707/report.json`; 28c9244bd;
+`runs/lanes/w4_ballgpu_20260707/REPORT.md`.**
 
 **[WAVE-3 CLOSEOUT CORRECTIONS 2026-07-07 — these supersede conflicting lines below]:** (1) STAGE-1
 pretrain is DONE (H100, harness internal_val f1@20 0.0615→0.6104, precision@20 0.848, recall 0.477;
@@ -836,8 +839,9 @@ real labels — nothing in this doc is VERIFIED.
   `partial` under-used, honest). Held-out clean (pwxNwFfYQlQ/vQhtz8l6VqU absent). This is P1-1/P1-2 SEED material,
   far below the STAGE-2 volume budget (>=10-20k frames, NORTH_STAR P0-4) — insufficient FUEL for a stage-2 shot,
   NOT "zero labels." Evidence: BUILD_CHECKLIST 2026-07-07 "HARVEST REVIEW LABELS COMPLETE".
-- LOCAL BLOCKER CLOSED 2026-07-07: `models/checkpoints/wasb/wasb_tennis_best.pth.tar` is local and sha-verified
-  by w4_ballgpu prestage [PENDING wave-4 decisive proof — manager fills at closeout].
+- LOCAL BLOCKER CLOSED 2026-07-07: `models/checkpoints/wasb/wasb_tennis_best.pth.tar` is local and
+  sha256 9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb is verified on VM and Mac
+  (28c9244bd; `runs/lanes/w4_ballgpu_20260707/REPORT.md`).
 - 4-LEVEL VISIBILITY SCHEMA: landed end-to-end (`p11_visibility_schema_20260706`). Pretrain harness
   (`train_ball_pretrain.py`, `RoboflowBallPretrainDataset`) landed in wave-3 `w3_p11_prep` (CPU smoke loss
   0.75->0.21; UNRULED). These are the uncommitted working-tree files this blueprint plans against.
@@ -1363,26 +1367,29 @@ NEVER emit an officiating-grade boolean. No new gate beyond "gray-zone present a
 ## PILLAR: BODY — raw-noise kill (latent smoothing), camera motion, far players, GT, challenger protocol
 
 **[WAVE-4 RECONCILIATION 2026-07-07 — supersede conflicting lines below where more recent]:**
-camera-motion probe-context bug is RESOLVED-PENDING-PROOF: explicit decode-orientation policy and
+camera-motion probe-context bug is RESOLVED BY FRESH PROOF: explicit decode-orientation policy and
 fail-safe mismatch semantics landed after two adversarial verify rounds, img1605 production probe is
 53.70515 AUTO ON, statics are bit-exact, and first-class `camera_motion_auto` summary keys persist in
-`PIPELINE_SUMMARY.json`; decisive in-pipeline proof is [PENDING wave-4 decisive proof — manager fills
-at closeout]. Foot-attribution skeleton-direct producer landed UNWIRED and measured negative: 2-12
+`PIPELINE_SUMMARY.json`; fresh proof at committed 940576495 closes the wave-3 probe-context defect:
+img1605 probe 50.02 > 2.5 AUTO ON, statics OFF at 0.129/0.524/0.385-0.568, and first-class
+decode_orientation_* keys are present x4. Foot-attribution skeleton-direct producer landed UNWIRED and measured negative: 2-12
 phases/clip, predicted gate breaches 3/4 clips (34.6/33.6/48.4mm), dominant rejection
 `phase_penetrates_ground` 120-167/clip; `grounding_refine` remains honest no-op and un-kill is re-queued
 behind P2-2 for wave 5. Evidence: cd0b59390; 1588b110f; 75e438223;
 `runs/lanes/w4_cammotion_fix_20260707/report_r2.json`;
 `runs/lanes/w4_integration_20260707/report.json`;
-`runs/lanes/w4_footattr_fix_20260707/report_r2.json`.**
+`runs/lanes/w4_footattr_fix_20260707/report_r2.json`; a93764203;
+`runs/lanes/w4_freshproof_20260707/summary.json`.**
 
 **[WAVE-3 CLOSEOUT CORRECTIONS 2026-07-07 — supersede conflicting lines below]:** (1) STEP 0 is
 DONE: slide gate GREEN 4/4 on fresh GPU proof @ ad75c875c (max_foot_lock_slide_m 20.25/22.50/17.98/
 16.66mm vs 30mm frozen bar; p95 <12mm; 0 root jumps; fix survived 3 adversarial-verify rounds).
 (2) grounding_refine = honest NO-OP posture (0 confident phases on eval clips); un-kill requires
 UPSTREAM per-foot attribution at source — wave-4 queue #2. (3) Camera-motion motion-conditional
-landed but PARTIAL: img1605 in-pipeline probe scored 0.329 vs 53.7 offline (probe-context bug) →
-auto-OFF; diagnosis = wave-4 queue #1. (4) Version-stamp/code-sync LIVE-PROVEN (73 files, 0 drift,
-4/4 stamp echo).**
+landed but was corrected in wave 4: the wave-3 img1605 in-pipeline 0.329 AUTO-OFF was the stale bug
+value, and fresh proof at committed 940576495 records img1605 probe 50.02 > 2.5 AUTO ON, statics OFF,
+and decode_orientation_* keys present x4 (a93764203; `runs/lanes/w4_freshproof_20260707/summary.json`).
+(4) Version-stamp/code-sync LIVE-PROVEN (73 files, 0 drift, 4/4 stamp echo).**
 
 > Audience: the successor manager. Every step names exact files/functions (grep-verified 2026-07-07),
 > exact metric keys copied from gate code, and a decision tree. Reserved word `VERIFIED` = passed
@@ -1412,11 +1419,13 @@ failed mission.
 - **grounding_refine: honest no-op remains.** W4 removed the forbidden gate-threshold exclusion and proved
   skeleton-direct phases are not gate-safe; do not wire the producer into `process_video.py` until P2-2
   reduces raw skeleton noise (75e438223; `runs/lanes/w4_footattr_fix_20260707/report_r2.json`).
-- **Camera-motion module: HARDENED, resolved-pending-proof.** `camera_motion.py` person-masked LK+MAD+2-pass
+- **Camera-motion module: HARDENED, fresh-proof resolved.** `camera_motion.py` person-masked LK+MAD+2-pass
   smoothing; img1605 handheld wins all 3 proxies (inlier .767→.895, jerk 2.62→2.45, court-line 14.84→
   11.75px), 2× faster (98→50ms/f). Wave-4 fixed decode-orientation and summary-key persistence; decisive
-  in-pipeline proof is [PENDING wave-4 decisive proof — manager fills at closeout] (cd0b59390; 1588b110f;
-  `runs/lanes/w4_cammotion_fix_20260707/report_r2.json`; `runs/lanes/w4_integration_20260707/report.json`).
+  fresh proof at committed 940576495 has img1605 camera_motion_auto 50.02 > 2.5 AUTO ON, statics OFF at
+  0.129/0.524/0.385-0.568, and first-class decode_orientation_* keys present x4 (cd0b59390; 1588b110f;
+  a93764203; `runs/lanes/w4_cammotion_fix_20260707/report_r2.json`;
+  `runs/lanes/w4_integration_20260707/report.json`; `runs/lanes/w4_freshproof_20260707/summary.json`).
 - **P2-2 emission prerequisite: DONE.** `global_orient`/`body_pose`(euler)/`betas`/`left_hand_pose`/
   `right_hand_pose` schema'd end-to-end in the per-sample frame dict returned by
   `worldhmr.py::_ground_fast_sam_sample` (function def line 2231; schema keys returned lines 2274-2278 —
@@ -1489,7 +1498,7 @@ failed mission.
   wrist params in `pose_temporal.py` are already tuned — reuse `_joint_smoothing_group`). Do NOT ship
   a global latent smoother that touches wrists if the peak-timing gate moves.
 
-**STEP B — P2-1 camera-motion motion-conditional default: LANDED, RESOLVED-PENDING-PROOF.**
+**STEP B — P2-1 camera-motion motion-conditional default: LANDED, FRESH-PROOF RESOLVED.**
 - Status 2026-07-07: decode-orientation explicit policy + fail-safe mismatch semantics landed
   (cd0b59390) and first-class process summary keys landed (1588b110f). Evidence:
   `runs/lanes/w4_cammotion_fix_20260707/report_r2.json`;
@@ -1497,8 +1506,10 @@ failed mission.
   `runs/lanes/w4_integration_20260707/report.json`.
 - Measured acceptance: img1605 production probe 53.70515 AUTO ON; wolverine/burlington/outdoor statics
   bit-exact at 0.128813/0.523815/0.566526 AUTO OFF; set/readback mismatch is conservative when
-  consequential and visible when non-consequential. Decisive in-pipeline proof remains
-  [PENDING wave-4 decisive proof — manager fills at closeout].
+  consequential and visible when non-consequential. Fresh in-pipeline proof: img1605 50.02 AUTO ON;
+  statics OFF at 0.129/0.524/0.385-0.568; first-class decode_orientation_* keys present x4; probe score
+  is not host-deterministic but classification is stable (a93764203;
+  `runs/lanes/w4_freshproof_20260707/summary.json`).
 - RAFT-small upgrade (pending): weights `raft_small_C_T_V2-01064c6d.pth`, sha256 staged
   `runs/lanes/w3_labelfactory_20260707/raft_sha256.txt`, URL confirmed §5. Prefetch on a
   network-capable Sonnet lane, then A/B RAFT vs LK+MAD; adopt only if it beats LK+MAD (which already
