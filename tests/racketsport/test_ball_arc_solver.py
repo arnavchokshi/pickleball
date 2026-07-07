@@ -4,6 +4,7 @@ import json
 import math
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -299,6 +300,203 @@ def test_fit_validity_gate_demotes_any_physical_sanity_violation_to_bvp_fallback
     assert gated[0].diagnostics["fit_validity_gate"]["reason"] == violation
     assert gated[0].diagnostics["fit_validity_gate"]["original_status"] == "fit"
     assert gated[0].diagnostics["fit_validity_gate"]["original_inlier_count"] == segment.inlier_count
+
+
+def test_anchor_preservation_rejects_split_that_worsens_a_good_parent_interval() -> None:
+    parent = replace(
+        _segment_with_physical_sanity(0, status="fit", violation=None),
+        endpoint_error_m=0.04,
+        inlier_frames=(0, 1, 2, 3),
+    )
+    child_left = replace(
+        _segment_with_physical_sanity(1, status="fit", violation=None),
+        endpoint_error_m=0.03,
+        inlier_frames=(0, 1, 2),
+    )
+    child_right = replace(
+        _segment_with_physical_sanity(2, status="fit_bvp_fallback", violation=None),
+        endpoint_error_m=0.09,
+        inlier_frames=(0, 1, 2),
+    )
+
+    reason = ball_arc_solver_module._anchor_preservation_rejection_reason(
+        parent,
+        child_left,
+        child_right,
+        BallArcSolverConfig(min_segment_observations=3),
+    )
+
+    assert reason == "anchor_preservation_worse_endpoint_error"
+
+
+def test_anchor_preservation_allows_split_when_children_keep_fit_floor_and_endpoint_error() -> None:
+    parent = replace(
+        _segment_with_physical_sanity(0, status="fit", violation=None),
+        endpoint_error_m=0.04,
+        inlier_frames=(0, 1, 2, 3),
+    )
+    child_left = replace(
+        _segment_with_physical_sanity(1, status="fit", violation=None),
+        endpoint_error_m=0.02,
+        inlier_frames=(0, 1, 2),
+    )
+    child_right = replace(
+        _segment_with_physical_sanity(2, status="fit_bvp_fallback", violation=None),
+        endpoint_error_m=0.04,
+        inlier_frames=(0, 1, 2),
+    )
+
+    reason = ball_arc_solver_module._anchor_preservation_rejection_reason(
+        parent,
+        child_left,
+        child_right,
+        BallArcSolverConfig(min_segment_observations=3),
+    )
+
+    assert reason is None
+
+
+def test_selected_split_quality_rejects_unverified_fallback_child() -> None:
+    parent = replace(
+        _segment_with_physical_sanity(0, status="fit", violation=None),
+        endpoint_error_m=0.04,
+        reprojection_rmse_px=12.0,
+        inlier_frames=(0, 1, 2, 3),
+    )
+    child_left = replace(
+        _segment_with_physical_sanity(1, status="fit", violation=None),
+        start_anchor=_anchor("left-start", "contact", 0.0, (0.0, 0.0, 1.0), frame=0),
+        end_anchor=_anchor("split-left", "contact", 0.25, (0.1, 0.0, 1.0), frame=15),
+        endpoint_error_m=0.03,
+        reprojection_rmse_px=8.0,
+        inlier_frames=(0, 1, 2),
+    )
+    child_right = replace(
+        _segment_with_physical_sanity(2, status="fit_bvp_fallback", violation=None),
+        start_anchor=_anchor("split-right", "contact", 0.25, (0.1, 0.0, 1.0), frame=15),
+        end_anchor=_anchor("right-end", "bounce", 0.5, (0.2, 0.0, 1.0), frame=30, status="human_reviewed"),
+        endpoint_error_m=0.02,
+        reprojection_rmse_px=9.0,
+        inlier_frames=(0, 1, 2),
+    )
+    split_anchor = _anchor("contact-unverified", "contact", 0.25, (0.1, 0.0, 1.0), status="contact_prior")
+
+    rejection = ball_arc_solver_module._selected_split_quality_rejection(
+        parent,
+        child_left,
+        child_right,
+        split_anchor=split_anchor,
+        physics=PhysicsParameters.no_drag(),
+        config=BallArcSolverConfig(min_segment_observations=3),
+    )
+
+    assert rejection is not None
+    assert rejection["reason"] == "selected_split_child_below_fit_tier"
+
+
+def test_selected_split_quality_rejects_negative_time_gap() -> None:
+    parent = replace(
+        _segment_with_physical_sanity(0, status="fit", violation=None),
+        endpoint_error_m=0.04,
+        reprojection_rmse_px=12.0,
+        inlier_frames=(0, 1, 2, 3),
+    )
+    child_left = replace(
+        _segment_with_physical_sanity(1, status="fit", violation=None),
+        end_anchor=_anchor("left-end-refined", "contact", 0.5, (0.2, 0.0, 1.0), frame=30),
+        endpoint_error_m=0.03,
+        reprojection_rmse_px=8.0,
+        inlier_frames=(0, 1, 2),
+    )
+    child_right = replace(
+        _segment_with_physical_sanity(2, status="fit", violation=None),
+        start_anchor=_anchor("right-start-refined", "contact", 0.49, (0.2, 0.0, 1.0), frame=29),
+        endpoint_error_m=0.02,
+        reprojection_rmse_px=8.0,
+        inlier_frames=(0, 1, 2),
+    )
+    split_anchor = _anchor("contact-unverified", "contact", 0.495, (0.2, 0.0, 1.0), status="contact_prior")
+
+    rejection = ball_arc_solver_module._selected_split_quality_rejection(
+        parent,
+        child_left,
+        child_right,
+        split_anchor=split_anchor,
+        physics=PhysicsParameters.no_drag(),
+        config=BallArcSolverConfig(min_segment_observations=3),
+    )
+
+    assert rejection is not None
+    assert rejection["reason"] == "selected_split_negative_time_gap"
+
+
+def test_leave_one_out_validation_refits_bvp_segment_for_each_holdout(monkeypatch: pytest.MonkeyPatch) -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    config = BallArcSolverConfig(min_segment_observations=3, visible_confidence_min=0.0)
+    observations = tuple(
+        BallObservation(
+            frame=frame,
+            t=frame / 30.0,
+            xy=_project(calibration, (0.02 * frame, 0.0, 1.0)),
+            confidence=0.95,
+            visible=True,
+        )
+        for frame in range(4)
+    )
+    segment = replace(
+        _segment_with_physical_sanity(0, status="fit", violation=None),
+        observations=observations,
+        inlier_frames=tuple(obs.frame for obs in observations),
+        outlier_frames=(),
+        start_anchor=_anchor("start-loo", "contact", 0.0, (0.0, 0.0, 1.0), frame=0),
+        end_anchor=_anchor("end-loo", "bounce", 0.1, (0.0, 0.0, 1.0), frame=3, status="human_reviewed"),
+        initial_position_m=(0.0, 0.0, 1.0),
+        initial_velocity_mps=(0.0, 0.0, 0.0),
+        diagnostics={
+            "bvp_anchor_fallback": {
+                "initial_position_m": [99.0, 99.0, 99.0],
+                "initial_velocity_mps": [99.0, 99.0, 99.0],
+            }
+        },
+    )
+    solve_calls: list[tuple[tuple[float, float, float], tuple[float, float, float]]] = []
+
+    def fail_full_fit(**_kwargs):
+        raise AssertionError("LOO should re-solve fixed-endpoint BVP, not run full segment fitting")
+
+    def fail_free_fit(**_kwargs):
+        raise AssertionError("LOO should use the bounded retained-observation seed, not nonlinear free fitting")
+
+    def fake_solve(p0, p1, t0, t1, *, physics, config):
+        solve_calls.append((p0, p1))
+        return {
+            "status": "converged",
+            "converged": True,
+            "iterations": 1,
+            "t0": t0,
+            "t1": t1,
+            "initial_position_m": list(p0),
+            "initial_velocity_mps": [0.0, 0.0, 0.0],
+            "target_position_m": list(p1),
+            "endpoint_position_m": list(p1),
+            "endpoint_error_m": 0.0,
+        }
+
+    monkeypatch.setattr(ball_arc_solver_module, "_fit_flight_segment_once", fail_full_fit)
+    monkeypatch.setattr(ball_arc_solver_module, "_fit_free_flight_segment_once", fail_free_fit)
+    monkeypatch.setattr(ball_arc_solver_module, "_solve_bvp_shooting", fake_solve)
+
+    report = ball_arc_solver_module._leave_one_out_validation(
+        [segment],
+        calibration=calibration,
+        physics=physics,
+        config=config,
+    )
+
+    assert len(solve_calls) == 4
+    assert len({call[0] for call in solve_calls}) > 1
+    assert report["sample_count"] == 4
 
 
 def test_physical_summary_violation_fraction_excludes_bvp_fallback_segments_from_denominator() -> None:

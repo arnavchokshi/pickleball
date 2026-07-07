@@ -174,6 +174,9 @@ features → PF-2 joint optimizer. A slip in P1-4 stalls three pillars — it is
 single artifact in the plan. P5-6 auto-QA ships WITHOUT the Phase-F consistency residuals first
 (they don't exist until PF-1) and adds them later — QA-green before PF-1 means "green minus
 Phase-F residuals" and must say so in its report.
+Live-tier spine runs in parallel and never feeds promotion: PL-1 live court lock unlocks line-relative
+ADVISORY overlays, PL-5 trained ball student unlocks L1 challenge replay dots, and PL-6 BODY-skipped
+L2 emits trust-banded `not_gate_verified` call artifacts while L3 remains the only gate-eligible tier.
 
 ## B.4 The successor's twelve most likely mistakes (from the critic; guardrails are binding)
 1. Promoting a ball checkpoint on the wrong scorer — only `label_f1_at_20px` from
@@ -199,7 +202,343 @@ Phase-F residuals" and must say so in its report.
 12. Feeding the coach LLM raw numbers or skipping the fabrication firewall — the LLM sees ONLY
     comparator verdicts; every cited metric must trace to a finding or the card is rejected.
 
-# PART C — THE NINE PILLAR BLUEPRINTS
+# PART C — THE NINE PILLAR BLUEPRINTS + LIVE TIER COMPANION
+
+## PILLAR: LIVE TIER — on-device advisory perception + the L0-L3 split (PL-1..PL-7)
+
+> Author: docs lane `live_tier_blueprint_20260707`, 2026-07-07. Audience: the successor manager.
+> This is the deep HOW companion to `CAPABILITIES.md` `## Canonical Tier Split`; CAPABILITIES remains
+> canonical on tier-truth wording. Evidence source of record for this pillar: `runs/research_liveondevice_20260707/RULING.md`,
+> `INTERNAL_FACTS.md`, `tech_report.md`, `landscape_rules_report.md`, plus the grep-verified code
+> symbols named below. `VERIFIED=0` everywhere. Every L0/L1 live call described here is ADVISORY,
+> every L2 fast-verdict call is trust-banded/not-gate-verified, and only L3 deep outputs can become
+> gate-eligible after their documented offline gates pass.
+
+### 0. Final ruling — the stack in one paragraph (what we decided and why)
+We RULED a four-tier split, not a live-vs-offline argument. **L0 LIVE IN-RALLY** is on-device during
+recording, <300ms target class, and renders only ADVISORY overlays/haptics from cadence-scheduled
+ANE inference (`runs/research_liveondevice_20260707/RULING.md`). **L1 LIVE BETWEEN-RALLY** is still
+on-device but occurs after a rally/recording stops: instant replay, challenge-style bounce zoom, and
+post-stop summaries, all ADVISORY when they mention a call (`RULING.md`). **L2 SERVER FAST VERDICT**
+is a planned BODY-skipped `process_video.py` profile: calibration + tracks + ball + events + line/court
+rule artifacts in roughly the 1-2 minute class, always trust-banded and never promotion-grade
+(`RULING.md`; stage inventory in `INTERNAL_FACTS.md`). **L3 SERVER DEEP WORLD** is the full offline
+pipeline with SAM-3D-Body, global association/smoothing, arc refinement, fusion, replay, stats, and
+coaching; L3 is the only tier whose outputs can ever pass gates or support a product promotion
+(`RULING.md`, `CAPABILITIES.md`). Existing docs' "ON-DEVICE LIVE / fast tier" equals L0+L1; existing
+"SERVER OFFLINE / deep tier" equals L3; L2 is the new fast server tier created by the measured BODY
+runtime split. The 5-rule constitution is binding: (1) every live call is ADVISORY and abstains to
+`too_close_to_call`/hidden when sigma or confidence fails; (2) the record path is sacred, fail-open,
+and never slowed by live overlays; (3) one decision layer serves all tiers, with tiers differing only
+by perception quality and uncertainty width; (4) live/L2 outputs never train, gate, or promote; (5)
+device budget law is FP16 + `.cpuAndNeuralEngine`, cadence scheduling, 640px person, 288-512px ball,
+and no per-frame 240fps inference (`RULING.md`).
+
+### 1. Current measured state (numbers + evidence paths only — no aspirations)
+- **MEASURED — live person detect is wired during recording, but model delivery is not bundled.**
+  `LiveFrameTap` adds a fail-open `AVCaptureVideoDataOutput` and returns `false` if the session refuses
+  it; `LiveCourtOverlayEngine` runs `CoreMLPersonDetector` through `LiveDetectionCadenceScheduler.budgeted`
+  at cadence 4, loads `Documents/benchmark_models/yolo26n_640.mlmodelc`, and emits honest
+  `.modelUnavailable` if absent. The detector config is YOLO26n INT8 640x640, maxTracks 4, minConf
+  0.10, inputWidth/inputHeight 640, `detectionIntervalFrames=cadence.everyNFrames`. Evidence:
+  `runs/research_liveondevice_20260707/INTERNAL_FACTS.md`; `ios/Capture/Sources/PickleballCapture/LiveFrameTap.swift`;
+  `ios/Capture/Sources/PickleballCapture/LiveCourtOverlayEngine.swift`; `ios/FastTier/Sources/PickleballFastTier/LiveDetectionCadenceScheduler.swift`.
+- **MEASURED — 640px YOLO26n ANE path works in burst, 960px is not an ANE candidate today.** Real iPhone
+  14 Pro table: `yolo26n_player_detector_640` `.all` mean 3.185ms / p90 3.726ms with genuine ANE compile;
+  `yolo26n_player_detector_960` `.all` mean 14.533ms but the ANE compiler failed and CoreML silently fell
+  back to GPU/CPU. Evidence: `runs/ios_device_gate_20260702T025809Z/LATENCY_TABLE_DEVICE.md`.
+- **MEASURED — ball student deploy path is fast but explicitly UNTRAINED.** `ball_student_288x512`
+  measured 1.407ms mean / 1.489ms p90 on the same iPhone 14 Pro ANE, using zero-filled tensors and no
+  camera-loop/thermal overhead; `WASBLiteBallStudent` consumes `(1, 9, 288, 512)` three-frame RGB and emits
+  `(1, 1, 72, 128)` heatmap; `LiveBallIndicatorPolicy.modelIsTrainedInThisBuild=false` forces every live
+  ball state to "coming soon" regardless of confidence. Evidence: `runs/ios_device_gate_20260702T025809Z/LATENCY_TABLE_DEVICE.md`;
+  `spikes/coreml_conversion/ball_student.py`; `ios/FastTier/Sources/PickleballFastTier/LiveBallIndicator.swift`.
+- **MEASURED — no live homography or real court-plane projection exists.** ARKit is a bounded pre-record
+  setup pass, not a recording-time stream, because `CameraResourceOwnership` makes ARKit setup and
+  AVCapture mutually exclusive; during recording the sidecar is CoreMotion-only for per-frame gravity.
+  Real-device sidecars so far have `arkit_camera_pose` and `court_plane` nil and `manual_court_taps` empty
+  per the internal digest. Evidence: `runs/research_liveondevice_20260707/INTERNAL_FACTS.md`;
+  `ios/Capture/Sources/PickleballCapture/ARKitSetupPassRunner.swift`;
+  `ios/Capture/Sources/PickleballCapture/CameraResourceOwnership.swift`;
+  `ios/Capture/Sources/PickleballCapture/CapturePackage.swift`.
+- **MEASURED — current dot map and foot rings are screen-space proxies, not a court map.** `CourtDotMap.swift`
+  states v0 has no ARKit court plane and no live tap-corner homography and normalizes each detected foot
+  point in camera-frame coordinates; `LivePlayerFootRing.swift` marks the source `screen_space_proxy`.
+  AppRootView currently renders foot rings, not a line-relative court projection. Evidence:
+  `ios/FastTier/Sources/PickleballFastTier/CourtDotMap.swift`;
+  `ios/FastTier/Sources/PickleballFastTier/LivePlayerFootRing.swift`;
+  `ios/App/AppRootView.swift`.
+- **MEASURED — guidance and post-stop summary are computed surfaces with incomplete render integration.**
+  `LiveGuidanceEvaluator` evaluates real readbacks every 0.5s from `CaptureViewModel.startLiveGuidancePollingIfNeeded`;
+  `PostStopPreviewBuilder` has a <10s budget and `CaptureViewModel.postStopSummary` is populated after stop.
+  `AppRootView.swift` has no `liveGuidanceState` or `postStopSummary` reference in the grep performed for this
+  lane, so those two surfaces are computed but not first-class rendered in the app shell. Evidence:
+  `ios/Guidance/Sources/PickleballGuidance/LiveGuidanceEvaluator.swift`;
+  `ios/FastTier/Sources/PickleballFastTier/PostStopPreviewSummary.swift`;
+  `ios/App/CaptureViewModel.swift`; grep log in `runs/lanes/live_tier_blueprint_20260707/report.json`.
+- **MEASURED — capture modes are already explicit.** `CapturePolicy.recommended`: `standard60` =
+  1080p60 HEVC, `swing120` = 1080p120 HEVC, `ballPhysics240` = 720p240 HEVC, `quality4K60` = 4K60
+  ProRes422LT only on LiDAR/all-codecs devices and otherwise 1080p60 HEVC. Evidence:
+  `ios/Capture/Sources/PickleballCapture/CapturePolicy.swift`; `ios/Capture/Sources/PickleballCapture/CaptureMode.swift`.
+- **MEASURED — BODY dominates server wall, creating the L2 opportunity.** The current Wolverine visual run
+  reports `wall_seconds=532.252` and body `wall_seconds=518.676` in
+  `runs/visual1_wolverine_20260705T220517Z/PIPELINE_SUMMARY.json`; the earlier four-clip timing report
+  measured BODY at 96.9-98.4% of total wall on all four baseline clips. Evidence:
+  `runs/visual1_wolverine_20260705T220517Z/PIPELINE_SUMMARY.json`;
+  `runs/lanes/pipeline_speed_20260705/TIMING_REPORT.md`.
+- **MEASURED — decision/rule code exists but much of it is not wired into the orchestrator.**
+  `decide_court_boundary(CourtDecisionInput)` returns `too_close_to_call` unless metric confidence is high,
+  capture quality is not poor, and distance clears `sigma*z`; `build_calls_artifact` emits
+  `racketsport_court_calls` with `not_gate_verified=True`; `classify_ball_line_calls` emits bounce
+  court/NVZ calls; `bounce_geometric_uncertainty_m` computes sigma terms; `classify_shots_from_payloads`
+  emits outcomes including `net_hit`, `excess_bounce`, `out`, and `in`; `event_fusion.fuse_contact_windows`
+  fail-closes to required audio+wrist+ball cues; `rally_gating` is an OR-fused runtime optimization.
+  Internal digest states `ball_line_calls`, `court_positioning`/`CallsArtifact`, `shot_taxonomy`, `shot_rules`,
+  rally gating flags, and M4/M5/M6 consumers are library/CLI or flag-gated rather than fully orchestrator-wired.
+  Evidence: `runs/research_liveondevice_20260707/INTERNAL_FACTS.md`;
+  `threed/racketsport/court_positioning.py`; `threed/racketsport/court_positioning_artifacts.py`;
+  `threed/racketsport/ball_line_calls.py`; `threed/racketsport/ball_inout_uncertainty.py`;
+  `threed/racketsport/shot_taxonomy.py`; `threed/racketsport/event_fusion.py`; `threed/racketsport/rally_gating.py`.
+- **MEASURED — 2026 rule numbers are known and must drive copy.** Serve foot position is Section
+  7.A.1-7.A.3 at serve hit; NVZ faults are 11.A.1 contact while volleying, 11.A.2 momentum after volley
+  until balance/control returns, and 11.A.3 failure to exit before volleying; two-bounce/double-bounce is
+  10.A/10.B; Section 8 line-call convention keeps lines in except the NVZ/kitchen line on serve. Evidence:
+  `runs/research_liveondevice_20260707/landscape_rules_report.md`; primary URL cited there:
+  `https://usapickleball.org/docs/rules/USAP-Official-Rulebook.pdf`.
+
+### 2. The exact build plan (numbered; objective · files · recipe · lane · acceptance keys · kill)
+**PL-1 — Live court lock on device (the keystone; do before any line-relative ADVISORY live call).**
+- Objective: collect four pre-record court corners using the existing `ManualCourtTaps` type, use ARKit setup-pass
+  plane only as an assist, reuse H0 court profiles when available, compute an on-device homography quality score,
+  write the sidecar/server seed, and remove the calibration hard-fail for app captures.
+- Files/symbols (grep-verified): `ios/Calibration/Sources/PickleballCalibration/ManualCourtTaps.swift`
+  (`orderedFourCorners`), `AssistedCourtSeed.swift`, `CalibrationSidecarPackager.swift`; `ios/Capture/Sources/PickleballCapture/CapturePackage.swift`
+  (`manual_court_taps`, `arkit_camera_pose`, `court_plane`); `ARKitSetupPassRunner.swift`; `CaptureViewModel.swift`;
+  `AppRootView.swift`; server consumption in `scripts/racketsport/process_video.py` (`--court-corners`,
+  `--capture-sidecar`, `--court-calibration`) and `threed/racketsport/orchestrator.py` `ManualCalibrationRunner`.
+- Recipe: add a pre-record guided four-corner tap sheet; validate with `ManualCourtTaps.orderedFourCorners`;
+  if `ARKitSetupPassRunner` returns a plane, show it only as a visual assist; if H0 profile matches, pre-fill taps
+  but require user accept; compute `live_court_lock.reprojection_p95_px`, `live_court_lock.homography_condition_number`,
+  and `live_court_lock.coverage_corners_inside_frame`; write ordered taps into `manual_court_taps` and a separate
+  `live_court_lock` sidecar block; server maps it to `--court-corners`/manual calibration seed and records provenance.
+- Lane sizing: Codex app+server wiring; owner/device required for one real court smoke; Sonnet only if ARKit/device
+  interaction needs live app inspection.
+- Acceptance keys: `manual_court_taps_count == 4`; `manual_court_taps_ordered == true`;
+  `live_court_lock.status in {"locked","declined"}`; `live_court_lock.reprojection_p95_px <= 12.3`;
+  `live_court_lock.server_metric15_delta_p95_px <= 12.3`; `live_court_lock.homography_condition_number` finite;
+  `capture_sidecar.court_seed_source in {"manual_taps","profile_reuse_manual_accept"}`;
+  `server_seed.calibration_stage_status in {"ran","skipped_reused_trusted"}`.
+- Kill: if four corners cannot be ordered, p95 exceeds the manual bar, profile reuse disagrees with user taps, or the
+  server cannot consume the sidecar seed, set `live_court_lock.status="declined"` and disable every line-relative
+  ADVISORY live overlay. Do not fall back to screen-space projection for line-relative features.
+
+**PL-2 — Record+infer soak benchmark (the device budget table; no latency promises before this).**
+- Objective: measure the actual recording+CoreML+render loop outdoors on the owner's phone for 20-30 minutes.
+- Files/symbols (grep-verified): `LiveFrameTap.attach`, `LiveCourtOverlayEngine`, `LiveDetectionCadenceScheduler`,
+  `CapturePolicy`, `LiveBallIndicatorPolicy`, `ios/AppTests/ANELatencyBenchmarkTests.swift`, and existing evidence
+  `runs/ios_device_gate_20260702T025809Z/LATENCY_TABLE_DEVICE.md`.
+- Recipe: run `standard60` and the one high-fps mode the owner will actually use; keep `LiveFrameTap` fail-open;
+  log every cadence inference duration, effective FPS, frame drops, thermal state, battery delta, attach failures,
+  overlay render time, and any capture interruption; run the thermal ladder but never stop recording.
+- Lane sizing: Sonnet/device-required or manager device run; Codex can add instrumentation and tests, but cannot
+  produce the gate without the owner's physical phone.
+- Acceptance keys: `soak_duration_s >= 1200`; `recording_interruption_count == 0`;
+  `video_frame_drop_rate <= 0.005`; `live_inference_p90_ms < 16.7` for 60fps cadence runs;
+  `live_render_p90_ms < 8.0`; `thermal_state_max not in {"serious","critical"}` for the accepted profile;
+  `battery_delta_pct` recorded; `cadence_effective_every_n` recorded; `tap_attach_status` recorded.
+- Kill: if recording freezes, drops exceed the threshold, thermal reaches serious/critical, or attach false rate is
+  nonzero on the target mode, lower cadence 4→8→persons-only→overlays-off and keep recording. No promise survives
+  without a matching soak artifact.
+
+**PL-3 — Wire the built-but-hidden live UX (cheap app lane; still ADVISORY where it mentions a live call).**
+- Objective: bundle the 640 detector model, render live guidance and post-stop summary, and keep current foot-ring
+  overlay honest while model/court locks are missing.
+- Files/symbols (grep-verified): `LiveCourtOverlayEngine.defaultModelURL`, `CoreMLPersonDetectorConfiguration`,
+  `LiveGuidanceEvaluator.evaluate`, `PostStopPreviewBuilder.summarize`, `CaptureViewModel.liveGuidanceState`,
+  `CaptureViewModel.postStopSummary`, `AppRootView.swift`.
+- Recipe: move the `yolo26n_640.mlmodelc` artifact into app resources or a first-launch install path; render the
+  `LiveGuidanceState` card on Record without claiming automatic corner framing; render `PostStopPreviewSummary`
+  after stop; keep `LiveBallIndicatorPolicy` at coming-soon until PL-5; keep foot rings labeled screen-space proxy
+  until PL-1.
+- Lane sizing: Codex pure-app lane plus manager/owner device smoke.
+- Acceptance keys: `live_person_model_bundled == true`; `live_overlay_status != "modelUnavailable"`;
+  `live_guidance_rendered == true`; `post_stop_summary_rendered == true`;
+  `post_stop_summary.elapsedBuildSeconds <= 10.0`; `record_path_blocked_by_live_overlay == false`.
+- Kill: if model packaging increases app launch/record latency or causes any camera failure, revert the bundle path
+  and ship an explicit model-missing state rather than blocking capture.
+
+**PL-4 — Foot-position ADVISORY overlays (kitchen proximity + serve-position check, not a fault verdict).**
+- Objective: after PL-1, project foot rings to court coordinates and use `decide_court_boundary` semantics for
+  kitchen proximity and serve-position ADVISORY cues, always abstaining to no cue/`too_close_to_call` when inputs are weak.
+- Files/symbols (grep-verified): `LivePlayerFootRingBuilder`, `CourtDotMapBuilder`, `decide_court_boundary`,
+  `CourtDecisionInput`, `build_calls_artifact`, `CallsArtifact`, `LiveGuidanceEvaluator`, `AppRootView.swift`.
+- Recipe: derive foot `court_xy` from PL-1 homography; compute sigma from homography p95 + detector box-foot
+  uncertainty; run `decide_court_boundary` for `near_kitchen`/`far_kitchen` and serve-area boundaries; copy must say
+  "proximity" or "serve position advisory", never "fault"; serve cue requires an explicit serve-moment signal
+  (audio/contact/pose R&D) or no serve ADVISORY live call appears.
+- Lane sizing: Codex app+Python parity tests; device-required visual smoke after PL-1.
+- Acceptance keys: `foot_advisory.source == "live_homography"`; `foot_advisory.too_close_to_call_count` recorded;
+  `foot_advisory.hard_fault_copy_count == 0`; `kitchen_proximity.sigma_p_m` recorded;
+  `serve_position_advisory.status in {"shown","abstained_no_serve_moment","abstained_low_geometry"}`.
+- Kill: if `live_court_lock.status!="locked"`, sigma crosses the decision margin, or serve moment is absent, hide the
+  ADVISORY live cue. Do not display a screen-space line-relative cue.
+
+**PL-5 — Ball student distillation (CoreML FP16; blocked on P1 internal bar + owner data).**
+- Objective: train/distill a 288x512 three-frame ball student for L0/L1 trail/bounce-zone dots, using the existing
+  CoreML conversion path and flipping the UI kill-switch only after a device accuracy smoke.
+- Files/symbols (grep-verified): `spikes/coreml_conversion/ball_student.py` `WASBLiteBallStudent`;
+  `convert_and_benchmark.py` `convert_ball_student`, `ct.convert`, `compute_precision=ct.precision.FLOAT16`;
+  `LiveBallIndicatorPolicy.modelIsTrainedInThisBuild`; `LiveBallOverlayTracker`; `LiveBallIndicatorPolicy.evaluate`;
+  device latency evidence `runs/ios_device_gate_20260702T025809Z/LATENCY_TABLE_DEVICE.md`.
+- Recipe: branch A keeps current `(1,9,288,512)` RGB triple; branch B adds frame-differencing input (single-channel
+  or RGB-diff A/B, recorded as `ball_student.input_variant`); train only after P1 internal bar and owner in-domain
+  labels exist; convert with coremltools FP16 `mlprogram`; load with `.cpuAndNeuralEngine`; run on-device accuracy
+  smoke with real frames; then and only then set `modelIsTrainedInThisBuild=true`.
+- Lane sizing: Codex for model/conversion/training harness; Sonnet/GPU for training if needed; owner data and device
+  required for final smoke.
+- Acceptance keys: `live_ball_student.trained == true`; `live_ball_student.input_variant` recorded;
+  `live_ball_student.label_f1_at_20px` recorded; `live_ball_student.recall_at_20px` recorded;
+  `live_ball_student.hidden_fp_rate` recorded; `live_ball_student.mean_ane_ms <= 4.0`;
+  `live_ball_student.p90_ane_ms <= 8.0`; `live_ball_student.on_device_accuracy_smoke_pass == true`;
+  `LiveBallIndicatorPolicy.modelIsTrainedInThisBuild == true` only after the smoke.
+- Kill: if P1 internal bar fails, owner data is missing, hidden-FP regresses, or on-device accuracy smoke fails, keep
+  `modelIsTrainedInThisBuild=false`; live ball trail remains hidden/coming-soon even if latency is fast.
+
+**PL-6 — Server fast-verdict profile (L2; BODY-skipped, trust-banded, not promotion).**
+- Objective: add a `process_video.py` profile that skips BODY and emits rule/calls artifacts quickly after upload:
+  ball line calls, `CallsArtifact`, shot outcomes including `excess_bounce`, rally stats, and challenge-replay backend
+  payloads. L2 is stricter than phone perception but still not gate-eligible.
+- Files/symbols (grep-verified): `scripts/racketsport/process_video.py` `_build_prefix_stage_fns`,
+  `_middle_stage_fns`, `_build_suffix_stage_fns`, `--no-gpu`; `threed/racketsport/ball_line_calls.py`
+  `classify_ball_line_calls`; `court_positioning_artifacts.py` `build_calls_artifact`; `schemas.__init__.py`
+  `CallsArtifact`; `shot_taxonomy.py` `classify_shots_from_payloads` and `_has_excess_bounce`; `trust_band.py`
+  `build_trust_band`; `event_fusion.py` `fuse_contact_windows`; `rally_gating.py`.
+- Recipe: implement `--fast-verdict-profile` or equivalent profile config that runs ingest→calibration→tracking/
+  reuse→placement→ball→ball_arc/events where available→line/court/shot calls→manifest-lite; force body stage to
+  skipped with explicit `body_stage_status="skipped_fast_verdict_profile"`; write `ball_line_calls.json`,
+  `court_calls.json`, `shot_taxonomy.json`, `fast_verdict_summary.json`, and trust bands with `not_gate_verified`.
+- Lane sizing: Codex pipeline lane; no device; GPU optional only for fresh ball/tracking if no reuse.
+- Acceptance keys: `fast_verdict.wall_seconds <= 120`; `fast_verdict.body_stage_status == "skipped_fast_verdict_profile"`;
+  `fast_verdict.not_gate_verified == true`; `ball_line_calls.artifact_type == "racketsport_ball_line_calls"`;
+  `court_calls.artifact_type == "racketsport_court_calls"`; `court_calls.summary.too_close_to_call_count` recorded;
+  `shot_taxonomy.summary.outcome_counts` recorded; `trust_bands.fast_verdict.badge in {"preview","low_confidence"}`.
+- Kill: if calibration is missing, ball/runtime artifacts are missing, or wall exceeds 120s on the target clip,
+  L2 returns partial/preview only and does not suppress the L3 job. Never reuse L2 call artifacts for gates/training.
+
+**PL-7 — Score state machine (H26 after P6-1; manual correction first).**
+- Objective: infer score/serve side from contacts, two-bounce state, side switches, and manual/voice corrections;
+  v0 is assistive and editable, not a live officiating system.
+- Files/symbols (grep-verified or absence-checked): existing inputs in `shot_taxonomy.py` `_rally_index`
+  (`serve`, `return`, `third`, `fourth_plus`), `classify_shots_from_payloads`, `_has_excess_bounce`; planned new
+  module should be created only after grepping no existing `score_state.py`; UI target remains Record/replay state
+  in `ios/App`.
+- Recipe: build a deterministic state machine with explicit uncertainty: serve number, server side, rally count,
+  bounce count, and correction events; ingest PL-6/P6-1 shot records when present; allow manual override; persist
+  every correction provenance.
+- Lane sizing: Codex pure logic + UI; owner feedback for correction ergonomics.
+- Acceptance keys: `score_state.status in {"inferred","needs_manual_correction","manual"}`;
+  `score_state.server_side_confidence`; `score_state.correction_count`; `score_state.two_bounce_rule_state`;
+  `score_state.unresolved_rally_count`; `score_state.manual_override_roundtrip == true`.
+- Kill: if contacts/serve-side are missing or contradictory, show manual score only. Do not invent a score from weak
+  rally grammar.
+
+### 3. Decision trees (if X -> do exactly Y; ambiguous branches end in typed STOP)
+- **Tier assignment for a new feature:** can it run on device during recording under PL-2 budget and never affect
+  record? → L0 ADVISORY overlay. Needs seconds after stop and on-device replay buffers? → L1 ADVISORY review.
+  Needs server ball/calibration/events but not BODY? → L2 trust-banded fast verdict. Needs BODY/global fusion/stats,
+  can feed gates, or could affect promotion? → L3 only. If two answers look plausible → typed STOP: tier-placement.
+- **Court-lock quality below bar:** `live_court_lock.status!="locked"` OR p95/condition/sigma missing → hide every
+  line-relative ADVISORY live overlay and keep only screen-space foot rings. Never degrade to a fake projection.
+- **Thermal ladder:** cadence 4 works → keep; thermal/frame drops rise → cadence 8; still rising → persons-only;
+  still rising → overlays-off. Recording never stops or downgrades because of live perception.
+- **Ball student confidence below threshold:** `modelIsTrainedInThisBuild=false` OR confidence < threshold OR PL-5
+  smoke absent → trail and bounce-zone hidden; show coming-soon/low-confidence UI only.
+- **Serve-moment cue unavailable:** no audio/contact/pose serve event with explicit confidence → no serve-position
+  ADVISORY live cue; kitchen proximity may still show if PL-1 geometry is locked.
+- **L2 fast verdict partial:** missing calibration → partial with `requires_calibration`; missing ball → no
+  ball-line artifacts; missing shot contacts → no shot/score artifacts. L3 upload still runs unless the owner cancels.
+- **Rule ambiguity:** NVZ momentum/partner-contact, 75%-style replay framing, or contested serve state cannot be
+  made deterministic from current signals → typed STOP: rules-judgment; ship review flag or abstain.
+
+### 4. DO-NOT list (each with the one-line reason/evidence)
+- DO NOT use authoritative/officiating language for L0/L1 live ADVISORY calls — constitution rule 1 and industry
+  precedent require uncertainty/no-call fallback (`RULING.md`, `landscape_rules_report.md`).
+- DO NOT run anything per-frame at 240fps — 240fps is a 4.2ms arithmetic budget before capture/render overhead
+  (`tech_report.md`); record high-fps, infer at cadence.
+- DO NOT run ARKit during recording — `CameraResourceOwnership` makes ARKit setup and AVCapture mutually exclusive
+  by design; recording-time sidecars are CoreMotion-only (`ARKitSetupPassRunner.swift`, `CameraResourceOwnership.swift`).
+- DO NOT ship 960px YOLO26n as an ANE live model — the real iPhone ANE compile failed and CoreML fell back to
+  GPU/CPU (`runs/ios_device_gate_20260702T025809Z/LATENCY_TABLE_DEVICE.md`).
+- DO NOT use Vision 3D body pose for four-player live foot faults — Apple Vision 3D returns only the closest person;
+  2D/multi-person or our own detector is the live path (`tech_report.md`).
+- DO NOT feed L0/L1/L2 outputs into metrics, gates, training, or promotion — constitution rule 4; schemas use
+  `not_gate_verified=True` for current call artifacts.
+- DO NOT ship any live feature that can block or slow recording — `LiveFrameTap.attach()` is fail-open, and
+  SwingVision's churn evidence says recording freezes are the top negative driver (`LiveFrameTap.swift`,
+  `landscape_rules_report.md`).
+- DO NOT invent court projection without PL-1 homography/profile lock — current `CourtDotMapBuilder` and foot rings
+  are explicitly screen-space proxies (`CourtDotMap.swift`, `LivePlayerFootRing.swift`).
+- DO NOT claim L2 as a replacement for L3 — BODY is 96.9-98.4% of measured E2E wall and is the deep-world moat;
+  L2 is a quick trust-banded layer, not a promotion path (`TIMING_REPORT.md`).
+
+### 5. External bets verified today (claim -> verdict -> source/URL -> tag)
+- **Sustained live-camera inference tax** → **[MEASURED] 4.2x-12x class**: YOLO26n 3.8ms burst vs ~16ms sustained
+  live camera on iPhone 17 Pro; separate live camera app measured ~15.96ms vs ~1.34ms synthetic/offline for the
+  same model. Sources: `runs/research_liveondevice_20260707/tech_report.md`;
+  https://docs.ultralytics.com/integrations/coreml ;
+  https://medium.com/@rachana.gupta_7569/building-a-two-stage-ml-pipeline-on-ios-real-time-detection-meets-tap-to-classify-7059d8342996.
+- **FP16 on ANE** → **[MEASURED][CORROBORATED] 2-4x** latency improvement vs FP32, while low-bit palettization is
+  mostly size/memory rather than latency. Source: `tech_report.md`;
+  https://apple.github.io/coremltools/docs-guides/source/opt-palettization-perf.html.
+- **Monocular bounce localization** → **[MEASURED] 9-30cm class for the closest TT3D analog**, with 40cm possible
+  frame-interval bound at 25fps/10m/s; separate depth-camera tennis system reports 29cm/7.2cm/17cm axes. Source:
+  `tech_report.md`; https://arxiv.org/html/2504.10035 ; https://academic.oup.com/jcde/article/10/3/1176/7197436.
+- **SwingVision single-camera close calls** → **[VENDOR CLAIM][UNCERTAIN] 97% within 10cm vs 90% human eye**, and
+  **[MEASURED] not-instant reality** because the CEO frames Hawk-Eye-Live immediacy as a long-term goal and no numeric
+  live challenge latency was found. Sources: `tech_report.md`, `landscape_rules_report.md`;
+  https://www.tennis.com/baseline/articles/fair-play-swingvision-puts-its-electronic-line-calling-to-the-test-in-tournament-play ;
+  https://secondservepodcast.com/2025/10/16/ep-292-disputed-line-calls/.
+- **In/Out honesty precedent** → **[VENDOR CLAIM] explicit Too Close To Call**, with earlier-gen review citing
+  **[MEASURED] 20-30mm** margin and pickleball kitchen/NVZ line explicitly unsupported on the fetched support page.
+  Source: `landscape_rules_report.md`; https://inout.tennis ; https://support.inout.tennis/pickleball ;
+  https://gadgetsandwearables.com/2026/04/26/in-out-tennis-line-calling/.
+- **PlayReplay reference architecture** → **[VENDOR CLAIM] 4 net-post cameras**, ITF Silver-classified, covers in/out,
+  service faults, lets, and kitchen violations; it is the certified multi-camera contrast to DinkVision's one-phone
+  tier. Source: `landscape_rules_report.md`;
+  https://pickleball.com/news/pickleball-inc-partners-with-playreplay-to-bring-automated-line-calls-and-ai-tracking-to-the-sport-of-pickleball ;
+  https://www.playreplay.io/news/playreplay-earns-itf-silver-classification-the-first-worldwide-at-its-price-point.
+- **HomeCourt live threshold** → **[MEASURED — company-published benchmark] A12 made Shot Science 6x faster** than
+  iPhone X and crossed from a couple-second delay to true real-time. Source: `landscape_rules_report.md`;
+  https://help.homecourt.ai/hc/en-us/articles/7018020579475-Would-HomeCourt-work-on-my-device ;
+  https://sportstechnologyblog.com/2019/01/17/homecourt-the-iphone-app-that-tracks-and-analyses-your-hoops-a-review/.
+
+### 6. Acceptance gates + owner dependencies (exact metric keys; what only the owner can provide)
+- **P0-10 remains the app/device gate:** owner 30s+ real-device recording smoke with sidecar pulled and server-consumed.
+  Required keys: `arkit_frame_samples_count`, `gravity_sample_count`, `capture_sidecar.manual_court_taps_count`,
+  `capture_policy.mode`, `capture_policy.fps`, `recording_interruption_count`, and server `calibration.stage_status`.
+- **PL-1 live court lock:** owner performs one-time four-corner taps per H0 court. Required keys:
+  `manual_court_taps_count==4`, `live_court_lock.reprojection_p95_px`, `live_court_lock.server_metric15_delta_p95_px`,
+  `live_court_lock.status`, `server_seed.calibration_stage_status`.
+- **PL-2 soak:** requires the owner's phone at a real outdoor/indoor session. Required keys:
+  `soak_duration_s`, `video_frame_drop_rate`, `live_inference_mean_ms`, `live_inference_p90_ms`,
+  `live_render_p90_ms`, `thermal_state_max`, `battery_delta_pct`, `recording_interruption_count`,
+  `cadence_effective_every_n`.
+- **PL-3 UX wiring:** `live_person_model_bundled`, `live_overlay_status`, `live_guidance_rendered`,
+  `post_stop_summary_rendered`, `post_stop_summary.elapsedBuildSeconds`, `record_path_blocked_by_live_overlay`.
+- **PL-4 foot ADVISORY overlays:** `foot_advisory.source`, `foot_advisory.too_close_to_call_count`,
+  `foot_advisory.hard_fault_copy_count==0`, `kitchen_proximity.sigma_p_m`, `serve_position_advisory.status`.
+- **PL-5 ball student:** blocked until P1 internal bar + owner in-domain data exist. Required keys:
+  `live_ball_student.label_f1_at_20px`, `live_ball_student.recall_at_20px`,
+  `live_ball_student.hidden_fp_rate`, `live_ball_student.mean_ane_ms`, `live_ball_student.p90_ane_ms`,
+  `live_ball_student.on_device_accuracy_smoke_pass`, and `LiveBallIndicatorPolicy.modelIsTrainedInThisBuild`.
+- **PL-6 L2 fast verdict:** `fast_verdict.wall_seconds <= 120`, `fast_verdict.body_stage_status`,
+  `fast_verdict.not_gate_verified`, `ball_line_calls.summary`, `court_calls.summary.too_close_to_call_count`,
+  `shot_taxonomy.summary.outcome_counts`, `trust_bands.fast_verdict.badge`.
+- **PL-7 score state:** `score_state.status`, `score_state.server_side_confidence`,
+  `score_state.correction_count`, `score_state.two_bounce_rule_state`, `score_state.manual_override_roundtrip`.
+- **Consent/biometrics dependency is unchanged by live tier:** L0/L1 on-device session-only processing does not
+  persist non-owner ReID galleries or shape betas; PART 0/P7-4b still gates any persistent non-owner biometric
+  storage. Owner/legal decision remains outside this docs lane.
 
 ## PILLAR: DATA ENGINE + PLAYER IDENTITY — the critical path's first link (P0-1b/3/4/5, P0-9 identity, cross-clip ReID)
 
@@ -355,8 +694,8 @@ across sessions after 2 iters → bank negative, keep session-only ReID (`associ
 do not ship a persistent gallery.
 
 **D6 — Corpus/dashboard bookkeeping + leakage (f).** *Obj:* one place that answers "how much labeled
-data, what diversity, any leakage." *Files to BUILD:* `scripts/racketsport/corpus_dashboard.py` (does
-NOT exist — P0-4 gate requires it). *Recipe:* aggregate corpus manifests (harvest corpus_card.json +
+data, what diversity, any leakage." *Files:* `scripts/racketsport/corpus_dashboard.py` (LANDED
+2026-07-07, stream-4 `p04_corpus_dashboard_20260707` — the P0-4 gate tool). *Recipe:* aggregate corpus manifests (harvest corpus_card.json +
 `runs/training_corpora_20260702/owner_capture/manifest.json` + Roboflow index) → counts by label type,
 distinct sessions/courts, roles; re-run `assert_no_protected_eval_hash_collisions` + a video-hash check
 of every train/val clip vs the 35 eval hashes + the 2 harvest held-out + owner held-out; emit a corpus
@@ -431,6 +770,17 @@ nonzero leakage → STOP, quarantine the batch, surface to manager.
 
 ## PILLAR: BALL 2D — detection/tracking from 0.6969 to the M1 bar (F1@20>=0.90, recall>=0.75, hidden-FP<=0.05)
 
+**[WAVE-4 RECONCILIATION 2026-07-07 — these supersede conflicting lines below]:** STEP-3 build gap
+CLOSED: `train_ball_stage2.py` implements sparse-review semantics (486 reviewed rows = 268 positives
++ 218 reviewed-absent), occlusion augmentation paired with WBCE, SST manifests, and disagreement CLIs;
+the dense CVAT helper is unsafe-for-sparse and bypassed. LOCAL BLOCKER CLOSED: the WASB tennis anchor
+sha256 9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb is verified on VM and Mac.
+Ballgpu banked harness_v0 NON-PROMOTABLE cards: official control 0.7143/0.7826, stage-1 bridge
+0.8936/0.2000, seed fine-tune 0.7368/0.5946 with best hidden-FP 0.20, SST-3k 0.7442/0.7273 with
+recall 0.7708, threshold sweep banked, 12,075-row disagreement queue, protected-hash 35/0. Evidence:
+5b268aa6d; `runs/lanes/w4_ballcode_20260707/report.json`; 28c9244bd;
+`runs/lanes/w4_ballgpu_20260707/REPORT.md`.**
+
 **[WAVE-3 CLOSEOUT CORRECTIONS 2026-07-07 — these supersede conflicting lines below]:** (1) STAGE-1
 pretrain is DONE (H100, harness internal_val f1@20 0.0615→0.6104, precision@20 0.848, recall 0.477;
 ckpts runs/lanes/w3_p11_train_20260707/checkpoints/; cycle-caching + output_channels harness bugs
@@ -452,7 +802,8 @@ beat it (SAM3.1, volleyball-WASB, public fine-tunes all inverted on held-out). W
 + occlusion augmentation TOGETHER (aug alone hurts: RMSE 29.6->54.3). We ruled a 3-stage path: STAGE-1 warm-start
 pretrain on the 61,260-sample Roboflow corpus + adjacent-sport aux at 8:1, INTERNAL-VAL ONLY; STAGE-2 fine-tune
 ONLY on owner in-domain CVAT labels (the only lever that ever moved held-out) — only stage-2 candidates may take
-a pre-registered held-out shot; STAGE-3 SST bootstrap with the PHYSICS-GATED chain as teacher. Detectors are
+a pre-registered held-out shot; STAGE-3 SST bootstrap currently seeds from raw single-WASB until P4 supplies
+enough court calibration for the physics-gated teacher (W4 measured state: 5b268aa6d; 83e090168). Detectors are
 CANDIDATE GENERATORS, never spatial-consensus voters (voting hidden-FP 0.349 vs single WASB 0.063); final
 selection is physics-consistency (arc solver), flipped only after a pre-registered A/B. Recall to 0.75 is a
 separate composable lane (P1-3) measured lever-by-lever. VERIFIED=0 and stays 0 until a product gate passes on
@@ -488,8 +839,9 @@ real labels — nothing in this doc is VERIFIED.
   `partial` under-used, honest). Held-out clean (pwxNwFfYQlQ/vQhtz8l6VqU absent). This is P1-1/P1-2 SEED material,
   far below the STAGE-2 volume budget (>=10-20k frames, NORTH_STAR P0-4) — insufficient FUEL for a stage-2 shot,
   NOT "zero labels." Evidence: BUILD_CHECKLIST 2026-07-07 "HARVEST REVIEW LABELS COMPLETE".
-- LOCAL BLOCKER: `models/checkpoints/wasb/wasb_tennis_best.pth.tar` is ABSENT on the Mac (confirmed). Stage-1
-  init + the true zero-shot baseline need a VM/network prestage.
+- LOCAL BLOCKER CLOSED 2026-07-07: `models/checkpoints/wasb/wasb_tennis_best.pth.tar` is local and
+  sha256 9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb is verified on VM and Mac
+  (28c9244bd; `runs/lanes/w4_ballgpu_20260707/REPORT.md`).
 - 4-LEVEL VISIBILITY SCHEMA: landed end-to-end (`p11_visibility_schema_20260706`). Pretrain harness
   (`train_ball_pretrain.py`, `RoboflowBallPretrainDataset`) landed in wave-3 `w3_p11_prep` (CPU smoke loss
   0.75->0.21; UNRULED). These are the uncommitted working-tree files this blueprint plans against.
@@ -571,17 +923,15 @@ Held-out shots use the same bridge through `run_ball_chain.py --heldout-authoriz
 `benchmark_ball_tracks_against_cvat.py` under a pre-registered ledger row. STEPS 3/4/5/6 all route their
 product-gate scoring through THIS bridge — there is no other checkpoint->score path.
 
-**STEP 3 — STAGE-2 owner fine-tune (GPU lane) — BLOCKED until owner in-domain CVAT labels reach P0-4 VOLUME (a
+**STEP 3 — STAGE-2 owner fine-tune (GPU lane) — BUILD GAP CLOSED, TRAINING BLOCKED until owner in-domain
+CVAT labels reach P0-4 VOLUME (a
 ~274-box first seed exists at `cvat_upload/exports/harvest_review_20260707/`; STAGE-2 needs the >=10-20k-frame budget).**
 - Objective: fine-tune the stage-1 checkpoint on owner labels; this is the ONLY stage that has ever moved held-out.
-- BUILD GAP (must be closed first, Codex lane): `train_ball_pretrain.py` reads ONLY `corpus_index` (Roboflow). The
-  owner-CVAT feed lives in `threed/racketsport/ball_tracknet_cvat_dataset.py`
-  (`build_ball_tracknet_cvat_dataset`, `dense_tracknet_labels_from_cvat`) which already emits `visibility_level` +
-  `wbce_weight` per label via `_visibility_wbce_weight` -> `BALL_VISIBILITY_WBCE_WEIGHTS`
-  (`threed/racketsport/schemas/__init__.py` lines 47-53: clear=1/partial=2/full=3/out_of_frame=3). Wire this
-  loader into the trainer (or a stage-2 sibling script) AND add the two TOTNet pieces the harness lacks:
-  (i) occlusion augmentation at `occluded_prob=0.25` (NOT implemented in `train_one_batch`), (ii) confirm the
-  real per-sample `wbce_weight` (2/3/3) flows — it does, via the same `weights = batch["wbce_weight"]` multiply.
+- BUILD GAP CLOSED 2026-07-07: `scripts/racketsport/train_ball_stage2.py` is the stage-2 sibling trainer;
+  it uses sparse reviewed-only semantics and aborts when reviewed-absent cannot be distinguished from never-reviewed.
+  Current local owner export parses to 486 reviewed rows (268 positives + 218 reviewed-absent); occlusion
+  augmentation is paired with WBCE and the dense CVAT helper is documented unsafe-for-sparse and bypassed.
+  Evidence: 5b268aa6d; `runs/lanes/w4_ballcode_20260707/report.json`.
 - Recipe: init from stage-1 checkpoint (`--init-checkpoint <stage1>/checkpoints/latest.pt`), AdamW lr=5e-4
   wd=5e-5, frames_in=3 (MUST equal the stage-1 checkpoint — frames_in sets input channels = frames_in*3, so
   changing it makes the init non-loadable and trips STEP 1's own KEY-DIFF STOP), 512x288, occluded_prob=0.25,
@@ -596,9 +946,10 @@ product-gate scoring through THIS bridge — there is no other checkpoint->score
 
 **STEP 4 — STAGE-3 SST bootstrap (GPU lane; nightly flywheel later).**
 - Objective: lift the stage-2 student using owner UNLABELED footage via teacher-student pseudo-labels.
-- Teacher = PHYSICS-GATED chain output (`scripts/racketsport/run_ball_chain.py`, hidden-FP 0.021), falling back to
-  single zero-shot WASB-tennis (0.063) when the arc solver self-kills. NEVER the raw un-gated fusion (0.349 would
-  bake correlated hallucinations into labels).
+- Teacher policy as of 2026-07-07: raw single-WASB is the blessed SST seed until P4 court auto-cal supplies
+  enough calibration for the physics-gated chain; do not use raw un-gated fusion. Evidence: wave-3 measured
+  raw single-WASB 0.680 vs 2D-gated 0.395 on human GT, and wave-4 P4 has only 1/6 source at bar
+  (83e090168; `runs/lanes/w4_court_harvestcal_20260707/report.json`).
 - Recipe: Vandeghen SST (github.com/rvandeghen/SST), 2 rounds, doubt/confidence-weighted student loss; active
   learning — frames where detectors disagree go to the human label queue first. Seed already exists: 40 WASB
   prelabel sidecars from the `p01b_prelabel_20260707` lane (40/40 shards DONE). DATA-LOCALITY caveat: only 6/40
@@ -637,8 +988,8 @@ expected direction (measure, do not assume magnitudes):
 - Stage-1 init reports non-empty `missing_keys`/`unexpected_keys` -> checkpoint amputated -> typed STOP: needs-validation.
 - Stage-1 proxy `f1_at_20px` UP but internal product `label_f1_at_20px` on Burlington/Wolverine DOWN ->
   distractor-lock -> inspect per-source counts, drop the offending sources, re-pretrain; do NOT take a held-out shot.
-- `wasb_tennis_best.pth.tar` missing on VM -> run STEP 1 prestage; if the MODEL_ZOO URL is dead ->
-  typed STOP: needs-validation.
+- `wasb_tennis_best.pth.tar` missing on VM -> use the sha-verified local prestage as source if available;
+  if the MODEL_ZOO URL and local prestage are both unavailable -> typed STOP: needs-validation.
 - Owner in-domain labels below STAGE-2 volume (a ~274-box seed exists at `cvat_upload/exports/harvest_review_20260707/`;
   STAGE-2 needs the >=10-20k-frame P0-4 budget) -> STAGE-2 cannot run yet -> typed STOP: labeling (public-only
   student is forbidden a held-out shot; do not substitute more public data for owner data).
@@ -735,6 +1086,12 @@ In/out (P1-7) always keeps a `too_close_to_call` gray zone — advisory, never o
   exact-baseline currently-good intervals LOSE fit status after reselection; D.3(e) internal-val F1
   not run. Root-cause noted in report: cached event-subset scoring uses a ballistic proxy; LOO reuses
   the segment anchor-BVP arc instead of re-solving. Full BALL suite 365 passed / 1 preexisting-unowned.
+- Wave-4 P1-4a update: LOO per-holdout BVP refit is real now (verifier-confirmed 5 unique param sets),
+  anchor-preservation diagnostics landed, and D.3(a/c/d/e) remain acceptable, but D.3(b) span protection
+  is NOT achieved: span-equivalence was refuted, one repair was runtime-killed, and r3 banked the wave-5
+  design as frozen-baseline arc params protected-span priors + junction repair before validity gates.
+  Evidence: 5633c4b48; `runs/lanes/w4_bvp_20260707/report_r3.json`;
+  `runs/lanes/w4_bvp_verify_20260707/report.json`.
 - P0-7 flight simulator landed, objective_result=PARTIAL: `runs/lanes/p07_flightsim_20260706/report.json`.
   PASS: 1k corpus failed_segments=0; round-trip clean fit p95=0.063596m; noise match
   p95=34.21px / recall=0.5771 / hidden-FP=0.02148 (targets 34px/0.578/0.021); 1k in 40.7s; deterministic.
@@ -755,6 +1112,9 @@ downstream. Size guide: Codex = single-file deterministic-CPU numerics/tests; So
 multi-file. Every lane: dispatch via `/run-lane`, pin an explicit `model`, no commit unless owner says.
 
 **STEP 1 — P1-4a: stabilize anchor-first BVP so good intervals keep fit status (Codex).**
+- Status 2026-07-07: PARTIAL, not done. Keep the landed LOO per-holdout refit, but do not start STEP 2
+  Magnus until protected-span priors + junction repair are implemented and D.3(b) passes. Evidence:
+  5633c4b48; `runs/lanes/w4_bvp_20260707/report_r3.json`.
 - Objective: eliminate the D.3(b) regression BEFORE adding spin. Exact bug: reselection demotes 5
   currently-good baseline intervals (Burlington seg0/seg13-adjacent x4, Wolverine seg6-region x1).
 - File targets: `threed/racketsport/ball_arc_solver.py` — `_fit_flight_segment_once` (:486), the
@@ -826,7 +1186,8 @@ multi-file. Every lane: dispatch via `/run-lane`, pin an explicit `model`, no co
   segments benefited. Do NOT attempt full 3-axis spin — UNIDENTIFIABLE (see DO-NOT). Do NOT attempt
   spin-SIGN disambiguation — parked on H13.
 
-**STEP 3 — P0-7 extension: harden sim as the training oracle (Codex, CPU).**
+**STEP 3 — P0-7 extension: harden sim as the training oracle (Codex, CPU). [CORPUS DONE 2026-07-07,
+stream-4 `p07_flight_corpus_20260707` — both files at `runs/flight_corpus_20260707/`, acceptance met]**
 - Objective: the simulator already emits noise-matched pairs; extend it so its label distribution
   matches our real error profile tightly enough to train STEP 4. File: `flight_simulator.py`
   (`DetectorNoiseProfile` p95_jitter_px/recall=0.578/hidden_fp_rate=0.021; `generate_corpus` :640;
@@ -919,6 +1280,10 @@ NEVER emit an officiating-grade boolean. No new gate beyond "gray-zone present a
 - STEP 1 D.3(b) still fails after anchor-preservation guard → try selection-scoring BVP-exact on just
   the affected intervals; if runtime explodes AND intervals still demote → typed STOP: advice (surface
   the runtime-vs-fidelity tradeoff to owner).
+- STEP 1 wave-4 banked path → freeze baseline arc params as protected-span priors and repair junctions
+  before validity gates; do not accept endpoint-error-only equivalence because the verifier showed residual,
+  fallback-tier, confidence, and junction regressions despite some endpoint improvements (5633c4b48;
+  `runs/lanes/w4_bvp_verify_20260707/report.json`).
 - STEP 2 recovered S from a spin_scalar=0.5 sim traj lands `|S_hat-0.5|>0.15` → the port has a sign or
   axis bug; diff your `deriv` against `flight_simulator.py:729` line-by-line; the cross-product order
   `cross(axis, v_hat)` and axis `(vy,-vx,0)` are load-bearing. Do NOT ship S until the round-trip test
@@ -1001,14 +1366,30 @@ NEVER emit an officiating-grade boolean. No new gate beyond "gray-zone present a
 
 ## PILLAR: BODY — raw-noise kill (latent smoothing), camera motion, far players, GT, challenger protocol
 
+**[WAVE-4 RECONCILIATION 2026-07-07 — supersede conflicting lines below where more recent]:**
+camera-motion probe-context bug is RESOLVED BY FRESH PROOF: explicit decode-orientation policy and
+fail-safe mismatch semantics landed after two adversarial verify rounds, img1605 production probe is
+53.70515 AUTO ON, statics are bit-exact, and first-class `camera_motion_auto` summary keys persist in
+`PIPELINE_SUMMARY.json`; fresh proof at committed 940576495 closes the wave-3 probe-context defect:
+img1605 probe 50.02 > 2.5 AUTO ON, statics OFF at 0.129/0.524/0.385-0.568, and first-class
+decode_orientation_* keys are present x4. Foot-attribution skeleton-direct producer landed UNWIRED and measured negative: 2-12
+phases/clip, predicted gate breaches 3/4 clips (34.6/33.6/48.4mm), dominant rejection
+`phase_penetrates_ground` 120-167/clip; `grounding_refine` remains honest no-op and un-kill is re-queued
+behind P2-2 for wave 5. Evidence: cd0b59390; 1588b110f; 75e438223;
+`runs/lanes/w4_cammotion_fix_20260707/report_r2.json`;
+`runs/lanes/w4_integration_20260707/report.json`;
+`runs/lanes/w4_footattr_fix_20260707/report_r2.json`; a93764203;
+`runs/lanes/w4_freshproof_20260707/summary.json`.**
+
 **[WAVE-3 CLOSEOUT CORRECTIONS 2026-07-07 — supersede conflicting lines below]:** (1) STEP 0 is
 DONE: slide gate GREEN 4/4 on fresh GPU proof @ ad75c875c (max_foot_lock_slide_m 20.25/22.50/17.98/
 16.66mm vs 30mm frozen bar; p95 <12mm; 0 root jumps; fix survived 3 adversarial-verify rounds).
 (2) grounding_refine = honest NO-OP posture (0 confident phases on eval clips); un-kill requires
 UPSTREAM per-foot attribution at source — wave-4 queue #2. (3) Camera-motion motion-conditional
-landed but PARTIAL: img1605 in-pipeline probe scored 0.329 vs 53.7 offline (probe-context bug) →
-auto-OFF; diagnosis = wave-4 queue #1. (4) Version-stamp/code-sync LIVE-PROVEN (73 files, 0 drift,
-4/4 stamp echo).**
+landed but was corrected in wave 4: the wave-3 img1605 in-pipeline 0.329 AUTO-OFF was the stale bug
+value, and fresh proof at committed 940576495 records img1605 probe 50.02 > 2.5 AUTO ON, statics OFF,
+and decode_orientation_* keys present x4 (a93764203; `runs/lanes/w4_freshproof_20260707/summary.json`).
+(4) Version-stamp/code-sync LIVE-PROVEN (73 files, 0 drift, 4/4 stamp echo).**
 
 > Audience: the successor manager. Every step names exact files/functions (grep-verified 2026-07-07),
 > exact metric keys copied from gate code, and a decision tree. Reserved word `VERIFIED` = passed
@@ -1031,21 +1412,20 @@ failed mission.
 - **Root-jump: WON.** outdoor 55→0, burlington 24→1 (survivor 10.04 vs 10.0 review floor). Root cause
   = hardcoded 30fps frame-index in `placement.py` visual root-step rewrite on 60fps clips (ABAB).
   Evidence: `runs/lanes/wave2_freshworlds_20260707/`, BUILD_CHECKLIST [CLOSING RUN RULED 2026-07-07].
-- **Foot-slide MAX gate: OPEN (the sole carried BODY blocker).** Gated key
-  `grounding_metrics.max_foot_lock_slide_m` ≤ 0.03 (`body_grounding_quality.py:12 DEFAULT_MAX_FOOT_SLIDE_M`).
-  Closing run: burlington 40.6mm, outdoor 56.0mm, wolverine 18.4mm (PASS), img1605 25.6mm (PASS).
-  p95 UNDER bar everywhere ⇒ **outlier-frame driven**. Root cause (2 independent diagnoses converged):
-  100% of consumed contact phases are confidence-free `bilateral_from_player_stance` placeholders with
-  `source_phase_foot: unknown` (exact-foot BODY agreement 0.363–0.651). Evidence:
-  `runs/lanes/w3_slidediag_20260707/REPORT.md` §6, `runs/lanes/w3_groundref_diag_20260707/REPORT.md` §5.
-  MAD bone-length ruled INNOCENT (engages 0 frames; [MAD A/B RULED 2026-07-07]).
-- **grounding_refine: self-kills 4/4** (predates wave-2). Same root cause as slide-max (weak phases).
-- **Camera-motion module: HARDENED, default-OFF.** `camera_motion.py` person-masked LK+MAD+2-pass
+- **Foot-slide MAX gate: GREEN in wave-3 internal-val, but upstream foot-attribution is still blocked by
+  raw skeleton noise.** W4 skeleton-direct phases engage but predict 34.6/33.6/48.4mm breaches on
+  Burlington/Outdoor/IMG1605, so the producer is unwired and P2-2 owns the next un-kill path (75e438223;
+  `runs/lanes/w4_footattr_fix_20260707/report_r2.json`).
+- **grounding_refine: honest no-op remains.** W4 removed the forbidden gate-threshold exclusion and proved
+  skeleton-direct phases are not gate-safe; do not wire the producer into `process_video.py` until P2-2
+  reduces raw skeleton noise (75e438223; `runs/lanes/w4_footattr_fix_20260707/report_r2.json`).
+- **Camera-motion module: HARDENED, fresh-proof resolved.** `camera_motion.py` person-masked LK+MAD+2-pass
   smoothing; img1605 handheld wins all 3 proxies (inlier .767→.895, jerk 2.62→2.45, court-line 14.84→
-  11.75px), 2× faster (98→50ms/f). Default-stage kill-criterion FIRED (wolverine placement jitter p90
-  +1%). Motion-CONDITIONAL AUTO probe landed UNRULED: `estimate_camera_motion_probe` @
-  `CAMERA_MOTION_AUTO_THRESHOLD = 2.5` (camera_motion.py:17). Evidence: `runs/lanes/p21_cammotion_20260706/`,
-  `runs/lanes/w3_cammotion_conditional_20260707/`.
+  11.75px), 2× faster (98→50ms/f). Wave-4 fixed decode-orientation and summary-key persistence; decisive
+  fresh proof at committed 940576495 has img1605 camera_motion_auto 50.02 > 2.5 AUTO ON, statics OFF at
+  0.129/0.524/0.385-0.568, and first-class decode_orientation_* keys present x4 (cd0b59390; 1588b110f;
+  a93764203; `runs/lanes/w4_cammotion_fix_20260707/report_r2.json`;
+  `runs/lanes/w4_integration_20260707/report.json`; `runs/lanes/w4_freshproof_20260707/summary.json`).
 - **P2-2 emission prerequisite: DONE.** `global_orient`/`body_pose`(euler)/`betas`/`left_hand_pose`/
   `right_hand_pose` schema'd end-to-end in the per-sample frame dict returned by
   `worldhmr.py::_ground_fast_sam_sample` (function def line 2231; schema keys returned lines 2274-2278 —
@@ -1061,17 +1441,13 @@ failed mission.
 > §6 sequencing: **STEP D** (P2-5) and **STEP B**, then **STEP A** (P2-2, after its decode wrapper +
 > round-trip gate), then **STEP C** and **STEP E**. Letters A–E are labels, not sequence.
 
-**STEP 0 — close the carried foot-slide MAX blocker FIRST (w3_phasefix promotion run).**
-- The `w3_phasefix_20260707` lane has ALREADY LANDED the fix code (per-foot confidence-bearing phases +
-  weak-bilateral demotion + `foot_lock_gate_stream` instrumentation; offline replays PASS at 0.000m
-  consumed surrogate on all 4 clips — report.json `objective_result: PARTIAL`, blocked ONLY on the WIDE
-  suite, not on missing implementation). It is NOT promoted: `max_foot_lock_slide_m` is a fresh-GPU-only
-  measurement (offline replays CANNOT clear it — [ROOTJUMP VERIFY RULED]).
-- NEXT ACTION: dispatch a **Sonnet GPU** fresh-worlds run (acceptance in
-  `runs/lanes/w3_phasefix_20260707/spec.md`) to measure the gated max on burlington/outdoor/wolverine/
-  img1605 with the phasefix code. If all ≤0.03 with confident per-foot phases consumed → blocker CLOSES.
-  If it still FAILs → follow the §3 slide-max branch (max-vs-p99 statistic = owner needs-decision STOP;
-  NEVER re-tune 0.03).
+**STEP 0 — carried foot-slide MAX blocker status (closed in wave 3; do not reopen without new proof).**
+- Wave-3 fresh GPU proof closed the frozen 30mm max gate on the four internal-val clips; this is still
+  not BODY VERIFIED because independent-GT world-MPJPE is absent (BUILD_CHECKLIST [WAVE-3 COMPLETE]).
+- Wave-4 foot-attribution un-kill is measured-negative and UNWIRED: skeleton-direct accepted phases
+  predict 34.6/33.6/48.4mm breaches on 3/4 clips and are dominated by `phase_penetrates_ground`
+  rejections, so the next action is P2-2 raw-noise reduction, not a process_video wiring lane
+  (75e438223; `runs/lanes/w4_footattr_fix_20260707/report_r2.json`).
 
 **STEP A — P2-2 Latent-space temporal smoothing (THE raw-noise fix; the big one).**
 - Objective: replace world-JOINT smoothing (mesh/skeleton can diverge) with smoothing of the MHR
@@ -1122,28 +1498,18 @@ failed mission.
   wrist params in `pose_temporal.py` are already tuned — reuse `_joint_smoothing_group`). Do NOT ship
   a global latent smoother that touches wrists if the peak-timing gate moves.
 
-**STEP B — P2-1 camera-motion motion-conditional default: ALREADY IMPLEMENTED — RULE + COMMIT it.**
-- Status: the probe-then-conditional-enable recipe is ALREADY WIRED (uncommitted working-tree change —
-  `git status` shows `M scripts/racketsport/process_video.py`) and ALREADY MEASURED end-to-end on all 4
-  eval clips by `runs/lanes/w3_cammotion_conditional_20260707/` (report.json `objective_result: PARTIAL`
-  — every acceptance row PASS except the WIDE-suite classification). This is NOT a job to re-wire.
-- **DO NOT** re-dispatch a Codex "CPU wiring" lane against
-  `runs/lanes/p21_cammotion_20260706/deferred_patches/` — those patches are STALE (`git apply --check`
-  FAILS on both `default_stage_wiring` and `placement_consumption_hook` today, forward and reverse);
-  re-running them collides with the landed uncommitted work.
-- NEXT ACTION: **RULE** the existing lane — reconcile the WIDE-suite failures as cross-lane/sandbox-
-  suspect (the report already classifies them) or fix them, then **COMMIT** (owner joint-commit rule).
-  Files it touched: `process_video.py`, `camera_motion.py::estimate_camera_motion_probe` (threshold 2.5,
-  camera_motion.py:17), placement consumption hook.
-- Measured acceptance (from the lane report — all PASS): img1605 AUTO enabled (score 53.7 > 2.5) with
-  3/3 hardened handheld proxies retained (inlier .767→.895, jerk 2.62→2.45, court-line 14.84→11.75px);
-  wolverine AUTO OFF (score 0.13 ≤ 2.5), static path bit-identical (`jitter_after_p90_mean` 2.244 mm/f²
-  unchanged); burlington/outdoor AUTO OFF (score 0.52/0.57). NOTE: img1605 foot-slide already PASSes at
-  25.6mm (§1) — camera-motion's win is the handheld PROXIES above, NOT a foot-slide fix (the 330mm
-  figure from earlier drafts was unsourced; drop it). Kill guard: if any static clip's placement jitter
-  p90 regresses >1% vs its OWN default-OFF baseline p90 (record all 4 baselines from the lane report
-  before enabling AUTO, so the 1% threshold is computable per clip), keep default-OFF and ship the probe
-  as advisory only.
+**STEP B — P2-1 camera-motion motion-conditional default: LANDED, FRESH-PROOF RESOLVED.**
+- Status 2026-07-07: decode-orientation explicit policy + fail-safe mismatch semantics landed
+  (cd0b59390) and first-class process summary keys landed (1588b110f). Evidence:
+  `runs/lanes/w4_cammotion_fix_20260707/report_r2.json`;
+  `runs/lanes/w4_cammotion_verify_20260707/report_r2.json`;
+  `runs/lanes/w4_integration_20260707/report.json`.
+- Measured acceptance: img1605 production probe 53.70515 AUTO ON; wolverine/burlington/outdoor statics
+  bit-exact at 0.128813/0.523815/0.566526 AUTO OFF; set/readback mismatch is conservative when
+  consequential and visible when non-consequential. Fresh in-pipeline proof: img1605 50.02 AUTO ON;
+  statics OFF at 0.129/0.524/0.385-0.568; first-class decode_orientation_* keys present x4; probe score
+  is not host-deterministic but classification is stable (a93764203;
+  `runs/lanes/w4_freshproof_20260707/summary.json`).
 - RAFT-small upgrade (pending): weights `raft_small_C_T_V2-01064c6d.pth`, sha256 staged
   `runs/lanes/w3_labelfactory_20260707/raft_sha256.txt`, URL confirmed §5. Prefetch on a
   network-capable Sonnet lane, then A/B RAFT vs LK+MAD; adopt only if it beats LK+MAD (which already
@@ -1657,6 +2023,11 @@ lands (P0-10), PoseGravity (BSD-3, closed-form pose from points+lines+gravity) a
   post→center sag (pickleball 36in post / 34in center). Heights are REGULATION DEFAULTS from
   `court_templates.py:159-167`; the profile fields `net_post_height_in`/`net_center_height_in` exist
   but are NOT threaded into `build_net_plane`. VERIFIED=0 everywhere (no product gate passed on labels).
+- **Harvest court calibration measured 2026-07-07:** owner court-kp labels produce 1/6 source at manual_bar
+  (73VurrTKCZ8 median 2.93px / p95 6.0px; 8/40 harvest clips covered); HyUqT7zFiwk and zwCtH_i1_S4
+  are full-labeled but fail p95 36.2/32.2px around net/far-side residuals; physics-gated SST teacher
+  remains deferred because fewer than two sources reached bar. Evidence: 83e090168;
+  `runs/lanes/w4_court_harvestcal_20260707/report.json`.
 
 ### 2. The exact build plan (numbered; objective · files · recipe · lane · acceptance keys · kill)
 **STEP 1 — P4-4a: plug the ARKit distortion leak (do FIRST; smallest, highest-leverage).**
@@ -2299,7 +2670,8 @@ Order is fixed: **S1 features → S2 reference library → S3 comparator → S4 
 S2 can run in parallel with S1 (it is pure JSON + owner review). Do NOT start S4 before S3's finding
 schema is frozen.
 
-**S1 — Shot segmentation + feature vector (P6-1) [Codex lane, CPU-only, no GPU].**
+**S1 — Shot segmentation + feature vector (P6-1) [Codex lane, CPU-only, no GPU]. [RULE-TABLE v0 DONE
+2026-07-07, stream-4 `p61_shot_rules_20260707` (design-only; feature extraction + integration OPEN)]**
 - Objective: from existing artifacts, produce `shots.json` = ordered list of shots, each with a feature
   vector + a rule-based class + confidence. No new model. No held-out labels touched.
 - **STEP 0 (mandatory): read `shot_taxonomy.py` first.** It already emits ARTIFACT_TYPE `racketsport_shots`
@@ -2628,10 +3000,16 @@ storage + LLM + review labor + idle), never the BODY-only $0.117/clip slice.
 - Quality proof harness live: `body_full_clip_gate` (artifact `racketsport_body_full_clip_gate`), foot-slide key
   **`max_foot_lock_slide_m`**, gate `foot_slide_max_m` threshold **`DEFAULT_MAX_FOOT_SLIDE_M = 0.03` (30mm)**,
   0 root-motion jumps. Code: `threed/racketsport/body_full_clip_gate.py`, `body_grounding_quality.py:12,24`.
-- Version-stamp/sync system LANDED (wave-3 `w3_codesync`, live-VM proof PENDING): `remote_body_dispatch.py`
-  `build_version_stamp`/`verify_version_stamp_file`/`sync_remote_checkout_to_local_head`; CLI `--sync-remote-code`,
+- Version-stamp/sync system LANDED (wave-3 `w3_codesync`, wave-4 committed-blob update): `remote_body_dispatch.py`
+  `build_version_stamp`/`verify_version_stamp_file`/`sync_remote_checkout_to_local_head`; wave-4 changed stamps to
+  hash committed blobs and report dirty working-tree notes as non-gating (190dea09f;
+  `runs/lanes/w4_syncstamp_20260707/report.json`). CLI `--sync-remote-code`,
   `--verify-version-stamp`, `--allow-dirty`; critical-file set via AST import closure `_remote_runtime_critical_files`.
   Dispatch is **one-shot per clip** under a flock **shared-slot lease** (`scripts/gpu-eval-run.sh`), NO queue.
+- H100 BODY runtime validated 2026-07-07: Wolverine BODY dispatch wall 479.6s vs A100-40GB reference
+  1134.4s (about 2.37x faster), version stamp verified 73/73 files with 0 drift, and snapshot->a3 boot
+  worked with pd-balanced; this is runtime/SKU evidence, not a BODY quality gate. Evidence:
+  `runs/lanes/w4_h100body_20260707/REPORT.md`.
 - **How to run E2E + where the number lives:** the full pipeline runs via `scripts/gpu-eval-run.sh` (flock lease +
   `--verify-version-stamp`) wrapping `scripts/racketsport/process_video.py`; E2E wall + per-stage timing land in the
   `PIPELINE_SUMMARY` block (grep `pipeline_summary` in `process_video.py`/`threed/racketsport/pipeline_cli.py`) and,

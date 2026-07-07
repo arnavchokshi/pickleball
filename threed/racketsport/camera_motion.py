@@ -19,6 +19,7 @@ CAMERA_MOTION_PROBE_FRAME_STEP = 75
 CAMERA_MOTION_PROBE_MAX_FRAMES = 4
 CAMERA_MOTION_PROBE_PROCESSING_SCALE = 0.3
 CAMERA_MOTION_PROBE_MAX_CORNERS = 250
+CAMERA_MOTION_DECODE_ORIENTATION_AUTO_REQUEST = 1
 
 
 @dataclass(frozen=True)
@@ -87,7 +88,7 @@ def estimate_camera_motion(
     reference_idx = _reference_frame_idx(calibration, override=reference_frame_idx)
     tracks_by_frame = load_tracks_by_frame(tracks_path) if tracks_path is not None and params.use_person_masks else {}
 
-    cap = cv2.VideoCapture(str(video))
+    cap, orientation_policy = _open_camera_motion_capture(video)
     if not cap.isOpened():
         raise ValueError(f"could not open video: {video}")
     try:
@@ -99,6 +100,8 @@ def estimate_camera_motion(
         reference_bgr = _read_frame_at(cap, reference_idx)
         if reference_bgr is None:
             raise ValueError(f"could not read reference frame {reference_idx} from {video}")
+        decode_telemetry = _capture_decode_telemetry(cap, orientation_policy, reference_bgr)
+        decode_telemetry.update(_decode_orientation_policy_status(decode_telemetry, calibration))
 
         frame_shape = reference_bgr.shape[:2]
         processing_scale = float(params.processing_scale)
@@ -131,6 +134,8 @@ def estimate_camera_motion(
                 drift_values=[0.0 for _ in frames],
                 residual_values=[],
                 smoothing_stats=_empty_smoothing_stats(),
+                decode_telemetry=decode_telemetry,
+                reference_feature_count=len(reference_points),
             )
             if diagnostics_dir is not None:
                 _write_diagnostics(
@@ -206,6 +211,8 @@ def estimate_camera_motion(
             drift_values=drift_values,
             residual_values=residual_values,
             smoothing_stats=smoothing_stats,
+            decode_telemetry=decode_telemetry,
+            reference_feature_count=len(reference_points),
         )
         if diagnostics_dir is not None:
             max_drift_idx = _max_drift_frame_idx(payload["frames"], drift_values)
@@ -248,7 +255,7 @@ def estimate_camera_motion_probe(
     tracks_by_frame = load_tracks_by_frame(tracks_path) if tracks_path is not None and params.use_person_masks else {}
     started = time.monotonic()
 
-    cap = cv2.VideoCapture(str(video))
+    cap, orientation_policy = _open_camera_motion_capture(video)
     if not cap.isOpened():
         raise ValueError(f"could not open video: {video}")
     try:
@@ -260,6 +267,8 @@ def estimate_camera_motion_probe(
         reference_bgr = _read_frame_at(cap, reference_idx)
         if reference_bgr is None:
             raise ValueError(f"could not read reference frame {reference_idx} from {video}")
+        decode_telemetry = _capture_decode_telemetry(cap, orientation_policy, reference_bgr)
+        decode_telemetry.update(_decode_orientation_policy_status(decode_telemetry, calibration))
 
         frame_shape = reference_bgr.shape[:2]
         processing_scale = float(params.processing_scale)
@@ -326,6 +335,16 @@ def estimate_camera_motion_probe(
                     failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
 
         motion_score = _percentile(drift_values, 95)
+        orientation_untrusted = bool(decode_telemetry["orientation_policy_untrusted"])
+        if orientation_untrusted:
+            reason = str(decode_telemetry["orientation_policy_mismatch_reason"])
+            failure_reasons[reason] = int(len(sample_indices))
+        enabled = bool(motion_score > float(threshold)) and not orientation_untrusted
+        forced = (
+            f"auto_decode_orientation_untrusted:{decode_telemetry['orientation_policy_mismatch_reason']}"
+            if orientation_untrusted
+            else "auto"
+        )
         return {
             "schema_version": 1,
             "artifact_type": "racketsport_camera_motion_probe",
@@ -339,8 +358,18 @@ def estimate_camera_motion_probe(
             },
             "threshold": _round_float(float(threshold)),
             "motion_score": motion_score,
-            "enabled": bool(motion_score > float(threshold)),
-            "forced": "auto",
+            "enabled": enabled,
+            "forced": forced,
+            "decode_orientation": decode_telemetry,
+            "decode_orientation_mismatch": bool(decode_telemetry["orientation_policy_mismatch"]),
+            "decode_orientation_consequential_mismatch": bool(
+                decode_telemetry["orientation_policy_consequential_mismatch"]
+            ),
+            "decode_orientation_untrusted": orientation_untrusted,
+            "decode_orientation_mismatch_reason": decode_telemetry["orientation_policy_mismatch_reason"],
+            "decoded_frame_shape_hwc": decode_telemetry["decoded_frame_shape_hwc"],
+            "decoded_frame_width_height": decode_telemetry["decoded_frame_width_height"],
+            "reference_feature_count": int(len(reference_points)),
             "sampled_frame_indices": sample_indices,
             "sampled_frame_count": int(len(sample_indices)),
             "frame_step": int(max(1, frame_step)),
@@ -1132,6 +1161,130 @@ def _validate_params(params: CameraMotionParams) -> None:
         raise ValueError("legacy estimator_mode requires flow_mad_filter=false and temporal_smoothing=false")
 
 
+def _open_camera_motion_capture(video: Path) -> tuple[cv2.VideoCapture, dict[str, Any]]:
+    cap = cv2.VideoCapture(str(video))
+    return cap, _apply_decode_orientation_policy(cap)
+
+
+def _apply_decode_orientation_policy(cap: cv2.VideoCapture) -> dict[str, Any]:
+    orientation_auto_prop = getattr(cv2, "CAP_PROP_ORIENTATION_AUTO", None)
+    requested = CAMERA_MOTION_DECODE_ORIENTATION_AUTO_REQUEST
+    set_ok: bool | None = None
+    if orientation_auto_prop is not None:
+        try:
+            set_ok = bool(cap.set(int(orientation_auto_prop), float(requested)))
+        except cv2.error:
+            set_ok = False
+    return {
+        "orientation_auto_property_available": orientation_auto_prop is not None,
+        "orientation_auto_requested": int(requested),
+        "orientation_auto_set_ok": set_ok,
+    }
+
+
+def _capture_decode_telemetry(
+    cap: cv2.VideoCapture,
+    orientation_policy: Mapping[str, Any],
+    first_decoded_frame: np.ndarray,
+) -> dict[str, Any]:
+    orientation_auto_prop = getattr(cv2, "CAP_PROP_ORIENTATION_AUTO", None)
+    orientation_meta_prop = getattr(cv2, "CAP_PROP_ORIENTATION_META", None)
+    height, width = first_decoded_frame.shape[:2]
+    telemetry = {
+        **dict(orientation_policy),
+        "orientation_auto_reported": _capture_prop_float(cap, orientation_auto_prop),
+        "orientation_meta": _capture_prop_float(cap, orientation_meta_prop),
+        "capture_frame_width_height": [
+            _capture_prop_int(cap, cv2.CAP_PROP_FRAME_WIDTH),
+            _capture_prop_int(cap, cv2.CAP_PROP_FRAME_HEIGHT),
+        ],
+        "decoded_frame_shape_hwc": [int(value) for value in first_decoded_frame.shape],
+        "decoded_frame_width_height": [int(width), int(height)],
+    }
+    return telemetry
+
+
+def _decode_orientation_policy_status(
+    decode_telemetry: Mapping[str, Any],
+    calibration: Mapping[str, Any],
+) -> dict[str, Any]:
+    requested = decode_telemetry.get("orientation_auto_requested")
+    reported = decode_telemetry.get("orientation_auto_reported")
+    set_ok = decode_telemetry.get("orientation_auto_set_ok")
+    reasons: list[str] = []
+    if decode_telemetry.get("orientation_auto_property_available") is False:
+        reasons.append("orientation_auto_property_unavailable")
+    if set_ok is False:
+        reasons.append("orientation_auto_set_failed")
+    if requested is not None and reported is None and decode_telemetry.get("orientation_auto_property_available") is True:
+        reasons.append("orientation_auto_readback_unavailable")
+    if requested is not None and reported is not None and abs(float(reported) - float(requested)) > 1e-6:
+        reasons.append("orientation_auto_readback_mismatch")
+
+    calibration_image_size = _calibration_image_size(calibration)
+    decoded_size = decode_telemetry.get("decoded_frame_width_height")
+    dims_contradict = (
+        calibration_image_size is not None
+        and isinstance(decoded_size, Sequence)
+        and not isinstance(decoded_size, (str, bytes))
+        and [int(v) for v in decoded_size[:2]] != calibration_image_size
+    )
+    rotation_meta_nonzero = _rotation_meta_nonzero(decode_telemetry.get("orientation_meta"))
+    mismatch = bool(reasons)
+    consequential = bool(mismatch and (rotation_meta_nonzero or dims_contradict))
+    reason_text = ";".join(reasons) if reasons else None
+    if consequential and dims_contradict and "decoded_dims_contradict_calibration" not in reasons:
+        reason_text = f"{reason_text};decoded_dims_contradict_calibration" if reason_text else "decoded_dims_contradict_calibration"
+    return {
+        "calibration_image_size": calibration_image_size,
+        "decoded_dims_match_calibration_image_size": None if calibration_image_size is None else not dims_contradict,
+        "rotation_metadata_nonzero": rotation_meta_nonzero,
+        "decoded_dims_contradict_expected_orientation": bool(dims_contradict),
+        "orientation_policy_mismatch": mismatch,
+        "orientation_policy_consequential_mismatch": consequential,
+        "orientation_policy_untrusted": consequential,
+        "orientation_policy_mismatch_reason": reason_text,
+    }
+
+
+def _calibration_image_size(calibration: Mapping[str, Any]) -> list[int] | None:
+    value = calibration.get("image_size")
+    if not _is_number_sequence(value, min_len=2):
+        return None
+    width = int(round(float(value[0])))
+    height = int(round(float(value[1])))
+    if width <= 0 or height <= 0:
+        return None
+    return [width, height]
+
+
+def _rotation_meta_nonzero(value: Any) -> bool:
+    if value is None:
+        return False
+    try:
+        rotation = float(value) % 360.0
+    except (TypeError, ValueError):
+        return False
+    return rotation > 1e-6 and abs(rotation - 360.0) > 1e-6
+
+
+def _capture_prop_float(cap: cv2.VideoCapture, prop: int | None) -> float | None:
+    if prop is None:
+        return None
+    try:
+        value = float(cap.get(int(prop)))
+    except (cv2.error, TypeError, ValueError):
+        return None
+    if not math.isfinite(value):
+        return None
+    return _round_float(value)
+
+
+def _capture_prop_int(cap: cv2.VideoCapture, prop: int | None) -> int | None:
+    value = _capture_prop_float(cap, prop)
+    return None if value is None else int(round(value))
+
+
 def _payload(
     *,
     video: Path,
@@ -1141,6 +1294,8 @@ def _payload(
     drift_values: Sequence[float],
     residual_values: Sequence[float],
     smoothing_stats: Mapping[str, int],
+    decode_telemetry: Mapping[str, Any] | None = None,
+    reference_feature_count: int | None = None,
 ) -> dict[str, Any]:
     inlier_ratios = [
         float(frame.get("inlier_ratio", 0.0) or 0.0)
@@ -1150,7 +1305,7 @@ def _payload(
     flow_track_total = int(sum(int(frame.get("flow_track_count", 0) or 0) for frame in frames))
     flow_raw_track_total = int(sum(int(frame.get("flow_raw_track_count", 0) or 0) for frame in frames))
     flow_mad_filtered_total = int(sum(int(frame.get("flow_mad_filtered_count", 0) or 0) for frame in frames))
-    return {
+    payload: dict[str, Any] = {
         "schema_version": 1,
         "artifact_type": "racketsport_camera_motion",
         "video": video.as_posix(),
@@ -1177,6 +1332,20 @@ def _payload(
         "verified": False,
         "not_gate_verified": True,
     }
+    if decode_telemetry is not None:
+        decode_payload = dict(decode_telemetry)
+        payload["decode_orientation"] = decode_payload
+        payload["decode_orientation_mismatch"] = bool(decode_payload.get("orientation_policy_mismatch", False))
+        payload["decode_orientation_consequential_mismatch"] = bool(
+            decode_payload.get("orientation_policy_consequential_mismatch", False)
+        )
+        payload["decode_orientation_untrusted"] = bool(decode_payload.get("orientation_policy_untrusted", False))
+        payload["decode_orientation_mismatch_reason"] = decode_payload.get("orientation_policy_mismatch_reason")
+        payload["decoded_frame_shape_hwc"] = list(decode_payload.get("decoded_frame_shape_hwc", []))
+        payload["decoded_frame_width_height"] = list(decode_payload.get("decoded_frame_width_height", []))
+    if reference_feature_count is not None:
+        payload["reference_feature_count"] = int(reference_feature_count)
+    return payload
 
 
 def _write_diagnostics(
@@ -1192,7 +1361,7 @@ def _write_diagnostics(
     selected = _dedupe_ints([idx for idx in selected_frames if idx in frames_by_idx])
     if not selected:
         return
-    cap = cv2.VideoCapture(str(video))
+    cap, _orientation_policy = _open_camera_motion_capture(video)
     if not cap.isOpened():
         return
     try:

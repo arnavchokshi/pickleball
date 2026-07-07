@@ -127,6 +127,8 @@ green-field construction.
   evaluator, on-device person detect/track, CoreML person detector + ~288p ball-heatmap spike,
   court dot-map, live ball/foot overlays. Calibration seed (ARKit + manual taps). Upload manifest +
   render-gateway client. Replay playback boundaries.
+- **Canonical live/offline split**: `CAPABILITIES.md` is the single source of truth: L0/L1 are
+  on-device advisory tiers, L2 is server fast verdict, and L3 is server deep world authority.
 
 ### ⬜ NOT DONE (this is the roadmap — P0→P7)
 - **`VERIFIED=0`**: no stage has passed its promotion gate on real labels. This is the headline gap.
@@ -649,7 +651,7 @@ consumption (P0-10), expanded eval suite with audio, fresh gate-passing worlds.
 - [x] **P0-1 GPU cold start — DONE 2026-07-06** (fleet1 A100-40GB cold start 257s, 27/27 GPU BODY
   tests, smoke inference w/ GPU util confirmed; evidence `runs/lanes/gpu_coldstart_20260706/report.md`.
   The single-VM wording below is superseded by the §12/§19 FLEET protocol — H100-first, ≤$5/hr,
-  parallelize-by-default). Original spec: Follow `RESET_HANDOFF_20260705.md` §7: create ONE spot VM (<$2/hr;
+  parallelize-by-default). Original spec (archived, historical): `runs/archive/root_docs_20260707/RESET_HANDOFF_20260705.md` §7 said: create ONE spot VM (<$2/hr;
   L4 for detector work, A100-40GB when VRAM-bound e.g. BODY/SAM-3D), `git clone` for the GPU-VM compute env (code is pushed — do NOT resurrect scp-sync; NOTE: the
   docs-of-record incl. this file + EDGE_PLAYBOOK are pending the owner joint-commit, so a fresh clone
   lacks them until that lands — §0 owner-setup), restore vendor pins per `third_party/VENDOR_PINS.md`, run
@@ -697,7 +699,8 @@ consumption (P0-10), expanded eval suite with audio, fresh gate-passing worlds.
   round-trip PASS, and the FIRST owner review batch returned; a CVAT UI naming trap
   (visibility_level 'full' vs 'clear') was caught and deterministically remapped — see
   `cvat_upload/exports/harvest_review_20260707/*/MANAGER_NOTE.md`. OPEN: labels/hour measurement +
-  the volume budgets below; current corpus ~486 review frames vs the ≥10-20k budget.)* Throughput
+  the volume budgets below; current corpus ~486 review frames vs the ≥10-20k budget; corpus_dashboard.py LANDED 2026-07-07
+  (stream-4 `p04_corpus_dashboard_20260707`) — D6 gate tool, leakage re-check clean 0/0.)* Throughput
   plan for owner+helpers: (a) ball: prelabel with current
   ensemble, human corrects (SST teacher output = prelabels — see P1-2; CVAT SAM3 integration is
   per-frame only, no video propagation — don't plan around it); (b) paddle: boxes + 4 visible-corner
@@ -738,8 +741,11 @@ consumption (P0-10), expanded eval suite with audio, fresh gate-passing worlds.
 - [ ] **P0-7 Pickleball flight simulator. PHASE 1 DONE 2026-07-06** (`p07_flightsim_20260706`:
   pure-numpy ODE generator reusing the arc solver's `_rk4_step` LITERALLY — sim/solver physics
   mismatch killed by construction; Lindsey/Steyn constants seeded; Wolverine-calibration camera
-  projection). *OPEN: phase 2 MuJoCo (needs the network prestage — Codex has no network) + the
-  detector-noise/error-profile match report + fitting refinement from owner captures.* Original
+  projection). *PHASE 2 CORPUS DONE 2026-07-07 (stream-4 `p07_flight_corpus_20260707`: 50k train / 5k val at
+  `runs/flight_corpus_20260707/`, flight-sanity 100%, error-profile match all metrics <3% off the
+  measured 34px/0.578/0.021 profile; mujoco 3.10.0 prestaged into .venv w/ stepping smoke PASS —
+  MJX itself stays VM-deferred, install script is CUDA-shaped). OPEN: MuJoCo bounce/hit stitching +
+  fitting refinement from owner captures.* Original
   spec: Ballistic + drag +
   Magnus generator for a 26g holey plastic ball; **SEED with the real measured pickleball
   coefficients** (Lindsey TWU 2025: outdoor Cd≈0.33 / indoor Cd≈0.45, asymmetric topspin>backspin
@@ -833,8 +839,9 @@ in/out with gray zone.
   *(STATUS 2026-07-07: prereq DONE — 4-level visibility schema landed end-to-end with WBCE weights
   1/2/3/3 (`p11_visibility_schema_20260706`). Pretrain harness + `RoboflowBallPretrainDataset` +
   `train_ball_pretrain.py` landed in wave-3 `w3_p11_prep` (CPU smoke loss 0.75→0.21; UNRULED at
-  write time). LOCAL BLOCKER: `models/checkpoints/wasb/wasb_tennis_best.pth.tar` absent on the Mac —
-  the true zero-shot baseline needs a network prestage or a VM run. Stage-1 pretrain on the 61k
+  write time). **LOCAL BLOCKER CLOSED 2026-07-07:** `models/checkpoints/wasb/wasb_tennis_best.pth.tar`
+  is local and sha256 9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb is verified
+  on VM and Mac (28c9244bd; `runs/lanes/w4_ballgpu_20260707/REPORT.md`). Stage-1 pretrain on the 61k
   corpus = the WAVE-4 HEADLINE, INTERNAL-VAL ONLY — a public-only student NEVER takes a held-out
   shot; the owner-data stage-2 fine-tune + pre-registered held-out shot is wave 5. PART VI.)* The
   corrected recipe after the T4 lesson (public-only fine-tunes degraded held-out): **pretrain/warm-
@@ -858,7 +865,17 @@ in/out with gray zone.
   Gate (INTERIM MILESTONE, not the full BALL M1): beat 0.7248 F1@20 held-out, recall ≥ 0.70, hidden-FP
   ≤ 0.05. P1-3 closes the rest to the true BALL M1 in I.2 (F1≥0.90/recall≥0.75). Loader trap: blurball↔WASB strict-incompatible
   (36 SE keys) — always key-diff checkpoints (`strict=False` silently amputates).
-- [ ] **P1-2 SST semi-supervised bootstrap.** *(STATUS 2026-07-07: seed DONE — 40/40 WASB prelabel
+- [ ] **P1-2 SST semi-supervised bootstrap.** *(STATUS 2026-07-07: build gap CLOSED for wave-4 stage-2/SST
+  plumbing — sparse reviewed-only owner labels are represented as 486 reviewed rows = 268 positive +
+  218 reviewed-absent; occlusion augmentation is paired with WBCE; SST manifest + disagreement CLIs
+  exist; dense CVAT helper is documented unsafe-for-sparse and bypassed. Stage-2 seed-tune + SST-r1
+  internal-val cards are banked as harness_v0 NON-PROMOTABLE measurement cards: official control
+  0.7143/0.7826, stage-1 bridge 0.8936/0.2000, seed fine-tune 0.7368/0.5946 with best hidden-FP
+  0.20, SST-3k 0.7442/0.7273 with recall 0.7708, threshold sweep banked, 12,075-row disagreement
+  queue, protected-hash 35/0. Wave-5 prereq stands: align training preprocessing to official transform,
+  retrain, and re-score official-mode before promotion candidacy. Evidence: 5b268aa6d;
+  `runs/lanes/w4_ballcode_20260707/report.json`; 28c9244bd;
+  `runs/lanes/w4_ballgpu_20260707/REPORT.md`.)* *(Prior seed status: seed DONE — 40/40 WASB prelabel
   sidecars from fleet2, visible-fraction 48.5-73.9%. Wave-3 teacher-gate tuning sweep
   (`w3_teachertune`) hit a DATA-LOCALITY blocker: only 6/40 raw sidecars exist locally — pull the
   fleet2 artifacts home or regenerate on fleet; manager resumed it at 8-clip scope. First full SST
@@ -887,9 +904,14 @@ in/out with gray zone.
   frame missed the ball, marked render-only/derived — NEVER counted as measured evidence. Budget:
   candidate union recall ceiling measured at 0.8793 — get fused recall from 0.578 toward ≥0.75.
   Gate: BALL M1 recall bar on held-out without hidden-FP regression.
-- [ ] **P1-4 True 3D flight lift.** *(2026-07-07: P0-7 phase-1 sim now EXISTS reusing `_rk4_step`
-  — step (3) below satisfied early, by construction. Steps (1) BVP stabilization, (2) Magnus, (4)
-  learned rescue all unstarted; (1)+(2) slot in PART VI wave 4.)* SEQUENCED (tech-audit: a symmetric bake-off is premature — P1-4a is itself PARTIAL with a live
+- [ ] **P1-4 True 3D flight lift.** *(STATUS 2026-07-07: P1-4a is PARTIAL after wave 4. LOO per-holdout
+  BVP refit is real now and verifier-confirmed 5 unique param sets, but D.3(b) protected-span
+  preservation is NOT achieved; span-equivalence was refuted, runtime-killed, then banked for wave 5
+  as frozen-baseline arc params as protected-span priors + junction repair before validity gates.
+  Magnus STEP 2 remains gated behind STEP 1. Evidence: 5633c4b48;
+  `runs/lanes/w4_bvp_20260707/report_r3.json`;
+  `runs/lanes/w4_bvp_verify_20260707/report.json`.)* *(Prior sim status: P0-7 phase-1 sim now EXISTS reusing `_rk4_step`
+  — step (3) below satisfied early, by construction.)* SEQUENCED (tech-audit: a symmetric bake-off is premature — P1-4a is itself PARTIAL with a live
   regression and P0-7 has zero code): (1) STABILIZE (P1-4a) — finish the
   P3-A BVP anchor-first solver (committed WIP — 5 baseline intervals lose `fit` status on
   reselection + internal F1 never rerun; finish steps in
@@ -946,7 +968,17 @@ p95 8-23mm tripod), mesh index, contact-dense scheduling. **To build:** raw-nois
 (latent smoothing), camera-motion/handheld robustness, far-player quality, IDF1 scoring, independent
 GT + world-MPJPE gate, challenger benchmark.
 
-- [ ] **P2-1 SMART-recipe hardening lane.** *(STATUS 2026-07-07 — [wave-2 correction]: (a) module
+- [ ] **P2-1 SMART-recipe hardening lane.** *(STATUS 2026-07-07 — WAVE-4 FRESH-PROOF RESOLVED:
+  decode-orientation policy + fail-safe mismatch semantics landed after two adversarial verify rounds;
+  img1605 production probe is 53.70515 AUTO ON, statics are bit-exact, and first-class
+  `camera_motion_auto` decode-orientation keys landed in the integration lane. Fresh proof at committed
+  940576495 closes the wave-3 probe-context defect: img1605 probe 50.02 > 2.5 AUTO ON, statics OFF at
+  0.129/0.524/0.385-0.568, first-class decode_orientation_* keys present x4; probe score is not
+  host-deterministic but never flips classification. Evidence: cd0b59390; 1588b110f; a93764203;
+  `runs/lanes/w4_cammotion_fix_20260707/report_r2.json`;
+  `runs/lanes/w4_cammotion_verify_20260707/report_r2.json`;
+  `runs/lanes/w4_integration_20260707/report.json`;
+  `runs/lanes/w4_freshproof_20260707/summary.json`.)* *(Prior wave-2 correction: (a) module
   HARDENED + ACCEPTED (`p21_cammotion_20260706`): person-masked LK + MAD flow-track filter +
   MAD+Gaussian smoothing, img1605 handheld wins all 3 proxies, static-clip guard IMPROVED, runtime
   halved 98→50ms/frame — BUT the default-stage kill-criterion FIRED (wolverine placement jitter p90
@@ -1132,6 +1164,13 @@ synthetic generator v2 w/ tennis overlays), external checkpoints local (PnLCalib
 DeepLSD/ScaleLSD). **To build:** land Wave A on main, train the model, GEO r3 (adjacent-court vote),
 distortion-aware handheld calibration, court-profile library (P4-0), downstream impact gate.
 
+**STATUS 2026-07-07 — P4 harvest-cal measured:** owner court-keypoint harvest calibration produced
+exactly 1/6 source at manual_bar (73VurrTKCZ8 median 2.93px / p95 6.0px; 8/40 harvest clips covered);
+two full-labeled sources fail p95 (36.2/32.2px, net/far-side residuals, owner relabel queued);
+physics-gated SST teacher remains DEFERRED because fewer than two sources reached bar; `run_ball_chain
+--court-calibration` is the handoff seam. Evidence: 83e090168;
+`runs/lanes/w4_court_harvestcal_20260707/report.json`.
+
 - [ ] **P4-0 [START HERE — 0% built today (no CourtProfile module exists; `camera_fingerprint()` is a
   device key only, tech-audit verified). THE v1 court path.] Court-profile library + color +
   intrinsics-at-ingest (EDGE_PLAYBOOK H1/H2/H3; do BEFORE
@@ -1269,6 +1308,40 @@ smoothing.
   are planted, and every unmeasured element is honestly banded; `verify_process_video_viewer.py`
   extended to assert cross-system consistency.
 
+## PHASE L — LIVE TIER (on-device advisory; parallel stream, never blocks the BALL critical path)
+
+The canonical LIVE vs OFFLINE split lives in `CAPABILITIES.md`: L0/L1 are
+on-device advisory tiers, L2 is a server fast verdict, and L3 is the deep world
+authority. Phase L is a parallel stream for advisory live UX and fast calls; it
+does not promote outputs and must never delay the DATA→BALL critical path.
+
+- [ ] **PL-1 Live court lock on device.** Pre-record guided 4-corner tap flow (data types
+  `ManualCourtTaps`/`AssistedCourtSeed` exist, uncollected) + ARKit setup-pass plane as assist +
+  H0 court-profile reuse (one-time per court). Output: live homography quality-scored on device;
+  sidecar carries it (server seed too — kills the calibration hard-fail for app captures).
+  Acceptance: live foot-ring → court-plane mapping on a real court; reprojection sanity vs the
+  server metric-15pt solve within a stated tolerance; graceful decline on failure.
+- [ ] **PL-2 Record+infer soak benchmark.** 20-30min continuous 1080p60 record + cadence ANE
+  inference on-device, outdoors: frame drops, thermal state timeline, sustained ms/frame, battery.
+  Publishes the device budget table the tier promises rest on (no published numbers exist anywhere).
+- [ ] **PL-3 Wire the built-but-hidden live UX.** Bundle the person-detector model in the app
+  (stop requiring manual device push); render `LiveGuidanceEvaluator` card + `PostStopPreviewSummary`;
+  keep fail-open tap semantics. Cheap, pure-app lane.
+- [ ] **PL-4 Advisory foot alerts.** Kitchen-proximity indicator + serve-position check from foot
+  rings × PL-1 homography, `decide_court_boundary` semantics (too_close_to_call default), advisory
+  copy everywhere ("proximity", never "fault"). Serve-moment cue via audio onset/pose swing R&D.
+- [ ] **PL-5 Ball student distillation (subsumes P5-5, product-gated).** After P1 internal bar:
+  distill server WASB → 288-512px CoreML student (FP16, frame-differencing channel candidate),
+  flip `modelIsTrainedInThisBuild`, live trail + bounce-zone dots + rally segmentation. Deploy path
+  already proven at 1.41ms ANE.
+- [ ] **PL-6 Server fast-verdict profile (L2).** A process_video profile that skips BODY and wires
+  the existing-but-unwired calls artifacts into the orchestrator (`ball_line_calls`,
+  `court_positioning`/`CallsArtifact`, `shot_taxonomy` outcomes incl. `excess_bounce`): upload →
+  calls + rally stats in ~1-2 min; full L3 world follows. Also the home of the challenge-replay
+  backend.
+- [ ] **PL-7 Score state machine (H26, after P6-1).** Two-bounce + side-switch + server-position
+  rules → inferred score/serve-side with confidence; manual/voice correction UI is v0 and stays.
+
 ## PHASE 5 — Speed + cost (realistic gate: ≤ evidenced floor; ≤1× is an un-booked STRETCH)
 
 **Already built:** 2141→~532-565s (3.8×, zero quality change), slim BODY monoliths, VM-built mesh
@@ -1309,6 +1382,7 @@ per-court cache, cost metering, pre-flight QA, and the P5-7 BODY redesign.
   cost line on every run; simulated preemption recovers without human help.
 - [ ] **P5-5 (Later, product-gated) iOS live-tier distillation.** CoreML ball heatmap distillation
   (task #8, owner-capture-gated) + capture guidance. Only after P1 lands (distill the GOOD teacher).
+  NOTE 2026-07-07: this is subsumed by PL-5 in PHASE L; keep this line as the older speed-phase pointer only.
 - [ ] **P5-5b Pre-flight sanity gate (cheap, BEFORE any GPU stage — harsh-review gap).** At pipeline
   entry, before dispatch: ffprobe/opencv integrity (0-duration/corrupt), a REAL orientation/rotation
   check (today it's a hardcoded `landscape` stub in 2 places), and a 1-few-frame court-presence + sport
@@ -1345,7 +1419,10 @@ framework with trust bands, court-map view, viewer moment-jump surface. **To bui
 classification, the stat layer users value, the pickleball reference-range library (the moat),
 the grounded-LLM coach, direct visual feedback overlays, session reports.
 
-- [ ] **P6-1 Shot classification.** Serve/return/drive/drop/dink/lob/volley/smash from (ball 3D arc,
+- [ ] **P6-1 Shot classification.** *(DESIGN v0 DONE 2026-07-07, stream-4 `p61_shot_rules_20260707`:
+  rule table `docs/racketsport/shot_rules_v0.json` + pure-function `threed/racketsport/shot_rules.py`,
+  design-only, no pipeline wiring — shot_taxonomy.py stays the sole shots producer; integration lane
+  + the 0.85-agreement gate remain OPEN.)* Serve/return/drive/drop/dink/lob/volley/smash from (ball 3D arc,
   contact events, hitter pose features, court zones). Start rule-based on P1 outputs (interpretable,
   trust-banded), add a learned classifier when owner-label volume allows (Talking-Tennis used
   EfficientNet-B0+LSTM at 79% on 12 tennis classes — our 3D features should beat video-only).
@@ -1456,8 +1533,9 @@ legal review, the VERIFIED promotion ladder.
 1. **Read order for a fresh session:** `CLAUDE.md` (auto-loads the pointer) → `FABLE_OPERATING_MANUAL.md`
    → this file PART 0 (any blank owner item = typed STOP) + Part I (incl. I.7 critical path) →
    `BUILD_CHECKLIST.md` (last ~15 bullets) → `runs/manager/gpu_fleet.md` (reconcile orphaned VMs) →
-   `CAPABILITIES.md` (canonical truth) + `PIPELINE_STATUS.md` as truth-checks → the linked lane/run
-   evidence. `RESET_HANDOFF_20260705.md` = historical restart context when needed.
+   `CAPABILITIES.md` (canonical truth) → the linked lane/run
+   evidence. `PIPELINE_STATUS.md` and `RESET_HANDOFF_20260705.md` were archived 2026-07-07 (superseded by
+   `CAPABILITIES.md` + `BUILD_CHECKLIST.md`); see `runs/archive/root_docs_20260707/` if historical context is needed.
 2. **Protected data:** Outdoor + Indoor labels NEVER touched without a pre-registered
    `runs/manager/heldout_eval_ledger.md` row + explicit STOP for manager go. Burlington/Wolverine =
    internal-val only. CVAT labels = scoring only, never construction. New owner captures get a role
@@ -1549,8 +1627,9 @@ legal review, the VERIFIED promotion ladder.
    lanes). Expect concurrent lanes' wide suites to see each other's dirty files mid-wave — only the
    wave-end clean run adjudicates. Worktree-per-lane remains MANDATORY for VM/rsync contexts and
    for any two lanes that would touch the same files.
-14. **Wave-end docs reconciliation is MANDATORY, not optional:** `CAPABILITIES.md` +
-   `PIPELINE_STATUS.md` (the canonical-on-conflict docs) went stale through wave 2. Every wave
+14. **Wave-end docs reconciliation is MANDATORY, not optional:** `CAPABILITIES.md`
+   (the canonical-on-conflict doc; `PIPELINE_STATUS.md` was archived 2026-07-07 as a duplicate that
+   went stale through wave 2 — see `runs/archive/root_docs_20260707/`) went stale through wave 2 in the same way. Every wave
    closeout runs a docs lane that refreshes them + ticks this file's checkboxes + updates the
    PART VI wave log — a plan doc that diverges from reality poisons every future session's boot.
 
@@ -1560,8 +1639,9 @@ legal review, the VERIFIED promotion ladder.
 - Companion: `EDGE_PLAYBOOK.md` — profile-first hacks H0-H26 + iPhone-capture hacks H27-H34, exact stack, exact data sources, task deltas
 - Pass 2/3 research addenda: PART II-B (citation-graph deep dive) + PART II-C (court/net + global fusion + production); reports in `runs/research_sota_20260705/pass2_*.md` + `pass3_*.md`
 - Research (this doc's Part II): `runs/research_sota_20260705/{README,ball_report,body_report,paddle_report,product_report}.md`
-- Current-state canon: `RESET_HANDOFF_20260705.md`, `CAPABILITIES.md`, `PIPELINE_STATUS.md`,
-  `MASTER_PLAN.md`, `runs/lanes/wiring_audit_20260705/WIRING_TRUTH_TABLE.md`
+- Current-state canon: `CAPABILITIES.md`, `MASTER_PLAN.md`,
+  `runs/lanes/wiring_audit_20260705/WIRING_TRUTH_TABLE.md` (`RESET_HANDOFF_20260705.md` and
+  `PIPELINE_STATUS.md` archived 2026-07-07 — `runs/archive/root_docs_20260707/`)
 - Ball: `runs/manager/heldout_eval_ledger.md` (rows 4, 19-23), `runs/lanes/ball_tracking_long_run_STATUS.md`,
   `runs/lanes/ball_t4_train_20260704/EVIDENCE_REPORT.md`, `runs/lanes/ball_p3a_bvp_anchor_first_20260705/`
 - Body/visual: `runs/lanes/joint_placement_4videos_20260704/FINAL_REPORT.md`,
@@ -1592,6 +1672,9 @@ close; that prompt + this part must agree. **Companion (2026-07-07): `TECH_BLUEP
 executable per-pillar specs (algorithms, recipes, file targets, decision trees) + the successor
 manager primer; every wave lane spec pulls its recipes and acceptance keys from the matching
 pillar there.
+
+PHASE L runs as a parallel advisory live-tier stream under the same critical-path guard: it can
+ride alongside waves, but it never replaces or delays DATA→BALL→flight→contacts→coaching work.
 
 ## VI.0 The wave lifecycle (invariant — run every wave exactly like this)
 
@@ -1676,11 +1759,10 @@ for promotion still goes through the product scorer per the BALL2D blueprint, ne
 proxy. (b) SST teacher RE-RULED by measurement: raw single-WASB seed (see P1-2 note above).
 (c) NEW: P4 court auto-cal enters the wave-4 queue — it structurally unlocks the physics-gated
 teacher on harvest footage, so P4 work now feeds the BALL critical path, earlier than the wave-5
-slot planned below. (d) Carried diagnoses: camera-motion probe-context bug (in-pipeline 0.329 vs
-offline 53.7 on img1605), upstream foot-attribution (grounding_refine un-kill). (e) W4-D (P1-4a
-BVP stabilization) is NOT in the closeout queue — it remains critical-path (the dependency spine's
-highest-leverage artifact) and must not slip past wave 5. (f) H100 = recorded default for TRAINING
-(~2.3× A100-40); BODY stays A100 until compat validation (queue #7).**
+slot planned below. (d) Wave-4 reconciliation update: camera-motion probe-context diagnosis is
+resolved by fresh proof (cd0b59390 + 1588b110f + a93764203), upstream foot-attribution landed unwired
+and measured negative (75e438223), P1-4a BVP is PARTIAL (5633c4b48), and H100 is now BODY-validated
+runtime evidence (`runs/lanes/w4_h100body_20260707/REPORT.md`); closeout metrics are recorded below.**
 
 Honest framing: waves 1-3 built infrastructure; **zero training runs have happened**. The ball wall
 (held-out 0.6969 vs the 0.7248 zero-shot anchor) still stands untouched. Wave 4 converts fuel into
@@ -1699,8 +1781,10 @@ higher than waves 1-3's ~$8 — training is the point; >$5/hr or a 5th GPU = pur
   Acceptance (exact keys): internal-val product F1@20 on Burlington+Wolverine ≥ zero-shot baseline
   (no regression) AND improvement on the harvest internal-val-6; hidden-FP ≤ baseline. Kill:
   internal-val regression after 2 recipe iterations → bank the negative, stop (no re-tuning spiral).
-- **W4-B SST round 1 (GPU lane).** Teacher = PHYSICS-GATED chain (hidden-FP 0.021; NEVER raw
-  fusion) over the 40 harvest clips; student warm-starts from W4-A's checkpoint. Gate: student >
+- **W4-B SST round 1 (GPU lane).** Teacher policy is raw single-WASB until P4 court auto-cal has
+  enough calibrated sources for the physics-gated chain; NEVER raw un-gated fusion. Wave-4 measured
+  only 1/6 harvest sources at bar, so physics-gated teacher stays deferred (83e090168;
+  `runs/lanes/w4_court_harvestcal_20260707/report.json`). Gate: student >
   teacher on internal-val without regression elsewhere. Kill: recall unmoved after round 2
   (teacher-blind-spot inheritance). Disagreement frames → the P0-4 label queue (active learning).
 - **W4-C recall levers (Codex lane, CPU-measurable).** P1-3 (a) tiled hitter-adjacent inference,
@@ -1719,6 +1803,23 @@ higher than waves 1-3's ~$8 — training is the point; >$5/hr or a 5th GPU = pur
 Exit: pretrain + SST checkpoints banked with internal-val cards; recall levers measured
 individually; BVP stabilized (5/5 intervals keep `fit`, internal F1 rerun clean); scorecard states
 the wave-5 held-out-shot preconditions explicitly (owner label volume vs the P0-4 budget).
+
+**VI.2 execution log — W4-F reconciliation 2026-07-07:** wave 4 landed evidence-complete pieces in
+camera-motion (cd0b59390 + 1588b110f), foot-attribution as an unwired measured-negative producer
+(75e438223), BVP as PARTIAL with real LOO but failed span protection (5633c4b48), harvest court
+calibration (83e090168), BALL stage-2/SST build plumbing (5b268aa6d), fleet host/version-stamp fixes
+(dcc4dae42 + 190dea09f), H100 BODY runtime validation (`runs/lanes/w4_h100body_20260707/REPORT.md`),
+and mesh-warning telemetry (684d03380). Closeout fill: fresh-GPU proof at committed 940576495 passed
+all frozen BODY gates GREEN 4/4 (`max_foot_lock_slide_m` 0.02025/0.02004/0.01798/0.02307, root jumps
+0/0/0/0, body_full_clip_gate 4/4, zero `phase_slide_exceeds_lock_gate`, browser assertion_errors [] x4,
+pipeline_status complete x4) with img1605 camera_motion_auto 50.02 AUTO ON and decode_orientation_* keys
+present x4 (a93764203; `runs/lanes/w4_freshproof_20260707/summary.json`). Ballgpu banked harness_v0
+NON-PROMOTABLE cards: official control 0.7143/0.7826, stage-1 bridge 0.8936/0.2000, seed fine-tune
+0.7368/0.5946 hidden-FP 0.20, SST-3k 0.7442/0.7273 recall 0.7708, threshold sweep, 12,075-row
+disagreement queue, protected-hash 35/0 (28c9244bd; `runs/lanes/w4_ballgpu_20260707/REPORT.md`).
+Wave-5 carry: align training preprocessing to official transform, retrain/re-score official-mode, extend
+disagreement coverage for source balance, and diagnose img1605's empty compensated ball-arc census
+(0 segments, 0/297 world frames; p06-era code had 7 segments).
 
 ## VI.3 WAVE 5 — OWNER DATA IN + THE FIRST HELD-OUT SHOT (M2 complete; M3 attempted)
 
@@ -1798,6 +1899,43 @@ surfaces as a typed STOP at wave boot if still blank).
 - **Critical-path guard:** at every wave boot, check the wave plan against I.7 — if a wave contains
   zero critical-path lanes (DATA→BALL→flight→contacts→paddle-impact→stats→fusion→coaching), that is
   a planning bug; P2/P4/P5 quality work rides ALONGSIDE, never instead.
+
+## VI.8 THE STANDING PLAN-REFRESH LOOP (owner directive 2026-07-07 — the plan must always be current)
+
+The docs are only as good as their last correction. Evidence keeps arriving (wave results, kills,
+new papers/code); this loop converts it into plan updates on a fixed cadence, so the plan is never
+stale and never re-derived from scratch. It has three tiers — run the cheap tiers always, the
+expensive one only on trigger:
+
+**Tier 1 — every wave closeout (mandatory, ~30 min, part of VI.0 step 10):**
+1. *Failure-driven audit:* list the wave's kills, misses, carried items, and surprises. For each,
+   open the owning TECH_BLUEPRINTS pillar's decision tree: did reality follow a written branch? If
+   the branch was missing or wrong, book a dated **[WAVE-N CORRECTION]** block at the top of that
+   pillar section (supersede-by-date, never silent rewrite — the wave-3 SST-teacher re-ruling is
+   the template).
+2. *Ruling re-check:* any measured result that contradicts a standing ruling → re-rule ON THE
+   EVIDENCE, book it in BUILD_CHECKLIST + the pillar + (if strategic) Part I.3. Rulings are strong
+   defaults, not dogma — but only MEASUREMENT re-rules them, never taste.
+3. *Docs truth sync:* CAPABILITIES/PIPELINE_STATUS refresh + checkbox ticks (Part IV rule 14) +
+   the next wave's boot prompt reflecting all of the above.
+
+**Tier 2 — every ~2 waves or ~2 weeks, whichever first (cheap, one small lane or ~30 min of
+WebSearch):** sweep the named WATCH-LIST (Part II-B/II-C "no code yet" items: Human3R, DuoMo, RAM,
+CoMotion, JOSH code release, PlanaReLoc, Where-Is-The-Ball, TAPNext++, 6DOPE-GS family) + one query
+per ACTIVE pillar for anything genuinely new since the last sweep. Adoption bar = Part IV rule 10
+(signal-adoption discipline: re-derive the current ablation + pixel-math check) — new shiny things
+enter as SPIKES with kill criteria, never as re-architectures.
+
+**Tier 3 — full research-fanout on a pillar (expensive; research-fanout skill; declared budget) —
+ONLY on one of these triggers:** (a) a pillar hits a wall its blueprint's decision tree does not
+explain; (b) the same gate misses two consecutive waves; (c) a strategic call in I.3 is contradicted
+by measurement; (d) a watch-list item RELEASES code that could collapse multiple stages (Human3R
+class). Never run tier 3 "to feel thorough" — the 2026-07-05/06/07 sweeps stay valid until evidence
+says otherwise.
+
+**Who runs it:** the wave's manager, as part of closeout — not a separate session. **Output:** the
+scorecard bullet gains a one-line "PLAN DELTAS:" suffix (or "PLAN DELTAS: none") so the owner sees
+every tweak without reading diffs.
 
 
 *Maintained by the manager session. Update checkboxes + add dated notes as lanes land; never let this

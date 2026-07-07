@@ -163,8 +163,9 @@ def build_virtual_world_state(
     )
     if membership_summary is not None:
         paddles = _filter_membership_excluded_paddles(paddles, membership_summary=membership_summary)
+    mesh_index_present = _body_mesh_index_present(paths=paths, placement_calibration_path=placement_calibration_path)
     warnings = [
-        *_warnings(players=players, ball=ball, paddles=paddles),
+        *_warnings(players=players, ball=ball, paddles=paddles, mesh_index_present=mesh_index_present),
         *paddle_warnings,
         *_membership_preview_warnings(membership_summary),
     ]
@@ -234,6 +235,7 @@ def build_virtual_world_state_from_files(
         ball_world_policy=ball_world_policy,
         artifact_paths={
             "tracks": tracks_path,
+            "body_mesh_index": _existing_body_mesh_index_path(Path(court_calibration_path).parent),
             "physics_footlock": physics_footlock_path,
             "ball_track_physics_filled": ball_track_physics_filled_path,
             "ball_track_arc_solved": ball_track_arc_solved_path,
@@ -1679,12 +1681,18 @@ def _attach_trust_bands(
             paddle["trust_band"] = dict(paddle_band)
 
 
-def _warnings(*, players: list[dict[str, Any]], ball: dict[str, Any], paddles: list[dict[str, Any]]) -> list[str]:
+def _warnings(
+    *,
+    players: list[dict[str, Any]],
+    ball: dict[str, Any],
+    paddles: list[dict[str, Any]],
+    mesh_index_present: bool = False,
+) -> list[str]:
     warnings = []
     if not players:
         warnings.append("missing_players")
     elif not any(player["representation"] == "mesh" for player in players):
-        warnings.append("missing_mesh_vertices")
+        warnings.append("missing_embedded_mesh_vertices" if mesh_index_present else "missing_mesh_vertices")
     if not ball["frames"]:
         warnings.append("missing_ball_track")
     elif any(frame.get("visible") is True and frame.get("world_xyz") is None for frame in ball["frames"]):
@@ -1694,6 +1702,49 @@ def _warnings(*, players: list[dict[str, Any]], ball: dict[str, Any], paddles: l
     if any(frame.get("ambiguous") for paddle in paddles for frame in paddle["frames"]):
         warnings.append("ambiguous_paddle_pose")
     return warnings
+
+
+def _body_mesh_index_present(
+    *,
+    paths: Mapping[str, str],
+    placement_calibration_path: str | Path | None,
+) -> bool:
+    candidates: list[Path] = []
+    explicit = paths.get("body_mesh_index")
+    if explicit:
+        candidates.append(Path(explicit))
+    if placement_calibration_path is not None:
+        candidates.extend(_body_mesh_index_candidates(Path(placement_calibration_path).parent))
+    return any(_body_mesh_index_file_is_nonempty(candidate) for candidate in candidates)
+
+
+def _existing_body_mesh_index_path(root: Path) -> Path | None:
+    for candidate in _body_mesh_index_candidates(root):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _body_mesh_index_candidates(root: Path) -> list[Path]:
+    return [root / "body_mesh_index" / "body_mesh_index.json", root / "body_mesh_index.json"]
+
+
+def _body_mesh_index_file_is_nonempty(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(payload, Mapping):
+        return False
+    summary = payload.get("summary")
+    if isinstance(summary, Mapping):
+        mesh_frame_count = summary.get("mesh_frame_count")
+        if isinstance(mesh_frame_count, int) and mesh_frame_count > 0:
+            return True
+    windows = payload.get("windows")
+    return isinstance(windows, list) and len(windows) > 0
 
 
 def _summary(

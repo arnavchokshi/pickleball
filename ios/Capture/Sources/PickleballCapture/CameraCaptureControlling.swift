@@ -19,8 +19,11 @@ public protocol CameraCaptureControlling: AnyObject, Sendable {
 
     func startPreview() async
     func stopPreview() async
+    func performARKitSetupPass(timeoutSeconds: Double) async -> ARKitSetupPassSidecar
     func startRecording() async throws -> CapturePackageDescriptor
     func stopRecording() async throws
+
+    func latestGravity() async -> [Double]
 
     /// Real, live-readback signals for the pre-record capture-quality
     /// guidance screen (W3-LIVE-MLP surface 1). Default implementation
@@ -45,6 +48,14 @@ public protocol CameraCaptureControlling: AnyObject, Sendable {
 extension CameraCaptureControlling {
     public func currentLiveGuidanceSample() async -> LiveGuidanceSample {
         LiveGuidanceSample()
+    }
+
+    public func performARKitSetupPass(timeoutSeconds _: Double) async -> ARKitSetupPassSidecar {
+        .unavailable(reason: "arkit_setup_pass_controller_unavailable")
+    }
+
+    public func latestGravity() async -> [Double] {
+        [0, -1, 0]
     }
 
     public func currentPolicyEnforcementReport() async -> CapturePolicyEnforcementReport? {
@@ -114,6 +125,14 @@ public final class QueuedCameraCaptureController: CameraCaptureControlling, @unc
         _ = try? await sessionQueue.run {
             self.controller.stopPreview()
         }
+    }
+
+    public func performARKitSetupPass(timeoutSeconds: Double = 4.0) async -> ARKitSetupPassSidecar {
+        await controller.performARKitSetupPass(timeoutSeconds: timeoutSeconds)
+    }
+
+    public func latestGravity() async -> [Double] {
+        (try? await sessionQueue.run { self.controller.latestGravity }) ?? [0, -1, 0]
     }
 
     public func startRecording() async throws -> CapturePackageDescriptor {

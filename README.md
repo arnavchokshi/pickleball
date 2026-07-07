@@ -72,3 +72,11 @@ npm test -- --run --dir web/replay
 
 Run only commands you can actually support in the current environment, and report
 the exact command and result. If a command is skipped, say why.
+
+## iOS Visual Gate
+
+Before any manager/device deploy of the native app, run the deterministic
+`DinkVisionScreenshotWalker` UI test and inspect the captured screenshots. The
+current runner notes and extraction command live at
+`runs/lanes/ios_uifix_20260707/SCREENSHOT_WALKER.md`. No device deploy should be
+treated as visually cleared without a manager walker pass.

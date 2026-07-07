@@ -83,6 +83,7 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
     public var intrinsics: CameraIntrinsics?
     public var arkitCameraPose: RigidPose?
     public var courtPlane: Plane?
+    public var setupPass: ARKitSetupPassSidecar?
     public var manualCourtTaps: [[Double]]
     public var gravity: [Double]?
     public var arkitFrameSamples: [ARKitFrameSample]
@@ -112,6 +113,7 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         intrinsics: CameraIntrinsics?,
         arkitCameraPose: RigidPose? = nil,
         courtPlane: Plane? = nil,
+        setupPass: ARKitSetupPassSidecar? = nil,
         manualCourtTaps: [[Double]] = [],
         gravity: [Double]?,
         arkitFrameSamples: [ARKitFrameSample] = [],
@@ -140,6 +142,7 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         self.intrinsics = intrinsics
         self.arkitCameraPose = arkitCameraPose
         self.courtPlane = courtPlane
+        self.setupPass = setupPass
         self.manualCourtTaps = manualCourtTaps
         self.gravity = gravity
         self.arkitFrameSamples = arkitFrameSamples
@@ -170,6 +173,7 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         case intrinsics
         case arkitCameraPose = "arkit_camera_pose"
         case courtPlane = "court_plane"
+        case setupPass = "setup_pass"
         case manualCourtTaps = "manual_court_taps"
         case gravity
         case arkitFrameSamples = "arkit_frame_samples"
@@ -201,6 +205,7 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         self.intrinsics = try container.decodeIfPresent(CameraIntrinsics.self, forKey: .intrinsics)
         self.arkitCameraPose = try container.decodeIfPresent(RigidPose.self, forKey: .arkitCameraPose)
         self.courtPlane = try container.decodeIfPresent(Plane.self, forKey: .courtPlane)
+        self.setupPass = try container.decodeIfPresent(ARKitSetupPassSidecar.self, forKey: .setupPass)
         self.manualCourtTaps = try container.decodeIfPresent([[Double]].self, forKey: .manualCourtTaps) ?? []
         self.gravity = try container.decodeIfPresent([Double].self, forKey: .gravity)
         self.arkitFrameSamples = try container.decodeIfPresent([ARKitFrameSample].self, forKey: .arkitFrameSamples) ?? []
@@ -232,6 +237,7 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         try container.encodeIfPresent(intrinsics, forKey: .intrinsics)
         try container.encodeIfPresent(arkitCameraPose, forKey: .arkitCameraPose)
         try container.encodeIfPresent(courtPlane, forKey: .courtPlane)
+        try container.encodeIfPresent(setupPass, forKey: .setupPass)
         try container.encode(manualCourtTaps, forKey: .manualCourtTaps)
         try container.encodeIfPresent(gravity, forKey: .gravity)
         try container.encode(arkitFrameSamples, forKey: .arkitFrameSamples)

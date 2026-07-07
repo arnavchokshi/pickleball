@@ -4,13 +4,13 @@ This scaffold is the native iOS entry point for the Pickleball capture client.
 It contains the app shell, partial AVFoundation capture scaffolding, sensor
 sidecar contracts, and module boundaries for the video-to-pipeline workflow.
 
-Canonical split: the iOS app owns ON-DEVICE LIVE / fast tier work only
-(cached ARKit court seed, person detect+track+N-lock, 2D pose/joints, the
-~288p CoreML ball heatmap spike, cheap line/contact cues, court map, one cue,
-and capture-quality guidance). SERVER OFFLINE / deep tier work is async GPU
-(mesh, world grounding, foot-lock/physics, paddle 6DoF, full biomech, replay
-render, LLM copy, week-over-week). Camera-space mesh preview is `server-fast`,
-not phone-real-time; LiDAR is a near-field (~5 m) bonus only.
+Canonical split: the iOS app owns L0/L1 work only: on-device advisory capture
+guidance, cached ARKit/manual court seed, person detect+track foot rings,
+2D pose/joints, the ~288p CoreML ball heatmap spike, cheap line/contact cues,
+court map, upload priors, and post-stop replay summaries. L2 server fast
+verdict and L3 server deep world work are async server tiers. Camera-space mesh
+preview is `server-fast`, not phone-real-time; LiDAR is a near-field (~5 m)
+bonus only.
 
 ## Modules
 
@@ -22,30 +22,57 @@ not phone-real-time; LiDAR is a near-field (~5 m) bonus only.
 - `PickleballUpload`: upload manifest boundaries for IOS-5.
 - `PickleballReplay`: playback boundaries for server-rendered replay assets in IOS-6.
 
-## DinkVision Design System
+## DinkVision Brand V3
 
 The app-facing display name is `DinkVisionBrand.displayName` in
 `ios/App/DinkVisionDesignSystem.swift`. Bundle identifiers remain unchanged.
 
-Tokens are mirrored from the 2026-07-07 manager mockups:
+Tokens are mirrored from `runs/lanes/ios_brand_v2_20260707/mockups/tokens.css`:
 
 - Colors: cream `#F4EEE3`, court green `#2E5B3F`, deep green `#234731`, ink
-  `#141414` from `tokens.css`, ball yellow `#F2C63F`, trail blue `#3E8EF0`,
-  trail red `#E8503A`, card white `#FFFFFF`, and line `#E7DFD1`.
+  `#141414`, ball yellow `#F2C63F`, trail blue `#3E8EF0`, trail red
+  `#E8503A`, card white `#FFFFFF`, and line `#E7DFD1`.
 - Shapes: 24 pt card radius, 32 pt top tab-bar radius, black bottom tab rail,
-  and thick rounded strokes for the paddle-eye mark.
+  and owner raster artwork for all app-icon and in-app logo placements.
 - Type: SF rounded/system heavy numerals and sentence-case labels. Stat cards
   use dynamic SwiftUI text with scale limits rather than fixed bitmap copy.
-- Iconography: the paddle-eye mark is pure SwiftUI vector drawing in
-  `PaddleEyeMark`; empty states and the loader reuse the perforated-ball motif.
+- Iconography: the app icon and in-app logo use the owner's actual raster
+  masters from `runs/lanes/ios_brand_v3_20260707/assets/`: `app_icon_1024.png`,
+  `mark_master.png`, and `lockup_master.png`. Do not redraw, re-vector, trace,
+  recolor, or "improve" those files. `PaddleEyeMark` remains only for tiny
+  template glyph use such as the tab bar.
+
+Owner taste board, 2026-07-07: ink-on-cream raster mark; aligned slow-blink
+splash with no extra layers; speed-streak trail card as the motion motif;
+perforation panels as texture; hand-drawn double-slashes, dot grids, and curvy
+orange arrow around empty/onboarding content only. The tone is playful but super
+clean.
 
 Signature animations:
 
-- Splash: cream launch screen, paddle-eye blink, then an ink perforated-ball iris
-  expansion that reveals the Record tab. Reduced-motion users get a short
-  crossfade with no iris expansion.
+- Splash v3: the app shell renders behind the overlay. Phase A `settle` is
+  150 ms on full cream, with the raster mark centered at 34% screen width and a
+  1.06 -> 1.00 spring scale. Phase B `blink` draws only cream lids plus ink edge
+  strokes over the raster eye: close 260 ms, hold 120 ms, open 340 ms,
+  ease-in-out. Phase C `openUp` is 380 ms: the mark/lids scale up from the eye
+  center while the cream overlay and mark fade to reveal the live app. Total
+  duration is 1.25 s. Reduced-motion users get a 180 ms crossfade.
+- Splash v3 eye constants: eye center is `(0.50, 0.361)` of the mark frame,
+  aperture half-height is `0.145 * markHeight`, lid span is `0.86 * markWidth`,
+  and ink stroke width is `0.075 * markWidth`. Geometry helpers are nonisolated
+  so SwiftUI `Shape.path(in:)` does not call MainActor-isolated code.
 - Loader: `BallTrailLoadingView` is the reusable black-card speed-streak loader
-  used for capture save/sidecar processing and replay loading states.
+  used for capture save/sidecar processing, replay loading states, and the
+  brief replay-open transition.
+
+Accent usage rules:
+
+- `SketchSlashes`, `DotGrid`, `HandArrow`, and `PerforationPanel` live in
+  `ios/App/DinkVisionAccents.swift`.
+- Approved screen sites are limited to Replays empty state, Stats sample
+  watermark, Profile completed checklist rows, and the permission primer.
+- Keep accents off measured data surfaces and use at most one accent cluster per
+  screen. Perforation panels may be ink/white dots or yellow embossed only.
 
 Screen map:
 
@@ -63,6 +90,32 @@ Screen map:
   until server wiring exists.
 - Profile/Settings exposes the H0 profile checklist steps, app info, and the
   capture-policy explainer.
+
+## DinkVision Brand V4
+
+Brand v4 keeps the v3 owner raster artwork untouched and moves the app shell to
+a record-first five-tab layout: Replays, Stats, raised Record, Coach, Profile.
+The center Record control is code-drawn, not raster-backed: a 72 pt ball-yellow
+disc, 4 pt ink ring, eight embossed perforations, and a subtle drop shadow. It
+breathes gently when idle, depresses on press, and turns into a trail-red stop
+state with an elapsed pill while recording. The tab button calls the existing
+`CaptureViewModel.prepare()` / `toggleRecording()` flow so the camfix ARKit
+setup-pass ordering stays intact.
+
+The reusable motion layer is intentionally hand-drawn: `StrokeDrawOn` reveals
+accent strokes, active tabs get a sketch underline, screen changes use a small
+sticker-like slide, record start wobbles briefly, and replay open uses the
+diagonal ball-trail swoosh. Reduced-motion users get crossfades or static
+states. Coach is an honest P6 placeholder only, with the owner lockup, dot-grid
+accent, and no fake coaching features.
+
+Stats, Replays, and Profile share the 24 pt card rhythm. Stats remains
+sample-watermarked. Replays reads local capture packages and shows em-dash trust
+chips when no real 3D/ball sidecar fields exist. Profile completion uses the
+yellow embossed perforation state with light haptics. The native 3D viewer keeps
+world-data semantics untouched while adding branded cream controls, simple
+camera chips, autoplay, speed cycling, follow selection, and a one-time
+coach-mark overlay.
 
 ## Local Verification
 

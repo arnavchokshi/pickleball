@@ -1,0 +1,15 @@
+=== 34.126.94.44 ===
+NVIDIA A100-SXM4-40GB, Exclusive_Process, 0 MiB
+/dev/root       194G   59G  136G  31% /
+NO-REPO-AT-DEFAULT
+no-preempt-flag
+=== 34.87.20.4 ===
+NVIDIA A100-SXM4-40GB, Exclusive_Process, 0 MiB
+/dev/root       194G   59G  136G  31% /
+NO-REPO-AT-DEFAULT
+no-preempt-flag
+=== 34.21.239.35 ===
+NVIDIA A100-SXM4-40GB, Exclusive_Process, 0 MiB
+/dev/root       194G   59G  136G  31% /
+NO-REPO-AT-DEFAULT
+no-preempt-flag

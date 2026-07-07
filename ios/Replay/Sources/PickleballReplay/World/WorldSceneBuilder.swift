@@ -15,7 +15,7 @@ public final class WorldSceneBuilder {
 
     public init(court: VirtualWorld.Court, meshFaces: [WorldMeshFace]) {
         self.meshFaces = meshFaces
-        scene.background.contents = CGColor(red: 0.067, green: 0.075, blue: 0.082, alpha: 1)
+        scene.background.contents = CGColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
         scene.rootNode.addChildNode(dynamicRoot)
         buildCamera()
         buildLighting()

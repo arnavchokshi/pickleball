@@ -1,47 +1,16 @@
 import Foundation
 import PickleballCore
 
-public enum ARKitSetupTrackingState: String, Codable, Equatable, Sendable {
-    case normal
-    case limited
-    case unavailable
-}
+public typealias ARKitSetupTrackingState = PickleballCore.ARKitSetupTrackingState
+public typealias ARKitSetupPassSidecar = PickleballCore.ARKitSetupPassSidecar
 
-public struct ARKitSetupPassSidecar: Codable, Equatable, Sendable {
-    public var intrinsics: CameraIntrinsics
-    public var cameraPose: RigidPose
-    public var courtPlane: Plane
-    public var trackingState: ARKitSetupTrackingState
-    public var timestampS: Double?
-
-    public init(
-        intrinsics: CameraIntrinsics,
-        cameraPose: RigidPose,
-        courtPlane: Plane,
-        trackingState: ARKitSetupTrackingState,
-        timestampS: Double? = nil
-    ) {
-        self.intrinsics = intrinsics
-        self.cameraPose = cameraPose
-        self.courtPlane = courtPlane
-        self.trackingState = trackingState
-        self.timestampS = timestampS
-    }
-
-    public func calibrationSeed() -> CalibrationSeed {
+public extension ARKitSetupPassSidecar {
+    func calibrationSeed() -> CalibrationSeed {
         CalibrationSeed(
-            intrinsics: intrinsics,
+            intrinsics: intrinsics ?? CameraIntrinsics(fx: 0, fy: 0, cx: 0, cy: 0, source: "arkit_setup_unavailable"),
             arkitCameraPose: cameraPose,
             courtPlane: courtPlane
         )
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case intrinsics
-        case cameraPose = "camera_pose"
-        case courtPlane = "court_plane"
-        case trackingState = "tracking_state"
-        case timestampS = "timestamp_s"
     }
 }
 

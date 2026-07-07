@@ -230,14 +230,16 @@ model-proximity/template competition, not a calibration promotion.
 
 ## Architecture
 
-**On-device live tier:** AVFoundation capture, ARKit/manual calibration seed,
-capture-quality guidance, lightweight person/ball/pose cues, court map, one
-priority cue, upload priors. This tier is fast and conservative.
+**L0/L1 live advisory tier:** AVFoundation capture, ARKit/manual calibration
+seed, capture-quality guidance, lightweight person/ball/pose cues, court map,
+one priority cue, upload priors, and post-stop replay summaries. This tier is
+fast, conservative, and uncertainty-banded.
 
-**Server offline tier:** calibration refinement, deep tracking, ball/event
-processing, Fast SAM-3D-Body mesh, grounding, foot-lock/physics, paddle 6DoF
-when available, metrics, replay bake, and coaching copy. This tier is the
-accuracy authority.
+**L2/L3 server tiers:** L2 is the trust-banded fast verdict path that skips BODY;
+L3 is the deep-world authority with calibration refinement, deep tracking,
+ball/event processing, Fast SAM-3D-Body mesh, grounding, foot-lock/physics,
+paddle 6DoF when available, metrics, replay bake, and coaching copy.
+`CAPABILITIES.md` owns the canonical four-tier split.
 
 **GPU reset state:** the July 2026 A100 spot runtime is reset-pending during
 winddown. Do not treat any named VM as currently available without a fresh

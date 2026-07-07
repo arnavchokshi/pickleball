@@ -6,6 +6,7 @@ import csv
 import hashlib
 import json
 import math
+import pathlib
 import subprocess
 import sys
 import time
@@ -30,6 +31,9 @@ DEFAULT_BALL_CANDIDATE_TOP_K = 5
 WASB_INPUT_WH = (512, 288)
 WASB_FRAMES_IN = 3
 WASB_FRAMES_OUT = 3
+DEFAULT_WASB_INPUT_PREPROCESSING = "official"
+WASB_INPUT_PREPROCESSING_MODES = ("official", "harness_v0")
+NON_PROMOTABLE_INPUT_PREPROCESSING_MODES = {"harness_v0"}
 
 
 def wasb_csv_to_ball_track(
@@ -38,11 +42,13 @@ def wasb_csv_to_ball_track(
     fps: float,
     frame_times: Any = None,
     visible_threshold: float = DEFAULT_WASB_VISIBLE_THRESHOLD,
+    input_preprocessing: str = DEFAULT_WASB_INPUT_PREPROCESSING,
 ) -> dict[str, Any]:
     """Convert WASB ``Frame,Visibility,X,Y,Confidence`` rows into BallTrack JSON."""
 
     fps = _require_positive_float(fps, "fps")
     visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
+    input_preprocessing = _normalize_input_preprocessing(input_preprocessing)
     rows = _read_wasb_rows(Path(csv_path))
     frames = []
     for row in sorted(rows, key=lambda item: item["frame"]):
@@ -56,7 +62,14 @@ def wasb_csv_to_ball_track(
                 approx=False,
             )
         )
-    payload = {"schema_version": 1, "fps": fps, "source": "wasb", "frames": frames, "bounces": []}
+    payload = {
+        "schema_version": 1,
+        "fps": fps,
+        "source": "wasb",
+        "input_preprocessing": input_preprocessing,
+        "frames": frames,
+        "bounces": [],
+    }
     BallTrack.model_validate(payload)
     return payload
 
@@ -75,17 +88,20 @@ def write_ball_track_from_wasb_predictions(
     candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
     candidate_frames: dict[int, Sequence[dict[str, Any]]] | None = None,
     candidates_out: str | Path | None = None,
+    input_preprocessing: str = DEFAULT_WASB_INPUT_PREPROCESSING,
 ) -> dict[str, Any]:
     """Write ``ball_track.json`` plus WASB run metadata."""
 
     out_path = Path(out)
     candidate_top_k = _require_positive_int(candidate_top_k, "candidate_top_k")
     visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
+    input_preprocessing = _normalize_input_preprocessing(input_preprocessing)
     payload = wasb_csv_to_ball_track(
         predictions_csv,
         fps=fps,
         frame_times=frame_times,
         visible_threshold=visible_threshold,
+        input_preprocessing=input_preprocessing,
     )
     _write_json(out_path, payload)
     candidate_path: Path | None = None
@@ -104,7 +120,12 @@ def write_ball_track_from_wasb_predictions(
             frame_ids=[int(row["frame"]) for row in _read_wasb_rows(Path(predictions_csv))],
             candidate_frames=candidate_frames,
             default_source_detector="wasb_concomp",
-            provenance={"predictions_csv": str(predictions_csv), "candidate_source": "provided_candidate_frames"},
+            provenance={
+                "predictions_csv": str(predictions_csv),
+                "candidate_source": "provided_candidate_frames",
+                "input_preprocessing": input_preprocessing,
+            },
+            input_preprocessing=input_preprocessing,
         )
     visible_count = sum(1 for frame in payload["frames"] if frame["visible"])
     runtime_payload = dict(runtime or {})
@@ -121,6 +142,8 @@ def write_ball_track_from_wasb_predictions(
         "visible_frame_count": visible_count,
         "confidence_semantics": WASB_CONFIDENCE_SEMANTICS,
         "visible_threshold": visible_threshold,
+        "input_preprocessing": input_preprocessing,
+        "non_promotable_measurement_mode": input_preprocessing in NON_PROMOTABLE_INPUT_PREPROCESSING_MODES,
         "not_ground_truth": True,
         "official_repo_url": WASB_REPO_URL,
         "official_model_zoo_url": WASB_MODEL_ZOO_URL,
@@ -155,6 +178,7 @@ def run_official_wasb_predict(
     candidates_out: str | Path | None = None,
     candidate_fps: float | None = None,
     primary_output: str | Path | None = None,
+    input_preprocessing: str = DEFAULT_WASB_INPUT_PREPROCESSING,
 ) -> dict[str, Any]:
     """Run official WASB model code on a video and write per-frame predictions CSV."""
 
@@ -174,6 +198,7 @@ def run_official_wasb_predict(
         raise ValueError("batch_size must be positive")
     candidate_top_k = _require_positive_int(candidate_top_k, "candidate_top_k")
     visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
+    input_preprocessing = _normalize_input_preprocessing(input_preprocessing)
     normalized_range = _normalize_video_range(video_range)
 
     start = time.perf_counter()
@@ -196,7 +221,7 @@ def run_official_wasb_predict(
         from utils.image import get_affine_transform
 
         model = build_model(cfg)
-        checkpoint_payload = torch.load(checkpoint_path, map_location="cpu")
+        checkpoint_payload = _load_wasb_checkpoint_payload(checkpoint_path, torch=torch)
         state_dict = _checkpoint_state_dict(checkpoint_payload)
         model.load_state_dict(_strip_module_prefix(state_dict))
         model = model.to(torch_device)
@@ -227,6 +252,13 @@ def run_official_wasb_predict(
             scale = max(height, width) * 1.0
             trans_input = get_affine_transform(center, scale, 0, list(WASB_INPUT_WH))
             trans_output_inv = get_affine_transform(center, scale, 0, list(WASB_INPUT_WH), inv=1)
+            postprocess_affine_inv = _preprocessing_output_affine_inv(
+                input_preprocessing=input_preprocessing,
+                width=width,
+                height=height,
+                official_affine_inv=trans_output_inv,
+                np=np,
+            )
 
             det_results: dict[int, list[dict[str, Any]]] = defaultdict(list)
             confidence_results: dict[int, list[float]] = defaultdict(list)
@@ -247,7 +279,16 @@ def run_official_wasb_predict(
                 if len(window) == WASB_FRAMES_IN:
                     frame_indices = [item[0] for item in window]
                     frame_images = [item[1] for item in window]
-                    pending_tensors.append(_preprocess_wasb_window(frame_images, trans_input, cv2=cv2, np=np, torch=torch))
+                    pending_tensors.append(
+                        _preprocess_wasb_window(
+                            frame_images,
+                            trans_input,
+                            cv2=cv2,
+                            np=np,
+                            torch=torch,
+                            input_preprocessing=input_preprocessing,
+                        )
+                    )
                     pending_indices.append(frame_indices)
                     if len(pending_tensors) >= batch_size:
                         processed_windows += _process_wasb_batch(
@@ -255,7 +296,7 @@ def run_official_wasb_predict(
                             postprocessor=postprocessor,
                             tensors=pending_tensors,
                             frame_indices=pending_indices,
-                            affine_inv=trans_output_inv,
+                            affine_inv=postprocess_affine_inv,
                             det_results=det_results,
                             confidence_results=confidence_results,
                             torch=torch,
@@ -271,7 +312,7 @@ def run_official_wasb_predict(
                     postprocessor=postprocessor,
                     tensors=pending_tensors,
                     frame_indices=pending_indices,
-                    affine_inv=trans_output_inv,
+                    affine_inv=postprocess_affine_inv,
                     det_results=det_results,
                     confidence_results=confidence_results,
                     torch=torch,
@@ -311,9 +352,11 @@ def run_official_wasb_predict(
                     "video": str(video_path),
                     "wasb_repo": str(repo),
                     "wasb_checkpoint": str(checkpoint_path),
+                    "input_preprocessing": input_preprocessing,
                     "postprocessor": "TracknetV2Postprocessor",
                     "blob_det_method": "concomp",
                 },
+                input_preprocessing=input_preprocessing,
             )
 
     out_path = Path(out_csv)
@@ -334,6 +377,8 @@ def run_official_wasb_predict(
         "max_frames": max_frames,
         "batch_size": int(batch_size),
         "device": device,
+        "input_preprocessing": input_preprocessing,
+        "non_promotable_measurement_mode": input_preprocessing in NON_PROMOTABLE_INPUT_PREPROCESSING_MODES,
         "wall_seconds": wall_seconds,
     }
     if emit_candidates and candidate_sidecar_path is not None:
@@ -360,11 +405,13 @@ def run_wasb_or_convert(
     device: str = "cuda",
     emit_candidates: bool = False,
     candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
+    input_preprocessing: str = DEFAULT_WASB_INPUT_PREPROCESSING,
 ) -> dict[str, Any]:
     """CLI-oriented entrypoint that converts CSV or runs official WASB-SBDT."""
 
     candidate_top_k = _require_positive_int(candidate_top_k, "candidate_top_k")
     visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
+    input_preprocessing = _normalize_input_preprocessing(input_preprocessing)
     if predictions_csv is not None:
         if emit_candidates:
             raise ValueError("WASB emit_candidates requires official inference; predictions CSV has only tracked argmax rows")
@@ -376,6 +423,7 @@ def run_wasb_or_convert(
             metadata_out=metadata_out,
             source_mode="wasb_csv",
             visible_threshold=visible_threshold,
+            input_preprocessing=input_preprocessing,
         )
 
     if video is None or checkpoint is None or wasb_repo is None:
@@ -396,6 +444,7 @@ def run_wasb_or_convert(
         candidates_out=_ball_candidates_sidecar_path(out) if emit_candidates else None,
         candidate_fps=fps,
         primary_output=out,
+        input_preprocessing=input_preprocessing,
     )
     return write_ball_track_from_wasb_predictions(
         predictions_csv=prediction_csv_path,
@@ -406,6 +455,7 @@ def run_wasb_or_convert(
         source_mode="wasb_predict",
         runtime=runtime,
         visible_threshold=visible_threshold,
+        input_preprocessing=input_preprocessing,
     )
 
 
@@ -440,7 +490,24 @@ def _read_wasb_rows(csv_path: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def _preprocess_wasb_window(frames_rgb: Sequence[Any], trans_input: Any, *, cv2: Any, np: Any, torch: Any) -> Any:
+def _preprocess_wasb_window(
+    frames_rgb: Sequence[Any],
+    trans_input: Any,
+    *,
+    cv2: Any,
+    np: Any,
+    torch: Any,
+    input_preprocessing: str = DEFAULT_WASB_INPUT_PREPROCESSING,
+) -> Any:
+    mode = _normalize_input_preprocessing(input_preprocessing)
+    if mode == "official":
+        return _preprocess_wasb_window_official(frames_rgb, trans_input, cv2=cv2, np=np, torch=torch)
+    if mode == "harness_v0":
+        return _preprocess_wasb_window_harness_v0(frames_rgb, np=np, torch=torch)
+    raise AssertionError(f"unhandled WASB input preprocessing mode: {mode}")
+
+
+def _preprocess_wasb_window_official(frames_rgb: Sequence[Any], trans_input: Any, *, cv2: Any, np: Any, torch: Any) -> Any:
     tensors = []
     mean = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
     std = np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
@@ -450,6 +517,39 @@ def _preprocess_wasb_window(frames_rgb: Sequence[Any], trans_input: Any, *, cv2:
         array = (array - mean) / std
         tensors.append(torch.from_numpy(array.transpose(2, 0, 1)).float())
     return torch.cat(tensors, dim=0)
+
+
+def _preprocess_wasb_window_harness_v0(frames_rgb: Sequence[Any], *, np: Any, torch: Any) -> Any:
+    from PIL import Image
+
+    tensors = []
+    for frame_rgb in frames_rgb:
+        rgb = Image.fromarray(frame_rgb).convert("RGB").resize(WASB_INPUT_WH, Image.Resampling.BILINEAR)
+        array = np.asarray(rgb, dtype=np.float32) / 255.0
+        tensors.append(torch.from_numpy(array).permute(2, 0, 1).contiguous())
+    return torch.cat(tensors, dim=0)
+
+
+def _preprocessing_output_affine_inv(
+    *,
+    input_preprocessing: str,
+    width: int,
+    height: int,
+    official_affine_inv: Any,
+    np: Any,
+) -> Any:
+    mode = _normalize_input_preprocessing(input_preprocessing)
+    if mode == "official":
+        return official_affine_inv
+    if mode == "harness_v0":
+        return np.asarray(
+            [
+                [float(width) / float(WASB_INPUT_WH[0]), 0.0, 0.0],
+                [0.0, float(height) / float(WASB_INPUT_WH[1]), 0.0],
+            ],
+            dtype=np.float32,
+        )
+    raise AssertionError(f"unhandled WASB input preprocessing mode: {mode}")
 
 
 def _process_wasb_batch(
@@ -521,13 +621,18 @@ def _write_ball_candidates_sidecar(
     candidate_frames: dict[int, Sequence[dict[str, Any]]],
     default_source_detector: str,
     provenance: dict[str, Any],
+    input_preprocessing: str = DEFAULT_WASB_INPUT_PREPROCESSING,
 ) -> None:
+    input_preprocessing = _normalize_input_preprocessing(input_preprocessing)
+    provenance = dict(provenance)
+    provenance.setdefault("input_preprocessing", input_preprocessing)
     payload = {
         "schema_version": 1,
         "artifact_type": "racketsport_ball_candidates",
         "fps": float(fps),
         "source": source,
         "source_mode": source_mode,
+        "input_preprocessing": input_preprocessing,
         "primary_output": str(primary_output),
         "max_candidates_per_frame": int(max_candidates_per_frame),
         "nms_radius_px": nms_radius_px,
@@ -697,6 +802,37 @@ def _checkpoint_state_dict(checkpoint_payload: Any) -> dict[str, Any]:
     raise ValueError("WASB checkpoint missing model_state_dict")
 
 
+def _load_wasb_checkpoint_payload(checkpoint_path: str | Path, *, torch: Any) -> Any:
+    path = Path(checkpoint_path)
+    try:
+        return torch.load(path, map_location="cpu", weights_only=True)
+    except TypeError:
+        return torch.load(path, map_location="cpu")
+    except Exception as exc:
+        if not _is_pathlib_weights_only_error(exc):
+            raise
+        safe_globals = getattr(getattr(torch, "serialization", None), "safe_globals", None)
+        if safe_globals is None:
+            return torch.load(path, map_location="cpu", weights_only=False)
+        with safe_globals(_torch_checkpoint_safe_globals()):
+            return torch.load(path, map_location="cpu", weights_only=True)
+
+
+def _is_pathlib_weights_only_error(exc: Exception) -> bool:
+    message = str(exc)
+    return "Weights only load failed" in message and "pathlib" in message
+
+
+def _torch_checkpoint_safe_globals() -> list[type[Any]]:
+    return [
+        pathlib.PosixPath,
+        pathlib.PurePath,
+        pathlib.PurePosixPath,
+        pathlib.PureWindowsPath,
+        pathlib.WindowsPath,
+    ]
+
+
 def _strip_module_prefix(state_dict: dict[str, Any]) -> dict[str, Any]:
     if not any(key.startswith("module.") for key in state_dict):
         return state_dict
@@ -752,6 +888,14 @@ def _parse_confidence(value: object, name: str) -> float:
     if not 0.0 <= number <= 1.0:
         raise ValueError(f"{name} must be between 0.0 and 1.0")
     return number
+
+
+def _normalize_input_preprocessing(value: object) -> str:
+    mode = str(value or DEFAULT_WASB_INPUT_PREPROCESSING)
+    if mode not in WASB_INPUT_PREPROCESSING_MODES:
+        choices = ", ".join(WASB_INPUT_PREPROCESSING_MODES)
+        raise ValueError(f"input_preprocessing must be one of: {choices}")
+    return mode
 
 
 def _saturate_candidate_score(value: object, name: str) -> float:

@@ -51,7 +51,8 @@ final class WorldCameraPresetsTests: XCTestCase {
 
     func testPresetDisplayNamesAreHumanReadable() {
         XCTAssertEqual(WorldCameraPreset.broadcast.displayName, "Broadcast")
-        XCTAssertEqual(WorldCameraPreset.behindBaseline.displayName, "Behind Baseline")
-        XCTAssertEqual(WorldCameraPreset.topDown.displayName, "Top Down")
+        XCTAssertEqual(WorldCameraPreset.behindBaseline.displayName, "Behind")
+        XCTAssertEqual(WorldCameraPreset.topDown.displayName, "Top")
+        XCTAssertEqual(WorldCameraPreset.ballFollow.displayName, "Ball-follow")
     }
 }

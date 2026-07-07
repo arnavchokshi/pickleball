@@ -45,6 +45,7 @@ PICKLEBALL_COURT_KEYPOINT_NAMES: tuple[str, ...] = (
     "far_nvz_right",
 )
 BallVisibilityLevel = Literal["clear", "partial", "full", "out_of_frame"]
+BallInputPreprocessingMode = Literal["official", "harness_v0"]
 BALL_VISIBILITY_LEVELS: tuple[BallVisibilityLevel, ...] = ("clear", "partial", "full", "out_of_frame")
 BALL_VISIBILITY_WBCE_WEIGHTS: dict[BallVisibilityLevel, int] = {
     "clear": 1,
@@ -1230,6 +1231,7 @@ class BallTrack(StrictArtifact):
         "physics_filled",
         "sam31",
     ]
+    input_preprocessing: BallInputPreprocessingMode | None = None
     frames: list[BallFrame]
     bounces: list[Bounce] = Field(default_factory=list)
 
@@ -1348,6 +1350,7 @@ class BallCandidates(StrictArtifact):
     fps: float = Field(gt=0.0)
     source: Literal["tracknet", "wasb", "pbmat", "totnet", "blurball"]
     source_mode: str
+    input_preprocessing: BallInputPreprocessingMode | None = None
     primary_output: str
     max_candidates_per_frame: int = Field(ge=1)
     nms_radius_px: FiniteFloat | None = Field(default=None, ge=0.0)

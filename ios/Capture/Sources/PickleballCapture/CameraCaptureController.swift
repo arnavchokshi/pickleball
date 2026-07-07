@@ -41,11 +41,15 @@ public final class CameraCaptureController: NSObject {
 
     private let movieOutput = AVCaptureMovieFileOutput()
     private let motionSampler = CaptureMotionSampler()
-    private let arFrameRecorder: ARFrameSidecarRecorder
+    private let arSessionProvider: ARSessionProviding
+    private let cameraOwnership = CameraResourceOwnership()
+    private let frameMotionRecorder = CoreMotionFrameSidecarRecorder()
     private var activeDevice: AVCaptureDevice?
     private var activePolicy: CapturePolicy?
     private var activePolicyEnforcement: CapturePolicyEnforcementReport?
     private var activeProfileCapture: ProfileCapturePayload?
+    private var activeAVCaptureToken: AVCaptureCameraOwnershipToken?
+    private var latestSetupPass: ARKitSetupPassSidecar?
     private var activePackageRootURL: URL?
     private var activeCaptureDeviceOrientation: CaptureDeviceOrientation?
     private var activeClipURL: URL?
@@ -54,10 +58,13 @@ public final class CameraCaptureController: NSObject {
     private var sessionIDFactory = CaptureSessionIDFactory()
 
     public init(arSessionProvider: ARSessionProviding = DefaultARSessionProviderFactory.make()) {
-        self.arFrameRecorder = ARFrameSidecarRecorder(provider: arSessionProvider)
+        self.arSessionProvider = arSessionProvider
         super.init()
-        liveOverlayEngine.onFramePresentationTimestamp = { [arFrameRecorder] _, presentationSeconds in
-            arFrameRecorder.recordVideoFrame(ptsS: presentationSeconds)
+        liveOverlayEngine.onFramePresentationTimestamp = { [frameMotionRecorder, motionSampler] _, presentationSeconds in
+            frameMotionRecorder.recordVideoFrame(
+                ptsS: presentationSeconds,
+                gravity: motionSampler.latestGravity
+            )
         }
     }
 
@@ -164,9 +171,13 @@ public final class CameraCaptureController: NSObject {
         guard !session.isRunning else {
             return
         }
+        guard activeAVCaptureToken == nil,
+              let token = try? cameraOwnership.beginAVCapture() else {
+            return
+        }
         motionSampler.start()
-        arFrameRecorder.startSession()
         session.startRunning()
+        activeAVCaptureToken = token
     }
 
     public func stopPreview() {
@@ -174,12 +185,32 @@ public final class CameraCaptureController: NSObject {
             return
         }
         session.stopRunning()
-        arFrameRecorder.stopSession()
+        activeAVCaptureToken?.release()
+        activeAVCaptureToken = nil
         motionSampler.stop()
     }
 
     public var latestGravity: [Double] {
         motionSampler.latestGravity
+    }
+
+    public func performARKitSetupPass(timeoutSeconds: Double = 4.0) async -> ARKitSetupPassSidecar {
+        if session.isRunning {
+            session.stopRunning()
+            activeAVCaptureToken?.release()
+            activeAVCaptureToken = nil
+        }
+        motionSampler.start()
+        let runner = ARKitSetupPassRunner(
+            provider: arSessionProvider,
+            ownership: cameraOwnership,
+            gravityProvider: { [motionSampler] in
+                motionSampler.latestGravity
+            }
+        )
+        let setupPass = await runner.run(timeoutSeconds: timeoutSeconds)
+        latestSetupPass = setupPass
+        return setupPass
     }
 
     /// Real, live-readback signals for the pre-record capture-quality
@@ -211,11 +242,7 @@ public final class CameraCaptureController: NSObject {
             configuredFPS: minFrameDurationSeconds > 0 ? 1.0 / minFrameDurationSeconds : nil,
             expectedResolution: policy.resolution.dimensions(for: policy.orientation),
             configuredResolution: [Int(dimensions.width), Int(dimensions.height)],
-            setupTipReasons: [
-                "arkit_seed_missing",
-                "court_plane_missing",
-                "intrinsics_estimated_from_fov",
-            ]
+            setupTipReasons: setupTipReasons()
         )
     }
 
@@ -246,7 +273,7 @@ public final class CameraCaptureController: NSObject {
 
         recordingStartedAt = Date()
         lastRecordingResult = nil
-        arFrameRecorder.beginRecording()
+        frameMotionRecorder.beginRecording()
         movieOutput.startRecording(to: clipURL, recordingDelegate: self)
     }
 
@@ -427,7 +454,13 @@ public final class CameraCaptureController: NSObject {
             locked: lockedCaptureSnapshot(),
             intrinsics: estimatedIntrinsics(for: descriptor.expectedResolution),
             gravity: latestGravity,
-            arkit: arFrameRecorder.sidecarPayload(),
+            arkit: ARCaptureSidecarPayload(
+                setupPass: latestSetupPass ?? .unavailable(
+                    reason: "arkit_setup_pass_not_run",
+                    gravity: latestGravity
+                ),
+                frameSamples: frameMotionRecorder.frameSamples()
+            ),
             policyEnforcement: activePolicyEnforcement,
             profileCapture: activeProfileCapture,
             captureQuality: CaptureQuality(
@@ -446,6 +479,25 @@ public final class CameraCaptureController: NSObject {
             finishedAt: finishedAt,
             context: context
         )
+    }
+
+    private func setupTipReasons() -> [String] {
+        guard let latestSetupPass else {
+            return [
+                "arkit_seed_missing",
+                "court_plane_missing",
+                "intrinsics_estimated_from_fov",
+            ]
+        }
+        guard latestSetupPass.status == .available else {
+            return [
+                "arkit_seed_missing",
+                "court_plane_missing",
+                "intrinsics_estimated_from_fov",
+                latestSetupPass.unavailableReason ?? "arkit_setup_pass_unavailable",
+            ]
+        }
+        return latestSetupPass.courtPlane == nil ? ["court_plane_missing"] : []
     }
 
     private func policyEnforcementReport(
@@ -550,20 +602,20 @@ extension CameraCaptureController: AVCaptureFileOutputRecordingDelegate {
         error: Error?
     ) {
         if let error {
-            arFrameRecorder.endRecording()
+            frameMotionRecorder.endRecording()
             onRecordingFinished?(.failure(error))
             return
         }
 
         guard let descriptor = activeDescriptor else {
-            arFrameRecorder.endRecording()
+            frameMotionRecorder.endRecording()
             onRecordingFinished?(.failure(CameraCaptureControllerError.noConfiguredPackage))
             return
         }
 
         do {
             defer {
-                arFrameRecorder.endRecording()
+                frameMotionRecorder.endRecording()
             }
             try writeSidecar(for: descriptor, outputFileURL: outputFileURL, finishedAt: Date())
         } catch {

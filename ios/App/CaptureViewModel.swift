@@ -27,6 +27,7 @@ final class CaptureViewModel: ObservableObject {
     @Published private(set) var status: Status = .idle
     @Published private(set) var capturePolicyEnforcement: CapturePolicyEnforcementReport?
     @Published private(set) var recordFlowPhase: DinkVisionRecordFlowPhase = .idle
+    @Published private(set) var setupPassStatus: DinkVisionSetupPassStatus = .idle
     @Published private(set) var recordingStartedAt: Date?
     @Published private(set) var profileFlow = ProfileCaptureFlowState.h0Checklist()
     @Published var profilePlayerHeightCM: Double = 180
@@ -52,6 +53,8 @@ final class CaptureViewModel: ObservableObject {
     private var recentPlayerCountSamples: [Int] = []
     private var lastFootRingDetectionFrameIndex: Int?
     private var ballOverlayTracker = LiveBallOverlayTracker()
+    private var lastSetupPassCompletedAt: Date?
+    private var lastSetupPassGravity: [Double]?
 
     static let modes: [CaptureMode] = [.standard60, .swing120, .ballPhysics240, .quality4K60]
 
@@ -159,6 +162,23 @@ final class CaptureViewModel: ObservableObject {
         return "Policy issue: \(capturePolicyEnforcement.violations.first ?? "unknown")"
     }
 
+    var setupPassStatusText: String {
+        switch setupPassStatus {
+        case .idle:
+            return "Aligning"
+        case .aligning:
+            return "Aligning…"
+        case .aligned:
+            return "Aligned ✓"
+        case .unavailable:
+            return "Align skipped"
+        }
+    }
+
+    var setupPassChipStatus: DinkVisionPolicyChipStatus {
+        setupPassStatus == .aligned ? .pass : .warning
+    }
+
     var policyChips: [DinkVisionPolicyChip] {
         DinkVisionPolicyChipMapper.chips(for: capturePolicyEnforcement)
     }
@@ -210,6 +230,7 @@ final class CaptureViewModel: ObservableObject {
                     }
                 }
             )
+            await refreshSetupPassIfNeeded(force: true)
             await controller.startPreview()
             capturePolicyEnforcement = await controller.currentPolicyEnforcementReport()
             status = .ready
@@ -342,6 +363,43 @@ final class CaptureViewModel: ObservableObject {
         }
 
         await configure()
+    }
+
+    func refreshSetupPassIfNeeded(force: Bool = false) async {
+        guard !isRecording else {
+            return
+        }
+        let currentGravity = await controller.latestGravity()
+        let shouldRefresh = force || ARKitSetupPassRefreshPolicy.shouldRefresh(
+            now: Date(),
+            lastCompletedAt: lastSetupPassCompletedAt,
+            lastGravity: lastSetupPassGravity,
+            currentGravity: currentGravity
+        )
+        guard shouldRefresh else {
+            return
+        }
+
+        let shouldRestartPreviewAfterSetup: Bool
+        switch status {
+        case .ready, .finished:
+            shouldRestartPreviewAfterSetup = true
+        case .idle, .requestingAccess, .recording, .blocked:
+            shouldRestartPreviewAfterSetup = false
+        }
+        setupPassStatus = .aligning
+        let setupPass = await controller.performARKitSetupPass(timeoutSeconds: 4.0)
+        lastSetupPassCompletedAt = Date()
+        lastSetupPassGravity = setupPass.gravity ?? currentGravity
+        switch setupPass.status {
+        case .available:
+            setupPassStatus = .aligned
+        case .unavailable:
+            setupPassStatus = .unavailable(setupPass.unavailableReason ?? "arkit_setup_pass_unavailable")
+        }
+        if shouldRestartPreviewAfterSetup {
+            await controller.startPreview()
+        }
     }
 
     func toggleRecording() async {

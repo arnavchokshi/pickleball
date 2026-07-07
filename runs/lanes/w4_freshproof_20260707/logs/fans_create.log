@@ -1,0 +1,8 @@
+WARNING: This command is using service account impersonation. All API calls will be executed as [pickleball-fleet@gifted-electron-498923-h1.iam.gserviceaccount.com].
+Created [https://www.googleapis.com/compute/v1/projects/gifted-electron-498923-h1/zones/asia-southeast1-a/instances/pickleball-a100-w4fan3].
+Created [https://www.googleapis.com/compute/v1/projects/gifted-electron-498923-h1/zones/asia-southeast1-a/instances/pickleball-a100-w4fan2].
+Created [https://www.googleapis.com/compute/v1/projects/gifted-electron-498923-h1/zones/asia-southeast1-a/instances/pickleball-a100-w4fan1].
+NAME                    ZONE               MACHINE_TYPE   PREEMPTIBLE  INTERNAL_IP  EXTERNAL_IP   STATUS
+pickleball-a100-w4fan3  asia-southeast1-a  a2-highgpu-1g  true         10.148.0.12  34.21.239.35  RUNNING
+pickleball-a100-w4fan2  asia-southeast1-a  a2-highgpu-1g  true         10.148.0.13  34.87.20.4    RUNNING
+pickleball-a100-w4fan1  asia-southeast1-a  a2-highgpu-1g  true         10.148.0.14  34.126.94.44  RUNNING

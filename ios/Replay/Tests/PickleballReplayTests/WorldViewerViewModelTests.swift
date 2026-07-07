@@ -49,6 +49,54 @@ final class WorldViewerViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.cameraPreset, .topDown)
     }
 
+    func testCameraPresetModelIncludesOwnerRequestedSimpleChoices() {
+        XCTAssertEqual(
+            WorldCameraPreset.allCases.map(\.displayName),
+            ["Broadcast", "Behind", "Top", "Ball-follow"]
+        )
+    }
+
+    func testSpeedChipCyclesThroughHalfNormalAndDoubleSpeed() throws {
+        let viewModel = try makeViewModel()
+
+        XCTAssertEqual(viewModel.playbackSpeed, .normal)
+        XCTAssertEqual(viewModel.timeline.playbackRate, 1.0, accuracy: 1e-9)
+        viewModel.cyclePlaybackSpeed()
+        XCTAssertEqual(viewModel.playbackSpeed, .double)
+        XCTAssertEqual(viewModel.timeline.playbackRate, 2.0, accuracy: 1e-9)
+        viewModel.cyclePlaybackSpeed()
+        XCTAssertEqual(viewModel.playbackSpeed, .half)
+        XCTAssertEqual(viewModel.timeline.playbackRate, 0.5, accuracy: 1e-9)
+        viewModel.cyclePlaybackSpeed()
+        XCTAssertEqual(viewModel.playbackSpeed, .normal)
+    }
+
+    func testFollowSelectionOnlyAcceptsVisiblePlayersAndCanClear() throws {
+        let viewModel = try makeViewModel()
+        let playerID = try XCTUnwrap(viewModel.snapshot.players.first?.id)
+
+        XCTAssertNil(viewModel.followedPlayerID)
+        XCTAssertTrue(viewModel.selectFollowedPlayer(id: playerID))
+        XCTAssertEqual(viewModel.followedPlayerID, playerID)
+        XCTAssertFalse(viewModel.selectFollowedPlayer(id: -999))
+        XCTAssertEqual(viewModel.followedPlayerID, playerID)
+        viewModel.clearFollowedPlayer()
+        XCTAssertNil(viewModel.followedPlayerID)
+    }
+
+    func testCoachMarkUsesOnceFlagStore() throws {
+        let store = InMemoryWorldViewerCoachMarkStore()
+        let first = WorldViewerViewModel(bundle: try WorldBundle.loadBundledSample(), coachMarkStore: store)
+
+        XCTAssertTrue(first.isCoachMarkVisible)
+        first.dismissCoachMark()
+        XCTAssertFalse(first.isCoachMarkVisible)
+        XCTAssertTrue(store.didShowViewerCoachMark)
+
+        let second = WorldViewerViewModel(bundle: try WorldBundle.loadBundledSample(), coachMarkStore: store)
+        XCTAssertFalse(second.isCoachMarkVisible)
+    }
+
     func testDimLowConfidenceToggleDoesNotChangeCurrentTimeOrTier() throws {
         let viewModel = try makeViewModel()
         viewModel.seek(to: 0.2)
@@ -67,4 +115,8 @@ final class WorldViewerViewModelTests: XCTestCase {
         viewModel.togglePlayback()
         XCTAssertFalse(viewModel.isPlaying)
     }
+}
+
+private final class InMemoryWorldViewerCoachMarkStore: WorldViewerCoachMarkStoring {
+    var didShowViewerCoachMark = false
 }

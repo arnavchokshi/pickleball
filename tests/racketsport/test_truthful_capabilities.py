@@ -27,18 +27,12 @@ ALLOWED_MARKDOWN_DOCS = set(CANONICAL_DOCS) | {
     "CLAUDE.md",
     "EDGE_PLAYBOOK.md",
     "FABLE_OPERATING_MANUAL.md",
-    "JOINT_DETECTION_AND_PLACEMENT_HANDOFF.md",
-    "JOINT_PLACEMENT_HANDOFF_20260704.md",
     "NORTH_STAR_ROADMAP.md",
     "OVERLAPPING_COURT_CALIBRATION_GOAL.md",
-    "OWNER_CHECKIN_20260703.md",
-    "OWNER_CHECKIN_20260705.md",
-    "OWNER_CHECKIN_20260706.md",
     "OWNER_CHECKIN_20260707.md",
-    "PIPELINE_STATUS.md",
     "RACKET_6DOF_GOAL.md",
-    "RESET_HANDOFF_20260705.md",
     "TECH_BLUEPRINTS.md",
+    "docs/specs/2026-07-07-product-infra-design.md",
     "corrections/README.md",
     "cvat_upload/CVAT_LABELING_INSTRUCTIONS.md",
     "cvat_upload/court_keypoints_20260707/OWNER_COURT_KP_GUIDE.md",
@@ -60,6 +54,13 @@ GENERATED_MARKDOWN_ARTIFACTS = {
 }
 
 REMOVED_NARRATIVE_DOCS = [
+    "JOINT_DETECTION_AND_PLACEMENT_HANDOFF.md",
+    "JOINT_PLACEMENT_HANDOFF_20260704.md",
+    "RESET_HANDOFF_20260705.md",
+    "PIPELINE_STATUS.md",
+    "OWNER_CHECKIN_20260703.md",
+    "OWNER_CHECKIN_20260705.md",
+    "OWNER_CHECKIN_20260706.md",
     "ACCURACY_AND_TRAINING.md",
     "IMPLEMENTATION_PHASES.md",
     "SWAY_BODY_PICKLEBALL_MVP.md",
@@ -377,6 +378,7 @@ def test_capabilities_matrix_is_compact_and_no_row_is_verified() -> None:
         "metrics",
         "shot/drill",
         "replay",
+        "ios live tier",
         "e2e",
     } == set(rows)
     assert rows["e2e"]["honest status"] == "SCAFFOLD/SCOPED PASS, not VERIFIED"

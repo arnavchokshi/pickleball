@@ -2,7 +2,7 @@
 @preconcurrency import CoreMotion
 import Foundation
 
-public final class CaptureMotionSampler {
+public final class CaptureMotionSampler: @unchecked Sendable {
     private let manager = CMMotionManager()
 
     public init() {}

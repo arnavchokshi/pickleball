@@ -1,0 +1,24 @@
+=== 34.126.94.44 ===
+ * branch            main       -> FETCH_HEAD
+HEAD is now at 1588b11 process_video: camera_motion_auto persists decode-orientation telemetry first-class (wave-4 integration lane)
+REMOTE-HEAD: 1588b110f74fc057535b81b464378b62c808673d
+=== 34.87.20.4 ===
+   5b9f132..1588b11  main       -> origin/main
+HEAD is now at 1588b11 process_video: camera_motion_auto persists decode-orientation telemetry first-class (wave-4 integration lane)
+REMOTE-HEAD: 1588b110f74fc057535b81b464378b62c808673d
+=== 34.21.239.35 ===
+   5b9f132..1588b11  main       -> origin/main
+HEAD is now at 1588b11 process_video: camera_motion_auto persists decode-orientation telemetry first-class (wave-4 integration lane)
+REMOTE-HEAD: 1588b110f74fc057535b81b464378b62c808673d
+=== 34.126.94.44 ===
+   1588b11..9405764  main       -> origin/main
+HEAD is now at 9405764 docs: wave-4 evidence-complete reconciliation across the 5 canonical docs (W4-F)
+REMOTE-HEAD: 9405764959976d1ea893456849e6d010666e6c50
+=== 34.87.20.4 ===
+   1588b11..9405764  main       -> origin/main
+HEAD is now at 9405764 docs: wave-4 evidence-complete reconciliation across the 5 canonical docs (W4-F)
+REMOTE-HEAD: 9405764959976d1ea893456849e6d010666e6c50
+=== 34.21.239.35 ===
+   1588b11..9405764  main       -> origin/main
+HEAD is now at 9405764 docs: wave-4 evidence-complete reconciliation across the 5 canonical docs (W4-F)
+REMOTE-HEAD: 9405764959976d1ea893456849e6d010666e6c50

@@ -7,12 +7,14 @@ public enum WorldCameraPreset: String, CaseIterable, Equatable, Sendable {
     case broadcast
     case behindBaseline
     case topDown
+    case ballFollow
 
     public var displayName: String {
         switch self {
         case .broadcast: return "Broadcast"
-        case .behindBaseline: return "Behind Baseline"
-        case .topDown: return "Top Down"
+        case .behindBaseline: return "Behind"
+        case .topDown: return "Top"
+        case .ballFollow: return "Ball-follow"
         }
     }
 }
@@ -78,6 +80,11 @@ public enum WorldCameraPlanner {
             return WorldCameraPose(
                 position: WorldVec3(bounds.centerX, bounds.centerY, max(10, bounds.length * 1.1)),
                 target: WorldVec3(bounds.centerX, bounds.centerY, 0)
+            )
+        case .ballFollow:
+            return WorldCameraPose(
+                position: WorldVec3(bounds.centerX, bounds.minY - bounds.length * 0.24, 1.9),
+                target: groundTarget
             )
         case .behindBaseline:
             return WorldCameraPose(

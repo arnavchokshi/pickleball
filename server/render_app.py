@@ -9,7 +9,7 @@ import uuid
 from dataclasses import replace
 from pathlib import Path
 from threading import Lock
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from fastapi import BackgroundTasks, Body, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -118,15 +118,81 @@ def create_app(
     run_jobs_inline: bool = False,
     static_dir: Path = DEFAULT_STATIC_DIR,
     court_predictor: CourtPredictor | None = None,
+    mongo_db: Any | None = None,
+    s3_client: Any | None = None,
+    accounts_enabled: bool | None = None,
+    env: Mapping[str, str] | None = None,
 ) -> FastAPI:
+    """Build the gateway app.
+
+    Accounts-era collaborators (INFRA-1) follow the same DI convention as
+    `runner`: pass `mongo_db` / `s3_client` / `accounts_enabled` explicitly in
+    tests, or leave them None to read the environment. `env` is the config
+    mapping for the accounts wiring (None -> `os.environ`), mirroring
+    `runner_from_env(env)` so tests use a literal dict instead of touching
+    real environment variables. With the flag OFF nothing below reads it and
+    the app is byte-identical to the legacy single-user gateway.
+    """
+    resolved_env: Mapping[str, str] = os.environ if env is None else env
+    accounts_on = (
+        accounts_enabled
+        if accounts_enabled is not None
+        else resolved_env.get("PICKLEBALL_ACCOUNTS_ENABLED", "0").strip() == "1"
+    )
+
     app = FastAPI(title="Pickleball Render Gateway")
     store = JobStore(upload_root)
     gpu_runner = runner if runner is not None else runner_from_env()
     court_predictor_fn = court_predictor if court_predictor is not None else predict_court_layout_from_video
 
+    accounts_db: Any | None = None
+    accounts_s3: Any | None = None
+    accounts_bucket = ""
+    if accounts_on:
+        # Imported lazily so the flag-OFF path never touches the accounts
+        # stack (pymongo/boto3/slowapi) and stays byte-identical.
+        from slowapi import Limiter, _rate_limit_exceeded_handler
+        from slowapi.errors import RateLimitExceeded
+        from slowapi.util import get_remote_address
+
+        from .db import ensure_indexes, get_db, mongo_client_from_env, mongo_health
+        from .routes import (
+            build_account_router,
+            build_auth_router,
+            build_clips_router,
+            build_jobs_v2_router,
+            build_stripe_webhook_router,
+        )
+        from .s3 import s3_client_from_env, s3_health
+        from .security import auth_config_from_env
+
+        auth_config = auth_config_from_env(resolved_env)
+        if not auth_config.jwt_secret:
+            raise ValueError("accounts are enabled but PICKLEBALL_JWT_SECRET is not set")
+        accounts_db = mongo_db
+        if accounts_db is None:
+            mongo_client = mongo_client_from_env(resolved_env)
+            if mongo_client is None:
+                raise ValueError("accounts are enabled but PICKLEBALL_MONGODB_URI is not set")
+            accounts_db = get_db(mongo_client, resolved_env)
+        accounts_s3 = s3_client if s3_client is not None else s3_client_from_env(resolved_env)
+        accounts_bucket = resolved_env.get("PICKLEBALL_S3_BUCKET", "").strip()
+        if not accounts_bucket:
+            raise ValueError("accounts are enabled but PICKLEBALL_S3_BUCKET is not set")
+        ensure_indexes(accounts_db)
+
+        limiter = Limiter(key_func=get_remote_address)
+        app.state.limiter = limiter
+        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
     @app.get("/api/health")
     def health() -> dict[str, Any]:
-        return {"ok": True, "runner": gpu_runner.describe()}
+        payload: dict[str, Any] = {"ok": True, "runner": gpu_runner.describe()}
+        if accounts_on:
+            payload["accounts_enabled"] = True
+            payload["mongo"] = mongo_health(accounts_db)
+            payload["s3"] = s3_health(accounts_s3, accounts_bucket)
+        return payload
 
     @app.post("/api/court/predict")
     async def predict_court_endpoint(
@@ -171,59 +237,96 @@ def create_app(
             raise HTTPException(status_code=400, detail=str(exc)) from None
         return {"review": review, "court_calibration": court_calibration, "saved": saved}
 
-    @app.post("/api/jobs", status_code=202)
-    async def create_job(
-        background_tasks: BackgroundTasks,
-        video: UploadFile = File(...),
-        clip: str | None = Form(default=None),
-        max_frames: int | None = Form(default=None),
-        capture_sidecar: UploadFile | None = File(default=None),
-        court_corners: UploadFile | None = File(default=None),
-        court_calibration: UploadFile | None = File(default=None),
-        court_review: UploadFile | None = File(default=None),
-    ) -> dict[str, Any]:
-        try:
-            clip_id = _clip_id_from_upload(clip, video.filename)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from None
-        job = store.create(clip=clip_id, video_name=video.filename or "video")
-        job_dir = upload_root / job["id"]
-        input_dir = job_dir / "input"
-        artifacts_dir = job_dir / "artifacts"
-        input_dir.mkdir(parents=True, exist_ok=True)
-        artifacts_dir.mkdir(parents=True, exist_ok=True)
-
-        video_path = input_dir / _safe_upload_filename(video.filename, fallback=f"{clip_id}.mp4")
-        await _save_upload(video, video_path)
-        capture_sidecar_path = await _save_optional_upload(capture_sidecar, input_dir, "capture_sidecar.json")
-        court_corners_path = await _save_optional_upload(court_corners, input_dir, "court_corners.json")
-        court_calibration_path = await _save_optional_upload(court_calibration, input_dir, "court_calibration.json")
-        court_review_path = await _save_optional_upload(court_review, input_dir, "reviewed_court_calibration.json")
-        store.update(
-            job["id"],
-            progress=_progress_payload(
-                GpuRunProgress(percent=8, stage="Inputs saved", message="Upload received by Render."),
-                status="queued",
-            ),
+    if accounts_on:
+        # New account-scoped route set. Registered BEFORE the legacy job GET so
+        # the JWT-gated Mongo-backed GET /api/jobs/{id} wins route matching.
+        # The legacy multipart POST /api/jobs is intentionally NOT registered.
+        app.include_router(
+            build_auth_router(db=accounts_db, auth_config=auth_config, limiter=limiter)
         )
-
-        request = GpuRunRequest(
-            job_id=job["id"],
-            clip=clip_id,
-            input_dir=input_dir,
-            video_path=video_path,
-            artifacts_dir=artifacts_dir,
-            capture_sidecar_path=capture_sidecar_path,
-            court_corners_path=court_corners_path,
-            court_calibration_path=court_calibration_path,
-            court_review_path=court_review_path,
-            max_frames=max_frames,
+        app.include_router(
+            build_clips_router(
+                db=accounts_db,
+                s3_client=accounts_s3,
+                bucket=accounts_bucket,
+                auth_config=auth_config,
+            )
         )
-        if run_jobs_inline:
-            _execute_job(store, gpu_runner, request)
-        else:
-            background_tasks.add_task(_execute_job, store, gpu_runner, request)
-        return job
+        app.include_router(
+            build_jobs_v2_router(
+                db=accounts_db,
+                s3_client=accounts_s3,
+                bucket=accounts_bucket,
+                auth_config=auth_config,
+                runner=gpu_runner,
+                upload_root=upload_root,
+                run_jobs_inline=run_jobs_inline,
+                execute_job=_execute_job,
+                progress_payload=_progress_payload,
+                with_dynamic_eta=_with_dynamic_eta,
+            )
+        )
+        app.include_router(build_account_router(auth_config=auth_config))
+        app.include_router(
+            build_stripe_webhook_router(
+                stripe_enabled=resolved_env.get("PICKLEBALL_STRIPE_ENABLED", "0").strip() == "1"
+            )
+        )
+    else:
+
+        @app.post("/api/jobs", status_code=202)
+        async def create_job(
+            background_tasks: BackgroundTasks,
+            video: UploadFile = File(...),
+            clip: str | None = Form(default=None),
+            max_frames: int | None = Form(default=None),
+            capture_sidecar: UploadFile | None = File(default=None),
+            court_corners: UploadFile | None = File(default=None),
+            court_calibration: UploadFile | None = File(default=None),
+            court_review: UploadFile | None = File(default=None),
+        ) -> dict[str, Any]:
+            try:
+                clip_id = _clip_id_from_upload(clip, video.filename)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from None
+            job = store.create(clip=clip_id, video_name=video.filename or "video")
+            job_dir = upload_root / job["id"]
+            input_dir = job_dir / "input"
+            artifacts_dir = job_dir / "artifacts"
+            input_dir.mkdir(parents=True, exist_ok=True)
+            artifacts_dir.mkdir(parents=True, exist_ok=True)
+
+            video_path = input_dir / _safe_upload_filename(video.filename, fallback=f"{clip_id}.mp4")
+            await _save_upload(video, video_path)
+            capture_sidecar_path = await _save_optional_upload(capture_sidecar, input_dir, "capture_sidecar.json")
+            court_corners_path = await _save_optional_upload(court_corners, input_dir, "court_corners.json")
+            court_calibration_path = await _save_optional_upload(court_calibration, input_dir, "court_calibration.json")
+            court_review_path = await _save_optional_upload(court_review, input_dir, "reviewed_court_calibration.json")
+            store.update(
+                job["id"],
+                progress=_progress_payload(
+                    GpuRunProgress(percent=8, stage="Inputs saved", message="Upload received by Render."),
+                    status="queued",
+                ),
+            )
+
+            request = GpuRunRequest(
+                job_id=job["id"],
+                clip=clip_id,
+                input_dir=input_dir,
+                video_path=video_path,
+                artifacts_dir=artifacts_dir,
+                capture_sidecar_path=capture_sidecar_path,
+                court_corners_path=court_corners_path,
+                court_calibration_path=court_calibration_path,
+                court_review_path=court_review_path,
+                max_frames=max_frames,
+            )
+            if run_jobs_inline:
+                _execute_job(store, gpu_runner, request)
+            else:
+                background_tasks.add_task(_execute_job, store, gpu_runner, request)
+            return job
 
     @app.get("/api/jobs/{job_id}")
     def get_job(job_id: str) -> dict[str, Any]:

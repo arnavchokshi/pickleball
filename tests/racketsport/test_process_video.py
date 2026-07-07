@@ -1682,6 +1682,73 @@ def test_camera_motion_auto_default_skips_static_probe_without_writing_artifact(
         "sampled_frame_count": 6,
     }
     assert outcome.metrics["camera_motion_auto"] == pipeline._camera_motion_auto
+    summary = pipeline._write_summary(wall_seconds=0.25)
+    persisted_auto = json.loads((options.run_dir / "PIPELINE_SUMMARY.json").read_text(encoding="utf-8"))["camera_motion_auto"]
+    assert persisted_auto == summary["camera_motion_auto"] == pipeline._camera_motion_auto
+    for key in (
+        "decode_orientation_mismatch",
+        "decode_orientation_consequential_mismatch",
+        "decode_orientation_untrusted",
+        "decode_orientation_mismatch_reason",
+    ):
+        assert key not in persisted_auto
+
+
+def test_camera_motion_auto_summary_persists_decode_orientation_probe_keys(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "tracks.json", _tracks_payload())
+    expected_base = {
+        "score": 0.5,
+        "threshold": 5.0,
+        "enabled": False,
+        "forced": "auto_decode_orientation_untrusted:rotation_meta_disagrees_with_auto",
+        "probe_wall_seconds": 0.123,
+        "sampled_frame_count": 6,
+    }
+    expected_decode_keys = {
+        "decode_orientation_mismatch": True,
+        "decode_orientation_consequential_mismatch": True,
+        "decode_orientation_untrusted": True,
+        "decode_orientation_mismatch_reason": "rotation_meta_disagrees_with_auto",
+    }
+
+    monkeypatch.setattr(
+        process_video,
+        "estimate_camera_motion_probe",
+        lambda *_args, **_kwargs: {
+            "motion_score": expected_base["score"],
+            "threshold": expected_base["threshold"],
+            "enabled": expected_base["enabled"],
+            "forced": expected_base["forced"],
+            "sampled_frame_count": expected_base["sampled_frame_count"],
+            "wall_seconds": expected_base["probe_wall_seconds"],
+            **expected_decode_keys,
+        },
+        raising=False,
+    )
+    monkeypatch.setattr(
+        process_video,
+        "estimate_camera_motion",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("full estimator should not run when AUTO is off")),
+    )
+
+    outcome = pipeline._stage_camera_motion()
+    summary = pipeline._write_summary(wall_seconds=0.25)
+    persisted_auto = json.loads((options.run_dir / "PIPELINE_SUMMARY.json").read_text(encoding="utf-8"))["camera_motion_auto"]
+
+    assert outcome.status == "skipped"
+    assert {key: pipeline._camera_motion_auto[key] for key in expected_base} == expected_base
+    for key, value in expected_decode_keys.items():
+        assert pipeline._camera_motion_auto[key] == value
+    assert persisted_auto == summary["camera_motion_auto"] == pipeline._camera_motion_auto
 
 
 def test_pipeline_summary_persists_camera_motion_auto_decision(tmp_path: Path) -> None:

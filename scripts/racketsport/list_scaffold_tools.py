@@ -104,8 +104,11 @@ TASK_HINTS = {
     "build_variant_comparison": ("EVAL", "EVAL-0"),
     "calibrate": ("CAL", "CAL-2"),
     "check_eval_regression": ("EVAL", "EVAL-1"),
+    "corpus_dashboard": ("DATA", "P0-4"),
+    "doctor": ("ENV", "ENV-2"),
     "extract_label_frames": ("DATA", "DATA-1"),
     "finetune_pose": ("BODY", "BODY-4"),
+    "generate_flight_corpus": ("BALL", "P0-7"),
     "ingest_testclips": ("DATA", "DATA-1"),
     "init_label_workdir": ("DATA", "DATA-1"),
     "manifest_report": ("RPT", "RPT-1"),
@@ -124,6 +127,7 @@ TASK_HINTS = {
     "validate_pipeline_artifacts": ("EVAL", "EVAL-4"),
     "validate_pose_dataset": ("DATA", "DATA-2"),
     "validate_racket_dataset": ("DATA", "DATA-4"),
+    "validate_reference_ranges": ("COACH", "P6-3"),
     "validate_shot_dataset": ("DATA", "DATA-5"),
     "validate_testclips": ("DATA", "DATA-1"),
 }
@@ -217,7 +221,7 @@ def _tool_entry(path: Path, *, root: Path, tests_root: Path, schemas_root: Path)
 def _category(stem: str) -> str:
     normalized = stem.replace("-", "_")
     if (
-        normalized in {"gpu_train_lock", "gpu_cold_start", "setup_env"}
+        normalized in {"doctor", "gpu_train_lock", "gpu_cold_start", "setup_env"}
         or normalized.startswith("install_")
         or normalized.startswith("smoke_")
     ):
@@ -234,6 +238,8 @@ def _category(stem: str) -> str:
         return "decode"
     if "serving" in normalized:
         return "serving"
+    if normalized == "generate_flight_corpus":
+        return "physics"
     if "replay" in normalized or "scrubber" in normalized or "viewer" in normalized:
         return "replay"
     if "eval" in normalized or "variant_comparison" in normalized or "benchmark" in normalized or "sweep" in normalized or normalized.startswith("measure_"):
@@ -272,7 +278,14 @@ def _category(stem: str) -> str:
         return "shot"
     if "contact" in normalized or "audio" in normalized or "wrist" in normalized or "rally" in normalized:
         return "contact"
-    if "ball" in normalized or "totnet" in normalized or "pbmat" in normalized or "tracknet" in normalized or "inout" in normalized:
+    if (
+        "ball" in normalized
+        or "sst" in normalized
+        or "totnet" in normalized
+        or "pbmat" in normalized
+        or "tracknet" in normalized
+        or "inout" in normalized
+    ):
         return "ball"
     if "racket" in normalized or "paddle" in normalized or normalized.startswith("rkt_"):
         return "racket"
@@ -309,6 +322,7 @@ def _category(stem: str) -> str:
     if (
         "report" in normalized
         or "corrections" in normalized
+        or "reference_ranges" in normalized
         or "readiness" in normalized
         or "promotion_audit" in normalized
         or "review_packet" in normalized

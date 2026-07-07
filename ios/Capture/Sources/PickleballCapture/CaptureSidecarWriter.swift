@@ -76,11 +76,16 @@ public enum CaptureSidecarWriter {
         context: CaptureSidecarWriteContext
     ) -> CaptureSidecar {
         let latestARFrame = context.arkit?.latestFrame
-        let courtPlane = context.arkit?.courtPlane
+        let setupPass = context.arkit?.setupPass
+        let setupPassAvailable = setupPass?.status == .available
+        let setupPassUnavailableReason = setupPass?.unavailableReason ?? "arkit_setup_pass_unavailable"
+        let courtPlane = setupPassAvailable ? setupPass?.courtPlane : context.arkit?.courtPlane
         let arkitFrameSamples = context.arkit?.frameSamples ?? []
         let unavailableSensorReasons = unavailableSensorReasons(
-            arkitFrameSamples: arkitFrameSamples,
-            courtPlane: courtPlane
+            setupPass: setupPass,
+            latestARFrame: latestARFrame,
+            courtPlane: courtPlane,
+            setupPassUnavailableReason: setupPassUnavailableReason
         )
         return CaptureSidecar(
             deviceTier: context.deviceTier,
@@ -96,9 +101,12 @@ public enum CaptureSidecarWriter {
             cameraPosition: context.cameraPosition,
             cameraLens: context.cameraLens,
             locked: context.locked,
-            intrinsics: latestARFrame?.intrinsics ?? context.intrinsics,
-            arkitCameraPose: latestARFrame?.cameraPose,
+            intrinsics: setupPassAvailable
+                ? (setupPass?.intrinsics ?? context.intrinsics)
+                : (latestARFrame?.intrinsics ?? context.intrinsics),
+            arkitCameraPose: setupPassAvailable ? setupPass?.cameraPose : latestARFrame?.cameraPose,
             courtPlane: courtPlane,
+            setupPass: setupPass,
             gravity: context.gravity,
             arkitFrameSamples: arkitFrameSamples,
             ondevicePoseTrack: nil,
@@ -107,7 +115,7 @@ public enum CaptureSidecarWriter {
             profileCapture: context.profileCapture,
             captureQuality: captureQuality(
                 context.captureQuality,
-                arkitFrameSamples: arkitFrameSamples,
+                setupPass: setupPass,
                 courtPlane: courtPlane,
                 policyEnforcement: context.policyEnforcement
             )
@@ -115,27 +123,33 @@ public enum CaptureSidecarWriter {
     }
 
     private static func unavailableSensorReasons(
-        arkitFrameSamples: [ARKitFrameSample],
-        courtPlane: Plane?
+        setupPass: ARKitSetupPassSidecar?,
+        latestARFrame: ARKitFrameSample?,
+        courtPlane: Plane?,
+        setupPassUnavailableReason: String
     ) -> [String: String] {
         var reasons: [String: String] = [:]
-        if arkitFrameSamples.isEmpty {
-            reasons["arkit_camera_pose"] = "no_arkit_frame_samples_recorded"
+        if setupPass?.status == .unavailable {
+            reasons["arkit_camera_pose"] = setupPassUnavailableReason
+        } else if setupPass?.cameraPose == nil && latestARFrame?.cameraPose == nil {
+            reasons["arkit_camera_pose"] = "no_arkit_setup_pass_recorded"
         }
         if courtPlane == nil {
-            reasons["court_plane"] = "no_horizontal_arkit_plane_recorded"
+            reasons["court_plane"] = setupPass?.status == .unavailable
+                ? setupPassUnavailableReason
+                : "no_horizontal_arkit_plane_recorded"
         }
         return reasons
     }
 
     private static func captureQuality(
         _ original: CaptureQuality,
-        arkitFrameSamples: [ARKitFrameSample],
+        setupPass: ARKitSetupPassSidecar?,
         courtPlane: Plane?,
         policyEnforcement: CapturePolicyEnforcementReport?
     ) -> CaptureQuality {
         var reasons = original.reasons.filter { reason in
-            if !arkitFrameSamples.isEmpty && (reason == "arkit_seed_missing" || reason == "intrinsics_estimated_from_fov") {
+            if setupPass?.status == .available && (reason == "arkit_seed_missing" || reason == "intrinsics_estimated_from_fov") {
                 return false
             }
             if courtPlane != nil && reason == "court_plane_missing" {

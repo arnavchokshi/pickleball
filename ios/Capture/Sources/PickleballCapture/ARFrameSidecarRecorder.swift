@@ -30,6 +30,7 @@ public protocol ARSessionProviding: AnyObject, Sendable {
 }
 
 public struct ARCaptureSidecarPayload: Equatable, Sendable {
+    public var setupPass: ARKitSetupPassSidecar?
     public var frameSamples: [ARKitFrameSample]
     public var courtPlane: Plane?
 
@@ -37,9 +38,14 @@ public struct ARCaptureSidecarPayload: Equatable, Sendable {
         frameSamples.last
     }
 
-    public init(frameSamples: [ARKitFrameSample], courtPlane: Plane? = nil) {
+    public init(
+        setupPass: ARKitSetupPassSidecar? = nil,
+        frameSamples: [ARKitFrameSample],
+        courtPlane: Plane? = nil
+    ) {
+        self.setupPass = setupPass
         self.frameSamples = frameSamples
-        self.courtPlane = courtPlane
+        self.courtPlane = courtPlane ?? setupPass?.courtPlane
     }
 }
 

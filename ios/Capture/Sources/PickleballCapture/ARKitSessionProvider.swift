@@ -4,27 +4,25 @@ import Foundation
 import PickleballCore
 
 public final class ARKitSessionProvider: NSObject, ARSessionProviding, ARSessionDelegate, @unchecked Sendable {
-    private let session = ARSession()
     private let lock = NSLock()
+    private var session: ARSession?
     private var latestSnapshot: ARFrameSnapshot?
     private var latestCourtPlane: Plane?
-
-    public override init() {
-        super.init()
-        session.delegate = self
-    }
 
     public func startSession() {
         guard ARWorldTrackingConfiguration.isSupported else {
             return
         }
+        let session = makeSession()
         let configuration = ARWorldTrackingConfiguration()
         configuration.planeDetection = [.horizontal]
         session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
     }
 
     public func stopSession() {
-        session.pause()
+        session?.pause()
+        session?.delegate = nil
+        session = nil
         lock.lock()
         latestSnapshot = nil
         latestCourtPlane = nil
@@ -78,6 +76,17 @@ public final class ARKitSessionProvider: NSObject, ARSessionProviding, ARSession
         let plane = latestCourtPlane
         lock.unlock()
         return plane
+    }
+
+    private func makeSession() -> ARSession {
+        if let session {
+            session.delegate = self
+            return session
+        }
+        let session = ARSession()
+        session.delegate = self
+        self.session = session
+        return session
     }
 
     private static func snapshot(from frame: ARFrame, courtPlane: Plane?) -> ARFrameSnapshot {

@@ -57,14 +57,9 @@ if str(ROOT) not in sys.path:
 # shared venv for the orchestrator CLI vs. Fast-SAM-3D-Body's own separate
 # venv/checkout under body_runtime/) -- that split is real, not a bug -- but
 # now they all derive from a single root constant to update.
-# FLEET NOTE (2026-07-07): the old standing VM (34.126.67.233) was DELETED; defaults now point at
-# fleet GPU #1 `pickleball-a100-fleet1` with the cold-start layout under ~/coldstart_20260706.
-# Fleet1 restarted with external IP 35.240.183.195; prior 34.143.175.207 is kept in known_hosts
-# as historical evidence for the same host key/disk mapping.
-# (see runs/manager/gpu_fleet.md — THE source of truth; wave-2 improvement booked: derive these
-# from the fleet ledger instead of constants). Per-lane dispatches may still override via flags.
+# Fleet VM external IPs recycle on stop/start. Keep remote host selection out of
+# defaults; callers must pass the current value from runs/manager/gpu_fleet.md.
 DEFAULT_REMOTE_HOME = "/home/arnavchokshi/coldstart_20260706"
-DEFAULT_REMOTE_HOST = "arnavchokshi@35.240.183.195"
 DEFAULT_SSH_KEY = "~/.ssh/google_compute_engine"
 DEFAULT_REMOTE_REPO = f"{DEFAULT_REMOTE_HOME}/repo"
 # On fleet1 the cold-start builds ONE body venv that serves both the orchestrator CLI and
@@ -89,13 +84,15 @@ DEFAULT_LOCK_WAIT_TIMEOUT_S = 60
 # (exit 124).
 DEFAULT_COMMAND_TIMEOUT_S = 3600
 DEFAULT_RUN_ROOT = "runs/process_video_body_dispatch"
-# Pinned host key for DEFAULT_REMOTE_HOST (fleet1, 35.240.183.195), captured via
-# ssh-keyscan and cross-checked against this machine's own trusted
-# ~/.ssh/known_hosts -- see configs/ssh/a100_known_hosts's header comment
-# and review_harden_20260702.md finding 7. Used in place of
-# StrictHostKeyChecking=no so a wrong/spoofed host cannot silently receive
-# source videos or return fabricated BODY artifacts.
+# Pinned host keys are refreshed per fleet restart from the current fleet ledger.
+# Used in place of StrictHostKeyChecking=no so a wrong/spoofed host cannot
+# silently receive source videos or return fabricated BODY artifacts.
 DEFAULT_KNOWN_HOSTS_FILE = str(ROOT / "configs" / "ssh" / "a100_known_hosts")
+REMOTE_HOST_REQUIRED_MESSAGE = (
+    "explicit remote host is required; fleet VM external IPs recycle on stop/start. "
+    "Find the current host in runs/manager/gpu_fleet.md and pass it with --host "
+    "(process_video.py: --remote-host)."
+)
 TRANSPORT_TAR_BATCH = "tar_batch"
 TRANSPORT_RSYNC = "rsync"
 TRANSPORT_CHOICES = (TRANSPORT_TAR_BATCH, TRANSPORT_RSYNC)
@@ -206,9 +203,16 @@ class RemoteBodyDispatchError(RuntimeError):
     """Raised when the remote BODY dispatch cannot complete for a real reason."""
 
 
+def _require_remote_host(host: str, *, flag_name: str = "--host") -> str:
+    host = host.strip()
+    if not host:
+        raise RemoteBodyDispatchError(f"{flag_name} missing: {REMOTE_HOST_REQUIRED_MESSAGE}")
+    return host
+
+
 @dataclass(frozen=True)
 class RemoteConfig:
-    host: str = DEFAULT_REMOTE_HOST
+    host: str = ""
     ssh_key: str = DEFAULT_SSH_KEY
     repo: str = DEFAULT_REMOTE_REPO
     python: str = DEFAULT_REMOTE_PYTHON
@@ -279,6 +283,7 @@ class RemoteConfig:
         return args
 
     def ssh_base(self) -> list[str]:
+        _require_remote_host(self.host)
         return ["ssh", "-i", self.ssh_key, *self.ssh_option_args(), self.host]
 
     def scp_base(self) -> list[str]:
@@ -292,6 +297,7 @@ class RemoteConfig:
         as defense in depth matching finding 8's quoting requirement.
         """
 
+        _require_remote_host(self.host)
         parts = ["ssh", "-i", self.ssh_key, *self.ssh_option_args()]
         return " ".join(shlex.quote(part) for part in parts)
 
@@ -396,6 +402,23 @@ def _git_dirty_tracked_files(repo_root: Path, paths: Sequence[str] | None = None
         if name:
             dirty.append(name)
     return sorted(set(dirty))
+
+
+def _git_blob_bytes(repo_root: Path, ref: str, rel_path: str) -> bytes:
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), "cat-file", "blob", f"{ref}:{rel_path}"],
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or b"").decode("utf-8", errors="replace").strip()
+        raise RemoteBodyDispatchError(f"git cat-file blob {ref}:{rel_path} failed under {repo_root}: {detail}")
+    return result.stdout
+
+
+def _git_blob_md5_and_size(repo_root: Path, ref: str, rel_path: str) -> tuple[str, int]:
+    blob = _git_blob_bytes(repo_root, ref, rel_path)
+    return hashlib.md5(blob, usedforsecurity=False).hexdigest(), len(blob)
 
 
 def _md5_file(path: Path) -> str:
@@ -541,32 +564,36 @@ def build_version_stamp(
     repo_root = repo_root or ROOT
     critical_files = _remote_runtime_critical_files(repo_root)
     dirty_files = _git_dirty_tracked_files(repo_root, critical_files)
-    if dirty_files and not allow_dirty:
-        raise RemoteBodyDispatchError(
-            "refusing remote BODY dispatch with dirty tracked runtime file(s): "
-            + ", ".join(dirty_files)
-            + " (pass --allow-dirty only for local development; remote md5 verification still must match)"
-        )
+    git_head_sha = _git_head_sha(repo_root)
     file_records = []
     for rel in critical_files:
-        path = repo_root / rel
+        md5, size_bytes = _git_blob_md5_and_size(repo_root, git_head_sha, rel)
         file_records.append(
             {
                 "path": rel,
-                "md5": _md5_file(path),
-                "size_bytes": path.stat().st_size,
+                "md5": md5,
+                "size_bytes": size_bytes,
             }
+        )
+    notes = [
+        "critical file hashes are from committed git blobs at git_head_sha, not the local working tree"
+    ]
+    if dirty_files:
+        notes.append(
+            "non-gating local dirty tracked runtime file(s) detected: " + ", ".join(dirty_files)
         )
     return {
         "schema_version": 1,
         "artifact_type": "racketsport_remote_body_version_stamp",
         "created_at_utc": _utc_now_iso(),
-        "git_head_sha": _git_head_sha(repo_root),
+        "git_head_sha": git_head_sha,
         "git_dirty": bool(dirty_files),
         "dirty_tracked_runtime_files": dirty_files,
         "allow_dirty": bool(allow_dirty),
+        "notes": notes,
         "remote_run_dir": remote_run_dir,
         "critical_file_set": {
+            "hash_source": "git_committed_blob",
             "derivation": {
                 "remote_command_entrypoints": [
                     "scripts/racketsport/remote_body_dispatch.py --verify-version-stamp",
@@ -739,6 +766,26 @@ def _transport_failure_detail(result: "subprocess.CompletedProcess[str]") -> str
     return (result.stderr or result.stdout or "").strip()[-2000:]
 
 
+TRANSPORT_RETRYABLE_DETAIL_PATTERNS = (
+    "ssh_packet_write_poll",
+    "result too large",
+    "lost connection",
+    "connection reset by peer",
+    "broken pipe",
+)
+
+
+def _is_retryable_transport_result(
+    result: "subprocess.CompletedProcess[str]",
+    *,
+    retryable_exit_codes: set[int],
+) -> bool:
+    if result.returncode in retryable_exit_codes:
+        return True
+    detail = _transport_failure_detail(result).lower()
+    return any(pattern in detail for pattern in TRANSPORT_RETRYABLE_DETAIL_PATTERNS)
+
+
 def _run_transport_command(
     cmd: Sequence[str],
     timeout_s: float | None,
@@ -757,7 +804,7 @@ def _run_transport_command(
             return last
         if tolerated_failure is not None and tolerated_failure(last):
             return last
-        if last.returncode not in retryable:
+        if not _is_retryable_transport_result(last, retryable_exit_codes=retryable):
             raise RemoteBodyDispatchError(
                 f"{operation} failed (exit {last.returncode}): {_transport_failure_detail(last)}"
             )
@@ -977,9 +1024,10 @@ def dispatch_body_stage(
     a pipeline-fatal error.
     """
 
-    config = config or RemoteConfig()
-    transport = _validate_transport_name(config.transport)
     clip = _validate_clip_id(clip)
+    config = config or RemoteConfig()
+    _require_remote_host(config.host)
+    transport = _validate_transport_name(config.transport)
     clip_dir = Path(clip_dir)
     video_path = Path(video_path)
     started = time.monotonic()
@@ -1983,14 +2031,9 @@ def sync_remote_checkout_to_local_head(
     """
 
     config = config or RemoteConfig()
+    _require_remote_host(config.host)
     repo_root = repo_root or ROOT
     dirty_files = _git_dirty_tracked_files(repo_root)
-    if dirty_files and not allow_dirty:
-        raise RemoteBodyDispatchError(
-            "refusing to sync remote checkout from a dirty local tree: "
-            + ", ".join(dirty_files)
-            + " (pass --allow-dirty to explicitly sync committed HEAD while recording dirty state)"
-        )
     if not check_remote_reachable(config, run=run):
         raise RemoteBodyDispatchError(
             f"remote host {config.host} unreachable over SSH within {config.connect_timeout_s}s "
@@ -2075,6 +2118,11 @@ def sync_remote_checkout_to_local_head(
         notes=[
             "synced repo files via git bundle and checkout --detach -f; did not run git clean",
             f"remote version stamp verified for {after_sha}",
+            *(
+                ["non-gating local dirty tracked file(s) present while syncing committed HEAD: " + ", ".join(dirty_files)]
+                if dirty_files
+                else []
+            ),
         ],
     )
 
@@ -2086,7 +2134,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--video", type=Path)
     parser.add_argument("--body-frames-dir", type=Path, default=None)
     parser.add_argument("--camera-motion", type=Path, default=None, help="Optional camera_motion.json to sync as camera_motion.json in the remote BODY working dir.")
-    parser.add_argument("--host", default=DEFAULT_REMOTE_HOST)
+    parser.add_argument("--host", default="")
     parser.add_argument("--ssh-key", default=DEFAULT_SSH_KEY)
     parser.add_argument("--repo", default=DEFAULT_REMOTE_REPO)
     parser.add_argument("--python", default=DEFAULT_REMOTE_PYTHON)

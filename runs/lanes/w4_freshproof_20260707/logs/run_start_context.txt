@@ -1,0 +1,18 @@
+run-start 2026-07-07T20:55:05Z
+local HEAD: 9405764959976d1ea893456849e6d010666e6c50
+local dirty (tracked):
+ M BUILD_CHECKLIST.md
+ M EDGE_PLAYBOOK.md
+ M MASTER_PLAN.md
+ M README.md
+ M RUNBOOK.md
+ M TIER_MAP.md
+ M configs/ssh/a100_known_hosts
+ M ios/App/AppRootView.swift
+ M ios/App/DinkVisionModels.swift
+ M ios/AppTests/DinkVisionStateTests.swift
+ M ios/README.md
+ M ios/Replay/Sources/PickleballReplay/World/WorldViewerView.swift
+ M runs/manager/inflight_lanes.md
+ M scripts/racketsport/list_scaffold_tools.py
+ M tests/racketsport/test_truthful_capabilities.py

@@ -40,3 +40,9 @@ ios/.swiftpm/
 DerivedData/
 **/xcuserdata/
 yolo26n-cls.pt
+
+# Local env files (INFRA-1): secrets live in Render env vars / VM .env copies,
+# never in git. Only the example template is tracked.
+.env
+.env.*
+!.env.example
