@@ -52,6 +52,15 @@ def _tree_hashes(root: Path) -> dict[str, str]:
     }
 
 
+def _git_blob_md5(repo_root: Path, ref: str, rel_path: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), "cat-file", "blob", f"{ref}:{rel_path}"],
+        check=True,
+        capture_output=True,
+    )
+    return hashlib.md5(result.stdout, usedforsecurity=False).hexdigest()
+
+
 def _scp_remote_path(target: str) -> Path:
     return Path(target.split(":", 1)[1])
 
@@ -1175,7 +1184,7 @@ def test_tar_batch_transport_round_trips_245_file_payload_byte_identical_through
     }
 
 
-def test_tar_batch_transport_retries_transient_upload_failure_with_backoff(
+def test_tar_batch_transport_retries_result_too_large_exit_1_with_backoff(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1198,7 +1207,13 @@ def test_tar_batch_transport_retries_transient_upload_failure_with_backoff(
         if command[0] == "scp":
             scp_attempts += 1
             if scp_attempts == 1:
-                return _completed(255, stderr="ssh_packet_write_poll: Result too large")
+                return _completed(
+                    1,
+                    stderr=(
+                        "client_loop: ssh_packet_write_poll: Connection to 203.0.113.10 port 22: "
+                        "Result too large\r\nlost connection"
+                    ),
+                )
             shutil.copy2(command[-2], _scp_remote_path(command[-1]))
             return _completed(0)
         if command[0] == "ssh":
@@ -2353,41 +2368,43 @@ def test_dispatch_body_stage_echoes_verified_version_stamp_for_matching_remote(
     assert "verified_at_utc" in dispatch_config["version_stamp"]
 
 
-def test_dispatch_body_stage_refuses_dirty_tracked_runtime_file_without_allow_dirty(
+def test_version_stamp_uses_committed_blob_and_reports_dirty_file_without_gating(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     local_repo, remote_repo = _version_fixture_repos(tmp_path, stale_remote=False)
     _patch_version_fixture_runtime(monkeypatch, local_repo)
     dirty_file = local_repo / "scripts" / "racketsport" / "remote_body_dispatch.py"
     dirty_file.write_text(dirty_file.read_text(encoding="utf-8") + "\n# dirty runtime edit\n", encoding="utf-8")
-    calls: list[list[str]] = []
 
-    def fake_run(cmd, timeout_s):  # noqa: ANN001
-        calls.append(list(cmd))
-        return _run_local_ssh_and_scp(list(cmd), timeout_s)
+    result = rbd.dispatch_body_stage(
+        clip="wolverine",
+        clip_dir=_clip_dir_with_tracks(tmp_path),
+        video_path=tmp_path / "clip" / "source.mp4",
+        config=_version_fixture_config(remote_repo),
+        run=_run_local_ssh_and_scp,
+    )
 
-    with pytest.raises(rbd.RemoteBodyDispatchError) as exc_info:
-        rbd.dispatch_body_stage(
-            clip="wolverine",
-            clip_dir=_clip_dir_with_tracks(tmp_path),
-            video_path=tmp_path / "clip" / "source.mp4",
-            config=_version_fixture_config(remote_repo),
-            run=fake_run,
-        )
-
-    assert "dirty tracked runtime file" in str(exc_info.value)
-    assert "scripts/racketsport/remote_body_dispatch.py" in str(exc_info.value)
-    assert calls == []
+    stamp = json.loads((tmp_path / "clip" / "version_stamp.json").read_text(encoding="utf-8"))
+    verification = json.loads((tmp_path / "clip" / "remote_version_verification.json").read_text(encoding="utf-8"))
+    assert result.status == "ran"
+    assert stamp["git_dirty"] is True
+    assert stamp["dirty_tracked_runtime_files"] == ["scripts/racketsport/remote_body_dispatch.py"]
+    assert stamp["critical_file_set"]["hash_source"] == "git_committed_blob"
+    assert any("non-gating" in note for note in stamp["notes"])
+    assert verification["verified"] is True
 
     stamp = rbd.build_version_stamp(
         repo_root=local_repo,
         remote_run_dir="/remote/run",
         generated_runner_sha256="0" * 64,
-        allow_dirty=True,
     )
     assert stamp["git_dirty"] is True
-    assert stamp["allow_dirty"] is True
     assert stamp["dirty_tracked_runtime_files"] == ["scripts/racketsport/remote_body_dispatch.py"]
+    assert stamp["critical_file_set"]["files"][0]["md5"] == _git_blob_md5(
+        local_repo,
+        "HEAD",
+        "scripts/racketsport/remote_body_dispatch.py",
+    )
 
 
 def test_sync_remote_checkout_to_local_head_then_version_verification_passes_and_preserves_vendor_paths(
@@ -2399,6 +2416,8 @@ def test_sync_remote_checkout_to_local_head_then_version_verification_passes_and
     vendor_pin.parent.mkdir(parents=True)
     vendor_pin.write_text("remote-only vendor pin\n", encoding="utf-8")
     local_sha = _git(local_repo, "rev-parse", "HEAD")
+    dirty_file = local_repo / "scripts" / "racketsport" / "remote_body_dispatch.py"
+    dirty_file.write_text(dirty_file.read_text(encoding="utf-8") + "\n# dirty sync-only fixture edit\n", encoding="utf-8")
 
     result = rbd.sync_remote_checkout_to_local_head(
         config=_version_fixture_config(remote_repo),
@@ -2411,4 +2430,6 @@ def test_sync_remote_checkout_to_local_head_then_version_verification_passes_and
     assert result.local_git_head_sha == local_sha
     assert result.remote_git_head_sha_after == local_sha
     assert result.verified is True
+    assert result.dirty_tracked_files == ["scripts/racketsport/remote_body_dispatch.py"]
+    assert any("non-gating" in note for note in result.notes)
     assert vendor_pin.read_text(encoding="utf-8") == "remote-only vendor pin\n"

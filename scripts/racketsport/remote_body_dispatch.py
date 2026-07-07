@@ -404,6 +404,23 @@ def _git_dirty_tracked_files(repo_root: Path, paths: Sequence[str] | None = None
     return sorted(set(dirty))
 
 
+def _git_blob_bytes(repo_root: Path, ref: str, rel_path: str) -> bytes:
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), "cat-file", "blob", f"{ref}:{rel_path}"],
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or b"").decode("utf-8", errors="replace").strip()
+        raise RemoteBodyDispatchError(f"git cat-file blob {ref}:{rel_path} failed under {repo_root}: {detail}")
+    return result.stdout
+
+
+def _git_blob_md5_and_size(repo_root: Path, ref: str, rel_path: str) -> tuple[str, int]:
+    blob = _git_blob_bytes(repo_root, ref, rel_path)
+    return hashlib.md5(blob, usedforsecurity=False).hexdigest(), len(blob)
+
+
 def _md5_file(path: Path) -> str:
     digest = hashlib.md5(usedforsecurity=False)
     with path.open("rb") as handle:
@@ -547,32 +564,36 @@ def build_version_stamp(
     repo_root = repo_root or ROOT
     critical_files = _remote_runtime_critical_files(repo_root)
     dirty_files = _git_dirty_tracked_files(repo_root, critical_files)
-    if dirty_files and not allow_dirty:
-        raise RemoteBodyDispatchError(
-            "refusing remote BODY dispatch with dirty tracked runtime file(s): "
-            + ", ".join(dirty_files)
-            + " (pass --allow-dirty only for local development; remote md5 verification still must match)"
-        )
+    git_head_sha = _git_head_sha(repo_root)
     file_records = []
     for rel in critical_files:
-        path = repo_root / rel
+        md5, size_bytes = _git_blob_md5_and_size(repo_root, git_head_sha, rel)
         file_records.append(
             {
                 "path": rel,
-                "md5": _md5_file(path),
-                "size_bytes": path.stat().st_size,
+                "md5": md5,
+                "size_bytes": size_bytes,
             }
+        )
+    notes = [
+        "critical file hashes are from committed git blobs at git_head_sha, not the local working tree"
+    ]
+    if dirty_files:
+        notes.append(
+            "non-gating local dirty tracked runtime file(s) detected: " + ", ".join(dirty_files)
         )
     return {
         "schema_version": 1,
         "artifact_type": "racketsport_remote_body_version_stamp",
         "created_at_utc": _utc_now_iso(),
-        "git_head_sha": _git_head_sha(repo_root),
+        "git_head_sha": git_head_sha,
         "git_dirty": bool(dirty_files),
         "dirty_tracked_runtime_files": dirty_files,
         "allow_dirty": bool(allow_dirty),
+        "notes": notes,
         "remote_run_dir": remote_run_dir,
         "critical_file_set": {
+            "hash_source": "git_committed_blob",
             "derivation": {
                 "remote_command_entrypoints": [
                     "scripts/racketsport/remote_body_dispatch.py --verify-version-stamp",
@@ -745,6 +766,26 @@ def _transport_failure_detail(result: "subprocess.CompletedProcess[str]") -> str
     return (result.stderr or result.stdout or "").strip()[-2000:]
 
 
+TRANSPORT_RETRYABLE_DETAIL_PATTERNS = (
+    "ssh_packet_write_poll",
+    "result too large",
+    "lost connection",
+    "connection reset by peer",
+    "broken pipe",
+)
+
+
+def _is_retryable_transport_result(
+    result: "subprocess.CompletedProcess[str]",
+    *,
+    retryable_exit_codes: set[int],
+) -> bool:
+    if result.returncode in retryable_exit_codes:
+        return True
+    detail = _transport_failure_detail(result).lower()
+    return any(pattern in detail for pattern in TRANSPORT_RETRYABLE_DETAIL_PATTERNS)
+
+
 def _run_transport_command(
     cmd: Sequence[str],
     timeout_s: float | None,
@@ -763,7 +804,7 @@ def _run_transport_command(
             return last
         if tolerated_failure is not None and tolerated_failure(last):
             return last
-        if last.returncode not in retryable:
+        if not _is_retryable_transport_result(last, retryable_exit_codes=retryable):
             raise RemoteBodyDispatchError(
                 f"{operation} failed (exit {last.returncode}): {_transport_failure_detail(last)}"
             )
@@ -1993,12 +2034,6 @@ def sync_remote_checkout_to_local_head(
     _require_remote_host(config.host)
     repo_root = repo_root or ROOT
     dirty_files = _git_dirty_tracked_files(repo_root)
-    if dirty_files and not allow_dirty:
-        raise RemoteBodyDispatchError(
-            "refusing to sync remote checkout from a dirty local tree: "
-            + ", ".join(dirty_files)
-            + " (pass --allow-dirty to explicitly sync committed HEAD while recording dirty state)"
-        )
     if not check_remote_reachable(config, run=run):
         raise RemoteBodyDispatchError(
             f"remote host {config.host} unreachable over SSH within {config.connect_timeout_s}s "
@@ -2083,6 +2118,11 @@ def sync_remote_checkout_to_local_head(
         notes=[
             "synced repo files via git bundle and checkout --detach -f; did not run git clean",
             f"remote version stamp verified for {after_sha}",
+            *(
+                ["non-gating local dirty tracked file(s) present while syncing committed HEAD: " + ", ".join(dirty_files)]
+                if dirty_files
+                else []
+            ),
         ],
     )
 
