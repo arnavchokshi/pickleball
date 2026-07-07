@@ -328,6 +328,15 @@ def _placement_payload() -> dict[str, object]:
                         "smoothed_world_xy": [0.25, 0.5],
                         "covariance_m2": [[0.01, 0.0], [0.0, 0.01]],
                         "stance": True,
+                        "phase_id": "7:left:0-0",
+                        "phase_foot": "left",
+                        "foot_assignment": "per_foot_keypoint_support",
+                        "source_phase_foot": "left",
+                        "min_confidence": 0.95,
+                        "max_height_m": 0.0,
+                        "max_speed_mps": 0.10,
+                        "source_thresholds": {"min_confidence": 0.90},
+                        "assignment_evidence": {"body_detector_agreement": 0.95},
                         "signals": [],
                         "source_counts": {"bbox": 1},
                     }
@@ -345,6 +354,48 @@ def _placement_payload() -> dict[str, object]:
         },
         "provenance": {"stage": "placement", "stance_phase_count": 1},
     }
+
+
+def _qualified_stance_index_from_placement_fixture(
+    original_index_builder: Any,
+    placement_payload: Any,
+    *,
+    foot_contact_phases: Any,
+    fps: float,
+) -> dict[tuple[int, int], dict[str, Any]]:
+    index = original_index_builder(placement_payload, foot_contact_phases=foot_contact_phases, fps=fps)
+    if not isinstance(placement_payload, dict):
+        return index
+    for player in placement_payload.get("players", []) or []:
+        if not isinstance(player, dict):
+            continue
+        try:
+            player_id = int(player.get("id"))
+        except (TypeError, ValueError):
+            continue
+        for frame in player.get("frames", []) or []:
+            if not isinstance(frame, dict):
+                continue
+            try:
+                key = (player_id, int(frame.get("frame_idx")))
+            except (TypeError, ValueError):
+                continue
+            if key not in index:
+                continue
+            for field in (
+                "phase_id",
+                "phase_foot",
+                "foot_assignment",
+                "source_phase_foot",
+                "min_confidence",
+                "max_height_m",
+                "max_speed_mps",
+                "source_thresholds",
+                "assignment_evidence",
+            ):
+                if field in frame:
+                    index[key][field] = frame[field]
+    return index
 
 
 def _frame_compute_plan_payload() -> dict[str, object]:
@@ -1299,6 +1350,17 @@ def test_body_stage_runner_engages_stance_grounding_from_dispatch_dir_fixture(
     body_frames.mkdir()
     (body_frames / "frame_000000.jpg").write_bytes(b"stub")
     monkeypatch.setattr(orchestrator, "_read_image_size", lambda _path: (1920, 1080))
+    original_stance_index_builder = orchestrator._body_stance_index_from_placement
+    monkeypatch.setattr(
+        orchestrator,
+        "_body_stance_index_from_placement",
+        lambda placement_payload, *, foot_contact_phases, fps: _qualified_stance_index_from_placement_fixture(
+            original_stance_index_builder,
+            placement_payload,
+            foot_contact_phases=foot_contact_phases,
+            fps=fps,
+        ),
+    )
 
     runner = BodyStageRunner(
         manifest_path=_body_manifest(tmp_path / "models"),
