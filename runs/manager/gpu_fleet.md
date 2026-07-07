@@ -16,10 +16,16 @@ teardown. A session MUST reconcile this against `gcloud compute instances list
 QUOTA UNLOCK (owner-filed, approved 2026-07-07 ~12:47-12:50 AM): Preemptible NVIDIA H100 GPUs = 2/region
 in asia-southeast1 + us-east4 + us-central1 + us-west1 + us-west4 + europe-west4; NVIDIA A100 80GB = 2/region
 in asia-southeast1 + us-central1 + us-east4 + europe-west4 (us-west1/us-west4 denied). H100-first
-(owner directive 2) is now ACTIONABLE: first H100 use = one-time cold-start validation (conditional
-migration order sent to w3_p11_train 2026-07-07; if validation passes, H100-80GB spot ≤$5/hr becomes
-the recorded default heavy worker; A100-80GB = middle tier; A100-40GB = proven BODY-stage default
-until H100 BODY compat is separately validated — decisive gate runs stay on proven SKUs).
+(owner directive 2) is now ACTIONABLE — and VALIDATED 2026-07-07: first-fleet H100 cold-start PASS
+(driver 580.159.03 / CUDA 13.0 / torch cu129; ~8 steps/s ≈ 2.3× A100-40GB on identical training
+work; evidence runs/lanes/w3_p11_train_20260707/cold_start_validation.json). STANDING SKU POLICY:
+H100-80GB spot = DEFAULT heavy worker for TRAINING-class jobs (a3-highgpu-1g lives in
+asia-southeast1-b/-c, NOT -a; describe-quota lags admission control — attempt create as the
+definitive test); A100-80GB = middle tier (quota exists, unused); A100-40GB = proven BODY-stage
+default until H100 BODY-runtime compat is separately validated (wave-4 queue #7) — decisive gate
+runs stay on proven SKUs. Fleet IPs RECYCLE across VMs on restart — always --remote-host; refresh
+known_hosts + DEFAULT_REMOTE_HOST each restart (wave-4 queue #6). Snapshot→fan is the standard
+multi-GPU pattern (template snapshot: pickleball-fleet1-snap-20260707, READY, 46.56GB).
 
 Fleet cost cap (owner 2026-07-06): ≤$5/GPU/hr, max 4 concurrent GPUs; teardown/DELETE the moment a
 lane ends (idle spend never acceptable); 5th GPU or >$5/hr = `needs-purchase-approval` STOP.

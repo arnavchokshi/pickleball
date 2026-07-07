@@ -180,15 +180,26 @@ codex exec \
 - **`-o report.json`** puts the report at a known path. When the background task exits, the harness notifies you — read that one file. **Do NOT set up Monitor/strict-done-marker watchers; they false-fire and waste tokens.**
 - **Always absolute paths** for `--cd`, `--output-schema`, `-o`, spec, and log. The shell cwd drifts between calls and relative paths silently fail to launch (this actually happened last session).
 
-**Iterate cheaply — resume the thread instead of re-specifying:**
+**Iterate cheaply — resume the thread instead of re-specifying (CORRECTED 2026-07-07, verified on v0.142.5):**
 ```bash
-codex exec resume "$SESSION_ID" \
-  -c model_reasoning_effort=xhigh \
-  --output-schema "$ROOT/docs/racketsport/lane_report.schema.json" \
-  -o "$ROOT/runs/lanes/$LANE/report_r2.json" \
-  <<< "Your report says PASS but full_suite.failed=2 and failures_all_preexisting=false. Fix those two and re-report."
+cd "$ROOT" &&   # resume inherits the CALLING cwd, NOT the recorded session's — a resume launched from
+                # a worktree edited the worktree (wave-3 incident). Always cd to the intended root first.
+codex exec resume -c model_reasoning_effort=xhigh "$SESSION_ID" - >> "$ROOT/runs/lanes/$LANE/log.txt" 2>&1 <<'EOF'
+Your report says PASS but full_suite.failed=2 and failures_all_preexisting=false. Fix those two.
+Write your updated structured report yourself to runs/lanes/$LANE/report_r2.json (same field
+structure as report.json) — this resume has no --output-schema/-o wiring.
+EOF
 ```
-`session_id` comes back in the report. Resuming keeps Codex's full context, so your correction is one sentence, not a re-spec. Use this whenever a report is inadequate — it is the cheapest possible round-trip.
+- `codex exec resume` accepts ONLY `-c` overrides: `--cd/--sandbox/--output-schema/-o` are REJECTED
+  after the `resume` subcommand (sandbox persists from the recorded session). The lane must
+  SELF-WRITE its report file — always say so in the resume prompt.
+- Prompt via the `-` positional + heredoc. `session_id` comes back in the report; if the report's
+  session_id is null, it is in the log banner (`grep "session id" log.txt`).
+- Dispatch resumes with `run_in_background: true` — a foreground resume died at the 2-5 min Bash
+  timeout in wave 3 (SIGTERM mid-edit left a half-applied change; always background + notification).
+Resuming keeps Codex's full context, so your correction is one sentence, not a re-spec. Use this
+whenever a report is inadequate — it is the cheapest possible round-trip (wave-3 ran a 3-round
+repair cycle on one session for ~3 sentences of manager input).
 
 **When to use MCP instead of exec:** Codex can also run as an MCP server (`codex mcp-server`) and be added to Claude Code (`claude mcp add codex -- codex mcp-server`) so you call it as a native tool. That is good for *short, synchronous* Codex queries. It is **worse for long lanes** — an MCP tool call blocks the turn, so an hour-long build ties you up. Keep long implementation lanes on `codex exec` + background + notification. (Experimental `codex cloud` can offload very long tasks to run remotely and apply diffs locally — a frontier option, not the default.)
 
@@ -468,4 +479,76 @@ helps E2E; do both.
   file presents as a bare canvas-timeout with an empty out-dir.
 - The >10MB Mac→VM transfer flake did not reproduce in 2 subsequent lanes — treat as
   intermittent/VPN-state; tar_batch + bounded retries + rsync fallback is sufficient cover.
+
+## 20. Wave-3 field lessons (2026-07-07 — the wave that closed the slide gate; these are standing rules)
+
+**KEEP (proven in wave 3 — several are now non-negotiable):**
+- **One verify round per repair round on gate-adjacent fixes, and the verifier writes EXECUTABLE
+  defect proofs.** The slide fix took 3 rounds: r1 caught vacuous offline surrogates + a
+  stance-fallback leak (the fix gated a layer the GPU path never consulted); r2 caught an
+  UNFAILABLE GATE (slide-over-threshold as a rejection reason + gate over accepted phases =
+  threshold-tuning by exclusion) and pinned it with a failing test; r3 was accepted only when that
+  test passed UNMODIFIED and both verifier harnesses were rerun by the fix lane and reproduced by
+  the manager's reading. Rules: repairs are scored by the verifier's own unmodified harness; a
+  rejection reason that references the gate threshold is definitionally circular and forbidden;
+  every metric-population change ships a non-gated companion metric (e.g.
+  max_candidate_phase_slide_m + per-reason counts) so exclusion is never silent.
+- **Predictor-gated GPU spend.** No decisive GPU run until the offline predictor (the verifier's
+  replay harness) shows every clip passing. Wave-3's outdoor prediction landed exact to 0.1mm.
+- **Human-GT before mass pseudo-labels.** The owner's 480 review frames measured the 2D-gated
+  teacher at F1 0.395 vs raw WASB 0.680 and killed a planned 40-clip mass-seed. Standing rule: no
+  mass pseudo-label production until the teacher is scored on a human-labeled slice; decisions by
+  measurement, not by gate-theory.
+- **Snapshot→fan is the standard multi-GPU pattern.** Disk-snapshot the proven VM, create fans from
+  the snapshot (byte-identical env, no cold-start risk), fan one-clip-per-GPU, DELETE fans + keep
+  the snapshot as template. 4-clip makespan 20m54s vs 29.6min serial; env verify table mandatory.
+- **Conditional mid-lane migration works.** The A100→H100 trainer cutover was gated on measured
+  progress (<40%) + proven checkpoint-resume + loss-continuity check; the owner's quota unlock was
+  actioned within the hour with zero loss. First-use-of-a-SKU = one-time cold-start validation on a
+  non-decisive lane; decisive gate runs stay on proven SKUs.
+- **Diagnosis-first with a manager ruling between diagnosis and fix.** Two independent diagnoses
+  (slide outliers, refine self-kill) converged on one root cause; one composed fix beat two patches.
+  The prime-suspect theory (guard-fire) was REFUTED by frame-level evidence — commission the
+  evidence, don't trust the correlation.
+- **Micro-lanes for one-file fixes** (doc registration, harness bugs, stale fixtures): scoped to
+  named files, medium effort, minutes each. Fable still never edits source; micro-lanes do.
+- **Concurrent owner + concurrent sessions are normal.** The owner labeled, cleaned disk, edited
+  iOS, granted quota, and other Fable sessions pushed to main — all mid-wave. What held it together:
+  file fences (ios/ excluded from lane commits), `git fetch` before any push-state assumption,
+  boards as single source of truth, and treating owner file-system actions as events to reconcile,
+  not errors.
+
+**FIX (cost us real time/tokens in wave 3):**
+- **Spec-template constants must be grep-verified.** A wrong benchmark filename (missing `test_`
+  prefix) in the manager's spec template propagated to every wave-3 lane and cost each wide run an
+  extra 22 minutes. Same class: a Sonnet brief stated clip paths as fact that were false for 34/40
+  (the lane recovered honestly). Rule: state assumptions as CHECKS ("verify X exists; if not, report
+  and do Y"), and grep-verify every literal path/filename in a spec before dispatch.
+- **Lane-local acceptance harnesses can diverge from the pipeline.** The camera-motion lane measured
+  img1605 probe score 53.7 in its harness; the real pipeline probe scored 0.329 → auto-OFF in the
+  decisive run (the mechanism is live but the handheld clip runs uncompensated; wave-4 #1). Rule:
+  acceptance for pipeline-integrated features is measured THROUGH the pipeline entry point
+  (process_video), not through a lane-local replica of it. The general form of phasefix-r1's
+  failure too: offline surrogates that don't share the production code path prove nothing.
+- **Machine-readable grants only.** A push grant written in CLAUDE.md prose did not bind the
+  permission classifier (correctly — prose can be agent-authored). Grants live in
+  .claude/settings.json permissions.allow; if a needed grant is prose-only, surface the one-liner
+  to the owner instead of retrying.
+- **Local data/ is volatile.** An owner disk cleanup deleted 34 prelabel sidecars AND their rally
+  clips mid-wave. Recovery worked (sha-verified sources + the repo's own extractor +
+  RECONSTRUCTION_NOTEs) but cost a lane blockage + GPU minutes. Rules: pull-and-verify lane outputs
+  to the Mac before VM DELETE is necessary but not sufficient — anything under data/ that is a
+  future lane INPUT needs either a regeneration recipe banked (it saved us) or a KEEP note in the
+  cleanup script; when a lane hits missing inputs, check `.DS_Store` mtimes before suspecting lanes.
+- **Passive-wait still recurs** even with the anti-passive-wait block in the brief (the trainer
+  ended its turn to "wait" on an rsync). The §18 auto-resume rule works: one SendMessage nudge,
+  seconds later it was moving. Resume instantly; never let a waiting lane sit.
+- **Late-wave branch edits need a fresh merge from main first.** A coordination-branch edit made on
+  a stale base (main had moved via another session) produced avoidable conflicts. Rule: `git merge
+  main` into the coordination branch before any late-wave edit; boards are manager-single-writer.
+- **GCP quota `describe` lags admission control** after a grant — a create attempt is the
+  definitive test (wave-3's H100 create succeeded while `describe` still showed 0). Also:
+  a3-highgpu-1g (H100) lives in asia-southeast1-b/-c, NOT -a; fleet IPs RECYCLE across VMs on
+  restart (fan1 received fleet1's old IP) — always pass --remote-host explicitly and refresh
+  known_hosts + DEFAULT_REMOTE_HOST at each restart (wave-4 queue item).
 
