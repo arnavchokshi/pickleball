@@ -26,6 +26,8 @@ final class CaptureViewModel: ObservableObject {
     @Published private(set) var replayBenchmarkStatus: ReplayBenchmarkStatus = .idle
     @Published private(set) var status: Status = .idle
     @Published private(set) var capturePolicyEnforcement: CapturePolicyEnforcementReport?
+    @Published private(set) var recordFlowPhase: DinkVisionRecordFlowPhase = .idle
+    @Published private(set) var recordingStartedAt: Date?
     @Published private(set) var profileFlow = ProfileCaptureFlowState.h0Checklist()
     @Published var profilePlayerHeightCM: Double = 180
     @Published var profileBallSKU: String = "outdoor_yellow"
@@ -157,6 +159,10 @@ final class CaptureViewModel: ObservableObject {
         return "Policy issue: \(capturePolicyEnforcement.violations.first ?? "unknown")"
     }
 
+    var policyChips: [DinkVisionPolicyChip] {
+        DinkVisionPolicyChipMapper.chips(for: capturePolicyEnforcement)
+    }
+
     func prepare() async {
         status = .requestingAccess
         permissions = await requestPermissions()
@@ -179,12 +185,16 @@ final class CaptureViewModel: ObservableObject {
                 case .success(let recording):
                     Task { @MainActor [weak self] in
                         self?.status = .finished(recording.descriptor.clipRelativePath)
+                        self?.recordFlowPhase = .done(sessionID: recording.descriptor.sessionID)
+                        self?.recordingStartedAt = nil
                         await self?.buildPostStopSummary(for: recording)
                     }
                 case .failure(let error):
                     let message = String(describing: error)
                     Task { @MainActor [weak self] in
                         self?.status = .blocked(message)
+                        self?.recordFlowPhase = .blocked(message)
+                        self?.recordingStartedAt = nil
                     }
                 }
             }
@@ -203,9 +213,12 @@ final class CaptureViewModel: ObservableObject {
             await controller.startPreview()
             capturePolicyEnforcement = await controller.currentPolicyEnforcementReport()
             status = .ready
+            recordFlowPhase = .ready
             startLiveGuidancePollingIfNeeded()
         } catch {
-            status = .blocked(Self.message(for: error))
+            let message = Self.message(for: error)
+            status = .blocked(message)
+            recordFlowPhase = Self.recordFlowBlockedPhase(for: error, message: message)
         }
     }
 
@@ -334,6 +347,7 @@ final class CaptureViewModel: ObservableObject {
     func toggleRecording() async {
         do {
             if isRecording {
+                recordFlowPhase = .saving
                 try await controller.stopRecording()
                 return
             }
@@ -343,6 +357,7 @@ final class CaptureViewModel: ObservableObject {
                     return
                 }
                 status = .blocked("Camera is not ready")
+                recordFlowPhase = .blocked("Camera is not ready")
                 return
             }
 
@@ -351,9 +366,14 @@ final class CaptureViewModel: ObservableObject {
             postStopSummary = nil
             controller.setProfileCapturePayload(profileFlow.payload)
             descriptor = try await controller.startRecording()
+            let startedAt = Date()
+            recordingStartedAt = startedAt
             status = .recording
+            recordFlowPhase = .recording(startedAt: startedAt)
         } catch {
-            status = .blocked(Self.message(for: error))
+            let message = Self.message(for: error)
+            status = .blocked(message)
+            recordFlowPhase = Self.recordFlowBlockedPhase(for: error, message: message)
         }
     }
 
@@ -476,6 +496,13 @@ final class CaptureViewModel: ObservableObject {
         default:
             return String(describing: error)
         }
+    }
+
+    nonisolated private static func recordFlowBlockedPhase(for error: Error, message: String) -> DinkVisionRecordFlowPhase {
+        if case CameraCaptureControllerError.permissionDenied = error {
+            return .permissionDenied(message)
+        }
+        return .blocked(message)
     }
 
     private var canStartRecording: Bool {

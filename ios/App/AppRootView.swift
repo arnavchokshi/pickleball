@@ -1,708 +1,380 @@
 import SwiftUI
-import PhotosUI
-import UniformTypeIdentifiers
 import PickleballCapture
 import PickleballCore
 import PickleballFastTier
-import PickleballGuidance
-import PickleballUpload
 import PickleballReplay
 
-private enum PickleballPalette {
-    static let ink = Color(red: 0.03, green: 0.045, blue: 0.04)
-    static let felt = Color(red: 0.06, green: 0.22, blue: 0.16)
-    static let mint = Color(red: 0.67, green: 1.0, blue: 0.58)
-    static let lime = Color(red: 0.88, green: 1.0, blue: 0.24)
-    static let coral = Color(red: 1.0, green: 0.43, blue: 0.30)
-    static let cyan = Color(red: 0.40, green: 0.86, blue: 1.0)
-    static let cream = Color(red: 0.94, green: 0.97, blue: 0.89)
-}
-
-private enum CameraRollImportStatus: Equatable {
-    case idle
-    case importing
-    case imported(String)
-    case failed(String)
-}
-
-private enum RenderUploadDisplayStatus: Equatable {
-    case idle
-    case submitting(sessionID: String)
-    case running(sessionID: String, job: RenderGatewayJob, replayURL: URL?)
-    case complete(sessionID: String, job: RenderGatewayJob, replayURL: URL?)
-    case failed(sessionID: String, message: String)
-
-    var sessionID: String? {
-        switch self {
-        case .idle:
-            return nil
-        case .submitting(let sessionID),
-                .running(let sessionID, _, _),
-                .complete(let sessionID, _, _),
-                .failed(let sessionID, _):
-            return sessionID
-        }
-    }
-
-    var isBusy: Bool {
-        switch self {
-        case .submitting, .running:
-            return true
-        case .idle, .complete, .failed:
-            return false
-        }
-    }
-
-    var progressFraction: Double {
-        switch self {
-        case .idle:
-            return 0
-        case .submitting:
-            return 0.05
-        case .running(_, let job, _), .complete(_, let job, _):
-            return job.progress?.fractionComplete ?? (job.status == .complete ? 1.0 : 0.35)
-        case .failed(_, _):
-            return 1.0
-        }
-    }
-
-    var stageText: String {
-        switch self {
-        case .idle:
-            return "Ready"
-        case .submitting:
-            return "Uploading to Render"
-        case .running(_, let job, _), .complete(_, let job, _):
-            return job.progress?.stage ?? job.status.rawValue
-        case .failed(_, let message):
-            return message
-        }
-    }
-
-    var etaText: String? {
-        switch self {
-        case .running(_, let job, _):
-            return job.progress?.etaText
-        case .submitting:
-            return "ETA calculating"
-        case .idle, .complete, .failed:
-            return nil
-        }
-    }
-
-    var replayURL: URL? {
-        switch self {
-        case .running(_, _, let replayURL), .complete(_, _, let replayURL):
-            return replayURL
-        case .idle, .submitting, .failed:
-            return nil
-        }
-    }
-}
-
 struct AppRootView: View {
-    @StateObject private var flow = PickleballAppFlow()
-
     var body: some View {
-        ZStack {
-            PickleballCourtBackdrop()
-                .ignoresSafeArea()
-
-            switch flow.screen {
-            case .splash:
-                PickleballSplashScreen {
-                    flow.finishSplash()
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.985)))
-            case .home:
-                PickleballHomeScreen(
-                    openCamera: { flow.openCamera() },
-                    openWorldViewer: { flow.openWorldViewer() },
-                    openRealityReplay: { flow.openRealityReplay() }
-                )
-                .transition(.asymmetric(
-                    insertion: .opacity.combined(with: .move(edge: .bottom)),
-                    removal: .opacity
-                ))
-            case .camera:
-                CameraCaptureScreen {
-                    flow.returnHome()
-                }
-                .transition(.asymmetric(
-                    insertion: .opacity.combined(with: .move(edge: .trailing)),
-                    removal: .opacity.combined(with: .move(edge: .leading))
-                ))
-            case .worldViewer:
-                WorldViewerScreen {
-                    flow.returnHome()
-                }
-                .transition(.asymmetric(
-                    insertion: .opacity.combined(with: .move(edge: .trailing)),
-                    removal: .opacity.combined(with: .move(edge: .leading))
-                ))
-            case .realityReplay:
-                RealityReplayScreen {
-                    flow.returnHome()
-                }
-                .transition(.asymmetric(
-                    insertion: .opacity.combined(with: .move(edge: .trailing)),
-                    removal: .opacity.combined(with: .move(edge: .leading))
-                ))
-            }
-        }
-        .animation(.smooth(duration: 0.48), value: flow.screen)
-        .preferredColorScheme(.dark)
+        DinkVisionAppRootView()
     }
 }
 
-private struct PickleballSplashScreen: View {
-    let onFinish: () -> Void
-    @State private var markScale: CGFloat = 0.86
-    @State private var wordOpacity = 0.0
+private struct DinkVisionAppRootView: View {
+    @State private var isSplashVisible = true
 
     var body: some View {
         ZStack {
-            PickleballCourtBackdrop()
+            DinkVisionTabShell(isActive: !isSplashVisible)
+                .opacity(isSplashVisible ? 0 : 1)
 
-            VStack(spacing: 20) {
-                PickleballBrandMark(size: 112)
-                    .scaleEffect(markScale)
-                    .shadow(color: PickleballPalette.lime.opacity(0.28), radius: 34, y: 12)
-
-                Text("Pickleball")
-                    .font(.system(size: 34, weight: .heavy, design: .rounded))
-                    .foregroundStyle(PickleballPalette.cream)
-                    .opacity(wordOpacity)
+            if isSplashVisible {
+                DinkVisionSplashView {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        isSplashVisible = false
+                    }
+                }
+                .transition(.opacity)
+                .zIndex(2)
             }
         }
-        .ignoresSafeArea()
-        .task {
-            withAnimation(.smooth(duration: 0.55)) {
-                markScale = 1.0
-                wordOpacity = 1.0
+        .background(DinkVisionColor.cream)
+        .preferredColorScheme(.light)
+    }
+}
+
+private struct DinkVisionSplashView: View {
+    let onFinish: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var machine = DinkVisionSplashStateMachine(reducedMotion: false)
+    @State private var phase: DinkVisionSplashPhase = .mark
+    @State private var irisScale: CGFloat = 0.16
+    @State private var markOpacity: Double = 1
+
+    var body: some View {
+        ZStack {
+            DinkVisionColor.cream.ignoresSafeArea()
+
+            if phase == .irisExpand {
+                expandingIris
+            } else {
+                VStack(spacing: 30) {
+                    Spacer()
+                    PaddleEyeMark(size: 190, isBlinking: phase == .blinkClosed)
+                        .opacity(markOpacity)
+                    Spacer()
+                    if phase == .mark {
+                        Text(DinkVisionBrand.displayName)
+                            .font(.system(size: 30, weight: .heavy, design: .rounded))
+                            .foregroundStyle(DinkVisionColor.ink)
+                            .padding(.bottom, 62)
+                    }
+                }
             }
-            try? await Task.sleep(nanoseconds: 1_080_000_000)
+        }
+        .task {
+            machine = DinkVisionSplashStateMachine(reducedMotion: reduceMotion)
+            if reduceMotion {
+                try? await Task.sleep(nanoseconds: 180_000_000)
+                onFinish()
+                return
+            }
+
+            try? await Task.sleep(nanoseconds: 170_000_000)
+            withAnimation(.easeInOut(duration: 0.125)) {
+                phase = machine.advance()
+            }
+            try? await Task.sleep(nanoseconds: 125_000_000)
+            withAnimation(.easeInOut(duration: 0.125)) {
+                phase = machine.advance()
+            }
+            withAnimation(.spring(response: 0.36, dampingFraction: 0.88)) {
+                irisScale = 1.0
+                markOpacity = 0
+            }
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            _ = machine.advance()
             onFinish()
         }
     }
+
+    private var expandingIris: some View {
+        GeometryReader { proxy in
+            let diameter = max(proxy.size.width, proxy.size.height) * 1.48
+            ZStack {
+                Circle()
+                    .fill(DinkVisionColor.ink)
+                    .frame(width: diameter, height: diameter)
+                    .scaleEffect(irisScale)
+                PerforatedBallView(fill: DinkVisionColor.ink, hole: DinkVisionColor.cream)
+                    .frame(width: min(330, diameter * 0.54), height: min(330, diameter * 0.54))
+                    .scaleEffect(irisScale)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+        }
+        .ignoresSafeArea()
+    }
 }
 
-private struct PickleballHomeScreen: View {
-    let openCamera: () -> Void
-    let openWorldViewer: () -> Void
-    let openRealityReplay: () -> Void
-    @State private var isImportPickerPresented = false
-    @State private var importStatus: CameraRollImportStatus = .idle
-    @State private var captureItems: [CaptureLibraryItem] = []
-    @State private var importSummary: PostStopPreviewSummary?
-    @State private var renderUploadStatus: RenderUploadDisplayStatus = .idle
+private enum DinkVisionTab: String, CaseIterable, Identifiable {
+    case record
+    case replays
+    case stats
+    case profile
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .record:
+            return "Record"
+        case .replays:
+            return "Replays"
+        case .stats:
+            return "Stats"
+        case .profile:
+            return "Profile"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .record:
+            return "record.circle"
+        case .replays:
+            return "play.rectangle"
+        case .stats:
+            return "chart.bar"
+        case .profile:
+            return "person.crop.circle"
+        }
+    }
+}
+
+private struct DinkVisionTabShell: View {
+    var isActive: Bool = true
+    @State private var selectedTab: DinkVisionTab = .record
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Group {
+                switch selectedTab {
+                case .record:
+                    DinkVisionRecordScreen(isActive: isActive)
+                case .replays:
+                    DinkVisionReplaysScreen()
+                case .stats:
+                    DinkVisionStatsScreen()
+                case .profile:
+                    DinkVisionProfileScreen()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            DinkVisionTabBar(selectedTab: $selectedTab)
+        }
+        .ignoresSafeArea(edges: selectedTab == .record ? .all : .bottom)
+    }
+}
+
+private struct DinkVisionTabBar: View {
+    @Binding var selectedTab: DinkVisionTab
+
+    var body: some View {
+        HStack {
+            ForEach(DinkVisionTab.allCases) { tab in
+                Button {
+                    selectedTab = tab
+                } label: {
+                    VStack(spacing: 4) {
+                        if tab == .record {
+                            PaddleEyeMark(
+                                size: 26,
+                                foreground: selectedTab == tab ? DinkVisionColor.cream : Color.white.opacity(0.46),
+                                background: DinkVisionColor.ink
+                            )
+                            .frame(width: 30, height: 30)
+                        } else {
+                            Image(systemName: tab.symbolName)
+                                .font(.system(size: 22, weight: .heavy))
+                                .frame(width: 30, height: 30)
+                        }
+                        Text(tab.title)
+                            .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    }
+                    .foregroundStyle(selectedTab == tab ? DinkVisionColor.cream : Color.white.opacity(0.46))
+                    .frame(maxWidth: .infinity, minHeight: 54)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(tab.title)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 18)
+        .frame(height: DinkVisionMetric.tabBarHeight)
+        .background(
+            TopRoundedRectangle(radius: DinkVisionMetric.tabBarRadius)
+            .fill(DinkVisionColor.ink)
+        )
+    }
+}
+
+private struct TopRoundedRectangle: Shape {
+    var radius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let r = min(radius, rect.width / 2, rect.height / 2)
+        path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + r))
+        path.addQuadCurve(to: CGPoint(x: rect.minX + r, y: rect.minY), control: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - r, y: rect.minY))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY + r), control: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+}
+
+private struct DinkVisionRecordScreen: View {
+    var isActive: Bool
+    @StateObject private var model: CaptureViewModel
+    @State private var isCourtOverlayEnabled = true
+    @State private var selectedPolicyHint: String?
+
+    init(
+        isActive: Bool = true,
+        model: @autoclosure @escaping () -> CaptureViewModel = CaptureViewModel()
+    ) {
+        self.isActive = isActive
+        _model = StateObject(wrappedValue: model())
+    }
 
     var body: some View {
         GeometryReader { proxy in
-            let isCompact = proxy.size.width < 520
             ZStack {
-                PickleballCourtBackdrop()
+                cameraLayer
 
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: isCompact ? 20 : 24) {
-                        homeHeader
-                        hero(isCompact: isCompact)
-                        signalStrip
-                        CapturePreviewPanel(
-                            items: captureItems,
-                            importStatus: importStatus,
-                            renderUploadStatus: renderUploadStatus,
-                            processPackage: { item in
-                                Task {
-                                    await uploadPackage(item)
-                                }
-                            }
-                        )
-                        if let importSummary {
-                            PostStopSummaryCard(summary: importSummary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                        }
-                        Spacer(minLength: 16)
-                    }
-                    .frame(minHeight: proxy.size.height)
-                    .padding(.horizontal, isCompact ? 18 : 28)
-                    .padding(.top, max(18, proxy.safeAreaInsets.top + 12))
-                    .padding(.bottom, max(28, proxy.safeAreaInsets.bottom + 18))
+                if isCourtOverlayEnabled {
+                    LivePlayerFootRingOverlay(
+                        rings: model.playerFootRings,
+                        videoAspectRatio: model.liveOverlayVideoAspectRatio
+                    )
+                    .allowsHitTesting(false)
+
+                    LiveBallTrajectoryOverlay(
+                        trailPoints: model.ballTrailPoints,
+                        contactMarkers: model.ballContactMarkers,
+                        videoAspectRatio: model.liveOverlayVideoAspectRatio
+                    )
+                    .allowsHitTesting(false)
                 }
-            }
-            .ignoresSafeArea()
-            .task {
-                await refreshCaptureItems()
-            }
-            .sheet(isPresented: $isImportPickerPresented) {
-                VideoImportPicker(
-                    onPickedTemporaryURL: { url in
-                        Task {
-                            await importPickedVideo(from: url)
-                        }
-                    },
-                    onFailure: { message in
-                        importStatus = .failed(message)
-                    }
-                )
-                .ignoresSafeArea()
-            }
-        }
-    }
 
-    private var homeHeader: some View {
-        HStack(spacing: 12) {
-            PickleballBrandMark(size: 42)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Pickleball")
-                    .font(.system(size: 18, weight: .heavy, design: .rounded))
-                Text("Court intelligence")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.64))
-            }
-            Spacer()
-            Text("Local")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(PickleballPalette.ink)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(PickleballPalette.lime, in: Capsule())
-        }
-        .foregroundStyle(PickleballPalette.cream)
-    }
-
-    private func hero(isCompact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("Game-speed capture,\nready on the first tap.")
-                .font(.system(size: isCompact ? 39 : 48, weight: .black, design: .rounded))
-                .minimumScaleFactor(0.68)
-                .lineLimit(4)
-                .foregroundStyle(PickleballPalette.cream)
-                .shadow(color: .black.opacity(0.32), radius: 18, y: 8)
-
-            Text("Record clean court video with locked camera settings, package-safe sidecars, and a review stack that stays honest about what is verified.")
-                .font(.system(size: 17, weight: .medium))
-                .lineSpacing(3)
-                .foregroundStyle(.white.opacity(0.72))
-                .fixedSize(horizontal: false, vertical: true)
-
-            Button(action: openCamera) {
-                HStack(spacing: 12) {
-                    Image(systemName: "camera.viewfinder")
-                        .font(.title3.weight(.bold))
-                    Text("Open Camera")
-                        .font(.headline.weight(.heavy))
-                    Spacer(minLength: 0)
-                    Image(systemName: "arrow.right")
-                        .font(.headline.weight(.heavy))
+                VStack(spacing: 0) {
+                    recordHeader
+                        .padding(.top, max(48, proxy.safeAreaInsets.top + 10))
+                    policyChips
+                    Spacer(minLength: 20)
+                    recordFooter
+                        .padding(.bottom, DinkVisionMetric.tabBarHeight + 22)
                 }
-                .foregroundStyle(PickleballPalette.ink)
                 .padding(.horizontal, 18)
-                .frame(height: 58)
-                .background(
-                    LinearGradient(
-                        colors: [PickleballPalette.lime, PickleballPalette.mint],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ),
-                    in: Capsule()
-                )
-                .shadow(color: PickleballPalette.lime.opacity(0.24), radius: 26, y: 14)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Open Camera")
 
-            Button {
-                isImportPickerPresented = true
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "photo.on.rectangle")
-                        .font(.title3.weight(.bold))
-                    Text("Import Video")
-                        .font(.headline.weight(.heavy))
-                    Spacer(minLength: 0)
-                    Image(systemName: "tray.and.arrow.down")
-                        .font(.headline.weight(.heavy))
+                if case .saving = model.recordFlowPhase {
+                    saveCard(title: "Saving\nsidecar", detail: "local")
                 }
-                .foregroundStyle(PickleballPalette.cream)
-                .padding(.horizontal, 18)
-                .frame(height: 52)
-                .background(Color.white.opacity(0.10), in: Capsule())
-                .overlay(Capsule().stroke(PickleballPalette.cyan.opacity(0.38), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Import Video")
-            .disabled(importStatus == .importing)
-
-            Button(action: openWorldViewer) {
-                HStack(spacing: 12) {
-                    Image(systemName: "scope")
-                        .font(.title3.weight(.bold))
-                    Text("View 3D World")
-                        .font(.headline.weight(.heavy))
-                    Spacer(minLength: 0)
-                    Image(systemName: "arrow.right")
-                        .font(.headline.weight(.heavy))
-                }
-                .foregroundStyle(PickleballPalette.cream)
-                .padding(.horizontal, 18)
-                .frame(height: 52)
-                .background(Color.white.opacity(0.10), in: Capsule())
-                .overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("View 3D World")
-
-            Button(action: openRealityReplay) {
-                HStack(spacing: 12) {
-                    Image(systemName: "cube.transparent")
-                        .font(.title3.weight(.bold))
-                    Text("Play Baked Replay")
-                        .font(.headline.weight(.heavy))
-                    Spacer(minLength: 0)
-                    Image(systemName: "arrow.right")
-                        .font(.headline.weight(.heavy))
-                }
-                .foregroundStyle(PickleballPalette.cream)
-                .padding(.horizontal, 18)
-                .frame(height: 52)
-                .background(Color.white.opacity(0.08), in: Capsule())
-                .overlay(Capsule().stroke(PickleballPalette.mint.opacity(0.36), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Play Baked Replay")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 18)
-    }
-
-    private func refreshCaptureItems() async {
-        do {
-            captureItems = try CaptureLibrary.listPackages(
-                packageRootURL: CameraCaptureController.defaultPackageRootURL()
-            )
-        } catch {
-            importStatus = .failed(Self.message(for: error))
-        }
-    }
-
-    private func importPickedVideo(from temporaryURL: URL) async {
-        let startedAt = CFAbsoluteTimeGetCurrent()
-        importStatus = .importing
-        importSummary = nil
-        do {
-            let rootURL = CameraCaptureController.defaultPackageRootURL()
-            let result = try await Task.detached(priority: .userInitiated) {
-                try await CameraRollVideoImporter().importVideo(
-                    sourceURL: temporaryURL,
-                    packageRootURL: rootURL
-                )
-            }.value
-            try? FileManager.default.removeItem(at: temporaryURL)
-            let elapsed = max(0, CFAbsoluteTimeGetCurrent() - startedAt)
-            importSummary = PostStopPreviewBuilder.summarize(
-                durationSeconds: result.sidecar.recordingDurationS ?? 0,
-                requestedFPS: result.sidecar.fps,
-                measuredFPS: Double(result.sidecar.fps),
-                captureQuality: result.sidecar.captureQuality,
-                sampledFrameDetectionCounts: [],
-                elapsedBuildSeconds: elapsed,
-                provenance: .cameraRollImport
-            )
-            importStatus = .imported(result.descriptor.sessionID)
-            await refreshCaptureItems()
-        } catch {
-            try? FileManager.default.removeItem(at: temporaryURL)
-            importStatus = .failed(Self.message(for: error))
-        }
-    }
-
-    private func uploadPackage(_ item: CaptureLibraryItem) async {
-        guard !renderUploadStatus.isBusy else {
-            return
-        }
-
-        let rootURL = CameraCaptureController.defaultPackageRootURL()
-        let clipURL = rootURL.appendingPathComponent(item.clipRelativePath)
-        let sidecarURL = rootURL.appendingPathComponent(item.sidecarRelativePath)
-        let client = RenderGatewayClient()
-        renderUploadStatus = .submitting(sessionID: item.sessionID)
-
-        do {
-            var job = try await client.submitJob(
-                upload: RenderGatewayUploadRequest(
-                    videoURL: clipURL,
-                    captureSidecarURL: sidecarURL,
-                    clip: item.sessionID
-                )
-            )
-            renderUploadStatus = .running(sessionID: item.sessionID, job: job, replayURL: client.replayURL(for: job))
-
-            while job.isActive && !Task.isCancelled {
-                try await Task.sleep(nanoseconds: 2_500_000_000)
-                job = try await client.fetchJobStatus(job.links.status)
-                let replayURL = client.replayURL(for: job)
-                if job.status == .complete {
-                    renderUploadStatus = .complete(sessionID: item.sessionID, job: job, replayURL: replayURL)
-                } else if job.status == .failed {
-                    renderUploadStatus = .failed(sessionID: item.sessionID, message: job.error ?? "Render job failed")
-                } else {
-                    renderUploadStatus = .running(sessionID: item.sessionID, job: job, replayURL: replayURL)
-                }
-            }
-        } catch is CancellationError {
-            renderUploadStatus = .idle
-        } catch {
-            renderUploadStatus = .failed(sessionID: item.sessionID, message: Self.message(for: error))
-        }
-    }
-
-    private static func message(for error: Error) -> String {
-        switch error {
-        case CameraRollVideoImportError.missingVideoTrack:
-            return "No video track"
-        case CameraRollVideoImportError.invalidResolution:
-            return "Resolution unavailable"
-        case CameraRollVideoImportError.invalidFPS:
-            return "FPS unavailable"
-        case CameraRollVideoImportError.invalidDuration:
-            return "Duration unavailable"
-        default:
-            return String(describing: error)
-        }
-    }
-
-    private var signalStrip: some View {
-        // The "Review 3D" tile mirrors the "View 3D World" CTA above --
-        // tapping it opens the same in-app SceneKit world viewer (GLUE-4),
-        // rendering the same locked mesh/joints tier + trust badges as the
-        // web scrubber. It is not an ON-DEVICE LIVE deep reconstruction
-        // claim.
-        HStack(spacing: 10) {
-            HomeSignalTile(title: "Capture", value: "60 FPS", icon: "bolt.fill", tint: PickleballPalette.lime)
-            HomeSignalTile(title: "Sidecar", value: "Ready", icon: "doc.badge.gearshape", tint: PickleballPalette.cyan)
-            Button(action: openWorldViewer) {
-                HomeSignalTile(title: "Review", value: "3D", icon: "scope", tint: PickleballPalette.coral)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Review 3D")
-        }
-    }
-}
-
-private struct VideoImportPicker: UIViewControllerRepresentable {
-    let onPickedTemporaryURL: (URL) -> Void
-    let onFailure: (String) -> Void
-
-    func makeUIViewController(context: Context) -> PHPickerViewController {
-        var configuration = PHPickerConfiguration(photoLibrary: .shared())
-        configuration.filter = .videos
-        configuration.selectionLimit = 1
-        configuration.preferredAssetRepresentationMode = .current
-        let picker = PHPickerViewController(configuration: configuration)
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_: PHPickerViewController, context _: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onPickedTemporaryURL: onPickedTemporaryURL, onFailure: onFailure)
-    }
-
-    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        private let onPickedTemporaryURL: (URL) -> Void
-        private let onFailure: (String) -> Void
-
-        init(onPickedTemporaryURL: @escaping (URL) -> Void, onFailure: @escaping (String) -> Void) {
-            self.onPickedTemporaryURL = onPickedTemporaryURL
-            self.onFailure = onFailure
-        }
-
-        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            picker.dismiss(animated: true)
-            guard let provider = results.first?.itemProvider else {
-                return
-            }
-            guard let typeIdentifier = provider.registeredTypeIdentifiers.first(where: { identifier in
-                guard let type = UTType(identifier) else {
-                    return false
-                }
-                return type.conforms(to: .movie) || type.conforms(to: .video)
-            }) else {
-                DispatchQueue.main.async {
-                    self.onFailure("Selected item is not a video")
-                }
-                return
-            }
-
-            provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { sourceURL, error in
-                if let error {
-                    DispatchQueue.main.async {
-                        self.onFailure(String(describing: error))
-                    }
-                    return
-                }
-                guard let sourceURL else {
-                    DispatchQueue.main.async {
-                        self.onFailure("Video file unavailable")
-                    }
-                    return
+                if case .done = model.recordFlowPhase {
+                    saveCard(title: "Capture\nsaved", detail: "sidecar ready")
                 }
 
-                do {
-                    let copiedURL = try Self.copyPickerFileToTemporaryURL(sourceURL)
-                    DispatchQueue.main.async {
-                        self.onPickedTemporaryURL(copiedURL)
-                    }
-                } catch {
-                    DispatchQueue.main.async {
-                        self.onFailure(String(describing: error))
-                    }
-                }
-            }
-        }
-
-        private static func copyPickerFileToTemporaryURL(_ sourceURL: URL) throws -> URL {
-            let ext = sourceURL.pathExtension.isEmpty ? "mov" : sourceURL.pathExtension
-            let destinationURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent("camera-roll-import-\(UUID().uuidString).\(ext)")
-            if FileManager.default.fileExists(atPath: destinationURL.path) {
-                try FileManager.default.removeItem(at: destinationURL)
-            }
-            try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
-            return destinationURL
-        }
-    }
-}
-
-private struct CameraCaptureScreen: View {
-    let returnHome: () -> Void
-    @StateObject private var model = CaptureViewModel()
-
-    var body: some View {
-        GeometryReader { proxy in
-            let isLandscape = proxy.size.width > proxy.size.height
-            ZStack {
-                CameraPreviewView(
-                    session: model.session,
-                    videoRotationAngle: model.previewRotationAngle
-                )
-                .ignoresSafeArea()
-
-                LivePlayerFootRingOverlay(
-                    rings: model.playerFootRings,
-                    videoAspectRatio: model.liveOverlayVideoAspectRatio
-                )
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
-                LiveBallTrajectoryOverlay(
-                    trailPoints: model.ballTrailPoints,
-                    contactMarkers: model.ballContactMarkers,
-                    videoAspectRatio: model.liveOverlayVideoAspectRatio
-                )
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
-                Color.black.opacity(model.status == .idle || model.status == .requestingAccess ? 0.22 : 0)
-                    .ignoresSafeArea()
-
-                if isLandscape {
-                    landscapeOverlay
-                } else {
-                    portraitOverlay
+                if shouldShowPermissionPrimer {
+                    permissionPrimer
                 }
 
-                if model.status == .ready || model.isRecording {
+                if let selectedPolicyHint {
                     VStack {
                         Spacer()
-                        HStack(alignment: .bottom, spacing: 10) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                LiveGuidancePanel(state: model.liveGuidanceState)
-                                CapturePolicyBadge(report: model.capturePolicyEnforcement, statusText: model.capturePolicyStatusText)
-                                ProfileSetupChecklistPanel(
-                                    flow: model.profileFlow,
-                                    playerHeightCM: $model.profilePlayerHeightCM,
-                                    ballSKU: $model.profileBallSKU,
-                                    completeCurrentStep: {
-                                        model.completeCurrentProfileStepFromUI()
-                                    }
-                                )
+                        Text(selectedPolicyHint)
+                            .font(.system(size: 13, weight: .heavy, design: .rounded))
+                            .foregroundStyle(DinkVisionColor.ink)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(DinkVisionColor.ballYellow, in: Capsule())
+                            .padding(.bottom, DinkVisionMetric.tabBarHeight + 118)
+                            .onTapGesture {
+                                self.selectedPolicyHint = nil
                             }
-                            Spacer(minLength: 8)
-                            VStack(alignment: .trailing, spacing: 8) {
-                                BallIndicatorBadge(state: model.ballIndicatorState)
-                                CourtDotMiniMap(
-                                    points: model.courtDotMapPoints,
-                                    statusText: model.courtOverlayStatusText,
-                                    detailText: model.courtOverlayDetailText
-                                )
-                            }
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 10)
                     }
-                }
-
-                if let summary = model.postStopSummary {
-                    PostStopSummaryCard(summary: summary)
-                        .padding(20)
-                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
             }
-            .animation(.smooth(duration: 0.3), value: model.postStopSummary)
-            .task {
-                await model.prepare()
-                await model.updateOrientation(isLandscapeViewport: isLandscape)
+            .animation(.spring(response: 0.32, dampingFraction: 0.86), value: model.recordFlowPhase)
+            .task(id: isActive) {
+                if isActive && model.status == .idle {
+                    await model.prepare()
+                }
             }
-            .onChange(of: isLandscape) {
+            .onChange(of: proxy.size.width > proxy.size.height) {
                 Task {
-                    await model.updateOrientation(isLandscapeViewport: isLandscape)
+                    await model.updateOrientation(isLandscapeViewport: proxy.size.width > proxy.size.height)
                 }
             }
         }
+        .background(DinkVisionColor.courtGreen)
     }
 
-    private var portraitOverlay: some View {
-        VStack(spacing: 12) {
-            header
-            Spacer(minLength: 20)
-            recordButton
+    private var cameraLayer: some View {
+        ZStack {
+            DinkVisionCourtPreviewBackdrop()
+            CameraPreviewView(session: model.session, videoRotationAngle: model.previewRotationAngle)
+                .opacity(model.status == .ready || model.isRecording ? 1 : 0.16)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .ignoresSafeArea()
     }
 
-    private var landscapeOverlay: some View {
-        HStack(alignment: .top, spacing: 14) {
-            header
+    private var recordHeader: some View {
+        HStack(alignment: .top) {
+            PaddleEyeMark(size: 31, foreground: .white, background: DinkVisionColor.courtGreen)
+                .frame(width: 34, height: 48)
             Spacer()
-            recordButton
+            VStack(alignment: .trailing, spacing: 8) {
+                if model.isRecording {
+                    recordingBadge
+                } else {
+                    statusChip(title: statusText, status: model.status == .ready ? .pass : .warning)
+                }
+                Button {
+                    isCourtOverlayEnabled.toggle()
+                } label: {
+                    Label(isCourtOverlayEnabled ? "Court overlay" : "Overlay off", systemImage: isCourtOverlayEnabled ? "viewfinder" : "viewfinder.circle")
+                        .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 7)
+                        .background(Color.black.opacity(0.45), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .frame(minHeight: 44)
+            }
         }
-        .padding(14)
     }
 
-    private var header: some View {
-        HStack(spacing: 10) {
-            Button(action: returnHome) {
-                Image(systemName: "chevron.left")
-                    .font(.headline.weight(.heavy))
-                    .frame(width: 38, height: 38)
+    private var policyChips: some View {
+        FlowLayout(spacing: 8) {
+            ForEach(model.policyChips) { chip in
+                Button {
+                    selectedPolicyHint = chip.hint
+                } label: {
+                    statusChip(title: chip.title, status: chip.status)
+                }
+                .buttonStyle(.plain)
+                .frame(minHeight: 44)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(PickleballPalette.cream)
-            .background(.ultraThinMaterial, in: Circle())
-            .accessibilityLabel("Back")
+        }
+        .padding(.top, 22)
+    }
 
-            statusPill
-            Spacer(minLength: 8)
-            Label(model.captureOrientationTitle, systemImage: orientationIconName)
-                .font(.caption.weight(.semibold))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(.regularMaterial, in: Capsule())
+    private var recordFooter: some View {
+        VStack(spacing: 16) {
+            Text(model.isRecording ? model.courtOverlayStatusText : "Frame the full court, then one tap")
+                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .shadow(color: .black.opacity(0.38), radius: 8, y: 1)
+
+            recordButton
         }
     }
 
@@ -712,25 +384,93 @@ private struct CameraCaptureScreen: View {
                 await model.toggleRecording()
             }
         } label: {
-            Image(systemName: model.isRecording ? "stop.fill" : "record.circle")
-                .font(.system(size: 32, weight: .semibold))
-                .frame(width: 72, height: 72)
+            ZStack {
+                Circle()
+                    .stroke(DinkVisionColor.ballYellow, lineWidth: 7)
+                    .frame(width: 92, height: 92)
+                if model.isRecording {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(DinkVisionColor.trailRed)
+                        .frame(width: 40, height: 40)
+                } else {
+                    Circle()
+                        .fill(canRecord ? DinkVisionColor.ballYellow : DinkVisionColor.mutedText.opacity(0.7))
+                        .frame(width: 58, height: 58)
+                }
+            }
+            .overlay {
+                if model.isRecording {
+                    DinkVisionTrailPulseView()
+                        .frame(width: 118, height: 118)
+                }
+            }
         }
-        .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.circle)
-        .tint(model.isRecording ? PickleballPalette.coral : PickleballPalette.lime)
+        .buttonStyle(.plain)
         .disabled(!canRecord)
-        .shadow(color: (model.isRecording ? PickleballPalette.coral : PickleballPalette.lime).opacity(0.28), radius: 20, y: 10)
+        .frame(width: 112, height: 112)
         .accessibilityLabel(model.isRecording ? "Stop recording" : "Start recording")
     }
 
-    private var statusPill: some View {
-        Label(statusText, systemImage: statusIconName)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(PickleballPalette.cream)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(.regularMaterial, in: Capsule())
+    private var recordingBadge: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let elapsed = model.recordingStartedAt.map { max(0, Int(context.date.timeIntervalSince($0))) } ?? 0
+            statusChip(title: "REC \(elapsed / 60):\(String(format: "%02d", elapsed % 60))", status: .warning, fill: DinkVisionColor.trailRed)
+        }
+    }
+
+    private func statusChip(title: String, status: DinkVisionPolicyChipStatus, fill: Color? = nil) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(status == .pass ? DinkVisionColor.success : DinkVisionColor.ballYellow)
+                .frame(width: 8, height: 8)
+            Text(title)
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background((fill ?? Color.black.opacity(0.50)), in: Capsule())
+    }
+
+    private func saveCard(title: String, detail: String) -> some View {
+        VStack {
+            Spacer()
+            BallTrailLoadingView(title: title, detail: detail)
+                .padding(.horizontal, 18)
+                .padding(.bottom, DinkVisionMetric.tabBarHeight + 88)
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+    }
+
+    private var permissionPrimer: some View {
+        VStack(spacing: 12) {
+            PaddleEyeMark(size: 56)
+                .frame(width: 62, height: 82)
+            Text("Camera + mic")
+                .font(.system(size: 22, weight: .heavy, design: .rounded))
+                .foregroundStyle(DinkVisionColor.ink)
+            Text("Accept access, then the record button is ready.")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(DinkVisionColor.mutedText)
+                .multilineTextAlignment(.center)
+        }
+        .padding(22)
+        .frame(maxWidth: 270)
+        .background(.white, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
+        .shadow(color: .black.opacity(0.20), radius: 24, y: 12)
+        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+    }
+
+    private var shouldShowPermissionPrimer: Bool {
+        if case .requestingAccess = model.status {
+            return true
+        }
+        if case .permissionDenied = model.recordFlowPhase {
+            return true
+        }
+        return false
     }
 
     private var canRecord: Bool {
@@ -745,11 +485,11 @@ private struct CameraCaptureScreen: View {
     private var statusText: String {
         switch model.status {
         case .idle:
-            return "Idle"
+            return "Starting"
         case .requestingAccess:
-            return "Access"
+            return "Camera access"
         case .ready:
-            return "Ready"
+            return "Tripod steady"
         case .recording:
             return "Recording"
         case .finished:
@@ -758,794 +498,65 @@ private struct CameraCaptureScreen: View {
             return message
         }
     }
-
-    private var statusIconName: String {
-        switch model.status {
-        case .idle:
-            return "pause"
-        case .requestingAccess:
-            return "lock.open"
-        case .ready:
-            return "checkmark"
-        case .recording:
-            return "record.circle"
-        case .finished:
-            return "checkmark.circle"
-        case .blocked:
-            return "exclamationmark.triangle"
-        }
-    }
-
-    private var orientationIconName: String {
-        model.captureOrientationTitle == "Portrait" ? "iphone" : "iphone.landscape"
-    }
 }
 
-/// Hosts the GLUE-4 SceneKit world viewer (`PickleballReplay.WorldViewerView`)
-/// loaded from the bundled Wolverine fixture
-/// (`ios/Replay/Sources/PickleballReplay/Resources/WorldFixture/`, a
-/// compact excerpt of `runs/process_video_glue_20260702T_live_wolverine2/...`).
-/// Falls back to a plain error screen (never a placeholder/fake world) if
-/// the bundled fixture somehow fails to load.
-private struct WorldViewerScreen: View {
-    let onClose: () -> Void
-    @State private var loadedBundle: WorldBundle?
-    @State private var loadError: String?
-
-    var body: some View {
-        ZStack {
-            PickleballCourtBackdrop()
-            if let loadedBundle {
-                WorldViewerView(bundle: loadedBundle, onClose: onClose)
-            } else if let loadError {
-                worldLoadErrorView(message: loadError)
-            } else {
-                ProgressView("Loading world…")
-                    .foregroundStyle(PickleballPalette.cream)
-            }
-        }
-        .ignoresSafeArea(edges: .bottom)
-        .task {
-            do {
-                loadedBundle = try WorldBundle.loadBundledSample()
-            } catch {
-                loadError = "Could not load the bundled world fixture: \(error)"
-            }
-        }
-    }
-
-    private func worldLoadErrorView(message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.largeTitle)
-            Text(message)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-            Button("Back", action: onClose)
-                .buttonStyle(.borderedProminent)
-        }
-        .foregroundStyle(PickleballPalette.cream)
-    }
-}
-
-/// Hosts the RealityKit/USDZ baked replay surface for W3-REPLAY-NATIVE
-/// phase 2. This intentionally complements the GLUE-4 JSON/SceneKit world
-/// viewer rather than replacing it: the USDZ is a baked contact-window mesh
-/// flipbook with coarse animation control, while GLUE-4 remains the per-frame
-/// tier/trust inspection surface.
-private struct RealityReplayScreen: View {
-    let onClose: () -> Void
-    @State private var loadedAsset: RealityReplayAsset?
-    @State private var loadError: String?
-
-    var body: some View {
-        ZStack {
-            PickleballCourtBackdrop()
-            if let loadedAsset {
-                loadedReplayView(asset: loadedAsset)
-            } else if let loadError {
-                replayLoadErrorView(message: loadError)
-            } else {
-                ProgressView("Loading baked replay...")
-                    .foregroundStyle(PickleballPalette.cream)
-            }
-        }
-        .ignoresSafeArea(edges: .bottom)
-        .task {
-            do {
-                loadedAsset = try RealityReplayAsset.loadBundledFixture()
-            } catch {
-                loadError = "Could not load the bundled Reality replay fixture: \(error)"
-            }
-        }
-    }
-
-    private func loadedReplayView(asset: RealityReplayAsset) -> some View {
-        Group {
-            if let view = try? RealityReplayView(asset: asset, onClose: onClose) {
-                view
-            } else {
-                replayLoadErrorView(message: "Could not initialize the Reality replay timeline.")
-            }
-        }
-    }
-
-    private func replayLoadErrorView(message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.largeTitle)
-            Text(message)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-            Button("Back", action: onClose)
-                .buttonStyle(.borderedProminent)
-        }
-        .foregroundStyle(PickleballPalette.cream)
-    }
-}
-
-private struct PickleballCourtBackdrop: View {
+private struct DinkVisionCourtPreviewBackdrop: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [
-                    PickleballPalette.ink,
-                    Color(red: 0.025, green: 0.10, blue: 0.08),
-                    Color(red: 0.04, green: 0.055, blue: 0.055)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            CourtLineGrid()
-                .stroke(.white.opacity(0.12), lineWidth: 1)
-                .blendMode(.screen)
-                .padding(.horizontal, -80)
-
-            LinearGradient(
-                colors: [
-                    Color.clear,
-                    PickleballPalette.felt.opacity(0.38),
-                    Color.black.opacity(0.58)
-                ],
+                colors: [Color(hex: 0x37684A), DinkVisionColor.courtGreen, Color(hex: 0x26503A)],
                 startPoint: .top,
                 endPoint: .bottom
             )
+            CourtPerspectiveLines()
+                .stroke(DinkVisionColor.cream.opacity(0.85), style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                .padding(.horizontal, 25)
+                .padding(.top, 250)
+                .padding(.bottom, 250)
         }
     }
 }
 
-private struct CourtLineGrid: Shape {
+private struct CourtPerspectiveLines: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        let step = max(70, rect.width / 5)
-        var x = rect.minX - step
-        while x <= rect.maxX + step {
-            path.move(to: CGPoint(x: x, y: rect.minY))
-            path.addLine(to: CGPoint(x: x + rect.height * 0.18, y: rect.maxY))
-            x += step
-        }
-        var y = rect.minY + step * 0.6
-        while y <= rect.maxY {
-            path.move(to: CGPoint(x: rect.minX, y: y))
-            path.addLine(to: CGPoint(x: rect.maxX, y: y + step * 0.16))
-            y += step
-        }
-        path.addRoundedRect(in: rect.insetBy(dx: rect.width * 0.16, dy: rect.height * 0.18), cornerSize: CGSize(width: 18, height: 18))
+        path.move(to: CGPoint(x: rect.width * 0.24, y: rect.height * 0.08))
+        path.addLine(to: CGPoint(x: rect.width * 0.76, y: rect.height * 0.08))
+        path.addLine(to: CGPoint(x: rect.width * 0.94, y: rect.height * 0.88))
+        path.addLine(to: CGPoint(x: rect.width * 0.06, y: rect.height * 0.88))
+        path.closeSubpath()
+        path.move(to: CGPoint(x: rect.width * 0.15, y: rect.height * 0.48))
+        path.addLine(to: CGPoint(x: rect.width * 0.85, y: rect.height * 0.48))
+        path.move(to: CGPoint(x: rect.width * 0.50, y: rect.height * 0.48))
+        path.addLine(to: CGPoint(x: rect.width * 0.50, y: rect.height * 0.88))
+        path.move(to: CGPoint(x: rect.width * 0.20, y: rect.height * 0.27))
+        path.addLine(to: CGPoint(x: rect.width * 0.80, y: rect.height * 0.27))
         return path
     }
 }
 
-private struct PickleballBrandMark: View {
-    var size: CGFloat
+private struct DinkVisionTrailPulseView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.24, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            PickleballPalette.lime,
-                            PickleballPalette.mint,
-                            PickleballPalette.cyan
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-            CourtGlyph()
-                .stroke(PickleballPalette.ink.opacity(0.86), style: StrokeStyle(lineWidth: max(2, size * 0.045), lineCap: .round, lineJoin: .round))
-                .padding(size * 0.20)
-        }
-        .frame(width: size, height: size)
-    }
-}
-
-private struct CourtGlyph: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.addRoundedRect(in: rect, cornerSize: CGSize(width: rect.width * 0.08, height: rect.width * 0.08))
-        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
-        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
-        path.move(to: CGPoint(x: rect.minX, y: rect.minY + rect.height * 0.28))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + rect.height * 0.28))
-        path.move(to: CGPoint(x: rect.minX, y: rect.maxY - rect.height * 0.28))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - rect.height * 0.28))
-        return path
-    }
-}
-
-private struct HomeSignalTile: View {
-    let title: String
-    let value: String
-    let icon: String
-    let tint: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon)
-                .font(.caption.weight(.heavy))
-                .foregroundStyle(tint)
-            Text(value)
-                .font(.system(size: 18, weight: .heavy, design: .rounded))
-                .foregroundStyle(PickleballPalette.cream)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Text(title)
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.white.opacity(0.56))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(.white.opacity(0.14), lineWidth: 1)
-        )
-    }
-}
-
-private struct CapturePreviewPanel: View {
-    let items: [CaptureLibraryItem]
-    let importStatus: CameraRollImportStatus
-    let renderUploadStatus: RenderUploadDisplayStatus
-    let processPackage: (CaptureLibraryItem) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Review-ready packages")
-                    .font(.title3.weight(.heavy))
-                    .foregroundStyle(PickleballPalette.cream)
-                Spacer()
-                importStatusBadge
-            }
-
-            if items.isEmpty {
-                Text("No local packages yet.")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.66))
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                VStack(spacing: 8) {
-                    ForEach(items.prefix(4)) { item in
-                        CapturePackageRow(
-                            item: item,
-                            renderUploadStatus: renderUploadStatus,
-                            processPackage: processPackage
-                        )
-                    }
-                }
-            }
-
-            if renderUploadStatus != .idle {
-                RenderUploadStatusCard(status: renderUploadStatus)
-                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
-            }
-
-            Text("Each package keeps `clip.mov` and `capture_sidecar.json` under Documents/captures for the same upload and process-video path.")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.white.opacity(0.52))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color.black.opacity(0.28))
-                .overlay(CourtLineGrid().stroke(.white.opacity(0.16), lineWidth: 1))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(.white.opacity(0.14), lineWidth: 1)
-        )
-    }
-
-    @ViewBuilder
-    private var importStatusBadge: some View {
-        switch importStatus {
-        case .idle:
-            Text("video + sidecar")
-                .foregroundStyle(.white.opacity(0.58))
-        case .importing:
-            Text("importing")
-                .foregroundStyle(PickleballPalette.ink)
-                .background(PickleballPalette.cyan, in: Capsule())
-        case .imported:
-            Text("imported")
-                .foregroundStyle(PickleballPalette.ink)
-                .background(PickleballPalette.lime, in: Capsule())
-        case .failed:
-            Text("import failed")
-                .foregroundStyle(PickleballPalette.ink)
-                .background(PickleballPalette.coral, in: Capsule())
-        }
-    }
-}
-
-private struct CapturePackageRow: View {
-    let item: CaptureLibraryItem
-    let renderUploadStatus: RenderUploadDisplayStatus
-    let processPackage: (CaptureLibraryItem) -> Void
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: item.isImported ? "photo.on.rectangle" : "video.fill")
-                .font(.caption.weight(.heavy))
-                .foregroundStyle(item.isImported ? PickleballPalette.cyan : PickleballPalette.lime)
-                .frame(width: 22)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(item.sessionID)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(PickleballPalette.cream)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    if let badge = item.badgeText {
-                        Text(badge)
-                            .font(.caption2.weight(.black))
-                            .foregroundStyle(PickleballPalette.ink)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(PickleballPalette.cyan, in: Capsule())
-                    }
-                }
-                Text(detailText)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.56))
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 8)
-            Button {
-                processPackage(item)
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: uploadIconName)
-                    Text(uploadButtonText)
-                }
-                .font(.caption2.weight(.black))
-                .foregroundStyle(PickleballPalette.ink)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(uploadButtonColor, in: Capsule())
-            }
-            .buttonStyle(.plain)
-            .disabled(renderUploadStatus.isBusy && renderUploadStatus.sessionID != item.sessionID)
-            .accessibilityLabel("Process \(item.sessionID) on GPU")
-            Text(gradeText)
-                .font(.caption2.weight(.black))
-                .foregroundStyle(PickleballPalette.ink)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 4)
-                .background(gradeColor, in: Capsule())
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
-        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-    }
-
-    private var isCurrentUpload: Bool {
-        renderUploadStatus.sessionID == item.sessionID
-    }
-
-    private var uploadButtonText: String {
-        guard isCurrentUpload else {
-            return "Process"
-        }
-        switch renderUploadStatus {
-        case .submitting, .running:
-            return "Running"
-        case .complete:
-            return "Ready"
-        case .failed:
-            return "Retry"
-        case .idle:
-            return "Process"
-        }
-    }
-
-    private var uploadIconName: String {
-        guard isCurrentUpload else {
-            return "icloud.and.arrow.up"
-        }
-        switch renderUploadStatus {
-        case .submitting, .running:
-            return "hourglass"
-        case .complete:
-            return "checkmark"
-        case .failed:
-            return "arrow.clockwise"
-        case .idle:
-            return "icloud.and.arrow.up"
-        }
-    }
-
-    private var uploadButtonColor: Color {
-        guard isCurrentUpload else {
-            return PickleballPalette.cyan
-        }
-        switch renderUploadStatus {
-        case .complete:
-            return PickleballPalette.lime
-        case .failed:
-            return PickleballPalette.coral
-        case .idle, .submitting, .running:
-            return PickleballPalette.cyan
-        }
-    }
-
-    private var detailText: String {
-        let resolution = item.resolution.count == 2 ? "\(item.resolution[0])x\(item.resolution[1])" : "unknown resolution"
-        let duration = item.durationSeconds.map { String(format: "%.1fs", $0) } ?? "duration unknown"
-        return "\(duration) · \(item.fps) fps · \(resolution)"
-    }
-
-    private var gradeText: String {
-        switch item.captureQualityGrade {
-        case .good:
-            return "GOOD"
-        case .warn:
-            return "WARN"
-        case .poor:
-            return "POOR"
-        }
-    }
-
-    private var gradeColor: Color {
-        switch item.captureQualityGrade {
-        case .good:
-            return PickleballPalette.lime
-        case .warn:
-            return PickleballPalette.cyan
-        case .poor:
-            return PickleballPalette.coral
-        }
-    }
-}
-
-private struct RenderUploadStatusCard: View {
-    let status: RenderUploadDisplayStatus
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label(status.stageText, systemImage: statusIconName)
-                    .font(.caption.weight(.heavy))
-                    .foregroundStyle(PickleballPalette.cream)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-                Spacer(minLength: 8)
-                if let etaText = status.etaText {
-                    Text(etaText)
-                        .font(.caption2.weight(.black))
-                        .foregroundStyle(PickleballPalette.ink)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(PickleballPalette.cyan, in: Capsule())
-                }
-            }
-
-            ProgressView(value: status.progressFraction)
-                .tint(statusTint)
-
-            if let replayURL = status.replayURL {
-                Link(destination: replayURL) {
-                    Label("Open replay", systemImage: "play.rectangle")
-                        .font(.caption.weight(.heavy))
-                        .foregroundStyle(PickleballPalette.lime)
-                }
-            }
-        }
-        .padding(10)
-        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(statusTint.opacity(0.45), lineWidth: 1)
-        )
-    }
-
-    private var statusIconName: String {
-        switch status {
-        case .idle:
-            return "pause"
-        case .submitting, .running:
-            return "bolt.horizontal"
-        case .complete:
-            return "checkmark.circle"
-        case .failed:
-            return "exclamationmark.triangle"
-        }
-    }
-
-    private var statusTint: Color {
-        switch status {
-        case .complete:
-            return PickleballPalette.lime
-        case .failed:
-            return PickleballPalette.coral
-        case .idle, .submitting, .running:
-            return PickleballPalette.cyan
-        }
-    }
-}
-
-/// W3-LIVE-MLP surface 1: pre-record capture-quality guidance. Renders
-/// `LiveGuidanceEvaluator` output as-is -- a check with no real signal shows
-/// as a neutral "not measured yet" chip, never a fake green checkmark.
-private struct LiveGuidancePanel: View {
-    let state: LiveGuidanceState?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Setup check")
-                .font(.caption2.weight(.black))
-                .foregroundStyle(.white.opacity(0.56))
-
-            if let state {
-                FlowChips(checks: state.checks)
-                Text(state.manualFramingTip)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .fixedSize(horizontal: false, vertical: true)
-                if !state.setupTips.isEmpty {
-                    ForEach(state.setupTips, id: \.self) { tip in
-                        Text("· \(tip)")
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.5))
-                    }
-                }
-            } else {
-                Text("Reading camera signals…")
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.6))
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: 260, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
-    }
-}
-
-private struct CapturePolicyBadge: View {
-    let report: CapturePolicyEnforcementReport?
-    let statusText: String
-
-    var body: some View {
-        Label(statusText, systemImage: iconName)
-            .font(.caption2.weight(.black))
-            .foregroundStyle(report?.isCompliant == false ? PickleballPalette.ink : PickleballPalette.cream)
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .frame(maxWidth: 260, alignment: .leading)
-            .background(background, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
-    }
-
-    private var iconName: String {
-        guard let report else {
-            return "hourglass"
-        }
-        return report.isCompliant ? "lock.shield" : "exclamationmark.triangle"
-    }
-
-    private var background: Color {
-        guard let report else {
-            return Color.black.opacity(0.34)
-        }
-        return report.isCompliant ? Color.black.opacity(0.34) : PickleballPalette.coral
-    }
-}
-
-private struct ProfileSetupChecklistPanel: View {
-    let flow: ProfileCaptureFlowState
-    @Binding var playerHeightCM: Double
-    @Binding var ballSKU: String
-    let completeCurrentStep: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 8) {
-                Text("Profile")
-                    .font(.caption2.weight(.black))
-                    .foregroundStyle(.white.opacity(0.56))
-                Spacer(minLength: 8)
-                Button(action: completeCurrentStep) {
-                    Image(systemName: flow.isComplete ? "checkmark.seal.fill" : "checkmark")
-                        .font(.caption.weight(.heavy))
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(flow.isComplete ? PickleballPalette.lime : PickleballPalette.ink)
-                .background(flow.isComplete ? Color.white.opacity(0.10) : PickleballPalette.lime, in: Circle())
-                .disabled(flow.isComplete)
-                .accessibilityLabel(flow.isComplete ? "Profile checklist complete" : "Complete profile step")
-            }
-
-            ForEach(flow.steps, id: \.kind) { step in
-                HStack(spacing: 7) {
-                    Image(systemName: step.status == .complete ? "checkmark.circle.fill" : "circle")
-                        .font(.caption2.weight(.heavy))
-                        .foregroundStyle(step.status == .complete ? PickleballPalette.lime : .white.opacity(0.42))
-                        .frame(width: 14)
-                    Text(step.kind.title)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(step.status == .complete ? PickleballPalette.cream : .white.opacity(0.66))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                }
-            }
-
-            if flow.currentStep?.kind == .playerHeightEntry {
-                Stepper(value: $playerHeightCM, in: 120...230, step: 1) {
-                    Text("\(Int(playerHeightCM.rounded())) cm")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(PickleballPalette.cream)
-                }
-            }
-
-            if flow.currentStep?.kind == .ballPick {
-                Picker("Ball", selection: $ballSKU) {
-                    Text("Outdoor").tag("outdoor_yellow")
-                    Text("Indoor").tag("indoor_yellow")
-                }
-                .pickerStyle(.segmented)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: 260, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
-    }
-}
-
-private extension ProfileCaptureStepKind {
-    var title: String {
-        switch self {
-        case .emptyCourtClip:
-            return "Empty court"
-        case .calibrationGridSweep:
-            return "Grid sweep"
-        case .paddleOrbit:
-            return "Paddle orbit"
-        case .playerHeightEntry:
-            return "Player height"
-        case .ballPick:
-            return "Ball pick"
-        }
-    }
-}
-
-private struct FlowChips: View {
-    let checks: [LiveGuidanceCheck]
-
-    var body: some View {
-        // Simple wrapping-free horizontal scroll keeps this robust across
-        // portrait/landscape without a custom flow layout for v0.
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(checks, id: \.id) { check in
-                    Text(check.title)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(chipForeground(check.status))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(chipBackground(check.status), in: Capsule())
-                        .accessibilityLabel("\(check.title): \(check.detail)")
-                }
-            }
-        }
-    }
-
-    private func chipBackground(_ status: LiveCheckStatus) -> Color {
-        switch status {
-        case .good:
-            return PickleballPalette.lime.opacity(0.85)
-        case .warn:
-            return PickleballPalette.coral.opacity(0.85)
-        case .unavailable:
-            return Color.white.opacity(0.12)
-        }
-    }
-
-    private func chipForeground(_ status: LiveCheckStatus) -> Color {
-        switch status {
-        case .good, .warn:
-            return PickleballPalette.ink
-        case .unavailable:
-            return .white.opacity(0.6)
-        }
-    }
-}
-
-/// W3-LIVE-MLP surface 3: confidence-gated ball indicator. `ball_student` is
-/// untrained in this build, so this ALWAYS renders the honest "coming soon"
-/// badge -- see `LiveBallIndicatorPolicy` for the gate that guarantees this.
-private struct BallIndicatorBadge: View {
-    let state: LiveBallIndicatorState
-
-    var body: some View {
-        Label(state.badgeText, systemImage: state.availability == .tracking ? "circle.fill" : "clock.badge.questionmark")
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(PickleballPalette.cream)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(.regularMaterial, in: Capsule())
-    }
-}
-
-/// W3-LIVE-MLP surface 2: live court-dot map. HONESTY: this is a
-/// screen-space proxy (see `CourtDotMapBuilder`), not a true top-down court
-/// projection -- there is no live calibration in v0. The label says so.
-private struct CourtDotMiniMap: View {
-    let points: [CourtDotMapPoint]
-    let statusText: String
-    let detailText: String
-
-    var body: some View {
-        VStack(alignment: .trailing, spacing: 4) {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
+            let phase = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 0.9) / 0.9
             ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(PickleballPalette.felt.opacity(0.55))
-                GeometryReader { proxy in
-                    ForEach(points, id: \.trackID) { point in
-                        Circle()
-                            .fill(dotColor(for: point))
-                            .frame(width: 10, height: 10)
-                            .position(
-                                x: CGFloat(point.normalizedX) * proxy.size.width,
-                                y: CGFloat(point.normalizedY) * proxy.size.height
-                            )
-                    }
-                }
-            }
-            .frame(width: 120, height: 90)
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.18), lineWidth: 1))
-            .accessibilityLabel("Court dot map (screen-space proxy, not a calibrated top-down view): \(points.count) players")
-
-            Text("screen-space proxy")
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.45))
-            Text(statusText)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.7))
-            if !detailText.isEmpty {
-                Text(detailText)
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.45))
-                    .frame(maxWidth: 150, alignment: .trailing)
-                    .fixedSize(horizontal: false, vertical: true)
+                Circle()
+                    .trim(from: 0.06, to: 0.30)
+                    .stroke(DinkVisionColor.trailBlue.opacity(0.82), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .rotationEffect(.degrees(phase * 360))
+                Circle()
+                    .trim(from: 0.40, to: 0.62)
+                    .stroke(DinkVisionColor.trailYellow.opacity(0.82), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .rotationEffect(.degrees(phase * 360 + 24))
+                Circle()
+                    .trim(from: 0.72, to: 0.92)
+                    .stroke(DinkVisionColor.trailRed.opacity(0.82), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .rotationEffect(.degrees(phase * 360 + 48))
             }
         }
-    }
-
-    private func dotColor(for point: CourtDotMapPoint) -> Color {
-        let palette: [Color] = [PickleballPalette.lime, PickleballPalette.cyan, PickleballPalette.coral, PickleballPalette.mint]
-        return palette[abs(point.trackID) % palette.count]
+        .accessibilityHidden(true)
     }
 }
 
@@ -1595,10 +606,10 @@ private struct LivePlayerFootRingOverlay: View {
 
     private func ringColor(for ring: LivePlayerFootRing) -> Color {
         let palette: [Color] = [
-            PickleballPalette.lime,
-            PickleballPalette.cyan,
-            PickleballPalette.coral,
-            Color(red: 0.98, green: 0.78, blue: 0.18),
+            DinkVisionColor.trailYellow,
+            DinkVisionColor.trailBlue,
+            DinkVisionColor.trailRed,
+            DinkVisionColor.success,
         ]
         return palette[ring.colorIndex % palette.count]
     }
@@ -1630,39 +641,31 @@ private struct LiveBallTrajectoryOverlay: View {
                         }
                     }
                     .stroke(
-                        Color(red: 1.0, green: 0.84, blue: 0.18).opacity(trailOpacity(segment.points)),
+                        DinkVisionColor.ballYellow.opacity(trailOpacity(segment.points)),
                         style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
                     )
                 }
 
                 ForEach(rendered.trailPoints, id: \.point.frameIndex) { renderedPoint in
                     Circle()
-                        .fill(Color(red: 1.0, green: 0.95, blue: 0.34).opacity(renderedPoint.point.opacity))
+                        .fill(DinkVisionColor.ballYellow.opacity(renderedPoint.point.opacity))
                         .frame(
                             width: max(5, CGFloat(renderedPoint.radius * 2)),
                             height: max(5, CGFloat(renderedPoint.radius * 2))
                         )
                         .position(x: CGFloat(renderedPoint.centerX), y: CGFloat(renderedPoint.centerY))
-                        .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.18).opacity(0.45), radius: 5)
+                        .shadow(color: DinkVisionColor.ballYellow.opacity(0.45), radius: 5)
                 }
 
                 ForEach(rendered.contactMarkers, id: \.marker.frameIndex) { renderedMarker in
-                    ZStack {
-                        Circle()
-                            .stroke(
-                                PickleballPalette.coral.opacity(renderedMarker.marker.opacity),
-                                lineWidth: 3
-                            )
-                        Circle()
-                            .stroke(.white.opacity(renderedMarker.marker.opacity * 0.45), lineWidth: 1)
-                            .scaleEffect(0.58)
-                    }
-                    .frame(
-                        width: max(24, CGFloat(renderedMarker.radius * 2)),
-                        height: max(24, CGFloat(renderedMarker.radius * 2))
-                    )
-                    .position(x: CGFloat(renderedMarker.centerX), y: CGFloat(renderedMarker.centerY))
-                    .shadow(color: PickleballPalette.coral.opacity(renderedMarker.marker.opacity * 0.42), radius: 8)
+                    Circle()
+                        .stroke(DinkVisionColor.trailRed.opacity(renderedMarker.marker.opacity), lineWidth: 3)
+                        .frame(
+                            width: max(24, CGFloat(renderedMarker.radius * 2)),
+                            height: max(24, CGFloat(renderedMarker.radius * 2))
+                        )
+                        .position(x: CGFloat(renderedMarker.centerX), y: CGFloat(renderedMarker.centerY))
+                        .shadow(color: DinkVisionColor.trailRed.opacity(renderedMarker.marker.opacity * 0.42), radius: 8)
                 }
             }
         }
@@ -1674,87 +677,583 @@ private struct LiveBallTrajectoryOverlay: View {
     }
 }
 
-/// W3-LIVE-MLP surface 4: post-stop preview, must appear inside the <10s
-/// gate. Every number here traces to a real readback (`PostStopPreviewSummary`)
-/// -- the player-count estimate is explicitly labeled as an estimate from a
-/// handful of sampled frames, never presented as an exact count.
-private struct PostStopSummaryCard: View {
-    let summary: PostStopPreviewSummary
+private struct DinkVisionReplaysScreen: View {
+    @State private var rows: [DinkVisionReplayRow] = []
+    @State private var isLoading = true
+    @State private var errorText: String?
+    @State private var selectedRow: DinkVisionReplayRow?
+    private let dataSource: DinkVisionReplayListDataSource
+
+    init(dataSource: DinkVisionReplayListDataSource = DinkVisionReplayListDataSource()) {
+        self.dataSource = dataSource
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(summary.provenance == .cameraRollImport ? "Clip imported" : "Clip saved")
-                    .font(.headline.weight(.heavy))
-                    .foregroundStyle(PickleballPalette.cream)
-                Spacer()
-                Text(summary.isWithinPreviewBudget ? "<10s preview" : "preview slow")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(PickleballPalette.ink)
-                    .padding(.horizontal, 8)
+        NavigationStack {
+            ZStack {
+                DinkVisionColor.cream.ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        DinkVisionScreenHeader(title: "Replays", subtitle: "Your rallies, rebuilt in 3D")
+
+                        if isLoading {
+                            BallTrailLoadingView(title: "Scanning\ncaptures", detail: "sidecars")
+                        } else if rows.isEmpty {
+                            DinkVisionEmptyReplaysView(message: errorText ?? "record your first rally")
+                        } else {
+                            ForEach(rows) { row in
+                                Button {
+                                    selectedRow = row
+                                } label: {
+                                    DinkVisionReplayRowView(row: row)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 58)
+                    .padding(.bottom, DinkVisionMetric.tabBarHeight + 24)
+                }
+            }
+            .navigationBarHidden(true)
+            .task {
+                loadRows()
+            }
+            .fullScreenCover(item: $selectedRow) { row in
+                DinkVisionReplayPlaybackScreen(row: row) {
+                    selectedRow = nil
+                }
+            }
+        }
+    }
+
+    private func loadRows() {
+        isLoading = true
+        do {
+            rows = try dataSource.loadRows()
+            errorText = nil
+        } catch {
+            rows = []
+            errorText = "Could not read local captures"
+        }
+        isLoading = false
+    }
+}
+
+private struct DinkVisionReplayRowView: View {
+    let row: DinkVisionReplayRow
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack(alignment: .bottomTrailing) {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: 0x37684A), DinkVisionColor.courtGreenDeep],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 96, height: 64)
+                TrailArcThumbnail()
+                    .stroke(DinkVisionColor.trailBlue, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .frame(width: 86, height: 54)
+                Text(row.durationText)
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                    .padding(6)
+            }
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(row.title)
+                    .font(.system(size: 17, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DinkVisionColor.ink)
+                Text(row.subtitle)
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DinkVisionColor.mutedText)
+                    .textCase(.uppercase)
+                    .lineLimit(2)
+                Text(row.trustBadgeText)
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 9)
                     .padding(.vertical, 4)
-                    .background(summary.isWithinPreviewBudget ? PickleballPalette.lime : PickleballPalette.coral, in: Capsule())
+                    .background(DinkVisionColor.courtGreen, in: Capsule())
             }
 
-            summaryRow(label: "Duration", value: String(format: "%.1fs", summary.durationSeconds))
-            summaryRow(label: "Frame rate", value: frameRateText)
-            summaryRow(label: "Capture quality", value: gradeText(summary.captureQualityGrade))
-            summaryRow(
-                label: "Players (estimate)",
-                value: summary.estimatedPlayerCount.map { "~\($0) from \(summary.playerCountSampleFrameCount) sampled frames" }
-                    ?? missingPlayerEstimateText
-            )
-
-            if !summary.captureQualityReasons.isEmpty {
-                Text(summary.captureQualityReasons.map { LiveGuidanceEvaluator.humanReadableSetupTip(for: $0) }.joined(separator: " · "))
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.55))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(16)
-        .frame(maxWidth: 320, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.16), lineWidth: 1))
-        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
-    }
-
-    private func summaryRow(label: String, value: String) -> some View {
-        HStack {
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.6))
             Spacer()
-            Text(value)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(PickleballPalette.cream)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 18, weight: .heavy))
+                .foregroundStyle(DinkVisionColor.ink)
         }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(.white)
+        )
+        .accessibilityLabel("\(row.title), \(row.subtitle)")
     }
+}
 
-    private var frameRateText: String {
-        summary.provenance == .cameraRollImport
-            ? "\(summary.requestedFPS) fps probed"
-            : "\(summary.requestedFPS) fps requested"
+private struct TrailArcThumbnail: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + 8, y: rect.maxY - 14))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX - 12, y: rect.midY + 4), control: CGPoint(x: rect.midX - 8, y: rect.minY + 4))
+        return path
     }
+}
 
-    private var missingPlayerEstimateText: String {
-        summary.provenance == .cameraRollImport
-            ? "no sampled detector pass"
-            : "not enough sampled frames yet"
+private struct DinkVisionEmptyReplaysView: View {
+    let message: String
+
+    var body: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                ForEach(0..<16, id: \.self) { index in
+                    Circle()
+                        .fill(DinkVisionColor.ink.opacity(index.isMultiple(of: 3) ? 0.75 : 0.20))
+                        .frame(width: 8, height: 8)
+                        .offset(
+                            x: CGFloat((index % 4) - 2) * 22,
+                            y: CGFloat((index / 4) - 2) * 20
+                        )
+                }
+            }
+            .frame(height: 110)
+            Text(message)
+                .font(.system(size: 19, weight: .heavy, design: .rounded))
+                .foregroundStyle(DinkVisionColor.ink)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(30)
+        .background(.white, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
     }
+}
 
-    private func gradeText(_ grade: CaptureQuality.Grade) -> String {
-        switch grade {
-        case .good:
-            return "Good"
-        case .warn:
-            return "Warn"
-        case .poor:
-            return "Poor"
+private struct DinkVisionReplayPlaybackScreen: View {
+    let row: DinkVisionReplayRow
+    let onClose: () -> Void
+    @State private var loadedBundle: WorldBundle?
+    @State private var loadError: String?
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            DinkVisionColor.ink.ignoresSafeArea()
+            if let loadedBundle {
+                WorldViewerView(bundle: loadedBundle, onClose: onClose)
+                    .ignoresSafeArea()
+            } else if let loadError {
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.largeTitle)
+                    Text(loadError)
+                        .multilineTextAlignment(.center)
+                    Button("Close", action: onClose)
+                        .buttonStyle(.borderedProminent)
+                }
+                .foregroundStyle(DinkVisionColor.cream)
+                .padding(24)
+            } else {
+                BallTrailLoadingView(title: "Loading\nreplay", detail: row.durationText)
+                    .padding(22)
+            }
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(row.title)
+                        .font(.system(size: 17, weight: .heavy, design: .rounded))
+                    Text("Existing replay module. Bundled sample until this capture has server output.")
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(2)
+                }
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.headline.weight(.heavy))
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+            }
+            .foregroundStyle(DinkVisionColor.cream)
+            .padding(.horizontal, 18)
+            .padding(.top, 54)
+            .background(
+                LinearGradient(colors: [Color.black.opacity(0.76), .clear], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 130),
+                alignment: .top
+            )
+        }
+        .task {
+            do {
+                loadedBundle = try WorldBundle.loadBundledSample()
+            } catch {
+                loadError = "Could not load the replay viewer fixture."
+            }
         }
     }
 }
 
-#Preview {
-    AppRootView()
+private struct DinkVisionStatsScreen: View {
+    var body: some View {
+        ZStack {
+            DinkVisionColor.cream.ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    DinkVisionScreenHeader(title: "Match Overview", subtitle: "Sample data - unlocks after your first match")
+                    sampleWatermark
+                    DinkVisionCourtMapCard()
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        StatTile(title: "Shots tracked", value: "324", accent: DinkVisionColor.trailBlue, style: .spark)
+                        StatTile(title: "Dink %", value: "41%", accent: DinkVisionColor.courtGreen, style: .ring)
+                        StatTile(title: "Winners", value: "18", accent: DinkVisionColor.trailRed, style: .spark)
+                        StatTile(title: "Avg speed", value: "31mph", accent: DinkVisionColor.trailYellow, style: .spark)
+                    }
+                    DinkVisionPlaceholderAnalysisCards()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 58)
+                .padding(.bottom, DinkVisionMetric.tabBarHeight + 24)
+            }
+        }
+    }
+
+    private var sampleWatermark: some View {
+        Text("Sample data")
+            .font(.system(size: 12, weight: .heavy, design: .rounded))
+            .foregroundStyle(DinkVisionColor.ink)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(DinkVisionColor.ballYellow, in: Capsule())
+            .accessibilityLabel("Sample data, not real match stats")
+    }
+}
+
+private struct DinkVisionCourtMapCard: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous)
+                .fill(DinkVisionColor.courtGreen)
+            CourtMapLines()
+                .stroke(DinkVisionColor.cream.opacity(0.9), lineWidth: 3)
+                .padding(14)
+            TrailArcThumbnail()
+                .stroke(DinkVisionColor.trailBlue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .padding(30)
+            TrailArcThumbnail()
+                .stroke(DinkVisionColor.trailRed, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .rotationEffect(.degrees(8))
+                .padding(42)
+            Circle()
+                .fill(DinkVisionColor.ballYellow)
+                .frame(width: 11, height: 11)
+                .offset(x: 86, y: -16)
+        }
+        .frame(height: 164)
+    }
+}
+
+private struct CourtMapLines: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.addRoundedRect(in: rect, cornerSize: CGSize(width: 10, height: 10))
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.33, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.33, y: rect.maxY))
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.66, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.66, y: rect.maxY))
+        return path
+    }
+}
+
+private enum StatTileStyle {
+    case spark
+    case ring
+}
+
+private struct StatTile: View {
+    let title: String
+    let value: String
+    let accent: Color
+    let style: StatTileStyle
+
+    var body: some View {
+        DinkVisionCard {
+            VStack(alignment: .leading, spacing: 7) {
+                Text(title)
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DinkVisionColor.mutedText)
+                    .textCase(.uppercase)
+                    .lineLimit(2)
+                Text(value)
+                    .font(.system(size: value.count > 4 ? 34 : 44, weight: .black, design: .rounded))
+                    .foregroundStyle(DinkVisionColor.ink)
+                    .minimumScaleFactor(0.64)
+                    .lineLimit(1)
+                if style == .spark {
+                    Sparkline(accent: accent)
+                        .stroke(accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .frame(height: 28)
+                } else {
+                    RingMeter(accent: accent)
+                        .frame(width: 46, height: 46)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .overlay(alignment: .topTrailing) {
+            Text("sample")
+                .font(.system(size: 8, weight: .heavy, design: .rounded))
+                .foregroundStyle(DinkVisionColor.mutedText.opacity(0.76))
+                .padding(10)
+        }
+    }
+}
+
+private struct Sparkline: Shape {
+    let accent: Color
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + 4, y: rect.midY + 5))
+        path.addQuadCurve(to: CGPoint(x: rect.midX, y: rect.midY - 4), control: CGPoint(x: rect.width * 0.25, y: rect.minY + 2))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX - 4, y: rect.midY - 8), control: CGPoint(x: rect.width * 0.75, y: rect.maxY))
+        return path
+    }
+}
+
+private struct RingMeter: View {
+    let accent: Color
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(DinkVisionColor.line, lineWidth: 7)
+            Circle()
+                .trim(from: 0, to: 0.41)
+                .stroke(accent, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+        }
+    }
+}
+
+private struct DinkVisionPlaceholderAnalysisCards: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            placeholder(title: "Heat map", detail: "Sample placeholder until server wiring lands")
+            placeholder(title: "Shot placement", detail: "Sample placeholder until your replay is processed")
+        }
+    }
+
+    private func placeholder(title: String, detail: String) -> some View {
+        DinkVisionCard {
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(.system(size: 17, weight: .heavy, design: .rounded))
+                        .foregroundStyle(DinkVisionColor.ink)
+                    Text(detail)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(DinkVisionColor.mutedText)
+                }
+                Spacer()
+                PerforatedBallView(fill: DinkVisionColor.line, hole: .white)
+                    .frame(width: 46, height: 46)
+            }
+        }
+    }
+}
+
+private struct DinkVisionProfileScreen: View {
+    @State private var flow = ProfileCaptureFlowState.h0Checklist()
+    @State private var playerHeightCM: Double = 180
+    @State private var ballSKU = "outdoor_yellow"
+
+    var body: some View {
+        ZStack {
+            DinkVisionColor.cream.ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    DinkVisionScreenHeader(title: "Set up your court", subtitle: "5 quick steps - better tracking forever")
+                    profileChecklist
+                    capturePolicyExplainer
+                    appInfo
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 58)
+                .padding(.bottom, DinkVisionMetric.tabBarHeight + 24)
+            }
+        }
+    }
+
+    private var profileChecklist: some View {
+        VStack(spacing: 10) {
+            ForEach(flow.steps.indices, id: \.self) { index in
+                let step = flow.steps[index]
+                Button {
+                    complete(step.kind)
+                } label: {
+                    HStack(spacing: 14) {
+                        Text(step.status == .complete ? "OK" : "\(index + 1)")
+                            .font(.system(size: 15, weight: .heavy, design: .rounded))
+                            .foregroundStyle(step.status == .complete ? .white : DinkVisionColor.ink)
+                            .frame(width: 40, height: 40)
+                            .background(stepColor(step: step), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(step.kind.dinkVisionTitle)
+                                .font(.system(size: 17, weight: .heavy, design: .rounded))
+                                .foregroundStyle(DinkVisionColor.ink)
+                            Text(step.kind.dinkVisionDetail)
+                                .font(.system(size: 11, weight: .heavy, design: .rounded))
+                                .foregroundStyle(DinkVisionColor.mutedText)
+                                .textCase(.uppercase)
+                        }
+                        Spacer()
+                        if flow.currentStep?.kind == step.kind {
+                            Text("Next")
+                                .font(.system(size: 10, weight: .heavy, design: .rounded))
+                                .foregroundStyle(DinkVisionColor.ink)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(DinkVisionColor.ballYellow, in: Capsule())
+                        }
+                    }
+                    .padding(14)
+                    .background(.white, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous)
+                            .stroke(borderColor(step: step), lineWidth: 3)
+                    )
+                    .opacity(step.status == .complete || flow.currentStep?.kind == step.kind ? 1 : 0.55)
+                }
+                .buttonStyle(.plain)
+                .frame(minHeight: 68)
+            }
+        }
+    }
+
+    private var capturePolicyExplainer: some View {
+        DinkVisionCard {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Capture policy")
+                    .font(.system(size: 17, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DinkVisionColor.ink)
+                Text("DinkVision asks the camera for EIS off, AE/AF/WB lock, landscape, ARKit pose, gravity, and court-plane sidecar samples. If a device readback misses, the sidecar records the violation.")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(DinkVisionColor.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var appInfo: some View {
+        DinkVisionCard {
+            HStack {
+                PaddleEyeMark(size: 42)
+                    .frame(width: 48, height: 62)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(DinkVisionBrand.displayName)
+                        .font(.system(size: 20, weight: .heavy, design: .rounded))
+                        .foregroundStyle(DinkVisionColor.ink)
+                    Text("App-side capture UI. Server stats are not wired in this lane.")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(DinkVisionColor.mutedText)
+                }
+                Spacer()
+            }
+        }
+    }
+
+    private func complete(_ kind: ProfileCaptureStepKind) {
+        switch kind {
+        case .emptyCourtClip:
+            flow.recordStep(kind, artifactRef: "captures/profile/empty_court_clip.mov", metadata: ["clip_type": "empty_court"])
+        case .calibrationGridSweep:
+            flow.recordStep(kind, artifactRef: "captures/profile/calibration_grid_sweep.json", metadata: ["pattern": "charuco_or_aprilgrid"])
+        case .paddleOrbit:
+            flow.recordStep(kind, artifactRef: "captures/profile/paddle_orbit.mov", metadata: ["orbit": "single_paddle"])
+        case .playerHeightEntry:
+            flow.recordStep(kind, metadata: ["height_cm": "\(Int(playerHeightCM.rounded()))"])
+        case .ballPick:
+            flow.recordStep(kind, metadata: ["sku": ballSKU])
+        }
+    }
+
+    private func stepColor(step: ProfileCaptureStepRecord) -> Color {
+        if step.status == .complete {
+            return DinkVisionColor.courtGreen
+        }
+        return flow.currentStep?.kind == step.kind ? DinkVisionColor.ballYellow : DinkVisionColor.line
+    }
+
+    private func borderColor(step: ProfileCaptureStepRecord) -> Color {
+        if step.status == .complete {
+            return DinkVisionColor.courtGreen
+        }
+        return flow.currentStep?.kind == step.kind ? DinkVisionColor.ballYellow : .clear
+    }
+}
+
+private struct DinkVisionScreenHeader: View {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.system(size: 28, weight: .heavy, design: .rounded))
+                .foregroundStyle(DinkVisionColor.ink)
+                .minimumScaleFactor(0.78)
+                .lineLimit(2)
+            Text(subtitle)
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundStyle(DinkVisionColor.mutedText)
+                .textCase(.uppercase)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct FlowLayout<Content: View>: View {
+    var spacing: CGFloat
+    let content: Content
+
+    init(spacing: CGFloat, @ViewBuilder content: () -> Content) {
+        self.spacing = spacing
+        self.content = content()
+    }
+
+    var body: some View {
+        HStack(spacing: spacing) {
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+}
+
+#Preview("DinkVision shell") {
+    DinkVisionAppRootView()
+}
+
+#Preview("Splash") {
+    DinkVisionSplashView {}
+}
+
+#Preview("Record") {
+    DinkVisionRecordScreen()
+}
+
+#Preview("Replays empty") {
+    DinkVisionReplaysScreen(dataSource: DinkVisionReplayListDataSource(loadPackages: { _ in [] }))
+}
+
+#Preview("Stats") {
+    DinkVisionStatsScreen()
+}
+
+#Preview("Profile") {
+    DinkVisionProfileScreen()
 }

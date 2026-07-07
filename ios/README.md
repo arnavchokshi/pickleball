@@ -22,6 +22,48 @@ not phone-real-time; LiDAR is a near-field (~5 m) bonus only.
 - `PickleballUpload`: upload manifest boundaries for IOS-5.
 - `PickleballReplay`: playback boundaries for server-rendered replay assets in IOS-6.
 
+## DinkVision Design System
+
+The app-facing display name is `DinkVisionBrand.displayName` in
+`ios/App/DinkVisionDesignSystem.swift`. Bundle identifiers remain unchanged.
+
+Tokens are mirrored from the 2026-07-07 manager mockups:
+
+- Colors: cream `#F4EEE3`, court green `#2E5B3F`, deep green `#234731`, ink
+  `#141414` from `tokens.css`, ball yellow `#F2C63F`, trail blue `#3E8EF0`,
+  trail red `#E8503A`, card white `#FFFFFF`, and line `#E7DFD1`.
+- Shapes: 24 pt card radius, 32 pt top tab-bar radius, black bottom tab rail,
+  and thick rounded strokes for the paddle-eye mark.
+- Type: SF rounded/system heavy numerals and sentence-case labels. Stat cards
+  use dynamic SwiftUI text with scale limits rather than fixed bitmap copy.
+- Iconography: the paddle-eye mark is pure SwiftUI vector drawing in
+  `PaddleEyeMark`; empty states and the loader reuse the perforated-ball motif.
+
+Signature animations:
+
+- Splash: cream launch screen, paddle-eye blink, then an ink perforated-ball iris
+  expansion that reveals the Record tab. Reduced-motion users get a short
+  crossfade with no iris expansion.
+- Loader: `BallTrailLoadingView` is the reusable black-card speed-streak loader
+  used for capture save/sidecar processing and replay loading states.
+
+Screen map:
+
+- Record is the cold-launch default tab. It wraps `CaptureViewModel` and the
+  P0-10a `CameraCaptureControlling` path, so start/stop still lands the
+  capture package and sidecar through the existing controller. Policy chips are
+  mapped from `CapturePolicyEnforcementReport`; tapping a chip shows the
+  one-line fix hint. The court overlay toggle only shows/hides the existing
+  live overlay surfaces.
+- Replays lists real local capture packages through `CaptureLibrary` via
+  `DinkVisionReplayListDataSource`. Opening a row wraps the existing replay
+  viewer module; until a local capture has server replay output, the viewer
+  labels that it is showing the bundled sample fixture.
+- Stats is explicitly sample placeholder UI. No stat is claimed as measured
+  until server wiring exists.
+- Profile/Settings exposes the H0 profile checklist steps, app info, and the
+  capture-policy explainer.
+
 ## Local Verification
 
 `swift test` covers the Swift package modules. The shared Xcode scheme now has a

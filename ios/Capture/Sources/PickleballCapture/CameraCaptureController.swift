@@ -56,8 +56,8 @@ public final class CameraCaptureController: NSObject {
     public init(arSessionProvider: ARSessionProviding = DefaultARSessionProviderFactory.make()) {
         self.arFrameRecorder = ARFrameSidecarRecorder(provider: arSessionProvider)
         super.init()
-        liveOverlayEngine.onFramePresentationTimestamp = { [weak self] _, presentationSeconds in
-            self?.arFrameRecorder.recordVideoFrame(ptsS: presentationSeconds)
+        liveOverlayEngine.onFramePresentationTimestamp = { [arFrameRecorder] _, presentationSeconds in
+            arFrameRecorder.recordVideoFrame(ptsS: presentationSeconds)
         }
     }
 

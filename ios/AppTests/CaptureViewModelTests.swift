@@ -22,6 +22,8 @@ final class CaptureViewModelTests: XCTestCase {
         XCTAssertNil(model.replayBenchmarkOutputPath)
         XCTAssertTrue(model.modeSummary.contains("60 fps"))
         XCTAssertTrue(model.modeSummary.contains("hevc"))
+        XCTAssertEqual(model.recordFlowPhase, .idle)
+        XCTAssertEqual(model.policyChips.map(\.id), ["eis", "camera_locks", "landscape"])
     }
 
     @MainActor
@@ -50,6 +52,7 @@ final class CaptureViewModelTests: XCTestCase {
         ])
         XCTAssertEqual(controller.startPreviewCallCount, 1)
         XCTAssertEqual(model.capturePolicyStatusText, "Capture policy locked")
+        XCTAssertEqual(model.recordFlowPhase, .ready)
     }
 
     @MainActor
@@ -123,10 +126,20 @@ final class CaptureViewModelTests: XCTestCase {
         XCTAssertEqual(model.status, .recording)
         XCTAssertEqual(model.descriptor, recordingDescriptor)
         XCTAssertEqual(controller.startRecordingCallCount, 1)
+        XCTAssertEqual(model.recordFlowPhase, .recording(startedAt: model.recordingStartedAt!))
 
         await model.toggleRecording()
 
         XCTAssertEqual(controller.stopRecordingCallCount, 1)
+        XCTAssertEqual(model.recordFlowPhase, .saving)
+
+        controller.onRecordingFinished?(.success(CameraRecordingResult(
+            descriptor: recordingDescriptor,
+            clipURL: URL(fileURLWithPath: "/tmp/recording.mov")
+        )))
+        await Task.yield()
+
+        XCTAssertEqual(model.recordFlowPhase, .done(sessionID: "recording"))
     }
 
     @MainActor
@@ -146,6 +159,7 @@ final class CaptureViewModelTests: XCTestCase {
         await model.toggleRecording()
 
         XCTAssertEqual(model.status, .blocked("Camera or microphone access needed"))
+        XCTAssertEqual(model.recordFlowPhase, .permissionDenied("Camera or microphone access needed"))
         XCTAssertFalse(model.isRecording)
         XCTAssertEqual(controller.startRecordingCallCount, 0)
     }
