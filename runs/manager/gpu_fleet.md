@@ -4,12 +4,24 @@ Live source of truth for every fleet VM. One row per VM; update on provision / d
 teardown. A session MUST reconcile this against `gcloud compute instances list
 --filter=labels.fable-fleet=pickleball` at start (orphaned VM = resume its lane or tear it down).
 
-WAVE-4 AUTHORIZED SELF-PROVISIONING LANES (2026-07-07, manager): (1) w4_h100body — H100 a3 spot,
-snapshot-boot attempt then cold-start fallback, BODY-compat validation, self-DELETE (~1-2h);
-(2) w4_ballgpu — H100 a3 spot, seed fine-tune + SST r1 + threshold sweep, syncs from committed
-HEAD >= 5b268aa6d, self-DELETE (~2-4h). VM names/zones/$ land here from their reports. Both under
-the ≤$5/hr × ≤4-GPU cap; wave budget ~$12-25 stated in wave4_boot_prompt.md. fleet1 stays STOPPED
-(reserved for the wave-close A100 fresh-worlds proof via snapshot→fan or direct restart).
+WAVE-4 FLEET LOG (2026-07-07, manager):
+- pickleball-h100-w4body (H100 a3 spot) — CREATED from snapshot pickleball-fleet1-snap-20260707
+  (attempt 2: a3 REQUIRES --boot-disk-type=pd-balanced, pd-standard rejected) → BODY-compat
+  validation PASS (27/27 GPU tests 0 skipped; wolverine BODY dispatch real w/ 82-84% util;
+  version-stamp 73/73 @ c8c4c0425) → DELETED list-confirmed. Uptime 58m01s ≈ $0.55-4.11.
+  **SKU POLICY UPDATE: H100 = BODY-VALIDATED 2026-07-07, ≈2.37× A100 (479.6s vs 1134.4s
+  wolverine ref; caveat: reused clip-dir, not clean-room). H100 now default for BOTH training
+  and BODY when ≤$5/hr; decisive gate runs stay on proven SKUs per standing rule.** Evidence:
+  runs/lanes/w4_h100body_20260707/REPORT.md. refresh_remote_host.sh first LIVE proof: works
+  (sshd needs ~90s post-create before first keyscan).
+- pickleball-h100-w4ballgpu (H100 a3 spot) — BUSY, lane w4_ballgpu (seed fine-tune + SST r1 +
+  threshold sweep; syncs from committed HEAD ≥ 5b268aa6d), self-DELETE on completion.
+- fleet1 stays STOPPED (reserved for the wave-close A100 fresh-worlds proof).
+- TOOL BUGS found live (fix lane w4_syncstamp dispatched): --sync-remote-code dirty-check hashes
+  working tree not shipped committed blobs (false drift under concurrent-session dirt); tar_batch
+  transport failure exit-1 non-retryable while ssh transport bug (`ssh_packet_write_poll: Result
+  too large`) recurs on large transfers — rsync fallback exit-255 IS retryable.
+Cap compliance: ≤$5/hr × ≤4 concurrent holds; wave budget ~$12-25 per wave4_boot_prompt.md.
 
 | vm_name | zone | gpu | model | status (provisioning/idle/busy/preempted/tearing-down) | lane | $/hr | created_at | notes |
 |---|---|---|---|---|---|---|---|---|
