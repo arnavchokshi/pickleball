@@ -57,6 +57,32 @@ def test_propose_ball_bounce_candidates_cli_emits_honest_track_geometry_payload(
     assert "scripts/racketsport/propose_ball_bounce_candidates.py" in Path(__file__).read_text(encoding="utf-8")
 
 
+def test_bounce_candidate_visible_runs_use_frame_times_when_track_t_missing() -> None:
+    from threed.racketsport.ball_bounce_candidates import _visible_runs
+
+    frame_times = {
+        "artifact_type": "racketsport_frame_times",
+        "frames": [
+            {"frame": 0, "pts_s": 0.0},
+            {"frame": 1, "pts_s": 0.025},
+            {"frame": 2, "pts_s": 0.110},
+        ],
+    }
+    ball_track = {
+        "fps": 30.0,
+        "frames": [
+            {"xy": [100.0, 100.0], "visible": True, "conf": 0.9},
+            {"xy": [110.0, 120.0], "visible": True, "conf": 0.9},
+            {"xy": [120.0, 135.0], "visible": True, "conf": 0.9},
+        ],
+    }
+
+    runs = _visible_runs(ball_track, max_gap_frames=2, frame_times=frame_times)
+
+    assert [item["t"] for item in runs[0]] == [0.0, 0.025, 0.110]
+    assert runs[0][2]["t"] != pytest.approx(2.0 / 30.0)
+
+
 def test_gap_ballistic_intersection_emits_candidate_inside_hidden_bounce_gap() -> None:
     from threed.racketsport.ball_bounce_candidates import build_bounce_candidate_payload
 

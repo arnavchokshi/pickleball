@@ -57,6 +57,7 @@ def main() -> int:
     reviewed_bounces = _load_optional_json(args.reviewed_bounces) if args.reviewed_bounces else None
     ball_inflections = _load_optional_json(args.ball_inflections) if args.ball_inflections else _load_optional_json(world_dir / "ball_inflections.json")
     wrist_velocity_peaks = _load_optional_json(args.wrist_velocity_peaks) if args.wrist_velocity_peaks else _load_optional_json(world_dir / "wrist_velocity_peaks.json")
+    frame_times_path = args.frame_times or ((world_dir / "frame_times.json") if (world_dir / "frame_times.json").is_file() else None)
     physics3d_reconstruction = None
     physics3d_summary: dict[str, Any] | None = None
     if calibration is not None and not args.no_physics3d:
@@ -79,6 +80,7 @@ def main() -> int:
         ball_inflections=ball_inflections,
         wrist_velocity_peaks=wrist_velocity_peaks,
         physics3d_reconstruction=physics3d_reconstruction,
+        frame_times=frame_times_path,
     )
     validation = validate_physics_fill(
         ball_payload,
@@ -98,6 +100,7 @@ def main() -> int:
     filled["physics_fill"]["reviewed_bounces_input"] = str(args.reviewed_bounces) if args.reviewed_bounces else None
     filled["physics_fill"]["ball_inflections_input"] = str(args.ball_inflections) if args.ball_inflections else (str(world_dir / "ball_inflections.json") if (world_dir / "ball_inflections.json").is_file() else None)
     filled["physics_fill"]["wrist_velocity_peaks_input"] = str(args.wrist_velocity_peaks) if args.wrist_velocity_peaks else (str(world_dir / "wrist_velocity_peaks.json") if (world_dir / "wrist_velocity_peaks.json").is_file() else None)
+    filled["physics_fill"]["frame_times_input"] = str(frame_times_path) if frame_times_path else None
 
     filled_path = out_dir / "ball_track_physics_filled.json"
     report_path = out_dir / "physics_fill_report.json"
@@ -159,6 +162,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--reviewed-bounces", type=Path, default=None)
     parser.add_argument("--ball-inflections", type=Path, default=None)
     parser.add_argument("--wrist-velocity-peaks", type=Path, default=None)
+    parser.add_argument("--frame-times", type=Path, default=None)
     parser.add_argument("--no-physics3d", action="store_true", help="Disable calibrated ball_physics3d z reconstruction.")
     parser.add_argument("--physics3d-max-reprojection-rmse-px", type=float, default=12.0)
     parser.add_argument("--physics3d-max-fit-samples", type=int, default=13)
@@ -319,6 +323,8 @@ def _commands(*, world_dir: Path, out_dir: Path, args: argparse.Namespace) -> st
         option_lines.append(f"  --ball-inflections {args.ball_inflections}")
     if args.wrist_velocity_peaks:
         option_lines.append(f"  --wrist-velocity-peaks {args.wrist_velocity_peaks}")
+    if args.frame_times:
+        option_lines.append(f"  --frame-times {args.frame_times}")
     if args.no_physics3d:
         option_lines.append("  --no-physics3d")
     option_lines.append(f"  --validation-seed {args.validation_seed}")

@@ -27,6 +27,7 @@ def run_totnet_video(
     checkpoint: Path,
     out: Path,
     predictions_out: Path,
+    frame_times: Any = None,
     metadata_out: Path | None = None,
     model_id: str = "totnet_tennis_5f_288x512",
     num_frames: int = 5,
@@ -200,6 +201,7 @@ def run_totnet_video(
     metadata = write_ball_track_from_totnet_predictions(
         payload,
         out=out,
+        frame_times=frame_times,
         metadata_out=metadata_out,
         confidence_threshold=confidence_threshold,
     )
@@ -383,6 +385,7 @@ def main() -> int:
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--predictions-out", type=Path, required=True)
+    parser.add_argument("--frame-times", type=Path, help="Optional frame_times.json for VFR-correct output timestamps.")
     parser.add_argument("--metadata-out", type=Path, default=None)
     parser.add_argument("--model-id", default="totnet_tennis_5f_288x512")
     parser.add_argument("--num-frames", type=int, default=5)
@@ -404,6 +407,7 @@ def main() -> int:
             checkpoint=args.checkpoint,
             out=args.out,
             predictions_out=args.predictions_out,
+            frame_times=args.frame_times,
             metadata_out=args.metadata_out,
             model_id=args.model_id,
             num_frames=args.num_frames,

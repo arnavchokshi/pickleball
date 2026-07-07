@@ -44,6 +44,7 @@ def main() -> int:
     )
     parser.add_argument("--candidate-top-k", type=int, default=5, help="Maximum ball candidates to keep per frame.")
     parser.add_argument("--fps", type=float, required=True)
+    parser.add_argument("--frame-times", type=Path, help="Optional frame_times.json for VFR-correct output timestamps.")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--metadata-out", type=Path, default=None)
     args = parser.parse_args()
@@ -52,6 +53,7 @@ def main() -> int:
         summary = run_wasb_or_convert(
             out=args.out,
             fps=args.fps,
+            frame_times=args.frame_times,
             metadata_out=args.metadata_out,
             predictions_csv=args.predictions_csv,
             video=args.video,

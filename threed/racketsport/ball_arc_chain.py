@@ -98,6 +98,7 @@ def run_default_ball_arc_chain(
     skeleton3d_path: Path | None = None,
     net_plane_path: Path | None = None,
     rally_spans_path: Path | None = None,
+    frame_times_path: Path | None = None,
     ball_type: str = "outdoor",
     generated_at: str | None = None,
 ) -> dict[str, Any]:
@@ -106,12 +107,14 @@ def run_default_ball_arc_chain(
     out_dir.mkdir(parents=True, exist_ok=True)
     generated_at = generated_at or utc_stamp()
     bounce_candidates_path = out_dir / "ball_bounce_candidates.json"
+    frame_times = read_optional_json_object(frame_times_path)
     auto_bounces = write_bounce_candidate_payload(
         ball_track_path=ball_track_path,
         calibration_path=court_calibration_path,
         out_path=bounce_candidates_path,
         clip_id=clip,
         config=BounceCandidateConfig(),
+        frame_times=frame_times,
     )
     ball_track = read_json_object(ball_track_path, "ball_track")
     calibration = read_json_object(court_calibration_path, "court_calibration")
@@ -133,6 +136,7 @@ def run_default_ball_arc_chain(
             skeleton3d=read_optional_json_object(skeleton3d_path),
             net_plane=read_optional_json_object(net_plane_path),
             rally_spans=rally_spans,
+            frame_times=frame_times,
             physics=PhysicsParameters.for_ball_type(ball_type),
             config=default_ball_arc_solver_config(),
             out_dir=out_dir / "ball_arc_seed",
@@ -151,6 +155,7 @@ def run_default_ball_arc_chain(
         skeleton3d=None,
         net_plane=net_plane_for_solve,
         rally_spans=None,
+        frame_times=frame_times,
         extra_anchors=seed_extra_anchors,
         physics=PhysicsParameters.for_ball_type(ball_type),
         config=default_ball_arc_solver_config(),
@@ -164,6 +169,7 @@ def run_default_ball_arc_chain(
         "ball_track": str(ball_track_path),
         "court_calibration": str(court_calibration_path),
         "ball_candidates": [str(path) for path in candidate_paths],
+        "frame_times": str(frame_times_path or ""),
     }
     if chain_config_degraded is not None:
         run.artifact["chain_config_degraded"] = chain_config_degraded
@@ -202,6 +208,7 @@ def run_default_ball_arc_chain(
                 "ball_track": ball_track_path,
                 "court_calibration": court_calibration_path,
                 **({"net_plane": net_plane_path} if net_plane_path is not None else {}),
+                **({"frame_times": frame_times_path} if frame_times_path is not None else {}),
                 **{f"ball_candidates_{idx}": path for idx, path in enumerate(candidate_paths)},
             }
         ),
@@ -377,6 +384,7 @@ def solve_arc_with_flight_sanity(
     skeleton3d: Mapping[str, Any] | None = None,
     net_plane: Mapping[str, Any] | None = None,
     rally_spans: Mapping[str, Any] | None = None,
+    frame_times: Mapping[str, Any] | None = None,
     reviewed_bounces: Mapping[str, Any] | None = None,
     ball_sizes: Mapping[str, Any] | None = None,
     ball_candidate_sidecars: Sequence[Mapping[str, Any]] = (),
@@ -399,6 +407,7 @@ def solve_arc_with_flight_sanity(
         rally_spans=rally_spans,
         net_plane=net_plane,
         extra_anchors=extra_anchors,
+        frame_times=frame_times,
         physics=physics,
         config=config,
         clip_id=clip,

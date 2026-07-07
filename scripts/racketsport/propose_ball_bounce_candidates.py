@@ -23,6 +23,7 @@ def main() -> int:
         calibration_path=args.court_calibration,
         out_path=args.out,
         clip_id=args.clip or "",
+        frame_times_path=args.frame_times,
         config=BounceCandidateConfig(
             smoothing_window=args.smoothing_window,
             min_run_len=args.min_run_len,
@@ -48,6 +49,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--clip", help="Clip id to record in the output payload.")
     parser.add_argument("--ball-track", type=Path, required=True, help="Input ball_track.json path.")
     parser.add_argument("--court-calibration", type=Path, required=True, help="Input court_calibration.json path.")
+    parser.add_argument("--frame-times", type=Path, help="Optional frame_times.json for VFR-correct candidate timestamps.")
     parser.add_argument("--out", type=Path, required=True, help="Output auto-bounce candidates JSON path.")
     parser.add_argument("--smoothing-window", type=int, default=5)
     parser.add_argument("--min-run-len", type=int, default=7)

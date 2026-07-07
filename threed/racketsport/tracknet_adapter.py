@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Iterator, Literal
 
 from .ball_tracknet import ball_frame
+from .io_decode import time_for_frame
 from .schemas import BallCandidates, BallTrack
 
 try:
@@ -41,6 +42,7 @@ def tracknet_csv_to_ball_track(
     csv_path: str | Path,
     *,
     fps: float,
+    frame_times: Any = None,
     confidence_mode: TrackNetConfidenceMode = "legacy_visibility",
     heatmap_visible_threshold: float = DEFAULT_HEATMAP_VISIBLE_THRESHOLD,
 ) -> dict[str, Any]:
@@ -51,7 +53,7 @@ def tracknet_csv_to_ball_track(
     rows = _read_tracknet_rows(Path(csv_path), confidence_mode=confidence_mode)
     frames = [
         ball_frame(
-            t=float(row["frame"]) / fps,
+            t=time_for_frame(int(row["frame"]), frame_times=frame_times, fps=fps),
             xy=[row["x"], row["y"]],
             conf=_row_confidence(row, confidence_mode=confidence_mode),
             visible=_row_visible(
@@ -72,6 +74,7 @@ def write_ball_track_from_csv(
     *,
     predictions_csv: str | Path,
     fps: float,
+    frame_times: Any = None,
     out: str | Path,
     metadata_out: str | Path | None = None,
     source_mode: str = "tracknet_csv",
@@ -92,6 +95,7 @@ def write_ball_track_from_csv(
     payload = tracknet_csv_to_ball_track(
         predictions_csv,
         fps=fps,
+        frame_times=frame_times,
         confidence_mode=confidence_mode,
         heatmap_visible_threshold=heatmap_visible_threshold,
     )
@@ -1070,6 +1074,7 @@ def run_tracknet_or_convert(
     *,
     out: str | Path,
     fps: float,
+    frame_times: Any = None,
     metadata_out: str | Path | None = None,
     predictions_csv: str | Path | None = None,
     video: str | Path | None = None,
@@ -1099,6 +1104,7 @@ def run_tracknet_or_convert(
         return write_ball_track_from_csv(
             predictions_csv=predictions_csv,
             fps=fps,
+            frame_times=frame_times,
             out=out,
             metadata_out=metadata_out,
             source_mode="tracknet_csv",
@@ -1178,6 +1184,7 @@ def run_tracknet_or_convert(
             return write_ball_track_from_csv(
                 predictions_csv=persistent_csv_path,
                 fps=fps,
+                frame_times=frame_times,
                 out=out,
                 metadata_out=metadata_out,
                 source_mode="tracknet_predict",
@@ -1224,6 +1231,7 @@ def run_tracknet_or_convert(
     return write_ball_track_from_csv(
         predictions_csv=csv_path,
         fps=fps,
+        frame_times=frame_times,
         out=out,
         metadata_out=metadata_out,
         source_mode="tracknet_predict",

@@ -11,6 +11,7 @@ from typing import Any, Mapping
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from .ball_tracknet import ball_frame
+from .io_decode import time_for_frame
 from .schemas import BallTrack
 
 
@@ -91,6 +92,7 @@ class TOTNetPredictions(BaseModel):
 def totnet_predictions_to_ball_track(
     predictions: Mapping[str, Any] | TOTNetPredictions,
     *,
+    frame_times: Any = None,
     confidence_threshold: float = 0.0,
 ) -> dict[str, Any]:
     threshold = _unit_interval(confidence_threshold, "confidence_threshold")
@@ -101,7 +103,7 @@ def totnet_predictions_to_ball_track(
         xy = frame.xy if visible and frame.xy is not None else [0.0, 0.0]
         frames.append(
             ball_frame(
-                t=float(frame.frame_index) / float(payload.fps),
+                t=time_for_frame(int(frame.frame_index), frame_times=frame_times, fps=float(payload.fps)),
                 xy=xy,
                 conf=float(frame.confidence) if visible else 0.0,
                 visible=visible,
@@ -123,12 +125,17 @@ def write_ball_track_from_totnet_predictions(
     predictions: str | Path | Mapping[str, Any] | TOTNetPredictions,
     *,
     out: str | Path,
+    frame_times: Any = None,
     metadata_out: str | Path | None = None,
     confidence_threshold: float = 0.0,
 ) -> dict[str, Any]:
     prediction_payload = _load_predictions(predictions)
     totnet = TOTNetPredictions.model_validate(prediction_payload)
-    ball_track = totnet_predictions_to_ball_track(totnet, confidence_threshold=confidence_threshold)
+    ball_track = totnet_predictions_to_ball_track(
+        totnet,
+        frame_times=frame_times,
+        confidence_threshold=confidence_threshold,
+    )
     out_path = Path(out)
     _write_json(out_path, ball_track)
     visible_count = sum(1 for frame in ball_track["frames"] if bool(frame["visible"]))

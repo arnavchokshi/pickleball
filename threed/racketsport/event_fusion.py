@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from threed.racketsport.contact_windows import build_contact_event, build_contact_windows_artifact
+from threed.racketsport.io_decode import nearest_frame_for_time, time_for_frame
 
 
 DEFAULT_MAX_TIME_DELTA_S = 0.035
@@ -77,6 +78,7 @@ class AudioOnsetCandidate:
 def fuse_contact_windows(
     *,
     fps: float,
+    frame_times: Any = None,
     audio_onsets: Sequence[AudioOnsetCandidate | Mapping[str, Any] | Any],
     wrist_velocity_peaks: Sequence[WristVelocityPeak],
     ball_inflections: Sequence[BallInflectionCandidate],
@@ -122,7 +124,7 @@ def fuse_contact_windows(
         raise ValueError("wrist_only_min_separation_s must be non-negative")
 
     normalized_audio = sorted(
-        (_coerce_audio_onset(candidate) for candidate in audio_onsets),
+        (_coerce_audio_onset(candidate, fps=fps, frame_times=frame_times) for candidate in audio_onsets),
         key=lambda candidate: candidate.time_s,
     )
     sorted_ball = sorted(ball_inflections, key=lambda candidate: candidate.time_s)
@@ -134,6 +136,7 @@ def fuse_contact_windows(
         if allow_wrist_only_contact_hints:
             return _wrist_only_contact_hints(
                 fps=fps,
+                frame_times=frame_times,
                 wrists=sorted_wrist,
                 pre_s=wrist_only_pre_s,
                 post_s=wrist_only_post_s,
@@ -145,6 +148,7 @@ def fuse_contact_windows(
         if allow_wrist_only_contact_hints:
             return _wrist_only_contact_hints(
                 fps=fps,
+                frame_times=frame_times,
                 wrists=sorted_wrist,
                 pre_s=wrist_only_pre_s,
                 post_s=wrist_only_post_s,
@@ -178,7 +182,7 @@ def fuse_contact_windows(
                 "ball_inflection": ball.confidence,
             }
             confidence = round(sum(source_confidences.values()) / len(source_confidences), 12)
-            frame = max(0, int(round(event_t * fps)))
+            frame = _event_frame(event_t, fps=fps, frame_times=frame_times)
 
             events.append(
                 build_contact_event(
@@ -201,6 +205,7 @@ def fuse_contact_windows(
             return build_contact_windows_artifact(events)
         return _wrist_only_contact_hints(
             fps=fps,
+            frame_times=frame_times,
             wrists=sorted_wrist,
             pre_s=wrist_only_pre_s,
             post_s=wrist_only_post_s,
@@ -233,7 +238,7 @@ def fuse_contact_windows(
             "ball_inflection": ball.confidence,
         }
         confidence = round(sum(source_confidences.values()) / len(source_confidences), 12)
-        frame = max(0, int(round(event_t * fps)))
+        frame = _event_frame(event_t, fps=fps, frame_times=frame_times)
 
         events.append(
             build_contact_event(
@@ -256,6 +261,7 @@ def fuse_contact_windows(
         return build_contact_windows_artifact(events)
     return _wrist_only_contact_hints(
         fps=fps,
+        frame_times=frame_times,
         wrists=sorted_wrist,
         pre_s=wrist_only_pre_s,
         post_s=wrist_only_post_s,
@@ -267,6 +273,7 @@ def fuse_contact_windows(
 def fuse_contact_windows_from_cue_payloads(
     *,
     fps: float,
+    frame_times: Any = None,
     audio_onsets_payload: Any,
     wrist_velocity_peaks_payload: Any,
     ball_inflections_payload: Any,
@@ -285,7 +292,7 @@ def fuse_contact_windows_from_cue_payloads(
     audio_onsets = _items(audio_onsets_payload, keys=("onsets", "audio_onsets", "items"))
     wrist_velocity_peaks = [
         WristVelocityPeak(
-            time_s=float(item["time_s"]),
+            time_s=_cue_time_s(item, fps=fps, frame_times=frame_times, name="wrist_velocity_peak.time_s"),
             player_id=int(item["player_id"]),
             wrist_world_xyz=tuple(item["wrist_world_xyz"]),
             speed_mps=float(item["speed_mps"]),
@@ -295,7 +302,7 @@ def fuse_contact_windows_from_cue_payloads(
     ]
     ball_inflections = [
         BallInflectionCandidate(
-            time_s=float(item["time_s"]),
+            time_s=_cue_time_s(item, fps=fps, frame_times=frame_times, name="ball_inflection.time_s"),
             ball_world_xyz=_optional_vector3(item.get("ball_world_xyz")),
             confidence=float(item["confidence"]),
         )
@@ -303,6 +310,7 @@ def fuse_contact_windows_from_cue_payloads(
     ]
     return fuse_contact_windows(
         fps=fps,
+        frame_times=frame_times,
         audio_onsets=audio_onsets,
         wrist_velocity_peaks=wrist_velocity_peaks,
         ball_inflections=ball_inflections,
@@ -321,6 +329,7 @@ def fuse_contact_windows_from_cue_payloads(
 def fuse_contact_windows_from_cue_files(
     *,
     fps: float,
+    frame_times: Any = None,
     audio_onsets_path: str | Path | None,
     wrist_velocity_peaks_path: str | Path,
     ball_inflections_path: str | Path | None,
@@ -338,6 +347,7 @@ def fuse_contact_windows_from_cue_files(
 
     return fuse_contact_windows_from_cue_payloads(
         fps=fps,
+        frame_times=frame_times,
         audio_onsets_payload=_read_json(Path(audio_onsets_path)) if audio_onsets_path is not None else [],
         wrist_velocity_peaks_payload=_read_json(Path(wrist_velocity_peaks_path)),
         ball_inflections_payload=_read_json(Path(ball_inflections_path)) if ball_inflections_path is not None else [],
@@ -356,6 +366,7 @@ def fuse_contact_windows_from_cue_files(
 def _wrist_only_contact_hints(
     *,
     fps: float,
+    frame_times: Any,
     wrists: Sequence[WristVelocityPeak],
     pre_s: float,
     post_s: float,
@@ -369,7 +380,7 @@ def _wrist_only_contact_hints(
         events.append(
             build_contact_event(
                 t=event_t,
-                frame=max(0, int(round(event_t * fps))),
+                frame=_event_frame(event_t, fps=fps, frame_times=frame_times),
                 player_id=wrist.player_id,
                 confidence=confidence,
                 sources={"wrist_vel": wrist.confidence, "ball_inflection": 0.0},
@@ -409,11 +420,16 @@ def _wrist_rank(wrist: WristVelocityPeak) -> tuple[float, float]:
     return wrist.speed_mps, wrist.confidence
 
 
-def _coerce_audio_onset(candidate: AudioOnsetCandidate | Mapping[str, Any] | Any) -> AudioOnsetCandidate:
+def _coerce_audio_onset(
+    candidate: AudioOnsetCandidate | Mapping[str, Any] | Any,
+    *,
+    fps: float,
+    frame_times: Any,
+) -> AudioOnsetCandidate:
     if isinstance(candidate, AudioOnsetCandidate):
         return candidate
     if isinstance(candidate, Mapping):
-        time_s = candidate.get("time_s", candidate.get("t", candidate.get("time")))
+        time_s = _cue_time_s(candidate, fps=fps, frame_times=frame_times, name="audio_onset.time_s")
         confidence = candidate.get("confidence", candidate.get("score", candidate.get("conf")))
     else:
         time_s = getattr(candidate, "time_s", getattr(candidate, "t", None))
@@ -422,6 +438,23 @@ def _coerce_audio_onset(candidate: AudioOnsetCandidate | Mapping[str, Any] | Any
         time_s=_require_non_negative_time(time_s, "audio_onset.time_s"),
         confidence=_require_confidence(confidence, "audio_onset.confidence"),
     )
+
+
+def _cue_time_s(item: Mapping[str, Any], *, fps: float, frame_times: Any, name: str) -> float:
+    time_s = item.get("time_s", item.get("t", item.get("time")))
+    if time_s is not None:
+        return _require_non_negative_time(time_s, name)
+    frame = item.get("frame", item.get("frame_index", item.get("frame_idx")))
+    if frame is None:
+        raise ValueError(f"{name} is required")
+    return _require_non_negative_time(
+        time_for_frame(int(frame), frame_times=frame_times, fps=fps),
+        name,
+    )
+
+
+def _event_frame(event_t: float, *, fps: float, frame_times: Any) -> int:
+    return max(0, nearest_frame_for_time(float(event_t), frame_times=frame_times, fps=fps))
 
 
 def _nearest_ball_match(

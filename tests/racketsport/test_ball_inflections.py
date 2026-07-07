@@ -8,6 +8,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 def _virtual_world(ball_frames: list[dict]) -> dict:
     return {
@@ -134,6 +136,42 @@ def test_ball_inflection_builder_detects_image_track_turn_without_world_points()
     assert candidate["turn_angle_deg"] == 90.0
     assert candidate["speed_before_px_s"] == 100.0
     assert candidate["speed_after_px_s"] == 100.0
+
+
+def test_ball_inflection_builder_uses_frame_time_table_when_track_times_are_missing() -> None:
+    module = importlib.import_module("threed.racketsport.ball_inflections")
+    frame_times = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_frame_times",
+        "provenance": "ffprobe_pts",
+        "frames": [
+            {"frame": 0, "pts_s": 0.00},
+            {"frame": 1, "pts_s": 0.04},
+            {"frame": 2, "pts_s": 0.24},
+        ],
+    }
+    ball_track = {
+        "schema_version": 1,
+        "fps": 30.0,
+        "source": "synthetic_vfr_no_t",
+        "frames": [
+            {"frame": 0, "xy": [0.0, 0.0], "visible": True, "conf": 0.9},
+            {"frame": 1, "xy": [10.0, 0.0], "visible": True, "conf": 0.9},
+            {"frame": 2, "xy": [10.0, 10.0], "visible": True, "conf": 0.9},
+        ],
+        "bounces": [],
+    }
+
+    payload = module.build_ball_inflections_from_ball_track(
+        ball_track,
+        frame_times=frame_times,
+        min_turn_degrees=35.0,
+        min_speed_px_per_s=25.0,
+    )
+
+    candidate = payload["candidates"][0]
+    assert candidate["frame"] == 1
+    assert candidate["time_s"] == pytest.approx(0.04)
 
 
 def test_ball_inflection_builder_detects_image_turn_over_wider_window() -> None:

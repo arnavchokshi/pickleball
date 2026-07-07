@@ -8,7 +8,65 @@ from pathlib import Path
 import pytest
 
 from threed.racketsport import event_fusion
+from threed.racketsport.io_decode import build_frame_time_table
 from threed.racketsport.schemas import ContactWindows
+
+
+def _make_vfr_clip(path: Path, *, durations_s: list[float]) -> None:
+    frames_dir = path.parent / f"{path.stem}_frames"
+    frames_dir.mkdir()
+    colors = ["red", "green", "blue", "yellow", "magenta", "cyan", "white", "black"]
+    frame_paths = []
+    for index, _duration in enumerate(durations_s):
+        frame_path = frames_dir / f"frame_{index:03d}.png"
+        command = [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            f"color=c={colors[index % len(colors)]}:s=64x48:d=0.01",
+            "-frames:v",
+            "1",
+            str(frame_path),
+        ]
+        try:
+            subprocess.run(command, check=True)
+        except FileNotFoundError:
+            pytest.skip("ffmpeg is not installed")
+        frame_paths.append(frame_path)
+
+    concat = path.parent / f"{path.stem}_concat.txt"
+    lines = []
+    for frame_path, duration_s in zip(frame_paths, durations_s, strict=True):
+        lines.append(f"file '{frame_path}'")
+        lines.append(f"duration {duration_s:.9f}")
+    lines.append(f"file '{frame_paths[-1]}'")
+    concat.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    command = [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(concat),
+        "-fps_mode",
+        "vfr",
+        "-pix_fmt",
+        "yuv420p",
+        str(path),
+    ]
+    try:
+        subprocess.run(command, check=True)
+    except FileNotFoundError:
+        pytest.skip("ffmpeg is not installed")
 
 
 def _fusion_api():
@@ -251,6 +309,51 @@ def test_fuse_contact_windows_accepts_image_only_ball_inflections_as_low_trust()
     assert event["sources"] == {"wrist_vel": 0.95, "ball_inflection": 0.8}
     assert event["trust_band_note"] == "image-space ball-inflection cue, unverified"
     ContactWindows.model_validate(payload)
+
+
+def test_vfr_contact_timing_uses_pts_table_and_constant_fps_would_drift(tmp_path: Path) -> None:
+    clip = tmp_path / "vfr_contact.mp4"
+    _make_vfr_clip(clip, durations_s=[0.04, 0.20, 0.04, 0.16, 0.04])
+    frame_times = build_frame_time_table(clip)
+    pts_by_frame = {int(frame["frame"]): float(frame["pts_s"]) for frame in frame_times["frames"]}
+    event_frame = 2
+    true_event_t = pts_by_frame[event_frame]
+
+    payload = event_fusion.fuse_contact_windows_from_cue_payloads(
+        fps=30.0,
+        frame_times=frame_times,
+        audio_onsets_payload={
+            "onsets": [{"frame": event_frame, "score": 0.90}],
+        },
+        wrist_velocity_peaks_payload={
+            "peaks": [
+                {
+                    "frame": event_frame,
+                    "player_id": 7,
+                    "wrist_world_xyz": [1.0, 0.0, 0.9],
+                    "speed_mps": 8.0,
+                    "confidence": 0.85,
+                }
+            ]
+        },
+        ball_inflections_payload={
+            "candidates": [
+                {
+                    "frame": event_frame,
+                    "ball_world_xyz": [1.0, 0.0, 0.88],
+                    "confidence": 0.80,
+                }
+            ]
+        },
+        max_time_delta_s=0.005,
+    )
+
+    event = payload["events"][0]
+    constant_fps_time_s = event_frame / 30.0
+    one_real_frame_duration_s = pts_by_frame[event_frame + 1] - pts_by_frame[event_frame]
+    assert event["t"] == pytest.approx(true_event_t, abs=one_real_frame_duration_s)
+    assert event["frame"] == event_frame
+    assert abs(true_event_t - constant_fps_time_s) > one_real_frame_duration_s
 
 
 def test_fuse_contact_windows_requires_flag_for_wrist_only_hints() -> None:

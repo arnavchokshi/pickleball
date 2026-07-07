@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from .ball_tracknet import ball_frame
+from .io_decode import time_for_frame
 from .schemas import BallCandidates, BallTrack
 
 
@@ -35,6 +36,7 @@ def wasb_csv_to_ball_track(
     csv_path: str | Path,
     *,
     fps: float,
+    frame_times: Any = None,
     visible_threshold: float = DEFAULT_WASB_VISIBLE_THRESHOLD,
 ) -> dict[str, Any]:
     """Convert WASB ``Frame,Visibility,X,Y,Confidence`` rows into BallTrack JSON."""
@@ -47,7 +49,7 @@ def wasb_csv_to_ball_track(
         visible = bool(row["visible"] and row["confidence"] >= visible_threshold)
         frames.append(
             ball_frame(
-                t=float(row["frame"]) / fps,
+                t=time_for_frame(int(row["frame"]), frame_times=frame_times, fps=fps),
                 xy=[row["x"], row["y"]],
                 conf=float(row["confidence"]),
                 visible=visible,
@@ -63,6 +65,7 @@ def write_ball_track_from_wasb_predictions(
     *,
     predictions_csv: str | Path,
     fps: float,
+    frame_times: Any = None,
     out: str | Path,
     metadata_out: str | Path | None = None,
     source_mode: str = "wasb_csv",
@@ -78,7 +81,12 @@ def write_ball_track_from_wasb_predictions(
     out_path = Path(out)
     candidate_top_k = _require_positive_int(candidate_top_k, "candidate_top_k")
     visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
-    payload = wasb_csv_to_ball_track(predictions_csv, fps=fps, visible_threshold=visible_threshold)
+    payload = wasb_csv_to_ball_track(
+        predictions_csv,
+        fps=fps,
+        frame_times=frame_times,
+        visible_threshold=visible_threshold,
+    )
     _write_json(out_path, payload)
     candidate_path: Path | None = None
     if emit_candidates:
@@ -338,6 +346,7 @@ def run_wasb_or_convert(
     *,
     out: str | Path,
     fps: float,
+    frame_times: Any = None,
     metadata_out: str | Path | None = None,
     predictions_csv: str | Path | None = None,
     video: str | Path | None = None,
@@ -362,6 +371,7 @@ def run_wasb_or_convert(
         return write_ball_track_from_wasb_predictions(
             predictions_csv=predictions_csv,
             fps=fps,
+            frame_times=frame_times,
             out=out,
             metadata_out=metadata_out,
             source_mode="wasb_csv",
@@ -390,6 +400,7 @@ def run_wasb_or_convert(
     return write_ball_track_from_wasb_predictions(
         predictions_csv=prediction_csv_path,
         fps=fps,
+        frame_times=frame_times,
         out=out,
         metadata_out=metadata_out,
         source_mode="wasb_predict",

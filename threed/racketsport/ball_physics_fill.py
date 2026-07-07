@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
 from .ball_physics3d import BounceArcReconstruction
+from .io_decode import frame_time_lookup, time_for_frame
 
 
 LANE = "PHYS-BALLFILL"
@@ -230,6 +231,7 @@ def fill_ball_track_physics(
     ball_inflections: Mapping[str, Any] | None = None,
     wrist_velocity_peaks: Mapping[str, Any] | None = None,
     physics3d_reconstruction: BounceArcReconstruction | None = None,
+    frame_times: Any = None,
 ) -> dict[str, Any]:
     """Return an additive render-only ball track with physics-filled samples."""
 
@@ -240,6 +242,8 @@ def fill_ball_track_physics(
         raise ValueError("ball payload must contain a frames list")
 
     original_frames = _frame_list(ball_payload)
+    frame_time_map = frame_time_lookup(frame_times if frame_times is not None else ball_payload.get("frame_times"))
+    payload_fps = _payload_fps(ball_payload, original_frames)
     fit_result = fit_ballistic_segments(
         ball_payload,
         config=cfg,
@@ -287,7 +291,12 @@ def fill_ball_track_physics(
             if not isinstance(frame, dict):
                 continue
             try:
-                t = float(original.get("t", frame_index / max(_payload_fps(ball_payload, original_frames), 1e-9)))
+                t = float(
+                    original.get(
+                        "t",
+                        time_for_frame(frame_index, frame_times=frame_time_map, fps=payload_fps),
+                    )
+                )
             except (TypeError, ValueError):
                 continue
 

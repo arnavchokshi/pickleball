@@ -63,6 +63,63 @@ def test_order_event_anchors_sorts_and_prefers_human_reviewed_duplicates() -> No
     assert ordered[1].immovable is True
 
 
+def test_solve_ball_arc_track_uses_frame_time_table_when_frame_timestamps_are_missing() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    frame_times = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_frame_times",
+        "provenance": "ffprobe_pts",
+        "frames": [
+            {"frame": 0, "pts_s": 0.00},
+            {"frame": 1, "pts_s": 0.04},
+            {"frame": 2, "pts_s": 0.24},
+        ],
+    }
+    p0 = (0.0, -1.0, 1.0)
+    p1_t = 0.24
+    v0 = (0.8, 2.0, _vz_for_endpoint(p0[2], BALL_RADIUS_M, p1_t))
+    frames = []
+    for index, t in enumerate([0.00, 0.04, 0.24]):
+        frames.append(
+            {
+                "frame": index,
+                "xy": list(_project(calibration, _no_drag_position(p0, v0, t))),
+                "conf": 0.99,
+                "visible": True,
+            }
+        )
+
+    artifact = solve_ball_arc_track(
+        ball_track={"schema_version": 1, "fps": 30.0, "source": "synthetic_vfr", "frames": frames, "bounces": []},
+        calibration=calibration,
+        frame_times=frame_times,
+        extra_anchors=[
+            _anchor("contact-vfr", "contact", 0.0, p0, frame=0, sigma_m=0.04),
+            _anchor(
+                "bounce-vfr",
+                "bounce",
+                p1_t,
+                _no_drag_position(p0, v0, p1_t),
+                frame=2,
+                sigma_m=0.04,
+                status="human_reviewed",
+            ),
+        ],
+        physics=physics,
+        config=BallArcSolverConfig(
+            enable_event_discovery=False,
+            enable_event_subset_selection=False,
+            enable_weak_segments=False,
+            max_reprojection_inlier_px=8.0,
+            robust_pixel_sigma=2.0,
+        ),
+    )
+
+    assert [frame["t"] for frame in artifact["frames"][:3]] == pytest.approx([0.00, 0.04, 0.24])
+    assert artifact["frames"][2]["world_xyz"] is not None
+
+
 def test_fit_flight_segment_recovers_velocity_and_prunes_planted_fp() -> None:
     calibration = _projection_calibration()
     physics = PhysicsParameters.no_drag()
@@ -2020,6 +2077,7 @@ def _anchor(
     t: float,
     world_xyz: tuple[float, float, float],
     *,
+    frame: int | None = None,
     sigma_m: float = 0.05,
     status: str = "contact_prior",
     player_id: int | None = None,
@@ -2028,7 +2086,7 @@ def _anchor(
         anchor_id=anchor_id,
         kind=kind,
         t=t,
-        frame=int(round(t * 60.0)),
+        frame=int(frame if frame is not None else round(t * 60.0)),
         world_xyz=world_xyz,
         sigma_m=sigma_m,
         status=status,

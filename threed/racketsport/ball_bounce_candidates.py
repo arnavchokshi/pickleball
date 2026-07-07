@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .ball_arc_solver import BALL_RADIUS_M, intersect_ray_z, pixel_ray_world
+from .io_decode import frame_time_lookup, time_for_frame
 
 
 @dataclass(frozen=True)
@@ -34,14 +35,16 @@ def build_bounce_candidate_payload(
     *,
     clip_id: str = "",
     config: BounceCandidateConfig | None = None,
+    frame_times: Any = None,
 ) -> dict[str, Any]:
     cfg = config or BounceCandidateConfig()
     bounds = _court_bounds(calibration)
-    runs = _visible_runs(ball_track, max_gap_frames=cfg.max_visible_gap_frames)
+    frame_time_map = frame_time_lookup(frame_times if frame_times is not None else ball_track.get("frame_times"))
+    runs = _visible_runs(ball_track, max_gap_frames=cfg.max_visible_gap_frames, frame_times=frame_time_map)
     all_candidates: list[dict[str, Any]] = []
     for run in runs:
         all_candidates.extend(_find_cusp_candidates_in_run(run, calibration, bounds, cfg))
-    all_candidates.extend(_find_gap_ballistic_candidates(runs, calibration, bounds, cfg))
+    all_candidates.extend(_find_gap_ballistic_candidates(runs, calibration, bounds, cfg, frame_times=frame_time_map))
     raw_count = len(all_candidates)
     in_bounds = [candidate for candidate in all_candidates if candidate["in_extended_court_bounds"]]
     deduped = _dedupe(in_bounds, cfg.min_candidate_separation_frames)
@@ -95,12 +98,15 @@ def write_bounce_candidate_payload(
     out_path: Path,
     clip_id: str = "",
     config: BounceCandidateConfig | None = None,
+    frame_times: Any = None,
+    frame_times_path: Path | None = None,
 ) -> dict[str, Any]:
     payload = build_bounce_candidate_payload(
         json.loads(ball_track_path.read_text(encoding="utf-8")),
         json.loads(calibration_path.read_text(encoding="utf-8")),
         clip_id=clip_id,
         config=config,
+        frame_times=frame_times_path if frame_times_path is not None else frame_times,
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -122,7 +128,12 @@ def _court_bounds(calibration: Mapping[str, Any]) -> tuple[float, float, float, 
     return (min(xs), max(xs), min(ys), max(ys))
 
 
-def _visible_runs(ball_track: Mapping[str, Any], *, max_gap_frames: int) -> list[list[dict[str, Any]]]:
+def _visible_runs(
+    ball_track: Mapping[str, Any],
+    *,
+    max_gap_frames: int,
+    frame_times: Any = None,
+) -> list[list[dict[str, Any]]]:
     frames = ball_track.get("frames")
     if not isinstance(frames, Sequence) or isinstance(frames, (str, bytes)):
         return []
@@ -137,7 +148,9 @@ def _visible_runs(ball_track: Mapping[str, Any], *, max_gap_frames: int) -> list
         observations.append(
             {
                 "frame": index,
-                "t": _float_or_none(frame.get("t")) if _float_or_none(frame.get("t")) is not None else index / fps,
+                "t": _float_or_none(frame.get("t"))
+                if _float_or_none(frame.get("t")) is not None
+                else time_for_frame(index, frame_times=frame_times, fps=fps),
                 "xy": xy,
                 "conf": _float_or_none(frame.get("conf")) or 1.0,
             }
@@ -211,6 +224,8 @@ def _find_gap_ballistic_candidates(
     calibration: Mapping[str, Any],
     bounds: tuple[float, float, float, float],
     config: BounceCandidateConfig,
+    *,
+    frame_times: Mapping[int, float] | None,
 ) -> list[dict[str, Any]]:
     candidates: list[dict[str, Any]] = []
     for left, right in zip(runs, runs[1:]):
@@ -229,6 +244,7 @@ def _find_gap_ballistic_candidates(
             config,
             left_image_y_slope=left_slope,
             right_image_y_slope=right_slope,
+            frame_times=frame_times,
         )
         if fit is None:
             continue
@@ -271,6 +287,7 @@ def _best_gap_ballistic_fit(
     *,
     left_image_y_slope: float | None,
     right_image_y_slope: float | None,
+    frame_times: Mapping[int, float] | None,
 ) -> dict[str, Any] | None:
     left_samples = list(left[-config.gap_window_frames :])
     right_samples = list(right[: config.gap_window_frames])
@@ -278,7 +295,8 @@ def _best_gap_ballistic_fit(
         return None
     start_frame = int(left[-1]["frame"])
     end_frame = int(right[0]["frame"])
-    fps = (end_frame - start_frame) / max(float(right[0]["t"]) - float(left[-1]["t"]), 1e-9)
+    boundary_dt = max(float(right[0]["t"]) - float(left[-1]["t"]), 1e-9)
+    fps = (end_frame - start_frame) / boundary_dt
     if len(left) <= 2:
         candidate_frames = list(range(start_frame, end_frame + 1))
     else:
@@ -287,7 +305,15 @@ def _best_gap_ballistic_fit(
             candidate_frames = list(range(start_frame, end_frame + 1))
     best: dict[str, Any] | None = None
     for frame in candidate_frames:
-        t = frame / max(fps, 1e-9)
+        t = _candidate_time_for_frame(
+            frame,
+            frame_times=frame_times,
+            fallback_fps=fps,
+            start_frame=start_frame,
+            start_t=float(left[-1]["t"]),
+            end_frame=end_frame,
+            end_t=float(right[0]["t"]),
+        )
         if frame == start_frame:
             t = float(left[-1]["t"])
             xy = _xy_tuple(left[-1].get("xy"))
@@ -339,6 +365,24 @@ def _best_gap_ballistic_fit(
         if best is None or score < float(best["score"]):
             best = candidate
     return best
+
+
+def _candidate_time_for_frame(
+    frame: int,
+    *,
+    frame_times: Mapping[int, float] | None,
+    fallback_fps: float,
+    start_frame: int,
+    start_t: float,
+    end_frame: int,
+    end_t: float,
+) -> float:
+    if frame_times and frame in frame_times:
+        return float(frame_times[frame])
+    if end_frame != start_frame:
+        alpha = (float(frame) - float(start_frame)) / (float(end_frame) - float(start_frame))
+        return start_t + alpha * (end_t - start_t)
+    return time_for_frame(frame, frame_times=frame_times, fps=fallback_fps)
 
 
 def _fit_velocity_to_rays(

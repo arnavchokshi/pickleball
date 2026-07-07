@@ -61,6 +61,7 @@ def main() -> int:
         }
         contact_windows = _read_optional_json(task.get("contact_windows"))
         skeleton3d = _read_optional_json(task.get("skeleton3d"))
+        frame_times = _read_optional_json(task.get("frame_times"))
         reviewed_bounces = _read_optional_json(task.get("reviewed_bounces"))
         auto_bounce_candidates = _read_optional_json(task.get("auto_bounce_candidates"))
         rally_spans = _read_optional_json(task.get("rally_spans"))
@@ -106,6 +107,7 @@ def main() -> int:
             auto_bounce_candidates=auto_bounce_candidates,
             rally_spans=rally_spans,
             net_plane=net_plane,
+            frame_times=frame_times,
             physics=physics,
             config=config,
             clip_id=clip,
@@ -119,6 +121,7 @@ def main() -> int:
             "candidate_extra_tracks": {name: str(path) for name, path in task.get("candidate_extra_tracks", {}).items()},
             "contact_windows": str(task.get("contact_windows") or ""),
             "skeleton3d": str(task.get("skeleton3d") or ""),
+            "frame_times": str(task.get("frame_times") or ""),
             "reviewed_bounces": str(task.get("reviewed_bounces") or ""),
             "auto_bounce_candidates": str(task.get("auto_bounce_candidates") or ""),
             "rally_spans": str(task.get("rally_spans") or ""),
@@ -206,6 +209,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--size-crop-radius-px", type=int, default=24, help="Crop radius around each ball xy for size measurement helper.")
     parser.add_argument("--contact-windows", type=Path, help="Optional contact_windows.json path.")
     parser.add_argument("--skeleton3d", type=Path, help="Optional skeleton3d.json path.")
+    parser.add_argument("--frame-times", type=Path, help="Optional frame_times.json for VFR-correct fallback timestamps.")
     parser.add_argument("--reviewed-bounces", type=Path, help="Optional reviewed_ball_bounces.json path.")
     parser.add_argument("--auto-bounce-candidates", type=Path, help="Optional label-free auto-bounce candidates JSON path.")
     parser.add_argument("--rally-spans", type=Path, help="Optional rally_spans.json path.")
@@ -254,6 +258,7 @@ def _tasks(args: argparse.Namespace) -> list[dict[str, Any]]:
                 "candidate_extra_tracks": _candidate_extra_track_specs(getattr(args, "candidate_extra_track", None) or []),
                 "contact_windows": args.contact_windows,
                 "skeleton3d": args.skeleton3d,
+                "frame_times": args.frame_times,
                 "reviewed_bounces": args.reviewed_bounces,
                 "auto_bounce_candidates": args.auto_bounce_candidates,
                 "rally_spans": args.rally_spans,
@@ -282,6 +287,7 @@ def _tasks(args: argparse.Namespace) -> list[dict[str, Any]]:
             "candidate_extra_tracks": _candidate_extra_track_specs(getattr(args, "candidate_extra_track", None) or []),
             "contact_windows": clip_dir / "contact_windows.json" if (clip_dir / "contact_windows.json").is_file() else None,
             "skeleton3d": clip_dir / "skeleton3d.json" if (clip_dir / "skeleton3d.json").is_file() else None,
+            "frame_times": clip_dir / "frame_times.json" if (clip_dir / "frame_times.json").is_file() else None,
             "reviewed_bounces": _default_reviewed_bounces_path(clip_dir, clip),
             "auto_bounce_candidates": clip_dir / "auto_bounce_candidates.json" if (clip_dir / "auto_bounce_candidates.json").is_file() else None,
             "rally_spans": clip_dir / "rally_spans.json" if (clip_dir / "rally_spans.json").is_file() else None,

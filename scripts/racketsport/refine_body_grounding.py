@@ -16,6 +16,15 @@ if str(ROOT) not in sys.path:
 from threed.racketsport.body_grounding_refine import GroundingRefineConfig, refine_body_grounding  # noqa: E402
 
 
+def _bool_arg(value: str) -> bool:
+    lowered = value.strip().lower()
+    if lowered in {"1", "true", "yes", "on"}:
+        return True
+    if lowered in {"0", "false", "no", "off"}:
+        return False
+    raise argparse.ArgumentTypeError("expected one of: true, false")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--skeleton", type=Path, required=True, help="Path to skeleton3d.json or smpl_motion.json")
@@ -42,6 +51,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--smoothness-weight", type=float, default=0.15)
     parser.add_argument("--max-correction-warn-m", type=float, default=0.15)
     parser.add_argument(
+        "--xy-translation-enabled",
+        type=_bool_arg,
+        default=True,
+        metavar="{true,false}",
+        help="Enable XY translation against tracks; process_video sets this false when R3 grounding provenance exists.",
+    )
+    parser.add_argument(
         "--fail-if-residual-worse",
         action="store_true",
         help="Return exit code 2 after writing artifacts when foot-plane or track residuals increase.",
@@ -61,6 +77,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 root_joint_names=tuple(args.root_joint_names),
                 smoothness_weight=args.smoothness_weight,
                 max_correction_warn_m=args.max_correction_warn_m,
+                xy_translation_enabled=args.xy_translation_enabled,
             ),
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:

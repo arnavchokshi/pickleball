@@ -92,7 +92,7 @@ import threading
 import time
 import traceback
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from statistics import median
 from typing import Any, Callable, Literal, Mapping, Sequence
@@ -121,6 +121,13 @@ from threed.racketsport.frame_rating import (  # noqa: E402
     MESH_COVERAGE_MODES,
     build_frame_compute_plan,
     write_frame_compute_plan,
+)
+from threed.racketsport.io_decode import time_for_frame, write_frame_time_table  # noqa: E402
+from threed.racketsport.camera_motion import (  # noqa: E402
+    CameraMotionParams,
+    estimate_camera_motion,
+    validate_camera_motion_payload,
+    write_camera_motion_json,
 )
 from threed.racketsport.person_reid_diagnostics import resolve_reid_device  # noqa: E402
 from threed.racketsport.placement import PlacementConfig, rewrite_tracks_with_placement  # noqa: E402
@@ -321,6 +328,10 @@ class PipelineOptions:
 
     placement_keypoints_2d: Path | None = None
     camera_motion_path: Path | None = None
+    skip_camera_motion: bool = True
+    camera_motion_estimator: str = "hardened"
+    camera_motion_flow_backend: str = "lk"
+    camera_motion_person_masks: bool = True
     placement_undistort: bool = True
 
     mesh_coverage_mode: str = DEFAULT_MESH_COVERAGE_MODE
@@ -443,6 +454,7 @@ class ProcessVideoPipeline:
             ("ingest", self._stage_ingest),
             ("calibration", self._stage_calibration),
             ("tracking", self._stage_tracking),
+            ("camera_motion", self._stage_camera_motion),
             ("placement", self._stage_placement),
         ]
         if self.options.rally_gating:
@@ -681,8 +693,15 @@ class ProcessVideoPipeline:
                 shutil.copy2(video, target)
 
         width, height, fps = _video_probe(video)
-        notes = [f"ingested {video} as {target.name} ({width}x{height} @ {fps:.3f}fps)"]
-        return StageOutcome(stage="ingest", status="ran", wall_seconds=0.0, notes=notes, artifacts=[target.name])
+        frame_times_path = self.clip_dir / "frame_times.json"
+        frame_times = write_frame_time_table(target, frame_times_path)
+        notes = [
+            f"ingested {video} as {target.name} ({width}x{height} @ {fps:.3f}fps)",
+            "wrote frame_times.json from ffprobe PTS"
+            if frame_times.get("provenance") == "ffprobe_pts"
+            else "wrote frame_times.json with constant_fps_assumed fallback",
+        ]
+        return StageOutcome(stage="ingest", status="ran", wall_seconds=0.0, notes=notes, artifacts=[target.name, "frame_times.json"])
 
     # ------------------------------------------------------------------
     # stage 2: calibration
@@ -1109,6 +1128,97 @@ class ProcessVideoPipeline:
             ]
         return ["raw-pool global association ran but produced no valid tracks.json; kept loose-pool tracks.json"]
 
+    def _stage_camera_motion(self) -> StageOutcome:
+        opts = self.options
+        if opts.skip_camera_motion:
+            return StageOutcome(
+                stage="camera_motion",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=[
+                    "camera_motion default stage is wired but default-OFF after offline placement stability regression; "
+                    "use --enable-camera-motion to run the preview estimator or --camera-motion to provide an explicit artifact"
+                ],
+            )
+        if opts.camera_motion_path is not None:
+            return StageOutcome(
+                stage="camera_motion",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=[f"camera_motion explicit artifact supplied: {opts.camera_motion_path}"],
+                artifacts=[],
+                trust_badge="preview",
+            )
+
+        target = self.clip_dir / "camera_motion.json"
+        if target.is_file() and not opts.force:
+            try:
+                validate_camera_motion_payload(_read_json(target))
+            except Exception as exc:  # noqa: BLE001
+                return StageOutcome(
+                    stage="camera_motion",
+                    status="degraded",
+                    wall_seconds=0.0,
+                    notes=[f"existing camera_motion.json failed validation ({type(exc).__name__}: {exc}); placement will proceed without rewriting it"],
+                    trust_badge="preview",
+                )
+            return StageOutcome(
+                stage="camera_motion",
+                status="reused",
+                wall_seconds=0.0,
+                notes=["reusing existing valid camera_motion.json"],
+                artifacts=["camera_motion.json"],
+                trust_badge="preview",
+            )
+
+        source_video = self.clip_dir / f"source{opts.video.suffix.lower()}"
+        calibration_path = self.clip_dir / "court_calibration.json"
+        tracks_path = self.clip_dir / "tracks.json"
+        missing = [path.name for path in (source_video, calibration_path, tracks_path) if not path.is_file()]
+        if missing:
+            return StageOutcome(
+                stage="camera_motion",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=[f"camera_motion requires source video, court_calibration.json, and tracks.json; missing={missing}"],
+                trust_badge="preview",
+            )
+
+        params = CameraMotionParams.legacy() if opts.camera_motion_estimator == "legacy" else CameraMotionParams()
+        params = replace(
+            params,
+            flow_backend=opts.camera_motion_flow_backend,
+            use_person_masks=opts.camera_motion_person_masks,
+        )
+        started = time.monotonic()
+        try:
+            payload = estimate_camera_motion(source_video, calibration_path, tracks_path=tracks_path, params=params)
+            write_camera_motion_json(payload, target)
+        except Exception as exc:  # noqa: BLE001
+            return StageOutcome(
+                stage="camera_motion",
+                status="degraded",
+                wall_seconds=time.monotonic() - started,
+                notes=[f"camera_motion failed ({type(exc).__name__}: {exc}); placement will proceed without camera compensation"],
+                trust_badge="preview",
+            )
+        summary = payload.get("summary", {}) if isinstance(payload, Mapping) else {}
+        frame_count = int(summary.get("n_frames", 0) or 0)
+        wall_seconds = time.monotonic() - started
+        runtime_ms_per_frame = round((wall_seconds * 1000.0) / frame_count, 3) if frame_count else 0.0
+        return StageOutcome(
+            stage="camera_motion",
+            status="ran",
+            wall_seconds=wall_seconds,
+            notes=[
+                f"estimated preview-only camera_motion.json estimator={params.estimator_mode} flow_backend={params.flow_backend} person_masks={params.use_person_masks}",
+                f"verified={payload.get('verified')} not_gate_verified={payload.get('not_gate_verified')}",
+            ],
+            artifacts=["camera_motion.json"],
+            trust_badge="preview",
+            metrics={"n_frames": frame_count, "n_compensated": int(summary.get("n_compensated", 0) or 0), "runtime_ms_per_frame": runtime_ms_per_frame},
+        )
+
     def _stage_placement(self) -> StageOutcome:
         return self._run_placement_stage(refine_from_sam3d=False)
 
@@ -1148,6 +1258,7 @@ class ProcessVideoPipeline:
                 native2d_keypoints_path=native2d_path,
                 sam3d_keypoints_path=sam3d_path,
                 stance_phases_path=stance_phases_path,
+                foot_contact_phases_out_path=self.clip_dir / "foot_contact_phases.json",
                 camera_motion_path=camera_motion_path,
                 refine_from_sam3d=refine_from_sam3d,
                 config=PlacementConfig(undistort=self.options.placement_undistort),
@@ -1175,12 +1286,16 @@ class ProcessVideoPipeline:
             notes.append(f"sam3d_keypoints={sam3d_path}")
         if stance_phases_path is not None:
             notes.append(f"stance_phases={stance_phases_path}")
+        artifacts = ["placement.json", "tracks.json", "tracks_prewrite_backup.json"]
+        if (self.clip_dir / "foot_contact_phases.json").is_file():
+            artifacts.append("foot_contact_phases.json")
+            notes.append("foot_contact_phases=foot_contact_phases.json")
         return StageOutcome(
             stage=stage_name,
             status="ran",
             wall_seconds=0.0,
             notes=notes,
-            artifacts=["placement.json", "tracks.json", "tracks_prewrite_backup.json"],
+            artifacts=artifacts,
             metrics={
                 "coverage_unchanged": result.coverage_unchanged,
                 "source_counts": result.source_counts,
@@ -1587,6 +1702,8 @@ class ProcessVideoPipeline:
             raise _HardStageFailure(f"reused ball_track frames must be a list for {source_kind}: {source_path}")
 
         timing = _video_timing_probe(self.options.video)
+        frame_times_path = self.clip_dir / "frame_times.json"
+        frame_times_payload = _read_optional_json(frame_times_path) if frame_times_path.is_file() else None
         source_frame_count = len(frames)
         if source_frame_count != timing.frame_count:
             raise _HardStageFailure(
@@ -1598,6 +1715,12 @@ class ProcessVideoPipeline:
         source_fps = _maybe_positive_float(payload.get("fps"))
         source_dt = _median_frame_dt(frames)
         expected_dt = 1.0 / timing.fps
+        if frame_times_payload is not None:
+            expected_samples = [
+                {"t": time_for_frame(index, frame_times=frame_times_payload, fps=timing.fps)}
+                for index in range(source_frame_count)
+            ]
+            expected_dt = _median_frame_dt(expected_samples) or expected_dt
         before_coverage = _ball_timeline_coverage_fraction(
             frames,
             fps=source_fps,
@@ -1614,7 +1737,7 @@ class ProcessVideoPipeline:
         }
         notes: list[str] = []
         warnings: list[str] = []
-        dt_mismatch = source_dt is not None and abs((source_dt * timing.fps) - 1.0) > 0.02
+        dt_mismatch = source_dt is not None and abs(source_dt - expected_dt) > max(0.002, expected_dt * 0.02)
         fps_mismatch = source_fps is not None and abs(source_fps - timing.fps) > max(0.01, timing.fps * 0.01)
         if not (dt_mismatch or (fps_mismatch and before_coverage is not None and before_coverage < 0.95)):
             metrics["ball_timeline_coverage_after"] = before_coverage
@@ -1622,7 +1745,7 @@ class ProcessVideoPipeline:
 
         for index, frame in enumerate(frames):
             if isinstance(frame, dict):
-                frame["t"] = round(index / timing.fps, 6)
+                frame["t"] = round(time_for_frame(index, frame_times=frame_times_payload, fps=timing.fps), 6)
         payload["fps"] = float(timing.fps)
         _write_json(ball_track_path, payload)
         if not _valid_artifact("ball_track", ball_track_path):
@@ -1656,11 +1779,12 @@ class ProcessVideoPipeline:
             "video_frame_count": timing.frame_count,
             "source_median_dt": source_dt,
             "expected_dt": expected_dt,
+            "frame_times_path": str(frame_times_path) if frame_times_payload is not None else None,
             "source_last_t": _last_frame_time(frames),
             "normalized_last_t": _last_frame_time(normalized_frames if isinstance(normalized_frames, list) else []),
             "coverage_before": before_coverage,
             "coverage_after": after_coverage,
-            "normalization": "t=index/video_fps",
+            "normalization": "t=frame_times[index]" if frame_times_payload is not None else "t=index/video_fps",
             "not_ball_gate_evidence": True,
         }
         _write_json(ball_track_path.with_name("ball_track_timing_provenance.json"), provenance)
@@ -1705,6 +1829,7 @@ class ProcessVideoPipeline:
             run_wasb_or_convert(
                 out=target,
                 fps=fps,
+                frame_times=_existing_optional_path(self.clip_dir / "frame_times.json"),
                 metadata_out=self.clip_dir / "wasb_run.json",
                 predictions_csv=None,
                 video=self.clip_dir / f"source{opts.video.suffix.lower()}",
@@ -1824,6 +1949,7 @@ class ProcessVideoPipeline:
                 skeleton3d_path=_existing_optional_path(self.clip_dir / "skeleton3d.json"),
                 net_plane_path=_existing_optional_path(self.clip_dir / "net_plane.json"),
                 rally_spans_path=_existing_optional_path(self.clip_dir / "rally_spans.json"),
+                frame_times_path=_existing_optional_path(self.clip_dir / "frame_times.json"),
             )
         except Exception as exc:  # noqa: BLE001 - default arc is fail-closed
             return StageOutcome(
@@ -1939,7 +2065,10 @@ class ProcessVideoPipeline:
 
         ball_inflections_path = self.clip_dir / "ball_inflections.json"
         if ball_track_path.is_file():
-            ball_inflections = build_ball_inflections_from_ball_track(_read_json(ball_track_path))
+            ball_inflections = build_ball_inflections_from_ball_track(
+                _read_json(ball_track_path),
+                frame_times=_existing_optional_path(self.clip_dir / "frame_times.json"),
+            )
             _write_json(ball_inflections_path, ball_inflections)
             notes.append("derived ball_inflections.json from ball_track.json")
         else:
@@ -1954,6 +2083,7 @@ class ProcessVideoPipeline:
 
         contact_windows = fuse_contact_windows_from_cue_payloads(
             fps=fps,
+            frame_times=_existing_optional_path(self.clip_dir / "frame_times.json"),
             audio_onsets_payload=audio_onsets_payload,
             wrist_velocity_peaks_payload=wrist_payload,
             ball_inflections_payload=ball_inflections,
@@ -2191,6 +2321,7 @@ class ProcessVideoPipeline:
             ball_inflections=ball_inflections,
             wrist_velocity_peaks=wrist_velocity_peaks,
             physics3d_reconstruction=physics3d_reconstruction,
+            frame_times=_existing_optional_path(self.clip_dir / "frame_times.json"),
         )
         filled["physics_fill"]["physics3d_reconstruction"] = physics3d_summary
         filled["physics_fill"]["reviewed_bounces_input"] = str(self.clip_dir / "reviewed_ball_bounces.json") if reviewed_bounces is not None else None
@@ -4514,6 +4645,10 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         if args.placement_keypoints_2d
         else None,
         camera_motion_path=Path(args.camera_motion).expanduser().resolve() if args.camera_motion else None,
+        skip_camera_motion=(not args.enable_camera_motion) or args.skip_camera_motion,
+        camera_motion_estimator=args.camera_motion_estimator,
+        camera_motion_flow_backend=args.camera_motion_flow_backend,
+        camera_motion_person_masks=not args.no_camera_motion_person_mask,
         placement_undistort=not args.no_placement_undistort,
         mesh_coverage_mode=args.mesh_coverage_mode,
         target_mesh_frame_budget=None if args.target_mesh_frame_budget == 0 else args.target_mesh_frame_budget,
@@ -4624,6 +4759,29 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--rally-gating", action="store_true", help="Opt in to loose rally-span gating before frame/pose/body/world stages; preserves full pre-gating artifacts with *_pre_rally_gating.json copies.")
     parser.add_argument("--placement-keypoints-2d", default=None, help="Optional native/body keypoints_2d.json for the pre-BODY placement pass.")
     parser.add_argument("--camera-motion", default=None, help="Optional camera_motion.json mapping frame pixels into the calibration-reference frame before placement homography projection.")
+    parser.add_argument(
+        "--enable-camera-motion",
+        action="store_true",
+        help="Opt in to the preview camera_motion.json estimation stage. Default remains off until offline placement regression is resolved.",
+    )
+    parser.add_argument("--skip-camera-motion", action="store_true", help="Force-disable the preview camera_motion.json estimation stage; wins over --enable-camera-motion.")
+    parser.add_argument(
+        "--camera-motion-estimator",
+        choices=("hardened", "legacy"),
+        default="hardened",
+        help="Camera-motion estimator profile for the default camera_motion stage.",
+    )
+    parser.add_argument(
+        "--camera-motion-flow-backend",
+        choices=("lk", "raft-small"),
+        default="lk",
+        help="Camera-motion optical-flow backend. raft-small is flag-gated and requires already-cached weights; no download is attempted.",
+    )
+    parser.add_argument(
+        "--no-camera-motion-person-mask",
+        action="store_true",
+        help="Disable person-track masking in the default camera_motion stage for ablation/debug runs.",
+    )
     parser.add_argument("--no-placement-undistort", action="store_true", help="Disable placement-stage pixel undistortion before homography projection.")
 
     parser.add_argument(

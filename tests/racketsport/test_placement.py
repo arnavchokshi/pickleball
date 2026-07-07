@@ -447,6 +447,7 @@ def test_rewrite_tracks_emits_native_stance_from_low_speed_dwell_without_externa
     tracks_path = tmp_path / "tracks.json"
     calibration_path = tmp_path / "court_calibration.json"
     placement_path = tmp_path / "placement.json"
+    phases_out_path = tmp_path / "foot_contact_phases.json"
     frames = []
     world_x_by_frame = [
         0.000,
@@ -495,6 +496,7 @@ def test_rewrite_tracks_emits_native_stance_from_low_speed_dwell_without_externa
         tracks_path=tracks_path,
         calibration_path=calibration_path,
         placement_path=placement_path,
+        foot_contact_phases_out_path=phases_out_path,
         config=PlacementConfig(process_noise_mps2=0.1),
     )
 
@@ -515,6 +517,15 @@ def test_rewrite_tracks_emits_native_stance_from_low_speed_dwell_without_externa
     assert placement["provenance"]["stance_phases"] is None
     assert placement["provenance"]["stance_phase_count"] > 0
     assert placement["provenance"]["stance_detection"]["players"]["1"]["native_phase_count"] == 2
+    phases = json.loads(phases_out_path.read_text(encoding="utf-8"))
+    assert phases["artifact_type"] == "foot_contact_phases"
+    assert phases["source_kind"] == "placement_low_speed_stance"
+    assert phases["source_phase_count"] == placement["provenance"]["stance_phase_count"]
+    assert phases["phase_count"] == placement["provenance"]["stance_phase_count"] * 2
+    assert phases["phases"]
+    assert all(phase["frame_indices"] for phase in phases["phases"])
+    assert {phase["foot"] for phase in phases["phases"]} == {"left", "right"}
+    assert {phase["foot_assignment"] for phase in phases["phases"]} == {"bilateral_from_player_stance"}
     assert 0.15 <= coverage <= 0.80
     assert pair_speeds
     assert max(pair_speeds) <= PlacementConfig().stance_speed_mps
@@ -593,6 +604,57 @@ def test_apply_placement_cli_help_direct_reference() -> None:
     assert "--tracks" in completed.stdout
     assert "--placement-out" in completed.stdout
     assert "--stance-phases" in completed.stdout
+    assert "--foot-contact-phases-out" in completed.stdout
+    assert "--camera-motion" in completed.stdout
+
+
+def test_apply_placement_cli_passes_camera_motion_and_foot_contact_out(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import scripts.racketsport.apply_placement as apply_placement_cli
+
+    tracks_path = tmp_path / "tracks.json"
+    calibration_path = tmp_path / "court_calibration.json"
+    placement_path = tmp_path / "placement.json"
+    foot_contact_out = tmp_path / "foot_contact_phases.json"
+    camera_motion_path = tmp_path / "camera_motion.json"
+    calls: list[dict[str, object]] = []
+
+    def _fake_rewrite(**kwargs: object) -> object:
+        calls.append(kwargs)
+        return type(
+            "PlacementResult",
+            (),
+            {
+                "placement_path": placement_path,
+                "backup_tracks_path": tmp_path / "tracks_prewrite_backup.json",
+                "coverage_unchanged": True,
+                "source_counts": {},
+                "court_bounds_violations": 0,
+            },
+        )()
+
+    monkeypatch.setattr(apply_placement_cli, "rewrite_tracks_with_placement", _fake_rewrite)
+
+    rc = apply_placement_cli.main(
+        [
+            "--tracks",
+            str(tracks_path),
+            "--court-calibration",
+            str(calibration_path),
+            "--placement-out",
+            str(placement_path),
+            "--foot-contact-phases-out",
+            str(foot_contact_out),
+            "--camera-motion",
+            str(camera_motion_path),
+        ]
+    )
+
+    assert rc == 0
+    assert calls[0]["foot_contact_phases_out_path"] == foot_contact_out
+    assert calls[0]["camera_motion_path"] == camera_motion_path
 
 
 def _lane_foot_joints(x_px: float, y_px: float, *, conf: float = 9.0) -> list[dict[str, object]]:
@@ -1312,6 +1374,75 @@ def test_rewrite_tracks_records_visual_root_step_bound_provenance(tmp_path: Path
     assert visual["frames_adjusted_count"] > 0
     assert _max_written_speed_mps(rewritten) <= 8.0 + 1e-6
 
+
+def test_visual_root_step_bound_rewrites_null_frame_idx_tracks_at_source_fps(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tracks_path = tmp_path / "tracks.json"
+    calibration_path = tmp_path / "court_calibration.json"
+    placement_path = tmp_path / "placement.json"
+    frames = []
+    for frame_idx, world_x in enumerate([0.0, 0.30, 0.30, 0.30]):
+        frame = _lane_frame(frame_idx, world_x, -5.0)
+        frame["frame_idx"] = None
+        frame["t"] = frame_idx / 60.0
+        frames.append(frame)
+    _write_json(
+        tracks_path,
+        _lane_tracks_payload([{"id": 1, "side": "near", "role": "left", "frames": frames}], fps=60.0),
+    )
+    _write_json(calibration_path, _calibration_payload())
+
+    def fake_smooth(_measurements, *, frame_indices, fps, player_id, config):  # noqa: ANN001
+        del fps, player_id, config
+        path = {
+            0: [0.0, -5.0],
+            1: [0.30, -5.0],
+            2: [0.30, -5.0],
+            3: [0.30, -5.0],
+        }
+        return placement_module._SegmentedSmoothingResult(
+            smoothed={
+                int(idx): placement_module.SmoothedPlacement(
+                    xy=list(path[int(idx)]),
+                    covariance=[[0.5, 0.0], [0.0, 0.5]],
+                    velocity=[0.0, 0.0],
+                )
+                for idx in frame_indices
+            },
+            gap_hold_frames=set(),
+            gap_interpolated_frames=set(),
+            gap_reacquisition_speed_violations=[],
+        )
+
+    monkeypatch.setattr(placement_module, "_smooth_measurement_segments", fake_smooth)
+
+    rewrite_tracks_with_placement(
+        tracks_path=tracks_path,
+        calibration_path=calibration_path,
+        placement_path=placement_path,
+        config=PlacementConfig(
+            visual_max_root_step_m=0.10,
+            stance_min_duration_s=99.0,
+            max_written_speed_mps=100.0,
+            continuity_max_supported_speed_mps=100.0,
+        ),
+    )
+
+    rewritten = json.loads(tracks_path.read_text(encoding="utf-8"))
+    written_frames = rewritten["players"][0]["frames"]
+    assert [frame["frame_idx"] for frame in written_frames] == [0, 1, 2, 3]
+    steps = [
+        float(
+            np.linalg.norm(
+                np.asarray(right["world_xy"], dtype=float) - np.asarray(left["world_xy"], dtype=float)
+            )
+        )
+        for left, right in zip(written_frames, written_frames[1:], strict=False)
+    ]
+    assert max(steps) <= 0.10 + 1e-9
+
 def test_frame_index_treats_null_frame_idx_like_absent() -> None:
     # Regression (2026-07-06): fresh tracker output serializes the schema's optional
     # frame_idx as an explicit null; placement must fall back to `t` instead of
@@ -1321,4 +1452,3 @@ def test_frame_index_treats_null_frame_idx_like_absent() -> None:
     assert _frame_index({"frame_idx": None, "t": 2.5}, fps=30.0) == 75
     assert _frame_index({"t": 2.5}, fps=30.0) == 75
     assert _frame_index({"frame_idx": 7, "t": 2.5}, fps=30.0) == 7
-

@@ -12,9 +12,12 @@ from threed.racketsport.io_decode import (
     FrameSource,
     _laplacian_variance,
     analyze_clip_qc,
+    build_frame_time_table,
     decode_clip,
+    load_frame_time_table,
     measure_decode_throughput,
     probe_clip,
+    write_frame_time_table,
 )
 
 
@@ -33,6 +36,63 @@ def _make_tiny_clip(path, *, rate: int = 5, duration_s: float = 1.0):
         "-i",
         f"sine=frequency=1000:sample_rate=44100:duration={duration_s}",
         "-shortest",
+        "-pix_fmt",
+        "yuv420p",
+        str(path),
+    ]
+    try:
+        subprocess.run(command, check=True)
+    except FileNotFoundError:
+        pytest.skip("ffmpeg is not installed")
+
+
+def _make_vfr_clip(path, *, durations_s: list[float]):
+    frames_dir = path.parent / f"{path.stem}_frames"
+    frames_dir.mkdir()
+    colors = ["red", "green", "blue", "yellow", "magenta", "cyan", "white", "black"]
+    frame_paths = []
+    for index, _duration in enumerate(durations_s):
+        frame_path = frames_dir / f"frame_{index:03d}.png"
+        command = [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            f"color=c={colors[index % len(colors)]}:s=64x48:d=0.01",
+            "-frames:v",
+            "1",
+            str(frame_path),
+        ]
+        try:
+            subprocess.run(command, check=True)
+        except FileNotFoundError:
+            pytest.skip("ffmpeg is not installed")
+        frame_paths.append(frame_path)
+
+    concat = path.parent / f"{path.stem}_concat.txt"
+    lines = []
+    for frame_path, duration_s in zip(frame_paths, durations_s, strict=True):
+        lines.append(f"file '{frame_path}'")
+        lines.append(f"duration {duration_s:.9f}")
+    lines.append(f"file '{frame_paths[-1]}'")
+    concat.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    command = [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(concat),
+        "-fps_mode",
+        "vfr",
         "-pix_fmt",
         "yuv420p",
         str(path),
@@ -65,6 +125,40 @@ def test_decode_clip_alias_matches_probe_clip_metadata(tmp_path):
     _make_tiny_clip(clip)
 
     assert decode_clip(clip, fps_out=30.0) == probe_clip(clip, fps_out=30.0)
+
+
+def test_write_frame_time_table_emits_pts_sidecar_for_real_clip(tmp_path):
+    clip = tmp_path / "sample.mp4"
+    out = tmp_path / "frame_times.json"
+    _make_tiny_clip(clip, rate=10, duration_s=0.6)
+
+    table = write_frame_time_table(clip, out)
+
+    assert out.exists()
+    reloaded = load_frame_time_table(out)
+    assert table == reloaded
+    assert reloaded["artifact_type"] == "racketsport_frame_times"
+    assert reloaded["schema_version"] == 1
+    assert reloaded["clip_path"] == str(clip)
+    assert reloaded["provenance"] == "ffprobe_pts"
+    assert reloaded["frame_count"] >= 5
+    assert reloaded["frames"][0] == {"frame": 0, "pts_s": pytest.approx(0.0)}
+    assert all("pts_s" in frame for frame in reloaded["frames"])
+
+
+def test_build_frame_time_table_preserves_synthetic_vfr_pts(tmp_path):
+    clip = tmp_path / "vfr.mp4"
+    _make_vfr_clip(clip, durations_s=[0.04, 0.20, 0.04, 0.16, 0.04])
+
+    table = build_frame_time_table(clip)
+
+    assert table["artifact_type"] == "racketsport_frame_times"
+    assert table["provenance"] == "ffprobe_pts"
+    times = [frame["pts_s"] for frame in table["frames"][:5]]
+    assert times[0] == pytest.approx(0.0, abs=0.02)
+    deltas = [round(right - left, 3) for left, right in zip(times, times[1:], strict=False)]
+    assert len(set(deltas[:4])) > 1
+    assert times[2] == pytest.approx(0.24, abs=0.03)
 
 
 def test_probe_clip_fails_closed_on_missing_file(tmp_path):

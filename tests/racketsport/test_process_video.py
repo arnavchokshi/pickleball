@@ -333,6 +333,36 @@ def _base_options(tmp_path: Path, *, video: Path, court_corners: Path | None) ->
     )
 
 
+def test_ingest_stage_writes_frame_times_artifact(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video, frame_count=3, fps=30.0)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    calls: list[tuple[Path, Path]] = []
+
+    def _fake_write_frame_time_table(path: Path, out_path: Path) -> dict[str, Any]:
+        calls.append((path, out_path))
+        payload = {
+            "artifact_type": "racketsport_frame_times",
+            "provenance": "ffprobe_pts",
+            "frames": [{"frame_idx": 0, "pts_s": 0.0}],
+        }
+        _write_json(out_path, payload)
+        return payload
+
+    monkeypatch.setattr(process_video, "write_frame_time_table", _fake_write_frame_time_table)
+
+    outcome = pipeline._stage_ingest()
+
+    assert calls == [(options.clip_dir / "source.mp4", options.clip_dir / "frame_times.json")]
+    assert "frame_times.json" in outcome.artifacts
+    assert (options.clip_dir / "frame_times.json").is_file()
+    assert "wrote frame_times.json from ffprobe PTS" in outcome.notes
+
+
 def _fake_run_pipeline_factory(write_for_stage: dict[str, dict[str, Any]]):
     """Build a stand-in for orchestrator.run_pipeline that writes fixture
     artifacts for a given stage instead of running any real model."""
@@ -1467,6 +1497,7 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
         "ingest",
         "calibration",
         "tracking",
+        "camera_motion",
         "placement",
         "frames",
         "ball",
@@ -1541,6 +1572,10 @@ def test_placement_stage_rewrites_tracks_after_tracking(tmp_path: Path, monkeypa
                 "provenance": {},
             },
         )
+        _write_json(
+            kwargs["foot_contact_phases_out_path"],
+            {"schema_version": 1, "artifact_type": "foot_contact_phases", "phase_count": 1, "phases": []},
+        )
         return type("Result", (), {"coverage_unchanged": True, "source_counts": {"bbox": 2, "native2d": 1, "sam3d": 0}})()
 
     monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite)
@@ -1552,8 +1587,97 @@ def test_placement_stage_rewrites_tracks_after_tracking(tmp_path: Path, monkeypa
     assert calls[0]["tracks_path"] == options.clip_dir / "tracks.json"
     assert calls[0]["native2d_keypoints_path"] == keypoints_path
     assert calls[0]["stance_phases_path"] is None
+    assert calls[0]["foot_contact_phases_out_path"] == options.clip_dir / "foot_contact_phases.json"
     assert calls[0]["refine_from_sam3d"] is False
     assert "placement.json" in outcome.artifacts
+    assert "foot_contact_phases.json" in outcome.artifacts
+    assert "foot_contact_phases=foot_contact_phases.json" in outcome.notes
+
+
+def test_default_stage_order_runs_camera_motion_before_placement(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    assert [name for name, _fn in pipeline._build_prefix_stage_fns()] == [
+        "ingest",
+        "calibration",
+        "tracking",
+        "camera_motion",
+        "placement",
+        "frames",
+    ]
+
+
+def test_camera_motion_stage_is_default_off_after_offline_regression_check(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    outcome = pipeline._stage_camera_motion()
+
+    assert outcome.status == "skipped"
+    assert any("--enable-camera-motion" in note for note in outcome.notes)
+
+
+def test_camera_motion_stage_runs_hardened_default_estimator(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.skip_camera_motion = False
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "tracks.json", _tracks_payload())
+    calls: list[dict[str, Any]] = []
+
+    def _fake_estimate_camera_motion(video_path: Path, calibration_path: Path, *, tracks_path: Path, params: Any) -> dict[str, Any]:
+        calls.append(
+            {
+                "video_path": video_path,
+                "calibration_path": calibration_path,
+                "tracks_path": tracks_path,
+                "params": params,
+            }
+        )
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_camera_motion",
+            "video": str(video_path),
+            "method": "homography",
+            "reference_frame_idx": 0,
+            "params": {"estimator_mode": params.estimator_mode, "flow_backend": params.flow_backend},
+            "summary": {
+                "n_frames": 2,
+                "n_compensated": 2,
+                "drift_px_p50": 0.0,
+                "drift_px_p95": 0.0,
+                "drift_px_max": 0.0,
+                "residual_px_p50": 0.0,
+                "residual_px_p95": 0.0,
+                "residual_px_max": 0.0,
+            },
+            "frames": [],
+            "verified": False,
+            "not_gate_verified": True,
+        }
+
+    monkeypatch.setattr(process_video, "estimate_camera_motion", _fake_estimate_camera_motion)
+
+    outcome = pipeline._stage_camera_motion()
+
+    assert outcome.status == "ran"
+    assert outcome.artifacts == ["camera_motion.json"]
+    assert calls[0]["video_path"] == options.clip_dir / "source.mp4"
+    assert calls[0]["calibration_path"] == options.clip_dir / "court_calibration.json"
+    assert calls[0]["tracks_path"] == options.clip_dir / "tracks.json"
+    assert calls[0]["params"].estimator_mode == "hardened"
+    assert calls[0]["params"].flow_backend == "lk"
+    assert calls[0]["params"].use_person_masks is True
+    assert outcome.metrics["n_compensated"] == 2
 
 
 def test_placement_stage_auto_discovers_camera_motion_and_surfaces_guard_notes(
@@ -2507,7 +2631,7 @@ def test_events_stage_runs_with_sam3d_skeleton_and_regenerates_frame_plan(
     monkeypatch.setattr(
         process_video,
         "build_ball_inflections_from_ball_track",
-        lambda payload: {"schema_version": 1, "source": "test", "summary": {"candidate_count": 1}, "candidates": []},
+        lambda payload, **kwargs: {"schema_version": 1, "source": "test", "summary": {"candidate_count": 1}, "candidates": []},
     )
     monkeypatch.setattr(process_video, "fuse_contact_windows_from_cue_payloads", lambda **kwargs: _contact_windows_payload())
 
@@ -2535,7 +2659,7 @@ def test_events_stage_fails_closed_without_prebody_sam3d_skeleton(
     monkeypatch.setattr(
         process_video,
         "build_ball_inflections_from_ball_track",
-        lambda payload: {"schema_version": 1, "source": "test", "summary": {"candidate_count": 0}, "candidates": []},
+        lambda payload, **kwargs: {"schema_version": 1, "source": "test", "summary": {"candidate_count": 0}, "candidates": []},
     )
     monkeypatch.setattr(process_video, "fuse_contact_windows_from_cue_payloads", lambda **kwargs: _contact_windows_payload())
     pipeline = process_video.ProcessVideoPipeline(options)
@@ -3050,6 +3174,40 @@ def test_ball_stage_rescales_reused_ball_track_when_frame_count_matches_video_bu
     assert any("rescaled reused ball_track timestamps" in note for note in outcome.notes)
 
 
+def test_ball_stage_normalizes_reused_ball_track_to_frame_times_table(tmp_path: Path) -> None:
+    video = tmp_path / "vfr_clip.mp4"
+    _make_video(video, frame_count=3, fps=30.0)
+    reuse_ball = tmp_path / "constant_fps_ball_track.json"
+    _write_json(reuse_ball, _ball_track_payload(frame_count=3, fps=30.0))
+
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.skip_ball = False
+    options.ball_track_reuse = reuse_ball
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(
+        options.clip_dir / "frame_times.json",
+        {
+            "artifact_type": "racketsport_frame_times",
+            "provenance": "ffprobe_pts",
+            "frames": [
+                {"frame_idx": 0, "pts_s": 0.0},
+                {"frame_idx": 1, "pts_s": 0.1},
+                {"frame_idx": 2, "pts_s": 0.3},
+            ],
+        },
+    )
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    outcome = pipeline._stage_ball()
+
+    assert outcome.status == "reused"
+    normalized = json.loads((options.clip_dir / "ball_track.json").read_text(encoding="utf-8"))
+    assert [frame["t"] for frame in normalized["frames"]] == [0.0, 0.1, 0.3]
+    provenance = json.loads((options.clip_dir / "ball_track_timing_provenance.json").read_text(encoding="utf-8"))
+    assert provenance["normalization"] == "t=frame_times[index]"
+    assert provenance["frame_times_path"] == str(options.clip_dir / "frame_times.json")
+
+
 def test_ball_stage_rescales_exact_wolverine_fps_mismatch_fixture(tmp_path: Path) -> None:
     """Regression fixture for manager diagnosis:
     300 WASB frames stamped at 60fps reused against a 300-frame 30fps Wolverine clip.
@@ -3225,6 +3383,39 @@ def test_cli_parses_camera_motion_path_into_options(tmp_path: Path) -> None:
     )
     options = process_video.build_options_from_args(args)
     assert options.camera_motion_path == camera_motion.resolve()
+
+
+def test_cli_parses_default_camera_motion_stage_controls(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    parser = process_video.build_arg_parser()
+
+    default_options = process_video.build_options_from_args(parser.parse_args(["--video", str(video), "--out", str(tmp_path / "default")]))
+    enabled_options = process_video.build_options_from_args(
+        parser.parse_args(["--video", str(video), "--out", str(tmp_path / "enabled"), "--enable-camera-motion"])
+    )
+    options = process_video.build_options_from_args(
+        parser.parse_args(
+            [
+                "--video",
+                str(video),
+                "--out",
+                str(tmp_path / "run"),
+                "--skip-camera-motion",
+                "--camera-motion-estimator",
+                "legacy",
+                "--camera-motion-flow-backend",
+                "raft-small",
+                "--no-camera-motion-person-mask",
+            ]
+        )
+    )
+
+    assert default_options.skip_camera_motion is True
+    assert enabled_options.skip_camera_motion is False
+    assert options.skip_camera_motion is True
+    assert options.camera_motion_estimator == "legacy"
+    assert options.camera_motion_flow_backend == "raft-small"
+    assert options.camera_motion_person_masks is False
 
 
 def test_cli_parses_confidence_gate_opt_out_into_options(tmp_path: Path) -> None:

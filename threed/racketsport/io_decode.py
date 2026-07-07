@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import math
 import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping, Sequence
 
 from .capture_quality import score_capture_quality
 from .schemas import CaptureQuality
@@ -114,6 +115,224 @@ def _run_ffprobe(path: Path) -> dict[str, Any]:
     except subprocess.CalledProcessError as exc:
         raise RuntimeError(f"ffprobe failed for {path}: {exc.stderr.strip()}") from exc
     return json.loads(completed.stdout)
+
+
+def _run_ffprobe_frames(path: Path) -> dict[str, Any]:
+    command = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-print_format",
+        "json",
+        "-show_entries",
+        "frame=best_effort_timestamp_time,pts_time,pkt_pts_time,pkt_duration_time",
+        str(path),
+    ]
+    try:
+        completed = subprocess.run(command, check=True, capture_output=True, text=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError("ffprobe is required for frame time probing") from exc
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"ffprobe frame probing failed for {path}: {exc.stderr.strip()}") from exc
+    return json.loads(completed.stdout)
+
+
+def _video_stream(payload: Mapping[str, Any], clip_path: Path) -> Mapping[str, Any]:
+    streams = payload.get("streams", [])
+    video_stream = next((stream for stream in streams if stream.get("codec_type") == "video"), None)
+    if video_stream is None:
+        raise ValueError(f"no video stream found in {clip_path}")
+    return video_stream
+
+
+def _finite_float_or_none(value: Any) -> float | None:
+    if value in (None, "N/A"):
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(parsed):
+        return None
+    return parsed
+
+
+def _frame_pts_from_ffprobe_frames(payload: Mapping[str, Any]) -> list[float]:
+    frames = payload.get("frames")
+    if not isinstance(frames, Sequence) or isinstance(frames, (str, bytes)):
+        return []
+    pts_values: list[float] = []
+    for frame in frames:
+        if not isinstance(frame, Mapping):
+            continue
+        pts = (
+            _finite_float_or_none(frame.get("best_effort_timestamp_time"))
+            or _finite_float_or_none(frame.get("pts_time"))
+            or _finite_float_or_none(frame.get("pkt_pts_time"))
+        )
+        if pts is None:
+            continue
+        pts_values.append(float(pts))
+    if not pts_values:
+        return []
+    monotonic: list[float] = []
+    previous: float | None = None
+    for pts in pts_values:
+        if previous is not None and pts < previous:
+            return []
+        monotonic.append(pts)
+        previous = pts
+    return monotonic
+
+
+def _stream_frame_count(video_stream: Mapping[str, Any], duration_s: float, fps: float) -> int:
+    raw_frame_count = video_stream.get("nb_frames")
+    if raw_frame_count not in (None, "N/A"):
+        return int(raw_frame_count)
+    if duration_s > 0 and fps > 0:
+        return max(1, round(duration_s * fps))
+    return 0
+
+
+def build_frame_time_table(path: str | Path) -> dict[str, Any]:
+    """Build a per-frame presentation timestamp table for a clip.
+
+    The preferred path is ffprobe's per-frame PTS/best-effort timestamp output.
+    When timestamps are unavailable, the table is still emitted from the
+    stream's r_frame_rate with ``provenance=constant_fps_assumed`` so downstream
+    consumers can treat that timing as lower trust instead of silently assuming
+    CFR.
+    """
+
+    clip_path = Path(path)
+    if not clip_path.exists():
+        raise FileNotFoundError(clip_path)
+
+    stream_payload = _run_ffprobe(clip_path)
+    video_stream = _video_stream(stream_payload, clip_path)
+    fps = _parse_rational(video_stream.get("avg_frame_rate")) or _parse_rational(
+        video_stream.get("r_frame_rate")
+    )
+    r_frame_rate = _parse_rational(video_stream.get("r_frame_rate"))
+    if fps is None:
+        raise ValueError(f"could not determine frame rate for {clip_path}")
+    duration_s = float(video_stream.get("duration") or stream_payload.get("format", {}).get("duration") or 0.0)
+
+    pts_values = _frame_pts_from_ffprobe_frames(_run_ffprobe_frames(clip_path))
+    source_start_pts_s: float | None = None
+    if pts_values:
+        provenance = "ffprobe_pts"
+        source_start_pts_s = float(pts_values[0])
+        frame_times = [float(value) - source_start_pts_s for value in pts_values]
+        fps_assumed = None
+    else:
+        provenance = "constant_fps_assumed"
+        fps_assumed = r_frame_rate or fps
+        frame_count = _stream_frame_count(video_stream, duration_s, fps_assumed)
+        frame_times = [index / fps_assumed for index in range(frame_count)]
+
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_frame_times",
+        "clip_path": str(clip_path),
+        "provenance": provenance,
+        "trust_band": "pts" if provenance == "ffprobe_pts" else "constant_fps_assumed",
+        "fps": float(fps),
+        "r_frame_rate": float(r_frame_rate) if r_frame_rate is not None else None,
+        "duration_s": duration_s,
+        "frame_count": len(frame_times),
+        "source_start_pts_s": source_start_pts_s,
+        "fps_assumed": float(fps_assumed) if fps_assumed is not None else None,
+        "frames": [
+            {"frame": index, "pts_s": round(float(pts_s), 9)}
+            for index, pts_s in enumerate(frame_times)
+        ],
+    }
+
+
+def write_frame_time_table(path: str | Path, out_path: str | Path) -> dict[str, Any]:
+    table = build_frame_time_table(path)
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(table, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return table
+
+
+def load_frame_time_table(path: str | Path) -> dict[str, Any]:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("frame time table must contain a JSON object")
+    if payload.get("artifact_type") != "racketsport_frame_times":
+        raise ValueError("frame time table must have artifact_type='racketsport_frame_times'")
+    frame_time_lookup(payload)
+    return payload
+
+
+def frame_time_lookup(frame_times: Any) -> dict[int, float]:
+    """Normalize supported frame-time payloads into ``{frame_index: pts_s}``."""
+
+    if frame_times is None:
+        return {}
+    if isinstance(frame_times, (str, Path)):
+        return frame_time_lookup(load_frame_time_table(frame_times))
+    if isinstance(frame_times, Mapping):
+        frames = frame_times.get("frames")
+        if isinstance(frames, Sequence) and not isinstance(frames, (str, bytes)):
+            output: dict[int, float] = {}
+            for index, item in enumerate(frames):
+                if isinstance(item, Mapping):
+                    frame_index = int(item.get("frame", item.get("frame_index", item.get("frame_idx", index))))
+                    pts_s = _finite_float_or_none(item.get("pts_s", item.get("t", item.get("time_s"))))
+                else:
+                    frame_index = index
+                    pts_s = _finite_float_or_none(item)
+                if pts_s is None or frame_index < 0:
+                    continue
+                output[frame_index] = float(pts_s)
+            return output
+        output = {}
+        for key, value in frame_times.items():
+            try:
+                frame_index = int(key)
+            except (TypeError, ValueError):
+                continue
+            pts_s = _finite_float_or_none(value)
+            if pts_s is not None and frame_index >= 0:
+                output[frame_index] = float(pts_s)
+        return output
+    if isinstance(frame_times, Sequence) and not isinstance(frame_times, (str, bytes)):
+        output = {}
+        for index, item in enumerate(frame_times):
+            if isinstance(item, Mapping):
+                frame_index = int(item.get("frame", item.get("frame_index", item.get("frame_idx", index))))
+                pts_s = _finite_float_or_none(item.get("pts_s", item.get("t", item.get("time_s"))))
+            else:
+                frame_index = index
+                pts_s = _finite_float_or_none(item)
+            if pts_s is not None and frame_index >= 0:
+                output[frame_index] = float(pts_s)
+        return output
+    raise ValueError("unsupported frame time table shape")
+
+
+def time_for_frame(frame_index: int, *, frame_times: Any = None, fps: float | None = None) -> float:
+    lookup = frame_time_lookup(frame_times)
+    if int(frame_index) in lookup:
+        return lookup[int(frame_index)]
+    if fps is None or fps <= 0:
+        raise ValueError("fps is required when frame_times does not contain frame")
+    return int(frame_index) / float(fps)
+
+
+def nearest_frame_for_time(time_s: float, *, frame_times: Any = None, fps: float | None = None) -> int:
+    lookup = frame_time_lookup(frame_times)
+    if lookup:
+        return min(lookup, key=lambda frame: (abs(lookup[frame] - float(time_s)), frame))
+    if fps is None or fps <= 0:
+        raise ValueError("fps is required when frame_times is unavailable")
+    return max(0, int(round(float(time_s) * float(fps))))
 
 
 def _scaled_sample_size(width: int, height: int, max_width: int) -> tuple[int, int]:

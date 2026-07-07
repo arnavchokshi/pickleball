@@ -53,6 +53,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
+from threed.racketsport.io_decode import time_for_frame
+
 SCHEMA_VERSION = 1
 ARTIFACT_TYPE = "racketsport_rally_spans"
 
@@ -350,6 +352,7 @@ def frame_schedule(
     *,
     fps: float,
     frame_count: int,
+    frame_times: Any = None,
 ) -> list[int]:
     """0-indexed frame numbers inside any span, for a clip decoded at ``fps`` with
     ``frame_count`` total frames.
@@ -369,7 +372,7 @@ def frame_schedule(
         return []
     scheduled: list[int] = []
     for idx in range(frame_count):
-        t = idx / fps
+        t = time_for_frame(idx, frame_times=frame_times, fps=fps)
         if in_rally_span(t, spans):
             scheduled.append(idx)
     return scheduled

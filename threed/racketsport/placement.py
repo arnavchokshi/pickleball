@@ -151,6 +151,7 @@ def rewrite_tracks_with_placement(
     native2d_keypoints_path: str | Path | None = None,
     sam3d_keypoints_path: str | Path | None = None,
     stance_phases_path: str | Path | None = None,
+    foot_contact_phases_out_path: str | Path | None = None,
     camera_motion_path: str | Path | None = None,
     refine_from_sam3d: bool = False,
     config: PlacementConfig | None = None,
@@ -164,6 +165,7 @@ def rewrite_tracks_with_placement(
     native2d_keypoints_path = Path(native2d_keypoints_path) if native2d_keypoints_path is not None else None
     sam3d_keypoints_path = Path(sam3d_keypoints_path) if sam3d_keypoints_path is not None else None
     stance_phases_path = Path(stance_phases_path) if stance_phases_path is not None else None
+    foot_contact_phases_out_path = Path(foot_contact_phases_out_path) if foot_contact_phases_out_path is not None else None
     camera_motion_path = Path(camera_motion_path) if camera_motion_path is not None else None
 
     tracks_payload = _read_json(tracks_path)
@@ -237,6 +239,7 @@ def rewrite_tracks_with_placement(
     visual_smoothing_totals: Counter[str] = Counter({"frames_adjusted_count": 0, "infeasible_segment_count": 0})
     camera_motion_seen: set[int] = set()
     camera_motion_used: set[int] = set()
+    emitted_stance_phases: list[_StancePhase] = []
 
     for source_player, dest_player in zip(tracks_payload.get("players", []), rewritten_payload.get("players", []), strict=False):
         player_id = int(source_player["id"])
@@ -328,6 +331,8 @@ def rewrite_tracks_with_placement(
             source="native_keypoint_low_speed" if keypoint_stance_frames else "native_placement_low_speed",
         )
         native_stance_phase_count += len(native_stance_phases)
+        emitted_stance_phases.extend(player_stance_phases)
+        emitted_stance_phases.extend(native_stance_phases)
         native_stance_frames = _phase_frame_set(native_stance_phases, frame_indices=frame_indices)
         stance_frames = set(native_stance_frames)
         stance_frames.update(external_stance_frames)
@@ -476,6 +481,7 @@ def rewrite_tracks_with_placement(
             original_inside = _inside_court_bounds(original_by_frame[frame_idx], margin_m=config.court_margin_m)
             if not _inside_court_bounds(xy, margin_m=config.court_margin_m) and original_inside:
                 total_bounds_violations += 1
+            rewritten_frame["frame_idx"] = int(frame_idx)
             rewritten_frame["world_xy"] = [float(xy[0]), float(xy[1])]
             rewritten_by_frame[frame_idx] = [float(xy[0]), float(xy[1])]
             frame_count += 1
@@ -544,10 +550,17 @@ def rewrite_tracks_with_placement(
             "camera_motion_frames_uncompensated": len(camera_motion_seen - camera_motion_used),
             "camera_motion_artifact_frame_count": camera_motion_metadata.get("artifact_frame_count", 0),
             "camera_motion_artifact_compensated_frame_count": camera_motion_metadata.get("artifact_compensated_frame_count", 0),
+            "camera_motion_method": camera_motion_metadata.get("method"),
+            "camera_motion_flow_backend": camera_motion_metadata.get("flow_backend"),
+            "camera_motion_processing_scale": camera_motion_metadata.get("processing_scale"),
+            "camera_motion_inlier_ratio_p50": camera_motion_metadata.get("inlier_ratio_p50"),
+            "camera_motion_drift_px_p95": camera_motion_metadata.get("drift_px_p95"),
+            "camera_motion_not_gate_verified": camera_motion_metadata.get("not_gate_verified"),
         }
+    generated_at = _utc_now()
     provenance = {
         "stage": "placement_refine" if refine_from_sam3d else "placement",
-        "generated_at": _utc_now(),
+        "generated_at": generated_at,
         "tracks": tracks_path.name,
         "placement": placement_path.name,
         "tracks_backup": backup_path.name,
@@ -585,6 +598,12 @@ def rewrite_tracks_with_placement(
             "artifact_compensated_frame_count": camera_motion_metadata.get("artifact_compensated_frame_count", 0),
             "verified": camera_motion_metadata.get("verified"),
             "not_gate_verified": camera_motion_metadata.get("not_gate_verified"),
+            "method": camera_motion_metadata.get("method"),
+            "flow_backend": camera_motion_metadata.get("flow_backend"),
+            "processing_scale": camera_motion_metadata.get("processing_scale"),
+            "use_person_masks": camera_motion_metadata.get("use_person_masks"),
+            "inlier_ratio_p50": camera_motion_metadata.get("inlier_ratio_p50"),
+            "drift_px_p95": camera_motion_metadata.get("drift_px_p95"),
         }
     if gap_reacquisition_speed_violations:
         provenance["gap_reacquisition_speed_violations"] = gap_reacquisition_speed_violations
@@ -623,6 +642,16 @@ def rewrite_tracks_with_placement(
     }
     placement_path.parent.mkdir(parents=True, exist_ok=True)
     _write_json(placement_path, placement_payload)
+    if foot_contact_phases_out_path is not None:
+        _write_json(
+            foot_contact_phases_out_path,
+            _foot_contact_phases_payload(
+                phases=emitted_stance_phases,
+                clip=tracks_path.parent.name,
+                source_artifact=placement_path.name,
+                generated_at=generated_at,
+            ),
+        )
     _write_json(tracks_path, rewritten_payload)
     return PlacementRewriteResult(
         placement_path=placement_path,
@@ -1070,7 +1099,7 @@ def _apply_visual_root_step_bound(
             "infeasible_segment_count": infeasible,
         }
     rewritten_by_frame = {
-        _frame_index(frame, 30.0): frame
+        _frame_index(frame, fps): frame
         for frame in rewritten_frames
         if isinstance(frame, dict)
     }
@@ -1683,11 +1712,23 @@ def _load_camera_motion(path: Path) -> tuple[dict[int, _CameraMotionObservation]
             reason=str(item.get("reason")) if item.get("reason") is not None else None,
         )
         artifact_compensated_frame_count += 1
+    params = payload.get("params") if isinstance(payload.get("params"), Mapping) else {}
+    summary = payload.get("summary") if isinstance(payload.get("summary"), Mapping) else {}
     return frames, {
         "artifact_frame_count": artifact_frame_count,
         "artifact_compensated_frame_count": artifact_compensated_frame_count,
         "verified": payload.get("verified"),
         "not_gate_verified": payload.get("not_gate_verified"),
+        "method": payload.get("method"),
+        "reference_frame_idx": payload.get("reference_frame_idx"),
+        "flow_backend": params.get("flow_backend"),
+        "processing_scale": params.get("processing_scale"),
+        "use_person_masks": params.get("use_person_masks"),
+        "estimator_mode": params.get("estimator_mode"),
+        "inlier_ratio_p50": summary.get("inlier_ratio_p50"),
+        "drift_px_p95": summary.get("drift_px_p95"),
+        "flow_mad_filtered_count_total": summary.get("flow_mad_filtered_count_total"),
+        "temporal_smoothed_frame_count": summary.get("temporal_smoothed_frame_count"),
     }
 
 
@@ -1815,6 +1856,47 @@ def _stance_phases_from_frames(*, player_id: int, stance_frames: set[int], sourc
             )
         )
     return phases
+
+
+def _foot_contact_phases_payload(
+    *,
+    phases: Sequence[_StancePhase],
+    clip: str,
+    source_artifact: str,
+    generated_at: str,
+) -> dict[str, Any]:
+    phase_items = []
+    for phase in phases:
+        frame_indices = [int(idx) for idx in phase.frame_indices]
+        if not frame_indices:
+            continue
+        requested_foot = str(phase.foot)
+        phase_feet = (requested_foot,) if requested_foot in {"left", "right"} else ("left", "right")
+        for foot in phase_feet:
+            phase_items.append(
+                {
+                    "player_id": int(phase.player_id),
+                    "foot": foot,
+                    "start_frame_index": int(frame_indices[0]),
+                    "end_frame_index": int(frame_indices[-1]),
+                    "frame_indices": frame_indices,
+                    "frame_count": len(frame_indices),
+                    "source": str(phase.source),
+                    "source_phase_foot": requested_foot,
+                    "foot_assignment": "source_foot" if requested_foot in {"left", "right"} else "bilateral_from_player_stance",
+                }
+            )
+    return {
+        "artifact_type": "foot_contact_phases",
+        "schema_version": 1,
+        "clip": clip,
+        "source_artifact": source_artifact,
+        "source_kind": "placement_low_speed_stance",
+        "generated_at": generated_at,
+        "source_phase_count": len(phases),
+        "phase_count": len(phase_items),
+        "phases": phase_items,
+    }
 
 
 def _anchor_external_stance_phases(

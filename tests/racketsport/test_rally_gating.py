@@ -271,6 +271,24 @@ def test_frame_schedule_selects_only_in_span_frames():
     assert scheduled == [0]
 
 
+def test_frame_schedule_uses_pts_frame_times_for_vfr_inputs():
+    spans = [{"t0": 0.23, "t1": 0.25}]
+    frame_times = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_frame_times",
+        "provenance": "ffprobe_pts",
+        "frames": [
+            {"frame": 0, "pts_s": 0.00},
+            {"frame": 1, "pts_s": 0.04},
+            {"frame": 2, "pts_s": 0.24},
+            {"frame": 3, "pts_s": 0.28},
+        ],
+    }
+
+    assert frame_schedule(spans, fps=30.0, frame_count=4, frame_times=frame_times) == [2]
+    assert frame_schedule(spans, fps=30.0, frame_count=4) == []
+
+
 def test_frame_schedule_empty_spans_selects_nothing():
     assert frame_schedule([], fps=30.0, frame_count=100) == []
 

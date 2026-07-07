@@ -75,6 +75,7 @@ def test_refine_body_grounding_cli_exposes_direct_help_reference() -> None:
     assert "--tracks" in completed.stdout
     assert "--foot-contact-phases" in completed.stdout
     assert "--out-dir" in completed.stdout
+    assert "--xy-translation-enabled" in completed.stdout
 
 
 def test_refine_body_grounding_cli_writes_refined_payload_and_report(tmp_path: Path) -> None:
@@ -107,3 +108,35 @@ def test_refine_body_grounding_cli_writes_refined_payload_and_report(tmp_path: P
     report = json.loads((out_dir / "body_grounding_refinement.json").read_text(encoding="utf-8"))
     assert refined["players"][0]["frames"][0]["joints_world"][2][2] == 0.0
     assert report["summary"]["foot_plane_residual_m"]["mean_abs_after"] == 0.0
+
+
+def test_refine_body_grounding_cli_passes_xy_translation_flag(tmp_path: Path) -> None:
+    command_path = "scripts/racketsport/refine_body_grounding.py"
+    skeleton_path, tracks_path, phases_path = _write_inputs(tmp_path)
+    out_dir = tmp_path / "grounding"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            command_path,
+            "--skeleton",
+            str(skeleton_path),
+            "--tracks",
+            str(tracks_path),
+            "--foot-contact-phases",
+            str(phases_path),
+            "--out-dir",
+            str(out_dir),
+            "--xy-translation-enabled",
+            "false",
+            "--max-correction-warn-m",
+            "1.0",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    report = json.loads((out_dir / "body_grounding_refinement.json").read_text(encoding="utf-8"))
+    assert report["policy"]["xy_translation_enabled"] is False

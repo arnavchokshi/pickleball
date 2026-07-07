@@ -72,6 +72,8 @@ def run_chain(args: argparse.Namespace) -> dict[str, Any]:
     fused_track = _read_json(args.fused_track, "fused_track")
     calibration = _read_json(args.court_calibration, "court_calibration")
     fusion_decisions = _read_optional_json(args.fusion_decisions)
+    frame_times_path = getattr(args, "frame_times", None)
+    frame_times = _read_optional_json(frame_times_path)
     candidate_sidecars = [solve_cli._read_ball_candidates(path) for path in args.ball_candidates]
     candidate_extra_tracks = {
         name: _read_json(path, f"candidate_extra_track:{name}")
@@ -91,6 +93,7 @@ def run_chain(args: argparse.Namespace) -> dict[str, Any]:
         out_path=auto_bounces_path,
         clip_id=args.clip,
         config=BounceCandidateConfig(),
+        frame_times=frame_times,
     )
     solver_auto_bounces = None if extra_anchors else auto_bounces
 
@@ -129,6 +132,7 @@ def run_chain(args: argparse.Namespace) -> dict[str, Any]:
             candidate_extra_tracks=candidate_extra_tracks,
             physics=physics,
             config=free_config,
+            frame_times=frame_times,
         ),
         out_root=free_root,
         clip=args.clip,
@@ -146,6 +150,7 @@ def run_chain(args: argparse.Namespace) -> dict[str, Any]:
             candidate_extra_tracks=candidate_extra_tracks,
             physics=physics,
             config=rescue_config,
+            frame_times=frame_times,
         ),
         out_root=rescue_root,
         clip=args.clip,
@@ -231,6 +236,7 @@ def run_chain(args: argparse.Namespace) -> dict[str, Any]:
                 "fused_track": args.fused_track,
                 "court_calibration": args.court_calibration,
                 "fusion_decisions": args.fusion_decisions,
+                "frame_times": frame_times_path,
                 "extra_anchors_from_arc": args.extra_anchors_from_arc,
                 **{f"ball_candidates_{idx}": path for idx, path in enumerate(args.ball_candidates)},
             }
@@ -283,6 +289,7 @@ def _run_solver(
     candidate_extra_tracks: Mapping[str, Mapping[str, Any]],
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
+    frame_times: Mapping[str, Any] | None,
 ) -> tuple[dict[str, Any], dict[str, Any], Path]:
     clip_dir = out_root / clip
     run = solve_arc_with_flight_sanity(
@@ -295,6 +302,7 @@ def _run_solver(
         extra_anchors=extra_anchors,
         physics=physics,
         config=config,
+        frame_times=frame_times,
         out_dir=clip_dir,
         generated_at=generated_at,
         write_events_selected=True,
@@ -359,6 +367,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--clip", required=True)
     parser.add_argument("--fused-track", type=Path, required=True)
     parser.add_argument("--court-calibration", type=Path, required=True)
+    parser.add_argument("--frame-times", type=Path, default=None)
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--ball-candidates", type=Path, action="append", default=[])
     parser.add_argument("--candidate-extra-track", action="append", default=[], metavar="NAME=PATH")

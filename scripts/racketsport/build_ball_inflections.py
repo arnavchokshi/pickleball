@@ -27,6 +27,7 @@ def main() -> int:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--virtual-world", type=Path, help="Input virtual_world.json.")
     source.add_argument("--ball-track", type=Path, help="Input ball_track.json for image-space motion inflections.")
+    parser.add_argument("--frame-times", type=Path, help="Optional frame_times.json for VFR-correct ball-track frame timestamps.")
     parser.add_argument("--out", type=Path, required=True, help="Output ball_inflections.json.")
     parser.add_argument(
         "--min-turn-degrees",
@@ -49,6 +50,7 @@ def main() -> int:
         if args.ball_track is not None:
             payload = build_ball_inflections_from_ball_track_file(
                 args.ball_track,
+                frame_times_path=args.frame_times,
                 min_turn_degrees=args.min_turn_degrees if args.min_turn_degrees is not None else DEFAULT_IMAGE_MIN_TURN_DEGREES,
                 min_speed_px_per_s=args.min_speed_px_s,
                 max_neighbor_gap_s=args.max_neighbor_gap_s,

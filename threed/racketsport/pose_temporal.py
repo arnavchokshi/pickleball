@@ -38,6 +38,8 @@ DEFAULT_PLAUSIBILITY_JOINT_CONFIDENCE_FLOOR = 0.25
 DEFAULT_PLAUSIBILITY_MAX_BONE_ZSCORE = 6.0
 DEFAULT_PLAUSIBILITY_MIN_BONE_SAMPLES = 4
 DEFAULT_PLAUSIBILITY_MIN_SIGMA_M = 0.03
+DEFAULT_SAM3D_BONE_LENGTH_OUTLIER_SMOOTHING = True
+DEFAULT_BONE_LENGTH_OUTLIER_SMOOTHING_MIN_WEIGHT = 0.0
 DEFAULT_STATURE_BAND_M = (1.4, 1.8)
 DEFAULT_MOTIONBERT_WINDOW_MAX_FRAMES = 243
 MOTIONBERT_MODEL_ID = "motionbert_lift_smooth"
@@ -251,6 +253,12 @@ def refine_lane_a_skeleton3d(
     motionbert_window_max_frames: int = DEFAULT_MOTIONBERT_WINDOW_MAX_FRAMES,
     motionbert_runtime: Any | None = None,
     apply_world_grounding: bool = True,
+    bone_length_outlier_smoothing: bool = False,
+    bone_length_outlier_smoothing_confidence_floor: float = DEFAULT_PLAUSIBILITY_JOINT_CONFIDENCE_FLOOR,
+    bone_length_outlier_smoothing_max_zscore: float = DEFAULT_PLAUSIBILITY_MAX_BONE_ZSCORE,
+    bone_length_outlier_smoothing_min_samples: int = DEFAULT_PLAUSIBILITY_MIN_BONE_SAMPLES,
+    bone_length_outlier_smoothing_min_sigma_m: float = DEFAULT_PLAUSIBILITY_MIN_SIGMA_M,
+    bone_length_outlier_smoothing_min_weight: float = DEFAULT_BONE_LENGTH_OUTLIER_SMOOTHING_MIN_WEIGHT,
 ) -> dict[str, Any]:
     """Return a refined Lane A skeleton payload without fabricating frames.
 
@@ -283,6 +291,16 @@ def refine_lane_a_skeleton3d(
         raise ValueError("low_confidence_threshold must be in [0, 1]")
     if motionbert_window_max_frames <= 0:
         raise ValueError("motionbert_window_max_frames must be positive")
+    if not 0.0 <= bone_length_outlier_smoothing_confidence_floor <= 1.0:
+        raise ValueError("bone_length_outlier_smoothing_confidence_floor must be in [0, 1]")
+    if bone_length_outlier_smoothing_max_zscore <= 0.0:
+        raise ValueError("bone_length_outlier_smoothing_max_zscore must be positive")
+    if bone_length_outlier_smoothing_min_samples <= 0:
+        raise ValueError("bone_length_outlier_smoothing_min_samples must be positive")
+    if bone_length_outlier_smoothing_min_sigma_m <= 0.0:
+        raise ValueError("bone_length_outlier_smoothing_min_sigma_m must be positive")
+    if not 0.0 <= bone_length_outlier_smoothing_min_weight <= 1.0:
+        raise ValueError("bone_length_outlier_smoothing_min_weight must be in [0, 1]")
     joint_names = skeleton3d.get("joint_names")
     if not isinstance(joint_names, list) or not all(isinstance(name, str) for name in joint_names):
         raise ValueError("skeleton3d joint_names must be a list of strings")
@@ -302,6 +320,18 @@ def refine_lane_a_skeleton3d(
     grounding_metrics = _empty_grounding_metrics()
     motionbert_metrics = _empty_motionbert_metrics(motionbert_runtime)
     smoothing_metrics = _empty_smoothing_metrics()
+    bone_outlier_smoothing_metrics = (
+        _empty_bone_length_outlier_smoothing_metrics(
+            enabled=True,
+            confidence_floor=bone_length_outlier_smoothing_confidence_floor,
+            max_zscore=bone_length_outlier_smoothing_max_zscore,
+            min_samples=bone_length_outlier_smoothing_min_samples,
+            min_sigma_m=bone_length_outlier_smoothing_min_sigma_m,
+            min_weight=bone_length_outlier_smoothing_min_weight,
+        )
+        if bone_length_outlier_smoothing
+        else None
+    )
     core_clamp_engagement_by_player: dict[str, dict[str, Any]] = {}
     for player in players:
         if not isinstance(player, Mapping):
@@ -322,6 +352,22 @@ def refine_lane_a_skeleton3d(
         )
         _add_motionbert_metrics(motionbert_metrics, player_motionbert_metrics)
         bone_lengths = _median_bone_lengths(motionbert_frames, joint_names)
+        joint_weights_by_frame: list[dict[int, float]] | None = None
+        if bone_length_outlier_smoothing:
+            joint_weights_by_frame, player_bone_outlier_metrics = _bone_length_outlier_smoothing_weights(
+                motionbert_frames,
+                joint_names,
+                confidence_floor=bone_length_outlier_smoothing_confidence_floor,
+                max_zscore=bone_length_outlier_smoothing_max_zscore,
+                min_samples=bone_length_outlier_smoothing_min_samples,
+                min_sigma_m=bone_length_outlier_smoothing_min_sigma_m,
+                min_weight=bone_length_outlier_smoothing_min_weight,
+            )
+            if bone_outlier_smoothing_metrics is not None:
+                _add_bone_length_outlier_smoothing_metrics(
+                    bone_outlier_smoothing_metrics,
+                    player_bone_outlier_metrics,
+                )
         filtered_frames, player_smoothing_metrics = _apply_one_euro(
             motionbert_frames,
             joint_names,
@@ -336,6 +382,7 @@ def refine_lane_a_skeleton3d(
             foot_beta=effective_foot_beta,
             max_displacement_m=smoothing_max_displacement_m,
             low_confidence_threshold=low_confidence_threshold,
+            joint_weights_by_frame=joint_weights_by_frame,
         )
         _add_smoothing_metrics(smoothing_metrics, player_smoothing_metrics)
         constrained_frames = _apply_bone_lengths(filtered_frames, joint_names, bone_lengths)
@@ -384,6 +431,7 @@ def refine_lane_a_skeleton3d(
         core_clamp_engagement_by_player=core_clamp_engagement_by_player,
         world_grounding_applied=apply_world_grounding,
         smoothing_max_displacement_m=smoothing_max_displacement_m,
+        bone_outlier_smoothing_metrics=bone_outlier_smoothing_metrics,
     )
     return output
 
@@ -407,6 +455,8 @@ def refine_sam3d_skeleton3d(
     plausibility_max_bone_zscore: float = DEFAULT_PLAUSIBILITY_MAX_BONE_ZSCORE,
     plausibility_min_bone_samples: int = DEFAULT_PLAUSIBILITY_MIN_BONE_SAMPLES,
     plausibility_min_sigma_m: float = DEFAULT_PLAUSIBILITY_MIN_SIGMA_M,
+    sam3d_bone_length_outlier_smoothing: bool = DEFAULT_SAM3D_BONE_LENGTH_OUTLIER_SMOOTHING,
+    bone_length_outlier_smoothing_min_weight: float = DEFAULT_BONE_LENGTH_OUTLIER_SMOOTHING_MIN_WEIGHT,
     max_wrist_peak_delta_frames: int = 1,
     apply_world_grounding: bool = False,
 ) -> dict[str, Any]:
@@ -439,6 +489,8 @@ def refine_sam3d_skeleton3d(
         raise ValueError("max_wrist_peak_delta_frames must be non-negative")
     if smoothing_max_displacement_m is not None and smoothing_max_displacement_m <= 0.0:
         raise ValueError("smoothing_max_displacement_m must be positive")
+    if not 0.0 <= bone_length_outlier_smoothing_min_weight <= 1.0:
+        raise ValueError("bone_length_outlier_smoothing_min_weight must be in [0, 1]")
 
     before = copy.deepcopy(dict(skeleton3d))
     plausibility_checked, plausibility = _apply_sam3d_skeleton_plausibility(
@@ -463,6 +515,12 @@ def refine_sam3d_skeleton3d(
         low_confidence_threshold=low_confidence_threshold,
         motionbert_runtime=None,
         apply_world_grounding=apply_world_grounding,
+        bone_length_outlier_smoothing=sam3d_bone_length_outlier_smoothing,
+        bone_length_outlier_smoothing_confidence_floor=plausibility_joint_confidence_floor,
+        bone_length_outlier_smoothing_max_zscore=plausibility_max_bone_zscore,
+        bone_length_outlier_smoothing_min_samples=plausibility_min_bone_samples,
+        bone_length_outlier_smoothing_min_sigma_m=plausibility_min_sigma_m,
+        bone_length_outlier_smoothing_min_weight=bone_length_outlier_smoothing_min_weight,
     )
     _copy_sam3d_plausibility_flags(refined, plausibility_checked)
     wrist_timing = compare_wrist_peak_timing(
@@ -852,6 +910,7 @@ def _apply_one_euro(
     foot_beta: float,
     low_confidence_threshold: float,
     max_displacement_m: float | None = None,
+    joint_weights_by_frame: Sequence[Mapping[int, float]] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     filter_indexes = list(range(len(joint_names)))
     joint_groups = {
@@ -865,7 +924,7 @@ def _apply_one_euro(
     refined_frames: list[dict[str, Any]] = []
     metrics = _empty_smoothing_metrics(filtered_joint_count=len(filter_indexes))
     previous_t: float | None = None
-    for frame in frames:
+    for frame_pos, frame in enumerate(frames):
         refined = copy.deepcopy(dict(frame))
         joints = _joint_vectors(refined)
         t = float(refined.get("t", 0.0))
@@ -881,10 +940,22 @@ def _apply_one_euro(
         for joint_idx in filter_indexes:
             if joint_idx >= len(joints):
                 continue
+            frame_weights = joint_weights_by_frame[frame_pos] if joint_weights_by_frame is not None and frame_pos < len(joint_weights_by_frame) else {}
+            smoothing_weight = _joint_smoothing_weight(frame_weights, joint_idx)
             group = joint_groups.get(joint_idx, "core_body")
             target = list(raw_joints[joint_idx])
             previous_raw = previous_raw_by_joint.get(joint_idx)
             previous_output = previous_output_by_joint.get(joint_idx)
+            if smoothing_weight < 1.0 and previous_output is not None:
+                target = [
+                    previous_output[axis] * (1.0 - smoothing_weight) + target[axis] * smoothing_weight
+                    for axis in range(3)
+                ]
+                metrics["bone_length_outlier_weighted_joint_count"] += 1
+                metrics["bone_length_outlier_frame_count"] += 1
+                _add_joint_flag(frame_flags, joint_idx, "bone_length_outlier_weighted")
+                if smoothing_weight <= 1e-9:
+                    _add_joint_flag(frame_flags, joint_idx, "bone_length_outlier_held")
             if previous_raw is not None and previous_output is not None and dt > 0.0:
                 displacement_m = math.dist(previous_raw, target)
                 output_displacement_m = math.dist(previous_output, target)
@@ -1008,6 +1079,16 @@ def _set_one_euro_output_state(
         filt = filters.get((joint_idx, axis))
         if filt is not None:
             filt.x_hat_previous = float(joint[axis])
+
+
+def _joint_smoothing_weight(frame_weights: Mapping[int, float], joint_idx: int) -> float:
+    try:
+        weight = float(frame_weights.get(joint_idx, 1.0))
+    except (TypeError, ValueError):
+        return 1.0
+    if not math.isfinite(weight):
+        return 1.0
+    return min(1.0, max(0.0, weight))
 
 
 def _median_bone_lengths(frames: Sequence[Mapping[str, Any]], joint_names: Sequence[str]) -> dict[tuple[int, int], float]:
@@ -1299,6 +1380,107 @@ def _sam3d_frame_bone_length(
     return math.dist(joints[parent_idx], joints[child_idx])
 
 
+def _bone_length_outlier_smoothing_weights(
+    frames: Sequence[Mapping[str, Any]],
+    joint_names: Sequence[str],
+    *,
+    confidence_floor: float,
+    max_zscore: float,
+    min_samples: int,
+    min_sigma_m: float,
+    min_weight: float,
+) -> tuple[list[dict[int, float]], dict[str, Any]]:
+    bone_pairs = _available_semantic_bone_pairs(joint_names)
+    bone_stats = _sam3d_bone_length_stats(
+        frames,
+        joint_names=joint_names,
+        bone_pairs=bone_pairs,
+        confidence_floor=confidence_floor,
+        min_bone_samples=min_samples,
+        min_sigma_m=min_sigma_m,
+    )
+    index_by_name = _semantic_index_by_name(joint_names)
+    weights_by_frame: list[dict[int, float]] = []
+    weighted_joint_count = 0
+    weighted_frame_count = 0
+    outlier_bone_counts: Counter[str] = Counter()
+    for frame in frames:
+        frame_weights: dict[int, float] = {}
+        for bone, (center, sigma) in bone_stats.items():
+            length = _sam3d_frame_bone_length(
+                frame,
+                joint_names=joint_names,
+                bone=bone,
+                confidence_floor=0.0,
+            )
+            if length is None or sigma <= 0.0:
+                continue
+            zscore = abs(length - center) / sigma
+            if zscore <= max_zscore:
+                continue
+            weight = max(float(min_weight), min(1.0, float(max_zscore) / zscore))
+            for joint_name in bone:
+                joint_idx = index_by_name.get(joint_name)
+                if joint_idx is None:
+                    continue
+                frame_weights[joint_idx] = min(frame_weights.get(joint_idx, 1.0), weight)
+            outlier_bone_counts[f"{bone[0]}->{bone[1]}"] += 1
+        if frame_weights:
+            weighted_frame_count += 1
+            weighted_joint_count += len(frame_weights)
+        weights_by_frame.append(frame_weights)
+    return weights_by_frame, {
+        "enabled": True,
+        "source": "mad_bone_length_zscore",
+        "confidence_floor": confidence_floor,
+        "max_zscore": max_zscore,
+        "min_samples": min_samples,
+        "min_sigma_m": min_sigma_m,
+        "min_weight": min_weight,
+        "bone_pair_count": len(bone_pairs),
+        "bone_stats_count": len(bone_stats),
+        "weighted_frame_count": weighted_frame_count,
+        "weighted_joint_count": weighted_joint_count,
+        "outlier_bone_counts": dict(sorted(outlier_bone_counts.items())),
+    }
+
+
+def _empty_bone_length_outlier_smoothing_metrics(
+    *,
+    enabled: bool,
+    confidence_floor: float,
+    max_zscore: float,
+    min_samples: int,
+    min_sigma_m: float,
+    min_weight: float,
+) -> dict[str, Any]:
+    return {
+        "enabled": bool(enabled),
+        "source": "mad_bone_length_zscore",
+        "confidence_floor": float(confidence_floor),
+        "max_zscore": float(max_zscore),
+        "min_samples": int(min_samples),
+        "min_sigma_m": float(min_sigma_m),
+        "min_weight": float(min_weight),
+        "bone_pair_count": 0,
+        "bone_stats_count": 0,
+        "weighted_frame_count": 0,
+        "weighted_joint_count": 0,
+        "outlier_bone_counts": {},
+    }
+
+
+def _add_bone_length_outlier_smoothing_metrics(total: dict[str, Any], increment: Mapping[str, Any]) -> None:
+    total["bone_pair_count"] = max(int(total.get("bone_pair_count", 0)), int(increment.get("bone_pair_count", 0)))
+    total["bone_stats_count"] = max(int(total.get("bone_stats_count", 0)), int(increment.get("bone_stats_count", 0)))
+    total["weighted_frame_count"] = int(total.get("weighted_frame_count", 0)) + int(increment.get("weighted_frame_count", 0))
+    total["weighted_joint_count"] = int(total.get("weighted_joint_count", 0)) + int(increment.get("weighted_joint_count", 0))
+    counts = Counter(dict(total.get("outlier_bone_counts", {})))
+    for bone_name, count in dict(increment.get("outlier_bone_counts", {})).items():
+        counts[str(bone_name)] += int(count)
+    total["outlier_bone_counts"] = dict(sorted(counts.items()))
+
+
 def _empty_sam3d_wrist_bone_lock_record(
     *,
     status: str,
@@ -1555,6 +1737,7 @@ def _provenance_with_temporal_refine(
     core_clamp_engagement_by_player: Mapping[str, Mapping[str, Any]],
     world_grounding_applied: bool,
     smoothing_max_displacement_m: float | None,
+    bone_outlier_smoothing_metrics: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     output = dict(provenance) if isinstance(provenance, Mapping) else {}
     motionbert_status = "applied" if int(motionbert_metrics["motionbert_frame_count"]) > 0 else "not_configured"
@@ -1592,7 +1775,7 @@ def _provenance_with_temporal_refine(
     }
     if smoothing_max_displacement_m is not None:
         physical_plausibility["smoothing_max_displacement_m"] = float(smoothing_max_displacement_m)
-    output["temporal_refine"] = {
+    temporal_refine = {
         "motionbert": motionbert_status,
         "motionbert_model_id": str(motionbert_metrics.get("motionbert_model_id", "")),
         "motionbert_window_max_frames": motionbert_window_max_frames,
@@ -1605,6 +1788,13 @@ def _provenance_with_temporal_refine(
         "smoothing_flags": smoothing_flag_counts,
         "bone_length_constraint": "body17_median_per_player",
     }
+    if bone_outlier_smoothing_metrics is not None:
+        temporal_refine["bone_length_outlier_smoothing"] = {
+            key: (dict(value) if isinstance(value, Mapping) else value)
+            for key, value in bone_outlier_smoothing_metrics.items()
+            if not str(key).startswith("_")
+        }
+    output["temporal_refine"] = temporal_refine
     output["world_grounding"] = {
         "applied": bool(world_grounding_applied),
         "support_foot_strategy": "max_conf_lowest_z_lowest_vertical_velocity_5f",
@@ -1989,11 +2179,19 @@ def _empty_smoothing_metrics(*, filtered_joint_count: int = 0) -> dict[str, Any]
     return {
         "filtered_joint_count": int(filtered_joint_count),
         "flag_counts": Counter(),
+        "bone_length_outlier_weighted_joint_count": 0,
+        "bone_length_outlier_frame_count": 0,
     }
 
 
 def _add_smoothing_metrics(total: dict[str, Any], increment: Mapping[str, Any]) -> None:
     total["filtered_joint_count"] = max(int(total.get("filtered_joint_count", 0)), int(increment.get("filtered_joint_count", 0)))
+    total["bone_length_outlier_weighted_joint_count"] = int(total.get("bone_length_outlier_weighted_joint_count", 0)) + int(
+        increment.get("bone_length_outlier_weighted_joint_count", 0)
+    )
+    total["bone_length_outlier_frame_count"] = int(total.get("bone_length_outlier_frame_count", 0)) + int(
+        increment.get("bone_length_outlier_frame_count", 0)
+    )
     total_counts = total.setdefault("flag_counts", Counter())
     for flag, count in dict(increment.get("flag_counts", {})).items():
         total_counts[str(flag)] += int(count)

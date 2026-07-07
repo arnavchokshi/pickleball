@@ -309,6 +309,7 @@ class BallStageRunner:
             checkpoint=self.totnet_checkpoint,
             out=out,
             predictions_out=predictions_out,
+            frame_times=_first_existing(context, "frame_times.json"),
             metadata_out=metadata_out,
             confidence_threshold=self.confidence_threshold,
             batch_size=self.batch_size,
@@ -333,6 +334,7 @@ class BallStageRunner:
         summary = runner(
             out=out,
             fps=fps,
+            frame_times=_first_existing(context, "frame_times.json"),
             metadata_out=metadata_out,
             video=video,
             tracknet_file=self.tracknet_file,
@@ -780,7 +782,10 @@ def _derive_ball_inflections_from_current_track(
     if input_ball_inflections.is_file():
         return None, ()
 
-    payload = build_ball_inflections_from_ball_track(ball_payload)
+    payload = build_ball_inflections_from_ball_track(
+        ball_payload,
+        frame_times=_first_existing(context, "frame_times.json"),
+    )
     _write_json(Path(context.run_dir) / DEFAULT_BALL_INFLECTIONS_FILENAME, payload)
     return payload, ("derived ball_inflections.json from current ball_track.json image motion",)
 
@@ -826,6 +831,7 @@ def _contact_windows_from_cues(
 
     contact_payload = fuse_contact_windows_from_cue_payloads(
         fps=fps,
+        frame_times=_first_existing(context, "frame_times.json"),
         audio_onsets_payload=_read_json(cue_paths["audio"]) if require_audio else [],
         wrist_velocity_peaks_payload=_read_json(cue_paths["wrist"]),
         ball_inflections_payload=_read_json(cue_paths["ball"]),

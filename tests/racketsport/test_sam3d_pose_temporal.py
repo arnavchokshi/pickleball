@@ -251,6 +251,48 @@ def test_sam3d_plausibility_gate_flags_bone_zscore_and_confidence_floor() -> Non
     assert summary["reason_counts"]["bone_length_zscore"] >= 1
 
 
+def test_sam3d_bone_length_outlier_smoothing_downweights_mad_outlier_joint() -> None:
+    skeleton = _minimal_sam3d_lock_skeleton()
+    left_shoulder = _sam3d_idx("left_shoulder")
+    left_elbow = _sam3d_idx("left_elbow")
+    for frame in skeleton["players"][0]["frames"]:
+        frame["joints_world"][left_shoulder] = [0.0, 0.0, 1.5]
+        frame["joints_world"][left_elbow] = [0.3, 0.0, 1.5]
+    skeleton["players"][0]["frames"][2]["joints_world"][left_elbow] = [0.6, 0.0, 1.5]
+
+    enabled = refine_sam3d_skeleton3d(
+        skeleton,
+        fps=30.0,
+        sam3d_bone_length_outlier_smoothing=True,
+        smoothing_max_displacement_m=None,
+        plausibility_max_bone_zscore=3.0,
+        plausibility_min_bone_samples=3,
+    )
+    disabled = refine_sam3d_skeleton3d(
+        skeleton,
+        fps=30.0,
+        sam3d_bone_length_outlier_smoothing=False,
+        smoothing_max_displacement_m=None,
+        plausibility_max_bone_zscore=3.0,
+        plausibility_min_bone_samples=3,
+    )
+
+    temporal = enabled["provenance"]["temporal_refine"]
+    assert temporal["bone_length_outlier_smoothing"]["enabled"] is True
+    assert temporal["bone_length_outlier_smoothing"]["weighted_joint_count"] >= 1
+    assert temporal["smoothing_flags"]["bone_length_outlier_weighted"] >= 1
+    assert "bone_length_outlier_weighted" in enabled["players"][0]["frames"][2]["smoothing_flag"][left_elbow]
+    assert "bone_length_outlier_weighted" not in disabled["players"][0]["frames"][2]["smoothing_flag"][left_elbow]
+
+
+def test_refine_sam3d_skeleton3d_enables_bone_outlier_smoothing_by_default() -> None:
+    refined = refine_sam3d_skeleton3d(_minimal_sam3d_lock_skeleton(), fps=30.0)
+
+    smoothing = refined["provenance"]["temporal_refine"]["bone_length_outlier_smoothing"]
+    assert smoothing["enabled"] is True
+    assert smoothing["source"] == "mad_bone_length_zscore"
+
+
 def test_sam3d_plausibility_annotations_validate_through_skeleton3d_schema() -> None:
     skeleton = _load_fixture()
     mutated = {

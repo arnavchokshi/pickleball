@@ -15,6 +15,7 @@ from typing import Any, Mapping, Sequence
 
 from .ball_physics3d import _project_world_array, reconstruct_bounce_arcs_from_image_track
 from .court_templates import get_court_template
+from .io_decode import frame_time_lookup, nearest_frame_for_time, time_for_frame
 from .skeleton3d import semanticize_skeleton_payload
 
 
@@ -1819,6 +1820,7 @@ def solve_ball_arc_track(
     rally_spans: Mapping[str, Any] | None = None,
     net_plane: Mapping[str, Any] | None = None,
     extra_anchors: Sequence[AnchorEvent] = (),
+    frame_times: Any = None,
     physics: PhysicsParameters | None = None,
     config: BallArcSolverConfig | None = None,
     clip_id: str | None = None,
@@ -1829,11 +1831,19 @@ def solve_ball_arc_track(
     phys = physics or PhysicsParameters()
     frames = _frames(ball_track)
     fps = _payload_fps(ball_track, frames)
+    frame_time_map = frame_time_lookup(frame_times if frame_times is not None else ball_track.get("frame_times"))
     primary_source = f"primary:{ball_track.get('source') or 'ball_track'}"
-    observations = _ball_observations(frames, fps=fps, ball_sizes=ball_sizes, source_label=primary_source)
+    observations = _ball_observations(
+        frames,
+        fps=fps,
+        frame_times=frame_time_map,
+        ball_sizes=ball_sizes,
+        source_label=primary_source,
+    )
     candidate_sets_by_frame = _combined_candidate_sets_by_frame(
         frames=frames,
         fps=fps,
+        frame_times=frame_time_map,
         ball_track=ball_track,
         primary_observations=observations,
         ball_candidate_sidecars=ball_candidate_sidecars,
@@ -1866,6 +1876,8 @@ def solve_ball_arc_track(
             skeleton3d,
             calibration=calibration,
             observations=observations,
+            fps=fps,
+            frame_times=frame_time_map,
             config=cfg,
         )
     )
@@ -1970,6 +1982,7 @@ def solve_ball_arc_track(
     frame_payloads, coverage = _solved_frames(
         frames,
         fps=fps,
+        frame_times=frame_time_map,
         segments=all_segments,
         physics=phys,
         config=cfg,
@@ -3253,7 +3266,7 @@ def _auto_bounce_candidate_anchors(
         candidate_id = str(review_id) if isinstance(review_id, str) and review_id else f"auto_bounce_candidate_{frame:06d}_{index:03d}"
         try:
             anchor = build_bounce_anchor(
-                {**dict(item), "frame": frame, "review_id": candidate_id, "xy": xy},
+                {**dict(item), "frame": frame, "t": obs.t if obs is not None else item.get("t"), "review_id": candidate_id, "xy": xy},
                 calibration,
                 ball_radius_m=physics.radius_m,
                 ball_xy=xy,
@@ -3304,7 +3317,7 @@ def _reviewed_bounce_anchors(
         try:
             anchors.append(
                 build_bounce_anchor(
-                    item,
+                    {**dict(item), "t": obs.t},
                     calibration,
                     ball_radius_m=physics.radius_m,
                     ball_xy=obs.xy,
@@ -3343,6 +3356,8 @@ def _contact_anchors(
     *,
     calibration: Mapping[str, Any],
     observations: Sequence[BallObservation],
+    fps: float,
+    frame_times: Mapping[int, float] | None,
     config: BallArcSolverConfig,
 ) -> list[AnchorEvent]:
     if not isinstance(contact_windows, Mapping) or not isinstance(skeleton3d, Mapping):
@@ -3377,7 +3392,7 @@ def _contact_anchors(
             continue
         frame = _frame_from_mapping(event)
         if frame is None:
-            frame = int(round(t * 30.0))
+            frame = nearest_frame_for_time(t, frame_times=frame_times, fps=fps)
         event_confidence = _float_or_none(event.get("confidence"))
         sigma_m = _contact_anchor_sigma_from_confidence(selected["confidence"], event_confidence)
         anchor_id = f"contact_{index:03d}_p{player_id}_{selected['side']}"
@@ -3523,6 +3538,7 @@ def _solved_frames(
     frames: Sequence[Mapping[str, Any]],
     *,
     fps: float,
+    frame_times: Mapping[int, float] | None = None,
     segments: Sequence[FlightSegmentFit],
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
@@ -3540,7 +3556,8 @@ def _solved_frames(
         frame = dict(source_frame)
         t = _float_or_none(frame.get("t"))
         if t is None:
-            t = frame_index / max(fps, 1e-9)
+            t = time_for_frame(frame_index, frame_times=frame_times, fps=fps)
+            frame["t"] = _round(t, 9)
         segment = _segment_for_frame_time(segments, frame_index=frame_index, t=t)
         if segment is None or not segment.status.startswith("fit"):
             frame["world_xyz"] = None
@@ -4195,6 +4212,7 @@ def _combined_candidate_sets_by_frame(
     *,
     frames: Sequence[Mapping[str, Any]],
     fps: float,
+    frame_times: Mapping[int, float] | None,
     ball_track: Mapping[str, Any],
     primary_observations: Sequence[BallObservation],
     ball_candidate_sidecars: Sequence[Mapping[str, Any]],
@@ -4203,7 +4221,7 @@ def _combined_candidate_sets_by_frame(
 ) -> dict[int, tuple[BallObservation, ...]] | None:
     if not ball_candidate_sidecars and not candidate_extra_tracks:
         return None
-    frame_times = _frame_times(frames, fps=fps)
+    frame_time_map = _frame_times(frames, fps=fps, frame_times=frame_times)
     combined: dict[int, list[BallObservation]] = {}
     for obs in primary_observations:
         combined.setdefault(obs.frame, []).append(
@@ -4218,7 +4236,7 @@ def _combined_candidate_sets_by_frame(
         extra_frames = _frames(track)
         extra_fps = _payload_fps(track, extra_frames)
         for obs in _ball_observations(extra_frames, fps=extra_fps, source_label=f"extra:{name}"):
-            t = frame_times.get(obs.frame, obs.t)
+            t = frame_time_map.get(obs.frame, obs.t)
             combined.setdefault(obs.frame, []).append(replace(obs, t=t))
     for sidecar in ball_candidate_sidecars:
         _validate_candidate_sidecar_policy(sidecar)
@@ -4233,7 +4251,7 @@ def _combined_candidate_sets_by_frame(
             frame = _frame_from_mapping(frame_payload)
             if frame is None:
                 continue
-            t = frame_times.get(frame, frame / max(sidecar_fps, 1e-9))
+            t = frame_time_map.get(frame, frame / max(sidecar_fps, 1e-9))
             candidates = frame_payload.get("candidates")
             if not isinstance(candidates, Sequence) or isinstance(candidates, (str, bytes)):
                 continue
@@ -4274,10 +4292,16 @@ def _validate_candidate_sidecar_policy(sidecar: Mapping[str, Any]) -> None:
         raise ValueError("ball candidate sidecar must declare not_ground_truth=true and candidate_prediction=true")
 
 
-def _frame_times(frames: Sequence[Mapping[str, Any]], *, fps: float) -> dict[int, float]:
+def _frame_times(
+    frames: Sequence[Mapping[str, Any]],
+    *,
+    fps: float,
+    frame_times: Mapping[int, float] | None = None,
+) -> dict[int, float]:
     output: dict[int, float] = {}
     for index, frame in enumerate(frames):
-        output[index] = _float_or_none(frame.get("t")) or index / max(fps, 1e-9)
+        t = _float_or_none(frame.get("t"))
+        output[index] = t if t is not None else time_for_frame(index, frame_times=frame_times, fps=fps)
     return output
 
 
@@ -4292,6 +4316,7 @@ def _ball_observations(
     frames: Sequence[Mapping[str, Any]],
     *,
     fps: float,
+    frame_times: Mapping[int, float] | None = None,
     ball_sizes: Mapping[str, Any] | None = None,
     source_label: str = "primary:ball_track",
 ) -> list[BallObservation]:
@@ -4305,7 +4330,7 @@ def _ball_observations(
             continue
         t = _float_or_none(frame.get("t"))
         if t is None:
-            t = index / max(fps, 1e-9)
+            t = time_for_frame(index, frame_times=frame_times, fps=fps)
         confidence = _float_or_none(frame.get("conf", frame.get("confidence"))) or 1.0
         size = _frame_size_observation(frame) or size_by_frame.get(index)
         observations.append(

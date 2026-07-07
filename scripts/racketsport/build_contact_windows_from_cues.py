@@ -34,6 +34,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ball-inflections", type=Path, help="ball_inflections.json artifact.")
     parser.add_argument("--tracks", type=Path, help="Optional tracks.json used to infer FPS.")
     parser.add_argument("--ball-track", type=Path, help="Optional ball_track.json used to infer FPS.")
+    parser.add_argument("--frame-times", type=Path, help="Optional frame_times.json used for VFR-correct frame/time resolution.")
     parser.add_argument("--fps", type=float, help="Explicit frame rate override.")
     parser.add_argument(
         "--contact-fusion-mode",
@@ -63,6 +64,7 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError("--ball-inflections is required unless --allow-wrist-only-contact-hints is set")
         payload = fuse_contact_windows_from_cue_files(
             fps=fps,
+            frame_times=args.frame_times,
             audio_onsets_path=args.audio_onsets,
             wrist_velocity_peaks_path=args.wrist_velocity_peaks,
             ball_inflections_path=args.ball_inflections,

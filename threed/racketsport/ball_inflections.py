@@ -11,6 +11,8 @@ import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from threed.racketsport.io_decode import time_for_frame
+
 
 ARTIFACT_TYPE = "racketsport_ball_inflections"
 DEFAULT_MIN_TURN_DEGREES = 45.0
@@ -125,6 +127,7 @@ def build_ball_inflections_from_file(
 def build_ball_inflections_from_ball_track(
     ball_track: Mapping[str, Any],
     *,
+    frame_times: Any = None,
     min_turn_degrees: float = DEFAULT_IMAGE_MIN_TURN_DEGREES,
     min_speed_px_per_s: float = DEFAULT_MIN_SPEED_PX_PER_S,
     max_neighbor_gap_s: float = DEFAULT_MAX_NEIGHBOR_GAP_S,
@@ -145,7 +148,7 @@ def build_ball_inflections_from_ball_track(
     if min_candidate_separation_s < 0.0:
         raise ValueError("min_candidate_separation_s must be non-negative")
 
-    frames = _usable_ball_track_frames(ball_track)
+    frames = _usable_ball_track_frames(ball_track, frame_times=frame_times)
     raw_candidates: list[dict[str, Any]] = []
     max_window_frames = min(6, max(1, (len(frames) - 1) // 2))
     for current_index in range(len(frames)):
@@ -222,6 +225,7 @@ def build_ball_inflections_from_ball_track(
 def build_ball_inflections_from_ball_track_file(
     ball_track_path: str | Path,
     *,
+    frame_times_path: str | Path | None = None,
     min_turn_degrees: float = DEFAULT_IMAGE_MIN_TURN_DEGREES,
     min_speed_px_per_s: float = DEFAULT_MIN_SPEED_PX_PER_S,
     max_neighbor_gap_s: float = DEFAULT_MAX_NEIGHBOR_GAP_S,
@@ -232,6 +236,7 @@ def build_ball_inflections_from_ball_track_file(
         raise ValueError("ball_track.json must contain an object")
     return build_ball_inflections_from_ball_track(
         payload,
+        frame_times=frame_times_path,
         min_turn_degrees=min_turn_degrees,
         min_speed_px_per_s=min_speed_px_per_s,
         max_neighbor_gap_s=max_neighbor_gap_s,
@@ -280,10 +285,11 @@ def _usable_ball_frames(virtual_world: Mapping[str, Any]) -> list[dict[str, Any]
     return sorted(frames, key=lambda item: (item["time_s"], item["frame"]))
 
 
-def _usable_ball_track_frames(ball_track: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _usable_ball_track_frames(ball_track: Mapping[str, Any], *, frame_times: Any = None) -> list[dict[str, Any]]:
     raw_frames = ball_track.get("frames")
     if not isinstance(raw_frames, list):
         raise ValueError("ball_track frames must be a list")
+    fps = _optional_positive_fps(ball_track.get("fps"))
 
     frames: list[dict[str, Any]] = []
     for index, frame in enumerate(raw_frames):
@@ -296,7 +302,12 @@ def _usable_ball_track_frames(ball_track: Mapping[str, Any]) -> list[dict[str, A
             continue
         try:
             point = tuple(_require_finite(component, "xy") for component in image_xy)
-            time_s = _require_finite(frame.get("t", frame.get("time_s")), "t")
+            raw_time = frame.get("t", frame.get("time_s"))
+            if raw_time is None:
+                frame_index = int(frame.get("frame", frame.get("frame_index", frame.get("frame_idx", index))))
+                time_s = time_for_frame(frame_index, frame_times=frame_times, fps=fps)
+            else:
+                time_s = _require_finite(raw_time, "t")
             confidence = _confidence(frame.get("conf", frame.get("confidence", 0.0)))
             world_xyz = _optional_vector3(frame.get("world_xyz"))
         except ValueError:
@@ -322,6 +333,13 @@ def _optional_vector3(value: Any) -> tuple[float, float, float] | None:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes)) or len(value) != 3:
         raise ValueError("world_xyz must be a 3-vector")
     return tuple(_require_finite(component, "world_xyz") for component in value)
+
+
+def _optional_positive_fps(value: Any) -> float | None:
+    if value is None:
+        return None
+    fps = _require_finite(value, "fps")
+    return fps if fps > 0.0 else None
 
 
 def _candidate_confidence(
