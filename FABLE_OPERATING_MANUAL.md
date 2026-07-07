@@ -415,3 +415,55 @@ leg. Record the exception in the lane report.
   grant of roles/iam.serviceAccountTokenCreator).
 - **Cost governor on research fan-outs** (§15 item 11 stands): state agent/token budgets up front;
   tier effort; this session's three passes were worth it but ran with no declared ceiling.
+
+## 19. Wave-2 field lessons + OWNER SPEED DIRECTIVES (2026-07-07 — these re-weight §12; they are standing rules)
+
+**OWNER DIRECTIVE 1 — WALL-CLOCK FIRST within the cost cap.** The old "provision a NEW GPU only when
+≥2 GPU-bound lanes are truly safe-parallel / never speculatively" rule was cost-anchored; the owner
+re-weighted it: within ≤$5/GPU/hr × 4 GPUs, **provisioning to parallelize is the DEFAULT**. Apply as:
+(a) fan multi-clip GPU jobs one-clip-per-GPU whenever ≥2 clips and the serial job is ≥~15 min —
+cold-start overhead is a price, not a veto; (b) provision tail-work GPUs (prelabel, verify re-runs)
+at WAVE START the moment their inputs are guaranteed to exist, not when the queue reaches them;
+(c) a manager idle-reserve gap >1h is a BUG — either STOP the VM or give it work; (d) serial A/B
+arms split across 2 VMs when >20 min serial. Teardown-on-completion stands; the self-tearing-down
+lane (provision→run→verify→DELETE→report, wave-2 prelabel pattern) is the preferred shape.
+
+**OWNER DIRECTIVE 2 — buy the FASTEST cost-effective GPU within the cap, not the familiar one.**
+Wave-2 anchored on A100-40GB @ ~$1.2/hr and never priced alternatives; the cap was $5/hr. New rule:
+default heavy worker = **H100-80GB spot if ≤$5/hr in a reachable zone**, else A100-80GB, else
+A100-40GB — chosen by a 2-minute price/availability check, not by habit. First H100 use runs a
+one-time cold-start validation lane (image/driver/CUDA compat vs our BODY runtime), after which it
+becomes the recorded default; the fleet ledger gains per-SKU minutes/clip + $/clip columns so SKU
+choice is data-driven. Caveat honestly measured in wave 2: much BODY-dispatch wall time is
+transfer/orchestration-bound (GPU util ~0% for stretches) — SKU upgrades help inference, FAN-OUT
+helps E2E; do both.
+
+**KEEP (proven in wave 2):**
+- Independent verification catches what self-verification structurally cannot: the verify lane found
+  the fix lane's acceptance tracked the WRONG statistic (p95 vs the gated max_foot_lock_slide_m) and
+  that its counterfactual guaranteed its own success; the A/B lane refused a meaningless baseline and
+  ran true arms. Budget an adversarial verify for every gate-adjacent claim.
+- Spec rule: acceptance criteria MUST name the exact gated metric key (copy it from the gate code),
+  never a paraphrase like "slide p95".
+- Wave-start fan-out of file-fenced Codex lanes (6 concurrent) worked cleanly; single-owner-per-file
+  + propose-diff for fenced files + CROSS-LANE-SUSPECT classification handled all collisions.
+- One clean local wide-suite run adjudicates all lanes' sandbox-classified failures at wave end
+  (2916/0 green vs 6-10 classified failures per sandboxed lane). Quantify slow test files once
+  (court benchmark = 22 min standalone) and split them from wide runs.
+- Owner-run script pattern for mass deletions (classifier blocks agent-chosen rm targets even with
+  broad authorization): write a commented per-line script, owner reviews + runs.
+- Commit permissions now in .claude/settings.json (owner grant 2026-07-07): Bash(git add *) +
+  Bash(git commit *). Pushes remain owner-gated.
+
+**FIX (new failure classes found in wave 2):**
+- **BODY dispatch ships DATA, never code.** fleet1's repo sat 16 commits stale through the whole wave
+  (pinned at cold-start commit); every VM-computed metric ran old code and survived only because the
+  relevant files happened to be identical. MANDATORY before trusting any remote-computed metric:
+  code-sync + version-stamp in the dispatch path, fail-loud on drift (wave-3 item #2).
+- Offline validation of VM-side behavior is doubly blind (monoliths never materialize AND code may be
+  stale) — GPU-computed metrics require GPU-run validation with verified code sync.
+- verify_process_video_viewer takes replay_viewer_manifest.json, NOT PIPELINE_SUMMARY.json; the wrong
+  file presents as a bare canvas-timeout with an empty out-dir.
+- The >10MB Mac→VM transfer flake did not reproduce in 2 subsequent lanes — treat as
+  intermittent/VPN-state; tar_batch + bounded retries + rsync fallback is sufficient cover.
+
