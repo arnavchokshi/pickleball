@@ -1799,6 +1799,43 @@ surfaces as a typed STOP at wave boot if still blank).
   zero critical-path lanes (DATA→BALL→flight→contacts→paddle-impact→stats→fusion→coaching), that is
   a planning bug; P2/P4/P5 quality work rides ALONGSIDE, never instead.
 
+## VI.8 THE STANDING PLAN-REFRESH LOOP (owner directive 2026-07-07 — the plan must always be current)
+
+The docs are only as good as their last correction. Evidence keeps arriving (wave results, kills,
+new papers/code); this loop converts it into plan updates on a fixed cadence, so the plan is never
+stale and never re-derived from scratch. It has three tiers — run the cheap tiers always, the
+expensive one only on trigger:
+
+**Tier 1 — every wave closeout (mandatory, ~30 min, part of VI.0 step 10):**
+1. *Failure-driven audit:* list the wave's kills, misses, carried items, and surprises. For each,
+   open the owning TECH_BLUEPRINTS pillar's decision tree: did reality follow a written branch? If
+   the branch was missing or wrong, book a dated **[WAVE-N CORRECTION]** block at the top of that
+   pillar section (supersede-by-date, never silent rewrite — the wave-3 SST-teacher re-ruling is
+   the template).
+2. *Ruling re-check:* any measured result that contradicts a standing ruling → re-rule ON THE
+   EVIDENCE, book it in BUILD_CHECKLIST + the pillar + (if strategic) Part I.3. Rulings are strong
+   defaults, not dogma — but only MEASUREMENT re-rules them, never taste.
+3. *Docs truth sync:* CAPABILITIES/PIPELINE_STATUS refresh + checkbox ticks (Part IV rule 14) +
+   the next wave's boot prompt reflecting all of the above.
+
+**Tier 2 — every ~2 waves or ~2 weeks, whichever first (cheap, one small lane or ~30 min of
+WebSearch):** sweep the named WATCH-LIST (Part II-B/II-C "no code yet" items: Human3R, DuoMo, RAM,
+CoMotion, JOSH code release, PlanaReLoc, Where-Is-The-Ball, TAPNext++, 6DOPE-GS family) + one query
+per ACTIVE pillar for anything genuinely new since the last sweep. Adoption bar = Part IV rule 10
+(signal-adoption discipline: re-derive the current ablation + pixel-math check) — new shiny things
+enter as SPIKES with kill criteria, never as re-architectures.
+
+**Tier 3 — full research-fanout on a pillar (expensive; research-fanout skill; declared budget) —
+ONLY on one of these triggers:** (a) a pillar hits a wall its blueprint's decision tree does not
+explain; (b) the same gate misses two consecutive waves; (c) a strategic call in I.3 is contradicted
+by measurement; (d) a watch-list item RELEASES code that could collapse multiple stages (Human3R
+class). Never run tier 3 "to feel thorough" — the 2026-07-05/06/07 sweeps stay valid until evidence
+says otherwise.
+
+**Who runs it:** the wave's manager, as part of closeout — not a separate session. **Output:** the
+scorecard bullet gains a one-line "PLAN DELTAS:" suffix (or "PLAN DELTAS: none") so the owner sees
+every tweak without reading diffs.
+
 
 *Maintained by the manager session. Update checkboxes + add dated notes as lanes land; never let this
 document claim more than the linked evidence shows.*
