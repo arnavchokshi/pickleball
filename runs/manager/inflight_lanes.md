@@ -19,6 +19,17 @@ runs/lanes/<lane>/log.txt`); harness bg-task ids listed for TaskOutput monitorin
 | w4_ballcode_20260707 | codex xhigh | bg task b8k3t8n6d | see header | train_ball_stage2.py(new), ball_sst_dataset.py(new), export_sst_disagreements.py(new), test_ball_stage2_*(new), train_ball_pretrain.py(minimal) | — | ~2-4h | 2026-07-07 |
 | w4_court_harvestcal_20260707 | codex xhigh | bg task bwlg1m5pg | see header | calibrate_harvest_courts.py(new)+test, data/online_harvest_20260706/court_calibrations/(new) | — | ~2-3h | 2026-07-07 |
 
+FOREIGN LANE (dispatched by the Fable-final/succession session, noted uncommitted on the MAIN
+tree's copy of this board — preserve at merge): p63_reference_ranges_20260707 | codex | owned:
+ONLY NEW FILES docs/racketsport/reference_ranges_{schema,v0}.json,
+scripts/racketsport/validate_reference_ranges.py, tests/racketsport/test_reference_ranges.py
+(+scaffold-index line — shared touchpoint with w4_fleethosts/w4_ballcode/w4_court_harvestcal
+registrations; check at adjudication) | ~1-2h from 2026-07-07.
+
+CONCURRENT-SESSION UPDATE: brand-v2 (wave-2 manager) session COMPLETED its arc — ios work
+committed+pushed by it; its final docs bullet (c657a25c0) rode along with my 684d03380 push.
+ios/** stays untouched by wave-4 regardless.
+
 QUEUED (not yet dispatched): w4_ballgpu (Sonnet GPU H100 spot, AFTER w4_ballcode rules PASS — WASB
 prestage sha-check + seed fine-tune on owner labels + SST r1 (teacher = 40 local raw-WASB sidecars)
 + threshold sweep, ALL scoring through the SCORING BRIDGE on Burlington/Wolverine, INTERNAL-VAL
