@@ -19,6 +19,9 @@ None — Roboflow resolved; all lanes running.
 ## Money / GPU log
 fleet1 (A100-40GB spot, ~$1.2/hr) RESTARTED for the GVHMR spike; likely reused for the burlington/outdoor verify re-runs after the fix lands; STOP/teardown at wave end per standing rule. No new VMs yet; cap 4 × ≤$5/hr stands.
 
+## Quick wins
+- Mac volume at 96% (~12GB free) after the 6.9GB Roboflow pull — worth clearing space when convenient; wave-2 continues fine (aggregation is index-based, no copies).
+
 ## Verify when back
 - The Roboflow ask above.
 - Wave-2 closeout table: burlington/outdoor blockers gone + slide ≤30mm (manager browser-verifies before claiming).
