@@ -28,10 +28,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shlex
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 from dataclasses import dataclass, field
@@ -90,6 +92,12 @@ DEFAULT_RUN_ROOT = "runs/process_video_body_dispatch"
 # StrictHostKeyChecking=no so a wrong/spoofed host cannot silently receive
 # source videos or return fabricated BODY artifacts.
 DEFAULT_KNOWN_HOSTS_FILE = str(ROOT / "configs" / "ssh" / "a100_known_hosts")
+TRANSPORT_TAR_BATCH = "tar_batch"
+TRANSPORT_RSYNC = "rsync"
+TRANSPORT_CHOICES = (TRANSPORT_TAR_BATCH, TRANSPORT_RSYNC)
+RETRYABLE_TRANSPORT_EXIT_CODES = (10, 12, 30, 35, 255)
+DEFAULT_TRANSPORT_RETRY_MAX_ATTEMPTS = 12
+DEFAULT_TRANSPORT_RETRY_BACKOFF_S = 4.0
 
 # Remote clip ids are interpolated into a single shell command string sent
 # over SSH (_remote_body_command) and into a remote directory path (mkdir).
@@ -235,6 +243,13 @@ class RemoteConfig:
     # regular ~/.ssh/known_hosts with strict checking still on -- it does
     # NOT mean unverified, unlike the old StrictHostKeyChecking=no default.
     known_hosts_file: str = DEFAULT_KNOWN_HOSTS_FILE
+    # Default to the tar-batch transport so process_video.py call sites pick up
+    # the wave-2 hardening without changing their invocation contract. GNU
+    # rsync remains selectable as a fallback through RemoteConfig/CLI.
+    transport: str = TRANSPORT_TAR_BATCH
+    transport_retry_max_attempts: int = DEFAULT_TRANSPORT_RETRY_MAX_ATTEMPTS
+    transport_retry_backoff_s: float = DEFAULT_TRANSPORT_RETRY_BACKOFF_S
+    transport_retryable_exit_codes: tuple[int, ...] = RETRYABLE_TRANSPORT_EXIT_CODES
 
     def ssh_option_args(self) -> list[str]:
         """`-o ...` host-key-verification options, shared by ssh and rsync -e."""
@@ -255,6 +270,9 @@ class RemoteConfig:
 
     def ssh_base(self) -> list[str]:
         return ["ssh", "-i", self.ssh_key, *self.ssh_option_args(), self.host]
+
+    def scp_base(self) -> list[str]:
+        return ["scp", "-i", self.ssh_key, *self.ssh_option_args()]
 
     def rsync_ssh_command(self) -> str:
         """The `-e` argument rsync uses to shell out to ssh for transport.
@@ -369,6 +387,133 @@ def _write_remote_output_log(clip_dir: Path, *, stdout: str, stderr: str) -> Non
     )
     clip_dir.mkdir(parents=True, exist_ok=True)
     (clip_dir / "remote_body_stdout.log").write_text(_tail_bytes_text(combined), encoding="utf-8")
+
+
+@dataclass(frozen=True)
+class _BodyInputSelection:
+    single_files: dict[str, Path]
+    directories: dict[str, Path]
+
+    @property
+    def synced_names(self) -> list[str]:
+        return [*self.single_files.keys(), *self.directories.keys()]
+
+
+def _validate_transport_name(transport: str) -> str:
+    if transport not in TRANSPORT_CHOICES:
+        raise RemoteBodyDispatchError(
+            f"unsupported remote BODY transport {transport!r}; expected one of {', '.join(TRANSPORT_CHOICES)}"
+        )
+    return transport
+
+
+def _transport_failure_detail(result: "subprocess.CompletedProcess[str]") -> str:
+    return (result.stderr or result.stdout or "").strip()[-2000:]
+
+
+def _run_transport_command(
+    cmd: Sequence[str],
+    timeout_s: float | None,
+    *,
+    config: RemoteConfig,
+    run: RunFn,
+    operation: str,
+    tolerated_failure: Callable[["subprocess.CompletedProcess[str]"], bool] | None = None,
+) -> "subprocess.CompletedProcess[str]":
+    attempts = max(1, int(config.transport_retry_max_attempts))
+    retryable = set(config.transport_retryable_exit_codes)
+    last: subprocess.CompletedProcess[str] | None = None
+    for attempt in range(1, attempts + 1):
+        last = run(cmd, timeout_s)
+        if last.returncode == 0:
+            return last
+        if tolerated_failure is not None and tolerated_failure(last):
+            return last
+        if last.returncode not in retryable:
+            raise RemoteBodyDispatchError(
+                f"{operation} failed (exit {last.returncode}): {_transport_failure_detail(last)}"
+            )
+        if attempt < attempts:
+            time.sleep(float(config.transport_retry_backoff_s))
+    assert last is not None
+    raise RemoteBodyDispatchError(
+        f"{operation} failed after {attempts} attempts (last exit {last.returncode}): "
+        f"{_transport_failure_detail(last)}"
+    )
+
+
+def _collect_body_inputs(
+    clip_dir: Path,
+    video_path: Path,
+    body_frames_dir: str | Path | None,
+    *,
+    camera_motion_path: str | Path | None = None,
+) -> _BodyInputSelection:
+    if not (clip_dir / "tracks.json").is_file():
+        raise RemoteBodyDispatchError("refusing remote BODY dispatch without a local tracks.json to sync (nothing to run body on)")
+
+    single_file_inputs: dict[str, Path] = {}
+    if video_path.is_file():
+        single_file_inputs["source.mp4"] = video_path
+
+    explicit_camera_motion = Path(camera_motion_path) if camera_motion_path is not None else None
+    for name in BODY_INPUT_ARTIFACTS:
+        if name == CAMERA_MOTION_ARTIFACT and explicit_camera_motion is not None and explicit_camera_motion.is_file():
+            continue
+        local_path = clip_dir / name
+        if local_path.is_file():
+            single_file_inputs[name] = local_path
+
+    if explicit_camera_motion is not None and explicit_camera_motion.is_file():
+        canonical_clip_camera_motion = clip_dir / CAMERA_MOTION_ARTIFACT
+        if not canonical_clip_camera_motion.is_file() or explicit_camera_motion.resolve() != canonical_clip_camera_motion.resolve():
+            single_file_inputs[CAMERA_MOTION_ARTIFACT] = explicit_camera_motion
+
+    directories: dict[str, Path] = {}
+    frames_dir = Path(body_frames_dir) if body_frames_dir is not None else clip_dir / "body_frames"
+    if frames_dir.is_dir() and any(frames_dir.iterdir()):
+        directories["body_frames/"] = frames_dir
+
+    for dirname in SAM3D_MASK_INPUT_DIRS:
+        mask_dir = clip_dir / dirname
+        if mask_dir.is_dir() and any(mask_dir.iterdir()):
+            directories[f"{dirname}/"] = mask_dir
+
+    return _BodyInputSelection(single_files=single_file_inputs, directories=directories)
+
+
+def _safe_tar_member_name(name: str) -> str:
+    normalized = name.strip().rstrip("/")
+    if not normalized or normalized in {".", ".."}:
+        raise RemoteBodyDispatchError(f"refusing unsafe tar member name {name!r}")
+    parts = Path(normalized).parts
+    if normalized.startswith("/") or ".." in parts:
+        raise RemoteBodyDispatchError(f"refusing unsafe tar member name {name!r}")
+    return normalized
+
+
+def _add_path_to_tar(archive: tarfile.TarFile, source_path: Path, arcname: str) -> None:
+    safe_arcname = _safe_tar_member_name(arcname)
+    if source_path.is_dir():
+        for path in sorted(source_path.rglob("*")):
+            if path.is_file():
+                archive.add(path, arcname=f"{safe_arcname}/{path.relative_to(source_path)}", recursive=False)
+    elif source_path.is_file():
+        archive.add(source_path, arcname=safe_arcname, recursive=False)
+
+
+def _safe_extract_tar_gz(archive_path: Path, dest_dir: Path) -> None:
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_root = dest_dir.resolve()
+    with tarfile.open(archive_path, "r:gz") as archive:
+        members = archive.getmembers()
+        for member in members:
+            if member.issym() or member.islnk():
+                raise RemoteBodyDispatchError(f"refusing to extract tar link member {member.name!r}")
+            target = (dest_dir / member.name).resolve()
+            if target != dest_root and not str(target).startswith(str(dest_root) + os.sep):
+                raise RemoteBodyDispatchError(f"refusing to extract tar member outside destination: {member.name!r}")
+        archive.extractall(dest_dir, members=members)
 
 
 def _runner_marker_epoch(stdout: str, event: str) -> float | None:
@@ -504,6 +649,7 @@ def dispatch_body_stage(
     """
 
     config = config or RemoteConfig()
+    transport = _validate_transport_name(config.transport)
     clip = _validate_clip_id(clip)
     clip_dir = Path(clip_dir)
     video_path = Path(video_path)
@@ -553,7 +699,8 @@ def dispatch_body_stage(
     (clip_dir / REMOTE_BODY_RUNNER_FILENAME).write_text(runner_script, encoding="utf-8")
 
     upload_started = time.monotonic()
-    synced_inputs = _rsync_up(
+    transport_phases: dict[str, float] = {}
+    synced_inputs = _sync_body_inputs(
         clip_dir,
         video_path,
         body_frames_dir,
@@ -561,8 +708,10 @@ def dispatch_body_stage(
         config,
         run=run,
         camera_motion_path=camera_motion_path,
+        phases=transport_phases,
     )
     phase_seconds["upload_s"] = time.monotonic() - upload_started
+    phase_seconds.update(transport_phases)
     upload_bytes = _upload_size_bytes(
         synced_inputs=synced_inputs,
         clip_dir=clip_dir,
@@ -593,6 +742,7 @@ def dispatch_body_stage(
             "schema_version": 1,
             "artifact_type": "racketsport_remote_body_dispatch_timing",
             "status": "failed",
+            "transport": transport,
             "remote_host": config.host,
             "remote_run_dir": remote_run_dir,
             "phases": {name: round(value, 6) for name, value in phase_seconds.items()},
@@ -620,6 +770,7 @@ def dispatch_body_stage(
             "schema_version": 1,
             "artifact_type": "racketsport_remote_body_dispatch_timing",
             "status": "lock_busy",
+            "transport": transport,
             "remote_host": config.host,
             "remote_run_dir": remote_run_dir,
             "phases": {name: round(value, 6) for name, value in phase_seconds.items()},
@@ -638,6 +789,7 @@ def dispatch_body_stage(
             "schema_version": 1,
             "artifact_type": "racketsport_remote_body_dispatch_timing",
             "status": "timeout",
+            "transport": transport,
             "remote_host": config.host,
             "remote_run_dir": remote_run_dir,
             "phases": {name: round(value, 6) for name, value in phase_seconds.items()},
@@ -657,6 +809,7 @@ def dispatch_body_stage(
             "schema_version": 1,
             "artifact_type": "racketsport_remote_body_dispatch_timing",
             "status": "failed",
+            "transport": transport,
             "remote_host": config.host,
             "remote_run_dir": remote_run_dir,
             "phases": {name: round(value, 6) for name, value in phase_seconds.items()},
@@ -671,13 +824,16 @@ def dispatch_body_stage(
         )
 
     download_started = time.monotonic()
-    synced_outputs = _rsync_down(remote_run_dir, clip_dir, config, run=run)
+    transport_phases = {}
+    synced_outputs = _sync_body_outputs(remote_run_dir, clip_dir, config, run=run, phases=transport_phases)
     phase_seconds["download_s"] = time.monotonic() - download_started
+    phase_seconds.update(transport_phases)
     download_bytes = _download_size_bytes(synced_outputs=synced_outputs, clip_dir=clip_dir)
     timing = {
         "schema_version": 1,
         "artifact_type": "racketsport_remote_body_dispatch_timing",
         "status": "ran",
+        "transport": transport,
         "remote_host": config.host,
         "remote_run_dir": remote_run_dir,
         "phases": {name: round(value, 6) for name, value in phase_seconds.items()},
@@ -695,7 +851,7 @@ def dispatch_body_stage(
             f"remote BODY command exited 0 but produced no smpl_motion.json/skeleton3d.json in {remote_run_dir}"
         )
     fetch_notes = [
-        f"remote BODY phase timing: preflight={phase_seconds.get('preflight_s', 0.0):.3f}s "
+        f"remote BODY phase timing: transport={transport} preflight={phase_seconds.get('preflight_s', 0.0):.3f}s "
         f"mkdir={phase_seconds.get('mkdir_s', 0.0):.3f}s upload={phase_seconds.get('upload_s', 0.0):.3f}s "
         f"remote_command={phase_seconds.get('remote_command_s', 0.0):.3f}s download={phase_seconds.get('download_s', 0.0):.3f}s "
         f"upload_bytes={upload_bytes} download_bytes={download_bytes}",
@@ -1012,6 +1168,179 @@ def _remote_body_command(
     )
 
 
+def _sync_body_inputs(
+    clip_dir: Path,
+    video_path: Path,
+    body_frames_dir: str | Path | None,
+    remote_run_dir: str,
+    config: RemoteConfig,
+    *,
+    run: RunFn,
+    phases: dict[str, float] | None = None,
+    camera_motion_path: str | Path | None = None,
+) -> list[str]:
+    transport = _validate_transport_name(config.transport)
+    if transport == TRANSPORT_RSYNC:
+        return _rsync_up(
+            clip_dir,
+            video_path,
+            body_frames_dir,
+            remote_run_dir,
+            config,
+            run=run,
+            camera_motion_path=camera_motion_path,
+        )
+    return _tar_batch_up(
+        clip_dir,
+        video_path,
+        body_frames_dir,
+        remote_run_dir,
+        config,
+        run=run,
+        phases=phases,
+        camera_motion_path=camera_motion_path,
+    )
+
+
+def _sync_body_outputs(
+    remote_run_dir: str,
+    clip_dir: Path,
+    config: RemoteConfig,
+    *,
+    run: RunFn,
+    phases: dict[str, float] | None = None,
+) -> list[str]:
+    transport = _validate_transport_name(config.transport)
+    if transport == TRANSPORT_RSYNC:
+        return _rsync_down(remote_run_dir, clip_dir, config, run=run)
+    return _tar_batch_down(remote_run_dir, clip_dir, config, run=run, phases=phases)
+
+
+def _tar_batch_up(
+    clip_dir: Path,
+    video_path: Path,
+    body_frames_dir: str | Path | None,
+    remote_run_dir: str,
+    config: RemoteConfig,
+    *,
+    run: RunFn,
+    phases: dict[str, float] | None = None,
+    camera_motion_path: str | Path | None = None,
+) -> list[str]:
+    phases = phases if phases is not None else {}
+    selection = _collect_body_inputs(
+        clip_dir,
+        video_path,
+        body_frames_dir,
+        camera_motion_path=camera_motion_path,
+    )
+    synced = selection.synced_names
+    if not synced:
+        return []
+
+    with tempfile.TemporaryDirectory(prefix="remote_body_tar_up_") as tmp:
+        archive_path = Path(tmp) / "body_inputs.tar.gz"
+        create_started = time.monotonic()
+        with tarfile.open(archive_path, "w:gz", dereference=True) as archive:
+            for remote_name, source_path in selection.single_files.items():
+                _add_path_to_tar(archive, source_path, remote_name)
+            for remote_name, source_path in selection.directories.items():
+                _add_path_to_tar(archive, source_path, remote_name)
+        phases["tar_create_upload_archive_s"] = time.monotonic() - create_started
+
+        remote_archive_path = f"{remote_run_dir}/remote_body_inputs.tar.gz"
+        scp_started = time.monotonic()
+        _run_transport_command(
+            [*config.scp_base(), str(archive_path), f"{config.host}:{remote_archive_path}"],
+            None,
+            config=config,
+            run=run,
+            operation="tar-batch upload archive",
+        )
+        phases["tar_upload_scp_s"] = time.monotonic() - scp_started
+
+    untar_started = time.monotonic()
+    remote_cmd = (
+        f"COPYFILE_DISABLE=1 tar -xzf {shlex.quote(remote_archive_path)} -C {shlex.quote(remote_run_dir)} "
+        f"&& rm -f {shlex.quote(remote_archive_path)}"
+    )
+    _run_transport_command(
+        [*config.ssh_base(), remote_cmd],
+        config.connect_timeout_s + 60,
+        config=config,
+        run=run,
+        operation="tar-batch remote untar",
+    )
+    phases["tar_remote_untar_s"] = time.monotonic() - untar_started
+    return synced
+
+
+def _tar_batch_down(
+    remote_run_dir: str,
+    clip_dir: Path,
+    config: RemoteConfig,
+    *,
+    run: RunFn,
+    phases: dict[str, float] | None = None,
+) -> list[str]:
+    phases = phases if phases is not None else {}
+    clip_dir.mkdir(parents=True, exist_ok=True)
+    requested_files = list(_download_artifacts_for_config(config))
+    existing_files = _remote_existing_output_files(remote_run_dir, requested_files, config, run=run)
+    existing_dirs = _remote_existing_output_dirs(remote_run_dir, BODY_OUTPUT_DIRS_DEFAULT, config, run=run)
+    entries = [*existing_files, *(dirname.rstrip("/") for dirname in existing_dirs)]
+    if not entries:
+        return []
+
+    remote_archive_path = f"{remote_run_dir}/remote_body_outputs.tar.gz"
+    entry_args = " ".join(shlex.quote(_safe_tar_member_name(entry)) for entry in entries)
+    pack_started = time.monotonic()
+    remote_pack_cmd = (
+        f"cd {shlex.quote(remote_run_dir)} && "
+        f"rm -f {shlex.quote(remote_archive_path)} && "
+        f"COPYFILE_DISABLE=1 tar -czf {shlex.quote(remote_archive_path)} {entry_args}"
+    )
+    _run_transport_command(
+        [*config.ssh_base(), remote_pack_cmd],
+        config.connect_timeout_s + 300,
+        config=config,
+        run=run,
+        operation="tar-batch remote output pack",
+    )
+    phases["tar_remote_pack_s"] = time.monotonic() - pack_started
+
+    with tempfile.TemporaryDirectory(prefix="remote_body_tar_down_") as tmp:
+        archive_path = Path(tmp) / "body_outputs.tar.gz"
+        download_started = time.monotonic()
+        _run_transport_command(
+            [*config.scp_base(), f"{config.host}:{remote_archive_path}", str(archive_path)],
+            None,
+            config=config,
+            run=run,
+            operation="tar-batch download archive",
+        )
+        phases["tar_download_scp_s"] = time.monotonic() - download_started
+
+        extract_started = time.monotonic()
+        _safe_extract_tar_gz(archive_path, clip_dir)
+        phases["tar_extract_outputs_s"] = time.monotonic() - extract_started
+
+    cleanup_cmd = f"rm -f {shlex.quote(remote_archive_path)}"
+    cleanup_result = run([*config.ssh_base(), cleanup_cmd], config.connect_timeout_s + 10)
+    if cleanup_result.returncode != 0:
+        # Cleanup is best effort; the tar already downloaded and extracted.
+        pass
+
+    synced: list[str] = []
+    for name in requested_files:
+        if name in existing_files and (clip_dir / name).is_file():
+            synced.append(name)
+    for dirname in existing_dirs:
+        if (clip_dir / dirname.rstrip("/")).is_dir():
+            synced.append(dirname)
+    return synced
+
+
 def _rsync_up(
     clip_dir: Path,
     video_path: Path,
@@ -1059,24 +1388,26 @@ def _rsync_up(
 
     frames_dir = Path(body_frames_dir) if body_frames_dir is not None else clip_dir / "body_frames"
     if frames_dir.is_dir() and any(frames_dir.iterdir()):
-        result = run(
+        _run_transport_command(
             ["rsync", "-az", "-e", rsync_ssh, f"{frames_dir}/", f"{config.host}:{remote_run_dir}/body_frames/"],
             None,
+            config=config,
+            run=run,
+            operation="rsync of body_frames/",
         )
-        if result.returncode != 0:
-            raise RemoteBodyDispatchError(f"rsync of body_frames/ failed: {result.stderr.strip()}")
         synced.append("body_frames/")
 
     for dirname in SAM3D_MASK_INPUT_DIRS:
         mask_dir = clip_dir / dirname
         if not mask_dir.is_dir() or not any(mask_dir.iterdir()):
             continue
-        result = run(
+        _run_transport_command(
             ["rsync", "-az", "-e", rsync_ssh, f"{mask_dir}/", f"{config.host}:{remote_run_dir}/{dirname}/"],
             None,
+            config=config,
+            run=run,
+            operation=f"rsync of {dirname}/",
         )
-        if result.returncode != 0:
-            raise RemoteBodyDispatchError(f"rsync of {dirname}/ failed: {result.stderr.strip()}")
         synced.append(f"{dirname}/")
 
     return synced
@@ -1093,7 +1424,7 @@ def _rsync_down(remote_run_dir: str, clip_dir: Path, config: RemoteConfig, *, ru
         with tempfile.TemporaryDirectory(prefix="remote_body_rsync_down_") as tmp:
             files_from = Path(tmp) / "outputs.txt"
             files_from.write_text("".join(f"{name}\n" for name in existing_files), encoding="utf-8")
-            result = run(
+            result = _run_transport_command(
                 [
                     "rsync",
                     "-az",
@@ -1105,6 +1436,10 @@ def _rsync_down(remote_run_dir: str, clip_dir: Path, config: RemoteConfig, *, ru
                     f"{clip_dir}/",
                 ],
                 None,
+                config=config,
+                run=run,
+                operation="rsync of BODY output batch",
+                tolerated_failure=lambda failed: _rsync_missing_only(failed.stderr),
             )
             if result.returncode != 0 and not _rsync_missing_only(result.stderr):
                 raise RemoteBodyDispatchError(f"rsync of BODY output batch failed: {result.stderr.strip()}")
@@ -1113,10 +1448,16 @@ def _rsync_down(remote_run_dir: str, clip_dir: Path, config: RemoteConfig, *, ru
                 synced.append(name)
     for dirname in BODY_OUTPUT_DIRS_DEFAULT:
         local_dir = clip_dir / dirname.rstrip("/")
-        result = run(
-            ["rsync", "-az", "-e", rsync_ssh, f"{config.host}:{remote_run_dir}/{dirname}", str(local_dir)],
-            None,
-        )
+        try:
+            result = _run_transport_command(
+                ["rsync", "-az", "-e", rsync_ssh, f"{config.host}:{remote_run_dir}/{dirname}", str(local_dir)],
+                None,
+                config=config,
+                run=run,
+                operation=f"rsync of {dirname}",
+            )
+        except RemoteBodyDispatchError:
+            continue
         if result.returncode == 0 and local_dir.is_dir():
             synced.append(dirname)
     return synced
@@ -1142,7 +1483,7 @@ def _rsync_single_file_batch_up(
             ordered_names.append(remote_name)
         files_from = Path(tmp) / "inputs.txt"
         files_from.write_text("".join(f"{name}\n" for name in ordered_names), encoding="utf-8")
-        result = run(
+        result = _run_transport_command(
             [
                 "rsync",
                 "-azL",
@@ -1154,9 +1495,10 @@ def _rsync_single_file_batch_up(
                 f"{config.host}:{remote_run_dir}/",
             ],
             None,
+            config=config,
+            run=run,
+            operation="rsync of BODY input file batch",
         )
-        if result.returncode != 0:
-            raise RemoteBodyDispatchError(f"rsync of BODY input file batch failed: {result.stderr.strip()}")
     return ordered_names
 
 
@@ -1187,6 +1529,36 @@ def _remote_existing_output_files(
     requested = set(names)
     existing = [line.strip() for line in result.stdout.splitlines() if line.strip() in requested]
     return [name for name in names if name in set(existing)]
+
+
+def _remote_existing_output_dirs(
+    remote_run_dir: str,
+    requested_dirs: Sequence[str],
+    config: RemoteConfig,
+    *,
+    run: RunFn,
+) -> list[str]:
+    if not requested_dirs:
+        return []
+    q = shlex.quote
+    names = [str(name).rstrip("/") for name in requested_dirs]
+    for name in names:
+        _safe_tar_member_name(name)
+        if "/" in name:
+            raise RemoteBodyDispatchError(f"refusing unsafe remote output directory {name!r}")
+    name_args = " ".join(q(name) for name in names)
+    command = (
+        f"cd {q(remote_run_dir)} && "
+        f"for d in {name_args}; do if [ -d \"$d\" ]; then printf '%s/\\n' \"$d\"; fi; done "
+        "# BODY_OUTPUT_DIR_LIST"
+    )
+    result = run([*config.ssh_base(), command], config.connect_timeout_s + 10)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()
+        raise RemoteBodyDispatchError(f"remote BODY output directory listing failed: {detail}")
+    requested = {f"{name}/" for name in names}
+    existing = [line.strip() for line in result.stdout.splitlines() if line.strip() in requested]
+    return [f"{name}/" for name in names if f"{name}/" in set(existing)]
 
 
 def _rsync_missing_only(stderr: str) -> bool:
@@ -1245,6 +1617,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--python", default=DEFAULT_REMOTE_PYTHON)
     parser.add_argument("--fast-sam-python", default=DEFAULT_REMOTE_FAST_SAM_PYTHON)
     parser.add_argument("--fast-sam-root", default=DEFAULT_REMOTE_FAST_SAM_ROOT)
+    parser.add_argument(
+        "--transport",
+        choices=TRANSPORT_CHOICES,
+        default=RemoteConfig().transport,
+        help="Remote BODY transport: tar_batch is the hardened default; rsync is the selectable GNU-rsync fallback.",
+    )
+    parser.add_argument("--transport-retry-max-attempts", type=int, default=RemoteConfig().transport_retry_max_attempts)
+    parser.add_argument("--transport-retry-backoff-s", type=float, default=RemoteConfig().transport_retry_backoff_s)
     parser.add_argument("--lock-wait-timeout-s", type=int, default=DEFAULT_LOCK_WAIT_TIMEOUT_S)
     parser.add_argument(
         "--command-timeout-s",
@@ -1291,6 +1671,9 @@ def main(argv: list[str] | None = None) -> int:
         python=args.python,
         fast_sam_python=args.fast_sam_python,
         fast_sam_root=args.fast_sam_root,
+        transport=args.transport,
+        transport_retry_max_attempts=args.transport_retry_max_attempts,
+        transport_retry_backoff_s=args.transport_retry_backoff_s,
         sam3d_body_input_size_px=args.sam3d_body_input_size_px,
         sam3d_crop_bucket_sizes=_parse_int_tuple(args.sam3d_crop_bucket_sizes, flag_name="--sam3d-crop-bucket-sizes"),
         sam3d_crop_padding_scale=args.sam3d_crop_padding_scale,

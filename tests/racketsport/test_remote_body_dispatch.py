@@ -3,6 +3,7 @@ from __future__ import annotations
 import gzip
 import json
 import hashlib
+import shutil
 import shlex
 import subprocess
 import sys
@@ -41,6 +42,28 @@ def _is_rsync_download_batch(cmd: list[str]) -> bool:
 
 def _is_remote_output_listing(cmd: list[str]) -> bool:
     return cmd[0] == "ssh" and "BODY_OUTPUT_FILE_LIST" in cmd[-1]
+
+
+def _tree_hashes(root: Path) -> dict[str, str]:
+    return {
+        str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
+
+
+def _scp_remote_path(target: str) -> Path:
+    return Path(target.split(":", 1)[1])
+
+
+def _run_mocked_ssh_shell(command: str) -> "subprocess.CompletedProcess[str]":
+    completed = subprocess.run(command, shell=True, check=False, capture_output=True, text=True)
+    return subprocess.CompletedProcess(
+        args=["ssh", command],
+        returncode=completed.returncode,
+        stdout=completed.stdout,
+        stderr=completed.stderr,
+    )
 
 
 def _clip_dir_with_tracks(tmp_path: Path) -> Path:
@@ -443,6 +466,7 @@ def test_dispatch_body_stage_raises_when_unreachable(tmp_path: Path) -> None:
             clip="wolverine",
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
+            config=rbd.RemoteConfig(transport="rsync"),
             run=fake_run,
         )
 
@@ -503,6 +527,7 @@ def test_dispatch_body_stage_reports_lock_busy_on_gpu_lock_wait_exit_code(tmp_pa
             clip="wolverine",
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
+            config=rbd.RemoteConfig(transport="rsync"),
             run=fake_run,
         )
     assert "remote_command" in steps
@@ -529,6 +554,7 @@ def test_dispatch_body_stage_reports_command_budget_exceeded_on_timeout_exit_cod
             clip="wolverine",
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
+            config=rbd.RemoteConfig(transport="rsync"),
             run=fake_run,
         )
     message = str(exc_info.value)
@@ -550,7 +576,7 @@ def test_dispatch_body_stage_bounds_local_ssh_wait_and_reports_hang(tmp_path: Pa
             raise subprocess.TimeoutExpired(cmd=cmd, timeout=timeout_s or 1)
         raise AssertionError(f"unexpected command: {cmd}")
 
-    config = rbd.RemoteConfig(command_timeout_s=300)
+    config = rbd.RemoteConfig(command_timeout_s=300, transport="rsync")
     with pytest.raises(rbd.RemoteBodyDispatchError, match="no result within"):
         rbd.dispatch_body_stage(
             clip="wolverine",
@@ -595,7 +621,7 @@ def test_dispatch_body_stage_success_syncs_outputs_back(tmp_path: Path) -> None:
         clip="wolverine",
         clip_dir=clip_dir,
         video_path=clip_dir / "source.mp4",
-        config=rbd.RemoteConfig(fetch_body_monoliths=True),
+        config=rbd.RemoteConfig(fetch_body_monoliths=True, transport="rsync"),
         run=fake_run,
     )
     assert result.status == "ran"
@@ -863,6 +889,247 @@ def test_rsync_up_syncs_explicit_camera_motion_path_as_canonical_remote_name(tmp
     assert "owner_camera_motion.json" not in uploaded
 
 
+def test_tar_batch_transport_round_trips_245_file_payload_byte_identical_through_mocked_ssh_boundary(
+    tmp_path: Path,
+) -> None:
+    """Wave-1 failed above ~100-244 files; tar-batch must handle a >=245-file payload."""
+
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    body_frames = clip_dir / "body_frames"
+    body_frames.mkdir()
+    for idx in range(245):
+        (body_frames / f"frame_{idx:06d}.jpg").write_bytes(f"frame-payload-{idx}".encode("utf-8"))
+    _write_json(clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(clip_dir / "placement.json", _placement_payload())
+
+    remote_repo = tmp_path / "remote" / "repo"
+    remote_run_dir = remote_repo / "runs" / "body" / "clip"
+    remote_run_dir.mkdir(parents=True)
+    config = rbd.RemoteConfig(host="mock@ssh", repo=str(remote_repo), transport="tar_batch")
+    phases: dict[str, float] = {}
+    commands: list[list[str]] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        command = list(cmd)
+        commands.append(command)
+        if command[0] == "scp":
+            source, dest = command[-2], command[-1]
+            if ":" in dest:
+                remote_tar = _scp_remote_path(dest)
+                remote_tar.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, remote_tar)
+            else:
+                shutil.copy2(_scp_remote_path(source), dest)
+            return _completed(0)
+        if command[0] == "ssh":
+            return _run_mocked_ssh_shell(command[-1])
+        raise AssertionError(f"unexpected command: {command}")
+
+    synced_inputs = rbd._tar_batch_up(
+        clip_dir,
+        clip_dir / "source.mp4",
+        None,
+        str(remote_run_dir),
+        config,
+        run=fake_run,
+        phases=phases,
+    )
+
+    assert "body_frames/" in synced_inputs
+    assert _tree_hashes(body_frames) == _tree_hashes(remote_run_dir / "body_frames")
+
+    remote_index = remote_run_dir / "body_mesh_index"
+    remote_index.mkdir()
+    for idx in range(245):
+        (remote_index / f"mesh_chunk_{idx:06d}.json").write_bytes(f"mesh-payload-{idx}".encode("utf-8"))
+    _write_json(remote_run_dir / "skeleton3d.json", _sam3d_skeleton_payload())
+    local_out = tmp_path / "download"
+
+    synced_outputs = rbd._tar_batch_down(str(remote_run_dir), local_out, config, run=fake_run, phases=phases)
+
+    assert "skeleton3d.json" in synced_outputs
+    assert "body_mesh_index/" in synced_outputs
+    assert _tree_hashes(remote_index) == _tree_hashes(local_out / "body_mesh_index")
+    assert len([cmd for cmd in commands if cmd[0] == "scp" and ":" in cmd[-1]]) == 1
+    assert len([cmd for cmd in commands if cmd[0] == "scp" and ":" in cmd[-2]]) == 1
+    assert phases.keys() >= {
+        "tar_create_upload_archive_s",
+        "tar_upload_scp_s",
+        "tar_remote_untar_s",
+        "tar_remote_pack_s",
+        "tar_download_scp_s",
+        "tar_extract_outputs_s",
+    }
+
+
+def test_tar_batch_transport_retries_transient_upload_failure_with_backoff(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    remote_run_dir = tmp_path / "remote" / "run"
+    remote_run_dir.mkdir(parents=True)
+    config = rbd.RemoteConfig(
+        host="mock@ssh",
+        transport="tar_batch",
+        transport_retry_max_attempts=3,
+        transport_retry_backoff_s=0.25,
+    )
+    scp_attempts = 0
+    sleeps: list[float] = []
+    monkeypatch.setattr(rbd.time, "sleep", lambda seconds: sleeps.append(seconds))
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        nonlocal scp_attempts
+        command = list(cmd)
+        if command[0] == "scp":
+            scp_attempts += 1
+            if scp_attempts == 1:
+                return _completed(255, stderr="ssh_packet_write_poll: Result too large")
+            shutil.copy2(command[-2], _scp_remote_path(command[-1]))
+            return _completed(0)
+        if command[0] == "ssh":
+            return _run_mocked_ssh_shell(command[-1])
+        raise AssertionError(f"unexpected command: {command}")
+
+    rbd._tar_batch_up(
+        clip_dir,
+        clip_dir / "source.mp4",
+        None,
+        str(remote_run_dir),
+        config,
+        run=fake_run,
+        phases={},
+    )
+
+    assert scp_attempts == 2
+    assert sleeps == [0.25]
+
+
+def test_tar_batch_transport_bounds_permanent_retryable_failure_without_retry_storm(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    remote_run_dir = tmp_path / "remote" / "run"
+    remote_run_dir.mkdir(parents=True)
+    config = rbd.RemoteConfig(
+        host="mock@ssh",
+        transport="tar_batch",
+        transport_retry_max_attempts=3,
+        transport_retry_backoff_s=0.1,
+    )
+    scp_attempts = 0
+    sleeps: list[float] = []
+    monkeypatch.setattr(rbd.time, "sleep", lambda seconds: sleeps.append(seconds))
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        nonlocal scp_attempts
+        if cmd[0] == "scp":
+            scp_attempts += 1
+            return _completed(255, stderr="ssh transport stayed broken")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    with pytest.raises(rbd.RemoteBodyDispatchError, match="tar-batch upload archive failed after 3 attempts"):
+        rbd._tar_batch_up(
+            clip_dir,
+            clip_dir / "source.mp4",
+            None,
+            str(remote_run_dir),
+            config,
+            run=fake_run,
+            phases={},
+        )
+
+    assert scp_attempts == 3
+    assert sleeps == [0.1, 0.1]
+
+
+def test_dispatch_body_stage_tar_transport_records_transport_and_tar_phase_entries(tmp_path: Path) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    body_frames = clip_dir / "body_frames"
+    body_frames.mkdir()
+    (body_frames / "frame_000000.jpg").write_bytes(b"frame")
+
+    remote_repo = tmp_path / "remote" / "repo"
+    remote_python = remote_repo / "body_runtime" / "body_venv" / "bin" / "python"
+    remote_fast_sam_root = remote_repo / "body_runtime" / "Fast-SAM-3D-Body"
+    remote_lock_script = remote_repo / "scripts" / "gpu-eval-run.sh"
+    for path in (remote_python, remote_lock_script):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("#!/bin/sh\n", encoding="utf-8")
+    remote_fast_sam_root.mkdir(parents=True)
+    commands: list[list[str]] = []
+
+    config = rbd.RemoteConfig(
+        host="mock@ssh",
+        repo=str(remote_repo),
+        python=str(remote_python),
+        fast_sam_python=str(remote_python),
+        fast_sam_root=str(remote_fast_sam_root),
+        transport="tar_batch",
+        transport_retry_max_attempts=2,
+        transport_retry_backoff_s=0.0,
+    )
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        command = list(cmd)
+        commands.append(command)
+        if command[0] == "scp":
+            source, dest = command[-2], command[-1]
+            if ":" in dest:
+                remote_tar = _scp_remote_path(dest)
+                remote_tar.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, remote_tar)
+            else:
+                shutil.copy2(_scp_remote_path(source), dest)
+            return _completed(0)
+        if command[0] == "ssh":
+            remote_cmd = command[-1]
+            if rbd.REMOTE_BODY_RUNNER_FILENAME in remote_cmd and config.gpu_lock_script in remote_cmd:
+                run_root = next(remote_repo.glob("runs/process_video_body_dispatch/wolverine_*"))
+                _write_json(run_root / "skeleton3d.json", _sam3d_skeleton_payload())
+                _write_json(run_root / "body_serialization_timing.json", {"artifact_type": "racketsport_body_serialization_timing"})
+                _write_json(run_root / "body_stage_phase_timing.json", {"artifact_type": "racketsport_body_stage_phase_timing"})
+                stdout = "\n".join(
+                    [
+                        json.dumps({"event": "script_start", "epoch_s": 1001.25}),
+                        json.dumps({"event": "exit", "epoch_s": 1002.0, "exit_code": 0}),
+                    ]
+                )
+                return _completed(0, stdout=stdout)
+            return _run_mocked_ssh_shell(remote_cmd)
+        raise AssertionError(f"unexpected command: {command}")
+
+    result = rbd.dispatch_body_stage(
+        clip="wolverine",
+        clip_dir=clip_dir,
+        video_path=clip_dir / "source.mp4",
+        config=config,
+        run=fake_run,
+    )
+
+    timing = json.loads((clip_dir / "remote_body_dispatch_timing.json").read_text(encoding="utf-8"))
+    assert result.status == "ran"
+    assert timing["transport"] == "tar_batch"
+    assert result.timing["transport"] == "tar_batch"
+    assert timing["phases"].keys() >= {
+        "preflight_s",
+        "mkdir_s",
+        "upload_s",
+        "remote_command_s",
+        "download_s",
+        "tar_create_upload_archive_s",
+        "tar_upload_scp_s",
+        "tar_remote_untar_s",
+        "tar_remote_pack_s",
+        "tar_download_scp_s",
+        "tar_extract_outputs_s",
+    }
+    assert "skeleton3d.json" in result.synced_outputs
+    assert not any(cmd[0] == "rsync" for cmd in commands)
+
+
 def test_body_stage_runner_engages_stance_grounding_from_dispatch_dir_fixture(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1069,6 +1336,7 @@ def test_dispatch_body_stage_raises_when_no_outputs_synced(tmp_path: Path) -> No
             clip="wolverine",
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
+            config=rbd.RemoteConfig(transport="rsync"),
             run=fake_run,
         )
 
@@ -1149,6 +1417,9 @@ def test_remote_body_dispatch_cli_help_direct_reference() -> None:
     assert "--sam3d-tier2-output-lite" in completed.stdout
     assert "--camera-motion" in completed.stdout
     assert "--fetch-body-monoliths" in completed.stdout
+    assert "--transport" in completed.stdout
+    assert "tar_batch" in completed.stdout
+    assert "rsync" in completed.stdout
     config = rbd.RemoteConfig(lock_wait_timeout_s=42, command_timeout_s=1234)
     command = rbd._remote_body_command(remote_run_dir="/remote/run", config=config)
     assert config.gpu_lock_script in command
@@ -1340,7 +1611,7 @@ def test_dispatch_body_stage_writes_and_syncs_runner_script(tmp_path: Path) -> N
         clip="wolverine",
         clip_dir=clip_dir,
         video_path=clip_dir / "source.mp4",
-        config=rbd.RemoteConfig(fetch_body_monoliths=True),
+        config=rbd.RemoteConfig(fetch_body_monoliths=True, transport="rsync"),
         run=fake_run,
     )
     assert result.status == "ran"
@@ -1389,6 +1660,7 @@ def test_dispatch_body_stage_writes_timing_and_remote_output_log(tmp_path: Path)
         clip="wolverine",
         clip_dir=clip_dir,
         video_path=clip_dir / "source.mp4",
+        config=rbd.RemoteConfig(transport="rsync"),
         run=fake_run,
     )
 
@@ -1580,6 +1852,7 @@ def test_mkdir_command_quotes_remote_run_dir_for_hostile_clip(tmp_path: Path) ->
             clip="wolverine",
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
+            config=rbd.RemoteConfig(transport="rsync"),
             run=fake_run,
         )
     except rbd.RemoteBodyDispatchError:
@@ -1711,6 +1984,7 @@ def test_dispatch_body_stage_runs_preflight_before_mkdir_and_rsync(tmp_path: Pat
             clip="wolverine",
             clip_dir=clip_dir,
             video_path=clip_dir / "source.mp4",
+            config=rbd.RemoteConfig(transport="rsync"),
             run=fake_run,
         )
 
