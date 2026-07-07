@@ -272,7 +272,14 @@ def _category(stem: str) -> str:
         return "shot"
     if "contact" in normalized or "audio" in normalized or "wrist" in normalized or "rally" in normalized:
         return "contact"
-    if "ball" in normalized or "totnet" in normalized or "pbmat" in normalized or "tracknet" in normalized or "inout" in normalized:
+    if (
+        "ball" in normalized
+        or "sst" in normalized
+        or "totnet" in normalized
+        or "pbmat" in normalized
+        or "tracknet" in normalized
+        or "inout" in normalized
+    ):
         return "ball"
     if "racket" in normalized or "paddle" in normalized or normalized.startswith("rkt_"):
         return "racket"
