@@ -4,4 +4,4 @@ One row per still-running lane so the next session neither double-dispatches nor
 
 | lane | kind (codex/sonnet/workflow) | session/task id | resume command | owned files | vm (if any) | expected done | dispatched |
 |---|---|---|---|---|---|---|---|
-| _(none — wave 2 closed 2026-07-07; wave-3 queue in BUILD_CHECKLIST [WAVE-2 COMPLETE] bullet)_ | | | | | | | |
+| ios_p010a_20260707 | codex | bash (wave-2 manager session, still open for owner support) | `codex exec resume <session_id from report.json>` | ios/** ONLY + runs/lanes/ios_p010a_20260707/** — CROSS-MANAGER FENCE: wave-3 session owns all racketsport files; this lane touches nothing outside ios/ | — | 2026-07-07 +2-3h | 2026-07-07 |
