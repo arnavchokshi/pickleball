@@ -225,6 +225,62 @@ def test_train_ball_stage2_cli_help_is_indexed() -> None:
     assert "--sst-manifest" in completed.stdout
     assert "--occluded-prob" in completed.stdout
     assert "--init-checkpoint" in completed.stdout
+    assert "--resume-checkpoint" in completed.stdout
+
+
+def test_train_ball_stage2_resume_checkpoint_continues_loss_and_step(tmp_path: Path) -> None:
+    from scripts.racketsport import train_ball_stage2 as stage2
+
+    cv2 = pytest.importorskip("cv2")
+    clip_id = "source_rally_clip_train"
+    cvat_root = tmp_path / "cvat"
+    clip_dir = cvat_root / clip_id
+    clip_dir.mkdir(parents=True)
+    payload = _cvat_payload(
+        frame_count=3,
+        reviewed_frame_indices=[1],
+        ball_frames={1: (10.0, 12.0, 4.0, 6.0)},
+        ball_visibility_levels={1: "clear"},
+    )
+    payload["clip_id"] = clip_id
+    (clip_dir / "reviewed_boxes.json").write_text(
+        json.dumps(payload),
+        encoding="utf-8",
+    )
+    video = tmp_path / "source" / f"{clip_id}.mp4"
+    _write_tiny_video(video, frame_count=3, cv2=cv2)
+
+    continuous = _run_stage2_train(
+        stage2,
+        cvat_root=cvat_root,
+        rally_root=tmp_path,
+        out_dir=tmp_path / "continuous",
+        steps=4,
+        seed=77,
+    )
+    first_leg = _run_stage2_train(
+        stage2,
+        cvat_root=cvat_root,
+        rally_root=tmp_path,
+        out_dir=tmp_path / "first_leg",
+        steps=2,
+        seed=77,
+    )
+    resumed = _run_stage2_train(
+        stage2,
+        cvat_root=cvat_root,
+        rally_root=tmp_path,
+        out_dir=tmp_path / "resumed",
+        steps=2,
+        seed=77,
+        resume_checkpoint=Path(str(first_leg["checkpoint"]["latest_checkpoint"])),
+    )
+
+    assert first_leg["checkpoint"]["step"] == 2
+    assert resumed["checkpoint"]["step"] == 4
+    assert resumed["model"]["resume_summary"]["step"] == 2
+    assert resumed["loss"]["values"] == pytest.approx(continuous["loss"]["values"][2:], rel=0.0, abs=1e-8)
+    assert resumed["checkpoint"]["state_sha256"] == continuous["checkpoint"]["state_sha256"]
 
 
 def test_scaffold_index_covers_train_ball_stage2_cli() -> None:
@@ -320,6 +376,57 @@ def _cvat_payload(
         payload["reviewed_frame_indices"] = reviewed_frame_indices
         payload["reviewed_frame_indices_source"] = "explicit"
     return payload
+
+
+def _run_stage2_train(
+    stage2,
+    *,
+    cvat_root: Path,
+    rally_root: Path,
+    out_dir: Path,
+    steps: int,
+    seed: int,
+    resume_checkpoint: Path | None = None,
+) -> dict[str, object]:
+    argv = [
+        "--cvat-export-root",
+        str(cvat_root),
+        "--out-dir",
+        str(out_dir),
+        "--model-family",
+        "tiny_wasb",
+        "--device",
+        "cpu",
+        "--image-size",
+        "32x32",
+        "--frames-in",
+        "3",
+        "--output-channels",
+        "1",
+        "--steps",
+        str(steps),
+        "--batch-size",
+        "1",
+        "--learning-rate",
+        "0.02",
+        "--weight-decay",
+        "0.0",
+        "--checkpoint-every",
+        "1",
+        "--num-workers",
+        "0",
+        "--seed",
+        str(seed),
+        "--occluded-prob",
+        "0",
+        "--rally-root",
+        str(rally_root),
+    ]
+    if resume_checkpoint is not None:
+        argv.extend(["--resume-checkpoint", str(resume_checkpoint)])
+    args = stage2._build_parser().parse_args(argv)
+    summary = stage2.run(args)
+    return summary
 
 
 def _write_tiny_video(path: Path, *, frame_count: int, cv2) -> None:

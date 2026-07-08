@@ -26,6 +26,8 @@ from scripts.racketsport.train_ball_pretrain import (  # noqa: E402
     _parse_image_size,
     _parse_protected_eval_hashes,
     _primary_logits,
+    _seed_loader_worker,
+    _seed_training_process,
     atomic_torch_save,
     build_model,
     checkpoint_round_trip_summary,
@@ -279,6 +281,7 @@ def run_build_sst_manifest(args: argparse.Namespace) -> dict[str, Any]:
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     torch = _torch()
+    seed_summary = _seed_training_process(int(args.seed), torch=torch)
     start = time.perf_counter()
     if args.out_dir is None:
         raise ValueError("--out-dir is required for training")
@@ -324,6 +327,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         shuffle=True,
         num_workers=int(args.num_workers),
         generator=_loader_generator(int(args.seed), torch=torch),
+        worker_init_fn=_seed_loader_worker,
         collate_fn=_collate_batch,
     )
     model = build_model(
@@ -338,6 +342,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         lr=float(args.learning_rate),
         weight_decay=float(args.weight_decay),
     )
+    resume_summary = None
+    global_step = 0
+    if args.resume_checkpoint is not None:
+        resume_summary = load_stage2_checkpoint(
+            Path(args.resume_checkpoint),
+            model=model,
+            optimizer=optimizer,
+            device=device,
+            args=args,
+        )
+        global_step = int(resume_summary["step"])
     init_summary = None
     if args.init_checkpoint is not None:
         init_summary = load_required_init_checkpoint(
@@ -351,7 +366,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError("--steps must be positive")
     occlusion_generator = _loader_generator(int(args.seed) + 10_000, torch=torch)
     losses: list[float] = []
-    global_step = 0
     latest_checkpoint: Path | None = None
     model.train()
     batches = _no_cache_cycle(loader)
@@ -407,6 +421,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "image_size": list(image_size),
             "init_checkpoint": str(args.init_checkpoint) if args.init_checkpoint is not None else None,
             "init_summary": init_summary,
+            "resume_checkpoint": str(args.resume_checkpoint) if args.resume_checkpoint is not None else None,
+            "resume_summary": resume_summary,
         },
         "recipe": {
             "optimizer": "AdamW",
@@ -430,6 +446,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "runtime": {
             "wall_seconds": time.perf_counter() - start,
             "device": str(device),
+            "seed": int(args.seed),
+            "seed_summary": seed_summary,
             "torch_version": str(torch.__version__),
             "cuda_available": bool(torch.cuda.is_available()),
         },
@@ -639,6 +657,28 @@ def save_stage2_checkpoint(
     }
     atomic_torch_save(payload, path, torch=_torch())
     return path
+
+
+def load_stage2_checkpoint(
+    path: Path,
+    *,
+    model: Any,
+    optimizer: Any,
+    device: Any,
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    payload = _torch().load(path, map_location=device, weights_only=False)
+    if int(payload.get("frames_in", -1)) != int(args.frames_in):
+        raise RuntimeError(f"resume checkpoint frames_in mismatch: checkpoint={payload.get('frames_in')} requested={args.frames_in}")
+    if int(payload.get("output_channels", -1)) != int(args.output_channels):
+        raise RuntimeError(
+            f"resume checkpoint output_channels mismatch: checkpoint={payload.get('output_channels')} requested={args.output_channels}"
+        )
+    if str(payload.get("model_family")) != str(args.model_family):
+        raise RuntimeError(f"resume checkpoint model_family mismatch: checkpoint={payload.get('model_family')} requested={args.model_family}")
+    model.load_state_dict(payload["model_state_dict"])
+    optimizer.load_state_dict(payload["optimizer_state_dict"])
+    return {"checkpoint": str(path), "step": int(payload["step"])}
 
 
 def _record_from_cvat_label(
@@ -932,6 +972,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model-family", choices=MODEL_FAMILIES, default="wasb_hrnet")
     parser.add_argument("--wasb-repo", type=Path, default=Path("third_party/WASB-SBDT"))
     parser.add_argument("--init-checkpoint", type=Path, default=None)
+    parser.add_argument("--resume-checkpoint", type=Path, default=None)
     parser.add_argument("--device", choices=("cpu", "cuda", "mps"), default="cuda")
     parser.add_argument("--image-size", default=f"{DEFAULT_BALL_PRETRAIN_IMAGE_SIZE[0]}x{DEFAULT_BALL_PRETRAIN_IMAGE_SIZE[1]}")
     parser.add_argument("--frames-in", type=int, default=DEFAULT_BALL_PRETRAIN_FRAMES_IN)
