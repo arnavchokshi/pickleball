@@ -9,8 +9,8 @@ CYCLE_SECS=600
 MAX_HOURS=7
 STALE_CODEX_MIN=45
 VM_MAX_AGE_HOURS=5
-EXPECTED_VMS=""
-CODEX_LANES="w6_magnus_20260708 w6_labelingest_20260708"
+EXPECTED_VMS="pickleball-h100-w6close"
+CODEX_LANES=""
 
 anomaly() { echo "WATCHDOG-ANOMALY[$1]: $2"; exit 2; }
 now() { date +%s; }
@@ -26,11 +26,12 @@ while true; do
   # --- A/B/F: fleet state (also the auth canary) ---
   FLEET_JSON=$(gcloud compute instances list --filter=labels.fable-fleet=pickleball \
     --format="csv[no-heading](name,status,creationTimestamp)" 2>&1)
-  # AUTH-RESTORE-WATCH MODE (2026-07-08): auth is KNOWN-DEAD (typed STOP surfaced). Positive wake when it returns.
-  if ! echo "$FLEET_JSON" | grep -qiE "reauth|credential|invalid_grant|login required|^ERROR"; then
-    echo "WATCHDOG-ANOMALY[G-AUTH-RESTORED]: gcloud auth is back; fleet list succeeds. Resume GPU errand."; exit 2
+  if echo "$FLEET_JSON" | grep -qiE "reauth|credential|invalid_grant|login required"; then
+    anomaly F "gcloud auth challenge fired mid-wave: $(echo "$FLEET_JSON" | head -2)"
   fi
-  FLEET_JSON=""
+  if echo "$FLEET_JSON" | grep -qiE "^ERROR"; then
+    anomaly F "gcloud list failed: $(echo "$FLEET_JSON" | head -2)"
+  fi
   RUNNING_COUNT=$(echo "$FLEET_JSON" | grep -c ",RUNNING," || true)
   [ "$RUNNING_COUNT" -gt 4 ] && anomaly B "more than 4 fleet VMs RUNNING: $FLEET_JSON"
   for VM in $EXPECTED_VMS; do

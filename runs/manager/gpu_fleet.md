@@ -102,3 +102,12 @@ WAVE-6 FLEET LOG (2026-07-08, manager):
   (VM-side monolith; per runs/lanes/w6_instrudocs_20260708/frame_scheduling_adjudication.md);
   (4) pull artifacts + md5 to Mac lane dir; DELETE + list-confirm + cost. Budget: ~1-2h × $0.6-4.3/hr
   ≈ $1-8 (+50% contingency ceiling ~$12); in-VM 60-min no-heartbeat self-stop armed.
+- pickleball-h100-w6close (H100 a3-highgpu-1g SPOT, ase1-b, pd-balanced 200GB from
+  pickleball-fleet-snap-20260708-ffmpeg) — status: PROVISIONING (Sonnet lane w6_close_errand_20260708,
+  self-tearing). CONSOLIDATED CLOSE ERRAND: (a) label re-score GPU_RESCORE_COMMANDS.sh (3 candidates
+  x 20 clips, OFFICIAL bridge + LoSO-mean w/ outdoor fold, control row); (b) TEMPLATE RE-CUT clean-tree
+  + bake corpus/rally videos; (c) legitimate GATE-1b raw arm (fixed knob + canonical harness w/
+  provenance); (d) mesh-cap outdoor budget-400 proof. Budget ~2-3h x $0.6-4.3/hr ≈ $2-13 (wave total
+  may reach the ~$12-15 band — flagged in checkin); 60-min idle self-stop armed.
+- FLEET NOTE 2026-07-08: pickleball-calv1unet-a100-spot (A100 spot, ase1-a) RUNNING = the CONCURRENT
+  CALV1 court session's VM (their ledger row/teardown; global concurrency 2/4 with w6close).
