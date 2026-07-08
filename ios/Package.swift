@@ -12,6 +12,7 @@ let package = Package(
         .library(name: "PickleballGuidance", targets: ["PickleballGuidance"]),
         .library(name: "PickleballUpload", targets: ["PickleballUpload"]),
         .library(name: "PickleballReplay", targets: ["PickleballReplay"]),
+        .library(name: "WatchBridge", targets: ["WatchBridge"]),
     ],
     targets: [
         .target(name: "PickleballCore", path: "Core/Sources/PickleballCore"),
@@ -45,5 +46,7 @@ let package = Package(
             path: "Replay/Tests/PickleballReplayTests",
             resources: [.copy("Resources")]
         ),
+        .target(name: "WatchBridge", path: "WatchBridge/Sources/WatchBridge"),
+        .testTarget(name: "WatchBridgeTests", dependencies: ["WatchBridge"], path: "WatchBridge/Tests/WatchBridgeTests"),
     ]
 )
