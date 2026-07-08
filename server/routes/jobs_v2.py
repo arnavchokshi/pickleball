@@ -1,16 +1,23 @@
-"""Account-era job routes (INFRA-1): Mongo-backed job records over the
-existing GPU runner.
+"""Account-era job routes (INFRA-1/2): Mongo-backed job records over the
+existing GPU runner, with an INFRA-2 pull-worker queue branch.
 
-The pull-worker queue is INFRA-2; in THIS lane jobs still execute via the
-injected `GpuRunner` in FastAPI `BackgroundTasks`, but the job document lives
-in Mongo (mirroring the legacy JSON job shape, ETA logic included) so the
-record survives restarts and is owner-scoped. Inputs are staged by downloading
-the clip's raw bytes from S3 into the same `upload_root` layout the legacy
-path uses, so `_execute_job` (injected from `server.render_app`) runs
-unchanged.
+`PICKLEBALL_QUEUE_ENABLED=0` (default): jobs still execute via the injected
+`GpuRunner` in FastAPI `BackgroundTasks` -- the INFRA-1 behavior, unchanged.
+`=1`: `create_job_v2` inserts a `queued` Mongo doc and returns immediately;
+`server/worker/daemon.py` (a separate process, possibly on a different
+machine) claims it via `server/routes/worker.py` and drives it to
+completion. Either way the job document lives in Mongo (mirroring the
+legacy JSON job shape, ETA logic included) so the record survives restarts
+and is owner-scoped. Inputs are staged by downloading the clip's raw bytes
+from S3 into the same `upload_root` layout the legacy path uses (inline
+path only -- the queue path downloads on the worker instead), so
+`_execute_job` (injected from `server.render_app`) runs unchanged.
 
-Queue-era fields (`attempts`, `worker_id`, `heartbeat_at`) are written now so
-INFRA-2's claim/heartbeat logic lands on documents that already carry them.
+Queue-era fields (`attempts`, `worker_id`, `heartbeat_at`) were written from
+INFRA-1 onward so INFRA-2's claim/heartbeat logic lands on documents that
+already carry them. `get_job_v2` runs the SHARED stale-heartbeat sweep
+(`_reclaim_stale_jobs`, defined in `server/routes/worker.py`) before every
+read so status stays honest even when zero workers are polling.
 """
 
 from __future__ import annotations
@@ -26,6 +33,7 @@ from pydantic import BaseModel
 
 from ..gpu_runner import GpuRunner, GpuRunProgress, GpuRunRequest
 from ..security import AuthConfig, bearer_auth_dependency
+from .worker import _reclaim_stale_jobs
 
 ProgressPayload = Callable[..., dict[str, Any]]
 ExecuteJob = Callable[[Any, GpuRunner, GpuRunRequest], None]
@@ -75,6 +83,7 @@ def build_jobs_v2_router(
     runner: GpuRunner,
     upload_root: Path,
     run_jobs_inline: bool,
+    queue_enabled: bool,
     execute_job: ExecuteJob,
     progress_payload: ProgressPayload,
     with_dynamic_eta: WithDynamicEta,
@@ -189,6 +198,11 @@ def build_jobs_v2_router(
             {"_id": clip["_id"]},
             {"$set": {"job_id": job_id, "updated_at": datetime.now(timezone.utc)}},
         )
+        if queue_enabled:
+            # INFRA-2: the pull-worker daemon claims this via
+            # GET /api/worker/next-job -- nothing to schedule here.
+            return _public_job(job_doc)
+
         kwargs = {
             "job_id": job_id,
             "clip_slug": job_doc["clip"],
@@ -205,6 +219,7 @@ def build_jobs_v2_router(
 
     @router.get("/api/jobs/{job_id}")
     def get_job_v2(job_id: str, user_id: str = Depends(require_user)) -> dict[str, Any]:
+        _reclaim_stale_jobs(db)
         doc = db.jobs.find_one({"_id": job_id, "user_id": user_id})
         if doc is None:
             raise HTTPException(status_code=404, detail="job not found")
