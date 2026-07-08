@@ -33,11 +33,11 @@ WAVE-5 FLEET LOG (2026-07-07, manager):
   in-VM idle watchdog (60min no-heartbeat -> shutdown) armed + never triggered (heartbeat touched
   every SSH round-trip).
 
-- pickleball-h100-w5ball (H100 a3 spot, ase1-b preferred; same fallback ladder) — PROVISIONING
-  DELEGATED to Sonnet lane w5_ballretrain_20260707 (self-provision from snapshot; code-identity =
-  20 contract tests on VM @ >= c1f707d6f; stage-1 12k retrain + seed fine-tune + OFFICIAL bridge
-  scoring + LoSO; self-DELETE + cost report). Budget: probe-gated, est 2-5h x $0.6-4.3/hr ~ $2-22
-  (+50% contingency); idle watchdog required. 2 of 4 concurrent GPUs (w5p22 is the other).
+- pickleball-h100-w5ball — DONE+DELETED (list-confirmed by lane, 2026-07-08T08:29:51Z): created
+  06:14:38Z, SPOT-preempted 07:43:31Z (3m42s outage, disk-safe, watchdog-caught + manager restart),
+  deleted 08:29:51Z; billed 2.192h ~ $1.25-9.32. Deliverables: stage1_official NOT-degenerate
+  (queue #1 closed), seed_official honest-mixed, control exact, LoSO-mean all rows, 20/20 contract
+  tests on VM. Gap: snapshot lacks corpus+rally videos (16min transfer tax) — next snapshot cut.
 
 - pickleball-h100-w5fastbody (H100 a3 spot, ase1-b; std fallback ladder) — PROVISIONING DELEGATED
   to Sonnet lane w5_fastbody_bench_20260708 (OWNER-APPROVED HARD $15 cap, self-stop ~$13 est;
