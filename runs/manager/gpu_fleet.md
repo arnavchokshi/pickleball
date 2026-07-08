@@ -21,6 +21,13 @@ WAVE-4 FLEET LOG (2026-07-07, manager):
   working tree not shipped committed blobs (false drift under concurrent-session dirt); tar_batch
   transport failure exit-1 non-retryable while ssh transport bug (`ssh_packet_write_poll: Result
   too large`) recurs on large transfers — rsync fallback exit-255 IS retryable.
+WAVE-5 FLEET LOG (2026-07-07, manager):
+- pickleball-h100-w5p22 (H100 a3 spot, ase1-b preferred; fallback regions per quota-unlock list;
+  A100-80GB then A100-40GB SKU fallback) — PROVISIONING DELEGATED to Sonnet lane w5_p22latent_20260707
+  (self-provision from snapshot pickleball-fleet1-snap-20260707 w/ pd-balanced; installs ffmpeg;
+  snapshots updated disk as new fan template at lane end; self-DELETE + cost report). Budget: 3-6h
+  x $0.6-4.3/hr ≈ $2-26 (+50% outage contingency booked); in-VM idle watchdog required (>2h VM).
+
 WAVE-4 FINAL FLEET ACCOUNTING (2026-07-08 close): ALL wave-4 VMs DELETED, list-confirmed by
 manager + each lane. (1) pickleball-h100-w4body: 58m01s, $0.55-4.11 (BODY-validated 2.37×).
 (2) pickleball-h100-w4ballgpu: created 17:43:49Z deleted 23:38:18Z, 5.90h, $3.4-25 honest span
