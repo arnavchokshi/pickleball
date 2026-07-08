@@ -5,7 +5,6 @@ One row per still-running lane so the next session neither double-dispatches nor
 | lane | kind (codex/sonnet/workflow) | session/task id | resume command | owned files | vm (if any) | expected done | dispatched |
 |---|---|---|---|---|---|---|---|
 | w5_ballretrain_20260707 | sonnet-gpu | agent (see session notes) | SendMessage nudge if passive-wait | NO repo files (lane-dir glue only; VM pickleball-h100-w5ball lifecycle) | pickleball-h100-w5ball (H100 spot, self-provision) | ~2-5h incl transfers | 2026-07-07T23:5x |
-| w5_bvpspan_verify_20260707 | codex | bg bkjdw6l8y | resume: log banner session id in its log.txt | NONE (read-only verifier; writes only its lane dir). NOTE: w5_bvpspan repo edits (ball_arc_solver.py + its test) sit UNCOMMITTED pending this verify + manager ruling | none | ~1-3h | 2026-07-08 |
 | w5_labelpack_20260708 | codex | bg bkh1g78o0 | resume: log banner session id in its log.txt | cvat_upload/ new packages + OWNER_SESSION_20260708.md + lane dir | none | ~1-2h (OWNER WAITING) | 2026-07-08 |
 | w5_p22wiring_20260708 | codex | bg (this session) | resume: log banner session id in its log.txt | NEW scripts/racketsport/eval_latent_smoothing.py + tests | none | ~1-3h | 2026-07-08 |
 | w5_fastbody_bench_20260708 | sonnet-gpu | agent (this session) | SendMessage nudge if passive-wait | NO repo files (VM lifecycle only; HARD $15 cap) | pickleball-h100-w5fastbody | ~2-4h | 2026-07-08 |
