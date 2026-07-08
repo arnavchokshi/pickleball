@@ -1,0 +1,19 @@
+{
+  "pre_import_task_count": 12,
+  "post_import_task_count": 80,
+  "delta": 68,
+  "imported_ok_count": 68,
+  "failed": [],
+  "project_created": {"project_id": 6, "project_name": "racketsport_w6_ball_sst_20260708"},
+  "spot_checks": [
+    {"task_id": 19, "task_name": "w6_ball_sst_ball_session_01_20260708", "frames": 640, "shapes": 640, "tracks": 0},
+    {"task_id": 52, "task_name": "w6_ball_sst_ball_session_34_20260708", "frames": 640, "shapes": 640, "tracks": 0},
+    {"task_id": 86, "task_name": "w6_ball_sst_ball_session_68_20260708", "frames": 350, "shapes": 350, "tracks": 0}
+  ],
+  "w5_tasks_preserved": true,
+  "other_pre_existing_tasks_preserved": true,
+  "render_proof": "runs/lanes/w6_cvatimport_20260708/spot_check_task19_frame1.png",
+  "import_start_utc": "2026-07-08T19:19:43Z",
+  "import_end_utc": "2026-07-08T19:40:43Z",
+  "duration_seconds": 1260
+}

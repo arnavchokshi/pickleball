@@ -1,0 +1,692 @@
+{
+  "projects": {
+    "ball": {
+      "project_id": 6,
+      "project_name": "racketsport_w6_ball_sst_20260708"
+    }
+  },
+  "schema_version": 1,
+  "status": "imported",
+  "tasks": [
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_01_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_01_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 19,
+      "task_name": "w6_ball_sst_ball_session_01_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_02_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_02_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 20,
+      "task_name": "w6_ball_sst_ball_session_02_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_03_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_03_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 21,
+      "task_name": "w6_ball_sst_ball_session_03_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_04_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_04_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 22,
+      "task_name": "w6_ball_sst_ball_session_04_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_05_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_05_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 23,
+      "task_name": "w6_ball_sst_ball_session_05_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_06_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_06_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 24,
+      "task_name": "w6_ball_sst_ball_session_06_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_07_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_07_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 25,
+      "task_name": "w6_ball_sst_ball_session_07_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_08_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_08_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 26,
+      "task_name": "w6_ball_sst_ball_session_08_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_09_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_09_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 27,
+      "task_name": "w6_ball_sst_ball_session_09_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_10_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_10_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 28,
+      "task_name": "w6_ball_sst_ball_session_10_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_11_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_11_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 29,
+      "task_name": "w6_ball_sst_ball_session_11_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_12_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_12_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 30,
+      "task_name": "w6_ball_sst_ball_session_12_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_13_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_13_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 31,
+      "task_name": "w6_ball_sst_ball_session_13_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_14_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_14_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 32,
+      "task_name": "w6_ball_sst_ball_session_14_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_15_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_15_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 33,
+      "task_name": "w6_ball_sst_ball_session_15_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_16_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_16_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 34,
+      "task_name": "w6_ball_sst_ball_session_16_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_17_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_17_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 35,
+      "task_name": "w6_ball_sst_ball_session_17_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_18_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_18_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 36,
+      "task_name": "w6_ball_sst_ball_session_18_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_19_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_19_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 37,
+      "task_name": "w6_ball_sst_ball_session_19_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_20_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_20_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 38,
+      "task_name": "w6_ball_sst_ball_session_20_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_21_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_21_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 39,
+      "task_name": "w6_ball_sst_ball_session_21_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_22_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_22_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 40,
+      "task_name": "w6_ball_sst_ball_session_22_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_23_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_23_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 41,
+      "task_name": "w6_ball_sst_ball_session_23_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_24_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_24_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 42,
+      "task_name": "w6_ball_sst_ball_session_24_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_25_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_25_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 43,
+      "task_name": "w6_ball_sst_ball_session_25_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_26_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_26_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 44,
+      "task_name": "w6_ball_sst_ball_session_26_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_27_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_27_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 45,
+      "task_name": "w6_ball_sst_ball_session_27_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_28_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_28_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 46,
+      "task_name": "w6_ball_sst_ball_session_28_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_29_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_29_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 47,
+      "task_name": "w6_ball_sst_ball_session_29_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_30_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_30_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 48,
+      "task_name": "w6_ball_sst_ball_session_30_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_31_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_31_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 49,
+      "task_name": "w6_ball_sst_ball_session_31_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_32_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_32_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 50,
+      "task_name": "w6_ball_sst_ball_session_32_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_33_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_33_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 51,
+      "task_name": "w6_ball_sst_ball_session_33_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_34_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_34_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 52,
+      "task_name": "w6_ball_sst_ball_session_34_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_35_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_35_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 53,
+      "task_name": "w6_ball_sst_ball_session_35_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_36_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_36_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 54,
+      "task_name": "w6_ball_sst_ball_session_36_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_37_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_37_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 55,
+      "task_name": "w6_ball_sst_ball_session_37_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_38_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_38_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 56,
+      "task_name": "w6_ball_sst_ball_session_38_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_39_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_39_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 57,
+      "task_name": "w6_ball_sst_ball_session_39_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_40_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_40_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 58,
+      "task_name": "w6_ball_sst_ball_session_40_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_41_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_41_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 59,
+      "task_name": "w6_ball_sst_ball_session_41_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_42_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_42_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 60,
+      "task_name": "w6_ball_sst_ball_session_42_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_43_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_43_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 61,
+      "task_name": "w6_ball_sst_ball_session_43_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_44_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_44_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 62,
+      "task_name": "w6_ball_sst_ball_session_44_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_45_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_45_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 63,
+      "task_name": "w6_ball_sst_ball_session_45_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_46_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_46_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 64,
+      "task_name": "w6_ball_sst_ball_session_46_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_47_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_47_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 65,
+      "task_name": "w6_ball_sst_ball_session_47_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_48_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_48_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 66,
+      "task_name": "w6_ball_sst_ball_session_48_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_49_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_49_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 67,
+      "task_name": "w6_ball_sst_ball_session_49_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_50_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_50_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 68,
+      "task_name": "w6_ball_sst_ball_session_50_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_51_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_51_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 69,
+      "task_name": "w6_ball_sst_ball_session_51_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_52_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_52_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 70,
+      "task_name": "w6_ball_sst_ball_session_52_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_53_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_53_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 71,
+      "task_name": "w6_ball_sst_ball_session_53_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_54_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_54_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 72,
+      "task_name": "w6_ball_sst_ball_session_54_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_55_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_55_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 73,
+      "task_name": "w6_ball_sst_ball_session_55_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_56_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_56_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 74,
+      "task_name": "w6_ball_sst_ball_session_56_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_57_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_57_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 75,
+      "task_name": "w6_ball_sst_ball_session_57_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_58_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_58_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 76,
+      "task_name": "w6_ball_sst_ball_session_58_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_59_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_59_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 77,
+      "task_name": "w6_ball_sst_ball_session_59_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_60_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_60_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 78,
+      "task_name": "w6_ball_sst_ball_session_60_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_61_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_61_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 79,
+      "task_name": "w6_ball_sst_ball_session_61_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_62_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_62_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 80,
+      "task_name": "w6_ball_sst_ball_session_62_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_63_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_63_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 81,
+      "task_name": "w6_ball_sst_ball_session_63_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_64_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_64_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 82,
+      "task_name": "w6_ball_sst_ball_session_64_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_65_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_65_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 83,
+      "task_name": "w6_ball_sst_ball_session_65_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_66_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_66_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 84,
+      "task_name": "w6_ball_sst_ball_session_66_20260708"
+    },
+    {
+      "frame_count": 640,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_67_640f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_67_640f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 85,
+      "task_name": "w6_ball_sst_ball_session_67_20260708"
+    },
+    {
+      "frame_count": 350,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_68_350f_w6_images.zip",
+      "kind": "ball",
+      "prelabel_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w6_labelpack_20260708/packages/ball_session_68_350f_w6_prelabels_cvat1_1.zip",
+      "project_id": 6,
+      "status": "imported",
+      "task_id": 86,
+      "task_name": "w6_ball_sst_ball_session_68_20260708"
+    }
+  ]
+}

@@ -9,8 +9,8 @@ CYCLE_SECS=600
 MAX_HOURS=7
 STALE_CODEX_MIN=45
 VM_MAX_AGE_HOURS=5
-EXPECTED_VMS=""   # wave-6 GPU tail not provisioned yet; manager updates this line when it is
-CODEX_LANES="w6_labelpack_20260708 w6_gate1b_knob_20260708 w6_magnus_20260708 w6_instrudocs_20260708 w6_playbackdiag_20260708"
+EXPECTED_VMS="pickleball-h100-w6gate1b"
+CODEX_LANES="w6_magnus_20260708 w6_meshcap_20260708"
 
 anomaly() { echo "WATCHDOG-ANOMALY[$1]: $2"; exit 2; }
 now() { date +%s; }

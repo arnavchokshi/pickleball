@@ -91,3 +91,14 @@ lane ends (idle spend never acceptable); 5th GPU or >$5/hr = `needs-purchase-app
 Auth: owner gcloud refresh token (hello@; SA key creation org-blocked); dead auth = typed STOP for one owner login.
 
 | pickleball-calv1unet-a100-spot | asia-southeast1-a (ladder: ase1-b/c, us-central1-a) | a2-highgpu-1g A100-40GB | SPOT | CREATING (dispatched 2026-07-08, court session) | calv1_unet_train_20260708 | ~$1.1-1.5/hr | teardown: DELETE on lane success, STOP on failure |
+
+WAVE-6 FLEET LOG (2026-07-08, manager):
+- pickleball-h100-w6gate1b (H100 a3-highgpu-1g SPOT, asia-southeast1-b, pd-balanced 200GB from
+  pickleball-fleet-snap-20260708-ffmpeg) — status: PROVISIONING (Sonnet lane w6_gpu_instrument_20260708,
+  self-tearing provision→run→verify→DELETE→report). Mission: (1) snapshot-hygiene check (git status
+  CLEAN on boot — gap on record) + sync to committed dd5e5980d + version-stamp verify; (2) wolverine
+  raw-postchain instrument dispatch (GATE-1b: decode(emit) <=1mm, mesh-skel <=5mm p95 vs raw sidecar
+  via 2db0d1b4e harness; roma importable check first); (3) 541/276 frame-count adjudication data
+  (VM-side monolith; per runs/lanes/w6_instrudocs_20260708/frame_scheduling_adjudication.md);
+  (4) pull artifacts + md5 to Mac lane dir; DELETE + list-confirm + cost. Budget: ~1-2h × $0.6-4.3/hr
+  ≈ $1-8 (+50% contingency ceiling ~$12); in-VM 60-min no-heartbeat self-stop armed.
