@@ -718,6 +718,13 @@ def _bypass_footlock_for_player_frames(
 
 
 def _bypassed_foot_pin_metrics() -> dict[str, Any]:
+    gate_stream = _empty_gate_stream(clip="unknown")
+    gate_stream["status"] = "bypassed_body_postchain_foot_pin_disabled"
+    gate_stream["provenance"] = {
+        "source": "body_postchain_bypass",
+        "stage": "foot_pin",
+        "strict_mode_loud": True,
+    }
     return {
         "refined_stance_phase_count": 0,
         "refined_stance_split_phase_count": 0,
@@ -733,13 +740,7 @@ def _bypassed_foot_pin_metrics() -> dict[str, Any]:
         "candidate_phase_count": 0,
         "candidate_phase_rejected_count": 0,
         "candidate_phase_rejection_reason_counts": {},
-        "foot_lock_gate_stream": {
-            "artifact_type": "foot_lock_gate_stream",
-            "status": "bypassed_body_postchain_foot_pin_disabled",
-            "phase_rows": [],
-            "frame_rows": [],
-            "summary": {"phase_count": 0, "frame_count": 0},
-        },
+        "foot_lock_gate_stream": gate_stream,
     }
 
 

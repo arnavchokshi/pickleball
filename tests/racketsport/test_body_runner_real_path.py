@@ -121,6 +121,70 @@ def _write_inputs(inputs_dir: Path, *, frame_indexes: tuple[int, ...] = (0,)) ->
         assert cv2.imwrite(str(frames / f"frame_{frame_idx:06d}.jpg"), frame)
 
 
+def _write_precomputed_tracks_with_placement_provenance(
+    inputs_dir: Path,
+    *,
+    frame_indexes: tuple[int, ...],
+) -> None:
+    _write_json(
+        inputs_dir / "tracks.json",
+        {
+            "schema_version": 1,
+            "fps": 30.0,
+            "players": [
+                {
+                    "id": 7,
+                    "side": "near",
+                    "role": "player",
+                    "frames": [
+                        {
+                            "frame_idx": frame_idx,
+                            "t": frame_idx / 30.0,
+                            "bbox": [940.0, 440.0, 980.0, 540.0],
+                            "world_xy": [float(frame_idx) * 0.01, 0.0],
+                            "conf": 0.91,
+                        }
+                        for frame_idx in frame_indexes
+                    ],
+                }
+            ],
+            "rally_spans": [],
+            "placement_provenance": {"source": "unit_test_r3_placement"},
+        },
+    )
+
+
+def _write_r3_placement_anchor_artifact(
+    run_dir: Path,
+    *,
+    frame_indexes: tuple[int, ...],
+) -> None:
+    _write_json(
+        run_dir / "placement.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_placement",
+            "players": [
+                {
+                    "id": 7,
+                    "frames": [
+                        {
+                            "frame_idx": frame_idx,
+                            "t": frame_idx / 30.0,
+                            "original_world_xy": [float(frame_idx) * 0.01, 0.0],
+                            "fused_world_xy": [float(frame_idx) * 0.01, 0.0],
+                            "smoothed_world_xy": [float(frame_idx) * 0.01, 0.0],
+                            "covariance_m2": [[0.01, 0.0], [0.0, 0.01]],
+                            "stance": True,
+                        }
+                        for frame_idx in frame_indexes
+                    ],
+                }
+            ],
+        },
+    )
+
+
 def _write_multi_player_inputs(inputs_dir: Path) -> None:
     inputs_dir.mkdir(parents=True)
     (inputs_dir / "capture_sidecar.json").write_text(json.dumps(_sidecar_payload()), encoding="utf-8")
@@ -975,6 +1039,103 @@ def test_body_runner_raw_postchain_writes_sidecar_and_loud_bypass_summary(tmp_pa
     assert phase_timing["postchain_bypasses"]["raw_grounded_joints_sidecar"] == "body_raw_grounded_joints.json"
     assert contact_splice["summary"]["status"] == "bypassed"
     assert skeleton_payload["provenance"]["body_postchain_bypass"]["stages"] == expected_bypasses
+
+
+@pytest.mark.parametrize(
+    ("case_name", "runner_kwargs", "expected_bypasses", "expects_raw_sidecar"),
+    (
+        (
+            "body_postchain_raw",
+            {
+                "body_temporal_smoothing": False,
+                "body_foot_lock": False,
+                "body_foot_pin": False,
+                "body_contact_splice": False,
+                "sam3d_wrist_bone_lock": False,
+                "body_world_joint_visual_smoothing": False,
+            },
+            [
+                "temporal_smoothing",
+                "foot_lock",
+                "foot_pin",
+                "contact_splice",
+                "wrist_lock",
+                "world_joint_visual_smoothing",
+            ],
+            True,
+        ),
+        (
+            "no_body_foot_pin",
+            {"body_foot_pin": False},
+            ["foot_pin"],
+            False,
+        ),
+    ),
+)
+def test_body_runner_r3_foot_pin_bypass_passes_grounding_validator_and_writes_full_artifacts(
+    tmp_path: Path,
+    case_name: str,
+    runner_kwargs: dict[str, object],
+    expected_bypasses: list[str],
+    expects_raw_sidecar: bool,
+) -> None:
+    inputs = tmp_path / case_name / "inputs"
+    run_dir = tmp_path / case_name / "run"
+    manifest = _manifest(tmp_path / case_name / "models")
+    frame_indexes = (0, 1, 2)
+    _write_inputs(inputs, frame_indexes=frame_indexes)
+    _write_precomputed_tracks_with_placement_provenance(inputs, frame_indexes=frame_indexes)
+    run_dir.mkdir()
+    _write_frame_compute_plan(run_dir)
+    _write_r3_placement_anchor_artifact(run_dir, frame_indexes=frame_indexes)
+    runtime = FakeFastSamRuntime(joint_count=70)
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="body",
+        max_frames=None,
+        max_players=1,
+        tracking_mode="precomputed_tracks",
+        runners={
+            "pose": FakePoseStageRunner(),
+            "body": BodyStageRunner(
+                write_body_monoliths=False,
+                manifest_path=manifest,
+                runtime=runtime,
+                **runner_kwargs,
+            ),
+        },
+    )
+
+    body_stage = _stage(summary, "body")
+    assert body_stage["status"] == "ran", body_stage.get("notes")
+    skeleton = validate_artifact_file("skeleton3d", run_dir / "skeleton3d.json")
+    body_mesh_index = json.loads((run_dir / "body_mesh_index" / "body_mesh_index.json").read_text(encoding="utf-8"))
+    body_mesh_faces = json.loads((run_dir / "body_mesh_index" / "body_mesh_faces.json").read_text(encoding="utf-8"))
+    phase_timing = json.loads((run_dir / "body_stage_phase_timing.json").read_text(encoding="utf-8"))
+    grounding_quality = json.loads((run_dir / "body_grounding_quality.json").read_text(encoding="utf-8"))
+
+    assert body_stage["metrics"]["postchain_bypassed_stages"] == expected_bypasses
+    assert isinstance(skeleton, Skeleton3D)
+    assert body_mesh_index["artifact_type"] == "racketsport_body_mesh_index"
+    assert body_mesh_index["summary"]["window_count"] >= 1
+    assert body_mesh_faces["mesh_faces"] == [[0, 1, 2]]
+    assert phase_timing["postchain_bypasses"]["stages"] == expected_bypasses
+    assert phase_timing["postchain_bypasses"]["raw_grounded_joints_sidecar"] == (
+        "body_raw_grounded_joints.json" if expects_raw_sidecar else ""
+    )
+    assert grounding_quality["status"] == "pass"
+    assert grounding_quality["grounding_metrics"]["foot_pin_status"] == "bypassed_body_postchain_foot_pin_disabled"
+    gate_stream = grounding_quality["foot_lock_gate_stream"]
+    assert gate_stream["artifact_type"] == "foot_lock_gate_stream"
+    assert gate_stream["status"] == "bypassed_body_postchain_foot_pin_disabled"
+    assert gate_stream["phase_rows"] == []
+    assert gate_stream["frame_rows"] == []
+    assert gate_stream["artifact_size_policy"]["max_bytes"] == 20_000_000
+    assert ("body_raw_grounded_joints.json" in body_stage["produced_artifacts"]) is expects_raw_sidecar
+    assert (run_dir / "body_raw_grounded_joints.json").is_file() is expects_raw_sidecar
 
 
 def test_body_runner_does_not_backfill_missing_contact_mesh_with_pose_fallback(tmp_path: Path) -> None:

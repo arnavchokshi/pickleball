@@ -1,0 +1,83 @@
+{
+  "objective_result": "PASS",
+  "full_suite": {
+    "scope": "focused blast-radius suite, not full wide suite",
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_worldhmr.py tests/racketsport/test_worldhmr_stance_grounding.py tests/racketsport/test_body_grounding_quality.py tests/racketsport/test_body_runner_real_path.py tests/racketsport/test_process_video.py tests/racketsport/test_process_video_body_frames.py tests/racketsport/test_mhr_decode.py tests/racketsport/test_run_sam3dbody_batch.py tests/racketsport/test_mesh_export.py tests/racketsport/test_body_compute.py -q",
+    "passed": 259,
+    "failed": 0,
+    "skipped": 6,
+    "warnings": 1,
+    "failure_notes": null
+  },
+  "red_green": {
+    "red_command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_body_runner_real_path.py::test_body_runner_r3_foot_pin_bypass_passes_grounding_validator_and_writes_full_artifacts -q",
+    "red_result": "2 failed with body failed: foot_lock_gate_stream missing artifact_size_policy",
+    "green_result": "2 passed after the stub fix"
+  },
+  "changes": [
+    "threed/racketsport/worldhmr.py:720 - _bypassed_foot_pin_metrics now builds its foot_lock_gate_stream from the real empty producer shape via _empty_gate_stream, preserving schema_version, clip, summary keys, and artifact_size_policy.",
+    "threed/racketsport/worldhmr.py:722 - bypass stream remains loud with status=bypassed_body_postchain_foot_pin_disabled.",
+    "threed/racketsport/worldhmr.py:723 - bypass stream adds provenance {source: body_postchain_bypass, stage: foot_pin, strict_mode_loud: true}.",
+    "tests/racketsport/test_body_runner_real_path.py:124 - added precomputed tracks fixture with placement_provenance to force the R3 placement/stance path that crashed on GPU.",
+    "tests/racketsport/test_body_runner_real_path.py:157 - added placement anchor fixture so --body-postchain raw and --no-body-foot-pin exercise the foot_pin bypass stub.",
+    "tests/racketsport/test_body_runner_real_path.py:1044 - added parametrized regression for raw and no-body-foot-pin paths through grounding validator plus skeleton3d/body_mesh_index/phase-timing/bypass artifacts."
+  ],
+  "stub_key_audit": {
+    "validator_required_top_level_keys": [
+      "artifact_type",
+      "phase_rows",
+      "frame_rows",
+      "summary",
+      "artifact_size_policy"
+    ],
+    "validator_required_phase_row_keys_when_rows_exist": [
+      "clip",
+      "player_id",
+      "foot",
+      "phase_id",
+      "start_frame_index",
+      "end_frame_index",
+      "slide_m",
+      "max_contributing_frame_index",
+      "anchor_position_xyz",
+      "contact_source",
+      "foot_assignment",
+      "weak",
+      "demoted",
+      "split"
+    ],
+    "validator_required_frame_row_keys_when_rows_exist": [
+      "clip",
+      "player_id",
+      "foot",
+      "phase_id",
+      "frame_idx",
+      "contact_state",
+      "selected_foot",
+      "lock_anchor_xyz",
+      "body_root_world",
+      "output_source",
+      "divergence_flag",
+      "speed_cap_flag",
+      "residuals",
+      "source_counts",
+      "foot_pin_correction_m"
+    ],
+    "stub_satisfies": [
+      "artifact_type=foot_lock_gate_stream",
+      "phase_rows=[]",
+      "frame_rows=[]",
+      "summary mirrors _empty_gate_stream including top_20_phases_by_slide_m, phases_over_threshold, weak_rejection_reasons, candidate_phase_rejection_reason_counts, max_candidate_phase_slide_m, frame_row_stride, frame_rows_unstrided_count, phase_count, threshold_m, metric_phase_count",
+      "artifact_size_policy mirrors _gate_artifact_size_policy with max_bytes, action, max_frame_rows_before_stride",
+      "schema_version and clip are present from _empty_gate_stream even though the current validator only requires artifact_type plus the four payload keys",
+      "bypass provenance is explicit and strict_mode_loud"
+    ]
+  },
+  "honest_issues": [
+    "Full wide tests/racketsport suite was not run; lane scope explicitly did not require it and the tree is concurrently dirty.",
+    "No live H100 rerun was performed here; the deterministic CPU fixture covers the post-SAM3D raw/no-foot-pin crash path.",
+    "A pre-existing unrelated dirty worktree remains, including configs/ssh/a100_known_hosts, ball/CVAT files, schemas/__init__.py, cvat_upload packages, and owner-label ingest files."
+  ],
+  "proposed_bullet": "w6_footpinstub_20260708 PASS: raw and no-body-foot-pin R3 BODY fixture now pass the foot_lock_gate_stream validator and serialize skeleton3d, body_mesh_index, phase timing, grounding quality, and bypass summaries; focused BODY/worldhmr/process_video/Gate1b suites green (259 passed, 6 skipped).",
+  "next": "Optional manager follow-up: rerun the original H100 raw-postchain command to replace the GPU defect artifact with live closure evidence."
+}
