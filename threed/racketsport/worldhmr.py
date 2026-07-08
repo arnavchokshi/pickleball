@@ -803,11 +803,6 @@ def _detect_refined_contact_phases(skeleton3d: Mapping[str, Any]) -> list[Contac
         return []
 
 
-def _contact_metrics_for_skeleton3d(skeleton3d: Mapping[str, Any]) -> dict[str, Any]:
-    metrics, _gate_stream = _contact_gate_stream_for_skeleton3d(skeleton3d, clip="unknown", threshold_m=0.03)
-    return metrics
-
-
 def _contact_gate_stream_for_skeleton3d(
     skeleton3d: Mapping[str, Any],
     *,

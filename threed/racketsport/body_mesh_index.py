@@ -371,40 +371,6 @@ def _iter_player_payloads(mm: mmap.mmap, *, players_range: tuple[int, int]) -> I
             pos += 1
 
 
-def _process_players(
-    mm: mmap.mmap,
-    *,
-    players_range: tuple[int, int],
-    accumulators: dict[int, _WindowAccumulator],
-    chunk_dir: Path,
-    quantization_scale: int,
-) -> None:
-    start, end = players_range
-    pos = _skip_ws(mm, start)
-    if pos >= end or mm[pos] != ord("["):
-        raise ValueError("body_mesh.players must be an array")
-    pos += 1
-    while True:
-        pos = _skip_ws(mm, pos)
-        if pos >= end:
-            raise ValueError("unterminated body_mesh.players array")
-        if mm[pos] == ord("]"):
-            return
-        player_start = pos
-        player_end = _json_value_end(mm, player_start)
-        player = _loads_slice(mm, player_start, player_end)
-        if isinstance(player, Mapping):
-            _process_player_payload(
-                player,
-                accumulators=accumulators,
-                chunk_dir=chunk_dir,
-                quantization_scale=quantization_scale,
-            )
-        pos = _skip_ws(mm, player_end)
-        if pos < end and mm[pos] == ord(","):
-            pos += 1
-
-
 def _process_player_payload(
     player: Mapping[str, Any],
     *,
@@ -428,72 +394,6 @@ def _process_player_payload(
             ),
         )
         accumulator.add_frame(player_id=player_id, frame=frame, quantization_scale=quantization_scale)
-
-
-def _process_player(
-    mm: mmap.mmap,
-    start: int,
-    end: int,
-    *,
-    accumulators: dict[int, _WindowAccumulator],
-    chunk_dir: Path,
-    quantization_scale: int,
-) -> None:
-    player_id: int | None = None
-    frames_range: tuple[int, int] | None = None
-    for key, value_start, value_end in _iter_object_items(mm, start, end):
-        if key == "id":
-            player_id = int(_loads_slice(mm, value_start, value_end))
-        elif key == "frames":
-            frames_range = (value_start, value_end)
-    if player_id is None or frames_range is None:
-        return
-    _process_frames(
-        mm,
-        frames_range=frames_range,
-        player_id=player_id,
-        accumulators=accumulators,
-        chunk_dir=chunk_dir,
-        quantization_scale=quantization_scale,
-    )
-
-
-def _process_frames(
-    mm: mmap.mmap,
-    *,
-    frames_range: tuple[int, int],
-    player_id: int,
-    accumulators: dict[int, _WindowAccumulator],
-    chunk_dir: Path,
-    quantization_scale: int,
-) -> None:
-    start, end = frames_range
-    pos = _skip_ws(mm, start)
-    if pos >= end or mm[pos] != ord("["):
-        raise ValueError("body_mesh.players[].frames must be an array")
-    pos += 1
-    fallback_window_index = 0
-    while True:
-        pos = _skip_ws(mm, pos)
-        if pos >= end:
-            raise ValueError("unterminated body_mesh.players[].frames array")
-        if mm[pos] == ord("]"):
-            return
-        frame_end = _json_value_end(mm, pos)
-        frame = _loads_slice(mm, pos, frame_end)
-        if isinstance(frame, Mapping):
-            raw_window_index = frame.get("source_window_index")
-            window_index = int(raw_window_index) if raw_window_index is not None else fallback_window_index
-            accumulator = accumulators.setdefault(
-                window_index,
-                _WindowAccumulator(
-                    source_window_index=window_index,
-                ),
-            )
-            accumulator.add_frame(player_id=player_id, frame=frame, quantization_scale=quantization_scale)
-        pos = _skip_ws(mm, frame_end)
-        if pos < end and mm[pos] == ord(","):
-            pos += 1
 
 
 def _finalize_windows(
@@ -545,29 +445,6 @@ def _finalize_windows(
         }
         windows.append(window)
     return windows
-
-
-def _iter_object_items(mm: mmap.mmap, start: int, end: int) -> Iterator[tuple[str, int, int]]:
-    pos = _skip_ws(mm, start)
-    if pos >= end or mm[pos] != ord("{"):
-        raise ValueError("expected JSON object")
-    pos += 1
-    while True:
-        pos = _skip_ws(mm, pos)
-        if pos >= end:
-            raise ValueError("unterminated JSON object")
-        if mm[pos] == ord("}"):
-            return
-        key, pos = _read_string(mm, pos)
-        pos = _skip_ws(mm, pos)
-        if pos >= end or mm[pos] != ord(":"):
-            raise ValueError("expected ':' after object key")
-        value_start = _skip_ws(mm, pos + 1)
-        value_end = _json_value_end(mm, value_start)
-        yield key, value_start, value_end
-        pos = _skip_ws(mm, value_end)
-        if pos < end and mm[pos] == ord(","):
-            pos += 1
 
 
 def _read_string(mm: mmap.mmap, pos: int) -> tuple[str, int]:
