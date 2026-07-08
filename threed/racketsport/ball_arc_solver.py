@@ -1970,6 +1970,15 @@ def solve_ball_arc_track(
             net_plane=net_plane,
         )
     confident_segments = list(segments)
+    confident_segments, protected_span_prior_report = _apply_protected_span_priors_from_frozen_baseline(
+        confident_segments,
+        observations=observations,
+        calibration=calibration,
+        physics=phys,
+        config=cfg,
+        net_plane=net_plane,
+        clip_id=clip_id,
+    )
     weak_segments, weak_validation = _build_weak_segments(
         anchors,
         confident_segments,
@@ -2095,6 +2104,7 @@ def solve_ball_arc_track(
             "size_depth_residuals_m": size_summary,
             "weak_segments": weak_validation,
             "candidate_association": candidate_association_summary,
+            "protected_span_priors": protected_span_prior_report,
             "physical_sanity": physical_summary,
             "ball_physics3d_reference": physics3d_summary,
         },
@@ -3106,6 +3116,319 @@ _PROTECTED_BASELINE_SPANS: Mapping[str, tuple[dict[str, Any], ...]] = {
 }
 
 
+def _apply_protected_span_priors_from_frozen_baseline(
+    segments: Sequence[FlightSegmentFit],
+    *,
+    observations: Sequence[BallObservation],
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+    net_plane: Mapping[str, Any] | None,
+    clip_id: str | None,
+) -> tuple[list[FlightSegmentFit], dict[str, Any]]:
+    clip = str(clip_id or "")
+    protected = _PROTECTED_BASELINE_SPANS.get(clip)
+    if not protected:
+        return list(segments), {"mode": "not_applicable", "applied_count": 0, "rows": []}
+    baseline = _load_protected_baseline_artifact(clip)
+    if baseline is None:
+        return list(segments), {"mode": "baseline_missing", "applied_count": 0, "rows": []}
+    repaired, report = _apply_protected_span_priors(
+        segments,
+        baseline_artifact=baseline,
+        protected_spans=protected,
+        observations=observations,
+        calibration=calibration,
+        physics=physics,
+        config=config,
+        net_plane=net_plane,
+    )
+    return repaired, {**report, "clip_id": clip}
+
+
+def _apply_protected_span_priors(
+    segments: Sequence[FlightSegmentFit],
+    *,
+    baseline_artifact: Mapping[str, Any],
+    protected_spans: Sequence[Mapping[str, Any]],
+    observations: Sequence[BallObservation],
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+    net_plane: Mapping[str, Any] | None,
+) -> tuple[list[FlightSegmentFit], dict[str, Any]]:
+    output = list(segments)
+    rows: list[dict[str, Any]] = []
+    applied_baseline_keys: set[tuple[int, int, int]] = set()
+    for item in protected_spans:
+        name = str(item.get("name") or "")
+        interval_raw = item.get("interval")
+        if not isinstance(interval_raw, Sequence) or isinstance(interval_raw, (str, bytes)) or len(interval_raw) != 2:
+            rows.append({"name": name, "action": "skipped_invalid_interval"})
+            continue
+        interval = (int(interval_raw[0]), int(interval_raw[1]))
+        baseline_segment = _baseline_segment_for_item(baseline_artifact, int(item.get("segment_id", -1)), interval)
+        if baseline_segment is None:
+            rows.append({"name": name, "interval": list(interval), "action": "skipped_baseline_segment_missing"})
+            continue
+        baseline_status = str(baseline_segment.get("status") or "")
+        if not baseline_status.startswith("fit") or baseline_status == "fit_bvp_fallback":
+            rows.append(
+                {
+                    "name": name,
+                    "interval": list(interval),
+                    "action": "skipped_baseline_not_fit_prior",
+                    "baseline_status": baseline_status,
+                }
+            )
+            continue
+        current_quality = _protected_span_quality(output, interval)
+        if not current_quality["covering_segments"] and not any(interval[0] <= int(obs.frame) <= interval[1] for obs in observations):
+            rows.append({"name": name, "interval": list(interval), "action": "skipped_no_current_span"})
+            continue
+        baseline_rmse = _float_or_none(baseline_segment.get("reprojection_rmse_px"))
+        baseline_endpoint = _float_or_none(baseline_segment.get("endpoint_error_m"))
+        if not _protected_span_needs_rollback(current_quality, baseline_rmse=baseline_rmse, baseline_endpoint=baseline_endpoint):
+            rows.append(
+                {
+                    "name": name,
+                    "interval": list(interval),
+                    "action": "kept_current",
+                    "current": current_quality,
+                    "baseline_rmse_px": _optional_float_round(baseline_rmse),
+                    "baseline_endpoint_error_m": _optional_float_round(baseline_endpoint),
+                }
+            )
+            continue
+        segments_to_apply: list[tuple[Mapping[str, Any], tuple[int, int], str]] = [
+            (baseline_segment, interval, "prior_applied")
+        ]
+        for boundary_segment in _baseline_segments_touching_interval(baseline_artifact, interval):
+            key = _baseline_segment_key(boundary_segment)
+            if key == _baseline_segment_key(baseline_segment):
+                continue
+            boundary_status = str(boundary_segment.get("status") or "")
+            if not boundary_status.startswith("fit") or boundary_status == "fit_bvp_fallback":
+                continue
+            boundary_interval = (
+                int(boundary_segment.get("frame_start", interval[0])),
+                int(boundary_segment.get("frame_end", interval[1])),
+            )
+            segments_to_apply.append((boundary_segment, boundary_interval, "boundary_prior_applied"))
+        for baseline_to_apply, apply_interval, action in segments_to_apply:
+            key = _baseline_segment_key(baseline_to_apply)
+            if key in applied_baseline_keys:
+                rows.append({"name": name, "interval": list(apply_interval), "action": "skipped_duplicate_prior"})
+                continue
+            prior = _protected_prior_segment_from_baseline(
+                baseline_to_apply,
+                segment_id=len(output),
+                observations=observations,
+                calibration=calibration,
+                physics=physics,
+                config=config,
+                net_plane=net_plane,
+            )
+            if prior is None:
+                rows.append({"name": name, "interval": list(apply_interval), "action": "skipped_prior_unbuildable"})
+                continue
+            output = _overlay_protected_segment(output, prior, apply_interval, physics=physics, config=config)
+            applied_baseline_keys.add(key)
+            rows.append(
+                {
+                    "name": name,
+                    "interval": list(apply_interval),
+                    "action": action,
+                    "current": current_quality if action == "prior_applied" else _protected_span_quality(output, apply_interval),
+                    "prior_status": prior.status,
+                    "prior_rmse_px": _optional_round(prior.reprojection_rmse_px, 6),
+                    "prior_endpoint_error_m": _round(prior.endpoint_error_m, 6),
+                    "baseline_rmse_px": _optional_float_round(_float_or_none(baseline_to_apply.get("reprojection_rmse_px"))),
+                    "baseline_endpoint_error_m": _optional_float_round(_float_or_none(baseline_to_apply.get("endpoint_error_m"))),
+                    "physical_violations_before_gate": list(prior.physical_sanity.get("violations") or [])
+                    if isinstance(prior.physical_sanity, Mapping)
+                    else [],
+                }
+            )
+    output = [replace(segment, segment_id=index) for index, segment in enumerate(sorted(output, key=lambda seg: (seg.start_anchor.t, seg.end_anchor.t, seg.segment_id)))]
+    reason_counts: dict[str, int] = {}
+    for row in rows:
+        action = str(row.get("action") or "unknown")
+        reason_counts[action] = reason_counts.get(action, 0) + 1
+    return output, {
+        "mode": "frozen_baseline_arc_params_before_validity_gates",
+        "applied_count": sum(1 for row in rows if row.get("action") == "prior_applied"),
+        "non_gated_action_counts": reason_counts,
+        "rows": rows,
+    }
+
+
+def _baseline_segments_touching_interval(
+    baseline_artifact: Mapping[str, Any],
+    interval: tuple[int, int],
+) -> tuple[Mapping[str, Any], ...]:
+    segments = baseline_artifact.get("segments")
+    if not isinstance(segments, Sequence) or isinstance(segments, (str, bytes)):
+        return ()
+    touching: list[Mapping[str, Any]] = []
+    for segment in segments:
+        if not isinstance(segment, Mapping):
+            continue
+        start = int(segment.get("frame_start", -1))
+        end = int(segment.get("frame_end", -1))
+        if start <= interval[1] and end >= interval[0]:
+            touching.append(segment)
+    return tuple(touching)
+
+
+def _baseline_segment_key(segment: Mapping[str, Any]) -> tuple[int, int, int]:
+    return (
+        int(segment.get("segment_id", -1)),
+        int(segment.get("frame_start", -1)),
+        int(segment.get("frame_end", -1)),
+    )
+
+
+def _protected_prior_segment_from_baseline(
+    baseline_segment: Mapping[str, Any],
+    *,
+    segment_id: int,
+    observations: Sequence[BallObservation],
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+    net_plane: Mapping[str, Any] | None,
+) -> FlightSegmentFit | None:
+    anchors_json = baseline_segment.get("anchors_used")
+    if not isinstance(anchors_json, Sequence) or isinstance(anchors_json, (str, bytes)) or len(anchors_json) < 2:
+        return None
+    p0 = _vec3_from_json(baseline_segment.get("initial_position_m"))
+    v0 = _vec3_from_json(baseline_segment.get("initial_velocity_mps"))
+    if p0 is None or v0 is None:
+        return None
+    try:
+        start_anchor = _anchor_from_artifact_json(anchors_json[0])
+        end_anchor = _anchor_from_artifact_json(anchors_json[1])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if end_anchor.t <= start_anchor.t + 1e-9:
+        return None
+    span_observations = tuple(
+        obs for obs in observations if start_anchor.t - 1e-9 <= obs.t <= end_anchor.t + 1e-9 and obs.visible
+    )
+    reprojection_errors = _segment_reprojection_errors_from_params(
+        span_observations,
+        p0,
+        v0,
+        start_anchor.t,
+        calibration=calibration,
+        physics=physics,
+        config=config,
+    )
+    inlier_frames = _int_tuple(baseline_segment.get("inlier_frames"))
+    outlier_frames = _int_tuple(baseline_segment.get("outlier_frames"))
+    if not inlier_frames and reprojection_errors:
+        inlier_frames = tuple(
+            frame for frame, error in sorted(reprojection_errors.items()) if error <= config.max_reprojection_inlier_px
+        )
+        outlier_frames = tuple(frame for frame in sorted(reprojection_errors) if frame not in set(inlier_frames))
+    inlier_errors = [reprojection_errors[frame] for frame in inlier_frames if frame in reprojection_errors]
+    baseline_rmse = _float_or_none(baseline_segment.get("reprojection_rmse_px"))
+    baseline_max = _float_or_none(baseline_segment.get("max_reprojection_error_px"))
+    endpoint_pred = _integrate_positions(p0, v0, [end_anchor.t], t0=start_anchor.t, physics=physics, config=config)[0]
+    start_anchor, start_repaired = _repair_unverified_prior_anchor(start_anchor, p0, role="start")
+    end_anchor, end_repaired = _repair_unverified_prior_anchor(end_anchor, endpoint_pred, role="end")
+    net_clearance = _net_clearance_m(p0, v0, start_anchor.t, end_anchor.t, physics, config, net_plane)
+    physical = _physical_sanity(p0, v0, start_anchor.t, end_anchor.t, physics, config, net_clearance)
+    diagnostics = dict(baseline_segment.get("diagnostics") if isinstance(baseline_segment.get("diagnostics"), Mapping) else {})
+    diagnostics["protected_span_prior"] = {
+        "source": "frozen_baseline_arc_params",
+        "baseline_segment_id": int(baseline_segment.get("segment_id", -1)),
+        "baseline_status": str(baseline_segment.get("status") or ""),
+        "applied_before_fit_validity_gates": True,
+        "start_repaired_before_gate": bool(start_repaired),
+        "endpoint_repaired_before_gate": bool(end_repaired),
+        "physical_violations_before_gate": list(physical.get("violations") or []),
+    }
+    return FlightSegmentFit(
+        segment_id=segment_id,
+        status=str(baseline_segment.get("status") or "fit"),
+        start_anchor=start_anchor,
+        end_anchor=end_anchor,
+        initial_position_m=p0,
+        initial_velocity_mps=v0,
+        observations=span_observations,
+        inlier_frames=inlier_frames,
+        outlier_frames=outlier_frames,
+        reprojection_errors_px=reprojection_errors,
+        reprojection_rmse_px=baseline_rmse if baseline_rmse is not None else _rmse(inlier_errors),
+        max_reprojection_error_px=baseline_max if baseline_max is not None else (max(reprojection_errors.values()) if reprojection_errors else None),
+        endpoint_error_m=_distance(endpoint_pred, end_anchor.world_xyz),
+        net_clearance_m=net_clearance,
+        net_clearance_ok=None if net_clearance is None else net_clearance >= -config.net_clearance_slack_m,
+        physical_sanity=physical,
+        size_residuals_m=dict(baseline_segment.get("size_residuals_m") if isinstance(baseline_segment.get("size_residuals_m"), Mapping) else {}),
+        diagnostics=diagnostics,
+    )
+
+
+def _repair_unverified_prior_anchor(
+    anchor: AnchorEvent,
+    world_xyz: tuple[float, float, float],
+    *,
+    role: str,
+) -> tuple[AnchorEvent, bool]:
+    if anchor.immovable or anchor.status == "human_reviewed":
+        return anchor, False
+    details = dict(anchor.details or {})
+    details["protected_span_prior_anchor_repair"] = {
+        "role": role,
+        "source": "frozen_baseline_arc_params",
+        "original_world_xyz": _vec_json(anchor.world_xyz),
+    }
+    return replace(
+        anchor,
+        world_xyz=world_xyz,
+        source=anchor.source or "protected_span_prior",
+        details=details,
+    ), True
+
+
+def _segment_reprojection_errors_from_params(
+    observations: Sequence[BallObservation],
+    p0: tuple[float, float, float],
+    v0: tuple[float, float, float],
+    t0: float,
+    *,
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+) -> dict[int, float]:
+    errors: dict[int, float] = {}
+    if not observations:
+        return errors
+    times = [obs.t for obs in observations]
+    points = _integrate_positions(p0, v0, times, t0=t0, physics=physics, config=config)
+    for obs, point in zip(observations, points, strict=True):
+        try:
+            errors[int(obs.frame)] = _distance2(_project_world_point(calibration, point), obs.xy)
+        except (TypeError, ValueError):
+            continue
+    return errors
+
+
+def _int_tuple(value: Any) -> tuple[int, ...]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return ()
+    parsed: list[int] = []
+    for item in value:
+        try:
+            parsed.append(int(item))
+        except (TypeError, ValueError):
+            continue
+    return tuple(parsed)
+
+
 def _post_final_protected_span_rollback(
     segments: Sequence[FlightSegmentFit],
     *,
@@ -3345,19 +3668,34 @@ def _head_segment_before_frame(
 ) -> FlightSegmentFit | None:
     if end_anchor.t <= segment.start_anchor.t + 1e-9:
         return None
-    observations = tuple(obs for obs in segment.observations if obs.t <= end_anchor.t + 1e-9)
-    inlier_frames = tuple(frame for frame in segment.inlier_frames if frame <= end_anchor.frame)
-    outlier_frames = tuple(frame for frame in segment.outlier_frames if frame <= end_anchor.frame)
-    reprojection_errors = {frame: error for frame, error in segment.reprojection_errors_px.items() if frame <= end_anchor.frame}
-    endpoint_pred = segment.predict(end_anchor.t, physics, config)
+    observations = tuple(obs for obs in segment.observations if obs.frame < end_anchor.frame)
+    if not observations:
+        return None
+    trim_obs = observations[-1]
+    trim_t = float(trim_obs.t)
+    if trim_t <= segment.start_anchor.t + 1e-9:
+        return None
+    trim_world = segment.predict(trim_t, physics, config)
+    trim_anchor = replace(
+        end_anchor,
+        anchor_id=f"{end_anchor.anchor_id}_protected_head_trim",
+        t=trim_t,
+        frame=int(trim_obs.frame),
+        world_xyz=trim_world,
+        status="protected_span_trim",
+        source="protected_span_overlay",
+    )
+    inlier_frames = tuple(frame for frame in segment.inlier_frames if frame < end_anchor.frame)
+    outlier_frames = tuple(frame for frame in segment.outlier_frames if frame < end_anchor.frame)
+    reprojection_errors = {frame: error for frame, error in segment.reprojection_errors_px.items() if frame < end_anchor.frame}
     return replace(
         segment,
-        end_anchor=end_anchor,
+        end_anchor=trim_anchor,
         observations=observations,
         inlier_frames=inlier_frames,
         outlier_frames=outlier_frames,
         reprojection_errors_px=reprojection_errors,
-        endpoint_error_m=_distance(endpoint_pred, end_anchor.world_xyz),
+        endpoint_error_m=0.0,
     )
 
 
@@ -3370,15 +3708,31 @@ def _tail_segment_after_frame(
 ) -> FlightSegmentFit | None:
     if start_anchor.t >= segment.end_anchor.t - 1e-9:
         return None
-    velocity = _segment_velocity_at(segment, start_anchor.t, physics=physics, config=config)
-    observations = tuple(obs for obs in segment.observations if obs.t >= start_anchor.t - 1e-9)
-    inlier_frames = tuple(frame for frame in segment.inlier_frames if frame >= start_anchor.frame)
-    outlier_frames = tuple(frame for frame in segment.outlier_frames if frame >= start_anchor.frame)
-    reprojection_errors = {frame: error for frame, error in segment.reprojection_errors_px.items() if frame >= start_anchor.frame}
+    observations = tuple(obs for obs in segment.observations if obs.frame > start_anchor.frame)
+    if not observations:
+        return None
+    trim_obs = observations[0]
+    trim_t = float(trim_obs.t)
+    if trim_t >= segment.end_anchor.t - 1e-9:
+        return None
+    trim_world = segment.predict(trim_t, physics, config)
+    velocity = _segment_velocity_at(segment, trim_t, physics=physics, config=config)
+    trim_anchor = replace(
+        start_anchor,
+        anchor_id=f"{start_anchor.anchor_id}_protected_tail_trim",
+        t=trim_t,
+        frame=int(trim_obs.frame),
+        world_xyz=trim_world,
+        status="protected_span_trim",
+        source="protected_span_overlay",
+    )
+    inlier_frames = tuple(frame for frame in segment.inlier_frames if frame > start_anchor.frame)
+    outlier_frames = tuple(frame for frame in segment.outlier_frames if frame > start_anchor.frame)
+    reprojection_errors = {frame: error for frame, error in segment.reprojection_errors_px.items() if frame > start_anchor.frame}
     return replace(
         segment,
-        start_anchor=start_anchor,
-        initial_position_m=start_anchor.world_xyz,
+        start_anchor=trim_anchor,
+        initial_position_m=trim_world,
         initial_velocity_mps=velocity,
         observations=observations,
         inlier_frames=inlier_frames,

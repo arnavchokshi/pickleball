@@ -499,6 +499,255 @@ def test_leave_one_out_validation_refits_bvp_segment_for_each_holdout(monkeypatc
     assert report["sample_count"] == 4
 
 
+def test_w4_loo_spot_refit_params_are_unique_per_holdout() -> None:
+    spot_root = Path("runs/lanes/w4_bvp_verify_20260707")
+    artifact_path = spot_root / "replay/post/wolverine_mixed_0200_mid_steep_corner/ball_track_arc_solved.json"
+    track_path = Path("runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/ball_track.json")
+    calibration_path = Path(
+        "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/court_calibration.json"
+    )
+    if not artifact_path.is_file() or not track_path.is_file() or not calibration_path.is_file():
+        pytest.skip("w4 BVP verifier spot artifacts are not present in this checkout")
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    segment_json = next(item for item in artifact["segments"] if int(item["segment_id"]) == 3)
+    track = json.loads(track_path.read_text(encoding="utf-8"))
+    calibration = json.loads(calibration_path.read_text(encoding="utf-8"))
+    anchors = [
+        AnchorEvent(
+            anchor_id=str(item["anchor_id"]),
+            kind=str(item["kind"]),
+            t=float(item["t"]),
+            frame=int(item["frame"]),
+            world_xyz=tuple(float(value) for value in item["world_xyz"]),
+            sigma_m=float(item["sigma_m"]),
+            status=str(item["status"]),
+            player_id=item.get("player_id"),
+            immovable=bool(item.get("immovable", False)),
+            source=item.get("source"),
+            details=item.get("details") if isinstance(item.get("details"), dict) else None,
+        )
+        for item in segment_json["anchors_used"]
+    ]
+    observations = []
+    for frame_idx in range(int(segment_json["frame_start"]), int(segment_json["frame_end"]) + 1):
+        frame = track["frames"][frame_idx]
+        if frame.get("visible") is not True or frame.get("xy") is None:
+            continue
+        observations.append(
+            BallObservation(
+                frame=frame_idx,
+                t=float(frame.get("t") if frame.get("t") is not None else frame_idx / 30.0),
+                xy=tuple(float(value) for value in frame["xy"]),
+                confidence=float(frame.get("conf") or 1.0),
+                visible=True,
+            )
+        )
+    segment = ball_arc_solver_module.FlightSegmentFit(
+        segment_id=int(segment_json["segment_id"]),
+        status=str(segment_json["status"]),
+        start_anchor=anchors[0],
+        end_anchor=anchors[1],
+        initial_position_m=tuple(float(value) for value in segment_json["initial_position_m"]),
+        initial_velocity_mps=tuple(float(value) for value in segment_json["initial_velocity_mps"]),
+        observations=tuple(observations),
+        inlier_frames=tuple(int(value) for value in segment_json["inlier_frames"]),
+        outlier_frames=tuple(int(value) for value in segment_json["outlier_frames"]),
+        reprojection_errors_px={},
+        reprojection_rmse_px=segment_json.get("reprojection_rmse_px"),
+        max_reprojection_error_px=segment_json.get("max_reprojection_error_px"),
+        endpoint_error_m=float(segment_json["endpoint_error_m"]),
+        net_clearance_m=segment_json.get("net_clearance_m"),
+        net_clearance_ok=segment_json.get("net_clearance_ok"),
+        physical_sanity=segment_json.get("physical_sanity") or {},
+        size_residuals_m=segment_json.get("size_residuals_m") or {},
+    )
+    physics = PhysicsParameters.for_ball_type("outdoor")
+    config = BallArcSolverConfig()
+    rows = []
+    for held_out in [obs for obs in segment.observations if obs.frame in segment.inlier_frames][:5]:
+        refit = ball_arc_solver_module._leave_one_out_refit_segment(
+            segment,
+            [obs for obs in segment.observations if obs.frame != held_out.frame],
+            held_out_frame=held_out.frame,
+            all_candidates_by_frame=None,
+            calibration=calibration,
+            physics=physics,
+            config=config,
+        )
+        assert refit is not None
+        rows.append((refit.initial_position_m, refit.initial_velocity_mps))
+
+    assert len({json.dumps(row, sort_keys=True) for row in rows}) == len(rows)
+
+
+def test_protected_span_prior_overlays_baseline_params_before_validity_gate() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    config = BallArcSolverConfig(min_segment_observations=3)
+    fps = 60.0
+    p0 = (0.0, -1.0, 1.0)
+    p1 = (0.3, -0.2, BALL_RADIUS_M)
+    t0 = 10.0 / fps
+    t1 = 20.0 / fps
+    v0 = ((p1[0] - p0[0]) / (t1 - t0), (p1[1] - p0[1]) / (t1 - t0), _vz_for_endpoint(p0[2], p1[2], t1 - t0))
+    observations = tuple(
+        BallObservation(
+            frame=frame,
+            t=frame / fps,
+            xy=_project(calibration, _no_drag_position(p0, v0, frame / fps - t0)),
+            confidence=0.95,
+            visible=True,
+        )
+        for frame in range(10, 21)
+    )
+    baseline = replace(
+        _segment_with_physical_sanity(99, status="fit", violation=None),
+        start_anchor=_anchor("baseline-start", "contact", t0, p0, frame=10),
+        end_anchor=_anchor("baseline-end", "bounce", t1, p1, frame=20, status="human_reviewed"),
+        initial_position_m=p0,
+        initial_velocity_mps=v0,
+        observations=observations,
+        inlier_frames=tuple(obs.frame for obs in observations),
+        outlier_frames=(),
+        reprojection_rmse_px=1.0,
+        max_reprojection_error_px=2.0,
+        endpoint_error_m=0.0,
+    )
+    current = replace(
+        baseline,
+        segment_id=0,
+        status="fit_bvp_fallback",
+        start_anchor=_anchor("current-start", "contact", 0.0, (0.0, -2.0, 1.0), frame=0),
+        end_anchor=_anchor("current-end", "bounce", 30.0 / fps, (0.2, 2.0, BALL_RADIUS_M), frame=30, status="human_reviewed"),
+        initial_position_m=(9.0, 9.0, 2.0),
+        initial_velocity_mps=(1.0, 1.0, 1.0),
+        reprojection_rmse_px=50.0,
+    )
+    repaired, report = ball_arc_solver_module._apply_protected_span_priors(
+        [current],
+        baseline_artifact={"segments": [baseline.to_json()]},
+        protected_spans=({"name": "synthetic_protected", "segment_id": 99, "interval": (10, 20)},),
+        observations=observations,
+        calibration=calibration,
+        physics=physics,
+        config=config,
+        net_plane=None,
+    )
+
+    gated = ball_arc_solver_module._apply_fit_validity_gates(repaired, physics=physics, config=config, net_plane=None)
+    protected = next(segment for segment in gated if segment.start_anchor.frame == 10 and segment.end_anchor.frame == 20)
+    assert protected.status == "fit"
+    assert protected.initial_position_m == pytest.approx(p0)
+    assert protected.initial_velocity_mps == pytest.approx(v0)
+    assert report["applied_count"] == 1
+    assert report["rows"][0]["action"] == "prior_applied"
+
+
+def test_protected_span_prior_also_restores_inclusive_boundary_segment() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    config = BallArcSolverConfig(min_segment_observations=3)
+    protected = replace(
+        _segment_with_physical_sanity(10, status="fit", violation=None),
+        start_anchor=_anchor("protected-start", "contact", 10 / 60.0, (0.0, -1.0, 1.0), frame=10),
+        end_anchor=_anchor("protected-end", "bounce", 20 / 60.0, (0.2, -0.2, BALL_RADIUS_M), frame=20, status="human_reviewed"),
+    )
+    boundary = replace(
+        _segment_with_physical_sanity(11, status="fit", violation=None),
+        start_anchor=_anchor("boundary-start", "bounce", 20 / 60.0, (0.2, -0.2, BALL_RADIUS_M), frame=20, status="human_reviewed"),
+        end_anchor=_anchor("boundary-end", "contact", 24 / 60.0, (0.4, 0.2, 0.7), frame=24),
+        initial_position_m=(0.2, -0.2, BALL_RADIUS_M),
+        initial_velocity_mps=(0.7, 2.0, 3.0),
+    )
+    current_boundary = replace(
+        boundary,
+        segment_id=1,
+        status="fit_bvp_fallback",
+        initial_position_m=(4.0, 4.0, 1.0),
+        initial_velocity_mps=(1.0, 1.0, 1.0),
+    )
+
+    repaired, report = ball_arc_solver_module._apply_protected_span_priors(
+        [
+            replace(protected, segment_id=0, status="fit_bvp_fallback"),
+            current_boundary,
+        ],
+        baseline_artifact={"segments": [protected.to_json(), boundary.to_json()]},
+        protected_spans=({"name": "synthetic_protected", "segment_id": 10, "interval": (10, 20)},),
+        observations=tuple([*protected.observations, *boundary.observations]),
+        calibration=calibration,
+        physics=physics,
+        config=config,
+        net_plane=None,
+    )
+
+    assert any(segment.start_anchor.frame == 20 and segment.end_anchor.frame == 24 for segment in repaired)
+    restored = next(segment for segment in repaired if segment.start_anchor.frame == 20 and segment.end_anchor.frame == 24)
+    assert restored.status == "fit"
+    assert restored.initial_position_m == pytest.approx(boundary.initial_position_m)
+    assert report["non_gated_action_counts"]["boundary_prior_applied"] == 1
+
+
+def test_protected_span_prior_is_still_demoted_by_unchanged_validity_gates() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    config = BallArcSolverConfig(min_segment_observations=3)
+    baseline = replace(
+        _segment_with_physical_sanity(99, status="fit", violation=None),
+        start_anchor=_anchor("baseline-fast-start", "contact", 0.0, (0.0, -1.0, 1.0), frame=0),
+        end_anchor=_anchor("baseline-fast-end", "bounce", 0.5, (30.0, -1.0, BALL_RADIUS_M), frame=30, status="human_reviewed"),
+        initial_position_m=(0.0, -1.0, 1.0),
+        initial_velocity_mps=(60.0, 0.0, 0.0),
+        endpoint_error_m=0.0,
+    )
+
+    repaired, report = ball_arc_solver_module._apply_protected_span_priors(
+        [_segment_with_physical_sanity(0, status="fit_bvp_fallback", violation=None)],
+        baseline_artifact={"segments": [baseline.to_json()]},
+        protected_spans=({"name": "synthetic_fast", "segment_id": 99, "interval": (0, 30)},),
+        observations=baseline.observations,
+        calibration=calibration,
+        physics=physics,
+        config=config,
+        net_plane=None,
+    )
+
+    gated = ball_arc_solver_module._apply_fit_validity_gates(repaired, physics=physics, config=config, net_plane=None)
+    assert report["applied_count"] == 1
+    assert gated[0].status == "fit_bvp_fallback"
+    assert gated[0].diagnostics["fit_validity_gate"]["reason"] == "initial_speed_outside_plausible_range_mps"
+
+
+def test_protected_span_prior_repairs_unverified_endpoint_before_gate() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    config = BallArcSolverConfig(min_segment_observations=3)
+    baseline = replace(
+        _segment_with_physical_sanity(99, status="fit", violation=None),
+        start_anchor=_anchor("repair-start", "bounce", 0.0, (0.0, -1.0, BALL_RADIUS_M), frame=0, status="human_reviewed"),
+        end_anchor=_anchor("repair-contact", "contact", 0.2, (2.0, 2.0, 1.0), frame=12),
+        initial_position_m=(0.0, -1.0, BALL_RADIUS_M),
+        initial_velocity_mps=(1.0, 4.0, 2.0),
+        endpoint_error_m=1.0,
+    )
+
+    repaired, _report = ball_arc_solver_module._apply_protected_span_priors(
+        [_segment_with_physical_sanity(0, status="fit_bvp_fallback", violation=None)],
+        baseline_artifact={"segments": [baseline.to_json()]},
+        protected_spans=({"name": "synthetic_endpoint_repair", "segment_id": 99, "interval": (0, 12)},),
+        observations=baseline.observations,
+        calibration=calibration,
+        physics=physics,
+        config=config,
+        net_plane=None,
+    )
+
+    gated = ball_arc_solver_module._apply_fit_validity_gates(repaired, physics=physics, config=config, net_plane=None)
+    assert gated[0].status == "fit"
+    assert gated[0].endpoint_error_m == pytest.approx(0.0)
+    assert gated[0].diagnostics["protected_span_prior"]["endpoint_repaired_before_gate"] is True
+
+
 def test_physical_summary_violation_fraction_excludes_bvp_fallback_segments_from_denominator() -> None:
     good_fit = _segment_with_physical_sanity(0, status="fit", violation=None)
     violating_fit = _segment_with_physical_sanity(1, status="fit", violation="apex_height_implausible")
