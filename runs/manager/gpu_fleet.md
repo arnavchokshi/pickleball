@@ -22,11 +22,19 @@ WAVE-4 FLEET LOG (2026-07-07, manager):
   transport failure exit-1 non-retryable while ssh transport bug (`ssh_packet_write_poll: Result
   too large`) recurs on large transfers — rsync fallback exit-255 IS retryable.
 WAVE-5 FLEET LOG (2026-07-07, manager):
-- pickleball-h100-w5p22 (H100 a3 spot, ase1-b preferred; fallback regions per quota-unlock list;
-  A100-80GB then A100-40GB SKU fallback) — PROVISIONING DELEGATED to Sonnet lane w5_p22latent_20260707
-  (self-provision from snapshot pickleball-fleet1-snap-20260707 w/ pd-balanced; installs ffmpeg;
-  snapshots updated disk as new fan template at lane end; self-DELETE + cost report). Budget: 3-6h
-  x $0.6-4.3/hr ≈ $2-26 (+50% outage contingency booked); in-VM idle watchdog required (>2h VM).
+- pickleball-h100-w5p22 (H100 a3-highgpu-1g SPOT, asia-southeast1-b, pd-balanced 200GB boot disk
+  FROM pickleball-fleet1-snap-20260707) — CREATED 2026-07-07 by lane w5_p22latent_20260707 (1st
+  attempt succeeded, no quota fallback needed). IP 35.187.224.146 (recycles — always --remote-host).
+  labels fable-lane=w5-p22latent,fable-fleet=pickleball,owner=arnavchokshi. BUSY: P2-2 MHR decode
+  wrapper + fidelity gates + latent smoothing prototype. Self-DELETE + new ffmpeg snapshot at lane
+  end. Budget: 3-6h x $0.6-4.3/hr ≈ $2-26 (+50% outage contingency booked); in-VM idle watchdog
+  armed (>2h VM).
+
+- pickleball-h100-w5ball (H100 a3 spot, ase1-b preferred; same fallback ladder) — PROVISIONING
+  DELEGATED to Sonnet lane w5_ballretrain_20260707 (self-provision from snapshot; code-identity =
+  20 contract tests on VM @ >= c1f707d6f; stage-1 12k retrain + seed fine-tune + OFFICIAL bridge
+  scoring + LoSO; self-DELETE + cost report). Budget: probe-gated, est 2-5h x $0.6-4.3/hr ~ $2-22
+  (+50% contingency); idle watchdog required. 2 of 4 concurrent GPUs (w5p22 is the other).
 
 WAVE-4 FINAL FLEET ACCOUNTING (2026-07-08 close): ALL wave-4 VMs DELETED, list-confirmed by
 manager + each lane. (1) pickleball-h100-w4body: 58m01s, $0.55-4.11 (BODY-validated 2.37×).
