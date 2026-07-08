@@ -7,7 +7,14 @@ and a read-only playback-frame-rate diagnosis for your critique item #1. The cri
 ingest (queue #1) is STAGED HOT — it fires the moment your first CVAT export lands. VERIFIED=0 unchanged.
 
 ## Blockers (typed STOPs)
-(empty — nothing blocked; everything below is asks, not blockers)
+
+### STOP: needs-decision (gcloud reauth)
+**One-line ask:** run `gcloud auth login` once (type `! gcloud auth login` in the Claude session for interactive flow).
+**Why this needs you:** Google fired a periodic reauth challenge on the hello@ refresh token (known same-day pattern, manual §12); it cannot be answered non-interactively, and no standing rule lets me work around auth.
+**Evidence:** `gcloud compute instances list` → "Reauthentication failed. cannot prompt during non-interactive execution" (watchdog class F, 2026-07-08 ~14:3x; re-confirmed manually).
+**Options considered:** ssh-key fallback works for existing VMs but there are ZERO VMs up (nothing burning) and ssh cannot CREATE the final errand VM; waiting is safe.
+**If you don't answer:** the wave-6 consolidated GPU errand (owner-label re-score + snapshot template re-cut + legitimate GATE-1b raw measurement) stays queued; everything else proceeds to wave close, and the errand items carry to the closeout as auth-gated.
+**Everything else keeps running:** labelingest is finishing its wide-suite self-verification; all other wave-6 lanes are landed and ruled; $0 idle GPU spend.
 
 ## Asks (numbered, easiest-first)
 1. **Label session 01 + export (CRITICAL PATH — the single highest-value hour you can give):**
