@@ -304,7 +304,12 @@ def test_build_ball_tracknet_cvat_dataset_records_blur_manifest_without_changing
     row = manifest["splits"]["train"][0]
     assert row["blur_annotation_summary"] == {
         "visible_ball_frame_count": 2,
-        "center_convention_counts": {"blur_midpoint": 1, "disk_center": 1, "unknown": 0},
+        "center_convention_counts": {
+            "blur_midpoint": 1,
+            "disk_center": 1,
+            "review_to_blur_streak_center": 0,
+            "unknown": 0,
+        },
         "blur_label_quality_counts": {"absent": 1, "clear": 1, "unknown": 0, "weak": 0},
         "blur_angle_labeled_count": 1,
         "blur_length_labeled_count": 1,

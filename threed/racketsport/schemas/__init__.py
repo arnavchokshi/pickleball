@@ -809,7 +809,7 @@ class CvatVideoBox(BaseModel):
     occluded: bool
     source: str | None = None
     visibility_level: BallVisibilityLevel | None = None
-    center_convention: Literal["blur_midpoint", "disk_center", "unknown"] | None = None
+    center_convention: Literal["blur_midpoint", "disk_center", "unknown", "review_to_blur_streak_center"] | None = None
     blur_angle_deg: FiniteFloat | None = None
     blur_length_px: FiniteFloat | None = None
     blur_width_px: FiniteFloat | None = None
@@ -880,7 +880,7 @@ class CvatVideoAnnotationSummary(BaseModel):
 class CvatVideoAnnotations(StrictArtifact):
     artifact_type: Literal["racketsport_cvat_video_annotations"]
     clip_id: str
-    source_format: Literal["cvat_video_1_1"]
+    source_format: Literal["cvat_video_1_1", "cvat_images_1_1"]
     source_path: str
     reviewed_frame_indices: list[int] | None = None
     reviewed_frame_indices_source: Literal["cvat_frame_filter", "explicit", "dense_all_frames"] | None = None

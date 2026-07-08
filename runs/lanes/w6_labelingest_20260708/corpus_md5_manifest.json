@@ -1,0 +1,321 @@
+{
+  "artifact_type": "racketsport_reviewed_corpus_md5_manifest",
+  "counts": {
+    "per_class": {
+      "negative": 439,
+      "positive": 682
+    },
+    "per_clip": {
+      "73VurrTKCZ8_rally_0001": {
+        "negative_row_count": 8,
+        "positive_row_count": 24,
+        "reviewed_row_count": 32,
+        "visibility:clear": 24,
+        "visibility:none": 8
+      },
+      "73VurrTKCZ8_rally_0002": {
+        "negative_row_count": 59,
+        "positive_row_count": 148,
+        "reviewed_row_count": 207,
+        "visibility:clear": 148,
+        "visibility:none": 59
+      },
+      "73VurrTKCZ8_rally_0003": {
+        "negative_row_count": 3,
+        "positive_row_count": 18,
+        "reviewed_row_count": 21,
+        "visibility:clear": 18,
+        "visibility:none": 3
+      },
+      "73VurrTKCZ8_rally_0004": {
+        "negative_row_count": 1,
+        "positive_row_count": 3,
+        "reviewed_row_count": 4,
+        "visibility:clear": 3,
+        "visibility:none": 1
+      },
+      "73VurrTKCZ8_rally_0005": {
+        "negative_row_count": 1,
+        "positive_row_count": 16,
+        "reviewed_row_count": 17,
+        "visibility:clear": 16,
+        "visibility:none": 1
+      },
+      "73VurrTKCZ8_rally_0006": {
+        "negative_row_count": 2,
+        "positive_row_count": 17,
+        "reviewed_row_count": 19,
+        "visibility:clear": 17,
+        "visibility:none": 2
+      },
+      "73VurrTKCZ8_rally_0007": {
+        "negative_row_count": 2,
+        "positive_row_count": 7,
+        "reviewed_row_count": 9,
+        "visibility:clear": 7,
+        "visibility:none": 2
+      },
+      "73VurrTKCZ8_rally_0008": {
+        "negative_row_count": 20,
+        "positive_row_count": 68,
+        "reviewed_row_count": 88,
+        "visibility:clear": 68,
+        "visibility:none": 20
+      },
+      "Ezz6HDNHlnk_rally_0001": {
+        "negative_row_count": 4,
+        "positive_row_count": 4,
+        "reviewed_row_count": 8,
+        "visibility:clear": 4,
+        "visibility:none": 4
+      },
+      "Ezz6HDNHlnk_rally_0002": {
+        "negative_row_count": 50,
+        "positive_row_count": 55,
+        "reviewed_row_count": 105,
+        "visibility:clear": 55,
+        "visibility:none": 50
+      },
+      "Ezz6HDNHlnk_rally_0003": {
+        "negative_row_count": 2,
+        "positive_row_count": 1,
+        "reviewed_row_count": 3,
+        "visibility:clear": 1,
+        "visibility:none": 2
+      },
+      "Ezz6HDNHlnk_rally_0004": {
+        "negative_row_count": 93,
+        "positive_row_count": 76,
+        "reviewed_row_count": 169,
+        "visibility:clear": 76,
+        "visibility:none": 93
+      },
+      "Ezz6HDNHlnk_rally_0005": {
+        "positive_row_count": 1,
+        "reviewed_row_count": 1,
+        "visibility:clear": 1
+      },
+      "Ezz6HDNHlnk_rally_0006": {
+        "negative_row_count": 32,
+        "positive_row_count": 32,
+        "reviewed_row_count": 64,
+        "visibility:clear": 32,
+        "visibility:none": 32
+      },
+      "Ezz6HDNHlnk_rally_0007": {
+        "negative_row_count": 24,
+        "positive_row_count": 10,
+        "reviewed_row_count": 34,
+        "visibility:clear": 10,
+        "visibility:none": 24
+      },
+      "Ezz6HDNHlnk_rally_0008": {
+        "negative_row_count": 2,
+        "positive_row_count": 14,
+        "reviewed_row_count": 16,
+        "visibility:clear": 14,
+        "visibility:none": 2
+      },
+      "HyUqT7zFiwk_rally_0001": {
+        "negative_row_count": 40,
+        "positive_row_count": 41,
+        "reviewed_row_count": 81,
+        "visibility:clear": 39,
+        "visibility:none": 40,
+        "visibility:partial": 2
+      },
+      "_L0HVmAlCQI_rally_0001": {
+        "negative_row_count": 24,
+        "positive_row_count": 57,
+        "reviewed_row_count": 81,
+        "visibility:clear": 55,
+        "visibility:none": 24,
+        "visibility:partial": 2
+      },
+      "wBu8bC4OfUY_rally_0001": {
+        "negative_row_count": 34,
+        "positive_row_count": 47,
+        "reviewed_row_count": 81,
+        "visibility:clear": 30,
+        "visibility:none": 32,
+        "visibility:out_of_frame": 2,
+        "visibility:partial": 17
+      },
+      "zwCtH_i1_S4_rally_0001": {
+        "negative_row_count": 38,
+        "positive_row_count": 43,
+        "reviewed_row_count": 81,
+        "visibility:clear": 43,
+        "visibility:none": 38
+      }
+    },
+    "per_source": {
+      "73VurrTKCZ8": {
+        "negative_row_count": 96,
+        "positive_row_count": 301,
+        "reviewed_row_count": 397,
+        "source_class:outdoor_day_multicam": 397,
+        "visibility:clear": 301,
+        "visibility:none": 96
+      },
+      "Ezz6HDNHlnk": {
+        "negative_row_count": 207,
+        "positive_row_count": 193,
+        "reviewed_row_count": 400,
+        "source_class:outdoor_night_fenced": 400,
+        "visibility:clear": 193,
+        "visibility:none": 207
+      },
+      "HyUqT7zFiwk": {
+        "negative_row_count": 40,
+        "positive_row_count": 41,
+        "reviewed_row_count": 81,
+        "source_class:indoor_court_level": 81,
+        "visibility:clear": 39,
+        "visibility:none": 40,
+        "visibility:partial": 2
+      },
+      "_L0HVmAlCQI": {
+        "negative_row_count": 24,
+        "positive_row_count": 57,
+        "reviewed_row_count": 81,
+        "source_class:outdoor_night_tennis_overlay": 81,
+        "visibility:clear": 55,
+        "visibility:none": 24,
+        "visibility:partial": 2
+      },
+      "wBu8bC4OfUY": {
+        "negative_row_count": 34,
+        "positive_row_count": 47,
+        "reviewed_row_count": 81,
+        "source_class:outdoor_night_tennis_overlay": 81,
+        "visibility:clear": 30,
+        "visibility:none": 32,
+        "visibility:out_of_frame": 2,
+        "visibility:partial": 17
+      },
+      "zwCtH_i1_S4": {
+        "negative_row_count": 38,
+        "positive_row_count": 43,
+        "reviewed_row_count": 81,
+        "source_class:outdoor_day_broadcast_overlay": 81,
+        "visibility:clear": 43,
+        "visibility:none": 38
+      }
+    },
+    "totals": {
+      "negative_row_count": 439,
+      "positive_row_count": 682,
+      "reviewed_row_count": 1121
+    },
+    "visibility_level_counts": {
+      "clear": 661,
+      "none": 437,
+      "out_of_frame": 2,
+      "partial": 21
+    }
+  },
+  "files": [
+    {
+      "bytes": 101866,
+      "md5": "961d54335d010b978226995c9c899b32",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0001/reviewed_boxes.json"
+    },
+    {
+      "bytes": 381677,
+      "md5": "da7a54d8f326012e98740e6a4dcf7c53",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0002/reviewed_boxes.json"
+    },
+    {
+      "bytes": 55208,
+      "md5": "85caf0359ac92f2cce78f510fea7a709",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0003/reviewed_boxes.json"
+    },
+    {
+      "bytes": 22225,
+      "md5": "f84153c14d63c715cdc2f87b7335711b",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0004/reviewed_boxes.json"
+    },
+    {
+      "bytes": 70775,
+      "md5": "a535b0c7b4e46b1015f41907fc840cf9",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0005/reviewed_boxes.json"
+    },
+    {
+      "bytes": 72148,
+      "md5": "682fa0efc0d5493d1de1a170a27ba86b",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0006/reviewed_boxes.json"
+    },
+    {
+      "bytes": 26328,
+      "md5": "f2a9ffa7e3ea89296321f6d8b02afd71",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0007/reviewed_boxes.json"
+    },
+    {
+      "bytes": 293779,
+      "md5": "2ade3788b2ba599d0d6cbc67ad606cd8",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0008/reviewed_boxes.json"
+    },
+    {
+      "bytes": 93223,
+      "md5": "9b386f4f7984736ad323f8c21c223278",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0001/reviewed_boxes.json"
+    },
+    {
+      "bytes": 395848,
+      "md5": "223035a35583089b46dd1be3e454283c",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0002/reviewed_boxes.json"
+    },
+    {
+      "bytes": 31913,
+      "md5": "cbb1c630ec50167d1d19cababd9a2401",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0003/reviewed_boxes.json"
+    },
+    {
+      "bytes": 659721,
+      "md5": "7ffd34b8bab64283d7da160cd3f2db65",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0004/reviewed_boxes.json"
+    },
+    {
+      "bytes": 17249,
+      "md5": "c4abb1fa1e74b1bf67d1195f5722a62c",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0005/reviewed_boxes.json"
+    },
+    {
+      "bytes": 386239,
+      "md5": "29b168299463559076282b4b92fe3034",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0006/reviewed_boxes.json"
+    },
+    {
+      "bytes": 199563,
+      "md5": "c9dd3db4d063bc9eb73f827f68bcb1fe",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0007/reviewed_boxes.json"
+    },
+    {
+      "bytes": 169161,
+      "md5": "73dba0428fff3789db523c6bb51c2d15",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0008/reviewed_boxes.json"
+    },
+    {
+      "bytes": 2904771,
+      "md5": "25d5b40b8fb59242931c853b86ceed25",
+      "relative_path": "reviewed_corpus/HyUqT7zFiwk_rally_0001/reviewed_boxes.json"
+    },
+    {
+      "bytes": 182547,
+      "md5": "105a2d8ce561a795a4742885a22d5dcb",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0001/reviewed_boxes.json"
+    },
+    {
+      "bytes": 1300963,
+      "md5": "3055881e39ea89810d6ebe2bcb8bd7c7",
+      "relative_path": "reviewed_corpus/wBu8bC4OfUY_rally_0001/reviewed_boxes.json"
+    },
+    {
+      "bytes": 1820364,
+      "md5": "8e9590fb9683cc97fc511f6a59452375",
+      "relative_path": "reviewed_corpus/zwCtH_i1_S4_rally_0001/reviewed_boxes.json"
+    }
+  ],
+  "schema_version": 1
+}
