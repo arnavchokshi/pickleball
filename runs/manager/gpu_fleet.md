@@ -94,7 +94,7 @@ Auth: owner gcloud refresh token (hello@; SA key creation org-blocked); dead aut
 
 WAVE-6 FLEET LOG (2026-07-08, manager):
 - pickleball-h100-w6gate1b (H100 a3-highgpu-1g SPOT, asia-southeast1-b, pd-balanced 200GB from
-  pickleball-fleet-snap-20260708-ffmpeg) — status: PROVISIONING (Sonnet lane w6_gpu_instrument_20260708,
+  pickleball-fleet-snap-20260708-ffmpeg) — DONE+DELETED 2026-07-08T21:01Z list-confirmed (created 19:52Z, uptime 1.158h ~= $0.66-4.92, zero preemptions; 3 BODY arms + GATE-1b harness + 541/276 evidence + mesh-cap proof pulled w/ md5; TEMPLATE DIRTY ON BOOT: 5 truncated core files, reset --hard recovered — re-cut template next errand). (Sonnet lane w6_gpu_instrument_20260708,
   self-tearing provision→run→verify→DELETE→report). Mission: (1) snapshot-hygiene check (git status
   CLEAN on boot — gap on record) + sync to committed dd5e5980d + version-stamp verify; (2) wolverine
   raw-postchain instrument dispatch (GATE-1b: decode(emit) <=1mm, mesh-skel <=5mm p95 vs raw sidecar

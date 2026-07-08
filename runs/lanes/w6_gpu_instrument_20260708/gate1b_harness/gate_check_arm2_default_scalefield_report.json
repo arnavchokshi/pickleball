@@ -1,0 +1,100 @@
+{
+  "artifact_type": "w5_p22latent_gate_check_report",
+  "body_mesh_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260708T202415Z/body_mesh.json",
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "court_calibration_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260708T202415Z/court_calibration.json",
+  "gate_1a": {
+    "body_pose": {
+      "component": "body_pose",
+      "frame_count": 680,
+      "max_abs_error_deg": 1.366037849948043e-05,
+      "mean_abs_error_deg": 9.364700126468506e-09,
+      "p95_abs_error_deg": 0.0
+    },
+    "gate": "gate_1a_euler_cont_euler_idempotence",
+    "global_orient": {
+      "component": "global_orient",
+      "frame_count": 680,
+      "max_abs_error_deg": 4.098113640793599e-05,
+      "mean_abs_error_deg": 2.290122438353137e-06,
+      "p95_abs_error_deg": 1.366037849948043e-05
+    },
+    "max_abs_error_deg": 4.098113640793599e-05,
+    "passed": true,
+    "target_max_abs_error_deg": 0.1
+  },
+  "gate_1b": {
+    "gate": "gate_1b_world_round_trip",
+    "passed": false,
+    "per_player": {
+      "18": {
+        "joints_world_max_abs_error_mm": 233.00876029937447,
+        "joints_world_p95_abs_error_mm": 195.53503624809895,
+        "sample_count": 40,
+        "vertices_world_max_abs_error_mm": 96.1636651073621,
+        "vertices_world_p95_abs_error_mm": 85.78364560699217
+      },
+      "19": {
+        "joints_world_max_abs_error_mm": 201.95870601122567,
+        "joints_world_p95_abs_error_mm": 111.28180134386206,
+        "sample_count": 40,
+        "vertices_world_max_abs_error_mm": 227.6138316846784,
+        "vertices_world_p95_abs_error_mm": 85.34363427437862
+      },
+      "20": {
+        "joints_world_max_abs_error_mm": 230.4421150145523,
+        "joints_world_p95_abs_error_mm": 115.97494687219168,
+        "sample_count": 40,
+        "vertices_world_max_abs_error_mm": 107.33912279002489,
+        "vertices_world_p95_abs_error_mm": 96.92726246015208
+      },
+      "21": {
+        "joints_world_max_abs_error_mm": 222.31342278047384,
+        "joints_world_p95_abs_error_mm": 101.85545564060857,
+        "sample_count": 40,
+        "vertices_world_max_abs_error_mm": 112.54958817131563,
+        "vertices_world_p95_abs_error_mm": 76.05200770095189
+      }
+    },
+    "scale_source": "field",
+    "target_max_abs_error_mm": 1.0,
+    "worst_joints_world_max_abs_error_mm": 233.00876029937447,
+    "worst_vertices_world_max_abs_error_mm": 227.6138316846784
+  },
+  "mesh_skeleton_divergence": {
+    "passed": false,
+    "per_player": {
+      "18": {
+        "p95_mm_max_over_sample": 50.800315856933594,
+        "p95_mm_mean_over_sample": 49.73206253051758,
+        "sample_count": 40
+      },
+      "19": {
+        "p95_mm_max_over_sample": 53.37696075439453,
+        "p95_mm_mean_over_sample": 49.388803768157956,
+        "sample_count": 40
+      },
+      "20": {
+        "p95_mm_max_over_sample": 53.49998474121094,
+        "p95_mm_mean_over_sample": 50.82908668518066,
+        "sample_count": 40
+      },
+      "21": {
+        "p95_mm_max_over_sample": 52.60371780395508,
+        "p95_mm_mean_over_sample": 50.07477178573608,
+        "sample_count": 40
+      }
+    },
+    "target_p95_mm": 5.0,
+    "worst_p95_mm_over_sample": 53.49998474121094
+  },
+  "player_ids": [
+    "18",
+    "19",
+    "20",
+    "21"
+  ],
+  "schema_version": 1,
+  "total_real_frame_sample_count": 680,
+  "wall_seconds": 48.642807722091675
+}
