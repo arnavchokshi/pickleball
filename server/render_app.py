@@ -175,6 +175,7 @@ def create_app(
             build_auth_router,
             build_clips_router,
             build_jobs_v2_router,
+            build_profiles_worker_router,
             build_stripe_webhook_router,
         )
         from .routes.worker import build_worker_router
@@ -282,7 +283,14 @@ def create_app(
                 with_dynamic_eta=_with_dynamic_eta,
             )
         )
-        app.include_router(build_account_router(auth_config=auth_config))
+        app.include_router(
+            build_account_router(
+                db=accounts_db,
+                s3_client=accounts_s3,
+                bucket=accounts_bucket,
+                auth_config=auth_config,
+            )
+        )
         app.include_router(
             build_stripe_webhook_router(
                 stripe_enabled=resolved_env.get("PICKLEBALL_STRIPE_ENABLED", "0").strip() == "1",
@@ -299,6 +307,15 @@ def create_app(
                 db=accounts_db,
                 worker_token=resolved_env.get("PICKLEBALL_WORKER_BEARER_TOKEN", "").strip(),
                 with_dynamic_eta=_with_dynamic_eta,
+            )
+        )
+        # INFRA-5: read-only profile-registry access for the worker, same
+        # bearer token, mounted for the same reason (independent of the
+        # queue flag).
+        app.include_router(
+            build_profiles_worker_router(
+                db=accounts_db,
+                worker_token=resolved_env.get("PICKLEBALL_WORKER_BEARER_TOKEN", "").strip(),
             )
         )
     else:

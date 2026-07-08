@@ -282,7 +282,13 @@ def test_login_rate_limited_429_at_eleventh_request(tmp_path: Path) -> None:
     assert eleventh.status_code == 429
 
 
-def test_account_delete_is_jwt_gated_501_stub(tmp_path: Path) -> None:
+def test_account_delete_is_jwt_gated_and_requires_password_body(tmp_path: Path) -> None:
+    # The full delete-cascade behavior (S3 + Mongo, correct/wrong password)
+    # is covered end-to-end in test_delete_cascade.py (INFRA-5), which sets
+    # up moto so the cascade's real S3 calls are safe to exercise. This test
+    # only proves the auth surface: no JWT -> 401, and a missing `password`
+    # field in the body -> 422 (Pydantic validation runs before the handler,
+    # so this never touches S3/Mongo -- safe without moto in this module).
     client = _make_client(tmp_path)
     _register(client)
     access_token = _login(client)["access_token"]
@@ -290,10 +296,10 @@ def test_account_delete_is_jwt_gated_501_stub(tmp_path: Path) -> None:
     unauthenticated = client.delete("/api/account")
     assert unauthenticated.status_code == 401
 
-    authenticated = client.delete(
-        "/api/account", headers={"Authorization": f"Bearer {access_token}"}
+    missing_password = client.request(
+        "DELETE", "/api/account", headers={"Authorization": f"Bearer {access_token}"}, json={}
     )
-    assert authenticated.status_code == 501
+    assert missing_password.status_code == 422
 
 
 def test_stripe_webhook_stub_returns_503_while_disabled(tmp_path: Path) -> None:
