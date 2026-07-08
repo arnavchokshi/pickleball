@@ -179,10 +179,16 @@ public final class RenderGatewayClient: @unchecked Sendable {
 
     private let baseURL: URL
     private let session: URLSession
+    private let accessTokenProvider: (@Sendable () -> String?)?
 
-    public init(baseURL: URL = RenderGatewayClient.defaultBaseURL, session: URLSession = .shared) {
+    public init(
+        baseURL: URL = RenderGatewayClient.defaultBaseURL,
+        session: URLSession = .shared,
+        accessTokenProvider: (@Sendable () -> String?)? = nil
+    ) {
         self.baseURL = baseURL
         self.session = session
+        self.accessTokenProvider = accessTokenProvider
     }
 
     public func submitJob(upload: RenderGatewayUploadRequest) async throws -> RenderGatewayJob {
@@ -192,14 +198,26 @@ public final class RenderGatewayClient: @unchecked Sendable {
         var request = URLRequest(url: Self.apiURL(path: "/api/jobs", baseURL: baseURL))
         request.httpMethod = "POST"
         request.setValue(body.contentType, forHTTPHeaderField: "Content-Type")
+        applyAuthHeader(&request)
         let (data, response) = try await session.upload(for: request, fromFile: body.fileURL)
         return try Self.decodeJobResponse(data: data, response: response)
     }
 
     public func fetchJobStatus(_ statusPath: String) async throws -> RenderGatewayJob {
-        let request = URLRequest(url: Self.apiURL(path: statusPath, baseURL: baseURL))
+        var request = URLRequest(url: Self.apiURL(path: statusPath, baseURL: baseURL))
+        applyAuthHeader(&request)
         let (data, response) = try await session.data(for: request)
         return try Self.decodeJobResponse(data: data, response: response)
+    }
+
+    /// Sets `Authorization: Bearer <token>` when `accessTokenProvider` is
+    /// configured and returns a non-empty token (INFRA-4). Existing callers
+    /// that don't pass a provider are unaffected -- no header is added.
+    private func applyAuthHeader(_ request: inout URLRequest) {
+        guard let token = accessTokenProvider?(), !token.isEmpty else {
+            return
+        }
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     }
 
     public func replayURL(for job: RenderGatewayJob) -> URL? {

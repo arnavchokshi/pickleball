@@ -4,6 +4,7 @@ import PickleballCapture
 import PickleballCore
 import PickleballFastTier
 import PickleballReplay
+import PickleballUpload
 
 struct AppRootView: View {
     var body: some View {
@@ -11,19 +12,31 @@ struct AppRootView: View {
     }
 }
 
+/// INFRA-4 rollout flag: dark until a follow-up lane verifies the on-device
+/// sign-in -> record -> upload -> queued path (and updates the UI-test
+/// fixtures that launch straight past splash, e.g. `RecordStopUITests`,
+/// `WorldViewerUITests`) and flips this bit. Matches the product-infra
+/// plan's own rollback design ("AppFlow gate is one boolean"). While `false`,
+/// `isSignedIn` below is forced `true` and the gate below never renders --
+/// behavior is byte-for-byte identical to pre-INFRA-4.
+private let dinkVisionAuthGateEnabled = false
+
 private struct DinkVisionAppRootView: View {
     private let configuration: DinkVisionRuntimeConfiguration
     @State private var isSplashVisible: Bool
+    @State private var isSignedIn: Bool
 
     init(configuration: DinkVisionRuntimeConfiguration = .current()) {
         self.configuration = configuration
         _isSplashVisible = State(initialValue: !configuration.skipSplash)
+        // Short-circuits before touching the Keychain while the gate is dark.
+        _isSignedIn = State(initialValue: !dinkVisionAuthGateEnabled || AuthTokenStore().hasAccessToken)
     }
 
     var body: some View {
         ZStack {
-            DinkVisionTabShell(isActive: !isSplashVisible, configuration: configuration)
-                .allowsHitTesting(!isSplashVisible)
+            DinkVisionTabShell(isActive: !isSplashVisible && isSignedIn, configuration: configuration)
+                .allowsHitTesting(!isSplashVisible && isSignedIn)
 
             if isSplashVisible {
                 DinkVisionSplashView {
@@ -33,6 +46,12 @@ private struct DinkVisionAppRootView: View {
                 }
                 .transition(.opacity)
                 .zIndex(2)
+            } else if dinkVisionAuthGateEnabled && !isSignedIn {
+                SignInView {
+                    isSignedIn = true
+                }
+                .transition(.opacity)
+                .zIndex(1)
             }
         }
         .background(DinkVisionColor.cream)
