@@ -12,6 +12,14 @@ Create exactly these labels:
 
 ## What To Label
 
+Label the **four active on-court players**, their **paddles**, and the **ball** —
+nothing else. Do not label spectators, coaches, refs, bystanders, people on other
+courts, shadows, or reflections; unlabeled objects are treated as background.
+Per-object rules are in the `### player`, `### paddle`, and `### ball` sections
+below; the technique (CVAT `Track` vs `Shape`, keyframes, `Outside`) is in **Fast
+CVAT Workflow**. Priority per frame: players first, then paddles, then ball, adding
+density around swings, contacts, bounces, and tracker mistakes.
+
 ## Fast CVAT Workflow
 
 ### Active players

@@ -15,10 +15,11 @@
 | Repo rules and doc map | `README.md`, then this file. |
 | Product goal, current truth, and no-retry decisions | `MASTER_PLAN.md`. |
 | Current pipeline run behavior | `RUNBOOK.md`, then `scripts/racketsport/process_video.py`. |
+| HTTP API, programmatic/single-stage entry points, running tests | `docs/API.md`. |
 | Capability truth and promotion gates | `CAPABILITIES.md` and `BUILD_CHECKLIST.md`. |
 | Runtime/model/code ownership | `TECH_STACK.md`, `models/MANIFEST.json`, and `configs/`. |
 | Pipeline CLIs and orchestration helpers | `scripts/racketsport/`. |
-| Stage implementations and shared library code | `threed/racketsport/`. |
+| Stage implementations and shared library code | `threed/racketsport/`, indexed in `threed/racketsport/README.md`. |
 | Python verification | `tests/racketsport/`. |
 | Native capture/live/upload/replay surfaces | `ios/`. |
 | Web replay viewer | `web/replay/`. |

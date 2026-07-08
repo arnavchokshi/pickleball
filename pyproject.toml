@@ -4,6 +4,7 @@ pythonpath = ["."]
 markers = [
   "h100: requires the shared H100 runtime and GPU lease",
   "integration: exercises real external runtimes or media",
+  "slow: slower tests; deselect with -m 'not slow'",
 ]
 
 [tool.ruff.lint.per-file-ignores]

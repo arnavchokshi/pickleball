@@ -4,6 +4,11 @@ The solver treats monocular 2D ball sightings as camera rays. Human-reviewed
 bounces and loose contact priors provide 3D anchors; each consecutive anchor
 pair bounds one free-flight segment. Outputs are explicitly render-only and
 must not feed BALL detector metrics, gates, training, or promotion.
+
+Public entry: ``solve_ball_arc_track(...)``. This module is large (~5.7k lines)
+and almost entirely private ``_`` helpers — start at ``solve_ball_arc_track``
+rather than reading top-to-bottom. It is reached in the pipeline via
+``ball_arc_chain.py`` and the ``scripts/racketsport/build_*`` ball-arc CLIs.
 """
 
 from __future__ import annotations
