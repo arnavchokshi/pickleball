@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit --jsx react-jsx --module ESNext --moduleResolution Bundler --target ES2020 --lib ESNext,DOM --types node --strict --allowImportingTsExtensions src/vite-env.d.ts src/main.tsx src/main.test.tsx src/App.tsx src/App.test.tsx src/UploadPanel.tsx src/UploadPanel.test.tsx src/CourtMapPanel.tsx src/CourtMapPanel.test.tsx src/ballArcRender.ts src/ballArcRender.test.ts src/courtReview.ts src/courtReview.test.ts src/uploadApi.ts src/uploadApi.test.ts src/gltfLoader.test.ts src/replayScene.ts src/replayScene.test.ts src/shotTrails.ts src/shotTrails.test.ts src/viewerData.ts src/viewerData.test.ts src/viewState.ts src/viewState.test.ts"
+    "typecheck": "tsc --noEmit --jsx react-jsx --module ESNext --moduleResolution Bundler --target ES2020 --lib ESNext,DOM --types node --strict --allowImportingTsExtensions src/vite-env.d.ts src/main.tsx src/main.test.tsx src/App.tsx src/App.test.tsx src/UploadPanel.tsx src/UploadPanel.test.tsx src/CourtMapPanel.tsx src/CourtMapPanel.test.tsx src/ballArcRender.ts src/ballArcRender.test.ts src/courtReview.ts src/courtReview.test.ts src/uploadApi.ts src/uploadApi.test.ts src/gltfLoader.test.ts src/replayScene.ts src/replayScene.test.ts src/shotTrails.ts src/shotTrails.test.ts src/viewerData.ts src/viewerData.test.ts src/viewState.ts src/viewState.test.ts src/authApi.ts src/authApi.test.ts src/AppShell.tsx src/AppShell.test.tsx src/SignInScreen.tsx src/SignInScreen.test.tsx src/LibraryScreen.tsx src/LibraryScreen.test.tsx src/uploadPlan.ts src/uploadPlan.test.ts"
   },
   "dependencies": {
     "@react-three/fiber": "^9.0.0",
