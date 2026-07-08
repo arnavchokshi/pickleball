@@ -1,5 +1,11 @@
 # LANE w6_labelingest_20260708 — owner-label ingest + LoSO OUTDOOR fold (wave-6 queue #1, CRITICAL PATH)
-# STATUS: STAGED-HOT — dispatch ONLY when >=1 owner export zip exists under cvat_upload/exports/w5_labelpack_20260708/ (or a w6 export dir). Manager fires this.
+# STATUS: DISPATCHED 2026-07-08 — owner export #1 landed.
+# CONCRETE INPUT: cvat_upload/exports/w5_labelpack_20260708/w5_session_01_ball_annotations.zip
+#   = w5 ball_session_01 (task w5_ball_sst_ball_session_01_20260708, job 14, FULL segment 0-639):
+#   640 images / 420 ball boxes (absent-ball frames carry no box — reconcile against the labelpack
+#   convention + per-session error-mix manifest); sources 73VurrTKCZ8 + Ezz6HDNHlnk; visibility_level
+#   + blur attributes present in the XML schema. Job export (not task export) but covers the whole
+#   task in one segment. Manager verified image-name mapping to the w5 package manifest.
 
 ## HARD RULES (binding)
 - NO git branches, NO commits, NO pushes. Working-tree changes only in your OWNED FILES. Manager commits at checkpoints.

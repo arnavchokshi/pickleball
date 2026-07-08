@@ -10,7 +10,7 @@ MAX_HOURS=7
 STALE_CODEX_MIN=45
 VM_MAX_AGE_HOURS=5
 EXPECTED_VMS="pickleball-h100-w6gate1b"
-CODEX_LANES="w6_magnus_20260708 w6_meshcap_20260708"
+CODEX_LANES="w6_magnus_20260708 w6_labelingest_20260708"
 
 anomaly() { echo "WATCHDOG-ANOMALY[$1]: $2"; exit 2; }
 now() { date +%s; }
@@ -20,7 +20,7 @@ while true; do
   CYCLES=$((CYCLES+1))
 
   # --- G: owner CVAT export landed (queue #1 trigger — positive event, wake immediately) ---
-  NEWZIPS=$(find "$ROOT/cvat_upload/exports" -name "*.zip" -newer "$ROOT/runs/manager/wave6_boot_prompt.md" 2>/dev/null | grep -v court_keypoints_metric15 | head -3)
+  NEWZIPS=$(find "$ROOT/cvat_upload/exports" -name "*.zip" -newer "$ROOT/runs/manager/.w6_export_epoch" 2>/dev/null | grep -v court_keypoints_metric15 | head -3)
   [ -n "$NEWZIPS" ] && anomaly G "owner export zip(s) landed — fire w6_labelingest: $NEWZIPS"
 
   # --- A/B/F: fleet state (also the auth canary) ---
