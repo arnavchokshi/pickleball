@@ -285,7 +285,10 @@ def create_app(
         app.include_router(build_account_router(auth_config=auth_config))
         app.include_router(
             build_stripe_webhook_router(
-                stripe_enabled=resolved_env.get("PICKLEBALL_STRIPE_ENABLED", "0").strip() == "1"
+                stripe_enabled=resolved_env.get("PICKLEBALL_STRIPE_ENABLED", "0").strip() == "1",
+                db=accounts_db,
+                publishable_key=resolved_env.get("PICKLEBALL_STRIPE_PUBLISHABLE_KEY", "").strip(),
+                webhook_secret=resolved_env.get("PICKLEBALL_STRIPE_WEBHOOK_SECRET", "").strip(),
             )
         )
         # INFRA-2: worker auth is independent of the queue flag, so this

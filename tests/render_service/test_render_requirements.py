@@ -6,6 +6,7 @@ PRODUCT_INFRA_PINS = (
     "argon2-cffi>=21.3,<24",
     "pyjwt>=2.9,<3",
     "slowapi>=0.1.9,<1",
+    "stripe>=11,<13",
     "moto[s3]>=5.0,<6",
     "mongomock>=4.1,<5",
 )

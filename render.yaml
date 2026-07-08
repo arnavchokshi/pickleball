@@ -50,6 +50,12 @@ services:
         value: "30"
       - key: PICKLEBALL_STRIPE_ENABLED
         value: "0"
+      - key: PICKLEBALL_STRIPE_SECRET_KEY
+        sync: false
+      - key: PICKLEBALL_STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: PICKLEBALL_STRIPE_WEBHOOK_SECRET
+        sync: false
       - key: PICKLEBALL_MONGODB_URI
         sync: false
       - key: PICKLEBALL_AWS_ACCESS_KEY_ID
