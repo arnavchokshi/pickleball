@@ -93,3 +93,25 @@ NO_MATCH pattern=indoor_doubles_fwuks_0500_long_mid_baseline packages=10
 NO_MATCH pattern=03_outdoor_webcam_iynbd packages=10
 NO_MATCH pattern=04_indoor_doubles_fwuks packages=10
 ```
+
+## Localhost Quickstart (live-verified 2026-07-08)
+
+CVAT is running now at **http://localhost:8080** with all 5 tasks below loaded and
+prelabels rendering (verified via API frame/annotation counts + a browser screenshot). If
+it's ever down after a reboot, run the "First Command" block above -- `docker compose up -d`
+brings back the *same* instance (all prior tasks/annotations are on disk in Docker volumes,
+nothing was recreated).
+
+- **Login**: username `admin`, password in `data/credentials/cvat_local.txt` (gitignored,
+  chmod 600 -- not printed here). The CVAT login form is two-step: type the username, click
+  Next, then enter the password.
+- **Label in this order**: `w5_ball_sst_ball_session_01_20260708` (640f) ->
+  `_02_` (640f) -> `_03_` (640f) -> `_04_` (640f) ->
+  `w5_court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_20260708` (4f).
+- **The 3-sentence reminder**: get the ball box tight around the true ball position/blur
+  streak first. Then set `visibility_level` (clear / partial / full / out_of_frame) to match
+  what's actually visible in that frame. For motion blur, center the box on the blur streak,
+  not the leading edge.
+- **Export when a session is done**: task page -> Actions -> Export task dataset -> format
+  `CVAT for images 1.1` -> save the zip under `cvat_upload/exports/w5_labelpack_20260708/`
+  (e.g. `w5_session_01_ball_annotations.zip`, matching the Export section above).
