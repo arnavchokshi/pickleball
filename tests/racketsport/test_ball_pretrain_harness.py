@@ -58,55 +58,27 @@ def test_train_ball_pretrain_cpu_smoke_decreases_loss_and_round_trips_checkpoint
     corpus_index = _write_smoke_corpus(tmp_path)
     out_dir = tmp_path / "smoke_out"
 
-    completed = subprocess.run(
-        [
-            sys.executable,
-            CLI_PATH,
-            "--corpus-index",
-            str(corpus_index),
-            "--out-dir",
-            str(out_dir),
-            "--mode",
-            "smoke",
-            "--model-family",
-            "tiny_wasb",
-            "--device",
-            "cpu",
-            "--image-size",
-            "32x32",
-            "--frames-in",
-            "3",
-            "--steps",
-            "4",
-            "--batch-size",
-            "2",
-            "--learning-rate",
-            "0.05",
-            "--max-train-samples",
-            "4",
-            "--max-val-samples",
-            "4",
-            "--protected-eval-hash",
-            "smoke=ffffffffffffffff",
-            "--expected-protected-eval-hash-count",
-            "1",
-            "--seed",
-            "7",
-        ],
-        cwd=Path(__file__).resolve().parents[2],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
-    summary = json.loads(completed.stdout)
+    summary = _run_smoke_cli(corpus_index, out_dir)
     assert summary["status"] == "smoke_passed"
     assert summary["loss"]["strictly_decreased"] is True
+    assert summary["smoke_checks"]["failure_reasons"] == []
     assert summary["checkpoint"]["round_trip_state_sha256_match"] is True
     assert Path(summary["checkpoint"]["latest_checkpoint"]).is_file()
     assert summary["internal_val"]["metrics"]["sample_count"] == 4
     assert "f1_at_20px" in summary["internal_val"]["metrics"]
     assert (out_dir / "skip_list.json").is_file()
+
+
+def test_train_ball_pretrain_cpu_smoke_same_seed_reproduces_checkpoint(tmp_path: Path) -> None:
+    corpus_index = _write_smoke_corpus(tmp_path)
+
+    first = _run_smoke_cli(corpus_index, tmp_path / "smoke_out_first")
+    second = _run_smoke_cli(corpus_index, tmp_path / "smoke_out_second")
+
+    assert first["status"] == "smoke_passed"
+    assert second["status"] == "smoke_passed"
+    assert first["loss"]["values"] == second["loss"]["values"]
+    assert first["checkpoint"]["state_sha256"] == second["checkpoint"]["state_sha256"]
 
 
 def test_train_loader_cycle_does_not_cache_first_epoch_batches() -> None:
@@ -246,6 +218,50 @@ def _write_smoke_corpus(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return corpus_index
+
+
+def _run_smoke_cli(corpus_index: Path, out_dir: Path) -> dict[str, object]:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            CLI_PATH,
+            "--corpus-index",
+            str(corpus_index),
+            "--out-dir",
+            str(out_dir),
+            "--mode",
+            "smoke",
+            "--model-family",
+            "tiny_wasb",
+            "--device",
+            "cpu",
+            "--image-size",
+            "32x32",
+            "--frames-in",
+            "3",
+            "--steps",
+            "4",
+            "--batch-size",
+            "2",
+            "--learning-rate",
+            "0.05",
+            "--max-train-samples",
+            "4",
+            "--max-val-samples",
+            "4",
+            "--protected-eval-hash",
+            "smoke=ffffffffffffffff",
+            "--expected-protected-eval-hash-count",
+            "1",
+            "--seed",
+            "7",
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(completed.stdout)
 
 
 def _write_ball_image(path: Path, *, x: int, y: int) -> None:

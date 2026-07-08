@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import random
 import sys
 import time
 from pathlib import Path
@@ -48,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     torch = _torch()
+    seed_summary = _seed_training_process(int(args.seed), torch=torch)
     start = time.perf_counter()
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -86,6 +88,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             shuffle=True,
             num_workers=int(args.num_workers),
             generator=_loader_generator(int(args.seed), torch=torch),
+            worker_init_fn=_seed_loader_worker,
             collate_fn=_collate_batch,
         )
 
@@ -113,6 +116,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         batch_size=int(args.batch_size),
         shuffle=False,
         num_workers=int(args.num_workers),
+        worker_init_fn=_seed_loader_worker,
         collate_fn=_collate_batch,
     )
 
@@ -200,16 +204,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     elapsed = time.perf_counter() - start
     loss_summary = _loss_summary(losses)
     status = "eval_complete"
+    smoke_checks = None
     if mode == "train":
         status = "train_complete"
     if mode == "smoke":
-        status = (
-            "smoke_passed"
-            if loss_summary.get("strictly_decreased") is True
-            and checkpoint_round_trip is not None
-            and checkpoint_round_trip.get("round_trip_state_sha256_match") is True
-            else "smoke_failed"
-        )
+        smoke_checks = _smoke_checks(loss_summary, checkpoint_round_trip)
+        status = "smoke_passed" if not smoke_checks["failure_reasons"] else "smoke_failed"
     summary = {
         "schema_version": 1,
         "artifact_type": ARTIFACT_TYPE,
@@ -240,6 +240,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             ),
         },
         "loss": loss_summary,
+        "smoke_checks": smoke_checks,
         "zero_shot_baseline": zero_shot,
         "internal_val": {
             "metrics": internal_val_metrics,
@@ -257,6 +258,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "runtime": {
             "wall_seconds": elapsed,
             "device": str(device),
+            "seed": int(args.seed),
+            "seed_summary": seed_summary,
             "torch_version": str(torch.__version__),
             "cuda_available": bool(torch.cuda.is_available()),
         },
@@ -555,9 +558,28 @@ def _cli_summary(summary: Mapping[str, Any]) -> dict[str, Any]:
         "summary_json": str(Path(summary["out_dir"]) / "summary.json"),
         "checkpoint": summary["checkpoint"],
         "loss": summary["loss"],
+        "smoke_checks": summary.get("smoke_checks"),
         "internal_val": summary["internal_val"],
         "zero_shot_baseline": summary.get("zero_shot_baseline"),
         "runtime": summary["runtime"],
+    }
+
+
+def _smoke_checks(loss_summary: Mapping[str, Any], checkpoint_round_trip: Mapping[str, Any] | None) -> dict[str, Any]:
+    loss_decreased = loss_summary.get("strictly_decreased") is True
+    checkpoint_matches = (
+        checkpoint_round_trip is not None
+        and checkpoint_round_trip.get("round_trip_state_sha256_match") is True
+    )
+    failure_reasons: list[str] = []
+    if not loss_decreased:
+        failure_reasons.append("loss_not_strictly_decreased")
+    if not checkpoint_matches:
+        failure_reasons.append("checkpoint_round_trip_state_sha256_mismatch")
+    return {
+        "loss_strictly_decreased": loss_decreased,
+        "checkpoint_round_trip_state_sha256_match": checkpoint_matches,
+        "failure_reasons": failure_reasons,
     }
 
 
@@ -623,6 +645,46 @@ def _loader_generator(seed: int, *, torch: Any) -> Any:
     generator = torch.Generator()
     generator.manual_seed(seed)
     return generator
+
+
+def _seed_training_process(seed: int, *, torch: Any) -> dict[str, Any]:
+    normalized_seed = int(seed)
+    numpy_seed = normalized_seed % (2**32)
+    random.seed(normalized_seed)
+    numpy_seeded = False
+    try:
+        import numpy as np
+
+        np.random.seed(numpy_seed)
+        numpy_seeded = True
+    except ModuleNotFoundError:
+        numpy_seeded = False
+    torch.manual_seed(normalized_seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(normalized_seed)
+    cudnn = getattr(torch.backends, "cudnn", None)
+    if cudnn is not None:
+        cudnn.benchmark = False
+        cudnn.deterministic = True
+    return {
+        "python_random": normalized_seed,
+        "numpy_random": numpy_seed if numpy_seeded else None,
+        "torch": normalized_seed,
+        "cuda_manual_seed_all": bool(torch.cuda.is_available()),
+        "cudnn_deterministic": bool(cudnn is not None),
+    }
+
+
+def _seed_loader_worker(worker_id: int) -> None:
+    del worker_id
+    worker_seed = _torch().initial_seed() % (2**32)
+    random.seed(worker_seed)
+    try:
+        import numpy as np
+
+        np.random.seed(worker_seed)
+    except ModuleNotFoundError:
+        pass
 
 
 def _device(value: str, *, torch: Any) -> Any:
