@@ -1,0 +1,69 @@
+{
+  "artifact_type": "w5_court_kp_relabel_manifest",
+  "focus_keypoints": [
+    "far_right_corner",
+    "far_baseline_center",
+    "far_left_corner",
+    "net_left_sideline",
+    "net_center",
+    "net_right_sideline",
+    "far_nvz_left",
+    "far_nvz_center",
+    "far_nvz_right"
+  ],
+  "full_metric15_keypoints": [
+    "near_left_corner",
+    "near_baseline_center",
+    "near_right_corner",
+    "far_right_corner",
+    "far_baseline_center",
+    "far_left_corner",
+    "near_nvz_left",
+    "near_nvz_center",
+    "near_nvz_right",
+    "net_left_sideline",
+    "net_center",
+    "net_right_sideline",
+    "far_nvz_left",
+    "far_nvz_center",
+    "far_nvz_right"
+  ],
+  "image_count": 4,
+  "image_zip": "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_images.zip",
+  "images": [
+    {
+      "absolute_frame_index": 10195,
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "file_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195__relabel_net_far_side.png",
+      "prelabel_source_image": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195.png",
+      "role": "relabel_existing_net_far_side",
+      "source_id": "HyUqT7zFiwk"
+    },
+    {
+      "absolute_frame_index": 14564,
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "file_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_014564__replacement_full_metric15.png",
+      "role": "replacement_full_metric15_frame",
+      "source_id": "HyUqT7zFiwk"
+    },
+    {
+      "absolute_frame_index": 3636,
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "file_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636__relabel_net_far_side.png",
+      "prelabel_source_image": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636.png",
+      "role": "relabel_existing_net_far_side",
+      "source_id": "zwCtH_i1_S4"
+    },
+    {
+      "absolute_frame_index": 6363,
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "file_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_006363__replacement_full_metric15.png",
+      "role": "replacement_full_metric15_frame",
+      "source_id": "zwCtH_i1_S4"
+    }
+  ],
+  "prelabel_zip": "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_prelabels_cvat1_1.zip",
+  "rationale": "Wave-4 court closeout found HyUqT7zFiwk and zwCtH_i1_S4 full labels fail p95 with largest residuals around net/far-side points; package includes original relabel frames plus one replacement frame per source.",
+  "schema_version": 1,
+  "task_name": "w5_court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_20260708"
+}

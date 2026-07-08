@@ -29,8 +29,10 @@ students NEVER shoot (4 inversions on record).
 - P2-2 phase 1 (62d785ce3): latent FAITHFUL (GATE 1a 2.7e-5°); scale_params silent-drop schema
   fix; smoother prototype UNWIRED (proxy jitter −47-76%); real-key acceptance table =
   [W5-CLOSE: w5_p22wiring λ-sweep table + wiring recommendation].
-- Fast-SAM-3D-Body bench (owner-funded $15): [W5-CLOSE: verdict ADOPT-CANDIDATE/NOT-ADOPT/
-  INCONCLUSIVE + speed/MPJPE tables from w5_fastbody_bench].
+- Fast-SAM-3D-Body bench (owner-funded, ~$2 of $15): VERDICT NOT-ADOPT — accuracy regression
+  (all-joint mean 8.5mm, motion-concentrated to 149mm/frame at fast swings) + net wall-clock
+  SLOWER per-clip (compile warmup unamortized; paper's headline measures a fit step we don't run).
+  Revisit conditions banked in runs/lanes/w5_fastbody_bench_20260708/.
 - Owner labeling LIVE: local CVAT v2.69 at localhost:8080 w/ 5 tasks imported+verified (4x640f
   ball sessions — BOTH OUTDOOR sources — + court-kp 4f); runbook cvat_upload/OWNER_SESSION_20260708.md;
   creds data/credentials/cvat_local.txt. Phase-B 24-clip prediction extension SKIPPED on w5ball
@@ -54,8 +56,8 @@ students NEVER shoot (4 inversions on record).
 3. **Magnus STEP 2 (UNLOCKED by BVP v2):** per TECH_BLUEPRINTS BALL 3D pillar; mandatory order
    honored (span protection landed first). Also carry the img1605 anchor-starvation quality gap:
    any Magnus/arc work reports the img1605 census as a diagnostic row (no bar, no tuning).
-4. **Fast-body adoption decision** [W5-CLOSE: only if bench verdict = ADOPT-CANDIDATE]: P5-7
-   spike lane on our gates/clips; kill = any internal-val accuracy regression (pre-ruled).
+4. **Fast-body: DECIDED (NOT-ADOPT)** — no wave-6 lane; P5-7 speed work returns to the other
+   booked levers (frame-plan sparsification, per-court warm caches); revisit conditions banked.
 5. **Docs/instrument debt:** v2 BVP verify-harness revision (whole-span policy — w4 harness
    axis-4 check is manager-ruled stale, kept as historical instrument); CAPABILITIES.md
    truth-claims for wave-5 landings; frame-scheduling nondeterminism watch item (541 vs 276

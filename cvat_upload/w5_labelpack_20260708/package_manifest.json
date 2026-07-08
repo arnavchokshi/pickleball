@@ -1,0 +1,455 @@
+{
+  "artifact_type": "w5_labelpack_20260708_package_manifest",
+  "ball_sessions": [
+    {
+      "clip_count": 16,
+      "clip_counts": {
+        "73VurrTKCZ8_rally_0001": 32,
+        "73VurrTKCZ8_rally_0002": 130,
+        "73VurrTKCZ8_rally_0003": 21,
+        "73VurrTKCZ8_rally_0004": 4,
+        "73VurrTKCZ8_rally_0005": 17,
+        "73VurrTKCZ8_rally_0006": 19,
+        "73VurrTKCZ8_rally_0007": 9,
+        "73VurrTKCZ8_rally_0008": 88,
+        "Ezz6HDNHlnk_rally_0001": 8,
+        "Ezz6HDNHlnk_rally_0002": 106,
+        "Ezz6HDNHlnk_rally_0003": 3,
+        "Ezz6HDNHlnk_rally_0004": 88,
+        "Ezz6HDNHlnk_rally_0005": 1,
+        "Ezz6HDNHlnk_rally_0006": 64,
+        "Ezz6HDNHlnk_rally_0007": 34,
+        "Ezz6HDNHlnk_rally_0008": 16
+      },
+      "disagreement_type_counts": {
+        "large-offset": 320,
+        "student-only": 160,
+        "teacher-only": 160
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_01_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_01_640f_73VurrTKCZ8_Ezz6HDNHlnk_prelabels_cvat1_1.zip",
+      "priority_rationale": "Equal source split across the two available outdoor queue sources, then ranked class mix.",
+      "session_id": "ball_session_01",
+      "source_classes": {
+        "73VurrTKCZ8": "outdoor_day_multicam",
+        "Ezz6HDNHlnk": "outdoor_night_fenced"
+      },
+      "source_ids": [
+        "73VurrTKCZ8",
+        "Ezz6HDNHlnk"
+      ],
+      "task_name": "w5_ball_sst_ball_session_01_20260708"
+    },
+    {
+      "clip_count": 16,
+      "clip_counts": {
+        "73VurrTKCZ8_rally_0001": 45,
+        "73VurrTKCZ8_rally_0002": 106,
+        "73VurrTKCZ8_rally_0003": 9,
+        "73VurrTKCZ8_rally_0004": 12,
+        "73VurrTKCZ8_rally_0005": 25,
+        "73VurrTKCZ8_rally_0006": 14,
+        "73VurrTKCZ8_rally_0007": 14,
+        "73VurrTKCZ8_rally_0008": 95,
+        "Ezz6HDNHlnk_rally_0001": 18,
+        "Ezz6HDNHlnk_rally_0002": 78,
+        "Ezz6HDNHlnk_rally_0003": 9,
+        "Ezz6HDNHlnk_rally_0004": 79,
+        "Ezz6HDNHlnk_rally_0005": 3,
+        "Ezz6HDNHlnk_rally_0006": 87,
+        "Ezz6HDNHlnk_rally_0007": 26,
+        "Ezz6HDNHlnk_rally_0008": 20
+      },
+      "disagreement_type_counts": {
+        "large-offset": 320,
+        "student-only": 160,
+        "teacher-only": 160
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_02_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_02_640f_73VurrTKCZ8_Ezz6HDNHlnk_prelabels_cvat1_1.zip",
+      "priority_rationale": "Equal source split across the two available outdoor queue sources, then ranked class mix.",
+      "session_id": "ball_session_02",
+      "source_classes": {
+        "73VurrTKCZ8": "outdoor_day_multicam",
+        "Ezz6HDNHlnk": "outdoor_night_fenced"
+      },
+      "source_ids": [
+        "73VurrTKCZ8",
+        "Ezz6HDNHlnk"
+      ],
+      "task_name": "w5_ball_sst_ball_session_02_20260708"
+    },
+    {
+      "clip_count": 16,
+      "clip_counts": {
+        "73VurrTKCZ8_rally_0001": 36,
+        "73VurrTKCZ8_rally_0002": 101,
+        "73VurrTKCZ8_rally_0003": 5,
+        "73VurrTKCZ8_rally_0004": 12,
+        "73VurrTKCZ8_rally_0005": 37,
+        "73VurrTKCZ8_rally_0006": 22,
+        "73VurrTKCZ8_rally_0007": 10,
+        "73VurrTKCZ8_rally_0008": 97,
+        "Ezz6HDNHlnk_rally_0001": 16,
+        "Ezz6HDNHlnk_rally_0002": 70,
+        "Ezz6HDNHlnk_rally_0003": 11,
+        "Ezz6HDNHlnk_rally_0004": 87,
+        "Ezz6HDNHlnk_rally_0005": 3,
+        "Ezz6HDNHlnk_rally_0006": 85,
+        "Ezz6HDNHlnk_rally_0007": 26,
+        "Ezz6HDNHlnk_rally_0008": 22
+      },
+      "disagreement_type_counts": {
+        "large-offset": 349,
+        "student-only": 160,
+        "teacher-only": 131
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_03_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_03_640f_73VurrTKCZ8_Ezz6HDNHlnk_prelabels_cvat1_1.zip",
+      "priority_rationale": "Equal source split across the two available outdoor queue sources, then ranked class mix.",
+      "session_id": "ball_session_03",
+      "source_classes": {
+        "73VurrTKCZ8": "outdoor_day_multicam",
+        "Ezz6HDNHlnk": "outdoor_night_fenced"
+      },
+      "source_ids": [
+        "73VurrTKCZ8",
+        "Ezz6HDNHlnk"
+      ],
+      "task_name": "w5_ball_sst_ball_session_03_20260708"
+    },
+    {
+      "clip_count": 15,
+      "clip_counts": {
+        "73VurrTKCZ8_rally_0001": 26,
+        "73VurrTKCZ8_rally_0002": 88,
+        "73VurrTKCZ8_rally_0003": 11,
+        "73VurrTKCZ8_rally_0004": 7,
+        "73VurrTKCZ8_rally_0005": 28,
+        "73VurrTKCZ8_rally_0006": 16,
+        "73VurrTKCZ8_rally_0007": 17,
+        "73VurrTKCZ8_rally_0008": 127,
+        "Ezz6HDNHlnk_rally_0001": 19,
+        "Ezz6HDNHlnk_rally_0002": 101,
+        "Ezz6HDNHlnk_rally_0003": 5,
+        "Ezz6HDNHlnk_rally_0004": 67,
+        "Ezz6HDNHlnk_rally_0006": 81,
+        "Ezz6HDNHlnk_rally_0007": 19,
+        "Ezz6HDNHlnk_rally_0008": 28
+      },
+      "disagreement_type_counts": {
+        "large-offset": 400,
+        "student-only": 160,
+        "teacher-only": 80
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_04_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_04_640f_73VurrTKCZ8_Ezz6HDNHlnk_prelabels_cvat1_1.zip",
+      "priority_rationale": "Equal source split across the two available outdoor queue sources, then ranked class mix.",
+      "session_id": "ball_session_04",
+      "source_classes": {
+        "73VurrTKCZ8": "outdoor_day_multicam",
+        "Ezz6HDNHlnk": "outdoor_night_fenced"
+      },
+      "source_ids": [
+        "73VurrTKCZ8",
+        "Ezz6HDNHlnk"
+      ],
+      "task_name": "w5_ball_sst_ball_session_04_20260708"
+    }
+  ],
+  "court_kp_relabel": {
+    "clip_count": 2,
+    "estimated_label_hours_at_240_fph": 0.05,
+    "focus_keypoints": [
+      "far_right_corner",
+      "far_baseline_center",
+      "far_left_corner",
+      "net_left_sideline",
+      "net_center",
+      "net_right_sideline",
+      "far_nvz_left",
+      "far_nvz_center",
+      "far_nvz_right"
+    ],
+    "frame_count": 4,
+    "image_zip": "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_images.zip",
+    "kind": "court_kp_relabel",
+    "prelabel_zip": "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_prelabels_cvat1_1.zip",
+    "source_classes": {
+      "HyUqT7zFiwk": "indoor_court_level",
+      "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+    },
+    "source_ids": [
+      "HyUqT7zFiwk",
+      "zwCtH_i1_S4"
+    ],
+    "task_name": "w5_court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_20260708"
+  },
+  "created_at_utc": "2026-07-08T07:41:11.085545Z",
+  "export_cvat_tasks": {
+    "command": "/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python scripts/racketsport/export_cvat_tasks.py --review-manifest /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w5_labelpack_20260708/review_manifest.json --out /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w5_labelpack_20260708/cvat_task_export",
+    "returncode": 0,
+    "stderr": "",
+    "stdout": {
+      "artifact_type": "racketsport_cvat_task_export",
+      "missing_source_image_count": 0,
+      "missing_source_images": [],
+      "schema_version": 1,
+      "status": "ready_for_cvat_review",
+      "task_count": 4,
+      "tasks": [
+        {
+          "clip": "ball_session_01",
+          "image_count": 640,
+          "task_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w5_labelpack_20260708/cvat_task_export/ball_session_01"
+        },
+        {
+          "clip": "ball_session_02",
+          "image_count": 640,
+          "task_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w5_labelpack_20260708/cvat_task_export/ball_session_02"
+        },
+        {
+          "clip": "ball_session_03",
+          "image_count": 640,
+          "task_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w5_labelpack_20260708/cvat_task_export/ball_session_03"
+        },
+        {
+          "clip": "ball_session_04",
+          "image_count": 640,
+          "task_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w5_labelpack_20260708/cvat_task_export/ball_session_04"
+        }
+      ]
+    }
+  },
+  "objective": "Owner CVAT packages from Wave-4 SST disagreement queue plus court-kp relabel mini-package.",
+  "owner_import_script": "runs/lanes/w5_labelpack_20260708/import_w5_labelpack_tasks.py",
+  "owner_runbook": "cvat_upload/OWNER_SESSION_20260708.md",
+  "protected_patterns": [
+    "pwxNwFfYQlQ",
+    "vQhtz8l6VqU",
+    "outdoor_webcam_iynbd_1500_long_high_baseline",
+    "indoor_doubles_fwuks_0500_long_mid_baseline",
+    "03_outdoor_webcam_iynbd",
+    "04_indoor_doubles_fwuks"
+  ],
+  "schema_version": 1,
+  "selection_summary": {
+    "queue_clip_counts": {
+      "73VurrTKCZ8_rally_0001": 402,
+      "73VurrTKCZ8_rally_0002": 1325,
+      "73VurrTKCZ8_rally_0003": 204,
+      "73VurrTKCZ8_rally_0004": 165,
+      "73VurrTKCZ8_rally_0005": 341,
+      "73VurrTKCZ8_rally_0006": 285,
+      "73VurrTKCZ8_rally_0007": 146,
+      "73VurrTKCZ8_rally_0008": 1115,
+      "Ezz6HDNHlnk_rally_0001": 418,
+      "Ezz6HDNHlnk_rally_0002": 1666,
+      "Ezz6HDNHlnk_rally_0003": 199,
+      "Ezz6HDNHlnk_rally_0004": 2483,
+      "Ezz6HDNHlnk_rally_0005": 107,
+      "Ezz6HDNHlnk_rally_0006": 1745,
+      "Ezz6HDNHlnk_rally_0007": 826,
+      "Ezz6HDNHlnk_rally_0008": 648
+    },
+    "queue_counts_current_two_sources": {
+      "large-offset": 5574,
+      "student-only": 2194,
+      "teacher-only": 4307
+    },
+    "queue_source_counts": {
+      "73VurrTKCZ8": 3983,
+      "Ezz6HDNHlnk": 8092
+    },
+    "ranking_assumption": "Used queue order/rank from build_sst_disagreement_queue: large-offset rank is offset_px; teacher-only/student-only rank is visible model confidence. Mixed classes explicitly because raw ranks are not numerically comparable across those semantics.",
+    "selected_by_source": {
+      "73VurrTKCZ8": 1280,
+      "Ezz6HDNHlnk": 1280
+    },
+    "selected_by_source_type": {
+      "73VurrTKCZ8/large-offset": 749,
+      "73VurrTKCZ8/student-only": 320,
+      "73VurrTKCZ8/teacher-only": 211,
+      "Ezz6HDNHlnk/large-offset": 640,
+      "Ezz6HDNHlnk/student-only": 320,
+      "Ezz6HDNHlnk/teacher-only": 320
+    },
+    "selected_by_type": {
+      "large-offset": 1389,
+      "student-only": 640,
+      "teacher-only": 531
+    },
+    "selected_count": 2560,
+    "sessions": [
+      {
+        "clip_count": 16,
+        "frame_count": 640,
+        "session_id": "ball_session_01",
+        "source_counts": {
+          "73VurrTKCZ8": 320,
+          "Ezz6HDNHlnk": 320
+        },
+        "type_counts": {
+          "large-offset": 320,
+          "student-only": 160,
+          "teacher-only": 160
+        }
+      },
+      {
+        "clip_count": 16,
+        "frame_count": 640,
+        "session_id": "ball_session_02",
+        "source_counts": {
+          "73VurrTKCZ8": 320,
+          "Ezz6HDNHlnk": 320
+        },
+        "type_counts": {
+          "large-offset": 320,
+          "student-only": 160,
+          "teacher-only": 160
+        }
+      },
+      {
+        "clip_count": 16,
+        "frame_count": 640,
+        "session_id": "ball_session_03",
+        "source_counts": {
+          "73VurrTKCZ8": 320,
+          "Ezz6HDNHlnk": 320
+        },
+        "type_counts": {
+          "large-offset": 349,
+          "student-only": 160,
+          "teacher-only": 131
+        }
+      },
+      {
+        "clip_count": 15,
+        "frame_count": 640,
+        "session_id": "ball_session_04",
+        "source_counts": {
+          "73VurrTKCZ8": 320,
+          "Ezz6HDNHlnk": 320
+        },
+        "type_counts": {
+          "large-offset": 400,
+          "student-only": 160,
+          "teacher-only": 80
+        }
+      }
+    ],
+    "strategy": "4 sessions x 640 frames; equal 73VurrTKCZ8/Ezz6HDNHlnk source split first, then per-source ranked class mix with large-offset/teacher-only/student-only targets."
+  },
+  "source_balance_note": {
+    "current_queue_coverage": "16/40 clips from 2/6 non-heldout sources",
+    "current_queue_sources": [
+      "73VurrTKCZ8",
+      "Ezz6HDNHlnk"
+    ],
+    "missing_nonheldout_sources": [
+      "HyUqT7zFiwk",
+      "wBu8bC4OfUY",
+      "_L0HVmAlCQI",
+      "zwCtH_i1_S4"
+    ],
+    "separate_task": "Extend student predictions to the other 24 clips after aligned retrain; not done in this labelpack lane."
+  },
+  "source_metadata": {
+    "73VurrTKCZ8": {
+      "channel": " Game 1 | High-Quality Multi-Cam|The Pickleball Shaman",
+      "fps": 30.0,
+      "priority_note": "current queue source; outdoor LoSO value",
+      "resolution": [
+        null,
+        1080
+      ],
+      "source_class": "outdoor_day_multicam",
+      "source_id": "73VurrTKCZ8",
+      "status": "downloaded",
+      "title": "Pro Pickleball Rec Match ",
+      "venue_summary": "outdoor daylight, fixed-court rec source; multi-camera title/source, 1080p"
+    },
+    "Ezz6HDNHlnk": {
+      "channel": " Pickleball Rec Game (November, 2024)|Alston Pickleball",
+      "fps": 23.98,
+      "priority_note": "current queue source; night/outdoor domain value",
+      "resolution": [
+        null,
+        1080
+      ],
+      "source_class": "outdoor_night_fenced",
+      "source_id": "Ezz6HDNHlnk",
+      "status": "downloaded",
+      "title": "2.5-3.0 Men's Doubles ",
+      "venue_summary": "outdoor night, lights/fence, low court-level rec source, 1080p"
+    },
+    "HyUqT7zFiwk": {
+      "channel": "The Pickleball Pirates",
+      "fps": 30.0,
+      "priority_note": "not in current disagreement queue; needs future student predictions",
+      "resolution": [
+        null,
+        1080
+      ],
+      "source_class": "indoor_court_level",
+      "source_id": "HyUqT7zFiwk",
+      "status": "downloaded",
+      "title": "Intense Pickleball Men's Doubles Advanced rec Game from the Court Level",
+      "venue_summary": "indoor court-level advanced doubles, 1080p"
+    },
+    "_L0HVmAlCQI": {
+      "channel": "Rich Pickleball",
+      "fps": 30.0,
+      "priority_note": "not in current disagreement queue; needs future student predictions",
+      "resolution": [
+        null,
+        1080
+      ],
+      "source_class": "outdoor_night_tennis_overlay",
+      "source_id": "_L0HVmAlCQI",
+      "status": "downloaded",
+      "title": "Lily / Glenn vs Rich Half-court vs Full-court Oct 19th Pickleball match play",
+      "venue_summary": "outdoor night Rich Pickleball source with tennis-overlay court markings, 1080p"
+    },
+    "wBu8bC4OfUY": {
+      "channel": "Rich Pickleball",
+      "fps": 30.0,
+      "priority_note": "not in current disagreement queue; needs future student predictions",
+      "resolution": [
+        null,
+        1080
+      ],
+      "source_class": "outdoor_night_tennis_overlay",
+      "source_id": "wBu8bC4OfUY",
+      "status": "downloaded",
+      "title": "Lily / Glenn vs Rich Full-court vs Half-court Dec 14th Pickleball match play",
+      "venue_summary": "outdoor night Rich Pickleball source with tennis-overlay court markings, 1080p"
+    },
+    "zwCtH_i1_S4": {
+      "channel": " #Pickleball|RallyPoint by Suffolk Pickleball Co.",
+      "fps": 30.0,
+      "priority_note": "not in current disagreement queue; needs future student predictions",
+      "resolution": [
+        null,
+        1080
+      ],
+      "source_class": "outdoor_day_broadcast_overlay",
+      "source_id": "zwCtH_i1_S4",
+      "status": "downloaded",
+      "title": "Rec-Play Doubles 3.0\u20133.5 DUPR in Woodbridge ",
+      "venue_summary": "outdoor daytime fixed wide source with lower-third/broadcast overlay, 1080p"
+    }
+  }
+}

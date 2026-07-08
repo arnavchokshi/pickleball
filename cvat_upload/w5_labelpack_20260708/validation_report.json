@@ -1,0 +1,73 @@
+{
+  "artifact_type": "w5_labelpack_validation_report",
+  "created_at_utc": "2026-07-08T07:41:55.023867Z",
+  "errors": [],
+  "package_checks": [
+    {
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_01_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
+      "prelabel_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_01_640f_73VurrTKCZ8_Ezz6HDNHlnk_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_02_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
+      "prelabel_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_02_640f_73VurrTKCZ8_Ezz6HDNHlnk_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_03_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
+      "prelabel_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_03_640f_73VurrTKCZ8_Ezz6HDNHlnk_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_04_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
+      "prelabel_zip": "cvat_upload/w5_labelpack_20260708/packages/ball_session_04_640f_73VurrTKCZ8_Ezz6HDNHlnk_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 4,
+      "image_zip": "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_images.zip",
+      "prelabel_zip": "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 4
+    }
+  ],
+  "protected_grep_check_output": "NO_MATCH pattern=pwxNwFfYQlQ packages=10\nNO_MATCH pattern=vQhtz8l6VqU packages=10\nNO_MATCH pattern=outdoor_webcam_iynbd_1500_long_high_baseline packages=10\nNO_MATCH pattern=indoor_doubles_fwuks_0500_long_mid_baseline packages=10\nNO_MATCH pattern=03_outdoor_webcam_iynbd packages=10\nNO_MATCH pattern=04_indoor_doubles_fwuks packages=10",
+  "protected_programmatic_check": {
+    "hits": [],
+    "patterns": [
+      "pwxNwFfYQlQ",
+      "vQhtz8l6VqU",
+      "outdoor_webcam_iynbd_1500_long_high_baseline",
+      "indoor_doubles_fwuks_0500_long_mid_baseline",
+      "03_outdoor_webcam_iynbd",
+      "04_indoor_doubles_fwuks"
+    ],
+    "status": "passed"
+  },
+  "schema_version": 1,
+  "status": "passed",
+  "structural_roundtrip_note": "True CVAT import needs the local CVAT app. This check validates against known-good CVAT image-package layout: image zip entries plus prelabel zip containing one annotations.xml, CVAT 1.1 root, XML image refs exactly match image zip entries."
+}

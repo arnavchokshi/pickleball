@@ -39,10 +39,10 @@ WAVE-5 FLEET LOG (2026-07-07, manager):
   (queue #1 closed), seed_official honest-mixed, control exact, LoSO-mean all rows, 20/20 contract
   tests on VM. Gap: snapshot lacks corpus+rally videos (16min transfer tax) — next snapshot cut.
 
-- pickleball-h100-w5fastbody (H100 a3 spot, ase1-b; std fallback ladder) — PROVISIONING DELEGATED
-  to Sonnet lane w5_fastbody_bench_20260708 (OWNER-APPROVED HARD $15 cap, self-stop ~$13 est;
-  boots from the NEW ffmpeg template; Fast-SAM-3D-Body speed+MPJPE bench vs our stack, kill=any
-  accuracy regression; self-DELETE + cost report). 2 concurrent GPUs (w5ball is the other).
+- pickleball-h100-w5fastbody — DONE+DELETED (list-confirmed, 2026-07-08T08:31:59Z): created
+  07:32:45Z, 0.99h ~ $0.59-4.25 (mid ~$2) vs $15 owner cap, zero preemptions. VERDICT NOT-ADOPT
+  (accuracy regression, kill pre-ruled; wall-clock net-slower per-clip). 3 footgun catches folded
+  into w5_transport lane.
 - TEMPLATE POLICY 2026-07-08: `pickleball-fleet-snap-20260708-ffmpeg` (READY, 200GB, ffmpeg 4.4.2,
   clean committed HEAD) SUPERSEDES pickleball-fleet1-snap-20260707 as the default boot template.
 
