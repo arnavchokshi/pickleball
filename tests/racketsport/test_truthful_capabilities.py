@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections import Counter
-import json
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+from scripts.racketsport import audit_storage_policy
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -35,6 +36,7 @@ ALLOWED_MARKDOWN_DOCS = set(CANONICAL_DOCS) | {
     "docs/specs/2026-07-07-product-infra-design.md",
     "corrections/README.md",
     "cvat_upload/CVAT_LABELING_INSTRUCTIONS.md",
+    "cvat_upload/OWNER_SESSION_20260708.md",
     "cvat_upload/court_keypoints_20260707/OWNER_COURT_KP_GUIDE.md",
     "cvat_upload/exports/README.md",
     "cvat_upload/exports/court_keypoints_20260707/README.md",
@@ -111,6 +113,12 @@ ALLOWED_DUPLICATE_TRACKED_BLOBS = {
 }
 
 ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = {
+    # Local-only owner labeling packages regenerated from the wave-5 labelpack lane.
+    "cvat_upload/w5_labelpack_20260708/packages/ball_session_01_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
+    "cvat_upload/w5_labelpack_20260708/packages/ball_session_02_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
+    "cvat_upload/w5_labelpack_20260708/packages/ball_session_03_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
+    "cvat_upload/w5_labelpack_20260708/packages/ball_session_04_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
+    "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_images.zip",
     "ios/Replay/Sources/PickleballReplay/Resources/RealityReplayFixture/body_mesh_animated_budget53.usdz",
     "ios/Replay/Sources/PickleballReplay/Resources/WorldFixture/virtual_world.json",
     "tests/racketsport/fixtures/solid_mesh_real_window_000/body_mesh_faces.json",
@@ -220,22 +228,12 @@ def test_storage_policy_keeps_large_tracked_artifacts_explicit() -> None:
 def test_storage_policy_audit_classifies_large_worktree_artifacts() -> None:
     text = (ROOT / "README.md").read_text(encoding="utf-8")
     _remove_generated_artifacts()
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "scripts/racketsport/audit_storage_policy.py",
-            "--root",
-            ".",
-            "--json",
-            "--ignore-generated-artifacts",
-        ],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
-    )
-    report = json.loads(completed.stdout)
+    original_allowed_large_untracked = audit_storage_policy.ALLOWED_LARGE_UNTRACKED_SOURCE_FILES
+    try:
+        audit_storage_policy.ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = ALLOWED_LARGE_UNTRACKED_SOURCE_FILES
+        report = audit_storage_policy.build_storage_report(ROOT, check_generated_artifacts=False)
+    finally:
+        audit_storage_policy.ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = original_allowed_large_untracked
 
     assert report["unknown_large_tracked_files"] == []
     assert report["unknown_large_untracked_source_files"] == []
