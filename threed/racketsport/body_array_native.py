@@ -7,6 +7,7 @@ from typing import Any, Mapping, Sequence
 
 from . import mesh_export as _mesh_export
 from . import worldhmr as _worldhmr
+from .body_postchain import BodyPostChainConfig
 from .schemas import CourtCalibration
 
 
@@ -15,6 +16,7 @@ class BodyArrayNativeArtifacts:
     smpl_motion_view: dict[str, Any]
     skeleton3d: dict[str, Any]
     grounding_metrics: dict[str, Any]
+    raw_grounded_joints: dict[str, Any] | None
     body_mesh_metadata: dict[str, Any]
     body_mesh_players: list[dict[str, Any]]
     body_mesh_summary: dict[str, Any]
@@ -38,6 +40,7 @@ def build_body_array_native_artifacts_from_fast_sam(
     smoothing_gap_carry_frames: int = _worldhmr.DEFAULT_SMOOTHING_GAP_CARRY_FRAMES,
     smoothing_residual_identity_reset_m: float = _worldhmr.DEFAULT_SMOOTHING_RESIDUAL_IDENTITY_RESET_M,
     world_joint_visual_smoothing: bool = True,
+    body_postchain: BodyPostChainConfig | None = None,
 ) -> BodyArrayNativeArtifacts:
     """Build slim BODY gate/index inputs without materializing monolithic payloads."""
 
@@ -56,6 +59,7 @@ def build_body_array_native_artifacts_from_fast_sam(
         smoothing_gap_carry_frames=smoothing_gap_carry_frames,
         smoothing_residual_identity_reset_m=smoothing_residual_identity_reset_m,
         world_joint_visual_smoothing=world_joint_visual_smoothing,
+        body_postchain=body_postchain,
     )
     metadata, body_mesh_players, body_mesh_summary = body_mesh_export_parts_from_smpl_motion_view(
         computed.smpl_motion_view,
@@ -66,6 +70,7 @@ def build_body_array_native_artifacts_from_fast_sam(
         smpl_motion_view=computed.smpl_motion_view,
         skeleton3d=computed.skeleton3d,
         grounding_metrics=computed.metrics,
+        raw_grounded_joints=computed.raw_grounded_joints,
         body_mesh_metadata=metadata,
         body_mesh_players=body_mesh_players,
         body_mesh_summary=body_mesh_summary,

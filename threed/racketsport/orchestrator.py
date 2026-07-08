@@ -34,6 +34,7 @@ from .body_array_native import (
 )
 from .body_mesh_index import build_body_mesh_index_from_arrays, build_body_mesh_index_from_payload
 from .body_mesh_readiness import build_body_mesh_readiness
+from .body_postchain import BodyPostChainConfig, RAW_GROUNDED_JOINTS_ARTIFACT
 from .ball_inflections import build_ball_inflections_from_ball_track
 from .court_auto_evidence import build_auto_court_line_evidence_from_frame, build_auto_court_line_evidence_from_video
 from .court_calibration import (
@@ -82,7 +83,7 @@ from .sam3d_body_input_prep import (
 from .schemas import CaptureSidecar, CourtCalibration, StrictArtifact, Tracks, validate_artifact_file
 from .virtual_world import build_virtual_world_state_from_files, write_virtual_world
 from .wrist_velocity_peaks import build_wrist_velocity_peaks_from_file
-from .worldhmr import assemble_body_monolith_payloads, build_body_artifacts_from_fast_sam
+from .worldhmr import assemble_body_monolith_payloads, build_body_artifacts_from_fast_sam, compute_body_skeleton_and_metrics
 
 
 YOLO26M_MODEL_ID = "yolo26m"
@@ -675,6 +676,11 @@ class BodyStageRunner:
         sam3d_upstream_env: Mapping[str, Any] | None = None,
         sam3d_tier2_output_lite: bool = False,
         sam3d_wrist_bone_lock: bool = True,
+        body_temporal_smoothing: bool = True,
+        body_foot_lock: bool = True,
+        body_foot_pin: bool = True,
+        body_contact_splice: bool = True,
+        body_world_joint_visual_smoothing: bool = True,
         experimental_body_array_native: bool = True,
     ) -> None:
         self.manifest_path = Path(manifest_path)
@@ -704,10 +710,18 @@ class BodyStageRunner:
         self.sam3d_upstream_env = _normalize_sam3d_upstream_env(sam3d_upstream_env or {})
         self.sam3d_tier2_output_lite = bool(sam3d_tier2_output_lite)
         self.sam3d_wrist_bone_lock = bool(sam3d_wrist_bone_lock)
+        self.body_postchain = BodyPostChainConfig(
+            temporal_smoothing=bool(body_temporal_smoothing),
+            foot_lock=bool(body_foot_lock),
+            foot_pin=bool(body_foot_pin),
+            contact_splice=bool(body_contact_splice),
+            wrist_lock=bool(sam3d_wrist_bone_lock),
+            world_joint_visual_smoothing=bool(body_world_joint_visual_smoothing),
+        )
         self.experimental_body_array_native = bool(experimental_body_array_native)
 
     def _sam3d_tier2_config(self, body_execution: Mapping[str, Any]) -> dict[str, Any]:
-        return {
+        payload = {
             "schema_version": 1,
             "artifact_type": "racketsport_sam3d_tier2_config",
             "source": "sam3d_tier2_impl_20260703T0xZ",
@@ -770,6 +784,9 @@ class BodyStageRunner:
                 "target_ms_per_person_batched": 55.0,
             },
         }
+        if not self.body_postchain.is_default:
+            payload["optimization"]["body_postchain"] = self.body_postchain.to_artifact_dict()
+        return payload
 
     def run(self, context: StageContext) -> StageRun:
         body_wall_start = time.perf_counter()
@@ -1133,6 +1150,7 @@ class BodyStageRunner:
         body_mesh_metadata: dict[str, Any] | None = None
         body_mesh_players: list[dict[str, Any]] | None = None
         body_mesh_summary: dict[str, Any] | None = None
+        raw_grounded_joints: dict[str, Any] | None = None
         body_joint_builder = "legacy_worldhmr_build_body_artifacts_from_fast_sam"
         smpl_payload_start = time.perf_counter()
         if samples and self.experimental_body_array_native:
@@ -1150,6 +1168,7 @@ class BodyStageRunner:
                 sam3d_wrist_bone_lock=self.sam3d_wrist_bone_lock,
                 stance_index=stance_index,
                 grounding_anchor_source=grounding_anchor_source,
+                body_postchain=self.body_postchain,
             )
             if self.write_body_monoliths:
                 smpl_motion, skeleton3d, grounding_metrics = assemble_body_monolith_payloads(
@@ -1166,19 +1185,40 @@ class BodyStageRunner:
             body_mesh_metadata = array_native.body_mesh_metadata
             body_mesh_players = array_native.body_mesh_players
             body_mesh_summary = array_native.body_mesh_summary
+            raw_grounded_joints = array_native.raw_grounded_joints
             phase_timings["array_native_gate_feed_s"] = max(0.0, time.perf_counter() - array_native_start)
         elif samples:
-            smpl_motion, skeleton3d, grounding_metrics = build_body_artifacts_from_fast_sam(
-                samples,
-                calibration=calibration,
-                fps=tracks.fps,
-                smoothing_alpha=self.smoothing_alpha,
-                max_root_speed_mps=self.max_root_speed_mps,
-                max_track_anchor_smoothing_residual_m=self.max_track_anchor_smoothing_residual_m,
-                sam3d_wrist_bone_lock=self.sam3d_wrist_bone_lock,
-                stance_index=stance_index,
-                grounding_anchor_source=grounding_anchor_source,
-            )
+            if self.body_postchain.is_default:
+                smpl_motion, skeleton3d, grounding_metrics = build_body_artifacts_from_fast_sam(
+                    samples,
+                    calibration=calibration,
+                    fps=tracks.fps,
+                    smoothing_alpha=self.smoothing_alpha,
+                    max_root_speed_mps=self.max_root_speed_mps,
+                    max_track_anchor_smoothing_residual_m=self.max_track_anchor_smoothing_residual_m,
+                    sam3d_wrist_bone_lock=self.sam3d_wrist_bone_lock,
+                    stance_index=stance_index,
+                    grounding_anchor_source=grounding_anchor_source,
+                )
+            else:
+                computed = compute_body_skeleton_and_metrics(
+                    samples,
+                    calibration=calibration,
+                    fps=tracks.fps,
+                    smoothing_alpha=self.smoothing_alpha,
+                    max_root_speed_mps=self.max_root_speed_mps,
+                    max_track_anchor_smoothing_residual_m=self.max_track_anchor_smoothing_residual_m,
+                    sam3d_wrist_bone_lock=self.sam3d_wrist_bone_lock,
+                    stance_index=stance_index,
+                    grounding_anchor_source=grounding_anchor_source,
+                    body_postchain=self.body_postchain,
+                )
+                smpl_motion, skeleton3d, grounding_metrics = assemble_body_monolith_payloads(
+                    computed.smpl_motion_view,
+                    computed.skeleton3d,
+                    computed.metrics,
+                )
+                raw_grounded_joints = computed.raw_grounded_joints
             phase_timings["smpl_motion_payload_assembly_s"] = max(0.0, time.perf_counter() - smpl_payload_start)
         else:
             smpl_motion = _empty_smpl_motion(fps=tracks.fps)
@@ -1192,6 +1232,10 @@ class BodyStageRunner:
             }
             phase_timings["smpl_motion_payload_assembly_s"] = max(0.0, time.perf_counter() - smpl_payload_start)
         grounding_metrics = {**grounding_metrics, "calibration_confidence": _calibration_confidence_proxy(calibration)}
+        raw_grounded_joints_written = False
+        if raw_grounded_joints is not None:
+            _write_json_artifact(context.run_dir / RAW_GROUNDED_JOINTS_ARTIFACT, raw_grounded_joints)
+            raw_grounded_joints_written = True
         monolith_skip_reason = "not built (speed default; rerun with --fetch-body-monoliths to produce them)"
         serialization_timings = []
         if self.write_body_monoliths:
@@ -1274,11 +1318,14 @@ class BodyStageRunner:
         _write_body_serialization_timing(context.run_dir, serialization_timings)
         phase_timings["serialization_s"] = sum(float(item["serialization_seconds"]) for item in serialization_timings)
         contact_splice_start = time.perf_counter()
-        skeleton3d_payload, contact_splice = splice_contact_skeleton_with_body_mesh(
-            skeleton3d_payload,
-            body_mesh=body_mesh_for_splice,
-            body_compute_execution=body_execution,
-        )
+        if self.body_postchain.contact_splice:
+            skeleton3d_payload, contact_splice = splice_contact_skeleton_with_body_mesh(
+                skeleton3d_payload,
+                body_mesh=body_mesh_for_splice,
+                body_compute_execution=body_execution,
+            )
+        else:
+            contact_splice = _bypassed_contact_splice_artifact(body_execution)
         if self.sam3d_wrist_bone_lock:
             skeleton3d_payload = apply_sam3d_wrist_bone_lock(skeleton3d_payload)
         _write_json_artifact(skeleton3d_path, skeleton3d_payload)
@@ -1344,6 +1391,7 @@ class BodyStageRunner:
             phase_boundaries=phase_boundaries,
             not_instrumentable=not_instrumentable,
             timing_sources=timing_sources,
+            postchain_bypasses=self.body_postchain.bypass_summary(),
         )
         produced_artifacts = [
             "body_compute_execution.json",
@@ -1362,6 +1410,8 @@ class BodyStageRunner:
         ]
         if self.write_body_monoliths:
             produced_artifacts[3:3] = ["smpl_motion.json", "body_mesh.json"]
+        if raw_grounded_joints_written:
+            produced_artifacts.append(RAW_GROUNDED_JOINTS_ARTIFACT)
         notes = [
             "Fast SAM-3D-Body runtime output converted to court/world coordinates with court_calibration.json",
             (
@@ -1399,6 +1449,16 @@ class BodyStageRunner:
             notes.append(binary_handoff_note)
         if not self.write_body_monoliths:
             notes.append("BODY monoliths smpl_motion.json/body_mesh.json were not built (speed default; rerun with --fetch-body-monoliths to produce them)")
+        if not self.body_postchain.is_default:
+            notes.append(
+                "BODY post-chain bypassed stages: "
+                + ", ".join(self.body_postchain.bypassed_stages())
+                + (
+                    f"; raw grounded joints sidecar: {RAW_GROUNDED_JOINTS_ARTIFACT}"
+                    if raw_grounded_joints_written
+                    else ""
+                )
+            )
         return StageRun(
             stage=self.stage,
             status="ran",
@@ -1491,6 +1551,28 @@ class BodyStageRunner:
                 "max_track_anchor_smoothing_residual_m": self.max_track_anchor_smoothing_residual_m,
             },
         )
+
+
+def _bypassed_contact_splice_artifact(body_compute_execution: Mapping[str, Any]) -> dict[str, Any]:
+    summary = body_compute_execution.get("summary", {}) if isinstance(body_compute_execution, Mapping) else {}
+    scheduled = int(summary.get("scheduled_player_frame_count", 0) or 0)
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_contact_splice",
+        "source": "body_postchain_contact_splice_bypass",
+        "summary": {
+            "status": "bypassed",
+            "reason": "body_postchain_contact_splice_disabled",
+            "scheduled_player_frame_count": scheduled,
+            "scheduled_contact_count": 0,
+            "spliced_contact_count": 0,
+            "overridden_joint_count": 0,
+            "mesh_unavailable_count": 0,
+            "fallback_spliced_count": 0,
+            "strict_mode_loud": True,
+        },
+        "events": [],
+    }
 
 
 def _calibration_confidence_proxy(calibration: CourtCalibration) -> dict[str, Any]:
@@ -3524,6 +3606,7 @@ def _write_body_stage_phase_timing(
     phase_boundaries: Mapping[str, str],
     not_instrumentable: Mapping[str, str],
     timing_sources: Mapping[str, str],
+    postchain_bypasses: Mapping[str, Any] | None = None,
 ) -> None:
     timed_keys = (
         "orchestrator_model_setup_s",
@@ -3587,6 +3670,8 @@ def _write_body_stage_phase_timing(
             "VERIFIED=0 unchanged; this artifact is speed instrumentation only.",
         ],
     }
+    if postchain_bypasses:
+        payload["postchain_bypasses"] = dict(postchain_bypasses)
     _write_json(run_dir / "body_stage_phase_timing.json", payload)
 
 

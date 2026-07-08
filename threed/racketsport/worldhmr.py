@@ -31,6 +31,7 @@ from .foot_contact import (
     resolve_foot_joint_indices,
 )
 from .foot_pin import FootPinSettings, apply_foot_pin_to_payload
+from .body_postchain import BodyPostChainConfig, RAW_GROUNDED_JOINTS_ARTIFACT
 from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
 from .pose_temporal import apply_sam3d_wrist_bone_lock, compare_wrist_peak_timing, refine_sam3d_skeleton3d
 from .schemas import CourtCalibration
@@ -149,6 +150,7 @@ class BodySkeletonAndMetrics:
     smpl_motion_view: dict[str, Any]
     skeleton3d: dict[str, Any]
     metrics: dict[str, Any]
+    raw_grounded_joints: dict[str, Any] | None = None
 
 
 def snap_player_translation_to_court(
@@ -256,6 +258,7 @@ def build_body_artifacts_from_fast_sam(
     smoothing_gap_carry_frames: int = DEFAULT_SMOOTHING_GAP_CARRY_FRAMES,
     smoothing_residual_identity_reset_m: float = DEFAULT_SMOOTHING_RESIDUAL_IDENTITY_RESET_M,
     world_joint_visual_smoothing: bool = True,
+    body_postchain: BodyPostChainConfig | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Build BODY contract artifacts from real Fast SAM-3D-Body outputs."""
 
@@ -274,6 +277,7 @@ def build_body_artifacts_from_fast_sam(
         smoothing_gap_carry_frames=smoothing_gap_carry_frames,
         smoothing_residual_identity_reset_m=smoothing_residual_identity_reset_m,
         world_joint_visual_smoothing=world_joint_visual_smoothing,
+        body_postchain=body_postchain,
     )
     return assemble_body_monolith_payloads(
         computed.smpl_motion_view,
@@ -298,6 +302,7 @@ def compute_body_skeleton_and_metrics(
     smoothing_gap_carry_frames: int = DEFAULT_SMOOTHING_GAP_CARRY_FRAMES,
     smoothing_residual_identity_reset_m: float = DEFAULT_SMOOTHING_RESIDUAL_IDENTITY_RESET_M,
     world_joint_visual_smoothing: bool = True,
+    body_postchain: BodyPostChainConfig | None = None,
 ) -> BodySkeletonAndMetrics:
     """Compute shared BODY skeleton, joint metrics, and light SMPL motion view."""
 
@@ -315,6 +320,12 @@ def compute_body_skeleton_and_metrics(
         raise ValueError("smoothing_residual_identity_reset_m must be positive")
     if not samples:
         raise ValueError("at least one Fast SAM-3D-Body sample is required")
+    postchain = body_postchain or BodyPostChainConfig(
+        wrist_lock=sam3d_wrist_bone_lock,
+        world_joint_visual_smoothing=world_joint_visual_smoothing,
+    )
+    sam3d_wrist_bone_lock = bool(postchain.wrist_lock)
+    world_joint_visual_smoothing = bool(postchain.world_joint_visual_smoothing)
     camera_motion, camera_motion_warnings = _load_camera_motion_context(camera_motion_path)
     camera_motion_seen: set[int] = set()
     camera_motion_used: set[int] = set()
@@ -338,7 +349,20 @@ def compute_body_skeleton_and_metrics(
         or (R3_GROUNDING_ANCHOR_SOURCE if stance_index else DEFAULT_GROUNDING_ANCHOR_SOURCE)
     )
     stance_aware_grounding = anchor_source == R3_GROUNDING_ANCHOR_SOURCE and stance_index is not None
-    if stance_aware_grounding:
+    raw_grounded_joints = (
+        _build_raw_grounded_joints_sidecar(
+            grounded,
+            fps=fps,
+            model=model,
+            grounding_anchor_source=anchor_source,
+            postchain=postchain,
+        )
+        if postchain.is_raw
+        else None
+    )
+    if not postchain.temporal_smoothing:
+        smoothed, smoothing_metrics = _bypass_temporal_smoothing(grounded, stance_aware_grounding=stance_aware_grounding)
+    elif stance_aware_grounding:
         smoothed, smoothing_metrics = _smooth_grounded_frames_stance_aware(
             grounded,
             stance_index=stance_index or {},
@@ -362,13 +386,16 @@ def compute_body_skeleton_and_metrics(
     foot_lock_player_summaries: list[dict[str, Any]] = []
     for player_id in sorted({int(frame["player_id"]) for frame in smoothed}):
         player_frames = [frame for frame in smoothed if int(frame["player_id"]) == player_id]
-        player_frames, foot_lock_summary = _apply_footlock_to_player_frames(
-            player_frames,
-            max_root_speed_mps=None if stance_aware_grounding else max_root_speed_mps,
-            xy_translation_enabled=not stance_aware_grounding,
-            max_allowed_xy_correction_m=FOOT_LOCK_MAX_XY_CORRECTION_M if stance_aware_grounding else None,
-            smoothing_gap_carry_frames=smoothing_gap_carry_frames,
-        )
+        if postchain.foot_lock:
+            player_frames, foot_lock_summary = _apply_footlock_to_player_frames(
+                player_frames,
+                max_root_speed_mps=None if stance_aware_grounding else max_root_speed_mps,
+                xy_translation_enabled=not stance_aware_grounding,
+                max_allowed_xy_correction_m=FOOT_LOCK_MAX_XY_CORRECTION_M if stance_aware_grounding else None,
+                smoothing_gap_carry_frames=smoothing_gap_carry_frames,
+            )
+        else:
+            player_frames, foot_lock_summary = _bypass_footlock_for_player_frames(player_frames)
         foot_lock_player_summaries.append(foot_lock_summary)
         betas = _first_list(player_frames, "betas")
         # ADDITIVE (P2-2 GATE 1b, w5_p22latent_20260707): same per-player
@@ -411,9 +438,13 @@ def compute_body_skeleton_and_metrics(
                 ],
                 "foot_lock": _smpl_foot_lock_summary(foot_lock_summary),
                 "skate_free": bool(foot_lock_summary["skate_free"]),
-                "physics": "worldhmr_floor_contact_footlock_z_snap"
-                if player_has_contact
-                else "worldhmr_grounded_not_footlocked",
+                "physics": (
+                    "worldhmr_floor_contact_footlock_z_snap"
+                    if player_has_contact and postchain.foot_lock
+                    else "worldhmr_foot_lock_bypassed"
+                    if player_has_contact
+                    else "worldhmr_grounded_not_footlocked"
+                ),
             }
         )
         skeleton_players.append(
@@ -470,13 +501,22 @@ def compute_body_skeleton_and_metrics(
         "players": skeleton_players,
         "provenance": skeleton_provenance,
     }
-    skeleton3d = apply_sam3d_temporal_refine_gate(
-        skeleton3d,
-        fps=fps,
-        sam3d_wrist_bone_lock=sam3d_wrist_bone_lock,
-    )
+    if postchain.temporal_smoothing:
+        skeleton3d = apply_sam3d_temporal_refine_gate(
+            skeleton3d,
+            fps=fps,
+            sam3d_wrist_bone_lock=sam3d_wrist_bone_lock,
+        )
+    else:
+        skeleton3d = _with_sam3d_temporal_refine_status(
+            skeleton3d,
+            status="bypassed_body_postchain_temporal_smoothing_disabled",
+            wrist_peak_timing_gate_pass=False,
+        )
+        if sam3d_wrist_bone_lock:
+            skeleton3d = apply_sam3d_wrist_bone_lock(skeleton3d)
     refined_stance_metrics: dict[str, Any] = {}
-    if anchor_source == R3_GROUNDING_ANCHOR_SOURCE:
+    if anchor_source == R3_GROUNDING_ANCHOR_SOURCE and postchain.foot_pin:
         smpl_motion, skeleton3d, refined_stance_metrics = _apply_refined_stance_phase_lock_and_pin(
             smpl_motion,
             skeleton3d,
@@ -484,6 +524,8 @@ def compute_body_skeleton_and_metrics(
             deep_copy_payload=False,
         )
         players = smpl_motion["players"]
+    elif anchor_source == R3_GROUNDING_ANCHOR_SOURCE and not postchain.foot_pin:
+        refined_stance_metrics = _bypassed_foot_pin_metrics()
     mesh_vertices_by_key = _detach_smpl_motion_mesh_vertices(smpl_motion)
     smpl_motion, skeleton3d, world_joint_visual_smoothing_metrics = _apply_world_joint_visual_smoothing(
         smpl_motion,
@@ -494,6 +536,8 @@ def compute_body_skeleton_and_metrics(
     )
     _reattach_smpl_motion_mesh_vertices(smpl_motion, mesh_vertices_by_key)
     players = smpl_motion["players"]
+    if not postchain.is_default:
+        skeleton3d = _mark_body_postchain_bypasses(skeleton3d, postchain)
     sam3d_temporal_refine = dict(skeleton3d.get("provenance", {}).get("sam3d_temporal_refine", {}))
     sam3d_lock = dict(skeleton3d.get("provenance", {}).get("sam3d_wrist_bone_lock", {}))
     temporal_refine = dict(skeleton3d.get("provenance", {}).get("temporal_refine", {}))
@@ -566,10 +610,16 @@ def compute_body_skeleton_and_metrics(
         **camera_motion_metrics,
     }
     metrics.update(refined_stance_metrics)
+    if not postchain.is_default:
+        metrics["body_postchain"] = postchain.to_artifact_dict()
+        metrics["postchain_bypassed_stages"] = postchain.bypassed_stages()
+        if raw_grounded_joints is not None:
+            metrics["raw_grounded_joints_sidecar"] = RAW_GROUNDED_JOINTS_ARTIFACT
     return BodySkeletonAndMetrics(
         smpl_motion_view=smpl_motion,
         skeleton3d=skeleton3d,
         metrics=metrics,
+        raw_grounded_joints=raw_grounded_joints,
     )
 
 
@@ -585,6 +635,254 @@ def assemble_body_monolith_payloads(
         copy.deepcopy(dict(skeleton3d)),
         copy.deepcopy(dict(metrics)),
     )
+
+
+def _bypass_temporal_smoothing(
+    grounded: Sequence[dict[str, Any]],
+    *,
+    stance_aware_grounding: bool,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    frames: list[dict[str, Any]] = []
+    for frame in grounded:
+        copied = copy.deepcopy(dict(frame))
+        copied["grounding_anchor"] = frame.get("grounding_anchor", "")
+        copied["temporal_smoothing_reset"] = False
+        copied.pop("temporal_smoothing_metadata", None)
+        frames.append(copied)
+    metrics: dict[str, Any] = {
+        "temporal_smoothing_status": "bypassed_body_postchain_temporal_smoothing_disabled",
+        "root_speed_limited_frames": 0,
+        "track_anchor_residual_reset_frames": 0,
+        "track_anchor_residual_carried_frames": 0,
+        "track_anchor_residual_identity_reset_frames": 0,
+        "max_pre_reset_track_anchor_residual_m": 0.0,
+        "max_track_anchor_residual_m": 0.0,
+    }
+    if stance_aware_grounding:
+        metrics.update(
+            {
+                "root_speed_anomaly_frames": 0,
+                "root_speed_clamp_engagement_overall": 0.0,
+                "root_speed_anomaly_fraction_overall": 0.0,
+                "root_speed_clamp_engagement_by_player": {},
+                "root_speed_anomaly_fraction_by_player": {},
+                "transition_anchor_lag_p95_m": 0.0,
+                "transition_anchor_lag_median_m": 0.0,
+                "body_marker_transition_divergence_p90_m": 0.0,
+                "stance_aware_grounding": {
+                    "source": R3_GROUNDING_ANCHOR_SOURCE,
+                    "status": "bypassed_body_postchain_temporal_smoothing_disabled",
+                    "stance_frame_count": 0,
+                    "rejected_stance_frame_count": 0,
+                    "rejected_stance_reasons": {},
+                    "transition_frame_count": 0,
+                    "track_anchor_residual_m": _distribution_m([]),
+                    "transition_anchor_lag_m": _distribution_m([]),
+                    "transition_anchor_lag_p95_m": 0.0,
+                    "transition_anchor_lag_median_m": 0.0,
+                    "body_marker_transition_divergence": _distribution_m([]),
+                    "residual_reset_frames": 0,
+                    "residual_carried_frames": 0,
+                    "residual_identity_reset_frames": 0,
+                    "root_speed_clamp_engagement_overall": 0.0,
+                    "root_speed_clamp_engagement_by_player": {},
+                },
+            }
+        )
+    return frames, metrics
+
+
+def _bypass_footlock_for_player_frames(
+    player_frames: Sequence[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    copied_frames: list[dict[str, Any]] = []
+    for frame in player_frames:
+        copied = copy.deepcopy(dict(frame))
+        copied["foot_lock"] = {"left": False, "right": False}
+        copied_frames.append(copied)
+    return copied_frames, {
+        "scaffold": "body_postchain_bypass",
+        "status": "bypassed_body_postchain_foot_lock_disabled",
+        "contact_frames": 0,
+        "contact_samples": 0,
+        "root_speed_limited_frames": 0,
+        "xy_capped_frames": 0,
+        "gap_carried_frames": 0,
+        "gap_reset_frames": 0,
+        "max_xy_correction_m": 0.0,
+        "max_allowed_xy_correction_m": 0.0,
+        "max_slide_m": 0.0,
+        "max_penetration_m": 0.0,
+        "skate_free": False,
+    }
+
+
+def _bypassed_foot_pin_metrics() -> dict[str, Any]:
+    return {
+        "refined_stance_phase_count": 0,
+        "refined_stance_split_phase_count": 0,
+        "refined_stance_phase_split_count": 0,
+        "foot_pin_phase_count": 0,
+        "foot_pin_corrected_frame_count": 0,
+        "foot_pin_max_correction_m": 0.0,
+        "foot_pin_status": "bypassed_body_postchain_foot_pin_disabled",
+        "foot_lock_slide_metric": "body_postchain_foot_pin_bypassed",
+        "max_foot_lock_slide_m": 0.0,
+        "foot_lock_slide_p95_m": 0.0,
+        "max_candidate_phase_slide_m": 0.0,
+        "candidate_phase_count": 0,
+        "candidate_phase_rejected_count": 0,
+        "candidate_phase_rejection_reason_counts": {},
+        "foot_lock_gate_stream": {
+            "artifact_type": "foot_lock_gate_stream",
+            "status": "bypassed_body_postchain_foot_pin_disabled",
+            "phase_rows": [],
+            "frame_rows": [],
+            "summary": {"phase_count": 0, "frame_count": 0},
+        },
+    }
+
+
+def _mark_body_postchain_bypasses(
+    skeleton3d: Mapping[str, Any],
+    postchain: BodyPostChainConfig,
+) -> dict[str, Any]:
+    output = copy.deepcopy(dict(skeleton3d))
+    bypass_summary = postchain.bypass_summary()
+    if bypass_summary is None:
+        return output
+    provenance = dict(output.get("provenance", {}))
+    provenance["body_postchain_bypass"] = {
+        **bypass_summary,
+        "strict_mode_loud": True,
+    }
+    if not postchain.foot_pin:
+        provenance.setdefault(
+            "foot_pin",
+            {
+                "status": "bypassed_body_postchain_foot_pin_disabled",
+                "strict_mode_loud": True,
+            },
+        )
+    if not postchain.world_joint_visual_smoothing:
+        provenance.setdefault(
+            "worldhmr_visual_smoothing",
+            {
+                "enabled": False,
+                "status": "bypassed_body_postchain_world_joint_visual_smoothing_disabled",
+            },
+        )
+    output["provenance"] = provenance
+    return output
+
+
+def _build_raw_grounded_joints_sidecar(
+    grounded: Sequence[dict[str, Any]],
+    *,
+    fps: float,
+    model: str,
+    grounding_anchor_source: str,
+    postchain: BodyPostChainConfig,
+) -> dict[str, Any]:
+    if not grounded:
+        raise ValueError("raw grounded joints sidecar requires at least one grounded BODY frame")
+    player_frames: dict[int, list[dict[str, Any]]] = {}
+    max_joint_count = 0
+    min_joint_count: int | None = None
+    for index, frame in enumerate(grounded):
+        missing = [
+            field
+            for field in ("frame_idx", "player_id", "t", "track_world_xy", "transl_world", "joints_world")
+            if field not in frame
+        ]
+        if missing:
+            raise ValueError(f"raw grounded joints frame {index} missing required field(s): {', '.join(missing)}")
+        player_id = int(frame["player_id"])
+        joints = _vector3_list(frame["joints_world"], name=f"raw_grounded_joints/players/{player_id}/joints_world")
+        if not joints:
+            raise ValueError(f"raw grounded joints frame {index} has no joints_world samples")
+        max_joint_count = max(max_joint_count, len(joints))
+        min_joint_count = len(joints) if min_joint_count is None else min(min_joint_count, len(joints))
+        confidence = float(frame.get("confidence", 0.0))
+        player_frames.setdefault(player_id, []).append(
+            {
+                "frame_idx": int(frame["frame_idx"]),
+                "t": float(frame["t"]),
+                "track_world_xy": _vector2(frame["track_world_xy"], name="track_world_xy"),
+                "transl_world": _vector3(frame["transl_world"], name="transl_world"),
+                "joints_world": joints,
+                "joint_conf": [confidence] * len(joints),
+                "grounding_anchor": str(frame.get("grounding_anchor", "")),
+            }
+        )
+    players = [
+        {
+            "id": player_id,
+            "frames": sorted(frames, key=lambda item: int(item["frame_idx"])),
+        }
+        for player_id, frames in sorted(player_frames.items())
+    ]
+    sidecar = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_body_raw_grounded_joints",
+        "source": "worldhmr._ground_fast_sam_sample",
+        "model": model,
+        "fps": float(fps),
+        "world_frame": "court_Z0",
+        "grounding": "camera_offset_row_times_R_plus_track_footpoint_court_z0",
+        "grounding_anchor_source": grounding_anchor_source,
+        "postchain": postchain.to_artifact_dict(mode="raw"),
+        "postchain_bypassed_stages": postchain.bypassed_stages(),
+        "joint_names": [f"sam3dbody_joint_{idx:03d}" for idx in range(max_joint_count)],
+        "players": players,
+        "summary": {
+            "player_count": len(players),
+            "frame_count": len({int(frame["frame_idx"]) for frame in grounded}),
+            "sample_count": len(grounded),
+            "joint_count_min": int(min_joint_count or 0),
+            "joint_count_max": int(max_joint_count),
+        },
+    }
+    _validate_raw_grounded_joints_sidecar(sidecar)
+    return sidecar
+
+
+def _validate_raw_grounded_joints_sidecar(sidecar: Mapping[str, Any]) -> None:
+    required = (
+        "schema_version",
+        "artifact_type",
+        "fps",
+        "world_frame",
+        "postchain",
+        "postchain_bypassed_stages",
+        "joint_names",
+        "players",
+        "summary",
+    )
+    missing = [field for field in required if field not in sidecar]
+    if missing:
+        raise ValueError(f"raw grounded joints sidecar missing required field(s): {', '.join(missing)}")
+    if sidecar["artifact_type"] != "racketsport_body_raw_grounded_joints":
+        raise ValueError("raw grounded joints sidecar artifact_type mismatch")
+    if sidecar["world_frame"] != "court_Z0":
+        raise ValueError("raw grounded joints sidecar must use court_Z0 world_frame")
+    if not isinstance(sidecar.get("players"), list) or not sidecar["players"]:
+        raise ValueError("raw grounded joints sidecar must include at least one player")
+    for player in sidecar["players"]:
+        if not isinstance(player, Mapping) or "id" not in player or "frames" not in player:
+            raise ValueError("raw grounded joints sidecar player rows require id and frames")
+        frames = player["frames"]
+        if not isinstance(frames, list) or not frames:
+            raise ValueError("raw grounded joints sidecar players require non-empty frames")
+        for frame in frames:
+            if not isinstance(frame, Mapping):
+                raise ValueError("raw grounded joints sidecar frame rows must be objects")
+            for field in ("frame_idx", "t", "track_world_xy", "transl_world", "joints_world", "joint_conf"):
+                if field not in frame:
+                    raise ValueError(f"raw grounded joints sidecar frame missing {field}")
+            joints = frame["joints_world"]
+            if not isinstance(joints, list) or not joints:
+                raise ValueError("raw grounded joints sidecar frame joints_world must be non-empty")
 
 
 def apply_sam3d_temporal_refine_gate(

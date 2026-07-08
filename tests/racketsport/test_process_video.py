@@ -2286,6 +2286,13 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     assert default_options.remote_config.sam3d_compile_warmup_buckets == (8, 16)
     assert default_options.remote_config.sam3d_skip_tier2_mesh_vertices is True
     assert default_options.remote_config.fetch_body_monoliths is False
+    assert default_options.remote_config.body_postchain_mode == "default"
+    assert default_options.remote_config.body_temporal_smoothing is True
+    assert default_options.remote_config.body_foot_lock is True
+    assert default_options.remote_config.body_foot_pin is True
+    assert default_options.remote_config.body_contact_splice is True
+    assert default_options.remote_config.sam3d_wrist_bone_lock is True
+    assert default_options.remote_config.body_world_joint_visual_smoothing is True
 
     ball_aware_options = process_video.build_options_from_args(
         parser.parse_args(
@@ -2311,6 +2318,9 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
                 "4,8",
                 "--serialize-tier2-mesh-vertices",
                 "--fetch-body-monoliths",
+                "--body-postchain",
+                "raw",
+                "--no-body-contact-splice",
                 "--events-selected",
                 str(events_selected),
                 "--ball-track-arc-solved",
@@ -2330,6 +2340,13 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     assert ball_aware_options.remote_config.sam3d_compile_warmup_buckets == (4, 8)
     assert ball_aware_options.remote_config.sam3d_skip_tier2_mesh_vertices is False
     assert ball_aware_options.remote_config.fetch_body_monoliths is True
+    assert ball_aware_options.remote_config.body_postchain_mode == "raw"
+    assert ball_aware_options.remote_config.body_temporal_smoothing is False
+    assert ball_aware_options.remote_config.body_foot_lock is False
+    assert ball_aware_options.remote_config.body_foot_pin is False
+    assert ball_aware_options.remote_config.body_contact_splice is False
+    assert ball_aware_options.remote_config.sam3d_wrist_bone_lock is False
+    assert ball_aware_options.remote_config.body_world_joint_visual_smoothing is False
 
 
 def test_process_video_cli_help_direct_reference() -> None:
@@ -2362,6 +2379,13 @@ def test_process_video_cli_help_direct_reference() -> None:
     assert "--sam3d-compile-warmup-buckets" in completed.stdout
     assert "--serialize-tier2-mesh-vertices" in completed.stdout
     assert "--fetch-body-monoliths" in completed.stdout
+    assert "--body-postchain" in completed.stdout
+    assert "--no-body-temporal-smoothing" in completed.stdout
+    assert "--no-body-foot-lock" in completed.stdout
+    assert "--no-body-foot-pin" in completed.stdout
+    assert "--no-body-contact-splice" in completed.stdout
+    assert "--no-body-wrist-lock" in completed.stdout
+    assert "--no-body-world-joint-visual-smoothing" in completed.stdout
 
 
 def test_process_video_cli_rejects_missing_video() -> None:

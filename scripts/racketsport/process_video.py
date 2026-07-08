@@ -2622,6 +2622,11 @@ class ProcessVideoPipeline:
                         sam3d_torch_compile=opts.remote_config.sam3d_torch_compile,
                         sam3d_compile_warmup_buckets=opts.remote_config.sam3d_compile_warmup_buckets,
                         sam3d_wrist_bone_lock=opts.remote_config.sam3d_wrist_bone_lock,
+                        body_temporal_smoothing=opts.remote_config.body_temporal_smoothing,
+                        body_foot_lock=opts.remote_config.body_foot_lock,
+                        body_foot_pin=opts.remote_config.body_foot_pin,
+                        body_contact_splice=opts.remote_config.body_contact_splice,
+                        body_world_joint_visual_smoothing=opts.remote_config.body_world_joint_visual_smoothing,
                     )
                 },
                 # Calibration/tracking already ran earlier in this same process_video
@@ -4747,6 +4752,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
     video = Path(args.video).expanduser().resolve()
     clip = args.clip or _clip_id_from_video(video)
     run_dir = Path(args.out).expanduser().resolve() if args.out else DEFAULT_RUN_ROOT / f"process_video_{clip}"
+    body_postchain_raw = args.body_postchain == "raw"
 
     remote_config = RemoteConfig(
         host=args.remote_host,
@@ -4765,7 +4771,20 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
             name="--sam3d-compile-warmup-buckets",
         ),
         sam3d_skip_tier2_mesh_vertices=not args.serialize_tier2_mesh_vertices,
-        sam3d_wrist_bone_lock=not args.no_sam3d_wrist_bone_lock,
+        sam3d_wrist_bone_lock=not (
+            args.no_sam3d_wrist_bone_lock
+            or args.no_body_wrist_lock
+            or body_postchain_raw
+        ),
+        body_postchain_mode=str(args.body_postchain),
+        body_temporal_smoothing=not (args.no_body_temporal_smoothing or body_postchain_raw),
+        body_foot_lock=not (args.no_body_foot_lock or body_postchain_raw),
+        body_foot_pin=not (args.no_body_foot_pin or body_postchain_raw),
+        body_contact_splice=not (args.no_body_contact_splice or body_postchain_raw),
+        body_world_joint_visual_smoothing=not (
+            args.no_body_world_joint_visual_smoothing
+            or body_postchain_raw
+        ),
         fetch_body_monoliths=bool(args.fetch_body_monoliths),
     )
 
@@ -5052,6 +5071,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable the default SAM-3D post-splice canonical lower-arm wrist lock.",
     )
+    parser.add_argument(
+        "--body-postchain",
+        choices=("default", "raw"),
+        default="default",
+        help="BODY post-chain preset. raw disables all post-chain stages and persists body_raw_grounded_joints.json.",
+    )
+    parser.add_argument("--no-body-temporal-smoothing", action="store_true")
+    parser.add_argument("--no-body-foot-lock", action="store_true")
+    parser.add_argument("--no-body-foot-pin", action="store_true")
+    parser.add_argument("--no-body-contact-splice", action="store_true")
+    parser.add_argument("--no-body-wrist-lock", action="store_true")
+    parser.add_argument("--no-body-world-joint-visual-smoothing", action="store_true")
     parser.add_argument("--remote-lock-wait-timeout-s", type=int, default=RemoteConfig().lock_wait_timeout_s)
     parser.add_argument(
         "--remote-command-timeout-s",

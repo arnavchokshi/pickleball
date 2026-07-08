@@ -1686,6 +1686,13 @@ def test_phase_d_dispatch_config_documents_static_intrinsics_warmup_and_stall_ga
         sam3d_crop_bucket_sizes=(8, 16),
         sam3d_torch_compile=True,
         sam3d_compile_warmup_buckets=(8, 16),
+        body_postchain_mode="raw",
+        body_temporal_smoothing=False,
+        body_foot_lock=False,
+        body_foot_pin=False,
+        body_contact_splice=False,
+        sam3d_wrist_bone_lock=False,
+        body_world_joint_visual_smoothing=False,
     )
 
     payload = rbd.build_phase_d_sam3d_dispatch_config(config)
@@ -1700,6 +1707,16 @@ def test_phase_d_dispatch_config_documents_static_intrinsics_warmup_and_stall_ga
     assert optimization["inner_bucket_sync"] is True
     assert optimization["upstream_env"] == {}
     assert optimization["tier2_output_lite"] is False
+    assert optimization["body_postchain"] == {
+        "mode": "raw",
+        "temporal_smoothing": False,
+        "foot_lock": False,
+        "foot_pin": False,
+        "contact_splice": False,
+        "wrist_lock": False,
+        "world_joint_visual_smoothing": False,
+        "raw_grounded_joints_sidecar": "body_raw_grounded_joints.json",
+    }
     assert optimization["static_clip_intrinsics_contract"] == {
         "source_artifact": "court_calibration.json",
         "request_field": "clip_intrinsics",
@@ -1744,6 +1761,13 @@ def test_remote_body_dispatch_cli_help_direct_reference() -> None:
     assert "--sam3d-tier2-output-lite" in completed.stdout
     assert "--camera-motion" in completed.stdout
     assert "--fetch-body-monoliths" in completed.stdout
+    assert "--body-postchain" in completed.stdout
+    assert "--no-body-temporal-smoothing" in completed.stdout
+    assert "--no-body-foot-lock" in completed.stdout
+    assert "--no-body-foot-pin" in completed.stdout
+    assert "--no-body-contact-splice" in completed.stdout
+    assert "--no-body-wrist-lock" in completed.stdout
+    assert "--no-body-world-joint-visual-smoothing" in completed.stdout
     assert "--allow-dirty" in completed.stdout
     assert "--sync-remote-code" in completed.stdout
     assert "--verify-version-stamp" in completed.stdout

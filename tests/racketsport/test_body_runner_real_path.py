@@ -918,6 +918,65 @@ def test_body_runner_replaces_existing_legacy_skeleton3d_with_sam3d_output(tmp_p
     assert skeleton_payload["provenance"]["contact_splice"]["mesh_source"] == "body_mesh.json"
 
 
+def test_body_runner_raw_postchain_writes_sidecar_and_loud_bypass_summary(tmp_path: Path) -> None:
+    inputs = tmp_path / "inputs"
+    run_dir = tmp_path / "run"
+    manifest = _manifest(tmp_path / "models")
+    _write_inputs(inputs, frame_indexes=(0, 1, 2))
+    _write_contact_ball_inflections(inputs)
+    run_dir.mkdir()
+    _write_frame_compute_plan(run_dir)
+    runtime = FakeFastSamRuntime(joint_count=70)
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="body",
+        max_frames=None,
+        max_players=1,
+        tracking_mode="precomputed",
+        runners={
+            "pose": FakePoseStageRunner(),
+            "body": BodyStageRunner(
+                write_body_monoliths=True,
+                manifest_path=manifest,
+                runtime=runtime,
+                body_temporal_smoothing=False,
+                body_foot_lock=False,
+                body_foot_pin=False,
+                body_contact_splice=False,
+                sam3d_wrist_bone_lock=False,
+                body_world_joint_visual_smoothing=False,
+            ),
+        },
+    )
+
+    body_stage = _stage(summary, "body")
+    raw_sidecar = json.loads((run_dir / "body_raw_grounded_joints.json").read_text(encoding="utf-8"))
+    phase_timing = json.loads((run_dir / "body_stage_phase_timing.json").read_text(encoding="utf-8"))
+    contact_splice = json.loads((run_dir / "contact_splice.json").read_text(encoding="utf-8"))
+    skeleton_payload = json.loads((run_dir / "skeleton3d.json").read_text(encoding="utf-8"))
+
+    expected_bypasses = [
+        "temporal_smoothing",
+        "foot_lock",
+        "foot_pin",
+        "contact_splice",
+        "wrist_lock",
+        "world_joint_visual_smoothing",
+    ]
+    assert body_stage["metrics"]["postchain_bypassed_stages"] == expected_bypasses
+    assert "body_raw_grounded_joints.json" in body_stage["produced_artifacts"]
+    assert raw_sidecar["artifact_type"] == "racketsport_body_raw_grounded_joints"
+    assert raw_sidecar["postchain_bypassed_stages"] == expected_bypasses
+    assert raw_sidecar["summary"]["sample_count"] > 0
+    assert phase_timing["postchain_bypasses"]["stages"] == expected_bypasses
+    assert phase_timing["postchain_bypasses"]["raw_grounded_joints_sidecar"] == "body_raw_grounded_joints.json"
+    assert contact_splice["summary"]["status"] == "bypassed"
+    assert skeleton_payload["provenance"]["body_postchain_bypass"]["stages"] == expected_bypasses
+
+
 def test_body_runner_does_not_backfill_missing_contact_mesh_with_pose_fallback(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs"
     run_dir = tmp_path / "run"

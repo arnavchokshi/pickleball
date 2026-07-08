@@ -104,6 +104,15 @@ DEFAULT_TRANSPORT_CHUNKED_FALLBACK_BWLIMIT_KBPS = 8192
 VERSION_STAMP_ARTIFACT = "version_stamp.json"
 REMOTE_VERSION_VERIFICATION_ARTIFACT = "remote_version_verification.json"
 REMOTE_CODE_SYNC_DIR = ".body_code_sync"
+RAW_GROUNDED_JOINTS_ARTIFACT = "body_raw_grounded_joints.json"
+BODY_POSTCHAIN_STAGE_ORDER: tuple[str, ...] = (
+    "temporal_smoothing",
+    "foot_lock",
+    "foot_pin",
+    "contact_splice",
+    "wrist_lock",
+    "world_joint_visual_smoothing",
+)
 
 # Remote clip ids are interpolated into a single shell command string sent
 # over SSH (_remote_body_command) and into a remote directory path (mkdir).
@@ -187,6 +196,7 @@ BODY_OUTPUT_ARTIFACTS_DEFAULT: tuple[str, ...] = (
     "sam3d_body_input_prep.json",
     "remote_sam3d_tier2_dispatch_config.json",
     "contact_splice.json",
+    RAW_GROUNDED_JOINTS_ARTIFACT,
     "frame_compute_plan.json",
     "wrist_velocity_peaks.json",
     "ball_inflections.json",
@@ -248,6 +258,12 @@ class RemoteConfig:
     sam3d_upstream_env: dict[str, str] = field(default_factory=dict)
     sam3d_tier2_output_lite: bool = False
     sam3d_wrist_bone_lock: bool = True
+    body_postchain_mode: str = "default"
+    body_temporal_smoothing: bool = True
+    body_foot_lock: bool = True
+    body_foot_pin: bool = True
+    body_contact_splice: bool = True
+    body_world_joint_visual_smoothing: bool = True
     fetch_body_monoliths: bool = False
     gpu_lock_script: str = DEFAULT_GPU_LOCK_SCRIPT
     run_root: str = DEFAULT_RUN_ROOT
@@ -426,6 +442,18 @@ def _git_blob_md5_and_size(repo_root: Path, ref: str, rel_path: str) -> tuple[st
     return hashlib.md5(blob, usedforsecurity=False).hexdigest(), len(blob)
 
 
+def _git_blob_or_worktree_md5_and_size(repo_root: Path, ref: str, rel_path: str) -> tuple[str, int, bool]:
+    try:
+        md5, size_bytes = _git_blob_md5_and_size(repo_root, ref, rel_path)
+        return md5, size_bytes, False
+    except RemoteBodyDispatchError:
+        path = repo_root / rel_path
+        if not path.is_file():
+            raise
+        data = path.read_bytes()
+        return hashlib.md5(data, usedforsecurity=False).hexdigest(), len(data), True
+
+
 def _md5_file(path: Path) -> str:
     digest = hashlib.md5(usedforsecurity=False)
     with path.open("rb") as handle:
@@ -571,8 +599,11 @@ def build_version_stamp(
     dirty_files = _git_dirty_tracked_files(repo_root, critical_files)
     git_head_sha = _git_head_sha(repo_root)
     file_records = []
+    working_tree_hash_files: list[str] = []
     for rel in critical_files:
-        md5, size_bytes = _git_blob_md5_and_size(repo_root, git_head_sha, rel)
+        md5, size_bytes, used_worktree = _git_blob_or_worktree_md5_and_size(repo_root, git_head_sha, rel)
+        if used_worktree:
+            working_tree_hash_files.append(rel)
         file_records.append(
             {
                 "path": rel,
@@ -587,6 +618,11 @@ def build_version_stamp(
         notes.append(
             "non-gating local dirty tracked runtime file(s) detected: " + ", ".join(dirty_files)
         )
+    if working_tree_hash_files:
+        notes.append(
+            "working-tree hash used for critical runtime file(s) not present in HEAD: "
+            + ", ".join(working_tree_hash_files)
+        )
     return {
         "schema_version": 1,
         "artifact_type": "racketsport_remote_body_version_stamp",
@@ -598,7 +634,10 @@ def build_version_stamp(
         "notes": notes,
         "remote_run_dir": remote_run_dir,
         "critical_file_set": {
-            "hash_source": "git_committed_blob",
+            "hash_source": "git_committed_blob"
+            if not working_tree_hash_files
+            else "mixed_git_committed_blob_and_working_tree_missing_from_head",
+            "working_tree_hash_files": working_tree_hash_files,
             "derivation": {
                 "remote_command_entrypoints": [
                     "scripts/racketsport/remote_body_dispatch.py --verify-version-stamp",
@@ -1297,8 +1336,33 @@ REMOTE_BODY_RUNNER_FILENAME = "remote_body_runner.py"
 CAMERA_MOTION_ARTIFACT = "camera_motion.json"
 
 
-def build_phase_d_sam3d_dispatch_config(config: RemoteConfig) -> dict[str, Any]:
+def _body_postchain_values(config: RemoteConfig) -> dict[str, bool]:
     return {
+        "temporal_smoothing": bool(config.body_temporal_smoothing),
+        "foot_lock": bool(config.body_foot_lock),
+        "foot_pin": bool(config.body_foot_pin),
+        "contact_splice": bool(config.body_contact_splice),
+        "wrist_lock": bool(config.sam3d_wrist_bone_lock),
+        "world_joint_visual_smoothing": bool(config.body_world_joint_visual_smoothing),
+    }
+
+
+def _body_postchain_is_default(config: RemoteConfig) -> bool:
+    return all(_body_postchain_values(config).values())
+
+
+def _body_postchain_artifact_dict(config: RemoteConfig) -> dict[str, Any]:
+    values = _body_postchain_values(config)
+    is_raw = all(not values[stage] for stage in BODY_POSTCHAIN_STAGE_ORDER)
+    return {
+        "mode": str(config.body_postchain_mode),
+        **values,
+        "raw_grounded_joints_sidecar": RAW_GROUNDED_JOINTS_ARTIFACT if is_raw else "",
+    }
+
+
+def build_phase_d_sam3d_dispatch_config(config: RemoteConfig) -> dict[str, Any]:
+    payload = {
         "schema_version": 1,
         "artifact_type": "racketsport_remote_sam3d_tier2_dispatch_config",
         "source": "sam3d_tier2_impl_20260703T0xZ",
@@ -1376,6 +1440,9 @@ def build_phase_d_sam3d_dispatch_config(config: RemoteConfig) -> dict[str, Any]:
             "internal_val_only": True,
         },
     }
+    if not _body_postchain_is_default(config):
+        payload["optimization"]["body_postchain"] = _body_postchain_artifact_dict(config)
+    return payload
 
 
 def _remote_body_success_flags(summary: dict[str, Any], *, skeleton_exists: bool) -> dict[str, Any]:
@@ -1526,6 +1593,11 @@ summary = run_pipeline(
             sam3d_upstream_env={dict(config.sam3d_upstream_env)!r},
             sam3d_tier2_output_lite={bool(config.sam3d_tier2_output_lite)!r},
             sam3d_wrist_bone_lock={bool(config.sam3d_wrist_bone_lock)!r},
+            body_temporal_smoothing={bool(config.body_temporal_smoothing)!r},
+            body_foot_lock={bool(config.body_foot_lock)!r},
+            body_foot_pin={bool(config.body_foot_pin)!r},
+            body_contact_splice={bool(config.body_contact_splice)!r},
+            body_world_joint_visual_smoothing={bool(config.body_world_joint_visual_smoothing)!r},
         )
     }},
 )
@@ -2375,6 +2447,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--sam3d-tier2-output-lite", action="store_true")
     parser.add_argument("--no-sam3d-wrist-bone-lock", action="store_true")
     parser.add_argument(
+        "--body-postchain",
+        choices=("default", "raw"),
+        default="default",
+        help="BODY post-chain preset. raw disables all post-chain stages and persists body_raw_grounded_joints.json.",
+    )
+    parser.add_argument("--no-body-temporal-smoothing", action="store_true")
+    parser.add_argument("--no-body-foot-lock", action="store_true")
+    parser.add_argument("--no-body-foot-pin", action="store_true")
+    parser.add_argument("--no-body-contact-splice", action="store_true")
+    parser.add_argument("--no-body-wrist-lock", action="store_true")
+    parser.add_argument("--no-body-world-joint-visual-smoothing", action="store_true")
+    parser.add_argument(
         "--allow-dirty",
         action="store_true",
         help="Allow dirty tracked runtime files only for local development; the stamp records this and remote md5 verification still must match.",
@@ -2417,6 +2501,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(verification, indent=2, sort_keys=True))
         return 0
 
+    body_postchain_raw = args.body_postchain == "raw"
     config = RemoteConfig(
         host=args.host,
         ssh_key=args.ssh_key,
@@ -2446,7 +2531,20 @@ def main(argv: list[str] | None = None) -> int:
         sam3d_inner_bucket_sync=not args.no_sam3d_inner_bucket_sync,
         sam3d_upstream_env=_parse_sam3d_upstream_env_tuple(args.sam3d_upstream_env),
         sam3d_tier2_output_lite=bool(args.sam3d_tier2_output_lite),
-        sam3d_wrist_bone_lock=not args.no_sam3d_wrist_bone_lock,
+        sam3d_wrist_bone_lock=not (
+            args.no_sam3d_wrist_bone_lock
+            or args.no_body_wrist_lock
+            or body_postchain_raw
+        ),
+        body_postchain_mode=str(args.body_postchain),
+        body_temporal_smoothing=not (args.no_body_temporal_smoothing or body_postchain_raw),
+        body_foot_lock=not (args.no_body_foot_lock or body_postchain_raw),
+        body_foot_pin=not (args.no_body_foot_pin or body_postchain_raw),
+        body_contact_splice=not (args.no_body_contact_splice or body_postchain_raw),
+        body_world_joint_visual_smoothing=not (
+            args.no_body_world_joint_visual_smoothing
+            or body_postchain_raw
+        ),
         fetch_body_monoliths=bool(args.fetch_body_monoliths),
         lock_wait_timeout_s=args.lock_wait_timeout_s,
         command_timeout_s=args.command_timeout_s,

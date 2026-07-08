@@ -8,6 +8,7 @@ import pytest
 
 from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
 from threed.racketsport import worldhmr
+from threed.racketsport.body_postchain import BodyPostChainConfig
 from threed.racketsport.body_joint_quality import build_body_joint_quality
 from threed.racketsport.schemas import (
     CameraIntrinsics,
@@ -239,6 +240,233 @@ def _install_pass_through_sam3d_refine(monkeypatch: pytest.MonkeyPatch) -> None:
         return refined
 
     monkeypatch.setattr(worldhmr, "refine_sam3d_skeleton3d", fake_refine)
+
+
+def test_body_postchain_temporal_smoothing_knob_keeps_raw_grounded_translation() -> None:
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+        {
+            "frame_idx": 1,
+            "player_id": 1,
+            "t": 1.0 / 30.0,
+            "confidence": 0.9,
+            "track_world_xy": [10.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+    ]
+
+    default_smpl, _default_skeleton, default_metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        copy.deepcopy(samples),
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=0.5,
+    )
+    raw_smpl, raw_skeleton, raw_metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        copy.deepcopy(samples),
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=0.5,
+        body_postchain=BodyPostChainConfig(temporal_smoothing=False),
+    )
+
+    assert default_smpl["players"][0]["frames"][1]["transl_world"] == pytest.approx([5.0, 0.0, 0.0])
+    assert raw_smpl["players"][0]["frames"][1]["transl_world"] == pytest.approx([10.0, 0.0, 0.0])
+    assert raw_metrics["postchain_bypassed_stages"] == ["temporal_smoothing"]
+    assert raw_skeleton["provenance"]["body_postchain_bypass"]["stages"] == ["temporal_smoothing"]
+    assert "postchain_bypassed_stages" not in default_metrics
+
+
+def test_body_postchain_raw_mode_persists_schema_valid_raw_grounded_joints() -> None:
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+        {
+            "frame_idx": 1,
+            "player_id": 1,
+            "t": 1.0 / 30.0,
+            "confidence": 0.9,
+            "track_world_xy": [10.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0]],
+            "vertices_camera": [],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+    ]
+
+    computed = worldhmr.compute_body_skeleton_and_metrics(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=0.5,
+        body_postchain=BodyPostChainConfig.raw(),
+    )
+
+    assert computed.raw_grounded_joints is not None
+    assert computed.raw_grounded_joints["schema_version"] == 1
+    assert computed.raw_grounded_joints["artifact_type"] == "racketsport_body_raw_grounded_joints"
+    assert computed.raw_grounded_joints["postchain_bypassed_stages"] == [
+        "temporal_smoothing",
+        "foot_lock",
+        "foot_pin",
+        "contact_splice",
+        "wrist_lock",
+        "world_joint_visual_smoothing",
+    ]
+    assert computed.raw_grounded_joints["players"][0]["frames"][1]["joints_world"][0] == pytest.approx([10.0, 0.0, 0.0])
+    assert computed.smpl_motion_view["players"][0]["frames"][1]["joints_world"][0] == pytest.approx([10.0, 0.0, 0.0])
+    assert computed.metrics["raw_grounded_joints_sidecar"] == "body_raw_grounded_joints.json"
+
+
+def test_body_postchain_foot_lock_knob_bypasses_foot_lock_stage() -> None:
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [1.0, 2.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.2], [0.0, 0.0, 0.0]],
+            "vertices_camera": [[1.0, 0.0, 0.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+        {
+            "frame_idx": 1,
+            "player_id": 1,
+            "t": 1.0 / 30.0,
+            "confidence": 0.9,
+            "track_world_xy": [1.5, 2.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.2], [0.0, 0.0, 0.0]],
+            "vertices_camera": [[1.0, 0.0, 0.0]],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        },
+    ]
+
+    smpl_motion, _skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        smoothing_alpha=1.0,
+        body_postchain=BodyPostChainConfig(foot_lock=False),
+    )
+
+    first, second = smpl_motion["players"][0]["frames"]
+    assert first["foot_lock"] == {"left": False, "right": False}
+    assert second["foot_lock"] == {"left": False, "right": False}
+    assert second["joints_world"][1] == pytest.approx([1.5, 2.0, 0.0])
+    assert metrics["foot_lock_contact_frames"] == 0
+    assert metrics["postchain_bypassed_stages"] == ["foot_lock"]
+
+
+def test_body_postchain_foot_pin_knob_bypasses_refined_stance_pin(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_pass_through_sam3d_refine(monkeypatch)
+    calls: list[str] = []
+
+    def fail_if_called(*_args, **_kwargs):  # noqa: ANN001
+        calls.append("called")
+        raise AssertionError("foot pin stage should be bypassed")
+
+    monkeypatch.setattr(worldhmr, "_apply_refined_stance_phase_lock_and_pin", fail_if_called)
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.2], [0.0, 0.0, 0.0]],
+            "vertices_camera": [],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        }
+    ]
+
+    _smpl_motion, skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        stance_index={(1, 0): {"stance": True}},
+        grounding_anchor_source="placement_track_world_xy",
+        body_postchain=BodyPostChainConfig(foot_pin=False),
+    )
+
+    assert calls == []
+    assert metrics["postchain_bypassed_stages"] == ["foot_pin"]
+    assert skeleton3d["provenance"]["body_postchain_bypass"]["stages"] == ["foot_pin"]
+
+
+def test_body_postchain_wrist_lock_knob_bypasses_lock_stage(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_pass_through_sam3d_refine(monkeypatch)
+    calls: list[str] = []
+
+    def fail_if_called(payload, **_kwargs):  # noqa: ANN001
+        calls.append("called")
+        return copy.deepcopy(dict(payload))
+
+    monkeypatch.setattr(worldhmr, "apply_sam3d_wrist_bone_lock", fail_if_called)
+    samples = [
+        {
+            "frame_idx": 0,
+            "player_id": 1,
+            "t": 0.0,
+            "confidence": 0.9,
+            "track_world_xy": [0.0, 0.0],
+            "camera_translation": [0.0, 0.0, 0.0],
+            "joints_camera": [[0.0, 0.0, 1.0] for _idx in range(70)],
+            "vertices_camera": [],
+            "global_orient": [0.0, 0.0, 0.0],
+            "body_pose": [0.0, 0.0, 0.0],
+            "betas": [0.0],
+        }
+    ]
+
+    _smpl_motion, _skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+        body_postchain=BodyPostChainConfig(wrist_lock=False),
+    )
+
+    assert calls == []
+    assert metrics["sam3d_wrist_bone_lock_status"] == "disabled"
+    assert metrics["postchain_bypassed_stages"] == ["wrist_lock"]
 
 
 def _camera_motion_payload(matrix: list[list[float]], *, compensated: bool = True) -> dict[str, object]:
