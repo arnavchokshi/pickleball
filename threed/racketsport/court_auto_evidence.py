@@ -32,6 +32,8 @@ def build_auto_court_line_evidence_from_frame(
     calibration: CourtCalibration,
     *,
     net_plane: NetPlane | None = None,
+    net_post_height_in: float | None = None,
+    net_center_height_in: float | None = None,
     frame_index: int = 0,
     cv2_module: Any | None = None,
     required_line_ids: Sequence[str] | None = None,
@@ -46,6 +48,8 @@ def build_auto_court_line_evidence_from_frame(
         image,
         calibration,
         net_plane=net_plane,
+        net_post_height_in=net_post_height_in,
+        net_center_height_in=net_center_height_in,
         frame_indexes=[frame_index],
         cv2_module=cv2,
         required_line_ids=required_line_ids,
@@ -58,6 +62,8 @@ def build_auto_court_line_evidence_from_video(
     calibration: CourtCalibration,
     *,
     net_plane: NetPlane | None = None,
+    net_post_height_in: float | None = None,
+    net_center_height_in: float | None = None,
     sample_count: int = 7,
     cv2_module: Any | None = None,
     required_line_ids: Sequence[str] | None = None,
@@ -87,6 +93,8 @@ def build_auto_court_line_evidence_from_video(
                     frame,
                     calibration,
                     net_plane=net_plane,
+                    net_post_height_in=net_post_height_in,
+                    net_center_height_in=net_center_height_in,
                     frame_indexes=[frame_index],
                     cv2_module=cv2,
                     required_line_ids=resolved_required_line_ids,
@@ -121,6 +129,8 @@ def build_auto_court_line_evidence_from_image(
     calibration: CourtCalibration,
     *,
     net_plane: NetPlane | None = None,
+    net_post_height_in: float | None = None,
+    net_center_height_in: float | None = None,
     frame_indexes: Sequence[int] = (0,),
     cv2_module: Any | None = None,
     required_line_ids: Sequence[str] | None = None,
@@ -146,7 +156,11 @@ def build_auto_court_line_evidence_from_image(
         )
         for line_id, expected in expected_lines.items()
     ]
-    net = net_plane or build_net_plane(calibration.sport)
+    net = net_plane or build_net_plane(
+        calibration.sport,
+        post_height_in=net_post_height_in,
+        center_height_in=net_center_height_in,
+    )
     top_net_observation, top_net_rejection_reason = _select_top_net_observation_with_reason(
         calibration,
         net,

@@ -65,8 +65,16 @@ class PrecomputedCalibrationRunner:
     real_model = False
     source_mode = "precomputed_external_gt_calibration"
 
-    def __init__(self, *, source_note: str) -> None:
+    def __init__(
+        self,
+        *,
+        source_note: str,
+        net_post_height_in: float | None = None,
+        net_center_height_in: float | None = None,
+    ) -> None:
         self.source_note = source_note
+        self.net_post_height_in = net_post_height_in
+        self.net_center_height_in = net_center_height_in
 
     def run(self, context: StageContext) -> StageRun:
         calibration_path = context.inputs_dir / "court_calibration.json"
@@ -79,7 +87,11 @@ class PrecomputedCalibrationRunner:
         if not isinstance(calibration, CourtCalibration):
             raise ValueError("court_calibration.json did not validate as CourtCalibration")
 
-        net_plane = build_net_plane(context.sport)
+        net_plane = build_net_plane(
+            context.sport,
+            post_height_in=self.net_post_height_in,
+            center_height_in=self.net_center_height_in,
+        )
         line_evidence = _fail_closed_court_line_evidence(
             context.sport,
             source="external_gt_precomputed_calibration_no_video_court",

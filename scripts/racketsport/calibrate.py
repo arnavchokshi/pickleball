@@ -44,6 +44,8 @@ def main() -> int:
         ),
     )
     parser.add_argument("--sport", choices=["pickleball", "tennis"], default="pickleball")
+    parser.add_argument("--net-post-height-in", type=float, default=None)
+    parser.add_argument("--net-center-height-in", type=float, default=None)
     parser.add_argument("--out", type=Path, required=True, help="Output directory for court_calibration.json, court_zones.json, and net_plane.json.")
     args = parser.parse_args()
 
@@ -67,7 +69,14 @@ def main() -> int:
 
     write_artifact(args.out / "court_calibration.json", calibration)
     write_artifact(args.out / "court_zones.json", build_court_zones(sport))
-    write_artifact(args.out / "net_plane.json", build_net_plane(sport))
+    write_artifact(
+        args.out / "net_plane.json",
+        build_net_plane(
+            sport,
+            post_height_in=args.net_post_height_in,
+            center_height_in=args.net_center_height_in,
+        ),
+    )
     return 0
 
 

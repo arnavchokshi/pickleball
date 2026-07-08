@@ -53,11 +53,26 @@ def load_net_plane_artifact(path: str | Path) -> NetPlane:
         raise ValueError(f"invalid net plane artifact: {artifact_path}: {exc}") from exc
 
 
-def build_calibration_overlay(calibration: CourtCalibration, *, net_plane: NetPlane | None = None) -> OverlayPayload:
+def build_calibration_overlay(
+    calibration: CourtCalibration,
+    *,
+    net_plane: NetPlane | None = None,
+    net_post_height_in: float | None = None,
+    net_center_height_in: float | None = None,
+) -> OverlayPayload:
     """Project regulation court and net geometry through a solved calibration."""
 
-    net = net_plane or build_net_plane(calibration.sport)
-    _validate_net_plane_matches_sport(calibration, net)
+    net = net_plane or build_net_plane(
+        calibration.sport,
+        post_height_in=net_post_height_in,
+        center_height_in=net_center_height_in,
+    )
+    _validate_net_plane_matches_sport(
+        calibration,
+        net,
+        net_post_height_in=net_post_height_in,
+        net_center_height_in=net_center_height_in,
+    )
     template = get_court_template(calibration.sport)
 
     court_lines = []
@@ -160,9 +175,16 @@ def write_overlay_artifacts(
     calibration: CourtCalibration,
     *,
     net_plane: NetPlane | None = None,
+    net_post_height_in: float | None = None,
+    net_center_height_in: float | None = None,
     summary_out: str | Path | None = None,
 ) -> OverlayPayload:
-    overlay = build_calibration_overlay(calibration, net_plane=net_plane)
+    overlay = build_calibration_overlay(
+        calibration,
+        net_plane=net_plane,
+        net_post_height_in=net_post_height_in,
+        net_center_height_in=net_center_height_in,
+    )
     svg_path = Path(out_svg)
     svg_path.parent.mkdir(parents=True, exist_ok=True)
     svg_path.write_text(overlay_to_svg(overlay), encoding="utf-8")
@@ -181,6 +203,8 @@ def render_calibration_image_overlay(
     out_path: str | Path,
     calibration: CourtCalibration,
     net_plane: NetPlane | None = None,
+    net_post_height_in: float | None = None,
+    net_center_height_in: float | None = None,
     cv2_module: Any | None = None,
 ) -> dict[str, Any]:
     """Draw projected calibration geometry onto a real review frame image."""
@@ -194,7 +218,12 @@ def render_calibration_image_overlay(
 
     height, width = frame.shape[:2]
     calibration = calibration_for_image_size(calibration, width=int(width), height=int(height))
-    overlay = build_calibration_overlay(calibration, net_plane=net_plane)
+    overlay = build_calibration_overlay(
+        calibration,
+        net_plane=net_plane,
+        net_post_height_in=net_post_height_in,
+        net_center_height_in=net_center_height_in,
+    )
     _draw_image_overlay(cv2, frame, overlay)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if not cv2.imwrite(str(out_path), frame):
@@ -223,6 +252,8 @@ def render_calibration_run_overlays(
     clips: list[str] | None = None,
     max_video_frames: int | None = None,
     fps: float = 10.0,
+    net_post_height_in: float | None = None,
+    net_center_height_in: float | None = None,
     cv2_module: Any | None = None,
     write_index: bool = True,
     write_markdown: bool = True,
@@ -243,6 +274,8 @@ def render_calibration_run_overlays(
             reviewed_frame=reviewed_frames.get(clip),
             max_video_frames=max_video_frames,
             fps=fps,
+            net_post_height_in=net_post_height_in,
+            net_center_height_in=net_center_height_in,
         )
         for clip in clip_names
     ]
@@ -268,8 +301,18 @@ def render_calibration_run_overlays(
     return summary
 
 
-def _validate_net_plane_matches_sport(calibration: CourtCalibration, net_plane: NetPlane) -> None:
-    expected = build_net_plane(calibration.sport)
+def _validate_net_plane_matches_sport(
+    calibration: CourtCalibration,
+    net_plane: NetPlane,
+    *,
+    net_post_height_in: float | None = None,
+    net_center_height_in: float | None = None,
+) -> None:
+    expected = build_net_plane(
+        calibration.sport,
+        post_height_in=net_post_height_in,
+        center_height_in=net_center_height_in,
+    )
     expected_points = [*expected.endpoints, [0.0, 0.0, expected.center_height_in * 0.0254]]
     actual_points = [*net_plane.endpoints, [0.0, 0.0, net_plane.center_height_in * 0.0254]]
     for actual, expected_point in zip(actual_points, expected_points, strict=True):
@@ -310,6 +353,8 @@ def _render_clip_calibration_overlays(
     reviewed_frame: str | None,
     max_video_frames: int | None,
     fps: float,
+    net_post_height_in: float | None,
+    net_center_height_in: float | None,
 ) -> dict[str, Any]:
     clip_dir = run_root / clip
     calibration_path = clip_dir / "court_calibration.json"
@@ -342,6 +387,8 @@ def _render_clip_calibration_overlays(
         out_path=frame_out,
         calibration=calibration,
         net_plane=net_plane,
+        net_post_height_in=net_post_height_in,
+        net_center_height_in=net_center_height_in,
         cv2_module=cv2,
     )
     video_out = compare_dir / "calibration_overlay.mp4"
@@ -352,6 +399,8 @@ def _render_clip_calibration_overlays(
         calibration=calibration,
         net_plane=net_plane,
         fps=fps,
+        net_post_height_in=net_post_height_in,
+        net_center_height_in=net_center_height_in,
     )
     summary = {
         "schema_version": 1,
@@ -383,6 +432,8 @@ def _render_calibration_video_overlay(
     calibration: CourtCalibration,
     net_plane: NetPlane,
     fps: float,
+    net_post_height_in: float | None,
+    net_center_height_in: float | None,
 ) -> int:
     first_frame = _read_first_frame(cv2, frame_paths)
     if first_frame is None:
@@ -394,7 +445,12 @@ def _render_calibration_video_overlay(
     if not writer.isOpened():
         raise RuntimeError(f"cannot open calibration overlay writer: {out_path}")
     count = 0
-    overlay = build_calibration_overlay(calibration, net_plane=net_plane)
+    overlay = build_calibration_overlay(
+        calibration,
+        net_plane=net_plane,
+        net_post_height_in=net_post_height_in,
+        net_center_height_in=net_center_height_in,
+    )
     try:
         for path in frame_paths:
             frame = cv2.imread(str(path))

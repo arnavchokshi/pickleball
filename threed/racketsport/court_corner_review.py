@@ -25,6 +25,8 @@ def build_calibration_from_corrections(
     frames_root: str | Path,
     out_root: str | Path,
     sport: Sport = "pickleball",
+    net_post_height_in: float | None = None,
+    net_center_height_in: float | None = None,
 ) -> dict[str, Any]:
     """Convert reviewed court corners into sidecars and calibration artifacts."""
 
@@ -58,7 +60,11 @@ def build_calibration_from_corrections(
             out_dir.mkdir(parents=True, exist_ok=True)
             _write_json(out_dir / "capture_sidecar.json", sidecar)
             calibration = calibration_from_manual_taps(out_dir / "capture_sidecar.json", sport=sport)
-            net_plane = build_net_plane(sport)
+            net_plane = build_net_plane(
+                sport,
+                post_height_in=net_post_height_in,
+                center_height_in=net_center_height_in,
+            )
             _write_json_artifact(out_dir / "court_calibration.json", calibration)
             _write_json_artifact(out_dir / "court_zones.json", build_court_zones(sport))
             _write_json_artifact(out_dir / "net_plane.json", net_plane)

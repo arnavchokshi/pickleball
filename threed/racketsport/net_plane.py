@@ -2,15 +2,22 @@
 
 from __future__ import annotations
 
-from .court_templates import Sport, get_court_template
+from .court_templates import Sport, get_court_template, in_to_m
 from .court_calibration import project_world_points
 from .schemas import CourtCalibration, NetPlane
 
 
-def build_net_plane(sport: Sport) -> NetPlane:
+def build_net_plane(
+    sport: Sport,
+    *,
+    post_height_in: float | None = None,
+    center_height_in: float | None = None,
+) -> NetPlane:
     template = get_court_template(sport)
     half_net_width_m = template.net_width_m / 2.0
-    post_height_m = template.post_net_height_m
+    resolved_post_height_in = template.post_net_height_in if post_height_in is None else float(post_height_in)
+    resolved_center_height_in = template.center_net_height_in if center_height_in is None else float(center_height_in)
+    post_height_m = in_to_m(resolved_post_height_in)
 
     return NetPlane(
         schema_version=1,
@@ -19,8 +26,8 @@ def build_net_plane(sport: Sport) -> NetPlane:
             [-half_net_width_m, 0.0, post_height_m],
             [half_net_width_m, 0.0, post_height_m],
         ),
-        center_height_in=template.center_net_height_in,
-        post_height_in=template.post_net_height_in,
+        center_height_in=resolved_center_height_in,
+        post_height_in=resolved_post_height_in,
     )
 
 
