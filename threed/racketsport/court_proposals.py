@@ -110,6 +110,14 @@ def write_court_proposal_report(path: str | Path, report: CourtProposalReport) -
 # search self-reports weak support. Fallback usage is recorded per clip.
 FALLBACK_INTERNAL_SUPPORT_THRESHOLD = 0.65
 
+# GEO r3 (2026-07-08) predeclared in:
+# runs/lanes/calv1_geor3_20260708/PREDECLARED.md
+GEO_R3_TRIGGER_TEMPORAL_MEDIAN_PX = 24.0
+GEO_R3_TRIGGER_MIN_FRAMES = 3
+GEO_R3_VOTE_TOP_K = 3
+GEO_R3_IDENTITY_LINK_MEDIAN_PX = 96.0
+GEO_R3_IDENTITY_MIN_SHARED_KEYPOINTS = 8
+
 
 def _hough_keypoints_fallback_proposal(
     frame: Any,
@@ -366,12 +374,255 @@ def _percentile95(values: list[float]) -> float:
     return ordered[lower] * (1.0 - fraction) + ordered[upper] * fraction
 
 
+def _geor3_temporal_trigger_fires(
+    temporal_stability_px: Mapping[str, Any],
+    *,
+    enabled: bool = True,
+    temporal_median_threshold_px: float = GEO_R3_TRIGGER_TEMPORAL_MEDIAN_PX,
+    min_frames: int = GEO_R3_TRIGGER_MIN_FRAMES,
+) -> bool:
+    if not enabled:
+        return False
+    median = _as_float(temporal_stability_px.get("median"))
+    frame_count = _as_int(temporal_stability_px.get("frame_count"))
+    if median is None or frame_count is None:
+        return False
+    return frame_count >= int(min_frames) and median > float(temporal_median_threshold_px)
+
+
+def _geor3_ranked_top_hypotheses(
+    pickleball_hypotheses: list[dict[str, Any]],
+    best: dict[str, Any] | None,
+    *,
+    top_k: int = GEO_R3_VOTE_TOP_K,
+) -> list[dict[str, Any]]:
+    ranked: list[dict[str, Any]] = []
+    seen: set[int] = set()
+    if best is not None:
+        ranked.append(best)
+        seen.add(id(best))
+    for hypothesis in pickleball_hypotheses:
+        if id(hypothesis) in seen:
+            continue
+        ranked.append(hypothesis)
+        seen.add(id(hypothesis))
+        if len(ranked) >= max(1, int(top_k)):
+            break
+    return ranked[: max(1, int(top_k))]
+
+
+def _geor3_select_identity_vote(
+    frames_with_hypothesis: list[dict[str, Any]],
+    *,
+    top_k: int = GEO_R3_VOTE_TOP_K,
+    identity_link_median_px: float = GEO_R3_IDENTITY_LINK_MEDIAN_PX,
+    min_shared_keypoints: int = GEO_R3_IDENTITY_MIN_SHARED_KEYPOINTS,
+) -> dict[str, Any]:
+    """Vote for a persistent court identity across each frame's top-3 hypotheses.
+
+    The vote is label-free: it clusters projected court keypoints by pixel
+    agreement and counts distinct frame support. The returned `selected_frames`
+    is intentionally private/in-memory because frame records contain image
+    arrays; use `_geor3_json_safe_vote` for artifact metadata.
+    """
+
+    import math
+
+    frame_count = len(frames_with_hypothesis)
+    candidates: list[dict[str, Any]] = []
+    for frame_pos, item in enumerate(frames_with_hypothesis):
+        hypotheses = list(item.get("top_pickleball_hypotheses") or [])
+        if not hypotheses and item.get("best") is not None:
+            hypotheses = [item["best"]]
+        for rank, hypothesis in enumerate(hypotheses[: max(1, int(top_k))], start=1):
+            keypoints = _coerce_keypoints(hypothesis.get("keypoints") or {})
+            if len(keypoints) < int(min_shared_keypoints):
+                continue
+            candidates.append(
+                {
+                    "candidate_index": len(candidates),
+                    "frame_pos": frame_pos,
+                    "frame_index": int(item.get("frame_index") or frame_pos),
+                    "rank": rank,
+                    "score": float(hypothesis.get("score") or 0.0),
+                    "hypothesis_id": str(hypothesis.get("hypothesis_id") or f"frame_{frame_pos}_rank_{rank}"),
+                    "hypothesis": hypothesis,
+                    "keypoints": keypoints,
+                }
+            )
+
+    required_support = int(math.ceil(frame_count / 2.0)) if frame_count else 0
+    if not candidates or required_support <= 0:
+        return {
+            "attempted": True,
+            "selected": False,
+            "frame_count": frame_count,
+            "required_support_frame_count": required_support,
+            "candidate_count": len(candidates),
+            "cluster_count": 0,
+            "support_frame_count": 0,
+            "selected_cluster_id": None,
+            "selected_frame_indices": [],
+            "selected_hypothesis_ids": [],
+            "selected_frames": [],
+            "clusters": [],
+            "identity_link_median_px": float(identity_link_median_px),
+            "identity_min_shared_keypoints": int(min_shared_keypoints),
+        }
+
+    parent = list(range(len(candidates)))
+
+    def find(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    def union(left: int, right: int) -> None:
+        root_left = find(left)
+        root_right = find(right)
+        if root_left != root_right:
+            parent[root_right] = root_left
+
+    for left in range(len(candidates)):
+        for right in range(left + 1, len(candidates)):
+            distance = _geor3_median_keypoint_distance(
+                candidates[left]["keypoints"],
+                candidates[right]["keypoints"],
+                min_shared_keypoints=int(min_shared_keypoints),
+            )
+            if distance is not None and distance <= float(identity_link_median_px):
+                union(left, right)
+
+    grouped: dict[int, list[dict[str, Any]]] = {}
+    for candidate in candidates:
+        grouped.setdefault(find(candidate["candidate_index"]), []).append(candidate)
+
+    clusters: list[dict[str, Any]] = []
+    for cluster_id, members in grouped.items():
+        per_frame_best: dict[int, dict[str, Any]] = {}
+        for candidate in members:
+            current = per_frame_best.get(candidate["frame_pos"])
+            if current is None or _geor3_candidate_order(candidate) < _geor3_candidate_order(current):
+                per_frame_best[candidate["frame_pos"]] = candidate
+        best_members = [per_frame_best[index] for index in sorted(per_frame_best)]
+        support = len(best_members)
+        mean_rank = sum(float(item["rank"]) for item in best_members) / float(support)
+        mean_score = sum(float(item["score"]) for item in best_members) / float(support)
+        clusters.append(
+            {
+                "cluster_id": int(cluster_id),
+                "support_frame_count": int(support),
+                "frame_indices": [int(item["frame_index"]) for item in best_members],
+                "hypothesis_ids": [str(item["hypothesis_id"]) for item in best_members],
+                "mean_rank": round(float(mean_rank), 6),
+                "mean_score": round(float(mean_score), 6),
+                "_best_members": best_members,
+            }
+        )
+
+    clusters.sort(
+        key=lambda item: (
+            -int(item["support_frame_count"]),
+            float(item["mean_rank"]),
+            float(item["mean_score"]),
+            int(item["cluster_id"]),
+        )
+    )
+    best_cluster = clusters[0]
+    selected = int(best_cluster["support_frame_count"]) >= required_support
+    selected_frames: list[dict[str, Any]] = []
+    selected_hypothesis_ids: list[str] = []
+    selected_frame_indices: list[int] = []
+    if selected:
+        for member in best_cluster["_best_members"]:
+            frame = dict(frames_with_hypothesis[int(member["frame_pos"])])
+            frame["best"] = member["hypothesis"]
+            frame["geor3_vote_rank"] = int(member["rank"])
+            selected_frames.append(frame)
+            selected_hypothesis_ids.append(str(member["hypothesis_id"]))
+            selected_frame_indices.append(int(member["frame_index"]))
+
+    json_clusters = []
+    for item in clusters:
+        json_clusters.append({key: value for key, value in item.items() if key != "_best_members"})
+    return {
+        "attempted": True,
+        "selected": bool(selected),
+        "frame_count": int(frame_count),
+        "required_support_frame_count": int(required_support),
+        "candidate_count": len(candidates),
+        "cluster_count": len(clusters),
+        "support_frame_count": int(best_cluster["support_frame_count"]),
+        "selected_cluster_id": int(best_cluster["cluster_id"]) if selected else None,
+        "selected_frame_indices": selected_frame_indices,
+        "selected_hypothesis_ids": selected_hypothesis_ids,
+        "selected_frames": selected_frames,
+        "clusters": json_clusters,
+        "identity_link_median_px": float(identity_link_median_px),
+        "identity_min_shared_keypoints": int(min_shared_keypoints),
+    }
+
+
+def _geor3_json_safe_vote(vote: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): value for key, value in vote.items() if key != "selected_frames"}
+
+
+def _geor3_candidate_order(candidate: Mapping[str, Any]) -> tuple[int, float, str]:
+    return (int(candidate.get("rank") or 999), float(candidate.get("score") or 0.0), str(candidate.get("hypothesis_id") or ""))
+
+
+def _coerce_keypoints(points: Mapping[str, Any]) -> dict[str, tuple[float, float]]:
+    keypoints: dict[str, tuple[float, float]] = {}
+    for name, xy in points.items():
+        if isinstance(xy, (list, tuple)) and len(xy) == 2:
+            x = _as_float(xy[0])
+            y = _as_float(xy[1])
+            if x is not None and y is not None:
+                keypoints[str(name)] = (float(x), float(y))
+    return keypoints
+
+
+def _geor3_median_keypoint_distance(
+    left: Mapping[str, tuple[float, float]],
+    right: Mapping[str, tuple[float, float]],
+    *,
+    min_shared_keypoints: int,
+) -> float | None:
+    import math
+    import statistics
+
+    shared = sorted(set(left) & set(right))
+    if len(shared) < int(min_shared_keypoints):
+        return None
+    distances = [math.hypot(float(left[name][0]) - float(right[name][0]), float(left[name][1]) - float(right[name][1])) for name in shared]
+    return float(statistics.median(distances)) if distances else None
+
+
+def _as_float(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
+def _as_int(value: Any) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return int(value)
+
+
 def propose_court_from_video(
     video_path: str | Path,
     *,
     max_frames: int = 24,
     top_k: int = 8,
     tracks_path: str | Path | None = None,
+    geo_r3_enabled: bool = True,
+    geo_r3_trigger_temporal_median_px: float = GEO_R3_TRIGGER_TEMPORAL_MEDIAN_PX,
+    geo_r3_min_trigger_frames: int = GEO_R3_TRIGGER_MIN_FRAMES,
+    geo_r3_vote_top_k: int = GEO_R3_VOTE_TOP_K,
+    geo_r3_identity_link_median_px: float = GEO_R3_IDENTITY_LINK_MEDIAN_PX,
+    geo_r3_identity_min_shared_keypoints: int = GEO_R3_IDENTITY_MIN_SHARED_KEYPOINTS,
 ) -> dict[str, Any]:
     """Real Stage 0-6 multi-frame court solver. STABLE CONTRACT.
 
@@ -461,13 +712,19 @@ def propose_court_from_video(
         pickleball_hypotheses = [h for h in hypotheses if h.get("template") == "pickleball"]
         tennis_hypotheses = [h for h in hypotheses if h.get("template") == "tennis"]
         best = _best_by_net_and_feet(pickleball_hypotheses, net_evidence=net_evidence, tracks=tracks)
-        pickleball_runner_up = next((h for h in pickleball_hypotheses if h is not best), None)
+        top_pickleball_hypotheses = _geor3_ranked_top_hypotheses(
+            pickleball_hypotheses,
+            best,
+            top_k=geo_r3_vote_top_k,
+        )
+        pickleball_runner_up = next((h for h in top_pickleball_hypotheses if h is not best), None)
         per_frame_results.append(
             {
                 "frame_index": item["frame_index"],
                 "sharpness": item["sharpness"],
                 "frame": frame,
                 "best": best,
+                "top_pickleball_hypotheses": top_pickleball_hypotheses,
                 "pickleball_runner_up": pickleball_runner_up,
                 "tennis_best": tennis_hypotheses[0] if tennis_hypotheses else None,
                 "net_evidence": net_evidence,
@@ -515,12 +772,62 @@ def propose_court_from_video(
     consensus_keypoints, temporal_stability, retained_indices = _temporal_consensus(
         [item["best"]["keypoints"] for item in frames_with_hypothesis]
     )
+    r2_temporal_stability = dict(temporal_stability)
+    active_frames_with_hypothesis = frames_with_hypothesis
+    geor3_vote: dict[str, Any] = {
+        "attempted": False,
+        "enabled": bool(geo_r3_enabled),
+        "triggered": False,
+        "selected": False,
+        "trigger": {
+            "temporal_median_px": float(geo_r3_trigger_temporal_median_px),
+            "min_frames": int(geo_r3_min_trigger_frames),
+            "r2_temporal_stability_px": r2_temporal_stability,
+        },
+        "config": {
+            "top_k": int(geo_r3_vote_top_k),
+            "identity_link_median_px": float(geo_r3_identity_link_median_px),
+            "identity_min_shared_keypoints": int(geo_r3_identity_min_shared_keypoints),
+        },
+    }
+    if _geor3_temporal_trigger_fires(
+        r2_temporal_stability,
+        enabled=geo_r3_enabled,
+        temporal_median_threshold_px=geo_r3_trigger_temporal_median_px,
+        min_frames=geo_r3_min_trigger_frames,
+    ):
+        vote = _geor3_select_identity_vote(
+            frames_with_hypothesis,
+            top_k=geo_r3_vote_top_k,
+            identity_link_median_px=geo_r3_identity_link_median_px,
+            min_shared_keypoints=geo_r3_identity_min_shared_keypoints,
+        )
+        geor3_vote = {
+            **_geor3_json_safe_vote(vote),
+            "enabled": bool(geo_r3_enabled),
+            "triggered": True,
+            "trigger": {
+                "temporal_median_px": float(geo_r3_trigger_temporal_median_px),
+                "min_frames": int(geo_r3_min_trigger_frames),
+                "r2_temporal_stability_px": r2_temporal_stability,
+            },
+            "config": {
+                "top_k": int(geo_r3_vote_top_k),
+                "identity_link_median_px": float(geo_r3_identity_link_median_px),
+                "identity_min_shared_keypoints": int(geo_r3_identity_min_shared_keypoints),
+            },
+        }
+        if vote.get("selected"):
+            active_frames_with_hypothesis = list(vote.get("selected_frames") or [])
+            consensus_keypoints, temporal_stability, retained_indices = _temporal_consensus(
+                [item["best"]["keypoints"] for item in active_frames_with_hypothesis]
+            )
     # The representative frame (used for the real evidence-based verify
     # metrics below) must come from the SAME persistent cluster the consensus
     # was built from -- picking an outlier frame here would score the
     # consensus keypoints against a frame whose own evidence disagrees with
     # them, which is not a fair evidence check.
-    retained_frames = [frames_with_hypothesis[index] for index in retained_indices] or frames_with_hypothesis
+    retained_frames = [active_frames_with_hypothesis[index] for index in retained_indices] or active_frames_with_hypothesis
     representative = min(retained_frames, key=lambda item: item["best"]["score"])
 
     # ROUND-2 FIX 4: verify metrics are scored against the FULL PERSISTENT
@@ -642,6 +949,8 @@ def propose_court_from_video(
             "representative_frame_index": representative["frame_index"],
             "frames_evaluated": len(per_frame_results),
             "frames_with_pickleball_hypothesis": len(frames_with_hypothesis),
+            "geor3": geor3_vote,
+            "r2_temporal_stability_px": r2_temporal_stability,
             "runner_up_hypotheses": runner_up[:5],
             "pickleball_runner_up_hypotheses": pickleball_runner_ups[:5],
             "per_expected_line_support": per_line_support,
