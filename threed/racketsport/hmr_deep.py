@@ -664,6 +664,19 @@ def normalize_fast_sam_body_output(
         "left_hand_pose": left_hand_pose,
         "right_hand_pose": right_hand_pose,
         "betas": _float_list(_first_present(public, ("shape_params", "betas"), default=[]), name="betas"),
+        # ADDITIVE (P2-2 GATE 1b, w5_p22latent_20260707): the raw estimator
+        # output carries `scale_params` (28-dim MHR scale/bone-length
+        # correction; see sam_3d_body_estimator.py's `"scale_params":
+        # out["scale"][idx]`) but it was previously dropped here entirely --
+        # no downstream consumer ever read it. Without it, a decode-time
+        # re-synthesis of a frame's mesh/joints from persisted
+        # global_orient/body_pose/betas alone defaults to population-mean
+        # scale and misses real per-athlete bone-length variation by
+        # 100-220mm world-position error (measured live on wolverine, see
+        # the lane report GATE 1b evidence) -- far above the <=1mm
+        # round-trip fidelity bar. New field, no removals; empty list is a
+        # safe/back-compatible default for any existing consumer.
+        "scale": _float_list(_first_present(public, ("scale_params", "scale"), default=[]), name="scale"),
         "camera_translation": _float_vector(
             _first_present(public, ("pred_cam_t", "camera_translation", "transl"), default=[0.0, 0.0, 0.0]),
             name="camera_translation",

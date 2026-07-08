@@ -19,6 +19,7 @@ def _smpl_motion() -> dict:
             {
                 "id": 7,
                 "betas": [0.1, 0.2],
+                "scale": [0.05, 0.06],
                 "frames": [
                     {
                         "frame_idx": 12,
@@ -82,6 +83,7 @@ def test_build_body_mesh_export_keeps_contact_vertices_params_and_faces_ref() ->
                 "left_hand_pose": [0.4],
                 "right_hand_pose": [0.5],
                 "betas": [0.1, 0.2],
+                "scale": [0.05, 0.06],
                 "transl_world": [1.0, 2.0, 0.0],
             },
             "reasons": ["contact_window"],

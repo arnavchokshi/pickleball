@@ -31,6 +31,10 @@ def build_body_mesh_export(
             continue
         player_id = int(player.get("id", 0))
         betas = _float_list(player.get("betas", []))
+        # ADDITIVE (P2-2 GATE 1b, w5_p22latent_20260707): mirrors
+        # body_array_native.py's array-native twin of this function -- see
+        # worldhmr.py::compute_body_skeleton_and_metrics for the producer.
+        scale = _float_list(player.get("scale", []))
         frames_payload: list[dict[str, Any]] = []
         for frame in player.get("frames", []):
             if not isinstance(frame, Mapping):
@@ -57,6 +61,7 @@ def build_body_mesh_export(
                     "left_hand_pose": _float_list(frame.get("left_hand_pose", [])),
                     "right_hand_pose": _float_list(frame.get("right_hand_pose", [])),
                     "betas": betas,
+                    "scale": scale,
                     "transl_world": _float_list(frame.get("transl_world", [])),
                 },
                 "reasons": list(scheduled_record.get("reasons", [])) if scheduled_record else [],

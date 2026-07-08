@@ -91,6 +91,10 @@ def body_mesh_export_parts_from_smpl_motion_view(
             continue
         player_id = int(player.get("id", 0))
         betas = _mesh_export._float_list(player.get("betas", []))
+        # ADDITIVE (P2-2 GATE 1b, w5_p22latent_20260707): see
+        # worldhmr.py::compute_body_skeleton_and_metrics -- scale is a
+        # per-player value, collapsed the same way betas is.
+        scale = _mesh_export._float_list(player.get("scale", []))
         frames_payload: list[dict[str, Any]] = []
         for frame in player.get("frames", []):
             if not isinstance(frame, Mapping):
@@ -117,6 +121,7 @@ def body_mesh_export_parts_from_smpl_motion_view(
                     "left_hand_pose": _mesh_export._float_list(frame.get("left_hand_pose", [])),
                     "right_hand_pose": _mesh_export._float_list(frame.get("right_hand_pose", [])),
                     "betas": betas,
+                    "scale": scale,
                     "transl_world": _mesh_export._float_list(frame.get("transl_world", [])),
                 },
                 "reasons": list(scheduled_record.get("reasons", [])) if scheduled_record else [],

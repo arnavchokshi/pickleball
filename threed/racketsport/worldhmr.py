@@ -371,12 +371,18 @@ def compute_body_skeleton_and_metrics(
         )
         foot_lock_player_summaries.append(foot_lock_summary)
         betas = _first_list(player_frames, "betas")
+        # ADDITIVE (P2-2 GATE 1b, w5_p22latent_20260707): same per-player
+        # collapse convention as `betas` above -- MHR scale_params is a
+        # per-athlete bone-length/proportions correction, not a per-frame
+        # quantity, so the first non-empty sample is representative.
+        scale = _first_list(player_frames, "scale")
         contact_by_frame = [_infer_floor_contact(frame) for frame in player_frames]
         player_has_contact = any(contact["left"] or contact["right"] for contact in contact_by_frame)
         players.append(
             {
                 "id": player_id,
                 "betas": betas,
+                "scale": scale,
                 "frames": [
                     {
                         "frame_idx": int(frame["frame_idx"]),
@@ -2290,6 +2296,11 @@ def _ground_fast_sam_sample(
         "left_hand_pose": _float_list(sample.get("left_hand_pose", []), name="left_hand_pose"),
         "right_hand_pose": _float_list(sample.get("right_hand_pose", []), name="right_hand_pose"),
         "betas": _float_list(sample.get("betas", []), name="betas"),
+        # ADDITIVE (P2-2 GATE 1b, w5_p22latent_20260707): MHR scale_params
+        # (28-dim bone-length/proportions correction), previously dropped
+        # end-to-end -- see hmr_deep.py::normalize_fast_sam_body_output for
+        # the producer-side note and measured decode-error evidence.
+        "scale": _float_list(sample.get("scale", []), name="scale"),
         "transl_world": [track_world_xy[0], track_world_xy[1], 0.0],
         "joints_world": _translate_points(joints_world_raw or vertices_world_raw, dx=dx, dy=dy, dz=dz),
         "vertices_world": _translate_points(vertices_world_raw, dx=dx, dy=dy, dz=dz),

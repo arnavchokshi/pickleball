@@ -1064,6 +1064,12 @@ class SmplPlayer(BaseModel):
 
     id: int
     betas: list[float]
+    # ADDITIVE (P2-2 GATE 1b, w5_p22latent_20260707): MHR scale_params
+    # (28-dim bone-length/proportions correction), collapsed per-player the
+    # same way `betas` is -- see worldhmr.py::compute_body_skeleton_and_metrics.
+    # New field, no removals; default keeps every existing producer/consumer
+    # that predates this lane valid (empty list = "not carried").
+    scale: list[float] = Field(default_factory=list)
     frames: list[SmplFrame]
     skate_free: bool
     physics: str
