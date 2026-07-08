@@ -31,12 +31,14 @@ ALLOWED_MARKDOWN_DOCS = set(CANONICAL_DOCS) | {
     "NORTH_STAR_ROADMAP.md",
     "OVERLAPPING_COURT_CALIBRATION_GOAL.md",
     "OWNER_CHECKIN_20260707.md",
+    "OWNER_CHECKIN_20260708.md",
     "RACKET_6DOF_GOAL.md",
     "TECH_BLUEPRINTS.md",
     "docs/specs/2026-07-07-product-infra-design.md",
     "corrections/README.md",
     "cvat_upload/CVAT_LABELING_INSTRUCTIONS.md",
     "cvat_upload/OWNER_SESSION_20260708.md",
+    "cvat_upload/OWNER_SESSION_W6_20260708.md",
     "cvat_upload/court_keypoints_20260707/OWNER_COURT_KP_GUIDE.md",
     "cvat_upload/exports/README.md",
     "cvat_upload/exports/court_keypoints_20260707/README.md",
@@ -103,6 +105,13 @@ ALLOWED_LARGE_TRACKED_FILES = {
     "models_coreml/yolo26s_img416_int8/yolo26s.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
 }
 
+W6_LABELPACK_IMAGE_ZIPS = {
+    f"cvat_upload/w6_labelpack_20260708/packages/ball_session_{index:02d}_640f_w6_images.zip"
+    for index in range(1, 68)
+} | {
+    "cvat_upload/w6_labelpack_20260708/packages/ball_session_68_350f_w6_images.zip",
+}
+
 ALLOWED_DUPLICATE_TRACKED_BLOBS = {
     frozenset(
         {
@@ -122,7 +131,7 @@ ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = {
     "ios/Replay/Sources/PickleballReplay/Resources/RealityReplayFixture/body_mesh_animated_budget53.usdz",
     "ios/Replay/Sources/PickleballReplay/Resources/WorldFixture/virtual_world.json",
     "tests/racketsport/fixtures/solid_mesh_real_window_000/body_mesh_faces.json",
-}
+} | W6_LABELPACK_IMAGE_ZIPS
 
 
 def test_canonical_doc_set_exists_and_obsolete_root_docs_are_removed() -> None:

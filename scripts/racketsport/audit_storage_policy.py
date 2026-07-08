@@ -39,6 +39,13 @@ ALLOWED_LARGE_TRACKED_FILES = {
     "models_coreml/yolo26s_img416_int8/yolo26s.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
 }
 
+W6_LABELPACK_IMAGE_ZIPS = {
+    f"cvat_upload/w6_labelpack_20260708/packages/ball_session_{index:02d}_640f_w6_images.zip"
+    for index in range(1, 68)
+} | {
+    "cvat_upload/w6_labelpack_20260708/packages/ball_session_68_350f_w6_images.zip",
+}
+
 ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = {
     # Local-only wave-5 CVAT packages; evidence: runs/lanes/w5_labelpack_20260708/report.json.
     "cvat_upload/w5_labelpack_20260708/packages/ball_session_01_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
@@ -49,7 +56,7 @@ ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = {
     "ios/Replay/Sources/PickleballReplay/Resources/RealityReplayFixture/body_mesh_animated_budget53.usdz",
     "ios/Replay/Sources/PickleballReplay/Resources/WorldFixture/virtual_world.json",
     "tests/racketsport/fixtures/solid_mesh_real_window_000/body_mesh_faces.json",
-}
+} | W6_LABELPACK_IMAGE_ZIPS
 
 
 def build_storage_report(root: Path, *, check_generated_artifacts: bool = True) -> dict[str, object]:

@@ -1,0 +1,6 @@
+NO_MATCH pattern=pwxNwFfYQlQ packages=136
+NO_MATCH pattern=vQhtz8l6VqU packages=136
+NO_MATCH pattern=outdoor_webcam_iynbd_1500_long_high_baseline packages=136
+NO_MATCH pattern=indoor_doubles_fwuks_0500_long_mid_baseline packages=136
+NO_MATCH pattern=03_outdoor_webcam_iynbd packages=136
+NO_MATCH pattern=04_indoor_doubles_fwuks packages=136

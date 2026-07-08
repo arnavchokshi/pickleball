@@ -1,0 +1,777 @@
+{
+  "artifact_type": "w6_labelpack_validation_report",
+  "created_at_utc": "2026-07-08T18:56:36.263442Z",
+  "errors": [],
+  "package_checks": [
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_01_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_01_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_02_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_02_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_03_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_03_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_04_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_04_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_05_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_05_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_06_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_06_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_07_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_07_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_08_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_08_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_09_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_09_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_10_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_10_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_11_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_11_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_12_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_12_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_13_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_13_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_14_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_14_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_15_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_15_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_16_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_16_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_17_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_17_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_18_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_18_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_19_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_19_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_20_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_20_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_21_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_21_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_22_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_22_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_23_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_23_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_24_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_24_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_25_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_25_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_26_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_26_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_27_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_27_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_28_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_28_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_29_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_29_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_30_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_30_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_31_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_31_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_32_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_32_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_33_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_33_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_34_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_34_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_35_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_35_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_36_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_36_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_37_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_37_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_38_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_38_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_39_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_39_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_40_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_40_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_41_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_41_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_42_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_42_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_43_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_43_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_44_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_44_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_45_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_45_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_46_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_46_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_47_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_47_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_48_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_48_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_49_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_49_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_50_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_50_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_51_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_51_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_52_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_52_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_53_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_53_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_54_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_54_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_55_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_55_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_56_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_56_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_57_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_57_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_58_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_58_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_59_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_59_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_60_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_60_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_61_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_61_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_62_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_62_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_63_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_63_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_64_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_64_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_65_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_65_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_66_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_66_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 640,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_67_640f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_67_640f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 640
+    },
+    {
+      "box_count": 350,
+      "byte_layout_matches_known_good_pattern": true,
+      "image_count": 350,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_68_350f_w6_images.zip",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_68_350f_w6_prelabels_cvat1_1.zip",
+      "xml_entries": [
+        "annotations.xml"
+      ],
+      "xml_image_count": 350
+    }
+  ],
+  "protected_grep_check_output": "NO_MATCH pattern=pwxNwFfYQlQ packages=136\nNO_MATCH pattern=vQhtz8l6VqU packages=136\nNO_MATCH pattern=outdoor_webcam_iynbd_1500_long_high_baseline packages=136\nNO_MATCH pattern=indoor_doubles_fwuks_0500_long_mid_baseline packages=136\nNO_MATCH pattern=03_outdoor_webcam_iynbd packages=136\nNO_MATCH pattern=04_indoor_doubles_fwuks packages=136",
+  "protected_programmatic_check": {
+    "hits": [],
+    "patterns": [
+      "pwxNwFfYQlQ",
+      "vQhtz8l6VqU",
+      "outdoor_webcam_iynbd_1500_long_high_baseline",
+      "indoor_doubles_fwuks_0500_long_mid_baseline",
+      "03_outdoor_webcam_iynbd",
+      "04_indoor_doubles_fwuks"
+    ],
+    "status": "passed"
+  },
+  "schema_version": 1,
+  "status": "passed",
+  "structural_roundtrip_note": "Validates against known-good CVAT image-package layout: image zip entries plus prelabel zip containing one annotations.xml, CVAT 1.1 root, XML image refs exactly match image zip entries, and one editable ball box per image.",
+  "summary": {
+    "package_pair_count": 68,
+    "total_boxes": 43230,
+    "total_images": 43230,
+    "zip_count": 136
+  }
+}

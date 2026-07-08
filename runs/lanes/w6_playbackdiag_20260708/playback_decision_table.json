@@ -1,0 +1,386 @@
+{
+  "lane": "w6_playbackdiag_20260708",
+  "status": "measured_read_only",
+  "source_policy": {
+    "repo_write_scope": "Only this lane directory was written.",
+    "protected_eval_labels": "Not read. Measurements used manifests, mesh indexes, summaries, timing logs, and source code only.",
+    "network": "Not used.",
+    "gpu": "Not used."
+  },
+  "evidence_paths": {
+    "wave6_boot": "runs/manager/wave6_boot_prompt.md",
+    "closeproof_root": "runs/lanes/w5_closeproof_20260708/",
+    "viewer_source": [
+      "web/replay/src/App.tsx",
+      "web/replay/src/viewerData.ts"
+    ],
+    "p22_latent": [
+      "runs/lanes/w5_p22latent_20260707/spec.md",
+      "runs/lanes/w5_p22wiring_20260708/report.json",
+      "runs/lanes/w5_p22wiring_20260708/wolverine_proxy_measurement/latent_smoothing_acceptance_report.md"
+    ]
+  },
+  "clips": {
+    "burlington": {
+      "run_dir": "runs/lanes/w5_closeproof_20260708/burlington/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner",
+      "fps": 59.94,
+      "total_clip_frames": 600,
+      "duration_sec": 10.01,
+      "frame_compute_plan_world_mesh_frames": 100,
+      "body_scheduled_frame_count": 675,
+      "body_scheduled_player_frame_count": 1785,
+      "body_scheduled_by_target_representation": {
+        "body_joints": 575,
+        "world_mesh": 100
+      },
+      "mesh_index_player_frame_count": 166,
+      "mesh_unique_frame_count": 100,
+      "mesh_effective_fps_1x": 9.99,
+      "mesh_gap_histogram_frames": {
+        "1": 73,
+        "4": 1,
+        "9": 2,
+        "11": 16,
+        "12": 6,
+        "83": 1
+      },
+      "mesh_gap_median_frames": 1,
+      "mesh_gap_max_frames": 83,
+      "worst_mesh_gap": "frame 343 -> 426, 83 frames, about 1.38s at 59.94fps",
+      "body_schedule_gap_histogram_frames": {
+        "1": 599
+      },
+      "body_schedule_gap_median_frames": 1,
+      "body_schedule_gap_max_frames": 1,
+      "body_stage_wall_seconds": 561.536,
+      "body_phase_stage_wall_seconds": 509.946949171,
+      "person_frame_count": 1785,
+      "steady_ms_per_person_frame": 15.233266,
+      "mesh_index_recursive_bytes": 14231523,
+      "mesh_faces_bytes": 1813990,
+      "mesh_variable_bytes_per_unique_frame": 459908.6,
+      "measured_monoliths": [
+        {
+          "label": "older replay_native Burlington body_mesh.json, not this close-proof run",
+          "path": "runs/replay_native_20260702T032204Z/burlington/body_mesh.json",
+          "bytes": 65074304
+        }
+      ],
+      "cap_extrapolation": {
+        "100": {
+          "frame_count": 100,
+          "estimated_index_mib": 45.59,
+          "effective_fps": 9.99
+        },
+        "200": {
+          "frame_count": 200,
+          "estimated_index_mib": 89.45,
+          "effective_fps": 19.98
+        },
+        "400": {
+          "frame_count": 400,
+          "estimated_index_mib": 177.17,
+          "effective_fps": 39.96
+        },
+        "all_scheduled": {
+          "frame_count": 675,
+          "estimated_index_mib": 297.79,
+          "effective_fps": 67.43
+        }
+      }
+    },
+    "wolverine": {
+      "run_dir": "runs/lanes/w5_closeproof_20260708/wolverine/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner",
+      "fps": 30.0,
+      "total_clip_frames": 300,
+      "duration_sec": 10.0,
+      "frame_compute_plan_world_mesh_frames": 100,
+      "body_scheduled_frame_count": 266,
+      "body_scheduled_player_frame_count": 680,
+      "body_scheduled_by_target_representation": {
+        "body_joints": 166,
+        "world_mesh": 100
+      },
+      "mesh_index_player_frame_count": 276,
+      "mesh_unique_frame_count": 100,
+      "mesh_effective_fps_1x": 10.0,
+      "mesh_gap_histogram_frames": {
+        "1": 31,
+        "2": 63,
+        "3": 1,
+        "9": 2,
+        "15": 1,
+        "21": 1
+      },
+      "mesh_gap_median_frames": 2,
+      "mesh_gap_max_frames": 21,
+      "worst_mesh_gap": "frame 270 -> 291, 21 frames, about 0.70s at 30fps",
+      "body_schedule_gap_histogram_frames": {
+        "1": 243
+      },
+      "body_schedule_gap_median_frames": 1,
+      "body_schedule_gap_max_frames": 1,
+      "body_stage_wall_seconds": 379.912,
+      "body_phase_stage_wall_seconds": 333.91239826800006,
+      "person_frame_count": 680,
+      "steady_ms_per_person_frame": 15.278281,
+      "mesh_index_recursive_bytes": 22346650,
+      "mesh_faces_bytes": 1813990,
+      "mesh_variable_bytes_per_unique_frame": 297574.8,
+      "measured_monoliths": [
+        {
+          "label": "w5_p22latent Wolverine body_mesh.json, not this close-proof run",
+          "path": "runs/lanes/w5_p22latent_20260707/wolverine_body_dispatch/body_mesh.json",
+          "bytes": 304687278
+        },
+        {
+          "label": "older A100 ball-aware-100 Wolverine body_mesh.json",
+          "path": "runs/a100_sam3d_validation2_20260703T0647Z/production_remesh/wolverine_ball_aware_100/body_mesh.json",
+          "bytes": 447305691
+        }
+      ],
+      "cap_extrapolation": {
+        "100": {
+          "frame_count": 100,
+          "estimated_index_mib": 30.11,
+          "effective_fps": 10.0
+        },
+        "200": {
+          "frame_count": 200,
+          "estimated_index_mib": 58.49,
+          "effective_fps": 20.0
+        },
+        "400": {
+          "frame_count": 266,
+          "estimated_index_mib": 77.22,
+          "effective_fps": 26.6
+        },
+        "all_scheduled": {
+          "frame_count": 266,
+          "estimated_index_mib": 77.22,
+          "effective_fps": 26.6
+        }
+      }
+    },
+    "outdoor": {
+      "run_dir": "runs/lanes/w5_closeproof_20260708/outdoor/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline",
+      "fps": 60.0,
+      "total_clip_frames": 1151,
+      "duration_sec": 19.18,
+      "frame_compute_plan_world_mesh_frames": 100,
+      "body_scheduled_frame_count": 1251,
+      "body_scheduled_player_frame_count": 2653,
+      "body_scheduled_by_target_representation": {
+        "body_joints": 1151,
+        "world_mesh": 100
+      },
+      "mesh_index_player_frame_count": 169,
+      "mesh_unique_frame_count": 100,
+      "mesh_effective_fps_1x": 5.21,
+      "mesh_gap_histogram_frames": {
+        "1": 92,
+        "2": 1,
+        "3": 1,
+        "9": 1,
+        "21": 1,
+        "27": 1,
+        "31": 1,
+        "110": 1
+      },
+      "mesh_gap_median_frames": 1,
+      "mesh_gap_max_frames": 110,
+      "worst_mesh_gap": "frame 483 -> 593, 110 frames, about 1.83s at 60fps",
+      "body_schedule_gap_histogram_frames": {
+        "1": 1150
+      },
+      "body_schedule_gap_median_frames": 1,
+      "body_schedule_gap_max_frames": 1,
+      "body_stage_wall_seconds": 565.24,
+      "body_phase_stage_wall_seconds": 504.925668017,
+      "person_frame_count": 2653,
+      "steady_ms_per_person_frame": 15.178495,
+      "mesh_index_recursive_bytes": 14348673,
+      "mesh_faces_bytes": 1813990,
+      "mesh_variable_bytes_per_unique_frame": 1566835.4,
+      "measured_monoliths": [],
+      "cap_extrapolation": {
+        "100": {
+          "frame_count": 100,
+          "estimated_index_mib": 151.16,
+          "effective_fps": 5.21
+        },
+        "200": {
+          "frame_count": 200,
+          "estimated_index_mib": 300.58,
+          "effective_fps": 10.43
+        },
+        "400": {
+          "frame_count": 400,
+          "estimated_index_mib": 599.43,
+          "effective_fps": 20.85
+        },
+        "all_scheduled": {
+          "frame_count": 1251,
+          "estimated_index_mib": 1871.04,
+          "effective_fps": 65.21
+        }
+      }
+    },
+    "img1605_rerun2": {
+      "run_dir": "runs/lanes/w5_closeproof_20260708/img1605_rerun2/owner_IMG_1605_8a193402780b/owner_IMG_1605_8a193402780b",
+      "fps": 29.99,
+      "total_clip_frames": 297,
+      "duration_sec": 9.9,
+      "frame_compute_plan_world_mesh_frames": 100,
+      "body_scheduled_frame_count": 243,
+      "body_scheduled_player_frame_count": 359,
+      "body_scheduled_by_target_representation": {
+        "body_joints": 143,
+        "world_mesh": 100
+      },
+      "mesh_index_player_frame_count": 148,
+      "mesh_unique_frame_count": 100,
+      "mesh_effective_fps_1x": 10.1,
+      "mesh_gap_histogram_frames": {
+        "2": 54,
+        "3": 44,
+        "56": 1
+      },
+      "mesh_gap_median_frames": 2,
+      "mesh_gap_max_frames": 56,
+      "worst_mesh_gap": "frame 81 -> 137, 56 frames, about 1.87s at 29.99fps",
+      "body_schedule_gap_histogram_frames": {
+        "1": 241,
+        "55": 1
+      },
+      "body_schedule_gap_median_frames": 1,
+      "body_schedule_gap_max_frames": 55,
+      "body_stage_wall_seconds": 261.447,
+      "body_phase_stage_wall_seconds": 216.20289832400022,
+      "person_frame_count": 359,
+      "steady_ms_per_person_frame": 15.419398,
+      "mesh_index_recursive_bytes": 12856172,
+      "mesh_faces_bytes": 1813990,
+      "mesh_variable_bytes_per_unique_frame": 110421.8,
+      "measured_monoliths": [],
+      "cap_extrapolation": {
+        "100": {
+          "frame_count": 100,
+          "estimated_index_mib": 12.26,
+          "effective_fps": 10.1
+        },
+        "200": {
+          "frame_count": 200,
+          "estimated_index_mib": 22.79,
+          "effective_fps": 20.2
+        },
+        "400": {
+          "frame_count": 243,
+          "estimated_index_mib": 27.32,
+          "effective_fps": 24.54
+        },
+        "all_scheduled": {
+          "frame_count": 243,
+          "estimated_index_mib": 27.32,
+          "effective_fps": 24.54
+        }
+      }
+    }
+  },
+  "viewer_capability_today": {
+    "display_fps_button": "web/replay/src/App.tsx DisplayFpsControl labels the control '2x FPS (interpolated)'.",
+    "world_skeleton_interpolation": "web/replay/src/viewerData.ts displayFpsReplayData -> doubleFpsWorld inserts midpoint VirtualWorld frames by linearly interpolating joints_world, joint_conf, track_world_xy, transl_world, floor_world_xyz, and mesh_ref metadata.",
+    "mesh_interpolation": "web/replay/src/viewerData.ts doubleFpsBodyMesh inserts midpoint BodyMeshFrame only when the adjacent mesh frames are in the same source_window_index and have matching vertex/joint counts; interpolated mesh vertices and joints are linearly blended and marked mesh_interpolated=true with interpolation metadata.",
+    "mesh_hold_without_2x": "bodyMeshFrameForTime can hold a previous mesh over short same-run gaps before fading; this is hold behavior, not measured interpolation.",
+    "current_bundle_limitation": "The four close-proof mesh indexes have 100 selected mesh frames. Existing render-side interpolation cannot invent BODY evidence and is only cosmetic; it can blend available adjacent same-window vertices, but long inter-window gaps remain refused/held/blank depending on timing.",
+    "data_available_for_render_mesh_interp": [
+      "per-frame mesh vertices_world",
+      "same topology faces",
+      "per-frame joints_world",
+      "frame_idx/t/source_window_index",
+      "interpolation metadata fields in viewer model"
+    ],
+    "data_lacking_for_principled_interp": [
+      "MHR latent pose-code sequence in the viewer bundle",
+      "decode wrapper wired into replay",
+      "validated latent round-trip/mesh-skeleton correspondence for interpolated frames"
+    ]
+  },
+  "p22_tie_in": {
+    "exists_today": "P2-2 phase 1 landed an MHR decode wrapper and latent smoother prototype, but the smoother is unwired. w5_p22wiring produced only a marked world-joint proxy measurement for Wolverine.",
+    "measured_wiring_state": "runs/lanes/w5_p22wiring_20260708/report.json reports PARTIAL: decoded smoothed candidate dirs absent; .venv lacked roma for local mhr_decode; process_video.py remained unwired.",
+    "what_it_could_enable_once_wired": "If strict decoded latent round-trip and mesh-skeleton correspondence pass, replay could interpolate between BODY frames by smoothing/decoding latent pose codes so skeleton and mesh move coherently instead of simple render-side vertex blends.",
+    "not_available_today": "No current close-proof viewer bundle carries MHR latents or decoded inter-frame BODY output; no lambda is wiring-ready from the available proxy report."
+  },
+  "mechanism_table": [
+    {
+      "mechanism": "render-interp",
+      "measured_current_state": "Viewer already has a 2x FPS display-only button. It interpolates world skeletons and eligible same-window mesh vertices; it marks interpolated mesh frames with mesh_interpolated=true/interpolation metadata. It does not create measured BODY evidence.",
+      "cost": {
+        "disk_mib": 0,
+        "transfer_mib": 0,
+        "gpu_min": 0,
+        "engineering_scope": "viewer-only labeling/banding and possibly looser same-topology mesh blend policy"
+      },
+      "expected_playback_fps_gain": "Display cadence can double for skeletons. Mesh gain is bounded by available adjacent mesh frames and same-window eligibility; long gaps such as Outdoor 483->593 remain non-measured cosmetic gaps unless the viewer explicitly blends across windows.",
+      "never_measured_evidence_risk": "High if hidden behind normal playback. Must label as display/cosmetic/interpolated, preserve original frame markers, and prevent export/scoring/training use.",
+      "viewer_label": "Display FPS: 2x interpolated, cosmetic only; measured frames remain tick-marked.",
+      "composes_with": [
+        "mesh-cap-raise",
+        "denser-scheduling",
+        "P2-2-latent-interp"
+      ]
+    },
+    {
+      "mechanism": "mesh-cap-raise",
+      "measured_current_state": "All four close-proof frame plans selected 100 world-mesh source frames. Effective unique mesh cadence is Burlington 9.99fps, Wolverine 10.00fps, Outdoor 5.21fps, IMG1605 10.10fps. Outdoor and IMG1605 have worst gaps around 1.8s.",
+      "cost": {
+        "disk_transfer": "Roughly linear in mesh-frame count plus one shared faces file. See per-clip cap_extrapolation.",
+        "gpu_min": "No extra BODY inference if it only exports more already-scheduled BODY frames; may add index build/download time.",
+        "engineering_scope": "pipeline/config cap change plus storage/viewer load checks"
+      },
+      "expected_playback_fps_gain": "Cap 200 roughly doubles mesh cadence where scheduled frames exist; cap 400/all reaches 20-65fps depending on clip schedule.",
+      "never_measured_evidence_risk": "Low. Frames remain measured BODY outputs, but still scoped/low-confidence BODY evidence, not promotion evidence.",
+      "viewer_label": "Measured BODY mesh frames, still scoped evidence; show cap/source count.",
+      "composes_with": [
+        "render-interp",
+        "denser-scheduling",
+        "P2-2-latent-interp"
+      ]
+    },
+    {
+      "mechanism": "denser-scheduling",
+      "measured_current_state": "BODY scheduling already kept every source frame for Burlington, Wolverine, and Outdoor at the unique-frame level. IMG1605 has one BODY schedule gap frame 82->137 (55 frames). Scheduled player-frame counts are 1785, 680, 2653, and 359.",
+      "cost": {
+        "gpu_min_estimate": "Using measured steady H100 ms/person-frame only: Burlington 2x +0.45m, 4x +1.36m; Wolverine 2x +0.17m, 4x +0.52m; Outdoor 2x +0.67m, 4x +2.01m; IMG1605 2x +0.09m, 4x +0.28m. Full stage-wall scaling would be much larger because preprocessing/gate/index overhead dominates.",
+        "engineering_scope": "scheduler policy and remote BODY cost guard changes"
+      },
+      "expected_playback_fps_gain": "Only helps where BODY itself is sparse or where more player frames become eligible for mesh export. It does not fix a 100-frame mesh cap by itself.",
+      "never_measured_evidence_risk": "Low for emitted BODY frames; cost and quality drift risk are higher.",
+      "viewer_label": "Measured BODY frames; preserve schedule policy and cap provenance.",
+      "composes_with": [
+        "mesh-cap-raise",
+        "render-interp",
+        "P2-2-latent-interp"
+      ]
+    },
+    {
+      "mechanism": "P2-2-latent-interp",
+      "measured_current_state": "Prototype exists but is unwired. Available w5 wiring evidence is proxy-only and not wiring-ready; decoded candidate dirs/lambda coverage are absent locally.",
+      "cost": {
+        "disk_transfer": "TBD after latent payload format; likely smaller than dense vertices if latents are stored, but requires decode/runtime path.",
+        "gpu_min": "TBD; could avoid full SAM3D per-frame BODY only after validated decode/interp path.",
+        "engineering_scope": "raw latent persistence, strict GATE 1b, decoded candidate generation, viewer or pipeline decode wiring, trust-band UI"
+      },
+      "expected_playback_fps_gain": "Potentially fills between BODY frames with coherent mesh+skeleton once wired. No measured gain today.",
+      "never_measured_evidence_risk": "High unless inter-frame decoded output is visibly banded as latent-interpolated and excluded from metrics/training/promotion.",
+      "viewer_label": "Latent-interpolated BODY, cosmetic/derived; measured BODY frames separately tick-marked.",
+      "composes_with": [
+        "render-interp",
+        "mesh-cap-raise",
+        "denser-scheduling"
+      ]
+    }
+  ],
+  "proposed_build_checklist_bullet": "[W6 PLAYBACKDIAG 2026-07-08, Codex READ-ONLY] Measured close-proof 3D playback cadence and cost menu in runs/lanes/w6_playbackdiag_20260708/: all 4 close-proof runs selected 100 world-mesh source frames; effective mesh cadence is Burlington 9.99fps, Wolverine 10.00fps, Outdoor 5.21fps, IMG1605 10.10fps with worst mesh gaps 83/21/110/56 frames. Viewer 2x FPS is cosmetic render-side interpolation only; mesh cap raise is linear storage/transfer; denser scheduling has measured H100 steady cost but does not fix the cap alone; P2-2 latent interpolation remains unwired/proxy-only."
+}

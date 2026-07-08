@@ -1,0 +1,4778 @@
+{
+  "artifact_type": "w6_labelpack_20260708_package_manifest",
+  "ball_sessions": [
+    {
+      "clip_count": 22,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 32,
+        "_L0HVmAlCQI_rally_0002": 10,
+        "_L0HVmAlCQI_rally_0003": 11,
+        "_L0HVmAlCQI_rally_0005": 3,
+        "_L0HVmAlCQI_rally_0007": 7,
+        "_L0HVmAlCQI_rally_0008": 2,
+        "_L0HVmAlCQI_rally_0009": 13,
+        "_L0HVmAlCQI_rally_0010": 4,
+        "_L0HVmAlCQI_rally_0011": 39,
+        "_L0HVmAlCQI_rally_0012": 6,
+        "_L0HVmAlCQI_rally_0013": 1,
+        "_L0HVmAlCQI_rally_0014": 8,
+        "_L0HVmAlCQI_rally_0015": 4,
+        "_L0HVmAlCQI_rally_0016": 4,
+        "_L0HVmAlCQI_rally_0017": 8,
+        "_L0HVmAlCQI_rally_0018": 6,
+        "_L0HVmAlCQI_rally_0019": 2,
+        "wBu8bC4OfUY_rally_0001": 128,
+        "wBu8bC4OfUY_rally_0002": 22,
+        "wBu8bC4OfUY_rally_0003": 10,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 223,
+        "student-only": 160,
+        "teacher-only": 257
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_01_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_01_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_01",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_01_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 32,
+        "_L0HVmAlCQI_rally_0002": 10,
+        "_L0HVmAlCQI_rally_0003": 5,
+        "_L0HVmAlCQI_rally_0004": 1,
+        "_L0HVmAlCQI_rally_0005": 2,
+        "_L0HVmAlCQI_rally_0006": 6,
+        "_L0HVmAlCQI_rally_0007": 11,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 12,
+        "_L0HVmAlCQI_rally_0010": 7,
+        "_L0HVmAlCQI_rally_0011": 21,
+        "_L0HVmAlCQI_rally_0012": 5,
+        "_L0HVmAlCQI_rally_0013": 5,
+        "_L0HVmAlCQI_rally_0014": 9,
+        "_L0HVmAlCQI_rally_0015": 5,
+        "_L0HVmAlCQI_rally_0016": 6,
+        "_L0HVmAlCQI_rally_0017": 6,
+        "_L0HVmAlCQI_rally_0018": 7,
+        "_L0HVmAlCQI_rally_0019": 5,
+        "wBu8bC4OfUY_rally_0001": 128,
+        "wBu8bC4OfUY_rally_0002": 31,
+        "wBu8bC4OfUY_rally_0003": 1,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 160,
+        "student-only": 150,
+        "teacher-only": 330
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_02_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_02_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_02",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_02_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 12,
+        "_L0HVmAlCQI_rally_0002": 5,
+        "_L0HVmAlCQI_rally_0003": 8,
+        "_L0HVmAlCQI_rally_0004": 4,
+        "_L0HVmAlCQI_rally_0005": 4,
+        "_L0HVmAlCQI_rally_0006": 5,
+        "_L0HVmAlCQI_rally_0007": 15,
+        "_L0HVmAlCQI_rally_0008": 4,
+        "_L0HVmAlCQI_rally_0009": 17,
+        "_L0HVmAlCQI_rally_0010": 3,
+        "_L0HVmAlCQI_rally_0011": 26,
+        "_L0HVmAlCQI_rally_0012": 3,
+        "_L0HVmAlCQI_rally_0013": 2,
+        "_L0HVmAlCQI_rally_0014": 9,
+        "_L0HVmAlCQI_rally_0015": 4,
+        "_L0HVmAlCQI_rally_0016": 13,
+        "_L0HVmAlCQI_rally_0017": 19,
+        "_L0HVmAlCQI_rally_0018": 4,
+        "_L0HVmAlCQI_rally_0019": 3,
+        "wBu8bC4OfUY_rally_0001": 133,
+        "wBu8bC4OfUY_rally_0002": 26,
+        "wBu8bC4OfUY_rally_0003": 1,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 160,
+        "student-only": 120,
+        "teacher-only": 360
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_03_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_03_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_03",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_03_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 18,
+        "_L0HVmAlCQI_rally_0002": 11,
+        "_L0HVmAlCQI_rally_0003": 6,
+        "_L0HVmAlCQI_rally_0004": 1,
+        "_L0HVmAlCQI_rally_0005": 3,
+        "_L0HVmAlCQI_rally_0006": 2,
+        "_L0HVmAlCQI_rally_0007": 17,
+        "_L0HVmAlCQI_rally_0008": 8,
+        "_L0HVmAlCQI_rally_0009": 18,
+        "_L0HVmAlCQI_rally_0010": 1,
+        "_L0HVmAlCQI_rally_0011": 24,
+        "_L0HVmAlCQI_rally_0012": 4,
+        "_L0HVmAlCQI_rally_0013": 3,
+        "_L0HVmAlCQI_rally_0014": 14,
+        "_L0HVmAlCQI_rally_0015": 2,
+        "_L0HVmAlCQI_rally_0016": 5,
+        "_L0HVmAlCQI_rally_0017": 15,
+        "_L0HVmAlCQI_rally_0018": 7,
+        "_L0HVmAlCQI_rally_0019": 1,
+        "wBu8bC4OfUY_rally_0001": 124,
+        "wBu8bC4OfUY_rally_0002": 32,
+        "wBu8bC4OfUY_rally_0003": 4,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 160,
+        "student-only": 120,
+        "teacher-only": 360
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_04_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_04_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_04",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_04_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 22,
+        "_L0HVmAlCQI_rally_0002": 5,
+        "_L0HVmAlCQI_rally_0003": 11,
+        "_L0HVmAlCQI_rally_0004": 2,
+        "_L0HVmAlCQI_rally_0005": 3,
+        "_L0HVmAlCQI_rally_0006": 5,
+        "_L0HVmAlCQI_rally_0007": 13,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 16,
+        "_L0HVmAlCQI_rally_0010": 4,
+        "_L0HVmAlCQI_rally_0011": 30,
+        "_L0HVmAlCQI_rally_0012": 1,
+        "_L0HVmAlCQI_rally_0013": 5,
+        "_L0HVmAlCQI_rally_0014": 5,
+        "_L0HVmAlCQI_rally_0015": 4,
+        "_L0HVmAlCQI_rally_0016": 5,
+        "_L0HVmAlCQI_rally_0017": 13,
+        "_L0HVmAlCQI_rally_0018": 9,
+        "_L0HVmAlCQI_rally_0019": 2,
+        "wBu8bC4OfUY_rally_0001": 120,
+        "wBu8bC4OfUY_rally_0002": 35,
+        "wBu8bC4OfUY_rally_0003": 5,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 81,
+        "student-only": 120,
+        "teacher-only": 439
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_05_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_05_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_05",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_05_20260708"
+    },
+    {
+      "clip_count": 22,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 20,
+        "_L0HVmAlCQI_rally_0002": 9,
+        "_L0HVmAlCQI_rally_0003": 3,
+        "_L0HVmAlCQI_rally_0005": 6,
+        "_L0HVmAlCQI_rally_0006": 7,
+        "_L0HVmAlCQI_rally_0007": 20,
+        "_L0HVmAlCQI_rally_0008": 10,
+        "_L0HVmAlCQI_rally_0009": 13,
+        "_L0HVmAlCQI_rally_0010": 7,
+        "_L0HVmAlCQI_rally_0011": 23,
+        "_L0HVmAlCQI_rally_0012": 3,
+        "_L0HVmAlCQI_rally_0013": 1,
+        "_L0HVmAlCQI_rally_0014": 10,
+        "_L0HVmAlCQI_rally_0015": 7,
+        "_L0HVmAlCQI_rally_0016": 7,
+        "_L0HVmAlCQI_rally_0017": 7,
+        "_L0HVmAlCQI_rally_0018": 7,
+        "wBu8bC4OfUY_rally_0001": 110,
+        "wBu8bC4OfUY_rally_0002": 41,
+        "wBu8bC4OfUY_rally_0003": 9,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 94,
+        "teacher-only": 466
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_06_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_06_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_06",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_06_20260708"
+    },
+    {
+      "clip_count": 23,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 22,
+        "_L0HVmAlCQI_rally_0002": 7,
+        "_L0HVmAlCQI_rally_0003": 5,
+        "_L0HVmAlCQI_rally_0004": 2,
+        "_L0HVmAlCQI_rally_0005": 6,
+        "_L0HVmAlCQI_rally_0006": 7,
+        "_L0HVmAlCQI_rally_0007": 17,
+        "_L0HVmAlCQI_rally_0008": 6,
+        "_L0HVmAlCQI_rally_0009": 12,
+        "_L0HVmAlCQI_rally_0010": 8,
+        "_L0HVmAlCQI_rally_0011": 30,
+        "_L0HVmAlCQI_rally_0013": 4,
+        "_L0HVmAlCQI_rally_0014": 7,
+        "_L0HVmAlCQI_rally_0015": 4,
+        "_L0HVmAlCQI_rally_0016": 6,
+        "_L0HVmAlCQI_rally_0017": 12,
+        "_L0HVmAlCQI_rally_0018": 3,
+        "_L0HVmAlCQI_rally_0019": 2,
+        "wBu8bC4OfUY_rally_0001": 115,
+        "wBu8bC4OfUY_rally_0002": 35,
+        "wBu8bC4OfUY_rally_0003": 10,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 80,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_07_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_07_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_07",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_07_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 18,
+        "_L0HVmAlCQI_rally_0002": 3,
+        "_L0HVmAlCQI_rally_0003": 9,
+        "_L0HVmAlCQI_rally_0004": 1,
+        "_L0HVmAlCQI_rally_0005": 7,
+        "_L0HVmAlCQI_rally_0006": 4,
+        "_L0HVmAlCQI_rally_0007": 19,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 7,
+        "_L0HVmAlCQI_rally_0010": 9,
+        "_L0HVmAlCQI_rally_0011": 27,
+        "_L0HVmAlCQI_rally_0012": 3,
+        "_L0HVmAlCQI_rally_0013": 5,
+        "_L0HVmAlCQI_rally_0014": 6,
+        "_L0HVmAlCQI_rally_0015": 3,
+        "_L0HVmAlCQI_rally_0016": 12,
+        "_L0HVmAlCQI_rally_0017": 14,
+        "_L0HVmAlCQI_rally_0018": 4,
+        "_L0HVmAlCQI_rally_0019": 4,
+        "wBu8bC4OfUY_rally_0001": 123,
+        "wBu8bC4OfUY_rally_0002": 27,
+        "wBu8bC4OfUY_rally_0003": 10,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 80,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_08_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_08_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_08",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_08_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 22,
+        "_L0HVmAlCQI_rally_0002": 9,
+        "_L0HVmAlCQI_rally_0003": 7,
+        "_L0HVmAlCQI_rally_0004": 3,
+        "_L0HVmAlCQI_rally_0005": 5,
+        "_L0HVmAlCQI_rally_0006": 5,
+        "_L0HVmAlCQI_rally_0007": 20,
+        "_L0HVmAlCQI_rally_0008": 2,
+        "_L0HVmAlCQI_rally_0009": 16,
+        "_L0HVmAlCQI_rally_0010": 2,
+        "_L0HVmAlCQI_rally_0011": 21,
+        "_L0HVmAlCQI_rally_0012": 1,
+        "_L0HVmAlCQI_rally_0013": 4,
+        "_L0HVmAlCQI_rally_0014": 6,
+        "_L0HVmAlCQI_rally_0015": 2,
+        "_L0HVmAlCQI_rally_0016": 5,
+        "_L0HVmAlCQI_rally_0017": 11,
+        "_L0HVmAlCQI_rally_0018": 12,
+        "_L0HVmAlCQI_rally_0019": 7,
+        "wBu8bC4OfUY_rally_0001": 123,
+        "wBu8bC4OfUY_rally_0002": 30,
+        "wBu8bC4OfUY_rally_0003": 7,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 80,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_09_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_09_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_09",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_09_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 16,
+        "_L0HVmAlCQI_rally_0002": 5,
+        "_L0HVmAlCQI_rally_0003": 8,
+        "_L0HVmAlCQI_rally_0004": 4,
+        "_L0HVmAlCQI_rally_0005": 3,
+        "_L0HVmAlCQI_rally_0006": 4,
+        "_L0HVmAlCQI_rally_0007": 14,
+        "_L0HVmAlCQI_rally_0008": 6,
+        "_L0HVmAlCQI_rally_0009": 12,
+        "_L0HVmAlCQI_rally_0010": 8,
+        "_L0HVmAlCQI_rally_0011": 29,
+        "_L0HVmAlCQI_rally_0012": 3,
+        "_L0HVmAlCQI_rally_0013": 5,
+        "_L0HVmAlCQI_rally_0014": 7,
+        "_L0HVmAlCQI_rally_0015": 5,
+        "_L0HVmAlCQI_rally_0016": 8,
+        "_L0HVmAlCQI_rally_0017": 9,
+        "_L0HVmAlCQI_rally_0018": 11,
+        "_L0HVmAlCQI_rally_0019": 3,
+        "wBu8bC4OfUY_rally_0001": 120,
+        "wBu8bC4OfUY_rally_0002": 33,
+        "wBu8bC4OfUY_rally_0003": 7,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 80,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_10_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_10_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_10",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_10_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 20,
+        "_L0HVmAlCQI_rally_0002": 6,
+        "_L0HVmAlCQI_rally_0003": 10,
+        "_L0HVmAlCQI_rally_0004": 2,
+        "_L0HVmAlCQI_rally_0005": 4,
+        "_L0HVmAlCQI_rally_0006": 6,
+        "_L0HVmAlCQI_rally_0007": 20,
+        "_L0HVmAlCQI_rally_0008": 7,
+        "_L0HVmAlCQI_rally_0009": 9,
+        "_L0HVmAlCQI_rally_0010": 3,
+        "_L0HVmAlCQI_rally_0011": 21,
+        "_L0HVmAlCQI_rally_0012": 4,
+        "_L0HVmAlCQI_rally_0013": 6,
+        "_L0HVmAlCQI_rally_0014": 9,
+        "_L0HVmAlCQI_rally_0015": 9,
+        "_L0HVmAlCQI_rally_0016": 4,
+        "_L0HVmAlCQI_rally_0017": 11,
+        "_L0HVmAlCQI_rally_0018": 7,
+        "_L0HVmAlCQI_rally_0019": 2,
+        "wBu8bC4OfUY_rally_0001": 117,
+        "wBu8bC4OfUY_rally_0002": 37,
+        "wBu8bC4OfUY_rally_0003": 6,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 80,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_11_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_11_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_11",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_11_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 17,
+        "_L0HVmAlCQI_rally_0002": 11,
+        "_L0HVmAlCQI_rally_0003": 12,
+        "_L0HVmAlCQI_rally_0004": 6,
+        "_L0HVmAlCQI_rally_0005": 6,
+        "_L0HVmAlCQI_rally_0006": 6,
+        "_L0HVmAlCQI_rally_0007": 15,
+        "_L0HVmAlCQI_rally_0008": 1,
+        "_L0HVmAlCQI_rally_0009": 12,
+        "_L0HVmAlCQI_rally_0010": 6,
+        "_L0HVmAlCQI_rally_0011": 27,
+        "_L0HVmAlCQI_rally_0012": 2,
+        "_L0HVmAlCQI_rally_0013": 7,
+        "_L0HVmAlCQI_rally_0014": 7,
+        "_L0HVmAlCQI_rally_0015": 2,
+        "_L0HVmAlCQI_rally_0016": 8,
+        "_L0HVmAlCQI_rally_0017": 7,
+        "_L0HVmAlCQI_rally_0018": 5,
+        "_L0HVmAlCQI_rally_0019": 3,
+        "wBu8bC4OfUY_rally_0001": 128,
+        "wBu8bC4OfUY_rally_0002": 28,
+        "wBu8bC4OfUY_rally_0003": 4,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 80,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_12_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_12_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_12",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_12_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 10,
+        "_L0HVmAlCQI_rally_0002": 9,
+        "_L0HVmAlCQI_rally_0003": 11,
+        "_L0HVmAlCQI_rally_0004": 7,
+        "_L0HVmAlCQI_rally_0005": 8,
+        "_L0HVmAlCQI_rally_0006": 5,
+        "_L0HVmAlCQI_rally_0007": 17,
+        "_L0HVmAlCQI_rally_0008": 3,
+        "_L0HVmAlCQI_rally_0009": 13,
+        "_L0HVmAlCQI_rally_0010": 9,
+        "_L0HVmAlCQI_rally_0011": 21,
+        "_L0HVmAlCQI_rally_0012": 2,
+        "_L0HVmAlCQI_rally_0013": 6,
+        "_L0HVmAlCQI_rally_0014": 8,
+        "_L0HVmAlCQI_rally_0015": 5,
+        "_L0HVmAlCQI_rally_0016": 8,
+        "_L0HVmAlCQI_rally_0017": 9,
+        "_L0HVmAlCQI_rally_0018": 5,
+        "_L0HVmAlCQI_rally_0019": 4,
+        "wBu8bC4OfUY_rally_0001": 123,
+        "wBu8bC4OfUY_rally_0002": 31,
+        "wBu8bC4OfUY_rally_0003": 6,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 80,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_13_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_13_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_13",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_13_20260708"
+    },
+    {
+      "clip_count": 23,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 15,
+        "_L0HVmAlCQI_rally_0002": 7,
+        "_L0HVmAlCQI_rally_0003": 8,
+        "_L0HVmAlCQI_rally_0004": 5,
+        "_L0HVmAlCQI_rally_0005": 4,
+        "_L0HVmAlCQI_rally_0006": 7,
+        "_L0HVmAlCQI_rally_0007": 13,
+        "_L0HVmAlCQI_rally_0008": 2,
+        "_L0HVmAlCQI_rally_0009": 7,
+        "_L0HVmAlCQI_rally_0010": 10,
+        "_L0HVmAlCQI_rally_0011": 33,
+        "_L0HVmAlCQI_rally_0012": 4,
+        "_L0HVmAlCQI_rally_0013": 3,
+        "_L0HVmAlCQI_rally_0014": 16,
+        "_L0HVmAlCQI_rally_0015": 7,
+        "_L0HVmAlCQI_rally_0016": 8,
+        "_L0HVmAlCQI_rally_0017": 8,
+        "_L0HVmAlCQI_rally_0018": 3,
+        "wBu8bC4OfUY_rally_0001": 116,
+        "wBu8bC4OfUY_rally_0002": 37,
+        "wBu8bC4OfUY_rally_0003": 7,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 80,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_14_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_14_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_14",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_14_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 17,
+        "_L0HVmAlCQI_rally_0002": 8,
+        "_L0HVmAlCQI_rally_0003": 9,
+        "_L0HVmAlCQI_rally_0004": 6,
+        "_L0HVmAlCQI_rally_0005": 6,
+        "_L0HVmAlCQI_rally_0006": 15,
+        "_L0HVmAlCQI_rally_0007": 19,
+        "_L0HVmAlCQI_rally_0008": 6,
+        "_L0HVmAlCQI_rally_0009": 7,
+        "_L0HVmAlCQI_rally_0010": 5,
+        "_L0HVmAlCQI_rally_0011": 17,
+        "_L0HVmAlCQI_rally_0012": 2,
+        "_L0HVmAlCQI_rally_0013": 3,
+        "_L0HVmAlCQI_rally_0014": 11,
+        "_L0HVmAlCQI_rally_0015": 2,
+        "_L0HVmAlCQI_rally_0016": 7,
+        "_L0HVmAlCQI_rally_0017": 9,
+        "_L0HVmAlCQI_rally_0018": 8,
+        "_L0HVmAlCQI_rally_0019": 3,
+        "wBu8bC4OfUY_rally_0001": 125,
+        "wBu8bC4OfUY_rally_0002": 30,
+        "wBu8bC4OfUY_rally_0003": 5,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 80,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_15_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_15_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_15",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_15_20260708"
+    },
+    {
+      "clip_count": 23,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 17,
+        "_L0HVmAlCQI_rally_0002": 6,
+        "_L0HVmAlCQI_rally_0003": 10,
+        "_L0HVmAlCQI_rally_0005": 6,
+        "_L0HVmAlCQI_rally_0006": 5,
+        "_L0HVmAlCQI_rally_0007": 17,
+        "_L0HVmAlCQI_rally_0008": 11,
+        "_L0HVmAlCQI_rally_0009": 6,
+        "_L0HVmAlCQI_rally_0010": 7,
+        "_L0HVmAlCQI_rally_0011": 28,
+        "_L0HVmAlCQI_rally_0012": 2,
+        "_L0HVmAlCQI_rally_0013": 4,
+        "_L0HVmAlCQI_rally_0014": 9,
+        "_L0HVmAlCQI_rally_0015": 4,
+        "_L0HVmAlCQI_rally_0016": 7,
+        "_L0HVmAlCQI_rally_0017": 7,
+        "_L0HVmAlCQI_rally_0018": 9,
+        "_L0HVmAlCQI_rally_0019": 5,
+        "wBu8bC4OfUY_rally_0001": 122,
+        "wBu8bC4OfUY_rally_0002": 32,
+        "wBu8bC4OfUY_rally_0003": 6,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 53,
+        "teacher-only": 507
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_16_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_16_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_16",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_16_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 13,
+        "_L0HVmAlCQI_rally_0002": 7,
+        "_L0HVmAlCQI_rally_0003": 10,
+        "_L0HVmAlCQI_rally_0004": 4,
+        "_L0HVmAlCQI_rally_0005": 7,
+        "_L0HVmAlCQI_rally_0006": 9,
+        "_L0HVmAlCQI_rally_0007": 12,
+        "_L0HVmAlCQI_rally_0008": 4,
+        "_L0HVmAlCQI_rally_0009": 11,
+        "_L0HVmAlCQI_rally_0010": 9,
+        "_L0HVmAlCQI_rally_0011": 30,
+        "_L0HVmAlCQI_rally_0012": 4,
+        "_L0HVmAlCQI_rally_0013": 2,
+        "_L0HVmAlCQI_rally_0014": 12,
+        "_L0HVmAlCQI_rally_0015": 3,
+        "_L0HVmAlCQI_rally_0016": 7,
+        "_L0HVmAlCQI_rally_0017": 7,
+        "_L0HVmAlCQI_rally_0018": 4,
+        "_L0HVmAlCQI_rally_0019": 5,
+        "wBu8bC4OfUY_rally_0001": 136,
+        "wBu8bC4OfUY_rally_0002": 21,
+        "wBu8bC4OfUY_rally_0003": 3,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_17_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_17_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_17",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_17_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 17,
+        "_L0HVmAlCQI_rally_0002": 6,
+        "_L0HVmAlCQI_rally_0003": 8,
+        "_L0HVmAlCQI_rally_0004": 4,
+        "_L0HVmAlCQI_rally_0005": 8,
+        "_L0HVmAlCQI_rally_0006": 8,
+        "_L0HVmAlCQI_rally_0007": 10,
+        "_L0HVmAlCQI_rally_0008": 3,
+        "_L0HVmAlCQI_rally_0009": 11,
+        "_L0HVmAlCQI_rally_0010": 6,
+        "_L0HVmAlCQI_rally_0011": 28,
+        "_L0HVmAlCQI_rally_0012": 7,
+        "_L0HVmAlCQI_rally_0013": 2,
+        "_L0HVmAlCQI_rally_0014": 11,
+        "_L0HVmAlCQI_rally_0015": 5,
+        "_L0HVmAlCQI_rally_0016": 6,
+        "_L0HVmAlCQI_rally_0017": 8,
+        "_L0HVmAlCQI_rally_0018": 7,
+        "_L0HVmAlCQI_rally_0019": 5,
+        "wBu8bC4OfUY_rally_0001": 129,
+        "wBu8bC4OfUY_rally_0002": 27,
+        "wBu8bC4OfUY_rally_0003": 4,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_18_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_18_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_18",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_18_20260708"
+    },
+    {
+      "clip_count": 23,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 16,
+        "_L0HVmAlCQI_rally_0002": 9,
+        "_L0HVmAlCQI_rally_0003": 12,
+        "_L0HVmAlCQI_rally_0004": 1,
+        "_L0HVmAlCQI_rally_0005": 3,
+        "_L0HVmAlCQI_rally_0006": 9,
+        "_L0HVmAlCQI_rally_0007": 11,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 10,
+        "_L0HVmAlCQI_rally_0010": 10,
+        "_L0HVmAlCQI_rally_0011": 25,
+        "_L0HVmAlCQI_rally_0013": 6,
+        "_L0HVmAlCQI_rally_0014": 12,
+        "_L0HVmAlCQI_rally_0015": 7,
+        "_L0HVmAlCQI_rally_0016": 10,
+        "_L0HVmAlCQI_rally_0017": 3,
+        "_L0HVmAlCQI_rally_0018": 8,
+        "_L0HVmAlCQI_rally_0019": 3,
+        "wBu8bC4OfUY_rally_0001": 132,
+        "wBu8bC4OfUY_rally_0002": 25,
+        "wBu8bC4OfUY_rally_0003": 3,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_19_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_19_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_19",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_19_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 16,
+        "_L0HVmAlCQI_rally_0002": 5,
+        "_L0HVmAlCQI_rally_0003": 6,
+        "_L0HVmAlCQI_rally_0004": 5,
+        "_L0HVmAlCQI_rally_0005": 11,
+        "_L0HVmAlCQI_rally_0006": 6,
+        "_L0HVmAlCQI_rally_0007": 7,
+        "_L0HVmAlCQI_rally_0008": 6,
+        "_L0HVmAlCQI_rally_0009": 20,
+        "_L0HVmAlCQI_rally_0010": 5,
+        "_L0HVmAlCQI_rally_0011": 23,
+        "_L0HVmAlCQI_rally_0012": 2,
+        "_L0HVmAlCQI_rally_0013": 4,
+        "_L0HVmAlCQI_rally_0014": 12,
+        "_L0HVmAlCQI_rally_0015": 2,
+        "_L0HVmAlCQI_rally_0016": 9,
+        "_L0HVmAlCQI_rally_0017": 11,
+        "_L0HVmAlCQI_rally_0018": 6,
+        "_L0HVmAlCQI_rally_0019": 4,
+        "wBu8bC4OfUY_rally_0001": 126,
+        "wBu8bC4OfUY_rally_0002": 32,
+        "wBu8bC4OfUY_rally_0003": 2,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_20_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_20_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_20",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_20_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 12,
+        "_L0HVmAlCQI_rally_0002": 8,
+        "_L0HVmAlCQI_rally_0003": 10,
+        "_L0HVmAlCQI_rally_0004": 2,
+        "_L0HVmAlCQI_rally_0005": 4,
+        "_L0HVmAlCQI_rally_0006": 6,
+        "_L0HVmAlCQI_rally_0007": 20,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 6,
+        "_L0HVmAlCQI_rally_0010": 7,
+        "_L0HVmAlCQI_rally_0011": 31,
+        "_L0HVmAlCQI_rally_0012": 4,
+        "_L0HVmAlCQI_rally_0013": 5,
+        "_L0HVmAlCQI_rally_0014": 9,
+        "_L0HVmAlCQI_rally_0015": 3,
+        "_L0HVmAlCQI_rally_0016": 7,
+        "_L0HVmAlCQI_rally_0017": 6,
+        "_L0HVmAlCQI_rally_0018": 11,
+        "_L0HVmAlCQI_rally_0019": 4,
+        "wBu8bC4OfUY_rally_0001": 136,
+        "wBu8bC4OfUY_rally_0002": 22,
+        "wBu8bC4OfUY_rally_0003": 2,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_21_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_21_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_21",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_21_20260708"
+    },
+    {
+      "clip_count": 23,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 17,
+        "_L0HVmAlCQI_rally_0002": 8,
+        "_L0HVmAlCQI_rally_0003": 6,
+        "_L0HVmAlCQI_rally_0004": 6,
+        "_L0HVmAlCQI_rally_0005": 3,
+        "_L0HVmAlCQI_rally_0006": 7,
+        "_L0HVmAlCQI_rally_0007": 13,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 12,
+        "_L0HVmAlCQI_rally_0010": 3,
+        "_L0HVmAlCQI_rally_0011": 32,
+        "_L0HVmAlCQI_rally_0012": 2,
+        "_L0HVmAlCQI_rally_0013": 1,
+        "_L0HVmAlCQI_rally_0014": 15,
+        "_L0HVmAlCQI_rally_0015": 8,
+        "_L0HVmAlCQI_rally_0016": 4,
+        "_L0HVmAlCQI_rally_0017": 6,
+        "_L0HVmAlCQI_rally_0018": 5,
+        "_L0HVmAlCQI_rally_0019": 7,
+        "wBu8bC4OfUY_rally_0001": 132,
+        "wBu8bC4OfUY_rally_0002": 28,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_22_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_22_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_22",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_22_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 19,
+        "_L0HVmAlCQI_rally_0002": 9,
+        "_L0HVmAlCQI_rally_0003": 13,
+        "_L0HVmAlCQI_rally_0004": 1,
+        "_L0HVmAlCQI_rally_0005": 2,
+        "_L0HVmAlCQI_rally_0006": 8,
+        "_L0HVmAlCQI_rally_0007": 7,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 10,
+        "_L0HVmAlCQI_rally_0010": 7,
+        "_L0HVmAlCQI_rally_0011": 22,
+        "_L0HVmAlCQI_rally_0012": 4,
+        "_L0HVmAlCQI_rally_0013": 7,
+        "_L0HVmAlCQI_rally_0014": 7,
+        "_L0HVmAlCQI_rally_0015": 6,
+        "_L0HVmAlCQI_rally_0016": 11,
+        "_L0HVmAlCQI_rally_0017": 9,
+        "_L0HVmAlCQI_rally_0018": 8,
+        "_L0HVmAlCQI_rally_0019": 5,
+        "wBu8bC4OfUY_rally_0001": 110,
+        "wBu8bC4OfUY_rally_0002": 44,
+        "wBu8bC4OfUY_rally_0003": 6,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_23_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_23_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_23",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_23_20260708"
+    },
+    {
+      "clip_count": 23,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 15,
+        "_L0HVmAlCQI_rally_0002": 7,
+        "_L0HVmAlCQI_rally_0003": 8,
+        "_L0HVmAlCQI_rally_0004": 4,
+        "_L0HVmAlCQI_rally_0005": 5,
+        "_L0HVmAlCQI_rally_0006": 9,
+        "_L0HVmAlCQI_rally_0007": 18,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 14,
+        "_L0HVmAlCQI_rally_0010": 4,
+        "_L0HVmAlCQI_rally_0011": 27,
+        "_L0HVmAlCQI_rally_0013": 9,
+        "_L0HVmAlCQI_rally_0014": 8,
+        "_L0HVmAlCQI_rally_0015": 6,
+        "_L0HVmAlCQI_rally_0016": 7,
+        "_L0HVmAlCQI_rally_0017": 7,
+        "_L0HVmAlCQI_rally_0018": 3,
+        "_L0HVmAlCQI_rally_0019": 4,
+        "wBu8bC4OfUY_rally_0001": 123,
+        "wBu8bC4OfUY_rally_0002": 34,
+        "wBu8bC4OfUY_rally_0003": 3,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_24_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_24_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_24",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_24_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 18,
+        "_L0HVmAlCQI_rally_0002": 6,
+        "_L0HVmAlCQI_rally_0003": 6,
+        "_L0HVmAlCQI_rally_0004": 5,
+        "_L0HVmAlCQI_rally_0005": 2,
+        "_L0HVmAlCQI_rally_0006": 5,
+        "_L0HVmAlCQI_rally_0007": 24,
+        "_L0HVmAlCQI_rally_0008": 4,
+        "_L0HVmAlCQI_rally_0009": 6,
+        "_L0HVmAlCQI_rally_0010": 8,
+        "_L0HVmAlCQI_rally_0011": 28,
+        "_L0HVmAlCQI_rally_0012": 4,
+        "_L0HVmAlCQI_rally_0013": 4,
+        "_L0HVmAlCQI_rally_0014": 13,
+        "_L0HVmAlCQI_rally_0015": 1,
+        "_L0HVmAlCQI_rally_0016": 7,
+        "_L0HVmAlCQI_rally_0017": 7,
+        "_L0HVmAlCQI_rally_0018": 7,
+        "_L0HVmAlCQI_rally_0019": 5,
+        "wBu8bC4OfUY_rally_0001": 118,
+        "wBu8bC4OfUY_rally_0002": 38,
+        "wBu8bC4OfUY_rally_0003": 4,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_25_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_25_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_25",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_25_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 17,
+        "_L0HVmAlCQI_rally_0002": 5,
+        "_L0HVmAlCQI_rally_0003": 14,
+        "_L0HVmAlCQI_rally_0004": 6,
+        "_L0HVmAlCQI_rally_0005": 2,
+        "_L0HVmAlCQI_rally_0006": 13,
+        "_L0HVmAlCQI_rally_0007": 15,
+        "_L0HVmAlCQI_rally_0008": 3,
+        "_L0HVmAlCQI_rally_0009": 13,
+        "_L0HVmAlCQI_rally_0010": 5,
+        "_L0HVmAlCQI_rally_0011": 26,
+        "_L0HVmAlCQI_rally_0012": 1,
+        "_L0HVmAlCQI_rally_0013": 2,
+        "_L0HVmAlCQI_rally_0014": 11,
+        "_L0HVmAlCQI_rally_0015": 5,
+        "_L0HVmAlCQI_rally_0016": 4,
+        "_L0HVmAlCQI_rally_0017": 6,
+        "_L0HVmAlCQI_rally_0018": 3,
+        "_L0HVmAlCQI_rally_0019": 9,
+        "wBu8bC4OfUY_rally_0001": 124,
+        "wBu8bC4OfUY_rally_0002": 30,
+        "wBu8bC4OfUY_rally_0003": 6,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_26_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_26_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_26",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_26_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 12,
+        "_L0HVmAlCQI_rally_0002": 8,
+        "_L0HVmAlCQI_rally_0003": 2,
+        "_L0HVmAlCQI_rally_0004": 10,
+        "_L0HVmAlCQI_rally_0005": 5,
+        "_L0HVmAlCQI_rally_0006": 9,
+        "_L0HVmAlCQI_rally_0007": 21,
+        "_L0HVmAlCQI_rally_0008": 2,
+        "_L0HVmAlCQI_rally_0009": 9,
+        "_L0HVmAlCQI_rally_0010": 8,
+        "_L0HVmAlCQI_rally_0011": 31,
+        "_L0HVmAlCQI_rally_0012": 5,
+        "_L0HVmAlCQI_rally_0013": 5,
+        "_L0HVmAlCQI_rally_0014": 9,
+        "_L0HVmAlCQI_rally_0015": 3,
+        "_L0HVmAlCQI_rally_0016": 3,
+        "_L0HVmAlCQI_rally_0017": 13,
+        "_L0HVmAlCQI_rally_0018": 3,
+        "_L0HVmAlCQI_rally_0019": 2,
+        "wBu8bC4OfUY_rally_0001": 118,
+        "wBu8bC4OfUY_rally_0002": 40,
+        "wBu8bC4OfUY_rally_0003": 2,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_27_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_27_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_27",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_27_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 15,
+        "_L0HVmAlCQI_rally_0002": 10,
+        "_L0HVmAlCQI_rally_0003": 11,
+        "_L0HVmAlCQI_rally_0004": 6,
+        "_L0HVmAlCQI_rally_0005": 4,
+        "_L0HVmAlCQI_rally_0006": 2,
+        "_L0HVmAlCQI_rally_0007": 17,
+        "_L0HVmAlCQI_rally_0008": 3,
+        "_L0HVmAlCQI_rally_0009": 19,
+        "_L0HVmAlCQI_rally_0010": 2,
+        "_L0HVmAlCQI_rally_0011": 25,
+        "_L0HVmAlCQI_rally_0012": 1,
+        "_L0HVmAlCQI_rally_0013": 4,
+        "_L0HVmAlCQI_rally_0014": 9,
+        "_L0HVmAlCQI_rally_0015": 7,
+        "_L0HVmAlCQI_rally_0016": 4,
+        "_L0HVmAlCQI_rally_0017": 8,
+        "_L0HVmAlCQI_rally_0018": 6,
+        "_L0HVmAlCQI_rally_0019": 7,
+        "wBu8bC4OfUY_rally_0001": 119,
+        "wBu8bC4OfUY_rally_0002": 35,
+        "wBu8bC4OfUY_rally_0003": 6,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_28_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_28_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_28",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_28_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 16,
+        "_L0HVmAlCQI_rally_0002": 10,
+        "_L0HVmAlCQI_rally_0003": 10,
+        "_L0HVmAlCQI_rally_0004": 3,
+        "_L0HVmAlCQI_rally_0005": 5,
+        "_L0HVmAlCQI_rally_0006": 9,
+        "_L0HVmAlCQI_rally_0007": 17,
+        "_L0HVmAlCQI_rally_0008": 3,
+        "_L0HVmAlCQI_rally_0009": 15,
+        "_L0HVmAlCQI_rally_0010": 4,
+        "_L0HVmAlCQI_rally_0011": 23,
+        "_L0HVmAlCQI_rally_0012": 6,
+        "_L0HVmAlCQI_rally_0013": 7,
+        "_L0HVmAlCQI_rally_0014": 10,
+        "_L0HVmAlCQI_rally_0015": 3,
+        "_L0HVmAlCQI_rally_0016": 5,
+        "_L0HVmAlCQI_rally_0017": 12,
+        "_L0HVmAlCQI_rally_0018": 1,
+        "_L0HVmAlCQI_rally_0019": 1,
+        "wBu8bC4OfUY_rally_0001": 121,
+        "wBu8bC4OfUY_rally_0002": 31,
+        "wBu8bC4OfUY_rally_0003": 8,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_29_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_29_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_29",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_29_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 12,
+        "_L0HVmAlCQI_rally_0002": 8,
+        "_L0HVmAlCQI_rally_0003": 14,
+        "_L0HVmAlCQI_rally_0004": 10,
+        "_L0HVmAlCQI_rally_0005": 2,
+        "_L0HVmAlCQI_rally_0006": 3,
+        "_L0HVmAlCQI_rally_0007": 19,
+        "_L0HVmAlCQI_rally_0008": 7,
+        "_L0HVmAlCQI_rally_0009": 11,
+        "_L0HVmAlCQI_rally_0010": 10,
+        "_L0HVmAlCQI_rally_0011": 22,
+        "_L0HVmAlCQI_rally_0012": 4,
+        "_L0HVmAlCQI_rally_0013": 2,
+        "_L0HVmAlCQI_rally_0014": 9,
+        "_L0HVmAlCQI_rally_0015": 2,
+        "_L0HVmAlCQI_rally_0016": 8,
+        "_L0HVmAlCQI_rally_0017": 4,
+        "_L0HVmAlCQI_rally_0018": 8,
+        "_L0HVmAlCQI_rally_0019": 5,
+        "wBu8bC4OfUY_rally_0001": 123,
+        "wBu8bC4OfUY_rally_0002": 30,
+        "wBu8bC4OfUY_rally_0003": 7,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_30_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_30_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_30",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_30_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 16,
+        "_L0HVmAlCQI_rally_0002": 4,
+        "_L0HVmAlCQI_rally_0003": 11,
+        "_L0HVmAlCQI_rally_0004": 7,
+        "_L0HVmAlCQI_rally_0005": 3,
+        "_L0HVmAlCQI_rally_0006": 6,
+        "_L0HVmAlCQI_rally_0007": 20,
+        "_L0HVmAlCQI_rally_0008": 8,
+        "_L0HVmAlCQI_rally_0009": 10,
+        "_L0HVmAlCQI_rally_0010": 7,
+        "_L0HVmAlCQI_rally_0011": 24,
+        "_L0HVmAlCQI_rally_0012": 3,
+        "_L0HVmAlCQI_rally_0013": 7,
+        "_L0HVmAlCQI_rally_0014": 8,
+        "_L0HVmAlCQI_rally_0015": 2,
+        "_L0HVmAlCQI_rally_0016": 5,
+        "_L0HVmAlCQI_rally_0017": 10,
+        "_L0HVmAlCQI_rally_0018": 4,
+        "_L0HVmAlCQI_rally_0019": 5,
+        "wBu8bC4OfUY_rally_0001": 124,
+        "wBu8bC4OfUY_rally_0002": 30,
+        "wBu8bC4OfUY_rally_0003": 6,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_31_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_31_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_31",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_31_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 17,
+        "_L0HVmAlCQI_rally_0002": 5,
+        "_L0HVmAlCQI_rally_0003": 12,
+        "_L0HVmAlCQI_rally_0004": 3,
+        "_L0HVmAlCQI_rally_0005": 4,
+        "_L0HVmAlCQI_rally_0006": 9,
+        "_L0HVmAlCQI_rally_0007": 21,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 8,
+        "_L0HVmAlCQI_rally_0010": 4,
+        "_L0HVmAlCQI_rally_0011": 34,
+        "_L0HVmAlCQI_rally_0012": 1,
+        "_L0HVmAlCQI_rally_0013": 5,
+        "_L0HVmAlCQI_rally_0014": 8,
+        "_L0HVmAlCQI_rally_0015": 2,
+        "_L0HVmAlCQI_rally_0016": 3,
+        "_L0HVmAlCQI_rally_0017": 8,
+        "_L0HVmAlCQI_rally_0018": 7,
+        "_L0HVmAlCQI_rally_0019": 4,
+        "wBu8bC4OfUY_rally_0001": 131,
+        "wBu8bC4OfUY_rally_0002": 24,
+        "wBu8bC4OfUY_rally_0003": 5,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_32_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_32_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_32",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_32_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 17,
+        "_L0HVmAlCQI_rally_0002": 3,
+        "_L0HVmAlCQI_rally_0003": 11,
+        "_L0HVmAlCQI_rally_0004": 6,
+        "_L0HVmAlCQI_rally_0005": 5,
+        "_L0HVmAlCQI_rally_0006": 3,
+        "_L0HVmAlCQI_rally_0007": 20,
+        "_L0HVmAlCQI_rally_0008": 9,
+        "_L0HVmAlCQI_rally_0009": 7,
+        "_L0HVmAlCQI_rally_0010": 6,
+        "_L0HVmAlCQI_rally_0011": 22,
+        "_L0HVmAlCQI_rally_0012": 1,
+        "_L0HVmAlCQI_rally_0013": 6,
+        "_L0HVmAlCQI_rally_0014": 7,
+        "_L0HVmAlCQI_rally_0015": 4,
+        "_L0HVmAlCQI_rally_0016": 10,
+        "_L0HVmAlCQI_rally_0017": 10,
+        "_L0HVmAlCQI_rally_0018": 4,
+        "_L0HVmAlCQI_rally_0019": 9,
+        "wBu8bC4OfUY_rally_0001": 118,
+        "wBu8bC4OfUY_rally_0002": 40,
+        "wBu8bC4OfUY_rally_0003": 2,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_33_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_33_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_33",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_33_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 13,
+        "_L0HVmAlCQI_rally_0002": 4,
+        "_L0HVmAlCQI_rally_0003": 15,
+        "_L0HVmAlCQI_rally_0004": 4,
+        "_L0HVmAlCQI_rally_0005": 3,
+        "_L0HVmAlCQI_rally_0006": 9,
+        "_L0HVmAlCQI_rally_0007": 18,
+        "_L0HVmAlCQI_rally_0008": 8,
+        "_L0HVmAlCQI_rally_0009": 8,
+        "_L0HVmAlCQI_rally_0010": 6,
+        "_L0HVmAlCQI_rally_0011": 24,
+        "_L0HVmAlCQI_rally_0012": 6,
+        "_L0HVmAlCQI_rally_0013": 4,
+        "_L0HVmAlCQI_rally_0014": 11,
+        "_L0HVmAlCQI_rally_0015": 4,
+        "_L0HVmAlCQI_rally_0016": 5,
+        "_L0HVmAlCQI_rally_0017": 9,
+        "_L0HVmAlCQI_rally_0018": 4,
+        "_L0HVmAlCQI_rally_0019": 5,
+        "wBu8bC4OfUY_rally_0001": 134,
+        "wBu8bC4OfUY_rally_0002": 23,
+        "wBu8bC4OfUY_rally_0003": 3,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_34_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_34_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_34",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_34_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 15,
+        "_L0HVmAlCQI_rally_0002": 9,
+        "_L0HVmAlCQI_rally_0003": 9,
+        "_L0HVmAlCQI_rally_0004": 11,
+        "_L0HVmAlCQI_rally_0005": 4,
+        "_L0HVmAlCQI_rally_0006": 7,
+        "_L0HVmAlCQI_rally_0007": 20,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 13,
+        "_L0HVmAlCQI_rally_0010": 2,
+        "_L0HVmAlCQI_rally_0011": 20,
+        "_L0HVmAlCQI_rally_0012": 7,
+        "_L0HVmAlCQI_rally_0013": 6,
+        "_L0HVmAlCQI_rally_0014": 7,
+        "_L0HVmAlCQI_rally_0015": 1,
+        "_L0HVmAlCQI_rally_0016": 3,
+        "_L0HVmAlCQI_rally_0017": 9,
+        "_L0HVmAlCQI_rally_0018": 5,
+        "_L0HVmAlCQI_rally_0019": 7,
+        "wBu8bC4OfUY_rally_0001": 132,
+        "wBu8bC4OfUY_rally_0002": 23,
+        "wBu8bC4OfUY_rally_0003": 5,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_35_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_35_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_35",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_35_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 18,
+        "_L0HVmAlCQI_rally_0002": 6,
+        "_L0HVmAlCQI_rally_0003": 15,
+        "_L0HVmAlCQI_rally_0004": 7,
+        "_L0HVmAlCQI_rally_0005": 1,
+        "_L0HVmAlCQI_rally_0006": 7,
+        "_L0HVmAlCQI_rally_0007": 23,
+        "_L0HVmAlCQI_rally_0008": 6,
+        "_L0HVmAlCQI_rally_0009": 11,
+        "_L0HVmAlCQI_rally_0010": 4,
+        "_L0HVmAlCQI_rally_0011": 19,
+        "_L0HVmAlCQI_rally_0012": 2,
+        "_L0HVmAlCQI_rally_0013": 2,
+        "_L0HVmAlCQI_rally_0014": 9,
+        "_L0HVmAlCQI_rally_0015": 4,
+        "_L0HVmAlCQI_rally_0016": 4,
+        "_L0HVmAlCQI_rally_0017": 13,
+        "_L0HVmAlCQI_rally_0018": 7,
+        "_L0HVmAlCQI_rally_0019": 2,
+        "wBu8bC4OfUY_rally_0001": 135,
+        "wBu8bC4OfUY_rally_0002": 19,
+        "wBu8bC4OfUY_rally_0003": 6,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_36_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_36_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_36",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_36_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 18,
+        "_L0HVmAlCQI_rally_0002": 6,
+        "_L0HVmAlCQI_rally_0003": 10,
+        "_L0HVmAlCQI_rally_0004": 7,
+        "_L0HVmAlCQI_rally_0005": 7,
+        "_L0HVmAlCQI_rally_0006": 15,
+        "_L0HVmAlCQI_rally_0007": 13,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 10,
+        "_L0HVmAlCQI_rally_0010": 3,
+        "_L0HVmAlCQI_rally_0011": 23,
+        "_L0HVmAlCQI_rally_0012": 4,
+        "_L0HVmAlCQI_rally_0013": 3,
+        "_L0HVmAlCQI_rally_0014": 5,
+        "_L0HVmAlCQI_rally_0015": 9,
+        "_L0HVmAlCQI_rally_0016": 3,
+        "_L0HVmAlCQI_rally_0017": 12,
+        "_L0HVmAlCQI_rally_0018": 5,
+        "_L0HVmAlCQI_rally_0019": 2,
+        "wBu8bC4OfUY_rally_0001": 127,
+        "wBu8bC4OfUY_rally_0002": 28,
+        "wBu8bC4OfUY_rally_0003": 5,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_37_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_37_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_37",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_37_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 17,
+        "_L0HVmAlCQI_rally_0002": 2,
+        "_L0HVmAlCQI_rally_0003": 13,
+        "_L0HVmAlCQI_rally_0004": 10,
+        "_L0HVmAlCQI_rally_0005": 2,
+        "_L0HVmAlCQI_rally_0006": 12,
+        "_L0HVmAlCQI_rally_0007": 22,
+        "_L0HVmAlCQI_rally_0008": 4,
+        "_L0HVmAlCQI_rally_0009": 13,
+        "_L0HVmAlCQI_rally_0010": 1,
+        "_L0HVmAlCQI_rally_0011": 24,
+        "_L0HVmAlCQI_rally_0012": 1,
+        "_L0HVmAlCQI_rally_0013": 2,
+        "_L0HVmAlCQI_rally_0014": 6,
+        "_L0HVmAlCQI_rally_0015": 3,
+        "_L0HVmAlCQI_rally_0016": 6,
+        "_L0HVmAlCQI_rally_0017": 13,
+        "_L0HVmAlCQI_rally_0018": 4,
+        "_L0HVmAlCQI_rally_0019": 5,
+        "wBu8bC4OfUY_rally_0001": 126,
+        "wBu8bC4OfUY_rally_0002": 32,
+        "wBu8bC4OfUY_rally_0003": 2,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_38_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_38_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_38",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_38_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 23,
+        "_L0HVmAlCQI_rally_0002": 2,
+        "_L0HVmAlCQI_rally_0003": 12,
+        "_L0HVmAlCQI_rally_0004": 9,
+        "_L0HVmAlCQI_rally_0005": 1,
+        "_L0HVmAlCQI_rally_0006": 10,
+        "_L0HVmAlCQI_rally_0007": 18,
+        "_L0HVmAlCQI_rally_0008": 6,
+        "_L0HVmAlCQI_rally_0009": 8,
+        "_L0HVmAlCQI_rally_0010": 6,
+        "_L0HVmAlCQI_rally_0011": 20,
+        "_L0HVmAlCQI_rally_0012": 1,
+        "_L0HVmAlCQI_rally_0013": 3,
+        "_L0HVmAlCQI_rally_0014": 11,
+        "_L0HVmAlCQI_rally_0015": 4,
+        "_L0HVmAlCQI_rally_0016": 7,
+        "_L0HVmAlCQI_rally_0017": 12,
+        "_L0HVmAlCQI_rally_0018": 6,
+        "_L0HVmAlCQI_rally_0019": 1,
+        "wBu8bC4OfUY_rally_0001": 128,
+        "wBu8bC4OfUY_rally_0002": 28,
+        "wBu8bC4OfUY_rally_0003": 4,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_39_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_39_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_39",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_39_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 27,
+        "_L0HVmAlCQI_rally_0002": 7,
+        "_L0HVmAlCQI_rally_0003": 12,
+        "_L0HVmAlCQI_rally_0004": 7,
+        "_L0HVmAlCQI_rally_0005": 1,
+        "_L0HVmAlCQI_rally_0006": 10,
+        "_L0HVmAlCQI_rally_0007": 22,
+        "_L0HVmAlCQI_rally_0008": 3,
+        "_L0HVmAlCQI_rally_0009": 8,
+        "_L0HVmAlCQI_rally_0010": 6,
+        "_L0HVmAlCQI_rally_0011": 16,
+        "_L0HVmAlCQI_rally_0012": 2,
+        "_L0HVmAlCQI_rally_0013": 5,
+        "_L0HVmAlCQI_rally_0014": 9,
+        "_L0HVmAlCQI_rally_0015": 6,
+        "_L0HVmAlCQI_rally_0016": 4,
+        "_L0HVmAlCQI_rally_0017": 11,
+        "_L0HVmAlCQI_rally_0018": 3,
+        "_L0HVmAlCQI_rally_0019": 1,
+        "wBu8bC4OfUY_rally_0001": 132,
+        "wBu8bC4OfUY_rally_0002": 18,
+        "wBu8bC4OfUY_rally_0003": 10,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_40_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_40_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_40",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_40_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 22,
+        "_L0HVmAlCQI_rally_0002": 11,
+        "_L0HVmAlCQI_rally_0003": 12,
+        "_L0HVmAlCQI_rally_0004": 6,
+        "_L0HVmAlCQI_rally_0005": 1,
+        "_L0HVmAlCQI_rally_0006": 4,
+        "_L0HVmAlCQI_rally_0007": 21,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 10,
+        "_L0HVmAlCQI_rally_0010": 7,
+        "_L0HVmAlCQI_rally_0011": 16,
+        "_L0HVmAlCQI_rally_0012": 2,
+        "_L0HVmAlCQI_rally_0013": 6,
+        "_L0HVmAlCQI_rally_0014": 11,
+        "_L0HVmAlCQI_rally_0015": 5,
+        "_L0HVmAlCQI_rally_0016": 4,
+        "_L0HVmAlCQI_rally_0017": 11,
+        "_L0HVmAlCQI_rally_0018": 3,
+        "_L0HVmAlCQI_rally_0019": 3,
+        "wBu8bC4OfUY_rally_0001": 121,
+        "wBu8bC4OfUY_rally_0002": 34,
+        "wBu8bC4OfUY_rally_0003": 5,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_41_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_41_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_41",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_41_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 28,
+        "_L0HVmAlCQI_rally_0002": 7,
+        "_L0HVmAlCQI_rally_0003": 15,
+        "_L0HVmAlCQI_rally_0004": 11,
+        "_L0HVmAlCQI_rally_0005": 3,
+        "_L0HVmAlCQI_rally_0006": 8,
+        "_L0HVmAlCQI_rally_0007": 20,
+        "_L0HVmAlCQI_rally_0008": 3,
+        "_L0HVmAlCQI_rally_0009": 11,
+        "_L0HVmAlCQI_rally_0010": 2,
+        "_L0HVmAlCQI_rally_0011": 15,
+        "_L0HVmAlCQI_rally_0012": 3,
+        "_L0HVmAlCQI_rally_0013": 3,
+        "_L0HVmAlCQI_rally_0014": 8,
+        "_L0HVmAlCQI_rally_0015": 4,
+        "_L0HVmAlCQI_rally_0016": 6,
+        "_L0HVmAlCQI_rally_0017": 8,
+        "_L0HVmAlCQI_rally_0018": 3,
+        "_L0HVmAlCQI_rally_0019": 2,
+        "wBu8bC4OfUY_rally_0001": 125,
+        "wBu8bC4OfUY_rally_0002": 33,
+        "wBu8bC4OfUY_rally_0003": 2,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_42_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_42_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_42",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_42_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 28,
+        "_L0HVmAlCQI_rally_0002": 12,
+        "_L0HVmAlCQI_rally_0003": 9,
+        "_L0HVmAlCQI_rally_0004": 5,
+        "_L0HVmAlCQI_rally_0005": 5,
+        "_L0HVmAlCQI_rally_0006": 5,
+        "_L0HVmAlCQI_rally_0007": 15,
+        "_L0HVmAlCQI_rally_0008": 3,
+        "_L0HVmAlCQI_rally_0009": 8,
+        "_L0HVmAlCQI_rally_0010": 1,
+        "_L0HVmAlCQI_rally_0011": 16,
+        "_L0HVmAlCQI_rally_0012": 3,
+        "_L0HVmAlCQI_rally_0013": 5,
+        "_L0HVmAlCQI_rally_0014": 10,
+        "_L0HVmAlCQI_rally_0015": 7,
+        "_L0HVmAlCQI_rally_0016": 6,
+        "_L0HVmAlCQI_rally_0017": 11,
+        "_L0HVmAlCQI_rally_0018": 6,
+        "_L0HVmAlCQI_rally_0019": 5,
+        "wBu8bC4OfUY_rally_0001": 127,
+        "wBu8bC4OfUY_rally_0002": 25,
+        "wBu8bC4OfUY_rally_0003": 8,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_43_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_43_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_43",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_43_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 15,
+        "_L0HVmAlCQI_rally_0002": 5,
+        "_L0HVmAlCQI_rally_0003": 11,
+        "_L0HVmAlCQI_rally_0004": 6,
+        "_L0HVmAlCQI_rally_0005": 4,
+        "_L0HVmAlCQI_rally_0006": 10,
+        "_L0HVmAlCQI_rally_0007": 26,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 9,
+        "_L0HVmAlCQI_rally_0010": 4,
+        "_L0HVmAlCQI_rally_0011": 18,
+        "_L0HVmAlCQI_rally_0012": 1,
+        "_L0HVmAlCQI_rally_0013": 3,
+        "_L0HVmAlCQI_rally_0014": 10,
+        "_L0HVmAlCQI_rally_0015": 6,
+        "_L0HVmAlCQI_rally_0016": 10,
+        "_L0HVmAlCQI_rally_0017": 11,
+        "_L0HVmAlCQI_rally_0018": 4,
+        "_L0HVmAlCQI_rally_0019": 2,
+        "wBu8bC4OfUY_rally_0001": 112,
+        "wBu8bC4OfUY_rally_0002": 43,
+        "wBu8bC4OfUY_rally_0003": 5,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_44_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_44_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_44",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_44_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 26,
+        "_L0HVmAlCQI_rally_0002": 6,
+        "_L0HVmAlCQI_rally_0003": 13,
+        "_L0HVmAlCQI_rally_0004": 3,
+        "_L0HVmAlCQI_rally_0005": 5,
+        "_L0HVmAlCQI_rally_0006": 8,
+        "_L0HVmAlCQI_rally_0007": 12,
+        "_L0HVmAlCQI_rally_0008": 5,
+        "_L0HVmAlCQI_rally_0009": 12,
+        "_L0HVmAlCQI_rally_0010": 8,
+        "_L0HVmAlCQI_rally_0011": 18,
+        "_L0HVmAlCQI_rally_0012": 4,
+        "_L0HVmAlCQI_rally_0013": 4,
+        "_L0HVmAlCQI_rally_0014": 10,
+        "_L0HVmAlCQI_rally_0015": 4,
+        "_L0HVmAlCQI_rally_0016": 4,
+        "_L0HVmAlCQI_rally_0017": 12,
+        "_L0HVmAlCQI_rally_0018": 4,
+        "_L0HVmAlCQI_rally_0019": 2,
+        "wBu8bC4OfUY_rally_0001": 123,
+        "wBu8bC4OfUY_rally_0002": 33,
+        "wBu8bC4OfUY_rally_0003": 4,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_45_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_45_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_45",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_45_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 23,
+        "_L0HVmAlCQI_rally_0002": 2,
+        "_L0HVmAlCQI_rally_0003": 11,
+        "_L0HVmAlCQI_rally_0004": 5,
+        "_L0HVmAlCQI_rally_0005": 7,
+        "_L0HVmAlCQI_rally_0006": 10,
+        "_L0HVmAlCQI_rally_0007": 18,
+        "_L0HVmAlCQI_rally_0008": 2,
+        "_L0HVmAlCQI_rally_0009": 16,
+        "_L0HVmAlCQI_rally_0010": 6,
+        "_L0HVmAlCQI_rally_0011": 17,
+        "_L0HVmAlCQI_rally_0012": 3,
+        "_L0HVmAlCQI_rally_0013": 3,
+        "_L0HVmAlCQI_rally_0014": 10,
+        "_L0HVmAlCQI_rally_0015": 6,
+        "_L0HVmAlCQI_rally_0016": 8,
+        "_L0HVmAlCQI_rally_0017": 8,
+        "_L0HVmAlCQI_rally_0018": 2,
+        "_L0HVmAlCQI_rally_0019": 3,
+        "wBu8bC4OfUY_rally_0001": 118,
+        "wBu8bC4OfUY_rally_0002": 37,
+        "wBu8bC4OfUY_rally_0003": 5,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_46_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_46_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_46",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_46_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 16,
+        "_L0HVmAlCQI_rally_0002": 5,
+        "_L0HVmAlCQI_rally_0003": 11,
+        "_L0HVmAlCQI_rally_0004": 4,
+        "_L0HVmAlCQI_rally_0005": 4,
+        "_L0HVmAlCQI_rally_0006": 10,
+        "_L0HVmAlCQI_rally_0007": 22,
+        "_L0HVmAlCQI_rally_0008": 9,
+        "_L0HVmAlCQI_rally_0009": 10,
+        "_L0HVmAlCQI_rally_0010": 5,
+        "_L0HVmAlCQI_rally_0011": 22,
+        "_L0HVmAlCQI_rally_0012": 2,
+        "_L0HVmAlCQI_rally_0013": 6,
+        "_L0HVmAlCQI_rally_0014": 6,
+        "_L0HVmAlCQI_rally_0015": 8,
+        "_L0HVmAlCQI_rally_0016": 2,
+        "_L0HVmAlCQI_rally_0017": 8,
+        "_L0HVmAlCQI_rally_0018": 6,
+        "_L0HVmAlCQI_rally_0019": 4,
+        "wBu8bC4OfUY_rally_0001": 121,
+        "wBu8bC4OfUY_rally_0002": 32,
+        "wBu8bC4OfUY_rally_0003": 7,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_47_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_47_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_47",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_47_20260708"
+    },
+    {
+      "clip_count": 23,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 26,
+        "_L0HVmAlCQI_rally_0002": 6,
+        "_L0HVmAlCQI_rally_0003": 14,
+        "_L0HVmAlCQI_rally_0004": 7,
+        "_L0HVmAlCQI_rally_0005": 5,
+        "_L0HVmAlCQI_rally_0006": 11,
+        "_L0HVmAlCQI_rally_0007": 15,
+        "_L0HVmAlCQI_rally_0008": 6,
+        "_L0HVmAlCQI_rally_0009": 13,
+        "_L0HVmAlCQI_rally_0010": 9,
+        "_L0HVmAlCQI_rally_0011": 15,
+        "_L0HVmAlCQI_rally_0012": 5,
+        "_L0HVmAlCQI_rally_0013": 2,
+        "_L0HVmAlCQI_rally_0014": 6,
+        "_L0HVmAlCQI_rally_0016": 9,
+        "_L0HVmAlCQI_rally_0017": 5,
+        "_L0HVmAlCQI_rally_0018": 4,
+        "_L0HVmAlCQI_rally_0019": 2,
+        "wBu8bC4OfUY_rally_0001": 122,
+        "wBu8bC4OfUY_rally_0002": 32,
+        "wBu8bC4OfUY_rally_0003": 6,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_48_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_48_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_48",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_48_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 16,
+        "_L0HVmAlCQI_rally_0002": 4,
+        "_L0HVmAlCQI_rally_0003": 9,
+        "_L0HVmAlCQI_rally_0004": 3,
+        "_L0HVmAlCQI_rally_0005": 6,
+        "_L0HVmAlCQI_rally_0006": 8,
+        "_L0HVmAlCQI_rally_0007": 17,
+        "_L0HVmAlCQI_rally_0008": 6,
+        "_L0HVmAlCQI_rally_0009": 13,
+        "_L0HVmAlCQI_rally_0010": 6,
+        "_L0HVmAlCQI_rally_0011": 26,
+        "_L0HVmAlCQI_rally_0012": 4,
+        "_L0HVmAlCQI_rally_0013": 2,
+        "_L0HVmAlCQI_rally_0014": 10,
+        "_L0HVmAlCQI_rally_0015": 4,
+        "_L0HVmAlCQI_rally_0016": 6,
+        "_L0HVmAlCQI_rally_0017": 12,
+        "_L0HVmAlCQI_rally_0018": 6,
+        "_L0HVmAlCQI_rally_0019": 2,
+        "wBu8bC4OfUY_rally_0001": 128,
+        "wBu8bC4OfUY_rally_0002": 29,
+        "wBu8bC4OfUY_rally_0003": 3,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_49_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_49_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_49",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_49_20260708"
+    },
+    {
+      "clip_count": 24,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 160,
+        "_L0HVmAlCQI_rally_0001": 15,
+        "_L0HVmAlCQI_rally_0002": 5,
+        "_L0HVmAlCQI_rally_0003": 8,
+        "_L0HVmAlCQI_rally_0004": 6,
+        "_L0HVmAlCQI_rally_0005": 7,
+        "_L0HVmAlCQI_rally_0006": 10,
+        "_L0HVmAlCQI_rally_0007": 13,
+        "_L0HVmAlCQI_rally_0008": 4,
+        "_L0HVmAlCQI_rally_0009": 13,
+        "_L0HVmAlCQI_rally_0010": 7,
+        "_L0HVmAlCQI_rally_0011": 23,
+        "_L0HVmAlCQI_rally_0012": 3,
+        "_L0HVmAlCQI_rally_0013": 9,
+        "_L0HVmAlCQI_rally_0014": 7,
+        "_L0HVmAlCQI_rally_0015": 2,
+        "_L0HVmAlCQI_rally_0016": 10,
+        "_L0HVmAlCQI_rally_0017": 13,
+        "_L0HVmAlCQI_rally_0018": 1,
+        "_L0HVmAlCQI_rally_0019": 4,
+        "wBu8bC4OfUY_rally_0001": 131,
+        "wBu8bC4OfUY_rally_0002": 27,
+        "wBu8bC4OfUY_rally_0003": 2,
+        "zwCtH_i1_S4_rally_0001": 160
+      },
+      "disagreement_type_counts": {
+        "large-offset": 80,
+        "student-only": 40,
+        "teacher-only": 520
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_50_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_50_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_50",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 160,
+        "_L0HVmAlCQI": 160,
+        "wBu8bC4OfUY": 160,
+        "zwCtH_i1_S4": 160
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_50_20260708"
+    },
+    {
+      "clip_count": 23,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 207,
+        "_L0HVmAlCQI_rally_0001": 11,
+        "_L0HVmAlCQI_rally_0002": 3,
+        "_L0HVmAlCQI_rally_0003": 6,
+        "_L0HVmAlCQI_rally_0004": 4,
+        "_L0HVmAlCQI_rally_0005": 1,
+        "_L0HVmAlCQI_rally_0006": 6,
+        "_L0HVmAlCQI_rally_0007": 6,
+        "_L0HVmAlCQI_rally_0008": 2,
+        "_L0HVmAlCQI_rally_0009": 3,
+        "_L0HVmAlCQI_rally_0010": 5,
+        "_L0HVmAlCQI_rally_0011": 6,
+        "_L0HVmAlCQI_rally_0012": 1,
+        "_L0HVmAlCQI_rally_0013": 3,
+        "_L0HVmAlCQI_rally_0014": 6,
+        "_L0HVmAlCQI_rally_0015": 3,
+        "_L0HVmAlCQI_rally_0016": 2,
+        "_L0HVmAlCQI_rally_0017": 1,
+        "_L0HVmAlCQI_rally_0018": 4,
+        "wBu8bC4OfUY_rally_0001": 124,
+        "wBu8bC4OfUY_rally_0002": 27,
+        "wBu8bC4OfUY_rally_0003": 3,
+        "zwCtH_i1_S4_rally_0001": 206
+      },
+      "disagreement_type_counts": {
+        "large-offset": 104,
+        "student-only": 51,
+        "teacher-only": 485
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_51_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_51_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_51",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "_L0HVmAlCQI": "outdoor_night_tennis_overlay",
+        "wBu8bC4OfUY": "outdoor_night_tennis_overlay",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 207,
+        "_L0HVmAlCQI": 73,
+        "wBu8bC4OfUY": 154,
+        "zwCtH_i1_S4": 206
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "wBu8bC4OfUY",
+        "_L0HVmAlCQI",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_51_20260708"
+    },
+    {
+      "clip_count": 2,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 634,
+        "zwCtH_i1_S4_rally_0001": 6
+      },
+      "disagreement_type_counts": {
+        "large-offset": 261,
+        "student-only": 159,
+        "teacher-only": 220
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_52_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_52_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_52",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level",
+        "zwCtH_i1_S4": "outdoor_day_broadcast_overlay"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 634,
+        "zwCtH_i1_S4": 6
+      },
+      "source_ids": [
+        "HyUqT7zFiwk",
+        "zwCtH_i1_S4"
+      ],
+      "task_name": "w6_ball_sst_ball_session_52_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_53_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_53_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_53",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_53_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_54_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_54_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_54",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_54_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_55_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_55_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_55",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_55_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_56_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_56_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_56",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_56_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_57_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_57_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_57",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_57_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_58_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_58_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_58",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_58_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_59_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_59_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_59",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_59_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_60_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_60_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_60",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_60_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_61_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_61_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_61",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_61_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_62_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_62_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_62",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_62_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_63_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_63_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_63",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_63_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_64_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_64_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_64",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_64_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_65_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_65_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_65",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_65_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_66_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_66_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_66",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_66_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 640
+      },
+      "disagreement_type_counts": {
+        "student-only": 160,
+        "teacher-only": 480
+      },
+      "estimated_label_hours_at_240_fph": 2.67,
+      "frame_count": 640,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_67_640f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_67_640f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_67",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 640
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_67_20260708"
+    },
+    {
+      "clip_count": 1,
+      "clip_counts": {
+        "HyUqT7zFiwk_rally_0001": 350
+      },
+      "disagreement_type_counts": {
+        "student-only": 78,
+        "teacher-only": 272
+      },
+      "estimated_label_hours_at_240_fph": 1.46,
+      "frame_count": 350,
+      "image_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_68_350f_w6_images.zip",
+      "kind": "ball_session",
+      "prelabel_zip": "cvat_upload/w6_labelpack_20260708/packages/ball_session_68_350f_w6_prelabels_cvat1_1.zip",
+      "priority_rationale": "New-source coverage first while active sources remain; then ranked class/source fallback over all remaining Phase-B rows.",
+      "session_id": "ball_session_68",
+      "source_classes": {
+        "HyUqT7zFiwk": "indoor_court_level"
+      },
+      "source_counts": {
+        "HyUqT7zFiwk": 350
+      },
+      "source_ids": [
+        "HyUqT7zFiwk"
+      ],
+      "task_name": "w6_ball_sst_ball_session_68_20260708"
+    }
+  ],
+  "created_at_utc": "2026-07-08T18:56:33.691561Z",
+  "disagreement_queue": {
+    "large_offset_px": 25.0,
+    "path": "runs/lanes/w6_labelpack_20260708/sst_disagreements.json",
+    "summary": {
+      "clip_count": 24,
+      "disagreement_count": 43230,
+      "large_offset_count": 4749,
+      "student_only_count": 5585,
+      "teacher_only_count": 32896
+    }
+  },
+  "export_cvat_tasks": {
+    "reason": "w6 packages were written directly to the same CVAT image-zip + CVAT 1.1 prelabel-zip layout validated by the w5 packager to avoid duplicating 43,230 staged images.",
+    "status": "not_run"
+  },
+  "objective": "Owner CVAT packages from Wave-6 Phase-B SST disagreement queue over 24 new clips.",
+  "owner_import_script": "runs/lanes/w6_labelpack_20260708/import_w6_labelpack_tasks.py",
+  "owner_runbook": "cvat_upload/OWNER_SESSION_W6_20260708.md",
+  "protected_patterns": [
+    "pwxNwFfYQlQ",
+    "vQhtz8l6VqU",
+    "outdoor_webcam_iynbd_1500_long_high_baseline",
+    "indoor_doubles_fwuks_0500_long_mid_baseline",
+    "03_outdoor_webcam_iynbd",
+    "04_indoor_doubles_fwuks"
+  ],
+  "schema_version": 1,
+  "selection_summary": {
+    "queue_clip_counts": {
+      "HyUqT7zFiwk_rally_0001": 18791,
+      "_L0HVmAlCQI_rally_0001": 932,
+      "_L0HVmAlCQI_rally_0002": 341,
+      "_L0HVmAlCQI_rally_0003": 502,
+      "_L0HVmAlCQI_rally_0004": 242,
+      "_L0HVmAlCQI_rally_0005": 218,
+      "_L0HVmAlCQI_rally_0006": 370,
+      "_L0HVmAlCQI_rally_0007": 847,
+      "_L0HVmAlCQI_rally_0008": 252,
+      "_L0HVmAlCQI_rally_0009": 571,
+      "_L0HVmAlCQI_rally_0010": 286,
+      "_L0HVmAlCQI_rally_0011": 1208,
+      "_L0HVmAlCQI_rally_0012": 148,
+      "_L0HVmAlCQI_rally_0013": 213,
+      "_L0HVmAlCQI_rally_0014": 463,
+      "_L0HVmAlCQI_rally_0015": 218,
+      "_L0HVmAlCQI_rally_0016": 322,
+      "_L0HVmAlCQI_rally_0017": 479,
+      "_L0HVmAlCQI_rally_0018": 279,
+      "_L0HVmAlCQI_rally_0019": 182,
+      "wBu8bC4OfUY_rally_0001": 6341,
+      "wBu8bC4OfUY_rally_0002": 1561,
+      "wBu8bC4OfUY_rally_0003": 252,
+      "zwCtH_i1_S4_rally_0001": 8212
+    },
+    "queue_counts_phase_b": {
+      "large-offset": 4749,
+      "student-only": 5585,
+      "teacher-only": 32896
+    },
+    "queue_source_counts": {
+      "HyUqT7zFiwk": 18791,
+      "_L0HVmAlCQI": 8073,
+      "wBu8bC4OfUY": 8154,
+      "zwCtH_i1_S4": 8212
+    },
+    "ranking_assumption": "Used queue order/rank from build_sst_disagreement_queue: large-offset rank is offset_px; teacher-only/student-only rank is visible model confidence. Class quotas are used before rank fallback because raw rank values are not directly comparable across disagreement semantics.",
+    "selected_by_source": {
+      "HyUqT7zFiwk": 18791,
+      "_L0HVmAlCQI": 8073,
+      "wBu8bC4OfUY": 8154,
+      "zwCtH_i1_S4": 8212
+    },
+    "selected_by_source_type": {
+      "HyUqT7zFiwk/large-offset": 4365,
+      "HyUqT7zFiwk/student-only": 4688,
+      "HyUqT7zFiwk/teacher-only": 9738,
+      "_L0HVmAlCQI/large-offset": 28,
+      "_L0HVmAlCQI/student-only": 70,
+      "_L0HVmAlCQI/teacher-only": 7975,
+      "wBu8bC4OfUY/large-offset": 321,
+      "wBu8bC4OfUY/student-only": 613,
+      "wBu8bC4OfUY/teacher-only": 7220,
+      "zwCtH_i1_S4/large-offset": 35,
+      "zwCtH_i1_S4/student-only": 214,
+      "zwCtH_i1_S4/teacher-only": 7963
+    },
+    "selected_by_type": {
+      "large-offset": 4749,
+      "student-only": 5585,
+      "teacher-only": 32896
+    },
+    "selected_count": 43230,
+    "session_size": 640,
+    "sessions": [
+      {
+        "clip_count": 22,
+        "frame_count": 640,
+        "session_id": "ball_session_01",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 223,
+          "student-only": 160,
+          "teacher-only": 257
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_02",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 160,
+          "student-only": 150,
+          "teacher-only": 330
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_03",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 160,
+          "student-only": 120,
+          "teacher-only": 360
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_04",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 160,
+          "student-only": 120,
+          "teacher-only": 360
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_05",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 81,
+          "student-only": 120,
+          "teacher-only": 439
+        }
+      },
+      {
+        "clip_count": 22,
+        "frame_count": 640,
+        "session_id": "ball_session_06",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 94,
+          "teacher-only": 466
+        }
+      },
+      {
+        "clip_count": 23,
+        "frame_count": 640,
+        "session_id": "ball_session_07",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 80,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_08",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 80,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_09",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 80,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_10",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 80,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_11",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 80,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_12",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 80,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_13",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 80,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 23,
+        "frame_count": 640,
+        "session_id": "ball_session_14",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 80,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_15",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 80,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 23,
+        "frame_count": 640,
+        "session_id": "ball_session_16",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 53,
+          "teacher-only": 507
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_17",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_18",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 23,
+        "frame_count": 640,
+        "session_id": "ball_session_19",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_20",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_21",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 23,
+        "frame_count": 640,
+        "session_id": "ball_session_22",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_23",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 23,
+        "frame_count": 640,
+        "session_id": "ball_session_24",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_25",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_26",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_27",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_28",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_29",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_30",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_31",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_32",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_33",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_34",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_35",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_36",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_37",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_38",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_39",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_40",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_41",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_42",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_43",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_44",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_45",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_46",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_47",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 23,
+        "frame_count": 640,
+        "session_id": "ball_session_48",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_49",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 24,
+        "frame_count": 640,
+        "session_id": "ball_session_50",
+        "source_counts": {
+          "HyUqT7zFiwk": 160,
+          "_L0HVmAlCQI": 160,
+          "wBu8bC4OfUY": 160,
+          "zwCtH_i1_S4": 160
+        },
+        "type_counts": {
+          "large-offset": 80,
+          "student-only": 40,
+          "teacher-only": 520
+        }
+      },
+      {
+        "clip_count": 23,
+        "frame_count": 640,
+        "session_id": "ball_session_51",
+        "source_counts": {
+          "HyUqT7zFiwk": 207,
+          "_L0HVmAlCQI": 73,
+          "wBu8bC4OfUY": 154,
+          "zwCtH_i1_S4": 206
+        },
+        "type_counts": {
+          "large-offset": 104,
+          "student-only": 51,
+          "teacher-only": 485
+        }
+      },
+      {
+        "clip_count": 2,
+        "frame_count": 640,
+        "session_id": "ball_session_52",
+        "source_counts": {
+          "HyUqT7zFiwk": 634,
+          "zwCtH_i1_S4": 6
+        },
+        "type_counts": {
+          "large-offset": 261,
+          "student-only": 159,
+          "teacher-only": 220
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_53",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_54",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_55",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_56",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_57",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_58",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_59",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_60",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_61",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_62",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_63",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_64",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_65",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_66",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 640,
+        "session_id": "ball_session_67",
+        "source_counts": {
+          "HyUqT7zFiwk": 640
+        },
+        "type_counts": {
+          "student-only": 160,
+          "teacher-only": 480
+        }
+      },
+      {
+        "clip_count": 1,
+        "frame_count": 350,
+        "session_id": "ball_session_68",
+        "source_counts": {
+          "HyUqT7zFiwk": 350
+        },
+        "type_counts": {
+          "student-only": 78,
+          "teacher-only": 272
+        }
+      }
+    ],
+    "source_order": [
+      "HyUqT7zFiwk",
+      "wBu8bC4OfUY",
+      "_L0HVmAlCQI",
+      "zwCtH_i1_S4"
+    ],
+    "strategy": "Package every Phase-B disagreement row into 640-frame sessions. Sessions greedily keep all remaining new sources represented first, allocate frames evenly across active sources, use the w5 class mix scaled per active-source allocation when available, then fall back to the highest remaining queue rank within that source. Once a source exhausts, later sessions use the remaining active sources only."
+  },
+  "source_balance_note": {
+    "phase_b_clip_count": 24,
+    "phase_b_clip_exclusions": {},
+    "phase_b_clips_represented": [
+      "HyUqT7zFiwk_rally_0001",
+      "_L0HVmAlCQI_rally_0001",
+      "_L0HVmAlCQI_rally_0002",
+      "_L0HVmAlCQI_rally_0003",
+      "_L0HVmAlCQI_rally_0004",
+      "_L0HVmAlCQI_rally_0005",
+      "_L0HVmAlCQI_rally_0006",
+      "_L0HVmAlCQI_rally_0007",
+      "_L0HVmAlCQI_rally_0008",
+      "_L0HVmAlCQI_rally_0009",
+      "_L0HVmAlCQI_rally_0010",
+      "_L0HVmAlCQI_rally_0011",
+      "_L0HVmAlCQI_rally_0012",
+      "_L0HVmAlCQI_rally_0013",
+      "_L0HVmAlCQI_rally_0014",
+      "_L0HVmAlCQI_rally_0015",
+      "_L0HVmAlCQI_rally_0016",
+      "_L0HVmAlCQI_rally_0017",
+      "_L0HVmAlCQI_rally_0018",
+      "_L0HVmAlCQI_rally_0019",
+      "wBu8bC4OfUY_rally_0001",
+      "wBu8bC4OfUY_rally_0002",
+      "wBu8bC4OfUY_rally_0003",
+      "zwCtH_i1_S4_rally_0001"
+    ],
+    "union_nonheldout_source_count": 6,
+    "union_nonheldout_source_counts": {
+      "73VurrTKCZ8": 1280,
+      "Ezz6HDNHlnk": 1280,
+      "HyUqT7zFiwk": 18791,
+      "_L0HVmAlCQI": 8073,
+      "wBu8bC4OfUY": 8154,
+      "zwCtH_i1_S4": 8212
+    },
+    "w5_sources_already_packaged": [
+      "73VurrTKCZ8",
+      "Ezz6HDNHlnk"
+    ],
+    "w6_new_sources_packaged": [
+      "HyUqT7zFiwk",
+      "wBu8bC4OfUY",
+      "_L0HVmAlCQI",
+      "zwCtH_i1_S4"
+    ]
+  },
+  "source_metadata": {
+    "73VurrTKCZ8": {
+      "channel": " Game 1 | High-Quality Multi-Cam|The Pickleball Shaman",
+      "fps": 30.0,
+      "priority_note": "w5 source; already in owner queue",
+      "resolution": [
+        null,
+        1080
+      ],
+      "source_class": "outdoor_day_multicam",
+      "source_id": "73VurrTKCZ8",
+      "status": "downloaded",
+      "title": "Pro Pickleball Rec Match ",
+      "venue_summary": "outdoor daylight, fixed-court rec source; multi-camera title/source, 1080p"
+    },
+    "Ezz6HDNHlnk": {
+      "channel": " Pickleball Rec Game (November, 2024)|Alston Pickleball",
+      "fps": 23.98,
+      "priority_note": "w5 source; already in owner queue",
+      "resolution": [
+        null,
+        1080
+      ],
+      "source_class": "outdoor_night_fenced",
+      "source_id": "Ezz6HDNHlnk",
+      "status": "downloaded",
+      "title": "2.5-3.0 Men's Doubles ",
+      "venue_summary": "outdoor night, lights/fence, low court-level rec source, 1080p"
+    },
+    "HyUqT7zFiwk": {
+      "channel": "The Pickleball Pirates",
+      "fps": 30.0,
+      "priority_note": "new w6 Phase-B source; first session introduces it",
+      "resolution": [
+        null,
+        1080
+      ],
+      "source_class": "indoor_court_level",
+      "source_id": "HyUqT7zFiwk",
+      "status": "downloaded",
+      "title": "Intense Pickleball Men's Doubles Advanced rec Game from the Court Level",
+      "venue_summary": "indoor court-level advanced doubles, 1080p"
+    },
+    "_L0HVmAlCQI": {
+      "channel": "Rich Pickleball",
+      "fps": 30.0,
+      "priority_note": "new w6 Phase-B source; first session introduces it",
+      "resolution": [
+        null,
+        1080
+      ],
+      "source_class": "outdoor_night_tennis_overlay",
+      "source_id": "_L0HVmAlCQI",
+      "status": "downloaded",
+      "title": "Lily / Glenn vs Rich Half-court vs Full-court Oct 19th Pickleball match play",
+      "venue_summary": "outdoor night Rich Pickleball source with tennis-overlay court markings, 1080p"
+    },
+    "wBu8bC4OfUY": {
+      "channel": "Rich Pickleball",
+      "fps": 30.0,
+      "priority_note": "new w6 Phase-B source; first session introduces it",
+      "resolution": [
+        null,
+        1080
+      ],
+      "source_class": "outdoor_night_tennis_overlay",
+      "source_id": "wBu8bC4OfUY",
+      "status": "downloaded",
+      "title": "Lily / Glenn vs Rich Full-court vs Half-court Dec 14th Pickleball match play",
+      "venue_summary": "outdoor night Rich Pickleball source with tennis-overlay court markings, 1080p"
+    },
+    "zwCtH_i1_S4": {
+      "channel": " #Pickleball|RallyPoint by Suffolk Pickleball Co.",
+      "fps": 30.0,
+      "priority_note": "new w6 Phase-B source; first session introduces it",
+      "resolution": [
+        null,
+        1080
+      ],
+      "source_class": "outdoor_day_broadcast_overlay",
+      "source_id": "zwCtH_i1_S4",
+      "status": "downloaded",
+      "title": "Rec-Play Doubles 3.0\u20133.5 DUPR in Woodbridge ",
+      "venue_summary": "outdoor daytime fixed wide source with lower-third/broadcast overlay, 1080p"
+    }
+  }
+}
