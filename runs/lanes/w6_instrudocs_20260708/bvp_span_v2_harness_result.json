@@ -1,0 +1,120 @@
+{
+  "acceptance": {
+    "d3e_after_rows": [
+      {
+        "clip": "burlington_gold_0300_low_steep_corner",
+        "floor_label_f1_at_20px": 0.7727272727,
+        "hidden_false_positive_count": 3,
+        "label_f1_at_20px": 0.7727272727272727,
+        "verdict": "PASS",
+        "visible_recall_at_20px": 0.7083333333333334
+      },
+      {
+        "clip": "wolverine_mixed_0200_mid_steep_corner",
+        "floor_label_f1_at_20px": 0.875,
+        "hidden_false_positive_count": 3,
+        "label_f1_at_20px": 0.875,
+        "verdict": "PASS",
+        "visible_recall_at_20px": 0.875
+      }
+    ],
+    "protected_span_count": 5,
+    "protected_span_delta_0_0_count": 5,
+    "protected_spans": [
+      {
+        "clip": "burlington_gold_0300_low_steep_corner",
+        "endpoint_error_max_m_delta": -0.033695,
+        "fallback_coverage_delta": 0.0,
+        "fit_coverage_delta": 0.0,
+        "interval": [
+          107,
+          132
+        ],
+        "material_losses": [],
+        "name": "burlington_seg2_adjacent",
+        "residual_rmse_px_delta": 0.0,
+        "verdict": "PASS",
+        "viewer_confidence_weighted_delta": 0.0
+      },
+      {
+        "clip": "burlington_gold_0300_low_steep_corner",
+        "endpoint_error_max_m_delta": -0.019624,
+        "fallback_coverage_delta": 0.0,
+        "fit_coverage_delta": 0.0,
+        "interval": [
+          139,
+          151
+        ],
+        "material_losses": [],
+        "name": "burlington_seg4_adjacent",
+        "residual_rmse_px_delta": 0.0,
+        "verdict": "PASS",
+        "viewer_confidence_weighted_delta": 0.0
+      },
+      {
+        "clip": "burlington_gold_0300_low_steep_corner",
+        "endpoint_error_max_m_delta": -0.1741,
+        "fallback_coverage_delta": 0.0,
+        "fit_coverage_delta": 0.0,
+        "interval": [
+          447,
+          497
+        ],
+        "material_losses": [],
+        "name": "burlington_seg15_adjacent",
+        "residual_rmse_px_delta": 0.0,
+        "verdict": "PASS",
+        "viewer_confidence_weighted_delta": 0.0
+      },
+      {
+        "clip": "burlington_gold_0300_low_steep_corner",
+        "endpoint_error_max_m_delta": 0.0,
+        "fallback_coverage_delta": 0.0,
+        "fit_coverage_delta": 0.0,
+        "interval": [
+          497,
+          543
+        ],
+        "material_losses": [],
+        "name": "burlington_seg16_adjacent",
+        "residual_rmse_px_delta": 0.0,
+        "verdict": "PASS",
+        "viewer_confidence_weighted_delta": 0.0
+      },
+      {
+        "clip": "wolverine_mixed_0200_mid_steep_corner",
+        "endpoint_error_max_m_delta": -0.465495,
+        "fallback_coverage_delta": 0.0,
+        "fit_coverage_delta": 0.0,
+        "interval": [
+          70,
+          104
+        ],
+        "material_losses": [],
+        "name": "wolverine_seg4_region",
+        "residual_rmse_px_delta": 0.0,
+        "verdict": "PASS",
+        "viewer_confidence_weighted_delta": 0.0
+      }
+    ],
+    "whole_span_axis4": {
+      "historical_split_verdict": "FAIL",
+      "manager_ruled_conclusion": "stale_harness_expectation_for_banked_v2",
+      "v2_verdict": "PASS"
+    }
+  },
+  "artifact_type": "w6_bvp_span_verify_harness_v2_result",
+  "inputs": {
+    "axis4_adjudication": "runs/lanes/w5_bvpspan_verify_20260707/axis4_adjudication.json",
+    "d3e_product_eval": "runs/lanes/w5_bvpspan_verify_20260707/d3e_product_eval/fresh_d3e_product_eval.json",
+    "span_metrics": "runs/lanes/w5_bvpspan_verify_20260707/w4_harness/span_equivalence_metrics.json"
+  },
+  "objective_result": "PASS",
+  "policy": {
+    "historical_w4_harness": "runs/lanes/w4_bvp_verify_20260707/harness/bvp_verify_harness.py",
+    "historical_w4_status": "preserved_read_only_historical_instrument",
+    "name": "bvp_span_protection_v2_whole_span",
+    "rule": "Frozen-baseline protected spans pass when fit/fallback/RMSE/confidence deltas are zero and no material losses occur; the historical contact-519 split-junction requirement is not part of v2."
+  },
+  "schema_version": 1
+}

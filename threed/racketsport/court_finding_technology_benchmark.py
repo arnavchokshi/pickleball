@@ -1252,7 +1252,64 @@ def _proposal_for_technology(
             "needs_user_confirmation": solver_confidence < 0.70,
             "notes": ["benchmark_proposal_only_never_writes_court_calibration_json"],
         }
+    if technology_id == "detector_v2_multiframe":
+        return _detector_v2_multiframe_proposal(sample=sample)
     raise ValueError(f"unsupported proposal technology: {technology_id}")
+
+
+def _detector_v2_multiframe_proposal(*, sample: CourtFindingSample) -> dict[str, Any]:
+    """CAL-GEO 2026-07-05: real multi-frame detector_v2 candidate adapter.
+
+    Registers the new Stage 0-6 solver (`court_proposals.propose_court_from_video`)
+    as a benchmark candidate. This calls the STABLE product-facing contract
+    directly against `sample.frame_input` (a directory of frames or a video,
+    per `discover_court_finding_samples`), so it is scored exactly like the
+    product lane would call it, not re-derived here.
+    """
+
+    from .court_proposals import propose_court_from_video
+
+    report = propose_court_from_video(sample.frame_input, max_frames=24, top_k=8)
+    image_size = list(report.get("input", {}).get("image_size") or [0, 0])
+    proposals = report.get("proposals") or []
+    if not proposals:
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_court_finding_technology_proposal",
+            "source": {"clip_id": sample.clip, "image_size": image_size},
+            "solver": {"name": "detector_v2_multiframe", "version": 1, "writes_court_calibration": False},
+            "keypoints": {},
+            "solver_confidence": 0.0,
+            "needs_user_input": ["court_keypoints"],
+            "needs_user_confirmation": True,
+            "notes": ["benchmark_proposal_only_never_writes_court_calibration_json", "no_proposal_generated"],
+        }
+    proposal = proposals[0]
+    court_keypoints = proposal.get("court_keypoints") or {}
+    scores = proposal.get("scores") or {}
+    gate = proposal.get("gate") or {}
+    confidence = round(max(0.0, min(1.0, float(scores.get("overall") or 0.0))), 4)
+    keypoints = {
+        str(name): {
+            "xy": [float(xy[0]), float(xy[1])],
+            "confidence": confidence,
+            "source": "detector_v2_multiframe",
+        }
+        for name, xy in court_keypoints.items()
+    }
+    auto_usable = bool(gate.get("auto_usable"))
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_court_finding_technology_proposal",
+        "source": {"clip_id": sample.clip, "image_size": image_size},
+        "solver": {"name": "detector_v2_multiframe", "version": 1, "writes_court_calibration": False},
+        "keypoints": keypoints,
+        "solver_confidence": confidence,
+        "needs_user_input": [] if auto_usable else ["court_keypoints"],
+        "needs_user_confirmation": not auto_usable,
+        "evidence": proposal.get("evidence"),
+        "notes": ["benchmark_proposal_only_never_writes_court_calibration_json"],
+    }
 
 
 def _result_rejection_reasons(*, technology_id: str, comparison: Mapping[str, Any]) -> list[str]:

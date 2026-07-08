@@ -63,11 +63,198 @@ class SolvePnPCorrespondences:
     confidence: tuple[float, ...]
 
 
-def make_court_keypoint_heatmap_model(keypoint_count: int, *, architecture: str = "encoder_decoder_v1") -> Any:
+COURT_UNET_V2_ARCHITECTURE = "court_unet_v2"
+# 5-class combined line-family+surface segmentation head taxonomy (CAL-MODEL, 2026-07-05). Merged
+# from CAL-SYNTH's two separate targets (threed.racketsport.court_synth_stream:
+# LINE_FAMILY_CLASSES {other,pickleball_line,tennis_line,net} + SURFACE_CLASSES
+# {background,apron,interior}) into one head: a pixel is "surface" (class 4) iff it is inside the
+# court interior AND not already claimed by a line-family class (lines always take priority over
+# the surface they sit on); "apron" collapses into "bg" (class 0) since this head has no apron
+# class of its own -- see `merge_line_family_and_surface_targets` below for the exact merge and
+# `split_line_family_segmentation` for the inverse decode used by the STABLE court_model_infer
+# contract (which still exposes line_family_mask/surface_mask as two separate arrays).
+COURT_UNET_V2_SEG_CLASS_NAMES: tuple[str, ...] = ("bg", "pickleball_line", "tennis_line", "net", "surface")
+COURT_UNET_V2_HEATMAP_STRIDE = 4
+
+
+def merge_line_family_and_surface_targets(line_family_mask: Any, surface_mask: Any) -> Any:
+    """Merge CAL-SYNTH's ``line_family_mask`` (0..3: other/pickleball/tennis/net) and
+    ``surface_mask`` (0..2: background/apron/interior) into one ``COURT_UNET_V2_SEG_CLASS_NAMES``
+    label map (0..4: bg/pickleball_line/tennis_line/net/surface).
+
+    Priority: any non-"other" line_family pixel keeps its line class (1/2/3) regardless of the
+    surface value underneath it (a painted line is still a line even though it sits on the court
+    surface); an "other" pixel becomes "surface" (4) iff the surface mask says "interior" (2);
+    everything else (background, or apron -- this head has no separate apron class) is "bg" (0).
+    """
+
+    import numpy as np
+
+    line = np.asarray(line_family_mask)
+    surface = np.asarray(surface_mask)
+    if line.shape != surface.shape:
+        raise ValueError("line_family_mask and surface_mask must share the same shape")
+    merged = np.where(line != 0, line, np.where(surface == 2, 4, 0))
+    return merged.astype(np.uint8)
+
+
+def split_line_family_segmentation(merged_class_map: Any) -> tuple[Any, Any]:
+    """Inverse of `merge_line_family_and_surface_targets`: decode a ``COURT_UNET_V2_SEG_CLASS_NAMES``
+    argmax map back into separate ``line_family_mask`` (0..3) and ``surface_mask`` (0..2, restricted
+    to background/interior -- this head cannot express "apron" since it was never given that class)
+    arrays, matching the `court_model_infer.infer_court_model` STABLE contract's two mask keys."""
+
+    import numpy as np
+
+    merged = np.asarray(merged_class_map)
+    line_family_mask = np.where(merged == 4, 0, merged).astype(np.uint8)
+    surface_mask = np.where(merged == 4, 2, 0).astype(np.uint8)
+    return line_family_mask, surface_mask
+
+
+def _load_resnet34_encoder(encoder_weights_path: Any) -> Any:
+    """Build a torchvision resnet34 encoder (``weights=None`` -- no network access), optionally
+    loading ImageNet weights from a local checkpoint file (e.g.
+    ``models/checkpoints/court_external/torchvision/resnet34-b627a593.pth``, the exact state dict
+    `torchvision.models.resnet34` would download from the network if it could). The classifier
+    head (`fc`) is dropped since only the conv backbone (stem + layer1..4) is used as a feature
+    extractor; a state dict with a mismatched/missing `fc.*` is expected and tolerated, but any
+    other missing/unexpected key means the checkpoint is not actually a resnet34 backbone and is
+    rejected loudly rather than silently loading a partially-wrong encoder."""
+
+    import torch
+    from torchvision.models import resnet34
+
+    encoder = resnet34(weights=None)
+    if encoder_weights_path is not None:
+        state = torch.load(str(encoder_weights_path), map_location="cpu", weights_only=True)
+        if isinstance(state, dict) and "state_dict" in state and "conv1.weight" not in state:
+            state = state["state_dict"]
+        if not isinstance(state, dict):
+            raise ValueError(f"resnet34 encoder checkpoint at {encoder_weights_path} is not a state dict")
+        missing, unexpected = encoder.load_state_dict(state, strict=False)
+        missing_non_fc = [key for key in missing if not key.startswith("fc.")]
+        unexpected_non_fc = [key for key in unexpected if not key.startswith("fc.")]
+        if missing_non_fc or unexpected_non_fc:
+            raise ValueError(
+                "resnet34 encoder checkpoint at "
+                f"{encoder_weights_path} does not match the expected backbone layout "
+                f"(missing={missing_non_fc}, unexpected={unexpected_non_fc})"
+            )
+    import torch.nn as nn
+
+    encoder.fc = nn.Identity()
+    return encoder
+
+
+def make_court_unet_v2_model(
+    keypoint_count: int,
+    *,
+    seg_class_count: int = len(COURT_UNET_V2_SEG_CLASS_NAMES),
+    encoder_weights_path: Any = None,
+) -> Any:
+    """Build the CAL-MODEL v2 architecture: a torchvision resnet34 encoder with a U-Net decoder
+    (3 upsample stages with skip connections back to layer1/layer2/layer3), ending at stride
+    `COURT_UNET_V2_HEATMAP_STRIDE` (4) relative to the model's input resolution (640x360 by
+    convention -> a 160x90 trunk feature map). Three heads share that trunk:
+
+      - `keypoint_heatmaps`: (B, keypoint_count, H/4, W/4) per-channel spatial-softmax logits
+        (decode with `court_keypoint_probabilities` + `decode_subpixel_heatmap`, same as the
+        legacy encoder_decoder_v1/local_conv_v1 archs -- the heatmap loss/decode machinery is
+        architecture-agnostic).
+      - `line_family_logits`: (B, seg_class_count, H/4, W/4) the 5-class combined line-family +
+        surface segmentation head (see `COURT_UNET_V2_SEG_CLASS_NAMES`).
+      - `keypoint_vis_logits`: (B, keypoint_count) per-keypoint binary visibility logits (BCE
+        target: 1.0 iff cleanly visible, 0.0 for occluded/off-frame).
+
+    Unlike `make_court_keypoint_heatmap_model`'s single-tensor-output architectures, `forward`
+    returns a dict with those three keys -- this is a new, purpose-built architecture (not routed
+    through the legacy single-tensor trainer path), so the dict return is not a backward
+    compatibility break for anything already calling `make_court_keypoint_heatmap_model` with the
+    existing two architectures.
+    """
+
     if isinstance(keypoint_count, bool) or not isinstance(keypoint_count, int) or keypoint_count <= 0:
         raise ValueError("keypoint_count must be a positive integer")
-    if architecture not in {"encoder_decoder_v1", "local_conv_v1"}:
+    if isinstance(seg_class_count, bool) or not isinstance(seg_class_count, int) or seg_class_count <= 0:
+        raise ValueError("seg_class_count must be a positive integer")
+
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+
+    class _UpBlock(nn.Module):
+        def __init__(self, in_channels: int, skip_channels: int, out_channels: int) -> None:
+            super().__init__()
+            self.reduce = nn.Conv2d(in_channels, out_channels, kernel_size=1)
+            self.conv = nn.Sequential(
+                nn.Conv2d(out_channels + skip_channels, out_channels, kernel_size=3, padding=1),
+                nn.BatchNorm2d(out_channels),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
+                nn.BatchNorm2d(out_channels),
+                nn.ReLU(inplace=True),
+            )
+
+        def forward(self, x: Any, skip: Any) -> Any:
+            up = F.interpolate(self.reduce(x), size=skip.shape[-2:], mode="bilinear", align_corners=False)
+            return self.conv(torch.cat([up, skip], dim=1))
+
+    class CourtUNetV2(nn.Module):
+        heatmap_stride = COURT_UNET_V2_HEATMAP_STRIDE
+        seg_class_names = COURT_UNET_V2_SEG_CLASS_NAMES
+
+        def __init__(self) -> None:
+            super().__init__()
+            resnet = _load_resnet34_encoder(encoder_weights_path)
+            self.stem = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool)
+            self.layer1 = resnet.layer1
+            self.layer2 = resnet.layer2
+            self.layer3 = resnet.layer3
+            self.layer4 = resnet.layer4
+
+            trunk_channels = 96
+            self.up3 = _UpBlock(512, 256, 256)
+            self.up2 = _UpBlock(256, 128, 128)
+            self.up1 = _UpBlock(128, 64, trunk_channels)
+
+            self.keypoint_head = nn.Conv2d(trunk_channels, keypoint_count, kernel_size=1)
+            self.seg_head = nn.Conv2d(trunk_channels, seg_class_count, kernel_size=1)
+            self.vis_head = nn.Sequential(
+                nn.AdaptiveAvgPool2d(1),
+                nn.Flatten(),
+                nn.Linear(trunk_channels, keypoint_count),
+            )
+            self.keypoint_count = keypoint_count
+            self.seg_class_count = seg_class_count
+
+        def forward(self, x: Any) -> dict[str, Any]:
+            c1 = self.layer1(self.stem(x))
+            c2 = self.layer2(c1)
+            c3 = self.layer3(c2)
+            c4 = self.layer4(c3)
+            trunk = self.up1(self.up2(self.up3(c4, c3), c2), c1)
+            return {
+                "keypoint_heatmaps": self.keypoint_head(trunk),
+                "line_family_logits": self.seg_head(trunk),
+                "keypoint_vis_logits": self.vis_head(trunk),
+            }
+
+    return CourtUNetV2()
+
+
+def make_court_keypoint_heatmap_model(
+    keypoint_count: int,
+    *,
+    architecture: str = "encoder_decoder_v1",
+    encoder_weights_path: Any = None,
+) -> Any:
+    if isinstance(keypoint_count, bool) or not isinstance(keypoint_count, int) or keypoint_count <= 0:
+        raise ValueError("keypoint_count must be a positive integer")
+    if architecture not in {"encoder_decoder_v1", "local_conv_v1", COURT_UNET_V2_ARCHITECTURE}:
         raise ValueError("unsupported court keypoint heatmap architecture")
+    if architecture == COURT_UNET_V2_ARCHITECTURE:
+        return make_court_unet_v2_model(keypoint_count, encoder_weights_path=encoder_weights_path)
     import torch.nn as nn
     import torch.nn.functional as F
 
