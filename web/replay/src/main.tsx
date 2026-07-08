@@ -1,7 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 
-import App from "./App";
+import { AppShell } from "./AppShell";
 import "./styles.css";
 
 const rootElement = document.getElementById("root");
@@ -10,4 +10,4 @@ if (!rootElement) {
   throw new Error("Replay viewer root element #root was not found");
 }
 
-createRoot(rootElement).render(<App />);
+createRoot(rootElement).render(<AppShell />);

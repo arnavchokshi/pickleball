@@ -187,7 +187,7 @@ async function parseJobResponse(response: Response): Promise<UploadJob> {
   return parseJsonResponse<UploadJob>(response);
 }
 
-async function parseJsonResponse<T>(response: Response): Promise<T> {
+export async function parseJsonResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get("content-type") ?? "";
   const isJson = contentType.includes("application/json");
   const payload = isJson ? await response.json().catch(() => ({})) : {};
