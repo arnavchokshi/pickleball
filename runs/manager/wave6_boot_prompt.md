@@ -50,6 +50,15 @@ students NEVER shoot (4 inversions on record).
   end-to-end; CPU smoke deterministic w/ failure reasons — the flake was an unseeded-init
   coin-flip exposed by the preprocessing change).
 
+## OWNER CRITIQUE (wave-5 worlds, 2026-07-08 — fold into P2-2/wiring rulings)
+1. **3D-world playback frame rate is low.** Mechanisms on record: mesh layer capped at ~100
+   selected frames/clip (selected_mesh_frame_count; 290-600MB dense monolith economy) → mesh
+   steps at ~5fps on long clips; BODY ball-aware frame scheduling skips some frames. Fix menu
+   by cost: render-side viewer interpolation (cheap, render-only, NEVER measured evidence) →
+   mesh-cap raise (disk/transfer linear) → denser BODY scheduling (GPU linear). P2-2 latent
+   decode enables principled inter-frame interpolation once wired. More critique items may
+   arrive from the owner's session on the w5_critiqueviewer station — ask the owner at boot.
+
 ## Wave-6 queue (priority order — re-derive at boot)
 1. **Owner-label ingest + LoSO outdoor fold (CRITICAL PATH):** ingest owner CVAT exports as they
    land (import path proven in cvat_upload/ precedent), rebuild the reviewed corpus, add the
