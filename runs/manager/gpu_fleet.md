@@ -90,7 +90,7 @@ Fleet cost cap (owner 2026-07-06): ≤$5/GPU/hr, max 4 concurrent GPUs; teardown
 lane ends (idle spend never acceptable); 5th GPU or >$5/hr = `needs-purchase-approval` STOP.
 Auth: owner gcloud refresh token (hello@; SA key creation org-blocked); dead auth = typed STOP for one owner login.
 
-| pickleball-calv1unet-a100-spot | asia-southeast1-a (ladder: ase1-b/c, us-central1-a) | a2-highgpu-1g A100-40GB | SPOT | CREATING (dispatched 2026-07-08, court session) | calv1_unet_train_20260708 | ~$1.1-1.5/hr | teardown: DELETE on lane success, STOP on failure |
+| pickleball-calv1unet-a100-spot | asia-southeast1-a | a2-highgpu-1g A100-40GB | SPOT | DELETED 2026-07-08T23:45Z list-confirmed (lane COMPLETE: 2.87 GPU-h, ~$4.4-6, zero preemptions) | calv1_unet_train_20260708 | ~$1.1-1.5/hr | ckpt pulled+sha-verified |
 
 WAVE-6 FLEET LOG (2026-07-08, manager):
 - pickleball-h100-w6gate1b (H100 a3-highgpu-1g SPOT, asia-southeast1-b, pd-balanced 200GB from
