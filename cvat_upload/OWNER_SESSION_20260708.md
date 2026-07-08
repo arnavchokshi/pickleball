@@ -23,6 +23,17 @@ Then open http://localhost:8080 and label the tasks named below.
 - `full`: ball is expected in-frame but fully hidden.
 - `out_of_frame`: ball is outside the image bounds.
 - Keep one ball object per frame. Drag/correct the prelabel if it is close; delete/recreate only when it is misleading.
+- **Prelabel on a NON-ball while the real ball IS visible**: drag the box onto the real ball
+  (or delete + redraw). Never leave clear/partial on a non-ball — those coords train the model.
+- **Ball NOT in frame but a box exists**: either DELETE the box (frame becomes a reviewed-absent
+  negative — valid and valuable) OR leave it anywhere and set visibility_level=out_of_frame
+  (coords are ignored for full/out_of_frame). Use the visibility_level ATTRIBUTE dropdown, not
+  CVAT's native outside/occluded toggles.
+- **Background ball (real ball, not the game ball — fence line, adjacent court)**: ALWAYS delete
+  that box. One game-ball box max per frame (the importer hard-errors on 2+), and static
+  background balls are the distractor-lock failure class that broke a prior model.
+- **When in doubt, delete.** False positives poison training far more than missed positives;
+  reviewed-empty frames are useful negatives.
 
 ## Session Order
 
