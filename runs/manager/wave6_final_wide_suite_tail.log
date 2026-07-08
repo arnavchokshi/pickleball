@@ -1,0 +1,15 @@
+    warnings.warn(
+
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torch/jit/_trace.py:1139: DeprecationWarning: `torch.jit.trace_method` is not supported in Python 3.14+ and may break. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torch/jit/_serialization.py:170: DeprecationWarning: `torch.jit.load` is not supported in Python 3.14+ and may break. Please switch to `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/racketsport/test_calibrate_charuco_device.py::[1mtest_calibrate_charuco_device_recovers_synthetic_barrel_distortion_and_persists_profile[0m - subprocess.CalledProcessError: Command '['/Users/arnavchokshi/Desktop/pickl...
+[31m[31m[1m1 failed[0m, [32m3245 passed[0m, [33m25 skipped[0m, [33m7 warnings[0m[31m in 1935.32s (0:32:15)[0m[0m
