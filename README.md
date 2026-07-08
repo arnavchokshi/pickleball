@@ -13,6 +13,8 @@ pipeline, and generate a trust-banded 3D replay plus coaching artifacts.
 5. `BUILD_CHECKLIST.md` - small operational board for what remains.
 6. `TECH_STACK.md` - model/runtime registry and where code lives.
 7. `BALL_TRACKING_PIPELINE.md` - focused ball-stage contract used by ball code comments.
+8. `docs/API.md` - HTTP API, pipeline/programmatic entry points, and how to run tests.
+9. `threed/racketsport/README.md` - stage-library module index (find the code behind a stage).
 
 ## Current Truth
 
@@ -27,7 +29,7 @@ internal-val run, browser load, or schema validation passed.
 | Path | Purpose |
 |---|---|
 | `scripts/racketsport/process_video.py` | Main one-command video-to-replay pipeline. |
-| `threed/racketsport/` | Python stage implementations, schemas, gates, and artifact builders. |
+| `threed/racketsport/` | Python stage implementations, schemas, gates, and artifact builders. See `threed/racketsport/README.md` for the module index. |
 | `tests/racketsport/` | Python verification for stage contracts and truth-doc invariants. |
 | `ios/` | Native Swift capture/live-tier/upload/replay app modules. |
 | `web/replay/` | Review viewer for `replay_viewer_manifest.json` bundles. |
@@ -35,6 +37,7 @@ internal-val run, browser load, or schema validation passed.
 | `configs/` | Runtime/tracker/remote configuration. |
 | `eval_clips/` | Small committed eval/label assets. Protected owner clips are eval-only unless code explicitly permits internal-val use. |
 | `docs/racketsport/` | JSON schemas and manifests only. Narrative docs were collapsed into the root docs above. |
+| `docs/API.md` | HTTP API, pipeline/programmatic entry points, and the test-suite run guide. |
 | `runs/` | Generated evidence and experiment outputs. Usually ignored; cite paths carefully and never assume old runs are current. |
 
 ## Storage Policy

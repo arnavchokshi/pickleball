@@ -781,23 +781,6 @@ def _root_motion_stats(samples: Sequence[tuple[int, tuple[float, float]]], *, se
     }
 
 
-def _root_p90_with_corrections(
-    frames: Sequence[_FrameRef],
-    corrections: Mapping[tuple[str, int], _Correction],
-    *,
-    joint_names: Sequence[str],
-    settings: FootPinSettings,
-) -> float:
-    samples: list[tuple[int, tuple[float, float]]] = []
-    for frame in frames:
-        root = _root_xy(frame.frame, frame.joints_world, joint_names=joint_names)
-        correction = corrections.get((frame.player_id, frame.frame_index))
-        if correction is not None:
-            root = (root[0] + correction.dx, root[1] + correction.dy)
-        samples.append((frame.frame_index, root))
-    return float(_root_motion_stats(samples, settings=settings)["p90_frame_displacement_m"])
-
-
 def _frame_correction_dict(frame: _FrameRef, correction: _Correction) -> dict[str, Any]:
     return {
         "frame_index": frame.frame_index,

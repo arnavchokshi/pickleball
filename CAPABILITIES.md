@@ -1,6 +1,6 @@
 # Capability Truth Matrix
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-07.
 
 This file records what the current repo can honestly claim. It is not a run log
 and not a place for old experiment narratives. `BUILD_CHECKLIST.md` owns the
@@ -67,7 +67,7 @@ phone-real-time. LiDAR is a near-field bonus only and is not required for v1.
 | Feature | L0 in-rally | L1 between-rally | L2 fast verdict | L3 deep world | How + unlock |
 |---|---|---|---|---|---|
 | Capture guidance (framing/level/exposure/fps) | TODAY (computed; UI unwired) | TODAY (post-stop summary computed; UI unwired) | — | — | `LiveGuidanceEvaluator` + `PostStopPreviewSummary` exist; wire to Record screen (PL-3) |
-| Player detect/track + foot rings | TODAY (YOLO26n INT8 640, 1-in-4 cadence, tested live during recording) | replay overlay | — | authoritative tracks (BoT-SORT + global re-assoc) | bundle model in app (PL-3); screen-space today |
+| Player detect/track + foot rings | TODAY (live person overlay wired, screen-space; YOLO26n INT8 640 / 1-in-4 cadence planned — model not bundled, P0-10 device smoke pending) | replay overlay | — | authoritative tracks (BoT-SORT + global re-assoc) | bundle model in app (PL-3); screen-space today |
 | Live court geometry (homography) | NEXT (tap-corner seed pre-record; ARKit plane assist) | same | manual taps / metric-15pt / profiles | metric-15pt + distortion | THE keystone: no line-relative call at any tier without it (PL-1; H0 court profiles make it one-time per court) |
 | Court-plane dot map (real, not proxy) | after PL-1 | after PL-1 | TODAY (placement) | TODAY (RTS-smoothed) | screen-space proxy today, honest note in code |
 | Kitchen-proximity indicator (feet vs NVZ line) | after PL-1 (geometry only; explicitly NOT a fault verdict — volley state unknown live) | after PL-1 | after PL-6 wiring | full NVZ fault w/ volley-state + momentum review-flag | `decide_court_boundary(near_kitchen)` exists unit-tested; NVZ momentum (Rule 11.A.2) has no fixed time window → even L3 ships it as a review FLAG, not a verdict |

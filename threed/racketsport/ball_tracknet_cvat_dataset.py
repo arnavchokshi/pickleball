@@ -918,20 +918,6 @@ def _detector_error_windows_for_clip(
     return sorted(windows, key=lambda item: (item[1], item[2], item[0]))
 
 
-def _hard_negative_windows_for_clip(
-    *,
-    plan_clip: object,
-    frame_count: int,
-    context_frames: int,
-) -> list[tuple[int, int, int, int]]:
-    return _error_windows_for_key(
-        plan_clip=plan_clip,
-        key="hard_negative_hidden_fp_ranges",
-        frame_count=frame_count,
-        context_frames=context_frames,
-    )
-
-
 def _error_windows_for_key(
     *,
     plan_clip: object,

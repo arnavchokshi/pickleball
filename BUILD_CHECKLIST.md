@@ -1,11 +1,11 @@
 # Build Checklist
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-07.
 
-This is the operational board. It should stay short enough that a new agent can
-read it before touching code. For final goal and truth boundaries, read
-`MASTER_PLAN.md`; for commands, read `RUNBOOK.md`; for tier placement, read
-`CAPABILITIES.md`.
+This is the operational board — a running log, not a from-scratch read (it is 750+
+lines). Skim the last ~15 dated bullets before touching code. For final goal and
+truth boundaries, read `MASTER_PLAN.md`; for commands, read `RUNBOOK.md`; for tier
+placement, read `CAPABILITIES.md`.
 
 No row is `VERIFIED`.
 
@@ -26,7 +26,7 @@ cal (+ Wave A auto-find on a branch) · speed 2141→~532-565s (3.8×) · data-e
 guards · web viewer (trust bands, honesty KPIs, mesh, 2×-FPS, court-map) · eval ledger + gate scripts
 + ~2,900 tests.
 
-**✅ BUILT (our iOS app — it EXISTS):** 110 Swift files, 7 modules (`ios/`) · capture sidecar contract
+**✅ BUILT (our iOS app — it EXISTS):** 127 Swift files, 7 modules (`ios/`) · capture sidecar contract
 already carrying intrinsics + ARKit pose + gravity + court plane + locked exposure + LiDAR refs +
 240/120fps modes · CoreMotion gravity, live overlays/guidance, on-device person track + CoreML ball
 heatmap, camera-roll import, upload manifest · server ingest already consumes the sidecar

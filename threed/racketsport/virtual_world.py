@@ -1116,11 +1116,6 @@ def _skeleton_player_frame_from_sources(track_frame: Any | None, skeleton_frame:
     }
 
 
-def _skeleton_transl_world(skeleton_frame: Any, *, track_world_xy: Any) -> list[float] | None:
-    transl, _joint_delta = _skeleton_alignment(skeleton_frame, track_world_xy=track_world_xy)
-    return transl
-
-
 def _skeleton_alignment(skeleton_frame: Any, *, track_world_xy: Any) -> tuple[list[float] | None, list[float]]:
     transl = _vector3(getattr(skeleton_frame, "transl_world", None))
     track_xy = _vector2(track_world_xy)
@@ -1364,13 +1359,6 @@ def _ball_frame(
         payload["render_only"] = True
         payload["not_for_detection_metrics"] = True
     return payload
-
-
-def _legacy_ball(ball_obj: BallTrack | None, *, calibration: CourtCalibration) -> dict[str, Any]:
-    return {
-        "source": ball_obj.source,
-        "frames": [_ball_frame(frame, calibration=calibration) for frame in ball_obj.frames],
-    }
 
 
 def _ball_world_xyz(

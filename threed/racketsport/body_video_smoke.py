@@ -343,22 +343,6 @@ def run_body_video_smoke(
     return report
 
 
-def _body_runners(
-    *,
-    manifest_path: str | Path,
-    fast_sam_repo: str | Path | None,
-    body_detector_name: str | None,
-    body_fov_name: str | None,
-) -> dict[str, Any] | None:
-    return _body_runners_with_pose(
-        manifest_path=manifest_path,
-        fast_sam_repo=fast_sam_repo,
-        body_detector_name=body_detector_name,
-        body_fov_name=body_fov_name,
-        reuse_input_skeleton=False,
-    )
-
-
 def _body_runners_with_pose(
     *,
     manifest_path: str | Path,

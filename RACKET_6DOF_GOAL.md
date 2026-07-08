@@ -95,9 +95,10 @@ contact where reflection+mask agree) > `mask_fitted` > `grip_extrapolated` (wris
 - Lane home: `runs/lanes/racket_6dof_20260705/` (STATUS.md = trail).
 - R1 (Codex, repo, read-only): quantify Q1–Q3 on the four final placement run dirs.
 - R2 (Codex, web research): Q4 survey with license table.
-- After Fable rules on R1/R2: implementation lanes (new files only:
-  `threed/racketsport/paddle_pose_6dof.py` + CLI + tests is the working plan), then
-  deferred-patch world/viewer integration once the ball lane lands its virtual_world changes.
+- After Fable rules on R1/R2: implementation lanes (the work shipped as
+  `threed/racketsport/paddle_pose_fused.py` + `scripts/racketsport/build_paddle_pose_fused.py`
+  + tests), then deferred-patch world/viewer integration once the ball lane lands its
+  virtual_world changes.
 
 ## Log
 

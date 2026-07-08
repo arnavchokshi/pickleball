@@ -1,2 +1,0 @@
-"""Runtime acceleration helpers."""
-

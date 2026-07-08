@@ -5,7 +5,7 @@
 MongoDB Atlas + AWS S3 + GCP GPU fleet + Render hosting; React web, Swift iOS; Stripe scaffolded
 now / live later (web + mobile); budget ≤ $30/mo for always-on services.
 **SUPERSEDES:** the TECH_BLUEPRINTS P7-1 ruling "Render Persistent Disk + SQLite + Render Key Value
-+ Background Worker" (TECH_BLUEPRINTS.md ~2807-2817). No lane should build against that plan.
++ Background Worker" (TECH_BLUEPRINTS.md ~2985-2986, 3186-3193). No lane should build against that plan.
 The typed purchase-approval STOP on paid tiers is RESOLVED by the owner's $30/mo grant (2026-07-07).
 
 ## 1. Goal
