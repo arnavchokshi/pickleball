@@ -23,12 +23,15 @@ WAVE-4 FLEET LOG (2026-07-07, manager):
   too large`) recurs on large transfers — rsync fallback exit-255 IS retryable.
 WAVE-5 FLEET LOG (2026-07-07, manager):
 - pickleball-h100-w5p22 (H100 a3-highgpu-1g SPOT, asia-southeast1-b, pd-balanced 200GB boot disk
-  FROM pickleball-fleet1-snap-20260707) — CREATED 2026-07-07 by lane w5_p22latent_20260707 (1st
-  attempt succeeded, no quota fallback needed). IP 35.187.224.146 (recycles — always --remote-host).
-  labels fable-lane=w5-p22latent,fable-fleet=pickleball,owner=arnavchokshi. BUSY: P2-2 MHR decode
-  wrapper + fidelity gates + latent smoothing prototype. Self-DELETE + new ffmpeg snapshot at lane
-  end. Budget: 3-6h x $0.6-4.3/hr ≈ $2-26 (+50% outage contingency booked); in-VM idle watchdog
-  armed (>2h VM).
+  FROM pickleball-fleet1-snap-20260707) — lane w5_p22latent_20260707 DONE: CREATED
+  2026-07-08T~05:35Z (1st attempt succeeded, no quota fallback needed) → P2-2 MHR decode wrapper +
+  fidelity gates + latent smoothing prototype (GATE 1a PASS 2.7e-5 deg; GATE 1b measured-partial,
+  see report) → new fan snapshot `pickleball-fleet-snap-20260708-ffmpeg` (READY, 200GB, ffmpeg
+  4.4.2 baked in) created from the VM disk BEFORE teardown, VM repo reset to clean committed HEAD
+  first (lane's uncommitted schema patch stays Mac-side only) → DELETED 2026-07-08T~06:56Z,
+  list-confirmed empty. Uptime ≈1.3-1.5h × $0.6-4.3/hr ≈ $0.8-6.5 (mid ~$2-3). Zero preemptions.
+  in-VM idle watchdog (60min no-heartbeat -> shutdown) armed + never triggered (heartbeat touched
+  every SSH round-trip).
 
 - pickleball-h100-w5ball (H100 a3 spot, ase1-b preferred; same fallback ladder) — PROVISIONING
   DELEGATED to Sonnet lane w5_ballretrain_20260707 (self-provision from snapshot; code-identity =
