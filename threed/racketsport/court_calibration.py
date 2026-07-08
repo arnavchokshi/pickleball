@@ -32,6 +32,27 @@ def camera_matrix_from_intrinsics(intrinsics: CameraIntrinsics) -> list[list[flo
     ]
 
 
+def undistort_pixels_for_intrinsics(
+    pixels: Sequence[Sequence[float]],
+    intrinsics: CameraIntrinsics,
+) -> tuple[list[list[float]], bool]:
+    points = [[float(point[0]), float(point[1])] for point in pixels]
+    if not _dist_nonzero(intrinsics.dist):
+        return points, False
+
+    try:
+        import cv2  # type: ignore[import-not-found]
+        import numpy as np  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise RuntimeError("undistorting calibration keypoints requires opencv-python and numpy") from exc
+
+    camera_matrix = np.asarray(camera_matrix_from_intrinsics(intrinsics), dtype=np.float64)
+    distortion = np.asarray(list(intrinsics.dist), dtype=np.float64)
+    point_array = np.asarray(points, dtype=np.float64).reshape(-1, 1, 2)
+    undistorted = cv2.undistortPoints(point_array, camera_matrix, distortion, P=camera_matrix).reshape(-1, 2)
+    return [[float(point[0]), float(point[1])] for point in undistorted], True
+
+
 def load_capture_sidecar(path: str | Path) -> CaptureSidecar:
     with Path(path).open("r", encoding="utf-8") as handle:
         return CaptureSidecar.model_validate(json.load(handle))
@@ -246,14 +267,20 @@ def _camera_height_from_sidecar(sidecar: CaptureSidecar) -> float:
     return abs(sum((camera[idx] - plane_point[idx]) * normal[idx] / norm for idx in range(3)))
 
 
-def _merge_capture_quality(sidecar: CaptureSidecar, reprojection: ReprojectionError, corners_visible: int) -> CaptureQuality:
+def _merge_capture_quality(
+    sidecar: CaptureSidecar,
+    reprojection: ReprojectionError,
+    corners_visible: int,
+    *,
+    extra_reasons: Sequence[str] = (),
+) -> CaptureQuality:
     scored = score_capture_quality(
         corners_visible=corners_visible,
         reprojection_rmse_px=reprojection.median,
         fps=sidecar.fps,
         exposure_s=sidecar.locked.exposure_s,
     )
-    reasons = list(dict.fromkeys([*sidecar.capture_quality.reasons, *scored.reasons]))
+    reasons = list(dict.fromkeys([*sidecar.capture_quality.reasons, *scored.reasons, *extra_reasons]))
     grades = {"good": 0, "warn": 1, "poor": 2}
     grade = sidecar.capture_quality.grade if grades[sidecar.capture_quality.grade] >= grades[scored.grade] else scored.grade
     return CaptureQuality(grade=grade, reasons=reasons)
@@ -440,8 +467,16 @@ def metric_calibration_from_sidecar_and_keypoints(
         }
         for keypoint in keypoints.keypoints
     }
+    undistorted_points, undistort_applied = undistort_pixels_for_intrinsics(
+        [image_keypoints[name]["uv"] for name in PICKLEBALL_COURT_KEYPOINT_NAMES],
+        sidecar.intrinsics,
+    )
+    floor_projection_keypoints = {
+        name: {**image_keypoints[name], "uv": undistorted_points[idx]}
+        for idx, name in enumerate(PICKLEBALL_COURT_KEYPOINT_NAMES)
+    }
     world_keypoints = {
-        name: back_project_pixel_to_floor(image_keypoints[name]["uv"], geometry)
+        name: back_project_pixel_to_floor(floor_projection_keypoints[name]["uv"], geometry)
         for name in PICKLEBALL_COURT_KEYPOINT_NAMES
     }
     placement = solve_metric_court_placement(world_keypoints)
@@ -462,7 +497,7 @@ def metric_calibration_from_sidecar_and_keypoints(
     plane_sigma_m = 0.012
     gsd_samples = []
     for name in placement.solved_keypoints:
-        uv = image_keypoints[name]["uv"]
+        uv = floor_projection_keypoints[name]["uv"]
         gsd = estimate_ground_sample_distance(uv, geometry)
         sigma = estimate_position_uncertainty(
             pixel_error_px=1.0,
@@ -498,7 +533,12 @@ def metric_calibration_from_sidecar_and_keypoints(
             "calibration_sigma_m": calibration_sigma_m,
             "samples": gsd_samples,
         },
-        capture_quality=_merge_capture_quality(sidecar, error, len(image_pts)).model_dump(mode="json"),
+        capture_quality=_merge_capture_quality(
+            sidecar,
+            error,
+            len(image_pts),
+            extra_reasons=("undistort_applied",) if undistort_applied else (),
+        ).model_dump(mode="json"),
         source="arkit_plane_keypoint_metric_solve_v1",
         solved_over_frames=keypoints.frame_indexes,
         sport=sport,
@@ -615,6 +655,10 @@ def _invert_homography(homography: Iterable[Iterable[float]]) -> list[list[float
     if math.isclose(determinant, 0.0, abs_tol=1e-12):
         raise ValueError("homography is singular")
     return [[value / determinant for value in row] for row in cofactor]
+
+
+def _dist_nonzero(dist: Sequence[float]) -> bool:
+    return any(not math.isclose(float(value), 0.0, abs_tol=1e-12) for value in dist)
 
 
 def _solve_linear_system(matrix: list[list[float]], rhs: list[float]) -> list[float]:

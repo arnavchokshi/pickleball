@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
+import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -78,6 +80,8 @@ def ingest_owner_capture(
     manifest_path: str | Path = DEFAULT_OWNER_DATA_MANIFEST,
     protected_video_shas: Mapping[str, str] | None = None,
     repo_root: str | Path = ".",
+    account_id: str | None = None,
+    profiles_root: str | Path = "runs/profiles",
 ) -> dict[str, Any]:
     """Register an owner capture package or bare video in the append-only manifest."""
 
@@ -91,6 +95,16 @@ def ingest_owner_capture(
         )
 
     sidecar = _load_json_optional(resolved["sidecar_path"])
+    if sidecar is not None and account_id is not None:
+        sidecar_with_profile_dist = inject_device_profile_distortion(
+            sidecar,
+            account_id=account_id,
+            profiles_root=profiles_root,
+        )
+        if sidecar_with_profile_dist != sidecar:
+            sidecar = sidecar_with_profile_dist
+            if resolved["sidecar_path"] is not None:
+                _write_json(resolved["sidecar_path"], sidecar)
     metadata = probe_video_metadata(resolved["video_path"])
     capture_id = _assign_capture_id(resolved, sidecar, video_sha)
     manifest_file = Path(manifest_path)
@@ -211,6 +225,46 @@ def validate_owner_data_manifest(payload: Mapping[str, Any]) -> None:
 def camera_fingerprint(metadata: OwnerCaptureVideoMetadata, sidecar: Mapping[str, Any] | None) -> str:
     intrinsics_hash = _intrinsics_hash(sidecar)
     return f"{metadata.width}x{metadata.height}@{metadata.fps:.3f}:{intrinsics_hash}"
+
+
+def inject_device_profile_distortion(
+    sidecar: Mapping[str, Any],
+    *,
+    account_id: str,
+    profiles_root: str | Path = "runs/profiles",
+) -> dict[str, Any]:
+    """Copy matched ChArUco lens/zoom distortion from a DeviceProfile into a sidecar."""
+
+    updated = copy.deepcopy(dict(sidecar))
+    intrinsics = updated.get("intrinsics")
+    if not isinstance(intrinsics, dict):
+        return updated
+
+    device_key = _sidecar_string(updated, ("device_key", "device_profile_key", "deviceKey", "deviceProfileKey"))
+    lens = _sidecar_string(updated, ("camera_lens", "lens", "cameraLens"))
+    zoom = _sidecar_float(updated, ("camera_zoom", "zoom", "zoom_factor", "zoomFactor"))
+    if device_key is None or lens is None or zoom is None:
+        return updated
+
+    try:
+        from .profile_registry import load_profile_registry
+
+        registry = load_profile_registry(account_id, profiles_root=profiles_root)
+    except (FileNotFoundError, ValueError):
+        return updated
+
+    lens_normalized = lens.strip().lower()
+    for profile in registry.device_profiles.values():
+        if profile.device_key != device_key:
+            continue
+        for entry in profile.intrinsics_by_lens_zoom:
+            if entry.lens.strip().lower() != lens_normalized:
+                continue
+            if not math.isclose(float(entry.zoom), zoom, rel_tol=1e-6, abs_tol=1e-6):
+                continue
+            intrinsics["dist"] = [float(value) for value in entry.intrinsics.dist]
+            return updated
+    return updated
 
 
 def prelabel_owner_capture(
@@ -410,6 +464,41 @@ def _intrinsics_hash(sidecar: Mapping[str, Any] | None) -> str:
     return hashlib.sha256(canonical).hexdigest()[:16]
 
 
+def _sidecar_string(sidecar: Mapping[str, Any], keys: Sequence[str]) -> str | None:
+    value = _sidecar_nested_value(sidecar, keys)
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _sidecar_float(sidecar: Mapping[str, Any], keys: Sequence[str]) -> float | None:
+    value = _sidecar_nested_value(sidecar, keys)
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(number):
+        return None
+    return number
+
+
+def _sidecar_nested_value(sidecar: Mapping[str, Any], keys: Sequence[str]) -> Any | None:
+    for key in keys:
+        if key in sidecar:
+            return sidecar[key]
+    for parent_key in ("metadata", "capture_metadata", "device", "camera"):
+        child = sidecar.get(parent_key)
+        if not isinstance(child, Mapping):
+            continue
+        for key in keys:
+            if key in child:
+                return child[key]
+    return None
+
+
 def _assign_capture_id(resolved: Mapping[str, Any], sidecar: Mapping[str, Any] | None, video_sha: str) -> str:
     if sidecar and isinstance(sidecar.get("capture_id"), str) and sidecar["capture_id"].strip():
         return _safe_id(sidecar["capture_id"])
@@ -495,6 +584,7 @@ __all__ = [
     "collect_protected_eval_video_shas",
     "enforce_candidate_prediction_status",
     "guard_protected_eval_reference",
+    "inject_device_profile_distortion",
     "ingest_owner_capture",
     "load_owner_data_manifest",
     "prelabel_owner_capture",

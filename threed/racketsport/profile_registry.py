@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
+import json
+import math
 from pathlib import Path
 from typing import Any, Literal, TypeAlias
 
@@ -15,6 +17,7 @@ from .schemas import CameraIntrinsics, FiniteFloat
 UTC = timezone.utc
 DEFAULT_PROFILE_ROOT = Path("runs/profiles")
 CURRENT_REGISTRY_FILENAME = "profile_registry.json"
+COURT_PROFILE_COLOR_DELTA_E_THRESHOLD = 10.0
 
 
 class ProfileRegistryError(ValueError):
@@ -213,6 +216,14 @@ Profile: TypeAlias = CourtProfile | DeviceProfile | PlayerProfile | GearProfile 
 ProfileType: TypeAlias = Literal["court", "device", "player", "gear", "session_cache"]
 
 
+@dataclass(frozen=True)
+class CourtProfileMatch:
+    profile: CourtProfile
+    match_confidence: float
+    color_delta_e2000: float | None
+    gps_distance_m: float | None
+
+
 class ProfileRegistryDocument(BaseModel):
     model_config = ConfigDict(extra="forbid", title="Racket-sport profile registry")
 
@@ -350,25 +361,153 @@ def lookup_court_profile(
     account_id: str,
     *,
     camera_fingerprint: str,
+    line_color_lab: LabColor | dict[str, Any] | None = None,
     gps_hint: GpsHint | dict[str, Any] | None = None,
     wifi_hint: WifiHint | dict[str, Any] | None = None,
     profiles_root: str | Path = DEFAULT_PROFILE_ROOT,
 ) -> CourtProfile | None:
+    """Return the best matching court profile while preserving the legacy return shape."""
+
+    profile, _confidence = match_court_profile(
+        account_id,
+        camera_fingerprint=camera_fingerprint,
+        line_color_lab=line_color_lab,
+        gps_hint=gps_hint,
+        wifi_hint=wifi_hint,
+        profiles_root=profiles_root,
+    )
+    return profile
+
+
+def match_court_profile(
+    account_id: str,
+    *,
+    camera_fingerprint: str,
+    line_color_lab: LabColor | dict[str, Any] | None = None,
+    gps_hint: GpsHint | dict[str, Any] | None = None,
+    wifi_hint: WifiHint | dict[str, Any] | None = None,
+    profiles_root: str | Path = DEFAULT_PROFILE_ROOT,
+) -> tuple[CourtProfile | None, float]:
+    """Return the top ranked court profile and advisory match confidence."""
+
+    matches = rank_court_profile_matches(
+        account_id,
+        camera_fingerprint=camera_fingerprint,
+        line_color_lab=line_color_lab,
+        gps_hint=gps_hint,
+        wifi_hint=wifi_hint,
+        profiles_root=profiles_root,
+    )
+    if not matches:
+        return None, 0.0
+    best = matches[0]
+    return best.profile, best.match_confidence
+
+
+def rank_court_profile_matches(
+    account_id: str,
+    *,
+    camera_fingerprint: str,
+    line_color_lab: LabColor | dict[str, Any] | None = None,
+    gps_hint: GpsHint | dict[str, Any] | None = None,
+    wifi_hint: WifiHint | dict[str, Any] | None = None,
+    profiles_root: str | Path = DEFAULT_PROFILE_ROOT,
+) -> list[CourtProfileMatch]:
+    """Rank candidate court profiles by exact camera fingerprint, line color, and optional location."""
+
     path = _registry_path(_safe_id(account_id, label="account_id"), profiles_root)
     if not path.exists():
-        return None
+        return []
     registry = load_profile_registry(account_id, profiles_root=profiles_root)
+    expected_color = LabColor.model_validate(line_color_lab) if line_color_lab is not None else None
     expected_gps = GpsHint.model_validate(gps_hint) if gps_hint is not None else None
     expected_wifi = WifiHint.model_validate(wifi_hint) if wifi_hint is not None else None
+    matches: list[CourtProfileMatch] = []
     for profile in registry.court_profiles.values():
         if profile.camera_fingerprint != camera_fingerprint:
             continue
-        if expected_gps is not None and profile.gps_hint != expected_gps:
-            continue
         if expected_wifi is not None and profile.wifi_hint != expected_wifi:
             continue
-        return profile
-    return None
+        gps_distance_m: float | None = None
+        if expected_gps is not None:
+            if profile.gps_hint is None:
+                continue
+            gps_distance_m = _gps_distance_m(expected_gps, profile.gps_hint)
+            if gps_distance_m > float(expected_gps.radius_m) + float(profile.gps_hint.radius_m):
+                continue
+        color_delta: float | None = None
+        if expected_color is not None:
+            color_delta = delta_e2000(profile.line_paint_color_lab, expected_color)
+            if color_delta > COURT_PROFILE_COLOR_DELTA_E_THRESHOLD:
+                continue
+            match_confidence = max(0.0, 1.0 - color_delta / COURT_PROFILE_COLOR_DELTA_E_THRESHOLD)
+        else:
+            match_confidence = 1.0
+        matches.append(
+            CourtProfileMatch(
+                profile=profile,
+                match_confidence=match_confidence,
+                color_delta_e2000=color_delta,
+                gps_distance_m=gps_distance_m,
+            )
+        )
+    return sorted(
+        matches,
+        key=lambda item: (
+            item.color_delta_e2000 if item.color_delta_e2000 is not None else 0.0,
+            item.gps_distance_m if item.gps_distance_m is not None else 0.0,
+            item.profile.profile_id,
+        ),
+    )
+
+
+def delta_e2000(first: LabColor | dict[str, Any], second: LabColor | dict[str, Any]) -> float:
+    """Return CIEDE2000 color difference for two CIELAB colors."""
+
+    lab1 = LabColor.model_validate(first)
+    lab2 = LabColor.model_validate(second)
+    l1, a1, b1 = float(lab1.l), float(lab1.a), float(lab1.b)
+    l2, a2, b2 = float(lab2.l), float(lab2.a), float(lab2.b)
+
+    c1 = math.hypot(a1, b1)
+    c2 = math.hypot(a2, b2)
+    c_bar = (c1 + c2) / 2.0
+    c_bar7 = c_bar**7
+    g = 0.5 * (1.0 - math.sqrt(c_bar7 / (c_bar7 + 25.0**7))) if c_bar > 0.0 else 0.0
+    a1_prime = (1.0 + g) * a1
+    a2_prime = (1.0 + g) * a2
+    c1_prime = math.hypot(a1_prime, b1)
+    c2_prime = math.hypot(a2_prime, b2)
+    h1_prime = _lab_hue_degrees(a1_prime, b1) if c1_prime > 0.0 else 0.0
+    h2_prime = _lab_hue_degrees(a2_prime, b2) if c2_prime > 0.0 else 0.0
+
+    delta_l_prime = l2 - l1
+    delta_c_prime = c2_prime - c1_prime
+    delta_h_prime = _delta_h_prime(h1_prime, h2_prime, c1_prime, c2_prime)
+    delta_h_big_prime = 2.0 * math.sqrt(c1_prime * c2_prime) * math.sin(math.radians(delta_h_prime / 2.0))
+
+    l_bar_prime = (l1 + l2) / 2.0
+    c_bar_prime = (c1_prime + c2_prime) / 2.0
+    h_bar_prime = _mean_h_prime(h1_prime, h2_prime, c1_prime, c2_prime)
+    t = (
+        1.0
+        - 0.17 * math.cos(math.radians(h_bar_prime - 30.0))
+        + 0.24 * math.cos(math.radians(2.0 * h_bar_prime))
+        + 0.32 * math.cos(math.radians(3.0 * h_bar_prime + 6.0))
+        - 0.20 * math.cos(math.radians(4.0 * h_bar_prime - 63.0))
+    )
+    delta_theta = 30.0 * math.exp(-(((h_bar_prime - 275.0) / 25.0) ** 2))
+    c_bar_prime7 = c_bar_prime**7
+    r_c = 2.0 * math.sqrt(c_bar_prime7 / (c_bar_prime7 + 25.0**7)) if c_bar_prime > 0.0 else 0.0
+    s_l = 1.0 + (0.015 * ((l_bar_prime - 50.0) ** 2)) / math.sqrt(20.0 + ((l_bar_prime - 50.0) ** 2))
+    s_c = 1.0 + 0.045 * c_bar_prime
+    s_h = 1.0 + 0.015 * c_bar_prime * t
+    r_t = -math.sin(math.radians(2.0 * delta_theta)) * r_c
+
+    l_term = delta_l_prime / s_l
+    c_term = delta_c_prime / s_c
+    h_term = delta_h_big_prime / s_h
+    return math.sqrt(l_term * l_term + c_term * c_term + h_term * h_term + r_t * c_term * h_term)
 
 
 def fingerprint_capture(metadata: OwnerCaptureVideoMetadata, sidecar: dict[str, Any] | None) -> str:
@@ -446,10 +585,50 @@ def _utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _lab_hue_degrees(a_value: float, b_value: float) -> float:
+    return math.degrees(math.atan2(b_value, a_value)) % 360.0
+
+
+def _delta_h_prime(h1_prime: float, h2_prime: float, c1_prime: float, c2_prime: float) -> float:
+    if c1_prime * c2_prime == 0.0:
+        return 0.0
+    diff = h2_prime - h1_prime
+    if abs(diff) <= 180.0:
+        return diff
+    if diff > 180.0:
+        return diff - 360.0
+    return diff + 360.0
+
+
+def _mean_h_prime(h1_prime: float, h2_prime: float, c1_prime: float, c2_prime: float) -> float:
+    if c1_prime * c2_prime == 0.0:
+        return h1_prime + h2_prime
+    diff = abs(h1_prime - h2_prime)
+    if diff <= 180.0:
+        return (h1_prime + h2_prime) / 2.0
+    if h1_prime + h2_prime < 360.0:
+        return (h1_prime + h2_prime + 360.0) / 2.0
+    return (h1_prime + h2_prime - 360.0) / 2.0
+
+
+def _gps_distance_m(first: GpsHint, second: GpsHint) -> float:
+    lat1 = math.radians(float(first.latitude))
+    lat2 = math.radians(float(second.latitude))
+    delta_lat = lat2 - lat1
+    delta_lon = math.radians(float(second.longitude) - float(first.longitude))
+    haversine = (
+        math.sin(delta_lat / 2.0) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon / 2.0) ** 2
+    )
+    return 6_371_000.0 * 2.0 * math.atan2(math.sqrt(haversine), math.sqrt(max(0.0, 1.0 - haversine)))
+
+
 __all__ = [
     "CURRENT_REGISTRY_FILENAME",
+    "COURT_PROFILE_COLOR_DELTA_E_THRESHOLD",
     "DEFAULT_PROFILE_ROOT",
     "CourtProfile",
+    "CourtProfileMatch",
     "DeviceProfile",
     "GearProfile",
     "GpsHint",
@@ -468,11 +647,14 @@ __all__ = [
     "SourceTrace",
     "WifiHint",
     "create_profile_registry",
+    "delta_e2000",
     "fingerprint_capture",
     "list_accounts",
     "list_profiles",
     "load_profile_registry",
     "lookup_court_profile",
+    "match_court_profile",
     "profile_registry_json_schema",
+    "rank_court_profile_matches",
     "update_profile",
 ]
