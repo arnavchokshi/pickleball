@@ -1,0 +1,82 @@
+{
+  "objective_result": "PASS",
+  "acceptance": [
+    {
+      "metric": "ChArUco optional dependency guard",
+      "baseline": "test used pytest.importorskip(\"cv2.aruco\") only, which does not skip when cv2.aruco exists without detectMarkers",
+      "after": "test checks hasattr(aruco, \"detectMarkers\") in the pytest process and skips before synthetic video generation or CLI subprocess",
+      "target": "skip environments without cv2.aruco.detectMarkers; behavior unchanged when opencv-contrib is installed",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Focused test file on this Mac environment",
+      "baseline": "pre-fix focused run failed with subprocess.CalledProcessError after cv2.aruco import succeeded but detectMarkers was missing",
+      "after": "1 skipped with reason: cv2.aruco (opencv-contrib) not available",
+      "target": "target test skipped cleanly with clear reason; no subprocess spawned on missing dependency",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Grep-proof optional dependency pattern",
+      "baseline": "pytest.importorskip(\"cv2.aruco\") present without capability check",
+      "after": "pytest.importorskip(\"cv2.aruco\"), detectMarkers, and opencv-contrib skip reason present in tests/racketsport/test_calibrate_charuco_device.py",
+      "target": "house optional-dep skip pattern remains visible to grep",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Scaffold/dead-code/storage guardrails",
+      "baseline": "not run in resumed process",
+      "after": "list_scaffold_tools exit 0; audit_dead_code exit 0; audit_storage_policy exit 0 with status pass",
+      "target": "run focused file plus scaffold/doc guardrails",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "File ownership",
+      "baseline": "dirty worktree had unrelated concurrent changes before this micro-lane",
+      "after": "only tests/racketsport/test_calibrate_charuco_device.py changed by code edit; report written under runs/lanes/w6_charucoskip_20260708/report.json",
+      "target": "do not touch calibrate_charuco_device.py or other calv1 files",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "tests/racketsport/test_calibrate_charuco_device.py:17 keeps pytest.importorskip(\"cv2.aruco\") and adds a detectMarkers availability check with skip reason cv2.aruco (opencv-contrib) not available before generating videos or spawning the CLI.",
+    "runs/lanes/w6_charucoskip_20260708/report.json:1 records this lane report artifact."
+  ],
+  "full_suite": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_calibrate_charuco_device.py -q -rs",
+    "passed": 0,
+    "failed": 0,
+    "skipped": 1,
+    "failures_all_preexisting": false,
+    "failure_notes": null
+  },
+  "guardrails": [
+    {
+      "command": "rg -n 'pytest\\.importorskip\\(\\\"cv2\\.aruco\\\"\\)|detectMarkers|opencv-contrib' tests/racketsport/test_calibrate_charuco_device.py",
+      "exit_code": 0,
+      "result": "lines 17-19 show importorskip, detectMarkers check, and opencv-contrib skip reason"
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python scripts/racketsport/list_scaffold_tools.py --root .",
+      "exit_code": 0,
+      "result": "summary reported missing_direct_cli_reference_tests=0, missing_related_tests=0, tool_count=276"
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python scripts/racketsport/audit_dead_code.py --root .",
+      "exit_code": 0,
+      "result": "status: pass; python_sources: 543; unknown_python_sources: 0"
+    },
+    {
+      "command": "rm -rf generated cache dirs && python3 -B scripts/racketsport/audit_storage_policy.py --root . --json",
+      "exit_code": 0,
+      "result": "status: pass; generated_artifacts=[]; unknown_large_tracked_files=[]; unknown_large_untracked_source_files=[]"
+    }
+  ],
+  "honest_issues": [
+    "This environment has cv2 5.0.0 with cv2.aruco present but detectMarkers absent, so the real calibration CLI semantics were not exercised here; the test correctly skips before subprocess on this host.",
+    "Earlier storage-audit attempts failed because pytest/guardrails had generated __pycache__/.pytest_cache artifacts; I removed only generated cache dirs and reran storage with python3 -B to get the final pass.",
+    "The worktree still contains unrelated dirty files from concurrent lanes; I did not modify them."
+  ],
+  "proposed_bullet_text": "[W6 CHARUCOSKIP 2026-07-08, Codex PASS] Cross-lane courtesy repair for CALV1 ChArUco test: tests/racketsport/test_calibrate_charuco_device.py now keeps the house pytest.importorskip(\"cv2.aruco\") pattern and additionally skips before synthetic video generation/subprocess when cv2.aruco.detectMarkers is missing, with reason cv2.aruco (opencv-contrib) not available. On this Mac .venv the focused file is green as 1 skipped; scaffold/dead-code/storage guardrails pass. Note to CALV1 session: CLI/calibration semantics are unchanged when opencv-contrib is installed; this only prevents non-contrib OpenCV envs from leaving main red.",
+  "next": "CALV1 session can continue from fcf47ec90 with the optional-dependency skip guard in place; rerun the real ChArUco calibration test in an opencv-contrib environment to exercise CLI semantics.",
+  "session_id": null
+}

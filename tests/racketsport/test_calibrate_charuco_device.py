@@ -14,7 +14,9 @@ from threed.racketsport.profile_registry import load_profile_registry
 
 
 def test_calibrate_charuco_device_recovers_synthetic_barrel_distortion_and_persists_profile(tmp_path: Path) -> None:
-    pytest.importorskip("cv2.aruco")
+    aruco = pytest.importorskip("cv2.aruco")
+    if not hasattr(aruco, "detectMarkers"):
+        pytest.skip("cv2.aruco (opencv-contrib) not available")
     videos, expected_dist = _write_synthetic_charuco_videos(tmp_path)
     profiles_root = tmp_path / "profiles"
 
