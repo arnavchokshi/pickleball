@@ -39,6 +39,13 @@ WAVE-5 FLEET LOG (2026-07-07, manager):
   scoring + LoSO; self-DELETE + cost report). Budget: probe-gated, est 2-5h x $0.6-4.3/hr ~ $2-22
   (+50% contingency); idle watchdog required. 2 of 4 concurrent GPUs (w5p22 is the other).
 
+- pickleball-h100-w5fastbody (H100 a3 spot, ase1-b; std fallback ladder) — PROVISIONING DELEGATED
+  to Sonnet lane w5_fastbody_bench_20260708 (OWNER-APPROVED HARD $15 cap, self-stop ~$13 est;
+  boots from the NEW ffmpeg template; Fast-SAM-3D-Body speed+MPJPE bench vs our stack, kill=any
+  accuracy regression; self-DELETE + cost report). 2 concurrent GPUs (w5ball is the other).
+- TEMPLATE POLICY 2026-07-08: `pickleball-fleet-snap-20260708-ffmpeg` (READY, 200GB, ffmpeg 4.4.2,
+  clean committed HEAD) SUPERSEDES pickleball-fleet1-snap-20260707 as the default boot template.
+
 WAVE-4 FINAL FLEET ACCOUNTING (2026-07-08 close): ALL wave-4 VMs DELETED, list-confirmed by
 manager + each lane. (1) pickleball-h100-w4body: 58m01s, $0.55-4.11 (BODY-validated 2.37×).
 (2) pickleball-h100-w4ballgpu: created 17:43:49Z deleted 23:38:18Z, 5.90h, $3.4-25 honest span
