@@ -250,6 +250,8 @@ the coaching product.
    court colors and stick to it (H5); 30-60s empty-court clip per court (H6); ball-drop +
    known-speed drill for physics constants (H13); paddle photo orbit + 4-corner-marker clips (H7).
 7. Monthly 10-min slow-mo (1080p240) drill session — precision contact/spin GT (H25).
+8. **[DEEP-REVIEW 2026-07-07 — deferred by owner, do when convenient] Two 5-minute phone checks**, each retiring or green-lighting a real engineering bet: (a) iPhone-Pro LiDAR depth range at real filming distance (10-15m, indoor AND direct sun) — does it return usable depth on the FAR court? (gates P4-7); (b) record 30s in-app, then confirm the capture sidecar carries `arkit_camera_pose`, not just `coremotion_only` gravity (gates P0-10 ARKit consumption + PF-2/P4-6, which assume per-frame ARKit poses exist).
+9. **[DEEP-REVIEW 2026-07-07, revised per owner 2026-07-07] Independent BODY ground-truth — court-placement first (P2-6).** Primary (cheap, no extra gear, folds into a normal capture): stand with a foot ON known court marks (a corner, the kitchen line, the centerline T) at a few NEAR and FAR spots, calling out each — that gives world-placement GT tied to the real court, which is what we actually validate (foot-slide/root-jump/placement). OpenCap (2-iPhone joint-angle GT) is now an OPTIONAL secondary check only — court placement, not limb pose, is our binding concern.
 
 *Owner ETA (2026-07-06): items 1-6 in "a few days" — no lane blocks on them meanwhile (harvest +
 eval clips carry the interim); the moment they land, P4-4/P4-0/H13/P3-7 unlock.*
@@ -865,6 +867,17 @@ in/out with gray zone.
   Gate (INTERIM MILESTONE, not the full BALL M1): beat 0.7248 F1@20 held-out, recall ≥ 0.70, hidden-FP
   ≤ 0.05. P1-3 closes the rest to the true BALL M1 in I.2 (F1≥0.90/recall≥0.75). Loader trap: blurball↔WASB strict-incompatible
   (36 SE keys) — always key-diff checkpoints (`strict=False` silently amputates).
+  **[DEEP-REVIEW 2026-07-07 — validation + labeling deltas]:** the 4-inversions rule now has a CAUSE
+  and a fix. The inversions are the textbook signature of a mixed-source/random internal-val split under
+  domain shift (CORROBORATED vs ETH-Zürich badminton arXiv 2603.06691: random-split F1 0.864 →
+  leave-one-location-out 0.703, recall collapse while precision holds; medical-imaging LoCoCV precedent).
+  So score EVERY fine-tune through the leave-one-source-out harness (P1-9) before any promotion
+  candidacy — it is a MEASURED better-calibrated held-out estimator (F1 abs-err 0.058 vs 0.074 pooled),
+  but it only catches a domain shift it has a LABELED fold for, so pair it with labeling ≥1
+  outdoor/webcam-diverse source (see P1-9 landed note). Two free wins for the retrain: fold
+  **BlurBall** blur-center labeling (label the ball at the blur-streak CENTER, not the leading edge;
+  arXiv 2509.18387, model-agnostic, doesn't touch WASB-HRNet) and treat <20px small-ball size as a
+  primary recall failure mode to check.
 - [ ] **P1-2 SST semi-supervised bootstrap.** *(STATUS 2026-07-07: build gap CLOSED for wave-4 stage-2/SST
   plumbing — sparse reviewed-only owner labels are represented as 486 reviewed rows = 268 positive +
   218 reviewed-absent; occlusion augmentation is paired with WBCE; SST manifest + disagreement CLIs
@@ -959,6 +972,28 @@ in/out with gray zone.
   framing (raises simulated return rate 49.9→59.0%). Data: owner captures + our own 3D reconstruction
   as self-labels (LATTE-MV pattern). Gate: forecast ADE beats a constant-velocity baseline on
   held-out rallies; recall-bridge additions never counted as measured (trust-band honest).
+- [ ] **P1-9 [DEEP-REVIEW 2026-07-07] Leave-one-source-out validation (the anti-inversion gate).**
+  Our internal-val has inverted vs held-out 5× because it mixes capture sources in a random/frame split
+  (distribution-shift-blind). Build a leave-one-source-out (LoSO / leave-one-court-or-session-out)
+  validation that holds out an ENTIRE capture context at a time and reports per-source
+  F1@20/recall/precision/hidden-FP + a generalization gap (mixed-split minus LoSO-mean). This becomes the
+  promotion-predictive internal-val: no ball candidate takes the W5-A held-out shot or promotes until it
+  clears LoSO, so we stop selecting candidates that invert. No GPU (scores existing predictions in
+  OFFICIAL preprocessing mode). Evidence: ETH-Zürich badminton arXiv 2603.06691 (random 0.864 → LoSO
+  0.703); medical-imaging LoCoCV. Lane in flight: `ball_loso_validation_20260707`. Gate: the LoSO harness
+  runs on the corpus, produces per-source folds, and its ranking would have PREDICTED the known Outdoor
+  inversion. **Sequencing: lands BEFORE W5-A scores the wave-5 preprocessing-aligned retrain (VI.3).**
+  *(LANDED 2026-07-07, Sonnet lane `ball_loso_validation_20260707`, wide suite 3113/0 — HONEST PARTIAL:
+  the harness works and LoSO-mean is a strictly better-calibrated held-out estimator than the pooled/mixed
+  metric (F1 abs-err 0.058 vs 0.074; correct winner on precision + hidden-FP). BUT with the only 2 legal
+  LABELED folds today — Burlington + Wolverine, BOTH INDOOR — it does NOT flip the F1 ranking to predict
+  the chain→wasb-tennis Outdoor inversion, because the chain genuinely wins both indoor folds and the
+  inversion is a pure INDOOR→OUTDOOR jump two similar indoor folds cannot span. So P1-9 is
+  NECESSARY-not-SUFFICIENT: catching the specific inversion requires a REVIEWED outdoor/webcam-diverse
+  internal-val fold (the `data/online_harvest_20260706/` corpus is pseudo-labeled `not_ground_truth`
+  only). The harness scales to N folds with zero code change → this COMPOSES with P0-4/P0-5 owner labeling
+  of diverse (esp. outdoor) footage, which stays the real unlock, not the harness alone. Use LoSO-mean for
+  wave-5 retrain scoring regardless. Artifacts: `runs/lanes/ball_loso_validation_20260707/`.)*
 
 ## PHASE 2 — Bodies: kill the noise at the source
 
@@ -1048,6 +1083,17 @@ GT + world-MPJPE gate, challenger benchmark.
   deliverable) (training-time-only rig is allowed;
   product stays single-cam) for triangulated joint GT on ≥ 20 samples. Gate: world-MPJPE ≤ 0.05m
   threshold pass per `pickleball-manager-setup` gate; per-player far/near breakdown reported.
+  **[DEEP-REVIEW 2026-07-07, revised per owner 2026-07-07]:** for US the PRIMARY independent GT is
+  option (a) — the surveyed-court-landmark protocol — NOT OpenCap. Our binding, unvalidated concern is
+  COURT PLACEMENT (foot-slide, root-jump, and the 12/20 PnP-vs-homography cross-check are all
+  world-placement/calibration, not local limb pose), and OpenCap measures LOCAL joint kinematics in its
+  own small checkerboard-calibrated volume — it does NOT give the court-relative global placement we
+  actually place players by. So: owner stands with a foot ON known court marks (corner, kitchen line,
+  centerline T) at a few NEAR and FAR positions at called-out frames → world-position ankle GT tied to
+  the real court, no extra hardware. OpenCap (Stanford, 2 iPhones, no LiDAR, ~4.5° joint-angle MAE) is a
+  DE-PRIORITIZED optional SECONDARY check on limb/joint-angle accuracy (which skeleton-vs-mesh already
+  suggests is ~fine); the `opencap_body_gt_20260707` compare harness is reusable for the court-landmark GT
+  too (generic joint-position error math). Raw ARKit body-skeleton is NOT a GT source (~18.8° MAE).
 - [x] **P2-7a GVHMR gravity-view spike — DONE 2026-07-06, PREMISE CORRECTED** (8/8 runs, 2 clips ×
   4 players, ~$1.30: (1) `get_R_c2gv` external pose+gravity is TRAINING-dataloader-only — shipped
   inference collapses to identity; injected-true-gravity ~= GVHMR-own on tripod ⇒ external-gravity
@@ -1243,6 +1289,16 @@ physics-gated SST teacher remains DEFERRED because fewer than two sources reache
   3D occluder consumed by ball 3D (P1-4) + placement (Phase F). Gate: net top-cord height error ≤ 2cm
   vs. tape-measured GT at posts+center on an owner clip; net occlusion improves ball-track continuity
   across the net. Owner GT: tape-measure net heights once per court (into the H0 court profile).
+- [ ] **P4-7 [DEEP-REVIEW 2026-07-07, SPIKE — GATED on the owner LiDAR range test (I.5 #8a)] Near-field
+  LiDAR metric court/net scan.** The depth "moat" was DEFLATED by the audit: iPhone LiDAR reaches only
+  ~5m (≤1.5m in direct sun) while a pickleball court is 13.4m filmed from 10-15m, and the stock Camera
+  app captures ZERO depth — so full-court/full-rally depth is NOT viable and is NOT a moat. The ONE
+  defensible use: a short setup-time scan where the operator walks the phone within ~3-5m of the court
+  lines/net/kitchen (shaded/indoor) to hand-fit METRIC court+net geometry directly, attacking the P4
+  auto-find failure (PCK@5 0.017) and P4-6's net GT from a different angle. Pair with a **PoseGravity**-
+  style ARKit-gravity constraint fed into the existing `least_squares` court solver (cheap, additive,
+  non-replacing). PRECONDITION: the owner's 5-min LiDAR range test (I.5 #8a) must show a usable near-field
+  zone — if it doesn't, this task is KILLED, not built. Never a full-court depth dependency.
 
 ## PHASE F — GLOBAL FUSION: one mutually-consistent metric 3D world (the combine-everything pillar)
 
@@ -1407,6 +1463,14 @@ per-court cache, cost metering, pre-flight QA, and the P5-7 BODY redesign.
   queue). Other candidates: frame-plan sparsification beyond ball_aware. Gate: BODY wall ≤ video duration on a
   full owner game, gates green. Kill: if two candidates fail to beat the booked floor ≥2×, accept ≤2×
   as the product SLA and close the stretch.
+  **[DEEP-REVIEW 2026-07-07 — a concrete order-of-magnitude candidate, SPIKE, GPU-HELD]:**
+  **Fast-SAM-3D-Body** (arXiv 2603.15603, MIT, code public) targets our EXACT SAM-3D-Body+MHR family with
+  a claimed 8.3-10.9× speedup — the only surveyed lever that could plausibly reach ≤1×. The speed numbers
+  are CORROBORATED (its own table, 0.8→6.6 FPS); but its "same-stack" and "accuracy-preserved" claims were
+  REFUTED on inspection (it substitutes a distilled feedforward mesh-fit; accuracy is mixed by
+  metric/dataset). So bench it OURSELVES on our labeled pickleball clips for BOTH wall-clock AND
+  accuracy-through-our-gates; kill = any internal-val accuracy regression vs the current checkpoint. Do
+  NOT adopt on the paper's numbers. GPU-HELD pending owner spend go (2026-07-07).
 - [ ] **P5-8 Per-court warm caches + cascade inference (EDGE H17).** Cache per-court/per-session
   immutables (H1 profile, H6 background, H4 ReID galleries, TensorRT engines) so a clip's marginal
   work is only its rallies; tiny detector every frame, full ensemble only on uncertainty/rally
@@ -1434,12 +1498,32 @@ the grounded-LLM coach, direct visual feedback overlays, session reports.
   view already landed in the ball-render lane `ball_p4_render_fix_20260706` — extend), shot-speed (needs P1-4; report bands, never
   single-number over-precision — pb.vision's 60-vs-27mph blunder is the cautionary tale). Gate:
   every stat has a trust band + a "how we measured" popover; rally-metrics facts JSON feeds it.
+  **[DEEP-REVIEW 2026-07-07]:** ship the BODY+COURT-only rows FIRST (kitchen-arrival time,
+  court-coverage/positioning, recovery latency, split-step timing, stance width; body-only stroke
+  kinematics: shoulder/torso rotation, elbow-angle displacement). These need ONLY signals already passing
+  our body+court gates — no ball, no paddle — so this stat layer can land WITHOUT waiting on the ball
+  critical path, and it has real (thin) academic precedent (Edriss 2025 dink kinematics; Cobar 2025).
+  Ball/paddle-dependent stats (shot-speed, third-shot success, unforced-error attribution) come after
+  P1/P3 clear bar. This is the fastest honest path toward the M4 "it coaches me" milestone.
 - [ ] **P6-3 Pickleball reference-range library (the moat).** Per skill band (3.0/3.5/4.0/4.5+):
   third-shot-drop success and apex/landing bands, serve depth distribution, kitchen-arrival timing,
   ready-position paddle height, contact-point-vs-body position, dink apex over net. Sources: trade
   benchmarks as seeds (drill 50%@3.0 → 85-90%@4.0), owner/coach review, then OUR OWN accumulated
   user data. Stored as versioned JSON contracts (`docs/racketsport/` schema). Gate: coach sign-off
   on v1 ranges; every range carries provenance.
+  **[DEEP-REVIEW 2026-07-07 — reference-range CORRECTION, supersedes the "trade benchmarks as seeds
+  (drill 50%@3.0 → 85-90%@4.0)" line above]:** an adversarially-verified pass (35 agents) found NO usable
+  external pickleball reference library exists — DUPR is a match-outcome Elo; USA Pickleball's matrix is
+  qualitative prose with zero numbers; and that specific 50%→85-90% ladder is ONE coach's self-described
+  non-research estimate (The Dink), not a consensus benchmark. HARD-BAN from seeding comparator bands: the
+  9%/46.6% unforced-error split, the 34%/>50% drive-rate, and the 8-12-dinks/90%-drop numbers
+  (unverifiable / likely AI-fabricated); the 50→85-90% ladder may be used ONLY as an explicitly-labeled
+  UNVALIDATED prior, never ground truth. Build the library from OUR OWN harvest corpus + owner
+  longitudinal self-baseline (self-relative framing: "your dink depth is up 12% vs your last 5 games"),
+  pre-registered per the `heldout_eval_ledger` discipline before any range becomes a comparator input.
+  Adopt USA Pickleball's 7-category taxonomy (Forehand/Backhand/Serve-Return/Dink/3rd-Shot/Volley/Strategy)
+  as the card's labeling SKELETON only (qualitative ordering, never numbers). Watch-item (not a lane):
+  PPA/MLP's PlayReplay (2026) may eventually publish pro-tour per-shot data. Evidence: thrust-B2 report.
 - [ ] **P6-4 Grounded coaching engine (3-stage, causally-validated architecture).** (1) feature
   extractor over our 3D world (kinematics, positions, events — deterministic, tested); (2) rule
   comparator vs P6-3 ranges → structured findings with severity + evidence pointers (frame ranges,
@@ -1830,7 +1914,9 @@ WAITS; small-single-session fine-tunes are kill-listed). P0-5 held-out clips w/ 
 - **W5-A P1-1 stage-2 owner fine-tune + PRE-REGISTERED held-out shot** (the M3 gate: beat 0.7248
   F1@20, recall ≥ 0.70, hidden-FP ≤ 0.05 — interim bar, then P1-3 composes toward the true M1). On
   a MISS: that is the 5th internal→held-out inversion — automatic `needs-validation` STOP + analyze;
-  never re-tune past it.
+  never re-tune past it. **[DEEP-REVIEW 2026-07-07 PREREQ]:** the candidate for this shot MUST be
+  selected through the leave-one-source-out internal-val (P1-9) in OFFICIAL preprocessing mode — a
+  mixed/random-split winner does not qualify (that split is what produced the prior inversions).
 - **W5-B P1-6 contact events v0:** audio-onset + track-kink + wrist-cue fusion, trained/validated on
   owner captures with audio; IMG_1605's 30 onsets = first testbed. Gate: timing ≤40ms p90 internal.
 - **W5-C P4-0 court profiles + P0-9 wiring** (owner's 15-minute profile captures: ChArUco sweep,
@@ -1937,6 +2023,34 @@ says otherwise.
 scorecard bullet gains a one-line "PLAN DELTAS:" suffix (or "PLAN DELTAS: none") so the owner sees
 every tweak without reading diffs.
 
+
+## VI.9 DEEP-REVIEW PLAN DELTAS (2026-07-07 — owner-requested mid-stream review; forward-only, no wave ≤4 change)
+
+An owner-requested super-deep review of waves 0-4 (4 adversarially-verified research thrusts, ~180 Sonnet
+agents, 2-vote refute on every load-bearing claim; reports in the workflow transcript dirs + the
+`[DEEP REVIEW ...]` BUILD_CHECKLIST bullets) produced these wave-5+ deltas — all tagged
+`[DEEP-REVIEW 2026-07-07]` in place, none touching a wave ≤4 commitment:
+- **P1-9** (NEW, LANDED 2026-07-07) — leave-one-source-out validation: a MEASURED better-calibrated
+  held-out estimator, but NECESSARY-not-SUFFICIENT — with only 2 indoor labeled folds it can't catch the
+  indoor→outdoor inversion; needs a REVIEWED outdoor-diverse fold (COMPOSES with owner labeling, which
+  stays the real unlock). **P1-1** — BlurBall blur-center labeling + <20px recall failure mode.
+- **P2-6** — independent body-GT = the surveyed-court-landmark protocol FIRST (validates court PLACEMENT,
+  our binding concern); OpenCap (2-iPhone joint-angle GT) demoted to an optional secondary check per owner
+  2026-07-07 (it doesn't measure court-relative placement).
+- **P5-7** — Fast-SAM-3D-Body = a concrete ≤1× BODY candidate (SPIKE, GPU-held; speed real, accuracy must
+  be re-benched on our data).
+- **P4-7** (NEW) — near-field LiDAR court/net scan (SPIKE, GATED on the owner LiDAR range test); the depth
+  "moat" is otherwise DEFLATED (LiDAR range < filming distance; stock camera captures no depth).
+- **P6-2 / P6-3** — ship BODY+COURT-only coaching rows first (decoupled from the below-bar ball); NO
+  external reference library exists — build from our own data + self-relative framing; hard-ban the
+  fabricated web benchmarks.
+- **I.5 #8-9** — two deferred 5-minute owner phone tests (LiDAR range; ARKit sidecar pose) + a 2nd iPhone
+  for OpenCap.
+Standing "keep" verdicts unchanged (WASB + physics selection, SAM-3D-Body+MHR, court profiles-first,
+offline L0-L3 tiers, grounded-LLM coaching, scipy solver). Owner ruled the 3D "wow" world stays the
+product HOOK (trust-UX = secondary reliability that protects the wow, not a repositioning). Integrity
+fixes (in `runs/research_liveondevice_20260707/`): L2 skip-BODY turnaround corrected to <1 min; the Apple
+"bent over" citation flagged DISPUTED. PLAN DELTAS captured.
 
 *Maintained by the manager session. Update checkboxes + add dated notes as lanes land; never let this
 document claim more than the linked evidence shows.*
