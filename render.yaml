@@ -23,14 +23,21 @@ services:
         value: "7200"
       - key: PICKLEBALL_GPU_SSH_HOST
         sync: false
-      - key: PICKLEBALL_GPU_WORKER_URL
-        sync: false
-      - key: PICKLEBALL_GPU_WORKER_TOKEN
-        sync: false
       # Product infra (INFRA-1): accounts land DARK — flip to "1" only after
       # Atlas/S3 provisioning + secrets are set in the Render dashboard.
       - key: PICKLEBALL_ACCOUNTS_ENABLED
         value: "0"
+      # Product infra (INFRA-2): pull-worker queue lands DARK alongside
+      # accounts — flip to "1" only after a worker VM is live and the
+      # INFRA-2 gate (queued->claimed->running->succeeded, kill-mid-job
+      # requeue) has passed against staging. HttpGpuRunner (the old
+      # push-to-worker HTTP stub -- PICKLEBALL_GPU_WORKER_URL/_TOKEN) is
+      # retired as of this lane; SshGpuRunner remains the flag-off fallback
+      # for one wave.
+      - key: PICKLEBALL_QUEUE_ENABLED
+        value: "0"
+      - key: PICKLEBALL_WORKER_BEARER_TOKEN
+        sync: false
       - key: PICKLEBALL_MONGODB_DB_NAME
         value: pickleball
       - key: PICKLEBALL_S3_BUCKET

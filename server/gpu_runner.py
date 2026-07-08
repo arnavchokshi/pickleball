@@ -2,32 +2,50 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import shlex
-import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
-import httpx
+from .pipeline_invocation import (
+    PIPELINE_SUMMARY_ARTIFACT,
+    REPO_ROOT,
+    RESOURCE_MONITOR_SOURCE,
+    RESOURCE_USAGE_ARTIFACT,
+    SAFE_SLUG_PATTERN,
+    build_process_video_args,
+    copy_resource_monitor_to_input as _copy_resource_monitor_to_input,
+    prepare_render_artifacts as _prepare_render_artifacts,
+    remote_model_root,
+    safe_slug,
+)
 
-SAFE_SLUG_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
-RESOURCE_USAGE_ARTIFACT = "gpu_resource_usage.json"
-PIPELINE_SUMMARY_ARTIFACT = "PIPELINE_SUMMARY.json"
-REPO_ROOT = Path(__file__).resolve().parents[1]
-RESOURCE_MONITOR_SOURCE = REPO_ROOT / "scripts" / "racketsport" / "monitor_process_resources.py"
 CODE_SYNC_PATHS = ("scripts", "threed", "configs")
+
+__all__ = [
+    "CODE_SYNC_PATHS",
+    "GpuRunProgress",
+    "GpuRunRequest",
+    "GpuRunResult",
+    "GpuRunner",
+    "LocalPipelineRunner",
+    "MissingGpuRunnerConfig",
+    "PIPELINE_SUMMARY_ARTIFACT",
+    "REPO_ROOT",
+    "RESOURCE_MONITOR_SOURCE",
+    "RESOURCE_USAGE_ARTIFACT",
+    "SAFE_SLUG_PATTERN",
+    "SshGpuRunner",
+    "UnconfiguredGpuRunner",
+    "prepare_render_artifacts",
+    "runner_from_env",
+    "safe_slug",
+]
 
 
 class MissingGpuRunnerConfig(RuntimeError):
     """Raised when no real GPU execution path is configured."""
-
-
-def safe_slug(value: str) -> str:
-    if not value or not SAFE_SLUG_PATTERN.match(value):
-        raise ValueError(f"unsafe slug {value!r}; expected {SAFE_SLUG_PATTERN.pattern}")
-    return value
 
 
 @dataclass(frozen=True)
@@ -103,8 +121,9 @@ class UnconfiguredGpuRunner(GpuRunner):
     def run(self, request: GpuRunRequest) -> GpuRunResult:
         raise MissingGpuRunnerConfig(
             "No GPU runner is configured. Set PICKLEBALL_GPU_SSH_HOST + "
-            "PICKLEBALL_GPU_SSH_KEY_PATH for GCP SSH execution, or set "
-            "PICKLEBALL_GPU_WORKER_URL for an HTTP GPU worker."
+            "PICKLEBALL_GPU_SSH_KEY_PATH for GCP SSH execution (fallback wave), "
+            "or set PICKLEBALL_QUEUE_ENABLED=1 with a pull-worker running "
+            "against this API for the queue path."
         )
 
 
@@ -243,7 +262,6 @@ class SshGpuRunner(GpuRunner):
             ]
         )
         prepare_render_artifacts(request)
-
         manifest_path = request.artifacts_dir / "replay_viewer_manifest.json"
         raw = _artifact_payloads(request.artifacts_dir)
         return GpuRunResult(
@@ -278,41 +296,33 @@ class SshGpuRunner(GpuRunner):
 
     def _remote_process_command(self, request: GpuRunRequest, remote_input_dir: str, remote_code_dir: str, remote_out_dir: str) -> str:
         video_name = request.video_path.name
-        remote_model_root = _remote_model_root(self.remote_python)
-        process_args = [
-            self.remote_python,
-            "scripts/racketsport/process_video.py",
-            "--video",
-            f"{remote_input_dir}/{video_name}",
-            "--out",
-            remote_out_dir,
-            "--clip",
-            safe_slug(request.clip),
-            "--body-local",
-            "--device",
-            "cuda:0",
-            "--json",
-            "--manifest",
-            f"{remote_model_root}/models/MANIFEST.json",
-            "--reid-model",
-            f"{remote_model_root}/models/checkpoints/osnet_x1_0_market1501.pt",
-        ]
-        if request.allow_auto_court_corners_preview:
-            process_args.append("--allow-auto-court-corners-preview")
-        if self.wasb_repo:
-            process_args.extend(["--wasb-repo", self.wasb_repo])
-        if self.wasb_checkpoint:
-            process_args.extend(["--wasb-checkpoint", self.wasb_checkpoint])
-        if request.max_frames is not None:
-            process_args.extend(["--max-frames", str(request.max_frames)])
-        if request.capture_sidecar_path is not None:
-            process_args.extend(["--capture-sidecar", f"{remote_input_dir}/{request.capture_sidecar_path.name}"])
+        clip = safe_slug(request.clip)
+        sidecar = (
+            f"{remote_input_dir}/{request.capture_sidecar_path.name}"
+            if request.capture_sidecar_path is not None
+            else None
+        )
+        process_args = build_process_video_args(
+            python=self.remote_python,
+            script="scripts/racketsport/process_video.py",
+            video=f"{remote_input_dir}/{video_name}",
+            out=remote_out_dir,
+            clip=clip,
+            model_root=remote_model_root(self.remote_python),
+            sidecar=sidecar,
+            max_frames=request.max_frames,
+            wasb_repo=self.wasb_repo,
+            wasb_checkpoint=self.wasb_checkpoint,
+            allow_auto_court=request.allow_auto_court_corners_preview,
+        )
+        # SSH-only extras: the queue path has no court-corners/calibration
+        # inputs, so these stay here rather than in the shared builder.
         if request.court_corners_path is not None:
             process_args.extend(["--court-corners", f"{remote_input_dir}/{request.court_corners_path.name}"])
         if request.court_calibration_path is not None and self.supports_court_calibration:
             process_args.extend(["--court-calibration", f"{remote_input_dir}/{request.court_calibration_path.name}"])
 
-        telemetry_path = f"{remote_out_dir}/{safe_slug(request.clip)}/{RESOURCE_USAGE_ARTIFACT}"
+        telemetry_path = f"{remote_out_dir}/{clip}/{RESOURCE_USAGE_ARTIFACT}"
         monitor_args = [
             self.remote_python,
             f"{remote_input_dir}/{RESOURCE_MONITOR_SOURCE.name}",
@@ -340,65 +350,6 @@ class SshGpuRunner(GpuRunner):
             detail = (completed.stderr or completed.stdout or "").strip()
             raise RuntimeError(f"GPU SSH command failed ({cmd[0]} exit {completed.returncode}): {detail}")
         return completed
-
-
-class HttpGpuRunner(GpuRunner):
-    name = "gpu-http-worker"
-
-    def __init__(self, *, base_url: str, token: str | None = None, timeout_s: int = 7200) -> None:
-        self.base_url = base_url.rstrip("/")
-        self.token = token
-        self.timeout_s = timeout_s
-
-    def describe(self) -> dict[str, str]:
-        return {"mode": self.name, "base_url": self.base_url}
-
-    def run(self, request: GpuRunRequest) -> GpuRunResult:
-        self.emit_progress(
-            request,
-            percent=20,
-            stage="Uploading inputs to GPU worker",
-            message="Submitting the video package to the configured GPU worker.",
-        )
-        headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
-        data: dict[str, str] = {"job_id": request.job_id, "clip": request.clip}
-        if request.max_frames is not None:
-            data["max_frames"] = str(request.max_frames)
-        if request.allow_auto_court_corners_preview:
-            data["allow_auto_court_corners_preview"] = "1"
-
-        files = {"video": (request.video_path.name, request.video_path.open("rb"), "application/octet-stream")}
-        optional_files = {
-            "capture_sidecar": request.capture_sidecar_path,
-            "court_corners": request.court_corners_path,
-            "court_calibration": request.court_calibration_path,
-            "court_review": request.court_review_path,
-        }
-        try:
-            for field, path in optional_files.items():
-                if path is not None:
-                    files[field] = (path.name, path.open("rb"), "application/json")
-            with httpx.Client(timeout=self.timeout_s) as client:
-                self.emit_progress(
-                    request,
-                    percent=36,
-                    stage="Running pipeline on GPU",
-                    message="Waiting for the GPU worker to return.",
-                )
-                response = client.post(f"{self.base_url}/jobs", data=data, files=files, headers=headers)
-                response.raise_for_status()
-                payload = response.json()
-        finally:
-            for file_tuple in files.values():
-                file_tuple[1].close()
-
-        return GpuRunResult(
-            status=str(payload.get("status", "submitted")),
-            notes=[str(note) for note in payload.get("notes", []) if isinstance(note, str)],
-            artifacts_dir=request.artifacts_dir,
-            remote_run_dir=str(payload.get("remote_run_dir")) if payload.get("remote_run_dir") else None,
-            raw=payload,
-        )
 
 
 class LocalPipelineRunner(GpuRunner):
@@ -486,10 +437,6 @@ class LocalPipelineRunner(GpuRunner):
 
 def runner_from_env(env: Mapping[str, str] | None = None) -> GpuRunner:
     env = os.environ if env is None else env
-    worker_url = env.get("PICKLEBALL_GPU_WORKER_URL", "").strip()
-    if worker_url:
-        return HttpGpuRunner(base_url=worker_url, token=env.get("PICKLEBALL_GPU_WORKER_TOKEN") or None)
-
     ssh_host = env.get("PICKLEBALL_GPU_SSH_HOST", "").strip()
     ssh_key = env.get("PICKLEBALL_GPU_SSH_KEY_PATH", "").strip()
     if ssh_host and ssh_key:
@@ -515,21 +462,20 @@ def runner_from_env(env: Mapping[str, str] | None = None) -> GpuRunner:
 
 
 def prepare_render_artifacts(request: GpuRunRequest) -> None:
-    request.artifacts_dir.mkdir(parents=True, exist_ok=True)
-    _copy_source_video_artifact(request)
-    _rewrite_manifest_urls_for_render(request)
-
-
-def _copy_resource_monitor_to_input(input_dir: Path) -> None:
-    input_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(RESOURCE_MONITOR_SOURCE, input_dir / RESOURCE_MONITOR_SOURCE.name)
-
-
-def _remote_model_root(remote_python: str) -> str:
-    marker = "/.venv/"
-    if marker in remote_python:
-        return remote_python.split(marker, 1)[0].rstrip("/")
-    return str(Path(remote_python).parent.parent.parent)
+    """Adapts the shared `pipeline_invocation.prepare_render_artifacts` to
+    the `GpuRunRequest` shape both `SshGpuRunner` and `LocalPipelineRunner`
+    still pass around internally. Both runners serve artifacts back through
+    the same `/api/jobs/{id}/artifacts/{name}` route, so both resolve
+    manifest URLs the same way -- only the pull-worker daemon (which has no
+    `GpuRunRequest`) calls the shared function directly with a different
+    resolver.
+    """
+    slug = safe_slug(request.job_id)
+    _prepare_render_artifacts(
+        artifacts_dir=request.artifacts_dir,
+        video_path=request.video_path,
+        resolve=lambda name: f"/api/jobs/{slug}/artifacts/{name}",
+    )
 
 
 def _artifact_payloads(artifacts_dir: Path) -> dict[str, object]:
@@ -553,64 +499,3 @@ def _load_json_artifact(path: Path) -> dict[str, object] | None:
     return payload if isinstance(payload, dict) else None
 
 
-def _copy_source_video_artifact(request: GpuRunRequest) -> None:
-    suffix = request.video_path.suffix.lower() or ".mp4"
-    target = request.artifacts_dir / f"source{suffix}"
-    if target.is_symlink() or (target.exists() and not target.is_file()):
-        target.unlink()
-    if not target.is_file():
-        shutil.copy2(request.video_path, target)
-
-
-def _rewrite_manifest_urls_for_render(request: GpuRunRequest) -> None:
-    manifest_path = request.artifacts_dir / "replay_viewer_manifest.json"
-    if not manifest_path.is_file():
-        return
-    try:
-        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return
-
-    source_artifact_name = f"source{request.video_path.suffix.lower() or '.mp4'}"
-    rewritten = _rewrite_manifest_value(payload, job_id=request.job_id, source_artifact_name=source_artifact_name)
-    manifest_path.write_text(json.dumps(rewritten, indent=2, sort_keys=True), encoding="utf-8")
-
-
-def _rewrite_manifest_value(
-    value: object,
-    *,
-    job_id: str,
-    source_artifact_name: str,
-    key: str | None = None,
-) -> object:
-    if isinstance(value, dict):
-        return {
-            str(child_key): _rewrite_manifest_value(
-                child_value,
-                job_id=job_id,
-                source_artifact_name=source_artifact_name,
-                key=str(child_key),
-            )
-            for child_key, child_value in value.items()
-        }
-    if isinstance(value, list):
-        return [_rewrite_manifest_value(item, job_id=job_id, source_artifact_name=source_artifact_name, key=key) for item in value]
-    if isinstance(value, str) and key is not None and key.endswith("_url"):
-        artifact_name = _artifact_name_from_pipeline_url(value)
-        if artifact_name is not None:
-            if key == "video_url":
-                artifact_name = source_artifact_name
-            return f"/api/jobs/{safe_slug(job_id)}/artifacts/{artifact_name}"
-    return value
-
-
-def _artifact_name_from_pipeline_url(value: str) -> str | None:
-    if value.startswith("/@fs//"):
-        return Path(value.removeprefix("/@fs//")).name
-    if value.startswith("/@fs/"):
-        return Path(value.removeprefix("/@fs/")).name
-    if value.startswith("/"):
-        path = Path(value)
-        if "runs" in path.parts and path.name:
-            return path.name
-    return None

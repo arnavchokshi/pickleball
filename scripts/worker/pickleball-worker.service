@@ -1,0 +1,47 @@
+# Pickleball pull-worker daemon (INFRA-2, product-infra plan §INFRA-2 / §3).
+#
+# Installed to /etc/systemd/system/pickleball-worker.service by the
+# fable-role=pickleball-worker gated hook in
+# scripts/fleet/lane_vm_startup.sh. Only ever lands on a VM booted with
+# that GCE metadata role -- training/eval fleet VMs never see this unit.
+#
+# EnvironmentFile is written by the same hook from GCE instance metadata
+# (`pickleball-worker-env`), chmod 600, and is NEVER committed to git. It
+# supplies PICKLEBALL_WORKER_API_BASE_URL, PICKLEBALL_WORKER_BEARER_TOKEN,
+# PICKLEBALL_AWS_ACCESS_KEY_ID/_SECRET_ACCESS_KEY (the scoped
+# `pickleball-worker` IAM user -- GetObject on raw/*, Put/Get on
+# artifacts/*+bundles/*, no DeleteObject), PICKLEBALL_S3_BUCKET,
+# PICKLEBALL_S3_REGION, PICKLEBALL_WORKER_REPO_DIR,
+# PICKLEBALL_WORKER_PIPELINE_PYTHON, PICKLEBALL_WORKER_ID -- see
+# server/worker/config.py:worker_config_from_env for the full env var list.
+#
+# Preemption: the daemon's own loop watches /tmp/PREEMPTED (the same file
+# the fable-lane preemption watcher in lane_vm_startup.sh touches) and
+# exits cleanly (0) between jobs; Restart=always then just... doesn't
+# restart a genuinely preempted VM (it's gone). On any OTHER exit (crash,
+# unhandled exception) systemd restarts it. Either way, from the API's
+# perspective a dead worker just looks like a stale heartbeat -- the
+# server-side sweep (`_reclaim_stale_jobs`) requeues/fails the job; this
+# unit does not need to be preemption-aware beyond the flag file.
+
+[Unit]
+Description=Pickleball pull-worker daemon (INFRA-2)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/pickleball-worker/worker.env
+WorkingDirectory=/opt/pickleball-worker/pipeline/repo
+ExecStart=/opt/pickleball-worker/worker_venv/bin/python -m server.worker.daemon
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=30
+# One worker daemon per GPU box (matches the fleet's "one lane per GPU"
+# rule, FABLE_OPERATING_MANUAL §12) -- do not template/scale this unit.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

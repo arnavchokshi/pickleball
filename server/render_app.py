@@ -121,6 +121,7 @@ def create_app(
     mongo_db: Any | None = None,
     s3_client: Any | None = None,
     accounts_enabled: bool | None = None,
+    queue_enabled: bool | None = None,
     env: Mapping[str, str] | None = None,
 ) -> FastAPI:
     """Build the gateway app.
@@ -132,12 +133,25 @@ def create_app(
     `runner_from_env(env)` so tests use a literal dict instead of touching
     real environment variables. With the flag OFF nothing below reads it and
     the app is byte-identical to the legacy single-user gateway.
+
+    `queue_enabled` (INFRA-2, `PICKLEBALL_QUEUE_ENABLED`) is independent of
+    `accounts_enabled`: it only changes whether `POST /api/jobs` (the
+    accounts-era route) executes inline or hands the job to the pull-worker
+    queue. The worker router itself mounts whenever accounts are enabled,
+    regardless of this flag -- worker auth (bearer token) is a separate
+    concern from whether the queue path is live yet, so the routes can be
+    smoke-tested ahead of the cutover flip.
     """
     resolved_env: Mapping[str, str] = os.environ if env is None else env
     accounts_on = (
         accounts_enabled
         if accounts_enabled is not None
         else resolved_env.get("PICKLEBALL_ACCOUNTS_ENABLED", "0").strip() == "1"
+    )
+    queue_on = (
+        queue_enabled
+        if queue_enabled is not None
+        else resolved_env.get("PICKLEBALL_QUEUE_ENABLED", "0").strip() == "1"
     )
 
     app = FastAPI(title="Pickleball Render Gateway")
@@ -163,6 +177,7 @@ def create_app(
             build_jobs_v2_router,
             build_stripe_webhook_router,
         )
+        from .routes.worker import build_worker_router
         from .s3 import s3_client_from_env, s3_health
         from .security import auth_config_from_env
 
@@ -261,6 +276,7 @@ def create_app(
                 runner=gpu_runner,
                 upload_root=upload_root,
                 run_jobs_inline=run_jobs_inline,
+                queue_enabled=queue_on,
                 execute_job=_execute_job,
                 progress_payload=_progress_payload,
                 with_dynamic_eta=_with_dynamic_eta,
@@ -270,6 +286,16 @@ def create_app(
         app.include_router(
             build_stripe_webhook_router(
                 stripe_enabled=resolved_env.get("PICKLEBALL_STRIPE_ENABLED", "0").strip() == "1"
+            )
+        )
+        # INFRA-2: worker auth is independent of the queue flag, so this
+        # mounts whenever accounts are enabled -- see the create_app
+        # docstring.
+        app.include_router(
+            build_worker_router(
+                db=accounts_db,
+                worker_token=resolved_env.get("PICKLEBALL_WORKER_BEARER_TOKEN", "").strip(),
+                with_dynamic_eta=_with_dynamic_eta,
             )
         )
     else:

@@ -1,0 +1,6 @@
+# Pull-worker daemon (INFRA-2) -- deliberately tiny. The daemon shells out
+# to the heavy pipeline venv for actual GPU work (torch/cv2/etc. live
+# there, not here); this venv only needs to talk to the render-service API
+# and to S3.
+httpx>=0.27,<1
+boto3>=1.34,<2
