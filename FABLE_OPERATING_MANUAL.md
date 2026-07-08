@@ -614,3 +614,49 @@ helps E2E; do both.
   single-line appends + selective staging; candidate wave-5+ refactor: per-tool metadata instead
   of one shared map. Wave-close adjudication catches unregistered tools — classify THEN repair
   cross-lane in minutes (the doctor.py pattern), don't leave main red overnight.
+
+## 22. Wave-5 field lessons (2026-07-08 — closeout rules)
+
+**KEEP (these worked):**
+- **Watchdog on first anomaly, not after human intuition catches up.** The ball retrain spot
+  preemption was only a 3m42s outage and was caught/restarted in <15min; the lane recovered without
+  losing the 12k stage-1 result. Standing: GPU lanes get watchdog-visible heartbeats plus a first-
+  anomaly wake, not a "check back later" habit (BUILD_CHECKLIST [W5 BALLRETRAIN PASS 2026-07-08];
+  `runs/lanes/w5_ballretrain_20260707/`).
+- **Quota alarms must be error-shaped, tail-line evidence.** Wave-5 create specs still carried quota
+  ladders, but w5p22 succeeded on the first attempt and had no fallback. Do not wake the owner from a
+  broad `quota` grep over historical logs; grep the create command's tail for current error-shaped
+  lines first (BUILD_CHECKLIST [W5 P22 PHASE1 RULED + OWNER UNBLOCKS 2026-07-08];
+  `runs/lanes/w5_p22latent_20260707/spec.md`).
+- **Pre-staged verify specs collapse repair rounds.** BVP v2 closed after one independent adversarial
+  verify round because the acceptance attacks and adjudication questions were written before the fix
+  landed; wave 4 needed three BVP rounds to reach the same decisiveness. Preserve this pattern for
+  every risky repair (BUILD_CHECKLIST [W5 BVP SPAN v2 ACCEPTED 2026-07-08]; 792fa5fc6;
+  BUILD_CHECKLIST [WAVE-4 COMPLETE 2026-07-08]; 94fe77d79).
+- **Control rows + measured probes are not ceremony.** The retrain control row reproduced the exact
+  expected class before scoring candidates, and the measured H100 probe set the wall cap. That is why
+  the stage1_official win is trustworthy as internal-val while staying non-promotable (BUILD_CHECKLIST
+  [W5 BALLRETRAIN PASS 2026-07-08]; `runs/lanes/w5_ballretrain_20260707/probe_rate.json`).
+
+**FIX (new wave-5 failure classes):**
+- **`--clip-dir` is an input/output footgun unless guarded.** Fastbody bench Run A overwrote another
+  lane's gitignored body-dispatch dir with an equivalent rerun; w5_transport closed this by refusing a
+  populated CLI `--clip-dir` without `--allow-overwrite` (BUILD_CHECKLIST [W5 FASTBODY BENCH 2026-07-08];
+  af16e27c7; `runs/lanes/w5_transport_20260708/report.json`).
+- **Silent BODY degrade is a correctness bug, even when the fallback runs.** `FAST_SAM_PYTHON` unset
+  silently dropped batched subprocess BODY into per-frame mode; w5_transport made the degrade loud,
+  metered, and strict-mode-failable. Specs must require a fail-loud body-runtime summary for every
+  remote proof (BUILD_CHECKLIST [W5 FASTBODY BENCH 2026-07-08]; `runs/lanes/w5_transport_20260708/report.json`).
+- **Board drops from PR merges are a real regression class.** Wave-5 opened by restoring dropped
+  WAVE-4 COMPLETE / DOCS-CLEANUP bullets after an origin merge resolution. The close watchdog now
+  checks board presence, not just tests, before calling a wave ready (BUILD_CHECKLIST [WAVE-5 OPEN
+  2026-07-07]; 94fe77d79).
+- **Boot-prompt constants need grep verification.** Arcdiag proved the "p06-era img1605 had 7
+  segments" premise was a manager transcription error; honest read-only contradiction saved a false
+  fix. Every numeric premise in a boot prompt gets grepped to source before it drives implementation
+  (BUILD_CHECKLIST [W5 ARCDIAG RULED 2026-07-07]; `runs/lanes/w5_arcdiag_20260707/report.md`).
+- **Snapshots must include the data they are expected to train on.** The new ffmpeg snapshot fixed one
+  boot gap, but ball retrain still paid a 16min corpus/rally-video transfer tax because the template
+  did not bake the corpus/videos. The next snapshot cut includes corpus/video payloads or the spec
+  books transfer time explicitly (BUILD_CHECKLIST [W5 BALLRETRAIN PASS 2026-07-08];
+  `runs/manager/gpu_fleet.md`).

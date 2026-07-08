@@ -845,7 +845,14 @@ in/out with gray zone.
   is local and sha256 9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb is verified
   on VM and Mac (28c9244bd; `runs/lanes/w4_ballgpu_20260707/REPORT.md`). Stage-1 pretrain on the 61k
   corpus = the WAVE-4 HEADLINE, INTERNAL-VAL ONLY — a public-only student NEVER takes a held-out
-  shot; the owner-data stage-2 fine-tune + pre-registered held-out shot is wave 5. PART VI.)* The
+  shot; the owner-data stage-2 fine-tune + pre-registered held-out shot is wave 5. PART VI.)*
+  **[WAVE-5 STATUS 2026-07-08 — P1-1 retrain reconciled]:** OFFICIAL preprocessing alignment landed
+  for stage-1/stage-2 (BUILD_CHECKLIST [W5 BALLPREP LANDED 2026-07-07]; c1f707d6f;
+  `runs/lanes/w5_ballprep_20260707/report.json`). Stage-1 official retrain cleared the internal-val
+  bar on Burlington/Wolverine (0.8636/0.7500), removed the w4 Wolverine-degenerate class, and beat
+  control on LoSO-mean, but it is NON-PROMOTABLE/internal-val only: 486 labels, no held-out read,
+  no pre-registered ledger row, `VERIFIED=0` unchanged (BUILD_CHECKLIST [W5 BALLRETRAIN PASS
+  2026-07-08]; `runs/lanes/w5_ballretrain_20260707/`). The
   corrected recipe after the T4 lesson (public-only fine-tunes degraded held-out): **pretrain/warm-
   start on the P1-0 aggregated public corpus + multi-sport auxiliary (RacketVision/TrackNet, +14-19%
   mAP evidence), then FINE-TUNE on owner-labeled in-domain data (P0-4) — never ship a public-only
@@ -923,7 +930,14 @@ in/out with gray zone.
   as frozen-baseline arc params as protected-span priors + junction repair before validity gates.
   Magnus STEP 2 remains gated behind STEP 1. Evidence: 5633c4b48;
   `runs/lanes/w4_bvp_20260707/report_r3.json`;
-  `runs/lanes/w4_bvp_verify_20260707/report.json`.)* *(Prior sim status: P0-7 phase-1 sim now EXISTS reusing `_rk4_step`
+  `runs/lanes/w4_bvp_verify_20260707/report.json`.)*
+  **[WAVE-5 STATUS 2026-07-08 — P1-4a reconciled]:** BVP span protection v2 landed with frozen-baseline
+  protected-span priors plus junction repair before unchanged validity gates; independent verify
+  preserved 5/5 protected spans, fresh D.3(e) floors met Burlington 0.7727272727 / Wolverine 0.875000,
+  and Magnus STEP 2 preconditions are now satisfied but not dispatched until wave 6 (BUILD_CHECKLIST
+  [W5 BVP SPAN v2 ACCEPTED 2026-07-08]; 792fa5fc6;
+  `runs/lanes/w5_bvpspan_verify_20260707/report.json`). `VERIFIED=0` unchanged.
+  *(Prior sim status: P0-7 phase-1 sim now EXISTS reusing `_rk4_step`
   — step (3) below satisfied early, by construction.)* SEQUENCED (tech-audit: a symmetric bake-off is premature — P1-4a is itself PARTIAL with a live
   regression and P0-7 has zero code): (1) STABILIZE (P1-4a) — finish the
   P3-A BVP anchor-first solver (committed WIP — 5 baseline intervals lose `fit` status on
@@ -994,6 +1008,10 @@ in/out with gray zone.
   only). The harness scales to N folds with zero code change → this COMPOSES with P0-4/P0-5 owner labeling
   of diverse (esp. outdoor) footage, which stays the real unlock, not the harness alone. Use LoSO-mean for
   wave-5 retrain scoring regardless. Artifacts: `runs/lanes/ball_loso_validation_20260707/`.)*
+  **[WAVE-5 STATUS 2026-07-08 — P1-9 applied]:** W5 scoring used LoSO-mean as required; stage1_official
+  LoSO-mean was 0.7094 F1 / 0.2812 hFP versus control 0.6858 / 0.5318, still internal-val only and
+  insufficient for held-out readiness without reviewed outdoor/diverse folds (BUILD_CHECKLIST
+  [W5 BALLRETRAIN PASS 2026-07-08]; `runs/lanes/w5_ballretrain_20260707/`).
 
 ## PHASE 2 — Bodies: kill the noise at the source
 
@@ -1054,6 +1072,12 @@ GT + world-MPJPE gate, challenger benchmark.
   0-frame-delta — regression harness exists); mesh-skeleton divergence ≤ 5mm p95. Kill: if latent
   smoothing over-smooths fast swings (SMART's failure mode) — fall back to hybrid (latent for
   torso/legs, classical wrist protection).
+  **[WAVE-5 STATUS 2026-07-08 — P2-2 phase 1 landed]:** MHR decode wrapper + W=9 latent-smoothing
+  prototype landed, plus additive `scale_params` schema threading; smoother remains UNWIRED and decoded
+  acceptance evidence is rerouted to the close-proof VM because Mac-side proxy smoothing is explicitly
+  not the latent method (BUILD_CHECKLIST [W5 P22 PHASE1 RULED + OWNER UNBLOCKS 2026-07-08];
+  62d785ce3; BUILD_CHECKLIST [W5 P22WIRING RULED 2026-07-08]; 2db0d1b4e;
+  `runs/lanes/w5_p22wiring_20260708/report.json`). `VERIFIED=0` unchanged.
 - [ ] **P2-3 Far/small-player quality.** TECH-AUDIT: the body model's input is hard-capped at
   384/448/512px regardless of source resolution — so "run the whole frame at higher res" is NOT a
   distinct lever; the crop-based path below is the right family. High-res crop re-inference pass for players whose bbox
@@ -1471,6 +1495,11 @@ per-court cache, cost metering, pre-flight QA, and the P5-7 BODY redesign.
   metric/dataset). So bench it OURSELVES on our labeled pickleball clips for BOTH wall-clock AND
   accuracy-through-our-gates; kill = any internal-val accuracy regression vs the current checkpoint. Do
   NOT adopt on the paper's numbers. GPU-HELD pending owner spend go (2026-07-07).
+  **[WAVE-5 STATUS 2026-07-08 — Fast-body NOT-ADOPT]:** Owner-approved bench spent ~$2 under the
+  $15 cap and killed adoption: steady-state improved only 1.3x, full-stage wall was 1.31x slower
+  than our stack, and accuracy regressed up to 149mm/frame on fast swings. Revisit only if a
+  persistent worker amortizes compile warmup, gentler layer trims avoid the regression, and the
+  fast-swing gap is solved first (BUILD_CHECKLIST [W5 FASTBODY BENCH 2026-07-08]; af16e27c7).
 - [ ] **P5-8 Per-court warm caches + cascade inference (EDGE H17).** Cache per-court/per-session
   immutables (H1 profile, H6 background, H4 ReID galleries, TensorRT engines) so a clip's marginal
   work is only its rallies; tiny detector every frame, full ensemble only on uncertainty/rally

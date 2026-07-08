@@ -781,6 +781,14 @@ recall 0.7708, threshold sweep banked, 12,075-row disagreement queue, protected-
 5b268aa6d; `runs/lanes/w4_ballcode_20260707/report.json`; 28c9244bd;
 `runs/lanes/w4_ballgpu_20260707/REPORT.md`.**
 
+**[WAVE-5 STATUS 2026-07-08 — P1-1/P1-9 reconciliation]:** OFFICIAL preprocessing alignment landed
+for stage-1/stage-2 (BUILD_CHECKLIST [W5 BALLPREP LANDED 2026-07-07]; c1f707d6f;
+`runs/lanes/w5_ballprep_20260707/report.json`). Stage1_official internal-val cleared Burlington
+0.8636 / Wolverine 0.7500 and beat control on LoSO-mean (0.7094 F1 / 0.2812 hFP versus control
+0.6858 / 0.5318), but it remains NON-PROMOTABLE: 486 labels, no held-out read, no pre-registered
+ledger row, `VERIFIED=0` unchanged (BUILD_CHECKLIST [W5 BALLRETRAIN PASS 2026-07-08];
+`runs/lanes/w5_ballretrain_20260707/`).**
+
 **[WAVE-3 CLOSEOUT CORRECTIONS 2026-07-07 — these supersede conflicting lines below]:** (1) STAGE-1
 pretrain is DONE (H100, harness internal_val f1@20 0.0615→0.6104, precision@20 0.848, recall 0.477;
 ckpts runs/lanes/w3_p11_train_20260707/checkpoints/; cycle-caching + output_channels harness bugs
@@ -1092,6 +1100,11 @@ In/out (P1-7) always keeps a `too_close_to_call` gray zone — advisory, never o
   design as frozen-baseline arc params protected-span priors + junction repair before validity gates.
   Evidence: 5633c4b48; `runs/lanes/w4_bvp_20260707/report_r3.json`;
   `runs/lanes/w4_bvp_verify_20260707/report.json`.
+- Wave-5 P1-4a update: BVP span protection v2 landed with frozen-baseline protected-span priors and
+  junction repair before unchanged validity gates; independent verify preserved 5/5 protected spans,
+  fresh D.3(e) floors met Burlington 0.7727272727 / Wolverine 0.875000, and Magnus STEP 2 preconditions
+  are satisfied for wave 6 (not dispatched in wave 5). Evidence: BUILD_CHECKLIST [W5 BVP SPAN v2
+  ACCEPTED 2026-07-08]; 792fa5fc6; `runs/lanes/w5_bvpspan_verify_20260707/report.json`.
 - P0-7 flight simulator landed, objective_result=PARTIAL: `runs/lanes/p07_flightsim_20260706/report.json`.
   PASS: 1k corpus failed_segments=0; round-trip clean fit p95=0.063596m; noise match
   p95=34.21px / recall=0.5771 / hidden-FP=0.02148 (targets 34px/0.578/0.021); 1k in 40.7s; deterministic.
@@ -1115,6 +1128,10 @@ multi-file. Every lane: dispatch via `/run-lane`, pin an explicit `model`, no co
 - Status 2026-07-07: PARTIAL, not done. Keep the landed LOO per-holdout refit, but do not start STEP 2
   Magnus until protected-span priors + junction repair are implemented and D.3(b) passes. Evidence:
   5633c4b48; `runs/lanes/w4_bvp_20260707/report_r3.json`.
+- Status 2026-07-08: STEP 1 landed/accepted. Protected-span priors + junction repair are implemented,
+  D.3(e) floors met on fresh eval, and Magnus STEP 2 preconditions are satisfied but queued for wave 6
+  (BUILD_CHECKLIST [W5 BVP SPAN v2 ACCEPTED 2026-07-08]; 792fa5fc6;
+  `runs/lanes/w5_bvpspan_verify_20260707/report.json`).
 - Objective: eliminate the D.3(b) regression BEFORE adding spin. Exact bug: reselection demotes 5
   currently-good baseline intervals (Burlington seg0/seg13-adjacent x4, Wolverine seg6-region x1).
 - File targets: `threed/racketsport/ball_arc_solver.py` — `_fit_flight_segment_once` (:486), the
@@ -1380,6 +1397,13 @@ behind P2-2 for wave 5. Evidence: cd0b59390; 1588b110f; 75e438223;
 `runs/lanes/w4_integration_20260707/report.json`;
 `runs/lanes/w4_footattr_fix_20260707/report_r2.json`; a93764203;
 `runs/lanes/w4_freshproof_20260707/summary.json`.**
+
+**[WAVE-5 STATUS 2026-07-08 — P2-2 phase 1 reconciliation]:** MHR decode wrapper + W=9 latent
+smoother prototype landed, `scale_params` now threads through schema/runtime surfaces, and the scorer
+harness for exact acceptance keys landed; smoother is still UNWIRED pending decoded close-proof VM
+evidence because the Mac-side world-joint proxy is explicitly not the latent method (BUILD_CHECKLIST
+[W5 P22 PHASE1 RULED + OWNER UNBLOCKS 2026-07-08]; 62d785ce3; BUILD_CHECKLIST [W5 P22WIRING RULED
+2026-07-08]; 2db0d1b4e; `runs/lanes/w5_p22wiring_20260708/report.json`).**
 
 **[WAVE-3 CLOSEOUT CORRECTIONS 2026-07-07 — supersede conflicting lines below]:** (1) STEP 0 is
 DONE: slide gate GREEN 4/4 on fresh GPU proof @ ad75c875c (max_foot_lock_slide_m 20.25/22.50/17.98/
@@ -2437,11 +2461,13 @@ PF-2 is NOT worth starting until ALL of these are true (current status in bracke
      (`ball_track_arc_solved.json` not all-hidden) [EXISTS but clip-dependent — VERIFY per clip].
   4. Court metric calibration `grade` acceptable + `metric_confidence` present [EXISTS].
   5. P2-2 latent MHR pose-code + FROZEN decoder callable as a python function returning joints from a
-     latent [VERIFY: grep `threed/racketsport` for a decoder entrypoint such as
-     `decode_latent`/`latent_decoder`/`pose_code`/`decode_pose`. As of 2026-07-07 this returns ZERO
-     hits — the decoder does NOT exist. RULING: the ONLY supported PF-2 is the root+global-orient
-     degrade (decision tree); do NOT attempt the latent-code variable vector. Full-latent fusion is a
-     typed STOP: decision, blocked on P2-2 landing].
+     latent [STATUS 2026-07-08: phase-1 wrapper and smoother prototype landed, but decoded acceptance
+     evidence is pending close-proof VM; smoother remains UNWIRED. RULING: the ONLY supported PF-2 is
+     still the root+global-orient degrade until decoded evidence passes; do NOT attempt the latent-code
+     variable vector. Full-latent fusion remains a typed STOP: decision until P2-2 decoded proof lands.
+     Evidence: BUILD_CHECKLIST [W5 P22 PHASE1 RULED + OWNER UNBLOCKS 2026-07-08]; 62d785ce3;
+     BUILD_CHECKLIST [W5 P22WIRING RULED 2026-07-08]; 2db0d1b4e;
+     `runs/lanes/w5_p22wiring_20260708/report.json`].
   6. ARKit sidecar present+valid OR the P2-1 RAFT+MAD camera seed exists (`camera_motion` path via
      `process_video._placement_camera_motion_path`) [camera_motion EXISTS; ARKit P0-10 is owner-gated].
 If any of 2-6 is red on a clip, PF-2 runs in DEGRADED mode for that clip (trust-band the whole world),
@@ -3181,6 +3207,12 @@ pooled-with-batching worker ONLY if it processes clips back-to-back with <1h idl
 compiled-graph disk cache. Gate: BODY wall <= video duration on a full owner game, gates green.
 Kill (roadmap's own): if two candidates fail to beat the booked floor >=2x, **accept <=2x as the product SLA and
 close the stretch** (owner already pre-ruled <=2x is the real target — this is NOT a STOP).
+
+**[WAVE-5 STATUS 2026-07-08 — Fast-body NOT-ADOPT]:** The owner-approved Fast-body bench killed
+adoption: steady-state improved only 1.3x, full-stage wall was 1.31x slower per clip, and accuracy
+regressed up to 149mm/frame on fast swings. Revisit only after persistent-worker warmup amortization,
+gentler layer trims, and a fast-swing fix; do not spend another BODY-redesign lane on the paper
+headline alone (BUILD_CHECKLIST [W5 FASTBODY BENCH 2026-07-08]; af16e27c7).
 
 **P7-1 — Minimal durable service (owner+friends scale).**
 - (a) Object storage: **Render Persistent Disk** ($0.25/GB-mo) mounted on the web service; point
