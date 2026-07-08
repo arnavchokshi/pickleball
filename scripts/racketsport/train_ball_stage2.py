@@ -54,6 +54,11 @@ from threed.racketsport.schemas import (  # noqa: E402
     CvatVideoFrame,
     validate_artifact_file,
 )
+from threed.racketsport.wasb_adapter import (  # noqa: E402
+    _preprocess_wasb_window_official,
+    _wasb_affine_transform_xy,
+    _wasb_official_input_affine,
+)
 
 
 ARTIFACT_TYPE = "racketsport_ball_stage2_run"
@@ -410,7 +415,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "lr_schedule": "constant",
             "heatmap_radius_px": float(args.heatmap_radius_px),
             "occluded_prob": float(args.occluded_prob),
-            "occlusion_policy": "enabled only with batch wbce_weight present; masks target-centered patch before weighted BCE",
+            "occlusion_policy": "model-space patch after official WASB warp, centered on warped target_xy_px before weighted BCE",
             "epochs": int(args.epochs),
             "steps": steps,
             "checkpoint_every": int(args.checkpoint_every),
@@ -668,17 +673,34 @@ def _record_to_item(
     image_path_rewrites: Mapping[str, str],
 ) -> dict[str, Any]:
     torch = _torch()
+    np = _numpy()
+    cv2 = _cv2()
     target_w, target_h = image_size
     video_path = _rewrite_path(record.video_path, image_path_rewrites)
     offsets = _window_offsets(frames_in)
-    frames = [
-        _read_video_frame_tensor(video_path, max(0, record.frame_index + offset), image_size=image_size)
+    frames_rgb = [
+        _read_video_frame_rgb(video_path, max(0, record.frame_index + offset))
         for offset in offsets
     ]
-    input_tensor = torch.cat(frames, dim=0)
+    trans_input = _wasb_official_input_affine(
+        record.source_width,
+        record.source_height,
+        cv2=cv2,
+        np=np,
+        output_wh=image_size,
+    )
+    input_tensor = _preprocess_wasb_window_official(
+        frames_rgb,
+        trans_input,
+        cv2=cv2,
+        np=np,
+        torch=torch,
+        output_wh=image_size,
+    )
     if record.ball_present:
-        scaled_x = float(record.source_xy_px[0]) * float(target_w) / float(record.source_width)
-        scaled_y = float(record.source_xy_px[1]) * float(target_h) / float(record.source_height)
+        warped_xy = _wasb_affine_transform_xy(record.source_xy_px, trans_input, np=np)
+        scaled_x = float(warped_xy[0])
+        scaled_y = float(warped_xy[1])
         target = _gaussian_heatmap(scaled_x, scaled_y, width=target_w, height=target_h, radius=heatmap_radius_px, torch=torch)
         target_xy = torch.tensor([scaled_x, scaled_y], dtype=torch.float32)
     else:
@@ -702,10 +724,8 @@ def _record_to_item(
     }
 
 
-def _read_video_frame_tensor(path: Path, frame_index: int, *, image_size: tuple[int, int]) -> Any:
+def _read_video_frame_rgb(path: Path, frame_index: int) -> Any:
     cv2 = _cv2()
-    np = _numpy()
-    torch = _torch()
     capture = cv2.VideoCapture(str(path))
     try:
         if not capture.isOpened():
@@ -721,9 +741,7 @@ def _read_video_frame_tensor(path: Path, frame_index: int, *, image_size: tuple[
             if not ok or frame_bgr is None:
                 raise ValueError(f"could not read frame {frame_index} from {path}")
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        resized = cv2.resize(frame_rgb, image_size, interpolation=cv2.INTER_AREA)
-        array = resized.astype(np.float32) / 255.0
-        return torch.from_numpy(array).permute(2, 0, 1).contiguous()
+        return frame_rgb
     finally:
         capture.release()
 
@@ -834,6 +852,7 @@ def _dataset_summary(
         "visibility_level_counts": dict(sorted(visibility.items())),
         "wbce_weight_counts": dict(sorted(weights.items())),
         "image_size": list(image_size),
+        "input_preprocessing": "wasb_official_affine_imagenet",
         "frames_in": int(frames_in),
         "heatmap_radius_px": float(heatmap_radius_px),
         "sparse_review_policy": "only reviewed_frame_indices are training rows; unreviewed frames are never fabricated negatives",

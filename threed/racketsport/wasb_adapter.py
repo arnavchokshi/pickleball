@@ -34,6 +34,8 @@ WASB_FRAMES_OUT = 3
 DEFAULT_WASB_INPUT_PREPROCESSING = "official"
 WASB_INPUT_PREPROCESSING_MODES = ("official", "harness_v0")
 NON_PROMOTABLE_INPUT_PREPROCESSING_MODES = {"harness_v0"}
+WASB_IMAGENET_MEAN = (0.485, 0.456, 0.406)
+WASB_IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
 def wasb_csv_to_ball_track(
@@ -218,8 +220,6 @@ def run_official_wasb_predict(
         from detectors.postprocessor import TracknetV2Postprocessor
         from models import build_model
         from trackers.online import OnlineTracker
-        from utils.image import get_affine_transform
-
         model = build_model(cfg)
         checkpoint_payload = _load_wasb_checkpoint_payload(checkpoint_path, torch=torch)
         state_dict = _checkpoint_state_dict(checkpoint_payload)
@@ -248,10 +248,7 @@ def run_official_wasb_predict(
             if start_frame:
                 cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
 
-            center = np.array([width / 2.0, height / 2.0], dtype=np.float32)
-            scale = max(height, width) * 1.0
-            trans_input = get_affine_transform(center, scale, 0, list(WASB_INPUT_WH))
-            trans_output_inv = get_affine_transform(center, scale, 0, list(WASB_INPUT_WH), inv=1)
+            trans_input, trans_output_inv = _wasb_official_input_affines(width, height, cv2=cv2, np=np)
             postprocess_affine_inv = _preprocessing_output_affine_inv(
                 input_preprocessing=input_preprocessing,
                 width=width,
@@ -507,16 +504,117 @@ def _preprocess_wasb_window(
     raise AssertionError(f"unhandled WASB input preprocessing mode: {mode}")
 
 
-def _preprocess_wasb_window_official(frames_rgb: Sequence[Any], trans_input: Any, *, cv2: Any, np: Any, torch: Any) -> Any:
+def _preprocess_wasb_window_official(
+    frames_rgb: Sequence[Any],
+    trans_input: Any,
+    *,
+    cv2: Any,
+    np: Any,
+    torch: Any,
+    output_wh: tuple[int, int] = WASB_INPUT_WH,
+) -> Any:
     tensors = []
-    mean = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
-    std = np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
+    mean = np.asarray(WASB_IMAGENET_MEAN, dtype=np.float32)
+    std = np.asarray(WASB_IMAGENET_STD, dtype=np.float32)
+    output_wh = _normalize_output_wh(output_wh)
     for frame_rgb in frames_rgb:
-        warped = cv2.warpAffine(frame_rgb, trans_input, WASB_INPUT_WH, flags=cv2.INTER_LINEAR)
+        warped = cv2.warpAffine(frame_rgb, trans_input, output_wh, flags=cv2.INTER_LINEAR)
         array = warped.astype(np.float32) / 255.0
         array = (array - mean) / std
         tensors.append(torch.from_numpy(array.transpose(2, 0, 1)).float())
     return torch.cat(tensors, dim=0)
+
+
+def _wasb_official_input_affines(
+    width: int,
+    height: int,
+    *,
+    cv2: Any,
+    np: Any,
+    output_wh: tuple[int, int] = WASB_INPUT_WH,
+) -> tuple[Any, Any]:
+    output_wh = _normalize_output_wh(output_wh)
+    trans_input = _wasb_official_input_affine(width, height, cv2=cv2, np=np, output_wh=output_wh)
+    trans_output_inv = _wasb_official_input_affine(width, height, cv2=cv2, np=np, output_wh=output_wh, inv=1)
+    return trans_input, trans_output_inv
+
+
+def _wasb_official_input_affine(
+    width: int,
+    height: int,
+    *,
+    cv2: Any,
+    np: Any,
+    output_wh: tuple[int, int] = WASB_INPUT_WH,
+    inv: int = 0,
+) -> Any:
+    if int(width) <= 0 or int(height) <= 0:
+        raise ValueError(f"WASB affine requires positive source dimensions, got width={width} height={height}")
+    center = np.array([float(width) / 2.0, float(height) / 2.0], dtype=np.float32)
+    scale = np.array([float(max(int(height), int(width))), float(max(int(height), int(width)))], dtype=np.float32)
+    return _wasb_affine_transform(center, scale, 0.0, _normalize_output_wh(output_wh), cv2=cv2, np=np, inv=inv)
+
+
+def _wasb_affine_transform(
+    center: Any,
+    scale: Any,
+    rot: float,
+    output_wh: tuple[int, int],
+    *,
+    cv2: Any,
+    np: Any,
+    inv: int = 0,
+) -> Any:
+    if not isinstance(scale, np.ndarray) and not isinstance(scale, list):
+        scale = np.array([scale, scale], dtype=np.float32)
+    scale_tmp = scale
+    src_w = scale_tmp[0]
+    dst_w, dst_h = _normalize_output_wh(output_wh)
+    rot_rad = np.pi * float(rot) / 180.0
+    src_dir = _wasb_get_dir([0, src_w * -0.5], rot_rad, np=np)
+    dst_dir = np.array([0, dst_w * -0.5], np.float32)
+    src = np.zeros((3, 2), dtype=np.float32)
+    dst = np.zeros((3, 2), dtype=np.float32)
+    src[0, :] = center
+    src[1, :] = center + src_dir
+    dst[0, :] = [dst_w * 0.5, dst_h * 0.5]
+    dst[1, :] = np.array([dst_w * 0.5, dst_h * 0.5], np.float32) + dst_dir
+    src[2:, :] = _wasb_get_3rd_point(src[0, :], src[1, :], np=np)
+    dst[2:, :] = _wasb_get_3rd_point(dst[0, :], dst[1, :], np=np)
+    if inv:
+        return cv2.getAffineTransform(np.float32(dst), np.float32(src))
+    return cv2.getAffineTransform(np.float32(src), np.float32(dst))
+
+
+def _wasb_affine_transform_xy(xy: Sequence[float], affine: Any, *, np: Any) -> Any:
+    if len(xy) != 2:
+        raise ValueError(f"xy must contain exactly two values, got {xy}")
+    point = np.array([float(xy[0]), float(xy[1]), 1.0], dtype=np.float32)
+    transformed = np.dot(affine, point)
+    return transformed[:2].astype(np.float32)
+
+
+def _wasb_get_3rd_point(a: Any, b: Any, *, np: Any) -> Any:
+    direct = a - b
+    return b + np.array([-direct[1], direct[0]], dtype=np.float32)
+
+
+def _wasb_get_dir(src_point: Sequence[float], rot_rad: float, *, np: Any) -> Any:
+    sn, cs = np.sin(rot_rad), np.cos(rot_rad)
+    return np.array(
+        [
+            src_point[0] * cs - src_point[1] * sn,
+            src_point[0] * sn + src_point[1] * cs,
+        ],
+        dtype=np.float32,
+    )
+
+
+def _normalize_output_wh(output_wh: tuple[int, int]) -> tuple[int, int]:
+    width, height = int(output_wh[0]), int(output_wh[1])
+    if width <= 0 or height <= 0:
+        raise ValueError(f"output_wh must contain positive width,height, got {output_wh}")
+    return width, height
 
 
 def _preprocess_wasb_window_harness_v0(frames_rgb: Sequence[Any], *, np: Any, torch: Any) -> Any:

@@ -291,6 +291,96 @@ def test_ball_pretrain_dataset_rewrites_absolute_image_roots_for_vm_paths(tmp_pa
     }
 
 
+def test_ball_pretrain_dataset_tensor_matches_wasb_official_preprocessing(tmp_path: Path) -> None:
+    cv2 = pytest.importorskip("cv2")
+    np = pytest.importorskip("numpy")
+    torch = pytest.importorskip("torch")
+    from threed.racketsport import wasb_adapter
+
+    image = tmp_path / "source" / "train" / "frame_000001.png"
+    _write_gradient_image(image, width=64, height=48)
+    corpus_index = tmp_path / "aggregated" / "corpus_index.json"
+    _write_ball_corpus_index(
+        corpus_index,
+        [
+            _ball_sample(
+                sample_id="core:train:official",
+                image_path=image,
+                split="train",
+                bucket="core_pickleball",
+                xy=[16.0, 12.0],
+                temporal={"kind": "isolated_still", "sequence_id": None, "sequence_order": None},
+            )
+        ],
+    )
+
+    dataset = RoboflowBallPretrainDataset(
+        corpus_index,
+        split_role="train",
+        frames_in=3,
+        protected_eval_hashes={"synthetic": [0xFFFFFFFFFFFFFFFF]},
+        expected_protected_eval_hash_count=1,
+        skip_list_path=tmp_path / "skip_list.json",
+    )
+    item = dataset[0]
+    frame = np.asarray(Image.open(image).convert("RGB"))
+    trans_input = wasb_adapter._wasb_official_input_affine(64, 48, cv2=cv2, np=np)
+    expected = wasb_adapter._preprocess_wasb_window(
+        [frame, frame, frame],
+        trans_input,
+        cv2=cv2,
+        np=np,
+        torch=torch,
+        input_preprocessing="official",
+    )
+
+    assert torch.allclose(item["input"], expected, atol=1e-6)
+
+
+def test_ball_pretrain_dataset_heatmap_argmax_uses_wasb_official_affine(tmp_path: Path) -> None:
+    cv2 = pytest.importorskip("cv2")
+    np = pytest.importorskip("numpy")
+    torch = pytest.importorskip("torch")
+    from threed.racketsport import wasb_adapter
+
+    image = tmp_path / "source" / "train" / "frame_000001.png"
+    _write_gradient_image(image, width=64, height=48)
+    corpus_index = tmp_path / "aggregated" / "corpus_index.json"
+    _write_ball_corpus_index(
+        corpus_index,
+        [
+            _ball_sample(
+                sample_id="core:train:label-geometry",
+                image_path=image,
+                split="train",
+                bucket="core_pickleball",
+                xy=[16.0, 12.0],
+                temporal={"kind": "isolated_still", "sequence_id": None, "sequence_order": None},
+            )
+        ],
+    )
+
+    dataset = RoboflowBallPretrainDataset(
+        corpus_index,
+        split_role="train",
+        frames_in=3,
+        protected_eval_hashes={"synthetic": [0xFFFFFFFFFFFFFFFF]},
+        expected_protected_eval_hash_count=1,
+        skip_list_path=tmp_path / "skip_list.json",
+    )
+    item = dataset[0]
+    peak_index = int(item["target"][0].flatten().argmax().item())
+    peak_xy = torch.tensor([peak_index % 512, peak_index // 512], dtype=torch.float32)
+    trans_input = wasb_adapter._wasb_official_input_affine(64, 48, cv2=cv2, np=np)
+    expected_xy = torch.tensor(
+        wasb_adapter._wasb_affine_transform_xy([16.0, 12.0], trans_input, np=np),
+        dtype=torch.float32,
+    )
+
+    assert torch.allclose(item["target_xy_px"], expected_xy, atol=1e-6)
+    assert torch.allclose(peak_xy, expected_xy.round(), atol=1.0)
+
+
 def test_ball_pretrain_dataset_uses_corpus_card_leakage_summary_by_default(tmp_path: Path) -> None:
     image = tmp_path / "source" / "train" / "frame_000001.jpg"
     _write_image(image, color=(40, 90, 130))
@@ -455,6 +545,22 @@ def test_ball_pretrain_dataset_applies_core_to_aux_mixing_ratio(tmp_path: Path) 
 def _write_image(path: Path, *, color: tuple[int, int, int]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (64, 48), color=color).save(path)
+
+
+def _write_gradient_image(path: Path, *, width: int, height: int) -> None:
+    import numpy as np
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    yy, xx = np.mgrid[0:height, 0:width]
+    array = np.stack(
+        [
+            (xx * 5 + yy * 3) % 256,
+            (xx * 7 + 11) % 256,
+            (yy * 13 + 17) % 256,
+        ],
+        axis=2,
+    ).astype(np.uint8)
+    Image.fromarray(array, mode="RGB").save(path)
 
 
 def _write_coco(path: Path, *, images: list[dict], annotations: list[dict]) -> None:

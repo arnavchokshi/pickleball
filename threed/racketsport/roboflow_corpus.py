@@ -17,6 +17,12 @@ from .ball_tracknet_cvat_dataset import (
     PUBLIC_UNKNOWN_VISIBILITY_POLICY,
     PUBLIC_UNKNOWN_VISIBILITY_WBCE_WEIGHT,
 )
+from .wasb_adapter import (
+    WASB_INPUT_WH,
+    _preprocess_wasb_window_official,
+    _wasb_affine_transform_xy,
+    _wasb_official_input_affine,
+)
 
 
 ADJACENT_SPORT_SLUGS = {
@@ -39,7 +45,7 @@ HASH_TYPE = "dhash_8x8_64bit"
 DEFAULT_DEDUP_THRESHOLD = 3
 DEFAULT_EVAL_SAMPLE_EVERY_S = 2.0
 DEFAULT_PROTECTED_EVAL_HASH_COUNT = 35
-DEFAULT_BALL_PRETRAIN_IMAGE_SIZE = (512, 288)
+DEFAULT_BALL_PRETRAIN_IMAGE_SIZE = WASB_INPUT_WH
 DEFAULT_BALL_PRETRAIN_FRAMES_IN = 3
 DEFAULT_BALL_PRETRAIN_HEATMAP_RADIUS_PX = 4.0
 DEFAULT_CORE_TO_AUX_RATIO = 8
@@ -443,6 +449,7 @@ class RoboflowBallPretrainDataset:
 
         self._torch = _require_torch()
         self._np = _require_numpy()
+        self._cv2 = _require_cv2()
         self.corpus_index_path = Path(corpus_index_path)
         self.split_role = split_role
         self.image_size = (int(image_size[0]), int(image_size[1]))
@@ -544,6 +551,7 @@ class RoboflowBallPretrainDataset:
             "source_split_counts": dict(sorted(split_counts.items())),
             "temporal_sample_counts": dict(sorted(temporal_counts.items())),
             "image_size": list(self.image_size),
+            "input_preprocessing": "wasb_official_affine_imagenet",
             "frames_in": self.frames_in,
             "heatmap_radius_px": self.heatmap_radius_px,
             "mixing": {
@@ -581,14 +589,25 @@ class RoboflowBallPretrainDataset:
                 width, height = image.size
         target_w, target_h = self.image_size
         x, y = _label_xy(record.label)
-        scaled_x = float(x) * float(target_w) / float(width)
-        scaled_y = float(y) * float(target_h) / float(height)
-        frames = [
-            _image_tensor(_resolve_sample_image_path(window_sample, self.image_path_rewrites), image_size=self.image_size)
+        torch = self._torch
+        np = self._np
+        cv2 = self._cv2
+        trans_input = _wasb_official_input_affine(width, height, cv2=cv2, np=np, output_wh=self.image_size)
+        frames_rgb = [
+            _image_array(_resolve_sample_image_path(window_sample, self.image_path_rewrites))
             for window_sample in record.window_samples
         ]
-        torch = self._torch
-        input_tensor = torch.cat(frames, dim=0)
+        input_tensor = _preprocess_wasb_window_official(
+            frames_rgb,
+            trans_input,
+            cv2=cv2,
+            np=np,
+            torch=torch,
+            output_wh=self.image_size,
+        )
+        warped_xy = _wasb_affine_transform_xy([x, y], trans_input, np=np)
+        scaled_x = float(warped_xy[0])
+        scaled_y = float(warped_xy[1])
         target = _gaussian_heatmap(
             scaled_x,
             scaled_y,
@@ -983,6 +1002,12 @@ def _image_tensor(path: Path, *, image_size: tuple[int, int]) -> Any:
     return torch.from_numpy(array).permute(2, 0, 1).contiguous()
 
 
+def _image_array(path: Path) -> Any:
+    np = _require_numpy()
+    with Image.open(path) as image:
+        return np.asarray(image.convert("RGB"), dtype=np.uint8)
+
+
 def _gaussian_heatmap(
     x: float,
     y: float,
@@ -1012,6 +1037,14 @@ def _require_numpy() -> Any:
     except ModuleNotFoundError as exc:
         raise RuntimeError("numpy is required for RoboflowBallPretrainDataset") from exc
     return np
+
+
+def _require_cv2() -> Any:
+    try:
+        import cv2
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("cv2 is required for official WASB training preprocessing") from exc
+    return cv2
 
 
 def initial_bucket_for_entry(entry: Mapping[str, Any]) -> tuple[str, str]:

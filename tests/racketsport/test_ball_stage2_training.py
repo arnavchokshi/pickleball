@@ -102,6 +102,55 @@ def test_stage2_cvat_batch_carries_wbce_weights_into_loss(tmp_path: Path) -> Non
     assert loss == pytest.approx(expected, rel=1e-6)
 
 
+def test_stage2_dataset_tensor_and_label_geometry_use_wasb_official_affine(tmp_path: Path) -> None:
+    from scripts.racketsport import train_ball_stage2 as stage2
+    from threed.racketsport import wasb_adapter
+
+    cv2 = pytest.importorskip("cv2")
+    np = pytest.importorskip("numpy")
+    cvat_root = tmp_path / "cvat"
+    clip_dir = cvat_root / "clip_train"
+    clip_dir.mkdir(parents=True)
+    payload = _cvat_payload(
+        frame_count=3,
+        reviewed_frame_indices=[1],
+        ball_frames={1: (14.0, 10.0, 4.0, 4.0)},
+        ball_visibility_levels={1: "clear"},
+    )
+    payload["task"]["original_size"] = [64, 48]  # type: ignore[index]
+    (clip_dir / "reviewed_boxes.json").write_text(json.dumps(payload), encoding="utf-8")
+    video = tmp_path / "clip_train.mp4"
+    _write_gradient_video(video, frame_count=3, width=64, height=48, cv2=cv2, np=np)
+
+    dataset = stage2.CvatBallStage2Dataset.from_export_root(
+        cvat_root,
+        video_paths={"clip_train": video},
+        frames_in=3,
+        heatmap_radius_px=2.0,
+    )
+    item = dataset[0]
+    frames = _read_video_rgb_frames(video, [0, 1, 2], cv2=cv2)
+    trans_input = wasb_adapter._wasb_official_input_affine(64, 48, cv2=cv2, np=np)
+    expected = wasb_adapter._preprocess_wasb_window(
+        frames,
+        trans_input,
+        cv2=cv2,
+        np=np,
+        torch=torch,
+        input_preprocessing="official",
+    )
+    expected_xy = torch.tensor(
+        wasb_adapter._wasb_affine_transform_xy([16.0, 12.0], trans_input, np=np),
+        dtype=torch.float32,
+    )
+    peak_index = int(item["target"][0].flatten().argmax().item())
+    peak_xy = torch.tensor([peak_index % 512, peak_index // 512], dtype=torch.float32)
+
+    assert torch.allclose(item["input"], expected, atol=1e-6)
+    assert torch.allclose(item["target_xy_px"], expected_xy, atol=1e-6)
+    assert torch.allclose(peak_xy, expected_xy.round(), atol=1.0)
+
+
 def test_occlusion_augmentation_is_seeded_and_requires_wbce() -> None:
     from scripts.racketsport.train_ball_stage2 import apply_occlusion_augmentation
 
@@ -285,3 +334,39 @@ def _write_tiny_video(path: Path, *, frame_count: int, cv2) -> None:
         frame[10:14, 10:14] = (0, 255, 255)
         writer.write(frame)
     writer.release()
+
+
+def _write_gradient_video(path: Path, *, frame_count: int, width: int, height: int, cv2, np) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (width, height))
+    if not writer.isOpened():
+        pytest.skip("cv2 VideoWriter mp4v is unavailable in this environment")
+    yy, xx = np.mgrid[0:height, 0:width]
+    for index in range(frame_count):
+        rgb = np.stack(
+            [
+                (xx * 5 + yy * 3 + index * 11) % 256,
+                (xx * 7 + 13 + index * 17) % 256,
+                (yy * 9 + 19 + index * 23) % 256,
+            ],
+            axis=2,
+        ).astype(np.uint8)
+        writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+    writer.release()
+
+
+def _read_video_rgb_frames(path: Path, indices: list[int], cv2) -> list[object]:
+    frames = []
+    capture = cv2.VideoCapture(str(path))
+    try:
+        if not capture.isOpened():
+            raise ValueError(f"could not open video: {path}")
+        for frame_index in indices:
+            capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+            ok, frame_bgr = capture.read()
+            if not ok or frame_bgr is None:
+                raise ValueError(f"could not read frame {frame_index} from {path}")
+            frames.append(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
+    finally:
+        capture.release()
+    return frames
