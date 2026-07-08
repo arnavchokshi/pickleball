@@ -178,6 +178,73 @@ def test_logout_returns_204_and_revokes_chain(tmp_path: Path) -> None:
     assert after_logout.status_code == 401
 
 
+def test_web_login_does_not_leak_refresh_token_in_body(tmp_path: Path) -> None:
+    # Web (native flag absent/false) must keep the refresh token in the httpOnly
+    # cookie ONLY -- never in the JSON body, or XSS could read it.
+    client = _make_client(tmp_path)
+    _register(client)
+
+    payload = _login(client)
+
+    assert "refresh_token" not in payload
+    assert client.cookies.get(REFRESH_COOKIE_NAME)
+
+
+def test_native_login_returns_refresh_token_in_body(tmp_path: Path) -> None:
+    client = _make_client(tmp_path)
+    _register(client)
+
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "player@example.com", "password": PASSWORD, "native": True},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body.get("refresh_token"), "native login must echo the refresh token in the body"
+
+
+def test_native_refresh_via_header_rotates_and_reuse_revokes_chain(tmp_path: Path) -> None:
+    # Full native flow with NO cookie: token travels only via X-Refresh-Token.
+    client = _make_client(tmp_path)
+    _register(client)
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "player@example.com", "password": PASSWORD, "native": True},
+    ).json()
+    first = login["refresh_token"]
+
+    client.cookies.clear()  # prove the header path works with zero cookies
+    rotated = client.post("/api/auth/refresh", headers={"X-Refresh-Token": first})
+    assert rotated.status_code == 200, rotated.text
+    second = rotated.json()["refresh_token"]
+    assert second and second != first
+
+    # Replaying the now-rotated first token is theft → whole chain revoked.
+    client.cookies.clear()
+    replay = client.post("/api/auth/refresh", headers={"X-Refresh-Token": first})
+    assert replay.status_code == 401
+    client.cookies.clear()
+    after = client.post("/api/auth/refresh", headers={"X-Refresh-Token": second})
+    assert after.status_code == 401
+
+
+def test_native_logout_via_header_revokes_chain(tmp_path: Path) -> None:
+    client = _make_client(tmp_path)
+    _register(client)
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "player@example.com", "password": PASSWORD, "native": True},
+    ).json()
+    token = login["refresh_token"]
+
+    client.cookies.clear()
+    assert client.post("/api/auth/logout", headers={"X-Refresh-Token": token}).status_code == 204
+
+    client.cookies.clear()
+    after = client.post("/api/auth/refresh", headers={"X-Refresh-Token": token})
+    assert after.status_code == 401
+
+
 def test_register_rate_limited_429_at_sixth_request(tmp_path: Path) -> None:
     client = _make_client(tmp_path)
 
