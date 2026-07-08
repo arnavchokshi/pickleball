@@ -18,7 +18,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Cookie, HTTPException, Request, Response
+from fastapi import APIRouter, Cookie, Header, HTTPException, Request, Response
 from pydantic import BaseModel
 from pymongo.errors import DuplicateKeyError
 from slowapi import Limiter
@@ -47,6 +47,11 @@ class LoginBody(BaseModel):
     email: str
     password: str
     device_label: str | None = None
+    # Native clients (iOS) have no httpOnly cookie jar for the refresh token, so
+    # they opt in to receiving it in the response body and thereafter send it via
+    # the X-Refresh-Token header. Web clients leave this false and keep the
+    # httpOnly cookie (so XSS can never read the refresh token).
+    native: bool = False
 
 
 def _utcnow() -> datetime:
@@ -81,7 +86,14 @@ def build_auth_router(*, db: Any, auth_config: AuthConfig, limiter: Limiter) -> 
             path="/api/auth",
         )
 
-    def _issue_session(response: Response, *, user_id: str, rotated_from: str | None, device_label: str | None) -> dict[str, Any]:
+    def _issue_session(
+        response: Response,
+        *,
+        user_id: str,
+        rotated_from: str | None,
+        device_label: str | None,
+        include_body_token: bool = False,
+    ) -> dict[str, Any]:
         now = _utcnow()
         refresh_token = generate_refresh_token()
         db.refresh_tokens.insert_one(
@@ -103,11 +115,17 @@ def build_auth_router(*, db: Any, auth_config: AuthConfig, limiter: Limiter) -> 
             secret=auth_config.jwt_secret,
             ttl_s=auth_config.jwt_access_ttl_s,
         )
-        return {
+        payload = {
             "access_token": access_token,
             "token_type": "bearer",
             "expires_in": auth_config.jwt_access_ttl_s,
         }
+        # Native clients get the rotating refresh token in the body (they store it
+        # in the Keychain and resend it via X-Refresh-Token). Web never sees it in
+        # the body -- the httpOnly cookie is its only carrier.
+        if include_body_token:
+            payload["refresh_token"] = refresh_token
+        return payload
 
     def _revoke_user_chain(user_id: str) -> None:
         now = _utcnow()
@@ -160,16 +178,23 @@ def build_auth_router(*, db: Any, auth_config: AuthConfig, limiter: Limiter) -> 
             user_id=user["_id"],
             rotated_from=None,
             device_label=body.device_label,
+            include_body_token=body.native,
         )
 
     @router.post("/api/auth/refresh")
     def refresh(
         response: Response,
         refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+        header_token: str | None = Header(default=None, alias="X-Refresh-Token"),
     ) -> dict[str, Any]:
-        if not refresh_token:
+        # Native clients send the token in X-Refresh-Token (no cookie jar); web
+        # sends the httpOnly cookie. Header wins when both are present, and its
+        # presence is what flags the caller as native (→ token echoed in body).
+        native = header_token is not None
+        token = header_token or refresh_token
+        if not token:
             raise HTTPException(status_code=401, detail="missing refresh token")
-        token_hash = hash_refresh_token(refresh_token)
+        token_hash = hash_refresh_token(token)
         now = _utcnow()
         claimed = db.refresh_tokens.find_one_and_update(
             {
@@ -200,15 +225,18 @@ def build_auth_router(*, db: Any, auth_config: AuthConfig, limiter: Limiter) -> 
             user_id=claimed["user_id"],
             rotated_from=token_hash,
             device_label=claimed.get("device_label"),
+            include_body_token=native,
         )
 
     @router.post("/api/auth/logout", status_code=204)
     def logout(
         response: Response,
         refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+        header_token: str | None = Header(default=None, alias="X-Refresh-Token"),
     ) -> None:
-        if refresh_token:
-            doc = db.refresh_tokens.find_one({"token_hash": hash_refresh_token(refresh_token)})
+        token = header_token or refresh_token
+        if token:
+            doc = db.refresh_tokens.find_one({"token_hash": hash_refresh_token(token)})
             if doc is not None:
                 _revoke_user_chain(doc["user_id"])
         response.delete_cookie(REFRESH_COOKIE_NAME, path="/api/auth")
