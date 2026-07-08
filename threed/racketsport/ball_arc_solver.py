@@ -26,6 +26,10 @@ ARTIFACT_TYPE = "racketsport_ball_track_arc_solved"
 LANE = "BALL-ARC-SOLVER"
 SOURCE = "event_anchored_drag_arc_solver"
 BALL_RADIUS_M = 0.0371
+STEYN_CL_PER_SPIN = 0.195
+SPIN_SCALAR_MAX_ABS = 0.8
+SPIN_SCALAR_REGULARIZATION_LAMBDA = 0.05
+SPIN_SCALAR_MIN_INLIERS = 8
 FIT_VALIDITY_MIN_OBSERVATIONS_FOR_INLIER_GATE = 6
 FIT_VALIDITY_MIN_INLIER_FRACTION = 0.15
 
@@ -141,6 +145,7 @@ class BallArcSolverConfig:
     endpoint_refinement_contact_cap_m: float = 0.5
     endpoint_refinement_bounce_cap_m: float = 0.2
     endpoint_refinement_default_cap_m: float = 1.0
+    fit_spin_scalar: bool = False
     court_sport: str = "pickleball"
     court_margin_m: float = 4.0
     court_z_min_m: float = -0.15
@@ -303,6 +308,7 @@ class FlightSegmentFit:
     net_clearance_ok: bool | None
     physical_sanity: Mapping[str, Any]
     size_residuals_m: Mapping[str, Any]
+    spin_scalar: float = 0.0
     primary_observations: tuple[BallObservation, ...] = ()
     candidate_sets_by_frame: Mapping[int, tuple[BallObservation, ...]] | None = None
     selected_observations_by_frame: Mapping[int, BallObservation] | None = None
@@ -325,6 +331,7 @@ class FlightSegmentFit:
             t0=self.start_anchor.t,
             physics=physics,
             config=config,
+            spin_scalar=self.spin_scalar,
         )[0]
 
     def to_json(self) -> dict[str, Any]:
@@ -341,6 +348,8 @@ class FlightSegmentFit:
             "initial_position_m": _vec_json(self.initial_position_m),
             "initial_velocity_mps": _vec_json(self.initial_velocity_mps),
             "initial_speed_mps": _round(_norm(self.initial_velocity_mps), 6),
+            "spin_scalar": _round(self.spin_scalar, 9),
+            "spin_cl": _round(STEYN_CL_PER_SPIN * self.spin_scalar, 9),
             "inlier_count": self.inlier_count,
             "outlier_count": self.outlier_count,
             "inlier_frames": list(self.inlier_frames),
@@ -551,6 +560,8 @@ def _fit_flight_segment_once(
     )
     refined_start = start_anchor
     refined_end = end_anchor
+    spin_fit_eligible = _can_fit_spin_scalar(cfg, observations, inlier_count=free_fit.inlier_count)
+    spin_scalar = free_fit.spin_scalar if spin_fit_eligible else 0.0
     anchor_bvp = _solve_bvp_shooting(
         start_anchor.world_xyz,
         end_anchor.world_xyz,
@@ -558,9 +569,10 @@ def _fit_flight_segment_once(
         end_anchor.t,
         physics=phys,
         config=cfg,
+        spin_scalar=spin_scalar,
     )
     if refine_endpoints:
-        refined_start, refined_end, endpoint_refinement = _refine_bvp_endpoints(
+        refined_start, refined_end, spin_scalar, endpoint_refinement = _refine_bvp_endpoints(
             start_anchor,
             end_anchor,
             observations=observations,
@@ -570,6 +582,8 @@ def _fit_flight_segment_once(
             net_plane=net_plane,
             np=np,
             least_squares=least_squares,
+            spin_scalar=spin_scalar,
+            spin_inlier_count=free_fit.inlier_count,
         )
 
     bvp = _solve_bvp_shooting(
@@ -579,6 +593,7 @@ def _fit_flight_segment_once(
         refined_end.t,
         physics=phys,
         config=cfg,
+        spin_scalar=spin_scalar,
     )
     diagnostics = {
         "bvp_shooting_status": bvp["status"],
@@ -595,7 +610,7 @@ def _fit_flight_segment_once(
             return replace(free_fit, diagnostics=fallback_diag)
         return _blocked_segment(segment_id, refined_start, refined_end, "bvp_shooting_failed")
 
-    return _build_fit_from_bvp_solution(
+    final_fit = _build_fit_from_bvp_solution(
         segment_id=segment_id,
         start_anchor=refined_start,
         end_anchor=refined_end,
@@ -608,6 +623,33 @@ def _fit_flight_segment_once(
         status="fit",
         diagnostics=diagnostics,
     )
+    if abs(final_fit.spin_scalar) > 1e-12 and final_fit.inlier_count < SPIN_SCALAR_MIN_INLIERS:
+        no_spin_fit = _fit_flight_segment_once(
+            segment_id=segment_id,
+            start_anchor=start_anchor,
+            end_anchor=end_anchor,
+            observations=observations,
+            calibration=calibration,
+            physics=phys,
+            config=replace(cfg, fit_spin_scalar=False),
+            net_plane=net_plane,
+            max_nfev=max_nfev,
+            refine_endpoints=refine_endpoints,
+            candidate_endpoint_frozen=candidate_endpoint_frozen,
+        )
+        diagnostics_payload = dict(no_spin_fit.diagnostics or {})
+        diagnostics_payload["spin_scalar_fit"] = {
+            "enabled": True,
+            "fit": False,
+            "reason": "final_bvp_inlier_gate",
+            "candidate_spin_scalar": _round(final_fit.spin_scalar, 9),
+            "candidate_inlier_count": final_fit.inlier_count,
+            "min_inliers": SPIN_SCALAR_MIN_INLIERS,
+            "regularization_lambda": SPIN_SCALAR_REGULARIZATION_LAMBDA,
+            "bound_abs": SPIN_SCALAR_MAX_ABS,
+        }
+        return replace(no_spin_fit, diagnostics=diagnostics_payload)
+    return final_fit
 
 
 def _fit_free_flight_segment_once(
@@ -638,6 +680,34 @@ def _fit_free_flight_segment_once(
     observations = tuple(
         obs for obs in observations if start_anchor.t - 1e-9 <= obs.t <= end_anchor.t + 1e-9 and obs.visible
     )
+    spin_gate_fit: FlightSegmentFit | None = None
+    spin_gate_inlier_count: int | None = None
+    if cfg.fit_spin_scalar:
+        spin_gate_fit = _fit_free_flight_segment_once(
+            segment_id=segment_id,
+            start_anchor=start_anchor,
+            end_anchor=end_anchor,
+            observations=observations,
+            calibration=calibration,
+            physics=phys,
+            config=replace(cfg, fit_spin_scalar=False),
+            net_plane=net_plane,
+            max_nfev=max_nfev,
+            diagnostics=diagnostics,
+        )
+        spin_gate_inlier_count = spin_gate_fit.inlier_count
+        if not spin_gate_fit.status.startswith("fit") or spin_gate_inlier_count < SPIN_SCALAR_MIN_INLIERS:
+            diagnostics_payload = dict(spin_gate_fit.diagnostics or {})
+            diagnostics_payload["spin_scalar_fit"] = {
+                "enabled": True,
+                "fit": False,
+                "reason": "inlier_gate",
+                "min_inliers": SPIN_SCALAR_MIN_INLIERS,
+                "inlier_count": spin_gate_inlier_count,
+                "regularization_lambda": SPIN_SCALAR_REGULARIZATION_LAMBDA,
+                "bound_abs": SPIN_SCALAR_MAX_ABS,
+            }
+            return replace(spin_gate_fit, diagnostics=diagnostics_payload)
     dt = end_anchor.t - start_anchor.t
     initial_velocity = _initial_velocity_guess(start_anchor.world_xyz, end_anchor.world_xyz, dt, phys)
     start_sigma = _anchor_sigma_m(start_anchor, cfg)
@@ -652,17 +722,33 @@ def _fit_free_flight_segment_once(
     if not np.all(np.isfinite(lower)) or not np.all(np.isfinite(upper)) or not np.all(lower < upper):
         return _blocked_segment(segment_id, start_anchor, end_anchor, "invalid_segment_bounds")
     initial = np.minimum(np.maximum(initial, lower + 1e-9), upper - 1e-9)
+    fit_spin = _can_fit_spin_scalar(cfg, observations, inlier_count=spin_gate_inlier_count)
+    if fit_spin:
+        initial = np.append(initial, 0.0)
+        lower = np.append(lower, -SPIN_SCALAR_MAX_ABS)
+        upper = np.append(upper, SPIN_SCALAR_MAX_ABS)
     times = [start_anchor.t, end_anchor.t, *[obs.t for obs in observations]]
 
     def residuals(params: Any) -> Any:
         initial_position = (float(params[0]), float(params[1]), float(params[2]))
         velocity = (float(params[3]), float(params[4]), float(params[5]))
-        predicted = _integrate_positions(initial_position, velocity, times, t0=start_anchor.t, physics=phys, config=cfg)
+        spin_scalar = _clip_spin_scalar(params[6]) if fit_spin else 0.0
+        predicted = _integrate_positions(
+            initial_position,
+            velocity,
+            times,
+            t0=start_anchor.t,
+            physics=phys,
+            config=cfg,
+            spin_scalar=spin_scalar,
+        )
         by_time = {round(t, 9): point for t, point in zip(times, predicted, strict=True)}
         residual: list[float] = []
         residual.extend(_scaled_vec(_sub(initial_position, start_anchor.world_xyz), start_sigma / cfg.endpoint_anchor_weight))
         endpoint = by_time[round(end_anchor.t, 9)]
         residual.extend(_scaled_vec(_sub(endpoint, end_anchor.world_xyz), end_sigma / cfg.endpoint_anchor_weight))
+        if fit_spin:
+            residual.append(math.sqrt(SPIN_SCALAR_REGULARIZATION_LAMBDA) * spin_scalar)
         for obs in observations:
             projected = _project_world_point(calibration, by_time[round(obs.t, 9)])
             sigma_px = cfg.robust_pixel_sigma / max(0.35, math.sqrt(max(obs.confidence, 1e-6)))
@@ -688,6 +774,7 @@ def _fit_free_flight_segment_once(
                     phys,
                     cfg,
                     net_plane,
+                    spin_scalar=spin_scalar,
                 )
             )
         return np.asarray(residual, dtype=float)
@@ -703,6 +790,7 @@ def _fit_free_flight_segment_once(
     params = result.x if result.success else initial
     initial_position = (float(params[0]), float(params[1]), float(params[2]))
     velocity = (float(params[3]), float(params[4]), float(params[5]))
+    spin_scalar = _clip_spin_scalar(params[6]) if fit_spin else 0.0
     obs_errors = _observation_reprojection_errors(
         observations,
         calibration=calibration,
@@ -711,17 +799,48 @@ def _fit_free_flight_segment_once(
         t0=start_anchor.t,
         physics=phys,
         config=cfg,
+        spin_scalar=spin_scalar,
     )
     inlier_frames = tuple(obs.frame for obs in observations if obs_errors.get(obs.frame, math.inf) <= cfg.max_reprojection_inlier_px)
     outlier_frames = tuple(obs.frame for obs in observations if obs_errors.get(obs.frame, 0.0) > cfg.max_reprojection_inlier_px)
+    if fit_spin and len(inlier_frames) < SPIN_SCALAR_MIN_INLIERS and spin_gate_fit is not None:
+        diagnostics_payload = dict(spin_gate_fit.diagnostics or {})
+        diagnostics_payload["spin_scalar_fit"] = {
+            "enabled": True,
+            "fit": False,
+            "reason": "final_inlier_gate",
+            "candidate_spin_scalar": _round(spin_scalar, 9),
+            "min_inliers": SPIN_SCALAR_MIN_INLIERS,
+            "inlier_count": len(inlier_frames),
+            "regularization_lambda": SPIN_SCALAR_REGULARIZATION_LAMBDA,
+            "bound_abs": SPIN_SCALAR_MAX_ABS,
+        }
+        return replace(spin_gate_fit, diagnostics=diagnostics_payload)
     errors = [obs_errors[obs.frame] for obs in observations if obs.frame in obs_errors]
     inlier_errors = [
         obs_errors[obs.frame]
         for obs in observations
         if obs.frame in obs_errors and obs_errors[obs.frame] <= cfg.max_reprojection_inlier_px
     ]
-    endpoint_pred = _integrate_positions(initial_position, velocity, [end_anchor.t], t0=start_anchor.t, physics=phys, config=cfg)[0]
-    net_clearance = _net_clearance_m(initial_position, velocity, start_anchor.t, end_anchor.t, phys, cfg, net_plane)
+    endpoint_pred = _integrate_positions(
+        initial_position,
+        velocity,
+        [end_anchor.t],
+        t0=start_anchor.t,
+        physics=phys,
+        config=cfg,
+        spin_scalar=spin_scalar,
+    )[0]
+    net_clearance = _net_clearance_m(
+        initial_position,
+        velocity,
+        start_anchor.t,
+        end_anchor.t,
+        phys,
+        cfg,
+        net_plane,
+        spin_scalar=spin_scalar,
+    )
     net_ok = None if net_clearance is None else net_clearance >= -cfg.net_clearance_slack_m
     physical = _physical_sanity(
         initial_position,
@@ -731,6 +850,7 @@ def _fit_free_flight_segment_once(
         phys,
         cfg,
         net_clearance,
+        spin_scalar=spin_scalar,
     )
     size_residuals = _size_residual_distribution(
         observations,
@@ -741,7 +861,18 @@ def _fit_free_flight_segment_once(
         physics=phys,
         config=cfg,
         sigma_floor_m=cfg.size_depth_sigma_m,
+        spin_scalar=spin_scalar,
     )
+    spin_diagnostics = {
+        "enabled": bool(cfg.fit_spin_scalar),
+        "fit": bool(fit_spin),
+        "min_inliers": SPIN_SCALAR_MIN_INLIERS,
+        "inlier_count": len(inlier_frames),
+        "regularization_lambda": SPIN_SCALAR_REGULARIZATION_LAMBDA,
+        "bound_abs": SPIN_SCALAR_MAX_ABS,
+    }
+    diagnostics_payload = dict(diagnostics or {})
+    diagnostics_payload["spin_scalar_fit"] = spin_diagnostics
     return FlightSegmentFit(
         segment_id=segment_id,
         status="fit" if result.success else "fit_optimizer_not_converged",
@@ -760,7 +891,8 @@ def _fit_free_flight_segment_once(
         net_clearance_ok=net_ok,
         physical_sanity=physical,
         size_residuals_m=size_residuals,
-        diagnostics=diagnostics,
+        spin_scalar=spin_scalar,
+        diagnostics=diagnostics_payload,
     )
 
 
@@ -852,18 +984,21 @@ def _solve_bvp_shooting(
     *,
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
+    spin_scalar: float = 0.0,
 ) -> dict[str, Any]:
+    spin = _clip_spin_scalar(spin_scalar)
     try:
         import numpy as np
     except ImportError:
         v_guess = _initial_velocity_guess(p0, p1, max(t1 - t0, 1e-9), physics)
-        endpoint = _integrate_positions(p0, v_guess, [t1], t0=t0, physics=physics, config=config)[0]
+        endpoint = _integrate_positions(p0, v_guess, [t1], t0=t0, physics=physics, config=config, spin_scalar=spin)[0]
         return {
             "status": "failed_missing_numpy",
             "converged": False,
             "iterations": 0,
             "initial_position_m": _vec_json(p0),
             "initial_velocity_mps": _vec_json(v_guess),
+            "spin_scalar": _round(spin, 9),
             "endpoint_error_m": _round(_distance(endpoint, p1), 6),
             "target_position_m": _vec_json(p1),
         }
@@ -877,6 +1012,7 @@ def _solve_bvp_shooting(
             "iterations": 0,
             "initial_position_m": _vec_json(p0),
             "initial_velocity_mps": _vec_json(v_guess),
+            "spin_scalar": _round(spin, 9),
             "endpoint_error_m": None,
             "target_position_m": _vec_json(p1),
         }
@@ -899,6 +1035,7 @@ def _solve_bvp_shooting(
                 t0=t0,
                 physics=physics,
                 config=config,
+                spin_scalar=spin,
             )[0],
             dtype=float,
         )
@@ -956,6 +1093,8 @@ def _solve_bvp_shooting(
         "fd_eps_mps": float(config.bvp_shooting_fd_eps_mps),
         "initial_position_m": _vec_json(p0),
         "initial_velocity_mps": _vec_json((float(best_velocity[0]), float(best_velocity[1]), float(best_velocity[2]))),
+        "spin_scalar": _round(spin, 9),
+        "spin_cl": _round(STEYN_CL_PER_SPIN * spin, 9),
         "target_position_m": _vec_json(p1),
         "endpoint_position_m": _vec_json((float(endpoint[0]), float(endpoint[1]), float(endpoint[2]))),
         "endpoint_error_m": _round(endpoint_error, 6),
@@ -973,7 +1112,11 @@ def _refine_bvp_endpoints(
     net_plane: Mapping[str, Any] | None,
     np: Any,
     least_squares: Any,
-) -> tuple[AnchorEvent, AnchorEvent, dict[str, Any]]:
+    spin_scalar: float = 0.0,
+    spin_inlier_count: int | None = None,
+) -> tuple[AnchorEvent, AnchorEvent, float, dict[str, Any]]:
+    initial_spin = _clip_spin_scalar(spin_scalar)
+    fit_spin = _can_fit_spin_scalar(config, observations, inlier_count=spin_inlier_count)
     base = _endpoint_refinement_identity(
         start_anchor,
         end_anchor,
@@ -982,19 +1125,25 @@ def _refine_bvp_endpoints(
         frozen_for_candidate_association=False,
     )
     if end_anchor.t - start_anchor.t <= config.min_segment_dt_s:
-        return start_anchor, end_anchor, {**base, "status": "skipped"}
+        return start_anchor, end_anchor, initial_spin, {**base, "status": "skipped"}
     fps = _fps_from_observations(observations)
     time_cap = float(config.endpoint_refinement_time_corridor_frames) / max(fps, 1e-9)
     p0_cap = _endpoint_position_corridor_m(start_anchor, config)
     p1_cap = _endpoint_position_corridor_m(end_anchor, config)
     lower = np.asarray([-p0_cap, -p0_cap, -p0_cap, -p1_cap, -p1_cap, -p1_cap, -time_cap, -time_cap], dtype=float)
     upper = np.asarray([p0_cap, p0_cap, p0_cap, p1_cap, p1_cap, p1_cap, time_cap, time_cap], dtype=float)
+    if fit_spin:
+        lower = np.append(lower, -SPIN_SCALAR_MAX_ABS)
+        upper = np.append(upper, SPIN_SCALAR_MAX_ABS)
     if not np.all(lower < upper):
-        return start_anchor, end_anchor, {**base, "status": "skipped"}
+        return start_anchor, end_anchor, initial_spin, {**base, "status": "skipped"}
     start_sigma = max(_anchor_sigma_m(start_anchor, config), config.min_anchor_sigma_m)
     end_sigma = max(_anchor_sigma_m(end_anchor, config), config.min_anchor_sigma_m)
 
-    def trial_from_params(params: Any) -> tuple[tuple[float, float, float], tuple[float, float, float], float, float]:
+    def spin_from_params(params: Any) -> float:
+        return _clip_spin_scalar(params[8]) if fit_spin else initial_spin
+
+    def trial_from_params(params: Any) -> tuple[tuple[float, float, float], tuple[float, float, float], float, float, float]:
         dp0 = (float(params[0]), float(params[1]), float(params[2]))
         dp1 = (float(params[3]), float(params[4]), float(params[5]))
         return (
@@ -1002,25 +1151,44 @@ def _refine_bvp_endpoints(
             _add(end_anchor.world_xyz, dp1),
             float(start_anchor.t) + float(params[6]),
             float(end_anchor.t) + float(params[7]),
+            spin_from_params(params),
         )
 
     def residuals(params: Any) -> Any:
-        trial_p0, trial_p1, trial_t0, trial_t1 = trial_from_params(params)
+        trial_p0, trial_p1, trial_t0, trial_t1, trial_spin = trial_from_params(params)
         residual: list[float] = []
         residual.extend(float(params[index]) / start_sigma for index in range(3))
         residual.extend(float(params[index]) / end_sigma for index in range(3, 6))
         residual.append(float(params[6]) / max(time_cap, 1e-9))
         residual.append(float(params[7]) / max(time_cap, 1e-9))
+        if fit_spin:
+            residual.append(math.sqrt(SPIN_SCALAR_REGULARIZATION_LAMBDA) * trial_spin)
         if trial_t1 - trial_t0 <= config.min_segment_dt_s:
             residual.extend([1e3, 1e3, 1e3])
             return np.asarray(residual, dtype=float)
-        bvp = _solve_bvp_shooting(trial_p0, trial_p1, trial_t0, trial_t1, physics=physics, config=config)
+        bvp = _solve_bvp_shooting(
+            trial_p0,
+            trial_p1,
+            trial_t0,
+            trial_t1,
+            physics=physics,
+            config=config,
+            spin_scalar=trial_spin,
+        )
         velocity = _vec3_from_json(bvp.get("initial_velocity_mps"))
         if not bool(bvp.get("converged")) or velocity is None:
             residual.extend([1e2, 1e2, 1e2])
             return np.asarray(residual, dtype=float)
         times = [obs.t for obs in observations]
-        predicted = _integrate_positions(trial_p0, velocity, times, t0=trial_t0, physics=physics, config=config)
+        predicted = _integrate_positions(
+            trial_p0,
+            velocity,
+            times,
+            t0=trial_t0,
+            physics=physics,
+            config=config,
+            spin_scalar=trial_spin,
+        )
         for obs, point in zip(observations, predicted, strict=True):
             projected = _project_world_point(calibration, point)
             sigma_px = config.robust_pixel_sigma / max(0.35, math.sqrt(max(obs.confidence, 1e-6)))
@@ -1037,10 +1205,23 @@ def _refine_bvp_endpoints(
             if size_residual is not None:
                 residual.append(size_residual[0] / size_residual[1])
         if net_plane is not None:
-            residual.append(_net_soft_residual(trial_p0, velocity, trial_t0, trial_t1, physics, config, net_plane))
+            residual.append(
+                _net_soft_residual(
+                    trial_p0,
+                    velocity,
+                    trial_t0,
+                    trial_t1,
+                    physics,
+                    config,
+                    net_plane,
+                    spin_scalar=trial_spin,
+                )
+            )
         return np.asarray(residual, dtype=float)
 
     initial = np.zeros(8, dtype=float)
+    if fit_spin:
+        initial = np.append(initial, initial_spin)
     try:
         result = least_squares(
             residuals,
@@ -1051,9 +1232,9 @@ def _refine_bvp_endpoints(
             max_nfev=config.endpoint_refinement_max_nfev,
         )
     except ValueError:
-        return start_anchor, end_anchor, {**base, "status": "skipped"}
+        return start_anchor, end_anchor, initial_spin, {**base, "status": "skipped"}
     params = result.x if result.success else initial
-    trial_p0, trial_p1, trial_t0, trial_t1 = trial_from_params(params)
+    trial_p0, trial_p1, trial_t0, trial_t1, refined_spin = trial_from_params(params)
     if result.success and float(result.cost) < 1e-12:
         status = "not_improved"
     elif result.success:
@@ -1062,6 +1243,7 @@ def _refine_bvp_endpoints(
         status = "not_improved"
         trial_p0, trial_p1, trial_t0, trial_t1 = start_anchor.world_xyz, end_anchor.world_xyz, start_anchor.t, end_anchor.t
         params = initial
+        refined_spin = initial_spin
     refined_start = replace(start_anchor, world_xyz=trial_p0, t=trial_t0)
     refined_end = replace(end_anchor, world_xyz=trial_p1, t=trial_t1)
     report = {
@@ -1075,8 +1257,13 @@ def _refine_bvp_endpoints(
         "delta_p1_m": _vec_json((float(params[3]), float(params[4]), float(params[5]))),
         "delta_t0_s": _round(float(params[6]), 9),
         "delta_t1_s": _round(float(params[7]), 9),
+        "spin_scalar_initial": _round(initial_spin, 9),
+        "spin_scalar": _round(refined_spin, 9),
+        "spin_fitted": bool(fit_spin),
+        "spin_min_inliers": SPIN_SCALAR_MIN_INLIERS,
+        "spin_regularization_lambda": SPIN_SCALAR_REGULARIZATION_LAMBDA,
     }
-    return refined_start, refined_end, report
+    return refined_start, refined_end, refined_spin, report
 
 
 def _build_fit_from_bvp_solution(
@@ -1097,6 +1284,7 @@ def _build_fit_from_bvp_solution(
     if velocity is None:
         velocity = _initial_velocity_guess(start_anchor.world_xyz, end_anchor.world_xyz, end_anchor.t - start_anchor.t, physics)
     initial_position = start_anchor.world_xyz
+    spin_scalar = _clip_spin_scalar(bvp.get("spin_scalar"))
     obs_errors = _observation_reprojection_errors(
         observations,
         calibration=calibration,
@@ -1105,6 +1293,7 @@ def _build_fit_from_bvp_solution(
         t0=start_anchor.t,
         physics=physics,
         config=config,
+        spin_scalar=spin_scalar,
     )
     inlier_frames = tuple(obs.frame for obs in observations if obs_errors.get(obs.frame, math.inf) <= config.max_reprojection_inlier_px)
     outlier_frames = tuple(obs.frame for obs in observations if obs_errors.get(obs.frame, 0.0) > config.max_reprojection_inlier_px)
@@ -1114,8 +1303,25 @@ def _build_fit_from_bvp_solution(
         for obs in observations
         if obs.frame in obs_errors and obs_errors[obs.frame] <= config.max_reprojection_inlier_px
     ]
-    endpoint_pred = _integrate_positions(initial_position, velocity, [end_anchor.t], t0=start_anchor.t, physics=physics, config=config)[0]
-    net_clearance = _net_clearance_m(initial_position, velocity, start_anchor.t, end_anchor.t, physics, config, net_plane)
+    endpoint_pred = _integrate_positions(
+        initial_position,
+        velocity,
+        [end_anchor.t],
+        t0=start_anchor.t,
+        physics=physics,
+        config=config,
+        spin_scalar=spin_scalar,
+    )[0]
+    net_clearance = _net_clearance_m(
+        initial_position,
+        velocity,
+        start_anchor.t,
+        end_anchor.t,
+        physics,
+        config,
+        net_plane,
+        spin_scalar=spin_scalar,
+    )
     net_ok = None if net_clearance is None else net_clearance >= -config.net_clearance_slack_m
     physical = _physical_sanity(
         initial_position,
@@ -1125,6 +1331,7 @@ def _build_fit_from_bvp_solution(
         physics,
         config,
         net_clearance,
+        spin_scalar=spin_scalar,
     )
     size_residuals = _size_residual_distribution(
         observations,
@@ -1135,6 +1342,7 @@ def _build_fit_from_bvp_solution(
         physics=physics,
         config=config,
         sigma_floor_m=config.size_depth_sigma_m,
+        spin_scalar=spin_scalar,
     )
     return FlightSegmentFit(
         segment_id=segment_id,
@@ -1154,6 +1362,7 @@ def _build_fit_from_bvp_solution(
         net_clearance_ok=net_ok,
         physical_sanity=physical,
         size_residuals_m=size_residuals,
+        spin_scalar=spin_scalar,
         diagnostics=diagnostics,
     )
 
@@ -1208,6 +1417,7 @@ def _fit_diagnostic_summary(fit: FlightSegmentFit) -> dict[str, Any]:
         "status": fit.status,
         "initial_position_m": _vec_json(fit.initial_position_m),
         "initial_velocity_mps": _vec_json(fit.initial_velocity_mps),
+        "spin_scalar": _round(fit.spin_scalar, 9),
         "endpoint_error_m": _round(fit.endpoint_error_m, 6),
         "inlier_count": fit.inlier_count,
         "outlier_count": fit.outlier_count,
@@ -3802,9 +4012,27 @@ def _fit_bvp_fallback_segment(
     fallback_t0 = segment.start_anchor.t if bvp_t0 is None else bvp_t0
     fallback_t1 = segment.end_anchor.t if bvp_t1 is None else bvp_t1
     fallback_end = _vec3_from_json(bvp.get("target_position_m")) or segment.end_anchor.world_xyz
-    endpoint_pred = _integrate_positions(bvp_p0, bvp_v0, [fallback_t1], t0=fallback_t0, physics=physics, config=config)[0]
-    net_clearance = _net_clearance_m(bvp_p0, bvp_v0, fallback_t0, fallback_t1, physics, config, net_plane)
-    physical = _physical_sanity(bvp_p0, bvp_v0, fallback_t0, fallback_t1, physics, config, net_clearance)
+    spin_scalar = _clip_spin_scalar(bvp.get("spin_scalar") if isinstance(bvp, Mapping) else segment.spin_scalar)
+    endpoint_pred = _integrate_positions(
+        bvp_p0,
+        bvp_v0,
+        [fallback_t1],
+        t0=fallback_t0,
+        physics=physics,
+        config=config,
+        spin_scalar=spin_scalar,
+    )[0]
+    net_clearance = _net_clearance_m(
+        bvp_p0,
+        bvp_v0,
+        fallback_t0,
+        fallback_t1,
+        physics,
+        config,
+        net_plane,
+        spin_scalar=spin_scalar,
+    )
+    physical = _physical_sanity(bvp_p0, bvp_v0, fallback_t0, fallback_t1, physics, config, net_clearance, spin_scalar=spin_scalar)
     original = diagnostics.get("legacy_free_fit") if isinstance(diagnostics.get("legacy_free_fit"), Mapping) else _fit_diagnostic_summary(segment)
     diagnostics["fit_validity_gate"] = {
         "reason": reason,
@@ -3821,6 +4049,7 @@ def _fit_bvp_fallback_segment(
         status="fit_bvp_fallback",
         initial_position_m=bvp_p0,
         initial_velocity_mps=bvp_v0,
+        spin_scalar=spin_scalar,
         endpoint_error_m=_distance(endpoint_pred, fallback_end),
         net_clearance_m=net_clearance,
         net_clearance_ok=None if net_clearance is None else net_clearance >= -config.net_clearance_slack_m,
@@ -4891,6 +5120,7 @@ def _leave_one_out_refit_segment(
         segment.end_anchor.t,
         physics=physics,
         config=config,
+        spin_scalar=segment.spin_scalar,
     )
     if not bool(bvp.get("converged")):
         return None
@@ -4985,6 +5215,7 @@ def _segment_anchor_bvp_for_validation(
             segment.end_anchor.t,
             physics=physics,
             config=config,
+            spin_scalar=segment.spin_scalar,
         )
         if solved.get("status") != "converged":
             return None
@@ -5078,10 +5309,11 @@ def _physical_sanity(
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
     net_clearance_m: float | None,
+    spin_scalar: float = 0.0,
 ) -> dict[str, Any]:
     speed = _norm(v0)
     times = [t0 + (t1 - t0) * i / 40.0 for i in range(41)]
-    points = _integrate_positions(p0, v0, times, t0=t0, physics=physics, config=config)
+    points = _integrate_positions(p0, v0, times, t0=t0, physics=physics, config=config, spin_scalar=spin_scalar)
     apex = max(point[2] for point in points)
     violations: list[str] = []
     court_volume = _court_volume_report(points, config)
@@ -5153,9 +5385,13 @@ def _integrate_positions(
     t0: float,
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
+    spin_scalar: float = 0.0,
 ) -> list[tuple[float, float, float]]:
-    if physics.drag_k_per_m <= 0.0:
+    spin = _clip_spin_scalar(spin_scalar)
+    use_magnus = abs(spin) > 1e-12
+    if physics.drag_k_per_m <= 0.0 and not use_magnus:
         return [_analytic_no_drag_position(p0, v0, float(t) - t0, physics.gravity_mps2) for t in times]
+    spin_axis = _spin_axis_for_velocity(v0) if use_magnus else None
     indexed = sorted(enumerate(times), key=lambda item: float(item[1]))
     positions: list[tuple[float, float, float] | None] = [None] * len(times)
     state = (*p0, *v0)
@@ -5167,13 +5403,21 @@ def _integrate_positions(
             reverse_t = t0
             while reverse_t > target_t + 1e-12:
                 step = -min(config.integrator_max_step_s, reverse_t - target_t)
-                reverse_state = _rk4_step(reverse_state, step, physics)
+                reverse_state = (
+                    _rk4_step_magnus(reverse_state, step, physics, spin_axis, spin)
+                    if spin_axis is not None
+                    else _rk4_step(reverse_state, step, physics, spin_scalar=0.0)
+                )
                 reverse_t += step
             positions[index] = (reverse_state[0], reverse_state[1], reverse_state[2])
             continue
         while current_t < target_t - 1e-12:
             step = min(config.integrator_max_step_s, target_t - current_t)
-            state = _rk4_step(state, step, physics)
+            state = (
+                _rk4_step_magnus(state, step, physics, spin_axis, spin)
+                if spin_axis is not None
+                else _rk4_step(state, step, physics, spin_scalar=0.0)
+            )
             current_t += step
         positions[index] = (state[0], state[1], state[2])
     return [position if position is not None else p0 for position in positions]
@@ -5183,12 +5427,50 @@ def _rk4_step(
     state: tuple[float, float, float, float, float, float],
     dt: float,
     physics: PhysicsParameters,
+    *,
+    spin_scalar: float = 0.0,
 ) -> tuple[float, float, float, float, float, float]:
+    _ = spin_scalar
+
     def deriv(s: tuple[float, float, float, float, float, float]) -> tuple[float, float, float, float, float, float]:
         vx, vy, vz = s[3], s[4], s[5]
         speed = math.sqrt(vx * vx + vy * vy + vz * vz)
         drag = physics.drag_k_per_m * speed
         return (vx, vy, vz, -drag * vx, -drag * vy, -physics.gravity_mps2 - drag * vz)
+
+    k1 = deriv(state)
+    k2 = deriv(_add_state(state, _scale(k1, dt / 2.0)))
+    k3 = deriv(_add_state(state, _scale(k2, dt / 2.0)))
+    k4 = deriv(_add_state(state, _scale(k3, dt)))
+    return tuple(state[i] + dt * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]) / 6.0 for i in range(6))  # type: ignore[return-value]
+
+
+def _rk4_step_magnus(
+    state: tuple[float, float, float, float, float, float],
+    dt: float,
+    physics: PhysicsParameters,
+    spin_axis: tuple[float, float, float],
+    spin_scalar: float = 0.0,
+) -> tuple[float, float, float, float, float, float]:
+    spin = _clip_spin_scalar(spin_scalar)
+
+    def deriv(s: tuple[float, float, float, float, float, float]) -> tuple[float, float, float, float, float, float]:
+        vx, vy, vz = s[3], s[4], s[5]
+        speed = math.sqrt(vx * vx + vy * vy + vz * vz)
+        drag = physics.drag_k_per_m * speed
+        ax = -drag * vx
+        ay = -drag * vy
+        az = -physics.gravity_mps2 - drag * vz
+        if speed > 1e-9:
+            v_hat = (vx / speed, vy / speed, vz / speed)
+            lift_dir = _unit_vec3(_cross_vec3(spin_axis, v_hat))
+            if lift_dir is not None:
+                lift_k = 0.5 * physics.rho_air_kg_m3 * math.pi * physics.radius_m * physics.radius_m / physics.mass_kg
+                lift_acc = lift_k * speed * speed * (STEYN_CL_PER_SPIN * spin)
+                ax += lift_acc * lift_dir[0]
+                ay += lift_acc * lift_dir[1]
+                az += lift_acc * lift_dir[2]
+        return (vx, vy, vz, ax, ay, az)
 
     k1 = deriv(state)
     k2 = deriv(_add_state(state, _scale(k1, dt / 2.0)))
@@ -5220,6 +5502,7 @@ def _observation_reprojection_errors(
     t0: float,
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
+    spin_scalar: float = 0.0,
 ) -> dict[int, float]:
     positions = _integrate_positions(
         initial_position,
@@ -5228,6 +5511,7 @@ def _observation_reprojection_errors(
         t0=t0,
         physics=physics,
         config=config,
+        spin_scalar=spin_scalar,
     )
     errors: dict[int, float] = {}
     for obs, position in zip(observations, positions, strict=True):
@@ -5289,6 +5573,7 @@ def _size_residual_distribution(
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
     sigma_floor_m: float,
+    spin_scalar: float = 0.0,
 ) -> dict[str, Any]:
     positions = _integrate_positions(
         initial_position,
@@ -5297,6 +5582,7 @@ def _size_residual_distribution(
         t0=t0,
         physics=physics,
         config=config,
+        spin_scalar=spin_scalar,
     )
     residuals: list[float] = []
     for obs, position in zip(observations, positions, strict=True):
@@ -5378,6 +5664,7 @@ def _net_clearance_m(
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
     net_plane: Mapping[str, Any] | None,
+    spin_scalar: float = 0.0,
 ) -> float | None:
     plane = net_plane.get("plane") if isinstance(net_plane, Mapping) else None
     if not isinstance(plane, Mapping):
@@ -5388,7 +5675,7 @@ def _net_clearance_m(
         return None
     net_height = _net_height_m(net_plane)
     times = [t0 + (t1 - t0) * i / 80.0 for i in range(81)]
-    points = _integrate_positions(p0, v0, times, t0=t0, physics=physics, config=config)
+    points = _integrate_positions(p0, v0, times, t0=t0, physics=physics, config=config, spin_scalar=spin_scalar)
     values = [_dot(_sub(point3, point), normal) for point3 in points]
     crossings: list[tuple[float, float]] = []
     for idx, (a, b) in enumerate(zip(values, values[1:])):
@@ -5413,8 +5700,9 @@ def _net_soft_residual(
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
     net_plane: Mapping[str, Any] | None,
+    spin_scalar: float = 0.0,
 ) -> float:
-    clearance = _net_clearance_m(p0, v0, t0, t1, physics, config, net_plane)
+    clearance = _net_clearance_m(p0, v0, t0, t1, physics, config, net_plane, spin_scalar=spin_scalar)
     if clearance is None or clearance >= -config.net_clearance_slack_m:
         return 0.0
     return (-config.net_clearance_slack_m - clearance) / max(config.net_clearance_slack_m, 1e-9)
@@ -5998,6 +6286,46 @@ def _normalize(a: Sequence[float]) -> tuple[float, float, float]:
     if norm <= 1e-12:
         return (0.0, 0.0, 0.0)
     return (float(a[0]) / norm, float(a[1]) / norm, float(a[2]) / norm)
+
+
+def _cross_vec3(a: Sequence[float], b: Sequence[float]) -> tuple[float, float, float]:
+    return (
+        float(a[1]) * float(b[2]) - float(a[2]) * float(b[1]),
+        float(a[2]) * float(b[0]) - float(a[0]) * float(b[2]),
+        float(a[0]) * float(b[1]) - float(a[1]) * float(b[0]),
+    )
+
+
+def _unit_vec3(a: Sequence[float]) -> tuple[float, float, float] | None:
+    norm = _norm(a)
+    if norm <= 1e-12:
+        return None
+    return (float(a[0]) / norm, float(a[1]) / norm, float(a[2]) / norm)
+
+
+def _spin_axis_for_velocity(velocity: tuple[float, float, float]) -> tuple[float, float, float]:
+    vx, vy = velocity[0], velocity[1]
+    norm = math.hypot(vx, vy)
+    if norm <= 1e-9:
+        return (1.0, 0.0, 0.0)
+    return (vy / norm, -vx / norm, 0.0)
+
+
+def _clip_spin_scalar(value: Any) -> float:
+    parsed = _float_or_none(value)
+    if parsed is None:
+        return 0.0
+    return max(-SPIN_SCALAR_MAX_ABS, min(SPIN_SCALAR_MAX_ABS, float(parsed)))
+
+
+def _can_fit_spin_scalar(
+    config: BallArcSolverConfig,
+    observations: Sequence[BallObservation],
+    *,
+    inlier_count: int | None = None,
+) -> bool:
+    _ = observations
+    return bool(config.fit_spin_scalar and inlier_count is not None and inlier_count >= SPIN_SCALAR_MIN_INLIERS)
 
 
 def _distance(a: Sequence[float], b: Sequence[float]) -> float:

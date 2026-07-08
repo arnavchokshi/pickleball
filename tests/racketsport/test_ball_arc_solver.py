@@ -8,6 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 from scripts.racketsport import solve_ball_arcs as solve_ball_arcs_cli
@@ -24,6 +25,12 @@ from threed.racketsport.ball_arc_solver import (
     solve_ball_arc_track,
 )
 from threed.racketsport.ball_arc_chain import build_ball_arc_render_artifact
+from threed.racketsport.flight_simulator import (
+    FlightSimulationConfig,
+    generate_trajectory_pair,
+    load_court_calibration,
+    sample_shot_family,
+)
 
 
 BALL_RADIUS_M = 0.0371
@@ -187,6 +194,92 @@ def test_fit_flight_segment_shoots_drag_bvp_to_anchor_with_diagnostics() -> None
     assert shooting["endpoint_error_m"] <= 0.005
     assert result.endpoint_error_m <= 0.005
     assert result.initial_velocity_mps == pytest.approx(v0, abs=0.03)
+
+
+def test_fit_flight_segment_recovers_simulated_scalar_magnus_spin() -> None:
+    calibration = load_court_calibration(
+        Path("eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/labels/court_calibration_metric15pt.json")
+    )
+    physics = PhysicsParameters.for_ball_type("outdoor")
+    shot = sample_shot_family("lob", np.random.default_rng(21), start_side="near")
+    shot = shot.with_position((0.0, -4.4, 1.0)).with_velocity((0.35, 8.7, 3.1))
+    record = generate_trajectory_pair(
+        trajectory_id="magnus-spin-roundtrip",
+        rng=np.random.default_rng(22),
+        calibration=calibration,
+        shot=shot,
+        config=FlightSimulationConfig(spin_scalar=0.5, max_time_s=0.55, max_bounces=0),
+        clean_only=True,
+    )
+    samples = [sample for sample in record["truth_3d"]["samples"] if int(sample.get("segment_id", 0)) == 0]
+    visible_by_frame = {
+        int(frame["frame"]): frame
+        for frame in record["clean_2d_track"]
+        if bool(frame.get("visible")) and int(frame.get("segment_id", 0)) == 0
+    }
+    observations = [
+        BallObservation(
+            frame=int(sample["frame"]),
+            t=float(sample["t"]),
+            xy=tuple(float(value) for value in visible_by_frame[int(sample["frame"])]["xy_px"]),  # type: ignore[arg-type]
+            confidence=1.0,
+            visible=True,
+        )
+        for sample in samples[::8]
+        if int(sample["frame"]) in visible_by_frame
+    ]
+    if observations[-1].frame != int(samples[-1]["frame"]) and int(samples[-1]["frame"]) in visible_by_frame:
+        observations.append(
+            BallObservation(
+                frame=int(samples[-1]["frame"]),
+                t=float(samples[-1]["t"]),
+                xy=tuple(float(value) for value in visible_by_frame[int(samples[-1]["frame"])]["xy_px"]),  # type: ignore[arg-type]
+                confidence=1.0,
+                visible=True,
+            )
+        )
+
+    assert len(observations) >= 8
+
+    start = AnchorEvent(
+        anchor_id="sim_start_spin",
+        kind="contact",
+        t=float(samples[0]["t"]),
+        frame=int(samples[0]["frame"]),
+        world_xyz=tuple(float(value) for value in samples[0]["world_xyz_m"]),  # type: ignore[arg-type]
+        sigma_m=0.02,
+        status="simulated",
+        immovable=True,
+    )
+    end = AnchorEvent(
+        anchor_id="sim_end_spin",
+        kind="endpoint",
+        t=float(samples[-1]["t"]),
+        frame=int(samples[-1]["frame"]),
+        world_xyz=tuple(float(value) for value in samples[-1]["world_xyz_m"]),  # type: ignore[arg-type]
+        sigma_m=0.02,
+        status="simulated",
+        immovable=True,
+    )
+
+    result = fit_flight_segment(
+        segment_id=21,
+        start_anchor=start,
+        end_anchor=end,
+        observations=observations,
+        calibration=calibration.payload,
+        physics=physics,
+        config=BallArcSolverConfig(
+            fit_spin_scalar=True,
+            max_reprojection_inlier_px=8.0,
+            robust_pixel_sigma=2.0,
+        ),
+    )
+
+    assert result.status == "fit"
+    assert result.inlier_count >= 8
+    assert result.spin_scalar == pytest.approx(0.5, abs=0.15)
+    assert result.to_json()["spin_scalar"] == pytest.approx(result.spin_scalar, abs=1e-6)
 
 
 def test_endpoint_refinement_respects_anchor_and_time_corridor_caps() -> None:
@@ -468,7 +561,8 @@ def test_leave_one_out_validation_refits_bvp_segment_for_each_holdout(monkeypatc
     def fail_free_fit(**_kwargs):
         raise AssertionError("LOO should use the bounded retained-observation seed, not nonlinear free fitting")
 
-    def fake_solve(p0, p1, t0, t1, *, physics, config):
+    def fake_solve(p0, p1, t0, t1, *, physics, config, spin_scalar=0.0):
+        _ = spin_scalar
         solve_calls.append((p0, p1))
         return {
             "status": "converged",

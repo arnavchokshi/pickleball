@@ -1,0 +1,1442 @@
+{
+  "artifact_type": "w6_magnus_reprojection_compare",
+  "benefited_segments": [
+    {
+      "after": {
+        "endpoint_error_m": 0.000863,
+        "frames": [
+          168,
+          218
+        ],
+        "inlier_count": 46,
+        "outlier_count": 5,
+        "physical_violations": [],
+        "reprojection_rmse_px": 12.425452,
+        "segment_id": 7,
+        "spin_scalar": -0.799999999,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.000432,
+        "frames": [
+          168,
+          218
+        ],
+        "inlier_count": 44,
+        "outlier_count": 7,
+        "physical_violations": [],
+        "reprojection_rmse_px": 13.513988,
+        "segment_id": 7,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.000285,
+        "frames": [
+          218,
+          266
+        ],
+        "inlier_count": 43,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 6.076578,
+        "segment_id": 8,
+        "spin_scalar": -0.8,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.00027,
+        "frames": [
+          218,
+          266
+        ],
+        "inlier_count": 43,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 6.208437,
+        "segment_id": 8,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 1.3e-05,
+        "frames": [
+          266,
+          289
+        ],
+        "inlier_count": 18,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 1.552758,
+        "segment_id": 9,
+        "spin_scalar": 0.473275462,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 1e-05,
+        "frames": [
+          266,
+          289
+        ],
+        "inlier_count": 18,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 1.57074,
+        "segment_id": 9,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 3e-05,
+        "frames": [
+          334,
+          347
+        ],
+        "inlier_count": 13,
+        "outlier_count": 1,
+        "physical_violations": [
+          "initial_speed_outside_plausible_range_mps",
+          "net_clearance_below_slack"
+        ],
+        "reprojection_rmse_px": 8.001777,
+        "segment_id": 11,
+        "spin_scalar": 0.732792207,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 1.7e-05,
+        "frames": [
+          334,
+          347
+        ],
+        "inlier_count": 12,
+        "outlier_count": 2,
+        "physical_violations": [
+          "initial_speed_outside_plausible_range_mps",
+          "net_clearance_below_slack"
+        ],
+        "reprojection_rmse_px": 9.899622,
+        "segment_id": 11,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 3e-06,
+        "frames": [
+          250,
+          272
+        ],
+        "inlier_count": 22,
+        "outlier_count": 1,
+        "physical_violations": [
+          "net_clearance_below_slack"
+        ],
+        "reprojection_rmse_px": 5.766675,
+        "segment_id": 7,
+        "spin_scalar": -0.100272317,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 2e-06,
+        "frames": [
+          250,
+          272
+        ],
+        "inlier_count": 22,
+        "outlier_count": 1,
+        "physical_violations": [
+          "net_clearance_below_slack"
+        ],
+        "reprojection_rmse_px": 5.804084,
+        "segment_id": 7,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "wolverine_mixed_0200_mid_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 2e-06,
+        "frames": [
+          272,
+          289
+        ],
+        "inlier_count": 18,
+        "outlier_count": 0,
+        "physical_violations": [
+          "initial_speed_outside_plausible_range_mps"
+        ],
+        "reprojection_rmse_px": 1.596995,
+        "segment_id": 8,
+        "spin_scalar": 0.102332503,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 2e-06,
+        "frames": [
+          272,
+          289
+        ],
+        "inlier_count": 18,
+        "outlier_count": 0,
+        "physical_violations": [
+          "initial_speed_outside_plausible_range_mps"
+        ],
+        "reprojection_rmse_px": 1.597502,
+        "segment_id": 8,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "wolverine_mixed_0200_mid_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.001175,
+        "frames": [
+          321,
+          388
+        ],
+        "inlier_count": 39,
+        "outlier_count": 16,
+        "physical_violations": [],
+        "reprojection_rmse_px": 11.24284,
+        "segment_id": 1,
+        "spin_scalar": 0.8,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 0.000751,
+        "frames": [
+          321,
+          388
+        ],
+        "inlier_count": 38,
+        "outlier_count": 17,
+        "physical_violations": [],
+        "reprojection_rmse_px": 11.313115,
+        "segment_id": 1,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 3.3e-05,
+        "frames": [
+          746,
+          774
+        ],
+        "inlier_count": 28,
+        "outlier_count": 1,
+        "physical_violations": [],
+        "reprojection_rmse_px": 3.044886,
+        "segment_id": 7,
+        "spin_scalar": 0.79998219,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 2.4e-05,
+        "frames": [
+          746,
+          774
+        ],
+        "inlier_count": 28,
+        "outlier_count": 1,
+        "physical_violations": [],
+        "reprojection_rmse_px": 3.062019,
+        "segment_id": 7,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline"
+    }
+  ],
+  "clip_rows": [
+    {
+      "after_mean_reprojection_rmse_px": 6.261041,
+      "before_mean_reprojection_rmse_px": 6.146578,
+      "clip": "burlington_gold_0300_low_steep_corner",
+      "delta": 0.114464,
+      "verdict": "FAIL"
+    },
+    {
+      "after_mean_reprojection_rmse_px": 7.301973,
+      "before_mean_reprojection_rmse_px": 7.30739,
+      "clip": "wolverine_mixed_0200_mid_steep_corner",
+      "delta": -0.005417,
+      "verdict": "PASS"
+    },
+    {
+      "after_mean_reprojection_rmse_px": 8.383164,
+      "before_mean_reprojection_rmse_px": 8.329174,
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline",
+      "delta": 0.053989,
+      "verdict": "FAIL"
+    }
+  ],
+  "schema_version": 1,
+  "segment_rows": [
+    {
+      "after": {
+        "endpoint_error_m": 1.8e-05,
+        "frames": [
+          0,
+          75
+        ],
+        "inlier_count": 0,
+        "outlier_count": 69,
+        "physical_violations": [],
+        "reprojection_rmse_px": null,
+        "segment_id": 0,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 1.8e-05,
+        "frames": [
+          0,
+          75
+        ],
+        "inlier_count": 0,
+        "outlier_count": 69,
+        "physical_violations": [],
+        "reprojection_rmse_px": null,
+        "segment_id": 0,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 1e-06,
+        "frames": [
+          75,
+          91
+        ],
+        "inlier_count": 2,
+        "outlier_count": 14,
+        "physical_violations": [],
+        "reprojection_rmse_px": 10.878699,
+        "segment_id": 1,
+        "spin_scalar": 0.8,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 0.003843,
+        "frames": [
+          75,
+          91
+        ],
+        "inlier_count": 2,
+        "outlier_count": 14,
+        "physical_violations": [],
+        "reprojection_rmse_px": 10.678067,
+        "segment_id": 1,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          92,
+          107
+        ],
+        "inlier_count": 13,
+        "outlier_count": 0,
+        "physical_violations": [
+          "outside_court_volume"
+        ],
+        "reprojection_rmse_px": 3.944336,
+        "segment_id": 2,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          92,
+          107
+        ],
+        "inlier_count": 13,
+        "outlier_count": 0,
+        "physical_violations": [
+          "outside_court_volume"
+        ],
+        "reprojection_rmse_px": 3.944336,
+        "segment_id": 2,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          107,
+          132
+        ],
+        "inlier_count": 12,
+        "outlier_count": 2,
+        "physical_violations": [],
+        "reprojection_rmse_px": 4.079306,
+        "segment_id": 3,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          107,
+          132
+        ],
+        "inlier_count": 12,
+        "outlier_count": 2,
+        "physical_violations": [],
+        "reprojection_rmse_px": 4.079306,
+        "segment_id": 3,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          132,
+          139
+        ],
+        "inlier_count": 8,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 1.554418,
+        "segment_id": 4,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          132,
+          139
+        ],
+        "inlier_count": 8,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 1.554418,
+        "segment_id": 4,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          139,
+          151
+        ],
+        "inlier_count": 12,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 0.918769,
+        "segment_id": 5,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          139,
+          151
+        ],
+        "inlier_count": 12,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 0.918769,
+        "segment_id": 5,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          151,
+          168
+        ],
+        "inlier_count": 5,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 2.654028,
+        "segment_id": 6,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          151,
+          168
+        ],
+        "inlier_count": 5,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 2.654028,
+        "segment_id": 6,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.000863,
+        "frames": [
+          168,
+          218
+        ],
+        "inlier_count": 46,
+        "outlier_count": 5,
+        "physical_violations": [],
+        "reprojection_rmse_px": 12.425452,
+        "segment_id": 7,
+        "spin_scalar": -0.799999999,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.000432,
+        "frames": [
+          168,
+          218
+        ],
+        "inlier_count": 44,
+        "outlier_count": 7,
+        "physical_violations": [],
+        "reprojection_rmse_px": 13.513988,
+        "segment_id": 7,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.000285,
+        "frames": [
+          218,
+          266
+        ],
+        "inlier_count": 43,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 6.076578,
+        "segment_id": 8,
+        "spin_scalar": -0.8,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.00027,
+        "frames": [
+          218,
+          266
+        ],
+        "inlier_count": 43,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 6.208437,
+        "segment_id": 8,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 1.3e-05,
+        "frames": [
+          266,
+          289
+        ],
+        "inlier_count": 18,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 1.552758,
+        "segment_id": 9,
+        "spin_scalar": 0.473275462,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 1e-05,
+        "frames": [
+          266,
+          289
+        ],
+        "inlier_count": 18,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 1.57074,
+        "segment_id": 9,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 5e-06,
+        "frames": [
+          289,
+          334
+        ],
+        "inlier_count": 28,
+        "outlier_count": 13,
+        "physical_violations": [],
+        "reprojection_rmse_px": 11.304391,
+        "segment_id": 10,
+        "spin_scalar": -0.799725595,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 3e-06,
+        "frames": [
+          289,
+          334
+        ],
+        "inlier_count": 2,
+        "outlier_count": 39,
+        "physical_violations": [],
+        "reprojection_rmse_px": 1.618053,
+        "segment_id": 10,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 3e-05,
+        "frames": [
+          334,
+          347
+        ],
+        "inlier_count": 13,
+        "outlier_count": 1,
+        "physical_violations": [
+          "initial_speed_outside_plausible_range_mps",
+          "net_clearance_below_slack"
+        ],
+        "reprojection_rmse_px": 8.001777,
+        "segment_id": 11,
+        "spin_scalar": 0.732792207,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 1.7e-05,
+        "frames": [
+          334,
+          347
+        ],
+        "inlier_count": 12,
+        "outlier_count": 2,
+        "physical_violations": [
+          "initial_speed_outside_plausible_range_mps",
+          "net_clearance_below_slack"
+        ],
+        "reprojection_rmse_px": 9.899622,
+        "segment_id": 11,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.001074,
+        "frames": [
+          347,
+          355
+        ],
+        "inlier_count": 1,
+        "outlier_count": 6,
+        "physical_violations": [],
+        "reprojection_rmse_px": 1.651146,
+        "segment_id": 12,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 0.001074,
+        "frames": [
+          347,
+          355
+        ],
+        "inlier_count": 1,
+        "outlier_count": 6,
+        "physical_violations": [],
+        "reprojection_rmse_px": 1.651146,
+        "segment_id": 12,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.002162,
+        "frames": [
+          355,
+          423
+        ],
+        "inlier_count": 0,
+        "outlier_count": 64,
+        "physical_violations": [],
+        "reprojection_rmse_px": null,
+        "segment_id": 13,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 0.002162,
+        "frames": [
+          355,
+          423
+        ],
+        "inlier_count": 0,
+        "outlier_count": 64,
+        "physical_violations": [],
+        "reprojection_rmse_px": null,
+        "segment_id": 13,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          423,
+          447
+        ],
+        "inlier_count": 15,
+        "outlier_count": 1,
+        "physical_violations": [],
+        "reprojection_rmse_px": 5.300534,
+        "segment_id": 14,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          423,
+          447
+        ],
+        "inlier_count": 15,
+        "outlier_count": 1,
+        "physical_violations": [],
+        "reprojection_rmse_px": 5.300534,
+        "segment_id": 14,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          447,
+          497
+        ],
+        "inlier_count": 50,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 1.912784,
+        "segment_id": 15,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          447,
+          497
+        ],
+        "inlier_count": 50,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 1.912784,
+        "segment_id": 15,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          497,
+          543
+        ],
+        "inlier_count": 25,
+        "outlier_count": 1,
+        "physical_violations": [],
+        "reprojection_rmse_px": 21.660646,
+        "segment_id": 16,
+        "spin_scalar": 0.0,
+        "status": "fit_weak"
+      },
+      "before": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          497,
+          543
+        ],
+        "inlier_count": 25,
+        "outlier_count": 1,
+        "physical_violations": [],
+        "reprojection_rmse_px": 21.660646,
+        "segment_id": 16,
+        "spin_scalar": 0.0,
+        "status": "fit_weak"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": null,
+      "before": {
+        "endpoint_error_m": 0.000539,
+        "frames": [
+          569,
+          587
+        ],
+        "inlier_count": 13,
+        "outlier_count": 2,
+        "physical_violations": [
+          "outside_court_volume"
+        ],
+        "reprojection_rmse_px": 11.180367,
+        "segment_id": 17,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "burlington_gold_0300_low_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 1.2e-05,
+        "frames": [
+          0,
+          13
+        ],
+        "inlier_count": 5,
+        "outlier_count": 7,
+        "physical_violations": [
+          "outside_court_volume"
+        ],
+        "reprojection_rmse_px": 10.431983,
+        "segment_id": 0,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 1.2e-05,
+        "frames": [
+          0,
+          13
+        ],
+        "inlier_count": 5,
+        "outlier_count": 7,
+        "physical_violations": [
+          "outside_court_volume"
+        ],
+        "reprojection_rmse_px": 10.431983,
+        "segment_id": 0,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "wolverine_mixed_0200_mid_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 2e-06,
+        "frames": [
+          13,
+          36
+        ],
+        "inlier_count": 0,
+        "outlier_count": 20,
+        "physical_violations": [],
+        "reprojection_rmse_px": null,
+        "segment_id": 1,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 2e-06,
+        "frames": [
+          13,
+          36
+        ],
+        "inlier_count": 0,
+        "outlier_count": 20,
+        "physical_violations": [],
+        "reprojection_rmse_px": null,
+        "segment_id": 1,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "wolverine_mixed_0200_mid_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          36,
+          70
+        ],
+        "inlier_count": 6,
+        "outlier_count": 0,
+        "physical_violations": [
+          "outside_court_volume"
+        ],
+        "reprojection_rmse_px": 4.841829,
+        "segment_id": 2,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          36,
+          70
+        ],
+        "inlier_count": 6,
+        "outlier_count": 0,
+        "physical_violations": [
+          "outside_court_volume"
+        ],
+        "reprojection_rmse_px": 4.841829,
+        "segment_id": 2,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "wolverine_mixed_0200_mid_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          70,
+          104
+        ],
+        "inlier_count": 24,
+        "outlier_count": 4,
+        "physical_violations": [],
+        "reprojection_rmse_px": 6.96772,
+        "segment_id": 3,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          70,
+          104
+        ],
+        "inlier_count": 24,
+        "outlier_count": 4,
+        "physical_violations": [],
+        "reprojection_rmse_px": 6.96772,
+        "segment_id": 3,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "wolverine_mixed_0200_mid_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          104,
+          156
+        ],
+        "inlier_count": 17,
+        "outlier_count": 10,
+        "physical_violations": [
+          "outside_court_volume"
+        ],
+        "reprojection_rmse_px": 10.399882,
+        "segment_id": 4,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          104,
+          156
+        ],
+        "inlier_count": 17,
+        "outlier_count": 10,
+        "physical_violations": [
+          "outside_court_volume"
+        ],
+        "reprojection_rmse_px": 10.399882,
+        "segment_id": 4,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "wolverine_mixed_0200_mid_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 7e-06,
+        "frames": [
+          156,
+          217
+        ],
+        "inlier_count": 0,
+        "outlier_count": 58,
+        "physical_violations": [],
+        "reprojection_rmse_px": null,
+        "segment_id": 5,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 7e-06,
+        "frames": [
+          156,
+          217
+        ],
+        "inlier_count": 0,
+        "outlier_count": 58,
+        "physical_violations": [],
+        "reprojection_rmse_px": null,
+        "segment_id": 5,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "wolverine_mixed_0200_mid_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.003617,
+        "frames": [
+          217,
+          250
+        ],
+        "inlier_count": 8,
+        "outlier_count": 26,
+        "physical_violations": [],
+        "reprojection_rmse_px": 11.108728,
+        "segment_id": 6,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 0.003617,
+        "frames": [
+          217,
+          250
+        ],
+        "inlier_count": 8,
+        "outlier_count": 26,
+        "physical_violations": [],
+        "reprojection_rmse_px": 11.108728,
+        "segment_id": 6,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "wolverine_mixed_0200_mid_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 3e-06,
+        "frames": [
+          250,
+          272
+        ],
+        "inlier_count": 22,
+        "outlier_count": 1,
+        "physical_violations": [
+          "net_clearance_below_slack"
+        ],
+        "reprojection_rmse_px": 5.766675,
+        "segment_id": 7,
+        "spin_scalar": -0.100272317,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 2e-06,
+        "frames": [
+          250,
+          272
+        ],
+        "inlier_count": 22,
+        "outlier_count": 1,
+        "physical_violations": [
+          "net_clearance_below_slack"
+        ],
+        "reprojection_rmse_px": 5.804084,
+        "segment_id": 7,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "wolverine_mixed_0200_mid_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 2e-06,
+        "frames": [
+          272,
+          289
+        ],
+        "inlier_count": 18,
+        "outlier_count": 0,
+        "physical_violations": [
+          "initial_speed_outside_plausible_range_mps"
+        ],
+        "reprojection_rmse_px": 1.596995,
+        "segment_id": 8,
+        "spin_scalar": 0.102332503,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 2e-06,
+        "frames": [
+          272,
+          289
+        ],
+        "inlier_count": 18,
+        "outlier_count": 0,
+        "physical_violations": [
+          "initial_speed_outside_plausible_range_mps"
+        ],
+        "reprojection_rmse_px": 1.597502,
+        "segment_id": 8,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "wolverine_mixed_0200_mid_steep_corner"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          303,
+          321
+        ],
+        "inlier_count": 3,
+        "outlier_count": 16,
+        "physical_violations": [
+          "net_clearance_below_slack"
+        ],
+        "reprojection_rmse_px": 12.557402,
+        "segment_id": 0,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 0.0,
+        "frames": [
+          303,
+          321
+        ],
+        "inlier_count": 3,
+        "outlier_count": 16,
+        "physical_violations": [
+          "net_clearance_below_slack"
+        ],
+        "reprojection_rmse_px": 12.557402,
+        "segment_id": 0,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.001175,
+        "frames": [
+          321,
+          388
+        ],
+        "inlier_count": 39,
+        "outlier_count": 16,
+        "physical_violations": [],
+        "reprojection_rmse_px": 11.24284,
+        "segment_id": 1,
+        "spin_scalar": 0.8,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 0.000751,
+        "frames": [
+          321,
+          388
+        ],
+        "inlier_count": 38,
+        "outlier_count": 17,
+        "physical_violations": [],
+        "reprojection_rmse_px": 11.313115,
+        "segment_id": 1,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.001535,
+        "frames": [
+          388,
+          426
+        ],
+        "inlier_count": 25,
+        "outlier_count": 3,
+        "physical_violations": [],
+        "reprojection_rmse_px": 4.928117,
+        "segment_id": 2,
+        "spin_scalar": 0.8,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.001108,
+        "frames": [
+          388,
+          426
+        ],
+        "inlier_count": 24,
+        "outlier_count": 4,
+        "physical_violations": [],
+        "reprojection_rmse_px": 4.416748,
+        "segment_id": 2,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.000167,
+        "frames": [
+          426,
+          596
+        ],
+        "inlier_count": 1,
+        "outlier_count": 123,
+        "physical_violations": [
+          "apex_height_implausible"
+        ],
+        "reprojection_rmse_px": 12.700218,
+        "segment_id": 3,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 0.000167,
+        "frames": [
+          426,
+          596
+        ],
+        "inlier_count": 1,
+        "outlier_count": 123,
+        "physical_violations": [
+          "apex_height_implausible"
+        ],
+        "reprojection_rmse_px": 12.700218,
+        "segment_id": 3,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 2e-06,
+        "frames": [
+          596,
+          605
+        ],
+        "inlier_count": 2,
+        "outlier_count": 6,
+        "physical_violations": [],
+        "reprojection_rmse_px": 5.82454,
+        "segment_id": 4,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 2e-06,
+        "frames": [
+          596,
+          605
+        ],
+        "inlier_count": 2,
+        "outlier_count": 6,
+        "physical_violations": [],
+        "reprojection_rmse_px": 5.82454,
+        "segment_id": 4,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.000275,
+        "frames": [
+          605,
+          707
+        ],
+        "inlier_count": 5,
+        "outlier_count": 76,
+        "physical_violations": [],
+        "reprojection_rmse_px": 12.764765,
+        "segment_id": 5,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "before": {
+        "endpoint_error_m": 0.000275,
+        "frames": [
+          605,
+          707
+        ],
+        "inlier_count": 5,
+        "outlier_count": 76,
+        "physical_violations": [],
+        "reprojection_rmse_px": 12.764765,
+        "segment_id": 5,
+        "spin_scalar": 0.0,
+        "status": "fit_bvp_fallback"
+      },
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 0.000101,
+        "frames": [
+          707,
+          746
+        ],
+        "inlier_count": 40,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 4.002541,
+        "segment_id": 6,
+        "spin_scalar": -0.276928301,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 0.000103,
+        "frames": [
+          707,
+          746
+        ],
+        "inlier_count": 40,
+        "outlier_count": 0,
+        "physical_violations": [],
+        "reprojection_rmse_px": 3.994588,
+        "segment_id": 6,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline"
+    },
+    {
+      "after": {
+        "endpoint_error_m": 3.3e-05,
+        "frames": [
+          746,
+          774
+        ],
+        "inlier_count": 28,
+        "outlier_count": 1,
+        "physical_violations": [],
+        "reprojection_rmse_px": 3.044886,
+        "segment_id": 7,
+        "spin_scalar": 0.79998219,
+        "status": "fit"
+      },
+      "before": {
+        "endpoint_error_m": 2.4e-05,
+        "frames": [
+          746,
+          774
+        ],
+        "inlier_count": 28,
+        "outlier_count": 1,
+        "physical_violations": [],
+        "reprojection_rmse_px": 3.062019,
+        "segment_id": 7,
+        "spin_scalar": 0.0,
+        "status": "fit"
+      },
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline"
+    }
+  ],
+  "verdict": "FAIL",
+  "wolverine_seg6": {
+    "after": {
+      "endpoint_error_m": 7e-06,
+      "frames": [
+        156,
+        217
+      ],
+      "inlier_count": 0,
+      "outlier_count": 58,
+      "physical_violations": [],
+      "reprojection_rmse_px": null,
+      "segment_id": 5,
+      "spin_scalar": 0.0,
+      "status": "fit_bvp_fallback"
+    },
+    "before": {
+      "endpoint_error_m": 7e-06,
+      "frames": [
+        156,
+        217
+      ],
+      "inlier_count": 0,
+      "outlier_count": 58,
+      "physical_violations": [],
+      "reprojection_rmse_px": null,
+      "segment_id": 5,
+      "spin_scalar": 0.0,
+      "status": "fit_bvp_fallback"
+    },
+    "delta": null,
+    "interval": [
+      156,
+      217
+    ],
+    "verdict": "FAIL"
+  }
+}
