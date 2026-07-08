@@ -1,6 +1,6 @@
 # Pickleball Master Plan
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-07.
 
 Doc-role note (2026-07-07, resolves a two-masters ambiguity): `NORTH_STAR_ROADMAP.md` is the
 master phased TO-DO plan (phases P0-P7/PF, task IDs, PART VI wave playbook); THIS file remains
@@ -57,7 +57,7 @@ their promotion gates.
 |---|---|---|---|
 | CAL | Scaffold/preview | Manual/sidecar and metric-15pt calibration paths can feed the pipeline. The 2026-07-05 court-autofind Wave A patch is worktree-only, not mainline, and still misses the aggregate hard bar. | Held-out PCK@5px gate on reviewed owner viewpoints. |
 | TRK | In progress | YOLO26m plus BoT-SORT/ReID/raw-pool tooling exists. Pre-registered gate runs still fail coverage/identity/spectator constraints. | Per-clip IDF1, zero ID switches where required, zero true spectator/background FP, coverage gate. |
-| BALL | Scaffold | The default 3D ball chain landed in commit `790930ed`, but held-out quality did not promote: the product chain is cleaner and lower-FP than the standing zero-shot baseline while still losing F1/recall. The training campaign concluded negative. | Reviewed ball F1/contact/in-out gates, with gray-zone behavior for uncertain calls. |
+| BALL | Scaffold | The default 3D ball chain landed in commit `790930ed`, but held-out quality did not promote: the product chain is cleaner and lower-FP than the standing zero-shot baseline. The wave-4 SST-3k student then beat the standing zero-shot bar on both clips in harness_v0 mode (F1 0.744/0.727, visible-hit recall 0.771; `runs/lanes/w4_ballgpu_20260707/REPORT.md`), but every card stays NON-PROMOTABLE (preprocessing-contract mismatch, small-N, 3k/12k steps) pending a wave-5 official-mode re-score. | Reviewed ball F1/contact/in-out gates, with gray-zone behavior for uncertain calls. |
 | BODY | Scaffold | Fast SAM-3D-Body runtime, mesh index artifacts, speed improvements, and stance-aware visual smoothing exist for scoped clips. Candidate-label review and current visual runs are not independent GT. | Representative independent-GT world-MPJPE gate. |
 | FOOT/PHYS | Internal-val done | Wolverine internal-val foot-lock reached zero slide/penetration in a scoped chain. | Strict protected-clip physics/replay verification before user-facing promotion. |
 | RKT | Scaffold | Phase-1 fused paddle estimator final_v3 is render-only: useful internal-val paddle orientation/position for review, no true-reference GT promotion. | Face-angle/contact-point error against true-corner/reference GT. |

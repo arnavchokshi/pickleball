@@ -1,6 +1,6 @@
 # Ball Tracking Pipeline
 
-Last updated: 2026-07-03.
+Last updated: 2026-07-05.
 
 This is the focused ball-stage contract. It exists because ball code comments
 refer to section numbers here. The global product plan lives in `MASTER_PLAN.md`.

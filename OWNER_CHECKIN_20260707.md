@@ -6,6 +6,8 @@ only encodes add/commit — the permission classifier (correctly) refused my pus
 add `"Bash(git push *)"` to `.claude/settings.json` → `permissions.allow`, or run
 `! git push origin main` yourself. Everything is committed locally; only transport is pending.
 
+> [RESOLVED 2026-07-07: `"Bash(git push *)"` is now in `.claude/settings.json` → `permissions.allow`; the push grant is live. This dated snapshot is left intact for history.]
+
 ## The headline
 **The foot-slide gate is GREEN on all four clips** — wave-2's only carried blocker is closed:
 burlington 40.6→20.25mm, outdoor 56.0→22.50mm, wolverine 17.98, img1605 16.66 (bar 30mm, thresholds
