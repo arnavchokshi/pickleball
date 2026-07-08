@@ -89,3 +89,5 @@ multi-GPU pattern (template snapshot: pickleball-fleet1-snap-20260707, READY, 46
 Fleet cost cap (owner 2026-07-06): ≤$5/GPU/hr, max 4 concurrent GPUs; teardown/DELETE the moment a
 lane ends (idle spend never acceptable); 5th GPU or >$5/hr = `needs-purchase-approval` STOP.
 Auth: owner gcloud refresh token (hello@; SA key creation org-blocked); dead auth = typed STOP for one owner login.
+
+| pickleball-calv1unet-a100-spot | asia-southeast1-a (ladder: ase1-b/c, us-central1-a) | a2-highgpu-1g A100-40GB | SPOT | CREATING (dispatched 2026-07-08, court session) | calv1_unet_train_20260708 | ~$1.1-1.5/hr | teardown: DELETE on lane success, STOP on failure |
