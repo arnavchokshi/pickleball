@@ -29,7 +29,26 @@ SCAFFOLD_NOTE = "cpu_hmr_deep_primitives_no_model_inference"
 SCHEMA_VERSION = "body_hmr_deep.v0"
 MODEL_FAMILY = "fast_sam_3d_body_mhr_to_smpl"
 DEFAULT_BODY_MANIFEST_PATH = Path("models/MANIFEST.json")
-DEFAULT_FAST_SAM_REPO = Path(os.environ.get("FAST_SAM_ROOT", "/opt/fast-sam-3d-body"))
+
+
+class _LazyEnvPathDefault(os.PathLike[str]):
+    """Path-like default that reads its environment override at use time."""
+
+    def __init__(self, env_name: str, fallback: str) -> None:
+        self.env_name = env_name
+        self.fallback = fallback
+
+    def __fspath__(self) -> str:
+        return os.environ.get(self.env_name, self.fallback)
+
+    def __str__(self) -> str:
+        return os.fspath(self)
+
+    def __repr__(self) -> str:
+        return f"Path({str(self)!r})"
+
+
+DEFAULT_FAST_SAM_REPO = _LazyEnvPathDefault("FAST_SAM_ROOT", "/opt/fast-sam-3d-body")
 REQUIRED_FAST_SAM_MODEL_IDS = (
     "fast_sam_3d_body_dinov3",
     "sam_3d_body_mhr_model",

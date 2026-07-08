@@ -9,6 +9,7 @@ import os
 import subprocess
 import time
 import uuid
+import warnings
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -93,6 +94,7 @@ DEFAULT_BODY_MAX_TRACK_ANCHOR_SMOOTHING_RESIDUAL_M = 0.75
 R3_GROUNDING_ANCHOR_SOURCE = "placement_track_world_xy"
 DEFAULT_GROUNDING_ANCHOR_SOURCE = "track_world_xy"
 FAST_SAM_PYTHON_ENV = "FAST_SAM_PYTHON"
+FAST_SAM_REQUIRE_SUBPROCESS_ENV = "FAST_SAM_REQUIRE_SUBPROCESS"
 VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".avi", ".mkv"}
 BODY_FRAME_SUFFIXES = (".jpg", ".jpeg", ".png")
 SAM3D_UPSTREAM_ENV_WHITELIST = frozenset(
@@ -105,6 +107,10 @@ SAM3D_UPSTREAM_ENV_WHITELIST = frozenset(
         "MHR_NO_CORRECTIVES",
     }
 )
+
+
+def _env_flag_enabled(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 ARTIFACT_SCHEMA_BY_FILENAME: dict[str, str] = {
     "court_calibration.json": "court_calibration",
@@ -839,13 +845,15 @@ class BodyStageRunner:
         )
 
         model_load_start = time.perf_counter()
+        fast_sam_runtime_unavailable_note = ""
+        fast_sam_subprocess_degrade_note = ""
+        fast_sam_subprocess_degrade_summary: dict[str, Any] = {"status": "not_degraded"}
+        runtime = self._runtime
+        fast_sam_python = os.environ.get(FAST_SAM_PYTHON_ENV, "").strip()
+        fast_sam_runtime_mode = "injected" if runtime is not None else ("subprocess" if fast_sam_python else "in_process")
         try:
             required_model_ids = fast_sam_required_model_ids(detector_name=self.detector_name, fov_name=self.fov_name)
             assets = verify_fast_sam_manifest_assets(self.manifest_path, required_model_ids=required_model_ids)
-            fast_sam_runtime_unavailable_note = ""
-            runtime = self._runtime
-            fast_sam_python = os.environ.get(FAST_SAM_PYTHON_ENV, "").strip()
-            fast_sam_runtime_mode = "injected" if runtime is not None else ("subprocess" if fast_sam_python else "in_process")
             if runtime is None:
                 try:
                     if fast_sam_python:
@@ -865,6 +873,22 @@ class BodyStageRunner:
                             "manifest verification and subprocess-runtime construction without touching forbidden files"
                         )
                     else:
+                        fast_sam_subprocess_degrade_note = (
+                            f"{FAST_SAM_PYTHON_ENV} is unset; BODY is degrading from the batched "
+                            "FastSam3DBodySubprocessRuntime path to the in-process per-frame FastSam3DBodyRuntime path"
+                        )
+                        fast_sam_subprocess_degrade_summary = {
+                            "status": "degraded_to_in_process",
+                            "reason": fast_sam_subprocess_degrade_note,
+                            "strict_env": FAST_SAM_REQUIRE_SUBPROCESS_ENV,
+                            "strict": _env_flag_enabled(FAST_SAM_REQUIRE_SUBPROCESS_ENV),
+                        }
+                        if fast_sam_subprocess_degrade_summary["strict"]:
+                            raise RuntimeError(
+                                f"{fast_sam_subprocess_degrade_note}; set {FAST_SAM_PYTHON_ENV} or unset "
+                                f"{FAST_SAM_REQUIRE_SUBPROCESS_ENV}"
+                            )
+                        warnings.warn(fast_sam_subprocess_degrade_note, RuntimeWarning, stacklevel=2)
                         runtime = FastSam3DBodyRuntime(
                             assets=assets,
                             fast_sam_repo=self.fast_sam_repo,
@@ -873,6 +897,8 @@ class BodyStageRunner:
                             body_input_size_px=self.sam3d_body_input_size_px,
                         )
                 except RuntimeError as exc:
+                    if fast_sam_subprocess_degrade_summary.get("strict"):
+                        raise
                     fast_sam_runtime_mode = "unavailable"
                     fast_sam_runtime_unavailable_note = (
                         "Fast SAM-3D-Body runtime unavailable; SAM-3D samples will be absent for this run: "
@@ -1366,6 +1392,8 @@ class BodyStageRunner:
         ]
         if fast_sam_runtime_unavailable_note:
             notes.append(fast_sam_runtime_unavailable_note)
+        if fast_sam_subprocess_degrade_note:
+            notes.append(fast_sam_subprocess_degrade_note)
         binary_handoff_note = str(getattr(runtime, "binary_handoff_note", "") or "")
         if binary_handoff_note:
             notes.append(binary_handoff_note)
@@ -1443,6 +1471,8 @@ class BodyStageRunner:
                 "sam3d_missing_output_count": sam3d_missing_output_count,
                 "fast_sam_runtime_mode": fast_sam_runtime_mode,
                 "fast_sam_python": fast_sam_python,
+                "fast_sam_subprocess_degraded": bool(fast_sam_subprocess_degrade_note),
+                "fast_sam_subprocess_degrade": fast_sam_subprocess_degrade_summary,
                 "fast_sam_runtime_unavailable": bool(fast_sam_runtime_unavailable_note),
                 "fast_sam_runtime_unavailable_note": fast_sam_runtime_unavailable_note,
                 "contact_splice_spliced_contact_count": contact_splice["summary"]["spliced_contact_count"],

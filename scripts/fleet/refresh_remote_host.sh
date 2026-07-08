@@ -14,6 +14,7 @@ SSH_KEY="${HOME}/.ssh/google_compute_engine"
 SSH_USER="arnavchokshi"
 KEYSCAN_FILE=""
 SKIP_CONNECTIVITY=0
+PINNED_WORKTREES=()
 
 usage() {
   cat >&2 <<'EOF'
@@ -24,6 +25,7 @@ Options:
   --ssh-key <path>              fleet SSH key (default: ~/.ssh/google_compute_engine)
   --ssh-user <user>             fleet SSH user (default: arnavchokshi)
   --keyscan-file <path>         offline fixture for tests; skips live ssh-keyscan
+  --pinned-worktree <path>      also copy refreshed configs/ssh/*known_hosts into this pinned worktree (repeatable)
   --skip-connectivity-check     update file only; connectivity check runs at fleet start
 EOF
 }
@@ -42,6 +44,8 @@ while (($#)); do
       SSH_USER="${2:-}"; shift 2 ;;
     --keyscan-file)
       KEYSCAN_FILE="${2:-}"; shift 2 ;;
+    --pinned-worktree)
+      PINNED_WORKTREES+=("${2:-}"); shift 2 ;;
     --skip-connectivity-check)
       SKIP_CONNECTIVITY=1; shift ;;
     -h|--help)
@@ -110,8 +114,28 @@ awk -v host="$HOST" -v alias="$ALIAS" '
 
 cat "$filtered" "$scan_normalized" > "$KNOWN_HOSTS"
 
+pinned_worktree_count=0
+known_hosts_rel="configs/ssh/$(basename "$KNOWN_HOSTS")"
+case "$KNOWN_HOSTS" in
+  "$ROOT"/configs/ssh/*)
+    known_hosts_rel="${KNOWN_HOSTS#"$ROOT"/}"
+    ;;
+esac
+if ((${#PINNED_WORKTREES[@]})); then
+  for pinned_worktree in "${PINNED_WORKTREES[@]}"; do
+    if [[ -z "$pinned_worktree" ]]; then
+      echo "--pinned-worktree <path> cannot be empty" >&2
+      exit 2
+    fi
+    pinned_known_hosts="$pinned_worktree/$known_hosts_rel"
+    mkdir -p "$(dirname "$pinned_known_hosts")"
+    cp "$KNOWN_HOSTS" "$pinned_known_hosts"
+    pinned_worktree_count=$((pinned_worktree_count + 1))
+  done
+fi
+
 if [[ "$SKIP_CONNECTIVITY" -eq 1 ]]; then
-  echo "PASS refresh_remote_host host=$HOST alias=${ALIAS:-} known_hosts=$KNOWN_HOSTS connectivity_check=skipped_runs_at_fleet_start"
+  echo "PASS refresh_remote_host host=$HOST alias=${ALIAS:-} known_hosts=$KNOWN_HOSTS pinned_worktrees=$pinned_worktree_count connectivity_check=skipped_runs_at_fleet_start"
   exit 0
 fi
 
@@ -122,7 +146,7 @@ if ssh \
   -o StrictHostKeyChecking=yes \
   -o UserKnownHostsFile="$KNOWN_HOSTS" \
   "${SSH_USER}@${HOST}" true; then
-  echo "PASS refresh_remote_host host=$HOST alias=${ALIAS:-} known_hosts=$KNOWN_HOSTS connectivity_check=passed"
+  echo "PASS refresh_remote_host host=$HOST alias=${ALIAS:-} known_hosts=$KNOWN_HOSTS pinned_worktrees=$pinned_worktree_count connectivity_check=passed"
 else
   echo "FAIL refresh_remote_host host=$HOST alias=${ALIAS:-} known_hosts=$KNOWN_HOSTS connectivity_check=failed" >&2
   exit 1

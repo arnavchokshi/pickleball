@@ -99,6 +99,8 @@ TRANSPORT_CHOICES = (TRANSPORT_TAR_BATCH, TRANSPORT_RSYNC)
 RETRYABLE_TRANSPORT_EXIT_CODES = (10, 12, 30, 35, 255)
 DEFAULT_TRANSPORT_RETRY_MAX_ATTEMPTS = 12
 DEFAULT_TRANSPORT_RETRY_BACKOFF_S = 4.0
+DEFAULT_TRANSPORT_CHUNKED_FALLBACK_CHUNK_BYTES = 50 * 1024 * 1024
+DEFAULT_TRANSPORT_CHUNKED_FALLBACK_BWLIMIT_KBPS = 8192
 VERSION_STAMP_ARTIFACT = "version_stamp.json"
 REMOTE_VERSION_VERIFICATION_ARTIFACT = "remote_version_verification.json"
 REMOTE_CODE_SYNC_DIR = ".body_code_sync"
@@ -264,6 +266,9 @@ class RemoteConfig:
     transport_retry_max_attempts: int = DEFAULT_TRANSPORT_RETRY_MAX_ATTEMPTS
     transport_retry_backoff_s: float = DEFAULT_TRANSPORT_RETRY_BACKOFF_S
     transport_retryable_exit_codes: tuple[int, ...] = RETRYABLE_TRANSPORT_EXIT_CODES
+    transport_chunked_fallback_enabled: bool = True
+    transport_chunked_fallback_chunk_bytes: int = DEFAULT_TRANSPORT_CHUNKED_FALLBACK_CHUNK_BYTES
+    transport_chunked_fallback_bwlimit_kbps: int = DEFAULT_TRANSPORT_CHUNKED_FALLBACK_BWLIMIT_KBPS
 
     def ssh_option_args(self) -> list[str]:
         """`-o ...` host-key-verification options, shared by ssh and rsync -e."""
@@ -744,6 +749,17 @@ def _write_remote_output_log(clip_dir: Path, *, stdout: str, stderr: str) -> Non
     (clip_dir / "remote_body_stdout.log").write_text(_tail_bytes_text(combined), encoding="utf-8")
 
 
+def _guard_cli_clip_dir_overwrite(clip_dir: Path, *, allow_overwrite: bool) -> None:
+    if allow_overwrite:
+        return
+    if not clip_dir.exists() or not any(clip_dir.iterdir()):
+        return
+    raise RemoteBodyDispatchError(
+        f"refusing to write remote BODY outputs into populated --clip-dir {clip_dir}; "
+        "pass --allow-overwrite after confirming this is the intended output directory"
+    )
+
+
 @dataclass(frozen=True)
 class _BodyInputSelection:
     single_files: dict[str, Path]
@@ -783,6 +799,11 @@ def _is_retryable_transport_result(
     if result.returncode in retryable_exit_codes:
         return True
     detail = _transport_failure_detail(result).lower()
+    return any(pattern in detail for pattern in TRANSPORT_RETRYABLE_DETAIL_PATTERNS)
+
+
+def _transport_failure_text_is_retryable(text: str) -> bool:
+    detail = text.lower()
     return any(pattern in detail for pattern in TRANSPORT_RETRYABLE_DETAIL_PATTERNS)
 
 
@@ -1132,6 +1153,7 @@ def dispatch_body_stage(
             "upload_bytes": int(upload_bytes),
             "download_bytes": 0,
             "lock_wait_estimate_s": None,
+            "transport_fallback": _transport_fallback_summary(phase_seconds),
         }
         _write_json_file(clip_dir / "remote_body_dispatch_timing.json", timing)
         raise RemoteBodyDispatchError(
@@ -1160,6 +1182,7 @@ def dispatch_body_stage(
             "upload_bytes": int(upload_bytes),
             "download_bytes": 0,
             "lock_wait_estimate_s": lock_wait_estimate_s,
+            "transport_fallback": _transport_fallback_summary(phase_seconds),
         }
         _write_json_file(clip_dir / "remote_body_dispatch_timing.json", timing)
         # scripts/gpu-eval-run.sh's own GPU_LOCK_TIMEOUT_S flock timeout.
@@ -1179,6 +1202,7 @@ def dispatch_body_stage(
             "upload_bytes": int(upload_bytes),
             "download_bytes": 0,
             "lock_wait_estimate_s": lock_wait_estimate_s,
+            "transport_fallback": _transport_fallback_summary(phase_seconds),
         }
         _write_json_file(clip_dir / "remote_body_dispatch_timing.json", timing)
         raise RemoteBodyDispatchError(
@@ -1199,6 +1223,7 @@ def dispatch_body_stage(
             "upload_bytes": int(upload_bytes),
             "download_bytes": 0,
             "lock_wait_estimate_s": lock_wait_estimate_s,
+            "transport_fallback": _transport_fallback_summary(phase_seconds),
         }
         _write_json_file(clip_dir / "remote_body_dispatch_timing.json", timing)
         raise RemoteBodyDispatchError(
@@ -1223,6 +1248,7 @@ def dispatch_body_stage(
         "upload_bytes": int(upload_bytes),
         "download_bytes": int(download_bytes),
         "lock_wait_estimate_s": lock_wait_estimate_s,
+        "transport_fallback": _transport_fallback_summary(phase_seconds),
         "fetched_default_artifacts": list(BODY_OUTPUT_ARTIFACTS_DEFAULT),
         "fetched_heavy_artifacts": list(BODY_OUTPUT_ARTIFACTS_HEAVY) if config.fetch_body_monoliths else [],
         "skipped_heavy_artifacts": [] if config.fetch_body_monoliths else list(BODY_OUTPUT_ARTIFACTS_HEAVY),
@@ -1244,6 +1270,9 @@ def dispatch_body_stage(
             else "fetched BODY default artifacts only; smpl_motion.json and body_mesh.json were not built on the VM (speed default; rerun with --fetch-body-monoliths to produce them)"
         ),
     ]
+    transport_fallback = _transport_fallback_summary(phase_seconds)
+    if transport_fallback["upload"] != "none":
+        fetch_notes.append(f"transport upload fallback engaged: {transport_fallback}")
     if "body_mesh_index/" in synced_outputs:
         fetch_notes.append("fetched body_mesh_index/ windowed mesh directory for replay review; not a BODY verification claim")
     else:
@@ -1619,6 +1648,148 @@ def _sync_body_outputs(
     return _tar_batch_down(remote_run_dir, clip_dir, config, run=run, phases=phases)
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _write_transport_chunks(source_path: Path, chunk_dir: Path, *, chunk_bytes: int) -> list[Path]:
+    chunk_size = max(1, int(chunk_bytes))
+    chunk_dir.mkdir(parents=True, exist_ok=True)
+    chunks: list[Path] = []
+    with source_path.open("rb") as source:
+        for idx in range(10**9):
+            payload = source.read(chunk_size)
+            if not payload:
+                break
+            chunk_path = chunk_dir / f"{source_path.name}.part{idx:06d}"
+            chunk_path.write_bytes(payload)
+            chunks.append(chunk_path)
+    return chunks
+
+
+def _remote_python_verify_file_command(config: RemoteConfig, remote_path: str, *, size_bytes: int, sha256: str) -> str:
+    script = (
+        "import hashlib, pathlib, sys\n"
+        "path = pathlib.Path(sys.argv[1])\n"
+        "expected_size = int(sys.argv[2])\n"
+        "expected_sha = sys.argv[3]\n"
+        "data = path.read_bytes()\n"
+        "actual_sha = hashlib.sha256(data).hexdigest()\n"
+        "if len(data) != expected_size or actual_sha != expected_sha:\n"
+        "    print(f'size={len(data)} sha256={actual_sha}', file=sys.stderr)\n"
+        "    raise SystemExit(1)\n"
+    )
+    return (
+        f"{shlex.quote(config.python)} -c {shlex.quote(script)} "
+        f"{shlex.quote(remote_path)} {int(size_bytes)} {shlex.quote(sha256)}"
+    )
+
+
+def _chunked_append_verify_upload(
+    source_path: Path,
+    remote_path: str,
+    config: RemoteConfig,
+    *,
+    run: RunFn,
+    phases: dict[str, float],
+) -> None:
+    started = time.monotonic()
+    chunk_bytes = max(1, int(config.transport_chunked_fallback_chunk_bytes))
+    bwlimit_kbps = max(1, int(config.transport_chunked_fallback_bwlimit_kbps))
+    source_size = source_path.stat().st_size
+    source_sha256 = _sha256_file(source_path)
+    remote_chunk_dir = f"{remote_path}.chunks"
+    remote_tmp_path = f"{remote_path}.chunked_tmp"
+    rsync_ssh = config.rsync_ssh_command()
+
+    with tempfile.TemporaryDirectory(prefix="remote_body_chunked_upload_") as tmp:
+        chunks = _write_transport_chunks(source_path, Path(tmp) / "chunks", chunk_bytes=chunk_bytes)
+        setup_cmd = f"rm -rf {shlex.quote(remote_chunk_dir)} && mkdir -p {shlex.quote(remote_chunk_dir)}"
+        _run_transport_command(
+            [*config.ssh_base(), setup_cmd],
+            config.connect_timeout_s + 30,
+            config=config,
+            run=run,
+            operation="chunked append-verify upload setup",
+        )
+        for chunk_path in chunks:
+            remote_chunk_path = f"{remote_chunk_dir}/{chunk_path.name}"
+            _run_transport_command(
+                [
+                    "rsync",
+                    "-az",
+                    "--partial",
+                    "--inplace",
+                    "--append-verify",
+                    f"--bwlimit={bwlimit_kbps}",
+                    "-e",
+                    rsync_ssh,
+                    str(chunk_path),
+                    f"{config.host}:{remote_chunk_path}",
+                ],
+                None,
+                config=config,
+                run=run,
+                operation=f"chunked append-verify upload {chunk_path.name}",
+            )
+        chunk_args = " ".join(shlex.quote(f"{remote_chunk_dir}/{chunk_path.name}") for chunk_path in chunks)
+        assemble_cmd = (
+            f"cat {chunk_args} > {shlex.quote(remote_tmp_path)} && "
+            f"mv {shlex.quote(remote_tmp_path)} {shlex.quote(remote_path)}"
+        )
+        _run_transport_command(
+            [*config.ssh_base(), assemble_cmd],
+            config.connect_timeout_s + 300,
+            config=config,
+            run=run,
+            operation="chunked append-verify upload assemble",
+        )
+        _run_transport_command(
+            [
+                *config.ssh_base(),
+                _remote_python_verify_file_command(
+                    config,
+                    remote_path,
+                    size_bytes=source_size,
+                    sha256=source_sha256,
+                ),
+            ],
+            config.connect_timeout_s + 300,
+            config=config,
+            run=run,
+            operation="chunked append-verify upload remote checksum",
+        )
+        cleanup_result = run(
+            [*config.ssh_base(), f"rm -rf {shlex.quote(remote_chunk_dir)} {shlex.quote(remote_tmp_path)}"],
+            config.connect_timeout_s + 10,
+        )
+        if cleanup_result.returncode != 0:
+            pass
+
+    phases["chunked_fallback_upload_s"] = time.monotonic() - started
+    phases["chunked_fallback_upload_chunk_count"] = len(chunks)
+    phases["chunked_fallback_upload_chunk_bytes"] = chunk_bytes
+    phases["chunked_fallback_upload_bwlimit_kbps"] = bwlimit_kbps
+    phases["chunked_fallback_upload_source_bytes"] = source_size
+
+
+def _transport_fallback_summary(phases: Mapping[str, Any]) -> dict[str, Any]:
+    if "chunked_fallback_upload_s" not in phases:
+        return {"upload": "none"}
+    return {
+        "upload": "chunked_append_verify",
+        "chunk_count": int(phases.get("chunked_fallback_upload_chunk_count", 0)),
+        "chunk_bytes": int(phases.get("chunked_fallback_upload_chunk_bytes", 0)),
+        "bwlimit_kbps": int(phases.get("chunked_fallback_upload_bwlimit_kbps", 0)),
+        "source_bytes": int(phases.get("chunked_fallback_upload_source_bytes", 0)),
+        "wall_seconds": round(float(phases.get("chunked_fallback_upload_s", 0.0)), 6),
+    }
+
+
 def _tar_batch_up(
     clip_dir: Path,
     video_path: Path,
@@ -1653,13 +1824,25 @@ def _tar_batch_up(
 
         remote_archive_path = f"{remote_run_dir}/remote_body_inputs.tar.gz"
         scp_started = time.monotonic()
-        _run_transport_command(
-            [*config.scp_base(), str(archive_path), f"{config.host}:{remote_archive_path}"],
-            None,
-            config=config,
-            run=run,
-            operation="tar-batch upload archive",
-        )
+        try:
+            _run_transport_command(
+                [*config.scp_base(), str(archive_path), f"{config.host}:{remote_archive_path}"],
+                None,
+                config=config,
+                run=run,
+                operation="tar-batch upload archive",
+            )
+        except RemoteBodyDispatchError as exc:
+            if not config.transport_chunked_fallback_enabled or not _transport_failure_text_is_retryable(str(exc)):
+                raise
+            phases["tar_upload_primary_failed_retryable"] = 1
+            _chunked_append_verify_upload(
+                archive_path,
+                remote_archive_path,
+                config,
+                run=run,
+                phases=phases,
+            )
         phases["tar_upload_scp_s"] = time.monotonic() - scp_started
 
     untar_started = time.monotonic()
@@ -2131,6 +2314,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Dispatch the BODY (Fast SAM-3D-Body) stage to the remote A100.")
     parser.add_argument("--clip")
     parser.add_argument("--clip-dir", type=Path, help="Local directory with tracks.json/skeleton3d.json/etc.")
+    parser.add_argument(
+        "--allow-overwrite",
+        action="store_true",
+        help="Allow writing remote BODY outputs into a populated --clip-dir after confirming it is the intended output directory.",
+    )
     parser.add_argument("--video", type=Path)
     parser.add_argument("--body-frames-dir", type=Path, default=None)
     parser.add_argument("--camera-motion", type=Path, default=None, help="Optional camera_motion.json to sync as camera_motion.json in the remote BODY working dir.")
@@ -2148,6 +2336,23 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--transport-retry-max-attempts", type=int, default=RemoteConfig().transport_retry_max_attempts)
     parser.add_argument("--transport-retry-backoff-s", type=float, default=RemoteConfig().transport_retry_backoff_s)
+    parser.add_argument(
+        "--no-transport-chunked-fallback",
+        action="store_true",
+        help="Disable tar-batch EMSGSIZE fallback to resumable rsync --append-verify chunks.",
+    )
+    parser.add_argument(
+        "--transport-chunked-fallback-size-mb",
+        type=int,
+        default=DEFAULT_TRANSPORT_CHUNKED_FALLBACK_CHUNK_BYTES // (1024 * 1024),
+        help="Chunk size in MiB for tar-batch EMSGSIZE fallback uploads (default: 50).",
+    )
+    parser.add_argument(
+        "--transport-chunked-fallback-bwlimit-kbps",
+        type=int,
+        default=DEFAULT_TRANSPORT_CHUNKED_FALLBACK_BWLIMIT_KBPS,
+        help="rsync --bwlimit value for tar-batch EMSGSIZE fallback uploads.",
+    )
     parser.add_argument("--lock-wait-timeout-s", type=int, default=DEFAULT_LOCK_WAIT_TIMEOUT_S)
     parser.add_argument(
         "--command-timeout-s",
@@ -2222,6 +2427,9 @@ def main(argv: list[str] | None = None) -> int:
         transport=args.transport,
         transport_retry_max_attempts=args.transport_retry_max_attempts,
         transport_retry_backoff_s=args.transport_retry_backoff_s,
+        transport_chunked_fallback_enabled=not args.no_transport_chunked_fallback,
+        transport_chunked_fallback_chunk_bytes=max(1, int(args.transport_chunked_fallback_size_mb)) * 1024 * 1024,
+        transport_chunked_fallback_bwlimit_kbps=max(1, int(args.transport_chunked_fallback_bwlimit_kbps)),
         sam3d_body_input_size_px=args.sam3d_body_input_size_px,
         sam3d_crop_bucket_sizes=_parse_int_tuple(args.sam3d_crop_bucket_sizes, flag_name="--sam3d-crop-bucket-sizes"),
         sam3d_crop_padding_scale=args.sam3d_crop_padding_scale,
@@ -2270,6 +2478,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(f"{', '.join(missing)} required unless --sync-remote-code or --verify-version-stamp is used")
 
     try:
+        _require_remote_host(config.host)
+        _guard_cli_clip_dir_overwrite(args.clip_dir, allow_overwrite=bool(args.allow_overwrite))
         result = dispatch_body_stage(
             clip=args.clip,
             clip_dir=args.clip_dir,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gzip
+import os
 import json
 import hashlib
 import shutil
@@ -1234,6 +1235,91 @@ def test_tar_batch_transport_retries_result_too_large_exit_1_with_backoff(
     assert sleeps == [0.25]
 
 
+def test_transport_retry_classification_covers_rsync_255_and_tar_batch_result_too_large() -> None:
+    assert rbd._is_retryable_transport_result(
+        _completed(255, stderr="rsync error: unexplained error"),
+        retryable_exit_codes=set(rbd.RETRYABLE_TRANSPORT_EXIT_CODES),
+    )
+    assert rbd._is_retryable_transport_result(
+        _completed(
+            1,
+            stderr=(
+                "client_loop: ssh_packet_write_poll: Connection to 203.0.113.10 port 22: "
+                "Result too large\r\nlost connection"
+            ),
+        ),
+        retryable_exit_codes=set(rbd.RETRYABLE_TRANSPORT_EXIT_CODES),
+    )
+
+
+def test_tar_batch_upload_engages_chunked_append_verify_fallback_after_persistent_emsgsize(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    (clip_dir / "source.mp4").write_bytes(os.urandom(4096))
+    remote_run_dir = tmp_path / "remote" / "run"
+    remote_run_dir.mkdir(parents=True)
+    config = _remote_config(
+        host="mock@ssh",
+        transport="tar_batch",
+        transport_retry_max_attempts=2,
+        transport_retry_backoff_s=0.0,
+        transport_chunked_fallback_chunk_bytes=257,
+        transport_chunked_fallback_bwlimit_kbps=1024,
+        python=sys.executable,
+    )
+    monkeypatch.setattr(rbd.time, "sleep", lambda _seconds: None)
+    scp_attempts = 0
+    rsync_commands: list[list[str]] = []
+    phases: dict[str, float] = {}
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        nonlocal scp_attempts
+        command = list(cmd)
+        if command[0] == "scp":
+            scp_attempts += 1
+            return _completed(
+                1,
+                stderr=(
+                    "client_loop: ssh_packet_write_poll: Connection to 203.0.113.10 port 22: "
+                    "Result too large\r\nlost connection"
+                ),
+            )
+        if command[0] == "rsync":
+            rsync_commands.append(command)
+            remote_dest = _scp_remote_path(command[-1])
+            remote_dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(command[-2], remote_dest)
+            return _completed(0)
+        if command[0] == "ssh":
+            return _run_mocked_ssh_shell(command[-1])
+        raise AssertionError(f"unexpected command: {command}")
+
+    synced = rbd._tar_batch_up(
+        clip_dir,
+        clip_dir / "source.mp4",
+        None,
+        str(remote_run_dir),
+        config,
+        run=fake_run,
+        phases=phases,
+    )
+
+    assert "source.mp4" in synced
+    assert scp_attempts == 2
+    assert rsync_commands
+    assert all("--append-verify" in command for command in rsync_commands)
+    assert all("--partial" in command for command in rsync_commands)
+    assert all("--inplace" in command for command in rsync_commands)
+    assert all("--bwlimit=1024" in command for command in rsync_commands)
+    assert phases["chunked_fallback_upload_chunk_bytes"] == 257
+    assert phases["chunked_fallback_upload_chunk_count"] >= 2
+    assert phases["chunked_fallback_upload_s"] >= 0.0
+    assert (remote_run_dir / "tracks.json").is_file()
+    assert (remote_run_dir / "source.mp4").read_bytes() == (clip_dir / "source.mp4").read_bytes()
+
+
 def test_tar_batch_transport_bounds_permanent_retryable_failure_without_retry_storm(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1664,6 +1750,29 @@ def test_remote_body_dispatch_cli_help_direct_reference() -> None:
     assert "--transport" in completed.stdout
     assert "tar_batch" in completed.stdout
     assert "rsync" in completed.stdout
+    assert "--allow-overwrite" in completed.stdout
+    assert "--transport-chunked-fallback-size-mb" in completed.stdout
+    assert "--transport-chunked-fallback-bwlimit-kbps" in completed.stdout
+
+
+def test_clip_dir_overwrite_guard_refuses_populated_dir_without_flag(tmp_path: Path) -> None:
+    clip_dir = tmp_path / "clip"
+    clip_dir.mkdir()
+    (clip_dir / "existing_evidence.json").write_text("{}", encoding="utf-8")
+
+    with pytest.raises(rbd.RemoteBodyDispatchError, match="--allow-overwrite"):
+        rbd._guard_cli_clip_dir_overwrite(clip_dir, allow_overwrite=False)
+
+
+def test_clip_dir_overwrite_guard_allows_empty_dir_and_explicit_override(tmp_path: Path) -> None:
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    rbd._guard_cli_clip_dir_overwrite(empty, allow_overwrite=False)
+
+    populated = tmp_path / "populated"
+    populated.mkdir()
+    (populated / "existing_evidence.json").write_text("{}", encoding="utf-8")
+    rbd._guard_cli_clip_dir_overwrite(populated, allow_overwrite=True)
 
 
 def test_remote_body_dispatch_cli_requires_explicit_host(tmp_path: Path) -> None:

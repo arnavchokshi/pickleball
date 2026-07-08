@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from threed.racketsport.orchestrator import BodyStageRunner, StageRun, run_pipeline
+from threed.racketsport import hmr_deep
+from threed.racketsport.orchestrator import BodyStageRunner, StageContext, StageRun, run_pipeline
 from threed.racketsport.schemas import ContactWindows, Skeleton3D, SmplMotion, validate_artifact_file
 
 
@@ -1020,6 +1021,108 @@ def test_body_runner_leaves_missing_outputs_when_fast_sam_runtime_is_unavailable
     assert not (run_dir / "body_pose_fallback.json").exists()
     assert contact_splice["events"][0]["status"] == "mesh_unavailable"
     assert contact_splice["events"][0]["mesh_unavailable"] is True
+
+
+def test_default_fast_sam_repo_reads_fast_sam_root_lazily(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    later_repo = tmp_path / "late-fast-sam-root"
+
+    monkeypatch.setenv("FAST_SAM_ROOT", str(later_repo))
+
+    assert Path(hmr_deep.DEFAULT_FAST_SAM_REPO) == later_repo
+    assert BodyStageRunner().fast_sam_repo == later_repo
+
+
+def test_body_runner_warns_and_summarizes_in_process_degrade_when_fast_sam_python_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inputs = tmp_path / "inputs"
+    run_dir = tmp_path / "run"
+    manifest = _manifest(tmp_path / "models")
+    fast_sam_repo = tmp_path / "fast-sam"
+    fast_sam_repo.mkdir()
+    _write_inputs(inputs)
+    _write_deep_mesh_frame_compute_plan(run_dir)
+    monkeypatch.delenv("FAST_SAM_PYTHON", raising=False)
+    monkeypatch.delenv("FAST_SAM_REQUIRE_SUBPROCESS", raising=False)
+
+    class FakeInProcessFastSamRuntime(FakeFastSamRuntime):
+        def __init__(self, **kwargs: object) -> None:
+            super().__init__()
+            self.init_kwargs = kwargs
+
+    monkeypatch.setattr(
+        "threed.racketsport.orchestrator.FastSam3DBodyRuntime",
+        FakeInProcessFastSamRuntime,
+    )
+
+    with pytest.warns(RuntimeWarning, match="FAST_SAM_PYTHON"):
+        summary = run_pipeline(
+            clip="clip_001",
+            inputs_dir=inputs,
+            run_dir=run_dir,
+            stage="body",
+            max_frames=1,
+            tracking_mode="precomputed",
+            runners={
+                "pose": FakePoseStageRunner(),
+                "body": BodyStageRunner(
+                    write_body_monoliths=True,
+                    manifest_path=manifest,
+                    fast_sam_repo=fast_sam_repo,
+                    detector_name="",
+                    fov_name="",
+                ),
+            },
+        )
+
+    body_stage = _stage(summary, "body")
+    assert body_stage["status"] == "ran"
+    assert body_stage["metrics"]["fast_sam_runtime_mode"] == "in_process"
+    assert body_stage["metrics"]["fast_sam_subprocess_degraded"] is True
+    assert body_stage["metrics"]["fast_sam_subprocess_degrade"]["status"] == "degraded_to_in_process"
+    assert any("FAST_SAM_PYTHON is unset" in note for note in body_stage["notes"])
+
+
+def test_body_runner_strict_mode_fails_stage_when_fast_sam_python_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inputs = tmp_path / "inputs"
+    run_dir = tmp_path / "run"
+    manifest = _manifest(tmp_path / "models")
+    fast_sam_repo = tmp_path / "fast-sam"
+    fast_sam_repo.mkdir()
+    _write_inputs(inputs)
+    _write_deep_mesh_frame_compute_plan(run_dir)
+    monkeypatch.delenv("FAST_SAM_PYTHON", raising=False)
+    monkeypatch.setenv("FAST_SAM_REQUIRE_SUBPROCESS", "1")
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="body",
+        max_frames=1,
+        tracking_mode="precomputed",
+        runners={
+            "pose": FakePoseStageRunner(),
+            "body": BodyStageRunner(
+                write_body_monoliths=True,
+                manifest_path=manifest,
+                fast_sam_repo=fast_sam_repo,
+                detector_name="",
+                fov_name="",
+            ),
+        },
+    )
+
+    body_stage = _stage(summary, "body")
+    assert body_stage["status"] == "fail"
+    assert "FAST_SAM_PYTHON" in body_stage["notes"][0]
 
 
 def test_body_runner_can_disable_detector_and_fov_asset_checks_for_tracked_bboxes(tmp_path: Path) -> None:
