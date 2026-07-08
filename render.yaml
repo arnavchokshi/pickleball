@@ -38,6 +38,12 @@ services:
         value: "0"
       - key: PICKLEBALL_WORKER_BEARER_TOKEN
         sync: false
+      # Product infra (INFRA-5): gates ONLY a per-user lifecycle-override read
+      # path (not built yet). The S3 bucket's default 60-day lifecycle
+      # (INFRA-0) is unconditional and is NOT controlled by this flag. Ships
+      # DARK.
+      - key: PICKLEBALL_RETENTION_ENFORCEMENT_ENABLED
+        value: "0"
       - key: PICKLEBALL_MONGODB_DB_NAME
         value: pickleball
       - key: PICKLEBALL_S3_BUCKET

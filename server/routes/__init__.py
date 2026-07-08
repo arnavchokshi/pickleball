@@ -11,6 +11,7 @@ from .account import build_account_router
 from .auth import build_auth_router
 from .clips import build_clips_router
 from .jobs_v2 import build_jobs_v2_router
+from .profiles_worker import build_profiles_worker_router
 from .stripe_webhook import build_stripe_webhook_router
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     "build_auth_router",
     "build_clips_router",
     "build_jobs_v2_router",
+    "build_profiles_worker_router",
     "build_stripe_webhook_router",
 ]

@@ -15,10 +15,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
-from ..s3 import complete_multipart, presign_multipart_put, presign_put
+from ..s3 import complete_multipart, delete_prefix, presign_multipart_put, presign_put
 from ..security import AuthConfig, bearer_auth_dependency
 
 _VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v"}
@@ -167,5 +167,30 @@ def build_clips_router(
     def list_clips(user_id: str = Depends(require_user)) -> dict[str, Any]:
         docs = db.clips.find({"user_id": user_id}).sort("created_at", -1)
         return {"clips": [_public_clip(doc) for doc in docs]}
+
+    @router.delete("/api/clips/{clip_id}", status_code=204, response_model=None)
+    def delete_clip(clip_id: str, user_id: str = Depends(require_user)) -> Response:
+        """Per-clip delete-cascade (INFRA-5): scoped to this clip + its job
+        only. S3 prefixes for `raw/{user_id}/{clip_id}/` (video + sidecar)
+        and `bundles/{clip_id}/`, plus `artifacts/{job_id}/` if a job was
+        ever created for this clip. Does NOT touch the user doc -- other
+        clips/jobs owned by the same user are untouched (owner-scoped find
+        below also means a non-owner gets 404, not 403, matching
+        `complete_clip`'s existing behavior)."""
+        clip = db.clips.find_one({"_id": clip_id, "user_id": user_id})
+        if clip is None:
+            raise HTTPException(status_code=404, detail="clip not found")
+
+        job_id = clip.get("job_id")
+        delete_prefix(s3_client, bucket=bucket, prefix=f"raw/{user_id}/{clip_id}/")
+        delete_prefix(s3_client, bucket=bucket, prefix=f"bundles/{clip_id}/")
+        if job_id:
+            delete_prefix(s3_client, bucket=bucket, prefix=f"artifacts/{job_id}/")
+
+        db.clips.delete_one({"_id": clip_id})
+        if job_id:
+            db.jobs.delete_one({"_id": job_id})
+
+        return Response(status_code=204)
 
     return router
