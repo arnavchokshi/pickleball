@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from threed.racketsport.frame_rating import build_frame_compute_plan
+from threed.racketsport.frame_rating import DEFAULT_MESH_ESTIMATED_BYTES_PER_PLAYER_FRAME, build_frame_compute_plan
 
 
 def _tracks_payload() -> dict:
@@ -841,6 +841,60 @@ def test_frame_compute_plan_ball_aware_budget_prioritizes_events_over_proximity_
     assert by_idx[2]["tier_rationale"]["selection_reasons"] == ["ball_aware_boost"]
     assert by_idx[5]["tier_rationale"]["selection_reasons"] == ["ball_aware_boost"]
     assert by_idx[7]["tier_rationale"]["mesh_selected"] is False
+
+
+def test_frame_compute_plan_byte_budget_selects_all_when_estimate_fits() -> None:
+    budget_mib = (10 * DEFAULT_MESH_ESTIMATED_BYTES_PER_PLAYER_FRAME) / (1024 * 1024)
+
+    plan = build_frame_compute_plan(
+        _dense_tracks_payload(frame_count=4),
+        expected_players=2,
+        mesh_coverage_mode="uniform",
+        target_mesh_frame_budget=1,
+        mesh_byte_budget_mib=budget_mib,
+    )
+
+    policy = plan["mesh_coverage_policy"]
+    summary = plan["summary"]
+    assert policy["mesh_budget_policy"] == "byte_budget"
+    assert policy["selected_mesh_frame_count"] == 4
+    assert policy["selected_estimated_mesh_bytes"] == 8 * DEFAULT_MESH_ESTIMATED_BYTES_PER_PLAYER_FRAME
+    assert policy["selected_estimated_mesh_bytes"] <= policy["mesh_byte_budget_bytes"]
+    assert summary["mesh_budget_policy"] == "byte_budget"
+    assert summary["mesh_byte_budget_mib"] == policy["mesh_byte_budget_mib"]
+    assert summary["selected_estimated_mesh_bytes"] == policy["selected_estimated_mesh_bytes"]
+    assert summary["world_mesh_frame_count"] == 4
+
+
+def test_frame_compute_plan_byte_budget_truncates_without_reordering_priority() -> None:
+    budget_mib = (2 * DEFAULT_MESH_ESTIMATED_BYTES_PER_PLAYER_FRAME) / (1024 * 1024)
+
+    plan = build_frame_compute_plan(
+        _dense_tracks_payload(),
+        contact_windows=_mixed_confidence_contact_payload(),
+        ball_aware_events=_events_selected_payload(),
+        ball_track_arc_solved=_ball_track_arc_solved_payload(),
+        expected_players=2,
+        mesh_coverage_mode="ball_aware",
+        ball_aware_padding_s=0.0,
+        mesh_byte_budget_mib=budget_mib,
+    )
+
+    policy = plan["mesh_coverage_policy"]
+    counts = policy["ball_aware_trigger_source_counts"]
+    assert policy["mesh_budget_policy"] == "byte_budget"
+    assert policy["selected_mesh_frame_count"] == 2
+    assert policy["selected_estimated_mesh_bytes"] <= policy["mesh_byte_budget_bytes"]
+    assert counts["events"] == 1
+    assert counts["proximity"] == 1
+    assert counts["swing"] == 0
+
+    by_idx = {frame["frame_idx"]: frame for frame in plan["frames"]}
+    assert by_idx[2]["tier_rationale"]["selection_reasons"] == ["ball_aware_boost"]
+    assert by_idx[5]["tier_rationale"]["selection_reasons"] == ["ball_aware_boost"]
+    assert by_idx[7]["tier_rationale"]["mesh_selected"] is False
+    assert plan["summary"]["mesh_byte_budget_bytes"] == policy["mesh_byte_budget_bytes"]
+    assert plan["summary"]["selected_estimated_mesh_bytes"] == policy["selected_estimated_mesh_bytes"]
 
 
 def test_frame_compute_plan_ball_aware_rejects_invalid_thresholds() -> None:

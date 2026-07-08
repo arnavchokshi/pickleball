@@ -20,6 +20,7 @@ SCHEMA_VERSION = 1
 ARTIFACT_TYPE = "racketsport_frame_compute_plan"
 DEFAULT_MESH_COVERAGE_MODE = "hybrid"
 DEFAULT_TARGET_MESH_FRAME_BUDGET = 200
+DEFAULT_MESH_ESTIMATED_BYTES_PER_PLAYER_FRAME = 88_000
 MESH_COVERAGE_MODES = ("contact_only", "uniform", "hybrid", "ball_aware")
 CONTACT_BOOST_SELECTION_REASON = "contact_boost"
 UNIFORM_MESH_SELECTION_REASON = "uniform_mesh_coverage"
@@ -81,11 +82,13 @@ def build_frame_compute_plan(
     contact_padding_s: float = 0.08,
     mesh_coverage_mode: str = DEFAULT_MESH_COVERAGE_MODE,
     target_mesh_frame_budget: int | None = DEFAULT_TARGET_MESH_FRAME_BUDGET,
+    mesh_byte_budget_mib: float | None = None,
     ball_aware_events: Mapping[str, Any] | None = None,
     ball_track_arc_solved: Mapping[str, Any] | None = None,
     ball_proximity_m: float = DEFAULT_BALL_PROXIMITY_M,
     high_confidence_swing_floor: float = DEFAULT_HIGH_CONFIDENCE_SWING_FLOOR,
     ball_aware_padding_s: float = DEFAULT_BALL_AWARE_PADDING_S,
+    mesh_estimated_bytes_per_player_frame: int = DEFAULT_MESH_ESTIMATED_BYTES_PER_PLAYER_FRAME,
 ) -> dict[str, Any]:
     """Return a CPU-only frame priority plan for adaptive deep compute.
 
@@ -111,6 +114,10 @@ def build_frame_compute_plan(
         raise ValueError(f"mesh_coverage_mode must be one of {', '.join(MESH_COVERAGE_MODES)}")
     if target_mesh_frame_budget is not None and target_mesh_frame_budget <= 0:
         raise ValueError("target_mesh_frame_budget must be positive when provided")
+    if mesh_byte_budget_mib is not None and mesh_byte_budget_mib <= 0.0:
+        raise ValueError("mesh_byte_budget_mib must be positive when provided")
+    if mesh_estimated_bytes_per_player_frame <= 0:
+        raise ValueError("mesh_estimated_bytes_per_player_frame must be positive")
     if ball_proximity_m <= 0.0:
         raise ValueError("ball_proximity_m must be positive")
     if not 0.0 <= high_confidence_swing_floor <= 1.0:
@@ -256,6 +263,8 @@ def build_frame_compute_plan(
         tracks_obj=tracks_obj,
         mode=mesh_coverage_mode,
         target_budget=target_mesh_frame_budget,
+        mesh_byte_budget_mib=mesh_byte_budget_mib,
+        estimated_bytes_per_player_frame=mesh_estimated_bytes_per_player_frame,
     )
     deep_mesh_windows = _deep_mesh_windows(frames, fps=tracks_obj.fps)
     return {
@@ -279,6 +288,7 @@ def build_frame_compute_plan_from_files(
     expected_players: int = 4,
     mesh_coverage_mode: str = DEFAULT_MESH_COVERAGE_MODE,
     target_mesh_frame_budget: int | None = DEFAULT_TARGET_MESH_FRAME_BUDGET,
+    mesh_byte_budget_mib: float | None = None,
     ball_aware_events_path: str | Path | None = None,
     ball_track_arc_solved_path: str | Path | None = None,
     ball_proximity_m: float = DEFAULT_BALL_PROXIMITY_M,
@@ -321,6 +331,7 @@ def build_frame_compute_plan_from_files(
         expected_players=expected_players,
         mesh_coverage_mode=mesh_coverage_mode,
         target_mesh_frame_budget=target_mesh_frame_budget,
+        mesh_byte_budget_mib=mesh_byte_budget_mib,
         ball_aware_events=ball_aware_events,
         ball_track_arc_solved=ball_track_arc_solved,
         ball_proximity_m=ball_proximity_m,
@@ -653,6 +664,8 @@ def _apply_mesh_coverage_policy(
     tracks_obj: Tracks,
     mode: str,
     target_budget: int | None,
+    mesh_byte_budget_mib: float | None,
+    estimated_bytes_per_player_frame: int,
 ) -> dict[str, Any]:
     base_deep_indexes = {
         int(frame["frame_idx"])
@@ -682,69 +695,39 @@ def _apply_mesh_coverage_policy(
         and _frame_in_rally_spans(frame, tracks_obj=tracks_obj)
     ]
     eligible_index_set = set(eligible_indexes)
-    budget = len(eligible_indexes) if target_budget is None else min(int(target_budget), len(eligible_indexes))
-
-    contact_selected: set[int] = set()
-    uniform_selected: set[int] = set()
-    mesh_fallback: dict[str, Any] | None = None
-    if mode == "contact_only":
-        contact_selected = set(base_deep_indexes & eligible_index_set)
-        if target_budget is not None and len(contact_selected) > budget:
-            contact_selected = set(_select_priority_indexes(frames, contact_selected, budget))
-    elif mode == "uniform":
-        uniform_selected = set(
-            _select_uniform_indexes(
-                sorted(eligible_index_set),
-                target_count=budget,
-                tracks_obj=tracks_obj,
-            )
+    fixed_budget = len(eligible_indexes) if target_budget is None else min(int(target_budget), len(eligible_indexes))
+    byte_budget_audit: dict[str, Any] | None = None
+    if mesh_byte_budget_mib is not None:
+        budget, byte_budget_audit = _frame_count_budget_from_mesh_byte_budget(
+            frames,
+            tracks_obj=tracks_obj,
+            mode=mode,
+            byte_budget_mib=mesh_byte_budget_mib,
+            estimated_bytes_per_player_frame=estimated_bytes_per_player_frame,
+            base_deep_indexes=base_deep_indexes,
+            contact_candidate_indexes=contact_candidate_indexes,
+            ball_aware_candidate_indexes=ball_aware_candidate_indexes,
+            eligible_index_set=eligible_index_set,
         )
-    elif mode == "ball_aware":
-        candidate_budget = min(len(ball_aware_candidate_indexes), budget)
-        contact_selected = set(
-            _select_priority_indexes(frames, ball_aware_candidate_indexes & eligible_index_set, candidate_budget)
-        )
-        remaining_budget = max(0, budget - len(contact_selected))
-        if remaining_budget:
-            uniform_pool = sorted(eligible_index_set - contact_selected)
-            uniform_selected = set(
-                _select_uniform_indexes(
-                    uniform_pool,
-                    target_count=remaining_budget,
-                    tracks_obj=tracks_obj,
-                )
-            )
-        if not contact_selected and not uniform_selected:
-            fallback_pool = _manual_review_mesh_fallback_pool(frames, tracks_obj=tracks_obj)
-            if fallback_pool:
-                fallback_budget = len(fallback_pool) if target_budget is None else min(int(target_budget), len(fallback_pool))
-                uniform_selected = set(
-                    _select_uniform_indexes(
-                        fallback_pool,
-                        target_count=fallback_budget,
-                        tracks_obj=tracks_obj,
-                    )
-                )
-                if uniform_selected:
-                    mesh_fallback = {
-                        "engaged": True,
-                        "reason": MESH_FALLBACK_REASON_ELIGIBLE_ZERO_ALL_MANUAL_REVIEW,
-                        "selected": len(uniform_selected),
-                        "policy": "uniform_stride",
-                    }
+        target_budget_unlimited = False
+        fallback_budget = budget
     else:
-        contact_budget = min(len(contact_candidate_indexes), budget)
-        contact_selected = set(_select_priority_indexes(frames, contact_candidate_indexes & eligible_index_set, contact_budget))
-        remaining_budget = max(0, budget - len(contact_selected))
-        if remaining_budget:
-            uniform_pool = sorted(eligible_index_set - contact_selected)
-            uniform_selected = set(
-                _select_uniform_indexes(
-                    uniform_pool,
-                    target_count=remaining_budget,
-                    tracks_obj=tracks_obj,
-                )
-            )
+        budget = fixed_budget
+        target_budget_unlimited = target_budget is None
+        fallback_budget = len(eligible_indexes) if target_budget is None else int(target_budget)
+
+    contact_selected, uniform_selected, mesh_fallback = _select_mesh_indexes_for_budget(
+        frames,
+        tracks_obj=tracks_obj,
+        mode=mode,
+        budget=budget,
+        target_budget_unlimited=target_budget_unlimited,
+        fallback_budget=fallback_budget,
+        base_deep_indexes=base_deep_indexes,
+        contact_candidate_indexes=contact_candidate_indexes,
+        ball_aware_candidate_indexes=ball_aware_candidate_indexes,
+        eligible_index_set=eligible_index_set,
+    )
 
     boost_reason = BALL_AWARE_BOOST_SELECTION_REASON if mode == "ball_aware" else CONTACT_BOOST_SELECTION_REASON
     selected_indexes = contact_selected | uniform_selected
@@ -797,7 +780,200 @@ def _apply_mesh_coverage_policy(
     }
     if mesh_fallback is not None:
         policy["mesh_fallback"] = mesh_fallback
+    if byte_budget_audit is not None:
+        policy.update(
+            {
+                "mesh_budget_policy": "byte_budget",
+                **byte_budget_audit,
+                "selected_estimated_mesh_bytes": _estimated_selection_bytes(
+                    frames,
+                    contact_selected=contact_selected,
+                    uniform_selected=uniform_selected,
+                    estimated_bytes_per_player_frame=estimated_bytes_per_player_frame,
+                ),
+            }
+        )
     return policy
+
+
+def _select_mesh_indexes_for_budget(
+    frames: list[dict[str, Any]],
+    *,
+    tracks_obj: Tracks,
+    mode: str,
+    budget: int,
+    target_budget_unlimited: bool,
+    fallback_budget: int,
+    base_deep_indexes: set[int],
+    contact_candidate_indexes: set[int],
+    ball_aware_candidate_indexes: set[int],
+    eligible_index_set: set[int],
+) -> tuple[set[int], set[int], dict[str, Any] | None]:
+    contact_selected: set[int] = set()
+    uniform_selected: set[int] = set()
+    mesh_fallback: dict[str, Any] | None = None
+    if mode == "contact_only":
+        contact_selected = set(base_deep_indexes & eligible_index_set)
+        if not target_budget_unlimited and len(contact_selected) > budget:
+            contact_selected = set(_select_priority_indexes(frames, contact_selected, budget))
+    elif mode == "uniform":
+        uniform_selected = set(
+            _select_uniform_indexes(
+                sorted(eligible_index_set),
+                target_count=budget,
+                tracks_obj=tracks_obj,
+            )
+        )
+    elif mode == "ball_aware":
+        candidate_budget = min(len(ball_aware_candidate_indexes), budget)
+        contact_selected = set(
+            _select_priority_indexes(frames, ball_aware_candidate_indexes & eligible_index_set, candidate_budget)
+        )
+        remaining_budget = max(0, budget - len(contact_selected))
+        if remaining_budget:
+            uniform_pool = sorted(eligible_index_set - contact_selected)
+            uniform_selected = set(
+                _select_uniform_indexes(
+                    uniform_pool,
+                    target_count=remaining_budget,
+                    tracks_obj=tracks_obj,
+                )
+            )
+        if not contact_selected and not uniform_selected:
+            fallback_pool = _manual_review_mesh_fallback_pool(frames, tracks_obj=tracks_obj)
+            if fallback_pool:
+                fallback_count = len(fallback_pool) if target_budget_unlimited else min(int(fallback_budget), len(fallback_pool))
+                uniform_selected = set(
+                    _select_uniform_indexes(
+                        fallback_pool,
+                        target_count=fallback_count,
+                        tracks_obj=tracks_obj,
+                    )
+                )
+                if uniform_selected:
+                    mesh_fallback = {
+                        "engaged": True,
+                        "reason": MESH_FALLBACK_REASON_ELIGIBLE_ZERO_ALL_MANUAL_REVIEW,
+                        "selected": len(uniform_selected),
+                        "policy": "uniform_stride",
+                    }
+    else:
+        contact_budget = min(len(contact_candidate_indexes), budget)
+        contact_selected = set(_select_priority_indexes(frames, contact_candidate_indexes & eligible_index_set, contact_budget))
+        remaining_budget = max(0, budget - len(contact_selected))
+        if remaining_budget:
+            uniform_pool = sorted(eligible_index_set - contact_selected)
+            uniform_selected = set(
+                _select_uniform_indexes(
+                    uniform_pool,
+                    target_count=remaining_budget,
+                    tracks_obj=tracks_obj,
+                )
+            )
+    return contact_selected, uniform_selected, mesh_fallback
+
+
+def _frame_count_budget_from_mesh_byte_budget(
+    frames: list[dict[str, Any]],
+    *,
+    tracks_obj: Tracks,
+    mode: str,
+    byte_budget_mib: float,
+    estimated_bytes_per_player_frame: int,
+    base_deep_indexes: set[int],
+    contact_candidate_indexes: set[int],
+    ball_aware_candidate_indexes: set[int],
+    eligible_index_set: set[int],
+) -> tuple[int, dict[str, Any]]:
+    byte_budget = int(math.floor(float(byte_budget_mib) * 1024 * 1024))
+    fallback_pool = _manual_review_mesh_fallback_pool(frames, tracks_obj=tracks_obj) if mode == "ball_aware" else []
+    max_count = len(eligible_index_set) if eligible_index_set else len(fallback_pool)
+    best_budget = 0
+    best_selected_count = 0
+    best_estimated_bytes = 0
+    all_estimated_bytes = 0
+
+    for candidate_budget in range(max_count + 1):
+        contact_selected, uniform_selected, _mesh_fallback = _select_mesh_indexes_for_budget(
+            frames,
+            tracks_obj=tracks_obj,
+            mode=mode,
+            budget=candidate_budget,
+            target_budget_unlimited=False,
+            fallback_budget=candidate_budget,
+            base_deep_indexes=base_deep_indexes,
+            contact_candidate_indexes=contact_candidate_indexes,
+            ball_aware_candidate_indexes=ball_aware_candidate_indexes,
+            eligible_index_set=eligible_index_set,
+        )
+        estimated_bytes = _estimated_selection_bytes(
+            frames,
+            contact_selected=contact_selected,
+            uniform_selected=uniform_selected,
+            estimated_bytes_per_player_frame=estimated_bytes_per_player_frame,
+        )
+        if candidate_budget == max_count:
+            all_estimated_bytes = estimated_bytes
+        selected_count = len(contact_selected | uniform_selected)
+        if estimated_bytes <= byte_budget and (
+            selected_count > best_selected_count
+            or (selected_count == best_selected_count and estimated_bytes > best_estimated_bytes)
+        ):
+            best_budget = candidate_budget
+            best_selected_count = selected_count
+            best_estimated_bytes = estimated_bytes
+
+    return best_budget, {
+        "mesh_byte_budget_mib": float(byte_budget_mib),
+        "mesh_byte_budget_bytes": byte_budget,
+        "estimated_bytes_per_player_frame": int(estimated_bytes_per_player_frame),
+        "estimated_all_eligible_mesh_bytes": all_estimated_bytes,
+        "estimated_all_eligible_mesh_frame_count": max_count,
+        "byte_budget_selected_frame_budget": best_budget,
+        "byte_budget_estimator": "active_or_world_mesh_player_targets_x_measured_player_frame_bytes",
+    }
+
+
+def _estimated_selection_bytes(
+    frames: list[Mapping[str, Any]],
+    *,
+    contact_selected: set[int],
+    uniform_selected: set[int],
+    estimated_bytes_per_player_frame: int,
+) -> int:
+    frame_lookup = {int(frame["frame_idx"]): frame for frame in frames}
+    total = 0
+    for frame_idx in sorted(contact_selected | uniform_selected):
+        frame = frame_lookup.get(frame_idx)
+        if frame is None:
+            continue
+        total += _estimated_mesh_frame_bytes(
+            frame,
+            uniform_frame=frame_idx in uniform_selected,
+            estimated_bytes_per_player_frame=estimated_bytes_per_player_frame,
+        )
+    return int(total)
+
+
+def _estimated_mesh_frame_bytes(
+    frame: Mapping[str, Any],
+    *,
+    uniform_frame: bool,
+    estimated_bytes_per_player_frame: int,
+) -> int:
+    if uniform_frame:
+        player_count = len([player_id for player_id in frame.get("active_player_ids", []) if player_id is not None])
+    else:
+        player_count = len(
+            [
+                target
+                for target in frame.get("player_targets", [])
+                if isinstance(target, Mapping) and target.get("target_representation") == "world_mesh"
+            ]
+        )
+        if player_count <= 0:
+            player_count = len([player_id for player_id in frame.get("active_player_ids", []) if player_id is not None])
+    return max(0, int(player_count)) * int(estimated_bytes_per_player_frame)
 
 
 def _manual_review_mesh_fallback_pool(frames: list[Mapping[str, Any]], *, tracks_obj: Tracks) -> list[int]:
@@ -1140,7 +1316,7 @@ def _summary(
                 continue
             representation = str(target.get("target_representation", "unknown"))
             by_player_target_representation[representation] = by_player_target_representation.get(representation, 0) + 1
-    return {
+    payload = {
         "by_tier": dict(sorted(by_tier.items())),
         "by_reason": dict(sorted(by_reason.items())),
         "by_player_target_representation": dict(sorted(by_player_target_representation.items())),
@@ -1159,6 +1335,19 @@ def _summary(
         if frames
         else 0.0,
     }
+    for key in (
+        "mesh_budget_policy",
+        "mesh_byte_budget_mib",
+        "mesh_byte_budget_bytes",
+        "estimated_bytes_per_player_frame",
+        "estimated_all_eligible_mesh_bytes",
+        "selected_estimated_mesh_bytes",
+        "byte_budget_selected_frame_budget",
+        "byte_budget_estimator",
+    ):
+        if key in mesh_coverage_policy:
+            payload[key] = mesh_coverage_policy[key]
+    return payload
 
 
 def _tracks(value: Tracks | Mapping[str, Any]) -> Tracks:
@@ -1191,6 +1380,7 @@ def _contact_windows(value: ContactWindows | Mapping[str, Any] | None) -> Contac
 __all__ = [
     "DEFAULT_MESH_COVERAGE_MODE",
     "DEFAULT_TARGET_MESH_FRAME_BUDGET",
+    "DEFAULT_MESH_ESTIMATED_BYTES_PER_PLAYER_FRAME",
     "DEFAULT_BALL_PROXIMITY_M",
     "DEFAULT_HIGH_CONFIDENCE_SWING_FLOOR",
     "DEFAULT_BALL_AWARE_PADDING_S",

@@ -265,6 +265,8 @@ class RemoteConfig:
     body_contact_splice: bool = True
     body_world_joint_visual_smoothing: bool = True
     fetch_body_monoliths: bool = False
+    target_mesh_frame_budget: int | None = None
+    mesh_byte_budget_mib: float | None = None
     gpu_lock_script: str = DEFAULT_GPU_LOCK_SCRIPT
     run_root: str = DEFAULT_RUN_ROOT
     connect_timeout_s: int = DEFAULT_SSH_CONNECT_TIMEOUT_S
@@ -1440,6 +1442,19 @@ def build_phase_d_sam3d_dispatch_config(config: RemoteConfig) -> dict[str, Any]:
             "internal_val_only": True,
         },
     }
+    mesh_frame_selection: dict[str, Any] = {}
+    if config.target_mesh_frame_budget is not None:
+        mesh_frame_selection["target_mesh_frame_budget"] = int(config.target_mesh_frame_budget)
+    if config.mesh_byte_budget_mib is not None:
+        mesh_frame_selection["mesh_byte_budget_mib"] = float(config.mesh_byte_budget_mib)
+    if mesh_frame_selection:
+        mesh_frame_selection.update(
+            {
+                "remote_selection_policy": "honor_synced_frame_compute_plan",
+                "source_artifact": "frame_compute_plan.json",
+            }
+        )
+        payload["body_stage"]["mesh_frame_selection"] = mesh_frame_selection
     if not _body_postchain_is_default(config):
         payload["optimization"]["body_postchain"] = _body_postchain_artifact_dict(config)
     return payload
@@ -2479,6 +2494,18 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Also download smpl_motion.json and body_mesh.json. Default skips them for faster BODY round trips.",
     )
+    parser.add_argument(
+        "--target-mesh-frame-budget",
+        type=int,
+        default=None,
+        help="Audit passthrough for the synced frame_compute_plan.json target mesh frame budget. Use 0 to mean no cap.",
+    )
+    parser.add_argument(
+        "--mesh-byte-budget-mib",
+        type=float,
+        default=None,
+        help="Audit passthrough for the synced frame_compute_plan.json opt-in mesh byte budget in MiB.",
+    )
     parser.add_argument("--max-frames", type=int, default=None)
     parser.add_argument("--max-players", type=int, default=4)
     parser.add_argument(
@@ -2502,6 +2529,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     body_postchain_raw = args.body_postchain == "raw"
+    target_mesh_frame_budget = None if args.target_mesh_frame_budget == 0 else args.target_mesh_frame_budget
+    if args.mesh_byte_budget_mib is not None and args.mesh_byte_budget_mib <= 0.0:
+        parser.error("--mesh-byte-budget-mib must be positive")
     config = RemoteConfig(
         host=args.host,
         ssh_key=args.ssh_key,
@@ -2546,6 +2576,8 @@ def main(argv: list[str] | None = None) -> int:
             or body_postchain_raw
         ),
         fetch_body_monoliths=bool(args.fetch_body_monoliths),
+        target_mesh_frame_budget=target_mesh_frame_budget,
+        mesh_byte_budget_mib=args.mesh_byte_budget_mib,
         lock_wait_timeout_s=args.lock_wait_timeout_s,
         command_timeout_s=args.command_timeout_s,
         known_hosts_file=args.known_hosts_file,

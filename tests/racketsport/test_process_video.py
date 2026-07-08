@@ -2278,6 +2278,7 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     default_options = process_video.build_options_from_args(parser.parse_args(["--video", str(video), "--out", str(tmp_path / "run")]))
     assert default_options.mesh_coverage_mode == "ball_aware"
     assert default_options.target_mesh_frame_budget == 100
+    assert default_options.mesh_byte_budget_mib is None
     assert default_options.events_selected is None
     assert default_options.ball_track_arc_solved is None
     assert default_options.remote_config.sam3d_body_input_size_px == 384
@@ -2293,6 +2294,8 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     assert default_options.remote_config.body_contact_splice is True
     assert default_options.remote_config.sam3d_wrist_bone_lock is True
     assert default_options.remote_config.body_world_joint_visual_smoothing is True
+    assert default_options.remote_config.target_mesh_frame_budget is None
+    assert default_options.remote_config.mesh_byte_budget_mib is None
 
     ball_aware_options = process_video.build_options_from_args(
         parser.parse_args(
@@ -2308,7 +2311,9 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
                 "--high-confidence-swing-floor",
                 "0.7",
                 "--target-mesh-frame-budget",
-                "0",
+                "250",
+                "--mesh-byte-budget-mib",
+                "200",
                 "--sam3d-body-input-size-px",
                 "512",
                 "--sam3d-crop-bucket-sizes",
@@ -2331,7 +2336,8 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     assert ball_aware_options.mesh_coverage_mode == "ball_aware"
     assert ball_aware_options.ball_proximity_m == 2.0
     assert ball_aware_options.high_confidence_swing_floor == 0.7
-    assert ball_aware_options.target_mesh_frame_budget is None  # 0 means "no cap"
+    assert ball_aware_options.target_mesh_frame_budget == 250
+    assert ball_aware_options.mesh_byte_budget_mib == 200.0
     assert ball_aware_options.events_selected == events_selected.resolve()
     assert ball_aware_options.ball_track_arc_solved == ball_track_arc_solved.resolve()
     assert ball_aware_options.remote_config.sam3d_body_input_size_px == 512
@@ -2347,6 +2353,22 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     assert ball_aware_options.remote_config.body_contact_splice is False
     assert ball_aware_options.remote_config.sam3d_wrist_bone_lock is False
     assert ball_aware_options.remote_config.body_world_joint_visual_smoothing is False
+    assert ball_aware_options.remote_config.target_mesh_frame_budget == 250
+    assert ball_aware_options.remote_config.mesh_byte_budget_mib == 200.0
+
+    no_cap_options = process_video.build_options_from_args(
+        parser.parse_args(
+            [
+                "--video",
+                str(video),
+                "--out",
+                str(tmp_path / "run3"),
+                "--target-mesh-frame-budget",
+                "0",
+            ]
+        )
+    )
+    assert no_cap_options.target_mesh_frame_budget is None  # 0 means "no cap"
 
 
 def test_process_video_cli_help_direct_reference() -> None:
@@ -2368,6 +2390,7 @@ def test_process_video_cli_help_direct_reference() -> None:
     assert "--video" in completed.stdout
     assert "--mesh-coverage-mode" in completed.stdout
     assert "--target-mesh-frame-budget" in completed.stdout
+    assert "--mesh-byte-budget-mib" in completed.stdout
     assert "--ball-proximity-m" in completed.stdout
     assert "--high-confidence-swing-floor" in completed.stdout
     assert "--events-selected" in completed.stdout

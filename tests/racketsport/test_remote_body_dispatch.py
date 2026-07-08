@@ -1738,6 +1738,19 @@ def test_phase_d_dispatch_config_documents_static_intrinsics_warmup_and_stall_ga
     assert "process_one_image" not in json.dumps(payload["a100_stall_regression_check"])
 
 
+def test_phase_d_dispatch_config_records_mesh_byte_budget_policy() -> None:
+    config = _remote_config(target_mesh_frame_budget=250, mesh_byte_budget_mib=200.0)
+
+    payload = rbd.build_phase_d_sam3d_dispatch_config(config)
+
+    assert payload["body_stage"]["mesh_frame_selection"] == {
+        "target_mesh_frame_budget": 250,
+        "mesh_byte_budget_mib": 200.0,
+        "remote_selection_policy": "honor_synced_frame_compute_plan",
+        "source_artifact": "frame_compute_plan.json",
+    }
+
+
 def test_remote_body_dispatch_cli_help_direct_reference() -> None:
     command_path = "scripts/racketsport/remote_body_dispatch.py"
 
@@ -1761,6 +1774,8 @@ def test_remote_body_dispatch_cli_help_direct_reference() -> None:
     assert "--sam3d-tier2-output-lite" in completed.stdout
     assert "--camera-motion" in completed.stdout
     assert "--fetch-body-monoliths" in completed.stdout
+    assert "--target-mesh-frame-budget" in completed.stdout
+    assert "--mesh-byte-budget-mib" in completed.stdout
     assert "--body-postchain" in completed.stdout
     assert "--no-body-temporal-smoothing" in completed.stdout
     assert "--no-body-foot-lock" in completed.stdout

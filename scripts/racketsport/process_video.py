@@ -342,6 +342,7 @@ class PipelineOptions:
 
     mesh_coverage_mode: str = DEFAULT_MESH_COVERAGE_MODE
     target_mesh_frame_budget: int | None = DEFAULT_TARGET_MESH_FRAME_BUDGET
+    mesh_byte_budget_mib: float | None = None
     ball_proximity_m: float = DEFAULT_BALL_PROXIMITY_M
     high_confidence_swing_floor: float = DEFAULT_HIGH_CONFIDENCE_SWING_FLOOR
     events_selected: Path | None = None
@@ -2350,12 +2351,15 @@ class ProcessVideoPipeline:
         return ball_aware_events, ball_track_arc_solved, notes
 
     def _mesh_coverage_kwargs(self) -> dict[str, Any]:
-        return {
+        kwargs: dict[str, Any] = {
             "mesh_coverage_mode": self.options.mesh_coverage_mode,
             "target_mesh_frame_budget": self.options.target_mesh_frame_budget,
             "ball_proximity_m": self.options.ball_proximity_m,
             "high_confidence_swing_floor": self.options.high_confidence_swing_floor,
         }
+        if self.options.mesh_byte_budget_mib is not None:
+            kwargs["mesh_byte_budget_mib"] = self.options.mesh_byte_budget_mib
+        return kwargs
 
     @staticmethod
     def _mesh_coverage_plan_metrics(plan: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -2368,6 +2372,10 @@ class ProcessVideoPipeline:
         trigger_counts = policy.get("ball_aware_trigger_source_counts")
         if trigger_counts is not None:
             metrics["ball_aware_trigger_source_counts"] = trigger_counts
+        if policy.get("mesh_budget_policy") == "byte_budget":
+            metrics["mesh_budget_policy"] = "byte_budget"
+            metrics["mesh_byte_budget_mib"] = policy.get("mesh_byte_budget_mib")
+            metrics["selected_estimated_mesh_bytes"] = policy.get("selected_estimated_mesh_bytes")
         return metrics
 
     def _ensure_auto_court_preview_demo_mesh(self, plan: Mapping[str, Any]) -> tuple[dict[str, Any], int]:
@@ -4753,6 +4761,10 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
     clip = args.clip or _clip_id_from_video(video)
     run_dir = Path(args.out).expanduser().resolve() if args.out else DEFAULT_RUN_ROOT / f"process_video_{clip}"
     body_postchain_raw = args.body_postchain == "raw"
+    target_mesh_frame_budget = None if args.target_mesh_frame_budget == 0 else args.target_mesh_frame_budget
+    mesh_byte_budget_mib = args.mesh_byte_budget_mib
+    if mesh_byte_budget_mib is not None and mesh_byte_budget_mib <= 0.0:
+        raise ValueError("--mesh-byte-budget-mib must be positive")
 
     remote_config = RemoteConfig(
         host=args.remote_host,
@@ -4786,6 +4798,10 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
             or body_postchain_raw
         ),
         fetch_body_monoliths=bool(args.fetch_body_monoliths),
+        target_mesh_frame_budget=target_mesh_frame_budget
+        if mesh_byte_budget_mib is not None or target_mesh_frame_budget != DEFAULT_TARGET_MESH_FRAME_BUDGET
+        else None,
+        mesh_byte_budget_mib=mesh_byte_budget_mib,
     )
 
     return PipelineOptions(
@@ -4828,7 +4844,8 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         camera_motion_person_masks=not args.no_camera_motion_person_mask,
         placement_undistort=not args.no_placement_undistort,
         mesh_coverage_mode=args.mesh_coverage_mode,
-        target_mesh_frame_budget=None if args.target_mesh_frame_budget == 0 else args.target_mesh_frame_budget,
+        target_mesh_frame_budget=target_mesh_frame_budget,
+        mesh_byte_budget_mib=mesh_byte_budget_mib,
         ball_proximity_m=args.ball_proximity_m,
         high_confidence_swing_floor=args.high_confidence_swing_floor,
         events_selected=Path(args.events_selected).expanduser().resolve() if args.events_selected else None,
@@ -4985,6 +5002,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_TARGET_MESH_FRAME_BUDGET,
         help="Target deep-mesh (tier-1) frame budget for uniform/hybrid/ball_aware scheduling. Use 0 to mean 'no cap'.",
+    )
+    parser.add_argument(
+        "--mesh-byte-budget-mib",
+        type=float,
+        default=None,
+        help=(
+            "Opt-in deep-mesh byte budget in MiB. When set, frame_compute_plan.json fills this estimated "
+            "mesh-index budget instead of using the fixed --target-mesh-frame-budget count."
+        ),
     )
     parser.add_argument(
         "--ball-proximity-m",
