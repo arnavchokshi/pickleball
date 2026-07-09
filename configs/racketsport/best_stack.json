@@ -1,0 +1,654 @@
+{
+  "schema_version": 1,
+  "revision": 2,
+  "updated": "2026-07-09",
+  "invariants": [
+    "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
+    "Explicit CLI flag overrides manifest defaults; absent manifest entry is a hard error on decision paths.",
+    "Protected Outdoor/Indoor labels are eval-only and are not read or written by this lane."
+  ],
+  "server_overrides": {
+    "allow_auto_court_corners_preview": {
+      "value": true,
+      "entry": "server.allow_auto_court_corners_preview",
+      "rationale": "Server uploads seed preview corners for the confirm UI; CLI no-flag remains false."
+    }
+  },
+  "entries": {
+    "ball.wasb_checkpoint": {
+      "stage": "ball",
+      "selection": "raw WASB tennis zero-shot checkpoint",
+      "value": {
+        "kind": "local_path",
+        "path": "models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+        "sha256": "9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb"
+      },
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json",
+          "models/MANIFEST.json",
+          "runs/lanes/w6_labelingest_20260708/gpu_rescore/loso/loso_report.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Default unchanged: this remains the 0.7248 zero-shot anchor and is not a promotion of official retrains. Candidate evidence only: seed_official > control > stage1_official on the 1121-row owner corpus at runs/lanes/w6_labelingest_20260708/gpu_rescore/loso/loso_report.json."
+    },
+    "ball.wasb_repo": {
+      "stage": "ball",
+      "selection": "WASB-SBDT repository checkout",
+      "value": {
+        "kind": "repo_path",
+        "path": "third_party/WASB-SBDT"
+      },
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Threaded through the manifest; checkpoint value remains unchanged."
+    },
+    "ball.arc_chain": {
+      "stage": "ball_arc",
+      "selection": "default auto-bounce plus arc-solved ball chain enabled",
+      "value": true,
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json",
+          "runs/lanes/e2e_synergy_audit_20260705/stage_graph.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Default selection surface recorded; no ball metric threshold or gated metric key changed."
+    },
+    "mesh.coverage_mode": {
+      "stage": "frames",
+      "selection": "ball-aware mesh coverage mode",
+      "value": "ball_aware",
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "BUILD_CHECKLIST.md#[W6 PLAYBACK RULING]",
+          "BUILD_CHECKLIST.md#[W6 MESHCAP PASS]"
+        ]
+      },
+      "proven_against": {
+        "events": 1,
+        "frames": 1
+      },
+      "notes": "Contact-density depends on events running before frame materialization in cold runs."
+    },
+    "mesh.byte_budget_mib": {
+      "stage": "frames",
+      "selection": "byte-budgeted mesh cap",
+      "value": 300.0,
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "BUILD_CHECKLIST.md#[W6 PLAYBACK RULING]",
+          "BUILD_CHECKLIST.md#[W6 MESHCAP PASS]"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Runtime numeric selector retained for beststack_core compatibility. The wave-6 doctrine decision gate is recorded separately in mesh.byte_budget_policy; do not treat this as a VERIFIED replay or BODY claim."
+    },
+    "mesh.byte_budget_policy": {
+      "stage": "mesh",
+      "selection": "--mesh-byte-budget-mib default promotion policy",
+      "value": {
+        "current_default": "legacy target_mesh_frame_budget=100 until promoted",
+        "candidate_byte_budget_mib": 300.0,
+        "measured_transfer_mib": {
+          "wolverine": 77.0,
+          "outdoor": 112.6,
+          "legacy_cap_100_approx": 13.0
+        },
+        "measured_playback_gain": {
+          "wolverine": "1.67x",
+          "outdoor": "4.1x"
+        }
+      },
+      "status": "PENDING",
+      "gate": {
+        "name": "owner_decision_on_default_promotion",
+        "metric_key": "mesh_byte_budget_default_owner_ruling",
+        "bar": "explicit owner approval after transfer and UX cost review",
+        "evidence_path": "runs/lanes/w6_meshcap_20260708/report.json"
+      },
+      "provenance": {
+        "lane": "w6_beststack_recon_20260708",
+        "commit": "091e91196",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "runs/lanes/w6_meshcap_20260708/report.json",
+          "runs/lanes/w6_close_errand_20260708"
+        ]
+      },
+      "proven_against": {
+        "wolverine_transfer_mib": 77.0,
+        "outdoor_transfer_mib": 112.6,
+        "legacy_cap_100_approx_mib": 13.0,
+        "wolverine_playback_gain": "1.67x",
+        "outdoor_playback_gain": "4.1x"
+      },
+      "notes": "Pending by ruling: bookkeeping only; manifest entry records candidate default-selection policy, not VERIFIED replay quality."
+    },
+    "mesh.target_frame_budget": {
+      "stage": "frames",
+      "selection": "fixed-frame mesh cap disabled by default",
+      "value": null,
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "BUILD_CHECKLIST.md#[W6 PLAYBACK RULING]"
+        ]
+      },
+      "proven_against": null,
+      "notes": "The previous no-flag value was fixed 100 frames; explicit --target-mesh-frame-budget remains the fixed-frame override."
+    },
+    "tracking.reid_model": {
+      "stage": "tracking",
+      "selection": "OSNet ReID checkpoint path for raw-pool global association",
+      "value": {
+        "kind": "local_path",
+        "path": "models/checkpoints/osnet_x1_0_market1501.pt",
+        "required": false
+      },
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Local checkpoint is not staged in this checkout; the manifest records the current default selector without fabricating an available checkpoint claim."
+    },
+    "tracking.global_association_profile": {
+      "stage": "tracking",
+      "selection": "production default raw-pool global association profile",
+      "value": "wolverine_internal_val_trk10_iter2_margin2",
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Deliberate default. Per-clip Burlington/Wolverine/Outdoor profiles are eval-only overrides, not global production defaults."
+    },
+    "confidence.calibration_curves": {
+      "stage": "confidence_gate",
+      "selection": "Wave-B confidence calibration curves",
+      "value": {
+        "kind": "local_path",
+        "path": "runs/waveb_confidence_gate_20260702T183158Z/calibration_curves.json",
+        "sha256": "7b7b758b880908366de400aabf61d2a92e03dabbeddda1d064c158e3c27de5f8"
+      },
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json",
+          "runs/waveb_confidence_gate_20260702T183158Z/calibration_curves.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Fail-loud manifest-owned pointer; old artifacts remain backward-compatible because summaries are additive."
+    },
+    "body.detector_fov": {
+      "stage": "body",
+      "selection": "track-box BODY dispatch with detector/FOV disabled",
+      "value": {
+        "detector_name": "",
+        "fov_name": "",
+        "fov_checkpoint_model_id": "moge_2_vitl_normal",
+        "fov_checkpoint_required_when_fov_enabled": true
+      },
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json",
+          "models/MANIFEST.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Unifies local BodyStageRunner and RemoteConfig empty-string semantics. If fov_name is enabled later, models/MANIFEST.json id=moge_2_vitl_normal must resolve and verify."
+    },
+    "body.fast_sam_3d_body_production": {
+      "stage": "body",
+      "selection": "SAM-3D-Body production BODY backbone",
+      "value": "fast_sam_3d_body",
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "BUILD_CHECKLIST.md#[W6 RULINGS]",
+          "models/MANIFEST.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Active BODY stack is SAM-3D-Body; Fast-SAM-3D-Body challenger NOT-ADOPT is recorded separately as DORMANT."
+    },
+    "camera_motion.policy": {
+      "stage": "camera_motion",
+      "selection": "current HEAD camera-motion AUTO behavior",
+      "value": {
+        "mode": "auto",
+        "threshold": 2.5,
+        "estimator": "hardened",
+        "flow_backend": "lk",
+        "person_masks": true,
+        "enable_flag_default": false,
+        "disable_flag_default": false
+      },
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "scripts/racketsport/process_video.py:335",
+          "scripts/racketsport/process_video.py:1245"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Zero behavior change: enable_camera_motion dataclass default is false, but no-flag runs the AUTO probe unless --disable-camera-motion is set."
+    },
+    "placement.undistort": {
+      "stage": "placement",
+      "selection": "placement pixel undistortion enabled",
+      "value": true,
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Recorded default selection surface; no gated metric key or threshold changed."
+    },
+    "body.schedule": {
+      "stage": "body",
+      "selection": "serial BODY schedule",
+      "value": "serial",
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/e2e_synergy_audit_20260705/stage_graph.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Default E2E route is serial. Overlap remains explicit and is not promoted by this lane."
+    },
+    "server.allow_auto_court_corners_preview": {
+      "stage": "server",
+      "selection": "server upload preview-corner seed",
+      "value": true,
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Declared intentional CLI-vs-server divergence: preview seed for the confirm UI."
+    },
+    "ball.seed_official_checkpoint": {
+      "stage": "ball",
+      "selection": "official seed checkpoint candidate",
+      "value": {
+        "kind": "unresolved_checkpoint",
+        "label": "seed_official"
+      },
+      "status": "PENDING",
+      "gate": {
+        "name": "heldout_loso_beats_zero_shot_anchor_plus_owner_go",
+        "metric_key": "ball_loso_anchor_f1",
+        "bar": ">0.7248 and explicit owner go",
+        "evidence_path": "runs/lanes/w6_labelingest_20260708/gpu_rescore/loso/"
+      },
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json",
+          "runs/lanes/w6_labelingest_20260708/gpu_rescore/loso/"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Pre-registered only; ball default checkpoint value stays the raw WASB zero-shot anchor."
+    },
+    "ball.stage1_official_checkpoint": {
+      "stage": "ball",
+      "selection": "official stage1 checkpoint candidate",
+      "value": {
+        "kind": "unresolved_checkpoint",
+        "label": "stage1_official"
+      },
+      "status": "PENDING",
+      "gate": {
+        "name": "heldout_loso_beats_zero_shot_anchor_plus_owner_go",
+        "metric_key": "ball_loso_anchor_f1",
+        "bar": ">0.7248 and explicit owner go",
+        "evidence_path": "runs/lanes/w6_labelingest_20260708/gpu_rescore/loso/"
+      },
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json",
+          "runs/lanes/w6_labelingest_20260708/gpu_rescore/loso/"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Pre-registered only; no held-out ledger row exists for this lane and no labels are touched."
+    },
+    "court.court_unet_v2": {
+      "stage": "calibration",
+      "selection": "court U-Net v2 checkpoint candidate",
+      "value": {
+        "kind": "local_path",
+        "path": "models/checkpoints/court_unet_v2/court_model_v2.pt",
+        "sha256": "cdf0555d49335a946e518b177d85e2ab5be02100ba46eb3e634785c84f337c22"
+      },
+      "status": "PENDING",
+      "gate": {
+        "name": "calv1_fusedefault_decisive_eval",
+        "metric_key": "court_pck_at_5px",
+        "bar": ">=0.95",
+        "evidence_path": "runs/lanes/calv1_fusedefault_20260708/"
+      },
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json",
+          "BUILD_CHECKLIST.md#[BESTSTACK WAVE OPEN]"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Pending only; fenced court session owns court default code and this lane does not touch court files."
+    },
+    "court.e4_fusion_default": {
+      "stage": "calibration",
+      "selection": "E4 court fusion default candidate",
+      "value": "e4_fusion",
+      "status": "PENDING",
+      "gate": {
+        "name": "calv1_fusedefault_decisive_eval",
+        "metric_key": "court_pck_at_5px",
+        "bar": ">=0.95",
+        "evidence_path": "runs/lanes/calv1_fusedefault_20260708/"
+      },
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json",
+          "BUILD_CHECKLIST.md#[BESTSTACK WAVE OPEN]"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Pending only; concurrent court lane owns this code and gate."
+    },
+    "body.postchain_raw_knob": {
+      "stage": "body",
+      "selection": "--body-postchain raw instrument family",
+      "value": {
+        "mode": "instrument_only",
+        "pipeline_default": false,
+        "strict_loud_bypass": true
+      },
+      "status": "DORMANT",
+      "gate": null,
+      "provenance": {
+        "lane": "w6_beststack_recon_20260708",
+        "commit": "dd5e5980d",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "runs/lanes/w6_gate1b_knob_20260708",
+          "runs/lanes/w6_footpinstub_20260708/report.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Dormant by ruling: instrument-only raw bypass family, never a pipeline default; strict loud-bypass provenance required."
+    },
+    "instrument.gate_check_body_decode": {
+      "stage": "instrument",
+      "selection": "canonical decode-fidelity harness",
+      "value": {
+        "script": "scripts/racketsport/gate_check_body_decode.py",
+        "pipeline_stage": false,
+        "latent_smoothing_available": false
+      },
+      "status": "DORMANT",
+      "gate": null,
+      "provenance": {
+        "lane": "w6_beststack_recon_20260708",
+        "commit": "37b8ecd3f",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "runs/lanes/w6_gatecheckfix_20260708/report.json",
+          "runs/lanes/w6_close_errand_20260708/gate1b_raw_arm_report.json"
+        ]
+      },
+      "proven_against": {
+        "gate_1b_world_round_trip_mm": 262.35,
+        "gate_1b_status": "FAIL"
+      },
+      "notes": "Dormant by ruling: canonical instrument only, not a pipeline stage; gate_1b FAIL 262.35mm means decode is not wiring-ready and latent smoothing must not be referenced as available."
+    },
+    "ball.arc_solver_spin": {
+      "stage": "ball",
+      "selection": "arc solver spin scalar plumbing",
+      "value": {
+        "fit_spin_scalar": false,
+        "pipeline_default": false
+      },
+      "status": "DORMANT",
+      "gate": null,
+      "provenance": {
+        "lane": "w6_beststack_recon_20260708",
+        "commit": "37b8ecd3f",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "runs/lanes/w6_magnus_20260708/report.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Dormant by ruling: kill-fired and not adopted; revisit only after STEP 5 view confidence clears."
+    },
+    "ball.physics_2d_gated_teacher": {
+      "stage": "ball",
+      "selection": "physics/2D-gated teacher",
+      "value": "disabled",
+      "status": "DORMANT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "BUILD_CHECKLIST.md#[W6 RULINGS]"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Dormant by ruling: killed on human GT."
+    },
+    "body.experimental_body_array_native": {
+      "stage": "body",
+      "selection": "experimental body array native runtime",
+      "value": "disabled",
+      "status": "DORMANT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "BUILD_CHECKLIST.md#[W6 RULINGS]"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Dormant by ruling: regression-reverted."
+    },
+    "tracking.dead_botsort_tracker_presets": {
+      "stage": "tracking",
+      "selection": "dead BoT-SORT tracker presets",
+      "value": "disabled",
+      "status": "DORMANT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "BUILD_CHECKLIST.md#[W6 RULINGS]"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Dormant by ruling: dead presets remain non-default."
+    },
+    "court.profile_driven_cluster": {
+      "stage": "calibration",
+      "selection": "profile-driven court/net/distortion cluster",
+      "value": "fenced",
+      "status": "FENCED",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Product-infra/court fence; this lane must not edit court files or gates."
+    },
+    "product.wave_a_auto_find_ui": {
+      "stage": "product",
+      "selection": "Wave-A auto-find UI",
+      "value": "fenced",
+      "status": "FENCED",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "runs/lanes/beststack_core_20260708/audit_result_full.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Product-infra fence; web/replay and ios are out of scope."
+    }
+  },
+  "selection_constant_coverage": {
+    "DEFAULT_REID_MODEL": "tracking.reid_model",
+    "DEFAULT_WASB_CHECKPOINT": "ball.wasb_checkpoint",
+    "DEFAULT_WASB_REPO": "ball.wasb_repo",
+    "DEFAULT_CONFIDENCE_CALIBRATION_CURVES": "confidence.calibration_curves",
+    "DEFAULT_MESH_COVERAGE_MODE": "mesh.coverage_mode",
+    "DEFAULT_TARGET_MESH_FRAME_BUDGET": "mesh.target_frame_budget",
+    "DEFAULT_MESH_BYTE_BUDGET_MIB": "mesh.byte_budget_mib",
+    "DEFAULT_GLOBAL_ASSOCIATION_PROFILE": "tracking.global_association_profile"
+  },
+  "selection_constant_allowlist": {
+    "DEFAULT_MODEL_MANIFEST": "model registry file location, not a default model/checkpoint/profile selection",
+    "DEFAULT_BODY_MODEL_MANIFEST": "BODY registry file location, not a default model/checkpoint/profile selection"
+  },
+  "model_manifest_coverage": {
+    "fast_sam_3d_body_dinov3": {"entry": "body.fast_sam_3d_body_production"},
+    "sam_3d_body_mhr_model": {"entry": "body.fast_sam_3d_body_production"},
+    "sat_hmr_644_3dpw": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "fallback asset, not default-selected"},
+    "moge_2_vitl_normal": {"entry": "body.detector_fov"},
+    "sam2_hiera_base_plus": {"entry": "court.profile_driven_cluster", "allowlist_reason": "racket/court adjacent asset, not default-selected"},
+    "grounding_dino_tiny_paddle_detector": {"entry": "court.profile_driven_cluster", "allowlist_reason": "racket/court adjacent asset, not default-selected"},
+    "grounding_dino_base_paddle_detector_failed_probe": {"entry": "tracking.dead_botsort_tracker_presets", "allowlist_reason": "failed probe, not default-selected"},
+    "sam2_hiera_tiny_racket_masks": {"entry": "court.profile_driven_cluster", "allowlist_reason": "racket/court adjacent asset, not default-selected"},
+    "yolo11n_paddle_cpu320_e2_failed_probe": {"entry": "tracking.dead_botsort_tracker_presets", "allowlist_reason": "failed probe, not default-selected"},
+    "yolo11n_paddle_a100_img960_e50_failed_probe": {"entry": "tracking.dead_botsort_tracker_presets", "allowlist_reason": "failed probe, not default-selected"},
+    "yolo26s_paddle_a100_img1280_e80_failed_probe": {"entry": "tracking.dead_botsort_tracker_presets", "allowlist_reason": "failed probe, not default-selected"},
+    "body4d_yolo_best_existing": {"entry": "body.detector_fov", "allowlist_reason": "legacy detector asset disabled by empty detector default"},
+    "yolo26m": {"entry": "body.detector_fov"},
+    "rtmw_l_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
+    "rtmw_x_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
+    "rtmw3d_x": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
+    "motionbert_lift_smooth": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
+    "rtmpose_m_body26_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
+    "rtmpose_l_body26_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
+    "rtmpose_x_body26_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
+    "rtmpose_m_wholebody_256": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
+    "rtmpose_l_wholebody_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
+    "rtmpose_x_wholebody_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
+    "tracknetv3": {"entry": "ball.seed_official_checkpoint", "allowlist_reason": "candidate detector, not default-selected"},
+    "tracknetv3_inpaintnet": {"entry": "ball.seed_official_checkpoint", "allowlist_reason": "candidate detector, not default-selected"},
+    "wasb_tennis_bmvc2023": {"entry": "ball.wasb_checkpoint"},
+    "sat_hmr": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "fallback asset, not default-selected"},
+    "multihmr2_b": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "fallback asset, not default-selected"},
+    "mujoco_mjx": {"entry": "body.p22_lambda_foot_smoother", "allowlist_reason": "physics support asset, not default-selected"}
+  }
+}

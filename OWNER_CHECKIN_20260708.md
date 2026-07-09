@@ -1,10 +1,13 @@
 # OWNER CHECK-IN — 2026-07-08 (wave 6)
 
-⭐ **Headline:** Wave 6 is OPEN and running. Preflight green (auth OK, zero fleet VMs, ledger clean).
-Five Codex lanes dispatched in parallel: Phase-B labelpack packaging (queue #7), the GATE-1b
-raw-persist knob (queue #2), Magnus STEP 2 spin fitting (queue #3), instrument/docs debt (queue #5),
-and a read-only playback-frame-rate diagnosis for your critique item #1. The critical-path label
-ingest (queue #1) is STAGED HOT — it fires the moment your first CVAT export lands. VERIFIED=0 unchanged.
+⭐ **Headline:** WAVE 6 IS CLOSING COMPLETE — all 8 queue items ruled. Your session-01 labels
+went end-to-end: ingested (corpus 486→1,121), LoSO outdoor fold built, and the GPU re-score says
+**seed_official (owner-data-trained) is the clear winner** — stage1 actually scores BELOW the
+tennis control on hard frames, which vindicates your labeling as THE unlock. Playback critique:
+outdoor mesh cadence went 5.2→21.3 fps (4.1x). GATE-1b was finally measured legitimately and
+FAILED (262mm vs 1mm target) — so the latent-smoothing path stays honestly unwired; root cause is
+queued. Magnus spin: honest kill, plumbing dormant. Next: the deep review + North Star refresh you
+ordered (running tonight), then wave 7.
 
 ## Blockers (typed STOPs)
 
