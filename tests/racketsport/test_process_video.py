@@ -1515,6 +1515,7 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
         "body",
         "placement_refine",
         "grounding_refine",
+        "paddle_pose",
         "world",
         "confidence_gate",
         "manifest",

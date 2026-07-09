@@ -60,15 +60,20 @@ entrypoint (MASTER_PLAN.md's product goal). It chains, in order:
                       when foot_contact_phases.json + calibration + tracks exist;
                       not accuracy/gate evidence, skipped untouched on zero
                       contact phases.
- 11. world         -- virtual_world.json + trust_bands.json (every entity
+ 11. paddle_pose   -- render-only fused wrist+palm+grip paddle estimate
+                      (`racket_pose_estimate.json`) when SAM-3D wrist/palm
+                      evidence exists; fail-closed with a loud summary block
+                      otherwise. This is estimated preview evidence only, never
+                      an RKT promotion.
+ 12. world         -- virtual_world.json + trust_bands.json (every entity
                       badged from real upstream gate/artifact state via
                       threed.racketsport.trust_band, never invented).
- 12. confidence    -- confidence_gated_world.json via the Wave-B additive
+ 13. confidence    -- confidence_gated_world.json via the Wave-B additive
                       confidence gate (default on; --no-confidence-gate keeps
                       raw virtual_world.json as the viewer world).
- 13. manifest      -- replay_viewer_manifest.json, the same bundle shape
+ 14. manifest      -- replay_viewer_manifest.json, the same bundle shape
                       web/replay already loads.
- 14. verify        -- optional (--verify-viewer) headless load check of the
+ 15. verify        -- optional (--verify-viewer) headless load check of the
                       web viewer against the freshly built manifest.
 
 Resilience: every stage checks for an already-valid artifact first and skips
@@ -136,6 +141,12 @@ from threed.racketsport.camera_motion import (  # noqa: E402
 )
 from threed.racketsport.person_reid_diagnostics import resolve_reid_device  # noqa: E402
 from threed.racketsport.placement import PlacementConfig, rewrite_tracks_with_placement  # noqa: E402
+from threed.racketsport.paddle_pose_fused import (  # noqa: E402
+    ARTIFACT_TYPE as PADDLE_POSE_ARTIFACT_TYPE,
+    SOURCE as PADDLE_POSE_SOURCE,
+    build_paddle_pose_fused_from_file,
+    write_paddle_pose_fused,
+)
 from threed.racketsport.process_video_body_frames import materialize_process_video_frames  # noqa: E402
 from threed.racketsport.rally_gating import build_rally_spans_artifact, in_rally_span  # noqa: E402
 from threed.racketsport.raw_pool_person_authority import (  # noqa: E402
@@ -181,6 +192,8 @@ DEFAULT_CONFIDENCE_CALIBRATION_CURVES = BEST_STACK_MANIFEST.path_value("confiden
 DEFAULT_MESH_COVERAGE_MODE = BEST_STACK_MANIFEST.string_value("mesh.coverage_mode")
 DEFAULT_TARGET_MESH_FRAME_BUDGET = BEST_STACK_MANIFEST.value("mesh.target_frame_budget")
 DEFAULT_MESH_BYTE_BUDGET_MIB = BEST_STACK_MANIFEST.number_value("mesh.byte_budget_mib")
+DEFAULT_PADDLE_FUSED_ESTIMATOR = BEST_STACK_MANIFEST.value("paddle.fused_estimator")
+PADDLE_POSE_ARTIFACT_NAME = "racket_pose_estimate.json"
 GROUNDING_REFINE_POLICY_NOTE = "render-honest estimated grounding, not gate evidence"
 REPLAY_POINT_MAX_SPAN_SECONDS = 1.5
 AUTO_COURT_PREVIEW_TRACKING_MARGIN_M = 1000.0
@@ -356,6 +369,7 @@ class PipelineOptions:
     remote_config: RemoteConfig = field(default_factory=RemoteConfig)
 
     grounding_refine: bool = True
+    paddle_pose: bool = bool(DEFAULT_PADDLE_FUSED_ESTIMATOR.get("enabled", True))
 
     confidence_gate: bool = True
     confidence_calibration_curves: Path | None = None
@@ -423,6 +437,7 @@ class ProcessVideoPipeline:
             "body_grounding_refinement.json",
             "skeleton3d_pre_grounding_refine.json",
             "smpl_motion_pre_grounding_refine.json",
+            PADDLE_POSE_ARTIFACT_NAME,
             "pipeline_run.json",
             "virtual_world.json",
             "confidence_gated_world.json",
@@ -515,6 +530,7 @@ class ProcessVideoPipeline:
         stage_fns: list[tuple[str, Callable[[], StageOutcome]]] = [
             ("placement_refine", self._stage_placement_refine),
             ("grounding_refine", self._stage_grounding_refine),
+            ("paddle_pose", self._stage_paddle_pose),
             ("world", self._stage_world),
             ("confidence_gate", self._stage_confidence_gate),
             ("manifest", self._stage_manifest),
@@ -2966,7 +2982,140 @@ class ProcessVideoPipeline:
         )
 
     # ------------------------------------------------------------------
-    # stage 9: world (virtual_world.json + trust_bands.json)
+    # stage 9: paddle pose (racket_pose_estimate.json)
+    # ------------------------------------------------------------------
+
+    def _stage_paddle_pose(self) -> StageOutcome:
+        out = self.clip_dir / PADDLE_POSE_ARTIFACT_NAME
+        if not self.options.paddle_pose:
+            return StageOutcome(
+                stage="paddle_pose",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["--no-paddle-pose set: fused paddle estimator disabled before world assembly"],
+                metrics=_paddle_pose_blocked_stage_metrics("no_paddle_pose_flag", status="skipped"),
+            )
+
+        if out.is_file() and not self.options.force:
+            try:
+                payload = _read_optional_json(out)
+            except Exception:
+                payload = None
+            if _is_valid_paddle_pose_payload(payload):
+                self._record_paddle_pose_trust_band(payload)
+                return StageOutcome(
+                    stage="paddle_pose",
+                    status="reused",
+                    wall_seconds=0.0,
+                    notes=[f"reused existing {PADDLE_POSE_ARTIFACT_NAME} before world assembly"],
+                    artifacts=[PADDLE_POSE_ARTIFACT_NAME],
+                    trust_badge="low_confidence",
+                    metrics={"paddle_pose": _paddle_pose_stage_metrics(payload)},
+                )
+            out.unlink(missing_ok=True)
+
+        skeleton_path = self.clip_dir / "skeleton3d.json"
+        if not skeleton_path.is_file():
+            return StageOutcome(
+                stage="paddle_pose",
+                status="blocked",
+                wall_seconds=0.0,
+                notes=[
+                    "paddle_pose fail-closed: missing skeleton3d.json from BODY/SAM-3D, so no racket_pose_estimate.json was emitted",
+                ],
+                metrics=_paddle_pose_blocked_stage_metrics("missing_sam3d_skeleton3d"),
+            )
+
+        calibration_path = self.clip_dir / "court_calibration.json"
+        detector_boxes_path = _first_existing_path(
+            self.clip_dir,
+            (
+                "paddle_detector_boxes.json",
+                "racket_detector_boxes.json",
+                "detector_boxes.json",
+                "paddle_boxes.json",
+            ),
+        )
+        membership_path = _first_existing_path(
+            self.clip_dir,
+            (
+                "court_membership.json",
+                "player_membership.json",
+                "membership.json",
+            ),
+        )
+        try:
+            detector_boxes = _read_optional_json(detector_boxes_path) if detector_boxes_path is not None else None
+            calibration = _read_optional_json(calibration_path) if calibration_path.is_file() else None
+            membership = _read_optional_json(membership_path) if membership_path is not None else None
+            use_detector_boxes = isinstance(detector_boxes, Mapping) and isinstance(calibration, Mapping)
+            payload = build_paddle_pose_fused_from_file(
+                skeleton_path,
+                clip_id=self.options.clip,
+                ball_track=_read_optional_json(self.clip_dir / "ball_track.json"),
+                contact_windows=_read_optional_json(self.clip_dir / "contact_windows.json"),
+                physics_estimate=_read_optional_json(self.clip_dir / "racket_physics_estimate.json"),
+                detector_boxes=detector_boxes if isinstance(detector_boxes, Mapping) else None,
+                calibration=calibration if isinstance(calibration, Mapping) else None,
+                membership=membership if isinstance(membership, Mapping) else None,
+                use_reflection=True,
+                use_detector_boxes=use_detector_boxes,
+                use_detector_box_handedness=use_detector_boxes,
+            )
+        except Exception as exc:  # noqa: BLE001 - stage is fail-closed by contract.
+            out.unlink(missing_ok=True)
+            return StageOutcome(
+                stage="paddle_pose",
+                status="blocked",
+                wall_seconds=0.0,
+                notes=[
+                    "paddle_pose fail-closed: fused estimator raised while reading current run evidence; no artifact was emitted",
+                    f"{type(exc).__name__}: {exc}",
+                ],
+                metrics=_paddle_pose_blocked_stage_metrics("fused_estimator_exception"),
+            )
+
+        metrics = _paddle_pose_stage_metrics(payload)
+        if payload.get("status") != "preview" or metrics["coverage"]["estimate_frame_count"] <= 0:
+            out.unlink(missing_ok=True)
+            reason = _paddle_pose_blocked_reason(payload)
+            return StageOutcome(
+                stage="paddle_pose",
+                status="blocked",
+                wall_seconds=0.0,
+                notes=[
+                    f"paddle_pose fail-closed: {reason}; no racket_pose_estimate.json was emitted",
+                ],
+                metrics={"paddle_pose": {**metrics, "status": "blocked", "reason": reason}},
+            )
+
+        write_paddle_pose_fused(out, payload)
+        self._record_paddle_pose_trust_band(payload)
+        notes = [
+            "built render-only fused wrist+palm+grip paddle estimate before world assembly",
+            "RKT remains unverified: racket_pose_estimate.json is estimated preview evidence, not a promotion artifact",
+        ]
+        if detector_boxes_path is None:
+            notes.append("no detector-box sidecar found; estimator used SAM-3D wrist/palm/grip evidence only")
+        else:
+            notes.append(f"detector-box evidence sidecar: {detector_boxes_path.name}")
+        return StageOutcome(
+            stage="paddle_pose",
+            status="ran",
+            wall_seconds=0.0,
+            notes=notes,
+            artifacts=[PADDLE_POSE_ARTIFACT_NAME],
+            trust_badge="low_confidence",
+            metrics={"paddle_pose": metrics},
+        )
+
+    def _record_paddle_pose_trust_band(self, payload: Mapping[str, Any]) -> None:
+        trust_band = payload.get("trust_band")
+        if isinstance(trust_band, Mapping):
+            self.trust_bands["racket_pose_estimate"] = dict(trust_band)
+
+    # ------------------------------------------------------------------
+    # stage 10: world (virtual_world.json + trust_bands.json)
     # ------------------------------------------------------------------
 
     def _stage_world(self) -> StageOutcome:
@@ -2995,13 +3144,13 @@ class ProcessVideoPipeline:
             physics_footlock=_read_optional_json(physics_footlock_path),
             ball_track_physics_filled=_read_optional_json(ball_physics_path),
             ball_track_arc_solved=_read_optional_json(ball_arc_solved_path),
-            racket_pose_estimate=_read_optional_json(racket_estimate_path),
+            racket_pose_estimate=_read_optional_json(racket_estimate_path) if self.options.paddle_pose else None,
             placement_calibration_path=court_path,
             artifact_paths={
                 "physics_footlock": physics_footlock_path if physics_footlock_path.is_file() else None,
                 "ball_track_physics_filled": ball_physics_path if ball_physics_path.is_file() else None,
                 "ball_track_arc_solved": ball_arc_solved_path if ball_arc_solved_path.is_file() else None,
-                "racket_pose_estimate": racket_estimate_path if racket_estimate_path.is_file() else None,
+                "racket_pose_estimate": racket_estimate_path if self.options.paddle_pose and racket_estimate_path.is_file() else None,
             },
         )
         out = self.clip_dir / "virtual_world.json"
@@ -3018,7 +3167,7 @@ class ProcessVideoPipeline:
         )
 
     # ------------------------------------------------------------------
-    # stage 10: confidence gate (confidence_gated_world.json)
+    # stage 11: confidence gate (confidence_gated_world.json)
     # ------------------------------------------------------------------
 
     def _stage_confidence_gate(self) -> StageOutcome:
@@ -3052,7 +3201,7 @@ class ProcessVideoPipeline:
             _read_json(world_path),
             ball_track_physics_filled=_read_optional_json(self.clip_dir / "ball_track_physics_filled.json"),
             physics_footlock=_read_optional_json(self.clip_dir / "physics_footlock.json"),
-            racket_pose_estimate=_read_optional_json(self.clip_dir / "racket_pose_estimate.json"),
+            racket_pose_estimate=_read_optional_json(self.clip_dir / "racket_pose_estimate.json") if self.options.paddle_pose else None,
             contact_windows=_read_optional_json(self.clip_dir / "contact_windows.json"),
             calibration_curves=calibration_curves,
             config=ConfidenceGateConfig(),
@@ -3075,11 +3224,10 @@ class ProcessVideoPipeline:
         }
         _write_json(out_summary, summary)
 
-        missing_phys = [
-            name
-            for name in ("ball_track_physics_filled.json", "physics_footlock.json", "racket_pose_estimate.json")
-            if not (self.clip_dir / name).is_file()
-        ]
+        expected_phys = ["ball_track_physics_filled.json", "physics_footlock.json"]
+        if self.options.paddle_pose:
+            expected_phys.append(PADDLE_POSE_ARTIFACT_NAME)
+        missing_phys = [name for name in expected_phys if not (self.clip_dir / name).is_file()]
         notes = [
             "applied Wave-B confidence gate additively; raw virtual_world.json remains on disk",
             "no Outdoor/Indoor labels read; gate consumes run-dir artifacts only",
@@ -4609,6 +4757,100 @@ def _read_optional_json(path: Path) -> Any | None:
     return _read_json(path) if path.is_file() else None
 
 
+def _first_existing_path(root: Path, names: Sequence[str]) -> Path | None:
+    for name in names:
+        candidate = root / name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _is_valid_paddle_pose_payload(payload: Any) -> bool:
+    return (
+        isinstance(payload, Mapping)
+        and payload.get("artifact_type") == PADDLE_POSE_ARTIFACT_TYPE
+        and payload.get("source") == PADDLE_POSE_SOURCE
+    )
+
+
+def _paddle_pose_zero_coverage() -> dict[str, int]:
+    return {
+        "estimate_frame_count": 0,
+        "input_player_count": 0,
+        "hidden_frame_count": 0,
+    }
+
+
+def _nonnegative_int(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _paddle_pose_coverage(payload: Any) -> dict[str, int]:
+    if not isinstance(payload, Mapping):
+        return _paddle_pose_zero_coverage()
+    summary = payload.get("summary")
+    if not isinstance(summary, Mapping):
+        return _paddle_pose_zero_coverage()
+    return {
+        "estimate_frame_count": _nonnegative_int(summary.get("estimate_frame_count")),
+        "input_player_count": _nonnegative_int(summary.get("input_player_count")),
+        "hidden_frame_count": _nonnegative_int(summary.get("hidden_frame_count")),
+    }
+
+
+def _paddle_pose_blocked_stage_metrics(reason: str, *, status: str = "blocked") -> dict[str, Any]:
+    return {
+        "paddle_pose": {
+            "status": status,
+            "reason": reason,
+            "coverage": _paddle_pose_zero_coverage(),
+        }
+    }
+
+
+def _paddle_pose_stage_metrics(payload: Mapping[str, Any]) -> dict[str, Any]:
+    summary = payload.get("summary")
+    summary_mapping = summary if isinstance(summary, Mapping) else {}
+    metrics: dict[str, Any] = {
+        "status": str(payload.get("status", "blocked")),
+        "artifact_type": str(payload.get("artifact_type", "")),
+        "source": str(payload.get("source", "")),
+        "coverage": _paddle_pose_coverage(payload),
+        "render_only": bool(payload.get("render_only", True)),
+        "not_for_detection_metrics": bool(payload.get("not_for_detection_metrics", True)),
+        "trusted_for_rkt_promotion": bool(payload.get("trusted_for_rkt_promotion", False)),
+        "rkt_gate_unscoreable": bool(payload.get("rkt_gate_unscoreable", True)),
+    }
+    band_distribution = summary_mapping.get("band_distribution")
+    if isinstance(band_distribution, Mapping):
+        metrics["band_distribution"] = dict(band_distribution)
+    evidence_channels = summary_mapping.get("evidence_channels")
+    if isinstance(evidence_channels, Mapping):
+        metrics["evidence_channels"] = dict(evidence_channels)
+    warnings = payload.get("warnings")
+    if isinstance(warnings, list):
+        metrics["warnings"] = [str(item) for item in warnings]
+    blockers = payload.get("blockers")
+    if isinstance(blockers, list):
+        metrics["blockers"] = [str(item) for item in blockers]
+    return metrics
+
+
+def _paddle_pose_blocked_reason(payload: Mapping[str, Any]) -> str:
+    blockers = payload.get("blockers")
+    if isinstance(blockers, list) and blockers:
+        return str(blockers[0])
+    coverage = _paddle_pose_coverage(payload)
+    if coverage["estimate_frame_count"] <= 0:
+        return "no_fused_paddle_pose_frames"
+    return "fused_estimator_blocked"
+
+
 def _path_summary(path: Path | None) -> str | None:
     return path.as_posix() if path is not None else None
 
@@ -4622,6 +4864,10 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
             "fov_checkpoint_required_when_fov_enabled"
         ],
     }
+    paddle_fused = copy.deepcopy(BEST_STACK_MANIFEST.value("paddle.fused_estimator"))
+    if not isinstance(paddle_fused, dict):
+        paddle_fused = {"enabled": bool(paddle_fused)}
+    paddle_fused["enabled"] = bool(options.paddle_pose)
     return {
         "ball.wasb_checkpoint": _path_summary(options.wasb_checkpoint),
         "ball.wasb_repo": _path_summary(options.wasb_repo),
@@ -4637,6 +4883,7 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
         "mesh.target_frame_budget": options.target_mesh_frame_budget,
         "body.detector_fov": detector_fov,
         "body.schedule": options.body_schedule,
+        "paddle.fused_estimator": paddle_fused,
         "camera_motion.policy": {
             "mode": "disabled" if options.skip_camera_motion else "forced" if options.enable_camera_motion else "auto",
             "threshold": options.camera_motion_auto_threshold,
@@ -4664,6 +4911,7 @@ def best_stack_overrides_from_options(options: PipelineOptions) -> dict[str, Any
         "mesh.target_frame_budget": BEST_STACK_MANIFEST.value("mesh.target_frame_budget"),
         "body.detector_fov": BEST_STACK_MANIFEST.value("body.detector_fov"),
         "body.schedule": BEST_STACK_MANIFEST.string_value("body.schedule"),
+        "paddle.fused_estimator": copy.deepcopy(BEST_STACK_MANIFEST.value("paddle.fused_estimator")),
         "camera_motion.policy": BEST_STACK_MANIFEST.value("camera_motion.policy"),
         "placement.undistort": BEST_STACK_MANIFEST.value("placement.undistort"),
     }
@@ -4929,6 +5177,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         body_schedule=args.body_schedule,
         remote_config=remote_config,
         grounding_refine=not args.no_grounding_refine,
+        paddle_pose=bool(DEFAULT_PADDLE_FUSED_ESTIMATOR.get("enabled", True)) and not args.no_paddle_pose,
         confidence_gate=not args.no_confidence_gate,
         confidence_calibration_curves=Path(args.confidence_calibration_curves).expanduser().resolve()
         if args.confidence_calibration_curves
@@ -5200,6 +5449,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "Skip the default render-honest BODY grounding refinement between BODY/skeleton sync and "
             "world assembly."
+        ),
+    )
+    parser.add_argument(
+        "--no-paddle-pose",
+        action="store_true",
+        help=(
+            "Skip the default fused wrist+palm+grip render-only paddle estimate stage before world assembly."
         ),
     )
     parser.add_argument("--no-confidence-gate", action="store_true", help="Skip the default Wave-B confidence gate and point the viewer manifest at raw virtual_world.json.")

@@ -1,0 +1,37 @@
+{
+  "artifact_type": "paddlewire_p31_internal_val_parity_report",
+  "banked_acceptance_path": "runs/lanes/racket_6dof_20260705/i1_fused_estimator/acceptance_record_v2.json",
+  "clips": {
+    "burlington": {
+      "actual_coverage_cvat_frames_pct": 100.0,
+      "actual_estimate_frame_count": 1785,
+      "actual_mean_iou": 0.331265,
+      "actual_median_center_error_px": 13.159981,
+      "banked_coverage_cvat_frames_pct": 100.0,
+      "banked_estimate_frame_count": 2331,
+      "banked_mean_iou": 0.342387,
+      "banked_median_center_error_px": 13.389299,
+      "delta_mean_iou": -0.011122,
+      "target_abs_delta_le": 0.02,
+      "verdict": "PASS"
+    },
+    "wolverine": {
+      "actual_coverage_cvat_frames_pct": 100.0,
+      "actual_estimate_frame_count": 1177,
+      "actual_mean_iou": 0.224126,
+      "actual_median_center_error_px": 24.29197,
+      "banked_coverage_cvat_frames_pct": 100.0,
+      "banked_estimate_frame_count": 1177,
+      "banked_mean_iou": 0.235558,
+      "banked_median_center_error_px": 23.356285,
+      "delta_mean_iou": -0.011432,
+      "target_abs_delta_le": 0.02,
+      "verdict": "PASS"
+    }
+  },
+  "overall_verdict": "PASS",
+  "review_only": true,
+  "schema_version": 1,
+  "score_path": "runs/lanes/paddlewire_p31_20260709/internal_val_score.json",
+  "trusted_for_rkt_promotion": false
+}

@@ -1,0 +1,88 @@
+{
+  "objective_result": "PASS",
+  "acceptance": [
+    {
+      "metric": "P3-1 default pipeline wiring",
+      "baseline": "BUILT_NOT_WIRED: process_video.py only consumed a pre-existing racket_pose_estimate.json before this lane.",
+      "after": "Default suffix pipeline now inserts paddle_pose after grounding_refine/BODY evidence and before world/confidence packaging. With sufficient SAM-3D wrist/palm evidence, default mocked pipeline emits racket_pose_estimate.json with ARTIFACT_TYPE=racketsport_racket_pose_estimate and source=wrist_palm_grip_fused.",
+      "target": "Plain default E2E run produces racket_pose_estimate.json through the best-stack-selected fused paddle estimator before viewer/world packaging.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Fail-closed no-evidence behavior",
+      "baseline": null,
+      "after": "Deterministic entrypoint test exercises missing BODY evidence: no racket_pose_estimate.json is emitted, no crash occurs, later world stage still runs, and PIPELINE_SUMMARY includes paddle_pose={status: blocked, reason: missing_sam3d_skeleton3d, coverage: {estimate_frame_count: 0, input_player_count: 0, hidden_frame_count: 0}}.",
+      "target": "When evidence is absent/insufficient, emit no paddle artifact and include a loud structured paddle_pose summary block instead of fabricating pose.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Opt-out flag",
+      "baseline": null,
+      "after": "--no-paddle-pose disables the stage, emits no racket_pose_estimate.json, records paddle_pose skipped/no_paddle_pose_flag metrics, and best_stack overrides show paddle.fused_estimator manifest enabled=true but resolved enabled=false.",
+      "target": "Explicit bypass flag per bypass-allowed doctrine.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Internal-val parity vs banked fused estimator acceptance",
+      "baseline": "Banked acceptance_record_v2.json: Wolverine mean IoU 0.235558; Burlington mean IoU 0.342387.",
+      "after": "Wolverine mean IoU 0.224126, delta -0.011432; Burlington mean IoU 0.331265, delta -0.011122; both within abs delta <= 0.02. Artifacts written under runs/lanes/paddlewire_p31_20260709/internal_val/ and scored in internal_val_parity_report.json.",
+      "target": "CPU-runnable internal-val path matches banked behavior within +/-0.02 IoU on same estimator inputs; no tuning.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "BEST-STACK DELTA",
+      "baseline": "best_stack revision 3; paddle fused estimator pending/built-not-wired.",
+      "after": "best_stack revision 4 promotes paddle.fused_estimator to WIRED_DEFAULT with source=wrist_palm_grip_fused, artifact=racket_pose_estimate.json, trust_band=estimated_preview, provenance=paddlewire_p31_20260709 + acceptance_record_v2 numbers. paddle.reflection_cone_factor remains DORMANT with gate metric p1_4_real_3d_ball_velocities and is not wired.",
+      "target": "Doctrine-selected paddle entry is wired by default; reflection cone stays dormant until P1-4 real 3D velocities.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Wide blast-radius suite",
+      "baseline": null,
+      "after": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport tests/server -q completed with 3285 passed, 0 failed, 26 skipped, 7 warnings in 2318.30s. First attempt saw a transient markdown-inventory failure while OWNER_CHECKIN_20260709.md was being reconciled into HEAD; focused rerun and settled-tree full rerun passed.",
+      "target": "Wide suite run with no fail-fast; census reported honestly.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Scaffold and storage hygiene",
+      "baseline": null,
+      "after": "list_scaffold_tools.py reports missing_direct_cli_reference_tests=0, missing_related_tests=0, tool_count=277, with_direct_cli_reference_tests=277. audit_storage_policy.py passes after removing only pytest-generated cache dirs; generated_artifacts=[], unknown_large_tracked_files=[], unknown_large_untracked_source_files=[].",
+      "target": "Scaffold direct-reference refs 0 missing and no generated/cache artifacts left behind.",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "scripts/racketsport/process_video.py:144 imports the fused paddle estimator writer/builder and contract constants.",
+    "scripts/racketsport/process_video.py:195 loads paddle.fused_estimator from best_stack and defines PADDLE_POSE_ARTIFACT_NAME=racket_pose_estimate.json.",
+    "scripts/racketsport/process_video.py:372 adds PipelineOptions.paddle_pose defaulting from best_stack.",
+    "scripts/racketsport/process_video.py:440 includes racket_pose_estimate.json in force-clean artifact cleanup.",
+    "scripts/racketsport/process_video.py:533 inserts the paddle_pose stage after grounding_refine and before world.",
+    "scripts/racketsport/process_video.py:2988 implements _stage_paddle_pose with opt-out, artifact reuse validation, fail-closed summary metrics, estimator invocation, and trust-band recording.",
+    "scripts/racketsport/process_video.py:3147 and scripts/racketsport/process_video.py:3204 gate world/confidence consumption of racket_pose_estimate.json behind options.paddle_pose so opt-out cannot consume stale pose.",
+    "scripts/racketsport/process_video.py:4768 adds paddle payload validation, coverage, blocked-metric, and blocked-reason helpers.",
+    "scripts/racketsport/process_video.py:4867 and scripts/racketsport/process_video.py:4914 thread paddle.fused_estimator through resolved best_stack config and overrides.",
+    "scripts/racketsport/process_video.py:5180 and scripts/racketsport/process_video.py:5455 add --no-paddle-pose CLI wiring.",
+    "configs/racketsport/best_stack.json:332 promotes paddle.fused_estimator to WIRED_DEFAULT in revision 4 with provenance and banked acceptance numbers.",
+    "configs/racketsport/best_stack.json:361 keeps paddle.reflection_cone_factor DORMANT with gate metric p1_4_real_3d_ball_velocities.",
+    "tests/racketsport/test_paddle_process_video.py:96 covers best_stack paddle entries, default artifact production, fail-closed no-evidence behavior, and --no-paddle-pose.",
+    "tests/racketsport/test_best_stack_manifest.py:46 requires paddle.fused_estimator and paddle.reflection_cone_factor entries.",
+    "tests/racketsport/test_process_video.py:1518 asserts paddle_pose stage order in the mocked pipeline."
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport tests/server -q",
+    "passed": 3285,
+    "failed": 0,
+    "skipped": 26,
+    "failures_all_preexisting": true,
+    "failure_notes": null
+  },
+  "honest_issues": [
+    "This is not an RKT VERIFIED promotion. racket_pose_estimate.json remains ESTIMATED/preview; RKT VERIFIED still requires owner-marker paddle GT per the North Star gate.",
+    "The reflection cone factor remains intentionally dormant and unconsumed until P1-4 real 3D ball velocities exist.",
+    "The banked Burlington source path named in older acceptance material was absent in this checkout, so the parity run used the current read-only Burlington SAM-3D artifact available in existing run dirs; parity still passed the +/-0.02 IoU stop rule.",
+    "Unrelated working-tree material remains untouched: configs/ssh/a100_known_hosts and bulk CVAT label-pack zips are outside this lane.",
+    "No protected clips or Outdoor/Indoor labels were modified; this lane did not need them."
+  ],
+  "next": "Draft BUILD_CHECKLIST bullet: [P3-1 PADDLEWIRE PASS] Default process_video.py now runs paddle_pose after BODY/grounding and before world packaging, producing racket_pose_estimate.json from wrist_palm_grip_fused when evidence exists and fail-closing with paddle_pose status/reason/coverage plus no artifact when evidence is absent. best_stack rev-4 promotes paddle.fused_estimator to WIRED_DEFAULT, keeps paddle.reflection_cone_factor DORMANT until p1_4_real_3d_ball_velocities, and makes no RKT VERIFIED claim. Evidence: internal-val parity Wolverine 0.224126 vs 0.235558 and Burlington 0.331265 vs 0.342387 within +/-0.02; wide suite 3285 passed, 0 failed, 26 skipped; scaffold refs 0 missing; storage audit pass.",
+  "session_id": null
+}

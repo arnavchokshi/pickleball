@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 3,
+  "revision": 4,
   "updated": "2026-07-09",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
@@ -328,6 +328,65 @@
       },
       "proven_against": null,
       "notes": "Default E2E route is serial. Overlap remains explicit and is not promoted by this lane."
+    },
+    "paddle.fused_estimator": {
+      "stage": "paddle_pose",
+      "selection": "fused wrist+palm+grip render-only paddle estimator",
+      "value": {
+        "enabled": true,
+        "artifact": "racket_pose_estimate.json",
+        "source": "wrist_palm_grip_fused",
+        "trust_band": "estimated_preview"
+      },
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "paddlewire_p31_20260709",
+        "commit": "uncommitted-main-lane",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "runs/lanes/racket_6dof_20260705/i1_fused_estimator/acceptance_record_v2.json",
+          "runs/lanes/racket_6dof_20260705/STATUS.md",
+          "runs/lanes/paddlewire_p31_20260709/spec.md"
+        ]
+      },
+      "proven_against": {
+        "wolverine_mean_iou": 0.235558,
+        "burlington_mean_iou": 0.342387,
+        "wolverine_coverage_pct": 100.0,
+        "burlington_coverage_pct": 100.0
+      },
+      "notes": "Default selection only: wires the render-only estimated fused paddle stage into process_video.py. This is not VERIFIED, not canonical racket_pose.json, and not an RKT promotion."
+    },
+    "paddle.reflection_cone_factor": {
+      "stage": "paddle_pose",
+      "selection": "ball-reflection cone factor inside fused paddle estimator remains dormant",
+      "value": {
+        "enabled": false,
+        "implemented": true,
+        "activation_gate": "P1-4 real 3D ball velocities"
+      },
+      "status": "DORMANT",
+      "gate": {
+        "name": "p1_4_real_3d_ball_velocities",
+        "metric_key": "p1_4_real_3d_ball_velocities",
+        "bar": "racket_physics_estimate estimates populated from real ball_track_arc_solved contact velocities; reflection contacts available > 0",
+        "evidence_path": "TECH_BLUEPRINTS.md#P3-5"
+      },
+      "provenance": {
+        "lane": "paddlewire_p31_20260709",
+        "commit": "uncommitted-main-lane",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "TECH_BLUEPRINTS.md#P3-5",
+          "runs/lanes/racket_6dof_20260705/i1_fused_estimator/acceptance_record_v2.json",
+          "runs/lanes/paddlewire_p31_20260709/spec.md"
+        ]
+      },
+      "proven_against": {
+        "contact_locked_frames": 0
+      },
+      "notes": "Dormant by ruling: reflection_channel_dormant_no_usable_ball_contacts until P1-4 real 3D ball velocities exist; do not wire or fake."
     },
     "server.allow_auto_court_corners_preview": {
       "stage": "server",

@@ -17,7 +17,7 @@ def test_best_stack_manifest_integrity() -> None:
     manifest = load_best_stack_manifest()
 
     assert manifest.schema_version == 1
-    assert manifest.revision == 3
+    assert manifest.revision == 4
     assert "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim" in manifest.invariants
     assert len(manifest.entries) >= 30
 
@@ -43,6 +43,8 @@ def test_best_stack_manifest_integrity() -> None:
         "instrument.gate_check_body_decode",
         "body.fast_sam_3d_body_challenger_not_adopt",
         "ball.arc_solver_spin",
+        "paddle.fused_estimator",
+        "paddle.reflection_cone_factor",
     }
     assert required_entries <= set(manifest.entries)
     assert "mesh.byte_budget_policy" not in manifest.entries
