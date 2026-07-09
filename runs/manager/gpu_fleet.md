@@ -141,3 +141,11 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
 - BOOT RECONCILE 2026-07-09: fleet-filter list = fleet1 TERMINATED only (ZERO running) — matches
   ledger. Foreign VM body4d-waker-ctrl (e2-micro, us-central1-a, cost-center=body4d, running
   since Jun 14) is NOT fleet — surfaced to owner as FYI in OWNER_CHECKIN_20260709.md.
+- pickleball-h100-w7p22 (H100 a3-highgpu-1g SPOT, ase1-b/-c ladder, pd-balanced 200GB FROM
+  pickleball-fleet-snap-20260708-w6close) — PROVISIONING (Sonnet lane w7_p22gate_20260709,
+  self-tearing). Mission: decisive post-pred_cam_t-fix GATE-1b measurement — fresh wolverine
+  raw arm w/ ALL raw sidecars preserved (pred_cam_t/pred_vertices/pred_keypoints_3d/
+  pred_joint_coords) -> canonical gate_check_body_decode -> alternate-field quantification ->
+  synthetic gate --decoder sam3d. Sync gate: md5-verified hmr_deep/mhr_decode/gate CLIs at
+  >=22be98100 (the fix MUST be in the measured code). Wall cap 2h, ~$0.6-6.5 (ceiling ~$10),
+  60-min idle self-stop, DELETE+list-confirm at end. Concurrency 2/4 with w7ball.
