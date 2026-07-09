@@ -182,3 +182,9 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
   0.6152/0.2506, C_stage1_official_aug 0.6121/0.2597 vs control 0.3611/0.5991 — label curve
   NOT plateaued (+15.5% rel F1 from 486->1121 rows); hFP regressed (needs arm D to attribute).
   LoSO harness = per-CLIP folds not per-source grouping (pre-existing, flagged for ruling).
+- pickleball-h100-w7ballc (H100 a3 SPOT from w6close snapshot) — PROVISIONING (Sonnet lane
+  w7_ballcomplete_20260709, self-tearing, wall cap 4.5h, ~$2-15). Completion errand: on-VM
+  contract check w/ PULLED log (closes verifier attack-4 gap) -> arms B (rawWASB+aug) + D
+  (seed no-aug ablation) at 2372 steps on the 1121 corpus -> complete 5-row 1121 card + full
+  re-score on the 1750 corpus (prepared block, control-first). Owner visibility ruling encoded
+  (w6-session rows = box-position-only). Drop order if tight: bottom-up from 1750 re-score.

@@ -1,0 +1,322 @@
+{
+  "artifact_type": "w7_ballscore_verify_adversarial_proof_results",
+  "attacks": [
+    {
+      "checks": {
+        "arm0_log_has_20_control_runs": true,
+        "arm0_log_md5_manifested": true,
+        "arm0_log_sources_match_report": true,
+        "arm0_loso_report_mtime_after_w6_report": true,
+        "arm0_report_md5_manifested": true,
+        "arm0_runtime_records_are_cuda_w7_official_anchor": true,
+        "arm4_combined_control_row_matches_arm0_fresh_control_row": true,
+        "w7_full_loso_report_md5_differs_from_w6_full_report_md5": true
+      },
+      "evidence": {
+        "arm0_control_fingerprint": "59f435a6955c50a7e7680daafc2ec18f",
+        "arm0_log": "runs/lanes/w7_ballretrain_20260709/vm_pull/logs/arm0_control.log",
+        "arm0_report": "runs/lanes/w7_ballretrain_20260709/vm_pull/arm0_control/gpu_rescore/loso/loso_report.json",
+        "arm0_report_mtime_utc": "2026-07-09T06:15:28.630599+00:00",
+        "arm4_control_fingerprint": "59f435a6955c50a7e7680daafc2ec18f",
+        "arm4_report": "runs/lanes/w7_ballretrain_20260709/vm_pull/arm4_score/loso_final/loso_report.json",
+        "control_metrics": {
+          "loso_mean_hidden_false_positive_rate": 0.5863272394638086,
+          "loso_mean_label_f1_at_20px": 0.30334815185592107,
+          "loso_mean_precision_at_20px": 0.3189675672022363,
+          "loso_mean_visible_recall_at_20px": 0.30812992758384244,
+          "micro_hidden_false_positive_rate": 0.5990888382687927,
+          "micro_label_f1_at_20px": 0.3611111111111111,
+          "micro_precision_at_20px": 0.34300791556728233,
+          "micro_visible_recall_at_20px": 0.3812316715542522
+        },
+        "logged_control_clip_count": 20,
+        "raw_prediction_files_pulled": [],
+        "w6_control_fingerprint": "59f435a6955c50a7e7680daafc2ec18f",
+        "w6_report": "runs/lanes/w6_labelingest_20260708/gpu_rescore/loso/loso_report.json",
+        "w6_report_mtime_utc": "2026-07-08T23:33:38.040115+00:00"
+      },
+      "id": 1,
+      "issues": [
+        "Raw per-clip control ball_track.json/csv prediction files were not pulled; provenance is bounded to logs, report mtimes, and md5 manifests.",
+        "The official_tennis_control candidate object is byte-identical to w6, which is expected for deterministic control scoring but still means copied-vs-deterministic-equal cannot be distinguished from JSON alone."
+      ],
+      "name": "CIRCULAR CONTROL / fresh control provenance",
+      "verdict": "CONFIRMED-VALID"
+    },
+    {
+      "checks": {
+        "A_C_checkpoint_md5_distinct": true,
+        "A_checkpoint_distinct_from_seed_base": true,
+        "A_checkpoint_file_exists": true,
+        "A_file_sha256_matches_scoring_log_sha": true,
+        "A_key_diff_empty": true,
+        "A_loss_curve_exists_and_has_2372_values": true,
+        "A_round_trip_state_sha_match": true,
+        "A_state_distinct_from_loaded_base_state": true,
+        "A_step_is_budget_2372": true,
+        "C_checkpoint_distinct_from_stage1_base": true,
+        "C_checkpoint_file_exists": true,
+        "C_file_sha256_matches_scoring_log_sha": true,
+        "C_key_diff_empty": true,
+        "C_loss_curve_exists_and_has_2372_values": true,
+        "C_round_trip_state_sha_match": true,
+        "C_state_distinct_from_loaded_base_state": true,
+        "C_step_is_budget_2372": true,
+        "budget_formula_recomputes_2372": true
+      },
+      "evidence": {
+        "A_loss_first_last": [
+          0.001869255444034934,
+          0.0008194098481908441
+        ],
+        "A_summary": "runs/lanes/w7_ballretrain_20260709/vm_pull/arm3_finetunes/A_seed_official_aug/summary.json",
+        "C_loss_first_last": [
+          0.004099235869944096,
+          0.0008853187900967896
+        ],
+        "C_summary": "runs/lanes/w7_ballretrain_20260709/vm_pull/arm3_finetunes/C_stage1_official_aug/summary.json",
+        "budget_steps": 2372,
+        "delta_rate_steps_per_s": 0.8787115483100592,
+        "hashes": {
+          "A_md5": "cfda3c423e1f93c0db42f20e32bdae9e",
+          "A_sha256_file": "630a4f4206b114ce9a09a6153297bfeb8074623cf061f0d4f985dfa810ede5a9",
+          "C_md5": "ba52d39e33bd5a9c1d72c85a1c8cb2a8",
+          "C_sha256_file": "e6f1219a827a28bb029fa379b78e3844a580dbd340b75879e6b620f29d877e22",
+          "official_anchor_md5": "bee80bb00f857109e19ef02b3942be88",
+          "seed_base_md5": "cb816f631e0c3ee5f60c96a6a1747304",
+          "stage1_base_md5": "d40ed00dd906ce6a403e8c21413949c1"
+        }
+      },
+      "id": 2,
+      "issues": [],
+      "name": "CHECKPOINT PROVENANCE / distinct A-C models",
+      "verdict": "CONFIRMED-VALID"
+    },
+    {
+      "checks": {
+        "corpus_manifest_md5_matches_expected_1121": true,
+        "no_excluded_frames_or_labels_in_scored_report": true,
+        "outdoor_source_folds_present": true,
+        "source_fold_count_is_6": true,
+        "source_fold_manifest_all_disjoint": true,
+        "w7_harness_fold_count_20_for_every_candidate": true,
+        "w7_harness_scores_all_20_clips_for_every_candidate": true
+      },
+      "evidence": {
+        "corpus_manifest": "runs/lanes/w6_labelingest_20260708/corpus_md5_manifest.json",
+        "corpus_manifest_md5": "37a5d43ab537a15bd12d382bb882a5fe",
+        "corpus_reviewed_row_count": 1121,
+        "excluded_totals": {
+          "A_seed_official_aug": {
+            "total_excluded_cvat_frame_count": 0,
+            "total_excluded_cvat_hidden_frame_count": 0,
+            "total_excluded_cvat_visible_label_count": 0,
+            "total_excluded_reviewed_frame_count": 0
+          },
+          "C_stage1_official_aug": {
+            "total_excluded_cvat_frame_count": 0,
+            "total_excluded_cvat_hidden_frame_count": 0,
+            "total_excluded_cvat_visible_label_count": 0,
+            "total_excluded_reviewed_frame_count": 0
+          },
+          "official_tennis_control": {
+            "total_excluded_cvat_frame_count": 0,
+            "total_excluded_cvat_hidden_frame_count": 0,
+            "total_excluded_cvat_visible_label_count": 0,
+            "total_excluded_reviewed_frame_count": 0
+          }
+        },
+        "fold_manifest": "runs/lanes/w6_labelingest_20260708/loso_fold_manifest.json",
+        "outdoor_source_folds": [
+          "73VurrTKCZ8",
+          "Ezz6HDNHlnk",
+          "_L0HVmAlCQI",
+          "wBu8bC4OfUY",
+          "zwCtH_i1_S4"
+        ],
+        "scored_clip_count_per_candidate": {
+          "A_seed_official_aug": 20,
+          "C_stage1_official_aug": 20,
+          "official_tennis_control": 20
+        },
+        "scored_report": "runs/lanes/w7_ballretrain_20260709/vm_pull/arm4_score/loso_final/loso_report.json",
+        "source_fold_disjointness": [
+          {
+            "intersection_count": 0,
+            "is_outdoor_fold": true,
+            "source_class": "outdoor_day_multicam",
+            "source_id": "73VurrTKCZ8",
+            "train_row_count": 724,
+            "val_row_count": 397
+          },
+          {
+            "intersection_count": 0,
+            "is_outdoor_fold": true,
+            "source_class": "outdoor_night_fenced",
+            "source_id": "Ezz6HDNHlnk",
+            "train_row_count": 721,
+            "val_row_count": 400
+          },
+          {
+            "intersection_count": 0,
+            "is_outdoor_fold": false,
+            "source_class": "indoor_court_level",
+            "source_id": "HyUqT7zFiwk",
+            "train_row_count": 1040,
+            "val_row_count": 81
+          },
+          {
+            "intersection_count": 0,
+            "is_outdoor_fold": true,
+            "source_class": "outdoor_night_tennis_overlay",
+            "source_id": "_L0HVmAlCQI",
+            "train_row_count": 1040,
+            "val_row_count": 81
+          },
+          {
+            "intersection_count": 0,
+            "is_outdoor_fold": true,
+            "source_class": "outdoor_night_tennis_overlay",
+            "source_id": "wBu8bC4OfUY",
+            "train_row_count": 1040,
+            "val_row_count": 81
+          },
+          {
+            "intersection_count": 0,
+            "is_outdoor_fold": true,
+            "source_class": "outdoor_day_broadcast_overlay",
+            "source_id": "zwCtH_i1_S4",
+            "train_row_count": 1040,
+            "val_row_count": 81
+          }
+        ]
+      },
+      "id": 3,
+      "issues": [
+        "W7 scoring uses the known 20 per-clip folds rather than the 6 source-grouped folds; this is protocol-consistent with W6 but not true source-grouped LoSO."
+      ],
+      "name": "LoSO INTEGRITY / corpus md5, disjoint folds, OUTDOOR scored",
+      "verdict": "CONFIRMED-VALID"
+    },
+    {
+      "checks": {
+        "report_claims_contract_pytest_passed": true,
+        "w5_precedent_contract_log_exists": true,
+        "w7_has_non_report_contract_execution_artifact": false
+      },
+      "evidence": {
+        "non_report_contract_artifact_hits": [],
+        "report": "runs/lanes/w7_ballretrain_20260709/REPORT.md",
+        "w5_contract_log_precedent": "runs/lanes/w5_ballretrain_20260707/vm_contract_tests.log"
+      },
+      "id": 4,
+      "issues": [
+        "The lane report claims the tensor-contract pytest passed, but no pulled non-report stdout/log artifact containing that assertion or '20 passed' was found under the w7 lane."
+      ],
+      "name": "CONTRACT CHECK / executed tensor assertion evidence",
+      "verdict": "UNVERIFIABLE"
+    },
+    {
+      "checks": {
+        "A_seed_official_aug_uses_exact_micro_f1_key": true,
+        "A_seed_official_aug_uses_exact_micro_hfp_key": true,
+        "C_stage1_official_aug_uses_exact_micro_f1_key": true,
+        "C_stage1_official_aug_uses_exact_micro_hfp_key": true,
+        "harness_key_container_is_pooled_mixed_metrics": true,
+        "official_tennis_control_uses_exact_micro_f1_key": true,
+        "official_tennis_control_uses_exact_micro_hfp_key": true
+      },
+      "evidence": {
+        "extracted_exact_keys": {
+          "A_seed_official_aug": {
+            "pooled_mixed_metrics.micro_hidden_false_positive_rate": 0.2505694760820046,
+            "pooled_mixed_metrics.micro_label_f1_at_20px": 0.6151724137931034
+          },
+          "C_stage1_official_aug": {
+            "pooled_mixed_metrics.micro_hidden_false_positive_rate": 0.25968109339407747,
+            "pooled_mixed_metrics.micro_label_f1_at_20px": 0.6120749479528105
+          },
+          "official_tennis_control": {
+            "pooled_mixed_metrics.micro_hidden_false_positive_rate": 0.5990888382687927,
+            "pooled_mixed_metrics.micro_label_f1_at_20px": 0.3611111111111111
+          }
+        },
+        "scored_report": "runs/lanes/w7_ballretrain_20260709/vm_pull/arm4_score/loso_final/loso_report.json"
+      },
+      "id": 5,
+      "issues": [
+        "REPORT.md prose says 'pooled micro_*', while the machine key is pooled_mixed_metrics.micro_*; the numeric values are from the exact machine keys."
+      ],
+      "name": "METRIC KEYS / exact harness statistics",
+      "verdict": "CONFIRMED-VALID"
+    },
+    {
+      "checks": {
+        "w5_reviewed_frame_count_900_for_control_and_seed": true,
+        "w7_arm1_candidates_are_control_and_seed": true,
+        "w7_arm1_reviewed_frame_count_900_for_control_and_seed": true,
+        "w7_arm1_sources_match_w5_for_control_and_seed": true,
+        "w7_control_loso_mean_beats_seed_same_direction_as_w5": true,
+        "w7_no_excluded_frames": true,
+        "w7_w5_loso_mean_f1_drift_under_0_003": true
+      },
+      "evidence": {
+        "diffs": {
+          "official_tennis_control": {
+            "abs_diff": 0.0010714453964675297,
+            "w5_loso_mean_f1": 0.6857550205711027,
+            "w7_loso_mean_f1": 0.6868264659675702
+          },
+          "seed_official": {
+            "abs_diff": 0.002188183807439792,
+            "w5_loso_mean_f1": 0.6403685523088014,
+            "w7_loso_mean_f1": 0.6425567361162412
+          }
+        },
+        "sources": [
+          "burlington_gold_0300_low_steep_corner",
+          "wolverine_mixed_0200_mid_steep_corner"
+        ],
+        "w5_report": "runs/lanes/w5_ballretrain_20260707/vm_pull/loso/loso_report.json",
+        "w7_arm1_report": "runs/lanes/w7_ballretrain_20260709/vm_pull/arm1_486anomaly/gpu_rescore/loso/loso_report.json",
+        "w7_metrics": {
+          "official_tennis_control": {
+            "loso_mean_hidden_false_positive_rate": 0.5223168999797119,
+            "loso_mean_label_f1_at_20px": 0.6868264659675702,
+            "loso_mean_precision_at_20px": 0.6948171445779101,
+            "loso_mean_visible_recall_at_20px": 0.6790200352953389,
+            "micro_hidden_false_positive_rate": 0.5,
+            "micro_label_f1_at_20px": 0.6684563758389261,
+            "micro_precision_at_20px": 0.6766304347826086,
+            "micro_visible_recall_at_20px": 0.6604774535809018
+          },
+          "seed_official": {
+            "loso_mean_hidden_false_positive_rate": 0.21119902617163727,
+            "loso_mean_label_f1_at_20px": 0.6425567361162412,
+            "loso_mean_precision_at_20px": 0.7479031385281385,
+            "loso_mean_visible_recall_at_20px": 0.5656597114086992,
+            "micro_hidden_false_positive_rate": 0.2328767123287671,
+            "micro_label_f1_at_20px": 0.6717325227963525,
+            "micro_precision_at_20px": 0.7864768683274022,
+            "micro_visible_recall_at_20px": 0.5862068965517241
+          }
+        }
+      },
+      "id": 6,
+      "issues": [
+        "W7 ARM1 intentionally scored only the anomaly pair (control and seed_official), not W5's stage1_official third row."
+      ],
+      "name": "486-ANOMALY ARM / W5 protocol identity",
+      "verdict": "CONFIRMED-VALID"
+    }
+  ],
+  "generated_at_utc": "2026-07-09T09:34:32.713967+00:00",
+  "overall": "PARTIAL",
+  "schema_version": 1,
+  "target_lane": "runs/lanes/w7_ballretrain_20260709",
+  "verdict_counts": {
+    "CONFIRMED-VALID": 5,
+    "REFUTED": 0,
+    "UNVERIFIABLE": 1
+  }
+}
