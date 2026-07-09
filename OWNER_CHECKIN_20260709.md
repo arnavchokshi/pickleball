@@ -6,10 +6,12 @@ wave's critical-path lane. No typed STOPs at boot — PART 0 verified (biometric
 non-blocking until we persist a non-owner profile, which wave 7 does not do).
 
 ## Blockers
-**DISK (now actively blocking, ~1 command to fix):** the Mac hit 100% mid-wave — one codex lane
-crashed on ENOSPC (recovered) and I've scraped tool caches to ~6GB free, which is survival mode.
-The reviewed cleanup script is staged and safe (protected data fenced):
-`! bash runs/manager/disk_cleanup_20260709.sh`  — frees ~35GB (Section A+B). Everything else runs.
+(none — disk RESOLVED 2026-07-09 ~01:10: you ran the cleanup script, 48GB free. Thanks.)
+
+## Overnight log (owner asleep ~01:15-09:30; autonomous mode, nothing owner-gated will run)
+- 01:15 overnight start: ball retrain (H100, ~2.6h in), tierprov recovery, watchdog all live;
+  dispatching P2-4 masklet GPU eval + P6-2 BODY+COURT stats lane. Held-out shot, mesh display
+  ruling, P4-0 re-confirmation all wait for you (queued asks stand).
 
 ## Numbered asks (easiest first)
 1. **Mac disk — 2 min, semi-urgent.** Data volume is 99% full (5.2GB free; boot bar is >25GB; wave-6
