@@ -42,6 +42,8 @@ ALLOWED_MARKDOWN_DOCS = set(CANONICAL_DOCS) | {
     "cvat_upload/OWNER_SESSION_W6_20260708.md",
     "cvat_upload/court_keypoints_20260707/OWNER_COURT_KP_GUIDE.md",
     "cvat_upload/exports/README.md",
+    "cvat_upload/exports/court_keypoints_20260707/PARTIAL_EXPORT_NOTES_20260709.md",
+    "cvat_upload/exports/w6_labelpack_20260708/SESSION_NOTES_20260709.md",
     "cvat_upload/exports/court_keypoints_20260707/README.md",
     "cvat_upload/exports/harvest_review_20260707/Ezz6HDNHlnk_rally_0004/MANAGER_NOTE.md",
     "cvat_upload/exports/harvest_review_20260707/HyUqT7zFiwk_rally_0001/MANAGER_NOTE.md",
