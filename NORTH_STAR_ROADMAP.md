@@ -2118,6 +2118,29 @@ Entry is re-ruled by the wave-6 closeout + refresh, not by the old assumption th
 3D flight already landed. The first wave-7 pass is a mix of critical-path progress, orphan wiring,
 and proof hygiene:
 
+**DATED STATUS NOTE 2026-07-08 (best-stack session wrap-up — OPEN WORK, resume in wave 7):**
+The owner's best-stack directive was partially executed and then wrapped early by owner request.
+LANDED + PUSHED (a8082598e): best_stack.json rev-3 single default-selection surface (30 entries) +
+loader + enforcement tests (incl. NEW tests/server/ dir — include in all future wide adjudications) +
+wire-now batch (mesh byte-budget-300 default, events-before-frames contact-dense scheduling, BODY
+detector/FOV local==remote unification, server-vs-CLI declared parity, camera-motion pinned AUTO@2.5)
++ the doctrine encoded (Part IV rule 15, TB A.2/B.1.6, manual §23, CLAUDE.md, run-lane skill).
+STILL OPEN — a later session MUST finish these (evidence + specs + resume handles in
+runs/manager/inflight_lanes.md and BUILD_CHECKLIST [BESTSTACK WRAP 2026-07-08]):
+(a) VERIFY-A2 REPAIR (real defect, unfixed): no-flag Burlington/Outdoor clip IDs resolve association
+    profiles OUTSIDE the manifest (verifier report runs/lanes/beststack_verify_20260709/report.json);
+    repair on the core lane (resume 019f444e-75f9-7001-9f4d-0b76098e892e), scored by the verifier's
+    UNMODIFIED harness + A1/A3 rerun with a schema-valid ball_track fixture.
+(b) P3-1 PADDLE WIRING (item 2 below) IN FLIGHT AT STOP: implementation edits sit UNCOMMITTED in the
+    working tree (process_video.py, best_stack.json rev-4 paddle flip, 2 test files), final wide
+    census was mid-run when stopped — resume codex session 019f44f2-2923-7cf2-8492-1dcd14028ae5 to
+    finish the census + report; do NOT commit unverified.
+(c) CLEAN WIDE ADJUDICATION owed on the settled tree (tests/racketsport AND tests/server) before the
+    next wave-close claim.
+(d) Watch the manifest PENDING gates and PROMOTE the moment they pass (doctrine rule 15c):
+    ball seed_official (held-out ledger row + owner go), court_unet_v2 + E4 fusion
+    (calv1_fusedefault decisive eval), mesh tier-eligibility raise (owner product ruling).
+
 1. **P1-1 BALL seed retrain on the 1,121-row corpus (critical path):** choose base explicitly after a
    small ablation (`seed_official`, raw WASB, `stage1_official`), include control rows, re-run the
    486-row anomaly first, score through official bridge + LoSO, and use P0-4's 1k/3k/6k/10k
