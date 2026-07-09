@@ -114,6 +114,7 @@ export type BodyMeshFrame = {
   t: number;
   source_window_index: number | null;
   blend_weight: number;
+  trust_badge?: TrustBadge;
   joints_world: Vec3[];
   joint_conf: number[];
   mesh_vertices_world: Vec3[];
@@ -161,6 +162,7 @@ export type BodyMeshIndexFrame = {
   t: number;
   source_window_index: number | null;
   blend_weight: number;
+  trust_badge?: TrustBadge;
   vertex_count: number;
   joint_count: number;
   joint_conf: number[];
@@ -822,6 +824,7 @@ export function decodeBodyMeshChunkBytes(
         t: frameMeta.t,
         source_window_index: frameMeta.source_window_index,
         blend_weight: frameMeta.blend_weight,
+        trust_badge: frameMeta.trust_badge,
         joints_world,
         joint_conf: frameMeta.joint_conf,
         mesh_vertices_world,
@@ -1966,6 +1969,7 @@ function readBodyMeshIndexFrame(input: unknown, path: string, defaultSourceWindo
         ? defaultSourceWindowIndex
         : readNonNegativeInteger(input.source_window_index, `${path}.source_window_index`),
     blend_weight: input.blend_weight === undefined ? 1 : readUnitNumber(input.blend_weight, `${path}.blend_weight`),
+    trust_badge: readOptionalTrustBadge(input.trust_badge, `${path}.trust_badge`),
     vertex_count: readNonNegativeInteger(input.vertex_count, `${path}.vertex_count`),
     joint_count: input.joint_count === undefined ? 0 : readNonNegativeInteger(input.joint_count, `${path}.joint_count`),
     joint_conf:
@@ -1997,6 +2001,7 @@ function readBodyMeshFrame(input: unknown, path: string, artifactFaces: MeshFace
         ? null
         : readNonNegativeInteger(input.source_window_index, `${path}.source_window_index`),
     blend_weight: input.blend_weight === undefined ? 1 : readUnitNumber(input.blend_weight, `${path}.blend_weight`),
+    trust_badge: readOptionalTrustBadge(input.trust_badge, `${path}.trust_badge`),
     joints_world:
       input.joints_world === undefined
         ? []
@@ -2135,6 +2140,7 @@ function interpolatedBodyMeshFrameForPair(
       t: pair.from.t,
       source_window_index: pair.from.source_window_index,
       blend_weight: pair.from.blend_weight,
+      trust_badge: meshFrameTrustBadgeForPair(pair.from, pair.to),
       joints_world: pair.from.joints_world.map(() => [0, 0, 0] as Vec3),
       joint_conf: pair.from.joint_conf.map(() => 0),
       mesh_vertices_world: pair.from.mesh_vertices_world.map(() => [0, 0, 0] as Vec3),
@@ -2157,6 +2163,7 @@ function interpolatedBodyMeshFrameForPair(
   frame.t = timeSeconds;
   frame.source_window_index = pair.from.source_window_index;
   frame.blend_weight = pair.from.blend_weight + (pair.to.blend_weight - pair.from.blend_weight) * alpha;
+  frame.trust_badge = meshFrameTrustBadgeForPair(pair.from, pair.to);
   frame.mesh_interpolated = true;
   if (frame.interpolation) {
     frame.interpolation.from_frame_idx = pair.from.frame_idx;
@@ -2547,6 +2554,19 @@ function bodyMeshInterpolationPairForFrames(from: BodyMeshFrame, to: BodyMeshFra
   };
 }
 
+const TRUST_BADGE_RANK: Record<TrustBadge, number> = {
+  verified: 0,
+  preview: 1,
+  low_confidence: 2,
+};
+
+function meshFrameTrustBadgeForPair(from: BodyMeshFrame, to: BodyMeshFrame): TrustBadge | undefined {
+  if (from.trust_badge === undefined && to.trust_badge === undefined) return undefined;
+  const left = from.trust_badge ?? "verified";
+  const right = to.trust_badge ?? "verified";
+  return TRUST_BADGE_RANK[left] >= TRUST_BADGE_RANK[right] ? left : right;
+}
+
 function interpolatedBodyMeshFrame(
   from: BodyMeshFrame,
   to: BodyMeshFrame,
@@ -2559,6 +2579,7 @@ function interpolatedBodyMeshFrame(
     t: cleanInterpolatedNumber(from.t + (to.t - from.t) * alpha),
     source_window_index: from.source_window_index,
     blend_weight: cleanInterpolatedNumber(from.blend_weight + (to.blend_weight - from.blend_weight) * alpha),
+    trust_badge: meshFrameTrustBadgeForPair(from, to),
     joints_world: interpolateVec3Array(from.joints_world, to.joints_world, alpha),
     joint_conf: interpolateNumberArray(from.joint_conf, to.joint_conf, alpha),
     mesh_vertices_world: interpolateVec3Array(from.mesh_vertices_world, to.mesh_vertices_world, alpha),
@@ -3228,6 +3249,11 @@ function readEnum<T extends string>(value: unknown, path: string, allowed: reado
   const text = readString(value, path);
   if (!allowed.includes(text as T)) throw new Error(`${path} must be one of: ${allowed.join(", ")}`);
   return text as T;
+}
+
+function readOptionalTrustBadge(value: unknown, path: string): TrustBadge | undefined {
+  if (value === undefined || value === null) return undefined;
+  return readEnum(value, path, ["verified", "preview", "low_confidence"] as const);
 }
 
 function readBoolean(value: unknown, path: string): boolean {

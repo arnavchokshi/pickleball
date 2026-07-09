@@ -1325,6 +1325,7 @@ describe("viewer data contracts", () => {
                   vertex_count: 3,
                   joint_count: 2,
                   joint_conf: [0.9, 0.8],
+                  trust_badge: "preview",
                   reasons: ["contact_window"],
                 },
               ],
@@ -1361,6 +1362,7 @@ describe("viewer data contracts", () => {
     });
 
     expect(chunk.players[0].id).toBe(2);
+    expect(chunk.players[0].frames[0].trust_badge).toBe("preview");
     expect(chunk.players[0].frames[0].mesh_vertices_world[2]).toEqual([0.4, 1.4, 1.6]);
     expect(chunk.players[0].frames[0].mesh_faces).toEqual([[0, 1, 2]]);
 

@@ -103,6 +103,7 @@ import {
   type TimelineChapter,
   type TimelineMarker,
   type TrustBand,
+  type TrustBadge,
   type Vec3,
   type VideoBallOverlay,
   type ViewerManifest,
@@ -329,6 +330,23 @@ export function bodyMeshOpacityFromBlendWeight(
   presenceOpacity = 1,
 ): number {
   return (0.26 + Math.max(0, Math.min(1, frame.blend_weight)) * 0.42) * Math.max(0, Math.min(1, presenceOpacity));
+}
+
+export type BodyMeshTrustMaterial = {
+  fillColor: string;
+  emissiveColor: string;
+  opacityScale: number;
+  label: "solid" | "estimated";
+};
+
+export function bodyMeshMaterialForTrustBadge(badge: TrustBadge | undefined): BodyMeshTrustMaterial {
+  if (badge === "preview") {
+    return { fillColor: "#ffb454", emissiveColor: "#5a3500", opacityScale: 0.62, label: "estimated" };
+  }
+  if (badge === "low_confidence") {
+    return { fillColor: "#8a8f98", emissiveColor: "#15171b", opacityScale: 0.42, label: "estimated" };
+  }
+  return { fillColor: "#b4f2bf", emissiveColor: "#102d18", opacityScale: 1, label: "solid" };
 }
 
 export function configureGltfLoader(loader: GLTFLoader): GLTFLoader {
@@ -2345,8 +2363,15 @@ function SolidBodyMesh({
     () => geometryForSolidBodyMeshFrame(geometryCache, meshPlayerId, frame),
     [frame, geometryCache, meshPlayerId],
   );
-  const baseOpacity = bodyMeshOpacityFromBlendWeight(frame, presenceOpacity);
-  const opacity = focusStyle.dimmed ? Math.min(baseOpacity, 0.14) : focusStyle.highlighted ? Math.min(0.9, baseOpacity + 0.16) : baseOpacity;
+  const material = bodyMeshMaterialForTrustBadge(frame.trust_badge);
+  const baseOpacity = bodyMeshOpacityFromBlendWeight(frame, presenceOpacity) * material.opacityScale;
+  const opacity = focusStyle.dimmed
+    ? Math.min(baseOpacity, 0.14 * material.opacityScale)
+    : focusStyle.highlighted
+      ? Math.min(material.label === "estimated" ? 0.56 : 0.9, baseOpacity + (material.label === "estimated" ? 0.08 : 0.16))
+      : baseOpacity;
+  const fillColor = focusStyle.highlighted && material.label === "solid" ? "#dfff3d" : material.fillColor;
+  const emissiveColor = focusStyle.highlighted && material.label === "solid" ? "#425800" : material.emissiveColor;
   return (
     <mesh
       geometry={geometry}
@@ -2358,8 +2383,8 @@ function SolidBodyMesh({
       }}
     >
       <meshStandardMaterial
-        color={focusStyle.highlighted ? "#dfff3d" : "#b4f2bf"}
-        emissive={focusStyle.highlighted ? "#425800" : "#102d18"}
+        color={fillColor}
+        emissive={emissiveColor}
         roughness={0.58}
         metalness={0.02}
         transparent

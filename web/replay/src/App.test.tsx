@@ -8,6 +8,7 @@ import * as AppModule from "./App";
 import {
   bodyJointSkeletonForFrame,
   bodyMeshOpacityFromBlendWeight,
+  bodyMeshMaterialForTrustBadge,
   cameraPresetPose,
   cocoWholeBodyCoreBoneNames,
   createSolidBodyMeshGeometryCache,
@@ -96,6 +97,41 @@ describe("bodyMeshOpacityFromBlendWeight", () => {
     expect(bodyMeshOpacityFromBlendWeight({ blend_weight: 1 }, 0)).toBe(0);
     expect(bodyMeshOpacityFromBlendWeight({ blend_weight: 1 }, 0.5)).toBeCloseTo(0.34);
     expect(bodyMeshOpacityFromBlendWeight({ blend_weight: 1 }, 1)).toBeCloseTo(0.68);
+  });
+});
+
+describe("bodyMeshMaterialForTrustBadge", () => {
+  it("keeps absent per-frame trust_badge behavior exactly on the current solid material", () => {
+    expect(bodyMeshMaterialForTrustBadge(undefined)).toEqual({
+      fillColor: "#b4f2bf",
+      emissiveColor: "#102d18",
+      opacityScale: 1,
+      label: "solid",
+    });
+  });
+
+  it("maps trust-band preview and low-confidence mesh frames to translucent estimated styling", () => {
+    expect(bodyMeshMaterialForTrustBadge("verified")).toMatchObject({
+      fillColor: "#b4f2bf",
+      emissiveColor: "#102d18",
+      opacityScale: 1,
+      label: "solid",
+    });
+    expect(bodyMeshMaterialForTrustBadge("preview")).toMatchObject({
+      fillColor: "#ffb454",
+      emissiveColor: "#5a3500",
+      label: "estimated",
+    });
+    expect(bodyMeshMaterialForTrustBadge("preview").opacityScale).toBeGreaterThan(0);
+    expect(bodyMeshMaterialForTrustBadge("preview").opacityScale).toBeLessThan(1);
+    expect(bodyMeshMaterialForTrustBadge("low_confidence")).toMatchObject({
+      fillColor: "#8a8f98",
+      label: "estimated",
+    });
+    expect(bodyMeshMaterialForTrustBadge("low_confidence").opacityScale).toBeGreaterThan(0);
+    expect(bodyMeshMaterialForTrustBadge("low_confidence").opacityScale).toBeLessThan(
+      bodyMeshMaterialForTrustBadge("preview").opacityScale,
+    );
   });
 });
 
