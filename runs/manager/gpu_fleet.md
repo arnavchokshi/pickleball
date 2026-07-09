@@ -125,3 +125,5 @@ WAVE-6 FLEET LOG (2026-07-08, manager):
   may reach the ~$12-15 band — flagged in checkin); 60-min idle self-stop armed.
 - FLEET NOTE 2026-07-08: pickleball-calv1unet-a100-spot (A100 spot, ase1-a) RUNNING = the CONCURRENT
   CALV1 court session's VM (their ledger row/teardown; global concurrency 2/4 with w6close).
+
+| pickleball-calv1unet2-a100-spot | asia-southeast1-a (ladder ase1-b/c, usc1-a) | a2-highgpu-1g A100-40GB | SPOT | CREATING (retrain v2 dispatched 2026-07-08 eve, court session) | calv1_unet_retrain_20260708 | ~$1.1-1.5/hr | DELETE on success, STOP on failure |
