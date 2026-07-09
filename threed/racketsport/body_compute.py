@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 from typing import Any, Mapping
 
+from .best_stack import load_best_stack_manifest
 from .schemas import Tracks
 from .trust_band import TRUST_BADGES
 
@@ -17,8 +18,10 @@ DEFAULT_MAX_TRACK_SPEED_FOR_BODY_MPS = 10.0
 DEFAULT_MAX_BBOX_CENTER_SPEED_FOR_BODY_DIAG_S = 30.0
 DEFAULT_MAX_BBOX_CENTER_STEP_FOR_BODY_PX = 300.0
 DEFAULT_MAX_TRACK_WORLD_STEP_FOR_BBOX_JITTER_M = 3.5
+DEFAULT_BODY_SKELETON_STRIDE = int(load_best_stack_manifest().value("body.skeleton_stride"))
 UNSAFE_TRACK_CONTINUITY_REASON = "unsafe_track_continuity"
 MISSING_FRAME_COMPUTE_PLAN_REASON = "missing_frame_compute_plan"
+BODY_SKELETON_STRIDE_SKIP_REASON = "body_skeleton_stride_skip"
 SAM3D_BODY_JOINTS_ALL_TRACKED_REASON = "sam3d_body_joints_all_tracked"
 SAM3D_BODY_JOINTS_SOURCE = "sam3d_body_joints"
 TIER2_BODY_JOINTS_TIER = "tier2_body_joints"
@@ -45,6 +48,7 @@ def build_body_compute_execution(
     max_frames: int | None = None,
     include_tier2_body_joints: bool = False,
     contact_dense_pad_s: float = DEFAULT_CONTACT_DENSE_PAD_S,
+    skeleton_stride: int = DEFAULT_BODY_SKELETON_STRIDE,
     max_track_speed_for_body_mps: float = DEFAULT_MAX_TRACK_SPEED_FOR_BODY_MPS,
     max_bbox_center_speed_for_body_diag_s: float = DEFAULT_MAX_BBOX_CENTER_SPEED_FOR_BODY_DIAG_S,
     max_bbox_center_step_for_body_px: float = DEFAULT_MAX_BBOX_CENTER_STEP_FOR_BODY_PX,
@@ -62,6 +66,8 @@ def build_body_compute_execution(
         raise ValueError("max_frames must be non-negative")
     if contact_dense_pad_s < 0.0:
         raise ValueError("contact_dense_pad_s must be non-negative")
+    if skeleton_stride <= 0:
+        raise ValueError("skeleton_stride must be positive")
     if max_track_speed_for_body_mps <= 0.0:
         raise ValueError("max_track_speed_for_body_mps must be positive")
     if max_bbox_center_speed_for_body_diag_s <= 0.0:
@@ -91,6 +97,7 @@ def build_body_compute_execution(
             max_frames=max_frames,
             include_tier2_body_joints=include_tier2_body_joints,
             contact_dense_pad_s=contact_dense_pad_s,
+            skeleton_stride=int(skeleton_stride),
         )
     return _execution_without_frame_plan(
         tracks,
@@ -98,6 +105,7 @@ def build_body_compute_execution(
         safe_track_lookup=safe_track_lookup,
         track_continuity=track_continuity,
         include_tier2_body_joints=include_tier2_body_joints,
+        skeleton_stride=int(skeleton_stride),
     )
 
 
@@ -110,6 +118,7 @@ def build_empty_body_compute_execution(
     max_bbox_center_speed_for_body_diag_s: float = DEFAULT_MAX_BBOX_CENTER_SPEED_FOR_BODY_DIAG_S,
     max_bbox_center_step_for_body_px: float = DEFAULT_MAX_BBOX_CENTER_STEP_FOR_BODY_PX,
     max_track_world_step_for_bbox_jitter_m: float = DEFAULT_MAX_TRACK_WORLD_STEP_FOR_BBOX_JITTER_M,
+    skeleton_stride: int = DEFAULT_BODY_SKELETON_STRIDE,
 ) -> dict[str, Any]:
     track_lookup = _track_lookup(tracks)
     _safe_track_lookup, track_continuity = _body_safe_track_lookup(
@@ -127,6 +136,7 @@ def build_empty_body_compute_execution(
         scheduled=[],
         skipped=[],
         track_continuity=track_continuity,
+        skeleton_stride=int(skeleton_stride),
     )
 
 
@@ -169,6 +179,7 @@ def _execution_from_frame_plan(
     max_frames: int | None,
     include_tier2_body_joints: bool,
     contact_dense_pad_s: float,
+    skeleton_stride: int,
 ) -> dict[str, Any]:
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     frame_lookup = {int(frame["frame_idx"]): frame for frame in plan.get("frames", [])}
@@ -182,15 +193,16 @@ def _execution_from_frame_plan(
             contact_dense_pad_s=contact_dense_pad_s,
         )
         if include_tier2_body_joints:
-            scheduled.extend(
-                _tier2_body_joint_scheduled_frames(
-                    tracks,
-                    frame_lookup=frame_lookup,
-                    track_lookup=track_lookup,
-                    safe_track_lookup=safe_track_lookup,
-                    already_scheduled_targets=_scheduled_target_keys(scheduled),
-                )
+            tier2_scheduled, tier2_skipped = _tier2_body_joint_scheduled_frames(
+                tracks,
+                frame_lookup=frame_lookup,
+                track_lookup=track_lookup,
+                safe_track_lookup=safe_track_lookup,
+                already_scheduled_targets=_scheduled_target_keys(scheduled),
+                skeleton_stride=skeleton_stride,
             )
+            scheduled.extend(tier2_scheduled)
+            skipped.extend(tier2_skipped)
         scheduled, limit_skipped = _apply_max_frames(scheduled, max_frames=max_frames)
         skipped.extend(limit_skipped)
         return _execution_payload(
@@ -201,6 +213,7 @@ def _execution_from_frame_plan(
             skipped=sorted(skipped, key=lambda item: (int(item["frame_idx"]), str(item["skip_reason"]))),
             track_continuity=track_continuity,
             mesh_density_profile=profile,
+            skeleton_stride=skeleton_stride,
         )
 
     scheduled: list[dict[str, Any]] = []
@@ -258,8 +271,23 @@ def _execution_from_frame_plan(
                 )
             )
 
+    cadence_skipped_indexes: set[int] = set()
+    if include_tier2_body_joints:
+        tier2_scheduled, tier2_skipped = _tier2_body_joint_scheduled_frames(
+            tracks,
+            frame_lookup=frame_lookup,
+            track_lookup=track_lookup,
+            safe_track_lookup=safe_track_lookup,
+            already_scheduled_targets=_scheduled_target_keys(scheduled),
+            skeleton_stride=skeleton_stride,
+        )
+        scheduled.extend(tier2_scheduled)
+        skipped.extend(tier2_skipped)
+        scheduled_indexes.update(int(frame["frame_idx"]) for frame in tier2_scheduled)
+        cadence_skipped_indexes.update(int(frame["frame_idx"]) for frame in tier2_skipped)
+
     for frame_idx, frame_plan in sorted(frame_lookup.items()):
-        if frame_idx in scheduled_indexes or frame_idx in continuity_skipped_indexes:
+        if frame_idx in scheduled_indexes or frame_idx in continuity_skipped_indexes or frame_idx in cadence_skipped_indexes:
             continue
         tier = str(frame_plan.get("recommended_tier", "unknown"))
         target_representation = str(frame_plan.get("target_representation", "unknown"))
@@ -276,17 +304,6 @@ def _execution_from_frame_plan(
             }
         )
 
-    if include_tier2_body_joints:
-        scheduled.extend(
-            _tier2_body_joint_scheduled_frames(
-                tracks,
-                frame_lookup=frame_lookup,
-                track_lookup=track_lookup,
-                safe_track_lookup=safe_track_lookup,
-                already_scheduled_targets=_scheduled_target_keys(scheduled),
-            )
-        )
-
     scheduled, limit_skipped = _apply_max_frames(scheduled, max_frames=max_frames)
     skipped.extend(limit_skipped)
     return _execution_payload(
@@ -296,6 +313,7 @@ def _execution_from_frame_plan(
         scheduled=scheduled,
         skipped=sorted(skipped, key=lambda item: (int(item["frame_idx"]), str(item["skip_reason"]))),
         track_continuity=track_continuity,
+        skeleton_stride=skeleton_stride,
     )
 
 
@@ -729,15 +747,17 @@ def _execution_without_frame_plan(
     safe_track_lookup: dict[int, list[tuple[int, Any]]],
     track_continuity: dict[str, Any],
     include_tier2_body_joints: bool,
+    skeleton_stride: int,
 ) -> dict[str, Any]:
     skipped: list[dict[str, Any]] = []
     scheduled: list[dict[str, Any]] = []
+    base_frame_indexes = _base_skeleton_frame_indexes(track_lookup, skeleton_stride=skeleton_stride)
     for frame_idx, active in sorted(track_lookup.items()):
         active_player_ids = [player_id for player_id, _frame in active]
         safe_active = safe_track_lookup.get(frame_idx, [])
         safe_ids = {player_id for player_id, _frame in safe_active}
         unsafe_ids = [player_id for player_id in active_player_ids if player_id not in safe_ids]
-        if include_tier2_body_joints and safe_active:
+        if include_tier2_body_joints and safe_active and frame_idx in base_frame_indexes:
             scheduled.append(
                 _tier2_body_joint_frame(
                     tracks,
@@ -745,6 +765,15 @@ def _execution_without_frame_plan(
                     active=active,
                     safe_active=safe_active,
                     frame_plan={},
+                )
+            )
+        elif include_tier2_body_joints and safe_active:
+            skipped.append(
+                _skeleton_stride_skipped_frame(
+                    tracks,
+                    frame_idx=frame_idx,
+                    active=active,
+                    skipped_active=safe_active,
                 )
             )
         elif safe_active:
@@ -788,6 +817,7 @@ def _execution_without_frame_plan(
         scheduled=scheduled,
         skipped=skipped,
         track_continuity=track_continuity,
+        skeleton_stride=skeleton_stride,
     )
 
 
@@ -807,14 +837,30 @@ def _tier2_body_joint_scheduled_frames(
     track_lookup: dict[int, list[tuple[int, Any]]],
     safe_track_lookup: dict[int, list[tuple[int, Any]]],
     already_scheduled_targets: set[tuple[int, int]],
-) -> list[dict[str, Any]]:
+    skeleton_stride: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     scheduled: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    base_frame_indexes = _base_skeleton_frame_indexes(track_lookup, skeleton_stride=skeleton_stride)
     for frame_idx, active in sorted(track_lookup.items()):
-        safe_active = [
+        unscheduled_safe_active = [
             (player_id, track_frame)
             for player_id, track_frame in safe_track_lookup.get(frame_idx, [])
             if (frame_idx, player_id) not in already_scheduled_targets
         ]
+        if not unscheduled_safe_active:
+            continue
+        if frame_idx not in base_frame_indexes:
+            skipped.append(
+                _skeleton_stride_skipped_frame(
+                    tracks,
+                    frame_idx=frame_idx,
+                    active=active,
+                    skipped_active=unscheduled_safe_active,
+                )
+            )
+            continue
+        safe_active = unscheduled_safe_active
         if not safe_active:
             continue
         scheduled.append(
@@ -826,7 +872,42 @@ def _tier2_body_joint_scheduled_frames(
                 frame_plan=frame_lookup.get(frame_idx, {}),
             )
         )
-    return scheduled
+    return scheduled, skipped
+
+
+def _base_skeleton_frame_indexes(
+    track_lookup: Mapping[int, list[tuple[int, Any]]],
+    *,
+    skeleton_stride: int,
+) -> set[int]:
+    frame_indexes = sorted(int(frame_idx) for frame_idx in track_lookup)
+    if not frame_indexes:
+        return set()
+    if skeleton_stride <= 1:
+        return set(frame_indexes)
+    anchor = frame_indexes[0]
+    return {frame_idx for frame_idx in frame_indexes if (frame_idx - anchor) % skeleton_stride == 0}
+
+
+def _skeleton_stride_skipped_frame(
+    tracks: Tracks,
+    *,
+    frame_idx: int,
+    active: list[tuple[int, Any]],
+    skipped_active: list[tuple[int, Any]],
+) -> dict[str, Any]:
+    target_ids = [int(player_id) for player_id, _frame in skipped_active]
+    return {
+        "frame_idx": frame_idx,
+        "t": frame_idx / tracks.fps,
+        "recommended_tier": TIER2_BODY_JOINTS_TIER,
+        "target_representation": TIER2_BODY_JOINTS_REPRESENTATION,
+        "skip_reason": BODY_SKELETON_STRIDE_SKIP_REASON,
+        "reasons": [BODY_SKELETON_STRIDE_SKIP_REASON],
+        "target_player_ids": target_ids,
+        "active_player_ids": [int(player_id) for player_id, _frame in active],
+        "player_targets": _tier2_stride_skipped_targets(skipped_active),
+    }
 
 
 def _tier2_body_joint_frame(
@@ -884,6 +965,65 @@ def _tier2_player_targets(frame_plan: Mapping[str, Any], safe_active: list[tuple
     ]
 
 
+def _tier2_stride_skipped_targets(skipped_active: list[tuple[int, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "player_id": int(player_id),
+            "track_conf": round(float(track_frame.conf), 3),
+            "score": 0.0,
+            "recommended_tier": TIER2_BODY_JOINTS_TIER,
+            "target_representation": TIER2_BODY_JOINTS_REPRESENTATION,
+            "source": SAM3D_BODY_JOINTS_SOURCE,
+            "reasons": [BODY_SKELETON_STRIDE_SKIP_REASON],
+        }
+        for player_id, track_frame in skipped_active
+    ]
+
+
+def _cadence_summary(
+    tracks: Tracks,
+    *,
+    scheduled: list[dict[str, Any]],
+    scheduled_player_frame_count: int,
+    skeleton_stride: int,
+) -> dict[str, Any]:
+    track_lookup = _track_lookup(tracks)
+    total_track_frame_count = len(track_lookup)
+    total_track_player_frame_count = sum(len(active) for active in track_lookup.values())
+    base_frame_indexes = _base_skeleton_frame_indexes(track_lookup, skeleton_stride=skeleton_stride)
+    scheduled_frame_indexes = {int(frame["frame_idx"]) for frame in scheduled}
+    scheduled_frame_count = len(scheduled_frame_indexes)
+    effective_stride = (
+        round(total_track_frame_count / scheduled_frame_count, 3)
+        if total_track_frame_count > 0 and scheduled_frame_count > 0
+        else None
+    )
+    effective_player_stride = (
+        round(total_track_player_frame_count / scheduled_player_frame_count, 3)
+        if total_track_player_frame_count > 0 and scheduled_player_frame_count > 0
+        else None
+    )
+    base_skeleton_player_frame_count = sum(len(track_lookup.get(frame_idx, [])) for frame_idx in base_frame_indexes)
+    return {
+        "base_skeleton_stride": int(skeleton_stride),
+        "effective_stride": effective_stride,
+        "effective_player_stride": effective_player_stride,
+        "total_track_frame_count": total_track_frame_count,
+        "total_track_player_frame_count": total_track_player_frame_count,
+        "base_skeleton_frame_count": len(base_frame_indexes),
+        "base_skeleton_player_frame_count": base_skeleton_player_frame_count,
+        "event_extra_frame_count": len(scheduled_frame_indexes - base_frame_indexes),
+        "scheduled_vs_total_frame_count": {
+            "scheduled": scheduled_frame_count,
+            "total": total_track_frame_count,
+        },
+        "scheduled_vs_total_player_frame_count": {
+            "scheduled": scheduled_player_frame_count,
+            "total": total_track_player_frame_count,
+        },
+    }
+
+
 def _execution_payload(
     tracks: Tracks,
     *,
@@ -892,6 +1032,7 @@ def _execution_payload(
     scheduled: list[dict[str, Any]],
     skipped: list[dict[str, Any]],
     track_continuity: dict[str, Any],
+    skeleton_stride: int,
     mesh_density_profile: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     scheduled_by_target_representation: dict[str, int] = {}
@@ -932,6 +1073,12 @@ def _execution_payload(
                 reason_key = str(reason)
                 skipped_by_reason[reason_key] = skipped_by_reason.get(reason_key, 0) + 1
     scheduled_player_frame_count = sum(len(frame.get("target_player_ids", [])) for frame in scheduled)
+    cadence_summary = _cadence_summary(
+        tracks,
+        scheduled=scheduled,
+        scheduled_player_frame_count=scheduled_player_frame_count,
+        skeleton_stride=skeleton_stride,
+    )
     track_continuity_skipped_player_frame_count = sum(
         len(frame.get("target_player_ids", []))
         for frame in skipped
@@ -953,6 +1100,7 @@ def _execution_payload(
         "summary": {
             "scheduled_frame_count": len(scheduled),
             "scheduled_player_frame_count": scheduled_player_frame_count,
+            **cadence_summary,
             "scheduled_by_target_representation": dict(sorted(scheduled_by_target_representation.items())),
             "scheduled_by_reason": dict(sorted(scheduled_by_reason.items())),
             "scheduled_targeted_reviewed_contact_frame_count": scheduled_targeted_reviewed_contact_frame_count,

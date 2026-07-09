@@ -81,6 +81,7 @@ def build_frame_schedule(
     *,
     frame_compute_plan_path: str | Path | None = None,
     max_frames: int | None = None,
+    skeleton_stride: int = 1,
 ) -> tuple[dict[str, Any], list[str]]:
     """Return a ``scheduled_frames`` execution manifest + human-readable notes.
 
@@ -91,14 +92,17 @@ def build_frame_schedule(
 
     if max_frames is not None and max_frames <= 0:
         raise ValueError("max_frames must be positive when given")
+    if skeleton_stride <= 0:
+        raise ValueError("skeleton_stride must be positive")
     cap = int(max_frames) if max_frames is not None else DEFAULT_MAX_SCHEDULED_FRAMES
 
     notes: list[str] = []
     pose_indexes = _tracked_frame_indexes(tracks)
+    base_indexes = _stride_sample(sorted(pose_indexes), int(skeleton_stride))
     notes.append(
-        f"bounded default schedule: {len(pose_indexes)} frame(s) carry at least one tracked player "
-        "(Lane A pose is joints-everywhere, not tier-scheduled -- frame_compute_plan.json does not exist yet "
-        "on a cold start, since process_video.py's events stage runs after pose)"
+        f"bounded base BODY skeleton schedule: kept {len(base_indexes)}/{len(pose_indexes)} tracked frame(s) "
+        f"with skeleton_stride={int(skeleton_stride)} (the prior joints-everywhere base is now cadence-controlled; "
+        "events/contact-dense mesh frames are unioned separately)"
     )
 
     plan_path = Path(frame_compute_plan_path) if frame_compute_plan_path is not None else None
@@ -112,7 +116,7 @@ def build_frame_schedule(
                 "whose events stage already wrote frame_compute_plan.json before this stage ran)"
             )
 
-    union_indexes = sorted(pose_indexes | mesh_indexes)
+    union_indexes = sorted(base_indexes | mesh_indexes)
     capped = len(union_indexes) > cap
     final_indexes = _uniform_sample(union_indexes, cap) if capped else union_indexes
     if capped:
@@ -124,6 +128,10 @@ def build_frame_schedule(
         )
 
     scheduled_frames = [{"frame_idx": idx, "t": idx / tracks.fps} for idx in final_indexes]
+    source = "tracks_union" if int(skeleton_stride) == 1 else "tracks_stride"
+    if mesh_indexes:
+        source += "+tier_rule"
+    effective_stride = round(len(pose_indexes) / len(final_indexes), 3) if final_indexes else None
     manifest = {
         "schema_version": SCHEMA_VERSION,
         "artifact_type": ARTIFACT_TYPE,
@@ -132,7 +140,12 @@ def build_frame_schedule(
         "frame_indexes": final_indexes,
         "capped": capped,
         "cap": cap,
-        "source": "tracks_union+tier_rule" if mesh_indexes else "tracks_union",
+        "source": source,
+        "base_skeleton_stride": int(skeleton_stride),
+        "total_tracked_frame_count": len(pose_indexes),
+        "base_scheduled_frame_count": len(base_indexes),
+        "event_extra_frame_count": len(set(final_indexes) - base_indexes),
+        "effective_stride": effective_stride,
     }
     return manifest, notes
 
@@ -144,6 +157,7 @@ def materialize_process_video_frames(
     out_dir: str | Path,
     frame_compute_plan_path: str | Path | None = None,
     max_frames: int | None = None,
+    skeleton_stride: int = 1,
     overwrite: bool = True,
 ) -> dict[str, Any]:
     """Build the frame schedule for ``tracks_path`` and materialize it into
@@ -174,6 +188,7 @@ def materialize_process_video_frames(
         tracks,
         frame_compute_plan_path=frame_compute_plan_path,
         max_frames=max_frames,
+        skeleton_stride=skeleton_stride,
     )
     schedule_path = out.parent / SCHEDULE_FILENAME
     schedule_path.parent.mkdir(parents=True, exist_ok=True)
@@ -203,6 +218,15 @@ def _tracked_frame_indexes(tracks: Tracks) -> set[int]:
         for frame in player.frames:
             indexes.add(int(round(float(frame.t) * tracks.fps)))
     return indexes
+
+
+def _stride_sample(indexes: list[int], stride: int) -> set[int]:
+    if not indexes:
+        return set()
+    if stride <= 1:
+        return set(indexes)
+    anchor = indexes[0]
+    return {idx for idx in indexes if (idx - anchor) % stride == 0}
 
 
 def _mesh_window_frame_indexes(plan_path: Path, *, tracked: set[int]) -> set[int]:

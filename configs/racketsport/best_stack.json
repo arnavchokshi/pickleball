@@ -1,10 +1,11 @@
 {
   "schema_version": 1,
-  "revision": 7,
+  "revision": 8,
   "updated": "2026-07-09",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
     "Explicit CLI flag overrides manifest defaults; absent manifest entry is a hard error on decision paths.",
+    "Cadence defaults are per-stage entries named <stage>.<cadence_knob> and are resolved from this manifest before CLI overrides.",
     "Protected Outdoor/Indoor labels are eval-only and are not read or written by this lane."
   ],
   "server_overrides": {
@@ -75,6 +76,23 @@
       },
       "proven_against": null,
       "notes": "Default selection surface recorded; no ball metric threshold or gated metric key changed."
+    },
+    "ball.detection_stride": {
+      "stage": "ball",
+      "selection": "full-rate BALL detection cadence",
+      "value": 1,
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "w7_cadence_20260709",
+        "commit": "worktree",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "runs/lanes/w7_cadence_20260709/report.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Owner ruling 2026-07-09 pins BALL full-rate: detection_stride=1 is explicit cadence doctrine, not an implicit default. BODY cadence may stride; BALL stays full-rate unless a future owner ruling changes this manifest entry and its runtime support."
     },
     "input_quality.preflight": {
       "stage": "input_quality",
@@ -461,6 +479,45 @@
       },
       "proven_against": null,
       "notes": "Default E2E route is serial. Overlap remains explicit and is not promoted by this lane."
+    },
+    "body.skeleton_stride": {
+      "stage": "body",
+      "selection": "base BODY skeleton cadence stride",
+      "value": 2,
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "w7_cadence_20260709",
+        "commit": "worktree",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "runs/lanes/w7_cadence_20260709/report.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Owner ruling 2026-07-09: app capture is 60fps, BODY default is stride-2 for a 30Hz effective base skeleton cadence; event/contact-dense mesh boosts are additive and do not replace the base cadence. This is a pre-authorized default flip, not BODY accuracy promotion."
+    },
+    "cadence.future_stage_pattern": {
+      "stage": "cadence",
+      "selection": "manifest-owned per-stage cadence pattern",
+      "value": {
+        "default_source": "best_stack.json",
+        "entry_name_pattern": "<stage>.<cadence_knob>",
+        "cli_override_pattern": "--<stage>-<cadence-knob>",
+        "summary_policy": "pipeline summaries record resolved cadence, effective_stride, and scheduled-vs-total counts where a stage skips compute"
+      },
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "w7_cadence_20260709",
+        "commit": "worktree",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "runs/lanes/w7_cadence_20260709/report.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Documented pattern only: future stage cadence knobs must be added as manifest entries, resolved into process_video options, given explicit CLI overrides, and surfaced in stage metrics before changing runtime cadence."
     },
     "paddle.fused_estimator": {
       "stage": "paddle_pose",

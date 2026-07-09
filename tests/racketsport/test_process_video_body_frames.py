@@ -103,6 +103,31 @@ def test_build_frame_schedule_respects_tier_rule_when_plan_available(tmp_path: P
     assert any("tier rule respected" in note for note in notes)
 
 
+def test_build_frame_schedule_applies_body_skeleton_stride_to_base_only(tmp_path: Path) -> None:
+    tracks = _tracks({1: [i / 60 for i in range(8)]}, fps=60.0)
+    plan_path = tmp_path / "frame_compute_plan.json"
+    _write_json(
+        plan_path,
+        {
+            "schema_version": 1,
+            "deep_mesh_windows": [
+                {"frame_start": 3, "frame_end": 3, "target_player_ids": [1]},
+            ],
+        },
+    )
+
+    schedule, notes = build_frame_schedule(tracks, frame_compute_plan_path=plan_path, skeleton_stride=2)
+
+    assert schedule["frame_indexes"] == [0, 2, 3, 4, 6]
+    assert schedule["base_skeleton_stride"] == 2
+    assert schedule["total_tracked_frame_count"] == 8
+    assert schedule["base_scheduled_frame_count"] == 4
+    assert schedule["event_extra_frame_count"] == 1
+    assert schedule["effective_stride"] == 1.6
+    assert any("skeleton_stride=2" in note for note in notes)
+    assert any("tier rule respected" in note for note in notes)
+
+
 def test_build_frame_schedule_ignores_missing_frame_compute_plan(tmp_path: Path) -> None:
     tracks = _tracks({1: [0.0, 1 / 30]})
 
@@ -140,6 +165,13 @@ def test_build_frame_schedule_rejects_nonpositive_max_frames() -> None:
 
     with pytest.raises(ValueError, match="max_frames must be positive"):
         build_frame_schedule(tracks, max_frames=0)
+
+
+def test_build_frame_schedule_rejects_nonpositive_skeleton_stride() -> None:
+    tracks = _tracks({1: [0.0]})
+
+    with pytest.raises(ValueError, match="skeleton_stride must be positive"):
+        build_frame_schedule(tracks, skeleton_stride=0)
 
 
 # ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@ from scripts.racketsport.track import build_tracks
 from .ball_stage_runner import BallStageRunner
 from .best_stack import body_detector_fov_defaults
 from .body_compute import (
+    DEFAULT_BODY_SKELETON_STRIDE,
     TIER2_BODY_JOINTS_REPRESENTATION,
     build_body_compute_execution,
     build_empty_body_compute_execution,
@@ -663,6 +664,7 @@ class BodyStageRunner:
         max_root_speed_mps: float | None = DEFAULT_BODY_MAX_ROOT_SPEED_MPS,
         max_track_anchor_smoothing_residual_m: float | None = DEFAULT_BODY_MAX_TRACK_ANCHOR_SMOOTHING_RESIDUAL_M,
         tier2_body_joints_all_tracked: bool = False,
+        body_skeleton_stride: int = DEFAULT_BODY_SKELETON_STRIDE,
         mesh_vertex_serialization_policy: Literal["all", "tier1_only"] = "all",
         write_body_monoliths: bool = False,
         sam3d_body_input_size_px: int | None = None,
@@ -695,6 +697,9 @@ class BodyStageRunner:
         self.max_root_speed_mps = max_root_speed_mps
         self.max_track_anchor_smoothing_residual_m = max_track_anchor_smoothing_residual_m
         self.tier2_body_joints_all_tracked = bool(tier2_body_joints_all_tracked)
+        if int(body_skeleton_stride) <= 0:
+            raise ValueError("body_skeleton_stride must be positive")
+        self.body_skeleton_stride = int(body_skeleton_stride)
         self.mesh_vertex_serialization_policy = mesh_vertex_serialization_policy
         self.write_body_monoliths = bool(write_body_monoliths)
         self.sam3d_body_input_size_px = normalize_body_input_size(sam3d_body_input_size_px)
@@ -731,6 +736,7 @@ class BodyStageRunner:
             "body_stage": {
                 "skeleton_source": "sam3d_body_joints",
                 "tier2_body_joints_all_tracked": self.tier2_body_joints_all_tracked,
+                "body_skeleton_stride": self.body_skeleton_stride,
                 "tier1_mesh_policy": "ball_aware_100",
                 "legacy_pose_path": "removed_from_production_skeleton_path",
             },
@@ -845,6 +851,7 @@ class BodyStageRunner:
                 tracks,
                 mode="adaptive_frame_compute_plan" if body_plan_path.is_file() else "lane_b_requires_frame_compute_plan",
                 source_plan=str(body_plan_path) if body_plan_path.is_file() else None,
+                skeleton_stride=self.body_skeleton_stride,
             )
             if "sha256 mismatch" in str(exc):
                 body_execution["fail_closed_reason"] = "manifest_asset_preflight_sha256_mismatch"
@@ -858,6 +865,7 @@ class BodyStageRunner:
             frame_plan_path=body_plan_path,
             max_frames=context.max_frames,
             include_tier2_body_joints=self.tier2_body_joints_all_tracked,
+            skeleton_stride=self.body_skeleton_stride,
         )
         write_body_compute_execution(context.run_dir / "body_compute_execution.json", body_execution)
         tier2_config = self._sam3d_tier2_config(body_execution)

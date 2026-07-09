@@ -17,7 +17,7 @@ def test_best_stack_manifest_integrity() -> None:
     manifest = load_best_stack_manifest()
 
     assert manifest.schema_version == 1
-    assert manifest.revision == 7
+    assert manifest.revision == 8
     assert "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim" in manifest.invariants
     assert len(manifest.entries) >= 30
 
@@ -33,6 +33,9 @@ def test_best_stack_manifest_integrity() -> None:
         "mesh.human_review_ghost_emission",
         "mesh.tier_eligibility_raise",
         "mesh.target_frame_budget",
+        "body.skeleton_stride",
+        "ball.detection_stride",
+        "cadence.future_stage_pattern",
         "body.detector_fov",
         "camera_motion.policy",
         "server.allow_auto_court_corners_preview",
@@ -79,6 +82,14 @@ def test_best_stack_manifest_integrity() -> None:
     assert manifest.entry("input_quality.preflight").value["mode"] == "advisory"
     assert manifest.entry("stats.match_stats_v0").status == "WIRED_DEFAULT"
     assert manifest.entry("stats.match_stats_v0").value["enabled"] is True
+    assert manifest.entry("body.skeleton_stride").status == "WIRED_DEFAULT"
+    assert manifest.entry("body.skeleton_stride").value == 2
+    assert "owner ruling 2026-07-09" in manifest.entry("body.skeleton_stride").notes.lower()
+    assert manifest.entry("ball.detection_stride").status == "WIRED_DEFAULT"
+    assert manifest.entry("ball.detection_stride").value == 1
+    assert "full-rate" in manifest.entry("ball.detection_stride").notes
+    assert manifest.entry("cadence.future_stage_pattern").status == "WIRED_DEFAULT"
+    assert manifest.entry("cadence.future_stage_pattern").value["default_source"] == "best_stack.json"
     assert "loso_report.json" in manifest.entry("ball.wasb_checkpoint").notes
     eval_profiles = manifest.entry("tracking.eval_only_association_profiles")
     assert eval_profiles.status == "DORMANT"

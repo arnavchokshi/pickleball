@@ -455,6 +455,70 @@ def _ball_aware_uniform_only_frame_plan_payload() -> dict:
     return payload
 
 
+def _baseline_frame_plan_payload(frame_count: int) -> dict:
+    frames = [
+        {
+            "frame_idx": frame_idx,
+            "t": frame_idx / 30.0,
+            "score": 0.0,
+            "recommended_tier": "baseline",
+            "target_representation": "track_only",
+            "reasons": [],
+            "active_players": 1,
+            "active_player_ids": [7],
+            "missing_players": 0,
+            "min_track_conf": 0.9,
+            "ball_conf": None,
+            "player_targets": [
+                {
+                    "player_id": 7,
+                    "track_conf": 0.9,
+                    "score": 0.0,
+                    "recommended_tier": "baseline",
+                    "target_representation": "track_only",
+                    "reasons": [],
+                }
+            ],
+        }
+        for frame_idx in range(frame_count)
+    ]
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_frame_compute_plan",
+        "fps": 30.0,
+        "expected_players": 1,
+        "frame_count": frame_count,
+        "mesh_coverage_policy": {"mode": "uniform"},
+        "frames": frames,
+        "deep_mesh_windows": [],
+        "summary": {"by_tier": {"baseline": frame_count}},
+    }
+
+
+def _single_player_tracks_payload(frame_count: int, *, fps: float = 30.0) -> dict:
+    return {
+        "schema_version": 1,
+        "fps": fps,
+        "players": [
+            {
+                "id": 7,
+                "side": "near",
+                "role": "left",
+                "frames": [
+                    {
+                        "t": frame_idx / fps,
+                        "bbox": [100.0 + frame_idx, 100.0, 200.0 + frame_idx, 300.0],
+                        "world_xy": [-1.0, -3.0 + frame_idx * 0.01],
+                        "conf": 0.92,
+                    }
+                    for frame_idx in range(frame_count)
+                ],
+            }
+        ],
+        "rally_spans": [],
+    }
+
+
 def _write_json(path: Path, payload: dict) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload), encoding="utf-8")
@@ -469,6 +533,24 @@ def test_body_compute_without_frame_plan_does_not_schedule_all_tracks_as_mesh() 
     assert execution["summary"]["scheduled_frame_count"] == 0
     assert execution["summary"]["scheduled_player_frame_count"] == 0
     assert execution["summary"]["skipped_by_reason"] == {"missing_frame_compute_plan": 2}
+
+
+def test_body_compute_default_skeleton_stride_schedules_every_other_base_frame(tmp_path: Path) -> None:
+    frame_plan = _write_json(tmp_path / "frame_compute_plan.json", _baseline_frame_plan_payload(5))
+
+    execution = build_body_compute_execution(
+        Tracks.model_validate(_single_player_tracks_payload(5)),
+        frame_plan_path=frame_plan,
+        include_tier2_body_joints=True,
+    )
+
+    assert [frame["frame_idx"] for frame in execution["scheduled_frames"]] == [0, 2, 4]
+    assert execution["summary"]["base_skeleton_stride"] == 2
+    assert execution["summary"]["effective_stride"] == 1.667
+    assert execution["summary"]["total_track_frame_count"] == 5
+    assert execution["summary"]["base_skeleton_frame_count"] == 3
+    assert execution["summary"]["scheduled_vs_total_frame_count"] == {"scheduled": 3, "total": 5}
+    assert execution["summary"]["skipped_by_reason"]["body_skeleton_stride_skip"] == 2
 
 
 def test_body_compute_can_schedule_sam3d_body_joints_for_all_safe_tracked_frames(tmp_path: Path) -> None:
@@ -614,6 +696,41 @@ def test_body_compute_contact_dense_ball_aware_schedules_hitter_every_frame_with
     assert execution["summary"]["tier1_mesh_player_frame_count"] == 34
     assert execution["summary"]["scheduled_by_reason"]["contact_dense_hitter_window"] == 31
     assert execution["summary"]["scheduled_by_reason"]["uniform_mesh_coverage"] == 2
+
+
+def test_body_compute_stride_keeps_contact_dense_extra_frames_when_tier2_enabled(tmp_path: Path) -> None:
+    frame_plan = _write_json(tmp_path / "frame_compute_plan.json", _contact_dense_ball_aware_frame_plan_payload())
+
+    execution = build_body_compute_execution(
+        Tracks.model_validate(_two_player_dense_tracks_payload()),
+        frame_plan_path=frame_plan,
+        include_tier2_body_joints=True,
+    )
+
+    mesh_frame_indexes = [
+        int(frame["frame_idx"])
+        for frame in execution["scheduled_frames"]
+        if frame["target_representation"] == "world_mesh"
+    ]
+    tier2_frame_indexes = [
+        int(frame["frame_idx"])
+        for frame in execution["scheduled_frames"]
+        if frame["target_representation"] == "body_joints"
+    ]
+
+    assert mesh_frame_indexes == list(range(31)) + [40]
+    assert tier2_frame_indexes == list(range(2, 31, 2)) + [32, 34, 36, 38]
+    assert [
+        frame["target_player_ids"]
+        for frame in execution["scheduled_frames"]
+        if frame["target_representation"] == "body_joints" and int(frame["frame_idx"]) <= 30
+    ] == [[8]] * 15
+    assert execution["summary"]["base_skeleton_stride"] == 2
+    assert execution["summary"]["total_track_frame_count"] == 41
+    assert execution["summary"]["base_skeleton_frame_count"] == 21
+    assert execution["summary"]["event_extra_frame_count"] == 15
+    assert execution["summary"]["scheduled_vs_total_frame_count"] == {"scheduled": 36, "total": 41}
+    assert execution["mesh_density_profile"]["status"] == "applied"
 
 
 def test_body_compute_contact_dense_ball_aware_falls_back_to_existing_uniform_when_contacts_missing(tmp_path: Path) -> None:

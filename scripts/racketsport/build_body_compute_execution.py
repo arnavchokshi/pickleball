@@ -20,6 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--tracks", type=Path, required=True, help="tracks.json artifact.")
     parser.add_argument("--frame-compute-plan", type=Path, help="Optional frame_compute_plan.json artifact.")
     parser.add_argument("--max-frames", type=int, help="Optional cap on scheduled BODY frames.")
+    parser.add_argument("--body-skeleton-stride", type=int, help="Base BODY skeleton cadence in source frames.")
     parser.add_argument("--out", type=Path, required=True, help="Output body_compute_execution.json path.")
     args = parser.parse_args(argv)
 
@@ -27,10 +28,14 @@ def main(argv: list[str] | None = None) -> int:
         tracks = validate_artifact_file("tracks", args.tracks)
         if not isinstance(tracks, Tracks):
             raise ValueError("tracks artifact did not parse as Tracks")
+        kwargs = {}
+        if args.body_skeleton_stride is not None:
+            kwargs["skeleton_stride"] = args.body_skeleton_stride
         execution = build_body_compute_execution(
             tracks,
             frame_plan_path=args.frame_compute_plan,
             max_frames=args.max_frames,
+            **kwargs,
         )
         write_body_compute_execution(args.out, execution)
     except (OSError, ValueError, json.JSONDecodeError) as exc:

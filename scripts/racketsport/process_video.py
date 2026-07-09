@@ -197,6 +197,8 @@ DEFAULT_CONFIDENCE_CALIBRATION_CURVES = BEST_STACK_MANIFEST.path_value("confiden
 DEFAULT_MESH_COVERAGE_MODE = BEST_STACK_MANIFEST.string_value("mesh.coverage_mode")
 DEFAULT_TARGET_MESH_FRAME_BUDGET = BEST_STACK_MANIFEST.value("mesh.target_frame_budget")
 DEFAULT_MESH_BYTE_BUDGET_MIB = BEST_STACK_MANIFEST.number_value("mesh.byte_budget_mib")
+DEFAULT_BODY_SKELETON_STRIDE = int(BEST_STACK_MANIFEST.value("body.skeleton_stride"))
+DEFAULT_BALL_DETECTION_STRIDE = int(BEST_STACK_MANIFEST.value("ball.detection_stride"))
 DEFAULT_PADDLE_FUSED_ESTIMATOR = BEST_STACK_MANIFEST.value("paddle.fused_estimator")
 PADDLE_POSE_ARTIFACT_NAME = "racket_pose_estimate.json"
 GROUNDING_REFINE_POLICY_NOTE = "render-honest estimated grounding, not gate evidence"
@@ -364,6 +366,8 @@ class PipelineOptions:
     mesh_coverage_mode: str = DEFAULT_MESH_COVERAGE_MODE
     target_mesh_frame_budget: int | None = DEFAULT_TARGET_MESH_FRAME_BUDGET
     mesh_byte_budget_mib: float | None = DEFAULT_MESH_BYTE_BUDGET_MIB
+    body_skeleton_stride: int = DEFAULT_BODY_SKELETON_STRIDE
+    ball_detection_stride: int = DEFAULT_BALL_DETECTION_STRIDE
     ball_proximity_m: float = DEFAULT_BALL_PROXIMITY_M
     high_confidence_swing_floor: float = DEFAULT_HIGH_CONFIDENCE_SWING_FLOOR
     events_selected: Path | None = None
@@ -1811,6 +1815,7 @@ class ProcessVideoPipeline:
                 out_dir=out_dir,
                 frame_compute_plan_path=self.clip_dir / "frame_compute_plan.json",
                 max_frames=opts.max_frames,
+                skeleton_stride=opts.body_skeleton_stride,
             )
         except Exception as exc:  # noqa: BLE001 - frame extraction must never crash the pipeline
             return StageOutcome(
@@ -1841,6 +1846,12 @@ class ProcessVideoPipeline:
                 "total_mb": round(total_mb, 3),
                 "capped": result["schedule"]["capped"],
                 "schedule_source": result["schedule"]["source"],
+                "base_skeleton_stride": result["schedule"].get("base_skeleton_stride"),
+                "effective_stride": result["schedule"].get("effective_stride"),
+                "scheduled_vs_total_frame_count": {
+                    "scheduled": len(result["schedule"].get("frame_indexes", [])),
+                    "total": result["schedule"].get("total_tracked_frame_count"),
+                },
             },
         )
 
@@ -1865,7 +1876,7 @@ class ProcessVideoPipeline:
     def _stage_ball(self) -> StageOutcome:
         opts = self.options
         target = self.clip_dir / "ball_track.json"
-        notes: list[str] = []
+        notes: list[str] = [f"BALL detection cadence pinned full-rate: detection_stride={opts.ball_detection_stride}"]
 
         if opts.skip_ball:
             return StageOutcome(stage="ball", status="skipped", wall_seconds=0.0, notes=["--skip-ball set"])
@@ -1939,6 +1950,8 @@ class ProcessVideoPipeline:
             trust_badge=self.trust_bands["ball"]["badge"],
             metrics={
                 "frame_count": len(payload.get("frames", [])),
+                "detection_stride": opts.ball_detection_stride,
+                "effective_stride": opts.ball_detection_stride,
                 "bounce_count": len(payload.get("bounces", [])),
                 "source_kind": source_kind,
                 "verified_full_ball_run": status == "ran",
@@ -2723,6 +2736,7 @@ class ProcessVideoPipeline:
                         detector_name=opts.remote_config.body_detector_name,
                         fov_name=opts.remote_config.body_fov_name,
                         tier2_body_joints_all_tracked=True,
+                        body_skeleton_stride=opts.body_skeleton_stride,
                         mesh_vertex_serialization_policy="tier1_only"
                         if opts.remote_config.sam3d_skip_tier2_mesh_vertices
                         else "all",
@@ -5230,6 +5244,8 @@ def _populate_body_postchain_summary_metrics(stage: dict[str, Any], clip_dir: Pa
     if not isinstance(metrics, dict):
         metrics = {}
         stage["metrics"] = metrics
+    cadence = _body_cadence_summary(clip_dir)
+    metrics.update(cadence)
     bypass = _body_postchain_bypass_summary(clip_dir)
     stages = list(bypass.get("stages", [])) if bypass else []
     metrics["postchain_bypassed_stages"] = stages
@@ -5275,6 +5291,30 @@ def _body_postchain_bypass_summary(clip_dir: Path) -> dict[str, Any] | None:
                 "raw_grounded_joints_sidecar": body_postchain.get("raw_grounded_joints_sidecar"),
             }
     return None
+
+
+def _body_cadence_summary(clip_dir: Path) -> dict[str, Any]:
+    payload = _read_optional_json(clip_dir / "body_compute_execution.json")
+    if not isinstance(payload, Mapping):
+        return {}
+    summary = payload.get("summary")
+    if not isinstance(summary, Mapping):
+        return {}
+    keys = (
+        "base_skeleton_stride",
+        "effective_stride",
+        "effective_player_stride",
+        "scheduled_frame_count",
+        "scheduled_player_frame_count",
+        "total_track_frame_count",
+        "total_track_player_frame_count",
+        "base_skeleton_frame_count",
+        "base_skeleton_player_frame_count",
+        "event_extra_frame_count",
+        "scheduled_vs_total_frame_count",
+        "scheduled_vs_total_player_frame_count",
+    )
+    return {key: summary[key] for key in keys if key in summary}
 
 
 def _xy_from_sequence(value: Any) -> tuple[float, float] | None:
@@ -5445,6 +5485,8 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
         "mesh.coverage_mode": options.mesh_coverage_mode,
         "mesh.byte_budget_mib": options.mesh_byte_budget_mib,
         "mesh.target_frame_budget": options.target_mesh_frame_budget,
+        "body.skeleton_stride": options.body_skeleton_stride,
+        "ball.detection_stride": options.ball_detection_stride,
         "body.detector_fov": detector_fov,
         "body.schedule": options.body_schedule,
         "paddle.fused_estimator": paddle_fused,
@@ -5475,6 +5517,8 @@ def best_stack_overrides_from_options(options: PipelineOptions) -> dict[str, Any
         "mesh.coverage_mode": BEST_STACK_MANIFEST.string_value("mesh.coverage_mode"),
         "mesh.byte_budget_mib": BEST_STACK_MANIFEST.number_value("mesh.byte_budget_mib"),
         "mesh.target_frame_budget": BEST_STACK_MANIFEST.value("mesh.target_frame_budget"),
+        "body.skeleton_stride": BEST_STACK_MANIFEST.value("body.skeleton_stride"),
+        "ball.detection_stride": BEST_STACK_MANIFEST.value("ball.detection_stride"),
         "body.detector_fov": BEST_STACK_MANIFEST.value("body.detector_fov"),
         "body.schedule": BEST_STACK_MANIFEST.string_value("body.schedule"),
         "paddle.fused_estimator": copy.deepcopy(BEST_STACK_MANIFEST.value("paddle.fused_estimator")),
@@ -5657,6 +5701,12 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         mesh_byte_budget_mib = None
     if mesh_byte_budget_mib is not None and mesh_byte_budget_mib <= 0.0:
         raise ValueError("--mesh-byte-budget-mib must be positive")
+    if args.body_skeleton_stride <= 0:
+        raise ValueError("--body-skeleton-stride must be positive")
+    if args.ball_detection_stride <= 0:
+        raise ValueError("--ball-detection-stride must be positive")
+    if args.ball_detection_stride != 1:
+        raise ValueError("--ball-detection-stride is pinned to 1 by the 2026-07-09 owner ruling")
 
     remote_config = RemoteConfig(
         host=args.remote_host,
@@ -5667,6 +5717,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         fast_sam_root=args.remote_fast_sam_root,
         lock_wait_timeout_s=args.remote_lock_wait_timeout_s,
         command_timeout_s=args.remote_command_timeout_s,
+        body_skeleton_stride=int(args.body_skeleton_stride),
         sam3d_body_input_size_px=args.sam3d_body_input_size_px,
         sam3d_crop_bucket_sizes=_parse_int_tuple(args.sam3d_crop_bucket_sizes, name="--sam3d-crop-bucket-sizes"),
         sam3d_torch_compile=not args.no_sam3d_torch_compile,
@@ -5737,6 +5788,8 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         mesh_coverage_mode=args.mesh_coverage_mode,
         target_mesh_frame_budget=target_mesh_frame_budget,
         mesh_byte_budget_mib=mesh_byte_budget_mib,
+        body_skeleton_stride=int(args.body_skeleton_stride),
+        ball_detection_stride=int(args.ball_detection_stride),
         ball_proximity_m=args.ball_proximity_m,
         high_confidence_swing_floor=args.high_confidence_swing_floor,
         events_selected=Path(args.events_selected).expanduser().resolve() if args.events_selected else None,
@@ -5915,6 +5968,24 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "Deep-mesh byte budget in MiB. The no-flag default is manifest-owned; explicit "
             "--target-mesh-frame-budget switches back to fixed-frame policy."
+        ),
+    )
+    parser.add_argument(
+        "--body-skeleton-stride",
+        type=int,
+        default=DEFAULT_BODY_SKELETON_STRIDE,
+        help=(
+            "Base BODY/SAM-3D skeleton cadence in source frames. The no-flag default is best_stack.json "
+            "body.skeleton_stride; ball-aware contact/mesh boosts are unioned on top of this base cadence."
+        ),
+    )
+    parser.add_argument(
+        "--ball-detection-stride",
+        type=int,
+        default=DEFAULT_BALL_DETECTION_STRIDE,
+        help=(
+            "BALL detection cadence in source frames. best_stack.json pins the no-flag value to 1 "
+            "(full-rate) per the 2026-07-09 owner ruling."
         ),
     )
     parser.add_argument(

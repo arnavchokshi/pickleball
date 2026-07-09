@@ -1643,6 +1643,44 @@ def test_body_summary_populates_postchain_bypassed_stages_from_phase_timing(tmp_
     assert body_stage["metrics"]["postchain_bypass_status"] == "postchain_bypassed"
 
 
+def test_body_summary_populates_cadence_metrics_from_body_compute_execution(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(
+        options.clip_dir / "body_compute_execution.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_compute_execution",
+            "mode": "adaptive_frame_compute_plan",
+            "fps": 60.0,
+            "scheduled_frames": [],
+            "skipped_frames": [],
+            "summary": {
+                "base_skeleton_stride": 2,
+                "effective_stride": 1.6,
+                "scheduled_frame_count": 5,
+                "scheduled_player_frame_count": 8,
+                "total_track_frame_count": 8,
+                "total_track_player_frame_count": 16,
+                "scheduled_vs_total_frame_count": {"scheduled": 5, "total": 8},
+                "scheduled_vs_total_player_frame_count": {"scheduled": 8, "total": 16},
+            },
+        },
+    )
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline.stage_outcomes.append(process_video.StageOutcome(stage="body", status="ran", wall_seconds=1.0))
+
+    summary = pipeline._write_summary(wall_seconds=1.0)
+
+    body_metrics = summary["stages"][0]["metrics"]
+    assert body_metrics["base_skeleton_stride"] == 2
+    assert body_metrics["effective_stride"] == 1.6
+    assert body_metrics["scheduled_vs_total_frame_count"] == {"scheduled": 5, "total": 8}
+    assert body_metrics["scheduled_vs_total_player_frame_count"] == {"scheduled": 8, "total": 16}
+
+
 def test_match_stats_stage_emits_body_court_only_consumer_artifact(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     video.write_bytes(b"fake-video")
@@ -2505,6 +2543,9 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     assert default_options.remote_config.body_world_joint_visual_smoothing is True
     assert default_options.remote_config.target_mesh_frame_budget is None
     assert default_options.remote_config.mesh_byte_budget_mib == 300.0
+    assert default_options.body_skeleton_stride == 2
+    assert default_options.remote_config.body_skeleton_stride == 2
+    assert default_options.ball_detection_stride == 1
 
     ball_aware_options = process_video.build_options_from_args(
         parser.parse_args(
@@ -2535,6 +2576,10 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
                 "--body-postchain",
                 "raw",
                 "--no-body-contact-splice",
+                "--body-skeleton-stride",
+                "3",
+                "--ball-detection-stride",
+                "1",
                 "--events-selected",
                 str(events_selected),
                 "--ball-track-arc-solved",
@@ -2564,6 +2609,9 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     assert ball_aware_options.remote_config.body_world_joint_visual_smoothing is False
     assert ball_aware_options.remote_config.target_mesh_frame_budget == 250
     assert ball_aware_options.remote_config.mesh_byte_budget_mib is None
+    assert ball_aware_options.body_skeleton_stride == 3
+    assert ball_aware_options.remote_config.body_skeleton_stride == 3
+    assert ball_aware_options.ball_detection_stride == 1
 
     no_cap_options = process_video.build_options_from_args(
         parser.parse_args(
@@ -3016,7 +3064,8 @@ def test_frames_stage_extracts_real_jpegs_from_tracked_frames(tmp_path: Path) ->
 
     assert outcome.status == "ran"
     assert outcome.metrics["frame_count"] == 1
-    assert outcome.metrics["schedule_source"] == "tracks_union"
+    assert outcome.metrics["schedule_source"] == "tracks_stride"
+    assert outcome.metrics["base_skeleton_stride"] == 2
     assert outcome.metrics["capped"] is False
     assert outcome.metrics["total_mb"] >= 0.0
     assert (options.clip_dir / "body_frames" / "frame_000000.jpg").is_file()

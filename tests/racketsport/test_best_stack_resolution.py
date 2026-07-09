@@ -121,6 +121,8 @@ def test_no_flag_invocation_resolves_wired_defaults_from_manifest(tmp_path: Path
     assert resolved["mesh.coverage_mode"] == manifest.string_value("mesh.coverage_mode")
     assert resolved["mesh.byte_budget_mib"] == manifest.number_value("mesh.byte_budget_mib")
     assert resolved["mesh.target_frame_budget"] == manifest.value("mesh.target_frame_budget")
+    assert resolved["body.skeleton_stride"] == manifest.value("body.skeleton_stride")
+    assert resolved["ball.detection_stride"] == manifest.value("ball.detection_stride")
     assert resolved["tracking.global_association_profile"] == manifest.string_value("tracking.global_association_profile")
     assert resolved["body.detector_fov"] == manifest.value("body.detector_fov")
     assert resolved["camera_motion.policy"] == manifest.value("camera_motion.policy")
@@ -128,6 +130,8 @@ def test_no_flag_invocation_resolves_wired_defaults_from_manifest(tmp_path: Path
     assert resolved["stats.match_stats_v0"] == manifest.value("stats.match_stats_v0")
     assert options.input_quality_mode == "advisory"
     assert options.match_stats is True
+    assert options.body_skeleton_stride == 2
+    assert options.ball_detection_stride == 1
     assert process_video.best_stack_overrides_from_options(options) == {}
 
 
@@ -159,6 +163,39 @@ def test_input_quality_and_stats_cli_flags_override_manifest_defaults(tmp_path: 
     assert overrides["input_quality.preflight"]["resolved"]["mode"] == "strict"
     assert overrides["stats.match_stats_v0"]["manifest"] == manifest.value("stats.match_stats_v0")
     assert overrides["stats.match_stats_v0"]["resolved"]["enabled"] is False
+
+
+def test_cadence_cli_flags_override_manifest_defaults(tmp_path: Path) -> None:
+    manifest = load_best_stack_manifest()
+    video = tmp_path / "clip.mp4"
+    parser = process_video.build_arg_parser()
+
+    options = process_video.build_options_from_args(
+        parser.parse_args(
+            [
+                "--video",
+                str(video),
+                "--out",
+                str(tmp_path / "run"),
+                "--body-skeleton-stride",
+                "3",
+                "--ball-detection-stride",
+                "1",
+            ]
+        )
+    )
+
+    resolved = process_video.resolved_best_stack_config_from_options(options)
+    overrides = process_video.best_stack_overrides_from_options(options)
+
+    assert resolved["body.skeleton_stride"] == 3
+    assert resolved["ball.detection_stride"] == 1
+    assert options.remote_config.body_skeleton_stride == 3
+    assert overrides["body.skeleton_stride"] == {
+        "manifest": manifest.value("body.skeleton_stride"),
+        "resolved": 3,
+    }
+    assert "ball.detection_stride" not in overrides
 
 
 def test_clip_keyed_association_no_flag_resolves_manifest_default(tmp_path: Path) -> None:

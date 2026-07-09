@@ -47,10 +47,19 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 try:
-    from threed.racketsport.best_stack import body_detector_fov_defaults  # noqa: E402
+    from threed.racketsport.best_stack import body_detector_fov_defaults, load_best_stack_manifest  # noqa: E402
 except ModuleNotFoundError:  # pragma: no cover - standalone version-stamp fixtures copy only this script.
     def body_detector_fov_defaults() -> tuple[str, str]:
         return "", ""
+
+    def load_best_stack_manifest():  # type: ignore[no-untyped-def]
+        class _StandaloneManifest:
+            def value(self, key: str) -> int:
+                if key == "body.skeleton_stride":
+                    return 2
+                raise KeyError(key)
+
+        return _StandaloneManifest()
 
 
 # All default remote paths are rooted under one canonical remote home
@@ -75,6 +84,7 @@ DEFAULT_REMOTE_FAST_SAM_PYTHON = f"{DEFAULT_REMOTE_HOME}/body_runtime/body_venv/
 DEFAULT_REMOTE_FAST_SAM_ROOT = f"{DEFAULT_REMOTE_HOME}/body_runtime/Fast-SAM-3D-Body"
 DEFAULT_GPU_LOCK_SCRIPT = "scripts/gpu-eval-run.sh"
 DEFAULT_BODY_DETECTOR_NAME, DEFAULT_BODY_FOV_NAME = body_detector_fov_defaults()
+DEFAULT_BODY_SKELETON_STRIDE = int(load_best_stack_manifest().value("body.skeleton_stride"))
 DEFAULT_SSH_CONNECT_TIMEOUT_S = 12
 DEFAULT_LOCK_WAIT_TIMEOUT_S = 60
 # Overall wall-clock budget for the remote BODY command itself (model loads +
@@ -240,6 +250,7 @@ class RemoteConfig:
     # BODY detector/FOV selection is manifest-owned; empty string means disabled.
     body_detector_name: str = DEFAULT_BODY_DETECTOR_NAME
     body_fov_name: str = DEFAULT_BODY_FOV_NAME
+    body_skeleton_stride: int = DEFAULT_BODY_SKELETON_STRIDE
     sam3d_body_input_size_px: int = 384
     sam3d_crop_bucket_sizes: tuple[int, ...] = (8, 16)
     sam3d_crop_padding_scale: float = 1.0
@@ -1369,6 +1380,7 @@ def build_phase_d_sam3d_dispatch_config(config: RemoteConfig) -> dict[str, Any]:
         "body_stage": {
             "skeleton_source": "sam3d_body_joints",
             "tier2_body_joints_all_tracked": True,
+            "body_skeleton_stride": int(config.body_skeleton_stride),
             "tier1_mesh_policy": "ball_aware_100",
             "legacy_pose_path": "removed_from_remote_sam3d_dispatch",
         },
@@ -1589,6 +1601,7 @@ summary = run_pipeline(
             detector_name={config.body_detector_name!r},
             fov_name={config.body_fov_name!r},
             tier2_body_joints_all_tracked=True,
+            body_skeleton_stride={int(config.body_skeleton_stride)!r},
             mesh_vertex_serialization_policy={'tier1_only' if config.sam3d_skip_tier2_mesh_vertices else 'all'!r},
             write_body_monoliths={bool(config.fetch_body_monoliths)!r},
             sam3d_body_input_size_px={int(config.sam3d_body_input_size_px)!r},
@@ -2405,6 +2418,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--video", type=Path)
     parser.add_argument("--body-frames-dir", type=Path, default=None)
+    parser.add_argument("--body-skeleton-stride", type=int, default=DEFAULT_BODY_SKELETON_STRIDE)
     parser.add_argument("--camera-motion", type=Path, default=None, help="Optional camera_motion.json to sync as camera_motion.json in the remote BODY working dir.")
     parser.add_argument("--host", default="")
     parser.add_argument("--ssh-key", default=DEFAULT_SSH_KEY)
@@ -2527,6 +2541,8 @@ def main(argv: list[str] | None = None) -> int:
 
     body_postchain_raw = args.body_postchain == "raw"
     target_mesh_frame_budget = None if args.target_mesh_frame_budget == 0 else args.target_mesh_frame_budget
+    if args.body_skeleton_stride <= 0:
+        parser.error("--body-skeleton-stride must be positive")
     if args.mesh_byte_budget_mib is not None and args.mesh_byte_budget_mib <= 0.0:
         parser.error("--mesh-byte-budget-mib must be positive")
     config = RemoteConfig(
@@ -2542,6 +2558,7 @@ def main(argv: list[str] | None = None) -> int:
         transport_chunked_fallback_enabled=not args.no_transport_chunked_fallback,
         transport_chunked_fallback_chunk_bytes=max(1, int(args.transport_chunked_fallback_size_mb)) * 1024 * 1024,
         transport_chunked_fallback_bwlimit_kbps=max(1, int(args.transport_chunked_fallback_bwlimit_kbps)),
+        body_skeleton_stride=int(args.body_skeleton_stride),
         sam3d_body_input_size_px=args.sam3d_body_input_size_px,
         sam3d_crop_bucket_sizes=_parse_int_tuple(args.sam3d_crop_bucket_sizes, flag_name="--sam3d-crop-bucket-sizes"),
         sam3d_crop_padding_scale=args.sam3d_crop_padding_scale,
