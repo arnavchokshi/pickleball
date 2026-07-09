@@ -1,6 +1,12 @@
 # OWNER CHECK-IN — 2026-07-09 (WAVE 7 BOOT)
 
-⭐ **HEADLINE:** Wave 7 is live on the refreshed North Star. Paddle wiring (P3-1) resumed to finish
+⭐ **MORNING HEADLINE (wave 7 CLOSED overnight):** your labels moved the ball +15.5% (curve still
+climbing — keep labeling); the 262mm body mystery died as two measurement bugs (real fidelity ~23mm);
+paddle/ghost-meshes/stride-2/input-gate/stats all wired as defaults; final suite 3315/0 green; GPU
+~$10-17. ONE ASK TO UNBLOCK THE LAST ITEM: run `gcloud auth login` (STOP block below) and I fire the
+parked speed gate. Wave-8 prompt is staged.
+
+⭐ **(original boot headline)**  Wave 7 is live on the refreshed North Star. Paddle wiring (P3-1) resumed to finish
 its final census; the BALL seed retrain on your 1,121 labeled rows (the 1k-checkpoint gate) is this
 wave's critical-path lane. No typed STOPs at boot — PART 0 verified (biometric-consent item stays
 non-blocking until we persist a non-owner profile, which wave 7 does not do).

@@ -1,9 +1,10 @@
 # WAVE 8 BOOT PROMPT (drafted at wave-7 close 2026-07-09; finalize any [PENDING-CLOSE] before dispatch)
 
 Boot ritual: CLAUDE.md read order + VI.8 owner-time queue + fleet-spend-vs-ask table BEFORE dispatch.
-Fleet template: prefer `pickleball-fleet-snap-20260709-w7close` IF the parked speed-gate errand cut it
-([PENDING-CLOSE] — else w6close + scp the 2 manifest-pinned artifacts FIRST: waveb calibration_curves.json
-+ court_model_v2.pt, the 2x-confirmed gap). Watchdog: adapt w7_watchdog.sh (auth-down guard now built in);
+Fleet template: the speed gate did NOT run at w7 close (parked on the reauth STOP) — boot from
+`pickleball-fleet-snap-20260708-w6close` + scp the 2 manifest-pinned artifacts FIRST (waveb
+calibration_curves.json + court_model_v2.pt, the 2x-confirmed gap); the speed-gate errand cuts the
+w7close template when it runs. Watchdog: adapt w7_watchdog.sh (auth-down guard now built in);
 class-G epoch marker = .w8_export_epoch (create at boot).
 
 ## Carried items (dispatch-ready, in priority order)
@@ -34,8 +35,7 @@ class-G epoch marker = .w8_export_epoch (create at boot).
 
 ## Standing discipline (unchanged)
 Held-out shot ONLY via checkpoint gates + uniform audit stratum + seen/unseen ledger + pre-registered row +
-owner go. VERIFIED=0 until a documented gate passes. Best-stack doctrine (manifest rev-9 [PENDING-CLOSE —
-confirm closedocs landed rev-9 w/ ball PENDING naming]); BEST-STACK DELTA in every lane. Subagents never on
+owner go. VERIFIED=0 until a documented gate passes. Best-stack doctrine (manifest rev-9 CONFIRMED, ball PENDING = A_seed_official_aug w/ named gate); BEST-STACK DELTA in every lane. Subagents never on
 Fable. <=$5/GPU/hr, <=4 concurrent, DELETE on lane end. One adversarial verify per gate-adjacent repair round;
 verifier harness UNMODIFIED. Acceptance through process_video. `;` not `&&` after git adds touching runs/.
 Codex lanes each in their OWN run_in_background call. Owner rulings of 2026-07-09 (ghost meshes, 60fps+stride-2,
