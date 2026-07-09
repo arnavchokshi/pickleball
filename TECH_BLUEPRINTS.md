@@ -786,6 +786,22 @@ nonzero leakage → STOP, quarantine the batch, surface to manager.
 
 ## PILLAR: BALL 2D — detection/tracking from 0.6969 to the M1 bar (F1@20>=0.90, recall>=0.75, hidden-FP<=0.05)
 
+**[WAVE-7 CORRECTION 2026-07-09 — 1k checkpoint + aug ruling]:** the 1k-checkpoint card is real
+internal-val evidence, not a promotion. `A_seed_official_aug` (checkpoint md5
+cfda3c423e1f93c0db42f20e32bdae9e) is the leading PENDING candidate after adversarial verify and the
+completion errand: 1121-row card A = 0.6152 F1 / 0.2506 hFP, C = 0.6121 / 0.2597, control =
+0.3611 / 0.5991; 486->1121 is +15.5% relative pooled F1, so the label curve has not plateaued
+(`runs/lanes/w7_ballretrain_20260709/REPORT.md`; `runs/lanes/w7_ballscore_verify_20260709/report.json`;
+BUILD_CHECKLIST `[W7 BALLRETRAIN 1K-CHECKPOINT LANDED 2026-07-09]`, `[W7 BALLSCORE VERIFY 2026-07-09]`).
+R2d aug attribution is now ruled: D no-aug has higher F1 but much worse hFP, so occlusion aug is the
+hFP mitigation, not the hFP cause; keep it in the standing recipe (`runs/lanes/w7_ballcomplete_20260709/REPORT.md`;
+BUILD_CHECKLIST `[W7 BALLCOMPLETE PARTIAL-VALID 2026-07-09]`). The harness caveat is binding:
+current LoSO is leave-one-CLIP-out, not true per-source grouped LoSO; add grouped folds alongside
+before future rewrites, never retroactively. W6-session `visibility_level` is uninformative/default-clear
+noise, so those rows are box-position-only supervision and MUST NOT drive WBCE weights, eval slices, or
+stats (`runs/lanes/w7_ballingest2_20260709/report.json`; BUILD_CHECKLIST
+`[W7 OWNER RULINGS INGESTED (label-session notes) 2026-07-09]`).**
+
 **[WAVE-4 RECONCILIATION 2026-07-07 — these supersede conflicting lines below]:** STEP-3 build gap
 CLOSED: `train_ball_stage2.py` implements sparse-review semantics (486 reviewed rows = 268 positives
 + 218 reviewed-absent), occlusion augmentation paired with WBCE, SST manifests, and disagreement CLIs;
@@ -1404,6 +1420,27 @@ NEVER emit an officiating-grade boolean. No new gate beyond "gray-zone present a
   data → the real unlock for beating the held-out BALL bar (Roboflow alone proven insufficient).
 
 ## PILLAR: BODY — raw-noise kill (latent smoothing), camera motion, far players, GT, challenger protocol
+
+**[WAVE-7 CORRECTION 2026-07-09 — P2-2 measurement class, not model promotion]:** the old GATE-1b
+262mm story is now split into production wiring, harness wiring, and true residual. Production
+`pred_cam_t` exactly-once landed and adversarial skip/double-apply mutations fail; the canonical
+harness now passes `pred_cam_t`, preserves thresholds, and fail-closes with `status=blocked_missing_pred_cam_t`
+when raw index/camera translation is absent (`runs/lanes/w7_p22checklist_20260709/report_r2.json`;
+`runs/lanes/w7_p22_verify_20260709/report.json`; `runs/lanes/w7_gatecheckfix2_20260709/report_r2.json`;
+BUILD_CHECKLIST `[W7 P22 ADVERSARIAL VERIFY 2026-07-09]`, `[W7 GATECHECKFIX2 COMPLETE 2026-07-09]`).
+The GPU measurement says canonical GATE-1b remains 262.348mm worst-joint / 53.50mm mesh-skel p95,
+but raw `pred_keypoints_3d` grounded WITH cam_t matches persisted `joints_world` at p95 23.4mm /
+max 26.7mm; `pred_joint_coords` is not a drop-in (p95 328.7mm NN). Treat this as a measurement/ceiling
+class until the fixed-harness live remeasurement runs; do not wire lambda_foot, latent smoother, or
+latent-interp playback (`runs/lanes/w7_p22gate_20260709/arm_c_field_quant_report.json`;
+`runs/lanes/w7_p22gate_20260709/gate1b_raw_arm_report.json`; BUILD_CHECKLIST
+`[W7 P22 GPU MEASUREMENT DECISIVE 2026-07-09]`). The synthetic-gate CPU instrument was repaired, but
+`--decoder sam3d` is still an honest unwired adapter (`runs/lanes/w7_p22checklist_20260709/report_r3.json`).
+P2-4 masklet-conditioning produced NO candidate result: permissions blocked executing/installing
+`gaomingqi/sam-body4d`; the only banked number is a 307.179s H100 BODY baseline, and the cheap re-attempt
+shape is masklets-only A/B through `mask_prompt_mode=manifest`, with explicit third-party execution grant
+and HF SAM3 access check first (`runs/lanes/w7_masklet_20260709/REPORT.md`; BUILD_CHECKLIST
+`[W7 P2-4 MASKLET NO-ATTEMPT 2026-07-09]`).**
 
 **[WAVE-4 RECONCILIATION 2026-07-07 — supersede conflicting lines below where more recent]:**
 camera-motion probe-context bug is RESOLVED BY FRESH PROOF: explicit decode-orientation policy and
@@ -3025,6 +3062,17 @@ schema is frozen.
   lanes without owner input, but ships UNVERIFIED until these gates pass.
 
 ## PILLAR: SPEED + QA + PRODUCTION — <=2x duration SLA, auto-QA, durable service, consent/privacy
+
+**[WAVE-7 CORRECTION 2026-07-09 — cadence wired, speed headline still gate-unscored]:** owner
+stride-2 BODY cadence is now manifest law: `body.skeleton_stride=2` gives a 30Hz effective base
+skeleton cadence for 60fps capture; `ball.detection_stride=1` pins BALL full-rate; contact/event-dense
+mesh boosts union with the base stride and are not replaced by it (`runs/lanes/w7_cadence_20260709/report.json`;
+BUILD_CHECKLIST `[W7 CADENCE PASS 2026-07-09]`). This is wiring, not a speed or accuracy promotion.
+The P5-1 speed headline is still gate-unscored: the clean speed-gate run must score Wolverine E2E
+against the <=400s / 400-500s-with-BODY-floor rule on the current promoted stack, now including
+stride-2, input-quality preflight, match_stats, paddle default, and ghost-mesh defaults. Do not quote
+the older 3.8x headline as product truth. Speed-gate execution remains parked until gcloud auth/reauth
+is available if the challenge fires; meanwhile non-GPU docs and manifest reconciliation may proceed.**
 
 > Author: deep-design agent, 2026-07-07. Audience: the successor manager. Every step is pre-ruled; where
 > a real blocker exists it is marked **typed STOP: <bucket>**. VERIFIED=0 across this pillar today — do not

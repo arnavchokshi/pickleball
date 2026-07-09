@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 8,
+  "revision": 9,
   "updated": "2026-07-09",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
@@ -597,29 +597,41 @@
     },
     "ball.seed_official_checkpoint": {
       "stage": "ball",
-      "selection": "official seed checkpoint candidate",
+      "selection": "A_seed_official_aug checkpoint candidate",
       "value": {
-        "kind": "unresolved_checkpoint",
-        "label": "seed_official"
+        "kind": "local_path",
+        "path": "runs/lanes/w7_ballretrain_20260709/vm_pull/arm3_finetunes/A_seed_official_aug/checkpoints/latest.pt",
+        "label": "A_seed_official_aug",
+        "md5": "cfda3c423e1f93c0db42f20e32bdae9e"
       },
       "status": "PENDING",
       "gate": {
-        "name": "heldout_loso_beats_zero_shot_anchor_plus_owner_go",
-        "metric_key": "ball_loso_anchor_f1",
-        "bar": ">0.7248 and explicit owner go",
-        "evidence_path": "runs/lanes/w6_labelingest_20260708/gpu_rescore/loso/"
+        "name": "pre_registered_heldout_eval_ledger_row_plus_owner_go",
+        "metric_key": "heldout_label_f1_at_20px_visible_recall_hidden_fp",
+        "bar": "pre-registered heldout_eval_ledger row + owner go; interim bar beats 0.7248 F1@20 held-out, recall >= 0.70, hidden-FP <= 0.05",
+        "evidence_path": "runs/manager/heldout_eval_ledger.md"
       },
       "provenance": {
-        "lane": "beststack_core_20260708",
-        "commit": "865c8d9f5",
-        "date": "2026-07-08",
+        "lane": "w7_closedocs_20260709",
+        "commit": "worktree",
+        "date": "2026-07-09",
         "evidence_paths": [
-          "runs/lanes/beststack_core_20260708/audit_result_full.json",
-          "runs/lanes/w6_labelingest_20260708/gpu_rescore/loso/"
+          "BUILD_CHECKLIST.md#[W7 BALLRETRAIN 1K-CHECKPOINT LANDED 2026-07-09]",
+          "BUILD_CHECKLIST.md#[W7 BALLSCORE VERIFY 2026-07-09]",
+          "BUILD_CHECKLIST.md#[W7 BALLCOMPLETE PARTIAL-VALID 2026-07-09]",
+          "runs/lanes/w7_ballretrain_20260709/REPORT.md",
+          "runs/lanes/w7_ballcomplete_20260709/REPORT.md",
+          "runs/lanes/w7_ballretrain_20260709/md5_manifest.txt"
         ]
       },
-      "proven_against": null,
-      "notes": "Pre-registered only; ball default checkpoint value stays the raw WASB zero-shot anchor."
+      "proven_against": {
+        "internal_val_rows": 1121,
+        "pooled_micro_label_f1_at_20px": 0.615172,
+        "pooled_micro_hidden_false_positive_rate": 0.250569,
+        "pooled_micro_visible_recall_at_20px": 0.653959,
+        "checkpoint_md5": "cfda3c423e1f93c0db42f20e32bdae9e"
+      },
+      "notes": "Pending candidate only: A_seed_official_aug is the wave-7 leading internal-val candidate, not the default and not VERIFIED. It beat the 1k-checkpoint internal-val control/card but still needs the pre-registered held-out ledger row plus owner go before replacing ball.wasb_checkpoint."
     },
     "ball.stage1_official_checkpoint": {
       "stage": "ball",

@@ -17,7 +17,7 @@ def test_best_stack_manifest_integrity() -> None:
     manifest = load_best_stack_manifest()
 
     assert manifest.schema_version == 1
-    assert manifest.revision == 8
+    assert manifest.revision == 9
     assert "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim" in manifest.invariants
     assert len(manifest.entries) >= 30
 
@@ -91,6 +91,12 @@ def test_best_stack_manifest_integrity() -> None:
     assert manifest.entry("cadence.future_stage_pattern").status == "WIRED_DEFAULT"
     assert manifest.entry("cadence.future_stage_pattern").value["default_source"] == "best_stack.json"
     assert "loso_report.json" in manifest.entry("ball.wasb_checkpoint").notes
+    ball_pending = manifest.entry("ball.seed_official_checkpoint")
+    assert ball_pending.status == "PENDING"
+    assert ball_pending.value["label"] == "A_seed_official_aug"
+    assert ball_pending.value["md5"] == "cfda3c423e1f93c0db42f20e32bdae9e"
+    assert ball_pending.gate["name"] == "pre_registered_heldout_eval_ledger_row_plus_owner_go"
+    assert "recall >= 0.70" in ball_pending.gate["bar"]
     eval_profiles = manifest.entry("tracking.eval_only_association_profiles")
     assert eval_profiles.status == "DORMANT"
     assert eval_profiles.value["no_flag_profile"] == "tracking.global_association_profile"
