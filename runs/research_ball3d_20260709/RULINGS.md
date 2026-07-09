@@ -40,3 +40,14 @@ w/ per-court-point confidence+spread; player court positions (feet units, their 
 BENCHMARK NOW CONCRETE: need the source clip identity from the owner -> run ours on the identical
 clip -> 3-pillar protocol + Bland-Altman. Owner also reports labels ~3k => 3k checkpoint gate fires
 next ball lane (train on new corpus revision; visibility ruling for w6+ sessions stands).
+
+## ADDENDUM 2 (2026-07-09, head-to-head EXECUTED — runs/lanes/w7_pbv_compare_20260709/COMPARISON.md)
+Alignment solid (r=0.949, ±1 frame). DECISIVE FACTS: our 2D coverage 80.6% vs PB 58.7% (overlap
+agreement 5.7px p50); cameras agree 2.7cm/0.27deg (court solve NOT the differentiator); PB emits NO
+3D on 31% of rally frames (fail-closed omission, interpolated flag used sparingly 0.58%) while we
+emitted fallback garbage on ~88-91% — THE visible gap is emission POLICY; bounce landing pseudo-GT:
+PB 0.22m vs ours 0.27m mean (n=2, comparable class). Open: 4.65m median 3D disagreement on the one
+comparable well-fit segment — needs independent GT (gold capture), neither system is truth.
+RULING CONFIRMED+STRENGTHENED: ship fail-closed omission + UKF fallback first (= instant PB-look
+parity mechanism), then TT3D joint-anchor search to monetize our HIGHER 2D coverage. PB comparator
+data + protocol now reusable for every future ball-3D change on this clip.
