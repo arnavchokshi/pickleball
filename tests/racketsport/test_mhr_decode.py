@@ -63,6 +63,45 @@ def test_gate_1b_world_round_trip_pure_python_distance_math() -> None:
     assert result_bad["joints_world"]["max_abs_error_mm"] == pytest.approx(2.0, abs=1e-6)
 
 
+def test_ground_decoded_camera_frame_applies_pred_cam_t_exactly_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    from threed.racketsport import worldhmr
+
+    captured: list[dict] = []
+
+    def fake_ground(sample: dict, *, calibration: object, camera_motion: object | None) -> dict:
+        captured.append(sample)
+        return sample
+
+    monkeypatch.setattr(worldhmr, "_ground_fast_sam_sample", fake_ground)
+
+    mhr_decode.ground_decoded_camera_frame(
+        joints_camera=[[1.0, 2.0, 3.0]],
+        vertices_camera=[[4.0, 5.0, 6.0]],
+        pred_cam_t=[0.25, -0.5, 1.0],
+        track_world_xy=[10.0, 20.0],
+        t=0.0,
+        frame_idx=1,
+        player_id=2,
+        calibration=object(),
+    )
+    assert captured[-1]["joints_camera"] == [[1.25, 1.5, 4.0]]
+    assert captured[-1]["vertices_camera"] == [[4.25, 4.5, 7.0]]
+
+    mhr_decode.ground_decoded_camera_frame(
+        joints_camera=[[1.25, 1.5, 4.0]],
+        vertices_camera=[[4.25, 4.5, 7.0]],
+        pred_cam_t=[0.25, -0.5, 1.0],
+        pred_cam_t_already_applied=True,
+        track_world_xy=[10.0, 20.0],
+        t=0.0,
+        frame_idx=1,
+        player_id=2,
+        calibration=object(),
+    )
+    assert captured[-1]["joints_camera"] == [[1.25, 1.5, 4.0]]
+    assert captured[-1]["vertices_camera"] == [[4.25, 4.5, 7.0]]
+
+
 # ---------------------------------------------------------------------------
 # Full-runtime tests (torch + roma + sam_3d_body): skip cleanly where that
 # stack is absent (the Mac CPU dev venv); real evidence for these comes from

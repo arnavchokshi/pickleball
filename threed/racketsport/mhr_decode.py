@@ -506,6 +506,8 @@ def ground_decoded_camera_frame(
     *,
     joints_camera: Any,
     vertices_camera: Any,
+    pred_cam_t: Sequence[float] | None = None,
+    pred_cam_t_already_applied: bool = False,
     track_world_xy: Sequence[float],
     t: float,
     frame_idx: int,
@@ -523,16 +525,50 @@ def ground_decoded_camera_frame(
     """
     from . import worldhmr  # local import: worldhmr pulls in the full schema/pose stack
 
+    joints_with_translation = apply_pred_cam_t_once(
+        joints_camera,
+        pred_cam_t=pred_cam_t,
+        already_applied=pred_cam_t_already_applied,
+    )
+    vertices_with_translation = apply_pred_cam_t_once(
+        vertices_camera,
+        pred_cam_t=pred_cam_t,
+        already_applied=pred_cam_t_already_applied,
+    )
     sample = {
         "frame_idx": int(frame_idx),
         "player_id": int(player_id),
         "t": float(t),
         "confidence": float(confidence),
         "track_world_xy": [float(track_world_xy[0]), float(track_world_xy[1])],
-        "joints_camera": [[float(v) for v in point] for point in joints_camera],
-        "vertices_camera": [[float(v) for v in point] for point in vertices_camera] if vertices_camera is not None else [],
+        "joints_camera": joints_with_translation,
+        "vertices_camera": vertices_with_translation,
     }
     return worldhmr._ground_fast_sam_sample(sample, calibration=calibration, camera_motion=None)
+
+
+def apply_pred_cam_t_once(
+    points_camera: Any,
+    *,
+    pred_cam_t: Sequence[float] | None = None,
+    already_applied: bool = False,
+) -> list[list[float]]:
+    """Apply SAM-3D-Body pred_cam_t to camera-space points exactly once.
+
+    MHR conversion.py treats pred_vertices and pred_cam_t as separate meter-space
+    terms before conversion into MHR centimeters. This helper keeps that policy
+    explicit for harnesses that reconstruct camera-space points from raw model
+    outputs while allowing callers to mark already-translated sidecars.
+    """
+    if points_camera is None:
+        return []
+    points = [[float(v) for v in point] for point in points_camera]
+    if pred_cam_t is None or already_applied:
+        return points
+    if len(pred_cam_t) != 3:
+        raise ValueError("pred_cam_t must be a 3-vector")
+    cam = [float(pred_cam_t[idx]) for idx in range(3)]
+    return [[point[idx] + cam[idx] for idx in range(3)] for point in points]
 
 
 def gate_1b_world_round_trip(
@@ -602,6 +638,7 @@ __all__ = [
     "round_trip_global_orient_error_deg",
     "gate_1a_euler_round_trip",
     "MHRDecoder",
+    "apply_pred_cam_t_once",
     "ground_decoded_camera_frame",
     "gate_1b_world_round_trip",
 ]
