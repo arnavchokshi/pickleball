@@ -7,6 +7,15 @@ calibration_curves.json + court_model_v2.pt, the 2x-confirmed gap); the speed-ga
 w7close template when it runs. Watchdog: adapt w7_watchdog.sh (auth-down guard now built in);
 class-G epoch marker = .w8_export_epoch (create at boot).
 
+## OWNER RULINGS 2026-07-09 morning (bind wave-8 — full text in BUILD_CHECKLIST [OWNER RULINGS 2026-07-09 ~09:4x])
+- MESH FULL-RATE + CONTACT SLO-MO: full 30fps mesh playback (no byte-budget frame exclusion; uncap/raise
+  default) + automatic ~2x predicted-mesh slo-mo around contact windows (banded, render-interp first,
+  latent-interp stays off). Storage/runtime NOT constraints for now; dedicated efficiency wave later.
+  This is wave-8 queue item #2 (lane pair: pipeline mesh scheduling/budget + viewer slo-mo playback).
+- Speed bars = INFORMATIONAL until the efficiency wave (measure + report, never gate features on them).
+- Broad try-things grant (prose): masklet re-attempt authorized; if the third-party-exec classifier guard
+  fires, surface the exact settings.json one-liner instead of retrying.
+
 ## Carried items (dispatch-ready, in priority order)
 1. **P5-1 SPEED GATE (if not run at w7 close):** spec READY at runs/lanes/w7_speedgate_20260709/spec.md —
    parked on the gcloud reauth STOP of 2026-07-09 ~05:50. Fire it FIRST once auth is live. It carries the
