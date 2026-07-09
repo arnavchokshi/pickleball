@@ -2,10 +2,16 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import App, { manifestUrlFromSearch } from "./App";
 import { getAccessToken, logout as apiLogout, setAccessToken, type AuthApiOptions } from "./authApi";
+import { replayVerifyDevBypassFromRuntime } from "./devAuthBypass";
 import { LibraryScreen } from "./LibraryScreen";
 import { SignInScreen } from "./SignInScreen";
 
 export type Screen = "signin" | "library" | "viewer";
+
+function explicitManifestUrlFromSearch(search: string): string | null {
+  const url = new URLSearchParams(search).get("manifest");
+  return url && url.trim() ? url : null;
+}
 
 /**
  * Pure screen resolver (no react-router): "signin" if there is no in-memory
@@ -18,8 +24,11 @@ export type Screen = "signin" | "library" | "viewer";
  * (confirmed: the existing App.test.tsx never renders `<App/>` either, only
  * its exported pure helpers).
  */
-export function resolveScreen(hasAccessToken: boolean, search: string): Screen {
-  if (!hasAccessToken) return "signin";
+export function resolveScreen(hasAccessToken: boolean, search: string, replayVerifyDevBypass = false): Screen {
+  if (!hasAccessToken) {
+    if (replayVerifyDevBypass && explicitManifestUrlFromSearch(search)) return "viewer";
+    return "signin";
+  }
   if (manifestUrlFromSearch(search)) return "viewer";
   if (new URLSearchParams(search).get("clip") !== null) return "viewer";
   return "library";
@@ -57,7 +66,7 @@ export function AppShell({ fetchImpl, baseUrl }: AppShellProps) {
     }
   }, []);
 
-  const screen = resolveScreen(hasToken, search);
+  const screen = resolveScreen(hasToken, search, replayVerifyDevBypassFromRuntime());
 
   if (screen === "signin") {
     return <SignInScreen onAuthed={handleAuthed} fetchImpl={fetchImpl} baseUrl={baseUrl} />;

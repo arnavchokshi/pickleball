@@ -23,12 +23,13 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import socket
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB_REPLAY_DIR = ROOT / "web" / "replay"
@@ -51,6 +52,23 @@ def viewer_url_for_manifest(manifest_path: Path | str | None, *, port: int = DEV
     path = _require_manifest_path(manifest_path)
     suffix = f"&view={view}" if view else ""
     return f"http://{DEV_SERVER_HOST}:{port}/?manifest=/@fs{path}{suffix}"
+
+
+def dev_auth_bypass_requested(*, flag: bool = False, env: Mapping[str, str] | None = None) -> bool:
+    resolved_env = os.environ if env is None else env
+    return flag or resolved_env.get("REPLAY_VERIFY_DEV_BYPASS", "").strip() == "1"
+
+
+def dev_server_env_with_replay_verify_bypass(
+    base_env: Mapping[str, str] | None = None,
+    *,
+    requested: bool,
+) -> dict[str, str]:
+    env = dict(os.environ if base_env is None else base_env)
+    if requested:
+        env["REPLAY_VERIFY_DEV_BYPASS"] = "1"
+        env["VITE_REPLAY_VERIFY_DEV_BYPASS"] = "1"
+    return env
 
 
 def assert_non_empty_entity_counts(loaded_counts: dict[str, Any], *, allow_empty: bool = False) -> None:
@@ -254,6 +272,7 @@ def verify_viewer_loads(
     port: int = DEV_SERVER_PORT,
     screenshot_at_seconds: Sequence[float] = (),
     view: str | None = None,
+    dev_auth_bypass: bool = False,
 ) -> dict[str, Any]:
     manifest_path = _require_manifest_path(manifest_path)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -268,6 +287,7 @@ def verify_viewer_loads(
     out_dir.mkdir(parents=True, exist_ok=True)
     started_server = False
     dev_process: subprocess.Popen | None = None
+    dev_auth_bypass_active = dev_auth_bypass_requested(flag=dev_auth_bypass)
     if not _port_open(DEV_SERVER_HOST, port):
         dev_process = subprocess.Popen(
             ["npm", "run", "dev", "--", "--host", DEV_SERVER_HOST, "--port", str(port)],
@@ -275,6 +295,7 @@ def verify_viewer_loads(
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            env=dev_server_env_with_replay_verify_bypass(requested=dev_auth_bypass_active),
         )
         started_server = True
         if not _wait_for_port(DEV_SERVER_HOST, port, timeout_s=timeout_s):
@@ -294,6 +315,16 @@ def verify_viewer_loads(
     ball_honesty_hud: dict[str, Any] | None = None
     url = viewer_url_for_manifest(manifest_path, port=port, view=view)
     solver_status, kill_reasons = read_ball_arc_solver_status(manifest_path)
+    if dev_auth_bypass_active:
+        notes.append(
+            "requested replay verifier dev auth bypass; the web app still requires "
+            "VITE_REPLAY_VERIFY_DEV_BYPASS=1, a localhost origin, and Vite non-production mode"
+        )
+        if not started_server:
+            notes.append(
+                "reused an existing Vite server; it must already have been started with "
+                "VITE_REPLAY_VERIFY_DEV_BYPASS=1 for the bypass to be available"
+            )
 
     try:
         with sync_playwright() as p:
@@ -369,6 +400,7 @@ def verify_viewer_loads(
         "ball_arc_solver_kill_reasons": list(kill_reasons),
         "ball_honesty_hud": ball_honesty_hud,
         "view": view or "world",
+        "dev_auth_bypass_requested": dev_auth_bypass_active,
     }
     write_headless_verify_report(out_dir, result)
     return result
@@ -384,6 +416,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-empty", action="store_true", help="Allow a manifest that intentionally renders zero viewer entities.")
     parser.add_argument("--view", choices=["world", "courtmap"], default=None, help="Open a dedicated viewer mode such as ?view=courtmap.")
     parser.add_argument(
+        "--dev-auth-bypass",
+        action="store_true",
+        help=(
+            "Local verifier only: start the Vite dev server with REPLAY_VERIFY_DEV_BYPASS=1 "
+            "and VITE_REPLAY_VERIFY_DEV_BYPASS=1. Equivalent env: REPLAY_VERIFY_DEV_BYPASS=1. "
+            "The web app still refuses this bypass unless the origin is localhost and Vite mode is non-production."
+        ),
+    )
+    parser.add_argument(
         "--screenshot-at-seconds",
         type=float,
         action="append",
@@ -398,6 +439,7 @@ def main(argv: list[str] | None = None) -> int:
         port=args.port,
         screenshot_at_seconds=args.screenshot_at_seconds,
         view=args.view,
+        dev_auth_bypass=args.dev_auth_bypass,
     )
     print(json.dumps(result, indent=2))
     return 0 if result["ok"] else 1

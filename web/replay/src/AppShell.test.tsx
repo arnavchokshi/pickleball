@@ -16,6 +16,12 @@ describe("resolveScreen", () => {
     expect(resolveScreen(false, "?clip=clip_1")).toBe("signin");
   });
 
+  it("routes a manifest deep link to the viewer when the verifier dev bypass is allowed", () => {
+    expect(resolveScreen(false, "?manifest=/@fs/tmp/replay_viewer_manifest.json", true)).toBe("viewer");
+    expect(resolveScreen(false, "?clip=clip_1", true)).toBe("signin");
+    expect(resolveScreen(false, "", true)).toBe("signin");
+  });
+
   it("routes to library when authed with no manifest/clip param", () => {
     expect(resolveScreen(true, "")).toBe("library");
     expect(resolveScreen(true, "?coaching=1")).toBe("library");

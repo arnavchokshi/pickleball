@@ -5,6 +5,8 @@ import pytest
 
 from scripts.racketsport.verify_process_video_viewer import (
     TRUSTED_BALL_ARC_SOLVER_STATUSES,
+    dev_auth_bypass_requested,
+    dev_server_env_with_replay_verify_bypass,
     assert_ball_honesty,
     assert_non_empty_entity_counts,
     read_ball_arc_solver_status,
@@ -50,6 +52,27 @@ def test_viewer_url_can_open_court_map_mode_for_second_screenshot(tmp_path: Path
 
     assert "manifest=/@fs" in url
     assert "&view=courtmap" in url
+
+
+def test_dev_auth_bypass_request_defaults_off() -> None:
+    assert dev_auth_bypass_requested(flag=False, env={}) is False
+
+
+def test_dev_auth_bypass_request_accepts_flag_or_env() -> None:
+    assert dev_auth_bypass_requested(flag=True, env={}) is True
+    assert dev_auth_bypass_requested(flag=False, env={"REPLAY_VERIFY_DEV_BYPASS": "1"}) is True
+    assert dev_auth_bypass_requested(flag=False, env={"REPLAY_VERIFY_DEV_BYPASS": "0"}) is False
+
+
+def test_dev_server_env_sets_vite_flag_only_when_requested() -> None:
+    base_env = {"PATH": "/usr/bin"}
+
+    off_env = dev_server_env_with_replay_verify_bypass(base_env, requested=False)
+    on_env = dev_server_env_with_replay_verify_bypass(base_env, requested=True)
+
+    assert off_env == base_env
+    assert on_env["REPLAY_VERIFY_DEV_BYPASS"] == "1"
+    assert on_env["VITE_REPLAY_VERIFY_DEV_BYPASS"] == "1"
 
 
 def test_assert_non_empty_entity_counts_rejects_silent_empty_viewer() -> None:

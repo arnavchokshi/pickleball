@@ -1,0 +1,36 @@
+{
+  "allow_empty": false,
+  "assertion_error_count": 0,
+  "assertion_errors": [],
+  "ball_arc_solver_kill_reasons": [],
+  "ball_arc_solver_status": null,
+  "ball_honesty_hud": {
+    "data_ball_state": "not_visible",
+    "data_low_confidence": "false",
+    "text": "ball: not visible"
+  },
+  "console_message_count": 7,
+  "dev_auth_bypass_requested": true,
+  "headless_verify_json": "runs/lanes/w7_browserbypass_20260709/live_viewer_verify/headless_verify.json",
+  "loaded_counts": {
+    "3D FPS": "7.4",
+    "Ball": "coverage n/a",
+    "Contacts": "0",
+    "Players": "4",
+    "Warnings": "2 notices: missing ball track, missing paddle pose"
+  },
+  "notes": [
+    "requested replay verifier dev auth bypass; the web app still requires VITE_REPLAY_VERIFY_DEV_BYPASS=1, a localhost origin, and Vite non-production mode",
+    "reused an existing Vite server; it must already have been started with VITE_REPLAY_VERIFY_DEV_BYPASS=1 for the bypass to be available",
+    "loaded http://127.0.0.1:5173/?manifest=/@fs/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w6_meshcap_20260708/gpu_proof_wolverine_budget400/wolverine_mixed_0200_mid_steep_corner/replay_viewer_manifest.json headless; 0 trust badge chip(s) rendered"
+  ],
+  "ok": true,
+  "page_error_count": 0,
+  "page_errors": [],
+  "screenshots": [
+    "runs/lanes/w7_browserbypass_20260709/live_viewer_verify/process_video_verify.png"
+  ],
+  "trust_chip_count": 0,
+  "url": "http://127.0.0.1:5173/?manifest=/@fs/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w6_meshcap_20260708/gpu_proof_wolverine_budget400/wolverine_mixed_0200_mid_steep_corner/replay_viewer_manifest.json",
+  "view": "world"
+}
