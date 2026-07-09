@@ -109,7 +109,93 @@ class LockedCapture(BaseModel):
     wb_locked: bool
 
 
+class ARTrackingSnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    state: Literal["normal", "limited", "unavailable"]
+    quality: Literal["good", "limited", "unavailable"]
+    reason: str | None = None
+
+
+class ARKitFrameSample(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    video_pts_s: FiniteFloat
+    arkit_timestamp_s: FiniteFloat | None = None
+    camera_pose: RigidPose | None = None
+    intrinsics: CameraIntrinsics | None = None
+    tracking: ARTrackingSnapshot | None = None
+    gravity: Vector3 | None = None
+    provenance: Literal["arkit", "coremotion_only"]
+    unavailable_reason: str | None = None
+
+
+class ARKitSetupPassSidecar(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["available", "unavailable"]
+    provenance: str
+    intrinsics: CameraIntrinsics | None = None
+    camera_pose: RigidPose | None = None
+    court_plane: Plane | None = None
+    gravity: Vector3 | None = None
+    tracking_state: Literal["normal", "limited", "unavailable"]
+    timestamp_s: FiniteFloat | None = None
+    duration_s: FiniteFloat | None = None
+    unavailable_reason: str | None = None
+
+
+class CapturePolicyRequestedState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    fps: int
+    resolution: tuple[int, int]
+    format: Literal["hevc", "prores422lt"]
+    orientation: Literal["portrait", "landscape"]
+    electronic_stabilization_enabled: bool
+    exposure_locked: bool
+    focus_locked: bool
+    white_balance_locked: bool
+
+
+class CapturePolicyAchievedState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    fps: int | None = None
+    resolution: tuple[int, int] | None = None
+    format: Literal["hevc", "prores422lt"] | None = None
+    orientation: Literal["portrait", "landscape"] | None = None
+    electronic_stabilization_enabled: bool | None = None
+    exposure_locked: bool | None = None
+    focus_locked: bool | None = None
+    white_balance_locked: bool | None = None
+
+
+class CapturePolicyEnforcementReport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    requested: CapturePolicyRequestedState
+    achieved: CapturePolicyAchievedState | None = None
+    violations: list[str] = Field(default_factory=list)
+
+
+class ProfileCaptureStepRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["empty_court_clip", "calibration_grid_sweep", "paddle_orbit", "player_height_entry", "ball_pick"]
+    status: Literal["pending", "complete"]
+    artifact_ref: str | None = None
+    metadata: dict[str, str] = Field(default_factory=dict)
+
+
+class ProfileCapturePayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    steps: list[ProfileCaptureStepRecord]
+
+
 class CaptureSidecar(StrictArtifact):
+    provenance: Literal["live_recording", "camera_roll_import"] | None = None
     device_tier: Literal["A_lidar", "B_standard", "fallback"]
     device_model: str
     fps: int
@@ -122,14 +208,19 @@ class CaptureSidecar(StrictArtifact):
     recording_duration_s: float | None = None
     camera_position: str | None = None
     camera_lens: str | None = None
-    locked: LockedCapture
-    intrinsics: CameraIntrinsics
+    locked: LockedCapture | None = None
+    intrinsics: CameraIntrinsics | None = None
     arkit_camera_pose: RigidPose | None = None
     court_plane: Plane | None = None
+    setup_pass: ARKitSetupPassSidecar | None = None
     manual_court_taps: list[Vector2] = Field(default_factory=list)
-    gravity: Vector3
+    gravity: Vector3 | None = None
+    arkit_frame_samples: list[ARKitFrameSample] = Field(default_factory=list)
     lidar_depth_refs: list[str] = Field(default_factory=list)
     ondevice_pose_track: str | None = None
+    unavailable_sensor_reasons: dict[str, str] = Field(default_factory=dict)
+    policy_enforcement: CapturePolicyEnforcementReport | None = None
+    profile_capture: ProfileCapturePayload | None = None
     capture_quality: CaptureQuality
     hdr_enabled: bool | None = None
     video_stabilization_enabled: bool | None = None

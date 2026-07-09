@@ -3,6 +3,7 @@ import PickleballCapture
 import PickleballCore
 import PickleballGuidance
 import PickleballReplay
+import PickleballUpload
 @preconcurrency import AVFoundation
 
 enum DinkVisionWalkerCaptureState: String, Equatable {
@@ -24,8 +25,13 @@ struct DinkVisionRuntimeConfiguration: Equatable {
     var replayState: DinkVisionWalkerReplayState
     var forceRecordPressed: Bool
     var forceWorldCoachMark: Bool
+    var apiBaseURL: URL
 
-    static func current(arguments: [String] = ProcessInfo.processInfo.arguments) -> DinkVisionRuntimeConfiguration {
+    static func current(
+        arguments: [String] = ProcessInfo.processInfo.arguments,
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        infoDictionary: [String: Any] = Bundle.main.infoDictionary ?? [:]
+    ) -> DinkVisionRuntimeConfiguration {
         let isWalker = arguments.contains("-dinkvision.walker")
         return DinkVisionRuntimeConfiguration(
             isWalker: isWalker,
@@ -33,7 +39,12 @@ struct DinkVisionRuntimeConfiguration: Equatable {
             captureState: DinkVisionWalkerCaptureState(rawValue: value(after: "-dinkvision.captureState", in: arguments) ?? "") ?? (isWalker ? .granted : .live),
             replayState: DinkVisionWalkerReplayState(rawValue: value(after: "-dinkvision.replays", in: arguments) ?? "") ?? .live,
             forceRecordPressed: arguments.contains("-dinkvision.recordPressed"),
-            forceWorldCoachMark: arguments.contains("-dinkvision.forceWorldCoachMark")
+            forceWorldCoachMark: arguments.contains("-dinkvision.forceWorldCoachMark"),
+            apiBaseURL: APIBaseURLResolver.resolve(
+                arguments: arguments,
+                environment: environment,
+                infoDictionary: infoDictionary
+            )
         )
     }
 
@@ -62,6 +73,32 @@ struct DinkVisionRuntimeConfiguration: Equatable {
         case .seeded:
             return DinkVisionReplayListDataSource(loadPackages: { _ in [Self.seededReplayItem] })
         }
+    }
+
+    func makeAuthApiClient(tokenStore: AuthTokenStore = AuthTokenStore()) -> AuthApiClient {
+        AuthApiClient(baseURL: apiBaseURL, tokenStore: tokenStore)
+    }
+
+    func makeRenderGatewayClient(tokenStore: AuthTokenStore = AuthTokenStore()) -> RenderGatewayClient {
+        RenderGatewayClient(baseURL: apiBaseURL, accessTokenProvider: { try? tokenStore.readAccessToken() })
+    }
+
+    func makePresignedUploadClient(tokenStore: AuthTokenStore = AuthTokenStore()) -> PresignedUploadClient {
+        PresignedUploadClient(baseURL: apiBaseURL, accessTokenProvider: { try? tokenStore.readAccessToken() })
+    }
+
+    @MainActor
+    func makeUploadCoordinator(
+        tokenStore: AuthTokenStore = AuthTokenStore(),
+        preferences: UserDefaults = .standard
+    ) -> DinkVisionUploadCoordinator {
+        let client = makePresignedUploadClient(tokenStore: tokenStore)
+        return DinkVisionUploadCoordinator(
+            queue: UploadQueue(client: client),
+            packageRootURL: CameraCaptureController.defaultPackageRootURL(),
+            hasAccessToken: { tokenStore.hasAccessToken },
+            preferences: preferences
+        )
     }
 
     private static var seededReplayItem: CaptureLibraryItem {

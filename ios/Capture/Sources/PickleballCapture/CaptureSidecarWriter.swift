@@ -81,11 +81,13 @@ public enum CaptureSidecarWriter {
         let setupPassUnavailableReason = setupPass?.unavailableReason ?? "arkit_setup_pass_unavailable"
         let courtPlane = setupPassAvailable ? setupPass?.courtPlane : context.arkit?.courtPlane
         let arkitFrameSamples = context.arkit?.frameSamples ?? []
+        let achievedPolicy = context.policyEnforcement?.achieved
         let unavailableSensorReasons = unavailableSensorReasons(
             setupPass: setupPass,
             latestARFrame: latestARFrame,
             courtPlane: courtPlane,
-            setupPassUnavailableReason: setupPassUnavailableReason
+            setupPassUnavailableReason: setupPassUnavailableReason,
+            policyEnforcement: context.policyEnforcement
         )
         return CaptureSidecar(
             deviceTier: context.deviceTier,
@@ -118,7 +120,11 @@ public enum CaptureSidecarWriter {
                 setupPass: setupPass,
                 courtPlane: courtPlane,
                 policyEnforcement: context.policyEnforcement
-            )
+            ),
+            videoStabilizationEnabled: achievedPolicy?.electronicStabilizationEnabled,
+            exposureLocked: achievedPolicy?.exposureLocked,
+            focusLocked: achievedPolicy?.focusLocked,
+            audioRecorded: true
         )
     }
 
@@ -126,7 +132,8 @@ public enum CaptureSidecarWriter {
         setupPass: ARKitSetupPassSidecar?,
         latestARFrame: ARKitFrameSample?,
         courtPlane: Plane?,
-        setupPassUnavailableReason: String
+        setupPassUnavailableReason: String,
+        policyEnforcement: CapturePolicyEnforcementReport?
     ) -> [String: String] {
         var reasons: [String: String] = [:]
         if setupPass?.status == .unavailable {
@@ -138,6 +145,16 @@ public enum CaptureSidecarWriter {
             reasons["court_plane"] = setupPass?.status == .unavailable
                 ? setupPassUnavailableReason
                 : "no_horizontal_arkit_plane_recorded"
+        }
+        reasons["hdr_enabled"] = "hdr_state_not_recorded"
+        if policyEnforcement?.achieved?.electronicStabilizationEnabled == nil {
+            reasons["video_stabilization_enabled"] = "capture_policy_achieved_state_unavailable"
+        }
+        if policyEnforcement?.achieved?.exposureLocked == nil {
+            reasons["exposure_locked"] = "capture_policy_achieved_state_unavailable"
+        }
+        if policyEnforcement?.achieved?.focusLocked == nil {
+            reasons["focus_locked"] = "capture_policy_achieved_state_unavailable"
         }
         return reasons
     }

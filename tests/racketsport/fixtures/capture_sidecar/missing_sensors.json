@@ -1,0 +1,52 @@
+{
+  "arkit_frame_samples": [
+    {
+      "gravity": [0, -1, 0],
+      "provenance": "coremotion_only",
+      "unavailable_reason": "arkit_not_supported",
+      "video_pts_s": 0.033
+    }
+  ],
+  "audio_recorded": true,
+  "capture_quality": {
+    "grade": "warn",
+    "reasons": ["arkit_seed_missing", "court_plane_missing"]
+  },
+  "device_model": "iPhone15,2",
+  "device_tier": "B_standard",
+  "exposure_locked": true,
+  "focus_locked": true,
+  "format": "hevc",
+  "fps": 60,
+  "gravity": [0, -1, 0],
+  "intrinsics": {
+    "cx": 960,
+    "cy": 540,
+    "dist": [],
+    "fx": 1277.9,
+    "fy": 1277.9,
+    "source": "avfoundation_fov_estimate"
+  },
+  "lidar_depth_refs": [],
+  "locked": {"exposure_s": 0.002, "focus": 0.65, "iso": 320, "wb_locked": true},
+  "manual_court_taps": [],
+  "orientation": "landscape",
+  "provenance": "live_recording",
+  "resolution": [1920, 1080],
+  "schema_version": 1,
+  "setup_pass": {
+    "duration_s": 0.25,
+    "gravity": [0, -1, 0],
+    "provenance": "arkit_setup_pass",
+    "status": "unavailable",
+    "tracking_state": "unavailable",
+    "unavailable_reason": "arkit_not_supported"
+  },
+  "unavailable_sensor_reasons": {
+    "arkit_camera_pose": "arkit_not_supported",
+    "court_plane": "arkit_not_supported",
+    "hdr_enabled": "hdr_state_not_recorded",
+    "lidar_depth": "device_has_no_lidar"
+  },
+  "video_stabilization_enabled": false
+}

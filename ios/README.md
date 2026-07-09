@@ -4,7 +4,8 @@ This scaffold is the native iOS entry point for the Pickleball capture client.
 It contains the app shell, partial AVFoundation capture scaffolding, sensor
 sidecar contracts, and module boundaries for the video-to-pipeline workflow.
 
-Canonical split: the iOS app owns L0/L1 work only: on-device advisory capture
+The iOS app implements the North Star tier split and owns L0/L1 work only:
+on-device advisory capture
 guidance, cached ARKit/manual court seed, person detect+track foot rings,
 2D pose/joints, the ~288p CoreML ball heatmap spike, cheap line/contact cues,
 court map, upload priors, and post-stop replay summaries. L2 server fast
@@ -124,8 +125,8 @@ minimal hosted `PickleballAppTests` target for camera-free app state coverage.
 This proves the app target can be built for XCTest, but it is not physical-device
 capture validation.
 Capture landscape enforcement, ARKit setup, Core ML live tier, upload, and
-RealityKit playback remain scaffold/partial unless promoted in the root
-checklist.
+RealityKit playback remain scaffold/partial unless promoted by the North Star
+gates.
 
 ```bash
 swift package --package-path ios describe

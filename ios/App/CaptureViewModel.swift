@@ -29,6 +29,7 @@ final class CaptureViewModel: ObservableObject {
     @Published private(set) var recordFlowPhase: DinkVisionRecordFlowPhase = .idle
     @Published private(set) var setupPassStatus: DinkVisionSetupPassStatus = .idle
     @Published private(set) var recordingStartedAt: Date?
+    @Published private(set) var lastFinishedCapture: CameraRecordingResult?
     @Published private(set) var profileFlow = ProfileCaptureFlowState.h0Checklist()
     @Published var profilePlayerHeightCM: Double = 180
     @Published var profileBallSKU: String = "outdoor_yellow"
@@ -204,6 +205,7 @@ final class CaptureViewModel: ObservableObject {
                 switch result {
                 case .success(let recording):
                     Task { @MainActor [weak self] in
+                        self?.lastFinishedCapture = recording
                         self?.status = .finished(recording.descriptor.clipRelativePath)
                         self?.recordFlowPhase = .done(sessionID: recording.descriptor.sessionID)
                         self?.recordingStartedAt = nil

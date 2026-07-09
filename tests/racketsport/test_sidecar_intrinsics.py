@@ -12,6 +12,7 @@ from threed.racketsport.sidecar import load_capture_sidecar
 def _capture_sidecar_payload() -> dict:
     return {
         "schema_version": 1,
+        "provenance": "live_recording",
         "device_tier": "B_standard",
         "device_model": "iPhone16,2",
         "fps": 120,
@@ -53,6 +54,7 @@ def test_load_capture_sidecar_reads_direct_sidecar_path(tmp_path):
 
     assert isinstance(sidecar, CaptureSidecar)
     assert sidecar.device_model == "iPhone16,2"
+    assert sidecar.provenance == "live_recording"
 
 
 def test_load_capture_sidecar_reads_capture_sidecar_from_clip_directory(tmp_path):

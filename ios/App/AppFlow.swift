@@ -9,6 +9,19 @@ enum PickleballAppScreen: Equatable {
     case realityReplay
 }
 
+/// Authentication may protect upload, but it never protects local recording
+/// or the local replay library. The root view uses this model directly so the
+/// signed-out invariant is testable without a UI fixture bypass.
+struct DinkVisionLaunchAccessState: Equatable {
+    var authGateEnabled: Bool
+    var isSplashVisible: Bool
+    var isSignedIn: Bool
+
+    var recordTabReachable: Bool { !isSplashVisible }
+    var localReplaysReachable: Bool { !isSplashVisible }
+    var uploadRequiresSignIn: Bool { authGateEnabled && !isSignedIn }
+}
+
 @MainActor
 final class PickleballAppFlow: ObservableObject {
     @Published private(set) var screen: PickleballAppScreen = .splash

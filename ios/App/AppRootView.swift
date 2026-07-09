@@ -12,14 +12,10 @@ struct AppRootView: View {
     }
 }
 
-/// INFRA-4 rollout flag: dark until a follow-up lane verifies the on-device
-/// sign-in -> record -> upload -> queued path (and updates the UI-test
-/// fixtures that launch straight past splash, e.g. `RecordStopUITests`,
-/// `WorldViewerUITests`) and flips this bit. Matches the product-infra
-/// plan's own rollback design ("AppFlow gate is one boolean"). While `false`,
-/// `isSignedIn` below is forced `true` and the gate below never renders --
-/// behavior is byte-for-byte identical to pre-INFRA-4.
-private let dinkVisionAuthGateEnabled = false
+/// Auth is enabled for account-backed operations, but the shell itself is
+/// intentionally never gated: local recording and Replays remain available
+/// while signed out, and upload presents sign-in contextually.
+let dinkVisionAuthGateEnabled = true
 
 private struct DinkVisionAppRootView: View {
     private let configuration: DinkVisionRuntimeConfiguration
@@ -29,14 +25,22 @@ private struct DinkVisionAppRootView: View {
     init(configuration: DinkVisionRuntimeConfiguration = .current()) {
         self.configuration = configuration
         _isSplashVisible = State(initialValue: !configuration.skipSplash)
-        // Short-circuits before touching the Keychain while the gate is dark.
         _isSignedIn = State(initialValue: !dinkVisionAuthGateEnabled || AuthTokenStore().hasAccessToken)
     }
 
     var body: some View {
+        let access = DinkVisionLaunchAccessState(
+            authGateEnabled: dinkVisionAuthGateEnabled,
+            isSplashVisible: isSplashVisible,
+            isSignedIn: isSignedIn
+        )
         ZStack {
-            DinkVisionTabShell(isActive: !isSplashVisible && isSignedIn, configuration: configuration)
-                .allowsHitTesting(!isSplashVisible && isSignedIn)
+            DinkVisionTabShell(
+                isActive: access.recordTabReachable,
+                configuration: configuration,
+                isSignedIn: $isSignedIn
+            )
+                .allowsHitTesting(!isSplashVisible)
 
             if isSplashVisible {
                 DinkVisionSplashView {
@@ -46,12 +50,6 @@ private struct DinkVisionAppRootView: View {
                 }
                 .transition(.opacity)
                 .zIndex(2)
-            } else if dinkVisionAuthGateEnabled && !isSignedIn {
-                SignInView {
-                    isSignedIn = true
-                }
-                .transition(.opacity)
-                .zIndex(1)
             }
         }
         .background(DinkVisionColor.cream)
@@ -233,14 +231,23 @@ private struct SplashLidStrokeShape: Shape {
 private struct DinkVisionTabShell: View {
     var isActive: Bool = true
     private let configuration: DinkVisionRuntimeConfiguration
+    @Binding private var isSignedIn: Bool
     @State private var selectedTab: DinkVisionTabKind = .record
     @StateObject private var recordModel: CaptureViewModel
+    @StateObject private var uploadCoordinator: DinkVisionUploadCoordinator
+    @State private var finishedRecordingPrompt: CameraRecordingResult?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(isActive: Bool = true, configuration: DinkVisionRuntimeConfiguration = .current()) {
+    init(
+        isActive: Bool = true,
+        configuration: DinkVisionRuntimeConfiguration = .current(),
+        isSignedIn: Binding<Bool> = .constant(false)
+    ) {
         self.isActive = isActive
         self.configuration = configuration
+        _isSignedIn = isSignedIn
         _recordModel = StateObject(wrappedValue: configuration.makeCaptureViewModel())
+        _uploadCoordinator = StateObject(wrappedValue: configuration.makeUploadCoordinator())
     }
 
     var body: some View {
@@ -250,7 +257,8 @@ private struct DinkVisionTabShell: View {
                 case .replays:
                     DinkVisionReplaysScreen(
                         dataSource: configuration.makeReplayDataSource(),
-                        configuration: configuration
+                        configuration: configuration,
+                        uploadCoordinator: uploadCoordinator
                     )
                 case .stats:
                     DinkVisionStatsScreen()
@@ -259,7 +267,11 @@ private struct DinkVisionTabShell: View {
                 case .coach:
                     DinkVisionCoachScreen()
                 case .profile:
-                    DinkVisionProfileScreen()
+                    DinkVisionProfileScreen(
+                        isSignedIn: isSignedIn,
+                        autoUploadAfterRecording: $uploadCoordinator.autoUploadAfterRecording,
+                        onSignIn: { uploadCoordinator.isSignInPresented = true }
+                    )
                 }
             }
             .id(selectedTab)
@@ -290,6 +302,42 @@ private struct DinkVisionTabShell: View {
         }
         .animation(.spring(response: 0.34, dampingFraction: 0.72), value: selectedTab)
         .ignoresSafeArea(edges: selectedTab == .record ? .all : .bottom)
+        .onChange(of: recordModel.lastFinishedCapture) { _, recording in
+            guard let recording else { return }
+            uploadCoordinator.recordingFinished(recording)
+            if !uploadCoordinator.autoUploadAfterRecording {
+                finishedRecordingPrompt = recording
+            }
+        }
+        .alert(
+            "Recording saved",
+            isPresented: Binding(
+                get: { finishedRecordingPrompt != nil },
+                set: { if !$0 { finishedRecordingPrompt = nil } }
+            )
+        ) {
+            Button("Upload") {
+                if let recording = finishedRecordingPrompt {
+                    uploadCoordinator.uploadFinishedRecording(recording)
+                }
+                finishedRecordingPrompt = nil
+            }
+            Button("Keep Local", role: .cancel) { finishedRecordingPrompt = nil }
+        } message: {
+            Text("Your video and exact capture sidecar are stored locally. Upload now or later from Replays.")
+        }
+        .sheet(isPresented: $uploadCoordinator.isSignInPresented) {
+            SignInView(authApiClient: configuration.makeAuthApiClient()) {
+                isSignedIn = true
+                uploadCoordinator.signedIn()
+            }
+        }
+        .task {
+            guard let items = try? CaptureLibrary.listPackages(
+                packageRootURL: CameraCaptureController.defaultPackageRootURL()
+            ) else { return }
+            await uploadCoordinator.resumeInterruptedUploads(items: items)
+        }
     }
 }
 
@@ -1090,15 +1138,21 @@ private struct DinkVisionReplaysScreen: View {
     @State private var errorText: String?
     @State private var selectedRow: DinkVisionReplayRow?
     @State private var openingRow: DinkVisionReplayRow?
+    @State private var isVideoPickerPresented = false
+    @StateObject private var importCoordinator: CameraRollImportCoordinator
     private let dataSource: DinkVisionReplayListDataSource
     private let configuration: DinkVisionRuntimeConfiguration
+    @ObservedObject private var uploadCoordinator: DinkVisionUploadCoordinator
 
     init(
         dataSource: DinkVisionReplayListDataSource = DinkVisionReplayListDataSource(),
-        configuration: DinkVisionRuntimeConfiguration = .current()
+        configuration: DinkVisionRuntimeConfiguration = .current(),
+        uploadCoordinator: DinkVisionUploadCoordinator
     ) {
         self.dataSource = dataSource
         self.configuration = configuration
+        self.uploadCoordinator = uploadCoordinator
+        _importCoordinator = StateObject(wrappedValue: CameraRollImportCoordinator(packageRootURL: dataSource.packageRootURL))
     }
 
     var body: some View {
@@ -1109,19 +1163,38 @@ private struct DinkVisionReplaysScreen: View {
                     VStack(alignment: .leading, spacing: 14) {
                         DinkVisionScreenHeader(title: "Replays", subtitle: "Your rallies, rebuilt in 3D")
 
+                        Button {
+                            isVideoPickerPresented = true
+                        } label: {
+                            Label(importCoordinator.isImporting ? "Importing…" : "Import video", systemImage: "photo.on.rectangle")
+                                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                                .foregroundStyle(DinkVisionColor.ink)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(DinkVisionColor.ballYellow, in: Capsule())
+                        }
+                        .disabled(importCoordinator.isImporting)
+                        .accessibilityIdentifier("DinkVisionImportVideoButton")
+
+                        if let importError = importCoordinator.errorMessage {
+                            Text(importError)
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.red)
+                        }
+
                         if isLoading {
                             BallTrailLoadingView(title: "Scanning\ncaptures", detail: "sidecars")
                         } else if rows.isEmpty {
                             DinkVisionEmptyReplaysView(message: errorText ?? "record your first rally")
                         } else {
                             ForEach(rows) { row in
-                                Button {
-                                    openReplay(row)
-                                } label: {
-                                    DinkVisionReplayRowView(row: row)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityIdentifier("DinkVisionReplayRow-\(row.id)")
+                                DinkVisionReplayRowView(
+                                    row: row,
+                                    uploadState: uploadCoordinator.state(for: row.id),
+                                    onOpen: { openReplay(row) },
+                                    onUpload: { uploadCoordinator.requestUpload(item: row.item) },
+                                    onRetry: { uploadCoordinator.requestRetry(item: row.item) }
+                                )
                             }
                         }
                     }
@@ -1142,6 +1215,26 @@ private struct DinkVisionReplaysScreen: View {
             .navigationBarHidden(true)
             .task {
                 loadRows()
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(15))
+                    await uploadCoordinator.refreshUploadedStatuses()
+                }
+            }
+            .sheet(isPresented: $isVideoPickerPresented) {
+                CameraRollVideoPicker(
+                    onPicked: { url in
+                        isVideoPickerPresented = false
+                        Task {
+                            _ = await importCoordinator.importVideo(at: url)
+                            try? FileManager.default.removeItem(at: url)
+                            loadRows()
+                        }
+                    },
+                    onError: { message in
+                        isVideoPickerPresented = false
+                        errorText = "Import failed: \(message)"
+                    }
+                )
             }
             .animation(.spring(response: 0.28, dampingFraction: 0.86), value: openingRow?.id)
             .fullScreenCover(item: $selectedRow) { row in
@@ -1156,6 +1249,7 @@ private struct DinkVisionReplaysScreen: View {
         isLoading = true
         do {
             rows = try dataSource.loadRows()
+            uploadCoordinator.register(rows.map(\.item))
             errorText = nil
         } catch {
             rows = []
@@ -1267,8 +1361,58 @@ private struct DinkVisionDiagonalWipe: View {
 
 private struct DinkVisionReplayRowView: View {
     let row: DinkVisionReplayRow
+    let uploadState: CaptureUploadState?
+    let onOpen: () -> Void
+    let onUpload: () -> Void
+    let onRetry: () -> Void
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button(action: onOpen) {
+                rowContent
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("DinkVisionReplayRow-\(row.id)")
+
+            HStack(spacing: 8) {
+                Text(uploadState?.dinkVisionStateTitle ?? "Local")
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(stateChipColor, in: Capsule())
+
+                if let clipID = uploadState?.clipId {
+                    Text("clip_id: \(clipID)")
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(DinkVisionColor.mutedText)
+                        .lineLimit(1)
+                        .textSelection(.enabled)
+                }
+
+                Spacer()
+
+                if uploadState?.state == .failed {
+                    Button("Retry", action: onRetry)
+                        .buttonStyle(.bordered)
+                        .accessibilityIdentifier("DinkVisionRetryUpload-\(row.id)")
+                } else if uploadState == nil {
+                    Button("Upload", action: onUpload)
+                        .buttonStyle(.borderedProminent)
+                        .tint(DinkVisionColor.courtGreen)
+                        .accessibilityIdentifier("DinkVisionUpload-\(row.id)")
+                }
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(.white)
+        )
+        .accessibilityElement(children: .contain)
+    }
+
+    private var rowContent: some View {
         HStack(spacing: 14) {
             ZStack(alignment: .bottomTrailing) {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -1317,12 +1461,17 @@ private struct DinkVisionReplayRowView: View {
                 .font(.system(size: 18, weight: .heavy))
                 .foregroundStyle(DinkVisionColor.ink)
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.white)
-        )
         .accessibilityLabel("\(row.title), \(row.subtitle)")
+    }
+
+    private var stateChipColor: Color {
+        switch uploadState?.state {
+        case .queued: return DinkVisionColor.trailBlue
+        case .uploading: return DinkVisionColor.ink
+        case .uploaded: return DinkVisionColor.courtGreen
+        case .failed: return DinkVisionColor.trailRed
+        case nil: return DinkVisionColor.mutedText
+        }
     }
 
     private func replayTrustChip(_ title: String, fill: Color) -> some View {
@@ -1648,6 +1797,9 @@ private struct DinkVisionPlaceholderAnalysisCards: View {
 }
 
 private struct DinkVisionProfileScreen: View {
+    var isSignedIn: Bool
+    @Binding var autoUploadAfterRecording: Bool
+    var onSignIn: () -> Void
     @State private var flow = ProfileCaptureFlowState.h0Checklist()
     @State private var playerHeightCM: Double = 180
     @State private var ballSKU = "outdoor_yellow"
@@ -1658,6 +1810,7 @@ private struct DinkVisionProfileScreen: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     DinkVisionScreenHeader(title: "Set up your court", subtitle: "5 quick steps - better tracking forever")
+                    accountAndUploadSettings
                     profileChecklist
                     capturePolicyExplainer
                     appInfo
@@ -1669,6 +1822,38 @@ private struct DinkVisionProfileScreen: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("DinkVisionScreen-Profile")
+    }
+
+    private var accountAndUploadSettings: some View {
+        DinkVisionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(isSignedIn ? "Signed in" : "Local mode")
+                            .font(.system(size: 17, weight: .heavy, design: .rounded))
+                            .foregroundStyle(DinkVisionColor.ink)
+                        Text(isSignedIn ? "Uploads use your account." : "Record and local replays work without an account.")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(DinkVisionColor.mutedText)
+                    }
+                    Spacer()
+                    if !isSignedIn {
+                        Button("Sign in", action: onSignIn)
+                            .buttonStyle(.borderedProminent)
+                            .tint(DinkVisionColor.courtGreen)
+                            .accessibilityIdentifier("DinkVisionProfileSignIn")
+                    }
+                }
+
+                Toggle("Auto-upload after recording", isOn: $autoUploadAfterRecording)
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .tint(DinkVisionColor.courtGreen)
+                    .accessibilityIdentifier("DinkVisionAutoUploadToggle")
+                Text("Off by default. When enabled, a signed-out upload prompts for sign-in without blocking recording.")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DinkVisionColor.mutedText)
+            }
+        }
     }
 
     private var profileChecklist: some View {
@@ -1849,7 +2034,10 @@ private struct FlowLayout<Content: View>: View {
 }
 
 #Preview("Replays empty") {
-    DinkVisionReplaysScreen(dataSource: DinkVisionReplayListDataSource(loadPackages: { _ in [] }))
+    DinkVisionReplaysScreen(
+        dataSource: DinkVisionReplayListDataSource(loadPackages: { _ in [] }),
+        uploadCoordinator: DinkVisionRuntimeConfiguration.current().makeUploadCoordinator()
+    )
 }
 
 #Preview("Stats") {
@@ -1857,5 +2045,9 @@ private struct FlowLayout<Content: View>: View {
 }
 
 #Preview("Profile") {
-    DinkVisionProfileScreen()
+    DinkVisionProfileScreen(
+        isSignedIn: false,
+        autoUploadAfterRecording: .constant(false),
+        onSignIn: {}
+    )
 }

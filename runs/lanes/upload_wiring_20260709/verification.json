@@ -1,0 +1,27 @@
+{
+  "date": "2026-07-09",
+  "branch": "main",
+  "best_stack_delta": "(c) No stack delta — product-route wiring.",
+  "baseline": {
+    "swift_exact": "Blocked before test discovery: managed sandbox denied ~/.cache/clang/ModuleCache writes.",
+    "python": "124 passed, 0 failed, 0 skipped, 293 warnings."
+  },
+  "after": {
+    "swift_exact": "Blocked before test discovery by the same managed-sandbox ModuleCache denial.",
+    "swift_sandbox_compatible": "234 executed: 233 passed, 0 failed, 1 skipped using swift test --disable-sandbox with workspace-local module caches.",
+    "swift_parse_fallback": "14 touched Swift files parsed, 0 errors.",
+    "upload_source_typecheck": "PickleballUpload sources type-checked for the iOS simulator SDK with Swift 6 strict concurrency, 0 errors.",
+    "app_source_typecheck": "App sources type-checked for the iOS simulator SDK with Swift 6 MainActor default isolation, 0 errors.",
+    "app_test_typecheck": "AppTests type-checked for the iOS simulator SDK, 0 errors.",
+    "ui_test_typecheck": "All AppUITests, including unchanged WorldViewerUITests and updated RecordStopUITests, type-checked for the iOS simulator SDK, 0 errors.",
+    "python": "124 passed, 0 failed, 0 skipped, 293 warnings."
+  },
+  "commands": [
+    "swift test --package-path ios --scratch-path .build-laneB",
+    "HOME=$PWD/.swift-home CLANG_MODULE_CACHE_PATH=$PWD/.build-laneB/ModuleCache SWIFTPM_MODULECACHE_OVERRIDE=$PWD/.build-laneB/ModuleCache swift test --disable-sandbox --package-path ios --scratch-path .build-laneB",
+    "xcrun swiftc -parse <each of 14 touched Swift files>",
+    "MPLBACKEND=Agg .venv/bin/python -m pytest tests/ios tests/server tests/render_service -q"
+  ],
+  "production_call_path": "Capture finish or CaptureLibrary item -> DinkVisionUploadCoordinator -> persisted serial PickleballUpload.UploadQueue -> PresignedUploadClient.createClip -> uploadParts (5xx retry) -> completeClip -> uploadSidecar with exact Data(contentsOf: capture_sidecar.json) -> GET /api/clips -> honest replay-row status and clip_id.",
+  "device_boundary": "No physical record/import/upload trace was claimed. The manager must run the simulator build/UITest compile and later NS-01.2b physical proof."
+}

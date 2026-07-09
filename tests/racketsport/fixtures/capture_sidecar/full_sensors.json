@@ -1,0 +1,120 @@
+{
+  "arkit_camera_pose": {
+    "R": [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    "t": [0.2, 1.4, 0.1]
+  },
+  "arkit_frame_samples": [
+    {
+      "arkit_timestamp_s": 10.04,
+      "camera_pose": {
+        "R": [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+        "t": [0.2, 1.4, 0.1]
+      },
+      "gravity": [0, -1, 0],
+      "intrinsics": {
+        "cx": 960,
+        "cy": 540,
+        "dist": [0.01, -0.02, 0, 0],
+        "fx": 1180,
+        "fy": 1190,
+        "source": "arkit"
+      },
+      "provenance": "arkit",
+      "tracking": {"quality": "good", "state": "normal"},
+      "video_pts_s": 0.041
+    }
+  ],
+  "audio_recorded": true,
+  "ball_high_contrast": true,
+  "camera_lens": "builtInWideAngleCamera",
+  "camera_position": "back",
+  "capture_device_orientation": "landscapeLeft",
+  "capture_quality": {"grade": "good", "reasons": []},
+  "court_lock_passed": true,
+  "court_plane": {"normal": [0, 1, 0], "point": [0, 0, 0]},
+  "device_model": "iPhone16,2",
+  "device_tier": "A_lidar",
+  "exposure_locked": true,
+  "focus_locked": true,
+  "format": "hevc",
+  "fps": 120,
+  "full_court_visible": true,
+  "gravity": [0, -1, 0],
+  "hdr_enabled": true,
+  "intrinsics": {
+    "cx": 960,
+    "cy": 540,
+    "dist": [0.01, -0.02, 0, 0],
+    "fx": 1180,
+    "fy": 1190,
+    "source": "arkit"
+  },
+  "lidar_depth_refs": ["lidar/depth_0001.bin"],
+  "locked": {"exposure_s": 0.001, "focus": 0.7, "iso": 200, "wb_locked": true},
+  "manual_court_taps": [[100, 100], [1820, 100], [1820, 980], [100, 980]],
+  "ondevice_pose_track": "ondevice_pose.json",
+  "orientation": "landscape",
+  "policy_enforcement": {
+    "achieved": {
+      "electronic_stabilization_enabled": false,
+      "exposure_locked": true,
+      "focus_locked": true,
+      "format": "hevc",
+      "fps": 120,
+      "orientation": "landscape",
+      "resolution": [1920, 1080],
+      "white_balance_locked": true
+    },
+    "requested": {
+      "electronic_stabilization_enabled": false,
+      "exposure_locked": true,
+      "focus_locked": true,
+      "format": "hevc",
+      "fps": 120,
+      "orientation": "landscape",
+      "resolution": [1920, 1080],
+      "white_balance_locked": true
+    },
+    "violations": []
+  },
+  "profile_capture": {
+    "steps": [
+      {
+        "artifact_ref": "captures/empty/clip.mov",
+        "kind": "empty_court_clip",
+        "metadata": {},
+        "status": "complete"
+      }
+    ]
+  },
+  "provenance": "live_recording",
+  "recording_duration_s": 12.5,
+  "recording_started_at": "2026-07-09T12:00:00.000Z",
+  "resolution": [1920, 1080],
+  "schema_version": 1,
+  "setup_pass": {
+    "camera_pose": {
+      "R": [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+      "t": [0.2, 1.4, 0.1]
+    },
+    "court_plane": {"normal": [0, 1, 0], "point": [0, 0, 0]},
+    "duration_s": 3.5,
+    "gravity": [0, -1, 0],
+    "intrinsics": {
+      "cx": 960,
+      "cy": 540,
+      "dist": [0.01, -0.02, 0, 0],
+      "fx": 1180,
+      "fy": 1190,
+      "source": "arkit"
+    },
+    "provenance": "arkit_setup_pass",
+    "status": "available",
+    "timestamp_s": 10,
+    "tracking_state": "normal"
+  },
+  "tripod_height_m": 1.4,
+  "unavailable_sensor_reasons": {},
+  "video_rotation_angle_degrees": 270,
+  "video_stabilization_enabled": false
+}

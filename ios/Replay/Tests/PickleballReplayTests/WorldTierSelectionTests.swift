@@ -100,7 +100,7 @@ final class WorldTierSelectionTests: XCTestCase {
     }
 
     /// Real, honest state of this bundle: BALL has 0/8 M1-M8 gates
-    /// (`MASTER_PLAN.md`) and this run never projected ball pixel tracks
+    /// (`NORTH_STAR_ROADMAP.md`) and this run never projected ball pixel tracks
     /// into 3D, so every ball frame has `world_xyz == nil`. The tier
     /// selector must report that as "no renderable ball frame" rather than
     /// inventing a 3D position -- exercised against synthetic data below to

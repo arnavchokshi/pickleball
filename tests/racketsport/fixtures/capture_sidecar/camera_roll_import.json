@@ -1,0 +1,23 @@
+{
+  "arkit_frame_samples": [],
+  "capture_quality": {"grade": "warn", "reasons": ["imported_no_live_sensors"]},
+  "device_model": "camera_roll",
+  "device_tier": "B_standard",
+  "format": "hevc",
+  "fps": 30,
+  "lidar_depth_refs": [],
+  "manual_court_taps": [],
+  "orientation": "landscape",
+  "provenance": "camera_roll_import",
+  "recording_duration_s": 8,
+  "recording_started_at": "2026-07-09T12:30:00.000Z",
+  "resolution": [1920, 1080],
+  "schema_version": 1,
+  "unavailable_sensor_reasons": {
+    "arkit_camera_pose": "camera_roll_import_has_no_live_arkit_tracking",
+    "camera_intrinsics": "camera_roll_import_has_no_live_calibration_intrinsics",
+    "core_motion_gravity": "camera_roll_import_has_no_live_core_motion",
+    "court_plane": "camera_roll_import_has_no_live_court_lock",
+    "locked_camera_settings": "camera_roll_import_has_no_live_exposure_focus_or_white_balance"
+  }
+}

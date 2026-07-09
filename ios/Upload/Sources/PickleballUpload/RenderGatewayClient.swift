@@ -177,7 +177,7 @@ public enum RenderGatewayClientError: Error, Equatable, Sendable {
 public final class RenderGatewayClient: @unchecked Sendable {
     public static let defaultBaseURL = URL(string: "https://pickleball-gpu-gateway.onrender.com")!
 
-    private let baseURL: URL
+    public let baseURL: URL
     private let session: URLSession
     private let accessTokenProvider: (@Sendable () -> String?)?
 

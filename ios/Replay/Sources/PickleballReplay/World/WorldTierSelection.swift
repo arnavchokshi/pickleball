@@ -1,6 +1,6 @@
 import Foundation
 
-/// The locked tier rule (`TIER_MAP.md`, owner directive): mesh people at
+/// The locked tier rule (`NORTH_STAR_ROADMAP.md`, owner directive): mesh people at
 /// contact windows only, joints otherwise, and a bare floor dot/path when
 /// neither is available. Exactly one tier is chosen per player per frame --
 /// never blended, never a guess.

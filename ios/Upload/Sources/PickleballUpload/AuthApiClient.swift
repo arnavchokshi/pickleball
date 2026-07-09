@@ -46,7 +46,7 @@ public enum AuthApiClientError: Error, Equatable, Sendable {
 public final class AuthApiClient: @unchecked Sendable {
     public static let defaultBaseURL = RenderGatewayClient.defaultBaseURL
 
-    private let baseURL: URL
+    public let baseURL: URL
     private let session: URLSession
     private let tokenStore: AuthTokenStore
 

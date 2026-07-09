@@ -20,6 +20,29 @@ final class CaptureSidecarWriterTests: XCTestCase {
             startedAt: Date(timeIntervalSince1970: 10),
             captureDeviceOrientation: .landscapeLeft
         )
+        let policyEnforcement = CapturePolicyEnforcementReport(
+            requested: CapturePolicyRequestedState(
+                fps: 120,
+                resolution: [1920, 1080],
+                format: .hevc,
+                orientation: .landscape,
+                electronicStabilizationEnabled: false,
+                exposureLocked: true,
+                focusLocked: true,
+                whiteBalanceLocked: true
+            ),
+            achieved: CapturePolicyAchievedState(
+                fps: 120,
+                resolution: [1920, 1080],
+                format: .hevc,
+                orientation: .landscape,
+                electronicStabilizationEnabled: false,
+                exposureLocked: true,
+                focusLocked: true,
+                whiteBalanceLocked: true
+            ),
+            violations: []
+        )
         let context = CaptureSidecarWriteContext(
             deviceTier: .standard,
             deviceModel: "iPhone15,2",
@@ -28,6 +51,7 @@ final class CaptureSidecarWriterTests: XCTestCase {
             locked: LockedCapture(exposureS: 0.001, iso: 220, focus: 0.7, wbLocked: true),
             intrinsics: CameraIntrinsics(fx: 1000, fy: 1000, cx: 960, cy: 540, source: "avfoundation_fov_estimate"),
             gravity: [0.0, -1.0, 0.0],
+            policyEnforcement: policyEnforcement,
             captureQuality: CaptureQuality(
                 grade: .warn,
                 reasons: ["arkit_seed_missing", "court_plane_missing"]
@@ -62,5 +86,63 @@ final class CaptureSidecarWriterTests: XCTestCase {
         XCTAssertEqual(sidecar.intrinsics, .some(context.intrinsics))
         XCTAssertEqual(sidecar.gravity, .some([0.0, -1.0, 0.0]))
         XCTAssertEqual(sidecar.captureQuality, context.captureQuality)
+        XCTAssertEqual(sidecar.videoStabilizationEnabled, false)
+        XCTAssertEqual(sidecar.exposureLocked, true)
+        XCTAssertEqual(sidecar.focusLocked, true)
+        XCTAssertEqual(sidecar.audioRecorded, true)
+        XCTAssertNil(sidecar.hdrEnabled)
+        XCTAssertEqual(sidecar.unavailableSensorReasons["hdr_enabled"], "hdr_state_not_recorded")
+        XCTAssertNil(sidecar.unavailableSensorReasons["video_stabilization_enabled"])
+        XCTAssertNil(sidecar.unavailableSensorReasons["exposure_locked"])
+        XCTAssertNil(sidecar.unavailableSensorReasons["focus_locked"])
+    }
+
+    func testWriterLeavesUnknownSessionFlagsNilAndExplainsWhy() throws {
+        let descriptor = try CapturePackageDescriptor(
+            sessionID: "write-sidecar-unknown-policy",
+            policy: CapturePolicy.recommended(
+                for: .swing120,
+                deviceTier: .standard,
+                capabilities: .hevcOnly,
+                orientation: .landscape
+            ),
+            startedAt: Date(timeIntervalSince1970: 10)
+        )
+        let context = CaptureSidecarWriteContext(
+            deviceTier: .standard,
+            deviceModel: "iPhone15,2",
+            cameraPosition: "back",
+            cameraLens: "builtInWideAngleCamera",
+            locked: LockedCapture(exposureS: 0.001, iso: 220, focus: 0.7, wbLocked: true),
+            intrinsics: CameraIntrinsics(fx: 1000, fy: 1000, cx: 960, cy: 540, source: "avfoundation_fov_estimate"),
+            gravity: [0.0, -1.0, 0.0],
+            captureQuality: CaptureQuality(grade: .warn)
+        )
+
+        let sidecar = CaptureSidecarWriter.makeSidecar(
+            descriptor: descriptor,
+            recordingStartedAt: Date(timeIntervalSince1970: 12),
+            finishedAt: Date(timeIntervalSince1970: 15),
+            context: context
+        )
+
+        XCTAssertNil(sidecar.hdrEnabled)
+        XCTAssertNil(sidecar.videoStabilizationEnabled)
+        XCTAssertNil(sidecar.exposureLocked)
+        XCTAssertNil(sidecar.focusLocked)
+        XCTAssertEqual(sidecar.audioRecorded, true)
+        XCTAssertEqual(sidecar.unavailableSensorReasons["hdr_enabled"], "hdr_state_not_recorded")
+        XCTAssertEqual(
+            sidecar.unavailableSensorReasons["video_stabilization_enabled"],
+            "capture_policy_achieved_state_unavailable"
+        )
+        XCTAssertEqual(
+            sidecar.unavailableSensorReasons["exposure_locked"],
+            "capture_policy_achieved_state_unavailable"
+        )
+        XCTAssertEqual(
+            sidecar.unavailableSensorReasons["focus_locked"],
+            "capture_policy_achieved_state_unavailable"
+        )
     }
 }

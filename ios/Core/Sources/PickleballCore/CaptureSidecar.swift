@@ -93,6 +93,15 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
     public var policyEnforcement: CapturePolicyEnforcementReport?
     public var profileCapture: ProfileCapturePayload?
     public var captureQuality: CaptureQuality
+    public var hdrEnabled: Bool?
+    public var videoStabilizationEnabled: Bool?
+    public var exposureLocked: Bool?
+    public var focusLocked: Bool?
+    public var tripodHeightM: Double?
+    public var fullCourtVisible: Bool?
+    public var courtLockPassed: Bool?
+    public var ballHighContrast: Bool?
+    public var audioRecorded: Bool?
 
     public init(
         schemaVersion: Int = 1,
@@ -122,7 +131,16 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         unavailableSensorReasons: [String: String] = [:],
         policyEnforcement: CapturePolicyEnforcementReport? = nil,
         profileCapture: ProfileCapturePayload? = nil,
-        captureQuality: CaptureQuality
+        captureQuality: CaptureQuality,
+        hdrEnabled: Bool? = nil,
+        videoStabilizationEnabled: Bool? = nil,
+        exposureLocked: Bool? = nil,
+        focusLocked: Bool? = nil,
+        tripodHeightM: Double? = nil,
+        fullCourtVisible: Bool? = nil,
+        courtLockPassed: Bool? = nil,
+        ballHighContrast: Bool? = nil,
+        audioRecorded: Bool? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.provenance = provenance
@@ -152,6 +170,15 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         self.policyEnforcement = policyEnforcement
         self.profileCapture = profileCapture
         self.captureQuality = captureQuality
+        self.hdrEnabled = hdrEnabled
+        self.videoStabilizationEnabled = videoStabilizationEnabled
+        self.exposureLocked = exposureLocked
+        self.focusLocked = focusLocked
+        self.tripodHeightM = tripodHeightM
+        self.fullCourtVisible = fullCourtVisible
+        self.courtLockPassed = courtLockPassed
+        self.ballHighContrast = ballHighContrast
+        self.audioRecorded = audioRecorded
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -183,6 +210,15 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         case policyEnforcement = "policy_enforcement"
         case profileCapture = "profile_capture"
         case captureQuality = "capture_quality"
+        case hdrEnabled = "hdr_enabled"
+        case videoStabilizationEnabled = "video_stabilization_enabled"
+        case exposureLocked = "exposure_locked"
+        case focusLocked = "focus_locked"
+        case tripodHeightM = "tripod_height_m"
+        case fullCourtVisible = "full_court_visible"
+        case courtLockPassed = "court_lock_passed"
+        case ballHighContrast = "ball_high_contrast"
+        case audioRecorded = "audio_recorded"
     }
 
     public init(from decoder: Decoder) throws {
@@ -215,6 +251,15 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         self.policyEnforcement = try container.decodeIfPresent(CapturePolicyEnforcementReport.self, forKey: .policyEnforcement)
         self.profileCapture = try container.decodeIfPresent(ProfileCapturePayload.self, forKey: .profileCapture)
         self.captureQuality = try container.decode(CaptureQuality.self, forKey: .captureQuality)
+        self.hdrEnabled = try container.decodeIfPresent(Bool.self, forKey: .hdrEnabled)
+        self.videoStabilizationEnabled = try container.decodeIfPresent(Bool.self, forKey: .videoStabilizationEnabled)
+        self.exposureLocked = try container.decodeIfPresent(Bool.self, forKey: .exposureLocked)
+        self.focusLocked = try container.decodeIfPresent(Bool.self, forKey: .focusLocked)
+        self.tripodHeightM = try container.decodeIfPresent(Double.self, forKey: .tripodHeightM)
+        self.fullCourtVisible = try container.decodeIfPresent(Bool.self, forKey: .fullCourtVisible)
+        self.courtLockPassed = try container.decodeIfPresent(Bool.self, forKey: .courtLockPassed)
+        self.ballHighContrast = try container.decodeIfPresent(Bool.self, forKey: .ballHighContrast)
+        self.audioRecorded = try container.decodeIfPresent(Bool.self, forKey: .audioRecorded)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -247,5 +292,14 @@ public struct CaptureSidecar: Codable, Equatable, Sendable {
         try container.encodeIfPresent(policyEnforcement, forKey: .policyEnforcement)
         try container.encodeIfPresent(profileCapture, forKey: .profileCapture)
         try container.encode(captureQuality, forKey: .captureQuality)
+        try container.encodeIfPresent(hdrEnabled, forKey: .hdrEnabled)
+        try container.encodeIfPresent(videoStabilizationEnabled, forKey: .videoStabilizationEnabled)
+        try container.encodeIfPresent(exposureLocked, forKey: .exposureLocked)
+        try container.encodeIfPresent(focusLocked, forKey: .focusLocked)
+        try container.encodeIfPresent(tripodHeightM, forKey: .tripodHeightM)
+        try container.encodeIfPresent(fullCourtVisible, forKey: .fullCourtVisible)
+        try container.encodeIfPresent(courtLockPassed, forKey: .courtLockPassed)
+        try container.encodeIfPresent(ballHighContrast, forKey: .ballHighContrast)
+        try container.encodeIfPresent(audioRecorded, forKey: .audioRecorded)
     }
 }

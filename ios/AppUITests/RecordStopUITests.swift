@@ -1,7 +1,7 @@
 import XCTest
 
 /// Drives a REAL Record/Stop session through the actual on-screen controls
-/// (Home -> Open Camera -> Start recording -> wait -> Stop recording) using
+/// (cold-launch Record tab -> Start recording -> wait -> Stop recording) using
 /// XCUIApplication, so this exercises the exact same tap targets a human
 /// finger would use. It intentionally does not assert on file contents --
 /// that verification happens out-of-process by pulling the app container
@@ -14,6 +14,7 @@ final class RecordStopUITests: XCTestCase {
 
     func testRecordStopProducesRealCapturePackage() throws {
         let app = XCUIApplication()
+        app.launchArguments += ["-dinkvision.skipSplash"]
 
         // Camera/mic/motion permission alerts are presented by springboard on
         // first launch. XCUITest only checks interruption monitors when the
@@ -42,18 +43,12 @@ final class RecordStopUITests: XCTestCase {
 
         app.launch()
 
-        let openCamera = app.buttons["Open Camera"]
-        XCTAssertTrue(
-            waitForHittable(openCamera, in: app, timeout: 15),
-            "Open Camera button never appeared/hittable from the home screen"
-        )
-        openCamera.tap()
-
-        let recordButton = app.buttons["Start recording"]
+        let recordButton = app.buttons["DinkVisionRecordButton"]
         XCTAssertTrue(
             waitForHittable(recordButton, in: app, timeout: 25),
-            "Start recording button never became hittable; camera prepare() may be blocked (permission dialog?)"
+            "DinkVisionRecordButton never became hittable on the cold-launch Record tab"
         )
+        XCTAssertEqual(recordButton.label, "Start recording")
         recordButton.tap()
 
         // Evidence for the run log regardless of pass/fail below: the exact
@@ -62,7 +57,7 @@ final class RecordStopUITests: XCTestCase {
         // pipeline rejected/stalled the start. Poll+log every ~3s for up to
         // 30s to distinguish "slow hardware bring-up" from "permanently
         // stuck".
-        let stopButton = app.buttons["Stop recording"]
+        let stopButton = app.buttons["DinkVisionRecordButton"]
         var becameHittable = false
         for tick in 0..<10 {
             if stopButton.exists && stopButton.isHittable {
@@ -78,6 +73,7 @@ final class RecordStopUITests: XCTestCase {
             becameHittable,
             "Stop recording button never appeared after tapping Start recording (waited 30s)"
         )
+        XCTAssertEqual(stopButton.label, "Stop recording")
 
         // Real 3-5s clip per the W2-IOS-DEVICE gate.
         Thread.sleep(forTimeInterval: 5)

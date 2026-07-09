@@ -5,7 +5,7 @@ import Foundation
 /// then callers must know whether it's a real calibrated 3D point or a
 /// flattened court-plane approximation, versus genuinely missing/off-court.
 /// For the bundled Burlington fixture every ball frame currently has
-/// `world_xyz == nil` (BALL has 0/8 M1-M8 gates per `MASTER_PLAN.md`, and
+/// `world_xyz == nil` (BALL has 0/8 M1-M8 gates per `NORTH_STAR_ROADMAP.md`, and
 /// this particular run never ran ball/court projection), so `.missing` is
 /// the honest, expected mode there -- this type exists so that state is
 /// surfaced, not silently hidden.

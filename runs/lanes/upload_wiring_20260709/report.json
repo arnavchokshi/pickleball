@@ -1,0 +1,85 @@
+{
+  "objective_result": "PASS",
+  "acceptance": [
+    {
+      "metric": "1. Production recording/library upload call path with real on-disk bytes",
+      "baseline": "Auth/upload clients existed but had zero production app call sites.",
+      "after": "Capture finish and Replays library both feed UploadQueue; the URLProtocol integration test exercises createClip -> two part PUTs with a simulated 503 retry -> completeClip -> exact on-disk sidecar PUT -> GET /api/clips, and passes.",
+      "target": "Production call path through PresignedUploadClient with real video+sidecar bytes and no fixture shortcut.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "2. Signed-out recording with auth gate enabled",
+      "baseline": "dinkVisionAuthGateEnabled was false and enabling the old root gate would hide the shell.",
+      "after": "dinkVisionAuthGateEnabled is true; DinkVisionLaunchAccessState keeps Record and local Replays reachable while signed out and gates only upload; focused AppFlow test type-checks.",
+      "target": "Record tab reachable signed out without an auth-bypass launch argument.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "3. Persisted serial UploadQueue state machine",
+      "baseline": "No queue or per-package upload_state.json existed.",
+      "after": "Seven UploadQueue tests pass: queued/uploading/uploaded, exact sidecar, failed+retry preserving clip_id, relaunch resume, strict two-capture serialization, contextual auth gate, base URL precedence, and URLProtocol 5xx retry coverage.",
+      "target": "queued -> uploading -> uploaded; failed -> retry with clip_id; relaunch resume; one capture at a time.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "4. Reachable camera-roll import",
+      "baseline": "CameraRollVideoImporter existed but was unreachable from app UI.",
+      "after": "Replays exposes a videos-only PHPickerViewController, stages the provider URL, calls CameraRollVideoImporter.importVideo, reloads CaptureLibrary, and renders the imported item with the same Upload action; focused App coordinator wiring test type-checks and package importer tests pass.",
+      "target": "Picker -> importer -> library row -> uploadable package.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "5. RecordStopUITests current-shell compile target",
+      "baseline": "Test tapped removed Open Camera control.",
+      "after": "Test cold-launches the default Record tab, finds DinkVisionRecordButton by identifier, and verifies Start recording/Stop recording labels; all AppUITests type-check with 0 errors and WorldViewerUITests is unchanged.",
+      "target": "Current-shell device-oriented test compiles without weakening WorldViewerUITests.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "6. Required Swift/Python blast-radius verification",
+      "baseline": "Python: 124 passed, 0 failed. Exact Swift command: sandbox ModuleCache denial before test discovery.",
+      "after": "Python: 124 passed, 0 failed, 0 new failures. Exact Swift command remains sandbox-blocked; the allowed fallback parsed all 14 touched Swift files with 0 errors, and the sandbox-compatible full package run executed 234 tests: 233 passed, 1 skipped, 0 failed.",
+      "target": "Swift package green or documented sandbox fallback with 0 parse errors; named pytest suites green with 0 new failures.",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "ios/App/AppFlow.swift:15 — added the testable signed-out local-access/auth-at-upload policy.",
+    "ios/App/AppRootView.swift:18 — enabled auth, kept the record-first shell signed-out, wired recording/library uploads, replay chips/clip_id/retry, import UI, polling, Profile sign-in, and default-off auto-upload.",
+    "ios/App/CameraRollVideoPicker.swift:8 — added videos-only PHPicker staging and CameraRollVideoImporter coordination.",
+    "ios/App/CaptureViewModel.swift:32 — publishes the actual completed CameraRecordingResult into the production upload route.",
+    "ios/App/DinkVisionRuntimeConfiguration.swift:28 — resolves and threads the runtime API base URL into AuthApiClient, PresignedUploadClient, and RenderGatewayClient and builds the upload coordinator.",
+    "ios/App/DinkVisionUploadCoordinator.swift:6 — owns auth-at-upload prompting, restart resume, queue monitoring, persisted state presentation, retry, and honest status refresh.",
+    "ios/App/Info.plist:5 — declares DINKVISION_API_BASE_URL with the unchanged Render default.",
+    "ios/AppTests/AppFlowTests.swift:6 — proves signed-out Record/local Replays remain reachable with the auth gate on.",
+    "ios/AppTests/UploadWiringTests.swift:9 — covers all-client base-URL threading and picker-to-uploadable-item importer wiring.",
+    "ios/AppUITests/RecordStopUITests.swift:15 — retargets the device-oriented test to the cold-launch Record tab and DinkVisionRecordButton labels.",
+    "ios/Upload/Sources/PickleballUpload/AuthApiClient.swift:49 — exposes the injected base URL for wiring verification.",
+    "ios/Upload/Sources/PickleballUpload/PresignedUploadClient.swift:78 — adds observable base URL, bounded retry for transient part 5xx/URL errors, part progress, GET /api/clips, and UploadQueueClient conformance.",
+    "ios/Upload/Sources/PickleballUpload/RenderGatewayClient.swift:180 — exposes the injected base URL for wiring verification.",
+    "ios/Upload/Sources/PickleballUpload/UploadQueue.swift:131 — new serial actor and upload_state.json contract; UploadQueue lives here. BEST-STACK DELTA: (c) No stack delta — product-route wiring.",
+    "ios/Upload/Tests/PickleballUploadTests/UploadQueueTests.swift:5 — adds seven focused state/auth/base-URL/serial/integration tests using fakes and URLProtocol only, never the live service.",
+    "runs/lanes/upload_wiring_20260709/verification.json:1 — records baseline/after commands, counts, type-checks, and the physical-device boundary.",
+    "runs/lanes/upload_wiring_20260709/report.json:1 — schema-conformant structured lane handoff."
+  ],
+  "full_suite": {
+    "command": "swift test --package-path ios --scratch-path .build-laneB (sandbox-blocked before discovery); HOME=$PWD/.swift-home CLANG_MODULE_CACHE_PATH=$PWD/.build-laneB/ModuleCache SWIFTPM_MODULECACHE_OVERRIDE=$PWD/.build-laneB/ModuleCache swift test --disable-sandbox --package-path ios --scratch-path .build-laneB; xcrun swiftc -parse on all 14 touched Swift files; MPLBACKEND=Agg .venv/bin/python -m pytest tests/ios tests/server tests/render_service -q",
+    "passed": 357,
+    "failed": 0,
+    "skipped": 1,
+    "failures_all_preexisting": false,
+    "failure_notes": "The exact Swift invocation cannot reach test discovery because the managed sandbox denies writes to ~/.cache/clang/ModuleCache. Per the spec fallback, all 14 touched Swift files parse with 0 errors. Additionally, the full package suite executes 234 tests with 233 passed, 1 skipped, and 0 failed under --disable-sandbox and workspace-local caches. Python passes 124/124, unchanged from baseline."
+  },
+  "honest_issues": [
+    "No physical iPhone claim: only a real device can prove camera/microphone recording, the produced sidecar/package, PHPicker behavior, Keychain-backed sign-in, foreground upload interruption behavior, and the final accessibility taps. This remains manager/NS-01.2b verification.",
+    "The exact mandated SwiftPM command is infrastructure-blocked before discovery by the managed sandbox; the manager must rerun the normal command plus simulator build and UITest compile outside this sandbox.",
+    "Job submission remains intentionally out of scope while the queue is dark. The app queries GET /api/clips verbatim and shows Uploaded — processing not started for server status uploaded with no job_id; it never fabricates processing or ready.",
+    "Upload v1 uses foreground URLSession. Background URLSession persistence is a follow-up.",
+    "The fixed server API has no same-clip re-presign endpoint. In-process retry preserves clip_id; a crash/relaunch recovery may create a replacement server clip and updates the persisted clip_id honestly.",
+    "Tests use injected fakes/URLProtocol and never the live Render service, as required; live accounts-enabled auth/upload is still manager verification.",
+    "The required report and verification artifact exist under runs/lanes/upload_wiring_20260709/, but runs/* is gitignored; the manager must force-add them if they should enter the commit."
+  ],
+  "next": "- 2026-07-09 handoff: manager reruns swift test, xcodebuild simulator build, AppTests, and AppUITest compile outside the sandbox; then flips PICKLEBALL_ACCOUNTS_ENABLED=1 and performs the bounded real-device record/import -> upload -> GET /api/clips identity trace without claiming GPU/job/replay completion. Follow-ups: background URLSession, job submission/status routing when the queue un-darks, and cleanup/abandon handling for replacement re-presigns. BEST-STACK DELTA: (c) No stack delta — product-route wiring.",
+  "session_id": null
+}

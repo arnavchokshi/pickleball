@@ -4,7 +4,7 @@ import Foundation
 /// W3-REPLAY-NATIVE solid-mesh artifact). This is the MESH tier of the
 /// GLUE-4 world viewer's data contract: full indexed SMPL-family meshes,
 /// but only for the frames the pipeline actually computed a solid mesh for
-/// -- in practice, contact windows, per `TIER_MAP.md`'s "mesh people at
+/// -- in practice, contact windows, per `NORTH_STAR_ROADMAP.md`'s "mesh people at
 /// contact windows only, joints otherwise" rule. Mirrors `BodyMesh` in
 /// `web/replay/src/viewerData.ts`.
 public struct BodyMesh: Codable, Equatable, Sendable {

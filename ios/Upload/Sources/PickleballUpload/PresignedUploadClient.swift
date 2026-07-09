@@ -43,7 +43,7 @@ public struct PresignedClipUploadTarget: Codable, Equatable, Sendable {
 
 /// One completed part, ready for `POST /api/clips/{id}/complete`
 /// (`CompletedPart` server-side: `part_number` + `etag`).
-public struct CompletedUploadPart: Equatable, Sendable {
+public struct CompletedUploadPart: Codable, Equatable, Sendable {
     public var partNumber: Int
     public var etag: String
 
@@ -75,18 +75,21 @@ public enum PresignedUploadClientError: Error, Equatable, Sendable {
 public final class PresignedUploadClient: @unchecked Sendable {
     public static let defaultBaseURL = RenderGatewayClient.defaultBaseURL
 
-    private let baseURL: URL
+    public let baseURL: URL
     private let session: URLSession
     private let accessTokenProvider: @Sendable () -> String?
+    private let maxPartAttempts: Int
 
     public init(
         baseURL: URL = PresignedUploadClient.defaultBaseURL,
         session: URLSession = .shared,
-        accessTokenProvider: @escaping @Sendable () -> String? = { nil }
+        accessTokenProvider: @escaping @Sendable () -> String? = { nil },
+        maxPartAttempts: Int = 3
     ) {
         self.baseURL = baseURL
         self.session = session
         self.accessTokenProvider = accessTokenProvider
+        self.maxPartAttempts = max(1, maxPartAttempts)
     }
 
     /// `POST /api/clips`: creates the clip doc and mints presigned part URLs.
@@ -116,6 +119,22 @@ public final class PresignedUploadClient: @unchecked Sendable {
         partURLs: [PresignedUploadPartURL],
         contentType: String = "application/octet-stream"
     ) async throws -> [CompletedUploadPart] {
+        try await uploadParts(
+            plan: plan,
+            fileURL: fileURL,
+            partURLs: partURLs,
+            contentType: contentType,
+            onPartUploaded: { _, _ in }
+        )
+    }
+
+    public func uploadParts(
+        plan: ResumableChunkPlan,
+        fileURL: URL,
+        partURLs: [PresignedUploadPartURL],
+        contentType: String,
+        onPartUploaded: @escaping @Sendable (CompletedUploadPart, Int64) async -> Void
+    ) async throws -> [CompletedUploadPart] {
         guard partURLs.count == plan.chunks.count else {
             throw PresignedUploadClientError.partCountMismatch(expected: plan.chunks.count, got: partURLs.count)
         }
@@ -136,18 +155,31 @@ public final class PresignedUploadClient: @unchecked Sendable {
             var request = URLRequest(url: url)
             request.httpMethod = "PUT"
             request.setValue(contentType, forHTTPHeaderField: "Content-Type")
-            let (data, response) = try await session.upload(for: request, from: chunkData)
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw PresignedUploadClientError.invalidResponse
+            var attempt = 0
+            while true {
+                attempt += 1
+                do {
+                    let (data, response) = try await session.upload(for: request, from: chunkData)
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        throw PresignedUploadClientError.invalidResponse
+                    }
+                    guard (200..<300).contains(httpResponse.statusCode) else {
+                        let message = String(data: data, encoding: .utf8) ?? "part upload failed"
+                        throw PresignedUploadClientError.httpStatus(httpResponse.statusCode, message)
+                    }
+                    guard let etag = httpResponse.value(forHTTPHeaderField: "ETag") else {
+                        throw PresignedUploadClientError.missingETag(partNumber)
+                    }
+                    let part = CompletedUploadPart(partNumber: partNumber, etag: etag)
+                    completed.append(part)
+                    await onPartUploaded(part, chunk.lengthBytes)
+                    break
+                } catch {
+                    guard attempt < maxPartAttempts, Self.isRetryablePartError(error) else {
+                        throw error
+                    }
+                }
             }
-            guard (200..<300).contains(httpResponse.statusCode) else {
-                let message = String(data: data, encoding: .utf8) ?? "part upload failed"
-                throw PresignedUploadClientError.httpStatus(httpResponse.statusCode, message)
-            }
-            guard let etag = httpResponse.value(forHTTPHeaderField: "ETag") else {
-                throw PresignedUploadClientError.missingETag(partNumber)
-            }
-            completed.append(CompletedUploadPart(partNumber: partNumber, etag: etag))
         }
         return completed
     }
@@ -189,6 +221,17 @@ public final class PresignedUploadClient: @unchecked Sendable {
         try Self.assertSuccess(response: response, data: responseData)
     }
 
+    /// `GET /api/clips`: the only current server-owned status surface for a
+    /// presigned clip. Status strings are intentionally not remapped.
+    public func listClips() async throws -> [ServerClipRecord] {
+        var request = URLRequest(url: RenderGatewayClient.apiURL(path: "/api/clips", baseURL: baseURL))
+        applyAuthHeader(&request)
+        let (data, response) = try await session.data(for: request)
+        try Self.assertSuccess(response: response, data: data)
+        struct Response: Decodable { var clips: [ServerClipRecord] }
+        return try JSONDecoder().decode(Response.self, from: data).clips
+    }
+
     private func applyAuthHeader(_ request: inout URLRequest) {
         guard let token = accessTokenProvider(), !token.isEmpty else {
             return
@@ -205,4 +248,16 @@ public final class PresignedUploadClient: @unchecked Sendable {
             throw PresignedUploadClientError.httpStatus(httpResponse.statusCode, message)
         }
     }
+
+    private static func isRetryablePartError(_ error: Error) -> Bool {
+        if case PresignedUploadClientError.httpStatus(let status, _) = error {
+            return (500..<600).contains(status)
+        }
+        if let urlError = error as? URLError {
+            return urlError.code != .cancelled
+        }
+        return false
+    }
 }
+
+extension PresignedUploadClient: UploadQueueClient {}

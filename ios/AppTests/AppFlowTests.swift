@@ -3,6 +3,20 @@ import XCTest
 
 final class AppFlowTests: XCTestCase {
     @MainActor
+    func testSignedOutAuthGateLeavesRecordAndLocalReplaysReachable() {
+        let state = DinkVisionLaunchAccessState(
+            authGateEnabled: true,
+            isSplashVisible: false,
+            isSignedIn: false
+        )
+
+        XCTAssertTrue(state.recordTabReachable)
+        XCTAssertTrue(state.localReplaysReachable)
+        XCTAssertTrue(state.uploadRequiresSignIn)
+        XCTAssertTrue(dinkVisionAuthGateEnabled)
+    }
+
+    @MainActor
     func testLaunchFlowStartsOnSplashThenMovesHomeThenCamera() {
         let flow = PickleballAppFlow()
 
