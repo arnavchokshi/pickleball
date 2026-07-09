@@ -12,6 +12,9 @@ non-blocking until we persist a non-owner profile, which wave 7 does not do).
 - 01:15 overnight start: ball retrain (H100, ~2.6h in), tierprov recovery, watchdog all live;
   dispatching P2-4 masklet GPU eval + P6-2 BODY+COURT stats lane. Held-out shot, mesh display
   ruling, P4-0 re-confirmation all wait for you (queued asks stand).
+- 01:5x: P6-2 BODY+COURT stats v0 LANDED (post-hoc, trust-banded). Masklet spike = honest
+  NO-ATTEMPT (permission-blocked; ~$1; banked a fresh 307s H100 BODY baseline anchor). Ball
+  retrain ~3.2h in; tierprov recovering from the disk crash.
 
 ## Numbered asks (easiest first)
 1. **Mac disk — 2 min, semi-urgent.** Data volume is 99% full (5.2GB free; boot bar is >25GB; wave-6
@@ -34,7 +37,11 @@ non-blocking until we persist a non-owner profile, which wave 7 does not do).
 6. **Two 5-minute phone checks** (LiDAR range; ARKit sidecar pose).
 7. **4.0-rated reviewer commitment** for the P6-4 coaching audit (later this wave at the earliest).
 8. **GCP invoice glance** (pins the real H100 spot $/hr; wave reports carry a $0.57-4.25 ambiguity).
-9. **P4-0 vs 3rd auto-find retrain re-confirmation** (CALV1 evidence: 244.3px Burlington / 212.6px
+9. **P2-4 masklet eval needs a one-time grant (NEW, from overnight):** the permission system
+   (correctly) blocked running the third-party sam-body4d repo on a fleet VM. If you want P2-4
+   attempted: say so + we'll do the narrow grant and verify HuggingFace sam3 access first; the
+   cheap shape is a masklets-only A/B, not the full 5-model pipeline. Otherwise it stays queued.
+10. **P4-0 vs 3rd auto-find retrain re-confirmation** (CALV1 evidence: 244.3px Burlington / 212.6px
    Wolverine, containment 0/8 and 2/8). Default this wave: P4-0 profiles first, no retrain.
 
 ## Fleet-spend-vs-ask (wave-7 planned GPU — all within standing ≤$5/hr × ≤4 envelope; no approval needed)

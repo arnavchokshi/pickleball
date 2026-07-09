@@ -165,3 +165,11 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
   K3 p95 divergence>10mm or schema breakage / K4 uptime>2.5h. Budget ~$1.5-11. Concurrency
   2-3/4 with w7ball. NO-ATTEMPT is a valid honest verdict if the evidence base lacks a concrete
   recipe (Mac-side check happens BEFORE provisioning).
+- pickleball-h100-w7masklet — DONE+DELETED 2026-07-09T08:49Z list-confirmed (created 08:19:45Z,
+  uptime 0.489h ~= $0.28-2.08 mid ~$1, zero preemptions). VERDICT NO-ATTEMPT on candidate arm:
+  permission classifier denied executing third-party sam-body4d code on the VM x3 (named prereq:
+  owner grant; HF checkpoints also gated; full pipeline = 5 model families, NOT a cheap spike;
+  masklets-only A/B is the real cheap shape). BASELINE BANKED: 307.179s H100 BODY wall wolverine
+  (reproduces w5_fastbody 316.05s within 2.8%) at runs/lanes/w7_masklet_20260709/. SNAPSHOT GAP
+  re-confirmed (2nd lane): calibration_curves.json + court_model_v2.pt missing from w6close
+  template — MUST bake at next cut. ~10min honest idle from 2 passive-wait turns (1 nudge used).
