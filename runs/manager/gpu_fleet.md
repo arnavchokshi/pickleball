@@ -45,6 +45,10 @@ WAVE-5 FLEET LOG (2026-07-07, manager):
   into w5_transport lane.
 - TEMPLATE POLICY 2026-07-08: `pickleball-fleet-snap-20260708-ffmpeg` (READY, 200GB, ffmpeg 4.4.2,
   clean committed HEAD) SUPERSEDES pickleball-fleet1-snap-20260707 as the default boot template.
+- TEMPLATE POLICY 2026-07-09: `pickleball-fleet-snap-20260708-w6close` (READY, 200GB disk / 45.6GB stored,
+  ffmpeg + roboflow corpus + rally videos BAKED, verified-clean tree @ 37b8ecd3f) SUPERSEDES the ffmpeg
+  snapshot as default boot template. Known by-design git-status lines: 2 vendor-submodule overlays
+  (RESTORE.md); anything ELSE dirty on boot = reset --hard first (truncated-file class seen twice).
 - No `pickleball-a100-w5proof` row yet: `runs/lanes/w5_closeproof_20260708/spec.md` is pre-staged,
   but no close-proof VM/report exists in this checkout at the w5_closedocs pass.
 
@@ -103,7 +107,17 @@ WAVE-6 FLEET LOG (2026-07-08, manager):
   (4) pull artifacts + md5 to Mac lane dir; DELETE + list-confirm + cost. Budget: ~1-2h × $0.6-4.3/hr
   ≈ $1-8 (+50% contingency ceiling ~$12); in-VM 60-min no-heartbeat self-stop armed.
 - pickleball-h100-w6close (H100 a3-highgpu-1g SPOT, ase1-b, pd-balanced 200GB from
-  pickleball-fleet-snap-20260708-ffmpeg) — status: PROVISIONING (Sonnet lane w6_close_errand_20260708,
+  pickleball-fleet-snap-20260708-ffmpeg) — DONE+DELETED 2026-07-09T00:57Z list-confirmed (created 22:07Z,
+  uptime 2.833h ≈ $1.61-12.04, zero preemptions, survived a Mac power-cycle via nohup+transcript-resume).
+  All 4 sub-tasks delivered: (A) re-score 3 candidates x 20 clips OFFICIAL+LoSO — seed_official micro-F1
+  0.5329/hFP 0.2255 WINNER, stage1_official 0.2971 BELOW control 0.3611 (disagreement-corpus caveat booked);
+  (B) legitimate GATE-1b raw arm: gate_1a PASS 4.098e-05deg, gate_1b FAIL 262.35mm (<=1mm), mesh-skel FAIL
+  53.50mm p95 (<=5mm) w/ provenance + scale/hand_pose flowing; (C) outdoor mesh byte-budget-400: 409/409
+  eligible frames, 112.6MiB actual (-14% vs estimate), 5.21->21.32 mesh fps; (D) TEMPLATE
+  pickleball-fleet-snap-20260708-w6close READY 45.6GB w/ roboflow corpus (6.9GB/110,749 files) + rally
+  videos (1.09GB) BAKED, 5-truncated-file dirt reset, vendor-submodule lines adjudicated BY-DESIGN
+  (third_party/pickleball_vendor_additions/RESTORE.md). WAVE-6 GPU TOTAL: $2.27-16.96 (mid ~$5-9); caps
+  never breached (max 2/4 concurrent incl. the foreign CALV1 VM, which tore itself down). (Sonnet lane w6_close_errand_20260708,
   self-tearing). CONSOLIDATED CLOSE ERRAND: (a) label re-score GPU_RESCORE_COMMANDS.sh (3 candidates
   x 20 clips, OFFICIAL bridge + LoSO-mean w/ outdoor fold, control row); (b) TEMPLATE RE-CUT clean-tree
   + bake corpus/rally videos; (c) legitimate GATE-1b raw arm (fixed knob + canonical harness w/

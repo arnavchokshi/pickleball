@@ -1,0 +1,228 @@
+{
+  "artifact_type": "racketsport_body_decode_gate_check",
+  "blocker": null,
+  "body_mesh_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260708T234631Z/body_mesh.json",
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "court_calibration_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260708T234631Z/court_calibration.json",
+  "decoder_provenance": {
+    "checkpoint": {
+      "exists": true,
+      "path": "/home/arnavchokshi/coldstart_20260706/body_runtime/checkpoints/sam-3d-body-dinov3/model.ckpt",
+      "sha256": "b5a2f9d305dd02626b967aa2e86021fba07065df66ce7a7e00ffb9664f150abf",
+      "sha256_status": "present"
+    },
+    "mhr_asset": {
+      "exists": true,
+      "path": "/home/arnavchokshi/coldstart_20260706/body_runtime/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt",
+      "sha256": "352e271a6c42729c68554ceaea0c955e866970160c31e35506d782dc0f7377bc",
+      "sha256_status": "present"
+    },
+    "mhr_decode_module": {
+      "dimensions": {
+        "body_pose_euler_dim": 133,
+        "face_comps_dim": 72,
+        "global_rot_euler_dim": 3,
+        "hand_comps_dim_per_hand": 54,
+        "num_keypoints": 70,
+        "scale_dim": 28,
+        "shape_dim": 45
+      },
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/threed/racketsport/mhr_decode.py",
+      "sha256": "cf90b7039c9a987416c0189e441f4014535c5c28579befe34b5bcce6e1655a5e",
+      "version_stamp": "mhr_decode.py:cf90b7039c9a987416c0189e441f4014535c5c28579befe34b5bcce6e1655a5e"
+    },
+    "mhr_forward_signature": "MHRHead.mhr_forward(global_trans, global_rot, body_pose_params, hand_pose_params, scale_params, shape_params, expr_params=None, return_keypoints=False, do_pcblend=True, return_joint_coords=False, return_model_params=False, return_joint_rotations=False, scale_offsets=None, vertex_offsets=None, _do_timing=False)",
+    "mhr_runtime_available": true,
+    "mhr_runtime_import_error": null
+  },
+  "field_mapping": [
+    {
+      "mhr_forward_arg": "global_trans",
+      "notes": "Persisted smplx_params.transl_world is not decoded; it is used later as world-grounding track_world_xy.",
+      "source": "zero tensor from mhr_decode.MHRDecoder._prep_batch"
+    },
+    {
+      "mhr_forward_arg": "global_rot",
+      "notes": "3-dim Euler global orientation, passed as global_orient_euler to decode_euler_frame().",
+      "source": "body_mesh.players[].frames[].smplx_params.global_orient"
+    },
+    {
+      "mhr_forward_arg": "body_pose_params",
+      "notes": "133-dim persisted Euler body pose; MHRHead.mhr_forward internally truncates to the first 130 channels.",
+      "source": "body_mesh.players[].frames[].smplx_params.body_pose"
+    },
+    {
+      "mhr_forward_arg": "hand_pose_params",
+      "notes": "54+54 hand components, concatenated verbatim when both hands are present; otherwise mhr_decode supplies zeros.",
+      "source": "smplx_params.left_hand_pose + smplx_params.right_hand_pose"
+    },
+    {
+      "mhr_forward_arg": "scale_params",
+      "notes": "--scale-source field passes the 28-dim field and fails if absent; --scale-source none passes None so mhr_decode uses zeros/mean scale.",
+      "source": "body_mesh.players[].frames[].smplx_params.scale"
+    },
+    {
+      "mhr_forward_arg": "shape_params",
+      "notes": "45-dim shape/betas vector, passed as decode_euler_frame(shape=...).",
+      "source": "body_mesh.players[].frames[].smplx_params.betas"
+    },
+    {
+      "mhr_forward_arg": "expr_params",
+      "notes": "Persisted body_mesh frames do not carry expression params; mhr_decode supplies FACE_COMPS_DIM zeros.",
+      "source": "zero tensor from mhr_decode.MHRDecoder._prep_batch"
+    }
+  ],
+  "gate_1a": {
+    "body_pose": {
+      "component": "body_pose",
+      "frame_count": 680,
+      "max_abs_error_deg": 1.366037849948043e-05,
+      "mean_abs_error_deg": 6.948003505868883e-09,
+      "p95_abs_error_deg": 0.0
+    },
+    "gate": "gate_1a_euler_cont_euler_idempotence",
+    "global_orient": {
+      "component": "global_orient",
+      "frame_count": 680,
+      "max_abs_error_deg": 4.098113640793599e-05,
+      "mean_abs_error_deg": 2.23655229092401e-06,
+      "p95_abs_error_deg": 1.366037849948043e-05
+    },
+    "max_abs_error_deg": 4.098113640793599e-05,
+    "passed": true,
+    "target_max_abs_error_deg": 0.1
+  },
+  "gate_1a_euler_cont_euler_idempotence": {
+    "body_pose": {
+      "component": "body_pose",
+      "frame_count": 680,
+      "max_abs_error_deg": 1.366037849948043e-05,
+      "mean_abs_error_deg": 6.948003505868883e-09,
+      "p95_abs_error_deg": 0.0
+    },
+    "gate": "gate_1a_euler_cont_euler_idempotence",
+    "global_orient": {
+      "component": "global_orient",
+      "frame_count": 680,
+      "max_abs_error_deg": 4.098113640793599e-05,
+      "mean_abs_error_deg": 2.23655229092401e-06,
+      "p95_abs_error_deg": 1.366037849948043e-05
+    },
+    "max_abs_error_deg": 4.098113640793599e-05,
+    "passed": true,
+    "target_max_abs_error_deg": 0.1
+  },
+  "gate_1b": {
+    "gate": "gate_1b_world_round_trip",
+    "passed": false,
+    "per_player": {
+      "18": {
+        "joints_world_max_abs_error_mm": 63.59252007679827,
+        "joints_world_p95_abs_error_mm": 49.212934271111884,
+        "sample_count": 40,
+        "vertices_world_max_abs_error_mm": 72.60869093057498,
+        "vertices_world_p95_abs_error_mm": 53.86860981488694
+      },
+      "19": {
+        "joints_world_max_abs_error_mm": 262.3481300437748,
+        "joints_world_p95_abs_error_mm": 24.610372846861235,
+        "sample_count": 40,
+        "vertices_world_max_abs_error_mm": 263.87278518078097,
+        "vertices_world_p95_abs_error_mm": 25.69331077978653
+      },
+      "20": {
+        "joints_world_max_abs_error_mm": 84.85516798244704,
+        "joints_world_p95_abs_error_mm": 52.957042918506936,
+        "sample_count": 40,
+        "vertices_world_max_abs_error_mm": 88.64990727131104,
+        "vertices_world_p95_abs_error_mm": 53.01292675383788
+      },
+      "21": {
+        "joints_world_max_abs_error_mm": 29.386952603951954,
+        "joints_world_p95_abs_error_mm": 25.322154932702883,
+        "sample_count": 40,
+        "vertices_world_max_abs_error_mm": 31.400550194634892,
+        "vertices_world_p95_abs_error_mm": 27.269144593620254
+      }
+    },
+    "scale_source": "field",
+    "target_max_abs_error_mm": 1.0,
+    "worst_joints_world_max_abs_error_mm": 262.3481300437748,
+    "worst_vertices_world_max_abs_error_mm": 263.87278518078097
+  },
+  "gate_1b_world_round_trip": {
+    "gate": "gate_1b_world_round_trip",
+    "passed": false,
+    "per_player": {
+      "18": {
+        "joints_world_max_abs_error_mm": 63.59252007679827,
+        "joints_world_p95_abs_error_mm": 49.212934271111884,
+        "sample_count": 40,
+        "vertices_world_max_abs_error_mm": 72.60869093057498,
+        "vertices_world_p95_abs_error_mm": 53.86860981488694
+      },
+      "19": {
+        "joints_world_max_abs_error_mm": 262.3481300437748,
+        "joints_world_p95_abs_error_mm": 24.610372846861235,
+        "sample_count": 40,
+        "vertices_world_max_abs_error_mm": 263.87278518078097,
+        "vertices_world_p95_abs_error_mm": 25.69331077978653
+      },
+      "20": {
+        "joints_world_max_abs_error_mm": 84.85516798244704,
+        "joints_world_p95_abs_error_mm": 52.957042918506936,
+        "sample_count": 40,
+        "vertices_world_max_abs_error_mm": 88.64990727131104,
+        "vertices_world_p95_abs_error_mm": 53.01292675383788
+      },
+      "21": {
+        "joints_world_max_abs_error_mm": 29.386952603951954,
+        "joints_world_p95_abs_error_mm": 25.322154932702883,
+        "sample_count": 40,
+        "vertices_world_max_abs_error_mm": 31.400550194634892,
+        "vertices_world_p95_abs_error_mm": 27.269144593620254
+      }
+    },
+    "scale_source": "field",
+    "target_max_abs_error_mm": 1.0,
+    "worst_joints_world_max_abs_error_mm": 262.3481300437748,
+    "worst_vertices_world_max_abs_error_mm": 263.87278518078097
+  },
+  "measurement_status": "measured",
+  "mesh_skeleton_divergence": {
+    "passed": false,
+    "per_player": {
+      "18": {
+        "p95_mm_max_over_sample": 50.80064010620117,
+        "p95_mm_mean_over_sample": 49.72475471496582,
+        "sample_count": 40
+      },
+      "19": {
+        "p95_mm_max_over_sample": 53.266143798828125,
+        "p95_mm_mean_over_sample": 49.29531726837158,
+        "sample_count": 40
+      },
+      "20": {
+        "p95_mm_max_over_sample": 53.49995040893555,
+        "p95_mm_mean_over_sample": 50.78303575515747,
+        "sample_count": 40
+      },
+      "21": {
+        "p95_mm_max_over_sample": 52.48284149169922,
+        "p95_mm_mean_over_sample": 50.04042682647705,
+        "sample_count": 40
+      }
+    },
+    "target_p95_mm": 5.0,
+    "worst_p95_mm_over_sample": 53.49995040893555
+  },
+  "player_ids": [
+    "18",
+    "19",
+    "20",
+    "21"
+  ],
+  "schema_version": 1,
+  "total_real_frame_sample_count": 680,
+  "wall_seconds": 50.87310838699341
+}
