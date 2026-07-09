@@ -223,3 +223,10 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
   template) — lane discarded its own faster-but-false numbers; gate checks worked. VM-side known_hosts
   self-dispatch keyscan = boot-ritual candidate. FLEET NOTE: foreign pickleball-h100-ns06eff-bx1
   RUNNING under fable-fleet=pickleball = the NS-consolidation session's NS-06 lane (theirs, untouched).
+- pickleball-h100-w7ball2 (H100 a3 SPOT, FIRST USE of pickleball-fleet-snap-20260709-w7close) —
+  PROVISIONING (Sonnet lane w7_ballretrain2_20260709, self-tearing, wall cap 5h, ~$3-15).
+  Owner-ordered retrain on the fresh 2,388-row corpus (md5 0ae65f01..., job_21=ball_session_03
+  ingested +638): control-first -> per-VM probe -> ONE-ARM-AT-A-TIME: E=seed_official+aug on 2388
+  (the ~2.4k curve point; w6/w7 rows box-position-only per owner ruling), B-complete from banked
+  step-500, F=warm-from-A optional -> score all candidates on the new 40-clip block w/ true source
+  groups. Template-bake validation = part of the mission. Drop order: F, B, C/D rows.
