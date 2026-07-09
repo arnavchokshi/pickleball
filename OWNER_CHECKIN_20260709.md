@@ -6,7 +6,15 @@ wave's critical-path lane. No typed STOPs at boot — PART 0 verified (biometric
 non-blocking until we persist a non-owner profile, which wave 7 does not do).
 
 ## Blockers
-(none — disk RESOLVED 2026-07-09 ~01:10: you ran the cleanup script, 48GB free. Thanks.)
+## STOP: needs-decision (gcloud reauth — fires ~05:50, fleet SAFE at zero VMs)
+**One-line ask:** run `gcloud auth login` (impersonation fallback also rides the dead token — both down).
+**Why this needs you:** standing rule — dead auth is never worked around; only your login restores it.
+**Evidence:** watchdog class-F at ~05:50; `Reauthentication failed. cannot prompt during non-interactive execution`; fleet list-confirmed ZERO VMs minutes before, so nothing is burning.
+**Options:** none — single-command unblock.
+**If you don't answer:** the P5-1 speed-gate GPU run (the last wave-7 queue item) stays parked; it either fires when you're back or carries to wave-8 queue #1. Nothing else is affected.
+**Everything else keeps running:** cadence lane, wave-close docs/adjudication/scorecard/boot-prompt — all local.
+
+(disk RESOLVED 2026-07-09 ~01:10: you ran the cleanup script, 48GB free. Thanks.)
 
 ## Overnight log (owner asleep ~01:15-09:30; autonomous mode, nothing owner-gated will run)
 - 01:15 overnight start: ball retrain (H100, ~2.6h in), tierprov recovery, watchdog all live;

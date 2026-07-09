@@ -27,7 +27,11 @@ while true; do
   FLEET_JSON=$(gcloud compute instances list --filter=labels.fable-fleet=pickleball \
     --format="csv[no-heading](name,status,creationTimestamp)" 2>&1)
   if echo "$FLEET_JSON" | grep -qiE "reauth|credential|invalid_grant|login required"; then
-    anomaly F "gcloud auth challenge fired mid-wave: $(echo "$FLEET_JSON" | head -2)"
+    if [ "${AUTH_DOWN:-0}" = "1" ]; then
+      : # known auth-dead state (typed STOP already surfaced); keep G/C/D/E canaries alive
+    else
+      anomaly F "gcloud auth challenge fired mid-wave: $(echo "$FLEET_JSON" | head -2)"
+    fi
   fi
   if echo "$FLEET_JSON" | grep -qiE "^ERROR"; then
     anomaly F "gcloud list failed: $(echo "$FLEET_JSON" | head -2)"
