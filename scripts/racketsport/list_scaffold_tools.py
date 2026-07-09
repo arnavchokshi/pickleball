@@ -228,7 +228,13 @@ def _category(stem: str) -> str:
         return "env"
     if normalized == "process_video":
         return "pipeline"
-    if "confidence" in normalized or "runtime" in normalized or "diagnostic" in normalized or normalized.startswith("monitor_"):
+    if (
+        "confidence" in normalized
+        or "runtime" in normalized
+        or "diagnostic" in normalized
+        or "stats" in normalized
+        or normalized.startswith("monitor_")
+    ):
         return "report"
     if "download_checkpoint" in normalized:
         return "model"
