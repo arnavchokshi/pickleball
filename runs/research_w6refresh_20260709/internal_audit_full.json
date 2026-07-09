@@ -1,0 +1,781 @@
+{
+ "maps": [
+  {
+   "pillar": "paddle-racket",
+   "working_well": [
+    {
+     "what": "Fused 6-DOF paddle estimator (wrist_palm_grip_fused) landed with a rigorous, honest acceptance process: single identical config across 4 clips, IoU improved from proxy baseline 0.1108->0.2582(Wolverine)/0.0269->0.3550(Burlington) vs CVAT rectangles, jitter median cut from 23-53deg/f to ~2-5deg/f, 100% coverage, 0 undeclared teleports after 3 verify legs.",
+     "evidence_path": "runs/lanes/racket_6dof_20260705/i1_fused_estimator/acceptance_record_v2.json"
+    },
+    {
+     "what": "Per-factor ablation MEASURED the real driver of the gain (detector-box evidence = +0.19 IoU, the whole game; SAM3D palm/finger channel only helps smoothness, weak absolute orientation because MHR fingers are rest-pose-biased; reflection factor true-zero, no usable contacts yet) -- an honest, load-bearing finding that correctly re-sequenced phase-2 priorities (P3-3 WiLoR before masks/keypoints).",
+     "evidence_path": "runs/lanes/racket_6dof_20260705/STATUS.md (Update 2026-07-05 ~20:30Z)"
+    },
+    {
+     "what": "Manager explicitly RULED to accept a small IoU regression (0.2582->0.2356 on Wolverine) in exchange for eliminating teleports, after PROVING the tighter position-smoothness bars were literally below the raw SAM3D wrist noise floor at 30fps (measured 0.020-0.076 m/frame) -- an honest engineering trade-off with numbers, not a hand-wave.",
+     "evidence_path": "runs/lanes/racket_6dof_20260705/i1_fused_estimator/acceptance_record_v2.json (tradeoff_measurements_wolverine, raw_input_noise_floor_m_per_frame)"
+    },
+    {
+     "what": "'Paddle rectangle-to-6DoF promotion' stays correctly KILLED and box-only poses stay suppressed in virtual_world -- render-only ESTIMATED band is the honest, disciplined boundary; nothing here is claimed VERIFIED.",
+     "evidence_path": "runs/lanes/racket_6dof_20260705/STATUS.md (Standing constraints section)"
+    },
+    {
+     "what": "CAPABILITIES.md truthfully states the racket row as SCAFFOLD not VERIFIED, with the correct promotion metric (face-angle/contact error vs true reference GT) and correctly notes true GT is still missing -- doc matches lane reality.",
+     "evidence_path": "CAPABILITIES.md:102"
+    }
+   ],
+   "needs_revisit": [
+    {
+     "what": "P3-1 (wire the fused estimator into the default E2E pipeline) is STILL NOT DONE as of wave-6 close, despite being explicitly SEQUENCED NEXT after the best-stack core landed on 2026-07-08, and flagged as 'the oldest BUILT-NOT-WIRED orphan, 4 waves' in the same audit.",
+     "why": "The single highest-value paddle deliverable for the end goal (a full 3D world with a rendered paddle) sits fully built and measured but produces zero effect on any real user-facing pipeline run today -- every default E2E clip still ships no paddle track unless build_paddle_pose_fused.py is invoked manually.",
+     "evidence_path": "BUILD_CHECKLIST.md:775 (BESTSTACK WAVE OPEN, 'paddle fused 6-DOF estimator = oldest BUILT_NOT_WIRED orphan, 4 waves'; 'SEQUENCED NEXT: paddle P3-1 wiring lane'); BUILD_CHECKLIST.md:780 (WAVE-6 COMPLETE scorecard item 8 lists 'paddle GT' only as owner-gated, no mention of P3-1 landing)",
+     "severity": "high"
+    },
+    {
+     "what": "The owner 4-marker/reference-pose GT capture session (P3-7/W5-D) -- the ONLY path to ever promoting paddle pose past render-only ESTIMATED to VERIFIED -- has been queued since wave-5 (2026-07-08) and repeatedly reappears as an 'owner-gated item surfaced' at every subsequent wave close without ever being booked/executed.",
+     "why": "Without this session there is a hard ceiling: paddle pose can never leave SCAFFOLD/ESTIMATED status, no matter how much further engineering (WiLoR, masks, keypoints, reflection) is layered on, because there is no true-corner GT to score against.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:1969 ('W5-D P3-7 paddle GT + hi-def asset (owner marker session \u2014 unlocks the ONLY path to RKT VERIFIED)'); BUILD_CHECKLIST.md:780 (WAVE-6 COMPLETE, item 8: 'owner-gated items surfaced (phone tests, game recording, paddle GT, 4.0 reviewer)')",
+     "severity": "high"
+    },
+    {
+     "what": "Ball-reflection factor (P3-5, fast-tracked as 'cheapest orientation signal at exactly the frames coaches care about') is built and tested but measured true-zero/dormant because no clip yet has real 3D contact velocities flowing to it (contact_locked=0 in all 4 acceptance clips).",
+     "why": "The single factor expected to give the tightest impact-frame orientation accuracy (target band 26.4 deg from TT4D evidence) is inert; it is gated on P1-4 3D ball-arc work landing first, so paddle accuracy at the moment coaches care about most (contact) is currently no better than the rest-pose-biased palm channel.",
+     "evidence_path": "runs/lanes/racket_6dof_20260705/i1_fused_estimator/acceptance_record_v2.json (band_distribution: contact_locked=0 in burlington/img1605/outdoor/wolverine)",
+     "severity": "medium"
+    },
+    {
+     "what": "Palm-only IoU (fingers/MHR hand channel in isolation) measured at 0.065 -- the weakest link in the fusion, attributed to MHR finger joints being rest-pose-biased rather than reflecting observed pronation -- yet P3-3 (WiLoR hand crops, the fix) has not been dispatched.",
+     "why": "Absolute paddle orientation (not just jitter smoothness) is currently carried almost entirely by the wrist-gated box factor (+0.19 IoU); the hand/palm signal that should supply orientation independent of boxes is measured near-useless, capping accuracy on any clip/frame where boxes are unavailable or noisy.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:1184 (P3-3 description, 'measured: palm-only IoU 0.065 \u2014 the weak link')",
+     "severity": "medium"
+    }
+   ],
+   "open_questions": [
+    "Is there a concrete date/plan for the owner 4-marker GT capture session, or does it remain indefinitely deferred behind other owner-gated asks (phone tests, game recording)?",
+    "Once P3-1 wiring lands, will it use per-clip YOLO26s box inference by default, or does production (non-CVAT) clip coverage remain a gap since box predictions today exist only for the 3 CVAT-labeled clips?",
+    "Does the wave-7 boot prompt / post-wave-6 deep-review North Star refresh (owner directive 2026-07-08 ~17:1x) re-prioritize P3-1 wiring above/below the P2-2 body-decode fix and Magnus, given paddle wiring has now waited across 4 waves?"
+   ],
+   "stale_or_unclear_docs": [
+    {
+     "doc": "TECH_BLUEPRINTS.md (PADDLE pillar blueprint, PART C)",
+     "problem": "Blueprint text (per BUILD_CHECKLIST.md:706) states 'paddle artifact BUILT-NOT-WIRED until P3-1' as a cross-pillar ruling -- still accurate, but should be checked against whatever the post-wave-6 North Star refresh produces to ensure it isn't left describing a now-superseded sequencing (P3-1 was supposed to be immediately next after beststack core, per BUILD_CHECKLIST.md:775, but multiple waves have since passed without it landing)."
+    }
+   ]
+  },
+  {
+   "pillar": "data-engine",
+   "working_well": [
+    {
+     "what": "Owner labeling flywheel is genuinely LIVE end-to-end: harvest -> WASB prelabel -> CVAT package -> local CVAT import -> owner export -> deterministic ingest -> LoSO fold rebuild. First real owner export (w5 ball_session_01, 420 boxes) landed 2026-07-08 and was ingested same day with a byte-identical deterministic manifest (md5 37a5d43ab537a15bd12d382bb882a5fe across two reruns) and protected-pattern scan NO_MATCH.",
+     "evidence_path": "runs/lanes/w6_labelingest_20260708/report.json"
+    },
+    {
+     "what": "Reviewed corpus grew from 486 to 1121 rows (682 positive / 439 negative) in one wave from real owner labels, with visibility taxonomy (clear=661/none=437/partial=21/out_of_frame=2) now populated instead of a plain bool.",
+     "evidence_path": "runs/lanes/w6_labelingest_20260708/corpus_md5_manifest.json"
+    },
+    {
+     "what": "LoSO (leave-one-source-out) fold manifest now exists with 6 disjoint folds including the OUTDOOR owner fold that the earlier wave's held-out MISS proved was missing; fold-disjointness is a passing test, not a claim.",
+     "evidence_path": "runs/lanes/w6_labelingest_20260708/loso_fold_manifest.json"
+    },
+    {
+     "what": "The LoSO harness itself is a validated, real ranking tool (not a training run): on the 2 legal internal-val folds it correctly predicted the direction of 2 outdoor held-out comparisons out of 4 metrics, and its mean-abs-error vs the pooled/mixed metric was lower or comparable on 3 of 4 metrics -- concrete evidence the LoSO-mean is a better proxy for held-out than a mixed split.",
+     "evidence_path": "runs/lanes/ball_loso_validation_20260707/loso_report.md"
+    },
+    {
+     "what": "The w6 label-pack pipeline is disciplined: 68/68 CVAT sessions, 43,230 frames / 43,230 editable prelabel boxes, validation_report status=passed with 0 errors, independent zip/XML reparse also passed, protected-material scan NO_MATCH across 6 patterns x 136 zips -- real, checked packaging, not an assertion.",
+     "evidence_path": "runs/lanes/w6_labelpack_20260708/validation_report.json"
+    },
+    {
+     "what": "The disagreement-selected re-score is an honest win with a stated caveat: on the newly labeled 1121-row corpus, seed_official decisively beat control and stage1_official (micro F1 0.5329 vs 0.3611/0.2971), real evidence owner-data fine-tuning is the right recipe -- but the manager explicitly flagged that this corpus is disagreement-selected (adversarially hard, not uniform) so absolute numbers aren't comparable to prior internal-val bars, only candidate ORDERING is valid.",
+     "evidence_path": "BUILD_CHECKLIST.md [W6 CLOSE ERRAND DONE + 4 RULINGS 2026-07-09] RULING A"
+    },
+    {
+     "what": "Corpus dashboard (P0-4) is a real, tested guardrail: leakage re-check clean (eval_hash_collisions=0, heldout_id_hits=0), catches seeded synthetic leakage in tests, and aggregates Roboflow (61,260 dedup pretrain samples) + harvest (43 clips) + owner_capture + human_review sources into one auditable report.",
+     "evidence_path": "runs/lanes/p04_corpus_dashboard_20260707/report.json"
+    },
+    {
+     "what": "CVAT import round-trip was independently verified (not just claimed): 68/68 sessions imported with zero failures, all 12 pre-existing tasks preserved with unchanged sizes, spot-checks with rendered prelabel boxes, and the manager personally verified an annotation screenshot.",
+     "evidence_path": "runs/lanes/w6_cvatimport_20260708/final_summary.json"
+    }
+   ],
+   "needs_revisit": [
+    {
+     "what": "Corpus scale is still ~5.6-11.2% of the pre-registered 10-20k held-out-shot bar (1121 reviewed rows). Full disagreement queue is estimated at ~180 owner-hours at 240 frames/hour, and reaching the bar alone needs ~42-84 owner-hours of that.",
+     "why": "This is the single biggest bottleneck on the critical path (data engine -> ball fine-tune -> everything downstream). Every accuracy campaign is gated on volume the owner has to personally produce; wave-6's win (1 session ingested) moved the needle only from 486 to 1121, itself still far short of bar.",
+     "evidence_path": "runs/lanes/w6_labelingest_20260708/report.json (honest_issues: '1121 reviewed frames total, about 5.6% to 11.2% of that bar')",
+     "severity": "high"
+    },
+    {
+     "what": "The disagreement-queue selection bias is a standing, only partially mitigated caveat: the reviewed corpus is built from frames where detectors disagree (adversarially hard), not a uniform sample, so absolute metrics computed on it are explicitly NOT comparable to prior internal-val bars -- only candidate ordering is trustworthy. This is documented as prose in a BUILD_CHECKLIST ruling rather than enforced structurally (no gate/test prevents someone from later comparing a disagreement-corpus F1 directly against a pooled/internal-val bar).",
+     "why": "If this caveat is forgotten in a future wave, it will produce a false regression or false promotion read -- e.g. someone could see 'F1 dropped from 0.74 (wave-4 internal-val) to 0.53 (w6 corpus)' and wrongly conclude regression, when it's actually a harder sample.",
+     "evidence_path": "BUILD_CHECKLIST.md [W6 CLOSE ERRAND DONE + 4 RULINGS 2026-07-09] RULING A ('CAVEAT (binding): corpus is disagreement-SELECTED ... absolute numbers are NOT comparable to prior internal-val bars')",
+     "severity": "medium"
+    },
+    {
+     "what": "GATE-1b (BODY decode fidelity) is now legitimately measured (harness bugs fixed) and still FAILs by a wide margin: gate_1b_world_round_trip 262.35mm vs <=1mm bar, mesh_skeleton_divergence 53.50mm p95 vs <=5mm bar; root cause is unresolved ('decode-internal, post-chain-invariant') and escalated to deep review.",
+     "why": "Not itself a labeling/corpus defect, but it consumed 2+ wave-6 GPU errand slots (harness-diagnosis + fix + re-measure) that compete with the label re-score queue for the same fleet budget, and it blocks P2-2 wiring indefinitely with no dated follow-up committed.",
+     "evidence_path": "BUILD_CHECKLIST.md [W6 CLOSE ERRAND DONE + 4 RULINGS 2026-07-09] RULING B",
+     "severity": "low"
+    },
+    {
+     "what": "5 of 640 owner-exported CVAT images were dropped from ingest as ambiguous/duplicate (3 multiple_ball_boxes, 1 duplicate-same-absent, 1 duplicate-conflict) -- correctly accounted for, but the multiple_ball_boxes case suggests a CVAT labeling-convention edge case that could shed proportionally more labeled effort as sessions scale to the full 68-task / ~46.7k-frame queue.",
+     "why": "At small scale (<1%) this is noise, but if the multiple_ball_boxes ambiguity rate holds across the full w6 queue, that is potentially hundreds of owner-labeled frames lost to a fixable convention/tooling gap rather than genuine unusable data.",
+     "evidence_path": "runs/lanes/w6_labelingest_20260708/report.json (acceptance item 1)",
+     "severity": "low"
+    }
+   ],
+   "open_questions": [
+    "Will the owner sustain ~240 frames/hour labeling throughput long enough (42-84 hours) to reach the 10-20k held-out bar, and is there a plan (more helpers, active-learning re-ordering, semi-automation) to compress that timeline rather than relying solely on owner hours?",
+    "Is there a plan to structurally correct the disagreement-selection bias (e.g., a periodic uniform-random audit sample alongside the disagreement queue) so future corpus-based metrics can be validly compared across waves, instead of relying on a manager-remembered prose caveat?",
+    "Now that GATE-1b is legitimately measured and still failing by ~50-260x the bar, is there a decision point for how much further GPU budget goes to root-causing decode fidelity vs. purely to label re-scoring, given both compete for the same fleet slot?"
+   ],
+   "stale_or_unclear_docs": [
+    {
+     "doc": "NORTH_STAR_ROADMAP.md P0-4 status line (around line 699-717)",
+     "problem": "States 'current corpus ~486 review frames vs the \u226510-20k budget' as the live count, but the corpus has since moved to 1121 rows per runs/lanes/w6_labelingest_20260708/report.json (2026-07-08) and multiple newer BUILD_CHECKLIST dated bullets; the roadmap doc has not been truth-upped with the new count."
+    }
+   ]
+  },
+  {
+   "pillar": "court",
+   "working_well": [
+    {
+     "what": "Manual/metric-15pt calibration path works TODAY in production (not gated behind auto-find): CAPABILITIES.md row 97 and NORTH_STAR P4-4 note report 12.3px p95 / 4.8px median on the owner/metric15 path.",
+     "evidence_path": "CAPABILITIES.md:97; NORTH_STAR_ROADMAP.md:1281-1290"
+    },
+    {
+     "what": "CALV1 wave (dedicated concurrent court session, 2026-07-08) shipped real, tested infra across file-disjoint CPU Codex lanes: distortion/ChArUco (calv1_distortion), court profiles Step 4a-4c (calv1_profiles), tape-measured net heights P4-6.0 (calv1_net) \u2014 all owner-directed, file-fenced, no eval-label touches.",
+     "evidence_path": "BUILD_CHECKLIST.md:743"
+    },
+    {
+     "what": "P4-1 Wave A solver actually LANDED on main (previously blocked by a stale non-applying patch per NORTH_STAR's own harsh-review note): 23/23 files byte-equal from worktree, manager independently re-verified 2 shas + reran a focused test locally, 60/1 focused tests, 16/16 smoke imports; server/render_app.py wiring correctly deferred rather than force-merged given contested INFRA commits.",
+     "evidence_path": "BUILD_CHECKLIST.md:753"
+    },
+    {
+     "what": "GEO r3 (P4-3) ran with a PREDECLARED bars file written before scoring, then reported an honest miss with a decisive root-cause artifact (top3_failure_analysis.json: true court absent from top-3 candidate pool on 0/8 + 0/8 frames = a proposal-generation failure, not a ranking bug) instead of quietly shipping a partial fix.",
+     "evidence_path": "BUILD_CHECKLIST.md:758; runs/lanes/calv1_geor3_20260708/"
+    },
+    {
+     "what": "court_unet_v2 training and fusion wiring both landed with disciplined honest reporting rather than inflated claims: training hit internal PCK@5 0.6414 vs a 0.95 bar (explicitly NOT claimed as a standalone solver, framed as a hypothesis seeder for E4 fusion); E4 fusion machinery landed mock-proven with a garbage-seed fail-safe test; the decisive real-checkpoint fused eval on Burlington/Wolverine was then run and HONESTLY reported as a miss (domain gap) rather than frozen/promoted.",
+     "evidence_path": "BUILD_CHECKLIST.md:772,773,776"
+    },
+    {
+     "what": "calv1_seeddiag correctly diagnosed root cause with zero code changes (Branch B: garbage geometry on real frames, not a confidence-threshold problem) before committing to a second, more expensive retrain spend \u2014 good stop-and-diagnose discipline.",
+     "evidence_path": "BUILD_CHECKLIST.md:781; runs/lanes/calv1_seeddiag_20260708/diagnosis.json"
+    },
+    {
+     "what": "Supporting lanes (calv1_impact = CAL downstream-impact harness, calv1_trainerfix = multi-worker DataLoader + periodic checkpoints + fail-loud encoder-weight validation) landed clean with PASS on every acceptance row and focused+wide suites green.",
+     "evidence_path": "runs/lanes/calv1_impact_20260708/report.json; runs/lanes/calv1_trainerfix_20260708/report.json"
+    },
+    {
+     "what": "No CAL held-out ledger row has been created and none of this court-model work has been promoted/gated on Outdoor/Indoor \u2014 the eval-label discipline (VERIFIED=0, no strict-clip touches) has held throughout the whole CALV1 wave.",
+     "evidence_path": "BUILD_CHECKLIST.md:743,747,758,776 (repeated 'Outdoor/Indoor untouched' / 'no ledger row' language)"
+    }
+   ],
+   "needs_revisit": [
+    {
+     "what": "The auto-find/unknown-court epic (P4-2 court_unet_v2, P4-3 GEO r3) still fails its own \u2264200px hard bar on the two hardest real clips: best fused result to date is Burlington 244.3px / Wolverine 212.6px, with 0/8 and 2/8 pool-containment \u2014 i.e. the marketed 'no-tap on unknown court' differentiator (NORTH_STAR line 210: 'our #1 marketable differentiator') is not yet close to gate-passing on real footage.",
+     "why": "This is the headline product differentiator per NORTH_STAR; shipping it un-gated risks a broken auto-find UX if it's ever wired into the product before the bar is met.",
+     "evidence_path": "BUILD_CHECKLIST.md:776 (Burlington 244.3px, Wolverine 212.6px, pool containment 0/8, 2/8)",
+     "severity": "high"
+    },
+    {
+     "what": "court_unet_v2 has a confirmed synthetic-to-real domain gap: on real internal frames the trained model emits near-zero usable neural-seeded candidates (floor-kp confidence \u22650.05 on only 2/12, 3/12, 1/12 keypoints) despite decent synthetic-held-out scores (PCK@5 0.6414); calv1_seeddiag confirmed this is garbage geometry (Burlington 203.2px / Wolverine 681.7px top-4 argmax), not a confidence-threshold bug \u2014 a retrain (random-init -> ImageNet resnet34 init) is in flight (pickleball-calv1unet2-a100-spot, status CREATING per fleet ledger) but not yet resolved as of this snapshot.",
+     "why": "Blocks P4-2/P4-3 promotion and the E4 fusion path from ever helping real clips until the domain gap closes; second GPU spend already committed without proof of fix.",
+     "evidence_path": "BUILD_CHECKLIST.md:776,781; runs/manager/gpu_fleet.md (pickleball-calv1unet2-a100-spot CREATING row)",
+     "severity": "high"
+    },
+    {
+     "what": "Even where Wave-A solver code landed on main (calv1_wavea, P4-1), nothing in the product consumes it yet: server/render_app.py wiring and all 10 web/replay guess+confirm UI files were explicitly deferred to a separate integration handoff (contested vs newer INFRA commits in server/), so the trust invariant holds but the feature is fully inert end-to-end.",
+     "why": "Landed-but-unwired work doesn't move the product goal (fastest video->3D->feedback) until the integration lane actually runs; risk of this becoming a long-lived orphan like the paddle 6-DOF estimator (per beststack audit).",
+     "evidence_path": "BUILD_CHECKLIST.md:747,753 ('nothing consumes the solver in product yet')",
+     "severity": "medium"
+    },
+    {
+     "what": "An env-dependent promotion divergence was found and only patched by convention, not code: tests/racketsport/test_court_detector_v2_eval reports IMG_1605 promoted=true under anaconda python3 but promoted=false under the repo .venv for the same landed code.",
+     "why": "A silent environment-dependent flip on a promotion boolean is a latent correctness/reproducibility risk if any future session runs court evals outside .venv without knowing the rule.",
+     "evidence_path": "BUILD_CHECKLIST.md:753 ('WATCH ITEM... env-dependent promotion divergence; ALL court evals hereafter pin .venv')",
+     "severity": "medium"
+    },
+    {
+     "what": "P4-0 (court-profile library \u2014 the TECH_BLUEPRINTS-ruled actual v1 path, closes profile round-trip + skip-recal) is still 0% built (no CourtProfile module exists) even though the owner override pulled attention toward the harder, still-failing auto-find epic (P4-2/P4-3).",
+     "why": "P4-0 is called out as the higher-leverage, lower-risk v1 win (works for the owner's own \u22643 known courts) but is currently deprioritized relative to the epic that keeps missing its bar; risks spending more GPU dollars chasing auto-find while the cheaper win sits idle.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:1244-1252 ('0% built today'); BUILD_CHECKLIST.md:747 (owner override toward auto-find)",
+     "severity": "medium"
+    },
+    {
+     "what": "External court corpus is not locally recoverable: models/checkpoints/court_external and runs/training_corpora_20260701/court are gone from local disk; the only recovery path is Roboflow re-fetch with the owner's API key (not yet re-issued) or a stale template snapshot.",
+     "why": "Any court_unet_v2 retrain that needs real (not synthetic) labeled data, or any GEO r3 work needing the PnLCalib GPL checkpoints re-verified, is blocked without owner action.",
+     "evidence_path": "BUILD_CHECKLIST.md:747 ('external-corpus recovery ladder'); NORTH_STAR_ROADMAP.md:247 (Roboflow API key re-issue owner ask)",
+     "severity": "low"
+    }
+   ],
+   "open_questions": [
+    "Will the in-flight court_unet_v2 retrain (pickleball-calv1unet2-a100-spot, ImageNet-init + multi-worker sampler) actually close the synthetic-to-real domain gap, or is a second honest miss likely given the random-init/synthetic-only training data is the deeper limiter?",
+    "Is there a scheduled lane to actually wire the landed Wave-A solver + calv1 profile/distortion/net infra into server/render_app.py and web/replay, or does it stay inert indefinitely behind the INFRA-commit contest?",
+    "Given P4-0 (court profiles) is called the actual v1 path and is 0% built, does the owner want it resequenced ahead of continuing to chase the P4-2/P4-3 auto-find bar, or is the auto-find override (BUILD_CHECKLIST:747) still the standing priority?",
+    "Does best_stack.json actually have court rows registered yet (distortion/profiles/net promoted, court_unet_v2+fusion dormant) as stated in BUILD_CHECKLIST:775-776, or is that still pending from the wave-6 manifest-doctrine landing?"
+   ],
+   "stale_or_unclear_docs": [
+    {
+     "doc": "NORTH_STAR_ROADMAP.md P4-1 item (lines ~1254-1261)",
+     "problem": "Still phrased as blocked/unlanded ('the handoff patch does NOT apply as-is... FIRST regenerate the patch...') with a harsh-review note from 2026-07-06, but BUILD_CHECKLIST.md:753 (2026-07-08, manager-verified) confirms Wave A was actually landed on main via a fresh worktree-to-main byte-equal land, not the old patch route. The checkbox is still unchecked and the note is now factually stale."
+    },
+    {
+     "doc": "NORTH_STAR_ROADMAP.md P4-2/P4-3 items (lines ~1266-1280)",
+     "problem": "Both still read as pure planning items ('STAGED', 'Then eval harness + E4 fusion... Gate: aggregate \u2264200px hard bar (currently 213.3)') without reflecting the substantial new evidence from 2026-07-08 (actual training run completed, GEO r3 run-and-killed with root-cause diagnosis, E4 fusion landed, fusedefault honest miss with concrete new px numbers 244.3/212.6). The 'currently 213.3px' figure is now superseded by newer measured numbers in BUILD_CHECKLIST."
+    }
+   ]
+  },
+  {
+   "pillar": "speed-pipeline",
+   "working_well": [
+    {
+     "what": "Measured E2E speed win landed with zero quality change: 2141s -> ~532-565s (3.8x) via slim BODY monoliths, VM-built mesh index, batched rsync, chunkfix, worldhmr-split fast path, overlap-schedule opt-in, full phase instrumentation.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:111,1427-1429; runs/lanes/pipeline_speed_20260705/FINAL_REPORT.md"
+    },
+    {
+     "what": "H100 BODY SKU validated end-to-end on a real spot VM: 27/27 GPU pytest green, one full wolverine BODY dispatch to completion (wall_seconds=479.6s vs A100 reference 1134.4s = ~2.37x faster), version-stamp verified 73/73 files zero drift, VM torn down list-confirmed gone. Runtime-validated only, explicitly NOT quality-verified.",
+     "evidence_path": "runs/lanes/w4_h100body_20260707/REPORT.md"
+    },
+    {
+     "what": "Fast-SAM-3D-Body challenger was benched rigorously (identical H100/frames/crops/ckpt, N=680 person-frames) and correctly killed as NOT-ADOPT: steady-state only 1.3x (not paper's 8-10x claim), full-stage wall 1.31x SLOWER than current stack (compile-warmup unamortized per-clip), and accuracy regressed up to 149mm/frame on fast swings -- an honest kill against a pre-registered condition, not a stall.",
+     "evidence_path": "BUILD_CHECKLIST.md line 741 [W5 FASTBODY BENCH 2026-07-08]; NORTH_STAR_ROADMAP.md:1490-1502"
+    },
+    {
+     "what": "Transport hardening landed and folded in 3 real bonus catches surfaced by the fastbody bench: EMSGSIZE/chunked rsync --append-verify fallback made retryable-first-class, known_hosts refresh mirrored into pinned worktrees, orchestrator now loudly warns (and can strict-fail) on silent batched->per-frame BODY degrade when FAST_SAM_PYTHON is unset, lazy FAST_SAM_ROOT read fixing a wrong-default import-time bug, and a --clip-dir overwrite guard closing a real cross-lane-overwrite incident.",
+     "evidence_path": "runs/lanes/w5_transport_20260708/report.json; BUILD_CHECKLIST.md commit baa7c911c note in [WAVE-5 COMPLETE 2026-07-08] line 742"
+    },
+    {
+     "what": "The project explicitly re-scoped the speed gate honestly after a harsh review found the four booked levers floor at ~6-8 min/clip (300-400s BODY = 96-98% of E2E) -- rejecting an unachievable <=1x claim and setting the real target as <=2x video duration for full games, with <=1x explicitly labeled an un-booked STRETCH (P5-7). This is a documented honest recalibration, not a quiet goalpost move.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:1429-1434"
+    },
+    {
+     "what": "Concrete order-of-magnitude BODY-runtime math was derived and disclosed rather than assumed: warm-worker fixed cost (model_load 23.3s + compile_warmup 42.3s = 65.6s) amortized across a queue of N=10 clips gives only ~59s/clip (15-20% of the post-P5-1 floor), explicitly NOT an order of magnitude on its own -- correctly routing the plan toward batched multi-clip inference + disk-cached compiled graphs as the real next levers.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:1479-1489"
+    }
+   ],
+   "needs_revisit": [
+    {
+     "what": "The one live attempt at the largest booked lever (S4 chunked binary/mmap subprocess handoff) was a measured REGRESSION (1057.4s -> 1300.7s; handoff 376s -> 489s) and was reverted. Only round-trip correctness is proven; the <40-60s handoff target is not banked, and the plan now redirects to 'large flat arrays, not chunked streaming' -- unimplemented.",
+     "why": "This was the single biggest remaining lever toward the 6-8min/clip floor; its regression + revert means P5-1 is still open and the floor is not yet reached in practice, directly blocking the fastest-video-to-3D-world goal.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:1436-1444",
+     "severity": "high"
+    },
+    {
+     "what": "P5-1's own gate (Wolverine <=400s; Outdoor <=2x video duration; six-run variance report; foot-slide bit-identical vs pre-change) has no report.json showing it passed at those exact thresholds -- the closest evidence is the H100 run at 479.6s wall (close to but above 400s) and the A100 reference at 1134.4s, neither run against the stated gate as the final acceptance check.",
+     "why": "Without a report scored against the explicit P5-1 gate, the manager cannot certify the speed floor is actually met on the accepted infra; current best number (479.6s H100 / 1134.4s A100) sits at or above the 400s bar, so the checklist item remains legitimately open, not just undocumented.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:1436-1444 (gate) vs runs/lanes/w4_h100body_20260707/REPORT.md (closest measured number)",
+     "severity": "medium"
+    },
+    {
+     "what": "H100 vs A100 cost-per-clip comparison is unresolved: spot $/hr sources conflict by ~7x ($0.57-$4.25/hr), so the $/clip claim ($0.076-$0.566 on H100 vs $0.117 A100-only slice) spans both 'cheaper' and 'more expensive than A100' depending on which price is real. This has been flagged twice (w3 and w4 lanes) with no resolution path besides waiting on the owner's actual GCP invoice.",
+     "why": "Cost-per-clip is a P5-4 gate input (fully-loaded $/clip) and a stated product-pricing input (P7-3); an unresolved 7x band on GPU pricing makes any $/clip number presented to the owner or used for pricing decisions unreliable.",
+     "evidence_path": "runs/lanes/w4_h100body_20260707/REPORT.md ('$/hr and $/clip' section, HONEST ISSUES #6)",
+     "severity": "medium"
+    },
+    {
+     "what": "The H100 vs A100 2.37x comparison itself is caveated as not fully clean-room: the wolverine clip-dir reused a prior body_mesh_index from the original A100 run (mesh_index_skipped logged), and the A100 reference number is 2 days older in commit history than the H100 number being compared against it.",
+     "why": "A caveated apples-to-apples comparison means the 2.37x SKU-speedup figure being cited in NORTH_STAR/BUILD_CHECKLIST could be somewhat optimistic or include warm-start contamination; a fresh, same-session, identical-clip-dir A100-vs-H100 run has not been done.",
+     "evidence_path": "runs/lanes/w4_h100body_20260707/REPORT.md ('CAVEATS ON THE SKU COMPARISON' section)",
+     "severity": "low"
+    },
+    {
+     "what": "P5-5b (pre-flight sanity gate: ffprobe/orientation check before burning GPU) is still unbuilt -- orientation/rotation detection today is a hardcoded 'landscape' stub in 2 places per the roadmap's own note.",
+     "why": "Without this gate, corrupt/wrong-orientation/wrong-sport clips can still burn full GPU wall time before failing, directly working against the cost/speed goal (wasted GPU-minutes per bad clip) and against reliability for the end-to-end product.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:1466-1470",
+     "severity": "medium"
+    },
+    {
+     "what": "P5-6 per-clip automated QA/failure-detection (sequential-hypothesis-testing wrapper) and P5-8 per-court warm caches/cascade inference are both still unbuilt checklist items with no lane evidence found under runs/lanes/ for either.",
+     "why": "P5-8 (warm caches) is explicitly named in the pillar's own remaining-work summary ('what remains booked... warm caches') -- its absence means a real 25%+ wall-reduction lever for repeat-court owner captures is sitting unbuilt; P5-6 is the reliability primitive needed before any pipeline output should be trusted un-reviewed.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:1471-1477 (P5-6), 1503-1506 (P5-8); no matching runs/lanes/* directory found",
+     "severity": "medium"
+    },
+    {
+     "what": "Frame-plan sparsification beyond ball_aware (named explicitly as a remaining candidate lever for the P5-7 BODY-runtime redesign) has no lane or report evidence of being attempted yet; it is only mentioned as a 'candidate' in the roadmap text.",
+     "why": "This is one of only two concretely named levers left toward closing the gap to the <=1x stretch goal (the other being batched multi-clip inference / disk-cached compiled graphs); neither has landed evidence yet, so the ceiling on BODY runtime remains the honest ~300-400s floor with no proven path past it.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:1487",
+     "severity": "low"
+    },
+    {
+     "what": "The most recent commit in this pillar's neighborhood (5c2eb6958, 2026-07-08) is only a wave-6 boot-prompt note about an owner critique on world playback frame rate/mesh cap and scheduling -- not yet a lane or fix.",
+     "why": "Signals a live, owner-reported speed/playback-quality issue queued for wave-6 that has not yet been triaged or resolved; worth explicit tracking so it isn't lost in the queue.",
+     "evidence_path": "runs/manager/wave6_boot_prompt.md (commit 5c2eb6958)",
+     "severity": "low"
+    }
+   ],
+   "open_questions": [
+    "Is there a report.json anywhere (not surfaced by this search) that scores the current pipeline against the exact P5-1 gate (Wolverine <=400s, Outdoor <=2x video duration, six-run variance, bit-identical foot-slide)? If not, should P5-1 remain an open checklist item rather than implicitly assumed done via the H100/A100 numbers?",
+    "What is the actual resolved GPU spot $/hr rate (owner's GCP invoice), needed to collapse the 7x cost-per-clip ambiguity blocking P5-4/P7-3 pricing?",
+    "Has any lane attempted the 'large flat arrays, not chunked streaming' mmap handoff redesign that P5-1 calls out as the next attempt after S4's chunked-streaming regression, or is it still purely a plan-stage idea?",
+    "Is P5-8 (per-court warm caches) scheduled for wave-6, given it's named directly in this pillar's remit ('what remains booked') but has no lane yet?"
+   ],
+   "stale_or_unclear_docs": [
+    {
+     "doc": "NORTH_STAR_ROADMAP.md PHASE 5 header line 1427-1432",
+     "problem": "States '2141->~532-565s' and '4 booked levers floor at ~6-8min/clip' as settled facts, but the only fresh SKU proof on record (H100, 479.6s wall) is close to but still slightly above the stated 400s P5-1 gate on A100 terms and the S4 handoff lever it counted on regressed and was reverted -- the header reads as more settled than the lane evidence underneath it supports; a reader skimming just the PHASE 5 header would not know P5-1's core lever is currently a reverted regression."
+    }
+   ]
+  },
+  {
+   "pillar": "ball-chain",
+   "working_well": [
+    {
+     "what": "LoSO (leave-one-source-out) validation harness built and run honestly: with only 2 legal labeled indoor folds it correctly found LoSO does NOT flip the F1 ranking that produced the 0.6969(chain) vs 0.7248(zero-shot anchor) indoor->outdoor inversion, and explicitly attributed the inversion to a genuine indoor->outdoor domain jump rather than a validation artifact -- while proving LoSO-mean is a better-calibrated estimator than pooled (F1 abs-err 0.058 vs 0.074).",
+     "evidence_path": "runs/lanes/ball_loso_validation_20260707/report.json; BUILD_CHECKLIST.md:730"
+    },
+    {
+     "what": "Once real owner outdoor labels landed (session-01 export, 635 new CVAT images), the LoSO harness was re-run for real: 6-fold all-disjoint manifest including a true OUTDOOR fold, and GPU re-score on owner ground truth showed seed_official (raw WASB) beating both official_tennis_control and stage1_official (micro F1 0.5329 vs 0.3611 control vs 0.2971 stage1) -- confirming the earlier 'raw WASB seed blessed' ruling with real labeled data instead of intuition.",
+     "evidence_path": "runs/lanes/w6_labelingest_20260708/gpu_rescore/loso/loso_report.json; runs/lanes/w6_labelingest_20260708/gpu_rescore/loso/loso_report.md; BUILD_CHECKLIST.md:766, :780"
+    },
+    {
+     "what": "Train/inference preprocessing mismatch (a real correctness bug) was found and fixed via shared wasb_adapter helpers, proven with a torch.allclose tensor-identity contract test train-vs-inference (atol 1e-6), and the fix was VALIDATED by retrain: the wave-4 Wolverine-degenerate class (0.20 F1) disappeared after retrain on the fixed preprocessing (stage1_official Wolverine 0.75, Burlington 0.8636, LoSO-mean 0.7094 beating control 0.6858).",
+     "evidence_path": "runs/lanes/w5_ballprep_20260707/report.json; runs/lanes/w5_ballretrain_20260707/vm_pull/; BUILD_CHECKLIST.md:733, :740"
+    },
+    {
+     "what": "Magnus/spin (BVP scalar-S) STEP-2 work is a clean honest kill: the S-parameter port was correctness-verified against a known-S simulator (S_hat=0.500617 vs true 0.5, err 0.0006, far under 0.15 tolerance), but measured on real reprojection RMSE across 3 clips it made accuracy worse on 2/3 clips (Burlington +0.114, Outdoor +0.054), so it ships with fit_spin_scalar=False (dormant) rather than being force-adopted.",
+     "evidence_path": "runs/lanes/w6_magnus_20260708/report.json; runs/lanes/w6_magnus_20260708/verify/reprojection_compare.json; BUILD_CHECKLIST.md:761"
+    },
+    {
+     "what": "BVP span-protection v2 landed after one adversarial verify round with real regression evidence: 5/5 protected spans held deltas of exactly 0.0 on fit/RMSE/confidence, endpoint error improved on 4/5, LOO uniqueness 5/5, runtime under baseline, and internal-val floors reproduced EXACTLY (Burlington 0.7727272727, Wolverine 0.875000) -- and a stale w4 harness assertion was correctly re-ruled as testing a defect rather than a real regression, with frozen-baseline evidence backing the re-ruling.",
+     "evidence_path": "runs/lanes/w5_bvpspan_verify_20260707/report.json; BUILD_CHECKLIST.md:734, :736"
+    },
+    {
+     "what": "Owner labeling flywheel is now operating end-to-end and deterministically: CVAT export -> ingest script (scripts/racketsport/ingest_owner_ball_labels.py) rebuilds the reviewed corpus with byte-identical manifest hashes across reruns (486->1121 rows), and the pipeline explicitly refuses to touch Outdoor/Indoor held-out eval labels (protected-scan checks with 0 hits across 10 zips, verified both by zipgrep and programmatically).",
+     "evidence_path": "runs/lanes/w6_labelingest_20260708/spec.md; runs/lanes/w6_labelingest_20260708/loso_fold_manifest.json; BUILD_CHECKLIST.md:757, :766"
+    }
+   ],
+   "needs_revisit": [
+    {
+     "what": "The pre-registered held-out shot (the actual M1/M3 gate: beat 0.7248 F1@20 on Outdoor/Indoor held-out labels) is still not attempted -- reviewed labels sit at 1121 vs the required >=10-20k bar (5.6-11.2% of the way there), so BALL remains VERIFIED=0 and the 0.6969-vs-0.7248 wall is technically still untouched by any promotable measurement.",
+     "why": "This is the literal definition-of-done gate for the BALL pillar (NORTH_STAR M1/M3) and the whole 3D-world pipeline depends on ball detection quality; every retrain/architecture win to date is internal-val only and non-promotable until this bar is cleared.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:176,315,874; BUILD_CHECKLIST.md:780 ('HELD-OUT SHOT: still gated (1121/>=10-20k...)')",
+     "severity": "high"
+    },
+    {
+     "what": "The w6 GPU re-score result that seed_official beats stage1_official and control is explicitly flagged with a 'disagreement-corpus caveat BINDING' -- the newly ingested labels were drawn from a teacher/student disagreement queue (frames where models disagreed), not a uniform/representative sample of outdoor footage, so the ranking may not hold once broader, non-disagreement-biased outdoor labels are ingested.",
+     "why": "A model-selection ruling (which ball checkpoint to trust going forward) is currently resting on a sampling-biased label set; if the bias flips the ranking once representative labels arrive, teams could be building on the wrong candidate.",
+     "evidence_path": "BUILD_CHECKLIST.md:780 (\"disagreement-corpus caveat BINDING\"); runs/lanes/w5_labelpack_20260707 disagreement-queue sourcing note",
+     "severity": "medium"
+    },
+    {
+     "what": "seed_official's 486-row fine-tune underperformed official_tennis_control on LoSO-mean (0.6404 vs control 0.6858) in the earlier w5_ballretrain PASS -- booked as 'small-N noise suspect' but not re-run/resolved yet as of the last dated bullet.",
+     "why": "If this isn't actually noise, it means the current best fine-tune candidate may regress vs the zero-shot control on some real data, which would misdirect the next retrain's starting checkpoint choice.",
+     "evidence_path": "BUILD_CHECKLIST.md:740 ('Seed fine-tune (486 rows) honest-mixed... LoSO-mean 0.6404 below control \u2014 booked SMALL-N NOISE SUSPECT')",
+     "severity": "low"
+    },
+    {
+     "what": "Recall gap: even the best measured internal-val numbers leave ~40% miss rate implied by the historical 0.578 recall figure carried in NORTH_STAR's BALL row, and the M1 bar requires recall >=0.75 alongside F1>=0.90 and hidden-FP<=0.05 -- none of stage1_official/seed_official/control have been shown to clear all three simultaneously on a held-out (only F1/hFP have LoSO evidence so far).",
+     "why": "A ball track with high miss rate breaks downstream arc-solving/BVP/Magnus and event fusion regardless of localization F1, so recall is a real remaining gap on the critical path to accurate 3D ball flight.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:176 ('recall 0.578 (misses ~40%)'); NORTH_STAR_ROADMAP.md:874 (M1 bar: F1>=0.90, recall>=0.75, hiddenFP<=0.05)",
+     "severity": "medium"
+    }
+   ],
+   "open_questions": [
+    "Does the disagreement-corpus sampling bias in the w6 rescore materially change once the next 72 staged CVAT tasks (~45.6k frames, non-disagreement-only sourcing per Phase-B) are ingested -- i.e. does seed_official still beat stage1_official/control on a broader/less-biased outdoor sample?",
+    "Is the seed_official 486-row fine-tune's LoSO-mean underperformance vs control (0.6404 vs 0.6858) genuine small-N noise, or a real regression that should stop further seed-based fine-tuning from that base?",
+    "What is the current owner-labeling pace/ETA to reach the >=10-20k reviewed-label bar needed to attempt the pre-registered held-out shot against the 0.7248 anchor?"
+   ],
+   "stale_or_unclear_docs": [
+    {
+     "doc": "CAPABILITIES.md ball row",
+     "problem": "States stage-1 official retrain results (Burlington 0.8636/Wolverine 0.7500, LoSO-mean 0.7094) as the current picture but does not yet reflect the wave-6 rescore finding that seed_official (not stage1_official) is the current LoSO winner on real owner-labeled outdoor data (stage1_official actually fell BELOW control at 0.2971) -- a reader skimming only CAPABILITIES.md would over-credit stage1_official."
+    }
+   ]
+  },
+  {
+   "pillar": "body-world",
+   "working_well": [
+    {
+     "what": "Fresh-GPU decisive proof (committed 940576495) is GREEN 4/4: max_foot_lock_slide_m 0.02025/0.02004/0.01798/0.02307 (all under the slide bar), root jumps 0/0/0/0, body_full_clip_gate 4/4, browser assertion_errors [] x4, pipeline_status complete x4 across scoped clips.",
+     "evidence_path": "runs/lanes/w4_freshproof_20260707/summary.json"
+    },
+    {
+     "what": "GATE-1a (euler-cont-euler idempotence) genuinely PASSES fresh: max_abs_error_deg 4.098e-05 vs 0.1 target on 680 frames, 4 players -- the encode-side of decode fidelity is solid.",
+     "evidence_path": "runs/lanes/w6_close_errand_20260708/gate1b_raw_arm_report.json"
+    },
+    {
+     "what": "Honest, adversarially-verified kill of grounding_refine: skeleton-direct per-foot phase producer was built, wired for measurement, and found to NOT help -- 3/4 clips breach the frozen 30mm max gate, so raw skeleton noise (not the gate itself) is the binding constraint. Process-wise this is a correctly-run kill, not a wasted build.",
+     "evidence_path": "runs/lanes/w4_footattr_fix_20260707/report_r2.json"
+    },
+    {
+     "what": "GATE-1b measurement infrastructure itself was honestly rebuilt after two real defects were caught by the manager's own adjudication process rather than shipped past: (1) the raw-postchain knob crashed post-inference because _bypassed_foot_pin_metrics omitted artifact_size_policy, fixed and fixture-covered; (2) the harness silently dropped scale and hand_pose fields, fixed with fail-loud semantics + decoder provenance block in a canonical replacement script.",
+     "evidence_path": "runs/lanes/w6_close_errand_20260708/gate1b_raw_arm_report.json"
+    },
+    {
+     "what": "Mesh byte-budget (W6 MESHCAP) landed with a clean no-flag byte-identical non-regression proof and delivered a real, measured win once tier-eligibility was accounted for: outdoor clip mesh density 5.21->21.32 effective fps (4.1x) at 112.6MiB; wolverine 1.67x. Correctly still gated behind an owner display/promotion decision rather than silently defaulted on.",
+     "evidence_path": "BUILD_CHECKLIST.md [W6 CLOSE ERRAND DONE + 4 RULINGS 2026-07-09] RULING C; runs/lanes/w6_meshcap_20260708/report.json"
+    },
+    {
+     "what": "Playback density diagnosis (w6_playbackdiag) refuted the denser-BODY-scheduling theory for owner critique #1 with actual measurement (mesh fps, BODY schedule gap histograms, GPU cost/frame) rather than guessing, correctly separating mesh-index gaps from true BODY scheduling holes (e.g. IMG1605's one 55-frame hole).",
+     "evidence_path": "runs/lanes/w6_playbackdiag_20260708/playback_decision_table.json"
+    }
+   ],
+   "needs_revisit": [
+    {
+     "what": "GATE-1b world round-trip decode fidelity FAILS by a wide margin now that the harness is trustworthy: worst joints_world_max_abs_error_mm 262.35mm (target <=1mm), mesh_skeleton_divergence p95 53.50mm (target <=5mm). This blocks ALL downstream latent work: lambda_foot pinned to 0, latent smoother stays UNWIRED, latent-interp playback stays OFF, grounding_refine un-kill cannot proceed.",
+     "why": "P2-2/GATE-1b is the single biggest blocker on the critical path to 'most accurate 3D world' -- until decode fidelity is understood and fixed, no downstream body-smoothness or latent-interpolation work can be trusted or promoted; wave-7 queue item #2 names this the top priority after ball retrain.",
+     "evidence_path": "runs/lanes/w6_close_errand_20260708/gate1b_raw_arm_report.json",
+     "severity": "high"
+    },
+    {
+     "what": "Root cause of the 262mm/53.5mm divergence is NOT yet diagnosed. The one diagnostic clue banked (p95 53.50mm IDENTICAL between raw-postchain and default arms) implies the defect is decode-internal and post-chain-invariant, but nobody has yet traced whether it is world-frame transform, betas, translation/scale application inside mhr_decode, or a persisted-fields gap.",
+     "why": "Without root-causing this, wave-7 cannot know whether the fix is a harness/field-plumbing issue (cheap) or a real model/decoder defect (expensive, may require retraining or a different SAM-3D-Body decode path) -- directly gates the 'most accurate' half of the project anchor.",
+     "evidence_path": "runs/manager/wave7_boot_prompt.md lines 29-36",
+     "severity": "high"
+    },
+    {
+     "what": "CAPABILITIES.md body row still marks BODY as SCAFFOLD, not VERIFIED, with 'independent-GT world-MPJPE' as the still-missing acceptance path, and explicitly notes Fast-body (a speed challenger) is NOT-ADOPT (slower + regressed accuracy on the wolverine bench) -- no external/candidate BODY path has produced a promotion.",
+     "why": "Confirms no independently-validated ground-truth accuracy number exists for BODY/world outputs at all (visual/internal-val only); until an OpenCap-style or similar independent-GT comparison exists, accuracy claims for the 3D world remain unverified by design.",
+     "evidence_path": "CAPABILITIES.md line 100",
+     "severity": "high"
+    },
+    {
+     "what": "Mesh-cap density gain has a real, measured ceiling from TIER ELIGIBILITY (not bytes): for wolverine, only 167/244 frames are mesh-eligible (77 human_review-tier frames are never meshed at all), so density improved ~1.67x instead of the originally-predicted ~26.6x. Whether to render human_review-tier meshes (banded/lower-trust) is an unresolved product/trust ruling still pending owner decision, as is the byte-budget 300-vs-400MiB default and whether to flip mesh.byte_budget_mib to WIRED_DEFAULT for result runs.",
+     "why": "Playback smoothness -- a stated owner critique item -- is still capped by an unresolved product-trust decision, not a technical block; leaving it open indefinitely means the visible playback experience stays worse than the pipeline is now capable of.",
+     "evidence_path": "BUILD_CHECKLIST.md [W6 RULINGS 2026-07-08] item (d); runs/manager/wave7_boot_prompt.md queue item #9",
+     "severity": "medium"
+    },
+    {
+     "what": "GPU-fleet template snapshot dirt (truncated core files: worldhmr -3016 lines, schemas/__init__ -2603, hmr_deep -990, mesh_export -231, body_array_native -179) occurred TWICE in consecutive waves on VM boot, requiring git reset --hard recovery each time before body-related lanes could run safely on fresh VMs.",
+     "why": "A silently-truncated worldhmr/body_array_native/mesh_export file on a fresh VM boot that goes unnoticed would corrupt BODY/mesh outputs without any error, directly threatening the trustworthiness of any body-world gate measured on that VM; wave-6 close ruled the fresh w6close template as the new default specifically to retire this, but the underlying re-cut-template pattern is a recurring operational risk worth a standing pre-flight check.",
+     "evidence_path": "BUILD_CHECKLIST.md [W6 GPU ERRAND DONE 2026-07-08]",
+     "severity": "medium"
+    },
+    {
+     "what": "pipeline_summary stages[body].metrics.postchain_bypassed_stages is empty/not populated even when postchain stages were in fact bypassed (5 other evidence sources agree this is a reporting gap, not a real bypass failure) -- flagged as micro-debt but still open.",
+     "why": "A blank bypass-stage report field makes it harder for anyone auditing a BODY run to tell whether foot-lock/postchain stages actually ran, weakening the self-auditability of the pipeline that the whole VERIFIED-gating discipline depends on.",
+     "evidence_path": "BUILD_CHECKLIST.md [W6 CLOSE ERRAND DONE + 4 RULINGS 2026-07-09] honest issues; runs/manager/wave7_boot_prompt.md queue item #10",
+     "severity": "low"
+    }
+   ],
+   "open_questions": [
+    "What is the actual root-cause mechanism of the 262mm world round-trip / 53.5mm mesh-skeleton divergence inside mhr_decode (world-frame transform vs betas vs translation/scale application vs a persisted-fields gap) -- nobody has traced this yet beyond ruling out checkpoint-key mismatch and confirming the raw-vs-default arm identity?",
+    "Should mesh byte-budget default flip to WIRED_DEFAULT (300 vs 400 MiB) for all result runs, and should human_review-tier frames be rendered (banded/lower-trust) to close the remaining tier-eligibility playback ceiling -- both pending an explicit owner product/trust decision?",
+    "Is there a path to an independent-GT world-MPJPE benchmark (e.g. OpenCap-style) for BODY that doesn't require the owner's own marker-based capture, given no promotion path exists today per CAPABILITIES.md?"
+   ],
+   "stale_or_unclear_docs": [
+    {
+     "doc": "CAPABILITIES.md",
+     "problem": "Line 100 (body row) has not been updated since before the wave-6 close GATE-1b legitimate-measurement ruling (262.35mm FAIL) and the mesh byte-budget 4.1x outdoor density win; it still cites the older w4_freshproof/P2-2-phase-1-unwired framing without the now-definitive GATE-1b FAIL numbers or the meshcap RULING C result, though the overall SCAFFOLD/VERIFIED=0 conclusion is still correct."
+    }
+   ]
+  },
+  {
+   "pillar": "product-infra-viewer",
+   "working_well": [
+    {
+     "what": "Full product-infra rebuild (Mongo Atlas + S3 presigned + pull-worker + own JWT auth + Stripe scaffold) landed INFRA-0 through INFRA-5 in one wave, each dark-flagged (PICKLEBALL_ACCOUNTS_ENABLED=0 / QUEUE_ENABLED=0) and test-verified before enabling in prod \u2014 safe incremental rollout discipline.",
+     "evidence_path": "BUILD_CHECKLIST.md:716-724 (INFRA-0 COMPLETE, INFRA-1 LANDED 54/54+95/95, INFRA-1b native refresh contract +4 tests, INFRA-2 pull-worker daemon 91/91 with a real manager-caught crash-loop fix, INFRA-3 React screens 212p/15 pre-existing-fail/227 total, INFRA-4 iOS wiring 30/30, INFRA-5 delete-cascade 121/121 proven both directions)"
+    },
+    {
+     "what": "Delete-cascade (account + per-clip) is proven both ways with real S3/Mongo state checks, not just unit mocks: correct password -> S3 empties + all docs gone + refresh chain revoked; wrong password -> 403 + zero mutation.",
+     "evidence_path": "BUILD_CHECKLIST.md:724 (INFRA-5 LANDED, server/profile_store.py, account.py DELETE /api/account, clips.py DELETE /api/clips/{id})"
+    },
+    {
+     "what": "iOS sign-in gate is real (Keychain-backed native auth client + presigned multipart upload client, 30/30 tests) and was deliberately shipped DARK rather than flipped live blind, because doing so would break two existing UI test suites with no bypass arg \u2014 an honest, correctly-scoped kill/defer rather than a silent regression.",
+     "evidence_path": "BUILD_CHECKLIST.md:721 (INFRA-4 iOS wiring, ios/Upload/Sources/PickleballUpload/*.swift, ios/App/SignIn{View,ViewModel}.swift, dinkVisionAuthGateEnabled=false)"
+    },
+    {
+     "what": "Fail-closed viewer bug (HUD claiming 'measured' while status/kill_reasons said otherwise) was caught via live browser verification and fixed with new parsers plus 14+9 tests, and the fix was later re-verified live in the running viewer.",
+     "evidence_path": "BUILD_CHECKLIST.md:2,62-70 and runs/lanes/ball_viewer_failclosed_fix_20260705/"
+    },
+    {
+     "what": "Owner critique #1 (playback frame rate) was diagnosed read-only before any code change (denser-scheduling theory measured and REFUTED, mesh-cadence measured per clip), then the actual fix (mesh byte-budget default) was landed and measured: outdoor mesh fps 5.21->21.32 (4.1x), wolverine 1.67x, with the remaining ceiling correctly attributed to a human_review tier-exclusion policy question, not a bug.",
+     "evidence_path": "runs/lanes/w6_playbackdiag_20260708/playback_decision_table.json and BUILD_CHECKLIST.md:745,777,780 (W6 PLAYBACKDIAG, W6 CLOSE ERRAND RULING C)"
+    },
+    {
+     "what": "Mesh-index viewer distinguishes 'missing_embedded_mesh_vertices' from true absence, avoiding a false-alarm class of trust-band mislabeling in the replay viewer.",
+     "evidence_path": "CAPABILITIES.md:105 and runs/lanes/w4_burlmesh_fix_20260707/report.json"
+    },
+    {
+     "what": "Interim owner-critique access to the 4 full-E2E worlds was solved pragmatically (pre-gate worktree viewer) rather than left fully blocked, while the real gate stayed in place for the product-infra fence.",
+     "evidence_path": "BUILD_CHECKLIST.md:742 (w5_critiqueviewer lane) and runs/lanes/w5_critiqueviewer_20260708/"
+    }
+   ],
+   "needs_revisit": [
+    {
+     "what": "Browser-verify (the standing gate that proves each GPU-decisive run's world actually renders correctly in the live viewer) has been BLOCKED by the INFRA-3 sign-in gate for two consecutive waves (wave-5 and wave-6), with the fix ('dev-bypass') repeatedly surfaced as a coordination ask to the product-infra session and repeatedly carried forward unresolved.",
+     "why": "Every wave since wave-5 has closed with 'numeric-only' verification instead of the live-viewer check that has historically caught real bugs (see the fail-open HUD bug it caught in 2026-07-05); this is a growing gap in the manager's ability to catch viewer-side regressions before they ship, directly on the fastest-path-to-player-feedback goal.",
+     "evidence_path": "BUILD_CHECKLIST.md:742 ('BROWSER VERIFY BLOCKED x4 by INFRA-3 signin gate'), BUILD_CHECKLIST.md:780 ('browser-verify dev-bypass: SURFACED, carried (product-infra fence; wave closed numeric-only again')",
+     "severity": "high"
+    },
+    {
+     "what": "React sign-in/library/upload screens (INFRA-3) have never had a live E2E run against a reachable staging stack; the same is true for iOS sign-in->upload->queued (INFRA-4 next-step). Both feature sets are built and unit-tested but functionally unverified end-to-end.",
+     "why": "A commercial-facing auth+upload flow with zero live E2E verification carries real risk of a broken first-run experience once flags flip; this blocks confident progress toward P7-1/P7-2 (accounts, onboarding).",
+     "evidence_path": "BUILD_CHECKLIST.md:720 ('no live E2E was run (no reachable staging stack from this worktree)'), BUILD_CHECKLIST.md:721 ('Next: add that bypass arg, flip the flag, on-device sign-in->upload->queued check')",
+     "severity": "medium"
+    },
+    {
+     "what": "iOS Swift file count in NORTH_STAR_ROADMAP.md ('110 Swift files') is stale versus the actual repo state.",
+     "why": "Repo currently has 140 total .swift files under ios/ (86 non-test + 54 test files as of 2026-07-08), driven by later landings (Watch support, INFRA-4 auth/upload clients) after the 110 figure was written; doc undercounts current iOS surface area for anyone sizing the app.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md:1617 vs `find ios -name '*.swift' | wc -l` = 140 (this session)",
+     "severity": "low"
+    },
+    {
+     "what": "Mesh byte-budget (the critique-#1 fix that gave the 4.1x outdoor fps win) is landed as a wired default (300MiB) but the final promotion decision (300 vs 400 MiB, and the human_review-tier display/exclusion policy that caps the remaining ceiling) is still an open owner ask, not yet closed.",
+     "why": "The single biggest lever left on playback smoothness is stuck on a product/UX ruling (transfer-cost vs completeness tradeoff) rather than an engineering blocker \u2014 a quick owner decision would unlock further progress.",
+     "evidence_path": "BUILD_CHECKLIST.md:777 (RULING C: 'DEFAULT promotion = PENDING best_stack row + owner ask (transfer/UX cost call)'), configs/racketsport/best_stack.json (mesh.byte_budget_mib entry, revision 2)",
+     "severity": "medium"
+    },
+    {
+     "what": "GATE-1b (post-chain MHR decode round-trip fidelity, which gates P2-2 latent smoothing / the viewer's future latent-interp playback mode) is now legitimately measured and FAILING (262.35mm world round-trip vs <=1mm bar; 53.50mm p95 mesh-skeleton divergence vs <=5mm bar), and the defect is decode-internal / post-chain-invariant \u2014 unexplained root cause.",
+     "why": "This blocks any smoother/higher-quality mesh playback mode (latent-interp) from ever being wired into the viewer until the MHR decode defect is root-caused; it was punted to the deep-review/wave-7 queue as an open unknown.",
+     "evidence_path": "BUILD_CHECKLIST.md:780 ('GATE-1b legitimately MEASURED: FAIL 262.35mm/53.50mm p95 -> NOT-WIRING-READY ... decode-internal defect -> wave-7 #2')",
+     "severity": "medium"
+    }
+   ],
+   "open_questions": [
+    "When will the browser-verify dev-bypass actually land, and who owns it \u2014 is it still waiting on the product-infra session, or does the manager need to directly dispatch it now that it has carried 2+ waves?",
+    "Is a reachable staging stack for live E2E testing of INFRA-3/INFRA-4 (sign-in -> upload -> queued job) planned, and on what timeline relative to flipping PICKLEBALL_ACCOUNTS_ENABLED live?",
+    "Owner ruling needed: mesh byte-budget 300 vs 400 MiB, and whether/how human_review-tier frames should be included in playback (transfer-cost vs completeness tradeoff) \u2014 this is blocking the last mile of the playback-critique fix.",
+    "Root cause of the MHF/MHR decode-internal defect behind the failing GATE-1b round-trip metrics \u2014 is anyone actively assigned to this for wave-7, per the 'wave-7 #2' notation?"
+   ],
+   "stale_or_unclear_docs": [
+    {
+     "doc": "NORTH_STAR_ROADMAP.md (PHASE 7 section, 'ios/, 110 Swift files')",
+     "problem": "Undercounts current iOS Swift file total (140 actual: 86 non-test + 54 test) as of 2026-07-08; several waves of iOS lanes (Watch support, INFRA-4 auth/upload) landed after this figure was last updated."
+    }
+   ]
+  },
+  {
+   "pillar": "coaching-readiness",
+   "working_well": [
+    {
+     "what": "P6-1 shot-classification design is real and honestly scoped: a declarative rule table (docs/racketsport/shot_rules_v0.json, 9 rules incl. 'unknown', every rule carries a non-empty rationale) + pure-function loader/evaluator threed/racketsport/shot_rules.py, TDD'd against tests/racketsport/test_shot_rules.py (18/18 passing), explicitly design-only/unwired so it does not collide with the existing shots producer shot_taxonomy.py::classify_shots_from_payloads (ARTIFACT_TYPE racketsport_shots). Lane report is a clean PASS on all 5 acceptance items plus the wide tests/racketsport suite (3074 passed/18 skipped/0 failed) and honestly lists the exact semantic-reconciliation gaps still open.",
+     "evidence_path": "runs/lanes/p61_shot_rules_20260707/report.json; docs/racketsport/shot_rules_v0.json; threed/racketsport/shot_rules.py"
+    },
+    {
+     "what": "P6-3 reference-range library v0 landed as a real versioned JSON contract with a JSON-Schema validator, not just a design doc: docs/racketsport/reference_ranges_v0.json + reference_ranges_schema.json + scripts/racketsport/validate_reference_ranges.py CLI, every range entry carries a provenance block (source, url, tier, confidence) and every seed-tier range is honestly labeled confidence:'seed' with a notes string admitting the source's weakness (e.g. 'Article says... explicitly a guess').",
+     "evidence_path": "docs/racketsport/reference_ranges_v0.json; docs/racketsport/reference_ranges_schema.json; runs/lanes/p63_reference_ranges_20260707/spec.md"
+    },
+    {
+     "what": "The full P6 architecture (S1 feature extractor -> S2 reference library -> S3 deterministic comparator -> S4 format-locked LLM -> S5 overlays) is fully specified with exact schemas, exact rule tables, exact severity math, and an explicit fabrication firewall (citation cross-check + reject-retry-fallback + a 300-output 0-fabrication audit gate) grounded in a real corroborated precedent (Talking-Tennis arxiv 2510.03921) and a real ablation showing why the LLM must never see raw numbers (SportsGPT ablation). This is unusually concrete engineering-ready spec work, not vague aspiration.",
+     "evidence_path": "TECH_BLUEPRINTS.md lines ~2650-3000 (PILLAR: COACHING + STATS)"
+    },
+    {
+     "what": "Honest non-adoption/kill: an adversarially-verified 35-agent research pass concluded no usable external pickleball reference-range library exists (DUPR is match-outcome Elo, USA Pickleball's matrix is qualitative prose) and explicitly HARD-BANNED several specific numeric splits from ever seeding comparator bands as if they were ground truth -- a disciplined refusal to launder unverifiable blog numbers as fact, and a correct strategic pivot (ship BODY+COURT-only coaching rows first, decoupling the first coaching card from the below-bar ball critical path).",
+     "evidence_path": "NORTH_STAR_ROADMAP.md P6-3 section (~line 1537-1556, the [DEEP-REVIEW 2026-07-07] correction block); BUILD_CHECKLIST.md line 728"
+    },
+    {
+     "what": "A real infra bug that was starving contact-aware mesh scheduling for downstream coaching signals (contact_windows.json empty on cold runs because events ran after frames) was found, named precisely, and fixed in the wave-6 best-stack wave via events-before-frames reordering -- an honest catch-and-fix rather than an unnoticed silent gap.",
+     "evidence_path": "BUILD_CHECKLIST.md lines 233-236 (finding); BUILD_CHECKLIST.md line 775 (BESTSTACK WAVE fix: 'events-before-frames' landed)"
+    }
+   ],
+   "needs_revisit": [
+    {
+     "what": "reference_ranges_v0.json still ships several 'trade_benchmark' tier entries (e.g. unforced_error_point_share bands 0.50-0.60 / 0.35-0.45 / 0.28-0.40 by skill band, third_shot_drop_success 0.50/0.50 for band 3.0) sourced from single blog articles that self-admit they are guesses ('Article says lower-level play is guessed at 50% or more...'), even though the later same-day deep-review ruling explicitly HARD-BANNED this class of number (the specific unforced-error and third-shot-drop ladders) from ever seeding comparator bands and mandated they be used only as an explicitly-labeled UNVALIDATED prior, never as tier=trade_benchmark ground truth. The file was never revised after that ruling to relabel these rows (e.g. as placeholder_unverified or an explicit unvalidated-prior tier).",
+     "why": "The P6-4 comparator (S3) will read this file directly and compute severity/verdict against these bands; if wired as-is, coaching findings would silently rest on numbers the project's own adversarial review called likely-fabricated/unverifiable -- exactly the trust-collapse failure mode the project is most worried about (a single confidently-wrong claim does lasting damage).",
+     "evidence_path": "docs/racketsport/reference_ranges_v0.json lines ~389-460 vs NORTH_STAR_ROADMAP.md ~line 1546-1552 (deep-review hard-ban correction) and BUILD_CHECKLIST.md line 728",
+     "severity": "high"
+    },
+    {
+     "what": "P6-1 through P6-6 are all still gated on things nobody has started supplying: the learned shot classifier and its 0.85-agreement gate need a pre-registered heldout_eval_ledger.md row plus owner shot labels (none exist); the P6-4 product gate needs the owner's live API key AND a >=1 rated-4.0+ reviewer plus the owner personally scoring the Talking-Tennis rubric; P6-3's signed_off_by stays null until an owner+coach review happens. None of these owner-only dependencies have a date or an owner commitment attached in the docs read.",
+     "why": "Every one of these is a hard blocker to the M4 'it coaches me' milestone and to ever flipping VERIFIED for this pillar -- the engineering can be 100% done and the pillar still cannot ship without owner-side actions that are not yet scheduled.",
+     "evidence_path": "TECH_BLUEPRINTS.md section 6 'Acceptance gates + owner dependencies' (~line 2975-3005)",
+     "severity": "medium"
+    },
+    {
+     "what": "S1c (P6-2 value-stats producer: third_shot_drop_success, unforced_error_share, dink_rally_win_rate) is explicitly dependent on rally-end-cause attribution which itself depends on the BALL/rally chain, and BALL is still below the VERIFIED bar (VERIFIED=0 project-wide, ball held-out shot gated at ~1121/>=10-20k labeled frames per wave-6 closeout). The deep-review's own 'ship BODY+COURT-only first' strategic pivot is the correct mitigation, but no lane report yet confirms a body/court-only value-stat producer has actually been built (S1c in TECH_BLUEPRINTS is still spec, not landed) -- P6-2 remains 100% unbuilt code today, only rally_metrics.py's position-based scaffold exists.",
+     "why": "Without ball/rally-outcome data OR a landed body-only stat producer, the 'stat layer users actually value' (P6-2) -- one of the two things the roadmap calls the actual product value proposition alongside P6-4 -- has zero shipped code, only a design plan; this is the largest remaining gap between current state and the coaching product demo.",
+     "evidence_path": "TECH_BLUEPRINTS.md ~line 2785 (S1c spec, unforced-error dependency note); NORTH_STAR_ROADMAP.md line 183 (Coaching output row: 'nothing user-facing verified')",
+     "severity": "medium"
+    },
+    {
+     "what": "No lane report.json exists for the p63_reference_ranges_20260707 lane (only spec.md and log.txt present, no completed report artifact), even though the resulting files (reference_ranges_v0.json, schema, CLI, tests) are present in the repo and referenced elsewhere as landed.",
+     "why": "Without the report.json, there is no documented acceptance-item-by-acceptance-item PASS/PARTIAL verdict trail for this lane the way p61_shot_rules_20260707 has one -- makes it harder for a successor manager to verify P6-3's actual test-pass state (e.g. the >=12 entries / >=8 trade_benchmark+ acceptance bar) without re-running the suite from scratch.",
+     "evidence_path": "runs/lanes/p63_reference_ranges_20260707/ (contains only log.txt and spec.md, no report.json)",
+     "severity": "low"
+    }
+   ],
+   "open_questions": [
+    "Has anyone re-run tests/racketsport/test_reference_ranges.py and validate_reference_ranges.py since 2026-07-07 to confirm P6-3's acceptance bar (>=12 entries across >=4 families/>=3 bands, >=8 at trade_benchmark+ tier) still holds, and should the file be revised now to reflect the deep-review hard-ban ruling that came later the same day?",
+    "Is there an owner-facing plan/date for the P6-4 product-gate dependencies (API key provisioning, recruiting a >=4.0-rated second reviewer, the 300-output fabrication audit run) or are these still fully unscheduled?",
+    "Has S1c (P6-2 value-stats producer) or any BODY+COURT-only stat producer actually been dispatched as a lane yet, given the deep-review's explicit strategic recommendation to decouple it from the ball critical path?",
+    "Does shot_taxonomy.py need a dedicated reconciliation lane before S1's rule table can be wired in, given the p61 report's own list of semantic divergences (volley addition, atp/erne/tweener omission, serve/return as class vs metadata)?"
+   ],
+   "stale_or_unclear_docs": [
+    {
+     "doc": "docs/racketsport/reference_ranges_v0.json",
+     "problem": "Ships numeric trade_benchmark-tier ranges (unforced_error_point_share, third_shot_drop_success) sourced from single blog posts that self-describe as guesses -- exactly the category the NORTH_STAR P6-3 deep-review correction (same day, 2026-07-07) explicitly hard-banned from being used as comparator seeding ground truth. The file has not been updated to reflect that correction (no placeholder_unverified/unvalidated-prior relabeling)."
+    },
+    {
+     "doc": "NORTH_STAR_ROADMAP.md P6-1/P6-3 entries",
+     "problem": "Read cleanly and are internally consistent with lane evidence (design-v0-done annotations match report.json); no staleness found there, but they do not cross-reference the reference_ranges_v0.json file's current unreconciled state noted above -- a reader following the roadmap alone would not know the JSON file itself needs a follow-up edit."
+    }
+   ]
+  },
+  {
+   "pillar": "eval-integrity",
+   "working_well": [
+    {
+     "what": "heldout_eval_ledger.md is a real, append-only, retroactively-reconstructed audit trail covering CAL/TRK/BALL/BODY/RKT touches of the two strict held-out clips (Outdoor, Indoor); it honestly names 8+ of the first 13 historical BALL runs as threshold-shopping/checkpoint-selection/hard-negative-harvesting violations (rows 5,6,7,8,11,12,13) discovered and confessed after the fact, not hidden.",
+     "evidence_path": "runs/manager/heldout_eval_ledger.md (rows 1-20, POLICY section lines 97-106)"
+    },
+    {
+     "what": "Ledger discipline is now code-enforced, not just documented: threed/racketsport/eval_guard.py's assert_not_training_on_eval_clip raises EvalClipLeakError and is wired into every known training/dataset-build entry point (train_court_keypoint_heatmap.py, train_person_osnet_reid.py, build_ball_tracknet_cvat_dataset.py, prepare_tracknetv3_finetune_dataset.py, export_cvat_detection_yolo_dataset.py, export_person_yolo_dataset.py); Burlington/Wolverine require explicit allow_internal_val=True opt-in, Outdoor/Indoor have no override at all.",
+     "evidence_path": "runs/manager/heldout_eval_ledger.md line 20 (Enforcement mechanism section); threed/racketsport/eval_guard.py"
+    },
+    {
+     "what": "Pre-registration discipline (rows 16, 18, 19/20, CAL-1/CAL-2) shows the process working as designed: candidates and thresholds fixed from train-clip-only evidence BEFORE the held-out run, written down, then exactly one held-out run follows -- and when the pre-registered candidate loses to the standing baseline (row 16 WASB-volleyball 0.4375 vs row 4 WASB-tennis 0.7248; row 20 SAM3.1 0.5137 vs 0.7248 bar) it is killed immediately per the rule, not re-tuned.",
+     "evidence_path": "runs/manager/heldout_eval_ledger.md rows 16, 18, 19, 20, CAL-1/CAL-2/CAL-3/CAL-4"
+    },
+    {
+     "what": "The N-inversions rule (internal-val winner loses on held-out) was correctly escalated into a root-cause research pass rather than papered over: the deep review traced it to a mixed-source/random-split validation bug, corroborated against an external paper (ETH-Zurich badminton arXiv 2603.06691, random 0.864 -> LoSO 0.703), and produced a landed fix (P1-9 leave-one-source-out harness).",
+     "evidence_path": "NORTH_STAR_ROADMAP.md lines 873-882, 989-1013; runs/lanes/ball_loso_validation_20260707/"
+    },
+    {
+     "what": "The LoSO fix was itself honestly scoped as necessary-not-sufficient rather than oversold: it measurably improves calibration (F1 abs-err 0.058 vs 0.074 pooled) but the team explicitly documented that with only 2 indoor labeled folds it would NOT have caught the actual indoor->outdoor inversion, and flagged that reviewed outdoor-diverse labels are the real unlock still missing.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md lines 1000-1010, 1011-1013 (WAVE-5 STATUS note)"
+    },
+    {
+     "what": "VERIFIED=0 is asserted as a standing, load-bearing claim across every closeout, including wins (e.g. P2-1 camera-motion pass, P1-4a BVP span v2 acceptance) -- the team does not let a passed internal gate or a green wide-suite run quietly upgrade to VERIFIED without a real held-out gate.",
+     "evidence_path": "BUILD_CHECKLIST.md dated bullets (e.g. P2-1 CAMMOTION 2026-07-07 entry, W5 BVP SPAN v2 ACCEPTED 2026-07-08 entry) -- both end 'VERIFIED=0 unchanged'"
+    },
+    {
+     "what": "Adversarial adjudication is a real, evidenced practice, not just a claim: axis4_adjudication.json for BVP span-v2 verify walks a specific frame-497/543/519 case through frozen-baseline vs w4-post-attack behavior with explicit FAIL verdicts and a harness assertion citation, showing genuine scrutiny of a candidate before acceptance.",
+     "evidence_path": "runs/lanes/w5_bvpspan_verify_20260707/axis4_adjudication.json"
+    },
+    {
+     "what": "Kill decisions are recorded as legitimate process outcomes, not buried: SAM 3.1 zero-shot BALL candidate killed on Outdoor underperformance despite winning internal-val (row 20); RKT Fast-body NOT-ADOPT; CAL round-2 geometric-loss architecture declared wrong per a pre-registered kill criterion with zero owner-clip gate spend (CAL-3/CAL-4, honoring the no-gate-on-kill rule).",
+     "evidence_path": "runs/manager/heldout_eval_ledger.md row 20, CAL-3/CAL-4"
+    }
+   ],
+   "needs_revisit": [
+    {
+     "what": "The frame-scheduling watch item (541 vs 276 real player-frame samples for the same Wolverine body_mesh.json between two gate-check reports) remains an open, unresolved diagnosis as of the last dated entry -- the lane explicitly could not root-cause it locally (no access to the remote monolithic body_mesh.json) and recommended manager ruling if any future proof depends on P2-2 gate-check frame counts.",
+     "why": "If this discrepancy reflects nondeterministic or silently-changed BODY frame population, any BODY gate report relying on frame counts (including future promotion claims) could be unknowingly comparing apples to oranges -- a latent eval-integrity risk that is flagged but not closed.",
+     "evidence_path": "runs/lanes/w6_instrudocs_20260708/frame_scheduling_adjudication.md",
+     "severity": "medium"
+    },
+    {
+     "what": "P1-9 LoSO validation is landed but structurally cannot catch the one inversion class that matters most (indoor->outdoor domain shift) because only 2 legal labeled folds exist and both are indoor; the harness is proven necessary-not-sufficient and the real unlock (reviewed outdoor/webcam-diverse labeled folds) has not landed.",
+     "why": "Every promotion decision made using LoSO-mean today (e.g. wave-5 stage1_official retrain, LoSO-mean 0.7094 vs control 0.6858) is still blind to the specific failure mode that produced the historical inversions -- a false sense of validation rigor could form if this caveat is dropped from future summaries.",
+     "evidence_path": "NORTH_STAR_ROADMAP.md lines 1000-1013; runs/lanes/ball_loso_validation_20260707/",
+     "severity": "high"
+    },
+    {
+     "what": "No BALL candidate has ever passed the M1 gate (F1@20>=0.90, recall@20>=0.75, hidden-FP<=0.05); the best-ever Outdoor result remains zero-shot WASB-tennis at F1@20 0.7248 from 2026-07-01, and every subsequent fine-tune/candidate (WASB fine-tune 0.4618, WASB-volleyball 0.4375, SAM3.1 0.5137, wave-5 official retrain still internal-val-only) has failed to beat it on the one held-out clip that counts.",
+     "why": "This is the single most important standing gap for the stated end goal (most accurate video->3D world): the core BALL detector has not demonstrably improved on real held-out evidence in over a week of iteration, and the wave-5 retrain that beats internal-val/LoSO metrics has zero held-out comparison count (heldout_comparison_count=0), so its real-world value is unknown.",
+     "evidence_path": "runs/manager/heldout_eval_ledger.md row 4 vs rows 14,16,20; CAPABILITIES.md:99 (heldout_comparison_count=0)",
+     "severity": "high"
+    },
+    {
+     "what": "Historical ledger rows 6, 12, 13 record a training-time model-selection leak (Outdoor used as the training-time validation split for checkpoint selection) and a hard-negative-harvesting leak (Outdoor's own errors mined as training data) that occurred BEFORE eval_guard.py existed; the ledger states these are 'exactly the incidents [the guard] exists to make structurally impossible going forward' but does not document any downstream check confirming no model trained on those contaminated artifacts is still in active use.",
+     "why": "If any checkpoint or dataset lineage descended from the row-6/row-13 contamination were still referenced by a live candidate, held-out numbers derived from it would be silently optimistic -- worth an explicit one-time audit to confirm none of the contaminated lineages survive in current candidate pools.",
+     "evidence_path": "runs/manager/heldout_eval_ledger.md rows 6, 12, 13",
+     "severity": "medium"
+    },
+    {
+     "what": "CAL (court calibration) has never recorded a passing held-out gate touch and the one full owner-clip gate run that was executed (CAL-2) failed on all 4 viewpoints with the model's own predictions not even internally consistent with a coherent court (homography self-consistency residual 120-420px median); no successor approach has yet cleared this.",
+     "why": "Court calibration underlies every downstream 3D-world claim (ball/body/racket all project through the court plane); an un-gated, structurally-wrong CAL model means any 3D-world output inherits an unverified/likely-wrong ground-plane assumption regardless of how good BALL/BODY individually look.",
+     "evidence_path": "runs/manager/heldout_eval_ledger.md CAL-2 row",
+     "severity": "high"
+    }
+   ],
+   "open_questions": [
+    "Has any subsequent audit confirmed that no currently-active BALL candidate/checkpoint descends from the row-6 (Outdoor-as-training-val) or row-13 (Outdoor-error-hard-negative-mining) contamination incidents recorded pre-eval_guard.py?",
+    "What is the concrete plan and timeline to land a reviewed outdoor/webcam-diverse labeled fold for LoSO, given P1-9 is explicitly non-sufficient without it?",
+    "Is there a standing owner-facing definition of when wave-5's internal-val-only BALL retrain (heldout_comparison_count=0) is allowed to spend its one pre-registered held-out shot, and has that pre-registration already been written per ledger POLICY rule 1?",
+    "Does the CAL failure (CAL-2, 0/4 viewpoints passing, incoherent court geometry) block or merely caveat current BODY/BALL 3D-world claims that assume a valid court-plane projection?"
+   ],
+   "stale_or_unclear_docs": [
+    {
+     "doc": "runs/manager/wave6_boot_prompt.md",
+     "problem": "Still queues the 541/276 frame-scheduling discrepancy as an open instrument/docs debt item per the w6_instrudocs adjudication, while BUILD_CHECKLIST.md's wave-5 closeout describes a related-but-distinct 243=243 byte-identical proof as cleared -- a reader skimming only the closeout bullet could mistakenly believe the 541/276 discrepancy itself is resolved when it is not."
+    }
+   ]
+  },
+  {
+   "pillar": "ops-process",
+   "working_well": [
+    {
+     "what": "Watchdog-on-first-anomaly (not human-intuition-catches-up) is proven: the ball-retrain spot preemption was a 3m42s outage, caught and restarted in <15min with zero lost progress; separately, a quota-alarm false-positive was fixed by grepping the create command's own tail for error-shaped lines instead of a broad historical `quota` grep.",
+     "evidence_path": "FABLE_OPERATING_MANUAL.md:623-632 (S22 KEEP items); BUILD_CHECKLIST.md line 740 [W5 BALLRETRAIN PASS 2026-07-08]; runs/lanes/w5_ballretrain_20260707/"
+    },
+    {
+     "what": "nohup-on-VM + transcript-resume + tracked-sentinel pattern survived repeated kill-sweeps, a 5h overnight Mac sleep during a spot preemption, and a mid-errand Mac power-cycle with zero lost GPU compute across waves 4-6.",
+     "evidence_path": "FABLE_OPERATING_MANUAL.md:571-572 (S21); BUILD_CHECKLIST.md line 742 [WAVE-5 COMPLETE] (\"3 kill-sweeps\", \"5h-during-sleep\" survived zero-loss); BUILD_CHECKLIST.md line 777 [W6 CLOSE ERRAND DONE] (Mac power-cycle mid-errand, zero loss via nohup + transcript-resume); BUILD_CHECKLIST.md line 771 [W6 CHARUCOSKIP PASS] (Codex micro survived power-cycle via session resume)"
+    },
+    {
+     "what": "Adversarial-verify-per-repair-round is now non-negotiable and demonstrably pays off: it caught a gate-stream circularity, a fabricated-confidence formula, a reintroduced gate-referencing exclusion, vacuous mutation tests, a sham LOO validation, and a false span-equivalence claim across waves 3-4; pre-staged verify specs (writing the acceptance attacks before the fix lands) cut BVP v2 to one round vs three in wave 4.",
+     "evidence_path": "FABLE_OPERATING_MANUAL.md:487-514 (S20), 562-568 (S21), 633-637 (S22); BUILD_CHECKLIST.md line 742 [WAVE-5 COMPLETE]"
+    },
+    {
+     "what": "Cost governance held across every wave: waves 4-6 all stated a GPU budget/cap up front, measured actual spend against it, and never breached the cap even when outage/idle overage occurred (wave-4 $19-32 vs $12-25 stated, entirely outage/transfer idle, not compute) \u2014 the fix (in-VM idle watchdog for VMs living >2h, +~50% outage contingency in every budget statement) was banked and applied in later waves (wave-5 ~$6-17 vs $19-32 in wave-4; wave-6 $2.27-16.96).",
+     "evidence_path": "FABLE_OPERATING_MANUAL.md:603-606 (S21 FIX); BUILD_CHECKLIST.md line 742 [WAVE-5 COMPLETE] (cost line); BUILD_CHECKLIST.md line 780 [WAVE-6 COMPLETE] (cost line)"
+    },
+    {
+     "what": "Honest kills as process wins: Fast-SAM-3D-Body was benched head-to-head (owner-funded $15 cap, spent ~$2) and correctly killed as NOT-ADOPT (1.3x steady-state not the paper's 8-10x, net wall-clock SLOWER per clip, accuracy regression at fast swings) rather than adopted on the strength of the paper's headline number; Magnus STEP 2 stayed an honored dormant kill; the 2D-gated-teacher pseudo-label plan was killed by 480 owner-review frames (F1 0.395 vs raw WASB 0.680) before a planned 40-clip mass-seed was spent.",
+     "evidence_path": "BUILD_CHECKLIST.md line 741 [W5 FASTBODY BENCH]; FABLE_OPERATING_MANUAL.md:500-503 (S20 human-GT-before-mass-pseudo-labels)"
+    },
+    {
+     "what": "Board-drop and truncated-file classes are now named, recurring failure classes with standing mitigations rather than one-off surprises: a wave-5 PR merge dropped WAVE-4 COMPLETE bullets (restored, close-watchdog now checks board presence not just tests); the truncated-file-on-boot class (reset --hard on VM boot) recurred twice and the fix is now standard (reset --hard first as a named boot step) baked into the wave-6-close default snapshot template.",
+     "evidence_path": "FABLE_OPERATING_MANUAL.md:652-655 (S22 FIX); BUILD_CHECKLIST.md line 777 [W6 CLOSE ERRAND DONE] (\"truncated-file class remains real (reset --hard on boot, seen twice)\"); BUILD_CHECKLIST.md line 780 [WAVE-6 COMPLETE] (\"truncated-file boot class = reset --hard first\")"
+    },
+    {
+     "what": "Snapshot hygiene visibly improved wave-over-wave via a named gap -> fix -> re-verify loop: wave-5 booked \"snapshot lacks corpus+rally videos\" as a 16-min transfer tax; the wave-6-close snapshot (pickleball-fleet-snap-20260708-w6close) baked corpus+videos in and retired that tax, and vendor-submodule dirt in snapshots was explicitly reclassified as BY-DESIGN (RESTORE.md) rather than left as an ambiguous gap.",
+     "evidence_path": "FABLE_OPERATING_MANUAL.md:660-664 (S22 FIX); BUILD_CHECKLIST.md line 777 [W6 CLOSE ERRAND DONE] RULING D; BUILD_CHECKLIST.md line 780 [WAVE-6 COMPLETE] (TEMPLATE line)"
+    },
+    {
+     "what": "Codex-quota-wall fallback protocol worked as designed: quota returns are logged with reset time, a cheap probe dispatch checks for early wall-lift before rerouting, and the narrow one-lane Sonnet-substitution exception is used and recorded rather than silently absorbing Codex's role.",
+     "evidence_path": "FABLE_OPERATING_MANUAL.md:380-389 (S17); BUILD_CHECKLIST.md line 324 (\"Codex quota returns Jul 9 ~1:31PM\"); BUILD_CHECKLIST.md line 414 (\"IMPLEMENTING NOW (Sonnet, Codex quota dead until Jul 9)\")"
+    },
+    {
+     "what": "The best-stack doctrine (owner directive 2026-07-08) closed a real process gap \u2014 8 uncoordinated default mechanisms across 9 files, orphaned gains (paddle 6-DOF estimator sat BUILT_NOT_WIRED for 4 waves) \u2014 with a structural fix (one manifest, enforcement tests, mandatory BEST-STACK DELTA section per lane) rather than another one-off wiring lane.",
+     "evidence_path": "FABLE_OPERATING_MANUAL.md:666-679 (S23); BUILD_CHECKLIST.md line 775 [BESTSTACK WAVE OPEN]; configs/racketsport/best_stack.json"
+    }
+   ],
+   "needs_revisit": [
+    {
+     "what": "541-vs-276 frame-scheduling nondeterminism watch item, and the related body_mesh vs gate_check count discrepancy, were flagged in wave 5, partially adjudicated in wave 6 (243=243 close-proof determinism cleared) but the underlying 541/276 discrepancy was left UNRESOLVED, needing a VM-side monolith read, and carried forward again to the wave-6 GPU errand checklist.",
+     "why": "An unresolved counting discrepancy in the body/gate pipeline is exactly the kind of silent-drift risk the manual's own anti-patterns warn about (stale-code / silent-degrade classes); leaving it open across two wave closes risks it being forgotten or masking a real correctness bug in mesh/gate frame accounting, which directly affects trust in world-quality metrics.",
+     "evidence_path": "BUILD_CHECKLIST.md line 752 [W6 INSTRUDOCS ACCEPTED-SCOPED] (\"541/276 vs 243=243 ADJUDICATED DISTINCT... UNRESOLVED, needs VM-side monolith\"); BUILD_CHECKLIST.md line 777 [W6 CLOSE ERRAND DONE]",
+     "severity": "medium"
+    },
+    {
+     "what": "Mac local disk hit 100% mid-errand during the wave-6 close (3.67GB of redundant monoliths/caches had to be cleared reactively); this is booked as a \"STANDING RISK\" needing a periodic /tmp+pip sweep, not yet automated.",
+     "why": "An unplanned full-disk event mid-GPU-errand can silently truncate transfers or kill in-flight processes (the same failure family as the truncated-file boot class); without an automated sweep this recurs every wave and eats manager/agent time reactively instead of being prevented.",
+     "evidence_path": "BUILD_CHECKLIST.md line 777 [W6 CLOSE ERRAND DONE] (\"Mac disk hit 100% mid-errand... STANDING RISK -> periodic /tmp+pip sweep item\"); BUILD_CHECKLIST.md line 780 [WAVE-6 COMPLETE] (\"Mac disk 100% (remediated; /tmp+pip sweep now a boot item)\")",
+     "severity": "medium"
+    },
+    {
+     "what": "train_ball_stage2.py lacked --resume-checkpoint through all of wave 5 (a spot preemption mid-seed cost ~19 extra GPU-minutes because the training script could not resume); the fix was only landed in wave 6 (w6_instrudocs), one full wave after the gap was identified and hit in production.",
+     "why": "This is a recurring lesson category (\u00a721 \"nohup for every long GPU step\" + resumability doctrine) that a core training script had NOT internalized \u2014 the gap between \"we know resumability matters\" and \"the script actually supports it\" cost real GPU spend before being closed; worth checking no other GPU-critical scripts have the same silent gap.",
+     "evidence_path": "BUILD_CHECKLIST.md line 740 [W5 BALLRETRAIN PASS] (\"train_ball_stage2.py lacks --resume-checkpoint: wave-6 repo gap booked\"); BUILD_CHECKLIST.md line 752 [W6 INSTRUDOCS ACCEPTED-SCOPED] (fix landed one wave later)",
+     "severity": "low"
+    },
+    {
+     "what": "Cross-lane overwrite incident: w5_fastbody_bench Run A overwrote another lane's (w5_p22latent) gitignored body-dispatch directory via `--clip-dir` doubling as input/output; caught and guarded post-hoc (w5_transport now refuses a populated --clip-dir without --allow-overwrite), but the underlying pattern (a CLI flag that is silently both an input path and a write target) may recur elsewhere in the codebase and was fixed only for this one script.",
+     "why": "An I/O-ambiguous flag is a generic footgun class; the fix was scoped to remote_body_dispatch's --clip-dir specifically, and the manual's own fence lesson notes \"a lesson booked\" rather than a swept audit of other scripts with the same shape \u2014 a similar silent-overwrite could still be waiting elsewhere in the fleet-facing CLI surface.",
+     "evidence_path": "BUILD_CHECKLIST.md line 741 [W5 FASTBODY BENCH]; FABLE_OPERATING_MANUAL.md:644-647 (S22 FIX, --clip-dir footgun)",
+     "severity": "low"
+    },
+    {
+     "what": "Wave-6 explicitly deferred the browser-verify dev-bypass coordination item (INFRA-3 signin gate blocking all real browser-verify checks) to product-infra fence for a second consecutive wave; wave-6 closed \"numeric-only again\" with no browser verification of the actual product experience.",
+     "why": "Manager-loop discipline (manual \u00a74/\u00a714) calls for reading raw artifacts and verifying visually when claims matter; two full waves of GPU/numeric proof without a single real browser check on the product surface means the actual user-facing 3D-world experience has gone unverified end-to-end for an extended period, which is a process gap against the project's own \"most accurate ... video->3D world\" anchor (the product IS the browser view).",
+     "evidence_path": "BUILD_CHECKLIST.md line 742 [WAVE-5 COMPLETE] (\"BROWSER VERIFY BLOCKED x4 by INFRA-3\"); BUILD_CHECKLIST.md line 780 [WAVE-6 COMPLETE] (\"browser-verify dev-bypass: SURFACED, carried... wave closed numeric-only again\")",
+     "severity": "medium"
+    }
+   ],
+   "open_questions": [
+    "Has the 541-vs-276 / body_mesh-vs-gate_check frame-count discrepancy actually been resolved with the promised VM-side monolith read, or is it still an open carry-forward item as of the current wave?",
+    "Is there now an automated (cron/watchdog) /tmp+pip disk sweep running on the Mac, or is the 100%-disk risk still only mitigated reactively per-incident?",
+    "Has an audit been run across other fleet-facing CLI scripts (beyond remote_body_dispatch --clip-dir) for the same input/output-path-ambiguity footgun class?",
+    "What is the current state of the browser-verify dev-bypass coordination ask with the product-infra session \u2014 has INFRA-3's signin gate been bypassed for dev/verify purposes yet, two waves after being surfaced?"
+   ],
+   "stale_or_unclear_docs": [
+    {
+     "doc": "FABLE_OPERATING_MANUAL.md section 22 (Wave-5 field lessons)",
+     "problem": "Documents the snapshot-hygiene gap (\"snapshot lacks corpus/videos\") as an open FIX item, but wave-6 (BUILD_CHECKLIST.md line 777/780) already closed it with a new default template \u2014 \u00a722 itself is not updated in-place to point forward to the resolution, so a reader of the manual alone (without cross-referencing BUILD_CHECKLIST) would think the gap is still open."
+    }
+   ]
+  }
+ ],
+ "other": [],
+ "syntheses": [
+  "{\n  \"missing\": [\n    {\n      \"gap\": \"No cross-pillar GPU/fleet budget contention view. Ball (label re-score), body-world (GATE-1b root-cause), court (calv1unet2 retrain) are all separately described as competing for 'the same fleet slot,' but no map treats fleet-hours as a single shared constrained resource with an explicit allocation decision across pillars. Right now three high-severity blockers are each proposing to consume GPU budget independently.\",\n      \"why_it_matters\": \"Without one owner-visible view of total fleet spend vs. the 3 competing high-value asks, the manager risks either starving the highest-leverage item (GATE-1b, which blocks ALL downstream body/mesh work) or over-committing to a lower-yield retrain (court_unet_v2, which has already regressed once).\"\n    },\n    {\n      \"gap\": \"No pillar audits owner-time/bandwidth as a shared constrained resource. Paddle needs an owner 4-marker GT session; data-engine needs 42-84 owner-labeling-hours; product-infra references 'phone tests' and 'game recording' as owner asks; court needs a Roboflow API key re-issue. These are tracked separately per-pillar with no consolidated view of total owner-ask backlog or sequencing priority.\",\n      \"why_it_matters\": \"Every pillar quietly assumes it can get owner time whenever needed; if the owner's actual bandwidth is the true bottleneck (more than GPU or engineering), several 'needs_revisit' items across pillars are really one shared queue competing for the same person's hours, and no one has ranked that queue.\"\n    },\n    {\n      \"gap\": \"No security/secrets/PII pillar despite product-infra now handling real user auth (JWT), payment scaffolding (Stripe), and uploaded player video (S3 presigned). No audit map covers secret-rotation discipline, PII/video-retention policy, or auth-token security posture for the new INFRA-0..5 build.\",\n      \"why_it_matters\": \"This is a real production system now (accounts, uploads, deletes, payments-scaffold) shipping toward real users; a first security review before any account-enabled flag flips live is normal practice and currently absent from every pillar map.\"\n    },\n    {\n      \"gap\": \"No pillar covers input/capture-quality guardrails for real (non-owner, non-curated) end-user video \u2014 e.g., wrong orientation, non-pickleball content, court not visible, poor lighting. Speed-pipeline names P5-5b (ffprobe/orientation pre-flight) as unbuilt with orientation hardcoded to 'landscape' in 2 places, but no map treats 'garbage-in protection for arbitrary end-user uploads' as a first-class product-readiness gap.\",\n      \"why_it_matters\": \"Every pillar's accuracy work assumes reasonably well-shot pickleball video; without an input-quality gate, real end users will burn GPU dollars and get silently poor/garbage 3D worlds with no diagnosis, undermining the 'trust > novelty' product philosophy the deep-review already established.\"\n    },\n    {\n      \"gap\": \"No pillar assesses licensing/compliance risk for the training data supply chain \u2014 Roboflow's 61,260 dedup pretrain samples (data-engine) and PnLCalib GPL checkpoints (court) are both referenced as load-bearing inputs, but no map checks license terms against the commercial product goal (P7 monetization/Stripe scaffold now exists).\",\n      \"why_it_matters\": \"If any pretrain corpus or checkpoint carries a non-commercial or copyleft license, that surfaces as a legal blocker only after the product is monetizing \u2014 cheap to check now, expensive to discover later.\"\n    }\n  ],\n  \"severity_corrections\": [\n    {\n      \"pillar\": \"speed-pipeline\",\n      \"item\": \"P5-1's own gate (Wolverine <=400s, Outdoor <=2x, six-run variance, bit-identical foot-slide) has no report.json scoring it against those exact thresholds; the only live attempt at the biggest lever (S4 chunked handoff) regressed and was reverted.\",\n      \"should_be\": \"high (currently medium)\",\n      \"why\": \"This is the literal load-bearing evidence behind the project's headline claim ('2141s->532-565s, 3.8x') that's repeated verbatim in the NORTH_STAR PHASE 5 header as settled fact. With the one attempted lever toward the stated floor having regressed and reverted, and no certified pass against the actual gate thresholds, the claimed speed win is currently unverified by its own criteria, not just 'undocumented' \u2014 that's a correctness-of-claim issue, not a paperwork gap.\"\n    },\n    {\n      \"pillar\": \"court\",\n      \"item\": \"P4-0 (court-profile library) is 0% built and deprioritized behind the still-failing P4-2/P4-3 auto-find epic.\",\n      \"should_be\": \"high (currently medium)\",\n      \"why\": \"The map's own text calls P4-0 the 'actual v1 path' that works for the owner's own courts TODAY at low engineering risk, explicitly contrasted against an epic that has now missed its bar across at least 2 wave attempts (best fused 244.3px/212.6px vs a 200px bar) and just committed to a second GPU retrain with no proof of fix. Continuing to starve a near-certain, cheap, real win in favor of doubling down on a repeatedly-missing epic is a bigger opportunity-cost risk to the 'fastest video->3D world' goal than a 'medium' severity implies.\"\n    },\n    {\n      \"pillar\": \"ball-chain\",\n      \"item\": \"seed_official's 486-row fine-tune underperformed control on LoSO-mean (0.6404 vs 0.6858), booked as 'small-N noise suspect' but never re-run/resolved.\",\n      \"should_be\": \"medium (currently low)\",\n      \"why\": \"seed_official is now the pillar's own declared LoSO winner on real owner-labeled outdoor data (beating both control and stage1_official per the same map's working_well section) and is the presumptive base for further fine-tuning. An unresolved regression signal in the leading candidate's own earlier fine-tune round is a live risk to the very recipe the pillar is about to scale up, not a minor footnote \u2014 it should be resolved before more owner-labeling hours are poured into extending that same recipe.\"\n    }\n  ],\n  \"top5_leverage\": [\n    {\n      \"item\": \"GATE-1b world round-trip decode fidelity FAIL (262.35mm vs <=1mm bar; 53.50mm p95 vs <=5mm bar), root cause still untraced\",\n      \"pillar\": \"body-world\",\n      \"why\": \"This single defect blocks every downstream body-smoothness and latent-interpolation deliverable across two pillars simultaneously (body-world's own P2-2/latent work AND product-infra-viewer's mesh-cap/playback-quality ceiling) and is explicitly named the wave-7 #1 priority after ball retrain. It sits on the critical path to 'most accurate 3D world' and nothing downstream can be trusted until it's root-caused, yet no one has traced it past ruling out checkpoint-key mismatch.\"\n    },\n    {\n      \"item\": \"Ball held-out labeled-corpus volume gap (1121 of the required >=10-20k rows, ~5.6-11.2% there) blocking the pre-registered M1/M3 held-out shot\",\n      \"pillar\": \"ball-chain / data-engine\",\n      \"why\": \"This is the literal definition-of-done gate for BALL, and BALL detection quality is upstream of arc-solving, BVP, Magnus, and event fusion \u2014 every other ball-chain win to date (LoSO ranking, preprocessing fix, span-protection) is internal-val only and non-promotable until this volume bar clears. It is also the single biggest identified bottleneck across all 10 pillars by the maps' own language ('the single biggest bottleneck on the critical path').\"\n    },\n    {\n      \"item\": \"Paddle fused 6-DOF estimator built, measured, and accepted, but still not wired into the default E2E pipeline (P3-1) \u2014 'oldest BUILT-NOT-WIRED orphan, 4 waves'\",\n      \"pillar\": \"paddle-racket\",\n      \"why\": \"This is the cheapest, highest-certainty win of the five: the hard engineering (fusion, ablation, acceptance) is already done and measured; wiring it is comparatively low-risk/low-cost integration work that has simply been re-sequenced away four waves running. It's the one item on this list that doesn't need new research, an owner session, or GPU spend \u2014 only dispatch.\"\n    },\n    {\n      \"item\": \"Browser-verify (live-viewer regression check) blocked by the INFRA-3 sign-in gate for 2 consecutive waves, with every recent GPU-decisive run closing 'numeric-only'\",\n      \"pillar\": \"product-infra-viewer\",\n      \"why\": \"This is the manager's own historically-proven bug-catching mechanism (it caught the fail-open HUD bug in 2026-07-05) sitting disabled exactly while multiple pillars (body-world mesh-cap, ball, court) are landing viewer-facing changes. Losing it for 2+ waves in a row is a silent, compounding risk to every 'looks done' claim being made elsewhere, and the fix (a dev-bypass) is small and has simply not been picked up.\"\n    },\n    {\n      \"item\": \"P4-0 court-profile library (0% built) deprioritized behind the still-failing P4-2/P4-3 auto-find epic, despite being named the actual v1 path that already works for the owner's own courts\",\n      \"pillar\": \"court\",\n      \"why\": \"This is real, near-certain product value (the owner's own courts, today) being left completely unbuilt while GPU budget and engineering attention keep chasing an auto-find epic that has missed its \u2264200px bar on every attempt so far (244.3px/212.6px best) and just committed a second retrain with no proof of fix yet. Redirecting even partial effort here is a low-risk, high-certainty way to move the 'fastest video->3D world' goal forward for the owner's actual use case while the harder epic keeps iterating.\"\n    }\n  ]\n}",
+  "# Progress Audit \u2014 10-Pillar Synthesis for NORTH_STAR Refresh\n*(sources: ball-chain, body-world, data-engine, court, paddle-racket, speed-pipeline, product-infra-viewer, coaching-readiness pillar maps + critic pass; 2026-07-08)*\n\n---\n\n## 1. WORKING WELL \u2014 compounding assets\n\n**Validation/measurement discipline (meta-asset, cross-pillar)**\n- LoSO harness validated twice \u2014 first on synthetic-legal folds (proved LoSO-mean beats pooled, abs-err 0.058 vs 0.074), then re-run on real owner outdoor labels with a true outdoor fold, confirming `seed_official` (raw WASB) as current winner (F1 0.5329 vs 0.3611/0.2971). `runs/lanes/ball_loso_validation_20260707/report.json`; `runs/lanes/w6_labelingest_20260708/gpu_rescore/loso/loso_report.json`\n- Preprocessing train/inference mismatch found + fixed + retrain-validated (wave-4 Wolverine degenerate class 0.20\u21920.75 F1 after fix). `runs/lanes/w5_ballprep_20260707/report.json`; `runs/lanes/w5_ballretrain_20260707/vm_pull/`\n- Two honest kills on real evidence, not guesswork: Magnus/BVP-spin (`fit_spin_scalar=False`, worse on 2/3 clips, `runs/lanes/w6_magnus_20260708/verify/reprojection_compare.json`); Fast-SAM-3D-Body (1.31x slower full-stage, +149mm/frame on fast swings, `BUILD_CHECKLIST.md:741`).\n- GATE-1b harness itself was rebuilt after catching its own 2 real defects (crash on missing `artifact_size_policy`; silently-dropped `scale`/`hand_pose` fields) before trusting its FAIL result. `runs/lanes/w6_close_errand_20260708/gate1b_raw_arm_report.json`\n\n**Data engine flywheel \u2014 LIVE end-to-end**\n- Harvest\u2192WASB prelabel\u2192CVAT\u2192owner export\u2192deterministic ingest\u2192LoSO rebuild proven byte-identical across reruns (md5 `37a5d43ab537a15bd12d382bb882a5fe`), protected-label scan 0 hits across 10 zips. `runs/lanes/w6_labelingest_20260708/report.json`; `runs/lanes/w6_labelpack_20260708/validation_report.json`\n- Corpus 486\u21921121 rows in one wave with visibility taxonomy populated. `runs/lanes/w6_labelingest_20260708/corpus_md5_manifest.json`\n- Corpus dashboard (P0-4) catches leakage in tests, 0 collisions on real data. `runs/lanes/p04_corpus_dashboard_20260707/report.json`\n\n**Body-world**\n- Fresh-GPU decisive proof 4/4 green (slide, root-jump, browser assertions). `runs/lanes/w4_freshproof_20260707/summary.json`\n- GATE-1a idempotence passes cleanly (4.098e-05 vs 0.1 target). `runs/lanes/w6_close_errand_20260708/gate1b_raw_arm_report.json`\n- Mesh byte-budget landed with real measured win once tier-eligibility accounted for (outdoor 4.1x fps). `BUILD_CHECKLIST.md` [W6 RULINGS 2026-07-09] RULING C; `runs/lanes/w6_meshcap_20260708/report.json`\n\n**Court**\n- Manual/metric-15pt path is production-real today (12.3px p95). `CAPABILITIES.md:97`; `NORTH_STAR_ROADMAP.md:1281-1290`\n- P4-1 Wave-A solver actually landed on main (23/23 byte-equal, previously blocked). `BUILD_CHECKLIST.md:753`\n- calv1_seeddiag correctly diagnosed domain gap with zero code spend before committing to a 2nd retrain. `BUILD_CHECKLIST.md:781`; `runs/lanes/calv1_seeddiag_20260708/diagnosis.json`\n- Zero eval-label discipline violations across the entire CALV1 wave. `BUILD_CHECKLIST.md:743,747,758,776`\n\n**Paddle**\n- Fused 6-DOF estimator: IoU 0.11\u21920.26 / 0.03\u21920.36, jitter 23-53\u21922-5 deg/f, 0 undeclared teleports after 3 verify legs. `runs/lanes/racket_6dof_20260705/i1_fused_estimator/acceptance_record_v2.json`\n- Ablation identified real driver (box evidence = whole gain) rather than assumed. `runs/lanes/racket_6dof_20260705/STATUS.md`\n\n**Speed pipeline**\n- 2141s\u2192~532-565s (3.8x) with zero quality change. `runs/lanes/pipeline_speed_20260705/FINAL_REPORT.md`\n- H100 validated end-to-end, 479.6s vs 1134.4s A100 ref (2.37x), version-stamp clean. `runs/lanes/w4_h100body_20260707/REPORT.md`\n- Transport hardening folded 3 bonus catches (EMSGSIZE fallback, silent-degrade warning, overwrite guard). `runs/lanes/w5_transport_20260708/report.json`\n\n**Product-infra-viewer**\n- INFRA-0..5 full rebuild, all dark-flagged before enabling. `BUILD_CHECKLIST.md:716-724`\n- Delete-cascade proven both directions on real S3/Mongo state. `BUILD_CHECKLIST.md:724`\n- Owner critique #1 diagnosed read-only first (refuted denser-scheduling theory), then fixed with measured 4.1x/1.67x wins. `runs/lanes/w6_playbackdiag_20260708/playback_decision_table.json`\n\n---\n\n## 2. NEEDS REVISIT \u2014 ranked by leverage toward accurate+fast video\u21923D\u2192feedback\n\n**#1 \u2014 GATE-1b world round-trip decode fidelity FAIL, root cause untraced (body-world)**\n- 262.35mm vs \u22641mm bar; mesh-skeleton divergence 53.50mm p95 vs \u22645mm bar. `runs/lanes/w6_close_errand_20260708/gate1b_raw_arm_report.json`\n- Blocks lambda_foot, latent smoother, latent-interp playback, grounding_refine un-kill, AND product-infra's playback-quality ceiling simultaneously \u2014 a two-pillar blocker. `runs/manager/wave7_boot_prompt.md:29-36`\n- Only clue: p95 identical raw-postchain vs default arm \u2192 decode-internal, post-chain-invariant, but no trace yet into world-frame transform / betas / translation-scale / persisted-fields gap.\n- Severity: **high**. Suggested wave: **next (wave-7 #1 after ball, per boot prompt)** \u2014 dedicate a diagnosis-only lane (no retrain) tracing the mhr_decode path before any further latent work is attempted.\n\n**#2 \u2014 Ball held-out corpus volume gap (1121 of \u226510-20k rows, ball-chain/data-engine)**\n- `runs/lanes/w6_labelingest_20260708/report.json` (\"5.6% to 11.2% of that bar\"); gate defined at `NORTH_STAR_ROADMAP.md:176,315,874`\n- Literal M1/M3 definition-of-done; every ball win to date (LoSO ranking, preprocessing fix, span-protection) is internal-val only, non-promotable. `BUILD_CHECKLIST.md:780`\n- Compounded by an unmitigated sampling bias: current ranking rests on a disagreement-selected (not uniform) corpus. `BUILD_CHECKLIST.md` RULING A (\"disagreement-corpus caveat BINDING\")\n- Severity: **high**. Suggested wave: ongoing owner-labeling push (~42-84 owner-hrs to bar) + structural fix \u2014 add a small periodic uniform-random audit sample alongside the disagreement queue so future comparisons aren't invalidated.\n\n**#3 \u2014 Paddle fused 6-DOF estimator built, accepted, NOT wired into default E2E (P3-1)**\n- \"Oldest BUILT-NOT-WIRED orphan, 4 waves.\" `BUILD_CHECKLIST.md:775,780`\n- Zero new research/GPU/owner time needed \u2014 pure dispatch. Highest ROI-per-effort item on this entire list.\n- Severity: **high** (per critic; was medium). Suggested wave: **immediate \u2014 single wiring lane, wave-7**, ahead of Magnus/further paddle factor work.\n\n**#4 \u2014 Browser-verify blocked 2 consecutive waves by INFRA-3 sign-in gate (product-infra-viewer)**\n- `BUILD_CHECKLIST.md:742` (\"BROWSER VERIFY BLOCKED x4 by INFRA-3 signin gate\"); `BUILD_CHECKLIST.md:780`\n- This is the mechanism that caught the fail-open HUD bug historically (`runs/lanes/ball_viewer_failclosed_fix_20260705/`); losing it while body-world mesh-cap, ball, and court all land viewer-facing changes is a silent, compounding regression risk.\n- Severity: **high**. Suggested wave: **wave-7, small lane** \u2014 a dev-bypass arg for staging sign-in, not a redesign.\n\n**#5 \u2014 P4-0 court-profile library, 0% built, deprioritized behind failing auto-find epic (court)**\n- `NORTH_STAR_ROADMAP.md:1244-1252` (\"0% built today\"); owner override toward auto-find at `BUILD_CHECKLIST.md:747`\n- Auto-find (P4-2/P4-3) has missed its \u2264200px bar on every attempt (best 244.3px Burlington / 212.6px Wolverine, 0/8 and 2/8 pool containment, `BUILD_CHECKLIST.md:776`) and just committed a 2nd GPU retrain with no proof of fix (`pickleball-calv1unet2-a100-spot`, CREATING, `runs/manager/gpu_fleet.md`).\n- Severity: **high** (per critic; was medium) \u2014 near-certain, cheap win (owner's own \u22643 courts) sitting idle while budget chases a repeatedly-missing epic.\n- Suggested wave: **wave-7 \u2014 resequence P4-0 ahead of a 3rd auto-find retrain attempt**, or explicitly re-confirm owner override with the 244.3/212.6px evidence in hand.\n\n**#6 \u2014 P5-1 speed gate uncertified against its own thresholds; the one attempted lever regressed (speed-pipeline)**\n- Gate: Wolverine \u2264400s, Outdoor \u22642x, six-run variance, bit-identical foot-slide. `NORTH_STAR_ROADMAP.md:1436-1444`. Closest evidence (H100 479.6s) sits above the 400s bar and is a caveated (not clean-room) comparison. `runs/lanes/w4_h100body_20260707/REPORT.md`\n- S4 chunked-handoff lever regressed (1057.4s\u21921300.7s) and was reverted; no replacement implemented yet. `NORTH_STAR_ROADMAP.md:1436-1444`\n- Severity: **high** (per critic; was medium) \u2014 the headline \"3.8x\" claim in `NORTH_STAR_ROADMAP.md:1427-1432` is repeated as settled fact while its own gate is unscored.\n- Suggested wave: run one clean-room P5-1 gate-scoring lane before further speed claims are cited in a NORTH_STAR refresh.\n\n**#7 \u2014 Owner 4-marker paddle GT session queued since wave-5, never booked (paddle-racket)**\n- Only path to RKT VERIFIED. `NORTH_STAR_ROADMAP.md:1969`; re-surfaced every wave close, `BUILD_CHECKLIST.md:780`\n- Severity: high (hard ceiling on promotion) but owner-gated, not engineering-gated. Suggested wave: bundle into a single owner-ask batch (see cross-pillar risk below) rather than re-surfacing individually each wave.\n\n**#8 \u2014 seed_official's 486-row fine-tune underperformed control on LoSO-mean (0.6404 vs 0.6858), unresolved (ball-chain)**\n- Booked \"small-N noise suspect,\" never re-run. `BUILD_CHECKLIST.md:740`\n- Severity: **medium** (per critic; was low) \u2014 seed_official is now the pillar's declared winner and presumptive base for further fine-tuning; an unresolved regression in its own lineage should be checked before more owner-labeling hours pour into extending the same recipe.\n- Suggested wave: cheap re-run lane, wave-7, before next seed-based fine-tune round.\n\n**#9 \u2014 GPU spot $/hr ambiguity (7x band, $0.57-$4.25/hr) blocking $/clip cost claims (speed-pipeline)**\n- `runs/lanes/w4_h100body_20260707/REPORT.md` HONEST ISSUES #6; feeds P5-4/P7-3 pricing.\n- Severity: medium. Suggested wave: owner-ask (real GCP invoice), not engineering \u2014 batch with other owner asks.\n\n**#10 \u2014 Mesh byte-budget 300 vs 400 MiB + human_review-tier display, pending owner ruling (body-world/product-infra)**\n- `BUILD_CHECKLIST.md` RULING C; `configs/racketsport/best_stack.json` (mesh.byte_budget_mib rev 2)\n- Severity: medium. Suggested wave: single owner decision, bundle with #7/#9.\n\n---\n\n## 3. CROSS-PILLAR RISKS\n\n1. **No unified GPU-fleet budget view.** Three high-severity blockers (GATE-1b root-cause, ball label re-score, court_unet_v2 retrain) each independently propose to consume fleet hours with no shared allocation decision. Risk: starving GATE-1b (blocks all downstream body/mesh work) in favor of a lower-yield retrain that has already regressed once. Needs a single owner-visible fleet-spend-vs-ask table before wave-7 dispatch.\n2. **No unified owner-time/bandwidth queue.** Paddle 4-marker GT session (`NORTH_STAR_ROADMAP.md:1969`), 42-84 owner-labeling hours (`runs/lanes/w6_labelingest_20260708/report.json`), phone tests/game recording (`BUILD_CHECKLIST.md:780`), Roboflow API key re-issue (`NORTH_STAR_ROADMAP.md:247`) are all tracked per-pillar with no ranked consolidated backlog. If owner bandwidth \u2014 not GPU or engineering \u2014 is the true bottleneck, this queue needs explicit sequencing.\n3. **No security/secrets/PII review** for the now-live product-infra build (JWT auth, Stripe scaffold, S3-hosted player video uploads). `BUILD_CHECKLIST.md:716-724` shipped dark-flagged but no secret-rotation, PII/retention, or auth-security pass exists in any pillar map before flags flip live.\n4. **No input/capture-quality guardrail pillar.** P5-5b (ffprobe/orientation pre-flight) is unbuilt with orientation hardcoded \"landscape\" in 2 places (`NORTH_STAR_ROADMAP.md:1466-1470`). No pillar treats garbage-in protection for arbitrary end-user uploads as first-class \u2014 directly undermines the \"trust > novelty\" product philosophy once real users upload video.\n5. **No licensing/compliance check on training-data supply chain** \u2014 Roboflow's 61,260-sample corpus (data-engine) and PnLCalib GPL checkpoints (court) are load-bearing inputs with no license-vs-commercial-product review, despite a Stripe monetization scaffold now existing (`BUILD_CHECKLIST.md:716-724`).\n\n---\n\n## 4. DOCS-STATE \u2014 stale/unclear, needs truth-up\n\n| Doc | Problem | Evidence |\n|---|---|---|\n| `CAPABILITIES.md` ball row | Still shows stage1_official as current picture; doesn't reflect wave-6 finding that seed_official is the real LoSO winner (stage1_official fell below control at 0.2971). | pillar map note |\n| `CAPABILITIES.md` line 100 (body row) | Predates GATE-1b legitimate-FAIL numbers and meshcap RULING C win; still cites older w4_freshproof/P2-2-unwired framing. | body-world pillar map |\n| `NORTH_STAR_ROADMAP.md` P0-4 status (~699-717) | States corpus \"~486 rows\" \u2014 actual is 1121 as of `runs/lanes/w6_labelingest_20260708/report.json`. | data-engine pillar map |\n| `NORTH_STAR_ROADMAP.md` P4-1 item (~1254-1261) | Still phrased as blocked (\"patch does NOT apply\") from a 2026-07-06 harsh-review note; `BUILD_CHECKLIST.md:753` confirms Wave-A actually landed on main 2026-07-08. Checkbox unchecked. | court pillar map |\n| `NORTH_STAR_ROADMAP.md` P4-2/P4-3 items (~1266-1280) | Still reads as pure planning (\"currently 213.3px\") without the 2026-07-08 training run, GEO r3 diagnosis, or fused honest-miss numbers (244.3/212.6px). | court pillar map |\n| `NORTH_STAR_ROADMAP.md` PHASE 5 header (1427-1432) | States \"2141\u2192532-565s\" and \"floor at 6-8min/clip\" as settled while the S4 lever behind that floor regressed and was reverted; reads more settled than the underlying lane evidence supports. | speed-pipeline pillar map |\n| `NORTH_STAR_ROADMAP.md` PHASE 7 (\"110 Swift files\") | Undercounts; actual is 140 (86 non-test + 54 test) as of 2026-07-08 per `find ios -name '*.swift' \\| wc -l`. | product-infra-viewer pillar map |\n| `TECH_BLUEPRINTS.md` PADDLE blueprint (PART C) | States \"BUILT-NOT-WIRED until P3-1\" \u2014 still accurate but should be checked against any post-wave-6 resequencing since P3-1 has now waited 4 waves past its \"sequenced next\" note (`BUILD_CHECKLIST.md:775`). | paddle-racket pillar map |"
+ ]
+}
