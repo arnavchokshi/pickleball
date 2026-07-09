@@ -1,7 +1,7 @@
 {
   "artifact_type": "racketsport_ns06_cpu_replay_parity",
   "schema_version": 1,
-  "status": "scoped_local_parity_pass",
+  "status": "superseded_pre_review_diagnostic",
   "verified": false,
   "source_artifact": "runs/lanes/w4_freshproof_20260707/img1605/owner_IMG_1605_8a193402780b/owner_IMG_1605_8a193402780b/fast_sam_subprocess/batch_outputs-8a3faadd6c824fa5b16c305b491402dc.json.chunks/index.json",
   "player_frame_count": 359,
@@ -11,7 +11,7 @@
     "chunk_restore": 49.26533341698814,
     "candidate_normalize": 14.078916750004282,
     "legacy_normalize": 34.98967174999416,
-    "candidate_world_compute": 45.43666750000557,
+    "initial_candidate_world_compute": 45.43666750000557,
     "legacy_world_compute": 50.713777791999746
   },
   "parity": {
@@ -26,6 +26,8 @@
   },
   "notes": [
     "Candidate and legacy functions ran side by side in one process after one shared output restore.",
+    "This timing predates review-driven removal of the NumPy matrix multiply and is retained only as superseded diagnostic provenance.",
+    "The preserved artifact matched exactly, but a later crafted half-millimetre boundary changed one quantized coordinate; the current candidate reverted that transform and added a regression test.",
     "Timing is a local replay diagnostic, not a full-pipeline or GPU claim.",
     "VERIFIED=0 remains binding."
   ]

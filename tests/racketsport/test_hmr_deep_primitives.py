@@ -300,6 +300,65 @@ def test_normalize_fast_sam_body_output_numpy_faces_keep_scalar_validation_error
         )
 
 
+def test_normalize_fast_sam_body_output_numpy_fast_paths_preserve_malformed_input_errors() -> None:
+    request = PlayerCropRequest(
+        frame_idx=5,
+        player_id=7,
+        bbox_xyxy=[100, 120, 260, 520],
+        image_size_px=[1920, 1080],
+        track_confidence=0.93,
+    )
+    base = {
+        "pred_vertices": [[0.0, 0.0, 0.1], [0.3, 0.0, 0.1], [0.3, 0.2, 1.6]],
+        "pred_keypoints_3d": [[0.1, 0.0, 1.0]],
+        "pred_cam_t": [0.25, -0.5, 1.0],
+        "mesh_faces": [[0, 1, 2]],
+        "confidence": 0.91,
+    }
+
+    with pytest.raises(ValueError, match="pred_vertices/0/0 must be finite"):
+        normalize_fast_sam_body_output(
+            {**base, "pred_vertices": [[True, 0.0, 0.1], [0.3, 0.0, 0.1], [0.3, 0.2, 1.6]]},
+            request=request,
+        )
+    with pytest.raises(ValueError, match="mesh_faces/0 must be a triangle index triple"):
+        normalize_fast_sam_body_output({**base, "mesh_faces": [[True, 1, 2]]}, request=request)
+    with pytest.raises(ValueError, match="mesh_faces/0 must be a triangle index triple"):
+        normalize_fast_sam_body_output({**base, "mesh_faces": [[], []]}, request=request)
+
+
+def test_normalize_fast_sam_body_output_requires_grad_tensor_uses_legacy_fallback() -> None:
+    torch = pytest.importorskip("torch")
+    request = PlayerCropRequest(
+        frame_idx=5,
+        player_id=7,
+        bbox_xyxy=[100, 120, 260, 520],
+        image_size_px=[1920, 1080],
+        track_confidence=0.93,
+    )
+    vertices = torch.tensor(
+        [[0.0, 0.0, 0.1], [0.3, 0.0, 0.1], [0.3, 0.2, 1.6]],
+        dtype=torch.float32,
+        requires_grad=True,
+    )
+
+    payload = {
+        "pred_vertices": vertices,
+        "pred_keypoints_3d": [[0.1, 0.0, 1.0]],
+        "pred_cam_t": [0.25, -0.5, 1.0],
+        "mesh_faces": [[0, 1, 2]],
+        "confidence": 0.91,
+    }
+
+    result = normalize_fast_sam_body_output(payload, request=request)
+    legacy_result = normalize_fast_sam_body_output(
+        {**payload, "pred_vertices": vertices.detach().cpu().tolist()},
+        request=request,
+    )
+
+    assert result == legacy_result
+
+
 def test_normalize_fast_sam_body_output_applies_pred_cam_t_exactly_once() -> None:
     request = PlayerCropRequest(
         frame_idx=5,

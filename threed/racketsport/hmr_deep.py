@@ -782,9 +782,15 @@ def _vector3_list(values: Any, *, name: str) -> list[list[float]]:
     if not isinstance(values, (str, bytes)):
         try:
             points = np.asarray(values, dtype=np.float64)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, RuntimeError):
             points = None
-        if points is not None and points.ndim == 2 and points.shape[1:] == (3,) and bool(np.isfinite(points).all()):
+        if (
+            points is not None
+            and points.ndim == 2
+            and points.shape[1:] == (3,)
+            and not _nested_sequence_contains_bool(values)
+            and bool(np.isfinite(points).all())
+        ):
             return points.tolist()
     return _vector3_list_scalar(values, name=name)
 
@@ -824,9 +830,9 @@ def _face_list(values: Any, *, vertex_count: int, name: str, vertices_name: str)
     if not isinstance(values, (str, bytes)):
         try:
             faces_array = np.asarray(values)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, RuntimeError):
             faces_array = None
-        if faces_array is not None and faces_array.size == 0:
+        if faces_array is not None and faces_array.size == 0 and _top_level_sequence_is_empty(values):
             return []
         if (
             faces_array is not None
@@ -834,6 +840,7 @@ def _face_list(values: Any, *, vertex_count: int, name: str, vertices_name: str)
             and faces_array.shape[1:] == (3,)
             and faces_array.dtype != np.dtype(bool)
             and np.issubdtype(faces_array.dtype, np.integer)
+            and not _nested_sequence_contains_bool(values)
         ):
             negative = faces_array < 0
             if bool(negative.any()):
@@ -846,6 +853,30 @@ def _face_list(values: Any, *, vertex_count: int, name: str, vertices_name: str)
                 raise ValueError(f"{name}/{face_index} index {index} is outside {vertices_name}")
             return faces_array.astype(np.int64, copy=False).tolist()
     return _face_list_scalar(values, vertex_count=vertex_count, name=name, vertices_name=vertices_name)
+
+
+def _top_level_sequence_is_empty(values: Any) -> bool:
+    try:
+        return len(values) == 0
+    except TypeError:
+        return False
+
+
+def _nested_sequence_contains_bool(values: Any) -> bool:
+    if isinstance(values, np.ndarray) and values.dtype != np.dtype(object):
+        return np.issubdtype(values.dtype, np.bool_)
+    try:
+        rows = iter(values)
+    except TypeError:
+        return False
+    for row in rows:
+        try:
+            members = iter(row)
+        except TypeError:
+            continue
+        if any(isinstance(member, (bool, np.bool_)) for member in members):
+            return True
+    return False
 
 
 def _face_list_scalar(values: Any, *, vertex_count: int, name: str, vertices_name: str) -> list[list[int]]:

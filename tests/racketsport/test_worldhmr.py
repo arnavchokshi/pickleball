@@ -747,6 +747,40 @@ def test_numpy_bulk_body_inputs_preserve_list_contract_and_quantized_world_mesh(
     assert np.array_equal(quantized, expected)
 
 
+def test_mesh_face_fast_path_preserves_bool_and_malformed_row_errors() -> None:
+    with pytest.raises(ValueError, match="mesh_faces/0 must be a triangle index triple"):
+        worldhmr._mesh_faces([[True, 1, 2]], vertex_count=3)
+    with pytest.raises(ValueError, match="mesh_faces/0 must be a triangle index triple"):
+        worldhmr._mesh_faces([[], []], vertex_count=3)
+
+
+def test_camera_to_world_preserves_legacy_half_millimetre_quantization_boundary() -> None:
+    point = [-1.8553603646411765, 0.34439941221241344, 0.671964913302858]
+    rotation = [
+        [-0.9335697082225718, 0.29882721259079315, 0.19786332885211252],
+        [0.007597074458510103, -0.5354562071719233, 0.8445288240555974],
+        [0.35831534205067767, 0.7899297103010338, 0.49761548251117615],
+    ]
+    calibration = _identity_calibration().model_copy(
+        update={
+            "extrinsics": CourtExtrinsics(
+                R=rotation,
+                t=[0.0, 0.0, 0.0],
+                camera_height_m=1.5,
+            )
+        }
+    )
+    legacy = [sum(float(point[row]) * float(rotation[row][column]) for row in range(3)) for column in range(3)]
+
+    actual = worldhmr._camera_offsets_to_world([point], calibration=calibration, root_camera=[0.0, 0.0, 0.0])
+
+    assert actual == [legacy]
+    assert np.array_equal(
+        np.rint(np.asarray(actual, dtype=np.float64) * 1000.0).astype(np.int16),
+        np.rint(np.asarray([legacy], dtype=np.float64) * 1000.0).astype(np.int16),
+    )
+
+
 def test_build_body_artifacts_wires_footlock_z_snap_and_metrics() -> None:
     samples = [
         {

@@ -30,13 +30,18 @@ data conversion and repeated validation, not useful model compute.
   loops, with the old scalar validator retained for malformed/ragged inputs.
 - Integer face topology validates with vectorized bounds checks, retaining the
   old scalar error path for non-integer/ragged inputs.
-- Dense camera-to-world rotation and translation use float64 NumPy operations.
+- Dense translation uses float64 NumPy operations. A trial NumPy/BLAS
+  camera-to-world rotation was rejected after review found a valid crafted
+  half-millimetre boundary where it changed an int16 replay coordinate by
+  1 mm; the candidate retains the legacy scalar accumulation order.
 - Common topology comparisons use NumPy equality instead of rebuilding three
   Python integers for every triangle.
 
-The direct legacy/candidate replay in `local_replay_parity.json` preserved exact
-normalization, face topology, int16 mesh bytes, and BODY metrics. Maximum raw
-world-coordinate movement was 7.1e-15m.
+The initial direct legacy/candidate replay in `local_replay_parity.json`
+preserved exact normalization, face topology, int16 mesh bytes, and BODY
+metrics on its real artifact. Review then found a crafted quantization-boundary
+counterexample outside that artifact, so the unsafe matrix multiply was
+reverted and covered by a regression test before the H100 candidate run.
 
 ## Research-backed next order
 

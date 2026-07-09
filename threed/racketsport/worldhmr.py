@@ -2366,9 +2366,9 @@ def _mesh_faces(values: Any, *, vertex_count: int) -> list[list[int]]:
     if not isinstance(values, (str, bytes)):
         try:
             faces_array = np.asarray(values)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, RuntimeError):
             faces_array = None
-        if faces_array is not None and faces_array.size == 0:
+        if faces_array is not None and faces_array.size == 0 and _top_level_sequence_is_empty(values):
             return []
         if (
             faces_array is not None
@@ -2376,6 +2376,7 @@ def _mesh_faces(values: Any, *, vertex_count: int) -> list[list[int]]:
             and faces_array.shape[1:] == (3,)
             and faces_array.dtype != np.dtype(bool)
             and np.issubdtype(faces_array.dtype, np.integer)
+            and not _nested_sequence_contains_bool(values)
         ):
             negative = faces_array < 0
             if bool(negative.any()):
@@ -2388,6 +2389,30 @@ def _mesh_faces(values: Any, *, vertex_count: int) -> list[list[int]]:
                 raise ValueError(f"mesh_faces/{face_index} index {index} is outside vertices_camera")
             return faces_array.astype(np.int64, copy=False).tolist()
     return _mesh_faces_scalar(values, vertex_count=vertex_count)
+
+
+def _top_level_sequence_is_empty(values: Any) -> bool:
+    try:
+        return len(values) == 0
+    except TypeError:
+        return False
+
+
+def _nested_sequence_contains_bool(values: Any) -> bool:
+    if isinstance(values, np.ndarray) and values.dtype != np.dtype(object):
+        return np.issubdtype(values.dtype, np.bool_)
+    try:
+        rows = iter(values)
+    except TypeError:
+        return False
+    for row in rows:
+        try:
+            members = iter(row)
+        except TypeError:
+            continue
+        if any(isinstance(member, (bool, np.bool_)) for member in members):
+            return True
+    return False
 
 
 def _mesh_faces_scalar(values: Any, *, vertex_count: int) -> list[list[int]]:
@@ -2665,10 +2690,21 @@ def _camera_offsets_to_world(
             rotation=calibration.extrinsics.R,
             joint_names=joint_names,
         )
-    points = np.asarray(points_camera_relative, dtype=np.float64)
-    root = np.asarray([float(root_camera[idx]) for idx in range(3)], dtype=np.float64)
-    rotation = np.asarray(calibration.extrinsics.R, dtype=np.float64)
-    return (root + ((points - root) @ rotation)).tolist()
+    # Keep the legacy scalar summation here. BLAS is faster, but its reduction
+    # order can move a valid coordinate across a half-millimetre boundary and
+    # therefore change the exact int16 replay mesh. Dense world transforms are
+    # not promoted until their downstream quantized bytes also match.
+    root = [float(root_camera[idx]) for idx in range(3)]
+    rotation = [[float(value) for value in row] for row in calibration.extrinsics.R]
+    rotated: list[list[float]] = []
+    for point in points_camera_relative:
+        offset = [float(point[idx]) - root[idx] for idx in range(3)]
+        world_offset = [
+            sum(offset[row_idx] * rotation[row_idx][col_idx] for row_idx in range(3))
+            for col_idx in range(3)
+        ]
+        rotated.append([root[idx] + world_offset[idx] for idx in range(3)])
+    return rotated
 
 
 def _low_grounding_anchor_xy(points_world: Sequence[Sequence[float]]) -> tuple[list[float], str]:
