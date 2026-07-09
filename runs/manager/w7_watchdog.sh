@@ -34,7 +34,11 @@ while true; do
     fi
   fi
   if echo "$FLEET_JSON" | grep -qiE "^ERROR"; then
-    anomaly F "gcloud list failed: $(echo "$FLEET_JSON" | head -2)"
+    if [ "${AUTH_DOWN:-0}" = "1" ]; then
+      : # known auth-dead state; fleet checks resume when the owner reauths
+    else
+      anomaly F "gcloud list failed: $(echo "$FLEET_JSON" | head -2)"
+    fi
   fi
   RUNNING_COUNT=$(echo "$FLEET_JSON" | grep -c ",RUNNING," || true)
   [ "$RUNNING_COUNT" -gt 4 ] && anomaly B "more than 4 fleet VMs RUNNING: $FLEET_JSON"
