@@ -49,6 +49,12 @@ non-blocking until we persist a non-owner profile, which wave 7 does not do).
 - Boot: fleet ZERO VMs list-confirmed (fleet1 TERMINATED disk-intact standing). No spend yet this wave.
 
 ## FYI (no action needed unless it surprises you)
+- **The 262mm body-decode mystery is ~90% solved, and it was measurement, not model.** The pipeline
+  was dropping the camera-translation term (fixed + adversarially verified this wave), and the gate
+  HARNESS had the same bug (fix in flight) — measuring with the term applied gives ~23mm p95, not
+  262mm. The 1mm gate bar itself is untouched; once the fixed harness re-measures on the next GPU
+  run, I'll bring you the recalibration question the refresh anticipated (R1). Your court-kp
+  relabel export was auto-detected and its ingest + re-score is running.
 - `body4d-waker-ctrl` (e2-micro, us-central1-a) has been RUNNING since Jun 14 — NOT this project's
   (labels cost-center=body4d, role=wake-controller). ~$6-7/mo. Kill it if it's stale.
 - Restored `runs/lanes/w6_footpinstub_20260708/report.json` — found gutted (uncommitted) in the
