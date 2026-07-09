@@ -155,7 +155,10 @@ export type BodyMeshFaces = {
   mesh_faces: MeshFace[];
 };
 
-export type BodyMeshChunkEncoding = "gzip_int16_world_vertices_v1" | "raw_int16_world_vertices_v1";
+export type BodyMeshChunkEncoding =
+  | "gzip_int16_delta_world_vertices_v2"
+  | "gzip_int16_world_vertices_v1"
+  | "raw_int16_world_vertices_v1";
 
 export type BodyMeshIndexFrame = {
   frame_idx: number;
@@ -167,6 +170,7 @@ export type BodyMeshIndexFrame = {
   joint_count: number;
   joint_conf: number[];
   reasons: string[];
+  delta_from_previous: boolean;
 };
 
 export type BodyMeshIndexPlayer = {
@@ -814,20 +818,43 @@ export function decodeBodyMeshChunkBytes(
   const players: BodyMeshPlayer[] = [];
   for (const player of window.players) {
     const frames: BodyMeshFrame[] = [];
+    let previousVertices: QuantizedVec3[] | null = null;
+    let previousJoints: QuantizedVec3[] | null = null;
     for (const frameMeta of player.frames) {
-      const mesh_vertices_world = readQuantizedVec3Array(view, offsetBytes, frameMeta.vertex_count, scale);
+      const useDelta = frameMeta.delta_from_previous;
+      if (useDelta && window.encoding !== "gzip_int16_delta_world_vertices_v2") {
+        throw new Error("body mesh frame declares a delta under a non-delta chunk encoding");
+      }
+      if (useDelta && (previousVertices === null || previousJoints === null)) {
+        throw new Error("body mesh delta frame is missing its previous-frame base");
+      }
+      const vertices = readQuantizedVec3Array(
+        view,
+        offsetBytes,
+        frameMeta.vertex_count,
+        scale,
+        useDelta ? previousVertices : null,
+      );
       offsetBytes += frameMeta.vertex_count * 3 * 2;
-      const joints_world = readQuantizedVec3Array(view, offsetBytes, frameMeta.joint_count, scale);
+      const joints = readQuantizedVec3Array(
+        view,
+        offsetBytes,
+        frameMeta.joint_count,
+        scale,
+        useDelta ? previousJoints : null,
+      );
       offsetBytes += frameMeta.joint_count * 3 * 2;
+      previousVertices = vertices.quantized;
+      previousJoints = joints.quantized;
       frames.push({
         frame_idx: frameMeta.frame_idx,
         t: frameMeta.t,
         source_window_index: frameMeta.source_window_index,
         blend_weight: frameMeta.blend_weight,
         trust_badge: frameMeta.trust_badge,
-        joints_world,
+        joints_world: joints.points,
         joint_conf: frameMeta.joint_conf,
-        mesh_vertices_world,
+        mesh_vertices_world: vertices.points,
         mesh_faces: faces.mesh_faces,
         smplx_params: {},
         reasons: frameMeta.reasons,
@@ -872,7 +899,8 @@ export async function decodeFetchedBodyMeshChunkBytes(
   bytes: ArrayBuffer,
 ): Promise<BodyMesh> {
   const decoded =
-    window.encoding === "gzip_int16_world_vertices_v1" && bodyMeshBytesLookGzipped(bytes)
+    (window.encoding === "gzip_int16_world_vertices_v1" || window.encoding === "gzip_int16_delta_world_vertices_v2") &&
+    bodyMeshBytesLookGzipped(bytes)
       ? await decompressGzipBytes(bytes)
       : bytes;
   return decodeBodyMeshChunkBytes(index, window, faces, decoded);
@@ -1937,7 +1965,11 @@ function readBodyMeshIndexWindow(input: unknown, index: number): BodyMeshIndexWi
     max_score: input.max_score === undefined ? 0 : readNumber(input.max_score, `${path}.max_score`),
     url: readString(input.url, `${path}.url`),
     byte_size: readNonNegativeInteger(input.byte_size, `${path}.byte_size`),
-    encoding: readEnum(input.encoding, `${path}.encoding`, ["gzip_int16_world_vertices_v1", "raw_int16_world_vertices_v1"] as const),
+    encoding: readEnum(
+      input.encoding,
+      `${path}.encoding`,
+      ["gzip_int16_delta_world_vertices_v2", "gzip_int16_world_vertices_v1", "raw_int16_world_vertices_v1"] as const,
+    ),
     quantization: {
       scale: readPositiveNumber(input.quantization.scale, `${path}.quantization.scale`),
       unit: readEnum(input.quantization.unit, `${path}.quantization.unit`, ["m"] as const),
@@ -1980,6 +2012,10 @@ function readBodyMeshIndexFrame(input: unknown, path: string, defaultSourceWindo
       input.reasons === undefined
         ? []
         : readArray(input.reasons, `${path}.reasons`).map((reason, index) => readString(reason, `${path}.reasons[${index}]`)),
+    delta_from_previous:
+      input.delta_from_previous === undefined
+        ? false
+        : readBoolean(input.delta_from_previous, `${path}.delta_from_previous`),
   };
 }
 
@@ -2663,21 +2699,36 @@ function windowDistanceFromTime(window: BodyMeshIndexWindow, timeSeconds: number
   return Math.min(Math.abs(timeSeconds - window.t0), Math.abs(timeSeconds - window.t1));
 }
 
-function readQuantizedVec3Array(view: DataView, offsetBytes: number, count: number, scale: number): Vec3[] {
+type QuantizedVec3 = [number, number, number];
+
+function readQuantizedVec3Array(
+  view: DataView,
+  offsetBytes: number,
+  count: number,
+  scale: number,
+  previous: QuantizedVec3[] | null = null,
+): { points: Vec3[]; quantized: QuantizedVec3[] } {
+  if (previous !== null && previous.length !== count) {
+    throw new Error(`body mesh delta base count mismatch: expected ${count}, got ${previous.length}`);
+  }
   const points: Vec3[] = [];
+  const quantized: QuantizedVec3[] = [];
   let offset = offsetBytes;
   for (let index = 0; index < count; index += 1) {
     if (offset + 6 > view.byteLength) {
       throw new Error(`body mesh chunk ended while reading vec3 ${index}`);
     }
-    points.push([
-      view.getInt16(offset, true) / scale,
-      view.getInt16(offset + 2, true) / scale,
-      view.getInt16(offset + 4, true) / scale,
-    ]);
+    const base = previous?.[index] ?? [0, 0, 0];
+    const value: QuantizedVec3 = [
+      base[0] + view.getInt16(offset, true),
+      base[1] + view.getInt16(offset + 2, true),
+      base[2] + view.getInt16(offset + 4, true),
+    ];
+    quantized.push(value);
+    points.push([value[0] / scale, value[1] / scale, value[2] / scale]);
     offset += 6;
   }
-  return points;
+  return { points, quantized };
 }
 
 function bodyMeshBytesLookGzipped(bytes: ArrayBuffer): boolean {

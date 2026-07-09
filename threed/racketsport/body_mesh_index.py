@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping, Sequence
 
+import numpy as np
+
 from .trust_band import TRUST_BADGES
 
 
@@ -23,18 +25,23 @@ INDEX_ARTIFACT_TYPE = "racketsport_body_mesh_index"
 FACES_ARTIFACT_TYPE = "racketsport_body_mesh_faces"
 BUILD_ARTIFACT_TYPE = "racketsport_body_mesh_index_build"
 DEFAULT_QUANTIZATION_SCALE = 1000
-DEFAULT_GZIP_COMPRESSLEVEL = 9
+# Level 6 is materially faster on the real delta-encoded Wolverine chunks and
+# produced a slightly smaller payload than level 9. Keep the option tunable for
+# callers, but use the measured speed/storage knee by default.
+DEFAULT_GZIP_COMPRESSLEVEL = 6
+CHUNK_ENCODING = "gzip_int16_delta_world_vertices_v2"
 
 
 @dataclass
 class _WindowAccumulator:
     source_window_index: int
-    raw_bytes: bytearray = field(default_factory=bytearray)
+    raw_bytes_by_player: dict[int, bytearray] = field(default_factory=dict, repr=False)
     players: dict[int, list[dict[str, Any]]] = field(default_factory=dict)
     player_ids: set[int] = field(default_factory=set)
     frame_indices: set[int] = field(default_factory=set)
     reason_counts: dict[str, int] = field(default_factory=dict)
     player_frame_count: int = 0
+    previous_quantized_by_player: dict[int, tuple[np.ndarray, np.ndarray]] = field(default_factory=dict, repr=False)
 
     def add_frame(self, *, player_id: int, frame: Mapping[str, Any], quantization_scale: int) -> None:
         frame_idx = int(frame.get("frame_idx", round(float(frame.get("t", 0.0)) * 30.0)))
@@ -50,8 +57,21 @@ class _WindowAccumulator:
         )
         if vertex_count == 0:
             return
-        self.raw_bytes.extend(vertex_bytes)
-        self.raw_bytes.extend(joint_bytes)
+        vertex_values = np.frombuffer(vertex_bytes, dtype="<i2").astype(np.int32)
+        joint_values = np.frombuffer(joint_bytes, dtype="<i2").astype(np.int32)
+        previous = self.previous_quantized_by_player.get(int(player_id))
+        delta_from_previous = False
+        if previous is not None and previous[0].shape == vertex_values.shape and previous[1].shape == joint_values.shape:
+            vertex_delta = vertex_values - previous[0]
+            joint_delta = joint_values - previous[1]
+            if _fits_int16(vertex_delta) and _fits_int16(joint_delta):
+                vertex_bytes = vertex_delta.astype(np.dtype("<i2"), copy=False).tobytes(order="C")
+                joint_bytes = joint_delta.astype(np.dtype("<i2"), copy=False).tobytes(order="C")
+                delta_from_previous = True
+        self.previous_quantized_by_player[int(player_id)] = (vertex_values, joint_values)
+        player_raw_bytes = self.raw_bytes_by_player.setdefault(int(player_id), bytearray())
+        player_raw_bytes.extend(vertex_bytes)
+        player_raw_bytes.extend(joint_bytes)
         reasons = [str(reason) for reason in frame.get("reasons", []) or []]
         for reason in reasons:
             self.reason_counts[reason] = self.reason_counts.get(reason, 0) + 1
@@ -65,6 +85,8 @@ class _WindowAccumulator:
             "joint_conf": _float_list(frame.get("joint_conf", [])),
             "reasons": reasons,
         }
+        if delta_from_previous:
+            frame_payload["delta_from_previous"] = True
         trust_badge = _optional_trust_badge(frame.get("trust_badge"))
         if trust_badge is not None:
             frame_payload["trust_badge"] = trust_badge
@@ -519,7 +541,11 @@ def _finalize_windows(
         if accumulator.player_frame_count == 0:
             continue
         compressed_path = chunk_dir / f"window_{source_window_index:03d}.bin.gz"
-        _gzip_bytes(accumulator.raw_bytes, compressed_path, compresslevel=compresslevel)
+        raw_bytes = b"".join(
+            accumulator.raw_bytes_by_player[player_id]
+            for player_id in sorted(accumulator.raw_bytes_by_player)
+        )
+        _gzip_bytes(raw_bytes, compressed_path, compresslevel=compresslevel)
         meta = metadata_by_index.get(source_window_index, {})
         frame_start = int(meta.get("frame_start", min(accumulator.frame_indices)))
         frame_end = int(meta.get("frame_end", max(accumulator.frame_indices)))
@@ -540,7 +566,7 @@ def _finalize_windows(
             "max_score": float(meta.get("max_score", 0.0) or 0.0),
             "url": f"body_mesh_chunks/window_{source_window_index:03d}.bin.gz",
             "byte_size": compressed_path.stat().st_size,
-            "encoding": "gzip_int16_world_vertices_v1",
+            "encoding": CHUNK_ENCODING,
             "quantization": {"scale": int(quantization_scale), "unit": "m"},
             "players": [
                 {"id": int(player_id), "frames": frames}
@@ -647,6 +673,37 @@ def _loads_slice(mm: mmap.mmap, start: int, end: int) -> Any:
 def _quantized_vec3_bytes_from_raw(values: Any, *, name: str, scale: int) -> tuple[bytes, int]:
     if values is None:
         return b"", 0
+
+    array_values = _to_numpy_candidate(values)
+    try:
+        points = np.asarray(array_values, dtype=np.float64)
+    except (TypeError, ValueError):
+        return _quantized_vec3_bytes_scalar(values, name=name, scale=scale)
+    if points.ndim != 2 or points.shape[1:] != (3,):
+        return _quantized_vec3_bytes_scalar(values, name=name, scale=scale)
+    if points.shape[0] == 0:
+        return b"", 0
+
+    finite = np.isfinite(points)
+    if not bool(finite.all()):
+        bad_row = int(np.argwhere(~finite)[0][0])
+        raise ValueError(f"{name}[{bad_row}] must contain finite values")
+
+    quantized = np.rint(points * float(scale))
+    below = quantized < -32768
+    above = quantized > 32767
+    if bool(below.any() or above.any()):
+        bad_row, bad_col = np.argwhere(below | above)[0]
+        bad_value = int(quantized[int(bad_row), int(bad_col)])
+        raise ValueError(f"quantized mesh coordinate {bad_value} exceeds int16 range at scale={scale}")
+
+    little_endian_i16 = quantized.astype(np.dtype("<i2"), copy=False)
+    return little_endian_i16.tobytes(order="C"), int(points.shape[0])
+
+
+def _quantized_vec3_bytes_scalar(values: Any, *, name: str, scale: int) -> tuple[bytes, int]:
+    """Validation-compatible fallback for ragged or non-array inputs."""
+
     values = _to_python_container(values)
     if not isinstance(values, Sequence) or isinstance(values, str | bytes):
         raise ValueError(f"{name} must be a sequence of 3-vectors")
@@ -668,6 +725,28 @@ def _quantized_vec3_bytes_from_raw(values: Any, *, name: str, scale: int) -> tup
     if sys.byteorder != "little":
         out.byteswap()
     return out.tobytes(), count
+
+
+def _fits_int16(values: np.ndarray) -> bool:
+    return bool(values.size == 0 or (values.min() >= -32768 and values.max() <= 32767))
+
+
+def _to_numpy_candidate(value: Any) -> Any:
+    item = value
+    for method_name in ("detach", "cpu"):
+        method = getattr(item, method_name, None)
+        if callable(method):
+            try:
+                item = method()
+            except Exception:
+                return value
+    numpy_method = getattr(item, "numpy", None)
+    if callable(numpy_method):
+        try:
+            return numpy_method()
+        except Exception:
+            return item
+    return item
 
 
 def _float_list(values: Any) -> list[float]:
@@ -727,7 +806,7 @@ def _int_mapping(value: Any) -> dict[str, int]:
 
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(payload, separators=(",", ":"), sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _peak_rss_mb() -> float:
@@ -739,6 +818,7 @@ def _peak_rss_mb() -> float:
 
 __all__ = [
     "BUILD_ARTIFACT_TYPE",
+    "CHUNK_ENCODING",
     "DEFAULT_GZIP_COMPRESSLEVEL",
     "DEFAULT_QUANTIZATION_SCALE",
     "FACES_ARTIFACT_TYPE",

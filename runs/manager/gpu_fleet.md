@@ -230,3 +230,11 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
   (the ~2.4k curve point; w6/w7 rows box-position-only per owner ruling), B-complete from banked
   step-500, F=warm-from-A optional -> score all candidates on the new 40-clip block w/ true source
   groups. Template-bake validation = part of the mission. Drop order: F, B, C/D rows.
+- pickleball-h100-ns06eff-bx1 — DONE+DELETED 2026-07-09T23:04:46Z, list-confirmed absent
+  (created 21:22:01Z, ~1.71h, a3-highgpu-1g H100 SPOT, zero preemptions; ase1-c first attempt
+  stockout, ase1-b succeeded). NS-06 speed/storage lane: matched Wolverine 244 BODY frames / 705
+  player-frames; selected delta-v2 level-6 candidate cut indexed mesh 51,921,156 -> 21,538,180
+  bytes (-58.5%) with index build 5.765s vs 22.068s prior baseline (-73.9%). Candidate full wall
+  470.492s is scoped n=1, not a global speed promotion. Self-dispatch required H100 compute mode
+  Default because the coordinator's CUDA context conflicts with Exclusive_Process; detailed import
+  errors exposed that root cause. Evidence: runs/lanes/ns06_efficiency_20260709/.

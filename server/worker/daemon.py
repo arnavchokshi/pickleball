@@ -22,6 +22,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol
@@ -32,9 +33,8 @@ from .config import WorkerConfig, worker_config_from_env
 from ..pipeline_invocation import (
     PIPELINE_SUMMARY_ARTIFACT,
     build_process_video_args,
-    copy_source_video_artifact,
     remote_model_root,
-    rewrite_manifest_urls,
+    stage_manifest_delivery_bundle,
 )
 
 HEARTBEAT_STAGE_STARTING = "Running pipeline on GPU"
@@ -87,6 +87,10 @@ class S3Client(Protocol):
     def download_file(self, bucket: str, key: str, filename: str) -> None: ...
 
     def upload_file(self, filename: str, bucket: str, key: str) -> None: ...
+
+    def list_objects_v2(self, **kwargs: Any) -> Mapping[str, Any]: ...
+
+    def delete_objects(self, **kwargs: Any) -> Mapping[str, Any]: ...
 
 
 def run_once(
@@ -157,6 +161,11 @@ def run_once(
 
     heartbeat_thread = threading.Thread(target=_heartbeat_loop, daemon=True)
     heartbeat_thread.start()
+
+    def _stop_heartbeat() -> None:
+        stop_heartbeat.set()
+        heartbeat_thread.join(timeout=5)
+
     try:
         api_client.send_heartbeat(job.job_id, stage=HEARTBEAT_STAGE_STARTING, percent=15, message="starting process_video")
     except Exception:  # noqa: BLE001 - same as above
@@ -165,8 +174,7 @@ def run_once(
     try:
         result = process_runner(job, video_path, sidecar_path, out_dir)
     except Exception as exc:  # noqa: BLE001 - a crashing runner is job state, not a daemon crash
-        stop_heartbeat.set()
-        heartbeat_thread.join(timeout=5)
+        _stop_heartbeat()
         api_client.complete_job(
             job.job_id,
             status="failed",
@@ -177,10 +185,8 @@ def run_once(
         )
         return True
 
-    stop_heartbeat.set()
-    heartbeat_thread.join(timeout=5)
-
     if result.status != "succeeded":
+        _stop_heartbeat()
         api_client.complete_job(
             job.job_id,
             status="failed",
@@ -191,20 +197,63 @@ def run_once(
         )
         return True
 
-    bundle_dir = out_dir / job.clip_id
-    bundle_dir.mkdir(parents=True, exist_ok=True)
-    copy_source_video_artifact(video_path=video_path, artifacts_dir=bundle_dir)
-    bundle_prefix = f"bundles/{job.clip_id}/"
-    rewrite_manifest_urls(
-        artifacts_dir=bundle_dir,
-        video_path=video_path,
-        resolve=lambda name, _prefix=bundle_prefix: f"{_prefix}{name}",
-    )
+    generation_id = uuid.uuid4().hex
+    artifacts_prefix = f"artifacts/{job.job_id}/generations/{generation_id}/"
+    bundle_prefix = f"bundles/{job.clip_id}/jobs/{job.job_id}/generations/{generation_id}/"
 
-    artifacts_prefix = f"artifacts/{job.job_id}/"
-    _upload_dir(s3_client, out_dir, config.s3_bucket, artifacts_prefix)
-    _upload_dir(s3_client, bundle_dir, config.s3_bucket, bundle_prefix)
+    bundle_source_dir = out_dir / job.clip_id
+    bundle_dir = job_dir / "delivery_bundle"
+    try:
+        stage_manifest_delivery_bundle(
+            source_dir=bundle_source_dir,
+            bundle_dir=bundle_dir,
+            video_path=video_path,
+            resolve=lambda name, _prefix=bundle_prefix: f"{_prefix}{name}",
+            allowed_source_root=out_dir,
+            prune_destination=True,
+        )
+    except Exception as exc:  # noqa: BLE001 - packaging failure is job state
+        _stop_heartbeat()
+        api_client.complete_job(
+            job.job_id,
+            status="failed",
+            error=f"delivery bundle packaging failed: {type(exc).__name__}: {exc}",
+            pipeline_stage_summary=result.pipeline_stage_summary,
+            s3_artifacts_prefix=None,
+            s3_bundle_prefix=None,
+        )
+        return True
 
+    try:
+        _upload_generation(s3_client, out_dir, config.s3_bucket, artifacts_prefix)
+        _upload_generation(s3_client, bundle_dir, config.s3_bucket, bundle_prefix)
+    except Exception as exc:  # noqa: BLE001 - upload failure is job state
+        cleanup_errors: list[str] = []
+        for prefix in (artifacts_prefix, bundle_prefix):
+            try:
+                _delete_s3_keys(
+                    s3_client,
+                    bucket=config.s3_bucket,
+                    keys=_list_s3_prefix_keys(s3_client, bucket=config.s3_bucket, prefix=prefix),
+                )
+            except Exception as cleanup_exc:  # noqa: BLE001 - preserve primary failure
+                cleanup_errors.append(f"{type(cleanup_exc).__name__}: {cleanup_exc}")
+        cleanup_note = f"; cleanup_errors={cleanup_errors}" if cleanup_errors else ""
+        _stop_heartbeat()
+        api_client.complete_job(
+            job.job_id,
+            status="failed",
+            error=f"artifact upload failed: {type(exc).__name__}: {exc}{cleanup_note}",
+            pipeline_stage_summary=result.pipeline_stage_summary,
+            s3_artifacts_prefix=None,
+            s3_bundle_prefix=None,
+        )
+        return True
+
+    _stop_heartbeat()
+    # This request is the atomic publish point. If the response is lost after
+    # the server commits it, the outcome is ambiguous, so the immutable S3
+    # generation must remain intact for idempotent retry/readback—not deleted.
     api_client.complete_job(
         job.job_id,
         status="succeeded",
@@ -216,14 +265,56 @@ def run_once(
     return True
 
 
-def _upload_dir(s3_client: S3Client, local_dir: Path, bucket: str, prefix: str) -> None:
-    if not local_dir.is_dir():
-        return
-    for path in sorted(local_dir.rglob("*")):
-        if not path.is_file():
+def _upload_generation(s3_client: S3Client, local_dir: Path, bucket: str, prefix: str) -> None:
+    """Upload an immutable generation, reclaiming only its own partial failure."""
+
+    if not prefix or not prefix.endswith("/"):
+        raise ValueError(f"generation prefix must be a non-empty directory prefix: {prefix!r}")
+    existing_keys = _list_s3_prefix_keys(s3_client, bucket=bucket, prefix=prefix)
+    if existing_keys:
+        raise RuntimeError(f"immutable S3 generation already exists: {prefix}")
+    uploaded_keys: set[str] = set()
+    try:
+        if local_dir.is_dir():
+            for path in sorted(local_dir.rglob("*")):
+                if not path.is_file():
+                    continue
+                key = f"{prefix}{path.relative_to(local_dir).as_posix()}"
+                s3_client.upload_file(str(path), bucket, key)
+                uploaded_keys.add(key)
+    except Exception:
+        _delete_s3_keys(s3_client, bucket=bucket, keys=uploaded_keys)
+        raise
+
+
+def _list_s3_prefix_keys(s3_client: S3Client, *, bucket: str, prefix: str) -> set[str]:
+    keys: set[str] = set()
+    continuation_token: str | None = None
+    while True:
+        kwargs: dict[str, Any] = {"Bucket": bucket, "Prefix": prefix}
+        if continuation_token:
+            kwargs["ContinuationToken"] = continuation_token
+        response = s3_client.list_objects_v2(**kwargs)
+        for item in response.get("Contents", []) or []:
+            if isinstance(item, Mapping) and isinstance(item.get("Key"), str):
+                keys.add(str(item["Key"]))
+        if not response.get("IsTruncated"):
+            return keys
+        continuation_token = str(response.get("NextContinuationToken") or "")
+        if not continuation_token:
+            raise RuntimeError(f"S3 listing for {prefix!r} was truncated without a continuation token")
+
+
+def _delete_s3_keys(s3_client: S3Client, *, bucket: str, keys: set[str]) -> None:
+    ordered_keys = sorted(keys)
+    for start in range(0, len(ordered_keys), 1000):
+        objects = [{"Key": key} for key in ordered_keys[start : start + 1000]]
+        if not objects:
             continue
-        relative = path.relative_to(local_dir).as_posix()
-        s3_client.upload_file(str(path), bucket, f"{prefix}{relative}")
+        response = s3_client.delete_objects(Bucket=bucket, Delete={"Objects": objects, "Quiet": True})
+        errors = response.get("Errors", []) or []
+        if errors:
+            raise RuntimeError(f"S3 failed to delete {len(errors)} object(s): {errors}")
 
 
 def _load_pipeline_summary(clip_dir: Path) -> list[dict[str, Any]] | None:

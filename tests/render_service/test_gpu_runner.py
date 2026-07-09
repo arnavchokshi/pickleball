@@ -63,6 +63,7 @@ def test_ssh_runner_uploads_runs_body_local_and_syncs_artifacts(tmp_path: Path) 
             (tmp_path / "artifacts" / "replay_viewer_manifest.json").write_text(
                 json.dumps(
                     {
+                        "clip": "clip_1",
                         "video_url": "/@fs//srv/pickleball/runs/render_jobs/job_1/input/clip.mp4",
                         "virtual_world_url": "/@fs//srv/pickleball/runs/render_jobs/job_1/out/clip_1/confidence_gated_world.json",
                     }
@@ -219,14 +220,25 @@ def test_local_pipeline_runner_passes_reviewed_calibration_to_process_video(tmp_
         produced_dir.mkdir(parents=True, exist_ok=True)
         (produced_dir / "replay_viewer_manifest.json").write_text(
             json.dumps(
-                {
-                    "video_url": str(tmp_path / "input" / "clip.mp4"),
+                    {
+                        "clip": "clip_1",
+                        "video_url": str(tmp_path / "input" / "clip.mp4"),
                     "virtual_world_url": str(produced_dir / "confidence_gated_world.json"),
+                    "body_mesh_index_url": str(produced_dir / "body_mesh_index" / "body_mesh_index.json"),
                 }
             ),
             encoding="utf-8",
         )
         (produced_dir / "confidence_gated_world.json").write_text("{}", encoding="utf-8")
+        body_index_dir = produced_dir / "body_mesh_index"
+        body_index_dir.mkdir()
+        (body_index_dir / "body_mesh_index.json").write_text(
+            json.dumps({"windows": [{"url": "body_mesh_chunks/window_000.bin.gz"}]}),
+            encoding="utf-8",
+        )
+        chunk = body_index_dir / "body_mesh_chunks" / "window_000.bin.gz"
+        chunk.parent.mkdir()
+        chunk.write_bytes(b"mesh-chunk")
         return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
 
     input_dir = tmp_path / "input"
@@ -255,3 +267,4 @@ def test_local_pipeline_runner_passes_reviewed_calibration_to_process_video(tmp_
     assert command[command.index("--vite-allow-root") + 1] == str(input_dir.parent)
     assert command[command.index("--court-calibration") + 1] == str(calibration)
     assert "--court-review" not in command
+    assert (request.artifacts_dir / "body_mesh_index" / "body_mesh_chunks" / "window_000.bin.gz").read_bytes() == b"mesh-chunk"

@@ -868,13 +868,15 @@ def _load_setup_sam_3d_body(fast_sam_repo: Path) -> Any:
         sys.path.insert(0, repo)
     try:
         module = importlib.import_module("notebook.utils")
-    except Exception as exc:
+    except Exception as notebook_exc:
         try:
             importlib.import_module("sam_3d_body")
         except Exception as direct_exc:
             raise RuntimeError(
                 "could not import FastSAM-3D-Body notebook.utils.setup_sam_3d_body "
-                "or direct sam_3d_body runtime"
+                "or direct sam_3d_body runtime "
+                f"(notebook_error={type(notebook_exc).__name__}: {notebook_exc}; "
+                f"direct_error={type(direct_exc).__name__}: {direct_exc})"
             ) from direct_exc
         return _direct_setup_sam_3d_body
     setup_sam_3d_body = getattr(module, "setup_sam_3d_body", None)

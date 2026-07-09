@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -426,10 +427,11 @@ class LocalPipelineRunner(GpuRunner):
         )
         produced_dir = out_dir / safe_slug(request.clip)
         if produced_dir.is_dir() and produced_dir != request.artifacts_dir:
-            for path in produced_dir.iterdir():
-                target = request.artifacts_dir / path.name
+            for path in produced_dir.rglob("*"):
                 if path.is_file():
-                    target.write_bytes(path.read_bytes())
+                    target = request.artifacts_dir / path.relative_to(produced_dir)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(path, target)
 
         prepare_render_artifacts(request)
         manifest_path = request.artifacts_dir / "replay_viewer_manifest.json"
@@ -503,4 +505,3 @@ def _load_json_artifact(path: Path) -> dict[str, object] | None:
     except (json.JSONDecodeError, OSError):
         return None
     return payload if isinstance(payload, dict) else None
-

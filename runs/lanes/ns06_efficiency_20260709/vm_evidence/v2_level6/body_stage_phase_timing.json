@@ -1,0 +1,75 @@
+{
+  "array_native_gate_feed_s": 135.97252512500017,
+  "artifact_io_s": 0.022337076000439993,
+  "artifact_type": "racketsport_body_stage_phase_timing",
+  "attributed_s": 232.4449323949995,
+  "compile_warmup_s": 23.924491,
+  "contact_splice_s": 0.7707181699997818,
+  "gates_s": 25.214494989999366,
+  "index_build_s": 5.764912009,
+  "inference_s": 5.574068,
+  "input_prep_s": 1.7520837709998887,
+  "keypoints_2d_s": 0.04658569300045201,
+  "mesh_export_payload_assembly_s": 2.04800016945228e-06,
+  "mesh_smpl_payload_assembly_s": 0.0,
+  "model_load_s": 13.60194,
+  "ms_per_person_steady": 7.906479,
+  "not_instrumentable": {},
+  "notes": [
+    "Phase timings are speed instrumentation only; subprocess_outer_call_s is retained for comparison and is not double-counted in attributed_s when runner timing is available.",
+    "VERIFIED=0 unchanged; this artifact is speed instrumentation only."
+  ],
+  "orchestrator_model_setup_s": 0.00011849999918922549,
+  "other_s": 118.61399954500013,
+  "per_bucket_timing": [
+    {
+      "bucket_size": 8,
+      "frames": 1,
+      "steady_s": 0.078693,
+      "warmup_s": 18.502034
+    },
+    {
+      "bucket_size": 16,
+      "frames": 704,
+      "steady_s": 5.495375,
+      "warmup_s": 5.422457
+    }
+  ],
+  "person_frame_count": 705,
+  "phase_boundaries": {
+    "array_native_gate_feed_s": "default slim mode BODY gate/readiness/splice/skeleton/index payload views built from shared worldhmr joint compute without monolithic smpl/body payloads",
+    "artifact_io_s": "small BODY config/plan artifact writes outside compact monolith serialization",
+    "contact_splice_s": "contact skeleton splice, optional wrist lock, skeleton/contact artifact writes",
+    "gates_s": "BODY quality, full-clip gate, grounding quality, and mesh-readiness artifact builds/writes",
+    "index_build_s": "body_mesh_index built from the in-memory body_mesh payload after body_mesh.json write",
+    "inference_s": "steady SAM3D bucket inference from run_sam3dbody_batch.py when available; otherwise runtime process_frame/process_frame_batches outer call",
+    "input_prep_s": "BodyStageRunner-visible frame, bbox, mask, soft-background, and request-payload preparation",
+    "keypoints_2d_s": "sam3d_keypoints_2d sidecar derivation and write",
+    "mesh_export_payload_assembly_s": "build_body_mesh_export Python payload construction before serialization",
+    "mesh_smpl_payload_assembly_s": "smpl_motion/body_mesh Python payload construction; zero in default slim array-native mode",
+    "model_load_s": "true FastSAM model_setup_load from run_sam3dbody_batch.py when subprocess timing is available; otherwise BodyStageRunner-visible model construction",
+    "orchestrator_model_setup_s": "manifest asset verification plus BodyStageRunner-visible subprocess runtime construction",
+    "runner_other_s": "run_sam3dbody_batch.py timing summary remainder after runner-local attribution",
+    "runner_postprocessing_s": "run_sam3dbody_batch.py output record conversion outside model inference",
+    "runner_preprocessing_s": "run_sam3dbody_batch.py request/crop/bucket/tensor preparation",
+    "runner_result_serialization_handoff_s": "run_sam3dbody_batch.py stream chunk/monolithic output serialization",
+    "serialization_s": "sum from body_serialization_timing.json for compact smpl_motion/body_mesh writes",
+    "smpl_motion_payload_assembly_s": "build_body_artifacts_from_fast_sam/monolith assembly or empty BODY payload construction before serialization; zero in default slim array-native mode",
+    "subprocess_outer_call_s": "wall around runtime.process_frame_batches including subprocess launch/result handoff",
+    "subprocess_wrapper_handoff_s": "BodyStageRunner outer batch wall not covered by the runner timing sidecar"
+  },
+  "runner_other_s": 0.0,
+  "runner_postprocessing_s": 0.0,
+  "runner_preprocessing_s": 13.222043,
+  "runner_request_parse_s": 0.011988,
+  "runner_result_serialization_handoff_s": 0.333704,
+  "schema_version": 1,
+  "serialization_s": 0.0,
+  "smpl_motion_payload_assembly_s": 0.0,
+  "stage_wall_seconds": 351.05893193999964,
+  "subprocess_outer_call_s": 57.41779006100023,
+  "subprocess_wrapper_handoff_s": 6.2329230610002355,
+  "timing_sources": {
+    "sam3d_batch_timing": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260709T225335Z/fast_sam_subprocess/batch_outputs-f0aa30f219ac4032b79993b0a4592cb7.json.timing.json"
+  }
+}

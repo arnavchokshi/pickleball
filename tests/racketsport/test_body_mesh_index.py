@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from threed.racketsport import body_mesh_index as body_mesh_index_module
 from threed.racketsport.body_mesh_index import (
     build_body_mesh_index,
     build_body_mesh_index_from_arrays,
@@ -105,6 +106,7 @@ def test_build_body_mesh_index_splits_mesh_into_viewer_schema_and_chunks(tmp_pat
     assert index["faces_url"] == "body_mesh_faces.json"
     assert index["summary"] == {"window_count": 1, "mesh_frame_count": 2, "player_count": 1, "faces_count": 1}
     assert index["windows"][0]["url"] == "body_mesh_chunks/window_000.bin.gz"
+    assert index["windows"][0]["encoding"] == "gzip_int16_delta_world_vertices_v2"
     assert index["windows"][0]["byte_size"] == chunk_path.stat().st_size
     assert index["windows"][0]["player_frame_count"] == 2
     assert index["windows"][0]["player_ids"] == [7]
@@ -119,6 +121,8 @@ def test_build_body_mesh_index_splits_mesh_into_viewer_schema_and_chunks(tmp_pat
         "reasons": ["contact_window"],
     }
     assert raw_values[:12] == (100, 200, 30, 110, 210, 40, 120, 220, 50, 10, 20, 100)
+    assert index["windows"][0]["players"][0]["frames"][1]["delta_from_previous"] is True
+    assert raw_values[12:] == (30, 30, 30, 30, 30, 30, 30, 30, 30, 10, 10, 10)
 
 
 def test_build_body_mesh_index_is_deterministic(tmp_path: Path) -> None:
@@ -133,6 +137,74 @@ def test_build_body_mesh_index_is_deterministic(tmp_path: Path) -> None:
     assert (tmp_path / "first" / "body_mesh_chunks" / "window_000.bin.gz").read_bytes() == (
         tmp_path / "second" / "body_mesh_chunks" / "window_000.bin.gz"
     ).read_bytes()
+
+
+def test_build_body_mesh_index_orders_bytes_with_sorted_player_metadata(tmp_path: Path) -> None:
+    payload = _body_mesh_payload()
+    first_player = payload["players"][0]
+    second_player = {
+        "id": 3,
+        "frames": [
+            {
+                **first_player["frames"][0],
+                "mesh_vertices_world": [[9.0, 8.0, 7.0]],
+                "joints_world": [[6.0, 5.0, 4.0]],
+            }
+        ],
+    }
+    payload["players"] = [first_player, second_player]
+    # Exercise the arbitrary input-order contract: metadata sorts IDs, and the
+    # binary stream must follow that same order.
+    payload["players"].reverse()
+
+    out_dir = tmp_path / "indexed"
+    build_body_mesh_index_from_payload(payload, out_dir=out_dir, quantization_scale=100)
+    index = json.loads((out_dir / "body_mesh_index.json").read_text(encoding="utf-8"))
+    chunk_path = out_dir / index["windows"][0]["url"]
+    raw_bytes = gzip.decompress(chunk_path.read_bytes())
+    raw_values = struct.unpack(f"<{len(raw_bytes) // 2}h", raw_bytes)
+
+    assert [player["id"] for player in index["windows"][0]["players"]] == [3, 7]
+    # Player 3's one vertex and joint precede player 7's two frames.
+    assert raw_values[:6] == (900, 800, 700, 600, 500, 400)
+    assert raw_values[6:18] == (100, 200, 30, 110, 210, 40, 120, 220, 50, 10, 20, 100)
+
+
+def test_build_body_mesh_index_writes_compact_json_metadata(tmp_path: Path) -> None:
+    body_mesh_path = tmp_path / "clip" / "body_mesh.json"
+    out_dir = tmp_path / "indexed"
+    _write_json(body_mesh_path, _body_mesh_payload())
+
+    build_body_mesh_index(body_mesh_path, out_dir=out_dir, quantization_scale=100)
+
+    assert b"\n  " not in (out_dir / "body_mesh_index.json").read_bytes()
+    assert b"\n  " not in (out_dir / "body_mesh_faces.json").read_bytes()
+
+
+def test_vectorized_quantization_matches_scalar_wire_bytes() -> None:
+    import numpy as np
+
+    values = [
+        [-32.767, -0.0015, -0.0005],
+        [0.0005, 0.0015, 1.2344],
+        [12.3456, 20.0004, 32.767],
+    ]
+    expected_list = body_mesh_index_module._quantized_vec3_bytes_scalar(values, name="points", scale=1000)
+    actual_list = body_mesh_index_module._quantized_vec3_bytes_from_raw(values, name="points", scale=1000)
+    assert actual_list == expected_list
+
+    float32_values = np.asarray(values, dtype=np.float32)
+    expected_float32 = body_mesh_index_module._quantized_vec3_bytes_scalar(
+        float32_values.tolist(),
+        name="points",
+        scale=1000,
+    )
+    actual_float32 = body_mesh_index_module._quantized_vec3_bytes_from_raw(
+        float32_values,
+        name="points",
+        scale=1000,
+    )
+    assert actual_float32 == expected_float32
 
 
 def test_build_body_mesh_index_decompressed_chunks_are_equivalent_across_compresslevels(tmp_path: Path) -> None:
@@ -151,6 +223,15 @@ def test_build_body_mesh_index_decompressed_chunks_are_equivalent_across_compres
     assert gzip.decompress((tmp_path / "level1" / "body_mesh_chunks" / "window_000.bin.gz").read_bytes()) == gzip.decompress(
         (tmp_path / "level9" / "body_mesh_chunks" / "window_000.bin.gz").read_bytes()
     )
+
+
+def test_build_body_mesh_index_uses_measured_default_compresslevel(tmp_path: Path) -> None:
+    body_mesh_path = tmp_path / "clip" / "body_mesh.json"
+    _write_json(body_mesh_path, _body_mesh_payload())
+
+    result = build_body_mesh_index(body_mesh_path, out_dir=tmp_path / "default")
+
+    assert result["gzip_compresslevel"] == 6
 
 
 def test_build_body_mesh_index_from_payload_matches_file_builder(tmp_path: Path) -> None:

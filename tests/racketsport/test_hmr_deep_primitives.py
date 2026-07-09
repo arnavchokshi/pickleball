@@ -527,6 +527,23 @@ def test_fast_sam_loader_falls_back_to_direct_runtime_when_notebook_import_fails
     assert imported == ["notebook.utils", "sam_3d_body"]
 
 
+def test_fast_sam_loader_preserves_both_import_failures(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "fast-sam"
+    repo.mkdir()
+
+    def fake_import_module(name: str):
+        raise ModuleNotFoundError(f"missing {name}")
+
+    monkeypatch.setattr("threed.racketsport.hmr_deep.importlib.import_module", fake_import_module)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        _load_setup_sam_3d_body(repo)
+
+    message = str(exc_info.value)
+    assert "notebook_error=ModuleNotFoundError: missing notebook.utils" in message
+    assert "direct_error=ModuleNotFoundError: missing sam_3d_body" in message
+
+
 def test_fast_sam_direct_setup_installs_torch_amp_compat_decorators() -> None:
     calls: list[tuple[str, object]] = []
 

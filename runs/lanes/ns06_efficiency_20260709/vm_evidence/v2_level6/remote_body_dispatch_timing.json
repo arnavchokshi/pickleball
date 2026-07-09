@@ -1,0 +1,58 @@
+{
+  "artifact_type": "racketsport_remote_body_dispatch_timing",
+  "download_bytes": 37164700,
+  "fetched_default_artifacts": [
+    "version_stamp.json",
+    "remote_version_verification.json",
+    "skeleton3d.json",
+    "body_compute_execution.json",
+    "body_mesh_readiness.json",
+    "body_joint_quality.json",
+    "body_full_clip_gate.json",
+    "body_grounding_quality.json",
+    "body_serialization_timing.json",
+    "body_stage_phase_timing.json",
+    "sam3d_keypoints_2d.json",
+    "sam3d_tier2_config.json",
+    "sam3d_body_input_prep.json",
+    "remote_sam3d_tier2_dispatch_config.json",
+    "contact_splice.json",
+    "body_raw_grounded_joints.json",
+    "frame_compute_plan.json",
+    "wrist_velocity_peaks.json",
+    "ball_inflections.json",
+    "contact_windows.json",
+    "pipeline_run.json"
+  ],
+  "fetched_directories": [
+    "body_mesh_index/"
+  ],
+  "fetched_heavy_artifacts": [],
+  "lock_wait_estimate_s": 0.47808194160461426,
+  "phases": {
+    "download_s": 1.982997,
+    "mkdir_s": 0.164132,
+    "preflight_s": 0.541263,
+    "remote_command_s": 357.807354,
+    "tar_create_upload_archive_s": 0.795295,
+    "tar_download_scp_s": 0.202696,
+    "tar_extract_outputs_s": 0.265372,
+    "tar_remote_pack_s": 1.020578,
+    "tar_remote_untar_s": 0.299709,
+    "tar_upload_scp_s": 0.26388,
+    "upload_s": 1.361266
+  },
+  "remote_host": "35.198.252.167",
+  "remote_run_dir": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260709T225335Z",
+  "schema_version": 1,
+  "skipped_heavy_artifacts": [
+    "smpl_motion.json",
+    "body_mesh.json"
+  ],
+  "status": "ran",
+  "transport": "tar_batch",
+  "transport_fallback": {
+    "upload": "none"
+  },
+  "upload_bytes": 18264625
+}

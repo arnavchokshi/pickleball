@@ -1371,6 +1371,109 @@ describe("viewer data contracts", () => {
     expect(solidMeshRenderedPlayerCount(active)).toBe(1);
   });
 
+  it("reconstructs delta-encoded mesh and joint frames without changing quantized coordinates", () => {
+    const faces = parseBodyMeshFaces({
+      schema_version: 1,
+      artifact_type: "racketsport_body_mesh_faces",
+      faces_ref: "mhr_faces_static",
+      mesh_faces: [[0, 0, 0]],
+    });
+    const index = parseBodyMeshIndex({
+      schema_version: 1,
+      artifact_type: "racketsport_body_mesh_index",
+      clip: "clip_delta",
+      model: "sam3dbody_world_joints",
+      fps: 30,
+      world_frame: "court_Z0",
+      faces_ref: "mhr_faces_static",
+      faces_url: "body_mesh_faces.json",
+      windows: [
+        {
+          source_window_index: 0,
+          frame_start: 0,
+          frame_end: 1,
+          t0: 0,
+          t1: 1 / 15,
+          frame_count: 2,
+          player_frame_count: 2,
+          target_player_ids: [1],
+          player_ids: [1],
+          url: "body_mesh_chunks/window_000.bin.gz",
+          byte_size: 24,
+          encoding: "gzip_int16_delta_world_vertices_v2",
+          quantization: { scale: 100, unit: "m" },
+          players: [
+            {
+              id: 1,
+              frames: [
+                { frame_idx: 0, t: 0, vertex_count: 1, joint_count: 1 },
+                { frame_idx: 1, t: 1 / 30, vertex_count: 1, joint_count: 1, delta_from_previous: true },
+              ],
+            },
+          ],
+        },
+      ],
+      summary: { window_count: 1, mesh_frame_count: 2, player_count: 1, faces_count: 1 },
+    });
+    const bytes = new Int16Array([
+      100, 200, 300,
+      10, 20, 30,
+      1, -2, 3,
+      -1, 2, -3,
+    ]).buffer;
+
+    const decoded = decodeBodyMeshChunkBytes(index, index.windows[0], faces, bytes);
+
+    expect(decoded.players[0].frames[0].mesh_vertices_world).toEqual([[1, 2, 3]]);
+    expect(decoded.players[0].frames[1].mesh_vertices_world).toEqual([[1.01, 1.98, 3.03]]);
+    expect(decoded.players[0].frames[1].joints_world).toEqual([[0.09, 0.22, 0.27]]);
+  });
+
+  it("rejects a delta frame without a previous-frame base", () => {
+    const faces = parseBodyMeshFaces({
+      schema_version: 1,
+      artifact_type: "racketsport_body_mesh_faces",
+      faces_ref: "mhr_faces_static",
+      mesh_faces: [[0, 0, 0]],
+    });
+    const index = parseBodyMeshIndex({
+      schema_version: 1,
+      artifact_type: "racketsport_body_mesh_index",
+      clip: "clip_bad_delta",
+      model: "sam3dbody_world_joints",
+      fps: 30,
+      world_frame: "court_Z0",
+      faces_ref: "mhr_faces_static",
+      faces_url: "body_mesh_faces.json",
+      windows: [{
+        source_window_index: 0,
+        frame_start: 0,
+        frame_end: 0,
+        t0: 0,
+        t1: 1 / 30,
+        frame_count: 1,
+        player_frame_count: 1,
+        target_player_ids: [1],
+        player_ids: [1],
+        url: "body_mesh_chunks/window_000.bin.gz",
+        byte_size: 12,
+        encoding: "gzip_int16_delta_world_vertices_v2",
+        quantization: { scale: 100, unit: "m" },
+        players: [{ id: 1, frames: [{
+          frame_idx: 0,
+          t: 0,
+          vertex_count: 1,
+          joint_count: 1,
+          delta_from_previous: true,
+        }] }],
+      }],
+      summary: { window_count: 1, mesh_frame_count: 1, player_count: 1, faces_count: 1 },
+    });
+
+    expect(() => decodeBodyMeshChunkBytes(index, index.windows[0], faces, new Int16Array(6).buffer))
+      .toThrow("missing its previous-frame base");
+  });
+
   it("proves midpoint interpolation and boundary refusal from a synthetic two-window index", () => {
     const faces = parseBodyMeshFaces({
       schema_version: 1,

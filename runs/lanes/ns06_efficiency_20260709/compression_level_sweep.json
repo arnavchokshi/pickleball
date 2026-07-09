@@ -1,0 +1,36 @@
+{
+  "artifact_type": "racketsport_body_mesh_compression_level_sweep",
+  "schema_version": 1,
+  "run_id": "wolverine_v2_delta_20260709T2242Z",
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "chunk_encoding": "gzip_int16_delta_world_vertices_v2",
+  "chunk_count": 23,
+  "raw_bytes": 78293070,
+  "rows": [
+    {
+      "compresslevel": 1,
+      "compression_wall_seconds": 0.9820234970002275,
+      "compressed_bytes": 23560199
+    },
+    {
+      "compresslevel": 3,
+      "compression_wall_seconds": 1.5045320250001168,
+      "compressed_bytes": 22260514
+    },
+    {
+      "compresslevel": 6,
+      "compression_wall_seconds": 3.5482478249996348,
+      "compressed_bytes": 20261818
+    },
+    {
+      "compresslevel": 9,
+      "compression_wall_seconds": 12.95661784800086,
+      "compressed_bytes": 20373414
+    }
+  ],
+  "selected_default_compresslevel": 6,
+  "notes": [
+    "The sweep recompressed the exact decompressed bytes from all 23 real v2 chunks on the isolated H100 VM CPU.",
+    "This is a speed and storage benchmark only; VERIFIED=0 and BODY accuracy status are unchanged."
+  ]
+}

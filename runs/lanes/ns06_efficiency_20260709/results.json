@@ -1,0 +1,145 @@
+{
+  "artifact_type": "racketsport_ns06_efficiency_results",
+  "schema_version": 1,
+  "status": "scoped_speed_storage_pass",
+  "verified": false,
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "workload": {
+    "video_frames": 300,
+    "scheduled_body_frames": 244,
+    "scheduled_player_frames": 705,
+    "mesh_windows": 23,
+    "mesh_frames": 705,
+    "gpu": "H100 a3-highgpu-1g Spot",
+    "body_effective_stride": 1
+  },
+  "historical_baseline": {
+    "source": "runs/lanes/w7_speedgate_20260709/vm_evidence/arm1_wolverine_profile.json",
+    "pipeline_run_count": 6,
+    "pipeline_wall_seconds": [
+      483.61,
+      494.347,
+      487.001,
+      484.75,
+      489.372,
+      497.46
+    ],
+    "pipeline_wall_mean_seconds": 489.42333333333335,
+    "run1_body_index_build_seconds": 22.06785808800032
+  },
+  "matched_runs": [
+    {
+      "run_id": "wolverine_v1_valid_20260709T2230Z",
+      "role": "vectorized_absolute_v1_control",
+      "pipeline_status": "partial",
+      "shell_wall_seconds": 485.990519,
+      "pipeline_wall_seconds": 481.757,
+      "body_wall_seconds": 373.276,
+      "body_stage_phase_wall_seconds": 360.6270405659998,
+      "body_index_build_seconds": 5.55714877399987,
+      "steady_inference_seconds": 5.66107,
+      "mesh_encoding": "gzip_int16_world_vertices_v1",
+      "mesh_chunk_bytes": 50662377,
+      "mesh_index_bytes": 587903,
+      "mesh_faces_bytes": 670876,
+      "mesh_total_indexed_bytes": 51921156
+    },
+    {
+      "run_id": "wolverine_v2_delta_20260709T2242Z",
+      "role": "delta_v2_level9_rejected_default",
+      "pipeline_status": "partial",
+      "shell_wall_seconds": 495.749864,
+      "pipeline_wall_seconds": 491.566,
+      "body_wall_seconds": 383.34,
+      "body_stage_phase_wall_seconds": 371.5315011749999,
+      "body_index_build_seconds": 15.279185469000367,
+      "steady_inference_seconds": 5.552573,
+      "mesh_encoding": "gzip_int16_delta_world_vertices_v2",
+      "mesh_chunk_bytes": 20373414
+    },
+    {
+      "run_id": "wolverine_v2_level6_20260709T2250Z",
+      "role": "selected_delta_v2_level6_candidate",
+      "pipeline_status": "partial",
+      "shell_wall_seconds": 474.654547,
+      "pipeline_wall_seconds": 470.492,
+      "body_wall_seconds": 362.767,
+      "body_stage_phase_wall_seconds": 351.05893193999964,
+      "body_index_build_seconds": 5.764912009,
+      "steady_inference_seconds": 5.574068,
+      "mesh_encoding": "gzip_int16_delta_world_vertices_v2",
+      "mesh_chunk_bytes": 20261966,
+      "mesh_index_bytes": 605338,
+      "mesh_faces_bytes": 670876,
+      "mesh_total_indexed_bytes": 21538180
+    }
+  ],
+  "selected_candidate_deltas": {
+    "mesh_chunks_vs_matched_v1_percent": -60.0059,
+    "mesh_total_indexed_vs_matched_v1_percent": -58.5175,
+    "body_index_build_vs_historical_run1_percent": -73.8764,
+    "body_index_build_vs_matched_v1_seconds": 0.2077632350001302,
+    "pipeline_wall_vs_matched_v1_percent": -2.33832,
+    "pipeline_wall_vs_historical_six_run_mean_percent": -3.86802
+  },
+  "delivery_bundle_measurements": [
+    {
+      "clip": "wolverine_mixed_0200_mid_steep_corner",
+      "source_bytes": 117268905,
+      "bundle_bytes": 61266182,
+      "bundle_file_count": 34,
+      "reduction_percent": 47.75581642891609,
+      "stage_wall_seconds": 1.6740463750029448,
+      "world_json_source_bytes": 13760159,
+      "world_json_bundle_bytes": 6451405
+    },
+    {
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline",
+      "source_bytes": 312183386,
+      "bundle_bytes": 228278081,
+      "bundle_file_count": 37,
+      "reduction_percent": 26.87692835774419,
+      "stage_wall_seconds": 5.320436457986943,
+      "world_json_source_bytes": 54127845,
+      "world_json_bundle_bytes": 25606537
+    }
+  ],
+  "wolverine_s3_duplication_model": {
+    "raw_video_bytes": 2153064,
+    "full_artifacts_bytes": 119421969,
+    "old_full_bundle_bytes": 119421969,
+    "new_curated_compact_bundle_bytes": 61266182,
+    "old_total_bytes": 240997002,
+    "new_total_bytes": 182841215,
+    "saved_bytes": 58155787,
+    "saved_percent": 24.1313
+  },
+  "quality_parity": {
+    "body_full_clip_gate_passed": true,
+    "body_full_clip_gate_blockers": [],
+    "body_full_clip_gate_warnings": [],
+    "coverage": 1.0,
+    "contact_mesh_coverage": 1.0,
+    "grounding_gate_status": "pass",
+    "selected_candidate_foot_slide_m": 0.019924665111149178,
+    "foot_slide_threshold_m": 0.03,
+    "joint_quality_status": "quality_checked_needs_accuracy_gate",
+    "mesh_readiness_status": "mesh_available_needs_accuracy_gate",
+    "promotion_blockers": [
+      "missing_world_mpjpe_gate"
+    ],
+    "max_observed_joint_summary_delta_vs_control": 1.437866335774362e-7
+  },
+  "decode_validation": {
+    "windows_validated": 23,
+    "frames_validated": 705,
+    "delta_frames": 641,
+    "quantized_values_reconstructed": 39146535,
+    "typescript_real_chunk_decode": "pass"
+  },
+  "notes": [
+    "All three pipeline runs were partial because the input-quality advisory remained below acceptance and the benchmark output path was outside the replay manifest Vite allow root; BODY ran and the scoped BODY gates passed.",
+    "The end-to-end timing comparison has one matched sample per candidate. The index-stage and byte-size measurements are the attributable speed/storage claims; no global runtime or accuracy promotion is claimed.",
+    "VERIFIED=0 remains binding."
+  ]
+}
