@@ -173,3 +173,12 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
   (reproduces w5_fastbody 316.05s within 2.8%) at runs/lanes/w7_masklet_20260709/. SNAPSHOT GAP
   re-confirmed (2nd lane): calibration_curves.json + court_model_v2.pt missing from w6close
   template — MUST bake at next cut. ~10min honest idle from 2 passive-wait turns (1 nudge used).
+- pickleball-h100-w7ball — DONE+DELETED 2026-07-09T09:17:18Z list-confirmed (created 05:40:25Z,
+  uptime 3.615h, $2.06-15.36 mid ~$4-8, zero preemptions, first-attempt ase1-b create, snapshot
+  had corpus/videos/ckpts baked = near-zero transfer tax, code identity byte-exact 6/6 scripts).
+  PARTIAL-honest: ARM0 control BIT-EXACT (0.361111/0.599089); ARM1 486-anomaly REPRODUCES
+  (0.6868 vs 0.6426; lineage clean); probe 0.8787 steps/s -> 2372 steps/arm; arms A+C trained
+  (B,D dropped per pre-agreed order at the 5h cap); 1k-CHECKPOINT CARD: A_seed_official_aug
+  0.6152/0.2506, C_stage1_official_aug 0.6121/0.2597 vs control 0.3611/0.5991 — label curve
+  NOT plateaued (+15.5% rel F1 from 486->1121 rows); hFP regressed (needs arm D to attribute).
+  LoSO harness = per-CLIP folds not per-source grouping (pre-existing, flagged for ruling).

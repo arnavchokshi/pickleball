@@ -15,6 +15,10 @@ non-blocking until we persist a non-owner profile, which wave 7 does not do).
 - 01:5x: P6-2 BODY+COURT stats v0 LANDED (post-hoc, trust-banded). Masklet spike = honest
   NO-ATTEMPT (permission-blocked; ~$1; banked a fresh 307s H100 BODY baseline anchor). Ball
   retrain ~3.2h in; tierprov recovering from the disk crash.
+- 02:2x: BALL 1K-CHECKPOINT LANDED (the big one): your labels moved ball F1 0.5329 -> 0.6152
+  (+15.5% rel) going 486->1121 rows — the curve is NOT flattening, so labeling sessions keep
+  paying. Control reproduced bit-exact; anomaly re-run clean; $4-8 GPU. Adversarial verify next,
+  then the completion arms + re-score on your new 1,750-row corpus.
 
 ## Numbered asks (easiest first)
 1. **Mac disk — 2 min, semi-urgent.** Data volume is 99% full (5.2GB free; boot bar is >25GB; wave-6
