@@ -2671,7 +2671,7 @@ def test_global_association_default_profile_declares_wolverine_internal_val_tuni
     assert config.reid_device == "mps"
 
 
-def test_default_global_association_profile_is_clip_and_pool_specific_for_preregistered_clips(tmp_path: Path) -> None:
+def test_no_flag_global_association_profile_is_manifest_default_for_preregistered_clips(tmp_path: Path) -> None:
     local_wolverine_pool = tmp_path / "local_wolverine_pool"
     scaled_wolverine_pool = tmp_path / "scaled_wolverine_pool"
     _write_json(
@@ -2702,32 +2702,17 @@ def test_default_global_association_profile_is_clip_and_pool_specific_for_prereg
         },
     )
 
-    assert (
-        process_video._default_raw_pool_authority_profile_for_clip(
-            "wolverine_mixed_0200_mid_steep_corner",
-            raw_pool_dir=local_wolverine_pool,
+    for clip, raw_pool_dir in (
+        ("wolverine_mixed_0200_mid_steep_corner", local_wolverine_pool),
+        ("wolverine_mixed_0200_mid_steep_corner", scaled_wolverine_pool),
+        ("wolverine_mixed_0200_mid_steep_corner", None),
+        ("burlington_gold_0300_low_steep_corner", None),
+        ("outdoor_webcam_iynbd_1500_long_high_baseline", None),
+    ):
+        assert (
+            process_video._default_raw_pool_authority_profile_for_clip(clip, raw_pool_dir=raw_pool_dir)
+            == process_video.DEFAULT_GLOBAL_ASSOCIATION_PROFILE
         )
-        == "wolverine_internal_val_trk12_cfg151_minconf03_margin1_appw05_backfill"
-    )
-    assert (
-        process_video._default_raw_pool_authority_profile_for_clip(
-            "wolverine_mixed_0200_mid_steep_corner",
-            raw_pool_dir=scaled_wolverine_pool,
-        )
-        == "wolverine_internal_val_trk10_iter2_margin2"
-    )
-    assert (
-        process_video._default_raw_pool_authority_profile_for_clip("wolverine_mixed_0200_mid_steep_corner")
-        == "wolverine_internal_val_trk10_iter2_margin2"
-    )
-    assert (
-        process_video._default_raw_pool_authority_profile_for_clip("burlington_gold_0300_low_steep_corner")
-        == "burlington_internal_val_trk10_iter5_minconf05_appw2_margin2"
-    )
-    assert (
-        process_video._default_raw_pool_authority_profile_for_clip("outdoor_webcam_iynbd_1500_long_high_baseline")
-        == "outdoor_preregistered_unshopped_base"
-    )
 
     config, profile_name = process_video._raw_pool_authority_config_for_profile(
         "outdoor_preregistered_unshopped_base",

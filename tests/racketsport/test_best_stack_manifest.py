@@ -17,7 +17,7 @@ def test_best_stack_manifest_integrity() -> None:
     manifest = load_best_stack_manifest()
 
     assert manifest.schema_version == 1
-    assert manifest.revision == 4
+    assert manifest.revision == 5
     assert "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim" in manifest.invariants
     assert len(manifest.entries) >= 30
 
@@ -26,6 +26,7 @@ def test_best_stack_manifest_integrity() -> None:
         "ball.wasb_repo",
         "tracking.reid_model",
         "tracking.global_association_profile",
+        "tracking.eval_only_association_profiles",
         "confidence.calibration_curves",
         "mesh.coverage_mode",
         "mesh.byte_budget_mib",
@@ -63,6 +64,17 @@ def test_best_stack_manifest_integrity() -> None:
     assert manifest.entry("ball.arc_solver_spin").status == "DORMANT"
     assert "kill-fired" in manifest.entry("ball.arc_solver_spin").notes
     assert "loso_report.json" in manifest.entry("ball.wasb_checkpoint").notes
+    eval_profiles = manifest.entry("tracking.eval_only_association_profiles")
+    assert eval_profiles.status == "DORMANT"
+    assert eval_profiles.value["no_flag_profile"] == "tracking.global_association_profile"
+    assert (
+        eval_profiles.value["profiles"]["burlington_gold_0300_low_steep_corner"]["profile"]
+        == "burlington_internal_val_trk10_iter5_minconf05_appw2_margin2"
+    )
+    assert (
+        eval_profiles.value["profiles"]["outdoor_webcam_iynbd_1500_long_high_baseline"]["profile"]
+        == "outdoor_preregistered_unshopped_base"
+    )
 
     pending_without_gate = [
         key for key, entry in manifest.entries.items() if entry.status == "PENDING" and entry.gate is None
@@ -84,6 +96,7 @@ def test_best_stack_manifest_integrity() -> None:
         "body.fast_sam_3d_body_challenger_not_adopt",
         "ball.arc_solver_spin",
         "ball.wasb_checkpoint",
+        "tracking.eval_only_association_profiles",
     }
     missing_evidence: list[str] = []
     for key in evidence_checked_entries:

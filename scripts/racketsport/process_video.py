@@ -1149,10 +1149,7 @@ class ProcessVideoPipeline:
         out_dir = self.clip_dir / "global_association"
         resolved_reid_device = resolve_reid_device(opts.device)
         reid_batch_size = 64
-        requested_profile = opts.global_association_profile or _default_raw_pool_authority_profile_for_clip(
-            opts.clip,
-            raw_pool_dir=self.clip_dir,
-        )
+        requested_profile = opts.global_association_profile or DEFAULT_GLOBAL_ASSOCIATION_PROFILE
         authority_config, profile_name = _raw_pool_authority_config_for_profile(
             requested_profile,
             expected_players=opts.max_players,
@@ -4636,12 +4633,7 @@ def _has_raw_pool_artifact(pool_dir: Path) -> bool:
 
 
 def _default_raw_pool_authority_profile_for_clip(clip: str, *, raw_pool_dir: Path | None = None) -> str:
-    if clip == "wolverine_mixed_0200_mid_steep_corner" and _raw_pool_has_identity_bbox_scale(raw_pool_dir):
-        return "wolverine_internal_val_trk12_cfg151_minconf03_margin1_appw05_backfill"
-    if clip == "burlington_gold_0300_low_steep_corner":
-        return "burlington_internal_val_trk10_iter5_minconf05_appw2_margin2"
-    if clip == "outdoor_webcam_iynbd_1500_long_high_baseline":
-        return "outdoor_preregistered_unshopped_base"
+    _ = (clip, raw_pool_dir)
     return DEFAULT_GLOBAL_ASSOCIATION_PROFILE
 
 
@@ -4873,8 +4865,7 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
         "ball.wasb_repo": _path_summary(options.wasb_repo),
         "ball.arc_chain": not options.no_ball_arc,
         "tracking.reid_model": _path_summary(options.reid_model),
-        "tracking.global_association_profile": options.global_association_profile
-        or _default_raw_pool_authority_profile_for_clip(options.clip),
+        "tracking.global_association_profile": options.global_association_profile or DEFAULT_GLOBAL_ASSOCIATION_PROFILE,
         "confidence.calibration_curves": _path_summary(
             options.confidence_calibration_curves or DEFAULT_CONFIDENCE_CALIBRATION_CURVES
         ),
@@ -5241,8 +5232,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
         choices=sorted(RAW_POOL_GLOBAL_ASSOCIATION_PROFILES),
         default=None,
         help=(
-            "Raw-pool association tuning profile. Default auto-selects the explicit "
-            "Wolverine internal-val TRK-10 profile, except Burlington uses its own internal-val profile."
+            "Raw-pool association tuning profile. Default uses the manifest production profile; "
+            "clip-specific eval/internal-val profiles require this explicit flag."
         ),
     )
     parser.add_argument("--reid-model", default=str(DEFAULT_REID_MODEL), help="OSNet ReID checkpoint for global association.")

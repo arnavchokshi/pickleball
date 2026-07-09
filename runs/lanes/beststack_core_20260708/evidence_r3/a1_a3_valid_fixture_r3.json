@@ -1,0 +1,31 @@
+{
+  "A1_fixture_attribution": {
+    "sanctioned_diff_count": 2,
+    "summary": "Only sanctioned fixture diffs found",
+    "unexpected_diff_count": 0,
+    "unexpected_diffs": [],
+    "verdict": "PASS"
+  },
+  "A3_events_before_frames": {
+    "contact_windows_identical": true,
+    "events_selected_identical": true,
+    "summary": "events/contact outputs stable and worktree frames consume contact-dense plan",
+    "verdict": "PASS",
+    "worktree_contact_selected_frame_count": 1,
+    "worktree_frames_schedule_source": "frame_compute_plan.json",
+    "worktree_trigger_counts": {
+      "events": 1,
+      "proximity": 1,
+      "swing": 1,
+      "uniform_fill": 0
+    }
+  },
+  "evidence": {
+    "base_behavior": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/beststack_core_20260708/evidence_r3/fixture_head_430d5b760_valid/behavior.json",
+    "commands": [
+      "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/beststack_core_20260708/evidence_r3/fixture_head_430d5b760_valid.command.json",
+      "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/beststack_core_20260708/evidence_r3/fixture_worktree_valid.command.json"
+    ],
+    "worktree_behavior": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/beststack_core_20260708/evidence_r3/fixture_worktree_valid/behavior.json"
+  }
+}

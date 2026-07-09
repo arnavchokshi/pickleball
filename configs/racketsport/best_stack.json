@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 4,
+  "revision": 5,
   "updated": "2026-07-09",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
@@ -204,7 +204,42 @@
         ]
       },
       "proven_against": null,
-      "notes": "Deliberate default. Per-clip Burlington/Wolverine/Outdoor profiles are eval-only overrides, not global production defaults."
+      "notes": "Deliberate default. No-flag runs use this manifest production profile for every clip; per-clip Burlington/Wolverine/Outdoor profiles are declared under tracking.eval_only_association_profiles and require explicit eval/internal-val selection."
+    },
+    "tracking.eval_only_association_profiles": {
+      "stage": "tracking",
+      "selection": "declared non-default clip-keyed raw-pool association profiles",
+      "value": {
+        "selection_mechanism": "explicit --global-association-profile only",
+        "no_flag_profile": "tracking.global_association_profile",
+        "profiles": {
+          "wolverine_mixed_0200_mid_steep_corner": {
+            "profile": "wolverine_internal_val_trk12_cfg151_minconf03_margin1_appw05_backfill",
+            "condition": "eval/internal-val only; historical identity-bbox raw-pool probe"
+          },
+          "burlington_gold_0300_low_steep_corner": {
+            "profile": "burlington_internal_val_trk10_iter5_minconf05_appw2_margin2",
+            "condition": "eval/internal-val only"
+          },
+          "outdoor_webcam_iynbd_1500_long_high_baseline": {
+            "profile": "outdoor_preregistered_unshopped_base",
+            "condition": "eval/internal-val only"
+          }
+        }
+      },
+      "status": "DORMANT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "430d5b760",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "runs/lanes/beststack_verify_20260709/report.json",
+          "runs/lanes/beststack_verify_20260709/evidence/failing_test_association_profile_manifest_surface.py"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Dormant by ruling: manager wave-7 A2 repair declares these clip-keyed profiles as eval/internal-val choices only; no-flag production association resolves tracking.global_association_profile for every clip. Explicit --global-association-profile remains the mechanism to select them."
     },
     "confidence.calibration_curves": {
       "stage": "confidence_gate",

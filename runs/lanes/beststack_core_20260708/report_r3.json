@@ -1,0 +1,139 @@
+{
+  "objective_result": "PASS",
+  "best_stack_delta": {
+    "revision": 5,
+    "updated": "2026-07-09",
+    "summary": "A2 repair: no-flag raw-pool global-association profile selection now resolves only through tracking.global_association_profile. Clip-keyed Burlington/Wolverine/Outdoor profiles are preserved as explicit eval/internal-val choices in a dormant manifest entry, not as hidden no-flag defaults.",
+    "preserved_rev4_entries": [
+      "paddle.fused_estimator",
+      "paddle.reflection_cone_factor"
+    ],
+    "new_entry": "tracking.eval_only_association_profiles",
+    "unchanged_manifest_default": {
+      "tracking.global_association_profile": "wolverine_internal_val_trk10_iter2_margin2"
+    }
+  },
+  "acceptance": [
+    {
+      "metric": "A2 verifier attack, unmodified evidence pytest",
+      "baseline": "Verifier report at runs/lanes/beststack_verify_20260709/report.json found Burlington/Outdoor no-flag clip IDs resolved association profiles outside best_stack.json.",
+      "after": "MPLBACKEND=Agg .venv/bin/python -m pytest runs/lanes/beststack_verify_20260709/evidence/failing_test_association_profile_manifest_surface.py -q\n.                                                                        [100%]\n1 passed in 13.08s",
+      "target": "Verifier's A2 attack passes exactly as written.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "A1 valid-fixture rerun",
+      "baseline": "Verifier's original BallTrack fixture was schema-invalid, so A1 could not provide a clean attribution result.",
+      "after": "runs/lanes/beststack_core_20260708/evidence_r3/a1_a3_valid_fixture_r3.json: A1_fixture_attribution PASS, sanctioned_diff_count=2, unexpected_diff_count=0.",
+      "target": "Rerun A1 with a schema-valid BallTrack fixture without weakening the allowed-diff check.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "A3 valid-fixture rerun",
+      "baseline": "Verifier's original invalid BallTrack fixture prevented a valid events-before-frames/contact-density proof.",
+      "after": "A3_events_before_frames PASS: contact_windows_identical=true, events_selected_identical=true, worktree_contact_selected_frame_count=1, trigger_counts={events:1, proximity:1, swing:1, uniform_fill:0}, frames_schedule_source=frame_compute_plan.json.",
+      "target": "Rerun A3 with a schema-valid fixture and prove frames consume a contact-dense plan.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "best_stack/process/server blast-radius pytest",
+      "baseline": null,
+      "after": "146 passed in 15.74s.",
+      "target": "MPLBACKEND=Agg, no fail-fast: best_stack tests, process_video tests, and tests/server all pass.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "scaffold reference audit",
+      "baseline": null,
+      "after": "runs/lanes/beststack_core_20260708/scaffold_audit_r3.json: tool_count=277, missing_direct_cli_reference_tests=0, missing_related_tests=0.",
+      "target": "0 missing scaffold direct-reference tests.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "grep proof for no hidden clip-keyed no-flag selector",
+      "baseline": "process_video.py contained clip-ID branches for Burlington/Outdoor/Wolverine profile defaults.",
+      "after": "rg -n 'burlington_gold_0300_low_steep_corner|outdoor_webcam_iynbd_1500_long_high_baseline|wolverine_mixed_0200_mid_steep_corner' scripts/racketsport/process_video.py produced no matches. The remaining process_video.py association fallback sites are DEFAULT_GLOBAL_ASSOCIATION_PROFILE reads from the manifest.",
+      "target": "No process_video clip-ID hardcode remains on the no-flag association decision path.",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "configs/racketsport/best_stack.json:3 bumped revision 4 -> 5, updated remains 2026-07-09.",
+    "configs/racketsport/best_stack.json:192 kept tracking.global_association_profile value unchanged and clarified it is the no-flag production profile for every clip.",
+    "configs/racketsport/best_stack.json:209 added tracking.eval_only_association_profiles as DORMANT, declaring the Burlington/Wolverine/Outdoor clip-keyed profiles as explicit eval/internal-val selections only.",
+    "scripts/racketsport/process_video.py:1152 changed raw-pool global association no-flag fallback to DEFAULT_GLOBAL_ASSOCIATION_PROFILE.",
+    "scripts/racketsport/process_video.py:4635 made _default_raw_pool_authority_profile_for_clip return the manifest-owned default for all clips.",
+    "scripts/racketsport/process_video.py:4868 changed resolved_best_stack_config_from_options to report the manifest default unless an explicit CLI profile override is provided.",
+    "scripts/racketsport/process_video.py:5232 updated --global-association-profile help text to remove the old Burlington no-flag exception.",
+    "tests/racketsport/test_best_stack_manifest.py:16 updated integrity expectations to rev5 and the new dormant eval-only association row.",
+    "tests/racketsport/test_best_stack_resolution.py:101 added the real parser/options regression for Burlington/Outdoor/Wolverine no-flag association profile resolution plus explicit override precedence.",
+    "tests/racketsport/test_process_video.py:2674 updated the older process-video association profile fixture to assert manifest default no-flag behavior while preserving explicit eval profile config coverage.",
+    "runs/lanes/beststack_core_20260708/rerun_a1_a3_valid_fixture.py:1 added the allowed lane evidence runner for schema-valid A1/A3 reruns.",
+    "runs/lanes/beststack_core_20260708/report_r3.json:1 wrote this structured repair report."
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_best_stack_manifest.py tests/racketsport/test_best_stack_resolution.py tests/racketsport/test_process_video.py tests/server",
+    "passed": 146,
+    "failed": 0,
+    "skipped": 0,
+    "failures_all_preexisting": true,
+    "failure_notes": null
+  },
+  "test_runs": [
+    {
+      "name": "A2 verifier evidence pytest",
+      "command": "MPLBACKEND=Agg .venv/bin/python -m pytest runs/lanes/beststack_verify_20260709/evidence/failing_test_association_profile_manifest_surface.py -q",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "stdout_quote": ".                                                                        [100%]\n1 passed in 13.08s"
+    },
+    {
+      "name": "A1/A3 schema-valid fixture rerun",
+      "command": "MPLBACKEND=Agg .venv/bin/python runs/lanes/beststack_core_20260708/rerun_a1_a3_valid_fixture.py",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "evidence_path": "runs/lanes/beststack_core_20260708/evidence_r3/a1_a3_valid_fixture_r3.json"
+    },
+    {
+      "name": "best_stack/process/server blast radius",
+      "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_best_stack_manifest.py tests/racketsport/test_best_stack_resolution.py tests/racketsport/test_process_video.py tests/server",
+      "passed": 146,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "name": "scaffold audit",
+      "command": ".venv/bin/python scripts/racketsport/list_scaffold_tools.py --root .",
+      "tool_count": 277,
+      "missing_direct_cli_reference_tests": 0,
+      "missing_related_tests": 0,
+      "evidence_path": "runs/lanes/beststack_core_20260708/scaffold_audit_r3.json"
+    }
+  ],
+  "grep_proof": {
+    "clip_id_search": {
+      "command": "rg -n 'burlington_gold_0300_low_steep_corner|outdoor_webcam_iynbd_1500_long_high_baseline|wolverine_mixed_0200_mid_steep_corner' scripts/racketsport/process_video.py",
+      "result": "no matches"
+    },
+    "association_resolution_sites": {
+      "command": "rg -n 'global_association_profile|DEFAULT_GLOBAL_ASSOCIATION_PROFILE|_default_raw_pool_authority_profile_for_clip' scripts/racketsport/process_video.py",
+      "result_summary": [
+        "DEFAULT_GLOBAL_ASSOCIATION_PROFILE is loaded from BEST_STACK_MANIFEST.string_value('tracking.global_association_profile').",
+        "_attempt_global_association uses opts.global_association_profile or DEFAULT_GLOBAL_ASSOCIATION_PROFILE.",
+        "resolved_best_stack_config_from_options uses options.global_association_profile or DEFAULT_GLOBAL_ASSOCIATION_PROFILE.",
+        "_default_raw_pool_authority_profile_for_clip returns DEFAULT_GLOBAL_ASSOCIATION_PROFILE."
+      ]
+    }
+  },
+  "honest_issues": [
+    "configs/ssh/a100_known_hosts remains a pre-existing unrelated tracked diff in the working tree; I did not edit it.",
+    "Unrelated untracked brand-exploration and cvat_upload package artifacts remain in the working tree; I did not touch them.",
+    "A1/A3 rerun used a lane-local evidence runner because the verifier's original fixture was schema-invalid. The runner imports the verifier fixture and changes the ball fixture to schema-valid wasb frames plus four tracked players so the contact-density attack is meaningful; it is still a lightweight monkeypatched pipeline fixture, not a CV quality run.",
+    "No protected court files, threed/racketsport/mhr_decode*.py, threed/racketsport/hmr_deep.py, web/replay, ios, root Markdown, synthetic gate files, or board files were edited.",
+    "No commit was made."
+  ],
+  "next": "Manager can review and commit the rev5 A2 repair. Suggested checklist bullet: [W7 BESTSTACK A2 REPAIR] rev5 declares clip-keyed association profiles as eval-only manifest entries and routes all no-flag association defaults through tracking.global_association_profile; verifier A2 plus valid-fixture A1/A3 and blast-radius tests pass.",
+  "session_id": null
+}

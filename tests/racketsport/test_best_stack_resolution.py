@@ -98,6 +98,60 @@ def test_no_flag_invocation_resolves_wired_defaults_from_manifest(tmp_path: Path
     assert resolved["camera_motion.policy"] == manifest.value("camera_motion.policy")
 
 
+def test_clip_keyed_association_no_flag_resolves_manifest_default(tmp_path: Path) -> None:
+    manifest = load_best_stack_manifest()
+    manifest_default = manifest.string_value("tracking.global_association_profile")
+    parser = process_video.build_arg_parser()
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"x")
+
+    for clip in (
+        "burlington_gold_0300_low_steep_corner",
+        "outdoor_webcam_iynbd_1500_long_high_baseline",
+        "wolverine_mixed_0200_mid_steep_corner",
+    ):
+        options = process_video.build_options_from_args(
+            parser.parse_args(
+                [
+                    "--video",
+                    str(video),
+                    "--clip",
+                    clip,
+                    "--out",
+                    str(tmp_path / clip),
+                ]
+            )
+        )
+        resolved = process_video.resolved_best_stack_config_from_options(options)
+
+        assert resolved["tracking.global_association_profile"] == manifest_default
+        assert "tracking.global_association_profile" not in process_video.best_stack_overrides_from_options(options)
+
+    explicit = process_video.build_options_from_args(
+        parser.parse_args(
+            [
+                "--video",
+                str(video),
+                "--clip",
+                "burlington_gold_0300_low_steep_corner",
+                "--global-association-profile",
+                "burlington_internal_val_trk10_iter5_minconf05_appw2_margin2",
+                "--out",
+                str(tmp_path / "explicit"),
+            ]
+        )
+    )
+    explicit_resolved = process_video.resolved_best_stack_config_from_options(explicit)
+    explicit_overrides = process_video.best_stack_overrides_from_options(explicit)
+
+    assert explicit_resolved["tracking.global_association_profile"] == "burlington_internal_val_trk10_iter5_minconf05_appw2_margin2"
+    assert (
+        explicit_overrides["tracking.global_association_profile"]["resolved"]
+        == "burlington_internal_val_trk10_iter5_minconf05_appw2_margin2"
+    )
+    assert explicit_overrides["tracking.global_association_profile"]["manifest"] == manifest_default
+
+
 def test_no_flag_mesh_byte_budget_matches_explicit_300_and_fixed_frame_flag_wins(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     parser = process_video.build_arg_parser()
