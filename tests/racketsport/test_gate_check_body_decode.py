@@ -57,6 +57,43 @@ def _write_json(path: Path, payload: dict) -> Path:
     return path
 
 
+class _CameraPointDecoder:
+    def __init__(self, *, joints_camera: list[list[float]], vertices_camera: list[list[float]]) -> None:
+        self.joints_camera = joints_camera
+        self.vertices_camera = vertices_camera
+
+    def decode_euler_frame(self, **_kwargs: object) -> dict:
+        return {
+            "joints_camera": [self.joints_camera],
+            "vertices_camera": [self.vertices_camera],
+        }
+
+    def mesh_skeleton_divergence_mm(self, **_kwargs: object) -> dict:
+        return {"p95_mm": 1.25}
+
+
+def _install_identity_ground(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
+    captured: list[dict] = []
+
+    def fake_ground(**kwargs: object) -> dict:
+        captured.append(dict(kwargs))
+        return {
+            "joints_world": mhr_decode.apply_pred_cam_t_once(
+                kwargs["joints_camera"],
+                pred_cam_t=kwargs.get("pred_cam_t"),
+                already_applied=bool(kwargs.get("pred_cam_t_already_applied")),
+            ),
+            "vertices_world": mhr_decode.apply_pred_cam_t_once(
+                kwargs["vertices_camera"],
+                pred_cam_t=kwargs.get("pred_cam_t"),
+                already_applied=bool(kwargs.get("pred_cam_t_already_applied")),
+            ),
+        }
+
+    monkeypatch.setattr(gate.mhr_decode, "ground_decoded_camera_frame", fake_ground)
+    return captured
+
+
 def test_extract_frames_carries_scale_and_hand_pose_verbatim() -> None:
     frame = gate.extract_frames(_fixture_body_mesh())["42"][0]
     params = _fixture_body_mesh()["players"][0]["frames"][0]["smplx_params"]
@@ -67,6 +104,91 @@ def test_extract_frames_carries_scale_and_hand_pose_verbatim() -> None:
     assert frame.hand_pose == params["left_hand_pose"] + params["right_hand_pose"]
     assert frame.decode_kwargs(scale_source="field")["scale"] == params["scale"]
     assert frame.decode_kwargs(scale_source="field")["hand_pose"] == params["left_hand_pose"] + params["right_hand_pose"]
+
+
+def test_gate_1b_regrounding_uses_raw_pred_cam_t_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = _install_identity_ground(monkeypatch)
+    body_mesh = _fixture_body_mesh()
+    frame_payload = body_mesh["players"][0]["frames"][0]
+    frame_payload["joints_world"] = [[1.25, 1.5, 4.0], [2.25, 1.5, 4.0]]
+    frame_payload["mesh_vertices_world"] = [[4.25, 4.5, 7.0]]
+    raw_records = {"7:42": {"pred_cam_t": [0.25, -0.5, 1.0]}}
+    frames_by_player = gate.extract_frames(body_mesh, raw_records_by_request_id=raw_records)
+    decoder = _CameraPointDecoder(
+        joints_camera=[[1.0, 2.0, 3.0], [2.0, 2.0, 3.0]],
+        vertices_camera=[[4.0, 5.0, 6.0]],
+    )
+
+    gate1b, divergence = gate._compute_gate_1b_and_divergence(
+        decoder=decoder,
+        calibration=object(),
+        frames_by_player=frames_by_player,
+        scale_source="field",
+        max_frames_per_player=1,
+    )
+
+    assert captured[0]["pred_cam_t"] == [0.25, -0.5, 1.0]
+    assert captured[0]["pred_cam_t_already_applied"] is False
+    assert gate1b["worst_joints_world_max_abs_error_mm"] == pytest.approx(0.0, abs=1e-9)
+    assert gate1b["worst_vertices_world_max_abs_error_mm"] == pytest.approx(0.0, abs=1e-9)
+    assert divergence["worst_p95_mm_over_sample"] == pytest.approx(1.25)
+
+
+def test_gate_1b_respects_pred_cam_t_already_applied_escape_hatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = _install_identity_ground(monkeypatch)
+    body_mesh = _fixture_body_mesh()
+    frame_payload = body_mesh["players"][0]["frames"][0]
+    frame_payload["joints_world"] = [[1.25, 1.5, 4.0]]
+    frame_payload["mesh_vertices_world"] = [[4.25, 4.5, 7.0]]
+    raw_records = {
+        "7:42": {
+            "pred_cam_t": [0.25, -0.5, 1.0],
+            "pred_cam_t_already_applied": True,
+        }
+    }
+    frames_by_player = gate.extract_frames(body_mesh, raw_records_by_request_id=raw_records)
+    decoder = _CameraPointDecoder(
+        joints_camera=[[1.25, 1.5, 4.0]],
+        vertices_camera=[[4.25, 4.5, 7.0]],
+    )
+
+    gate1b, _divergence = gate._compute_gate_1b_and_divergence(
+        decoder=decoder,
+        calibration=object(),
+        frames_by_player=frames_by_player,
+        scale_source="field",
+        max_frames_per_player=1,
+    )
+
+    assert captured[0]["pred_cam_t"] == [0.25, -0.5, 1.0]
+    assert captured[0]["pred_cam_t_already_applied"] is True
+    assert gate1b["worst_joints_world_max_abs_error_mm"] == pytest.approx(0.0, abs=1e-9)
+    assert gate1b["worst_vertices_world_max_abs_error_mm"] == pytest.approx(0.0, abs=1e-9)
+
+
+def test_gate_1a_is_bit_unaffected_by_pred_cam_t_fields(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_gate_1a(global_orient: object, body_pose: object) -> dict:
+        assert hasattr(global_orient, "tolist")
+        assert hasattr(body_pose, "tolist")
+        return {
+            "gate": "gate_1a_euler_cont_euler_idempotence",
+            "global_orient": global_orient.tolist(),
+            "body_pose": body_pose.tolist(),
+            "target_max_abs_error_deg": 0.1,
+            "max_abs_error_deg": 0.0,
+            "passed": True,
+        }
+
+    monkeypatch.setattr(gate.mhr_decode, "gate_1a_euler_round_trip", fake_gate_1a)
+    baseline = gate._compute_gate_1a(gate.extract_frames(_fixture_body_mesh()))
+    with_cam_t = _fixture_body_mesh()
+    frame_payload = with_cam_t["players"][0]["frames"][0]
+    frame_payload["camera_translation"] = [9.0, 8.0, 7.0]
+    frame_payload["pred_cam_t_already_applied"] = True
+
+    after = gate._compute_gate_1a(gate.extract_frames(with_cam_t))
+
+    assert after == baseline
 
 
 def test_requested_field_scale_fails_loudly_when_absent() -> None:

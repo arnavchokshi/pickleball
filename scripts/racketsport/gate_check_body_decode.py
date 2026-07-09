@@ -23,6 +23,7 @@ import json
 import sys
 import time
 from dataclasses import dataclass
+from numbers import Integral
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -40,6 +41,12 @@ REPORT_ARTIFACT_TYPE = "racketsport_body_decode_gate_check"
 GATE_1A_NAME = "gate_1a_euler_cont_euler_idempotence"
 GATE_1B_NAME = "gate_1b_world_round_trip"
 MESH_DIVERGENCE_NAME = "mesh_skeleton_divergence"
+PRED_CAM_T_FIELDS = ("pred_cam_t", "camera_translation", "transl")
+PRED_CAM_T_ALREADY_APPLIED_FIELDS = (
+    "pred_cam_t_already_applied",
+    "camera_translation_already_applied",
+    "translation_already_applied",
+)
 
 MHR_FORWARD_FIELD_MAPPING: list[dict[str, str]] = [
     {
@@ -99,6 +106,8 @@ class BodyDecodeFrame:
     transl_world: list[float]
     joints_world: list[Any]
     vertices_world: list[Any]
+    pred_cam_t: list[float] | None
+    pred_cam_t_already_applied: bool
 
     def decode_kwargs(self, *, scale_source: str) -> dict[str, Any]:
         if scale_source == "field":
@@ -136,6 +145,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device", default=None, help="Decoder device override, e.g. cuda:0.")
     parser.add_argument("--max-frames-per-player", type=int, default=40)
     parser.add_argument(
+        "--sam3d-output-index",
+        type=Path,
+        default=None,
+        help=(
+            "Optional Fast SAM-3D-Body batch chunk index. When omitted, the harness "
+            "uses body_mesh.json's sibling fast_sam_subprocess/batch_outputs-*.json.chunks/index.json if unique."
+        ),
+    )
+    parser.add_argument(
         "--scale-source",
         choices=["none", "field"],
         default="none",
@@ -152,8 +170,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def extract_frames(body_mesh: Mapping[str, Any]) -> dict[str, list[BodyDecodeFrame]]:
+def extract_frames(
+    body_mesh: Mapping[str, Any],
+    *,
+    raw_records_by_request_id: Mapping[str, Mapping[str, Any]] | None = None,
+) -> dict[str, list[BodyDecodeFrame]]:
     out: dict[str, list[BodyDecodeFrame]] = {}
+    raw_records_by_request_id = raw_records_by_request_id or {}
     for player in body_mesh.get("players", []) or []:
         if not isinstance(player, Mapping):
             continue
@@ -165,6 +188,7 @@ def extract_frames(body_mesh: Mapping[str, Any]) -> dict[str, list[BodyDecodeFra
             params = frame.get("smplx_params", {})
             if not isinstance(params, Mapping):
                 continue
+            frame_idx = int(frame.get("frame_idx", -1))
             global_orient = _vector_or_none(params.get("global_orient"), mhr_decode.GLOBAL_ROT_EULER_DIM)
             body_pose = _vector_or_none(params.get("body_pose"), mhr_decode.BODY_POSE_EULER_DIM)
             if global_orient is None or body_pose is None:
@@ -191,10 +215,18 @@ def extract_frames(body_mesh: Mapping[str, Any]) -> dict[str, list[BodyDecodeFra
                 )
             hand_pose = left_hand + right_hand if left_hand is not None and right_hand is not None else None
             transl_world = _vector_or_none(params.get("transl_world"), 3) or [0.0, 0.0, 0.0]
+            request_id = _request_id(frame_idx=frame_idx, player_id=player_id)
+            raw_record = raw_records_by_request_id.get(request_id)
+            pred_cam_t, pred_cam_t_already_applied = _camera_translation_for_frame(
+                frame=frame,
+                params=params,
+                raw_record=raw_record,
+                request_id=request_id,
+            )
             frames.append(
                 BodyDecodeFrame(
                     player_id=player_id,
-                    frame_idx=int(frame.get("frame_idx", -1)),
+                    frame_idx=frame_idx,
                     t=float(frame.get("t", 0.0)),
                     global_orient=global_orient,
                     body_pose=body_pose,
@@ -206,6 +238,8 @@ def extract_frames(body_mesh: Mapping[str, Any]) -> dict[str, list[BodyDecodeFra
                     transl_world=transl_world,
                     joints_world=joints_world,
                     vertices_world=frame.get("mesh_vertices_world", []) or [],
+                    pred_cam_t=pred_cam_t,
+                    pred_cam_t_already_applied=pred_cam_t_already_applied,
                 )
             )
         if frames:
@@ -254,6 +288,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     t0 = time.time()
     body_mesh = json.loads(args.body_mesh.read_text(encoding="utf-8"))
     frames_by_player = extract_frames(body_mesh)
+    raw_records_by_request_id, raw_emit_source = _load_raw_records_for_frames(
+        body_mesh_path=args.body_mesh,
+        explicit_index_path=args.sam3d_output_index,
+        frames_by_player=frames_by_player,
+    )
+    if raw_records_by_request_id:
+        frames_by_player = extract_frames(body_mesh, raw_records_by_request_id=raw_records_by_request_id)
     _validate_scale_source(frames_by_player, args.scale_source)
     provenance = build_decoder_provenance(checkpoint_path=args.checkpoint, mhr_asset_path=args.mhr_asset)
 
@@ -265,6 +306,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             frames_by_player=frames_by_player,
             scale_source=args.scale_source,
             provenance=provenance,
+            raw_emit_source=raw_emit_source,
             wall_seconds=time.time() - t0,
             measurement_status="blocked_mhr_runtime_unavailable",
             blocker=f"MHR_RUNTIME_AVAILABLE=False: {mhr_decode.MHR_RUNTIME_IMPORT_ERROR!r}",
@@ -293,6 +335,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         frames_by_player=frames_by_player,
         scale_source=args.scale_source,
         provenance=provenance,
+        raw_emit_source=raw_emit_source,
         wall_seconds=time.time() - t0,
         measurement_status="measured",
         blocker=None,
@@ -326,6 +369,12 @@ def run_self_check(args: argparse.Namespace) -> dict[str, Any]:
         frames_by_player=frames_by_player,
         scale_source="field",
         provenance=provenance,
+        raw_emit_source={
+            "sam3d_output_index_path": None,
+            "status": "self_check_not_applicable",
+            "request_count": 0,
+            "record_count": 0,
+        },
         wall_seconds=time.time() - t0,
         measurement_status="self_check_passed" if passed else "self_check_failed",
         blocker=None if passed else "stub decoder did not receive expected scale/hand_pose fields",
@@ -385,6 +434,8 @@ def _compute_gate_1b_and_divergence(
             regrounded = mhr_decode.ground_decoded_camera_frame(
                 joints_camera=decoded["joints_camera"][0],
                 vertices_camera=decoded["vertices_camera"][0] if decoded["vertices_camera"] is not None else [],
+                pred_cam_t=frame.pred_cam_t,
+                pred_cam_t_already_applied=frame.pred_cam_t_already_applied,
                 track_world_xy=frame.transl_world[:2],
                 t=frame.t,
                 frame_idx=frame.frame_idx,
@@ -458,6 +509,7 @@ def _base_report(
     frames_by_player: Mapping[str, Sequence[BodyDecodeFrame]],
     scale_source: str,
     provenance: Mapping[str, Any],
+    raw_emit_source: Mapping[str, Any],
     wall_seconds: float,
     measurement_status: str,
     blocker: str | None,
@@ -478,6 +530,7 @@ def _base_report(
         "total_real_frame_sample_count": total_frame_count,
         "field_mapping": MHR_FORWARD_FIELD_MAPPING,
         "decoder_provenance": dict(provenance),
+        "raw_emit_source": dict(raw_emit_source),
         "gate_1a": gate1a,
         GATE_1A_NAME: gate1a,
         "gate_1b": gate1b,
@@ -520,6 +573,95 @@ def _blocked_mesh_divergence(blocker: str | None) -> dict[str, Any]:
     }
 
 
+def _request_id(*, frame_idx: int, player_id: str) -> str:
+    return f"{int(frame_idx)}:{player_id}"
+
+
+def _camera_translation_for_frame(
+    *,
+    frame: Mapping[str, Any],
+    params: Mapping[str, Any],
+    raw_record: Mapping[str, Any] | None,
+    request_id: str,
+) -> tuple[list[float] | None, bool]:
+    for source_name, source in (
+        ("raw_record", raw_record),
+        ("body_mesh_frame", frame),
+        ("smplx_params", params),
+    ):
+        if not isinstance(source, Mapping):
+            continue
+        raw_value = _first_present(source, PRED_CAM_T_FIELDS)
+        if raw_value is None:
+            continue
+        pred_cam_t = _vector_or_none(raw_value, 3)
+        if pred_cam_t is None:
+            raise HarnessInputError(
+                f"{source_name} pred_cam_t/camera_translation must be a 3-vector for request {request_id}"
+            )
+        already_applied_raw = _first_present(source, PRED_CAM_T_ALREADY_APPLIED_FIELDS, default=False)
+        try:
+            already_applied = _bool_flag(already_applied_raw, name="pred_cam_t_already_applied")
+        except ValueError as exc:
+            raise HarnessInputError(f"{source_name} {exc} for request {request_id}") from exc
+        return pred_cam_t, already_applied
+    return None, False
+
+
+def _load_raw_records_for_frames(
+    *,
+    body_mesh_path: Path,
+    explicit_index_path: Path | None,
+    frames_by_player: Mapping[str, Sequence[BodyDecodeFrame]],
+) -> tuple[dict[str, Mapping[str, Any]], dict[str, Any]]:
+    request_ids = [
+        _request_id(frame_idx=frame.frame_idx, player_id=player_id)
+        for player_id, frames in frames_by_player.items()
+        for frame in frames
+    ]
+    index_path = explicit_index_path or _discover_sam3d_output_index(body_mesh_path)
+    if index_path is None:
+        return {}, {
+            "sam3d_output_index_path": None,
+            "status": "not_found",
+            "request_count": len(request_ids),
+            "record_count": 0,
+        }
+    try:
+        from scripts.racketsport.run_sam3dbody_batch import load_sam3dbody_binary_outputs_from_chunk_index
+
+        outputs = load_sam3dbody_binary_outputs_from_chunk_index(
+            index_path,
+            request_ids=request_ids,
+            mmap_mode=None,
+        )
+    except Exception as exc:  # noqa: BLE001 - preserve exact load failure in the harness error.
+        raise HarnessInputError(
+            f"failed to load SAM3D raw output index {index_path}: {type(exc).__name__}: {exc}"
+        ) from exc
+
+    raw_records_by_request_id: dict[str, Mapping[str, Any]] = {}
+    for request_id, records in zip(request_ids, outputs):
+        first_record = next((record for record in records if isinstance(record, Mapping)), None)
+        if first_record is not None:
+            raw_records_by_request_id[request_id] = first_record
+    return raw_records_by_request_id, {
+        "sam3d_output_index_path": str(index_path),
+        "status": "loaded",
+        "request_count": len(request_ids),
+        "record_count": len(raw_records_by_request_id),
+        "camera_translation_fields": list(PRED_CAM_T_FIELDS),
+        "already_applied_fields": list(PRED_CAM_T_ALREADY_APPLIED_FIELDS),
+    }
+
+
+def _discover_sam3d_output_index(body_mesh_path: Path) -> Path | None:
+    candidates = sorted((body_mesh_path.parent / "fast_sam_subprocess").glob("batch_outputs-*.json.chunks/index.json"))
+    if len(candidates) == 1:
+        return candidates[0]
+    return None
+
+
 def _validate_scale_source(frames_by_player: Mapping[str, Sequence[BodyDecodeFrame]], scale_source: str) -> None:
     if scale_source != "field":
         return
@@ -534,11 +676,36 @@ def _sample_frames(frames: Sequence[BodyDecodeFrame], *, max_frames_per_player: 
 
 
 def _vector_or_none(value: Any, expected_len: int) -> list[float] | None:
+    if hasattr(value, "tolist"):
+        value = value.tolist()
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
         return None
     if len(value) != expected_len:
         return None
     return [float(v) for v in value]
+
+
+def _first_present(source: Mapping[str, Any], keys: Sequence[str], *, default: Any = None) -> Any:
+    for key in keys:
+        if key in source and source[key] is not None:
+            return source[key]
+    return default
+
+
+def _bool_flag(value: Any, *, name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, Integral):
+        if value in (0, 1):
+            return bool(value)
+        raise ValueError(f"{name} must be a boolean flag")
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes"}:
+            return True
+        if normalized in {"0", "false", "no"}:
+            return False
+    raise ValueError(f"{name} must be a boolean flag")
 
 
 def _path_provenance(path: Path) -> dict[str, Any]:
