@@ -19,6 +19,10 @@ non-blocking until we persist a non-owner profile, which wave 7 does not do).
   (+15.5% rel) going 486->1121 rows — the curve is NOT flattening, so labeling sessions keep
   paying. Control reproduced bit-exact; anomaly re-run clean; $4-8 GPU. Adversarial verify next,
   then the completion arms + re-score on your new 1,750-row corpus.
+- 05:4x: verify 5/6 CONFIRMED + gap closed w/ real log; aug ablation ANSWERED (aug = the
+  hidden-FP mitigation, stays in recipe; A remains lead candidate). Ghost meshes now fully
+  landed pipeline+viewer (best_stack rev-6/7); P5-5b input gate live w/ your angle policy;
+  match stats wired; your stride-2 ruling being wired now; speed gate + wave close next.
 
 ## Numbered asks (easiest first)
 1. **Mac disk — 2 min, semi-urgent.** Data volume is 99% full (5.2GB free; boot bar is >25GB; wave-6

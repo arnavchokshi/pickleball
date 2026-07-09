@@ -188,3 +188,12 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
   (seed no-aug ablation) at 2372 steps on the 1121 corpus -> complete 5-row 1121 card + full
   re-score on the 1750 corpus (prepared block, control-first). Owner visibility ruling encoded
   (w6-session rows = box-position-only). Drop order if tight: bottom-up from 1750 re-score.
+- pickleball-h100-w7ballc — DONE+DELETED 2026-07-09T12:39:49Z list-confirmed (created 09:41:36Z,
+  uptime 2.953h, $1.68-12.55 mid ~$3-6, zero preemptions). PARTIAL-honest: contract-check log
+  pulled+md5-verified BOTH SIDES (verifier gap CLOSED); ARM D landed via bit-exact
+  checkpoint-resume after a self-reported concurrency mistake (D+B co-scheduled on one GPU ->
+  ~3x throughput collapse, persistent — NEW STANDING GOTCHA: never co-schedule training arms;
+  re-probe rate per fresh VM before trusting the budget formula); ARM B dropped at step 500
+  (ckpt banked); 1750 re-score prepped not dispatched. AUG-ATTRIBUTION ANSWERED: D(no-aug)
+  0.6241 F1/0.3554 hFP vs A(aug) 0.6152/0.2506 — aug = the hFP MITIGATION (labels alone drive
+  hFP +57.6% rel; aug pulls back 29.5%). Recipe ruling: occlusion-aug STAYS.

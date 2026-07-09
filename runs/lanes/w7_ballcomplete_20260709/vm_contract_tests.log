@@ -1,0 +1,18 @@
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-9.1.1, pluggy-1.6.0 -- /home/arnavchokshi/coldstart_20260706/repo/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/arnavchokshi/coldstart_20260706/repo
+configfile: pyproject.toml
+plugins: hydra-core-1.3.3, anyio-4.14.1
+collecting ... collected 8 items
+
+tests/racketsport/test_ball_stage2_training.py::test_sparse_review_semantics_only_emit_reviewed_rows PASSED [ 12%]
+tests/racketsport/test_ball_stage2_training.py::test_stage2_cvat_batch_carries_wbce_weights_into_loss PASSED [ 25%]
+tests/racketsport/test_ball_stage2_training.py::test_stage2_dataset_tensor_and_label_geometry_use_wasb_official_affine PASSED [ 37%]
+tests/racketsport/test_ball_stage2_training.py::test_occlusion_augmentation_is_seeded_and_requires_wbce PASSED [ 50%]
+tests/racketsport/test_ball_stage2_training.py::test_init_checkpoint_key_diff_aborts PASSED [ 62%]
+tests/racketsport/test_ball_stage2_training.py::test_train_ball_stage2_cli_help_is_indexed PASSED [ 75%]
+tests/racketsport/test_ball_stage2_training.py::test_train_ball_stage2_resume_checkpoint_continues_loss_and_step PASSED [ 87%]
+tests/racketsport/test_ball_stage2_training.py::test_scaffold_index_covers_train_ball_stage2_cli PASSED [100%]
+
+============================== 8 passed in 7.74s ===============================
