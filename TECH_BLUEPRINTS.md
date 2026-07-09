@@ -77,6 +77,10 @@ Never resolve a conflict by picking the version that lets you proceed. Resolve b
   decision needs. Your context is the scarcest resource after GPU dollars.
 - **Write state to disk at every milestone.** BUILD_CHECKLIST bullet, gpu_fleet.md, inflight_lanes.md,
   memory. Assume your session dies at any moment; the next session must re-derive everything from files.
+- **No gain left opt-in.** Every landed improvement gets its best_stack.json entry in the same
+  lane (promoted / PENDING+gate / DORMANT+ruling — NORTH_STAR Part IV rule 15). When you rule a lane
+  PASS, check its BEST-STACK DELTA section; a landing without one is INCOMPLETE. Downstream evals run
+  on the current promoted upstream (court first).
 
 ## A.3 The bright-line STOP test (run it whenever unsure; any YES = typed STOP per manual §13)
 1. Would this touch Outdoor/Indoor labels or any held-out clip without a pre-registered ledger row?
@@ -144,6 +148,13 @@ Its findings are RULED here; these rulings bind every pillar section below when 
 5. **RKT VERIFIED needs the owner marker-GT session and none is booked.** Correct and intended:
    surface it as an owner ask at EVERY wave boot until booked (pair it with the W5 capture block).
    Internal IoU never promotes RKT — that is the honesty design, not a bug.
+6. **The best-stack contract.** `configs/racketsport/best_stack.json` + `threed/racketsport/best_stack.py`
+   are the single default-selection surface (built 2026-07-08, beststack_core lane). Interlocks:
+   stage-insertion serialization (B.1.1) still routes any process_video/orchestrator wiring through
+   ONE integration lane; the ball default flip (B.1.2) is now expressed as a manifest promotion gated
+   on the pre-registered held-out row; paddle wiring (B.1.3) flips the manifest paddle entry when
+   P3-1 lands; killed approaches (Part IV rule 5 kill list) appear as DORMANT entries citing their
+   ruling — visible, never re-attempted without new evidence.
 
 ## B.2 Rulings on the gaps
 1. **Data engine + player identity** — now the NINTH pillar (PART C first section): harvest
@@ -651,20 +662,25 @@ one capture fully ingested (court keypoints present, role registered, prelabels 
 rows in ledger with audio flagged; `validate_owner_data_manifest` passes. *Kill:* any capture sha
 matches a protected eval clip → `ProtectedEvalCaptureError` (intended; investigate, do not bypass).
 
-**D3 — Labeling factory scale-up to budget (c).** *Obj:* reach ball ≥10-20k / paddle ≥1-2k / contacts
-≥500 with measured throughput. *Files:* `runs/lanes/w3_labelfactory_20260707/` (create_project_and_tasks.py,
+**D3 — Labeling factory scale-up to budget (c).** *Obj:* reach ball checkpoint gates / paddle ≥1-2k /
+contacts ≥500 with measured throughput. **DATED RULING 2026-07-09 (R2, binding):** the old flat
+ball ≥10-20k objective is superseded by checkpoint evals at 1k / 3k / 6k / 10k reviewed rows, plus a
+uniform-random audit stratum beside the disagreement queue and a seen-vs-unseen ledger split. If the
+curve flattens, surplus owner hours go to venue/lighting diversity or coaching labels, not raw same-
+domain volume. *Files:* `runs/lanes/w3_labelfactory_20260707/` (create_project_and_tasks.py,
 build_and_import_prelabels.py, OWNER_LABELING_GUIDE.md), `import_cvat_video_annotations.py`,
 `check_cvat_video_annotations.py`. *Recipe:* (i) **Throughput math** — instrument labels/hour by
 diffing CVAT task `updated_date` deltas vs corrected-box counts per session (owner marks start/stop);
 record labels/hr per label type separately (ball-correct is fast, paddle-keypoint slow). Extrapolate
-to budget → owner+helpers plan (owner does train + all held-out; helpers do internal-val only, never
-held-out). (ii) **Active-learning queue** — feed SST teacher↔student disagreement frames (W4-B,
-`disagreement frames → P0-4 label queue`) to the FRONT of the queue; label the model's blind spots,
-not uniform frames. (iii) SAM3 per-frame assist for ball is the DEFAULT plan (§5). *Lane sizing:*
+to checkpoint gates → owner+helpers plan (owner does train + all held-out; helpers do internal-val
+only, never held-out). (ii) **Active-learning + audit queues** — feed SST teacher↔student
+disagreement frames (W4-B, `disagreement frames → P0-4 label queue`) to the FRONT of the queue while
+also sampling a small uniform-random audit stratum for absolute error estimates. (iii) SAM3 per-frame
+assist for ball is the DEFAULT plan (§5). *Lane sizing:*
 Codex micro-lane builds the throughput+queue tooling; labeling is owner/helper wall-clock. *Accept:*
-`labels_per_hour` reported per type; ≥4 distinct sessions/courts represented before any fine-tune is
-scheduled. *Kill:* if projected labels/hr can't reach the ball budget in the owner's available hours,
-the fine-tune WAITS (do not shrink the budget — diversity beats volume is the ruling).
+`labels_per_hour` reported per type; checkpoint curve reported; ≥4 distinct sessions/courts
+represented before any held-out shot is scheduled. *Kill:* if the checkpoint curve flattens, redirect
+owner hours to diversity/coaching labels; do not shrink gates silently.
 
 **D4 — Label QC (d).** *Obj:* trustworthy labels. *Files:* `check_cvat_video_annotations.py`,
 `MANAGER_NOTE.md` remap pattern, `schemas/__init__.py::BALL_VISIBILITY_LEVELS`. *Recipe:* (i)
@@ -1112,6 +1128,12 @@ In/out (P1-7) always keeps a `too_close_to_call` gray zone — advisory, never o
   NOT P0-7-owned. Corpus: `runs/lanes/p07_flightsim_20260706/flight_corpus_1000.jsonl`.
 - Magnus math ALREADY exists in the simulator (`flight_simulator.py:729 _rk4_step_with_magnus`,
   `STEYN_CL_PER_SPIN=0.195` at :36, `_spin_axis_for_velocity` at :902) but is NOT in the solver fit path.
+- **DATED RULING 2026-07-09 (manager R3, binding):** do NOT wire scalar-Magnus into the solver now.
+  Wave-6 real evidence killed it (`runs/lanes/w6_magnus_20260708/verify/reprojection_compare.json`):
+  spin-on worsened reprojection on 2/3 clips. Future spin work is TT3D-style bounce-kink inference
+  gated on view geometry, bounce-frame availability, and H13 measured friction/restitution, not
+  free-flight solver retuning. External event-camera spin evidence (arXiv:2606.26780v1) corroborates
+  that smartphone RGB is below the spin noise floor without hardware.
 - Bounce restitution=0.58 / friction=0.16 are UNMEASURED priors (H13-pending), `flight_simulator.py:93`.
 - Contact testbed: IMG_1605 (`eval_clips/ball/owner_IMG_1605_8a193402780b`) has 30 real audio onsets
   (`audio_onsets_v2.json` `onsets` field, first labels). No trained contact classifier yet.
@@ -1716,6 +1738,14 @@ probe — eval RacketVision's public MIT RTMPose-M checkpoint at zero training c
 good: FoundationPose-class zero-shot (HANDAL 0.04-0.26 AP), HOISDF/MOHO (no license), HOLD (25 GPU-hr/
 video). The constant-grip-transform assumption STAYS; per-segment grip re-fit is measured inside the
 WiLoR lane, not re-architected.
+
+**DATED RESEQUENCING NOTE 2026-07-09 (manager R6, binding):** P3-1 is no longer merely "sequenced
+next"; it is the immediate wave-7 lane because the fused estimator has been BUILT-NOT-WIRED for four
+waves and needs no new research, GPU, or owner labels. The acceptance stays conservative: default
+E2E emits `racket_pose_estimate.json` through `best_stack.json`, fail-closed when evidence is absent,
+with ESTIMATED/preview trust bands and no RKT promotion. Evidence:
+`runs/research_w6refresh_20260709/RULINGS.md` R6 and BUILD_CHECKLIST `[DEEP REVIEW RESULTS + RULINGS
+2026-07-09]`.
 
 ### 1. Current measured state (numbers + evidence paths only — no aspirations)
 Evidence root: `runs/lanes/racket_6dof_20260705/` (STATUS.md = trail;
