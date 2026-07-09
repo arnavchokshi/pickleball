@@ -36,6 +36,9 @@ their own inference path in `scripts/racketsport/train_court_keypoint_heatmap.py
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
@@ -50,9 +53,75 @@ from threed.racketsport.court_keypoint_net import (
 
 __all__ = [
     "build_court_model_from_checkpoint",
+    "court_model_inference_provider",
+    "get_current_court_model_infer_provider",
     "infer_court_model",
     "load_court_model_checkpoint",
+    "make_court_model_infer_provider",
 ]
+
+
+CourtModelInferProvider = Callable[[Any], Mapping[str, Any]]
+_CURRENT_COURT_MODEL_INFER_PROVIDER: ContextVar[CourtModelInferProvider | None] = ContextVar(
+    "current_court_model_infer_provider",
+    default=None,
+)
+
+
+def make_court_model_infer_provider(
+    *,
+    checkpoint_path: str | Path | None = None,
+    infer_callable: CourtModelInferProvider | None = None,
+    device: str = "cpu",
+) -> CourtModelInferProvider | None:
+    """Build the optional provider used by E4 fusion.
+
+    A callable is for tests or preloaded runtimes; a checkpoint path is the
+    drop-in production path once the trained `court_unet_v2` file lands.
+    """
+
+    if checkpoint_path is not None and infer_callable is not None:
+        raise ValueError("provide either checkpoint_path or infer_callable, not both")
+    if infer_callable is not None:
+        return infer_callable
+    if checkpoint_path is None:
+        return None
+
+    def _provider(image_bgr: Any) -> Mapping[str, Any]:
+        return infer_court_model(image_bgr, checkpoint_path, device=device)
+
+    return _provider
+
+
+def get_current_court_model_infer_provider() -> CourtModelInferProvider | None:
+    """Return the context-local E4 neural provider, or None when fusion is off."""
+
+    return _CURRENT_COURT_MODEL_INFER_PROVIDER.get()
+
+
+@contextmanager
+def court_model_inference_provider(
+    *,
+    checkpoint_path: str | Path | None = None,
+    infer_callable: CourtModelInferProvider | None = None,
+    device: str = "cpu",
+) -> Iterator[CourtModelInferProvider | None]:
+    """Temporarily expose an E4 neural provider to lower-level hypothesis code.
+
+    This keeps existing callers default-off and lets the existing multi-frame
+    proposal path opt in without changing its source file.
+    """
+
+    provider = make_court_model_infer_provider(
+        checkpoint_path=checkpoint_path,
+        infer_callable=infer_callable,
+        device=device,
+    )
+    token = _CURRENT_COURT_MODEL_INFER_PROVIDER.set(provider)
+    try:
+        yield provider
+    finally:
+        _CURRENT_COURT_MODEL_INFER_PROVIDER.reset(token)
 
 
 def load_court_model_checkpoint(checkpoint_path: str | Path, *, device: str = "cpu") -> dict[str, Any]:

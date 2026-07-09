@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import math
 from typing import Any, Mapping, Sequence
 
@@ -480,6 +481,170 @@ def _projected_pickleball_court_is_plausible(keypoints: Mapping[str, tuple[float
     return True
 
 
+def generate_neural_seed_hypotheses(
+    neural_inference: Mapping[str, Any] | None,
+    *,
+    image_size: tuple[int, int],
+    min_keypoint_confidence: float = 0.05,
+    min_keypoint_visibility: float = 0.05,
+    min_floor_correspondences: int = 4,
+) -> list[dict[str, Any]]:
+    """Convert a `court_unet_v2` inference dict into hypothesis-pool candidates.
+
+    The network provides pixel keypoints; this function fits one regulation
+    homography from confident floor points and emits it as a review-only
+    pickleball hypothesis. The model confidence is exposed separately from the
+    geometric score so callers can report the selection source honestly.
+    """
+
+    from .court_calibration import homography_from_planar_points, project_planar_points
+
+    if not isinstance(neural_inference, Mapping):
+        return []
+    width, height = int(image_size[0]), int(image_size[1])
+    if width <= 0 or height <= 0:
+        raise ValueError("image_size must contain positive width and height")
+
+    keypoints_xy = neural_inference.get("keypoints_xy") or neural_inference.get("keypoints") or {}
+    keypoints_conf = neural_inference.get("keypoints_conf") or {}
+    keypoints_vis = neural_inference.get("keypoints_vis") or {}
+    if not isinstance(keypoints_xy, Mapping):
+        return []
+
+    world_points: list[tuple[float, float]] = []
+    image_points: list[tuple[float, float]] = []
+    used_names: list[str] = []
+    confidence_values: list[float] = []
+    visibility_values: list[float] = []
+    for name in FLOOR_KEYPOINT_NAMES:
+        xy = keypoints_xy.get(name)
+        if not isinstance(xy, (list, tuple)) or len(xy) != 2:
+            continue
+        x = _finite_float(xy[0])
+        y = _finite_float(xy[1])
+        if x is None or y is None:
+            continue
+        confidence = _probability_from_mapping(keypoints_conf, name, default=1.0)
+        visibility = _probability_from_mapping(keypoints_vis, name, default=1.0)
+        if confidence < float(min_keypoint_confidence) or visibility < float(min_keypoint_visibility):
+            continue
+        world_points.append(_FLOOR_WORLD_XY_FT[name])
+        image_points.append((float(x), float(y)))
+        used_names.append(name)
+        confidence_values.append(float(confidence))
+        visibility_values.append(float(visibility))
+
+    if len(image_points) < int(min_floor_correspondences):
+        return []
+
+    try:
+        homography = homography_from_planar_points(world_points, image_points)
+        projected_raw = project_planar_points(homography, [_FLOOR_WORLD_XY_FT[name] for name in _FLOOR_WORLD_XY_FT])
+        reprojected_inputs = project_planar_points(homography, world_points)
+    except Exception:
+        return []
+
+    keypoints = {name: (float(xy[0]), float(xy[1])) for name, xy in zip(_FLOOR_WORLD_XY_FT, projected_raw, strict=True)}
+    if not _projected_pickleball_court_is_plausible(keypoints, width=width, height=height):
+        return []
+
+    residuals = [
+        math.hypot(float(observed[0]) - float(projected[0]), float(observed[1]) - float(projected[1]))
+        for observed, projected in zip(image_points, reprojected_inputs, strict=True)
+    ]
+    fit_median = _median_float(residuals)
+    fit_p95 = _p95_float(residuals)
+    model_confidence = _mean_float(confidence_values)
+    model_visibility = _mean_float(visibility_values)
+    combined_confidence = _mean_float([c * v for c, v in zip(confidence_values, visibility_values, strict=True)])
+    fit_quality = max(0.0, min(1.0, 1.0 - fit_p95 / 35.0))
+    evidence_score = max(0.02, min(0.98, 0.18 + 0.72 * combined_confidence * fit_quality))
+    score = 35.0 - 120.0 * evidence_score + fit_p95 * 1.2
+    required_lines_present = len(used_names) >= 8 and fit_p95 <= 20.0 and combined_confidence >= 0.10
+
+    return [
+        {
+            "score": float(score),
+            "evidence_score": float(evidence_score),
+            "template": "pickleball",
+            "promotable_as_pickleball": False,
+            "source": "neural_seeded_court_unet_v2",
+            "source_tag": "neural_seeded",
+            "model_confidence": round(float(model_confidence), 6),
+            "model_visibility": round(float(model_visibility), 6),
+            "model_combined_confidence": round(float(combined_confidence), 6),
+            "keypoints": keypoints,
+            "supported_line_count": min(8, len(used_names)),
+            "required_lines_present": bool(required_lines_present),
+            "line_assignment": {},
+            "neural_seed": {
+                "provider": "court_unet_v2",
+                "floor_correspondence_count": len(used_names),
+                "floor_correspondence_names": list(used_names),
+                "fit_residual_median_px": round(float(fit_median), 4),
+                "fit_residual_p95_px": round(float(fit_p95), 4),
+            },
+            "score_components": {
+                "evidence_score": round(float(evidence_score), 4),
+                "model_confidence": round(float(model_confidence), 6),
+                "model_visibility": round(float(model_visibility), 6),
+                "model_combined_confidence": round(float(combined_confidence), 6),
+                "neural_fit_residual_median_px": round(float(fit_median), 4),
+                "neural_fit_residual_p95_px": round(float(fit_p95), 4),
+                "joint_template_competition": {
+                    "available": True,
+                    "winner": "pickleball",
+                    "margin": round(float(combined_confidence), 6),
+                    "source": "neural_seed_geometry",
+                },
+            },
+        }
+    ]
+
+
+def _finite_float(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    result = float(value)
+    return result if math.isfinite(result) else None
+
+
+def _probability_from_mapping(values: Any, name: str, *, default: float) -> float:
+    if not isinstance(values, Mapping):
+        return float(default)
+    value = _finite_float(values.get(name))
+    if value is None:
+        return float(default)
+    return max(0.0, min(1.0, float(value)))
+
+
+def _mean_float(values: Sequence[float]) -> float:
+    return float(sum(values) / len(values)) if values else 0.0
+
+
+def _median_float(values: Sequence[float]) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(float(value) for value in values)
+    mid = len(ordered) // 2
+    if len(ordered) % 2:
+        return float(ordered[mid])
+    return float((ordered[mid - 1] + ordered[mid]) / 2.0)
+
+
+def _p95_float(values: Sequence[float]) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(float(value) for value in values)
+    if len(ordered) == 1:
+        return float(ordered[0])
+    position = 0.95 * (len(ordered) - 1)
+    lower = int(position)
+    upper = min(len(ordered) - 1, lower + 1)
+    fraction = position - lower
+    return float(ordered[lower] * (1.0 - fraction) + ordered[upper] * fraction)
+
+
 def _hypothesis_from_line_assignment(
     *,
     template: str,
@@ -838,6 +1003,8 @@ def generate_homography_hypotheses(
     surface_evidence: Mapping[str, Any] | None = None,
     max_hypotheses: int = 40,
     line_bank: Mapping[str, Any] | None = None,
+    neural_inference: Mapping[str, Any] | None = None,
+    neural_infer_provider: Callable[[Any], Mapping[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Stage 2: real RANSAC-style homography hypotheses from the line bank.
 
@@ -864,13 +1031,25 @@ def generate_homography_hypotheses(
     if image_bgr is None or not hasattr(image_bgr, "shape") or len(image_bgr.shape) < 2:
         return []
     height, width = int(image_bgr.shape[0]), int(image_bgr.shape[1])
+    if neural_inference is None:
+        provider = neural_infer_provider
+        if provider is None:
+            from .court_model_infer import get_current_court_model_infer_provider
+
+            provider = get_current_court_model_infer_provider()
+        if provider is not None:
+            neural_inference = provider(image_bgr)
+    neural_hypotheses = generate_neural_seed_hypotheses(
+        neural_inference,
+        image_size=(width, height),
+    )
     try:
         if line_bank is None:
             line_bank = build_merged_line_bank(image_bgr)
         segments = line_bank["segments"]
         groups = group_candidate_lines(segments, width=float(width), height=float(height))
     except Exception:
-        return []
+        return _finalize_homography_hypotheses(neural_hypotheses, fusion_enabled=bool(neural_hypotheses))
 
     cross_pool = [
         group for group in groups if angle_diff_mod_180(group.angle_deg, 0.0) <= 12.0 and group.support_length_px >= max(28.0, width * 0.04)
@@ -881,7 +1060,7 @@ def generate_homography_hypotheses(
         if angle_diff_mod_180(group.angle_deg, 0.0) >= 18.0 and group.support_length_px >= max(28.0, min(width, height) * 0.045)
     ][:10]
     if len(cross_pool) < 3 or len(long_pool) < 2:
-        return []
+        return _finalize_homography_hypotheses(neural_hypotheses, fusion_enabled=bool(neural_hypotheses))
 
     try:
         vp_families = cluster_line_family_directions(segments)
@@ -944,11 +1123,38 @@ def generate_homography_hypotheses(
                         if hypothesis is not None:
                             hypotheses.append(hypothesis)
 
+    fusion_enabled = bool(neural_hypotheses)
     hypotheses.sort(key=lambda item: float(item["score"]))
-    shortlist = hypotheses[:max_hypotheses]
+    if fusion_enabled:
+        for item in hypotheses:
+            item.setdefault("source_tag", "geometric")
+            item.setdefault("model_confidence", None)
+        combined = hypotheses + neural_hypotheses
+        combined.sort(key=lambda item: float(item["score"]))
+        shortlist = combined[:max_hypotheses]
+        for neural_item in neural_hypotheses:
+            if all(item is not neural_item for item in shortlist):
+                shortlist.append(neural_item)
+        shortlist.sort(key=lambda item: float(item["score"]))
+    else:
+        shortlist = hypotheses[:max_hypotheses]
+    return _finalize_homography_hypotheses(shortlist, fusion_enabled=fusion_enabled)
+
+
+def _finalize_homography_hypotheses(
+    shortlist: list[dict[str, Any]],
+    *,
+    fusion_enabled: bool,
+) -> list[dict[str, Any]]:
     for index, item in enumerate(shortlist):
         item["hypothesis_id"] = f"homography_hypothesis_{index:04d}"
-        item["source"] = f"real_line_bank_{item['template']}_assignment"
+        if item.get("source_tag") == "neural_seeded":
+            item["source"] = "neural_seeded_court_unet_v2"
+        else:
+            item["source"] = f"real_line_bank_{item['template']}_assignment"
+            if fusion_enabled:
+                item.setdefault("source_tag", "geometric")
+                item.setdefault("model_confidence", None)
         item["floor_correspondence_names"] = list(FLOOR_KEYPOINT_NAMES)
         item["projected_keypoints"] = {name: list(xy) for name, xy in item["keypoints"].items()}
         item["line_support"] = {
