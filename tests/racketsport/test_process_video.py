@@ -1507,11 +1507,11 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
         "tracking",
         "camera_motion",
         "placement",
-        "frames",
         "ball",
         "ball_arc",
         "events",
         "ball_fill",
+        "frames",
         "body",
         "placement_refine",
         "grounding_refine",
@@ -1613,8 +1613,8 @@ def test_default_stage_order_runs_camera_motion_before_placement(tmp_path: Path)
         "tracking",
         "camera_motion",
         "placement",
-        "frames",
     ]
+    assert [name for name, _fn in pipeline._middle_stage_fns()] == ["ball", "ball_arc", "events", "ball_fill"]
 
 
 def test_camera_motion_auto_default_skips_static_probe_without_writing_artifact(
@@ -2277,8 +2277,9 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
 
     default_options = process_video.build_options_from_args(parser.parse_args(["--video", str(video), "--out", str(tmp_path / "run")]))
     assert default_options.mesh_coverage_mode == "ball_aware"
-    assert default_options.target_mesh_frame_budget == 100
-    assert default_options.mesh_byte_budget_mib is None
+    # sanctioned default change: best-stack doctrine, owner PLAYBACK RULING 2026-07-08
+    assert default_options.target_mesh_frame_budget is None
+    assert default_options.mesh_byte_budget_mib == 300.0
     assert default_options.events_selected is None
     assert default_options.ball_track_arc_solved is None
     assert default_options.remote_config.sam3d_body_input_size_px == 384
@@ -2295,7 +2296,7 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     assert default_options.remote_config.sam3d_wrist_bone_lock is True
     assert default_options.remote_config.body_world_joint_visual_smoothing is True
     assert default_options.remote_config.target_mesh_frame_budget is None
-    assert default_options.remote_config.mesh_byte_budget_mib is None
+    assert default_options.remote_config.mesh_byte_budget_mib == 300.0
 
     ball_aware_options = process_video.build_options_from_args(
         parser.parse_args(
@@ -2337,7 +2338,7 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     assert ball_aware_options.ball_proximity_m == 2.0
     assert ball_aware_options.high_confidence_swing_floor == 0.7
     assert ball_aware_options.target_mesh_frame_budget == 250
-    assert ball_aware_options.mesh_byte_budget_mib == 200.0
+    assert ball_aware_options.mesh_byte_budget_mib is None
     assert ball_aware_options.events_selected == events_selected.resolve()
     assert ball_aware_options.ball_track_arc_solved == ball_track_arc_solved.resolve()
     assert ball_aware_options.remote_config.sam3d_body_input_size_px == 512
@@ -2354,7 +2355,7 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
     assert ball_aware_options.remote_config.sam3d_wrist_bone_lock is False
     assert ball_aware_options.remote_config.body_world_joint_visual_smoothing is False
     assert ball_aware_options.remote_config.target_mesh_frame_budget == 250
-    assert ball_aware_options.remote_config.mesh_byte_budget_mib == 200.0
+    assert ball_aware_options.remote_config.mesh_byte_budget_mib is None
 
     no_cap_options = process_video.build_options_from_args(
         parser.parse_args(
@@ -2369,6 +2370,7 @@ def test_cli_parses_mesh_coverage_flags_into_options(tmp_path: Path) -> None:
         )
     )
     assert no_cap_options.target_mesh_frame_budget is None  # 0 means "no cap"
+    assert no_cap_options.mesh_byte_budget_mib is None
 
 
 def test_process_video_cli_help_direct_reference() -> None:
@@ -4475,11 +4477,10 @@ def _successful_fake_dispatch(**kwargs: Any):  # noqa: ANN001
 def test_overlap_mode_matches_serial_stage_shape_with_parallel_body_block(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """SELF-VERIFICATION (a): overlap mode on the fake runtime produces the
-    identical artifact set + summary stage list as serial (golden compare),
-    modulo the parallel_body block, wall values, and the mandatory overlap
-    readiness note (HONESTY CONTRACTS b: an extra note must be added, so
-    notes cannot be byte-identical -- it must be a strict superset)."""
+    """SELF-VERIFICATION (a): overlap mode on the fake runtime still produces
+    the same stage outcomes/artifact set as serial, though serial now runs
+    events before frames for the sanctioned best-stack contact-density default.
+    Notes cannot be byte-identical because overlap adds its readiness note."""
 
     serial_summary = _run_pipeline_with_schedule(
         tmp_path / "serial", monkeypatch, schedule="serial", dispatch_fn=_successful_fake_dispatch
@@ -4491,7 +4492,7 @@ def test_overlap_mode_matches_serial_stage_shape_with_parallel_body_block(
     def _shape(summary: dict[str, Any]) -> list[tuple[str, str, tuple[str, ...], str | None]]:
         return [(s["stage"], s["status"], tuple(s["artifacts"]), s["trust_badge"]) for s in summary["stages"]]
 
-    assert _shape(serial_summary) == _shape(overlap_summary)
+    assert sorted(_shape(serial_summary)) == sorted(_shape(overlap_summary))
     assert "parallel_body" not in serial_summary
     assert "parallel_body" in overlap_summary
 

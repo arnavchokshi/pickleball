@@ -46,6 +46,12 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+try:
+    from threed.racketsport.best_stack import body_detector_fov_defaults  # noqa: E402
+except ModuleNotFoundError:  # pragma: no cover - standalone version-stamp fixtures copy only this script.
+    def body_detector_fov_defaults() -> tuple[str, str]:
+        return "", ""
+
 
 # All default remote paths are rooted under one canonical remote home
 # directory (review_diff_20260702.md finding 7: "remote BODY dispatch
@@ -68,6 +74,7 @@ DEFAULT_REMOTE_PYTHON = f"{DEFAULT_REMOTE_HOME}/body_runtime/body_venv/bin/pytho
 DEFAULT_REMOTE_FAST_SAM_PYTHON = f"{DEFAULT_REMOTE_HOME}/body_runtime/body_venv/bin/python"
 DEFAULT_REMOTE_FAST_SAM_ROOT = f"{DEFAULT_REMOTE_HOME}/body_runtime/Fast-SAM-3D-Body"
 DEFAULT_GPU_LOCK_SCRIPT = "scripts/gpu-eval-run.sh"
+DEFAULT_BODY_DETECTOR_NAME, DEFAULT_BODY_FOV_NAME = body_detector_fov_defaults()
 DEFAULT_SSH_CONNECT_TIMEOUT_S = 12
 DEFAULT_LOCK_WAIT_TIMEOUT_S = 60
 # Overall wall-clock budget for the remote BODY command itself (model loads +
@@ -230,19 +237,9 @@ class RemoteConfig:
     python: str = DEFAULT_REMOTE_PYTHON
     fast_sam_python: str = DEFAULT_REMOTE_FAST_SAM_PYTHON
     fast_sam_root: str = DEFAULT_REMOTE_FAST_SAM_ROOT
-    # BODY runner detector/FOV model selection for the remote run. Both default
-    # to "" (disabled) because that is the only configuration that has actually
-    # produced real meshes on VM1 (every successful a100_body_video_smoke_* run
-    # under runs/body_joint_goal_smoke_20260630T001407/ reports
-    # detector_name=""/fov_name="" in its body metrics): the committed
-    # BodyStageRunner defaults (detector "yolo" + fov "moge2") hard-fail on VM1
-    # because the moge_2_vitl_normal checkpoint does not exist anywhere on that
-    # host (its manifest entry still points at a stale H100-container
-    # /workspace path), and verify_fast_sam_manifest_assets is intentionally
-    # strict. Track bboxes are already supplied per-frame from tracks.json, so
-    # the detector is redundant for this dispatch path anyway.
-    body_detector_name: str = ""
-    body_fov_name: str = ""
+    # BODY detector/FOV selection is manifest-owned; empty string means disabled.
+    body_detector_name: str = DEFAULT_BODY_DETECTOR_NAME
+    body_fov_name: str = DEFAULT_BODY_FOV_NAME
     sam3d_body_input_size_px: int = 384
     sam3d_crop_bucket_sizes: tuple[int, ...] = (8, 16)
     sam3d_crop_padding_scale: float = 1.0

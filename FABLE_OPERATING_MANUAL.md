@@ -332,7 +332,9 @@ local kept-open /loop session or a manager-run detached script, not a cloud rout
    check yourself — cheap to in-source). Lane report audit: PASS with `full_suite.failed>0` is a
    rejected lane.
 7. **Update docs** (BUILD_CHECKLIST bullet, status, memory) at real milestones; register any new root
-   .md in the doc allowlist SAME lane.
+   .md in the doc allowlist SAME lane. Wave close ALSO reconciles best_stack.json: every gain landed
+   this wave is promoted / PENDING / DORMANT there (Part IV rule 15) — an unaccounted gain blocks the
+   close.
 8. **Stop-and-ask** whenever §13 fires. Between waves, always have the next wave queued.
 9. **Session cadence + context economy:** prefer bounded sessions (1-3 waves) over marathons —
    durable state lives in FILES (BUILD_CHECKLIST bullet, `gpu_fleet.md`, OWNER_CHECKIN, memory),
@@ -660,3 +662,18 @@ helps E2E; do both.
   did not bake the corpus/videos. The next snapshot cut includes corpus/video payloads or the spec
   books transfer time explicitly (BUILD_CHECKLIST [W5 BALLRETRAIN PASS 2026-07-08];
   `runs/manager/gpu_fleet.md`).
+
+## 23. The best-stack doctrine (owner directive 2026-07-08 — standing)
+
+Rationale: by wave 6 the repo had 8 uncoordinated default mechanisms across 9 files; the owner's
+ruled PRIMARY playback fix sat opt-in; the product server silently ran a different court default
+than the CLI; the strongest ball candidate was reachable only by hand-typed flag. The fix is
+structural: configs/racketsport/best_stack.json is the one selection surface (loader:
+threed/racketsport/best_stack.py; enforcement: manifest-integrity + resolution-contract +
+CLI-vs-server parity + no-orphan audit tests). Manager duties: (1) every lane spec + report carries
+a BEST-STACK DELTA section (run-lane skill); (2) ruling a lane PASS includes checking that delta;
+(3) wave close runs the reconciliation — zero unaccounted gains; (4) promotions bump the manifest
+revision; downstream evals name the revision they ran on (upstream-first: court calibration
+promotes before any downstream placement/ball/body A/B is trusted); (5) GPU result runs are full-
+stack on the promoted manifest by default — instrument/stage-isolated runs are labeled
+non-promotable exceptions. A manifest entry is a DEFAULT, never a VERIFIED claim.

@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
+from threed.racketsport.best_stack import server_override_value
+
 from .pipeline_invocation import (
     PIPELINE_SUMMARY_ARTIFACT,
     REPO_ROOT,
@@ -48,6 +50,10 @@ class MissingGpuRunnerConfig(RuntimeError):
     """Raised when no real GPU execution path is configured."""
 
 
+def default_allow_auto_court_corners_preview() -> bool:
+    return bool(server_override_value("allow_auto_court_corners_preview"))
+
+
 @dataclass(frozen=True)
 class GpuRunProgress:
     percent: int
@@ -71,7 +77,7 @@ class GpuRunRequest:
     court_calibration_path: Path | None = None
     court_review_path: Path | None = None
     max_frames: int | None = None
-    allow_auto_court_corners_preview: bool = True
+    allow_auto_court_corners_preview: bool = field(default_factory=default_allow_auto_court_corners_preview)
     progress_callback: ProgressCallback | None = field(default=None, compare=False, repr=False)
 
 
@@ -497,5 +503,4 @@ def _load_json_artifact(path: Path) -> dict[str, object] | None:
     except (json.JSONDecodeError, OSError):
         return None
     return payload if isinstance(payload, dict) else None
-
 

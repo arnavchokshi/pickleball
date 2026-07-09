@@ -26,6 +26,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol
 
+from threed.racketsport.best_stack import server_override_value
+
 from .config import WorkerConfig, worker_config_from_env
 from ..pipeline_invocation import (
     PIPELINE_SUMMARY_ARTIFACT,
@@ -37,6 +39,10 @@ from ..pipeline_invocation import (
 
 HEARTBEAT_STAGE_STARTING = "Running pipeline on GPU"
 PREEMPTION_FLAG_PATH = Path("/tmp/PREEMPTED")
+
+
+def default_allow_auto_court_corners_preview() -> bool:
+    return bool(server_override_value("allow_auto_court_corners_preview"))
 
 
 @dataclass(frozen=True)
@@ -259,7 +265,7 @@ def _real_process_runner(
         model_root=remote_model_root(config.pipeline_python),
         sidecar=str(sidecar_path) if sidecar_path is not None else None,
         max_frames=job.max_frames,
-        allow_auto_court=True,
+        allow_auto_court=default_allow_auto_court_corners_preview(),
     )
     clip_out_dir = out_dir / clip
     clip_out_dir.mkdir(parents=True, exist_ok=True)

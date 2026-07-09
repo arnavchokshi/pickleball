@@ -105,6 +105,7 @@ from threed.racketsport import orchestrator  # noqa: E402
 from threed.racketsport.ball_physics_fill import PhysicsFillConfig, fill_ball_track_physics  # noqa: E402
 from threed.racketsport.ball_physics3d import reconstruct_bounce_arcs_from_image_track  # noqa: E402
 from threed.racketsport.ball_arc_chain import run_default_ball_arc_chain  # noqa: E402
+from threed.racketsport.best_stack import load_best_stack_manifest  # noqa: E402
 from threed.racketsport.ball_inflections import build_ball_inflections_from_ball_track  # noqa: E402
 from threed.racketsport.court_calibration import calibration_image_size  # noqa: E402
 from threed.racketsport.court_corner_review import SIDECAR_CORNER_ORDER  # noqa: E402
@@ -172,12 +173,14 @@ from scripts.racketsport.remote_body_dispatch import (  # noqa: E402
 
 VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".avi", ".mkv"}
 DEFAULT_RUN_ROOT = ROOT / "runs"
-DEFAULT_REID_MODEL = ROOT / "models" / "checkpoints" / "osnet_x1_0_market1501.pt"
-DEFAULT_WASB_CHECKPOINT = ROOT / "models" / "checkpoints" / "wasb" / "wasb_tennis_best.pth.tar"
-DEFAULT_WASB_REPO = ROOT / "third_party" / "WASB-SBDT"
-DEFAULT_CONFIDENCE_CALIBRATION_CURVES = DEFAULT_RUN_ROOT / "waveb_confidence_gate_20260702T183158Z" / "calibration_curves.json"
-DEFAULT_MESH_COVERAGE_MODE = "ball_aware"
-DEFAULT_TARGET_MESH_FRAME_BUDGET = 100
+BEST_STACK_MANIFEST = load_best_stack_manifest()
+DEFAULT_REID_MODEL = BEST_STACK_MANIFEST.path_value("tracking.reid_model", must_exist=False)
+DEFAULT_WASB_CHECKPOINT = BEST_STACK_MANIFEST.path_value("ball.wasb_checkpoint")
+DEFAULT_WASB_REPO = BEST_STACK_MANIFEST.path_value("ball.wasb_repo")
+DEFAULT_CONFIDENCE_CALIBRATION_CURVES = BEST_STACK_MANIFEST.path_value("confidence.calibration_curves")
+DEFAULT_MESH_COVERAGE_MODE = BEST_STACK_MANIFEST.string_value("mesh.coverage_mode")
+DEFAULT_TARGET_MESH_FRAME_BUDGET = BEST_STACK_MANIFEST.value("mesh.target_frame_budget")
+DEFAULT_MESH_BYTE_BUDGET_MIB = BEST_STACK_MANIFEST.number_value("mesh.byte_budget_mib")
 GROUNDING_REFINE_POLICY_NOTE = "render-honest estimated grounding, not gate evidence"
 REPLAY_POINT_MAX_SPAN_SECONDS = 1.5
 AUTO_COURT_PREVIEW_TRACKING_MARGIN_M = 1000.0
@@ -246,10 +249,9 @@ class RawPoolGlobalAssociationProfile:
     cardinality_backfill: bool | None = None
 
 
-# The default raw-pool association profile is intentionally explicit: the
-# 2.0m court-margin setting was tuned on Wolverine internal-val (TRK-10), not
-# established as a universal production default.
-DEFAULT_GLOBAL_ASSOCIATION_PROFILE = "wolverine_internal_val_trk10_iter2_margin2"
+# The default raw-pool association profile is intentionally explicit and now
+# manifest-owned. Per-clip evaluation overrides below remain eval-only.
+DEFAULT_GLOBAL_ASSOCIATION_PROFILE = BEST_STACK_MANIFEST.string_value("tracking.global_association_profile")
 RAW_POOL_GLOBAL_ASSOCIATION_PROFILES: dict[str, RawPoolGlobalAssociationProfile] = {
     "wolverine_internal_val_trk12_cfg151_minconf03_margin1_appw05_backfill": RawPoolGlobalAssociationProfile(
         name="wolverine_internal_val_trk12_cfg151_minconf03_margin1_appw05_backfill",
@@ -342,7 +344,7 @@ class PipelineOptions:
 
     mesh_coverage_mode: str = DEFAULT_MESH_COVERAGE_MODE
     target_mesh_frame_budget: int | None = DEFAULT_TARGET_MESH_FRAME_BUDGET
-    mesh_byte_budget_mib: float | None = None
+    mesh_byte_budget_mib: float | None = DEFAULT_MESH_BYTE_BUDGET_MIB
     ball_proximity_m: float = DEFAULT_BALL_PROXIMITY_M
     high_confidence_swing_floor: float = DEFAULT_HIGH_CONFIDENCE_SWING_FLOOR
     events_selected: Path | None = None
@@ -499,7 +501,6 @@ class ProcessVideoPipeline:
         ]
         if self.options.rally_gating:
             stage_fns.append(("rally_gating", self._stage_rally_gating))
-        stage_fns.append(("frames", self._stage_frames))
         return stage_fns
 
     def _middle_stage_fns(self) -> list[tuple[str, Callable[[], StageOutcome]]]:
@@ -536,12 +537,13 @@ class ProcessVideoPipeline:
         return False
 
     def _run_serial(self) -> None:
-        """--body-schedule=serial (the default): today's stage order,
-        byte-identical to the pre-overlap behavior."""
+        """--body-schedule=serial (the default): derive ball/events first so
+        cold-run frame scheduling can use contact-dense ball_aware windows."""
 
         stage_fns = (
             self._build_prefix_stage_fns()
             + self._middle_stage_fns()
+            + [("frames", self._stage_frames)]
             + [("body", self._stage_body)]
             + self._build_suffix_stage_fns()
         )
@@ -554,7 +556,7 @@ class ProcessVideoPipeline:
         the main thread while BODY is in flight, joining before any
         BODY-dependent stage (placement_refine/grounding_refine/world)."""
 
-        if self._run_stage_list(self._build_prefix_stage_fns()):
+        if self._run_stage_list(self._build_prefix_stage_fns() + [("frames", self._stage_frames)]):
             return
 
         reuse_outcome = self._body_stage_reuse_skip()
@@ -2619,8 +2621,8 @@ class ProcessVideoPipeline:
                     "body": orchestrator.BodyStageRunner(
                         manifest_path=manifest_path,
                         fast_sam_repo=opts.remote_config.fast_sam_root,
-                        detector_name="",
-                        fov_name="",
+                        detector_name=opts.remote_config.body_detector_name,
+                        fov_name=opts.remote_config.body_fov_name,
                         tier2_body_joints_all_tracked=True,
                         mesh_vertex_serialization_policy="tier1_only"
                         if opts.remote_config.sam3d_skip_tier2_mesh_vertices
@@ -3342,6 +3344,11 @@ class ProcessVideoPipeline:
             "stages": [outcome.as_dict() for outcome in self.stage_outcomes],
             "trust_bands": self.trust_bands,
             "camera_motion_auto": self._camera_motion_auto,
+            "best_stack": {
+                "manifest_revision": BEST_STACK_MANIFEST.revision,
+                "resolved": resolved_best_stack_config_from_options(self.options),
+                "overrides": best_stack_overrides_from_options(self.options),
+            },
         }
         if self._parallel_body_block is not None:
             summary["parallel_body"] = self._parallel_body_block
@@ -4602,6 +4609,71 @@ def _read_optional_json(path: Path) -> Any | None:
     return _read_json(path) if path.is_file() else None
 
 
+def _path_summary(path: Path | None) -> str | None:
+    return path.as_posix() if path is not None else None
+
+
+def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[str, Any]:
+    detector_fov = {
+        "detector_name": options.remote_config.body_detector_name,
+        "fov_name": options.remote_config.body_fov_name,
+        "fov_checkpoint_model_id": BEST_STACK_MANIFEST.value("body.detector_fov")["fov_checkpoint_model_id"],
+        "fov_checkpoint_required_when_fov_enabled": BEST_STACK_MANIFEST.value("body.detector_fov")[
+            "fov_checkpoint_required_when_fov_enabled"
+        ],
+    }
+    return {
+        "ball.wasb_checkpoint": _path_summary(options.wasb_checkpoint),
+        "ball.wasb_repo": _path_summary(options.wasb_repo),
+        "ball.arc_chain": not options.no_ball_arc,
+        "tracking.reid_model": _path_summary(options.reid_model),
+        "tracking.global_association_profile": options.global_association_profile
+        or _default_raw_pool_authority_profile_for_clip(options.clip),
+        "confidence.calibration_curves": _path_summary(
+            options.confidence_calibration_curves or DEFAULT_CONFIDENCE_CALIBRATION_CURVES
+        ),
+        "mesh.coverage_mode": options.mesh_coverage_mode,
+        "mesh.byte_budget_mib": options.mesh_byte_budget_mib,
+        "mesh.target_frame_budget": options.target_mesh_frame_budget,
+        "body.detector_fov": detector_fov,
+        "body.schedule": options.body_schedule,
+        "camera_motion.policy": {
+            "mode": "disabled" if options.skip_camera_motion else "forced" if options.enable_camera_motion else "auto",
+            "threshold": options.camera_motion_auto_threshold,
+            "estimator": options.camera_motion_estimator,
+            "flow_backend": options.camera_motion_flow_backend,
+            "person_masks": options.camera_motion_person_masks,
+            "enable_flag_default": options.enable_camera_motion,
+            "disable_flag_default": options.skip_camera_motion,
+        },
+        "placement.undistort": options.placement_undistort,
+    }
+
+
+def best_stack_overrides_from_options(options: PipelineOptions) -> dict[str, Any]:
+    resolved = resolved_best_stack_config_from_options(options)
+    manifest_defaults = {
+        "ball.wasb_checkpoint": BEST_STACK_MANIFEST.path_value("ball.wasb_checkpoint").as_posix(),
+        "ball.wasb_repo": BEST_STACK_MANIFEST.path_value("ball.wasb_repo").as_posix(),
+        "ball.arc_chain": BEST_STACK_MANIFEST.value("ball.arc_chain"),
+        "tracking.reid_model": BEST_STACK_MANIFEST.path_value("tracking.reid_model", must_exist=False).as_posix(),
+        "tracking.global_association_profile": BEST_STACK_MANIFEST.string_value("tracking.global_association_profile"),
+        "confidence.calibration_curves": BEST_STACK_MANIFEST.path_value("confidence.calibration_curves").as_posix(),
+        "mesh.coverage_mode": BEST_STACK_MANIFEST.string_value("mesh.coverage_mode"),
+        "mesh.byte_budget_mib": BEST_STACK_MANIFEST.number_value("mesh.byte_budget_mib"),
+        "mesh.target_frame_budget": BEST_STACK_MANIFEST.value("mesh.target_frame_budget"),
+        "body.detector_fov": BEST_STACK_MANIFEST.value("body.detector_fov"),
+        "body.schedule": BEST_STACK_MANIFEST.string_value("body.schedule"),
+        "camera_motion.policy": BEST_STACK_MANIFEST.value("camera_motion.policy"),
+        "placement.undistort": BEST_STACK_MANIFEST.value("placement.undistort"),
+    }
+    return {
+        key: {"manifest": manifest_defaults[key], "resolved": value}
+        for key, value in resolved.items()
+        if key in manifest_defaults and value != manifest_defaults[key]
+    }
+
+
 def _existing_optional_path(path: Path) -> Path | None:
     return path if path.is_file() else None
 
@@ -4761,8 +4833,12 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
     clip = args.clip or _clip_id_from_video(video)
     run_dir = Path(args.out).expanduser().resolve() if args.out else DEFAULT_RUN_ROOT / f"process_video_{clip}"
     body_postchain_raw = args.body_postchain == "raw"
-    target_mesh_frame_budget = None if args.target_mesh_frame_budget == 0 else args.target_mesh_frame_budget
     mesh_byte_budget_mib = args.mesh_byte_budget_mib
+    if args.target_mesh_frame_budget is None:
+        target_mesh_frame_budget = DEFAULT_TARGET_MESH_FRAME_BUDGET
+    else:
+        target_mesh_frame_budget = None if args.target_mesh_frame_budget == 0 else args.target_mesh_frame_budget
+        mesh_byte_budget_mib = None
     if mesh_byte_budget_mib is not None and mesh_byte_budget_mib <= 0.0:
         raise ValueError("--mesh-byte-budget-mib must be positive")
 
@@ -4798,9 +4874,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
             or body_postchain_raw
         ),
         fetch_body_monoliths=bool(args.fetch_body_monoliths),
-        target_mesh_frame_budget=target_mesh_frame_budget
-        if mesh_byte_budget_mib is not None or target_mesh_frame_budget != DEFAULT_TARGET_MESH_FRAME_BUDGET
-        else None,
+        target_mesh_frame_budget=target_mesh_frame_budget,
         mesh_byte_budget_mib=mesh_byte_budget_mib,
     )
 
@@ -4948,7 +5022,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--skip-ball", action="store_true", help="Skip the ball stage entirely.")
     parser.add_argument("--no-ball-arc", action="store_true", help="Skip the default auto-bounce + arc-solved 3D ball stage.")
     parser.add_argument("--wasb-checkpoint", default=str(DEFAULT_WASB_CHECKPOINT))
-    parser.add_argument("--wasb-repo", default=None, help=f"WASB-SBDT repo checkout (default: {DEFAULT_WASB_REPO} if present).")
+    parser.add_argument("--wasb-repo", default=str(DEFAULT_WASB_REPO), help="WASB-SBDT repo checkout.")
     parser.add_argument("--skip-audio", action="store_true", help="Skip audio-onset extraction for contact-window fusion.")
     parser.add_argument("--rally-gating", action="store_true", help="Opt in to loose rally-span gating before frame/pose/body/world stages; preserves full pre-gating artifacts with *_pre_rally_gating.json copies.")
     parser.add_argument("--placement-keypoints-2d", default=None, help="Optional native/body keypoints_2d.json for the pre-BODY placement pass.")
@@ -5000,16 +5074,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--target-mesh-frame-budget",
         type=int,
-        default=DEFAULT_TARGET_MESH_FRAME_BUDGET,
-        help="Target deep-mesh (tier-1) frame budget for uniform/hybrid/ball_aware scheduling. Use 0 to mean 'no cap'.",
+        default=None,
+        help=(
+            "Explicit fixed-frame deep-mesh (tier-1) budget for uniform/hybrid/ball_aware scheduling. "
+            "Use 0 to mean 'no cap'. When omitted, the manifest byte-budget default is used."
+        ),
     )
     parser.add_argument(
         "--mesh-byte-budget-mib",
         type=float,
-        default=None,
+        default=DEFAULT_MESH_BYTE_BUDGET_MIB,
         help=(
-            "Opt-in deep-mesh byte budget in MiB. When set, frame_compute_plan.json fills this estimated "
-            "mesh-index budget instead of using the fixed --target-mesh-frame-budget count."
+            "Deep-mesh byte budget in MiB. The no-flag default is manifest-owned; explicit "
+            "--target-mesh-frame-budget switches back to fixed-frame policy."
         ),
     )
     parser.add_argument(
@@ -5048,8 +5125,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
         choices=("serial", "overlap"),
         default="serial",
         help=(
-            "serial (default): today's stage order, byte-identical. overlap: once frames/tracks/calibration "
-            "BODY inputs are ready, dispatch BODY on a background thread running the exact same stage code "
+            "serial (default): run ball/events before frames so cold-run mesh scheduling is contact-dense. "
+            "overlap: once frames/tracks/calibration BODY inputs are ready, dispatch BODY on a background thread running the exact same stage code "
             "path while ball/ball_arc/events/ball_fill run on the main thread, then hard-join before "
             "placement_refine/grounding_refine/world. Reuse semantics are unchanged: a no-force-valid BODY "
             "artifact still takes the plain serial path with no thread spun up."

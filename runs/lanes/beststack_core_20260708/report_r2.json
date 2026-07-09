@@ -1,0 +1,74 @@
+{
+  "objective_result": "PASS",
+  "acceptance": [
+    {
+      "metric": "best_stack manifest reconciliation",
+      "baseline": "HEAD rev2 had mesh.byte_budget_policy PENDING plus W6 rows; worktree rev1 had tested byte-budget-300 default, mesh.tier_eligibility_raise, P2-2, Fast-SAM-3D-Body NOT-ADOPT, and ball.magnus_fit_spin_scalar.",
+      "after": "rev3 updated 2026-07-09 with 30 entries: byte-budget-300 remains WIRED_DEFAULT, mesh.byte_budget_policy is dropped/superseded, mesh.tier_eligibility_raise remains PENDING, HEAD rows body.postchain_raw_knob and instrument.gate_check_body_decode are folded in, and Magnus is represented once as ball.arc_solver_spin.",
+      "target": "Merged manager-ruling truth from tested worktree plus HEAD W6 close provenance.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "best_stack manifest evidence/provenance",
+      "baseline": "worktree rev1 lacked HEAD W6 rows and close-errand byte-budget provenance.",
+      "after": "ball.wasb_checkpoint keeps candidate-only LOSO owner-GT note; mesh.byte_budget_mib cites W6 PLAYBACK RULING, W6 MESHCAP PASS, w6_meshcap report, and w6_close_errand with outdoor budget-400 21.3fps/4.1x evidence; body.p22_lambda_foot_smoother records GATE-1b raw-arm FAIL 262.35mm and NOT-WIRING-READY.",
+      "target": "Fold HEAD provenance strings and manager rulings without changing ball/court model defaults.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "TDD red check",
+      "baseline": "test_best_stack_manifest.py was patched first to require rev3 merged truth.",
+      "after": "Before manifest patch: 1 failed, 1 passed; failure was manifest.revision 1 != 3.",
+      "target": "Reconciliation test fails for the expected missing rev3 manifest state before implementation.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "requested focused pytest",
+      "baseline": null,
+      "after": "14 passed in 4.09s.",
+      "target": "Three best_stack test files plus focused process_video.py cases pass.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "scaffold audit",
+      "baseline": null,
+      "after": "list_scaffold_tools.py exit 0; missing_direct_cli_reference_tests=0, missing_related_tests=0, tool_count=276.",
+      "target": "0 missing scaffold direct-reference tests.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "CLAUDE best-stack bullet",
+      "baseline": "HEAD dropped the bullet.",
+      "after": "CLAUDE.md lines 27-30 contain the Best-stack doctrine bullet pointing defaults through configs/racketsport/best_stack.json.",
+      "target": "Keep the worktree best-stack bullet.",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "configs/racketsport/best_stack.json:3 set revision to 3 with updated 2026-07-09.",
+    "configs/racketsport/best_stack.json:100 kept mesh.byte_budget_mib as WIRED_DEFAULT value 300.0 and folded in W6 close provenance, including outdoor budget-400 21.3fps/4.1x evidence; mesh.byte_budget_policy remains dropped/superseded.",
+    "configs/racketsport/best_stack.json:118 kept mesh.tier_eligibility_raise as PENDING with owner-ruling gate.",
+    "configs/racketsport/best_stack.json:442 kept body.p22_lambda_foot_smoother DORMANT and updated it with GATE-1b raw-arm FAIL 262.35mm / NOT-WIRING-READY evidence.",
+    "configs/racketsport/best_stack.json:463 folded in HEAD body.postchain_raw_knob as DORMANT.",
+    "configs/racketsport/best_stack.json:485 folded in HEAD instrument.gate_check_body_decode as DORMANT.",
+    "configs/racketsport/best_stack.json:529 adopted HEAD row name ball.arc_solver_spin for the single Magnus fit_spin_scalar=False dormant row.",
+    "tests/racketsport/test_best_stack_manifest.py:16 reconciled integrity assertions to rev3 merged truth, >= coverage, byte-budget evidence, W6 dormant rows, and ball.arc_solver_spin.",
+    "runs/lanes/beststack_core_20260708/report_r2.json:1 wrote this reconciliation report."
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_best_stack_manifest.py tests/racketsport/test_best_stack_resolution.py tests/server/test_best_stack_parity.py tests/racketsport/test_process_video.py::test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners tests/racketsport/test_process_video.py::test_default_stage_order_runs_camera_motion_before_placement tests/racketsport/test_process_video.py::test_cli_parses_mesh_coverage_flags_into_options tests/racketsport/test_process_video.py::test_process_video_cli_help_direct_reference tests/racketsport/test_process_video.py::test_overlap_mode_matches_serial_stage_shape_with_parallel_body_block -q",
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "failures_all_preexisting": true,
+    "failure_notes": null
+  },
+  "honest_issues": [
+    "Global `git diff HEAD --stat` is not limited to this lane: pre-existing unrelated dirty files remain in .claude/skills/run-lane/SKILL.md, FABLE_OPERATING_MANUAL.md, configs/ssh/a100_known_hosts, runs/lanes/w6_footpinstub_20260708/report.json, and runs/manager/inflight_lanes.md. I did not touch the manager-fenced configs/ssh or w6_footpinstub paths.",
+    "The lane-intended diff subset is configs/racketsport/best_stack.json, models/MANIFEST.json, process_video.py, remote_body_dispatch.py, server gpu/worker defaults, best_stack tests, BODY/process tests, orchestrator, CLAUDE.md, and report_r2.json.",
+    "No full wide pytest rerun was requested or performed in this reconciliation round; the rerun census above is the requested focused group plus scaffold audit.",
+    "report_r2.json is under runs/ and may be ignored by git status, but it exists in runs/lanes/beststack_core_20260708/."
+  ],
+  "next": "Manager can commit the reconciled working-tree state. Suggested checkpoint note: BESTSTACK CORE R2 rev3 reconciles HEAD W6 close provenance with tested byte-budget-300 default, W6 dormant rows, and rev3 manifest tests.",
+  "session_id": null
+}

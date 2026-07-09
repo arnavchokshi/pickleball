@@ -18,6 +18,7 @@ from typing import Any, Literal, Mapping, Protocol, Sequence
 from scripts.racketsport.track import build_tracks
 
 from .ball_stage_runner import BallStageRunner
+from .best_stack import body_detector_fov_defaults
 from .body_compute import (
     TIER2_BODY_JOINTS_REPRESENTATION,
     build_body_compute_execution,
@@ -90,6 +91,7 @@ YOLO26M_MODEL_ID = "yolo26m"
 DEFAULT_MODEL_MANIFEST = Path("models/MANIFEST.json")
 DEFAULT_BODY_MODEL_MANIFEST = DEFAULT_BODY_MANIFEST_PATH
 DEFAULT_BOTSORT_REID_CONFIG = Path("configs/racketsport/botsort_reid.yaml")
+DEFAULT_BODY_DETECTOR_NAME, DEFAULT_BODY_FOV_NAME = body_detector_fov_defaults()
 DEFAULT_BODY_MAX_ROOT_SPEED_MPS = 8.0
 DEFAULT_BODY_MAX_TRACK_ANCHOR_SMOOTHING_RESIDUAL_M = 0.75
 R3_GROUNDING_ANCHOR_SOURCE = "placement_track_world_xy"
@@ -654,8 +656,8 @@ class BodyStageRunner:
         manifest_path: str | Path = DEFAULT_BODY_MODEL_MANIFEST,
         fast_sam_repo: str | Path = DEFAULT_FAST_SAM_REPO,
         runtime: Any | None = None,
-        detector_name: str = "yolo",
-        fov_name: str = "moge2",
+        detector_name: str = DEFAULT_BODY_DETECTOR_NAME,
+        fov_name: str = DEFAULT_BODY_FOV_NAME,
         smoothing_alpha: float = 1.0,
         max_root_speed_mps: float | None = DEFAULT_BODY_MAX_ROOT_SPEED_MPS,
         max_track_anchor_smoothing_residual_m: float | None = DEFAULT_BODY_MAX_TRACK_ANCHOR_SMOOTHING_RESIDUAL_M,

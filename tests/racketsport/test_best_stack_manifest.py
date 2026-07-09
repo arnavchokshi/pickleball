@@ -17,9 +17,9 @@ def test_best_stack_manifest_integrity() -> None:
     manifest = load_best_stack_manifest()
 
     assert manifest.schema_version == 1
-    assert manifest.revision == 2
+    assert manifest.revision == 3
     assert "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim" in manifest.invariants
-    assert len(manifest.entries) == 28
+    assert len(manifest.entries) >= 30
 
     required_entries = {
         "ball.wasb_checkpoint",
@@ -29,7 +29,7 @@ def test_best_stack_manifest_integrity() -> None:
         "confidence.calibration_curves",
         "mesh.coverage_mode",
         "mesh.byte_budget_mib",
-        "mesh.byte_budget_policy",
+        "mesh.tier_eligibility_raise",
         "mesh.target_frame_budget",
         "body.detector_fov",
         "camera_motion.policy",
@@ -38,19 +38,28 @@ def test_best_stack_manifest_integrity() -> None:
         "ball.stage1_official_checkpoint",
         "court.court_unet_v2",
         "court.e4_fusion_default",
+        "body.p22_lambda_foot_smoother",
         "body.postchain_raw_knob",
         "instrument.gate_check_body_decode",
+        "body.fast_sam_3d_body_challenger_not_adopt",
         "ball.arc_solver_spin",
     }
     assert required_entries <= set(manifest.entries)
-    assert "body.p22_lambda_foot_smoother" not in manifest.entries
+    assert "mesh.byte_budget_policy" not in manifest.entries
     assert "ball.magnus_fit_spin_scalar" not in manifest.entries
-    assert "mesh.tier_eligibility_raise" not in manifest.entries
 
-    assert manifest.entry("mesh.byte_budget_policy").status == "PENDING"
+    assert manifest.entry("mesh.byte_budget_mib").status == "WIRED_DEFAULT"
+    assert any("w6_close_errand_20260708" in path for path in manifest.entry("mesh.byte_budget_mib").provenance["evidence_paths"])
+    assert "21.3fps" in manifest.entry("mesh.byte_budget_mib").notes
+    assert manifest.entry("mesh.tier_eligibility_raise").status == "PENDING"
+    assert manifest.entry("body.p22_lambda_foot_smoother").status == "DORMANT"
+    assert "NOT-WIRING-READY" in manifest.entry("body.p22_lambda_foot_smoother").notes
+    assert manifest.entry("body.p22_lambda_foot_smoother").proven_against["gate_1b_world_round_trip_mm"] == 262.35
     assert manifest.entry("body.postchain_raw_knob").status == "DORMANT"
     assert manifest.entry("instrument.gate_check_body_decode").status == "DORMANT"
+    assert manifest.entry("body.fast_sam_3d_body_challenger_not_adopt").status == "DORMANT"
     assert manifest.entry("ball.arc_solver_spin").status == "DORMANT"
+    assert "kill-fired" in manifest.entry("ball.arc_solver_spin").notes
     assert "loso_report.json" in manifest.entry("ball.wasb_checkpoint").notes
 
     pending_without_gate = [
@@ -66,16 +75,18 @@ def test_best_stack_manifest_integrity() -> None:
     assert dormant_without_ruling == []
 
     evidence_checked_entries = {
-        "mesh.byte_budget_policy",
+        "mesh.tier_eligibility_raise",
+        "body.p22_lambda_foot_smoother",
         "body.postchain_raw_knob",
         "instrument.gate_check_body_decode",
+        "body.fast_sam_3d_body_challenger_not_adopt",
         "ball.arc_solver_spin",
         "ball.wasb_checkpoint",
     }
     missing_evidence: list[str] = []
     for key in evidence_checked_entries:
         for raw_path in manifest.entry(key).provenance["evidence_paths"]:
-            path = REPO_ROOT / str(raw_path)
+            path = REPO_ROOT / str(raw_path).split("#", 1)[0]
             if not path.exists():
                 missing_evidence.append(f"{key}:{raw_path}")
     assert missing_evidence == []

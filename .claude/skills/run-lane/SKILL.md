@@ -51,6 +51,11 @@ provision/assign the VM FIRST (gpu-fleet-provision skill) and record it in `runs
 6. **Anti-passive-wait** (for any lane touching a >10min GPU/remote job): "ending your turn to wait =
    lane death; you will NOT be re-woken; poll with a bounded foreground until-loop; end only with the
    final report or a hard blocker." Budget 1-2 SendMessage resumes.
+7. **BEST-STACK DELTA (mandatory, spec AND report):** state whether the lane (a) PROMOTES a
+   best_stack.json entry (attach gate evidence), (b) adds/updates a PENDING or DORMANT entry, or
+   (c) has no stack delta and why. A lane that lands a model/weights/policy improvement without its
+   manifest entry is INCOMPLETE — reject at ruling. Eval/A-B lanes MUST name the manifest revision
+   they consume and run on the current promoted upstream stack.
 
 ## Dispatch (match FABLE_OPERATING_MANUAL §10 exactly — schema-validated report, no watchers)
 ```bash

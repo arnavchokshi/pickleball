@@ -60,10 +60,13 @@
       "license": "See upstream MoGe license",
       "commercial_posture": "unknown",
       "status": "available_on_h100",
-      "local_path": "/workspace/checkpoints/body4d/moge-2-vitl-normal/model.pt",
+      "local_path": "models/checkpoints/body4d/moge-2-vitl-normal/model.pt",
       "sha256": "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01",
       "fallbacks": [],
-      "notes": ["Used by Fast-SAM-3D-Body FOV estimator path; license must be verified before commercialization."]
+      "notes": [
+        "Path repaired on 2026-07-08 to the repo-relative checkpoint location used by local resolution; absent files still fail verify_fast_sam_manifest_assets when fov_name is enabled.",
+        "Used by Fast-SAM-3D-Body FOV estimator path; license must be verified before commercialization."
+      ]
     },
     {
       "id": "sam2_hiera_base_plus",

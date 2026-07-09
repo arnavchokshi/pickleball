@@ -643,7 +643,7 @@ class FakePoseStageRunner:
         )
 
 
-def test_body_runner_verifies_manifest_uses_yolo26m_and_writes_contract_artifacts(tmp_path: Path) -> None:
+def test_body_runner_manifest_defaults_disable_optional_detector_fov_and_write_contract_artifacts(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs"
     run_dir = tmp_path / "run"
     manifest = _manifest(tmp_path / "models")
@@ -675,10 +675,8 @@ def test_body_runner_verifies_manifest_uses_yolo26m_and_writes_contract_artifact
     assert body_stage["metrics"]["verified_model_ids"] == [
         "fast_sam_3d_body_dinov3",
         "sam_3d_body_mhr_model",
-        "moge_2_vitl_normal",
-        "yolo26m",
     ]
-    assert body_stage["metrics"]["detector_model_id"] == "yolo26m"
+    assert body_stage["metrics"]["detector_model_id"] == ""
     assert body_stage["metrics"]["max_root_speed_mps"] == pytest.approx(8.0)
     assert runtime.calls[0]["bboxes_xyxy"] == [[940.0, 440.0, 980.0, 540.0]]
 
@@ -1566,7 +1564,16 @@ def test_body_runner_fails_loudly_on_detector_sha_mismatch(tmp_path: Path) -> No
         stage="body",
         max_frames=1,
         tracking_mode="precomputed",
-        runners={"pose": FakePoseStageRunner(), "body": BodyStageRunner(write_body_monoliths=True, manifest_path=manifest, runtime=FakeFastSamRuntime())},
+        runners={
+            "pose": FakePoseStageRunner(),
+            "body": BodyStageRunner(
+                write_body_monoliths=True,
+                manifest_path=manifest,
+                runtime=FakeFastSamRuntime(),
+                detector_name="yolo",
+                fov_name="",
+            ),
+        },
     )
 
     assert summary["status"] == "fail"

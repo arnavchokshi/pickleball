@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 2,
+  "revision": 3,
   "updated": "2026-07-09",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
@@ -109,40 +109,7 @@
         "date": "2026-07-08",
         "evidence_paths": [
           "BUILD_CHECKLIST.md#[W6 PLAYBACK RULING]",
-          "BUILD_CHECKLIST.md#[W6 MESHCAP PASS]"
-        ]
-      },
-      "proven_against": null,
-      "notes": "Runtime numeric selector retained for beststack_core compatibility. The wave-6 doctrine decision gate is recorded separately in mesh.byte_budget_policy; do not treat this as a VERIFIED replay or BODY claim."
-    },
-    "mesh.byte_budget_policy": {
-      "stage": "mesh",
-      "selection": "--mesh-byte-budget-mib default promotion policy",
-      "value": {
-        "current_default": "legacy target_mesh_frame_budget=100 until promoted",
-        "candidate_byte_budget_mib": 300.0,
-        "measured_transfer_mib": {
-          "wolverine": 77.0,
-          "outdoor": 112.6,
-          "legacy_cap_100_approx": 13.0
-        },
-        "measured_playback_gain": {
-          "wolverine": "1.67x",
-          "outdoor": "4.1x"
-        }
-      },
-      "status": "PENDING",
-      "gate": {
-        "name": "owner_decision_on_default_promotion",
-        "metric_key": "mesh_byte_budget_default_owner_ruling",
-        "bar": "explicit owner approval after transfer and UX cost review",
-        "evidence_path": "runs/lanes/w6_meshcap_20260708/report.json"
-      },
-      "provenance": {
-        "lane": "w6_beststack_recon_20260708",
-        "commit": "091e91196",
-        "date": "2026-07-09",
-        "evidence_paths": [
+          "BUILD_CHECKLIST.md#[W6 MESHCAP PASS]",
           "runs/lanes/w6_meshcap_20260708/report.json",
           "runs/lanes/w6_close_errand_20260708"
         ]
@@ -152,9 +119,37 @@
         "outdoor_transfer_mib": 112.6,
         "legacy_cap_100_approx_mib": 13.0,
         "wolverine_playback_gain": "1.67x",
-        "outdoor_playback_gain": "4.1x"
+        "outdoor_playback_gain": "4.1x",
+        "outdoor_budget_400_playback_fps": 21.3
       },
-      "notes": "Pending by ruling: bookkeeping only; manifest entry records candidate default-selection policy, not VERIFIED replay quality."
+      "notes": "Manager ruling: the byte-budget-300 no-flag default STANDS as the owner W6 PLAYBACK RULING primary fix. Folded-in W6 close evidence includes outdoor budget-400 proof at 21.3fps/4.1x as upper-band playback evidence; this does not change the default value from 300 MiB."
+    },
+    "mesh.tier_eligibility_raise": {
+      "stage": "mesh",
+      "selection": "mesh tier-eligibility raise candidate",
+      "value": {
+        "current_policy": "tier eligibility unchanged",
+        "candidate_policy": "raise mesh tier eligibility after owner product ruling",
+        "byte_budget_default_mib": 300.0
+      },
+      "status": "PENDING",
+      "gate": {
+        "name": "owner_product_ruling_mesh_tier_eligibility",
+        "metric_key": "mesh_tier_eligibility_owner_ruling",
+        "bar": "owner product ruling per BUILD_CHECKLIST.md [W6 RULINGS] (d)",
+        "evidence_path": "BUILD_CHECKLIST.md#[W6 RULINGS]"
+      },
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "BUILD_CHECKLIST.md#[W6 RULINGS]",
+          "runs/lanes/beststack_core_20260708/audit_result_full.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Pending by ruling: byte-budgeted mesh selection is wired by this lane, but tier eligibility remains unchanged until owner product ruling per [W6 RULINGS] (d)."
     },
     "mesh.target_frame_budget": {
       "stage": "frames",
@@ -453,6 +448,31 @@
       "proven_against": null,
       "notes": "Pending only; concurrent court lane owns this code and gate."
     },
+    "body.p22_lambda_foot_smoother": {
+      "stage": "body",
+      "selection": "P2-2 lambda-foot smoother",
+      "value": {
+        "lambda_foot_smoothing": "disabled",
+        "pipeline_default": false
+      },
+      "status": "DORMANT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "BUILD_CHECKLIST.md#[W6 GATE1B-KNOB]",
+          "runs/lanes/w6_footpinstub_20260708/report.json",
+          "runs/lanes/w6_close_errand_20260708/gate1b_raw_arm_report.json"
+        ]
+      },
+      "proven_against": {
+        "gate_1b_world_round_trip_mm": 262.35,
+        "gate_1b_status": "FAIL"
+      },
+      "notes": "Dormant by ruling: legitimate GATE-1b raw-arm FAIL 262mm means P2-2 is NOT-WIRING-READY and remains outside the default-selection path."
+    },
     "body.postchain_raw_knob": {
       "stage": "body",
       "selection": "--body-postchain raw instrument family",
@@ -500,6 +520,28 @@
       },
       "notes": "Dormant by ruling: canonical instrument only, not a pipeline stage; gate_1b FAIL 262.35mm means decode is not wiring-ready and latent smoothing must not be referenced as available."
     },
+    "body.fast_sam_3d_body_challenger_not_adopt": {
+      "stage": "body",
+      "selection": "Fast-SAM-3D-Body challenger NOT-ADOPT",
+      "value": {
+        "candidate": "Fast-SAM-3D-Body",
+        "adopted": false,
+        "production_default": "fast_sam_3d_body"
+      },
+      "status": "DORMANT",
+      "gate": null,
+      "provenance": {
+        "lane": "beststack_core_20260708",
+        "commit": "865c8d9f5",
+        "date": "2026-07-08",
+        "evidence_paths": [
+          "BUILD_CHECKLIST.md#[W6 RULINGS]",
+          "runs/lanes/beststack_core_20260708/audit_result_full.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Dormant by ruling: Fast-SAM-3D-Body challenger is NOT-ADOPT; active BODY stack remains SAM-3D-Body."
+    },
     "ball.arc_solver_spin": {
       "stage": "ball",
       "selection": "arc solver spin scalar plumbing",
@@ -518,7 +560,7 @@
         ]
       },
       "proven_against": null,
-      "notes": "Dormant by ruling: kill-fired and not adopted; revisit only after STEP 5 view confidence clears."
+      "notes": "Dormant by ruling: Magnus fit_spin_scalar=False was kill-fired and remains non-default."
     },
     "ball.physics_2d_gated_teacher": {
       "stage": "ball",

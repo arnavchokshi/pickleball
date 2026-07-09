@@ -24,3 +24,7 @@ Hard rules (full set: NORTH_STAR Part IV — these override defaults):
   history; destructive git ops still require an explicit owner ask.
 - Genuinely blocked → STOP and surface a typed ask (needs-validation / advice / labeling / decision /
   purchase-approval) as the RESULT. Never guess past a real blocker; everything else keeps running.
+- Best-stack doctrine (Part IV rule 15): every landed gain is promoted/PENDING/DORMANT in
+  `configs/racketsport/best_stack.json` in the SAME lane; defaults resolve ONLY through that
+  manifest (CLI and server alike); GPU result runs = FULL promoted stack by default; downstream
+  evals run on the current promoted upstream (court calibration first).
