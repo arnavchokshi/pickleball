@@ -127,3 +127,17 @@ WAVE-6 FLEET LOG (2026-07-08, manager):
   CALV1 court session's VM (their ledger row/teardown; global concurrency 2/4 with w6close).
 
 | pickleball-calv1unet2-a100-spot | asia-southeast1-a | a2-highgpu-1g A100-40GB | SPOT | DELETED 2026-07-09T04:35Z list-confirmed (retrain PASS: 3.19h, ~$3.5-4.8, zero preemptions) | calv1_unet_retrain_20260708 | ~$1.1-1.5/hr | ckpt pulled+sha-verified |
+
+WAVE-7 FLEET LOG (2026-07-09, manager):
+- pickleball-h100-w7ball (H100 a3-highgpu-1g SPOT, ase1-b/-c ladder, pd-balanced 200GB FROM
+  pickleball-fleet-snap-20260708-w6close) — PROVISIONING (Sonnet lane w7_ballretrain_20260709,
+  self-tearing). Mission: control-row reproduction (0.3611/0.5991) -> 486-row seed LoSO anomaly
+  re-run (0.6404 vs 0.6858, RULINGS R2e) -> ~100-step probe (budget formula: min(12000,
+  45min*rate)) -> 4 fine-tune arms (seed_official/rawWASB/stage1_official +aug, seed_official
+  -aug ablation) on the 1,121-row corpus (md5 37a5d43a...) -> OFFICIAL bridge + LoSO scoring w/
+  control row = THE 1k label-checkpoint eval. Wall cap 5h; drop order D,B; budget ~$1.5-17
+  (+50% contingency ceiling ~$26); in-VM 60-min idle self-stop; nohup everything; DELETE +
+  list-confirm + cost honesty at end. NO promotion; VERIFIED=0.
+- BOOT RECONCILE 2026-07-09: fleet-filter list = fleet1 TERMINATED only (ZERO running) — matches
+  ledger. Foreign VM body4d-waker-ctrl (e2-micro, us-central1-a, cost-center=body4d, running
+  since Jun 14) is NOT fleet — surfaced to owner as FYI in OWNER_CHECKIN_20260709.md.
