@@ -149,3 +149,13 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
   synthetic gate --decoder sam3d. Sync gate: md5-verified hmr_deep/mhr_decode/gate CLIs at
   >=22be98100 (the fix MUST be in the measured code). Wall cap 2h, ~$0.6-6.5 (ceiling ~$10),
   60-min idle self-stop, DELETE+list-confirm at end. Concurrency 2/4 with w7ball.
+- pickleball-h100-w7p22 — DONE+DELETED 2026-07-09T07:18:23Z list-confirmed (created 06:31:45Z,
+  uptime 0.777h, $0.47-5.05, zero preemptions, first-attempt ase1-b create, idle watchdog armed
+  never fired). DECISIVE: GATE-1b unchanged post-fix (262.348mm/53.50mm p95, FP-identical to w6)
+  BECAUSE the canonical harness itself omits pred_cam_t in its re-ground call
+  (gate_check_body_decode.py:385 — code fact); raw pred_keypoints_3d grounded WITH cam_t = p95
+  23.4mm/max 26.7mm vs persisted joints_world; pred_joint_coords NOT a drop-in (p95 328.7mm).
+  sam3d synthetic-gate adapter = honest stub (unwired). SNAPSHOT GAP: w6close template lacks 2
+  best_stack-pinned files (waveb calibration_curves.json + court_model_v2.pt 287MB) and
+  remote_body_dispatch validates the whole manifest at import — re-bake at next snapshot cut.
+  Evidence: runs/lanes/w7_p22gate_20260709/ (31MB, md5-manifested).

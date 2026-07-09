@@ -1,0 +1,371 @@
+{
+  "artifact_type": "w7_p22gate_md5_manifest",
+  "file_count": 73,
+  "files": [
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/arm_a_dispatch.log",
+      "bytes": 7263,
+      "md5": "b95813c751b75b30b5edde86f5cd2932"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/arm_a_dispatch_retry2.log",
+      "bytes": 5293,
+      "md5": "d3f84abaca9732a6d943c7185fb298be"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/arm_c_field_quant.py",
+      "bytes": 10165,
+      "md5": "1529f3fe987f743f16f557e776e47485"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/arm_c_field_quant_report.json",
+      "bytes": 4077,
+      "md5": "8598b498c567ad073e54e63f18179611"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/arm_c_run.log",
+      "bytes": 608,
+      "md5": "acfae49a610eeabf086604779305efc9"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/arm_d_run.log",
+      "bytes": 352,
+      "md5": "3c939837f00ed0dde0e47c3f23a2efef"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/fast_sam_subprocess_sample/bucket_000000.pkl",
+      "bytes": 4199130,
+      "md5": "ecc3fb24d2e4ab114e2eba325c38fd13"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/fast_sam_subprocess_sample/bucket_000001.pkl",
+      "bytes": 4199059,
+      "md5": "696ca9f50ece0249e9fee4fc8618fa68"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/fast_sam_subprocess_sample/index.json",
+      "bytes": 105300,
+      "md5": "4220965030c2730be666c481ae252223"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/fleet_list_after_create.log",
+      "bytes": 429,
+      "md5": "51aa92a7283ecb6be36f92dbdafeb808"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/fleet_list_after_delete.log",
+      "bytes": 316,
+      "md5": "5ea46d0383b2e9c2ea31a53b5a9e1b27"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gate1b_harness_run.log",
+      "bytes": 8021,
+      "md5": "ce43ef7e540edfd9f5a6a7416525be6b"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gate1b_raw_arm_report.json",
+      "bytes": 9046,
+      "md5": "718c2ee240ef9c8a9049366c34009017"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/PIPELINE_SUMMARY.json",
+      "bytes": 20628,
+      "md5": "fae79cc8507197ef1686a91f1f265a4e"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/PIPELINE_SUMMARY.json",
+      "bytes": 20628,
+      "md5": "fae79cc8507197ef1686a91f1f265a4e"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/audio_onsets_v2.json",
+      "bytes": 1122,
+      "md5": "578fae8e0a4d97af8376f7a1bf480095"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/ball_inflections.json",
+      "bytes": 112,
+      "md5": "9613c7e17c597958bb89e1c1d34a3cd1"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_compute_execution.json",
+      "bytes": 429170,
+      "md5": "af3809d89bf4c07a5129d09b4cd48e76"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_full_clip_gate.json",
+      "bytes": 1997,
+      "md5": "3fa0e21f8fd14983b7324e2773e096bc"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_grounding_quality.json",
+      "bytes": 7353,
+      "md5": "88cca4f2eef78b7fd58f7b67dfea5499"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_joint_quality.json",
+      "bytes": 2624,
+      "md5": "b8c7c894e62e975e742b5fb48360b28d"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_mesh_readiness.json",
+      "bytes": 2272,
+      "md5": "f1c6be67b3a81deb5726d4c1e72e7abc"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_raw_grounded_joints.json",
+      "bytes": 8005006,
+      "md5": "ab1a629f4299117f66864292515725fb"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_serialization_timing.json",
+      "bytes": 1028,
+      "md5": "7a4a3b7c9f0120c6b429d590082d2204"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_stage_phase_timing.json",
+      "bytes": 4769,
+      "md5": "0c422221c0dc21c2a32dda634734c3fc"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/capture_sidecar.json",
+      "bytes": 1257,
+      "md5": "edb58be072508ff4f7fe2263bd63122a"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/confidence_gate_summary.json",
+      "bytes": 877,
+      "md5": "b0229ae56c6b9b4a143dc6e2be047d63"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/contact_splice.json",
+      "bytes": 480,
+      "md5": "97228c9320541bf76613328974df5eca"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/contact_windows.json",
+      "bytes": 42,
+      "md5": "26bc42d2b239e6621158ddc42b9a7565"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+      "bytes": 6801,
+      "md5": "b009e8576f91b40d705af0543d06a237"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/court_line_evidence.json",
+      "bytes": 5499,
+      "md5": "5e874b7078b09615a2d9005aba1fa7ad"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/court_zones.json",
+      "bytes": 1697,
+      "md5": "5afa4c8264f97ebce7956a4399854dfc"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/foot_contact_phases.json",
+      "bytes": 40222,
+      "md5": "005e7ae3b8d62caa98cdb9e5cf3a35e0"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/frame_compute_plan.json",
+      "bytes": 367837,
+      "md5": "0ae838af94199f1f0ce9d54742d77ce3"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/frame_times.json",
+      "bytes": 16904,
+      "md5": "8d5e2a67db20ac314f1db159d95e4207"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/metrics.json",
+      "bytes": 1507,
+      "md5": "e09a545563b5622ce86665b9f9b264c9"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/net_plane.json",
+      "bytes": 354,
+      "md5": "ec57a9997c7b5da9da0a73cc17595080"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/pipeline_run.json",
+      "bytes": 16954,
+      "md5": "16b97ed2c58c92c10c2278c738b80482"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/placement.json",
+      "bytes": 1619947,
+      "md5": "eb53baa6bcbb781f7cc9aff46ae15bbc"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/process_video_frame_schedule.json",
+      "bytes": 17334,
+      "md5": "ccbd1e57cd04bf5810dc8ab193d147a5"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/racket_pose_estimate.json",
+      "bytes": 1437362,
+      "md5": "0f45f19bf17c850b82cc7ce38570c25e"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/raw_tracked_detections.json",
+      "bytes": 567792,
+      "md5": "2869513abf8e03145a9600f3d827c29b"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/remote_body_dispatch_timing.json",
+      "bytes": 1758,
+      "md5": "81d4d030973ba767de64e0f66788823f"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/remote_body_runner.py",
+      "bytes": 10829,
+      "md5": "0647e8c3f5e86f8951be3505fb26fe40"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/remote_body_stdout.log",
+      "bytes": 1492,
+      "md5": "ed137bd537bfb08df2f87dc32d6faf33"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/remote_sam3d_tier2_dispatch_config.json",
+      "bytes": 4208,
+      "md5": "92643204dddd985822fb353b74febd51"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/remote_version_verification.json",
+      "bytes": 349,
+      "md5": "4c945f95ef4377c9e39642b23acc70bf"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/replay_viewer_manifest.json",
+      "bytes": 1984,
+      "md5": "79c5015eab66c58f7fa96e133e402020"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/runtime_model_manifest.json",
+      "bytes": 30840,
+      "md5": "3cc6b4e30fd1cf5e6d9a2dff572a7578"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/sam3d_body_input_prep.json",
+      "bytes": 712852,
+      "md5": "46ad228f02ad79478f428067390aa172"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/sam3d_keypoints_2d.json",
+      "bytes": 1070079,
+      "md5": "360873a7b3d04661568595326e067f97"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/sam3d_tier2_config.json",
+      "bytes": 2282,
+      "md5": "c03486cdddac1b7d4be12698ca00ce0e"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/skeleton3d.json",
+      "bytes": 8038820,
+      "md5": "30317723f0bdde443e5179869f3ea935"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/smpl_motion_pre_grounding_refine.json",
+      "bytes": 0,
+      "md5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/source.mp4",
+      "bytes": 2153064,
+      "md5": "4dae12c8a934eaf8f0a18090511f4379"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/tracked_detections.json",
+      "bytes": 567792,
+      "md5": "2869513abf8e03145a9600f3d827c29b"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/tracks.json",
+      "bytes": 264947,
+      "md5": "b2ca7906392eda642d76e550efecf63e"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/tracks_prewrite_backup.json",
+      "bytes": 254462,
+      "md5": "3d88e13d4a478b6941f3636f6a1759e7"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/trust_bands.json",
+      "bytes": 2734,
+      "md5": "f2e2b9d3811d82a11ef2461936beb38b"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/version_stamp.json",
+      "bytes": 13278,
+      "md5": "6cc861bf6cc938f2f60a568a32fddaef"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/wrist_velocity_peaks.json",
+      "bytes": 808,
+      "md5": "500603190c8c9b3c0c97964468c2d42f"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/h100_create_attempt_1_asia-southeast1-b.log",
+      "bytes": 269,
+      "md5": "18f66973bd4f9e6211a1c988ed151322"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/h100_create_end.txt",
+      "bytes": 21,
+      "md5": "4fee17721e6c50df2905432176398b87"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/h100_create_start.txt",
+      "bytes": 21,
+      "md5": "f99711fc688e5b9cbebeac721ffdbe3a"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/h100_delete.log",
+      "bytes": 140,
+      "md5": "01ff79601ceb784eb4c31d9e36dfb51d"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/h100_delete_end.txt",
+      "bytes": 21,
+      "md5": "f964048a74c0bca0c5879aa5009af7ec"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/h100_delete_start.txt",
+      "bytes": 21,
+      "md5": "8e3a0c794fd763a3300d4b94968569fa"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/mac_critical_file_md5s.txt",
+      "bytes": 296,
+      "md5": "7f8a9d26a34440438dcd2b5f7491dac1"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/synthetic_body_decode_gate_report.json",
+      "bytes": 2206,
+      "md5": "76a75f2430b1176f1da7030f706edb98"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/version_stamp_verification.json",
+      "bytes": 3051,
+      "md5": "461727b05c2c0f65d0b549c01b398c30"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/vm_critical_file_md5s.txt",
+      "bytes": 296,
+      "md5": "225c0508abd83e62161b6a254721e08e"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/vm_git_hygiene.log",
+      "bytes": 2313,
+      "md5": "43269d619ce7f688462053c6b5db5541"
+    },
+    {
+      "path": "runs/lanes/w7_p22gate_20260709/vm_ip.txt",
+      "bytes": 14,
+      "md5": "78561a205e22bae0d06c42c30593a072"
+    }
+  ]
+}
