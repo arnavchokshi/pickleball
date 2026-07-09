@@ -100,6 +100,28 @@ def test_gather_source_frames_refuses_heldout_source_labels(tmp_path: Path) -> N
         gather_source_frames(parse_cvat_image_points(annotations))
 
 
+def test_parse_cvat_image_points_accepts_relabel_role_suffix_after_abs_frame(tmp_path: Path) -> None:
+    annotations = tmp_path / "annotations.xml"
+    annotations.write_text(
+        """<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <image id="0" name="HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195__relabel_net_far_side.png" width="1920" height="1080">
+    <points label="near_baseline_center" points="338.91,872.35" />
+  </image>
+</annotations>
+""",
+        encoding="utf-8",
+    )
+
+    parsed = parse_cvat_image_points(annotations)
+
+    assert len(parsed) == 1
+    assert parsed[0].source_id == "HyUqT7zFiwk"
+    assert parsed[0].clip_id == "HyUqT7zFiwk_rally_0001"
+    assert parsed[0].absolute_frame_index == 10195
+    assert parsed[0].points["near_baseline_center"] == (338.91, 872.35)
+
+
 def test_grade_calibration_thresholds_and_failures() -> None:
     assert grade_calibration(median_px=4.8, p95_px=12.3) == (GRADE_MANUAL_BAR, None)
     assert grade_calibration(median_px=4.81, p95_px=12.3) == (GRADE_AUTO_BAR, None)

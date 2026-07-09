@@ -501,7 +501,7 @@ def predict_source_keypoints(
     arr = np.asarray(resized, dtype=np.float32) / 255.0
     tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0).to(device)
     with torch.no_grad():
-        pred = court_keypoint_probabilities(model(tensor)).detach().cpu()[0]
+        pred = court_keypoint_probabilities(_keypoint_heatmap_logits(model(tensor))).detach().cpu()[0]
     sx, sy = width / label_w, height / label_h
     predicted_source_points: dict[str, list[float]] = {}
     for name in row["keypoints"]:
@@ -512,6 +512,14 @@ def predict_source_keypoints(
     if use_homography_refinement:
         predicted_source_points = refine_keypoint_xy_with_planar_homography(predicted_source_points)
     return predicted_source_points
+
+
+def _keypoint_heatmap_logits(model_output: Any) -> Any:
+    if isinstance(model_output, dict):
+        if "keypoint_heatmaps" not in model_output:
+            raise ValueError("court keypoint model output dict is missing keypoint_heatmaps")
+        return model_output["keypoint_heatmaps"]
+    return model_output
 
 
 def predict_source_keypoints_from_line_model(
@@ -1137,7 +1145,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                     real_source_errors_by_clip.setdefault(str(row.get("clip") or "unknown"), []).append(source_error)
             for _ in range(0 if use_line_segmentation else synthetic_batches):
                 x, target, _ = synthetic_batch(args.batch_size)
-                pred = court_keypoint_probabilities(model(x.to(device))).detach().cpu()
+                pred = court_keypoint_probabilities(_keypoint_heatmap_logits(model(x.to(device)))).detach().cpu()
                 for batch_i in range(pred.shape[0]):
                     for idx in range(pred.shape[1]):
                         pred_flat = int(pred[batch_i, idx].argmax())
@@ -1600,7 +1608,7 @@ def _predict_frame_keypoints(
     arr = resized.astype(np.float32) / 255.0
     tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0).to(device)
     with torch.inference_mode():
-        pred = court_keypoint_probabilities(model(tensor)).detach().cpu()[0]
+        pred = court_keypoint_probabilities(_keypoint_heatmap_logits(model(tensor))).detach().cpu()[0]
     scale_x = source_width / float(model_width)
     scale_y = source_height / float(model_height)
     keypoints: dict[str, dict[str, Any]] = {}

@@ -588,7 +588,8 @@ def _parse_frame_name(frame_name: str) -> tuple[str, str, int]:
     if "__" not in before_abs:
         raise ValueError(f"frame name lacks source/clip separator: {frame_name}")
     source_id, clip_id = before_abs.split("__", 1)
-    return source_id, clip_id, int(frame_text)
+    absolute_frame_text = frame_text.split("__", 1)[0]
+    return source_id, clip_id, int(absolute_frame_text)
 
 
 def _parse_cvat_point(raw: str) -> tuple[float, float]:

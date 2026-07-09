@@ -1,0 +1,143 @@
+{
+  "artifact_type": "w7_court_kp_relabel_gt_manifest",
+  "content_index_md5": "b5a772c4e096057cd03f20148fd33411",
+  "corrected_gt_root": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected",
+  "corrected_rows": [
+    {
+      "absolute_frame_index": 10195,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/HyUqT7zFiwk/labels/court_keypoint_frames/frame_010195.png",
+      "dest_image_md5": "9616eb3cee685f16979e7b9044b4f0c2",
+      "frame": "frame_010195.png",
+      "point_count": 15,
+      "root": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected",
+      "source_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195__relabel_net_far_side.png",
+      "source_id": "HyUqT7zFiwk",
+      "source_image": "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_images.zip!HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195__relabel_net_far_side.png"
+    },
+    {
+      "absolute_frame_index": 14564,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/HyUqT7zFiwk/labels/court_keypoint_frames/frame_014564.png",
+      "dest_image_md5": "c795941248f9d4d8de487be9c4bb5a8c",
+      "frame": "frame_014564.png",
+      "point_count": 15,
+      "root": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected",
+      "source_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_014564__replacement_full_metric15.png",
+      "source_id": "HyUqT7zFiwk",
+      "source_image": "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_images.zip!HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_014564__replacement_full_metric15.png"
+    },
+    {
+      "absolute_frame_index": 3636,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/zwCtH_i1_S4/labels/court_keypoint_frames/frame_003636.png",
+      "dest_image_md5": "6993e8e519cbb97fb9e3ca1600788f49",
+      "frame": "frame_003636.png",
+      "point_count": 15,
+      "root": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected",
+      "source_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636__relabel_net_far_side.png",
+      "source_id": "zwCtH_i1_S4",
+      "source_image": "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_images.zip!zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636__relabel_net_far_side.png"
+    },
+    {
+      "absolute_frame_index": 6363,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/zwCtH_i1_S4/labels/court_keypoint_frames/frame_006363.png",
+      "dest_image_md5": "8eb21b0fd28803b70cf1cd8d46340ca4",
+      "frame": "frame_006363.png",
+      "point_count": 15,
+      "root": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected",
+      "source_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_006363__replacement_full_metric15.png",
+      "source_id": "zwCtH_i1_S4",
+      "source_image": "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_images.zip!zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_006363__replacement_full_metric15.png"
+    }
+  ],
+  "files": [
+    {
+      "bytes": 1651774,
+      "md5": "9616eb3cee685f16979e7b9044b4f0c2",
+      "path": "gt_roots/old/HyUqT7zFiwk/labels/court_keypoint_frames/frame_010195.png"
+    },
+    {
+      "bytes": 2068,
+      "md5": "742d69ff0cb6ac2db10c208f44e56202",
+      "path": "gt_roots/old/HyUqT7zFiwk/labels/court_keypoints.json"
+    },
+    {
+      "bytes": 3405538,
+      "md5": "6993e8e519cbb97fb9e3ca1600788f49",
+      "path": "gt_roots/old/zwCtH_i1_S4/labels/court_keypoint_frames/frame_003636.png"
+    },
+    {
+      "bytes": 2067,
+      "md5": "ec161cab978036d096c470bb62760cd3",
+      "path": "gt_roots/old/zwCtH_i1_S4/labels/court_keypoints.json"
+    },
+    {
+      "bytes": 1651774,
+      "md5": "9616eb3cee685f16979e7b9044b4f0c2",
+      "path": "gt_roots/corrected/HyUqT7zFiwk/labels/court_keypoint_frames/frame_010195.png"
+    },
+    {
+      "bytes": 1565046,
+      "md5": "c795941248f9d4d8de487be9c4bb5a8c",
+      "path": "gt_roots/corrected/HyUqT7zFiwk/labels/court_keypoint_frames/frame_014564.png"
+    },
+    {
+      "bytes": 3486,
+      "md5": "a93c6d38a1774f291319c649e03ee76c",
+      "path": "gt_roots/corrected/HyUqT7zFiwk/labels/court_keypoints.json"
+    },
+    {
+      "bytes": 3405538,
+      "md5": "6993e8e519cbb97fb9e3ca1600788f49",
+      "path": "gt_roots/corrected/zwCtH_i1_S4/labels/court_keypoint_frames/frame_003636.png"
+    },
+    {
+      "bytes": 3367833,
+      "md5": "8eb21b0fd28803b70cf1cd8d46340ca4",
+      "path": "gt_roots/corrected/zwCtH_i1_S4/labels/court_keypoint_frames/frame_006363.png"
+    },
+    {
+      "bytes": 3476,
+      "md5": "0b3eb75c9543095bd41c4b232becf4c1",
+      "path": "gt_roots/corrected/zwCtH_i1_S4/labels/court_keypoints.json"
+    }
+  ],
+  "old_gt_root": "runs/lanes/w7_courtkpingest_20260709/gt_roots/old",
+  "old_rows": [
+    {
+      "absolute_frame_index": 10195,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/old/HyUqT7zFiwk/labels/court_keypoint_frames/frame_010195.png",
+      "dest_image_md5": "9616eb3cee685f16979e7b9044b4f0c2",
+      "frame": "frame_010195.png",
+      "point_count": 15,
+      "root": "runs/lanes/w7_courtkpingest_20260709/gt_roots/old",
+      "source_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195.png",
+      "source_id": "HyUqT7zFiwk",
+      "source_image": "cvat_upload/court_keypoints_20260707/frames/HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195.png"
+    },
+    {
+      "absolute_frame_index": 3636,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/old/zwCtH_i1_S4/labels/court_keypoint_frames/frame_003636.png",
+      "dest_image_md5": "6993e8e519cbb97fb9e3ca1600788f49",
+      "frame": "frame_003636.png",
+      "point_count": 15,
+      "root": "runs/lanes/w7_courtkpingest_20260709/gt_roots/old",
+      "source_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636.png",
+      "source_id": "zwCtH_i1_S4",
+      "source_image": "cvat_upload/court_keypoints_20260707/frames/zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636.png"
+    }
+  ],
+  "schema_version": 1,
+  "source_artifacts": {
+    "old_xml": {
+      "md5": "02dbfe8f384588691b22dbddc0631970",
+      "path": "cvat_upload/exports/court_keypoints_20260707/annotations.xml"
+    },
+    "relabel_export_zip": {
+      "md5": "1561159bc5236f6fbeb9148a7443adb2",
+      "path": "cvat_upload/exports/w5_labelpack_20260708/w5_court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_20260708_annotations.zip"
+    },
+    "relabel_image_zip": {
+      "md5": "efaee8acca81022b9c281a72a41eb77e",
+      "path": "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_images.zip"
+    }
+  }
+}

@@ -18,6 +18,26 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _write_court_unet_v2_checkpoint(tmp_path: Path) -> Path:
+    torch = pytest.importorskip("torch")
+
+    from threed.racketsport.court_keypoint_net import make_court_keypoint_heatmap_model
+
+    checkpoint_path = tmp_path / "court_unet_v2.pt"
+    model = make_court_keypoint_heatmap_model(len(PICKLEBALL_KEYPOINTS), architecture="court_unet_v2")
+    torch.save(
+        {
+            "model": model.state_dict(),
+            "image_size": [32, 18],
+            "model_architecture": "court_unet_v2",
+            "network_architecture": "court_unet_v2",
+            "keypoint_names": [point.name for point in PICKLEBALL_KEYPOINTS],
+        },
+        checkpoint_path,
+    )
+    return checkpoint_path
+
+
 def _build_checkpoint_and_owner_labels(tmp_path: Path) -> tuple[Path, Path]:
     """Train a throwaway checkpoint on one synthetic "external corpus" clip, then write a
     second, disjoint clip shaped like the real `eval_clips/ball/*/labels/court_keypoints.json`
@@ -120,6 +140,39 @@ def _build_checkpoint_and_owner_labels(tmp_path: Path) -> tuple[Path, Path]:
     _write_json(owner_clip / "labels" / "court_keypoints.json", payload)
 
     return checkpoint_path, owner_root
+
+
+def test_evaluate_court_keypoint_owner_gate_cli_accepts_court_unet_v2_checkpoint(tmp_path: Path) -> None:
+    """Current CALV1 checkpoints use the `court_unet_v2` network, whose forward pass returns
+    a dict with `keypoint_heatmaps`. The owner-gate CLI still owns the pre-registered gate
+    contract, so it must decode that output shape instead of crashing before scoring."""
+    _legacy_checkpoint_path, owner_root = _build_checkpoint_and_owner_labels(tmp_path)
+    checkpoint_path = _write_court_unet_v2_checkpoint(tmp_path)
+    out_path = tmp_path / "gate_report_unet_v2.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/evaluate_court_keypoint_owner_gate.py",
+            "--checkpoint",
+            str(checkpoint_path),
+            "--real-root",
+            str(owner_root),
+            "--out",
+            str(out_path),
+            "--device",
+            "cpu",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    report = json.loads(out_path.read_text(encoding="utf-8"))
+    assert report["artifact_type"] == "court_keypoint_owner_gate_report"
+    assert report["checkpoint"] == str(checkpoint_path)
+    assert report["raw_independent"]["keypoint_error_summary"]["count"] == len(PICKLEBALL_KEYPOINTS)
+    assert json.loads(completed.stdout)["checkpoint"] == str(checkpoint_path)
 
 
 def test_evaluate_court_keypoint_owner_gate_cli_writes_gate_report(tmp_path: Path) -> None:
