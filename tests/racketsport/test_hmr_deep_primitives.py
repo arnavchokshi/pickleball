@@ -242,6 +242,44 @@ def test_normalize_fast_sam_body_output_preserves_static_mesh_faces_for_mhr_surf
     assert normalized["mesh_faces"] == [[0, 1, 2]]
 
 
+def test_normalize_fast_sam_body_output_applies_pred_cam_t_exactly_once() -> None:
+    request = PlayerCropRequest(
+        frame_idx=5,
+        player_id=7,
+        bbox_xyxy=[100, 120, 260, 520],
+        image_size_px=[1920, 1080],
+        track_confidence=0.93,
+    )
+    raw = normalize_fast_sam_body_output(
+        {
+            "pred_vertices": [[4.0, 5.0, 6.0]],
+            "pred_keypoints_3d": [[1.0, 2.0, 3.0]],
+            "pred_cam_t": [0.25, -0.5, 1.0],
+            "confidence": 0.91,
+        },
+        request=request,
+    )
+
+    assert raw["camera_translation"] == [0.25, -0.5, 1.0]
+    assert raw["joints_camera"] == [[1.25, 1.5, 4.0]]
+    assert raw["vertices_camera"] == [[4.25, 4.5, 7.0]]
+
+    already_translated = normalize_fast_sam_body_output(
+        {
+            "pred_vertices": [[4.25, 4.5, 7.0]],
+            "pred_keypoints_3d": [[1.25, 1.5, 4.0]],
+            "pred_cam_t": [0.25, -0.5, 1.0],
+            "pred_cam_t_already_applied": True,
+            "confidence": 0.91,
+        },
+        request=request,
+    )
+
+    assert already_translated["camera_translation"] == [0.25, -0.5, 1.0]
+    assert already_translated["joints_camera"] == [[1.25, 1.5, 4.0]]
+    assert already_translated["vertices_camera"] == [[4.25, 4.5, 7.0]]
+
+
 def test_normalize_fast_sam_body_output_keeps_compact_foot_keypoints_only_by_default() -> None:
     request = PlayerCropRequest(
         frame_idx=5,

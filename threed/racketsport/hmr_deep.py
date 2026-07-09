@@ -21,6 +21,7 @@ from numbers import Integral
 from pathlib import Path
 from typing import Any, Callable
 
+from . import mhr_decode
 from .model_manifest import load_model_manifest
 from .sam3d_body_input_prep import load_mask_prompt_arrays, normalize_body_input_size
 
@@ -668,6 +669,19 @@ def normalize_fast_sam_body_output(
 
     hand_pose = _float_list(_first_present(public, ("hand_pose_params", "hand_pose"), default=[]), name="hand_pose")
     left_hand_pose, right_hand_pose = _split_hands(hand_pose)
+    camera_translation = _float_vector(
+        _first_present(public, ("pred_cam_t", "camera_translation", "transl"), default=[0.0, 0.0, 0.0]),
+        name="camera_translation",
+        length=3,
+    )
+    pred_cam_t_already_applied = _bool_flag(
+        _first_present(
+            public,
+            ("pred_cam_t_already_applied", "camera_translation_already_applied", "translation_already_applied"),
+            default=False,
+        ),
+        name="pred_cam_t_already_applied",
+    )
     return {
         "frame_idx": request.frame_idx,
         "player_id": request.player_id,
@@ -696,13 +710,18 @@ def normalize_fast_sam_body_output(
         # round-trip fidelity bar. New field, no removals; empty list is a
         # safe/back-compatible default for any existing consumer.
         "scale": _float_list(_first_present(public, ("scale_params", "scale"), default=[]), name="scale"),
-        "camera_translation": _float_vector(
-            _first_present(public, ("pred_cam_t", "camera_translation", "transl"), default=[0.0, 0.0, 0.0]),
-            name="camera_translation",
-            length=3,
+        "camera_translation": camera_translation,
+        "pred_cam_t_already_applied": pred_cam_t_already_applied,
+        "joints_camera": mhr_decode.apply_pred_cam_t_once(
+            joints,
+            pred_cam_t=camera_translation,
+            already_applied=pred_cam_t_already_applied,
         ),
-        "joints_camera": joints,
-        "vertices_camera": vertices,
+        "vertices_camera": mhr_decode.apply_pred_cam_t_once(
+            vertices,
+            pred_cam_t=camera_translation,
+            already_applied=pred_cam_t_already_applied,
+        ),
         "mesh_faces": _face_list(
             _first_present(public, ("mesh_faces", "faces", "pred_faces", "triangles", "mesh_triangles"), default=[]),
             vertex_count=len(vertices),
@@ -995,6 +1014,22 @@ def _first_present(public: Mapping[str, Any], keys: Sequence[str], *, default: A
         if key in public and public[key] is not None:
             return public[key]
     return default
+
+
+def _bool_flag(value: Any, *, name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, Integral):
+        if value in (0, 1):
+            return bool(value)
+        raise ValueError(f"{name} must be a boolean flag")
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes"}:
+            return True
+        if normalized in {"0", "false", "no"}:
+            return False
+    raise ValueError(f"{name} must be a boolean flag")
 
 
 def _split_hands(hand_pose: list[float]) -> tuple[list[float], list[float]]:

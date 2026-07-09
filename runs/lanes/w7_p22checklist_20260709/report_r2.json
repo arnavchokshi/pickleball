@@ -1,0 +1,75 @@
+{
+  "objective_result": "PASS",
+  "acceptance": [
+    {
+      "metric": "(b) pred_cam_t_exactly_once_production_path",
+      "baseline": "At committed baseline c375e4f89, normalize_fast_sam_body_output preserved camera_translation from pred_cam_t but assigned raw joints_camera/vertices_camera unchanged. RED evidence: MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_hmr_deep_primitives.py::test_normalize_fast_sam_body_output_applies_pred_cam_t_exactly_once -q failed because joints_camera stayed [[1.0, 2.0, 3.0]] instead of [[1.25, 1.5, 4.0]].",
+      "after": "PASS. threed/racketsport/hmr_deep.py:672-724 now reads camera_translation once from pred_cam_t/camera_translation/transl, preserves it, records pred_cam_t_already_applied, and routes both joints and vertices through mhr_decode.apply_pred_cam_t_once. tests/racketsport/test_hmr_deep_primitives.py:245-280 proves missing application and double application on the production normalize_fast_sam_body_output path. Focused GREEN: 1 passed.",
+      "target": "Production normalize_fast_sam_body_output path applies pred_cam_t exactly once to both pred_keypoints_3d and pred_vertices, with explicit escape hatch for pre-translated raw sources.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "pred_cam_t_already_applied_escape_hatch",
+      "baseline": "No explicit production escape hatch existed for raw sources whose sidecars already include camera translation.",
+      "after": "PASS. threed/racketsport/hmr_deep.py:677-684 accepts pred_cam_t_already_applied, camera_translation_already_applied, or translation_already_applied. threed/racketsport/hmr_deep.py:1019-1032 validates boolean-like flags. The production test asserts pre-translated joints/vertices remain [[1.25, 1.5, 4.0]] and [[4.25, 4.5, 7.0]] instead of being shifted twice.",
+      "target": "Include an explicit pred_cam_t_already_applied escape hatch for raw sources that pre-translate.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "synthetic_body_decode_gate gate_1b_world_round_trip.joints_world_p95_abs_error_mm mesh_skeleton_divergence.p95_mm",
+      "baseline": "Round-1 CPU mock synthetic gate reported 0.0mm for gate_1b_world_round_trip.joints_world_p95_abs_error_mm and 0.0mm for mesh_skeleton_divergence.p95_mm.",
+      "after": "PASS. Post-wiring command MPLBACKEND=Agg .venv/bin/python scripts/racketsport/synthetic_body_decode_gate.py --out runs/lanes/w7_p22checklist_20260709/synthetic_body_decode_gate_report_r2.json --render-dir runs/lanes/w7_p22checklist_20260709/synthetic_renders_r2 --samples 3 --decoder mock --seed 0 produced measurement_status=measured_mock_decoder, gate_1b_world_round_trip.joints_world_p95_abs_error_mm=0.0, vertices_world_p95_abs_error_mm=0.0, mesh_skeleton_divergence.p95_mm=0.0.",
+      "target": "CPU mock synthetic gate remains unaffected by production hmr_deep wiring and holds 0.0mm.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "full_body_chain_blast_radius",
+      "baseline": "Requested suite covers mhr_decode, hmr_deep, body runner, worldhmr, synthetic gate, mesh export, and every discovered test file importing hmr_deep.",
+      "after": "PASS. MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_mhr_decode.py tests/racketsport/test_hmr_deep*.py tests/racketsport/test_body_runner_real_path.py tests/racketsport/test_worldhmr*.py tests/racketsport/test_synthetic_body_decode_gate.py tests/racketsport/test_mesh_export.py tests/racketsport/test_sam3d_tier2_body_runner.py tests/racketsport/test_best_stack_resolution.py -q => 101 passed, 6 skipped, 1 warning.",
+      "target": "Run the full blast-radius suite plus any test file that imports hmr_deep; fix introduced failures and report pre-existing protected-lane failures.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "no_gate_protocol_best_stack_delta",
+      "baseline": "Manager ruling forbids gate-threshold/protocol/best_stack changes; lambda_foot=0, smoother UNWIRED, and latent-interp OFF stay untouched.",
+      "after": "PASS. Edited only threed/racketsport/hmr_deep.py, tests/racketsport/test_hmr_deep_primitives.py, and R2 lane artifacts under runs/lanes/w7_p22checklist_20260709/. No process_video.py, best_stack.json, test_process_video.py, test_best_stack_manifest.py, gate threshold, eval protocol, lambda_foot, smoother, or latent-interp changes were made by this lane.",
+      "target": "No gate-threshold/protocol/best_stack/process_video/paddle-lane changes.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "remaining_gpu_evidence gate_1b_world_round_trip.joints_world_p95_abs_error_mm mesh_skeleton_divergence.p95_mm",
+      "baseline": "Round-1 banked W6 evidence still had gate_1b_world_round_trip worst joints max 262.3481300437748mm and mesh_skeleton_divergence worst_p95_mm_over_sample 53.49995040893555mm.",
+      "after": "PASS for honest reporting only. Local production wiring is fixed, but the real raw-sidecar GATE-1b recompute was not rerun in this CPU repair pass. Still needed on GPU/raw artifacts: rerun GATE-1b with raw pred_cam_t, pred_vertices, pred_keypoints_3d, and pred_joint_coords sidecars preserved; recompute the alternate skeleton field to quantify how much of 262.35mm/53.50mm was field-definition mismatch; then apply the R1 ceiling rule or escalate any remaining decode defect.",
+      "target": "Explicitly state what still needs GPU rerun and avoid claiming GATE-1b promotion from local tests.",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "threed/racketsport/hmr_deep.py:24 imports the existing mhr_decode helper module.",
+    "threed/racketsport/hmr_deep.py:672 reads camera_translation once from pred_cam_t/camera_translation/transl.",
+    "threed/racketsport/hmr_deep.py:677 reads the explicit pred_cam_t_already_applied escape hatch and accepted aliases.",
+    "threed/racketsport/hmr_deep.py:713 preserves camera_translation for traceability and threed/racketsport/hmr_deep.py:714 records pred_cam_t_already_applied.",
+    "threed/racketsport/hmr_deep.py:715 and threed/racketsport/hmr_deep.py:720 route joints_camera and vertices_camera through mhr_decode.apply_pred_cam_t_once.",
+    "threed/racketsport/hmr_deep.py:1019 adds _bool_flag validation for the escape hatch.",
+    "tests/racketsport/test_hmr_deep_primitives.py:245 adds the production-path exactly-once regression test.",
+    "runs/lanes/w7_p22checklist_20260709/synthetic_body_decode_gate_report_r2.json:1 records the post-wiring synthetic gate CPU mock run.",
+    "runs/lanes/w7_p22checklist_20260709/storage_policy_audit_r2.json:1 records the post-cleanup storage policy audit.",
+    "runs/lanes/w7_p22checklist_20260709/report_r2.json:1 writes this repair-round structured report."
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_mhr_decode.py tests/racketsport/test_hmr_deep*.py tests/racketsport/test_body_runner_real_path.py tests/racketsport/test_worldhmr*.py tests/racketsport/test_synthetic_body_decode_gate.py tests/racketsport/test_mesh_export.py tests/racketsport/test_sam3d_tier2_body_runner.py tests/racketsport/test_best_stack_resolution.py -q",
+    "passed": 101,
+    "failed": 0,
+    "skipped": 6,
+    "failures_all_preexisting": true,
+    "failure_notes": "No failures. One warning from test_body_runner_real_path: FAST_SAM_PYTHON is unset, so BODY degrades from batched subprocess runtime to in-process fallback in this local environment."
+  },
+  "honest_issues": [
+    "This local repair proves production normalize_fast_sam_body_output applies pred_cam_t exactly once; it does not prove the historical W6 GATE-1b artifacts now pass because those raw sidecars must be regenerated or rerun on GPU.",
+    "Alternate skeleton-field quantification is still pending raw-sidecar evidence containing both pred_keypoints_3d and pred_joint_coords.",
+    "No BEST-STACK promotion is proposed yet. A PENDING decode-fidelity entry should wait for raw-sidecar GATE-1b recompute plus synthetic gate evidence.",
+    "The worktree remains dirty from other lanes before and after this repair, including protected/cross-lane files configs/racketsport/best_stack.json, scripts/racketsport/process_video.py, tests/racketsport/test_best_stack_manifest.py, tests/racketsport/test_process_video.py, and untracked labelpacks. I did not edit or revert them."
+  ],
+  "next": "Run the GPU/raw-sidecar GATE-1b recompute on fresh BODY output that preserves pred_cam_t, pred_vertices, pred_keypoints_3d, and pred_joint_coords; then recompute alternate-field divergence and decide whether the residual is ceiling-rule family-normal or still a decode defect.",
+  "session_id": null
+}
