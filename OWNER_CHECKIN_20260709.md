@@ -11,8 +11,9 @@ non-blocking until we persist a non-owner profile, which wave 7 does not do).
 ## Numbered asks (easiest first)
 1. **Mac disk — 2 min, semi-urgent.** Data volume is 99% full (5.2GB free; boot bar is >25GB; wave-6
    hit ENOSPC mid-errand). /tmp + pip caches are already clean — the real weight is `runs/` (57GB of
-   lane artifacts). A scout is ranking safe candidates now; I'll stage a commented per-line script at
-   `runs/manager/disk_cleanup_20260709.sh`. When it's ready (I'll note it here), review + run:
+   lane artifacts). The script is READY at `runs/manager/disk_cleanup_20260709.sh` (Section A intermediates ~19GB;
+   A+B ~35GB; held-out labels / reviewed corpus / regen-inputs / your raw footage all explicitly fenced).
+   Review + run:
    `! bash runs/manager/disk_cleanup_20260709.sh`
    Outside the repo, if you want more back: `~/Desktop/CV_pipeline` = 22GB, `~/Library/Caches` = 4.2GB.
 2. **Ball labeling continues (critical path).** 1,121 reviewed rows banked; 72-73 tasks / ~45.6k
