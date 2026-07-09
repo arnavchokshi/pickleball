@@ -75,6 +75,38 @@ final class CapturePolicyTests: XCTestCase {
         XCTAssertEqual(slowRequest.focus, 0.0, accuracy: 0.000_000_1)
     }
 
+    func testFocusExposurePolicyUsesContinuousPreviewAndLocksOnlyAtRecordStart() {
+        let preview = CaptureFocusExposurePolicy.preview(
+            supportsContinuousFocus: true,
+            supportsContinuousExposure: true
+        )
+        let recording = CaptureFocusExposurePolicy.recording(
+            supportsLockedFocus: true,
+            supportsContinuousFocus: true,
+            supportsLockedExposure: true,
+            supportsContinuousExposure: true
+        )
+
+        XCTAssertEqual(preview, CaptureFocusExposurePlan(focus: .continuous, exposure: .continuous))
+        XCTAssertEqual(recording, CaptureFocusExposurePlan(focus: .locked, exposure: .locked))
+    }
+
+    func testFocusExposurePolicyKeepsContinuousWhenRecordLocksAreUnavailable() {
+        let recording = CaptureFocusExposurePolicy.recording(
+            supportsLockedFocus: false,
+            supportsContinuousFocus: true,
+            supportsLockedExposure: false,
+            supportsContinuousExposure: true
+        )
+        let unavailablePreview = CaptureFocusExposurePolicy.preview(
+            supportsContinuousFocus: false,
+            supportsContinuousExposure: false
+        )
+
+        XCTAssertEqual(recording, CaptureFocusExposurePlan(focus: .continuous, exposure: .continuous))
+        XCTAssertEqual(unavailablePreview, CaptureFocusExposurePlan(focus: .unavailable, exposure: .unavailable))
+    }
+
     func testOrientationPolicySupportsPortraitAndLandscapeVideoTransforms() {
         XCTAssertEqual(CaptureOrientationPolicy.captureOrientation(for: .portrait), .portrait)
         XCTAssertEqual(CaptureOrientationPolicy.captureOrientation(for: .portraitUpsideDown), .portrait)

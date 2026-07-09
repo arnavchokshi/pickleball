@@ -55,6 +55,7 @@ public final class CameraCaptureController: NSObject {
     private var activeClipURL: URL?
     private var activeSidecarURL: URL?
     private var recordingStartedAt: Date?
+    private var recordingLockedSnapshot: LockedCapture?
     private var sessionIDFactory = CaptureSessionIDFactory()
 
     public init(arSessionProvider: ARSessionProviding = DefaultARSessionProviderFactory.make()) {
@@ -158,7 +159,7 @@ public final class CameraCaptureController: NSObject {
 
         activeDevice = camera
         activePolicy = policy
-        activePolicyEnforcement = policyEnforcementReport(policy: policy, descriptor: descriptor)
+        activePolicyEnforcement = nil
         activePackageRootURL = packageRootURL
         activeCaptureDeviceOrientation = captureDeviceOrientation
         activeDescriptor = descriptor
@@ -168,6 +169,9 @@ public final class CameraCaptureController: NSObject {
     }
 
     public func startPreview() {
+        if !movieOutput.isRecording {
+            restoreContinuousFocusAndExposure()
+        }
         guard !session.isRunning else {
             return
         }
@@ -262,6 +266,9 @@ public final class CameraCaptureController: NSObject {
         guard let clipURL = activeClipURL else {
             throw CameraCaptureControllerError.noConfiguredPackage
         }
+        guard let descriptor = activeDescriptor else {
+            throw CameraCaptureControllerError.noConfiguredPackage
+        }
 
         try FileManager.default.createDirectory(
             at: clipURL.deletingLastPathComponent(),
@@ -271,6 +278,10 @@ public final class CameraCaptureController: NSObject {
             try FileManager.default.removeItem(at: clipURL)
         }
 
+        recordingLockedSnapshot = nil
+        try lockExposureFocusAndWhiteBalanceForRecording(on: activeDevice)
+        recordingLockedSnapshot = currentCaptureSnapshot()
+        activePolicyEnforcement = policyEnforcementReport(policy: policy, descriptor: descriptor)
         recordingStartedAt = Date()
         lastRecordingResult = nil
         frameMotionRecorder.beginRecording()
@@ -283,6 +294,7 @@ public final class CameraCaptureController: NSObject {
         }
 
         movieOutput.stopRecording()
+        restoreContinuousFocusAndExposure()
     }
 
     public static func defaultPackageRootURL() -> URL {
@@ -348,7 +360,7 @@ public final class CameraCaptureController: NSObject {
         camera.activeVideoMinFrameDuration = frameDuration
         camera.activeVideoMaxFrameDuration = frameDuration
 
-        lockExposureFocusAndWhiteBalance(on: camera)
+        applyContinuousPreviewFocusAndExposure(on: camera)
     }
 
     private func configureAudioSession() throws {
@@ -382,23 +394,70 @@ public final class CameraCaptureController: NSObject {
             .first
     }
 
-    private func lockExposureFocusAndWhiteBalance(on camera: AVCaptureDevice) {
-        if camera.isExposureModeSupported(.custom) {
-            let requestedDuration = CMTime(seconds: 1.0 / 1_000.0, preferredTimescale: 1_000_000)
-            let duration = max(camera.activeFormat.minExposureDuration, min(camera.activeFormat.maxExposureDuration, requestedDuration))
-            let iso = max(camera.activeFormat.minISO, min(camera.activeFormat.maxISO, 200))
-            camera.setExposureModeCustom(duration: duration, iso: iso)
-        } else if camera.isExposureModeSupported(.locked) {
+    private func applyContinuousPreviewFocusAndExposure(on camera: AVCaptureDevice) {
+        let plan = CaptureFocusExposurePolicy.preview(
+            supportsContinuousFocus: camera.isFocusModeSupported(.continuousAutoFocus),
+            supportsContinuousExposure: camera.isExposureModeSupported(.continuousAutoExposure)
+        )
+        if plan.focus == .continuous {
+            camera.focusMode = .continuousAutoFocus
+        }
+        if plan.exposure == .continuous {
+            camera.exposureMode = .continuousAutoExposure
+        }
+        camera.isSubjectAreaChangeMonitoringEnabled = true
+    }
+
+    private func lockExposureFocusAndWhiteBalanceForRecording(on camera: AVCaptureDevice?) throws {
+        guard let camera else {
+            throw CameraCaptureControllerError.cameraUnavailable
+        }
+        try camera.lockForConfiguration()
+        defer {
+            camera.unlockForConfiguration()
+        }
+
+        let plan = CaptureFocusExposurePolicy.recording(
+            supportsLockedFocus: camera.isFocusModeSupported(.locked),
+            supportsContinuousFocus: camera.isFocusModeSupported(.continuousAutoFocus),
+            supportsLockedExposure: camera.isExposureModeSupported(.locked),
+            supportsContinuousExposure: camera.isExposureModeSupported(.continuousAutoExposure)
+        )
+        switch plan.focus {
+        case .locked:
+            let currentLensPosition = camera.lensPosition
+            camera.setFocusModeLocked(lensPosition: currentLensPosition)
+        case .continuous:
+            camera.focusMode = .continuousAutoFocus
+        case .unavailable:
+            break
+        }
+        switch plan.exposure {
+        case .locked:
             camera.exposureMode = .locked
+        case .continuous:
+            camera.exposureMode = .continuousAutoExposure
+        case .unavailable:
+            break
         }
-
-        if camera.isFocusModeSupported(.locked) {
-            camera.setFocusModeLocked(lensPosition: 0.7)
-        }
-
         if camera.isWhiteBalanceModeSupported(.locked) {
             camera.whiteBalanceMode = .locked
         }
+    }
+
+    private func restoreContinuousFocusAndExposure() {
+        guard let camera = activeDevice else {
+            return
+        }
+        do {
+            try camera.lockForConfiguration()
+        } catch {
+            return
+        }
+        defer {
+            camera.unlockForConfiguration()
+        }
+        applyContinuousPreviewFocusAndExposure(on: camera)
     }
 
     private func configureMovieOutput(policy: CapturePolicy, videoRotationAngleDegrees: Int) {
@@ -553,6 +612,10 @@ public final class CameraCaptureController: NSObject {
     }
 
     private func lockedCaptureSnapshot() -> LockedCapture {
+        recordingLockedSnapshot ?? currentCaptureSnapshot()
+    }
+
+    private func currentCaptureSnapshot() -> LockedCapture {
         guard let device = activeDevice else {
             return LockedCapture(exposureS: 0.001, iso: 0.0, focus: 0.0, wbLocked: false)
         }
@@ -601,6 +664,10 @@ extension CameraCaptureController: AVCaptureFileOutputRecordingDelegate {
         from _: [AVCaptureConnection],
         error: Error?
     ) {
+        defer {
+            recordingLockedSnapshot = nil
+        }
+        restoreContinuousFocusAndExposure()
         if let error {
             frameMotionRecorder.endRecording()
             onRecordingFinished?(.failure(error))

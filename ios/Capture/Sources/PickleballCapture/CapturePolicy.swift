@@ -98,6 +98,65 @@ public struct ISOClampBounds: Equatable, Sendable {
     }
 }
 
+public enum CaptureFocusExposureMode: Equatable, Sendable {
+    case continuous
+    case locked
+    case unavailable
+}
+
+public struct CaptureFocusExposurePlan: Equatable, Sendable {
+    public var focus: CaptureFocusExposureMode
+    public var exposure: CaptureFocusExposureMode
+
+    public init(focus: CaptureFocusExposureMode, exposure: CaptureFocusExposureMode) {
+        self.focus = focus
+        self.exposure = exposure
+    }
+}
+
+public enum CaptureFocusExposurePolicy {
+    public static func preview(
+        supportsContinuousFocus: Bool,
+        supportsContinuousExposure: Bool
+    ) -> CaptureFocusExposurePlan {
+        CaptureFocusExposurePlan(
+            focus: supportsContinuousFocus ? .continuous : .unavailable,
+            exposure: supportsContinuousExposure ? .continuous : .unavailable
+        )
+    }
+
+    public static func recording(
+        supportsLockedFocus: Bool,
+        supportsContinuousFocus: Bool,
+        supportsLockedExposure: Bool,
+        supportsContinuousExposure: Bool
+    ) -> CaptureFocusExposurePlan {
+        CaptureFocusExposurePlan(
+            focus: recordingMode(
+                supportsLocked: supportsLockedFocus,
+                supportsContinuous: supportsContinuousFocus
+            ),
+            exposure: recordingMode(
+                supportsLocked: supportsLockedExposure,
+                supportsContinuous: supportsContinuousExposure
+            )
+        )
+    }
+
+    private static func recordingMode(
+        supportsLocked: Bool,
+        supportsContinuous: Bool
+    ) -> CaptureFocusExposureMode {
+        if supportsLocked {
+            return .locked
+        }
+        if supportsContinuous {
+            return .continuous
+        }
+        return .unavailable
+    }
+}
+
 public enum LockedCapturePolicy {
     public static let fastestAllowedShutterSeconds = 1.0 / 1_000.0
     public static let slowestAllowedShutterSeconds = 1.0 / 500.0

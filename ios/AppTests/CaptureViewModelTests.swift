@@ -227,6 +227,39 @@ final class CaptureViewModelTests: XCTestCase {
         XCTAssertEqual(controller.startRecordingCallCount, 0)
     }
 
+    @MainActor
+    func testPortraitRecordTapCanRetryInLandscapeAndStartRecording() async throws {
+        let controller = FakeCameraCaptureController()
+        controller.configureDescriptor = try Self.captureDescriptor(sessionID: "configured")
+        controller.startRecordingDescriptor = try Self.captureDescriptor(sessionID: "recording")
+        controller.startRecordingError = CameraCaptureControllerError.landscapeRequired
+        var permissionRequestCount = 0
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                permissionRequestCount += 1
+                return CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            }
+        )
+
+        await model.prepare()
+        await model.handleRecordTap()
+
+        XCTAssertEqual(model.status, .blocked("Rotate to landscape to record"))
+        XCTAssertEqual(model.blockedReason, "Rotate to landscape to record")
+        XCTAssertTrue(model.isRecordButtonEnabled)
+        XCTAssertEqual(controller.startRecordingCallCount, 1)
+
+        controller.startRecordingError = nil
+        await model.handleRecordTap()
+
+        XCTAssertEqual(model.status, .recording)
+        XCTAssertEqual(model.descriptor?.sessionID, "recording")
+        XCTAssertEqual(controller.startRecordingCallCount, 2)
+        XCTAssertEqual(permissionRequestCount, 2)
+        XCTAssertEqual(controller.configureCalls.count, 2)
+    }
+
     fileprivate static func captureDescriptor(sessionID: String) throws -> CapturePackageDescriptor {
         try CapturePackageDescriptor(
             sessionID: sessionID,
@@ -253,6 +286,7 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
     var configureDescriptor: CapturePackageDescriptor?
     var configureError: Error?
     var startRecordingDescriptor: CapturePackageDescriptor?
+    var startRecordingError: Error?
     var policyEnforcementReport: CapturePolicyEnforcementReport?
     var setupPass: ARKitSetupPassSidecar = .unavailable(reason: "test_setup_pass_unavailable", gravity: [0, -1, 0])
     var gravity: [Double] = [0, -1, 0]
@@ -304,6 +338,9 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
     func startRecording() async throws -> CapturePackageDescriptor {
         events.append("startRecording")
         startRecordingCallCount += 1
+        if let startRecordingError {
+            throw startRecordingError
+        }
         if let startRecordingDescriptor {
             return startRecordingDescriptor
         }

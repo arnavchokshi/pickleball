@@ -81,6 +81,20 @@ final class CaptureViewModel: ObservableObject {
         status == .recording
     }
 
+    var isRecordButtonEnabled: Bool {
+        if case .requestingAccess = status {
+            return false
+        }
+        return true
+    }
+
+    var blockedReason: String? {
+        guard case .blocked(let message) = status else {
+            return nil
+        }
+        return message
+    }
+
     var modeSummary: String {
         let capture = CaptureSessionScaffold(
             mode: selectedMode,
@@ -189,6 +203,16 @@ final class CaptureViewModel: ObservableObject {
         permissions = await requestPermissions()
         await configure()
         await autoStartReplayBenchmarkIfRequested()
+    }
+
+    func handleRecordTap() async {
+        switch status {
+        case .idle, .blocked:
+            await prepare()
+        case .requestingAccess, .ready, .recording, .finished:
+            break
+        }
+        await toggleRecording()
     }
 
     func configure() async {
@@ -426,6 +450,7 @@ final class CaptureViewModel: ObservableObject {
             postStopSummary = nil
             controller.setProfileCapturePayload(profileFlow.payload)
             descriptor = try await controller.startRecording()
+            capturePolicyEnforcement = await controller.currentPolicyEnforcementReport()
             let startedAt = Date()
             recordingStartedAt = startedAt
             status = .recording
@@ -548,7 +573,7 @@ final class CaptureViewModel: ObservableObject {
         case CameraCaptureControllerError.unsupportedFrameRate(let fps):
             return "\(fps) fps unavailable on this camera"
         case CameraCaptureControllerError.landscapeRequired:
-            return "Rotate to landscape"
+            return "Rotate to landscape to record"
         case CameraCaptureControllerError.alreadyRecording:
             return "Already recording"
         case CameraCaptureControllerError.notRecording:

@@ -420,21 +420,13 @@ private struct DinkVisionTabBar: View {
     }
 
     private var canRecordFromTab: Bool {
-        switch recordModel.status {
-        case .ready, .recording, .finished, .idle:
-            return true
-        case .requestingAccess, .blocked:
-            return false
-        }
+        recordModel.isRecordButtonEnabled
     }
 
     private func handleRecordTap() async {
         selectedTab = .record
         DinkVisionHaptics.impact(.medium)
-        if recordModel.status == .idle {
-            await recordModel.prepare()
-        }
-        await recordModel.toggleRecording()
+        await recordModel.handleRecordTap()
     }
 }
 
@@ -708,6 +700,10 @@ private struct DinkVisionRecordScreen: View {
                     recordHeader
                         .padding(.top, max(48, proxy.safeAreaInsets.top + 10))
                     policyChips
+                    if let blockedReason = model.blockedReason {
+                        blockedReasonBanner(blockedReason)
+                            .padding(.top, 10)
+                    }
                     Spacer(minLength: 20)
                     recordFooter
                         .padding(.bottom, DinkVisionChromeLayout.scrollBottomPadding)
@@ -827,6 +823,18 @@ private struct DinkVisionRecordScreen: View {
         }
     }
 
+    private func blockedReasonBanner(_ reason: String) -> some View {
+        Label(reason, systemImage: "exclamationmark.triangle.fill")
+            .font(.system(size: 14, weight: .heavy, design: .rounded))
+            .foregroundStyle(DinkVisionColor.ink)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(DinkVisionColor.cream, in: Capsule())
+            .shadow(color: .black.opacity(0.20), radius: 10, y: 4)
+            .accessibilityIdentifier("DinkVisionRecordBlockedReason")
+    }
+
     private var recordingBadge: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let elapsed = model.recordingStartedAt.map { max(0, Int(context.date.timeIntervalSince($0))) } ?? 0
@@ -897,9 +905,9 @@ private struct DinkVisionRecordScreen: View {
 
     private var canRecord: Bool {
         switch model.status {
-        case .ready, .recording, .finished:
+        case .ready, .recording, .finished, .blocked:
             return true
-        case .idle, .requestingAccess, .blocked:
+        case .idle, .requestingAccess:
             return false
         }
     }
