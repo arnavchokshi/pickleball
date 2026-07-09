@@ -4,6 +4,7 @@ import importlib
 import json
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -176,6 +177,71 @@ def test_synthetic_court_iterable_dataset_per_worker_seeding_is_deterministic_an
     assert not np.allclose(worker0_run1, worker1_run1)
 
 
+def test_synthetic_training_dataloader_worker0_matches_single_process_materialization() -> None:
+    loader = train_court_model_v2._make_synthetic_training_dataloader(
+        config={"image_size": [96, 64]},
+        base_seed=42,
+        batch_size=3,
+        steps_per_epoch=1,
+        global_step_offset=0,
+        model_width=96,
+        model_height=64,
+        sigma_px=1.5,
+        force_fallback=True,
+        synthetic_workers=0,
+        torch=torch,
+    )
+    [batch] = list(train_court_model_v2._iter_ordered_synthetic_batches(loader, expected_steps=1))
+    direct = train_court_model_v2.materialize_synthetic_batch(
+        config={"image_size": [96, 64]},
+        seed=43,
+        count=3,
+        model_width=96,
+        model_height=64,
+        sigma_px=1.5,
+        force_fallback=True,
+        torch=torch,
+    )
+
+    for key in ("image", "heatmaps", "heatmap_mask", "vis_target", "seg_target", "seg_mask"):
+        assert torch.equal(batch[key], direct[key])
+    assert batch["loader_meta"]["global_step_index"] == 0
+    assert batch["loader_meta"]["synthetic_seed"] == 43
+
+
+def test_synthetic_training_dataloader_multi_worker_has_stamped_step_mapping() -> None:
+    loader = train_court_model_v2._make_synthetic_training_dataloader(
+        config={"image_size": [96, 64]},
+        base_seed=42,
+        batch_size=2,
+        steps_per_epoch=3,
+        global_step_offset=0,
+        model_width=96,
+        model_height=64,
+        sigma_px=1.5,
+        force_fallback=True,
+        synthetic_workers=2,
+        torch=torch,
+    )
+
+    batches = list(train_court_model_v2._iter_ordered_synthetic_batches(loader, expected_steps=3))
+    assert [batch["loader_meta"]["global_step_index"] for batch in batches] == [0, 1, 2]
+    assert [batch["loader_meta"]["synthetic_seed"] for batch in batches] == [43, 44, 45]
+    assert {batch["loader_meta"]["worker_id"] for batch in batches} == {0, 1}
+    for batch in batches:
+        direct = train_court_model_v2.materialize_synthetic_batch(
+            config={"image_size": [96, 64]},
+            seed=batch["loader_meta"]["synthetic_seed"],
+            count=2,
+            model_width=96,
+            model_height=64,
+            sigma_px=1.5,
+            force_fallback=True,
+            torch=torch,
+        )
+        assert torch.equal(batch["image"], direct["image"])
+
+
 # ---------------------------------------------------------------------------------------------
 # On-disk real corpora conversion: correct rescale even when the loaded image resolution differs
 # from the row's declared source_video_size (the 1280x720-vs-1920x1080 case).
@@ -296,6 +362,8 @@ def test_train_court_model_v2_cli_cpu_smoke_beats_random_init(tmp_path: Path) ->
             "--synthetic-fallback",
             "--device",
             "cpu",
+            "--synthetic-workers",
+            "0",
             "--eval-every",
             "1",
         ],
@@ -341,6 +409,146 @@ def test_train_court_model_v2_cli_cpu_smoke_beats_random_init(tmp_path: Path) ->
     assert cli_summary["checkpoint"] == summary["checkpoint"]
 
 
+@pytest.mark.parametrize("synthetic_workers", [0, 1])
+def test_train_court_model_v2_cli_tiny_cpu_smoke_with_worker_modes(
+    tmp_path: Path, synthetic_workers: int
+) -> None:
+    out_dir = tmp_path / f"cal_model_v2_workers_{synthetic_workers}"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/train_court_model_v2.py",
+            "--out",
+            str(out_dir),
+            "--epochs",
+            "1",
+            "--steps-per-epoch",
+            "1",
+            "--batch-size",
+            "2",
+            "--image-width",
+            "96",
+            "--image-height",
+            "64",
+            "--val-samples",
+            "2",
+            "--synthetic-fallback",
+            "--device",
+            "cpu",
+            "--synthetic-workers",
+            str(synthetic_workers),
+            "--eval-every",
+            "1",
+            "--geometric-loss-weight",
+            "0.0",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=180,
+    )
+    assert completed.returncode == 0
+    summary = json.loads((out_dir / "court_keypoint_metrics.json").read_text(encoding="utf-8"))
+    assert summary["training"]["synthetic_workers"] == synthetic_workers
+    assert summary["training"]["synthetic_loader"] == "SyntheticCourtIterableDataset+DataLoader"
+    assert len(summary["history"]) == 1
+    assert summary["history"][0]["synthetic_worker_count"] >= 1
+
+
+def test_train_court_model_v2_periodic_checkpoint_resume_matches_uninterrupted(tmp_path: Path) -> None:
+    def _args(out_dir: Path, *, epochs: int, resume: Path | None = None) -> list[str]:
+        args = [
+            sys.executable,
+            "scripts/racketsport/train_court_model_v2.py",
+            "--out",
+            str(out_dir),
+            "--epochs",
+            str(epochs),
+            "--steps-per-epoch",
+            "1",
+            "--batch-size",
+            "2",
+            "--image-width",
+            "96",
+            "--image-height",
+            "64",
+            "--val-samples",
+            "2",
+            "--synthetic-fallback",
+            "--device",
+            "cpu",
+            "--synthetic-workers",
+            "0",
+            "--eval-every",
+            "1",
+            "--keep-last-checkpoints",
+            "1",
+            "--geometric-loss-weight",
+            "0.0",
+        ]
+        if resume is not None:
+            args.extend(["--resume", str(resume)])
+        return args
+
+    def _run(out_dir: Path, *, epochs: int, resume: Path | None = None) -> dict[str, object]:
+        args = _args(out_dir, epochs=epochs, resume=resume)
+        completed = subprocess.run(args, check=True, capture_output=True, text=True, timeout=180)
+        assert completed.returncode == 0
+        return json.loads((out_dir / "court_keypoint_metrics.json").read_text(encoding="utf-8"))
+
+    def _run_until_first_epoch_checkpoint_then_kill(out_dir: Path) -> None:
+        process = subprocess.Popen(
+            _args(out_dir, epochs=2),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        assert process.stderr is not None
+        deadline = time.time() + 180
+        saw_epoch_one = False
+        stderr_lines: list[str] = []
+        while time.time() < deadline:
+            line = process.stderr.readline()
+            if line:
+                stderr_lines.append(line)
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if row.get("epoch") == 1:
+                    saw_epoch_one = True
+                    break
+            if process.poll() is not None:
+                break
+        if not saw_epoch_one:
+            process.kill()
+            stdout, stderr = process.communicate(timeout=30)
+            raise AssertionError(f"trainer did not reach epoch-1 checkpoint before exit; stdout={stdout}; stderr={''.join(stderr_lines)}{stderr}")
+        process.kill()
+        process.communicate(timeout=30)
+
+    uninterrupted_dir = tmp_path / "uninterrupted"
+    resumed_dir = tmp_path / "resumed"
+    _run(uninterrupted_dir, epochs=2)
+    _run_until_first_epoch_checkpoint_then_kill(resumed_dir)
+
+    first_epoch_checkpoint = resumed_dir / "court_model_v2_epoch_0001.pt"
+    assert first_epoch_checkpoint.is_file()
+    resumed_summary = _run(resumed_dir, epochs=2, resume=first_epoch_checkpoint)
+
+    retained_epoch_checkpoints = sorted(path.name for path in resumed_dir.glob("court_model_v2_epoch_*.pt"))
+    assert retained_epoch_checkpoints == ["court_model_v2_epoch_0002.pt"]
+    assert [row["epoch"] for row in resumed_summary["history"]] == [2]
+
+    uninterrupted_state = torch.load(
+        uninterrupted_dir / "court_model_v2.pt", map_location="cpu", weights_only=False
+    )["model"]
+    resumed_state = torch.load(resumed_dir / "court_model_v2.pt", map_location="cpu", weights_only=False)["model"]
+    assert uninterrupted_state.keys() == resumed_state.keys()
+    for key in uninterrupted_state:
+        assert torch.allclose(uninterrupted_state[key], resumed_state[key], atol=1e-7, rtol=1e-7), key
+
+
 def test_train_court_model_v2_resume_continues_from_saved_epoch(tmp_path: Path) -> None:
     out_dir = tmp_path / "cal_model_v2_resume"
     base_args = [
@@ -361,6 +569,8 @@ def test_train_court_model_v2_resume_continues_from_saved_epoch(tmp_path: Path) 
         "--synthetic-fallback",
         "--device",
         "cpu",
+        "--synthetic-workers",
+        "0",
     ]
     subprocess.run(base_args + ["--epochs", "1"], check=True, capture_output=True, text=True, timeout=120)
     checkpoint_path = out_dir / "court_model_v2.pt"
@@ -377,6 +587,61 @@ def test_train_court_model_v2_resume_continues_from_saved_epoch(tmp_path: Path) 
     summary = json.loads((out_dir / "court_keypoint_metrics.json").read_text(encoding="utf-8"))
     # Resumed from epoch 1 and only ran the remaining epoch (epoch 2), not both epochs again.
     assert [row["epoch"] for row in summary["history"]] == [2]
+
+
+def test_encoder_weights_path_missing_fails_loudly_without_random_init(tmp_path: Path) -> None:
+    out_dir = tmp_path / "cal_model_v2_missing_encoder"
+    missing = tmp_path / "missing_resnet34.pth"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/train_court_model_v2.py",
+            "--out",
+            str(out_dir),
+            "--epochs",
+            "1",
+            "--steps-per-epoch",
+            "1",
+            "--batch-size",
+            "2",
+            "--image-width",
+            "96",
+            "--image-height",
+            "64",
+            "--val-samples",
+            "2",
+            "--synthetic-fallback",
+            "--device",
+            "cpu",
+            "--encoder-weights-path",
+            str(missing),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+    assert completed.returncode == 2
+    assert "encoder weights were requested" in completed.stderr
+    assert "does not exist" in completed.stderr
+    assert not (out_dir / "court_model_v2.pt").exists()
+
+
+def test_encoder_weights_imagenet_requires_local_torchvision_cache(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TORCH_HOME", str(tmp_path / "empty_torch_home"))
+    with pytest.raises(FileNotFoundError, match="does not download"):
+        train_court_model_v2._resolve_encoder_weights_path("imagenet")
+
+
+def test_encoder_weights_path_rejects_wrong_resnet34_shape(tmp_path: Path) -> None:
+    bogus_checkpoint = tmp_path / "not_resnet34.pth"
+    torch.save({"conv1.weight": torch.zeros(1)}, bogus_checkpoint)
+
+    with pytest.raises(ValueError, match="does not match expected torchvision resnet34"):
+        train_court_model_v2._resolve_encoder_weights_path(str(bogus_checkpoint))
 
 
 def _build_tiny_external_corpus(root: Path) -> None:

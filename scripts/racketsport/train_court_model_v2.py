@@ -48,11 +48,13 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import random
 import sys
 import time
 from pathlib import Path
 from typing import Any, Iterator
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -82,6 +84,11 @@ try:
     from threed.racketsport.court_synth_stream import iter_synthetic_court_samples as _iter_synthetic_court_samples
 except Exception:  # pragma: no cover - exercised by test_train_court_model_v2's missing-module test
     _iter_synthetic_court_samples = None
+
+try:
+    from torch.utils.data import IterableDataset as _TorchIterableDataset
+except Exception:  # pragma: no cover - torch absence is handled by CLI/test importers
+    _TorchIterableDataset = object
 
 
 # ---------------------------------------------------------------------------------------------
@@ -307,12 +314,46 @@ def _stack_arrays(rows: list[dict[str, Any]], torch: Any) -> dict[str, Any]:
     }
 
 
-class SyntheticCourtIterableDataset:
+def _stack_arrays_numpy(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    import numpy as np
+
+    def stacked(key: str, dtype: Any) -> Any:
+        return np.stack([row[key] for row in rows]).astype(dtype)
+
+    return {
+        "image": stacked("image", "float32"),
+        "heatmaps": stacked("heatmaps", "float32"),
+        "heatmap_mask": stacked("heatmap_mask", "float32"),
+        "vis_target": stacked("vis_target", "float32"),
+        "seg_target": stacked("seg_target", "int64"),
+        "seg_mask": stacked("seg_mask", "float32"),
+    }
+
+
+def _tensorize_training_batch(batch: dict[str, Any], torch: Any) -> dict[str, Any]:
+    for key in ("image", "heatmaps", "heatmap_mask", "vis_target", "seg_target", "seg_mask"):
+        value = batch[key]
+        if not hasattr(value, "to"):
+            batch[key] = torch.from_numpy(value)
+    return batch
+
+
+def _identity_collate(sample: Any) -> Any:
+    return sample
+
+
+class SyntheticCourtIterableDataset(_TorchIterableDataset):
     """`torch.utils.data.IterableDataset` wrapper around `_iter_synthetic_samples` with
     per-worker seeding: each DataLoader worker (`torch.utils.data.get_worker_info()`) offsets
     `base_seed` by its worker id, so multi-worker loading never repeats the same stream and stays
     deterministic for a fixed `(base_seed, num_workers)` pair. Falls back to a single-process
-    stream (worker id 0) when used outside a DataLoader or with `num_workers=0`."""
+    stream (worker id 0) when used outside a DataLoader or with `num_workers=0`.
+
+    In ordinary sample mode it yields one converted sample at a time. In `batch_size` mode, used
+    by `run_training`, workers materialize full step batches. That preserves exact old trainer
+    sample parity: global training step `g` always uses synthetic seed `base_seed + g + 1`,
+    independent of how many DataLoader workers are active; workers only decide who prepares each
+    stamped step batch, and the training loop re-orders those batches before optimization."""
 
     def __init__(
         self,
@@ -324,7 +365,11 @@ class SyntheticCourtIterableDataset:
         sigma_px: float,
         force_fallback: bool,
         samples_per_epoch: int | None = None,
+        batch_size: int | None = None,
+        steps_per_epoch: int | None = None,
+        global_step_offset: int = 0,
     ) -> None:
+        super().__init__()
         self.config = config
         self.base_seed = base_seed
         self.model_width = model_width
@@ -332,12 +377,42 @@ class SyntheticCourtIterableDataset:
         self.sigma_px = sigma_px
         self.force_fallback = force_fallback
         self.samples_per_epoch = samples_per_epoch
+        self.batch_size = batch_size
+        self.steps_per_epoch = steps_per_epoch
+        self.global_step_offset = global_step_offset
 
     def __iter__(self) -> Iterator[dict[str, Any]]:
         from torch.utils.data import get_worker_info
 
         worker_info = get_worker_info()
         worker_id = 0 if worker_info is None else int(worker_info.id)
+        worker_count = 1 if worker_info is None else int(getattr(worker_info, "num_workers", 1))
+        if self.batch_size is not None:
+            if self.steps_per_epoch is None:
+                raise ValueError("steps_per_epoch is required when SyntheticCourtIterableDataset batch_size is set")
+            for local_step_index in range(worker_id, self.steps_per_epoch, worker_count):
+                global_step_index = self.global_step_offset + local_step_index
+                synthetic_seed = self.base_seed + global_step_index + 1
+                batch = materialize_synthetic_batch_arrays(
+                    config=self.config,
+                    seed=synthetic_seed,
+                    count=self.batch_size,
+                    model_width=self.model_width,
+                    model_height=self.model_height,
+                    sigma_px=self.sigma_px,
+                    force_fallback=self.force_fallback,
+                )
+                batch["loader_meta"] = {
+                    "global_step_index": local_step_index,
+                    "absolute_step_index": global_step_index,
+                    "synthetic_seed": synthetic_seed,
+                    "worker_id": worker_id,
+                    "worker_count": worker_count,
+                    "batch_size": self.batch_size,
+                }
+                yield batch
+            return
+
         seed = self.base_seed + worker_id
         produced = 0
         for sample in _iter_synthetic_samples(self.config, seed, force_fallback=self.force_fallback):
@@ -369,6 +444,35 @@ def materialize_synthetic_batch(
     reused-every-epoch held-out validation set (a fixed seed, generated once, never regenerated,
     so it is a valid stable validation set rather than freshly-sampled noise each epoch)."""
 
+    return _tensorize_training_batch(
+        materialize_synthetic_batch_arrays(
+            config=config,
+            seed=seed,
+            count=count,
+            model_width=model_width,
+            model_height=model_height,
+            sigma_px=sigma_px,
+            force_fallback=force_fallback,
+        ),
+        torch,
+    )
+
+
+def materialize_synthetic_batch_arrays(
+    *,
+    config: dict[str, Any] | None,
+    seed: int,
+    count: int,
+    model_width: int,
+    model_height: int,
+    sigma_px: float,
+    force_fallback: bool,
+) -> dict[str, Any]:
+    """Numpy-array variant of `materialize_synthetic_batch`.
+
+    DataLoader worker processes return numpy arrays instead of torch tensors so this lane does not
+    depend on PyTorch's shared-memory manager, which is disabled in some local sandboxes."""
+
     rows = []
     for sample in _iter_synthetic_samples(config, seed, force_fallback=force_fallback):
         rows.append(
@@ -382,7 +486,84 @@ def materialize_synthetic_batch(
         )
         if len(rows) >= count:
             break
-    return _stack_arrays(rows, torch)
+    return _stack_arrays_numpy(rows)
+
+
+def _resolve_synthetic_workers(requested_workers: int | None) -> int:
+    if requested_workers is None:
+        return max(0, min(8, os.cpu_count() or 1))
+    if isinstance(requested_workers, bool) or requested_workers < 0:
+        raise ValueError("--synthetic-workers must be a non-negative integer")
+    return int(requested_workers)
+
+
+def _make_synthetic_training_dataloader(
+    *,
+    config: dict[str, Any] | None,
+    base_seed: int,
+    batch_size: int,
+    steps_per_epoch: int,
+    global_step_offset: int,
+    model_width: int,
+    model_height: int,
+    sigma_px: float,
+    force_fallback: bool,
+    synthetic_workers: int,
+    torch: Any,
+) -> Any:
+    from torch.utils.data import DataLoader
+
+    if batch_size <= 0:
+        raise ValueError("--batch-size must be positive")
+    if steps_per_epoch <= 0:
+        raise ValueError("--steps-per-epoch must be positive")
+    workers = _resolve_synthetic_workers(synthetic_workers)
+    dataset = SyntheticCourtIterableDataset(
+        config=config,
+        base_seed=base_seed,
+        model_width=model_width,
+        model_height=model_height,
+        sigma_px=sigma_px,
+        force_fallback=force_fallback,
+        batch_size=batch_size,
+        steps_per_epoch=steps_per_epoch,
+        global_step_offset=global_step_offset,
+    )
+    kwargs: dict[str, Any] = {
+        "batch_size": None,
+        "collate_fn": _identity_collate,
+        "num_workers": workers,
+        "pin_memory": bool(torch.cuda.is_available()),
+        "persistent_workers": False,
+    }
+    if workers > 0:
+        kwargs["prefetch_factor"] = 2
+        kwargs["in_order"] = True
+    return DataLoader(dataset, **kwargs)
+
+
+def _iter_ordered_synthetic_batches(loader: Any, *, expected_steps: int) -> Iterator[dict[str, Any]]:
+    """Yield stamped step batches in local epoch order even when worker processes finish out of
+    order. This keeps optimization sample order equivalent to the old single-process loop while
+    allowing the expensive materialization work to happen inside DataLoader workers."""
+
+    import torch
+
+    next_step = 0
+    buffered: dict[int, dict[str, Any]] = {}
+    for batch in loader:
+        meta = batch.get("loader_meta") or {}
+        step_index = int(meta.get("global_step_index", -1))
+        if step_index < 0:
+            raise ValueError("synthetic DataLoader batch missing loader_meta.global_step_index")
+        buffered[step_index] = batch
+        while next_step in buffered:
+            yield _tensorize_training_batch(buffered.pop(next_step), torch)
+            next_step += 1
+            if next_step >= expected_steps:
+                return
+    if next_step != expected_steps:
+        raise RuntimeError(f"synthetic DataLoader produced {next_step}/{expected_steps} expected step batches")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -601,6 +782,121 @@ def _pck(ordered_values: list[float], threshold_px: float) -> float | None:
 
 
 # ---------------------------------------------------------------------------------------------
+# Encoder weight validation (local-only, no downloads)
+# ---------------------------------------------------------------------------------------------
+
+
+def _torchvision_resnet34_cached_weight_path() -> Path:
+    from torchvision.models import ResNet34_Weights
+
+    filename = Path(urlparse(ResNet34_Weights.IMAGENET1K_V1.url).path).name
+    torch_home = Path(os.environ.get("TORCH_HOME", Path.home() / ".cache" / "torch")).expanduser()
+    candidate = torch_home / "hub" / "checkpoints" / filename
+    if not candidate.is_file():
+        raise FileNotFoundError(
+            "encoder weights were requested as 'imagenet', but torchvision's resnet34 "
+            f"checkpoint is not locally cached at {candidate}. This lane does not download "
+            "weights. GPU lane download step: run torchvision's resnet34 ImageNet weight "
+            "materialization once in the target environment, then rerun this trainer with "
+            "--encoder-weights-path imagenet or the explicit cached .pth path."
+        )
+    return candidate
+
+
+def _extract_state_dict(payload: Any, *, path: Path) -> dict[str, Any]:
+    if isinstance(payload, dict) and "state_dict" in payload and "conv1.weight" not in payload:
+        payload = payload["state_dict"]
+    if not isinstance(payload, dict):
+        raise ValueError(f"encoder weights were requested but {path} is not a PyTorch state dict")
+    return payload
+
+
+def _validate_resnet34_encoder_checkpoint(path: Path) -> None:
+    import torch
+    from torchvision.models import resnet34
+
+    state = _extract_state_dict(torch.load(str(path), map_location="cpu", weights_only=True), path=path)
+    expected = resnet34(weights=None).state_dict()
+    expected_backbone = {key: value for key, value in expected.items() if not key.startswith("fc.")}
+    provided_non_fc = {key: value for key, value in state.items() if not key.startswith("fc.")}
+    missing = sorted(key for key in expected_backbone if key not in provided_non_fc)
+    unexpected = sorted(key for key in provided_non_fc if key not in expected_backbone)
+    shape_mismatch = sorted(
+        key
+        for key, expected_tensor in expected_backbone.items()
+        if key in provided_non_fc and tuple(provided_non_fc[key].shape) != tuple(expected_tensor.shape)
+    )
+    if missing or unexpected or shape_mismatch:
+        raise ValueError(
+            "encoder weights were requested but "
+            f"{path} does not match expected torchvision resnet34 backbone "
+            f"(missing={missing}, unexpected={unexpected}, shape_mismatch={shape_mismatch})"
+        )
+
+
+def _resolve_encoder_weights_path(requested: str | Path | None) -> Path | None:
+    if requested is None:
+        return None
+    text = str(requested)
+    if text.strip().lower() == "imagenet":
+        path = _torchvision_resnet34_cached_weight_path()
+    else:
+        path = Path(text).expanduser()
+    if not path.is_file():
+        raise FileNotFoundError(
+            "encoder weights were requested but "
+            f"{path} does not exist. Omit --encoder-weights-path for explicit random init, pass "
+            "a local torchvision resnet34 .pth checkpoint, or pass 'imagenet' only after the "
+            "checkpoint is already cached locally."
+        )
+    _validate_resnet34_encoder_checkpoint(path)
+    return path
+
+
+def _checkpoint_path(out_dir: Path, epoch: int) -> Path:
+    return out_dir / f"court_model_v2_epoch_{epoch:04d}.pt"
+
+
+def _save_training_checkpoint(
+    *,
+    path: Path,
+    model: Any,
+    optimizer: Any,
+    scheduler: Any,
+    scaler: Any,
+    epoch: int,
+    args: argparse.Namespace,
+    torch: Any,
+) -> None:
+    torch.save(
+        {
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "scheduler": scheduler.state_dict(),
+            "scaler": scaler.state_dict(),
+            "epoch": epoch,
+            "image_size": [args.image_width, args.image_height],
+            "model_architecture": COURT_UNET_V2_ARCHITECTURE,
+            "network_architecture": COURT_UNET_V2_ARCHITECTURE,
+            "keypoint_names": KEYPOINT_NAMES,
+            "seg_class_names": list(COURT_UNET_V2_SEG_CLASS_NAMES),
+            "heatmap_stride": COURT_UNET_V2_HEATMAP_STRIDE,
+            "args": {key: str(value) for key, value in vars(args).items()},
+        },
+        path,
+    )
+
+
+def _prune_epoch_checkpoints(out_dir: Path, *, keep_last: int) -> None:
+    if keep_last < 0:
+        raise ValueError("--keep-last-checkpoints must be non-negative")
+    checkpoints = sorted(out_dir.glob("court_model_v2_epoch_*.pt"))
+    stale = checkpoints if keep_last == 0 else checkpoints[:-keep_last]
+    for path in stale:
+        path.unlink()
+
+
+# ---------------------------------------------------------------------------------------------
 # Training entry point
 # ---------------------------------------------------------------------------------------------
 
@@ -611,6 +907,9 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     torch.manual_seed(args.seed)
     rng = random.Random(args.seed)
     device = torch.device(args.device if (args.device != "cuda" or torch.cuda.is_available()) else "cpu")
+    synthetic_workers = _resolve_synthetic_workers(args.synthetic_workers)
+    encoder_weights_path = _resolve_encoder_weights_path(args.encoder_weights_path)
+    args.out.mkdir(parents=True, exist_ok=True)
 
     synthetic_config: dict[str, Any] = {"image_size": [args.image_width, args.image_height]}
     if args.synthetic_scenario:
@@ -631,22 +930,25 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     model = make_court_keypoint_heatmap_model(
         KEYPOINT_COUNT,
         architecture=COURT_UNET_V2_ARCHITECTURE,
-        encoder_weights_path=args.encoder_weights_path,
+        encoder_weights_path=encoder_weights_path,
     ).to(device)
     param_count = int(sum(p.numel() for p in model.parameters()))
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(1, args.epochs))
+    amp_enabled = bool(args.amp) and device.type == "cuda"
+    scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled)
     start_epoch = 0
-    if args.resume is not None and Path(args.resume).is_file():
+    if args.resume is not None:
+        if not Path(args.resume).is_file():
+            raise FileNotFoundError(f"--resume checkpoint does not exist: {args.resume}")
         checkpoint = torch.load(str(args.resume), map_location="cpu", weights_only=False)
         model.load_state_dict(checkpoint["model"])
         optimizer.load_state_dict(checkpoint["optimizer"])
         scheduler.load_state_dict(checkpoint["scheduler"])
+        if "scaler" in checkpoint:
+            scaler.load_state_dict(checkpoint["scaler"])
         start_epoch = int(checkpoint.get("epoch", 0))
-
-    amp_enabled = bool(args.amp) and device.type == "cuda"
-    scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled)
 
     # ONE-TIME, fixed-seed held-out set (never regenerated, never trained on): the CPU smoke
     # acceptance proof and every mid-training eval score against this exact same batch.
@@ -667,23 +969,31 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
 
     history: list[dict[str, Any]] = []
     epoch_wall_times: list[float] = []
-    train_seed_offset = 0
+    saved_epoch_checkpoints: list[str] = []
     for epoch in range(start_epoch, args.epochs):
         epoch_start = time.time()
         model.train()
         epoch_losses: list[float] = []
-        for _ in range(args.steps_per_epoch):
-            train_seed_offset += 1
-            train_batch = materialize_synthetic_batch(
-                config=synthetic_config,
-                seed=args.seed + train_seed_offset,
-                count=args.batch_size,
-                model_width=args.image_width,
-                model_height=args.image_height,
-                sigma_px=args.heatmap_sigma_px,
-                force_fallback=args.synthetic_fallback,
-                torch=torch,
-            )
+        synthetic_loader = _make_synthetic_training_dataloader(
+            config=synthetic_config,
+            base_seed=args.seed,
+            batch_size=args.batch_size,
+            steps_per_epoch=args.steps_per_epoch,
+            global_step_offset=epoch * args.steps_per_epoch,
+            model_width=args.image_width,
+            model_height=args.image_height,
+            sigma_px=args.heatmap_sigma_px,
+            force_fallback=args.synthetic_fallback,
+            synthetic_workers=synthetic_workers,
+            torch=torch,
+        )
+        last_loader_meta: dict[str, Any] | None = None
+        first_loader_meta: dict[str, Any] | None = None
+        for train_batch in _iter_ordered_synthetic_batches(synthetic_loader, expected_steps=args.steps_per_epoch):
+            loader_meta = dict(train_batch.get("loader_meta") or {})
+            if first_loader_meta is None:
+                first_loader_meta = loader_meta
+            last_loader_meta = loader_meta
             optimizer.zero_grad(set_to_none=True)
             with torch.autocast(device_type=device.type, enabled=amp_enabled):
                 loss, components = _compute_batch_loss(
@@ -723,6 +1033,23 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             )
             avg_epoch_time = sum(epoch_wall_times) / len(epoch_wall_times)
             remaining_epochs = args.epochs - (epoch + 1)
+            checkpoint_epoch_path: Path | None = None
+            if args.checkpoint_every_eval:
+                checkpoint_epoch_path = _checkpoint_path(args.out, epoch + 1)
+                _save_training_checkpoint(
+                    path=checkpoint_epoch_path,
+                    model=model,
+                    optimizer=optimizer,
+                    scheduler=scheduler,
+                    scaler=scaler,
+                    epoch=epoch + 1,
+                    args=args,
+                    torch=torch,
+                )
+                _prune_epoch_checkpoints(args.out, keep_last=args.keep_last_checkpoints)
+                saved_epoch_checkpoints = [str(path) for path in sorted(args.out.glob("court_model_v2_epoch_*.pt"))]
+            first_seed = None if first_loader_meta is None else first_loader_meta.get("synthetic_seed")
+            last_seed = None if last_loader_meta is None else last_loader_meta.get("synthetic_seed")
             row = {
                 "epoch": epoch + 1,
                 "train_loss_mean": sum(epoch_losses) / len(epoch_losses),
@@ -730,6 +1057,10 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                 "lr": scheduler.get_last_lr()[0],
                 "epoch_wall_time_s": epoch_wall_times[-1],
                 "eta_s": avg_epoch_time * remaining_epochs,
+                "synthetic_worker_count": 1 if last_loader_meta is None else last_loader_meta.get("worker_count", 1),
+                "synthetic_seed_first": first_seed,
+                "synthetic_seed_last": last_seed,
+                "checkpoint": None if checkpoint_epoch_path is None else str(checkpoint_epoch_path),
                 **eval_result,
             }
             history.append(row)
@@ -756,23 +1087,16 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             model, real_val_batch, device=device, heatmap_stride=COURT_UNET_V2_HEATMAP_STRIDE, torch=torch
         )
 
-    args.out.mkdir(parents=True, exist_ok=True)
     checkpoint_path = args.out / "court_model_v2.pt"
-    torch.save(
-        {
-            "model": model.state_dict(),
-            "optimizer": optimizer.state_dict(),
-            "scheduler": scheduler.state_dict(),
-            "epoch": args.epochs,
-            "image_size": [args.image_width, args.image_height],
-            "model_architecture": COURT_UNET_V2_ARCHITECTURE,
-            "network_architecture": COURT_UNET_V2_ARCHITECTURE,
-            "keypoint_names": KEYPOINT_NAMES,
-            "seg_class_names": list(COURT_UNET_V2_SEG_CLASS_NAMES),
-            "heatmap_stride": COURT_UNET_V2_HEATMAP_STRIDE,
-            "args": {key: str(value) for key, value in vars(args).items()},
-        },
-        checkpoint_path,
+    _save_training_checkpoint(
+        path=checkpoint_path,
+        model=model,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        scaler=scaler,
+        epoch=args.epochs,
+        args=args,
+        torch=torch,
     )
 
     gate_value = after.get("pck_at_5px")
@@ -815,11 +1139,22 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "epochs": args.epochs,
             "steps_per_epoch": args.steps_per_epoch,
             "batch_size": args.batch_size,
+            "synthetic_loader": "SyntheticCourtIterableDataset+DataLoader",
+            "synthetic_workers": synthetic_workers,
+            "synthetic_stream_mapping": (
+                "absolute_step_index g uses synthetic seed seed+g+1; worker w prepares local "
+                "epoch steps w,w+num_workers,...; batches are consumed in global_step_index order"
+            ),
             "amp": amp_enabled,
             "real_train_row_count": len(real_train_rows),
             "real_fraction": real_fraction,
             "synthetic_fallback": bool(args.synthetic_fallback or _iter_synthetic_court_samples is None),
             "geometric_loss_weight": args.geometric_loss_weight,
+            "checkpoint_every_eval": bool(args.checkpoint_every_eval),
+            "keep_last_checkpoints": args.keep_last_checkpoints,
+            "epoch_checkpoints": saved_epoch_checkpoints,
+            "encoder_weights_requested": None if args.encoder_weights_path is None else str(args.encoder_weights_path),
+            "encoder_weights_path": None if encoder_weights_path is None else str(encoder_weights_path),
         },
         "holdout_artifacts": [],
         "note": "CAL-MODEL v2 court_unet_v2 trainer run; not a CAL3 promotion (see gate.note).",
@@ -877,7 +1212,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--image-width", type=int, default=640)
     parser.add_argument("--image-height", type=int, default=360)
-    parser.add_argument("--encoder-weights-path", type=Path, default=None)
+    parser.add_argument(
+        "--encoder-weights-path",
+        default=None,
+        help=(
+            "Optional local torchvision resnet34 state dict path, or 'imagenet' to use the "
+            "locally cached torchvision ResNet34_Weights.IMAGENET1K_V1 file. This trainer never "
+            "downloads weights; missing or shape-mismatched requested weights fail loudly."
+        ),
+    )
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--amp", action="store_true")
@@ -909,6 +1252,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--synthetic-scenario", action="append", default=None)
     parser.add_argument(
+        "--synthetic-workers",
+        type=int,
+        default=None,
+        help="DataLoader workers for synthetic training batches. Defaults to min(8, os.cpu_count()). Use 0 for inline loading.",
+    )
+    parser.add_argument(
         "--real-root",
         type=Path,
         action="append",
@@ -920,6 +1269,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--real-batch-size", type=int, default=4)
     parser.add_argument("--real-val-samples", type=int, default=8)
     parser.add_argument("--eval-every", type=int, default=1)
+    parser.add_argument(
+        "--checkpoint-every-eval",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Write court_model_v2_epoch_XXXX.pt at every eval epoch so preemption does not lose all progress.",
+    )
+    parser.add_argument(
+        "--keep-last-checkpoints",
+        type=int,
+        default=3,
+        help="Keep only the newest N periodic epoch checkpoints. The final court_model_v2.pt is always written.",
+    )
     parser.add_argument("--resume", type=Path, default=None)
     parser.add_argument("--device", default="cuda")
     args = parser.parse_args(argv)
