@@ -197,3 +197,13 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
   (ckpt banked); 1750 re-score prepped not dispatched. AUG-ATTRIBUTION ANSWERED: D(no-aug)
   0.6241 F1/0.3554 hFP vs A(aug) 0.6152/0.2506 — aug = the hFP MITIGATION (labels alone drive
   hFP +57.6% rel; aug pulls back 29.5%). Recipe ruling: occlusion-aug STAYS.
+- pickleball-h100-w7crit (H100 a3 SPOT from w6close snapshot) — PROVISIONING (Sonnet lane
+  w7_critique_20260709, self-tearing, owner-waiting priority). OWNER CRITIQUE E2E: owner's own
+  IMG_9545.mov (3m33s/30fps/223MB, never processed) COLD through the full rev-9 production stack;
+  overrides per owner order: --body-skeleton-stride 1 (no frame skipping) + max mesh byte budget;
+  fresh clip id, zero banked knowledge (verified). Deliverable: full viewer-servable world pulled
+  to Mac + provenance report. Concurrency 2/4 with w7speed. ~1-1.5h, ~$0.6-6.5.
+- pickleball-h100-w7speed (H100 a3 SPOT from w6close snapshot) — RUNNING (Sonnet lane
+  w7_speedgate_20260709, dispatched ~09:5x post-reauth): ARM1 clean-room timing (bars now
+  INFORMATIONAL per owner morning ruling) + ARM2 corrected GATE-1b numeric + ARM3 w7close
+  template re-bake (2 artifacts + 1750 corpus baked) + post-timing critique-world pull (scope add).
