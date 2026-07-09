@@ -438,6 +438,17 @@ pickleball-fleet-snap-20260709-w7close bakes all 3 manifest-pinned artifact gaps
 ultralytics (old template could not run production tracking — invalidated-and-discarded 6 fast
 timing runs prove the gate checks work). Evidence: runs/lanes/w7_speedgate_20260709/results.json.
 
+**Dated evidence note (2026-07-09 late, OWNER PRIORITY RULING + research): ball 2D->3D lift.** Owner
+live-ruled this the top ball priority (pb.vision achieves great monocular 3D on the owner's own
+uploaded clips = existence proof). 39-agent research sweep + rulings banked at
+runs/research_ball3d_20260709/{SYNTHESIS.md,RULINGS.md}: pb.vision runs our architecture class
+([CORROBORATED] first-party) — the gap is robustness engineering. Adopt sequence: fail-closed overlay
++ UKF graceful fallback -> TT3D joint-anchor-search inside the existing scipy fit -> BlurBall/audio
+anchor boosters -> both-ends pinning + inlier pass -> DP segmentation. Owner decisions surfaced:
+Magnus kill-list revisit (new first-party evidence), learned lift-first (training decision). Owner
+action available: pb.vision in-app raw "cv" JSON export on our clips = the benchmark unlock. Feeds
+NS-03 BALL / NS-04 scope; NS queue order otherwise unchanged.
+
 ### Owner-only asks
 
 | Rank | Ask | Why | Safe default while waiting |
