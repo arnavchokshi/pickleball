@@ -74,6 +74,16 @@ Court note: P4-0 court-profile library is ruled ahead of any 3rd auto-find retra
 re-confirmation with the CALV1 evidence (244.3px Burlington / 212.6px Wolverine, pool containment
 0/8 and 2/8). CALV1 owns detailed court section/board edits.
 
+## OWNER RULINGS LANDED AFTER REFRESH (2026-07-09 — bind wave-7 execution)
+- GHOST MESHES RULED: human_review-tier frames get meshes with ghost/estimated styling (never hidden,
+  never solid). Wave-7 lane pair: pipeline mesh-index tier provenance + viewer ghost styling
+  (web/replay — re-derive fences at boot; CALV1 session closed).
+- 60FPS CAPTURE + STRIDE-2 SKELETON: app forces 60fps; BODY default stride-2 (30Hz); ball stays
+  full-rate. Cadence = configurable best_stack-class defaults per stage.
+- SPEED-CADENCE DOCTRINE (standing): accuracy first, but push speed continuously; reducing
+  calculation frequency is a sanctioned lever; every stage cadence is a tunable knob, never
+  hardcoded; retune as technologies/evidence land.
+
 ## What wave-6 banked
 
 - Owner labeling flywheel operational end to end: label -> export -> auto-ingest -> deterministic
