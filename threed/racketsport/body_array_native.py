@@ -131,6 +131,9 @@ def body_mesh_export_parts_from_smpl_motion_view(
                 },
                 "reasons": list(scheduled_record.get("reasons", [])) if scheduled_record else [],
             }
+            trust_badge = _mesh_export._trust_badge_for_scheduled_record(scheduled_record)
+            if trust_badge is not None:
+                frame_payload["trust_badge"] = trust_badge
             joints_world = _mesh_export._vector3_list(frame.get("joints_world", []))
             if joints_world:
                 frame_payload["joints_world"] = joints_world

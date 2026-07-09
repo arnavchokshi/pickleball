@@ -75,6 +75,44 @@ def _dense_tracks_payload(*, frame_count: int = 10, fps: float = 10.0) -> dict:
     }
 
 
+def _human_review_tracks_payload(*, frame_count: int = 3, fps: float = 10.0) -> dict:
+    return {
+        "schema_version": 1,
+        "fps": fps,
+        "players": [
+            {
+                "id": 1,
+                "side": "near",
+                "role": "left",
+                "frames": [
+                    {
+                        "t": frame_idx / fps,
+                        "bbox": [100.0, 100.0, 200.0, 300.0],
+                        "world_xy": [-1.0, -3.0 + 0.01 * frame_idx],
+                        "conf": 0.92,
+                    }
+                    for frame_idx in range(frame_count)
+                ],
+            },
+            {
+                "id": 2,
+                "side": "near",
+                "role": "right",
+                "frames": [
+                    {
+                        "t": frame_idx / fps,
+                        "bbox": [500.0, 100.0, 600.0, 300.0],
+                        "world_xy": [1.0, -3.0 + 0.01 * frame_idx],
+                        "conf": 0.9,
+                    }
+                    for frame_idx in range(frame_count)
+                ],
+            },
+        ],
+        "rally_spans": [{"t0": 0.0, "t1": (frame_count - 1) / fps}],
+    }
+
+
 def _ball_payload() -> dict:
     return {
         "schema_version": 1,
@@ -164,7 +202,7 @@ def _trust_review_fields(plan: dict) -> dict:
     }
 
 
-def test_frame_compute_plan_img1605_uses_non_promotional_mesh_fallback_for_all_manual_review() -> None:
+def test_frame_compute_plan_img1605_emits_preview_ghost_mesh_for_all_manual_review() -> None:
     root = _wave2_freshworlds_clip_root("img1605/owner_IMG_1605_8a193402780b")
     baseline = json.loads((root / "frame_compute_plan.json").read_text(encoding="utf-8"))
 
@@ -173,7 +211,7 @@ def test_frame_compute_plan_img1605_uses_non_promotional_mesh_fallback_for_all_m
     assert baseline["mesh_coverage_policy"]["eligible_mesh_frame_count"] == 0
     assert baseline["mesh_coverage_policy"]["selected_mesh_frame_count"] == 0
     assert baseline["summary"]["human_review_frame_count"] == 297
-    assert plan["mesh_coverage_policy"]["eligible_mesh_frame_count"] == 0
+    assert plan["mesh_coverage_policy"]["eligible_mesh_frame_count"] == 243
     assert plan["mesh_coverage_policy"]["selected_mesh_frame_count"] == 100
     assert plan["mesh_coverage_policy"]["uniform_selected_frame_count"] == 100
     assert plan["mesh_coverage_policy"]["uniform_stride_frames"] == 3
@@ -184,12 +222,7 @@ def test_frame_compute_plan_img1605_uses_non_promotional_mesh_fallback_for_all_m
         "swing": 0,
         "uniform_fill": 100,
     }
-    assert plan["mesh_coverage_policy"]["mesh_fallback"] == {
-        "engaged": True,
-        "reason": "eligible_zero_all_manual_review",
-        "selected": 100,
-        "policy": "uniform_stride",
-    }
+    assert "mesh_fallback" not in plan["mesh_coverage_policy"]
     assert plan["summary"]["world_mesh_frame_count"] == 100
     assert plan["summary"]["deep_mesh_window_count"] == 100
     assert len(plan["deep_mesh_windows"]) == 100
@@ -206,7 +239,8 @@ def test_frame_compute_plan_img1605_uses_non_promotional_mesh_fallback_for_all_m
         by_idx[index]["target_representation"] == "manual_review_required"
         for index in selected_indexes
     )
-    assert _trust_review_fields(plan) == _trust_review_fields(baseline)
+    assert {by_idx[index].get("trust_badge") for index in selected_indexes} == {"preview"}
+    assert plan["summary"]["human_review_frame_count"] == baseline["summary"]["human_review_frame_count"]
 
 
 @pytest.mark.parametrize(
@@ -217,14 +251,22 @@ def test_frame_compute_plan_img1605_uses_non_promotional_mesh_fallback_for_all_m
         "outdoor/outdoor_webcam_iynbd_1500_long_high_baseline",
     ],
 )
-def test_frame_compute_plan_mesh_fallback_does_not_change_normal_wave2_plans(relative_clip_path: str) -> None:
+def test_frame_compute_plan_ghost_mesh_keeps_wave2_selected_budget(relative_clip_path: str) -> None:
     root = _wave2_freshworlds_clip_root(relative_clip_path)
     baseline = json.loads((root / "frame_compute_plan.json").read_text(encoding="utf-8"))
 
     plan = build_frame_compute_plan(**_wave2_frame_plan_inputs(root))
 
     assert "mesh_fallback" not in plan["mesh_coverage_policy"]
-    assert plan == baseline
+    assert plan["mesh_coverage_policy"]["selected_mesh_frame_count"] == baseline["mesh_coverage_policy"]["selected_mesh_frame_count"]
+    assert plan["summary"]["world_mesh_frame_count"] == baseline["summary"]["world_mesh_frame_count"]
+    assert plan["mesh_coverage_policy"]["eligible_mesh_frame_count"] >= baseline["mesh_coverage_policy"]["eligible_mesh_frame_count"]
+
+    selected = [frame for frame in plan["frames"] if frame["tier_rationale"]["mesh_selected"]]
+    ghost_selected = [frame for frame in selected if frame["recommended_tier"] == "human_review"]
+    assert all(frame["target_representation"] == "manual_review_required" for frame in ghost_selected)
+    assert {frame.get("trust_badge") for frame in ghost_selected} <= {"preview"}
+    assert all("trust_badge" not in frame for frame in selected if frame["recommended_tier"] != "human_review")
 
 
 def test_frame_compute_plan_prioritizes_contact_low_confidence_and_ball_uncertainty() -> None:
@@ -895,6 +937,33 @@ def test_frame_compute_plan_byte_budget_truncates_without_reordering_priority() 
     assert by_idx[7]["tier_rationale"]["mesh_selected"] is False
     assert plan["summary"]["mesh_byte_budget_bytes"] == policy["mesh_byte_budget_bytes"]
     assert plan["summary"]["selected_estimated_mesh_bytes"] == policy["selected_estimated_mesh_bytes"]
+
+
+def test_frame_compute_plan_byte_budget_counts_human_review_ghost_frames_like_eligible_mesh() -> None:
+    budget_mib = (4 * DEFAULT_MESH_ESTIMATED_BYTES_PER_PLAYER_FRAME) / (1024 * 1024)
+
+    plan = build_frame_compute_plan(
+        _human_review_tracks_payload(frame_count=3),
+        expected_players=4,
+        mesh_coverage_mode="uniform",
+        mesh_byte_budget_mib=budget_mib,
+    )
+
+    policy = plan["mesh_coverage_policy"]
+    selected = [frame for frame in plan["frames"] if frame["tier_rationale"]["mesh_selected"]]
+
+    assert policy["mesh_budget_policy"] == "byte_budget"
+    assert policy["eligible_mesh_frame_count"] == 3
+    assert policy["estimated_all_eligible_mesh_frame_count"] == 3
+    assert policy["selected_mesh_frame_count"] == 2
+    assert policy["selected_estimated_mesh_bytes"] == 4 * DEFAULT_MESH_ESTIMATED_BYTES_PER_PLAYER_FRAME
+    assert policy["selected_estimated_mesh_bytes"] <= policy["mesh_byte_budget_bytes"]
+    assert len(selected) == 2
+    assert {frame["recommended_tier"] for frame in selected} == {"human_review"}
+    assert {frame["target_representation"] for frame in selected} == {"manual_review_required"}
+    assert {frame.get("trust_badge") for frame in selected} == {"preview"}
+    assert plan["summary"]["human_review_frame_count"] == 3
+    assert plan["summary"]["world_mesh_frame_count"] == 2
 
 
 def test_frame_compute_plan_ball_aware_rejects_invalid_thresholds() -> None:

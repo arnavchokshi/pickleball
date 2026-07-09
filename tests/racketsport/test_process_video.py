@@ -2117,7 +2117,7 @@ def test_pipeline_blocks_wrist_cues_before_body_without_pose_fallback(
     assert by_stage["body"]["status"] == "ran"
 
 
-def test_events_adds_preview_demo_mesh_window_when_auto_court_has_no_contacts(
+def test_events_uses_preview_ghost_mesh_when_auto_court_has_no_contacts(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -2145,10 +2145,14 @@ def test_events_adds_preview_demo_mesh_window_when_auto_court_has_no_contacts(
     outcome = pipeline._stage_events()
 
     plan = json.loads((options.clip_dir / "frame_compute_plan.json").read_text(encoding="utf-8"))
+    selected = [frame for frame in plan["frames"] if frame["tier_rationale"]["mesh_selected"]]
+    ghost_selected = [frame for frame in selected if frame["recommended_tier"] == "human_review"]
+
     assert outcome.status == "ran"
     assert plan["summary"]["deep_mesh_frame_count"] > 0
-    assert plan["deep_mesh_windows"][0]["reason_counts"]["auto_court_preview_demo_mesh"] > 0
-    assert any("auto-court preview demo mesh" in note for note in outcome.notes)
+    assert ghost_selected
+    assert {frame["target_representation"] for frame in ghost_selected} == {"manual_review_required"}
+    assert {frame.get("trust_badge") for frame in ghost_selected} == {"preview"}
 
 
 def _events_selected_payload() -> dict[str, Any]:

@@ -14,6 +14,7 @@ from typing import Any, Mapping
 from pydantic import ValidationError
 
 from .schemas import BallTrack, ContactWindows, Tracks, validate_artifact_file
+from .trust_band import TRUST_BADGES
 
 
 SCHEMA_VERSION = 1
@@ -25,6 +26,7 @@ MESH_COVERAGE_MODES = ("contact_only", "uniform", "hybrid", "ball_aware")
 CONTACT_BOOST_SELECTION_REASON = "contact_boost"
 UNIFORM_MESH_SELECTION_REASON = "uniform_mesh_coverage"
 MESH_FALLBACK_REASON_ELIGIBLE_ZERO_ALL_MANUAL_REVIEW = "eligible_zero_all_manual_review"
+HUMAN_REVIEW_GHOST_TRUST_BADGE = "preview"
 
 # --- ball-aware tier-1 (SAM-3D mesh) scheduling ---------------------------
 #
@@ -691,7 +693,6 @@ def _apply_mesh_coverage_policy(
         int(frame["frame_idx"])
         for frame in frames
         if int(frame.get("active_players", 0)) > 0
-        and frame.get("target_representation") != "manual_review_required"
         and _frame_in_rally_spans(frame, tracks_obj=tracks_obj)
     ]
     eligible_index_set = set(eligible_indexes)
@@ -741,7 +742,9 @@ def _apply_mesh_coverage_policy(
                 selection_reasons.append(boost_reason)
             if frame_idx in uniform_selected:
                 selection_reasons.append(UNIFORM_MESH_SELECTION_REASON)
-            if mesh_fallback is None or frame_idx not in uniform_selected:
+            if _is_human_review_mesh_frame(frame, base_tier=base_tier, base_representation=base_representation):
+                _mark_human_review_frame_for_ghost_mesh(frame)
+            elif mesh_fallback is None or frame_idx not in uniform_selected:
                 _promote_frame_to_mesh(frame, selection_reasons=selection_reasons)
         else:
             _restore_non_selected_tier(
@@ -871,6 +874,23 @@ def _select_mesh_indexes_for_budget(
                 )
             )
     return contact_selected, uniform_selected, mesh_fallback
+
+
+def _is_human_review_mesh_frame(frame: Mapping[str, Any], *, base_tier: str, base_representation: str) -> bool:
+    return (
+        base_tier == "human_review"
+        or base_representation == "manual_review_required"
+        or frame.get("recommended_tier") == "human_review"
+        or frame.get("target_representation") == "manual_review_required"
+    )
+
+
+def _mark_human_review_frame_for_ghost_mesh(frame: dict[str, Any]) -> None:
+    if HUMAN_REVIEW_GHOST_TRUST_BADGE not in TRUST_BADGES:
+        raise ValueError("human_review ghost trust badge is not in trust_band.TRUST_BADGES")
+    frame["recommended_tier"] = "human_review"
+    frame["target_representation"] = "manual_review_required"
+    frame["trust_badge"] = HUMAN_REVIEW_GHOST_TRUST_BADGE
 
 
 def _frame_count_budget_from_mesh_byte_budget(
@@ -1067,9 +1087,11 @@ def _restore_non_selected_tier(
             for target in frame.get("player_targets", [])
             if isinstance(target, Mapping)
         ]
+        frame.pop("trust_badge", None)
         return
     frame["recommended_tier"] = base_tier
     frame["target_representation"] = base_representation
+    frame.pop("trust_badge", None)
 
 
 def _demote_player_target(target: Mapping[str, Any], *, tier: str, representation: str) -> dict[str, Any]:

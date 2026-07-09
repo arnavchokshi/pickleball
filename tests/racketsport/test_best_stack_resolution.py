@@ -41,6 +41,34 @@ def _tracks_payload() -> dict[str, Any]:
     }
 
 
+def _human_review_tracks_payload() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "fps": 30.0,
+        "players": [
+            {
+                "id": 1,
+                "side": "near",
+                "role": "left",
+                "frames": [
+                    {"t": 0.0, "bbox": [100.0, 100.0, 200.0, 300.0], "world_xy": [-1.0, -3.0], "conf": 0.9},
+                    {"t": 1.0 / 30.0, "bbox": [102.0, 100.0, 202.0, 300.0], "world_xy": [-1.0, -2.9], "conf": 0.9},
+                ],
+            },
+            {
+                "id": 2,
+                "side": "near",
+                "role": "right",
+                "frames": [
+                    {"t": 0.0, "bbox": [500.0, 100.0, 600.0, 300.0], "world_xy": [1.0, -3.0], "conf": 0.9},
+                    {"t": 1.0 / 30.0, "bbox": [502.0, 100.0, 602.0, 300.0], "world_xy": [1.0, -2.9], "conf": 0.9},
+                ],
+            },
+        ],
+        "rally_spans": [],
+    }
+
+
 def _contact_windows_payload() -> dict[str, Any]:
     return {
         "schema_version": 1,
@@ -246,3 +274,33 @@ def test_events_before_frames_makes_cold_mesh_plan_contact_dense(
     assert plan["mesh_coverage_policy"]["mesh_byte_budget_mib"] == 300.0
     assert plan["mesh_coverage_policy"]["contact_selected_frame_count"] > 0
     assert plan["mesh_coverage_policy"]["ball_aware_trigger_source_counts"]["events"] > 0
+
+
+def test_process_video_default_events_plan_emits_human_review_ghost_mesh_badges(
+    tmp_path: Path,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = process_video.PipelineOptions(
+        video=video,
+        clip="clip",
+        run_dir=tmp_path / "run",
+        max_players=4,
+        no_gpu=False,
+        skip_audio=True,
+    )
+    pipeline = process_video.ProcessVideoPipeline(options)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "tracks.json", _human_review_tracks_payload())
+
+    outcome = pipeline._stage_events()
+    plan = json.loads((options.clip_dir / "frame_compute_plan.json").read_text(encoding="utf-8"))
+    selected = [frame for frame in plan["frames"] if frame["tier_rationale"]["mesh_selected"]]
+
+    assert outcome.status == "ran"
+    assert plan["mesh_coverage_policy"]["mesh_budget_policy"] == "byte_budget"
+    assert plan["mesh_coverage_policy"]["eligible_mesh_frame_count"] == 2
+    assert plan["mesh_coverage_policy"]["selected_mesh_frame_count"] == 2
+    assert {frame["recommended_tier"] for frame in selected} == {"human_review"}
+    assert {frame["target_representation"] for frame in selected} == {"manual_review_required"}
+    assert {frame.get("trust_badge") for frame in selected} == {"preview"}

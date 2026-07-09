@@ -2246,6 +2246,7 @@ class BodyMeshFrame(BaseModel):
     joints_world: list[Vector3] = Field(default_factory=list)
     joint_conf: list[float] = Field(default_factory=list)
     reasons: list[str] = Field(default_factory=list)
+    trust_badge: Literal["verified", "preview", "low_confidence"] | None = None
 
     @field_validator("mesh_faces")
     @classmethod

@@ -1,0 +1,93 @@
+{
+  "objective_result": "PASS",
+  "acceptance": [
+    {
+      "metric": "1. Body mesh frame trust_badge schema/export/index round-trip",
+      "baseline": "BodyMesh frames and body_mesh_index frames had no optional per-frame trust_badge field; present extra fields would drift against the schema.",
+      "after": "BodyMesh accepts optional trust_badge values from trust_band.py vocabulary, legacy absent-field payloads still validate, body_mesh_export emits preview for human_review scheduled frames, preserves verified, and body_mesh_index round-trips the field.",
+      "target": "Optional trust_badge with verified | preview | low_confidence vocabulary round-trips without breaking old artifacts.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "2. human_review-tier mesh emission through process_video",
+      "baseline": "human_review/manual_review_required frames were excluded from mesh eligibility and skipped from BODY mesh scheduling.",
+      "after": "ProcessVideoPipeline events stage selects human_review frames into the byte-budget mesh set and writes trust_badge=preview on those selected frame_compute_plan records; process_video auto-court/no-contact path also emits preview ghost mesh records.",
+      "target": "human_review-tier frames are emitted as ghost/estimated mesh candidates, never hidden or solid, through scripts/racketsport/process_video.py plumbing.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "3. Verified/legacy behavior unchanged",
+      "baseline": "Non-human-review mesh frames did not carry a trust_badge and legacy payloads omitted the field.",
+      "after": "Explicit verified trust_badge values are preserved, legacy absent trust_badge stays absent/valid, and non-human-review selected frames are not force-badged by the eligibility change.",
+      "target": "verified frames unchanged; absent-field back-compat preserved.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "4. Byte-budget interaction",
+      "baseline": "human_review ghost frames were not counted as eligible mesh frames because they were excluded before byte-budget selection.",
+      "after": "Byte-budget test records eligible_mesh_frame_count=3, selected_mesh_frame_count=2, selected_estimated_mesh_bytes within mesh_byte_budget_bytes, and both selected human_review frames carry trust_badge=preview.",
+      "target": "Ghost frames count like any other eligible mesh frame; no silent tier re-weighting.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "5. BEST-STACK DELTA",
+      "baseline": "configs/racketsport/best_stack.json had no wired-default entry for human_review ghost mesh emission; mesh.tier_eligibility_raise remained pending.",
+      "after": "best_stack revision 6 adds mesh.human_review_ghost_emission as WIRED_DEFAULT with trust_badge=preview and counts_against_byte_budget=true; mesh.tier_eligibility_raise remains PENDING and 300-vs-400 remains unresolved.",
+      "target": "Ghost-mesh emission is the default path while the wider tier-eligibility raise and byte cap ruling remain pending.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "6. Detector-SHA fail-closed attribution and fix",
+      "baseline": "Scoped-stash attribution command removed this lane's source/config edits; tests/racketsport/test_body_runner_real_path.py::test_body_runner_fails_loudly_on_detector_sha_mismatch then passed, proving this lane caused the scheduled_frame_count regression.",
+      "after": "BODY verifies required manifest assets before BODY frame scheduling; on sha256 mismatch it writes an empty adaptive body_compute_execution with fail_closed_reason=manifest_asset_preflight_sha256_mismatch, preserves it through review fallback, raises the original loud mismatch, and writes no downstream BODY outputs.",
+      "target": "Detector SHA mismatch remains a loud fail-closed error with scheduled_frame_count=0 and no shipped BODY artifacts.",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/frame_rating.py:29 adds HUMAN_REVIEW_GHOST_TRUST_BADGE from trust_band vocabulary.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/frame_rating.py:692 includes human_review/manual_review_required frames in mesh eligibility so they enter byte-budget selection.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/frame_rating.py:746 marks selected human_review frames as preview-badged ghost mesh instead of promoting them to solid deep_mesh.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/frame_rating.py:888 clears/restores trust_badge when frames are not selected.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/body_compute.py:104 adds build_empty_body_compute_execution for pre-schedule fail-closed BODY exits.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/body_compute.py:347 propagates valid optional trust_badge from frame_compute_plan into BODY scheduled frames.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/body_compute.py:1227 exports build_empty_body_compute_execution.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/mesh_export.py:71 emits trust_badge on body_mesh frames from scheduled BODY records.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/mesh_export.py:190 validates trust_badge and defaults human_review/manual_review_required scheduled frames to preview.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/body_array_native.py:134 mirrors trust_badge propagation for array-native BODY payloads.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/body_mesh_index.py:68 copies optional trust_badge into body_mesh_index frame metadata.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/body_mesh_index.py:682 validates body_mesh_index trust_badge values against trust_band vocabulary.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/schemas/__init__.py:2249 adds optional BodyMeshFrame.trust_badge Literal field.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/orchestrator.py:25 imports the empty execution helper for fail-closed BODY preflight.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/orchestrator.py:844 verifies manifest assets before BODY frame scheduling.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/orchestrator.py:850 records sha mismatch preflight failures so review fallback preserves the empty execution.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/orchestrator.py:1422 updates BODY note text to describe preview-badged human-review ghost mesh emission.",
+    "/Users/arnavchokshi/Desktop/pickleball/threed/racketsport/orchestrator.py:2777 preserves existing body_compute_execution only for protected artifacts or sha-mismatch preflight failures.",
+    "/Users/arnavchokshi/Desktop/pickleball/configs/racketsport/best_stack.json:127 adds mesh.human_review_ghost_emission as WIRED_DEFAULT and keeps wider tier raise pending.",
+    "/Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_frame_rating.py:942 covers byte-budget counting of human_review ghost frames.",
+    "/Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_best_stack_resolution.py:279 covers process_video default events emission of preview-badged human_review mesh frames.",
+    "/Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_body_serialization_timing.py:56 covers human_review preview emission and verified preservation through export/index.",
+    "/Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_body_serialization_timing.py:75 covers absent-field back-compat and optional-field schema/index round-trip.",
+    "/Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_process_video.py:2120 covers the process_video auto-court/no-contact ghost mesh path.",
+    "/Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_orchestrator_spine.py:138 reconciles missing-SAM3D manifest failure with review fallback preview-badged human_review scheduling.",
+    "/Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_orchestrator_spine.py:443 updates CLI fail expectation for manifest preflight failure.",
+    "/Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_body_runner_real_path.py:1553 remains the detector-SHA fail-closed regression proof.",
+    "/Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_best_stack_manifest.py:58 covers the WIRED_DEFAULT best_stack delta."
+  ],
+  "full_suite": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q --tb=short -p no:cacheprovider",
+    "passed": 3301,
+    "failed": 0,
+    "skipped": 26,
+    "failures_all_preexisting": false,
+    "failure_notes": null
+  },
+  "honest_issues": [
+    "No known lane-blocking issues remain after the final full tests/racketsport run.",
+    "Scoped-stash attribution proved the detector-SHA regression was caused by this lane; the chosen fix is option (a), asset SHA verification before BODY frame scheduling, because it preserves the stronger scheduled_frame_count=0 fail-closed invariant.",
+    "The working tree still contains unrelated dirty state not changed by this lane, including configs/ssh/a100_known_hosts and deleted CVAT prelabel zip files. These were preserved and not reverted.",
+    "Full schema validation of report_r2.json depends on jsonschema, which is not installed in .venv; JSON parsing and strict structural checks were run instead."
+  ],
+  "next": "No tier provenance follow-up is required from this lane. Commit/land should exclude unrelated dirty files and include only the lane source/test/config changes plus this ignored report artifact if the manager wants it archived.",
+  "session_id": null
+}

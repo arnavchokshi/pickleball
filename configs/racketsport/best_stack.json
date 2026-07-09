@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 5,
+  "revision": 6,
   "updated": "2026-07-09",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
@@ -124,11 +124,34 @@
       },
       "notes": "Manager ruling: the byte-budget-300 no-flag default STANDS as the owner W6 PLAYBACK RULING primary fix. Folded-in W6 close evidence includes outdoor budget-400 proof at 21.3fps/4.1x as upper-band playback evidence; this does not change the default value from 300 MiB."
     },
+    "mesh.human_review_ghost_emission": {
+      "stage": "mesh",
+      "selection": "human-review mesh frames emitted as preview ghost/estimated mesh",
+      "value": {
+        "eligible_tier": "human_review",
+        "trust_badge": "preview",
+        "counts_against_byte_budget": true,
+        "viewer_contract": "body_mesh_index.players.frames[].trust_badge"
+      },
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "w7_tierprov_20260709",
+        "commit": "worktree",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "runs/lanes/w7_ghostviewer_20260709/report.json",
+          "configs/racketsport/best_stack.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Owner ghost-mesh ruling: selected human_review-tier frames are no longer hidden or solid; they emit optional trust_badge=preview and count against the same byte-budget policy as other mesh frames. This does not change the 300 MiB default and does not resolve the separate owner-product tier-eligibility raise beyond human_review ghost emission."
+    },
     "mesh.tier_eligibility_raise": {
       "stage": "mesh",
       "selection": "mesh tier-eligibility raise candidate",
       "value": {
-        "current_policy": "tier eligibility unchanged",
+        "current_policy": "human_review ghost emission wired; wider tier eligibility unchanged",
         "candidate_policy": "raise mesh tier eligibility after owner product ruling",
         "byte_budget_default_mib": 300.0
       },
@@ -149,7 +172,7 @@
         ]
       },
       "proven_against": null,
-      "notes": "Pending by ruling: byte-budgeted mesh selection is wired by this lane, but tier eligibility remains unchanged until owner product ruling per [W6 RULINGS] (d)."
+      "notes": "Pending by ruling: human_review ghost emission is wired as mesh.human_review_ghost_emission, but any wider tier-eligibility raise and the 300-vs-400 cap question remain unchanged until owner product ruling per [W6 RULINGS] (d)."
     },
     "mesh.target_frame_budget": {
       "stage": "frames",

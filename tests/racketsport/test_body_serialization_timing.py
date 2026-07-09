@@ -17,7 +17,7 @@ from threed.racketsport.body_mesh_readiness import build_body_mesh_readiness
 from threed.racketsport.contact_splice import splice_contact_skeleton_with_body_mesh
 from threed.racketsport.mesh_export import build_body_mesh_export
 from threed.racketsport.pose_temporal import apply_sam3d_wrist_bone_lock
-from threed.racketsport.schemas import CameraIntrinsics, CaptureQuality, CourtCalibration, CourtExtrinsics, ReprojectionError
+from threed.racketsport.schemas import BodyMesh, CameraIntrinsics, CaptureQuality, CourtCalibration, CourtExtrinsics, ReprojectionError
 from threed.racketsport.worldhmr import build_body_artifacts_from_fast_sam
 
 
@@ -51,6 +51,59 @@ def test_compact_json_writer_round_trips_nested_payload_and_terminates_with_newl
     assert json.loads(raw) == payload
     assert timing["bytes"] == out.stat().st_size
     assert timing["serialization_seconds"] >= 0.0
+
+
+def test_body_mesh_export_marks_human_review_frames_preview_and_preserves_verified_badges(tmp_path: Path) -> None:
+    body_mesh = build_body_mesh_export(
+        _minimal_smpl_motion_two_mesh_frames(),
+        clip="clip",
+        body_compute_execution=_mesh_badge_body_compute_execution(),
+    )
+
+    BodyMesh.model_validate(body_mesh)
+    frames = body_mesh["players"][0]["frames"]
+    assert frames[0]["trust_badge"] == "preview"
+    assert frames[1]["trust_badge"] == "verified"
+
+    build_body_mesh_index_from_payload(body_mesh, out_dir=tmp_path / "body_mesh_index")
+    index = json.loads((tmp_path / "body_mesh_index" / "body_mesh_index.json").read_text(encoding="utf-8"))
+    index_frames = index["windows"][0]["players"][0]["frames"]
+    assert index_frames[0]["trust_badge"] == "preview"
+    assert index_frames[1]["trust_badge"] == "verified"
+
+
+def test_body_mesh_schema_accepts_legacy_absent_trust_badge_and_round_trips_optional_field(
+    tmp_path: Path,
+) -> None:
+    legacy = build_body_mesh_export(
+        _minimal_smpl_motion_two_mesh_frames(frame_count=1),
+        clip="clip",
+        body_compute_execution={
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_compute_execution",
+            "fps": 30.0,
+            "scheduled_frames": [
+                {
+                    "frame_idx": 0,
+                    "t": 0.0,
+                    "target_player_ids": [7],
+                    "target_representation": "world_mesh",
+                    "source_window_index": 0,
+                    "reasons": ["unit_test"],
+                }
+            ],
+        },
+    )
+    BodyMesh.model_validate(legacy)
+    assert "trust_badge" not in legacy["players"][0]["frames"][0]
+
+    with_badge = copy.deepcopy(legacy)
+    with_badge["players"][0]["frames"][0]["trust_badge"] = "low_confidence"
+    BodyMesh.model_validate(with_badge)
+    build_body_mesh_index_from_payload(with_badge, out_dir=tmp_path / "body_mesh_index")
+
+    index = json.loads((tmp_path / "body_mesh_index" / "body_mesh_index.json").read_text(encoding="utf-8"))
+    assert index["windows"][0]["players"][0]["frames"][0]["trust_badge"] == "low_confidence"
 
 
 def test_array_native_body_payload_matches_legacy_gate_and_mesh_bytes(tmp_path: Path) -> None:
@@ -315,6 +368,84 @@ def test_legacy_body_runner_opt_out_uses_legacy_joint_builder_without_writing_mo
     assert timing["mesh_smpl_payload_assembly_s"] == pytest.approx(
         timing["smpl_motion_payload_assembly_s"] + timing["mesh_export_payload_assembly_s"]
     )
+
+
+def _minimal_smpl_motion_two_mesh_frames(*, frame_count: int = 2) -> dict[str, Any]:
+    frames: list[dict[str, Any]] = []
+    for frame_idx in range(frame_count):
+        frames.append(
+            {
+                "frame_idx": frame_idx,
+                "t": frame_idx / 30.0,
+                "mesh_vertices_world": [
+                    [0.0 + frame_idx * 0.01, 0.0, 0.0],
+                    [0.2 + frame_idx * 0.01, 0.0, 0.1],
+                    [0.0 + frame_idx * 0.01, 0.3, 0.1],
+                ],
+                "joints_world": [[0.01 * idx, 0.0, 0.02 * (idx % 5)] for idx in range(70)],
+                "joint_conf": [0.9 for _ in range(70)],
+                "global_orient": [0.0, 0.0, 0.0],
+                "body_pose": [0.0, 0.1],
+                "left_hand_pose": [0.0],
+                "right_hand_pose": [0.0],
+                "transl_world": [0.0, 0.0, 0.0],
+            }
+        )
+    return {
+        "schema_version": 1,
+        "model": "sam3dbody_world_joints",
+        "fps": 30.0,
+        "world_frame": "court_Z0",
+        "mesh_faces": [[0, 1, 2]],
+        "joint_names": [f"sam3dbody_joint_{idx:03d}" for idx in range(70)],
+        "players": [{"id": 7, "betas": [0.2, 0.3], "scale": [1.0], "frames": frames}],
+    }
+
+
+def _mesh_badge_body_compute_execution() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_body_compute_execution",
+        "mode": "adaptive_frame_compute_plan",
+        "fps": 30.0,
+        "scheduled_frames": [
+            {
+                "frame_idx": 0,
+                "t": 0.0,
+                "recommended_tier": "human_review",
+                "target_player_ids": [7],
+                "target_representation": "world_mesh",
+                "fallback_representation": "lane_a_skeleton",
+                "source_window_index": 0,
+                "window_frame_start": 0,
+                "window_frame_end": 1,
+                "window_t0": 0.0,
+                "window_t1": 2.0 / 30.0,
+                "window_frame_count": 2,
+                "reason_counts": {"missing_expected_players": 1, "unit_verified": 1},
+                "reasons": ["missing_expected_players"],
+                "max_score": 1.0,
+            },
+            {
+                "frame_idx": 1,
+                "t": 1.0 / 30.0,
+                "recommended_tier": "deep_mesh",
+                "target_player_ids": [7],
+                "target_representation": "world_mesh",
+                "fallback_representation": "lane_a_skeleton",
+                "source_window_index": 0,
+                "window_frame_start": 0,
+                "window_frame_end": 1,
+                "window_t0": 0.0,
+                "window_t1": 2.0 / 30.0,
+                "window_frame_count": 2,
+                "reason_counts": {"missing_expected_players": 1, "unit_verified": 1},
+                "reasons": ["unit_verified"],
+                "max_score": 1.0,
+                "trust_badge": "verified",
+            },
+        ],
+    }
 
 
 def _calibration() -> CourtCalibration:

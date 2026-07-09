@@ -22,6 +22,7 @@ from .best_stack import body_detector_fov_defaults
 from .body_compute import (
     TIER2_BODY_JOINTS_REPRESENTATION,
     build_body_compute_execution,
+    build_empty_body_compute_execution,
     body_frame_batches_from_execution,
     write_body_compute_execution,
 )
@@ -835,12 +836,26 @@ class BodyStageRunner:
             if stance_index and getattr(tracks, "placement_provenance", None)
             else DEFAULT_GROUNDING_ANCHOR_SOURCE
         )
+        body_plan_path = context.run_dir / "frame_compute_plan.json"
+        required_model_ids = fast_sam_required_model_ids(detector_name=self.detector_name, fov_name=self.fov_name)
+        try:
+            assets = verify_fast_sam_manifest_assets(self.manifest_path, required_model_ids=required_model_ids)
+        except Exception as exc:
+            body_execution = build_empty_body_compute_execution(
+                tracks,
+                mode="adaptive_frame_compute_plan" if body_plan_path.is_file() else "lane_b_requires_frame_compute_plan",
+                source_plan=str(body_plan_path) if body_plan_path.is_file() else None,
+            )
+            if "sha256 mismatch" in str(exc):
+                body_execution["fail_closed_reason"] = "manifest_asset_preflight_sha256_mismatch"
+            write_body_compute_execution(context.run_dir / "body_compute_execution.json", body_execution)
+            raise
 
         artifact_io_start = time.perf_counter()
         lane_b_plan = _ensure_body_frame_plan_from_sam3d(context, tracks)
         body_execution = build_body_compute_execution(
             tracks,
-            frame_plan_path=context.run_dir / "frame_compute_plan.json",
+            frame_plan_path=body_plan_path,
             max_frames=context.max_frames,
             include_tier2_body_joints=self.tier2_body_joints_all_tracked,
         )
@@ -871,8 +886,6 @@ class BodyStageRunner:
         fast_sam_python = os.environ.get(FAST_SAM_PYTHON_ENV, "").strip()
         fast_sam_runtime_mode = "injected" if runtime is not None else ("subprocess" if fast_sam_python else "in_process")
         try:
-            required_model_ids = fast_sam_required_model_ids(detector_name=self.detector_name, fov_name=self.fov_name)
-            assets = verify_fast_sam_manifest_assets(self.manifest_path, required_model_ids=required_model_ids)
             if runtime is None:
                 try:
                     if fast_sam_python:
@@ -1422,7 +1435,7 @@ class BodyStageRunner:
                 if body_joint_builder != "array_native_shared_worldhmr_compute"
                 else "BODY skeleton/joint computation used shared worldhmr.compute_body_skeleton_and_metrics; monolith assembly skipped unless requested"
             ),
-            "BODY frame execution follows frame_compute_plan.json when present and skips manual-review/preview-only frames",
+            "BODY frame execution follows frame_compute_plan.json when present; selected human-review frames emit preview-badged ghost mesh, while unselected preview-only frames still skip mesh",
             "preserved existing skeleton3d.json"
             if preserved_existing_skeleton
             else "wrote SAM3D body-mode skeleton3d.json as the offline skeleton source",
@@ -2759,7 +2772,16 @@ def _write_best_effort_review_artifacts(
             except Exception as exc:
                 notes.append(f"frame_compute_plan.json not written: {exc}")
 
-        if "body_compute_execution.json" in protected and (context.run_dir / "body_compute_execution.json").is_file():
+        body_execution_path = context.run_dir / "body_compute_execution.json"
+        body_execution_payload = _read_optional_json(body_execution_path) if body_execution_path.is_file() else None
+        reuse_existing_body_execution = (
+            "body_compute_execution.json" in protected
+            or (
+                isinstance(body_execution_payload, Mapping)
+                and body_execution_payload.get("fail_closed_reason") == "manifest_asset_preflight_sha256_mismatch"
+            )
+        )
+        if body_execution_path.is_file() and reuse_existing_body_execution:
             reused_artifacts.append("body_compute_execution.json")
         else:
             try:
@@ -2771,7 +2793,7 @@ def _write_best_effort_review_artifacts(
                     frame_plan_path=context.run_dir / "frame_compute_plan.json",
                     max_frames=context.max_frames,
                 )
-                write_body_compute_execution(context.run_dir / "body_compute_execution.json", body_execution)
+                write_body_compute_execution(body_execution_path, body_execution)
                 produced_artifacts.append("body_compute_execution.json")
             except Exception as exc:
                 notes.append(f"body_compute_execution.json not written: {exc}")

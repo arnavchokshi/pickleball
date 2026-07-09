@@ -153,7 +153,7 @@ def test_pipeline_runs_body_without_legacy_pose_dependency_and_fails_without_sam
     assert summary["stages"][2]["status"] == "fail"
     assert summary["stages"][2]["real_model"] is True
     assert summary["stages"][2]["source_mode"] == "fast_sam_3d_body"
-    assert any("adaptive BODY schedule contains no SAM3D body-mode frames" in note for note in summary["stages"][2]["notes"])
+    assert any("ModelManifest" in note and "models.0.status" in note for note in summary["stages"][2]["notes"])
     assert validate_artifact_file("court_calibration", run_dir / "court_calibration.json")
     evidence = validate_artifact_file("court_line_evidence", run_dir / "court_line_evidence.json")
     assert isinstance(evidence, CourtLineEvidence)
@@ -170,12 +170,17 @@ def test_pipeline_runs_body_without_legacy_pose_dependency_and_fails_without_sam
     assert virtual_world.summary.warnings == ["missing_mesh_vertices", "missing_ball_track", "missing_paddle_pose"]
     body_execution = json.loads((run_dir / "body_compute_execution.json").read_text(encoding="utf-8"))
     assert body_execution["artifact_type"] == "racketsport_body_compute_execution"
-    assert body_execution["summary"]["scheduled_frame_count"] == 0
+    assert body_execution["mode"] == "adaptive_frame_compute_plan"
+    assert body_execution["summary"]["scheduled_frame_count"] == 2
+    assert body_execution["summary"]["scheduled_by_target_representation"] == {"world_mesh": 2}
+    assert {frame["recommended_tier"] for frame in body_execution["scheduled_frames"]} == {"human_review"}
+    assert {frame["trust_badge"] for frame in body_execution["scheduled_frames"]} == {"preview"}
     assert summary["review_artifacts"]["produced_artifacts"] == [
         "frame_compute_plan.json",
         "body_compute_execution.json",
         "virtual_world.json",
     ]
+    assert summary["review_artifacts"]["reused_artifacts"] == []
 
 
 def test_calibration_runner_samples_video_for_court_line_evidence(tmp_path: Path, monkeypatch) -> None:
@@ -469,7 +474,7 @@ def test_orchestrator_cli_writes_summary_and_does_not_fake_e2e(tmp_path: Path) -
     assert payload["status"] == "fail"
     assert payload["stages"][2]["stage"] == "body"
     assert payload["stages"][2]["status"] == "fail"
-    assert any("adaptive BODY schedule contains no SAM3D body-mode frames" in note for note in payload["stages"][2]["notes"])
+    assert any("ModelManifest" in note and "models.0.status" in note for note in payload["stages"][2]["notes"])
     assert not (run_dir / "replay_scene.json").exists()
 
 

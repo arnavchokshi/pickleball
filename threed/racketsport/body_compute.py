@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .schemas import Tracks
+from .trust_band import TRUST_BADGES
 
 
 ARTIFACT_TYPE = "racketsport_body_compute_execution"
@@ -97,6 +98,35 @@ def build_body_compute_execution(
         safe_track_lookup=safe_track_lookup,
         track_continuity=track_continuity,
         include_tier2_body_joints=include_tier2_body_joints,
+    )
+
+
+def build_empty_body_compute_execution(
+    tracks: Tracks,
+    *,
+    mode: str,
+    source_plan: str | None,
+    max_track_speed_for_body_mps: float = DEFAULT_MAX_TRACK_SPEED_FOR_BODY_MPS,
+    max_bbox_center_speed_for_body_diag_s: float = DEFAULT_MAX_BBOX_CENTER_SPEED_FOR_BODY_DIAG_S,
+    max_bbox_center_step_for_body_px: float = DEFAULT_MAX_BBOX_CENTER_STEP_FOR_BODY_PX,
+    max_track_world_step_for_bbox_jitter_m: float = DEFAULT_MAX_TRACK_WORLD_STEP_FOR_BBOX_JITTER_M,
+) -> dict[str, Any]:
+    track_lookup = _track_lookup(tracks)
+    _safe_track_lookup, track_continuity = _body_safe_track_lookup(
+        tracks,
+        track_lookup=track_lookup,
+        max_track_speed_for_body_mps=max_track_speed_for_body_mps,
+        max_bbox_center_speed_for_body_diag_s=max_bbox_center_speed_for_body_diag_s,
+        max_bbox_center_step_for_body_px=max_bbox_center_step_for_body_px,
+        max_track_world_step_for_bbox_jitter_m=max_track_world_step_for_bbox_jitter_m,
+    )
+    return _execution_payload(
+        tracks,
+        mode=mode,
+        source_plan=source_plan,
+        scheduled=[],
+        skipped=[],
+        track_continuity=track_continuity,
     )
 
 
@@ -208,25 +238,24 @@ def _execution_from_frame_plan(
                 continue
             scheduled_indexes.add(frame_idx)
             scheduled.append(
-                {
-                    "frame_idx": frame_idx,
-                    "t": frame_idx / tracks.fps,
-                    "recommended_tier": str(frame_plan.get("recommended_tier", "deep_mesh")),
-                    "target_representation": TIER1_MESH_REPRESENTATION,
-                    "target_player_ids": safe_target_ids,
-                    "active_player_ids": [player_id for player_id, _frame in active],
-                    "source_window_index": window_index,
-                    "window_frame_start": frame_start,
-                    "window_frame_end": frame_end,
-                    "window_frame_count": int(window.get("frame_count", frame_end - frame_start + 1)),
-                    "window_t0": float(window.get("t0", frame_start / tracks.fps)),
-                    "window_t1": float(window.get("t1", (frame_end + 1) / tracks.fps)),
-                    "fallback_representation": str(window.get("fallback_representation", "lane_a_skeleton")),
-                    "reason_counts": dict(window.get("reason_counts", {})),
-                    "reasons": list(frame_plan.get("reasons", [])),
-                    "max_score": float(window.get("max_score", frame_plan.get("score", 0.0))),
-                    "player_targets": _selected_player_targets(frame_plan, safe_target_ids),
-                }
+                _scheduled_mesh_frame(
+                    frame_idx=frame_idx,
+                    t=frame_idx / tracks.fps,
+                    frame_plan=frame_plan,
+                    target_player_ids=safe_target_ids,
+                    active_player_ids=[player_id for player_id, _frame in active],
+                    source_window_index=window_index,
+                    window_frame_start=frame_start,
+                    window_frame_end=frame_end,
+                    window_frame_count=int(window.get("frame_count", frame_end - frame_start + 1)),
+                    window_t0=float(window.get("t0", frame_start / tracks.fps)),
+                    window_t1=float(window.get("t1", (frame_end + 1) / tracks.fps)),
+                    fallback_representation=str(window.get("fallback_representation", "lane_a_skeleton")),
+                    reason_counts=dict(window.get("reason_counts", {})),
+                    reasons=list(frame_plan.get("reasons", [])),
+                    max_score=float(window.get("max_score", frame_plan.get("score", 0.0))),
+                    player_targets=_selected_player_targets(frame_plan, safe_target_ids),
+                )
             )
 
     for frame_idx, frame_plan in sorted(frame_lookup.items()):
@@ -275,6 +304,59 @@ def _plan_uses_contact_dense_profile(plan: Mapping[str, Any]) -> bool:
     if not isinstance(policy, Mapping):
         return False
     return str(policy.get("mode", "")) == "ball_aware"
+
+
+def _scheduled_mesh_frame(
+    *,
+    frame_idx: int,
+    t: float,
+    frame_plan: Mapping[str, Any],
+    target_player_ids: list[int],
+    active_player_ids: list[int],
+    source_window_index: int,
+    window_frame_start: int,
+    window_frame_end: int,
+    window_frame_count: int,
+    window_t0: float,
+    window_t1: float,
+    fallback_representation: str,
+    reason_counts: Mapping[str, Any],
+    reasons: list[Any],
+    max_score: float,
+    player_targets: list[dict[str, Any]],
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "frame_idx": frame_idx,
+        "t": t,
+        "recommended_tier": str(frame_plan.get("recommended_tier", "deep_mesh")),
+        "target_representation": TIER1_MESH_REPRESENTATION,
+        "target_player_ids": target_player_ids,
+        "active_player_ids": active_player_ids,
+        "source_window_index": source_window_index,
+        "window_frame_start": window_frame_start,
+        "window_frame_end": window_frame_end,
+        "window_frame_count": window_frame_count,
+        "window_t0": window_t0,
+        "window_t1": window_t1,
+        "fallback_representation": fallback_representation,
+        "reason_counts": dict(reason_counts),
+        "reasons": list(reasons),
+        "max_score": max_score,
+        "player_targets": player_targets,
+    }
+    trust_badge = _optional_trust_badge(frame_plan.get("trust_badge"))
+    if trust_badge is not None:
+        payload["trust_badge"] = trust_badge
+    return payload
+
+
+def _optional_trust_badge(value: Any) -> str | None:
+    if value is None:
+        return None
+    badge = str(value)
+    if badge not in TRUST_BADGES:
+        raise ValueError(f"BODY frame trust_badge must be one of {TRUST_BADGES}, got {badge!r}")
+    return badge
 
 
 def _contact_dense_execution_frames(
@@ -384,31 +466,30 @@ def _contact_dense_execution_frames(
             uniform_target_ids=uniform_targets_by_frame.get(frame_idx, set()),
         )
         scheduled.append(
-            {
-                "frame_idx": frame_idx,
-                "t": frame_idx / tracks.fps,
-                "recommended_tier": "deep_mesh",
-                "target_representation": TIER1_MESH_REPRESENTATION,
-                "target_player_ids": safe_target_ids,
-                "active_player_ids": [player_id for player_id, _frame in active],
-                "source_window_index": source_window_index,
-                "window_frame_start": window_start,
-                "window_frame_end": window_end,
-                "window_frame_count": window_end - window_start + 1,
-                "window_t0": window_start / tracks.fps,
-                "window_t1": (window_end + 1) / tracks.fps,
-                "fallback_representation": "lane_a_skeleton",
-                "reason_counts": window_reason_counts[source_window_index],
-                "reasons": reasons,
-                "max_score": _contact_dense_frame_score(frame_plan, frame_idx=frame_idx, dense_targets_by_frame=dense_targets_by_frame),
-                "player_targets": _contact_dense_player_targets(
+            _scheduled_mesh_frame(
+                frame_idx=frame_idx,
+                t=frame_idx / tracks.fps,
+                frame_plan=frame_plan,
+                target_player_ids=safe_target_ids,
+                active_player_ids=[player_id for player_id, _frame in active],
+                source_window_index=source_window_index,
+                window_frame_start=window_start,
+                window_frame_end=window_end,
+                window_frame_count=window_end - window_start + 1,
+                window_t0=window_start / tracks.fps,
+                window_t1=(window_end + 1) / tracks.fps,
+                fallback_representation="lane_a_skeleton",
+                reason_counts=window_reason_counts[source_window_index],
+                reasons=reasons,
+                max_score=_contact_dense_frame_score(frame_plan, frame_idx=frame_idx, dense_targets_by_frame=dense_targets_by_frame),
+                player_targets=_contact_dense_player_targets(
                     frame_plan,
                     active=active,
                     target_ids=safe_target_ids,
                     dense_target_ids=dense_targets_by_frame.get(frame_idx, set()),
                     uniform_target_ids=uniform_targets_by_frame.get(frame_idx, set()),
                 ),
-            }
+            )
         )
 
     for frame_idx, frame_plan in sorted(frame_lookup.items()):
@@ -1143,6 +1224,7 @@ def _all_player_targets(frame_plan: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 __all__ = [
     "build_body_compute_execution",
+    "build_empty_body_compute_execution",
     "body_frame_batches_from_execution",
     "write_body_compute_execution",
 ]

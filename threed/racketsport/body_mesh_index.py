@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping, Sequence
 
+from .trust_band import TRUST_BADGES
+
 
 INDEX_ARTIFACT_TYPE = "racketsport_body_mesh_index"
 FACES_ARTIFACT_TYPE = "racketsport_body_mesh_faces"
@@ -53,18 +55,20 @@ class _WindowAccumulator:
         reasons = [str(reason) for reason in frame.get("reasons", []) or []]
         for reason in reasons:
             self.reason_counts[reason] = self.reason_counts.get(reason, 0) + 1
-        self.players.setdefault(int(player_id), []).append(
-            {
-                "frame_idx": frame_idx,
-                "t": float(frame.get("t", frame_idx / 30.0)),
-                "source_window_index": self.source_window_index,
-                "blend_weight": float(frame.get("blend_weight", 1.0)),
-                "vertex_count": vertex_count,
-                "joint_count": joint_count,
-                "joint_conf": _float_list(frame.get("joint_conf", [])),
-                "reasons": reasons,
-            }
-        )
+        frame_payload = {
+            "frame_idx": frame_idx,
+            "t": float(frame.get("t", frame_idx / 30.0)),
+            "source_window_index": self.source_window_index,
+            "blend_weight": float(frame.get("blend_weight", 1.0)),
+            "vertex_count": vertex_count,
+            "joint_count": joint_count,
+            "joint_conf": _float_list(frame.get("joint_conf", [])),
+            "reasons": reasons,
+        }
+        trust_badge = _optional_trust_badge(frame.get("trust_badge"))
+        if trust_badge is not None:
+            frame_payload["trust_badge"] = trust_badge
+        self.players.setdefault(int(player_id), []).append(frame_payload)
         self.player_ids.add(int(player_id))
         self.frame_indices.add(frame_idx)
         self.player_frame_count += 1
@@ -673,6 +677,15 @@ def _float_list(values: Any) -> list[float]:
     if not isinstance(values, Sequence) or isinstance(values, str | bytes):
         return []
     return [round(float(value), 6) for value in values]
+
+
+def _optional_trust_badge(value: Any) -> str | None:
+    if value is None:
+        return None
+    badge = str(value)
+    if badge not in TRUST_BADGES:
+        raise ValueError(f"body_mesh_index frame trust_badge must be one of {TRUST_BADGES}, got {badge!r}")
+    return badge
 
 
 def _to_python_container(value: Any) -> Any:

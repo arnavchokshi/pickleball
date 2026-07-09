@@ -17,7 +17,7 @@ def test_best_stack_manifest_integrity() -> None:
     manifest = load_best_stack_manifest()
 
     assert manifest.schema_version == 1
-    assert manifest.revision == 5
+    assert manifest.revision == 6
     assert "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim" in manifest.invariants
     assert len(manifest.entries) >= 30
 
@@ -30,6 +30,7 @@ def test_best_stack_manifest_integrity() -> None:
         "confidence.calibration_curves",
         "mesh.coverage_mode",
         "mesh.byte_budget_mib",
+        "mesh.human_review_ghost_emission",
         "mesh.tier_eligibility_raise",
         "mesh.target_frame_budget",
         "body.detector_fov",
@@ -54,6 +55,15 @@ def test_best_stack_manifest_integrity() -> None:
     assert manifest.entry("mesh.byte_budget_mib").status == "WIRED_DEFAULT"
     assert any("w6_close_errand_20260708" in path for path in manifest.entry("mesh.byte_budget_mib").provenance["evidence_paths"])
     assert "21.3fps" in manifest.entry("mesh.byte_budget_mib").notes
+    ghost = manifest.entry("mesh.human_review_ghost_emission")
+    assert ghost.status == "WIRED_DEFAULT"
+    assert ghost.value == {
+        "eligible_tier": "human_review",
+        "trust_badge": "preview",
+        "counts_against_byte_budget": True,
+        "viewer_contract": "body_mesh_index.players.frames[].trust_badge",
+    }
+    assert any("w7_ghostviewer_20260709/report.json" in path for path in ghost.provenance["evidence_paths"])
     assert manifest.entry("mesh.tier_eligibility_raise").status == "PENDING"
     assert manifest.entry("body.p22_lambda_foot_smoother").status == "DORMANT"
     assert "NOT-WIRING-READY" in manifest.entry("body.p22_lambda_foot_smoother").notes
@@ -90,6 +100,7 @@ def test_best_stack_manifest_integrity() -> None:
 
     evidence_checked_entries = {
         "mesh.tier_eligibility_raise",
+        "mesh.human_review_ghost_emission",
         "body.p22_lambda_foot_smoother",
         "body.postchain_raw_knob",
         "instrument.gate_check_body_decode",

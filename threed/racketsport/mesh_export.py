@@ -7,6 +7,8 @@ import math
 from pathlib import Path
 from typing import Any, Mapping
 
+from .trust_band import TRUST_BADGES
+
 
 ARTIFACT_TYPE = "racketsport_body_mesh"
 DEFAULT_FACES_REF = "mhr_faces_static"
@@ -66,6 +68,9 @@ def build_body_mesh_export(
                 },
                 "reasons": list(scheduled_record.get("reasons", [])) if scheduled_record else [],
             }
+            trust_badge = _trust_badge_for_scheduled_record(scheduled_record)
+            if trust_badge is not None:
+                frame_payload["trust_badge"] = trust_badge
             joints_world = _vector3_list(frame.get("joints_world", []))
             if joints_world:
                 frame_payload["joints_world"] = joints_world
@@ -180,6 +185,22 @@ def _blend_weight_for_frame(frame_idx: int, scheduled_record: Mapping[str, Any] 
     edge_progress = max(0.0, min(1.0, 1.0 - abs((progress * 2.0) - 1.0)))
     weight = 0.5 - (0.5 * math.cos(math.pi * edge_progress))
     return round(weight, 6)
+
+
+def _trust_badge_for_scheduled_record(scheduled_record: Mapping[str, Any] | None) -> str | None:
+    if scheduled_record is None:
+        return None
+    raw_badge = scheduled_record.get("trust_badge")
+    if raw_badge is not None:
+        badge = str(raw_badge)
+        if badge not in TRUST_BADGES:
+            raise ValueError(f"body mesh frame trust_badge must be one of {TRUST_BADGES}, got {badge!r}")
+        return badge
+    recommended_tier = str(scheduled_record.get("recommended_tier", ""))
+    target_representation = str(scheduled_record.get("target_representation", ""))
+    if recommended_tier == "human_review" or target_representation == "manual_review_required":
+        return "preview"
+    return None
 
 
 def _float_list(values: Any) -> list[float]:
