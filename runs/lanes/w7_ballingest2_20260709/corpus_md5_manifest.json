@@ -1,0 +1,507 @@
+{
+  "artifact_type": "racketsport_reviewed_corpus_md5_manifest",
+  "counts": {
+    "per_class": {
+      "negative": 510,
+      "positive": 1240
+    },
+    "per_clip": {
+      "73VurrTKCZ8_rally_0001": {
+        "negative_row_count": 8,
+        "positive_row_count": 24,
+        "reviewed_row_count": 32,
+        "visibility:clear": 24,
+        "visibility:none": 8
+      },
+      "73VurrTKCZ8_rally_0002": {
+        "negative_row_count": 59,
+        "positive_row_count": 148,
+        "reviewed_row_count": 207,
+        "visibility:clear": 148,
+        "visibility:none": 59
+      },
+      "73VurrTKCZ8_rally_0003": {
+        "negative_row_count": 3,
+        "positive_row_count": 18,
+        "reviewed_row_count": 21,
+        "visibility:clear": 18,
+        "visibility:none": 3
+      },
+      "73VurrTKCZ8_rally_0004": {
+        "negative_row_count": 1,
+        "positive_row_count": 3,
+        "reviewed_row_count": 4,
+        "visibility:clear": 3,
+        "visibility:none": 1
+      },
+      "73VurrTKCZ8_rally_0005": {
+        "negative_row_count": 1,
+        "positive_row_count": 16,
+        "reviewed_row_count": 17,
+        "visibility:clear": 16,
+        "visibility:none": 1
+      },
+      "73VurrTKCZ8_rally_0006": {
+        "negative_row_count": 2,
+        "positive_row_count": 17,
+        "reviewed_row_count": 19,
+        "visibility:clear": 17,
+        "visibility:none": 2
+      },
+      "73VurrTKCZ8_rally_0007": {
+        "negative_row_count": 2,
+        "positive_row_count": 7,
+        "reviewed_row_count": 9,
+        "visibility:clear": 7,
+        "visibility:none": 2
+      },
+      "73VurrTKCZ8_rally_0008": {
+        "negative_row_count": 20,
+        "positive_row_count": 68,
+        "reviewed_row_count": 88,
+        "visibility:clear": 68,
+        "visibility:none": 20
+      },
+      "Ezz6HDNHlnk_rally_0001": {
+        "negative_row_count": 4,
+        "positive_row_count": 4,
+        "reviewed_row_count": 8,
+        "visibility:clear": 4,
+        "visibility:none": 4
+      },
+      "Ezz6HDNHlnk_rally_0002": {
+        "negative_row_count": 50,
+        "positive_row_count": 55,
+        "reviewed_row_count": 105,
+        "visibility:clear": 55,
+        "visibility:none": 50
+      },
+      "Ezz6HDNHlnk_rally_0003": {
+        "negative_row_count": 2,
+        "positive_row_count": 1,
+        "reviewed_row_count": 3,
+        "visibility:clear": 1,
+        "visibility:none": 2
+      },
+      "Ezz6HDNHlnk_rally_0004": {
+        "negative_row_count": 93,
+        "positive_row_count": 76,
+        "reviewed_row_count": 169,
+        "visibility:clear": 76,
+        "visibility:none": 93
+      },
+      "Ezz6HDNHlnk_rally_0005": {
+        "positive_row_count": 1,
+        "reviewed_row_count": 1,
+        "visibility:clear": 1
+      },
+      "Ezz6HDNHlnk_rally_0006": {
+        "negative_row_count": 32,
+        "positive_row_count": 32,
+        "reviewed_row_count": 64,
+        "visibility:clear": 32,
+        "visibility:none": 32
+      },
+      "Ezz6HDNHlnk_rally_0007": {
+        "negative_row_count": 24,
+        "positive_row_count": 10,
+        "reviewed_row_count": 34,
+        "visibility:clear": 10,
+        "visibility:none": 24
+      },
+      "Ezz6HDNHlnk_rally_0008": {
+        "negative_row_count": 2,
+        "positive_row_count": 14,
+        "reviewed_row_count": 16,
+        "visibility:clear": 14,
+        "visibility:none": 2
+      },
+      "HyUqT7zFiwk_rally_0001": {
+        "negative_row_count": 87,
+        "positive_row_count": 153,
+        "reviewed_row_count": 240,
+        "visibility:clear": 151,
+        "visibility:none": 87,
+        "visibility:partial": 2
+      },
+      "_L0HVmAlCQI_rally_0001": {
+        "negative_row_count": 25,
+        "positive_row_count": 83,
+        "reviewed_row_count": 108,
+        "visibility:clear": 81,
+        "visibility:none": 25,
+        "visibility:partial": 2
+      },
+      "_L0HVmAlCQI_rally_0002": {
+        "positive_row_count": 10,
+        "reviewed_row_count": 10,
+        "visibility:clear": 10
+      },
+      "_L0HVmAlCQI_rally_0003": {
+        "positive_row_count": 11,
+        "reviewed_row_count": 11,
+        "visibility:clear": 11
+      },
+      "_L0HVmAlCQI_rally_0005": {
+        "negative_row_count": 1,
+        "positive_row_count": 2,
+        "reviewed_row_count": 3,
+        "visibility:clear": 2,
+        "visibility:none": 1
+      },
+      "_L0HVmAlCQI_rally_0007": {
+        "positive_row_count": 7,
+        "reviewed_row_count": 7,
+        "visibility:clear": 7
+      },
+      "_L0HVmAlCQI_rally_0008": {
+        "positive_row_count": 2,
+        "reviewed_row_count": 2,
+        "visibility:clear": 2
+      },
+      "_L0HVmAlCQI_rally_0009": {
+        "positive_row_count": 13,
+        "reviewed_row_count": 13,
+        "visibility:clear": 13
+      },
+      "_L0HVmAlCQI_rally_0010": {
+        "positive_row_count": 4,
+        "reviewed_row_count": 4,
+        "visibility:clear": 4
+      },
+      "_L0HVmAlCQI_rally_0011": {
+        "positive_row_count": 38,
+        "reviewed_row_count": 38,
+        "visibility:clear": 38
+      },
+      "_L0HVmAlCQI_rally_0012": {
+        "positive_row_count": 6,
+        "reviewed_row_count": 6,
+        "visibility:clear": 6
+      },
+      "_L0HVmAlCQI_rally_0013": {
+        "positive_row_count": 1,
+        "reviewed_row_count": 1,
+        "visibility:clear": 1
+      },
+      "_L0HVmAlCQI_rally_0014": {
+        "positive_row_count": 8,
+        "reviewed_row_count": 8,
+        "visibility:clear": 8
+      },
+      "_L0HVmAlCQI_rally_0015": {
+        "positive_row_count": 4,
+        "reviewed_row_count": 4,
+        "visibility:clear": 4
+      },
+      "_L0HVmAlCQI_rally_0016": {
+        "positive_row_count": 4,
+        "reviewed_row_count": 4,
+        "visibility:clear": 4
+      },
+      "_L0HVmAlCQI_rally_0017": {
+        "positive_row_count": 8,
+        "reviewed_row_count": 8,
+        "visibility:clear": 8
+      },
+      "_L0HVmAlCQI_rally_0018": {
+        "positive_row_count": 6,
+        "reviewed_row_count": 6,
+        "visibility:clear": 6
+      },
+      "_L0HVmAlCQI_rally_0019": {
+        "positive_row_count": 2,
+        "reviewed_row_count": 2,
+        "visibility:clear": 2
+      },
+      "wBu8bC4OfUY_rally_0001": {
+        "negative_row_count": 47,
+        "positive_row_count": 158,
+        "reviewed_row_count": 205,
+        "visibility:clear": 141,
+        "visibility:none": 45,
+        "visibility:out_of_frame": 2,
+        "visibility:partial": 17
+      },
+      "wBu8bC4OfUY_rally_0002": {
+        "negative_row_count": 3,
+        "positive_row_count": 19,
+        "reviewed_row_count": 22,
+        "visibility:clear": 19,
+        "visibility:none": 3
+      },
+      "wBu8bC4OfUY_rally_0003": {
+        "negative_row_count": 3,
+        "positive_row_count": 7,
+        "reviewed_row_count": 10,
+        "visibility:clear": 7,
+        "visibility:none": 3
+      },
+      "zwCtH_i1_S4_rally_0001": {
+        "negative_row_count": 41,
+        "positive_row_count": 200,
+        "reviewed_row_count": 241,
+        "visibility:clear": 200,
+        "visibility:none": 41
+      }
+    },
+    "per_source": {
+      "73VurrTKCZ8": {
+        "negative_row_count": 96,
+        "positive_row_count": 301,
+        "reviewed_row_count": 397,
+        "source_class:outdoor_day_multicam": 397,
+        "visibility:clear": 301,
+        "visibility:none": 96
+      },
+      "Ezz6HDNHlnk": {
+        "negative_row_count": 207,
+        "positive_row_count": 193,
+        "reviewed_row_count": 400,
+        "source_class:outdoor_night_fenced": 400,
+        "visibility:clear": 193,
+        "visibility:none": 207
+      },
+      "HyUqT7zFiwk": {
+        "negative_row_count": 87,
+        "positive_row_count": 153,
+        "reviewed_row_count": 240,
+        "source_class:indoor_court_level": 240,
+        "visibility:clear": 151,
+        "visibility:none": 87,
+        "visibility:partial": 2
+      },
+      "_L0HVmAlCQI": {
+        "negative_row_count": 26,
+        "positive_row_count": 209,
+        "reviewed_row_count": 235,
+        "source_class:outdoor_night_tennis_overlay": 235,
+        "visibility:clear": 207,
+        "visibility:none": 26,
+        "visibility:partial": 2
+      },
+      "wBu8bC4OfUY": {
+        "negative_row_count": 53,
+        "positive_row_count": 184,
+        "reviewed_row_count": 237,
+        "source_class:outdoor_night_tennis_overlay": 237,
+        "visibility:clear": 167,
+        "visibility:none": 51,
+        "visibility:out_of_frame": 2,
+        "visibility:partial": 17
+      },
+      "zwCtH_i1_S4": {
+        "negative_row_count": 41,
+        "positive_row_count": 200,
+        "reviewed_row_count": 241,
+        "source_class:outdoor_day_broadcast_overlay": 241,
+        "visibility:clear": 200,
+        "visibility:none": 41
+      }
+    },
+    "totals": {
+      "negative_row_count": 510,
+      "positive_row_count": 1240,
+      "reviewed_row_count": 1750
+    },
+    "visibility_level_counts": {
+      "clear": 1219,
+      "none": 508,
+      "out_of_frame": 2,
+      "partial": 21
+    }
+  },
+  "files": [
+    {
+      "bytes": 101863,
+      "md5": "742f20b9ce26dedbc8fa89b7e14a1e1e",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0001/reviewed_boxes.json"
+    },
+    {
+      "bytes": 381605,
+      "md5": "9b7d779d0a2ef5a8f60401c30f847452",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0002/reviewed_boxes.json"
+    },
+    {
+      "bytes": 55205,
+      "md5": "4cdfc50c00dba7f49de9e482c41013e4",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0003/reviewed_boxes.json"
+    },
+    {
+      "bytes": 22222,
+      "md5": "31b1cb8d2ddaee0f3a14cc4cab630173",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0004/reviewed_boxes.json"
+    },
+    {
+      "bytes": 70772,
+      "md5": "e0ad4de5cbb52a82c45d7454d6e2e338",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0005/reviewed_boxes.json"
+    },
+    {
+      "bytes": 72145,
+      "md5": "4d5ccd6e6015e21905a55c52c0913c12",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0006/reviewed_boxes.json"
+    },
+    {
+      "bytes": 26325,
+      "md5": "0c926b020289936228d220c1158f92c5",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0007/reviewed_boxes.json"
+    },
+    {
+      "bytes": 293776,
+      "md5": "a20a730f9d6fb130ef9e1aba7dfc07b3",
+      "relative_path": "reviewed_corpus/73VurrTKCZ8_rally_0008/reviewed_boxes.json"
+    },
+    {
+      "bytes": 93220,
+      "md5": "323459ace0274acbb5ce52e6701c31e3",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0001/reviewed_boxes.json"
+    },
+    {
+      "bytes": 395845,
+      "md5": "6d8a20a60e98043859ea50975f1958a4",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0002/reviewed_boxes.json"
+    },
+    {
+      "bytes": 31910,
+      "md5": "29560ae304edba222a496a6973005dd7",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0003/reviewed_boxes.json"
+    },
+    {
+      "bytes": 659649,
+      "md5": "26b224f5f6ae1164189760c40be2a4bb",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0004/reviewed_boxes.json"
+    },
+    {
+      "bytes": 17246,
+      "md5": "3afedeaebbc45135948ac4ef58d72266",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0005/reviewed_boxes.json"
+    },
+    {
+      "bytes": 386236,
+      "md5": "d087545cdc0dda2055446132dd95a72d",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0006/reviewed_boxes.json"
+    },
+    {
+      "bytes": 199560,
+      "md5": "691d1e8d284caba42d5f9041be243036",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0007/reviewed_boxes.json"
+    },
+    {
+      "bytes": 169158,
+      "md5": "3d1a70b6c17625f22cef8e6a2d5d8c95",
+      "relative_path": "reviewed_corpus/Ezz6HDNHlnk_rally_0008/reviewed_boxes.json"
+    },
+    {
+      "bytes": 2984349,
+      "md5": "e553b6eaf078c60c8c9412956a8816c0",
+      "relative_path": "reviewed_corpus/HyUqT7zFiwk_rally_0001/reviewed_boxes.json"
+    },
+    {
+      "bytes": 200909,
+      "md5": "466b63822a3c9a51996d716510083c54",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0001/reviewed_boxes.json"
+    },
+    {
+      "bytes": 48805,
+      "md5": "71617d0d8055a102d6a205051ad3256c",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0002/reviewed_boxes.json"
+    },
+    {
+      "bytes": 69214,
+      "md5": "20bfa463baee2eaf539d0085a012b8e3",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0003/reviewed_boxes.json"
+    },
+    {
+      "bytes": 14963,
+      "md5": "11cbea0aacd6c5f7b897f54d859409a0",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0005/reviewed_boxes.json"
+    },
+    {
+      "bytes": 131579,
+      "md5": "c23d1dd10b10e8caee8f27658adb6c7d",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0007/reviewed_boxes.json"
+    },
+    {
+      "bytes": 25533,
+      "md5": "7ad1ebc45a3ccc1aca23e5fabb4dcf96",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0008/reviewed_boxes.json"
+    },
+    {
+      "bytes": 89819,
+      "md5": "cf7629bda8afd99bffb78a011404eb8d",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0009/reviewed_boxes.json"
+    },
+    {
+      "bytes": 42931,
+      "md5": "48c67b0a156dc21de31a1ff161e04218",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0010/reviewed_boxes.json"
+    },
+    {
+      "bytes": 162925,
+      "md5": "c7548c79b21cc567fd667247539404bc",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0011/reviewed_boxes.json"
+    },
+    {
+      "bytes": 10630,
+      "md5": "a1a633973887292fb721fc2f9efe3de6",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0012/reviewed_boxes.json"
+    },
+    {
+      "bytes": 16975,
+      "md5": "e0da9bebe0805472cb1908e8b7ddba8d",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0013/reviewed_boxes.json"
+    },
+    {
+      "bytes": 68585,
+      "md5": "e1ee26b85fc413ab919f81febeec596e",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0014/reviewed_boxes.json"
+    },
+    {
+      "bytes": 6060,
+      "md5": "658497de47e9e3db430360d4c54d9fca",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0015/reviewed_boxes.json"
+    },
+    {
+      "bytes": 53816,
+      "md5": "c2660109be80db8300d9be9e7cf15d4e",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0016/reviewed_boxes.json"
+    },
+    {
+      "bytes": 54100,
+      "md5": "dcc13ce98c465761dafa5a690b2b7298",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0017/reviewed_boxes.json"
+    },
+    {
+      "bytes": 34730,
+      "md5": "c22488f09a62d40d0fbe2d72e673d1aa",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0018/reviewed_boxes.json"
+    },
+    {
+      "bytes": 46291,
+      "md5": "bae998c2bf58ccbbf1d9ffdb36e6ebd8",
+      "relative_path": "reviewed_corpus/_L0HVmAlCQI_rally_0019/reviewed_boxes.json"
+    },
+    {
+      "bytes": 1379510,
+      "md5": "982b344b79b34b6bfc780945fce0a725",
+      "relative_path": "reviewed_corpus/wBu8bC4OfUY_rally_0001/reviewed_boxes.json"
+    },
+    {
+      "bytes": 251113,
+      "md5": "380a45377ec2309f3efa702ed4f54646",
+      "relative_path": "reviewed_corpus/wBu8bC4OfUY_rally_0002/reviewed_boxes.json"
+    },
+    {
+      "bytes": 50430,
+      "md5": "7a2977b35faac9286479ad61648c8a94",
+      "relative_path": "reviewed_corpus/wBu8bC4OfUY_rally_0003/reviewed_boxes.json"
+    },
+    {
+      "bytes": 1931258,
+      "md5": "bbd629ab3797487eeeb160e6bf2353b9",
+      "relative_path": "reviewed_corpus/zwCtH_i1_S4_rally_0001/reviewed_boxes.json"
+    }
+  ],
+  "schema_version": 1
+}
