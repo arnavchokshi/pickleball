@@ -36,6 +36,10 @@ their own inference path in `scripts/racketsport/train_court_keypoint_heatmap.py
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+import json
+import logging
+import os
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -52,20 +56,79 @@ from threed.racketsport.court_keypoint_net import (
 )
 
 __all__ = [
+    "CourtModelCheckpointResolution",
+    "PICKLEBALL_COURT_UNET_CKPT_ENV",
+    "PROMOTED_COURT_UNET_CKPT_PATH",
     "build_court_model_from_checkpoint",
     "court_model_inference_provider",
     "get_current_court_model_infer_provider",
     "infer_court_model",
     "load_court_model_checkpoint",
     "make_court_model_infer_provider",
+    "resolve_court_model_checkpoint_path",
 ]
 
 
 CourtModelInferProvider = Callable[[Any], Mapping[str, Any]]
+PICKLEBALL_COURT_UNET_CKPT_ENV = "PICKLEBALL_COURT_UNET_CKPT"
+PROMOTED_COURT_UNET_CKPT_PATH = Path("models/checkpoints/court_unet_v2/court_model_v2.pt")
+_LOGGER = logging.getLogger(__name__)
+_COURT_MODEL_PROVIDER_CACHE: dict[tuple[str, str], CourtModelInferProvider | None] = {}
 _CURRENT_COURT_MODEL_INFER_PROVIDER: ContextVar[CourtModelInferProvider | None] = ContextVar(
     "current_court_model_infer_provider",
     default=None,
 )
+
+
+@dataclass(frozen=True)
+class CourtModelCheckpointResolution:
+    path: Path
+    source: str
+    sha256: str | None
+
+
+def resolve_court_model_checkpoint_path(
+    checkpoint_path: str | Path | None = None,
+) -> CourtModelCheckpointResolution | None:
+    """Resolve the default-on `court_unet_v2` checkpoint path.
+
+    Precedence is explicit argument, then PICKLEBALL_COURT_UNET_CKPT, then the
+    promoted repo-local checkpoint. A missing file disables the advisory neural
+    provider instead of falling back to a lower-precedence path.
+    """
+
+    if checkpoint_path is not None:
+        path = Path(checkpoint_path)
+        source = "explicit_arg"
+    else:
+        env_value = os.environ.get(PICKLEBALL_COURT_UNET_CKPT_ENV)
+        if env_value:
+            path = Path(env_value)
+            source = PICKLEBALL_COURT_UNET_CKPT_ENV
+        else:
+            path = PROMOTED_COURT_UNET_CKPT_PATH
+            source = "promoted_default"
+
+    if not path.is_file():
+        _LOGGER.warning("court_unet_v2 checkpoint unavailable source=%s path=%s; using geometric-only", source, path)
+        return None
+
+    sha256 = _read_checkpoint_provenance_sha256(path)
+    if sha256:
+        _LOGGER.info("court_unet_v2 checkpoint discovered source=%s path=%s sha256=%s", source, path, sha256)
+    else:
+        _LOGGER.info("court_unet_v2 checkpoint discovered source=%s path=%s sha256=unknown", source, path)
+    return CourtModelCheckpointResolution(path=path, source=source, sha256=sha256)
+
+
+def _read_checkpoint_provenance_sha256(checkpoint_path: Path) -> str | None:
+    provenance_path = checkpoint_path.parent / "PROVENANCE.json"
+    try:
+        payload = json.loads(provenance_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    sha256 = payload.get("sha256")
+    return str(sha256) if isinstance(sha256, str) and sha256 else None
 
 
 def make_court_model_infer_provider(
@@ -76,20 +139,46 @@ def make_court_model_infer_provider(
 ) -> CourtModelInferProvider | None:
     """Build the optional provider used by E4 fusion.
 
-    A callable is for tests or preloaded runtimes; a checkpoint path is the
-    drop-in production path once the trained `court_unet_v2` file lands.
+    A callable is for tests or preloaded runtimes. Otherwise the checkpoint is
+    resolved with the default-on precedence rule and loaded once per process for
+    the given path/device pair.
     """
 
     if checkpoint_path is not None and infer_callable is not None:
         raise ValueError("provide either checkpoint_path or infer_callable, not both")
     if infer_callable is not None:
         return infer_callable
-    if checkpoint_path is None:
+
+    resolved = resolve_court_model_checkpoint_path(checkpoint_path)
+    if resolved is None:
+        return None
+    cache_key = (str(resolved.path), str(device))
+    if cache_key in _COURT_MODEL_PROVIDER_CACHE:
+        return _COURT_MODEL_PROVIDER_CACHE[cache_key]
+
+    try:
+        payload = load_court_model_checkpoint(resolved.path, device=device)
+        model, keypoint_names, model_size = build_court_model_from_checkpoint(payload, device=device)
+    except Exception as exc:
+        _LOGGER.warning(
+            "court_unet_v2 provider disabled source=%s path=%s reason=%s; using geometric-only",
+            resolved.source,
+            resolved.path,
+            exc,
+        )
+        _COURT_MODEL_PROVIDER_CACHE[cache_key] = None
         return None
 
     def _provider(image_bgr: Any) -> Mapping[str, Any]:
-        return infer_court_model(image_bgr, checkpoint_path, device=device)
+        return _infer_court_model_with_loaded_model(
+            image_bgr,
+            model=model,
+            keypoint_names=keypoint_names,
+            model_size=model_size,
+            device=device,
+        )
 
+    _COURT_MODEL_PROVIDER_CACHE[cache_key] = _provider
     return _provider
 
 
@@ -183,6 +272,25 @@ def infer_court_model(image_bgr: Any, checkpoint_path: str | Path, device: str =
     trivially-testable contract over raw throughput.
     """
 
+    payload = load_court_model_checkpoint(checkpoint_path, device=device)
+    model, keypoint_names, (model_width, model_height) = build_court_model_from_checkpoint(payload, device=device)
+    return _infer_court_model_with_loaded_model(
+        image_bgr,
+        model=model,
+        keypoint_names=keypoint_names,
+        model_size=(model_width, model_height),
+        device=device,
+    )
+
+
+def _infer_court_model_with_loaded_model(
+    image_bgr: Any,
+    *,
+    model: Any,
+    keypoint_names: list[str],
+    model_size: tuple[int, int],
+    device: str = "cpu",
+) -> dict[str, Any]:
     import cv2
     import numpy as np
     import torch
@@ -193,8 +301,7 @@ def infer_court_model(image_bgr: Any, checkpoint_path: str | Path, device: str =
     if source_height <= 0 or source_width <= 0:
         raise ValueError("image_bgr must have positive dimensions")
 
-    payload = load_court_model_checkpoint(checkpoint_path, device=device)
-    model, keypoint_names, (model_width, model_height) = build_court_model_from_checkpoint(payload, device=device)
+    model_width, model_height = int(model_size[0]), int(model_size[1])
 
     resized_bgr = cv2.resize(np.asarray(image_bgr), (model_width, model_height), interpolation=cv2.INTER_AREA)
     resized_rgb = cv2.cvtColor(resized_bgr, cv2.COLOR_BGR2RGB)

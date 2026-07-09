@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import logging
 import math
 from typing import Any, Mapping, Sequence
 
@@ -10,6 +11,7 @@ from .court_templates import ft_to_m
 from .schemas import PICKLEBALL_COURT_KEYPOINT_NAMES
 
 
+_LOGGER = logging.getLogger(__name__)
 NET_TOP_KEYPOINT_NAMES = frozenset({"net_left_sideline", "net_center", "net_right_sideline"})
 FLOOR_KEYPOINT_NAMES = tuple(name for name in PICKLEBALL_COURT_KEYPOINT_NAMES if name not in NET_TOP_KEYPOINT_NAMES)
 
@@ -1034,11 +1036,17 @@ def generate_homography_hypotheses(
     if neural_inference is None:
         provider = neural_infer_provider
         if provider is None:
-            from .court_model_infer import get_current_court_model_infer_provider
+            from .court_model_infer import get_current_court_model_infer_provider, make_court_model_infer_provider
 
             provider = get_current_court_model_infer_provider()
+            if provider is None:
+                provider = make_court_model_infer_provider()
         if provider is not None:
-            neural_inference = provider(image_bgr)
+            try:
+                neural_inference = provider(image_bgr)
+            except Exception as exc:
+                _LOGGER.warning("court_unet_v2 inference failed reason=%s; using geometric-only for frame", exc)
+                neural_inference = None
     neural_hypotheses = generate_neural_seed_hypotheses(
         neural_inference,
         image_size=(width, height),

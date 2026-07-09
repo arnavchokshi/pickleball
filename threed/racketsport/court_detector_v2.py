@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from .court_detector_v2_verify import (
 )
 
 DEFAULT_NEEDS_USER_INPUT = ("near_left_corner", "near_right_corner", "far_right_corner", "far_left_corner")
+_LOGGER = logging.getLogger(__name__)
 
 
 def detect_court_v2_from_frame(
@@ -37,6 +39,11 @@ def detect_court_v2_from_frame(
     if width <= 0 or height <= 0:
         raise ValueError("frame_bgr must have positive dimensions")
 
+    neural_provider = _make_optional_neural_provider(
+        neural_checkpoint_path=neural_checkpoint_path,
+        neural_infer=neural_infer,
+        neural_device=neural_device,
+    )
     net_evidence = detect_court_net_evidence(frame_bgr)
     surface_evidence = build_surface_paint_evidence(frame_bgr, roi=net_evidence.get("roi"))
     hypotheses = generate_court_hypotheses(
@@ -44,12 +51,7 @@ def detect_court_v2_from_frame(
         net_evidence=net_evidence,
         surface_evidence=surface_evidence,
     )
-    neural_inference = _run_optional_neural_inference(
-        frame_bgr,
-        neural_checkpoint_path=neural_checkpoint_path,
-        neural_infer=neural_infer,
-        neural_device=neural_device,
-    )
+    neural_inference = _run_optional_neural_inference(frame_bgr, neural_provider=neural_provider)
     try:
         if neural_inference is None:
             real_hypotheses = generate_homography_hypotheses(
@@ -187,7 +189,12 @@ def detect_court_v2_from_frames(
         if geo_r3_identity_min_shared_keypoints is None
         else int(geo_r3_identity_min_shared_keypoints)
     )
-    provider_enabled = neural_checkpoint_path is not None or neural_infer is not None
+    neural_provider = _make_optional_neural_provider(
+        neural_checkpoint_path=neural_checkpoint_path,
+        neural_infer=neural_infer,
+        neural_device=neural_device,
+    )
+    provider_enabled = neural_provider is not None
     per_frame_results: list[dict[str, Any]] = []
     for frame_index, frame in enumerate(frames):
         try:
@@ -198,12 +205,7 @@ def detect_court_v2_from_frames(
             surface_evidence = build_surface_paint_evidence(frame, roi=net_evidence.get("roi"))
         except Exception:
             surface_evidence = {}
-        neural_inference = _run_optional_neural_inference(
-            frame,
-            neural_checkpoint_path=neural_checkpoint_path,
-            neural_infer=neural_infer,
-            neural_device=neural_device,
-        )
+        neural_inference = _run_optional_neural_inference(frame, neural_provider=neural_provider)
         if neural_inference is None:
             hypotheses = generate_homography_hypotheses(
                 frame,
@@ -312,22 +314,37 @@ def _select_hypothesis(hypotheses: list[dict[str, Any]]) -> dict[str, Any] | Non
     return max(hypotheses, key=score)
 
 
-def _run_optional_neural_inference(
-    frame_bgr: Any,
+def _make_optional_neural_provider(
     *,
     neural_checkpoint_path: str | Path | None,
     neural_infer: Callable[[Any], Mapping[str, Any]] | None,
     neural_device: str,
-) -> Mapping[str, Any] | None:
+) -> Callable[[Any], Mapping[str, Any]] | None:
     if neural_checkpoint_path is not None and neural_infer is not None:
         raise ValueError("provide either neural_checkpoint_path or neural_infer, not both")
     if neural_infer is not None:
-        return neural_infer(frame_bgr)
-    if neural_checkpoint_path is None:
-        return None
-    from .court_model_infer import infer_court_model
+        return neural_infer
+    from .court_model_infer import make_court_model_infer_provider
 
-    return infer_court_model(frame_bgr, neural_checkpoint_path, device=neural_device)
+    try:
+        return make_court_model_infer_provider(checkpoint_path=neural_checkpoint_path, device=neural_device)
+    except Exception as exc:
+        _LOGGER.warning("court_unet_v2 provider unavailable reason=%s; using geometric-only", exc)
+        return None
+
+
+def _run_optional_neural_inference(
+    frame_bgr: Any,
+    *,
+    neural_provider: Callable[[Any], Mapping[str, Any]] | None,
+) -> Mapping[str, Any] | None:
+    if neural_provider is None:
+        return None
+    try:
+        return neural_provider(frame_bgr)
+    except Exception as exc:
+        _LOGGER.warning("court_unet_v2 inference failed reason=%s; using geometric-only for frame", exc)
+        return None
 
 
 def _json_safe_hypothesis(hypothesis: Mapping[str, Any]) -> dict[str, Any]:

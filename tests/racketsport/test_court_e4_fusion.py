@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -116,9 +117,13 @@ def _patch_frame_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(detector, "compute_tennis_overlay_rejection", lambda _hypothesis: {"passed": True})
 
 
-def test_e4_mock_neural_seed_adds_true_candidate_and_geor3_vote_selects_it(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_e4_mock_neural_seed_adds_true_candidate_and_geor3_vote_selects_it(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     import threed.racketsport.court_detector_v2 as detector
 
+    monkeypatch.setenv("PICKLEBALL_COURT_UNET_CKPT", str(tmp_path / "missing.pt"))
     _patch_frame_evidence(monkeypatch)
     gt = _projected_court()
 
@@ -170,9 +175,13 @@ def test_e4_mock_neural_seed_adds_true_candidate_and_geor3_vote_selects_it(monke
     )
 
 
-def test_e4_garbage_model_does_not_degrade_geometric_selection(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_e4_garbage_model_does_not_degrade_geometric_selection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     import threed.racketsport.court_detector_v2 as detector
 
+    monkeypatch.setenv("PICKLEBALL_COURT_UNET_CKPT", str(tmp_path / "missing.pt"))
     _patch_frame_evidence(monkeypatch)
     gt = _projected_court()
 
