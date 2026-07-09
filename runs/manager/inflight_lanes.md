@@ -4,7 +4,6 @@ One row per still-running lane so the next session neither double-dispatches nor
 
 | lane | kind (codex/sonnet/workflow) | session/task id | resume command | owned files | vm (if any) | expected done | dispatched |
 |---|---|---|---|---|---|---|---|
-| calv1_fuseval2_20260708 | codex | court session (bg job c922aa13) | read runs/lanes/calv1_fuseval2_20260708/{log.txt,report.json} | threed/racketsport court fusion files READ-MOSTLY (eval + possible ckpt promotion copy + PROVENANCE update), tests extend | none | ~1h | 2026-07-09 |
 | w5_critiqueviewer_20260708 | sonnet-local | agent (this session) | SendMessage if stalled | worktree /tmp/critique_viewer_worktree + lane dir only (local viewer for owner critique; no repo edits) | none | ~minutes; leaves dev server running detached | 2026-07-08 |
 | w6_labelpack_20260708 | codex | 019f42fb-ac15-7063-8c72-2d73162c34f0 | codex exec resume (cd ROOT first) | cvat_upload/w6_labelpack_20260708/** + lane dir + OWNER_SESSION_W6 doc | none | DONE PASS 2026-07-08 (68 sessions packaged; import handed to w6_cvatimport Sonnet lane) | 2026-07-08 11:26 |
 | w6_gate1b_knob_20260708 | codex | 019f42fb-b28e-7822-b989-2911db21a8b6 | codex exec resume (cd ROOT first) | process_video.py, remote_body_dispatch.py, BODY post-chain modules + tests | none | DONE PARTIAL->ACCEPTED-SCOPED 2026-07-08 (knob landed; resume open for GPU-command file; GPU instrument next) | 2026-07-08 11:26 |
