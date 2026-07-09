@@ -1,0 +1,550 @@
+{
+  "abandoned_reason": "owner_ruled_rejected_angle",
+  "artifact_type": "w7_court_kp_r2_ingest_accounting",
+  "final_corrected_r2_row_count": 5,
+  "final_corrected_r2_rows": [
+    {
+      "absolute_frame_index": 3808,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/73VurrTKCZ8/labels/court_keypoint_frames/frame_003808.png",
+      "dest_image_md5": "f35b53ca2f5bfaae7bbfb3ef046b358d",
+      "frame": "frame_003808.png",
+      "point_count": 15,
+      "source_frame_name": "73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+      "source_id": "73VurrTKCZ8",
+      "source_image": "cvat_upload/court_keypoints_20260707/frames/73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+      "source_precedence": "task13_partial_export_usable_full15_net_new"
+    },
+    {
+      "absolute_frame_index": 10195,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/HyUqT7zFiwk/labels/court_keypoint_frames/frame_010195.png",
+      "dest_image_md5": "9616eb3cee685f16979e7b9044b4f0c2",
+      "frame": "frame_010195.png",
+      "point_count": 15,
+      "source_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195__relabel_net_far_side.png",
+      "source_id": "HyUqT7zFiwk",
+      "source_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/HyUqT7zFiwk/labels/court_keypoint_frames/frame_010195.png",
+      "source_precedence": "task18_relabel_wins_or_replacement_r1_image_source"
+    },
+    {
+      "absolute_frame_index": 14564,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/HyUqT7zFiwk/labels/court_keypoint_frames/frame_014564.png",
+      "dest_image_md5": "c795941248f9d4d8de487be9c4bb5a8c",
+      "frame": "frame_014564.png",
+      "point_count": 15,
+      "source_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_014564__replacement_full_metric15.png",
+      "source_id": "HyUqT7zFiwk",
+      "source_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/HyUqT7zFiwk/labels/court_keypoint_frames/frame_014564.png",
+      "source_precedence": "task18_relabel_wins_or_replacement_r1_image_source"
+    },
+    {
+      "absolute_frame_index": 3636,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/zwCtH_i1_S4/labels/court_keypoint_frames/frame_003636.png",
+      "dest_image_md5": "6993e8e519cbb97fb9e3ca1600788f49",
+      "frame": "frame_003636.png",
+      "point_count": 15,
+      "source_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636__relabel_net_far_side.png",
+      "source_id": "zwCtH_i1_S4",
+      "source_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/zwCtH_i1_S4/labels/court_keypoint_frames/frame_003636.png",
+      "source_precedence": "task18_relabel_wins_or_replacement_r1_image_source"
+    },
+    {
+      "absolute_frame_index": 6363,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/zwCtH_i1_S4/labels/court_keypoint_frames/frame_006363.png",
+      "dest_image_md5": "8eb21b0fd28803b70cf1cd8d46340ca4",
+      "frame": "frame_006363.png",
+      "point_count": 15,
+      "source_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_006363__replacement_full_metric15.png",
+      "source_id": "zwCtH_i1_S4",
+      "source_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/zwCtH_i1_S4/labels/court_keypoint_frames/frame_006363.png",
+      "source_precedence": "task18_relabel_wins_or_replacement_r1_image_source"
+    }
+  ],
+  "image_source_note": "task18 image zip absent in this checkout; unchanged task18 row images copied from R1 corrected GT root pinned by supersedes_manifest_md5",
+  "net_new_gt_rows_vs_r1": [
+    {
+      "absolute_frame_index": 3808,
+      "source_id": "73VurrTKCZ8"
+    }
+  ],
+  "protected_scan": "runs/lanes/w7_courtkpingest_20260709/protected_scan_r2.json",
+  "rejected_task13_rows": [
+    {
+      "absolute_frame_index": 10677,
+      "decision": "abandoned",
+      "frame_name": "Ezz6HDNHlnk__Ezz6HDNHlnk_rally_0004__abs_010677.png",
+      "point_count": 1,
+      "reason": "owner_ruled_rejected_angle",
+      "source_id": "Ezz6HDNHlnk"
+    },
+    {
+      "absolute_frame_index": 509,
+      "decision": "abandoned",
+      "frame_name": "_L0HVmAlCQI___L0HVmAlCQI_rally_0001__abs_000509.png",
+      "point_count": 7,
+      "reason": "owner_ruled_rejected_angle",
+      "source_id": "_L0HVmAlCQI"
+    },
+    {
+      "absolute_frame_index": 10248,
+      "decision": "abandoned",
+      "frame_name": "wBu8bC4OfUY__wBu8bC4OfUY_rally_0001__abs_010248.png",
+      "point_count": 4,
+      "reason": "owner_ruled_rejected_angle",
+      "source_id": "wBu8bC4OfUY"
+    }
+  ],
+  "schema_version": 1,
+  "task13_export": "cvat_upload/exports/court_keypoints_20260707/court_keypoints_metric15_20260707_partial_goodangles_20260709_annotations.zip",
+  "task13_export_md5": "49ae71128bb5fa575619a25e256334b8",
+  "task13_xml": "runs/lanes/w7_courtkpingest_20260709/partial_goodangles_annotations.xml",
+  "task13_xml_md5": "c008b293079dd5f45f2d37145c1df7d6",
+  "task18_precedence_overlap_rows": [
+    {
+      "absolute_frame_index": 10195,
+      "delta_summary_px": {
+        "count": 15,
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "keypoint_deltas": [
+        {
+          "delta_px": 0.0,
+          "keypoint": "near_left_corner",
+          "moved_gt5": false,
+          "task13_xy": [
+            0.8,
+            812.05
+          ],
+          "task18_xy": [
+            0.8,
+            812.05
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "near_baseline_center",
+          "moved_gt5": false,
+          "task13_xy": [
+            338.91,
+            872.35
+          ],
+          "task18_xy": [
+            338.91,
+            872.35
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "near_right_corner",
+          "moved_gt5": false,
+          "task13_xy": [
+            1034.51,
+            977.88
+          ],
+          "task18_xy": [
+            1034.51,
+            977.88
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "far_right_corner",
+          "moved_gt5": false,
+          "task13_xy": [
+            1870.1,
+            715.14
+          ],
+          "task18_xy": [
+            1870.1,
+            715.14
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "far_baseline_center",
+          "moved_gt5": false,
+          "task13_xy": [
+            1523.77,
+            708.21
+          ],
+          "task18_xy": [
+            1523.77,
+            708.21
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "far_left_corner",
+          "moved_gt5": false,
+          "task13_xy": [
+            1223.13,
+            705.88
+          ],
+          "task18_xy": [
+            1223.13,
+            705.88
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "near_nvz_left",
+          "moved_gt5": false,
+          "task13_xy": [
+            694.62,
+            749.07
+          ],
+          "task18_xy": [
+            694.62,
+            749.07
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "near_nvz_center",
+          "moved_gt5": false,
+          "task13_xy": [
+            1025.92,
+            777.27
+          ],
+          "task18_xy": [
+            1025.92,
+            777.27
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "near_nvz_right",
+          "moved_gt5": false,
+          "task13_xy": [
+            1583.04,
+            807.76
+          ],
+          "task18_xy": [
+            1583.04,
+            807.76
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "net_left_sideline",
+          "moved_gt5": false,
+          "task13_xy": [
+            921.0,
+            628.6
+          ],
+          "task18_xy": [
+            921.0,
+            628.6
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "net_center",
+          "moved_gt5": false,
+          "task13_xy": [
+            1239.9,
+            630.9
+          ],
+          "task18_xy": [
+            1239.9,
+            630.9
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "net_right_sideline",
+          "moved_gt5": false,
+          "task13_xy": [
+            1696.16,
+            614.68
+          ],
+          "task18_xy": [
+            1696.16,
+            614.68
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "far_nvz_left",
+          "moved_gt5": false,
+          "task13_xy": [
+            990.23,
+            721.61
+          ],
+          "task18_xy": [
+            990.23,
+            721.61
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "far_nvz_center",
+          "moved_gt5": false,
+          "task13_xy": [
+            1343.02,
+            738.07
+          ],
+          "task18_xy": [
+            1343.02,
+            738.07
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "far_nvz_right",
+          "moved_gt5": false,
+          "task13_xy": [
+            1766.58,
+            751.79
+          ],
+          "task18_xy": [
+            1766.58,
+            751.79
+          ]
+        }
+      ],
+      "moved_gt5_count": 0,
+      "source_id": "HyUqT7zFiwk",
+      "task13_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195.png",
+      "task18_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195__relabel_net_far_side.png",
+      "winner": "task18"
+    },
+    {
+      "absolute_frame_index": 3636,
+      "delta_summary_px": {
+        "count": 15,
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "keypoint_deltas": [
+        {
+          "delta_px": 0.0,
+          "keypoint": "near_left_corner",
+          "moved_gt5": false,
+          "task13_xy": [
+            214.04,
+            918.89
+          ],
+          "task18_xy": [
+            214.04,
+            918.89
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "near_baseline_center",
+          "moved_gt5": false,
+          "task13_xy": [
+            983.75,
+            918.89
+          ],
+          "task18_xy": [
+            983.75,
+            918.89
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "near_right_corner",
+          "moved_gt5": false,
+          "task13_xy": [
+            1744.81,
+            925.37
+          ],
+          "task18_xy": [
+            1744.81,
+            925.37
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "far_right_corner",
+          "moved_gt5": false,
+          "task13_xy": [
+            1225.29,
+            623.02
+          ],
+          "task18_xy": [
+            1225.29,
+            623.02
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "far_baseline_center",
+          "moved_gt5": false,
+          "task13_xy": [
+            975.47,
+            621.85
+          ],
+          "task18_xy": [
+            975.47,
+            621.85
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "far_left_corner",
+          "moved_gt5": false,
+          "task13_xy": [
+            716.39,
+            621.0
+          ],
+          "task18_xy": [
+            716.39,
+            621.0
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "near_nvz_left",
+          "moved_gt5": false,
+          "task13_xy": [
+            526.53,
+            738.12
+          ],
+          "task18_xy": [
+            526.53,
+            738.12
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "near_nvz_center",
+          "moved_gt5": false,
+          "task13_xy": [
+            980.73,
+            742.48
+          ],
+          "task18_xy": [
+            980.73,
+            742.48
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "near_nvz_right",
+          "moved_gt5": false,
+          "task13_xy": [
+            1432.87,
+            746.76
+          ],
+          "task18_xy": [
+            1432.87,
+            746.76
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "net_left_sideline",
+          "moved_gt5": false,
+          "task13_xy": [
+            633.58,
+            591.95
+          ],
+          "task18_xy": [
+            633.58,
+            591.95
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "net_center",
+          "moved_gt5": false,
+          "task13_xy": [
+            977.62,
+            591.95
+          ],
+          "task18_xy": [
+            977.62,
+            591.95
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "net_right_sideline",
+          "moved_gt5": false,
+          "task13_xy": [
+            1300.3,
+            594.1
+          ],
+          "task18_xy": [
+            1300.3,
+            594.1
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "far_nvz_left",
+          "moved_gt5": false,
+          "task13_xy": [
+            647.38,
+            665.11
+          ],
+          "task18_xy": [
+            647.38,
+            665.11
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "far_nvz_center",
+          "moved_gt5": false,
+          "task13_xy": [
+            975.5,
+            666.28
+          ],
+          "task18_xy": [
+            975.5,
+            666.28
+          ]
+        },
+        {
+          "delta_px": 0.0,
+          "keypoint": "far_nvz_right",
+          "moved_gt5": false,
+          "task13_xy": [
+            1301.49,
+            669.47
+          ],
+          "task18_xy": [
+            1301.49,
+            669.47
+          ]
+        }
+      ],
+      "moved_gt5_count": 0,
+      "source_id": "zwCtH_i1_S4",
+      "task13_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636.png",
+      "task18_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636__relabel_net_far_side.png",
+      "winner": "task18"
+    }
+  ],
+  "usable_task13_rows": [
+    {
+      "absolute_frame_index": 3808,
+      "decision": "usable_full15",
+      "frame_name": "73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+      "point_count": 15,
+      "source_id": "73VurrTKCZ8"
+    },
+    {
+      "absolute_frame_index": 10195,
+      "decision": "usable_full15",
+      "frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195.png",
+      "point_count": 15,
+      "source_id": "HyUqT7zFiwk"
+    },
+    {
+      "absolute_frame_index": 3636,
+      "decision": "usable_full15",
+      "frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636.png",
+      "point_count": 15,
+      "source_id": "zwCtH_i1_S4"
+    }
+  ]
+}

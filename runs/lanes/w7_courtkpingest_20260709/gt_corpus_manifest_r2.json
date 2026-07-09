@@ -1,0 +1,166 @@
+{
+  "artifact_type": "w7_court_kp_corrected_gt_manifest_r2",
+  "content_index_md5": "bbef9f0aa22b8878ba1f5e7090c8fe22",
+  "corrected_gt_root": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2",
+  "files": [
+    {
+      "bytes": 3587348,
+      "md5": "f35b53ca2f5bfaae7bbfb3ef046b358d",
+      "path": "gt_roots/corrected_r2/73VurrTKCZ8/labels/court_keypoint_frames/frame_003808.png"
+    },
+    {
+      "bytes": 2321,
+      "md5": "4a684e2e485ef3384a5a81ee523844cd",
+      "path": "gt_roots/corrected_r2/73VurrTKCZ8/labels/court_keypoints.json"
+    },
+    {
+      "bytes": 1651774,
+      "md5": "9616eb3cee685f16979e7b9044b4f0c2",
+      "path": "gt_roots/corrected_r2/HyUqT7zFiwk/labels/court_keypoint_frames/frame_010195.png"
+    },
+    {
+      "bytes": 1565046,
+      "md5": "c795941248f9d4d8de487be9c4bb5a8c",
+      "path": "gt_roots/corrected_r2/HyUqT7zFiwk/labels/court_keypoint_frames/frame_014564.png"
+    },
+    {
+      "bytes": 3700,
+      "md5": "a0f0d17a17cc677ef26ea7f1200c9c82",
+      "path": "gt_roots/corrected_r2/HyUqT7zFiwk/labels/court_keypoints.json"
+    },
+    {
+      "bytes": 3405538,
+      "md5": "6993e8e519cbb97fb9e3ca1600788f49",
+      "path": "gt_roots/corrected_r2/zwCtH_i1_S4/labels/court_keypoint_frames/frame_003636.png"
+    },
+    {
+      "bytes": 3367833,
+      "md5": "8eb21b0fd28803b70cf1cd8d46340ca4",
+      "path": "gt_roots/corrected_r2/zwCtH_i1_S4/labels/court_keypoint_frames/frame_006363.png"
+    },
+    {
+      "bytes": 3690,
+      "md5": "7fd0029446c4832552765fb08460beb0",
+      "path": "gt_roots/corrected_r2/zwCtH_i1_S4/labels/court_keypoints.json"
+    }
+  ],
+  "owner_ruling": {
+    "notes_path": "cvat_upload/exports/court_keypoints_20260707/PARTIAL_EXPORT_NOTES_20260709.md",
+    "rejected_keys": [
+      [
+        "Ezz6HDNHlnk",
+        10677
+      ],
+      [
+        "_L0HVmAlCQI",
+        509
+      ],
+      [
+        "wBu8bC4OfUY",
+        10248
+      ]
+    ],
+    "task18_wins_keys": [
+      [
+        "HyUqT7zFiwk",
+        10195
+      ],
+      [
+        "zwCtH_i1_S4",
+        3636
+      ]
+    ],
+    "usable_full15_keys": [
+      [
+        "73VurrTKCZ8",
+        3808
+      ],
+      [
+        "HyUqT7zFiwk",
+        10195
+      ],
+      [
+        "zwCtH_i1_S4",
+        3636
+      ]
+    ]
+  },
+  "row_count": 5,
+  "rows": [
+    {
+      "absolute_frame_index": 3808,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/73VurrTKCZ8/labels/court_keypoint_frames/frame_003808.png",
+      "dest_image_md5": "f35b53ca2f5bfaae7bbfb3ef046b358d",
+      "frame": "frame_003808.png",
+      "point_count": 15,
+      "source_frame_name": "73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+      "source_id": "73VurrTKCZ8",
+      "source_image": "cvat_upload/court_keypoints_20260707/frames/73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+      "source_precedence": "task13_partial_export_usable_full15_net_new"
+    },
+    {
+      "absolute_frame_index": 10195,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/HyUqT7zFiwk/labels/court_keypoint_frames/frame_010195.png",
+      "dest_image_md5": "9616eb3cee685f16979e7b9044b4f0c2",
+      "frame": "frame_010195.png",
+      "point_count": 15,
+      "source_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195__relabel_net_far_side.png",
+      "source_id": "HyUqT7zFiwk",
+      "source_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/HyUqT7zFiwk/labels/court_keypoint_frames/frame_010195.png",
+      "source_precedence": "task18_relabel_wins_or_replacement_r1_image_source"
+    },
+    {
+      "absolute_frame_index": 14564,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/HyUqT7zFiwk/labels/court_keypoint_frames/frame_014564.png",
+      "dest_image_md5": "c795941248f9d4d8de487be9c4bb5a8c",
+      "frame": "frame_014564.png",
+      "point_count": 15,
+      "source_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_014564__replacement_full_metric15.png",
+      "source_id": "HyUqT7zFiwk",
+      "source_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/HyUqT7zFiwk/labels/court_keypoint_frames/frame_014564.png",
+      "source_precedence": "task18_relabel_wins_or_replacement_r1_image_source"
+    },
+    {
+      "absolute_frame_index": 3636,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/zwCtH_i1_S4/labels/court_keypoint_frames/frame_003636.png",
+      "dest_image_md5": "6993e8e519cbb97fb9e3ca1600788f49",
+      "frame": "frame_003636.png",
+      "point_count": 15,
+      "source_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636__relabel_net_far_side.png",
+      "source_id": "zwCtH_i1_S4",
+      "source_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/zwCtH_i1_S4/labels/court_keypoint_frames/frame_003636.png",
+      "source_precedence": "task18_relabel_wins_or_replacement_r1_image_source"
+    },
+    {
+      "absolute_frame_index": 6363,
+      "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/zwCtH_i1_S4/labels/court_keypoint_frames/frame_006363.png",
+      "dest_image_md5": "8eb21b0fd28803b70cf1cd8d46340ca4",
+      "frame": "frame_006363.png",
+      "point_count": 15,
+      "source_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_006363__replacement_full_metric15.png",
+      "source_id": "zwCtH_i1_S4",
+      "source_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/zwCtH_i1_S4/labels/court_keypoint_frames/frame_006363.png",
+      "source_precedence": "task18_relabel_wins_or_replacement_r1_image_source"
+    }
+  ],
+  "schema_version": 1,
+  "source_artifacts": {
+    "task13_partial_xml": {
+      "md5": "c008b293079dd5f45f2d37145c1df7d6",
+      "path": "runs/lanes/w7_courtkpingest_20260709/partial_goodangles_annotations.xml"
+    },
+    "task13_partial_zip": {
+      "md5": "49ae71128bb5fa575619a25e256334b8",
+      "path": "cvat_upload/exports/court_keypoints_20260707/court_keypoints_metric15_20260707_partial_goodangles_20260709_annotations.zip"
+    },
+    "task18_r1_image_root": {
+      "manifest_md5": "0470cd23a8effa26825ce77be3a8076b",
+      "path": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected"
+    },
+    "task18_relabel_zip": {
+      "md5": "1561159bc5236f6fbeb9148a7443adb2",
+      "path": "cvat_upload/exports/w5_labelpack_20260708/w5_court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_20260708_annotations.zip"
+    }
+  },
+  "supersedes_manifest_md5": "0470cd23a8effa26825ce77be3a8076b"
+}

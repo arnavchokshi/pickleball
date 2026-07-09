@@ -1,0 +1,1354 @@
+{
+  "acceptance": [
+    {
+      "after": "PASS: protected_hits=0; named_source_hits=['73VurrTKCZ8', 'Ezz6HDNHlnk', 'HyUqT7zFiwk', '_L0HVmAlCQI', 'wBu8bC4OfUY', 'zwCtH_i1_S4']; export_md5=49ae71128bb5fa575619a25e256334b8",
+      "baseline": null,
+      "metric": "PROTECTED-SCAN FIRST: task-13 partial export protected patterns",
+      "target": "0 hits for pwxNwFfYQlQ/vQhtz8l6VqU/outdoor_webcam_iynbd/indoor_doubles_fwuks before ingest",
+      "verdict": "PASS"
+    },
+    {
+      "after": "usable_task13_rows=3; rejected_task13_rows=3; final_corrected_r2_rows=5; net_new_gt_rows_vs_r1=[{'absolute_frame_index': 3808, 'source_id': '73VurrTKCZ8'}]",
+      "baseline": "R1 corrected GT rows=4; manifest_md5=0470cd23a8effa26825ce77be3a8076b",
+      "metric": "Owner-ruling ingest scope",
+      "target": "Ingest only the three owner-named usable full-15kp rows; net-new GT should be 73VurrTKCZ8 abs_003808 only",
+      "verdict": "PASS"
+    },
+    {
+      "after": [
+        {
+          "absolute_frame_index": 10677,
+          "decision": "abandoned",
+          "frame_name": "Ezz6HDNHlnk__Ezz6HDNHlnk_rally_0004__abs_010677.png",
+          "point_count": 1,
+          "reason": "owner_ruled_rejected_angle",
+          "source_id": "Ezz6HDNHlnk"
+        },
+        {
+          "absolute_frame_index": 509,
+          "decision": "abandoned",
+          "frame_name": "_L0HVmAlCQI___L0HVmAlCQI_rally_0001__abs_000509.png",
+          "point_count": 7,
+          "reason": "owner_ruled_rejected_angle",
+          "source_id": "_L0HVmAlCQI"
+        },
+        {
+          "absolute_frame_index": 10248,
+          "decision": "abandoned",
+          "frame_name": "wBu8bC4OfUY__wBu8bC4OfUY_rally_0001__abs_010248.png",
+          "point_count": 4,
+          "reason": "owner_ruled_rejected_angle",
+          "source_id": "wBu8bC4OfUY"
+        }
+      ],
+      "baseline": null,
+      "metric": "Owner-ruled rejected-angle partial rows not ingested",
+      "target": "Ezz6HDNHlnk abs_010677, _L0HVmAlCQI abs_000509, and wBu8bC4OfUY abs_010248 are abandoned with reason owner_ruled_rejected_angle",
+      "verdict": "PASS"
+    },
+    {
+      "after": {
+        "delta_summaries_px": [
+          {
+            "absolute_frame_index": 10195,
+            "delta_summary_px": {
+              "count": 15,
+              "max": 0.0,
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0
+            },
+            "moved_gt5_count": 0,
+            "source_id": "HyUqT7zFiwk",
+            "winner": "task18"
+          },
+          {
+            "absolute_frame_index": 3636,
+            "delta_summary_px": {
+              "count": 15,
+              "max": 0.0,
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0
+            },
+            "moved_gt5_count": 0,
+            "source_id": "zwCtH_i1_S4",
+            "winner": "task18"
+          }
+        ],
+        "moved_gt5_total": 0,
+        "overlap_rows": 2
+      },
+      "baseline": "Task-13 partial export contains full-15kp rows for HyUqT7zFiwk abs_010195 and zwCtH_i1_S4 abs_003636",
+      "metric": "Task-18 precedence for overlapping task-13 usable rows",
+      "target": "Task-18 coordinates win on conflict; compare and report deltas",
+      "verdict": "PASS"
+    },
+    {
+      "after": "20aa6da46315888265a9487626c9224b byte_identical=True; row_count=5; file_count=8",
+      "baseline": "0470cd23a8effa26825ce77be3a8076b",
+      "metric": "Corrected GT manifest md5 supersedes R1",
+      "target": "Rebuild corrected GT manifest with deterministic md5 pin and prove rerun byte-identical",
+      "verdict": "PASS"
+    },
+    {
+      "after": "changed_sources=['73VurrTKCZ8']; candidate_count_scored=4; all metric keys=['raw_independent.pck_at_5px', 'raw_all.pck_at_5px', 'aggregated_independent.pck_at_5px', 'aggregated_all.pck_at_5px']; all PCK@5 values are 0.0 and all per-viewpoint gates false",
+      "baseline": "No R1 row for 73VurrTKCZ8 abs_003808",
+      "metric": "Owner-gate rescore for changed sources only",
+      "target": "Score what the harness can score for new/changed source 73VurrTKCZ8",
+      "verdict": "PASS"
+    },
+    {
+      "after": "none from this lane; no process_video.py, configs/racketsport/best_stack.json, or court training edits performed in R2. All R2 PCK@5 values tie at 0.0, so no corrected-GT PCK winner flip is evidenced.",
+      "baseline": "R1/current local best-stack file was not an artifact target for this lane",
+      "metric": "BEST-STACK DELTA",
+      "target": "GT/scoring only; if corrected GT flips candidate evidence, report pending evidence without touching manifest",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "runs/lanes/w7_courtkpingest_20260709/protected_scan_r2.json: protected scan for task-13 partial export before ingest.",
+    "runs/lanes/w7_courtkpingest_20260709/partial_goodangles_annotations.xml: extracted CVAT XML from task-13 partial export.",
+    "runs/lanes/w7_courtkpingest_20260709/task18_relabel_annotations_r2.xml: extracted task-18 relabel XML used for overlap precedence.",
+    "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/: corrected GT root with five rows total; task-13 net-new 73VurrTKCZ8 plus task-18-winning HyUqT7zFiwk/zwCtH_i1_S4 rows.",
+    "runs/lanes/w7_courtkpingest_20260709/gt_roots/changed_sources_r2/: changed-source-only root for 73VurrTKCZ8 owner-gate scoring.",
+    "runs/lanes/w7_courtkpingest_20260709/ingest_accounting_r2.json: accepted/rejected accounting including owner_ruled_rejected_angle rows.",
+    "runs/lanes/w7_courtkpingest_20260709/task13_task18_overlap_deltas_r2.json: task-13 vs task-18 overlap delta details.",
+    "runs/lanes/w7_courtkpingest_20260709/gt_corpus_manifest_r2.json and .md5: deterministic corrected-GT manifest, md5 20aa6da46315888265a9487626c9224b.",
+    "runs/lanes/w7_courtkpingest_20260709/determinism_check_r2.json: byte-identical manifest rerun proof.",
+    "runs/lanes/w7_courtkpingest_20260709/scores_r2/ and owner_gate_rescore_summary_r2.json: owner-gate reports for 73VurrTKCZ8 only.",
+    "runs/lanes/w7_courtkpingest_20260709/report_r2.json: this self-written report."
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_calibrate_harvest_courts.py tests/racketsport/test_evaluate_court_keypoint_owner_gate.py tests/racketsport/test_evaluate_court_model_v2.py -q",
+    "failed": 0,
+    "failure_notes": null,
+    "failures_all_preexisting": false,
+    "passed": 12,
+    "skipped": 0
+  },
+  "honest_issues": [
+    "The task-18 image package cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_images.zip is absent in this checkout, so unchanged task-18 rows in corrected_r2 copied images from the R1 corrected GT root pinned by supersedes_manifest_md5=0470cd23a8effa26825ce77be3a8076b.",
+    "No candidate passed the owner gate on the new 73VurrTKCZ8 changed-source slice: all raw/aggregated PCK@5 values are 0.0 and all per-viewpoint gates are false.",
+    "Task-13/task-18 overlaps had zero-pixel coordinate deltas in this export; task-18 precedence was still enforced.",
+    "Closeout git status has unrelated/concurrent dirty and deleted files, including configs/racketsport/best_stack.json. I did not modify or revert them for R2.",
+    "R2 made no code edits; existing R1 touched files remain in the worktree from the prior round."
+  ],
+  "ingest_accounting": {
+    "accepted_rows": [
+      {
+        "absolute_frame_index": 3808,
+        "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/73VurrTKCZ8/labels/court_keypoint_frames/frame_003808.png",
+        "dest_image_md5": "f35b53ca2f5bfaae7bbfb3ef046b358d",
+        "frame": "frame_003808.png",
+        "point_count": 15,
+        "source_frame_name": "73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+        "source_id": "73VurrTKCZ8",
+        "source_image": "cvat_upload/court_keypoints_20260707/frames/73VurrTKCZ8__73VurrTKCZ8_rally_0002__abs_003808.png",
+        "source_precedence": "task13_partial_export_usable_full15_net_new"
+      },
+      {
+        "absolute_frame_index": 10195,
+        "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/HyUqT7zFiwk/labels/court_keypoint_frames/frame_010195.png",
+        "dest_image_md5": "9616eb3cee685f16979e7b9044b4f0c2",
+        "frame": "frame_010195.png",
+        "point_count": 15,
+        "source_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195__relabel_net_far_side.png",
+        "source_id": "HyUqT7zFiwk",
+        "source_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/HyUqT7zFiwk/labels/court_keypoint_frames/frame_010195.png",
+        "source_precedence": "task18_relabel_wins_or_replacement_r1_image_source"
+      },
+      {
+        "absolute_frame_index": 14564,
+        "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/HyUqT7zFiwk/labels/court_keypoint_frames/frame_014564.png",
+        "dest_image_md5": "c795941248f9d4d8de487be9c4bb5a8c",
+        "frame": "frame_014564.png",
+        "point_count": 15,
+        "source_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_014564__replacement_full_metric15.png",
+        "source_id": "HyUqT7zFiwk",
+        "source_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/HyUqT7zFiwk/labels/court_keypoint_frames/frame_014564.png",
+        "source_precedence": "task18_relabel_wins_or_replacement_r1_image_source"
+      },
+      {
+        "absolute_frame_index": 3636,
+        "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/zwCtH_i1_S4/labels/court_keypoint_frames/frame_003636.png",
+        "dest_image_md5": "6993e8e519cbb97fb9e3ca1600788f49",
+        "frame": "frame_003636.png",
+        "point_count": 15,
+        "source_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636__relabel_net_far_side.png",
+        "source_id": "zwCtH_i1_S4",
+        "source_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/zwCtH_i1_S4/labels/court_keypoint_frames/frame_003636.png",
+        "source_precedence": "task18_relabel_wins_or_replacement_r1_image_source"
+      },
+      {
+        "absolute_frame_index": 6363,
+        "dest_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected_r2/zwCtH_i1_S4/labels/court_keypoint_frames/frame_006363.png",
+        "dest_image_md5": "8eb21b0fd28803b70cf1cd8d46340ca4",
+        "frame": "frame_006363.png",
+        "point_count": 15,
+        "source_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_006363__replacement_full_metric15.png",
+        "source_id": "zwCtH_i1_S4",
+        "source_image": "runs/lanes/w7_courtkpingest_20260709/gt_roots/corrected/zwCtH_i1_S4/labels/court_keypoint_frames/frame_006363.png",
+        "source_precedence": "task18_relabel_wins_or_replacement_r1_image_source"
+      }
+    ],
+    "image_source_note": "task18 image zip absent in this checkout; unchanged task18 row images copied from R1 corrected GT root pinned by supersedes_manifest_md5",
+    "net_new_gt_rows_vs_r1": [
+      {
+        "absolute_frame_index": 3808,
+        "source_id": "73VurrTKCZ8"
+      }
+    ],
+    "per_source_counts": {
+      "73VurrTKCZ8": {
+        "points": 15,
+        "rows": 1
+      },
+      "HyUqT7zFiwk": {
+        "points": 30,
+        "rows": 2
+      },
+      "zwCtH_i1_S4": {
+        "points": 30,
+        "rows": 2
+      }
+    },
+    "rejected_rows": [
+      {
+        "absolute_frame_index": 10677,
+        "decision": "abandoned",
+        "frame_name": "Ezz6HDNHlnk__Ezz6HDNHlnk_rally_0004__abs_010677.png",
+        "point_count": 1,
+        "reason": "owner_ruled_rejected_angle",
+        "source_id": "Ezz6HDNHlnk"
+      },
+      {
+        "absolute_frame_index": 509,
+        "decision": "abandoned",
+        "frame_name": "_L0HVmAlCQI___L0HVmAlCQI_rally_0001__abs_000509.png",
+        "point_count": 7,
+        "reason": "owner_ruled_rejected_angle",
+        "source_id": "_L0HVmAlCQI"
+      },
+      {
+        "absolute_frame_index": 10248,
+        "decision": "abandoned",
+        "frame_name": "wBu8bC4OfUY__wBu8bC4OfUY_rally_0001__abs_010248.png",
+        "point_count": 4,
+        "reason": "owner_ruled_rejected_angle",
+        "source_id": "wBu8bC4OfUY"
+      }
+    ]
+  },
+  "manifest": {
+    "artifact": "runs/lanes/w7_courtkpingest_20260709/gt_corpus_manifest_r2.json",
+    "determinism": {
+      "after_md5": "20aa6da46315888265a9487626c9224b",
+      "artifact_type": "w7_court_kp_r2_manifest_determinism_check",
+      "before_md5": "20aa6da46315888265a9487626c9224b",
+      "byte_identical": true,
+      "file_count": 8,
+      "manifest": "runs/lanes/w7_courtkpingest_20260709/gt_corpus_manifest_r2.json",
+      "rerun_manifest": "runs/lanes/w7_courtkpingest_20260709/gt_corpus_manifest_r2.rerun.json",
+      "row_count": 5
+    },
+    "file_count": 8,
+    "md5": "20aa6da46315888265a9487626c9224b",
+    "row_count": 5,
+    "supersedes_manifest_md5": "0470cd23a8effa26825ce77be3a8076b"
+  },
+  "next": "Downstream lanes should pin runs/lanes/w7_courtkpingest_20260709/gt_corpus_manifest_r2.json md5 20aa6da46315888265a9487626c9224b for this corrected GT revision. Restore/package the missing task-18 image zip separately if archival completeness is required.",
+  "objective_result": "PASS",
+  "owner_gate": {
+    "artifact": "runs/lanes/w7_courtkpingest_20260709/owner_gate_rescore_summary_r2.json",
+    "best_stack_delta": "none; all R2 changed-source PCK@5 values are 0.0 and gates false, so no PCK winner flip is evidenced. Error-summary differences are pending diagnostic evidence only.",
+    "changed_sources": [
+      "73VurrTKCZ8"
+    ],
+    "metric_keys": [
+      "raw_independent.pck_at_5px",
+      "raw_all.pck_at_5px",
+      "aggregated_independent.pck_at_5px",
+      "aggregated_all.pck_at_5px"
+    ],
+    "scope": "changed_sources_only",
+    "score_brief": [
+      {
+        "aggregated_independent_error_summary": {
+          "count": 15,
+          "max": 1460.3574924312197,
+          "mean": 976.3627587161133,
+          "median": 999.683559932842,
+          "p95": 1307.535620064316
+        },
+        "aggregated_independent_gate_passed_per_viewpoint": false,
+        "aggregated_independent_pck_at_5px": 0.0,
+        "aliases": [
+          "best_stack_court_unet_v2_current_path",
+          "calv1_unet_train_full_run"
+        ],
+        "candidate_id": "best_stack_court_unet_v2_current_path",
+        "checkpoint": "models/checkpoints/court_unet_v2/court_model_v2.pt",
+        "raw_independent_error_summary": {
+          "count": 15,
+          "max": 1460.3574924312197,
+          "mean": 976.3627587161133,
+          "median": 999.683559932842,
+          "p95": 1307.535620064316
+        },
+        "raw_independent_gate_passed_per_viewpoint": false,
+        "raw_independent_pck_at_5px": 0.0,
+        "report": "runs/lanes/w7_courtkpingest_20260709/scores_r2/best_stack_court_unet_v2_current_path/changed_sources_gt_gate_report.json",
+        "sha256": "cdf0555d49335a946e518b177d85e2ab5be02100ba46eb3e634785c84f337c22"
+      },
+      {
+        "aggregated_independent_error_summary": {
+          "count": 15,
+          "max": 1847.225223328222,
+          "mean": 935.6904744638248,
+          "median": 897.9968783910109,
+          "p95": 1655.913064068457
+        },
+        "aggregated_independent_gate_passed_per_viewpoint": false,
+        "aggregated_independent_pck_at_5px": 0.0,
+        "aliases": [
+          "calv1_unet_retrain_v2_full_run"
+        ],
+        "candidate_id": "calv1_unet_retrain_v2_full_run",
+        "checkpoint": "runs/lanes/calv1_unet_retrain_20260708/full_run/court_model_v2.pt",
+        "raw_independent_error_summary": {
+          "count": 15,
+          "max": 1847.225223328222,
+          "mean": 935.6904744638248,
+          "median": 897.9968783910109,
+          "p95": 1655.913064068457
+        },
+        "raw_independent_gate_passed_per_viewpoint": false,
+        "raw_independent_pck_at_5px": 0.0,
+        "report": "runs/lanes/w7_courtkpingest_20260709/scores_r2/calv1_unet_retrain_v2_full_run/changed_sources_gt_gate_report.json",
+        "sha256": "cb290475e30d0dfda75dadc33387b47f3b097f02a5df55bedae2a8a10f0deb52"
+      },
+      {
+        "aggregated_independent_error_summary": {
+          "count": 15,
+          "max": 1425.1793647555385,
+          "mean": 899.9733519893836,
+          "median": 820.0480542626755,
+          "p95": 1288.9729448073426
+        },
+        "aggregated_independent_gate_passed_per_viewpoint": false,
+        "aggregated_independent_pck_at_5px": 0.0,
+        "aliases": [
+          "calv1_trainerfix_smoke_workers0"
+        ],
+        "candidate_id": "calv1_trainerfix_smoke_workers0",
+        "checkpoint": "runs/lanes/calv1_trainerfix_20260708/smoke_workers0/court_model_v2.pt",
+        "raw_independent_error_summary": {
+          "count": 15,
+          "max": 1425.1793647555385,
+          "mean": 899.9733519893836,
+          "median": 820.0480542626755,
+          "p95": 1288.9729448073426
+        },
+        "raw_independent_gate_passed_per_viewpoint": false,
+        "raw_independent_pck_at_5px": 0.0,
+        "report": "runs/lanes/w7_courtkpingest_20260709/scores_r2/calv1_trainerfix_smoke_workers0/changed_sources_gt_gate_report.json",
+        "sha256": "8689f5f66609849b742ee6f47e571fe76fa45bbe9a26bef72f813f68235d83dc"
+      },
+      {
+        "aggregated_independent_error_summary": {
+          "count": 15,
+          "max": 1425.1793647555385,
+          "mean": 899.9733519893836,
+          "median": 820.0480542626755,
+          "p95": 1288.9729448073426
+        },
+        "aggregated_independent_gate_passed_per_viewpoint": false,
+        "aggregated_independent_pck_at_5px": 0.0,
+        "aliases": [
+          "calv1_trainerfix_smoke_workers2"
+        ],
+        "candidate_id": "calv1_trainerfix_smoke_workers2",
+        "checkpoint": "runs/lanes/calv1_trainerfix_20260708/smoke_workers2/court_model_v2.pt",
+        "raw_independent_error_summary": {
+          "count": 15,
+          "max": 1425.1793647555385,
+          "mean": 899.9733519893836,
+          "median": 820.0480542626755,
+          "p95": 1288.9729448073426
+        },
+        "raw_independent_gate_passed_per_viewpoint": false,
+        "raw_independent_pck_at_5px": 0.0,
+        "report": "runs/lanes/w7_courtkpingest_20260709/scores_r2/calv1_trainerfix_smoke_workers2/changed_sources_gt_gate_report.json",
+        "sha256": "e5d0fe27a0b6b3cbca5c0a203895af182e86c22c9a35c03812fcf4ebffbfc98b"
+      }
+    ],
+    "score_tables": [
+      {
+        "aliases": [
+          "best_stack_court_unet_v2_current_path",
+          "calv1_unet_train_full_run"
+        ],
+        "candidate_id": "best_stack_court_unet_v2_current_path",
+        "changed_source_gt_report": "runs/lanes/w7_courtkpingest_20260709/scores_r2/best_stack_court_unet_v2_current_path/changed_sources_gt_gate_report.json",
+        "checkpoint": "models/checkpoints/court_unet_v2/court_model_v2.pt",
+        "rows": [
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1460.3574924312197,
+              "mean": 976.3627587161133,
+              "median": 999.683559932842,
+              "p95": 1307.535620064316
+            },
+            "metric_key": "raw_independent.pck_at_5px",
+            "mode": "raw_per_frame",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1460.3574924312197,
+                "mean": 976.3627587161133,
+                "median": 999.683559932842,
+                "p95": 1307.535620064316,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          },
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1460.3574924312197,
+              "mean": 976.3627587161133,
+              "median": 999.683559932842,
+              "p95": 1307.535620064316
+            },
+            "metric_key": "raw_all.pck_at_5px",
+            "mode": "raw_per_frame",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1460.3574924312197,
+                "mean": 976.3627587161133,
+                "median": 999.683559932842,
+                "p95": 1307.535620064316,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          },
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1460.3574924312197,
+              "mean": 976.3627587161133,
+              "median": 999.683559932842,
+              "p95": 1307.535620064316
+            },
+            "metric_key": "aggregated_independent.pck_at_5px",
+            "mode": "aggregated_static_camera_median",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1460.3574924312197,
+                "mean": 976.3627587161133,
+                "median": 999.683559932842,
+                "p95": 1307.535620064316,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          },
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1460.3574924312197,
+              "mean": 976.3627587161133,
+              "median": 999.683559932842,
+              "p95": 1307.535620064316
+            },
+            "metric_key": "aggregated_all.pck_at_5px",
+            "mode": "aggregated_static_camera_median",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1460.3574924312197,
+                "mean": 976.3627587161133,
+                "median": 999.683559932842,
+                "p95": 1307.535620064316,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          }
+        ],
+        "sha256": "cdf0555d49335a946e518b177d85e2ab5be02100ba46eb3e634785c84f337c22"
+      },
+      {
+        "aliases": [
+          "calv1_unet_retrain_v2_full_run"
+        ],
+        "candidate_id": "calv1_unet_retrain_v2_full_run",
+        "changed_source_gt_report": "runs/lanes/w7_courtkpingest_20260709/scores_r2/calv1_unet_retrain_v2_full_run/changed_sources_gt_gate_report.json",
+        "checkpoint": "runs/lanes/calv1_unet_retrain_20260708/full_run/court_model_v2.pt",
+        "rows": [
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1847.225223328222,
+              "mean": 935.6904744638248,
+              "median": 897.9968783910109,
+              "p95": 1655.913064068457
+            },
+            "metric_key": "raw_independent.pck_at_5px",
+            "mode": "raw_per_frame",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1847.225223328222,
+                "mean": 935.6904744638248,
+                "median": 897.9968783910109,
+                "p95": 1655.913064068457,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          },
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1847.225223328222,
+              "mean": 935.6904744638248,
+              "median": 897.9968783910109,
+              "p95": 1655.913064068457
+            },
+            "metric_key": "raw_all.pck_at_5px",
+            "mode": "raw_per_frame",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1847.225223328222,
+                "mean": 935.6904744638248,
+                "median": 897.9968783910109,
+                "p95": 1655.913064068457,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          },
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1847.225223328222,
+              "mean": 935.6904744638248,
+              "median": 897.9968783910109,
+              "p95": 1655.913064068457
+            },
+            "metric_key": "aggregated_independent.pck_at_5px",
+            "mode": "aggregated_static_camera_median",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1847.225223328222,
+                "mean": 935.6904744638248,
+                "median": 897.9968783910109,
+                "p95": 1655.913064068457,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          },
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1847.225223328222,
+              "mean": 935.6904744638248,
+              "median": 897.9968783910109,
+              "p95": 1655.913064068457
+            },
+            "metric_key": "aggregated_all.pck_at_5px",
+            "mode": "aggregated_static_camera_median",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1847.225223328222,
+                "mean": 935.6904744638248,
+                "median": 897.9968783910109,
+                "p95": 1655.913064068457,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          }
+        ],
+        "sha256": "cb290475e30d0dfda75dadc33387b47f3b097f02a5df55bedae2a8a10f0deb52"
+      },
+      {
+        "aliases": [
+          "calv1_trainerfix_smoke_workers0"
+        ],
+        "candidate_id": "calv1_trainerfix_smoke_workers0",
+        "changed_source_gt_report": "runs/lanes/w7_courtkpingest_20260709/scores_r2/calv1_trainerfix_smoke_workers0/changed_sources_gt_gate_report.json",
+        "checkpoint": "runs/lanes/calv1_trainerfix_20260708/smoke_workers0/court_model_v2.pt",
+        "rows": [
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1425.1793647555385,
+              "mean": 899.9733519893836,
+              "median": 820.0480542626755,
+              "p95": 1288.9729448073426
+            },
+            "metric_key": "raw_independent.pck_at_5px",
+            "mode": "raw_per_frame",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1425.1793647555385,
+                "mean": 899.9733519893836,
+                "median": 820.0480542626755,
+                "p95": 1288.9729448073426,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          },
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1425.1793647555385,
+              "mean": 899.9733519893836,
+              "median": 820.0480542626755,
+              "p95": 1288.9729448073426
+            },
+            "metric_key": "raw_all.pck_at_5px",
+            "mode": "raw_per_frame",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1425.1793647555385,
+                "mean": 899.9733519893836,
+                "median": 820.0480542626755,
+                "p95": 1288.9729448073426,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          },
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1425.1793647555385,
+              "mean": 899.9733519893836,
+              "median": 820.0480542626755,
+              "p95": 1288.9729448073426
+            },
+            "metric_key": "aggregated_independent.pck_at_5px",
+            "mode": "aggregated_static_camera_median",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1425.1793647555385,
+                "mean": 899.9733519893836,
+                "median": 820.0480542626755,
+                "p95": 1288.9729448073426,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          },
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1425.1793647555385,
+              "mean": 899.9733519893836,
+              "median": 820.0480542626755,
+              "p95": 1288.9729448073426
+            },
+            "metric_key": "aggregated_all.pck_at_5px",
+            "mode": "aggregated_static_camera_median",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1425.1793647555385,
+                "mean": 899.9733519893836,
+                "median": 820.0480542626755,
+                "p95": 1288.9729448073426,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          }
+        ],
+        "sha256": "8689f5f66609849b742ee6f47e571fe76fa45bbe9a26bef72f813f68235d83dc"
+      },
+      {
+        "aliases": [
+          "calv1_trainerfix_smoke_workers2"
+        ],
+        "candidate_id": "calv1_trainerfix_smoke_workers2",
+        "changed_source_gt_report": "runs/lanes/w7_courtkpingest_20260709/scores_r2/calv1_trainerfix_smoke_workers2/changed_sources_gt_gate_report.json",
+        "checkpoint": "runs/lanes/calv1_trainerfix_20260708/smoke_workers2/court_model_v2.pt",
+        "rows": [
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1425.1793647555385,
+              "mean": 899.9733519893836,
+              "median": 820.0480542626755,
+              "p95": 1288.9729448073426
+            },
+            "metric_key": "raw_independent.pck_at_5px",
+            "mode": "raw_per_frame",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1425.1793647555385,
+                "mean": 899.9733519893836,
+                "median": 820.0480542626755,
+                "p95": 1288.9729448073426,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          },
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1425.1793647555385,
+              "mean": 899.9733519893836,
+              "median": 820.0480542626755,
+              "p95": 1288.9729448073426
+            },
+            "metric_key": "raw_all.pck_at_5px",
+            "mode": "raw_per_frame",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1425.1793647555385,
+                "mean": 899.9733519893836,
+                "median": 820.0480542626755,
+                "p95": 1288.9729448073426,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          },
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1425.1793647555385,
+              "mean": 899.9733519893836,
+              "median": 820.0480542626755,
+              "p95": 1288.9729448073426
+            },
+            "metric_key": "aggregated_independent.pck_at_5px",
+            "mode": "aggregated_static_camera_median",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1425.1793647555385,
+                "mean": 899.9733519893836,
+                "median": 820.0480542626755,
+                "p95": 1288.9729448073426,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          },
+          {
+            "frame_count": 1,
+            "gate_passed": false,
+            "gate_passed_per_viewpoint": false,
+            "gate_passed_pooled": false,
+            "keypoint_error_summary": {
+              "count": 15,
+              "max": 1425.1793647555385,
+              "mean": 899.9733519893836,
+              "median": 820.0480542626755,
+              "p95": 1288.9729448073426
+            },
+            "metric_key": "aggregated_all.pck_at_5px",
+            "mode": "aggregated_static_camera_median",
+            "pck_at_5px": 0.0,
+            "per_clip": {
+              "73VurrTKCZ8": {
+                "count": 15,
+                "keypoint_count": 15,
+                "max": 1425.1793647555385,
+                "mean": 899.9733519893836,
+                "median": 820.0480542626755,
+                "p95": 1288.9729448073426,
+                "pck_at_5px": 0.0,
+                "pck_threshold_px": 5.0
+              }
+            }
+          }
+        ],
+        "sha256": "e5d0fe27a0b6b3cbca5c0a203895af182e86c22c9a35c03812fcf4ebffbfc98b"
+      }
+    ]
+  },
+  "protected_scan": {
+    "entries": [
+      {
+        "bytes": 11068,
+        "hits": [],
+        "md5": "c008b293079dd5f45f2d37145c1df7d6",
+        "path": "annotations.xml"
+      }
+    ],
+    "entry_count": 1,
+    "export": "cvat_upload/exports/court_keypoints_20260707/court_keypoints_metric15_20260707_partial_goodangles_20260709_annotations.zip",
+    "export_bytes": 11196,
+    "export_md5": "49ae71128bb5fa575619a25e256334b8",
+    "named_source_hits": [
+      "73VurrTKCZ8",
+      "Ezz6HDNHlnk",
+      "HyUqT7zFiwk",
+      "_L0HVmAlCQI",
+      "wBu8bC4OfUY",
+      "zwCtH_i1_S4"
+    ],
+    "protected_hits": [],
+    "protected_patterns": [
+      "pwxNwFfYQlQ",
+      "vQhtz8l6VqU",
+      "outdoor_webcam_iynbd",
+      "indoor_doubles_fwuks"
+    ],
+    "rejected_sources_expected": [
+      "Ezz6HDNHlnk",
+      "_L0HVmAlCQI",
+      "wBu8bC4OfUY"
+    ],
+    "usable_sources_expected": [
+      "73VurrTKCZ8",
+      "HyUqT7zFiwk",
+      "zwCtH_i1_S4"
+    ],
+    "verdict": "PASS"
+  },
+  "relabel_delta_distribution": {
+    "artifact": "runs/lanes/w7_courtkpingest_20260709/task13_task18_overlap_deltas_r2.json",
+    "moved_keypoints_gt5_count": 0,
+    "overlap_count": 2,
+    "rows": [
+      {
+        "absolute_frame_index": 10195,
+        "delta_summary_px": {
+          "count": 15,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "keypoint_deltas": [
+          {
+            "delta_px": 0.0,
+            "keypoint": "near_left_corner",
+            "moved_gt5": false,
+            "task13_xy": [
+              0.8,
+              812.05
+            ],
+            "task18_xy": [
+              0.8,
+              812.05
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "near_baseline_center",
+            "moved_gt5": false,
+            "task13_xy": [
+              338.91,
+              872.35
+            ],
+            "task18_xy": [
+              338.91,
+              872.35
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "near_right_corner",
+            "moved_gt5": false,
+            "task13_xy": [
+              1034.51,
+              977.88
+            ],
+            "task18_xy": [
+              1034.51,
+              977.88
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "far_right_corner",
+            "moved_gt5": false,
+            "task13_xy": [
+              1870.1,
+              715.14
+            ],
+            "task18_xy": [
+              1870.1,
+              715.14
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "far_baseline_center",
+            "moved_gt5": false,
+            "task13_xy": [
+              1523.77,
+              708.21
+            ],
+            "task18_xy": [
+              1523.77,
+              708.21
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "far_left_corner",
+            "moved_gt5": false,
+            "task13_xy": [
+              1223.13,
+              705.88
+            ],
+            "task18_xy": [
+              1223.13,
+              705.88
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "near_nvz_left",
+            "moved_gt5": false,
+            "task13_xy": [
+              694.62,
+              749.07
+            ],
+            "task18_xy": [
+              694.62,
+              749.07
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "near_nvz_center",
+            "moved_gt5": false,
+            "task13_xy": [
+              1025.92,
+              777.27
+            ],
+            "task18_xy": [
+              1025.92,
+              777.27
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "near_nvz_right",
+            "moved_gt5": false,
+            "task13_xy": [
+              1583.04,
+              807.76
+            ],
+            "task18_xy": [
+              1583.04,
+              807.76
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "net_left_sideline",
+            "moved_gt5": false,
+            "task13_xy": [
+              921.0,
+              628.6
+            ],
+            "task18_xy": [
+              921.0,
+              628.6
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "net_center",
+            "moved_gt5": false,
+            "task13_xy": [
+              1239.9,
+              630.9
+            ],
+            "task18_xy": [
+              1239.9,
+              630.9
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "net_right_sideline",
+            "moved_gt5": false,
+            "task13_xy": [
+              1696.16,
+              614.68
+            ],
+            "task18_xy": [
+              1696.16,
+              614.68
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "far_nvz_left",
+            "moved_gt5": false,
+            "task13_xy": [
+              990.23,
+              721.61
+            ],
+            "task18_xy": [
+              990.23,
+              721.61
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "far_nvz_center",
+            "moved_gt5": false,
+            "task13_xy": [
+              1343.02,
+              738.07
+            ],
+            "task18_xy": [
+              1343.02,
+              738.07
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "far_nvz_right",
+            "moved_gt5": false,
+            "task13_xy": [
+              1766.58,
+              751.79
+            ],
+            "task18_xy": [
+              1766.58,
+              751.79
+            ]
+          }
+        ],
+        "moved_gt5_count": 0,
+        "source_id": "HyUqT7zFiwk",
+        "task13_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195.png",
+        "task18_frame_name": "HyUqT7zFiwk__HyUqT7zFiwk_rally_0001__abs_010195__relabel_net_far_side.png",
+        "winner": "task18"
+      },
+      {
+        "absolute_frame_index": 3636,
+        "delta_summary_px": {
+          "count": 15,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "keypoint_deltas": [
+          {
+            "delta_px": 0.0,
+            "keypoint": "near_left_corner",
+            "moved_gt5": false,
+            "task13_xy": [
+              214.04,
+              918.89
+            ],
+            "task18_xy": [
+              214.04,
+              918.89
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "near_baseline_center",
+            "moved_gt5": false,
+            "task13_xy": [
+              983.75,
+              918.89
+            ],
+            "task18_xy": [
+              983.75,
+              918.89
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "near_right_corner",
+            "moved_gt5": false,
+            "task13_xy": [
+              1744.81,
+              925.37
+            ],
+            "task18_xy": [
+              1744.81,
+              925.37
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "far_right_corner",
+            "moved_gt5": false,
+            "task13_xy": [
+              1225.29,
+              623.02
+            ],
+            "task18_xy": [
+              1225.29,
+              623.02
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "far_baseline_center",
+            "moved_gt5": false,
+            "task13_xy": [
+              975.47,
+              621.85
+            ],
+            "task18_xy": [
+              975.47,
+              621.85
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "far_left_corner",
+            "moved_gt5": false,
+            "task13_xy": [
+              716.39,
+              621.0
+            ],
+            "task18_xy": [
+              716.39,
+              621.0
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "near_nvz_left",
+            "moved_gt5": false,
+            "task13_xy": [
+              526.53,
+              738.12
+            ],
+            "task18_xy": [
+              526.53,
+              738.12
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "near_nvz_center",
+            "moved_gt5": false,
+            "task13_xy": [
+              980.73,
+              742.48
+            ],
+            "task18_xy": [
+              980.73,
+              742.48
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "near_nvz_right",
+            "moved_gt5": false,
+            "task13_xy": [
+              1432.87,
+              746.76
+            ],
+            "task18_xy": [
+              1432.87,
+              746.76
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "net_left_sideline",
+            "moved_gt5": false,
+            "task13_xy": [
+              633.58,
+              591.95
+            ],
+            "task18_xy": [
+              633.58,
+              591.95
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "net_center",
+            "moved_gt5": false,
+            "task13_xy": [
+              977.62,
+              591.95
+            ],
+            "task18_xy": [
+              977.62,
+              591.95
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "net_right_sideline",
+            "moved_gt5": false,
+            "task13_xy": [
+              1300.3,
+              594.1
+            ],
+            "task18_xy": [
+              1300.3,
+              594.1
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "far_nvz_left",
+            "moved_gt5": false,
+            "task13_xy": [
+              647.38,
+              665.11
+            ],
+            "task18_xy": [
+              647.38,
+              665.11
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "far_nvz_center",
+            "moved_gt5": false,
+            "task13_xy": [
+              975.5,
+              666.28
+            ],
+            "task18_xy": [
+              975.5,
+              666.28
+            ]
+          },
+          {
+            "delta_px": 0.0,
+            "keypoint": "far_nvz_right",
+            "moved_gt5": false,
+            "task13_xy": [
+              1301.49,
+              669.47
+            ],
+            "task18_xy": [
+              1301.49,
+              669.47
+            ]
+          }
+        ],
+        "moved_gt5_count": 0,
+        "source_id": "zwCtH_i1_S4",
+        "task13_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636.png",
+        "task18_frame_name": "zwCtH_i1_S4__zwCtH_i1_S4_rally_0001__abs_003636__relabel_net_far_side.png",
+        "winner": "task18"
+      }
+    ]
+  },
+  "session_id": null
+}
