@@ -126,4 +126,4 @@ WAVE-6 FLEET LOG (2026-07-08, manager):
 - FLEET NOTE 2026-07-08: pickleball-calv1unet-a100-spot (A100 spot, ase1-a) RUNNING = the CONCURRENT
   CALV1 court session's VM (their ledger row/teardown; global concurrency 2/4 with w6close).
 
-| pickleball-calv1unet2-a100-spot | asia-southeast1-a (ladder ase1-b/c, usc1-a) | a2-highgpu-1g A100-40GB | SPOT | CREATING (retrain v2 dispatched 2026-07-08 eve, court session) | calv1_unet_retrain_20260708 | ~$1.1-1.5/hr | DELETE on success, STOP on failure |
+| pickleball-calv1unet2-a100-spot | asia-southeast1-a | a2-highgpu-1g A100-40GB | SPOT | DELETED 2026-07-09T04:35Z list-confirmed (retrain PASS: 3.19h, ~$3.5-4.8, zero preemptions) | calv1_unet_retrain_20260708 | ~$1.1-1.5/hr | ckpt pulled+sha-verified |
