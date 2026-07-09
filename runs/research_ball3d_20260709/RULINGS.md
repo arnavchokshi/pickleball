@@ -29,3 +29,14 @@ pb.vision in-app "Download Raw Data" (three-dot menu) -> "cv" JSON export for th
 process: gives their per-frame numbers on our footage, no partner API needed. Then run the 3-pillar
 no-GT protocol (reprojection consistency + court-plane bounce pseudo-GT + physics re-integration,
 Bland-Altman framing) from SYNTHESIS.md §4.
+
+## ADDENDUM (2026-07-09, owner supplied the pb.vision "cv" export — banked at pbvision_cv_export/)
+Export contents (1 rally, 252 frames @30fps): per-frame 3D ball court_position with per-frame
+`interpolated` flag + `selected` candidate (=they ship interpolation PROVENANCE — validates our
+fail-closed/trust-band fix direction first-party); per-frame ball/bounce/net/shot confidences
+(bounce peaks 0.97); `ball_radius` tracked per frame (= apparent-size DEPTH CUE — new adopt-list
+item #9, cheap: WASB heatmap footprint size as a depth constraint in the arc fit); full camera solve
+w/ per-court-point confidence+spread; player court positions (feet units, their frame).
+BENCHMARK NOW CONCRETE: need the source clip identity from the owner -> run ours on the identical
+clip -> 3-pillar protocol + Bland-Altman. Owner also reports labels ~3k => 3k checkpoint gate fires
+next ball lane (train on new corpus revision; visibility ruling for w6+ sessions stands).
