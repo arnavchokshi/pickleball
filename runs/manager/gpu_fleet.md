@@ -159,3 +159,9 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
   best_stack-pinned files (waveb calibration_curves.json + court_model_v2.pt 287MB) and
   remote_body_dispatch validates the whole manifest at import — re-bake at next snapshot cut.
   Evidence: runs/lanes/w7_p22gate_20260709/ (31MB, md5-manifested).
+- pickleball-h100-w7masklet (H100 a3 SPOT from w6close snapshot) — PROVISIONING (Sonnet lane
+  w7_masklet_20260709, self-tearing, time-boxed 2.5h). P2-4 masklet-conditioning ADOPT-ONLY-ON-WIN
+  spike: baseline-vs-candidate BODY on wolverine, pre-ruled kills K1 setup>60min / K2 slower /
+  K3 p95 divergence>10mm or schema breakage / K4 uptime>2.5h. Budget ~$1.5-11. Concurrency
+  2-3/4 with w7ball. NO-ATTEMPT is a valid honest verdict if the evidence base lacks a concrete
+  recipe (Mac-side check happens BEFORE provisioning).
