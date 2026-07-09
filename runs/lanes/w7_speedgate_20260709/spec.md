@@ -1,0 +1,10 @@
+# LANE w7_speedgate_20260709 — P5-1 CLEAN-ROOM speed gate scoring (PARKED pending owner gcloud reauth)
+# Sonnet GPU lane; dispatch prompt = this spec verbatim + the standard fleet preamble.
+
+## MISSION (wave-7 queue #5; R5a: certify or fail the 3.8x speed headline BEFORE any further speed claims)
+One H100 SPOT VM (pickleball-h100-w7speed, w6close snapshot + scp the 2 known-missing manifest artifacts FIRST: runs/waveb_confidence_gate_20260702T183158Z/calibration_curves.json + models/checkpoints/court_unet_v2/court_model_v2.pt, sha-verify vs manifest pins — the 2x-confirmed snapshot gap). Sync committed HEAD (>= the cadence lane's landing); version-stamp md5 the full stack file set.
+ARM 1 — CLEAN-ROOM TIMING on the FULL PROMOTED STACK (best_stack rev at HEAD; stride-2 cadence + input gate + ghost meshes + paddle + match stats — the true product stack): wolverine x6 runs (fresh out-dirs, --force, no reuse) -> report all 6 wall-clocks + variance; gate bar wolverine <= 400s. Outdoor x2 runs -> bar <= 2x video duration. Foot-slide bit-identical check across repeats (max_foot_lock_slide_m identical bits). Profile per-stage share (BODY vs decode vs transport) — R5c: is the pred_cam_t-era decode speed-positive?
+ARM 2 — post-timing instrument (non-promotable, labeled): corrected GATE-1b numeric via the FIXED harness (raw arm w/ SAM3D chunk index preserved; expect the blocked-status path NOT to fire; report gate_1b_world_round_trip.* + mesh_skeleton_divergence.* exact keys — the first honest post-fix numbers).
+ARM 3 — TEMPLATE RE-BAKE: reset VM repo to clean committed HEAD, verify the 2 artifacts + 1750 corpus present, cut snapshot pickleball-fleet-snap-20260709-w7close, READY-confirm, then DELETE VM + list-confirm + honest cost.
+Budget: ~2.5-3.5h x $0.6-4.3 ≈ $1.5-15 (+50% ceiling ~$22). Wall cap 4h. Drop order if tight: ARM 2, then outdoor run #2 (never drop ARM 3 — the re-bake is owed).
+Verdict discipline: the 3.8x headline is CERTIFIED only if the gated bars pass on these runs; otherwise FAIL the headline honestly and report the real number. FACTS only; manager rules.
