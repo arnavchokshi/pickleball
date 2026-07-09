@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 from threed.racketsport.hmr_deep import (
@@ -240,6 +241,63 @@ def test_normalize_fast_sam_body_output_preserves_static_mesh_faces_for_mhr_surf
     )
 
     assert normalized["mesh_faces"] == [[0, 1, 2]]
+
+
+def test_normalize_fast_sam_body_output_numpy_bulk_arrays_match_list_wire_payload() -> None:
+    request = PlayerCropRequest(
+        frame_idx=5,
+        player_id=7,
+        bbox_xyxy=[100, 120, 260, 520],
+        image_size_px=[1920, 1080],
+        track_confidence=0.93,
+    )
+    vertices = np.asarray([[0.0, 0.0, 0.1], [0.3, 0.0, 0.1], [0.3, 0.2, 1.6]], dtype=np.float32)
+    joints = np.asarray([[0.1, 0.0, 1.0]], dtype=np.float32)
+    faces = np.asarray([[0, 1, 2]], dtype=np.int32)
+    payload = {
+        # Array.tolist() is the legacy handoff representation. Comparing it
+        # with the ndarray path proves the optimization preserves the exact
+        # float32 values rather than comparing float32 with decimal literals.
+        "pred_vertices": vertices.tolist(),
+        "pred_keypoints_3d": joints.tolist(),
+        "pred_cam_t": [0.25, -0.5, 1.0],
+        "mesh_faces": faces.tolist(),
+        "confidence": 0.91,
+    }
+
+    list_result = normalize_fast_sam_body_output(payload, request=request)
+    array_result = normalize_fast_sam_body_output(
+        {
+            **payload,
+            "pred_vertices": vertices,
+            "pred_keypoints_3d": joints,
+            "mesh_faces": faces,
+        },
+        request=request,
+    )
+
+    assert array_result == list_result
+
+
+def test_normalize_fast_sam_body_output_numpy_faces_keep_scalar_validation_errors() -> None:
+    request = PlayerCropRequest(
+        frame_idx=5,
+        player_id=7,
+        bbox_xyxy=[100, 120, 260, 520],
+        image_size_px=[1920, 1080],
+        track_confidence=0.93,
+    )
+
+    with pytest.raises(ValueError, match="mesh_faces/0 index 3 is outside pred_vertices"):
+        normalize_fast_sam_body_output(
+            {
+                "pred_vertices": np.asarray([[0, 0, 0.1], [0.3, 0, 0.1], [0.3, 0.2, 1.6]]),
+                "pred_keypoints_3d": np.asarray([[0.1, 0.0, 1.0]]),
+                "mesh_faces": np.asarray([[0, 1, 3]], dtype=np.int32),
+                "confidence": 0.91,
+            },
+            request=request,
+        )
 
 
 def test_normalize_fast_sam_body_output_applies_pred_cam_t_exactly_once() -> None:

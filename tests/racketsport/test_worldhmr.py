@@ -4,6 +4,7 @@ import copy
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
@@ -702,6 +703,48 @@ def test_build_body_artifacts_preserves_static_mesh_faces_for_body_mesh_export()
     )
 
     assert smpl_motion["mesh_faces"] == [[0, 1, 2]]
+
+
+def test_numpy_bulk_body_inputs_preserve_list_contract_and_quantized_world_mesh() -> None:
+    vertices = np.asarray(
+        [[0.0, 0.0, 0.0], [0.2, 0.0, 0.0], [0.2, 0.1, 1.7], [0.1, 0.3, 0.8]],
+        dtype=np.float32,
+    )
+    joints = np.asarray([[0.0, 0.0, 1.1], [0.2, 0.0, 0.0]], dtype=np.float32)
+    faces = np.asarray([[0, 1, 2], [0, 2, 3]], dtype=np.int32)
+    sample = {
+        "frame_idx": 12,
+        "player_id": 1,
+        "t": 0.4,
+        "confidence": 0.9,
+        "track_world_xy": [2.0, 3.0],
+        "camera_translation": [0.0, 0.0, 0.0],
+        "joints_camera": joints,
+        "vertices_camera": vertices,
+        "mesh_faces": faces,
+        "global_orient": [0.0, 0.0, 0.0],
+        "body_pose": [0.0, 0.0, 0.0],
+        "betas": [0.0],
+    }
+
+    array_result = worldhmr.build_body_artifacts_from_fast_sam(
+        [sample],
+        calibration=_camera_y_to_court_z_calibration(),
+        fps=30.0,
+    )
+    list_result = worldhmr.build_body_artifacts_from_fast_sam(
+        [{**sample, "joints_camera": joints.tolist(), "vertices_camera": vertices.tolist(), "mesh_faces": faces.tolist()}],
+        calibration=_camera_y_to_court_z_calibration(),
+        fps=30.0,
+    )
+
+    assert array_result == list_result
+    mesh = array_result[0]["players"][0]["frames"][0]["mesh_vertices_world"]
+    quantized = np.rint(np.asarray(mesh, dtype=np.float64) * 1000.0).astype(np.int16)
+    expected = np.rint(
+        np.asarray(list_result[0]["players"][0]["frames"][0]["mesh_vertices_world"], dtype=np.float64) * 1000.0
+    ).astype(np.int16)
+    assert np.array_equal(quantized, expected)
 
 
 def test_build_body_artifacts_wires_footlock_z_snap_and_metrics() -> None:

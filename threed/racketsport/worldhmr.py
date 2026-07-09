@@ -13,6 +13,8 @@ from math import isfinite, sqrt
 from pathlib import Path
 from typing import Any, Mapping, MutableMapping, Sequence
 
+import numpy as np
+
 from .footlock import (
     ContactHysteresis,
     FootContactObservation,
@@ -2361,6 +2363,34 @@ def _validate_vector3(values: Sequence[float], *, name: str) -> None:
 def _mesh_faces(values: Any, *, vertex_count: int) -> list[list[int]]:
     if values is None:
         return []
+    if not isinstance(values, (str, bytes)):
+        try:
+            faces_array = np.asarray(values)
+        except (TypeError, ValueError):
+            faces_array = None
+        if faces_array is not None and faces_array.size == 0:
+            return []
+        if (
+            faces_array is not None
+            and faces_array.ndim == 2
+            and faces_array.shape[1:] == (3,)
+            and faces_array.dtype != np.dtype(bool)
+            and np.issubdtype(faces_array.dtype, np.integer)
+        ):
+            negative = faces_array < 0
+            if bool(negative.any()):
+                face_index = int(np.argwhere(negative)[0][0])
+                raise ValueError(f"mesh_faces/{face_index} must be a triangle index triple")
+            outside = faces_array >= int(vertex_count)
+            if bool(outside.any()):
+                face_index, column_index = (int(value) for value in np.argwhere(outside)[0])
+                index = int(faces_array[face_index, column_index])
+                raise ValueError(f"mesh_faces/{face_index} index {index} is outside vertices_camera")
+            return faces_array.astype(np.int64, copy=False).tolist()
+    return _mesh_faces_scalar(values, vertex_count=vertex_count)
+
+
+def _mesh_faces_scalar(values: Any, *, vertex_count: int) -> list[list[int]]:
     if isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
         raise ValueError("mesh_faces must be a sequence of triangle index triples")
     faces: list[list[int]] = []
@@ -2386,15 +2416,28 @@ def _mesh_faces(values: Any, *, vertex_count: int) -> list[list[int]]:
 
 def _common_mesh_faces(frames: Sequence[Mapping[str, Any]]) -> list[list[int]]:
     canonical: list[list[int]] | None = None
+    canonical_array: np.ndarray | None = None
     for frame in frames:
         faces = frame.get("mesh_faces", [])
         if not faces:
             continue
-        face_rows = [[int(index) for index in face] for face in faces]
+        if canonical is faces:
+            continue
+        try:
+            face_array = np.asarray(faces, dtype=np.int64)
+        except (TypeError, ValueError):
+            face_array = None
+        if face_array is None or face_array.ndim != 2 or face_array.shape[1:] != (3,):
+            face_rows = [[int(index) for index in face] for face in faces]
+            face_array = np.asarray(face_rows, dtype=np.int64)
+        else:
+            face_rows = face_array.tolist()
         if canonical is None:
             canonical = face_rows
+            canonical_array = face_array
             continue
-        if canonical != face_rows:
+        assert canonical_array is not None
+        if canonical_array.shape != face_array.shape or not bool(np.array_equal(canonical_array, face_array)):
             raise ValueError("Fast SAM-3D-Body samples produced inconsistent mesh_faces")
     return canonical or []
 
@@ -2613,7 +2656,7 @@ def _camera_offsets_to_world(
     calibration: CourtCalibration,
     root_camera: Sequence[float] | None = None,
 ) -> list[list[float]]:
-    if not points_camera_relative:
+    if len(points_camera_relative) == 0:
         return []
     joint_names = [f"sam3dbody_joint_{idx:03d}" for idx in range(len(points_camera_relative))]
     if root_camera is None:
@@ -2622,17 +2665,10 @@ def _camera_offsets_to_world(
             rotation=calibration.extrinsics.R,
             joint_names=joint_names,
         )
-    root = [float(root_camera[idx]) for idx in range(3)]
-    rotation = [[float(value) for value in row] for row in calibration.extrinsics.R]
-    rotated: list[list[float]] = []
-    for point in points_camera_relative:
-        offset = [float(point[idx]) - root[idx] for idx in range(3)]
-        world_offset = [
-            sum(offset[row_idx] * rotation[row_idx][col_idx] for row_idx in range(3))
-            for col_idx in range(3)
-        ]
-        rotated.append([root[idx] + world_offset[idx] for idx in range(3)])
-    return rotated
+    points = np.asarray(points_camera_relative, dtype=np.float64)
+    root = np.asarray([float(root_camera[idx]) for idx in range(3)], dtype=np.float64)
+    rotation = np.asarray(calibration.extrinsics.R, dtype=np.float64)
+    return (root + ((points - root) @ rotation)).tolist()
 
 
 def _low_grounding_anchor_xy(points_world: Sequence[Sequence[float]]) -> tuple[list[float], str]:
@@ -2647,7 +2683,10 @@ def _low_grounding_anchor_xy(points_world: Sequence[Sequence[float]]) -> tuple[l
 
 
 def _translate_points(points: Sequence[Sequence[float]], *, dx: float, dy: float, dz: float) -> list[list[float]]:
-    return [[float(point[0]) + dx, float(point[1]) + dy, float(point[2]) + dz] for point in points]
+    if len(points) == 0:
+        return []
+    point_array = np.asarray(points, dtype=np.float64)
+    return (point_array + np.asarray([dx, dy, dz], dtype=np.float64)).tolist()
 
 
 def _smooth_grounded_frames_stance_aware(
@@ -3251,6 +3290,17 @@ def _first_list(frames: Sequence[Mapping[str, Any]], field: str) -> list[float]:
 def _vector3_list(values: Any, *, name: str) -> list[list[float]]:
     if values is None:
         return []
+    if not isinstance(values, (str, bytes)):
+        try:
+            points = np.asarray(values, dtype=np.float64)
+        except (TypeError, ValueError):
+            points = None
+        if points is not None and points.ndim == 2 and points.shape[1:] == (3,) and bool(np.isfinite(points).all()):
+            return points.tolist()
+    return _vector3_list_scalar(values, name=name)
+
+
+def _vector3_list_scalar(values: Any, *, name: str) -> list[list[float]]:
     if isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
         raise ValueError(f"{name} must be a sequence of 3-vectors")
     return [_vector3(vector, name=f"{name}/{idx}") for idx, vector in enumerate(values)]

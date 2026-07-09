@@ -1,0 +1,32 @@
+{
+  "artifact_type": "racketsport_ns06_cpu_replay_parity",
+  "schema_version": 1,
+  "status": "scoped_local_parity_pass",
+  "verified": false,
+  "source_artifact": "runs/lanes/w4_freshproof_20260707/img1605/owner_IMG_1605_8a193402780b/owner_IMG_1605_8a193402780b/fast_sam_subprocess/batch_outputs-8a3faadd6c824fa5b16c305b491402dc.json.chunks/index.json",
+  "player_frame_count": 359,
+  "mesh_frame_count": 148,
+  "vertex_count": 6619601,
+  "timing_seconds": {
+    "chunk_restore": 49.26533341698814,
+    "candidate_normalize": 14.078916750004282,
+    "legacy_normalize": 34.98967174999416,
+    "candidate_world_compute": 45.43666750000557,
+    "legacy_world_compute": 50.713777791999746
+  },
+  "parity": {
+    "normalization_exact_hash_match": true,
+    "frame_keys_exact": true,
+    "mesh_faces_exact": true,
+    "quantized_mesh_int16_exact": true,
+    "vertex_max_abs_delta_m": 7.105427357601002e-15,
+    "joint_max_abs_delta_m": 1.8596235662471372e-15,
+    "body_metrics_max_abs_delta": 0.0,
+    "body_metrics_nonnumeric_difference_count": 0
+  },
+  "notes": [
+    "Candidate and legacy functions ran side by side in one process after one shared output restore.",
+    "Timing is a local replay diagnostic, not a full-pipeline or GPU claim.",
+    "VERIFIED=0 remains binding."
+  ]
+}

@@ -21,6 +21,8 @@ from numbers import Integral
 from pathlib import Path
 from typing import Any, Callable
 
+import numpy as np
+
 from . import mhr_decode
 from .model_manifest import load_model_manifest
 from .sam3d_body_input_prep import load_mask_prompt_arrays, normalize_body_input_size
@@ -771,15 +773,27 @@ def _float_vector(values: Any, *, name: str, length: int) -> list[float]:
 
 
 def _vector3_list(values: Any, *, name: str) -> list[list[float]]:
-    values = _to_python_container(values)
     if values is None:
         return []
+    # The production handoff supplies large NumPy/memmap arrays. Converting
+    # 18k vertices through nested Python loops accounted for roughly 36% of a
+    # preserved real normalization profile. Keep validation and wire output
+    # identical while moving the rectangular finite fast path into NumPy C.
+    if not isinstance(values, (str, bytes)):
+        try:
+            points = np.asarray(values, dtype=np.float64)
+        except (TypeError, ValueError):
+            points = None
+        if points is not None and points.ndim == 2 and points.shape[1:] == (3,) and bool(np.isfinite(points).all()):
+            return points.tolist()
+    return _vector3_list_scalar(values, name=name)
+
+
+def _vector3_list_scalar(values: Any, *, name: str) -> list[list[float]]:
+    values = _to_python_container(values)
     if isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
         raise ValueError(f"{name} must be a sequence of 3-vectors")
-    return [
-        _float_vector(vector, name=f"{name}/{idx}", length=3)
-        for idx, vector in enumerate(values)
-    ]
+    return [_float_vector(vector, name=f"{name}/{idx}", length=3) for idx, vector in enumerate(values)]
 
 
 def _float_list(values: Any, *, name: str) -> list[float]:
@@ -802,9 +816,40 @@ def _float_list(values: Any, *, name: str) -> list[float]:
 
 
 def _face_list(values: Any, *, vertex_count: int, name: str, vertices_name: str) -> list[list[int]]:
-    values = _to_python_container(values)
     if values is None:
         return []
+    # Mesh topology is a dense rectangular integer array (36,874 triangles for
+    # current MHR). Validate its common path with vectorized reductions instead
+    # of reparsing three Python integers per triangle for every player-frame.
+    if not isinstance(values, (str, bytes)):
+        try:
+            faces_array = np.asarray(values)
+        except (TypeError, ValueError):
+            faces_array = None
+        if faces_array is not None and faces_array.size == 0:
+            return []
+        if (
+            faces_array is not None
+            and faces_array.ndim == 2
+            and faces_array.shape[1:] == (3,)
+            and faces_array.dtype != np.dtype(bool)
+            and np.issubdtype(faces_array.dtype, np.integer)
+        ):
+            negative = faces_array < 0
+            if bool(negative.any()):
+                face_index = int(np.argwhere(negative)[0][0])
+                raise ValueError(f"{name}/{face_index} must be a triangle index triple")
+            outside = faces_array >= int(vertex_count)
+            if bool(outside.any()):
+                face_index, column_index = (int(value) for value in np.argwhere(outside)[0])
+                index = int(faces_array[face_index, column_index])
+                raise ValueError(f"{name}/{face_index} index {index} is outside {vertices_name}")
+            return faces_array.astype(np.int64, copy=False).tolist()
+    return _face_list_scalar(values, vertex_count=vertex_count, name=name, vertices_name=vertices_name)
+
+
+def _face_list_scalar(values: Any, *, vertex_count: int, name: str, vertices_name: str) -> list[list[int]]:
+    values = _to_python_container(values)
     if isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
         raise ValueError(f"{name} must be a sequence of triangle index triples")
     faces: list[list[int]] = []
