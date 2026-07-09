@@ -1,13 +1,15 @@
 # OWNER CHECK-IN — 2026-07-08 (wave 6)
 
-⭐ **Headline:** WAVE 6 IS CLOSING COMPLETE — all 8 queue items ruled. Your session-01 labels
-went end-to-end: ingested (corpus 486→1,121), LoSO outdoor fold built, and the GPU re-score says
-**seed_official (owner-data-trained) is the clear winner** — stage1 actually scores BELOW the
-tennis control on hard frames, which vindicates your labeling as THE unlock. Playback critique:
-outdoor mesh cadence went 5.2→21.3 fps (4.1x). GATE-1b was finally measured legitimately and
-FAILED (262mm vs 1mm target) — so the latent-smoothing path stays honestly unwired; root cause is
-queued. Magnus spin: honest kill, plumbing dormant. Next: the deep review + North Star refresh you
-ordered (running tonight), then wave 7.
+⭐ **Headline:** EVERYTHING YOU ASKED FOR IS DONE. (1) Wave 6 closed complete — 8/8 items,
+tests fully green, ~$5-9 GPU. (2) The deep review ran (61 agents, adversarially verified): your
+262mm decode mystery is now a concrete 5-step checklist with two exact candidate bugs in Meta's own
+conversion code, the label plan gained evidence-based checkpoints at 1k/3k/6k/10k rows (so your
+labeling hours are never wasted past the plateau), and the spin kill was externally vindicated.
+(3) NORTH_STAR is refreshed — your goal sentence sits verbatim at the top, wave 7 is resequenced
+(paddle wiring first — it sat built-but-unwired for 4 waves), and three NEW pre-launch gates were
+added the review found missing: security/PII, training-data licensing (GPL + Roboflow terms vs your
+Stripe plans), and input-quality guardrails. All docs truth-ed up and pushed. Wave 7 fires next
+session from runs/manager/wave7_boot_prompt.md.
 
 ## Blockers (typed STOPs)
 
