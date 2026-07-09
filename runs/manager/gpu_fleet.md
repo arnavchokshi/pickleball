@@ -207,3 +207,19 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
   w7_speedgate_20260709, dispatched ~09:5x post-reauth): ARM1 clean-room timing (bars now
   INFORMATIONAL per owner morning ruling) + ARM2 corrected GATE-1b numeric + ARM3 w7close
   template re-bake (2 artifacts + 1750 corpus baked) + post-timing critique-world pull (scope add).
+- pickleball-h100-w7crit — DELETED 2026-07-09 ~20:5x by manager, list-confirmed (created 11:19 local,
+  ~1.7h, ~$1-7). Owner critique E2E thread: zwCtH cold + tapped + metric15 runs (trust-chain gauntlet
+  findings booked in NORTH_STAR dated note); worlds pulled to runs/lanes/w7_critique_20260709/.
+- pickleball-h100-w7speed — DONE+DELETED 2026-07-09T21:39:40Z list-confirmed (created 17:49:42Z,
+  uptime 3.833h, $2.18-16.29 mid ~$7.7, zero preemptions, first-attempt create). ARM1 wolverine x6
+  full-stack 483.6-497.5s mean 489.4s stdev 5.5s (informational vs 400s bar per owner ruling; 4.4x vs
+  2141s historical); BODY 78.6% of wall, steady inference only 5.5s/380s (=the efficiency-wave lever);
+  outdoor x2 ~1515s. Foot-slide spread 4.1e-7m (GPU nondeterminism scale — tolerance ruling needed,
+  not a regression). ARM2 corrected GATE-1b: pred_cam_t consumed 705/705 exactly-once, per-player p95
+  22-58mm, 262.17mm = SINGLE worst-frame outlier player 20 (frame-level phenomenon; decode stays
+  NOT-WIRING-READY). ARM3: pickleball-fleet-snap-20260709-w7close READY 46.2GB — bakes ALL THREE
+  discovered manifest-pinned gaps (calibration_curves, court_model_v2.pt, ball latest.pt) + yolo26m.pt
+  + ultralytics venv + 1750 corpus. INTEGRITY CATCH: first 6 timing runs invalid (tracking dead on old
+  template) — lane discarded its own faster-but-false numbers; gate checks worked. VM-side known_hosts
+  self-dispatch keyscan = boot-ritual candidate. FLEET NOTE: foreign pickleball-h100-ns06eff-bx1
+  RUNNING under fable-fleet=pickleball = the NS-consolidation session's NS-06 lane (theirs, untouched).

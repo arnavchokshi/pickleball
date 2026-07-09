@@ -429,6 +429,15 @@ computed), replay manifests carry non-portable absolute paths, and the CLI cold-
 chain dead-ends after corner taps (no human-verified tap tier; correction task loop unfinished).
 Evidence: runs/lanes/w7_ball3ddiag_20260709/DIAGNOSIS.md · runs/lanes/w7_critique_20260709/.
 
+**Dated evidence note (2026-07-09 late, w7 speed-gate close — feeds NS-06 + BODY residual scope):**
+full promoted-stack wolverine 489.4s±1.6% (x6; BODY=78.6% of wall and steady inference is only
+5.5s of BODY's 380s — the stage is ~98% orchestration overhead = NS-06's biggest lever); corrected
+GATE-1b with pred_cam_t provably consumed: per-player joints p95 22-58mm, the historical 262mm =
+one worst-frame outlier on one player (frame-level, not systemic); template
+pickleball-fleet-snap-20260709-w7close bakes all 3 manifest-pinned artifact gaps + yolo26m +
+ultralytics (old template could not run production tracking — invalidated-and-discarded 6 fast
+timing runs prove the gate checks work). Evidence: runs/lanes/w7_speedgate_20260709/results.json.
+
 ### Owner-only asks
 
 | Rank | Ask | Why | Safe default while waiting |

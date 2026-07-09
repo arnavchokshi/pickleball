@@ -1,0 +1,186 @@
+{
+  "lane": "w7_speedgate_20260709",
+  "date": "2026-07-09",
+  "verdict_headline_3p8x": "FAIL vs gated bars (informational per owner 2026-07-09 ruling: no speed claims either way)",
+  "arm1_wolverine": {
+    "runs": 6,
+    "wall_seconds": [
+      483.61,
+      494.347,
+      487.001,
+      484.75,
+      489.372,
+      497.46
+    ],
+    "mean_s": 489.423,
+    "stdev_s": 5.483,
+    "max_pct_deviation_from_mean": 1.64,
+    "within_pm5pct_of_mean": true,
+    "bar_wolverine_le_400s": "FAIL (all 6 runs 483.6-497.5s; >400, <500; INFORMATIONAL)",
+    "conditional_pass_note": "TB P5-1 conditional band (400-500s w/ BODY floored 300-400s) applies EXCEPT ball_arc=74s breaks 'every other stage <50s'",
+    "body_full_clip_gate_all_true": true,
+    "root_motion_temporal_jumps_all_zero": true,
+    "max_foot_lock_slide_m_per_run": [
+      0.019924683459573274,
+      0.019924817555882927,
+      0.019924494457658252,
+      0.01992452501600197,
+      0.019924900038737644,
+      0.019924702844009972
+    ],
+    "foot_slide_bit_identical_across_repeats": false,
+    "foot_slide_spread_m": 4.055810793913983e-07,
+    "per_stage_share_run1": {
+      "ingest": 0.847,
+      "calibration": 1.327,
+      "input_quality": 0.27,
+      "tracking": 14.733,
+      "camera_motion": 0.693,
+      "placement": 0.361,
+      "ball": 5.978,
+      "ball_arc": 74.05,
+      "events": 0.139,
+      "ball_fill": 0.714,
+      "frames": 2.058,
+      "body": 380.198,
+      "placement_refine": 0.0,
+      "grounding_refine": 0.0,
+      "paddle_pose": 0.391,
+      "world": 0.909,
+      "confidence_gate": 0.853,
+      "manifest": 0.001,
+      "match_stats": 0.087
+    },
+    "body_share_pct_run1": 78.6,
+    "body_phase_run1": {
+      "stage_wall_seconds": 367.287706051,
+      "attributed_s": 248.44299677500067,
+      "inference_s": 5.547259,
+      "compile_warmup_s": 23.864705,
+      "array_native_gate_feed_s": 136.19969466600014,
+      "index_build_s": 22.06785808800032,
+      "gates_s": 25.260354780999933,
+      "model_load_s": 13.091824,
+      "other_s": 118.84470927599932,
+      "subprocess_outer_call_s": 56.78449622300013,
+      "ms_per_person_steady": 7.868452,
+      "person_frame_count": 705
+    },
+    "pipeline_status_note": "all runs status=partial solely due to input_quality advisory degraded band (court_not_fully_visible_low_angle owner policy); BODY ran on all 6"
+  },
+  "arm1_outdoor": {
+    "runs": 2,
+    "wall_seconds": [
+      1522.824,
+      1508.398
+    ],
+    "video_duration_s": 19.183333,
+    "ratio_x": [
+      79.4,
+      78.6
+    ],
+    "bar_le_2x_video_duration": "FAIL (78.6-79.4x; INFORMATIONAL)",
+    "body_full_clip_gate_all_true": true,
+    "root_motion_temporal_jumps_all_zero": true,
+    "max_foot_lock_slide_m_per_run": [
+      0.024999091175107166,
+      0.024999155788499868
+    ],
+    "body_share_pct_run2": 86.0
+  },
+  "arm2_gate1b_fixed_harness": {
+    "measurement_status": "measured",
+    "blocked_path_fired": false,
+    "raw_records_loaded": "705/705 from sibling fast_sam_subprocess chunk index",
+    "gate_1a_passed": true,
+    "gate_1a_max_abs_error_deg": 4.098113640793599e-05,
+    "gate_1b_world_round_trip": {
+      "passed": false,
+      "target_max_abs_error_mm": 1.0,
+      "worst_joints_world_max_abs_error_mm": 262.1740854250304,
+      "worst_vertices_world_max_abs_error_mm": 263.5731819027063,
+      "per_player": {
+        "19": {
+          "joints_world_max_abs_error_mm": 67.56059803223955,
+          "joints_world_p95_abs_error_mm": 57.93635550982654,
+          "sample_count": 40,
+          "vertices_world_max_abs_error_mm": 68.7757185226148,
+          "vertices_world_p95_abs_error_mm": 58.18565191264959
+        },
+        "20": {
+          "joints_world_max_abs_error_mm": 262.1740854250304,
+          "joints_world_p95_abs_error_mm": 24.19159338510019,
+          "sample_count": 40,
+          "vertices_world_max_abs_error_mm": 263.5731819027063,
+          "vertices_world_p95_abs_error_mm": 25.775927651198653
+        },
+        "21": {
+          "joints_world_max_abs_error_mm": 43.93367668076815,
+          "joints_world_p95_abs_error_mm": 33.32455932055393,
+          "sample_count": 40,
+          "vertices_world_max_abs_error_mm": 43.97230423263593,
+          "vertices_world_p95_abs_error_mm": 34.73828294885754
+        },
+        "22": {
+          "joints_world_max_abs_error_mm": 25.198527759142184,
+          "joints_world_p95_abs_error_mm": 21.993912657449233,
+          "sample_count": 40,
+          "vertices_world_max_abs_error_mm": 26.583617682888153,
+          "vertices_world_p95_abs_error_mm": 23.242855572732193
+        }
+      }
+    },
+    "mesh_skeleton_divergence": {
+      "passed": false,
+      "target_p95_mm": 5.0,
+      "worst_p95_mm_over_sample": 53.297489166259766,
+      "per_player": {
+        "19": {
+          "p95_mm_max_over_sample": 50.7994384765625,
+          "p95_mm_mean_over_sample": 49.83718776702881,
+          "sample_count": 40
+        },
+        "20": {
+          "p95_mm_max_over_sample": 53.297489166259766,
+          "p95_mm_mean_over_sample": 49.2822660446167,
+          "sample_count": 40
+        },
+        "21": {
+          "p95_mm_max_over_sample": 53.191192626953125,
+          "p95_mm_mean_over_sample": 50.83384342193604,
+          "sample_count": 40
+        },
+        "22": {
+          "p95_mm_max_over_sample": 52.445858001708984,
+          "p95_mm_mean_over_sample": 49.991577816009524,
+          "sample_count": 40
+        }
+      }
+    },
+    "note": "first honest post-fix canonical numbers; 262.17mm worst-max persists (w6-era was 262.35mm) while per-player p95s are 22-58mm; the 262mm is a single-player worst-frame outlier (player 20 p95=24.2mm)"
+  },
+  "arm3_template": {
+    "snapshot": "pickleball-fleet-snap-20260709-w7close",
+    "status": "READY",
+    "disk_size_gb": 200,
+    "storage_bytes": 46197672448,
+    "baked": [
+      "e64865c clean tree (2 vendor lines by-design)",
+      "calibration_curves.json sha-verified",
+      "court_model_v2.pt sha-verified",
+      "yolo26m.pt sha-verified (NEW - closes tracking gap)",
+      "A_seed_official_aug latest.pt md5-verified (rev-9 pin)",
+      "1750-row reviewed corpus + loso manifest",
+      "ultralytics 8.4.87 + opencv in repo venv (NEW)",
+      "roboflow corpus 7.0G (inherited)"
+    ]
+  },
+  "vm_lifecycle": {
+    "vm": "pickleball-h100-w7speed (a3-highgpu-1g H100 SPOT, asia-southeast1-b, first-attempt create)",
+    "created": "2026-07-09T17:49:42Z",
+    "deleted": "2026-07-09T21:39:40Z (list-confirmed)",
+    "uptime_h": 3.833,
+    "cost_span_usd": "2.18-16.29 (mid ~7.7)",
+    "preemptions": 0
+  }
+}
