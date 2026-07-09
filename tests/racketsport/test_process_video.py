@@ -56,6 +56,58 @@ def _court_calibration_payload() -> dict[str, Any]:
     }
 
 
+def _low_angle_not_fully_visible_calibration_payload() -> dict[str, Any]:
+    payload = _court_calibration_payload()
+    payload["image_size"] = [960, 540]
+    payload["image_pts"] = [
+        [120.0, 510.0],
+        [840.0, 510.0],
+        [720.0, 190.0],
+        [-45.0, 190.0],
+    ]
+    payload["world_pts"] = [
+        [-3.048, -6.7056, 0.0],
+        [3.048, -6.7056, 0.0],
+        [3.048, 6.7056, 0.0],
+        [-3.048, 6.7056, 0.0],
+    ]
+    payload["extrinsics"] = {
+        "R": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        "t": [0.0, 0.0, 0.0],
+        "camera_height_m": 0.75,
+    }
+    return payload
+
+
+def _match_stats_court_zones_payload() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "zones": {
+            "court": [[-3.0, -6.0], [3.0, -6.0], [3.0, 6.0], [-3.0, 6.0]],
+            "near_nvz": [[-3.0, -2.0], [3.0, -2.0], [3.0, 0.0], [-3.0, 0.0]],
+            "far_nvz": [[-3.0, 0.0], [3.0, 0.0], [3.0, 2.0], [-3.0, 2.0]],
+        },
+    }
+
+
+def _match_stats_placement_payload() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_placement",
+        "fps": 1.0,
+        "players": [
+            {
+                "id": 1,
+                "frames": [
+                    {"frame_idx": 0, "t": 0.0, "smoothed_world_xy": [-1.0, -5.0]},
+                    {"frame_idx": 1, "t": 1.0, "smoothed_world_xy": [0.0, -3.0]},
+                    {"frame_idx": 2, "t": 2.0, "smoothed_world_xy": [1.0, -1.0]},
+                ],
+            }
+        ],
+    }
+
+
 def _external_metric_calibration_payload(*, dist: list[float] | None = None, source: str = "metric_15pt_reviewed") -> dict[str, Any]:
     """A court_calibration.json-shaped payload as ExternalCalibrationRunner would
     write it -- these process_video-level tests fake orchestrator.run_pipeline
@@ -1483,6 +1535,152 @@ def test_manifest_exposes_ball_arc_artifacts_when_present(tmp_path: Path) -> Non
 # ---------------------------------------------------------------------------
 
 
+def test_input_quality_advisory_bands_not_fully_visible_low_angle_before_heavy_stages(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video, frame_count=120, fps=60.0)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.input_quality_mode = "advisory"  # type: ignore[attr-defined]
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _low_angle_not_fully_visible_calibration_payload())
+
+    monkeypatch.setattr(
+        process_video,
+        "_probe_video_quality_samples",
+        lambda *args, **kwargs: {"blur_laplacian_var": 500.0, "luminance_mean": 0.5, "sampled_frame_count": 3},
+        raising=False,
+    )
+
+    pipeline = process_video.ProcessVideoPipeline(options)
+    outcome = pipeline._stage_input_quality()
+    payload = json.loads((options.clip_dir / "input_quality.json").read_text(encoding="utf-8"))
+
+    assert outcome.status == "degraded"
+    assert payload["band"] == "degraded_input"
+    assert payload["rejection_reasons"][0] == "court_not_fully_visible_low_angle"
+    assert outcome.metrics["input_quality"]["band"] == "degraded_input"
+
+
+def test_input_quality_strict_fail_closes_and_stops_before_tracking(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video, frame_count=120, fps=60.0)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.input_quality_mode = "strict"  # type: ignore[attr-defined]
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+
+    def _fake_ingest() -> process_video.StageOutcome:
+        return process_video.StageOutcome(stage="ingest", status="ran", wall_seconds=0.0)
+
+    def _fake_calibration() -> process_video.StageOutcome:
+        _write_json(options.clip_dir / "court_calibration.json", _low_angle_not_fully_visible_calibration_payload())
+        return process_video.StageOutcome(stage="calibration", status="ran", wall_seconds=0.0)
+
+    def _fail_if_tracking_runs() -> process_video.StageOutcome:
+        raise AssertionError("tracking should not run after strict input-quality rejection")
+
+    monkeypatch.setattr(
+        process_video,
+        "_probe_video_quality_samples",
+        lambda *args, **kwargs: {"blur_laplacian_var": 500.0, "luminance_mean": 0.5, "sampled_frame_count": 3},
+        raising=False,
+    )
+    monkeypatch.setattr(process_video.ProcessVideoPipeline, "_stage_ingest", lambda self: _fake_ingest())
+    monkeypatch.setattr(process_video.ProcessVideoPipeline, "_stage_calibration", lambda self: _fake_calibration())
+    monkeypatch.setattr(process_video.ProcessVideoPipeline, "_stage_tracking", lambda self: _fail_if_tracking_runs())
+
+    summary = process_video.ProcessVideoPipeline(options).run()
+
+    assert summary["status"] == "failed"
+    assert [stage["stage"] for stage in summary["stages"]] == ["ingest", "calibration", "input_quality"]
+    input_stage = summary["stages"][-1]
+    assert input_stage["status"] == "failed"
+    assert input_stage["metrics"]["input_quality"]["strict"] is True
+
+
+def test_body_summary_populates_postchain_bypassed_stages_from_phase_timing(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(
+        options.clip_dir / "body_stage_phase_timing.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_stage_phase_timing",
+            "postchain_bypasses": {
+                "status": "postchain_bypassed",
+                "stages": [
+                    "temporal_smoothing",
+                    "foot_lock",
+                    "foot_pin",
+                    "contact_splice",
+                    "wrist_lock",
+                    "world_joint_visual_smoothing",
+                ],
+                "raw_grounded_joints_sidecar": "body_raw_grounded_joints.json",
+            },
+        },
+    )
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline.stage_outcomes.append(process_video.StageOutcome(stage="body", status="ran", wall_seconds=1.0))
+
+    summary = pipeline._write_summary(wall_seconds=1.0)
+
+    body_stage = summary["stages"][0]
+    assert body_stage["metrics"]["postchain_bypassed_stages"] == [
+        "temporal_smoothing",
+        "foot_lock",
+        "foot_pin",
+        "contact_splice",
+        "wrist_lock",
+        "world_joint_visual_smoothing",
+    ]
+    assert body_stage["metrics"]["postchain_bypass_status"] == "postchain_bypassed"
+
+
+def test_match_stats_stage_emits_body_court_only_consumer_artifact(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.match_stats = True  # type: ignore[attr-defined]
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "placement.json", _match_stats_placement_payload())
+    _write_json(options.clip_dir / "court_zones.json", _match_stats_court_zones_payload())
+    _write_json(options.clip_dir / "trust_bands.json", {"court": {"badge": "preview"}, "body": {"badge": "low_confidence"}})
+
+    pipeline = process_video.ProcessVideoPipeline(options)
+    outcome = pipeline._stage_match_stats()
+    payload = json.loads((options.clip_dir / "match_stats.json").read_text(encoding="utf-8"))
+
+    assert outcome.status == "ran"
+    assert outcome.artifacts == ["match_stats.json"]
+    assert payload["policy"]["body_court_only"] is True
+    assert payload["inputs"]["ball"] is None
+    assert outcome.metrics["player_count"] == 1
+
+
+def test_match_stats_stage_skips_loudly_when_consumer_inputs_are_absent(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.match_stats = True  # type: ignore[attr-defined]
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_zones.json", _match_stats_court_zones_payload())
+
+    pipeline = process_video.ProcessVideoPipeline(options)
+    outcome = pipeline._stage_match_stats()
+
+    assert outcome.status == "skipped"
+    assert outcome.artifacts == []
+    assert outcome.metrics["reason"] == "missing_inputs"
+    assert outcome.metrics["missing_inputs"] == ["placement.json"]
+
+
 def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     video = tmp_path / "clip.mp4"
     _make_video(video)
@@ -1504,6 +1702,7 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
     assert stage_names == [
         "ingest",
         "calibration",
+        "input_quality",
         "tracking",
         "camera_motion",
         "placement",
@@ -1519,11 +1718,13 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
         "world",
         "confidence_gate",
         "manifest",
+        "match_stats",
     ]
     assert summary["status"] in {"complete", "partial"}
     # tracking/frames/body all blocked/degraded because no_gpu=True and no reuse artifacts given.
     by_stage = {s["stage"]: s for s in summary["stages"]}
     assert by_stage["calibration"]["status"] == "ran"
+    assert by_stage["input_quality"]["status"] in {"ran", "degraded"}
     assert by_stage["tracking"]["status"] == "blocked"
     assert by_stage["placement"]["status"] == "blocked"
     assert by_stage["frames"]["status"] == "blocked"
@@ -1539,6 +1740,7 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
     assert by_stage["world"]["status"] == "ran"
     assert by_stage["confidence_gate"]["status"] == "ran"
     assert by_stage["manifest"]["status"] == "ran"
+    assert by_stage["match_stats"]["status"] in {"ran", "skipped"}
     assert (options.clip_dir / "virtual_world.json").is_file()
     assert (options.run_dir / "PIPELINE_SUMMARY.json").is_file()
 
@@ -1611,6 +1813,7 @@ def test_default_stage_order_runs_camera_motion_before_placement(tmp_path: Path)
     assert [name for name, _fn in pipeline._build_prefix_stage_fns()] == [
         "ingest",
         "calibration",
+        "input_quality",
         "tracking",
         "camera_motion",
         "placement",

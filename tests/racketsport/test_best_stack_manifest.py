@@ -17,7 +17,7 @@ def test_best_stack_manifest_integrity() -> None:
     manifest = load_best_stack_manifest()
 
     assert manifest.schema_version == 1
-    assert manifest.revision == 6
+    assert manifest.revision == 7
     assert "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim" in manifest.invariants
     assert len(manifest.entries) >= 30
 
@@ -47,6 +47,8 @@ def test_best_stack_manifest_integrity() -> None:
         "ball.arc_solver_spin",
         "paddle.fused_estimator",
         "paddle.reflection_cone_factor",
+        "input_quality.preflight",
+        "stats.match_stats_v0",
     }
     assert required_entries <= set(manifest.entries)
     assert "mesh.byte_budget_policy" not in manifest.entries
@@ -73,6 +75,10 @@ def test_best_stack_manifest_integrity() -> None:
     assert manifest.entry("body.fast_sam_3d_body_challenger_not_adopt").status == "DORMANT"
     assert manifest.entry("ball.arc_solver_spin").status == "DORMANT"
     assert "kill-fired" in manifest.entry("ball.arc_solver_spin").notes
+    assert manifest.entry("input_quality.preflight").status == "WIRED_DEFAULT"
+    assert manifest.entry("input_quality.preflight").value["mode"] == "advisory"
+    assert manifest.entry("stats.match_stats_v0").status == "WIRED_DEFAULT"
+    assert manifest.entry("stats.match_stats_v0").value["enabled"] is True
     assert "loso_report.json" in manifest.entry("ball.wasb_checkpoint").notes
     eval_profiles = manifest.entry("tracking.eval_only_association_profiles")
     assert eval_profiles.status == "DORMANT"

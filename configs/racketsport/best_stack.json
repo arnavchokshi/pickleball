@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 6,
+  "revision": 7,
   "updated": "2026-07-09",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
@@ -75,6 +75,81 @@
       },
       "proven_against": null,
       "notes": "Default selection surface recorded; no ball metric threshold or gated metric key changed."
+    },
+    "input_quality.preflight": {
+      "stage": "input_quality",
+      "selection": "first-class pre-launch input quality gate",
+      "value": {
+        "mode": "advisory",
+        "allowed_modes": [
+          "advisory",
+          "strict",
+          "off"
+        ],
+        "band_on_rejection": "degraded_input",
+        "sampling": {
+          "sample_frame_count": 5,
+          "sample_cadence_s": 1.0
+        },
+        "thresholds": {
+          "min_width_px": 640,
+          "min_height_px": 360,
+          "min_fps": 30.0,
+          "min_duration_s": 1.0,
+          "max_duration_s": 900.0,
+          "min_blur_laplacian_var": 25.0,
+          "min_luminance_mean": 0.02,
+          "max_luminance_mean": 0.98,
+          "min_full_court_corner_visibility_fraction": 1.0,
+          "max_missing_required_court_lines": 0,
+          "min_camera_height_m": 1.0
+        },
+        "owner_policy_rejection_reason": "court_not_fully_visible_low_angle"
+      },
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "w7_pipepolish_20260709",
+        "commit": "worktree",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "cvat_upload/exports/court_keypoints_20260707/PARTIAL_EXPORT_NOTES_20260709.md",
+          "runs/lanes/w7_pipepolish_20260709/report.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Default is advisory: process continues with band_on_rejection=degraded_input. Strict mode is available via process_video and fail-closes before heavy stages. Owner policy binds courts not fully visible / camera angle too low to the first rejection reason."
+    },
+    "stats.match_stats_v0": {
+      "stage": "match_stats",
+      "selection": "BODY+COURT-only match_stats post-stage",
+      "value": {
+        "enabled": true,
+        "artifact": "match_stats.json",
+        "consumer_only": true,
+        "required_inputs": [
+          "placement.json",
+          "court_zones.json"
+        ],
+        "excluded_inputs": [
+          "ball",
+          "paddle"
+        ],
+        "opt_out_flag": "--no-match-stats"
+      },
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "w7_pipepolish_20260709",
+        "commit": "worktree",
+        "date": "2026-07-09",
+        "evidence_paths": [
+          "runs/lanes/w7_p62stats_20260709/report.json",
+          "runs/lanes/w7_pipepolish_20260709/report.json"
+        ]
+      },
+      "proven_against": null,
+      "notes": "Stats are a fail-open post-hoc consumer, never a pipeline blocker. The artifact remains BODY+COURT-only and excludes ball, paddle, rally, shot, contact, and speed claims."
     },
     "mesh.coverage_mode": {
       "stage": "frames",
@@ -773,7 +848,8 @@
     "DEFAULT_MESH_COVERAGE_MODE": "mesh.coverage_mode",
     "DEFAULT_TARGET_MESH_FRAME_BUDGET": "mesh.target_frame_budget",
     "DEFAULT_MESH_BYTE_BUDGET_MIB": "mesh.byte_budget_mib",
-    "DEFAULT_GLOBAL_ASSOCIATION_PROFILE": "tracking.global_association_profile"
+    "DEFAULT_GLOBAL_ASSOCIATION_PROFILE": "tracking.global_association_profile",
+    "DEFAULT_INPUT_QUALITY_MODE": "input_quality.preflight"
   },
   "selection_constant_allowlist": {
     "DEFAULT_MODEL_MANIFEST": "model registry file location, not a default model/checkpoint/profile selection",

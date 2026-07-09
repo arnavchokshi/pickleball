@@ -90,6 +90,7 @@ import argparse
 import copy
 import hashlib
 import json
+import math
 import os
 import shutil
 import sys
@@ -121,6 +122,7 @@ from threed.racketsport.confidence_gate import (  # noqa: E402
 )
 from threed.racketsport.body_grounding_refine import GroundingRefineConfig, refine_body_grounding  # noqa: E402
 from threed.racketsport.event_fusion import fuse_contact_windows_from_cue_payloads  # noqa: E402
+from threed.racketsport.match_stats import compute_match_stats_for_run_dir, write_match_stats_json  # noqa: E402
 from threed.racketsport.frame_rating import (  # noqa: E402
     DEFAULT_BALL_PROXIMITY_M,
     DEFAULT_HIGH_CONFIDENCE_SWING_FLOOR,
@@ -185,6 +187,9 @@ from scripts.racketsport.remote_body_dispatch import (  # noqa: E402
 VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".avi", ".mkv"}
 DEFAULT_RUN_ROOT = ROOT / "runs"
 BEST_STACK_MANIFEST = load_best_stack_manifest()
+INPUT_QUALITY_MODES = tuple(str(mode) for mode in BEST_STACK_MANIFEST.value("input_quality.preflight")["allowed_modes"])
+DEFAULT_INPUT_QUALITY_MODE = str(BEST_STACK_MANIFEST.value("input_quality.preflight")["mode"])
+DEFAULT_MATCH_STATS_ENABLED = bool(BEST_STACK_MANIFEST.value("stats.match_stats_v0")["enabled"])
 DEFAULT_REID_MODEL = BEST_STACK_MANIFEST.path_value("tracking.reid_model", must_exist=False)
 DEFAULT_WASB_CHECKPOINT = BEST_STACK_MANIFEST.path_value("ball.wasb_checkpoint")
 DEFAULT_WASB_REPO = BEST_STACK_MANIFEST.path_value("ball.wasb_repo")
@@ -326,6 +331,7 @@ class PipelineOptions:
     court_calibration: Path | None = None
     allow_auto_court_corners_preview: bool = False
     court_proposals_preview: bool = False
+    input_quality_mode: str = DEFAULT_INPUT_QUALITY_MODE
 
     tracks_reuse: Path | None = None
     global_association: bool = True
@@ -380,6 +386,7 @@ class PipelineOptions:
 
     verify_viewer: bool = False
     vite_allow_root: Path = ROOT
+    match_stats: bool = DEFAULT_MATCH_STATS_ENABLED
 
     @property
     def clip_dir(self) -> Path:
@@ -396,6 +403,7 @@ class ProcessVideoPipeline:
         self.trust_bands: dict[str, dict[str, Any] | None] = {}
         self.stage_outcomes: list[StageOutcome] = []
         self._parallel_body_block: dict[str, Any] | None = None
+        self._input_quality_report: dict[str, Any] | None = None
         self._camera_motion_auto: dict[str, Any] = self._camera_motion_auto_decision(
             score=None,
             threshold=self.options.camera_motion_auto_threshold,
@@ -426,6 +434,7 @@ class ProcessVideoPipeline:
             "audio_onsets.json",
             "contact_windows.json",
             "frame_compute_plan.json",
+            "input_quality.json",
             "placement.json",
             "sam3d_keypoints_2d.json",
             "smpl_motion.json",
@@ -445,6 +454,7 @@ class ProcessVideoPipeline:
             "trust_bands.json",
             "replay_scene.json",
             "replay_viewer_manifest.json",
+            "match_stats.json",
         ):
             path = self.clip_dir / name
             if self.options.ball_track_reuse is not None and path.resolve() == self.options.ball_track_reuse.resolve():
@@ -510,6 +520,7 @@ class ProcessVideoPipeline:
         stage_fns: list[tuple[str, Callable[[], StageOutcome]]] = [
             ("ingest", self._stage_ingest),
             ("calibration", self._stage_calibration),
+            ("input_quality", self._stage_input_quality),
             ("tracking", self._stage_tracking),
             ("camera_motion", self._stage_camera_motion),
             ("placement", self._stage_placement),
@@ -534,6 +545,7 @@ class ProcessVideoPipeline:
             ("world", self._stage_world),
             ("confidence_gate", self._stage_confidence_gate),
             ("manifest", self._stage_manifest),
+            ("match_stats", self._stage_match_stats),
         ]
         if self.options.verify_viewer:
             stage_fns.append(("verify", self._stage_verify))
@@ -951,6 +963,80 @@ class ProcessVideoPipeline:
                 "intrinsics_source": intrinsics.get("source"),
                 "intrinsics_dist_nonzero": dist_nonzero,
             },
+        )
+
+    # ------------------------------------------------------------------
+    # stage 2b: input quality
+    # ------------------------------------------------------------------
+
+    def _stage_input_quality(self) -> StageOutcome:
+        mode = str(self.options.input_quality_mode)
+        if mode == "off":
+            self._input_quality_report = {
+                "schema_version": 1,
+                "artifact_type": "racketsport_input_quality",
+                "clip": self.options.clip,
+                "video": str(self.options.video),
+                "mode": mode,
+                "strict": False,
+                "status": "skipped",
+                "band": "not_evaluated",
+                "rejection_reasons": [],
+                "warning_reasons": ["input_quality_disabled"],
+            }
+            return StageOutcome(
+                stage="input_quality",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["input_quality preflight disabled by --input-quality-mode=off"],
+                metrics={"input_quality": _input_quality_stage_metrics(self._input_quality_report)},
+            )
+        if mode not in INPUT_QUALITY_MODES:
+            return StageOutcome(
+                stage="input_quality",
+                status="failed",
+                wall_seconds=0.0,
+                notes=[f"invalid input quality mode {mode!r}; expected one of {list(INPUT_QUALITY_MODES)}"],
+                metrics={"input_quality": {"mode": mode, "status": "invalid_mode", "strict": True}},
+            )
+
+        config = _input_quality_config_for_mode(mode)
+        report = _build_input_quality_report(
+            video=self.options.video,
+            clip=self.options.clip,
+            calibration_path=self.clip_dir / "court_calibration.json",
+            court_line_evidence_path=self.clip_dir / "court_line_evidence.json",
+            mode=mode,
+            config=config,
+        )
+        self._input_quality_report = report
+        _write_json(self.clip_dir / "input_quality.json", report)
+
+        metrics = _input_quality_stage_metrics(report)
+        if report["status"] == "below_acceptance":
+            reason_text = ", ".join(report["rejection_reasons"])
+            notes = [
+                f"input_quality preflight below acceptance bar; band={report['band']}; reasons={reason_text}",
+                "advisory mode continues downstream; use --input-quality-mode=strict to fail-close before heavy compute"
+                if mode == "advisory"
+                else "strict mode fail-closes before tracking/BALL/BODY heavy stages",
+            ]
+            return StageOutcome(
+                stage="input_quality",
+                status="failed" if mode == "strict" else "degraded",
+                wall_seconds=0.0,
+                notes=notes,
+                artifacts=["input_quality.json"],
+                metrics={"input_quality": metrics},
+            )
+
+        return StageOutcome(
+            stage="input_quality",
+            status="ran",
+            wall_seconds=0.0,
+            notes=["input_quality preflight accepted input for configured thresholds"],
+            artifacts=["input_quality.json"],
+            metrics={"input_quality": metrics},
         )
 
     # ------------------------------------------------------------------
@@ -3343,6 +3429,72 @@ class ProcessVideoPipeline:
             metrics={**contact_metrics, **replay_metrics},
         )
 
+    # ------------------------------------------------------------------
+    # stage 11b: match stats (post-hoc consumer)
+    # ------------------------------------------------------------------
+
+    def _stage_match_stats(self) -> StageOutcome:
+        if not self.options.match_stats:
+            return StageOutcome(
+                stage="match_stats",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["--no-match-stats set: BODY+COURT post-hoc stats consumer disabled"],
+                metrics={"reason": "disabled_by_flag", "consumer_only": True},
+            )
+
+        required = {
+            "placement.json": self.clip_dir / "placement.json",
+            "court_zones.json": self.clip_dir / "court_zones.json",
+        }
+        missing = [name for name, path in required.items() if not path.is_file()]
+        if missing:
+            return StageOutcome(
+                stage="match_stats",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=[
+                    "match_stats skipped fail-open: required BODY+COURT consumer input(s) absent: "
+                    + ", ".join(missing)
+                ],
+                metrics={"reason": "missing_inputs", "missing_inputs": missing, "consumer_only": True},
+            )
+
+        out = self.clip_dir / "match_stats.json"
+        try:
+            payload = compute_match_stats_for_run_dir(self.clip_dir)
+            write_match_stats_json(payload, out)
+        except Exception as exc:  # noqa: BLE001 - stats are a consumer and never block the bundle
+            out.unlink(missing_ok=True)
+            return StageOutcome(
+                stage="match_stats",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=[
+                    "match_stats skipped fail-open: BODY+COURT consumer raised while reading current artifacts; "
+                    f"{type(exc).__name__}: {exc}"
+                ],
+                metrics={"reason": "consumer_exception", "error": f"{type(exc).__name__}: {exc}", "consumer_only": True},
+            )
+
+        summary = payload.get("summary", {}) if isinstance(payload.get("summary"), Mapping) else {}
+        return StageOutcome(
+            stage="match_stats",
+            status="ran",
+            wall_seconds=0.0,
+            notes=[
+                "computed BODY+COURT-only match_stats.json as a post-hoc consumer; stats are not a pipeline blocker",
+                "ball, paddle, rally, shot, contact, and ball-speed stats remain excluded",
+            ],
+            artifacts=["match_stats.json"],
+            metrics={
+                "player_count": int(payload.get("player_count", 0) or 0),
+                "world_jump_count": int(summary.get("world_jump_count", 0) or 0),
+                "body_court_only": bool(payload.get("policy", {}).get("body_court_only", False)),
+                "consumer_only": True,
+            },
+        )
+
     def _manifest_world_path(self) -> Path:
         gated_path = self.clip_dir / "confidence_gated_world.json"
         if self.options.confidence_gate and gated_path.is_file():
@@ -3477,6 +3629,13 @@ class ProcessVideoPipeline:
         else:
             status = "complete"
 
+        stage_dicts = []
+        for outcome in self.stage_outcomes:
+            item = outcome.as_dict()
+            if outcome.stage == "body":
+                _populate_body_postchain_summary_metrics(item, self.clip_dir)
+            stage_dicts.append(item)
+
         summary = {
             "schema_version": 1,
             "artifact_type": "racketsport_process_video_pipeline_summary",
@@ -3486,7 +3645,7 @@ class ProcessVideoPipeline:
             "clip_dir": str(self.clip_dir),
             "status": status,
             "wall_seconds": round(wall_seconds, 3),
-            "stages": [outcome.as_dict() for outcome in self.stage_outcomes],
+            "stages": stage_dicts,
             "trust_bands": self.trust_bands,
             "camera_motion_auto": self._camera_motion_auto,
             "best_stack": {
@@ -3495,6 +3654,8 @@ class ProcessVideoPipeline:
                 "overrides": best_stack_overrides_from_options(self.options),
             },
         }
+        if self._input_quality_report is not None:
+            summary["input_quality"] = self._input_quality_report
         if self._parallel_body_block is not None:
             summary["parallel_body"] = self._parallel_body_block
         _write_json(self.options.run_dir / "PIPELINE_SUMMARY.json", summary)
@@ -4749,6 +4910,413 @@ def _read_optional_json(path: Path) -> Any | None:
     return _read_json(path) if path.is_file() else None
 
 
+def _input_quality_config_for_mode(mode: str) -> dict[str, Any]:
+    config = copy.deepcopy(BEST_STACK_MANIFEST.value("input_quality.preflight"))
+    if not isinstance(config, dict):
+        config = {"mode": str(mode)}
+    config["mode"] = str(mode)
+    return config
+
+
+def _build_input_quality_report(
+    *,
+    video: Path,
+    clip: str,
+    calibration_path: Path,
+    court_line_evidence_path: Path,
+    mode: str,
+    config: Mapping[str, Any],
+) -> dict[str, Any]:
+    thresholds = config.get("thresholds")
+    if not isinstance(thresholds, Mapping):
+        raise ValueError("input_quality.preflight thresholds must be an object")
+    sampling = config.get("sampling")
+    if not isinstance(sampling, Mapping):
+        raise ValueError("input_quality.preflight sampling must be an object")
+
+    timing = _video_timing_probe(video)
+    calibration = _read_optional_json(calibration_path)
+    court_line_evidence = _read_optional_json(court_line_evidence_path)
+    video_quality = _probe_video_quality_samples(video, timing=timing, sampling=sampling)
+    court_metrics = _court_visibility_angle_metrics(
+        calibration,
+        court_line_evidence,
+        width=timing.width,
+        height=timing.height,
+        thresholds=thresholds,
+    )
+
+    rejection_reasons: list[str] = []
+    warning_reasons: list[str] = []
+
+    def reject(reason: str) -> None:
+        if reason not in rejection_reasons:
+            rejection_reasons.append(reason)
+
+    def warn(reason: str) -> None:
+        if reason not in warning_reasons and reason not in rejection_reasons:
+            warning_reasons.append(reason)
+
+    owner_reason = str(config.get("owner_policy_rejection_reason", "court_not_fully_visible_low_angle"))
+    if court_metrics.get("below_acceptance"):
+        reject(owner_reason)
+    elif not court_metrics.get("available"):
+        warn("court_visibility_angle_unknown")
+
+    if timing.width < _int_threshold(thresholds, "min_width_px") or timing.height < _int_threshold(thresholds, "min_height_px"):
+        reject("resolution_below_floor")
+    if timing.fps < _float_threshold(thresholds, "min_fps"):
+        reject("fps_below_floor")
+    if timing.duration_s < _float_threshold(thresholds, "min_duration_s"):
+        reject("duration_too_short")
+    if timing.duration_s > _float_threshold(thresholds, "max_duration_s"):
+        reject("duration_too_long")
+
+    blur = _float_or_none(video_quality.get("blur_laplacian_var"))
+    if blur is None:
+        warn("blur_check_unavailable")
+    elif blur < _float_threshold(thresholds, "min_blur_laplacian_var"):
+        reject("motion_blur_gross")
+
+    luminance = _float_or_none(video_quality.get("luminance_mean"))
+    if luminance is None:
+        warn("exposure_check_unavailable")
+    elif luminance < _float_threshold(thresholds, "min_luminance_mean") or luminance > _float_threshold(thresholds, "max_luminance_mean"):
+        reject("exposure_grossly_bad")
+
+    if video_quality.get("error"):
+        warn("video_quality_probe_unavailable")
+
+    status = "below_acceptance" if rejection_reasons else "accepted"
+    band = str(config.get("band_on_rejection", "degraded_input")) if rejection_reasons else "accepted_input"
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_input_quality",
+        "clip": clip,
+        "video": str(video),
+        "mode": str(mode),
+        "strict": str(mode) == "strict",
+        "status": status,
+        "band": band,
+        "rejection_reasons": rejection_reasons,
+        "warning_reasons": warning_reasons,
+        "metrics": {
+            "resolution": {"width_px": timing.width, "height_px": timing.height},
+            "fps": round(float(timing.fps), 6),
+            "duration_s": round(float(timing.duration_s), 6),
+            "frame_count": int(timing.frame_count),
+            "court_visibility_angle": court_metrics,
+            "video_quality": video_quality,
+        },
+        "thresholds": dict(thresholds),
+        "sampling": dict(sampling),
+        "policy": {
+            "advisory_continues_downstream": str(mode) == "advisory",
+            "strict_fail_closes": str(mode) == "strict",
+            "owner_policy_rejection_reason": owner_reason,
+        },
+    }
+
+
+def _input_quality_stage_metrics(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = report.get("metrics")
+    metrics_map = metrics if isinstance(metrics, Mapping) else {}
+    return {
+        "mode": str(report.get("mode", "")),
+        "strict": bool(report.get("strict", False)),
+        "status": str(report.get("status", "")),
+        "band": str(report.get("band", "")),
+        "rejection_reasons": list(report.get("rejection_reasons") or []),
+        "warning_reasons": list(report.get("warning_reasons") or []),
+        "resolution": metrics_map.get("resolution"),
+        "fps": metrics_map.get("fps"),
+        "duration_s": metrics_map.get("duration_s"),
+        "court_visibility_angle": metrics_map.get("court_visibility_angle"),
+    }
+
+
+def _probe_video_quality_samples(video: Path, *, timing: VideoTiming, sampling: Mapping[str, Any]) -> dict[str, Any]:
+    sample_count = max(1, int(_float_threshold(sampling, "sample_frame_count")))
+    cadence_s = max(0.0, _float_threshold(sampling, "sample_cadence_s"))
+    try:
+        import cv2  # type: ignore[import-not-found]
+    except ImportError as exc:
+        return {"sampled_frame_count": 0, "sampled_frame_indexes": [], "error": f"ImportError: {exc}"}
+
+    if cadence_s > 0.0:
+        step = max(1, int(round(cadence_s * timing.fps)))
+        indexes = list(range(0, timing.frame_count, step))[:sample_count]
+    else:
+        if sample_count == 1 or timing.frame_count == 1:
+            indexes = [0]
+        else:
+            span = timing.frame_count - 1
+            indexes = [int(round(index * span / float(sample_count - 1))) for index in range(sample_count)]
+    if timing.frame_count > 0 and indexes and indexes[-1] >= timing.frame_count:
+        indexes[-1] = timing.frame_count - 1
+    indexes = sorted(dict.fromkeys(max(0, min(timing.frame_count - 1, int(index))) for index in indexes))
+
+    blur_values: list[float] = []
+    luminance_values: list[float] = []
+    cap = cv2.VideoCapture(str(video))
+    try:
+        for frame_index in indexes:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+            ok, frame = cap.read()
+            if not ok or frame is None:
+                continue
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            blur_values.append(float(cv2.Laplacian(gray, cv2.CV_64F).var()))
+            luminance_values.append(float(gray.mean()) / 255.0)
+    finally:
+        cap.release()
+
+    payload: dict[str, Any] = {
+        "sampled_frame_count": len(luminance_values),
+        "sampled_frame_indexes": indexes,
+    }
+    if blur_values:
+        payload["blur_laplacian_var"] = round(float(median(blur_values)), 6)
+    if luminance_values:
+        payload["luminance_mean"] = round(float(sum(luminance_values) / len(luminance_values)), 6)
+        payload["luminance_min"] = round(float(min(luminance_values)), 6)
+        payload["luminance_max"] = round(float(max(luminance_values)), 6)
+    if not blur_values or not luminance_values:
+        payload["error"] = "no_sampled_frames"
+    return payload
+
+
+def _court_visibility_angle_metrics(
+    calibration: Any,
+    court_line_evidence: Any,
+    *,
+    width: int,
+    height: int,
+    thresholds: Mapping[str, Any],
+) -> dict[str, Any]:
+    metrics: dict[str, Any] = {
+        "source": "court_calibration.json+court_line_evidence.json",
+        "available": isinstance(calibration, Mapping),
+        "below_acceptance": False,
+    }
+    if not isinstance(calibration, Mapping):
+        return metrics
+
+    image_size = _calibration_image_size_or_video(calibration, width=width, height=height)
+    points = _court_corner_image_points_from_calibration(calibration)
+    metrics["image_size"] = list(image_size)
+    if points:
+        visible = [
+            0.0 <= point[0] <= float(image_size[0]) and 0.0 <= point[1] <= float(image_size[1])
+            for point in points
+        ]
+        visible_count = sum(1 for item in visible if item)
+        visible_fraction = visible_count / float(len(points))
+        metrics["full_court_corner_visibility_fraction"] = round(float(visible_fraction), 6)
+        metrics["visible_corner_count"] = visible_count
+        metrics["court_corner_count"] = len(points)
+        if visible_fraction < _float_threshold(thresholds, "min_full_court_corner_visibility_fraction"):
+            metrics["below_acceptance"] = True
+    else:
+        metrics["full_court_corner_visibility_fraction"] = None
+        metrics["visible_corner_count"] = 0
+        metrics["court_corner_count"] = 0
+
+    camera_height_m = _camera_height_m(calibration)
+    metrics["camera_height_m"] = None if camera_height_m is None else round(float(camera_height_m), 6)
+    if camera_height_m is not None and camera_height_m < _float_threshold(thresholds, "min_camera_height_m"):
+        metrics["below_acceptance"] = True
+
+    missing_required = _missing_required_court_line_count(court_line_evidence)
+    metrics["missing_required_court_line_count"] = missing_required
+    if missing_required > _int_threshold(thresholds, "max_missing_required_court_lines"):
+        metrics["below_acceptance"] = True
+    return metrics
+
+
+def _calibration_image_size_or_video(calibration: Mapping[str, Any], *, width: int, height: int) -> tuple[int, int]:
+    value = calibration.get("image_size")
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)) and len(value) >= 2:
+        parsed_width = _int_or_none(value[0])
+        parsed_height = _int_or_none(value[1])
+        if parsed_width is not None and parsed_height is not None and parsed_width > 0 and parsed_height > 0:
+            return parsed_width, parsed_height
+    return int(width), int(height)
+
+
+def _court_corner_image_points_from_calibration(calibration: Mapping[str, Any]) -> list[tuple[float, float]]:
+    image_pts = calibration.get("image_pts")
+    world_pts = calibration.get("world_pts")
+    pairs: list[tuple[tuple[float, float], tuple[float, float]]] = []
+    if (
+        isinstance(image_pts, Sequence)
+        and not isinstance(image_pts, (str, bytes))
+        and isinstance(world_pts, Sequence)
+        and not isinstance(world_pts, (str, bytes))
+    ):
+        for world, image in zip(world_pts, image_pts, strict=False):
+            world_xy = _xy_from_sequence(world)
+            image_xy = _xy_from_sequence(image)
+            if world_xy is not None and image_xy is not None:
+                pairs.append((world_xy, image_xy))
+    if len(pairs) >= 4:
+        xs = [item[0][0] for item in pairs]
+        ys = [item[0][1] for item in pairs]
+        targets = [
+            (min(xs), min(ys)),
+            (max(xs), min(ys)),
+            (max(xs), max(ys)),
+            (min(xs), max(ys)),
+        ]
+        selected: list[tuple[float, float]] = []
+        used: set[int] = set()
+        for target in targets:
+            best_index = min(
+                (index for index in range(len(pairs)) if index not in used),
+                key=lambda index: (pairs[index][0][0] - target[0]) ** 2 + (pairs[index][0][1] - target[1]) ** 2,
+            )
+            used.add(best_index)
+            selected.append(pairs[best_index][1])
+        return selected
+
+    homography = calibration.get("homography")
+    if isinstance(homography, Sequence) and not isinstance(homography, (str, bytes)):
+        corners = [(-3.048, -6.7056), (3.048, -6.7056), (3.048, 6.7056), (-3.048, 6.7056)]
+        projected = [_project_homography_point(homography, point) for point in corners]
+        return [point for point in projected if point is not None]
+    return []
+
+
+def _project_homography_point(homography: Any, point: tuple[float, float]) -> tuple[float, float] | None:
+    if not isinstance(homography, Sequence) or isinstance(homography, (str, bytes)) or len(homography) < 3:
+        return None
+    try:
+        h = [[float(value) for value in row[:3]] for row in homography[:3]]
+        x, y = point
+        denom = h[2][0] * x + h[2][1] * y + h[2][2]
+        if abs(denom) < 1e-12:
+            return None
+        return ((h[0][0] * x + h[0][1] * y + h[0][2]) / denom, (h[1][0] * x + h[1][1] * y + h[1][2]) / denom)
+    except (TypeError, ValueError, IndexError):
+        return None
+
+
+def _camera_height_m(calibration: Mapping[str, Any]) -> float | None:
+    extrinsics = calibration.get("extrinsics")
+    if isinstance(extrinsics, Mapping):
+        parsed = _float_or_none(extrinsics.get("camera_height_m"))
+        if parsed is not None:
+            return abs(parsed)
+    parsed = _float_or_none(calibration.get("camera_height_m"))
+    return abs(parsed) if parsed is not None else None
+
+
+def _missing_required_court_line_count(court_line_evidence: Any) -> int:
+    if not isinstance(court_line_evidence, Mapping):
+        return 0
+    aggregate = court_line_evidence.get("aggregate")
+    if not isinstance(aggregate, Mapping):
+        return 0
+    total = 0
+    for key in ("missing_required_line_ids", "missing_required_net_ids"):
+        value = aggregate.get(key)
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            total += len(value)
+    return total
+
+
+def _populate_body_postchain_summary_metrics(stage: dict[str, Any], clip_dir: Path) -> None:
+    metrics = stage.setdefault("metrics", {})
+    if not isinstance(metrics, dict):
+        metrics = {}
+        stage["metrics"] = metrics
+    bypass = _body_postchain_bypass_summary(clip_dir)
+    stages = list(bypass.get("stages", [])) if bypass else []
+    metrics["postchain_bypassed_stages"] = stages
+    if bypass:
+        metrics["postchain_bypass_status"] = str(bypass.get("status", "postchain_bypassed"))
+        if bypass.get("raw_grounded_joints_sidecar"):
+            metrics["postchain_raw_grounded_joints_sidecar"] = str(bypass["raw_grounded_joints_sidecar"])
+
+
+def _body_postchain_bypass_summary(clip_dir: Path) -> dict[str, Any] | None:
+    timing = _read_optional_json(clip_dir / "body_stage_phase_timing.json")
+    if isinstance(timing, Mapping):
+        bypass = timing.get("postchain_bypasses")
+        if isinstance(bypass, Mapping) and isinstance(bypass.get("stages"), Sequence):
+            stages = [str(stage) for stage in bypass.get("stages", [])]
+            if stages:
+                return {
+                    "status": str(bypass.get("status", "postchain_bypassed")),
+                    "stages": stages,
+                    "raw_grounded_joints_sidecar": bypass.get("raw_grounded_joints_sidecar"),
+                }
+    for filename in ("remote_sam3d_tier2_dispatch_config.json", "body_compute_execution.json"):
+        payload = _read_optional_json(clip_dir / filename)
+        if not isinstance(payload, Mapping):
+            continue
+        optimization = payload.get("optimization")
+        body_postchain = optimization.get("body_postchain") if isinstance(optimization, Mapping) else None
+        if not isinstance(body_postchain, Mapping):
+            continue
+        order = (
+            "temporal_smoothing",
+            "foot_lock",
+            "foot_pin",
+            "contact_splice",
+            "wrist_lock",
+            "world_joint_visual_smoothing",
+        )
+        stages = [stage for stage in order if body_postchain.get(stage) is False]
+        if stages:
+            return {
+                "status": "postchain_bypassed",
+                "stages": stages,
+                "raw_grounded_joints_sidecar": body_postchain.get("raw_grounded_joints_sidecar"),
+            }
+    return None
+
+
+def _xy_from_sequence(value: Any) -> tuple[float, float] | None:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)) or len(value) < 2:
+        return None
+    try:
+        return float(value[0]), float(value[1])
+    except (TypeError, ValueError):
+        return None
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _float_or_none(value: Any) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(parsed):
+        return None
+    return parsed
+
+
+def _float_threshold(values: Mapping[str, Any], key: str) -> float:
+    parsed = _float_or_none(values.get(key))
+    if parsed is None:
+        raise ValueError(f"input_quality.preflight missing numeric {key}")
+    return parsed
+
+
+def _int_threshold(values: Mapping[str, Any], key: str) -> int:
+    parsed = _int_or_none(values.get(key))
+    if parsed is None:
+        raise ValueError(f"input_quality.preflight missing integer {key}")
+    return parsed
+
+
 def _first_existing_path(root: Path, names: Sequence[str]) -> Path | None:
     for name in names:
         candidate = root / name
@@ -4860,6 +5428,11 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
     if not isinstance(paddle_fused, dict):
         paddle_fused = {"enabled": bool(paddle_fused)}
     paddle_fused["enabled"] = bool(options.paddle_pose)
+    input_quality = _input_quality_config_for_mode(options.input_quality_mode)
+    match_stats = copy.deepcopy(BEST_STACK_MANIFEST.value("stats.match_stats_v0"))
+    if not isinstance(match_stats, dict):
+        match_stats = {"enabled": bool(match_stats)}
+    match_stats["enabled"] = bool(options.match_stats)
     return {
         "ball.wasb_checkpoint": _path_summary(options.wasb_checkpoint),
         "ball.wasb_repo": _path_summary(options.wasb_repo),
@@ -4875,6 +5448,8 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
         "body.detector_fov": detector_fov,
         "body.schedule": options.body_schedule,
         "paddle.fused_estimator": paddle_fused,
+        "input_quality.preflight": input_quality,
+        "stats.match_stats_v0": match_stats,
         "camera_motion.policy": {
             "mode": "disabled" if options.skip_camera_motion else "forced" if options.enable_camera_motion else "auto",
             "threshold": options.camera_motion_auto_threshold,
@@ -4903,6 +5478,8 @@ def best_stack_overrides_from_options(options: PipelineOptions) -> dict[str, Any
         "body.detector_fov": BEST_STACK_MANIFEST.value("body.detector_fov"),
         "body.schedule": BEST_STACK_MANIFEST.string_value("body.schedule"),
         "paddle.fused_estimator": copy.deepcopy(BEST_STACK_MANIFEST.value("paddle.fused_estimator")),
+        "input_quality.preflight": copy.deepcopy(BEST_STACK_MANIFEST.value("input_quality.preflight")),
+        "stats.match_stats_v0": copy.deepcopy(BEST_STACK_MANIFEST.value("stats.match_stats_v0")),
         "camera_motion.policy": BEST_STACK_MANIFEST.value("camera_motion.policy"),
         "placement.undistort": BEST_STACK_MANIFEST.value("placement.undistort"),
     }
@@ -5132,6 +5709,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         court_calibration=Path(args.court_calibration).expanduser().resolve() if args.court_calibration else None,
         allow_auto_court_corners_preview=args.allow_auto_court_corners_preview,
         court_proposals_preview=args.court_proposals_preview,
+        input_quality_mode=str(args.input_quality_mode),
         tracks_reuse=Path(args.tracks).expanduser().resolve() if args.tracks else None,
         global_association=not args.no_global_association,
         global_association_profile=args.global_association_profile,
@@ -5178,6 +5756,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         tracker_config_path=Path(args.tracker_config),
         verify_viewer=args.verify_viewer,
         vite_allow_root=Path(args.vite_allow_root).expanduser().resolve() if args.vite_allow_root else ROOT,
+        match_stats=bool(DEFAULT_MATCH_STATS_ENABLED) and not bool(args.no_match_stats),
     )
 
 
@@ -5215,6 +5794,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "If no trusted calibration seed is supplied, write fail-closed court_proposals.json and a "
             "court correction task. Proposal preview does not satisfy calibration."
+        ),
+    )
+    parser.add_argument(
+        "--input-quality-mode",
+        choices=INPUT_QUALITY_MODES,
+        default=DEFAULT_INPUT_QUALITY_MODE,
+        help=(
+            "Pre-launch input quality policy from best_stack.json. advisory emits degraded_input and "
+            "continues; strict fail-closes before tracking/BALL/BODY; off skips the preflight."
         ),
     )
     parser.add_argument("--clip", help="Clip id; defaults to the video filename stem.")
@@ -5463,6 +6051,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tracker-config", default=str(orchestrator.DEFAULT_BOTSORT_REID_CONFIG))
     parser.add_argument("--verify-viewer", action="store_true", help="Run a headless web-viewer load check after the manifest is built.")
     parser.add_argument("--vite-allow-root", default=None, help="Root directory the local Vite replay server is configured to serve (default: repo root).")
+    parser.add_argument("--no-match-stats", action="store_true", help="Disable the default BODY+COURT-only match_stats.json post-stage.")
     parser.add_argument("--json", action="store_true", help="Print the full JSON summary instead of a human table.")
     return parser
 

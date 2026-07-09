@@ -124,6 +124,41 @@ def test_no_flag_invocation_resolves_wired_defaults_from_manifest(tmp_path: Path
     assert resolved["tracking.global_association_profile"] == manifest.string_value("tracking.global_association_profile")
     assert resolved["body.detector_fov"] == manifest.value("body.detector_fov")
     assert resolved["camera_motion.policy"] == manifest.value("camera_motion.policy")
+    assert resolved["input_quality.preflight"] == manifest.value("input_quality.preflight")
+    assert resolved["stats.match_stats_v0"] == manifest.value("stats.match_stats_v0")
+    assert options.input_quality_mode == "advisory"
+    assert options.match_stats is True
+    assert process_video.best_stack_overrides_from_options(options) == {}
+
+
+def test_input_quality_and_stats_cli_flags_override_manifest_defaults(tmp_path: Path) -> None:
+    manifest = load_best_stack_manifest()
+    video = tmp_path / "clip.mp4"
+    parser = process_video.build_arg_parser()
+
+    options = process_video.build_options_from_args(
+        parser.parse_args(
+            [
+                "--video",
+                str(video),
+                "--out",
+                str(tmp_path / "run"),
+                "--input-quality-mode",
+                "strict",
+                "--no-match-stats",
+            ]
+        )
+    )
+
+    resolved = process_video.resolved_best_stack_config_from_options(options)
+    overrides = process_video.best_stack_overrides_from_options(options)
+
+    assert resolved["input_quality.preflight"]["mode"] == "strict"
+    assert resolved["stats.match_stats_v0"]["enabled"] is False
+    assert overrides["input_quality.preflight"]["manifest"] == manifest.value("input_quality.preflight")
+    assert overrides["input_quality.preflight"]["resolved"]["mode"] == "strict"
+    assert overrides["stats.match_stats_v0"]["manifest"] == manifest.value("stats.match_stats_v0")
+    assert overrides["stats.match_stats_v0"]["resolved"]["enabled"] is False
 
 
 def test_clip_keyed_association_no_flag_resolves_manifest_default(tmp_path: Path) -> None:
