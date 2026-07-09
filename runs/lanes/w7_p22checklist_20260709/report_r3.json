@@ -1,0 +1,71 @@
+{
+  "objective_result": "PASS",
+  "acceptance": [
+    {
+      "metric": "adversarial_probe_wrong_helper_detection",
+      "baseline": "RED at HEAD 781fa928b before repair: running MPLBACKEND=Agg .venv/bin/python runs/lanes/w7_p22_verify_20260709/synthetic_gate_adversarial_probe.py showed wrong_helper_used_for_truth_and_mock_decode.gate_1b_passed=true and joints_world_p95_abs_error_mm=0.0, proving the self-reference defect.",
+      "after": "PASS. Unmodified probe output after repair exactly: {\n  \"mis_scaled_decoder\": {\n    \"gate_1b_passed\": false,\n    \"joints_world_p95_abs_error_mm\": 454.76580201558943,\n    \"mesh_skeleton_divergence_passed\": true\n  },\n  \"wrong_helper_used_for_truth_and_mock_decode\": {\n    \"gate_1b_passed\": false,\n    \"interpretation\": \"The gate still passes when the helper used to author truth is wrong, because the mock decode uses the same helper.\",\n    \"joints_world_p95_abs_error_mm\": 3109.5498066440427,\n    \"mesh_skeleton_divergence_passed\": true\n  }\n}",
+      "target": "Verifier's unmodified adversarial probe: mis-scaled decoder fails, wrong-helper case now fails, correct helper still allows normal mock gate to pass.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "truth_authoring_helper_independence",
+      "baseline": "scripts/racketsport/synthetic_body_decode_gate.py authored expected joints/vertices with mhr_decode.apply_pred_cam_t_once, the same helper used by _mock_decode.",
+      "after": "PASS. scripts/racketsport/synthetic_body_decode_gate.py:181-182 now calls _author_expected_translated_points for authored_joints_world/authored_vertices_world. scripts/racketsport/synthetic_body_decode_gate.py:194-202 implements local arithmetic only: validate pred_cam_t length, unpack tx/ty/tz, and add those floats directly to point coordinates. The decode side at scripts/racketsport/synthetic_body_decode_gate.py:205-214 still uses production mhr_decode.apply_pred_cam_t_once.",
+      "target": "Expected-geometry authoring is independent of mhr_decode and any decode-path helper; decode path under test keeps using production code.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "synthetic_body_decode_gate gate_1b_world_round_trip.joints_world_p95_abs_error_mm mesh_skeleton_divergence.p95_mm",
+      "baseline": "R2 mock gate held 0.0mm on both required metric keys.",
+      "after": "PASS. MPLBACKEND=Agg .venv/bin/python scripts/racketsport/synthetic_body_decode_gate.py --out runs/lanes/w7_p22checklist_20260709/synthetic_body_decode_gate_report_r3.json --render-dir runs/lanes/w7_p22checklist_20260709/synthetic_renders_r3 --samples 3 --decoder mock --seed 0 produced measurement_status=measured_mock_decoder, gate_1b_world_round_trip.joints_world_p95_abs_error_mm=0.0, vertices_world_p95_abs_error_mm=0.0, mesh_skeleton_divergence.p95_mm=0.0.",
+      "target": "Own gate CPU mock still passes with 0.0mm after helper-independent truth repair.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "blast_radius_tests",
+      "baseline": "Round 3 required only tests/racketsport/test_synthetic_body_decode_gate.py, tests/racketsport/test_mhr_decode.py, and scaffold index test with MPLBACKEND=Agg.",
+      "after": "PASS. MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_synthetic_body_decode_gate.py tests/racketsport/test_mhr_decode.py tests/racketsport/test_scaffold_tool_index.py -q => 10 passed, 6 skipped in 10.44s.",
+      "target": "Requested blast radius is green; no other test files required for this fenced repair.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "storage_hygiene",
+      "baseline": "The requested pytest/probe runs created generated cache directories.",
+      "after": "PASS. Removed generated caches and reran python3 scripts/racketsport/audit_storage_policy.py --root . --json > runs/lanes/w7_p22checklist_20260709/storage_policy_audit_r3.json; status=pass and generated_artifacts=[].",
+      "target": "Do not leave generated cache/build artifacts in the workspace.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "fence_compliance",
+      "baseline": "Manager prohibited process_video.py, best_stack.json, and paddle test edits.",
+      "after": "PASS. Source change is limited to scripts/racketsport/synthetic_body_decode_gate.py. No process_video.py, best_stack.json, test_process_video.py, test_best_stack_manifest.py, gate-threshold, eval-protocol, lambda_foot, smoother, or latent-interp changes were made by this lane.",
+      "target": "No protected/cross-lane file edits and no gate/protocol/default stack changes.",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "scripts/racketsport/synthetic_body_decode_gate.py:181 replaced helper-based authored_joints_world truth construction with helper-independent local arithmetic.",
+    "scripts/racketsport/synthetic_body_decode_gate.py:182 replaced helper-based authored_vertices_world truth construction with helper-independent local arithmetic.",
+    "scripts/racketsport/synthetic_body_decode_gate.py:194 added _author_expected_translated_points for dependency-free pred_cam_t addition in truth authoring.",
+    "runs/lanes/w7_p22checklist_20260709/synthetic_body_decode_gate_report_r3.json:1 records the post-repair CPU mock gate run.",
+    "runs/lanes/w7_p22checklist_20260709/storage_policy_audit_r3.json:1 records the post-cleanup storage audit.",
+    "runs/lanes/w7_p22checklist_20260709/report_r3.json:1 writes this round-3 structured report."
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_synthetic_body_decode_gate.py tests/racketsport/test_mhr_decode.py tests/racketsport/test_scaffold_tool_index.py -q",
+    "passed": 10,
+    "failed": 0,
+    "skipped": 6,
+    "failures_all_preexisting": true,
+    "failure_notes": null
+  },
+  "honest_issues": [
+    "The verifier probe's static interpretation string still says the gate passes when the helper is wrong, but the repaired numeric result now contradicts that stale text: wrong_helper_used_for_truth_and_mock_decode.gate_1b_passed=false and joints_world_p95_abs_error_mm=3109.5498066440427.",
+    "The gate still imports mhr_decode for the decode side under test and metric constants; the repaired truth construction path does not use mhr_decode or other decode helpers.",
+    "This R3 repair only fixes synthetic gate self-reference. It does not rerun GPU/raw-sidecar GATE-1b or alternate pred_keypoints_3d-vs-pred_joint_coords quantification.",
+    "The worktree still has pre-existing protected/cross-lane dirty files such as configs/racketsport/best_stack.json, scripts/racketsport/process_video.py, tests/racketsport/test_best_stack_manifest.py, and tests/racketsport/test_process_video.py; I did not edit or revert them."
+  ],
+  "next": "Use the repaired synthetic gate as the standing CPU/VM instrument, then run the separate GPU/raw-sidecar GATE-1b recompute before making any decode-fidelity or ceiling-rule promotion decision.",
+  "session_id": null
+}

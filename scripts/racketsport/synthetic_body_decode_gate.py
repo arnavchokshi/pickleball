@@ -178,8 +178,8 @@ def _author_sample(index: int, *, seed: int) -> dict[str, Any]:
     local_vertices = [list(point) for point in local_joints]
     local_vertices.extend([[-0.18 * scale, -0.08 * scale, 0.9 * scale], [0.18 * scale, 0.08 * scale, 0.9 * scale]])
     pred_cam_t = [0.2 + 0.03 * index, -0.1 + 0.02 * index, 3.0 + 0.1 * index]
-    authored_joints_world = mhr_decode.apply_pred_cam_t_once(local_joints, pred_cam_t=pred_cam_t)
-    authored_vertices_world = mhr_decode.apply_pred_cam_t_once(local_vertices, pred_cam_t=pred_cam_t)
+    authored_joints_world = _author_expected_translated_points(local_joints, pred_cam_t)
+    authored_vertices_world = _author_expected_translated_points(local_vertices, pred_cam_t)
     return {
         "sample_id": index,
         "scale_m": scale,
@@ -189,6 +189,17 @@ def _author_sample(index: int, *, seed: int) -> dict[str, Any]:
         "authored_joints_world": authored_joints_world,
         "authored_vertices_world": authored_vertices_world,
     }
+
+
+def _author_expected_translated_points(
+    points_camera: Sequence[Sequence[float]],
+    pred_cam_t: Sequence[float],
+) -> list[list[float]]:
+    """Author synthetic ground truth without using decode-path helpers."""
+    if len(pred_cam_t) != 3:
+        raise ValueError("pred_cam_t must be a 3-vector")
+    tx, ty, tz = [float(value) for value in pred_cam_t]
+    return [[float(point[0]) + tx, float(point[1]) + ty, float(point[2]) + tz] for point in points_camera]
 
 
 def _mock_decode(sample: dict[str, Any]) -> dict[str, list[list[float]]]:
