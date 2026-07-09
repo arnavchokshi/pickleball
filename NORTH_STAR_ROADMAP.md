@@ -438,6 +438,16 @@ pickleball-fleet-snap-20260709-w7close bakes all 3 manifest-pinned artifact gaps
 ultralytics (old template could not run production tracking — invalidated-and-discarded 6 fast
 timing runs prove the gate checks work). Evidence: runs/lanes/w7_speedgate_20260709/results.json.
 
+**Dated evidence note (2026-07-09 late, control-first catch — directly evidences the NS-02.3-02.5
+"evaluation reset / random audit" row):** ~74.8% of the 2,388-row corpus is byte-identical to model
+prelabels (the owner's confirm-or-correct flow; 0.003px signature; per-clip split: clean-14 clips
+control F1 0.236 vs confirmed-heavy 26 clips 0.710) — labels VALID for training, but absolute scores
+on confirmed rows are inflated for same-lineage models and block composition drifts between
+checkpoints. Standing ruling applied: curve reads use a FIXED block (the 1k point's 1121-era block);
+mixed-provenance blocks are ordering-only; per-row provenance classification now travels with the
+corpus. The uniform-random scratch-labeled audit stratum is the structural fix -> promoted to owner
+labeling ask #1. Evidence: runs/lanes/w7_ballretrain2_20260709/control_contamination_finding.json.
+
 **Dated evidence note (2026-07-09 late, OWNER PRIORITY RULING + research): ball 2D->3D lift.** Owner
 live-ruled this the top ball priority (pb.vision achieves great monocular 3D on the owner's own
 uploaded clips = existence proof). 39-agent research sweep + rulings banked at
