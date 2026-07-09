@@ -1,0 +1,72 @@
+{
+  "objective_result": "PASS",
+  "acceptance": [
+    {
+      "metric": "gate_1b_world_round_trip.absent_index_missing_pred_cam_t.status",
+      "baseline": "measured with pred_cam_t=None and a boolean gate_1b verdict possible",
+      "after": "blocked_missing_pred_cam_t",
+      "target": "fail-closed when raw_emit_source.status is not loaded and no camera_translation/pred_cam_t exists",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "gate_1b_world_round_trip.absent_index_missing_pred_cam_t.passed",
+      "baseline": "true/false boolean verdict possible",
+      "after": "null",
+      "target": "no numeric gate_1b pass/fail verdict when pred_cam_t is missing",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "gate_1b_world_round_trip.absent_index_missing_pred_cam_t.worst_errors",
+      "baseline": "numeric worst_joints_world_max_abs_error_mm and worst_vertices_world_max_abs_error_mm possible",
+      "after": "null/null",
+      "target": "no numeric gate_1b world round-trip error values when pred_cam_t is missing",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "gate_1a_euler_cont_euler_idempotence.absent_index_missing_pred_cam_t",
+      "baseline": "computed independently of pred_cam_t",
+      "after": "passed=true in fixture",
+      "target": "gate_1a keeps computing while gate_1b is blocked",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "mesh_skeleton_divergence.absent_index_missing_pred_cam_t",
+      "baseline": "computed independently of pred_cam_t",
+      "after": "passed=true, worst_p95_mm_over_sample=1.25 in fixture",
+      "target": "<=5.0 mm; mesh-skeleton divergence keeps computing while gate_1b is blocked",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "adversarial_proofs.py.unmodified_exit",
+      "baseline": "silent-fallback probe recorded measurement_status=measured",
+      "after": "exit 0; fallback_proof records measurement_status=measured_gate_1b_blocked",
+      "target": "unmodified verifier exits 0 and observes fail-closed absent-index behavior",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "scripts/racketsport/gate_check_body_decode.py:44 added explicit gate_1b missing-pred_cam_t block and top-level measured_gate_1b_blocked status constants.",
+    "scripts/racketsport/gate_check_body_decode.py:333 marks the report measured_gate_1b_blocked and copies the gate_1b blocked reason to the top-level blocker when gate_1b lacks pred_cam_t.",
+    "scripts/racketsport/gate_check_body_decode.py:451 detects sampled frames with pred_cam_t=None and refuses to append numeric gate_1b errors for those frames.",
+    "scripts/racketsport/gate_check_body_decode.py:492 routes missing-pred_cam_t frame sets to a blocked gate_1b summary while leaving the existing nonblocked gate_1b threshold/statistic branch intact.",
+    "scripts/racketsport/gate_check_body_decode.py:581 emits status=blocked_missing_pred_cam_t, passed=null, worst error values=null, missing request IDs, and a blocked reason for gate_1b only.",
+    "scripts/racketsport/gate_check_body_decode.py:835 makes the CLI return exit 2 and print the blocker for measured_gate_1b_blocked reports.",
+    "tests/racketsport/test_gate_check_body_decode.py:194 adds the absent-index/no-camera-translation fail-closed fixture and asserts gate_1a plus mesh-skeleton divergence still compute.",
+    "Threshold/stat proof: GATE_1B_MAX_ABS_ERROR_MM and MESH_SKELETON_DIVERGENCE_P95_MM values were not edited; the existing nonblocked gate_1b and mesh-skeleton percentile/pass branches remain the same formulas, with only a new blocked branch that emits nulls."
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python runs/lanes/w7_gatecheckfix2_verify_20260709/proofs/adversarial_proofs.py ; MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_gate_check_body_decode.py tests/racketsport/test_mhr_decode.py tests/racketsport/test_scaffold_tool_index.py -q",
+    "passed": 20,
+    "failed": 0,
+    "skipped": 6,
+    "failures_all_preexisting": true,
+    "failure_notes": "adversarial_proofs.py exited 0; pytest reported 19 passed, 6 skipped, 0 failed."
+  },
+  "honest_issues": [
+    "The real VM-only raw body_mesh monolith was not remeasured in this micro-round; this remains fixture/proof-level acceptance.",
+    "The unmodified verifier still captures a ground call with pred_cam_t=null for its legacy fallback probe, but the emitted report now marks gate_1b blocked with no numeric pass/fail verdict.",
+    "A live GPU rerun with the raw SAM3D chunk index is still required to produce the corrected numeric GATE-1b measurement."
+  ],
+  "next": "BEST-STACK DELTA: none. No best_stack/process_video files were touched by this lane; next scheduled GPU run should rerun the canonical harness with the raw monolith and raw SAM3D chunk index.",
+  "session_id": null
+}

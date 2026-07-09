@@ -191,6 +191,66 @@ def test_gate_1a_is_bit_unaffected_by_pred_cam_t_fields(monkeypatch: pytest.Monk
     assert after == baseline
 
 
+def test_absent_raw_emit_without_camera_translation_blocks_gate_1b_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    body_mesh_path = _write_json(tmp_path / "body_mesh.json", _fixture_body_mesh())
+    court_cal_path = _write_json(tmp_path / "court_calibration.json", {"stub": True})
+    out = tmp_path / "report.json"
+    _install_identity_ground(monkeypatch)
+
+    monkeypatch.setattr(gate.mhr_decode, "MHR_RUNTIME_AVAILABLE", True)
+    monkeypatch.setattr(gate.mhr_decode, "MHR_RUNTIME_IMPORT_ERROR", None)
+    monkeypatch.setattr(
+        gate.mhr_decode,
+        "MHRDecoder",
+        lambda **_kwargs: _CameraPointDecoder(
+            joints_camera=[[1.0, 2.0, 3.0]],
+            vertices_camera=[[4.0, 5.0, 6.0]],
+        ),
+    )
+    monkeypatch.setattr(
+        gate.mhr_decode,
+        "gate_1a_euler_round_trip",
+        lambda _global_orient, _body_pose: {
+            "gate": "gate_1a_euler_cont_euler_idempotence",
+            "max_abs_error_deg": 0.0,
+            "passed": True,
+        },
+    )
+    monkeypatch.setattr(gate.CourtCalibration, "model_validate", classmethod(lambda cls, _payload: object()))
+    monkeypatch.setattr(gate, "build_decoder_provenance", lambda **_kwargs: {"stubbed_for_unit": True})
+
+    exit_code = gate.main(
+        [
+            "--body-mesh",
+            str(body_mesh_path),
+            "--court-calibration",
+            str(court_cal_path),
+            "--out",
+            str(out),
+            "--scale-source",
+            "field",
+        ]
+    )
+
+    report = json.loads(out.read_text(encoding="utf-8"))
+
+    assert exit_code == 2
+    assert report["measurement_status"] == "measured_gate_1b_blocked"
+    assert report["blocker"] == report["gate_1b"]["blocked_reason"]
+    assert report["gate_1a"]["passed"] is True
+    assert report["mesh_skeleton_divergence"]["passed"] is True
+    assert report["mesh_skeleton_divergence"]["worst_p95_mm_over_sample"] == pytest.approx(1.25)
+    assert report["gate_1b"]["status"] == "blocked_missing_pred_cam_t"
+    assert report["gate_1b"]["passed"] is None
+    assert report["gate_1b"]["worst_joints_world_max_abs_error_mm"] is None
+    assert report["gate_1b"]["worst_vertices_world_max_abs_error_mm"] is None
+    assert report["gate_1b_world_round_trip"] == report["gate_1b"]
+    assert out.is_file()
+
+
 def test_requested_field_scale_fails_loudly_when_absent() -> None:
     frame = gate.extract_frames(_fixture_body_mesh(include_scale=False))["42"][0]
 

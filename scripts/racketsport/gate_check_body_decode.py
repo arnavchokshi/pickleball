@@ -41,6 +41,8 @@ REPORT_ARTIFACT_TYPE = "racketsport_body_decode_gate_check"
 GATE_1A_NAME = "gate_1a_euler_cont_euler_idempotence"
 GATE_1B_NAME = "gate_1b_world_round_trip"
 MESH_DIVERGENCE_NAME = "mesh_skeleton_divergence"
+GATE_1B_BLOCKED_MISSING_PRED_CAM_T = "blocked_missing_pred_cam_t"
+MEASUREMENT_STATUS_GATE_1B_BLOCKED = "measured_gate_1b_blocked"
 PRED_CAM_T_FIELDS = ("pred_cam_t", "camera_translation", "transl")
 PRED_CAM_T_ALREADY_APPLIED_FIELDS = (
     "pred_cam_t_already_applied",
@@ -328,6 +330,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         scale_source=args.scale_source,
         max_frames_per_player=args.max_frames_per_player,
     )
+    gate1b_blocked = gate1b_summary.get("status") == GATE_1B_BLOCKED_MISSING_PRED_CAM_T
+    measurement_status = MEASUREMENT_STATUS_GATE_1B_BLOCKED if gate1b_blocked else "measured"
+    blocker = str(gate1b_summary.get("blocked_reason")) if gate1b_blocked else None
     report = _base_report(
         body_mesh=body_mesh,
         body_mesh_path=args.body_mesh,
@@ -337,8 +342,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         provenance=provenance,
         raw_emit_source=raw_emit_source,
         wall_seconds=time.time() - t0,
-        measurement_status="measured",
-        blocker=None,
+        measurement_status=measurement_status,
+        blocker=blocker,
     )
     report["gate_1a"] = gate1a
     report[GATE_1A_NAME] = gate1a
@@ -422,6 +427,7 @@ def _compute_gate_1b_and_divergence(
     worst_joints_mm = 0.0
     worst_vertices_mm = 0.0
     worst_divergence_p95_mm = 0.0
+    missing_pred_cam_t_request_ids: list[str] = []
 
     for player_id, frames in frames_by_player.items():
         sample = _sample_frames(frames, max_frames_per_player=max_frames_per_player)
@@ -442,15 +448,18 @@ def _compute_gate_1b_and_divergence(
                 player_id=int(player_id),
                 calibration=calibration,
             )
-            gate1b = mhr_decode.gate_1b_world_round_trip(
-                decoded_joints_world=regrounded["joints_world"],
-                decoded_vertices_world=regrounded["vertices_world"],
-                persisted_joints_world=frame.joints_world,
-                persisted_vertices_world=frame.vertices_world,
-            )
-            joints_errs.append(gate1b["joints_world"]["max_abs_error_mm"])
-            if frame.vertices_world:
-                vertices_errs.append(gate1b["vertices_world"]["max_abs_error_mm"])
+            if frame.pred_cam_t is None:
+                missing_pred_cam_t_request_ids.append(_request_id(frame_idx=frame.frame_idx, player_id=player_id))
+            else:
+                gate1b = mhr_decode.gate_1b_world_round_trip(
+                    decoded_joints_world=regrounded["joints_world"],
+                    decoded_vertices_world=regrounded["vertices_world"],
+                    persisted_joints_world=frame.joints_world,
+                    persisted_vertices_world=frame.vertices_world,
+                )
+                joints_errs.append(gate1b["joints_world"]["max_abs_error_mm"])
+                if frame.vertices_world:
+                    vertices_errs.append(gate1b["vertices_world"]["max_abs_error_mm"])
             div = decoder.mesh_skeleton_divergence_mm(**kwargs)
             divergences.append(div["p95_mm"])
 
@@ -480,18 +489,24 @@ def _compute_gate_1b_and_divergence(
             per_player_divergence[player_id]["p95_mm_max_over_sample"],
         )
 
-    gate1b_summary = {
-        "gate": GATE_1B_NAME,
-        "target_max_abs_error_mm": mhr_decode.GATE_1B_MAX_ABS_ERROR_MM,
-        "scale_source": scale_source,
-        "worst_joints_world_max_abs_error_mm": worst_joints_mm,
-        "worst_vertices_world_max_abs_error_mm": worst_vertices_mm,
-        "passed": bool(
-            worst_joints_mm <= mhr_decode.GATE_1B_MAX_ABS_ERROR_MM
-            and worst_vertices_mm <= mhr_decode.GATE_1B_MAX_ABS_ERROR_MM
-        ),
-        "per_player": per_player_gate1b,
-    }
+    if missing_pred_cam_t_request_ids:
+        gate1b_summary = _blocked_gate_1b_missing_pred_cam_t(
+            scale_source=scale_source,
+            missing_request_ids=missing_pred_cam_t_request_ids,
+        )
+    else:
+        gate1b_summary = {
+            "gate": GATE_1B_NAME,
+            "target_max_abs_error_mm": mhr_decode.GATE_1B_MAX_ABS_ERROR_MM,
+            "scale_source": scale_source,
+            "worst_joints_world_max_abs_error_mm": worst_joints_mm,
+            "worst_vertices_world_max_abs_error_mm": worst_vertices_mm,
+            "passed": bool(
+                worst_joints_mm <= mhr_decode.GATE_1B_MAX_ABS_ERROR_MM
+                and worst_vertices_mm <= mhr_decode.GATE_1B_MAX_ABS_ERROR_MM
+            ),
+            "per_player": per_player_gate1b,
+        }
     divergence_summary = {
         "target_p95_mm": mhr_decode.MESH_SKELETON_DIVERGENCE_P95_MM,
         "worst_p95_mm_over_sample": worst_divergence_p95_mm,
@@ -560,6 +575,29 @@ def _blocked_gate_1b(*, scale_source: str, blocker: str | None) -> dict[str, Any
         "passed": None,
         "per_player": {},
         "blocked_reason": blocker,
+    }
+
+
+def _blocked_gate_1b_missing_pred_cam_t(*, scale_source: str, missing_request_ids: Sequence[str]) -> dict[str, Any]:
+    preview = list(missing_request_ids[:20])
+    suffix = "" if len(missing_request_ids) <= 20 else f" (first 20 shown of {len(missing_request_ids)})"
+    reason = (
+        f"{GATE_1B_NAME} {GATE_1B_BLOCKED_MISSING_PRED_CAM_T}: "
+        "pred_cam_t/camera_translation/transl unavailable for sampled BODY frame(s) "
+        f"{preview}{suffix}; refusing to emit numeric gate_1b pass/fail."
+    )
+    return {
+        "gate": GATE_1B_NAME,
+        "status": GATE_1B_BLOCKED_MISSING_PRED_CAM_T,
+        "target_max_abs_error_mm": mhr_decode.GATE_1B_MAX_ABS_ERROR_MM,
+        "scale_source": scale_source,
+        "worst_joints_world_max_abs_error_mm": None,
+        "worst_vertices_world_max_abs_error_mm": None,
+        "passed": None,
+        "per_player": {},
+        "blocked_reason": reason,
+        "missing_pred_cam_t_sample_count": len(missing_request_ids),
+        "missing_pred_cam_t_request_ids": preview,
     }
 
 
@@ -794,12 +832,15 @@ def main(argv: list[str] | None = None) -> int:
     except HarnessInputError as exc:
         parser.exit(2, f"{parser.prog}: error: {exc}\n")
 
-    if report["measurement_status"] == "blocked_mhr_runtime_unavailable":
+    exit_code = 2 if report["measurement_status"] in {"blocked_mhr_runtime_unavailable", MEASUREMENT_STATUS_GATE_1B_BLOCKED} else 0
+    if exit_code != 0 and report.get("blocker"):
         print(report["blocker"], file=sys.stderr)
     print(
         json.dumps(
             {
                 "measurement_status": report["measurement_status"],
+                "blocker": report.get("blocker"),
+                "gate_1b_status": report.get(GATE_1B_NAME, {}).get("status"),
                 "player_count": len(report["player_ids"]),
                 "total_real_frame_sample_count": report["total_real_frame_sample_count"],
                 "out": str(args.out),
@@ -808,7 +849,7 @@ def main(argv: list[str] | None = None) -> int:
             sort_keys=True,
         )
     )
-    return 2 if report["measurement_status"] == "blocked_mhr_runtime_unavailable" else 0
+    return exit_code
 
 
 if __name__ == "__main__":
