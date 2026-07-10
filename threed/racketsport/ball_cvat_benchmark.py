@@ -46,6 +46,7 @@ def benchmark_cvat_ball_track_candidate(
     teleport_px_per_frame: float = DEFAULT_TELEPORT_PX_PER_FRAME,
     max_jump_gap_frames: int = DEFAULT_MAX_JUMP_GAP_FRAMES,
     include_approx: bool = True,
+    reviewed_frame_indices: Sequence[int] | None = None,
 ) -> dict[str, Any]:
     """Score one existing ball-track artifact against reviewed CVAT labels."""
 
@@ -62,13 +63,30 @@ def benchmark_cvat_ball_track_candidate(
     track_frame_count = _track_frame_count(track)
     label_frame_count = len(labels.frames)
     evaluated_frame_count = min(track_frame_count, label_frame_count)
-    reviewed_frame_indices = _reviewed_frame_indices(labels, label_frame_count=label_frame_count)
-    evaluated_reviewed_frame_indices = [index for index in reviewed_frame_indices if index < evaluated_frame_count]
-    excluded_reviewed_frame_indices = [index for index in reviewed_frame_indices if index >= evaluated_frame_count]
+    available_reviewed_frame_indices = _reviewed_frame_indices(labels, label_frame_count=label_frame_count)
+    if reviewed_frame_indices is None:
+        selected_reviewed_frame_indices = available_reviewed_frame_indices
+        reviewed_frame_indices_source = labels.reviewed_frame_indices_source or "dense_all_frames"
+    else:
+        requested = {int(index) for index in reviewed_frame_indices}
+        unavailable = requested - set(available_reviewed_frame_indices)
+        if unavailable:
+            raise ValueError(
+                f"reviewed_frame_indices contains {len(unavailable)} non-reviewed frames for {labels.clip_id}: "
+                f"{sorted(unavailable)[:5]}"
+            )
+        selected_reviewed_frame_indices = sorted(requested)
+        reviewed_frame_indices_source = "explicit_caller_subset"
+    evaluated_reviewed_frame_indices = [
+        index for index in selected_reviewed_frame_indices if index < evaluated_frame_count
+    ]
+    excluded_reviewed_frame_indices = [
+        index for index in selected_reviewed_frame_indices if index >= evaluated_frame_count
+    ]
     evaluated_frames = _frames_for_indices(labels, evaluated_reviewed_frame_indices)
     excluded_frames = _frames_for_indices(labels, excluded_reviewed_frame_indices)
     centers_by_frame = _ball_centers_for_frame_indices(labels, evaluated_reviewed_frame_indices)
-    all_centers_by_frame = _ball_centers_for_frame_indices(labels, reviewed_frame_indices)
+    all_centers_by_frame = _ball_centers_for_frame_indices(labels, selected_reviewed_frame_indices)
     excluded_centers_by_frame = _ball_centers_for_frame_indices(labels, excluded_reviewed_frame_indices)
 
     label_metrics = _label_metrics(
@@ -104,10 +122,10 @@ def benchmark_cvat_ball_track_candidate(
         "track_frame_count": track_frame_count,
         "cvat_frame_count": label_frame_count,
         "evaluated_frame_count": evaluated_frame_count,
-        "reviewed_frame_count": len(reviewed_frame_indices),
+        "reviewed_frame_count": len(selected_reviewed_frame_indices),
         "evaluated_reviewed_frame_count": len(evaluated_reviewed_frame_indices),
         "excluded_reviewed_frame_count": len(excluded_reviewed_frame_indices),
-        "reviewed_frame_indices_source": labels.reviewed_frame_indices_source or "dense_all_frames",
+        "reviewed_frame_indices_source": reviewed_frame_indices_source,
         "track_frame_range": _index_range(samples_by_index.keys()),
         "evaluated_cvat_frame_range": _frame_range(evaluated_frames),
         "excluded_cvat_frame_range": _frame_range(excluded_frames),
@@ -145,6 +163,7 @@ def benchmark_cvat_ball_tracker_candidates(
     cue_root: str | Path | None = None,
     contact_fps: float = 60.0,
     max_cue_delta_frames: float = DEFAULT_MAX_CUE_DELTA_FRAMES,
+    reviewed_frame_indices_by_clip: Mapping[str, Sequence[int]] | None = None,
 ) -> dict[str, Any]:
     """Score many candidates and optionally attach ball-inflection cue coverage."""
 
@@ -163,6 +182,11 @@ def benchmark_cvat_ball_tracker_candidates(
                 teleport_px_per_frame=teleport_px_per_frame,
                 max_jump_gap_frames=max_jump_gap_frames,
                 include_approx=include_approx,
+                reviewed_frame_indices=(
+                    reviewed_frame_indices_by_clip.get(candidate.clip)
+                    if reviewed_frame_indices_by_clip is not None
+                    else None
+                ),
             )
         )
 
@@ -584,6 +608,7 @@ def _label_metrics(
         "median_error_px": _percentile(distances, 50) if distances else None,
         "p90_error_px": _percentile(distances, 90) if distances else None,
         "p95_error_px": _percentile(distances, 95) if distances else None,
+        "p99_error_px": _percentile(distances, 99) if distances else None,
         "hit_radius_px": hit_radius_px,
         "f1_radius_px": f1_radius_px,
         "hidden_label_count": len(hidden_indices),
@@ -710,6 +735,7 @@ def _aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "mean_median_error_px": _mean(row.get("median_error_px") for row in label_rows),
             "mean_p90_error_px": _mean(row.get("p90_error_px") for row in label_rows),
             "mean_p95_error_px": _mean(row.get("p95_error_px") for row in label_rows),
+            "mean_p99_error_px": _mean(row.get("p99_error_px") for row in label_rows),
             "total_hidden_label_count": total_hidden_labels,
             "total_hidden_false_positive_count": total_hidden_false_positives,
             "micro_hidden_false_positive_rate": _ratio(total_hidden_false_positives, total_hidden_labels),

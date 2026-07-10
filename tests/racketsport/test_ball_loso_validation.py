@@ -333,3 +333,96 @@ def test_loso_validation_reports_insufficient_folds_for_single_source_candidate(
     assert solo["generalization_gap_pooled_minus_losomean"] == {}
     # Objective result reflects that no candidate had >=2 folds.
     assert report["objective_result"] == "PARTIAL"
+
+
+def test_loso_validation_groups_multiple_clips_into_one_true_source(tmp_path: Path) -> None:
+    cvat_root, tracks_dir = _build_two_source_two_candidate_fixture(tmp_path)
+    out_dir = tmp_path / "out"
+
+    completed = _run_cli(
+        [
+            "--cvat-root",
+            str(cvat_root),
+            "--out-dir",
+            str(out_dir),
+            "--candidate-track",
+            f"wasb_like=clip_big={tracks_dir / 'wasb_like' / 'clip_big' / 'ball_track.json'}",
+            "--candidate-track",
+            f"wasb_like=clip_small={tracks_dir / 'wasb_like' / 'clip_small' / 'ball_track.json'}",
+            "--source-group",
+            "clip_big=recording_a",
+            "--source-group",
+            "clip_small=recording_a",
+        ]
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    report = json.loads((out_dir / "loso_report.json").read_text(encoding="utf-8"))
+    candidate = report["candidates"]["wasb_like"]
+    assert candidate["source_grouping_applied"] is True
+    assert candidate["fold_count"] == 1
+    assert candidate["clips_by_source_group"] == {"recording_a": ["clip_big", "clip_small"]}
+    assert candidate["per_source_metrics"]["recording_a"]["clip_count"] == 2
+    assert candidate["per_source_metrics"]["recording_a"]["label_f1_at_20px"] == pytest.approx(
+        candidate["pooled_mixed_metrics"]["micro_label_f1_at_20px"]
+    )
+    assert "p99_error_px_worst_clip" in candidate["per_source_metrics"]["recording_a"]
+
+
+def test_loso_validation_rejects_conflicting_source_group_mapping(tmp_path: Path) -> None:
+    cvat_root, tracks_dir = _build_two_source_two_candidate_fixture(tmp_path)
+    completed = _run_cli(
+        [
+            "--cvat-root",
+            str(cvat_root),
+            "--out-dir",
+            str(tmp_path / "out"),
+            "--candidate-track",
+            f"wasb_like=clip_big={tracks_dir / 'wasb_like' / 'clip_big' / 'ball_track.json'}",
+            "--source-group",
+            "clip_big=recording_a",
+            "--source-group",
+            "clip_big=recording_b",
+        ]
+    )
+    assert completed.returncode == 2
+    assert "conflicting --source-group" in completed.stderr
+
+
+def test_loso_validation_scores_explicit_reviewed_row_stratum(tmp_path: Path) -> None:
+    cvat_root, tracks_dir = _build_two_source_two_candidate_fixture(tmp_path)
+    out_dir = tmp_path / "out"
+    row_list = tmp_path / "random_rows.json"
+    row_list.write_text(
+        json.dumps(
+            {
+                "rows": [
+                    {"row_key": "clip_big:000000"},
+                    {"clip_id": "clip_small", "frame_index": 0},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = _run_cli(
+        [
+            "--cvat-root",
+            str(cvat_root),
+            "--out-dir",
+            str(out_dir),
+            "--reviewed-row-list",
+            str(row_list),
+            "--candidate-track",
+            f"wasb_like=clip_big={tracks_dir / 'wasb_like' / 'clip_big' / 'ball_track.json'}",
+            "--candidate-track",
+            f"wasb_like=clip_small={tracks_dir / 'wasb_like' / 'clip_small' / 'ball_track.json'}",
+        ]
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    report = json.loads((out_dir / "loso_report.json").read_text(encoding="utf-8"))
+    assert report["reviewed_row_filter"] == {"clip_count": 2, "row_count": 2}
+    candidate = report["candidates"]["wasb_like"]
+    assert candidate["pooled_mixed_metrics"]["total_reviewed_frame_count"] == 2
+    assert candidate["pooled_mixed_metrics"]["micro_label_f1_at_20px"] == 1.0

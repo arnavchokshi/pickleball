@@ -112,6 +112,7 @@ class SourceTrack:
     candidate: str
     clip: str
     path: Path
+    source_group: str | None = None
 
 
 @dataclass(frozen=True)
@@ -153,7 +154,26 @@ def main(argv: list[str] | None = None) -> int:
             + ", ".join(METRIC_ORDER)
         ),
     )
+    parser.add_argument(
+        "--source-group",
+        action="append",
+        default=[],
+        metavar="CLIP=SOURCE_GROUP",
+        help=(
+            "Map a clip to its true recording/game/session/court/device source group. May be "
+            "repeated. Clips without a mapping retain the historical clip-as-source behavior."
+        ),
+    )
     parser.add_argument("--cvat-root", type=Path, default=DEFAULT_CVAT_ROOT)
+    parser.add_argument(
+        "--reviewed-row-list",
+        type=Path,
+        default=None,
+        help=(
+            "Optional JSON sample/stratum list containing rows with clip_id+frame_index or row_key. "
+            "Only those already-reviewed internal rows are scored."
+        ),
+    )
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--out-json", type=Path, default=None)
     parser.add_argument("--out-md", type=Path, default=None)
@@ -165,6 +185,12 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         tracks = _parse_candidate_track_specs(args.candidate_track)
+        tracks = _apply_source_groups(tracks, _parse_source_group_specs(args.source_group))
+        reviewed_row_filter = (
+            _load_reviewed_row_filter(args.reviewed_row_list)
+            if args.reviewed_row_list is not None
+            else None
+        )
         heldout = _parse_heldout_metric_specs(args.heldout_metric)
         if not tracks:
             raise LoSOValidationError("at least one --candidate-track is required")
@@ -176,6 +202,7 @@ def main(argv: list[str] | None = None) -> int:
             f1_radius_px=args.f1_radius_px,
             teleport_px_per_frame=args.teleport_px_per_frame,
             max_jump_gap_frames=args.max_jump_gap_frames,
+            reviewed_frame_indices_by_clip=reviewed_row_filter,
         )
     except Exception as exc:
         print(f"{parser.prog}: error: {exc}", file=sys.stderr)
@@ -219,6 +246,40 @@ def _parse_candidate_track_specs(specs: Sequence[str]) -> list[SourceTrack]:
     return tracks
 
 
+def _parse_source_group_specs(specs: Sequence[str]) -> dict[str, str]:
+    mappings: dict[str, str] = {}
+    for spec in specs:
+        parts = spec.split("=", 1)
+        if len(parts) != 2:
+            raise LoSOValidationError(f"--source-group must be CLIP=SOURCE_GROUP: {spec!r}")
+        clip, source_group = (part.strip() for part in parts)
+        if not clip or not source_group:
+            raise LoSOValidationError(f"--source-group has an empty field: {spec!r}")
+        previous = mappings.get(clip)
+        if previous is not None and previous != source_group:
+            raise LoSOValidationError(
+                f"conflicting --source-group mappings for {clip!r}: {previous!r} vs {source_group!r}"
+            )
+        mappings[clip] = source_group
+    return mappings
+
+
+def _apply_source_groups(tracks: Sequence[SourceTrack], mappings: Mapping[str, str]) -> list[SourceTrack]:
+    tracked_clips = {track.clip for track in tracks}
+    unknown = sorted(set(mappings) - tracked_clips)
+    if unknown:
+        raise LoSOValidationError(f"--source-group names clips without candidate tracks: {unknown}")
+    return [
+        SourceTrack(
+            candidate=track.candidate,
+            clip=track.clip,
+            path=track.path,
+            source_group=mappings.get(track.clip, track.clip),
+        )
+        for track in tracks
+    ]
+
+
 def _parse_heldout_metric_specs(specs: Sequence[str]) -> list[HeldoutReference]:
     references: list[HeldoutReference] = []
     for spec in specs:
@@ -238,6 +299,30 @@ def _parse_heldout_metric_specs(specs: Sequence[str]) -> list[HeldoutReference]:
             raise LoSOValidationError(f"--heldout-metric value must be a float: {spec!r}") from exc
         references.append(HeldoutReference(candidate=candidate, clip=clip, metric=metric, value=value))
     return references
+
+
+def _load_reviewed_row_filter(path: Path) -> dict[str, list[int]]:
+    if not path.is_file():
+        raise LoSOValidationError(f"missing --reviewed-row-list JSON: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows = payload.get("rows") if isinstance(payload, Mapping) else None
+    if not isinstance(rows, list) or not rows:
+        raise LoSOValidationError("--reviewed-row-list must contain a non-empty rows array")
+    by_clip: dict[str, set[int]] = {}
+    for row in rows:
+        if not isinstance(row, Mapping):
+            raise LoSOValidationError("--reviewed-row-list rows must be objects")
+        clip = str(row.get("clip_id") or "").strip()
+        frame_value = row.get("frame_index")
+        row_key = str(row.get("row_key") or "")
+        if (not clip or frame_value is None) and ":" in row_key:
+            clip, frame_token = row_key.rsplit(":", 1)
+            frame_value = frame_token
+        if not clip or frame_value is None:
+            raise LoSOValidationError(f"reviewed row lacks clip_id/frame_index: {row!r}")
+        _assert_scoreable_source(clip, context=f"--reviewed-row-list {path}")
+        by_clip.setdefault(clip, set()).add(int(frame_value))
+    return {clip: sorted(indices) for clip, indices in sorted(by_clip.items())}
 
 
 def _assert_scoreable_source(clip_id: str, *, context: str) -> None:
@@ -268,6 +353,7 @@ def build_loso_report(
     f1_radius_px: float,
     teleport_px_per_frame: float,
     max_jump_gap_frames: int,
+    reviewed_frame_indices_by_clip: Mapping[str, Sequence[int]] | None = None,
 ) -> dict[str, Any]:
     by_candidate: dict[str, list[SourceTrack]] = {}
     for track in tracks:
@@ -278,6 +364,12 @@ def build_loso_report(
 
     candidates_report: dict[str, Any] = {}
     for name, candidate_tracks in sorted(by_candidate.items()):
+        if reviewed_frame_indices_by_clip is not None:
+            candidate_tracks = [
+                track for track in candidate_tracks if track.clip in reviewed_frame_indices_by_clip
+            ]
+            if not candidate_tracks:
+                raise LoSOValidationError(f"candidate {name!r} has no clips in --reviewed-row-list")
         candidates_report[name] = _score_candidate(
             name,
             candidate_tracks,
@@ -286,6 +378,7 @@ def build_loso_report(
             f1_radius_px=f1_radius_px,
             teleport_px_per_frame=teleport_px_per_frame,
             max_jump_gap_frames=max_jump_gap_frames,
+            reviewed_frame_indices_by_clip=reviewed_frame_indices_by_clip,
         )
 
     heldout_by_key: dict[tuple[str, str, str], float] = {}
@@ -318,10 +411,19 @@ def build_loso_report(
             for key, value in sorted(heldout_by_key.items())
         ],
         "heldout_comparisons": comparisons,
+        "reviewed_row_filter": (
+            {
+                "clip_count": len(reviewed_frame_indices_by_clip),
+                "row_count": sum(len(indices) for indices in reviewed_frame_indices_by_clip.values()),
+            }
+            if reviewed_frame_indices_by_clip is not None
+            else None
+        ),
         "methodology": {
             "capture_source_definition": (
-                "One continuous capture session/venue/camera setup (a CVAT-labeled clip id). Never "
-                "a random frame split; never a sub-clip-within-a-source split."
+                "An explicit --source-group is the conservative recording/game/session/court/device "
+                "identity shared by every clip from that source. Without mappings, the historical "
+                "compatibility behavior treats each CVAT clip id as a source. Never a random frame split."
             ),
             "pooled_mixed_metric": (
                 "Micro-average across every scored source under one candidate name -- reproduces "
@@ -363,6 +465,7 @@ def _score_candidate(
     f1_radius_px: float,
     teleport_px_per_frame: float,
     max_jump_gap_frames: int,
+    reviewed_frame_indices_by_clip: Mapping[str, Sequence[int]] | None,
 ) -> dict[str, Any]:
     cvat_candidates = [
         CvatBallCandidate(clip=track.clip, name=name, path=track.path) for track in candidate_tracks
@@ -374,11 +477,65 @@ def _score_candidate(
         f1_radius_px=f1_radius_px,
         teleport_px_per_frame=teleport_px_per_frame,
         max_jump_gap_frames=max_jump_gap_frames,
+        reviewed_frame_indices_by_clip=reviewed_frame_indices_by_clip,
     )
-    per_source: dict[str, dict[str, Any]] = {}
+    per_clip: dict[str, dict[str, Any]] = {}
     for row in summary["results"]:
-        per_source[str(row["clip"])] = dict(row["label_metrics"])
+        per_clip[str(row["clip"])] = {
+            "label_metrics": dict(row["label_metrics"]),
+            "jitter_metrics": dict(row["jitter_metrics"]),
+        }
     pooled_metrics = dict(summary["aggregate"].get(name, {}))
+
+    tracks_by_source: dict[str, list[SourceTrack]] = {}
+    for track in candidate_tracks:
+        source_group = track.source_group or track.clip
+        tracks_by_source.setdefault(source_group, []).append(track)
+
+    per_source: dict[str, dict[str, Any]] = {}
+    clips_by_source: dict[str, list[str]] = {}
+    for source_group, source_tracks in sorted(tracks_by_source.items()):
+        grouped_summary = benchmark_cvat_ball_tracker_candidates(
+            candidates=[
+                CvatBallCandidate(clip=track.clip, name=name, path=track.path)
+                for track in source_tracks
+            ],
+            cvat_root=cvat_root,
+            hit_radius_px=hit_radius_px,
+            f1_radius_px=f1_radius_px,
+            teleport_px_per_frame=teleport_px_per_frame,
+            max_jump_gap_frames=max_jump_gap_frames,
+            reviewed_frame_indices_by_clip=reviewed_frame_indices_by_clip,
+        )
+        aggregate = dict(grouped_summary["aggregate"].get(name, {}))
+        grouped_rows = list(grouped_summary["results"])
+        metrics: dict[str, Any] = {
+            metric: aggregate.get(spec["pooled_field"])
+            for metric, spec in METRIC_SPECS.items()
+        }
+        p95_values = [
+            float(row["label_metrics"]["p95_error_px"])
+            for row in grouped_rows
+            if row["label_metrics"].get("p95_error_px") is not None
+        ]
+        p99_values = [
+            float(row["label_metrics"]["p99_error_px"])
+            for row in grouped_rows
+            if row["label_metrics"].get("p99_error_px") is not None
+        ]
+        metrics.update(
+            {
+                "clip_count": len(source_tracks),
+                "p95_error_px_worst_clip": max(p95_values) if p95_values else None,
+                "p99_error_px_worst_clip": max(p99_values) if p99_values else None,
+                "teleport_count_total": sum(
+                    int(row["jitter_metrics"].get("teleport_count") or 0)
+                    for row in grouped_rows
+                ),
+            }
+        )
+        per_source[source_group] = metrics
+        clips_by_source[source_group] = sorted(track.clip for track in source_tracks)
 
     fold_count = len(per_source)
     sufficient = fold_count >= 2
@@ -409,9 +566,13 @@ def _score_candidate(
 
     return {
         "sources_scored": sorted(per_source),
+        "clips_scored": sorted(per_clip),
+        "clips_by_source_group": clips_by_source,
+        "source_grouping_applied": any((track.source_group or track.clip) != track.clip for track in candidate_tracks),
         "fold_count": fold_count,
         "sufficient_for_loso": sufficient,
         "per_source_metrics": per_source,
+        "per_clip_metrics": per_clip,
         "pooled_mixed_metrics": pooled_metrics,
         "loso_mean_metrics": loso_mean,
         "loso_worst_fold_metrics": loso_worst,

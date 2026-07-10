@@ -188,8 +188,29 @@ def test_cvat_candidate_scores_ball_f1_hidden_false_positives_error_and_teleport
     assert report["label_metrics"]["median_error_px"] == pytest.approx(13.0)
     assert report["label_metrics"]["p90_error_px"] == pytest.approx(22.6)
     assert report["label_metrics"]["p95_error_px"] == pytest.approx(23.8)
+    assert report["label_metrics"]["p99_error_px"] == pytest.approx(24.76)
     assert report["jitter_metrics"]["teleport_count"] == 2
     assert report["quality_score"] < 0.5
+
+
+def test_cvat_candidate_can_score_an_explicit_reviewed_subset(tmp_path: Path) -> None:
+    track_path = tmp_path / "ball_track.json"
+    cvat_path = tmp_path / "reviewed_boxes.json"
+    _write_track(track_path)
+    _write_cvat(cvat_path)
+
+    report = benchmark_cvat_ball_track_candidate(
+        ball_track_path=track_path,
+        cvat_labels_path=cvat_path,
+        candidate_name="subset",
+        reviewed_frame_indices=[0, 4],
+    )
+
+    assert report["reviewed_frame_count"] == 2
+    assert report["reviewed_frame_indices_source"] == "explicit_caller_subset"
+    assert report["label_metrics"]["visible_label_count"] == 1
+    assert report["label_metrics"]["hidden_label_count"] == 1
+    assert report["label_metrics"]["label_f1_at_20px"] == 1.0
 
 
 def test_cvat_candidate_scores_sparse_reviewed_frames_only(tmp_path: Path) -> None:
