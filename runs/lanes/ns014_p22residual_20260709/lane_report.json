@@ -1,0 +1,154 @@
+{
+  "artifact_type": "racketsport_codex_lane_report",
+  "schema_version": 1,
+  "lane": "ns014_p22residual_20260709",
+  "date": "2026-07-09",
+  "objective_result": "PARTIAL",
+  "deliverables": {
+    "D1_typed_coordinates": {
+      "objective_result": "PASS",
+      "evidence": "Typed seven-space vocabulary, canonical extrinsic inversion/point transforms, exactly-once translation delegation, and blessed K builder; lightweight import and round-trip tests pass.",
+      "numbers": {
+        "coordinate_spaces": 7,
+        "homography_pixel_conventions": 2,
+        "numeric_drift_detected": false
+      }
+    },
+    "D2_residual_attribution": {
+      "objective_result": "PASS",
+      "evidence": "32 locally present raw records replayed through normalize_fast_sam_body_output, _ground_fast_sam_sample, and compute_body_skeleton_and_metrics with call-time stage snapshots.",
+      "numbers": {
+        "present_records": 32,
+        "players_present": [20, 21],
+        "grounding_mean_mm": 3.5677235578957185e-13,
+        "grounding_p95_mm": 1.9860273225978185e-12,
+        "grounding_max_mm": 3.552713678800501e-12,
+        "disabled_chain_identity_max_m": 0.0,
+        "skeleton_replay_max_mm": 3.552713678800501e-12,
+        "chain_reproduced_1mm": true
+      }
+    },
+    "D3_synthetic_sam3d_adapter": {
+      "objective_result": "PASS",
+      "evidence": "The sam3d branch now authors a neutral MHR mesh, rasterizes 512px filled triangles with Lambert shading, applies the two-attempt realism kill rule, and invokes the production direct Fast-SAM setup path. CPU adapter/blocked/kill-rule tests pass.",
+      "numbers": {
+        "render_long_side_px": 512,
+        "realism_attempt_limit": 2,
+        "mac_status": "blocked_sam3d_runtime_unavailable",
+        "mac_error": "ModuleNotFoundError: No module named roma",
+        "gpu_measurement_claimed": false
+      }
+    },
+    "D4_gate_decomposition": {
+      "objective_result": "PASS",
+      "evidence": "Optional attribution summaries are embedded additively; absent vertices are marked absent_not_measured, the worst vertex value is null, and joints retain the binding pass decision.",
+      "numbers": {
+        "gate_1a_threshold_deg": 0.1,
+        "gate_1b_threshold_mm": 1.0,
+        "mesh_skeleton_divergence_threshold_mm": 5.0,
+        "thresholds_changed": false
+      }
+    }
+  },
+  "acceptance": {
+    "A1_focused_suite": {
+      "verdict": "FAIL",
+      "passed": 135,
+      "failed": 1,
+      "skipped": 6,
+      "failure": "tests/racketsport/test_truthful_capabilities.py::test_north_star_is_the_single_product_and_execution_authority: NORTH_STAR_ROADMAP.md has 510 lines, target <=500",
+      "failure_preexisting": true
+    },
+    "A2_banked_attribution": {
+      "verdict": "PASS",
+      "grounding_p95_mm": 1.9860273225978185e-12,
+      "grounding_max_mm": 3.552713678800501e-12,
+      "disabled_chain_identity_max_m": 0.0
+    },
+    "A3_zero_numeric_drift": {
+      "verdict": "PASS",
+      "gate_self_check_equal": true,
+      "synthetic_mock_metrics_pre": [0.0, 0.0, 0.0],
+      "synthetic_mock_metrics_post": [0.0, 0.0, 0.0],
+      "thresholds_pre_post": [0.1, 1.0, 5.0],
+      "mock_render_ppm_hashes_equal": true
+    },
+    "A4_wide_suite": {
+      "verdict": "PASS",
+      "baseline": {"passed": 3355, "failed": 7, "skipped": 24},
+      "post": {"passed": 3377, "failed": 7, "skipped": 24},
+      "new_failures": []
+    }
+  },
+  "full_suite_failures_all_preexisting": [
+    "tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_post_save_rejects_missing_or_wrong_token - PermissionError [Errno 1] sandbox denies localhost bind",
+    "tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_post_save_accepts_correct_token - PermissionError [Errno 1] sandbox denies localhost bind",
+    "tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_served_page_embeds_save_token_not_placeholder - PermissionError [Errno 1] sandbox denies localhost bind",
+    "tests/racketsport/test_review_input_server.py::test_review_input_post_save_rejects_missing_or_wrong_token - PermissionError [Errno 1] sandbox denies localhost bind",
+    "tests/racketsport/test_review_input_server.py::test_review_input_post_save_accepts_correct_token - PermissionError [Errno 1] sandbox denies localhost bind",
+    "tests/racketsport/test_review_input_server.py::test_review_input_served_pages_embed_save_token_not_placeholder - PermissionError [Errno 1] sandbox denies localhost bind",
+    "tests/racketsport/test_truthful_capabilities.py::test_north_star_is_the_single_product_and_execution_authority - protected NORTH_STAR_ROADMAP.md is 510 lines, target <=500"
+  ],
+  "artifacts": [
+    "runs/lanes/ns014_p22residual_20260709/pre/gate_self_check.json",
+    "runs/lanes/ns014_p22residual_20260709/pre/synthetic_mock.json",
+    "runs/lanes/ns014_p22residual_20260709/pre/wide_suite.log",
+    "runs/lanes/ns014_p22residual_20260709/post/gate_self_check.json",
+    "runs/lanes/ns014_p22residual_20260709/post/synthetic_mock.json",
+    "runs/lanes/ns014_p22residual_20260709/post/numeric_drift_proof.json",
+    "runs/lanes/ns014_p22residual_20260709/post/wide_suite.log",
+    "runs/lanes/ns014_p22residual_20260709/attribution_banked_fixture_report.json",
+    "runs/lanes/ns014_p22residual_20260709/gate_self_check_with_attribution.json",
+    "runs/lanes/ns014_p22residual_20260709/synthetic_sam3d_mac_report.json",
+    "runs/lanes/ns014_p22residual_20260709/focused_suite.log",
+    "runs/lanes/ns014_p22residual_20260709/scaffold_tools.json",
+    "runs/lanes/ns014_p22residual_20260709/dead_code_audit.json",
+    "runs/lanes/ns014_p22residual_20260709/storage_policy_audit.json"
+  ],
+  "assumptions": [
+    "The banked raw-grounded fixture is authoritative for t, track_world_xy, and joint confidence on the 32 present request IDs.",
+    "Camera-motion correction is omitted for this wolverine fixture, matching the established statics-off run condition.",
+    "The banked run explicitly records the raw postchain preset, so all five mesh stages under attribution are disabled and identity is the expected replay.",
+    "body_mesh.json is absent in the banked CPU fixture; replay validation is against skeleton3d.json and vertex replay is reported absent rather than measured.",
+    "The optional FK-vs-head component is blocked on this Mac because roma is unavailable; no numeric value is fabricated."
+  ],
+  "honest_issues": [
+    "A1 is not green: the only failure is the pre-existing protected root-roadmap line-count violation.",
+    "The Mac cannot execute MHR/Fast-SAM inference, so the sam3d report is honestly blocked and the later VM arm must produce measured evidence.",
+    "The banked fixture exercises the raw all-disabled chain; it proves grounding determinism and snapshot/identity mechanics, not the numeric contribution of an enabled production postchain.",
+    "The two present buckets contain players 20 and 21; the mission text's player-18 statement does not match the files on disk.",
+    "Storage-policy audit remains red because many allowlisted large source packages are absent from this checkout; it reports no unknown large files and is unrelated to this lane."
+  ],
+  "deferred_fenced_file_hunks": [
+    {
+      "reason": "This manager-owned compression would make the pre-existing A1 roadmap length test green; it was not applied because every root markdown file is fenced.",
+      "hunk": "--- a/NORTH_STAR_ROADMAP.md\n+++ b/NORTH_STAR_ROADMAP.md\n@@ -493,18 +493,5 @@\n-- Deep code/results/research review and detailed flowcharts:\n-  `runs/CV_PIPELINE_DEEP_REVIEW_20260709.md`.\n-- Multi-agent SOTA review, ranked experiment register, licenses, and kill rules:\n-  `runs/CV_SOTA_RESEARCH_20260709.md`.\n-- Exact pre-consolidation plans, checklists, capability tables, blueprints,\n-  owner check-ins, and goal documents:\n-  `runs/archive/root_docs_20260709/INDEX.md`.\n-- Current selected defaults: `configs/racketsport/best_stack.json`.\n-- Checkpoint identity: `models/MANIFEST.json`.\n-- Held-out preregistration: `runs/manager/heldout_eval_ledger.md`.\n-- Current transient work: `runs/manager/inflight_lanes.md` and\n-  `runs/manager/gpu_fleet.md`.\n-- Historical research: `runs/research_sota_20260705/` and\n-  `runs/research_w6refresh_20260709/`.\n-\n-Historical files are evidence, not instructions. A future agent should be able\n-to determine the product goal, current blocker, next task, gate, and stop rule\n-from this North Star without reading the archive.\n+- Reviews: `runs/CV_PIPELINE_DEEP_REVIEW_20260709.md` and `runs/CV_SOTA_RESEARCH_20260709.md`.\n+- Archive/history: `runs/archive/root_docs_20260709/INDEX.md`, `runs/research_sota_20260705/`, and `runs/research_w6refresh_20260709/`.\n+- Runtime authorities: `configs/racketsport/best_stack.json`, `models/MANIFEST.json`, `runs/manager/heldout_eval_ledger.md`, `runs/manager/inflight_lanes.md`, and `runs/manager/gpu_fleet.md`.\n+- Historical files are evidence, not instructions; this North Star alone must expose the goal, blocker, next task, gate, and stop rule."
+    }
+  ],
+  "ns014_consolidation_follow_up": {
+    "invert_extrinsics_sites": [
+      "threed/racketsport/court_calibration.py:247",
+      "threed/racketsport/court_calibration_metric15.py:661-664",
+      "threed/racketsport/ball_inout_uncertainty.py:216",
+      "threed/racketsport/racket6dof.py:333-340",
+      "threed/racketsport/paddle_pose_fused.py:857",
+      "threed/racketsport/ball_arc_solver.py:2337-2338"
+    ],
+    "inline_K_sites": [
+      "scripts/racketsport/validate_metric_calibration_15pt.py:253",
+      "scripts/racketsport/validate_metric_calibration_15pt.py:370",
+      "scripts/racketsport/calibrate_harvest_courts.py:668",
+      "scripts/racketsport/project_court_pseudo_labels.py:58-61",
+      "scripts/racketsport/run_sam3dbody_batch.py:1242",
+      "threed/racketsport/racket_stage_runner.py:262-264",
+      "threed/racketsport/overlapping_court_calibration.py:793",
+      "threed/racketsport/court_calibration_metric15.py:503",
+      "threed/racketsport/racket_pose_preview.py:161-163",
+      "threed/racketsport/placement.py:2568-2570"
+    ],
+    "booking": "Adopt coordinates.invert_extrinsics and coordinates.camera_matrix_from_intrinsics in later file-fenced owners only after per-surface numeric/quantized-byte drift proofs."
+  },
+  "best_stack_delta": "(c) No stack delta: measurement/API lane; no model, weights, or promoted-policy change; all gate thresholds byte-unchanged.",
+  "best_stack_confirmation": "configs/racketsport/best_stack.json was untouched by this lane; pre/post SHA-256 is 6ec18489f79605e76cbf9f990a07ffcd9950fb35ea64c211e109ba5575c9a315.",
+  "handoff": "2026-07-09: Mac-side P2-2 attribution now isolates grounding determinism at effectively zero error on all 32 locally present raw records, proves the raw disabled chain is identity, exposes postchain/FK components without turning residuals into accuracy claims, and gives GATE-1b explicit vertices provenance. The synthetic sam3d arm is wired through real MHR mesh authoring, shaded rasterization, and the production runtime boundary, but correctly remains blocked on this Mac pending the VM run. No stack or threshold changed; VERIFIED=0 remains binding."
+}

@@ -1,0 +1,347 @@
+........................................................................ [  2%]
+........................................................................ [  4%]
+........................................................................ [  6%]
+........................................................................ [  8%]
+........................................................................ [ 10%]
+........................................................................ [ 12%]
+........................................................................ [ 14%]
+..........s............................................................. [ 17%]
+........................................................................ [ 19%]
+........................................................................ [ 21%]
+........................................................................ [ 23%]
+........................................................................ [ 25%]
+........................................................................ [ 27%]
+........................................................................ [ 29%]
+........................................................................ [ 31%]
+.........................................................ss............. [ 34%]
+...............s........................................................ [ 36%]
+.......................FFF.............................................. [ 38%]
+........................................................................ [ 40%]
+........................................................................ [ 42%]
+........................................................................ [ 44%]
+........................................................................ [ 46%]
+........................................................................ [ 48%]
+........................................................................ [ 51%]
+..........................................ssssss........................ [ 53%]
+........................................................................ [ 55%]
+........................................................................ [ 57%]
+........................................................................ [ 59%]
+........................................................................ [ 61%]
+........................................................................ [ 63%]
+........................................................................ [ 65%]
+........................................................................ [ 68%]
+........................................................................ [ 70%]
+........................................................................ [ 72%]
+.....................................................................s.. [ 74%]
+........................................................................ [ 76%]
+........................................................................ [ 78%]
+.........................................FFF............................ [ 80%]
+........................................................................ [ 82%]
+........................................................................ [ 85%]
+.............................................sss.sssss.................. [ 87%]
+........................................................................ [ 89%]
+........................................................................ [ 91%]
+........................................................................ [ 93%]
+....................................sss........................F........ [ 95%]
+........................................................................ [ 97%]
+................ss...................................................... [ 99%]
+..                                                                       [100%]
+=================================== FAILURES ===================================
+_________ test_court_keypoint_post_save_rejects_missing_or_wrong_token _________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-545/test_court_keypoint_post_save_0')
+
+    def test_court_keypoint_post_save_rejects_missing_or_wrong_token(tmp_path: Path) -> None:
+        _write_review_task(tmp_path)
+>       server, thread = _start_court_keypoint_server(tmp_path, token="correct-horse-battery-staple")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_keypoint_review_server.py:383: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_keypoint_review_server.py:19: in _start_court_keypoint_server
+    server = court_keypoint_review_server.ThreadingHTTPServer(
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x15b1c7e00>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+_____________ test_court_keypoint_post_save_accepts_correct_token ______________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-545/test_court_keypoint_post_save_1')
+
+    def test_court_keypoint_post_save_accepts_correct_token(tmp_path: Path) -> None:
+        _write_review_task(tmp_path)
+>       server, thread = _start_court_keypoint_server(tmp_path, token="correct-horse-battery-staple")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_keypoint_review_server.py:423: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_keypoint_review_server.py:19: in _start_court_keypoint_server
+    server = court_keypoint_review_server.ThreadingHTTPServer(
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x1580c8a50>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+______ test_court_keypoint_served_page_embeds_save_token_not_placeholder _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-545/test_court_keypoint_served_pag0')
+
+    def test_court_keypoint_served_page_embeds_save_token_not_placeholder(tmp_path: Path) -> None:
+        _write_review_task(tmp_path)
+>       server, thread = _start_court_keypoint_server(tmp_path, token="page-embedded-token")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_keypoint_review_server.py:453: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_keypoint_review_server.py:19: in _start_court_keypoint_server
+    server = court_keypoint_review_server.ThreadingHTTPServer(
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x15b71ed50>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+__________ test_review_input_post_save_rejects_missing_or_wrong_token __________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-545/test_review_input_post_save_re0')
+
+    def test_review_input_post_save_rejects_missing_or_wrong_token(tmp_path: Path) -> None:
+>       server, thread = _start_review_server(tmp_path, token="correct-horse-battery-staple")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_review_input_server.py:892: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_review_input_server.py:16: in _start_review_server
+    server = review_input_server.ThreadingHTTPServer(("127.0.0.1", 0), review_input_server.ReviewHandler)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x15b702520>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+______________ test_review_input_post_save_accepts_correct_token _______________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-545/test_review_input_post_save_ac0')
+
+    def test_review_input_post_save_accepts_correct_token(tmp_path: Path) -> None:
+>       server, thread = _start_review_server(tmp_path, token="correct-horse-battery-staple")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_review_input_server.py:923: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_review_input_server.py:16: in _start_review_server
+    server = review_input_server.ThreadingHTTPServer(("127.0.0.1", 0), review_input_server.ReviewHandler)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x15cbe3ce0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+_______ test_review_input_served_pages_embed_save_token_not_placeholder ________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-545/test_review_input_served_pages0')
+
+    def test_review_input_served_pages_embed_save_token_not_placeholder(tmp_path: Path) -> None:
+>       server, thread = _start_review_server(tmp_path, token="page-embedded-token")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_review_input_server.py:944: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_review_input_server.py:16: in _start_review_server
+    server = review_input_server.ThreadingHTTPServer(("127.0.0.1", 0), review_input_server.ReviewHandler)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x15b6e96d0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+________ test_north_star_is_the_single_product_and_execution_authority _________
+
+    def test_north_star_is_the_single_product_and_execution_authority() -> None:
+        text = (ROOT / "NORTH_STAR_ROADMAP.md").read_text(encoding="utf-8")
+    
+        assert text.startswith("# DinkVision North Star")
+        assert "This is the sole authority" in text
+        assert "`VERIFIED=0`" in text
+        assert "## 1. The product" in text
+        assert "## 2. Current truth" in text
+        assert "## 3. Target CV architecture and data reuse" in text
+        assert "## 4. Ordered execution program" in text
+        assert "## 5. Active queue for the next agents" in text
+        assert "## 6. Standing rules" in text
+        assert "## 7. Evidence and history" in text
+>       assert len(text.splitlines()) <= 500
+E       AssertionError: assert 510 <= 500
+E        +  where 510 = len(['# DinkVision North Star', '', 'Last updated: 2026-07-09.', 'Status: `VERIFIED=0`.', '', '## Authority and reading rule', ...])
+E        +    where ['# DinkVision North Star', '', 'Last updated: 2026-07-09.', 'Status: `VERIFIED=0`.', '', '## Authority and reading rule', ...] = <built-in method splitlines of str object at 0xcabfa8000>()
+E        +      where <built-in method splitlines of str object at 0xcabfa8000> = '# DinkVision North Star\n\nLast updated: 2026-07-09.\nStatus: `VERIFIED=0`.\n\n## Authority and reading rule\n\nThis ...the product goal, current blocker, next task, gate, and stop rule\nfrom this North Star without reading the archive.\n'.splitlines
+
+tests/racketsport/test_truthful_capabilities.py:335: AssertionError
+=============================== warnings summary ===============================
+tests/racketsport/test_body_mesh_index.py:304
+  /Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_body_mesh_index.py:304: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+.venv/lib/python3.14/site-packages/torchreid/reid/metrics/rank.py:11
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torchreid/reid/metrics/rank.py:11: UserWarning: Cython evaluation (very fast so highly recommended) is unavailable, now use python evaluation.
+    warnings.warn(
+
+tests/racketsport/test_body_runner_real_path.py::test_body_runner_leaves_missing_outputs_when_fast_sam_runtime_is_unavailable
+  /Users/arnavchokshi/Desktop/pickleball/threed/racketsport/orchestrator.py:2576: RuntimeWarning: FAST_SAM_PYTHON is unset; BODY is degrading from the batched FastSam3DBodySubprocessRuntime path to the in-process per-frame FastSam3DBodyRuntime path
+    result = runner.run(context)
+
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torch/jit/_trace.py:1000: DeprecationWarning: `torch.jit.trace` is not supported in Python 3.14+ and may break. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torch/jit/_trace.py:1139: DeprecationWarning: `torch.jit.trace_method` is not supported in Python 3.14+ and may break. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torch/jit/_serialization.py:170: DeprecationWarning: `torch.jit.load` is not supported in Python 3.14+ and may break. Please switch to `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_post_save_rejects_missing_or_wrong_token
+FAILED tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_post_save_accepts_correct_token
+FAILED tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_served_page_embeds_save_token_not_placeholder
+FAILED tests/racketsport/test_review_input_server.py::test_review_input_post_save_rejects_missing_or_wrong_token
+FAILED tests/racketsport/test_review_input_server.py::test_review_input_post_save_accepts_correct_token
+FAILED tests/racketsport/test_review_input_server.py::test_review_input_served_pages_embed_save_token_not_placeholder
+FAILED tests/racketsport/test_truthful_capabilities.py::test_north_star_is_the_single_product_and_execution_authority
+7 failed, 3355 passed, 24 skipped, 7 warnings in 2539.43s (0:42:19)

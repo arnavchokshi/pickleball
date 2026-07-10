@@ -166,6 +166,35 @@ def test_gate_1b_respects_pred_cam_t_already_applied_escape_hatch(monkeypatch: p
     assert gate1b["worst_vertices_world_max_abs_error_mm"] == pytest.approx(0.0, abs=1e-9)
 
 
+def test_gate_1b_surfaces_absent_vertices_without_vacuous_measured_claim(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_identity_ground(monkeypatch)
+    body_mesh = _fixture_body_mesh()
+    frame_payload = body_mesh["players"][0]["frames"][0]
+    frame_payload["joints_world"] = [[1.25, 1.5, 4.0]]
+    frame_payload["mesh_vertices_world"] = []
+    frames_by_player = gate.extract_frames(
+        body_mesh,
+        raw_records_by_request_id={"7:42": {"pred_cam_t": [0.25, -0.5, 1.0]}},
+    )
+    decoder = _CameraPointDecoder(joints_camera=[[1.0, 2.0, 3.0]], vertices_camera=[])
+
+    gate1b, _ = gate._compute_gate_1b_and_divergence(
+        decoder=decoder,
+        calibration=object(),
+        frames_by_player=frames_by_player,
+        scale_source="field",
+        max_frames_per_player=1,
+    )
+
+    assert gate1b["passed"] is True
+    assert gate1b["vertices_status"] == "absent_not_measured"
+    assert gate1b["measured_vertices_frame_count"] == 0
+    assert gate1b["worst_vertices_world_max_abs_error_mm"] is None
+    assert gate1b["per_player"]["42"]["vertices_world_p95_abs_error_mm"] is None
+
+
 def test_gate_1a_is_bit_unaffected_by_pred_cam_t_fields(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_gate_1a(global_orient: object, body_pose: object) -> dict:
         assert hasattr(global_orient, "tolist")
@@ -324,6 +353,34 @@ def test_self_check_uses_stub_decoder_and_records_field_flow(tmp_path: Path) -> 
     assert self_check["first_decode_call"]["hand_pose"] == report["self_check_fixture"]["hand_pose"]
 
 
+def test_attribution_report_is_embedded_as_additive_residual_decomposition(tmp_path: Path) -> None:
+    attribution = _write_json(
+        tmp_path / "attribution.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_body_decode_residual_attribution",
+            "grounding_determinism": {"status": "measured", "overall": {"p95_mm": 0.2}},
+            "postchain_attribution": {"total_delta": {"p95_mm": 12.0}},
+            "fk_vs_head_divergence": {"status": "blocked_mhr_runtime_unavailable"},
+        },
+    )
+    out = tmp_path / "self_check_with_attribution.json"
+
+    exit_code = gate.main(
+        ["--self-check", "--out", str(out), "--attribution-report", str(attribution)]
+    )
+    report = json.loads(out.read_text(encoding="utf-8"))
+
+    assert exit_code == 0
+    assert report["gate_1b_world_round_trip"]["target_max_abs_error_mm"] == 1.0
+    assert report["residual_decomposition"] == {
+        "source_path": str(attribution),
+        "grounding_determinism": {"status": "measured", "overall": {"p95_mm": 0.2}},
+        "postchain_totals": {"p95_mm": 12.0},
+        "fk_vs_head": {"status": "blocked_mhr_runtime_unavailable"},
+    }
+
+
 def test_cli_help_references_gate_1b_inputs() -> None:
     completed = subprocess.run(
         [sys.executable, CLI_PATH, "--help"],
@@ -334,6 +391,7 @@ def test_cli_help_references_gate_1b_inputs() -> None:
 
     assert "--scale-source" in completed.stdout
     assert "--self-check" in completed.stdout
+    assert "--attribution-report" in completed.stdout
     assert "GATE-1b" in completed.stdout
 
 

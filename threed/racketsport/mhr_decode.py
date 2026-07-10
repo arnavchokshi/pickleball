@@ -1,6 +1,6 @@
 """MHR pose-code decode wrapper (P2-2 STEP A, phase 1).
 
-See `TECH_BLUEPRINTS.md` BODY pillar STEP 0 + STEP A (~lines 1444-1499) and
+See `runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md` BODY pillar STEP 0 + STEP A (~lines 1444-1499) and
 `runs/lanes/w5_p22latent_20260707/spec.md` for the full recipe this module
 implements.
 
@@ -50,6 +50,8 @@ from typing import Any, Mapping, Sequence
 import numpy as np
 
 import os
+
+from . import coordinates
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -560,15 +562,13 @@ def apply_pred_cam_t_once(
     explicit for harnesses that reconstruct camera-space points from raw model
     outputs while allowing callers to mark already-translated sidecars.
     """
-    if points_camera is None:
-        return []
-    points = [[float(v) for v in point] for point in points_camera]
-    if pred_cam_t is None or already_applied:
-        return points
-    if len(pred_cam_t) != 3:
+    if pred_cam_t is not None and not already_applied and len(pred_cam_t) != 3:
         raise ValueError("pred_cam_t must be a 3-vector")
-    cam = [float(pred_cam_t[idx]) for idx in range(3)]
-    return [[point[idx] + cam[idx] for idx in range(3)] for point in points]
+    return coordinates.apply_translation_once(
+        points_camera,
+        pred_cam_t,
+        already_applied=already_applied,
+    )
 
 
 def gate_1b_world_round_trip(

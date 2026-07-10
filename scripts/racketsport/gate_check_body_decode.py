@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from threed.racketsport import mhr_decode  # noqa: E402
+from threed.racketsport import coordinates, mhr_decode  # noqa: E402
 from threed.racketsport.schemas import CourtCalibration  # noqa: E402
 
 
@@ -145,6 +145,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--checkpoint", type=Path, default=Path(mhr_decode.DEFAULT_CHECKPOINT_PATH))
     parser.add_argument("--mhr-asset", type=Path, default=Path(mhr_decode.DEFAULT_MHR_ASSET_PATH))
     parser.add_argument("--device", default=None, help="Decoder device override, e.g. cuda:0.")
+    parser.add_argument(
+        "--attribution-report",
+        type=Path,
+        default=None,
+        help="Optional attribute_body_decode_residual.py JSON report to summarize beside GATE-1b.",
+    )
     parser.add_argument("--max-frames-per-player", type=int, default=40)
     parser.add_argument(
         "--sam3d-output-index",
@@ -313,6 +319,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             measurement_status="blocked_mhr_runtime_unavailable",
             blocker=f"MHR_RUNTIME_AVAILABLE=False: {mhr_decode.MHR_RUNTIME_IMPORT_ERROR!r}",
         )
+        _attach_residual_decomposition(report, args.attribution_report)
         _write_report(args.out, report)
         return report
 
@@ -350,6 +357,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     report["gate_1b"] = gate1b_summary
     report[GATE_1B_NAME] = gate1b_summary
     report[MESH_DIVERGENCE_NAME] = divergence_summary
+    _attach_residual_decomposition(report, args.attribution_report)
     _write_report(args.out, report)
     return report
 
@@ -395,6 +403,7 @@ def run_self_check(args: argparse.Namespace) -> dict[str, Any]:
         "first_decode_call": first_call,
         "first_divergence_call": decoder.divergence_calls[0],
     }
+    _attach_residual_decomposition(report, args.attribution_report)
     _write_report(args.out, report)
     return report
 
@@ -426,6 +435,7 @@ def _compute_gate_1b_and_divergence(
     per_player_divergence: dict[str, dict[str, Any]] = {}
     worst_joints_mm = 0.0
     worst_vertices_mm = 0.0
+    measured_vertices_frame_count = 0
     worst_divergence_p95_mm = 0.0
     missing_pred_cam_t_request_ids: list[str] = []
 
@@ -460,6 +470,7 @@ def _compute_gate_1b_and_divergence(
                 joints_errs.append(gate1b["joints_world"]["max_abs_error_mm"])
                 if frame.vertices_world:
                     vertices_errs.append(gate1b["vertices_world"]["max_abs_error_mm"])
+                    measured_vertices_frame_count += 1
             div = decoder.mesh_skeleton_divergence_mm(**kwargs)
             divergences.append(div["p95_mm"])
 
@@ -495,15 +506,21 @@ def _compute_gate_1b_and_divergence(
             missing_request_ids=missing_pred_cam_t_request_ids,
         )
     else:
+        vertices_measured = measured_vertices_frame_count > 0
         gate1b_summary = {
             "gate": GATE_1B_NAME,
             "target_max_abs_error_mm": mhr_decode.GATE_1B_MAX_ABS_ERROR_MM,
             "scale_source": scale_source,
             "worst_joints_world_max_abs_error_mm": worst_joints_mm,
-            "worst_vertices_world_max_abs_error_mm": worst_vertices_mm,
+            "worst_vertices_world_max_abs_error_mm": worst_vertices_mm if vertices_measured else None,
+            "vertices_status": "measured" if vertices_measured else "absent_not_measured",
+            "measured_vertices_frame_count": measured_vertices_frame_count,
             "passed": bool(
                 worst_joints_mm <= mhr_decode.GATE_1B_MAX_ABS_ERROR_MM
-                and worst_vertices_mm <= mhr_decode.GATE_1B_MAX_ABS_ERROR_MM
+                and (
+                    not vertices_measured
+                    or worst_vertices_mm <= mhr_decode.GATE_1B_MAX_ABS_ERROR_MM
+                )
             ),
             "per_player": per_player_gate1b,
         }
@@ -546,6 +563,11 @@ def _base_report(
         "field_mapping": MHR_FORWARD_FIELD_MAPPING,
         "decoder_provenance": dict(provenance),
         "raw_emit_source": dict(raw_emit_source),
+        "coordinate_spaces": {
+            "decoded_body_offsets": coordinates.CoordinateSpace.BODY_CAMERA_ROOT_RELATIVE_M.value,
+            "translated_camera_points": coordinates.CoordinateSpace.CAMERA_M.value,
+            "persisted_world_points": coordinates.CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M.value,
+        },
         "gate_1a": gate1a,
         GATE_1A_NAME: gate1a,
         "gate_1b": gate1b,
@@ -572,6 +594,7 @@ def _blocked_gate_1b(*, scale_source: str, blocker: str | None) -> dict[str, Any
         "scale_source": scale_source,
         "worst_joints_world_max_abs_error_mm": None,
         "worst_vertices_world_max_abs_error_mm": None,
+        "vertices_status": "not_evaluated",
         "passed": None,
         "per_player": {},
         "blocked_reason": blocker,
@@ -593,6 +616,7 @@ def _blocked_gate_1b_missing_pred_cam_t(*, scale_source: str, missing_request_id
         "scale_source": scale_source,
         "worst_joints_world_max_abs_error_mm": None,
         "worst_vertices_world_max_abs_error_mm": None,
+        "vertices_status": "not_evaluated",
         "passed": None,
         "per_player": {},
         "blocked_reason": reason,
@@ -769,6 +793,29 @@ def _sha256_file(path: Path) -> str | None:
 def _write_report(path: Path, report: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _attach_residual_decomposition(report: dict[str, Any], attribution_path: Path | None) -> None:
+    if attribution_path is None:
+        return
+    try:
+        attribution = json.loads(attribution_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise HarnessInputError(
+            f"failed to read --attribution-report {attribution_path}: {type(exc).__name__}: {exc}"
+        ) from exc
+    if attribution.get("artifact_type") != "racketsport_body_decode_residual_attribution":
+        raise HarnessInputError(
+            "--attribution-report must have artifact_type "
+            "racketsport_body_decode_residual_attribution"
+        )
+    postchain = attribution.get("postchain_attribution", {})
+    report["residual_decomposition"] = {
+        "source_path": str(attribution_path),
+        "grounding_determinism": attribution.get("grounding_determinism"),
+        "postchain_totals": postchain.get("total_delta") if isinstance(postchain, Mapping) else None,
+        "fk_vs_head": attribution.get("fk_vs_head_divergence"),
+    }
 
 
 class _RecordingDecoder:

@@ -1,0 +1,28 @@
+..........ssssss........................................................ [ 50%]
+................................................................F.....   [100%]
+=================================== FAILURES ===================================
+________ test_north_star_is_the_single_product_and_execution_authority _________
+
+    def test_north_star_is_the_single_product_and_execution_authority() -> None:
+        text = (ROOT / "NORTH_STAR_ROADMAP.md").read_text(encoding="utf-8")
+    
+        assert text.startswith("# DinkVision North Star")
+        assert "This is the sole authority" in text
+        assert "`VERIFIED=0`" in text
+        assert "## 1. The product" in text
+        assert "## 2. Current truth" in text
+        assert "## 3. Target CV architecture and data reuse" in text
+        assert "## 4. Ordered execution program" in text
+        assert "## 5. Active queue for the next agents" in text
+        assert "## 6. Standing rules" in text
+        assert "## 7. Evidence and history" in text
+>       assert len(text.splitlines()) <= 500
+E       AssertionError: assert 510 <= 500
+E        +  where 510 = len(['# DinkVision North Star', '', 'Last updated: 2026-07-09.', 'Status: `VERIFIED=0`.', '', '## Authority and reading rule', ...])
+E        +    where ['# DinkVision North Star', '', 'Last updated: 2026-07-09.', 'Status: `VERIFIED=0`.', '', '## Authority and reading rule', ...] = <built-in method splitlines of str object at 0xaad2c8000>()
+E        +      where <built-in method splitlines of str object at 0xaad2c8000> = '# DinkVision North Star\n\nLast updated: 2026-07-09.\nStatus: `VERIFIED=0`.\n\n## Authority and reading rule\n\nThis ...the product goal, current blocker, next task, gate, and stop rule\nfrom this North Star without reading the archive.\n'.splitlines
+
+tests/racketsport/test_truthful_capabilities.py:335: AssertionError
+=========================== short test summary info ============================
+FAILED tests/racketsport/test_truthful_capabilities.py::test_north_star_is_the_single_product_and_execution_authority
+1 failed, 135 passed, 6 skipped in 86.98s (0:01:26)

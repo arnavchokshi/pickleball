@@ -1,0 +1,8 @@
+{
+  "blocker": null,
+  "gate_1b_status": null,
+  "measurement_status": "self_check_passed",
+  "out": "runs/lanes/ns014_p22residual_20260709/post/gate_self_check.json",
+  "player_count": 1,
+  "total_real_frame_sample_count": 1
+}

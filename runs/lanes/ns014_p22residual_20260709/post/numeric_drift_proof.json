@@ -1,0 +1,41 @@
+{
+  "constants": {
+    "GATE_1A_MAX_ABS_ERROR_DEG": 0.1,
+    "GATE_1B_MAX_ABS_ERROR_MM": 1.0,
+    "MESH_SKELETON_DIVERGENCE_P95_MM": 5.0
+  },
+  "gate_self_check": {
+    "post_status": "self_check_passed",
+    "post_targets": [
+      0.1,
+      1.0,
+      5.0
+    ],
+    "pre_status": "self_check_passed",
+    "pre_targets": [
+      0.1,
+      1.0,
+      5.0
+    ],
+    "self_check_equal": true
+  },
+  "numeric_identical": true,
+  "synthetic_mock": {
+    "ppm_hashes_identical": true,
+    "ppm_sha256": [
+      "9e76eb7b2d3790527c5e33beba43e779a883b4dd35f5236c2e7661e41e5ae9e5",
+      "1b823670839b15464d3d2df3feeab06a2cbc3f7696b04d7a08a33f67cc9b2b76",
+      "6ed47c28e2c8e8c63a6878e3792a3b10ae29af79fadb6b4e05b7b32941a201e1"
+    ],
+    "post_metrics": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "pre_metrics": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  }
+}

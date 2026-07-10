@@ -1,0 +1,33 @@
+{
+  "artifact_type": "racketsport_synthetic_body_decode_gate",
+  "attempts": [],
+  "blocker": "ModuleNotFoundError(\"No module named 'roma'\")",
+  "decoder": "sam3d",
+  "gate_1b_world_round_trip": {
+    "joints_world_p95_abs_error_mm": null,
+    "metric": "gate_1b_world_round_trip.joints_world_p95_abs_error_mm",
+    "passed": null,
+    "target_joints_world_p95_abs_error_mm": 1.0,
+    "vertices_world_p95_abs_error_mm": null
+  },
+  "measurement_status": "blocked_sam3d_runtime_unavailable",
+  "mesh_skeleton_divergence": {
+    "metric": "mesh_skeleton_divergence.p95_mm",
+    "p95_mm": null,
+    "passed": null,
+    "target_p95_mm": 5.0
+  },
+  "recipe": {
+    "author_geometry": "MHRDecoder neutral body mesh when the production runtime is available",
+    "camera_model": "identity extrinsics plus pinhole projection for render inspection",
+    "cpu_arm": "mock decoder validates metric plumbing without GPU runtime",
+    "gpu_arm": "hmr_deep._direct_setup_sam_3d_body production subprocess fallback path",
+    "render": "two-attempt 512px shaded mesh realism ladder",
+    "translation_policy": "pred_cam_t is applied exactly once to both joints and vertices"
+  },
+  "renders": [],
+  "sample_count": 0,
+  "samples": [],
+  "schema_version": 1,
+  "wall_seconds": 0.000125885009765625
+}

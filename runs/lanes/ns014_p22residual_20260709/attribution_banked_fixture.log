@@ -1,0 +1,5 @@
+{
+  "chain_reproduced_1mm": true,
+  "grounding_status": "measured",
+  "out": "runs/lanes/ns014_p22residual_20260709/attribution_banked_fixture_report.json"
+}
