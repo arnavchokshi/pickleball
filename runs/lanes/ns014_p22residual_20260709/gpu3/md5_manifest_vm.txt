@@ -1,0 +1,6 @@
+362f007dbed8130bc4776041bffdfbf9  threed/racketsport/coordinates.py
+3febf42872f47cb019dc278076ee4f46  scripts/racketsport/attribute_body_decode_residual.py
+a904bff310b61463670abe7adc58cc8f  scripts/racketsport/gate_check_body_decode.py
+2d52c7c567d2684256b672062d58c8b1  threed/racketsport/mhr_decode.py
+ff90dfe21647000bad6fabeeec8ec982  threed/racketsport/hmr_deep.py
+d33ea4d5a95780f9ad358785d9e56fe4  scripts/racketsport/synthetic_body_decode_gate.py

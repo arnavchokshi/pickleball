@@ -1,0 +1,26 @@
+ns014_gpu_rescore2 — STEP 0 HARD BLOCKER
+=========================================
+Attempted VM: pickleball-h100-ns014rescore2
+Machine type: a3-highgpu-1g (1x H100 80GB, 2x local SSD), SPOT, --instance-termination-action=STOP
+Boot disk: --create-disk=source-snapshot=pickleball-fleet-snap-20260709-w7close,boot=yes,type=pd-balanced,size=200GB
+Labels: fable-lane=ns014-rescore2,fable-fleet=pickleball,owner=arnavchokshi
+Project: gifted-electron-498923-h1
+
+Attempt 1 (per mission: try asia-southeast1-c FIRST) — start 2026-07-10T05:05:55Z
+  Result: ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS / STOCKOUT
+  (Note: this is the INVERSE of arm 1, where ase1-b stocked out and ase1-c worked.
+  Resource availability flipped between arm 1 (2026-07-10T03:2x UTC) and this attempt
+  (2026-07-10T05:0x UTC), roughly 1h40m later.)
+
+Attempt 2 (fallback, per mission) — asia-southeast1-b
+  Result: ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS / STOCKOUT
+
+Both zones exhausted the single-attempt-per-zone budget the mission authorized.
+No third zone is in scope for this lane. No instance was created in either zone
+(verified via `gcloud compute instances list` — zero instances named
+ns014rescore2* exist in the project; only body4d-waker-ctrl and the already-
+TERMINATED pickleball-a100-fleet1 are present). No teardown is required —
+nothing was provisioned, nothing to bill, nothing to delete.
+
+STOP: reporting blocker per mission STEP 0 instruction ("one attempt per zone
+then report blocker"). No STEP 1-4 work was performed because no VM exists.

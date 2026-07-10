@@ -1,0 +1,30 @@
+{
+  "artifact_type": "racketsport_body_serialization_timing",
+  "artifacts": [
+    {
+      "artifact": "smpl_motion.json",
+      "bytes": 776879872,
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/source_20260710T053225Z/smpl_motion.json",
+      "reason": null,
+      "serialization_seconds": 14.865106032999847,
+      "skipped": false
+    },
+    {
+      "artifact": "body_mesh.json",
+      "bytes": 777790773,
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/source_20260710T053225Z/body_mesh.json",
+      "reason": null,
+      "serialization_seconds": 14.885245024999904,
+      "skipped": false
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "json_format": "compact_no_indent_no_sort_keys_newline_terminated",
+    "skipped_count": 0,
+    "total_bytes": 1554670645,
+    "total_serialization_seconds": 29.75035105799975,
+    "written_count": 2
+  }
+}

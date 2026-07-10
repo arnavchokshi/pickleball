@@ -310,3 +310,23 @@ NS-014 FLEET LOG (2026-07-09/10, ns014 manager):
   stride) => reproducible cold-clip frames/BODY scheduling bug, 3 signatures banked in
   runs/lanes/demo_beststack_20260710/REPORT.md; follow-up lane queued. DEMO WAVE GPU TOTAL
   (demo1+demo2): ~1.2-1.3h, ~$0.7-5.7; caps never breached (max 2/4 concurrent).
+- pickleball-h100-ns014rescore2 (H100 a3 SPOT, ase1-c-first ladder, FROM w7close snapshot) —
+  PROVISIONING (Sonnet lane ns014_gpu_rescore2, self-tearing, wall cap 2h, ~$0.6-4.5 ceiling ~$7).
+  CORRECTED arm-2 procedure: sync 4a3cbc60a (py3.10 fix + coherence guard) -> pre-seed VM self
+  hostkey -> self-dispatch remote BODY (the body_mesh-writing route) -> attribution + gate against
+  the DISPATCH-side run dir (fresh chunks + body_mesh same-execution; coherence guard active) ->
+  pull + md5 -> DELETE + list-confirm. Concurrency <=3/4 (w7ball2 foreign still running).
+  OUTCOME: BLOCKED-STOCKOUT 2026-07-10T05:05-05:07Z — ase1-c AND ase1-b both
+  ZONE_RESOURCE_POOL_EXHAUSTED (inverse of arm 1's pattern 100min earlier; volatile SKU). $0 spent,
+  zero resources allocated, list-confirmed. Evidence runs/lanes/ns014_p22residual_20260709/gpu2/.
+  RETRY DISPATCHED as ns014_gpu_rescore3 w/ owner-granted broadened H100 zone ladder
+  (ase1-c, ase1-b, us-central1-a, us-central1-b + one bounded 15-min second pass).
+- pickleball-h100-ns014rescore3 — DONE+DELETED 2026-07-10T06:10:44Z list-confirmed (created
+  05:18:01Z, uptime 0.879h, $0.53-3.78, zero preemptions, ase1-c first-attempt). Coherence guard
+  LIVE-exercised (705/705 coherent on dispatch-dir pairing); gate_1b MEASURED (worst joints p95
+  112.43mm, scale_source=None caveat vs ARM2 lineage); gate_1a + FK-vs-head exact reproductions;
+  synthetic instrument stable replicate (<=0.5mm vs arm 1); mesh-skel 53.41 third reproduction.
+  Per-stage replay table ruled VOID as production attribution (replay infidelity self-declared +
+  foot-lock 20mm-cap impossibility) — production postchain total stays w7-armC 23.4mm p95. Full
+  ruling: runs/lanes/ns014_p22residual_20260709/REPORT.md. ns014 lane GPU total ~2.19h ~$1.3-9.4.
+

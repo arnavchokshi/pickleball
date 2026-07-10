@@ -1,0 +1,21 @@
+VM_NAME=pickleball-h100-ns014rescore3
+ZONE=asia-southeast1-c (SUCCESS on first attempt of the broadened ladder; no fallback needed)
+ZONE_LADDER_LOG:
+  asia-southeast1-c -> SUCCESS (attempt 1 of 1; created)
+INTERNAL_IP=10.148.0.42
+EXTERNAL_IP=35.198.252.167
+CREATE_TIMESTAMP_UTC=2026-07-10T05:18:01Z (gcloud instances describe creationTimestamp, authoritative)
+CREATE_ATTEMPT_START_UTC=2026-07-10T05:17:51Z
+GCLOUD_CREATE_RETURNED_RUNNING_AT_UTC=2026-07-10T05:19:05Z
+LABELS=fable-lane=ns014-rescore3,fable-fleet=pickleball,owner=arnavchokshi
+MACHINE_TYPE=a3-highgpu-1g (1x nvidia-h100-80gb baked into machine type, no separate --accelerator flag)
+PROVISIONING_MODEL=SPOT, --instance-termination-action=STOP
+BOOT_DISK=--create-disk=source-snapshot=pickleball-fleet-snap-20260709-w7close,boot=yes,type=pd-balanced,size=200GB
+
+TEARDOWN:
+DELETE_ISSUED_UTC=2026-07-10T06:10:44Z (gcloud compute instances delete, --quiet, returned confirmation)
+LIST_CONFIRM_UTC=2026-07-10T06:10:5xZ (gcloud compute instances list --filter=name~ns014rescore3 -> Listed 0 items)
+FULL_FLEET_LIST_AFTER_DELETE: body4d-waker-ctrl (RUNNING, untouched), pickleball-a100-fleet1 (TERMINATED, untouched) -- no other VM affected.
+UPTIME_HOURS=0.879 (05:18:01Z create -> 06:10:44Z delete)
+ZERO_PREEMPTIONS observed (continuous SSH session throughout; single boot, lastStartTimestamp matches creation)
+COST_ESTIMATE=$0.53-3.78 (0.879h x $0.6-4.3/hr band)

@@ -1,0 +1,132 @@
+{
+  "artifact_type": "racketsport_synthetic_body_decode_gate",
+  "attempts": [
+    {
+      "attempt": 1,
+      "joint_count": 70,
+      "pred_cam_t": [
+        0.14427438378334045,
+        0.03406347334384918,
+        3.6747186183929443
+      ],
+      "record_count": 1,
+      "render": "synthetic_body_0000_attempt1.png",
+      "sample_id": 0,
+      "valid_detection": true,
+      "vertex_count": 18439
+    },
+    {
+      "attempt": 1,
+      "joint_count": 70,
+      "pred_cam_t": [
+        0.18194663524627686,
+        0.03652732074260712,
+        3.8126721382141113
+      ],
+      "record_count": 1,
+      "render": "synthetic_body_0001_attempt1.png",
+      "sample_id": 1,
+      "valid_detection": true,
+      "vertex_count": 18439
+    },
+    {
+      "attempt": 1,
+      "joint_count": 70,
+      "pred_cam_t": [
+        0.2166673094034195,
+        0.04672092944383621,
+        3.9592058658599854
+      ],
+      "record_count": 1,
+      "render": "synthetic_body_0002_attempt1.png",
+      "sample_id": 2,
+      "valid_detection": true,
+      "vertex_count": 18439
+    }
+  ],
+  "blocker": null,
+  "decoder": "sam3d",
+  "gate_1b_world_round_trip": {
+    "joints_world_p95_abs_error_mm": 313.4828770242357,
+    "metric": "gate_1b_world_round_trip.joints_world_p95_abs_error_mm",
+    "passed": false,
+    "target_joints_world_p95_abs_error_mm": 1.0,
+    "vertices_world_p95_abs_error_mm": 315.74776585525507
+  },
+  "measurement_status": "measured",
+  "mesh_skeleton_divergence": {
+    "metric": "mesh_skeleton_divergence.p95_mm",
+    "p95_mm": 39.45334099366513,
+    "passed": false,
+    "target_p95_mm": 5.0
+  },
+  "recipe": {
+    "author_geometry": "MHRDecoder neutral body mesh and model head faces",
+    "camera_model": "identity extrinsics plus pinhole projection for render inspection",
+    "cpu_arm": "mock decoder validates metric plumbing without GPU runtime",
+    "gpu_arm": "hmr_deep._direct_setup_sam_3d_body production subprocess fallback path",
+    "render": "512px filled triangles with Lambert shading; attempt 2 adds floor and gradient",
+    "translation_policy": "pred_cam_t is applied exactly once to both joints and vertices"
+  },
+  "renders": [
+    {
+      "attempt": 1,
+      "height": 512,
+      "path": "synthetic_body_0000_attempt1.png",
+      "sample_id": 0,
+      "width": 512
+    },
+    {
+      "attempt": 1,
+      "height": 512,
+      "path": "synthetic_body_0001_attempt1.png",
+      "sample_id": 1,
+      "width": 512
+    },
+    {
+      "attempt": 1,
+      "height": 512,
+      "path": "synthetic_body_0002_attempt1.png",
+      "sample_id": 2,
+      "width": 512
+    }
+  ],
+  "sample_count": 3,
+  "samples": [
+    {
+      "joint_count": 70,
+      "pred_cam_t": [
+        0.15,
+        -0.05,
+        3.5
+      ],
+      "sample_id": 0,
+      "scale_m": 0.3610427677631378,
+      "vertex_count": 18439
+    },
+    {
+      "joint_count": 70,
+      "pred_cam_t": [
+        0.18,
+        -0.05,
+        3.6
+      ],
+      "sample_id": 1,
+      "scale_m": 0.36104273796081543,
+      "vertex_count": 18439
+    },
+    {
+      "joint_count": 70,
+      "pred_cam_t": [
+        0.21,
+        -0.05,
+        3.7
+      ],
+      "sample_id": 2,
+      "scale_m": 0.36104273796081543,
+      "vertex_count": 18439
+    }
+  ],
+  "schema_version": 1,
+  "wall_seconds": 24.49722146987915
+}

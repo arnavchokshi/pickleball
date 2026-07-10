@@ -1,0 +1,3 @@
+Created [https://www.googleapis.com/compute/v1/projects/gifted-electron-498923-h1/zones/asia-southeast1-c/instances/pickleball-h100-ns014rescore3].
+NAME                           ZONE               MACHINE_TYPE   PREEMPTIBLE  INTERNAL_IP  EXTERNAL_IP     STATUS
+pickleball-h100-ns014rescore3  asia-southeast1-c  a3-highgpu-1g  true         10.148.0.42  35.198.252.167  RUNNING
