@@ -350,9 +350,82 @@ def _normalize_ball_world_policy(policy: BallWorldPolicy | str) -> BallWorldPoli
     raise ValueError(f"invalid ball_world_policy {policy!r}; expected one of: {rendered}")
 
 
+BALL_ARC_FAIL_CLOSED_MIN_INLIERS = 3
+BALL_ARC_FAIL_CLOSED_MAX_REPROJECTION_PX = 40.0
+BALL_ARC_FAIL_CLOSED_POLICY = "arc_segment_fail_closed_v1"
+_BALL_ARC_UNTRUSTED_STATUSES = frozenset({"fit_bvp_fallback", "fit_weak"})
+# Sanity violations that place the trajectory somewhere spatially absurd
+# (behind the fence, 20 m in the air, through the net). Speed-policy
+# violations are deliberately excluded: a slow-but-pixel-consistent arc is
+# depth-ambiguous, not junk, and hiding it would trade honest coverage for
+# nothing (see w7_ball3ddiag segment 7/9/10 classifications).
+_BALL_ARC_SPATIAL_VIOLATIONS = frozenset(
+    {
+        "outside_court_volume",
+        "apex_height_implausible",
+        "net_clearance_below_slack",
+    }
+)
+
+
+def ball_arc_segment_fail_closed_verdicts(
+    segments: Any,
+) -> dict[int, dict[str, Any]]:
+    """Per-segment trust verdicts for fail-closed 3D ball emission.
+
+    A ``fit`` segment is always trusted. A fallback/weak segment is trusted
+    only when its own fit statistics show the 2D evidence actually supports
+    it: enough inlier sightings, inliers not outnumbered by rejected
+    sightings, and a bounded reprojection error. Fallback segments with
+    missing statistics are not trusted — the boundary fails closed.
+    """
+
+    verdicts: dict[int, dict[str, Any]] = {}
+    for segment in segments if isinstance(segments, list) else []:
+        if not isinstance(segment, Mapping):
+            continue
+        raw_id = segment.get("segment_id")
+        if isinstance(raw_id, bool) or not isinstance(raw_id, int):
+            continue
+        status = str(segment.get("status") or "")
+        reasons: list[str] = []
+        if status in _BALL_ARC_UNTRUSTED_STATUSES:
+            inliers = _optional_float(segment.get("inlier_count"))
+            outliers = _optional_float(segment.get("outlier_count"))
+            max_reproj = _optional_float(segment.get("max_reprojection_error_px"))
+            if inliers is None or outliers is None:
+                reasons.append("missing_fit_statistics")
+            else:
+                if inliers < BALL_ARC_FAIL_CLOSED_MIN_INLIERS:
+                    reasons.append("insufficient_inliers")
+                if outliers > inliers:
+                    reasons.append("outliers_exceed_inliers")
+                if max_reproj is None:
+                    reasons.append("missing_reprojection_error")
+                elif max_reproj > BALL_ARC_FAIL_CLOSED_MAX_REPROJECTION_PX:
+                    reasons.append("max_reprojection_error_above_bound")
+            sanity = segment.get("physical_sanity")
+            if isinstance(sanity, Mapping):
+                violations = sanity.get("violations")
+                if isinstance(violations, list) and any(
+                    str(item) in _BALL_ARC_SPATIAL_VIOLATIONS for item in violations
+                ):
+                    reasons.append("spatial_sanity_violation")
+        verdicts[raw_id] = {
+            "trusted": not reasons,
+            "status": status,
+            "reasons": reasons,
+            "frame_start": segment.get("frame_start"),
+            "frame_end": segment.get("frame_end"),
+        }
+    return verdicts
+
+
 def apply_ball_track_arc_solved_overlay(
     ball_track_physics_filled: Mapping[str, Any] | None,
     ball_track_arc_solved: Mapping[str, Any] | None,
+    *,
+    fail_closed: bool = True,
 ) -> Mapping[str, Any] | None:
     """Make the BALL-ARC-SOLVER output authoritative for ``world_xyz``.
 
@@ -399,10 +472,37 @@ def apply_ball_track_arc_solved_overlay(
             continue
         arc_by_key[_time_key(t)] = arc_frame
 
+    segment_verdicts = ball_arc_segment_fail_closed_verdicts(
+        ball_track_arc_solved.get("segments")
+    )
+    untrusted_ids = {
+        segment_id
+        for segment_id, verdict in segment_verdicts.items()
+        if not verdict["trusted"]
+    }
+    untrusted_spans: list[tuple[int, int, int]] = []
+    for segment_id in untrusted_ids:
+        verdict = segment_verdicts[segment_id]
+        start = verdict.get("frame_start")
+        end = verdict.get("frame_end")
+        if isinstance(start, int) and isinstance(end, int):
+            untrusted_spans.append((start, end, segment_id))
+
+    def _frame_untrusted(arc_frame: Mapping[str, Any], frame_index: int) -> bool:
+        solver_info = arc_frame.get("arc_solver")
+        if isinstance(solver_info, Mapping):
+            segment_id = solver_info.get("segment_id")
+            if isinstance(segment_id, int) and not isinstance(segment_id, bool):
+                return segment_id in untrusted_ids
+        # No per-frame segment provenance: fail closed if the frame index
+        # falls inside any untrusted segment's declared span.
+        return any(start <= frame_index <= end for start, end, _ in untrusted_spans)
+
     merged_frames: list[Any] = []
     overlaid_count = 0
     forced_hidden_count = 0
-    for frame in _sequence(ball_track_physics_filled.get("frames")):
+    suppressed_count = 0
+    for frame_index, frame in enumerate(_sequence(ball_track_physics_filled.get("frames"))):
         if not isinstance(frame, Mapping):
             merged_frames.append(frame)
             continue
@@ -421,6 +521,14 @@ def apply_ball_track_arc_solved_overlay(
             # continuity: no world position beats a fabricated one.
             merged["world_xyz"] = None
             forced_hidden_count += 1
+        elif fail_closed and _frame_untrusted(arc_frame, frame_index):
+            # Fail-closed boundary (w7_ball3ddiag single fix): the authoring
+            # segment's own fit statistics say the solver ignored the 2D
+            # evidence, so its analytic position is a guess, not a
+            # measurement. Emitting nothing beats emitting fallback junk the
+            # confidence gate would band as measured.
+            merged["world_xyz"] = None
+            suppressed_count += 1
         else:
             merged["world_xyz"] = [float(component) for component in arc_world_xyz]
             overlaid_count += 1
@@ -435,6 +543,18 @@ def apply_ball_track_arc_solved_overlay(
         ),
         "overlaid_frame_count": overlaid_count,
         "forced_hidden_frame_count": forced_hidden_count,
+        "fail_closed": {
+            "enabled": bool(fail_closed),
+            "policy": BALL_ARC_FAIL_CLOSED_POLICY,
+            "min_inlier_count": BALL_ARC_FAIL_CLOSED_MIN_INLIERS,
+            "max_reprojection_error_px": BALL_ARC_FAIL_CLOSED_MAX_REPROJECTION_PX,
+            "suppressed_frame_count": suppressed_count,
+            "suppressed_segment_ids": sorted(untrusted_ids),
+            "segment_verdicts": {
+                str(segment_id): verdict
+                for segment_id, verdict in sorted(segment_verdicts.items())
+            },
+        },
     }
     return result
 

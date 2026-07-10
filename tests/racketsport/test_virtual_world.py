@@ -828,12 +828,16 @@ def test_apply_ball_track_arc_solved_overlay_prefers_arc_and_hides_uncovered_fra
     # xy/conf/visible/trust_band are a 2D-detection concern this overlay does not own.
     assert [frame["visible"] for frame in merged["frames"]] == [True, False, True]
     assert [frame["xy"] for frame in merged["frames"]] == [[320.0, 240.0], [321.0, 241.0], [322.0, 242.0]]
-    assert merged["arc_solved_overlay"] == {
-        "applied": True,
-        "source_artifact_type": "racketsport_ball_track_arc_solved",
-        "overlaid_frame_count": 2,
-        "forced_hidden_frame_count": 1,
-    }
+    overlay = merged["arc_solved_overlay"]
+    assert overlay["applied"] is True
+    assert overlay["source_artifact_type"] == "racketsport_ball_track_arc_solved"
+    assert overlay["overlaid_frame_count"] == 2
+    assert overlay["forced_hidden_frame_count"] == 1
+    # Fail-closed provenance (see test_virtual_world_ball_failclosed.py): an
+    # artifact without per-segment fit statistics suppresses nothing.
+    assert overlay["fail_closed"]["enabled"] is True
+    assert overlay["fail_closed"]["suppressed_frame_count"] == 0
+    assert overlay["fail_closed"]["suppressed_segment_ids"] == []
 
 
 def test_apply_ball_track_arc_solved_overlay_is_a_noop_without_an_arc_artifact() -> None:

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 10,
-  "updated": "2026-07-09",
+  "revision": 11,
+  "updated": "2026-07-10",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
     "Explicit CLI flag overrides manifest defaults; absent manifest entry is a hard error on decision paths.",
@@ -16,6 +16,45 @@
     }
   },
   "entries": {
+    "ball.world_emission_fail_closed": {
+      "stage": "ball_arc",
+      "selection": "fail-closed 3D ball emission (world overlay + dense render trail)",
+      "value": {
+        "enabled": true,
+        "policy": "arc_segment_fail_closed_v1",
+        "min_inlier_count": 3,
+        "max_reprojection_error_px": 40.0,
+        "spatial_sanity_violations": [
+          "outside_court_volume",
+          "apex_height_implausible",
+          "net_clearance_below_slack"
+        ],
+        "fit_segments_always_trusted": true,
+        "escape_hatch": "fail_closed=False parameter (instrument use only)"
+      },
+      "status": "WIRED_DEFAULT",
+      "gate": null,
+      "provenance": {
+        "lane": "demo_beststack_20260710",
+        "commit": "worktree",
+        "date": "2026-07-10",
+        "evidence_paths": [
+          "runs/lanes/w7_ball3ddiag_20260709/DIAGNOSIS.md",
+          "runs/research_ball3d_20260709/RULINGS.md",
+          "runs/lanes/demo_beststack_20260710/spec.md"
+        ]
+      },
+      "proven_against": {
+        "wolverine_suppressed_segments": [0, 2, 3, 4, 6, 8],
+        "wolverine_suppressed_frame_count": 225,
+        "wolverine_emitted_frame_count": 75,
+        "wolverine_max_ball_height_m_after": 0.968,
+        "wolverine_max_ball_height_m_before": 23.53,
+        "wolverine_max_speed_mps_after": 10.3,
+        "wolverine_max_speed_mps_before": 41.0
+      },
+      "notes": "SHIP-FIRST ruling from runs/research_ball3d_20260709 (RULINGS adopt item 1) implementing the w7_ball3ddiag single fix: fallback/weak arc segments whose own fit statistics or spatial sanity say the solver ignored the 2D evidence contribute world_xyz=null and are dropped from the dense render trail; the confidence gate bands them hidden. Emission-policy honesty parity with pb.vision (they omit 3D on 31% of frames; we rendered fallback junk on 88-91%). Default selection, NOT a VERIFIED accuracy claim; VERIFIED=0 binding. Depth-ambiguity recovery of suppressed coverage = TT3D joint-anchor-search lane (adopt item 2), not this entry. Before/after measured on runs/lanes/w7_critique_20260709/wolv_world artifacts via re-composition."
+    },
     "ball.wasb_checkpoint": {
       "stage": "ball",
       "selection": "raw WASB tennis zero-shot checkpoint",
