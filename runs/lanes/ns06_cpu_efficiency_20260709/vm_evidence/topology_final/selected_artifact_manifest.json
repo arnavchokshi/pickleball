@@ -1,0 +1,32 @@
+{
+  "artifact_type": "racketsport_ns06_selected_artifact_manifest",
+  "schema_version": 1,
+  "run": "cpu_topology_1",
+  "artifacts": {
+    "body_grounding_quality.json": {
+      "size_bytes": 1098659,
+      "sha256": "679bf44cc84d3ba28cdebe6107c03865c8035a9bab67937557860419511bf8d6",
+      "status": "pass",
+      "max_foot_lock_slide_m": 0.019924856564175954,
+      "blockers": []
+    },
+    "body_mesh_index.json": {
+      "size_bytes": 605338,
+      "sha256": "f6d494ed3186b1f702b3d15a95084a2a67a09d6300aaa3ea794ad59035de0825",
+      "mesh_frame_count": 705,
+      "window_count": 23,
+      "faces_count": 36874,
+      "compressed_chunk_bytes": 20261897
+    },
+    "body_mesh_faces.json": {
+      "size_bytes": 670876,
+      "sha256": "b9aeff280c43f345997e97e7bbe189592231ee5306906cb2e7732a09c35d8579",
+      "faces_count": 36874,
+      "sha256_identical_across_counted_runs": true
+    }
+  },
+  "notes": [
+    "The three large selected artifacts were checksumed and summarized here, then omitted from committed evidence to avoid duplicating 2.38 MB of generated JSON.",
+    "Full originals existed on the isolated VM through evidence capture; the VM was then deleted."
+  ]
+}

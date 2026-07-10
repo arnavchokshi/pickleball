@@ -1,0 +1,171 @@
+{
+  "artifact_type": "racketsport_ns06_cpu_storage_efficiency_benchmark",
+  "schema_version": 1,
+  "status": "scoped_efficiency_adopt",
+  "verified": false,
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "workload": {
+    "video_frames": 300,
+    "scheduled_body_frames": 244,
+    "scheduled_player_frames": 705,
+    "mesh_frames": 705,
+    "players": 4,
+    "faces_per_topology": 36874,
+    "vertices_per_mesh": 18439
+  },
+  "machine": {
+    "name": "pickleball-h100-ns06cpu-bx1",
+    "project": "gifted-electron-498923-h1",
+    "zone": "asia-southeast1-b",
+    "machine_type": "a3-highgpu-1g",
+    "gpu": "NVIDIA H100 80GB HBM3",
+    "driver": "580.159.03",
+    "compute_mode": "Default",
+    "provisioning": "SPOT",
+    "created_at": "2026-07-09T23:38:34.168Z",
+    "deleted_and_list_confirmed_by": "2026-07-10T00:34:37Z"
+  },
+  "runs": [
+    {
+      "name": "cold_control_warmup",
+      "commit": "bdeebfa04debc08b922e262770662e4f42d16a71",
+      "disposition": "warmup_only",
+      "shell_wall_seconds": 523.640644,
+      "pipeline_wall_seconds": 518.537,
+      "body_phase_seconds": 401.48519787399994,
+      "compile_warmup_seconds": 54.715014,
+      "notes": [
+        "Excluded from the matched speed claim because its compile cache was cold."
+      ]
+    },
+    {
+      "name": "warm_control",
+      "commit": "bdeebfa04debc08b922e262770662e4f42d16a71",
+      "disposition": "matched_control",
+      "shell_wall_seconds": 507.059337,
+      "pipeline_wall_seconds": 502.81,
+      "body_outcome_seconds": 396.499,
+      "body_phase_seconds": 384.0346998959999,
+      "array_native_gate_feed_seconds": 147.14350586599994,
+      "other_body_seconds": 127.19425194299981,
+      "gates_seconds": 27.173443587000293,
+      "index_build_seconds": 6.151208418999886,
+      "model_load_seconds": 14.130041,
+      "compile_warmup_seconds": 31.018508,
+      "steady_inference_seconds": 5.790846,
+      "peak_rss_kib": 16080136,
+      "mesh_chunk_bytes": 20261673,
+      "pipeline_status": "partial",
+      "body_status": "ran",
+      "critical_version_clean": true
+    },
+    {
+      "name": "vector_candidate",
+      "commit": "6eeaead700131a8b580b52361a2926f242cb2b01",
+      "disposition": "intermediate_only_memory_regression",
+      "shell_wall_seconds": 422.978763,
+      "pipeline_wall_seconds": 418.293,
+      "body_outcome_seconds": 303.421,
+      "body_phase_seconds": 290.65094831700003,
+      "array_native_gate_feed_seconds": 126.87829399300017,
+      "other_body_seconds": 53.06777127699979,
+      "gates_seconds": 26.80139003299996,
+      "index_build_seconds": 6.159098818000075,
+      "model_load_seconds": 15.266677,
+      "compile_warmup_seconds": 30.996266,
+      "steady_inference_seconds": 5.793827,
+      "peak_rss_kib": 20955152,
+      "mesh_chunk_bytes": 20262154,
+      "pipeline_status": "partial",
+      "body_status": "ran",
+      "critical_version_clean": true
+    },
+    {
+      "name": "topology_final",
+      "commit": "cf5295182eafe59c4d85db24663c45457e4b9802",
+      "disposition": "selected_scoped_candidate",
+      "shell_wall_seconds": 371.382502,
+      "pipeline_wall_seconds": 366.81,
+      "body_outcome_seconds": 254.009,
+      "body_phase_seconds": 241.0901954349997,
+      "array_native_gate_feed_seconds": 78.07056658900001,
+      "other_body_seconds": 53.75035863599976,
+      "gates_seconds": 26.899353620000056,
+      "index_build_seconds": 6.170039992000056,
+      "model_load_seconds": 14.108481,
+      "compile_warmup_seconds": 30.823904,
+      "steady_inference_seconds": 5.741303,
+      "peak_rss_kib": 15917988,
+      "mesh_chunk_bytes": 20261897,
+      "pipeline_status": "partial",
+      "body_status": "ran",
+      "critical_version_clean": true
+    }
+  ],
+  "selected_deltas": {
+    "versus_warm_control": {
+      "pipeline_seconds_saved": 136.0,
+      "pipeline_percent_reduction": 27.047990294544658,
+      "body_phase_seconds_saved": 142.94450446100018,
+      "body_phase_percent_reduction": 37.22176785059029,
+      "array_native_gate_feed_seconds_saved": 69.07293927699993,
+      "array_native_gate_feed_percent_reduction": 46.94256730562272,
+      "other_body_seconds_saved": 73.44389330700005,
+      "other_body_percent_reduction": 57.74151912140875,
+      "peak_rss_kib_saved": 162148,
+      "peak_rss_percent_reduction": 1.0083745560360933
+    },
+    "topology_interning_over_vector_candidate": {
+      "pipeline_seconds_saved": 51.483000000000004,
+      "pipeline_percent_reduction": 12.307879883239739,
+      "body_phase_seconds_saved": 49.560752882000315,
+      "body_phase_percent_reduction": 17.051639834302765,
+      "array_native_gate_feed_seconds_saved": 48.80772740400016,
+      "array_native_gate_feed_percent_reduction": 38.4681460224338,
+      "peak_rss_kib_saved": 5037164,
+      "peak_rss_percent_reduction": 24.037830887602247
+    }
+  },
+  "resource_summary": {
+    "warm_control_peak_rss_gib": 15.335212707519531,
+    "vector_candidate_peak_rss_gib": 19.984390258789062,
+    "topology_final_peak_rss_gib": 15.18057632446289,
+    "method": "Linux proc VmHWM sampled until the remote BODY process exited"
+  },
+  "parity": {
+    "full_clip_body_gate_passed": true,
+    "coverage": 1.0,
+    "contact_mesh_coverage": 1.0,
+    "grounding_status": "pass",
+    "joint_status": "quality_checked_needs_accuracy_gate",
+    "mesh_status": "mesh_available_needs_accuracy_gate",
+    "promotion_blocker": "missing_world_mpjpe_gate",
+    "static_faces_sha256_all_runs": "b9aeff280c43f345997e97e7bbe189592231ee5306906cb2e7732a09c35d8579",
+    "semantic_mesh_index_exact_after_removing_gpu_nondeterministic_joint_conf_and_compressed_byte_size": true,
+    "max_joint_z_delta_m_final_minus_control": -9.687565616367522e-08,
+    "min_joint_z_delta_m_final_minus_control": 4.4417742997571175e-08,
+    "max_root_speed_delta_mps": 0.0,
+    "max_track_anchor_residual_delta_m": 0.0,
+    "max_foot_slide_delta_m": -1.1161822945082722e-08,
+    "notes": [
+      "Independent GPU runs retain tiny expected inference nondeterminism; mesh chunk bytes differed by 224 bytes out of about 20.26 MB.",
+      "The candidate code path also has same-input local replay parity and a crafted half-millimetre regression fixture."
+    ]
+  },
+  "verification": {
+    "local_topology_suite": "131 passed, 1 expected runtime warning",
+    "broader_candidate_suite": "169 passed, 1 skipped, 2 warnings",
+    "vm_python_3_10_final_suite": "62 passed, 1 upstream warning",
+    "dead_code_audit": "pass; 555 Python sources; 0 unknown",
+    "scaffold_index": "pass; 280 tools; 0 missing direct or related tests",
+    "storage_policy_audit": "pre-existing fail: generated caches and missing allowlisted source packages; no unknown large files",
+    "ruff": "one pre-existing F402 at worldhmr.py loop variable outside this diff"
+  },
+  "decision": {
+    "vectorization": "adopt only with topology interning",
+    "topology_interning": "adopt scoped candidate",
+    "gpu_dense_world_transform": "reject for now; crafted case changed one quantized coordinate by 1 mm",
+    "quality_or_coverage_skips": "reject for L3",
+    "verified_flag": "VERIFIED=0 remains binding"
+  }
+}

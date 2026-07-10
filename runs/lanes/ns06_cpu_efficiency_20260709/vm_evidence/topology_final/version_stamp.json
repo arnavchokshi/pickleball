@@ -1,0 +1,427 @@
+{
+  "allow_dirty": false,
+  "artifact_type": "racketsport_remote_body_version_stamp",
+  "created_at_utc": "2026-07-10T00:23:18Z",
+  "critical_file_set": {
+    "derivation": {
+      "generated_runner_import_roots": [
+        "threed/racketsport/orchestrator.py",
+        "threed/racketsport/body_mesh_index.py",
+        "scripts/racketsport/run_sam3dbody_batch.py"
+      ],
+      "method": "project-local AST import closure plus shell/model-manifest entrypoints",
+      "remote_command_entrypoints": [
+        "scripts/racketsport/remote_body_dispatch.py --verify-version-stamp",
+        "scripts/gpu-eval-run.sh",
+        "remote_body_runner.py"
+      ]
+    },
+    "files": [
+      {
+        "md5": "a52ff7b37d373f3e418205be0f725105",
+        "path": "models/MANIFEST.json",
+        "size_bytes": 30251
+      },
+      {
+        "md5": "ad39d8e6c24d9f5fa63bd5d3f6c26527",
+        "path": "scripts/gpu-eval-run.sh",
+        "size_bytes": 4055
+      },
+      {
+        "md5": "67ad20377b086ea7377a16ec7e3fa4b6",
+        "path": "scripts/racketsport/remote_body_dispatch.py",
+        "size_bytes": 113498
+      },
+      {
+        "md5": "d9a194ad8dee6ab64a87286270c7b81a",
+        "path": "scripts/racketsport/run_sam3dbody_batch.py",
+        "size_bytes": 99820
+      },
+      {
+        "md5": "c789d0b92a1a680cad6f394617fcf1ab",
+        "path": "scripts/racketsport/run_sam3dbody_frame.py",
+        "size_bytes": 7552
+      },
+      {
+        "md5": "f67ffcdc4523d2a45ade2a2e970dd96b",
+        "path": "scripts/racketsport/run_sam3dbody_probe.py",
+        "size_bytes": 8471
+      },
+      {
+        "md5": "a19b4ebe3a9fb643ce525dba23db600e",
+        "path": "scripts/racketsport/run_totnet_ball.py",
+        "size_bytes": 16788
+      },
+      {
+        "md5": "3863257213eb085f665b5da3b1b7475e",
+        "path": "scripts/racketsport/track.py",
+        "size_bytes": 23944
+      },
+      {
+        "md5": "24cf2cd1dce60e466d1818398db991e0",
+        "path": "threed/racketsport/__init__.py",
+        "size_bytes": 55
+      },
+      {
+        "md5": "4549ab7156a4e31f4b7c7ce340ba979d",
+        "path": "threed/racketsport/ball_court_filter.py",
+        "size_bytes": 10007
+      },
+      {
+        "md5": "89847c5ed7f76369c654c09248776952",
+        "path": "threed/racketsport/ball_inflections.py",
+        "size_bytes": 17856
+      },
+      {
+        "md5": "fd68b86fd05536a4ddbc63391ca6e74f",
+        "path": "threed/racketsport/ball_local_search.py",
+        "size_bytes": 29354
+      },
+      {
+        "md5": "3df8fc8c4ded70677e55af2feb295c0e",
+        "path": "threed/racketsport/ball_overlay.py",
+        "size_bytes": 9715
+      },
+      {
+        "md5": "442fb9a46037301ccd5fdd4b67298d7b",
+        "path": "threed/racketsport/ball_physics3d.py",
+        "size_bytes": 21653
+      },
+      {
+        "md5": "ec39f54da16fb72b6e2dbe17b5d87954",
+        "path": "threed/racketsport/ball_stage_runner.py",
+        "size_bytes": 37303
+      },
+      {
+        "md5": "d93b26bd94e3f5a6fd5fb351fd6f2fbf",
+        "path": "threed/racketsport/ball_tracknet.py",
+        "size_bytes": 6182
+      },
+      {
+        "md5": "9f83208c142a042ed31d135d37a92e09",
+        "path": "threed/racketsport/best_stack.py",
+        "size_bytes": 10299
+      },
+      {
+        "md5": "326e692f2b365271d39c507b9874e7c0",
+        "path": "threed/racketsport/body_array_native.py",
+        "size_bytes": 8314
+      },
+      {
+        "md5": "2fe9ebbe3dfab6015bc3ee519358076f",
+        "path": "threed/racketsport/body_compute.py",
+        "size_bytes": 59501
+      },
+      {
+        "md5": "d19d3f45663624f4d2fec9f9d20fe4e8",
+        "path": "threed/racketsport/body_full_clip_gate.py",
+        "size_bytes": 10901
+      },
+      {
+        "md5": "4634867d5d08038e1d232df8a859a1b9",
+        "path": "threed/racketsport/body_grounding_quality.py",
+        "size_bytes": 6245
+      },
+      {
+        "md5": "dd00ab133dafe2b64d0f93b25f4bc147",
+        "path": "threed/racketsport/body_joint_quality.py",
+        "size_bytes": 26963
+      },
+      {
+        "md5": "fce587e7c187dc5a7cd53019f5d19ec5",
+        "path": "threed/racketsport/body_mesh_index.py",
+        "size_bytes": 30796
+      },
+      {
+        "md5": "a98e1346234a4af810e7ecf36f722562",
+        "path": "threed/racketsport/body_mesh_readiness.py",
+        "size_bytes": 14486
+      },
+      {
+        "md5": "9fbfdf18d5338fc25c81adbd315301d0",
+        "path": "threed/racketsport/body_postchain.py",
+        "size_bytes": 2694
+      },
+      {
+        "md5": "dac4c981d0932429f5268a310f991fb7",
+        "path": "threed/racketsport/capture_quality.py",
+        "size_bytes": 2833
+      },
+      {
+        "md5": "ed2f08380fc18dc5f31a7a5c8a15735e",
+        "path": "threed/racketsport/contact_splice.py",
+        "size_bytes": 11301
+      },
+      {
+        "md5": "1656179e9cb104cf2e26d10561312a32",
+        "path": "threed/racketsport/contact_windows.py",
+        "size_bytes": 2499
+      },
+      {
+        "md5": "900c68d3e0d44feb1bc71fbf17eb16ea",
+        "path": "threed/racketsport/court_auto_evidence.py",
+        "size_bytes": 19964
+      },
+      {
+        "md5": "8ae16a9e38ac5e84e7ba7bd89ed95994",
+        "path": "threed/racketsport/court_calibration.py",
+        "size_bytes": 27673
+      },
+      {
+        "md5": "5b4678069fa43706c12d4ba0111c330f",
+        "path": "threed/racketsport/court_keypoint_net.py",
+        "size_bytes": 32848
+      },
+      {
+        "md5": "4f3bf9cab2487992240e104af85ffac3",
+        "path": "threed/racketsport/court_line_evidence.py",
+        "size_bytes": 9967
+      },
+      {
+        "md5": "bda7941ef8b4b5d029e5b0c648d2c597",
+        "path": "threed/racketsport/court_positioning.py",
+        "size_bytes": 16628
+      },
+      {
+        "md5": "db343defbee75c39c0648b67005af1bf",
+        "path": "threed/racketsport/court_positioning_artifacts.py",
+        "size_bytes": 8957
+      },
+      {
+        "md5": "488a605f3f2cc5003527b6b1c2d69a1b",
+        "path": "threed/racketsport/court_templates.py",
+        "size_bytes": 5904
+      },
+      {
+        "md5": "a7613e5a3de74fca19344c60d394d945",
+        "path": "threed/racketsport/court_zones.py",
+        "size_bytes": 3909
+      },
+      {
+        "md5": "1df99c0297836b7907332cf2676eba6c",
+        "path": "threed/racketsport/detection_scaling.py",
+        "size_bytes": 1477
+      },
+      {
+        "md5": "26744a9d463bf0c4ee01a721a7b10369",
+        "path": "threed/racketsport/doubles_id.py",
+        "size_bytes": 2880
+      },
+      {
+        "md5": "3a910d549a180ddefdfe61ee4141bdcc",
+        "path": "threed/racketsport/eval_guard.py",
+        "size_bytes": 8948
+      },
+      {
+        "md5": "f3b340a8b8b08bcd06a11a453d34447b",
+        "path": "threed/racketsport/event_fusion.py",
+        "size_bytes": 23426
+      },
+      {
+        "md5": "02dce2a3c097610662ab04843a733f3f",
+        "path": "threed/racketsport/external_gt_body_prediction_schema.py",
+        "size_bytes": 4397
+      },
+      {
+        "md5": "941ff6e75a7d3de0b5a27e8868b2ab01",
+        "path": "threed/racketsport/foot_contact.py",
+        "size_bytes": 43067
+      },
+      {
+        "md5": "1a164d7f8c4304f5411e9f445f872e71",
+        "path": "threed/racketsport/foot_pin.py",
+        "size_bytes": 46297
+      },
+      {
+        "md5": "59102eaac34d276137da689b6315cea7",
+        "path": "threed/racketsport/footlock.py",
+        "size_bytes": 5367
+      },
+      {
+        "md5": "b483485783d1b87854156404a18accdd",
+        "path": "threed/racketsport/frame_rating.py",
+        "size_bytes": 58043
+      },
+      {
+        "md5": "ff90dfe21647000bad6fabeeec8ec982",
+        "path": "threed/racketsport/hmr_deep.py",
+        "size_bytes": 53165
+      },
+      {
+        "md5": "be6bc74f6efd170303d5f680cdda6f27",
+        "path": "threed/racketsport/io_decode.py",
+        "size_bytes": 19528
+      },
+      {
+        "md5": "6a2d66cc070b32d25e18c8d1d066d44b",
+        "path": "threed/racketsport/joint_schema.py",
+        "size_bytes": 1637
+      },
+      {
+        "md5": "1a2c6496d05e8e63aadc63109c2f829e",
+        "path": "threed/racketsport/mesh_export.py",
+        "size_bytes": 11434
+      },
+      {
+        "md5": "555d55e6e4f437075740c4548d024515",
+        "path": "threed/racketsport/mhr_decode.py",
+        "size_bytes": 27942
+      },
+      {
+        "md5": "75de186be74b38daf2b7e2e508cc10a6",
+        "path": "threed/racketsport/model_manifest.py",
+        "size_bytes": 3674
+      },
+      {
+        "md5": "7ce694bb8b9e77ad4dad8f48eff242fc",
+        "path": "threed/racketsport/net_plane.py",
+        "size_bytes": 2266
+      },
+      {
+        "md5": "71fb4aec927583a79ba07fd9eba4c756",
+        "path": "threed/racketsport/orchestrator.py",
+        "size_bytes": 175961
+      },
+      {
+        "md5": "6abb286670f534a70a09ac73edbc9f8c",
+        "path": "threed/racketsport/person_fast.py",
+        "size_bytes": 1936
+      },
+      {
+        "md5": "83d66c5332caf068427745f29696f02e",
+        "path": "threed/racketsport/pipeline_contracts.py",
+        "size_bytes": 18462
+      },
+      {
+        "md5": "198dbcf64bf55289432e164fd792e25e",
+        "path": "threed/racketsport/player_grounding.py",
+        "size_bytes": 6702
+      },
+      {
+        "md5": "4119c67faf52070f53a97e7a83168ffa",
+        "path": "threed/racketsport/pose_temporal.py",
+        "size_bytes": 123834
+      },
+      {
+        "md5": "4b1f94d50afa7ff90b08b58bd4211295",
+        "path": "threed/racketsport/racket6dof.py",
+        "size_bytes": 22345
+      },
+      {
+        "md5": "45ce0102a07e1ce9cf3e4752365a2a7f",
+        "path": "threed/racketsport/racket_pose_readiness.py",
+        "size_bytes": 10527
+      },
+      {
+        "md5": "5bb1606dc349594f3f035ab9e68c1e02",
+        "path": "threed/racketsport/racket_promotion_audit.py",
+        "size_bytes": 10223
+      },
+      {
+        "md5": "db0c6c56c8c749baf240a3c9941109fc",
+        "path": "threed/racketsport/racket_stage_runner.py",
+        "size_bytes": 12152
+      },
+      {
+        "md5": "1e2e7652b6add671a0c4f7ba0251b0b4",
+        "path": "threed/racketsport/racket_true_corners.py",
+        "size_bytes": 19749
+      },
+      {
+        "md5": "be08663cc88fa2ea7bb055a12910f378",
+        "path": "threed/racketsport/sam3d_body_input_prep.py",
+        "size_bytes": 9495
+      },
+      {
+        "md5": "1ebbcf55b05b812aff01c4c9c6ab7548",
+        "path": "threed/racketsport/sam3dbody_probe.py",
+        "size_bytes": 9115
+      },
+      {
+        "md5": "88df097e6e14fc138c4fcd2d79bcdba7",
+        "path": "threed/racketsport/schemas/__init__.py",
+        "size_bytes": 89881
+      },
+      {
+        "md5": "bc779db74c5ae5531062ac198c64925b",
+        "path": "threed/racketsport/skeleton3d.py",
+        "size_bytes": 5799
+      },
+      {
+        "md5": "9a5eda5b5a6817db1b2745849b122d19",
+        "path": "threed/racketsport/skeleton_lift_2d.py",
+        "size_bytes": 63118
+      },
+      {
+        "md5": "3a9f9028fff1d1550165981bd4da43e2",
+        "path": "threed/racketsport/skeleton_upright.py",
+        "size_bytes": 19007
+      },
+      {
+        "md5": "0a4206b74c084848d91c0867d24a2bb3",
+        "path": "threed/racketsport/totnet_adapter.py",
+        "size_bytes": 6954
+      },
+      {
+        "md5": "fb0473e9102f40a8f88f281907912cd8",
+        "path": "threed/racketsport/track_lock.py",
+        "size_bytes": 3346
+      },
+      {
+        "md5": "887eb20d5d86eef8178fcb5efb9e1141",
+        "path": "threed/racketsport/tracknet_adapter.py",
+        "size_bytes": 51116
+      },
+      {
+        "md5": "2db80514a88837f5b0a657dc8dd72664",
+        "path": "threed/racketsport/trust_band.py",
+        "size_bytes": 12427
+      },
+      {
+        "md5": "b200b828325e43743364686bca65d074",
+        "path": "threed/racketsport/virtual_world.py",
+        "size_bytes": 84967
+      },
+      {
+        "md5": "764152cb58912a208d0f2b3232ff012a",
+        "path": "threed/racketsport/visual_quality.py",
+        "size_bytes": 20034
+      },
+      {
+        "md5": "92a31574490dc15103270b126a5e46bc",
+        "path": "threed/racketsport/worldhmr.py",
+        "size_bytes": 149757
+      },
+      {
+        "md5": "ffe2b7e3d6d6b5195829a3063e7ec483",
+        "path": "threed/racketsport/wrist_velocity_peaks.py",
+        "size_bytes": 18699
+      }
+    ],
+    "hash_source": "git_committed_blob",
+    "working_tree_hash_files": []
+  },
+  "dirty_tracked_runtime_files": [],
+  "git_dirty": false,
+  "git_head_sha": "cf5295182eafe59c4d85db24663c45457e4b9802",
+  "notes": [
+    "critical file hashes are from committed git blobs at git_head_sha, not the local working tree"
+  ],
+  "payloads": {
+    "remote_body_runner.py": {
+      "sha256": "4e951bca59561311b015ea1262b56c89c49f4fc54ad550af0a10f48aa74efef7"
+    }
+  },
+  "remote_run_dir": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T002317Z",
+  "remote_verification": {
+    "artifact_type": "racketsport_remote_body_version_verification",
+    "checked_file_count": 76,
+    "drifted_files": [],
+    "expected_git_head_sha": "cf5295182eafe59c4d85db24663c45457e4b9802",
+    "remote_git_head_sha": "cf5295182eafe59c4d85db24663c45457e4b9802",
+    "schema_version": 1,
+    "verified": true,
+    "verified_at_utc": "2026-07-10T00:23:21Z"
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,823 @@
+{
+  "artifact_type": "racketsport_process_video_pipeline_summary",
+  "best_stack": {
+    "manifest_revision": 9,
+    "overrides": {},
+    "resolved": {
+      "ball.arc_chain": true,
+      "ball.detection_stride": 1,
+      "ball.wasb_checkpoint": "/home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+      "ball.wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+      "body.detector_fov": {
+        "detector_name": "",
+        "fov_checkpoint_model_id": "moge_2_vitl_normal",
+        "fov_checkpoint_required_when_fov_enabled": true,
+        "fov_name": ""
+      },
+      "body.schedule": "serial",
+      "body.skeleton_stride": 2,
+      "camera_motion.policy": {
+        "disable_flag_default": false,
+        "enable_flag_default": false,
+        "estimator": "hardened",
+        "flow_backend": "lk",
+        "mode": "auto",
+        "person_masks": true,
+        "threshold": 2.5
+      },
+      "confidence.calibration_curves": "/home/arnavchokshi/coldstart_20260706/repo/runs/waveb_confidence_gate_20260702T183158Z/calibration_curves.json",
+      "input_quality.preflight": {
+        "allowed_modes": [
+          "advisory",
+          "strict",
+          "off"
+        ],
+        "band_on_rejection": "degraded_input",
+        "mode": "advisory",
+        "owner_policy_rejection_reason": "court_not_fully_visible_low_angle",
+        "sampling": {
+          "sample_cadence_s": 1.0,
+          "sample_frame_count": 5
+        },
+        "thresholds": {
+          "max_duration_s": 900.0,
+          "max_luminance_mean": 0.98,
+          "max_missing_required_court_lines": 0,
+          "min_blur_laplacian_var": 25.0,
+          "min_camera_height_m": 1.0,
+          "min_duration_s": 1.0,
+          "min_fps": 30.0,
+          "min_full_court_corner_visibility_fraction": 1.0,
+          "min_height_px": 360,
+          "min_luminance_mean": 0.02,
+          "min_width_px": 640
+        }
+      },
+      "mesh.byte_budget_mib": 300.0,
+      "mesh.coverage_mode": "ball_aware",
+      "mesh.target_frame_budget": null,
+      "paddle.fused_estimator": {
+        "artifact": "racket_pose_estimate.json",
+        "enabled": true,
+        "source": "wrist_palm_grip_fused",
+        "trust_band": "estimated_preview"
+      },
+      "placement.undistort": true,
+      "stats.match_stats_v0": {
+        "artifact": "match_stats.json",
+        "consumer_only": true,
+        "enabled": true,
+        "excluded_inputs": [
+          "ball",
+          "paddle"
+        ],
+        "opt_out_flag": "--no-match-stats",
+        "required_inputs": [
+          "placement.json",
+          "court_zones.json"
+        ]
+      },
+      "tracking.global_association_profile": "wolverine_internal_val_trk10_iter2_margin2",
+      "tracking.reid_model": "/home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/osnet_x1_0_market1501.pt"
+    }
+  },
+  "camera_motion_auto": {
+    "decode_orientation_consequential_mismatch": false,
+    "decode_orientation_mismatch": false,
+    "decode_orientation_mismatch_reason": null,
+    "decode_orientation_untrusted": false,
+    "enabled": false,
+    "forced": "auto",
+    "probe_wall_seconds": 0.671678,
+    "sampled_frame_count": 4,
+    "score": 0.123591,
+    "threshold": 2.5
+  },
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "clip_dir": "/mnt/ns06-scratch/runs/cpu_control_2/wolverine_mixed_0200_mid_steep_corner",
+  "input_quality": {
+    "artifact_type": "racketsport_input_quality",
+    "band": "degraded_input",
+    "clip": "wolverine_mixed_0200_mid_steep_corner",
+    "metrics": {
+      "court_visibility_angle": {
+        "available": true,
+        "below_acceptance": true,
+        "camera_height_m": 1.733697,
+        "court_corner_count": 4,
+        "full_court_corner_visibility_fraction": 1.0,
+        "image_size": [
+          1920,
+          1080
+        ],
+        "missing_required_court_line_count": 1,
+        "source": "court_calibration.json+court_line_evidence.json",
+        "visible_corner_count": 4
+      },
+      "duration_s": 10.0,
+      "fps": 30.0,
+      "frame_count": 300,
+      "resolution": {
+        "height_px": 1080,
+        "width_px": 1920
+      },
+      "video_quality": {
+        "blur_laplacian_var": 432.287907,
+        "luminance_max": 0.421131,
+        "luminance_mean": 0.417536,
+        "luminance_min": 0.4084,
+        "sampled_frame_count": 5,
+        "sampled_frame_indexes": [
+          0,
+          30,
+          60,
+          90,
+          120
+        ]
+      }
+    },
+    "mode": "advisory",
+    "policy": {
+      "advisory_continues_downstream": true,
+      "owner_policy_rejection_reason": "court_not_fully_visible_low_angle",
+      "strict_fail_closes": false
+    },
+    "rejection_reasons": [
+      "court_not_fully_visible_low_angle"
+    ],
+    "sampling": {
+      "sample_cadence_s": 1.0,
+      "sample_frame_count": 5
+    },
+    "schema_version": 1,
+    "status": "below_acceptance",
+    "strict": false,
+    "thresholds": {
+      "max_duration_s": 900.0,
+      "max_luminance_mean": 0.98,
+      "max_missing_required_court_lines": 0,
+      "min_blur_laplacian_var": 25.0,
+      "min_camera_height_m": 1.0,
+      "min_duration_s": 1.0,
+      "min_fps": 30.0,
+      "min_full_court_corner_visibility_fraction": 1.0,
+      "min_height_px": 360,
+      "min_luminance_mean": 0.02,
+      "min_width_px": 640
+    },
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4",
+    "warning_reasons": []
+  },
+  "run_dir": "/mnt/ns06-scratch/runs/cpu_control_2",
+  "schema_version": 1,
+  "stages": [
+    {
+      "artifacts": [
+        "source.mp4",
+        "frame_times.json"
+      ],
+      "metrics": {},
+      "notes": [
+        "ingested /home/arnavchokshi/coldstart_20260706/repo/eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4 as source.mp4 (1920x1080 @ 30.000fps)",
+        "wrote frame_times.json from ffprobe PTS"
+      ],
+      "stage": "ingest",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 0.849
+    },
+    {
+      "artifacts": [
+        "court_calibration.json",
+        "court_zones.json",
+        "net_plane.json",
+        "court_line_evidence.json"
+      ],
+      "metrics": {
+        "intrinsics_dist_nonzero": false,
+        "intrinsics_source": "metric_15pt_reviewed",
+        "reprojection_median_px": 5.004391918498315,
+        "reprojection_p95_px": 19.920538155647392
+      },
+      "notes": [
+        "auto-discovered externally-provided court calibration from /home/arnavchokshi/coldstart_20260706/repo/eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/labels/court_calibration_metric15pt.json (intrinsics.source='metric_15pt_reviewed'); schema + intrinsics.source validated (threed.racketsport.orchestrator.ExternalCalibrationRunner), PnP re-derivation from --court-corners/--capture-sidecar skipped"
+      ],
+      "stage": "calibration",
+      "status": "ran",
+      "trust_badge": "preview",
+      "wall_seconds": 1.408
+    },
+    {
+      "artifacts": [
+        "input_quality.json"
+      ],
+      "metrics": {
+        "input_quality": {
+          "band": "degraded_input",
+          "court_visibility_angle": {
+            "available": true,
+            "below_acceptance": true,
+            "camera_height_m": 1.733697,
+            "court_corner_count": 4,
+            "full_court_corner_visibility_fraction": 1.0,
+            "image_size": [
+              1920,
+              1080
+            ],
+            "missing_required_court_line_count": 1,
+            "source": "court_calibration.json+court_line_evidence.json",
+            "visible_corner_count": 4
+          },
+          "duration_s": 10.0,
+          "fps": 30.0,
+          "mode": "advisory",
+          "rejection_reasons": [
+            "court_not_fully_visible_low_angle"
+          ],
+          "resolution": {
+            "height_px": 1080,
+            "width_px": 1920
+          },
+          "status": "below_acceptance",
+          "strict": false,
+          "warning_reasons": []
+        }
+      },
+      "notes": [
+        "input_quality preflight below acceptance bar; band=degraded_input; reasons=court_not_fully_visible_low_angle",
+        "advisory mode continues downstream; use --input-quality-mode=strict to fail-close before heavy compute"
+      ],
+      "stage": "input_quality",
+      "status": "degraded",
+      "trust_badge": null,
+      "wall_seconds": 0.272
+    },
+    {
+      "artifacts": [
+        "tracks.json",
+        "raw_tracked_detections.json",
+        "tracked_detections.json",
+        "metrics.json"
+      ],
+      "metrics": {},
+      "notes": [
+        "ran BoT-SORT-ReID loose-pool tracking (YOLO26m + BoT-SORT via threed.racketsport.orchestrator)",
+        "runtime manifest override: yolo26m declared checkpoint /home/arnavchokshi/pickleball_git/models/checkpoints/yolo26m.pt was missing on this host; using repo-local /home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/yolo26m.pt",
+        "raw-pool global association skipped: --reid-model /home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/osnet_x1_0_market1501.pt not found; kept loose-pool tracks.json"
+      ],
+      "stage": "tracking",
+      "status": "ran",
+      "trust_badge": "low_confidence",
+      "wall_seconds": 14.53
+    },
+    {
+      "artifacts": [],
+      "metrics": {
+        "camera_motion_auto": {
+          "decode_orientation_consequential_mismatch": false,
+          "decode_orientation_mismatch": false,
+          "decode_orientation_mismatch_reason": null,
+          "decode_orientation_untrusted": false,
+          "enabled": false,
+          "forced": "auto",
+          "probe_wall_seconds": 0.671678,
+          "sampled_frame_count": 4,
+          "score": 0.123591,
+          "threshold": 2.5
+        }
+      },
+      "notes": [
+        "camera_motion AUTO probe classified clip as static; placement will use the default no-camera-motion path",
+        "motion_score=0.123591 threshold=2.5"
+      ],
+      "stage": "camera_motion",
+      "status": "skipped",
+      "trust_badge": "preview",
+      "wall_seconds": 0.678
+    },
+    {
+      "artifacts": [
+        "placement.json",
+        "tracks.json",
+        "tracks_prewrite_backup.json",
+        "foot_contact_phases.json"
+      ],
+      "metrics": {
+        "camera_motion_frames_uncompensated": 0,
+        "camera_motion_frames_used": 0,
+        "court_bounds_violations": 0,
+        "coverage_unchanged": true,
+        "source_counts": {
+          "bbox": 705,
+          "native2d": 0,
+          "sam3d": 0
+        }
+      },
+      "notes": [
+        "rewrote tracks.json world_xy via foot-keypoint placement fusion",
+        "coverage_unchanged=True",
+        "source_counts(bbox=705)",
+        "camera_motion=not_used source=auto_disabled frames_used=0 frames_uncompensated=0",
+        "side_recompute(player=19: side None->far, role None->left)",
+        "side_recompute(player=20: side None->near, role None->left)",
+        "side_recompute(player=21: side None->far, role None->right)",
+        "side_recompute(player=22: side None->near, role None->right)",
+        "placement_guards(centerline_gap_clamped_frames=0, divergence_snap_frames=112, fallback_transition_blends=154, gap_hold_frames=0, gap_interpolated_frames=0, native2d_dropped=0, native2d_reassigned=0, net_gap_clamped_frames=0, sam3d_dropped=0, sam3d_reassigned=0, written_speed_capped_frames=137)",
+        "foot_contact_phases=foot_contact_phases.json"
+      ],
+      "stage": "placement",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 0.364
+    },
+    {
+      "artifacts": [
+        "ball_track.json",
+        "ball_candidates.json"
+      ],
+      "metrics": {
+        "bounce_count": 0,
+        "detection_stride": 1,
+        "effective_stride": 1,
+        "frame_count": 300,
+        "source_kind": "fresh runtime",
+        "verified_full_ball_run": true
+      },
+      "notes": [
+        "BALL detection cadence pinned full-rate: detection_stride=1",
+        "ran WASB-tennis zero-shot ball tracking (best-available per MASTER_PLAN.md, no fine-tuning)",
+        "no court_corners.json available for bounce/in-out geometry; ball_track.json has trajectory only",
+        "wrote top-K ball candidate sidecar for the default arc chain"
+      ],
+      "stage": "ball",
+      "status": "ran",
+      "trust_badge": "low_confidence",
+      "wall_seconds": 5.907
+    },
+    {
+      "artifacts": [
+        "ball_bounce_candidates.json",
+        "ball_track_arc_solved.json",
+        "ball_arc_render.json",
+        "ball_flight_sanity.json",
+        "ball_chain_manifest.json"
+      ],
+      "metrics": {
+        "auto_bounce_candidate_count": 9,
+        "ball_arc_render_bridge_sample_count": 0,
+        "ball_arc_render_sample_count": 1165,
+        "chain_config_degraded": null,
+        "coverage_world_xyz_count": 300,
+        "flight_sanity_demoted_frame_count": 1,
+        "flight_sanity_failed_segment_count": 2,
+        "segment_count": 11,
+        "solver_status": "ran"
+      },
+      "notes": [
+        "ran default ball_arc chain: auto-bounce candidates -> single-primary-track arc solver -> flight-sanity demotion",
+        "ball_arc chain consumed candidate sidecars under the frozen row-22 default config"
+      ],
+      "stage": "ball_arc",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 76.412
+    },
+    {
+      "artifacts": [
+        "wrist_velocity_peaks.json",
+        "ball_inflections.json",
+        "contact_windows.json",
+        "frame_compute_plan.json"
+      ],
+      "metrics": {
+        "ball_aware_trigger_source_counts": {
+          "events": 0,
+          "proximity": 101,
+          "swing": 0,
+          "uniform_fill": 143
+        },
+        "contact_cues": {
+          "audio": "missing",
+          "audio_onset_count": 0,
+          "ball_inflection_candidate_count": 56,
+          "ball_inflections": "available",
+          "event_count": 0,
+          "event_source_counts": {},
+          "missing": [
+            "wrist",
+            "audio",
+            "reviewed_contacts"
+          ],
+          "reviewed_contacts": "missing",
+          "wrist": "missing",
+          "wrist_candidate_count": 0
+        },
+        "contact_event_count": 0,
+        "mesh_budget_policy": "byte_budget",
+        "mesh_byte_budget_mib": 300.0,
+        "mesh_coverage_mode": "ball_aware",
+        "selected_estimated_mesh_bytes": 43912000
+      },
+      "notes": [
+        "SAM-3D skeleton unavailable before BODY; wrist_velocity_peaks.json is blocked, not pose-derived",
+        "derived ball_inflections.json from ball_track.json",
+        "extracted audio_onsets_v2.json (0 onsets; refines contact timing only)",
+        "fused contact_windows.json; cues used: wrist=missing, ball_inflections=available, audio=missing, reviewed_contacts=missing, missing=wrist,audio,reviewed_contacts",
+        "wrote frame_compute_plan.json (deep_mesh_windows authoritative: MESH only at contact windows, 244 frames, JOINTS everywhere else)",
+        "ball_aware mesh scheduling: loaded events_selected.json from /mnt/ns06-scratch/runs/cpu_control_2/wolverine_mixed_0200_mid_steep_corner/events_selected.json",
+        "ball_aware mesh scheduling: loaded ball_track_arc_solved.json from /mnt/ns06-scratch/runs/cpu_control_2/wolverine_mixed_0200_mid_steep_corner/ball_track_arc_solved.json"
+      ],
+      "stage": "events",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 0.158
+    },
+    {
+      "artifacts": [
+        "ball_track_physics_filled.json"
+      ],
+      "metrics": {
+        "filled_frame_count": 0,
+        "input_frame_count": 300,
+        "output_world_xyz_count": 13,
+        "physics3d_reconstructed_frame_count": 13,
+        "reviewed_bounce_boundary_count": 0,
+        "xy_interpolated_frame_count": 270
+      },
+      "notes": [
+        "built render-only ball_track_physics_filled.json; output is not for BALL detection metrics, gates, training, or promotion",
+        "applied ball_physics3d calibrated two-arc z reconstruction (rmse_px=0.7631072179528818)"
+      ],
+      "stage": "ball_fill",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 0.824
+    },
+    {
+      "artifacts": [
+        "body_frames/"
+      ],
+      "metrics": {
+        "base_skeleton_stride": 2,
+        "capped": false,
+        "effective_stride": 1.0,
+        "frame_count": 244,
+        "schedule_source": "tracks_stride+tier_rule",
+        "scheduled_vs_total_frame_count": {
+          "scheduled": 244,
+          "total": 244
+        },
+        "total_bytes": 14003549,
+        "total_mb": 13.355
+      },
+      "notes": [
+        "bounded base BODY skeleton schedule: kept 122/244 tracked frame(s) with skeleton_stride=2 (the prior joints-everywhere base is now cadence-controlled; events/contact-dense mesh frames are unioned separately)",
+        "tier rule respected: unioned 244 deep_mesh_windows frame(s) from /mnt/ns06-scratch/runs/cpu_control_2/wolverine_mixed_0200_mid_steep_corner/frame_compute_plan.json (already a subset of the tracked-frame set in the common case; explicit here for a resumed run whose events stage already wrote frame_compute_plan.json before this stage ran)",
+        "extracted 244 scheduled JPEG(s) into body_frames/ (13.35 MB) via ffmpeg (threed.racketsport.body_frame_materialization, the same extraction body_video_smoke.py already exercises)"
+      ],
+      "stage": "frames",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 2.249
+    },
+    {
+      "artifacts": [
+        "version_stamp.json",
+        "remote_version_verification.json",
+        "skeleton3d.json",
+        "body_compute_execution.json",
+        "body_mesh_readiness.json",
+        "body_joint_quality.json",
+        "body_full_clip_gate.json",
+        "body_grounding_quality.json",
+        "body_serialization_timing.json",
+        "body_stage_phase_timing.json",
+        "sam3d_keypoints_2d.json",
+        "sam3d_tier2_config.json",
+        "sam3d_body_input_prep.json",
+        "remote_sam3d_tier2_dispatch_config.json",
+        "contact_splice.json",
+        "frame_compute_plan.json",
+        "wrist_velocity_peaks.json",
+        "ball_inflections.json",
+        "contact_windows.json",
+        "pipeline_run.json",
+        "body_mesh_index/"
+      ],
+      "metrics": {
+        "base_skeleton_frame_count": 122,
+        "base_skeleton_player_frame_count": 351,
+        "base_skeleton_stride": 2,
+        "effective_player_stride": 1.0,
+        "effective_stride": 1.0,
+        "event_extra_frame_count": 122,
+        "postchain_bypassed_stages": [],
+        "scheduled_frame_count": 244,
+        "scheduled_player_frame_count": 705,
+        "scheduled_vs_total_frame_count": {
+          "scheduled": 244,
+          "total": 244
+        },
+        "scheduled_vs_total_player_frame_count": {
+          "scheduled": 705,
+          "total": 705
+        },
+        "total_track_frame_count": 244,
+        "total_track_player_frame_count": 705
+      },
+      "notes": [
+        "remote calibration seed: derived capture_sidecar.json corner taps from the external court_calibration.json's own image_pts/world_pts (remote's committed orchestrator re-derives calibration from manual taps; the local world keeps the trusted external calibration)",
+        "dispatched BODY stage to 34.142.232.28:/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T000923Z under scripts/gpu-eval-run.sh (shared slot lease)",
+        "remote BODY phase timing: transport=tar_batch preflight=0.339s mkdir=0.171s upload=1.429s remote_command=391.335s download=2.126s upload_bytes=18264520 download_bytes=37163815",
+        "fetched BODY default artifacts only; smpl_motion.json and body_mesh.json were not built on the VM (speed default; rerun with --fetch-body-monoliths to produce them)",
+        "fetched body_mesh_index/ windowed mesh directory for replay review; not a BODY verification claim",
+        "synced back: version_stamp.json, remote_version_verification.json, skeleton3d.json, body_compute_execution.json, body_mesh_readiness.json, body_joint_quality.json, body_full_clip_gate.json, body_grounding_quality.json, body_serialization_timing.json, body_stage_phase_timing.json, sam3d_keypoints_2d.json, sam3d_tier2_config.json, sam3d_body_input_prep.json, remote_sam3d_tier2_dispatch_config.json, contact_splice.json, frame_compute_plan.json, wrist_velocity_peaks.json, ball_inflections.json, contact_windows.json, pipeline_run.json, body_mesh_index/",
+        "remote BODY result is skeleton-level only with no smpl_motion.json; retained as a low-confidence SAM-3D BODY skeleton and not claimed as mesh output"
+      ],
+      "stage": "body",
+      "status": "ran",
+      "trust_badge": "low_confidence",
+      "wall_seconds": 396.499
+    },
+    {
+      "artifacts": [],
+      "metrics": {
+        "same_pass_track_rewrite_disabled": true
+      },
+      "notes": [
+        "same-pass post-BODY placement_refine is disabled by R3; SAM3D foot pixels may only feed a second pass before a fresh BODY run, never an in-place tracks.json rewrite before world build"
+      ],
+      "stage": "placement_refine",
+      "status": "skipped",
+      "trust_badge": null,
+      "wall_seconds": 0.0
+    },
+    {
+      "artifacts": [
+        "body_grounding_refinement.json"
+      ],
+      "metrics": {
+        "correction_magnitude_m": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "rms": 0.0,
+          "warn_count": 0
+        },
+        "phase_count": 0,
+        "policy_note": "render-honest estimated grounding, not gate evidence",
+        "status": "skipped_no_contact_phases"
+      },
+      "notes": [
+        "grounding_refine skipped_no_contact_phases: zero contact phases detected, so BODY/skeleton artifacts passed through untouched",
+        "render-honest estimated grounding, not gate evidence"
+      ],
+      "stage": "grounding_refine",
+      "status": "skipped",
+      "trust_badge": null,
+      "wall_seconds": 0.0
+    },
+    {
+      "artifacts": [
+        "racket_pose_estimate.json"
+      ],
+      "metrics": {
+        "paddle_pose": {
+          "artifact_type": "racketsport_racket_pose_estimate",
+          "band_distribution": {
+            "contact_locked": 0,
+            "grip_extrapolated": 0,
+            "palm_fitted": 705
+          },
+          "blockers": [],
+          "coverage": {
+            "estimate_frame_count": 705,
+            "hidden_frame_count": 0,
+            "input_player_count": 4
+          },
+          "evidence_channels": {
+            "detector_box_handedness_enabled": false,
+            "detector_boxes_enabled": false,
+            "reflection_contacts_available": false,
+            "reflection_enabled": true
+          },
+          "not_for_detection_metrics": true,
+          "render_only": true,
+          "rkt_gate_unscoreable": true,
+          "source": "wrist_palm_grip_fused",
+          "status": "preview",
+          "trusted_for_rkt_promotion": false,
+          "warnings": [
+            "fused_estimate_render_only_not_rkt_gate",
+            "rkt_gate_unscoreable_without_true_corner_gt",
+            "reflection_channel_dormant_no_usable_ball_contacts",
+            "no_contact_locked_frames_emitted"
+          ]
+        }
+      },
+      "notes": [
+        "built render-only fused wrist+palm+grip paddle estimate before world assembly",
+        "RKT remains unverified: racket_pose_estimate.json is estimated preview evidence, not a promotion artifact",
+        "no detector-box sidecar found; estimator used SAM-3D wrist/palm/grip evidence only"
+      ],
+      "stage": "paddle_pose",
+      "status": "ran",
+      "trust_badge": "low_confidence",
+      "wall_seconds": 0.45
+    },
+    {
+      "artifacts": [
+        "virtual_world.json",
+        "trust_bands.json"
+      ],
+      "metrics": {
+        "ambiguous_paddle_frame_count": 0,
+        "approx_ball_frame_count": 13,
+        "ball_frame_count": 300,
+        "floor_contact_player_frame_count": 0,
+        "floor_placed_player_frame_count": 705,
+        "joint_player_frame_count": 705,
+        "max_abs_floor_offset_m": 0.0,
+        "max_floor_penetration_m": 0.0,
+        "mesh_player_count": 0,
+        "mesh_player_frame_count": 0,
+        "paddle_frame_count": 705,
+        "paddle_player_count": 4,
+        "physics_modes": [],
+        "player_count": 4,
+        "temporal_coverage": {
+          "ball": {
+            "coverage_fraction": 1.0,
+            "frame_span": 10.0,
+            "max_t": 9.966667,
+            "min_t": 0.0
+          },
+          "clip_frame_span": 10.0,
+          "clip_max_t": 9.966667,
+          "clip_min_t": 0.0,
+          "players": [
+            {
+              "coverage_fraction": 0.806667,
+              "frame_span": 8.066667,
+              "max_t": 9.966667,
+              "min_t": 1.933333,
+              "no_data_frame_count": 86,
+              "observed_frame_count": 158,
+              "player_id": 19
+            },
+            {
+              "coverage_fraction": 0.503333,
+              "frame_span": 5.033333,
+              "max_t": 9.966667,
+              "min_t": 4.966667,
+              "no_data_frame_count": 93,
+              "observed_frame_count": 151,
+              "player_id": 20
+            },
+            {
+              "coverage_fraction": 0.783333,
+              "frame_span": 7.833333,
+              "max_t": 9.966667,
+              "min_t": 2.166667,
+              "no_data_frame_count": 85,
+              "observed_frame_count": 159,
+              "player_id": 21
+            },
+            {
+              "coverage_fraction": 0.813333,
+              "frame_span": 8.133333,
+              "max_t": 9.966667,
+              "min_t": 1.866667,
+              "no_data_frame_count": 7,
+              "observed_frame_count": 237,
+              "player_id": 22
+            }
+          ]
+        },
+        "track_only_player_frame_count": 0,
+        "warnings": [
+          "missing_embedded_mesh_vertices"
+        ]
+      },
+      "notes": [
+        "assembled virtual_world.json with per-entity trust bands (never invented; read from real upstream state)"
+      ],
+      "stage": "world",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 1.124
+    },
+    {
+      "artifacts": [
+        "confidence_gated_world.json",
+        "confidence_gate_summary.json"
+      ],
+      "metrics": {
+        "calibration_curves": "/home/arnavchokshi/coldstart_20260706/repo/runs/waveb_confidence_gate_20260702T183158Z/calibration_curves.json",
+        "counts_by_entity_band": {
+          "ball": {
+            "measured": 236,
+            "physics_predicted": 13,
+            "physics_predicted_low": 51
+          },
+          "paddle": {
+            "measured": 500,
+            "physics_predicted_low": 205
+          },
+          "player_joints": {
+            "measured": 702,
+            "physics_predicted_low": 274
+          }
+        },
+        "outdoor_indoor_labels_read": false,
+        "protected_eval_labels_used": false
+      },
+      "notes": [
+        "applied Wave-B confidence gate additively; raw virtual_world.json remains on disk",
+        "no Outdoor/Indoor labels read; gate consumes run-dir artifacts only",
+        "calibration curves: /home/arnavchokshi/coldstart_20260706/repo/runs/waveb_confidence_gate_20260702T183158Z/calibration_curves.json",
+        "absent PHYS artifact(s) passed through with provenance where possible: physics_footlock.json"
+      ],
+      "stage": "confidence_gate",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 0.873
+    },
+    {
+      "artifacts": [],
+      "metrics": {},
+      "notes": [
+        "unexpected ValueError: virtual_world file is outside Vite allow root /home/arnavchokshi/coldstart_20260706/repo: /mnt/ns06-scratch/runs/cpu_control_2/wolverine_mixed_0200_mid_steep_corner/confidence_gated_world.json",
+        "Traceback (most recent call last):\n  File \"/home/arnavchokshi/coldstart_20260706/repo/threed/racketsport/replay_viewer_manifest.py\", line 201, in _require_within_vite_allow_root\n    path.relative_to(allow_root)\n  File \"/usr/lib/python3.10/pathlib.py\", line 818, in relative_to\n    raise ValueError(\"{!r} is not in the subpath of {!r}\"\nValueError: '/mnt/ns06-scratch/runs/cpu_control_2/wolverine_mixed_0200_mid_steep_corner/confidence_gated_world.json' is not in the subpath of '/home/arnavchokshi/coldstart_20260706/repo' OR one path is relative and the other is absolute.\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/home/arnavchokshi/coldstart_20260706/repo/scripts/racketsport/process_video.py\", line 735, in _run_stage_safely\n    outcome = fn()\n  File \"/home/arnavchokshi/coldstart_20260706/repo/scripts/racketsport/process_video.py\", line 3408, in _stage_manifest\n    manifest = build_replay_viewer_manifest(\n  File \"/home/arnavchokshi/coldstart_20260706/repo/threed/racketsport/replay_viewer_manifest.py\", line 54, in build_replay_viewer_manifest\n    virtual_world = _existing_file(virtual_world_path, \"virtual_world\", allow_root=allow_root)\n  File \"/home/arnavchokshi/coldstart_20260706/repo/threed/racketsport/replay_viewer_manifest.py\", line 183, in _existing_file\n    _require_within_vite_allow_root(file_path, field=field, allow_root=allow_root)\n  File \"/home/arnavchokshi/coldstart_20260706/repo/threed/racketsport/replay_viewer_manifest.py\", line 203, in _require_within_vite_allow_root\n    raise ValueError(f\"{field} file is outside Vite allow root {allow_root}: {path}\") from exc\nValueError: virtual_world file is outside Vite allow root /home/arnavchokshi/coldstart_20260706/repo: /mnt/ns06-scratch/runs/cpu_control_2/wolverine_mixed_0200_mid_steep_corner/confidence_gated_world.json\n"
+      ],
+      "stage": "manifest",
+      "status": "degraded",
+      "trust_badge": null,
+      "wall_seconds": 0.001
+    },
+    {
+      "artifacts": [
+        "match_stats.json"
+      ],
+      "metrics": {
+        "body_court_only": true,
+        "consumer_only": true,
+        "player_count": 4,
+        "world_jump_count": 0
+      },
+      "notes": [
+        "computed BODY+COURT-only match_stats.json as a post-hoc consumer; stats are not a pipeline blocker",
+        "ball, paddle, rally, shot, contact, and ball-speed stats remain excluded"
+      ],
+      "stage": "match_stats",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 0.213
+    }
+  ],
+  "status": "partial",
+  "trust_bands": {
+    "ball": {
+      "badge": "low_confidence",
+      "evidence_path": "/mnt/ns06-scratch/runs/cpu_control_2/wolverine_mixed_0200_mid_steep_corner/ball_track.json",
+      "gate_id": "ball_m1_f1_at_20_gate",
+      "gate_status": "0/8 milestones pass",
+      "reason": "BALL track source is wasb; the M1 gate (F1@20>=0.90, recall@20>=0.75, hidden-FP<=0.05) has not passed for any milestone (0/8 per MASTER_PLAN.md); treat ball position as a rough cue, not a verified track.",
+      "stage": "BALL"
+    },
+    "body": {
+      "badge": "low_confidence",
+      "evidence_path": "/mnt/ns06-scratch/runs/cpu_control_2/wolverine_mixed_0200_mid_steep_corner/body_full_clip_gate.json",
+      "gate_id": "full_clip_body_gate",
+      "gate_status": "structural_only",
+      "reason": "remote A100 BODY run (/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T000923Z) came back skeleton-level only without smpl_motion.json; this is treated as low-confidence SAM-3D BODY output, not a mesh claim.",
+      "stage": "BODY"
+    },
+    "court": {
+      "badge": "preview",
+      "evidence_path": "/mnt/ns06-scratch/runs/cpu_control_2/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+      "gate_id": "court_calibration_pck5px_gate",
+      "gate_status": "metric15_unverified",
+      "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=warn, metric_confidence=low, reasons=reprojection_high, single_view_planar_full_calibration, distortion_model=zero_distortion_grid_search_focal, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+      "stage": "CAL"
+    },
+    "racket_pose_estimate": {
+      "badge": "low_confidence",
+      "gate_id": "wrist_palm_grip_fused_estimated_paddle",
+      "gate_status": "estimated_from_wrist",
+      "reason": "Fused wrist+palm+grip-transform paddle estimator: hand frames from MHR70 finger joints, constant-per-segment grip transform, optional wrist-gated external detector-box evidence and (when available) ball-reflection contacts. Render-only, estimated-class, never canonical racket_pose.json, never RKT promotion. Distinct from (and successor to) the legacy wrist_proxy estimator.",
+      "stage": "RKT",
+      "status": "estimated_from_wrist"
+    },
+    "track": {
+      "badge": "low_confidence",
+      "evidence_path": "/mnt/ns06-scratch/runs/cpu_control_2/wolverine_mixed_0200_mid_steep_corner/tracks.json",
+      "gate_id": "trk_idf1_gate",
+      "gate_status": "do_not_promote",
+      "reason": "Person-track IDF1=unknown has not cleared the per-clip gate (IDF1>=0.85, 0 ID switches, 0 spectator/off-court FP, cov4>=0.95); do_not_promote.",
+      "stage": "TRK"
+    }
+  },
+  "video": "/home/arnavchokshi/coldstart_20260706/repo/eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4",
+  "wall_seconds": 502.81
+}

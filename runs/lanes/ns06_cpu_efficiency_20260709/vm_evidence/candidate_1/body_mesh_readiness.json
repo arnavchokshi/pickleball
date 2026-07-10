@@ -1,0 +1,59 @@
+{
+  "artifact_type": "racketsport_body_mesh_readiness",
+  "blockers": [
+    "missing_world_mpjpe_gate"
+  ],
+  "body_compute_execution_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T000156Z/body_compute_execution.json",
+  "body_full_clip_gate_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T000156Z/body_full_clip_gate.json",
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "execution": {
+    "claims_accuracy_verified": false,
+    "cpu_only": true,
+    "creates_synthetic_mesh_from_joints": false,
+    "runs_body_model": false,
+    "uses_gpu": false
+  },
+  "frame_compute_plan_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T000156Z/frame_compute_plan.json",
+  "monoliths": {
+    "body_mesh_path": "",
+    "note": "not built (speed default; rerun with --fetch-body-monoliths to produce them)",
+    "smpl_motion_path": "",
+    "status": "not_built"
+  },
+  "representation_decision": "world_mesh_required_available_unverified",
+  "representation_plan": {
+    "available_joint_frame_count": 705,
+    "available_mesh_frame_count": 705,
+    "blockers": [
+      "missing_world_mpjpe_gate"
+    ],
+    "lane_a_skeleton_target_count": 0,
+    "manual_review_required_target_count": 126,
+    "requested_world_mesh_frame_count": 244,
+    "requested_world_mesh_player_target_count": 373,
+    "scheduled_world_mesh_frame_count": 244,
+    "scheduled_world_mesh_player_frame_count": 705,
+    "warnings": [
+      "mesh_not_accuracy_verified"
+    ]
+  },
+  "schema_version": 1,
+  "skeleton3d_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T000156Z/skeleton3d.json",
+  "smpl_motion_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T000156Z/smpl_motion.json",
+  "status": "mesh_available_needs_accuracy_gate",
+  "summary": {
+    "joints_frame_count": 705,
+    "joints_player_count": 4,
+    "mesh_frame_count": 705,
+    "mesh_player_count": 4,
+    "mesh_vertex_count_max": 18439,
+    "mesh_vertex_count_min": 18439,
+    "player_count": 4
+  },
+  "trusted_for_body_promotion": false,
+  "warnings": [
+    "mesh_not_accuracy_verified",
+    "body_monoliths_not_built_speed_default"
+  ],
+  "world_mesh_available": true
+}

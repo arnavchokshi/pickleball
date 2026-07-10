@@ -43,6 +43,29 @@ metrics on its real artifact. Review then found a crafted quantization-boundary
 counterexample outside that artifact, so the unsafe matrix multiply was
 reverted and covered by a regression test before the H100 candidate run.
 
+## Final measured result
+
+The same-VM warm H100 comparison selected the vectorization plus clip-scoped
+topology interning:
+
+| Measure | Warm control | Selected final | Change |
+|---|---:|---:|---:|
+| Pipeline wall | 502.810s | 366.810s | -27.0% |
+| BODY phase | 384.035s | 241.090s | -37.2% |
+| Array-native gate feed | 147.144s | 78.071s | -46.9% |
+| Residual BODY work | 127.194s | 53.750s | -57.7% |
+| Peak BODY RSS | 15.34 GiB | 15.18 GiB | -1.0% |
+
+The vector-only intermediate reached 19.98 GiB RSS. Interning the static
+36,874-face topology removed 4.80 GiB (24.0%) from that intermediate and made
+another 49.56s of BODY work disappear. See `benchmark_results.json` and
+`REPORT.md` for exact run provenance and gates.
+
+The selected world-stage interner is automatic. The optional normalization
+interner is not yet wired because `orchestrator.py` belonged to another active
+lane; doing that after its ownership fence releases is the next safe memory
+step.
+
 ## Research-backed next order
 
 1. Eliminate CPU work before adding cores. Keep large arrays in NumPy or CUDA

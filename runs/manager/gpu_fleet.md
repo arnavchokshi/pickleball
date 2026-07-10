@@ -238,3 +238,11 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
   470.492s is scoped n=1, not a global speed promotion. Self-dispatch required H100 compute mode
   Default because the coordinator's CUDA context conflicts with Exclusive_Process; detailed import
   errors exposed that root cause. Evidence: runs/lanes/ns06_efficiency_20260709/.
+- pickleball-h100-ns06cpu-bx1 — DONE+DELETED and list-confirmed absent by 2026-07-10T00:34:37Z
+  (created 2026-07-09T23:38:34Z, <0.94h, a3-highgpu-1g H100 SPOT, zero observed
+  preemptions). NS-06 CPU/storage follow-up: same-VM warm Wolverine control 502.810s pipeline /
+  384.035s BODY phase / 15.34 GiB peak RSS; selected vector+clip-topology candidate 366.810s /
+  241.090s / 15.18 GiB, with exact 244 BODY frames / 705 player-frames and scoped BODY plus
+  grounding gates passing. Vector-only intermediate's 19.98 GiB RSS was rejected; topology
+  interning recovered 4.80 GiB and another 49.56s BODY. Compute mode Default was required for
+  self-dispatch. `VERIFIED=0`; evidence: runs/lanes/ns06_cpu_efficiency_20260709/.
