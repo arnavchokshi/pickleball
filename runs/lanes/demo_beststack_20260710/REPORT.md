@@ -95,6 +95,14 @@ pull/teardown/report only.
 `ball_arc_render.json` summary + the confidence-gate hidden bands. Follow-up: persist the verdict
 map in a world-adjacent sidecar or extend the world schema.
 
+**Run 3 result:** identical BODY failure at stride-1 on demo2 ("missing BODY frame image for
+frame 41", 485.5s total, revision 11 attested) — so the defect is NOT the stride schedule: the
+frames stage never materializes frame 41 on this cold harvest clip at any stride. Reproducible
+cold-clip frames/BODY bug with three consistent signatures; queued as the top pipeline follow-up
+(candidate interaction with the current frames materialization path; w7_critique-era rev-9 code
+handled this clip, so it is a REGRESSION window between rev-9 and current HEAD). No more reruns;
+demo2 DELETED + list-confirmed. Demo-wave GPU total: ~1.2-1.3h, ~$0.7-5.7.
+
 ## 3. Demo video
 
 Assembled from: live headless viewer captures (before/after worlds, world view), CPU overlay renders
