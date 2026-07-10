@@ -1,0 +1,24 @@
+# Unified real-court corpus statistics
+
+- Rows: 3921
+- Distinct datasets: 9
+- Labeled-keypoint histogram: {"12": 3478, "14": 408, "15": 35}
+- Protected/harvest guard images hashed: 82
+- Protected hash matches included: 0
+- Best-stack delta: none (data preparation only).
+
+## Rows by dataset
+
+- `chetan-rajagiri-9abfm__pickleball-court-v2__v1`: 35
+- `n-do-tran__pickleball-court-p3chl__v4`: 120
+- `necromancer__pickleball-court-vbmkq__v2`: 1772
+- `nigh-workspace__pickleball-court-vhpgp__v11`: 292
+- `pickleball-ball-detection__pickleball-court-keypoints-syncz__v6`: 41
+- `ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3`: 288
+- `stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1`: 285
+- `testworkspace-i8nb1__pickle-court-keypoints__v2`: 54
+- `xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10`: 1034
+
+## Split proposal
+
+{"method": "by_dataset", "rationale": "Hold out the complete xuann/testworkspace source family together to avoid family leakage. Its combined audit tags span broadcast, elevated, low, and steep viewpoints, while the remaining datasets retain elevated, steep, and broadcast training coverage. No dataset is split across train and validation.", "schema_version": 1, "source_groups": {"chetan-rajagiri-9abfm__pickleball-court-v2__v1": "chetan_court_v2", "n-do-tran__pickleball-court-p3chl__v4": "p3chl_14kp_family", "necromancer__pickleball-court-vbmkq__v2": "vbmkq_vhpgp_12kp_family", "nigh-workspace__pickleball-court-vhpgp__v11": "vbmkq_vhpgp_12kp_family", "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6": "syncz_12kp", "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3": "p3chl_14kp_family", "stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1": "stump_front_view_12kp", "testworkspace-i8nb1__pickle-court-keypoints__v2": "xuann_testworkspace_12kp_family", "xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10": "xuann_testworkspace_12kp_family"}, "train_datasets": ["chetan-rajagiri-9abfm__pickleball-court-v2__v1", "n-do-tran__pickleball-court-p3chl__v4", "necromancer__pickleball-court-vbmkq__v2", "nigh-workspace__pickleball-court-vhpgp__v11", "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6", "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3", "stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1"], "val_datasets": ["testworkspace-i8nb1__pickle-court-keypoints__v2", "xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10"]}

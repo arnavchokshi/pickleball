@@ -1,0 +1,84 @@
+{
+  "corpus_root": "runs/lanes/court_data2b_20260709/real_court_corpus_partial",
+  "label_status_counts": {
+    "reviewed_external_dataset": 3921
+  },
+  "labeled_keypoint_histogram": {
+    "12": 3478,
+    "14": 408,
+    "15": 35
+  },
+  "loaded_rows": 3921,
+  "partial_roundtrip": {
+    "frame": "frame_000001.jpg",
+    "label_file": "runs/lanes/court_data2b_20260709/real_court_corpus_partial/n-do-tran__pickleball-court-p3chl__v4__test/labels/court_keypoints.json",
+    "loader_labeled_keypoint_count": 14,
+    "loader_omits_null_channels": true,
+    "raw_null_names_after": [
+      "net_center"
+    ],
+    "raw_null_names_before": [
+      "net_center"
+    ]
+  },
+  "random_12_point_net_null_spot_proof": [
+    {
+      "dataset": "nigh-workspace__pickleball-court-vhpgp__v11",
+      "frame": "frame_000197.jpg",
+      "label_file": "runs/lanes/court_data2b_20260709/real_court_corpus_partial/nigh-workspace__pickleball-court-vhpgp__v11__train/labels/court_keypoints.json",
+      "net_channels": {
+        "net_center": null,
+        "net_left_sideline": null,
+        "net_right_sideline": null
+      }
+    },
+    {
+      "dataset": "necromancer__pickleball-court-vbmkq__v2",
+      "frame": "frame_001366.jpg",
+      "label_file": "runs/lanes/court_data2b_20260709/real_court_corpus_partial/necromancer__pickleball-court-vbmkq__v2__train/labels/court_keypoints.json",
+      "net_channels": {
+        "net_center": null,
+        "net_left_sideline": null,
+        "net_right_sideline": null
+      }
+    },
+    {
+      "dataset": "xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10",
+      "frame": "frame_000683.jpg",
+      "label_file": "runs/lanes/court_data2b_20260709/real_court_corpus_partial/xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10__train/labels/court_keypoints.json",
+      "net_channels": {
+        "net_center": null,
+        "net_left_sideline": null,
+        "net_right_sideline": null
+      }
+    },
+    {
+      "dataset": "xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10",
+      "frame": "frame_000365.jpg",
+      "label_file": "runs/lanes/court_data2b_20260709/real_court_corpus_partial/xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10__train/labels/court_keypoints.json",
+      "net_channels": {
+        "net_center": null,
+        "net_left_sideline": null,
+        "net_right_sideline": null
+      }
+    },
+    {
+      "dataset": "xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10",
+      "frame": "frame_000049.jpg",
+      "label_file": "runs/lanes/court_data2b_20260709/real_court_corpus_partial/xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10__train/labels/court_keypoints.json",
+      "net_channels": {
+        "net_center": null,
+        "net_left_sideline": null,
+        "net_right_sideline": null
+      }
+    }
+  ],
+  "schema_errors": 0,
+  "schema_version": 1,
+  "training_summary_label_buckets": {
+    "labels_external_dataset_frame_count": 3921,
+    "labels_independent_human_frames": 0,
+    "labels_static_camera_copy_frame_count": 0,
+    "labels_synthetic_frame_count": 0
+  }
+}
