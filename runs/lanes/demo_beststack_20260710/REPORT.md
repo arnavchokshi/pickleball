@@ -38,10 +38,62 @@ design.
 
 ## 2. GPU best-stack E2E (Sonnet lane demo_beststack_gpu_20260710)
 
-VM pickleball-h100-demo1 (H100 spot, w7close snapshot), cold fresh clip dirs, code = this branch.
-See `runs/lanes/demo_beststack_gpu_20260710/report.json` (main checkout) for the run attestation
-(`best_stack.resolved` revision 11 + fail_closed provenance + md5-verified pulls). RESULTS PENDING
-AT WRITING — appended below when the lane reports.
+VM pickleball-h100-demo1 (H100 spot, w7close snapshot, first-attempt ase1-b create), cold fresh
+clip dirs, VM repo checked out at this branch (0c110de verified).
+
+**Wolverine fresh cold run — COMPLETE, attested:**
+- `PIPELINE_SUMMARY.json` status `partial` (input-quality advisory degraded_input only — same as
+  every wolverine run); all substantive stages ran.
+- **Total wall 379.5s** (body 270.7s, tracking 15.8s, ball 6.4s, calibration 1.4s) — vs 489.4s
+  w7speed mean and 2141s historical: the ns06 efficiency default is live. 5.6x vs a week ago.
+- **`best_stack.resolved.manifest_revision: 11`** — the run attests it consumed tonight's stack,
+  fail-closed ball entry included. This is the per-run stack attestation the owner asked for.
+- Fresh-run fail-closed proof: `ball_arc_render.json` summary reports enabled=true, suppressed
+  segments [0, 2, 3, 4, 6, 8]; max emitted ball z 0.968m. Identical to the local re-composition —
+  reproducible.
+
+**Owner-critique 45s excerpt** — cut from the local rally parent, schema-valid tapped-corner
+calibration trio (NOT the harvest-source format that killed the last cold attempt).
+- Run 1 (zwcth45s_demo_20260710): honest PARTIAL — calibration/tracking/placement/ball/arc/world
+  all ran (the strict-schema calibration path WORKS cold now), but the manager launched it without
+  `--body-local`, so BODY degraded instantly per the RUNBOOK's documented no-default-remote-host
+  behavior → no meshes/paddle; manifest also degraded (video outside the Vite allow root).
+  Manager error, attributed; artifacts kept as evidence.
+- Run 2 (zwcth45s_demo_r2_20260710): full cold rerun with `--body-local`, video in-tree. PARTIAL,
+  454.6s, revision 11 attested; manifest fixed; but **BODY failed with a frames-schedule mismatch**:
+  "missing BODY frame image for frame 41; expected body_frames/frame_000041.jpg" — the frame plan
+  kept 658/1315 tracked frames (stride-2 schedule) while BODY iterated a frame outside the kept
+  set. Cold directory, so NOT stale-cache: a genuine scheduling defect on this clip class
+  (P0-D dependency-mismatch family; wolverine 244/705 unaffected; NEW BUG, booked as a follow-up
+  lane — candidate interaction between the bounded skeleton schedule and the BODY frame iterator
+  on non-eval cold clips).
+- Run 2 owner-clip fail-closed proof (pulled artifacts): render summary enabled=true, suppressed
+  segments [0,2,3,4,5] of 8; 58 emitted frames, max z 1.69m; gate bands 45 measured / 1279 hidden
+  on 1350 frames. The policy generalizes beyond wolverine.
+- Run 3 (zwcth45s_demo_r3_20260710): `--body-skeleton-stride 1` (the proven w7_critique config for
+  this clip class), on a second VM pickleball-h100-demo2 (us-central1-a — both ase1 H100 zones
+  STOCKOUT at attempt time) after the lane's early teardown killed the first r3. Results below.
+
+**Lane report adjudication (manager):** the GPU lane's report claims the world-overlay half of the
+fix is "only reachable via a standalone repair script, not the default pipeline". REFUTED with
+artifact evidence: the fresh pipeline-produced `confidence_gated_world.json` matches the manager's
+local overlay re-composition frame-for-frame (75 emitted / 59 measured / 224 hidden / max z
+0.968m), which is only possible if `apply_ball_track_arc_solved_overlay` ran inside the world
+stage (`build_virtual_world_state` line ~129). The lane's other findings stand, including its
+correct observation that the run-level `arc_solved_overlay` provenance block does not persist
+into the world artifact (schema drop — follow-up above), which is likely what misled it.
+Teardown-race lesson: the manager's re-scope message pointed the lane at the r1 output path;
+the lane found it complete, pulled r1+r2, and deleted the VM while the manager's r3 was
+mid-flight. Standing rule for next time: a re-scope message to a lane sharing a VM must name
+EVERY live run dir and an explicit do-not-teardown-before condition.
+Ops note: the Sonnet GPU lane went idle after the wolverine run; the manager staged inputs and
+launched both zwcth runs directly, then re-scoped the lane via queued message to
+pull/teardown/report only.
+
+**Known residual (booked):** the per-segment fail-closed verdict map does not persist into
+`virtual_world.json` (strict world schema drops the overlay block); behavior provenance lives in
+`ball_arc_render.json` summary + the confidence-gate hidden bands. Follow-up: persist the verdict
+map in a world-adjacent sidecar or extend the world schema.
 
 ## 3. Demo video
 
