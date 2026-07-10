@@ -42,3 +42,11 @@ A5 teardown list-confirmed + cost span; A6 md5 manifest of pulled artifacts.
 ## REPORT
 REPORT.md + final JSON: {objective_result, control_reproduction, probe, arms[], overlays,
 honest_issues, artifacts, cost, fleet_accounting}.
+
+## DISPATCH NOTE (manager, 2026-07-10 ~07:4x PDT)
+- Code pin: VM resets to THIS commit (git log -1 on Mac at dispatch shows it; verify it contains
+  train_court_model_v2.py with --init-from-checkpoint and --real-split-proposal).
+- Consume runs/lanes/court_train2_20260710/HANDOFF.md invocations verbatim; suggested knobs:
+  --real-weight 0.65 --synthetic-weight 0.35, --batch-size/--real-batch-size per probe VRAM,
+  epochs*steps-per-epoch = probe-derived budget.
+- Fleet at dispatch: 0/4 running (verify with the fleet-filter list before create).
