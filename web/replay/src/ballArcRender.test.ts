@@ -82,6 +82,14 @@ describe("ball arc render parser", () => {
     });
   });
 
+  it("refuses interpolation across an unbridged segment boundary", () => {
+    const parsed = parseBallArcRender(renderArtifact);
+    const left = { ...parsed.samples[1], segmentId: 1, bridge: false };
+    const right = { ...parsed.samples[2], segmentId: 2, bridge: false };
+    expect(sampleBallArcRenderAtTime([left, right], 0.15)).toBe(left);
+    expect(sampleBallArcRenderAtTime([left, right], 0.5)).toBeNull();
+  });
+
   it("suppresses render samples when the solver status is untrusted", () => {
     const parsed = parseBallArcRender({ ...renderArtifact, solver_status: "experimental_off" });
 

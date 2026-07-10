@@ -12,6 +12,7 @@ import {
   parseContactWindowsForImpacts,
   parseNetPlane,
   solverOffReadout,
+  samplesFromVirtualWorld,
   styleForBand,
   TRUSTED_BALL_ARC_SOLVER_STATUSES,
   type BallTrailSample,
@@ -38,6 +39,24 @@ function loadExperimentalOffFixture(): any {
 }
 
 describe("ball trail honesty styling", () => {
+  it("preserves physics-predicted provenance with distinct styling and HUD text", () => {
+    expect(styleForBand("physics_predicted", 0.8)).toMatchObject({
+      band: "physics_predicted",
+      label: "physics predicted",
+      linePattern: "dashed",
+    });
+    const samples = samplesFromVirtualWorld({
+      ball: { frames: [{ t: 1, conf: 0.8, visible: true, world_xyz: [0, 0, 1], confidence_provenance: { band: "physics_predicted" } }] },
+    });
+    expect(samples[0].band).toBe("physics_predicted");
+    expect(ballHudStateForTime(samples, 1).label).toBe("ball: physics predicted");
+    expect(styleForBand("physics_predicted_low", 0.9)).toMatchObject({
+      band: "physics_predicted_low",
+      label: "physics predicted low",
+      lowConfidence: true,
+    });
+  });
+
   it("maps measured, predicted, weak, and hidden bands to distinct render vocabulary", () => {
     expect(styleForBand("anchored_measured", 0.91)).toMatchObject({
       hudState: "measured",
@@ -84,6 +103,15 @@ describe("ball trail honesty styling", () => {
     ]);
     expect(trail.segments[0].style.linePattern).toBe("dashed");
     expect(trail.hiddenGapCount).toBe(1);
+  });
+
+  it("never draws across a segment change unless a trusted bridge sample is explicit", () => {
+    const samples: BallTrailSample[] = [
+      { t: 0, band: "anchored_measured", conf: 0.9, visible: true, world_xyz: [0, 0, 0], segmentId: 1 },
+      { t: 0.1, band: "anchored_measured", conf: 0.9, visible: true, world_xyz: [1, 0, 0], segmentId: 2 },
+    ];
+    expect(buildBallTrail(samples, 0.1).segments).toHaveLength(0);
+    expect(buildBallTrail([{ ...samples[0] }, { ...samples[1], bridge: true }], 0.1).segments).toHaveLength(1);
   });
 
   it("reports current HUD state with low-confidence predicted positions separated from missing ball", () => {

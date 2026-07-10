@@ -196,11 +196,12 @@ describe("view-state URL persistence", () => {
       ballDot: true,
       ballTrail: true,
       paddles: true,
+      paddleNormals: false,
       playerSkeletons: true,
       playerSolidMeshes: true,
       playerTrails: false,
       floorContactMarkers: false,
-      eventMarkers: false,
+      eventMarkers: true,
       handJointPoints: false,
       implausibleSkeletons: false,
       debugPointClouds: false,
@@ -210,7 +211,7 @@ describe("view-state URL persistence", () => {
 
   it("round-trips layer state and focus through the URL query without dropping manifest", () => {
     const state = applyViewPreset(
-      toggleViewLayer(toggleViewLayer(DEFAULT_VIEW_STATE, "playerTrails"), "eventMarkers"),
+      toggleViewLayer(DEFAULT_VIEW_STATE, "playerTrails"),
       "playerFocus",
       { playerId: 2 },
     );
@@ -290,7 +291,7 @@ describe("scene-layer consequences", () => {
     expect(snapshot.playerSolidMeshes).toMatchObject({ visible: true, objectCount: 1 });
     expect(snapshot.playerTrails).toMatchObject({ visible: false, objectCount: 0 });
     expect(snapshot.floorContactMarkers).toMatchObject({ visible: false, objectCount: 0 });
-    expect(snapshot.eventMarkers).toMatchObject({ visible: false, objectCount: 0 });
+    expect(snapshot.eventMarkers).toMatchObject({ visible: true, objectCount: 1 });
     expect(snapshot.debugPointClouds).toMatchObject({ visible: false, objectCount: 0 });
   });
 
@@ -318,14 +319,14 @@ describe("scene-layer consequences", () => {
     });
     expect(floorOn.floorContactMarkers).toMatchObject({ visible: true, objectCount: 2 });
 
-    const eventsOn = sceneLayerSnapshotForTime({
+    const eventsOff = sceneLayerSnapshotForTime({
       world: realShapedWorld,
       bodyMesh: realShapedBodyMesh,
       contactWindows: realShapedContacts,
       currentTime: 1.0,
       viewState: toggleViewLayer(DEFAULT_VIEW_STATE, "eventMarkers"),
     });
-    expect(eventsOn.eventMarkers).toMatchObject({ visible: true, objectCount: 1 });
+    expect(eventsOff.eventMarkers).toMatchObject({ visible: false, objectCount: 0 });
 
     const debugOn = sceneLayerSnapshotForTime({
       world: realShapedWorld,
@@ -335,5 +336,17 @@ describe("scene-layer consequences", () => {
       viewState: toggleViewLayer(DEFAULT_VIEW_STATE, "debugPointClouds"),
     });
     expect(debugOn.debugPointClouds).toMatchObject({ visible: true, objectCount: 1 });
+  });
+
+  it("keeps the parent skeleton layer visible when only implausible frames are explicitly enabled", () => {
+    const world = structuredClone(realShapedWorld);
+    for (const player of world.players) {
+      const frame = player.frames.find((candidate) => candidate.t === 1);
+      if (frame) frame.skeleton_implausible = true;
+    }
+    const state = toggleViewLayer(DEFAULT_VIEW_STATE, "implausibleSkeletons");
+    const snapshot = sceneLayerSnapshotForTime({ world, bodyMesh: null, contactWindows: null, currentTime: 1, viewState: state });
+    expect(snapshot.playerSkeletons.visible).toBe(true);
+    expect(snapshot.playerSkeletons.objectCount).toBe(2);
   });
 });

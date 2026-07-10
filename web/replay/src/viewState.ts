@@ -15,11 +15,13 @@ import {
   type VirtualWorldFrame,
   type VirtualWorldPlayer,
 } from "./viewerData";
+import { ballHudStateForTime, buildBallTrail, samplesFromVirtualWorld, type BallTrailSample } from "./components/modules/ballTrail";
 
 export type ViewLayerKey =
   | "ballDot"
   | "ballTrail"
   | "paddles"
+  | "paddleNormals"
   | "playerSkeletons"
   | "playerSolidMeshes"
   | "playerTrails"
@@ -41,6 +43,7 @@ export const VIEW_LAYER_DEFINITIONS: ViewLayerDefinition[] = [
   { key: "ballDot", label: "Ball", description: "3D ball dot", group: "Ball", queryToken: "ball" },
   { key: "ballTrail", label: "Ball trail", description: "Recent 3D ball path", group: "Ball", queryToken: "trail" },
   { key: "paddles", label: "Paddles", description: "Estimated paddle proxy faces", group: "Players", queryToken: "paddles" },
+  { key: "paddleNormals", label: "Paddle normals", description: "Review-only paddle direction arrows", group: "Debug", queryToken: "paddle-normals" },
   { key: "playerSkeletons", label: "Skeletons", description: "Player joint skeletons", group: "Players", queryToken: "players" },
   { key: "playerSolidMeshes", label: "Solid meshes", description: "BODY solid mesh frames", group: "Players", queryToken: "mesh" },
   { key: "playerTrails", label: "Player trails", description: "Recent player floor paths", group: "Players", queryToken: "ptrails" },
@@ -78,11 +81,12 @@ export const DEFAULT_VIEW_LAYERS: ViewLayers = {
   ballDot: true,
   ballTrail: true,
   paddles: true,
+  paddleNormals: false,
   playerSkeletons: true,
   playerSolidMeshes: true,
   playerTrails: false,
   floorContactMarkers: false,
-  eventMarkers: false,
+  eventMarkers: true,
   handJointPoints: false,
   implausibleSkeletons: false,
   debugPointClouds: false,
@@ -271,6 +275,7 @@ export function sceneLayerSnapshotForTime({
   bodyMesh,
   contactWindows,
   ballArcEventsSelected = null,
+  ballSamples,
   currentTime,
   viewState,
 }: {
@@ -278,12 +283,13 @@ export function sceneLayerSnapshotForTime({
   bodyMesh: BodyMesh | null;
   contactWindows: ContactWindows | null;
   ballArcEventsSelected?: BallArcEventsSelected | null;
+  ballSamples?: BallTrailSample[] | null;
   currentTime: number;
   viewState: ViewState;
 }): SceneLayerSnapshot {
-  const ballRenderInfo = ballRenderInfoForTime(world, currentTime);
-  const ballDotCount = ballRenderInfo.render3d || ballRenderInfo.ghost ? 1 : 0;
-  const ballTrailCount = ballTrailSegmentsForTime(world, currentTime, 0.75, ballArcEventsSelected).length;
+  const resolvedBallSamples = ballSamples ?? samplesFromVirtualWorld(world);
+  const ballDotCount = ballHudStateForTime(resolvedBallSamples, currentTime).sample ? 1 : 0;
+  const ballTrailCount = buildBallTrail(resolvedBallSamples, currentTime, { windowSeconds: 0.75 }).segments.length;
   const paddleCount = activePaddleFramesForTime(world, currentTime).length;
   const skeletonCount = world.players.filter((player) => playerHasSkeletonFrame(player, currentTime, false)).length;
   const implausibleSkeletonCount = world.players.filter((player) => playerHasSkeletonFrame(player, currentTime, true, true)).length;
@@ -299,7 +305,11 @@ export function sceneLayerSnapshotForTime({
     ballDot: layerStatus(viewState.layers.ballDot, ballDotCount),
     ballTrail: layerStatus(viewState.layers.ballTrail, ballTrailCount),
     paddles: layerStatus(viewState.layers.paddles, paddleCount),
-    playerSkeletons: layerStatus(viewState.layers.playerSkeletons, skeletonCount),
+    paddleNormals: layerStatus(viewState.layers.paddleNormals, paddleCount),
+    playerSkeletons: layerStatus(
+      viewState.layers.playerSkeletons,
+      skeletonCount + (viewState.layers.implausibleSkeletons ? implausibleSkeletonCount : 0),
+    ),
     playerSolidMeshes: layerStatus(viewState.layers.playerSolidMeshes, solidMeshCount),
     playerTrails: layerStatus(viewState.layers.playerTrails, playerTrailCount),
     floorContactMarkers: layerStatus(viewState.layers.floorContactMarkers, floorMarkerCount),

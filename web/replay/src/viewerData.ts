@@ -508,7 +508,43 @@ export type ActivePaddleFrame = {
   paddle: VirtualWorldPaddle;
   frame: VirtualWorldPaddleFrame;
   estimated: boolean;
+  staleAgeSeconds: number;
+  opacity: number;
 };
+
+export const ENTITY_HOLD_TOLERANCES_SECONDS = {
+  player: 0.12,
+  mesh: 0.15,
+  paddleFullOpacity: 0.083,
+  paddleDrop: 0.25,
+  ball: 0.12,
+} as const;
+
+export type TimeSampleResolution<T> = {
+  sample?: T;
+  staleAgeSeconds: number | null;
+  insideCoverage: boolean;
+};
+
+/** Canonical nearest-PTS resolver. Callers declare their entity-specific hold tolerance. */
+export function resolveTimeSample<T extends { t: number }>(
+  frames: readonly T[],
+  timeSeconds: number,
+  holdToleranceSeconds: number,
+): TimeSampleResolution<T> {
+  if (!frames.length) return { sample: undefined, staleAgeSeconds: null, insideCoverage: false };
+  const sorted = [...frames].sort((left, right) => left.t - right.t);
+  const insideCoverage = sorted[0].t <= timeSeconds && timeSeconds <= sorted[sorted.length - 1].t;
+  const nearest = sorted.reduce((best, frame) =>
+    Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best,
+  );
+  const staleAgeSeconds = Math.abs(nearest.t - timeSeconds);
+  return {
+    sample: staleAgeSeconds <= Math.max(0, holdToleranceSeconds) ? nearest : undefined,
+    staleAgeSeconds,
+    insideCoverage,
+  };
+}
 
 export type VirtualWorldBallFrame = {
   t: number;
@@ -1093,18 +1129,40 @@ export function parseVirtualWorld(input: unknown): VirtualWorld {
 }
 
 export function frameForTime(player: VirtualWorldPlayer, timeSeconds: number): VirtualWorldFrame | undefined {
-  if (!player.frames.length) return undefined;
-  if (!isWithinFrameRange(player.frames, timeSeconds)) return undefined;
-  return player.frames.reduce((best, frame) =>
-    Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best,
+  return resolveTimeSample(player.frames, timeSeconds, ENTITY_HOLD_TOLERANCES_SECONDS.player).sample;
+}
+
+export type PlayerPresenceState = {
+  frame?: VirtualWorldFrame;
+  missingEvidence: boolean;
+  reason: "present" | "all_null_pose" | "coverage_gap";
+  lastKnownFloor: Vec3 | null;
+  staleAgeSeconds: number | null;
+};
+
+export function playerPresenceForTime(player: VirtualWorldPlayer, timeSeconds: number): PlayerPresenceState {
+  const resolved = resolveTimeSample(player.frames, timeSeconds, ENTITY_HOLD_TOLERANCES_SECONDS.player);
+  const frame = resolved.sample;
+  const allNullPose = Boolean(
+    frame && frame.joints_world.length === 0 && frame.floor_world_xyz == null && frame.track_world_xy == null,
   );
+  const lastKnownFloor = player.frames
+    .filter((candidate) => candidate.t <= timeSeconds)
+    .sort((left, right) => right.t - left.t)
+    .map((candidate) => candidate.floor_world_xyz ?? (candidate.track_world_xy ? ([candidate.track_world_xy[0], candidate.track_world_xy[1], 0] as Vec3) : null))
+    .find((point): point is Vec3 => point !== null) ?? null;
+  return {
+    frame,
+    missingEvidence: !frame || allNullPose,
+    reason: !frame ? "coverage_gap" : allNullPose ? "all_null_pose" : "present",
+    lastKnownFloor,
+    staleAgeSeconds: resolved.staleAgeSeconds,
+  };
 }
 
 export function ballFrameForTime(world: VirtualWorld, timeSeconds: number): VirtualWorld["ball"]["frames"][number] | undefined {
   const frames = world.ball.frames.filter((frame) => frame.visible !== false && frame.world_xyz);
-  if (!frames.length) return undefined;
-  if (!isWithinFrameRange(frames, timeSeconds)) return undefined;
-  return frames.reduce((best, frame) => (Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best));
+  return resolveTimeSample(frames, timeSeconds, ENTITY_HOLD_TOLERANCES_SECONDS.ball).sample;
 }
 
 export function videoBallOverlayForTime(world: VirtualWorld, timeSeconds: number): VideoBallOverlay | null {
@@ -1262,13 +1320,18 @@ const BODY_MESH_FADE_SECONDS = 0.12;
 export function activePaddleFramesForTime(world: VirtualWorld, timeSeconds: number): ActivePaddleFrame[] {
   return world.paddles
     .map((paddle) => {
-      const frame = paddleFrameForTime(paddle, timeSeconds, world.fps);
-      if (!frame) return null;
+      const resolved = paddleFrameForTime(paddle, timeSeconds);
+      const frame = resolved.sample;
+      if (!frame || resolved.staleAgeSeconds === null) return null;
+      const opacity = paddleOpacityForStaleAge(resolved.staleAgeSeconds);
+      if (opacity <= 0) return null;
       return {
         playerId: paddle.player_id,
         paddle,
         frame,
         estimated: isEstimatedPaddleFrame(paddle, frame),
+        staleAgeSeconds: resolved.staleAgeSeconds,
+        opacity,
       };
     })
     .filter((entry): entry is ActivePaddleFrame => entry !== null);
@@ -2068,7 +2131,7 @@ function readSmplxParams(input: unknown, path: string): Record<string, number[]>
 }
 
 const BODY_MESH_INTERPOLATION_MAX_GAP_SECONDS = 0.066;
-const BODY_MESH_HOLD_MAX_GAP_SECONDS = 0.15;
+const BODY_MESH_HOLD_MAX_GAP_SECONDS = ENTITY_HOLD_TOLERANCES_SECONDS.mesh;
 const DISPLAY_FPS_MESH_MAX_GAP_SECONDS = 0.15;
 const MESH_INTERPOLATION_REASON = "client_midpoint_interpolation";
 const DISPLAY_FPS_INTERPOLATION_REASON = "user_enabled_2x_display";
@@ -2101,6 +2164,7 @@ function bodyMeshFrameForTime(player: BodyMeshPlayer, timeSeconds: number, fps: 
   const tolerance = Math.max(1 / Math.max(fps || 30, 1) * 1.5, 0.04, BODY_MESH_FADE_SECONDS);
   const first = sortedFrames[0].t;
   const last = sortedFrames[sortedFrames.length - 1].t;
+  const nearestResolution = resolveTimeSample(sortedFrames, timeSeconds, tolerance);
   if (timeSeconds < first - tolerance || timeSeconds > last + tolerance) return undefined;
 
   const exactFrame = sortedFrames.find((frame) => Math.abs(frame.t - timeSeconds) <= 1e-6);
@@ -2119,9 +2183,7 @@ function bodyMeshFrameForTime(player: BodyMeshPlayer, timeSeconds: number, fps: 
   }
   if (timeSeconds >= last) return sortedFrames[sortedFrames.length - 1];
 
-  return sortedFrames.reduce((best, frame) =>
-    Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best,
-  );
+  return nearestResolution.sample;
 }
 
 function bodyMeshInterpolationStateForPlayer(player: BodyMeshPlayer): BodyMeshInterpolationState {
@@ -2676,14 +2738,17 @@ function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
-function paddleFrameForTime(paddle: VirtualWorldPaddle, timeSeconds: number, fps: number): VirtualWorldPaddleFrame | undefined {
-  if (!paddle.frames.length) return undefined;
-  const sortedFrames = [...paddle.frames].sort((left, right) => left.t - right.t);
-  const tolerance = Math.max(1 / Math.max(fps || 30, 1) * 1.5, 0.04);
-  const first = sortedFrames[0].t;
-  const last = sortedFrames[sortedFrames.length - 1].t;
-  if (timeSeconds < first - tolerance || timeSeconds > last + tolerance) return undefined;
-  return sortedFrames.reduce((best, frame) => (Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best));
+function paddleFrameForTime(paddle: VirtualWorldPaddle, timeSeconds: number): TimeSampleResolution<VirtualWorldPaddleFrame> {
+  return resolveTimeSample(paddle.frames, timeSeconds, ENTITY_HOLD_TOLERANCES_SECONDS.paddleDrop);
+}
+
+export function paddleOpacityForStaleAge(staleAgeSeconds: number): number {
+  if (staleAgeSeconds <= ENTITY_HOLD_TOLERANCES_SECONDS.paddleFullOpacity) return 1;
+  if (staleAgeSeconds >= ENTITY_HOLD_TOLERANCES_SECONDS.paddleDrop) return 0;
+  return clamp01(
+    (ENTITY_HOLD_TOLERANCES_SECONDS.paddleDrop - staleAgeSeconds) /
+      (ENTITY_HOLD_TOLERANCES_SECONDS.paddleDrop - ENTITY_HOLD_TOLERANCES_SECONDS.paddleFullOpacity),
+  );
 }
 
 function solidMeshFrameRenderable(frame: BodyMeshFrame | undefined): frame is BodyMeshFrame {

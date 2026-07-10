@@ -18,8 +18,10 @@ import { BallHonestyHud } from "./components/modules/BallHonestyHud";
 import { BallTrailLayer } from "./components/modules/BallTrailLayer";
 import { ImpactMarkers } from "./components/modules/ImpactMarkers";
 import {
+  ballHudStateForTime,
   parseAutoBounceCandidates,
   parseBallTrailArtifact,
+  samplesFromVirtualWorld,
   type BallTrailArtifact,
   type BounceCandidate,
 } from "./components/modules/ballTrail";
@@ -69,6 +71,7 @@ import {
   parseViewerManifest,
   parseVirtualWorld,
   activePaddleFramesForTime,
+  playerPresenceForTime,
   playerTrailPointsForTime,
   playerCoverageStats,
   resolveBodyMeshAssetUrl,
@@ -86,7 +89,6 @@ import {
   type ActiveBodyMeshFrame,
   type ActivePaddleFrame,
   type BallArcEventsSelected,
-  type BallGhostMarker,
   type BallInflections,
   type BodyMesh,
   type BodyMeshDebugSnapshot,
@@ -332,6 +334,12 @@ export function bodyMeshOpacityFromBlendWeight(
   return (0.26 + Math.max(0, Math.min(1, frame.blend_weight)) * 0.42) * Math.max(0, Math.min(1, presenceOpacity));
 }
 
+export function adjacentBodyMeshWindow(index: BodyMeshIndex, activeWindowId: number, direction: 1 | -1) {
+  const windows = [...index.windows].sort((left, right) => left.t0 - right.t0);
+  const activeIndex = windows.findIndex((window) => window.source_window_index === activeWindowId);
+  return activeIndex < 0 ? null : windows[activeIndex + direction] ?? null;
+}
+
 export type BodyMeshTrustMaterial = {
   fillColor: string;
   emissiveColor: string;
@@ -340,7 +348,7 @@ export type BodyMeshTrustMaterial = {
 };
 
 export function bodyMeshMaterialForTrustBadge(badge: TrustBadge | undefined): BodyMeshTrustMaterial {
-  if (badge === "preview") {
+  if (badge === undefined || badge === "preview") {
     return { fillColor: "#ffb454", emissiveColor: "#5a3500", opacityScale: 0.62, label: "estimated" };
   }
   if (badge === "low_confidence") {
@@ -530,6 +538,7 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(initialTime);
   const [videoDuration, setVideoDuration] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [capabilityErrors, setCapabilityErrors] = useState<Record<string, string>>({});
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>("broadcast");
   const [replayViewMode, setReplayViewMode] = useState<ReplayViewMode>(() => replayViewFromSearch(window.location.search));
   const [cameraResetToken, setCameraResetToken] = useState(0);
@@ -541,6 +550,7 @@ export default function App() {
   const bodyMeshChunkCacheRef = useRef<Map<number, BodyMesh>>(new Map());
   const bodyMeshChunkInflightRef = useRef<Map<number, Promise<BodyMesh>>>(new Map());
   const currentTimeRef = useRef(0);
+  const playbackDirectionRef = useRef<1 | -1>(1);
   const preferredInitialTimeRef = useRef(initialTime);
   const cameraDragSeqRef = useRef(0);
   const initialSeekAppliedRef = useRef(false);
@@ -568,6 +578,7 @@ export default function App() {
       setDisplayFpsData(null);
       setDisplayFpsProcessing(false);
       setLoadError(null);
+      setCapabilityErrors({});
       return;
     }
     const resolvedManifestUrl = manifestUrl;
@@ -576,29 +587,35 @@ export default function App() {
       try {
         const manifestPayload = parseViewerManifest(await fetchJson(resolvedManifestUrl));
         const worldPayload = parseVirtualWorld(await fetchJson(manifestPayload.virtual_world_url));
+        const optionalErrors: Record<string, string> = {};
+        const recordOptionalError = (capability: string, error: unknown) => {
+          optionalErrors[capability] = error instanceof Error ? error.message : String(error);
+        };
         const reviewStartTime = hasExplicitInitialTime ? initialTime : defaultReviewStartTime(worldPayload);
         const firstOverlay = manifestPayload.label_overlays.find((overlay) => overlay.kind === "player_boxes");
-        const labelPayload = firstOverlay ? await fetchJson(firstOverlay.url) : null;
+        const labelPayload = firstOverlay
+          ? await loadOptionalArtifact("player labels", () => fetchJson(firstOverlay.url), recordOptionalError)
+          : null;
         const physicsPayload = manifestPayload.physics_refinement_url
-          ? parsePhysicsRefinement(await fetchJson(manifestPayload.physics_refinement_url))
+          ? await loadOptionalArtifact("physics", async () => parsePhysicsRefinement(await fetchJson(manifestPayload.physics_refinement_url!)), recordOptionalError)
           : null;
         const contactPayload = manifestPayload.contact_windows_url
-          ? parseContactWindows(await fetchJson(manifestPayload.contact_windows_url))
+          ? await loadOptionalArtifact("contacts", async () => parseContactWindows(await fetchJson(manifestPayload.contact_windows_url!)), recordOptionalError)
           : null;
         const ballInflectionsPayload = manifestPayload.ball_inflections_url
-          ? parseBallInflections(await fetchJson(manifestPayload.ball_inflections_url))
+          ? await loadOptionalArtifact("ball inflections", async () => parseBallInflections(await fetchJson(manifestPayload.ball_inflections_url!)), recordOptionalError)
           : null;
         const ballArcEventsSelectedPayload = manifestPayload.events_selected_url
-          ? parseBallArcEventsSelected(await fetchJson(manifestPayload.events_selected_url))
+          ? await loadOptionalArtifact("selected events", async () => parseBallArcEventsSelected(await fetchJson(manifestPayload.events_selected_url!)), recordOptionalError)
           : null;
         const reviewedBouncesPayload = manifestPayload.reviewed_bounces_url
-          ? parseReviewedBounces(await fetchJson(manifestPayload.reviewed_bounces_url))
+          ? await loadOptionalArtifact("reviewed bounces", async () => parseReviewedBounces(await fetchJson(manifestPayload.reviewed_bounces_url!)), recordOptionalError)
           : null;
         const rallySpansPayload = manifestPayload.rally_spans_url
-          ? parseRallySpans(await fetchJson(manifestPayload.rally_spans_url))
+          ? await loadOptionalArtifact("rally spans", async () => parseRallySpans(await fetchJson(manifestPayload.rally_spans_url!)), recordOptionalError)
           : null;
         const replayScenePayload = manifestPayload.replay_scene_url
-          ? parseReplayScene(await fetchJson(manifestPayload.replay_scene_url))
+          ? await loadOptionalArtifact("replay scene", async () => parseReplayScene(await fetchJson(manifestPayload.replay_scene_url!)), recordOptionalError)
           : null;
         let bodyMeshIndexPayload: BodyMeshIndex | null = null;
         let bodyMeshFacesPayload: BodyMeshFaces | null = null;
@@ -611,29 +628,40 @@ export default function App() {
           } catch (error) {
             warnBodyMeshFailure({ stage: "index", url: indexUrl, error });
             if (!cancelled) setBodyMeshLoadStatus(meshFailureStatus("index", indexUrl, error));
-            throw error;
+            recordOptionalError("body mesh index", error);
           }
-          const facesUrl = resolveBodyMeshAssetUrl(indexUrl, bodyMeshIndexPayload.faces_url);
-          try {
-            bodyMeshFacesPayload = parseBodyMeshFaces(await fetchJson(facesUrl));
-          } catch (error) {
-            warnBodyMeshFailure({ stage: "faces", url: facesUrl, error });
-            if (!cancelled) setBodyMeshLoadStatus(meshFailureStatus("faces", facesUrl, error));
-            throw error;
+          if (bodyMeshIndexPayload) {
+            const facesUrl = resolveBodyMeshAssetUrl(indexUrl, bodyMeshIndexPayload.faces_url);
+            try {
+              bodyMeshFacesPayload = parseBodyMeshFaces(await fetchJson(facesUrl));
+            } catch (error) {
+              warnBodyMeshFailure({ stage: "faces", url: facesUrl, error });
+              if (!cancelled) setBodyMeshLoadStatus(meshFailureStatus("faces", facesUrl, error));
+              recordOptionalError("body mesh faces", error);
+            }
           }
         }
         const coachingFactsUrl = coachingFactsUrlFromSearch(window.location.search, manifestPayload);
-        const coachingFactsPayload = coachingFactsUrl ? parseCoachingCardFacts(await fetchJson(coachingFactsUrl)) : null;
-        const shotsPayload = manifestPayload.shots_url ? parseShots(await fetchJson(manifestPayload.shots_url)) : null;
-        const ballArcSolvedJson = manifestPayload.ball_arc_solved_url ? await fetchJson(manifestPayload.ball_arc_solved_url) : null;
-        const ballArcSolvedPayload = ballArcSolvedJson ? parseBallArcSolved(ballArcSolvedJson) : null;
-        const ballTrailArtifactPayload = ballArcSolvedJson ? parseBallTrailArtifact(ballArcSolvedJson) : null;
+        const coachingFactsPayload = coachingFactsUrl
+          ? await loadOptionalArtifact("coaching facts", async () => parseCoachingCardFacts(await fetchJson(coachingFactsUrl)), recordOptionalError)
+          : null;
+        const shotsPayload = manifestPayload.shots_url
+          ? await loadOptionalArtifact("shots", async () => parseShots(await fetchJson(manifestPayload.shots_url!)), recordOptionalError)
+          : null;
+        const ballArcPayload = manifestPayload.ball_arc_solved_url
+          ? await loadOptionalArtifact("ball arc solve", async () => {
+              const json = await fetchJson(manifestPayload.ball_arc_solved_url!);
+              return { solved: parseBallArcSolved(json), trail: parseBallTrailArtifact(json) };
+            }, recordOptionalError)
+          : null;
+        const ballArcSolvedPayload = ballArcPayload?.solved ?? null;
+        const ballTrailArtifactPayload = ballArcPayload?.trail ?? null;
         const ballArcRenderPayload = manifestPayload.ball_arc_render_url
-          ? parseBallArcRender(await fetchJson(manifestPayload.ball_arc_render_url))
+          ? await loadOptionalArtifact("ball arc render", async () => parseBallArcRender(await fetchJson(manifestPayload.ball_arc_render_url!)), recordOptionalError)
           : null;
         const autoBounceCandidatesUrl = manifestPayload.auto_bounce_candidates_url ?? manifestPayload.ball_bounce_candidates_url ?? null;
         const autoBounceCandidatesPayload = autoBounceCandidatesUrl
-          ? parseAutoBounceCandidates(await fetchJson(autoBounceCandidatesUrl))
+          ? (await loadOptionalArtifact("bounce candidates", async () => parseAutoBounceCandidates(await fetchJson(autoBounceCandidatesUrl)), recordOptionalError)) ?? []
           : [];
         if (cancelled) return;
         setManifest(manifestPayload);
@@ -661,6 +689,7 @@ export default function App() {
         setBodyMeshLoadStatus(bodyMeshIndexPayload ? meshLoadStatus("index_ready", { stage: "index" }) : INITIAL_BODY_MESH_STATUS);
         setReplayScene(replayScenePayload);
         setLoadError(null);
+        setCapabilityErrors(optionalErrors);
       } catch (error) {
         if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error));
       }
@@ -747,7 +776,7 @@ export default function App() {
       .then((chunk) => {
         bodyMeshChunkInflightRef.current.delete(cacheKey);
         bodyMeshChunkCacheRef.current.set(cacheKey, chunk);
-        while (bodyMeshChunkCacheRef.current.size > 2) {
+        while (bodyMeshChunkCacheRef.current.size > 6) {
           const oldest = bodyMeshChunkCacheRef.current.keys().next().value;
           if (oldest === undefined) break;
           bodyMeshChunkCacheRef.current.delete(oldest);
@@ -768,6 +797,33 @@ export default function App() {
     return () => {
       cancelled = true;
     };
+  }, [bodyMeshFaces, bodyMeshIndex, currentTime, manifest?.body_mesh_index_url]);
+
+  useEffect(() => {
+    const indexUrl = manifest?.body_mesh_index_url;
+    if (!indexUrl || !bodyMeshIndex || !bodyMeshFaces) return;
+    if (currentTime !== currentTimeRef.current) playbackDirectionRef.current = currentTime >= currentTimeRef.current ? 1 : -1;
+    const activeWindow = bodyMeshIndexWindowForTime(bodyMeshIndex, currentTime);
+    const adjacent = activeWindow
+      ? adjacentBodyMeshWindow(bodyMeshIndex, activeWindow.source_window_index, playbackDirectionRef.current)
+      : null;
+    if (!adjacent) return;
+    const key = adjacent.source_window_index;
+    if (bodyMeshChunkCacheRef.current.has(key) || bodyMeshChunkInflightRef.current.has(key)) return;
+    const inflight = fetchBodyMeshChunk(indexUrl, bodyMeshIndex, adjacent, bodyMeshFaces);
+    bodyMeshChunkInflightRef.current.set(key, inflight);
+    void inflight.then((chunk) => {
+      bodyMeshChunkInflightRef.current.delete(key);
+      bodyMeshChunkCacheRef.current.set(key, chunk);
+      while (bodyMeshChunkCacheRef.current.size > 6) {
+        const oldest = bodyMeshChunkCacheRef.current.keys().next().value;
+        if (oldest === undefined) break;
+        bodyMeshChunkCacheRef.current.delete(oldest);
+      }
+    }).catch((error) => {
+      bodyMeshChunkInflightRef.current.delete(key);
+      warnBodyMeshFailure({ stage: "chunk", url: resolveBodyMeshAssetUrl(indexUrl, adjacent.url), windowId: key, error });
+    });
   }, [bodyMeshFaces, bodyMeshIndex, currentTime, manifest?.body_mesh_index_url]);
 
   useEffect(() => {
@@ -842,6 +898,25 @@ export default function App() {
     [contactWindows, currentTime, renderBodyMesh, renderWorld],
   );
   const activePaddles = useMemo(() => activePaddleFramesForTime(world, currentTime), [currentTime, world]);
+  const ballArcRenderSamples = useMemo(() => {
+    const samples = ballArcRender?.samples ?? [];
+    const current = sampleBallArcRenderAtTime(samples, currentTime);
+    if (!current) return samples;
+    const withoutDuplicate = samples.filter((sample) => Math.abs(sample.t - current.t) > 1e-6);
+    return [...withoutDuplicate, current].sort((left, right) => left.t - right.t);
+  }, [ballArcRender, currentTime]);
+  const resolvedBallSamples = useMemo(
+    () => ballArcRenderSamples.length
+      ? ballArcRenderSamples
+      : ballTrailArtifact?.samples.length
+        ? ballTrailArtifact.samples
+        : samplesFromVirtualWorld(world),
+    [ballArcRenderSamples, ballTrailArtifact, world],
+  );
+  const playerPresenceGaps = useMemo(
+    () => world.players.filter((player) => playerPresenceForTime(player, currentTime).missingEvidence),
+    [currentTime, world.players],
+  );
   const solidGeometryCache = useMemo(() => createSolidBodyMeshGeometryCache(renderBodyMesh), [renderBodyMesh]);
   useEffect(() => () => solidGeometryCache.dispose(), [solidGeometryCache]);
   const renderedSolidMeshPlayers = useMemo(() => solidMeshRenderedPlayerCount(activeBodyMeshes), [activeBodyMeshes]);
@@ -862,6 +937,10 @@ export default function App() {
       }),
     [activeBodyMeshes, bodyMeshIndex, bodyMeshLoadStatus, currentTime, renderBodyMesh, renderWorld],
   );
+  const entityStaleReadout = useMemo(
+    () => entityStaleAgeReadout(renderWorld, activeBodyMeshes, activePaddles, resolvedBallSamples, currentTime),
+    [activeBodyMeshes, activePaddles, currentTime, renderWorld, resolvedBallSamples],
+  );
   const sceneLayers = useMemo(
     () =>
       sceneLayerSnapshotForTime({
@@ -869,15 +948,22 @@ export default function App() {
         bodyMesh: renderBodyMesh,
         contactWindows,
         ballArcEventsSelected,
+        ballSamples: resolvedBallSamples,
         currentTime,
         viewState,
       }),
-    [ballArcEventsSelected, contactWindows, currentTime, renderBodyMesh, renderWorld, viewState],
+    [ballArcEventsSelected, contactWindows, currentTime, renderBodyMesh, renderWorld, resolvedBallSamples, viewState],
   );
   const worldEventMarkers = useMemo(
     () => eventMarkersForTime(world, contactWindows, currentTime),
     [contactWindows, currentTime, world],
   );
+  const eventMarkerEmpty =
+    viewState.layers.eventMarkers &&
+    worldEventMarkers.length === 0 &&
+    autoBounceCandidates.length === 0 &&
+    (contactWindows?.events.length ?? 0) === 0 &&
+    (ballTrailArtifact?.segments.length ?? 0) === 0;
   const viewerContactPlayerIds = useMemo(
     () => contactPlayerIdsForViewer(activeContactPlayerIds, activeBodyMeshes),
     [activeContactPlayerIds, activeBodyMeshes],
@@ -887,7 +973,10 @@ export default function App() {
   const contactReadout = contactReadoutText(activeContactPlayerIds, activeBodyMeshes);
   const ballReadout = ballRenderText(ballRenderInfo.mode, videoBallOverlay);
   const warningsReadout = useMemo(() => worldWarningsReadout(world), [world]);
-  const ballCoverage = useMemo(() => ballCoverageKpiReadout(world), [world]);
+  const ballCoverage = useMemo(
+    () => ballHudStateForTime(resolvedBallSamples, currentTime).label.replace("ball: ", ""),
+    [currentTime, resolvedBallSamples],
+  );
   const timelineMarkers = useMemo(
     () => timelineMarkersFromArtifacts(contactWindows, ballInflections, reviewedBounces),
     [contactWindows, ballInflections, reviewedBounces],
@@ -910,13 +999,6 @@ export default function App() {
     () => buildShotTrailGroups(filteredShots, ballArcSolved, world),
     [ballArcSolved, filteredShots, world],
   );
-  const ballArcRenderSamples = useMemo(() => {
-    const samples = ballArcRender?.samples ?? [];
-    const current = sampleBallArcRenderAtTime(samples, currentTime);
-    if (!current) return samples;
-    const withoutDuplicate = samples.filter((sample) => Math.abs(sample.t - current.t) > 1e-6);
-    return [...withoutDuplicate, current].sort((left, right) => left.t - right.t);
-  }, [ballArcRender, currentTime]);
   const selectedShot = useMemo(
     () => (selectedShotId ? (shots?.shots ?? []).find((shot) => shot.shot_id === selectedShotId) ?? null : null),
     [selectedShotId, shots],
@@ -1045,6 +1127,7 @@ export default function App() {
         {replayLoaded ? (
           <div className="status-grid">
             <Metric label="Players" value={stats.players} />
+            <Metric label="Coverage gaps" value={`${playerPresenceGaps.length}/${world.players.length}`} />
             <Metric label="Contacts" value={contactEventCount(contactWindows)} />
             <Metric label="Ball" value={ballCoverage} />
             <Metric label="Warnings" value={warningsReadout} />
@@ -1053,7 +1136,24 @@ export default function App() {
         ) : null}
       </header>
 
+      {replayLoaded ? (
+        <div className="entity-trust-strip" aria-label="Entity trust badges">
+          <PlayerTrustBandPanels players={world.players} />
+          <TrustBandPanel label="Ball" trustBand={world.ball.trust_band} />
+          {world.paddles.map((paddle) => (
+            <TrustBandPanel key={`paddle-${paddle.player_id}`} label={`Paddle ${paddle.player_id} (preview)`} trustBand={paddle.trust_band} />
+          ))}
+        </div>
+      ) : null}
+
       {loadError ? <p className="load-error">{loadError}</p> : null}
+      {Object.keys(capabilityErrors).length ? (
+        <div className="capability-error-strip" aria-label="Missing optional capabilities">
+          {Object.entries(capabilityErrors).map(([capability, reason]) => (
+            <span key={capability} className="trust-badge-chip preview" title={reason}>{capability}: missing</span>
+          ))}
+        </div>
+      ) : null}
 
       <UploadPanel />
 
@@ -1246,11 +1346,25 @@ export default function App() {
                   viewState={viewState}
                   onSelectPlayer={focusPlayer}
                 />
-                {sceneLayers.paddles.visible ? <Paddles paddles={activePaddles} viewState={viewState} onSelectPlayer={focusPlayer} /> : null}
-                {sceneLayers.playerSolidMeshes.visible ? (
-                  <SolidBodyMeshes meshes={activeBodyMeshes} geometryCache={solidGeometryCache} viewState={viewState} onSelectPlayer={focusPlayer} />
+                {sceneLayers.paddles.visible ? (
+                  <Paddles
+                    paddles={activePaddles}
+                    showNormals={viewState.layers.paddleNormals}
+                    viewState={viewState}
+                    onSelectPlayer={focusPlayer}
+                  />
                 ) : null}
-                {sceneLayers.eventMarkers.visible ? (
+                {viewState.layers.playerSolidMeshes ? (
+                  <SolidBodyMeshes
+                    meshes={activeBodyMeshes}
+                    world={renderWorld}
+                    currentTime={currentTime}
+                    geometryCache={solidGeometryCache}
+                    viewState={viewState}
+                    onSelectPlayer={focusPlayer}
+                  />
+                ) : null}
+                {viewState.layers.eventMarkers ? (
                   <ImpactMarkers
                     world={world}
                     arcSolved={ballTrailArtifact}
@@ -1261,9 +1375,7 @@ export default function App() {
                 ) : null}
                 {sceneLayers.ballTrail.visible || sceneLayers.ballDot.visible ? (
                   <BallTrailLayer
-                    world={ballArcRenderSamples.length ? null : world}
-                    samples={ballArcRenderSamples.length ? ballArcRenderSamples : null}
-                    arcSolved={ballTrailArtifact}
+                    samples={resolvedBallSamples}
                     currentTime={currentTime}
                     showTrail={sceneLayers.ballTrail.visible}
                     showBall={sceneLayers.ballDot.visible}
@@ -1274,15 +1386,26 @@ export default function App() {
             )}
           </Canvas>
           <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 2, pointerEvents: "none" }}>
-            <BallHonestyHud world={world} arcSolved={ballTrailArtifact} currentTime={currentTime} />
+            <BallHonestyHud
+              samples={resolvedBallSamples}
+              arcSolved={ballArcRenderSamples.length ? null : ballTrailArtifact}
+              currentTime={currentTime}
+            />
           </div>
           {coverageGapActive ? <div className="world-warning">No player artifact coverage after {coverage.lastTime?.toFixed(2)}s</div> : null}
+          {playerPresenceGaps.length ? (
+            <div className="player-gap-strip" aria-label="Player coverage gaps">
+              {playerPresenceGaps.map((player) => <span key={player.id}>Player {player.id}: no detection</span>)}
+            </div>
+          ) : null}
+          {eventMarkerEmpty ? <div className="event-empty-reason">Events: no marker evidence at this time</div> : null}
           {sceneLayers.debugPointClouds.visible ? <MeshDebugReadout snapshot={meshDebugSnapshot} /> : null}
           <div className="world-mini-readout">
             <span>{CAMERA_PRESET_LABELS[cameraPreset]}</span>
             <span>{solidMeshTileValue}</span>
             <span>{meshInterpolationReadout}</span>
             {displayFpsEnabled ? <span>{displayFpsControlReadout}</span> : null}
+            {sceneLayers.debugPointClouds.visible ? <span data-entity-stale-ages>{entityStaleReadout}</span> : null}
           </div>
           <CameraDragPads onDrag={applyCameraDrag} onReset={() => selectCameraPreset(cameraPreset)} />
           </>
@@ -1302,6 +1425,25 @@ function Metric({ label, value }: { label: string; value: number | string }) {
       <dd>{value}</dd>
     </div>
   );
+}
+
+export function entityStaleAgeReadout(
+  world: VirtualWorld,
+  meshes: ActiveBodyMeshFrame[],
+  paddles: ActivePaddleFrame[],
+  ballSamples: Array<{ t: number }>,
+  currentTime: number,
+): string {
+  const players = world.players.map((player) => {
+    const age = playerPresenceForTime(player, currentTime).staleAgeSeconds;
+    return `P${player.id}:${age === null ? "missing" : `${age.toFixed(3)}s`}`;
+  });
+  const meshAges = meshes.map((mesh) => `M${mesh.playerId}:${Math.abs(currentTime - mesh.frame.t).toFixed(3)}s`);
+  const paddleAges = paddles.map((paddle) => `R${paddle.playerId}:${paddle.staleAgeSeconds.toFixed(3)}s`);
+  const ballAge = ballSamples.length
+    ? Math.min(...ballSamples.map((sample) => Math.abs(currentTime - sample.t))).toFixed(3) + "s"
+    : "missing";
+  return [...players, ...meshAges, ...paddleAges, `B:${ballAge}`].join(" ");
 }
 
 export function RecentRunSwitcher({
@@ -2089,12 +2231,14 @@ function Players({
   return (
     <>
       {world.players.map((player) => {
-        const frame = frameForTime(player, currentTime);
+        const presence = playerPresenceForTime(player, currentTime);
+        const frame = presence.frame;
         return (
           <Player
             key={player.id}
             player={player}
             frame={frame}
+            presence={presence}
             isBallContactActive={activeContactPlayerIds.has(player.id)}
             showSkeletons={showSkeletons}
             showImplausibleSkeletons={showImplausibleSkeletons}
@@ -2114,6 +2258,7 @@ function Players({
 function Player({
   player,
   frame,
+  presence,
   isBallContactActive,
   showSkeletons,
   showImplausibleSkeletons,
@@ -2126,6 +2271,7 @@ function Player({
 }: {
   player: VirtualWorldPlayer;
   frame?: VirtualWorldFrame;
+  presence: ReturnType<typeof playerPresenceForTime>;
   isBallContactActive: boolean;
   showSkeletons: boolean;
   showImplausibleSkeletons: boolean;
@@ -2140,7 +2286,10 @@ function Player({
   const meshPoints = vertexDebugPointsForFrame(frame, showVertexClouds, isBallContactActive ? 1800 : 850);
   const bodySkeleton = bodyJointSkeletonForFrame(frame, jointNames, { includeImplausible: showImplausibleSkeletons });
   const handPoints = handJointPointsForFrame(frame, jointNames);
-  const proxySkeleton = bodySkeleton || frame?.skeleton_implausible ? null : skeletonForFrame(frame);
+  const implausibleSuppressed = frame?.skeleton_implausible === true && !showImplausibleSkeletons;
+  const proxySkeleton = bodySkeleton || implausibleSuppressed ? null : skeletonForFrame(frame);
+  const placeholderAnchor = floor ?? presence.lastKnownFloor;
+  const showMissingPlaceholder = presence.missingEvidence || implausibleSuppressed;
   const badge = effectiveTrustBadge(player.trust_band);
   const baseColor = trustBadgeColor(badge);
   const opacityScale = focusStyle.dimmed ? 0.22 : 1;
@@ -2154,6 +2303,14 @@ function Player({
         onSelectPlayer(player.id);
       }}
     >
+      {showMissingPlaceholder && placeholderAnchor ? (
+        <NoDetectionPlaceholder
+          position={placeholderAnchor}
+          label={implausibleSuppressed ? `Player ${player.id}: implausible pose hidden` : `Player ${player.id}: no detection`}
+          color={baseColor}
+          opacity={focusStyle.dimmed ? 0.1 : 0.24}
+        />
+      ) : null}
       {showFloorMarkers && floor ? (
         <mesh position={floor} scale={[highlightScale, highlightScale, 1]}>
           <cylinderGeometry args={[0.16, 0.16, 0.025, 28]} />
@@ -2200,6 +2357,33 @@ function Player({
   );
 }
 
+function NoDetectionPlaceholder({
+  position,
+  label,
+  color,
+  opacity,
+}: {
+  position: Vec3;
+  label: string;
+  color: string;
+  opacity: number;
+}) {
+  return (
+    <group position={[position[0], position[1], 0.018]} userData={{ badge: "missing", label }}>
+      {Array.from({ length: 12 }, (_, index) => (
+        <mesh key={index} rotation={[0, 0, (index * Math.PI * 2) / 12]}>
+          <torusGeometry args={[0.22, 0.009, 5, 8, Math.PI / 12]} />
+          <meshBasicMaterial color={color} transparent opacity={opacity} depthWrite={false} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0, 0.025]}>
+        <circleGeometry args={[0.075, 20]} />
+        <meshBasicMaterial color={color} transparent opacity={opacity * 0.28} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
 function VideoBallOverlayMark({ overlay }: { overlay: VideoBallOverlay }) {
   const [cx, cy] = overlay.point;
   const classes = ["video-ball", overlay.confidenceClass, overlay.interpolated ? "interpolated" : ""].filter(Boolean).join(" ");
@@ -2216,15 +2400,24 @@ function VideoBallOverlayMark({ overlay }: { overlay: VideoBallOverlay }) {
 
 function SolidBodyMeshes({
   meshes,
+  world,
+  currentTime,
   geometryCache,
   viewState,
   onSelectPlayer,
 }: {
   meshes: ActiveBodyMeshFrame[];
+  world: VirtualWorld;
+  currentTime: number;
   geometryCache: SolidBodyMeshGeometryCache;
   viewState: ViewState;
   onSelectPlayer: (playerId: number) => void;
 }) {
+  const activePlayerIds = new Set(meshes.map((mesh) => mesh.playerId));
+  const gaps = world.players
+    .filter((player) => !activePlayerIds.has(player.id))
+    .map((player) => ({ player, presence: playerPresenceForTime(player, currentTime) }))
+    .filter(({ presence }) => presence.lastKnownFloor !== null);
   return (
     <>
       {meshes.map(({ playerId, meshPlayerId, frame, presenceOpacity, renderTranslation }) => (
@@ -2240,16 +2433,27 @@ function SolidBodyMeshes({
           onSelectPlayer={onSelectPlayer}
         />
       ))}
+      {gaps.map(({ player, presence }) => (
+        <NoDetectionPlaceholder
+          key={`mesh-gap-${player.id}`}
+          position={presence.lastKnownFloor!}
+          label={`Player ${player.id}: mesh no coverage`}
+          color="#ffb454"
+          opacity={0.16}
+        />
+      ))}
     </>
   );
 }
 
 function Paddles({
   paddles,
+  showNormals,
   viewState,
   onSelectPlayer,
 }: {
   paddles: ActivePaddleFrame[];
+  showNormals: boolean;
   viewState: ViewState;
   onSelectPlayer: (playerId: number) => void;
 }) {
@@ -2259,6 +2463,7 @@ function Paddles({
         <PaddleProxy
           key={`${paddle.playerId}-${paddle.frame.t}`}
           paddle={paddle}
+          showNormal={showNormals}
           focusStyle={entityFocusStyle(viewState, { kind: "player", playerId: paddle.playerId })}
           onSelectPlayer={onSelectPlayer}
         />
@@ -2269,10 +2474,12 @@ function Paddles({
 
 function PaddleProxy({
   paddle,
+  showNormal,
   focusStyle,
   onSelectPlayer,
 }: {
   paddle: ActivePaddleFrame;
+  showNormal: boolean;
   focusStyle: EntityFocusStyle;
   onSelectPlayer: (playerId: number) => void;
 }) {
@@ -2284,8 +2491,8 @@ function PaddleProxy({
     () => geometryFromIndexedMesh(renderGeometry.vertices, renderGeometry.faces),
     [renderGeometry.faces, renderGeometry.vertices],
   );
-  const opacity = focusStyle.dimmed ? 0.22 : focusStyle.highlighted ? 0.92 : renderGeometry.material.fillOpacity;
-  const edgeOpacity = focusStyle.dimmed ? 0.28 : focusStyle.highlighted ? 1 : renderGeometry.material.edgeOpacity;
+  const opacity = (focusStyle.dimmed ? 0.22 : focusStyle.highlighted ? 0.92 : renderGeometry.material.fillOpacity) * paddle.opacity;
+  const edgeOpacity = (focusStyle.dimmed ? 0.28 : focusStyle.highlighted ? 1 : renderGeometry.material.edgeOpacity) * paddle.opacity;
   const fillColor = focusStyle.highlighted ? "#dfff3d" : renderGeometry.material.fillColor;
   const emissiveColor = focusStyle.highlighted ? "#425800" : renderGeometry.material.emissiveColor;
   return (
@@ -2313,15 +2520,17 @@ function PaddleProxy({
         opacity={edgeOpacity}
         radius={renderGeometry.material.edgeRadiusM}
       />
-      <BoneSegments
-        points={renderGeometry.normalSegment}
-        color={renderGeometry.material.normalColor}
-        opacity={edgeOpacity}
-        radius={renderGeometry.material.normalRadiusM}
-        renderOrder={26}
-        depthTest={!renderGeometry.material.normalOverlay}
-      />
-      {renderGeometry.normalTip ? (
+      {showNormal ? (
+        <BoneSegments
+          points={renderGeometry.normalSegment}
+          color={renderGeometry.material.normalColor}
+          opacity={edgeOpacity}
+          radius={renderGeometry.material.normalRadiusM}
+          renderOrder={26}
+          depthTest={!renderGeometry.material.normalOverlay}
+        />
+      ) : null}
+      {showNormal && renderGeometry.normalTip ? (
         <mesh position={renderGeometry.normalTip} renderOrder={27}>
           <sphereGeometry args={[renderGeometry.material.normalTipRadiusM, 18, 18]} />
           <meshStandardMaterial
@@ -2566,50 +2775,6 @@ function PlayerMotionTrails({ world, currentTime, viewState }: { world: VirtualW
         );
       })}
     </>
-  );
-}
-
-function Ball({ world, currentTime, focusStyle }: { world: VirtualWorld; currentTime: number; focusStyle: EntityFocusStyle }) {
-  const info = ballRenderInfoForTime(world, currentTime);
-  if (info.ghost) return <BallGhostMarkerRing ghost={info.ghost} focusStyle={focusStyle} />;
-  if (!info.frame?.world_xyz || !info.render3d) return null;
-  const isApprox = info.mode === "court_plane_projection";
-  const badge = effectiveTrustBadge(world.ball.trust_band);
-  const isLowConfidence = badge === "low_confidence";
-  const color = isLowConfidence ? "#9aa0a8" : isApprox ? "#ffcf5a" : "#e8ff34";
-  const emissive = isLowConfidence ? "#2a2c30" : isApprox ? "#4f3f00" : "#526000";
-  const opacity = focusStyle.dimmed ? 0.24 : isLowConfidence ? 0.6 : 1;
-  const radius = focusStyle.highlighted ? 0.082 : 0.055;
-  return (
-    <group position={info.frame.world_xyz}>
-      {focusStyle.highlighted ? (
-        <mesh>
-          <sphereGeometry args={[0.15, 24, 24]} />
-          <meshStandardMaterial color="#dfff3d" emissive="#526000" transparent opacity={0.22} depthWrite={false} />
-        </mesh>
-      ) : null}
-      <mesh>
-        <sphereGeometry args={[radius, 16, 16]} />
-        <meshStandardMaterial color={color} emissive={focusStyle.highlighted ? "#9bb000" : emissive} transparent opacity={opacity} />
-      </mesh>
-    </group>
-  );
-}
-
-function BallGhostMarkerRing({ ghost, focusStyle }: { ghost: BallGhostMarker; focusStyle: EntityFocusStyle }) {
-  const opacity = focusStyle.dimmed ? 0.18 : focusStyle.highlighted ? 0.72 : 0.42;
-  const scale = focusStyle.highlighted ? 1.35 : 1;
-  return (
-    <group position={ghost.position} scale={[scale, scale, scale]} userData={{ label: ghost.label }}>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.18, 0.012, 8, 36]} />
-        <meshStandardMaterial color="#63d9ff" emissive="#10384a" transparent opacity={opacity} depthWrite={false} />
-      </mesh>
-      <mesh position={[0, 0, 0.012]} rotation={[Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.1, 0.18, 36]} />
-        <meshStandardMaterial color="#63d9ff" transparent opacity={opacity * 0.22} depthWrite={false} side={DoubleSide} />
-      </mesh>
-    </group>
   );
 }
 
@@ -3272,7 +3437,7 @@ export function paddleRenderGeometryForFrame(
   const estimated = frame.source.includes("wrist_proxy") || frame.render_only === true || frame.not_for_detection_metrics === true;
   const material = paddleRenderMaterial(estimated);
   const normalSegment = paddleFaceNormalSegment(frame);
-  if (frame.mesh_vertices_world.length > 4 && frame.mesh_faces.length > 2) {
+  if (!estimated && frame.mesh_vertices_world.length > 4 && frame.mesh_faces.length > 2) {
     return {
       vertices: frame.mesh_vertices_world,
       faces: frame.mesh_faces,
@@ -3288,16 +3453,29 @@ export function paddleRenderGeometryForFrame(
   const radius = Math.min(widthM, lengthM) * 0.18;
   const local = roundedRectanglePoints(widthM, lengthM, radius, 4);
   const center = frame.pose_se3.t;
-  const vertices: Vec3[] = [center, ...local.map(([x, y]) => transformPaddleLocalPoint(frame.pose_se3.R, center, x, y))];
+  const thicknessM = Math.max(0.008, Math.min(0.022, (dimsIn.thickness ?? 0.55) * 0.0254));
+  const frontCenter = transformPaddleLocalPoint3(frame.pose_se3.R, center, 0, 0, thicknessM / 2);
+  const backCenter = transformPaddleLocalPoint3(frame.pose_se3.R, center, 0, 0, -thicknessM / 2);
+  const front = local.map(([x, y]) => transformPaddleLocalPoint3(frame.pose_se3.R, center, x * 0.96, y * 0.96, thicknessM / 2));
+  const middle = local.map(([x, y]) => transformPaddleLocalPoint3(frame.pose_se3.R, center, x, y, 0));
+  const back = local.map(([x, y]) => transformPaddleLocalPoint3(frame.pose_se3.R, center, x * 0.96, y * 0.96, -thicknessM / 2));
+  const vertices: Vec3[] = [frontCenter, backCenter, ...front, ...middle, ...back];
   const faces: Array<[number, number, number]> = [];
-  for (let index = 1; index < vertices.length; index += 1) {
-    const next = index === vertices.length - 1 ? 1 : index + 1;
-    faces.push([0, index, next]);
+  const count = local.length;
+  const frontStart = 2;
+  const middleStart = frontStart + count;
+  const backStart = middleStart + count;
+  for (let index = 0; index < count; index += 1) {
+    const next = (index + 1) % count;
+    faces.push([0, frontStart + index, frontStart + next]);
+    faces.push([1, backStart + next, backStart + index]);
+    faces.push([frontStart + index, middleStart + index, middleStart + next], [frontStart + index, middleStart + next, frontStart + next]);
+    faces.push([middleStart + index, backStart + index, backStart + next], [middleStart + index, backStart + next, middleStart + next]);
   }
   return {
     vertices,
     faces,
-    edgeSegments: paddleEdgeSegmentsForIndexedMesh(vertices, faces),
+    edgeSegments: front.flatMap((point, index) => [point, front[(index + 1) % front.length]]),
     normalSegment,
     normalTip: normalSegment.length === 2 ? normalSegment[1] : null,
     estimated,
@@ -3312,9 +3490,9 @@ function paddleRenderMaterial(estimated: boolean) {
         emissiveColor: "#5a3500",
         edgeColor: "#2a1700",
         normalColor: "#23c9ff",
-        fillOpacity: 0.84,
+        fillOpacity: 0.58,
         edgeOpacity: 0.95,
-        edgeRadiusM: 0.014,
+        edgeRadiusM: 0.009,
         normalRadiusM: 0.026,
         normalLengthM: 0.52,
         normalTipRadiusM: 0.052,
@@ -3400,9 +3578,18 @@ function roundedRectanglePoints(widthM: number, lengthM: number, radiusM: number
 }
 
 function transformPaddleLocalPoint(R: VirtualWorldPaddleFrame["pose_se3"]["R"], t: Vec3, x: number, y: number): Vec3 {
+  return transformPaddleLocalPoint3(R, t, x, y, 0);
+}
+
+function transformPaddleLocalPoint3(R: VirtualWorldPaddleFrame["pose_se3"]["R"], t: Vec3, x: number, y: number, z: number): Vec3 {
   const axisX: Vec3 = [R[0][0], R[1][0], R[2][0]];
   const axisY: Vec3 = [R[0][1], R[1][1], R[2][1]];
-  return [t[0] + axisX[0] * x + axisY[0] * y, t[1] + axisX[1] * x + axisY[1] * y, t[2] + axisX[2] * x + axisY[2] * y];
+  const axisZ: Vec3 = [R[0][2], R[1][2], R[2][2]];
+  return [
+    t[0] + axisX[0] * x + axisY[0] * y + axisZ[0] * z,
+    t[1] + axisX[1] * x + axisY[1] * y + axisZ[1] * z,
+    t[2] + axisX[2] * x + axisY[2] * y + axisZ[2] * z,
+  ];
 }
 
 function sampleMeshPoints(points: Vec3[], maxPoints: number): Vec3[] {
@@ -3420,6 +3607,19 @@ async function fetchJson(url: string) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`failed to fetch ${url}: ${response.status}`);
   return response.json() as Promise<unknown>;
+}
+
+export async function loadOptionalArtifact<T>(
+  capability: string,
+  loader: () => Promise<T>,
+  onFailure: (capability: string, error: unknown) => void,
+): Promise<T | null> {
+  try {
+    return await loader();
+  } catch (error) {
+    onFailure(capability, error);
+    return null;
+  }
 }
 
 function xywhToXyxy(value?: number[]): [number, number, number, number] | null {

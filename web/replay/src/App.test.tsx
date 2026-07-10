@@ -9,6 +9,7 @@ import {
   bodyJointSkeletonForFrame,
   bodyMeshOpacityFromBlendWeight,
   bodyMeshMaterialForTrustBadge,
+  adjacentBodyMeshWindow,
   cameraPresetPose,
   cocoWholeBodyCoreBoneNames,
   createSolidBodyMeshGeometryCache,
@@ -19,6 +20,7 @@ import {
   handJointPointsForFrame,
   hasExplicitReviewStartTime,
   manifestUrlFromSearch,
+  loadOptionalArtifact,
   paddleRenderGeometryForFrame,
   shouldRenderReplayScenePointClouds,
   updateFpsSample,
@@ -101,12 +103,12 @@ describe("bodyMeshOpacityFromBlendWeight", () => {
 });
 
 describe("bodyMeshMaterialForTrustBadge", () => {
-  it("keeps absent per-frame trust_badge behavior exactly on the current solid material", () => {
+  it("fails missing per-frame trust_badge safe to preview material", () => {
     expect(bodyMeshMaterialForTrustBadge(undefined)).toEqual({
-      fillColor: "#b4f2bf",
-      emissiveColor: "#102d18",
-      opacityScale: 1,
-      label: "solid",
+      fillColor: "#ffb454",
+      emissiveColor: "#5a3500",
+      opacityScale: 0.62,
+      label: "estimated",
     });
   });
 
@@ -132,6 +134,41 @@ describe("bodyMeshMaterialForTrustBadge", () => {
     expect(bodyMeshMaterialForTrustBadge("low_confidence").opacityScale).toBeLessThan(
       bodyMeshMaterialForTrustBadge("preview").opacityScale,
     );
+  });
+});
+
+describe("optional capability isolation", () => {
+  it("returns null and records the capability without rejecting the core load", async () => {
+    const failures: string[] = [];
+    await expect(
+      loadOptionalArtifact("contacts", async () => { throw new Error("404"); }, (capability) => failures.push(capability)),
+    ).resolves.toBeNull();
+    expect(failures).toEqual(["contacts"]);
+  });
+});
+
+describe("viewer truth wiring", () => {
+  it("mounts missing-evidence, trust, marker-empty, and review-only paddle-normal surfaces", () => {
+    const source = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
+    expect(source).toContain("<NoDetectionPlaceholder");
+    expect(source).toContain('aria-label="Player coverage gaps"');
+    expect(source).toContain('aria-label="Entity trust badges"');
+    expect(source).toContain("Events: no marker evidence at this time");
+    expect(source).toContain("showNormals={viewState.layers.paddleNormals}");
+    expect(source).not.toContain("function Ball(");
+    expect(source).not.toContain("function BallGhostMarkerRing(");
+  });
+});
+
+describe("mesh chunk playback prefetch", () => {
+  it("selects the next or previous time-ordered window from playback direction", () => {
+    const index = { windows: [
+      { source_window_index: 2, t0: 2 },
+      { source_window_index: 0, t0: 0 },
+      { source_window_index: 1, t0: 1 },
+    ] } as any;
+    expect(adjacentBodyMeshWindow(index, 1, 1)?.source_window_index).toBe(2);
+    expect(adjacentBodyMeshWindow(index, 1, -1)?.source_window_index).toBe(0);
   });
 });
 
@@ -606,7 +643,7 @@ describe("paddleRenderGeometryForFrame", () => {
     expect(geometry.vertices[1]).not.toEqual(frame.pose_se3.t);
   });
 
-  it("uses frame mesh vertices when the world artifact supplies a face-and-handle paddle mesh", () => {
+  it("replaces an estimated box mesh with the rounded beveled dimensions proxy", () => {
     const frame: VirtualWorldPaddleFrame = {
       t: 0,
       pose_se3: {
@@ -647,13 +684,14 @@ describe("paddleRenderGeometryForFrame", () => {
 
     const geometry = paddleRenderGeometryForFrame(frame, { length: 15.5, width: 7.5 });
 
-    expect(geometry.vertices).toEqual(frame.mesh_vertices_world);
-    expect(geometry.faces).toEqual(frame.mesh_faces);
+    expect(geometry.vertices).not.toEqual(frame.mesh_vertices_world);
+    expect(geometry.vertices.length).toBeGreaterThan(frame.mesh_vertices_world.length);
+    expect(geometry.faces.length).toBeGreaterThan(frame.mesh_faces.length);
     expect(geometry.estimated).toBe(true);
-    expect(geometry.edgeSegments).toHaveLength(16);
-    expect(geometry.material.fillOpacity).toBeGreaterThanOrEqual(0.8);
+    expect(geometry.edgeSegments.length).toBeGreaterThan(16);
+    expect(geometry.material.fillOpacity).toBeLessThan(0.7);
     expect(geometry.material.edgeOpacity).toBeGreaterThanOrEqual(0.9);
-    expect(geometry.material.edgeRadiusM).toBeGreaterThanOrEqual(0.012);
+    expect(geometry.material.edgeRadiusM).toBeLessThan(0.012);
   });
 
   it("exposes a face-normal review segment from the paddle pose rotation", () => {
@@ -884,6 +922,8 @@ function makeActivePaddle(playerId: number, center: [number, number, number]): A
     },
     frame,
     estimated: true,
+    staleAgeSeconds: 0,
+    opacity: 1,
   };
 }
 

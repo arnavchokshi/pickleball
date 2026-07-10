@@ -1,6 +1,6 @@
 export type Vec3 = [number, number, number];
 
-export type BallBand = "anchored_measured" | "arc_interpolated" | "arc_extrapolated" | "arc_weak" | "hidden" | "unknown";
+export type BallBand = "anchored_measured" | "physics_predicted" | "physics_predicted_low" | "arc_interpolated" | "arc_extrapolated" | "arc_weak" | "hidden" | "unknown";
 
 export type BallHudState = "measured" | "predicted" | "not_visible" | "solver_off";
 export type BallLinePattern = "solid" | "dashed" | "gap";
@@ -216,6 +216,24 @@ export function styleForBand(
       lowConfidence: true,
     };
   }
+  if (band === "physics_predicted" || band === "physics_predicted_low") {
+    const low = band === "physics_predicted_low" || lowConfidenceByScore;
+    return {
+      band,
+      hudState: "predicted",
+      label: band === "physics_predicted_low" ? "physics predicted low" : "physics predicted",
+      color: low ? "#a87ac4" : "#c58cff",
+      emissiveColor: "#351050",
+      linePattern: "dashed",
+      opacity: low ? 0.26 : 0.44,
+      lineWidth: 0.84,
+      ballRadius: 0.04,
+      pulsingBall: true,
+      rendersTrail: true,
+      rendersBall: true,
+      lowConfidence: low,
+    };
+  }
   if (band === "arc_extrapolated") {
     return {
       band,
@@ -276,7 +294,7 @@ export function buildBallTrail(
   const confidenceThreshold = options.confidenceThreshold ?? DEFAULT_CONFIDENCE_THRESHOLD;
   const maxGapSeconds = options.maxGapSeconds ?? Math.max(0.18, windowSeconds);
   const t0 = currentTime - Math.max(0, windowSeconds);
-  const windowed = samples
+  const windowed = withHiddenGapSentinels(samples)
     .filter((sample) => Number.isFinite(sample.t) && t0 <= sample.t && sample.t <= currentTime)
     .slice()
     .sort((left, right) => left.t - right.t);
@@ -320,6 +338,34 @@ export function buildBallTrail(
   };
 }
 
+/** Makes omitted/suppressed intervals explicit so no line can cross a segment boundary. */
+export function withHiddenGapSentinels(samples: BallTrailSample[]): BallTrailSample[] {
+  const sorted = samples.slice().sort((left, right) => left.t - right.t);
+  const output: BallTrailSample[] = [];
+  for (const sample of sorted) {
+    const previous = output[output.length - 1];
+    const segmentChanged =
+      previous?.segmentId !== null &&
+      previous?.segmentId !== undefined &&
+      sample.segmentId !== null &&
+      sample.segmentId !== undefined &&
+      previous.segmentId !== sample.segmentId;
+    const trustedBridge = previous?.bridge === true || sample.bridge === true;
+    if (previous && segmentChanged && !trustedBridge) {
+      output.push({
+        t: (previous.t + sample.t) / 2,
+        band: "hidden",
+        conf: 0,
+        visible: false,
+        world_xyz: null,
+        source: "suppressed_segment_gap_sentinel",
+      });
+    }
+    output.push(sample);
+  }
+  return output;
+}
+
 export function ballHudStateForTime(
   samples: BallTrailSample[],
   currentTime: number,
@@ -344,7 +390,7 @@ export function ballHudStateForTime(
   const state = style.hudState;
   return {
     state,
-    label: state === "measured" ? "ball: measured" : "ball: predicted",
+    label: state === "measured" ? "ball: measured" : style.band === "physics_predicted" || style.band === "physics_predicted_low" ? `ball: ${style.label}` : "ball: predicted",
     lowConfidence: style.lowConfidence,
     sample: renderable,
     style,
@@ -778,6 +824,8 @@ function leastCertainBand(left: BallBand, right: BallBand): BallBand {
     hidden: 5,
     arc_weak: 4,
     arc_extrapolated: 3,
+    physics_predicted: 2.5,
+    physics_predicted_low: 3.5,
     arc_interpolated: 2,
     unknown: 1,
     anchored_measured: 0,
@@ -788,6 +836,8 @@ function leastCertainBand(left: BallBand, right: BallBand): BallBand {
 function normalizeBand(input: BallBand | string | null | undefined): BallBand {
   if (
     input === "anchored_measured" ||
+    input === "physics_predicted" ||
+    input === "physics_predicted_low" ||
     input === "arc_interpolated" ||
     input === "arc_extrapolated" ||
     input === "arc_weak" ||

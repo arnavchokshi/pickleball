@@ -1,4 +1,5 @@
 import { TRUSTED_BALL_ARC_SOLVER_STATUSES, type BallBand, type BallTrailSample, type Vec3 } from "./components/modules/ballTrail";
+import { ENTITY_HOLD_TOLERANCES_SECONDS, resolveTimeSample } from "./viewerData";
 import type { Vec2 } from "./viewerData";
 
 export type ReplayViewMode = "world" | "courtmap";
@@ -110,8 +111,11 @@ export function sampleBallArcRenderAtTime(samples: BallTrailSample[], currentTim
     }
   }
   if (!left || !right || right.t <= left.t || right.t - left.t > maxGapSeconds) {
-    const nearest = renderable.reduce((best, sample) => (Math.abs(sample.t - currentTime) < Math.abs(best.t - currentTime) ? sample : best));
-    return Math.abs(nearest.t - currentTime) <= maxGapSeconds ? nearest : null;
+    return resolveTimeSample(renderable, currentTime, ENTITY_HOLD_TOLERANCES_SECONDS.ball).sample ?? null;
+  }
+  const segmentChanged = left.segmentId != null && right.segmentId != null && left.segmentId !== right.segmentId;
+  if (segmentChanged && left.bridge !== true && right.bridge !== true) {
+    return resolveTimeSample(renderable, currentTime, ENTITY_HOLD_TOLERANCES_SECONDS.ball).sample ?? null;
   }
   const alpha = (currentTime - left.t) / (right.t - left.t);
   return {
@@ -263,6 +267,8 @@ function leastCertainBand(a: BallBand, b: BallBand): BallBand {
   const rank: Record<BallBand, number> = {
     anchored_measured: 0,
     arc_interpolated: 1,
+    physics_predicted: 1.5,
+    physics_predicted_low: 2.5,
     arc_extrapolated: 2,
     arc_weak: 3,
     unknown: 4,
@@ -330,7 +336,7 @@ function readSegmentId(input: unknown, path: string): number | string {
 
 function readBand(input: unknown, path: string): BallBand {
   const value = readString(input, path);
-  if (value === "anchored_measured" || value === "arc_interpolated" || value === "arc_extrapolated" || value === "arc_weak" || value === "hidden") {
+  if (value === "anchored_measured" || value === "physics_predicted" || value === "physics_predicted_low" || value === "arc_interpolated" || value === "arc_extrapolated" || value === "arc_weak" || value === "hidden") {
     return value;
   }
   return "unknown";

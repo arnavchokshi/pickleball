@@ -43,6 +43,8 @@ import {
   parseRallySpans,
   parseViewerManifest,
   parseVirtualWorld,
+  paddleOpacityForStaleAge,
+  playerPresenceForTime,
   playerTrailPointsForTime,
   playerCoverageDistanceM,
   playerCoverageStats,
@@ -60,7 +62,38 @@ import {
   videoBallOverlayForTime,
   worldWarningsReadout,
   worldStats,
+  resolveTimeSample,
 } from "./viewerData";
+
+describe("canonical entity time resolution", () => {
+  it("refuses an internal nearest-sample hold beyond the declared tolerance", () => {
+    const resolved = resolveTimeSample([{ t: 0 }, { t: 1 }], 0.5, 0.12);
+    expect(resolved.insideCoverage).toBe(true);
+    expect(resolved.sample).toBeUndefined();
+    expect(resolved.staleAgeSeconds).toBe(0.5);
+  });
+
+  it("marks all-null poses missing and retains only a prior floor anchor", () => {
+    const player = {
+      frames: [
+        { t: 0, joints_world: [], floor_world_xyz: [1, 2, 0], track_world_xy: [1, 2] },
+        { t: 0.1, joints_world: [], floor_world_xyz: null, track_world_xy: null },
+      ],
+    } as any;
+    expect(playerPresenceForTime(player, 0.1)).toMatchObject({
+      missingEvidence: true,
+      reason: "all_null_pose",
+      lastKnownFloor: [1, 2, 0],
+    });
+  });
+
+  it("keeps paddle opacity through two source frames, decays it, then drops it", () => {
+    expect(paddleOpacityForStaleAge(0.083)).toBe(1);
+    expect(paddleOpacityForStaleAge(0.16)).toBeGreaterThan(0);
+    expect(paddleOpacityForStaleAge(0.16)).toBeLessThan(1);
+    expect(paddleOpacityForStaleAge(0.25)).toBe(0);
+  });
+});
 
 const realMeshFixtureDir = resolve(process.cwd(), "../../tests/racketsport/fixtures/solid_mesh_real_window_000");
 
@@ -1852,10 +1885,10 @@ describe("viewer data contracts", () => {
     expect(() => parseVirtualWorld(invalidPaddle)).toThrow("virtual_world.paddles[0].paddle_dims_in must include length/width or h/w");
   });
 
-  it("selects the nearest player frame for the current video time", () => {
+  it("does not hold the nearest player frame across a coverage gap", () => {
     const parsed = parseVirtualWorld(world);
 
-    expect(frameForTime(parsed.players[0], 0.8)?.t).toBe(1);
+    expect(frameForTime(parsed.players[0], 0.8)).toBeUndefined();
   });
 
   it("reports player artifact coverage so late-video gaps are visible", () => {
