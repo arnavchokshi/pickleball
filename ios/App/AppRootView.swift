@@ -362,35 +362,17 @@ private struct DinkVisionTabBar: View {
 
     var body: some View {
         GeometryReader { proxy in
-            ZStack(alignment: .bottom) {
-                HStack(alignment: .bottom, spacing: 0) {
-                    ForEach(layout.tabs) { tab in
-                        if tab == .record {
-                            Color.clear
-                                .frame(maxWidth: .infinity, minHeight: 54)
-                                .accessibilityHidden(true)
-                        } else {
-                            Button {
-                                selectedTab = tab
-                            } label: {
-                                DinkVisionTabItem(tab: tab, isSelected: selectedTab == tab)
-                                    .frame(maxWidth: .infinity, minHeight: 54)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(tab.title)
-                            .accessibilityIdentifier("DinkVisionTab-\(tab.rawValue)")
-                        }
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.top, 15)
-                .padding(.bottom, 18)
-                .frame(height: DinkVisionMetric.tabBarHeight)
-                .background(
-                    TopRoundedRectangle(radius: DinkVisionMetric.tabBarRadius)
-                        .fill(DinkVisionColor.ink)
-                )
-                .accessibilityIdentifier("DinkVisionTabBarRail")
+            let railEdge = layout.railEdge(for: proxy.size)
+            let placement = layout.recordButtonPlacement(
+                in: proxy.size,
+                railEdge: railEdge,
+                barThickness: DinkVisionMetric.tabBarHeight,
+                buttonDiameter: layout.recordButtonDiameter
+            )
+
+            ZStack {
+                tabRail(edge: railEdge, containerSize: proxy.size)
+                    .zIndex(1)
 
                 Button {
                     Task {
@@ -407,16 +389,98 @@ private struct DinkVisionTabBar: View {
                 .buttonStyle(.plain)
                 .disabled(!canRecordFromTab)
                 .frame(width: layout.recordButtonDiameter + 14, height: layout.recordButtonDiameter + 14)
-                .position(
-                    x: proxy.size.width / 2,
-                    y: layout.recordButtonCenterY(tabBarHeight: DinkVisionMetric.tabBarHeight)
-                )
+                .contentShape(Circle())
+                .position(placement.center)
+                .zIndex(2)
                 .accessibilityLabel(recordModel.isRecording ? "Stop recording" : "Start recording")
                 .accessibilityIdentifier("DinkVisionRecordButton")
             }
         }
-        .frame(height: layout.totalOverlayHeight(tabBarHeight: DinkVisionMetric.tabBarHeight))
         .accessibilityIdentifier("DinkVisionTabBarOverlay")
+    }
+
+    @ViewBuilder
+    private func tabRail(edge: DinkVisionTabRailEdge, containerSize: CGSize) -> some View {
+        switch edge {
+        case .bottom:
+            HStack(alignment: .bottom, spacing: 0) {
+                ForEach(layout.tabs) { tab in
+                    horizontalTabSlot(tab)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 15)
+            .padding(.bottom, 18)
+            .frame(width: containerSize.width, height: DinkVisionMetric.tabBarHeight)
+            .background(
+                TopRoundedRectangle(radius: DinkVisionMetric.tabBarRadius)
+                    .fill(DinkVisionColor.ink)
+                    .allowsHitTesting(false)
+            )
+            .accessibilityIdentifier("DinkVisionTabBarRail")
+            .frame(width: containerSize.width, height: containerSize.height, alignment: .bottom)
+        case .leading, .trailing:
+            VStack(spacing: 0) {
+                ForEach(layout.tabs) { tab in
+                    verticalTabSlot(tab)
+                }
+            }
+            .padding(.vertical, 12)
+            .padding(edge == .leading ? .leading : .trailing, 15)
+            .padding(edge == .leading ? .trailing : .leading, 18)
+            .frame(width: DinkVisionMetric.tabBarHeight, height: containerSize.height)
+            .background(
+                DinkVisionSideRoundedRectangle(radius: DinkVisionMetric.tabBarRadius, railEdge: edge)
+                    .fill(DinkVisionColor.ink)
+                    .allowsHitTesting(false)
+            )
+            .accessibilityIdentifier("DinkVisionTabBarRail")
+            .frame(
+                width: containerSize.width,
+                height: containerSize.height,
+                alignment: edge == .leading ? .leading : .trailing
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func horizontalTabSlot(_ tab: DinkVisionTabKind) -> some View {
+        if tab == .record {
+            Color.clear
+                .frame(maxWidth: .infinity, minHeight: 54)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        } else {
+            Button {
+                selectedTab = tab
+            } label: {
+                DinkVisionTabItem(tab: tab, isSelected: selectedTab == tab)
+                    .frame(maxWidth: .infinity, minHeight: 54)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(tab.title)
+            .accessibilityIdentifier("DinkVisionTab-\(tab.rawValue)")
+        }
+    }
+
+    @ViewBuilder
+    private func verticalTabSlot(_ tab: DinkVisionTabKind) -> some View {
+        if tab == .record {
+            Color.clear
+                .frame(minWidth: 54, maxHeight: .infinity)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        } else {
+            Button {
+                selectedTab = tab
+            } label: {
+                DinkVisionTabItem(tab: tab, isSelected: selectedTab == tab)
+                    .frame(minWidth: 54, maxHeight: .infinity)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(tab.title)
+            .accessibilityIdentifier("DinkVisionTab-\(tab.rawValue)")
+        }
     }
 
     private var canRecordFromTab: Bool {
@@ -659,6 +723,28 @@ private struct TopRoundedRectangle: Shape {
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
         path.closeSubpath()
         return path
+    }
+}
+
+private struct DinkVisionSideRoundedRectangle: Shape {
+    let radius: CGFloat
+    let railEdge: DinkVisionTabRailEdge
+
+    func path(in rect: CGRect) -> Path {
+        let corners: UIRectCorner
+        switch railEdge {
+        case .leading:
+            corners = [.topRight, .bottomRight]
+        case .bottom, .trailing:
+            corners = [.topLeft, .bottomLeft]
+        }
+        return Path(
+            UIBezierPath(
+                roundedRect: rect,
+                byRoundingCorners: corners,
+                cornerRadii: CGSize(width: radius, height: radius)
+            ).cgPath
+        )
     }
 }
 

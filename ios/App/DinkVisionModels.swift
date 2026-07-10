@@ -235,9 +235,56 @@ struct DinkVisionTabLayoutModel: Equatable {
         )
     }
 
+    func railEdge(for containerSize: CGSize) -> DinkVisionTabRailEdge {
+        containerSize.width > containerSize.height ? .leading : .bottom
+    }
+
+    func recordButtonPlacement(
+        in containerSize: CGSize,
+        railEdge: DinkVisionTabRailEdge,
+        barThickness: CGFloat,
+        buttonDiameter: CGFloat
+    ) -> DinkVisionRecordButtonPlacement {
+        let buttonRadius = buttonDiameter / 2
+
+        switch railEdge {
+        case .bottom:
+            let center = CGPoint(
+                x: containerSize.width / 2,
+                y: containerSize.height - barThickness - recordButtonCenterAboveBarTop
+            )
+            let exposedDiameter = containerSize.height - barThickness - center.y + buttonRadius
+            return DinkVisionRecordButtonPlacement(
+                center: center,
+                exposedFraction: exposedDiameter / buttonDiameter
+            )
+        case .leading:
+            return DinkVisionRecordButtonPlacement(
+                center: CGPoint(x: barThickness + buttonRadius, y: containerSize.height / 2),
+                exposedFraction: 1
+            )
+        case .trailing:
+            return DinkVisionRecordButtonPlacement(
+                center: CGPoint(x: containerSize.width - barThickness - buttonRadius, y: containerSize.height / 2),
+                exposedFraction: 1
+            )
+        }
+    }
+
     func contentBottomPadding(tabBarHeight: CGFloat) -> CGFloat {
         totalOverlayHeight(tabBarHeight: tabBarHeight) + 24
     }
+}
+
+enum DinkVisionTabRailEdge: Equatable {
+    case bottom
+    case leading
+    case trailing
+}
+
+struct DinkVisionRecordButtonPlacement: Equatable {
+    var center: CGPoint
+    var exposedFraction: CGFloat
 }
 
 enum DinkVisionRecordButtonControlState: Equatable {
