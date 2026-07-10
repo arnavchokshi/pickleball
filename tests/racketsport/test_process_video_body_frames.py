@@ -3,13 +3,18 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from threed.racketsport.process_video_body_frames import (
+    BodyFrameMaterializationError,
+    BodyFrameScheduleError,
     build_frame_schedule,
     materialize_process_video_frames,
+    validate_materialized_frame_set,
 )
+from threed.racketsport.orchestrator import _find_body_frame_image
 from threed.racketsport.schemas import Tracks
 
 
@@ -160,6 +165,62 @@ def test_build_frame_schedule_uncapped_when_within_limit() -> None:
     assert schedule["frame_indexes"] == [0, 1, 2]
 
 
+def test_capped_frame_schedule_keeps_body_required_frame_for_input_assembly(tmp_path: Path) -> None:
+    tracks = _tracks({1: [i / 30 for i in range(1315)]})
+    plan_path = tmp_path / "frame_compute_plan.json"
+    _write_json(
+        plan_path,
+        {
+            "schema_version": 1,
+            "deep_mesh_windows": [
+                {"frame_start": 74, "frame_end": 74, "target_player_ids": [1]},
+            ],
+        },
+    )
+    schedule, _notes = build_frame_schedule(tracks, frame_compute_plan_path=plan_path)
+    body_frames = tmp_path / "body_frames"
+    body_frames.mkdir()
+    for frame_idx in schedule["frame_indexes"]:
+        (body_frames / f"frame_{frame_idx:06d}.jpg").write_bytes(b"jpeg")
+
+    context = SimpleNamespace(inputs_dir=tmp_path, run_dir=tmp_path, clip="cold_cap_regression")
+    found = _find_body_frame_image(context, 74)
+
+    assert found == body_frames / "frame_000074.jpg"
+
+
+def test_capped_frame_schedule_contains_authoritative_body_execution_set() -> None:
+    tracks = _tracks({1: [i / 30 for i in range(1315)]})
+    required = {0, 74, 246, 1309}
+
+    schedule, notes = build_frame_schedule(tracks, required_frame_indexes=required)
+
+    assert len(schedule["frame_indexes"]) == 1200
+    assert required <= set(schedule["frame_indexes"])
+    assert any("authoritative BODY request" in note for note in notes)
+
+
+def test_frame_schedule_fails_typed_when_body_required_set_exceeds_cap() -> None:
+    tracks = _tracks({1: [i / 30 for i in range(5)]})
+
+    with pytest.raises(BodyFrameScheduleError, match=r"exceeding materialization cap 2.*required frames=\[0, 1, 2\]"):
+        build_frame_schedule(tracks, max_frames=2, required_frame_indexes={0, 1, 2})
+
+
+def test_validate_materialized_frame_set_names_missing_and_stale_frames(tmp_path: Path) -> None:
+    body_frames = tmp_path / "body_frames"
+    body_frames.mkdir()
+    (body_frames / "frame_000002.jpg").write_bytes(b"jpeg")
+    (body_frames / "frame_000009.jpg").write_bytes(b"stale")
+    schedule = {"frame_indexes": [2, 5]}
+
+    with pytest.raises(
+        BodyFrameMaterializationError,
+        match=r"missing_frames=\[5\]; unexpected_frames=\[9\]",
+    ):
+        validate_materialized_frame_set(out_dir=body_frames, schedule=schedule)
+
+
 def test_build_frame_schedule_rejects_nonpositive_max_frames() -> None:
     tracks = _tracks({1: [0.0]})
 
@@ -204,6 +265,41 @@ def test_materialize_process_video_frames_extracts_real_jpegs(tmp_path: Path) ->
     assert (out_dir / "frame_000005.jpg").is_file()
     assert result["total_bytes"] > 0
     assert result["schedule"]["source"] == "tracks_union"
+
+
+def test_materialize_process_video_frames_replaces_stale_cache_with_exact_schedule(tmp_path: Path) -> None:
+    video = tmp_path / "source.mp4"
+    _make_tiny_clip(video, rate=10, duration_s=1.0)
+    tracks_path = tmp_path / "tracks.json"
+    _write_json(
+        tracks_path,
+        {
+            "schema_version": 1,
+            "fps": 10.0,
+            "players": [
+                {
+                    "id": 1,
+                    "side": "near",
+                    "role": "left",
+                    "frames": [
+                        {"t": 0.2, "bbox": [1, 1, 5, 5], "world_xy": [0, 0], "conf": 0.9},
+                        {"t": 0.5, "bbox": [1, 1, 5, 5], "world_xy": [0, 0], "conf": 0.9},
+                    ],
+                }
+            ],
+            "rally_spans": [],
+        },
+    )
+    out_dir = tmp_path / "body_frames"
+    out_dir.mkdir()
+    (out_dir / "frame_000002.jpg").write_bytes(b"stale-current")
+    (out_dir / "frame_000003.jpg").write_bytes(b"stale-unexpected")
+
+    result = materialize_process_video_frames(video_path=video, tracks_path=tracks_path, out_dir=out_dir)
+
+    assert result["validation"]["equal"] is True
+    assert result["validation"]["materialized_frame_indexes"] == [2, 5]
+    assert not (out_dir / "frame_000003.jpg").exists()
 
 
 def test_materialize_process_video_frames_missing_video_raises(tmp_path: Path) -> None:

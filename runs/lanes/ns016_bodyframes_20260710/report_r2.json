@@ -1,0 +1,66 @@
+{
+  "objective_result": "PASS",
+  "acceptance": [
+    {
+      "metric": "A1 pre-fix local reproduction",
+      "baseline": "Three banked GPU signatures reported late BODY input failures on the zwCtH 45-second harvest excerpt.",
+      "after": "The same excerpt (MD5 059e396317071e58478e75c55947fe6d), real tracks, real frame_compute_plan, real ffmpeg materializer, and production _find_body_frame_image path reproduced the exact signature locally: missing BODY frame image for frame 75; expected body_frames/frame_000075.jpg. The pre-fix run materialized 1200 frames while 18 of 200 BODY-requested frames were absent.",
+      "target": "Bank a pre-fix local CPU repro with the exact missing BODY frame image for frame N message.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "A2 root cause and cold-vs-Wolverine asymmetry",
+      "baseline": "The original spec suspected 460992ae9..d47b399a1 and claimed rev-9 processed the harvest clip successfully.",
+      "after": "Root cause is b437b411886d7fe858e96136ce0d75fb46e95d32, which introduced the frames stage and its independent uniform 1200-frame cap. BODY independently selected a different set. The claimed rev-9 success artifact actually failed calibration before BODY. Fresh Wolverine has only 244 tracked/requested/materialized frames, so the cap never activates; there is no eval-specific scheduler exemption. Warm caches previously masked mismatches because any existing JPEG caused an unvalidated skip.",
+      "target": "Name the introducing commit and mechanism and explain eval/cold and warm-cache behavior.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "A3 post-fix BODY request/materialization coverage",
+      "baseline": "zwCtH stride-1 local repro: 1200 materialized, 200 requested, 18 missing; Wolverine was unaffected.",
+      "after": "The exact repro driver completed BODY input assembly with zwCtH schedule=1200, materialized=1200, BODY requested=1200, missing=0, schedule_materialized_equal=true, and body_requested_subset_materialized=true. Wolverine remained schedule=244, BODY requested=244, schedule_materialized_equal=true, and its regenerated process_video_frame_schedule.json was byte-identical to the pre-fix artifact.",
+      "target": "Zero missing BODY inputs and printed set equality for zwCtH plus byte-identical Wolverine behavior.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "A4 regression test red then green",
+      "baseline": "Before the fix, test_capped_frame_schedule_keeps_body_required_frame_for_input_assembly failed with FileNotFoundError: missing BODY frame image for frame 74; expected body_frames/frame_000074.jpg (1 failed).",
+      "after": "The same regression test passed post-fix (1 passed). Additional tests cover authoritative-set retention, typed cap/missing-frame errors, stale-cache repair, and BODY handoff acceptance/rejection.",
+      "target": "Bank pre-fix red and post-fix green evidence for the exact failure class.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "A5 mandatory full racketsport suite",
+      "baseline": null,
+      "after": "Final post-correction run: 3420 passed, 24 skipped, 0 failed, 7 warnings in 2590.61s.",
+      "target": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q with zero new failures.",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "threed/racketsport/process_video_body_frames.py:80 adds typed BodyFrameScheduleError and BodyFrameMaterializationError; required BODY frames are retained inside the bounded materialization schedule, on-disk set equality is enforced, and stale extras are removed.",
+    "scripts/racketsport/process_video.py:2128 derives BODY execution once for planned serial and no-plan overlap modes, persists it before materialization, validates warm caches against the current schedule, and hard-fails typed schedule mismatches at the frames stage.",
+    "threed/racketsport/orchestrator.py:866 consumes the persisted process_video BODY execution instead of independently deriving a second set; the handoff validates stride and request-subset coverage.",
+    "tests/racketsport/test_process_video_body_frames.py:168 adds the exact-signature cap regression plus required-set, typed-error, equality, and stale-cache tests.",
+    "tests/racketsport/test_ns016_body_frame_schedule_regression.py:32 adds integration coverage for warm-cache repair and BODY handoff acceptance/rejection.",
+    "runs/lanes/ns016_bodyframes_20260710/repro_real_clip.py:1 drives the real zwCtH materializer/BODY-input path and Wolverine schedule/equality proof."
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q",
+    "passed": 3420,
+    "failed": 0,
+    "skipped": 24,
+    "failures_all_preexisting": true,
+    "failure_notes": null
+  },
+  "honest_issues": [
+    "BEST-STACK SEMANTICS DELTA (manager ruling required): no manifest revision or default knob changed, but long-clip execution semantics did. process_video now applies max_frames=min(user max_frames or 1200, 1200) while deriving the authoritative BODY execution, then materializes a schedule containing that exact request set. On the real stride-1 zwCtH proof, BODY now assembles/runs the bounded 1200 selected frames instead of attempting an uncapped request set against an independently uniform-capped JPEG set; 115 of 1315 tracked frames remain intentionally outside the bound. Wolverine remains byte-identical at 244 frames. This lane did not bump best_stack.json.",
+    "The local post-fix proof stops after BODY input assembly as authorized; it does not claim local CPU SAM-3D inference completion or BODY accuracy. GPU inference was unnecessary to verify this pre-inference defect.",
+    "The final suite's seven warnings are non-failing and unrelated: unknown pytest slow mark, torchreid Python fallback, expected FAST_SAM_PYTHON fallback test warning, and Python 3.14 torch.jit deprecations.",
+    "Repository structure checks: scaffold index reports zero missing direct CLI-reference tests and zero missing related tests; dead-code audit passes with zero unknown Python sources. Storage audit remains fail because many allowlisted source packages are absent, but reports zero unknown large tracked and zero unknown large untracked files; this lane changed no storage allowlist or missing source package.",
+    "No Outdoor or Indoor labels were read. Wolverine generated artifacts were used only for permitted internal schedule/equality verification. VERIFIED=0 remains binding.",
+    "Artifacts: pre_fix_repro_attempt2.log; regression_red_attempt2.log; regression_green.log; post_fix_repro.log; full_suite_r2.log; pre_fix_cold_zwcth45s_stride1/; post_fix_cold_zwcth45s_stride1/; DIAGNOSIS.md; list_scaffold_tools_r2.log; audit_dead_code_r2.log; audit_storage_policy_r2.json; report_r2.json."
+  ],
+  "next": "Manager should explicitly accept the bounded long-clip semantics delta. No manifest revision was changed by this lane; no further code work is required for A1-A5.",
+  "session_id": null
+}

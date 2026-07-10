@@ -1,0 +1,73 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+___ test_capped_frame_schedule_keeps_body_required_frame_for_input_assembly ____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-606/test_capped_frame_schedule_kee0')
+
+    def test_capped_frame_schedule_keeps_body_required_frame_for_input_assembly(tmp_path: Path) -> None:
+        tracks = _tracks({1: [i / 30 for i in range(1315)]})
+        plan_path = tmp_path / "frame_compute_plan.json"
+        _write_json(
+            plan_path,
+            {
+                "schema_version": 1,
+                "deep_mesh_windows": [
+                    {"frame_start": 74, "frame_end": 74, "target_player_ids": [1]},
+                ],
+            },
+        )
+        schedule, _notes = build_frame_schedule(tracks, frame_compute_plan_path=plan_path)
+        body_frames = tmp_path / "body_frames"
+        body_frames.mkdir()
+        for frame_idx in schedule["frame_indexes"]:
+            (body_frames / f"frame_{frame_idx:06d}.jpg").write_bytes(b"jpeg")
+    
+        context = SimpleNamespace(inputs_dir=tmp_path, run_dir=tmp_path, clip="cold_cap_regression")
+>       found = _find_body_frame_image(context, 74)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_process_video_body_frames.py:184: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+context = namespace(inputs_dir=PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest...n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-606/test_capped_frame_schedule_kee0'), clip='cold_cap_regression')
+frame_idx = 74
+
+    def _find_body_frame_image(context: StageContext, frame_idx: int) -> Path:
+        names = [f"frame_{frame_idx:06d}{suffix}" for suffix in BODY_FRAME_SUFFIXES]
+        roots: list[Path] = []
+        env_root = os.environ.get("RACKETSPORT_BODY_FRAMES")
+        if env_root:
+            roots.append(Path(env_root))
+            roots.append(Path(env_root) / context.clip)
+        roots.extend(
+            [
+                context.inputs_dir / "body_frames",
+                context.inputs_dir / "frames",
+                context.inputs_dir,
+                context.run_dir / "body_frames",
+                context.run_dir / "frames",
+                context.run_dir,
+            ]
+        )
+        for root in roots:
+            for name in names:
+                candidate = root / name
+                if candidate.is_file():
+                    return candidate
+    
+        recursive_matches: list[Path] = []
+        for suffix in BODY_FRAME_SUFFIXES:
+            recursive_matches.extend(context.inputs_dir.rglob(f"frame_{frame_idx:06d}{suffix}"))
+        if recursive_matches:
+            return sorted(recursive_matches, key=_body_frame_priority)[0]
+    
+>       raise FileNotFoundError(
+            f"missing BODY frame image for frame {frame_idx}; expected body_frames/frame_{frame_idx:06d}.jpg "
+            f"under {context.inputs_dir} or RACKETSPORT_BODY_FRAMES"
+        )
+E       FileNotFoundError: missing BODY frame image for frame 74; expected body_frames/frame_000074.jpg under /private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-606/test_capped_frame_schedule_kee0 or RACKETSPORT_BODY_FRAMES
+
+threed/racketsport/orchestrator.py:3286: FileNotFoundError
+=========================== short test summary info ============================
+FAILED tests/racketsport/test_process_video_body_frames.py::test_capped_frame_schedule_keeps_body_required_frame_for_input_assembly
+1 failed in 1.49s

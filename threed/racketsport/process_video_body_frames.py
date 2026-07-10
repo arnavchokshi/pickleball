@@ -58,7 +58,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable, Mapping
 
 from .body_frame_materialization import materialize_body_frames
 from .schemas import Tracks, validate_artifact_file
@@ -74,6 +74,15 @@ SCHEDULE_FILENAME = "process_video_frame_schedule.json"
 # bounding a pathologically long input instead of extracting its every
 # tracked frame unconditionally.
 DEFAULT_MAX_SCHEDULED_FRAMES = 1200
+BODY_FRAME_SUFFIXES = (".jpg", ".jpeg", ".png")
+
+
+class BodyFrameScheduleError(RuntimeError):
+    """The frames-stage schedule cannot cover the authoritative BODY request set."""
+
+
+class BodyFrameMaterializationError(RuntimeError):
+    """The on-disk BODY JPEG set does not equal the current frames-stage schedule."""
 
 
 def build_frame_schedule(
@@ -82,6 +91,7 @@ def build_frame_schedule(
     frame_compute_plan_path: str | Path | None = None,
     max_frames: int | None = None,
     skeleton_stride: int = 1,
+    required_frame_indexes: Iterable[int] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     """Return a ``scheduled_frames`` execution manifest + human-readable notes.
 
@@ -116,15 +126,34 @@ def build_frame_schedule(
                 "whose events stage already wrote frame_compute_plan.json before this stage ran)"
             )
 
-    union_indexes = sorted(base_indexes | mesh_indexes)
+    union_set = base_indexes | mesh_indexes
+    required_indexes = (
+        {int(frame_idx) for frame_idx in required_frame_indexes}
+        if required_frame_indexes is not None
+        else set(mesh_indexes)
+    )
+    unavailable_required = sorted(required_indexes - union_set)
+    if unavailable_required:
+        raise BodyFrameScheduleError(
+            "BODY frame schedule requires frame(s) absent from the tracked/materializable set: "
+            f"{unavailable_required}"
+        )
+    if len(required_indexes) > cap:
+        raise BodyFrameScheduleError(
+            f"BODY frame schedule requires {len(required_indexes)} frame(s), exceeding materialization cap {cap}; "
+            f"required frames={sorted(required_indexes)}"
+        )
+
+    union_indexes = sorted(union_set)
     capped = len(union_indexes) > cap
-    final_indexes = _uniform_sample(union_indexes, cap) if capped else union_indexes
+    final_indexes = _capped_schedule_with_required(union_indexes, cap, required_indexes) if capped else union_indexes
     if capped:
+        required_added = sorted(required_indexes - set(_uniform_sample(union_indexes, cap)))
         notes.append(
             f"hard cap applied: kept {len(final_indexes)} of {len(union_indexes)} scheduled frame(s) "
-            f"(uniform stride across the full clip, cap={cap}) -- pose/mesh coverage for the dropped frames will "
-            "be honestly absent from skeleton3d.json/smpl_motion.json rather than fabricated; re-run with a "
-            "higher --max-frames for full coverage"
+            f"(uniform temporal coverage with all {len(required_indexes)} authoritative BODY request frame(s) "
+            f"retained, cap={cap}, required replacements={len(required_added)}) -- coverage for other dropped "
+            "frames is honestly absent rather than fabricated"
         )
 
     scheduled_frames = [{"frame_idx": idx, "t": idx / tracks.fps} for idx in final_indexes]
@@ -150,6 +179,40 @@ def build_frame_schedule(
     return manifest, notes
 
 
+def write_frame_schedule(path: str | Path, schedule: Mapping[str, Any]) -> None:
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(dict(schedule), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def body_execution_frame_indexes(body_execution: Mapping[str, Any]) -> set[int]:
+    return {int(frame["frame_idx"]) for frame in body_execution.get("scheduled_frames", [])}
+
+
+def validate_materialized_frame_set(
+    *,
+    out_dir: str | Path,
+    schedule: Mapping[str, Any],
+) -> dict[str, Any]:
+    expected = {int(frame_idx) for frame_idx in schedule.get("frame_indexes", [])}
+    actual = _materialized_frame_indexes(Path(out_dir))
+    missing = sorted(expected - actual)
+    unexpected = sorted(actual - expected)
+    if missing or unexpected:
+        raise BodyFrameMaterializationError(
+            "BODY frames-stage materialization mismatch: "
+            f"missing_frames={missing}; unexpected_frames={unexpected}; "
+            f"expected_count={len(expected)}; actual_count={len(actual)}"
+        )
+    return {
+        "expected_frame_indexes": sorted(expected),
+        "materialized_frame_indexes": sorted(actual),
+        "missing_frames": missing,
+        "unexpected_frames": unexpected,
+        "equal": True,
+    }
+
+
 def materialize_process_video_frames(
     *,
     video_path: str | Path,
@@ -158,6 +221,8 @@ def materialize_process_video_frames(
     frame_compute_plan_path: str | Path | None = None,
     max_frames: int | None = None,
     skeleton_stride: int = 1,
+    required_frame_indexes: Iterable[int] | None = None,
+    schedule: Mapping[str, Any] | None = None,
     overwrite: bool = True,
 ) -> dict[str, Any]:
     """Build the frame schedule for ``tracks_path`` and materialize it into
@@ -184,22 +249,43 @@ def materialize_process_video_frames(
     if not any(player.frames for player in tracks.players):
         raise ValueError(f"{tracks_file} has no tracked player-frames; nothing to schedule")
 
-    schedule, notes = build_frame_schedule(
-        tracks,
-        frame_compute_plan_path=frame_compute_plan_path,
-        max_frames=max_frames,
-        skeleton_stride=skeleton_stride,
-    )
+    if schedule is None:
+        schedule, notes = build_frame_schedule(
+            tracks,
+            frame_compute_plan_path=frame_compute_plan_path,
+            max_frames=max_frames,
+            skeleton_stride=skeleton_stride,
+            required_frame_indexes=required_frame_indexes,
+        )
+    else:
+        schedule = dict(schedule)
+        notes = []
     schedule_path = out.parent / SCHEDULE_FILENAME
-    schedule_path.parent.mkdir(parents=True, exist_ok=True)
-    schedule_path.write_text(json.dumps(schedule, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_frame_schedule(schedule_path, schedule)
 
-    extraction = materialize_body_frames(
-        video_path=video,
-        execution_path=schedule_path,
-        out_dir=out,
-        overwrite=overwrite,
-    )
+    expected_indexes = {int(frame_idx) for frame_idx in schedule.get("frame_indexes", [])}
+    _remove_unexpected_materialized_frames(out, expected_indexes=expected_indexes)
+
+    try:
+        extraction = materialize_body_frames(
+            video_path=video,
+            execution_path=schedule_path,
+            out_dir=out,
+            overwrite=overwrite,
+        )
+    except RuntimeError as exc:
+        if "ffmpeg did not produce BODY frame" not in str(exc):
+            raise
+        actual_indexes = _materialized_frame_indexes(out)
+        missing_indexes = sorted(expected_indexes - actual_indexes)
+        if missing_indexes:
+            raise BodyFrameMaterializationError(
+                "BODY frames-stage extraction did not materialize required frame(s): "
+                f"missing_frames={missing_indexes}; expected_count={len(expected_indexes)}; "
+                f"actual_count={len(actual_indexes)}; cause={exc}"
+            ) from exc
+        raise
+    validation = validate_materialized_frame_set(out_dir=out, schedule=schedule)
     total_bytes = sum(frame.stat().st_size for frame in out.glob("frame_*.jpg") if frame.is_file())
     return {
         "schedule": schedule,
@@ -209,6 +295,7 @@ def materialize_process_video_frames(
         "out_dir": str(out),
         "frame_count": extraction["extracted_frame_count"],
         "total_bytes": total_bytes,
+        "validation": validation,
     }
 
 
@@ -260,3 +347,49 @@ def _uniform_sample(indexes: list[int], cap: int) -> list[int]:
     # is fine (still <= cap, still spread evenly across the full range);
     # never pad back toward the frames the stride dropped.
     return picked
+
+
+def _capped_schedule_with_required(indexes: list[int], cap: int, required: set[int]) -> list[int]:
+    sampled = set(_uniform_sample(indexes, cap))
+    missing_required = sorted(required - sampled)
+    if not missing_required:
+        return sorted(sampled)
+    removable = sorted(sampled - required, reverse=True)
+    if len(removable) < len(missing_required):
+        raise BodyFrameScheduleError(
+            f"materialization cap {cap} cannot retain required BODY frames {missing_required}"
+        )
+    for frame_idx in removable[: len(missing_required)]:
+        sampled.remove(frame_idx)
+    sampled.update(missing_required)
+    return sorted(sampled)
+
+
+def _materialized_frame_indexes(out_dir: Path) -> set[int]:
+    indexes: set[int] = set()
+    if not out_dir.is_dir():
+        return indexes
+    for path in out_dir.iterdir():
+        if not path.is_file() or path.suffix.lower() not in BODY_FRAME_SUFFIXES or not path.stem.startswith("frame_"):
+            continue
+        try:
+            frame_idx = int(path.stem.removeprefix("frame_"))
+        except ValueError:
+            continue
+        if path.stat().st_size > 0:
+            indexes.add(frame_idx)
+    return indexes
+
+
+def _remove_unexpected_materialized_frames(out_dir: Path, *, expected_indexes: set[int]) -> None:
+    if not out_dir.is_dir():
+        return
+    for path in out_dir.iterdir():
+        if not path.is_file() or path.suffix.lower() not in BODY_FRAME_SUFFIXES or not path.stem.startswith("frame_"):
+            continue
+        try:
+            frame_idx = int(path.stem.removeprefix("frame_"))
+        except ValueError:
+            continue
+        if frame_idx not in expected_indexes:
+            path.unlink()

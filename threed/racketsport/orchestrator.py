@@ -863,14 +863,19 @@ class BodyStageRunner:
 
         artifact_io_start = time.perf_counter()
         lane_b_plan = _ensure_body_frame_plan_from_sam3d(context, tracks)
-        body_execution = build_body_compute_execution(
-            tracks,
-            frame_plan_path=body_plan_path,
-            max_frames=context.max_frames,
-            include_tier2_body_joints=self.tier2_body_joints_all_tracked,
+        body_execution = _precomputed_process_video_body_execution(
+            context,
             skeleton_stride=self.body_skeleton_stride,
         )
-        write_body_compute_execution(context.run_dir / "body_compute_execution.json", body_execution)
+        if body_execution is None:
+            body_execution = build_body_compute_execution(
+                tracks,
+                frame_plan_path=body_plan_path,
+                max_frames=context.max_frames,
+                include_tier2_body_joints=self.tier2_body_joints_all_tracked,
+                skeleton_stride=self.body_skeleton_stride,
+            )
+            write_body_compute_execution(context.run_dir / "body_compute_execution.json", body_execution)
         tier2_config = self._sam3d_tier2_config(body_execution)
         _write_json_artifact(context.run_dir / "sam3d_tier2_config.json", tier2_config)
         phase_timings["artifact_io_s"] = phase_timings.get("artifact_io_s", 0.0) + max(
@@ -3287,6 +3292,47 @@ def _find_body_frame_image(context: StageContext, frame_idx: int) -> Path:
         f"missing BODY frame image for frame {frame_idx}; expected body_frames/frame_{frame_idx:06d}.jpg "
         f"under {context.inputs_dir} or RACKETSPORT_BODY_FRAMES"
     )
+
+
+def _precomputed_process_video_body_execution(
+    context: StageContext,
+    *,
+    skeleton_stride: int,
+) -> dict[str, Any] | None:
+    """Load the execution manifest authored by process_video's frames stage.
+
+    Presence of both artifacts is the handoff marker: the frames stage derived
+    the BODY request set once, retained it while applying its materialization
+    cap, and validated the on-disk JPEG set. Direct orchestrator callers that
+    do not own this handoff continue to build their execution locally.
+    """
+
+    execution_path = context.run_dir / "body_compute_execution.json"
+    schedule_path = context.run_dir / "process_video_frame_schedule.json"
+    if not execution_path.is_file() or not schedule_path.is_file():
+        return None
+    execution = _read_optional_json(execution_path)
+    schedule = _read_optional_json(schedule_path)
+    if not isinstance(execution, dict) or not isinstance(schedule, Mapping):
+        raise ValueError("process_video BODY execution handoff artifacts must be JSON objects")
+    summary = execution.get("summary")
+    if not isinstance(summary, Mapping):
+        raise ValueError("process_video BODY execution handoff is missing summary")
+    recorded_stride = int(summary.get("base_skeleton_stride", skeleton_stride))
+    if recorded_stride != int(skeleton_stride):
+        raise ValueError(
+            "process_video BODY execution handoff skeleton stride mismatch: "
+            f"execution={recorded_stride}, runner={int(skeleton_stride)}"
+        )
+    requested = {int(frame["frame_idx"]) for frame in execution.get("scheduled_frames", [])}
+    materialized_schedule = {int(frame_idx) for frame_idx in schedule.get("frame_indexes", [])}
+    missing = sorted(requested - materialized_schedule)
+    if missing:
+        raise ValueError(
+            "process_video BODY execution handoff contains frames absent from frames-stage schedule: "
+            f"missing_frames={missing}"
+        )
+    return execution
 
 
 def _body_frame_priority(path: Path) -> tuple[int, str]:

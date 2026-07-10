@@ -122,6 +122,7 @@ from threed.racketsport.confidence_gate import (  # noqa: E402
     summarize_bands,
 )
 from threed.racketsport.body_grounding_refine import GroundingRefineConfig, refine_body_grounding  # noqa: E402
+from threed.racketsport.body_compute import build_body_compute_execution, write_body_compute_execution  # noqa: E402
 from threed.racketsport.event_fusion import fuse_contact_windows_from_cue_payloads  # noqa: E402
 from threed.racketsport.match_stats import compute_match_stats_for_run_dir, write_match_stats_json  # noqa: E402
 from threed.racketsport.frame_rating import (  # noqa: E402
@@ -156,7 +157,16 @@ from threed.racketsport.paddle_pose_fused import (  # noqa: E402
     build_paddle_pose_fused_from_file,
     write_paddle_pose_fused,
 )
-from threed.racketsport.process_video_body_frames import materialize_process_video_frames  # noqa: E402
+from threed.racketsport.process_video_body_frames import (  # noqa: E402
+    DEFAULT_MAX_SCHEDULED_FRAMES,
+    BodyFrameMaterializationError,
+    BodyFrameScheduleError,
+    body_execution_frame_indexes,
+    build_frame_schedule,
+    materialize_process_video_frames,
+    validate_materialized_frame_set,
+    write_frame_schedule,
+)
 from threed.racketsport.rally_gating import build_rally_spans_artifact, in_rally_span  # noqa: E402
 from threed.racketsport.raw_pool_person_authority import (  # noqa: E402
     RawPoolAuthorityConfig,
@@ -2138,17 +2148,6 @@ class ProcessVideoPipeline:
                 notes=["requires tracks.json (tracking stage did not produce one); BODY will degrade to court/skeleton-only"],
             )
 
-        existing = sorted(out_dir.glob("frame_*.jpg")) if out_dir.is_dir() else []
-        if existing and not opts.force and self._identity_allows_reuse("frames"):
-            return StageOutcome(
-                stage="frames",
-                status="skipped",
-                wall_seconds=0.0,
-                notes=[f"reusing {len(existing)} already-extracted body_frames/ JPEG(s)"],
-                artifacts=["body_frames/"],
-                metrics={"frame_count": len(existing)},
-            )
-
         if opts.no_gpu:
             return StageOutcome(
                 stage="frames",
@@ -2158,14 +2157,71 @@ class ProcessVideoPipeline:
             )
 
         try:
+            tracks = validate_artifact_file("tracks", tracks_path)
+            frame_plan_path = self.clip_dir / "frame_compute_plan.json"
+            body_execution: Mapping[str, Any] | None = None
+            required_frame_indexes: set[int] | None = None
+            body_frame_cap = min(
+                int(opts.max_frames) if opts.max_frames is not None else DEFAULT_MAX_SCHEDULED_FRAMES,
+                DEFAULT_MAX_SCHEDULED_FRAMES,
+            )
+            body_execution = build_body_compute_execution(
+                tracks,
+                frame_plan_path=frame_plan_path,
+                max_frames=body_frame_cap,
+                include_tier2_body_joints=True,
+                skeleton_stride=opts.body_skeleton_stride,
+            )
+            write_body_compute_execution(self.clip_dir / "body_compute_execution.json", body_execution)
+            required_frame_indexes = body_execution_frame_indexes(body_execution)
+
+            schedule, schedule_notes = build_frame_schedule(
+                tracks,
+                frame_compute_plan_path=frame_plan_path,
+                max_frames=body_frame_cap,
+                skeleton_stride=opts.body_skeleton_stride,
+                required_frame_indexes=required_frame_indexes,
+            )
+            write_frame_schedule(self.clip_dir / "process_video_frame_schedule.json", schedule)
+
+            existing = sorted(out_dir.glob("frame_*.jpg")) if out_dir.is_dir() else []
+            cache_note: str | None = None
+            if existing and not opts.force and self._identity_allows_reuse("frames"):
+                try:
+                    validation = validate_materialized_frame_set(out_dir=out_dir, schedule=schedule)
+                except BodyFrameMaterializationError as exc:
+                    cache_note = f"cached body_frames/ rejected against current schedule and will be re-materialized: {exc}"
+                else:
+                    return StageOutcome(
+                        stage="frames",
+                        status="skipped",
+                        wall_seconds=0.0,
+                        notes=[
+                            *schedule_notes,
+                            f"reusing {len(existing)} schedule-validated body_frames/ JPEG(s); current schedule set equals materialized set",
+                        ],
+                        artifacts=["body_frames/", "process_video_frame_schedule.json"],
+                        metrics={
+                            "frame_count": len(existing),
+                            "schedule_materialized_equal": validation["equal"],
+                            "required_body_frame_count": len(required_frame_indexes or set()),
+                        },
+                    )
+
             result = materialize_process_video_frames(
                 video_path=self.clip_dir / f"source{opts.video.suffix.lower()}",
                 tracks_path=tracks_path,
                 out_dir=out_dir,
-                frame_compute_plan_path=self.clip_dir / "frame_compute_plan.json",
-                max_frames=opts.max_frames,
+                frame_compute_plan_path=frame_plan_path,
+                max_frames=body_frame_cap,
                 skeleton_stride=opts.body_skeleton_stride,
+                required_frame_indexes=required_frame_indexes,
+                schedule=schedule,
             )
+            if cache_note is not None:
+                result["notes"] = [cache_note, *result["notes"]]
+        except (BodyFrameScheduleError, BodyFrameMaterializationError) as exc:
+            raise _HardStageFailure(f"BODY frames-stage schedule validation failed ({type(exc).__name__}): {exc}") from exc
         except Exception as exc:  # noqa: BLE001 - frame extraction must never crash the pipeline
             return StageOutcome(
                 stage="frames",
@@ -2179,16 +2235,18 @@ class ProcessVideoPipeline:
 
         total_mb = result["total_bytes"] / (1024 * 1024)
         notes = [
+            *schedule_notes,
             *result["notes"],
             f"extracted {result['frame_count']} scheduled JPEG(s) into body_frames/ ({total_mb:.2f} MB) via ffmpeg "
             "(threed.racketsport.body_frame_materialization, the same extraction body_video_smoke.py already exercises)",
+            "frames-stage validation passed: current schedule set equals materialized BODY frame set",
         ]
         return StageOutcome(
             stage="frames",
             status="ran",
             wall_seconds=0.0,
             notes=notes,
-            artifacts=["body_frames/"],
+            artifacts=["body_frames/", "process_video_frame_schedule.json"],
             metrics={
                 "frame_count": result["frame_count"],
                 "total_bytes": result["total_bytes"],
@@ -2197,6 +2255,8 @@ class ProcessVideoPipeline:
                 "schedule_source": result["schedule"]["source"],
                 "base_skeleton_stride": result["schedule"].get("base_skeleton_stride"),
                 "effective_stride": result["schedule"].get("effective_stride"),
+                "required_body_frame_count": len(required_frame_indexes or set()),
+                "schedule_materialized_equal": result.get("validation", {"equal": True})["equal"],
                 "scheduled_vs_total_frame_count": {
                     "scheduled": len(result["schedule"].get("frame_indexes", [])),
                     "total": result["schedule"].get("total_tracked_frame_count"),
