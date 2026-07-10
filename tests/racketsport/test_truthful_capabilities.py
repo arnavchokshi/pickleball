@@ -28,6 +28,7 @@ ALLOWED_MARKDOWN_DOCS = set(CANONICAL_DOCS) | {
     "cvat_upload/court_keypoints_20260707/OWNER_COURT_KP_GUIDE.md",
     "cvat_upload/exports/README.md",
     "cvat_upload/exports/w7_labels_20260709/README_INGEST_QUEUE_20260709.md",
+    "cvat_upload/w7_audit_stratum_20260709/TASK_README.md",
     "cvat_upload/exports/court_keypoints_20260707/PARTIAL_EXPORT_NOTES_20260709.md",
     "cvat_upload/exports/w6_labelpack_20260708/SESSION_NOTES_20260709.md",
     "cvat_upload/exports/court_keypoints_20260707/README.md",
@@ -124,6 +125,7 @@ ALLOWED_DUPLICATE_TRACKED_BLOBS = {
 }
 
 ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = {
+    "cvat_upload/w7_audit_stratum_20260709/w7_audit_stratum_uniform350_images.zip",
     # Local-only owner labeling packages regenerated from the wave-5 labelpack lane.
     "cvat_upload/w5_labelpack_20260708/packages/ball_session_01_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
     "cvat_upload/w5_labelpack_20260708/packages/ball_session_02_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",

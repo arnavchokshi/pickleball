@@ -49,6 +49,7 @@ W6_LABELPACK_IMAGE_ZIPS = {
 }
 
 ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = {
+    "cvat_upload/w7_audit_stratum_20260709/w7_audit_stratum_uniform350_images.zip",
     # Local-only wave-5 CVAT packages; evidence: runs/lanes/w5_labelpack_20260708/report.json.
     "cvat_upload/w5_labelpack_20260708/packages/ball_session_01_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
     "cvat_upload/w5_labelpack_20260708/packages/ball_session_02_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
