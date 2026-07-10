@@ -1,0 +1,1222 @@
+{
+  "artifact_type": "racketsport_court_pseudo_label_projection_report",
+  "calibrated_source_count": 1,
+  "calibrated_source_ids": [
+    "73VurrTKCZ8"
+  ],
+  "calibration_dir": "runs/lanes/court_data1_20260709/court_calibrations_r2",
+  "counts_by_clip": {
+    "73VurrTKCZ8/73VurrTKCZ8_rally_0001": {
+      "clip_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0001.mp4",
+      "excluded_reason": "camera_motion",
+      "excluded_rows": 200,
+      "frame_count": 996,
+      "full_rows": 200,
+      "included_rows": 0,
+      "source_id": "73VurrTKCZ8",
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0001"
+    },
+    "73VurrTKCZ8/73VurrTKCZ8_rally_0002": {
+      "clip_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0002.mp4",
+      "excluded_reason": "camera_motion",
+      "excluded_rows": 548,
+      "frame_count": 2736,
+      "full_rows": 548,
+      "included_rows": 0,
+      "source_id": "73VurrTKCZ8",
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0002"
+    },
+    "73VurrTKCZ8/73VurrTKCZ8_rally_0003": {
+      "clip_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0003.mp4",
+      "excluded_reason": "camera_motion",
+      "excluded_rows": 87,
+      "frame_count": 431,
+      "full_rows": 87,
+      "included_rows": 0,
+      "source_id": "73VurrTKCZ8",
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0003"
+    },
+    "73VurrTKCZ8/73VurrTKCZ8_rally_0004": {
+      "clip_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0004.mp4",
+      "excluded_reason": "camera_motion",
+      "excluded_rows": 60,
+      "frame_count": 296,
+      "full_rows": 60,
+      "included_rows": 0,
+      "source_id": "73VurrTKCZ8",
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0004"
+    },
+    "73VurrTKCZ8/73VurrTKCZ8_rally_0005": {
+      "clip_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0005.mp4",
+      "excluded_reason": "camera_motion",
+      "excluded_rows": 132,
+      "frame_count": 656,
+      "full_rows": 132,
+      "included_rows": 0,
+      "source_id": "73VurrTKCZ8",
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0005"
+    },
+    "73VurrTKCZ8/73VurrTKCZ8_rally_0006": {
+      "clip_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0006.mp4",
+      "excluded_reason": "camera_motion",
+      "excluded_rows": 124,
+      "frame_count": 616,
+      "full_rows": 124,
+      "included_rows": 0,
+      "source_id": "73VurrTKCZ8",
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0006"
+    },
+    "73VurrTKCZ8/73VurrTKCZ8_rally_0007": {
+      "clip_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0007.mp4",
+      "excluded_reason": "camera_motion",
+      "excluded_rows": 53,
+      "frame_count": 261,
+      "full_rows": 53,
+      "included_rows": 0,
+      "source_id": "73VurrTKCZ8",
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0007"
+    },
+    "73VurrTKCZ8/73VurrTKCZ8_rally_0008": {
+      "clip_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0008.mp4",
+      "excluded_reason": "camera_motion",
+      "excluded_rows": 524,
+      "frame_count": 2616,
+      "full_rows": 524,
+      "included_rows": 0,
+      "source_id": "73VurrTKCZ8",
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0008"
+    }
+  },
+  "counts_by_source": {
+    "73VurrTKCZ8": {
+      "clip_count": 8,
+      "excluded_rows": 1728,
+      "full_rows": 1728,
+      "included_rows": 0
+    }
+  },
+  "default_view_jsonl": "runs/lanes/court_data1_20260709/court_pseudo_labels_default.jsonl",
+  "excluded_row_count": 1728,
+  "full_row_count": 1728,
+  "included_row_count": 0,
+  "manifest_jsonl": "runs/lanes/court_data1_20260709/court_pseudo_labels.jsonl",
+  "projector_version": "court_metric15_projector_v1",
+  "qa_overlay_count_by_source": {
+    "73VurrTKCZ8": 20
+  },
+  "rallies_dir": "data/online_harvest_20260706/rallies",
+  "schema_validation": {
+    "failures": 0,
+    "rows_checked": 1728
+  },
+  "schema_version": 1,
+  "static_camera_checks": [
+    {
+      "drift_max_px": 711.3997192382812,
+      "drift_median_px": 0.6360569596290588,
+      "drift_p95_px": 360.08704833984376,
+      "excluded_reason": "camera_motion",
+      "frame_count": 996,
+      "gate_px": 2.0,
+      "method": "orb_scene_homography_court_region_v2",
+      "method_note": "Detect up to 2500 ORB scene features (static court, apron, fence, and background), match reference-to-sample descriptors with a 0.78 ratio test, require at least 20 and 25% RANSAC inliers for a 1.5px homography, and measure displacement at all 15 court-region template points. ECC affine is a failover only. At least 8 uniformly spaced frames must measure; pooled court-point drift p95 must be <=2.0px.",
+      "sample_count_measured": 12,
+      "sample_count_requested": 12,
+      "sample_frames": [
+        {
+          "drift_max_px": 551.7977294921875,
+          "drift_median_px": 224.17361450195312,
+          "drift_p95_px": 507.2078918457031,
+          "frame_index": 0,
+          "inlier_count": 102,
+          "match_count": 171,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.8046367764472961,
+          "drift_median_px": 0.3999497592449188,
+          "drift_p95_px": 0.6989627540111543,
+          "frame_index": 90,
+          "inlier_count": 441,
+          "match_count": 614,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 2.6213064193725586,
+          "drift_median_px": 1.1430537700653076,
+          "drift_p95_px": 2.1283832550048833,
+          "frame_index": 181,
+          "inlier_count": 356,
+          "match_count": 544,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 2.2814993858337402,
+          "drift_median_px": 0.6708292961120605,
+          "drift_p95_px": 1.8170972347259524,
+          "frame_index": 271,
+          "inlier_count": 254,
+          "match_count": 365,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.9351879358291626,
+          "drift_median_px": 0.39783793687820435,
+          "drift_p95_px": 0.8718588411808015,
+          "frame_index": 362,
+          "inlier_count": 405,
+          "match_count": 606,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 77.46233367919922,
+          "drift_median_px": 26.518892288208008,
+          "drift_p95_px": 59.16327133178713,
+          "frame_index": 452,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.9061578512191772,
+          "drift_median_px": 0.5973984003067017,
+          "drift_p95_px": 0.7764359235763552,
+          "frame_index": 543,
+          "inlier_count": 389,
+          "match_count": 556,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.985486388206482,
+          "drift_median_px": 0.33190086483955383,
+          "drift_p95_px": 1.7834261059761047,
+          "frame_index": 633,
+          "inlier_count": 381,
+          "match_count": 549,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.4575756788253784,
+          "drift_median_px": 0.23162852227687836,
+          "drift_p95_px": 1.311389422416687,
+          "frame_index": 724,
+          "inlier_count": 576,
+          "match_count": 732,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.688857913017273,
+          "drift_median_px": 0.2597580552101135,
+          "drift_p95_px": 0.6623050689697266,
+          "frame_index": 814,
+          "inlier_count": 545,
+          "match_count": 731,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 711.3997192382812,
+          "drift_median_px": 285.4898986816406,
+          "drift_p95_px": 654.4153015136719,
+          "frame_index": 905,
+          "inlier_count": 106,
+          "match_count": 215,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.8448687195777893,
+          "drift_median_px": 0.2607559561729431,
+          "drift_p95_px": 0.7590121150016786,
+          "frame_index": 995,
+          "inlier_count": 472,
+          "match_count": 625,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        }
+      ],
+      "static_camera": false,
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0001",
+      "status": "fail",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0001.mp4"
+    },
+    {
+      "drift_max_px": 120.77783966064453,
+      "drift_median_px": 4.9047011733055115,
+      "drift_p95_px": 72.48046913146973,
+      "excluded_reason": "camera_motion",
+      "frame_count": 2736,
+      "gate_px": 2.0,
+      "method": "orb_scene_homography_court_region_v2",
+      "method_note": "Detect up to 2500 ORB scene features (static court, apron, fence, and background), match reference-to-sample descriptors with a 0.78 ratio test, require at least 20 and 25% RANSAC inliers for a 1.5px homography, and measure displacement at all 15 court-region template points. ECC affine is a failover only. At least 8 uniformly spaced frames must measure; pooled court-point drift p95 must be <=2.0px.",
+      "sample_count_measured": 12,
+      "sample_count_requested": 12,
+      "sample_frames": [
+        {
+          "drift_max_px": 55.69293975830078,
+          "drift_median_px": 27.022335052490234,
+          "drift_p95_px": 47.631850051879894,
+          "frame_index": 0,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.3922784626483917,
+          "drift_median_px": 0.15684525668621063,
+          "drift_p95_px": 0.32100690901279455,
+          "frame_index": 249,
+          "inlier_count": 587,
+          "match_count": 757,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.044066309928894,
+          "drift_median_px": 0.48298269510269165,
+          "drift_p95_px": 0.8068931579589846,
+          "frame_index": 497,
+          "inlier_count": 453,
+          "match_count": 631,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.6817207336425781,
+          "drift_median_px": 0.3149925470352173,
+          "drift_p95_px": 0.5734633743762971,
+          "frame_index": 746,
+          "inlier_count": 586,
+          "match_count": 802,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 53.841182708740234,
+          "drift_median_px": 30.388017654418945,
+          "drift_p95_px": 51.870462036132814,
+          "frame_index": 995,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 74.34132385253906,
+          "drift_median_px": 35.664886474609375,
+          "drift_p95_px": 73.58037185668945,
+          "frame_index": 1243,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 120.77783966064453,
+          "drift_median_px": 46.93156814575195,
+          "drift_p95_px": 93.26109237670902,
+          "frame_index": 1492,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 108.98414611816406,
+          "drift_median_px": 37.7735595703125,
+          "drift_p95_px": 101.98288040161134,
+          "frame_index": 1740,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.6279658079147339,
+          "drift_median_px": 0.42050880193710327,
+          "drift_p95_px": 0.5548353791236879,
+          "frame_index": 1989,
+          "inlier_count": 519,
+          "match_count": 700,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 63.9791259765625,
+          "drift_median_px": 30.532123565673828,
+          "drift_p95_px": 45.65018577575685,
+          "frame_index": 2238,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.36092373728752136,
+          "drift_median_px": 0.11630193144083023,
+          "drift_p95_px": 0.3441499680280686,
+          "frame_index": 2486,
+          "inlier_count": 569,
+          "match_count": 713,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.6024560332298279,
+          "drift_median_px": 0.24575959146022797,
+          "drift_p95_px": 0.44553924500942244,
+          "frame_index": 2735,
+          "inlier_count": 447,
+          "match_count": 608,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        }
+      ],
+      "static_camera": false,
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0002",
+      "status": "fail",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0002.mp4"
+    },
+    {
+      "drift_max_px": 89.97757720947266,
+      "drift_median_px": 23.80097007751465,
+      "drift_p95_px": 63.45301456451417,
+      "excluded_reason": "camera_motion",
+      "frame_count": 431,
+      "gate_px": 2.0,
+      "method": "orb_scene_homography_court_region_v2",
+      "method_note": "Detect up to 2500 ORB scene features (static court, apron, fence, and background), match reference-to-sample descriptors with a 0.78 ratio test, require at least 20 and 25% RANSAC inliers for a 1.5px homography, and measure displacement at all 15 court-region template points. ECC affine is a failover only. At least 8 uniformly spaced frames must measure; pooled court-point drift p95 must be <=2.0px.",
+      "sample_count_measured": 12,
+      "sample_count_requested": 12,
+      "sample_frames": [
+        {
+          "drift_max_px": 85.10165405273438,
+          "drift_median_px": 38.31412124633789,
+          "drift_p95_px": 69.9078510284424,
+          "frame_index": 0,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.6024914979934692,
+          "drift_median_px": 0.36045798659324646,
+          "drift_p95_px": 0.5663733065128327,
+          "frame_index": 39,
+          "inlier_count": 586,
+          "match_count": 770,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.8677771091461182,
+          "drift_median_px": 0.19619715213775635,
+          "drift_p95_px": 0.7505363166332246,
+          "frame_index": 78,
+          "inlier_count": 621,
+          "match_count": 775,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.36212781071662903,
+          "drift_median_px": 0.1689119040966034,
+          "drift_p95_px": 0.3600729197263718,
+          "frame_index": 117,
+          "inlier_count": 650,
+          "match_count": 839,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.7056114673614502,
+          "drift_median_px": 0.2977812886238098,
+          "drift_p95_px": 0.6354436397552491,
+          "frame_index": 156,
+          "inlier_count": 584,
+          "match_count": 758,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 73.31779479980469,
+          "drift_median_px": 29.65866470336914,
+          "drift_p95_px": 59.659017562866225,
+          "frame_index": 195,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 89.97757720947266,
+          "drift_median_px": 35.166011810302734,
+          "drift_p95_px": 72.16573562622072,
+          "frame_index": 235,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 73.6351547241211,
+          "drift_median_px": 31.00108528137207,
+          "drift_p95_px": 59.473981475830094,
+          "frame_index": 274,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 78.10718536376953,
+          "drift_median_px": 34.8809928894043,
+          "drift_p95_px": 66.04261550903323,
+          "frame_index": 313,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.8743887543678284,
+          "drift_median_px": 0.6963534951210022,
+          "drift_p95_px": 0.8248277485370636,
+          "frame_index": 352,
+          "inlier_count": 471,
+          "match_count": 689,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 76.93660736083984,
+          "drift_median_px": 36.26691436767578,
+          "drift_p95_px": 69.6602165222168,
+          "frame_index": 391,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 80.82847595214844,
+          "drift_median_px": 29.61425018310547,
+          "drift_p95_px": 59.573418045043965,
+          "frame_index": 430,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        }
+      ],
+      "static_camera": false,
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0003",
+      "status": "fail",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0003.mp4"
+    },
+    {
+      "drift_max_px": 187.88644409179688,
+      "drift_median_px": 4.618142604827881,
+      "drift_p95_px": 156.6892059326172,
+      "excluded_reason": "camera_motion",
+      "frame_count": 296,
+      "gate_px": 2.0,
+      "method": "orb_scene_homography_court_region_v2",
+      "method_note": "Detect up to 2500 ORB scene features (static court, apron, fence, and background), match reference-to-sample descriptors with a 0.78 ratio test, require at least 20 and 25% RANSAC inliers for a 1.5px homography, and measure displacement at all 15 court-region template points. ECC affine is a failover only. At least 8 uniformly spaced frames must measure; pooled court-point drift p95 must be <=2.0px.",
+      "sample_count_measured": 12,
+      "sample_count_requested": 12,
+      "sample_frames": [
+        {
+          "drift_max_px": 74.81794738769531,
+          "drift_median_px": 28.337203979492188,
+          "drift_p95_px": 58.18898735046388,
+          "frame_index": 0,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.6520555019378662,
+          "drift_median_px": 0.13489213585853577,
+          "drift_p95_px": 0.5446625232696535,
+          "frame_index": 27,
+          "inlier_count": 665,
+          "match_count": 895,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.8425232172012329,
+          "drift_median_px": 0.19419103860855103,
+          "drift_p95_px": 0.6269913733005525,
+          "frame_index": 54,
+          "inlier_count": 645,
+          "match_count": 863,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.33766236901283264,
+          "drift_median_px": 0.12565696239471436,
+          "drift_p95_px": 0.2956086069345475,
+          "frame_index": 80,
+          "inlier_count": 616,
+          "match_count": 812,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.6716896295547485,
+          "drift_median_px": 0.20137318968772888,
+          "drift_p95_px": 0.5493415772914887,
+          "frame_index": 107,
+          "inlier_count": 486,
+          "match_count": 629,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 39.31028366088867,
+          "drift_median_px": 24.03897476196289,
+          "drift_p95_px": 37.718757247924806,
+          "frame_index": 134,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 48.636016845703125,
+          "drift_median_px": 26.233749389648438,
+          "drift_p95_px": 47.86511001586914,
+          "frame_index": 161,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 186.05575561523438,
+          "drift_median_px": 119.95777893066406,
+          "drift_p95_px": 175.28437957763674,
+          "frame_index": 188,
+          "inlier_count": 128,
+          "match_count": 262,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 182.391845703125,
+          "drift_median_px": 116.9005126953125,
+          "drift_p95_px": 172.6827102661133,
+          "frame_index": 215,
+          "inlier_count": 171,
+          "match_count": 375,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 187.88644409179688,
+          "drift_median_px": 119.38163757324219,
+          "drift_p95_px": 177.5434783935547,
+          "frame_index": 241,
+          "inlier_count": 197,
+          "match_count": 367,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.586143970489502,
+          "drift_median_px": 0.2510843575000763,
+          "drift_p95_px": 1.3404066205024723,
+          "frame_index": 268,
+          "inlier_count": 401,
+          "match_count": 555,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.6126378178596497,
+          "drift_median_px": 0.25609418749809265,
+          "drift_p95_px": 0.4575513660907747,
+          "frame_index": 295,
+          "inlier_count": 441,
+          "match_count": 597,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        }
+      ],
+      "static_camera": false,
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0004",
+      "status": "fail",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0004.mp4"
+    },
+    {
+      "drift_max_px": 97.7947769165039,
+      "drift_median_px": 0.3258856385946274,
+      "drift_p95_px": 66.3973567962647,
+      "excluded_reason": "camera_motion",
+      "frame_count": 656,
+      "gate_px": 2.0,
+      "method": "orb_scene_homography_court_region_v2",
+      "method_note": "Detect up to 2500 ORB scene features (static court, apron, fence, and background), match reference-to-sample descriptors with a 0.78 ratio test, require at least 20 and 25% RANSAC inliers for a 1.5px homography, and measure displacement at all 15 court-region template points. ECC affine is a failover only. At least 8 uniformly spaced frames must measure; pooled court-point drift p95 must be <=2.0px.",
+      "sample_count_measured": 12,
+      "sample_count_requested": 12,
+      "sample_frames": [
+        {
+          "drift_max_px": 0.8911573886871338,
+          "drift_median_px": 0.3172709047794342,
+          "drift_p95_px": 0.6936787366867068,
+          "frame_index": 0,
+          "inlier_count": 573,
+          "match_count": 735,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.9106988310813904,
+          "drift_median_px": 0.148396298289299,
+          "drift_p95_px": 0.79394348859787,
+          "frame_index": 60,
+          "inlier_count": 602,
+          "match_count": 745,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.9745873212814331,
+          "drift_median_px": 0.19830505549907684,
+          "drift_p95_px": 0.8739764988422394,
+          "frame_index": 119,
+          "inlier_count": 635,
+          "match_count": 868,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 92.89221954345703,
+          "drift_median_px": 47.60948181152344,
+          "drift_p95_px": 83.54631271362305,
+          "frame_index": 179,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 97.7947769165039,
+          "drift_median_px": 36.28879928588867,
+          "drift_p95_px": 75.58688278198244,
+          "frame_index": 238,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.31468820571899414,
+          "drift_median_px": 0.18146361410617828,
+          "drift_p95_px": 0.30281285047531126,
+          "frame_index": 298,
+          "inlier_count": 446,
+          "match_count": 572,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.0707966089248657,
+          "drift_median_px": 0.245575949549675,
+          "drift_p95_px": 0.8934406638145449,
+          "frame_index": 357,
+          "inlier_count": 323,
+          "match_count": 448,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.8579117059707642,
+          "drift_median_px": 0.24128933250904083,
+          "drift_p95_px": 0.7109998404979707,
+          "frame_index": 417,
+          "inlier_count": 603,
+          "match_count": 742,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.20031096041202545,
+          "drift_median_px": 0.12147261947393417,
+          "drift_p95_px": 0.18374351263046265,
+          "frame_index": 476,
+          "inlier_count": 549,
+          "match_count": 699,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 66.16313934326172,
+          "drift_median_px": 28.29319953918457,
+          "drift_p95_px": 52.28639984130861,
+          "frame_index": 536,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 86.95152282714844,
+          "drift_median_px": 42.1541748046875,
+          "drift_p95_px": 86.18905944824219,
+          "frame_index": 595,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.973785400390625,
+          "drift_median_px": 0.3750174343585968,
+          "drift_p95_px": 1.7056883096694948,
+          "frame_index": 655,
+          "inlier_count": 535,
+          "match_count": 711,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        }
+      ],
+      "static_camera": false,
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0005",
+      "status": "fail",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0005.mp4"
+    },
+    {
+      "drift_max_px": 84.8800048828125,
+      "drift_median_px": 12.603437066078186,
+      "drift_p95_px": 49.97072696685794,
+      "excluded_reason": "camera_motion",
+      "frame_count": 616,
+      "gate_px": 2.0,
+      "method": "orb_scene_homography_court_region_v2",
+      "method_note": "Detect up to 2500 ORB scene features (static court, apron, fence, and background), match reference-to-sample descriptors with a 0.78 ratio test, require at least 20 and 25% RANSAC inliers for a 1.5px homography, and measure displacement at all 15 court-region template points. ECC affine is a failover only. At least 8 uniformly spaced frames must measure; pooled court-point drift p95 must be <=2.0px.",
+      "sample_count_measured": 12,
+      "sample_count_requested": 12,
+      "sample_frames": [
+        {
+          "drift_max_px": 2.8505547046661377,
+          "drift_median_px": 0.33501896262168884,
+          "drift_p95_px": 2.458822274208069,
+          "frame_index": 0,
+          "inlier_count": 537,
+          "match_count": 721,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 62.04835891723633,
+          "drift_median_px": 27.902420043945312,
+          "drift_p95_px": 47.05295295715334,
+          "frame_index": 56,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 84.8800048828125,
+          "drift_median_px": 34.20173645019531,
+          "drift_p95_px": 66.3191474914551,
+          "frame_index": 112,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.43733251094818115,
+          "drift_median_px": 0.12633709609508514,
+          "drift_p95_px": 0.41121634244918825,
+          "frame_index": 168,
+          "inlier_count": 584,
+          "match_count": 751,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.5497277975082397,
+          "drift_median_px": 0.09996720403432846,
+          "drift_p95_px": 0.5007240265607834,
+          "frame_index": 224,
+          "inlier_count": 560,
+          "match_count": 703,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 76.79141235351562,
+          "drift_median_px": 31.795297622680664,
+          "drift_p95_px": 59.74093666076662,
+          "frame_index": 280,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 65.80586242675781,
+          "drift_median_px": 36.69038772583008,
+          "drift_p95_px": 51.72548675537111,
+          "frame_index": 335,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 61.533180236816406,
+          "drift_median_px": 25.696937561035156,
+          "drift_p95_px": 45.88705978393556,
+          "frame_index": 391,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.7315230369567871,
+          "drift_median_px": 0.15536612272262573,
+          "drift_p95_px": 0.5143518030643466,
+          "frame_index": 447,
+          "inlier_count": 607,
+          "match_count": 801,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 76.28767395019531,
+          "drift_median_px": 33.89482116699219,
+          "drift_p95_px": 61.96626472473146,
+          "frame_index": 503,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.0082913637161255,
+          "drift_median_px": 0.40189415216445923,
+          "drift_p95_px": 0.7770741641521456,
+          "frame_index": 559,
+          "inlier_count": 511,
+          "match_count": 674,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.2247191667556763,
+          "drift_median_px": 0.24428021907806396,
+          "drift_p95_px": 0.9918391287326815,
+          "frame_index": 615,
+          "inlier_count": 525,
+          "match_count": 680,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        }
+      ],
+      "static_camera": false,
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0006",
+      "status": "fail",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0006.mp4"
+    },
+    {
+      "drift_max_px": 109.39592742919922,
+      "drift_median_px": 0.398092582821846,
+      "drift_p95_px": 55.800468254089374,
+      "excluded_reason": "camera_motion",
+      "frame_count": 261,
+      "gate_px": 2.0,
+      "method": "orb_scene_homography_court_region_v2",
+      "method_note": "Detect up to 2500 ORB scene features (static court, apron, fence, and background), match reference-to-sample descriptors with a 0.78 ratio test, require at least 20 and 25% RANSAC inliers for a 1.5px homography, and measure displacement at all 15 court-region template points. ECC affine is a failover only. At least 8 uniformly spaced frames must measure; pooled court-point drift p95 must be <=2.0px.",
+      "sample_count_measured": 12,
+      "sample_count_requested": 12,
+      "sample_frames": [
+        {
+          "drift_max_px": 0.607703447341919,
+          "drift_median_px": 0.34326890110969543,
+          "drift_p95_px": 0.5535291433334351,
+          "frame_index": 0,
+          "inlier_count": 463,
+          "match_count": 605,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.1284024715423584,
+          "drift_median_px": 0.23824207484722137,
+          "drift_p95_px": 0.9096678256988528,
+          "frame_index": 24,
+          "inlier_count": 545,
+          "match_count": 723,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.5892367362976074,
+          "drift_median_px": 0.3191399872303009,
+          "drift_p95_px": 1.332754147052765,
+          "frame_index": 47,
+          "inlier_count": 579,
+          "match_count": 739,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.834297776222229,
+          "drift_median_px": 0.2870413362979889,
+          "drift_p95_px": 1.6363801121711734,
+          "frame_index": 71,
+          "inlier_count": 510,
+          "match_count": 664,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.97794508934021,
+          "drift_median_px": 0.296739399433136,
+          "drift_p95_px": 1.6927332878112795,
+          "frame_index": 95,
+          "inlier_count": 540,
+          "match_count": 678,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 109.39592742919922,
+          "drift_median_px": 54.92903137207031,
+          "drift_p95_px": 92.89948043823244,
+          "frame_index": 118,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 66.49105834960938,
+          "drift_median_px": 32.73997497558594,
+          "drift_p95_px": 56.779444885253916,
+          "frame_index": 142,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 66.65631866455078,
+          "drift_median_px": 25.53643226623535,
+          "drift_p95_px": 48.81791038513185,
+          "frame_index": 165,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 64.49295806884766,
+          "drift_median_px": 34.958335876464844,
+          "drift_p95_px": 52.54909858703614,
+          "frame_index": 189,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.5765861868858337,
+          "drift_median_px": 0.2809593975543976,
+          "drift_p95_px": 0.4781200230121614,
+          "frame_index": 213,
+          "inlier_count": 487,
+          "match_count": 665,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.5631009936332703,
+          "drift_median_px": 0.279940664768219,
+          "drift_p95_px": 0.4706399738788606,
+          "frame_index": 236,
+          "inlier_count": 443,
+          "match_count": 591,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.4155804216861725,
+          "drift_median_px": 0.23120565712451935,
+          "drift_p95_px": 0.3526952207088471,
+          "frame_index": 260,
+          "inlier_count": 393,
+          "match_count": 518,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        }
+      ],
+      "static_camera": false,
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0007",
+      "status": "fail",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0007.mp4"
+    },
+    {
+      "drift_max_px": 72.65592956542969,
+      "drift_median_px": 23.523380279541016,
+      "drift_p95_px": 50.21231422424319,
+      "excluded_reason": "camera_motion",
+      "frame_count": 2616,
+      "gate_px": 2.0,
+      "method": "orb_scene_homography_court_region_v2",
+      "method_note": "Detect up to 2500 ORB scene features (static court, apron, fence, and background), match reference-to-sample descriptors with a 0.78 ratio test, require at least 20 and 25% RANSAC inliers for a 1.5px homography, and measure displacement at all 15 court-region template points. ECC affine is a failover only. At least 8 uniformly spaced frames must measure; pooled court-point drift p95 must be <=2.0px.",
+      "sample_count_measured": 12,
+      "sample_count_requested": 12,
+      "sample_frames": [
+        {
+          "drift_max_px": 52.018489837646484,
+          "drift_median_px": 32.8055305480957,
+          "drift_p95_px": 44.764780426025396,
+          "frame_index": 0,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 61.367183685302734,
+          "drift_median_px": 36.53525161743164,
+          "drift_p95_px": 55.17147712707521,
+          "frame_index": 238,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.6083744764328003,
+          "drift_median_px": 0.380401074886322,
+          "drift_p95_px": 1.5268677711486818,
+          "frame_index": 475,
+          "inlier_count": 495,
+          "match_count": 674,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.323712944984436,
+          "drift_median_px": 0.31602734327316284,
+          "drift_p95_px": 1.3018703222274781,
+          "frame_index": 713,
+          "inlier_count": 524,
+          "match_count": 690,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 5.998926639556885,
+          "drift_median_px": 0.3989983797073364,
+          "drift_p95_px": 5.342010068893433,
+          "frame_index": 951,
+          "inlier_count": 390,
+          "match_count": 557,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 0.6023231148719788,
+          "drift_median_px": 0.2430388182401657,
+          "drift_p95_px": 0.4668156743049623,
+          "frame_index": 1189,
+          "inlier_count": 384,
+          "match_count": 555,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 72.65592956542969,
+          "drift_median_px": 32.56847381591797,
+          "drift_p95_px": 58.33182601928713,
+          "frame_index": 1426,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 58.883140563964844,
+          "drift_median_px": 29.56510353088379,
+          "drift_p95_px": 45.616455078125014,
+          "frame_index": 1664,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 70.86355590820312,
+          "drift_median_px": 31.522001266479492,
+          "drift_p95_px": 54.84161911010743,
+          "frame_index": 1902,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 66.68563842773438,
+          "drift_median_px": 26.024682998657227,
+          "drift_p95_px": 49.41038856506349,
+          "frame_index": 2140,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 58.220420837402344,
+          "drift_median_px": 26.47526741027832,
+          "drift_p95_px": 45.244169235229506,
+          "frame_index": 2377,
+          "inlier_count": 0,
+          "match_count": 0,
+          "method": "ecc_affine_fallback",
+          "status": "measured"
+        },
+        {
+          "drift_max_px": 1.3897773027420044,
+          "drift_median_px": 0.7561068534851074,
+          "drift_p95_px": 1.2127644896507266,
+          "frame_index": 2615,
+          "inlier_count": 452,
+          "match_count": 632,
+          "method": "orb_ransac_homography",
+          "status": "measured"
+        }
+      ],
+      "static_camera": false,
+      "static_camera_check_id": "73VurrTKCZ8/73VurrTKCZ8_rally_0008",
+      "status": "fail",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0008.mp4"
+    }
+  ],
+  "static_camera_gate_px": 2.0,
+  "static_camera_method": "Detect up to 2500 ORB scene features (static court, apron, fence, and background), match reference-to-sample descriptors with a 0.78 ratio test, require at least 20 and 25% RANSAC inliers for a 1.5px homography, and measure displacement at all 15 court-region template points. ECC affine is a failover only. At least 8 uniformly spaced frames must measure; pooled court-point drift p95 must be <=2.0px.",
+  "stride": 5
+}

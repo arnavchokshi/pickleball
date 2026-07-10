@@ -168,3 +168,4 @@ def test_calibrate_harvest_courts_cli_help() -> None:
 
     assert "scripts/racketsport/calibrate_harvest_courts.py"
     assert "--cvat-export-xml" in result.stdout
+    assert "--corrected-gt-root" in result.stdout

@@ -207,6 +207,10 @@ def test_evaluate_court_keypoint_owner_gate_cli_writes_gate_report(tmp_path: Pat
     assert report["artifact_type"] == "court_keypoint_owner_gate_report"
     assert report["independent_frame_count"] == 1
     assert report["all_frame_count"] == 4
+    # COURT-LOADER-1 regression: the owner-gate's existing full-15 rows still score all 15
+    # points per row; partial/external masking cannot alter this path.
+    assert [row["keypoint_count"] for row in report["raw_all"]["per_row"]] == [15, 15, 15, 15]
+    assert report["raw_all"]["keypoint_error_summary"]["count"] == 60
     expected_modes = {"raw_independent", "raw_all", "aggregated_independent", "aggregated_all"}
     assert set(report["gate_passed"]) == expected_modes
     assert set(report["gate_passed_pooled"]) == expected_modes

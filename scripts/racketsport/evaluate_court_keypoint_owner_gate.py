@@ -6,7 +6,7 @@ labels (`eval_clips/ball/*/labels/court_keypoints.json`).
 
 This script is read-only inference + scoring: it never trains or mutates the checkpoint. It
 exists as the single, pre-registered gate runner for CAL's "Held-out PCK@5px >= 0.95 per
-viewpoint on the 4 independent CVAT frames" gate (`MASTER_PLAN.md`, Gate ladder). Per the binding
+viewpoint on the 4 independent CVAT frames" gate (`NORTH_STAR_ROADMAP.md`, Gate ladder). Per the binding
 held-out eval protocol, a run against this script must be pre-registered in
 `runs/manager/heldout_eval_ledger.md` (CAL section) BEFORE it is executed, and gets exactly one
 run per pre-committed candidate.

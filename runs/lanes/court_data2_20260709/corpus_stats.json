@@ -1,0 +1,322 @@
+{
+  "corpus_root": "runs/lanes/court_data2_20260709/real_court_corpus",
+  "dataset_count": 1,
+  "duplicate_examples": [],
+  "excluded_counts": {},
+  "guard_hash_matches_included": 0,
+  "guard_image_files_hashed": 82,
+  "guard_unique_hashes": 70,
+  "held_out_source_ids": [
+    "pwxNwFfYQlQ",
+    "vQhtz8l6VqU"
+  ],
+  "keypoint_coverage_histogram": {
+    "15": 35
+  },
+  "near_duplicate_policy_note": "Same-court/different-frame near duplicates are retained because they are expected temporal/domain samples. Training must group by source_groups/dataset and must not randomly split frames across train and validation.",
+  "provenance_rows": [
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000690_jpg.rf.6837da3ff29ad869a20046b533521846.jpg",
+      "sha256": "ef61d10ea6984edd9afb287d2933b10f1782c4322577b443c44b929b7e108372",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000420_jpg.rf.94954625a465026c02257f1549bdce92.jpg",
+      "sha256": "7feb0d4cdcd27b3edc492e583646d75a605fef0b37a8eabc6698fcc19eb15bd4",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000870_jpg.rf.6bb4b06a35b38f11fc1e1e644c1ce74d.jpg",
+      "sha256": "9ed93f7bdc99f472bd513b59a33583f58bac0bf924fd96a7ccac328a0318dd8d",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000240_jpg.rf.82f8a17bd37de6e0f62774962fc703ac.jpg",
+      "sha256": "befc267ed9323b6247b171ceb98313fd956c3185c8f4c32922a8081294e76edc",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_001050_jpg.rf.b80f21e5ae2a90afda815052bd92d9c9.jpg",
+      "sha256": "0aa9609723376910bd15519a84c0b977e200863a33b8c871da4def9b9c358873",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000180_jpg.rf.8013c385e9c02564bec90cb60e1d1758.jpg",
+      "sha256": "7c7c3dd43c6caaea70e46df81ef674b488347cbfd8a506bd2ce601c3b8fed6db",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000450_jpg.rf.7a2b627ddae09bf5944ffd5528ba48b6.jpg",
+      "sha256": "5b639f9f36638ea571c7c3ec170ff60ac43865bc20f23ef59bd4d6e5c0ac2f16",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000900_jpg.rf.3066f125294f186936edf83f43f47b2e.jpg",
+      "sha256": "162ed5893d7e4fd5e135ed19fef0401dcfb87ad17c16da3d6bdafb11095457c3",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000960_jpg.rf.e669a59da2fe07c8cf7b87389fbdf9e4.jpg",
+      "sha256": "666b7c88b5242c7bab77bad75413a013662a1a982473cdfa92c2a10cb1ca5c52",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000270_jpg.rf.5cc3957fdc516206b72bf6e010e2339f.jpg",
+      "sha256": "aaf8ec1359b52fdcd626daec0fd0cfd268552459b43672624dd84781cd13a78b",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000990_jpg.rf.bfb69521a87703c4ce6c7f112c42a7f3.jpg",
+      "sha256": "dfbbdbf6cce22abda4f26b899194de63e612cc609274007d2104cb6db5a6da7c",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_001140_jpg.rf.7376f464aba8c25219e74ee4dafc7fd2.jpg",
+      "sha256": "a5b9e8c5582ca60015f151639b1b7d0777c50c79248797154143955b2bd64053",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000120_jpg.rf.fc7a12e72fce1ba9d8945e16f56a5e93.jpg",
+      "sha256": "d30559aef99cea8c5ca195fed50678fc30d89c8e2c82321aaa6e4e6d20961b1e",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000840_jpg.rf.874086c6ba68ade7c6c281b275215f92.jpg",
+      "sha256": "e4e155e4f37e093fe81bea0024b9ec4061bbb84d8233522089b2a872da9144cc",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000390_jpg.rf.e384b0990d895aa0d385887b8979cc12.jpg",
+      "sha256": "9f5417b9501c2466c389a080bed8cc150040dee220d8e6e40df3db9837f426e4",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000750_jpg.rf.a6a7bcd2c13de6f8075deb389265a5d4.jpg",
+      "sha256": "cb5cf114bb3370f8ef15b43ea1d1b7dbb64ff7242cd6be94aa376055b9b0adae",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000300_jpg.rf.bc20dfce8c912092d8f275f8e428c854.jpg",
+      "sha256": "c94a849babd9c5e48718d83f5e220385c9b74a4ecf90e89e9441ae93c678a292",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000720_jpg.rf.73fdf1d808d4972aaddade2b8379df1e.jpg",
+      "sha256": "a8a3d094c67784edbf41dddfbe63765d8e4de7d5009b6b1b89f065c5712c9eee",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000060_jpg.rf.de71d2217ed8f98c1cd4e2df81e8aa03.jpg",
+      "sha256": "3de0e122dd17a3a95ea861b55e3cb8bb1d5f729581478475fbf18c85d52029f8",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000810_jpg.rf.6044acaf0c72b8b8af0d65fea916958e.jpg",
+      "sha256": "6b58aa7679f53fa1b35ce345e469b940a7ed05f0f80992c13d58d68e2022c4a9",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000210_jpg.rf.1bf5dbfcad2f9b52f2bc632fa01b2ed7.jpg",
+      "sha256": "b5d0c0d6a7b607e32b241af3cd91e451f508f9e85ff8d3c63dce205cb0c361bd",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_001230_jpg.rf.ff7bc163d7f781d862b82c82b3c7a7ee.jpg",
+      "sha256": "a67c5ca124b55193c1642240bea147f2607327a5be4eed7786542ba51f869b33",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_001020_jpg.rf.68f6b0184212c5550088f5b5bca5b1c2.jpg",
+      "sha256": "0ef56a4226ad92bfdae39980549ea857a83cf3209c1f2d195d7bfe09a5e32a40",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000780_jpg.rf.3ab96840cd7d4edd284c360903a77063.jpg",
+      "sha256": "3f1278b07e60a005a70bebba657d605d2cdc613d68fd6c4213fb538cfe859550",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_001170_jpg.rf.45a2cd0c4b52f4e2eeb24d01f55033f7.jpg",
+      "sha256": "dc588b48bef857b672e554c07ef7f5ab1617f9d170ad855cb73b476ed5270c72",
+      "source_group": "chetan_court_v2",
+      "split": "train"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_001110_jpg.rf.a64a5ae38b15ea552b96cb9588b8d5db.jpg",
+      "sha256": "c163dbbb37982d367299a5d5b3e3a9c87540a2aea995def9f877d0249350c71e",
+      "source_group": "chetan_court_v2",
+      "split": "valid"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_000930_jpg.rf.ec5f143cc73e6019fe1ed31d8db8009c.jpg",
+      "sha256": "9979547736a12a49f89246f120488ab89700da2967d8710c0c18415747b20070",
+      "source_group": "chetan_court_v2",
+      "split": "valid"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_001200_jpg.rf.fa5cd2e433b918c36a412a05543a0335.jpg",
+      "sha256": "3f850cf260f2ef9076a00d61ba200a27ae0646d920444d0f80e19a9c81a4286b",
+      "source_group": "chetan_court_v2",
+      "split": "valid"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_001080_jpg.rf.1830f41043db64ce671743d5809602d3.jpg",
+      "sha256": "3b3ba8d8e7a57797693ea2f4ae40896b8017831e38999bff04928854f48cc06c",
+      "source_group": "chetan_court_v2",
+      "split": "valid"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_000330_jpg.rf.b01ae30db92c4cb736f1910b98c13a34.jpg",
+      "sha256": "5e6aec240c692fdef8e9eb8bfd21cb74626bba5f61c368f57f7d87ac963f806a",
+      "source_group": "chetan_court_v2",
+      "split": "valid"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_000090_jpg.rf.536fcb237b2ba0c6a58dfd493335c618.jpg",
+      "sha256": "846a190df392a9cce9aab67f29b16aa81c7bc819c6bdb71a18a22a0fd524fe4c",
+      "source_group": "chetan_court_v2",
+      "split": "valid"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_000030_jpg.rf.622ace6756bd7de37d3cea737a7cccba.jpg",
+      "sha256": "aeab6ef995e8b5d8765754d3b5be94193df6bac25055fc260a858fb67c998941",
+      "source_group": "chetan_court_v2",
+      "split": "valid"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/test/frame_000000_jpg.rf.9cab3329ca5fc9b8bd210b49910953d8.jpg",
+      "sha256": "bbdc7e5efc1bb3e0b9bd6f4a96e16d1109822f2a27d8dae2b4d5462033ace2cf",
+      "source_group": "chetan_court_v2",
+      "split": "test"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/test/frame_000360_jpg.rf.0f77fc75dd2404556262618e5215d2a6.jpg",
+      "sha256": "729d42d1d6b3400083e780b306a9b38667eaafd4584aaf07d4406200e1cc036d",
+      "source_group": "chetan_court_v2",
+      "split": "test"
+    },
+    {
+      "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "license": "CC BY 4.0",
+      "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/test/frame_000150_jpg.rf.a3a9114a8e973e539f8708e0eaa87fc3.jpg",
+      "sha256": "9dd63f7a772530fa97c0fa668cfac7bebe970044c04f368e07cde6d412bd8902",
+      "source_group": "chetan_court_v2",
+      "split": "test"
+    }
+  ],
+  "row_count": 35,
+  "rows_by_dataset": {
+    "chetan-rajagiri-9abfm__pickleball-court-v2__v1": 35
+  },
+  "rows_by_original_split": {
+    "test": 3,
+    "train": 25,
+    "valid": 7
+  },
+  "schema_version": 1,
+  "source_groups": {
+    "chetan-rajagiri-9abfm__pickleball-court-v2__v1": "chetan_court_v2"
+  },
+  "split_proposal": {
+    "method": "blocked_by_dataset_count",
+    "note": "The exact loader contract admits fewer than three fully mapped datasets, so a leakage-safe two-dataset validation holdout is not yet possible.",
+    "train_datasets": [],
+    "val_datasets": []
+  },
+  "viewpoint_distribution_by_included_dataset": {
+    "elevated": 1,
+    "steep": 1
+  }
+}

@@ -1,0 +1,357 @@
+{
+  "schema_version": 1,
+  "canonical_keypoints": [
+    "near_left_corner",
+    "near_baseline_center",
+    "near_right_corner",
+    "far_right_corner",
+    "far_baseline_center",
+    "far_left_corner",
+    "near_nvz_left",
+    "near_nvz_center",
+    "near_nvz_right",
+    "net_left_sideline",
+    "net_center",
+    "net_right_sideline",
+    "far_nvz_left",
+    "far_nvz_center",
+    "far_nvz_right"
+  ],
+  "datasets": {
+    "acmai__pickleball-courts-emwra__v3": {
+      "verdict": "corners-only",
+      "mapping_confidence": "medium",
+      "mapping_rationale": "Human court polygons can support outer-boundary corner extraction, but do not directly identify baseline centers, NVZ centers, or net-top points.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["elevated", "broadcast"],
+      "source_group": "emwra_court_polygon_family",
+      "include_default": false
+    },
+    "chetan-rajagiri-9abfm__pickleball-court-v2__v1": {
+      "verdict": "direct-map",
+      "mapping_confidence": "high",
+      "mapping_rationale": "All 15 points are explicitly named. Five overlays show the source's far_* rows are image-near and near_* rows are image-far, so geometry, court topology, and apparent depth resolve that source-relative naming reversal.",
+      "keypoint_mapping": {
+        "far_left_baseline": "near_left_corner",
+        "far_center_baseline": "near_baseline_center",
+        "far_right_baseline": "near_right_corner",
+        "far_left_kitchen": "near_nvz_left",
+        "far_center_kitchen": "near_nvz_center",
+        "far_right_kitchen": "near_nvz_right",
+        "net_left": "net_left_sideline",
+        "net_center": "net_center",
+        "net_right": "net_right_sideline",
+        "near_left_kitchen": "far_nvz_left",
+        "near_center_kitchen": "far_nvz_center",
+        "near_right_kitchen": "far_nvz_right",
+        "near_left_baseline": "far_left_corner",
+        "near_center_baseline": "far_baseline_center",
+        "near_right_baseline": "far_right_corner"
+      },
+      "viewpoint_character": ["elevated", "steep"],
+      "source_group": "chetan_court_v2",
+      "human_annotated": true,
+      "include_default": true
+    },
+    "dians-workspace-qq6mg__pickle-net__v3": {
+      "verdict": "unusable",
+      "mapping_confidence": "none",
+      "mapping_rationale": "Net segmentation has no court-line or canonical point semantics and only nine images.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["elevated", "steep"],
+      "source_group": "dians_pickle_net",
+      "include_default": false
+    },
+    "gideons__pickleball-court__v1": {
+      "verdict": "corners-only",
+      "mapping_confidence": "medium",
+      "mapping_rationale": "Human court polygons support only outer corners without guessed internal-line semantics.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["elevated", "broadcast"],
+      "source_group": "emwra_court_polygon_family",
+      "include_default": false
+    },
+    "hilab__pickleball-lkbro__v1": {
+      "verdict": "unusable",
+      "mapping_confidence": "none",
+      "mapping_rationale": "Three multi-class segmentation images do not define stable 15-point court semantics.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["broadcast"],
+      "source_group": "hilab_multiclass",
+      "include_default": false
+    },
+    "hughs-workspace-plw3g__pickleball-court-cfyv4__v1": {
+      "verdict": "corners-only",
+      "mapping_confidence": "medium",
+      "mapping_rationale": "Court masks support an outer quadrilateral but not the 15 canonical intersections.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["broadcast", "elevated"],
+      "source_group": "hughs_court_line_masks",
+      "include_default": false
+    },
+    "liberin-technologies__pickleball-vision__v9": {
+      "verdict": "unusable",
+      "mapping_confidence": "none",
+      "mapping_rationale": "The downloaded COCO annotations contain ball boxes rather than court keypoints despite court-related project metadata.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["broadcast", "elevated"],
+      "source_group": "liberin_pickleball_vision",
+      "include_default": false
+    },
+    "luiss-workspace-99bfi__pickleball-court-detection-o8i4o__v1": {
+      "verdict": "unusable_ambiguous",
+      "mapping_confidence": "low",
+      "mapping_rationale": "Baseline/kitchen classes are bounding boxes, not endpoint annotations; selecting canonical intersections from box edges would be guessed.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["low"],
+      "source_group": "luiss_court_line_boxes",
+      "include_default": false
+    },
+    "n-do-tran__pickleball-court-p3chl__v4": {
+      "verdict": "partial-map",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Topology and five overlays resolve 12 planar court points plus the two net-top sideline points; net_center is absent and is not guessed.",
+      "keypoint_mapping": {
+        "new-point-0": "far_left_corner",
+        "new-point-1": "far_baseline_center",
+        "new-point-2": "far_right_corner",
+        "new-point-3": "far_nvz_right",
+        "new-point-4": "far_nvz_center",
+        "new-point-5": "far_nvz_left",
+        "new-point-6": "near_nvz_left",
+        "new-point-7": "near_nvz_center",
+        "new-point-8": "near_nvz_right",
+        "new-point-9": "near_right_corner",
+        "new-point-10": "near_baseline_center",
+        "new-point-11": "near_left_corner",
+        "new-point-12": "net_left_sideline",
+        "new-point-13": "net_right_sideline"
+      },
+      "viewpoint_character": ["elevated", "steep", "broadcast"],
+      "source_group": "p3chl_14kp_family",
+      "include_default": false
+    },
+    "necromancer__pickleball-court-vbmkq__v2": {
+      "verdict": "partial-map",
+      "mapping_confidence": "high",
+      "mapping_rationale": "The named topology and five overlays resolve all 12 planar canonical points; the three net-top points are absent.",
+      "keypoint_mapping": {
+        "SB1": "far_left_corner",
+        "BS1": "far_baseline_center",
+        "SB2": "far_right_corner",
+        "SNZ2": "far_nvz_right",
+        "SNZ3": "near_nvz_right",
+        "SB3": "near_right_corner",
+        "BS2": "near_baseline_center",
+        "SB4": "near_left_corner",
+        "SNZ4": "near_nvz_left",
+        "SNZ1": "far_nvz_left",
+        "NS1": "far_nvz_center",
+        "NS2": "near_nvz_center"
+      },
+      "viewpoint_character": ["broadcast", "elevated", "steep"],
+      "source_group": "vbmkq_vhpgp_12kp_family",
+      "include_default": false
+    },
+    "nigh-workspace__pickleball-court-vhpgp__v11": {
+      "verdict": "partial-map",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Five overlays and skeleton topology resolve 12 planar points; no annotated net-top points exist.",
+      "keypoint_mapping": {
+        "l-n-b": "far_left_corner",
+        "l-m-b": "far_baseline_center",
+        "l-f-b": "far_right_corner",
+        "l-f-k": "far_nvz_right",
+        "r-f-k": "near_nvz_right",
+        "r-f-b": "near_right_corner",
+        "r-m-b": "near_baseline_center",
+        "r-n-b": "near_left_corner",
+        "r-n-k": "near_nvz_left",
+        "l-n-k": "far_nvz_left",
+        "l-m-k": "far_nvz_center",
+        "r-m-k": "near_nvz_center"
+      },
+      "viewpoint_character": ["broadcast", "elevated"],
+      "source_group": "vbmkq_vhpgp_12kp_family",
+      "include_default": false
+    },
+    "pickle-es3fs__pickleball-video__v10": {
+      "verdict": "corners-only",
+      "mapping_confidence": "low",
+      "mapping_rationale": "Sparse court segmentations can at most support an outer boundary and do not identify internal canonical points.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["broadcast"],
+      "source_group": "pickleball_video_multiclass",
+      "include_default": false
+    },
+    "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6": {
+      "verdict": "partial-map",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Skeleton adjacency and five overlays resolve all 12 planar court points; net-top points are absent.",
+      "keypoint_mapping": {
+        "new-point-0": "near_left_corner",
+        "new-point-11": "near_baseline_center",
+        "new-point-3": "near_right_corner",
+        "new-point-4": "near_nvz_left",
+        "new-point-8": "near_nvz_center",
+        "new-point-5": "near_nvz_right",
+        "new-point-7": "far_nvz_left",
+        "new-point-9": "far_nvz_center",
+        "new-point-6": "far_nvz_right",
+        "new-point-1": "far_left_corner",
+        "new-point-10": "far_baseline_center",
+        "new-point-2": "far_right_corner"
+      },
+      "viewpoint_character": ["broadcast", "elevated"],
+      "source_group": "syncz_12kp",
+      "include_default": false
+    },
+    "pickleball-dl6zm__pickleball-courts-emwra-w8dsr__v1": {
+      "verdict": "corners-only",
+      "mapping_confidence": "medium",
+      "mapping_rationale": "Court/kitchen polygons support boundaries but not direct named 15-point labels.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["elevated", "broadcast"],
+      "source_group": "emwra_court_polygon_family",
+      "include_default": false
+    },
+    "pickleball-od8al__pickleball-seg__v20": {
+      "verdict": "unusable_ambiguous",
+      "mapping_confidence": "low",
+      "mapping_rationale": "Team surface/service-region masks do not provide stable named court intersections across frames.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["broadcast", "elevated"],
+      "source_group": "od8al_segmentation",
+      "include_default": false
+    },
+    "pickleball-tsibp__paddle-4point-aljfe__v1": {
+      "verdict": "unusable",
+      "mapping_confidence": "none",
+      "mapping_rationale": "The project is paddle keypoints, not court keypoints; it was included by the exhaustive keypoint-theme search.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["low", "portrait"],
+      "source_group": "paddle_4point",
+      "include_default": false
+    },
+    "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3": {
+      "verdict": "partial-map",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Same 14-point topology as p3chl: 12 planar points and two net-top endpoints; net_center is absent and is not synthesized.",
+      "keypoint_mapping": {
+        "new-point-0": "far_left_corner",
+        "new-point-1": "far_baseline_center",
+        "new-point-2": "far_right_corner",
+        "new-point-3": "far_nvz_right",
+        "new-point-4": "far_nvz_center",
+        "new-point-5": "far_nvz_left",
+        "new-point-6": "near_nvz_left",
+        "new-point-7": "near_nvz_center",
+        "new-point-8": "near_nvz_right",
+        "new-point-9": "near_right_corner",
+        "new-point-10": "near_baseline_center",
+        "new-point-11": "near_left_corner",
+        "new-point-12": "net_left_sideline",
+        "new-point-13": "net_right_sideline"
+      },
+      "viewpoint_character": ["elevated", "steep", "broadcast"],
+      "source_group": "p3chl_14kp_family",
+      "include_default": false
+    },
+    "stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1": {
+      "verdict": "partial-map",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Five overlays resolve A-L as the 12 planar baseline/NVZ intersections; the net-top triplet is absent.",
+      "keypoint_mapping": {
+        "A": "near_left_corner",
+        "I": "near_baseline_center",
+        "B": "near_right_corner",
+        "E": "near_nvz_left",
+        "J": "near_nvz_center",
+        "F": "near_nvz_right",
+        "G": "far_nvz_left",
+        "L": "far_nvz_center",
+        "H": "far_nvz_right",
+        "C": "far_left_corner",
+        "K": "far_baseline_center",
+        "D": "far_right_corner"
+      },
+      "viewpoint_character": ["broadcast", "elevated"],
+      "source_group": "stump_front_view_12kp",
+      "include_default": false
+    },
+    "testworkspace-i8nb1__pickle-court-keypoints__v2": {
+      "verdict": "partial-map",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Skeleton topology and five overlays resolve the 12 planar points; the three net-top points are absent.",
+      "keypoint_mapping": {
+        "new-point-0": "far_left_corner",
+        "new-point-1": "far_baseline_center",
+        "new-point-2": "far_right_corner",
+        "new-point-3": "far_nvz_right",
+        "new-point-4": "far_nvz_center",
+        "new-point-5": "far_nvz_left",
+        "new-point-6": "near_nvz_left",
+        "new-point-7": "near_nvz_center",
+        "new-point-8": "near_nvz_right",
+        "new-point-9": "near_right_corner",
+        "new-point-10": "near_baseline_center",
+        "new-point-11": "near_left_corner"
+      },
+      "viewpoint_character": ["broadcast", "low", "steep"],
+      "source_group": "xuann_testworkspace_12kp_family",
+      "include_default": false
+    },
+    "vit-bdraw__pickle-ball-vka5h__v7": {
+      "verdict": "unusable",
+      "mapping_confidence": "none",
+      "mapping_rationale": "Manifest metadata mentions Line, but downloaded annotations are pickleball boxes without court-line point semantics.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["low"],
+      "source_group": "vit_line_metadata",
+      "include_default": false
+    },
+    "xas-workspace-j20pu__pickleball-net-corners__v1": {
+      "verdict": "partial-map",
+      "mapping_confidence": "medium",
+      "mapping_rationale": "Top-left/top-right directly support the two net-top sideline endpoints when the full net is visible; bottom net corners are not canonical and net_center is absent.",
+      "keypoint_mapping": {
+        "top-left": "net_left_sideline",
+        "top-right": "net_right_sideline"
+      },
+      "viewpoint_character": ["low", "broadcast"],
+      "source_group": "xas_net_corners",
+      "include_default": false
+    },
+    "xas-workspace-j20pu__pickleball-paddle-backhand-dink__v1": {
+      "verdict": "unusable",
+      "mapping_confidence": "none",
+      "mapping_rationale": "The annotations are six paddle keypoints, not court points.",
+      "keypoint_mapping": {},
+      "viewpoint_character": ["low", "portrait"],
+      "source_group": "xas_paddle_backhand",
+      "include_default": false
+    },
+    "xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10": {
+      "verdict": "partial-map",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Five overlays and the court skeleton resolve all 12 planar baseline/NVZ points; no net-top points are annotated.",
+      "keypoint_mapping": {
+        "1": "far_left_corner",
+        "2": "far_baseline_center",
+        "3": "far_right_corner",
+        "4": "far_nvz_right",
+        "5": "far_nvz_center",
+        "6": "far_nvz_left",
+        "7": "near_nvz_left",
+        "8": "near_nvz_center",
+        "9": "near_nvz_right",
+        "10": "near_right_corner",
+        "11": "near_baseline_center",
+        "12": "near_left_corner"
+      },
+      "viewpoint_character": ["broadcast", "elevated"],
+      "source_group": "xuann_testworkspace_12kp_family",
+      "include_default": false
+    }
+  }
+}

@@ -1,0 +1,27 @@
+# License card
+
+| Dataset | Recorded license | Commercial use | Default corpus | Attribution |
+|---|---|---:|---:|---|
+| `acmai__pickleball-courts-emwra__v3` | CC BY 4.0 | yes | no | Dataset: acmai/pickleball-courts-emwra via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `chetan-rajagiri-9abfm__pickleball-court-v2__v1` | CC BY 4.0 | yes | yes | Dataset: chetan-rajagiri-9abfm/pickleball-court-v2 via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `dians-workspace-qq6mg__pickle-net__v3` | CC BY 4.0 | yes | no | Dataset: dians-workspace-qq6mg/pickle-net via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `gideons__pickleball-court__v1` | CC BY 4.0 | yes | no | Dataset: gideons/pickleball-court via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `hilab__pickleball-lkbro__v1` | CC BY 4.0 | yes | no | Dataset: hilab/pickleball-lkbro via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `hughs-workspace-plw3g__pickleball-court-cfyv4__v1` | CC BY 4.0 | yes | no | Dataset: hughs-workspace-plw3g/pickleball-court-cfyv4 via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `liberin-technologies__pickleball-vision__v9` | CC BY 4.0 | yes | no | Dataset: liberin-technologies/pickleball-vision via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `luiss-workspace-99bfi__pickleball-court-detection-o8i4o__v1` | CC BY 4.0 | yes | no | Dataset: luiss-workspace-99bfi/pickleball-court-detection-o8i4o via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `n-do-tran__pickleball-court-p3chl__v4` | CC BY 4.0 | yes | no | Dataset: n-do-tran/pickleball-court-p3chl via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `necromancer__pickleball-court-vbmkq__v2` | CC BY 4.0 | yes | no | Dataset: necromancer/pickleball-court-vbmkq via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `nigh-workspace__pickleball-court-vhpgp__v11` | CC BY 4.0 | yes | no | Dataset: nigh-workspace/pickleball-court-vhpgp via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `pickle-es3fs__pickleball-video__v10` | CC BY 4.0 | yes | no | Dataset: pickle-es3fs/pickleball-video via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `pickleball-ball-detection__pickleball-court-keypoints-syncz__v6` | CC BY 4.0 | yes | no | Dataset: pickleball-ball-detection/pickleball-court-keypoints-syncz via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `pickleball-dl6zm__pickleball-courts-emwra-w8dsr__v1` | CC BY 4.0 | yes | no | Dataset: pickleball-dl6zm/pickleball-courts-emwra-w8dsr via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `pickleball-od8al__pickleball-seg__v20` | CC BY 4.0 | yes | no | Dataset: pickleball-od8al/pickleball-seg via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `pickleball-tsibp__paddle-4point-aljfe__v1` | CC BY 4.0 | yes | no | Dataset: pickleball-tsibp/paddle-4point-aljfe via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3` | CC BY 4.0 | yes | no | Dataset: ping-pong-paddle-ai-with-images/pickleball-court-p3chl-7tufp via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1` | CC BY 4.0 | yes | no | Dataset: stump-detection-front-view-mj39q/pickle-ball-court-keypoints via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `testworkspace-i8nb1__pickle-court-keypoints__v2` | CC BY 4.0 | yes | no | Dataset: testworkspace-i8nb1/pickle-court-keypoints via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `vit-bdraw__pickle-ball-vka5h__v7` | CC BY 4.0 | yes | no | Dataset: vit-bdraw/pickle-ball-vka5h via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `xas-workspace-j20pu__pickleball-net-corners__v1` | CC BY 4.0 | yes | no | Dataset: xas-workspace-j20pu/pickleball-net-corners via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `xas-workspace-j20pu__pickleball-paddle-backhand-dink__v1` | CC BY 4.0 | yes | no | Dataset: xas-workspace-j20pu/pickleball-paddle-backhand-dink via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |
+| `xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10` | CC BY 4.0 | yes | no | Dataset: xuann-bacc-ujr91/pickle-court-keypoints-nluo7 via Roboflow Universe; licensed CC BY 4.0. Preserve the source project attribution and license notice. |

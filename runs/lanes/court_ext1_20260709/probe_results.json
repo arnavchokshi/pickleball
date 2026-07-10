@@ -1,0 +1,927 @@
+{
+  "burlington": [
+    {
+      "frame": "frame_000050.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        45.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/burlington/frame_000050.png"
+    },
+    {
+      "frame": "frame_000300.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        44.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        11.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/burlington/frame_000300.png"
+    },
+    {
+      "frame": "frame_000550.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        45.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/burlington/frame_000550.png"
+    }
+  ],
+  "gt": [
+    {
+      "frame": "73VurrTKCZ8_f003808.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        32.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/gt/73VurrTKCZ8_f003808.png"
+    },
+    {
+      "frame": "HyUqT7zFiwk_f010195.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": true,
+      "n_keypoints_detected_of_14": 3,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        [
+          291.0,
+          35.0
+        ],
+        null,
+        null,
+        null,
+        null,
+        null,
+        [
+          351.0,
+          47.0
+        ],
+        [
+          371.0,
+          203.0
+        ]
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        36.0,
+        5.0,
+        6.0,
+        5.0,
+        255.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        255.0,
+        255.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/gt/HyUqT7zFiwk_f010195.png"
+    },
+    {
+      "frame": "HyUqT7zFiwk_f014564.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": true,
+      "n_keypoints_detected_of_14": 2,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        [
+          329.0,
+          73.0
+        ],
+        null,
+        null,
+        null,
+        null,
+        null,
+        [
+          351.0,
+          47.0
+        ],
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        36.0,
+        5.0,
+        6.0,
+        5.0,
+        255.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        255.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/gt/HyUqT7zFiwk_f014564.png"
+    },
+    {
+      "frame": "zwCtH_i1_S4_f003636.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": true,
+      "n_keypoints_detected_of_14": 2,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        [
+          647.0,
+          391.0
+        ],
+        [
+          1067.0,
+          405.0
+        ]
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        22.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        255.0,
+        254.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/gt/zwCtH_i1_S4_f003636.png"
+    },
+    {
+      "frame": "zwCtH_i1_S4_f006363.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": true,
+      "n_keypoints_detected_of_14": 2,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        [
+          649.0,
+          397.0
+        ],
+        [
+          1053.0,
+          381.0
+        ]
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        22.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        255.0,
+        255.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/gt/zwCtH_i1_S4_f006363.png"
+    }
+  ],
+  "tennis_overlay_L0HVmAlCQI": [
+    {
+      "frame": "frame_000100.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": true,
+      "n_keypoints_detected_of_14": 2,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        [
+          531.0,
+          583.0
+        ],
+        null,
+        [
+          1039.0,
+          667.0
+        ],
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        33.0,
+        255.0,
+        6.0,
+        255.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/tennis_overlay_L0HVmAlCQI/frame_000100.png"
+    },
+    {
+      "frame": "frame_000400.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        37.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/tennis_overlay_L0HVmAlCQI/frame_000400.png"
+    },
+    {
+      "frame": "frame_000700.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        38.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/tennis_overlay_L0HVmAlCQI/frame_000700.png"
+    },
+    {
+      "frame": "frame_001000.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        38.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/tennis_overlay_L0HVmAlCQI/frame_001000.png"
+    },
+    {
+      "frame": "frame_001300.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        66.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/tennis_overlay_L0HVmAlCQI/frame_001300.png"
+    }
+  ],
+  "tennis_overlay_wBu8bC4OfUY": [
+    {
+      "frame": "frame_000500.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        23.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/tennis_overlay_wBu8bC4OfUY/frame_000500.png"
+    },
+    {
+      "frame": "frame_003000.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        24.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/tennis_overlay_wBu8bC4OfUY/frame_003000.png"
+    },
+    {
+      "frame": "frame_006000.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        29.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/tennis_overlay_wBu8bC4OfUY/frame_006000.png"
+    },
+    {
+      "frame": "frame_009000.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        24.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/tennis_overlay_wBu8bC4OfUY/frame_009000.png"
+    },
+    {
+      "frame": "frame_012000.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        6.0,
+        24.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/tennis_overlay_wBu8bC4OfUY/frame_012000.png"
+    }
+  ],
+  "wolverine": [
+    {
+      "frame": "frame_000025.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        137.0,
+        26.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/wolverine/frame_000025.png"
+    },
+    {
+      "frame": "frame_000150.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        42.0,
+        26.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/wolverine/frame_000150.png"
+    },
+    {
+      "frame": "frame_000275.png",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "fired": false,
+      "n_keypoints_detected_of_14": 0,
+      "keypoints_640x360": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "heatmap_peak_confidences_0_255": [
+        6.0,
+        164.0,
+        26.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        5.0,
+        6.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "overlay_path": "runs/lanes/court_ext1_20260709/probe_overlays/wolverine/frame_000275.png"
+    }
+  ]
+}

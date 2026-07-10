@@ -1,3 +1,20 @@
+"""Train and evaluate the legacy court-keypoint heatmap model.
+
+Court-keypoint label items use one additive partial-label schema. ``keypoints`` must still
+contain exactly the 15 canonical names. A labeled point keeps the existing two-number
+``[x, y]`` coordinate value; an unlabeled point is JSON ``null``. Missing names,
+``{"labeled": false}`` objects, and every other marker fail loudly. ``null`` means there is no
+supervision for that channel; it does not mean occluded. An occluded-but-known point remains a
+labeled ``[x, y]`` coordinate. Loaded rows expose only labeled coordinates in ``row["keypoints"]``
+so target construction produces a zero per-pixel mask for every unlabeled channel, and metrics
+aggregate only labeled points. Existing full-15 rows therefore follow the original path.
+
+``label_status == "reviewed_external_dataset"`` denotes a human-annotated third-party dataset.
+It is accepted for training and counted only as ``labels_external_dataset_frame_count``. It is
+never included in ``labels_independent_human_frames`` or the owner gate's independent buckets.
+The existing ``reviewed`` status remains the only independent owner-human status.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -40,9 +57,10 @@ from threed.racketsport.eval_guard import assert_not_training_on_eval_clip
 # independent review of another frame from the same static-camera clip. "synthetic" is a
 # procedurally-rendered domain-randomized court render (scripts/racketsport/
 # generate_synthetic_court_keypoints.py, runs/training_corpora_20260701/court_synthetic/) with
-# geometrically-exact but never human-verified labels. All three are accepted as usable training
-# rows, but only "reviewed" counts toward the independent human-verified frame count reported in
-# the training/gate summary.
+# geometrically-exact but never human-verified labels. "reviewed_external_dataset" is a
+# third-party human annotation whose provenance is not owner-independent gate truth. All four
+# are accepted as usable training rows, but only "reviewed" counts toward the independent
+# human-verified frame count reported in the training/gate summary.
 #
 # CAL-R2 provenance fix (2026-07-02): "synthetic" used to be smuggled in under
 # "reviewed_static_camera_copy" (an enum workaround -- see the CAL-R2 REPORT.md in this run's
@@ -54,7 +72,13 @@ from threed.racketsport.eval_guard import assert_not_training_on_eval_clip
 INDEPENDENT_REVIEWED_STATUS = "reviewed"
 STATIC_CAMERA_COPY_STATUS = "reviewed_static_camera_copy"
 SYNTHETIC_STATUS = "synthetic"
-ACCEPTED_ITEM_STATUSES = {INDEPENDENT_REVIEWED_STATUS, STATIC_CAMERA_COPY_STATUS, SYNTHETIC_STATUS}
+EXTERNAL_DATASET_STATUS = "reviewed_external_dataset"
+ACCEPTED_ITEM_STATUSES = {
+    INDEPENDENT_REVIEWED_STATUS,
+    STATIC_CAMERA_COPY_STATUS,
+    SYNTHETIC_STATUS,
+    EXTERNAL_DATASET_STATUS,
+}
 
 
 def court_corner_keypoint_labels(payload: dict[str, Any], *, clip_root: Path | None = None) -> dict[str, Any]:
@@ -196,18 +220,16 @@ def load_real_corner_labels(root: Path) -> list[dict[str, Any]]:
 
 
 def _label_status_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
-    """Split loaded court-keypoint label rows into independent-human, static-camera-copy, and
-    synthetic counts, keyed off the per-item ``label_status`` provenance tag. This must be used
-    anywhere a frame count is reported as human-verified so a copied OR synthetic label is
-    never presented as an independent review (CAL-R2 provenance fix -- see the ``SYNTHETIC_STATUS``
-    comment above for why this used to be able to happen silently)."""
+    """Split label rows into owner-independent, copied, synthetic, and external counts."""
     independent = sum(1 for row in rows if row.get("label_status") == INDEPENDENT_REVIEWED_STATUS)
     copied = sum(1 for row in rows if row.get("label_status") == STATIC_CAMERA_COPY_STATUS)
     synthetic = sum(1 for row in rows if row.get("label_status") == SYNTHETIC_STATUS)
+    external = sum(1 for row in rows if row.get("label_status") == EXTERNAL_DATASET_STATUS)
     return {
         "labels_independent_human_frames": independent,
         "labels_static_camera_copy_frame_count": copied,
         "labels_synthetic_frame_count": synthetic,
+        "labels_external_dataset_frame_count": external,
     }
 
 
@@ -284,10 +306,14 @@ def _court_keypoint_label_row_from_item(
     frame_dir = _frame_dir(payload)
     source_size = _source_resolution(payload)
     label_size = _label_coordinate_space(payload)
-    raw_keypoints = {
-        name: list(_xy_field(keypoints[name], f"court_keypoints.{name}"))
-        for name in expected_names
-    }
+    raw_keypoints: dict[str, list[float]] = {}
+    for name in expected_names:
+        value = keypoints[name]
+        if value is None:
+            continue
+        raw_keypoints[name] = list(_xy_field(value, f"court_keypoints.{name}"))
+    if not raw_keypoints:
+        raise ValueError("court keypoint labels must label at least one canonical keypoint")
     source_keypoints = _scale_keypoint_labels_to_source(raw_keypoints, label_size=label_size, source_size=source_size)
     image_path = frame_dir / frame_name
     video_path = clip_root / "source.mp4" if clip_root is not None else _payload_source_video(payload)
@@ -298,13 +324,16 @@ def _court_keypoint_label_row_from_item(
         "label_coordinate_space": list(label_size) if label_size is not None else None,
         "source_video_size": list(source_size) if source_size is not None else None,
         "keypoints": source_keypoints,
-        "label_source": "reviewed_15_keypoint_court_labels",
+        "label_source": (
+            "reviewed_15_keypoint_court_labels"
+            if len(source_keypoints) == len(expected_names)
+            else "reviewed_partial_court_keypoint_labels"
+        ),
         # Provenance of this specific frame's label: an independent human review, an
         # owner-approved copy of another frame's independent review on the same static
-        # camera, or a synthetic domain-randomized render. Training/gate summaries must count
-        # these separately (see labels_independent_human_frames /
-        # labels_static_camera_copy_frame_count / labels_synthetic_frame_count below) so a
-        # copied or synthetic label is never reported as an independent human-verified frame.
+        # camera, a synthetic domain-randomized render, or a human-annotated external dataset.
+        # Training/gate summaries count all four separately so only owner "reviewed" rows can
+        # enter the independent-human bucket.
         "label_status": item.get("status", INDEPENDENT_REVIEWED_STATUS),
     }
 
@@ -589,7 +618,7 @@ def aggregate_static_camera_predictions(
     use_homography_refinement: bool = False,
 ) -> dict[str, dict[str, list[float]]]:
     """Per-clip median of per-frame model predictions -- the CAL static-camera aggregation
-    policy (`MASTER_PLAN.md`, "Gate ladder" section).
+    policy (`NORTH_STAR_ROADMAP.md`, "Gate ladder" section).
 
     EVAL INTEGRITY (binding): ``rows`` must be the exact set of rows being scored (e.g. the
     held-out rows themselves, or the owner-clip gate rows), never a separate training set.
@@ -706,6 +735,10 @@ def evaluate_checkpoint_against_real_labels(
     per-frame metric side by side with the static-camera per-clip median-aggregation metric,
     each split into "independent human frames only" (primary) and "all rows" (secondary).
 
+    Partial rows are scored only on coordinates retained in ``row["keypoints"]``; each mode's
+    ``per_row`` entries expose the resulting labeled-only ``keypoint_count``. External-dataset
+    rows can enter the all-rows modes, but only status ``reviewed`` enters independent modes.
+
     This is the single reusable implementation behind the CAL owner-clip gate evaluation
     (`scripts/racketsport/evaluate_court_keypoint_owner_gate.py`). It is read-only inference +
     scoring: it never fits or mutates ``checkpoint_path``, and the caller is responsible for
@@ -764,20 +797,30 @@ def evaluate_checkpoint_against_real_labels(
     def _summarize(selected_indices: list[int], *, aggregated: bool) -> dict[str, Any]:
         errors: list[float] = []
         by_clip: dict[str, list[float]] = {}
+        per_row: list[dict[str, Any]] = []
         for index in selected_indices:
             row = rows[index]
             clip = str(row.get("clip") or "unknown")
             predicted = aggregated_by_clip.get(clip, {}) if aggregated else raw_predictions[index]
-            if not predicted:
-                continue
-            row_errors = _row_errors(row, predicted)
+            row_errors = _row_errors(row, predicted) if predicted else []
             errors.extend(row_errors)
             by_clip.setdefault(clip, []).extend(row_errors)
+            per_row.append(
+                {
+                    "row_index": index,
+                    "clip": clip,
+                    "frame_index": row.get("frame_index"),
+                    "keypoint_count": len(row_errors),
+                    "keypoint_error_summary": _error_summary(row_errors),
+                    "pck_at_5px": _pck_at_threshold(row_errors, pck_threshold_px),
+                }
+            )
         return {
             "mode": "aggregated_static_camera_median" if aggregated else "raw_per_frame",
             "frame_count": len(selected_indices),
             "keypoint_error_summary": _error_summary(errors),
             "pck_at_5px": _pck_at_threshold(errors, pck_threshold_px),
+            "per_row": per_row,
             "per_clip": {
                 clip: _pck_error_summary(clip_errors, pck_threshold_px) for clip, clip_errors in sorted(by_clip.items())
             },
@@ -828,7 +871,10 @@ def evaluate_checkpoint_against_real_labels(
             "aggregated_* scores every row in a clip against that clip's per-clip median "
             "prediction, computed only from the rows passed in here (never training rows).",
             "*_independent uses only status=='reviewed' rows (independent human labels); "
-            "*_all additionally includes status=='reviewed_static_camera_copy' rows.",
+            "*_all additionally includes copied, synthetic, and external-dataset rows when "
+            "the caller supplies them; external-dataset rows never enter *_independent.",
+            "per_row keypoint_count and every aggregate metric include labeled coordinates "
+            "only; null/unlabeled channels are skipped.",
         ],
     }
 
@@ -1320,13 +1366,17 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     independent_reviewed_frame_count = label_status_counts["labels_independent_human_frames"]
     copied_frame_count = label_status_counts["labels_static_camera_copy_frame_count"]
     synthetic_frame_count = label_status_counts["labels_synthetic_frame_count"]
+    external_dataset_frame_count = label_status_counts["labels_external_dataset_frame_count"]
     human_verification_note = (
         f"Independent human-verified frames = {independent_reviewed_frame_count}; "
         f"{copied_frame_count} additional frame(s) are owner-approved reviewed_static_camera_copy "
         "duplicates of an independent review on the same static camera and are NOT independent "
         f"human labels; {synthetic_frame_count} additional frame(s) are synthetic "
         "domain-randomized renders (status=='synthetic') and are NEITHER independent human "
-        "labels NOR owner-approved copies -- never counted as human verification of any kind."
+        "labels NOR owner-approved copies; "
+        f"{external_dataset_frame_count} additional frame(s) are human-annotated third-party "
+        "dataset rows (status=='reviewed_external_dataset') and are counted separately, never "
+        "as independent owner-human verification."
     )
     summary = {
         "schema_version": 1,
@@ -1353,6 +1403,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "independent_reviewed_frame_count": independent_reviewed_frame_count,
             "copied_frame_count": copied_frame_count,
             "synthetic_frame_count": synthetic_frame_count,
+            "external_dataset_frame_count": external_dataset_frame_count,
             "human_verification_note": human_verification_note,
         },
         "before": before,
@@ -1366,6 +1417,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         "labels_independent_human_frames": independent_reviewed_frame_count,
         "labels_static_camera_copy_frame_count": copied_frame_count,
         "labels_synthetic_frame_count": synthetic_frame_count,
+        "labels_external_dataset_frame_count": external_dataset_frame_count,
         "postprocess": {
             "prediction_mode": "line_segmentation_intersection" if use_line_segmentation else "keypoint_heatmap_argmax",
             "homography_refinement": use_homography_refinement,
@@ -1393,7 +1445,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "synthetic_curriculum_end_fraction": synthetic_curriculum_end_fraction,
         },
         "note": (
-            "Synthetic pretraining plus limited reviewed 15-keypoint court fine-tune; not a "
+            "Synthetic pretraining plus court-keypoint fine-tune; not a "
             "verified CAL-3 no-tap solver. " + human_verification_note
         ),
     }
@@ -1430,6 +1482,7 @@ def training_cli_summary(summary: dict[str, Any]) -> dict[str, Any]:
         "labels_independent_human_frames": summary.get("labels_independent_human_frames"),
         "labels_static_camera_copy_frame_count": summary.get("labels_static_camera_copy_frame_count"),
         "labels_synthetic_frame_count": summary.get("labels_synthetic_frame_count"),
+        "labels_external_dataset_frame_count": summary.get("labels_external_dataset_frame_count"),
     }
 
 

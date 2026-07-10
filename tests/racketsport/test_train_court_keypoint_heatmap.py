@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from argparse import Namespace
 from pathlib import Path
 
@@ -9,10 +11,12 @@ import pytest
 
 from scripts.racketsport.train_court_keypoint_heatmap import (
     choose_torch_device_name,
+    court_keypoint_label_rows,
     court_keypoint_heatmap_loss,
     court_keypoint_probabilities,
     curriculum_synthetic_fraction,
     evaluate_checkpoint_against_real_labels,
+    heatmaps_for_points,
     load_real_corner_labels,
     load_real_court_keypoint_labels,
     make_court_keypoint_heatmap_model,
@@ -81,6 +85,60 @@ def test_court_keypoint_heatmap_loss_prioritizes_labeled_peaks() -> None:
     probabilities = court_keypoint_probabilities(torch.tensor([[[[-6.0, 0.0, 6.0]]]]))
     assert probabilities.sum().item() == pytest.approx(1.0)
     assert probabilities[0, 0, 0].tolist() == pytest.approx([0.00000612898, 0.002472608, 0.9975212])
+
+
+def test_full_15_reviewed_loss_tensor_is_byte_identical_to_legacy_path() -> None:
+    """COURT-LOADER-1 default-path proof: a full-15 mask uses the exact pre-change formula."""
+    torch = pytest.importorskip("torch")
+    fixture_row = court_keypoint_label_rows(
+        _reviewed_court_keypoint_label_payload(
+            source_resolution=[64, 36],
+            label_coordinate_space=[64, 36],
+        )
+    )[0]
+    target_array, mask_array = heatmaps_for_points(
+        fixture_row["keypoints"],
+        [point.name for point in PICKLEBALL_KEYPOINTS],
+        64,
+        36,
+        sigma=1.5,
+    )
+    torch.manual_seed(1709)
+    target = torch.from_numpy(target_array).unsqueeze(0)
+    mask = torch.from_numpy(mask_array).unsqueeze(0)
+    logits = torch.randn_like(target)
+
+    actual = court_keypoint_heatmap_loss(logits, target, mask)
+
+    target_flat = target.clamp(0.0, 1.0).reshape(1, len(PICKLEBALL_KEYPOINTS), -1)
+    logits_flat = logits.reshape(1, len(PICKLEBALL_KEYPOINTS), -1)
+    target_distribution = target_flat / target_flat.sum(dim=-1, keepdim=True).clamp_min(1e-6)
+    per_channel = -(target_distribution * torch.nn.functional.log_softmax(logits_flat, dim=-1)).sum(dim=-1)
+    legacy = per_channel.sum() / torch.tensor(len(PICKLEBALL_KEYPOINTS), dtype=logits.dtype)
+
+    assert fixture_row["label_status"] == "reviewed"
+    assert set(fixture_row["keypoints"]) == {point.name for point in PICKLEBALL_KEYPOINTS}
+    assert torch.equal(actual, legacy)
+
+
+def test_masked_unlabeled_channel_has_zero_loss_and_gradient_contribution() -> None:
+    torch = pytest.importorskip("torch")
+    target = torch.zeros((1, 2, 5, 5), dtype=torch.float32)
+    target[0, 0, 2, 2] = 1.0
+    mask = torch.zeros_like(target)
+    mask[:, 0] = 1.0
+
+    logits = torch.zeros_like(target, requires_grad=True)
+    with torch.no_grad():
+        logits[0, 1, 0, 0] = 1000.0
+        logits[0, 1, 4, 4] = -1000.0
+    loss_with_garbage = court_keypoint_heatmap_loss(logits, target, mask)
+    loss_with_garbage.backward()
+
+    clean_logits = torch.zeros_like(target)
+    clean_loss = court_keypoint_heatmap_loss(clean_logits, target, mask)
+    assert torch.equal(loss_with_garbage.detach(), clean_loss)
+    assert torch.count_nonzero(logits.grad[:, 1]).item() == 0
 
 
 def test_court_keypoint_heatmap_model_uses_encoder_decoder_context() -> None:
@@ -162,6 +220,41 @@ def _reviewed_court_keypoint_label_payload(
         },
         "review": {"status": "reviewed", "reviewer": "court-label-review"},
     }
+
+
+def _partial_external_payload() -> dict:
+    payload = _reviewed_court_keypoint_label_payload(
+        "frame_000001.jpg",
+        source_resolution=[64, 36],
+        label_coordinate_space=[64, 36],
+        item_status="reviewed_external_dataset",
+    )
+    for name in ("net_left_sideline", "net_center", "net_right_sideline"):
+        payload["annotation"]["items"][0]["keypoints"][name] = None
+    return payload
+
+
+def _write_mixed_partial_training_fixture(tmp_path: Path) -> Path:
+    cv2 = __import__("cv2")
+    real_root = tmp_path / "real_corpus"
+    clip_root = real_root / "external_partial_clip"
+    clip_root.mkdir(parents=True)
+    video = clip_root / "source.mp4"
+    writer = cv2.VideoWriter(str(video), cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (64, 36))
+    assert writer.isOpened()
+    writer.write(np.zeros((36, 64, 3), dtype=np.uint8))
+    writer.write(np.full((36, 64, 3), 40, dtype=np.uint8))
+    writer.release()
+
+    payload = _reviewed_court_keypoint_label_payload(
+        "frame_000000.jpg",
+        source_resolution=[64, 36],
+        label_coordinate_space=[64, 36],
+    )
+    partial_item = _partial_external_payload()["annotation"]["items"][0]
+    payload["annotation"]["items"].append(partial_item)
+    _write_json(clip_root / "labels" / "court_keypoints.json", payload)
+    return real_root
 
 
 def test_load_real_court_keypoint_labels_requires_reviewed_full_15_point_labels(tmp_path: Path) -> None:
@@ -289,6 +382,130 @@ def test_load_real_court_keypoint_labels_accepts_synthetic_status(tmp_path: Path
 
     assert len(rows) == 1
     assert rows[0]["label_status"] == "synthetic"
+
+
+def test_partial_null_schema_loads_only_labeled_keypoints_and_builds_channel_mask() -> None:
+    payload = _partial_external_payload()
+
+    row = court_keypoint_label_rows(payload)[0]
+
+    assert row["label_status"] == "reviewed_external_dataset"
+    assert row["label_source"] == "reviewed_partial_court_keypoint_labels"
+    assert len(row["keypoints"]) == 12
+    assert set(row["keypoints"]).isdisjoint({"net_left_sideline", "net_center", "net_right_sideline"})
+    _, mask = heatmaps_for_points(
+        row["keypoints"],
+        [point.name for point in PICKLEBALL_KEYPOINTS],
+        64,
+        36,
+        sigma=1.5,
+    )
+    assert mask.shape == (15, 36, 64)
+    assert mask.sum() == pytest.approx(12 * 36 * 64)
+    names = [point.name for point in PICKLEBALL_KEYPOINTS]
+    for name in ("net_left_sideline", "net_center", "net_right_sideline"):
+        assert mask[names.index(name)].sum() == pytest.approx(0.0)
+
+
+@pytest.mark.parametrize(
+    "mutate, match",
+    [
+        (lambda keypoints: keypoints.pop("net_center"), "exactly the 15 canonical keypoints"),
+        (
+            lambda keypoints: keypoints.__setitem__("net_center", {"labeled": False}),
+            "must be a two-item image coordinate",
+        ),
+        (lambda keypoints: [keypoints.__setitem__(name, None) for name in list(keypoints)], "at least one"),
+    ],
+)
+def test_loader_rejects_malformed_partial_schemas_fail_loud(mutate: object, match: str) -> None:
+    payload = _partial_external_payload()
+    mutate(payload["annotation"]["items"][0]["keypoints"])
+
+    with pytest.raises(ValueError, match=match):
+        court_keypoint_label_rows(payload)
+
+
+def test_training_summary_counts_external_dataset_rows_separately(tmp_path: Path) -> None:
+    real_root = _write_mixed_partial_training_fixture(tmp_path)
+    out = tmp_path / "count_summary"
+
+    summary = run_training(
+        Namespace(
+            real_root=real_root,
+            out=out,
+            holdout_clip=["not_a_real_clip"],
+            epochs=0,
+            batch_size=1,
+            image_width=32,
+            image_height=18,
+            sigma=1.5,
+            learning_rate=1e-3,
+            real_finetune_start_epoch=0,
+            eval_every=1,
+            seed=13,
+            device="cpu",
+            skip_holdout_artifacts=True,
+            static_camera_aggregate=False,
+            enable_homography_refinement=False,
+            disable_homography_refinement=False,
+        )
+    )
+
+    assert summary["labels_independent_human_frames"] == 1
+    assert summary["labels_external_dataset_frame_count"] == 1
+    assert summary["gate"]["independent_reviewed_frame_count"] == 1
+    assert summary["gate"]["external_dataset_frame_count"] == 1
+    assert training_cli_summary(summary)["labels_external_dataset_frame_count"] == 1
+    assert summary["after"]["real_keypoint_count"] == 12
+
+    rows = load_real_court_keypoint_labels(real_root)
+    report = evaluate_checkpoint_against_real_labels(Path(summary["checkpoint"]), rows, device="cpu")
+    assert report["raw_all"]["keypoint_error_summary"]["count"] == 27
+    assert [item["keypoint_count"] for item in report["raw_all"]["per_row"]] == [15, 12]
+    assert report["independent_frame_count"] == 1
+    assert report["raw_independent"]["keypoint_error_summary"]["count"] == 15
+
+
+def test_direct_cli_two_epoch_mixed_full15_and_partial_external_smoke(tmp_path: Path) -> None:
+    real_root = _write_mixed_partial_training_fixture(tmp_path)
+    out = tmp_path / "direct_cli_smoke"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/train_court_keypoint_heatmap.py",
+            "--real-root",
+            str(real_root),
+            "--out",
+            str(out),
+            "--epochs",
+            "2",
+            "--batch-size",
+            "1",
+            "--image-width",
+            "32",
+            "--image-height",
+            "18",
+            "--real-finetune-start-epoch",
+            "0",
+            "--eval-every",
+            "1",
+            "--device",
+            "cpu",
+            "--skip-holdout-artifacts",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert (out / "court_keypoint_heatmap.pt").is_file()
+    metrics = json.loads((out / "court_keypoint_metrics.json").read_text(encoding="utf-8"))
+    assert len(metrics["history"]) == 2
+    assert metrics["labels_independent_human_frames"] == 1
+    assert metrics["labels_external_dataset_frame_count"] == 1
+    assert '"checkpoint"' in completed.stdout
 
 
 def test_run_training_writes_holdout_predictions_overlay_and_gate_metric(tmp_path: Path) -> None:
@@ -969,7 +1186,7 @@ def test_real_finetune_batch_size_caps_per_epoch_real_row_count(tmp_path: Path) 
 def test_static_camera_aggregation_scores_only_holdout_rows_not_train_rows(tmp_path: Path) -> None:
     """Eval-integrity regression test for the CAL static-camera aggregation policy.
 
-    `MASTER_PLAN.md`'s "CAL static-camera aggregation policy" note flags a prior uncommitted
+    `NORTH_STAR_ROADMAP.md`'s "CAL static-camera aggregation policy" note flags a prior uncommitted
     one-off check that aggregated over *training* rows and scored the result as a held-out gate
     number. This constructs a fixture where the train/holdout row counts differ (4 vs 1) and
     asserts the aggregation row count always matches the holdout count, never the (larger)
