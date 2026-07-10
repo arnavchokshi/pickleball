@@ -20,6 +20,10 @@ from threed.racketsport.ball_arc_solver import (
 )
 from threed.racketsport.ball_bounce_candidates import BounceCandidateConfig, write_bounce_candidate_payload
 from threed.racketsport.ball_flight_sanity import apply_flight_sanity_demotions, evaluate_ball_flight_sanity
+from threed.racketsport.virtual_world import (
+    BALL_ARC_FAIL_CLOSED_POLICY,
+    ball_arc_segment_fail_closed_verdicts,
+)
 from threed.racketsport.court_templates import get_court_template
 from threed.racketsport.schemas import NetPlane, load_ball_candidates_file
 from pydantic import ValidationError
@@ -284,6 +288,7 @@ def build_ball_arc_render_artifact(
     rally_spans: Mapping[str, Any] | None = None,
     generated_at: str | None = None,
     source_artifact: str = "ball_track_arc_solved.json",
+    fail_closed: bool = True,
 ) -> dict[str, Any]:
     """Build a render-only dense parametric arc artifact for the replay viewer.
 
@@ -301,6 +306,29 @@ def build_ball_arc_render_artifact(
     physics = _physics_from_arc_artifact(arc_solved)
     config = _config_from_arc_artifact(arc_solved)
     raw_segments = _renderable_segments(arc_solved) if trusted else []
+    # Fail-closed dense-trail emission: the viewer draws these samples as the
+    # ball trail independently of world frames, so a segment the world overlay
+    # suppresses must not survive here either. Same-artifact segment_id join
+    # (never against ball_flight_sanity.json, whose ids are shifted).
+    emission_verdicts = (
+        ball_arc_segment_fail_closed_verdicts(arc_solved.get("segments")) if fail_closed else {}
+    )
+    suppressed_segment_ids = sorted(
+        segment_id
+        for segment_id, verdict in emission_verdicts.items()
+        if not verdict["trusted"]
+    )
+    if suppressed_segment_ids:
+        suppressed_set = set(suppressed_segment_ids)
+        raw_segments = [
+            raw
+            for raw in raw_segments
+            if not (
+                isinstance(raw.get("segment_id"), int)
+                and not isinstance(raw.get("segment_id"), bool)
+                and raw.get("segment_id") in suppressed_set
+            )
+        ]
 
     segments: list[dict[str, Any]] = []
     base_samples: list[dict[str, Any]] = []
@@ -366,6 +394,9 @@ def build_ball_arc_render_artifact(
             "supersample_rate": 4,
             "fps": _round_float(fps, 6),
             "solver_trusted_for_render": trusted,
+            "fail_closed_enabled": bool(fail_closed),
+            "fail_closed_policy": BALL_ARC_FAIL_CLOSED_POLICY,
+            "fail_closed_suppressed_segment_ids": suppressed_segment_ids,
         },
     }
 

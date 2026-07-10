@@ -893,10 +893,14 @@ def test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay
     assert frame_200["arc_solver"]["segment_status"] == "fit_bvp_fallback"
     assert frame_200["arc_solver"]["bvp_fallback_segment"] is True
 
+    # Bounds check of the BVP sampling math itself needs the fail-open
+    # escape hatch: the default render build fail-closes junk fallback
+    # segments (asserted right after).
     render = build_ball_arc_render_artifact(
         artifact,
         flight_sanity={"schema_version": 2, "segments": [{"segment_id": 0, "verdict": "pass", "reasons": []}]},
         generated_at="2026-07-05T00:00:00Z",
+        fail_closed=False,
     )
     render_path = tmp_path / "ball_arc_render.json"
     render_path.write_text(json.dumps(render, indent=2), encoding="utf-8")
@@ -904,6 +908,22 @@ def test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay
     segment_samples = [sample for sample in reloaded["samples"] if sample["segment_id"] == 0 and sample["bridge"] is False]
     assert segment_samples
     assert all(_inside_pickleball_court_volume(sample["world_xyz"]) for sample in segment_samples)
+    assert reloaded["summary"]["fail_closed_enabled"] is False
+
+    # Default build: if this fallback segment's own fit statistics do not
+    # support trusting it, the dense trail fails closed.
+    default_render = build_ball_arc_render_artifact(
+        artifact,
+        flight_sanity={"schema_version": 2, "segments": [{"segment_id": 0, "verdict": "pass", "reasons": []}]},
+        generated_at="2026-07-05T00:00:00Z",
+    )
+    assert default_render["summary"]["fail_closed_enabled"] is True
+    if default_render["summary"]["fail_closed_suppressed_segment_ids"] == [0]:
+        assert not [
+            sample
+            for sample in default_render["samples"]
+            if sample["segment_id"] == 0 and sample["bridge"] is False
+        ]
 
 
 def test_physical_sanity_checks_pickleball_court_volume_boundaries() -> None:
