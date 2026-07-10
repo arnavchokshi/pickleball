@@ -442,9 +442,10 @@ does not change the order above.
   (landed) -> TT3D joint-anchor-search inside the existing scipy fit -> BlurBall/audio
   anchor boosters -> both-ends pinning + inlier pass -> DP segmentation. Owner unlock:
   pb.vision raw "cv" JSON export on our clips. Evidence: runs/research_ball3d_20260709/.
-- Reproducible cold-clip BODY frame-materialization bug (frames stage never writes some
-  cold harvest clips' BODY frame images; 3 signatures) is booked for an NS-01.6-adjacent
-  fix. Evidence: runs/lanes/demo_beststack_20260710/REPORT.md.
+- Cold-clip BODY frame-materialization bug FIXED (ns016, `7a6fd828e`); 1,200-frame cap
+  exclusion residual booked to NS-04.2. Dual-track (Fable x Codex) owner-symptom deep review
+  ruled root causes + the V/P/T/B/M fix-wave plan for framerate, missing-people, skeleton-gap,
+  hidden-ball, and paddle symptoms. Evidence: runs/research_deepreview_20260710/RULINGS.md.
 
 ### Owner-only asks
 
