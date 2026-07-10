@@ -73,6 +73,7 @@ from . import mesh_export as _mesh_export
 from .mesh_export import build_body_mesh_export
 from .pose_temporal import apply_sam3d_wrist_bone_lock
 from .racket_stage_runner import RacketStageRunner
+from .run_identity import RunIdentityStore
 from .sam3d_body_input_prep import (
     ACCURACY_OPT_SOURCE,
     load_mask_prompt_lookup,
@@ -2482,6 +2483,7 @@ def run_pipeline(
     id_strategy: str = "auto",
     ball_source_path: str | Path | None = None,
     reuse_existing_stage_artifacts: bool = False,
+    require_content_identity_for_reuse: bool = False,
 ) -> dict[str, Any]:
     """Run the pipeline through ``stage`` and stop rather than fabricate artifacts.
 
@@ -2509,6 +2511,11 @@ def run_pipeline(
     asks to run "tracking" always gets a real tracking attempt), and it does not change
     anything for callers that leave the default ``False`` -- documented here rather than
     changed globally, since other callers/tests intentionally exercise full re-derivation.
+
+    ``require_content_identity_for_reuse`` upgrades that opt-in path for NS-01.3:
+    a schema-valid dependency is reusable only when its current stage identity
+    manifest exists and every registered artifact hash still matches. Legacy run
+    directories without manifests rebuild instead of crashing.
     """
 
     run_path = Path(run_dir)
@@ -2556,7 +2563,11 @@ def run_pipeline(
         if (
             reuse_existing_stage_artifacts
             and contract.stage != stage
-            and _contract_artifacts_already_valid(contract, run_path)
+            and _contract_artifacts_already_valid(
+                contract,
+                run_path,
+                require_content_identity=require_content_identity_for_reuse,
+            )
         ):
             stage_runs.append(_with_stage_wall_seconds(_reused_stage_run(contract, runner, run_path), stage_wall_start).as_dict())
             continue
@@ -2675,7 +2686,12 @@ def _validate_contract_artifacts(contract: PipelineStageContract, run_dir: Path)
         validate_artifact_file(schema_name, run_dir / artifact)
 
 
-def _contract_artifacts_already_valid(contract: PipelineStageContract, run_dir: Path) -> bool:
+def _contract_artifacts_already_valid(
+    contract: PipelineStageContract,
+    run_dir: Path,
+    *,
+    require_content_identity: bool = False,
+) -> bool:
     """Task #45 S2: has ``contract`` already produced valid artifacts on ``run_dir``?
 
     Used only when a caller opts into ``run_pipeline(reuse_existing_stage_artifacts=True)``
@@ -2685,6 +2701,11 @@ def _contract_artifacts_already_valid(contract: PipelineStageContract, run_dir: 
     """
 
     if not contract.required_artifacts:
+        return False
+    if require_content_identity and not RunIdentityStore(run_dir).current_stage_reusable(contract.stage):
+        # NS-01.3 migration policy: schema-valid legacy artifacts without a
+        # fingerprint are stale, not reusable. Rebuilding publishes the first
+        # identity generation without requiring manual cleanup.
         return False
     try:
         _validate_contract_artifacts(contract, run_dir)

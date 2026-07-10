@@ -4,7 +4,7 @@
     scripts/racketsport/process_video.py --video X.mp4 --court-corners corners.json
 
 This is the "send in a video, the entire pipeline runs seamlessly together"
-entrypoint (MASTER_PLAN.md's product goal). It chains, in order:
+entrypoint (NORTH_STAR_ROADMAP.md's product goal). It chains, in order:
 
   1. ingest       -- validate the video, build capture_sidecar.json from
                       --court-corners (declared image_size required) or an
@@ -22,7 +22,7 @@ entrypoint (MASTER_PLAN.md's product goal). It chains, in order:
   3. tracking      -- BoT-SORT-ReID "loose pool" (YOLO26m + BoT-SORT via the
                       existing spine), optionally refined by raw-pool global
                       association (threed.racketsport.raw_pool_person_authority,
-                      the champion recipe cited in MASTER_PLAN.md), or reused
+                      the champion recipe cited in NORTH_STAR_ROADMAP.md), or reused
                       from an already-computed --tracks artifact.
   4. placement     -- placement.json plus an in-place tracks.json world_xy rewrite
                       from bbox, native-2D foot keypoints, covariance fusion, and
@@ -89,6 +89,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import inspect
 import json
 import math
 import os
@@ -143,6 +144,12 @@ from threed.racketsport.camera_motion import (  # noqa: E402
 )
 from threed.racketsport.person_reid_diagnostics import resolve_reid_device  # noqa: E402
 from threed.racketsport.placement import PlacementConfig, rewrite_tracks_with_placement  # noqa: E402
+from threed.racketsport.run_identity import (  # noqa: E402
+    RunIdentityStore,
+    SourceIdentity,
+    StageSpec,
+    fingerprint_path,
+)
 from threed.racketsport.paddle_pose_fused import (  # noqa: E402
     ARTIFACT_TYPE as PADDLE_POSE_ARTIFACT_TYPE,
     SOURCE as PADDLE_POSE_SOURCE,
@@ -317,6 +324,89 @@ RAW_POOL_GLOBAL_ASSOCIATION_PROFILES: dict[str, RawPoolGlobalAssociationProfile]
 }
 
 
+# NS-01.3 stage dependency declarations. These are identity edges, not another
+# execution graph: the existing stage order remains authoritative. A changed
+# fingerprint propagates only through these edges.
+RUN_IDENTITY_DEPENDENCIES: dict[str, tuple[str, ...]] = {
+    "ingest": (),
+    "calibration": ("ingest",),
+    "input_quality": ("calibration",),
+    "tracking": ("calibration", "input_quality"),
+    "camera_motion": ("ingest", "calibration", "tracking"),
+    "placement": ("calibration", "tracking", "camera_motion"),
+    "rally_gating": ("tracking",),
+    "ball": ("ingest", "calibration"),
+    "ball_arc": ("ball", "calibration"),
+    "events": ("ball", "tracking"),
+    "ball_fill": ("ball", "events", "calibration"),
+    "frames": ("tracking", "events", "ball"),
+    "body": ("calibration", "tracking", "camera_motion", "frames"),
+    "placement_refine": ("placement", "body"),
+    "grounding_refine": ("calibration", "tracking", "events", "body", "placement_refine"),
+    "paddle_pose": ("body",),
+    "world": ("calibration", "tracking", "ball_fill", "body", "placement_refine", "grounding_refine", "paddle_pose"),
+    "confidence_gate": ("world",),
+    "manifest": ("world", "confidence_gate"),
+    "match_stats": ("placement", "manifest"),
+    "verify": ("manifest",),
+}
+
+RUN_IDENTITY_CONFIG_KEYS: dict[str, tuple[str, ...]] = {
+    "input_quality": ("input_quality.preflight",),
+    "tracking": ("tracking.reid_model", "tracking.global_association_profile"),
+    "camera_motion": ("camera_motion.policy",),
+    "placement": ("placement.undistort",),
+    "ball": ("ball.wasb_checkpoint", "ball.wasb_repo", "ball.detection_stride"),
+    "ball_arc": ("ball.arc_chain",),
+    "frames": ("body.skeleton_stride", "mesh.coverage_mode", "mesh.target_frame_budget"),
+    "body": (
+        "body.detector_fov",
+        "body.schedule",
+        "body.skeleton_stride",
+        "mesh.byte_budget_mib",
+        "mesh.coverage_mode",
+        "mesh.target_frame_budget",
+    ),
+    "paddle_pose": ("paddle.fused_estimator",),
+    "confidence_gate": ("confidence.calibration_curves",),
+    "match_stats": ("stats.match_stats_v0",),
+}
+
+RUN_IDENTITY_OUTPUTS: dict[str, tuple[str, ...]] = {
+    "ingest": ("frame_times.json",),
+    "calibration": (
+        "capture_sidecar.json",
+        "court_keypoints.json",
+        "court_calibration.json",
+        "court_zones.json",
+        "net_plane.json",
+        "court_line_evidence.json",
+    ),
+    "input_quality": ("input_quality.json",),
+    "tracking": ("tracks.json",),
+    "camera_motion": ("camera_motion.json",),
+    "placement": ("placement.json", "tracks_prewrite_backup.json"),
+    "rally_gating": ("rally_spans.json",),
+    "ball": ("ball_track.json", "ball_candidates.json", "ball_inout_summary.json"),
+    "ball_arc": (
+        "ball_bounce_candidates.json",
+        "ball_track_arc_solved.json",
+        "ball_flight_sanity.json",
+        "ball_chain_manifest.json",
+    ),
+    "events": ("ball_inflections.json", "audio_onsets_v2.json", "contact_windows.json", "frame_compute_plan.json"),
+    "ball_fill": ("ball_track_physics_filled.json",),
+    "frames": ("body_frames",),
+    "body": ("body_full_clip_gate.json", "body_mesh_readiness.json", "body_compute_execution.json"),
+    "grounding_refine": ("body_grounding_refinement.json",),
+    "paddle_pose": (PADDLE_POSE_ARTIFACT_NAME,),
+    "world": ("virtual_world.json", "trust_bands.json"),
+    "confidence_gate": ("confidence_gated_world.json", "confidence_gate_summary.json"),
+    "manifest": ("replay_viewer_manifest.json", "replay_scene.json", "replay_review"),
+    "match_stats": ("match_stats.json",),
+}
+
+
 @dataclass
 class PipelineOptions:
     video: Path
@@ -405,6 +495,9 @@ class ProcessVideoPipeline:
         self.options = options
         self.clip_dir = options.clip_dir
         self.clip_dir.mkdir(parents=True, exist_ok=True)
+        self._run_identity_store = RunIdentityStore(self.clip_dir)
+        self._source_identity_cache: SourceIdentity | None = None
+        self._active_reuse_decisions: dict[str, bool] = {}
         self.trust_bands: dict[str, dict[str, Any] | None] = {}
         self.stage_outcomes: list[StageOutcome] = []
         self._parallel_body_block: dict[str, Any] | None = None
@@ -492,6 +585,202 @@ class ProcessVideoPipeline:
         self._camera_motion_auto = decision
         self._camera_motion_auto_decision_made = True
         return decision
+
+    def _source_content_identity(self) -> SourceIdentity:
+        if self._source_identity_cache is None:
+            timing = _video_timing_probe(self.options.video)
+            self._source_identity_cache = SourceIdentity.from_path(
+                self.options.video,
+                timing={
+                    "width": timing.width,
+                    "height": timing.height,
+                    "fps": round(timing.fps, 9),
+                    "frame_count": timing.frame_count,
+                    "duration_s": round(timing.duration_s, 9),
+                },
+            )
+        return self._source_identity_cache
+
+    def _stage_identity_spec(self, name: str, fn: Callable[[], StageOutcome]) -> StageSpec:
+        resolved_stack = resolved_best_stack_config_from_options(self.options)
+        config = {
+            key: copy.deepcopy(resolved_stack[key])
+            for key in RUN_IDENTITY_CONFIG_KEYS.get(name, ())
+            if key in resolved_stack
+        }
+        config.update(self._stage_identity_options(name))
+
+        models: dict[str, Path] = {}
+        if name == "tracking":
+            models = {
+                "model_manifest": self.options.manifest_path,
+                "reid_checkpoint": self.options.reid_model,
+                "tracker_config": self.options.tracker_config_path,
+            }
+        elif name == "ball":
+            models = {"wasb_checkpoint": self.options.wasb_checkpoint}
+        elif name == "body":
+            models = {"model_manifest": self.options.manifest_path}
+
+        explicit_inputs = self._stage_explicit_inputs(name)
+        callable_object = getattr(fn, "__func__", fn)
+        try:
+            callable_source = inspect.getsource(callable_object)
+        except (OSError, TypeError):
+            callable_source = repr(callable_object)
+        return StageSpec(
+            name=name,
+            dependencies=RUN_IDENTITY_DEPENDENCIES.get(name, ()),
+            code={"callable_sha256": hashlib.sha256(callable_source.encode("utf-8")).hexdigest()},
+            config=config,
+            models=models,
+            explicit_inputs=explicit_inputs,
+        )
+
+    def _stage_identity_options(self, name: str) -> dict[str, Any]:
+        opts = self.options
+        common = {"sport": opts.sport}
+        by_stage: dict[str, dict[str, Any]] = {
+            "calibration": {
+                "allow_auto_court_corners_preview": opts.allow_auto_court_corners_preview,
+                "court_proposals_preview": opts.court_proposals_preview,
+            },
+            "tracking": {
+                "global_association": opts.global_association,
+                "max_players": opts.max_players,
+                "max_frames": opts.max_frames,
+                "device": opts.device,
+            },
+            "rally_gating": {"enabled": opts.rally_gating, "pad_seconds": opts.rally_gating_pad_seconds},
+            "ball": {
+                "skip_ball": opts.skip_ball,
+                "emit_ball_candidates": opts.emit_ball_candidates,
+                "auto_discovery": opts.ball_track_auto_discovery,
+                "max_frames": opts.max_frames,
+            },
+            "events": {
+                "skip_audio": opts.skip_audio,
+                "ball_proximity_m": opts.ball_proximity_m,
+                "high_confidence_swing_floor": opts.high_confidence_swing_floor,
+            },
+            "frames": {"max_frames": opts.max_frames, "no_gpu": opts.no_gpu},
+            "body": {
+                "no_gpu": opts.no_gpu,
+                "body_remote": opts.body_remote,
+                "max_frames": opts.max_frames,
+            },
+            "grounding_refine": {"enabled": opts.grounding_refine},
+            "paddle_pose": {"enabled": opts.paddle_pose},
+            "confidence_gate": {"enabled": opts.confidence_gate},
+            "manifest": {"scene_points": opts.scene_points},
+            "verify": {"enabled": opts.verify_viewer},
+        }
+        return {**common, **by_stage.get(name, {})}
+
+    def _stage_explicit_inputs(self, name: str) -> dict[str, Path]:
+        opts = self.options
+        candidates: dict[str, Path | None] = {}
+        if name == "calibration":
+            candidates = {
+                "court_calibration": opts.court_calibration,
+                "capture_sidecar": opts.capture_sidecar,
+                "court_keypoints": opts.court_keypoints,
+                "court_corners": opts.court_corners,
+            }
+        elif name == "tracking":
+            candidates = {"tracks": opts.tracks_reuse}
+        elif name == "camera_motion":
+            candidates = {"camera_motion": opts.camera_motion_path}
+        elif name == "placement":
+            candidates = {"placement_keypoints_2d": opts.placement_keypoints_2d}
+        elif name == "ball":
+            candidates = {"ball_track": opts.ball_track_reuse}
+            candidates.update(
+                {f"ball_candidates_{index}": path for index, path in enumerate(opts.ball_candidates_reuse)}
+            )
+        elif name == "events":
+            candidates = {
+                "events_selected": opts.events_selected,
+                "ball_track_arc_solved": opts.ball_track_arc_solved,
+            }
+        elif name == "confidence_gate":
+            candidates = {"confidence_calibration_curves": opts.confidence_calibration_curves}
+        return {key: Path(value) for key, value in candidates.items() if value is not None}
+
+    def _identity_allows_reuse(self, stage: str) -> bool:
+        # Direct unit calls bypass the top-level identity wrapper and retain their
+        # historical behavior. Pipeline runs always install an explicit decision.
+        return self._active_reuse_decisions.get(stage, True)
+
+    def _identity_artifacts(self, name: str, outcome: StageOutcome) -> list[Path]:
+        values = [*RUN_IDENTITY_OUTPUTS.get(name, ()), *outcome.artifacts]
+        if name == "ingest":
+            values.append(f"source{self.options.video.suffix.lower()}")
+        mutable_later = {
+            "tracking": {"tracks.json"},
+            "body": {"smpl_motion.json", "skeleton3d.json"},
+        }.get(name, set())
+        artifacts: list[Path] = []
+        seen: set[Path] = set()
+        for value in values:
+            normalized = str(value).rstrip("/")
+            if not normalized or normalized in mutable_later:
+                continue
+            path = Path(normalized)
+            if not path.is_absolute():
+                path = self.clip_dir / path
+            if path in seen or not path.exists() or self._run_identity_store.store_dir in path.parents:
+                continue
+            seen.add(path)
+            artifacts.append(path)
+        return artifacts
+
+    def _identity_metadata(self, outcome: StageOutcome) -> dict[str, Any]:
+        return {
+            "outcome": outcome.as_dict(),
+            "pipeline_state": {
+                "trust_bands": copy.deepcopy(self.trust_bands),
+                "input_quality_report": copy.deepcopy(self._input_quality_report),
+                "camera_motion_auto": copy.deepcopy(self._camera_motion_auto),
+                "camera_motion_auto_decision_made": self._camera_motion_auto_decision_made,
+            },
+        }
+
+    def _restore_identity_state(self, manifest: Mapping[str, Any]) -> None:
+        metadata = manifest.get("metadata")
+        state = metadata.get("pipeline_state") if isinstance(metadata, Mapping) else None
+        if not isinstance(state, Mapping):
+            return
+        trust_bands = state.get("trust_bands")
+        if isinstance(trust_bands, Mapping):
+            self.trust_bands = copy.deepcopy(dict(trust_bands))
+        input_quality = state.get("input_quality_report")
+        if isinstance(input_quality, Mapping):
+            self._input_quality_report = copy.deepcopy(dict(input_quality))
+        camera_motion = state.get("camera_motion_auto")
+        if isinstance(camera_motion, Mapping):
+            self._camera_motion_auto = copy.deepcopy(dict(camera_motion))
+        self._camera_motion_auto_decision_made = bool(state.get("camera_motion_auto_decision_made", False))
+
+    def _identity_reused_outcome(self, name: str, manifest: Mapping[str, Any]) -> StageOutcome:
+        self._restore_identity_state(manifest)
+        metadata = manifest.get("metadata")
+        prior = metadata.get("outcome") if isinstance(metadata, Mapping) else None
+        external = manifest.get("external_artifacts")
+        artifacts = [
+            str(row.get("path"))
+            for row in external
+            if isinstance(external, list) and isinstance(row, Mapping) and isinstance(row.get("path"), str)
+        ] if isinstance(external, list) else []
+        return StageOutcome(
+            stage=name,
+            status="skipped",
+            wall_seconds=0.0,
+            notes=["reused content-addressed stage generation with identical source/code/model/config/upstream fingerprint"],
+            artifacts=artifacts,
+            trust_badge=str(prior.get("trust_badge")) if isinstance(prior, Mapping) and prior.get("trust_badge") is not None else None,
+            metrics=copy.deepcopy(dict(prior.get("metrics", {}))) if isinstance(prior, Mapping) and isinstance(prior.get("metrics"), Mapping) else {},
+        )
 
     # ------------------------------------------------------------------
     # top-level driver
@@ -732,7 +1021,30 @@ class ProcessVideoPipeline:
 
     def _run_stage_safely(self, name: str, fn) -> StageOutcome:
         started = time.monotonic()
+        spec: StageSpec | None = None
+        source_identity: SourceIdentity | None = None
         try:
+            if name == "ingest" and not self.options.video.is_file():
+                # Preserve the ingest stage's hard-failure contract. Identity
+                # probing must never turn a missing source into a degradable CV
+                # error or allow the pipeline to continue downstream.
+                outcome = fn()
+                outcome.wall_seconds = time.monotonic() - started
+                return outcome
+            source_identity = self._source_content_identity()
+            spec = self._stage_identity_spec(name, fn)
+            decision = self._run_identity_store.decision(
+                spec,
+                source_identity,
+                force=self.options.force,
+            )
+            # A legacy stage has no trusted manifest yet, so the wrapper cannot
+            # short-circuit it. It may still run its existing schema validator
+            # and adopt a valid artifact; only that successful stage outcome
+            # publishes the first content-addressed generation.
+            self._active_reuse_decisions[name] = decision.reusable or decision.reason == "unfingerprinted_stale"
+            if decision.reusable and decision.manifest is not None:
+                return self._identity_reused_outcome(name, decision.manifest)
             outcome = fn()
         except _HardStageFailure as exc:
             return StageOutcome(stage=name, status="failed", wall_seconds=time.monotonic() - started, notes=[str(exc)])
@@ -744,7 +1056,23 @@ class ProcessVideoPipeline:
                 wall_seconds=time.monotonic() - started,
                 notes=[f"unexpected {type(exc).__name__}: {exc}", trace],
             )
+        finally:
+            self._active_reuse_decisions.pop(name, None)
         outcome.wall_seconds = time.monotonic() - started
+        if spec is not None and source_identity is not None and outcome.status in {"ran", "reused", "skipped"}:
+            try:
+                with self._run_identity_store.transaction(
+                    spec,
+                    source_identity,
+                    external_artifacts=self._identity_artifacts(name, outcome),
+                    metadata=self._identity_metadata(outcome),
+                ):
+                    pass
+            except Exception as exc:  # noqa: BLE001 - preserve stage output but reject reuse until identity publishes
+                outcome.notes.append(
+                    f"content-addressed stage manifest publication failed ({type(exc).__name__}: {exc}); "
+                    "this stage is not eligible for automatic reuse"
+                )
         return outcome
 
     # ------------------------------------------------------------------
@@ -759,13 +1087,22 @@ class ProcessVideoPipeline:
             raise _HardStageFailure(f"unsupported video suffix {video.suffix!r}; expected one of {sorted(VIDEO_SUFFIXES)}")
 
         target = self.clip_dir / f"source{video.suffix.lower()}"
-        if not target.exists():
+        source_identity = self._source_content_identity()
+        target_identity = fingerprint_path(target)
+        if target_identity.get("sha256") != source_identity.sha256 or int(target_identity.get("size", -1)) != source_identity.size:
+            temp_target = target.with_name(
+                f".{target.name}.ingest-{os.getpid()}-{threading.get_ident()}"
+            )
+            temp_target.unlink(missing_ok=True)
             try:
-                target.symlink_to(video.resolve())
+                temp_target.symlink_to(video.resolve())
             except OSError:
-                import shutil
+                shutil.copy2(video, temp_target)
+            os.replace(temp_target, target)
 
-                shutil.copy2(video, target)
+        for stale_source in self.clip_dir.glob("source.*"):
+            if stale_source != target and stale_source.is_file():
+                stale_source.unlink()
 
         width, height, fps = _video_probe(video)
         frame_times_path = self.clip_dir / "frame_times.json"
@@ -784,7 +1121,12 @@ class ProcessVideoPipeline:
 
     def _stage_calibration(self) -> StageOutcome:
         target = self.clip_dir / "court_calibration.json"
-        if target.is_file() and not self.options.force and _valid_artifact("court_calibration", target):
+        if (
+            target.is_file()
+            and not self.options.force
+            and self._identity_allows_reuse("calibration")
+            and _valid_artifact("court_calibration", target)
+        ):
             payload = _read_json(target)
             self._set_court_trust_band(payload, target)
             return StageOutcome(
@@ -1060,7 +1402,12 @@ class ProcessVideoPipeline:
         if court_gate is not None:
             return court_gate
 
-        if target.is_file() and not opts.force and _valid_artifact("tracks", target):
+        if (
+            target.is_file()
+            and not opts.force
+            and self._identity_allows_reuse("tracking")
+            and _valid_artifact("tracks", target)
+        ):
             self.trust_bands["track"] = derive_track_trust_band(idf1=None, evidence_path=str(target))
             return StageOutcome(
                 stage="tracking",
@@ -1116,6 +1463,7 @@ class ProcessVideoPipeline:
                 # artifacts as authoritative instead of having run_pipeline's internal
                 # tracking-depends-on-calibration walk re-derive them from scratch here.
                 reuse_existing_stage_artifacts=True,
+                require_content_identity_for_reuse=True,
             )
         except Exception as exc:  # noqa: BLE001
             return StageOutcome(
@@ -1423,7 +1771,7 @@ class ProcessVideoPipeline:
                     metrics={"camera_motion_auto": self._camera_motion_auto},
                 )
 
-        if target.is_file() and not opts.force:
+        if target.is_file() and not opts.force and self._identity_allows_reuse("camera_motion"):
             try:
                 validate_camera_motion_payload(_read_json(target))
             except Exception as exc:  # noqa: BLE001
@@ -1791,7 +2139,7 @@ class ProcessVideoPipeline:
             )
 
         existing = sorted(out_dir.glob("frame_*.jpg")) if out_dir.is_dir() else []
-        if existing and not opts.force:
+        if existing and not opts.force and self._identity_allows_reuse("frames"):
             return StageOutcome(
                 stage="frames",
                 status="skipped",
@@ -1886,7 +2234,12 @@ class ProcessVideoPipeline:
         source_kind = "fresh runtime"
         timing_metrics: dict[str, Any] = {}
         warnings: list[str] = []
-        if target.is_file() and not opts.force and _valid_artifact("ball_track", target):
+        if (
+            target.is_file()
+            and not opts.force
+            and self._identity_allows_reuse("ball")
+            and _valid_artifact("ball_track", target)
+        ):
             notes.append("reusing existing valid ball_track.json")
             guard_notes, timing_metrics, warnings = self._guard_reused_ball_track_timing(
                 target,
@@ -1926,7 +2279,7 @@ class ProcessVideoPipeline:
                         "into low-confidence precomputed preview reuse; no ball data this run"
                     ],
                 )
-            notes.append("ran WASB-tennis zero-shot ball tracking (best-available per MASTER_PLAN.md, no fine-tuning)")
+            notes.append("ran WASB-tennis zero-shot ball tracking (best-available per NORTH_STAR_ROADMAP.md, no fine-tuning)")
 
         width, height, _ = _video_probe(opts.video)
         court_corners = self._resolved_court_corners_path()
@@ -2197,7 +2550,11 @@ class ProcessVideoPipeline:
             self.clip_dir / "ball_flight_sanity.json",
             self.clip_dir / "ball_chain_manifest.json",
         ]
-        if all(path.is_file() for path in artifact_paths) and not self.options.force:
+        if (
+            all(path.is_file() for path in artifact_paths)
+            and not self.options.force
+            and self._identity_allows_reuse("ball_arc")
+        ):
             arc_payload = _read_optional_json(self.clip_dir / "ball_track_arc_solved.json") or {}
             return StageOutcome(
                 stage="ball_arc",
@@ -2272,7 +2629,12 @@ class ProcessVideoPipeline:
         contact_windows_path = self.clip_dir / "contact_windows.json"
         notes: list[str] = []
 
-        if contact_windows_path.is_file() and not self.options.force and _valid_artifact("contact_windows", contact_windows_path):
+        if (
+            contact_windows_path.is_file()
+            and not self.options.force
+            and self._identity_allows_reuse("events")
+            and _valid_artifact("contact_windows", contact_windows_path)
+        ):
             artifacts = ["contact_windows.json"]
             if tracks_path.is_file() and not (self.clip_dir / "frame_compute_plan.json").is_file():
                 contact_windows = _read_json(contact_windows_path)
@@ -2552,7 +2914,7 @@ class ProcessVideoPipeline:
                 wall_seconds=0.0,
                 notes=["requires ball_track.json; no render-only ball physics fill produced"],
             )
-        if target.is_file() and not self.options.force:
+        if target.is_file() and not self.options.force and self._identity_allows_reuse("ball_fill"):
             return StageOutcome(
                 stage="ball_fill",
                 status="skipped",
@@ -2659,13 +3021,19 @@ class ProcessVideoPipeline:
         opts = self.options
         target = self.clip_dir / "smpl_motion.json"
 
-        if target.is_file() and not opts.force and _valid_artifact("smpl_motion", target):
+        if (
+            target.is_file()
+            and not opts.force
+            and self._identity_allows_reuse("body")
+            and _valid_artifact("smpl_motion", target)
+        ):
             return StageOutcome(stage="body", status="skipped", wall_seconds=0.0, notes=["reusing existing valid smpl_motion.json"], artifacts=["smpl_motion.json"])
 
         skeleton_path = self.clip_dir / "skeleton3d.json"
         body_gate_path = self.clip_dir / "body_full_clip_gate.json"
         if (
             not opts.force
+            and self._identity_allows_reuse("body")
             and not target.is_file()
             and _is_real_sam3d_skeleton(skeleton_path)
             and body_gate_path.is_file()
@@ -2757,6 +3125,7 @@ class ProcessVideoPipeline:
                 # Calibration/tracking already ran earlier in this same process_video
                 # run -- reuse those artifacts instead of re-deriving them.
                 reuse_existing_stage_artifacts=True,
+                require_content_identity_for_reuse=True,
             )
         except Exception as exc:  # noqa: BLE001
             return StageOutcome(stage="body", status="degraded", wall_seconds=0.0, notes=[f"local BODY stage unavailable ({type(exc).__name__}: {exc}); degraded to skeleton-only"])
@@ -3095,7 +3464,7 @@ class ProcessVideoPipeline:
                 metrics=_paddle_pose_blocked_stage_metrics("no_paddle_pose_flag", status="skipped"),
             )
 
-        if out.is_file() and not self.options.force:
+        if out.is_file() and not self.options.force and self._identity_allows_reuse("paddle_pose"):
             try:
                 payload = _read_optional_json(out)
             except Exception:
