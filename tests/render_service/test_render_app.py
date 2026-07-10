@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from server.gpu_runner import GpuRunProgress, GpuRunRequest, GpuRunResult
 from server.render_app import create_app
+from tests.render_service.ns015_bundle_fixture import write_minimum_bundle
 from threed.racketsport.schemas import PICKLEBALL_COURT_KEYPOINT_NAMES
 
 
@@ -18,15 +19,10 @@ class CompletingRunner:
 
     def run(self, request: GpuRunRequest) -> GpuRunResult:
         self.requests.append(request)
-        request.artifacts_dir.mkdir(parents=True, exist_ok=True)
+        write_minimum_bundle(request.artifacts_dir, video_path=request.video_path)
         manifest = request.artifacts_dir / "replay_viewer_manifest.json"
-        manifest.write_text('{"artifact_type":"replay_viewer_manifest"}', encoding="utf-8")
         (request.artifacts_dir / "gpu_resource_usage.json").write_text(
             '{"artifact_type":"racketsport_resource_usage","summary":{"gpu_utilization_avg_pct":55.5,"gpu_memory_used_max_mb":12345}}',
-            encoding="utf-8",
-        )
-        (request.artifacts_dir / "PIPELINE_SUMMARY.json").write_text(
-            '{"status":"complete","stages":[{"stage":"ingest","wall_seconds":1.25},{"stage":"body","wall_seconds":9.5}]}',
             encoding="utf-8",
         )
         return GpuRunResult(
@@ -129,6 +125,8 @@ def test_health_reports_runner_mode(tmp_path: Path) -> None:
 
 
 def test_upload_job_saves_inputs_runs_gpu_and_exposes_manifest(tmp_path: Path) -> None:
+    # Original intent: the legacy upload route persists inputs and exposes a
+    # completed replay. The fake runner now earns complete with a real bundle.
     runner = CompletingRunner()
     app = create_app(upload_root=tmp_path, runner=runner, run_jobs_inline=True, static_dir=tmp_path / "dist")
     client = TestClient(app)
@@ -267,6 +265,8 @@ def test_upload_job_saves_reviewed_court_artifact_and_passes_derived_calibration
 
 
 def test_upload_job_reports_progress_and_eta(tmp_path: Path) -> None:
+    # Original intent: progress callbacks culminate in Replay ready only when
+    # the runner's final fixture satisfies the minimum-bundle policy.
     runner = ProgressRunner()
     app = create_app(upload_root=tmp_path, runner=runner, run_jobs_inline=True, static_dir=tmp_path / "dist")
     client = TestClient(app)

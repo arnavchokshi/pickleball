@@ -178,7 +178,10 @@ def test_heartbeat_unknown_job_404(tmp_path: Path) -> None:
         assert response.status_code == 404
 
 
-def test_complete_succeeded_marks_job_complete_with_result(tmp_path: Path) -> None:
+def test_legacy_exit_success_marks_job_partial_with_result(tmp_path: Path) -> None:
+    # Original intent: worker completion persists its prefixes/stage summary.
+    # NS-01.5 retires exit-success=>complete, so absent bundle-policy evidence
+    # is terminal partial with an explicit missing-capabilities payload.
     with mock_aws():
         client, _db, s3_client = _make_app(tmp_path)
         job, user_token = _queued_job(client, s3_client)
@@ -191,15 +194,28 @@ def test_complete_succeeded_marks_job_complete_with_result(tmp_path: Path) -> No
                 "pipeline_stage_summary": [{"stage": "ingest", "wall_seconds": 1.0, "status": "complete"}],
                 "s3_artifacts_prefix": f"artifacts/{job['id']}/",
                 "s3_bundle_prefix": f"bundles/{job['clip_id']}/",
+                "missing_capabilities": [
+                    {
+                        "capability": "bundle_policy",
+                        "reason": "legacy worker supplied exit success without minimum-bundle evidence",
+                    }
+                ],
             },
             headers=_worker_auth(),
         )
         assert complete.status_code == 200
 
         final = client.get(f"/api/jobs/{job['id']}", headers={"Authorization": f"Bearer {user_token}"}).json()
-        assert final["status"] == "complete"
+        assert final["status"] == "partial"
         assert final["progress"]["percent"] == 100
         assert final["progress"]["eta_seconds"] == 0
+        assert final["progress"]["stage"] == "Partial result"
+        assert final["missing_capabilities"] == [
+            {
+                "capability": "bundle_policy",
+                "reason": "legacy worker supplied exit success without minimum-bundle evidence",
+            }
+        ]
         assert final["result"]["s3_bundle_prefix"] == f"bundles/{job['clip_id']}/"
         assert final["result"]["s3_artifacts_prefix"] == f"artifacts/{job['id']}/"
         assert final["result"]["pipeline_stage_summary"][0]["stage"] == "ingest"

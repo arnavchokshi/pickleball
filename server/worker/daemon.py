@@ -29,6 +29,7 @@ from typing import Any, Callable, Mapping, Protocol
 
 from threed.racketsport.best_stack import server_override_value
 
+from ..bundle_policy import evaluate_bundle, s3_url_exists
 from .config import WorkerConfig, worker_config_from_env
 from ..pipeline_invocation import (
     PIPELINE_SUMMARY_ARTIFACT,
@@ -61,6 +62,7 @@ class RunResult:
     status: str  # "succeeded" | "failed"
     error: str | None = None
     pipeline_stage_summary: list[dict[str, Any]] | None = None
+    pipeline_summary: dict[str, Any] | None = None
 
 
 ProcessRunner = Callable[[WorkerJob, Path, "Path | None", Path], RunResult]
@@ -80,6 +82,9 @@ class ApiClient(Protocol):
         pipeline_stage_summary: list[dict[str, Any]] | None = None,
         s3_artifacts_prefix: str | None = None,
         s3_bundle_prefix: str | None = None,
+        missing_capabilities: list[Any] | None = None,
+        trust_bands: dict[str, Any] | None = None,
+        bundle_policy: dict[str, Any] | None = None,
     ) -> None: ...
 
 
@@ -202,7 +207,7 @@ def run_once(
     bundle_prefix = f"bundles/{job.clip_id}/jobs/{job.job_id}/generations/{generation_id}/"
 
     bundle_source_dir = out_dir / job.clip_id
-    bundle_dir = job_dir / "delivery_bundle"
+    bundle_dir = job_dir / "delivery_bundles" / generation_id
     try:
         stage_manifest_delivery_bundle(
             source_dir=bundle_source_dir,
@@ -211,6 +216,7 @@ def run_once(
             resolve=lambda name, _prefix=bundle_prefix: f"{_prefix}{name}",
             allowed_source_root=out_dir,
             prune_destination=True,
+            allow_missing_assets=True,
         )
     except Exception as exc:  # noqa: BLE001 - packaging failure is job state
         _stop_heartbeat()
@@ -218,6 +224,23 @@ def run_once(
             job.job_id,
             status="failed",
             error=f"delivery bundle packaging failed: {type(exc).__name__}: {exc}",
+            pipeline_stage_summary=result.pipeline_stage_summary,
+            s3_artifacts_prefix=None,
+            s3_bundle_prefix=None,
+        )
+        return True
+
+    prepublish_policy = evaluate_bundle(
+        bundle_dir,
+        runner_status="failed" if result.status == "failed" else None,
+        pipeline_summary=result.pipeline_summary,
+    )
+    if prepublish_policy.status == "failed":
+        _stop_heartbeat()
+        api_client.complete_job(
+            job.job_id,
+            status="failed",
+            error="delivery bundle policy failed before publish",
             pipeline_stage_summary=result.pipeline_stage_summary,
             s3_artifacts_prefix=None,
             s3_bundle_prefix=None,
@@ -250,17 +273,35 @@ def run_once(
         )
         return True
 
+    published_bundle_keys = _list_s3_prefix_keys(
+        s3_client,
+        bucket=config.s3_bucket,
+        prefix=bundle_prefix,
+    )
+    published_policy = evaluate_bundle(
+        bundle_dir,
+        pipeline_summary=result.pipeline_summary,
+        url_exists=s3_url_exists(
+            published_keys=published_bundle_keys,
+            bundle_prefix=bundle_prefix,
+        ),
+    )
+
     _stop_heartbeat()
     # This request is the atomic publish point. If the response is lost after
     # the server commits it, the outcome is ambiguous, so the immutable S3
     # generation must remain intact for idempotent retry/readback—not deleted.
-    api_client.complete_job(
+    _complete_job_with_policy(
+        api_client,
         job.job_id,
-        status="succeeded",
+        status=published_policy.status,
         error=None,
         pipeline_stage_summary=result.pipeline_stage_summary,
         s3_artifacts_prefix=artifacts_prefix,
         s3_bundle_prefix=bundle_prefix,
+        missing_capabilities=list(published_policy.missing_capabilities),
+        trust_bands=published_policy.trust_bands,
+        bundle_policy=published_policy.as_dict(),
     )
     return True
 
@@ -318,6 +359,16 @@ def _delete_s3_keys(s3_client: S3Client, *, bucket: str, keys: set[str]) -> None
 
 
 def _load_pipeline_summary(clip_dir: Path) -> list[dict[str, Any]] | None:
+    payload = _load_pipeline_summary_payload(clip_dir)
+    if payload is None:
+        return None
+    stages = payload.get("stages") if isinstance(payload, dict) else None
+    if not isinstance(stages, list):
+        return None
+    return [stage for stage in stages if isinstance(stage, dict)]
+
+
+def _load_pipeline_summary_payload(clip_dir: Path) -> dict[str, Any] | None:
     summary_path = clip_dir / PIPELINE_SUMMARY_ARTIFACT
     if not summary_path.is_file():
         return None
@@ -325,10 +376,7 @@ def _load_pipeline_summary(clip_dir: Path) -> list[dict[str, Any]] | None:
         payload = json.loads(summary_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
-    stages = payload.get("stages") if isinstance(payload, dict) else None
-    if not isinstance(stages, list):
-        return None
-    return [stage for stage in stages if isinstance(stage, dict)]
+    return payload if isinstance(payload, dict) else None
 
 
 def _real_process_runner(
@@ -383,6 +431,7 @@ def _real_process_runner(
         text=True,
         timeout=config.command_timeout_s,
     )
+    summary_payload = _load_pipeline_summary_payload(clip_out_dir)
     summary = _load_pipeline_summary(clip_out_dir)
     if completed.returncode != 0:
         detail = (completed.stderr or completed.stdout or "").strip()
@@ -390,8 +439,13 @@ def _real_process_runner(
             status="failed",
             error=f"process_video exit {completed.returncode}: {detail}",
             pipeline_stage_summary=summary,
+            pipeline_summary=summary_payload,
         )
-    return RunResult(status="succeeded", pipeline_stage_summary=summary)
+    return RunResult(
+        status="succeeded",
+        pipeline_stage_summary=summary,
+        pipeline_summary=summary_payload,
+    )
 
 
 class HttpApiClient:
@@ -438,6 +492,9 @@ class HttpApiClient:
         pipeline_stage_summary: list[dict[str, Any]] | None = None,
         s3_artifacts_prefix: str | None = None,
         s3_bundle_prefix: str | None = None,
+        missing_capabilities: list[Any] | None = None,
+        trust_bands: dict[str, Any] | None = None,
+        bundle_policy: dict[str, Any] | None = None,
     ) -> None:
         import httpx
 
@@ -449,11 +506,29 @@ class HttpApiClient:
                 "pipeline_stage_summary": pipeline_stage_summary,
                 "s3_artifacts_prefix": s3_artifacts_prefix,
                 "s3_bundle_prefix": s3_bundle_prefix,
+                "missing_capabilities": missing_capabilities,
+                "trust_bands": trust_bands,
+                "bundle_policy": bundle_policy,
             },
             headers=self._headers,
             timeout=self._timeout_s,
         )
         response.raise_for_status()
+
+
+def _complete_job_with_policy(
+    api_client: ApiClient,
+    job_id: str,
+    **payload: Any,
+) -> None:
+    """Send the NS-01.5 fields; tolerate old in-process fakes only."""
+
+    import inspect
+
+    parameters = inspect.signature(api_client.complete_job).parameters
+    accepts_kwargs = any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters.values())
+    supported = payload if accepts_kwargs else {key: value for key, value in payload.items() if key in parameters}
+    api_client.complete_job(job_id, **supported)
 
 
 def _git_pull_ff_only(repo_dir: str) -> None:

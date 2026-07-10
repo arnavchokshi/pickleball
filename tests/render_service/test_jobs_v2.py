@@ -8,6 +8,7 @@ from moto import mock_aws
 
 from server.gpu_runner import GpuRunRequest, GpuRunResult
 from server.render_app import create_app
+from tests.render_service.ns015_bundle_fixture import write_minimum_bundle
 
 BUCKET = "test-bucket"
 JWT_SECRET = "unit-test-jwt-secret-0123456789abcdef"
@@ -36,9 +37,8 @@ class CompletingRunner:
 
     def run(self, request: GpuRunRequest) -> GpuRunResult:
         self.requests.append(request)
-        request.artifacts_dir.mkdir(parents=True, exist_ok=True)
+        write_minimum_bundle(request.artifacts_dir, video_path=request.video_path)
         manifest = request.artifacts_dir / "replay_viewer_manifest.json"
-        manifest.write_text('{"artifact_type":"replay_viewer_manifest"}', encoding="utf-8")
         return GpuRunResult(
             status="complete",
             notes=["fake runner complete"],
@@ -111,6 +111,8 @@ def _uploaded_clip(client: TestClient, s3_client, token: str, *, with_sidecar: b
 
 
 def test_flag_off_keeps_legacy_multipart_jobs_and_hides_account_routes(tmp_path: Path) -> None:
+    # Original intent: flag-off preserves the legacy route surface. Its fake
+    # runner now earns complete with the same minimum bundle as production.
     app = create_app(
         upload_root=tmp_path,
         runner=CompletingRunner(),
@@ -172,6 +174,8 @@ def test_flag_on_drops_legacy_multipart_and_serves_account_routes(tmp_path: Path
 
 
 def test_job_flow_pulls_clip_from_s3_and_completes_with_progress(tmp_path: Path) -> None:
+    # Original intent: the account-era job pulls the exact S3 inputs and ends
+    # ready. Complete is now backed by mandatory artifacts and valid URLs.
     with mock_aws():
         runner = CompletingRunner()
         client, s3_client = _make_accounts_app(tmp_path, runner=runner)

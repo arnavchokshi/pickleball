@@ -12,6 +12,7 @@ import pytest
 import server.worker.daemon as worker_daemon
 from server.worker.config import WorkerConfig
 from server.worker.daemon import RunResult, run_once
+from tests.render_service.ns015_bundle_fixture import write_minimum_bundle
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -42,6 +43,9 @@ class FakeApiClient:
         pipeline_stage_summary=None,
         s3_artifacts_prefix: str | None = None,
         s3_bundle_prefix: str | None = None,
+        missing_capabilities=None,
+        trust_bands=None,
+        bundle_policy=None,
     ) -> None:
         self.completed.append(
             {
@@ -51,9 +55,12 @@ class FakeApiClient:
                 "pipeline_stage_summary": pipeline_stage_summary,
                 "s3_artifacts_prefix": s3_artifacts_prefix,
                 "s3_bundle_prefix": s3_bundle_prefix,
+                "missing_capabilities": missing_capabilities,
+                "trust_bands": trust_bands,
+                "bundle_policy": bundle_policy,
             }
         )
-        if status == "succeeded" and self.raise_after_successful_complete:
+        if status == "complete" and self.raise_after_successful_complete:
             raise TimeoutError("completion response lost")
 
 
@@ -147,6 +154,8 @@ def test_run_once_returns_false_on_empty_queue(tmp_path: Path) -> None:
 
 
 def test_run_once_success_downloads_runs_uploads_and_completes(tmp_path: Path) -> None:
+    # Original intent: a genuinely complete run downloads inputs, publishes
+    # immutable generations, and reports complete without deleting old ones.
     api_client = FakeApiClient(job_payload=_job_payload())
     s3_client = _s3_with_raw_inputs()
     old_artifact_key = "artifacts/job_1/generations/old/obsolete.json"
@@ -160,15 +169,15 @@ def test_run_once_success_downloads_runs_uploads_and_completes(tmp_path: Path) -
         assert video_path.read_bytes() == b"video-bytes"
         assert sidecar_path is not None
         assert sidecar_path.read_text(encoding="utf-8") == "{}"
-        clip_dir = out_dir / job.clip_id
-        clip_dir.mkdir(parents=True, exist_ok=True)
-        (clip_dir / "replay_viewer_manifest.json").write_text(
-            '{"video_url": "/@fs//tmp/x/input/drill.mp4"}', encoding="utf-8"
+        summary = write_minimum_bundle(
+            out_dir / job.clip_id,
+            video_path=video_path,
         )
-        (clip_dir / "PIPELINE_SUMMARY.json").write_text(
-            '{"stages":[{"stage":"ingest","wall_seconds":1.0,"status":"complete"}]}', encoding="utf-8"
+        return RunResult(
+            status="succeeded",
+            pipeline_stage_summary=summary["stages"],
+            pipeline_summary=summary,
         )
-        return RunResult(status="succeeded", pipeline_stage_summary=[{"stage": "ingest", "wall_seconds": 1.0}])
 
     processed = run_once(api_client, s3_client, process_runner, _config(tmp_path))
 
@@ -178,12 +187,16 @@ def test_run_once_success_downloads_runs_uploads_and_completes(tmp_path: Path) -
     assert len(api_client.completed) == 1
     completed = api_client.completed[0]
     assert completed["job_id"] == "job_1"
-    assert completed["status"] == "succeeded"
+    assert completed["status"] == "complete"
     bundle_prefix = completed["s3_bundle_prefix"]
     artifacts_prefix = completed["s3_artifacts_prefix"]
     assert bundle_prefix.startswith("bundles/clip_1/jobs/job_1/generations/")
     assert artifacts_prefix.startswith("artifacts/job_1/generations/")
-    assert completed["pipeline_stage_summary"] == [{"stage": "ingest", "wall_seconds": 1.0}]
+    assert completed["pipeline_stage_summary"] == [
+        {"stage": "manifest", "status": "ran", "wall_seconds": 1.0}
+    ]
+    assert completed["missing_capabilities"] == []
+    assert completed["bundle_policy"]["status"] == "complete"
 
     assert any(key.startswith("bundles/clip_1/") for key in s3_client.uploaded)
     assert any(key.startswith("artifacts/job_1/") for key in s3_client.uploaded)
@@ -192,7 +205,7 @@ def test_run_once_success_downloads_runs_uploads_and_completes(tmp_path: Path) -
     uploaded_manifest = s3_client.uploaded[f"{bundle_prefix}replay_viewer_manifest.json"]
     assert f"{bundle_prefix}source.mp4".encode() in uploaded_manifest
     assert f"{artifacts_prefix}clip_1/PIPELINE_SUMMARY.json" in s3_client.uploaded
-    assert f"{bundle_prefix}PIPELINE_SUMMARY.json" not in s3_client.uploaded
+    assert f"{bundle_prefix}PIPELINE_SUMMARY.json" in s3_client.uploaded
     # Superseded immutable generations are retained until a state-aware
     # lifecycle/cleanup pass; the worker never races deletion against publish.
     assert s3_client.uploaded[old_artifact_key] == b"old-artifact"
@@ -200,6 +213,8 @@ def test_run_once_success_downloads_runs_uploads_and_completes(tmp_path: Path) -
 
 
 def test_run_once_without_sidecar_key_skips_sidecar_download(tmp_path: Path) -> None:
+    # Original intent: no sidecar key means no sidecar download. Under NS-01.5
+    # that bare execution success is inspectable partial, never complete.
     payload = _job_payload()
     payload["s3_sidecar_key"] = None
     api_client = FakeApiClient(job_payload=payload)
@@ -207,42 +222,52 @@ def test_run_once_without_sidecar_key_skips_sidecar_download(tmp_path: Path) -> 
 
     def process_runner(job, video_path, sidecar_path, out_dir):
         assert sidecar_path is None
-        clip_dir = out_dir / job.clip_id
-        clip_dir.mkdir(parents=True, exist_ok=True)
-        (clip_dir / "replay_viewer_manifest.json").write_text(
-            '{"video_url": "/@fs//tmp/x/input/drill.mp4"}', encoding="utf-8"
+        missing = [{"capability": "capture_sidecar", "reason": "sidecar key was absent"}]
+        summary = write_minimum_bundle(
+            out_dir / job.clip_id,
+            video_path=video_path,
+            status="partial",
+            missing_capabilities=missing,
+            omit="capture_sidecar",
         )
-        return RunResult(status="succeeded")
+        return RunResult(status="succeeded", pipeline_summary=summary)
 
     processed = run_once(api_client, s3_client, process_runner, _config(tmp_path))
 
     assert processed is True
-    assert api_client.completed[0]["status"] == "succeeded"
+    assert api_client.completed[0]["status"] == "partial"
+    assert api_client.completed[0]["missing_capabilities"] == [
+        {"capability": "capture_sidecar", "reason": "sidecar key was absent"}
+    ]
 
 
-def test_run_once_bundle_packaging_failure_fails_job_without_uploading(tmp_path: Path) -> None:
+def test_run_once_missing_advertised_url_publishes_partial_without_ready(tmp_path: Path) -> None:
+    # Original intent: a broken advertised URL must never reach ready. The new
+    # contract retains an inspectable immutable bundle and reports partial.
     api_client = FakeApiClient(job_payload=_job_payload())
     s3_client = _s3_with_raw_inputs()
 
     def process_runner(job, video_path, sidecar_path, out_dir):
-        clip_dir = out_dir / job.clip_id
-        clip_dir.mkdir(parents=True, exist_ok=True)
-        (clip_dir / "replay_viewer_manifest.json").write_text(
-            '{"virtual_world_url": "missing_world.json"}', encoding="utf-8"
+        summary = write_minimum_bundle(
+            out_dir / job.clip_id,
+            video_path=video_path,
+            missing_extra_url=True,
         )
-        return RunResult(status="succeeded", pipeline_stage_summary=[{"stage": "manifest"}])
+        return RunResult(status="succeeded", pipeline_summary=summary)
 
     processed = run_once(api_client, s3_client, process_runner, _config(tmp_path))
 
     assert processed is True
-    assert api_client.completed[0]["status"] == "failed"
-    assert "delivery bundle packaging failed" in api_client.completed[0]["error"]
-    assert "missing_world.json" in api_client.completed[0]["error"]
-    assert api_client.completed[0]["pipeline_stage_summary"] == [{"stage": "manifest"}]
-    assert s3_client.uploaded == {}
+    completed = api_client.completed[0]
+    assert completed["status"] == "partial"
+    assert completed["bundle_policy"]["missing_urls"] == ["assets/missing_overlay.png"]
+    assert any(item["capability"] == "advertised_urls" for item in completed["missing_capabilities"])
+    assert any(key.startswith(completed["s3_bundle_prefix"]) for key in s3_client.uploaded)
 
 
 def test_run_once_failed_generation_upload_preserves_previous_live_bundle(tmp_path: Path) -> None:
+    # Original intent: upload failure cannot disturb the previous immutable
+    # generation. The candidate fixture is complete so it reaches upload.
     api_client = FakeApiClient(job_payload=_job_payload())
     s3_client = _s3_with_raw_inputs()
     old_key = "bundles/clip_1/jobs/job_1/generations/old/replay_viewer_manifest.json"
@@ -250,13 +275,8 @@ def test_run_once_failed_generation_upload_preserves_previous_live_bundle(tmp_pa
     s3_client.fail_upload_at = 2
 
     def process_runner(job, video_path, sidecar_path, out_dir):
-        clip_dir = out_dir / job.clip_id
-        clip_dir.mkdir(parents=True, exist_ok=True)
-        (clip_dir / "replay_viewer_manifest.json").write_text(
-            '{"video_url": "/@fs//tmp/x/input/drill.mp4"}', encoding="utf-8"
-        )
-        (clip_dir / "PIPELINE_SUMMARY.json").write_text("{}", encoding="utf-8")
-        return RunResult(status="succeeded")
+        summary = write_minimum_bundle(out_dir / job.clip_id, video_path=video_path)
+        return RunResult(status="succeeded", pipeline_summary=summary)
 
     processed = run_once(api_client, s3_client, process_runner, _config(tmp_path))
 
@@ -275,23 +295,21 @@ def test_delete_s3_keys_rejects_per_object_errors() -> None:
 
 
 def test_run_once_lost_completion_response_keeps_published_generation(tmp_path: Path) -> None:
+    # Original intent: a lost API response after honest completion must not
+    # delete the already-published immutable generation.
     api_client = FakeApiClient(job_payload=_job_payload())
     api_client.raise_after_successful_complete = True
     s3_client = _s3_with_raw_inputs()
 
     def process_runner(job, video_path, sidecar_path, out_dir):
-        clip_dir = out_dir / job.clip_id
-        clip_dir.mkdir(parents=True, exist_ok=True)
-        (clip_dir / "replay_viewer_manifest.json").write_text(
-            '{"video_url": "/@fs//tmp/x/input/drill.mp4"}', encoding="utf-8"
-        )
-        return RunResult(status="succeeded")
+        summary = write_minimum_bundle(out_dir / job.clip_id, video_path=video_path)
+        return RunResult(status="succeeded", pipeline_summary=summary)
 
     with pytest.raises(TimeoutError, match="response lost"):
         run_once(api_client, s3_client, process_runner, _config(tmp_path))
 
     completed = api_client.completed[-1]
-    assert completed["status"] == "succeeded"
+    assert completed["status"] == "complete"
     assert any(key.startswith(completed["s3_bundle_prefix"]) for key in s3_client.uploaded)
     assert any(key.startswith(completed["s3_artifacts_prefix"]) for key in s3_client.uploaded)
 

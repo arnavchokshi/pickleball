@@ -23,6 +23,7 @@ from threed.racketsport.court_review_artifacts import (
     sha256_file,
 )
 
+from .bundle_policy import evaluate_bundle, local_api_url_exists
 from .court_review import predict_court_layout_from_video
 from .gpu_runner import (
     PIPELINE_SUMMARY_ARTIFACT,
@@ -384,10 +385,12 @@ def create_app(
     @app.get("/api/jobs/{job_id}/manifest")
     def get_manifest(job_id: str) -> FileResponse:
         try:
-            store.get(job_id)
+            job = store.get(job_id)
             manifest = _job_artifacts_dir(upload_root, job_id) / "replay_viewer_manifest.json"
         except (KeyError, ValueError):
             raise HTTPException(status_code=404, detail="job not found") from None
+        if job.get("status") not in {"complete", "partial"}:
+            raise HTTPException(status_code=404, detail="manifest not ready")
         if not manifest.is_file():
             raise HTTPException(status_code=404, detail="manifest not ready")
         return FileResponse(manifest, media_type="application/json")
@@ -395,10 +398,12 @@ def create_app(
     @app.get("/api/jobs/{job_id}/artifacts/{artifact_path:path}")
     def get_artifact(job_id: str, artifact_path: str) -> FileResponse:
         try:
-            store.get(job_id)
+            job = store.get(job_id)
             safe_path = _safe_artifact_path(_job_artifacts_dir(upload_root, job_id), artifact_path)
         except (KeyError, ValueError):
             raise HTTPException(status_code=404, detail="artifact not found") from None
+        if job.get("status") not in {"complete", "partial"}:
+            raise HTTPException(status_code=404, detail="artifact not ready")
         if not safe_path.is_file():
             raise HTTPException(status_code=404, detail="artifact not found")
         return FileResponse(safe_path)
@@ -459,21 +464,48 @@ def _execute_job(store: JobStore, runner: GpuRunner, request: GpuRunRequest) -> 
         )
         return
 
-    final_progress = (
-        GpuRunProgress(percent=100, stage="Replay ready", message="Replay artifacts are ready.", eta_seconds=0)
-        if result.status == "complete"
-        else GpuRunProgress(percent=55, stage="Submitted", message="GPU worker accepted the job.")
+    policy_root = result.artifacts_dir or request.artifacts_dir
+    policy = evaluate_bundle(
+        policy_root,
+        runner_status=result.status,
+        url_exists=local_api_url_exists(bundle_root=policy_root),
     )
+    result = replace(
+        result,
+        status=policy.status,
+        missing_capabilities=list(policy.missing_capabilities),
+        trust_bands=policy.trust_bands,
+        bundle_policy=policy.as_dict(),
+    )
+
+    if result.status == "complete":
+        final_progress = GpuRunProgress(
+            percent=100,
+            stage="Replay ready",
+            message="Replay artifacts are ready.",
+            eta_seconds=0,
+        )
+    elif result.status == "partial":
+        final_progress = GpuRunProgress(
+            percent=100,
+            stage="Partial result",
+            message="Replay is inspectable with explicitly missing capabilities.",
+            eta_seconds=0,
+        )
+    else:
+        final_progress = GpuRunProgress(percent=55, stage="Submitted", message="GPU worker accepted the job.")
     store.update(
         request.job_id,
         status=result.status,
         error=None,
         result=_result_payload(request.job_id, result),
+        missing_capabilities=result.missing_capabilities,
+        trust_bands=result.trust_bands,
         progress=_progress_payload(
             final_progress,
             status=result.status,
             started_at=started_at,
-            completed_at=time.time() if result.status in {"complete", "failed"} else None,
+            completed_at=time.time() if result.status in {"complete", "partial", "failed"} else None,
         ),
     )
 
@@ -483,6 +515,9 @@ def _result_payload(job_id: str, result: GpuRunResult) -> dict[str, Any]:
         "notes": result.notes,
         "remote_run_dir": result.remote_run_dir,
         "manifest_url": f"/api/jobs/{job_id}/manifest" if result.manifest_path else None,
+        "missing_capabilities": result.missing_capabilities,
+        "trust_bands": result.trust_bands,
+        "bundle_policy": result.bundle_policy,
     }
     artifacts_dir = result.artifacts_dir
     resource_usage = _json_artifact(artifacts_dir / RESOURCE_USAGE_ARTIFACT) if artifacts_dir is not None else None
@@ -624,6 +659,8 @@ def _progress_payload(
             payload["eta_seconds"] = max(0, int(estimated_total_seconds - max(0.0, now - started_at)))
     if status == "complete":
         payload["eta_seconds"] = 0
+    if status == "partial":
+        payload["eta_seconds"] = 0
     if status == "failed":
         payload["eta_seconds"] = None
     return payload
@@ -640,6 +677,8 @@ def _progress_steps(*, status: str, percent: int) -> list[dict[str, str]]:
 
     steps: list[dict[str, str]] = []
     for index, (step_id, label, _) in enumerate(PIPELINE_STEPS):
+        if status == "partial" and step_id == "ready":
+            label = "Partial result"
         if status == "failed" and index == active_index:
             step_status = "failed"
         elif index < active_index:

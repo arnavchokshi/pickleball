@@ -27,6 +27,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from pydantic import BaseModel
 from pymongo import ReturnDocument
 
+from ..bundle_policy import gate_reported_status
+
 STALE_HEARTBEAT_S = 300
 MAX_ATTEMPTS_BEFORE_FAIL = 2
 CLAIM_POLL_INTERVAL_S = 2
@@ -44,11 +46,16 @@ class HeartbeatBody(BaseModel):
 
 
 class CompleteBody(BaseModel):
-    status: Literal["succeeded", "failed"]
+    # ``succeeded`` remains accepted during rolling deploys, but the policy
+    # gate below can only downgrade that legacy execution result to partial.
+    status: Literal["complete", "partial", "failed", "succeeded"]
     error: str | None = None
     pipeline_stage_summary: list[dict[str, Any]] | None = None
     s3_artifacts_prefix: str | None = None
     s3_bundle_prefix: str | None = None
+    missing_capabilities: list[Any] | None = None
+    trust_bands: dict[str, Any] | None = None
+    bundle_policy: dict[str, Any] | None = None
 
 
 def _now() -> float:
@@ -177,11 +184,14 @@ def build_worker_router(*, db: Any, worker_token: str, with_dynamic_eta: WithDyn
         if doc is None:
             raise HTTPException(status_code=404, detail="job not found")
         now = _now()
-        # Wire contract with the daemon is succeeded/failed; the job doc's
-        # `status` enum stays "complete"/"failed" to match the pre-existing
-        # inline (SshGpuRunner) path so `GET /api/jobs/{id}` behaves
-        # identically regardless of which execution path produced it.
-        job_status = "complete" if body.status == "succeeded" else "failed"
+        # NS-01.5: the worker's bundle status is the job status. Never infer
+        # completion from process success or translate partial into ready.
+        job_status = gate_reported_status(
+            status=body.status,
+            missing_capabilities=body.missing_capabilities,
+            trust_bands=body.trust_bands,
+            bundle_policy=body.bundle_policy,
+        )
         progress = dict(doc.get("progress") or {})
         if job_status == "complete":
             progress.update(
@@ -195,9 +205,33 @@ def build_worker_router(*, db: Any, worker_token: str, with_dynamic_eta: WithDyn
                 }
             )
             result: dict[str, Any] | None = {
+                "manifest_url": f"/api/jobs/{job_id}/manifest",
                 "s3_artifacts_prefix": body.s3_artifacts_prefix,
                 "s3_bundle_prefix": body.s3_bundle_prefix,
                 "pipeline_stage_summary": body.pipeline_stage_summary or [],
+                "missing_capabilities": body.missing_capabilities or [],
+                "trust_bands": body.trust_bands or {},
+                "bundle_policy": body.bundle_policy,
+            }
+        elif job_status == "partial":
+            progress.update(
+                {
+                    "percent": 100,
+                    "stage": "Partial result",
+                    "message": "Replay is inspectable with explicitly missing capabilities.",
+                    "eta_seconds": 0,
+                    "updated_at": now,
+                    "completed_at": now,
+                }
+            )
+            result = {
+                "manifest_url": f"/api/jobs/{job_id}/manifest",
+                "s3_artifacts_prefix": body.s3_artifacts_prefix,
+                "s3_bundle_prefix": body.s3_bundle_prefix,
+                "pipeline_stage_summary": body.pipeline_stage_summary or [],
+                "missing_capabilities": body.missing_capabilities or [],
+                "trust_bands": body.trust_bands or {},
+                "bundle_policy": body.bundle_policy,
             }
         else:
             progress.update(
@@ -217,6 +251,8 @@ def build_worker_router(*, db: Any, worker_token: str, with_dynamic_eta: WithDyn
                     "status": job_status,
                     "error": body.error,
                     "result": result,
+                    "missing_capabilities": body.missing_capabilities or [],
+                    "trust_bands": body.trust_bands or {},
                     "progress": progress,
                     "updated_at": now,
                 }

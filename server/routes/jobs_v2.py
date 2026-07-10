@@ -22,16 +22,21 @@ read so status stays honest even when zero workers are polling.
 
 from __future__ import annotations
 
+import json
+import posixpath
 import time
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Callable
+from urllib.parse import unquote, urlsplit
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
 from ..gpu_runner import GpuRunner, GpuRunProgress, GpuRunRequest
+from ..s3 import presign_get
 from ..security import AuthConfig, bearer_auth_dependency
 from .worker import _reclaim_stale_jobs
 
@@ -225,4 +230,131 @@ def build_jobs_v2_router(
             raise HTTPException(status_code=404, detail="job not found")
         return with_dynamic_eta(_public_job(doc))
 
+    @router.get("/api/jobs/{job_id}/manifest", response_model=None)
+    def get_job_manifest_v2(job_id: str, user_id: str = Depends(require_user)) -> JSONResponse:
+        doc = _published_job(db, job_id=job_id, user_id=user_id)
+        prefix = _bundle_prefix(doc)
+        payload = _load_s3_json(s3_client, bucket=bucket, key=f"{prefix}replay_viewer_manifest.json")
+        rewritten = _rewrite_bundle_urls(
+            payload,
+            job_id=job_id,
+            bundle_prefix=prefix,
+            document_relative="replay_viewer_manifest.json",
+        )
+        return JSONResponse(rewritten)
+
+    @router.get("/api/jobs/{job_id}/artifacts/{artifact_path:path}", response_model=None)
+    def get_job_artifact_v2(
+        job_id: str,
+        artifact_path: str,
+        user_id: str = Depends(require_user),
+    ) -> JSONResponse | RedirectResponse:
+        doc = _published_job(db, job_id=job_id, user_id=user_id)
+        relative = _safe_bundle_relative_path(artifact_path)
+        prefix = _bundle_prefix(doc)
+        key = f"{prefix}{relative}"
+        if PurePosixPath(relative).name in {"body_mesh_index.json", "replay_scene.json"}:
+            payload = _load_s3_json(s3_client, bucket=bucket, key=key)
+            return JSONResponse(
+                _rewrite_bundle_urls(
+                    payload,
+                    job_id=job_id,
+                    bundle_prefix=prefix,
+                    document_relative=relative,
+                )
+            )
+        try:
+            s3_client.head_object(Bucket=bucket, Key=key)
+        except Exception as exc:  # noqa: BLE001 - absent bundle object is API state
+            raise HTTPException(status_code=404, detail="artifact not found") from exc
+        return RedirectResponse(presign_get(s3_client, bucket=bucket, key=key), status_code=307)
+
     return router
+
+
+def _published_job(db: Any, *, job_id: str, user_id: str) -> dict[str, Any]:
+    doc = db.jobs.find_one({"_id": job_id, "user_id": user_id})
+    if doc is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    if doc.get("status") not in {"complete", "partial"}:
+        raise HTTPException(status_code=404, detail="manifest not ready")
+    _bundle_prefix(doc)
+    return doc
+
+
+def _bundle_prefix(doc: dict[str, Any]) -> str:
+    result = doc.get("result")
+    prefix = result.get("s3_bundle_prefix") if isinstance(result, dict) else None
+    if not isinstance(prefix, str) or not prefix.endswith("/"):
+        raise HTTPException(status_code=404, detail="published bundle not found")
+    return prefix
+
+
+def _load_s3_json(s3_client: Any, *, bucket: str, key: str) -> dict[str, Any]:
+    try:
+        response = s3_client.get_object(Bucket=bucket, Key=key)
+        payload = json.loads(response["Body"].read())
+    except Exception as exc:  # noqa: BLE001 - absent/invalid object is API state
+        raise HTTPException(status_code=404, detail="bundle JSON not found") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=500, detail="published bundle JSON must be an object")
+    return payload
+
+
+def _safe_bundle_relative_path(value: str) -> str:
+    path = PurePosixPath(unquote(value))
+    if path.is_absolute() or not path.parts or any(part in {"", ".", ".."} for part in path.parts):
+        raise HTTPException(status_code=404, detail="artifact not found")
+    return path.as_posix()
+
+
+def _rewrite_bundle_urls(
+    value: Any,
+    *,
+    job_id: str,
+    bundle_prefix: str,
+    document_relative: str,
+    key: str | None = None,
+) -> Any:
+    if isinstance(value, dict):
+        return {
+            str(child_key): _rewrite_bundle_urls(
+                child_value,
+                job_id=job_id,
+                bundle_prefix=bundle_prefix,
+                document_relative=document_relative,
+                key=str(child_key),
+            )
+            for child_key, child_value in value.items()
+        }
+    if isinstance(value, list):
+        return [
+            _rewrite_bundle_urls(
+                child,
+                job_id=job_id,
+                bundle_prefix=bundle_prefix,
+                document_relative=document_relative,
+                key=key,
+            )
+            for child in value
+        ]
+    if not (
+        isinstance(value, str)
+        and key is not None
+        and (key == "url" or key.endswith("_url") or key == "court_glb")
+    ):
+        return value
+    parsed = urlsplit(value)
+    if parsed.scheme or parsed.netloc:
+        return value
+    raw_path = unquote(parsed.path)
+    if raw_path.startswith(bundle_prefix):
+        relative = raw_path.removeprefix(bundle_prefix)
+    elif raw_path.startswith("/"):
+        return value
+    else:
+        relative = posixpath.normpath(
+            posixpath.join(posixpath.dirname(document_relative), raw_path)
+        )
+    relative = _safe_bundle_relative_path(relative)
+    return f"/api/jobs/{job_id}/artifacts/{relative}"

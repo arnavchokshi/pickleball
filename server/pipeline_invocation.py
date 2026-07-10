@@ -15,16 +15,20 @@ it stays green, unmodified, against the refactored `SshGpuRunner`.
 
 from __future__ import annotations
 
+import ctypes
 import json
 import os
 import posixpath
 import re
 import shutil
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 from urllib.parse import unquote, urlsplit
+
+from .bundle_policy import iter_policy_package_files
 
 SAFE_SLUG_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
 
@@ -153,6 +157,7 @@ def collect_manifest_asset_closure(
     asset_root: Path | None = None,
     video_path: Path | None = None,
     allowed_source_root: Path | None = None,
+    allow_missing_assets: bool = False,
 ) -> tuple[ManifestAsset, ...]:
     """Collect and validate the replay manifest's transitive local assets.
 
@@ -170,6 +175,7 @@ def collect_manifest_asset_closure(
         asset_root=asset_root,
         video_path=video_path,
         allowed_source_root=allowed_source_root,
+        allow_missing_assets=allow_missing_assets,
     )
     return closure
 
@@ -180,6 +186,7 @@ def _collect_manifest_asset_closure(
     asset_root: Path | None,
     video_path: Path | None,
     allowed_source_root: Path | None,
+    allow_missing_assets: bool = False,
 ) -> tuple[tuple[ManifestAsset, ...], dict[str, object]]:
     if not manifest_path.is_file():
         raise FileNotFoundError(f"replay manifest is missing: {manifest_path}")
@@ -220,15 +227,20 @@ def _collect_manifest_asset_closure(
         visited_json.add(document_key)
 
         for key, value in _iter_asset_references(document_payload):
-            asset = _resolve_manifest_reference(
-                key=key,
-                value=value,
-                document=document,
-                asset_root=root,
-                allowed_source_root=allowed_root,
-                clip=clip,
-                video_path=video_path,
-            )
+            try:
+                asset = _resolve_manifest_reference(
+                    key=key,
+                    value=value,
+                    document=document,
+                    asset_root=root,
+                    allowed_source_root=allowed_root,
+                    clip=clip,
+                    video_path=video_path,
+                )
+            except FileNotFoundError:
+                if allow_missing_assets:
+                    continue
+                raise
             if asset is None:
                 continue
             is_new = _add_manifest_asset(assets, asset)
@@ -248,6 +260,7 @@ def stage_manifest_delivery_bundle(
     resolve: ManifestUrlResolver,
     allowed_source_root: Path | None = None,
     prune_destination: bool = False,
+    allow_missing_assets: bool = False,
 ) -> tuple[Path, ...]:
     """Validate and stage a complete replay bundle, publishing manifest last.
 
@@ -264,10 +277,20 @@ def stage_manifest_delivery_bundle(
         asset_root=source_root,
         video_path=video_path,
         allowed_source_root=allowed_source_root or source_root,
+        allow_missing_assets=allow_missing_assets,
     )
+    assets = {asset.relative_path.as_posix(): asset for asset in closure}
+    for source_path in iter_policy_package_files(source_root):
+        relative_path = source_path.relative_to(source_root)
+        _add_manifest_asset(
+            assets,
+            ManifestAsset(relative_path=relative_path, source_path=source_path),
+        )
+    closure = tuple(assets[key] for key in sorted(assets))
     manifest_asset = next(asset for asset in closure if asset.relative_path == Path(REPLAY_MANIFEST_ARTIFACT))
     clip_value = manifest_payload.get("clip")
     clip = str(clip_value) if isinstance(clip_value, str) and clip_value else None
+    manifest_payload = _advertise_policy_artifacts(manifest_payload, source_root)
     rewritten_manifest = _rewrite_manifest_value(
         manifest_payload,
         resolve=resolve,
@@ -276,6 +299,7 @@ def stage_manifest_delivery_bundle(
         allowed_source_root=(allowed_source_root or source_root).resolve(),
         clip=clip,
         video_path=video_path,
+        allow_missing_assets=allow_missing_assets,
     )
     rewritten_children: dict[Path, object] = {}
     for asset in closure:
@@ -297,10 +321,10 @@ def stage_manifest_delivery_bundle(
             allowed_source_root=(allowed_source_root or source_root).resolve(),
             clip=clip,
             video_path=video_path,
+            allow_missing_assets=allow_missing_assets,
         )
 
     destination_root.parent.mkdir(parents=True, exist_ok=True)
-    destination_root.mkdir(parents=True, exist_ok=True)
     stage_root = Path(
         tempfile.mkdtemp(
             prefix=f".{destination_root.name}.delivery-",
@@ -312,10 +336,7 @@ def stage_manifest_delivery_bundle(
         for asset in closure:
             if asset.relative_path == Path(REPLAY_MANIFEST_ARTIFACT):
                 continue
-            destination = _safe_bundle_destination(destination_root, asset.relative_path)
             rewritten_child = rewritten_children.get(asset.relative_path)
-            if rewritten_child is None and _same_existing_file(asset.source_path, destination):
-                continue
             staged = _safe_bundle_destination(stage_root, asset.relative_path)
             staged.parent.mkdir(parents=True, exist_ok=True)
             if rewritten_child is None:
@@ -335,28 +356,21 @@ def stage_manifest_delivery_bundle(
             json.dumps(rewritten_manifest, separators=(",", ":"), sort_keys=True) + "\n",
             encoding="utf-8",
         )
-
-        for relative_path in sorted(staged_paths, key=lambda path: path.as_posix()):
-            staged = _safe_bundle_destination(stage_root, relative_path)
-            destination = _safe_bundle_destination(destination_root, relative_path)
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            _reject_non_file_destination(destination)
-            os.replace(staged, destination)
-
-        final_manifest = _safe_bundle_destination(destination_root, Path(REPLAY_MANIFEST_ARTIFACT))
-        _reject_non_file_destination(final_manifest)
-        os.replace(staged_manifest, final_manifest)
-        if prune_destination:
-            if destination_root == source_root:
-                raise ValueError("cannot prune a delivery bundle in place over its source artifacts")
-            _prune_bundle_destination(
-                destination_root,
-                keep={asset.relative_path for asset in closure},
-            )
+        staged_paths.append(Path(REPLAY_MANIFEST_ARTIFACT))
+        _verify_staged_delivery_bundle(stage_root, staged_paths)
+        if destination_root.exists():
+            if not prune_destination:
+                raise FileExistsError(f"delivery bundle destination already exists: {destination_root}")
+            _atomic_exchange_directories(stage_root, destination_root)
+            # The old generation now lives at stage_root and is not visible at
+            # the published path. It is removed only after the atomic swap.
+        else:
+            os.replace(stage_root, destination_root)
     finally:
-        shutil.rmtree(stage_root, ignore_errors=True)
+        if stage_root.exists():
+            shutil.rmtree(stage_root, ignore_errors=True)
 
-    return tuple(asset.relative_path for asset in closure)
+    return tuple(staged_paths)
 
 
 def rewrite_manifest_urls(
@@ -364,6 +378,7 @@ def rewrite_manifest_urls(
     artifacts_dir: Path,
     video_path: Path,
     resolve: ManifestUrlResolver,
+    allow_missing_assets: bool = False,
 ) -> None:
     """Validate/stage the recursive closure and rewrite its manifest URLs.
 
@@ -382,7 +397,27 @@ def rewrite_manifest_urls(
         # SSH/worker assets already live under artifacts_dir. Both are bounded
         # by the per-job parent directory.
         allowed_source_root=artifacts_dir.parent,
+        prune_destination=True,
+        allow_missing_assets=allow_missing_assets,
     )
+
+
+def _advertise_policy_artifacts(payload: dict[str, object], source_root: Path) -> dict[str, object]:
+    """Add same-run stats/coaching URLs before the manifest is staged.
+
+    Older runners create the manifest before these facts. The server may add
+    links to artifacts that actually exist, but it never invents an artifact
+    or upgrades bundle status when either file is absent.
+    """
+
+    advertised = dict(payload)
+    for field, filename in (
+        ("match_stats_url", "match_stats.json"),
+        ("coaching_card_facts_url", "coaching_card_facts.json"),
+    ):
+        if (source_root / filename).is_file():
+            advertised[field] = filename
+    return advertised
 
 
 def _rewrite_manifest_value(
@@ -395,6 +430,7 @@ def _rewrite_manifest_value(
     clip: str | None,
     video_path: Path,
     key: str | None = None,
+    allow_missing_assets: bool = False,
 ) -> object:
     if isinstance(value, dict):
         return {
@@ -407,6 +443,7 @@ def _rewrite_manifest_value(
                 clip=clip,
                 video_path=video_path,
                 key=str(child_key),
+                allow_missing_assets=allow_missing_assets,
             )
             for child_key, child_value in value.items()
         }
@@ -421,19 +458,25 @@ def _rewrite_manifest_value(
                 clip=clip,
                 video_path=video_path,
                 key=key,
+                allow_missing_assets=allow_missing_assets,
             )
             for item in value
         ]
     if isinstance(value, str) and key is not None and _is_asset_reference_key(key):
-        asset = _resolve_manifest_reference(
-            key=key,
-            value=value,
-            document=document,
-            asset_root=asset_root,
-            allowed_source_root=allowed_source_root,
-            clip=clip,
-            video_path=video_path,
-        )
+        try:
+            asset = _resolve_manifest_reference(
+                key=key,
+                value=value,
+                document=document,
+                asset_root=asset_root,
+                allowed_source_root=allowed_source_root,
+                clip=clip,
+                video_path=video_path,
+            )
+        except FileNotFoundError:
+            if allow_missing_assets:
+                return value
+            raise
         if asset is not None:
             return resolve(asset.relative_path.as_posix())
     return value
@@ -744,29 +787,53 @@ def _safe_bundle_destination(root: Path, relative_path: Path) -> Path:
     return destination
 
 
-def _same_existing_file(source: Path, destination: Path) -> bool:
-    try:
-        return destination.is_file() and source.samefile(destination)
-    except OSError:
-        return False
+def _verify_staged_delivery_bundle(stage_root: Path, staged_paths: list[Path]) -> None:
+    expected = {path.as_posix() for path in staged_paths}
+    actual = {
+        path.relative_to(stage_root).as_posix()
+        for path in stage_root.rglob("*")
+        if path.is_file() and not path.is_symlink()
+    }
+    if expected != actual:
+        raise RuntimeError(
+            "staged delivery bundle verification failed: "
+            f"missing={sorted(expected - actual)} unexpected={sorted(actual - expected)}"
+        )
+    manifest = stage_root / REPLAY_MANIFEST_ARTIFACT
+    _read_json_object(manifest, label=REPLAY_MANIFEST_ARTIFACT)
 
 
-def _reject_non_file_destination(path: Path) -> None:
-    if path.is_symlink() or (path.exists() and not path.is_file()):
-        raise ValueError(f"unsafe bundle destination: {path}")
+def _atomic_exchange_directories(staged: Path, published: Path) -> None:
+    """Atomically swap two directories or fail closed on this platform."""
 
-
-def _prune_bundle_destination(root: Path, *, keep: set[Path]) -> None:
-    keep_keys = {path.as_posix() for path in keep}
-    for path in sorted(root.rglob("*"), key=lambda item: len(item.parts), reverse=True):
-        relative = path.relative_to(root).as_posix()
-        if (path.is_file() or path.is_symlink()) and relative not in keep_keys:
-            path.unlink()
-        elif path.is_dir():
-            try:
-                path.rmdir()
-            except OSError:
-                pass
+    staged_bytes = os.fsencode(staged)
+    published_bytes = os.fsencode(published)
+    libc = ctypes.CDLL(None, use_errno=True)
+    result = -1
+    if sys.platform == "darwin" and hasattr(libc, "renamex_np"):
+        rename_swap = 0x00000002
+        result = libc.renamex_np(
+            ctypes.c_char_p(staged_bytes),
+            ctypes.c_char_p(published_bytes),
+            ctypes.c_uint(rename_swap),
+        )
+    elif sys.platform.startswith("linux") and hasattr(libc, "renameat2"):
+        at_fdcwd = -100
+        rename_exchange = 0x2
+        result = libc.renameat2(
+            ctypes.c_int(at_fdcwd),
+            ctypes.c_char_p(staged_bytes),
+            ctypes.c_int(at_fdcwd),
+            ctypes.c_char_p(published_bytes),
+            ctypes.c_uint(rename_exchange),
+        )
+    if result != 0:
+        error_number = ctypes.get_errno()
+        raise OSError(
+            error_number,
+            "atomic directory exchange is unavailable; refusing non-atomic bundle replacement",
+            str(published),
+        )
 
 
 def _compact_json_file(source: Path, destination: Path, *, chunk_bytes: int = 1024 * 1024) -> None:
@@ -800,7 +867,13 @@ def _compact_json_file(source: Path, destination: Path, *, chunk_bytes: int = 10
         raise ValueError(f"unterminated JSON string in advertised asset: {source}")
 
 
-def prepare_render_artifacts(*, artifacts_dir: Path, video_path: Path, resolve: ManifestUrlResolver) -> None:
+def prepare_render_artifacts(
+    *,
+    artifacts_dir: Path,
+    video_path: Path,
+    resolve: ManifestUrlResolver,
+    allow_missing_assets: bool = False,
+) -> None:
     """Atomically stage the recursive replay closure and rewrite its URLs.
 
     Shared tail step for every runner (SSH, local, and the pull-worker's
@@ -810,4 +883,9 @@ def prepare_render_artifacts(*, artifacts_dir: Path, video_path: Path, resolve: 
     if not (artifacts_dir / REPLAY_MANIFEST_ARTIFACT).is_file():
         copy_source_video_artifact(video_path=video_path, artifacts_dir=artifacts_dir)
         return
-    rewrite_manifest_urls(artifacts_dir=artifacts_dir, video_path=video_path, resolve=resolve)
+    rewrite_manifest_urls(
+        artifacts_dir=artifacts_dir,
+        video_path=video_path,
+        resolve=resolve,
+        allow_missing_assets=allow_missing_assets,
+    )

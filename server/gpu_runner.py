@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 import shlex
-import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,6 +21,7 @@ from .pipeline_invocation import (
     prepare_render_artifacts as _prepare_render_artifacts,
     remote_model_root,
     safe_slug,
+    stage_manifest_delivery_bundle,
 )
 
 CODE_SYNC_PATHS = ("scripts", "threed", "configs")
@@ -90,6 +90,9 @@ class GpuRunResult:
     manifest_path: Path | None = None
     remote_run_dir: str | None = None
     raw: dict[str, object] = field(default_factory=dict)
+    missing_capabilities: list[object] = field(default_factory=list)
+    trust_bands: dict[str, object] = field(default_factory=dict)
+    bundle_policy: dict[str, object] = field(default_factory=dict)
 
 
 class GpuRunner:
@@ -427,13 +430,17 @@ class LocalPipelineRunner(GpuRunner):
         )
         produced_dir = out_dir / safe_slug(request.clip)
         if produced_dir.is_dir() and produced_dir != request.artifacts_dir:
-            for path in produced_dir.rglob("*"):
-                if path.is_file():
-                    target = request.artifacts_dir / path.relative_to(produced_dir)
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(path, target)
-
-        prepare_render_artifacts(request)
+            stage_manifest_delivery_bundle(
+                source_dir=produced_dir,
+                bundle_dir=request.artifacts_dir,
+                video_path=request.video_path,
+                resolve=lambda name: f"/api/jobs/{safe_slug(request.job_id)}/artifacts/{name}",
+                allowed_source_root=out_dir,
+                prune_destination=True,
+                allow_missing_assets=True,
+            )
+        else:
+            prepare_render_artifacts(request)
         manifest_path = request.artifacts_dir / "replay_viewer_manifest.json"
         return GpuRunResult(
             status="complete",
@@ -483,6 +490,7 @@ def prepare_render_artifacts(request: GpuRunRequest) -> None:
         artifacts_dir=request.artifacts_dir,
         video_path=request.video_path,
         resolve=lambda name: f"/api/jobs/{slug}/artifacts/{name}",
+        allow_missing_assets=True,
     )
 
 

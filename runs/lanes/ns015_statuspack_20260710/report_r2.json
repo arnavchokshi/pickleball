@@ -1,0 +1,57 @@
+{
+  "objective_result": "PASS",
+  "acceptance": [
+    {
+      "metric": "Ten ruled-stale render-service tests migrated",
+      "baseline": "10 failures: five worker-daemon tests, one worker-completion endpoint test, two render-app tests, and two jobs-v2 tests encoded exit-success=>complete or used empty complete bundles",
+      "after": "All ten tests now encode the NS-01.5 contract with their original behavioral intent documented in-place; the four affected files pass 38/38",
+      "target": "Migrate all ten stale tests to the honest contract without weakening server policy",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Complete fixtures earn complete honestly",
+      "baseline": "Fake complete runners wrote only an empty replay manifest or a summary with no mandatory bundle evidence",
+      "after": "Shared fixture supplies content identity, capture sidecar, calibration, tracks, BODY coverage plus recursive mesh assets, ball/events/arc/paddle/fusion, stats/coaching, trust bands, summary, source video, manifest, and resolvable advertised URLs; seven test paths use it before asserting complete or testing a later transport failure",
+      "target": "Every test asserting complete supplies mandatory artifacts and resolvable advertised URLs",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Bare execution success remains partial",
+      "baseline": "Legacy worker status succeeded was asserted as complete",
+      "after": "No-sidecar execution success asserts partial with capture_sidecar reason; legacy worker completion asserts partial with explicit bundle_policy reason; missing advertised URL publishes inspectably as partial and names the missing URL",
+      "target": "No test restores or expects an exit-code-upgrade path",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Exact r2 regression suite",
+      "baseline": "Manager independently re-verified 13/13 tests/server green and the six former sandbox-only socket cases locally green",
+      "after": "190 passed, 0 failed, 0 skipped in tests/render_service, tests/server, test_court_keypoint_review_server.py, and test_review_input_server.py",
+      "target": "All green, except listed socket-bind-only failures if the sandbox still prohibits binds",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "tests/render_service/ns015_bundle_fixture.py:25 adds the shared doctrine-correct minimum-bundle fixture, including recursive assets, runner status, missing-capability variants, and URL-break injection.",
+    "tests/render_service/test_worker_daemon.py:156,215,244,268,297 migrates five stale tests: honest complete upload, missing-sidecar partial, missing-URL partial, valid pre-upload fixture, and valid lost-response fixture.",
+    "tests/render_service/test_worker_endpoints.py:181 keeps the completion-persistence intent while asserting legacy exit success is partial with an explicit missing-capability reason.",
+    "tests/render_service/test_render_app.py:127,267 makes both complete/Replay-ready assertions depend on a real minimum bundle while retaining input, manifest, progress, ETA, and resource-summary coverage.",
+    "tests/render_service/test_jobs_v2.py:113,176 makes the legacy flag-off and account S3 job-flow complete assertions depend on real minimum-bundle evidence.",
+    "runs/lanes/ns015_statuspack_20260710/r2_suite.xml records the exact 190-test green suite; report_r2.json records this schema-valid ruling response."
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest -q tests/render_service tests/server tests/racketsport/test_court_keypoint_review_server.py tests/racketsport/test_review_input_server.py --junitxml=runs/lanes/ns015_statuspack_20260710/r2_suite.xml",
+    "passed": 190,
+    "failed": 0,
+    "skipped": 0,
+    "failures_all_preexisting": false,
+    "failure_notes": null
+  },
+  "honest_issues": [
+    "No production server code was changed in r2; the tests moved to the already-ruled fail-closed contract.",
+    "The suite emitted 293 dependency deprecation warnings (Starlette TestClient/httpx, slowapi asyncio inspection, and mongomock utcnow); none are failures and none are caused by the migrated status expectations.",
+    "The two socket test files passed in the current unrestricted environment, corroborating the manager's ruling that the prior six failures were sandbox-only.",
+    "Product-wide runner/native-app follow-ups recorded in r1 handoff.md remain outside this bounded test-migration ruling. VERIFIED=0 remains binding."
+  ],
+  "next": "Integration owner may now treat tests/render_service, tests/server, and both review-server socket files as green under the NS-01.5 honest-status doctrine; the remaining work is the previously reported runner/native-app integration, not test-policy rollback.",
+  "session_id": null
+}
