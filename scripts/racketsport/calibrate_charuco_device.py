@@ -156,6 +156,13 @@ def _collect_observations(
     max_frames_per_video: int,
     min_corners: int,
 ) -> list[CharucoObservation]:
+    charuco_detector_type = getattr(cv2.aruco, "CharucoDetector", None)
+    charuco_detector = charuco_detector_type(board) if callable(charuco_detector_type) else None
+    legacy_detect_markers = getattr(cv2.aruco, "detectMarkers", None)
+    legacy_interpolate = getattr(cv2.aruco, "interpolateCornersCharuco", None)
+    if charuco_detector is None and not (callable(legacy_detect_markers) and callable(legacy_interpolate)):
+        raise RuntimeError("OpenCV aruco installation has no supported ChArUco detector API")
+
     observations: list[CharucoObservation] = []
     for video_index, video in enumerate(videos):
         capture = cv2.VideoCapture(str(video))
@@ -168,11 +175,17 @@ def _collect_observations(
                 break
             frames_read += 1
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if len(frame.shape) == 3 else frame
-            corners, ids, _rejected = cv2.aruco.detectMarkers(gray, dictionary)
-            if ids is None or len(ids) == 0:
-                continue
-            count, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(corners, ids, gray, board)
-            if not count or count < min_corners or charuco_corners is None or charuco_ids is None:
+            if charuco_detector is not None:
+                charuco_corners, charuco_ids, _marker_corners, _marker_ids = charuco_detector.detectBoard(gray)
+            else:
+                marker_corners, marker_ids, _rejected = legacy_detect_markers(gray, dictionary)
+                if marker_ids is None or len(marker_ids) == 0:
+                    continue
+                _count, charuco_corners, charuco_ids = legacy_interpolate(
+                    marker_corners, marker_ids, gray, board
+                )
+            count = 0 if charuco_ids is None else len(charuco_ids)
+            if count < min_corners or charuco_corners is None:
                 continue
             hull = cv2.convexHull(charuco_corners.reshape(-1, 2).astype("float32"))
             observations.append(
@@ -194,15 +207,36 @@ def _fit_charuco(*, cv2: Any, board: Any, observations: Sequence[CharucoObservat
     image_size = observations[0].image_size
     if any(observation.image_size != image_size for observation in observations):
         raise ValueError("all ChArUco videos must have the same frame size")
-    rms, camera_matrix, dist, _rvecs, _tvecs = cv2.aruco.calibrateCameraCharuco(
-        [observation.corners for observation in observations],
-        [observation.ids for observation in observations],
-        board,
-        image_size,
-        None,
-        None,
-        flags=cv2.CALIB_FIX_K3,
-    )
+    legacy_calibrate = getattr(cv2.aruco, "calibrateCameraCharuco", None)
+    if callable(legacy_calibrate):
+        rms, camera_matrix, dist, _rvecs, _tvecs = legacy_calibrate(
+            [observation.corners for observation in observations],
+            [observation.ids for observation in observations],
+            board,
+            image_size,
+            None,
+            None,
+            flags=cv2.CALIB_FIX_K3,
+        )
+    else:
+        match_image_points = getattr(board, "matchImagePoints", None)
+        calibrate_camera = getattr(cv2, "calibrateCamera", None)
+        if not callable(match_image_points) or not callable(calibrate_camera):
+            raise ValueError("OpenCV installation has no supported ChArUco calibration API")
+        object_points = []
+        image_points = []
+        for observation in observations:
+            object_view, image_view = match_image_points(observation.corners, observation.ids)
+            object_points.append(object_view)
+            image_points.append(image_view)
+        rms, camera_matrix, dist, _rvecs, _tvecs = calibrate_camera(
+            object_points,
+            image_points,
+            image_size,
+            None,
+            None,
+            flags=cv2.CALIB_FIX_K3,
+        )
     return CharucoFit(
         rms=float(rms),
         camera_matrix=camera_matrix,

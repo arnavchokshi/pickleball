@@ -15,9 +15,9 @@ from threed.racketsport.profile_registry import load_profile_registry
 
 def test_calibrate_charuco_device_recovers_synthetic_barrel_distortion_and_persists_profile(tmp_path: Path) -> None:
     aruco = pytest.importorskip("cv2.aruco")
-    if not hasattr(aruco, "detectMarkers"):
-        pytest.skip("cv2.aruco (opencv-contrib) not available")
-    videos, expected_dist = _write_synthetic_charuco_videos(tmp_path)
+    if not hasattr(aruco, "CharucoDetector") and not hasattr(aruco, "detectMarkers"):
+        pytest.skip("cv2.aruco has no supported ChArUco detector API")
+    videos, expected_dist, expected_camera_matrix = _write_synthetic_charuco_videos(tmp_path)
     profiles_root = tmp_path / "profiles"
 
     result = subprocess.run(
@@ -60,6 +60,10 @@ def test_calibrate_charuco_device_recovers_synthetic_barrel_distortion_and_persi
     assert recovered[0] < 0.0
     assert recovered[0] == pytest.approx(expected_dist[0], abs=0.04)
     assert recovered[1] == pytest.approx(expected_dist[1], abs=0.04)
+    assert summary["intrinsics"]["fx"] == pytest.approx(expected_camera_matrix[0, 0], abs=30.0)
+    assert summary["intrinsics"]["fy"] == pytest.approx(expected_camera_matrix[1, 1], abs=30.0)
+    assert summary["intrinsics"]["cx"] == pytest.approx(expected_camera_matrix[0, 2], abs=20.0)
+    assert summary["intrinsics"]["cy"] == pytest.approx(expected_camera_matrix[1, 2], abs=20.0)
 
     registry = load_profile_registry("owner_1", profiles_root=profiles_root)
     profile = registry.device_profiles["iphone16_owner"]
@@ -70,7 +74,7 @@ def test_calibrate_charuco_device_recovers_synthetic_barrel_distortion_and_persi
     assert entry.source_trace.source_clip_id == "synthetic_charuco_wide"
 
 
-def _write_synthetic_charuco_videos(tmp_path: Path) -> tuple[list[Path], list[float]]:
+def _write_synthetic_charuco_videos(tmp_path: Path) -> tuple[list[Path], list[float], np.ndarray]:
     aruco = cv2.aruco
     dictionary = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
     board = aruco.CharucoBoard((5, 7), 0.04, 0.03, dictionary)
@@ -122,7 +126,7 @@ def _write_synthetic_charuco_videos(tmp_path: Path) -> tuple[list[Path], list[fl
         writer.release()
         assert frame_count >= 8
         videos.append(path)
-    return videos, dist[:4].tolist()
+    return videos, dist[:4].tolist(), camera_matrix
 
 
 def _charuco_frame(
