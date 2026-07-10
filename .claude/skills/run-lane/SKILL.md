@@ -63,13 +63,16 @@ LANE=<short-name>; ROOT=/Users/arnavchokshi/Desktop/pickleball
 mkdir -p "$ROOT/runs/lanes/$LANE"   # spec.md written first
 codex exec \
   --cd "$ROOT" --sandbox workspace-write \
-  -c model_reasoning_effort=xhigh \
+  -c model="gpt-5.6-sol" -c model_reasoning_effort=high \
   --output-schema "$ROOT/docs/racketsport/lane_report.schema.json" \
   -o "$ROOT/runs/lanes/$LANE/report.json" \
   < "$ROOT/runs/lanes/$LANE/spec.md" \
   > "$ROOT/runs/lanes/$LANE/log.txt" 2>&1
 ```
 run_in_background: true; absolute paths ALWAYS; add `-c tools.web_search=true` for research lanes.
+**MODEL DEFAULT (owner directive 2026-07-09): every Codex dispatch uses `gpt-5.6-sol`, reasoning effort `high`,
+normal speed (no priority/speed override). Pin the model explicitly — never rely on the CLI default. Deviate
+(e.g. xhigh) only for a deliberate, stated reason in the lane row.**
 The harness notifies on process exit — read `report.json` and rule. Do NOT set up Monitor/done-marker
 watchers (they false-fire; manual §10). Prefer big self-iterating lanes over many small round-trips.
 
