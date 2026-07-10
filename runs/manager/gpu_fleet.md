@@ -372,3 +372,22 @@ WAVE-COURT FLEET LOG (2026-07-10, manager court session):
   bridges to court_unet_v2 checkpoints via build_model_from_checkpoint's architecture dispatch;
   checkpoint/corpus/CARD-A/CARD-B source integrity re-verified against TRAIN-1's banked hashes.
   No training, no promotion, no best-stack delta. Evidence: runs/lanes/court_train3_20260710/REPORT.md.
+- pickleball-gpu-court3 (multi-SKU/multi-region ladder per TRAIN-3 post-stockout ruling, SPOT,
+  FROM pickleball-fleet-snap-20260709-w7close) — PROVISIONING (Sonnet lane court_train4_20260710,
+  self-tearing). Same mission as court_train3 (court_unet_v2 ARM-A/B on real corpus). Wall cap
+  3h from RUNNING + 2h provisioning cap, 120s inter-attempt backoff. Code pin 3cfede00b.
+- pickleball-gpu-court3 — DONE+DELETED 2026-07-10T19:29:35Z list-confirmed (created 17:03:27Z
+  europe-west4-b H100 a3 SPOT on widened-ladder attempt 7/7 H100 rungs — ase1/usc1/use4 all
+  stockout, 120s backoff eliminated TRAIN-3's snapshot-throttle failure mode entirely; uptime
+  2.430h, $1.39-10.33, zero preemptions). MISSION COMPLETE (court_train4_20260710, Sonnet lane):
+  the literal R2/R8 court_unet_v2 ARM-A (court_model_v2.pt init) + ARM-B (ImageNet resnet34)
+  arms BOTH trained to full probe-derived budget (1800 steps) and BOTH FAIL the R2 kill bar
+  decisively: CARD-A median 936.63/833.37px vs 25px bar, PCK@5 delta +0.0 vs +0.30 bar, uniform
+  per-source/per-clip/floor-12-only. DECISIVE contrast: trainer-internal train-family holdout
+  2.8px/0.758 PCK@5 both arms (real supervision worked) vs 290-345px on the source-disjoint val
+  family — cross-source generalization is the wall; data diversity (owner O1), not architecture
+  or init lineage, is the binding lever. Control rows reproduced 0.003-0.004px vs TRAIN-1 bank.
+  NEW ENV BUG booked: train_court_model_v2.py:560 DataLoader(in_order=) requires torch>=2.6,
+  fleet venv has 2.5.1 — default config crashes; --synthetic-workers 0 workaround = CPU-bound
+  synthetic gen (GPU ~idle, step budget throughput-limited 1800 vs 6000). Evidence:
+  runs/lanes/court_train4_20260710/REPORT.md (+ 71-file md5 manifest, 30 overlays pulled).

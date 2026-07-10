@@ -1,0 +1,16 @@
+{
+  "sku": "H100 a3-highgpu-1g (europe-west4-b)",
+  "batch_size": 32,
+  "real_batch_size": 32,
+  "synthetic_workers": 0,
+  "note_bug": "train_court_model_v2.py:560 passes DataLoader(in_order=True) when synthetic_workers>0; this VM's pinned torch==2.5.1+cu124 does not support that kwarg (added in a later torch release) -- crashes immediately. Worked around via documented --synthetic-workers 0 CLI flag (no code change). This forces single-threaded CPU-bound synthetic sample generation, which dominates step wall-time (GPU mostly idle at batch=256, ~8.87s/step). Re-probed at batch=32: 0.60 steps/sec, GPU compute is NOT the bottleneck on this SKU under this workaround.",
+  "probe_100_steps": {
+    "sum_epoch_wall_time_s": 165.661,
+    "total_wall_including_setup_s": 181.73,
+    "steps": 100,
+    "steps_per_sec": 0.6036
+  },
+  "step_budget_formula": "min(6000, floor(50*60*steps_per_sec))",
+  "step_budget": 1810,
+  "training_plan": {"epochs": 18, "steps_per_epoch": 100, "total_steps": 1800, "eval_every": 2}
+}

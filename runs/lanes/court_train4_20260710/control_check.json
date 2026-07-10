@@ -1,0 +1,25 @@
+{
+  "overall_pass": true,
+  "results": {
+    "carda": {
+      "median": 942.3438999112797,
+      "banked_median": 942.34,
+      "delta": 0.0038999112796318514,
+      "pass": true,
+      "frame_count": 5,
+      "banked_frame_count": 5,
+      "p95": 1484.7459704691303,
+      "banked_p95": 1484.75
+    },
+    "cardb": {
+      "median": 675.146698070176,
+      "banked_median": 675.15,
+      "delta": 0.003301929824033323,
+      "pass": true,
+      "frame_count": 2,
+      "banked_frame_count": 2,
+      "p95": 1432.1966394377737,
+      "banked_p95": 1432.2
+    }
+  }
+}
