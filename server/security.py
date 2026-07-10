@@ -1,6 +1,6 @@
 """Password hashing, JWT access tokens, and refresh-token primitives (INFRA-1).
 
-Per the approved design (docs/specs/2026-07-07-product-infra-design.md
+Per the approved design (runs/archive/root_docs_20260709/PRODUCT_INFRA_DESIGN_20260707.md
 Sec 6): argon2id password hashing, 15-min HS256 JWT access tokens, 30-day
 rotating refresh tokens hashed at rest (sha256 hex) with reuse-of-a-rotated
 token revoking the whole user's chain. The chain-revocation logic itself lives

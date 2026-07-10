@@ -1,6 +1,6 @@
 # DinkVision North Star
 
-Last updated: 2026-07-09.
+Last updated: 2026-07-10.
 Status: `VERIFIED=0`.
 
 ## Authority and reading rule
@@ -168,7 +168,7 @@ Numbers from different protocols are not compared directly.
 | CAL | Manual/metric/profile paths, distortion and ChArUco tools, preview auto-find | Corrected owner PCK@5 is 0 for learned candidates; synthetic-only transfer failed twice | Profile + guided confirmation for v1; auto-find needs owner-viewpoint PCK@5 ≥0.95 and handheld/distortion gates |
 | TRK | YOLO26m, BoT-SORT/ReID, raw-pool association, court placement | Mean IDF1 about 0.852; worst about 0.756 with six switches and worst four-player coverage about 0.885 | Every fresh clip: IDF1 ≥0.85, zero switches, zero spectator FP, zero far-off-court FP, coverage ≥0.95 |
 | BALL | WASB default, candidate training, bounce/in-out, audio/events, arc/sanity chain | Standing anchor F1@20 0.7248, recall@20 0.626, hFP 0.063; candidate A is 0.6152/0.654/0.2506 on a different internal card | Same-protocol F1@20 ≥0.90, recall@20 ≥0.75, hFP ≤0.05 plus contact/in-out/tail gates on fresh data |
-| BODY | SAM-3D-Body runtime, mesh index, placement, grounding and foot-lock | External root-relative 59.7mm, PA 39.9mm, grounding-consistent 76.5mm; about 23-27mm decode residual remains unexplained | Corrected decode gate; independent court-frame world-MPJPE ≤50mm; `grounding_metrics.max_foot_lock_slide_m` ≤0.03; no candidate-label promotion |
+| BODY | SAM-3D-Body runtime, mesh index, placement, grounding and foot-lock | External root-relative 59.7mm, PA 39.9mm, grounding-consistent 76.5mm; decode residual decomposed 2026-07-10 (FK-vs-head ~0, grounding exact, ~53mm = family-metric definition, intentional postchain 23.4mm p95; gate recalibration proposal owner-facing in runs/lanes/ns014_p22residual_20260709/REPORT.md) | Corrected decode gate; independent court-frame world-MPJPE ≤50mm; `grounding_metrics.max_foot_lock_slide_m` ≤0.03; no candidate-label promotion |
 | RKT | Default-wired wrist/palm/grip `estimated_preview` | Rectangle IoU about 0.224-0.331; no true pose/contact GT | Marker/corner GT; checked-in promotion gates: face-angle p90 ≤5° and contact-point p90 ≤3cm. The old 30° bar is an interim candidate milestone only. |
 | EVENTS/PHYS | Ball/audio/wrist fusion, fill, confidence bands and foot postprocessing | Useful internal slide reductions; no reviewed product event gate | Contact timing p90 ≤40ms, bounce-vs-hit/in-out gates, corrected acoustic/A/V timing, no standalone regression |
 | REPLAY/STATS | Web/native boundaries, ghost previews, movement stats | Scoped viewer load; prior proof had low FPS and missing ball/contact/paddle/trust content | Current full bundle, full computed-frame mesh policy, native/web visual/perf/every-URL proof |
@@ -396,16 +396,19 @@ are not weakened to hit a headline.
 
 Do not start another broad model search. The next executable goals are:
 
+Scoped passes completed since 2026-07-09 (evidence in the named lane dirs; none are
+capability promotions): NS-01.1 sidecar contract; NS-01.2a upload lifecycle code path
+(capture-to-S3 route live); NS-01.3 content-addressed run identity (`ns013_rundag`);
+NS-02 gold-capture package plus ChArUco OpenCV-5 port (`ns021_goldcapture`); NS-02.3-02.5
+evaluation reset (`ns02_evalreset`); the NS-01.4 typed-coordinates slice and decode-residual
+decomposition (`ns014_p22residual`).
+
 | Order | Agent goal | Scope boundary | Required handoff |
 |---:|---|---|---|
-| 1 | **NS-01.1 Capture/sidecar truth** | Swift/Python schema, encoded PTS/native intrinsics/drop/sensor persistence; no model work | Fixtures, focused tests, 30-second/5-minute/high-FPS physical protocol |
-| 2 | **NS-01.2a Upload lifecycle** | Finish the code-wired app/server path: mid-part restart, job/manifest, matching replay; no final E2E claim | Focused relaunch/call-path tests and one traceable capture/clip/job/manifest identity |
-| 3 | **NS-01.3 Content-addressed DAG** | Ingest/reuse/force/transaction tests; preserve current stage behavior otherwise | Dependency model, collision tests, migration behavior, focused process-video suite |
-| 4 | **NS-01.4/01.5 Coordinates, status, packaging** | One encoded/time/transform API and honest server/app delivery; no model tuning | Distortion/clock/drop tests, minimum bundle, partial propagation, every-URL proof |
-| 5 | **NS-01.6/01.7 Spine and evidence plumbing** | One `process_video.py` owner; audio, post-BODY events, dependency hashes, ball size, both paddle hypotheses | Cold/reuse/partial/failure tests plus modality ablations; no promotion claim |
-| 6 | **NS-01.2b Physical upload proof** | After identity/status/packaging/restart settle; production app and real device | Saved record/import → upload → job → manifest → matching replay trace |
-| 7 | **NS-02 gold-capture package** | Protocol, calibration/sync tools, lane labels and candidate license-card template; product remains monocular | Dry-run package and explicit owner half-day checklist |
-| Parallel now | **NS-02.3-02.5 evaluation reset** | Source grouping, random audit, ledger, and 1,750 baseline card do not wait for the new capture | Dataset cards, group audit, preregistered baseline commands |
+| 1 | **NS-01.4/01.5 Coordinates, status, packaging** | Adopt the typed transform API across stages plus one encoded/time convention and honest server/app delivery; no model tuning | Distortion/clock/drop tests, minimum bundle, partial propagation, every-URL proof |
+| 2 | **NS-01.6/01.7 Spine and evidence plumbing** | One `process_video.py` owner; audio, post-BODY events, dependency hashes, ball size, both paddle hypotheses | Cold/reuse/partial/failure tests plus modality ablations; no promotion claim |
+| 3 | **NS-01.2b Physical upload proof** | After identity/status/packaging/restart settle; production app and real device | Saved record/import → upload → job → manifest → matching replay trace |
+| Parallel now | **NS-02.1/02.2 gold capture execution + owner scratch labeling** | Owner half-day capture per the ns021 checklist; extra cameras remain GT-only; labeling per the R2 pivot | Surveyed points, sync proof, versioned lane-specific labels |
 
 After NS-02 gates exist, dispatch CAL/TRK/BALL/BODY/RKT as file-fenced parallel
 NS-03 lanes in the exact row order above. First challengers are the existing
@@ -414,64 +417,34 @@ masklet-only SAM-Body4D then GEM-X, and AnyCalib as an import prior. The bounded
 LIVE lane may already run, but BALL deployment waits for its gate. NS-04 remains
 one serialized owner of `process_video.py`; NS-05 follows an improved world.
 
-Current background Wave-7 GPU work may finish and save its reports, but it does
-not supersede this queue. A running process, incomplete report, or speed number
+In-flight background lanes may finish and save their reports, but they do not
+supersede this queue. A running process, incomplete report, or speed number
 does not change the order above.
 
-**Dated evidence note (2026-07-09, owner live-critique session — feeds NS-01.4/01.6 scope, order unchanged):**
-the world BALL overlay FAILS OPEN during arc-solver fallback — 9/11 wolverine segments were
-`fit_bvp_fallback` yet all 263 fallback frames rendered solid world positions (z to 23.5 m, 10
-underground, 32 transitions >20 m/s) and 210 were labeled "measured" downstream; 2D track itself was
-~81% visible and owner-judged good. Trust-doctrine violation; single highest-leverage ball-visual fix
-= fail-closed world overlay + arc demotion/provenance propagation. Also from the same session: viewer
-video sync seek-snaps (lag-then-jump), mesh render fps ceiling (renderer-bound, 244/244 frames were
-computed), replay manifests carry non-portable absolute paths, and the CLI cold-upload court-trust
-chain dead-ends after corner taps (no human-verified tap tier; correction task loop unfinished).
-Evidence: runs/lanes/w7_ball3ddiag_20260709/DIAGNOSIS.md · runs/lanes/w7_critique_20260709/.
+**Dated evidence pointers (2026-07-09/10 — rulings stand; detail lives under `runs/`):**
 
-**Dated evidence note (2026-07-09 late, w7 speed-gate close — feeds NS-06 + BODY residual scope):**
-full promoted-stack wolverine 489.4s±1.6% (x6; BODY=78.6% of wall and steady inference is only
-5.5s of BODY's 380s — the stage is ~98% orchestration overhead = NS-06's biggest lever); corrected
-GATE-1b with pred_cam_t provably consumed: per-player joints p95 22-58mm, the historical 262mm =
-one worst-frame outlier on one player (frame-level, not systemic); template
-pickleball-fleet-snap-20260709-w7close bakes all 3 manifest-pinned artifact gaps + yolo26m +
-ultralytics (old template could not run production tracking — invalidated-and-discarded 6 fast
-timing runs prove the gate checks work). Evidence: runs/lanes/w7_speedgate_20260709/results.json.
-
-**Dated evidence note (2026-07-09 late, control-first catch — directly evidences the NS-02.3-02.5
-"evaluation reset / random audit" row):** ~74.8% of the 2,388-row corpus is byte-identical to model
-prelabels (the owner's confirm-or-correct flow; 0.003px signature; per-clip split: clean-14 clips
-control F1 0.236 vs confirmed-heavy 26 clips 0.710) — labels VALID for training, but absolute scores
-on confirmed rows are inflated for same-lineage models and block composition drifts between
-checkpoints. Standing ruling applied: curve reads use a FIXED block (the 1k point's 1121-era block);
-mixed-provenance blocks are ordering-only; per-row provenance classification now travels with the
-corpus. The uniform-random scratch-labeled audit stratum is the structural fix -> promoted to owner
-labeling ask #1. Evidence: runs/lanes/w7_ballretrain2_20260709/control_contamination_finding.json.
-
-**Dated evidence note (2026-07-09 night, THE 3K CHECKPOINT — fires the R2 pivot):** step-matched,
-fixed-block, control-bit-exact curve read: control 0.3611 -> 1k 0.6142 -> **3k 0.5710 (-7% rel vs
-1k)**. Growing the corpus 1,121->3,026 where ~75% of growth = confirmed-prelabel rows did NOT improve
-and mildly hurt generalization at equal training. The 3k model still beats control everywhere (incl.
-clean-subset 0.503 vs 0.236). RULINGS: A_seed_official_aug REMAINS the PENDING candidate (rev-9
-naming stands); curve-point protocol corrected to FIXED 2372 steps (wall = safety cap only);
-provenance classifier (runs/lanes/w7_ballretrain2_20260709/classify_provenance.py) becomes a standing
-pre-training corpus check; owner labeling pivot per R2 = scratch-labeled random audit stratum +
-disagreement-mined hard frames + venue diversity, NOT confirm-heavy volume. OPEN OWNER DECISION:
-exclude/down-weight confirmed-prelabel rows from training mixes. Known gap: GPU_RESCORE_COMMANDS
-templates from ballingest2/3/4 reference an uncommitted --source-group flag (sibling-session work) —
-will fail as-is. Evidence: runs/lanes/w7_ballretrain2_20260709/ (cards, both E3k ckpts md5'd,
-classifier, contamination raw evidence).
-
-**Dated evidence note (2026-07-09 late, OWNER PRIORITY RULING + research): ball 2D->3D lift.** Owner
-live-ruled this the top ball priority (pb.vision achieves great monocular 3D on the owner's own
-uploaded clips = existence proof). 39-agent research sweep + rulings banked at
-runs/research_ball3d_20260709/{SYNTHESIS.md,RULINGS.md}: pb.vision runs our architecture class
-([CORROBORATED] first-party) — the gap is robustness engineering. Adopt sequence: fail-closed overlay
-+ UKF graceful fallback -> TT3D joint-anchor-search inside the existing scipy fit -> BlurBall/audio
-anchor boosters -> both-ends pinning + inlier pass -> DP segmentation. Owner decisions surfaced:
-Magnus kill-list revisit (new first-party evidence), learned lift-first (training decision). Owner
-action available: pb.vision in-app raw "cv" JSON export on our clips = the benchmark unlock. Feeds
-NS-03 BALL / NS-04 scope; NS queue order otherwise unchanged.
+- Fail-closed world BALL emission is WIRED_DEFAULT (best_stack rev 11; wolverine max
+  ball z 23.53m -> 0.97m) after the owner-critique fail-open finding. Remaining viewer
+  defects (seek-snap sync, renderer-bound mesh fps, absolute manifest paths, tap-tier
+  trust dead-end) feed NS-01.4/01.6. Evidence: runs/lanes/w7_ball3ddiag_20260709/,
+  runs/lanes/w7_critique_20260709/, runs/lanes/demo_beststack_20260710/.
+- Wolverine promoted-stack wall 489.4s +/-1.6% (x6); BODY is 78.6% of wall with only
+  5.5s steady inference — orchestration overhead is NS-06's biggest lever. Evidence:
+  runs/lanes/w7_speedgate_20260709/results.json.
+- Confirm-heavy labeling stopped paying: fixed-block step-matched curve 0.361 control ->
+  0.614 (1k) -> 0.571 (3k); ~74.8% of the 2,388-row corpus is byte-identical confirmed
+  prelabels, which inflates same-lineage scores. Pivot: uniform-random scratch audit
+  stratum + disagreement-mined hard frames + venue diversity; provenance classifier is a
+  standing pre-training corpus check. Open owner decision: exclude/down-weight confirmed
+  rows in training mixes. Evidence: runs/lanes/w7_ballretrain2_20260709/.
+- Ball 2D->3D lift is the owner-ruled top ball priority (pb.vision existence proof; same
+  architecture class, gap = robustness engineering). Adopt sequence: fail-closed overlay
+  (landed) -> TT3D joint-anchor-search inside the existing scipy fit -> BlurBall/audio
+  anchor boosters -> both-ends pinning + inlier pass -> DP segmentation. Owner unlock:
+  pb.vision raw "cv" JSON export on our clips. Evidence: runs/research_ball3d_20260709/.
+- Reproducible cold-clip BODY frame-materialization bug (frames stage never writes some
+  cold harvest clips' BODY frame images; 3 signatures) is booked for an NS-01.6-adjacent
+  fix. Evidence: runs/lanes/demo_beststack_20260710/REPORT.md.
 
 ### Owner-only asks
 

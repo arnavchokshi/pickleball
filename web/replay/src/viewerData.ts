@@ -1485,7 +1485,7 @@ export function contactEventBadge(event: ContactWindowEvent): TrustBadge {
 }
 
 /**
- * BALL has 0/8 milestone gates passing today (MASTER_PLAN.md), so every ball
+ * BALL has 0/8 milestone gates passing today (NORTH_STAR_ROADMAP.md), so every ball
  * inflection/bounce candidate is low_confidence regardless of its own
  * reported confidence -- coloring markers by a fabricated per-event tier
  * would overstate BALL's actual gate state.

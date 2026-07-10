@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """P2-2 STEP A phase 2: MHR latent-space temporal smoothing PROTOTYPE.
 
-See `TECH_BLUEPRINTS.md` BODY pillar STEP A (~lines 1452-1499) and
+See `runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md` BODY pillar STEP A (~lines 1452-1499) and
 `runs/lanes/w5_p22latent_20260707/spec.md` PHASE 2. This is a measurement
 harness, not a pipeline component: it stays UNWIRED from `process_video.py`
 by construction (no import of this module anywhere in that file), and

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Convert a VNDetectTrajectoriesRequest spike harness JSON into ball_track.json.
 
-W0-BALL-SPIKE (see MASTER_PLAN.md): rung-1 spike of Apple's native
+W0-BALL-SPIKE (see NORTH_STAR_ROADMAP.md): rung-1 spike of Apple's native
 `VNDetectTrajectoriesRequest` as an on-device ball-tracking candidate. The
 Swift harness at `spikes/vn_trajectories/` writes RAW per-frame candidate
 trajectory emissions (see `spikes/vn_trajectories/Sources/VNTrajectorySpike/JSONModels.swift`

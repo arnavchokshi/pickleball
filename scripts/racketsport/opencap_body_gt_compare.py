@@ -2,7 +2,7 @@
 """Compare our BODY pipeline's per-frame 3D joints against an OpenCap (Stanford,
 github.com/stanfordnmbl/opencap-core) two-iPhone markerless-mocap session -- the FIRST
 harness in this project for an INDEPENDENT accuracy number for BODY (see
-`TECH_BLUEPRINTS.md` PILLAR: BODY, P2-6). No real OpenCap capture exists yet (the owner
+`runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md` PILLAR: BODY, P2-6). No real OpenCap capture exists yet (the owner
 will record one later); this module is validated here only against a SYNTHETIC fixture
 with a known injected error (see `run_self_test`/`--self-test`).
 
@@ -10,7 +10,7 @@ WHY OPENCAP: OpenCap reports ~4.5 deg mean-absolute joint-angle error (range 1.7
 vs. marker-based mocap + force plates, using two ordinary iPhones, a printed checkerboard,
 and no hardware sync -- a genuinely independent, cheap instrument, distinct from (and
 complementary to) the court-landmark and two-iPhone-triangulation protocols already
-described in `TECH_BLUEPRINTS.md` PILLAR BODY section 6 (P2-6a/b). Sources consulted (web,
+described in `runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md` PILLAR BODY section 6 (P2-6a/b). Sources consulted (web,
 2026-07-07): stanfordnmbl/opencap-core README + stanfordnmbl/opencap-processing docs;
 PLOS Comp Biol 10.1371/journal.pcbi.1011462 (OpenCap validation paper, MAE 4.5deg, 2 iPhone
 minimum, 720x540mm precision checkerboard for factory intrinsics + 210x175mm A4 checkerboard

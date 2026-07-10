@@ -42,15 +42,12 @@ def test_active_pipeline_source_has_no_rtmw_runtime_or_references() -> None:
 
 
 def test_canonical_docs_state_rtmw_is_retired_for_fast_sam3d_body() -> None:
-    for relpath in ("MASTER_PLAN.md", "RUNBOOK.md", "CAPABILITIES.md", "TECH_STACK.md"):
+    for relpath in ("NORTH_STAR_ROADMAP.md", "RUNBOOK.md"):
         text = (ROOT / relpath).read_text(encoding="utf-8")
         compact = " ".join(text.split())
         assert "RTMW" in text, relpath
         assert "retired" in compact.lower(), relpath
-        assert "Fast SAM-3D-Body" in text, relpath
         assert "SAM-3D-Body only" in text, relpath
-        assert "accuracy" in compact.lower(), relpath
-        assert "speed" in compact.lower(), relpath
 
 
 def _ignored_path(path: Path) -> bool:

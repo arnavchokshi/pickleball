@@ -6,13 +6,15 @@ pipeline, and generate a trust-banded 3D replay plus coaching artifacts.
 
 ## Read This First
 
-1. `AGENTS.md` - repo-specific operating rules for future agents.
-2. `MASTER_PLAN.md` - final product goal, current truth, open gates, and what not to retry.
-3. `RUNBOOK.md` - how the current `process_video.py` pipeline actually runs, stage by stage.
-4. `CAPABILITIES.md` - canonical live/server tier split and capability truth matrix.
-5. `BUILD_CHECKLIST.md` - small operational board for what remains.
-6. `TECH_STACK.md` - model/runtime registry and where code lives.
-7. `BALL_TRACKING_PIPELINE.md` - focused ball-stage contract used by ball code comments.
+1. `NORTH_STAR_ROADMAP.md` - the sole product vision, current truth, ordered
+   future plan, gates, owner asks, and active agent queue.
+2. `AGENTS.md` - durable repository rules and code navigation.
+3. `RUNBOOK.md` - how the current `process_video.py` pipeline actually runs.
+4. `BALL_TRACKING_PIPELINE.md` - focused numbered BALL contract used by code.
+
+Historical plans, checklists, capability tables, blueprints, check-ins, and goal
+documents are indexed under `runs/archive/root_docs_20260709/`. They are
+evidence/context, not current instructions.
 
 ## Current Truth
 
@@ -21,6 +23,13 @@ CAL, TRK, BALL, BODY, RKT, iOS live tier, replay, and full E2E remain unverified
 until their explicit gates pass on the required real labels, device runs, or
 runtime evidence. Do not promote a row because a smoke test, copied fixture,
 internal-val run, browser load, or schema validation passed.
+
+The 2026-07-09 deep review also found P0 product-correctness blockers in the
+Swift/Python sidecar, production upload call, source/cache identity,
+raw/undistorted coordinates, partial/complete propagation, artifact packaging,
+and same-run BODY→event/arc feedback. Read the North Star and
+`runs/CV_PIPELINE_DEEP_REVIEW_20260709.md` before launching another isolated
+model campaign.
 
 ## Repo Map
 
@@ -34,7 +43,7 @@ internal-val run, browser load, or schema validation passed.
 | `models/MANIFEST.json` | Checkpoint/model manifest. Treat it as the weight registry. |
 | `configs/` | Runtime/tracker/remote configuration. |
 | `eval_clips/` | Small committed eval/label assets. Protected owner clips are eval-only unless code explicitly permits internal-val use. |
-| `docs/racketsport/` | JSON schemas and manifests only. Narrative docs were collapsed into the root docs above. |
+| `docs/racketsport/` | JSON schemas and manifests only. Product direction lives only in the North Star. |
 | `runs/` | Generated evidence and experiment outputs. Usually ignored; cite paths carefully and never assume old runs are current. |
 
 ## Storage Policy
@@ -56,7 +65,8 @@ fixture or run paths. The same audit fails on generated cache/build leftovers
 such as `__pycache__`, `.pytest_cache`, `ios/.build`, and `web/replay/dist`;
 remove those after local tests/builds instead of leaving them in the workspace.
 Do not add new long-lived research/status Markdown under `docs/racketsport/`;
-use the canonical root docs or a run-local report instead.
+update the North Star only for current product/direction changes, otherwise use
+a run-local report.
 
 ## Verification Commands
 

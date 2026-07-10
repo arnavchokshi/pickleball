@@ -1,6 +1,6 @@
 """Trust-band confidence provenance for `virtual_world.json` entities.
 
-Per MASTER_PLAN.md's "3D world / scrubber surfaces" section, the scrubber must
+Per NORTH_STAR_ROADMAP.md's "3D world / scrubber surfaces" section, the scrubber must
 carry a mandatory per-entity `{stage, gate_id, gate_status, badge, reason,
 evidence_path}` field so it can grey out (never charge for, never render as
 final) any mesh/track/ball/paddle/court segment whose upstream stage has not
@@ -144,7 +144,7 @@ def derive_court_trust_band(
     """Classify a `court_calibration.json` payload into a trust band.
 
     CAL has 0 held-out gate passes today (held-out PCK@5px>=0.95 per
-    viewpoint, MASTER_PLAN.md). A human-reviewed manual corner sidecar is
+    viewpoint, NORTH_STAR_ROADMAP.md). A human-reviewed manual corner sidecar is
     more trustworthy than an unreviewed automated guess, but it is still not
     a verified calibration -- and per the completed calibration diagnostic,
     this calibration's guessed intrinsics + 4-corner PnP solve is the actual
@@ -238,7 +238,7 @@ def derive_ball_trust_band(
         reason=(
             f"BALL track source is {source or 'unknown'}; the M1 gate "
             "(F1@20>=0.90, recall@20>=0.75, hidden-FP<=0.05) has not passed for any milestone "
-            "(0/8 per MASTER_PLAN.md); treat ball position as a rough cue, not a verified track."
+            "(0/8 per NORTH_STAR_ROADMAP.md); treat ball position as a rough cue, not a verified track."
         ),
         evidence_path=evidence_path,
     )

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fit + validate the metric-15pt court calibration path against the 4 eval clips.
 
-This is the CAL-METRIC lane's validation harness for Task #15 (MASTER_PLAN.md). It:
+This is the CAL-METRIC lane's validation harness for Task #15 (NORTH_STAR_ROADMAP.md). It:
 
 1. Fits `metric_calibration_from_reviewed_keypoints_15pt` for each of the 4 eval clips
    from their human-reviewed `labels/court_keypoints.json`, and writes the result both

@@ -40,7 +40,7 @@ is:
    exists on this ``clip_dir`` (a resumed/reused run whose events stage
    already ran previously), its ``deep_mesh_windows`` frame indices are
    explicitly unioned in too -- respecting the locked tier-split product
-   decision (MASTER_PLAN.md) rather than assuming they are always a subset
+   decision (NORTH_STAR_ROADMAP.md) rather than assuming they are always a subset
    of (1). In the common case they already are a subset; this only matters
    for correctness on a resumed run.
 3. **Hard cap:** ``max_frames`` (process_video.py's existing ``--max-frames``
@@ -70,7 +70,7 @@ SCHEDULE_FILENAME = "process_video_frame_schedule.json"
 # Safety ceiling for the bounded-default schedule. ~1200 JPEGs at ~85KB each
 # (1080p, ffmpeg's default JPEG quality -- see
 # threed/racketsport/body_frame_materialization.py) is ~100MB: generous for
-# the short rally clips this pipeline targets (MASTER_PLAN.md), while still
+# the short rally clips this pipeline targets (NORTH_STAR_ROADMAP.md), while still
 # bounding a pathologically long input instead of extracting its every
 # tracked frame unconditionally.
 DEFAULT_MAX_SCHEDULED_FRAMES = 1200

@@ -1,11 +1,16 @@
 # Pickleball Master Plan
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-09.
 
 Doc-role note (2026-07-07, resolves a two-masters ambiguity): `NORTH_STAR_ROADMAP.md` is the
 master phased TO-DO plan (phases P0-P7/PF, task IDs, PART VI wave playbook); THIS file remains
 canonical for the final goal and the truth/no-overclaim boundaries below. On planning/sequencing
 conflicts, NORTH_STAR wins; on truth-claim boundaries, this file + `CAPABILITIES.md` win.
+
+The 2026-07-09 independent review is
+`runs/CV_PIPELINE_DEEP_REVIEW_20260709.md`. Its dated reviewer reset at the
+top of `NORTH_STAR_ROADMAP.md` owns current sequencing; older evidence
+reconciliation below remains historical context.
 
 ## Final Goal
 
@@ -47,23 +52,24 @@ This section lists repo reality, not promotion evidence:
 
 `VERIFIED=0`.
 
-The current `scripts/racketsport/process_video.py` glue can complete scoped
-accepted-clip runs and write scrubber-ready artifacts, but that is not a global
-acceptance pass. Recent speed and visual runs made the bundle faster and more
-inspectable, but CAL, TRK, BALL, BODY, RKT, replay, and E2E all remain below
-their promotion gates.
+The current `scripts/racketsport/process_video.py` has 19 default serial
+outcomes and can write scoped partial/complete bundles. The real user route is
+not viable yet: Swift/Python sidecars are incompatible, production iOS upload
+calls are unwired, cache/source identity is unsafe, distortion spaces diverge,
+partial runs can surface as complete, and current BODY/paddle evidence arrives
+too late to refine same-run events/ball arcs.
 
 | Area | Current status | What is true now | Promotion gate |
 |---|---|---|---|
-| CAL | Scaffold/preview | Manual/sidecar and metric-15pt calibration paths can feed the pipeline. The 2026-07-05 court-autofind Wave A patch is worktree-only, not mainline, and still misses the aggregate hard bar. | Held-out PCK@5px gate on reviewed owner viewpoints. |
-| TRK | In progress | YOLO26m plus BoT-SORT/ReID/raw-pool tooling exists. Pre-registered gate runs still fail coverage/identity/spectator constraints. | Per-clip IDF1, zero ID switches where required, zero true spectator/background FP, coverage gate. |
-| BALL | Scaffold | The default 3D ball chain landed in commit `790930ed`, but held-out quality did not promote: the product chain is cleaner and lower-FP than the standing zero-shot baseline while still losing F1/recall. The training campaign concluded negative. | Reviewed ball F1/contact/in-out gates, with gray-zone behavior for uncertain calls. |
-| BODY | Scaffold | Fast SAM-3D-Body runtime, mesh index artifacts, speed improvements, and stance-aware visual smoothing exist for scoped clips. Candidate-label review and current visual runs are not independent GT. | Representative independent-GT world-MPJPE gate. |
-| FOOT/PHYS | Internal-val done | Wolverine internal-val foot-lock reached zero slide/penetration in a scoped chain. | Strict protected-clip physics/replay verification before user-facing promotion. |
-| RKT | Scaffold | Phase-1 fused paddle estimator final_v3 is render-only: useful internal-val paddle orientation/position for review, no true-reference GT promotion. | Face-angle/contact-point error against true-corner/reference GT. |
-| iOS | Scoped passes | Swift modules, capture/import sidecars, upload manifest, and live-tier slices have tests. Physical capture/import/live thermal/render proof is still incomplete. | Real device capture plus live overlay and replay verification under the documented budget. |
-| Replay | Scoped review pass | Web review viewer and scoped mesh-index/replay artifacts can load review bundles. Visual artifacts are viewer-consumable, not product replay proof. | Production replay asset, native/web perf, and visual QA gates. |
-| E2E | SCAFFOLD/SCOPED PASS, not VERIFIED | `process_video.py` can write complete or partial bundles with fail-closed trust bands. The latest Wolverine visual run is faster, but still partial and ball/BODY gates remain scoped. | One real clip meeting component quality gates and replay SLA from a clean command. |
+| CAL | Scaffold/preview | Manual/metric/profile paths exist. Corrected owner GT still scores learned candidates at PCK@5=0; synthetic-only transfer failed twice. | Fresh owner-viewpoint PCK@5 plus distortion/handheld gates; profile+guided confirmation is v1. |
+| TRK | In progress | YOLO26m plus BoT-SORT/ReID/raw-pool tooling exists; mean IDF1 is roughly 0.85 but worst clip, switches, coverage and FP axes still fail. | Per-clip IDF1, zero switches, spectator/off-court FP and ≥0.95 four-player coverage on fresh sources. |
+| BALL | Scaffold | Default held-out anchor is F1 0.7248/hFP 0.063. Candidate A is 0.6152/0.2506 on a different internal 1,121-row card; 1,750 rows are prepared but unscored. | Same-protocol grouped-source validation plus one fresh preregistered F1/recall/hFP/contact/in-out gate. |
+| BODY | Scaffold | SAM-3D-Body runtime and mesh/grounding paths exist. The old 262mm result was a measurement bug; about 23-27mm remains unattributed and external grounding-consistent error is above bar. | Corrected live decode measurement and independent fast-athletic court-frame world-MPJPE. |
+| FOOT/PHYS | Internal-val only | Postprocessing gives useful scoped slide numbers, but skeleton-direct phases breach 30mm on 3/4 clips. | Independent sole/court and ball-surface contact gates after upstream BODY/events improve. |
+| RKT | Scaffold/preview | Fused wrist/palm/grip estimate is default-wired as `estimated_preview`; internal rectangle IoU is about 0.22-0.33. | Marker/corner face-plane and contact-point GT; no rectangle-to-6DoF promotion. |
+| iOS | Scaffold/scoped | Capture, sensor model, UI and client definitions exist; device install/launch evidence exists. Swift sidecar and Python schema disagree, and the production app does not call the upload/job path. | Cross-language golden contract plus one physical record/import→upload→GPU→replay vertical slice. |
+| Replay/stats | Scoped review | Ghost meshes and viewer paths exist; placement/court movement stats are wired. | Implement full-mesh ruling, package directories recursively, generate stats/coaching before manifest, verify every URL/native-web visual gate. |
+| E2E | SCAFFOLD/SCOPED PASS, not VERIFIED | A 19-stage CLI can produce inspectable bundles, but source/cache identity, status propagation, coordinate normalization and post-BODY feedback are P0 blockers. | One content-addressed physical-app run meeting minimum bundle, component quality and replay gates. |
 
 ## 2026-07-05 Evidence Reconciliation
 
@@ -237,19 +243,20 @@ fast, conservative, and uncertainty-banded.
 
 **L2/L3 server tiers:** L2 is the trust-banded fast verdict path that skips BODY;
 L3 is the deep-world authority with calibration refinement, deep tracking,
-ball/event processing, Fast SAM-3D-Body mesh, grounding, foot-lock/physics,
-paddle 6DoF when available, metrics, replay bake, and coaching copy.
+ball/event processing, SAM-3D-Body mesh, grounding, foot-lock/physics,
+estimated paddle now and verified pose only after GT, metrics, replay bake, and
+evidence-linked coaching.
 `CAPABILITIES.md` owns the canonical four-tier split.
 
-**GPU reset state:** the July 2026 A100 spot runtime is reset-pending during
-winddown. Do not treat any named VM as currently available without a fresh
-connectivity, disk, and GPU-lock check.
+**GPU state:** transient. The reviewer snapshot had a running H100 speed gate
+with no result. Do not treat a named VM, running process, or incomplete report
+as evidence without a fresh connectivity, disk, version and artifact check.
 
 **RTMW retirement:** RTMW/RTMW3D/RTMPose are retired from the pipeline. BODY is
-SAM-3D-Body only: Fast SAM-3D-Body is the offline skeleton/mesh source because
-the prior RTMW family was less accurate on visible pickleball joints, and the
-current optimized SAM-3D-Body path reached equal-or-better speed while producing
-the mesh/joint artifacts the replay stack needs.
+SAM-3D-Body only. Normalize the ambiguous production/challenger names in
+`best_stack.json` before comparing variants; the separately tested
+Fast-SAM-3D-Body challenger is a measured NOT-ADOPT, not the name of a new
+default.
 
 `CAPABILITIES.md` owns the exact tier split. `RUNBOOK.md` owns the runnable
 pipeline command.
@@ -257,7 +264,9 @@ pipeline command.
 ## Non-Negotiable Rules
 
 - Do not train on protected eval clips unless the code path explicitly marks an
-  internal-val diagnostic. Outdoor and Indoor are strict holdout clips.
+  internal-val diagnostic. Indoor remains protected. Outdoor remains protected
+  from new leakage but is a historical benchmark, not a statistically fresh
+  holdout after prior tuning/selection use.
 - Do not call a stage `VERIFIED` from smoke tests, schema validation, copied
   fixtures, internal-val-only evidence, browser loads, or a partial pipeline run.
 - Do not reuse killed levers without new evidence. In particular, avoid
@@ -269,15 +278,19 @@ pipeline command.
 
 ## Next Gates
 
-1. Make CAL fail-closed and usable: tap-assisted/metric seed stays v1, no-tap
-   remains unverified until reviewed gates pass.
-2. Improve TRK with real detector/data leverage, not another exhausted association
-   sweep.
-3. Improve BALL with reviewed data and a model-side candidate that beats the
-   current confidence-gated baseline without hidden-FP or recall regressions.
-4. Promote BODY only from independent GT, not candidate labels.
-5. Complete iOS physical-device capture/import/live-overlay/replay proof.
-6. Run a clean `process_video.py` reproduction after component gates improve.
+1. Align the Swift/Python sidecar, wire the production upload client, and prove
+   one physical-device vertical slice.
+2. Make ingest/cache identity content-addressed, normalize coordinate/time
+   spaces, propagate partial honestly, and package every manifest artifact.
+3. Run one cross-lane independent-GT capture day and reset validation to true
+   source groups, uniform-random audit and fresh holdouts.
+4. Score/train BALL on 1,750; run CAL profile/tap, TRK detector/ReID, BODY
+   residual/GT and paddle marker-GT lanes in parallel.
+5. Add explicit coarse and post-BODY event/arc passes, then physically correct
+   anti-circular global fusion.
+6. Generate deterministic stats/coaching before the manifest, implement the
+   full-mesh directive, and only then run a dedicated efficiency wave and a
+   clean current-stack E2E.
 
 ## Documentation Policy
 
@@ -286,6 +299,7 @@ Canonical narrative docs are intentionally small:
 - `README.md`
 - `AGENTS.md`
 - `MASTER_PLAN.md`
+- `NORTH_STAR_ROADMAP.md`
 - `RUNBOOK.md`
 - `CAPABILITIES.md`
 - `BUILD_CHECKLIST.md`

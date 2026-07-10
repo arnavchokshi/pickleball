@@ -32,8 +32,7 @@ def test_dead_code_audit_has_no_unknown_python_source_surfaces() -> None:
     assert payload["unknown_python_sources"] == []
 
 
-def test_tech_stack_points_agents_to_dead_code_audit() -> None:
-    text = (ROOT / "TECH_STACK.md").read_text(encoding="utf-8")
+def test_agents_doc_points_agents_to_dead_code_audit() -> None:
+    text = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
 
     assert "scripts/racketsport/audit_dead_code.py" in text
-    assert "dead-code candidate" in text

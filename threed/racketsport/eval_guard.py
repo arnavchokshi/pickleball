@@ -3,8 +3,8 @@
 This module is the single code-level source of truth for which clips are
 eval-only and how they may (or may not) be touched by anything that fits a
 model. It exists because prior sessions repeatedly, and independently,
-re-derived this policy from prose in ``BUILD_CHECKLIST.md`` /
-``runs/manager/outdoor_eval_ledger.md`` and then still leaked eval clips into
+re-derived this policy from prose rather than the North Star plus the held-out
+ledger and then still leaked eval clips into
 training or checkpoint-selection inputs (see the ledger's "seeded history"
 rows for the concrete incidents this module is meant to make structurally
 impossible going forward).
@@ -12,12 +12,14 @@ impossible going forward).
 Policy (binding, enforced here, not just documented):
 
 * ``outdoor_webcam_iynbd_1500_long_high_baseline`` and
-  ``indoor_doubles_fwuks_0500_long_mid_baseline`` are **strict holdout**
-  clips. They may never appear in training inputs *or* in a
+  ``indoor_doubles_fwuks_0500_long_mid_baseline`` are code-protected
+  **strict_holdout** clips. They may never appear in training inputs *or* in a
   validation-during-fitting split (checkpoint selection, early stopping,
   threshold sweeps run as part of a training loop, etc). There is no
-  override for these two clips -- that is the entire point of holding them
-  out.
+  override for these two clips. Outdoor has nevertheless been used for prior
+  selection/tuning decisions and is therefore a historical benchmark rather
+  than statistically fresh promotion evidence; the guard keeps it protected
+  from additional leakage. Indoor remains the fresher protected clip.
 * ``burlington_gold_0300_low_steep_corner`` and
   ``wolverine_mixed_0200_mid_steep_corner`` are **internal-val-only** clips.
   They must never be used as actual training data, but a caller may use them

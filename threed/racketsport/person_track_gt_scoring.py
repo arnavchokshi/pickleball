@@ -72,7 +72,7 @@ directly comparable across clips with very different prediction volumes;
 median and p90 near-miss IoU are still computed and reported
 (``near_miss_localization``) as non-gating diagnostics for the detector-retrain
 lane. 10% is deliberately "less punitive" than the true-spectator axis's
-``== 0`` per `MASTER_PLAN.md`'s TRK gate v2 refinement, reflecting that this
+``== 0`` per `NORTH_STAR_ROADMAP.md`'s TRK gate v2 refinement, reflecting that this
 axis is expected to close via detector data, not tracking logic.
 
 Gate v2.1: apron-margin off-court refinement (2026-07-02)

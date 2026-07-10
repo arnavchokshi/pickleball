@@ -180,8 +180,8 @@
         "commit": "865c8d9f5",
         "date": "2026-07-08",
         "evidence_paths": [
-          "BUILD_CHECKLIST.md#[W6 PLAYBACK RULING]",
-          "BUILD_CHECKLIST.md#[W6 MESHCAP PASS]"
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W6 PLAYBACK RULING]",
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W6 MESHCAP PASS]"
         ]
       },
       "proven_against": {
@@ -201,8 +201,8 @@
         "commit": "865c8d9f5",
         "date": "2026-07-08",
         "evidence_paths": [
-          "BUILD_CHECKLIST.md#[W6 PLAYBACK RULING]",
-          "BUILD_CHECKLIST.md#[W6 MESHCAP PASS]",
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W6 PLAYBACK RULING]",
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W6 MESHCAP PASS]",
           "runs/lanes/w6_meshcap_20260708/report.json",
           "runs/lanes/w6_close_errand_20260708"
         ]
@@ -252,15 +252,15 @@
       "gate": {
         "name": "owner_product_ruling_mesh_tier_eligibility",
         "metric_key": "mesh_tier_eligibility_owner_ruling",
-        "bar": "owner product ruling per BUILD_CHECKLIST.md [W6 RULINGS] (d)",
-        "evidence_path": "BUILD_CHECKLIST.md#[W6 RULINGS]"
+        "bar": "owner product ruling per runs/archive/root_docs_20260709/BUILD_CHECKLIST.md [W6 RULINGS] (d)",
+        "evidence_path": "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W6 RULINGS]"
       },
       "provenance": {
         "lane": "beststack_core_20260708",
         "commit": "865c8d9f5",
         "date": "2026-07-08",
         "evidence_paths": [
-          "BUILD_CHECKLIST.md#[W6 RULINGS]",
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W6 RULINGS]",
           "runs/lanes/beststack_core_20260708/audit_result_full.json"
         ]
       },
@@ -278,7 +278,7 @@
         "commit": "865c8d9f5",
         "date": "2026-07-08",
         "evidence_paths": [
-          "BUILD_CHECKLIST.md#[W6 PLAYBACK RULING]"
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W6 PLAYBACK RULING]"
         ]
       },
       "proven_against": null,
@@ -413,7 +413,7 @@
         "commit": "865c8d9f5",
         "date": "2026-07-08",
         "evidence_paths": [
-          "BUILD_CHECKLIST.md#[W6 RULINGS]",
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W6 RULINGS]",
           "models/MANIFEST.json"
         ]
       },
@@ -561,14 +561,14 @@
         "name": "p1_4_real_3d_ball_velocities",
         "metric_key": "p1_4_real_3d_ball_velocities",
         "bar": "racket_physics_estimate estimates populated from real ball_track_arc_solved contact velocities; reflection contacts available > 0",
-        "evidence_path": "TECH_BLUEPRINTS.md#P3-5"
+        "evidence_path": "runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md#P3-5"
       },
       "provenance": {
         "lane": "paddlewire_p31_20260709",
         "commit": "uncommitted-main-lane",
         "date": "2026-07-09",
         "evidence_paths": [
-          "TECH_BLUEPRINTS.md#P3-5",
+          "runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md#P3-5",
           "runs/lanes/racket_6dof_20260705/i1_fused_estimator/acceptance_record_v2.json",
           "runs/lanes/paddlewire_p31_20260709/spec.md"
         ]
@@ -616,9 +616,9 @@
         "commit": "worktree",
         "date": "2026-07-09",
         "evidence_paths": [
-          "BUILD_CHECKLIST.md#[W7 BALLRETRAIN 1K-CHECKPOINT LANDED 2026-07-09]",
-          "BUILD_CHECKLIST.md#[W7 BALLSCORE VERIFY 2026-07-09]",
-          "BUILD_CHECKLIST.md#[W7 BALLCOMPLETE PARTIAL-VALID 2026-07-09]",
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W7 BALLRETRAIN 1K-CHECKPOINT LANDED 2026-07-09]",
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W7 BALLSCORE VERIFY 2026-07-09]",
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W7 BALLCOMPLETE PARTIAL-VALID 2026-07-09]",
           "runs/lanes/w7_ballretrain_20260709/REPORT.md",
           "runs/lanes/w7_ballcomplete_20260709/REPORT.md",
           "runs/lanes/w7_ballretrain_20260709/md5_manifest.txt"
@@ -680,7 +680,7 @@
         "date": "2026-07-08",
         "evidence_paths": [
           "runs/lanes/beststack_core_20260708/audit_result_full.json",
-          "BUILD_CHECKLIST.md#[BESTSTACK WAVE OPEN]"
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[BESTSTACK WAVE OPEN]"
         ]
       },
       "proven_against": null,
@@ -703,7 +703,7 @@
         "date": "2026-07-08",
         "evidence_paths": [
           "runs/lanes/beststack_core_20260708/audit_result_full.json",
-          "BUILD_CHECKLIST.md#[BESTSTACK WAVE OPEN]"
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[BESTSTACK WAVE OPEN]"
         ]
       },
       "proven_against": null,
@@ -723,7 +723,7 @@
         "commit": "865c8d9f5",
         "date": "2026-07-08",
         "evidence_paths": [
-          "BUILD_CHECKLIST.md#[W6 GATE1B-KNOB]",
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W6 GATE1B-KNOB]",
           "runs/lanes/w6_footpinstub_20260708/report.json",
           "runs/lanes/w6_close_errand_20260708/gate1b_raw_arm_report.json"
         ]
@@ -796,7 +796,7 @@
         "commit": "865c8d9f5",
         "date": "2026-07-08",
         "evidence_paths": [
-          "BUILD_CHECKLIST.md#[W6 RULINGS]",
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W6 RULINGS]",
           "runs/lanes/beststack_core_20260708/audit_result_full.json"
         ]
       },
@@ -834,7 +834,7 @@
         "commit": "865c8d9f5",
         "date": "2026-07-08",
         "evidence_paths": [
-          "BUILD_CHECKLIST.md#[W6 RULINGS]"
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W6 RULINGS]"
         ]
       },
       "proven_against": null,
@@ -869,7 +869,7 @@
         "commit": "865c8d9f5",
         "date": "2026-07-08",
         "evidence_paths": [
-          "BUILD_CHECKLIST.md#[W6 RULINGS]"
+          "runs/archive/root_docs_20260709/BUILD_CHECKLIST.md#[W6 RULINGS]"
         ]
       },
       "proven_against": null,

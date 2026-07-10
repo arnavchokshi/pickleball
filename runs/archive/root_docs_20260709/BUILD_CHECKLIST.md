@@ -1,6 +1,6 @@
 # Build Checklist
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-09 (independent reviewer reset).
 
 This is the operational board. It should stay short enough that a new agent can
 read it before touching code. For final goal and truth boundaries, read
@@ -12,47 +12,56 @@ No row is `VERIFIED`.
 The master phased plan is `NORTH_STAR_ROADMAP.md` (owner summary + phases P0-P7 with task IDs);
 edge tactics + exact stack/data are `EDGE_PLAYBOOK.md`. This board is the live operational channel.
 
-## BUILT vs. LEFT (2026-07-05 — the honest done/not-done split)
+**Current-direction warning:** the dated lane bullets below are an append-only
+evidence log, not a readable current queue. Start with the 2026-07-09 reviewer
+reset at the top of `NORTH_STAR_ROADMAP.md` and
+`runs/CV_PIPELINE_DEEP_REVIEW_20260709.md`. The final dated bullet wins over
+older bullets only for its named scope.
+
+## BUILT vs. LEFT (reviewed 2026-07-09)
 
 "Built" = code/app runs and emits artifacts. "VERIFIED" = passed its promotion gate on real labels.
-**`VERIFIED=0` — so everything is "built, not yet gate-passed."** That is assembly complete, accuracy
-+ proof remaining — not green-field. Full detail: `NORTH_STAR_ROADMAP.md` §I.0.
+**`VERIFIED=0` — so everything is "built, not yet gate-passed."** That is assembly complete, with
+accuracy and proof remaining — not green-field. Full detail: `NORTH_STAR_ROADMAP.md` §I.0.
 
-**✅ BUILT & RUNNING (server):** E2E orchestrator (`process_video.py`, 17 stages, trust bands) ·
+**✅ BUILT & RUNNING (server scaffold):** E2E orchestrator (`process_video.py`, 19 default stage
+outcomes, trust bands) ·
 ball 3D chain default (ensemble → auto-bounce anchors → arc solver → flight-sanity → court-map view →
 viewer trail+KPI) · SAM-3D body/world (MHR70 skeleton+mesh, placement, stance foot-pin + smoothing,
-mesh index, contact-dense scheduling) · fused 6-DOF paddle (render-only) · manual/metric-15pt court
-cal (+ Wave A auto-find on a branch) · speed 2141→~532-565s (3.8×) · data-engine ingest+prelabel+
-guards · web viewer (trust bands, honesty KPIs, mesh, 2×-FPS, court-map) · eval ledger + gate scripts
-+ ~2,900 tests.
+mesh index, contact-dense scheduling) · fused paddle estimate default-wired (render-only) · manual/metric-15pt court
+cal + unpromoted auto-find candidates (corrected owner PCK@5=0) · historical scoped speed
+2141→~532-565s · data-engine ingest+prelabel+
+guards · input-quality + placement/court stats · web viewer (trust bands, honesty KPIs, mesh,
+2×-FPS, court-map) · eval ledger + gate scripts + latest banked census 3315/0/26.
 
-**✅ BUILT (our iOS app — it EXISTS):** 110 Swift files, 7 modules (`ios/`) · capture sidecar contract
+**✅ BUILT (our iOS scaffold — it EXISTS):** 140 Swift files, 7 modules (`ios/`) · capture sidecar model
 already carrying intrinsics + ARKit pose + gravity + court plane + locked exposure + LiDAR refs +
 240/120fps modes · CoreMotion gravity, live overlays/guidance, on-device person track + CoreML ball
-heatmap, camera-roll import, upload manifest · server ingest already consumes the sidecar
-(intrinsics/provenance/taps).
+heatmap, camera-roll import, upload/replay client definitions. The Swift payload does **not**
+currently validate against strict Python v1, and the production app does not call the upload/job
+path.
 
-**⬜ LEFT (the roadmap P0-P7):** `VERIFIED=0` (no gate passed) · in-domain training data (P0) ·
-physical-device capture proof + server consumption of ARKit-pose/gravity (P0-10) · profile registry
-(P0-9) · ball to bar + true 3D flight/spin (P1) · body raw-noise/handheld/GT (P2) · paddle
-wired+hi-def (P3) · court auto-find landed+robust (P4) · speed levers + cost (P5) · coaching product
-(P6) · accounts/onboarding/pricing/legal (P7).
+**⬜ LEFT (the ordered roadmap):** `VERIFIED=0` · Swift/Python schema + physical upload vertical
+slice · content-addressed cache/source identity · one coordinate/time convention · honest
+partial/complete + asset delivery · independent cross-lane GT · representative grouped-source
+evaluation · ball/body/paddle/court gates · post-BODY event/arc refinement · global fusion ·
+evidence-linked coaching · later efficiency · security/licensing/product gates.
 
 ## Status Board
 
 | ID | Area | Status | Current blocker | Next useful action |
 |---|---|---|---|---|
-| DOCS-1 | Documentation | IN-PROGRESS | full cleanup proof is still incomplete | Keep docs small; continue truth/dead-code/storage audits without adding new narrative docs. |
+| DOCS-1 | Documentation | IN-PROGRESS | full cleanup proof is still incomplete; reviewer reset is written and manager reconciliation remains | Keep docs small: keep current direction in the North Star reset and detailed evidence under `runs/`; do not append another competing plan. |
 | CAL-1 | Court calibration | SCAFFOLD/PREVIEW | no no-tap solver has passed reviewed PCK/reprojection gates | Keep v1 tap-assisted/metric seed; score any new solver fail-closed. |
 | TRK-1 | Person tracking | IN-PROGRESS | pre-registered candidates still fail coverage/identity/spectator gates | Improve detector/data leverage; do not repeat exhausted association-only sweeps. |
 | BALL-1 | Ball tracking/events | SCAFFOLD | reviewed F1/contact/in-out gates not passed | Use reviewed data and model-side candidates; preserve gray-zone behavior. |
 | BODY-1 | 3D body | SCAFFOLD | independent-GT world-MPJPE gate missing/failing | Use external/independent GT; never promote candidate-label reviews. |
 | PHYS-1 | Foot/physics | INTERNAL-VAL DONE | Wolverine internal-val proof is not protected-clip/product proof | Reverify on protected/representative clips after upstream gates improve. |
 | RKT-1 | Paddle pose | SCAFFOLD | no true paddle-face corner/reference GT | Collect/consume true-corner or marker/reference data before pose claims. |
-| IOS-1 | Native iOS/live tier | SCOPED PASS | full physical capture/import/live overlay/replay proof still incomplete | Run real device capture/import/live tier and report exact evidence. |
+| IOS-1 | Native iOS/live tier | SCAFFOLD/SCOPED PASS | Swift sidecar fails strict Python v1 and production upload calls are unwired | Align one versioned contract, then prove physical record/import→upload→GPU→replay. |
 | RPL-1 | Replay/scrubber | SCOPED PASS | review viewer and scoped assets are not production replay verification | Verify native/web playback, size, FPS, and visual QA against a current bundle. |
-| E2E-1 | Full pipeline | SCAFFOLD/SCOPED PASS | no clean clip meets all component gates plus replay SLA | Rerun `process_video.py` only after component gates improve. |
-| DATA-1 | Data/eval policy | IN-PROGRESS | protected eval/training boundaries need constant enforcement | Keep guards/tests active; pre-register held-out evals. |
+| E2E-1 | Full pipeline | SCAFFOLD/SCOPED PASS | source/cache identity, coordinate conventions, status propagation and post-BODY feedback are P0 blockers | Fix correctness DAG first; then run one content-addressed physical-app bundle. |
+| DATA-1 | Data/eval policy | IN-PROGRESS | 1,121 score is clip-folded/disagreement-selected; 1,750 source folds are prepared but unscored; Outdoor is historical, not fresh | Add uniform-random audit + true source grouping + untouched owner/HARVEST holdout. |
 
 ## Count Summary
 
@@ -62,8 +71,8 @@ wired+hi-def (P3) · court auto-find landed+robust (P4) · speed levers + cost (
 | INTERNAL-VAL DONE | 1 |
 | SCAFFOLD | 3 |
 | SCAFFOLD/PREVIEW | 1 |
-| SCOPED PASS | 2 |
-| SCAFFOLD/SCOPED PASS | 1 |
+| SCOPED PASS | 1 |
+| SCAFFOLD/SCOPED PASS | 2 |
 
 ## Dated Lane Handoffs
 

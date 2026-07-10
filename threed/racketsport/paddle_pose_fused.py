@@ -1,7 +1,7 @@
 """Fused wrist+palm+grip-transform render-only paddle 6-DOF estimator.
 
 This module implements the "grip-transform fused paddle 6-DOF estimator" design from
-``RACKET_6DOF_GOAL.md`` / ``runs/lanes/racket_6dof_20260705/i1_fused_estimator/spec.md``.
+``runs/archive/root_docs_20260709/RACKET_6DOF_GOAL.md`` / ``runs/lanes/racket_6dof_20260705/i1_fused_estimator/spec.md``.
 It is the successor evidence channel to :mod:`threed.racketsport.paddle_proxy` (which stays
 untouched and remains the fallback): instead of a crude forearm-axis + world-up face normal,
 this solves for a **hand frame** ``H(t)`` from the raw MHR70 wrist+finger joints every frame,
@@ -527,7 +527,7 @@ def _hand_intervals_from_box_votes(
 ) -> tuple[list[tuple[float, float, str]], dict[str, Any]]:
     """Segment the clip into hand-side intervals with >= ``min_hold_s`` hysteresis.
 
-    RACKET_6DOF_GOAL.md requires two-handed/hand-switch handling and the spec forbids per-frame
+    runs/archive/root_docs_20260709/RACKET_6DOF_GOAL.md requires two-handed/hand-switch handling and the spec forbids per-frame
     side flapping: a switch requires a sustained window (>= ``min_hold_s``) in which the
     challenger side wins >= ``majority`` of >= ``min_votes`` detector-box proximity votes.
     Between switches the current side carries frames with no votes (fail-soft).
@@ -1086,7 +1086,7 @@ def _per_frame_box_deviation(
 ) -> dict[str, Any]:
     """Small per-frame position deviation toward the nearest wrist-gated detector box.
 
-    RACKET_6DOF_GOAL.md's parameterization is "G held constant per grip segment, plus a small
+    runs/archive/root_docs_20260709/RACKET_6DOF_GOAL.md's parameterization is "G held constant per grip segment, plus a small
     per-frame deviation"; this implements the deviation for the translation component only,
     driven by the (legal) detector-box channel: bounded (``max_deviation_m``), confidence-weighted,
     slew-limited (``slew_m_per_frame`` caps how much translational motion the deviation itself may

@@ -4,7 +4,7 @@
 This assembles a scrubber-ready virtual world from already-produced stage
 artifacts (never re-running any gate) and wires a per-entity trust band onto
 players/court/ball/paddles from the real gate-report state of those
-artifacts, per MASTER_PLAN.md's "3D world / scrubber surfaces" section and
+artifacts, per NORTH_STAR_ROADMAP.md's "3D world / scrubber surfaces" section and
 the W3-SCRUBBER-V0 milestone row.
 
 BODY world joints can come from either a full `skeleton3d.json`/

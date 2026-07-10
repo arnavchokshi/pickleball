@@ -5,7 +5,7 @@ conflicts with `CAPABILITIES.md`, fix this file.
 
 | Stage/feature | Tier L0-L3 | Current status | Main artifact |
 |---|---|---|---|
-| capture guidance | L0/L1 | computed in code; Record UI still needs wiring | `LiveGuidanceEvaluator`, `PostStopPreviewSummary` |
+| capture guidance | L0/L1 | computed in code; Record UI still needs wiring; Swift/Python sidecar contract and production upload call are P0 blockers | `LiveGuidanceEvaluator`, `PostStopPreviewSummary` |
 | player detect/track + foot rings | L0/L1 advisory; L3 authority | live person overlay wired; model not bundled; screen-space today | `LiveFrameTap`, `LiveCourtOverlayEngine`, `tracks.json` |
 | live court geometry | L0/L1 next; L2/L3 server paths | no live homography yet; manual/metric/profile server paths exist | `ManualCourtTaps`, `AssistedCourtSeed`, `court_calibration.json` |
 | court-plane dot map | L0/L1 after live court lock; L2/L3 today | current live map is proxy; server placement/world can emit real court map | `court_dot_map`, `virtual_world.json` |
@@ -18,8 +18,8 @@ conflicts with `CAPABILITIES.md`, fix this file.
 | ball speed | L1 rough estimate after PL-1/PL-5; L2/L3 arcs | no live speed promise before soak benchmark and geometry | solved arc artifacts |
 | shot types | L2 after PL-6; L3 P6-1 | `shot_rules_v0.json` landed but unwired | `shot_rules_v0.json`, shot taxonomy outputs |
 | highlights / instant replay clips | L0 rally-end trigger; L1 last-capture replay; L3 authority | cheap trigger/replay path, contact-density selection later | rally gating, replay manifests |
-| stats + coaching card | L2 basic stats; L3 coaching | offline-only by design | metrics/report/coaching artifacts |
-| 3D world / mesh replay | L3 only | never live; BODY is A100-class and remains the offline accuracy moat | `virtual_world.json`, `body_mesh_index/`, `replay_viewer_manifest.json` |
+| stats + coaching card | L2 basic stats; L3 coaching | placement/court stats are wired but run after the manifest; rally/shot/coaching facts are not production stages | `match_stats.json`, metrics/report/coaching artifacts |
+| 3D world / mesh replay | L3 only | never live; remote-GPU BODY remains the offline accuracy path; no full current bundle is verified | `virtual_world.json`, `body_mesh_index/`, `replay_viewer_manifest.json` |
 | NVZ momentum / partner-contact | L3 review-flag only | no fixed time-window verdict; human review required | rule flags, world/contact artifacts |
 
 Borderline:

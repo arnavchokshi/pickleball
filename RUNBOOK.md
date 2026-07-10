@@ -1,6 +1,6 @@
 # Process Video Runbook
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-09.
 
 `scripts/racketsport/process_video.py` is the current one-command pipeline for a
 video-to-scrubber bundle. It is the entrypoint future agents should start from
@@ -19,6 +19,27 @@ Use a trusted calibration seed when possible:
   --verify-viewer
 ```
 
+For a real BODY run, also supply an explicit current `--remote-host <host>` or
+choose `--body-local`. The remote host intentionally has no universal default;
+without either choice BODY may be blocked and the command can still return a
+partial bundle.
+
+### P0 run-isolation warning
+
+Until North Star task `NS-01.3 Content-addressed DAG` lands, use a new `--out` and
+globally unique `--clip` for every source video. Do not point a new upload at
+an existing clip directory: `--force` does not replace `source.*`, and
+schema-valid downstream artifacts do not carry complete source/model/config
+fingerprints. Also verify that explicit calibration/tracks/ball inputs were
+actually selected; existing clip-local artifacts currently take precedence in
+several stages.
+
+Swift-encoded version-1 sidecars now share the Python strict contract for live
+recordings, missing-sensor captures, and camera-roll imports. The checked-in
+cross-language golden fixtures must remain green and unknown keys remain
+rejected. This is contract proof, not current physical-device proof; a fresh
+device sidecar and upload trace are still required for the product exit gate.
+
 Use `--clip` explicitly for eval clips. The committed eval videos are usually
 named `source.mp4`; if `--clip` is omitted, the clip id becomes `source`, which
 silently misses clip-keyed tracker tuning and default raw-pool profiles.
@@ -28,22 +49,24 @@ Manual four-corner seed path:
 ```bash
 .venv/bin/python scripts/racketsport/process_video.py \
   --video path/to/clip.mp4 \
-  --clip <stable_clip_id> \
+  --clip <globally_unique_source_clip_id> \
   --court-corners path/to/court_corners.json \
-  --out runs/process_video_<clip>
+  --out runs/process_video_<clip>_<fresh_run_id>
 ```
+
+`<fresh_run_id>` must name a never-before-used output directory until P0 cache
+identity is fixed.
 
 Reuse precomputed tracks or ball track when evaluating downstream stages:
 
 ```bash
 .venv/bin/python scripts/racketsport/process_video.py \
   --video path/to/clip.mp4 \
-  --clip <stable_clip_id> \
+  --clip <globally_unique_source_clip_id> \
   --court-calibration path/to/court_calibration.json \
   --tracks path/to/tracks.json \
   --ball-track path/to/ball_track.json \
-  --out runs/process_video_<clip> \
-  --force
+  --out runs/process_video_<clip>_<fresh_run_id>
 ```
 
 CPU/skeleton-only smoke:
@@ -69,9 +92,9 @@ CPU/skeleton-only smoke:
 | Manual corner seed | `--court-corners` | `court_corners.json` with declared `image_size`. |
 | Capture sidecar | `--capture-sidecar` | Pre-built sidecar, e.g. ARKit/manual capture metadata. |
 | Court keypoints | `--court-keypoints` | Optional no-tap/metric path paired with a capture sidecar. |
-| Solved calibration | `--court-calibration` | Preferred when available. Validated before use; explicit flag wins. |
-| Tracks reuse | `--tracks` | Reuses a valid `tracks.json`; otherwise live tracking may run. |
-| Ball reuse | `--ball-track` | Reuses a valid `ball_track.json`; otherwise WASB path may run. |
+| Solved calibration | `--court-calibration` | Preferred when available and validated, but an existing clip-local calibration currently wins. Use a new run directory. |
+| Tracks reuse | `--tracks` | Reuses a valid `tracks.json` only when no existing clip-local track wins; use a new run directory. |
+| Ball reuse | `--ball-track` | Reuses a valid `ball_track.json` only when no existing clip-local ball track wins; use a new run directory. |
 | Arc/contact sidecars | `--events-selected`, `--ball-track-arc-solved` | Optional ball-aware mesh scheduling inputs. |
 
 ## Environment gotchas
@@ -99,38 +122,55 @@ be called CAL promotion.
 After argument parsing and option construction succeed, `process_video.py`
 writes `PIPELINE_SUMMARY.json` even on partial runs. Pre-flight argument/path
 failures can exit before any run directory or `PIPELINE_SUMMARY.json` exists.
-The stage order is:
+The default serial path has 19 stage outcomes. Optional `rally_gating` makes
+20 and optional viewer verification makes 20; enabling both makes 21. The order
+is:
 
 1. **ingest** - validate video and build/consume capture sidecar.
 2. **calibration** - create or consume `court_calibration.json`, court zones, net
    plane, and court evidence. Calibration is the only hard dependency.
-3. **tracking** - run or reuse person tracks, optionally with raw-pool global
+3. **input_quality** - write the advisory/strict input-quality report. This is
+   currently after calibration; the target DAG splits media checks before
+   calibration from court-visibility checks after it.
+4. **tracking** - run or reuse person tracks, optionally with raw-pool global
    association.
-4. **camera_motion** - optional/auto preview camera-motion compensation before
+5. **camera_motion** - optional/auto preview camera-motion compensation before
    placement homography projection.
-5. **placement** - project tracks into court/world placement when inputs exist.
-6. **rally_gating** - optional loose rally-span gating before downstream work.
-7. **frames** - materialize BODY frames from tracks and planned mesh windows.
-8. **ball** - run/reuse ball track, bounce, and court in/out artifacts.
-9. **ball_arc** - default 3D ball chain: auto-bounce anchors, arc solver, and
+6. **placement** - project tracks into court/world placement when inputs exist.
+Optional insertion after stage 6: **rally_gating**. On a cold run it occurs
+before fresh BALL/audio and does not yet trim all downstream decoding.
+
+7. **ball** - run/reuse ball track, bounce, and court in/out artifacts.
+8. **ball_arc** - default 3D ball chain: auto-bounce anchors, arc solver, and
    flight-sanity gate. Use `--no-ball-arc` to skip it.
-10. **events** - fuse ball/audio/wrist cues into `contact_windows.json` and
-   `frame_compute_plan.json`.
-11. **ball_fill** - render-honest fill from accepted ball arc/contact evidence.
-12. **body** - dispatch Fast SAM-3D-Body to the configured remote GPU path by
+9. **events** - fuse ball/audio/wrist cues into `contact_windows.json` and
+    `frame_compute_plan.json`. On a cold serial run BODY does not exist yet, so
+    wrist cues are explicitly blocked.
+10. **ball_fill** - render-honest fill from accepted ball arc/contact evidence.
+11. **frames** - materialize BODY frames from tracks and the event/mesh plan.
+12. **body** - dispatch SAM-3D-Body to the configured remote GPU path by
    default, run local BODY only with `--body-local`, or skip with `--no-gpu`.
    RTMW/RTMW3D/RTMPose are retired; the pipeline is SAM-3D-Body only for
-   offline body joints/mesh because it is the more accurate path and current
-   optimizations made it equal-or-better speed.
-13. **placement_refine** - refine person placement from BODY/world evidence.
-14. **grounding** / **grounding_refine** - render-honest BODY grounding
+   offline body joints/mesh.
+13. **placement_refine** - currently always skipped by the R3 same-pass safety
+    rule; BODY foot pixels require a true second pass before a fresh BODY run.
+14. **grounding_refine** - render-honest BODY grounding
     refinement when inputs exist.
-15. **world** - write `virtual_world.json` and `trust_bands.json`.
-16. **confidence** / **confidence_gate** - write `confidence_gated_world.json`
-    unless
+15. **paddle_pose** - write a fail-closed, render-only estimated paddle artifact
+    when BODY wrist/palm evidence exists.
+16. **world** - compose `virtual_world.json` and `trust_bands.json`.
+17. **confidence_gate** - write `confidence_gated_world.json` unless
     `--no-confidence-gate` is set.
-17. **manifest** - write `replay_viewer_manifest.json` and optional point scene.
-18. **verify** - optional `--verify-viewer` headless web viewer check.
+18. **manifest** - write `replay_viewer_manifest.json` and optional point scene.
+19. **match_stats** - default-on fail-open placement/court movement stats. It
+    currently runs after the manifest, so the same-run manifest does not
+    advertise it.
+Optional final stage: **verify** via `--verify-viewer`. It is stage 20 without
+rally gating and stage 21 with rally gating.
+
+The target architecture adds an explicit post-BODY event/arc/placement refine
+pass, then global fusion, stats and coaching, and builds the manifest last. Do
+not simulate that target by leaving stale artifacts in the clip directory.
 
 ## Important Flags
 
@@ -140,7 +180,7 @@ The stage order is:
 | `--sport {pickleball,tennis}` | Sport/rules hint for downstream court/event semantics. Pickleball is the v1 product target. |
 | `--max-players {2,4}` | Expected player count for tracking/BODY selection. Use 4 for doubles clips. |
 | `--court-proposals-preview` | Write fail-closed court proposals/correction task when no trusted calibration seed exists; preview only. |
-| `--force` | Recompute stages even when valid artifacts already exist. |
+| `--force` | Clears a bounded set of generated files. It does **not** replace `source.*` or invalidate every directory/dependency; it is not a safe substitute for a new run directory. |
 | `--max-frames` | Cap frames for smoke runs only. Do not use capped runs as promotion evidence. |
 | `--device` | Device hint for tracking/ReID/pose code that supports it, e.g. `cuda:0`, `mps`, or `cpu`. |
 | `--no-global-association` | Skip raw-pool global association after loose-pool tracking. |
@@ -189,9 +229,10 @@ The remote path is operational plumbing plus model execution. A completed remote
 run can still be `partial`, skeleton-only, or gated by downstream trust bands, so
 these flags are not promotion evidence by themselves.
 
-The July 2026 A100 runtime is reset-pending during winddown. Before using any
-remote BODY command, recheck SSH connectivity, disk, `nvidia-smi`, and the
-shared GPU lock instead of assuming a named VM is live.
+There is no persistent/default remote host. The reviewer-snapshot H100 was a
+lane-specific transient worker, not a reusable endpoint. Before using any
+remote BODY command, recheck SSH connectivity, disk, `nvidia-smi`, version
+stamps, and the shared GPU lock instead of assuming a named VM is live.
 
 There is no RTMW fallback in this path. If SAM-3D-Body is unavailable, BODY is
 missing/partial rather than replaced by legacy pose output.
@@ -235,6 +276,7 @@ Common outputs include:
 
 - `capture_sidecar.json`
 - `court_calibration.json`
+- `input_quality.json`
 - `tracks.json`
 - `camera_motion.json` when camera-motion estimation or explicit reuse is active
 - `ball_track.json`
@@ -248,10 +290,17 @@ Common outputs include:
 - `body_full_clip_gate.json`
 - `smpl_motion.json` only when `--fetch-body-monoliths` is requested
 - `body_mesh.json` only when `--fetch-body-monoliths` is requested
+- `racket_pose_estimate.json` when BODY wrist/palm evidence supports the
+  estimated-preview paddle stage
 - `virtual_world.json`
 - `confidence_gated_world.json`
 - `trust_bands.json`
 - `replay_viewer_manifest.json`
+- `match_stats.json` when placement/court inputs exist; current same-run
+  manifest does not link it
+
+`rally_metrics.json` and `coaching_card_facts.json` have standalone builders
+but are not production `process_video.py` stages today.
 
 Treat each artifact according to its trust band. Existence and schema validity
 are not accuracy proof.
@@ -304,7 +353,10 @@ Common traps and fixes:
 
 `process_video.py` returns success for `complete` and `partial` summary status.
 That means the bundle is inspectable; it does not mean the system is verified.
-Promotion still depends on the gates in `MASTER_PLAN.md` and `CAPABILITIES.md`.
+Current server runners can still map an exit-0 partial run to `complete` and
+“Replay ready”; inspect the clip-local summary and manifest contents rather
+than trusting the outer job label until P0-F is fixed.
+Promotion still depends on the gates in `NORTH_STAR_ROADMAP.md`.
 
 ## Legacy Contract CLI
 

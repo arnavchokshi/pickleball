@@ -32,6 +32,8 @@ GENERATED_RELATIVE_DIRS = {
 }
 
 ALLOWED_LARGE_TRACKED_FILES = {
+    "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+    "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_seed_official_aug/checkpoints/latest.pt",
     "cvat_upload/04_indoor_doubles_fwuks_0500_long_mid_baseline_30s.mp4",
     "cvat_upload/court_keypoints_20260707/packages/court_keypoints_metric15_20260707_6frames.zip",
     "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4",

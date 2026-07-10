@@ -44,7 +44,7 @@
         ]
       },
       "seed_confidence": 0.9,
-      "rationale": "TECH_BLUEPRINTS.md lines 2318-2331 define the S1 feature vector and line 2342 fixes serve as the first rally shot from the baseline; pickleball serves must start behind the baseline, so this arc-free rule gets the highest v0 seed."
+      "rationale": "runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md lines 2318-2331 define the S1 feature vector and line 2342 fixes serve as the first rally shot from the baseline; pickleball serves must start behind the baseline, so this arc-free rule gets the highest v0 seed."
     },
     {
       "class": "return",
@@ -64,7 +64,7 @@
         ]
       },
       "seed_confidence": 0.85,
-      "rationale": "TECH_BLUEPRINTS.md line 2343 fixes return as rally shot 2 after a bounce; pickleball returns are groundstrokes after the serve bounces, so this remains arc-free and high confidence."
+      "rationale": "runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md line 2343 fixes return as rally shot 2 after a bounce; pickleball returns are groundstrokes after the serve bounces, so this remains arc-free and high confidence."
     },
     {
       "class": "lob",
@@ -87,7 +87,7 @@
         ]
       },
       "seed_confidence": 0.7,
-      "rationale": "TECH_BLUEPRINTS.md line 2344 fixes a >=3.0 m apex with baseline/transition landing; pickleball lobs are high arcs intended to push opponents back, so deep landing disambiguates them from soft kitchen shots."
+      "rationale": "runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md line 2344 fixes a >=3.0 m apex with baseline/transition landing; pickleball lobs are high arcs intended to push opponents back, so deep landing disambiguates them from soft kitchen shots."
     },
     {
       "class": "smash",
@@ -112,7 +112,7 @@
         ]
       },
       "seed_confidence": 0.7,
-      "rationale": "TECH_BLUEPRINTS.md lines 2345-2346 fix high contact, >=12 m/s horizontal speed, and downward net crossing; pickleball smashes are fast overhead/downward attacks, so all three cues are required."
+      "rationale": "runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md lines 2345-2346 fix high contact, >=12 m/s horizontal speed, and downward net crossing; pickleball smashes are fast overhead/downward attacks, so all three cues are required."
     },
     {
       "class": "volley",
@@ -135,7 +135,7 @@
         ]
       },
       "seed_confidence": 0.65,
-      "rationale": "TECH_BLUEPRINTS.md line 2347 fixes volley as no previous bounce with kitchen/transition contact; pickleball volleys are air contacts near the non-volley/transition area, but v0 keeps confidence lower because arc cues are not required."
+      "rationale": "runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md line 2347 fixes volley as no previous bounce with kitchen/transition contact; pickleball volleys are air contacts near the non-volley/transition area, but v0 keeps confidence lower because arc cues are not required."
     },
     {
       "class": "dink",
@@ -165,7 +165,7 @@
         ]
       },
       "seed_confidence": 0.75,
-      "rationale": "TECH_BLUEPRINTS.md lines 2348-2349 fix bounced kitchen contact, apex <1.2 m, and kitchen landing; pickleball dinks are low, soft kitchen-to-kitchen ground contacts, so this uses both contact and landing zones."
+      "rationale": "runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md lines 2348-2349 fix bounced kitchen contact, apex <1.2 m, and kitchen landing; pickleball dinks are low, soft kitchen-to-kitchen ground contacts, so this uses both contact and landing zones."
     },
     {
       "class": "drop",
@@ -199,7 +199,7 @@
         ]
       },
       "seed_confidence": 0.7,
-      "rationale": "TECH_BLUEPRINTS.md lines 2350-2352 fix third-shot or baseline contact, kitchen landing, and apex <2.5 m; pickleball drops are soft attempts to land in the kitchen, especially the flagship third-shot-drop case."
+      "rationale": "runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md lines 2350-2352 fix third-shot or baseline contact, kitchen landing, and apex <2.5 m; pickleball drops are soft attempts to land in the kitchen, especially the flagship third-shot-drop case."
     },
     {
       "class": "drive",
@@ -219,7 +219,7 @@
         ]
       },
       "seed_confidence": 0.6,
-      "rationale": "TECH_BLUEPRINTS.md lines 2353-2354 fix drive as the fallback for fast, flatter remaining shots; pickleball drives are pace-first low-arc attacks, so this rule intentionally comes after the more specific classes."
+      "rationale": "runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md lines 2353-2354 fix drive as the fallback for fast, flatter remaining shots; pickleball drives are pace-first low-arc attacks, so this rule intentionally comes after the more specific classes."
     },
     {
       "class": "unknown",
@@ -228,7 +228,7 @@
         "always": true
       },
       "seed_confidence": 0.3,
-      "rationale": "TECH_BLUEPRINTS.md line 2355 fixes unknown as the fallback, with lines 2356-2359 requiring null-feature rules to fail closed; this preserves honesty when the v0 feature evidence is insufficient."
+      "rationale": "runs/archive/root_docs_20260709/TECH_BLUEPRINTS.md line 2355 fixes unknown as the fallback, with lines 2356-2359 requiring null-feature rules to fail closed; this preserves honesty when the v0 feature evidence is insufficient."
     }
   ]
 }

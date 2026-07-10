@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import Counter
 import os
 import shutil
 import subprocess
@@ -15,33 +14,20 @@ ROOT = Path(__file__).resolve().parents[2]
 CANONICAL_DOCS = [
     "README.md",
     "AGENTS.md",
-    "MASTER_PLAN.md",
+    "CLAUDE.md",
+    "NORTH_STAR_ROADMAP.md",
     "RUNBOOK.md",
-    "CAPABILITIES.md",
-    "BUILD_CHECKLIST.md",
-    "TECH_STACK.md",
     "BALL_TRACKING_PIPELINE.md",
-    "TIER_MAP.md",
 ]
 
 ALLOWED_MARKDOWN_DOCS = set(CANONICAL_DOCS) | {
-    "CLAUDE.md",
-    "EDGE_PLAYBOOK.md",
-    "FABLE_OPERATING_MANUAL.md",
-    "NORTH_STAR_ROADMAP.md",
-    "OVERLAPPING_COURT_CALIBRATION_GOAL.md",
-    "OWNER_CHECKIN_20260707.md",
-    "OWNER_CHECKIN_20260708.md",
-    "OWNER_CHECKIN_20260709.md",
-    "RACKET_6DOF_GOAL.md",
-    "TECH_BLUEPRINTS.md",
-    "docs/specs/2026-07-07-product-infra-design.md",
     "corrections/README.md",
     "cvat_upload/CVAT_LABELING_INSTRUCTIONS.md",
     "cvat_upload/OWNER_SESSION_20260708.md",
     "cvat_upload/OWNER_SESSION_W6_20260708.md",
     "cvat_upload/court_keypoints_20260707/OWNER_COURT_KP_GUIDE.md",
     "cvat_upload/exports/README.md",
+    "cvat_upload/exports/w7_labels_20260709/README_INGEST_QUEUE_20260709.md",
     "cvat_upload/exports/court_keypoints_20260707/PARTIAL_EXPORT_NOTES_20260709.md",
     "cvat_upload/exports/w6_labelpack_20260708/SESSION_NOTES_20260709.md",
     "cvat_upload/exports/court_keypoints_20260707/README.md",
@@ -61,6 +47,20 @@ GENERATED_MARKDOWN_ARTIFACTS = {
 }
 
 REMOVED_NARRATIVE_DOCS = [
+    "MASTER_PLAN.md",
+    "BUILD_CHECKLIST.md",
+    "CAPABILITIES.md",
+    "TECH_STACK.md",
+    "TIER_MAP.md",
+    "TECH_BLUEPRINTS.md",
+    "EDGE_PLAYBOOK.md",
+    "FABLE_OPERATING_MANUAL.md",
+    "OVERLAPPING_COURT_CALIBRATION_GOAL.md",
+    "RACKET_6DOF_GOAL.md",
+    "OWNER_CHECKIN_20260707.md",
+    "OWNER_CHECKIN_20260708.md",
+    "OWNER_CHECKIN_20260709.md",
+    "docs/specs/2026-07-07-product-infra-design.md",
     "JOINT_DETECTION_AND_PLACEMENT_HANDOFF.md",
     "JOINT_PLACEMENT_HANDOFF_20260704.md",
     "RESET_HANDOFF_20260705.md",
@@ -78,30 +78,29 @@ REMOVED_NARRATIVE_DOCS = [
     "OWNER_CHECKIN_20260702.md",
 ]
 
-REQUIRED_CAPABILITY_COLUMNS = [
-    "stage",
-    "named tech (registry)",
-    "actually invoked?",
-    "correct variant+weight?",
-    "wired into spine?",
-    "gate type (accuracy/presence/none)",
-    "gate run on real labels?",
-    "honest status",
-]
-
-EXPECTED_STATUS_COUNTS = Counter(
-    {
-        "IN-PROGRESS": 3,
-        "INTERNAL-VAL DONE": 1,
-        "SCAFFOLD": 3,
-        "SCAFFOLD/PREVIEW": 1,
-        "SCOPED PASS": 2,
-        "SCAFFOLD/SCOPED PASS": 1,
-    }
-)
+ARCHIVED_DOCS = {
+    "NORTH_STAR_ROADMAP_PRE_CONSOLIDATION.md",
+    "MASTER_PLAN.md",
+    "BUILD_CHECKLIST.md",
+    "CAPABILITIES.md",
+    "TECH_STACK.md",
+    "TIER_MAP.md",
+    "TECH_BLUEPRINTS.md",
+    "EDGE_PLAYBOOK.md",
+    "FABLE_OPERATING_MANUAL.md",
+    "OVERLAPPING_COURT_CALIBRATION_GOAL.md",
+    "RACKET_6DOF_GOAL.md",
+    "OWNER_CHECKIN_20260707.md",
+    "OWNER_CHECKIN_20260708.md",
+    "OWNER_CHECKIN_20260709.md",
+    "PRODUCT_INFRA_DESIGN_20260707.md",
+    "INDEX.md",
+}
 
 ALLOWED_LARGE_TRACKED_FILES = {
     "cvat_upload/04_indoor_doubles_fwuks_0500_long_mid_baseline_30s.mp4",
+    "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+    "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_seed_official_aug/checkpoints/latest.pt",
     "cvat_upload/court_keypoints_20260707/packages/court_keypoints_metric15_20260707_6frames.zip",
     "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4",
     "models_coreml/yolo26m_img416_int8/yolo26m.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
@@ -144,6 +143,12 @@ def test_canonical_doc_set_exists_and_obsolete_root_docs_are_removed() -> None:
     for relpath in REMOVED_NARRATIVE_DOCS:
         assert not (ROOT / relpath).exists(), relpath
 
+    archive_root = ROOT / "runs" / "archive" / "root_docs_20260709"
+    assert {path.name for path in archive_root.glob("*.md")} == ARCHIVED_DOCS
+    archive_index = (archive_root / "INDEX.md").read_text(encoding="utf-8")
+    assert "immutable historical context" in archive_index
+    assert "NORTH_STAR_ROADMAP.md" in archive_index
+
     assert not list((ROOT / "docs" / "superpowers").rglob("*.md"))
     assert not list((ROOT / "docs" / "racketsport").rglob("*.md"))
 
@@ -175,17 +180,69 @@ def test_markdown_doc_inventory_stays_small_and_explicit() -> None:
 def test_readme_points_agents_to_small_canonical_stack() -> None:
     text = (ROOT / "README.md").read_text(encoding="utf-8")
 
-    for relpath in CANONICAL_DOCS[1:-1]:
+    for relpath in (
+        "NORTH_STAR_ROADMAP.md",
+        "AGENTS.md",
+        "RUNBOOK.md",
+        "BALL_TRACKING_PIPELINE.md",
+    ):
         assert relpath in text
 
     for relpath in REMOVED_NARRATIVE_DOCS:
-        assert relpath not in text
+        if "/" not in relpath:
+            assert f"`{relpath}`" not in text
 
     assert "`VERIFIED=0`" in text
+    assert "sole product vision" in text
+    assert "runs/archive/root_docs_20260709/" in text
     assert "scripts/racketsport/process_video.py" in text
     assert "docs/racketsport/` | JSON schemas and manifests only" in text
     assert "## Storage Policy" in text
     assert "Do not add new long-lived research/status Markdown under `docs/racketsport/`" in text
+
+
+def test_retired_authority_names_only_survive_as_archived_evidence_paths() -> None:
+    retired_authorities = (
+        "MASTER_PLAN.md",
+        "BUILD_CHECKLIST.md",
+        "CAPABILITIES.md",
+        "TECH_STACK.md",
+        "TIER_MAP.md",
+        "TECH_BLUEPRINTS.md",
+        "EDGE_PLAYBOOK.md",
+        "FABLE_OPERATING_MANUAL.md",
+    )
+    scan_roots = [
+        *(ROOT / relpath for relpath in CANONICAL_DOCS),
+        ROOT / "configs" / "racketsport",
+        ROOT / "docs" / "racketsport",
+        ROOT / "ios",
+        ROOT / "scripts" / "racketsport",
+        ROOT / "server",
+        ROOT / "serving",
+        ROOT / "spikes" / "vn_trajectories",
+        ROOT / "threed" / "racketsport",
+        ROOT / "web" / "replay" / "src",
+    ]
+    text_suffixes = {".json", ".md", ".py", ".swift", ".toml", ".ts", ".tsx", ".yaml", ".yml"}
+    ignored_parts = {".build", "node_modules"}
+
+    paths: list[Path] = []
+    for root in scan_roots:
+        paths.extend([root] if root.is_file() else root.rglob("*"))
+
+    for path in paths:
+        if not path.is_file() or path.suffix not in text_suffixes:
+            continue
+        if ignored_parts.intersection(path.relative_to(ROOT).parts):
+            continue
+        text = path.read_text(encoding="utf-8")
+        for retired in retired_authorities:
+            active_text = text.replace(
+                f"runs/archive/root_docs_20260709/{retired}",
+                "",
+            )
+            assert retired not in active_text, f"{path.relative_to(ROOT)}: {retired}"
 
 
 def test_agents_doc_gives_future_agents_a_code_navigation_map() -> None:
@@ -194,11 +251,8 @@ def test_agents_doc_gives_future_agents_a_code_navigation_map() -> None:
     assert "## Agent Navigation" in text
     for relpath in (
         "README.md",
-        "MASTER_PLAN.md",
+        "NORTH_STAR_ROADMAP.md",
         "RUNBOOK.md",
-        "CAPABILITIES.md",
-        "BUILD_CHECKLIST.md",
-        "TECH_STACK.md",
         "scripts/racketsport/process_video.py",
         "scripts/racketsport/",
         "threed/racketsport/",
@@ -209,6 +263,7 @@ def test_agents_doc_gives_future_agents_a_code_navigation_map() -> None:
         "configs/",
         "docs/racketsport/",
         "runs/",
+        "runs/archive/root_docs_20260709/INDEX.md",
     ):
         assert relpath in text
 
@@ -221,6 +276,7 @@ def test_agents_doc_gives_future_agents_a_code_navigation_map() -> None:
 
     assert "JSON schemas/manifests only" in text
     assert "Generated evidence only" in text
+    assert "only product/current-truth/future-plan authority" in text
 
 
 def test_storage_policy_keeps_large_tracked_artifacts_explicit() -> None:
@@ -259,28 +315,87 @@ def test_storage_policy_audit_classifies_large_worktree_artifacts() -> None:
 
 
 def test_python_verification_commands_use_repo_virtualenv() -> None:
-    for relpath in ("README.md", "TECH_STACK.md", "RUNBOOK.md"):
+    for relpath in ("README.md", "RUNBOOK.md"):
         text = (ROOT / relpath).read_text(encoding="utf-8")
         assert ".venv/bin/python -m pytest" in text, relpath
         assert "python3 -m pytest" not in text, relpath
 
 
-def test_master_plan_preserves_goal_and_no_overclaim_boundary() -> None:
-    text = (ROOT / "MASTER_PLAN.md").read_text(encoding="utf-8")
+def test_north_star_is_the_single_product_and_execution_authority() -> None:
+    text = (ROOT / "NORTH_STAR_ROADMAP.md").read_text(encoding="utf-8")
 
-    assert "Build the best single-camera pickleball video-to-3D analysis pipeline" in text
-    assert "## What Exists So Far" in text
-    assert "`runs/` is generated evidence" in text
+    assert text.startswith("# DinkVision North Star")
+    assert "This is the sole authority" in text
     assert "`VERIFIED=0`" in text
-    assert "SCAFFOLD/SCOPED PASS, not VERIFIED" in text
-    assert "Do not call a stage `VERIFIED` from smoke tests" in text
-    assert "overlapping or multipurpose court paint" in text
-    assert "scripts/racketsport/evaluate_overlapping_court_calibration.py" in text
-    assert "LM-optimized mean residual: 0.414584 ft" in text
-    assert "`opencv_hsv_paint_hough`: 0.0000" in text
-    assert "`opencv_hsv_paint_net_crop_hough`: 0.0250" in text
-    assert "`AGENTS.md`" in text
-    assert "Candidate predictions, copied labels, and box-derived paddle candidates" not in text
+    assert "## 1. The product" in text
+    assert "## 2. Current truth" in text
+    assert "## 3. Target CV architecture and data reuse" in text
+    assert "## 4. Ordered execution program" in text
+    assert "## 5. Active queue for the next agents" in text
+    assert "## 6. Standing rules" in text
+    assert "## 7. Evidence and history" in text
+    assert len(text.splitlines()) <= 500
+    assert "runs/CV_SOTA_RESEARCH_20260709.md" in text
+
+    for research_direction in (
+        "encoded PTS",
+        "existing TOTNet adapter",
+        "both IPPE poses",
+        "GEM-X",
+        "render-only appearance",
+    ):
+        assert research_direction in text, research_direction
+
+    for phase in ("NS-01", "NS-02", "NS-03", "NS-04", "NS-05", "NS-06", "NS-07"):
+        assert phase in text
+
+    for gate in (
+        "F1@20 ≥0.90",
+        "recall@20 ≥0.75",
+        "hFP ≤0.05",
+        "IDF1 ≥0.85",
+        "zero far-off-court FP",
+        "world-MPJPE ≤50mm",
+        "`grounding_metrics.max_foot_lock_slide_m` ≤0.03",
+        "face-angle p90 ≤5°",
+        "contact-point p90 ≤3cm",
+        "shot macro-F1 ≥0.65",
+        "top-2 accuracy ≥0.85",
+        "Usefulness ≥8/10",
+        "fabrication 0/300",
+        "≤2× source-video duration",
+    ):
+        assert gate in text, gate
+
+    for retired in (
+        "MASTER_PLAN.md",
+        "BUILD_CHECKLIST.md",
+        "CAPABILITIES.md",
+        "TECH_STACK.md",
+        "TIER_MAP.md",
+        "TECH_BLUEPRINTS.md",
+        "EDGE_PLAYBOOK.md",
+        "FABLE_OPERATING_MANUAL.md",
+    ):
+        assert f"`{retired}`" not in text
+
+
+def test_north_star_orders_correctness_before_accuracy_and_productization() -> None:
+    text = (ROOT / "NORTH_STAR_ROADMAP.md").read_text(encoding="utf-8")
+    ordered_markers = (
+        "### NS-01 — Make the real product route correct",
+        "### NS-02 — Build independent truth and reset evaluation",
+        "### NS-03 — Improve components in parallel",
+        "### NS-04 — Join the lanes into one world",
+        "### NS-05 — Turn the world into a useful product",
+        "### NS-06 — Optimize speed, cost, and reliability",
+        "### NS-07 — Launch safely and prove repeatability",
+    )
+    offsets = [text.index(marker) for marker in ordered_markers]
+    assert offsets == sorted(offsets)
+    assert "Do not start another broad model search" in text
+    assert "Parallel now" in text
+    assert "In-flight background lanes may finish and save their reports" in text
 
 
 def test_runbook_documents_current_process_video_entrypoint() -> None:
@@ -295,16 +410,24 @@ def test_runbook_documents_current_process_video_entrypoint() -> None:
     expected_order = [
         "**ingest**",
         "**calibration**",
+        "**input_quality**",
         "**tracking**",
+        "**camera_motion**",
+        "**placement**",
         "**rally_gating**",
-        "**frames**",
         "**ball**",
+        "**ball_arc**",
         "**events**",
+        "**ball_fill**",
+        "**frames**",
         "**body**",
-        "**grounding**",
+        "**placement_refine**",
+        "**grounding_refine**",
+        "**paddle_pose**",
         "**world**",
-        "**confidence**",
+        "**confidence_gate**",
         "**manifest**",
+        "**match_stats**",
         "**verify**",
     ]
     last_index = -1
@@ -370,82 +493,6 @@ def test_runbook_documents_remote_body_runtime_flags_from_help() -> None:
     assert "not promotion evidence by themselves" in compact_text
 
 
-def test_capabilities_matrix_is_compact_and_no_row_is_verified() -> None:
-    text = (ROOT / "CAPABILITIES.md").read_text(encoding="utf-8")
-
-    assert "`VERIFIED=0`" in text
-    assert "This section is the single source of truth for live/server placement" in text
-    assert _first_markdown_table_headers(text) == REQUIRED_CAPABILITY_COLUMNS
-
-    rows = _capability_rows(text)
-    assert {
-        "calibration",
-        "tracking",
-        "ball",
-        "body",
-        "foot/physics",
-        "racket",
-        "metrics",
-        "shot/drill",
-        "replay",
-        "ios live tier",
-        "e2e",
-    } == set(rows)
-    assert rows["e2e"]["honest status"] == "SCAFFOLD/SCOPED PASS, not VERIFIED"
-    assert all("VERIFIED" not in row["honest status"].replace("not VERIFIED", "") for row in rows.values())
-
-
-def test_build_checklist_board_and_count_summary_match() -> None:
-    text = (ROOT / "BUILD_CHECKLIST.md").read_text(encoding="utf-8")
-    rows = _status_board_rows(text)
-
-    assert "recent handoff" not in text.lower()
-    assert "runs/sam3d_stall_schema_fix_20260703T0802Z/REPORT.md" not in text
-    assert "chronological narratives" in text
-    assert len(rows) == 11
-    assert [row["ID"] for row in rows] == [
-        "DOCS-1",
-        "CAL-1",
-        "TRK-1",
-        "BALL-1",
-        "BODY-1",
-        "PHYS-1",
-        "RKT-1",
-        "IOS-1",
-        "RPL-1",
-        "E2E-1",
-        "DATA-1",
-    ]
-    docs_row = next(row for row in rows if row["ID"] == "DOCS-1")
-    assert docs_row["Status"] == "IN-PROGRESS"
-    assert "full cleanup proof is still incomplete" in docs_row["Current blocker"]
-    assert "Keep docs small" in docs_row["Next useful action"]
-
-    parsed_counts = Counter(row["Status"] for row in rows)
-    assert parsed_counts == EXPECTED_STATUS_COUNTS
-    assert _visible_status_count_table(text) == EXPECTED_STATUS_COUNTS
-    assert "No row is `VERIFIED`." in text
-
-
-def test_tech_stack_maps_code_surfaces_without_old_companion_docs() -> None:
-    text = (ROOT / "TECH_STACK.md").read_text(encoding="utf-8")
-
-    for required in (
-        "`models/MANIFEST.json`",
-        "`scripts/racketsport/process_video.py`",
-        "`scripts/racketsport/list_scaffold_tools.py`",
-        "`threed/racketsport/`",
-        "`ios/`",
-        "`web/replay/`",
-    ):
-        assert required in text
-
-    assert "category/workstream map for every checked-in CLI" in text
-
-    for relpath in REMOVED_NARRATIVE_DOCS:
-        assert relpath not in text
-
-
 def test_ball_tracking_doc_keeps_code_referenced_section_anchors() -> None:
     text = (ROOT / "BALL_TRACKING_PIPELINE.md").read_text(encoding="utf-8")
 
@@ -470,73 +517,6 @@ def test_cvat_exports_readme_does_not_recommend_stale_holdout_dataset_scope() ->
     assert "current YOLO/TrackNet training exporters fail closed" in text
     assert "training/export artifacts" not in text
     assert "reviewed import/eval artifacts" in text
-
-
-def _first_markdown_table_headers(text: str) -> list[str]:
-    for line in text.splitlines():
-        if line.startswith("| stage |"):
-            return [cell.strip() for cell in line.strip().strip("|").split("|")]
-    return []
-
-
-def _capability_rows(text: str) -> dict[str, dict[str, str]]:
-    headers = _first_markdown_table_headers(text)
-    rows: dict[str, dict[str, str]] = {}
-    in_matrix = False
-    for line in text.splitlines():
-        if line.startswith("| stage |"):
-            in_matrix = True
-            continue
-        if in_matrix and line.startswith("|---"):
-            continue
-        if in_matrix and not line.startswith("|"):
-            break
-        if not in_matrix:
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) != len(headers):
-            continue
-        row = dict(zip(headers, cells, strict=True))
-        rows[row["stage"]] = row
-    return rows
-
-
-def _status_board_rows(text: str) -> list[dict[str, str]]:
-    headers: list[str] = []
-    rows: list[dict[str, str]] = []
-    in_board = False
-    for line in text.splitlines():
-        if line.startswith("| ID |"):
-            in_board = True
-            headers = [cell.strip() for cell in line.strip().strip("|").split("|")]
-            continue
-        if in_board and line.startswith("|---"):
-            continue
-        if in_board and not line.startswith("|"):
-            break
-        if not in_board:
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) == len(headers):
-            rows.append(dict(zip(headers, cells, strict=True)))
-    return rows
-
-
-def _visible_status_count_table(text: str) -> Counter[str]:
-    lines = text.splitlines()
-    for index, line in enumerate(lines):
-        if line.strip() != "| status | count |":
-            continue
-        table_counts: Counter[str] = Counter()
-        for row in lines[index + 2 :]:
-            if not row.startswith("|"):
-                break
-            cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
-            if len(cells) != 2:
-                break
-            table_counts[cells[0]] = int(cells[1])
-        return table_counts
-    return Counter()
 
 
 def _git_tracked_paths() -> list[str]:

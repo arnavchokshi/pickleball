@@ -3,20 +3,22 @@
 - Stay on `main` unless the user explicitly asks for a branch.
 - Never state that a capability is complete, verified, or current without fresh evidence from code, tests, artifacts, device state, or live infrastructure.
 - Preserve unrelated dirty worktree changes. Do not revert files you did not intentionally change.
-- Start with `README.md`, then `MASTER_PLAN.md`, `RUNBOOK.md`, `CAPABILITIES.md`, `BUILD_CHECKLIST.md`, and `TECH_STACK.md`.
+- Start with `NORTH_STAR_ROADMAP.md`, then this file and the relevant `RUNBOOK.md` section.
 - Treat `VERIFIED=0` as binding until a documented gate passes. Scoped passes, smoke tests, internal-val runs, browser loads, and copied fixtures are not promotions.
 - The main pipeline entrypoint is `scripts/racketsport/process_video.py`. The old `threed/racketsport/pipeline_cli.py` contract CLI is legacy plumbing unless a task explicitly targets it.
-- Keep narrative docs small. If a new document is needed, first check whether it belongs in an existing canonical doc or as a generated run artifact under `runs/`.
+- `NORTH_STAR_ROADMAP.md` is the only product/current-truth/future-plan authority. Do not create another checklist, master plan, wave roadmap, capability matrix, or blueprint.
+- Put dated status, experiments, and handoffs under `runs/`. Volatile coordination belongs in `runs/manager/inflight_lanes.md` and `runs/manager/gpu_fleet.md`, never a root append log.
+- Baseline first, score every candidate with the same frozen gate, and keep raw observations immutable. Visual plausibility and optimizer residuals are not accuracy proof.
+- One integration owner serializes `scripts/racketsport/process_video.py`; file-fenced CAL/TRK/BALL/BODY/RKT lanes may run in parallel.
 
 ## Agent Navigation
 
 | Need | Start here |
 |---|---|
-| Repo rules and doc map | `README.md`, then this file. |
-| Product goal, current truth, and no-retry decisions | `MASTER_PLAN.md`. |
+| Product goal, current truth, exact next order, and no-retry decisions | `NORTH_STAR_ROADMAP.md`. |
+| Repo rules and doc map | This file, then `README.md`. |
 | Current pipeline run behavior | `RUNBOOK.md`, then `scripts/racketsport/process_video.py`. |
-| Capability truth and promotion gates | `CAPABILITIES.md` and `BUILD_CHECKLIST.md`. |
-| Runtime/model/code ownership | `TECH_STACK.md`, `models/MANIFEST.json`, and `configs/`. |
+| Selected runtime/model defaults | `configs/racketsport/best_stack.json`, `models/MANIFEST.json`, and `configs/`. |
 | Pipeline CLIs and orchestration helpers | `scripts/racketsport/`. |
 | Stage implementations and shared library code | `threed/racketsport/`. |
 | Python verification | `tests/racketsport/`. |
@@ -24,6 +26,7 @@
 | Web replay viewer | `web/replay/`. |
 | Public schemas and manifests | `docs/racketsport/`; JSON schemas/manifests only, not narrative docs. |
 | Generated evidence | `runs/`; Generated evidence only, not a source of current truth unless rerun or explicitly cited. |
+| Historical plans and decisions | `runs/archive/root_docs_20260709/INDEX.md`; context only, never current sequencing. |
 
 Before adding a new CLI, removing code, or claiming the tree is clean, run the
 small repo-structure checks that match the current documentation policy:

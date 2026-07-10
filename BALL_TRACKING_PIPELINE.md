@@ -3,7 +3,8 @@
 Last updated: 2026-07-03.
 
 This is the focused ball-stage contract. It exists because ball code comments
-refer to section numbers here. The global product plan lives in `MASTER_PLAN.md`.
+refer to section numbers here. The global product plan and current BALL gate
+live in `NORTH_STAR_ROADMAP.md`.
 
 Current truth: BALL is not verified. The pipeline can run/reuse ball artifacts
 and render confidence-banded preview output, but no reviewed BALL acceptance gate

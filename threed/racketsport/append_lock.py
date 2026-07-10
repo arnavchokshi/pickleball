@@ -3,9 +3,9 @@
 Why this exists
 ----------------
 Several files in this repo are edited by multiple concurrent agent sessions
-that cannot talk to each other directly (see `BUILD_CHECKLIST.md`'s "this
-file + git commit messages are the only communication channel" note), most
-notably `runs/manager/heldout_eval_ledger.md`. Plain `Path.write_text(...)`
+that cannot talk to each other directly, most notably
+`runs/manager/heldout_eval_ledger.md`, `runs/manager/inflight_lanes.md`, and
+the fleet ledger. Root narrative documents are not coordination logs. Plain `Path.write_text(...)`
 or an editor's "insert this text before that line" edit is not safe under
 concurrency: two writers can interleave partial writes (a reader sees a
 truncated/corrupt file), or one writer's read-modify-write can silently

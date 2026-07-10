@@ -1,7 +1,7 @@
 // swift-tools-version:5.9
 import PackageDescription
 
-// W0-BALL-SPIKE (see MASTER_PLAN.md): rung-1 spike of Apple's native
+// W0-BALL-SPIKE (see NORTH_STAR_ROADMAP.md): rung-1 spike of Apple's native
 // VNDetectTrajectoriesRequest (Vision framework) as an on-device ball tracker
 // candidate, evaluated offline on this Mac against the committed eval clips
 // while the paired iPhone is unavailable. No third-party dependencies -
