@@ -1373,6 +1373,38 @@ def test_manifest_links_body_mesh_index_and_marks_windowed_mesh_status(tmp_path:
     assert "mesh_status=windowed_index" in " ".join(outcome.notes)
 
 
+def test_manifest_marks_tracked_player_without_body_as_body_missing_and_partial(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    world = _virtual_world_payload()
+    world["players"][0]["representation"] = "track_only"
+    for frame in world["players"][0]["frames"]:
+        frame["joints_world"] = None
+        frame["joint_conf"] = None
+    world["summary"].update(
+        {
+            "mesh_player_frame_count": 0,
+            "joint_player_frame_count": 0,
+            "track_only_player_frame_count": 2,
+        }
+    )
+    _write_json(options.clip_dir / "virtual_world.json", world)
+    pipeline.stage_outcomes.append(
+        process_video.StageOutcome("body", "failed", 0.0, notes=["BODY failed for test"])
+    )
+
+    outcome = pipeline._stage_manifest()
+
+    manifest = json.loads((options.clip_dir / "replay_viewer_manifest.json").read_text(encoding="utf-8"))
+    assert outcome.status == "degraded"
+    assert outcome.metrics["representation_status"] == "body_missing"
+    assert manifest["mesh_status"] is None
+    assert 'representation_status_json={"status":"body_missing"}' in manifest["notes"]
+
+
 def test_manifest_uses_fetched_body_mesh_index_directory_without_monolith(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     _make_video(video)
@@ -1777,7 +1809,8 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
     # world/manifest still assemble a partial (court-only) bundle, not a crash.
     assert by_stage["world"]["status"] == "ran"
     assert by_stage["confidence_gate"]["status"] == "ran"
-    assert by_stage["manifest"]["status"] == "ran"
+    assert by_stage["manifest"]["status"] == "degraded"
+    assert by_stage["manifest"]["metrics"]["representation_status"] == "body_missing"
     assert by_stage["match_stats"]["status"] in {"ran", "skipped"}
     assert (options.clip_dir / "virtual_world.json").is_file()
     assert (options.run_dir / "PIPELINE_SUMMARY.json").is_file()
@@ -2911,6 +2944,19 @@ def test_global_association_uses_resolved_reid_device_and_batch64(tmp_path: Path
     assert any("device=mps" in note and "batch=64" in note for note in notes)
 
 
+def test_missing_pinned_reid_asset_fails_loud_instead_of_keeping_loose_pool(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.reid_model = process_video.DEFAULT_REID_MODEL
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "tracked_detections.json", {"fps": 30.0, "frames": []})
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    with pytest.raises(process_video._HardStageFailure, match="best_stack_asset_missing.*tracking.reid_model"):
+        pipeline._attempt_global_association()
+
+
 def test_global_association_default_profile_declares_wolverine_internal_val_tuning() -> None:
     profile = process_video.RAW_POOL_GLOBAL_ASSOCIATION_PROFILES[process_video.DEFAULT_GLOBAL_ASSOCIATION_PROFILE]
 
@@ -3107,6 +3153,75 @@ def test_frames_stage_passes_max_frames_and_frame_compute_plan_path(tmp_path: Pa
     assert call["max_frames"] == 42
     assert call["frame_compute_plan_path"] == options.clip_dir / "frame_compute_plan.json"
     assert call["out_dir"] == options.clip_dir / "body_frames"
+
+
+def test_frames_stage_reports_all_115_indices_excluded_by_1200_cap(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "zwcth_class.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_gpu = False
+    options.body_skeleton_stride = 2
+    pipeline = process_video.ProcessVideoPipeline(options)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(
+        options.clip_dir / "tracks.json",
+        {
+            "schema_version": 1,
+            "fps": 30.0,
+            "players": [
+                {
+                    "id": 1,
+                    "side": "near",
+                    "role": "left",
+                    "frames": [
+                        {
+                            "frame_idx": index,
+                            "t": index / 30.0,
+                            "bbox": [10.0, 10.0, 20.0, 30.0],
+                            "world_xy": [0.0, -1.0],
+                            "conf": 0.9,
+                        }
+                        for index in range(1315)
+                    ],
+                }
+            ],
+            "rally_spans": [],
+        },
+    )
+    _write_json(
+        options.clip_dir / "frame_compute_plan.json",
+        {
+            "schema_version": 1,
+            "deep_mesh_windows": [
+                {"frame_start": 0, "frame_end": 1314, "target_player_ids": [1]},
+            ],
+        },
+    )
+
+    def _fake_materialize(**kwargs):  # noqa: ANN001
+        return {
+            "schedule": kwargs["schedule"],
+            "notes": [],
+            "frame_count": len(kwargs["schedule"]["frame_indexes"]),
+            "total_bytes": 0,
+            "validation": {"equal": True},
+        }
+
+    monkeypatch.setattr(process_video, "materialize_process_video_frames", _fake_materialize)
+
+    outcome = pipeline._stage_frames()
+
+    exclusion = outcome.metrics["cap_exclusion"]
+    assert outcome.status == "ran"
+    assert exclusion["cap"] == 1200
+    assert exclusion["excluded_count"] == 115
+    assert len(exclusion["excluded_frame_indexes"]) == 115
+    assert set(exclusion["excluded_frame_indexes"]).isdisjoint(
+        json.loads((options.clip_dir / "process_video_frame_schedule.json").read_text())["frame_indexes"]
+    )
 
 
 def test_frames_stage_degrades_when_video_unreadable(tmp_path: Path) -> None:

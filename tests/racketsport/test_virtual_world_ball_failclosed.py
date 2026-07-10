@@ -24,6 +24,7 @@ import pytest
 from threed.racketsport.virtual_world import (
     apply_ball_track_arc_solved_overlay,
     ball_arc_segment_fail_closed_verdicts,
+    build_ball_fail_closed_verdicts_sidecar,
 )
 
 
@@ -154,6 +155,21 @@ class TestSegmentVerdicts:
 
 
 class TestOverlayFailClosed:
+    def test_world_adjacent_sidecar_preserves_verdict_map_and_render_parity(self):
+        sidecar = build_ball_fail_closed_verdicts_sidecar(
+            _physics_filled(),
+            _artifact(),
+            ball_arc_render={
+                "summary": {"fail_closed_suppressed_segment_ids": [1, 2, 4]},
+            },
+        )
+
+        assert sidecar is not None
+        assert set(sidecar["segment_verdicts"]) == {"0", "1", "2", "3", "4"}
+        assert sidecar["summary"]["suppressed_segment_ids"] == [1, 2, 4]
+        assert sidecar["summary"]["ball_arc_render_suppressed_segment_ids"] == [1, 2, 4]
+        assert sidecar["summary"]["ball_arc_render_verdict_parity"] is True
+
     def test_suppressed_segment_frames_lose_world_xyz(self):
         result = apply_ball_track_arc_solved_overlay(_physics_filled(), _artifact())
         frames = result["frames"]

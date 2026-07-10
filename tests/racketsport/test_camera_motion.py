@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from threed.racketsport.camera_motion import (
+    CameraMotionUnavailable,
     CameraMotionParams,
     build_court_mask,
     detect_reference_features,
@@ -103,6 +104,40 @@ def test_known_synthetic_pan_recovers_frame_to_reference_transform(tmp_path: Pat
         assert np.allclose(matrix[0, 2], -dx, atol=1.75)
         assert np.allclose(matrix[1, 2], -dy, atol=1.75)
         assert frame["rms_px"] <= 2.0
+
+
+def test_parent_reference_rebases_from_harvest_clip_provenance(tmp_path: Path) -> None:
+    video = tmp_path / "excerpt.avi"
+    _write_video(video, _translated_frames([(0.0, 0.0), (2.0, 1.0)]))
+    calibration = _calibration(tmp_path / "court_calibration.json", reference=109050)
+    provenance = tmp_path / "clip_provenance.json"
+    provenance.write_text(
+        json.dumps({"timestamp_range_s": [3635.0, 3635.1], "fps": 30.0}),
+        encoding="utf-8",
+    )
+
+    payload = estimate_camera_motion(video, calibration, clip_provenance_path=provenance)
+
+    assert payload["reference_frame_idx"] == 0
+    assert payload["reference_frame_rebase"] == {
+        "status": "rebased_from_clip_provenance",
+        "source_reference_frame_idx": 109050,
+        "clip_local_reference_frame_idx": 0,
+        "parent_clip_start_frame_idx": 109050,
+        "provenance_path": str(provenance),
+    }
+
+
+def test_parent_reference_without_rebase_provenance_is_explicitly_unavailable(tmp_path: Path) -> None:
+    video = tmp_path / "excerpt.avi"
+    _write_video(video, _translated_frames([(0.0, 0.0), (2.0, 1.0)]))
+    calibration = _calibration(tmp_path / "court_calibration.json", reference=109050)
+
+    with pytest.raises(CameraMotionUnavailable) as raised:
+        estimate_camera_motion(video, calibration)
+
+    assert raised.value.reason == "unrebased_parent_reference"
+    assert "camera_motion_unavailable(reason=unrebased_parent_reference" in str(raised.value)
 
 
 def test_scaled_processing_preserves_original_pixel_transform_units(tmp_path: Path) -> None:

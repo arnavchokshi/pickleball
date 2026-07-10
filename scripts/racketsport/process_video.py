@@ -137,6 +137,7 @@ from threed.racketsport.camera_motion import (  # noqa: E402
     CAMERA_MOTION_AUTO_THRESHOLD,
     CAMERA_MOTION_PROBE_MAX_CORNERS,
     CAMERA_MOTION_PROBE_PROCESSING_SCALE,
+    CameraMotionUnavailable,
     CameraMotionParams,
     estimate_camera_motion,
     estimate_camera_motion_probe,
@@ -188,7 +189,11 @@ from threed.racketsport.trust_band import (  # noqa: E402
     derive_court_trust_band,
     derive_track_trust_band,
 )
-from threed.racketsport.virtual_world import build_virtual_world_state, write_virtual_world  # noqa: E402
+from threed.racketsport.virtual_world import (  # noqa: E402
+    build_ball_fail_closed_verdicts_sidecar,
+    build_virtual_world_state,
+    write_virtual_world,
+)
 from threed.racketsport.wrist_velocity_peaks import (  # noqa: E402
     build_blocked_wrist_velocity_peaks,
     build_wrist_velocity_peaks_from_file,
@@ -410,7 +415,7 @@ RUN_IDENTITY_OUTPUTS: dict[str, tuple[str, ...]] = {
     "body": ("body_full_clip_gate.json", "body_mesh_readiness.json", "body_compute_execution.json"),
     "grounding_refine": ("body_grounding_refinement.json",),
     "paddle_pose": (PADDLE_POSE_ARTIFACT_NAME,),
-    "world": ("virtual_world.json", "trust_bands.json"),
+    "world": ("virtual_world.json", "trust_bands.json", "ball_fail_closed_verdicts.json"),
     "confidence_gate": ("confidence_gated_world.json", "confidence_gate_summary.json"),
     "manifest": ("replay_viewer_manifest.json", "replay_scene.json", "replay_review"),
     "match_stats": ("match_stats.json",),
@@ -557,6 +562,7 @@ class ProcessVideoPipeline:
             PADDLE_POSE_ARTIFACT_NAME,
             "pipeline_run.json",
             "virtual_world.json",
+            "ball_fail_closed_verdicts.json",
             "confidence_gated_world.json",
             "confidence_gate_summary.json",
             "trust_bands.json",
@@ -1593,7 +1599,11 @@ class ProcessVideoPipeline:
                 "raw_tracked_detections.json exported by tracking; kept loose-pool tracks.json"
             ]
         if not opts.reid_model.is_file():
-            return [f"raw-pool global association skipped: --reid-model {opts.reid_model} not found; kept loose-pool tracks.json"]
+            raise _HardStageFailure(
+                "best_stack_asset_missing(stage=tracking, key=tracking.reid_model, "
+                f"path={opts.reid_model}); raw-pool global association is a wired default and loose-pool "
+                "tracks.json is not an honest substitute"
+            )
 
         out_dir = self.clip_dir / "global_association"
         resolved_reid_device = resolve_reid_device(opts.device)
@@ -1683,6 +1693,18 @@ class ProcessVideoPipeline:
 
         target = self.clip_dir / "camera_motion.json"
         source_video = self.clip_dir / f"source{opts.video.suffix.lower()}"
+        clip_provenance_path = next(
+            (
+                path
+                for path in (
+                    self.clip_dir / "clip_provenance.json",
+                    opts.video.with_name(f"{opts.video.stem}.provenance.json"),
+                    opts.video.with_name(f"{opts.video.stem}_provenance.json"),
+                )
+                if path.is_file()
+            ),
+            None,
+        )
         calibration_path = self.clip_dir / "court_calibration.json"
         tracks_path = self.clip_dir / "tracks.json"
         missing = [path.name for path in (source_video, calibration_path, tracks_path) if not path.is_file()]
@@ -1725,12 +1747,39 @@ class ProcessVideoPipeline:
                 temporal_smoothing=False,
             )
             try:
+                probe_kwargs: dict[str, Any] = {
+                    "tracks_path": tracks_path,
+                    "params": probe_params,
+                    "threshold": threshold,
+                }
+                if clip_provenance_path is not None:
+                    probe_kwargs["clip_provenance_path"] = clip_provenance_path
                 probe = estimate_camera_motion_probe(
                     source_video,
                     calibration_path,
-                    tracks_path=tracks_path,
-                    params=probe_params,
-                    threshold=threshold,
+                    **probe_kwargs,
+                )
+            except CameraMotionUnavailable as exc:
+                self._set_camera_motion_auto(
+                    self._camera_motion_auto_decision(
+                        score=None,
+                        threshold=threshold,
+                        enabled=False,
+                        forced="auto",
+                        probe_wall_seconds=0.0,
+                        sampled_frame_count=0,
+                    )
+                )
+                return StageOutcome(
+                    stage="camera_motion",
+                    status="degraded",
+                    wall_seconds=0.0,
+                    notes=[str(exc) + "; placement will proceed without camera compensation"],
+                    trust_badge="preview",
+                    metrics={
+                        "camera_motion_auto": self._camera_motion_auto,
+                        "camera_motion_unavailable": {"reason": exc.reason},
+                    },
                 )
             except Exception as exc:  # noqa: BLE001
                 self._set_camera_motion_auto(
@@ -1805,8 +1854,23 @@ class ProcessVideoPipeline:
 
         started = time.monotonic()
         try:
-            payload = estimate_camera_motion(source_video, calibration_path, tracks_path=tracks_path, params=params)
+            estimate_kwargs: dict[str, Any] = {"tracks_path": tracks_path, "params": params}
+            if clip_provenance_path is not None:
+                estimate_kwargs["clip_provenance_path"] = clip_provenance_path
+            payload = estimate_camera_motion(source_video, calibration_path, **estimate_kwargs)
             write_camera_motion_json(payload, target)
+        except CameraMotionUnavailable as exc:
+            return StageOutcome(
+                stage="camera_motion",
+                status="degraded",
+                wall_seconds=time.monotonic() - started,
+                notes=[str(exc) + "; placement will proceed without camera compensation"],
+                trust_badge="preview",
+                metrics={
+                    "camera_motion_auto": self._camera_motion_auto,
+                    "camera_motion_unavailable": {"reason": exc.reason},
+                },
+            )
         except Exception as exc:  # noqa: BLE001
             return StageOutcome(
                 stage="camera_motion",
@@ -2182,6 +2246,7 @@ class ProcessVideoPipeline:
                 skeleton_stride=opts.body_skeleton_stride,
                 required_frame_indexes=required_frame_indexes,
             )
+            cap_exclusion = _frame_cap_exclusion_record(tracks, schedule)
             write_frame_schedule(self.clip_dir / "process_video_frame_schedule.json", schedule)
 
             existing = sorted(out_dir.glob("frame_*.jpg")) if out_dir.is_dir() else []
@@ -2205,6 +2270,7 @@ class ProcessVideoPipeline:
                             "frame_count": len(existing),
                             "schedule_materialized_equal": validation["equal"],
                             "required_body_frame_count": len(required_frame_indexes or set()),
+                            "cap_exclusion": cap_exclusion,
                         },
                     )
 
@@ -2261,6 +2327,7 @@ class ProcessVideoPipeline:
                     "scheduled": len(result["schedule"].get("frame_indexes", [])),
                     "total": result["schedule"].get("total_tracked_frame_count"),
                 },
+                "cap_exclusion": cap_exclusion,
             },
         )
 
@@ -2327,6 +2394,17 @@ class ProcessVideoPipeline:
                     "not a verified fresh BALL run"
                 )
         else:
+            if not opts.wasb_checkpoint.is_file() and opts.wasb_checkpoint == DEFAULT_WASB_CHECKPOINT:
+                raise _HardStageFailure(
+                    "best_stack_asset_missing(stage=ball, key=ball.wasb_checkpoint, "
+                    f"path={opts.wasb_checkpoint})"
+                )
+            wasb_repo = opts.wasb_repo or DEFAULT_WASB_REPO
+            if not wasb_repo.is_dir() and wasb_repo == DEFAULT_WASB_REPO:
+                raise _HardStageFailure(
+                    "best_stack_asset_missing(stage=ball, key=ball.wasb_repo, "
+                    f"path={wasb_repo})"
+                )
             wasb_ok = self._run_wasb_zero_shot(target)
             if not wasb_ok:
                 return StageOutcome(
@@ -3681,6 +3759,17 @@ class ProcessVideoPipeline:
                 "racket_pose_estimate": racket_estimate_path if self.options.paddle_pose and racket_estimate_path.is_file() else None,
             },
         )
+        verdict_sidecar = build_ball_fail_closed_verdicts_sidecar(
+            _read_optional_json(ball_physics_path),
+            _read_optional_json(ball_arc_solved_path),
+            ball_arc_render=_read_optional_json(self.clip_dir / "ball_arc_render.json"),
+        )
+        verdict_sidecar_name = "ball_fail_closed_verdicts.json"
+        if verdict_sidecar is not None:
+            _write_json(self.clip_dir / verdict_sidecar_name, verdict_sidecar)
+            warnings = payload.get("summary", {}).get("warnings")
+            if isinstance(warnings, list):
+                warnings.append(f"ball_fail_closed_verdicts_sidecar={verdict_sidecar_name}")
         out = self.clip_dir / "virtual_world.json"
         write_virtual_world(out, payload)
         _write_json(self.clip_dir / "trust_bands.json", self.trust_bands)
@@ -3690,7 +3779,11 @@ class ProcessVideoPipeline:
             status="ran",
             wall_seconds=0.0,
             notes=["assembled virtual_world.json with per-entity trust bands (never invented; read from real upstream state)"],
-            artifacts=["virtual_world.json", "trust_bands.json"],
+            artifacts=[
+                "virtual_world.json",
+                "trust_bands.json",
+                *([verdict_sidecar_name] if verdict_sidecar is not None else []),
+            ],
             metrics=dict(payload.get("summary", {})),
         )
 
@@ -3826,12 +3919,19 @@ class ProcessVideoPipeline:
             if nested_body_mesh_index_path.is_file()
             else None
         )
+        representation = self._manifest_representation_status(
+            world_path=vw_path,
+            body_mesh_path=body_mesh_path,
+            body_mesh_index_path=body_mesh_index_path,
+        )
         mesh_status = (
             "windowed_index"
-            if body_mesh_index_path is not None
+            if representation == "mesh" and body_mesh_index_path is not None
             else "monolithic_unverified"
-            if body_mesh_path is not None
+            if representation == "mesh" and body_mesh_path is not None
             else "skeleton_only"
+            if representation == "skeleton_only"
+            else None
         )
         mesh_notes: list[str] = []
         if body_mesh_index_path is not None and body_mesh_path is None:
@@ -3858,21 +3958,86 @@ class ProcessVideoPipeline:
             vite_allow_root=self.options.vite_allow_root,
             mesh_status=mesh_status,
         )
+        degraded_reasons = self._degraded_reasons()
+        manifest["notes"].append(
+            "representation_status_json="
+            + json.dumps({"status": representation}, sort_keys=True, separators=(",", ":"))
+        )
+        if degraded_reasons:
+            manifest["notes"].append(
+                "degraded_reasons_json=" + json.dumps(degraded_reasons, sort_keys=True, separators=(",", ":"))
+            )
         out = self.clip_dir / "replay_viewer_manifest.json"
         write_replay_viewer_manifest(out, manifest)
+        representation_missing = representation in {"body_missing", "track_only"}
         return StageOutcome(
             stage="manifest",
-            status="ran",
+            status="degraded" if representation_missing else "ran",
             wall_seconds=0.0,
             notes=[
                 f"built replay_viewer_manifest.json with {'confidence_gated_world.json' if vw_path.name == 'confidence_gated_world.json' else 'virtual_world.json'} as world URL",
                 f"mesh_status={mesh_status}",
+                f"representation_status={representation}",
                 *mesh_notes,
                 *replay_notes,
             ],
             artifacts=["replay_viewer_manifest.json", *(["replay_scene.json", "replay_review/"] if replay_scene_path is not None else [])],
-            metrics={**contact_metrics, **replay_metrics},
+            metrics={
+                **contact_metrics,
+                **replay_metrics,
+                "representation_status": representation,
+                "degraded_reasons": degraded_reasons,
+            },
         )
+
+    def _manifest_representation_status(
+        self,
+        *,
+        world_path: Path,
+        body_mesh_path: Path | None,
+        body_mesh_index_path: Path | None,
+    ) -> str:
+        world = _read_json(world_path)
+        summary = world.get("summary") if isinstance(world, Mapping) else None
+        summary = summary if isinstance(summary, Mapping) else {}
+        explicit_world_counts = {
+            "mesh_player_frame_count",
+            "joint_player_frame_count",
+            "track_only_player_frame_count",
+        }.issubset(summary)
+        mesh_count = int(summary.get("mesh_player_frame_count", 0) or 0)
+        joint_count = int(summary.get("joint_player_frame_count", 0) or 0)
+        track_count = int(summary.get("track_only_player_frame_count", 0) or 0)
+        skeleton_path = self.clip_dir / "skeleton3d.json"
+        skeleton_present = skeleton_path.is_file() and _valid_artifact("skeleton3d", skeleton_path)
+        mesh_present = body_mesh_path is not None or body_mesh_index_path is not None
+        if mesh_present and (mesh_count > 0 or not explicit_world_counts):
+            return "mesh"
+        if (skeleton_present and joint_count > 0) or (
+            not explicit_world_counts
+            and any(
+                isinstance(player, Mapping) and player.get("representation") == "joints"
+                for player in world.get("players", [])
+            )
+        ):
+            return "skeleton_only"
+        body_outcome = next((outcome for outcome in self.stage_outcomes if outcome.stage == "body"), None)
+        if body_outcome is not None and body_outcome.status in {"failed", "blocked", "degraded"}:
+            return "body_missing"
+        if track_count > 0 or int(summary.get("player_count", 0) or 0) > 0:
+            return "track_only"
+        return "body_missing"
+
+    def _degraded_reasons(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "stage": outcome.stage,
+                "status": outcome.status,
+                "reasons": list(outcome.notes),
+            }
+            for outcome in self.stage_outcomes
+            if outcome.status in {"degraded", "blocked", "failed"}
+        ]
 
     # ------------------------------------------------------------------
     # stage 11b: match stats (post-hoc consumer)
@@ -4093,6 +4258,7 @@ class ProcessVideoPipeline:
             "stages": stage_dicts,
             "trust_bands": self.trust_bands,
             "camera_motion_auto": self._camera_motion_auto,
+            "degraded_reasons": self._degraded_reasons(),
             "best_stack": {
                 "manifest_revision": BEST_STACK_MANIFEST.revision,
                 "resolved": resolved_best_stack_config_from_options(self.options),
@@ -4115,6 +4281,25 @@ class _HardStageFailure(RuntimeError):
 # ----------------------------------------------------------------------
 # module-level helpers
 # ----------------------------------------------------------------------
+
+
+def _frame_cap_exclusion_record(tracks: Any, schedule: Mapping[str, Any]) -> dict[str, Any]:
+    tracked: set[int] = set()
+    fps = float(getattr(tracks, "fps", 30.0) or 30.0)
+    for player in getattr(tracks, "players", []) or []:
+        for frame in getattr(player, "frames", []) or []:
+            frame_idx = getattr(frame, "frame_idx", None)
+            if frame_idx is None:
+                frame_idx = int(round(float(getattr(frame, "t", 0.0)) * fps))
+            tracked.add(int(frame_idx))
+    scheduled = {int(frame_idx) for frame_idx in schedule.get("frame_indexes", [])}
+    excluded = sorted(tracked - scheduled) if bool(schedule.get("capped")) else []
+    return {
+        "policy": "body_frame_materialization_cap",
+        "cap": int(schedule.get("cap", DEFAULT_MAX_SCHEDULED_FRAMES)),
+        "excluded_count": len(excluded),
+        "excluded_frame_indexes": excluded,
+    }
 
 
 def _content_hash(path: Path) -> str | None:

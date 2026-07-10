@@ -2608,6 +2608,7 @@ def run_pipeline(
         context,
         expected_players=max_players,
         protected_artifacts=_successful_stage_artifacts(stage_runs),
+        after_failure=summary_status == PIPELINE_STATUS_FAIL,
     )
     readiness = build_readiness_report(run_path, stage=stage)
     if summary_status == PIPELINE_STATUS_PASS and readiness["status"] != "ready":
@@ -2769,6 +2770,7 @@ def _write_best_effort_review_artifacts(
     *,
     expected_players: int,
     protected_artifacts: set[str] | None = None,
+    after_failure: bool = False,
 ) -> dict[str, Any]:
     produced_artifacts: list[str] = []
     reused_artifacts: list[str] = []
@@ -2788,6 +2790,11 @@ def _write_best_effort_review_artifacts(
 
     if tracks_path.is_file():
         frame_plan_path = context.run_dir / "frame_compute_plan.json"
+        review_frame_plan_path = (
+            context.run_dir / "frame_compute_plan.review_after_failure.json"
+            if after_failure
+            else frame_plan_path
+        )
         protect_body_plan = bool(
             protected.intersection(
                 {
@@ -2798,7 +2805,7 @@ def _write_best_effort_review_artifacts(
                 }
             )
         )
-        if protect_body_plan and frame_plan_path.is_file():
+        if not after_failure and protect_body_plan and frame_plan_path.is_file():
             reused_artifacts.append("frame_compute_plan.json")
         else:
             try:
@@ -2808,18 +2815,26 @@ def _write_best_effort_review_artifacts(
                     contact_windows_path=contact_windows_path,
                     expected_players=expected_players,
                 )
-                write_frame_compute_plan(frame_plan_path, frame_plan)
-                produced_artifacts.append("frame_compute_plan.json")
+                write_frame_compute_plan(review_frame_plan_path, frame_plan)
+                produced_artifacts.append(review_frame_plan_path.name)
             except Exception as exc:
-                notes.append(f"frame_compute_plan.json not written: {exc}")
+                notes.append(f"{review_frame_plan_path.name} not written: {exc}")
 
         body_execution_path = context.run_dir / "body_compute_execution.json"
+        review_body_execution_path = (
+            context.run_dir / "body_compute_execution.review_after_failure.json"
+            if after_failure
+            else body_execution_path
+        )
         body_execution_payload = _read_optional_json(body_execution_path) if body_execution_path.is_file() else None
         reuse_existing_body_execution = (
+            not after_failure
+            and (
             "body_compute_execution.json" in protected
             or (
                 isinstance(body_execution_payload, Mapping)
                 and body_execution_payload.get("fail_closed_reason") == "manifest_asset_preflight_sha256_mismatch"
+            )
             )
         )
         if body_execution_path.is_file() and reuse_existing_body_execution:
@@ -2831,13 +2846,13 @@ def _write_best_effort_review_artifacts(
                     raise ValueError("tracks artifact did not parse as Tracks")
                 body_execution = build_body_compute_execution(
                     tracks,
-                    frame_plan_path=context.run_dir / "frame_compute_plan.json",
+                    frame_plan_path=review_frame_plan_path,
                     max_frames=context.max_frames,
                 )
-                write_body_compute_execution(body_execution_path, body_execution)
-                produced_artifacts.append("body_compute_execution.json")
+                write_body_compute_execution(review_body_execution_path, body_execution)
+                produced_artifacts.append(review_body_execution_path.name)
             except Exception as exc:
-                notes.append(f"body_compute_execution.json not written: {exc}")
+                notes.append(f"{review_body_execution_path.name} not written: {exc}")
 
     if court_path.is_file():
         try:

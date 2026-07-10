@@ -559,6 +559,50 @@ def apply_ball_track_arc_solved_overlay(
     return result
 
 
+def build_ball_fail_closed_verdicts_sidecar(
+    ball_track_physics_filled: Mapping[str, Any] | None,
+    ball_track_arc_solved: Mapping[str, Any] | None,
+    *,
+    ball_arc_render: Mapping[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Persist the run-level verdict map that the strict world drops by design."""
+
+    overlaid = apply_ball_track_arc_solved_overlay(
+        ball_track_physics_filled,
+        ball_track_arc_solved,
+    )
+    if not isinstance(overlaid, Mapping):
+        return None
+    overlay = overlaid.get("arc_solved_overlay")
+    fail_closed = overlay.get("fail_closed") if isinstance(overlay, Mapping) else None
+    verdicts = fail_closed.get("segment_verdicts") if isinstance(fail_closed, Mapping) else None
+    if not isinstance(verdicts, Mapping):
+        return None
+    suppressed = sorted(
+        int(segment_id)
+        for segment_id, verdict in verdicts.items()
+        if isinstance(verdict, Mapping) and verdict.get("trusted") is not True
+    )
+    render_summary = ball_arc_render.get("summary") if isinstance(ball_arc_render, Mapping) else None
+    render_suppressed = (
+        sorted(int(item) for item in render_summary.get("fail_closed_suppressed_segment_ids", []))
+        if isinstance(render_summary, Mapping)
+        else []
+    )
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_fail_closed_verdicts",
+        "source_artifact": "ball_track_arc_solved.json",
+        "policy": fail_closed.get("policy"),
+        "segment_verdicts": {str(key): dict(value) for key, value in verdicts.items()},
+        "summary": {
+            "suppressed_segment_ids": suppressed,
+            "ball_arc_render_suppressed_segment_ids": render_suppressed,
+            "ball_arc_render_verdict_parity": suppressed == render_suppressed,
+        },
+    }
+
+
 def _optional_float(value: Any) -> float | None:
     if isinstance(value, bool):
         return None
@@ -2266,6 +2310,7 @@ def _racket_pose(value: RacketPose | Mapping[str, Any] | None) -> RacketPose | N
 
 __all__ = [
     "apply_ball_track_arc_solved_overlay",
+    "build_ball_fail_closed_verdicts_sidecar",
     "build_virtual_world_state",
     "build_virtual_world_state_from_files",
     "build_virtual_world_state_from_run_dir",

@@ -162,13 +162,15 @@ def test_pipeline_runs_body_without_legacy_pose_dependency_and_fails_without_sam
     assert isinstance(tracks, Tracks)
     assert not (run_dir / "skeleton3d.json").exists()
     assert not (run_dir / "smpl_motion.json").exists()
-    frame_plan = json.loads((run_dir / "frame_compute_plan.json").read_text(encoding="utf-8"))
+    frame_plan = json.loads((run_dir / "frame_compute_plan.review_after_failure.json").read_text(encoding="utf-8"))
     assert frame_plan["artifact_type"] == "racketsport_frame_compute_plan"
     assert frame_plan["summary"]["human_review_frame_count"] == 2
     virtual_world = validate_artifact_file("virtual_world", run_dir / "virtual_world.json")
     assert isinstance(virtual_world, VirtualWorld)
     assert virtual_world.summary.warnings == ["missing_mesh_vertices", "missing_ball_track", "missing_paddle_pose"]
-    body_execution = json.loads((run_dir / "body_compute_execution.json").read_text(encoding="utf-8"))
+    body_execution = json.loads(
+        (run_dir / "body_compute_execution.review_after_failure.json").read_text(encoding="utf-8")
+    )
     assert body_execution["artifact_type"] == "racketsport_body_compute_execution"
     assert body_execution["mode"] == "adaptive_frame_compute_plan"
     assert body_execution["summary"]["scheduled_frame_count"] == 2
@@ -176,8 +178,8 @@ def test_pipeline_runs_body_without_legacy_pose_dependency_and_fails_without_sam
     assert {frame["recommended_tier"] for frame in body_execution["scheduled_frames"]} == {"human_review"}
     assert {frame["trust_badge"] for frame in body_execution["scheduled_frames"]} == {"preview"}
     assert summary["review_artifacts"]["produced_artifacts"] == [
-        "frame_compute_plan.json",
-        "body_compute_execution.json",
+        "frame_compute_plan.review_after_failure.json",
+        "body_compute_execution.review_after_failure.json",
         "virtual_world.json",
     ]
     assert summary["review_artifacts"]["reused_artifacts"] == []
@@ -243,11 +245,11 @@ def test_pipeline_review_frame_plan_uses_explicit_ball_source_after_body_failure
     )
 
     assert summary["status"] == "fail"
-    frame_plan = json.loads((run_dir / "frame_compute_plan.json").read_text(encoding="utf-8"))
+    frame_plan = json.loads((run_dir / "frame_compute_plan.review_after_failure.json").read_text(encoding="utf-8"))
     assert frame_plan["summary"]["by_reason"]["ball_uncertain"] == 1
     assert summary["review_artifacts"]["produced_artifacts"] == [
-        "frame_compute_plan.json",
-        "body_compute_execution.json",
+        "frame_compute_plan.review_after_failure.json",
+        "body_compute_execution.review_after_failure.json",
         "virtual_world.json",
     ]
 
@@ -310,7 +312,7 @@ def test_pipeline_precomputed_tracks_mode_uses_tracks_without_detections(tmp_pat
     assert len(tracks.players[0].frames) == 2
 
 
-def test_pipeline_overwrites_existing_review_frame_plan_from_current_inputs(tmp_path: Path) -> None:
+def test_failed_body_keeps_authoritative_plan_immutable_and_writes_review_sidecars(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs" / "clip_001"
     run_dir = tmp_path / "runs" / "phase11" / "clip_001"
     _write_inputs(inputs)
@@ -327,16 +329,20 @@ def test_pipeline_overwrites_existing_review_frame_plan_from_current_inputs(tmp_
     }
     frame_plan_path = run_dir / "frame_compute_plan.json"
     frame_plan_path.write_text(json.dumps(stale_plan, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    original_plan_bytes = frame_plan_path.read_bytes()
 
     summary = run_pipeline(clip="clip_001", inputs_dir=inputs, run_dir=run_dir, stage="body", tracking_mode="precomputed")
 
     assert summary["status"] == "fail"
-    rewritten_plan = json.loads(frame_plan_path.read_text(encoding="utf-8"))
-    assert rewritten_plan["summary"].get("stale_marker") is None
-    assert rewritten_plan["frame_count"] == 2
-    assert "frame_compute_plan.json" in summary["review_artifacts"]["produced_artifacts"]
+    assert frame_plan_path.read_bytes() == original_plan_bytes
+    review_plan = json.loads(
+        (run_dir / "frame_compute_plan.review_after_failure.json").read_text(encoding="utf-8")
+    )
+    assert review_plan["summary"].get("stale_marker") is None
+    assert review_plan["frame_count"] == 2
+    assert "frame_compute_plan.review_after_failure.json" in summary["review_artifacts"]["produced_artifacts"]
     assert summary["review_artifacts"]["reused_artifacts"] == []
-    assert "body_compute_execution.json" in summary["review_artifacts"]["produced_artifacts"]
+    assert "body_compute_execution.review_after_failure.json" in summary["review_artifacts"]["produced_artifacts"]
 
 
 def test_video_backed_calibration_is_advisory_not_blocking_for_trusted_manual_taps(tmp_path: Path, monkeypatch) -> None:

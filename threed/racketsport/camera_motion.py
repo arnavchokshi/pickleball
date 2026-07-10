@@ -22,6 +22,19 @@ CAMERA_MOTION_PROBE_MAX_CORNERS = 250
 CAMERA_MOTION_DECODE_ORIENTATION_AUTO_REQUEST = 1
 
 
+class CameraMotionUnavailable(RuntimeError):
+    """Camera motion cannot be expressed on the clip-local frame timeline."""
+
+    def __init__(self, reason: str, *, reference_frame_idx: int, frame_count: int) -> None:
+        self.reason = reason
+        self.reference_frame_idx = int(reference_frame_idx)
+        self.frame_count = int(frame_count)
+        super().__init__(
+            f"camera_motion_unavailable(reason={reason}, reference_frame_idx={reference_frame_idx}, "
+            f"processed_frame_count={frame_count})"
+        )
+
+
 @dataclass(frozen=True)
 class CameraMotionParams:
     estimator_mode: str = "hardened"
@@ -78,6 +91,7 @@ def estimate_camera_motion(
     reference_frame_idx: int | None = None,
     max_frames: int | None = None,
     diagnostics_dir: str | Path | None = None,
+    clip_provenance_path: str | Path | None = None,
     params: CameraMotionParams | None = None,
 ) -> dict[str, Any]:
     params = params or CameraMotionParams()
@@ -85,7 +99,7 @@ def estimate_camera_motion(
     video = Path(video_path)
     calibration_file = Path(calibration_path)
     calibration = _load_json(calibration_file)
-    reference_idx = _reference_frame_idx(calibration, override=reference_frame_idx)
+    parent_reference_idx = _reference_frame_idx(calibration, override=reference_frame_idx)
     tracks_by_frame = load_tracks_by_frame(tracks_path) if tracks_path is not None and params.use_person_masks else {}
 
     cap, orientation_policy = _open_camera_motion_capture(video)
@@ -95,8 +109,13 @@ def estimate_camera_motion(
         frame_count = _frame_count(cap, max_frames=max_frames)
         if frame_count <= 0:
             raise ValueError(f"video has no readable frames: {video}")
-        if reference_idx < 0 or reference_idx >= frame_count:
-            raise ValueError(f"reference frame {reference_idx} outside processed frame range 0..{frame_count - 1}")
+        reference_idx, reference_rebase = _clip_local_reference_frame_idx(
+            parent_reference_idx,
+            frame_count=frame_count,
+            video_path=video,
+            clip_provenance_path=clip_provenance_path,
+            explicit_override=reference_frame_idx is not None,
+        )
         reference_bgr = _read_frame_at(cap, reference_idx)
         if reference_bgr is None:
             raise ValueError(f"could not read reference frame {reference_idx} from {video}")
@@ -145,6 +164,7 @@ def estimate_camera_motion(
                     diagnostics_dir=Path(diagnostics_dir),
                     selected_frames=[0, reference_idx],
                 )
+            payload["reference_frame_rebase"] = reference_rebase
             validate_camera_motion_payload(payload)
             return payload
 
@@ -223,6 +243,7 @@ def estimate_camera_motion(
                 diagnostics_dir=Path(diagnostics_dir),
                 selected_frames=[0, reference_idx, max_drift_idx],
             )
+        payload["reference_frame_rebase"] = reference_rebase
         validate_camera_motion_payload(payload)
         return payload
     finally:
@@ -239,6 +260,7 @@ def estimate_camera_motion_probe(
     frame_step: int = CAMERA_MOTION_PROBE_FRAME_STEP,
     max_probe_frames: int = CAMERA_MOTION_PROBE_MAX_FRAMES,
     threshold: float = CAMERA_MOTION_AUTO_THRESHOLD,
+    clip_provenance_path: str | Path | None = None,
 ) -> dict[str, Any]:
     if params is None:
         params = replace(
@@ -251,7 +273,7 @@ def estimate_camera_motion_probe(
     video = Path(video_path)
     calibration_file = Path(calibration_path)
     calibration = _load_json(calibration_file)
-    reference_idx = _reference_frame_idx(calibration, override=reference_frame_idx)
+    parent_reference_idx = _reference_frame_idx(calibration, override=reference_frame_idx)
     tracks_by_frame = load_tracks_by_frame(tracks_path) if tracks_path is not None and params.use_person_masks else {}
     started = time.monotonic()
 
@@ -262,8 +284,13 @@ def estimate_camera_motion_probe(
         frame_count = _frame_count(cap, max_frames=None)
         if frame_count <= 0:
             raise ValueError(f"video has no readable frames: {video}")
-        if reference_idx < 0 or reference_idx >= frame_count:
-            raise ValueError(f"reference frame {reference_idx} outside processed frame range 0..{frame_count - 1}")
+        reference_idx, reference_rebase = _clip_local_reference_frame_idx(
+            parent_reference_idx,
+            frame_count=frame_count,
+            video_path=video,
+            clip_provenance_path=clip_provenance_path,
+            explicit_override=reference_frame_idx is not None,
+        )
         reference_bgr = _read_frame_at(cap, reference_idx)
         if reference_bgr is None:
             raise ValueError(f"could not read reference frame {reference_idx} from {video}")
@@ -350,6 +377,7 @@ def estimate_camera_motion_probe(
             "artifact_type": "racketsport_camera_motion_probe",
             "video": video.as_posix(),
             "reference_frame_idx": int(reference_idx),
+            "reference_frame_rebase": reference_rebase,
             "method": f"{_method_name(params)}_probe",
             "params": {
                 **asdict(params),
@@ -1503,6 +1531,83 @@ def _reference_frame_idx(calibration: Mapping[str, Any], *, override: int | None
     if isinstance(solved, Sequence) and not isinstance(solved, (str, bytes)) and len(solved) > 0:
         return int(solved[0])
     return 0
+
+
+def _clip_local_reference_frame_idx(
+    reference_idx: int,
+    *,
+    frame_count: int,
+    video_path: Path,
+    clip_provenance_path: str | Path | None,
+    explicit_override: bool,
+) -> tuple[int, dict[str, Any]]:
+    """Resolve a calibration reference onto the processed clip timeline.
+
+    Harvest provenance stores the parent timestamp range and FPS. An explicit
+    caller override is already clip-local and is never silently rebased.
+    """
+
+    if 0 <= reference_idx < frame_count:
+        return reference_idx, {
+            "status": "not_needed",
+            "source_reference_frame_idx": int(reference_idx),
+            "clip_local_reference_frame_idx": int(reference_idx),
+        }
+    if explicit_override:
+        raise CameraMotionUnavailable(
+            "explicit_reference_out_of_range",
+            reference_frame_idx=reference_idx,
+            frame_count=frame_count,
+        )
+
+    candidates = []
+    if clip_provenance_path is not None:
+        candidates.append(Path(clip_provenance_path))
+    candidates.extend(
+        [
+            video_path.parent / "clip_provenance.json",
+            video_path.with_name(f"{video_path.stem}.provenance.json"),
+            video_path.with_name(f"{video_path.stem}_provenance.json"),
+        ]
+    )
+    provenance_path = next((path for path in candidates if path.is_file()), None)
+    if provenance_path is None:
+        raise CameraMotionUnavailable(
+            "unrebased_parent_reference",
+            reference_frame_idx=reference_idx,
+            frame_count=frame_count,
+        )
+    provenance = _load_json(provenance_path)
+    timestamp_range = provenance.get("timestamp_range_s")
+    fps = provenance.get("fps")
+    if (
+        not isinstance(timestamp_range, Sequence)
+        or isinstance(timestamp_range, (str, bytes))
+        or not timestamp_range
+        or not isinstance(fps, (int, float))
+        or isinstance(fps, bool)
+        or float(fps) <= 0
+    ):
+        raise CameraMotionUnavailable(
+            "unrebased_parent_reference",
+            reference_frame_idx=reference_idx,
+            frame_count=frame_count,
+        )
+    parent_start_frame = int(round(float(timestamp_range[0]) * float(fps)))
+    local_reference_idx = int(reference_idx) - parent_start_frame
+    if local_reference_idx < 0 or local_reference_idx >= frame_count:
+        raise CameraMotionUnavailable(
+            "unrebased_parent_reference",
+            reference_frame_idx=reference_idx,
+            frame_count=frame_count,
+        )
+    return local_reference_idx, {
+        "status": "rebased_from_clip_provenance",
+        "source_reference_frame_idx": int(reference_idx),
+        "clip_local_reference_frame_idx": int(local_reference_idx),
+        "parent_clip_start_frame_idx": int(parent_start_frame),
+        "provenance_path": str(provenance_path),
+    }
 
 
 def _track_frame_idx(item: Mapping[str, Any], *, fps: float) -> int | None:
