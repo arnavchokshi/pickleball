@@ -1,0 +1,90 @@
+{
+  "wolverine_w7": {
+    "ambiguous_frame_count": 0,
+    "artifact_present": true,
+    "blockers": [],
+    "confidence_band_counts": {
+      "estimated_from_wrist": 705
+    },
+    "confidence_max": 0.52164,
+    "confidence_min": 0.22,
+    "confidence_p50": 0.50598,
+    "confidence_p95": 0.518215,
+    "frame_count": 705,
+    "reprojection_error_populated_count": 0,
+    "source_counts": {
+      "wrist_palm_grip_fused": 705
+    },
+    "status": "preview",
+    "summary": {
+      "band_distribution": {
+        "contact_locked": 0,
+        "grip_extrapolated": 0,
+        "palm_fitted": 705
+      },
+      "dominant_hand_by_player": {
+        "19": "right",
+        "20": "left",
+        "21": "left",
+        "22": "right"
+      },
+      "estimate_frame_count": 705,
+      "evidence_channels": {
+        "detector_box_handedness_enabled": false,
+        "detector_boxes_enabled": false,
+        "reflection_contacts_available": false,
+        "reflection_enabled": true
+      },
+      "hidden_frame_count": 0,
+      "input_player_count": 4,
+      "player_count": 4,
+      "render_only": true,
+      "rkt_gate_unscoreable": true,
+      "trust": "estimated_from_wrist"
+    },
+    "translation_unit": "m",
+    "warnings": [
+      "fused_estimate_render_only_not_rkt_gate",
+      "rkt_gate_unscoreable_without_true_corner_gt",
+      "reflection_channel_dormant_no_usable_ball_contacts",
+      "no_contact_locked_frames_emitted"
+    ],
+    "world_frame": "court_Z0"
+  },
+  "zwcth45s_r1": {
+    "ambiguous_frame_count": 0,
+    "artifact_present": false,
+    "blockers": null,
+    "confidence_band_counts": {},
+    "confidence_max": null,
+    "confidence_min": null,
+    "confidence_p50": null,
+    "confidence_p95": null,
+    "frame_count": 0,
+    "reprojection_error_populated_count": 0,
+    "source_counts": {},
+    "status": null,
+    "summary": null,
+    "translation_unit": null,
+    "warnings": null,
+    "world_frame": null
+  },
+  "zwcth45s_r2": {
+    "ambiguous_frame_count": 0,
+    "artifact_present": false,
+    "blockers": null,
+    "confidence_band_counts": {},
+    "confidence_max": null,
+    "confidence_min": null,
+    "confidence_p50": null,
+    "confidence_p95": null,
+    "frame_count": 0,
+    "reprojection_error_populated_count": 0,
+    "source_counts": {},
+    "status": null,
+    "summary": null,
+    "translation_unit": null,
+    "warnings": null,
+    "world_frame": null
+  }
+}

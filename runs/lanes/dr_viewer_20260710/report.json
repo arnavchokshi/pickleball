@@ -1,0 +1,83 @@
+{
+  "objective_result": "PASS",
+  "acceptance": [
+    {
+      "metric": "Per-entity render decision table",
+      "baseline": null,
+      "after": "Complete for player mesh, player skeleton, ball trail/marker, paddle, contact markers, and trust badges/bands, with drawn/hidden branches and file:line citations",
+      "target": "Complete decision table with file:line citations for every requested entity",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "S1 frame-rate attribution",
+      "baseline": "Owner observed low apparent frame rate in the assembled demo",
+      "after": "Separated demo assembly bound (10 unique fps upconverted to 30), renderer-bound headless evidence (1.2-3.3 fps with four-player world vs 46.2 fps with zero players), and data-bound mesh/sample cadence",
+      "target": "Evidence-backed distinction between renderer-, data-, and demo-assembly-bound cadence",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "S2 missing-player attribution",
+      "baseline": "Owner observed people not detected or picked up",
+      "after": "Attributed primarily data-side: retained owner verifier reports Players=0; supplied Wolverine per-player neither mesh nor skeleton coverage is 19.7-49.7% under ideal cached-chunk simulation; viewer cannot create absent identities",
+      "target": "At least one evidenced viewer explanation or explicit data-side attribution",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "S3 mesh-to-skeleton fallback proof",
+      "baseline": "Hypothesis that no skeleton fallback renders when mesh is absent",
+      "after": "Hypothesis refuted: BODY skeleton and floor-proxy skeleton branches are independent of mesh; neither renders only when usable joints/floor evidence is absent or implausibility gating suppresses it",
+      "target": "Prove whether any fallback renders and identify the proximate cause",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "S4 ball hidden/prediction behavior",
+      "baseline": "Fail-closed Wolverine emits 75/300 world frames",
+      "after": "Long suppressed spans show a fading recent trail then no marker; short gaps up to 0.25s may receive render-only interpolation; predicted geometry is visibly dashed/pulsing but exact physics_predicted provenance is collapsed to generic predicted styling",
+      "target": "Exact viewer result for hidden spans and each trust band, including physics-predicted behavior",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "S5 paddle geometry/pose/transform attribution",
+      "baseline": "Owner observed a bad-looking, mispositioned paddle",
+      "after": "Proved supplied geometry is a crude 16-vertex extruded face-and-handle proxy plus oversized normal; pose is low-confidence wrist_palm_grip_fused render-only; viewer holds stale nearest pose across internal gaps up to 1.467s; transform-error claim remains explicitly unverified without GT",
+      "target": "Identify geometry, source fields, transforms, and evidenced causes",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "S6 sweep",
+      "baseline": "Booked seek-snap, absolute-path, and tap-tier trust defects plus unknown residuals",
+      "after": "Covered all booked defects and additionally found optional-asset all-or-nothing load, implausible-toggle dead-end, event-parent gating, possible cross-segment ball trail, stale paddle hold, and ball count/render-source mismatch",
+      "target": "Cover booked S6 defects and identify additional viewer defects",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Read-only/write-scope compliance",
+      "baseline": "Concurrent dirty worktree existed outside the lane",
+      "after": "Only FINDINGS.md and report.json were written under runs/lanes/dr_viewer_20260710; no source/default/branch/commit/staging action",
+      "target": "Zero repo-file modification outside the owned lane",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [],
+  "full_suite": {
+    "command": "python3 -m json.tool runs/lanes/dr_viewer_20260710/report.json >/dev/null && python3 -c 'import json, jsonschema; jsonschema.validate(json.load(open(\"runs/lanes/dr_viewer_20260710/report.json\")), json.load(open(\"docs/racketsport/lane_report.schema.json\")))' && git diff --check -- runs/lanes/dr_viewer_20260710 && git status --short -- runs/lanes/dr_viewer_20260710",
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "failures_all_preexisting": false,
+    "failure_notes": null
+  },
+  "honest_issues": [
+    "This is an audit PASS, not a capability promotion. REPLAY/STATS remains unverified; VERIFIED=0 is unchanged.",
+    "No new browser/hardware performance run was launched. Existing headless FPS proves the demo capture environment and renderer sensitivity, not current live Mac/iPhone FPS.",
+    "Mesh/skeleton grid coverage assumes instantaneous availability of the correct mesh chunk; real async chunk loading can only make mesh coverage worse.",
+    "The W7 owner-critique manifest/world bundle referenced by viewer_verify is no longer retained in that directory; the retained headless report records Players=0, 46.2 FPS, and zero trust chips, and the demo report records the BODY failure.",
+    "Paddle corner/marker GT was unavailable. Stale hold, low-confidence pose provenance, and crude geometry are proven, but coordinate-transform error remains a hypothesis requiring reprojection/GT evidence.",
+    "The historical Outdoor 5.21 to 21.32 mesh-FPS result was read only from non-label archived status evidence; protected Outdoor/Indoor labels were not accessed.",
+    "The code permits ball-trail connections across segment changes up to 1.75 seconds; direct proof that a rendered demo line crosses a specifically suppressed segment remains pending.",
+    "No tests were run because the lane is read-only and the spec names no source blast-radius suite; deliverable syntax, JSON schema, diff whitespace, and write scope were validated instead.",
+    "BEST-STACK DELTA: none."
+  ],
+  "next": "Prioritize a true 30/60-Hz demo capture and hardware viewer profile, then enforce the per-player geometry invariant, reject stale paddle holds, resolve all manifest assets relative to the manifest, and mount fail-safe compact per-entity trust badges before another owner demo.",
+  "session_id": null
+}
