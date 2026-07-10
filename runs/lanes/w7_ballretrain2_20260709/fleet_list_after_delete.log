@@ -1,0 +1,2 @@
+NAME                    ZONE               STATUS      MACHINE_TYPE
+pickleball-a100-fleet1  asia-southeast1-a  TERMINATED  a2-highgpu-1g

@@ -1,0 +1,121 @@
+{
+  "finding": "official_tennis_control (zero-shot) ball_track.json predictions match CVAT ground-truth box centers to within ~0.003-0.006px on 26/40 clips (65%, 1787/2388 rows, 74.8% of the new corpus) -- not achievable by genuine independent zero-shot model inference. Isolating these clips shows pooled F1 = 0.710 (contaminated) vs 0.236 (clean 14-clip subset) vs 0.5956 (all 40 blended) vs 0.3611 historical reference (old 20-clip/1121-row corpus).",
+  "contaminated_clips": [
+    "73VurrTKCZ8_rally_0004",
+    "Ezz6HDNHlnk_rally_0004",
+    "Ezz6HDNHlnk_rally_0007",
+    "HyUqT7zFiwk_rally_0001",
+    "_L0HVmAlCQI_rally_0001",
+    "_L0HVmAlCQI_rally_0002",
+    "_L0HVmAlCQI_rally_0003",
+    "_L0HVmAlCQI_rally_0004",
+    "_L0HVmAlCQI_rally_0005",
+    "_L0HVmAlCQI_rally_0006",
+    "_L0HVmAlCQI_rally_0007",
+    "_L0HVmAlCQI_rally_0008",
+    "_L0HVmAlCQI_rally_0009",
+    "_L0HVmAlCQI_rally_0010",
+    "_L0HVmAlCQI_rally_0011",
+    "_L0HVmAlCQI_rally_0012",
+    "_L0HVmAlCQI_rally_0013",
+    "_L0HVmAlCQI_rally_0014",
+    "_L0HVmAlCQI_rally_0015",
+    "_L0HVmAlCQI_rally_0016",
+    "_L0HVmAlCQI_rally_0017",
+    "_L0HVmAlCQI_rally_0018",
+    "_L0HVmAlCQI_rally_0019",
+    "wBu8bC4OfUY_rally_0001",
+    "wBu8bC4OfUY_rally_0002",
+    "zwCtH_i1_S4_rally_0001"
+  ],
+  "contaminated_clip_count": 26,
+  "clean_clips": [
+    "73VurrTKCZ8_rally_0001",
+    "73VurrTKCZ8_rally_0002",
+    "73VurrTKCZ8_rally_0003",
+    "73VurrTKCZ8_rally_0005",
+    "73VurrTKCZ8_rally_0006",
+    "73VurrTKCZ8_rally_0007",
+    "73VurrTKCZ8_rally_0008",
+    "Ezz6HDNHlnk_rally_0001",
+    "Ezz6HDNHlnk_rally_0002",
+    "Ezz6HDNHlnk_rally_0003",
+    "Ezz6HDNHlnk_rally_0005",
+    "Ezz6HDNHlnk_rally_0006",
+    "Ezz6HDNHlnk_rally_0008",
+    "wBu8bC4OfUY_rally_0003"
+  ],
+  "clean_clip_count": 14,
+  "pooled_all_40": {
+    "tp": 1065,
+    "fp": 683,
+    "fn": 763,
+    "rows": 2388,
+    "pooled_f1": 0.5956375838926175
+  },
+  "pooled_clean_only": {
+    "tp": 102,
+    "fp": 350,
+    "fn": 310,
+    "rows": 601,
+    "pooled_f1": 0.2361111111111111
+  },
+  "pooled_contaminated_only": {
+    "tp": 963,
+    "fp": 333,
+    "fn": 453,
+    "rows": 1787,
+    "pooled_f1": 0.7101769911504425
+  },
+  "raw_coordinate_evidence_L0HVmAlCQI_rally_0004": [
+    {
+      "frame_index": 287,
+      "gt_center": [
+        813.24,
+        460.88
+      ],
+      "pred_xy": [
+        813.236816,
+        460.883453
+      ],
+      "pred_conf": 0.95352471
+    },
+    {
+      "frame_index": 311,
+      "gt_center": [
+        726.24,
+        474.76
+      ],
+      "pred_xy": [
+        726.24115,
+        474.755981
+      ],
+      "pred_conf": 0.95350337
+    },
+    {
+      "frame_index": 316,
+      "gt_center": [
+        696.63,
+        497.55
+      ],
+      "pred_xy": [
+        696.629517,
+        497.547577
+      ],
+      "pred_conf": 0.95353293
+    },
+    {
+      "frame_index": 318,
+      "gt_center": [
+        683.99,
+        513.63
+      ],
+      "pred_xy": [
+        683.993958,
+        513.630981
+      ],
+      "pred_conf": 0.95189047
+    }
+  ],
+  "hypothesis_not_confirmed_root_cause": "Most likely mechanism: CVAT semi-automatic review anchoring -- these clips labels may have been pre-filled from a models own high-confidence detections (plausibly WASB zero-shot itself, or a closely-correlated candidate) and accepted with minimal human correction on easy/confident frames, while genuinely-wrong frames were corrected (explains why some _L0HVmAlCQI clips like rally_0011/0012 show real disagreement, F1=0.615, while most others are exactly 1.0). Not confirmed against CVAT provenance metadata (out of this lanes read access/scope) -- flagged for the manager/owner to investigate labeling-tool provenance for job_21 and the ballingest2 18-clip batch."
+}

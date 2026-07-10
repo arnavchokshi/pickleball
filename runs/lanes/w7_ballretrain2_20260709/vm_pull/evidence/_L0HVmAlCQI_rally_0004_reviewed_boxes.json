@@ -1,0 +1,1767 @@
+{
+  "artifact_type": "racketsport_cvat_video_annotations",
+  "clip_id": "_L0HVmAlCQI_rally_0004",
+  "frames": [
+    {
+      "boxes": [],
+      "frame_index": 0,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 1,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 2,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 3,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 4,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 5,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 6,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 7,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 8,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 9,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 10,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 11,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 12,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 13,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 14,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 15,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 16,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 17,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 18,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 19,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 20,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 21,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 22,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 23,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 24,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 25,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 26,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 27,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 28,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 29,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 30,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 31,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 32,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 33,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 34,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 35,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 36,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 37,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 38,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 39,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 40,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 41,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 42,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 43,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 44,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 45,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 46,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 47,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 48,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 49,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 50,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 51,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 52,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 53,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 54,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 55,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 56,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 57,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 58,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 59,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 60,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 61,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 62,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 63,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 64,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 65,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 66,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 67,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 68,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 69,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 70,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 71,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 72,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 73,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 74,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 75,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 76,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 77,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 78,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 79,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 80,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 81,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 82,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 83,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 84,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 85,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 86,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 87,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 88,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 89,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 90,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 91,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 92,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 93,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 94,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 95,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 96,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 97,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 98,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 99,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 100,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 101,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 102,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 103,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 104,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 105,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 106,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 107,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 108,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 109,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 110,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 111,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 112,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 113,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 114,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 115,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 116,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 117,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 118,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 119,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 120,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 121,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 122,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 123,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 124,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 125,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 126,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 127,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 128,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 129,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 130,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 131,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 132,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 133,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 134,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 135,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 136,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 137,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 138,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 139,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 140,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 141,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 142,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 143,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 144,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 145,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 146,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 147,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 148,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 149,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 150,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 151,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 152,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 153,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 154,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 155,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 156,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 157,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 158,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 159,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 160,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 161,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 162,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 163,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 164,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 165,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 166,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 167,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 168,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 169,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 170,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 171,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 172,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 173,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 174,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 175,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 176,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 177,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 178,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 179,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 180,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 181,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 182,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 183,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 184,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 185,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 186,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 187,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 188,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 189,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 190,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 191,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 192,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 193,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 194,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 195,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 196,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 197,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 198,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 199,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 200,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 201,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 202,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 203,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 204,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 205,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 206,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 207,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 208,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 209,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 210,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 211,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 212,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 213,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 214,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 215,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 216,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 217,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 218,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 219,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 220,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 221,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 222,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 223,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 224,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 225,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 226,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 227,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 228,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 229,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 230,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 231,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 232,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 233,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 234,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 235,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 236,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 237,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 238,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 239,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 240,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 241,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 242,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 243,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 244,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 245,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 246,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 247,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 248,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 249,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 250,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 251,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 252,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 253,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 254,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 255,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 256,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 257,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 258,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 259,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 260,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 261,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 262,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 263,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 264,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 265,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 266,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 267,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 268,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 269,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 270,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 271,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 272,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 273,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 274,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 275,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 276,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 277,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 278,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 279,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 280,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 281,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 282,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 283,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 284,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 285,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 286,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [
+        {
+          "bbox_xywh": [
+            805.24,
+            452.88,
+            16.0,
+            16.0
+          ],
+          "bbox_xyxy": [
+            805.24,
+            452.88,
+            821.24,
+            468.88
+          ],
+          "blur_angle_deg": 0.0,
+          "blur_label_quality": null,
+          "blur_length_px": 0.0,
+          "blur_width_px": 0.0,
+          "center_convention": "review_to_blur_streak_center",
+          "frame_index": 287,
+          "keyframe": true,
+          "label": "ball",
+          "occluded": false,
+          "source": "file",
+          "track_id": 0,
+          "visibility_level": "clear"
+        }
+      ],
+      "frame_index": 287,
+      "visibility_levels_by_label": {
+        "ball": "clear"
+      }
+    },
+    {
+      "boxes": [],
+      "frame_index": 288,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 289,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 290,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 291,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 292,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 293,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 294,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 295,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 296,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 297,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 298,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 299,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 300,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 301,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 302,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 303,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 304,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 305,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 306,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 307,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 308,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 309,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 310,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [
+        {
+          "bbox_xywh": [
+            718.24,
+            466.76,
+            16.0,
+            16.0
+          ],
+          "bbox_xyxy": [
+            718.24,
+            466.76,
+            734.24,
+            482.76
+          ],
+          "blur_angle_deg": 0.0,
+          "blur_label_quality": null,
+          "blur_length_px": 0.0,
+          "blur_width_px": 0.0,
+          "center_convention": "review_to_blur_streak_center",
+          "frame_index": 311,
+          "keyframe": true,
+          "label": "ball",
+          "occluded": false,
+          "source": "file",
+          "track_id": 0,
+          "visibility_level": "clear"
+        }
+      ],
+      "frame_index": 311,
+      "visibility_levels_by_label": {
+        "ball": "clear"
+      }
+    },
+    {
+      "boxes": [],
+      "frame_index": 312,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 313,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 314,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [],
+      "frame_index": 315,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [
+        {
+          "bbox_xywh": [
+            688.63,
+            489.55,
+            16.0,
+            16.0
+          ],
+          "bbox_xyxy": [
+            688.63,
+            489.55,
+            704.63,
+            505.55
+          ],
+          "blur_angle_deg": 0.0,
+          "blur_label_quality": null,
+          "blur_length_px": 0.0,
+          "blur_width_px": 0.0,
+          "center_convention": "review_to_blur_streak_center",
+          "frame_index": 316,
+          "keyframe": true,
+          "label": "ball",
+          "occluded": false,
+          "source": "file",
+          "track_id": 0,
+          "visibility_level": "clear"
+        }
+      ],
+      "frame_index": 316,
+      "visibility_levels_by_label": {
+        "ball": "clear"
+      }
+    },
+    {
+      "boxes": [],
+      "frame_index": 317,
+      "visibility_levels_by_label": {}
+    },
+    {
+      "boxes": [
+        {
+          "bbox_xywh": [
+            675.99,
+            505.63,
+            16.0,
+            16.0
+          ],
+          "bbox_xyxy": [
+            675.99,
+            505.63,
+            691.99,
+            521.63
+          ],
+          "blur_angle_deg": 0.0,
+          "blur_label_quality": null,
+          "blur_length_px": 0.0,
+          "blur_width_px": 0.0,
+          "center_convention": "review_to_blur_streak_center",
+          "frame_index": 318,
+          "keyframe": true,
+          "label": "ball",
+          "occluded": false,
+          "source": "file",
+          "track_id": 0,
+          "visibility_level": "clear"
+        }
+      ],
+      "frame_index": 318,
+      "visibility_levels_by_label": {
+        "ball": "clear"
+      }
+    }
+  ],
+  "reviewed_frame_indices": [
+    287,
+    311,
+    316,
+    318
+  ],
+  "reviewed_frame_indices_source": "explicit",
+  "schema_version": 1,
+  "source_format": "cvat_images_1_1",
+  "source_path": "cvat_upload/exports/w7_labels_20260709/job_21_annotations_20260709_cvat_images_1.1.zip",
+  "summary": {
+    "frame_count": 319,
+    "labels": [
+      "ball"
+    ],
+    "outside_box_count": 0,
+    "track_count_by_label": {
+      "ball": 1
+    },
+    "visible_box_count": 4,
+    "visible_box_count_by_label": {
+      "ball": 4
+    }
+  },
+  "task": {
+    "dumped": null,
+    "frame_filter": null,
+    "mode": "annotation",
+    "name": "_L0HVmAlCQI_rally_0004",
+    "original_size": [
+      1920,
+      1080
+    ],
+    "size": 319,
+    "source": "_L0HVmAlCQI_rally_0004.mp4",
+    "start_frame": 0,
+    "stop_frame": 318,
+    "task_id": null
+  },
+  "tracks": [
+    {
+      "first_visible_frame": 287,
+      "keyframe_count": 4,
+      "label": "ball",
+      "last_visible_frame": 318,
+      "outside_box_count": 0,
+      "track_id": 0,
+      "visible_box_count": 4
+    }
+  ]
+}

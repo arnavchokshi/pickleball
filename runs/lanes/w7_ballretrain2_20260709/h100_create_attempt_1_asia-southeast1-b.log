@@ -1,0 +1,8 @@
+Created [https://www.googleapis.com/compute/v1/projects/gifted-electron-498923-h1/zones/asia-southeast1-b/instances/pickleball-h100-w7ball2].
+ERROR: gcloud crashed (ConnectionError): ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer'))
+
+If you would like to report this issue, please run the following command:
+  gcloud feedback
+
+To check gcloud for common problems, please run the following command:
+  gcloud info --run-diagnostics

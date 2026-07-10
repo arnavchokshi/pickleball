@@ -448,6 +448,20 @@ mixed-provenance blocks are ordering-only; per-row provenance classification now
 corpus. The uniform-random scratch-labeled audit stratum is the structural fix -> promoted to owner
 labeling ask #1. Evidence: runs/lanes/w7_ballretrain2_20260709/control_contamination_finding.json.
 
+**Dated evidence note (2026-07-09 night, THE 3K CHECKPOINT — fires the R2 pivot):** step-matched,
+fixed-block, control-bit-exact curve read: control 0.3611 -> 1k 0.6142 -> **3k 0.5710 (-7% rel vs
+1k)**. Growing the corpus 1,121->3,026 where ~75% of growth = confirmed-prelabel rows did NOT improve
+and mildly hurt generalization at equal training. The 3k model still beats control everywhere (incl.
+clean-subset 0.503 vs 0.236). RULINGS: A_seed_official_aug REMAINS the PENDING candidate (rev-9
+naming stands); curve-point protocol corrected to FIXED 2372 steps (wall = safety cap only);
+provenance classifier (runs/lanes/w7_ballretrain2_20260709/classify_provenance.py) becomes a standing
+pre-training corpus check; owner labeling pivot per R2 = scratch-labeled random audit stratum +
+disagreement-mined hard frames + venue diversity, NOT confirm-heavy volume. OPEN OWNER DECISION:
+exclude/down-weight confirmed-prelabel rows from training mixes. Known gap: GPU_RESCORE_COMMANDS
+templates from ballingest2/3/4 reference an uncommitted --source-group flag (sibling-session work) —
+will fail as-is. Evidence: runs/lanes/w7_ballretrain2_20260709/ (cards, both E3k ckpts md5'd,
+classifier, contamination raw evidence).
+
 **Dated evidence note (2026-07-09 late, OWNER PRIORITY RULING + research): ball 2D->3D lift.** Owner
 live-ruled this the top ball priority (pb.vision achieves great monocular 3D on the owner's own
 uploaded clips = existence proof). 39-agent research sweep + rulings banked at

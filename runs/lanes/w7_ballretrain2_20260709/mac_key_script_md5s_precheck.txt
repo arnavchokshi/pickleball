@@ -1,0 +1,7 @@
+0529d90e1c28d9fff6f522b70dddd152  scripts/racketsport/train_ball_stage2.py
+a75a865ab5062857c56543bf1508f9da  scripts/racketsport/run_wasb_ball.py
+714d79603131b68a6976511489cf63f0  scripts/racketsport/ball_loso_validation.py
+9f516167a607f549a9ef4fb3d75f3249  scripts/racketsport/fuse_ball_tracks.py
+fb6061bbd3f340b6d50a2e44853aa9f1  scripts/racketsport/run_ball_tracking_eval_suite.py
+ae2341865cabdfcbf9bf5f4fc5342cb7  scripts/racketsport/train_ball_pretrain.py
+d201fb2ef38d27c8eefdcc443d7ae924  tests/racketsport/test_ball_stage2_training.py

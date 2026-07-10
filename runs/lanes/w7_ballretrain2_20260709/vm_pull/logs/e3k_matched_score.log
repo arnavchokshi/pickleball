@@ -1,0 +1,900 @@
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 30.0,
+  "frame_count": 996,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0001/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0001/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 54.208395328769356,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 996,
+    "processed_window_count": 994,
+    "read_frame_count": 996,
+    "realtime_factor": 1.8069465109589786,
+    "source_video_fps": 30.0,
+    "source_video_frame_count": 996,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0001.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 18.37353778800025,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 827,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 30.0,
+  "frame_count": 2736,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0002/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0002/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 61.76658290881094,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 2736,
+    "processed_window_count": 2734,
+    "read_frame_count": 2736,
+    "realtime_factor": 2.058886096960365,
+    "source_video_fps": 30.0,
+    "source_video_frame_count": 2736,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0002.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 44.295796709999195,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 2387,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 30.0,
+  "frame_count": 431,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0003/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0003/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 45.82416227271001,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 431,
+    "processed_window_count": 429,
+    "read_frame_count": 431,
+    "realtime_factor": 1.5274720757570004,
+    "source_video_fps": 30.0,
+    "source_video_frame_count": 431,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0003.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 9.405518368999765,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 355,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 30.0,
+  "frame_count": 296,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0004/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0004/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 38.822290342053286,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 296,
+    "processed_window_count": 294,
+    "read_frame_count": 296,
+    "realtime_factor": 1.2940763447351096,
+    "source_video_fps": 30.0,
+    "source_video_frame_count": 296,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0004.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 7.624485762999029,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 269,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 30.0,
+  "frame_count": 656,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0005/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0005/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 51.198071200328975,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 656,
+    "processed_window_count": 654,
+    "read_frame_count": 656,
+    "realtime_factor": 1.7066023733442992,
+    "source_video_fps": 30.0,
+    "source_video_frame_count": 656,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0005.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 12.81298268899991,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 498,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 30.0,
+  "frame_count": 616,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0006/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0006/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 50.224225885243605,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 616,
+    "processed_window_count": 614,
+    "read_frame_count": 616,
+    "realtime_factor": 1.6741408628414536,
+    "source_video_fps": 30.0,
+    "source_video_frame_count": 616,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0006.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 12.264997402000517,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 549,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 30.0,
+  "frame_count": 261,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0007/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0007/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 37.644716957988265,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 261,
+    "processed_window_count": 259,
+    "read_frame_count": 261,
+    "realtime_factor": 1.2548238985996087,
+    "source_video_fps": 30.0,
+    "source_video_frame_count": 261,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0007.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 6.933243788000254,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 222,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 30.0,
+  "frame_count": 2616,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0008/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/73VurrTKCZ8_rally_0008/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 60.93318619125592,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 2616,
+    "processed_window_count": 2614,
+    "read_frame_count": 2616,
+    "realtime_factor": 2.0311062063751972,
+    "source_video_fps": 30.0,
+    "source_video_frame_count": 2616,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0008.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 42.93226997500096,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 2114,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 23.98,
+  "frame_count": 1116,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0001/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0001/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 59.86229602481047,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 1116,
+    "processed_window_count": 1114,
+    "read_frame_count": 1116,
+    "realtime_factor": 2.4963426198836727,
+    "source_video_fps": 23.976023976023978,
+    "source_video_frame_count": 1116,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 18.642786430000342,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 429,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 23.98,
+  "frame_count": 3660,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0002/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0002/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 65.6153302615515,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 3660,
+    "processed_window_count": 3658,
+    "read_frame_count": 3660,
+    "realtime_factor": 2.7362523044850504,
+    "source_video_fps": 23.976023976023978,
+    "source_video_frame_count": 3660,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0002.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 55.779647613000634,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 2226,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 23.98,
+  "frame_count": 485,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0003/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0003/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 48.29204717690768,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 485,
+    "processed_window_count": 483,
+    "read_frame_count": 485,
+    "realtime_factor": 2.0138468380695445,
+    "source_video_fps": 23.976023976023978,
+    "source_video_frame_count": 485,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0003.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 10.04306150499906,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 238,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 23.98,
+  "frame_count": 6183,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0004/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0004/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 67.74682025143564,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 6183,
+    "processed_window_count": 6181,
+    "read_frame_count": 6183,
+    "realtime_factor": 2.8251384591924786,
+    "source_video_fps": 23.976023976023978,
+    "source_video_frame_count": 6183,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0004.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 91.2662760710009,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 3317,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 23.98,
+  "frame_count": 275,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0005/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0005/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 40.69113470891208,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 275,
+    "processed_window_count": 273,
+    "read_frame_count": 275,
+    "realtime_factor": 1.696878011214015,
+    "source_video_fps": 23.976023976023978,
+    "source_video_frame_count": 275,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0005.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 6.7582288369994785,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 104,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 23.98,
+  "frame_count": 3867,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0006/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0006/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 65.28229156778458,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 3867,
+    "processed_window_count": 3865,
+    "read_frame_count": 3867,
+    "realtime_factor": 2.722364118756655,
+    "source_video_fps": 23.976023976023978,
+    "source_video_frame_count": 3867,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0006.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 59.23505298500095,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 2100,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 23.98,
+  "frame_count": 1986,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0007/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0007/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 63.038125619971204,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 1986,
+    "processed_window_count": 1984,
+    "read_frame_count": 1986,
+    "realtime_factor": 2.628779216846172,
+    "source_video_fps": 23.976023976023978,
+    "source_video_frame_count": 1986,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0007.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 31.504743842999233,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 1022,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 23.98,
+  "frame_count": 1813,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0008/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/Ezz6HDNHlnk_rally_0008/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 61.21782825056165,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 1813,
+    "processed_window_count": 1811,
+    "read_frame_count": 1813,
+    "realtime_factor": 2.5528702356364326,
+    "source_video_fps": 23.976023976023978,
+    "source_video_frame_count": 1813,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0008.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 29.615555660999235,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 1191,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 30.0,
+  "frame_count": 29130,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/HyUqT7zFiwk_rally_0001/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/HyUqT7zFiwk_rally_0001/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 67.65344731516402,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 29130,
+    "processed_window_count": 29128,
+    "read_frame_count": 29130,
+    "realtime_factor": 2.2551149105054673,
+    "source_video_fps": 30.0,
+    "source_video_frame_count": 29130,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 430.5767282529996,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 18815,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 30.0,
+  "frame_count": 1456,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/_L0HVmAlCQI_rally_0001/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/_L0HVmAlCQI_rally_0001/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 60.104743582229545,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 1456,
+    "processed_window_count": 1454,
+    "read_frame_count": 1456,
+    "realtime_factor": 2.003491452740985,
+    "source_video_fps": 30.0,
+    "source_video_frame_count": 1456,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0001.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 24.22437753200029,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 1153,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 30.0,
+  "frame_count": 12811,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/wBu8bC4OfUY_rally_0001/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/wBu8bC4OfUY_rally_0001/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 66.3177018163984,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 12811,
+    "processed_window_count": 12809,
+    "read_frame_count": 12811,
+    "realtime_factor": 2.2105900605466133,
+    "source_video_fps": 30.0,
+    "source_video_frame_count": 12811,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 193.17617542699918,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 10381,
+  "visible_threshold": 0.5
+}
+{
+  "artifact_type": "racketsport_wasb_ball_run",
+  "confidence_semantics": "WASB heatmap peak value (0..1)",
+  "fps": 30.0,
+  "frame_count": 18181,
+  "input_preprocessing": "official",
+  "non_promotable_measurement_mode": false,
+  "not_ground_truth": true,
+  "official_model_zoo_url": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md",
+  "official_repo_url": "https://github.com/nttcom/WASB-SBDT",
+  "out": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/zwCtH_i1_S4_rally_0001/wasb/ball_track.json",
+  "predictions_csv": "runs/lanes/w7_ballretrain2_20260709/primary_block_score/E3k_matched_seed_official_aug/zwCtH_i1_S4_rally_0001/wasb/ball_track_wasb_predictions.csv",
+  "runtime": {
+    "batch_size": 8,
+    "device": "cuda",
+    "effective_fps": 68.05681551468729,
+    "input_preprocessing": "official",
+    "max_frames": null,
+    "non_promotable_measurement_mode": false,
+    "processed_frame_count": 18181,
+    "processed_window_count": 18179,
+    "read_frame_count": 18181,
+    "realtime_factor": 2.268560517156243,
+    "source_video_fps": 30.0,
+    "source_video_frame_count": 18181,
+    "source_video_size": [
+      1920,
+      1080
+    ],
+    "video": "/home/arnavchokshi/coldstart_20260706/repo/data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+    "video_range_seconds": null,
+    "wall_seconds": 267.144441927001,
+    "wasb_checkpoint": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain2_20260709/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+      "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6"
+    },
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+    "wasb_repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f"
+  },
+  "schema_version": 1,
+  "source_mode": "wasb_predict",
+  "status": "TESTED-ON-REAL-DATA",
+  "visible_frame_count": 11354,
+  "visible_threshold": 0.5
+}
