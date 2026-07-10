@@ -330,3 +330,19 @@ NS-014 FLEET LOG (2026-07-09/10, ns014 manager):
   foot-lock 20mm-cap impossibility) — production postchain total stays w7-armC 23.4mm p95. Full
   ruling: runs/lanes/ns014_p22residual_20260709/REPORT.md. ns014 lane GPU total ~2.19h ~$1.3-9.4.
 
+
+WAVE-COURT FLEET LOG (2026-07-10, manager court session):
+- pickleball-h100-court1 — DONE+DELETED 2026-07-10T13:15:53Z list-confirmed (created 11:27:42Z
+  after 27 create attempts / ~65min ase1-b+c stockout — zero cost while failing; uptime 1.803h,
+  $1.03-7.66 mid ~$2-4, zero preemptions). HONEST FAIL vs R2 kill bar + DECISIVE repo-gap find:
+  court_model_v2.pt (court_unet_v2/resnet34/dict-output, trained by train_court_model_v2.py) is
+  unloadable by train_court_keypoint_heatmap.py (hardcoded legacy archs, no init flag) — literal
+  ARM-A/B impossible; substitute legacy-arch arms learned Roboflow-family real signal (val median
+  423->13.5px) but 0.0 PCK@5 on owner cards (CARD-A median 197-226px). Control rows banked
+  (frozen model: CARD-A 0.0 PCK/942px, CARD-B 0.0 PCK/675px). homography-refine = exact no-op at
+  garbage-pred level (booked). court_external absent from w7close snapshot (bake next cut).
+  Evidence: runs/lanes/court_train1_20260709/. (Sonnet lane court_train1_20260709, self-torn.) Mission: control-row-first court real-transfer probe ladder (frozen
+  court_model_v2 control on harvest-GT + Burl/Wolv cards -> ~100-step probe -> ARM-A fine-tune
+  on 3,921-row external partial corpus (Protocol S: no gate-source/eval-clip rows) -> eval w/
+  homography-refinement variants -> optional ARM-B imagenet-init). Wall cap 3.5h, ~$2-15
+  (ceiling ~$22), 60-min idle self-stop, DELETE+list-confirm at end. Code pin 497b64dbd.

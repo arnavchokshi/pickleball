@@ -1,0 +1,10 @@
+{
+  "note": "This trainer counts optimizer.step() calls 1:1 with --epochs (run_training() does exactly one gradient step per epoch loop iteration: one synthetic mini-batch concatenated with one sampled real mini-batch). So 'epoch' in this trainer's CLI IS the 'step' unit the spec's probe formula refers to.",
+  "probe_epochs_run": 100,
+  "probe_wall_seconds": 77.003,
+  "steps_per_sec": 1.2986507019207043,
+  "formula": "step_budget = min(4000, floor(45min_seconds * steps_per_sec))",
+  "step_budget": 3506,
+  "probe_recipe": "--real-root real_court_corpus_partial --real-root court_synthetic_v1 --holdout-clip x6 (testworkspace+xuann train/valid/test) --real-finetune-start-epoch 0 --real-batch-size 64 --synthetic-curriculum-start/end-fraction 0.35 --device cuda",
+  "probe_gate_after_100_steps": {"heldout_pck_at_5px": 0.0545343137254902, "note": "already nonzero after 100 steps -- promising early signal, not a gate pass"}
+}

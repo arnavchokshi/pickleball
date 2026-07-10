@@ -1,0 +1,25 @@
+{
+  "code_pin_commit": "497b64dbddda5d25dbbfef615a6ff2ee72810128",
+  "vm_head_after_reset": "497b64dbddda5d25dbbfef615a6ff2ee72810128",
+  "md5_matches": {
+    "scripts/racketsport/train_court_keypoint_heatmap.py": "ab537fe4c62e807e393815552949bed2",
+    "scripts/racketsport/evaluate_court_keypoint_owner_gate.py": "06be3f76ca4a6250c9258414be6c96f6",
+    "threed/racketsport/court_keypoint_net.py": "5b4678069fa43706c12d4ba0111c330f"
+  },
+  "court_model_v2_sha256": "cdf0555d49335a946e518b177d85e2ab5be02100ba46eb3e634785c84f337c22",
+  "court_model_v2_matches_best_stack_pin": true,
+  "roboflow_corpus_baked": true,
+  "roboflow_sample_sha256_matches": "3/3",
+  "resnet34_checkpoint": {"present_on_snapshot": false, "rsynced_from_mac": true, "md5": "78fe1097b28dbda1373a700020afeed9", "matches_mac": true, "note": "models/checkpoints/court_external/ directory did not exist at all on the w7close snapshot; created + rsynced."},
+  "corrected_r2_gt_root": {"rsynced_from_mac": true, "file_count": 8},
+  "synthetic_corpus": {"present_on_snapshot": false, "generated_fresh": true, "path": "runs/lanes/court_train1_20260709/court_synthetic_v1", "count": 800, "seed": 20260710, "scenarios": {"adjacent_multi_court": 115, "dedicated_indoor": 108, "dedicated_outdoor": 111, "harsh_shadow": 119, "portable_net_clutter": 128, "portrait_phone": 107, "tennis_overlay": 112}},
+  "corpus_rebuild": {
+    "row_count": 3921,
+    "dataset_count": 9,
+    "histogram": {"12": 3478, "14": 408, "15": 35},
+    "matches_court_data2b_handoff_exactly": true,
+    "guard_hash_matches_included": 0,
+    "guard_method": "git-index-only (--guard-git-index-prefix eval_clips/); could not reconstruct the exact 49-file harvest guard-image-root used by the original court_data2b build (no invocation was recorded); functionally equivalent because dataset-root (data/roboflow_universe_20260706) is 100% external Roboflow data with zero physical overlap with local harvest/eval frames -- verified by 6/6 sha256 spot matches against the Mac-committed corpus_stats.json provenance_rows",
+    "sha256_spot_check": "6/6 (3 Mac-side + re-verified 3 against VM-rebuilt corpus_stats.json provenance_rows) exact matches"
+  }
+}

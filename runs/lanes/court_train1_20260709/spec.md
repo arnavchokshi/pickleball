@@ -78,3 +78,11 @@ Return final structured JSON as your last message AND write runs/lanes/court_tra
 REPORT.md via Bash: {objective_result, control_rows, probe, arms:[{name, init, data_mix,
 steps, card_a, card_b, val_external, homography_variant, kill_bar_verdict}], honest_issues,
 artifacts, cost, fleet_accounting}.
+
+## DISPATCH NOTE (manager, 2026-07-10 ~02:5x PDT)
+- Code pin: VM must reset to commit 497b64dbd (contains masked loader, corpus builder, this spec).
+- Corpus rebuild commands (VM): use scripts/racketsport/build_real_court_corpus.py per its
+  --help; cross-check row counts vs runs/lanes/court_data2b_20260709/STATS_REPORT.md (3,921
+  partial / 35 exact) and split_proposal.json (7 train / 2 val datasets).
+- Fleet concurrency at dispatch: 0/4 running; you are 1/4.
+- Current codex/other lanes own no files you touch. Your Mac-side writes: lane dir ONLY.
