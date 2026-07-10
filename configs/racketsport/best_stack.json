@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 9,
+  "revision": 10,
   "updated": "2026-07-09",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
@@ -842,20 +842,21 @@
     },
     "body.experimental_body_array_native": {
       "stage": "body",
-      "selection": "experimental body array native runtime",
-      "value": "disabled",
-      "status": "DORMANT",
+      "selection": "shared array-native BODY payload path",
+      "value": true,
+      "status": "WIRED_DEFAULT",
       "gate": null,
       "provenance": {
-        "lane": "beststack_core_20260708",
-        "commit": "865c8d9f5",
-        "date": "2026-07-08",
+        "lane": "ns06_cpu_efficiency_20260709",
+        "commit": "cf5295182",
+        "date": "2026-07-09",
         "evidence_paths": [
-          "BUILD_CHECKLIST.md#[W6 RULINGS]"
+          "runs/lanes/worldhmr_compute_assemble_split_20260705/REPORT.md",
+          "runs/lanes/ns06_cpu_efficiency_20260709/REPORT.md"
         ]
       },
       "proven_against": null,
-      "notes": "Dormant by ruling: regression-reverted."
+      "notes": "Default slim BODY path delegates skeleton and metric computation to the same worldhmr implementation as legacy assembly, while avoiding monolith materialization. This is a default selection, not an accuracy promotion; VERIFIED=0 remains binding. The experimental key name is retained for API compatibility."
     },
     "tracking.dead_botsort_tracker_presets": {
       "stage": "tracking",

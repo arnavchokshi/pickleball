@@ -1958,6 +1958,7 @@ def test_remote_body_runner_script_wires_sam3d_tier2_bench_config() -> None:
     assert "sam3d_inner_bucket_sync=False" in script
     assert "sam3d_upstream_env={'USE_COMPILE_BACKBONE': '1', 'MHR_NO_CORRECTIVES': '1'}" in script
     assert "sam3d_tier2_output_lite=True" in script
+    assert "experimental_body_array_native=True" in script
     assert '"source": "sam3d_tier2_impl_20260703T0xZ"' in script
     assert '"phase_d_source": "phase_d_speed_opt_20260703T0xZ"' in script
     assert '"source": "sam3d_accuracy_opt_20260703T0xZ"' in script

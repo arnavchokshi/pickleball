@@ -198,6 +198,7 @@ DEFAULT_MESH_COVERAGE_MODE = BEST_STACK_MANIFEST.string_value("mesh.coverage_mod
 DEFAULT_TARGET_MESH_FRAME_BUDGET = BEST_STACK_MANIFEST.value("mesh.target_frame_budget")
 DEFAULT_MESH_BYTE_BUDGET_MIB = BEST_STACK_MANIFEST.number_value("mesh.byte_budget_mib")
 DEFAULT_BODY_SKELETON_STRIDE = int(BEST_STACK_MANIFEST.value("body.skeleton_stride"))
+DEFAULT_BODY_ARRAY_NATIVE = BEST_STACK_MANIFEST.bool_value("body.experimental_body_array_native")
 DEFAULT_BALL_DETECTION_STRIDE = int(BEST_STACK_MANIFEST.value("ball.detection_stride"))
 DEFAULT_PADDLE_FUSED_ESTIMATOR = BEST_STACK_MANIFEST.value("paddle.fused_estimator")
 PADDLE_POSE_ARTIFACT_NAME = "racket_pose_estimate.json"
@@ -2750,6 +2751,7 @@ class ProcessVideoPipeline:
                         body_foot_pin=opts.remote_config.body_foot_pin,
                         body_contact_splice=opts.remote_config.body_contact_splice,
                         body_world_joint_visual_smoothing=opts.remote_config.body_world_joint_visual_smoothing,
+                        experimental_body_array_native=opts.remote_config.experimental_body_array_native,
                     )
                 },
                 # Calibration/tracking already ran earlier in this same process_video
@@ -5486,6 +5488,7 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
         "mesh.byte_budget_mib": options.mesh_byte_budget_mib,
         "mesh.target_frame_budget": options.target_mesh_frame_budget,
         "body.skeleton_stride": options.body_skeleton_stride,
+        "body.experimental_body_array_native": options.remote_config.experimental_body_array_native,
         "ball.detection_stride": options.ball_detection_stride,
         "body.detector_fov": detector_fov,
         "body.schedule": options.body_schedule,
@@ -5518,6 +5521,9 @@ def best_stack_overrides_from_options(options: PipelineOptions) -> dict[str, Any
         "mesh.byte_budget_mib": BEST_STACK_MANIFEST.number_value("mesh.byte_budget_mib"),
         "mesh.target_frame_budget": BEST_STACK_MANIFEST.value("mesh.target_frame_budget"),
         "body.skeleton_stride": BEST_STACK_MANIFEST.value("body.skeleton_stride"),
+        "body.experimental_body_array_native": BEST_STACK_MANIFEST.bool_value(
+            "body.experimental_body_array_native"
+        ),
         "ball.detection_stride": BEST_STACK_MANIFEST.value("ball.detection_stride"),
         "body.detector_fov": BEST_STACK_MANIFEST.value("body.detector_fov"),
         "body.schedule": BEST_STACK_MANIFEST.string_value("body.schedule"),
@@ -5718,6 +5724,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         lock_wait_timeout_s=args.remote_lock_wait_timeout_s,
         command_timeout_s=args.remote_command_timeout_s,
         body_skeleton_stride=int(args.body_skeleton_stride),
+        experimental_body_array_native=DEFAULT_BODY_ARRAY_NATIVE,
         sam3d_body_input_size_px=args.sam3d_body_input_size_px,
         sam3d_crop_bucket_sizes=_parse_int_tuple(args.sam3d_crop_bucket_sizes, name="--sam3d-crop-bucket-sizes"),
         sam3d_torch_compile=not args.no_sam3d_torch_compile,

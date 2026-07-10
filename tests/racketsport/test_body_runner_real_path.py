@@ -1521,6 +1521,47 @@ def test_body_runner_batches_fast_sam_subprocess_requests_without_merging_player
     assert [player.id for player in smpl.players] == [7, 8]
 
 
+def test_body_runner_reuses_one_mesh_topology_scope_for_the_clip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    inputs = tmp_path / "inputs"
+    run_dir = tmp_path / "run"
+    manifest = _manifest(tmp_path / "models")
+    _write_multi_player_inputs(inputs)
+    _write_deep_mesh_frame_compute_plan(run_dir, target_player_ids=(7, 8), expected_players=2)
+    runtime = FakeBatchFastSamRuntime()
+    topology_scopes: list[hmr_deep.MeshTopologyInterner | None] = []
+    normalize = hmr_deep.normalize_fast_sam_body_output
+
+    def record_topology_scope(*args: object, **kwargs: object) -> dict[str, object]:
+        topology_scopes.append(kwargs.get("mesh_topology_interner"))  # type: ignore[arg-type]
+        return normalize(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr("threed.racketsport.orchestrator.normalize_fast_sam_body_output", record_topology_scope)
+
+    summary = run_pipeline(
+        clip="clip_001",
+        inputs_dir=inputs,
+        run_dir=run_dir,
+        stage="body",
+        max_frames=1,
+        tracking_mode="precomputed",
+        runners={
+            "pose": FakePoseStageRunner(),
+            "body": BodyStageRunner(
+                write_body_monoliths=True,
+                manifest_path=manifest,
+                runtime=runtime,
+                detector_name="",
+                fov_name="",
+            ),
+        },
+    )
+
+    assert _stage(summary, "body")["status"] == "ran"
+    assert len(topology_scopes) == 2
+    assert isinstance(topology_scopes[0], hmr_deep.MeshTopologyInterner)
+    assert topology_scopes[1] is topology_scopes[0]
+
+
 def test_body_runner_accepts_numpy_bbox_from_real_fast_sam_runtime(tmp_path: Path) -> None:
     inputs = tmp_path / "inputs"
     run_dir = tmp_path / "run"

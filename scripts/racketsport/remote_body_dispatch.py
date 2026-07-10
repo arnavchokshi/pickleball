@@ -47,8 +47,15 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 try:
-    from threed.racketsport.best_stack import body_detector_fov_defaults, load_best_stack_manifest  # noqa: E402
+    from threed.racketsport.best_stack import (  # noqa: E402
+        body_array_native_default,
+        body_detector_fov_defaults,
+        load_best_stack_manifest,
+    )
 except ModuleNotFoundError:  # pragma: no cover - standalone version-stamp fixtures copy only this script.
+    def body_array_native_default() -> bool:
+        return True
+
     def body_detector_fov_defaults() -> tuple[str, str]:
         return "", ""
 
@@ -84,6 +91,7 @@ DEFAULT_REMOTE_FAST_SAM_PYTHON = f"{DEFAULT_REMOTE_HOME}/body_runtime/body_venv/
 DEFAULT_REMOTE_FAST_SAM_ROOT = f"{DEFAULT_REMOTE_HOME}/body_runtime/Fast-SAM-3D-Body"
 DEFAULT_GPU_LOCK_SCRIPT = "scripts/gpu-eval-run.sh"
 DEFAULT_BODY_DETECTOR_NAME, DEFAULT_BODY_FOV_NAME = body_detector_fov_defaults()
+DEFAULT_BODY_ARRAY_NATIVE = body_array_native_default()
 DEFAULT_BODY_SKELETON_STRIDE = int(load_best_stack_manifest().value("body.skeleton_stride"))
 DEFAULT_SSH_CONNECT_TIMEOUT_S = 12
 DEFAULT_LOCK_WAIT_TIMEOUT_S = 60
@@ -251,6 +259,7 @@ class RemoteConfig:
     body_detector_name: str = DEFAULT_BODY_DETECTOR_NAME
     body_fov_name: str = DEFAULT_BODY_FOV_NAME
     body_skeleton_stride: int = DEFAULT_BODY_SKELETON_STRIDE
+    experimental_body_array_native: bool = DEFAULT_BODY_ARRAY_NATIVE
     sam3d_body_input_size_px: int = 384
     sam3d_crop_bucket_sizes: tuple[int, ...] = (8, 16)
     sam3d_crop_padding_scale: float = 1.0
@@ -1623,6 +1632,7 @@ summary = run_pipeline(
             body_foot_pin={bool(config.body_foot_pin)!r},
             body_contact_splice={bool(config.body_contact_splice)!r},
             body_world_joint_visual_smoothing={bool(config.body_world_joint_visual_smoothing)!r},
+            experimental_body_array_native={bool(config.experimental_body_array_native)!r},
         )
     }},
 )

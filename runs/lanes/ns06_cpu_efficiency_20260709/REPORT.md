@@ -56,10 +56,15 @@ that half-millimetre boundary.
 - World grounding, smoothing, and common-topology selection reuse one canonical topology.
 - Vertex-count changes recheck bounds; changed or malformed topology still fails.
 
-The active orchestrator ownership fence prevented passing the optional interner into normalization,
-so normalization still validates/hashes each frame. The automatic world-stage path already removes
-the second topology copy and repeated comparison. Wiring the interner at the orchestrator loop is the
-next low-risk memory reduction after that lane releases the file.
+After the orchestrator ownership fence released, the integration follow-up wired one interner into
+the BODY normalization loop. Every normal pipeline BODY run now creates one scope per clip and passes
+it to every player-frame; there is no process-global cache. The automatic world-stage path reuses the
+same immutable topology representation downstream.
+
+The follow-up also resolved an older selection-source contradiction: the constructor used shared
+array-native BODY compute by default while `best_stack.json` still called it dormant. Best-stack
+revision 10 now selects the shared array-native path, and local plus generated remote runners resolve
+and pass that setting explicitly. Pipeline summaries record the resolved selection.
 
 ## Matched H100 results
 
@@ -112,18 +117,16 @@ reduced from 7.5 MB to about 0.3 MB before commit.
 
 ## What to do next
 
-1. After the orchestrator owner releases its fence, pass one `MeshTopologyInterner` through the
-   normalization loop. That should remove the remaining per-frame topology copies before grounding.
-2. Keep vertices as NumPy/CUDA arrays through grounding and shared reductions; do not convert 705
+1. Keep vertices as NumPy/CUDA arrays through grounding and shared reductions; do not convert 705
    dense meshes into Python lists until the final quantized transport boundary.
-3. Batch GPU world transforms, reductions, int32 deltas, range checks, and int16 quantization only if
+2. Batch GPU world transforms, reductions, int32 deltas, range checks, and int16 quantization only if
    downstream int16 bytes pass the half-millimetre regression and same-input replay gate.
-4. Benchmark `--body-schedule overlap`; the selected run still spent about 79s in BALL arc solving
+3. Benchmark `--body-schedule overlap`; the selected run still spent about 79s in BALL arc solving
    before BODY, so overlap may hide useful wall time. Do not change the default without CPU/RAM
    contention and output-parity proof.
-5. Prototype a persistent preemption-safe BODY worker. It could remove about 14s model load plus 31s
+4. Prototype a persistent preemption-safe BODY worker. It could remove about 14s model load plus 31s
    compile warm-up, but needs code/model/config invalidation and GPU-context lifecycle proof.
-6. Profile/fuse gates that scan the same compact summaries. Do not remove full-clip, grounding,
+5. Profile/fuse gates that scan the same compact summaries. Do not remove full-clip, grounding,
    quality, or readiness gates to hit latency.
 
 L2 may intentionally omit BODY as a product-tier choice. L3 should not skip required mesh frames,
@@ -131,6 +134,8 @@ interpolate them, or drop gates merely for speed.
 
 ## Verification and teardown
 
+- Always-on integration follow-up: exact staged snapshot 16 passed; wider BODY/best-stack 143
+  passed, process-pipeline 142 passed, and remote-dispatch 76 passed.
 - Local topology/body/schema suite: 131 passed, one expected runtime warning.
 - Broader candidate suite: 169 passed, 1 skipped, 2 warnings.
 - Final commit on VM Python 3.10: 62 passed, one upstream warning.

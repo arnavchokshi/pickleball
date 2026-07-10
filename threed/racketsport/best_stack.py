@@ -89,6 +89,12 @@ class BestStackManifest:
             raise BestStackManifestError(f"best_stack entry {key!r} is not numeric")
         return float(value)
 
+    def bool_value(self, key: str) -> bool:
+        value = self.value(key)
+        if not isinstance(value, bool):
+            raise BestStackManifestError(f"best_stack entry {key!r} is not boolean")
+        return value
+
     def path_value(self, key: str, *, must_exist: bool = True) -> Path:
         value = self.value(key)
         if isinstance(value, str):
@@ -163,6 +169,10 @@ def load_best_stack_manifest(path: str | Path = DEFAULT_BEST_STACK_PATH) -> Best
 
 def body_detector_fov_defaults() -> tuple[str, str]:
     return load_best_stack_manifest().body_detector_fov_defaults()
+
+
+def body_array_native_default() -> bool:
+    return load_best_stack_manifest().bool_value("body.experimental_body_array_native")
 
 
 def server_override_value(key: str) -> Any:

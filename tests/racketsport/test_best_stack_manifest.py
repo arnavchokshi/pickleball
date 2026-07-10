@@ -17,7 +17,7 @@ def test_best_stack_manifest_integrity() -> None:
     manifest = load_best_stack_manifest()
 
     assert manifest.schema_version == 1
-    assert manifest.revision == 9
+    assert manifest.revision == 10
     assert "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim" in manifest.invariants
     assert len(manifest.entries) >= 30
 
@@ -85,6 +85,8 @@ def test_best_stack_manifest_integrity() -> None:
     assert manifest.entry("body.skeleton_stride").status == "WIRED_DEFAULT"
     assert manifest.entry("body.skeleton_stride").value == 2
     assert "owner ruling 2026-07-09" in manifest.entry("body.skeleton_stride").notes.lower()
+    assert manifest.entry("body.experimental_body_array_native").status == "WIRED_DEFAULT"
+    assert manifest.bool_value("body.experimental_body_array_native") is True
     assert manifest.entry("ball.detection_stride").status == "WIRED_DEFAULT"
     assert manifest.entry("ball.detection_stride").value == 1
     assert "full-rate" in manifest.entry("ball.detection_stride").notes

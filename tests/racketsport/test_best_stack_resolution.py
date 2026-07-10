@@ -122,6 +122,9 @@ def test_no_flag_invocation_resolves_wired_defaults_from_manifest(tmp_path: Path
     assert resolved["mesh.byte_budget_mib"] == manifest.number_value("mesh.byte_budget_mib")
     assert resolved["mesh.target_frame_budget"] == manifest.value("mesh.target_frame_budget")
     assert resolved["body.skeleton_stride"] == manifest.value("body.skeleton_stride")
+    assert resolved["body.experimental_body_array_native"] is manifest.bool_value(
+        "body.experimental_body_array_native"
+    )
     assert resolved["ball.detection_stride"] == manifest.value("ball.detection_stride")
     assert resolved["tracking.global_association_profile"] == manifest.string_value("tracking.global_association_profile")
     assert resolved["body.detector_fov"] == manifest.value("body.detector_fov")
@@ -131,6 +134,7 @@ def test_no_flag_invocation_resolves_wired_defaults_from_manifest(tmp_path: Path
     assert options.input_quality_mode == "advisory"
     assert options.match_stats is True
     assert options.body_skeleton_stride == 2
+    assert options.remote_config.experimental_body_array_native is True
     assert options.ball_detection_stride == 1
     assert process_video.best_stack_overrides_from_options(options) == {}
 
@@ -302,6 +306,8 @@ def test_body_detector_fov_defaults_match_manifest_for_local_and_remote() -> Non
 
     assert {"detector_name": local.detector_name, "fov_name": local.fov_name} == expected_identifiers
     assert {"detector_name": remote.body_detector_name, "fov_name": remote.body_fov_name} == expected_identifiers
+    assert local.experimental_body_array_native is manifest.bool_value("body.experimental_body_array_native")
+    assert remote.experimental_body_array_native is manifest.bool_value("body.experimental_body_array_native")
 
 
 def test_fov_checkpoint_repair_is_relative_and_absence_fails_loud() -> None:

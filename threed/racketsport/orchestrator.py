@@ -18,7 +18,7 @@ from typing import Any, Literal, Mapping, Protocol, Sequence
 from scripts.racketsport.track import build_tracks
 
 from .ball_stage_runner import BallStageRunner
-from .best_stack import body_detector_fov_defaults
+from .best_stack import body_array_native_default, body_detector_fov_defaults
 from .body_compute import (
     DEFAULT_BODY_SKELETON_STRIDE,
     TIER2_BODY_JOINTS_REPRESENTATION,
@@ -60,6 +60,7 @@ from .hmr_deep import (
     SAM3D_FOOT_KEYPOINT_INDICES,
     FastSam3DBodyRuntime,
     FastSam3DBodySubprocessRuntime,
+    MeshTopologyInterner,
     PlayerCropRequest,
     fast_sam_required_model_ids,
     normalize_fast_sam_body_output,
@@ -94,6 +95,7 @@ DEFAULT_MODEL_MANIFEST = Path("models/MANIFEST.json")
 DEFAULT_BODY_MODEL_MANIFEST = DEFAULT_BODY_MANIFEST_PATH
 DEFAULT_BOTSORT_REID_CONFIG = Path("configs/racketsport/botsort_reid.yaml")
 DEFAULT_BODY_DETECTOR_NAME, DEFAULT_BODY_FOV_NAME = body_detector_fov_defaults()
+DEFAULT_BODY_ARRAY_NATIVE = body_array_native_default()
 DEFAULT_BODY_MAX_ROOT_SPEED_MPS = 8.0
 DEFAULT_BODY_MAX_TRACK_ANCHOR_SMOOTHING_RESIDUAL_M = 0.75
 R3_GROUNDING_ANCHOR_SOURCE = "placement_track_world_xy"
@@ -686,7 +688,7 @@ class BodyStageRunner:
         body_foot_pin: bool = True,
         body_contact_splice: bool = True,
         body_world_joint_visual_smoothing: bool = True,
-        experimental_body_array_native: bool = True,
+        experimental_body_array_native: bool = DEFAULT_BODY_ARRAY_NATIVE,
     ) -> None:
         self.manifest_path = Path(manifest_path)
         self.fast_sam_repo = Path(fast_sam_repo)
@@ -1111,6 +1113,7 @@ class BodyStageRunner:
                     f"FastSAM-3D-Body batch returned {len(batched_outputs)} outputs for {len(mesh_requests)} requests"
                 )
 
+        mesh_topology_interner = MeshTopologyInterner()
         for request_index, mesh_request in enumerate(mesh_requests):
             frame_idx = int(mesh_request["frame_idx"])
             player_id = int(mesh_request["player_id"])
@@ -1152,7 +1155,11 @@ class BodyStageRunner:
                 image_size_px=image_size,
                 track_confidence=track_frame.conf,
             )
-            sample = normalize_fast_sam_body_output(raw_output, request=player_request)
+            sample = normalize_fast_sam_body_output(
+                raw_output,
+                request=player_request,
+                mesh_topology_interner=mesh_topology_interner,
+            )
             sample["t"] = track_frame.t
             sample["track_world_xy"] = list(track_frame.world_xy)
             sample["target_representation"] = target_representation
