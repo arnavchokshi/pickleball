@@ -9,6 +9,7 @@ import pytest
 from threed.racketsport.hmr_deep import (
     FastSam3DBodyRuntime,
     FastSam3DBodySubprocessRuntime,
+    MeshTopologyInterner,
     PlayerCropRequest,
     VerifiedModelAsset,
     _ensure_torch_amp_custom_decorators,
@@ -277,6 +278,91 @@ def test_normalize_fast_sam_body_output_numpy_bulk_arrays_match_list_wire_payloa
     )
 
     assert array_result == list_result
+
+
+def test_normalize_fast_sam_body_output_interns_topology_only_within_explicit_scope() -> None:
+    request = PlayerCropRequest(
+        frame_idx=5,
+        player_id=7,
+        bbox_xyxy=[100, 120, 260, 520],
+        image_size_px=[1920, 1080],
+        track_confidence=0.93,
+    )
+    base = {
+        "pred_vertices": [[0.0, 0.0, 0.1], [0.3, 0.0, 0.1], [0.3, 0.2, 1.6], [0.1, 0.3, 0.8]],
+        "pred_keypoints_3d": [[0.1, 0.0, 1.0]],
+        "mesh_faces": [[0, 1, 2], [0, 2, 3]],
+        "confidence": 0.91,
+    }
+    clip_scope = MeshTopologyInterner()
+
+    first = normalize_fast_sam_body_output(base, request=request, mesh_topology_interner=clip_scope)
+    second = normalize_fast_sam_body_output(
+        {**base, "mesh_faces": [[0, 1, 2], [0, 2, 3]]},
+        request=request,
+        mesh_topology_interner=clip_scope,
+    )
+    another_scope = normalize_fast_sam_body_output(
+        base,
+        request=request,
+        mesh_topology_interner=MeshTopologyInterner(),
+    )
+
+    assert first["mesh_faces"] is second["mesh_faces"]
+    assert another_scope["mesh_faces"] is not first["mesh_faces"]
+    assert another_scope["mesh_faces"] == first["mesh_faces"]
+    with pytest.raises(TypeError, match="mesh topology is immutable"):
+        first["mesh_faces"][0] = [2, 1, 0]
+    detached_row = first["mesh_faces"][0]
+    detached_row[0] = 2
+    assert first["mesh_faces"][0] == [0, 1, 2]
+
+
+def test_topology_interner_keeps_changed_bool_and_bounds_errors_strict() -> None:
+    request = PlayerCropRequest(
+        frame_idx=5,
+        player_id=7,
+        bbox_xyxy=[100, 120, 260, 520],
+        image_size_px=[1920, 1080],
+        track_confidence=0.93,
+    )
+    base = {
+        "pred_vertices": [[0.0, 0.0, 0.1], [0.3, 0.0, 0.1], [0.3, 0.2, 1.6], [0.1, 0.3, 0.8]],
+        "pred_keypoints_3d": [[0.1, 0.0, 1.0]],
+        "mesh_faces": [[0, 1, 2], [0, 2, 3]],
+        "confidence": 0.91,
+    }
+    clip_scope = MeshTopologyInterner()
+    first = normalize_fast_sam_body_output(base, request=request, mesh_topology_interner=clip_scope)
+
+    with pytest.raises(ValueError, match="inconsistent mesh_faces"):
+        normalize_fast_sam_body_output(
+            {**base, "mesh_faces": [[0, 1, 2], [1, 2, 3]]},
+            request=request,
+            mesh_topology_interner=clip_scope,
+        )
+    with pytest.raises(ValueError, match="mesh_faces/0 must be a triangle index triple"):
+        normalize_fast_sam_body_output(
+            {**base, "mesh_faces": [[False, 1, 2], [0, 2, 3]]},
+            request=request,
+            mesh_topology_interner=clip_scope,
+        )
+    with pytest.raises(ValueError, match="mesh_faces/1 index 4 is outside pred_vertices"):
+        normalize_fast_sam_body_output(
+            {**base, "mesh_faces": [[0, 1, 2], [0, 2, 4]]},
+            request=request,
+            mesh_topology_interner=clip_scope,
+        )
+    with pytest.raises(ValueError, match="mesh_faces/1 index 3 is outside pred_vertices"):
+        normalize_fast_sam_body_output(
+            {
+                **base,
+                "pred_vertices": base["pred_vertices"][:3],
+                "mesh_faces": first["mesh_faces"],
+            },
+            request=request,
+            mesh_topology_interner=clip_scope,
+        )
 
 
 def test_normalize_fast_sam_body_output_numpy_faces_keep_scalar_validation_errors() -> None:

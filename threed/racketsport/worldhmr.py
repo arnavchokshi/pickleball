@@ -35,6 +35,7 @@ from .foot_contact import (
 from .foot_pin import FootPinSettings, apply_foot_pin_to_payload
 from .body_postchain import BodyPostChainConfig, RAW_GROUNDED_JOINTS_ARTIFACT
 from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
+from .hmr_deep import MeshTopology, MeshTopologyInterner
 from .pose_temporal import apply_sam3d_wrist_bone_lock, compare_wrist_peak_timing, refine_sam3d_skeleton3d
 from .schemas import CourtCalibration
 from .skeleton_upright import ROTATION_CONVENTION_OFFSET_ROW_TIMES_R, rotate_camera_offsets_row_times_R
@@ -332,6 +333,7 @@ def compute_body_skeleton_and_metrics(
     camera_motion_seen: set[int] = set()
     camera_motion_used: set[int] = set()
     grounded = []
+    mesh_topology_interner = MeshTopologyInterner()
     for sample in sorted(samples, key=lambda item: (int(item["frame_idx"]), int(item["player_id"]))):
         frame_idx = int(sample["frame_idx"])
         motion_frame = camera_motion.frames.get(frame_idx) if camera_motion is not None else None
@@ -339,7 +341,14 @@ def compute_body_skeleton_and_metrics(
             camera_motion_seen.add(frame_idx)
             if motion_frame is not None:
                 camera_motion_used.add(frame_idx)
-        grounded.append(_ground_fast_sam_sample(sample, calibration=calibration, camera_motion=motion_frame))
+        grounded.append(
+            _ground_fast_sam_sample(
+                sample,
+                calibration=calibration,
+                camera_motion=motion_frame,
+                mesh_topology_interner=mesh_topology_interner,
+            )
+        )
     camera_motion_metrics, camera_motion_provenance = _camera_motion_artifact_summary(
         camera_motion,
         warnings=camera_motion_warnings,
@@ -2360,9 +2369,23 @@ def _validate_vector3(values: Sequence[float], *, name: str) -> None:
         raise ValueError(f"{name} must be a 3-vector")
 
 
-def _mesh_faces(values: Any, *, vertex_count: int) -> list[list[int]]:
+def _mesh_faces(
+    values: Any,
+    *,
+    vertex_count: int,
+    topology_interner: MeshTopologyInterner | None = None,
+) -> list[list[int]]:
     if values is None:
         return []
+    if topology_interner is not None:
+        reused = topology_interner.reuse_validated(
+            values,
+            vertex_count=vertex_count,
+            name="mesh_faces",
+            vertices_name="vertices_camera",
+        )
+        if reused is not None:
+            return reused
     if not isinstance(values, (str, bytes)):
         try:
             faces_array = np.asarray(values)
@@ -2387,8 +2410,30 @@ def _mesh_faces(values: Any, *, vertex_count: int) -> list[list[int]]:
                 face_index, column_index = (int(value) for value in np.argwhere(outside)[0])
                 index = int(faces_array[face_index, column_index])
                 raise ValueError(f"mesh_faces/{face_index} index {index} is outside vertices_camera")
-            return faces_array.astype(np.int64, copy=False).tolist()
-    return _mesh_faces_scalar(values, vertex_count=vertex_count)
+            parsed = MeshTopology._from_validated_array(faces_array.astype(np.int64, copy=False))
+            return (
+                topology_interner.intern_validated(
+                    parsed,
+                    vertex_count=vertex_count,
+                    name="mesh_faces",
+                    vertices_name="vertices_camera",
+                )
+                if topology_interner is not None
+                else parsed
+            )
+    parsed = MeshTopology._from_validated_array(
+        np.asarray(_mesh_faces_scalar(values, vertex_count=vertex_count), dtype=np.int64)
+    )
+    return (
+        topology_interner.intern_validated(
+            parsed,
+            vertex_count=vertex_count,
+            name="mesh_faces",
+            vertices_name="vertices_camera",
+        )
+        if topology_interner is not None
+        else parsed
+    )
 
 
 def _top_level_sequence_is_empty(values: Any) -> bool:
@@ -2442,27 +2487,44 @@ def _mesh_faces_scalar(values: Any, *, vertex_count: int) -> list[list[int]]:
 def _common_mesh_faces(frames: Sequence[Mapping[str, Any]]) -> list[list[int]]:
     canonical: list[list[int]] | None = None
     canonical_array: np.ndarray | None = None
+    canonical_digest: bytes | None = None
     for frame in frames:
         faces = frame.get("mesh_faces", [])
         if not faces:
             continue
         if canonical is faces:
             continue
-        try:
-            face_array = np.asarray(faces, dtype=np.int64)
-        except (TypeError, ValueError):
+        if isinstance(faces, MeshTopology):
+            face_rows = faces
             face_array = None
-        if face_array is None or face_array.ndim != 2 or face_array.shape[1:] != (3,):
-            face_rows = [[int(index) for index in face] for face in faces]
-            face_array = np.asarray(face_rows, dtype=np.int64)
+            face_digest = faces._digest
         else:
-            face_rows = face_array.tolist()
+            face_digest = None
+            try:
+                face_array = np.asarray(faces, dtype=np.int64)
+            except (TypeError, ValueError):
+                face_array = None
+            if face_array is None or face_array.ndim != 2 or face_array.shape[1:] != (3,):
+                face_rows = [[int(index) for index in face] for face in faces]
+                face_array = np.asarray(face_rows, dtype=np.int64)
+            else:
+                face_rows = face_array.tolist()
         if canonical is None:
             canonical = face_rows
             canonical_array = face_array
+            canonical_digest = face_digest
             continue
-        assert canonical_array is not None
-        if canonical_array.shape != face_array.shape or not bool(np.array_equal(canonical_array, face_array)):
+        if canonical_digest is not None and face_digest is not None:
+            inconsistent = len(canonical) != len(face_rows) or canonical_digest != face_digest
+        else:
+            if canonical_array is None:
+                canonical_array = np.asarray(canonical, dtype=np.int64)
+            if face_array is None:
+                face_array = np.asarray(face_rows, dtype=np.int64)
+            inconsistent = canonical_array.shape != face_array.shape or not bool(
+                np.array_equal(canonical_array, face_array)
+            )
+        if inconsistent:
             raise ValueError("Fast SAM-3D-Body samples produced inconsistent mesh_faces")
     return canonical or []
 
@@ -2620,6 +2682,7 @@ def _ground_fast_sam_sample(
     *,
     calibration: CourtCalibration,
     camera_motion: _CameraMotionObservation | None = None,
+    mesh_topology_interner: MeshTopologyInterner | None = None,
 ) -> dict[str, Any]:
     joints_camera = _vector3_list(sample.get("joints_camera"), name="joints_camera")
     vertices_camera = _vector3_list(sample.get("vertices_camera", []), name="vertices_camera")
@@ -2671,7 +2734,11 @@ def _ground_fast_sam_sample(
         "transl_world": [track_world_xy[0], track_world_xy[1], 0.0],
         "joints_world": _translate_points(joints_world_raw or vertices_world_raw, dx=dx, dy=dy, dz=dz),
         "vertices_world": _translate_points(vertices_world_raw, dx=dx, dy=dy, dz=dz),
-        "mesh_faces": _mesh_faces(sample.get("mesh_faces", []), vertex_count=len(vertices_camera)),
+        "mesh_faces": _mesh_faces(
+            sample.get("mesh_faces", []),
+            vertex_count=len(vertices_camera),
+            topology_interner=mesh_topology_interner,
+        ),
     }
 
 

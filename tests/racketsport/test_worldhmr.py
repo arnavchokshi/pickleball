@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
-from threed.racketsport import worldhmr
+from threed.racketsport import hmr_deep, worldhmr
 from threed.racketsport.body_postchain import BodyPostChainConfig
 from threed.racketsport.body_joint_quality import build_body_joint_quality
 from threed.racketsport.schemas import (
@@ -703,6 +703,71 @@ def test_build_body_artifacts_preserves_static_mesh_faces_for_body_mesh_export()
     )
 
     assert smpl_motion["mesh_faces"] == [[0, 1, 2]]
+
+
+def test_build_body_artifacts_interns_normalized_topology_through_grounding_and_common_faces() -> None:
+    first_faces = hmr_deep._face_list(
+        [[0, 1, 2], [0, 2, 3]],
+        vertex_count=4,
+        name="mesh_faces",
+        vertices_name="pred_vertices",
+    )
+    second_faces = hmr_deep._face_list(
+        [[0, 1, 2], [0, 2, 3]],
+        vertex_count=4,
+        name="mesh_faces",
+        vertices_name="pred_vertices",
+    )
+    assert first_faces is not second_faces
+
+    base = {
+        "player_id": 1,
+        "confidence": 0.9,
+        "track_world_xy": [2.0, 3.0],
+        "camera_translation": [0.0, 0.0, 0.0],
+        "joints_camera": [[0.0, 0.0, 1.1]],
+        "vertices_camera": [[0.0, 0.0, 0.0], [0.2, 0.0, 0.0], [0.2, 0.1, 1.7], [0.1, 0.3, 0.8]],
+        "global_orient": [0.0, 0.0, 0.0],
+        "body_pose": [0.0, 0.0, 0.0],
+        "betas": [0.0],
+    }
+    samples = [
+        {**base, "frame_idx": 12, "t": 0.4, "mesh_faces": first_faces},
+        {**base, "frame_idx": 13, "t": 13.0 / 30.0, "mesh_faces": second_faces},
+    ]
+
+    smpl_motion, _skeleton3d, _metrics = worldhmr.build_body_artifacts_from_fast_sam(
+        samples,
+        calibration=_identity_calibration(),
+        fps=30.0,
+    )
+
+    assert smpl_motion["mesh_faces"] is first_faces
+
+
+def test_build_body_artifacts_keeps_inconsistent_topology_error_with_interning() -> None:
+    base = {
+        "player_id": 1,
+        "confidence": 0.9,
+        "track_world_xy": [2.0, 3.0],
+        "camera_translation": [0.0, 0.0, 0.0],
+        "joints_camera": [[0.0, 0.0, 1.1]],
+        "vertices_camera": [[0.0, 0.0, 0.0], [0.2, 0.0, 0.0], [0.2, 0.1, 1.7], [0.1, 0.3, 0.8]],
+        "global_orient": [0.0, 0.0, 0.0],
+        "body_pose": [0.0, 0.0, 0.0],
+        "betas": [0.0],
+    }
+    samples = [
+        {**base, "frame_idx": 12, "t": 0.4, "mesh_faces": [[0, 1, 2], [0, 2, 3]]},
+        {**base, "frame_idx": 13, "t": 13.0 / 30.0, "mesh_faces": [[0, 1, 2], [1, 2, 3]]},
+    ]
+
+    with pytest.raises(ValueError, match="Fast SAM-3D-Body samples produced inconsistent mesh_faces"):
+        worldhmr.build_body_artifacts_from_fast_sam(
+            samples,
+            calibration=_identity_calibration(),
+            fps=30.0,
+        )
 
 
 def test_numpy_bulk_body_inputs_preserve_list_contract_and_quantized_world_mesh() -> None:

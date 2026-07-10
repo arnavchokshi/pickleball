@@ -72,6 +72,196 @@ SAM3D_FOOT_KEYPOINT_INDICES = {
 }
 
 
+class _ImmutableList(list[Any]):
+    """List-shaped JSON value whose contents cannot invalidate cached facts."""
+
+    __slots__ = ()
+
+    @staticmethod
+    def _immutable(*_args: Any, **_kwargs: Any) -> None:
+        raise TypeError("mesh topology is immutable")
+
+    __setitem__ = _immutable
+    __delitem__ = _immutable
+    __iadd__ = _immutable
+    __imul__ = _immutable
+    append = _immutable
+    clear = _immutable
+    extend = _immutable
+    insert = _immutable
+    pop = _immutable
+    remove = _immutable
+    reverse = _immutable
+    sort = _immutable
+
+    def __copy__(self) -> _ImmutableList:
+        return self
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> _ImmutableList:
+        memo[id(self)] = self
+        return self
+
+
+class MeshTopology(_ImmutableList):
+    """Validated immutable list-shaped triangle topology.
+
+    It remains a list-of-lists for JSON/Pydantic consumers. Normal access
+    returns detached rows, so its content digest and maximum index remain safe
+    to reuse without a second 36k-face validation pass.
+    """
+
+    __slots__ = ("_digest", "_max_index")
+
+    def __init__(self, rows: Sequence[Sequence[int]]) -> None:
+        array = np.asarray(rows)
+        if array.size == 0:
+            array = np.empty((0, 3), dtype=np.int64)
+        if (
+            array.ndim != 2
+            or array.shape[1:] != (3,)
+            or array.dtype == np.dtype(bool)
+            or not np.issubdtype(array.dtype, np.integer)
+            or _nested_sequence_contains_bool(rows)
+            or bool((array < 0).any())
+        ):
+            raise ValueError("mesh topology must contain non-negative integer triangle index triples")
+        self._set_validated_array(array)
+
+    @classmethod
+    def _from_validated_array(cls, array: np.ndarray) -> MeshTopology:
+        value = cls.__new__(cls)
+        value._set_validated_array(array)
+        return value
+
+    def _set_validated_array(self, array: np.ndarray) -> None:
+        canonical = np.array(array, dtype="<i8", order="C", copy=True)
+        if canonical.size == 0:
+            canonical = np.empty((0, 3), dtype="<i8")
+        # Real nested-list storage is required by existing mesh consumers and
+        # Pydantic's low-level list validator. Normal iteration/indexing below
+        # returns copies so callers cannot mutate these private backing rows.
+        list.__init__(self, canonical.tolist())
+        self._digest = hashlib.sha256(canonical).digest()
+        self._max_index = int(canonical.max()) if canonical.size else -1
+
+    def __iter__(self):  # type: ignore[no-untyped-def]
+        return (list(row) for row in list.__iter__(self))
+
+    def __getitem__(self, index: Any) -> Any:
+        value = list.__getitem__(self, index)
+        if isinstance(index, slice):
+            return [list(row) for row in value]
+        return list(value)
+
+    def copy(self) -> MeshTopology:
+        return self
+
+    def __add__(self, other: list[Any]) -> list[Any]:
+        return self.tolist() + other
+
+    def __radd__(self, other: list[Any]) -> list[Any]:
+        return other + self.tolist()
+
+    def __mul__(self, count: int) -> list[Any]:
+        return self.tolist() * count
+
+    __rmul__ = __mul__
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, MeshTopology):
+            return len(self) == len(other) and self._digest == other._digest
+        if isinstance(other, Sequence) and not isinstance(other, str | bytes | bytearray):
+            return self.tolist() == other
+        return False
+
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
+    def tolist(self) -> list[list[int]]:
+        return [list(row) for row in list.__iter__(self)]
+
+    def __reduce__(self) -> tuple[Any, tuple[list[list[int]]]]:
+        return (type(self), (self.tolist(),))
+
+
+class MeshTopologyInterner:
+    """Own one canonical mesh topology for an explicitly bounded clip scope."""
+
+    __slots__ = ("_canonical", "_inconsistent_error")
+
+    def __init__(
+        self,
+        *,
+        inconsistent_error: str = "Fast SAM-3D-Body samples produced inconsistent mesh_faces",
+    ) -> None:
+        self._canonical: MeshTopology | None = None
+        self._inconsistent_error = str(inconsistent_error)
+
+    def reuse_validated(
+        self,
+        values: Any,
+        *,
+        vertex_count: int,
+        name: str,
+        vertices_name: str,
+    ) -> MeshTopology | None:
+        """Reuse a trusted immutable topology, or decline unvalidated input."""
+
+        if not isinstance(values, MeshTopology):
+            return None
+        self._validate_vertex_bound(
+            values,
+            vertex_count=vertex_count,
+            name=name,
+            vertices_name=vertices_name,
+        )
+        return self._intern_validated(values)
+
+    def intern_validated(
+        self,
+        values: MeshTopology,
+        *,
+        vertex_count: int,
+        name: str,
+        vertices_name: str,
+    ) -> MeshTopology:
+        self._validate_vertex_bound(
+            values,
+            vertex_count=vertex_count,
+            name=name,
+            vertices_name=vertices_name,
+        )
+        return self._intern_validated(values)
+
+    def _intern_validated(self, values: MeshTopology) -> MeshTopology:
+        if not values:
+            return values
+        if self._canonical is None:
+            self._canonical = values
+            return values
+        if values is self._canonical:
+            return values
+        if len(values) == len(self._canonical) and values._digest == self._canonical._digest:
+            return self._canonical
+        raise ValueError(self._inconsistent_error)
+
+    @staticmethod
+    def _validate_vertex_bound(
+        values: MeshTopology,
+        *,
+        vertex_count: int,
+        name: str,
+        vertices_name: str,
+    ) -> None:
+        if values._max_index < int(vertex_count):
+            return
+        values_array = np.asarray(values, dtype=np.int64)
+        outside = values_array >= int(vertex_count)
+        face_index, column_index = (int(value) for value in np.argwhere(outside)[0])
+        index = int(values_array[face_index, column_index])
+        raise ValueError(f"{name}/{face_index} index {index} is outside {vertices_name}")
+
+
 @dataclass(frozen=True)
 class VerifiedModelAsset:
     """Manifest-backed checkpoint path verified before runtime setup."""
@@ -644,6 +834,7 @@ def normalize_fast_sam_body_output(
     person: Mapping[str, Any],
     *,
     request: PlayerCropRequest,
+    mesh_topology_interner: MeshTopologyInterner | None = None,
 ) -> dict[str, Any]:
     """Normalize one real Fast SAM-3D-Body person output for world grounding."""
 
@@ -729,6 +920,7 @@ def normalize_fast_sam_body_output(
             vertex_count=len(vertices),
             name="mesh_faces",
             vertices_name="pred_vertices",
+            topology_interner=mesh_topology_interner,
         ),
         "pred_foot_keypoints_2d": _compact_foot_keypoints_2d(
             _first_present(public, ("pred_keypoints_2d",), default=None),
@@ -821,9 +1013,25 @@ def _float_list(values: Any, *, name: str) -> list[float]:
     return result
 
 
-def _face_list(values: Any, *, vertex_count: int, name: str, vertices_name: str) -> list[list[int]]:
+def _face_list(
+    values: Any,
+    *,
+    vertex_count: int,
+    name: str,
+    vertices_name: str,
+    topology_interner: MeshTopologyInterner | None = None,
+) -> list[list[int]]:
     if values is None:
         return []
+    if topology_interner is not None:
+        reused = topology_interner.reuse_validated(
+            values,
+            vertex_count=vertex_count,
+            name=name,
+            vertices_name=vertices_name,
+        )
+        if reused is not None:
+            return reused
     # Mesh topology is a dense rectangular integer array (36,874 triangles for
     # current MHR). Validate its common path with vectorized reductions instead
     # of reparsing three Python integers per triangle for every player-frame.
@@ -851,8 +1059,33 @@ def _face_list(values: Any, *, vertex_count: int, name: str, vertices_name: str)
                 face_index, column_index = (int(value) for value in np.argwhere(outside)[0])
                 index = int(faces_array[face_index, column_index])
                 raise ValueError(f"{name}/{face_index} index {index} is outside {vertices_name}")
-            return faces_array.astype(np.int64, copy=False).tolist()
-    return _face_list_scalar(values, vertex_count=vertex_count, name=name, vertices_name=vertices_name)
+            parsed = MeshTopology._from_validated_array(faces_array.astype(np.int64, copy=False))
+            return (
+                topology_interner.intern_validated(
+                    parsed,
+                    vertex_count=vertex_count,
+                    name=name,
+                    vertices_name=vertices_name,
+                )
+                if topology_interner is not None
+                else parsed
+            )
+    parsed = MeshTopology._from_validated_array(
+        np.asarray(
+            _face_list_scalar(values, vertex_count=vertex_count, name=name, vertices_name=vertices_name),
+            dtype=np.int64,
+        )
+    )
+    return (
+        topology_interner.intern_validated(
+            parsed,
+            vertex_count=vertex_count,
+            name=name,
+            vertices_name=vertices_name,
+        )
+        if topology_interner is not None
+        else parsed
+    )
 
 
 def _top_level_sequence_is_empty(values: Any) -> bool:
