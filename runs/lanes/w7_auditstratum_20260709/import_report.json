@@ -1,0 +1,28 @@
+{
+  "projects": {
+    "ball": {
+      "project_id": 7,
+      "project_name": "racketsport_w7_ball_audit_20260709"
+    }
+  },
+  "schema_version": 2,
+  "status": "imported",
+  "summary": {
+    "created_task_count": 1,
+    "requested_task_count": 1,
+    "skipped_task_count": 0
+  },
+  "tasks": [
+    {
+      "frame_count": 350,
+      "image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w7_audit_stratum_20260709/w7_audit_stratum_uniform350_images.zip",
+      "kind": "ball",
+      "prelabel_zip": null,
+      "project_id": 7,
+      "status": "imported",
+      "task_fingerprint": "fbe7f0db96c553ad4570f95260e592a91f7aaaa20ae0ebf7b56951105eefae8d",
+      "task_id": 87,
+      "task_name": "w7_audit_stratum_uniform350"
+    }
+  ]
+}
