@@ -1,0 +1,46 @@
+{
+  "artifact_type": "racketsport_body_full_clip_gate",
+  "blockers": [],
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "contact_mesh_coverage": 1.0,
+  "coverage": 1.0,
+  "evaluated_frame_count": 705,
+  "evaluated_player_frame_count": 705,
+  "execution": {
+    "claims_accuracy_verified": false,
+    "cpu_only": true,
+    "runs_body_model": false,
+    "uses_gpu": false
+  },
+  "latency_seconds_per_video_minute": 2003.221109,
+  "min_coverage": 0.98,
+  "passed": true,
+  "paths": {
+    "body_compute_execution": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T041408Z/body_compute_execution.json",
+    "body_joint_quality": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T041408Z/body_joint_quality.json",
+    "contact_splice": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T041408Z/contact_splice.json",
+    "runtime_timing": "body_stage_wall_clock",
+    "tracks": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T041408Z/tracks.json"
+  },
+  "schema_version": 1,
+  "summary": {
+    "body_runtime_seconds": 263.7574459890002,
+    "clip_duration_s": 7.9,
+    "contact_mesh_accounted_count": 705,
+    "contact_mesh_frame_count": 705,
+    "fallback_spliced_contact_count": 0,
+    "joint_player_frame_count": 705,
+    "latency_seconds_per_video_minute": 2003.221109,
+    "mesh_joint_player_frame_count": 705,
+    "mesh_unavailable_contact_count": 0,
+    "quality_blockers": [],
+    "quality_status": "quality_checked_needs_accuracy_gate",
+    "quality_usable_for_review": true,
+    "scheduled_contact_count": 705,
+    "scheduled_player_frame_count": 705,
+    "skeleton_joint_player_frame_count": 705,
+    "tracked_player_frame_count": 705
+  },
+  "tracked_player_frame_count": 705,
+  "warnings": []
+}

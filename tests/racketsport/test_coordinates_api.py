@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -22,6 +24,15 @@ def test_coordinate_vocabulary_and_homography_conventions_are_stable() -> None:
         "world_xy_homography_m",
     }
     assert coordinates.HOMOGRAPHY_PIXEL_CONVENTIONS == ("raw_pixels", "undistorted_pixels")
+
+
+def test_coordinate_enum_is_python310_compatible_and_string_like() -> None:
+    source = Path(coordinates.__file__).read_text(encoding="utf-8")
+    assert re.search(r"from\s+enum\s+import[^\n]*\bStrEnum\b", source) is None
+    for member in coordinates.CoordinateSpace:
+        assert isinstance(member, str)
+        assert member == member.value
+        assert str(member) == member.value
 
 
 def test_module_import_is_lightweight() -> None:

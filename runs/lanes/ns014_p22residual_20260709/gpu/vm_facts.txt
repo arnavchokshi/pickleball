@@ -1,0 +1,4 @@
+VM_NAME=pickleball-h100-ns014rescore
+ZONE=asia-southeast1-c (fallback; -b was STOCKOUT/ZONE_RESOURCE_POOL_EXHAUSTED on first attempt)
+EXTERNAL_IP=34.142.232.28
+CREATE_TIMESTAMP_UTC=2026-07-10T03:25:07Z (gcloud instances describe creationTimestamp, authoritative; gcloud create call returned RUNNING at 2026-07-10T03:27:16Z)

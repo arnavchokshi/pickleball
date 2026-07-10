@@ -14,6 +14,7 @@ import copy
 import json
 import math
 import pickle
+import re
 import sys
 import time
 from collections import defaultdict
@@ -40,10 +41,42 @@ STAGE_NAMES = (
     "world_joint_visual_smoothing",
     "wrist_peak_restore",
 )
+PROVENANCE_STAMP_KEYS = frozenset(
+    {
+        "batch_id",
+        "created_at",
+        "execution_id",
+        "execution_timestamp",
+        "generated_at",
+        "inference_execution_id",
+        "inference_timestamp",
+        "out_path",
+        "output_path",
+        "run_id",
+        "timestamp",
+    }
+)
+RUN_PROVENANCE_FILENAMES = (
+    "body_stage_phase_timing.json",
+    "body_serialization_timing.json",
+    "remote_body_dispatch_timing.json",
+    "version_stamp.json",
+    "pipeline_run.json",
+)
+EXECUTION_TIMESTAMP_PATTERN = re.compile(r"(?<!\d)(20\d{6}T\d{6}Z)(?!\d)")
+SAM3D_BATCH_ID_PATTERN = re.compile(r"batch_outputs-([A-Za-z0-9]+)")
 
 
 class AttributionInputError(ValueError):
     """An input cannot support an honest attribution run."""
+
+
+class IncoherentInputsError(AttributionInputError):
+    """The raw inference records cannot be attributed to the scored run."""
+
+    def __init__(self, report: Mapping[str, Any]) -> None:
+        super().__init__("raw SAM-3D records and scored BODY frames are incoherent")
+        self.report = dict(report)
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -56,6 +89,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sam3d-output-index", type=Path, default=None)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--max-frames-per-player", type=int, default=0)
+    parser.add_argument(
+        "--input-coverage-threshold",
+        type=float,
+        default=1.0,
+        help="Required raw-record coverage of selected body_mesh player-frames (default: 1.0).",
+    )
+    parser.add_argument(
+        "--allow-incoherent-inputs",
+        action="store_true",
+        help="Forensic opt-out: continue while stamping incoherence evidence into every result block.",
+    )
     parser.add_argument("--checkpoint", type=Path, default=Path(mhr_decode.DEFAULT_CHECKPOINT_PATH))
     parser.add_argument("--mhr-asset", type=Path, default=Path(mhr_decode.DEFAULT_MHR_ASSET_PATH))
     parser.add_argument("--device", default=None)
@@ -65,6 +109,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
 def run(args: argparse.Namespace) -> dict[str, Any]:
     if args.max_frames_per_player < 0:
         raise AttributionInputError("--max-frames-per-player must be >= 0")
+    coverage_threshold = float(getattr(args, "input_coverage_threshold", 1.0))
+    if not 0.0 <= coverage_threshold <= 1.0:
+        raise AttributionInputError("--input-coverage-threshold must be between 0 and 1")
+    allow_incoherent = bool(getattr(args, "allow_incoherent_inputs", False))
     run_dir = args.run_dir.resolve()
     calibration_path = (args.calibration or run_dir / "court_calibration.json").resolve()
     if not run_dir.is_dir():
@@ -77,6 +125,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "no Fast-SAM chunk index found; pass --sam3d-output-index or place one under run-dir/fast_sam_subprocess"
         )
     index_path = index_path.resolve()
+    index_payload = _read_json(index_path)
     calibration_payload = _read_json(calibration_path)
     calibration = CourtCalibration.model_validate(calibration_payload)
     raw_reference = _read_json(args.raw_grounded.resolve()) if args.raw_grounded is not None else None
@@ -96,11 +145,40 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         assumptions.append(
             f"Raw grounding context was unavailable; track_world_xy/t came from {context_source}."
         )
-    records = load_present_raw_records(index_path)
-    selected_ids = _select_request_ids(
-        [request_id for request_id in records if request_id in contexts],
+    records = load_present_raw_records(index_path, index_payload=index_payload)
+    run_provenance, run_provenance_sources = _load_run_provenance(run_dir, body_mesh=body_mesh)
+    expected_ids = _measurement_request_ids(
+        body_mesh=body_mesh,
+        records=records,
+        contexts=contexts,
         max_frames_per_player=args.max_frames_per_player,
     )
+    coherence = _input_coherence_evidence(
+        expected_request_ids=expected_ids,
+        records=records,
+        index_payload=index_payload,
+        run_payload=run_provenance,
+        coverage_threshold=coverage_threshold,
+        coverage_source=(
+            "body_mesh_player_frames"
+            if body_mesh is not None
+            else "present_raw_records_restricted_to_available_context"
+        ),
+    )
+    if not coherence["inputs_coherent"] and not allow_incoherent:
+        failure_report = {
+            "schema_version": 1,
+            "artifact_type": ARTIFACT_TYPE,
+            "status": "incoherent_inputs",
+            "inputs_coherent": False,
+            "run_dir": str(run_dir),
+            "sam3d_output_index_path": str(index_path),
+            "run_provenance_sources": run_provenance_sources,
+            "input_coherence": coherence,
+        }
+        _write_json(args.out, failure_report)
+        raise IncoherentInputsError(failure_report)
+    selected_ids = [request_id for request_id in expected_ids if request_id in records and request_id in contexts]
     if not selected_ids:
         raise AttributionInputError("no present raw records have matching run-frame context")
     samples, raw_records = _normalize_samples(
@@ -156,9 +234,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         mhr_asset=args.mhr_asset,
         device=args.device,
     )
+    for result_block in (grounding, postchain_report, replay, fk_vs_head):
+        result_block["inputs_coherent"] = bool(coherence["inputs_coherent"])
+        result_block["input_coherence"] = coherence
     report = {
         "schema_version": 1,
         "artifact_type": ARTIFACT_TYPE,
+        "status": "measured",
+        "inputs_coherent": bool(coherence["inputs_coherent"]),
+        "input_coherence": coherence,
+        "run_provenance_sources": run_provenance_sources,
         "run_dir": str(run_dir),
         "calibration_path": str(calibration_path),
         "raw_grounded_path": None if args.raw_grounded is None else str(args.raw_grounded.resolve()),
@@ -289,10 +374,14 @@ class WorldHmrStageCapture:
         setattr(self.module, symbol, wrapper)
 
 
-def load_present_raw_records(index_path: Path) -> dict[str, dict[str, Any]]:
+def load_present_raw_records(
+    index_path: Path,
+    *,
+    index_payload: Mapping[str, Any] | None = None,
+) -> dict[str, dict[str, Any]]:
     """Load only locally present buckets, ignoring dead paths in the index."""
 
-    index = _read_json(index_path)
+    index = dict(index_payload) if index_payload is not None else _read_json(index_path)
     records: dict[str, dict[str, Any]] = {}
     for chunk in index.get("chunks", []) or []:
         path = index_path.parent / str(chunk.get("path", ""))
@@ -683,6 +772,127 @@ def _select_request_ids(request_ids: Sequence[str], *, max_frames_per_player: in
     return selected
 
 
+def _measurement_request_ids(
+    *,
+    body_mesh: Mapping[str, Any] | None,
+    records: Mapping[str, Any],
+    contexts: Mapping[str, Any],
+    max_frames_per_player: int,
+) -> list[str]:
+    """Choose the player-frames whose coherence must be established before scoring."""
+
+    if body_mesh is not None:
+        request_ids = [
+            f"{frame_idx}:{player_id}"
+            for player_id, frame_idx in _frame_map_from_payload(body_mesh)
+        ]
+    else:
+        # The banked CPU fixture intentionally has no body_mesh and only two
+        # locally present buckets. Its measurement domain is the explicit
+        # present-record subset for which grounding context exists.
+        request_ids = [request_id for request_id in records if request_id in contexts]
+    return _select_request_ids(request_ids, max_frames_per_player=max_frames_per_player)
+
+
+def _input_coherence_evidence(
+    *,
+    expected_request_ids: Sequence[str],
+    records: Mapping[str, Any],
+    index_payload: Mapping[str, Any],
+    run_payload: Mapping[str, Any] | None,
+    coverage_threshold: float,
+    coverage_source: str,
+) -> dict[str, Any]:
+    expected = set(expected_request_ids)
+    present = set(records)
+    missing = sorted(expected - present, key=_request_id_sort_key)
+    covered_count = len(expected & present)
+    coverage = covered_count / len(expected) if expected else 0.0
+    index_stamps = _collect_provenance_stamps(index_payload)
+    run_stamps = _collect_provenance_stamps(run_payload or {})
+    mismatches = []
+    for stamp in sorted(set(index_stamps) & set(run_stamps)):
+        index_values = index_stamps[stamp]
+        run_values = run_stamps[stamp]
+        if set(index_values) != set(run_values):
+            mismatches.append(
+                {
+                    "stamp": stamp,
+                    "index_values": index_values,
+                    "run_values": run_values,
+                }
+            )
+    coherent = bool(expected) and coverage >= coverage_threshold and not mismatches
+    return {
+        "status": "coherent" if coherent else "incoherent_inputs",
+        "inputs_coherent": coherent,
+        "coverage_source": coverage_source,
+        "coverage_threshold": coverage_threshold,
+        "expected_request_id_count": len(expected),
+        "present_raw_record_count": len(present),
+        "covered_request_id_count": covered_count,
+        "coverage_fraction": coverage,
+        "missing_request_id_count": len(missing),
+        "missing_request_ids_first_10": missing[:10],
+        "stamp_mismatches": mismatches,
+        "index_stamps": index_stamps,
+        "run_stamps": run_stamps,
+    }
+
+
+def _collect_provenance_stamps(payload: Mapping[str, Any]) -> dict[str, list[str]]:
+    found: dict[str, set[str]] = defaultdict(set)
+
+    def visit(value: Any) -> None:
+        if isinstance(value, Mapping):
+            for key, item in value.items():
+                if key in PROVENANCE_STAMP_KEYS and isinstance(item, (str, int, float)):
+                    found[key].add(str(item))
+                if isinstance(item, str):
+                    batch_ids = SAM3D_BATCH_ID_PATTERN.findall(item)
+                    if batch_ids:
+                        found["sam3d_batch_id_from_path"].update(batch_ids)
+                        found["sam3d_execution_timestamp_from_path"].update(
+                            EXECUTION_TIMESTAMP_PATTERN.findall(item)
+                        )
+                if key not in {"players", "frames", "mesh_faces"}:
+                    visit(item)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+
+    visit(payload)
+    return {key: sorted(values) for key, values in sorted(found.items())}
+
+
+def _load_run_provenance(
+    run_dir: Path,
+    *,
+    body_mesh: Mapping[str, Any] | None,
+) -> tuple[dict[str, Any], list[str]]:
+    """Load the small sibling artifacts that stamp the BODY inference execution."""
+
+    payloads: dict[str, Any] = {}
+    sources: list[str] = []
+    if body_mesh is not None:
+        payloads["body_mesh.json"] = body_mesh
+        sources.append(str(run_dir / "body_mesh.json"))
+    for filename in RUN_PROVENANCE_FILENAMES:
+        path = run_dir / filename
+        if path.is_file():
+            payloads[filename] = _read_json(path)
+            sources.append(str(path))
+    return payloads, sources
+
+
+def _request_id_sort_key(value: str) -> tuple[int, int]:
+    try:
+        frame_idx, player_id = value.split(":", 1)
+        return int(frame_idx), int(player_id)
+    except (TypeError, ValueError):
+        return sys.maxsize, sys.maxsize
+
+
 def _resolve_fps(*payloads: Mapping[str, Any] | None) -> float:
     for payload in payloads:
         if payload is not None and float(payload.get("fps", 0.0) or 0.0) > 0.0:
@@ -694,6 +904,9 @@ def _discover_index(run_dir: Path) -> Path | None:
     candidates = sorted((run_dir / "fast_sam_subprocess").glob("batch_outputs-*.json.chunks/index.json"))
     if len(candidates) == 1:
         return candidates[0]
+    if len(candidates) > 1:
+        formatted = "\n".join(f"  - {candidate}" for candidate in candidates)
+        raise AttributionInputError(f"multiple Fast-SAM chunk indexes found; pass one explicitly:\n{formatted}")
     return None
 
 
@@ -721,6 +934,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         report = run(args)
+    except IncoherentInputsError as exc:
+        print(json.dumps(exc.report, indent=2, sort_keys=True), file=sys.stderr)
+        return 2
     except AttributionInputError as exc:
         parser.exit(2, f"{parser.prog}: error: {exc}\n")
     print(

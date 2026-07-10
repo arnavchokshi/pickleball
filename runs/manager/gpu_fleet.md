@@ -246,3 +246,67 @@ WAVE-7 FLEET LOG (2026-07-09, manager):
   grounding gates passing. Vector-only intermediate's 19.98 GiB RSS was rejected; topology
   interning recovered 4.80 GiB and another 49.56s BODY. Compute mode Default was required for
   self-dispatch. `VERIFIED=0`; evidence: runs/lanes/ns06_cpu_efficiency_20260709/.
+
+WAVE-DEMO FLEET LOG (2026-07-10, demo_beststack lane):
+- pickleball-h100-demo1 (H100 a3-highgpu-1g SPOT, ase1-b/-c ladder, pd-balanced 200GB FROM
+  pickleball-fleet-snap-20260709-w7close) — PROVISIONING (Sonnet lane demo_beststack_20260710,
+  self-tearing, wall cap 2h, ~$1-6). Mission: git-bundle sync to demo-beststack branch (fail-closed
+  ball emission) -> compute-mode DEFAULT -> cold best-stack E2E wolverine + zwcth45s excerpt ->
+  attestation (best_stack.resolved + fail_closed provenance) -> batched artifact pull w/ md5 ->
+  DELETE + list-confirm + cost. Concurrency 2/4 with w7ball2 (foreign, 3K training).
+- pickleball-h100-demo1 -- DONE+DELETED 2026-07-10T~03:02:30Z list-confirmed absent (created
+  2026-07-10T02:20:11Z, uptime ~0.71h, a3-highgpu-1g H100 SPOT ase1-b, zero preemptions,
+  first-attempt create). Sonnet lane demo_beststack_gpu_20260710: consumed best_stack rev 11
+  (ball.world_emission_fail_closed WIRED_DEFAULT, demo-beststack-20260709 branch HEAD
+  0c110deac26190e883af7cf5830aa5d4cb83ec01). Code sync via git bundle, 6/6 md5 identity match.
+  Wolverine full-stack cold run (--body-local): wall 379.5s, all mandatory stages ran (partial
+  only via input_quality degraded_input advisory), ball_arc_render.json
+  fail_closed_enabled=true suppressed_segment_ids=[0,2,3,4,6,8] (exact commit-claim match),
+  virtual_world/confidence_gated_world max ball z=0.968m (matches commit's claimed
+  23.53m->0.968m exactly, n=75/300 frames). zwcth45s 45s harvest excerpt run twice (R1
+  --remote-host missing-host degraded BODY; R2 --body-local hit a real 'missing BODY frame
+  image' bug specific to this harvest clip) -- ball fail-closed IDENTICAL+reproducible both
+  attempts (suppressed=[0,2,3,4,5], max z=1.69m) but BODY/paddle_pose never completed for this
+  clip in either attempt (flagged for follow-up, distinct from the ball fix). Manager (Fable)
+  took over parallel wolverine pull+QA-render work mid-lane
+  (runs/lanes/demo_beststack_render_20260710/); this lane's own vm_pull/ holds zwcth45s R1+R2
+  with full two-sided md5 verification (wolverine independently re-verified live via SSH, not
+  re-pulled to this lane's dir). Cost ~$0.42-3.03 (0.71h x $0.6-4.3/hr H100 spot). Evidence:
+  runs/lanes/demo_beststack_gpu_20260710/report.json.
+
+- pickleball-h100-demo2 (H100 a3 SPOT, us-central1-a — ase1-b/-c STOCKOUT at attempt, snapshot is
+  global so cross-region boot from pickleball-fleet-snap-20260709-w7close) — RUNNING (manager-run
+  r3: zwcth45s stride-1 BODY rerun after demo1's early teardown race killed the first r3; manager
+  tears down on pull). demo1 accounting: created 2026-07-10T02:22Z, deleted ~03:0xZ by lane,
+  ~0.71h, ~$0.42-3.03, list-confirmed (lane report.json).
+
+NS-014 FLEET LOG (2026-07-09/10, ns014 manager):
+- pickleball-h100-ns014rescore (H100 a3-highgpu-1g SPOT, ase1-b/-c ladder, pd-balanced 200GB FROM
+  pickleball-fleet-snap-20260709-w7close) — PROVISIONING (Sonnet lane ns014_gpu_rescore, self-tearing,
+  wall cap 2.5h). Mission: fresh production-mode wolverine full-stack run at 8cd810a53 -> canonical
+  gate_check_body_decode rescore w/ --attribution-report embedding -> attribute_body_decode_residual
+  full-frame decomposition (grounding determinism / per-postchain-stage deltas / FK-vs-head) ->
+  synthetic_body_decode_gate --decoder sam3d first real measurement (blocked_* = valid honest result)
+  -> pull + md5 -> DELETE + list-confirm + cost. Budget ~1.5-2h x $0.6-4.3/hr ~= $1-9 (+50% ceiling
+  ~$13); 60-min idle self-stop; compute-mode DEFAULT (ns06 self-dispatch finding). Concurrency 3/4
+  with w7ball2 + demo2 (both foreign sessions').
+- pickleball-h100-ns014rescore — DONE+DELETED 2026-07-10T04:43:51Z list-confirmed (created 03:25:07Z,
+  uptime 1.312h, $0.79-5.64, zero preemptions; ase1-b stockout -> ase1-c first-attempt). Delivered:
+  gate_1a exact reproduction; mesh-skel ~53mm p95 REPRODUCES ARM2 digit-close (stable); synthetic
+  sam3d instrument FIRST REAL MEASUREMENT (3/3 valid detections; joints p95 313mm; mesh-skel 39.5mm);
+  FK-vs-head ~0 (persisted params decode EXACTLY to pred_keypoints_3d — decisive). Replay-attribution
+  arm CONFOUNDED (stale chunk index vs later self-dispatch body_mesh — 527mm p95 NOT valid evidence);
+  gate_1b fail-closed blocked_missing_pred_cam_t as designed. STRUCTURAL CATCHES: --body-local never
+  writes body_mesh monoliths (code-confirmed process_video.py:2734/5750/5805); remote-dispatch
+  sync-back EXCLUDES fast_sam_subprocess/ (gate/attribution must run VM-side against the DISPATCH
+  dir); coordinates.py StrEnum breaks py3.10 fleet venvs (repo fix in flight). FYI: demo2 VM vanished
+  mid-lane (its own session's teardown; this lane issued no command at it). Second corrected arm
+  planned (~$1-6). Evidence: runs/lanes/ns014_p22residual_20260709/gpu/pulled/ (13 files, md5 both-sides).
+
+- pickleball-h100-demo2 — DONE+DELETED 2026-07-10T~04:0xZ list-confirmed (created ~03:33Z,
+  ~0.5-0.6h, ~$0.3-2.6, zero preemptions; cross-region snapshot boot us-central1-a WORKS).
+  r3 stride-1 rerun reproduced the SAME BODY failure as r2 stride-2 ("missing BODY frame image
+  for frame 41" — frames stage never materializes it on this cold harvest clip regardless of
+  stride) => reproducible cold-clip frames/BODY scheduling bug, 3 signatures banked in
+  runs/lanes/demo_beststack_20260710/REPORT.md; follow-up lane queued. DEMO WAVE GPU TOTAL
+  (demo1+demo2): ~1.2-1.3h, ~$0.7-5.7; caps never breached (max 2/4 concurrent).

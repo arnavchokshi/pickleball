@@ -1,0 +1,14 @@
+b3095560089c5d119827b3d4029b8118  ./PIPELINE_SUMMARY.json
+9f8dfa85197760406403a4644ee5b4dc  ./attribution_full.json
+443f0dc4e13d523df4d8a5940822b0c7  ./body_compute_execution.json
+abd851d0416af438c998a27a63499b05  ./body_full_clip_gate.json
+46090653eb3fe9be835927a6c4871038  ./body_grounding_quality.json
+acd6f1fe0ed044e3e38fc3d7c17cc989  ./body_joint_quality.json
+895c9c88027d054f9c9314a0945e1db8  ./body_serialization_timing.json
+408d469fef1a59b1d4a713dc1cec17c4  ./body_stage_phase_timing.json
+5c8d5eadfef09b597cd91aba054e5d1e  ./gate1b_rescore.json
+70913c6199a624f73a125a6246f26fdd  ./md5_manifest_vm.txt
+5b70133d899fde6bc8a92e9fba6bf7af  ./synthetic_renders/synthetic_body_0000_attempt1.png
+8abc2c2d0c5cdaf2f9f7bd9421895553  ./synthetic_renders/synthetic_body_0001_attempt1.png
+810fc948cc1ad03a81dbbaac7e3392a0  ./synthetic_renders/synthetic_body_0002_attempt1.png
+a3364cddebf4f48730678c727e7f3105  ./synthetic_sam3d.json

@@ -1,0 +1,30 @@
+{
+  "artifact_type": "racketsport_body_serialization_timing",
+  "artifacts": [
+    {
+      "artifact": "smpl_motion.json",
+      "bytes": 776875614,
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T041408Z/smpl_motion.json",
+      "reason": null,
+      "serialization_seconds": 14.837968188000104,
+      "skipped": false
+    },
+    {
+      "artifact": "body_mesh.json",
+      "bytes": 777783123,
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260710T041408Z/body_mesh.json",
+      "reason": null,
+      "serialization_seconds": 14.946472520000043,
+      "skipped": false
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "json_format": "compact_no_indent_no_sort_keys_newline_terminated",
+    "skipped_count": 0,
+    "total_bytes": 1554658737,
+    "total_serialization_seconds": 29.784440708000147,
+    "written_count": 2
+  }
+}

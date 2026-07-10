@@ -32,14 +32,16 @@ already adopted the vocabulary.
 
 from __future__ import annotations
 
-from enum import StrEnum
+from enum import Enum
 from typing import Any, Final, Literal, Sequence
 
 import numpy as np
 
 
-class CoordinateSpace(StrEnum):
+class CoordinateSpace(str, Enum):
     """Stable names for coordinate-bearing artifacts and APIs."""
+
+    __str__ = str.__str__
 
     PIXELS_RAW_NATIVE = "pixels_raw_native"
     PIXELS_UNDISTORTED_NATIVE = "pixels_undistorted_native"

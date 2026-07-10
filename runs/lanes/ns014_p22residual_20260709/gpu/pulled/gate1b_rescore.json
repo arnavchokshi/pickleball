@@ -1,0 +1,351 @@
+{
+  "artifact_type": "racketsport_body_decode_gate_check",
+  "blocker": "gate_1b_world_round_trip blocked_missing_pred_cam_t: pred_cam_t/camera_translation/transl unavailable for sampled BODY frame(s) ['58:19', '61:19', '64:19', '67:19', '70:19', '73:19', '76:19', '79:19', '82:19', '85:19', '88:19', '91:19', '94:19', '97:19', '100:19', '103:19', '106:19', '109:19', '112:19', '115:19'] (first 20 shown of 160); refusing to emit numeric gate_1b pass/fail.",
+  "body_mesh_path": "runs/lanes/ns014_p22residual_20260709/wolverine_fresh/wolverine_mixed_0200_mid_steep_corner/body_mesh.json",
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "coordinate_spaces": {
+    "decoded_body_offsets": "body_camera_root_relative_m",
+    "persisted_world_points": "world_court_netcenter_z_up_m",
+    "translated_camera_points": "camera_m"
+  },
+  "court_calibration_path": "runs/lanes/ns014_p22residual_20260709/wolverine_fresh/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+  "decoder_provenance": {
+    "checkpoint": {
+      "exists": true,
+      "path": "/home/arnavchokshi/body_runtime/Fast-SAM-3D-Body/checkpoints/sam-3d-body-dinov3/model.ckpt",
+      "sha256": "b5a2f9d305dd02626b967aa2e86021fba07065df66ce7a7e00ffb9664f150abf",
+      "sha256_status": "present"
+    },
+    "mhr_asset": {
+      "exists": true,
+      "path": "/home/arnavchokshi/body_runtime/Fast-SAM-3D-Body/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt",
+      "sha256": "352e271a6c42729c68554ceaea0c955e866970160c31e35506d782dc0f7377bc",
+      "sha256_status": "present"
+    },
+    "mhr_decode_module": {
+      "dimensions": {
+        "body_pose_euler_dim": 133,
+        "face_comps_dim": 72,
+        "global_rot_euler_dim": 3,
+        "hand_comps_dim_per_hand": 54,
+        "num_keypoints": 70,
+        "scale_dim": 28,
+        "shape_dim": 45
+      },
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/threed/racketsport/mhr_decode.py",
+      "sha256": "745d6311899bedb22481d6b742678e182de22aee9fd81263ba5d7bbdb90ed40e",
+      "version_stamp": "mhr_decode.py:745d6311899bedb22481d6b742678e182de22aee9fd81263ba5d7bbdb90ed40e"
+    },
+    "mhr_forward_signature": "MHRHead.mhr_forward(global_trans, global_rot, body_pose_params, hand_pose_params, scale_params, shape_params, expr_params=None, return_keypoints=False, do_pcblend=True, return_joint_coords=False, return_model_params=False, return_joint_rotations=False, scale_offsets=None, vertex_offsets=None, _do_timing=False)",
+    "mhr_runtime_available": true,
+    "mhr_runtime_import_error": null
+  },
+  "field_mapping": [
+    {
+      "mhr_forward_arg": "global_trans",
+      "notes": "Persisted smplx_params.transl_world is not decoded; it is used later as world-grounding track_world_xy.",
+      "source": "zero tensor from mhr_decode.MHRDecoder._prep_batch"
+    },
+    {
+      "mhr_forward_arg": "global_rot",
+      "notes": "3-dim Euler global orientation, passed as global_orient_euler to decode_euler_frame().",
+      "source": "body_mesh.players[].frames[].smplx_params.global_orient"
+    },
+    {
+      "mhr_forward_arg": "body_pose_params",
+      "notes": "133-dim persisted Euler body pose; MHRHead.mhr_forward internally truncates to the first 130 channels.",
+      "source": "body_mesh.players[].frames[].smplx_params.body_pose"
+    },
+    {
+      "mhr_forward_arg": "hand_pose_params",
+      "notes": "54+54 hand components, concatenated verbatim when both hands are present; otherwise mhr_decode supplies zeros.",
+      "source": "smplx_params.left_hand_pose + smplx_params.right_hand_pose"
+    },
+    {
+      "mhr_forward_arg": "scale_params",
+      "notes": "--scale-source field passes the 28-dim field and fails if absent; --scale-source none passes None so mhr_decode uses zeros/mean scale.",
+      "source": "body_mesh.players[].frames[].smplx_params.scale"
+    },
+    {
+      "mhr_forward_arg": "shape_params",
+      "notes": "45-dim shape/betas vector, passed as decode_euler_frame(shape=...).",
+      "source": "body_mesh.players[].frames[].smplx_params.betas"
+    },
+    {
+      "mhr_forward_arg": "expr_params",
+      "notes": "Persisted body_mesh frames do not carry expression params; mhr_decode supplies FACE_COMPS_DIM zeros.",
+      "source": "zero tensor from mhr_decode.MHRDecoder._prep_batch"
+    }
+  ],
+  "gate_1a": {
+    "body_pose": {
+      "component": "body_pose",
+      "frame_count": 705,
+      "max_abs_error_deg": 1.366037849948043e-05,
+      "mean_abs_error_deg": 8.304181342566608e-09,
+      "p95_abs_error_deg": 0.0
+    },
+    "gate": "gate_1a_euler_cont_euler_idempotence",
+    "global_orient": {
+      "component": "global_orient",
+      "frame_count": 705,
+      "max_abs_error_deg": 4.098113640793599e-05,
+      "mean_abs_error_deg": 2.3574652914248873e-06,
+      "p95_abs_error_deg": 1.366037849948043e-05
+    },
+    "max_abs_error_deg": 4.098113640793599e-05,
+    "passed": true,
+    "target_max_abs_error_deg": 0.1
+  },
+  "gate_1a_euler_cont_euler_idempotence": {
+    "body_pose": {
+      "component": "body_pose",
+      "frame_count": 705,
+      "max_abs_error_deg": 1.366037849948043e-05,
+      "mean_abs_error_deg": 8.304181342566608e-09,
+      "p95_abs_error_deg": 0.0
+    },
+    "gate": "gate_1a_euler_cont_euler_idempotence",
+    "global_orient": {
+      "component": "global_orient",
+      "frame_count": 705,
+      "max_abs_error_deg": 4.098113640793599e-05,
+      "mean_abs_error_deg": 2.3574652914248873e-06,
+      "p95_abs_error_deg": 1.366037849948043e-05
+    },
+    "max_abs_error_deg": 4.098113640793599e-05,
+    "passed": true,
+    "target_max_abs_error_deg": 0.1
+  },
+  "gate_1b": {
+    "blocked_reason": "gate_1b_world_round_trip blocked_missing_pred_cam_t: pred_cam_t/camera_translation/transl unavailable for sampled BODY frame(s) ['58:19', '61:19', '64:19', '67:19', '70:19', '73:19', '76:19', '79:19', '82:19', '85:19', '88:19', '91:19', '94:19', '97:19', '100:19', '103:19', '106:19', '109:19', '112:19', '115:19'] (first 20 shown of 160); refusing to emit numeric gate_1b pass/fail.",
+    "gate": "gate_1b_world_round_trip",
+    "missing_pred_cam_t_request_ids": [
+      "58:19",
+      "61:19",
+      "64:19",
+      "67:19",
+      "70:19",
+      "73:19",
+      "76:19",
+      "79:19",
+      "82:19",
+      "85:19",
+      "88:19",
+      "91:19",
+      "94:19",
+      "97:19",
+      "100:19",
+      "103:19",
+      "106:19",
+      "109:19",
+      "112:19",
+      "115:19"
+    ],
+    "missing_pred_cam_t_sample_count": 160,
+    "passed": null,
+    "per_player": {},
+    "scale_source": "none",
+    "status": "blocked_missing_pred_cam_t",
+    "target_max_abs_error_mm": 1.0,
+    "vertices_status": "not_evaluated",
+    "worst_joints_world_max_abs_error_mm": null,
+    "worst_vertices_world_max_abs_error_mm": null
+  },
+  "gate_1b_world_round_trip": {
+    "blocked_reason": "gate_1b_world_round_trip blocked_missing_pred_cam_t: pred_cam_t/camera_translation/transl unavailable for sampled BODY frame(s) ['58:19', '61:19', '64:19', '67:19', '70:19', '73:19', '76:19', '79:19', '82:19', '85:19', '88:19', '91:19', '94:19', '97:19', '100:19', '103:19', '106:19', '109:19', '112:19', '115:19'] (first 20 shown of 160); refusing to emit numeric gate_1b pass/fail.",
+    "gate": "gate_1b_world_round_trip",
+    "missing_pred_cam_t_request_ids": [
+      "58:19",
+      "61:19",
+      "64:19",
+      "67:19",
+      "70:19",
+      "73:19",
+      "76:19",
+      "79:19",
+      "82:19",
+      "85:19",
+      "88:19",
+      "91:19",
+      "94:19",
+      "97:19",
+      "100:19",
+      "103:19",
+      "106:19",
+      "109:19",
+      "112:19",
+      "115:19"
+    ],
+    "missing_pred_cam_t_sample_count": 160,
+    "passed": null,
+    "per_player": {},
+    "scale_source": "none",
+    "status": "blocked_missing_pred_cam_t",
+    "target_max_abs_error_mm": 1.0,
+    "vertices_status": "not_evaluated",
+    "worst_joints_world_max_abs_error_mm": null,
+    "worst_vertices_world_max_abs_error_mm": null
+  },
+  "measurement_status": "measured_gate_1b_blocked",
+  "mesh_skeleton_divergence": {
+    "passed": false,
+    "per_player": {
+      "19": {
+        "p95_mm_max_over_sample": 50.79971694946289,
+        "p95_mm_mean_over_sample": 49.844169807434085,
+        "sample_count": 40
+      },
+      "20": {
+        "p95_mm_max_over_sample": 53.405784606933594,
+        "p95_mm_mean_over_sample": 49.373410034179685,
+        "sample_count": 40
+      },
+      "21": {
+        "p95_mm_max_over_sample": 53.19124221801758,
+        "p95_mm_mean_over_sample": 50.881553936004636,
+        "sample_count": 40
+      },
+      "22": {
+        "p95_mm_max_over_sample": 52.55945587158203,
+        "p95_mm_mean_over_sample": 50.02528629302979,
+        "sample_count": 40
+      }
+    },
+    "target_p95_mm": 5.0,
+    "worst_p95_mm_over_sample": 53.405784606933594
+  },
+  "player_ids": [
+    "19",
+    "20",
+    "21",
+    "22"
+  ],
+  "raw_emit_source": {
+    "record_count": 0,
+    "request_count": 705,
+    "sam3d_output_index_path": null,
+    "status": "not_found"
+  },
+  "residual_decomposition": {
+    "fk_vs_head": {
+      "informational": true,
+      "per_player": {
+        "19": {
+          "raw": {
+            "max_mm": 0.00046361533361983435,
+            "mean_mm": 2.711502885794357e-05,
+            "p95_mm": 0.0001228781230931777,
+            "sample_count": 11060
+          },
+          "root_aligned": {
+            "max_mm": 0.0005031211082975308,
+            "mean_mm": 4.626306951933271e-05,
+            "p95_mm": 0.00021704701821787602,
+            "sample_count": 11060
+          }
+        },
+        "20": {
+          "raw": {
+            "max_mm": 0.0004169829774032836,
+            "mean_mm": 2.7347335266172013e-05,
+            "p95_mm": 0.00012293457984924316,
+            "sample_count": 10570
+          },
+          "root_aligned": {
+            "max_mm": 0.0005123730203283796,
+            "mean_mm": 4.359818401568468e-05,
+            "p95_mm": 0.00019314112360500874,
+            "sample_count": 10570
+          }
+        },
+        "21": {
+          "raw": {
+            "max_mm": 0.0008080016396213707,
+            "mean_mm": 2.8713549019820797e-05,
+            "p95_mm": 0.00012310379476739692,
+            "sample_count": 11130
+          },
+          "root_aligned": {
+            "max_mm": 0.0008175633137412512,
+            "mean_mm": 5.716253965682276e-05,
+            "p95_mm": 0.00027902127467058425,
+            "sample_count": 11130
+          }
+        },
+        "22": {
+          "raw": {
+            "max_mm": 0.0005886548086725524,
+            "mean_mm": 2.4602913622901226e-05,
+            "p95_mm": 0.0001228781230931777,
+            "sample_count": 16590
+          },
+          "root_aligned": {
+            "max_mm": 0.0009144937880318829,
+            "mean_mm": 4.149169617316541e-05,
+            "p95_mm": 0.00019314112360500874,
+            "sample_count": 16590
+          }
+        }
+      },
+      "raw": {
+        "max_mm": 0.0008080016396213707,
+        "mean_mm": 2.6680804265994547e-05,
+        "p95_mm": 0.0001228781230931777,
+        "sample_count": 49350
+      },
+      "root_aligned": {
+        "max_mm": 0.0009144937880318829,
+        "mean_mm": 4.654647740269216e-05,
+        "p95_mm": 0.00022152168672261396,
+        "sample_count": 49350
+      },
+      "status": "measured"
+    },
+    "grounding_determinism": {
+      "overall": null,
+      "passed_1mm": null,
+      "per_player": {},
+      "status": "no_reference"
+    },
+    "postchain_totals": {
+      "matched_frame_count": 705,
+      "overall": {
+        "max_mm": 1582.7858470501183,
+        "mean_mm": 94.41785686615118,
+        "p95_mm": 383.27474543502035,
+        "sample_count": 49350
+      },
+      "per_player": {
+        "19": {
+          "max_mm": 1582.7858470501183,
+          "mean_mm": 134.95805167743626,
+          "p95_mm": 509.0517202501684,
+          "sample_count": 11060
+        },
+        "20": {
+          "max_mm": 680.0365765120124,
+          "mean_mm": 100.90917876999528,
+          "p95_mm": 306.16337289251203,
+          "sample_count": 10570
+        },
+        "21": {
+          "max_mm": 1363.725970988714,
+          "mean_mm": 85.20368841820031,
+          "p95_mm": 291.25645705119,
+          "sample_count": 11130
+        },
+        "22": {
+          "max_mm": 868.2941574656115,
+          "mean_mm": 69.43689650986721,
+          "p95_mm": 442.4779213931046,
+          "sample_count": 16590
+        }
+      }
+    },
+    "source_path": "runs/lanes/ns014_p22residual_20260709/gpu_measurements/attribution_full.json"
+  },
+  "schema_version": 1,
+  "total_real_frame_sample_count": 705,
+  "wall_seconds": 41.73827505111694
+}

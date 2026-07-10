@@ -1,0 +1,492 @@
+{
+  "artifact_type": "racketsport_body_decode_residual_attribution",
+  "assumptions": [],
+  "calibration_path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+  "coordinate_spaces": {
+    "normalized": "camera_m",
+    "persisted": "world_court_netcenter_z_up_m",
+    "raw_head": "body_camera_root_relative_m"
+  },
+  "fk_vs_head_divergence": {
+    "error": "ModuleNotFoundError(\"No module named 'roma'\")",
+    "informational": true,
+    "input_coherence": {
+      "coverage_fraction": 1.0,
+      "coverage_source": "present_raw_records_restricted_to_available_context",
+      "coverage_threshold": 1.0,
+      "covered_request_id_count": 32,
+      "expected_request_id_count": 32,
+      "index_stamps": {
+        "out_path": [
+          "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260709T064634Z/fast_sam_subprocess/batch_outputs-7c0dd142d5ef4c69bf477d9d3f69e61d.json"
+        ],
+        "sam3d_batch_id_from_path": [
+          "7c0dd142d5ef4c69bf477d9d3f69e61d"
+        ],
+        "sam3d_execution_timestamp_from_path": [
+          "20260709T064634Z"
+        ]
+      },
+      "inputs_coherent": true,
+      "missing_request_id_count": 0,
+      "missing_request_ids_first_10": [],
+      "present_raw_record_count": 32,
+      "run_stamps": {
+        "sam3d_batch_id_from_path": [
+          "7c0dd142d5ef4c69bf477d9d3f69e61d"
+        ],
+        "sam3d_execution_timestamp_from_path": [
+          "20260709T064634Z"
+        ]
+      },
+      "stamp_mismatches": [],
+      "status": "coherent"
+    },
+    "inputs_coherent": true,
+    "status": "blocked_mhr_runtime_unavailable"
+  },
+  "grounding_determinism": {
+    "input_coherence": {
+      "coverage_fraction": 1.0,
+      "coverage_source": "present_raw_records_restricted_to_available_context",
+      "coverage_threshold": 1.0,
+      "covered_request_id_count": 32,
+      "expected_request_id_count": 32,
+      "index_stamps": {
+        "out_path": [
+          "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260709T064634Z/fast_sam_subprocess/batch_outputs-7c0dd142d5ef4c69bf477d9d3f69e61d.json"
+        ],
+        "sam3d_batch_id_from_path": [
+          "7c0dd142d5ef4c69bf477d9d3f69e61d"
+        ],
+        "sam3d_execution_timestamp_from_path": [
+          "20260709T064634Z"
+        ]
+      },
+      "inputs_coherent": true,
+      "missing_request_id_count": 0,
+      "missing_request_ids_first_10": [],
+      "present_raw_record_count": 32,
+      "run_stamps": {
+        "sam3d_batch_id_from_path": [
+          "7c0dd142d5ef4c69bf477d9d3f69e61d"
+        ],
+        "sam3d_execution_timestamp_from_path": [
+          "20260709T064634Z"
+        ]
+      },
+      "stamp_mismatches": [],
+      "status": "coherent"
+    },
+    "inputs_coherent": true,
+    "matched_frame_count": 32,
+    "overall": {
+      "max_mm": 3.552713678800501e-12,
+      "mean_mm": 3.5677235578957185e-13,
+      "p95_mm": 1.9860273225978185e-12,
+      "sample_count": 2240
+    },
+    "passed_1mm": true,
+    "per_player": {
+      "20": {
+        "max_mm": 3.552713678800501e-12,
+        "mean_mm": 6.581365910347208e-13,
+        "p95_mm": 1.9860273225978185e-12,
+        "sample_count": 630
+      },
+      "21": {
+        "max_mm": 1.831026719408895e-12,
+        "mean_mm": 2.388472202588614e-13,
+        "p95_mm": 4.965068306494546e-13,
+        "sample_count": 1610
+      }
+    },
+    "status": "measured"
+  },
+  "input_coherence": {
+    "coverage_fraction": 1.0,
+    "coverage_source": "present_raw_records_restricted_to_available_context",
+    "coverage_threshold": 1.0,
+    "covered_request_id_count": 32,
+    "expected_request_id_count": 32,
+    "index_stamps": {
+      "out_path": [
+        "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260709T064634Z/fast_sam_subprocess/batch_outputs-7c0dd142d5ef4c69bf477d9d3f69e61d.json"
+      ],
+      "sam3d_batch_id_from_path": [
+        "7c0dd142d5ef4c69bf477d9d3f69e61d"
+      ],
+      "sam3d_execution_timestamp_from_path": [
+        "20260709T064634Z"
+      ]
+    },
+    "inputs_coherent": true,
+    "missing_request_id_count": 0,
+    "missing_request_ids_first_10": [],
+    "present_raw_record_count": 32,
+    "run_stamps": {
+      "sam3d_batch_id_from_path": [
+        "7c0dd142d5ef4c69bf477d9d3f69e61d"
+      ],
+      "sam3d_execution_timestamp_from_path": [
+        "20260709T064634Z"
+      ]
+    },
+    "stamp_mismatches": [],
+    "status": "coherent"
+  },
+  "input_summary": {
+    "body_mesh_present": false,
+    "fps": 30.0,
+    "player_ids": [
+      "20",
+      "21"
+    ],
+    "present_raw_record_count": 32,
+    "selected_raw_record_count": 32,
+    "selected_request_ids": [
+      "56:21",
+      "57:21",
+      "58:21",
+      "59:21",
+      "60:21",
+      "61:21",
+      "62:21",
+      "63:21",
+      "64:20",
+      "64:21",
+      "65:20",
+      "65:21",
+      "66:21",
+      "67:21",
+      "68:21",
+      "69:21",
+      "70:21",
+      "71:20",
+      "71:21",
+      "72:20",
+      "72:21",
+      "73:21",
+      "74:21",
+      "75:20",
+      "75:21",
+      "76:20",
+      "76:21",
+      "77:20",
+      "77:21",
+      "78:20",
+      "78:21",
+      "79:20"
+    ],
+    "skeleton3d_present": true
+  },
+  "inputs_coherent": true,
+  "method": {
+    "grounding": "hmr_deep.normalize_fast_sam_body_output -> worldhmr._ground_fast_sam_sample; pred_cam_t is applied exactly once by the production normalizer",
+    "postchain": "real worldhmr.compute_body_skeleton_and_metrics entrypoint with temporary call-time wrappers around stage functions; no production monkeypatch persists after the call",
+    "replay": "index-aligned player/frame joint comparison on every selected present raw record"
+  },
+  "postchain_attribution": {
+    "all_stages_disabled": true,
+    "all_stages_disabled_identity_max_m": 0.0,
+    "entrypoint": "worldhmr.compute_body_skeleton_and_metrics",
+    "input_coherence": {
+      "coverage_fraction": 1.0,
+      "coverage_source": "present_raw_records_restricted_to_available_context",
+      "coverage_threshold": 1.0,
+      "covered_request_id_count": 32,
+      "expected_request_id_count": 32,
+      "index_stamps": {
+        "out_path": [
+          "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260709T064634Z/fast_sam_subprocess/batch_outputs-7c0dd142d5ef4c69bf477d9d3f69e61d.json"
+        ],
+        "sam3d_batch_id_from_path": [
+          "7c0dd142d5ef4c69bf477d9d3f69e61d"
+        ],
+        "sam3d_execution_timestamp_from_path": [
+          "20260709T064634Z"
+        ]
+      },
+      "inputs_coherent": true,
+      "missing_request_id_count": 0,
+      "missing_request_ids_first_10": [],
+      "present_raw_record_count": 32,
+      "run_stamps": {
+        "sam3d_batch_id_from_path": [
+          "7c0dd142d5ef4c69bf477d9d3f69e61d"
+        ],
+        "sam3d_execution_timestamp_from_path": [
+          "20260709T064634Z"
+        ]
+      },
+      "stamp_mismatches": [],
+      "status": "coherent"
+    },
+    "inputs_coherent": true,
+    "skeleton_only_stages": {
+      "contact_splice": "outside worldhmr entrypoint; not replayed by this instrument",
+      "foot_pin": false,
+      "temporal_refine_and_wrist_lock_callsite_1": false,
+      "wrist_lock_callsite_2": "outside worldhmr entrypoint; not replayed by this instrument"
+    },
+    "stages": [
+      {
+        "delta_vs_previous": {
+          "matched_frame_count": 32,
+          "overall": {
+            "max_mm": 0.0,
+            "mean_mm": 0.0,
+            "p95_mm": 0.0,
+            "sample_count": 2240
+          },
+          "per_player": {
+            "20": {
+              "max_mm": 0.0,
+              "mean_mm": 0.0,
+              "p95_mm": 0.0,
+              "sample_count": 630
+            },
+            "21": {
+              "max_mm": 0.0,
+              "mean_mm": 0.0,
+              "p95_mm": 0.0,
+              "sample_count": 1610
+            }
+          }
+        },
+        "enabled": false,
+        "snapshot_captured": true,
+        "stage": "temporal_smoothing"
+      },
+      {
+        "delta_vs_previous": {
+          "matched_frame_count": 32,
+          "overall": {
+            "max_mm": 0.0,
+            "mean_mm": 0.0,
+            "p95_mm": 0.0,
+            "sample_count": 2240
+          },
+          "per_player": {
+            "20": {
+              "max_mm": 0.0,
+              "mean_mm": 0.0,
+              "p95_mm": 0.0,
+              "sample_count": 630
+            },
+            "21": {
+              "max_mm": 0.0,
+              "mean_mm": 0.0,
+              "p95_mm": 0.0,
+              "sample_count": 1610
+            }
+          }
+        },
+        "enabled": false,
+        "snapshot_captured": true,
+        "stage": "foot_lock"
+      },
+      {
+        "delta_vs_previous": {
+          "matched_frame_count": 32,
+          "overall": {
+            "max_mm": 0.0,
+            "mean_mm": 0.0,
+            "p95_mm": 0.0,
+            "sample_count": 2240
+          },
+          "per_player": {
+            "20": {
+              "max_mm": 0.0,
+              "mean_mm": 0.0,
+              "p95_mm": 0.0,
+              "sample_count": 630
+            },
+            "21": {
+              "max_mm": 0.0,
+              "mean_mm": 0.0,
+              "p95_mm": 0.0,
+              "sample_count": 1610
+            }
+          }
+        },
+        "enabled": false,
+        "snapshot_captured": false,
+        "stage": "root_phase_median_lock"
+      },
+      {
+        "delta_vs_previous": {
+          "matched_frame_count": 32,
+          "overall": {
+            "max_mm": 0.0,
+            "mean_mm": 0.0,
+            "p95_mm": 0.0,
+            "sample_count": 2240
+          },
+          "per_player": {
+            "20": {
+              "max_mm": 0.0,
+              "mean_mm": 0.0,
+              "p95_mm": 0.0,
+              "sample_count": 630
+            },
+            "21": {
+              "max_mm": 0.0,
+              "mean_mm": 0.0,
+              "p95_mm": 0.0,
+              "sample_count": 1610
+            }
+          }
+        },
+        "enabled": false,
+        "snapshot_captured": true,
+        "stage": "world_joint_visual_smoothing"
+      },
+      {
+        "delta_vs_previous": {
+          "matched_frame_count": 32,
+          "overall": {
+            "max_mm": 0.0,
+            "mean_mm": 0.0,
+            "p95_mm": 0.0,
+            "sample_count": 2240
+          },
+          "per_player": {
+            "20": {
+              "max_mm": 0.0,
+              "mean_mm": 0.0,
+              "p95_mm": 0.0,
+              "sample_count": 630
+            },
+            "21": {
+              "max_mm": 0.0,
+              "mean_mm": 0.0,
+              "p95_mm": 0.0,
+              "sample_count": 1610
+            }
+          }
+        },
+        "enabled": false,
+        "snapshot_captured": true,
+        "stage": "wrist_peak_restore"
+      }
+    ],
+    "status": "measured",
+    "total_delta": {
+      "matched_frame_count": 32,
+      "overall": {
+        "max_mm": 0.0,
+        "mean_mm": 0.0,
+        "p95_mm": 0.0,
+        "sample_count": 2240
+      },
+      "per_player": {
+        "20": {
+          "max_mm": 0.0,
+          "mean_mm": 0.0,
+          "p95_mm": 0.0,
+          "sample_count": 630
+        },
+        "21": {
+          "max_mm": 0.0,
+          "mean_mm": 0.0,
+          "p95_mm": 0.0,
+          "sample_count": 1610
+        }
+      }
+    }
+  },
+  "postchain_knobs": {
+    "contact_splice": false,
+    "foot_lock": false,
+    "foot_pin": false,
+    "grounding_anchor_source": "placement_track_world_xy",
+    "max_root_speed_mps": 8.0,
+    "max_track_anchor_smoothing_residual_m": 0.75,
+    "mode": "raw",
+    "raw_grounded_joints_sidecar": "body_raw_grounded_joints.json",
+    "smoothing_alpha": 1.0,
+    "smoothing_gap_carry_frames": 8,
+    "smoothing_residual_identity_reset_m": 1.0,
+    "temporal_smoothing": false,
+    "world_joint_visual_smoothing": false,
+    "wrist_lock": false
+  },
+  "raw_grounded_path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_raw_grounded_joints.json",
+  "replay_validation": {
+    "body_mesh": {
+      "status": "absent"
+    },
+    "chain_reproduced_1mm": true,
+    "first_divergent_stage": null,
+    "input_coherence": {
+      "coverage_fraction": 1.0,
+      "coverage_source": "present_raw_records_restricted_to_available_context",
+      "coverage_threshold": 1.0,
+      "covered_request_id_count": 32,
+      "expected_request_id_count": 32,
+      "index_stamps": {
+        "out_path": [
+          "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_mixed_0200_mid_steep_corner_20260709T064634Z/fast_sam_subprocess/batch_outputs-7c0dd142d5ef4c69bf477d9d3f69e61d.json"
+        ],
+        "sam3d_batch_id_from_path": [
+          "7c0dd142d5ef4c69bf477d9d3f69e61d"
+        ],
+        "sam3d_execution_timestamp_from_path": [
+          "20260709T064634Z"
+        ]
+      },
+      "inputs_coherent": true,
+      "missing_request_id_count": 0,
+      "missing_request_ids_first_10": [],
+      "present_raw_record_count": 32,
+      "run_stamps": {
+        "sam3d_batch_id_from_path": [
+          "7c0dd142d5ef4c69bf477d9d3f69e61d"
+        ],
+        "sam3d_execution_timestamp_from_path": [
+          "20260709T064634Z"
+        ]
+      },
+      "stamp_mismatches": [],
+      "status": "coherent"
+    },
+    "inputs_coherent": true,
+    "skeleton3d": {
+      "matched_frame_count": 32,
+      "overall": {
+        "max_mm": 3.552713678800501e-12,
+        "mean_mm": 3.5677235578957185e-13,
+        "p95_mm": 1.9860273225978185e-12,
+        "sample_count": 2240
+      },
+      "per_player": {
+        "20": {
+          "max_mm": 3.552713678800501e-12,
+          "mean_mm": 6.581365910347208e-13,
+          "p95_mm": 1.9860273225978185e-12,
+          "sample_count": 630
+        },
+        "21": {
+          "max_mm": 1.831026719408895e-12,
+          "mean_mm": 2.388472202588614e-13,
+          "p95_mm": 4.965068306494546e-13,
+          "sample_count": 1610
+        }
+      },
+      "status": "measured"
+    }
+  },
+  "run_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner",
+  "run_provenance_sources": [
+    "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_stage_phase_timing.json",
+    "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_serialization_timing.json",
+    "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/remote_body_dispatch_timing.json",
+    "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/version_stamp.json",
+    "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/pipeline_run.json"
+  ],
+  "sam3d_output_index_path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_p22gate_20260709/fast_sam_subprocess_sample/index.json",
+  "schema_version": 1,
+  "status": "measured",
+  "wall_seconds": 6.069520950317383
+}
