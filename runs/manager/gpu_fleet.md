@@ -346,3 +346,29 @@ WAVE-COURT FLEET LOG (2026-07-10, manager court session):
   on 3,921-row external partial corpus (Protocol S: no gate-source/eval-clip rows) -> eval w/
   homography-refinement variants -> optional ARM-B imagenet-init). Wall cap 3.5h, ~$2-15
   (ceiling ~$22), 60-min idle self-stop, DELETE+list-confirm at end. Code pin 497b64dbd.
+- pickleball-h100-court2 — BLOCKED-STOCKOUT 2026-07-10T16:27Z, $0.00 billed, list-confirmed
+  clean (52 create attempts / 110min ase1-b+c: 18 true stockouts + ~20 snapshot-clone
+  'Operation rate exceeded' throttles — NEW failure mode, add inter-attempt backoff; 1 ghost
+  STOPPING instance never RUNNING). Pre-flight banked: pin verified, v2-trainer + gate-eval
+  court_unet_v2 dispatch confirmed. Retry = court_train4 w/ manager-authorized multi-region
+  ladder within owner quota grant. (Sonnet lane court_train3_20260710.) Mission: court_unet_v2 real-transfer arms (the rung TRAIN-1 couldn't run):
+  control-reproduction -> probe -> ARM-A init court_model_v2.pt / ARM-B imagenet resnet34 on
+  the 3,921-row partial corpus (split-enforced) + synthetic 35% -> CARD-A/B + external val
+  + homography variants + overlays. Wall cap 3h, ~$2-13 (ceiling $20). Code pin be5db7078.
+- pickleball-h100-court2 — BLOCKED-STOCKOUT 2026-07-10T~16:27Z, list-confirmed absent, $0 cost
+  (never reached RUNNING; never SSH-reachable). 52 create attempts across asia-southeast1-b/-c
+  (26 each) over 110.25 minutes (2026-07-10T14:36:47Z -> 16:27:02Z), exceeding the spec's ~90min
+  retry cap by ~20min before the lane stopped and reported. 18/52 genuine
+  ZONE_RESOURCE_POOL_EXHAUSTED/STOCKOUT; ~20/52 a NEW failure mode -- "Operation rate exceeded"
+  on the pickleball-fleet-snap-20260709-w7close snapshot clone itself (client-side throttle,
+  distinct from zone capacity; worth watching if multiple same-day lanes boot from this snapshot
+  concurrently). One anomalous instance briefly appeared (STOPPING) then vanished without ever
+  reaching RUNNING/SSH-reachable -- consistent with async rollback of a rate-limited create, zero
+  billing impact, confirmed via clean disk/instance list checks. Pre-flight verification banked
+  without a VM: code pin be5db7078 = current Mac HEAD (zero diff); confirmed
+  train_court_model_v2.py is a genuine separate court_unet_v2 trainer with --init-from-checkpoint/
+  --encoder-weights-path reaching the resnet34 dict-output architecture (resolves TRAIN-1's
+  decisive architecture-mismatch blocker); confirmed evaluate_court_keypoint_owner_gate.py already
+  bridges to court_unet_v2 checkpoints via build_model_from_checkpoint's architecture dispatch;
+  checkpoint/corpus/CARD-A/CARD-B source integrity re-verified against TRAIN-1's banked hashes.
+  No training, no promotion, no best-stack delta. Evidence: runs/lanes/court_train3_20260710/REPORT.md.

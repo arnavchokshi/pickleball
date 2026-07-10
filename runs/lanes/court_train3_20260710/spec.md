@@ -50,3 +50,11 @@ honest_issues, artifacts, cost, fleet_accounting}.
   --real-weight 0.65 --synthetic-weight 0.35, --batch-size/--real-batch-size per probe VRAM,
   epochs*steps-per-epoch = probe-derived budget.
 - Fleet at dispatch: 0/4 running (verify with the fleet-filter list before create).
+
+## MANAGER RULING POST-STOCKOUT (2026-07-10 ~09:3x PDT) — carried into TRAIN-4
+Widened provisioning authorized (within owner 2026-07-07 quota grant): H100 spot ladder
+ase1-b, ase1-c, us-central1-a, us-central1-b, us-east4-a, us-east4-c, europe-west4-b; then
+A100-80GB (a2-ultragpu-1g) us-central1/us-east4/europe-west4/ase1; then A100-40GB
+(a2-highgpu-1g) ase1-a/us-central1. 120s sleep between create attempts (snapshot-clone rate
+throttle), 2h provisioning cap. A100-40 budget note: ~2.3x H100 step time — shrink step
+budget to fit wall cap, drop ARM-B first.

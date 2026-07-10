@@ -1,0 +1,104 @@
+attempt 1 zone asia-southeast1-b 2026-07-10T15:06:22Z
+fail zone=asia-southeast1-b attempt=1: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 2 zone asia-southeast1-c 2026-07-10T15:07:23Z
+fail zone=asia-southeast1-c attempt=2: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 3 zone asia-southeast1-b 2026-07-10T15:08:26Z
+fail zone=asia-southeast1-b attempt=3:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 4 zone asia-southeast1-c 2026-07-10T15:10:22Z
+fail zone=asia-southeast1-c attempt=4:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 5 zone asia-southeast1-b 2026-07-10T15:12:28Z
+fail zone=asia-southeast1-b attempt=5: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 6 zone asia-southeast1-c 2026-07-10T15:13:28Z
+fail zone=asia-southeast1-c attempt=6: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 7 zone asia-southeast1-b 2026-07-10T15:14:33Z
+fail zone=asia-southeast1-b attempt=7: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 8 zone asia-southeast1-c 2026-07-10T15:15:30Z
+fail zone=asia-southeast1-c attempt=8:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 9 zone asia-southeast1-b 2026-07-10T15:18:35Z
+fail zone=asia-southeast1-b attempt=9:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 10 zone asia-southeast1-c 2026-07-10T15:20:37Z
+fail zone=asia-southeast1-c attempt=10:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 11 zone asia-southeast1-b 2026-07-10T15:23:02Z
+fail zone=asia-southeast1-b attempt=11: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 12 zone asia-southeast1-c 2026-07-10T15:24:01Z
+fail zone=asia-southeast1-c attempt=12: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 13 zone asia-southeast1-b 2026-07-10T15:25:08Z
+fail zone=asia-southeast1-b attempt=13: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 14 zone asia-southeast1-c 2026-07-10T15:26:05Z
+fail zone=asia-southeast1-c attempt=14: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 15 zone asia-southeast1-b 2026-07-10T15:27:11Z
+fail zone=asia-southeast1-b attempt=15:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 16 zone asia-southeast1-c 2026-07-10T15:28:48Z
+fail zone=asia-southeast1-c attempt=16: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 17 zone asia-southeast1-b 2026-07-10T15:29:55Z
+fail zone=asia-southeast1-b attempt=17: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 18 zone asia-southeast1-c 2026-07-10T15:30:55Z
+fail zone=asia-southeast1-c attempt=18: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 19 zone asia-southeast1-b 2026-07-10T15:32:02Z
+fail zone=asia-southeast1-b attempt=19: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 20 zone asia-southeast1-c 2026-07-10T15:33:00Z
+fail zone=asia-southeast1-c attempt=20: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 21 zone asia-southeast1-b 2026-07-10T15:34:08Z
+fail zone=asia-southeast1-b attempt=21: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 22 zone asia-southeast1-c 2026-07-10T15:35:07Z
+fail zone=asia-southeast1-c attempt=22:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 23 zone asia-southeast1-b 2026-07-10T15:37:35Z
+fail zone=asia-southeast1-b attempt=23:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 24 zone asia-southeast1-c 2026-07-10T15:40:01Z
+fail zone=asia-southeast1-c attempt=24:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 25 zone asia-southeast1-b 2026-07-10T15:43:41Z
+fail zone=asia-southeast1-b attempt=25: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 26 zone asia-southeast1-c 2026-07-10T15:44:39Z
+fail zone=asia-southeast1-c attempt=26: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 27 zone asia-southeast1-b 2026-07-10T15:45:48Z
+fail zone=asia-southeast1-b attempt=27: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 28 zone asia-southeast1-c 2026-07-10T15:46:47Z
+fail zone=asia-southeast1-c attempt=28: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 29 zone asia-southeast1-b 2026-07-10T15:47:55Z
+fail zone=asia-southeast1-b attempt=29:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 30 zone asia-southeast1-c 2026-07-10T15:49:51Z
+fail zone=asia-southeast1-c attempt=30:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 31 zone asia-southeast1-b 2026-07-10T15:52:26Z
+fail zone=asia-southeast1-b attempt=31: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 32 zone asia-southeast1-c 2026-07-10T15:53:23Z
+fail zone=asia-southeast1-c attempt=32: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 33 zone asia-southeast1-b 2026-07-10T15:54:32Z
+fail zone=asia-southeast1-b attempt=33: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 34 zone asia-southeast1-c 2026-07-10T15:55:29Z
+fail zone=asia-southeast1-c attempt=34:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 35 zone asia-southeast1-b 2026-07-10T15:58:25Z
+fail zone=asia-southeast1-b attempt=35:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 36 zone asia-southeast1-c 2026-07-10T15:59:59Z
+fail zone=asia-southeast1-c attempt=36:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 37 zone asia-southeast1-b 2026-07-10T16:03:06Z
+fail zone=asia-southeast1-b attempt=37: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 38 zone asia-southeast1-c 2026-07-10T16:04:06Z
+fail zone=asia-southeast1-c attempt=38: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 39 zone asia-southeast1-b 2026-07-10T16:05:15Z
+fail zone=asia-southeast1-b attempt=39: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 40 zone asia-southeast1-c 2026-07-10T16:06:16Z
+fail zone=asia-southeast1-c attempt=40: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 41 zone asia-southeast1-b 2026-07-10T16:07:35Z
+fail zone=asia-southeast1-b attempt=41:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 42 zone asia-southeast1-c 2026-07-10T16:09:48Z
+fail zone=asia-southeast1-c attempt=42: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 43 zone asia-southeast1-b 2026-07-10T16:10:55Z
+fail zone=asia-southeast1-b attempt=43: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 44 zone asia-southeast1-c 2026-07-10T16:11:56Z
+fail zone=asia-southeast1-c attempt=44:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 45 zone asia-southeast1-b 2026-07-10T16:16:29Z
+fail zone=asia-southeast1-b attempt=45: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 46 zone asia-southeast1-c 2026-07-10T16:17:26Z
+fail zone=asia-southeast1-c attempt=46: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 47 zone asia-southeast1-b 2026-07-10T16:18:45Z
+fail zone=asia-southeast1-b attempt=47:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 48 zone asia-southeast1-c 2026-07-10T16:21:04Z
+fail zone=asia-southeast1-c attempt=48: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
+attempt 49 zone asia-southeast1-b 2026-07-10T16:22:10Z
+fail zone=asia-southeast1-b attempt=49: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 50 zone asia-southeast1-c 2026-07-10T16:23:09Z
+fail zone=asia-southeast1-c attempt=50:   not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0   (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.  
+attempt 51 zone asia-southeast1-b 2026-07-10T16:25:36Z
+fail zone=asia-southeast1-b attempt=51: ERROR: (gcloud.compute.instances.create) Could not fetch resource:  - Operation rate exceeded for resource 'projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close'. Too frequent operations from the source resource.  
+attempt 52 zone asia-southeast1-c 2026-07-10T16:26:38Z
+fail zone=asia-southeast1-c attempt=52: message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-c' does   not have enough resources available to fulfill the request.  '(resource type:compute)'.  
