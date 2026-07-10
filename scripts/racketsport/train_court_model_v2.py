@@ -46,6 +46,7 @@ held-out synthetic set generated once from a separate, fixed validation seed.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -254,6 +255,14 @@ def sample_to_training_arrays(
 
     keypoints_xy = np.asarray(sample["keypoints_xy"], dtype=np.float32)
     keypoints_vis = np.asarray(sample["keypoints_vis"], dtype=np.int64)
+    supervision_mask = np.asarray(
+        sample.get("keypoint_supervision_mask", np.ones((KEYPOINT_COUNT,), dtype=np.float32)),
+        dtype=np.float32,
+    )
+    if keypoints_xy.shape != (KEYPOINT_COUNT, 2) or keypoints_vis.shape != (KEYPOINT_COUNT,):
+        raise ValueError(f"sample must carry {KEYPOINT_COUNT} keypoint coordinates and visibility values")
+    if supervision_mask.shape != (KEYPOINT_COUNT,) or not np.isin(supervision_mask, [0.0, 1.0]).all():
+        raise ValueError(f"keypoint_supervision_mask must be a binary ({KEYPOINT_COUNT},) array")
     keypoints_xy_model = keypoints_xy * np.asarray([scale_x, scale_y], dtype=np.float32)
 
     head_width = max(1, model_width // heatmap_stride)
@@ -262,7 +271,7 @@ def sample_to_training_arrays(
     heatmaps = np.zeros((KEYPOINT_COUNT, head_height, head_width), dtype=np.float32)
     heatmap_mask = np.zeros((KEYPOINT_COUNT,), dtype=np.float32)
     for index in range(KEYPOINT_COUNT):
-        if keypoints_vis[index] == 0:
+        if supervision_mask[index] <= 0 or keypoints_vis[index] == 0:
             continue  # off-frame: no valid heatmap location to supervise
         cx = keypoints_xy_model[index, 0] / heatmap_stride
         cy = keypoints_xy_model[index, 1] / heatmap_stride
@@ -270,6 +279,7 @@ def sample_to_training_arrays(
         heatmap_mask[index] = 1.0
 
     vis_target = (keypoints_vis == 2).astype(np.float32)
+    vis_mask = supervision_mask.copy()
 
     if has_seg_target:
         line_family_mask = sample["line_family_mask"]
@@ -293,6 +303,8 @@ def sample_to_training_arrays(
         "heatmaps": heatmaps,
         "heatmap_mask": heatmap_mask,
         "vis_target": vis_target,
+        "vis_mask": vis_mask,
+        "keypoint_supervision_mask": supervision_mask,
         "seg_target": seg_target,
         "seg_mask": seg_mask,
     }
@@ -309,6 +321,8 @@ def _stack_arrays(rows: list[dict[str, Any]], torch: Any) -> dict[str, Any]:
         "heatmaps": stacked("heatmaps", "float32"),
         "heatmap_mask": stacked("heatmap_mask", "float32"),
         "vis_target": stacked("vis_target", "float32"),
+        "vis_mask": stacked("vis_mask", "float32"),
+        "keypoint_supervision_mask": stacked("keypoint_supervision_mask", "float32"),
         "seg_target": stacked("seg_target", "int64"),
         "seg_mask": stacked("seg_mask", "float32"),
     }
@@ -325,13 +339,18 @@ def _stack_arrays_numpy(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "heatmaps": stacked("heatmaps", "float32"),
         "heatmap_mask": stacked("heatmap_mask", "float32"),
         "vis_target": stacked("vis_target", "float32"),
+        "vis_mask": stacked("vis_mask", "float32"),
+        "keypoint_supervision_mask": stacked("keypoint_supervision_mask", "float32"),
         "seg_target": stacked("seg_target", "int64"),
         "seg_mask": stacked("seg_mask", "float32"),
     }
 
 
 def _tensorize_training_batch(batch: dict[str, Any], torch: Any) -> dict[str, Any]:
-    for key in ("image", "heatmaps", "heatmap_mask", "vis_target", "seg_target", "seg_mask"):
+    for key in (
+        "image", "heatmaps", "heatmap_mask", "vis_target", "vis_mask",
+        "keypoint_supervision_mask", "seg_target", "seg_mask",
+    ):
         value = batch[key]
         if not hasattr(value, "to"):
             batch[key] = torch.from_numpy(value)
@@ -577,6 +596,8 @@ def real_row_to_sample_arrays(
     model_width: int,
     model_height: int,
     sigma_px: float,
+    photometric_aug: bool = False,
+    rng: random.Random | None = None,
 ) -> dict[str, Any]:
     """Convert one `<clip>/labels/court_keypoints.json` row (the existing on-disk tier format,
     loaded via `scripts.racketsport.train_court_keypoint_heatmap.load_real_court_keypoint_labels`)
@@ -606,24 +627,56 @@ def real_row_to_sample_arrays(
     image = load_label_image(row, cv2=cv2, image_module=Image)
     loaded_width, loaded_height = image.size
     source_size = row.get("source_video_size") or [loaded_width, loaded_height]
+    if (
+        not isinstance(source_size, (list, tuple))
+        or len(source_size) != 2
+        or any(isinstance(value, bool) or not isinstance(value, (int, float)) for value in source_size)
+    ):
+        raise ValueError("real row source_video_size must be two positive finite numbers")
     source_width, source_height = float(source_size[0]), float(source_size[1])
+    if not math.isfinite(source_width) or not math.isfinite(source_height) or source_width <= 0 or source_height <= 0:
+        raise ValueError("real row source_video_size must be two positive finite numbers")
     rescale_x = loaded_width / source_width
     rescale_y = loaded_height / source_height
 
     image_rgb = np.asarray(image, dtype=np.uint8)
     image_bgr = np.ascontiguousarray(image_rgb[:, :, ::-1])
+    if photometric_aug:
+        if rng is None:
+            raise ValueError("photometric augmentation requires a seeded rng")
+        image_bgr = _augment_real_image_photometric(image_bgr, rng=rng)
 
-    keypoints = row["keypoints"]
-    keypoints_xy = np.asarray(
-        [[keypoints[name][0] * rescale_x, keypoints[name][1] * rescale_y] for name in KEYPOINT_NAMES],
-        dtype=np.float32,
-    )
-    keypoints_vis = np.full((KEYPOINT_COUNT,), 2, dtype=np.int64)  # all labeled points: visible
+    keypoints = row.get("keypoints")
+    if not isinstance(keypoints, dict):
+        raise ValueError("real row keypoints must be an object")
+    extra = sorted(set(keypoints) - set(KEYPOINT_NAMES))
+    if extra:
+        raise ValueError(f"real row keypoints contain unexpected canonical names: {extra}")
+    keypoints_xy = np.zeros((KEYPOINT_COUNT, 2), dtype=np.float32)
+    keypoints_vis = np.zeros((KEYPOINT_COUNT,), dtype=np.int64)
+    supervision_mask = np.zeros((KEYPOINT_COUNT,), dtype=np.float32)
+    for index, name in enumerate(KEYPOINT_NAMES):
+        value = keypoints.get(name)
+        if value is None:
+            continue
+        if not isinstance(value, (list, tuple)) or len(value) != 2:
+            raise ValueError(f"real row keypoints.{name} must be null or a two-item coordinate")
+        x, y = value
+        if any(isinstance(item, bool) or not isinstance(item, (int, float)) for item in (x, y)):
+            raise ValueError(f"real row keypoints.{name} must contain numeric coordinates")
+        if not math.isfinite(float(x)) or not math.isfinite(float(y)):
+            raise ValueError(f"real row keypoints.{name} must contain finite coordinates")
+        keypoints_xy[index] = [float(x) * rescale_x, float(y) * rescale_y]
+        keypoints_vis[index] = 2
+        supervision_mask[index] = 1.0
+    if float(supervision_mask.sum()) <= 0:
+        raise ValueError("real row must supervise at least one canonical keypoint")
 
     sample = {
         "image_bgr": image_bgr,
         "keypoints_xy": keypoints_xy,
         "keypoints_vis": keypoints_vis,
+        "keypoint_supervision_mask": supervision_mask,
     }
     return sample_to_training_arrays(
         sample,
@@ -634,7 +687,28 @@ def real_row_to_sample_arrays(
     )
 
 
-def load_real_training_rows(real_roots: list[Path] | None) -> list[dict[str, Any]]:
+def _augment_real_image_photometric(image_bgr: Any, *, rng: random.Random) -> Any:
+    """Small label-preserving color/blur/noise jitter for real rows only."""
+
+    import cv2
+    import numpy as np
+
+    image = image_bgr.astype(np.float32)
+    image = (image - 127.5) * rng.uniform(0.88, 1.12) + 127.5 + rng.uniform(-18.0, 18.0)
+    gray = cv2.cvtColor(np.clip(image, 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY).astype(np.float32)
+    image = gray[:, :, None] + rng.uniform(0.85, 1.15) * (image - gray[:, :, None])
+    if rng.random() < 0.35:
+        image = cv2.GaussianBlur(image, (3, 3), sigmaX=rng.uniform(0.2, 1.0))
+    noise_sigma = rng.uniform(0.0, 4.0)
+    noise = np.random.default_rng(rng.getrandbits(64)).normal(0.0, noise_sigma, image.shape)
+    return np.ascontiguousarray(np.clip(image + noise, 0, 255).astype(np.uint8))
+
+
+def load_real_training_rows(
+    real_roots: list[Path] | None,
+    *,
+    split_proposal: Path | None = None,
+) -> list[dict[str, Any]]:
     if not real_roots:
         return []
     from scripts.racketsport.train_court_keypoint_heatmap import load_real_court_keypoint_labels
@@ -642,6 +716,26 @@ def load_real_training_rows(real_roots: list[Path] | None) -> list[dict[str, Any
     rows: list[dict[str, Any]] = []
     for root in real_roots:
         rows.extend(load_real_court_keypoint_labels(Path(root)))
+    if split_proposal is not None:
+        payload = json.loads(Path(split_proposal).read_text(encoding="utf-8"))
+        train_datasets = payload.get("train_datasets")
+        if not isinstance(train_datasets, list) or not train_datasets or not all(
+            isinstance(name, str) and name for name in train_datasets
+        ):
+            raise ValueError("--real-split-proposal must contain a non-empty train_datasets list")
+        matched = {name: 0 for name in train_datasets}
+        filtered: list[dict[str, Any]] = []
+        for row in rows:
+            clip = str(row.get("clip") or "")
+            for dataset in train_datasets:
+                if clip == dataset or clip.startswith(f"{dataset}__"):
+                    filtered.append(row)
+                    matched[dataset] += 1
+                    break
+        missing = sorted(name for name, count in matched.items() if count == 0)
+        if missing:
+            raise ValueError(f"--real-split-proposal train datasets had no corpus rows: {missing}")
+        rows = filtered
     assert_not_training_on_eval_clip((row.get("clip") for row in rows), allow_internal_val=False)
     return rows
 
@@ -673,10 +767,14 @@ def class_balanced_seg_loss(logits: Any, target: Any, sample_mask: Any, *, torch
     return (per_row * sample_mask).sum() / sample_mask.sum().clamp_min(1.0)
 
 
-def visibility_bce_loss(logits: Any, target: Any, *, torch: Any) -> Any:
+def visibility_bce_loss(logits: Any, target: Any, mask: Any | None = None, *, torch: Any) -> Any:
     import torch.nn.functional as F
 
-    return F.binary_cross_entropy_with_logits(logits, target)
+    if mask is None or bool((mask > 0).all()):
+        return F.binary_cross_entropy_with_logits(logits, target)
+    per_channel = F.binary_cross_entropy_with_logits(logits, target, reduction="none")
+    mask = mask.to(logits.dtype)
+    return (per_channel * mask).sum() / mask.sum().clamp_min(1.0)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -819,7 +917,15 @@ def _validate_resnet34_encoder_checkpoint(path: Path) -> None:
     expected = resnet34(weights=None).state_dict()
     expected_backbone = {key: value for key, value in expected.items() if not key.startswith("fc.")}
     provided_non_fc = {key: value for key, value in state.items() if not key.startswith("fc.")}
-    missing = sorted(key for key in expected_backbone if key not in provided_non_fc)
+    # The repository-pinned official torchvision b627a593 file predates persisted
+    # BatchNorm.num_batches_tracked buffers. PyTorch's BatchNorm loader intentionally recreates
+    # those counters as zero for legacy checkpoints; every learned parameter and running statistic
+    # remains mandatory here.
+    missing = sorted(
+        key
+        for key in expected_backbone
+        if key not in provided_non_fc and not key.endswith(".num_batches_tracked")
+    )
     unexpected = sorted(key for key in provided_non_fc if key not in expected_backbone)
     shape_mismatch = sorted(
         key
@@ -855,6 +961,37 @@ def _resolve_encoder_weights_path(requested: str | Path | None) -> Path | None:
 
 def _checkpoint_path(out_dir: Path, epoch: int) -> Path:
     return out_dir / f"court_model_v2_epoch_{epoch:04d}.pt"
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _load_model_initialization_checkpoint(model: Any, path: Path, *, torch: Any) -> dict[str, Any]:
+    if not path.is_file():
+        raise FileNotFoundError(f"--init-from-checkpoint does not exist: {path}")
+    checkpoint = torch.load(str(path), map_location="cpu", weights_only=False)
+    if not isinstance(checkpoint, dict) or not isinstance(checkpoint.get("model"), dict):
+        raise ValueError("--init-from-checkpoint must be a court_unet_v2 training checkpoint with model weights")
+    architecture = checkpoint.get("network_architecture") or checkpoint.get("model_architecture")
+    if architecture not in (None, COURT_UNET_V2_ARCHITECTURE):
+        raise ValueError(
+            f"--init-from-checkpoint architecture must be {COURT_UNET_V2_ARCHITECTURE}; got {architecture!r}"
+        )
+    model.load_state_dict(checkpoint["model"], strict=True)
+    return {
+        "path": str(path),
+        "sha256": _sha256_file(path),
+        "source_epoch": int(checkpoint.get("epoch", 0)),
+        "optimizer_restored": False,
+        "scheduler_restored": False,
+        "scaler_restored": False,
+        "start_epoch": 0,
+    }
 
 
 def _save_training_checkpoint(
@@ -909,6 +1046,8 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     device = torch.device(args.device if (args.device != "cuda" or torch.cuda.is_available()) else "cpu")
     synthetic_workers = _resolve_synthetic_workers(args.synthetic_workers)
     encoder_weights_path = _resolve_encoder_weights_path(args.encoder_weights_path)
+    if args.resume is not None and args.init_from_checkpoint is not None:
+        raise ValueError("--resume and --init-from-checkpoint are mutually exclusive")
     args.out.mkdir(parents=True, exist_ok=True)
 
     synthetic_config: dict[str, Any] = {"image_size": [args.image_width, args.image_height]}
@@ -916,13 +1055,18 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         synthetic_config["scenarios"] = list(args.synthetic_scenario)
 
     real_roots = args.real_root or []
-    real_rows = load_real_training_rows(real_roots)
+    real_rows = load_real_training_rows(real_roots, split_proposal=args.real_split_proposal)
     # Deterministic, non-overlapping split: the first `real_val_samples` rows are held out for
     # `real_holdout_after` eval ONLY and are never drawn into a training mini-batch below -- an
     # on-disk corpus is a finite dataset (unlike the synthetic stream), so without this split a
     # real-corpus holdout eval would silently score rows the model had already been trained on.
     real_holdout_rows = real_rows[: args.real_val_samples]
     real_train_rows = real_rows[args.real_val_samples :]
+    real_corpus_labeled_channels = sum(
+        sum(1 for name in KEYPOINT_NAMES if row.get("keypoints", {}).get(name) is not None)
+        for row in real_rows
+    )
+    real_corpus_null_channels = len(real_rows) * KEYPOINT_COUNT - real_corpus_labeled_channels
     real_fraction = 0.0
     if real_train_rows and (args.real_weight + args.synthetic_weight) > 0:
         real_fraction = args.real_weight / (args.real_weight + args.synthetic_weight)
@@ -933,6 +1077,18 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         encoder_weights_path=encoder_weights_path,
     ).to(device)
     param_count = int(sum(p.numel() for p in model.parameters()))
+
+    initialization = {
+        "mode": "encoder_weights" if encoder_weights_path is not None else "random",
+        "checkpoint": None,
+    }
+    if args.init_from_checkpoint is not None:
+        initialization = {
+            "mode": "model_checkpoint_fresh_optimizer",
+            "checkpoint": _load_model_initialization_checkpoint(
+                model, Path(args.init_from_checkpoint), torch=torch
+            ),
+        }
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(1, args.epochs))
@@ -949,6 +1105,32 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         if "scaler" in checkpoint:
             scaler.load_state_dict(checkpoint["scaler"])
         start_epoch = int(checkpoint.get("epoch", 0))
+        initialization = {
+            "mode": "resume_full_training_state",
+            "checkpoint": {"path": str(args.resume), "start_epoch": start_epoch},
+        }
+
+    real_probe_batch: dict[str, Any] | None = None
+    real_probe_before: dict[str, float] | None = None
+    if real_train_rows:
+        real_probe_batch = _stack_arrays(
+            [
+                real_row_to_sample_arrays(
+                    row,
+                    model_width=args.image_width,
+                    model_height=args.image_height,
+                    sigma_px=args.heatmap_sigma_px,
+                )
+                for row in real_train_rows[: min(args.real_batch_size, len(real_train_rows))]
+            ],
+            torch,
+        )
+        model.eval()
+        with torch.no_grad():
+            probe_loss, probe_components = _compute_batch_loss(
+                model, real_probe_batch, device=device, args=args, torch=torch, skip_geometric=True
+            )
+        real_probe_before = {"loss": float(probe_loss.detach().cpu()), **probe_components}
 
     # ONE-TIME, fixed-seed held-out set (never regenerated, never trained on): the CPU smoke
     # acceptance proof and every mid-training eval score against this exact same batch.
@@ -970,6 +1152,14 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     history: list[dict[str, Any]] = []
     epoch_wall_times: list[float] = []
     saved_epoch_checkpoints: list[str] = []
+    real_sampling = {
+        "batches": 0,
+        "rows": 0,
+        "labeled_channels": 0,
+        "null_channels": 0,
+        "null_heatmap_supervision_count": 0,
+        "null_visibility_supervision_count": 0,
+    }
     for epoch in range(start_epoch, args.epochs):
         epoch_start = time.time()
         model.train()
@@ -1007,10 +1197,24 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                             model_width=args.image_width,
                             model_height=args.image_height,
                             sigma_px=args.heatmap_sigma_px,
+                            photometric_aug=args.real_photometric_aug,
+                            rng=rng,
                         )
                         for row in rng.sample(real_train_rows, min(args.real_batch_size, len(real_train_rows)))
                     ],
                     torch,
+                )
+                supervision_mask = real_batch["keypoint_supervision_mask"]
+                null_mask = supervision_mask <= 0
+                real_sampling["batches"] += 1
+                real_sampling["rows"] += int(supervision_mask.shape[0])
+                real_sampling["labeled_channels"] += int((supervision_mask > 0).sum().item())
+                real_sampling["null_channels"] += int(null_mask.sum().item())
+                real_sampling["null_heatmap_supervision_count"] += int(
+                    (null_mask & (real_batch["heatmap_mask"] > 0)).sum().item()
+                )
+                real_sampling["null_visibility_supervision_count"] += int(
+                    (null_mask & (real_batch["vis_mask"] > 0)).sum().item()
                 )
                 with torch.autocast(device_type=device.type, enabled=amp_enabled):
                     real_loss, real_components = _compute_batch_loss(
@@ -1053,6 +1257,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             row = {
                 "epoch": epoch + 1,
                 "train_loss_mean": sum(epoch_losses) / len(epoch_losses),
+                "train_loss_first": epoch_losses[0],
                 "train_loss_last": epoch_losses[-1],
                 "lr": scheduler.get_last_lr()[0],
                 "epoch_wall_time_s": epoch_wall_times[-1],
@@ -1071,6 +1276,15 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     after = evaluate_on_batch(
         model, val_batch, device=device, heatmap_stride=COURT_UNET_V2_HEATMAP_STRIDE, torch=torch
     )
+
+    real_probe_after: dict[str, float] | None = None
+    if real_probe_batch is not None:
+        model.eval()
+        with torch.no_grad():
+            probe_loss, probe_components = _compute_batch_loss(
+                model, real_probe_batch, device=device, args=args, torch=torch, skip_geometric=True
+            )
+        real_probe_after = {"loss": float(probe_loss.detach().cpu()), **probe_components}
 
     real_after: dict[str, Any] | None = None
     if real_holdout_rows:
@@ -1155,6 +1369,14 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "epoch_checkpoints": saved_epoch_checkpoints,
             "encoder_weights_requested": None if args.encoder_weights_path is None else str(args.encoder_weights_path),
             "encoder_weights_path": None if encoder_weights_path is None else str(encoder_weights_path),
+            "initialization": initialization,
+            "real_photometric_aug": bool(args.real_photometric_aug),
+            "real_split_proposal": None if args.real_split_proposal is None else str(args.real_split_proposal),
+            "real_corpus_labeled_channel_count": real_corpus_labeled_channels,
+            "real_corpus_null_channel_count": real_corpus_null_channels,
+            "real_sampling": real_sampling,
+            "real_train_probe_before": real_probe_before,
+            "real_train_probe_after": real_probe_after,
         },
         "holdout_artifacts": [],
         "note": "CAL-MODEL v2 court_unet_v2 trainer run; not a CAL3 promotion (see gate.note).",
@@ -1179,7 +1401,12 @@ def _compute_batch_loss(
         batch["heatmaps"].to(device),
         batch["heatmap_mask"].to(device).unsqueeze(-1).unsqueeze(-1).expand_as(batch["heatmaps"]).to(device),
     )
-    vis_loss = visibility_bce_loss(outputs["keypoint_vis_logits"], batch["vis_target"].to(device), torch=torch)
+    vis_loss = visibility_bce_loss(
+        outputs["keypoint_vis_logits"],
+        batch["vis_target"].to(device),
+        batch["vis_mask"].to(device),
+        torch=torch,
+    )
     seg_loss = class_balanced_seg_loss(
         outputs["line_family_logits"], batch["seg_target"].to(device), batch["seg_mask"].to(device), torch=torch
     )
@@ -1219,6 +1446,15 @@ def main(argv: list[str] | None = None) -> int:
             "Optional local torchvision resnet34 state dict path, or 'imagenet' to use the "
             "locally cached torchvision ResNet34_Weights.IMAGENET1K_V1 file. This trainer never "
             "downloads weights; missing or shape-mismatched requested weights fail loudly."
+        ),
+    )
+    parser.add_argument(
+        "--init-from-checkpoint",
+        type=Path,
+        default=None,
+        help=(
+            "Load only court_unet_v2 model weights as initialization. Optimizer, scheduler, scaler, "
+            "and epoch remain fresh; mutually exclusive with --resume."
         ),
     )
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -1264,9 +1500,20 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Root(s) containing <clip>/labels/court_keypoints.json rows (existing tier format).",
     )
+    parser.add_argument(
+        "--real-split-proposal",
+        type=Path,
+        default=None,
+        help="Optional split_proposal.json; when set, only its train_datasets rows are loaded.",
+    )
     parser.add_argument("--real-weight", type=float, default=0.0)
     parser.add_argument("--synthetic-weight", type=float, default=1.0)
     parser.add_argument("--real-batch-size", type=int, default=4)
+    parser.add_argument(
+        "--real-photometric-aug",
+        action="store_true",
+        help="Apply bounded color/blur/noise jitter to sampled real training rows only (default off).",
+    )
     parser.add_argument("--real-val-samples", type=int, default=8)
     parser.add_argument("--eval-every", type=int, default=1)
     parser.add_argument(
